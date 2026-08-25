@@ -1,4 +1,5 @@
-import { FormEvent, useState } from "react";
+import { useState } from "react";
+import type { FormEvent } from "react";
 import "./App.css";
 
 function App() {
@@ -15,7 +16,7 @@ function App() {
     }
 
     // مؤقت فقط لعرض الواجهة.
-    // في الخطوة التالية يتم التحقق من الحساب في Backend آمن.
+    // لاحقًا سيتم التحقق من الحساب في Backend آمن.
     setLoggedIn(true);
   }
 
@@ -31,7 +32,9 @@ function App() {
       return;
     }
 
-    alert("سيتم ربط إنشاء الامتحان بالمخزن و OpenAI في مرحلة لاحقة.");
+    alert(
+      "سيتم ربط إنشاء الامتحان بالمخزن و OpenAI في مرحلة لاحقة."
+    );
   }
 
   if (!loggedIn) {
@@ -52,7 +55,9 @@ function App() {
               <input
                 type="text"
                 value={userCode}
-                onChange={(event) => setUserCode(event.target.value)}
+                onChange={(event) =>
+                  setUserCode(event.target.value)
+                }
                 placeholder="أدخل كود المستخدم"
                 autoComplete="username"
               />
@@ -63,13 +68,18 @@ function App() {
               <input
                 type="password"
                 value={password}
-                onChange={(event) => setPassword(event.target.value)}
+                onChange={(event) =>
+                  setPassword(event.target.value)
+                }
                 placeholder="أدخل كلمة المرور"
                 autoComplete="current-password"
               />
             </label>
 
-            <button type="submit" className="primary-button">
+            <button
+              type="submit"
+              className="primary-button"
+            >
               دخول
             </button>
           </form>
@@ -87,10 +97,16 @@ function App() {
       <header className="top-bar">
         <div>
           <h1>ExamBank 791381</h1>
-          <p>بناء امتحان من مخزن الأسئلة المصنف</p>
+
+          <p>
+            بناء امتحان من مخزن الأسئلة المصنف
+          </p>
         </div>
 
-        <button className="logout-button" onClick={handleLogout}>
+        <button
+          className="logout-button"
+          onClick={handleLogout}
+        >
           تسجيل الخروج
         </button>
       </header>
@@ -98,27 +114,35 @@ function App() {
       <section className="builder-content">
         <div className="builder-card">
           <div className="builder-heading">
-            <span className="ai-badge">AI</span>
+            <span className="ai-badge">
+              AI
+            </span>
 
             <div>
-              <h2>ماذا تريد في الامتحان؟</h2>
+              <h2>
+                ماذا تريد في الامتحان؟
+              </h2>
 
               <p>
-                اكتب طلبك بالطريقة التي تريدها، وسيتولى النظام اختيار
-                الأسئلة المناسبة من المخزن.
+                اكتب طلبك بالطريقة التي تريدها،
+                وسيتولى النظام اختيار الأسئلة
+                المناسبة من المخزن.
               </p>
             </div>
           </div>
 
           <textarea
             value={examPrompt}
-            onChange={(event) => setExamPrompt(event.target.value)}
+            onChange={(event) =>
+              setExamPrompt(event.target.value)
+            }
             placeholder="مثال: أنشئ امتحانًا من 20 سؤالًا لطلاب ضعفاء إلى متوسطين، 5 أسئلة IPv6، و3 DHCP، وسؤالين OSPF، واجعل معظم الأسئلة سهلة ومتوسطة..."
           />
 
           <div className="builder-actions">
             <span className="helper-text">
-              لاحقًا سيتم تحليل طلبك واختيار الأسئلة تلقائيًا.
+              لاحقًا سيتم تحليل طلبك واختيار
+              الأسئلة تلقائيًا.
             </span>
 
             <button
