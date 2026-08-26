@@ -13,9 +13,12 @@ const SOURCE_ID = "791381-2025";
 const SOURCE_BLOB =
   `sources/${SOURCE_ID}.json`;
 
+const INDEX_BLOB =
+  "index/questions-index.json";
+
 
 // ==========================================================
-// Load JSON config
+// CONFIG
 // ==========================================================
 
 function loadConfig(fileName) {
@@ -55,7 +58,7 @@ function loadConfig(fileName) {
 
 
 // ==========================================================
-// Stream helpers
+// BLOB HELPERS
 // ==========================================================
 
 async function streamToBuffer(stream) {
@@ -114,11 +117,43 @@ async function downloadBlobJson(
 }
 
 
+async function uploadJson(
+  containerClient,
+  blobName,
+  data
+) {
+  const text =
+    JSON.stringify(
+      data,
+      null,
+      2
+    );
+
+
+  const blockBlobClient =
+    containerClient
+      .getBlockBlobClient(
+        blobName
+      );
+
+
+  await blockBlobClient.uploadData(
+    Buffer.from(
+      text,
+      "utf8"
+    ),
+    {
+      blobHTTPHeaders: {
+        blobContentType:
+          "application/json; charset=utf-8"
+      }
+    }
+  );
+}
+
+
 // ==========================================================
-// OpenAI client
-//
-// Dynamic import works cleanly with our CommonJS
-// Azure Function project.
+// OPENAI
 // ==========================================================
 
 async function createOpenAIClient() {
@@ -148,7 +183,7 @@ async function createOpenAIClient() {
 
 
 // ==========================================================
-// Build readable question description
+// QUESTION DESCRIPTION
 // ==========================================================
 
 function buildQuestionText(question) {
@@ -159,21 +194,17 @@ function buildQuestionText(question) {
     `Question ID: ${question.id}`
   );
 
-
   lines.push(
     `Question number: ${question.questionNumber}`
   );
-
 
   lines.push(
     `Section: ${question.section}`
   );
 
-
   lines.push(
     `Question type: ${question.type}`
   );
-
 
   lines.push(
     `Original type: ${question.originalType}`
@@ -181,21 +212,18 @@ function buildQuestionText(question) {
 
 
   lines.push("");
-
-
   lines.push("QUESTION:");
+
   lines.push(
     question.text || ""
   );
 
 
-  // --------------------------------------------------------
-  // Parent / composite context
-  // --------------------------------------------------------
-
   if (question.parentGroup) {
     lines.push("");
-    lines.push("PARENT / GROUP CONTEXT:");
+    lines.push(
+      "PARENT / GROUP CONTEXT:"
+    );
 
     lines.push(
       JSON.stringify(
@@ -207,10 +235,6 @@ function buildQuestionText(question) {
   }
 
 
-  // --------------------------------------------------------
-  // Options
-  // --------------------------------------------------------
-
   if (
     Array.isArray(question.options) &&
     question.options.length > 0
@@ -218,17 +242,16 @@ function buildQuestionText(question) {
     lines.push("");
     lines.push("OPTIONS:");
 
-    for (const option of question.options) {
+    for (
+      const option
+      of question.options
+    ) {
       lines.push(
         `${option.label}: ${option.text}`
       );
     }
   }
 
-
-  // --------------------------------------------------------
-  // Fields
-  // --------------------------------------------------------
 
   if (
     Array.isArray(question.fields) &&
@@ -237,17 +260,16 @@ function buildQuestionText(question) {
     lines.push("");
     lines.push("FIELDS:");
 
-    for (const field of question.fields) {
+    for (
+      const field
+      of question.fields
+    ) {
       lines.push(
         `${field.order}. ${field.label}`
       );
     }
   }
 
-
-  // --------------------------------------------------------
-  // Parts
-  // --------------------------------------------------------
 
   if (
     Array.isArray(question.parts) &&
@@ -256,14 +278,17 @@ function buildQuestionText(question) {
     lines.push("");
     lines.push("PARTS:");
 
-    for (const part of question.parts) {
+    for (
+      const part
+      of question.parts
+    ) {
       lines.push(
         `${part.order}. ${part.label}`
       );
 
+
       if (
-        Array.isArray(part.options) &&
-        part.options.length > 0
+        Array.isArray(part.options)
       ) {
         for (
           const option
@@ -278,13 +303,6 @@ function buildQuestionText(question) {
   }
 
 
-  // --------------------------------------------------------
-  // Answer
-  //
-  // We include the answer because difficulty can depend on
-  // what the student actually has to produce.
-  // --------------------------------------------------------
-
   lines.push("");
   lines.push("ANSWER MODEL:");
 
@@ -296,10 +314,6 @@ function buildQuestionText(question) {
     )
   );
 
-
-  // --------------------------------------------------------
-  // Flags
-  // --------------------------------------------------------
 
   lines.push("");
   lines.push("QUESTION FLAGS:");
@@ -318,7 +332,7 @@ function buildQuestionText(question) {
 
 
 // ==========================================================
-// Image input
+// IMAGES
 // ==========================================================
 
 async function buildImageInputs(
@@ -380,7 +394,7 @@ async function buildImageInputs(
 
 
 // ==========================================================
-// Structured Output JSON Schema
+// STRUCTURED OUTPUT
 // ==========================================================
 
 function buildClassificationSchema(
@@ -498,7 +512,7 @@ function buildClassificationSchema(
 
 
 // ==========================================================
-// Prompt
+// PROMPT
 // ==========================================================
 
 function buildInstructions(
@@ -509,19 +523,20 @@ function buildInstructions(
 أنت خبير في تصنيف أسئلة شبكات الاتصال
 للامتحان 791381.
 
-مهمتك ليست حل السؤال فقط، بل تصنيفه بدقة
-حتى يستخدم لاحقًا في بناء امتحانات لطلاب
-مدرسة ثانوية.
+مهمتك تصنيف السؤال ليستخدم لاحقًا
+في بناء امتحانات مدرسية.
 
 ==================================================
-TOPIC CLASSIFICATION
+TOPIC
 ==================================================
 
-اختر primaryTopic واحدًا فقط من القائمة التالية.
+اختر primaryTopic واحدًا فقط.
 
 يمكن اختيار حتى 3 secondaryTopics.
 
-التصنيفات المتاحة:
+استخدم التصنيف الأكثر تخصصًا الممكن.
+
+التصنيفات:
 
 ${JSON.stringify(
   topicsConfig.topics,
@@ -529,25 +544,22 @@ ${JSON.stringify(
   2
 )}
 
-اختر الموضوع الأكثر تخصصًا عندما يكون واضحًا.
+أمثلة:
 
-مثال:
-إذا كان السؤال عن OSPF:
-primaryTopic = OSPF
+OSPF -> OSPF
 وليس ROUTING فقط.
 
-إذا كان عن Subnet Mask / CIDR:
-primaryTopic = SUBNET_CIDR.
+CIDR أو Subnet Mask
+-> SUBNET_CIDR.
 
-إذا كان عن أوامر Cisco عامة بدون موضوع
-أكثر تخصصًا:
-primaryTopic = CISCO_CLI.
+DHCP
+-> DHCP.
 
 ==================================================
-DIFFICULTY CLASSIFICATION
+DIFFICULTY
 ==================================================
 
-هذا هو سياق الطلاب وسلم الصعوبة المعتمد:
+السياق المعتمد:
 
 ${JSON.stringify(
   difficultyConfig,
@@ -555,68 +567,220 @@ ${JSON.stringify(
   2
 )}
 
-التزم بهذا السلم حرفيًا.
+قيّم الصعوبة بالنسبة للطلاب المحددين،
+وليس بالنسبة إلى خبير شبكات.
 
-لا تصنف الصعوبة بالنسبة لخبير شبكات.
-
-قيّم الصعوبة بالنسبة للطلاب المذكورين،
-مع الأخذ بعين الاعتبار أن الامتحان مفتوح المادة
-ولديهم أمثلة محلولة مشابهة.
+تذكر أن الامتحان مفتوح المادة،
+وأن الطلاب لديهم أمثلة محلولة مشابهة.
 
 ==================================================
-QUESTION FAMILY
+FAMILY KEY
 ==================================================
 
 أنشئ familyKey إنجليزيًا قصيرًا وثابتًا
 يصف الفكرة الأساسية التي يختبرها السؤال.
 
-مثال:
+أمثلة:
 
 dhcp-purpose
 ospf-network-command
-ipv4-valid-router-address
 subnet-host-range
+ipv4-valid-router-address
 nvram-startup-config
 
-الهدف من familyKey هو منع اختيار سؤالين
-يختبران نفس الفكرة تقريبًا في الامتحان نفسه.
+استخدم lowercase و - فقط تقريبًا.
 
-استخدم lowercase والكلمات مفصولة بشرطة -.
+الهدف هو منع اختيار سؤالين يختبران
+الفكرة نفسها في امتحان واحد.
 
 ==================================================
 FLAGS
 ==================================================
 
-hasCLI:
-true فقط إذا كان الطالب يحتاج قراءة أو كتابة
-أوامر CLI أو Cisco IOS.
+hasCLI = true فقط عندما يحتاج الطالب
+قراءة أو كتابة أوامر CLI / Cisco IOS.
 
-requiresCalculation:
-true إذا كان الحل يحتاج حسابًا فعليًا، مثل
-binary conversion أو subnetting أو CIDR أو
-حساب عدد hosts/networks.
+requiresCalculation = true عندما يحتاج
+الحل حسابًا فعليًا مثل:
+
+binary conversion
+CIDR
+subnetting
+host calculations
 
 ==================================================
 REVIEW
 ==================================================
 
-needsReview = true إذا كان التصنيف غير واضح
-أو السؤال ناقص أو متعدد الاحتمالات.
+needsReview = true فقط إذا كان السؤال
+أو التصنيف غير واضح بدرجة تستحق
+مراجعة المعلم.
 
-إذا needsReview=false:
+إذا كانت needsReview=false:
 reviewReason يجب أن يكون "".
 
 ==================================================
 OUTPUT
 ==================================================
 
-اكتب difficultyReason بالعربية وباختصار واضح.
+difficultyReason بالعربية.
 
-لا تخترع معلومات غير موجودة في السؤال.
+اجعله قصيرًا وواضحًا.
 
-إذا كانت هناك صورة مرفقة، استخدمها في فهم
-السؤال وتقييم صعوبته.
+لا تخترع معلومات غير موجودة.
+
+استعمل الصورة عند وجودها.
 `;
+}
+
+
+// ==========================================================
+// SAVE CLASSIFICATION
+// ==========================================================
+
+async function saveClassification(
+  bankContainer,
+  bankDocument,
+  question,
+  classification,
+  model
+) {
+  const now =
+    new Date()
+      .toISOString();
+
+
+  question.classification = {
+    topic:
+      classification.primaryTopic,
+
+    secondaryTopics:
+      classification.secondaryTopics,
+
+    difficulty:
+      classification.difficulty,
+
+    difficultyLabel:
+      classification.difficultyLabel,
+
+    difficultyReason:
+      classification.difficultyReason,
+
+    difficultyConfidence:
+      classification.difficultyConfidence,
+
+    familyKey:
+      classification.familyKey,
+
+    needsReview:
+      classification.needsReview,
+
+    reviewReason:
+      classification.reviewReason,
+
+    status:
+      classification.needsReview
+        ? "needs-review"
+        : "classified",
+
+    model,
+
+    classifiedAt:
+      now
+  };
+
+
+  if (!question.flags) {
+    question.flags = {};
+  }
+
+
+  question.flags.hasCLI =
+    classification.hasCLI;
+
+
+  question.flags.requiresCalculation =
+    classification.requiresCalculation;
+
+
+  question.reviewStatus =
+    classification.needsReview
+      ? "needs-review"
+      : "classified";
+
+
+  // --------------------------------------------------------
+  // Save source JSON
+  // --------------------------------------------------------
+
+  await uploadJson(
+    bankContainer,
+    SOURCE_BLOB,
+    bankDocument
+  );
+
+
+  // --------------------------------------------------------
+  // Update lightweight index
+  // --------------------------------------------------------
+
+  const indexDocument =
+    await downloadBlobJson(
+      bankContainer,
+      INDEX_BLOB
+    );
+
+
+  const indexQuestion =
+    indexDocument.questions
+      ?.find(
+        item =>
+          item.id === question.id
+      );
+
+
+  if (indexQuestion) {
+    indexQuestion.topic =
+      classification.primaryTopic;
+
+    indexQuestion.secondaryTopics =
+      classification.secondaryTopics;
+
+    indexQuestion.difficulty =
+      classification.difficulty;
+
+    indexQuestion.difficultyLabel =
+      classification.difficultyLabel;
+
+    indexQuestion.familyKey =
+      classification.familyKey;
+
+    indexQuestion.hasCLI =
+      classification.hasCLI;
+
+    indexQuestion.requiresCalculation =
+      classification.requiresCalculation;
+
+    indexQuestion.needsReview =
+      classification.needsReview;
+
+    indexQuestion.reviewStatus =
+      question.reviewStatus;
+
+    indexQuestion.classificationConfidence =
+      classification.difficultyConfidence;
+  }
+
+
+  indexDocument.updatedAt =
+    now;
+
+
+  await uploadJson(
+    bankContainer,
+    INDEX_BLOB,
+    indexDocument
+  );
 }
 
 
@@ -639,7 +803,7 @@ app.http("classifyQuestionPreview", {
   handler: async request => {
     try {
       // ----------------------------------------------------
-      // Temporary protection
+      // AUTH
       // ----------------------------------------------------
 
       const configuredKey =
@@ -672,7 +836,7 @@ app.http("classifyQuestionPreview", {
 
 
       // ----------------------------------------------------
-      // Environment
+      // ENVIRONMENT
       // ----------------------------------------------------
 
       const connectionString =
@@ -693,7 +857,35 @@ app.http("classifyQuestionPreview", {
 
 
       // ----------------------------------------------------
-      // Config
+      // BODY
+      // ----------------------------------------------------
+
+      let body = {};
+
+
+      try {
+        body =
+          await request.json();
+      }
+      catch {
+        body = {};
+      }
+
+
+      const requestedQuestionId =
+        body?.questionId
+          ? String(
+              body.questionId
+            )
+          : null;
+
+
+      const saveToBank =
+        body?.save === true;
+
+
+      // ----------------------------------------------------
+      // CONFIG
       // ----------------------------------------------------
 
       const topicsConfig =
@@ -710,12 +902,12 @@ app.http("classifyQuestionPreview", {
 
       const topicCodes =
         topicsConfig.topics.map(
-          topic => topic.code
+          item => item.code
         );
 
 
       // ----------------------------------------------------
-      // Storage
+      // STORAGE
       // ----------------------------------------------------
 
       const blobServiceClient =
@@ -739,10 +931,6 @@ app.http("classifyQuestionPreview", {
           );
 
 
-      // ----------------------------------------------------
-      // Read bank source
-      // ----------------------------------------------------
-
       const bankDocument =
         await downloadBlobJson(
           bankContainer,
@@ -758,36 +946,9 @@ app.http("classifyQuestionPreview", {
           : [];
 
 
-      if (questions.length === 0) {
-        throw new Error(
-          "Bank source contains no questions"
-        );
-      }
-
-
       // ----------------------------------------------------
-      // Optional QuestionID from body
+      // QUESTION
       // ----------------------------------------------------
-
-      let body = {};
-
-
-      try {
-        body =
-          await request.json();
-      }
-      catch {
-        body = {};
-      }
-
-
-      const requestedQuestionId =
-        body?.questionId
-          ? String(
-              body.questionId
-            )
-          : null;
-
 
       let question;
 
@@ -796,8 +957,7 @@ app.http("classifyQuestionPreview", {
         question =
           questions.find(
             item =>
-              item.id
-              ===
+              item.id ===
               requestedQuestionId
           );
 
@@ -818,7 +978,6 @@ app.http("classifyQuestionPreview", {
         }
       }
       else {
-        // First question still waiting for classification
         question =
           questions.find(
             item =>
@@ -827,14 +986,38 @@ app.http("classifyQuestionPreview", {
                 ?.status
               ===
               "pending"
-          )
-          ||
-          questions[0];
+          );
       }
 
 
       // ----------------------------------------------------
-      // Build multimodal input
+      // Nothing pending
+      // ----------------------------------------------------
+
+      if (!question) {
+        return {
+          status:
+            200,
+
+          jsonBody: {
+            ok:
+              true,
+
+            complete:
+              true,
+
+            remainingPending:
+              0,
+
+            message:
+              "No pending questions remain."
+          }
+        };
+      }
+
+
+      // ----------------------------------------------------
+      // INPUT
       // ----------------------------------------------------
 
       const questionText =
@@ -864,7 +1047,7 @@ app.http("classifyQuestionPreview", {
 
 
       // ----------------------------------------------------
-      // OpenAI
+      // OPENAI
       // ----------------------------------------------------
 
       const openai =
@@ -917,13 +1100,7 @@ app.http("classifyQuestionPreview", {
         });
 
 
-      // ----------------------------------------------------
-      // Structured output
-      // ----------------------------------------------------
-
-      if (
-        !response.output_text
-      ) {
+      if (!response.output_text) {
         throw new Error(
           "OpenAI returned no output_text"
         );
@@ -937,10 +1114,10 @@ app.http("classifyQuestionPreview", {
 
 
       // ----------------------------------------------------
-      // Make difficulty label deterministic
+      // Difficulty label from our rubric
       // ----------------------------------------------------
 
-      const difficultyDefinition =
+      const level =
         difficultyConfig.levels[
           String(
             classification.difficulty
@@ -948,15 +1125,42 @@ app.http("classifyQuestionPreview", {
         ];
 
 
-      classification
-        .difficultyLabel =
-        difficultyDefinition
-          ?.label
-        || "";
+      classification.difficultyLabel =
+        level?.label || "";
 
 
       // ----------------------------------------------------
-      // Preview only
+      // SAVE
+      // ----------------------------------------------------
+
+      if (saveToBank) {
+        await saveClassification(
+          bankContainer,
+          bankDocument,
+          question,
+          classification,
+          model
+        );
+      }
+
+
+      // ----------------------------------------------------
+      // Progress
+      // ----------------------------------------------------
+
+      const remainingPending =
+        questions.filter(
+          item =>
+            item
+              .classification
+              ?.status
+            ===
+            "pending"
+        ).length;
+
+
+      // ----------------------------------------------------
+      // RESPONSE
       // ----------------------------------------------------
 
       return {
@@ -968,10 +1172,18 @@ app.http("classifyQuestionPreview", {
             true,
 
           previewOnly:
-            true,
+            !saveToBank,
 
           savedToBank:
-            false,
+            saveToBank,
+
+          complete:
+            remainingPending === 0,
+
+          remainingPending,
+
+          totalQuestions:
+            questions.length,
 
           model,
 
@@ -1003,7 +1215,9 @@ app.http("classifyQuestionPreview", {
           classification,
 
           message:
-            "Classification preview completed. Bank was not modified."
+            saveToBank
+              ? "Question classified and saved to bank."
+              : "Classification preview completed."
         }
       };
     }
