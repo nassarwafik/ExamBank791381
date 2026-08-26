@@ -4,6 +4,8 @@ const {
 } = require("@azure/storage-blob");
 
 const crypto = require("crypto");
+const fs = require("fs");
+const path = require("path");
 
 
 const RAW_CONTAINER = "raw";
@@ -12,6 +14,522 @@ const ASSETS_CONTAINER = "assets";
 
 const INDEX_BLOB =
   "index/questions-index.json";
+
+
+// Pilot answer map embedded for the 2024 exam.
+// Future exams can use external JSON files under
+// api/src/data/answer-maps/<sourceId>.json.
+const BUILTIN_DERIVED_ANSWER_MAPS = {
+  "791381-2024": {
+  "schemaVersion": 1,
+  "sourceId": "791381-2024",
+  "examCode": "791381",
+  "year": 2024,
+  "provenance": {
+    "kind": "ai-derived",
+    "model": "GPT-5.6 Sol",
+    "official": false,
+    "note": "Answers derived by reviewing the 2024 exam HTML/PDF. ready entries may be merged automatically; needsReview entries should not become official answers without review."
+  },
+  "summary": {
+    "questionCount": 41,
+    "ready": 37,
+    "needsReview": 4
+  },
+  "answers": {
+    "1": {
+      "answer": {
+        "mode": "anyAccepted",
+        "values": [
+          "11000001"
+        ]
+      },
+      "confidence": 0.99,
+      "status": "ready"
+    },
+    "2": {
+      "answer": {
+        "mode": "singleChoice",
+        "correctOptionValue": "b",
+        "values": [
+          "b"
+        ]
+      },
+      "confidence": 0.99,
+      "status": "ready"
+    },
+    "3": {
+      "answer": {
+        "mode": "exactSequence",
+        "values": [
+          "صحيح",
+          "غير صحيح",
+          "غير صحيح",
+          "صحيح"
+        ]
+      },
+      "confidence": 0.99,
+      "status": "ready"
+    },
+    "4": {
+      "suggestedAnswer": {
+        "mode": "anyAccepted",
+        "values": [
+          "b",
+          "c"
+        ]
+      },
+      "confidence": 0.45,
+      "status": "needsReview",
+      "reason": "سؤال APIPA ملتبس شبكيًا؛ يلزم اعتماد مفتاح/معيار المنهاج قبل التصحيح الآلي."
+    },
+    "5": {
+      "suggestedAnswer": {
+        "mode": "exactSequence",
+        "values": [
+          "configure terminal",
+          "hostname EXAM"
+        ]
+      },
+      "confidence": 0.9,
+      "status": "needsReview",
+      "reason": "الـPDF يظهر Router>enable مكتملًا وسطرين فارغين فقط، بينما HTML يحتوي 3 حقول إدخال."
+    },
+    "6": {
+      "answer": {
+        "mode": "anyAccepted",
+        "values": [
+          "ping 192.168.1.2"
+        ]
+      },
+      "confidence": 0.99,
+      "status": "ready"
+    },
+    "7": {
+      "answer": {
+        "mode": "anyAccepted",
+        "values": [
+          "47"
+        ]
+      },
+      "confidence": 0.99,
+      "status": "ready"
+    },
+    "8": {
+      "answer": {
+        "mode": "singleChoice",
+        "correctOptionValue": "c",
+        "values": [
+          "c"
+        ]
+      },
+      "confidence": 0.99,
+      "status": "ready"
+    },
+    "9": {
+      "answer": {
+        "mode": "exactSequence",
+        "values": [
+          "غير صحيح",
+          "غير صحيح"
+        ]
+      },
+      "confidence": 0.99,
+      "status": "ready"
+    },
+    "10": {
+      "answer": {
+        "mode": "singleChoice",
+        "correctOptionValue": "b",
+        "values": [
+          "b"
+        ]
+      },
+      "confidence": 0.99,
+      "status": "ready"
+    },
+    "11": {
+      "answer": {
+        "mode": "singleChoice",
+        "correctOptionValue": "a",
+        "values": [
+          "a"
+        ]
+      },
+      "confidence": 0.99,
+      "status": "ready"
+    },
+    "12": {
+      "answer": {
+        "mode": "singleChoice",
+        "correctOptionValue": "c",
+        "values": [
+          "c"
+        ]
+      },
+      "confidence": 0.99,
+      "status": "ready"
+    },
+    "13": {
+      "answer": {
+        "mode": "singleChoice",
+        "correctOptionValue": "c",
+        "values": [
+          "c"
+        ]
+      },
+      "confidence": 0.99,
+      "status": "ready"
+    },
+    "14": {
+      "answer": {
+        "mode": "singleChoice",
+        "correctOptionValue": "a",
+        "values": [
+          "a"
+        ]
+      },
+      "confidence": 0.99,
+      "status": "ready"
+    },
+    "15": {
+      "answer": {
+        "mode": "singleChoice",
+        "correctOptionValue": "a",
+        "values": [
+          "a"
+        ]
+      },
+      "confidence": 0.99,
+      "status": "ready"
+    },
+    "16": {
+      "answer": {
+        "mode": "singleChoice",
+        "correctOptionValue": "c",
+        "values": [
+          "c"
+        ]
+      },
+      "confidence": 0.99,
+      "status": "ready"
+    },
+    "17": {
+      "answer": {
+        "mode": "exactSequence",
+        "values": [
+          "غير صحيح",
+          "صحيح",
+          "غير صحيح",
+          "غير صحيح"
+        ]
+      },
+      "confidence": 0.99,
+      "status": "ready"
+    },
+    "18": {
+      "answer": {
+        "mode": "anyAccepted",
+        "values": [
+          "10.0.0.0"
+        ]
+      },
+      "confidence": 0.99,
+      "status": "ready"
+    },
+    "19": {
+      "answer": {
+        "mode": "singleChoice",
+        "correctOptionValue": "c",
+        "values": [
+          "c"
+        ]
+      },
+      "confidence": 0.99,
+      "status": "ready"
+    },
+    "20": {
+      "answer": {
+        "mode": "singleChoice",
+        "correctOptionValue": "d",
+        "values": [
+          "d"
+        ]
+      },
+      "confidence": 0.99,
+      "status": "ready"
+    },
+    "21": {
+      "answer": {
+        "mode": "singleChoice",
+        "correctOptionValue": "b",
+        "values": [
+          "b"
+        ]
+      },
+      "confidence": 0.99,
+      "status": "ready"
+    },
+    "22": {
+      "answer": {
+        "mode": "anyAccepted",
+        "values": [
+          "254"
+        ]
+      },
+      "confidence": 0.99,
+      "status": "ready"
+    },
+    "23": {
+      "suggestedAnswer": {
+        "mode": "exactSequence",
+        "values": [
+          "غير صحيح",
+          "صحيح",
+          "غير صحيح"
+        ]
+      },
+      "confidence": 0.6,
+      "status": "needsReview",
+      "reason": "العبارة الثالثة حول مسطح الأمان تحتاج اعتماد تعليمات المختبر/المفتاح الرسمي."
+    },
+    "24": {
+      "answer": {
+        "mode": "singleChoice",
+        "correctOptionValue": "b",
+        "values": [
+          "b"
+        ]
+      },
+      "confidence": 0.99,
+      "status": "ready"
+    },
+    "25": {
+      "answer": {
+        "mode": "singleChoice",
+        "correctOptionValue": "d",
+        "values": [
+          "d"
+        ]
+      },
+      "confidence": 0.99,
+      "status": "ready"
+    },
+    "أ": {
+      "answer": {
+        "mode": "singleChoice",
+        "correctOptionValue": "c",
+        "values": [
+          "c"
+        ]
+      },
+      "confidence": 0.99,
+      "status": "ready",
+      "ordinal": 26
+    },
+    "ب": {
+      "answer": {
+        "mode": "singleChoice",
+        "correctOptionValue": "d",
+        "values": [
+          "d"
+        ]
+      },
+      "confidence": 0.99,
+      "status": "ready",
+      "ordinal": 27
+    },
+    "ج": {
+      "answer": {
+        "mode": "exactSequence",
+        "values": [
+          "صحيح",
+          "غير صحيح",
+          "صحيح",
+          "صحيح"
+        ]
+      },
+      "confidence": 0.99,
+      "status": "ready",
+      "ordinal": 28
+    },
+    "د": {
+      "answer": {
+        "mode": "singleChoice",
+        "correctOptionValue": "c",
+        "values": [
+          "c"
+        ]
+      },
+      "confidence": 0.99,
+      "status": "ready",
+      "ordinal": 29
+    },
+    "هـ": {
+      "answer": {
+        "mode": "singleChoice",
+        "correctOptionValue": "a",
+        "values": [
+          "a"
+        ]
+      },
+      "confidence": 0.99,
+      "status": "ready",
+      "ordinal": 30
+    },
+    "و": {
+      "answer": {
+        "mode": "anyAccepted",
+        "values": [
+          "tikshuv5",
+          "Tikshuv5",
+          "TIKSHUV5"
+        ]
+      },
+      "confidence": 0.99,
+      "status": "ready",
+      "ordinal": 31
+    },
+    "ز": {
+      "answer": {
+        "mode": "exactSequence",
+        "values": [
+          "غير صحيح",
+          "صحيح"
+        ]
+      },
+      "confidence": 0.99,
+      "status": "ready",
+      "ordinal": 32
+    },
+    "ح": {
+      "answer": {
+        "mode": "exactSequence",
+        "values": [
+          "صحيح",
+          "غير صحيح"
+        ]
+      },
+      "confidence": 0.99,
+      "status": "ready",
+      "ordinal": 33
+    },
+    "ط": {
+      "answer": {
+        "mode": "singleChoice",
+        "correctOptionValue": "d",
+        "values": [
+          "d"
+        ]
+      },
+      "confidence": 0.98,
+      "status": "ready",
+      "ordinal": 34
+    },
+    "ي": {
+      "answer": {
+        "mode": "singleChoice",
+        "correctOptionValue": "b",
+        "values": [
+          "b"
+        ]
+      },
+      "confidence": 0.99,
+      "status": "ready",
+      "ordinal": 35
+    },
+    "ي أ": {
+      "answer": {
+        "mode": "exactSequence",
+        "values": [
+          "network 192.168.10.0 0.0.0.255 area 0",
+          "network 172.16.0.0 0.0.255.255 area 0"
+        ]
+      },
+      "confidence": 0.99,
+      "status": "ready",
+      "ordinal": 36
+    },
+    "ي ب": {
+      "answer": {
+        "mode": "singleChoice",
+        "correctOptionValue": "c",
+        "values": [
+          "c"
+        ]
+      },
+      "confidence": 0.99,
+      "status": "ready",
+      "ordinal": 37
+    },
+    "ي ج": {
+      "answer": {
+        "mode": "exactSequence",
+        "values": [
+          "254",
+          "255.255.255.0"
+        ]
+      },
+      "confidence": 0.99,
+      "status": "ready",
+      "ordinal": 38
+    },
+    "ي د": {
+      "suggestedAnswer": {
+        "mode": "exactSequence",
+        "values": [
+          "deny host 192.16.2.1",
+          "permit",
+          "fa0/0"
+        ]
+      },
+      "acceptedPerField": [
+        [
+          "deny host 192.16.2.1",
+          "deny 192.16.2.1 0.0.0.0"
+        ],
+        [
+          "permit"
+        ],
+        [
+          "fa0/0",
+          "FastEthernet0/0"
+        ]
+      ],
+      "confidence": 0.7,
+      "status": "needsReview",
+      "ordinal": 39,
+      "reason": "الرسم الرسمي يضع تسمية Fa0/0 على وصلتي R1، لذلك واجهة تطبيق ACL ملتبسة."
+    },
+    "ط و": {
+      "answer": {
+        "mode": "exactSequence",
+        "values": [
+          "صحيح",
+          "غير صحيح"
+        ]
+      },
+      "confidence": 0.99,
+      "status": "ready",
+      "ordinal": 40
+    },
+    "ط ز": {
+      "answer": {
+        "mode": "exactSequence",
+        "values": [
+          "غير صحيح",
+          "صحيح",
+          "غير صحيح",
+          "صحيح"
+        ]
+      },
+      "confidence": 0.99,
+      "status": "ready",
+      "ordinal": 41
+    }
+  }
+}
+};
 
 
 // ==========================================================
@@ -3007,6 +3525,269 @@ function buildSourceId(
 
 
 // ==========================================================
+// Optional AI-derived answer maps
+//
+// Files live under:
+//   api/src/data/answer-maps/<sourceId>.json
+//
+// They never replace an answer extracted from the HTML unless
+// the map entry is explicitly marked status="ready".
+// needsReview entries are stored only as suggestedAnswer.
+// ==========================================================
+
+function loadDerivedAnswerMap(
+  sourceId
+) {
+  if (
+    Object.prototype
+      .hasOwnProperty
+      .call(
+        BUILTIN_DERIVED_ANSWER_MAPS,
+        sourceId
+      )
+  ) {
+    return BUILTIN_DERIVED_ANSWER_MAPS[
+      sourceId
+    ];
+  }
+
+
+  const safeSourceId =
+    String(sourceId || "")
+      .replace(
+        /[^0-9A-Za-z._-]/g,
+        "_"
+      );
+
+  const filePath =
+    path.join(
+      __dirname,
+      "..",
+      "data",
+      "answer-maps",
+      `${safeSourceId}.json`
+    );
+
+  if (!fs.existsSync(filePath)) {
+    return null;
+  }
+
+  try {
+    return JSON.parse(
+      fs.readFileSync(
+        filePath,
+        "utf8"
+      )
+    );
+  }
+  catch (error) {
+    throw new Error(
+      `Invalid derived answer map for ${sourceId}: ${
+        error instanceof Error
+          ? error.message
+          : "unknown JSON error"
+      }`
+    );
+  }
+}
+
+
+function findDerivedAnswerEntry(
+  answerDocument,
+  question
+) {
+  const answers =
+    answerDocument?.answers;
+
+  if (
+    !answers ||
+    typeof answers !== "object"
+  ) {
+    return null;
+  }
+
+  // Prefer an explicit ordinal match. This is stable even when
+  // historical exams reuse letters such as أ / ب / ج.
+  for (
+    const entry
+    of Object.values(answers)
+  ) {
+    if (
+      Number(entry?.ordinal) ===
+      Number(question.ordinal)
+    ) {
+      return entry;
+    }
+  }
+
+  // Questions 1..25 in older exams commonly use their ordinal
+  // directly as the key.
+  const ordinalKey =
+    String(question.ordinal);
+
+  if (answers[ordinalKey]) {
+    return answers[ordinalKey];
+  }
+
+  // Fallback to the visible question number / source id.
+  const candidates = [
+    question.questionNumber,
+    question.sourceQuestionId
+  ]
+    .map(
+      value =>
+        String(value || "")
+          .trim()
+    )
+    .filter(Boolean);
+
+  for (
+    const key
+    of candidates
+  ) {
+    if (answers[key]) {
+      return answers[key];
+    }
+  }
+
+  return null;
+}
+
+
+function applyDerivedAnswers(
+  questions,
+  answerDocument
+) {
+  const stats = {
+    mapFound:
+      Boolean(answerDocument),
+
+    applied: 0,
+    suggested: 0,
+    missing: 0
+  };
+
+  if (!answerDocument) {
+    return stats;
+  }
+
+  const provenance = {
+    kind:
+      answerDocument
+        ?.provenance
+        ?.kind ||
+      "ai-derived",
+
+    model:
+      answerDocument
+        ?.provenance
+        ?.model ||
+      null,
+
+    official:
+      Boolean(
+        answerDocument
+          ?.provenance
+          ?.official
+      )
+  };
+
+  for (
+    const question
+    of questions
+  ) {
+    const entry =
+      findDerivedAnswerEntry(
+        answerDocument,
+        question
+      );
+
+    if (!entry) {
+      stats.missing++;
+      continue;
+    }
+
+    const review = {
+      source:
+        provenance.kind,
+
+      model:
+        provenance.model,
+
+      official:
+        provenance.official,
+
+      confidence:
+        numberOrNull(
+          entry.confidence
+        ),
+
+      status:
+        entry.status ||
+        "needsReview",
+
+      reason:
+        entry.reason ||
+        null
+    };
+
+    // Do not overwrite an answer already embedded in the HTML.
+    const htmlAlreadyAnswered =
+      question
+        ?.answer
+        ?.mode &&
+      question
+        .answer
+        .mode !==
+      "manual";
+
+    if (
+      !htmlAlreadyAnswered &&
+      entry.status === "ready" &&
+      entry.answer
+    ) {
+      question.answer =
+        entry.answer;
+
+      question.answerReview =
+        review;
+
+      stats.applied++;
+      continue;
+    }
+
+    if (
+      entry.suggestedAnswer ||
+      (
+        entry.status !== "ready" &&
+        entry.answer
+      )
+    ) {
+      question.suggestedAnswer =
+        entry.suggestedAnswer ||
+        entry.answer;
+
+      question.answerReview =
+        review;
+
+      stats.suggested++;
+      continue;
+    }
+
+    if (htmlAlreadyAnswered) {
+      question.answerReview = {
+        ...review,
+        status:
+          "html-answer-preserved"
+      };
+    }
+  }
+
+  return stats;
+}
+
+
+// ==========================================================
 // Number helper
 // ==========================================================
 
@@ -3400,6 +4181,23 @@ app.http(
 
 
           // =================================================
+          // Optional answer enrichment
+          // =================================================
+
+          const derivedAnswerDocument =
+            loadDerivedAnswerMap(
+              sourceId
+            );
+
+
+          const derivedAnswerStats =
+            applyDerivedAnswers(
+              extracted,
+              derivedAnswerDocument
+            );
+
+
+          // =================================================
           // Source hash
           // =================================================
 
@@ -3434,48 +4232,62 @@ app.http(
 
           // =================================================
           // Storage
+          //
+          // Preview mode must not require or touch Blob Storage.
           // =================================================
 
-          const connectionString =
-            process.env
-              .AZURE_STORAGE_CONNECTION_STRING;
+          let rawContainer =
+            null;
+
+          let bankContainer =
+            null;
+
+          let assetsContainer =
+            null;
 
 
-          if (
-            !connectionString
-          ) {
-            throw new Error(
-              "AZURE_STORAGE_CONNECTION_STRING is not configured"
-            );
+          if (save) {
+            const connectionString =
+              process.env
+                .AZURE_STORAGE_CONNECTION_STRING;
+
+
+            if (
+              !connectionString
+            ) {
+              throw new Error(
+                "AZURE_STORAGE_CONNECTION_STRING is not configured"
+              );
+            }
+
+
+            const blobServiceClient =
+              BlobServiceClient
+                .fromConnectionString(
+                  connectionString
+                );
+
+
+            rawContainer =
+              blobServiceClient
+                .getContainerClient(
+                  RAW_CONTAINER
+                );
+
+
+            bankContainer =
+              blobServiceClient
+                .getContainerClient(
+                  BANK_CONTAINER
+                );
+
+
+            assetsContainer =
+              blobServiceClient
+                .getContainerClient(
+                  ASSETS_CONTAINER
+                );
           }
-
-
-          const blobServiceClient =
-            BlobServiceClient
-              .fromConnectionString(
-                connectionString
-              );
-
-
-          const rawContainer =
-            blobServiceClient
-              .getContainerClient(
-                RAW_CONTAINER
-              );
-
-
-          const bankContainer =
-            blobServiceClient
-              .getContainerClient(
-                BANK_CONTAINER
-              );
-
-
-          const assetsContainer =
-            blobServiceClient
-              .getContainerClient(
-                ASSETS_CONTAINER
-              );
 
 
           // =================================================
@@ -3791,6 +4603,16 @@ app.http(
                   answer:
                     question.answer,
 
+                  suggestedAnswer:
+                    question
+                      .suggestedAnswer ||
+                    null,
+
+                  answerReview:
+                    question
+                      .answerReview ||
+                    null,
+
                   hint:
                     question.hint,
 
@@ -3819,7 +4641,11 @@ app.http(
                       question
                         .answer
                         .mode ===
-                      "manual"
+                      "manual" ||
+                      question
+                        ?.answerReview
+                        ?.status ===
+                      "needsReview"
                   },
 
 
@@ -3855,7 +4681,12 @@ app.http(
 
 
                   reviewStatus:
-                    "pending-classification"
+                    question
+                      ?.answerReview
+                      ?.status ===
+                    "needsReview"
+                      ? "pending-answer-review"
+                      : "pending-classification"
                 };
               }
             );
@@ -3934,7 +4765,10 @@ app.http(
                 },
 
                 processedAt:
-                  now
+                  now,
+
+                answerEnrichment:
+                  derivedAnswerStats
               },
 
 
@@ -4080,6 +4914,24 @@ app.http(
                       .reviewStatus,
 
                   classificationConfidence:
+                    null,
+
+                  answerSource:
+                    question
+                      ?.answerReview
+                      ?.source ||
+                    null,
+
+                  answerConfidence:
+                    question
+                      ?.answerReview
+                      ?.confidence ??
+                    null,
+
+                  answerReviewStatus:
+                    question
+                      ?.answerReview
+                      ?.status ||
                     null
                 })
               );
@@ -4170,6 +5022,10 @@ app.http(
                         question.id
                     )
               },
+
+
+              answerEnrichment:
+                derivedAnswerStats,
 
 
               assets: {
