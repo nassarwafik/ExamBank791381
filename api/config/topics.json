@@ -1,0 +1,170 @@
+{
+    "version": "791381-topics-v1",
+    "topics": [
+      {
+        "code": "NUMBER_SYSTEMS",
+        "name": "أنظمة العد والتحويل",
+        "parent": null
+      },
+      {
+        "code": "NETWORK_BASICS",
+        "name": "أساسيات الشبكات",
+        "parent": null
+      },
+      {
+        "code": "OSI_TCPIP",
+        "name": "OSI و TCP/IP",
+        "parent": "NETWORK_BASICS"
+      },
+      {
+        "code": "NETWORK_DEVICES",
+        "name": "أجهزة الشبكة",
+        "parent": "NETWORK_BASICS"
+      },
+      {
+        "code": "NETWORK_TOPOLOGIES",
+        "name": "طوبولوجيا الشبكات",
+        "parent": "NETWORK_BASICS"
+      },
+      {
+        "code": "IP_ADDRESSING",
+        "name": "IPv4 Addressing",
+        "parent": null
+      },
+      {
+        "code": "SUBNET_CIDR",
+        "name": "Subnet Mask و CIDR",
+        "parent": "IP_ADDRESSING"
+      },
+      {
+        "code": "PRIVATE_PUBLIC_IP",
+        "name": "Private و Public IP",
+        "parent": "IP_ADDRESSING"
+      },
+      {
+        "code": "IPV6",
+        "name": "IPv6",
+        "parent": null
+      },
+      {
+        "code": "NETWORK_SERVICES",
+        "name": "خدمات وبروتوكولات الشبكة",
+        "parent": null
+      },
+      {
+        "code": "DHCP",
+        "name": "DHCP",
+        "parent": "NETWORK_SERVICES"
+      },
+      {
+        "code": "DNS",
+        "name": "DNS",
+        "parent": "NETWORK_SERVICES"
+      },
+      {
+        "code": "HTTP_HTTPS",
+        "name": "HTTP و HTTPS",
+        "parent": "NETWORK_SERVICES"
+      },
+      {
+        "code": "FTP",
+        "name": "FTP",
+        "parent": "NETWORK_SERVICES"
+      },
+      {
+        "code": "EMAIL_PROTOCOLS",
+        "name": "SMTP و POP و IMAP",
+        "parent": "NETWORK_SERVICES"
+      },
+      {
+        "code": "APIPA",
+        "name": "APIPA",
+        "parent": "NETWORK_SERVICES"
+      },
+      {
+        "code": "SWITCHING",
+        "name": "Switching",
+        "parent": null
+      },
+      {
+        "code": "VLAN",
+        "name": "VLAN",
+        "parent": "SWITCHING"
+      },
+      {
+        "code": "TRUNK_8021Q",
+        "name": "Trunk و 802.1Q",
+        "parent": "SWITCHING"
+      },
+      {
+        "code": "VTP",
+        "name": "VTP",
+        "parent": "SWITCHING"
+      },
+      {
+        "code": "PORT_SECURITY",
+        "name": "Port Security",
+        "parent": "SWITCHING"
+      },
+      {
+        "code": "INTERVLAN_ROUTING",
+        "name": "Inter-VLAN و Router-on-a-Stick",
+        "parent": "SWITCHING"
+      },
+      {
+        "code": "ROUTING",
+        "name": "Routing",
+        "parent": null
+      },
+      {
+        "code": "STATIC_ROUTING",
+        "name": "Static Routing",
+        "parent": "ROUTING"
+      },
+      {
+        "code": "OSPF",
+        "name": "OSPF",
+        "parent": "ROUTING"
+      },
+      {
+        "code": "RIP",
+        "name": "RIP",
+        "parent": "ROUTING"
+      },
+      {
+        "code": "EIGRP",
+        "name": "EIGRP",
+        "parent": "ROUTING"
+      },
+      {
+        "code": "ACL",
+        "name": "Access Control Lists",
+        "parent": null
+      },
+      {
+        "code": "NAT",
+        "name": "NAT و PAT",
+        "parent": null
+      },
+      {
+        "code": "CISCO_CLI",
+        "name": "Cisco IOS و CLI",
+        "parent": null
+      },
+      {
+        "code": "WIRELESS",
+        "name": "Wireless Networking",
+        "parent": null
+      },
+      {
+        "code": "WAN_METRO",
+        "name": "WAN و Metro",
+        "parent": null
+      },
+      {
+        "code": "OTHER_NETWORKING",
+        "name": "موضوع شبكات آخر",
+        "parent": null
+      }
+    ]
+  }
