@@ -4,9 +4,10 @@
     "private": true,
     "main": "src/functions/*.js",
     "scripts": {
-      "start": "func start"
+        "start": "func start"
     },
     "dependencies": {
-      "@azure/functions": "^4.0.0"
+        "@azure/functions": "^4.0.0",
+        "@azure/storage-blob": "^12.33.0"
     }
-  }
+}
