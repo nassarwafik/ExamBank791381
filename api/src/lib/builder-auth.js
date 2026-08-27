@@ -1,4 +1,4 @@
-const crypto = require("crypto");
+﻿const crypto = require("crypto");
 
 const TOKEN_TTL_SECONDS = 8 * 60 * 60;
 
@@ -162,8 +162,20 @@ function verifyBuilderToken(token) {
 }
 
 function getBearerToken(request) {
-  const header = request.headers.get("authorization") || "";
-  const match = header.match(/^Bearer\s+(.+)$/i);
+  const customToken = String(
+    request.headers.get("x-builder-token") || ""
+  ).trim();
+
+  if (customToken) {
+    return customToken;
+  }
+
+  const header =
+    request.headers.get("authorization") || "";
+
+  const match =
+    header.match(/^Bearer\s+(.+)$/i);
+
   return match ? match[1].trim() : "";
 }
 
@@ -229,3 +241,4 @@ module.exports = {
   requireBuilderAuth,
   validateBuilderCredentials
 };
+

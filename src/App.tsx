@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+﻿import { useMemo, useState } from "react";
 import type { FormEvent } from "react";
 import "./App.css";
 
@@ -198,6 +198,9 @@ function App() {
     headers.set("Content-Type", "application/json");
 
     if (token) {
+      // Azure Static Web Apps may handle Authorization specially.
+      // Send our builder session in a dedicated custom header as well.
+      headers.set("x-builder-token", token);
       headers.set("Authorization", `Bearer ${token}`);
     }
 
@@ -969,3 +972,4 @@ function App() {
 }
 
 export default App;
+
