@@ -1,4 +1,4 @@
-const { app } = require("@azure/functions");
+﻿const { app } = require("@azure/functions");
 const fs = require("fs");
 const path = require("path");
 const {
@@ -104,8 +104,7 @@ function buildSchema(topicCodes) {
         items: {
           type: "string",
           enum: topicCodes
-        },
-        uniqueItems: true
+        }
       },
       typeTargets: {
         type: "object",
@@ -532,3 +531,4 @@ app.http("interpretExamRequest", {
     }
   }
 });
+
