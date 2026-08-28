@@ -1,4 +1,4 @@
-﻿import { useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import type { FormEvent } from "react";
 import "./App.css";
 
@@ -559,7 +559,7 @@ function App() {
 
             <div className="model-and-generate">
               <label className="model-picker">
-                <span>Ø§Ù„Ù…ÙˆØ¯ÙŠÙ„</span>
+                <span>&#1575;&#1604;&#1605;&#1608;&#1583;&#1610;&#1604;</span>
                 <select
                   value={aiProvider}
                   onChange={event =>
@@ -573,7 +573,7 @@ function App() {
                   disabled={generateBusy}
                 >
                   <option value="glm">
-                    GLM-5.3-Flash â€” Ø§ÙØªØ±Ø§Ø¶ÙŠ
+                    GLM-5.3-Flash &mdash; &#1575;&#1601;&#1578;&#1585;&#1575;&#1590;&#1610;
                   </option>
                   <option value="qwen">
                     Qwen3.5-Flash
@@ -627,7 +627,7 @@ function App() {
                       : plan.aiProvider === "qwen"
                         ? "Qwen"
                         : "OpenAI"
-                  } Â· {plan.aiModel}
+                  } - {plan.aiModel}
                 </span>
               </div>
             )}
