@@ -176,6 +176,9 @@ function App() {
   const [generateBusy, setGenerateBusy] = useState(false);
   const [builderError, setBuilderError] = useState("");
   const [globalInstruction, setGlobalInstruction] = useState("");
+  const [questionBusy, setQuestionBusy] = useState<
+    Record<string, boolean>
+  >({});
   const [answerVisibility, setAnswerVisibility] = useState<
     Record<string, boolean>
   >({});
@@ -435,6 +438,409 @@ function App() {
       current => ({
         ...current,
         aiInstruction: instruction
+      })
+    );
+  }
+
+
+  function cloneQuestion(
+    question: ExamQuestion
+  ): ExamQuestion {
+    const copy =
+      JSON.parse(
+        JSON.stringify(question)
+      ) as ExamQuestion;
+
+    copy.history = [];
+    copy.redoStack = [];
+
+    return copy;
+  }
+
+  function getHistory(
+    question: ExamQuestion
+  ): ExamQuestion[] {
+    return question.history as ExamQuestion[];
+  }
+
+  function getRedoStack(
+    question: ExamQuestion
+  ): ExamQuestion[] {
+    return question.redoStack as ExamQuestion[];
+  }
+
+  function setQuestionLoading(
+    examQuestionId: string,
+    value: boolean
+  ) {
+    setQuestionBusy(
+      current => ({
+        ...current,
+        [examQuestionId]:
+          value
+      })
+    );
+  }
+
+  function applyQuestionReplacement(
+    currentQuestion: ExamQuestion,
+    replacement: ExamQuestion
+  ) {
+    const history = [
+      ...getHistory(
+        currentQuestion
+      ),
+      cloneQuestion(
+        currentQuestion
+      )
+    ].slice(-30);
+
+    updateQuestion(
+      currentQuestion
+        .examQuestionId,
+
+      () => ({
+        ...replacement,
+
+        examQuestionId:
+          currentQuestion
+            .examQuestionId,
+
+        marks:
+          currentQuestion
+            .marks,
+
+        locked:
+          currentQuestion
+            .locked,
+
+        teacherNote:
+          currentQuestion
+            .teacherNote,
+
+        history,
+
+        redoStack: []
+      })
+    );
+  }
+
+  async function runBankQuestionAction(
+    question: ExamQuestion,
+    options: {
+      difficulty?: number;
+      presentationType?:
+        ExamQuestion["presentationType"];
+    } = {}
+  ) {
+    if (
+      question.locked ||
+      questionBusy[
+        question.examQuestionId
+      ]
+    ) {
+      return;
+    }
+
+    setBuilderError("");
+
+    setQuestionLoading(
+      question.examQuestionId,
+      true
+    );
+
+    try {
+      const usedBankQuestionIds =
+        exam?.questions
+          .map(
+            item =>
+              item.bankQuestionId
+          )
+          .filter(Boolean) ||
+        [];
+
+      const usedFamilyKeys =
+        exam?.questions
+          .map(
+            item =>
+              item.familyKey
+          )
+          .filter(Boolean) ||
+        [];
+
+      const result =
+        await apiRequest<{
+          ok: true;
+          question: ExamQuestion;
+        }>(
+          "/api/question-bank-action",
+          {
+            method: "POST",
+
+            body:
+              JSON.stringify({
+                question,
+                ...options,
+                usedBankQuestionIds,
+                usedFamilyKeys
+              })
+          }
+        );
+
+      applyQuestionReplacement(
+        question,
+        result.question
+      );
+    }
+    catch (error) {
+      setBuilderError(
+        error instanceof Error
+          ? error.message
+          : "Question bank action failed."
+      );
+    }
+    finally {
+      setQuestionLoading(
+        question.examQuestionId,
+        false
+      );
+    }
+  }
+
+  async function runAiQuestionAction(
+    question: ExamQuestion,
+    action:
+      "modify" |
+      "external"
+  ) {
+    if (
+      question.locked ||
+      questionBusy[
+        question.examQuestionId
+      ]
+    ) {
+      return;
+    }
+
+    const instruction =
+      action === "modify"
+        ? question
+            .aiInstruction
+            .trim()
+        : "";
+
+    if (
+      action === "modify" &&
+      !instruction
+    ) {
+      return;
+    }
+
+    setBuilderError("");
+
+    setQuestionLoading(
+      question.examQuestionId,
+      true
+    );
+
+    try {
+      const result =
+        await apiRequest<{
+          ok: true;
+          question: ExamQuestion;
+          provider: string;
+          model: string;
+        }>(
+          "/api/question-ai-action",
+          {
+            method: "POST",
+
+            body:
+              JSON.stringify({
+                action,
+                question,
+                instruction,
+                provider:
+                  aiProvider
+              })
+          }
+        );
+
+      applyQuestionReplacement(
+        question,
+        result.question
+      );
+    }
+    catch (error) {
+      setBuilderError(
+        error instanceof Error
+          ? error.message
+          : "Question AI action failed."
+      );
+    }
+    finally {
+      setQuestionLoading(
+        question.examQuestionId,
+        false
+      );
+    }
+  }
+
+  function undoQuestion(
+    question: ExamQuestion
+  ) {
+    const history =
+      getHistory(
+        question
+      );
+
+    if (
+      history.length === 0
+    ) {
+      return;
+    }
+
+    const previous =
+      cloneQuestion(
+        history[
+          history.length - 1
+        ]
+      );
+
+    previous.history =
+      history.slice(
+        0,
+        -1
+      );
+
+    previous.redoStack = [
+      ...getRedoStack(
+        question
+      ),
+      cloneQuestion(
+        question
+      )
+    ].slice(-30);
+
+    updateQuestion(
+      question.examQuestionId,
+      () => previous
+    );
+  }
+
+  function redoQuestion(
+    question: ExamQuestion
+  ) {
+    const redo =
+      getRedoStack(
+        question
+      );
+
+    if (
+      redo.length === 0
+    ) {
+      return;
+    }
+
+    const next =
+      cloneQuestion(
+        redo[
+          redo.length - 1
+        ]
+      );
+
+    next.history = [
+      ...getHistory(
+        question
+      ),
+      cloneQuestion(
+        question
+      )
+    ].slice(-30);
+
+    next.redoStack =
+      redo.slice(
+        0,
+        -1
+      );
+
+    updateQuestion(
+      question.examQuestionId,
+      () => next
+    );
+  }
+
+  function restoreOriginalQuestion(
+    question: ExamQuestion
+  ) {
+    const history =
+      getHistory(
+        question
+      );
+
+    if (
+      history.length === 0
+    ) {
+      return;
+    }
+
+    const original =
+      cloneQuestion(
+        history[0]
+      );
+
+    original.history = [];
+
+    original.redoStack = [
+      ...getRedoStack(
+        question
+      ),
+      cloneQuestion(
+        question
+      )
+    ].slice(-30);
+
+    updateQuestion(
+      question.examQuestionId,
+      () => original
+    );
+  }
+
+  function deleteQuestionImage(
+    question: ExamQuestion
+  ) {
+    if (
+      question.locked
+    ) {
+      return;
+    }
+
+    const history = [
+      ...getHistory(
+        question
+      ),
+      cloneQuestion(
+        question
+      )
+    ].slice(-30);
+
+    updateQuestion(
+      question.examQuestionId,
+
+      current => ({
+        ...current,
+
+        history,
+
+        redoStack: [],
+
+        image: {
+          exists: false,
+          visible: false,
+          origin: null,
+          assets: [],
+          prompt: null
+        }
       })
     );
   }
@@ -862,7 +1268,14 @@ function App() {
                             <button onClick={showNextPhaseMessage}>
                               إعادة بناء الصورة
                             </button>
-                            <button onClick={showNextPhaseMessage}>
+                            <button onClick={() =>
+                              deleteQuestionImage(
+                                question
+                              )
+                            }
+                            disabled={
+                              question.locked
+                            }>
                               حذف الصورة
                             </button>
                           </div>
@@ -889,7 +1302,19 @@ function App() {
                     </div>
 
                     <div className="question-action-bar">
-                      <button onClick={showNextPhaseMessage}>
+                      <button onClick={() =>
+                          runBankQuestionAction(
+                            question
+                          )
+                        }
+                        disabled={
+                          question.locked ||
+                          Boolean(
+                            questionBusy[
+                              question.examQuestionId
+                            ]
+                          )
+                        }>
                         🔄 تغيير السؤال
                       </button>
 
@@ -897,7 +1322,25 @@ function App() {
                         🎚 الصعوبة
                         <select
                           value={question.difficulty}
-                          onChange={showNextPhaseMessage}
+                          onChange={event =>
+                            runBankQuestionAction(
+                              question,
+                              {
+                                difficulty:
+                                  Number(
+                                    event.target.value
+                                  )
+                              }
+                            )
+                          }
+                          disabled={
+                            question.locked ||
+                            Boolean(
+                              questionBusy[
+                                question.examQuestionId
+                              ]
+                            )
+                          }
                         >
                           <option value={1}>Easy</option>
                           <option value={2}>Easy-Medium</option>
@@ -911,7 +1354,24 @@ function App() {
                         🧩 النوع
                         <select
                           value={question.presentationType}
-                          onChange={showNextPhaseMessage}
+                          onChange={event =>
+                            runBankQuestionAction(
+                              question,
+                              {
+                                presentationType:
+                                  event.target.value as
+                                    ExamQuestion["presentationType"]
+                              }
+                            )
+                          }
+                          disabled={
+                            question.locked ||
+                            Boolean(
+                              questionBusy[
+                                question.examQuestionId
+                              ]
+                            )
+                          }
                         >
                           <option value="multipleChoice">أمريكي</option>
                           <option value="fillBlank">أكمل الناقص</option>
@@ -920,7 +1380,20 @@ function App() {
                         </select>
                       </label>
 
-                      <button onClick={showNextPhaseMessage}>
+                      <button onClick={() =>
+                          runAiQuestionAction(
+                            question,
+                            "external"
+                          )
+                        }
+                        disabled={
+                          question.locked ||
+                          Boolean(
+                            questionBusy[
+                              question.examQuestionId
+                            ]
+                          )
+                        }>
                         ✨ بناء سؤال خارجي
                       </button>
 
@@ -946,7 +1419,12 @@ function App() {
 
                       <button
                         className="secondary-primary-button"
-                        onClick={showNextPhaseMessage}
+                        onClick={() =>
+                          runAiQuestionAction(
+                            question,
+                            "modify"
+                          )
+                        }
                         disabled={!question.aiInstruction.trim()}
                       >
                         🤖 تطبيق التعديل
@@ -978,9 +1456,36 @@ function App() {
                       >
                         👁 {answerShown ? "إخفاء الإجابة" : "نموذج الإجابة"}
                       </button>
-                      <button onClick={showNextPhaseMessage}>↩ تراجع</button>
-                      <button onClick={showNextPhaseMessage}>↪ إعادة</button>
-                      <button onClick={showNextPhaseMessage}>↩ الرجوع للأصل</button>
+                      <button onClick={() =>
+                          undoQuestion(
+                            question
+                          )
+                        }
+                        disabled={
+                          getHistory(
+                            question
+                          ).length === 0
+                        }>↩ تراجع</button>
+                      <button onClick={() =>
+                          redoQuestion(
+                            question
+                          )
+                        }
+                        disabled={
+                          getRedoStack(
+                            question
+                          ).length === 0
+                        }>↪ إعادة</button>
+                      <button onClick={() =>
+                          restoreOriginalQuestion(
+                            question
+                          )
+                        }
+                        disabled={
+                          getHistory(
+                            question
+                          ).length === 0
+                        }>↩ الرجوع للأصل</button>
                     </div>
 
                     {answerShown && renderAnswer(question.answer)}
