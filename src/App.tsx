@@ -98,6 +98,7 @@ type ExamQuestion = {
   teacherNote: string;
   aiInstruction: string;
   wasModified: boolean;
+  wordBank?: string[];
   image: {
     exists: boolean;
     visible: boolean;
@@ -178,6 +179,12 @@ function App() {
   const [globalInstruction, setGlobalInstruction] = useState("");
   const [questionBusy, setQuestionBusy] = useState<
     Record<string, boolean>
+  >({});
+  const [imageBusy, setImageBusy] = useState<
+    Record<string, boolean>
+  >({});
+  const [imageNotice, setImageNotice] = useState<
+    Record<string, string>
   >({});
   const [answerVisibility, setAnswerVisibility] = useState<
     Record<string, boolean>
@@ -845,6 +852,261 @@ function App() {
     );
   }
 
+
+  function extractIpRanges(
+    text: string
+  ): Array<{
+    start: string;
+    end: string;
+  }> {
+    const ranges: Array<{
+      start: string;
+      end: string;
+    }> = [];
+
+    const regex =
+      /\\b((?:\\d{1,3}\\.){3}\\d{1,3})\\s*[–—-]\\s*((?:\\d{1,3}\\.){3}\\d{1,3})\\b/g;
+
+    let match:
+      RegExpExecArray |
+      null;
+
+    while (
+      (
+        match =
+          regex.exec(
+            text
+          )
+      ) !== null
+    ) {
+      ranges.push({
+        start:
+          match[1],
+
+        end:
+          match[2]
+      });
+    }
+
+    return ranges;
+  }
+
+  function getWordBank(
+    question:
+      ExamQuestion
+  ): string[] {
+    const values:
+      string[] = [];
+
+    if (
+      Array.isArray(
+        question.wordBank
+      )
+    ) {
+      values.push(
+        ...question.wordBank
+      );
+    }
+
+    for (
+      const field
+      of question.fields ||
+      []
+    ) {
+      for (
+        const option
+        of field.options ||
+        []
+      ) {
+        const value =
+          String(
+            option.text ||
+            option.label ||
+            option.value ||
+            ""
+          ).trim();
+
+        if (
+          value
+        ) {
+          values.push(
+            value
+          );
+        }
+      }
+    }
+
+    return Array.from(
+      new Set(
+        values
+          .map(
+            value =>
+              value.trim()
+          )
+          .filter(
+            Boolean
+          )
+      )
+    );
+  }
+
+  async function generateQuestionImage(
+    question:
+      ExamQuestion
+  ) {
+    if (
+      question.locked ||
+      imageBusy[
+        question
+          .examQuestionId
+      ]
+    ) {
+      return;
+    }
+
+    setBuilderError("");
+
+    setImageBusy(
+      current => ({
+        ...current,
+
+        [
+          question
+            .examQuestionId
+        ]:
+          true
+      })
+    );
+
+    setImageNotice(
+      current => ({
+        ...current,
+
+        [
+          question
+            .examQuestionId
+        ]:
+          "جاري إنشاء الصورة... قد يستغرق ذلك عدة ثوانٍ."
+      })
+    );
+
+    try {
+      const result =
+        await apiRequest<{
+          ok: true;
+
+          model:
+            string;
+
+          prompt:
+            string;
+
+          asset:
+            QuestionImageAsset;
+        }>(
+          "/api/generate-question-image",
+
+          {
+            method:
+              "POST",
+
+            body:
+              JSON.stringify({
+                question
+              })
+          }
+        );
+
+      const history = [
+        ...getHistory(
+          question
+        ),
+
+        cloneQuestion(
+          question
+        )
+      ].slice(-30);
+
+      updateQuestion(
+        question
+          .examQuestionId,
+
+        current => ({
+          ...current,
+
+          history,
+
+          redoStack: [],
+
+          image: {
+            exists: true,
+
+            visible: true,
+
+            origin:
+              "ai-generated",
+
+            assets: [
+              result.asset
+            ],
+
+            prompt:
+              result.prompt
+          }
+        })
+      );
+
+      setImageNotice(
+        current => ({
+          ...current,
+
+          [
+            question
+              .examQuestionId
+          ]:
+            "تم إنشاء الصورة بنجاح."
+        })
+      );
+    }
+    catch (error) {
+      const message =
+        error
+        instanceof Error
+          ? error.message
+          : "تعذر إنشاء الصورة.";
+
+      setImageNotice(
+        current => ({
+          ...current,
+
+          [
+            question
+              .examQuestionId
+          ]:
+            "تعذر إنشاء الصورة: " +
+            message
+        })
+      );
+
+      setBuilderError(
+        message
+      );
+    }
+    finally {
+      setImageBusy(
+        current => ({
+          ...current,
+
+          [
+            question
+              .examQuestionId
+          ]:
+            false
+        })
+      );
+    }
+  }
+
   function showNextPhaseMessage() {
     setBuilderError(
       "تم تجهيز الواجهة لهذه الأداة. سنربط تنفيذها بالـ Backend في المرحلة التالية دون تغيير الصفحة."
@@ -1083,6 +1345,22 @@ function App() {
             className="generated-exam"
             id="generated-exam"
           >
+            <div className="exam-preview-heading">
+              <div>
+                <span>
+                  معاينة الامتحان
+                </span>
+
+                <strong>
+                  نسخة العمل الخاصة بالمعلم
+                </strong>
+              </div>
+
+              <small>
+                عدّل الأسئلة من الأدوات أسفل كل سؤال
+              </small>
+            </div>
+
             <div className="exam-toolbar-card">
               <div className="section-title-row">
                 <div>
@@ -1160,7 +1438,7 @@ function App() {
 
                 return (
                   <article
-                    className={`question-card ${
+                    className={`question-card difficulty-${question.difficulty} ${
                       question.locked ? "question-locked" : ""
                     }`}
                     key={question.examQuestionId}
@@ -1214,9 +1492,124 @@ function App() {
                       </span>
                     </div>
 
-                    <div className="question-text">
-                      {question.text}
+                    <div className="question-text-panel">
+                      <div className="question-text">
+                        {question.text}
+                      </div>
                     </div>
+
+                    {extractIpRanges(
+                      question.text
+                    ).length >= 2 && (
+                      <div className="structured-data-block">
+                        <div className="structured-data-title">
+                          المعطيات مرتبة
+                        </div>
+
+                        <div className="exam-table-wrap">
+                          <table className="exam-data-table">
+                            <thead>
+                              <tr>
+                                <th>
+                                  الخيار
+                                </th>
+
+                                <th>
+                                  بداية النطاق
+                                </th>
+
+                                <th>
+                                  نهاية النطاق
+                                </th>
+
+                                <th>
+                                  إجابة الطالب
+                                </th>
+                              </tr>
+                            </thead>
+
+                            <tbody>
+                              {extractIpRanges(
+                                question.text
+                              ).map(
+                                (
+                                  row,
+                                  rowIndex
+                                ) => (
+                                  <tr
+                                    key={
+                                      question.examQuestionId +
+                                      "-range-" +
+                                      rowIndex
+                                    }
+                                  >
+                                    <td className="choice-letter">
+                                      {
+                                        [
+                                          "أ",
+                                          "ب",
+                                          "ج",
+                                          "د",
+                                          "هـ",
+                                          "و"
+                                        ][
+                                          rowIndex
+                                        ] ||
+                                        rowIndex +
+                                          1
+                                      }
+                                    </td>
+
+                                    <td dir="ltr">
+                                      {row.start}
+                                    </td>
+
+                                    <td dir="ltr">
+                                      {row.end}
+                                    </td>
+
+                                    <td className="student-answer-cell">
+                                      <span className="answer-square" />
+                                    </td>
+                                  </tr>
+                                )
+                              )}
+                            </tbody>
+                          </table>
+                        </div>
+                      </div>
+                    )}
+
+                    {getWordBank(
+                      question
+                    ).length > 0 && (
+                      <div className="word-bank-box">
+                        <div className="word-bank-title">
+                          مخزن الكلمات
+                        </div>
+
+                        <div className="word-bank-items">
+                          {getWordBank(
+                            question
+                          ).map(
+                            (
+                              word,
+                              wordIndex
+                            ) => (
+                              <span
+                                key={
+                                  question.examQuestionId +
+                                  "-word-" +
+                                  wordIndex
+                                }
+                              >
+                                {word}
+                              </span>
+                            )
+                          )}
+                        </div>
+                      </div>
+                    )}
 
                     {question.options.length > 0 && (
                       <ol className="question-options">
@@ -1265,8 +1658,33 @@ function App() {
                             <button onClick={() => toggleImage(question)}>
                               إخفاء الصورة
                             </button>
-                            <button onClick={showNextPhaseMessage}>
-                              إعادة بناء الصورة
+                            <button
+                              className={
+                                imageBusy[
+                                  question.examQuestionId
+                                ]
+                                  ? "image-generate-button is-loading"
+                                  : "image-generate-button"
+                              }
+                              onClick={() =>
+                                generateQuestionImage(
+                                  question
+                                )
+                              }
+                              disabled={
+                                question.locked ||
+                                Boolean(
+                                  imageBusy[
+                                    question.examQuestionId
+                                  ]
+                                )
+                              }
+                            >
+                              {imageBusy[
+                                question.examQuestionId
+                              ]
+                                ? "جاري إنشاء الصورة..."
+                                : "إعادة بناء الصورة"}
                             </button>
                             <button onClick={() =>
                               deleteQuestionImage(
@@ -1287,14 +1705,67 @@ function App() {
                           <p>
                             يمكن للذكاء الاصطناعي إنشاء صورة توضيحية ملائمة لهذا السؤال.
                           </p>
+
+                          {imageNotice[
+                            question.examQuestionId
+                          ] && (
+                            <div
+                              className={
+                                imageBusy[
+                                  question.examQuestionId
+                                ]
+                                  ? "image-status-line is-working"
+                                  : "image-status-line"
+                              }
+                            >
+                              {imageBusy[
+                                question.examQuestionId
+                              ] && (
+                                <span className="mini-spinner" />
+                              )}
+
+                              <span>
+                                {
+                                  imageNotice[
+                                    question.examQuestionId
+                                  ]
+                                }
+                              </span>
+                            </div>
+                          )}
                           <div className="image-controls">
                             {question.image.exists && (
                               <button onClick={() => toggleImage(question)}>
                                 إظهار الصورة
                               </button>
                             )}
-                            <button onClick={showNextPhaseMessage}>
-                              إنشاء صورة بالذكاء الاصطناعي
+                            <button
+                              className={
+                                imageBusy[
+                                  question.examQuestionId
+                                ]
+                                  ? "image-generate-button is-loading"
+                                  : "image-generate-button"
+                              }
+                              onClick={() =>
+                                generateQuestionImage(
+                                  question
+                                )
+                              }
+                              disabled={
+                                question.locked ||
+                                Boolean(
+                                  imageBusy[
+                                    question.examQuestionId
+                                  ]
+                                )
+                              }
+                            >
+                              {imageBusy[
+                                question.examQuestionId
+                              ]
+                                ? "جاري إنشاء الصورة..."
+                                : "إنشاء صورة بالذكاء الاصطناعي"}
                             </button>
                           </div>
                         </div>
@@ -1397,8 +1868,26 @@ function App() {
                         ✨ بناء سؤال خارجي
                       </button>
 
-                      <button onClick={showNextPhaseMessage}>
-                        🖼 إنشاء / تغيير صورة
+                      <button
+                        onClick={() =>
+                          generateQuestionImage(
+                            question
+                          )
+                        }
+                        disabled={
+                          question.locked ||
+                          Boolean(
+                            imageBusy[
+                              question.examQuestionId
+                            ]
+                          )
+                        }
+                      >
+                        {imageBusy[
+                          question.examQuestionId
+                        ]
+                          ? "⏳ جاري إنشاء الصورة..."
+                          : "🖼 إنشاء / تغيير صورة"}
                       </button>
                     </div>
 
@@ -1425,7 +1914,15 @@ function App() {
                             "modify"
                           )
                         }
-                        disabled={!question.aiInstruction.trim()}
+                        disabled={
+                          !question.aiInstruction.trim() ||
+                          question.locked ||
+                          Boolean(
+                            questionBusy[
+                              question.examQuestionId
+                            ]
+                          )
+                        }
                       >
                         🤖 تطبيق التعديل
                       </button>

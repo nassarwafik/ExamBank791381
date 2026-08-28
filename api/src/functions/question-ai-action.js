@@ -171,6 +171,16 @@ function buildSchema() {
         items: {
           type: "string"
         }
+      },
+
+      wordBank: {
+        type: "array",
+
+        maxItems: 16,
+
+        items: {
+          type: "string"
+        }
       }
     },
 
@@ -181,7 +191,8 @@ function buildSchema() {
       "fields",
       "answerText",
       "correctOptionIndex",
-      "fieldAnswers"
+      "fieldAnswers",
+      "wordBank"
     ]
   };
 }
@@ -314,7 +325,7 @@ function buildPrompt(
 
     "For multiple choice provide 4 plausible options and a zero-based correctOptionIndex.",
 
-    "For fillBlank/wordBank provide fields and fieldAnswers.",
+    "For fillBlank and wordBank provide fields and fieldAnswers. Also provide a wordBank containing every correct field answer plus several plausible distractor words. Keep the word bank shuffled and normally between 4 and 10 items.",
 
     "For open questions provide answerText.",
 
@@ -368,6 +379,39 @@ function convertResult(
         )
       : [];
 
+  const wordBankValues =
+    Array.from(
+      new Set(
+        [
+          ...(
+            Array.isArray(
+              result.fieldAnswers
+            )
+              ? result.fieldAnswers
+              : []
+          ),
+
+          ...(
+            Array.isArray(
+              result.wordBank
+            )
+              ? result.wordBank
+              : []
+          )
+        ]
+          .map(
+            value =>
+              String(
+                value ||
+                ""
+              ).trim()
+          )
+          .filter(
+            Boolean
+          )
+      )
+    );
+
   const fields =
     presentationType ===
       "fillBlank" ||
@@ -407,7 +451,26 @@ function convertResult(
                 ? "select"
                 : "text",
 
-            options: []
+            options:
+              wordBankValues.map(
+                (
+                  word,
+                  optionIndex
+                ) => ({
+                  value:
+                    String(
+                      optionIndex +
+                      1
+                    ),
+
+                  text:
+                    word,
+
+                  order:
+                    optionIndex +
+                    1
+                })
+              )
           })
         )
       : [];
@@ -553,6 +616,16 @@ function convertResult(
     aiInstruction: "",
 
     wasModified: true,
+
+    wordBank:
+      (
+        presentationType ===
+          "fillBlank" ||
+        presentationType ===
+          "wordBank"
+      )
+        ? wordBankValues
+        : [],
 
     image:
       action ===

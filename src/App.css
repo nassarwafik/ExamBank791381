@@ -1,4 +1,4 @@
-﻿#root {
+#root {
   min-height: 100vh;
 }
 
@@ -989,5 +989,939 @@ button {
 
   .generate-button {
     width: 100%;
+  }
+}
+
+
+/* ===== Exam UI Phase 3 ===== */
+
+/*
+  IMPORTANT:
+  These styles apply only to the GENERATED EXAM.
+  The prompt area at the top remains unchanged.
+*/
+
+.generated-exam {
+  margin-top: 34px;
+  padding: 22px;
+  border: 1px solid #dbe4f0;
+  border-radius: 30px;
+
+  background:
+    linear-gradient(
+      180deg,
+      #f8fbff 0%,
+      #f3f6fb 100%
+    );
+
+  box-shadow:
+    inset 0 1px 0
+    rgba(
+      255,
+      255,
+      255,
+      0.9
+    );
+}
+
+/* =========================
+   Exam Preview Heading
+   ========================= */
+
+.exam-preview-heading {
+  display: flex;
+  align-items: center;
+  justify-content:
+    space-between;
+
+  gap: 20px;
+
+  margin:
+    2px
+    4px
+    18px;
+
+  padding:
+    0
+    4px;
+}
+
+.exam-preview-heading > div {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+}
+
+.exam-preview-heading span {
+  color: #2563eb;
+  font-size: 13px;
+  font-weight: 900;
+}
+
+.exam-preview-heading strong {
+  color: #0f172a;
+  font-size: 20px;
+}
+
+.exam-preview-heading small {
+  color: #64748b;
+  font-size: 12px;
+}
+
+/* =========================
+   Exam Header
+   ========================= */
+
+.generated-exam
+.exam-toolbar-card {
+  margin-top: 0;
+
+  border-color:
+    #d9e3ef;
+
+  background:
+    linear-gradient(
+      135deg,
+      #ffffff 0%,
+      #fbfdff 100%
+    );
+
+  box-shadow:
+    0
+    18px
+    45px
+    rgba(
+      15,
+      23,
+      42,
+      0.07
+    );
+}
+
+/* =========================
+   Questions
+   ========================= */
+
+.generated-exam
+.questions-list {
+  gap: 26px;
+}
+
+.generated-exam
+.question-card {
+  position: relative;
+  overflow: hidden;
+
+  border:
+    1px
+    solid
+    #dbe4ef;
+
+  border-radius:
+    24px;
+
+  background:
+    #ffffff;
+
+  box-shadow:
+    0
+    12px
+    34px
+    rgba(
+      15,
+      23,
+      42,
+      0.055
+    );
+}
+
+.generated-exam
+.question-card::before {
+  content: "";
+
+  position: absolute;
+
+  top: 0;
+  right: 0;
+  bottom: 0;
+
+  width: 5px;
+
+  background:
+    #94a3b8;
+}
+
+/* Difficulty colors */
+
+.generated-exam
+.question-card
+.difficulty-1 {
+  border-color:
+    #dcfce7;
+}
+
+.generated-exam
+.question-card.difficulty-1::before {
+  background:
+    #22c55e;
+}
+
+.generated-exam
+.question-card.difficulty-2::before {
+  background:
+    #84cc16;
+}
+
+.generated-exam
+.question-card.difficulty-3::before {
+  background:
+    #f59e0b;
+}
+
+.generated-exam
+.question-card.difficulty-4::before {
+  background:
+    #f97316;
+}
+
+.generated-exam
+.question-card.difficulty-5::before {
+  background:
+    #ef4444;
+}
+
+/* Question number */
+
+.generated-exam
+.question-number {
+  display: inline-flex;
+  align-items: center;
+
+  min-height:
+    42px;
+
+  padding:
+    0
+    16px;
+
+  border:
+    1px
+    solid
+    #dbeafe;
+
+  border-radius:
+    999px;
+
+  background:
+    #eff6ff;
+
+  color:
+    #1e40af;
+
+  font-size:
+    18px;
+
+  font-weight:
+    900;
+}
+
+/* Metadata */
+
+.generated-exam
+.question-meta {
+  padding-bottom:
+    14px;
+
+  border-bottom:
+    1px
+    solid
+    #edf2f7;
+}
+
+.generated-exam
+.question-meta span {
+  border:
+    1px
+    solid
+    #e2e8f0;
+
+  background:
+    #f8fafc;
+}
+
+/* =========================
+   Question Text
+   ========================= */
+
+.question-text-panel {
+  margin-top:
+    18px;
+
+  padding:
+    18px
+    20px;
+
+  border:
+    1px
+    solid
+    #e6edf5;
+
+  border-radius:
+    16px;
+
+  background:
+    #fcfdff;
+}
+
+.question-text-panel
+.question-text {
+  margin-top:
+    0;
+
+  font-size:
+    18px;
+
+  font-weight:
+    650;
+
+  line-height:
+    2.05;
+}
+
+/* =========================
+   Structured Data Table
+   ========================= */
+
+.structured-data-block {
+  margin-top:
+    18px;
+
+  border:
+    1px
+    solid
+    #dbe4ef;
+
+  border-radius:
+    16px;
+
+  overflow:
+    hidden;
+
+  background:
+    white;
+}
+
+.structured-data-title {
+  padding:
+    11px
+    14px;
+
+  border-bottom:
+    1px
+    solid
+    #dbe4ef;
+
+  background:
+    #f8fafc;
+
+  color:
+    #334155;
+
+  font-size:
+    13px;
+
+  font-weight:
+    900;
+}
+
+.exam-table-wrap {
+  width:
+    100%;
+
+  overflow-x:
+    auto;
+}
+
+.exam-data-table {
+  width:
+    100%;
+
+  min-width:
+    640px;
+
+  border-collapse:
+    collapse;
+}
+
+.exam-data-table th,
+.exam-data-table td {
+  padding:
+    12px
+    14px;
+
+  border-left:
+    1px
+    solid
+    #e2e8f0;
+
+  border-bottom:
+    1px
+    solid
+    #e2e8f0;
+
+  text-align:
+    center;
+
+  vertical-align:
+    middle;
+}
+
+.exam-data-table
+th:last-child,
+.exam-data-table
+td:last-child {
+  border-left:
+    0;
+}
+
+.exam-data-table th {
+  background:
+    #f1f5f9;
+
+  color:
+    #334155;
+
+  font-size:
+    12px;
+
+  font-weight:
+    900;
+}
+
+.exam-data-table td {
+  color:
+    #0f172a;
+
+  font-size:
+    14px;
+}
+
+.exam-data-table
+tbody
+tr:last-child
+td {
+  border-bottom:
+    0;
+}
+
+.choice-letter {
+  width:
+    70px;
+
+  font-weight:
+    900;
+
+  color:
+    #1d4ed8 !important;
+}
+
+.student-answer-cell {
+  width:
+    120px;
+}
+
+.answer-square {
+  display:
+    inline-block;
+
+  width:
+    28px;
+
+  height:
+    28px;
+
+  border:
+    2px
+    solid
+    #94a3b8;
+
+  border-radius:
+    7px;
+
+  background:
+    white;
+}
+
+/* =========================
+   Word Bank
+   ========================= */
+
+.word-bank-box {
+  margin-top:
+    18px;
+
+  padding:
+    15px
+    16px;
+
+  border:
+    1px
+    solid
+    #bae6fd;
+
+  border-radius:
+    16px;
+
+  background:
+    #f0f9ff;
+}
+
+.word-bank-title {
+  margin-bottom:
+    10px;
+
+  color:
+    #075985;
+
+  font-size:
+    13px;
+
+  font-weight:
+    900;
+}
+
+.word-bank-items {
+  display:
+    flex;
+
+  flex-wrap:
+    wrap;
+
+  gap:
+    8px;
+}
+
+.word-bank-items span {
+  display:
+    inline-flex;
+
+  align-items:
+    center;
+
+  min-height:
+    34px;
+
+  padding:
+    5px
+    12px;
+
+  border:
+    1px
+    solid
+    #bae6fd;
+
+  border-radius:
+    999px;
+
+  background:
+    white;
+
+  color:
+    #0c4a6e;
+
+  font-weight:
+    800;
+
+  font-size:
+    13px;
+}
+
+/* =========================
+   Multiple Choice
+   ========================= */
+
+.generated-exam
+.question-options {
+  display:
+    grid;
+
+  gap:
+    8px;
+
+  margin-top:
+    16px;
+
+  padding-right:
+    0;
+
+  list-style-position:
+    inside;
+}
+
+.generated-exam
+.question-options li {
+  padding:
+    10px
+    13px;
+
+  border:
+    1px
+    solid
+    #e2e8f0;
+
+  border-radius:
+    12px;
+
+  background:
+    #ffffff;
+
+  line-height:
+    1.8;
+}
+
+/* =========================
+   Fill Blank
+   ========================= */
+
+.generated-exam
+.field-preview {
+  min-height:
+    48px;
+
+  padding:
+    8px
+    12px;
+
+  border:
+    1px
+    solid
+    #e2e8f0;
+
+  border-radius:
+    12px;
+
+  background:
+    #fff;
+}
+
+.generated-exam
+.blank-line {
+  height:
+    30px;
+
+  border-bottom:
+    2px
+    dotted
+    #94a3b8;
+}
+
+/* =========================
+   Images
+   ========================= */
+
+.generated-exam
+.question-image-slot {
+  margin-top:
+    18px;
+
+  border-color:
+    #dbe4ef;
+
+  background:
+    #fbfdff;
+}
+
+.generated-exam
+.hidden-image-placeholder {
+  min-height:
+    92px;
+
+  padding:
+    16px
+    20px;
+}
+
+.generated-exam
+.hidden-image-placeholder
+> span {
+  font-size:
+    24px;
+}
+
+.generated-exam
+.hidden-image-placeholder p {
+  margin-top:
+    4px;
+}
+
+/* Image Status */
+
+.image-status-line {
+  display:
+    inline-flex;
+
+  align-items:
+    center;
+
+  gap:
+    8px;
+
+  margin-top:
+    9px;
+
+  padding:
+    7px
+    10px;
+
+  border-radius:
+    999px;
+
+  background:
+    #f1f5f9;
+
+  color:
+    #475569;
+
+  font-size:
+    12px;
+
+  font-weight:
+    800;
+}
+
+.image-status-line.is-working {
+  background:
+    #eff6ff;
+
+  color:
+    #1d4ed8;
+}
+
+/* Spinner */
+
+.mini-spinner,
+.image-generate-button.is-loading::before {
+  width:
+    14px;
+
+  height:
+    14px;
+
+  border:
+    2px
+    solid
+    currentColor;
+
+  border-left-color:
+    transparent;
+
+  border-radius:
+    999px;
+
+  animation:
+    exam-spin
+    0.8s
+    linear
+    infinite;
+}
+
+.mini-spinner {
+  display:
+    inline-block;
+
+  flex:
+    0 0 auto;
+}
+
+.image-generate-button.is-loading {
+  display:
+    inline-flex;
+
+  align-items:
+    center;
+
+  gap:
+    8px;
+}
+
+.image-generate-button.is-loading::before {
+  content: "";
+
+  display:
+    inline-block;
+}
+
+@keyframes exam-spin {
+  to {
+    transform:
+      rotate(360deg);
+  }
+}
+
+/* =========================
+   Teacher Controls
+   ========================= */
+
+.generated-exam
+.question-action-bar {
+  margin-top:
+    20px;
+
+  padding:
+    12px;
+
+  border:
+    1px
+    solid
+    #e2e8f0;
+
+  border-radius:
+    16px;
+
+  background:
+    #f8fafc;
+}
+
+.generated-exam
+.per-question-ai {
+  background:
+    linear-gradient(
+      135deg,
+      #f8fbff,
+      #f5f9ff
+    );
+}
+
+.generated-exam
+.teacher-note-panel {
+  background:
+    #fffdf7;
+}
+
+.generated-exam
+.question-footer-actions {
+  margin-top:
+    14px;
+}
+
+.generated-exam
+.bottom-actions-card {
+  border-color:
+    #d9e3ef;
+
+  box-shadow:
+    0
+    16px
+    38px
+    rgba(
+      15,
+      23,
+      42,
+      0.06
+    );
+}
+
+/* =========================
+   Mobile
+   ========================= */
+
+@media (
+  max-width:
+    760px
+) {
+  .generated-exam {
+    padding:
+      10px;
+
+    border-radius:
+      20px;
+  }
+
+  .exam-preview-heading {
+    align-items:
+      flex-start;
+
+    flex-direction:
+      column;
+
+    gap:
+      5px;
+
+    margin:
+      4px
+      4px
+      14px;
+  }
+
+  .exam-preview-heading
+  > div {
+    align-items:
+      flex-start;
+
+    flex-direction:
+      column;
+
+    gap:
+      3px;
+  }
+
+  .question-text-panel {
+    padding:
+      14px;
+  }
+}
+
+/* =========================
+   Printing
+   ========================= */
+
+@media print {
+  .top-bar,
+  .prompt-card,
+  .plan-card,
+  .builder-error,
+  .global-ai-box,
+  .question-action-bar,
+  .per-question-ai,
+  .teacher-note-panel,
+  .question-footer-actions,
+  .image-controls,
+  .bottom-actions-card,
+  .question-meta,
+  .exam-id,
+  .exam-preview-heading small {
+    display:
+      none !important;
+  }
+
+  .builder-page,
+  .builder-content,
+  .generated-exam {
+    width:
+      100%;
+
+    margin:
+      0;
+
+    padding:
+      0;
+
+    background:
+      white;
+
+    box-shadow:
+      none;
+
+    border:
+      0;
+  }
+
+  .exam-toolbar-card,
+  .question-card {
+    box-shadow:
+      none !important;
+
+    break-inside:
+      avoid;
   }
 }
