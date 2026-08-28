@@ -5,8 +5,11 @@ import {
   useState
 } from "react";
 
+import AssignmentsPanel from "./AssignmentsPanel";
+
 type TeacherPlatformProps = {
   token: string;
+  currentExam: unknown | null;
 };
 
 type Classroom = {
@@ -35,7 +38,8 @@ type ApiError = {
 };
 
 function TeacherPlatform({
-  token
+  token,
+  currentExam
 }: TeacherPlatformProps) {
   const [
     classes,
@@ -1259,6 +1263,12 @@ function TeacherPlatform({
             )}
           </section>
         </div>
+
+        <AssignmentsPanel
+          token={token}
+          classes={classes}
+          currentExam={currentExam}
+        />
       </div>
     </section>
   );

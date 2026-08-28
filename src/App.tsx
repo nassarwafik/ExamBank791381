@@ -6,6 +6,7 @@ import "./App.css";
 import "./platform.css";
 // FINAL_BUILDER_PHASE_6
 // EXAMBANK_2_PHASE_A
+// EXAMBANK_2_PHASE_B
 
 type DifficultyMap = Record<"1" | "2" | "3" | "4" | "5", number>;
 
@@ -4425,6 +4426,7 @@ function App() {
         "platform" && (
         <TeacherPlatform
           token={token}
+          currentExam={exam}
         />
       )}
 
