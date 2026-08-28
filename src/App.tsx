@@ -7,6 +7,7 @@ import "./platform.css";
 // FINAL_BUILDER_PHASE_6
 // EXAMBANK_2_PHASE_A
 // EXAMBANK_2_PHASE_B
+// EXAMBANK_2_PHASE_C
 
 type DifficultyMap = Record<"1" | "2" | "3" | "4" | "5", number>;
 
