@@ -1,0 +1,624 @@
+
+/* ============================================================
+   ExamBank 2.0 - Phase A
+   Student accounts + classes foundation
+   ============================================================ */
+
+.teacher-mode-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.teacher-mode-button {
+  border: 1px solid rgba(255,255,255,0.22);
+  background: rgba(255,255,255,0.08);
+  color: #fff;
+  border-radius: 10px;
+  padding: 9px 12px;
+  cursor: pointer;
+  font-weight: 800;
+}
+
+.teacher-mode-button.active {
+  background: #fff;
+  color: #0f172a;
+}
+
+.teacher-platform {
+  min-height: calc(100vh - 88px);
+  background:
+    linear-gradient(
+      180deg,
+      #f8fbff 0%,
+      #f8fafc 100%
+    );
+  padding: 26px 20px 60px;
+}
+
+.teacher-platform-inner,
+.student-shell {
+  width: min(1180px, 100%);
+  margin: 0 auto;
+}
+
+.platform-hero,
+.student-welcome-card {
+  border-radius: 22px;
+  padding: 24px;
+  background:
+    linear-gradient(
+      135deg,
+      #0f172a,
+      #1d4ed8
+    );
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  box-shadow:
+    0 18px 45px
+    rgba(15, 23, 42, 0.14);
+}
+
+.platform-hero h2,
+.student-welcome-card h2 {
+  margin: 5px 0 6px;
+}
+
+.platform-hero p,
+.student-welcome-card p {
+  margin: 0;
+  color: #dbeafe;
+  line-height: 1.7;
+}
+
+.platform-eyebrow {
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  font-size: 11px;
+  font-weight: 900;
+  opacity: 0.76;
+}
+
+.platform-hero-stat {
+  min-width: 118px;
+  padding: 15px 18px;
+  border-radius: 17px;
+  background: rgba(255,255,255,0.12);
+  text-align: center;
+}
+
+.platform-hero-stat strong {
+  display: block;
+  font-size: 30px;
+}
+
+.platform-hero-stat span {
+  font-size: 12px;
+}
+
+.platform-grid {
+  display: grid;
+  grid-template-columns:
+    minmax(300px, 0.8fr)
+    minmax(480px, 1.4fr);
+  gap: 18px;
+  margin-top: 18px;
+}
+
+.platform-card,
+.student-panel {
+  background: white;
+  border: 1px solid #e2e8f0;
+  border-radius: 20px;
+  padding: 20px;
+  box-shadow:
+    0 10px 30px
+    rgba(15, 23, 42, 0.05);
+}
+
+.platform-card-heading,
+.student-panel-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 15px;
+}
+
+.platform-card-heading h3,
+.student-panel-heading h3 {
+  margin: 3px 0 0;
+  color: #0f172a;
+}
+
+.platform-card-heading button {
+  border: 1px solid #cbd5e1;
+  background: #fff;
+  border-radius: 9px;
+  padding: 7px 10px;
+  cursor: pointer;
+}
+
+.platform-form-grid,
+.student-create-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 9px;
+  padding: 14px;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 14px;
+}
+
+.platform-form-grid label,
+.student-create-grid label {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  color: #475569;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.platform-form-grid input,
+.student-create-grid input {
+  border: 1px solid #cbd5e1;
+  border-radius: 10px;
+  padding: 10px 11px;
+  font: inherit;
+  background: white;
+}
+
+.platform-primary {
+  border: 0;
+  border-radius: 11px;
+  padding: 11px 14px;
+  background: #2563eb;
+  color: white;
+  font-weight: 900;
+  cursor: pointer;
+}
+
+.platform-primary:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.class-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 13px;
+}
+
+.class-row {
+  border: 1px solid #e2e8f0;
+  border-radius: 13px;
+  overflow: hidden;
+  display: flex;
+  background: #fff;
+}
+
+.class-row.selected {
+  border-color: #2563eb;
+  box-shadow:
+    0 0 0 2px
+    rgba(37, 99, 235, 0.08);
+}
+
+.class-row.archived {
+  opacity: 0.62;
+}
+
+.class-select {
+  flex: 1;
+  border: 0;
+  background: transparent;
+  text-align: right;
+  padding: 12px;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  color: #0f172a;
+}
+
+.class-select span,
+.class-select small {
+  color: #64748b;
+}
+
+.class-archive {
+  border: 0;
+  border-right: 1px solid #e2e8f0;
+  background: #f8fafc;
+  color: #475569;
+  padding: 8px 10px;
+  cursor: pointer;
+}
+
+.selected-class-strip {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 12px;
+  margin-bottom: 10px;
+  border-radius: 11px;
+  background: #eff6ff;
+  color: #1d4ed8;
+}
+
+.student-count-badge,
+.phase-chip {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 32px;
+  height: 28px;
+  padding: 0 9px;
+  border-radius: 999px;
+  background: #eff6ff;
+  color: #1d4ed8;
+  font-size: 11px;
+  font-weight: 900;
+}
+
+.students-table-wrap {
+  margin-top: 13px;
+  overflow-x: auto;
+}
+
+.students-table {
+  width: 100%;
+  border-collapse: collapse;
+  min-width: 620px;
+}
+
+.students-table th,
+.students-table td {
+  border-bottom: 1px solid #e2e8f0;
+  padding: 11px 9px;
+  text-align: right;
+  font-size: 12px;
+}
+
+.students-table th {
+  color: #64748b;
+  background: #f8fafc;
+}
+
+.student-row-actions {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.student-row-actions button {
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  background: white;
+  padding: 6px 8px;
+  cursor: pointer;
+  font-size: 11px;
+}
+
+.status-active,
+.status-disabled {
+  display: inline-flex;
+  border-radius: 999px;
+  padding: 4px 8px;
+  font-size: 10px;
+  font-weight: 900;
+}
+
+.status-active {
+  background: #dcfce7;
+  color: #166534;
+}
+
+.status-disabled {
+  background: #fee2e2;
+  color: #991b1b;
+}
+
+.platform-empty,
+.platform-loading {
+  padding: 22px 12px;
+  text-align: center;
+  color: #64748b;
+}
+
+.platform-error,
+.platform-notice,
+.platform-warning {
+  width: min(1180px, 100%);
+  box-sizing: border-box;
+  margin: 12px auto 0;
+  padding: 11px 13px;
+  border-radius: 11px;
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.platform-error {
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+  color: #991b1b;
+}
+
+.platform-notice {
+  background: #f0fdf4;
+  border: 1px solid #bbf7d0;
+  color: #166534;
+}
+
+.platform-warning {
+  background: #fffbeb;
+  border: 1px solid #fde68a;
+  color: #92400e;
+}
+
+.credential-box {
+  margin: 14px auto 0;
+  width: min(1180px, 100%);
+  box-sizing: border-box;
+  border: 1px solid #86efac;
+  background: #f0fdf4;
+  border-radius: 17px;
+  padding: 16px;
+}
+
+.credential-box h3 {
+  margin: 4px 0 10px;
+  color: #14532d;
+}
+
+.credential-values {
+  display: grid;
+  grid-template-columns:
+    repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.credential-values > div {
+  border: 1px solid #bbf7d0;
+  border-radius: 11px;
+  padding: 10px;
+  background: white;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.credential-values span {
+  color: #64748b;
+  font-size: 10px;
+}
+
+.credential-values strong {
+  font-family:
+    ui-monospace,
+    SFMono-Regular,
+    Menlo,
+    Consolas,
+    monospace;
+  font-size: 17px;
+  direction: ltr;
+  text-align: left;
+}
+
+.credential-box p {
+  color: #166534;
+  font-size: 12px;
+}
+
+.credential-box button {
+  border: 1px solid #86efac;
+  background: white;
+  color: #166534;
+  border-radius: 9px;
+  padding: 7px 10px;
+  cursor: pointer;
+}
+
+/* Student portal */
+
+.student-portal {
+  min-height: 100vh;
+  background:
+    linear-gradient(
+      180deg,
+      #eff6ff 0,
+      #f8fafc 420px
+    );
+  color: #0f172a;
+}
+
+.student-topbar {
+  min-height: 78px;
+  padding: 14px 22px;
+  background: #0f172a;
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.student-brand {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.student-brand h1 {
+  margin: 0;
+  font-size: 20px;
+}
+
+.student-brand p {
+  margin: 3px 0 0;
+  font-size: 11px;
+  color: #cbd5e1;
+}
+
+.student-logo {
+  width: 43px;
+  height: 43px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 13px;
+  background: #2563eb;
+  color: white;
+  font-weight: 950;
+}
+
+.student-logout {
+  border: 1px solid rgba(255,255,255,0.22);
+  background: rgba(255,255,255,0.06);
+  color: white;
+  border-radius: 10px;
+  padding: 8px 11px;
+  cursor: pointer;
+}
+
+.student-shell {
+  padding: 28px 18px 60px;
+  box-sizing: border-box;
+}
+
+.student-code-chip {
+  border-radius: 999px;
+  background: rgba(255,255,255,0.14);
+  padding: 10px 13px;
+  white-space: nowrap;
+}
+
+.student-stat-grid {
+  display: grid;
+  grid-template-columns:
+    repeat(3, minmax(0, 1fr));
+  gap: 12px;
+  margin-top: 15px;
+}
+
+.student-stat-grid article {
+  border: 1px solid #dbeafe;
+  background: white;
+  border-radius: 16px;
+  padding: 17px;
+  text-align: center;
+}
+
+.student-stat-grid strong {
+  display: block;
+  font-size: 28px;
+  color: #1d4ed8;
+}
+
+.student-stat-grid span {
+  color: #64748b;
+  font-size: 12px;
+}
+
+.student-main-grid {
+  display: grid;
+  grid-template-columns:
+    minmax(0, 1.5fr)
+    minmax(260px, 0.7fr);
+  gap: 15px;
+  margin-top: 15px;
+}
+
+.student-empty-state {
+  padding: 45px 20px;
+  text-align: center;
+  border: 1px dashed #bfdbfe;
+  border-radius: 16px;
+  background: #f8fbff;
+}
+
+.student-empty-state > span {
+  display: block;
+  font-size: 38px;
+  margin-bottom: 8px;
+}
+
+.student-empty-state strong {
+  display: block;
+  color: #1e3a8a;
+}
+
+.student-empty-state p {
+  max-width: 520px;
+  margin: 7px auto 0;
+  color: #64748b;
+  line-height: 1.7;
+}
+
+.student-next-panel ul {
+  margin: 12px 0 0;
+  padding-right: 18px;
+  color: #475569;
+  line-height: 2;
+}
+
+/* Login v2 */
+
+.login-role-note {
+  display: flex;
+  justify-content: center;
+  gap: 8px;
+  margin-top: 10px;
+  color: #64748b;
+  font-size: 11px;
+}
+
+.login-role-note span {
+  border: 1px solid #e2e8f0;
+  background: #f8fafc;
+  border-radius: 999px;
+  padding: 4px 8px;
+}
+
+@media (max-width: 980px) {
+  .platform-grid,
+  .student-main-grid {
+    grid-template-columns:
+      1fr;
+  }
+}
+
+@media (max-width: 720px) {
+  .platform-hero,
+  .student-welcome-card,
+  .student-topbar {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .platform-hero-stat {
+    width: auto;
+  }
+
+  .credential-values,
+  .student-stat-grid {
+    grid-template-columns:
+      1fr;
+  }
+
+  .teacher-mode-actions {
+    width: 100%;
+  }
+
+  .teacher-mode-button,
+  .teacher-mode-actions
+  .logout-button {
+    flex: 1;
+  }
+}

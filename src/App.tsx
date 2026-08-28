@@ -1,6 +1,11 @@
 import { useEffect, useMemo, useState } from "react";
 import type { FormEvent } from "react";
+import StudentPortal from "./StudentPortal";
+import TeacherPlatform from "./TeacherPlatform";
 import "./App.css";
+import "./platform.css";
+// FINAL_BUILDER_PHASE_6
+// EXAMBANK_2_PHASE_A
 
 type DifficultyMap = Record<"1" | "2" | "3" | "4" | "5", number>;
 
@@ -237,8 +242,81 @@ function getStoredToken() {
   }
 }
 
+function getStoredRole():
+  "teacher" |
+  "student" |
+  "" {
+  try {
+    const stored =
+      sessionStorage
+        .getItem(
+          "examBankSessionRole"
+        );
+
+    if (
+      stored ===
+        "teacher" ||
+      stored ===
+        "student"
+    ) {
+      return stored;
+    }
+
+    return getStoredToken()
+      ? "teacher"
+      : "";
+  }
+  catch {
+    return "";
+  }
+}
+
+function getStoredDisplayName() {
+  try {
+    return sessionStorage
+      .getItem(
+        "examBankSessionDisplayName"
+      ) || "";
+  }
+  catch {
+    return "";
+  }
+}
+
 function App() {
   const [token, setToken] = useState(getStoredToken);
+
+  const [
+    sessionRole,
+    setSessionRole
+  ] =
+    useState<
+      "teacher" |
+      "student" |
+      ""
+    >(
+      getStoredRole
+    );
+
+  const [
+    sessionDisplayName,
+    setSessionDisplayName
+  ] =
+    useState(
+      getStoredDisplayName
+    );
+
+  const [
+    teacherView,
+    setTeacherView
+  ] =
+    useState<
+      "builder" |
+      "platform"
+    >(
+      "builder"
+    );
+
   const [userCode, setUserCode] = useState("");
   const [password, setPassword] = useState("");
   const [loginError, setLoginError] = useState("");
@@ -431,7 +509,7 @@ function App() {
     setLoginError("");
 
     try {
-      const response = await fetch("/api/builder-login", {
+      const response = await fetch("/api/platform-login", {
         method: "POST",
         headers: {
           "Content-Type": "application/json"
@@ -445,6 +523,10 @@ function App() {
       const data = (await response.json()) as {
         ok?: boolean;
         token?: string;
+        role?:
+          "teacher" |
+          "student";
+        displayName?: string;
         error?: string;
       };
 
@@ -457,6 +539,34 @@ function App() {
       sessionStorage.setItem(
         "examBankBuilderToken",
         data.token
+      );
+
+      const resolvedRole =
+        data.role ||
+        "teacher";
+
+      sessionStorage.setItem(
+        "examBankSessionRole",
+        resolvedRole
+      );
+
+      sessionStorage.setItem(
+        "examBankSessionDisplayName",
+        data.displayName ||
+        ""
+      );
+
+      setSessionRole(
+        resolvedRole
+      );
+
+      setSessionDisplayName(
+        data.displayName ||
+        ""
+      );
+
+      setTeacherView(
+        "builder"
       );
 
       setToken(data.token);
@@ -477,12 +587,17 @@ function App() {
   function handleLogout() {
     try {
       sessionStorage.removeItem("examBankBuilderToken");
+      sessionStorage.removeItem("examBankSessionRole");
+      sessionStorage.removeItem("examBankSessionDisplayName");
     }
     catch {
       // Ignore storage failures.
     }
 
     setToken("");
+    setSessionRole("");
+    setSessionDisplayName("");
+    setTeacherView("builder");
     setUserCode("");
     setPassword("");
     setExamPrompt("");
@@ -4168,8 +4283,18 @@ function App() {
           <div className="brand-mark">EB</div>
           <h1>ExamBank 791381</h1>
           <p className="subtitle">
-            نظام ذكي لبناء امتحانات شبكات الاتصال
+            منصة الامتحانات والتدريب الذكي لشبكات الاتصال
           </p>
+
+          <div className="login-role-note">
+            <span>
+              👨‍🏫 معلم
+            </span>
+
+            <span>
+              👨‍🎓 طالب
+            </span>
+          </div>
 
           <form onSubmit={handleLogin}>
             <label>
@@ -4214,10 +4339,27 @@ function App() {
           </form>
 
           <p className="login-note">
-            جلسة دخول آمنة لباني الامتحانات
+            نفس شاشة الدخول للمعلم والطالب
           </p>
         </section>
       </main>
+    );
+  }
+
+  if (
+    sessionRole ===
+    "student"
+  ) {
+    return (
+      <StudentPortal
+        token={token}
+        displayName={
+          sessionDisplayName
+        }
+        onLogout={
+          handleLogout
+        }
+      />
     );
   }
 
@@ -4231,14 +4373,63 @@ function App() {
           </p>
         </div>
 
-        <button
-          className="logout-button"
-          onClick={handleLogout}
-        >
-          تسجيل الخروج
-        </button>
+        <div className="teacher-mode-actions">
+          <button
+            className={
+              "teacher-mode-button " +
+              (
+                teacherView ===
+                "builder"
+                  ? "active"
+                  : ""
+              )
+            }
+            onClick={() =>
+              setTeacherView(
+                "builder"
+              )
+            }
+          >
+            🛠 باني الامتحان
+          </button>
+
+          <button
+            className={
+              "teacher-mode-button " +
+              (
+                teacherView ===
+                "platform"
+                  ? "active"
+                  : ""
+              )
+            }
+            onClick={() =>
+              setTeacherView(
+                "platform"
+              )
+            }
+          >
+            👥 الصفوف والطلاب
+          </button>
+
+          <button
+            className="logout-button"
+            onClick={handleLogout}
+          >
+            تسجيل الخروج
+          </button>
+        </div>
       </header>
 
+      {teacherView ===
+        "platform" && (
+        <TeacherPlatform
+          token={token}
+        />
+      )}
+
+      {teacherView ===
+        "builder" && (
       <section className="builder-content">
         <div className="builder-card prompt-card">
           <div className="builder-heading">
@@ -5819,6 +6010,7 @@ function App() {
           </section>
         )}
       </section>
+      )}
     </main>
   );
 }
