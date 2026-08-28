@@ -2418,3 +2418,426 @@ button:disabled {
       1fr;
   }
 }
+
+
+/* ===== Saved Exams + AI Export Phase 5 ===== */
+
+/* =========================
+   Saved Exams Access
+   ========================= */
+
+.saved-exams-access {
+  display:
+    flex;
+
+  align-items:
+    center;
+
+  gap:
+    14px;
+
+  margin-top:
+    14px;
+
+  padding:
+    12px
+    14px;
+
+  border:
+    1px
+    solid
+    #dbeafe;
+
+  border-radius:
+    14px;
+
+  background:
+    #f8fbff;
+}
+
+.saved-exams-access
+button {
+  flex:
+    0
+    0
+    auto;
+
+  border:
+    1px
+    solid
+    #bfdbfe;
+
+  border-radius:
+    11px;
+
+  padding:
+    10px
+    15px;
+
+  background:
+    white;
+
+  color:
+    #1d4ed8;
+
+  font-weight:
+    900;
+
+  cursor:
+    pointer;
+}
+
+.saved-exams-access
+button:hover:not(:disabled) {
+  background:
+    #eff6ff;
+}
+
+.saved-exams-access
+button:disabled {
+  opacity:
+    0.6;
+
+  cursor:
+    wait;
+}
+
+.saved-exams-access
+span {
+  color:
+    #64748b;
+
+  font-size:
+    12px;
+
+  line-height:
+    1.7;
+}
+
+/* =========================
+   Saved Exams Panel
+   ========================= */
+
+.saved-exams-panel {
+  margin-top:
+    14px;
+
+  padding:
+    22px;
+
+  border:
+    1px
+    solid
+    #dbe4ef;
+
+  border-radius:
+    20px;
+
+  background:
+    white;
+
+  box-shadow:
+    0
+    14px
+    36px
+    rgba(
+      15,
+      23,
+      42,
+      0.06
+    );
+}
+
+.saved-exams-heading {
+  display:
+    flex;
+
+  align-items:
+    center;
+
+  justify-content:
+    space-between;
+
+  gap:
+    16px;
+}
+
+.saved-exams-heading
+h3 {
+  margin:
+    4px
+    0
+    0;
+
+  color:
+    #0f172a;
+}
+
+.saved-exams-heading
+> button {
+  border:
+    1px
+    solid
+    #cbd5e1;
+
+  border-radius:
+    10px;
+
+  padding:
+    8px
+    12px;
+
+  background:
+    white;
+
+  color:
+    #334155;
+
+  font-weight:
+    800;
+
+  cursor:
+    pointer;
+}
+
+.saved-exams-list {
+  display:
+    grid;
+
+  gap:
+    10px;
+
+  margin-top:
+    18px;
+}
+
+.saved-exam-item {
+  display:
+    flex;
+
+  align-items:
+    center;
+
+  justify-content:
+    space-between;
+
+  gap:
+    18px;
+
+  padding:
+    14px
+    16px;
+
+  border:
+    1px
+    solid
+    #e2e8f0;
+
+  border-radius:
+    14px;
+
+  background:
+    #fbfdff;
+}
+
+.saved-exam-main {
+  display:
+    flex;
+
+  flex-direction:
+    column;
+
+  gap:
+    4px;
+}
+
+.saved-exam-main
+strong {
+  color:
+    #0f172a;
+
+  font-size:
+    15px;
+}
+
+.saved-exam-main
+span {
+  color:
+    #475569;
+
+  font-size:
+    12px;
+
+  font-weight:
+    700;
+}
+
+.saved-exam-main
+small {
+  color:
+    #94a3b8;
+
+  font-size:
+    11px;
+}
+
+.saved-exam-actions {
+  display:
+    flex;
+
+  gap:
+    7px;
+}
+
+.saved-exam-actions
+button {
+  border-radius:
+    9px;
+
+  padding:
+    8px
+    12px;
+
+  font-weight:
+    800;
+
+  cursor:
+    pointer;
+}
+
+.saved-open-button {
+  border:
+    1px
+    solid
+    #bfdbfe;
+
+  background:
+    #eff6ff;
+
+  color:
+    #1d4ed8;
+}
+
+.saved-delete-button {
+  border:
+    1px
+    solid
+    #fecaca;
+
+  background:
+    #fff7f7;
+
+  color:
+    #b91c1c;
+}
+
+.saved-exams-empty {
+  margin-top:
+    16px;
+
+  padding:
+    24px;
+
+  border:
+    1px
+    dashed
+    #cbd5e1;
+
+  border-radius:
+    14px;
+
+  background:
+    #f8fafc;
+
+  color:
+    #64748b;
+
+  text-align:
+    center;
+}
+
+/* =========================
+   AI Export buttons
+   ========================= */
+
+.export-ai-button {
+  border-color:
+    #7dd3fc !important;
+
+  background:
+    #f0f9ff !important;
+
+  color:
+    #0369a1 !important;
+}
+
+.export-ai-button:hover:not(:disabled) {
+  border-color:
+    #0284c7 !important;
+
+  background:
+    #e0f2fe !important;
+}
+
+.preview-download-button {
+  border:
+    1px
+    solid
+    #0284c7 !important;
+
+  background:
+    #0284c7 !important;
+
+  color:
+    white !important;
+}
+
+.preview-download-button:disabled,
+.export-ai-button:disabled {
+  opacity:
+    0.55;
+
+  cursor:
+    wait;
+}
+
+/* =========================
+   Mobile
+   ========================= */
+
+@media (
+  max-width:
+    760px
+) {
+  .saved-exams-access {
+    align-items:
+      stretch;
+
+    flex-direction:
+      column;
+  }
+
+  .saved-exams-access
+  button {
+    width:
+      100%;
+  }
+
+  .saved-exams-heading,
+  .saved-exam-item {
+    align-items:
+      stretch;
+
+    flex-direction:
+      column;
+  }
+
+  .saved-exam-actions {
+    display:
+      grid;
+
+    grid-template-columns:
+      1fr
+      1fr;
+  }
+}

@@ -139,6 +139,15 @@ type ApiError = {
   error?: string;
 };
 
+type SavedExamListItem = {
+  blobName: string;
+  examId: string;
+  title: string;
+  savedAt: string;
+  questionCount: number;
+  totalMarks: number;
+};
+
 const difficultyNames: Record<number, string> = {
   1: "Easy",
   2: "Easy-Medium",
@@ -203,6 +212,19 @@ function App() {
   const [qualityReport, setQualityReport] = useState<
     string[] | null
   >(null);
+
+  const [savedExams, setSavedExams] = useState<
+    SavedExamListItem[]
+  >([]);
+
+  const [savedExamsOpen, setSavedExamsOpen] =
+    useState(false);
+
+  const [savedExamsBusy, setSavedExamsBusy] =
+    useState(false);
+
+  const [exportBusy, setExportBusy] =
+    useState(false);
 
   const loggedIn = Boolean(token);
 
@@ -1560,24 +1582,848 @@ function App() {
     );
   }
 
-  function printCurrentExam() {
-    if (
-      previewMode ===
-      "edit"
-    ) {
-      showStudentCopy();
 
-      window.setTimeout(
-        () => {
-          window.print();
-        },
-        180
+  function safeDownloadName(
+    value: string
+  ) {
+    return String(
+      value ||
+      "exam"
+    )
+      .trim()
+      .replace(
+        /[<>:"/\\|?*\\u0000-\\u001F]/g,
+        "-"
+      )
+      .replace(
+        /\\s+/g,
+        "-"
+      )
+      .replace(
+        /-+/g,
+        "-"
+      )
+      .replace(
+        /^-|-$/g,
+        ""
+      )
+      .slice(
+        0,
+        80
+      ) || "exam";
+  }
+
+  async function blobToDataUrl(
+    blob: Blob
+  ): Promise<string> {
+    return new Promise(
+      (
+        resolve,
+        reject
+      ) => {
+        const reader =
+          new FileReader();
+
+        reader.onload =
+          () => {
+            resolve(
+              String(
+                reader.result ||
+                ""
+              )
+            );
+          };
+
+        reader.onerror =
+          () => {
+            reject(
+              new Error(
+                "تعذر تحويل الصورة."
+              )
+            );
+          };
+
+        reader.readAsDataURL(
+          blob
+        );
+      }
+    );
+  }
+
+  async function imageToPortableData(
+    url: string
+  ): Promise<string> {
+    if (
+      !url
+    ) {
+      return "";
+    }
+
+    if (
+      url.startsWith(
+        "data:"
+      )
+    ) {
+      return url;
+    }
+
+    const response =
+      await fetch(
+        url
+      );
+
+    if (
+      !response.ok
+    ) {
+      throw new Error(
+        "HTTP " +
+        response.status
+      );
+    }
+
+    return blobToDataUrl(
+      await response.blob()
+    );
+  }
+
+  function buildExportTable(
+    question:
+      ExamQuestion
+  ) {
+    const ranges =
+      extractIpRanges(
+        question.text
+      );
+
+    if (
+      ranges.length < 2
+    ) {
+      return null;
+    }
+
+    return {
+      kind:
+        "ip-range-table",
+
+      headers: [
+        "الخيار",
+        "بداية النطاق",
+        "نهاية النطاق",
+        "إجابة الطالب"
+      ],
+
+      rows:
+        ranges.map(
+          (
+            range,
+            index
+          ) => [
+            [
+              "أ",
+              "ب",
+              "ج",
+              "د",
+              "هـ",
+              "و"
+            ][index] ||
+              String(
+                index + 1
+              ),
+
+            range.start,
+
+            range.end,
+
+            ""
+          ]
+        )
+    };
+  }
+
+  async function downloadExamForAI() {
+    if (
+      !exam ||
+      exportBusy
+    ) {
+      return;
+    }
+
+    setBuilderError("");
+
+    setExportBusy(
+      true
+    );
+
+    setActionNotice(
+      "⏳ جارٍ تجهيز ملف AI وتنزيل الصور..."
+    );
+
+    try {
+      const portableQuestions =
+        [];
+
+      for (
+        let index = 0;
+        index <
+          exam.questions.length;
+        index += 1
+      ) {
+        const question =
+          exam.questions[
+            index
+          ];
+
+        const portableImages:
+          Array<{
+            id: string;
+            origin: string;
+            contentType: string;
+            dataUrl: string;
+            prompt: string | null;
+          }> = [];
+
+        for (
+          let imageIndex = 0;
+          imageIndex <
+            (
+              question.image
+                ?.assets ||
+              []
+            ).length;
+          imageIndex += 1
+        ) {
+          const asset =
+            question
+              .image
+              .assets[
+                imageIndex
+              ];
+
+          try {
+            const dataUrl =
+              await imageToPortableData(
+                asset.dataUrl
+              );
+
+            portableImages.push({
+              id:
+                asset.id ||
+                "q" +
+                String(
+                  index + 1
+                ) +
+                "-img-" +
+                String(
+                  imageIndex +
+                  1
+                ),
+
+              origin:
+                asset.origin,
+
+              contentType:
+                asset.contentType ||
+                "image/png",
+
+              dataUrl,
+
+              prompt:
+                question.image
+                  ?.prompt ||
+                null
+            });
+          }
+          catch {
+            /*
+              If embedding fails,
+              keep the original
+              reference as fallback.
+            */
+
+            portableImages.push({
+              id:
+                asset.id ||
+                "q" +
+                String(
+                  index + 1
+                ) +
+                "-img-" +
+                String(
+                  imageIndex +
+                  1
+                ),
+
+              origin:
+                asset.origin,
+
+              contentType:
+                asset.contentType ||
+                "image/png",
+
+              dataUrl:
+                asset.dataUrl,
+
+              prompt:
+                question.image
+                  ?.prompt ||
+                null
+            });
+          }
+        }
+
+        const cleanOptions =
+          (
+            question.options ||
+            []
+          ).map(
+            (
+              option,
+              optionIndex
+            ) => ({
+              number:
+                optionIndex +
+                1,
+
+              text:
+                option.text ||
+                option.label ||
+                option.value ||
+                ""
+            })
+          );
+
+        const cleanFields =
+          (
+            question.fields ||
+            []
+          ).map(
+            (
+              field,
+              fieldIndex
+            ) => ({
+              number:
+                fieldIndex +
+                1,
+
+              label:
+                field.label ||
+                "حقل " +
+                String(
+                  fieldIndex +
+                  1
+                ),
+
+              kind:
+                field.kind ||
+                "text"
+            })
+          );
+
+        portableQuestions.push({
+          number:
+            index + 1,
+
+          marks:
+            Number(
+              question.marks ||
+              0
+            ),
+
+          section:
+            question.section,
+
+          topic:
+            question.topic,
+
+          secondaryTopics:
+            question
+              .secondaryTopics ||
+            [],
+
+          difficulty:
+            question.difficulty,
+
+          difficultyLabel:
+            difficultyNames[
+              question.difficulty
+            ] ||
+            "Level " +
+            question.difficulty,
+
+          type:
+            question
+              .presentationType,
+
+          hasCLI:
+            question.hasCLI,
+
+          requiresCalculation:
+            question
+              .requiresCalculation,
+
+          text:
+            question.text,
+
+          textHtml:
+            question.textHtml ||
+            "",
+
+          options:
+            cleanOptions,
+
+          fields:
+            cleanFields,
+
+          wordBank:
+            getWordBank(
+              question
+            ),
+
+          table:
+            buildExportTable(
+              question
+            ),
+
+          images:
+            portableImages,
+
+          answer:
+            question.answer
+        });
+      }
+
+      const answerKey =
+        portableQuestions.map(
+          question => ({
+            questionNumber:
+              question.number,
+
+            marks:
+              question.marks,
+
+            answer:
+              question.answer
+          })
+        );
+
+      const exportDocument =
+        {
+          format:
+            "ExamBank-AI-Export",
+
+          version:
+            1,
+
+          exportedAt:
+            new Date()
+              .toISOString(),
+
+          source:
+            "ExamBank 791381",
+
+          purpose:
+            "Create a polished printable exam PDF with a separate teacher answer key.",
+
+          document: {
+            language:
+              "ar",
+
+            direction:
+              "rtl",
+
+            paperSize:
+              "A4",
+
+            title:
+              exam.title,
+
+            examId:
+              exam.examId,
+
+            totalMarks:
+              exam.totalMarks,
+
+            questionCount:
+              exam.questions.length
+          },
+
+          instructionsForAI: [
+            "أنشئ مستند امتحان احترافيًا وجاهزًا للطباعة بصيغة PDF وحجم A4.",
+            "لغة الامتحان العربية واتجاه الكتابة من اليمين إلى اليسار RTL.",
+            "لا تغير نص الأسئلة أو القيم أو الخيارات أو الإجابات الصحيحة.",
+            "صحح التنسيق فقط ولا تغير المحتوى العلمي.",
+            "حافظ على المصطلحات التقنية الإنجليزية وعناوين IP وCLI كما هي.",
+            "حوّل المعطيات التي تناسب الجداول إلى جداول واضحة ومنظمة.",
+            "ضع كل قيمة في خلية مستقلة واترك خانات مناسبة لإجابة الطالب.",
+            "في أسئلة مخزن الكلمات اعرض مخزن الكلمات في صندوق واضح ثم الفراغات تحته.",
+            "في الاختيار من متعدد رتّب الخيارات بوضوح وبمسافات مريحة.",
+            "استخدم الصور المرفقة مع السؤال نفسه ولا تنقل صورة إلى سؤال آخر.",
+            "لا تكشف الإجابات في نسخة الطالب.",
+            "أنشئ أولًا نسخة الطالب كاملة بدون الحلول.",
+            "بعد انتهاء نسخة الطالب أنشئ قسمًا منفصلًا بعنوان نموذج الإجابة للمعلم.",
+            "في نموذج الإجابة اذكر رقم السؤال والإجابة الصحيحة والعلامة.",
+            "اجعل التصميم أكاديميًا بسيطًا وأنيقًا ومناسبًا لمدرسة ثانوية.",
+            "لا تضف أسئلة جديدة ولا تحذف أي سؤال."
+          ],
+
+          originalRequest:
+            exam.originalRequest,
+
+          plan:
+            exam.plan,
+
+          studentExam: {
+            title:
+              exam.title,
+
+            totalMarks:
+              exam.totalMarks,
+
+            questions:
+              portableQuestions.map(
+                question => {
+                  const {
+                    answer,
+                    ...studentQuestion
+                  } =
+                    question;
+
+                  return studentQuestion;
+                }
+              )
+          },
+
+          answerKey,
+
+          fullQuestions:
+            portableQuestions
+        };
+
+      const json =
+        JSON.stringify(
+          exportDocument,
+          null,
+          2
+        );
+
+      const blob =
+        new Blob(
+          [
+            json
+          ],
+          {
+            type:
+              "application/json;charset=utf-8"
+          }
+        );
+
+      const url =
+        URL.createObjectURL(
+          blob
+        );
+
+      const anchor =
+        document.createElement(
+          "a"
+        );
+
+      const date =
+        new Date()
+          .toISOString()
+          .slice(
+            0,
+            10
+          );
+
+      anchor.href =
+        url;
+
+      anchor.download =
+        safeDownloadName(
+          exam.title
+        ) +
+        "-" +
+        date +
+        ".ai-exam.json";
+
+      document.body.appendChild(
+        anchor
+      );
+
+      anchor.click();
+
+      anchor.remove();
+
+      URL.revokeObjectURL(
+        url
+      );
+
+      setActionNotice(
+        "✓ تم تنزيل ملف ExamBank AI Export إلى الحاسوب."
+      );
+    }
+    catch (error) {
+      const message =
+        error
+        instanceof Error
+          ? error.message
+          : "تعذر تجهيز ملف AI.";
+
+      setBuilderError(
+        message
+      );
+
+      setActionNotice(
+        "⚠ تعذر تنزيل ملف AI."
+      );
+    }
+    finally {
+      setExportBusy(
+        false
+      );
+    }
+  }
+
+  async function loadSavedExams() {
+    setSavedExamsBusy(
+      true
+    );
+
+    setBuilderError("");
+
+    try {
+      const result =
+        await apiRequest<{
+          ok: true;
+
+          exams:
+            SavedExamListItem[];
+        }>(
+          "/api/saved-exams",
+          {
+            method:
+              "GET"
+          }
+        );
+
+      setSavedExams(
+        result.exams ||
+        []
+      );
+    }
+    catch (error) {
+      setBuilderError(
+        error
+        instanceof Error
+          ? error.message
+          : "تعذر قراءة الامتحانات المحفوظة."
+      );
+    }
+    finally {
+      setSavedExamsBusy(
+        false
+      );
+    }
+  }
+
+  async function toggleSavedExams() {
+    if (
+      savedExamsOpen
+    ) {
+      setSavedExamsOpen(
+        false
       );
 
       return;
     }
 
-    window.print();
+    setSavedExamsOpen(
+      true
+    );
+
+    await loadSavedExams();
+  }
+
+  async function openSavedExam(
+    item:
+      SavedExamListItem
+  ) {
+    setSavedExamsBusy(
+      true
+    );
+
+    setBuilderError("");
+
+    try {
+      const result =
+        await apiRequest<{
+          ok: true;
+
+          exam:
+            ExamDraft;
+
+          savedAt?:
+            string;
+        }>(
+          "/api/saved-exams",
+          {
+            method:
+              "POST",
+
+            body:
+              JSON.stringify({
+                action:
+                  "load",
+
+                blobName:
+                  item.blobName
+              })
+          }
+        );
+
+      const loadedExam =
+        result.exam;
+
+      setExam(
+        loadedExam
+      );
+
+      setPlan(
+        loadedExam.plan ||
+        null
+      );
+
+      setExamPrompt(
+        loadedExam
+          .originalRequest ||
+        loadedExam.plan
+          ?.originalRequest ||
+        ""
+      );
+
+      setPreviewMode(
+        "edit"
+      );
+
+      setAnswerVisibility(
+        {}
+      );
+
+      setQualityReport(
+        null
+      );
+
+      setSavedExamsOpen(
+        false
+      );
+
+      setActionNotice(
+        "✓ تم فتح الامتحان المحفوظ ويمكنك متابعة تعديله."
+      );
+
+      window.setTimeout(
+        () => {
+          document
+            .getElementById(
+              "generated-exam"
+            )
+            ?.scrollIntoView({
+              behavior:
+                "smooth",
+
+              block:
+                "start"
+            });
+        },
+        80
+      );
+    }
+    catch (error) {
+      setBuilderError(
+        error
+        instanceof Error
+          ? error.message
+          : "تعذر فتح الامتحان."
+      );
+    }
+    finally {
+      setSavedExamsBusy(
+        false
+      );
+    }
+  }
+
+  async function deleteSavedExam(
+    item:
+      SavedExamListItem
+  ) {
+    const confirmed =
+      window.confirm(
+        "هل تريد حذف الامتحان المحفوظ:\n" +
+        item.title +
+        "؟"
+      );
+
+    if (
+      !confirmed
+    ) {
+      return;
+    }
+
+    setSavedExamsBusy(
+      true
+    );
+
+    setBuilderError("");
+
+    try {
+      await apiRequest<{
+        ok: true;
+        deleted:
+          boolean;
+      }>(
+        "/api/saved-exams",
+        {
+          method:
+            "POST",
+
+          body:
+            JSON.stringify({
+              action:
+                "delete",
+
+              blobName:
+                item.blobName
+            })
+        }
+      );
+
+      setSavedExams(
+        current =>
+          current.filter(
+            saved =>
+              saved.blobName !==
+              item.blobName
+          )
+      );
+
+      setActionNotice(
+        "✓ تم حذف الامتحان المحفوظ."
+      );
+    }
+    catch (error) {
+      setBuilderError(
+        error
+        instanceof Error
+          ? error.message
+          : "تعذر حذف الامتحان."
+      );
+    }
+    finally {
+      setSavedExamsBusy(
+        false
+      );
+    }
   }
 
   function showNextPhaseMessage() {
@@ -1739,6 +2585,124 @@ function App() {
           </div>
         </div>
 
+        <div className="saved-exams-access">
+          <button
+            onClick={
+              toggleSavedExams
+            }
+            disabled={
+              savedExamsBusy
+            }
+          >
+            {savedExamsBusy
+              ? "⏳ جارٍ تحميل المحفوظة..."
+              : savedExamsOpen
+                ? "✕ إغلاق الامتحانات المحفوظة"
+                : "📚 الامتحانات المحفوظة"}
+          </button>
+
+          <span>
+            يمكنك فتح امتحان سابق ومتابعة تعديله من نفس الصفحة.
+          </span>
+        </div>
+
+        {savedExamsOpen && (
+          <section className="saved-exams-panel">
+            <div className="saved-exams-heading">
+              <div>
+                <span className="eyebrow">
+                  Azure Storage
+                </span>
+
+                <h3>
+                  الامتحانات المحفوظة
+                </h3>
+              </div>
+
+              <button
+                onClick={
+                  loadSavedExams
+                }
+                disabled={
+                  savedExamsBusy
+                }
+              >
+                ↻ تحديث
+              </button>
+            </div>
+
+            {savedExamsBusy ? (
+              <div className="saved-exams-empty">
+                ⏳ جارٍ تحميل الامتحانات...
+              </div>
+            ) : savedExams.length === 0 ? (
+              <div className="saved-exams-empty">
+                لا توجد امتحانات محفوظة حتى الآن.
+              </div>
+            ) : (
+              <div className="saved-exams-list">
+                {savedExams.map(
+                  item => (
+                    <article
+                      className="saved-exam-item"
+                      key={
+                        item.blobName
+                      }
+                    >
+                      <div className="saved-exam-main">
+                        <strong>
+                          {item.title}
+                        </strong>
+
+                        <span>
+                          {item.questionCount} سؤال
+                          {" · "}
+                          {item.totalMarks} علامة
+                        </span>
+
+                        <small>
+                          آخر حفظ:{" "}
+                          {item.savedAt
+                            ? new Date(
+                                item.savedAt
+                              ).toLocaleString(
+                                "ar"
+                              )
+                            : "غير معروف"}
+                        </small>
+                      </div>
+
+                      <div className="saved-exam-actions">
+                        <button
+                          className="saved-open-button"
+                          onClick={() =>
+                            openSavedExam(
+                              item
+                            )
+                          }
+                        >
+                          فتح وتعديل
+                        </button>
+
+                        <button
+                          className="saved-delete-button"
+                          onClick={() =>
+                            deleteSavedExam(
+                              item
+                            )
+                          }
+                        >
+                          حذف
+                        </button>
+                      </div>
+                    </article>
+                  )
+                )}
+              </div>
+            )}
+          </section>
+        )}
+
         {builderError && (
           <div className="builder-error">
             {builderError}
@@ -1848,10 +2812,17 @@ function App() {
                   </button>
 
                   <button
-                    className="preview-print-button"
-                    onClick={printCurrentExam}
+                    className="preview-download-button"
+                    onClick={
+                      downloadExamForAI
+                    }
+                    disabled={
+                      exportBusy
+                    }
                   >
-                    🖨 طباعة / PDF
+                    {exportBusy
+                      ? "⏳ جارٍ تجهيز ملف AI..."
+                      : "⬇️ تنزيل للـ AI"}
                   </button>
                 </div>
               </div>
@@ -2615,11 +3586,17 @@ function App() {
               </button>
 
               <button
+                className="export-ai-button"
                 onClick={
-                  printCurrentExam
+                  downloadExamForAI
+                }
+                disabled={
+                  exportBusy
                 }
               >
-                🖨 طباعة / PDF
+                {exportBusy
+                  ? "⏳ جارٍ تجهيز الملف..."
+                  : "⬇️ تنزيل ملف للـ AI"}
               </button>
             </div>
           </section>
