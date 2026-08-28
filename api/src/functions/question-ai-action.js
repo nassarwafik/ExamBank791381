@@ -52,7 +52,8 @@ async function createClient(
   }
 
   if (
-    provider === "qwen"
+    provider === "qwen" ||
+    provider === "qwenplus"
   ) {
     const apiKey =
       process.env
@@ -76,9 +77,17 @@ async function createClient(
         }),
 
       model:
-        process.env
-          .QWEN_MODEL ||
-        "qwen3.5-flash",
+        provider === "qwenplus"
+          ? (
+              process.env
+                .QWEN_PLUS_MODEL ||
+              "qwen3.7-plus"
+            )
+          : (
+              process.env
+                .QWEN_MODEL ||
+              "qwen3.5-flash"
+            ),
 
       mode: "qwen"
     };
@@ -742,6 +751,7 @@ app.http(
             [
               "glm",
               "qwen",
+              "qwenplus",
               "openai"
             ].includes(
               requestedProvider

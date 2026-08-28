@@ -38,7 +38,7 @@ type ExamPlan = {
     recentExamCount: number;
   };
   explanation: string;
-  aiProvider?: "glm" | "qwen" | "openai";
+  aiProvider?: "glm" | "qwen" | "qwenplus" | "openai";
   aiModel?: string;
 };
 
@@ -171,7 +171,7 @@ function App() {
   const [loginBusy, setLoginBusy] = useState(false);
 
   const [examPrompt, setExamPrompt] = useState("");
-  const [aiProvider, setAiProvider] = useState<"glm" | "qwen" | "openai">("glm");
+  const [aiProvider, setAiProvider] = useState<"glm" | "qwen" | "qwenplus" | "openai">("glm");
   const [plan, setPlan] = useState<ExamPlan | null>(null);
   const [exam, setExam] = useState<ExamDraft | null>(null);
   const [generateBusy, setGenerateBusy] = useState(false);
@@ -1706,9 +1706,7 @@ function App() {
                   onChange={event =>
                     setAiProvider(
                       event.target.value as
-                        | "glm"
-                        | "qwen"
-                        | "openai"
+                        | "glm" | "qwen" | "qwenplus" | "openai"
                     )
                   }
                   disabled={generateBusy}
@@ -1718,6 +1716,9 @@ function App() {
                   </option>
                   <option value="qwen">
                     Qwen3.5-Flash
+                  </option>
+                  <option value="qwenplus">
+                    Qwen3.7-Plus
                   </option>
                   <option value="openai">
                     OpenAI GPT-5.6 Luna
@@ -1766,8 +1767,10 @@ function App() {
                     plan.aiProvider === "glm"
                       ? "GLM"
                       : plan.aiProvider === "qwen"
-                        ? "Qwen"
-                        : "OpenAI"
+                        ? "Qwen 3.5 Flash"
+                        : plan.aiProvider === "qwenplus"
+                          ? "Qwen 3.7 Plus"
+                          : "OpenAI"
                   } - {plan.aiModel}
                 </span>
               </div>

@@ -1,4 +1,4 @@
-﻿const { app } = require("@azure/functions");
+const { app } = require("@azure/functions");
 const fs = require("fs");
 const path = require("path");
 const {
@@ -532,7 +532,7 @@ app.http("interpretExamRequest", {
           .toLowerCase();
 
       const provider =
-        ["glm", "qwen", "openai"]
+        ["glm", "qwen", "qwenplus", "openai"]
           .includes(requestedProvider)
           ? requestedProvider
           : "glm";
@@ -589,13 +589,23 @@ app.http("interpretExamRequest", {
         rawPlan =
           parseJsonObjectText(outputText);
       }
-      else if (provider === "qwen") {
+      else if (
+        provider === "qwen" ||
+        provider === "qwenplus"
+      ) {
         const qwen =
           await createQwenClient();
 
         model =
-          process.env.QWEN_MODEL ||
-          "qwen3.5-flash";
+          provider === "qwenplus"
+            ? (
+                process.env.QWEN_PLUS_MODEL ||
+                "qwen3.7-plus"
+              )
+            : (
+                process.env.QWEN_MODEL ||
+                "qwen3.5-flash"
+              );
 
         const response =
           await qwen.chat.completions.create({
