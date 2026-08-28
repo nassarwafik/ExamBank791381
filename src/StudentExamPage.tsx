@@ -2,7 +2,7 @@
 import {useEffect,useMemo,useRef,useState} from "react";
 
 type Opt={value?:string;label?:string;text?:string;order?:number;number?:number};
-type Field={id?:string;number?:number;label?:string;kind?:string};
+type Field={id?:string;number?:number;label?:string;kind?:string;options?:Opt[]};
 type ImageAsset={dataUrl?:string};
 type Question={examQuestionId?:string;id?:string;number?:number;text:string;textHtml?:string;marks:number;presentationType?:string;type?:string;options?:Opt[];fields?:Field[];wordBank?:string[];image?:{exists?:boolean;visible?:boolean;assets?:ImageAsset[]};images?:ImageAsset[]};
 type Assignment={assignmentId:string;title:string;instructions:string;openAt:string;dueAt:string;maxAttempts:number;questionCount:number;totalMarks:number;exam:{title?:string;metadata?:{school?:string;subject?:string;grade?:string;className?:string;generalInstructions?:string};questions?:Question[]}};
@@ -27,6 +27,28 @@ function answered(a:Answer|undefined){if(!a)return false;if(a.kind==="choice")re
 function tableCheckbox(q:Question){return /وضع علامة|✓|خاص بالشبكات الخاصة\?|private\?/i.test(q.text)}
 function imageList(q:Question){if(q.image?.exists&&q.image.visible&&Array.isArray(q.image.assets))return q.image.assets;return Array.isArray(q.images)?q.images:[]}
 
+/* EXAMBANK_WORD_BANK_DROPDOWN_FIX */
+function getWordBank(q:Question){
+ const values:string[]=[];
+ const add=(raw:unknown)=>{
+  const value=String(raw??"").trim();
+  if(!value||value==="— اختر —")return;
+  if(!values.includes(value))values.push(value);
+ };
+ if(Array.isArray(q.wordBank))q.wordBank.forEach(add);
+ for(const field of q.fields||[]){
+  for(const option of field.options||[]){
+   add(option.text||option.label||option.value);
+  }
+ }
+ if(!values.length&&typeOf(q)==="wordbank"){
+  for(const option of q.options||[]){
+   add(option.text||option.label||option.value);
+  }
+ }
+ return values;
+}
+
 export default function StudentExamPage({token,assignment,studentName,className,onBack,onLogout}:Props){
  const qs=assignment.exam.questions||[],[answers,setAnswers]=useState<Answers>({}),[state,setState]=useState<State|null>(null),[loading,setLoading]=useState(true),[saving,setSaving]=useState(false),[submitBusy,setSubmitBusy]=useState(false),[error,setError]=useState(""),[result,setResult]=useState<Result|null>(null),[started,setStarted]=useState(true);
  const loaded=useRef(false),timer=useRef<number|null>(null);
@@ -49,7 +71,7 @@ export default function StudentExamPage({token,assignment,studentName,className,
    {imageList(q).map((im,n)=>im.dataUrl?<img className="iex-image" src={im.dataUrl} alt={"صورة السؤال "+(i+1)} key={n}/>:null)}
    {t==="multiplechoice"&&<div className="iex-options">{(q.options||[]).map((o,n)=><label className={"iex-option "+(a?.kind==="choice"&&a.index===n?"selected":"")} key={n}><input type="radio" name={id} checked={a?.kind==="choice"&&a.index===n} onChange={()=>setChoice(id,n)}/><span className="iex-pick"/><b>{o.text||o.label||o.value||""}</b></label>)}</div>}
    {table&&<div className="iex-table-wrap"><table><thead><tr>{table.headers.map((h,n)=><th key={n}>{h}</th>)}</tr></thead><tbody>{table.rows.map((r,n)=><tr key={n}><td>{r[0]}</td><td>{tableCheckbox(q)?<input className="iex-check" type="checkbox" checked={a?.kind==="table"&&Boolean(a.values[n])} onChange={e=>setTable(id,n,e.target.checked)}/>:<input className="iex-cell" value={a?.kind==="table"?String(a.values[n]??""):""} onChange={e=>setTable(id,n,e.target.value)} placeholder="اكتب الإجابة"/>}</td></tr>)}</tbody></table></div>}
-   {!table&&seq&&<><div className="iex-bank">{(q.wordBank||[]).filter(x=>x&&x!=="— اختر —").map((w,n)=><span key={n}>{w}</span>)}</div><div className="iex-seq">{(q.fields||[]).map((f,n)=><label key={f.id||f.number||n}><span>{f.label||"الحقل "+(n+1)}</span><select value={a?.kind==="sequence"?a.values[n]||"":""} onChange={e=>setSeq(id,n,e.target.value)}><option value="">— اختر —</option>{(q.wordBank||[]).filter(x=>x&&x!=="— اختر —").map((w,k)=><option key={k}>{w}</option>)}</select></label>)}</div></>}
+   {!table&&seq&&(()=>{const bank=getWordBank(q);return <><div className="iex-bank">{bank.map((w,n)=><span key={n}>{w}</span>)}</div><div className="iex-seq">{(q.fields||[]).map((f,n)=><label key={f.id||f.number||n}><span>{f.label||"الحقل "+(n+1)}</span><select value={a?.kind==="sequence"?a.values[n]||"":""} onChange={e=>setSeq(id,n,e.target.value)}><option value="">— اختر —</option>{bank.map((w,k)=><option key={k} value={w}>{w}</option>)}</select></label>)}</div></>})()}
    {!table&&!seq&&t!=="multiplechoice"&&<textarea className="iex-open" value={a?.kind==="text"?a.value:""} onChange={e=>setAnswers(x=>({...x,[id]:{kind:"text",value:e.target.value}}))} placeholder="اكتب إجابتك هنا..."/>}
   </div></article>})}</section>
   <footer className="iex-foot"><div><strong>أجبت عن {done} من {qs.length}</strong><span>{saving?"جارٍ حفظ الإجابات...":"يتم حفظ إجاباتك تلقائيًا أثناء الحل."}</span></div><div><button onClick={onBack}>العودة بدون تسليم</button><button className="primary" onClick={submit} disabled={submitBusy||!state?.canAttempt}>{submitBusy?"⏳ جارٍ التصحيح...":"✓ تسليم وتصحيح الامتحان"}</button></div></footer>
