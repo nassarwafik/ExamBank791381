@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import type { FormEvent } from "react";
 import "./App.css";
 
@@ -110,6 +110,18 @@ type ExamQuestion = {
   redoStack: unknown[];
 };
 
+type ExamMetadata = {
+  school: string;
+  subject: string;
+  grade: string;
+  className: string;
+  teacherName: string;
+  date: string;
+  duration: string;
+  semester: string;
+  generalInstructions: string;
+};
+
 type ExamDraft = {
   schemaVersion: number;
   examId: string;
@@ -120,6 +132,7 @@ type ExamDraft = {
   status: "draft" | "final";
   createdAt: string;
   updatedAt: string;
+  metadata?: ExamMetadata;
   questions: ExamQuestion[];
   summary: {
     sections: Record<string, number>;
@@ -148,6 +161,26 @@ type SavedExamListItem = {
   totalMarks: number;
 };
 
+type SavedTemplateListItem = {
+  blobName: string;
+  templateId: string;
+  title: string;
+  savedAt: string;
+  totalMarks: number;
+  totalQuestions: number;
+};
+
+type GlobalAiOperation = {
+  examQuestionId: string;
+  action: "modify" | "replace";
+  targetTopic: string;
+  targetDifficulty: number;
+  targetType:
+    | ""
+    | ExamQuestion["presentationType"];
+  instruction: string;
+};
+
 const difficultyNames: Record<number, string> = {
   1: "Easy",
   2: "Easy-Medium",
@@ -162,6 +195,38 @@ const typeNames: Record<ExamQuestion["presentationType"], string> = {
   wordBank: "مخزن كلمات",
   open: "مفتوح"
 };
+
+const RECOVERY_KEY =
+  "ExamBank791381-Recovery-V1";
+
+function defaultExamMetadata(): ExamMetadata {
+  return {
+    school: "",
+    subject:
+      "شبكات الاتصال",
+    grade: "",
+    className: "",
+    teacherName: "",
+    date: "",
+    duration: "",
+    semester: "",
+    generalInstructions:
+      "أجب عن جميع الأسئلة، واقرأ السؤال جيدًا قبل الإجابة."
+  };
+}
+
+function hasRecoveryDraft() {
+  try {
+    return Boolean(
+      localStorage.getItem(
+        RECOVERY_KEY
+      )
+    );
+  }
+  catch {
+    return false;
+  }
+}
 
 function getStoredToken() {
   try {
@@ -226,6 +291,28 @@ function App() {
   const [exportBusy, setExportBusy] =
     useState(false);
 
+  const [templates, setTemplates] = useState<
+    SavedTemplateListItem[]
+  >([]);
+
+  const [templatesOpen, setTemplatesOpen] =
+    useState(false);
+
+  const [templatesBusy, setTemplatesBusy] =
+    useState(false);
+
+  const [globalAiBusy, setGlobalAiBusy] =
+    useState(false);
+
+  const [hasUnsavedChanges, setHasUnsavedChanges] =
+    useState(false);
+
+  const [lastCloudSaveAt, setLastCloudSaveAt] =
+    useState("");
+
+  const [recoveryAvailable, setRecoveryAvailable] =
+    useState(hasRecoveryDraft);
+
   const loggedIn = Boolean(token);
 
   const totalCurrentMarks = useMemo(() => {
@@ -238,6 +325,65 @@ function App() {
       0
     );
   }, [exam]);
+
+  // FINAL_BUILDER_PHASE_6_AUTOSAVE
+  useEffect(() => {
+    if (
+      !loggedIn ||
+      !exam ||
+      !hasUnsavedChanges
+    ) {
+      return;
+    }
+
+    const timer =
+      window.setTimeout(
+        () => {
+          try {
+            const payload = {
+              exam:
+                makeRecoveryExam(
+                  exam
+                ),
+
+              plan,
+
+              examPrompt,
+
+              savedAt:
+                new Date()
+                  .toISOString()
+            };
+
+            localStorage.setItem(
+              RECOVERY_KEY,
+              JSON.stringify(
+                payload
+              )
+            );
+
+            setRecoveryAvailable(
+              true
+            );
+          }
+          catch {
+            // Recovery is best-effort.
+          }
+        },
+        1800
+      );
+
+    return () =>
+      window.clearTimeout(
+        timer
+      );
+  }, [
+    loggedIn,
+    exam,
+    plan,
+    examPrompt,
+    hasUnsavedChanges
+  ]);
 
   async function apiRequest<T>(
     url: string,
@@ -379,7 +525,22 @@ function App() {
         })
       });
 
-      setExam(generated.exam);
+      setExam({
+        ...generated.exam,
+
+        metadata: {
+          ...defaultExamMetadata(),
+          ...(
+            generated.exam
+              .metadata ||
+            {}
+          )
+        }
+      });
+
+      setHasUnsavedChanges(
+        true
+      );
 
       window.setTimeout(() => {
         document
@@ -402,23 +563,153 @@ function App() {
     }
   }
 
+  function rebuildSummary(
+    questions:
+      ExamQuestion[]
+  ): ExamDraft["summary"] {
+    const sections:
+      Record<string, number> =
+      {};
+
+    const difficulty:
+      DifficultyMap = {
+        "1": 0,
+        "2": 0,
+        "3": 0,
+        "4": 0,
+        "5": 0
+      };
+
+    const topics:
+      Record<string, number> =
+      {};
+
+    const types:
+      Record<string, number> =
+      {};
+
+    let images = 0;
+    let cli = 0;
+    let calculations = 0;
+
+    for (
+      const question
+      of questions
+    ) {
+      sections[
+        question.section
+      ] =
+        (
+          sections[
+            question.section
+          ] ||
+          0
+        ) + 1;
+
+      const difficultyKey =
+        String(
+          question.difficulty
+        ) as
+          keyof DifficultyMap;
+
+      if (
+        difficultyKey in
+        difficulty
+      ) {
+        difficulty[
+          difficultyKey
+        ] += 1;
+      }
+
+      topics[
+        question.topic
+      ] =
+        (
+          topics[
+            question.topic
+          ] ||
+          0
+        ) + 1;
+
+      types[
+        question
+          .presentationType
+      ] =
+        (
+          types[
+            question
+              .presentationType
+          ] ||
+          0
+        ) + 1;
+
+      if (
+        question.image
+          ?.exists
+      ) {
+        images += 1;
+      }
+
+      if (
+        question.hasCLI
+      ) {
+        cli += 1;
+      }
+
+      if (
+        question
+          .requiresCalculation
+      ) {
+        calculations += 1;
+      }
+    }
+
+    return {
+      sections,
+      difficulty,
+      topics,
+      types,
+      images,
+      cli,
+      calculations
+    };
+  }
+
   function updateQuestion(
     examQuestionId: string,
     updater: (question: ExamQuestion) => ExamQuestion
   ) {
+    setHasUnsavedChanges(
+      true
+    );
+
     setExam(current => {
       if (!current) {
         return current;
       }
 
+      const questions =
+        current.questions.map(
+          question =>
+            question.examQuestionId ===
+            examQuestionId
+              ? updater(question)
+              : question
+        );
+
       return {
         ...current,
-        updatedAt: new Date().toISOString(),
-        questions: current.questions.map(question =>
-          question.examQuestionId === examQuestionId
-            ? updater(question)
-            : question
-        )
+
+        updatedAt:
+          new Date()
+            .toISOString(),
+
+        questions,
+
+        summary:
+          rebuildSummary(
+            questions
+          )
       };
     });
   }
@@ -525,46 +816,58 @@ function App() {
     );
   }
 
-  function applyQuestionReplacement(
-    currentQuestion: ExamQuestion,
-    replacement: ExamQuestion
-  ) {
+  function buildReplacementWithHistory(
+    currentQuestion:
+      ExamQuestion,
+    replacement:
+      ExamQuestion
+  ): ExamQuestion {
     const history = [
       ...getHistory(
         currentQuestion
       ),
+
       cloneQuestion(
         currentQuestion
       )
     ].slice(-30);
 
+    return {
+      ...replacement,
+
+      examQuestionId:
+        currentQuestion
+          .examQuestionId,
+
+      marks:
+        currentQuestion.marks,
+
+      locked:
+        currentQuestion.locked,
+
+      teacherNote:
+        currentQuestion
+          .teacherNote,
+
+      history,
+
+      redoStack: []
+    };
+  }
+
+  function applyQuestionReplacement(
+    currentQuestion: ExamQuestion,
+    replacement: ExamQuestion
+  ) {
     updateQuestion(
       currentQuestion
         .examQuestionId,
 
-      () => ({
-        ...replacement,
-
-        examQuestionId:
-          currentQuestion
-            .examQuestionId,
-
-        marks:
-          currentQuestion
-            .marks,
-
-        locked:
-          currentQuestion
-            .locked,
-
-        teacherNote:
-          currentQuestion
-            .teacherNote,
-
-        history,
-
-        redoStack: []
-      })
+      () =>
+        buildReplacementWithHistory(
+          currentQuestion,
+          replacement
+        )
     );
   }
 
@@ -574,6 +877,7 @@ function App() {
       difficulty?: number;
       presentationType?:
         ExamQuestion["presentationType"];
+      topic?: string;
     } = {}
   ) {
     if (
@@ -1748,6 +2052,48 @@ function App() {
       return;
     }
 
+    const preflightIssues =
+      collectFinalIssues(
+        exam
+      );
+
+    if (
+      preflightIssues.length >
+      0
+    ) {
+      setQualityReport(
+        preflightIssues
+      );
+
+      const continueExport =
+        window.confirm(
+          "وجد الفحص " +
+          preflightIssues.length +
+          " ملاحظة قبل التصدير.\n\n" +
+          preflightIssues
+            .slice(
+              0,
+              6
+            )
+            .join("\n") +
+          (
+            preflightIssues.length >
+            6
+              ? "\n..."
+              : ""
+          ) +
+          "\n\nهل تريد التصدير رغم ذلك؟"
+        );
+
+      if (!continueExport) {
+        setActionNotice(
+          "تم إيقاف التصدير حتى تراجع الملاحظات."
+        );
+
+        return;
+      }
+    }
+
     setBuilderError("");
 
     setExportBusy(
@@ -2044,12 +2390,18 @@ function App() {
               exam.totalMarks,
 
             questionCount:
-              exam.questions.length
+              exam.questions.length,
+
+            metadata:
+              exam.metadata ||
+              defaultExamMetadata()
           },
 
           instructionsForAI: [
             "أنشئ مستند امتحان احترافيًا وجاهزًا للطباعة بصيغة PDF وحجم A4.",
             "لغة الامتحان العربية واتجاه الكتابة من اليمين إلى اليسار RTL.",
+            "استخدم بيانات metadata في رأس الامتحان: المدرسة، الموضوع، الصف، الشعبة، المعلم، التاريخ، المدة والفصل الدراسي.",
+            "أضف في رأس نسخة الطالب خانة فارغة لاسم الطالب وخانة لرقم الهوية.",
             "لا تغير نص الأسئلة أو القيم أو الخيارات أو الإجابات الصحيحة.",
             "صحح التنسيق فقط ولا تغير المحتوى العلمي.",
             "حافظ على المصطلحات التقنية الإنجليزية وعناوين IP وCLI كما هي.",
@@ -2078,6 +2430,10 @@ function App() {
 
             totalMarks:
               exam.totalMarks,
+
+            metadata:
+              exam.metadata ||
+              defaultExamMetadata(),
 
             questions:
               portableQuestions.map(
@@ -2426,10 +2782,1375 @@ function App() {
     }
   }
 
-  function showNextPhaseMessage() {
-    setBuilderError(
-      "تم تجهيز الواجهة لهذه الأداة. سنربط تنفيذها بالـ Backend في المرحلة التالية دون تغيير الصفحة."
+
+  function updateExamMetadata(
+    field:
+      keyof ExamMetadata,
+    value:
+      string
+  ) {
+    setHasUnsavedChanges(
+      true
     );
+
+    setExam(current => {
+      if (!current) {
+        return current;
+      }
+
+      return {
+        ...current,
+
+        updatedAt:
+          new Date()
+            .toISOString(),
+
+        metadata: {
+          ...defaultExamMetadata(),
+          ...(
+            current.metadata ||
+            {}
+          ),
+
+          [field]:
+            value
+        }
+      };
+    });
+  }
+
+  function scrollToQuestion(
+    examQuestionId:
+      string
+  ) {
+    document
+      .getElementById(
+        "question-" +
+        examQuestionId
+      )
+      ?.scrollIntoView({
+        behavior: "smooth",
+        block: "start"
+      });
+  }
+
+  function moveQuestion(
+    index:
+      number,
+    direction:
+      -1 | 1
+  ) {
+    setHasUnsavedChanges(
+      true
+    );
+
+    setExam(current => {
+      if (!current) {
+        return current;
+      }
+
+      const target =
+        index + direction;
+
+      if (
+        target < 0 ||
+        target >=
+          current
+            .questions
+            .length
+      ) {
+        return current;
+      }
+
+      const questions = [
+        ...current.questions
+      ];
+
+      const temp =
+        questions[index];
+
+      questions[index] =
+        questions[target];
+
+      questions[target] =
+        temp;
+
+      return {
+        ...current,
+
+        updatedAt:
+          new Date()
+            .toISOString(),
+
+        questions,
+
+        summary:
+          rebuildSummary(
+            questions
+          )
+      };
+    });
+  }
+
+  function duplicateQuestion(
+    question:
+      ExamQuestion,
+    index:
+      number
+  ) {
+    setHasUnsavedChanges(
+      true
+    );
+
+    setExam(current => {
+      if (!current) {
+        return current;
+      }
+
+      const copy =
+        cloneQuestion(
+          question
+        );
+
+      copy.examQuestionId =
+        question.examQuestionId +
+        "-copy-" +
+        Date.now();
+
+      copy.locked =
+        false;
+
+      copy.teacherNote =
+        question.teacherNote
+          ? question.teacherNote +
+            " (نسخة)"
+          : "نسخة من السؤال " +
+            String(
+              index + 1
+            );
+
+      const questions = [
+        ...current.questions
+      ];
+
+      questions.splice(
+        index + 1,
+        0,
+        copy
+      );
+
+      return {
+        ...current,
+
+        updatedAt:
+          new Date()
+            .toISOString(),
+
+        questions,
+
+        summary:
+          rebuildSummary(
+            questions
+          )
+      };
+    });
+  }
+
+  function deleteExamQuestion(
+    question:
+      ExamQuestion,
+    index:
+      number
+  ) {
+    const confirmed =
+      window.confirm(
+        "هل تريد حذف السؤال " +
+        String(
+          index + 1
+        ) +
+        " من الامتحان؟"
+      );
+
+    if (!confirmed) {
+      return;
+    }
+
+    setHasUnsavedChanges(
+      true
+    );
+
+    setExam(current => {
+      if (!current) {
+        return current;
+      }
+
+      const questions =
+        current.questions.filter(
+          item =>
+            item.examQuestionId !==
+            question.examQuestionId
+        );
+
+      return {
+        ...current,
+
+        updatedAt:
+          new Date()
+            .toISOString(),
+
+        questions,
+
+        summary:
+          rebuildSummary(
+            questions
+          )
+      };
+    });
+  }
+
+  function autoDistributeMarks() {
+    if (
+      !exam ||
+      exam.questions.length ===
+      0
+    ) {
+      return;
+    }
+
+    const mode =
+      window.prompt(
+        "اختر طريقة التوزيع:\n1 = متساوٍ\n2 = حسب الصعوبة",
+        "2"
+      );
+
+    if (
+      mode !== "1" &&
+      mode !== "2"
+    ) {
+      return;
+    }
+
+    const target =
+      Math.max(
+        1,
+        Math.round(
+          Number(
+            exam.totalMarks ||
+            100
+          )
+        )
+      );
+
+    const weights =
+      exam.questions.map(
+        question =>
+          mode === "1"
+            ? 1
+            : Math.max(
+                1,
+                Number(
+                  question.difficulty ||
+                  1
+                )
+              )
+      );
+
+    const totalWeight =
+      weights.reduce(
+        (
+          sum,
+          value
+        ) =>
+          sum + value,
+        0
+      );
+
+    const exact =
+      weights.map(
+        weight =>
+          (
+            weight /
+            totalWeight
+          ) *
+          target
+      );
+
+    const marks =
+      exact.map(
+        value =>
+          Math.floor(
+            value
+          )
+      );
+
+    let remainder =
+      target -
+      marks.reduce(
+        (
+          sum,
+          value
+        ) =>
+          sum + value,
+        0
+      );
+
+    exact
+      .map(
+        (
+          value,
+          index
+        ) => ({
+          index,
+
+          fraction:
+            value -
+            Math.floor(
+              value
+            )
+        })
+      )
+      .sort(
+        (
+          a,
+          b
+        ) =>
+          b.fraction -
+          a.fraction
+      )
+      .forEach(
+        item => {
+          if (
+            remainder >
+            0
+          ) {
+            marks[
+              item.index
+            ] += 1;
+
+            remainder -= 1;
+          }
+        }
+      );
+
+    setExam(current => {
+      if (!current) {
+        return current;
+      }
+
+      const questions =
+        current.questions.map(
+          (
+            question,
+            index
+          ) => ({
+            ...question,
+
+            marks:
+              marks[index]
+          })
+        );
+
+      return {
+        ...current,
+
+        updatedAt:
+          new Date()
+            .toISOString(),
+
+        questions,
+
+        summary:
+          rebuildSummary(
+            questions
+          )
+      };
+    });
+
+    setHasUnsavedChanges(
+      true
+    );
+
+    setActionNotice(
+      mode === "1"
+        ? "✓ تم توزيع العلامات بالتساوي."
+        : "✓ تم توزيع العلامات حسب الصعوبة."
+    );
+  }
+
+  function makeRecoveryExam(
+    source:
+      ExamDraft
+  ): ExamDraft {
+    const copy =
+      JSON.parse(
+        JSON.stringify(
+          source
+        )
+      ) as ExamDraft;
+
+    for (
+      const question
+      of copy.questions
+    ) {
+      question.history = [];
+      question.redoStack = [];
+
+      if (
+        question.image
+          ?.assets
+      ) {
+        question.image.assets =
+          question.image.assets
+            .filter(asset => {
+              const value =
+                String(
+                  asset.dataUrl ||
+                  ""
+                );
+
+              return !(
+                value.startsWith(
+                  "data:"
+                ) &&
+                value.length >
+                  300000
+              );
+            });
+
+        if (
+          question.image
+            .assets.length ===
+          0
+        ) {
+          question.image.exists =
+            false;
+
+          question.image.visible =
+            false;
+        }
+      }
+    }
+
+    return copy;
+  }
+
+  function restoreRecoveryDraft() {
+    try {
+      const raw =
+        localStorage.getItem(
+          RECOVERY_KEY
+        );
+
+      if (!raw) {
+        setRecoveryAvailable(
+          false
+        );
+
+        return;
+      }
+
+      const payload =
+        JSON.parse(
+          raw
+        ) as {
+          exam:
+            ExamDraft;
+          plan:
+            ExamPlan | null;
+          examPrompt:
+            string;
+        };
+
+      if (!payload.exam) {
+        throw new Error(
+          "Recovery draft is invalid."
+        );
+      }
+
+      setExam(
+        payload.exam
+      );
+
+      setPlan(
+        payload.plan ||
+        payload.exam.plan ||
+        null
+      );
+
+      setExamPrompt(
+        payload.examPrompt ||
+        payload.exam
+          .originalRequest ||
+        ""
+      );
+
+      setPreviewMode(
+        "edit"
+      );
+
+      setHasUnsavedChanges(
+        true
+      );
+
+      setRecoveryAvailable(
+        false
+      );
+
+      setActionNotice(
+        "✓ تم استعادة المسودة المحلية. الصور الكبيرة المولدة بالذكاء الاصطناعي قد تحتاج إلى إعادة إنشاء."
+      );
+    }
+    catch (error) {
+      setBuilderError(
+        error
+        instanceof Error
+          ? error.message
+          : "تعذر استعادة المسودة."
+      );
+    }
+  }
+
+  function discardRecoveryDraft() {
+    try {
+      localStorage.removeItem(
+        RECOVERY_KEY
+      );
+    }
+    catch {
+      // Ignore local storage errors.
+    }
+
+    setRecoveryAvailable(
+      false
+    );
+  }
+
+  async function saveExamAsCopy() {
+    if (
+      !exam ||
+      saveBusy
+    ) {
+      return;
+    }
+
+    const now =
+      new Date()
+        .toISOString();
+
+    const copy:
+      ExamDraft = {
+        ...JSON.parse(
+          JSON.stringify(
+            exam
+          )
+        ) as ExamDraft,
+
+        examId:
+          "EXAM-" +
+          Date.now(),
+
+        title:
+          exam.title +
+          " - نسخة",
+
+        createdAt:
+          now,
+
+        updatedAt:
+          now
+      };
+
+    setSaveBusy(
+      "exam"
+    );
+
+    setBuilderError("");
+
+    try {
+      const result =
+        await apiRequest<{
+          ok: true;
+          savedAt:
+            string;
+          blobName:
+            string;
+        }>(
+          "/api/save-exam-artifact",
+
+          {
+            method:
+              "POST",
+
+            body:
+              JSON.stringify({
+                kind:
+                  "exam",
+
+                exam:
+                  copy
+              })
+          }
+        );
+
+      setExam(
+        copy
+      );
+
+      setHasUnsavedChanges(
+        false
+      );
+
+      setLastCloudSaveAt(
+        result.savedAt ||
+        now
+      );
+
+      try {
+        localStorage.removeItem(
+          RECOVERY_KEY
+        );
+      }
+      catch {
+        // Ignore.
+      }
+
+      setRecoveryAvailable(
+        false
+      );
+
+      setActionNotice(
+        "✓ تم حفظ نسخة جديدة، وأنت الآن تعمل على النسخة الجديدة."
+      );
+
+      if (
+        savedExamsOpen
+      ) {
+        await loadSavedExams();
+      }
+    }
+    catch (error) {
+      setBuilderError(
+        error
+        instanceof Error
+          ? error.message
+          : "تعذر حفظ نسخة جديدة."
+      );
+    }
+    finally {
+      setSaveBusy(
+        null
+      );
+    }
+  }
+
+  function collectFinalIssues(
+    sourceExam:
+      ExamDraft
+  ): string[] {
+    const issues:
+      string[] = [];
+
+    const marks =
+      sourceExam.questions.reduce(
+        (
+          sum,
+          question
+        ) =>
+          sum +
+          Number(
+            question.marks ||
+            0
+          ),
+        0
+      );
+
+    if (
+      marks !==
+      Number(
+        sourceExam.totalMarks
+      )
+    ) {
+      issues.push(
+        "مجموع العلامات الحالي " +
+        marks +
+        " وليس " +
+        sourceExam.totalMarks +
+        "."
+      );
+    }
+
+    sourceExam.questions
+      .forEach(
+        (
+          question,
+          index
+        ) => {
+          const number =
+            index + 1;
+
+          if (
+            !question.text
+              ?.trim()
+          ) {
+            issues.push(
+              "السؤال " +
+              number +
+              " بلا نص."
+            );
+          }
+
+          if (
+            !questionHasAnswer(
+              question
+            )
+          ) {
+            issues.push(
+              "السؤال " +
+              number +
+              " بلا نموذج إجابة."
+            );
+          }
+
+          if (
+            question
+              .presentationType ===
+              "wordBank" &&
+            getWordBank(
+              question
+            ).length ===
+              0
+          ) {
+            issues.push(
+              "السؤال " +
+              number +
+              " مخزن كلمات بلا كلمات."
+            );
+          }
+
+          if (
+            imageBusy[
+              question
+                .examQuestionId
+            ]
+          ) {
+            issues.push(
+              "صورة السؤال " +
+              number +
+              " ما زالت قيد الإنشاء."
+            );
+          }
+        }
+      );
+
+    return issues;
+  }
+
+  async function loadTemplates() {
+    setTemplatesBusy(
+      true
+    );
+
+    setBuilderError("");
+
+    try {
+      const result =
+        await apiRequest<{
+          ok: true;
+
+          templates:
+            SavedTemplateListItem[];
+        }>(
+          "/api/templates",
+
+          {
+            method:
+              "GET"
+          }
+        );
+
+      setTemplates(
+        result.templates ||
+        []
+      );
+    }
+    catch (error) {
+      setBuilderError(
+        error
+        instanceof Error
+          ? error.message
+          : "تعذر قراءة القوالب."
+      );
+    }
+    finally {
+      setTemplatesBusy(
+        false
+      );
+    }
+  }
+
+  async function toggleTemplates() {
+    if (
+      templatesOpen
+    ) {
+      setTemplatesOpen(
+        false
+      );
+
+      return;
+    }
+
+    setTemplatesOpen(
+      true
+    );
+
+    await loadTemplates();
+  }
+
+  async function useTemplate(
+    item:
+      SavedTemplateListItem
+  ) {
+    if (
+      templatesBusy ||
+      generateBusy
+    ) {
+      return;
+    }
+
+    setTemplatesBusy(
+      true
+    );
+
+    setBuilderError("");
+
+    try {
+      const loaded =
+        await apiRequest<{
+          ok: true;
+
+          template: {
+            title:
+              string;
+            originalRequest:
+              string;
+            plan:
+              ExamPlan;
+            metadata?:
+              ExamMetadata;
+          };
+        }>(
+          "/api/templates",
+
+          {
+            method:
+              "POST",
+
+            body:
+              JSON.stringify({
+                action:
+                  "load",
+
+                blobName:
+                  item.blobName
+              })
+          }
+        );
+
+      const template =
+        loaded.template;
+
+      if (!template.plan) {
+        throw new Error(
+          "القالب لا يحتوي على خطة امتحان."
+        );
+      }
+
+      const generated =
+        await apiRequest<{
+          ok: true;
+          exam:
+            ExamDraft;
+        }>(
+          "/api/generate-exam",
+
+          {
+            method:
+              "POST",
+
+            body:
+              JSON.stringify({
+                plan:
+                  template.plan
+              })
+          }
+        );
+
+      const freshExam = {
+        ...generated.exam,
+
+        metadata: {
+          ...defaultExamMetadata(),
+          ...(
+            template.metadata ||
+            {}
+          )
+        }
+      };
+
+      setPlan(
+        template.plan
+      );
+
+      setExamPrompt(
+        template
+          .originalRequest ||
+        template.plan
+          .originalRequest ||
+        ""
+      );
+
+      setExam(
+        freshExam
+      );
+
+      setTemplatesOpen(
+        false
+      );
+
+      setPreviewMode(
+        "edit"
+      );
+
+      setHasUnsavedChanges(
+        true
+      );
+
+      setActionNotice(
+        "✓ تم إنشاء امتحان جديد من القالب."
+      );
+    }
+    catch (error) {
+      setBuilderError(
+        error
+        instanceof Error
+          ? error.message
+          : "تعذر استخدام القالب."
+      );
+    }
+    finally {
+      setTemplatesBusy(
+        false
+      );
+    }
+  }
+
+  async function deleteTemplate(
+    item:
+      SavedTemplateListItem
+  ) {
+    const confirmed =
+      window.confirm(
+        "هل تريد حذف القالب:\n" +
+        item.title +
+        "؟"
+      );
+
+    if (!confirmed) {
+      return;
+    }
+
+    setTemplatesBusy(
+      true
+    );
+
+    try {
+      await apiRequest<{
+        ok: true;
+        deleted:
+          boolean;
+      }>(
+        "/api/templates",
+
+        {
+          method:
+            "POST",
+
+          body:
+            JSON.stringify({
+              action:
+                "delete",
+
+              blobName:
+                item.blobName
+            })
+        }
+      );
+
+      setTemplates(
+        current =>
+          current.filter(
+            template =>
+              template.blobName !==
+              item.blobName
+          )
+      );
+
+      setActionNotice(
+        "✓ تم حذف القالب."
+      );
+    }
+    catch (error) {
+      setBuilderError(
+        error
+        instanceof Error
+          ? error.message
+          : "تعذر حذف القالب."
+      );
+    }
+    finally {
+      setTemplatesBusy(
+        false
+      );
+    }
+  }
+
+  async function applyGlobalAiInstruction() {
+    if (
+      !exam ||
+      !globalInstruction
+        .trim() ||
+      globalAiBusy
+    ) {
+      return;
+    }
+
+    setGlobalAiBusy(
+      true
+    );
+
+    setBuilderError("");
+
+    setActionNotice(
+      "⏳ الذكاء الاصطناعي يحلل التعليمات العامة..."
+    );
+
+    try {
+      const analysis =
+        await apiRequest<{
+          ok: true;
+          summary:
+            string;
+          operations:
+            GlobalAiOperation[];
+          provider:
+            string;
+          model:
+            string;
+        }>(
+          "/api/analyze-global-exam-instruction",
+
+          {
+            method:
+              "POST",
+
+            body:
+              JSON.stringify({
+                instruction:
+                  globalInstruction
+                    .trim(),
+
+                exam,
+
+                provider:
+                  aiProvider
+              })
+          }
+        );
+
+      const operations =
+        analysis.operations ||
+        [];
+
+      if (
+        operations.length ===
+        0
+      ) {
+        setActionNotice(
+          "لم يجد الذكاء الاصطناعي تغييرات ضرورية لتنفيذها."
+        );
+
+        return;
+      }
+
+      const confirmed =
+        window.confirm(
+          (
+            analysis.summary ||
+            "سيتم تعديل الامتحان."
+          ) +
+          "\n\nعدد العمليات: " +
+          operations.length +
+          "\n\nمتابعة؟"
+        );
+
+      if (!confirmed) {
+        setActionNotice(
+          "تم إلغاء تطبيق التعليمات العامة."
+        );
+
+        return;
+      }
+
+      let nextQuestions =
+        exam.questions.map(
+          question =>
+            question
+        );
+
+      const usedIds =
+        new Set(
+          nextQuestions
+            .map(
+              question =>
+                question
+                  .bankQuestionId
+            )
+            .filter(
+              Boolean
+            )
+            .map(String)
+        );
+
+      const usedFamilies =
+        new Set(
+          nextQuestions
+            .map(
+              question =>
+                question.familyKey
+            )
+            .filter(
+              Boolean
+            )
+            .map(String)
+        );
+
+      for (
+        let operationIndex = 0;
+        operationIndex <
+          operations.length;
+        operationIndex += 1
+      ) {
+        const operation =
+          operations[
+            operationIndex
+          ];
+
+        const index =
+          nextQuestions.findIndex(
+            question =>
+              question.examQuestionId ===
+              operation
+                .examQuestionId
+          );
+
+        if (index < 0) {
+          continue;
+        }
+
+        const currentQuestion =
+          nextQuestions[index];
+
+        if (
+          currentQuestion.locked
+        ) {
+          continue;
+        }
+
+        setActionNotice(
+          "⏳ تنفيذ التغيير " +
+          String(
+            operationIndex +
+            1
+          ) +
+          " من " +
+          String(
+            operations.length
+          ) +
+          "..."
+        );
+
+        if (
+          operation.action ===
+          "replace"
+        ) {
+          const result =
+            await apiRequest<{
+              ok: true;
+              question:
+                ExamQuestion;
+            }>(
+              "/api/question-bank-action",
+
+              {
+                method:
+                  "POST",
+
+                body:
+                  JSON.stringify({
+                    question:
+                      currentQuestion,
+
+                    difficulty:
+                      operation
+                        .targetDifficulty ||
+                      undefined,
+
+                    presentationType:
+                      operation
+                        .targetType ||
+                      undefined,
+
+                    topic:
+                      operation
+                        .targetTopic ||
+                      undefined,
+
+                    usedBankQuestionIds:
+                      Array.from(
+                        usedIds
+                      ),
+
+                    usedFamilyKeys:
+                      Array.from(
+                        usedFamilies
+                      )
+                  })
+              }
+            );
+
+          const replacement =
+            buildReplacementWithHistory(
+              currentQuestion,
+              result.question
+            );
+
+          nextQuestions[index] =
+            replacement;
+
+          if (
+            replacement
+              .bankQuestionId
+          ) {
+            usedIds.add(
+              String(
+                replacement
+                  .bankQuestionId
+              )
+            );
+          }
+
+          if (
+            replacement
+              .familyKey
+          ) {
+            usedFamilies.add(
+              String(
+                replacement
+                  .familyKey
+              )
+            );
+          }
+        }
+        else {
+          const result =
+            await apiRequest<{
+              ok: true;
+              question:
+                ExamQuestion;
+            }>(
+              "/api/question-ai-action",
+
+              {
+                method:
+                  "POST",
+
+                body:
+                  JSON.stringify({
+                    action:
+                      "modify",
+
+                    question:
+                      currentQuestion,
+
+                    instruction:
+                      operation
+                        .instruction ||
+                      globalInstruction
+                        .trim(),
+
+                    provider:
+                      aiProvider
+                  })
+              }
+            );
+
+          nextQuestions[index] =
+            buildReplacementWithHistory(
+              currentQuestion,
+              result.question
+            );
+        }
+      }
+
+      setExam(current => {
+        if (!current) {
+          return current;
+        }
+
+        return {
+          ...current,
+
+          updatedAt:
+            new Date()
+              .toISOString(),
+
+          questions:
+            nextQuestions,
+
+          summary:
+            rebuildSummary(
+              nextQuestions
+            )
+        };
+      });
+
+      setHasUnsavedChanges(
+        true
+      );
+
+      setGlobalInstruction(
+        ""
+      );
+
+      setActionNotice(
+        "✓ تم تطبيق التعليمات العامة على " +
+        operations.length +
+        " عملية. الأسئلة المثبتة لم تتغير."
+      );
+    }
+    catch (error) {
+      setBuilderError(
+        error
+        instanceof Error
+          ? error.message
+          : "تعذر تطبيق التعليمات العامة."
+      );
+    }
+    finally {
+      setGlobalAiBusy(
+        false
+      );
+    }
   }
 
   function renderAnswer(answer: Record<string, unknown>) {
@@ -2585,6 +4306,40 @@ function App() {
           </div>
         </div>
 
+        {recoveryAvailable && (
+          <div className="recovery-draft-bar">
+            <div>
+              <strong>
+                ↻ توجد مسودة محلية غير محفوظة
+              </strong>
+
+              <span>
+                يمكنك استعادتها إذا أغلقت الصفحة أو حدث تحديث للمتصفح.
+              </span>
+            </div>
+
+            <div>
+              <button
+                className="recovery-restore"
+                onClick={
+                  restoreRecoveryDraft
+                }
+              >
+                استعادة
+              </button>
+
+              <button
+                className="recovery-discard"
+                onClick={
+                  discardRecoveryDraft
+                }
+              >
+                تجاهل
+              </button>
+            </div>
+          </div>
+        )}
+
         <div className="saved-exams-access">
           <button
             onClick={
@@ -2601,8 +4356,23 @@ function App() {
                 : "📚 الامتحانات المحفوظة"}
           </button>
 
+          <button
+            onClick={
+              toggleTemplates
+            }
+            disabled={
+              templatesBusy
+            }
+          >
+            {templatesBusy
+              ? "⏳ جارٍ تحميل القوالب..."
+              : templatesOpen
+                ? "✕ إغلاق القوالب"
+                : "🗂 القوالب"}
+          </button>
+
           <span>
-            يمكنك فتح امتحان سابق ومتابعة تعديله من نفس الصفحة.
+            افتح امتحانًا محفوظًا أو استخدم قالبًا لبناء امتحان جديد من نفس الصفحة.
           </span>
         </div>
 
@@ -2688,6 +4458,103 @@ function App() {
                           className="saved-delete-button"
                           onClick={() =>
                             deleteSavedExam(
+                              item
+                            )
+                          }
+                        >
+                          حذف
+                        </button>
+                      </div>
+                    </article>
+                  )
+                )}
+              </div>
+            )}
+          </section>
+        )}
+
+        {templatesOpen && (
+          <section className="templates-panel">
+            <div className="saved-exams-heading">
+              <div>
+                <span className="eyebrow">
+                  Exam Templates
+                </span>
+
+                <h3>
+                  القوالب المحفوظة
+                </h3>
+              </div>
+
+              <button
+                onClick={
+                  loadTemplates
+                }
+                disabled={
+                  templatesBusy
+                }
+              >
+                ↻ تحديث
+              </button>
+            </div>
+
+            {templatesBusy ? (
+              <div className="saved-exams-empty">
+                ⏳ جارٍ تحميل القوالب...
+              </div>
+            ) : templates.length === 0 ? (
+              <div className="saved-exams-empty">
+                لا توجد قوالب محفوظة حتى الآن.
+              </div>
+            ) : (
+              <div className="saved-exams-list">
+                {templates.map(
+                  item => (
+                    <article
+                      className="saved-exam-item"
+                      key={
+                        item.blobName
+                      }
+                    >
+                      <div className="saved-exam-main">
+                        <strong>
+                          {item.title}
+                        </strong>
+
+                        <span>
+                          {item.totalQuestions} سؤال
+                          {" · "}
+                          {item.totalMarks} علامة
+                        </span>
+
+                        <small>
+                          الحفظ:{" "}
+                          {item.savedAt
+                            ? new Date(
+                                item.savedAt
+                              ).toLocaleString(
+                                "ar"
+                              )
+                            : "غير معروف"}
+                        </small>
+                      </div>
+
+                      <div className="saved-exam-actions">
+                        <button
+                          className="saved-open-button"
+                          onClick={() =>
+                            useTemplate(
+                              item
+                            )
+                          }
+                        >
+                          استخدام القالب
+                        </button>
+
+                        <button
+                          className="saved-delete-button"
+                          onClick={() =>
+                            deleteTemplate(
                               item
                             )
                           }
@@ -2906,13 +4773,284 @@ function App() {
 
                 <button
                   className="secondary-primary-button"
-                  onClick={showNextPhaseMessage}
-                  disabled={!globalInstruction.trim()}
+                  onClick={applyGlobalAiInstruction}
+                  disabled={
+                    !globalInstruction.trim() ||
+                    globalAiBusy
+                  }
                 >
-                  تطبيق على الامتحان بالذكاء الاصطناعي
+                  {globalAiBusy
+                    ? "⏳ جارٍ تحليل وتنفيذ التغييرات..."
+                    : "🤖 تطبيق على الامتحان بالذكاء الاصطناعي"}
                 </button>
               </div>
             </div>
+
+            <div className="save-status-line">
+              <span
+                className={
+                  hasUnsavedChanges
+                    ? "save-dot unsaved"
+                    : "save-dot saved"
+                }
+              />
+
+              <strong>
+                {hasUnsavedChanges
+                  ? "تغييرات غير محفوظة"
+                  : "محفوظ"}
+              </strong>
+
+              {lastCloudSaveAt && (
+                <small>
+                  آخر حفظ سحابي:{" "}
+                  {new Date(
+                    lastCloudSaveAt
+                  ).toLocaleString(
+                    "ar"
+                  )}
+                </small>
+              )}
+
+              {recoveryAvailable &&
+                hasUnsavedChanges && (
+                  <small>
+                    · توجد نسخة استرجاع محلية
+                  </small>
+                )}
+            </div>
+
+            <details
+              className="exam-metadata-card"
+              open
+            >
+              <summary>
+                📝 بيانات ورأس الامتحان
+              </summary>
+
+              <div className="exam-metadata-grid">
+                <label>
+                  اسم المدرسة
+                  <input
+                    value={
+                      exam.metadata
+                        ?.school ||
+                      ""
+                    }
+                    onChange={event =>
+                      updateExamMetadata(
+                        "school",
+                        event.target.value
+                      )
+                    }
+                    placeholder="مثال: المدرسة الثانوية"
+                  />
+                </label>
+
+                <label>
+                  الموضوع
+                  <input
+                    value={
+                      exam.metadata
+                        ?.subject ||
+                      "شبكات الاتصال"
+                    }
+                    onChange={event =>
+                      updateExamMetadata(
+                        "subject",
+                        event.target.value
+                      )
+                    }
+                  />
+                </label>
+
+                <label>
+                  الصف
+                  <input
+                    value={
+                      exam.metadata
+                        ?.grade ||
+                      ""
+                    }
+                    onChange={event =>
+                      updateExamMetadata(
+                        "grade",
+                        event.target.value
+                      )
+                    }
+                    placeholder="مثال: العاشر"
+                  />
+                </label>
+
+                <label>
+                  الشعبة
+                  <input
+                    value={
+                      exam.metadata
+                        ?.className ||
+                      ""
+                    }
+                    onChange={event =>
+                      updateExamMetadata(
+                        "className",
+                        event.target.value
+                      )
+                    }
+                  />
+                </label>
+
+                <label>
+                  اسم المعلم
+                  <input
+                    value={
+                      exam.metadata
+                        ?.teacherName ||
+                      ""
+                    }
+                    onChange={event =>
+                      updateExamMetadata(
+                        "teacherName",
+                        event.target.value
+                      )
+                    }
+                  />
+                </label>
+
+                <label>
+                  التاريخ
+                  <input
+                    type="date"
+                    value={
+                      exam.metadata
+                        ?.date ||
+                      ""
+                    }
+                    onChange={event =>
+                      updateExamMetadata(
+                        "date",
+                        event.target.value
+                      )
+                    }
+                  />
+                </label>
+
+                <label>
+                  مدة الامتحان
+                  <input
+                    value={
+                      exam.metadata
+                        ?.duration ||
+                      ""
+                    }
+                    onChange={event =>
+                      updateExamMetadata(
+                        "duration",
+                        event.target.value
+                      )
+                    }
+                    placeholder="مثال: 90 دقيقة"
+                  />
+                </label>
+
+                <label>
+                  الفصل الدراسي
+                  <input
+                    value={
+                      exam.metadata
+                        ?.semester ||
+                      ""
+                    }
+                    onChange={event =>
+                      updateExamMetadata(
+                        "semester",
+                        event.target.value
+                      )
+                    }
+                  />
+                </label>
+
+                <label className="metadata-full">
+                  تعليمات عامة للطلاب
+                  <textarea
+                    value={
+                      exam.metadata
+                        ?.generalInstructions ||
+                      defaultExamMetadata()
+                        .generalInstructions
+                    }
+                    onChange={event =>
+                      updateExamMetadata(
+                        "generalInstructions",
+                        event.target.value
+                      )
+                    }
+                  />
+                </label>
+              </div>
+            </details>
+
+            <nav className="question-jump-bar">
+              <strong>
+                الانتقال إلى سؤال:
+              </strong>
+
+              <div>
+                {exam.questions.map(
+                  (
+                    question,
+                    index
+                  ) => (
+                    <button
+                      key={
+                        "jump-" +
+                        question.examQuestionId
+                      }
+                      onClick={() =>
+                        scrollToQuestion(
+                          question
+                            .examQuestionId
+                        )
+                      }
+                      title={
+                        "السؤال " +
+                        String(
+                          index + 1
+                        ) +
+                        (
+                          question.locked
+                            ? " · مثبت"
+                            : ""
+                        )
+                      }
+                    >
+                      <span>
+                        {index + 1}
+                      </span>
+
+                      {question.locked && (
+                        <small>
+                          🔒
+                        </small>
+                      )}
+
+                      {question.image
+                        ?.exists && (
+                        <small>
+                          🖼
+                        </small>
+                      )}
+
+                      {question.origin ===
+                        "ai-generated" && (
+                        <small>
+                          ✨
+                        </small>
+                      )}
+                    </button>
+                  )
+                )}
+              </div>
+            </nav>
 
             <div className="questions-list">
               {exam.questions.map((question, index) => {
@@ -2921,6 +5059,7 @@ function App() {
 
                 return (
                   <article
+                    id={"question-" + question.examQuestionId}
                     className={`question-card difficulty-${question.difficulty} ${
                       question.locked ? "question-locked" : ""
                     }`}
@@ -2932,6 +5071,65 @@ function App() {
                       </div>
 
                       <div className="question-top-actions">
+                        <div className="question-order-actions">
+                          <button
+                            title="نقل للأعلى"
+                            onClick={() =>
+                              moveQuestion(
+                                index,
+                                -1
+                              )
+                            }
+                            disabled={
+                              index === 0
+                            }
+                          >
+                            ↑
+                          </button>
+
+                          <button
+                            title="نقل للأسفل"
+                            onClick={() =>
+                              moveQuestion(
+                                index,
+                                1
+                              )
+                            }
+                            disabled={
+                              index ===
+                              exam.questions.length -
+                                1
+                            }
+                          >
+                            ↓
+                          </button>
+
+                          <button
+                            title="نسخ السؤال"
+                            onClick={() =>
+                              duplicateQuestion(
+                                question,
+                                index
+                              )
+                            }
+                          >
+                            ⧉
+                          </button>
+
+                          <button
+                            className="question-delete-mini"
+                            title="حذف السؤال"
+                            onClick={() =>
+                              deleteExamQuestion(
+                                question,
+                                index
+                              )
+                            }
+                          >
+                            🗑
+                          </button>
+                        </div>
+
                         <label className="marks-field">
                           العلامة
                           <input
@@ -3547,6 +5745,17 @@ function App() {
               </button>
 
               <button
+                onClick={
+                  saveExamAsCopy
+                }
+                disabled={
+                  saveBusy !== null
+                }
+              >
+                💾 حفظ نسخة جديدة
+              </button>
+
+              <button
                 onClick={() =>
                   saveExamArtifact(
                     "template"
@@ -3567,6 +5776,14 @@ function App() {
                 }
               >
                 ✅ فحص جودة الامتحان
+              </button>
+
+              <button
+                onClick={
+                  autoDistributeMarks
+                }
+              >
+                ⚖️ توزيع العلامات
               </button>
 
               <button

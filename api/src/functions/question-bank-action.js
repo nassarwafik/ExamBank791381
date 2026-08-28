@@ -543,6 +543,13 @@ app.http(
                 )
               : null;
 
+          const desiredTopic =
+            body?.topic
+              ? String(
+                  body.topic
+                ).trim()
+              : null;
+
           if (
             desiredDifficulty !==
               null &&
@@ -730,6 +737,16 @@ app.http(
                       .difficulty
                   ) !==
                     desiredDifficulty
+                ) {
+                  return false;
+                }
+
+                if (
+                  desiredTopic &&
+                  String(
+                    candidate.topic
+                  ) !==
+                    desiredTopic
                 ) {
                   return false;
                 }

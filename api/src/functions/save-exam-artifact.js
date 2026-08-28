@@ -197,6 +197,10 @@ app.http(
               totalMarks:
                 exam.totalMarks,
 
+              metadata:
+                exam.metadata ||
+                {},
+
               savedAt
             };
 
