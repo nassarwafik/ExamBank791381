@@ -7,8 +7,6 @@ import "./platform.css";
 // FINAL_BUILDER_PHASE_6
 // EXAMBANK_2_PHASE_A
 // EXAMBANK_2_PHASE_B
-// EXAMBANK_2_PHASE_C
-// EXAMBANK_IMAGE_UPLOAD_AND_TYPE_CONVERSION
 
 type DifficultyMap = Record<"1" | "2" | "3" | "4" | "5", number>;
 
@@ -67,7 +65,7 @@ type QuestionField = {
 
 type QuestionImageAsset = {
   id?: string;
-  origin: "bank" | "ai-generated" | "uploaded";
+  origin: "bank" | "ai-generated";
   blobName?: string;
   contentType?: string;
   dataUrl: string;
@@ -110,7 +108,7 @@ type ExamQuestion = {
   image: {
     exists: boolean;
     visible: boolean;
-    origin: "bank" | "ai-generated" | "uploaded" | null;
+    origin: "bank" | "ai-generated" | null;
     assets: QuestionImageAsset[];
     prompt: string | null;
   };
@@ -1151,149 +1149,6 @@ function App() {
     }
   }
 
-
-  async function convertQuestionType(
-    question: ExamQuestion,
-    targetType: ExamQuestion["presentationType"]
-  ) {
-    if (
-      targetType === question.presentationType ||
-      question.locked ||
-      questionBusy[
-        question.examQuestionId
-      ]
-    ) {
-      return;
-    }
-
-    setBuilderError("");
-
-    setQuestionLoading(
-      question.examQuestionId,
-      true
-    );
-
-    const instruction = [
-      `حوّل طريقة عرض هذا السؤال فقط إلى "${typeNames[targetType]}".`,
-      "ممنوع استبدال السؤال بسؤال آخر أو تغيير موضوعه أو فكرته التعليمية.",
-      "حافظ قدر الإمكان على نفس نص السؤال، السيناريو، الأرقام، عناوين IP، أوامر CLI، المعطيات، والصورة.",
-      "غيّر فقط ما يلزم في الصياغة والبنية حتى يصبح السؤال صالحًا للنوع المطلوب.",
-      "لا تغيّر الصعوبة أو القسم أو الموضوع أو العلامة.",
-      targetType === "open"
-        ? "عند التحويل إلى مفتوح: أزل بدائل الاختيار فقط، وحافظ على نفس المطلوب مع نموذج إجابة صحيح."
-        : "",
-      targetType === "multipleChoice"
-        ? "عند التحويل إلى أمريكي: أنشئ أربعة بدائل معقولة مبنية على نفس السؤال، مع بديل صحيح واحد."
-        : "",
-      targetType === "fillBlank"
-        ? "عند التحويل إلى أكمل الناقص: أنشئ الفراغات من نفس محتوى السؤال دون إدخال موضوع جديد."
-        : "",
-      targetType === "wordBank"
-        ? "عند التحويل إلى مخزن كلمات: أنشئ الحقول والكلمات من نفس محتوى السؤال دون إدخال موضوع جديد."
-        : ""
-    ]
-      .filter(Boolean)
-      .join("\n");
-
-    /*
-      Do not send image bytes or local history to the AI endpoint.
-      The image is restored exactly after conversion.
-    */
-    const questionForAi: ExamQuestion = {
-      ...question,
-      presentationType:
-        targetType,
-      aiInstruction:
-        "",
-      image: {
-        ...question.image,
-        assets: []
-      },
-      history: [],
-      redoStack: []
-    };
-
-    try {
-      const result =
-        await apiRequest<{
-          ok: true;
-          question: ExamQuestion;
-          provider: string;
-          model: string;
-        }>(
-          "/api/question-ai-action",
-          {
-            method: "POST",
-
-            body:
-              JSON.stringify({
-                action:
-                  "modify",
-                question:
-                  questionForAi,
-                instruction,
-                provider:
-                  aiProvider
-              })
-          }
-        );
-
-      if (
-        result.question
-          .presentationType !==
-        targetType
-      ) {
-        throw new Error(
-          "لم يُرجع الذكاء الاصطناعي نوع السؤال المطلوب. حاول مرة أخرى."
-        );
-      }
-
-      applyQuestionReplacement(
-        question,
-        {
-          ...result.question,
-
-          /*
-            Type conversion must not replace the original
-            image or change the question metadata.
-          */
-          section:
-            question.section,
-          topic:
-            question.topic,
-          secondaryTopics:
-            question.secondaryTopics,
-          difficulty:
-            question.difficulty,
-          difficultyLabel:
-            question.difficultyLabel,
-          marks:
-            question.marks,
-          image:
-            question.image
-        }
-      );
-
-      setActionNotice(
-        `✓ تم تحويل السؤال إلى ${typeNames[targetType]} مع الحفاظ على نفس السؤال.`
-      );
-    }
-    catch (error) {
-      setBuilderError(
-        error instanceof Error
-          ? error.message
-          : "تعذر تحويل نوع السؤال."
-      );
-    }
-    finally {
-      setQuestionLoading(
-        question.examQuestionId,
-        false
-      );
-    }
-  }
-
-
   function undoQuestion(
     question: ExamQuestion
   ) {
@@ -1550,241 +1405,6 @@ function App() {
       )
     );
   }
-
-
-  async function uploadQuestionImage(
-    question: ExamQuestion,
-    file: File
-  ) {
-    if (
-      question.locked ||
-      imageBusy[
-        question.examQuestionId
-      ]
-    ) {
-      return;
-    }
-
-    const allowedTypes =
-      new Set([
-        "image/png",
-        "image/jpeg",
-        "image/webp"
-      ]);
-
-    const contentType =
-      String(
-        file.type || ""
-      )
-        .toLowerCase();
-
-    if (
-      !allowedTypes.has(
-        contentType
-      )
-    ) {
-      const message =
-        "يمكن رفع صور PNG أو JPG أو WEBP فقط.";
-
-      setBuilderError(
-        message
-      );
-
-      setImageNotice(
-        current => ({
-          ...current,
-          [
-            question.examQuestionId
-          ]:
-            message
-        })
-      );
-
-      return;
-    }
-
-    /*
-      Keep the exam JSON manageable because uploaded images
-      are stored as portable data URLs inside the draft.
-    */
-    const maxBytes =
-      3 * 1024 * 1024;
-
-    if (
-      file.size >
-      maxBytes
-    ) {
-      const message =
-        "حجم الصورة كبير جدًا. الحد الأقصى 3 MB.";
-
-      setBuilderError(
-        message
-      );
-
-      setImageNotice(
-        current => ({
-          ...current,
-          [
-            question.examQuestionId
-          ]:
-            message
-        })
-      );
-
-      return;
-    }
-
-    setBuilderError("");
-
-    setImageBusy(
-      current => ({
-        ...current,
-        [
-          question.examQuestionId
-        ]:
-          true
-      })
-    );
-
-    setImageNotice(
-      current => ({
-        ...current,
-        [
-          question.examQuestionId
-        ]:
-          "جاري رفع الصورة من الحاسوب..."
-      })
-    );
-
-    try {
-      const dataUrl =
-        await new Promise<string>(
-          (
-            resolve,
-            reject
-          ) => {
-            const reader =
-              new FileReader();
-
-            reader.onload =
-              () => {
-                if (
-                  typeof reader.result ===
-                  "string"
-                ) {
-                  resolve(
-                    reader.result
-                  );
-                }
-                else {
-                  reject(
-                    new Error(
-                      "تعذر قراءة الصورة."
-                    )
-                  );
-                }
-              };
-
-            reader.onerror =
-              () =>
-                reject(
-                  new Error(
-                    "تعذر قراءة الصورة."
-                  )
-                );
-
-            reader.readAsDataURL(
-              file
-            );
-          }
-        );
-
-      const history = [
-        ...getHistory(
-          question
-        ),
-        cloneQuestion(
-          question
-        )
-      ].slice(-30);
-
-      const asset:
-        QuestionImageAsset = {
-          id:
-            "uploaded-" +
-            Date.now(),
-          origin:
-            "uploaded",
-          contentType,
-          dataUrl
-        };
-
-      updateQuestion(
-        question.examQuestionId,
-
-        current => ({
-          ...current,
-
-          history,
-
-          redoStack: [],
-
-          image: {
-            exists: true,
-            visible: true,
-            origin:
-              "uploaded",
-            assets: [
-              asset
-            ],
-            prompt: null
-          }
-        })
-      );
-
-      setImageNotice(
-        current => ({
-          ...current,
-          [
-            question.examQuestionId
-          ]:
-            "تم رفع الصورة من الحاسوب بنجاح."
-        })
-      );
-    }
-    catch (error) {
-      const message =
-        error instanceof Error
-          ? error.message
-          : "تعذر رفع الصورة.";
-
-      setBuilderError(
-        message
-      );
-
-      setImageNotice(
-        current => ({
-          ...current,
-          [
-            question.examQuestionId
-          ]:
-            message
-        })
-      );
-    }
-    finally {
-      setImageBusy(
-        current => ({
-          ...current,
-          [
-            question.examQuestionId
-          ]:
-            false
-        })
-      );
-    }
-  }
-
 
   async function generateQuestionImage(
     question:
@@ -5912,54 +5532,6 @@ function App() {
                             <button onClick={() => toggleImage(question)}>
                               إخفاء الصورة
                             </button>
-                            <input
-                              id={`question-image-upload-${question.examQuestionId}`}
-                              type="file"
-                              accept="image/png,image/jpeg,image/webp"
-                              hidden
-                              onChange={event => {
-                                const file =
-                                  event.currentTarget.files?.[0];
-
-                                if (file) {
-                                  void uploadQuestionImage(
-                                    question,
-                                    file
-                                  );
-                                }
-
-                                event.currentTarget.value = "";
-                              }}
-                              disabled={
-                                question.locked ||
-                                Boolean(
-                                  imageBusy[
-                                    question.examQuestionId
-                                  ]
-                                )
-                              }
-                            />
-                            <button
-                              type="button"
-                              onClick={() => {
-                                const input =
-                                  document.getElementById(
-                                    `question-image-upload-${question.examQuestionId}`
-                                  ) as HTMLInputElement | null;
-
-                                input?.click();
-                              }}
-                              disabled={
-                                question.locked ||
-                                Boolean(
-                                  imageBusy[
-                                    question.examQuestionId
-                                  ]
-                                )
-                              }
-                            >
-                              ⬆ رفع صورة
-                            </button>
                             <button
                               className={
                                 imageBusy[
@@ -6041,54 +5613,6 @@ function App() {
                                 إظهار الصورة
                               </button>
                             )}
-                            <input
-                              id={`question-image-upload-${question.examQuestionId}`}
-                              type="file"
-                              accept="image/png,image/jpeg,image/webp"
-                              hidden
-                              onChange={event => {
-                                const file =
-                                  event.currentTarget.files?.[0];
-
-                                if (file) {
-                                  void uploadQuestionImage(
-                                    question,
-                                    file
-                                  );
-                                }
-
-                                event.currentTarget.value = "";
-                              }}
-                              disabled={
-                                question.locked ||
-                                Boolean(
-                                  imageBusy[
-                                    question.examQuestionId
-                                  ]
-                                )
-                              }
-                            />
-                            <button
-                              type="button"
-                              onClick={() => {
-                                const input =
-                                  document.getElementById(
-                                    `question-image-upload-${question.examQuestionId}`
-                                  ) as HTMLInputElement | null;
-
-                                input?.click();
-                              }}
-                              disabled={
-                                question.locked ||
-                                Boolean(
-                                  imageBusy[
-                                    question.examQuestionId
-                                  ]
-                                )
-                              }
-                            >
-                              ⬆ رفع صورة
-                            </button>
                             <button
                               className={
                                 imageBusy[
@@ -6176,10 +5700,13 @@ function App() {
                         <select
                           value={question.presentationType}
                           onChange={event =>
-                            convertQuestionType(
+                            runBankQuestionAction(
                               question,
-                              event.target.value as
-                                ExamQuestion["presentationType"]
+                              {
+                                presentationType:
+                                  event.target.value as
+                                    ExamQuestion["presentationType"]
+                              }
                             )
                           }
                           disabled={
