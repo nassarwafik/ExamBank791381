@@ -38,6 +38,8 @@ type ExamPlan = {
     recentExamCount: number;
   };
   explanation: string;
+  aiProvider?: "glm" | "qwen" | "openai";
+  aiModel?: string;
 };
 
 type QuestionOption = {
@@ -168,6 +170,7 @@ function App() {
   const [loginBusy, setLoginBusy] = useState(false);
 
   const [examPrompt, setExamPrompt] = useState("");
+  const [aiProvider, setAiProvider] = useState<"glm" | "qwen" | "openai">("glm");
   const [plan, setPlan] = useState<ExamPlan | null>(null);
   const [exam, setExam] = useState<ExamDraft | null>(null);
   const [generateBusy, setGenerateBusy] = useState(false);
@@ -313,7 +316,8 @@ function App() {
       }>("/api/interpret-exam-request", {
         method: "POST",
         body: JSON.stringify({
-          prompt: examPrompt.trim()
+          prompt: examPrompt.trim(),
+          provider: aiProvider
         })
       });
 
@@ -553,7 +557,34 @@ function App() {
               لن يتم تأليف أسئلة جديدة إلا عندما تختار أنت «بناء سؤال خارجي» لاحقًا.
             </span>
 
-            <button
+            <div className="model-and-generate">
+              <label className="model-picker">
+                <span>Ø§Ù„Ù…ÙˆØ¯ÙŠÙ„</span>
+                <select
+                  value={aiProvider}
+                  onChange={event =>
+                    setAiProvider(
+                      event.target.value as
+                        | "glm"
+                        | "qwen"
+                        | "openai"
+                    )
+                  }
+                  disabled={generateBusy}
+                >
+                  <option value="glm">
+                    GLM-5.3-Flash â€” Ø§ÙØªØ±Ø§Ø¶ÙŠ
+                  </option>
+                  <option value="qwen">
+                    Qwen3.5-Flash
+                  </option>
+                  <option value="openai">
+                    OpenAI GPT-5.6 Luna
+                  </option>
+                </select>
+              </label>
+
+              <button
               className="generate-button"
               onClick={handleGenerateExam}
               disabled={!examPrompt.trim() || generateBusy}
@@ -562,6 +593,7 @@ function App() {
                 ? "جارٍ تحليل الطلب وبناء الامتحان..."
                 : "إنشاء الامتحان"}
             </button>
+            </div>
           </div>
         </div>
 
@@ -586,6 +618,19 @@ function App() {
             <p className="plan-explanation">
               {plan.explanation}
             </p>
+            {plan.aiModel && (
+              <div className="active-model-line">
+                <span className="info-chip model-chip">
+                  AI: {
+                    plan.aiProvider === "glm"
+                      ? "GLM"
+                      : plan.aiProvider === "qwen"
+                        ? "Qwen"
+                        : "OpenAI"
+                  } Â· {plan.aiModel}
+                </span>
+              </div>
+            )}
 
             <div className="stat-grid">
               <div className="stat-box">
@@ -972,4 +1017,5 @@ function App() {
 }
 
 export default App;
+
 

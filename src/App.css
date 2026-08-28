@@ -1,4 +1,4 @@
-#root {
+﻿#root {
   min-height: 100vh;
 }
 
@@ -911,5 +911,83 @@ button {
 
   .login-card {
     padding: 26px;
+  }
+}
+
+/* =========================
+   AI model picker
+   ========================= */
+
+.model-and-generate {
+  display: flex;
+  align-items: flex-end;
+  gap: 12px;
+  flex: 0 0 auto;
+}
+
+.model-picker {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 250px;
+}
+
+.model-picker > span {
+  color: #64748b;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.model-picker select {
+  min-height: 46px;
+  border: 1px solid #cbd5e1;
+  border-radius: 12px;
+  padding: 0 12px;
+  background: #ffffff;
+  color: #0f172a;
+  font-weight: 700;
+  outline: none;
+  cursor: pointer;
+}
+
+.model-picker select:focus {
+  border-color: #2563eb;
+  box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.08);
+}
+
+.model-picker select:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.active-model-line {
+  margin: 12px 0 4px;
+}
+
+.model-chip {
+  border-color: #bfdbfe;
+  background: #eff6ff;
+  color: #1d4ed8;
+}
+
+@media (max-width: 760px) {
+  .builder-actions {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .model-and-generate {
+    width: 100%;
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .model-picker {
+    width: 100%;
+    min-width: 0;
+  }
+
+  .generate-button {
+    width: 100%;
   }
 }

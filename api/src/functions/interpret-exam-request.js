@@ -34,6 +34,62 @@ async function createOpenAIClient() {
   return new OpenAI({ apiKey });
 }
 
+async function createZaiClient() {
+  const module = await import("openai");
+  const OpenAI = module.default;
+
+  const apiKey = process.env.ZAI_API_KEY;
+  const baseURL =
+    process.env.ZAI_BASE_URL ||
+    "https://api.z.ai/api/paas/v4";
+
+  if (!apiKey) {
+    throw new Error(
+      "ZAI_API_KEY is not configured."
+    );
+  }
+
+  return new OpenAI({
+    apiKey,
+    baseURL
+  });
+}
+async function createQwenClient() {
+  const module = await import("openai");
+  const OpenAI = module.default;
+
+  const apiKey = process.env.QWEN_API_KEY;
+
+  // Preferred: set a workspace-specific Model Studio
+  // compatible-mode URL in QWEN_BASE_URL.
+  // The legacy international endpoint remains functional.
+  const baseURL =
+    process.env.QWEN_BASE_URL ||
+    "https://dashscope-intl.aliyuncs.com/compatible-mode/v1";
+
+  if (!apiKey) {
+    throw new Error(
+      "QWEN_API_KEY is not configured."
+    );
+  }
+
+  return new OpenAI({
+    apiKey,
+    baseURL
+  });
+}
+function parseJsonObjectText(value) {
+  let text = String(value || "").trim();
+
+  if (text.startsWith("```")) {
+    text = text
+      .replace(/^```(?:json)?\s*/i, "")
+      .replace(/\s*```$/, "")
+      .trim();
+  }
+
+  return JSON.parse(text);
+}
 function buildSchema(topicCodes) {
   const countProperty = {
     type: "integer",
@@ -470,49 +526,172 @@ app.http("interpretExamRequest", {
         item => item.code
       );
 
-      const openai = await createOpenAIClient();
-      const model =
-        process.env.OPENAI_MODEL ||
-        "gpt-5.6-terra";
+      const requestedProvider =
+        String(body?.provider || "glm")
+          .trim()
+          .toLowerCase();
 
-      const response = await openai.responses.create({
-        model,
-        store: false,
-        instructions: buildInstructions(topicsConfig),
-        input: [
-          {
-            role: "user",
-            content: [
+      const provider =
+        ["glm", "qwen", "openai"]
+          .includes(requestedProvider)
+          ? requestedProvider
+          : "glm";
+
+      let model = "";
+      let rawPlan = null;
+
+      const schema = buildSchema(topicCodes);
+
+      const jsonSystemInstruction =
+        buildInstructions(topicsConfig) +
+        "\n\nReturn JSON only. " +
+        "The response must be valid JSON " +
+        "and follow this JSON schema:\n" +
+        JSON.stringify(schema);
+
+      if (provider === "glm") {
+        const zai = await createZaiClient();
+
+        model =
+          process.env.ZAI_MODEL ||
+          "glm-5.3-flash";
+
+        const response =
+          await zai.chat.completions.create({
+            model,
+            messages: [
               {
-                type: "input_text",
-                text: prompt
+                role: "system",
+                content: jsonSystemInstruction
+              },
+              {
+                role: "user",
+                content: prompt
               }
-            ]
-          }
-        ],
-        text: {
-          format: {
-            type: "json_schema",
-            name: "exam_plan",
-            strict: true,
-            schema: buildSchema(topicCodes)
-          }
-        },
-        max_output_tokens: 2200
-      });
+            ],
+            response_format: {
+              type: "json_object"
+            },
+            temperature: 0.1,
+            max_tokens: 2200
+          });
 
-      if (!response.output_text) {
-        throw new Error("OpenAI returned no output_text");
+        const outputText =
+          response?.choices?.[0]
+            ?.message?.content;
+
+        if (!outputText) {
+          throw new Error(
+            "GLM returned no JSON response."
+          );
+        }
+
+        rawPlan =
+          parseJsonObjectText(outputText);
+      }
+      else if (provider === "qwen") {
+        const qwen =
+          await createQwenClient();
+
+        model =
+          process.env.QWEN_MODEL ||
+          "qwen3.5-flash";
+
+        const response =
+          await qwen.chat.completions.create({
+            model,
+            messages: [
+              {
+                role: "system",
+                content: jsonSystemInstruction
+              },
+              {
+                role: "user",
+                content: prompt
+              }
+            ],
+            response_format: {
+              type: "json_object"
+            },
+
+            // Qwen 3.5 supports hybrid thinking.
+            // Node OpenAI SDK sends this custom field
+            // at the top level as required by Model Studio.
+            enable_thinking: false,
+
+            temperature: 0.1
+          });
+
+        const outputText =
+          response?.choices?.[0]
+            ?.message?.content;
+
+        if (!outputText) {
+          throw new Error(
+            "Qwen returned no JSON response."
+          );
+        }
+
+        rawPlan =
+          parseJsonObjectText(outputText);
+      }
+      else {
+        const openai =
+          await createOpenAIClient();
+
+        model =
+          process.env.OPENAI_MODEL ||
+          "gpt-5.6-luna";
+
+        const response =
+          await openai.responses.create({
+            model,
+            store: false,
+            instructions:
+              buildInstructions(topicsConfig),
+            input: [
+              {
+                role: "user",
+                content: [
+                  {
+                    type: "input_text",
+                    text: prompt
+                  }
+                ]
+              }
+            ],
+            text: {
+              format: {
+                type: "json_schema",
+                name: "exam_plan",
+                strict: true,
+                schema
+              }
+            },
+            max_output_tokens: 2200
+          });
+
+        if (!response.output_text) {
+          throw new Error(
+            "OpenAI returned no output_text"
+          );
+        }
+
+        rawPlan =
+          JSON.parse(response.output_text);
       }
 
-      const rawPlan = JSON.parse(response.output_text);
-      const plan = normalizePlan(rawPlan, prompt);
-
+      const plan = {
+        ...normalizePlan(rawPlan, prompt),
+        aiProvider: provider,
+        aiModel: model
+      };
       return {
         status: 200,
         jsonBody: {
           ok: true,
           plan,
+          provider,
           model
         }
       };
@@ -531,4 +710,6 @@ app.http("interpretExamRequest", {
     }
   }
 });
+
+
 
