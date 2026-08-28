@@ -1925,3 +1925,496 @@ td {
       avoid;
   }
 }
+
+
+/* ===== Bottom Actions Phase 4 ===== */
+
+/* =========================
+   Preview Mode Bar
+   ========================= */
+
+.preview-mode-bar {
+  position:
+    sticky;
+
+  top:
+    88px;
+
+  z-index:
+    40;
+
+  display:
+    flex;
+
+  align-items:
+    center;
+
+  justify-content:
+    space-between;
+
+  gap:
+    18px;
+
+  margin-bottom:
+    16px;
+
+  padding:
+    13px
+    16px;
+
+  border:
+    1px
+    solid
+    #bfdbfe;
+
+  border-radius:
+    16px;
+
+  background:
+    rgba(
+      239,
+      246,
+      255,
+      0.97
+    );
+
+  box-shadow:
+    0
+    10px
+    28px
+    rgba(
+      15,
+      23,
+      42,
+      0.08
+    );
+
+  backdrop-filter:
+    blur(8px);
+}
+
+.preview-mode-bar > div:first-child {
+  display:
+    flex;
+
+  flex-direction:
+    column;
+
+  gap:
+    3px;
+}
+
+.preview-mode-bar strong {
+  color:
+    #1e3a8a;
+
+  font-size:
+    15px;
+}
+
+.preview-mode-bar span {
+  color:
+    #64748b;
+
+  font-size:
+    12px;
+}
+
+.preview-mode-actions {
+  display:
+    flex;
+
+  gap:
+    8px;
+}
+
+.preview-mode-actions button {
+  border:
+    1px
+    solid
+    #bfdbfe;
+
+  border-radius:
+    10px;
+
+  padding:
+    9px
+    13px;
+
+  background:
+    white;
+
+  color:
+    #1e40af;
+
+  font-weight:
+    800;
+
+  cursor:
+    pointer;
+}
+
+.preview-mode-actions
+.preview-print-button {
+  border-color:
+    #2563eb;
+
+  background:
+    #2563eb;
+
+  color:
+    white;
+}
+
+/* =========================
+   Student / Teacher Preview
+   ========================= */
+
+.preview-student
+.question-top-actions,
+
+.preview-student
+.question-meta,
+
+.preview-student
+.question-action-bar,
+
+.preview-student
+.per-question-ai,
+
+.preview-student
+.teacher-note-panel,
+
+.preview-student
+.question-footer-actions,
+
+.preview-student
+.image-controls,
+
+.preview-student
+.bottom-actions-card,
+
+.preview-student
+.bottom-action-notice,
+
+.preview-student
+.quality-report,
+
+.preview-student
+.global-ai-box,
+
+.preview-student
+.exam-id {
+  display:
+    none !important;
+}
+
+.preview-teacher
+.question-top-actions,
+
+.preview-teacher
+.question-meta,
+
+.preview-teacher
+.question-action-bar,
+
+.preview-teacher
+.per-question-ai,
+
+.preview-teacher
+.teacher-note-panel,
+
+.preview-teacher
+.question-footer-actions,
+
+.preview-teacher
+.image-controls,
+
+.preview-teacher
+.bottom-actions-card,
+
+.preview-teacher
+.bottom-action-notice,
+
+.preview-teacher
+.quality-report,
+
+.preview-teacher
+.global-ai-box,
+
+.preview-teacher
+.exam-id {
+  display:
+    none !important;
+}
+
+.preview-student
+.answer-box {
+  display:
+    none !important;
+}
+
+.preview-student
+.question-card,
+
+.preview-teacher
+.question-card {
+  box-shadow:
+    0
+    6px
+    20px
+    rgba(
+      15,
+      23,
+      42,
+      0.045
+    );
+}
+
+/* =========================
+   Quality Report
+   ========================= */
+
+.quality-report {
+  margin-top:
+    22px;
+
+  padding:
+    18px
+    20px;
+
+  border-radius:
+    16px;
+}
+
+.quality-good {
+  border:
+    1px
+    solid
+    #bbf7d0;
+
+  background:
+    #f0fdf4;
+
+  color:
+    #166534;
+}
+
+.quality-warning {
+  border:
+    1px
+    solid
+    #fde68a;
+
+  background:
+    #fffbeb;
+
+  color:
+    #92400e;
+}
+
+.quality-report-heading {
+  display:
+    flex;
+
+  align-items:
+    center;
+
+  justify-content:
+    space-between;
+
+  gap:
+    12px;
+}
+
+.quality-report-heading
+button {
+  width:
+    30px;
+
+  height:
+    30px;
+
+  border:
+    0;
+
+  border-radius:
+    999px;
+
+  background:
+    rgba(
+      255,
+      255,
+      255,
+      0.7
+    );
+
+  font-size:
+    18px;
+
+  cursor:
+    pointer;
+}
+
+.quality-report ul {
+  margin:
+    12px
+    0
+    0;
+
+  padding-right:
+    22px;
+
+  line-height:
+    1.9;
+}
+
+.quality-report p {
+  margin:
+    10px
+    0
+    0;
+}
+
+/* =========================
+   Save notices
+   ========================= */
+
+.bottom-action-notice {
+  margin-top:
+    20px;
+
+  padding:
+    11px
+    15px;
+
+  border:
+    1px
+    solid
+    #dbeafe;
+
+  border-radius:
+    12px;
+
+  background:
+    #eff6ff;
+
+  color:
+    #1e40af;
+
+  font-size:
+    13px;
+
+  font-weight:
+    800;
+}
+
+.bottom-actions-card
+button:disabled {
+  opacity:
+    0.55;
+
+  cursor:
+    wait;
+}
+
+/* =========================
+   Print
+   ========================= */
+
+@media print {
+
+  @page {
+    size:
+      A4;
+
+    margin:
+      12mm;
+  }
+
+  body {
+    background:
+      white !important;
+  }
+
+  .preview-mode-bar,
+  .bottom-action-notice,
+  .quality-report {
+    display:
+      none !important;
+  }
+
+  .generated-exam {
+    padding:
+      0 !important;
+
+    margin:
+      0 !important;
+
+    border:
+      0 !important;
+
+    background:
+      white !important;
+  }
+
+  .exam-toolbar-card {
+    margin-bottom:
+      16px !important;
+  }
+
+  .question-card {
+    page-break-inside:
+      avoid;
+
+    break-inside:
+      avoid;
+
+    box-shadow:
+      none !important;
+
+    margin-bottom:
+      14px !important;
+  }
+
+  .preview-student
+  .answer-box {
+    display:
+      none !important;
+  }
+
+  .preview-teacher
+  .answer-box {
+    display:
+      block !important;
+  }
+}
+
+/* =========================
+   Mobile
+   ========================= */
+
+@media (
+  max-width:
+    760px
+) {
+  .preview-mode-bar {
+    position:
+      static;
+
+    align-items:
+      stretch;
+
+    flex-direction:
+      column;
+  }
+
+  .preview-mode-actions {
+    display:
+      grid;
+
+    grid-template-columns:
+      1fr
+      1fr;
+  }
+}

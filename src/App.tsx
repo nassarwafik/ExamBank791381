@@ -190,6 +190,20 @@ function App() {
     Record<string, boolean>
   >({});
 
+  const [previewMode, setPreviewMode] = useState<
+    "edit" | "student" | "teacher"
+  >("edit");
+
+  const [saveBusy, setSaveBusy] = useState<
+    "exam" | "template" | null
+  >(null);
+
+  const [actionNotice, setActionNotice] = useState("");
+
+  const [qualityReport, setQualityReport] = useState<
+    string[] | null
+  >(null);
+
   const loggedIn = Boolean(token);
 
   const totalCurrentMarks = useMemo(() => {
@@ -1107,6 +1121,465 @@ function App() {
     }
   }
 
+
+  async function saveExamArtifact(
+    kind:
+      "exam" |
+      "template"
+  ) {
+    if (
+      !exam ||
+      saveBusy
+    ) {
+      return;
+    }
+
+    setBuilderError("");
+
+    setActionNotice("");
+
+    setSaveBusy(
+      kind
+    );
+
+    try {
+      const result =
+        await apiRequest<{
+          ok: true;
+
+          kind:
+            string;
+
+          blobName:
+            string;
+
+          savedAt:
+            string;
+        }>(
+          "/api/save-exam-artifact",
+
+          {
+            method:
+              "POST",
+
+            body:
+              JSON.stringify({
+                kind,
+                exam
+              })
+          }
+        );
+
+      if (
+        kind ===
+        "template"
+      ) {
+        setActionNotice(
+          "✓ تم حفظ القالب بنجاح."
+        );
+      }
+      else {
+        setActionNotice(
+          "✓ تم حفظ الامتحان بنجاح."
+        );
+      }
+
+      console.log(
+        "Saved:",
+        result.blobName
+      );
+    }
+    catch (error) {
+      const message =
+        error
+        instanceof Error
+          ? error.message
+          : "تعذر الحفظ.";
+
+      setBuilderError(
+        message
+      );
+    }
+    finally {
+      setSaveBusy(
+        null
+      );
+    }
+  }
+
+  function questionHasAnswer(
+    question:
+      ExamQuestion
+  ) {
+    if (
+      !question.answer
+    ) {
+      return false;
+    }
+
+    return (
+      Object.keys(
+        question.answer
+      ).length > 0
+    );
+  }
+
+  function runQualityCheck() {
+    if (
+      !exam
+    ) {
+      return;
+    }
+
+    const issues:
+      string[] = [];
+
+    const currentMarks =
+      exam.questions.reduce(
+        (
+          total,
+          question
+        ) =>
+          total +
+          Number(
+            question.marks ||
+            0
+          ),
+        0
+      );
+
+    if (
+      currentMarks !==
+      Number(
+        exam.totalMarks
+      )
+    ) {
+      issues.push(
+        "مجموع علامات الأسئلة هو " +
+        currentMarks +
+        " بينما علامة الامتحان المطلوبة هي " +
+        exam.totalMarks +
+        "."
+      );
+    }
+
+    if (
+      exam.questions.length !==
+      Number(
+        exam.plan
+          ?.totalQuestions ||
+        exam.questions.length
+      )
+    ) {
+      issues.push(
+        "عدد الأسئلة الحالي لا يطابق عدد الأسئلة في الخطة."
+      );
+    }
+
+    const seenBankIds =
+      new Set();
+
+    const seenFamilies =
+      new Set();
+
+    exam.questions.forEach(
+      (
+        question,
+        index
+      ) => {
+        const number =
+          index + 1;
+
+        if (
+          !question.text
+            ?.trim()
+        ) {
+          issues.push(
+            "السؤال " +
+            number +
+            " لا يحتوي على نص."
+          );
+        }
+
+        if (
+          Number(
+            question.marks
+          ) <= 0
+        ) {
+          issues.push(
+            "السؤال " +
+            number +
+            " علامته صفر أو غير صالحة."
+          );
+        }
+
+        if (
+          !questionHasAnswer(
+            question
+          )
+        ) {
+          issues.push(
+            "السؤال " +
+            number +
+            " لا يحتوي على نموذج إجابة."
+          );
+        }
+
+        if (
+          question.presentationType ===
+            "multipleChoice" &&
+          (
+            !Array.isArray(
+              question.options
+            ) ||
+            question.options.length <
+              2
+          )
+        ) {
+          issues.push(
+            "السؤال " +
+            number +
+            " أمريكي ولكن عدد الخيارات غير كافٍ."
+          );
+        }
+
+        if (
+          (
+            question.presentationType ===
+              "fillBlank" ||
+            question.presentationType ===
+              "wordBank"
+          ) &&
+          (
+            !Array.isArray(
+              question.fields
+            ) ||
+            question.fields.length ===
+              0
+          )
+        ) {
+          issues.push(
+            "السؤال " +
+            number +
+            " يحتاج حقول إجابة ولكنه لا يحتوي على حقول."
+          );
+        }
+
+        if (
+          question.presentationType ===
+            "wordBank" &&
+          (
+            !Array.isArray(
+              question.wordBank
+            ) ||
+            question.wordBank.length ===
+              0
+          )
+        ) {
+          issues.push(
+            "السؤال " +
+            number +
+            " من نوع مخزن كلمات ولكن مخزن الكلمات فارغ."
+          );
+        }
+
+        if (
+          question.image
+            ?.exists &&
+          (
+            !Array.isArray(
+              question.image.assets
+            ) ||
+            question.image.assets.length ===
+              0
+          )
+        ) {
+          issues.push(
+            "السؤال " +
+            number +
+            " مسجل كسؤال صورة ولكن لا توجد صورة فعلية."
+          );
+        }
+
+        if (
+          question.bankQuestionId
+        ) {
+          if (
+            seenBankIds.has(
+              question.bankQuestionId
+            )
+          ) {
+            issues.push(
+              "يوجد تكرار للسؤال الأصلي عند السؤال " +
+              number +
+              "."
+            );
+          }
+
+          seenBankIds.add(
+            question.bankQuestionId
+          );
+        }
+
+        if (
+          question.familyKey
+        ) {
+          if (
+            seenFamilies.has(
+              question.familyKey
+            )
+          ) {
+            issues.push(
+              "يوجد أكثر من سؤال من نفس العائلة عند السؤال " +
+              number +
+              "."
+            );
+          }
+
+          seenFamilies.add(
+            question.familyKey
+          );
+        }
+      }
+    );
+
+    setQualityReport(
+      issues
+    );
+
+    if (
+      issues.length === 0
+    ) {
+      setActionNotice(
+        "✓ فحص الجودة اكتمل: لم يتم العثور على مشاكل."
+      );
+    }
+    else {
+      setActionNotice(
+        "⚠ فحص الجودة وجد " +
+        issues.length +
+        " ملاحظة."
+      );
+    }
+  }
+
+  function showStudentCopy() {
+    if (
+      !exam
+    ) {
+      return;
+    }
+
+    setPreviewMode(
+      "student"
+    );
+
+    setAnswerVisibility(
+      {}
+    );
+
+    setActionNotice(
+      "أنت الآن في معاينة نسخة الطالب."
+    );
+
+    window.setTimeout(
+      () => {
+        document
+          .getElementById(
+            "generated-exam"
+          )
+          ?.scrollIntoView({
+            behavior:
+              "smooth",
+
+            block:
+              "start"
+          });
+      },
+      40
+    );
+  }
+
+  function showTeacherCopy() {
+    if (
+      !exam
+    ) {
+      return;
+    }
+
+    const allAnswers:
+      Record<string, boolean> =
+      {};
+
+    for (
+      const question
+      of exam.questions
+    ) {
+      allAnswers[
+        question.examQuestionId
+      ] = true;
+    }
+
+    setAnswerVisibility(
+      allAnswers
+    );
+
+    setPreviewMode(
+      "teacher"
+    );
+
+    setActionNotice(
+      "أنت الآن في معاينة نسخة المعلم مع نموذج الإجابة."
+    );
+
+    window.setTimeout(
+      () => {
+        document
+          .getElementById(
+            "generated-exam"
+          )
+          ?.scrollIntoView({
+            behavior:
+              "smooth",
+
+            block:
+              "start"
+          });
+      },
+      40
+    );
+  }
+
+  function exitPreviewMode() {
+    setPreviewMode(
+      "edit"
+    );
+
+    setActionNotice(
+      "تم الرجوع إلى وضع تحرير الامتحان."
+    );
+  }
+
+  function printCurrentExam() {
+    if (
+      previewMode ===
+      "edit"
+    ) {
+      showStudentCopy();
+
+      window.setTimeout(
+        () => {
+          window.print();
+        },
+        180
+      );
+
+      return;
+    }
+
+    window.print();
+  }
+
   function showNextPhaseMessage() {
     setBuilderError(
       "تم تجهيز الواجهة لهذه الأداة. سنربط تنفيذها بالـ Backend في المرحلة التالية دون تغيير الصفحة."
@@ -1342,9 +1815,45 @@ function App() {
 
         {exam && (
           <section
-            className="generated-exam"
+            className={
+              "generated-exam preview-" +
+              previewMode
+            }
             id="generated-exam"
           >
+            {previewMode !== "edit" && (
+              <div className="preview-mode-bar">
+                <div>
+                  <strong>
+                    {previewMode === "student"
+                      ? "👨‍🎓 نسخة الطالب"
+                      : "👨‍🏫 نسخة المعلم"}
+                  </strong>
+
+                  <span>
+                    {previewMode === "student"
+                      ? "هذه هي النسخة النظيفة التي يراها الطالب."
+                      : "نسخة المعلم مع نموذج الإجابة."}
+                  </span>
+                </div>
+
+                <div className="preview-mode-actions">
+                  <button
+                    onClick={exitPreviewMode}
+                  >
+                    العودة للتحرير
+                  </button>
+
+                  <button
+                    className="preview-print-button"
+                    onClick={printCurrentExam}
+                  >
+                    🖨 طباعة / PDF
+                  </button>
+                </div>
+              </div>
+            )}
+
             <div className="exam-preview-heading">
               <div>
                 <span>
@@ -1991,23 +2500,122 @@ function App() {
               })}
             </div>
 
+            {qualityReport !== null && (
+              <div
+                className={
+                  qualityReport.length === 0
+                    ? "quality-report quality-good"
+                    : "quality-report quality-warning"
+                }
+              >
+                <div className="quality-report-heading">
+                  <strong>
+                    {qualityReport.length === 0
+                      ? "✓ الامتحان جاهز"
+                      : "⚠ تقرير فحص الجودة"}
+                  </strong>
+
+                  <button
+                    onClick={() =>
+                      setQualityReport(null)
+                    }
+                  >
+                    ×
+                  </button>
+                </div>
+
+                {qualityReport.length === 0 ? (
+                  <p>
+                    لم يتم العثور على مشاكل أساسية في الامتحان.
+                  </p>
+                ) : (
+                  <ul>
+                    {qualityReport.map(
+                      (
+                        issue,
+                        index
+                      ) => (
+                        <li
+                          key={
+                            "quality-" +
+                            index
+                          }
+                        >
+                          {issue}
+                        </li>
+                      )
+                    )}
+                  </ul>
+                )}
+              </div>
+            )}
+
+            {actionNotice && (
+              <div className="bottom-action-notice">
+                {actionNotice}
+              </div>
+            )}
+
             <div className="bottom-actions-card">
-              <button onClick={showNextPhaseMessage}>
-                💾 حفظ الامتحان
+              <button
+                onClick={() =>
+                  saveExamArtifact(
+                    "exam"
+                  )
+                }
+                disabled={
+                  saveBusy !== null
+                }
+              >
+                {saveBusy === "exam"
+                  ? "⏳ جارٍ الحفظ..."
+                  : "💾 حفظ الامتحان"}
               </button>
-              <button onClick={showNextPhaseMessage}>
-                📋 حفظ كقالب
+
+              <button
+                onClick={() =>
+                  saveExamArtifact(
+                    "template"
+                  )
+                }
+                disabled={
+                  saveBusy !== null
+                }
+              >
+                {saveBusy === "template"
+                  ? "⏳ جارٍ حفظ القالب..."
+                  : "📋 حفظ كقالب"}
               </button>
-              <button onClick={showNextPhaseMessage}>
+
+              <button
+                onClick={
+                  runQualityCheck
+                }
+              >
                 ✅ فحص جودة الامتحان
               </button>
-              <button onClick={showNextPhaseMessage}>
+
+              <button
+                onClick={
+                  showStudentCopy
+                }
+              >
                 👨‍🎓 نسخة الطالب
               </button>
-              <button onClick={showNextPhaseMessage}>
+
+              <button
+                onClick={
+                  showTeacherCopy
+                }
+              >
                 👨‍🏫 نسخة المعلم
               </button>
-              <button onClick={showNextPhaseMessage}>
+
+              <button
+                onClick={
+                  printCurrentExam
+                }
+              >
                 🖨 طباعة / PDF
               </button>
             </div>
