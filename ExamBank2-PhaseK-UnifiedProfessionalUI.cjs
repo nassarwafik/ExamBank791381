@@ -1,0 +1,918 @@
+const fs=require("fs");
+const path=require("path");
+const {execFileSync,execSync}=require("child_process");
+
+const root=process.cwd();
+const P=(...parts)=>path.join(root,...parts);
+const fail=(m)=>{console.error("\nERROR: "+m);process.exit(1)};
+
+let branch="";
+try{branch=execFileSync("git",["branch","--show-current"],{cwd:root,encoding:"utf8"}).trim()}
+catch{fail("تعذر قراءة فرع Git.")}
+if(branch!=="v2-dev")fail("شغّل الملف على فرع v2-dev فقط. الفرع الحالي: "+branch);
+
+const appPath=P("src","App.tsx");
+const proCssPath=P("src","professional-ui.css");
+if(!fs.existsSync(appPath))fail("src/App.tsx غير موجود.");
+
+const suffix=".bak-phase2k-professional-ui";
+for(const f of [appPath,proCssPath]){
+ if(fs.existsSync(f)&&!fs.existsSync(f+suffix))fs.copyFileSync(f,f+suffix);
+}
+
+let app=fs.readFileSync(appPath,"utf8");
+
+// Add the global professional design layer last so it can safely override legacy styles.
+if(!app.includes('import "./professional-ui.css";')){
+ const marker='import "./platform.css";';
+ if(!app.includes(marker))fail("تعذر العثور على استيراد platform.css.");
+ app=app.replace(marker,marker+'\nimport "./professional-ui.css";\n// EXAMBANK_2_PHASE_K_UNIFIED_PRO_UI');
+}
+
+// Replace only the login presentation; keep the existing authentication logic untouched.
+const loginStart=app.indexOf("  if (!loggedIn) {");
+const studentStart=app.indexOf('  if (\n    sessionRole ===\n    "student"\n  ) {',loginStart);
+if(loginStart<0||studentStart<0)fail("تعذر تحديد صفحة الدخول في App.tsx.");
+
+const loginBlock=`  if (!loggedIn) {
+    return (
+      <main className="login-page pro-login-page" dir="rtl">
+        <section className="pro-login-shell">
+          <aside className="pro-login-showcase">
+            <div className="pro-login-brand">
+              <div className="pro-login-logo">EB</div>
+              <div>
+                <strong>ExamBank 791381</strong>
+                <span>Smart Assessment Workspace</span>
+              </div>
+            </div>
+
+            <div className="pro-login-copy">
+              <span className="pro-kicker">منصة تعليمية احترافية</span>
+              <h1>أنشئ، أرسل، تابع وحلّل الامتحانات من مكان واحد.</h1>
+              <p>
+                بيئة موحّدة لبناء الامتحانات بالذكاء الاصطناعي، إدارة الصفوف والطلاب،
+                متابعة الواجبات وتحليل الأداء.
+              </p>
+            </div>
+
+            <div className="pro-login-features">
+              <article><span>01</span><div><strong>AI Exam Builder</strong><small>بناء وتعديل الأسئلة بمرونة.</small></div></article>
+              <article><span>02</span><div><strong>Teacher Analytics</strong><small>رسوم ومؤشرات لمتابعة الأداء.</small></div></article>
+              <article><span>03</span><div><strong>Student Workspace</strong><small>واجبات، محاولات ونتائج واضحة.</small></div></article>
+            </div>
+
+            <div className="pro-login-mini-stats">
+              <div><strong>AI</strong><span>Exam Builder</span></div>
+              <div><strong>360°</strong><span>Student View</span></div>
+              <div><strong>Live</strong><span>Analytics</span></div>
+            </div>
+          </aside>
+
+          <section className="login-card pro-login-card">
+            <div className="pro-login-mobile-brand">
+              <div className="brand-mark">EB</div>
+              <div><strong>ExamBank 791381</strong><span>Smart Assessment Workspace</span></div>
+            </div>
+
+            <span className="pro-kicker">مرحبًا بعودتك</span>
+            <h2>تسجيل الدخول</h2>
+            <p className="subtitle">أدخل بياناتك للوصول إلى مساحة العمل.</p>
+
+            <div className="login-role-note">
+              <span>👨‍🏫 معلم</span>
+              <span>👨‍🎓 طالب</span>
+            </div>
+
+            <form onSubmit={handleLogin}>
+              <label>
+                <span>رقم الهوية / كود المستخدم</span>
+                <div className="pro-input-wrap">
+                  <i className="pro-input-icon">ID</i>
+                  <input
+                    type="text"
+                    value={userCode}
+                    onChange={event => setUserCode(event.target.value)}
+                    placeholder="أدخل رقم الهوية أو كود المستخدم"
+                    autoComplete="username"
+                  />
+                </div>
+              </label>
+
+              <label>
+                <span>كلمة المرور</span>
+                <div className="pro-input-wrap">
+                  <i className="pro-input-icon">••</i>
+                  <input
+                    type="password"
+                    value={password}
+                    onChange={event => setPassword(event.target.value)}
+                    placeholder="أدخل كلمة المرور"
+                    autoComplete="current-password"
+                  />
+                </div>
+              </label>
+
+              {loginError && <div className="error-message">{loginError}</div>}
+
+              <button type="submit" className="primary-button pro-login-submit" disabled={loginBusy}>
+                {loginBusy ? "جارٍ التحقق والدخول..." : "دخول إلى ExamBank"}
+              </button>
+            </form>
+
+            <div className="pro-login-security">
+              <span>●</span>
+              <p><strong>دخول آمن</strong><small>تُحدد صلاحيات المعلم والطالب تلقائيًا بعد تسجيل الدخول.</small></p>
+            </div>
+          </section>
+        </section>
+      </main>
+    );
+  }
+
+`;
+
+app=app.slice(0,loginStart)+loginBlock+app.slice(studentStart);
+
+// Upgrade the teacher header into a real application sidebar without changing navigation logic.
+const oldHeader=`      <header className="top-bar">
+        <div>
+          <h1>ExamBank 791381</h1>
+          <p>
+            اكتب ما تريد، وسيبقى بناء الامتحان وتعديله كله في هذه الصفحة
+          </p>
+        </div>
+
+        <div className="teacher-mode-actions">`;
+
+const newHeader=`      <header className="top-bar pro-app-sidebar">
+        <div className="pro-sidebar-brand">
+          <div className="pro-sidebar-logo">EB</div>
+          <div>
+            <h1>ExamBank</h1>
+            <p>791381 · Smart Assessment</p>
+          </div>
+        </div>
+
+        <div className="pro-sidebar-user">
+          <span className="pro-user-avatar">👨‍🏫</span>
+          <div>
+            <strong>{sessionDisplayName || "المعلم"}</strong>
+            <small>Teacher Workspace</small>
+          </div>
+        </div>
+
+        <span className="pro-sidebar-label">مساحة العمل</span>
+
+        <div className="teacher-mode-actions">`;
+
+if(!app.includes(oldHeader))fail("تعذر تحديد رأس منصة المعلم لتحديث Sidebar.");
+app=app.replace(oldHeader,newHeader);
+
+fs.writeFileSync(appPath,app,"utf8");
+
+const css=String.raw`
+/* ============================================================
+   ExamBank 2.0K — Unified Professional UI
+   Visual language inspired by clean modern admin dashboards.
+   No business logic is changed in this stylesheet.
+   ============================================================ */
+
+:root{
+ --pro-bg:#f4f6f9;
+ --pro-surface:#ffffff;
+ --pro-surface-soft:#f8fafc;
+ --pro-surface-muted:#f1f5f9;
+ --pro-sidebar:#111827;
+ --pro-sidebar-2:#0b1220;
+ --pro-sidebar-text:#cbd5e1;
+ --pro-text:#172033;
+ --pro-muted:#6b7280;
+ --pro-border:#e5e9f0;
+ --pro-border-strong:#d7dee8;
+ --pro-primary:#2563eb;
+ --pro-primary-2:#1d4ed8;
+ --pro-primary-soft:#eff6ff;
+ --pro-success:#16a34a;
+ --pro-success-soft:#f0fdf4;
+ --pro-warning:#d97706;
+ --pro-warning-soft:#fffbeb;
+ --pro-danger:#dc2626;
+ --pro-danger-soft:#fef2f2;
+ --pro-info:#0891b2;
+ --pro-shadow-xs:0 1px 2px rgba(15,23,42,.03);
+ --pro-shadow-sm:0 8px 24px rgba(15,23,42,.055);
+ --pro-shadow-md:0 18px 48px rgba(15,23,42,.08);
+ --pro-radius-sm:9px;
+ --pro-radius:13px;
+ --pro-radius-lg:18px;
+ --pro-sidebar-w:236px;
+}
+
+*{box-sizing:border-box}
+html{background:var(--pro-bg)}
+body{
+ margin:0;
+ background:var(--pro-bg);
+ color:var(--pro-text);
+ font-family:Inter,"Segoe UI",Tahoma,Arial,sans-serif;
+ -webkit-font-smoothing:antialiased;
+ text-rendering:optimizeLegibility;
+}
+button,input,select,textarea{font:inherit}
+button{transition:transform .16s ease,box-shadow .16s ease,border-color .16s ease,background .16s ease,color .16s ease}
+button:not(:disabled):active{transform:translateY(1px)}
+button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible,summary:focus-visible{
+ outline:3px solid rgba(37,99,235,.16);
+ outline-offset:2px;
+}
+::selection{background:#bfdbfe;color:#172033}
+
+/* ---------------- LOGIN ---------------- */
+.pro-login-page{
+ min-height:100vh;
+ display:grid;
+ place-items:center;
+ padding:34px;
+ background:
+  radial-gradient(circle at 10% 10%,rgba(37,99,235,.10),transparent 30%),
+  radial-gradient(circle at 88% 88%,rgba(14,165,233,.09),transparent 26%),
+  linear-gradient(135deg,#eef2f7,#f8fafc 52%,#eef4fb);
+}
+.pro-login-shell{
+ width:min(1060px,100%);
+ min-height:620px;
+ display:grid;
+ grid-template-columns:minmax(0,1.12fr) minmax(360px,.88fr);
+ background:var(--pro-surface);
+ border:1px solid rgba(255,255,255,.72);
+ border-radius:28px;
+ overflow:hidden;
+ box-shadow:0 30px 80px rgba(15,23,42,.16);
+}
+.pro-login-showcase{
+ position:relative;
+ overflow:hidden;
+ padding:42px;
+ color:#fff;
+ display:flex;
+ flex-direction:column;
+ background:
+  radial-gradient(circle at 15% 15%,rgba(59,130,246,.34),transparent 26%),
+  radial-gradient(circle at 82% 70%,rgba(14,165,233,.22),transparent 28%),
+  linear-gradient(145deg,#0b1220,#111827 52%,#172554);
+}
+.pro-login-showcase:before,
+.pro-login-showcase:after{
+ content:"";
+ position:absolute;
+ border-radius:50%;
+ border:1px solid rgba(255,255,255,.07);
+ pointer-events:none;
+}
+.pro-login-showcase:before{width:360px;height:360px;left:-150px;bottom:-150px}
+.pro-login-showcase:after{width:520px;height:520px;right:-260px;top:-260px}
+.pro-login-brand{display:flex;align-items:center;gap:12px;position:relative;z-index:1}
+.pro-login-logo,.pro-sidebar-logo{
+ width:44px;height:44px;border-radius:13px;
+ display:grid;place-items:center;
+ background:linear-gradient(135deg,#3b82f6,#1d4ed8);
+ color:#fff;font-weight:900;letter-spacing:-.04em;
+ box-shadow:0 10px 24px rgba(37,99,235,.28)
+}
+.pro-login-brand>div:last-child{display:flex;flex-direction:column}
+.pro-login-brand strong{font-size:16px}
+.pro-login-brand span{font-size:10px;color:#94a3b8;margin-top:2px;letter-spacing:.04em}
+.pro-login-copy{margin:auto 0 30px;position:relative;z-index:1;max-width:560px}
+.pro-kicker{
+ display:inline-flex;align-items:center;gap:6px;
+ color:var(--pro-primary);font-size:11px;font-weight:900;
+ letter-spacing:.04em
+}
+.pro-login-showcase .pro-kicker{color:#93c5fd}
+.pro-login-copy h1{font-size:38px;line-height:1.35;margin:13px 0 14px;letter-spacing:-.025em}
+.pro-login-copy p{font-size:14px;line-height:1.9;color:#cbd5e1;margin:0;max-width:510px}
+.pro-login-features{display:grid;gap:10px;position:relative;z-index:1}
+.pro-login-features article{
+ display:flex;gap:11px;align-items:center;
+ background:rgba(255,255,255,.055);
+ border:1px solid rgba(255,255,255,.09);
+ border-radius:13px;padding:11px 13px;
+ backdrop-filter:blur(8px)
+}
+.pro-login-features article>span{
+ width:30px;height:30px;border-radius:9px;display:grid;place-items:center;
+ background:rgba(59,130,246,.18);color:#bfdbfe;font-size:10px;font-weight:900
+}
+.pro-login-features article>div{display:flex;flex-direction:column}
+.pro-login-features strong{font-size:12px}.pro-login-features small{color:#94a3b8;font-size:10px;margin-top:2px}
+.pro-login-mini-stats{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:14px;position:relative;z-index:1}
+.pro-login-mini-stats div{
+ padding:10px;border-top:1px solid rgba(255,255,255,.1);
+ display:flex;flex-direction:column
+}
+.pro-login-mini-stats strong{font-size:17px}.pro-login-mini-stats span{font-size:9px;color:#94a3b8;margin-top:2px}
+
+.pro-login-card.login-card{
+ width:auto;max-width:none;margin:0;padding:58px 50px;
+ border:0;border-radius:0;box-shadow:none;background:#fff;
+ display:flex;flex-direction:column;justify-content:center;align-items:stretch;
+ text-align:right;
+}
+.pro-login-mobile-brand{display:none}
+.pro-login-card h2{font-size:29px;margin:10px 0 5px;letter-spacing:-.02em;color:var(--pro-text)}
+.pro-login-card .subtitle{margin:0 0 20px;color:var(--pro-muted);line-height:1.7}
+.pro-login-card .login-role-note{justify-content:flex-start;margin:0 0 23px}
+.pro-login-card .login-role-note span{
+ border:1px solid var(--pro-border);background:var(--pro-surface-soft);
+ color:#64748b;padding:5px 10px;font-size:10px
+}
+.pro-login-card form{display:flex;flex-direction:column;gap:15px}
+.pro-login-card form>label{display:flex;flex-direction:column;gap:7px;color:#344054;font-size:12px;font-weight:800}
+.pro-input-wrap{position:relative}
+.pro-input-wrap input{
+ width:100%!important;
+ height:48px;
+ padding:0 46px 0 13px!important;
+ background:#fbfcfe!important;
+ border:1px solid var(--pro-border-strong)!important;
+ border-radius:11px!important;
+ box-shadow:var(--pro-shadow-xs);
+ transition:border-color .18s,box-shadow .18s,background .18s
+}
+.pro-input-wrap input:focus{
+ background:#fff!important;border-color:#93b4f6!important;
+ box-shadow:0 0 0 4px rgba(37,99,235,.08)!important
+}
+.pro-input-icon{
+ position:absolute;right:13px;top:50%;transform:translateY(-50%);
+ width:23px;height:23px;border-radius:7px;display:grid;place-items:center;
+ background:#eef4ff;color:#2563eb;font-size:8px;font-weight:950;font-style:normal;
+ pointer-events:none
+}
+.pro-login-submit.primary-button{
+ margin-top:4px;height:48px;border-radius:11px;
+ background:linear-gradient(135deg,#2563eb,#1d4ed8);
+ box-shadow:0 9px 20px rgba(37,99,235,.18);
+ font-weight:900
+}
+.pro-login-submit.primary-button:not(:disabled):hover{box-shadow:0 12px 26px rgba(37,99,235,.24);transform:translateY(-1px)}
+.pro-login-security{
+ margin-top:22px;padding:12px 13px;border:1px solid var(--pro-border);
+ border-radius:11px;background:#fbfcfe;display:flex;align-items:center;gap:10px
+}
+.pro-login-security>span{color:#22c55e;font-size:16px}
+.pro-login-security p{margin:0;display:flex;flex-direction:column}
+.pro-login-security strong{font-size:11px;color:#344054}.pro-login-security small{font-size:9px;color:#98a2b3;margin-top:2px}
+.pro-login-card .error-message{border-radius:10px;background:var(--pro-danger-soft);border:1px solid #fecaca;color:#b91c1c;padding:10px}
+
+/* ---------------- TEACHER APP SHELL ---------------- */
+.builder-page{
+ min-height:100vh!important;
+ background:var(--pro-bg)!important;
+ padding-right:var(--pro-sidebar-w);
+ color:var(--pro-text)
+}
+.top-bar.pro-app-sidebar{
+ position:fixed!important;
+ z-index:900;
+ top:0!important;right:0!important;bottom:0!important;left:auto!important;
+ width:var(--pro-sidebar-w)!important;
+ min-height:100vh!important;
+ padding:22px 16px!important;
+ display:flex!important;flex-direction:column!important;align-items:stretch!important;justify-content:flex-start!important;
+ gap:16px!important;
+ color:#fff!important;
+ background:linear-gradient(180deg,var(--pro-sidebar),var(--pro-sidebar-2))!important;
+ border-left:1px solid rgba(255,255,255,.05);
+ box-shadow:none!important
+}
+.pro-sidebar-brand{display:flex;gap:10px;align-items:center;padding:4px 3px 16px;border-bottom:1px solid rgba(255,255,255,.08)}
+.pro-sidebar-logo{width:39px;height:39px;border-radius:11px;box-shadow:none}
+.pro-sidebar-brand h1{font-size:17px!important;margin:0!important;color:#fff!important}
+.pro-sidebar-brand p{font-size:9px!important;margin:3px 0 0!important;color:#7f8ea3!important}
+.pro-sidebar-user{
+ display:flex;align-items:center;gap:9px;padding:10px;
+ border-radius:12px;background:rgba(255,255,255,.045);
+ border:1px solid rgba(255,255,255,.06)
+}
+.pro-user-avatar{width:32px;height:32px;display:grid;place-items:center;background:rgba(59,130,246,.16);border-radius:9px}
+.pro-sidebar-user>div{display:flex;flex-direction:column;min-width:0}
+.pro-sidebar-user strong{font-size:11px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.pro-sidebar-user small{font-size:8px;color:#7f8ea3;margin-top:2px}
+.pro-sidebar-label{
+ color:#66758b;font-size:8px;font-weight:900;text-transform:uppercase;letter-spacing:.12em;
+ padding:5px 8px 0
+}
+.top-bar .teacher-mode-actions{
+ display:flex!important;flex:1!important;flex-direction:column!important;align-items:stretch!important;
+ gap:6px!important;width:100%!important
+}
+.top-bar .teacher-mode-button{
+ width:100%;min-height:42px;padding:0 12px!important;
+ display:flex;align-items:center;justify-content:flex-start;gap:8px;
+ border:1px solid transparent!important;border-radius:10px!important;
+ background:transparent!important;color:#aebbd0!important;
+ font-size:11px!important;font-weight:750!important;text-align:right
+}
+.top-bar .teacher-mode-button:hover{background:rgba(255,255,255,.055)!important;color:#fff!important}
+.top-bar .teacher-mode-button.active{
+ background:linear-gradient(90deg,rgba(37,99,235,.24),rgba(37,99,235,.08))!important;
+ color:#fff!important;border-color:rgba(96,165,250,.18)!important;
+ box-shadow:inset -3px 0 0 #3b82f6!important
+}
+.top-bar .logout-button{
+ margin-top:auto!important;width:100%;min-height:40px;border-radius:10px!important;
+ background:rgba(255,255,255,.04)!important;border:1px solid rgba(255,255,255,.08)!important;
+ color:#aebbd0!important;font-size:10px!important
+}
+.top-bar .logout-button:hover{color:#fecaca!important;background:rgba(220,38,38,.08)!important;border-color:rgba(248,113,113,.16)!important}
+
+/* ---------------- SHARED PROFESSIONAL SURFACES ---------------- */
+.builder-content,.teacher-platform-inner,.student-shell{
+ width:min(1280px,calc(100% - 44px))!important;
+ max-width:1280px!important;
+ margin:0 auto!important
+}
+.builder-content{padding:27px 0 64px!important}
+.teacher-platform{
+ min-height:100vh!important;
+ padding:24px 0 64px!important;
+ background:var(--pro-bg)!important
+}
+.builder-card,.plan-card,.exam-toolbar-card,.question-card,.global-ai-panel,
+.saved-exams-panel,.templates-panel,.platform-card,.student-panel,
+.analytics-card,.analytics-hero,.analytics-filter-bar,.teacher-assignment-heading,
+.assignment-source-card,.review-modal,.student-profile-card,.credential-box,
+.student-admin-details,.student-welcome-card{
+ border:1px solid var(--pro-border)!important;
+ background:var(--pro-surface)!important;
+ border-radius:var(--pro-radius)!important;
+ box-shadow:var(--pro-shadow-xs)!important
+}
+.builder-card:hover,.platform-card:hover,.analytics-card:hover{
+ border-color:#d8e0eb!important;
+ box-shadow:var(--pro-shadow-sm)!important
+}
+
+/* Builder opening panel */
+.prompt-card{
+ padding:22px!important;
+ margin-bottom:14px!important;
+ background:
+  linear-gradient(135deg,rgba(239,246,255,.85),rgba(255,255,255,.96) 45%),
+  #fff!important
+}
+.builder-heading{align-items:center!important}
+.builder-heading h2{font-size:20px!important;margin:0 0 4px!important;color:var(--pro-text)!important}
+.builder-heading p{font-size:11px!important;color:var(--pro-muted)!important;margin:0!important}
+.ai-badge{
+ width:38px!important;height:38px!important;border-radius:10px!important;
+ background:#111827!important;color:#93c5fd!important;
+ box-shadow:none!important;font-size:11px!important
+}
+.prompt-card textarea{
+ min-height:132px!important;border:1px solid var(--pro-border-strong)!important;
+ border-radius:11px!important;background:#fff!important;
+ padding:15px!important;font-size:13px!important;line-height:1.8!important;
+ box-shadow:inset 0 1px 2px rgba(15,23,42,.025)!important
+}
+.prompt-card textarea:focus{border-color:#93b4f6!important;box-shadow:0 0 0 4px rgba(37,99,235,.07)!important}
+.generate-button,.platform-primary,.saved-open-button,.preview-download-button,
+.assignment-create-button,.iex-foot button.primary,.iex-result-card button.primary{
+ background:linear-gradient(135deg,#2563eb,#1d4ed8)!important;
+ border:0!important;color:#fff!important;border-radius:10px!important;
+ box-shadow:0 6px 14px rgba(37,99,235,.14)!important;
+ font-weight:850!important
+}
+.generate-button:not(:disabled):hover,.platform-primary:not(:disabled):hover{
+ transform:translateY(-1px);box-shadow:0 9px 20px rgba(37,99,235,.20)!important
+}
+.model-picker select,.builder-content input,.builder-content select,.builder-content textarea,
+.teacher-platform input,.teacher-platform select,.teacher-platform textarea,
+.student-portal input,.student-portal select,.student-portal textarea{
+ border:1px solid var(--pro-border-strong)!important;border-radius:9px!important;
+ background:#fff!important;color:var(--pro-text)!important
+}
+
+/* Saved / plan areas */
+.saved-exams-access{
+ margin:12px 0!important;padding:11px 13px!important;border:1px solid var(--pro-border)!important;
+ border-radius:11px!important;background:#fff!important;box-shadow:var(--pro-shadow-xs)
+}
+.saved-exams-access button,.saved-exams-heading button,.templates-panel button{
+ border:1px solid var(--pro-border)!important;background:#fff!important;border-radius:9px!important;color:#475569!important
+}
+.saved-exam-item{
+ border:1px solid var(--pro-border)!important;border-radius:10px!important;
+ background:#fff!important;box-shadow:none!important
+}
+.plan-card{padding:20px!important}
+.section-title-row h2,.section-title-row h3{color:var(--pro-text)!important;letter-spacing:-.01em}
+.eyebrow,.platform-eyebrow{
+ color:#8290a3!important;font-size:8px!important;letter-spacing:.12em!important;font-weight:900!important
+}
+.stat-grid{gap:8px!important}
+.stat-box{
+ background:#f9fbfd!important;border:1px solid var(--pro-border)!important;
+ border-radius:10px!important;padding:12px!important;box-shadow:none!important
+}
+.stat-box strong{color:var(--pro-text)!important}
+.info-chip,.status-chip,.phase-chip,.student-count-badge,.analytics-chip{
+ border-radius:999px!important;box-shadow:none!important
+}
+
+/* Exam workspace */
+.generated-exam{margin-top:15px!important}
+.exam-preview-heading{
+ border:1px solid var(--pro-border)!important;background:#fff!important;
+ border-radius:11px!important;padding:11px 14px!important;margin-bottom:10px!important;
+ box-shadow:var(--pro-shadow-xs)!important
+}
+.exam-toolbar-card{
+ position:sticky!important;top:12px!important;z-index:30!important;
+ padding:17px!important;margin-bottom:12px!important;
+ box-shadow:0 10px 30px rgba(15,23,42,.07)!important;
+ backdrop-filter:blur(12px)
+}
+.exam-total{
+ border:1px solid #dbeafe!important;background:var(--pro-primary-soft)!important;
+ color:var(--pro-primary-2)!important;border-radius:11px!important
+}
+.question-card{
+ padding:19px!important;margin-bottom:11px!important;
+ transition:border-color .18s,box-shadow .18s,transform .18s
+}
+.question-card:hover{border-color:#d3dce8!important;box-shadow:var(--pro-shadow-sm)!important}
+.question-number{
+ background:#111827!important;color:#fff!important;border-radius:9px!important;
+ box-shadow:none!important
+}
+.question-main-text{
+ color:#1f2937!important;font-size:15px!important;line-height:1.85!important
+}
+.question-tools,.question-ai-box,.question-bank-tools,.question-image-tools{
+ background:#fafbfc!important;border:1px solid var(--pro-border)!important;
+ border-radius:10px!important;box-shadow:none!important
+}
+.question-tools button,.question-card button{
+ border-radius:8px!important
+}
+.answer-box{
+ border:1px solid #c7ead4!important;background:#f6fcf8!important;
+ border-radius:10px!important;color:#166534!important
+}
+.recovery-draft-bar,.warning-panel,.builder-error,.platform-warning,.platform-error,.platform-notice{
+ border-radius:10px!important;box-shadow:none!important
+}
+
+/* ---------------- TEACHER PLATFORM NAV ---------------- */
+.teacher-workspace-nav{
+ position:sticky!important;top:12px!important;z-index:45!important;
+ display:flex!important;align-items:center!important;gap:5px!important;
+ padding:5px!important;margin:0 0 13px!important;
+ width:max-content;max-width:100%;
+ border:1px solid var(--pro-border)!important;border-radius:11px!important;
+ background:rgba(255,255,255,.94)!important;
+ box-shadow:0 7px 22px rgba(15,23,42,.055)!important;
+ backdrop-filter:blur(12px)
+}
+.teacher-workspace-nav button{
+ min-height:34px!important;padding:0 13px!important;
+ border:0!important;border-radius:8px!important;background:transparent!important;
+ color:#667085!important;font-size:10px!important;font-weight:850!important
+}
+.teacher-workspace-nav button.active{
+ background:#111827!important;color:#fff!important;
+ box-shadow:0 5px 12px rgba(15,23,42,.12)!important
+}
+.platform-hero,.analytics-hero{
+ color:var(--pro-text)!important;
+ background:linear-gradient(135deg,#fff,#f8fbff)!important;
+ padding:19px 21px!important;border-radius:13px!important
+}
+.platform-hero h2,.analytics-hero h2{color:var(--pro-text)!important;font-size:20px!important;margin:3px 0 4px!important}
+.platform-hero p,.analytics-hero p{color:var(--pro-muted)!important;font-size:10px!important}
+.platform-hero-stat{
+ background:#111827!important;border-radius:10px!important;color:#fff!important;
+ min-width:100px!important;padding:11px 14px!important
+}
+.platform-grid{gap:12px!important;margin-top:12px!important}
+.platform-card{padding:16px!important}
+.platform-card-heading{margin-bottom:11px!important}
+.platform-card-heading h3{font-size:14px!important}
+.platform-card-heading button{
+ border:1px solid var(--pro-border)!important;background:#fff!important;color:#667085!important;border-radius:8px!important
+}
+.platform-form-grid,.student-create-grid{
+ background:#fafbfc!important;border:1px solid var(--pro-border)!important;
+ border-radius:10px!important;padding:11px!important;gap:8px!important
+}
+.class-row{
+ border:1px solid var(--pro-border)!important;border-radius:9px!important;background:#fff!important
+}
+.class-row.selected{
+ border-color:#93b4f6!important;box-shadow:0 0 0 3px rgba(37,99,235,.055)!important
+}
+.class-select{padding:10px!important}
+.class-select strong{font-size:11px}.class-select span,.class-select small{font-size:9px!important}
+.selected-class-strip{
+ border:1px solid #dbeafe!important;border-radius:9px!important;
+ background:#f8fbff!important;color:#1d4ed8!important
+}
+.student-admin-stats,.gradebook-stats,.student-profile-stats{
+ gap:7px!important
+}
+.student-admin-stats article,.gradebook-stats article,.student-profile-stats article{
+ border:1px solid var(--pro-border)!important;background:#fff!important;border-radius:9px!important;
+ box-shadow:none!important;padding:10px!important
+}
+.student-admin-toolbar{
+ background:#fff!important;border:1px solid var(--pro-border)!important;
+ border-radius:10px!important;padding:8px!important;gap:7px!important
+}
+.student-admin-details{
+ overflow:hidden;margin-top:8px!important
+}
+.student-admin-details summary{
+ padding:11px 13px!important;background:#fbfcfe!important;color:#475569!important;
+ font-size:10px!important;font-weight:850!important;cursor:pointer
+}
+.student-bulk-bar{
+ border:1px solid #bfdbfe!important;background:#eff6ff!important;
+ border-radius:10px!important;box-shadow:var(--pro-shadow-sm)!important
+}
+
+/* Tables */
+.students-table-wrap{
+ border:1px solid var(--pro-border)!important;border-radius:10px!important;
+ background:#fff!important;overflow:auto!important
+}
+.students-table{border-collapse:separate!important;border-spacing:0!important}
+.students-table th{
+ position:sticky;top:0;z-index:3;
+ background:#f8fafc!important;color:#667085!important;
+ font-size:9px!important;text-transform:none!important;letter-spacing:.02em!important;
+ padding:10px 9px!important;border-bottom:1px solid var(--pro-border)!important
+}
+.students-table td{
+ color:#475467!important;font-size:10px!important;padding:10px 9px!important;
+ border-bottom:1px solid #edf0f4!important;background:#fff
+}
+.students-table tbody tr:last-child td{border-bottom:0!important}
+.students-table tbody tr:hover td{background:#fafcff!important}
+.student-row-actions{gap:4px!important}
+.student-row-actions button,.gradebook-actions button,.assignment-row-actions button{
+ border:1px solid var(--pro-border)!important;background:#fff!important;color:#475569!important;
+ border-radius:7px!important;padding:6px 7px!important;font-size:9px!important
+}
+.student-row-actions button:hover,.assignment-row-actions button:hover{
+ border-color:#bfdbfe!important;background:#f8fbff!important;color:#1d4ed8!important
+}
+.danger-button,.assignment-delete-button,.saved-delete-button{
+ color:#b42318!important;background:#fff!important;border-color:#fecdca!important
+}
+.status-active{background:#ecfdf3!important;color:#027a48!important}
+.status-disabled{background:#fff4ed!important;color:#b54708!important}
+.status-archived{background:#f2f4f7!important;color:#667085!important}
+.status-active,.status-disabled,.status-archived,.review-state{
+ border-radius:999px!important;padding:4px 8px!important;font-size:8px!important;font-weight:900!important
+}
+
+/* Student profile as premium drawer-like card */
+.student-profile-card{
+ padding:17px!important;margin-top:12px!important;
+ border-right:3px solid #2563eb!important;
+ box-shadow:var(--pro-shadow-md)!important
+}
+
+/* ---------------- ANALYTICS ---------------- */
+.analytics-dashboard{color:var(--pro-text)!important}
+.analytics-filter-bar{
+ padding:10px!important;gap:8px!important;border-radius:11px!important
+}
+.analytics-filter-bar label{font-size:9px!important;color:#667085!important}
+.analytics-filter-bar select{height:34px!important}
+.analytics-kpi-grid{gap:8px!important}
+.analytics-kpi{
+ min-height:104px!important;padding:14px!important;
+ border:1px solid var(--pro-border)!important;background:#fff!important;
+ border-radius:11px!important;box-shadow:var(--pro-shadow-xs)!important
+}
+.analytics-kpi:before{display:none!important}
+.analytics-kpi span{font-size:9px!important;color:#667085!important}
+.analytics-kpi strong{font-size:25px!important;letter-spacing:-.03em!important;color:#172033!important}
+.analytics-kpi small{font-size:8px!important;color:#98a2b3!important}
+.analytics-kpi.attention{border-color:#fedf89!important;background:#fffdf6!important}
+.analytics-kpi.positive{border-color:#abefc6!important}.analytics-kpi.negative{border-color:#fecdca!important}
+.analytics-main-grid{gap:10px!important}
+.analytics-card{padding:15px!important}
+.analytics-card-head h3{font-size:13px!important;margin-top:3px!important}
+.analytics-chart-canvas{filter:saturate(.88)}
+.analytics-insight{
+ border:1px solid var(--pro-border)!important;border-radius:9px!important;
+ box-shadow:none!important
+}
+.analytics-table .student-name-link{font-weight:800!important}
+.analytics-hero-actions button{
+ border:1px solid var(--pro-border)!important;background:#fff!important;color:#475569!important;
+ border-radius:8px!important;font-size:9px!important
+}
+
+/* ---------------- ASSIGNMENTS ---------------- */
+.teacher-assignment-heading{
+ padding:18px!important;margin-bottom:11px!important
+}
+.teacher-assignment-heading h2{font-size:19px!important;margin:3px 0!important}
+.teacher-assignment-heading p{font-size:10px!important;color:var(--pro-muted)!important}
+.assignments-panel{
+ border:1px solid var(--pro-border)!important;background:#fff!important;
+ border-radius:13px!important;padding:16px!important;box-shadow:var(--pro-shadow-xs)!important
+}
+.assignment-source-card{
+ background:#f8fbff!important;border-color:#dbeafe!important;padding:11px!important
+}
+.assignment-create-grid{
+ background:#fafbfc!important;border:1px solid var(--pro-border)!important;
+ border-radius:10px!important;padding:11px!important;gap:8px!important
+}
+.assignment-row{
+ border:1px solid var(--pro-border)!important;border-radius:9px!important;
+ padding:10px 11px!important;background:#fff!important
+}
+.assignment-row:hover{border-color:#cdd8e7!important;background:#fcfdff!important}
+.assignment-status{font-size:8px!important}
+
+/* ---------------- STUDENT PORTAL ---------------- */
+.student-portal{
+ min-height:100vh!important;
+ background:var(--pro-bg)!important;color:var(--pro-text)!important
+}
+.student-topbar{
+ min-height:66px!important;padding:10px 24px!important;
+ background:#111827!important;border-bottom:1px solid rgba(255,255,255,.06)!important
+}
+.student-logo{width:36px!important;height:36px!important;border-radius:10px!important;background:#2563eb!important}
+.student-brand h1{font-size:15px!important}.student-brand p{font-size:9px!important;color:#8da0b8!important}
+.student-logout{border-radius:8px!important;font-size:9px!important}
+.student-shell{padding-top:22px!important}
+.student-welcome-card{
+ color:var(--pro-text)!important;
+ background:linear-gradient(135deg,#fff,#f8fbff)!important;
+ padding:19px!important
+}
+.student-welcome-card h2{color:var(--pro-text)!important;font-size:19px!important}
+.student-welcome-card p{color:var(--pro-muted)!important;font-size:10px!important}
+.student-code-chip{background:#111827!important;color:#fff!important;font-size:9px!important}
+.student-stat-grid{gap:8px!important}
+.student-stat-grid article{
+ border:1px solid var(--pro-border)!important;background:#fff!important;
+ border-radius:10px!important;padding:13px!important
+}
+.student-stat-grid strong{font-size:23px!important;color:#172033!important}
+.student-stat-grid span{font-size:9px!important}
+.student-main-grid{gap:10px!important}
+.student-panel{padding:15px!important}
+.student-assignment-card{
+ border:1px solid var(--pro-border)!important;border-radius:10px!important;padding:11px!important
+}
+.student-assignment-card>button{background:#2563eb!important;border-radius:8px!important;font-size:9px!important}
+.student-assignment-header{
+ background:#111827!important;border-radius:13px!important;padding:18px!important
+}
+
+/* Student exam */
+.interactive-exam-page{
+ background:var(--pro-bg)!important;color:var(--pro-text)!important
+}
+.iex-wrap{max-width:1060px!important;padding-top:18px!important}
+.iex-head{
+ background:#111827!important;border-radius:14px!important;
+ box-shadow:var(--pro-shadow-sm)!important;padding:18px!important
+}
+.iex-head h1{font-size:23px!important}
+.iex-progress{
+ top:8px!important;border:1px solid var(--pro-border)!important;
+ border-radius:10px!important;background:rgba(255,255,255,.92)!important;
+ box-shadow:var(--pro-shadow-sm)!important
+}
+.iex-flow:before{background:#dbe3ee!important}
+.iex-node{box-shadow:0 0 0 5px var(--pro-bg)!important}
+.iex-card{
+ border:1px solid var(--pro-border)!important;border-radius:12px!important;
+ padding:17px!important;box-shadow:var(--pro-shadow-xs)!important
+}
+.iex-qtext{font-size:14px!important;color:#344054!important}
+.iex-option{
+ border:1px solid var(--pro-border)!important;border-radius:9px!important;
+ background:#fbfcfe!important;padding:10px 11px!important
+}
+.iex-option.selected{border-color:#93b4f6!important;background:#f3f7ff!important}
+.iex-foot,.iex-result-card{
+ border:1px solid var(--pro-border)!important;border-radius:13px!important;
+ box-shadow:var(--pro-shadow-sm)!important
+}
+
+/* ---------------- REVIEW / MODALS ---------------- */
+.review-overlay{
+ background:rgba(10,18,32,.55)!important;backdrop-filter:blur(5px)!important
+}
+.review-modal{border-radius:16px!important;padding:17px!important;background:#f7f9fc!important}
+.review-top{border-color:var(--pro-border)!important}
+.review-question{
+ border:1px solid var(--pro-border)!important;border-radius:11px!important;padding:13px!important
+}
+.review-question.needs-review{border-color:#fed7aa!important}
+.review-answer-grid>div{
+ border:1px solid var(--pro-border)!important;background:#fafbfc!important;border-radius:9px!important
+}
+.review-grade-row input,.review-general-feedback textarea{
+ border:1px solid var(--pro-border-strong)!important;border-radius:8px!important
+}
+
+/* ---------------- SCROLLBARS ---------------- */
+*{scrollbar-width:thin;scrollbar-color:#cbd5e1 transparent}
+*::-webkit-scrollbar{width:8px;height:8px}
+*::-webkit-scrollbar-thumb{background:#cbd5e1;border-radius:999px;border:2px solid transparent;background-clip:padding-box}
+*::-webkit-scrollbar-track{background:transparent}
+
+/* ---------------- MICRO MOTION ---------------- */
+@keyframes proFadeUp{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+.builder-content>.builder-card,.platform-card,.analytics-card,.student-panel,.assignment-row{
+ animation:proFadeUp .34s ease both
+}
+.analytics-kpi:nth-child(2),.platform-card:nth-child(2){animation-delay:.035s}
+.analytics-kpi:nth-child(3){animation-delay:.07s}
+.analytics-kpi:nth-child(4){animation-delay:.105s}
+.analytics-kpi:nth-child(5){animation-delay:.14s}
+.analytics-kpi:nth-child(6){animation-delay:.175s}
+
+/* ---------------- RESPONSIVE ---------------- */
+@media(max-width:980px){
+ :root{--pro-sidebar-w:0px}
+ .builder-page{padding-right:0!important;padding-top:0}
+ .top-bar.pro-app-sidebar{
+  position:relative!important;width:100%!important;min-height:auto!important;
+  padding:12px 14px!important;display:grid!important;
+  grid-template-columns:1fr auto!important;gap:9px!important;
+  border-radius:0!important
+ }
+ .pro-sidebar-brand{border-bottom:0;padding:0}
+ .pro-sidebar-user,.pro-sidebar-label{display:none}
+ .top-bar .teacher-mode-actions{
+  grid-column:1/-1!important;display:grid!important;grid-template-columns:1fr 1fr auto!important;
+  flex-direction:initial!important;gap:6px!important
+ }
+ .top-bar .teacher-mode-button,.top-bar .logout-button{margin:0!important;min-height:36px!important}
+ .builder-content,.teacher-platform-inner,.student-shell{width:min(100% - 26px,1280px)!important}
+ .teacher-workspace-nav{top:7px!important}
+}
+@media(max-width:820px){
+ .pro-login-page{padding:16px}
+ .pro-login-shell{grid-template-columns:1fr;min-height:0;border-radius:20px}
+ .pro-login-showcase{display:none}
+ .pro-login-card.login-card{padding:36px 28px}
+ .pro-login-mobile-brand{display:flex;align-items:center;gap:10px;margin-bottom:30px}
+ .pro-login-mobile-brand>div:last-child{display:flex;flex-direction:column}
+ .pro-login-mobile-brand strong{font-size:13px}.pro-login-mobile-brand span{font-size:8px;color:#98a2b3;margin-top:2px}
+ .platform-grid,.analytics-main-grid,.student-main-grid{grid-template-columns:1fr!important}
+ .analytics-kpi-grid{grid-template-columns:repeat(2,minmax(0,1fr))!important}
+ .exam-toolbar-card{position:relative!important;top:auto!important}
+}
+@media(max-width:620px){
+ .builder-content,.teacher-platform-inner,.student-shell{width:min(100% - 18px,1280px)!important}
+ .top-bar .teacher-mode-actions{grid-template-columns:1fr 1fr!important}
+ .top-bar .logout-button{grid-column:1/-1!important}
+ .teacher-workspace-nav{width:100%!important;overflow:auto!important;white-space:nowrap!important}
+ .teacher-workspace-nav button{flex:1!important}
+ .analytics-kpi-grid{grid-template-columns:1fr!important}
+ .pro-login-card.login-card{padding:30px 22px}
+ .pro-login-card h2{font-size:25px}
+ .platform-hero,.analytics-hero{align-items:flex-start!important;flex-direction:column!important}
+ .analytics-hero-actions{width:100%!important}
+ .analytics-hero-actions button{flex:1!important}
+ .student-admin-toolbar{grid-template-columns:1fr!important}
+}
+
+/* Respect accessibility preferences. */
+@media(prefers-reduced-motion:reduce){
+ *,*::before,*::after{
+  animation-duration:.01ms!important;
+  animation-iteration-count:1!important;
+  transition-duration:.01ms!important;
+  scroll-behavior:auto!important
+ }
+}
+`;
+
+fs.writeFileSync(proCssPath,css,"utf8");
+
+console.log("Created src/professional-ui.css");
+console.log("Updated src/App.tsx");
+console.log("Preserved all backend and page logic.");
+console.log("\nChecking TypeScript/Vite build...\n");
+
+execSync("npm run build",{cwd:root,stdio:"inherit",shell:true});
+
+console.log("\nPhase 2.0K Unified Professional UI installed successfully.");
+console.log("Included: new login experience, dark professional teacher sidebar, unified design system, redesigned builder, dashboard, students, assignments, student portal, exam-taking and review screens, responsive layout and micro-animations.");
