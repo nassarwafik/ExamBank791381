@@ -4,8 +4,6 @@ import StudentPortal from "./StudentPortal";
 import TeacherPlatform from "./TeacherPlatform";
 import "./App.css";
 import "./platform.css";
-import "./professional-ui.css";
-// EXAMBANK_2_PHASE_K_UNIFIED_PRO_UI
 // FINAL_BUILDER_PHASE_6
 // EXAMBANK_2_PHASE_A
 // EXAMBANK_2_PHASE_B
@@ -4662,95 +4660,69 @@ function App() {
 
   if (!loggedIn) {
     return (
-      <main className="login-page pro-login-page" dir="rtl">
-        <section className="pro-login-shell">
-          <aside className="pro-login-showcase">
-            <div className="pro-login-brand">
-              <div className="pro-login-logo">EB</div>
-              <div>
-                <strong>ExamBank 791381</strong>
-                <span>Smart Assessment Workspace</span>
+      <main className="login-page" dir="rtl">
+        <section className="login-card">
+          <div className="brand-mark">EB</div>
+          <h1>ExamBank 791381</h1>
+          <p className="subtitle">
+            منصة الامتحانات والتدريب الذكي لشبكات الاتصال
+          </p>
+
+          <div className="login-role-note">
+            <span>
+              👨‍🏫 معلم
+            </span>
+
+            <span>
+              👨‍🎓 طالب
+            </span>
+          </div>
+
+          <form onSubmit={handleLogin}>
+            <label>
+              كود المستخدم
+              <input
+                type="text"
+                value={userCode}
+                onChange={event =>
+                  setUserCode(event.target.value)
+                }
+                placeholder="أدخل كود المستخدم"
+                autoComplete="username"
+              />
+            </label>
+
+            <label>
+              كلمة المرور
+              <input
+                type="password"
+                value={password}
+                onChange={event =>
+                  setPassword(event.target.value)
+                }
+                placeholder="أدخل كلمة المرور"
+                autoComplete="current-password"
+              />
+            </label>
+
+            {loginError && (
+              <div className="error-message">
+                {loginError}
               </div>
-            </div>
+            )}
 
-            <div className="pro-login-copy">
-              <span className="pro-kicker">منصة تعليمية احترافية</span>
-              <h1>أنشئ، أرسل، تابع وحلّل الامتحانات من مكان واحد.</h1>
-              <p>
-                بيئة موحّدة لبناء الامتحانات بالذكاء الاصطناعي، إدارة الصفوف والطلاب،
-                متابعة الواجبات وتحليل الأداء.
-              </p>
-            </div>
+            <button
+              type="submit"
+              className="primary-button"
+              disabled={loginBusy}
+            >
+              {loginBusy ? "جارٍ الدخول..." : "دخول"}
+            </button>
+          </form>
 
-            <div className="pro-login-features">
-              <article><span>01</span><div><strong>AI Exam Builder</strong><small>بناء وتعديل الأسئلة بمرونة.</small></div></article>
-              <article><span>02</span><div><strong>Teacher Analytics</strong><small>رسوم ومؤشرات لمتابعة الأداء.</small></div></article>
-              <article><span>03</span><div><strong>Student Workspace</strong><small>واجبات، محاولات ونتائج واضحة.</small></div></article>
-            </div>
-
-            <div className="pro-login-mini-stats">
-              <div><strong>AI</strong><span>Exam Builder</span></div>
-              <div><strong>360°</strong><span>Student View</span></div>
-              <div><strong>Live</strong><span>Analytics</span></div>
-            </div>
-          </aside>
-
-          <section className="login-card pro-login-card">
-            <div className="pro-login-mobile-brand">
-              <div className="brand-mark">EB</div>
-              <div><strong>ExamBank 791381</strong><span>Smart Assessment Workspace</span></div>
-            </div>
-
-            <span className="pro-kicker">مرحبًا بعودتك</span>
-            <h2>تسجيل الدخول</h2>
-            <p className="subtitle">أدخل بياناتك للوصول إلى مساحة العمل.</p>
-
-            <div className="login-role-note">
-              <span>👨‍🏫 معلم</span>
-              <span>👨‍🎓 طالب</span>
-            </div>
-
-            <form onSubmit={handleLogin}>
-              <label>
-                <span>رقم الهوية / كود المستخدم</span>
-                <div className="pro-input-wrap">
-                  <i className="pro-input-icon">ID</i>
-                  <input
-                    type="text"
-                    value={userCode}
-                    onChange={event => setUserCode(event.target.value)}
-                    placeholder="أدخل رقم الهوية أو كود المستخدم"
-                    autoComplete="username"
-                  />
-                </div>
-              </label>
-
-              <label>
-                <span>كلمة المرور</span>
-                <div className="pro-input-wrap">
-                  <i className="pro-input-icon">••</i>
-                  <input
-                    type="password"
-                    value={password}
-                    onChange={event => setPassword(event.target.value)}
-                    placeholder="أدخل كلمة المرور"
-                    autoComplete="current-password"
-                  />
-                </div>
-              </label>
-
-              {loginError && <div className="error-message">{loginError}</div>}
-
-              <button type="submit" className="primary-button pro-login-submit" disabled={loginBusy}>
-                {loginBusy ? "جارٍ التحقق والدخول..." : "دخول إلى ExamBank"}
-              </button>
-            </form>
-
-            <div className="pro-login-security">
-              <span>●</span>
-              <p><strong>دخول آمن</strong><small>تُحدد صلاحيات المعلم والطالب تلقائيًا بعد تسجيل الدخول.</small></p>
-            </div>
-          </section>
+          <p className="login-note">
+            نفس شاشة الدخول للمعلم والطالب
+          </p>
         </section>
       </main>
     );
@@ -4775,24 +4747,13 @@ function App() {
 
   return (
     <main className="builder-page" dir="rtl">
-      <header className="top-bar pro-app-sidebar">
-        <div className="pro-sidebar-brand">
-          <div className="pro-sidebar-logo">EB</div>
-          <div>
-            <h1>ExamBank</h1>
-            <p>791381 · Smart Assessment</p>
-          </div>
+      <header className="top-bar">
+        <div>
+          <h1>ExamBank 791381</h1>
+          <p>
+            اكتب ما تريد، وسيبقى بناء الامتحان وتعديله كله في هذه الصفحة
+          </p>
         </div>
-
-        <div className="pro-sidebar-user">
-          <span className="pro-user-avatar">👨‍🏫</span>
-          <div>
-            <strong>{sessionDisplayName || "المعلم"}</strong>
-            <small>Teacher Workspace</small>
-          </div>
-        </div>
-
-        <span className="pro-sidebar-label">مساحة العمل</span>
 
         <div className="teacher-mode-actions">
           <button
