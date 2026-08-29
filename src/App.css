@@ -1,3 +1,90 @@
+/* ============================================================
+   ExamBank — Unified Design System (Tokens + Base)
+   UI/UX layer only. No logic, markup, or class names changed.
+   ============================================================ */
+:root {
+  /* Surfaces & background */
+  --eb-bg: #f5f7fa;
+  --eb-bg-tint: #f7f9fd;
+  --eb-surface: #ffffff;
+  --eb-surface-2: #f7f9fc;
+
+  /* Navy / ink / text hierarchy */
+  --eb-navy: #0f172a;
+  --eb-navy-2: #12223f;
+  --eb-ink: #1e293b;
+  --eb-text: #334155;
+  --eb-muted: #64748b;
+  --eb-faint: #94a3b8;
+
+  /* Lines / borders (soft) */
+  --eb-line: #e9edf4;
+  --eb-line-2: #dce2ec;
+
+  /* Professional blue */
+  --eb-primary: #2563eb;
+  --eb-primary-strong: #1d4ed8;
+  --eb-primary-050: #eef4ff;
+  --eb-primary-100: #e4edfc;
+
+  /* Semantic */
+  --eb-success: #16a34a; --eb-success-bg: #ecfdf3; --eb-success-tx: #15803d;
+  --eb-warn: #d97706;    --eb-warn-bg: #fff7ed;    --eb-warn-tx: #b45309;
+  --eb-danger: #dc2626;  --eb-danger-bg: #fef2f2;  --eb-danger-tx: #b42318;
+
+  /* Radius scale */
+  --eb-r-sm: 10px; --eb-r: 12px; --eb-r-lg: 16px; --eb-r-xl: 20px; --eb-pill: 999px;
+
+  /* Soft shadow scale */
+  --eb-sh-xs: 0 1px 2px rgba(15,23,42,.05);
+  --eb-sh-sm: 0 4px 14px -8px rgba(15,23,42,.14);
+  --eb-sh-md: 0 10px 30px -18px rgba(15,23,42,.16);
+  --eb-sh-lg: 0 20px 44px -26px rgba(15,23,42,.22);
+
+  /* Motion & focus */
+  --eb-ease: cubic-bezier(.4,0,.2,1);
+  --eb-dur: .18s;
+  --eb-focus: 0 0 0 4px rgba(37,99,235,.16);
+}
+
+/* Base polish */
+* { box-sizing: border-box; }
+body {
+  background: var(--eb-bg);
+  color: var(--eb-text);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+/* Unified, calm focus ring (keyboard only) */
+:focus-visible {
+  outline: none;
+  box-shadow: var(--eb-focus);
+}
+
+/* Selection + custom scrollbars */
+::selection { background: rgba(37,99,235,.16); }
+* { scrollbar-width: thin; scrollbar-color: #cdd6e4 transparent; }
+*::-webkit-scrollbar { width: 10px; height: 10px; }
+*::-webkit-scrollbar-thumb {
+  background: #cdd6e4; border-radius: var(--eb-pill);
+  border: 3px solid transparent; background-clip: content-box;
+}
+*::-webkit-scrollbar-thumb:hover { background: #b6c1d4; }
+
+/* Micro-interactions */
+@keyframes ebFadeIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+@keyframes ebSkeleton { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
+.eb-skeleton {
+  background: linear-gradient(90deg,#eef1f7 25%,#e3e8f1 37%,#eef1f7 63%);
+  background-size: 200% 100%;
+  animation: ebSkeleton 1.3s ease-in-out infinite;
+  border-radius: var(--eb-r-sm);
+}
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: .001ms !important; transition-duration: .001ms !important; }
+}
+
 #root {
   min-height: 100vh;
 }
@@ -24,19 +111,19 @@ button {
   justify-content: center;
   padding: 24px;
   background:
-    radial-gradient(circle at top right, #dbeafe 0, transparent 32%),
+    radial-gradient(circle at top right, #e4edfc 0, transparent 32%),
     radial-gradient(circle at bottom left, #e0e7ff 0, transparent 28%),
-    #f8fafc;
+    #f5f7fa;
 }
 
 .login-card {
   width: 100%;
   max-width: 430px;
   background: #ffffff;
-  border: 1px solid #e2e8f0;
-  border-radius: 24px;
+  border: 1px solid #e9edf4;
+  border-radius: 20px;
   padding: 36px;
-  box-shadow: 0 20px 55px rgba(15, 23, 42, 0.1);
+  box-shadow: 0 24px 60px -28px rgba(15,23,42,.18);
 }
 
 .brand-mark {
@@ -82,7 +169,7 @@ button {
 
 .login-card input {
   width: 100%;
-  border: 1px solid #cbd5e1;
+  border: 1px solid #dce2ec;
   border-radius: 12px;
   padding: 13px 14px;
   font-size: 15px;
@@ -139,7 +226,7 @@ button {
 
 .builder-page {
   min-height: 100vh;
-  background: #f8fafc;
+  background: #f5f7fa;
 }
 
 .top-bar {
@@ -155,7 +242,7 @@ button {
   background: rgba(15, 23, 42, 0.97);
   backdrop-filter: blur(12px);
   color: white;
-  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.12);
+  box-shadow: 0 8px 22px -12px rgba(15,23,42,.16);
 }
 
 .top-bar h1 {
@@ -194,12 +281,12 @@ button {
 .question-card,
 .bottom-actions-card {
   background: white;
-  border: 1px solid #e2e8f0;
-  box-shadow: 0 16px 45px rgba(15, 23, 42, 0.06);
+  border: 1px solid #e9edf4;
+  box-shadow: 0 10px 30px -18px rgba(15,23,42,.12);
 }
 
 .builder-card {
-  border-radius: 24px;
+  border-radius: 20px;
   padding: 36px;
 }
 
@@ -214,7 +301,7 @@ button {
   inset: auto -80px -100px auto;
   width: 240px;
   height: 240px;
-  border-radius: 999px;
+  border-radius: 20px;
   background: rgba(37, 99, 235, 0.06);
   pointer-events: none;
 }
@@ -230,7 +317,7 @@ button {
   flex: 0 0 auto;
   border-radius: 10px;
   padding: 7px 10px;
-  background: #dbeafe;
+  background: #e4edfc;
   color: #1d4ed8;
   font-weight: 900;
   font-size: 13px;
@@ -255,10 +342,10 @@ button {
   width: 100%;
   box-sizing: border-box;
   resize: vertical;
-  border: 1px solid #cbd5e1;
+  border: 1px solid #dce2ec;
   border-radius: 16px;
   padding: 16px 18px;
-  background: #f8fafc;
+  background: #f5f7fa;
   color: #0f172a;
   font-family: inherit;
   line-height: 1.9;
@@ -335,7 +422,7 @@ button {
 .plan-card,
 .exam-toolbar-card {
   margin-top: 24px;
-  border-radius: 22px;
+  border-radius: 20px;
   padding: 28px;
 }
 
@@ -364,7 +451,7 @@ button {
 .question-meta span {
   display: inline-flex;
   align-items: center;
-  border-radius: 999px;
+  border-radius: 20px;
   font-weight: 700;
 }
 
@@ -396,9 +483,9 @@ button {
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  border: 1px solid #e2e8f0;
+  border: 1px solid #e9edf4;
   border-radius: 16px;
-  background: #f8fafc;
+  background: #f5f7fa;
 }
 
 .stat-box strong {
@@ -453,8 +540,8 @@ button {
 .exam-total {
   min-width: 130px;
   text-align: center;
-  border: 1px solid #dbeafe;
-  background: #eff6ff;
+  border: 1px solid #e4edfc;
+  background: #eef4ff;
   color: #1d4ed8;
   border-radius: 16px;
   padding: 12px 16px;
@@ -477,7 +564,7 @@ button {
   margin-top: 18px;
   padding: 16px 18px;
   border: 1px solid #fde68a;
-  border-radius: 14px;
+  border-radius: 16px;
   background: #fffbeb;
   color: #92400e;
 }
@@ -491,7 +578,7 @@ button {
 .global-ai-box {
   margin-top: 22px;
   padding-top: 22px;
-  border-top: 1px solid #e2e8f0;
+  border-top: 1px solid #e9edf4;
 }
 
 .global-ai-box label,
@@ -526,13 +613,13 @@ button {
 }
 
 .question-card {
-  border-radius: 22px;
+  border-radius: 20px;
   padding: 28px;
   transition: 0.18s ease;
 }
 
 .question-card:hover {
-  box-shadow: 0 20px 52px rgba(15, 23, 42, 0.09);
+  box-shadow: 0 18px 42px -22px rgba(15,23,42,.16);
 }
 
 .question-locked {
@@ -570,14 +657,14 @@ button {
 
 .marks-field input {
   width: 72px;
-  border: 1px solid #cbd5e1;
+  border: 1px solid #dce2ec;
   border-radius: 10px;
   padding: 8px 10px;
   text-align: center;
 }
 
 .lock-button {
-  border: 1px solid #cbd5e1;
+  border: 1px solid #dce2ec;
   background: white;
   color: #334155;
   border-radius: 10px;
@@ -597,7 +684,7 @@ button {
 
 .question-meta span {
   padding: 5px 9px;
-  background: #f1f5f9;
+  background: #f1f4f9;
   color: #475569;
   font-size: 11px;
 }
@@ -642,9 +729,9 @@ button {
 
 .question-image-slot {
   margin-top: 24px;
-  border: 1px dashed #cbd5e1;
+  border: 1px dashed #dce2ec;
   border-radius: 18px;
-  background: #f8fafc;
+  background: #f5f7fa;
   overflow: hidden;
 }
 
@@ -700,10 +787,10 @@ button {
 
 .image-controls button,
 .question-footer-actions button {
-  border: 1px solid #cbd5e1;
+  border: 1px solid #dce2ec;
   background: white;
   color: #334155;
-  border-radius: 9px;
+  border-radius: 10px;
   padding: 8px 11px;
   cursor: pointer;
 }
@@ -711,7 +798,7 @@ button {
 .image-controls button:hover,
 .question-footer-actions button:hover {
   border-color: #94a3b8;
-  background: #f8fafc;
+  background: #f5f7fa;
 }
 
 /* =========================
@@ -728,8 +815,8 @@ button {
 .question-action-bar > button,
 .select-action {
   min-height: 48px;
-  border: 1px solid #cbd5e1;
-  border-radius: 11px;
+  border: 1px solid #dce2ec;
+  border-radius: 12px;
   background: white;
   color: #334155;
 }
@@ -741,7 +828,7 @@ button {
 
 .question-action-bar > button:hover {
   border-color: #2563eb;
-  background: #eff6ff;
+  background: #eef4ff;
   color: #1d4ed8;
 }
 
@@ -767,16 +854,16 @@ button {
 .per-question-ai {
   margin-top: 18px;
   padding: 18px;
-  border: 1px solid #dbeafe;
+  border: 1px solid #e4edfc;
   border-radius: 16px;
-  background: #f8fbff;
+  background: #f7f9fd;
 }
 
 .teacher-note-panel {
   margin-top: 14px;
-  border: 1px solid #e2e8f0;
+  border: 1px solid #e9edf4;
   border-radius: 12px;
-  background: #fafafa;
+  background: #f7f9fc;
 }
 
 .teacher-note-panel summary {
@@ -798,7 +885,7 @@ button {
   gap: 8px;
   margin-top: 16px;
   padding-top: 16px;
-  border-top: 1px solid #e2e8f0;
+  border-top: 1px solid #e9edf4;
 }
 
 .answer-box {
@@ -830,8 +917,8 @@ button {
 
 .bottom-actions-card button {
   min-height: 50px;
-  border: 1px solid #cbd5e1;
-  border-radius: 11px;
+  border: 1px solid #dce2ec;
+  border-radius: 12px;
   background: white;
   color: #334155;
   font-weight: 800;
@@ -840,7 +927,7 @@ button {
 
 .bottom-actions-card button:hover {
   border-color: #2563eb;
-  background: #eff6ff;
+  background: #eef4ff;
   color: #1d4ed8;
 }
 
@@ -940,7 +1027,7 @@ button {
 
 .model-picker select {
   min-height: 46px;
-  border: 1px solid #cbd5e1;
+  border: 1px solid #dce2ec;
   border-radius: 12px;
   padding: 0 12px;
   background: #ffffff;
@@ -965,8 +1052,8 @@ button {
 }
 
 .model-chip {
-  border-color: #bfdbfe;
-  background: #eff6ff;
+  border-color: #cfe0f8;
+  background: #eef4ff;
   color: #1d4ed8;
 }
 
@@ -1005,13 +1092,13 @@ button {
   margin-top: 34px;
   padding: 22px;
   border: 1px solid #dbe4f0;
-  border-radius: 30px;
+  border-radius: 20px;
 
   background:
     linear-gradient(
       180deg,
-      #f8fbff 0%,
-      #f3f6fb 100%
+      #f7f9fd 0%,
+      #f1f4fa 100%
     );
 
   box-shadow:
@@ -1077,13 +1164,13 @@ button {
   margin-top: 0;
 
   border-color:
-    #d9e3ef;
+    #e4e9f1;
 
   background:
     linear-gradient(
       135deg,
       #ffffff 0%,
-      #fbfdff 100%
+      #f9fbfe 100%
     );
 
   box-shadow:
@@ -1115,10 +1202,9 @@ button {
   border:
     1px
     solid
-    #dbe4ef;
+    #e4e9f1;
 
-  border-radius:
-    24px;
+  border-radius: 20px;
 
   background:
     #ffffff;
@@ -1207,13 +1293,12 @@ button {
   border:
     1px
     solid
-    #dbeafe;
+    #e4edfc;
 
-  border-radius:
-    999px;
+  border-radius: 20px;
 
   background:
-    #eff6ff;
+    #eef4ff;
 
   color:
     #1e40af;
@@ -1243,10 +1328,10 @@ button {
   border:
     1px
     solid
-    #e2e8f0;
+    #e9edf4;
 
   background:
-    #f8fafc;
+    #f5f7fa;
 }
 
 /* =========================
@@ -1266,11 +1351,10 @@ button {
     solid
     #e6edf5;
 
-  border-radius:
-    16px;
+  border-radius: 16px;
 
   background:
-    #fcfdff;
+    #f9fbfe;
 }
 
 .question-text-panel
@@ -1299,10 +1383,9 @@ button {
   border:
     1px
     solid
-    #dbe4ef;
+    #e4e9f1;
 
-  border-radius:
-    16px;
+  border-radius: 16px;
 
   overflow:
     hidden;
@@ -1319,10 +1402,10 @@ button {
   border-bottom:
     1px
     solid
-    #dbe4ef;
+    #e4e9f1;
 
   background:
-    #f8fafc;
+    #f5f7fa;
 
   color:
     #334155;
@@ -1362,12 +1445,12 @@ button {
   border-left:
     1px
     solid
-    #e2e8f0;
+    #e9edf4;
 
   border-bottom:
     1px
     solid
-    #e2e8f0;
+    #e9edf4;
 
   text-align:
     center;
@@ -1386,7 +1469,7 @@ td:last-child {
 
 .exam-data-table th {
   background:
-    #f1f5f9;
+    #f1f4f9;
 
   color:
     #334155;
@@ -1445,8 +1528,7 @@ td {
     solid
     #94a3b8;
 
-  border-radius:
-    7px;
+  border-radius: 10px;
 
   background:
     white;
@@ -1469,8 +1551,7 @@ td {
     solid
     #bae6fd;
 
-  border-radius:
-    16px;
+  border-radius: 16px;
 
   background:
     #f0f9ff;
@@ -1520,8 +1601,7 @@ td {
     solid
     #bae6fd;
 
-  border-radius:
-    999px;
+  border-radius: 20px;
 
   background:
     white;
@@ -1567,10 +1647,9 @@ td {
   border:
     1px
     solid
-    #e2e8f0;
+    #e9edf4;
 
-  border-radius:
-    12px;
+  border-radius: 12px;
 
   background:
     #ffffff;
@@ -1595,10 +1674,9 @@ td {
   border:
     1px
     solid
-    #e2e8f0;
+    #e9edf4;
 
-  border-radius:
-    12px;
+  border-radius: 12px;
 
   background:
     #fff;
@@ -1625,10 +1703,10 @@ td {
     18px;
 
   border-color:
-    #dbe4ef;
+    #e4e9f1;
 
   background:
-    #fbfdff;
+    #f9fbfe;
 }
 
 .generated-exam
@@ -1673,11 +1751,10 @@ td {
     7px
     10px;
 
-  border-radius:
-    999px;
+  border-radius: 20px;
 
   background:
-    #f1f5f9;
+    #f1f4f9;
 
   color:
     #475569;
@@ -1691,7 +1768,7 @@ td {
 
 .image-status-line.is-working {
   background:
-    #eff6ff;
+    #eef4ff;
 
   color:
     #1d4ed8;
@@ -1715,8 +1792,7 @@ td {
   border-left-color:
     transparent;
 
-  border-radius:
-    999px;
+  border-radius: 20px;
 
   animation:
     exam-spin
@@ -1773,13 +1849,12 @@ td {
   border:
     1px
     solid
-    #e2e8f0;
+    #e9edf4;
 
-  border-radius:
-    16px;
+  border-radius: 16px;
 
   background:
-    #f8fafc;
+    #f5f7fa;
 }
 
 .generated-exam
@@ -1787,8 +1862,8 @@ td {
   background:
     linear-gradient(
       135deg,
-      #f8fbff,
-      #f5f9ff
+      #f7f9fd,
+      #f2f6fd
     );
 }
 
@@ -1807,7 +1882,7 @@ td {
 .generated-exam
 .bottom-actions-card {
   border-color:
-    #d9e3ef;
+    #e4e9f1;
 
   box-shadow:
     0
@@ -1833,8 +1908,7 @@ td {
     padding:
       10px;
 
-    border-radius:
-      20px;
+    border-radius: 20px;
   }
 
   .exam-preview-heading {
@@ -1965,10 +2039,9 @@ td {
   border:
     1px
     solid
-    #bfdbfe;
+    #cfe0f8;
 
-  border-radius:
-    16px;
+  border-radius: 16px;
 
   background:
     rgba(
@@ -2032,10 +2105,9 @@ td {
   border:
     1px
     solid
-    #bfdbfe;
+    #cfe0f8;
 
-  border-radius:
-    10px;
+  border-radius: 10px;
 
   padding:
     9px
@@ -2183,8 +2255,7 @@ td {
     18px
     20px;
 
-  border-radius:
-    16px;
+  border-radius: 16px;
 }
 
 .quality-good {
@@ -2238,8 +2309,7 @@ button {
   border:
     0;
 
-  border-radius:
-    999px;
+  border-radius: 20px;
 
   background:
     rgba(
@@ -2291,13 +2361,12 @@ button {
   border:
     1px
     solid
-    #dbeafe;
+    #e4edfc;
 
-  border-radius:
-    12px;
+  border-radius: 12px;
 
   background:
-    #eff6ff;
+    #eef4ff;
 
   color:
     #1e40af;
@@ -2446,13 +2515,12 @@ button:disabled {
   border:
     1px
     solid
-    #dbeafe;
+    #e4edfc;
 
-  border-radius:
-    14px;
+  border-radius: 16px;
 
   background:
-    #f8fbff;
+    #f7f9fd;
 }
 
 .saved-exams-access
@@ -2465,10 +2533,9 @@ button {
   border:
     1px
     solid
-    #bfdbfe;
+    #cfe0f8;
 
-  border-radius:
-    11px;
+  border-radius: 12px;
 
   padding:
     10px
@@ -2490,7 +2557,7 @@ button {
 .saved-exams-access
 button:hover:not(:disabled) {
   background:
-    #eff6ff;
+    #eef4ff;
 }
 
 .saved-exams-access
@@ -2528,10 +2595,9 @@ span {
   border:
     1px
     solid
-    #dbe4ef;
+    #e4e9f1;
 
-  border-radius:
-    20px;
+  border-radius: 20px;
 
   background:
     white;
@@ -2578,10 +2644,9 @@ h3 {
   border:
     1px
     solid
-    #cbd5e1;
+    #dce2ec;
 
-  border-radius:
-    10px;
+  border-radius: 10px;
 
   padding:
     8px
@@ -2631,13 +2696,12 @@ h3 {
   border:
     1px
     solid
-    #e2e8f0;
+    #e9edf4;
 
-  border-radius:
-    14px;
+  border-radius: 16px;
 
   background:
-    #fbfdff;
+    #f9fbfe;
 }
 
 .saved-exam-main {
@@ -2691,8 +2755,7 @@ small {
 
 .saved-exam-actions
 button {
-  border-radius:
-    9px;
+  border-radius: 10px;
 
   padding:
     8px
@@ -2709,10 +2772,10 @@ button {
   border:
     1px
     solid
-    #bfdbfe;
+    #cfe0f8;
 
   background:
-    #eff6ff;
+    #eef4ff;
 
   color:
     #1d4ed8;
@@ -2741,13 +2804,12 @@ button {
   border:
     1px
     dashed
-    #cbd5e1;
+    #dce2ec;
 
-  border-radius:
-    14px;
+  border-radius: 16px;
 
   background:
-    #f8fafc;
+    #f5f7fa;
 
   color:
     #64748b;
@@ -2851,7 +2913,7 @@ button {
   margin-top: 14px;
   padding: 13px 15px;
   border: 1px solid #fcd34d;
-  border-radius: 14px;
+  border-radius: 16px;
   background: #fffbeb;
   display: flex;
   align-items: center;
@@ -2880,7 +2942,7 @@ button {
 }
 
 .recovery-draft-bar button {
-  border-radius: 9px;
+  border-radius: 10px;
   padding: 8px 12px;
   font-weight: 800;
   cursor: pointer;
@@ -2920,7 +2982,7 @@ button {
   flex-wrap: wrap;
   gap: 7px;
   padding: 10px 13px;
-  border: 1px solid #e2e8f0;
+  border: 1px solid #e9edf4;
   border-radius: 12px;
   background: #fff;
   color: #475569;
@@ -2938,7 +3000,7 @@ button {
 .save-dot {
   width: 9px;
   height: 9px;
-  border-radius: 999px;
+  border-radius: 20px;
   display: inline-block;
 }
 
@@ -2954,7 +3016,7 @@ button {
 
 .exam-metadata-card {
   margin-top: 16px;
-  border: 1px solid #dbe4ef;
+  border: 1px solid #e4e9f1;
   border-radius: 18px;
   background: #fff;
   overflow: hidden;
@@ -2963,7 +3025,7 @@ button {
 .exam-metadata-card summary {
   cursor: pointer;
   padding: 14px 17px;
-  background: #f8fafc;
+  background: #f5f7fa;
   color: #1e293b;
   font-weight: 900;
 }
@@ -2989,8 +3051,8 @@ button {
 .exam-metadata-grid textarea {
   box-sizing: border-box;
   width: 100%;
-  border: 1px solid #cbd5e1;
-  border-radius: 11px;
+  border: 1px solid #dce2ec;
+  border-radius: 12px;
   padding: 10px 11px;
   background: #fff;
   color: #0f172a;
@@ -3020,9 +3082,9 @@ button {
 .question-jump-bar {
   margin-top: 16px;
   padding: 12px 14px;
-  border: 1px solid #dbeafe;
-  border-radius: 15px;
-  background: #f8fbff;
+  border: 1px solid #e4edfc;
+  border-radius: 16px;
+  background: #f7f9fd;
   display: flex;
   align-items: center;
   gap: 12px;
@@ -3043,7 +3105,7 @@ button {
 .question-jump-bar button {
   min-width: 38px;
   min-height: 36px;
-  border: 1px solid #bfdbfe;
+  border: 1px solid #cfe0f8;
   border-radius: 10px;
   background: white;
   color: #1d4ed8;
@@ -3057,7 +3119,7 @@ button {
 
 .question-jump-bar button:hover {
   border-color: #2563eb;
-  background: #eff6ff;
+  background: #eef4ff;
 }
 
 .question-jump-bar button small {
@@ -3070,16 +3132,16 @@ button {
   display: inline-flex;
   gap: 5px;
   padding: 3px;
-  border: 1px solid #e2e8f0;
+  border: 1px solid #e9edf4;
   border-radius: 10px;
-  background: #f8fafc;
+  background: #f5f7fa;
 }
 
 .question-order-actions button {
   min-width: 30px;
   height: 30px;
   border: 1px solid transparent;
-  border-radius: 7px;
+  border-radius: 10px;
   background: white;
   color: #475569;
   font-weight: 900;
@@ -3087,7 +3149,7 @@ button {
 }
 
 .question-order-actions button:hover:not(:disabled) {
-  border-color: #bfdbfe;
+  border-color: #cfe0f8;
   color: #1d4ed8;
 }
 
@@ -3187,3 +3249,201 @@ button {
     grid-template-columns: 1fr;
   }
 }
+
+/* ============================================================
+   ExamBank Design System — Polish layer (App / Login + Builder)
+   Enhances existing selectors only. Loaded last within App.css.
+   ============================================================ */
+
+/* ---------- Page shell (teacher) becomes a sidebar layout ---------- */
+.builder-page {
+  background: var(--eb-bg);
+  padding-inline-end: 252px; /* reserve space for the fixed RTL sidebar */
+}
+.builder-content { animation: ebFadeIn .35s var(--eb-ease) both; }
+
+/* ---------- Vertical Sidebar (RTL: fixed to the right) ---------- */
+.top-bar {
+  position: fixed;
+  inset-block: 0;
+  inset-inline-end: 0;
+  width: 252px;
+  min-height: 100vh;
+  padding: 22px 16px 18px;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  justify-content: flex-start;
+  gap: 18px;
+  background: linear-gradient(180deg, #0f172a 0%, #0d1526 100%);
+  border-inline-start: 1px solid rgba(255,255,255,.06);
+  box-shadow: -8px 0 30px -22px rgba(15,23,42,.55);
+  backdrop-filter: none;
+  z-index: 50;
+}
+/* Brand block at the top of the sidebar */
+.top-bar > div:first-child {
+  padding: 6px 10px 16px;
+  border-bottom: 1px solid rgba(255,255,255,.07);
+}
+.top-bar h1 { font-size: 18px; font-weight: 800; letter-spacing: .2px; }
+.top-bar > div:first-child p { display: none; } /* hide long tagline in the rail */
+
+/* Nav items container */
+.teacher-mode-actions {
+  flex: 1;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 6px;
+  background: transparent;
+  border: 0;
+  padding: 0;
+}
+.teacher-mode-button {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  text-align: start;
+  border: 0;
+  background: transparent;
+  color: #b9c5da;
+  border-radius: var(--eb-r);
+  padding: 11px 14px;
+  font-weight: 700;
+  font-size: 14px;
+  transition: var(--eb-dur) var(--eb-ease);
+}
+.teacher-mode-button:hover { background: rgba(255,255,255,.07); color: #fff; }
+.teacher-mode-button.active {
+  background: linear-gradient(135deg, var(--eb-primary), var(--eb-primary-strong));
+  color: #fff;
+  box-shadow: 0 10px 22px -12px rgba(37,99,235,.7);
+}
+/* Logout pinned to the bottom of the sidebar */
+.logout-button {
+  margin-top: auto;
+  width: 100%;
+  border: 1px solid rgba(255,255,255,.14);
+  background: rgba(255,255,255,.04);
+  color: #e2e8f0;
+  border-radius: var(--eb-r);
+  padding: 11px 14px;
+  font-weight: 700;
+  font-size: 13.5px;
+  transition: var(--eb-dur) var(--eb-ease);
+}
+.logout-button:hover { background: rgba(239,68,68,.14); border-color: rgba(239,68,68,.4); color: #fecaca; }
+
+/* Tablet / phone: sidebar collapses back to a horizontal top bar */
+@media (max-width: 900px) {
+  .builder-page { padding-inline-end: 0; }
+  .top-bar {
+    position: sticky;
+    inset-block: auto;
+    inset-inline-end: auto;
+    top: 0;
+    width: auto;
+    min-height: 62px;
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 clamp(16px, 4vw, 28px);
+    gap: 14px;
+    border-inline-start: 0;
+    box-shadow: 0 6px 20px -14px rgba(15,23,42,.55);
+    backdrop-filter: blur(12px);
+  }
+  .top-bar > div:first-child { padding: 0; border-bottom: 0; }
+  .top-bar > div:first-child p { display: block; color: #9fb0c9; font-size: 12px; }
+  .teacher-mode-actions { flex: initial; flex-direction: row; gap: 6px; }
+  .teacher-mode-button { width: auto; }
+  .logout-button { margin-top: 0; width: auto; }
+}
+
+/* ---------- Login ---------- */
+.login-page {
+  background:
+    radial-gradient(1100px 520px at 88% -8%, #e6eefc 0, transparent 46%),
+    radial-gradient(900px 500px at -6% 108%, #eaf0fb 0, transparent 42%),
+    var(--eb-bg);
+}
+.login-card {
+  max-width: 420px;
+  border: 1px solid var(--eb-line);
+  border-radius: var(--eb-r-xl);
+  padding: 40px 36px;
+  box-shadow: var(--eb-sh-lg);
+  animation: ebFadeIn .4s var(--eb-ease) both;
+}
+.brand-mark {
+  border-radius: var(--eb-r);
+  background: linear-gradient(135deg, var(--eb-navy), var(--eb-primary));
+  box-shadow: 0 8px 20px -10px rgba(37,99,235,.5);
+}
+.login-card h1 { font-size: 26px; font-weight: 800; letter-spacing: .2px; }
+.subtitle { color: var(--eb-muted); }
+
+/* ---------- Cards ---------- */
+.builder-card, .plan-card, .exam-toolbar-card, .question-card, .bottom-actions-card {
+  border: 1px solid var(--eb-line);
+  border-radius: var(--eb-r-xl);
+  box-shadow: var(--eb-sh-md);
+  transition: box-shadow var(--eb-dur) var(--eb-ease), transform var(--eb-dur) var(--eb-ease);
+}
+.builder-card { padding: clamp(22px, 3vw, 32px); }
+.prompt-card { border-top: 3px solid var(--eb-primary); }
+.questions-list > .question-card { animation: ebFadeIn .3s var(--eb-ease) both; }
+.question-card { padding: 24px; }
+.question-card:hover { box-shadow: var(--eb-sh-lg); transform: translateY(-1px); }
+.question-locked { box-shadow: inset 4px 0 0 var(--eb-warn); }
+.question-number { color: var(--eb-navy); font-size: 17px; font-weight: 800; }
+
+/* ---------- Buttons ---------- */
+.primary-button, .generate-button {
+  border: 0; border-radius: var(--eb-r);
+  background: var(--eb-primary); color: #fff; font-weight: 700;
+  box-shadow: 0 8px 18px -10px rgba(37,99,235,.55);
+  transition: var(--eb-dur) var(--eb-ease);
+}
+.primary-button:hover, .generate-button:hover:not(:disabled) {
+  background: var(--eb-primary-strong); transform: translateY(-1px);
+  box-shadow: 0 12px 24px -10px rgba(37,99,235,.6);
+}
+.primary-button:disabled, .generate-button:disabled {
+  opacity: .55; cursor: not-allowed; box-shadow: none; transform: none;
+}
+.secondary-primary-button, .saved-open-button, .select-action, .lock-button, .preview-download-button {
+  border: 1px solid var(--eb-line-2); background: var(--eb-surface); color: var(--eb-text);
+  border-radius: var(--eb-r-sm); font-weight: 700; transition: var(--eb-dur) var(--eb-ease);
+}
+.secondary-primary-button:hover, .saved-open-button:hover, .select-action:hover, .preview-download-button:hover {
+  background: var(--eb-primary-050); border-color: #c7d7f5; color: var(--eb-primary-strong);
+}
+.saved-delete-button, .question-delete-mini {
+  border: 1px solid #f3d0d0; background: var(--eb-surface); color: var(--eb-danger);
+  border-radius: var(--eb-r-sm); font-weight: 700; transition: var(--eb-dur) var(--eb-ease);
+}
+.saved-delete-button:hover, .question-delete-mini:hover { background: var(--eb-danger-bg); border-color: #f0b4b4; }
+
+/* ---------- Form controls ---------- */
+.login-card input, .builder-card > textarea, .marks-field input, .model-picker select {
+  border: 1px solid var(--eb-line-2);
+  border-radius: var(--eb-r-sm);
+  background: var(--eb-surface);
+  transition: border-color var(--eb-dur) var(--eb-ease), box-shadow var(--eb-dur) var(--eb-ease);
+}
+.login-card input { padding: 12px 14px; }
+.login-card input:focus, .builder-card > textarea:focus, .marks-field input:focus, .model-picker select:focus {
+  outline: none; border-color: var(--eb-primary); box-shadow: var(--eb-focus);
+}
+.login-card label { color: var(--eb-text); font-weight: 700; font-size: 13.5px; }
+
+/* ---------- Chips / meta / badges ---------- */
+.info-chip, .question-meta span, .topic-chip, .status-chip, .success-chip, .model-chip {
+  font-weight: 700; font-size: 11.5px; letter-spacing: .1px;
+}
+.question-meta span { background: var(--eb-surface-2); color: var(--eb-muted); border: 1px solid var(--eb-line); }
+
+/* ---------- Exam table ---------- */
+.exam-table-wrap { border-radius: var(--eb-r-lg); border: 1px solid var(--eb-line); overflow: hidden; }
