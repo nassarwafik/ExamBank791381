@@ -1,0 +1,52 @@
+/* ============================================================
+   ExamBank — Canonical Design Tokens
+   Single source of truth for every *-pro.css layer and App.css.
+   UI/UX tokens only. No logic, markup, or class names here.
+   ============================================================ */
+:root {
+  /* Typography */
+  --eb-font: "IBM Plex Sans Arabic", "Segoe UI", Tahoma, Arial, sans-serif;
+
+  /* Surfaces & background */
+  --eb-bg: #f5f7fa;
+  --eb-bg-tint: #f7f9fd;
+  --eb-surface: #ffffff;
+  --eb-surface-2: #f7f9fc;
+
+  /* Navy / ink / text hierarchy */
+  --eb-navy: #0f172a;
+  --eb-navy-2: #12223f;
+  --eb-ink: #1e293b;
+  --eb-text: #334155;
+  --eb-muted: #64748b;
+  --eb-faint: #94a3b8;
+
+  /* Lines / borders (soft) */
+  --eb-line: #e9edf4;
+  --eb-line-2: #dce2ec;
+
+  /* Professional blue */
+  --eb-primary: #2563eb;
+  --eb-primary-strong: #1d4ed8;
+  --eb-primary-050: #eef4ff;
+  --eb-primary-100: #e4edfc;
+
+  /* Semantic */
+  --eb-success: #16a34a; --eb-success-bg: #ecfdf3; --eb-success-tx: #15803d;
+  --eb-warn: #d97706;    --eb-warn-bg: #fff7ed;    --eb-warn-tx: #b45309;
+  --eb-danger: #dc2626;  --eb-danger-bg: #fef2f2;  --eb-danger-tx: #b42318;
+
+  /* Radius scale */
+  --eb-r-sm: 10px; --eb-r: 12px; --eb-r-lg: 16px; --eb-r-xl: 20px; --eb-pill: 999px;
+
+  /* Soft shadow scale */
+  --eb-sh-xs: 0 1px 2px rgba(15,23,42,.05);
+  --eb-sh-sm: 0 4px 14px -8px rgba(15,23,42,.14);
+  --eb-sh-md: 0 10px 30px -18px rgba(15,23,42,.16);
+  --eb-sh-lg: 0 20px 44px -26px rgba(15,23,42,.22);
+
+  /* Motion & focus */
+  --eb-ease: cubic-bezier(.4,0,.2,1);
+  --eb-dur: .18s;
+  --eb-focus: 0 0 0 4px rgba(37,99,235,.16);
+}

@@ -2,8 +2,18 @@ import { useEffect, useMemo, useState } from "react";
 import type { FormEvent } from "react";
 import StudentPortal from "./StudentPortal";
 import TeacherPlatform from "./TeacherPlatform";
+import { IconUser, IconLock, IconWarning, IconBuilder, IconDashboard, IconStudents, IconAssignments, IconLogout, IconChevronDown, IconImage, IconSparkles } from "./icons";
 import "./App.css";
 import "./platform.css";
+import "./page-parts.css";
+import "./shell.css";
+import "./dashboard-pro.css";
+import "./builder-pro.css";
+import "./studentexam-pro.css";
+import "./review-pro.css";
+import "./assignments-pro.css";
+import "./studentportal-pro.css";
+import "./login-pro.css";
 // FINAL_BUILDER_PHASE_6
 // EXAMBANK_2_PHASE_A
 // EXAMBANK_2_PHASE_B
@@ -320,6 +330,13 @@ function App() {
     >(
       "builder"
     );
+
+  const [workspaceTab, setWorkspaceTab] = useState<"dashboard" | "students" | "assignments">("dashboard");
+
+  function goToWorkspace(tab: "dashboard" | "students" | "assignments") {
+    setTeacherView("platform");
+    setWorkspaceTab(tab);
+  }
 
   const [userCode, setUserCode] = useState("");
   const [password, setPassword] = useState("");
@@ -4660,70 +4677,108 @@ function App() {
 
   if (!loggedIn) {
     return (
-      <main className="login-page" dir="rtl">
-        <section className="login-card">
-          <div className="brand-mark">EB</div>
-          <h1>ExamBank 791381</h1>
-          <p className="subtitle">
-            منصة الامتحانات والتدريب الذكي لشبكات الاتصال
-          </p>
+      <main className="auth login-page" dir="rtl">
+        <section className="auth-brand">
+          <svg className="auth-net" viewBox="0 0 400 300" aria-hidden="true" focusable="false">
+            <g fill="none" stroke="#fff" strokeWidth="1">
+              <path d="M40 60 L160 110 L120 220 L280 190 L340 90" />
+              <path d="M160 110 L280 190" />
+              <path d="M120 220 L40 260" />
+            </g>
+            <g fill="#fff">
+              <circle cx="40" cy="60" r="4" />
+              <circle cx="160" cy="110" r="5" />
+              <circle cx="120" cy="220" r="4" />
+              <circle cx="280" cy="190" r="5" />
+              <circle cx="340" cy="90" r="4" />
+              <circle cx="40" cy="260" r="4" />
+            </g>
+          </svg>
 
-          <div className="login-role-note">
-            <span>
+          <div className="auth-brand-top">
+            <div className="auth-logo brand-mark">EB</div>
+            <div className="auth-logo-text">
+              ExamBank
+              <small>791381</small>
+            </div>
+          </div>
+
+          <div className="auth-hero">
+            <h2>منصة الامتحانات والتدريب الذكي لشبكات الاتصال</h2>
+          </div>
+
+          <div className="auth-features login-role-note">
+            <span className="auth-feature">
               👨‍🏫 معلم
             </span>
 
-            <span>
+            <span className="auth-feature">
               👨‍🎓 طالب
             </span>
           </div>
-
-          <form onSubmit={handleLogin}>
-            <label>
-              كود المستخدم
-              <input
-                type="text"
-                value={userCode}
-                onChange={event =>
-                  setUserCode(event.target.value)
-                }
-                placeholder="أدخل كود المستخدم"
-                autoComplete="username"
-              />
-            </label>
-
-            <label>
-              كلمة المرور
-              <input
-                type="password"
-                value={password}
-                onChange={event =>
-                  setPassword(event.target.value)
-                }
-                placeholder="أدخل كلمة المرور"
-                autoComplete="current-password"
-              />
-            </label>
-
-            {loginError && (
-              <div className="error-message">
-                {loginError}
-              </div>
-            )}
-
-            <button
-              type="submit"
-              className="primary-button"
-              disabled={loginBusy}
-            >
-              {loginBusy ? "جارٍ الدخول..." : "دخول"}
-            </button>
-          </form>
-
-          <p className="login-note">
-            نفس شاشة الدخول للمعلم والطالب
-          </p>
         </section>
+
+        <div className="auth-form-wrap">
+          <section className="auth-card login-card">
+            <h1 className="auth-welcome">ExamBank 791381</h1>
+            <p className="auth-sub subtitle">
+              منصة الامتحانات والتدريب الذكي لشبكات الاتصال
+            </p>
+
+            <form className="auth-form" onSubmit={handleLogin}>
+              <label className="auth-field">
+                <span>كود المستخدم</span>
+                <div className="auth-input">
+                  <IconUser size={18} />
+                  <input
+                    type="text"
+                    value={userCode}
+                    onChange={event =>
+                      setUserCode(event.target.value)
+                    }
+                    placeholder="أدخل كود المستخدم"
+                    autoComplete="username"
+                  />
+                </div>
+              </label>
+
+              <label className="auth-field">
+                <span>كلمة المرور</span>
+                <div className="auth-input">
+                  <IconLock size={18} />
+                  <input
+                    type="password"
+                    value={password}
+                    onChange={event =>
+                      setPassword(event.target.value)
+                    }
+                    placeholder="أدخل كلمة المرور"
+                    autoComplete="current-password"
+                  />
+                </div>
+              </label>
+
+              {loginError && (
+                <div className="auth-error error-message">
+                  <IconWarning size={16} />
+                  {loginError}
+                </div>
+              )}
+
+              <button
+                type="submit"
+                className="auth-submit primary-button"
+                disabled={loginBusy}
+              >
+                {loginBusy ? "جارٍ الدخول..." : "دخول"}
+              </button>
+            </form>
+
+            <p className="auth-note login-note">
+              نفس شاشة الدخول للمعلم والطالب
+            </p>
+          </section>
+        </div>
       </main>
     );
   }
@@ -4746,60 +4801,69 @@ function App() {
   }
 
   return (
-    <main className="builder-page" dir="rtl">
-      <header className="top-bar">
+    <main className="builder-page app-shell" dir="rtl">
+      <aside className="app-sidebar" aria-label="التنقل الرئيسي">
+        <div className="app-sidebar-brand">
+          <span className="app-sidebar-logo">EB</span>
+          <span className="app-sidebar-brand-text">
+            ExamBank
+            <small>791381</small>
+          </span>
+        </div>
+
+        <nav className="app-sidebar-nav">
+          <button
+            className={"app-sidebar-link " + (teacherView === "builder" ? "active" : "")}
+            onClick={() => setTeacherView("builder")}
+          >
+            <IconBuilder size={20} />
+            <span>باني الامتحان</span>
+          </button>
+
+          <button
+            className={"app-sidebar-link " + (teacherView === "platform" && workspaceTab === "dashboard" ? "active" : "")}
+            onClick={() => goToWorkspace("dashboard")}
+          >
+            <IconDashboard size={20} />
+            <span>لوحة المتابعة</span>
+          </button>
+
+          <button
+            className={"app-sidebar-link " + (teacherView === "platform" && workspaceTab === "students" ? "active" : "")}
+            onClick={() => goToWorkspace("students")}
+          >
+            <IconStudents size={20} />
+            <span>الصفوف والطلاب</span>
+          </button>
+
+          <button
+            className={"app-sidebar-link " + (teacherView === "platform" && workspaceTab === "assignments" ? "active" : "")}
+            onClick={() => goToWorkspace("assignments")}
+          >
+            <IconAssignments size={20} />
+            <span>الواجبات</span>
+          </button>
+        </nav>
+
+        <div className="app-sidebar-user">
+          <span className="app-sidebar-user-name">
+            <IconUser size={16} />
+            <span>{sessionDisplayName || "المعلم"}</span>
+          </span>
+          <button className="app-sidebar-logout logout-button" onClick={handleLogout}>
+            <IconLogout size={18} />
+            <span>تسجيل الخروج</span>
+          </button>
+        </div>
+      </aside>
+
+      <div className="app-shell-main">
+      <header className="top-bar app-content-header">
         <div>
           <h1>ExamBank 791381</h1>
           <p>
             اكتب ما تريد، وسيبقى بناء الامتحان وتعديله كله في هذه الصفحة
           </p>
-        </div>
-
-        <div className="teacher-mode-actions">
-          <button
-            className={
-              "teacher-mode-button " +
-              (
-                teacherView ===
-                "builder"
-                  ? "active"
-                  : ""
-              )
-            }
-            onClick={() =>
-              setTeacherView(
-                "builder"
-              )
-            }
-          >
-            🛠 باني الامتحان
-          </button>
-
-          <button
-            className={
-              "teacher-mode-button " +
-              (
-                teacherView ===
-                "platform"
-                  ? "active"
-                  : ""
-              )
-            }
-            onClick={() =>
-              setTeacherView(
-                "platform"
-              )
-            }
-          >
-            👥 الصفوف والطلاب
-          </button>
-
-          <button
-            className="logout-button"
-            onClick={handleLogout}
-          >
-            تسجيل الخروج
-          </button>
         </div>
       </header>
 
@@ -4808,12 +4872,20 @@ function App() {
         <TeacherPlatform
           token={token}
           currentExam={exam}
+          workspaceTab={workspaceTab}
         />
       )}
 
       {teacherView ===
         "builder" && (
       <section className="builder-content">
+        <details className="builder-setup-zone" open={!exam}>
+          <summary>
+            <IconSparkles size={16} />
+            <span>إعداد الامتحان — الذكاء الاصطناعي، الامتحانات المحفوظة، القوالب</span>
+            <IconChevronDown size={14} className="details-chevron" />
+          </summary>
+          <div className="builder-setup-body">
         <div className="builder-card prompt-card">
           <div className="builder-heading">
             <span className="ai-badge">AI</span>
@@ -5143,6 +5215,8 @@ function App() {
             )}
           </section>
         )}
+          </div>
+        </details>
 
         {builderError && (
           <div className="builder-error">
@@ -5285,6 +5359,8 @@ function App() {
               </small>
             </div>
 
+            <div className="builder-workspace">
+            <aside className="builder-side">
             <div className="exam-toolbar-card">
               <div className="section-title-row">
                 <div>
@@ -5396,7 +5472,6 @@ function App() {
 
             <details
               className="exam-metadata-card"
-              open
             >
               <summary>
                 📝 بيانات ورأس الامتحان
@@ -5563,18 +5638,24 @@ function App() {
               </div>
             </details>
 
-            <nav className="question-jump-bar">
-              <strong>
-                الانتقال إلى سؤال:
-              </strong>
+            <nav className="question-jump-bar builder-navigator">
+              <div className="builder-navigator-head">
+                <strong>
+                  الانتقال إلى سؤال
+                </strong>
+                <span className="builder-navigator-count">
+                  {exam.questions.length}
+                </span>
+              </div>
 
-              <div>
+              <div className="builder-navigator-grid">
                 {exam.questions.map(
                   (
                     question,
                     index
                   ) => (
                     <button
+                      className="builder-navigator-item"
                       key={
                         "jump-" +
                         question.examQuestionId
@@ -5597,35 +5678,42 @@ function App() {
                         )
                       }
                     >
-                      <span>
+                      <span className="builder-navigator-number">
                         {index + 1}
                       </span>
 
-                      {question.locked && (
-                        <small>
-                          🔒
-                        </small>
-                      )}
+                      <span className="builder-navigator-meta">
+                        <span className="builder-navigator-difficulty">
+                          {difficultyNames[question.difficulty] || question.difficulty}
+                        </span>
+                        <span className="builder-navigator-marks">
+                          {question.marks}
+                        </span>
+                      </span>
 
-                      {question.image
-                        ?.exists && (
-                        <small>
-                          🖼
-                        </small>
-                      )}
+                      <span className="builder-navigator-badges">
+                        {question.locked && (
+                          <IconLock size={11} />
+                        )}
 
-                      {question.origin ===
-                        "ai-generated" && (
-                        <small>
-                          ✨
-                        </small>
-                      )}
+                        {question.image
+                          ?.exists && (
+                          <IconImage size={11} />
+                        )}
+
+                        {question.origin ===
+                          "ai-generated" && (
+                          <IconSparkles size={11} />
+                        )}
+                      </span>
                     </button>
                   )
                 )}
               </div>
             </nav>
+            </aside>
 
+            <div className="builder-main">
             <div className="questions-list">
               {exam.questions.map((question, index) => {
                 const answerShown =
@@ -5639,6 +5727,7 @@ function App() {
                     }`}
                     key={question.examQuestionId}
                   >
+                  <div className="question-header">
                     <div className="question-top-row">
                       <div className="question-number">
                         السؤال {index + 1}
@@ -5731,6 +5820,15 @@ function App() {
                         </button>
                       </div>
                     </div>
+                    <div className="question-header-badges">
+                      <span className="question-type-badge">
+                        {typeNames[question.presentationType]}
+                      </span>
+                      <span className="question-difficulty-badge">
+                        {difficultyNames[question.difficulty] || question.difficulty}
+                      </span>
+                    </div>
+                  </div>
 
                     <div className="question-meta">
                       <span>{question.section}</span>
@@ -5747,6 +5845,7 @@ function App() {
                       </span>
                     </div>
 
+                    <div className="question-content">
                     <div className="question-text-panel">
                       <div className="question-text">
                         {question.text}
@@ -6122,7 +6221,14 @@ function App() {
                         </div>
                       )}
                     </div>
+                    </div>
 
+                    <details className="question-advanced-tools">
+                      <summary>
+                        <IconChevronDown size={14} className="details-chevron" />
+                        <span>أدوات متقدمة</span>
+                      </summary>
+                      <div className="question-advanced-body">
                     <div className="question-action-bar">
                       <button onClick={() =>
                           runBankQuestionAction(
@@ -6334,6 +6440,8 @@ function App() {
                     </div>
 
                     {answerShown && renderAnswer(question.answer)}
+                      </div>
+                    </details>
                   </article>
                 );
               })}
@@ -6483,10 +6591,13 @@ function App() {
                   : "⬇️ تنزيل ملف للـ AI"}
               </button>
             </div>
+            </div>
+            </div>
           </section>
         )}
       </section>
       )}
+      </div>
     </main>
   );
 }

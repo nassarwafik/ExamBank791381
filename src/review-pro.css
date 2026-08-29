@@ -1,0 +1,78 @@
+:root{
+  --navy:var(--eb-navy);--primary:var(--eb-primary);--primary2:var(--eb-primary-strong);--primary050:var(--eb-primary-050);
+  --text:var(--eb-text);--muted:var(--eb-muted);--faint:var(--eb-faint);--line:var(--eb-line);--line2:var(--eb-line-2);
+  --surface:var(--eb-surface);--surface2:var(--eb-surface-2);--ok:var(--eb-success);--okbg:var(--eb-success-bg);--warn:var(--eb-warn);--warnbg:var(--eb-warn-bg);--danger:var(--eb-danger);--dangerbg:var(--eb-danger-bg);
+  --r:var(--eb-r);--rlg:var(--eb-r-lg);--rxl:var(--eb-r-xl);--pill:var(--eb-pill);--ease:var(--eb-ease);
+}
+
+.review-modal{background:var(--surface);border:1px solid var(--line);border-radius:var(--rxl);box-shadow:0 30px 70px -30px rgba(15,23,42,.5);overflow:hidden}
+.review-top{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:18px 22px;border-block-end:1px solid var(--line);background:var(--surface)}
+.review-top h3{margin:0;font-size:16px;font-weight:800;color:var(--navy)}
+.review-top .sub{color:var(--muted);font-size:12.5px}
+.review-attempt-tabs{display:inline-flex;gap:4px;background:var(--surface2);border:1px solid var(--line);border-radius:var(--pill);padding:4px}
+.review-attempt-tabs button{border:0;background:transparent;color:var(--muted);border-radius:var(--pill);padding:6px 14px;font-weight:700;font-size:12.5px;cursor:pointer}
+.review-attempt-tabs button.active{background:var(--surface);color:var(--navy);box-shadow:0 4px 12px -6px rgba(15,23,42,.2)}
+.review-body{padding:22px;display:flex;flex-direction:column;gap:16px}
+.review-qhead{display:flex;align-items:center;justify-content:space-between;gap:10px}
+.review-qhead .qn{display:inline-flex;align-items:center;gap:8px;font-weight:800;color:var(--navy)}
+.review-qhead .qn::before{content:"";width:6px;height:20px;border-radius:var(--pill);background:linear-gradient(180deg,var(--primary),var(--primary2))}
+.review-qtext{background:var(--surface2);border:1px solid var(--line);border-radius:var(--rlg);padding:14px 16px;color:var(--navy);line-height:1.9;margin:0}
+.review-answer-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.review-col{border:1px solid var(--line);border-radius:var(--rlg);padding:14px 16px;background:var(--surface)}
+.review-col .lbl{font-size:12px;font-weight:800;color:var(--muted);margin-block-end:8px;display:flex;align-items:center;gap:6px}
+.review-col.student{background:#fff}
+.review-col.correct{background:#f0fdf4;border-color:#bbe7c9}
+.review-col.correct .lbl{color:#15803d}
+.review-grade-row{display:flex;align-items:center;gap:10px;flex-wrap:wrap;background:var(--surface2);border:1px solid var(--line);border-radius:var(--rlg);padding:12px 14px}
+.review-grade-row .mk{display:flex;align-items:center;gap:8px;font-weight:800;color:var(--navy)}
+.review-grade-row input{width:70px;text-align:center;font-weight:800;border:1px solid var(--line2);border-radius:10px;padding:8px}
+.review-quick{display:flex;gap:6px;flex-wrap:wrap}
+.review-quick button{border:1px solid var(--line2);background:var(--surface);border-radius:var(--pill);padding:6px 12px;font-weight:700;font-size:12px;cursor:pointer}
+.review-quick button.full{border-color:#bbe7c9;background:#f0fdf4;color:#15803d}
+.review-quick button.zero{border-color:#f0b4b4;background:#fef2f2;color:#b42318}
+.review-feedback textarea{width:100%;box-sizing:border-box;border:1px solid var(--line2);border-radius:var(--r);padding:11px 13px;resize:vertical;font:inherit;font-size:13.5px;min-height:70px}
+.review-footer{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:16px 22px;border-block-start:1px solid var(--line);background:var(--surface);position:sticky;inset-block-end:0}
+.rbtn{border:1px solid var(--line2);background:var(--surface);color:var(--text);border-radius:var(--r);padding:11px 18px;font-weight:800;cursor:pointer}
+.rbtn.primary{border:0;background:var(--primary);color:#fff;box-shadow:0 10px 22px -12px rgba(37,99,235,.6)}
+.review-state{display:inline-flex;align-items:center;gap:6px;padding:3px 10px;border-radius:var(--pill);font-size:11.5px;font-weight:800;background:var(--warnbg);color:#b45309}
+@media (max-width:640px){.review-answer-grid{grid-template-columns:1fr}}
+
+
+/* === ExamBank actual JSX selector bridge === */
+.review-top h2{margin:4px 0 3px;font-size:17px;font-weight:800;color:var(--navy)}
+.review-top p{margin:0;color:var(--muted);font-size:12.5px}
+.review-top>button{border:1px solid var(--line2);background:#fff;color:var(--text);border-radius:10px;padding:8px 12px;font-weight:700;cursor:pointer}
+.review-summary{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:8px;padding:16px 22px}
+.review-summary>div{border:1px solid var(--line);background:var(--surface2);border-radius:12px;padding:10px 12px;display:flex;flex-direction:column;gap:4px}
+.review-summary span{color:var(--muted);font-size:11.5px}.review-summary strong{color:var(--navy);font-size:14px}
+.review-attempt-tabs{margin-inline:22px;max-width:calc(100% - 44px);overflow:auto}
+.review-question-list{padding:18px 22px;display:flex;flex-direction:column;gap:14px}
+.review-question{border:1px solid var(--line);border-radius:var(--rlg);padding:16px;background:#fff;box-shadow:0 8px 22px -20px rgba(15,23,42,.18)}
+.review-question.needs-review{border-inline-start:4px solid var(--warn);background:#fffdf8}
+.review-qhead>div:first-child{display:flex;align-items:center;gap:8px;flex-wrap:wrap;font-weight:800;color:var(--navy)}
+.review-qhead>div:first-child::before{content:"";width:6px;height:20px;border-radius:var(--pill);background:linear-gradient(180deg,var(--primary),var(--primary2))}
+.review-qhead em{font-style:normal;padding:3px 8px;border-radius:var(--pill);background:var(--warnbg);color:#b45309;font-size:11px}
+.review-auto{color:var(--muted);font-size:12px;font-weight:700}
+.review-answer-grid>div{border:1px solid var(--line);border-radius:var(--rlg);padding:14px 16px;background:var(--surface)}
+.review-answer-grid>div>span{font-size:12px;font-weight:800;color:var(--muted);margin-block-end:8px;display:block}
+.review-answer-grid>div:last-child{background:#f0fdf4;border-color:#bbe7c9}
+.review-answer-grid>div:last-child>span{color:#15803d}
+.review-answer-grid pre{white-space:pre-wrap;word-break:break-word;margin:0;color:var(--text);font-family:inherit;line-height:1.75}
+.review-grade-row>label:first-child{display:flex;align-items:center;gap:8px;font-weight:800;color:var(--navy)}
+.review-grade-row .review-comment{display:flex;align-items:center;gap:8px;flex:1;min-width:220px}
+.review-grade-row .review-comment input{width:100%;text-align:start;font-weight:500}
+.review-grade-row>button{border:1px solid var(--line2);background:#fff;color:var(--text);border-radius:9px;padding:8px 11px;font-weight:700;cursor:pointer}
+.review-general-feedback{display:flex;flex-direction:column;gap:7px;margin:0 22px 18px;color:var(--navy);font-weight:800;font-size:12.5px}
+.review-general-feedback textarea{width:100%;box-sizing:border-box;border:1px solid var(--line2);border-radius:var(--r);padding:11px 13px;resize:vertical;font:inherit;font-size:13.5px;min-height:76px}
+.review-footer button{border:1px solid var(--line2);background:#fff;color:var(--text);border-radius:var(--r);padding:11px 18px;font-weight:800;cursor:pointer}
+.review-footer .platform-primary{border:0;background:var(--primary);color:#fff;box-shadow:0 10px 22px -12px rgba(37,99,235,.6)}
+
+/* ============================================================
+   Phase 6 — bounded workspace: modal scrolls internally, header
+   and footer stay pinned instead of the whole page scrolling.
+   ============================================================ */
+.review-modal{ max-height:calc(100vh - 48px); overflow-y:auto; }
+.review-top{ position:sticky; inset-block-start:0; z-index:2; }
+.review-top>button{ display:inline-flex; align-items:center; gap:6px; }
+.review-footer button{ display:inline-flex; align-items:center; gap:8px; }
+@media(max-width:800px){ .review-modal{ max-height:calc(100vh - 16px); } }

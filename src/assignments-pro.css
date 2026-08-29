@@ -1,0 +1,83 @@
+:root{
+  --navy:var(--eb-navy);--primary:var(--eb-primary);--primary2:var(--eb-primary-strong);--primary050:var(--eb-primary-050);
+  --text:var(--eb-text);--muted:var(--eb-muted);--faint:var(--eb-faint);--line:var(--eb-line);--line2:var(--eb-line-2);
+  --surface:var(--eb-surface);--surface2:var(--eb-surface-2);--ok:var(--eb-success);--okbg:var(--eb-success-bg);--warn:var(--eb-warn);--warnbg:var(--eb-warn-bg);--danger:var(--eb-danger);--dangerbg:var(--eb-danger-bg);
+  --r:var(--eb-r);--rlg:var(--eb-r-lg);--rxl:var(--eb-r-xl);--pill:var(--eb-pill);--ease:var(--eb-ease);
+}
+
+.assignments-heading{margin-bottom:14px;padding:18px 20px;border-radius:var(--rlg);border:1px solid var(--line);background:linear-gradient(135deg,#fff,#f7f9fd)}
+.assignments-heading h2{margin:4px 0 5px;color:var(--navy);font-size:20px;font-weight:800}
+.assignments-heading p{margin:0;color:var(--muted)}
+.assignment-list{display:flex;flex-direction:column;gap:10px}
+.assignment-row{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;background:var(--surface);border:1px solid var(--line);border-radius:var(--rlg);padding:15px 18px;transition:.16s var(--ease);box-shadow:0 8px 22px -18px rgba(15,23,42,.14)}
+.assignment-row:hover{border-color:#c7d7f5;box-shadow:0 12px 26px -18px rgba(15,23,42,.22)}
+.assignment-row-main{display:flex;flex-direction:column;gap:5px;min-width:220px}
+.assignment-title-line{font-weight:800;color:var(--navy);font-size:15px}
+.assignment-sub{display:flex;gap:14px;flex-wrap:wrap;color:var(--muted);font-size:12.5px}
+.assignment-status{padding:3px 11px;border-radius:var(--pill);font-size:11.5px;font-weight:800}
+.assignment-status.published{background:var(--okbg);color:#15803d}
+.assignment-status.draft{background:#f1f4f9;color:var(--muted)}
+.assignment-status.closed{background:var(--warnbg);color:#b45309}
+.assignment-row-actions{display:flex;gap:8px;flex-wrap:wrap}
+.abtn{border:1px solid var(--line2);background:var(--surface);color:var(--text);border-radius:10px;padding:8px 13px;font-weight:700;font-size:12.5px;cursor:pointer;transition:.16s var(--ease)}
+.abtn:hover{background:var(--primary050);border-color:#c7d7f5;color:var(--primary2)}
+.abtn.danger:hover{background:#fef2f2;border-color:#f0b4b4;color:var(--danger)}
+.abtn.primary{border:0;background:var(--primary);color:#fff}
+.assign-metric{display:inline-flex;align-items:center;gap:5px;font-weight:700}
+
+
+/* === ExamBank actual JSX selector bridge === */
+.assignments-heading h3{margin:4px 0 5px;color:var(--navy);font-size:20px;font-weight:800}
+.assignment-row-main strong{font-weight:800;color:var(--navy);font-size:15px}
+.assignment-row-title-line{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.assignment-status.archived{background:#f1f4f9;color:var(--muted)}
+.assignment-row-main > span{color:var(--muted);font-size:12.5px}
+.assignment-row-main > small{color:var(--faint);font-size:11.5px}
+.assignment-row-actions button,.assignment-row-actions select,.assignments-heading>button{
+ border:1px solid var(--line2);background:var(--surface);color:var(--text);border-radius:10px;padding:8px 13px;font-weight:700;font-size:12.5px;cursor:pointer;transition:.16s var(--ease)
+}
+.assignment-row-actions button:hover,.assignments-heading>button:hover{background:var(--primary050);border-color:#c7d7f5;color:var(--primary2)}
+.assignment-row-actions .assignment-delete-button{color:var(--danger);border-color:#f0d2d2}
+.assignment-row-actions .assignment-delete-button:hover{background:var(--dangerbg);border-color:#f0b4b4;color:var(--danger)}
+.assignment-create-button{border:0!important;background:var(--primary)!important;color:#fff!important;border-radius:10px!important;font-weight:800!important;box-shadow:0 8px 18px -10px rgba(37,99,235,.55)}
+.assignment-source-card{border:1px solid var(--line);border-radius:var(--rlg);background:linear-gradient(135deg,#fff,#f8faff);box-shadow:0 8px 24px -20px rgba(15,23,42,.18)}
+.assignment-create-grid{border:1px solid var(--line);border-radius:var(--rlg);background:var(--surface2);padding:14px}
+.assignment-results-panel{margin-top:16px;border:1px solid var(--line);border-radius:var(--rxl);background:#fff;padding:16px}
+.gradebook-stats article{border:1px solid var(--line);border-radius:14px;background:#fff;box-shadow:0 8px 20px -18px rgba(15,23,42,.16)}
+.gradebook-actions button,.review-button{border:1px solid var(--line2);background:#fff;color:var(--text);border-radius:9px;padding:7px 10px;font-weight:700;cursor:pointer}
+
+/* ============================================================
+   Phase 5 — Assignments: 3 clear zones (create / list / gradebook)
+   ============================================================ */
+.assignment-zone{ display:flex; flex-direction:column; }
+.assignment-create-zone{ border:1px solid var(--line); border-radius:var(--rxl); background:#fff; overflow:hidden; box-shadow:0 10px 28px -22px rgba(15,23,42,.18); }
+.assignment-create-zone > summary{
+  list-style:none; display:flex; align-items:center; gap:10px; padding:15px 20px; cursor:pointer;
+  font-weight:800; font-size:14.5px; color:var(--navy); background:linear-gradient(135deg,#fff,#f8faff);
+}
+.assignment-create-zone > summary::-webkit-details-marker{ display:none; }
+.assignment-create-zone > summary span{ flex:1; }
+.assignment-create-zone .details-chevron{ transition:transform .18s var(--ease); color:var(--muted); }
+.assignment-create-zone[open] .details-chevron{ transform:rotate(180deg); }
+.assignment-create-zone[open] > summary{ border-bottom:1px solid var(--line); }
+.assignment-zone-body{ display:flex; flex-direction:column; gap:14px; padding:18px 20px 20px; }
+.assignment-zone-body .assignment-source-card{ margin:0; }
+.assignment-zone-body .assignment-create-grid{ margin:0; }
+.assignment-create-cta-row{ display:flex; justify-content:flex-end; }
+.assignment-create-cta-row .assignment-create-button{ padding:13px 30px; font-size:14px; }
+
+.assignment-list-zone{ border:1px solid var(--line); border-radius:var(--rxl); background:#fff; padding:18px 20px; box-shadow:0 10px 28px -22px rgba(15,23,42,.16); }
+.assignment-zone-heading{ display:flex; align-items:center; gap:10px; margin-bottom:14px; }
+.assignment-zone-heading h4{ margin:0; color:var(--navy); font-size:14.5px; font-weight:800; }
+.assignment-zone-count{ background:var(--surface2); color:var(--muted); border-radius:var(--pill); padding:2px 10px; font-size:12px; font-weight:800; }
+
+.assignment-gradebook-zone{ border:1px solid var(--line); border-radius:var(--rxl); background:#fff; padding:18px 20px; box-shadow:0 16px 38px -26px rgba(15,23,42,.22); }
+
+@media(max-width:900px){
+  .assignment-row{ flex-direction:column; align-items:stretch; }
+  .assignment-row-actions{ width:100%; }
+}
+@media(max-width:760px){
+  .assignment-create-cta-row .assignment-create-button{ width:100%; }
+  .assignment-row-actions button, .assignment-row-actions select{ flex:1 1 auto; }
+}
