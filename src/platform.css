@@ -632,3 +632,240 @@
 
 /* EXAMBANK_2_PHASE_D_STYLES */
 .gradebook-stats{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:9px;margin:14px 0}.gradebook-stats article{border:1px solid #dbeafe;background:#f8fbff;border-radius:13px;padding:12px;display:flex;flex-direction:column;align-items:center}.gradebook-stats article strong{font-size:21px;color:#1d4ed8}.gradebook-stats article span{font-size:11px;color:#64748b}.gradebook-stats article.warn{background:#fff7ed;border-color:#fed7aa}.review-state{display:inline-flex;border-radius:999px;padding:4px 8px;font-size:10px;font-weight:900}.review-state.final{background:#dcfce7;color:#166534}.review-state.pending{background:#ffedd5;color:#9a3412}.gradebook-actions{display:flex;gap:6px;flex-wrap:wrap}.review-button{background:#eff6ff!important;color:#1d4ed8!important;border-color:#bfdbfe!important}.review-overlay{position:fixed;inset:0;z-index:1000;background:rgba(15,23,42,.62);backdrop-filter:blur(4px);display:flex;align-items:flex-start;justify-content:center;padding:24px;overflow:auto}.review-modal{width:min(1050px,100%);background:#f8fafc;border-radius:22px;padding:20px}.review-top{display:flex;justify-content:space-between;gap:15px;border-bottom:1px solid #e2e8f0;padding-bottom:13px}.review-top h2{margin:4px 0}.review-top p{margin:0;color:#64748b}.review-top>button,.review-footer button,.review-grade-row button{border:1px solid #cbd5e1;background:white;border-radius:9px;padding:9px 11px;cursor:pointer}.review-summary{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:9px;margin:14px 0}.review-summary>div{background:white;border:1px solid #e2e8f0;border-radius:12px;padding:10px;display:flex;flex-direction:column}.review-summary span{font-size:10px;color:#64748b}.review-attempt-tabs{display:flex;gap:7px;flex-wrap:wrap;margin-bottom:12px}.review-attempt-tabs button{border:1px solid #cbd5e1;background:white;border-radius:999px;padding:7px 11px}.review-attempt-tabs button.active{background:#1d4ed8;color:white}.review-question-list{display:flex;flex-direction:column;gap:12px}.review-question{background:white;border:1px solid #e2e8f0;border-radius:16px;padding:15px}.review-question.needs-review{border-color:#fdba74}.review-qhead{display:flex;justify-content:space-between}.review-qhead>div:first-child{display:flex;gap:7px;flex-wrap:wrap}.review-qhead strong{background:#eff6ff;color:#1d4ed8;padding:4px 8px;border-radius:999px}.review-qhead em{font-style:normal;background:#fff7ed;color:#c2410c;padding:4px 8px;border-radius:999px;font-size:10px}.review-auto{font-size:11px;color:#64748b}.review-qtext{font-weight:800;line-height:1.8}.review-answer-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}.review-answer-grid>div{border:1px solid #e2e8f0;background:#f8fafc;border-radius:12px;padding:10px}.review-answer-grid span{font-size:10px;color:#64748b}.review-answer-grid pre{white-space:pre-wrap;word-break:break-word;font-family:inherit}.review-grade-row{display:grid;grid-template-columns:180px 1fr auto;gap:9px;align-items:end;margin-top:11px}.review-grade-row label,.review-general-feedback{display:flex;flex-direction:column;gap:4px;font-size:11px;font-weight:800;color:#475569}.review-grade-row input,.review-general-feedback textarea{border:1px solid #cbd5e1;border-radius:9px;padding:9px;font:inherit}.review-general-feedback{margin-top:13px}.review-general-feedback textarea{min-height:85px}.review-footer{display:flex;justify-content:flex-end;gap:9px;margin-top:14px;padding-top:13px;border-top:1px solid #e2e8f0}.iex-finalized{color:#166534!important;background:#dcfce7;border-radius:10px;padding:9px}.iex-teacher-feedback{margin:12px auto;max-width:520px;text-align:right;background:#eff6ff;border:1px solid #bfdbfe;border-radius:12px;padding:12px;display:flex;flex-direction:column}.iex-teacher-feedback strong{color:#1d4ed8}@media(max-width:800px){.gradebook-stats,.review-summary{grid-template-columns:repeat(2,minmax(0,1fr))}.review-answer-grid,.review-grade-row{grid-template-columns:1fr}.review-overlay{padding:8px}}
+
+/* ============================================================
+   ExamBank 2.0H - Advanced student administration
+   ============================================================ */
+
+.student-admin-card {
+  min-width: 0;
+}
+
+.student-admin-stats,
+.student-profile-stats {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(82px, 1fr));
+  gap: 8px;
+  margin: 12px 0;
+}
+
+.student-admin-stats article,
+.student-profile-stats article {
+  border: 1px solid #e2e8f0;
+  background: #f8fafc;
+  border-radius: 12px;
+  padding: 10px;
+  text-align: center;
+}
+
+.student-admin-stats strong,
+.student-profile-stats strong {
+  display: block;
+  font-size: 20px;
+  color: #0f172a;
+}
+
+.student-admin-stats span,
+.student-profile-stats span {
+  display: block;
+  margin-top: 2px;
+  color: #64748b;
+  font-size: 11px;
+  font-weight: 800;
+}
+
+.student-admin-toolbar,
+.student-sort-row,
+.student-bulk-bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.student-admin-toolbar {
+  margin: 10px 0;
+  padding: 10px;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  background: #fff;
+}
+
+.student-admin-toolbar input {
+  flex: 1 1 260px;
+  min-width: 180px;
+  border: 1px solid #cbd5e1;
+  border-radius: 9px;
+  padding: 9px 10px;
+  font: inherit;
+}
+
+.student-admin-toolbar select,
+.student-bulk-bar select,
+.student-create-grid select {
+  border: 1px solid #cbd5e1;
+  border-radius: 9px;
+  padding: 9px 10px;
+  background: #fff;
+  font: inherit;
+}
+
+.student-admin-toolbar button,
+.student-sort-row button,
+.student-bulk-bar button,
+.student-profile-card button,
+.import-preview-wrap button {
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  background: #fff;
+  padding: 7px 9px;
+  cursor: pointer;
+  font-size: 11px;
+  font-weight: 800;
+}
+
+.student-admin-details {
+  margin-top: 10px;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  background: #fff;
+  overflow: hidden;
+}
+
+.student-admin-details summary {
+  padding: 11px 13px;
+  cursor: pointer;
+  font-weight: 900;
+  color: #334155;
+  background: #f8fafc;
+}
+
+.student-admin-details[open] summary {
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.student-admin-details .student-create-grid {
+  border: 0;
+  border-radius: 0;
+}
+
+.student-bulk-bar {
+  position: sticky;
+  top: 8px;
+  z-index: 4;
+  margin: 12px 0;
+  padding: 10px;
+  border: 1px solid #bfdbfe;
+  border-radius: 12px;
+  background: #eff6ff;
+  box-shadow: 0 8px 20px rgba(15,23,42,.08);
+}
+
+.student-bulk-bar strong {
+  color: #1d4ed8;
+  margin-left: 4px;
+}
+
+.danger-button {
+  color: #b42318 !important;
+  border-color: #fecaca !important;
+  background: #fff7f7 !important;
+}
+
+.status-archived {
+  display: inline-flex;
+  border-radius: 999px;
+  padding: 4px 8px;
+  font-size: 10px;
+  font-weight: 900;
+  background: #f1f5f9;
+  color: #475569;
+}
+
+.student-row-archived {
+  opacity: .72;
+  background: #fafafa;
+}
+
+.never-login {
+  color: #9a6700;
+  font-weight: 800;
+}
+
+.student-sort-row {
+  margin-top: 12px;
+  color: #64748b;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.student-sort-button {
+  min-width: 72px;
+}
+
+.import-preview-wrap {
+  max-height: 320px;
+  overflow: auto;
+  margin: 0 12px 12px;
+}
+
+.import-badge {
+  display: inline-flex;
+  padding: 4px 7px;
+  border-radius: 999px;
+  font-size: 10px;
+  font-weight: 900;
+}
+
+.import-badge.valid {
+  background: #dcfce7;
+  color: #166534;
+}
+
+.import-badge.duplicate {
+  background: #fef3c7;
+  color: #92400e;
+}
+
+.import-badge.invalid {
+  background: #fee2e2;
+  color: #991b1b;
+}
+
+.import-row-duplicate {
+  background: #fffbeb;
+}
+
+.import-row-invalid {
+  background: #fff7f7;
+}
+
+.student-profile-card {
+  margin-top: 14px;
+  border: 1px solid #bfdbfe;
+  background: #f8fbff;
+  border-radius: 16px;
+  padding: 14px;
+}
+
+.student-profile-card p {
+  color: #475569;
+  font-size: 12px;
+}
+
+.student-profile-stats {
+  grid-template-columns: repeat(4, minmax(90px, 1fr));
+}
+
+.credential-box .student-row-actions {
+  margin-top: 10px;
+}
+
+@media (max-width: 980px) {
+  .student-admin-stats {
+    grid-template-columns: repeat(2, minmax(110px, 1fr));
+  }
+  .student-profile-stats {
+    grid-template-columns: repeat(2, minmax(110px, 1fr));
+  }
+}
