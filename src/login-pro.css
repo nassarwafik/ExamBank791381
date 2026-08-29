@@ -1,0 +1,123 @@
+/* ============================================================
+   ExamBank — Professional Login (Split-Screen), RTL-first
+   Drop-in stylesheet. Pairs with the JSX in the integration note.
+   ============================================================ */
+:root{
+  --lg-navy:var(--eb-navy); --lg-navy-2:var(--eb-navy-2);
+  --lg-primary:var(--eb-primary); --lg-primary-2:var(--eb-primary-strong);
+  --lg-bg:var(--eb-bg); --lg-surface:var(--eb-surface);
+  --lg-text:var(--eb-text); --lg-muted:var(--eb-muted); --lg-faint:var(--eb-faint);
+  --lg-line:var(--eb-line); --lg-line-2:var(--eb-line-2);
+  --lg-danger:var(--eb-danger); --lg-danger-bg:var(--eb-danger-bg);
+  --lg-r:var(--eb-r); --lg-r-lg:var(--eb-r-xl); --lg-pill:var(--eb-pill);
+  --lg-ease:var(--eb-ease);
+  --lg-font:var(--eb-font);
+}
+
+.auth{
+  direction:rtl; min-height:100vh; display:grid;
+  grid-template-columns:1.05fr .95fr;
+  background:var(--lg-bg); font-family:var(--lg-font); color:var(--lg-text);
+  -webkit-font-smoothing:antialiased;
+}
+
+/* ---------- Brand / hero panel (start side in RTL = right) ---------- */
+.auth-brand{
+  position:relative; overflow:hidden; color:#fff;
+  padding:56px 52px; display:flex; flex-direction:column; justify-content:space-between;
+  background:
+    radial-gradient(900px 480px at 82% -6%, rgba(37,99,235,.42), transparent 60%),
+    radial-gradient(700px 520px at -8% 108%, rgba(59,130,246,.28), transparent 55%),
+    linear-gradient(160deg,#0b1220 0%,#0f172a 42%,#12326a 100%);
+}
+/* faint network motif (fits a networking course) */
+.auth-net{ position:absolute; inset:0; opacity:.5; pointer-events:none; }
+.auth-brand-top{ position:relative; z-index:2; display:flex; align-items:center; gap:12px; }
+.auth-logo{
+  width:52px; height:52px; border-radius:16px; display:flex; align-items:center; justify-content:center;
+  font-weight:800; font-size:20px; letter-spacing:.5px; color:#fff;
+  background:linear-gradient(135deg,#2563eb,#1d4ed8);
+  box-shadow:0 12px 26px -12px rgba(37,99,235,.8);
+}
+.auth-logo-text{ font-weight:800; font-size:15px; letter-spacing:.3px; }
+.auth-logo-text small{ display:block; color:#9fb4d8; font-weight:600; font-size:12px; }
+
+.auth-hero{ position:relative; z-index:2; max-width:460px; }
+.auth-hero h2{ margin:0 0 14px; font-size:clamp(26px,3.2vw,38px); font-weight:800; line-height:1.35; letter-spacing:.2px; }
+.auth-hero p{ margin:0; color:#cdd9f0; font-size:16px; line-height:1.9; }
+
+.auth-features{ position:relative; z-index:2; display:flex; flex-direction:column; gap:12px; margin-top:26px; }
+.auth-feature{ display:flex; align-items:center; gap:11px; color:#e4ecfb; font-weight:600; font-size:14.5px; }
+.auth-feature .tick{
+  width:26px; height:26px; border-radius:50%; flex:0 0 auto; display:flex; align-items:center; justify-content:center;
+  background:rgba(255,255,255,.12); border:1px solid rgba(255,255,255,.2);
+}
+.auth-feature .tick svg{ width:14px; height:14px; stroke:#7fe6c4; }
+
+.auth-brand-foot{ position:relative; z-index:2; color:#8aa0c6; font-size:12.5px; letter-spacing:.2px; }
+
+/* ---------- Form panel (end side in RTL = left) ---------- */
+.auth-form-wrap{ display:flex; align-items:center; justify-content:center; padding:40px 28px; }
+.auth-card{
+  width:100%; max-width:400px; animation:lgIn .5s var(--lg-ease) both;
+}
+.auth-welcome{ margin:0 0 4px; font-size:24px; font-weight:800; color:var(--lg-navy); }
+.auth-sub{ margin:0 0 22px; color:var(--lg-muted); font-size:14px; line-height:1.7; }
+
+/* role pills */
+.auth-roles{ display:flex; gap:8px; margin-bottom:22px; }
+.auth-role{
+  flex:1; text-align:center; padding:9px 10px; border-radius:var(--lg-r);
+  background:#eef4ff; color:#1d4ed8; border:1px solid #d9e5fb; font-weight:700; font-size:13px;
+}
+
+.auth-form{ display:flex; flex-direction:column; gap:16px; }
+.auth-field{ display:flex; flex-direction:column; gap:7px; }
+.auth-field > span{ font-weight:700; font-size:13px; color:var(--lg-text); }
+.auth-input{ position:relative; }
+.auth-input svg{
+  position:absolute; inset-inline-start:14px; inset-block-start:50%; transform:translateY(-50%);
+  width:18px; height:18px; stroke:var(--lg-faint); pointer-events:none;
+}
+.auth-input input{
+  width:100%; box-sizing:border-box; font:inherit; font-size:14px; color:var(--lg-text);
+  padding:13px 15px 13px 44px; background:var(--lg-surface);
+  border:1px solid var(--lg-line-2); border-radius:var(--lg-r);
+  transition:border-color .18s var(--lg-ease), box-shadow .18s var(--lg-ease);
+}
+.auth-input input::placeholder{ color:var(--lg-faint); }
+.auth-input input:focus{ outline:none; border-color:var(--lg-primary); box-shadow:0 0 0 4px rgba(37,99,235,.16); }
+.auth-input input:focus + svg,
+.auth-input:focus-within svg{ stroke:var(--lg-primary); }
+
+.auth-error{
+  display:flex; align-items:center; gap:8px;
+  background:var(--lg-danger-bg); color:#b42318; border:1px solid #f2cccc;
+  border-radius:var(--lg-r); padding:10px 13px; font-size:13px; font-weight:600;
+}
+
+.auth-submit{
+  margin-top:2px; width:100%; border:0; cursor:pointer;
+  padding:14px; border-radius:var(--lg-r); color:#fff; font-weight:800; font-size:15px;
+  background:linear-gradient(135deg,#2563eb,#1d4ed8);
+  box-shadow:0 12px 24px -12px rgba(37,99,235,.65);
+  transition:.18s var(--lg-ease);
+}
+.auth-submit:hover:not(:disabled){ transform:translateY(-1px); box-shadow:0 16px 30px -12px rgba(37,99,235,.7); }
+.auth-submit:active:not(:disabled){ transform:translateY(0); }
+.auth-submit:disabled{ opacity:.6; cursor:not-allowed; box-shadow:none; }
+
+.auth-note{ margin:20px 0 0; text-align:center; color:var(--lg-faint); font-size:12.5px; }
+
+@keyframes lgIn{ from{ opacity:0; transform:translateY(10px);} to{ opacity:1; transform:none; } }
+@media (prefers-reduced-motion:reduce){ .auth-card{ animation:none; } .auth-submit{ transition:none; } }
+
+/* ---------- Responsive: stack on tablet/phone ---------- */
+@media (max-width:900px){
+  .auth{ grid-template-columns:1fr; }
+  .auth-brand{ padding:34px 28px; }
+  .auth-hero h2{ font-size:24px; }
+  .auth-features{ display:none; }              /* keep mobile clean */
+  .auth-brand-foot{ display:none; }
+  .auth-form-wrap{ padding:32px 22px 44px; }
+}

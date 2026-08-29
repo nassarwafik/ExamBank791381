@@ -1,6 +1,7 @@
 import {useEffect,useMemo,useRef,useState} from "react";
 import {Chart as ChartJS,CategoryScale,LinearScale,PointElement,LineElement,BarElement,ArcElement,Tooltip,Legend,Filler,type ChartOptions} from "chart.js";
 import {Line,Doughnut,Bar} from "react-chartjs-2";
+import {IconDashboard,IconStudents,IconAssignments} from "./icons";
 ChartJS.register(CategoryScale,LinearScale,PointElement,LineElement,BarElement,ArcElement,Tooltip,Legend,Filler);
 
 type DashboardProps={token:string};
@@ -107,6 +108,7 @@ function TeacherDashboard({token}:DashboardProps){
  const [profileBusy,setProfileBusy]=useState(false);
  const [review,setReview]=useState<AttemptReview|null>(null);
  const [reviewBusy,setReviewBusy]=useState(false);
+ const [view,setView]=useState<"overview"|"followup"|"assignments">("overview");
 
  async function teacherApi<T>(url:string):Promise<T>{
   const response=await fetch(url,{headers:{"x-builder-token":token,"Authorization":"Bearer "+token}});
@@ -211,21 +213,35 @@ function TeacherDashboard({token}:DashboardProps){
 
   <section className="analytics-filter-bar">
    <label>الصف<select value={classId} onChange={(e:{target:{value:string}})=>setClassId(e.target.value)}><option value="">كل الصفوف</option>{data.classes.filter(item=>item.active).map(item=><option key={item.classId} value={item.classId}>{item.name} · {item.grade||"—"}</option>)}</select></label>
-   <label>الفترة<select value={range} onChange={(e:{target:{value:string}})=>setRange(e.target.value as RangeKey)}><option value="all">كل الفترة</option><option value="30">آخر 30 يومًا</option><option value="90">آخر 90 يومًا</option><option value="365">آخر سنة</option></select></label>
+   <div className="analytics-field"><span>الفترة</span><div className="analytics-segmented" role="group" aria-label="الفترة">
+    <button type="button" className={range==="all"?"active":""} onClick={()=>setRange("all" as RangeKey)}>كل الفترة</button>
+    <button type="button" className={range==="30"?"active":""} onClick={()=>setRange("30" as RangeKey)}>30 يومًا</button>
+    <button type="button" className={range==="90"?"active":""} onClick={()=>setRange("90" as RangeKey)}>90 يومًا</button>
+    <button type="button" className={range==="365"?"active":""} onClick={()=>setRange("365" as RangeKey)}>سنة</button>
+   </div></div>
    <div className="analytics-scope"><strong>{selectedClass?.name||"كل الصفوف"}</strong><span>آخر تحديث: {fmtDate(data.generatedAt)}</span></div>
   </section>
 
   {error&&<div className="platform-error">{error}</div>}
 
-  <section className="analytics-kpi-grid">
-   <article className="analytics-kpi"><span>الطلاب الفعّالون</span><strong><AnimatedNumber value={k.activeStudents}/></strong><small>{classId?"في الصف المختار":k.activeClasses+" صفوف فعّالة"}</small></article>
-   <article className="analytics-kpi"><span>متوسط العلامات</span><strong><AnimatedNumber value={k.average} suffix="%" decimals={1}/></strong><small>{k.highest===null?"لا توجد نتائج":"أعلى "+fmtPct(k.highest)+" · أدنى "+fmtPct(k.lowest)}</small></article>
-   <article className="analytics-kpi"><span>نسبة التسليم</span><strong><AnimatedNumber value={k.completionRate} suffix="%" decimals={1}/></strong><small>{k.submissions} من {k.expectedSubmissions} حالة متوقعة</small></article>
-   <article className="analytics-kpi attention"><span>يحتاجون متابعة</span><strong><AnimatedNumber value={k.followUpStudents}/></strong><small>{k.neverLogged} لم يسجلوا الدخول</small></article>
-   <article className="analytics-kpi"><span>واجبات منشورة</span><strong><AnimatedNumber value={k.publishedAssignments}/></strong><small>{k.pendingReview} تحتاج مراجعة</small></article>
-   <article className={`analytics-kpi ${k.performanceChange<0?"negative":"positive"}`}><span>اتجاه الأداء</span><strong>{trendIcon(k.performanceChange)} <AnimatedNumber value={Math.abs(k.performanceChange)} suffix="%" decimals={1}/></strong><small>{trendText(k.performanceChange)} مقارنة بالواجبات السابقة</small></article>
+  <section className="analytics-kpi-hierarchy">
+   <article className="analytics-kpi analytics-kpi-primary"><span>متوسط العلامات</span><strong><AnimatedNumber value={k.average} suffix="%" decimals={1}/></strong><small>{k.highest===null?"لا توجد نتائج":"أعلى "+fmtPct(k.highest)+" · أدنى "+fmtPct(k.lowest)}</small></article>
+   <div className="analytics-kpi-grid analytics-kpi-secondary-grid">
+    <article className="analytics-kpi"><span>الطلاب الفعّالون</span><strong><AnimatedNumber value={k.activeStudents}/></strong><small>{classId?"في الصف المختار":k.activeClasses+" صفوف فعّالة"}</small></article>
+    <article className="analytics-kpi"><span>نسبة التسليم</span><strong><AnimatedNumber value={k.completionRate} suffix="%" decimals={1}/></strong><small>{k.submissions} من {k.expectedSubmissions} حالة متوقعة</small></article>
+    <article className="analytics-kpi attention"><span>يحتاجون متابعة</span><strong><AnimatedNumber value={k.followUpStudents}/></strong><small>{k.neverLogged} لم يسجلوا الدخول</small></article>
+    <article className="analytics-kpi"><span>واجبات منشورة</span><strong><AnimatedNumber value={k.publishedAssignments}/></strong><small>{k.pendingReview} تحتاج مراجعة</small></article>
+    <article className={`analytics-kpi ${k.performanceChange<0?"negative":"positive"}`}><span>اتجاه الأداء</span><strong>{trendIcon(k.performanceChange)} <AnimatedNumber value={Math.abs(k.performanceChange)} suffix="%" decimals={1}/></strong><small>{trendText(k.performanceChange)} مقارنة بالواجبات السابقة</small></article>
+   </div>
   </section>
 
+  <nav className="analytics-view-tabs" role="tablist" aria-label="أقسام لوحة المتابعة">
+   <button type="button" className={"analytics-view-tab "+(view==="overview"?"active":"")} onClick={()=>setView("overview")}><IconDashboard size={16}/>نظرة عامة</button>
+   <button type="button" className={"analytics-view-tab "+(view==="followup"?"active":"")} onClick={()=>setView("followup")}><IconStudents size={16}/>متابعة{data.followUp.length>0&&<span className="analytics-view-tab-badge">{data.followUp.length}</span>}</button>
+   <button type="button" className={"analytics-view-tab "+(view==="assignments"?"active":"")} onClick={()=>setView("assignments")}><IconAssignments size={16}/>الواجبات</button>
+  </nav>
+
+  {view==="overview"&&<>
   <section className="analytics-main-grid">
    <article className="analytics-card analytics-wide"><div className="analytics-card-head"><div><span className="platform-eyebrow">Performance Trend</span><h3>تطور متوسط الأداء</h3></div><span className="analytics-chip">آخر {data.assignmentTrend.length} واجبات</span></div><LineChart items={data.assignmentTrend}/></article>
    <article className="analytics-card"><div className="analytics-card-head"><div><span className="platform-eyebrow">Submission Status</span><h3>حالة التسليم</h3></div></div><DonutChart submitted={data.submissionStatus.submitted} missing={data.submissionStatus.missing} pendingReview={data.submissionStatus.pendingReview}/></article>
@@ -240,13 +256,18 @@ function TeacherDashboard({token}:DashboardProps){
    <article className="analytics-card"><div className="analytics-card-head"><div><span className="platform-eyebrow">Topic Analytics</span><h3>الأداء حسب الموضوع</h3></div><span className="analytics-chip">الأضعف أولًا</span></div><TopicChart items={data.topicAnalytics}/></article>
    <article className="analytics-card"><div className="analytics-card-head"><div><span className="platform-eyebrow">Smart Insights</span><h3>مؤشرات ذكية للمعلم</h3></div></div><div className="analytics-insights">{data.insights.map((item,index)=><article key={index} className={"analytics-insight "+item.tone}><div className="analytics-insight-icon">{item.tone==="success"?"✓":item.tone==="warning"?"!":"i"}</div><div><strong>{item.title}</strong><p>{item.text}</p></div></article>)}</div></article>
   </section>
+  </>}
 
+  {view==="followup"&&
   <section className="analytics-main-grid">
    <article className="analytics-card analytics-wide"><div className="analytics-card-head"><div><span className="platform-eyebrow">Follow-up Center</span><h3>طلاب يحتاجون متابعة</h3></div><span className="analytics-chip warning">{data.followUp.length}</span></div><div className="students-table-wrap"><table className="students-table analytics-table"><thead><tr><th>الطالب</th><th>الصف</th><th>المعدل</th><th>غير مسلّم</th><th>الاتجاه</th><th>السبب</th><th></th></tr></thead><tbody>{data.followUp.map(item=><tr key={item.userId}><td><button className="analytics-link" onClick={()=>void openProfile(item.userId)}>{item.displayName}</button><small>{maskIdentity(item.identityNumber)}</small></td><td>{item.className}</td><td>{fmtPct(item.average)}</td><td>{item.missing}</td><td><span className={"analytics-trend-badge "+item.trend}>{trendIcon(item.trendDelta)} {trendText(item.trendDelta)} {item.trendDelta?Math.abs(item.trendDelta)+"%":""}</span></td><td>{item.reasons.join("، ")}</td><td><span className={"analytics-risk "+item.severity}>{item.severity==="high"?"عاجل":"متابعة"}</span></td></tr>)}{!data.followUp.length&&<tr><td colSpan={7}>لا توجد حالات متابعة بارزة ضمن النطاق الحالي.</td></tr>}</tbody></table></div></article>
    <article className="analytics-card"><div className="analytics-card-head"><div><span className="platform-eyebrow">Improvement</span><h3>أفضل تحسن</h3></div></div><div className="analytics-improvers">{data.topImprovers.map((item,index)=><button key={item.userId} onClick={()=>void openProfile(item.userId)}><span className="analytics-rank">{index+1}</span><div><strong>{item.displayName}</strong><small>{item.className}</small></div><b>↑ {item.trendDelta}%</b></button>)}{!data.topImprovers.length&&<div className="analytics-empty-chart">نحتاج نتائج متتابعة أكثر لقياس التحسن.</div>}</div></article>
   </section>
+  }
 
+  {view==="assignments"&&
   <section className="analytics-card analytics-assignment-card"><div className="analytics-card-head"><div><span className="platform-eyebrow">Assignments</span><h3>متابعة الواجبات</h3></div><span className="analytics-chip">اضغط على واجب للتفاصيل</span></div><div className="students-table-wrap"><table className="students-table analytics-table"><thead><tr><th>الواجب</th><th>الصف</th><th>المتوسط</th><th>التسليم</th><th>غير مسلّم</th><th>مراجعة</th><th>الموعد</th></tr></thead><tbody>{[...data.assignmentTrend].reverse().map(item=><tr key={item.assignmentId} className="analytics-click-row" onClick={()=>void openAssignment(item)}><td><strong>{item.title}</strong></td><td>{item.className}</td><td>{fmtPct(item.average)}</td><td>{fmtPct(item.completionRate)}</td><td>{item.missing}</td><td>{item.pendingReview}</td><td>{item.dueAt?fmtDate(item.dueAt):"—"}</td></tr>)}{!data.assignmentTrend.length&&<tr><td colSpan={7}>لا توجد واجبات منشورة ضمن النطاق الحالي.</td></tr>}</tbody></table></div></section>
+  }
 
   {assignmentBusy&&<div className="analytics-loading">جارٍ تحميل تفاصيل الواجب...</div>}
   {assignmentResults&&<section className="analytics-drill-card"><div className="analytics-card-head"><div><span className="platform-eyebrow">Drill Down · Assignment</span><h3>{assignmentResults.assignment.title}</h3><p>من الواجب ← الطالب ← المحاولة ← السؤال</p></div><button onClick={()=>{setAssignmentResults(null);setReview(null)}}>إغلاق</button></div><div className="analytics-mini-kpis"><span>المتوسط <b>{fmtPct(assignmentResults.stats.average)}</b></span><span>سلّموا <b>{assignmentResults.stats.submitted}/{assignmentResults.stats.students}</b></span><span>مراجعة <b>{assignmentResults.stats.pendingReview}</b></span><span>أعلى <b>{fmtPct(assignmentResults.stats.highest)}</b></span></div><div className="students-table-wrap"><table className="students-table analytics-table"><thead><tr><th>الطالب</th><th>المحاولات</th><th>آخر علامة</th><th>الحالة</th><th>فتح محاولة</th></tr></thead><tbody>{assignmentResults.students.map(student=><tr key={student.studentId}><td><button className="analytics-link" onClick={()=>void openProfile(student.studentId)}>{student.studentName}</button></td><td>{student.attemptsUsed}/{student.allowedAttempts}</td><td>{student.latestResult?fmtPct(student.latestResult.percentage):"—"}</td><td>{!student.latestResult?"لم يسلّم":student.latestResult.finalized?"مصحح":"يحتاج مراجعة"}</td><td><div className="analytics-attempt-buttons">{student.attempts.map(attempt=><button key={attempt.attemptNumber} onClick={()=>void openAttempt(assignmentResults.assignment.assignmentId,student.studentId,attempt.attemptNumber)}>#{attempt.attemptNumber} · {fmtPct(attempt.percentage)}</button>)}</div></td></tr>)}</tbody></table></div></section>}

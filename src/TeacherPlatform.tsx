@@ -1,8 +1,10 @@
 import {useEffect,useMemo,useState} from "react";
 import AssignmentsPanel from "./AssignmentsPanel";
 import TeacherDashboard from "./TeacherDashboard";
+import {IconSearch,IconDownload,IconUpload,IconPlus,IconChevronDown,IconMore,IconUser,IconEdit,IconCopy,IconKey,IconTrash} from "./icons";
 
-type TeacherPlatformProps={token:string;currentExam:unknown|null};
+type WorkspaceTab="dashboard"|"students"|"assignments";
+type TeacherPlatformProps={token:string;currentExam:unknown|null;workspaceTab:WorkspaceTab};
 type Classroom={classId:string;name:string;grade:string;schoolYear:string;active:boolean;studentCount:number;createdAt:string};
 type Student={userId:string;code:string;identityNumber:string;firstName:string;familyName:string;displayName:string;classId:string;active:boolean;archived:boolean;createdAt:string;updatedAt:string;lastLoginAt:string};
 type Credential={userId?:string;firstName?:string;familyName?:string;displayName?:string;code:string;identityNumber?:string;password:string};
@@ -40,7 +42,7 @@ function csvCell(value:unknown){
  return `"${text.replace(/"/g,'""')}"`;
 }
 
-function TeacherPlatform({token,currentExam}:TeacherPlatformProps){
+function TeacherPlatform({token,currentExam,workspaceTab}:TeacherPlatformProps){
  const [classes,setClasses]=useState<Classroom[]>([]);
  const [students,setStudents]=useState<Student[]>([]);
  const [selectedClassId,setSelectedClassId]=useState("");
@@ -83,7 +85,6 @@ function TeacherPlatform({token,currentExam}:TeacherPlatformProps){
 
  const [profile,setProfile]=useState<StudentProfile|null>(null);
  const [profileBusy,setProfileBusy]=useState(false);
- const [workspaceTab,setWorkspaceTab]=useState<"dashboard"|"students"|"assignments">("dashboard");
 
  const selectedClass=useMemo(()=>classes.find(c=>c.classId===selectedClassId)||null,[classes,selectedClassId]);
 
@@ -436,14 +437,8 @@ function TeacherPlatform({token,currentExam}:TeacherPlatformProps){
   </button>;
  }
 
- const workspaceNav=<nav className="teacher-workspace-nav" aria-label="أقسام منصة المعلم">
-  <button className={workspaceTab==="dashboard"?"active":""} onClick={()=>setWorkspaceTab("dashboard")}>📊 لوحة المتابعة</button>
-  <button className={workspaceTab==="students"?"active":""} onClick={()=>setWorkspaceTab("students")}>👥 الصفوف والطلاب</button>
-  <button className={workspaceTab==="assignments"?"active":""} onClick={()=>setWorkspaceTab("assignments")}>📝 الواجبات</button>
- </nav>;
-
- if(workspaceTab==="dashboard")return <section className="teacher-platform" dir="rtl"><div className="teacher-platform-inner">{workspaceNav}<TeacherDashboard token={token}/></div></section>;
- if(workspaceTab==="assignments")return <section className="teacher-platform" dir="rtl"><div className="teacher-platform-inner">{workspaceNav}<section className="teacher-assignment-heading"><span className="platform-eyebrow">Assignments</span><h2>الواجبات والاختبارات المرسلة</h2><p>إنشاء الواجبات، متابعة التسليمات، التصحيح والنتائج.</p></section><AssignmentsPanel token={token} classes={classes} currentExam={currentExam}/></div></section>;
+ if(workspaceTab==="dashboard")return <section className="teacher-platform" dir="rtl"><div className="teacher-platform-inner"><TeacherDashboard token={token}/></div></section>;
+ if(workspaceTab==="assignments")return <section className="teacher-platform" dir="rtl"><div className="teacher-platform-inner"><section className="teacher-assignment-heading"><span className="platform-eyebrow">Assignments</span><h2>الواجبات والاختبارات المرسلة</h2><p>إنشاء الواجبات، متابعة التسليمات، التصحيح والنتائج.</p></section><AssignmentsPanel token={token} classes={classes} currentExam={currentExam}/></div></section>;
 
  const selectedCount=selectedIds.length;
  const previewValid=importPreview.filter(x=>x.status==="valid").length;
@@ -451,7 +446,6 @@ function TeacherPlatform({token,currentExam}:TeacherPlatformProps){
  const previewInvalid=importPreview.filter(x=>x.status==="invalid").length;
 
  return <section className="teacher-platform" dir="rtl"><div className="teacher-platform-inner">
-  {workspaceNav}
   <section className="platform-hero">
    <div><span className="platform-eyebrow">ExamBank 2.0I</span><h2>إدارة الطلاب المتقدمة</h2><p>بحث وفرز، عمليات جماعية، معاينة استيراد، أرشفة، ملف طالب، علامات وتصدير.</p></div>
    <div className="platform-hero-stat"><strong>{classes.filter(c=>c.active).length}</strong><span>صفوف فعّالة</span></div>
@@ -504,59 +498,71 @@ function TeacherPlatform({token,currentExam}:TeacherPlatformProps){
       <article><strong>{stats.neverLogged}</strong><span>لم يدخلوا بعد</span></article>
      </div>
 
-     <div className="student-admin-toolbar">
-      <input value={searchText} onChange={e=>setSearchText(e.target.value)} placeholder="🔎 ابحث بالاسم، العائلة أو رقم الهوية"/>
-      <select value={statusFilter} onChange={e=>setStatusFilter(e.target.value as StatusFilter)}>
+     <div className="student-toolbar-pro">
+      <div className="student-search-field">
+       <IconSearch size={16} aria-hidden="true"/>
+       <input value={searchText} onChange={e=>setSearchText(e.target.value)} placeholder="ابحث بالاسم، العائلة أو رقم الهوية" aria-label="ابحث بالاسم، العائلة أو رقم الهوية"/>
+      </div>
+      <select className="student-status-select" value={statusFilter} onChange={e=>setStatusFilter(e.target.value as StatusFilter)}>
        <option value="all">كل الحالات</option><option value="active">فعّال</option><option value="disabled">معطّل</option><option value="archived">مؤرشف</option>
       </select>
-      <button onClick={exportCsv}>⬇ Excel / CSV</button>
+      <div className="student-sort-row">
+       <span>الفرز:</span>{sortButton("firstName","الاسم")}{sortButton("familyName","العائلة")}{sortButton("identityNumber","الهوية")}{sortButton("status","الحالة")}
+      </div>
+      <button className="student-toolbar-export" onClick={exportCsv}><IconDownload size={16}/>تصدير CSV</button>
      </div>
 
-     <details className="student-admin-details">
-      <summary>➕ إضافة طالب جديد</summary>
-      <div className="student-create-grid">
-       <label>الاسم<input value={newFirstName} onChange={e=>setNewFirstName(e.target.value)} placeholder="الاسم الشخصي"/></label>
-       <label>اسم العائلة<input value={newFamilyName} onChange={e=>setNewFamilyName(e.target.value)} placeholder="اسم العائلة"/></label>
-       <label>رقم الهوية<input value={newIdentityNumber} onChange={e=>setNewIdentityNumber(onlyDigits(e.target.value))} inputMode="numeric" maxLength={9} dir="ltr" placeholder="9 أرقام"/></label>
-       <label>كلمة مرور اختيارية<input type="password" value={newStudentPassword} onChange={e=>setNewStudentPassword(e.target.value)} placeholder="اتركها فارغة للتوليد التلقائي"/></label>
-       <button className="platform-primary" onClick={createStudent} disabled={actionBusy||!selectedClass.active||!newFirstName.trim()||!newFamilyName.trim()||!validIdentity(newIdentityNumber)}>+ إنشاء حساب طالب</button>
-      </div>
-     </details>
+     <div className="student-quick-actions">
+      <details className="student-admin-details student-quick-panel">
+       <summary><IconPlus size={16}/><span>إضافة طالب جديد</span><IconChevronDown size={14} className="details-chevron"/></summary>
+       <div className="student-create-grid">
+        <label>الاسم<input value={newFirstName} onChange={e=>setNewFirstName(e.target.value)} placeholder="الاسم الشخصي"/></label>
+        <label>اسم العائلة<input value={newFamilyName} onChange={e=>setNewFamilyName(e.target.value)} placeholder="اسم العائلة"/></label>
+        <label>رقم الهوية<input value={newIdentityNumber} onChange={e=>setNewIdentityNumber(onlyDigits(e.target.value))} inputMode="numeric" maxLength={9} dir="ltr" placeholder="9 أرقام"/></label>
+        <label>كلمة مرور اختيارية<input type="password" value={newStudentPassword} onChange={e=>setNewStudentPassword(e.target.value)} placeholder="اتركها فارغة للتوليد التلقائي"/></label>
+        <button className="platform-primary" onClick={createStudent} disabled={actionBusy||!selectedClass.active||!newFirstName.trim()||!newFamilyName.trim()||!validIdentity(newIdentityNumber)}>+ إنشاء حساب طالب</button>
+       </div>
+      </details>
 
-     <details className="student-admin-details">
-      <summary>⬆ استيراد طلاب من JSON مع معاينة قبل الحفظ</summary>
-      <div className="student-create-grid">
-       <label>ملف الطلاب<input type="file" accept=".json,application/json" onChange={e=>void readBulkFile(e.target.files?.[0]||null)}/></label>
-       <div><span>الملف</span><strong>{bulkFileName||"لم يتم اختيار ملف"}</strong><small>{previewBusy?" جارٍ فحص البيانات...":importPreview.length?` ${previewValid} صالح · ${previewDuplicates} مكرر · ${previewInvalid} غير صالح`:""}</small></div>
-       <button className="platform-primary" onClick={importBulkStudents} disabled={actionBusy||previewBusy||!selectedClass.active||!previewValid}>✓ استيراد {previewValid||""} طالب صالح</button>
-      </div>
+      <details className="student-admin-details student-quick-panel">
+       <summary><IconUpload size={16}/><span>استيراد من JSON مع معاينة قبل الحفظ</span><IconChevronDown size={14} className="details-chevron"/></summary>
+       <div className="student-create-grid">
+        <label>ملف الطلاب<input type="file" accept=".json,application/json" onChange={e=>void readBulkFile(e.target.files?.[0]||null)}/></label>
+        <div><span>الملف</span><strong>{bulkFileName||"لم يتم اختيار ملف"}</strong><small>{previewBusy?" جارٍ فحص البيانات...":importPreview.length?` ${previewValid} صالح · ${previewDuplicates} مكرر · ${previewInvalid} غير صالح`:""}</small></div>
+        <button className="platform-primary" onClick={importBulkStudents} disabled={actionBusy||previewBusy||!selectedClass.active||!previewValid}>✓ استيراد {previewValid||""} طالب صالح</button>
+       </div>
 
-      {importPreview.length>0&&<div className="students-table-wrap import-preview-wrap"><table className="students-table">
-       <thead><tr><th>الحالة</th><th>الاسم</th><th>العائلة</th><th>رقم الهوية</th><th>ملاحظة</th></tr></thead>
-       <tbody>{importPreview.map(row=><tr key={row.index} className={"import-row-"+row.status}>
-        <td><span className={"import-badge "+row.status}>{row.status==="valid"?"✓ صالح":row.status==="duplicate"?"⚠ مكرر":"✕ خطأ"}</span></td>
-        <td>{row.firstName||"—"}</td><td>{row.familyName||"—"}</td><td dir="ltr">{row.identityNumber||"—"}</td>
-        <td>{row.error||"جاهز للاستيراد"}</td>
-       </tr>)}</tbody>
-      </table></div>}
-     </details>
+       {importPreview.length>0&&<div className="students-table-wrap import-preview-wrap"><table className="students-table">
+        <thead><tr><th>الحالة</th><th>الاسم</th><th>العائلة</th><th>رقم الهوية</th><th>ملاحظة</th></tr></thead>
+        <tbody>{importPreview.map(row=><tr key={row.index} className={"import-row-"+row.status}>
+         <td><span className={"import-badge "+row.status}>{row.status==="valid"?"✓ صالح":row.status==="duplicate"?"⚠ مكرر":"✕ خطأ"}</span></td>
+         <td>{row.firstName||"—"}</td><td>{row.familyName||"—"}</td><td dir="ltr">{row.identityNumber||"—"}</td>
+         <td>{row.error||"جاهز للاستيراد"}</td>
+        </tr>)}</tbody>
+       </table></div>}
+      </details>
+     </div>
 
      {!selectedClass.active&&<div className="platform-warning">الصف مؤرشف؛ فعّله قبل إضافة أو استعادة الطلاب.</div>}
 
      {selectedCount>0&&<section className="student-bulk-bar">
       <strong>{selectedCount} طالب محدد</strong>
-      <button onClick={()=>void runBulkAction("activate")} disabled={actionBusy}>تفعيل</button>
-      <button onClick={()=>void runBulkAction("deactivate")} disabled={actionBusy}>تعطيل</button>
-      <button onClick={()=>void runBulkAction("archive")} disabled={actionBusy}>أرشفة</button>
-      <button onClick={()=>void runBulkAction("unarchive")} disabled={actionBusy}>استعادة</button>
-      <button onClick={()=>void runBulkAction("resetpasswords")} disabled={actionBusy}>🔑 كلمات مرور جديدة</button>
-      <select value={bulkTargetClassId} onChange={e=>setBulkTargetClassId(e.target.value)}>
-       <option value="">اختر صفًا للنقل</option>
-       {classes.filter(c=>c.active&&c.classId!==selectedClassId).map(c=><option key={c.classId} value={c.classId}>{c.name}</option>)}
-      </select>
-      <button onClick={()=>void runBulkAction("move")} disabled={actionBusy||!bulkTargetClassId}>نقل</button>
-      <button className="danger-button" onClick={()=>void runBulkAction("delete")} disabled={actionBusy}>🗑 حذف نهائي</button>
-      <button onClick={()=>setSelectedIds([])}>إلغاء التحديد</button>
+      <div className="student-bulk-safe">
+       <button onClick={()=>void runBulkAction("activate")} disabled={actionBusy}>تفعيل</button>
+       <button onClick={()=>void runBulkAction("deactivate")} disabled={actionBusy}>تعطيل</button>
+       <button onClick={()=>void runBulkAction("archive")} disabled={actionBusy}>أرشفة</button>
+       <button onClick={()=>void runBulkAction("unarchive")} disabled={actionBusy}>استعادة</button>
+       <button onClick={()=>void runBulkAction("resetpasswords")} disabled={actionBusy}><IconKey size={14}/>كلمات مرور جديدة</button>
+       <select value={bulkTargetClassId} onChange={e=>setBulkTargetClassId(e.target.value)}>
+        <option value="">اختر صفًا للنقل</option>
+        {classes.filter(c=>c.active&&c.classId!==selectedClassId).map(c=><option key={c.classId} value={c.classId}>{c.name}</option>)}
+       </select>
+       <button onClick={()=>void runBulkAction("move")} disabled={actionBusy||!bulkTargetClassId}>نقل</button>
+       <button onClick={()=>setSelectedIds([])}>إلغاء التحديد</button>
+      </div>
+      <div className="student-bulk-danger">
+       <button className="danger-button" onClick={()=>void runBulkAction("delete")} disabled={actionBusy}><IconTrash size={14}/>حذف نهائي</button>
+      </div>
      </section>}
 
      {bulkCredentials.length>0&&<section className="credential-box" style={{marginTop:16}}>
@@ -575,7 +581,9 @@ function TeacherPlatform({token,currentExam}:TeacherPlatformProps){
 
      {bulkErrors.length>0&&<div className="platform-warning"><strong>عمليات لم تكتمل:</strong>{bulkErrors.map((x,i)=><div key={x.userId||i}>{x.displayName||x.userId||"السطر "+((x.index??i)+1)}: {x.error}</div>)}</div>}
 
-     {editingStudent&&<section className="credential-box" style={{marginTop:16}}>
+     {(profile||editingStudent)&&<div className="slide-over-backdrop" onClick={()=>{setProfile(null);setEditingStudent(null)}}/>}
+
+     {editingStudent&&<section className="credential-box student-edit-panel">
       <div className="platform-card-heading"><div><span className="platform-eyebrow">Edit Student</span><h3>تعديل تفاصيل الطالب</h3></div><button onClick={()=>setEditingStudent(null)}>إلغاء</button></div>
       <div className="student-create-grid">
        <label>الاسم<input value={editFirstName} onChange={e=>setEditFirstName(e.target.value)}/></label>
@@ -588,7 +596,7 @@ function TeacherPlatform({token,currentExam}:TeacherPlatformProps){
      </section>}
 
      {profileBusy&&<div className="platform-loading">⏳ جارٍ تحميل ملف الطالب...</div>}
-     {profile&&<section className="student-profile-card">
+     {profile&&<section className="student-profile-card slide-over-panel">
       <div className="platform-card-heading">
        <div><span className="platform-eyebrow">Student Profile</span><h3>{profile.student.displayName}</h3><small>{profile.classroom?.name||"—"} · {profile.student.identityNumber}</small></div>
        <button onClick={()=>setProfile(null)}>إغلاق</button>
@@ -609,11 +617,7 @@ function TeacherPlatform({token,currentExam}:TeacherPlatformProps){
       </table></div>
      </section>}
 
-     <div className="student-sort-row">
-      <span>الفرز:</span>{sortButton("firstName","الاسم")}{sortButton("familyName","العائلة")}{sortButton("identityNumber","الهوية")}{sortButton("status","الحالة")}
-     </div>
-
-     <div className="students-table-wrap"><table className="students-table">
+     <div className="students-table-wrap"><table className="students-table students-table-pro">
       <thead><tr>
        <th><input type="checkbox" checked={visibleStudents.length>0&&visibleStudents.every(s=>selectedIds.includes(s.userId))} onChange={toggleSelectVisible} aria-label="تحديد الكل"/></th>
        <th>الاسم</th><th>اسم العائلة</th><th>رقم الهوية</th><th>الحالة</th><th>آخر دخول</th><th>إجراءات</th>
@@ -626,13 +630,19 @@ function TeacherPlatform({token,currentExam}:TeacherPlatformProps){
        <td><span className={student.archived?"status-archived":student.active?"status-active":"status-disabled"}>{statusLabel(student)}</span></td>
        <td>{student.lastLoginAt?fmtDate(student.lastLoginAt):<span className="never-login">لم يدخل بعد</span>}</td>
        <td><div className="student-row-actions">
-        <button onClick={()=>void openProfile(student)} disabled={actionBusy}>👤 التفاصيل</button>
-        <button onClick={()=>startEdit(student)} disabled={actionBusy}>✏️ تعديل</button>
-        <button onClick={()=>void copyText(student.identityNumber||student.code,"✓ تم نسخ رقم الهوية.")}>📋 الهوية</button>
-        {!student.archived&&<button onClick={()=>resetPassword(student)} disabled={actionBusy}>كلمة مرور جديدة</button>}
-        {!student.archived&&<button onClick={()=>toggleStudent(student)} disabled={actionBusy}>{student.active?"تعطيل":"تفعيل"}</button>}
-        <button onClick={()=>archiveStudent(student)} disabled={actionBusy}>{student.archived?"↩ استعادة":"📦 أرشفة"}</button>
-        <button className="danger-button" onClick={()=>deleteStudent(student)} disabled={actionBusy}>🗑 حذف</button>
+        <button className="student-row-primary" onClick={()=>void openProfile(student)} disabled={actionBusy}><IconUser size={14}/>التفاصيل</button>
+        <details className="row-menu" name="student-row-menu">
+         <summary aria-label="مزيد من الإجراءات"><IconMore size={16}/></summary>
+         <div className="row-menu-panel">
+          <button onClick={()=>startEdit(student)} disabled={actionBusy}><IconEdit size={14}/>تعديل</button>
+          <button onClick={()=>void copyText(student.identityNumber||student.code,"✓ تم نسخ رقم الهوية.")}><IconCopy size={14}/>نسخ رقم الهوية</button>
+          {!student.archived&&<button onClick={()=>resetPassword(student)} disabled={actionBusy}><IconKey size={14}/>كلمة مرور جديدة</button>}
+          {!student.archived&&<button onClick={()=>toggleStudent(student)} disabled={actionBusy}>{student.active?"تعطيل الحساب":"تفعيل الحساب"}</button>}
+          <button onClick={()=>archiveStudent(student)} disabled={actionBusy}>{student.archived?"↩ استعادة":"📦 أرشفة"}</button>
+          <hr className="row-menu-sep"/>
+          <button className="danger-button" onClick={()=>deleteStudent(student)} disabled={actionBusy}><IconTrash size={14}/>حذف نهائي</button>
+         </div>
+        </details>
        </div></td>
       </tr>)}</tbody>
      </table>

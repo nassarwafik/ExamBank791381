@@ -1,0 +1,214 @@
+/* ============================================================
+   ExamBank — Exam Builder "Pro" elevation layer
+   يُحمَّل بعد App.css. يحوّل باني الامتحان إلى مساحة عمل احترافية
+   باستخدام الأصناف الموجودة (prompt/question/toolbar...). RTL-safe.
+   ============================================================ */
+:root{
+  --bp-navy:var(--eb-navy); --bp-primary:var(--eb-primary); --bp-primary-2:var(--eb-primary-strong); --bp-primary-050:var(--eb-primary-050);
+  --bp-text:var(--eb-text); --bp-muted:var(--eb-muted); --bp-faint:var(--eb-faint);
+  --bp-line:var(--eb-line); --bp-line-2:var(--eb-line-2); --bp-surface:var(--eb-surface); --bp-surface-2:var(--eb-surface-2);
+  --bp-warn:var(--eb-warn); --bp-warn-bg:var(--eb-warn-bg); --bp-danger:var(--eb-danger);
+  --bp-r:var(--eb-r); --bp-r-lg:var(--eb-r-lg); --bp-r-xl:var(--eb-r-xl); --bp-pill:var(--eb-pill); --bp-ease:var(--eb-ease);
+}
+
+/* ---------- AI prompt card ---------- */
+.prompt-card{ border-top:3px solid var(--bp-primary); }
+.prompt-card .builder-heading{ display:flex; gap:13px; align-items:flex-start; }
+.prompt-card .ai-badge{
+  flex:0 0 auto; width:42px; height:42px; border-radius:13px; display:inline-flex; align-items:center; justify-content:center;
+  font-weight:800; color:#fff; background:linear-gradient(135deg,var(--bp-primary),var(--bp-primary-2));
+  box-shadow:0 10px 22px -12px rgba(37,99,235,.7);
+}
+.builder-heading h2{ margin:0 0 3px; font-size:18px; font-weight:800; color:var(--bp-navy); }
+.builder-heading p{ margin:0; color:var(--bp-muted); font-size:13.5px; line-height:1.8; }
+.model-and-generate{ display:flex; align-items:end; gap:12px; flex-wrap:wrap; }
+.model-picker{ display:flex; flex-direction:column; gap:6px; font-size:12.5px; font-weight:700; color:var(--bp-muted); }
+
+/* ---------- Exam toolbar (now lives inside the sidebar column) ---------- */
+.exam-toolbar-card{
+  display:flex; flex-direction:column; align-items:stretch; gap:14px;
+  background:var(--bp-surface); border:1px solid var(--bp-line); border-radius:var(--bp-r-xl);
+  padding:18px 20px; box-shadow:0 10px 28px -22px rgba(15,23,42,.18);
+}
+.exam-toolbar-card .section-title-row{ flex-direction:column; align-items:flex-start; gap:8px; }
+.exam-total{ font-weight:800; color:var(--bp-navy); font-size:15px; }
+.exam-toolbar-card .info-chip{ background:var(--bp-primary-050); color:var(--bp-primary-2); border:1px solid #d7e3fb; }
+
+/* ============================================================
+   Phase 7a — Workspace shell: sidebar (summary/navigator/tools)
+   + main column (question cards, untouched internally)
+   ============================================================ */
+.builder-workspace{ display:grid; grid-template-columns:minmax(280px,340px) 1fr; gap:20px; align-items:start; }
+.builder-side{
+  display:flex; flex-direction:column; gap:14px;
+  position:sticky; inset-block-start:16px; max-height:calc(100vh - 32px); overflow-y:auto; padding-inline-end:2px;
+}
+.builder-main{ min-width:0; }
+.builder-side .exam-metadata-card{ order:9; }
+/* the metadata grid and stat grid were designed for a full-width column;
+   force a layout that fits the narrower sidebar regardless of viewport width */
+.builder-side .exam-metadata-grid{ grid-template-columns:1fr; }
+.builder-side .exam-metadata-grid .metadata-full{ grid-column:auto; }
+.builder-side .compact-grid{ grid-template-columns:repeat(2,minmax(0,1fr)); }
+
+/* ---------- Question navigator (mini-map) ---------- */
+.question-jump-bar.builder-navigator{
+  display:flex; flex-direction:column; gap:10px;
+  background:var(--bp-surface); border:1px solid var(--bp-line); border-radius:var(--bp-r-xl);
+  padding:16px 18px; box-shadow:0 10px 28px -22px rgba(15,23,42,.16);
+}
+.builder-navigator-head{ display:flex; align-items:center; justify-content:space-between; color:var(--bp-navy); font-weight:800; font-size:13.5px; }
+.builder-navigator-count{ background:var(--bp-surface-2); color:var(--bp-muted); border-radius:var(--bp-pill); padding:2px 9px; font-size:12px; font-weight:800; }
+.builder-navigator-grid{ display:flex; flex-wrap:wrap; gap:6px; }
+.builder-navigator-item{
+  display:flex; flex-direction:column; align-items:center; gap:2px; min-width:46px;
+  border-radius:10px; border:1px solid var(--bp-line-2); background:var(--bp-surface);
+  color:var(--bp-muted); padding:6px 7px; cursor:pointer; transition:.16s var(--bp-ease);
+}
+.builder-navigator-item:hover{ border-color:var(--bp-primary); color:var(--bp-primary-2); background:var(--bp-primary-050); }
+.builder-navigator-number{ font-weight:800; font-size:13px; color:var(--bp-navy); }
+.builder-navigator-item:hover .builder-navigator-number{ color:var(--bp-primary-2); }
+.builder-navigator-meta{ display:flex; align-items:center; gap:3px; font-size:9.5px; font-weight:700; }
+.builder-navigator-marks::before{ content:"·"; margin-inline-end:3px; }
+.builder-navigator-badges{ display:flex; align-items:center; gap:2px; min-height:12px; }
+
+/* ---------- Setup zone: AI prompt / saved exams / templates ---------- */
+.builder-setup-zone{
+  border:1px solid var(--bp-line); border-radius:var(--bp-r-xl); background:var(--bp-surface);
+  overflow:hidden; box-shadow:0 10px 28px -22px rgba(15,23,42,.16);
+}
+.builder-setup-zone > summary{
+  list-style:none; display:flex; align-items:center; gap:10px; padding:15px 20px; cursor:pointer;
+  font-weight:800; font-size:14.5px; color:var(--bp-navy); background:linear-gradient(135deg,#fff,#f8faff);
+}
+.builder-setup-zone > summary::-webkit-details-marker{ display:none; }
+.builder-setup-zone > summary span{ flex:1; }
+.builder-setup-zone .details-chevron{ transition:transform .18s var(--bp-ease); color:var(--bp-muted); }
+.builder-setup-zone[open] .details-chevron{ transform:rotate(180deg); }
+.builder-setup-zone[open] > summary{ border-bottom:1px solid var(--bp-line); }
+.builder-setup-body{ display:flex; flex-direction:column; gap:16px; padding:18px 20px 20px; }
+.builder-setup-body .prompt-card, .builder-setup-body .saved-exams-panel, .builder-setup-body .templates-panel{ margin:0; }
+
+@media (max-width:1100px){
+  .builder-workspace{ grid-template-columns:260px 1fr; }
+}
+@media (max-width:900px){
+  .builder-workspace{ grid-template-columns:1fr; }
+  .builder-side{ position:static; max-height:none; overflow:visible; }
+}
+@media (max-width:760px){
+  .builder-navigator-item{ min-width:40px; }
+  .builder-setup-zone > summary{ padding:13px 16px; font-size:13.5px; }
+}
+
+/* ---------- Question card ---------- */
+.questions-list{ display:flex; flex-direction:column; gap:18px; }
+.question-card{
+  position:relative; background:var(--bp-surface); border:1px solid var(--bp-line);
+  border-radius:var(--bp-r-xl); padding:22px 24px; box-shadow:0 10px 30px -20px rgba(15,23,42,.16);
+  transition:box-shadow .18s var(--bp-ease), transform .18s var(--bp-ease);
+}
+.question-card:hover{ box-shadow:0 18px 42px -24px rgba(15,23,42,.26); transform:translateY(-1px); }
+.question-locked{ box-shadow:inset 4px 0 0 var(--bp-warn); }
+
+.question-top-row{ display:flex; align-items:center; justify-content:space-between; gap:14px; padding-block-end:13px; border-block-end:1px dashed var(--bp-line); }
+.question-number{ display:inline-flex; align-items:center; gap:9px; color:var(--bp-navy); font-size:16px; font-weight:800; }
+.question-number::before{ content:""; width:6px; height:22px; border-radius:var(--bp-pill); background:linear-gradient(180deg,var(--bp-primary),var(--bp-primary-2)); }
+.question-top-actions{ display:flex; align-items:center; gap:8px; flex-wrap:wrap; }
+.marks-field{ display:flex; align-items:center; gap:7px; color:var(--bp-muted); font-size:12px; font-weight:700; }
+.marks-field input{ width:60px; text-align:center; font-weight:800; border:1px solid var(--bp-line-2); border-radius:9px; padding:7px 8px; }
+.lock-button{ border:1px solid var(--bp-line-2); background:var(--bp-surface); color:var(--bp-text); border-radius:9px; padding:7px 11px; cursor:pointer; font-weight:700; transition:.16s var(--bp-ease); }
+.lock-button:hover{ background:var(--bp-surface-2); }
+.lock-button.active{ border-color:var(--bp-warn); background:var(--bp-warn-bg); color:#92400e; }
+
+/* meta chips */
+.question-meta{ display:flex; flex-wrap:wrap; gap:6px; margin-block:14px 12px; }
+.question-meta span{ padding:4px 10px; border-radius:var(--bp-pill); background:var(--bp-surface-2); border:1px solid var(--bp-line); color:var(--bp-muted); font-size:11.5px; font-weight:700; }
+
+/* text */
+.question-text-panel{ background:var(--bp-surface-2); border:1px solid var(--bp-line); border-radius:var(--bp-r-lg); padding:14px 16px; }
+.question-text{ color:var(--bp-navy); line-height:1.9; font-size:15px; margin:0; }
+
+/* options */
+.question-options{ display:flex; flex-direction:column; gap:9px; margin:14px 0 0; padding:0; list-style:none; }
+.question-options li, .question-option{ display:flex; align-items:center; gap:10px; padding:11px 13px; border:1px solid var(--bp-line-2); border-radius:var(--bp-r); background:var(--bp-surface); line-height:1.7; }
+.choice-letter{ display:inline-flex; align-items:center; justify-content:center; width:26px; height:26px; border-radius:var(--bp-pill); background:var(--bp-primary-050); color:var(--bp-primary-2); font-weight:800; font-size:12.5px; flex:0 0 auto; }
+.question-option.correct{ border-color:#bbe7c9; background:#f0fdf4; }
+.question-option.correct .choice-letter{ background:#dcfce7; color:#15803d; }
+
+/* word bank */
+.word-bank-box{ margin-top:12px; background:var(--bp-surface-2); border:1px dashed var(--bp-line-2); border-radius:var(--bp-r-lg); padding:12px 14px; }
+.word-bank-title{ color:var(--bp-muted); font-weight:800; font-size:12px; margin-block-end:8px; }
+.word-bank-items{ display:flex; flex-wrap:wrap; gap:8px; }
+.word-bank-items > *{ background:var(--bp-surface); border:1px solid var(--bp-line-2); border-radius:var(--bp-pill); padding:5px 12px; font-weight:700; font-size:12.5px; }
+
+/* image slot */
+.question-image-slot{ margin-top:12px; border:1px dashed var(--bp-line-2); border-radius:var(--bp-r-lg); background:var(--bp-surface-2); padding:14px; text-align:center; color:var(--bp-muted); }
+.image-controls{ display:flex; flex-wrap:wrap; gap:8px; align-items:center; justify-content:center; margin-top:10px; }
+
+/* per-question AI (subtle advanced subsection) */
+.per-question-ai{ margin-top:14px; padding:13px 15px; background:linear-gradient(180deg,#f7f9fd,#f5f7fa); border:1px solid var(--bp-line); border-radius:var(--bp-r-lg); }
+.per-question-ai .pq-title{ display:flex; align-items:center; gap:8px; color:var(--bp-primary-2); font-weight:800; font-size:12.5px; margin-block-end:9px; }
+.per-question-ai textarea{ width:100%; box-sizing:border-box; border:1px solid var(--bp-line-2); border-radius:var(--bp-r); padding:10px 12px; resize:vertical; font:inherit; font-size:13.5px; }
+
+/* grouped action bar (icon buttons) */
+.question-action-bar{ display:grid; grid-template-columns:repeat(auto-fit,minmax(96px,1fr)); gap:8px; margin-top:16px; padding-block-start:14px; border-block-start:1px solid var(--bp-line); }
+.question-action-bar > button{ display:flex; align-items:center; justify-content:center; gap:7px; border:1px solid var(--bp-line-2); background:var(--bp-surface); color:var(--bp-text); border-radius:10px; padding:9px 8px; font-weight:700; font-size:12.5px; cursor:pointer; transition:.16s var(--bp-ease); }
+.question-action-bar > button svg{ width:15px; height:15px; stroke:currentColor; }
+.question-action-bar > button:hover{ background:var(--bp-primary-050); border-color:#c7d7f5; color:var(--bp-primary-2); }
+.question-action-bar > button.danger:hover{ background:#fef2f2; border-color:#f0b4b4; color:var(--bp-danger); }
+
+.question-footer-actions, .question-order-actions{ display:flex; align-items:center; gap:8px; flex-wrap:wrap; }
+.question-delete-mini{ margin-inline-start:auto; opacity:.75; }
+.question-delete-mini:hover{ opacity:1; border-color:#f0b4b4; color:var(--bp-danger); background:#fef2f2; }
+
+/* ============================================================
+   Phase 7b — Question card: 3 visual levels (header / content / advanced)
+   No handler, value, or data logic touched — layout only.
+   ============================================================ */
+
+/* ---------- Level 1: Header (always visible, daily tools) ---------- */
+.question-header{ display:flex; flex-direction:column; gap:10px; padding-block-end:13px; border-block-end:1px dashed var(--bp-line); }
+.question-header .question-top-row{ padding-block-end:0; border-block-end:0; }
+.question-header-badges{ display:flex; gap:6px; flex-wrap:wrap; }
+.question-type-badge, .question-difficulty-badge{
+  display:inline-flex; align-items:center; padding:3px 10px; border-radius:var(--bp-pill);
+  background:var(--bp-surface-2); border:1px solid var(--bp-line); color:var(--bp-muted); font-size:11px; font-weight:700;
+}
+.question-difficulty-badge{ background:var(--bp-primary-050); color:var(--bp-primary-2); border-color:#d7e3fb; }
+
+/* ---------- Level 2: Content (the main event — extra breathing room) ---------- */
+.question-content{ display:flex; flex-direction:column; gap:16px; margin-block-start:2px; }
+
+/* ---------- Level 3: Advanced tools (collapsed by default, less-used) ---------- */
+.question-advanced-tools{
+  margin-top:16px; border:1px solid var(--bp-line); border-radius:var(--bp-r-lg); background:var(--bp-surface-2); overflow:hidden;
+}
+.question-advanced-tools > summary{
+  list-style:none; display:flex; align-items:center; gap:8px; padding:11px 14px; cursor:pointer;
+  font-weight:700; font-size:12.5px; color:var(--bp-muted); user-select:none;
+}
+.question-advanced-tools > summary::-webkit-details-marker{ display:none; }
+.question-advanced-tools .details-chevron{ transition:transform .18s var(--bp-ease); }
+.question-advanced-tools[open] .details-chevron{ transform:rotate(180deg); }
+.question-advanced-tools[open] > summary{ border-bottom:1px dashed var(--bp-line); }
+.question-advanced-body{ display:flex; flex-direction:column; gap:14px; padding:14px 16px 16px; }
+.question-advanced-body .question-action-bar{ margin-top:0; padding-block-start:0; border-block-start:0; }
+.question-advanced-body .per-question-ai{ margin-top:0; }
+
+@media (max-width:760px){
+  .question-header-badges{ gap:5px; }
+  .question-type-badge, .question-difficulty-badge{ font-size:10.5px; padding:2px 8px; }
+  .question-advanced-tools > summary{ padding:10px 12px; }
+}
+
+/* The advanced-tools wrapper is new: its children were already hidden in
+   student/teacher preview via existing rules, but the wrapper itself (with
+   its visible summary) was not — hide it too so preview stays clean. */
+.preview-student .question-advanced-tools,
+.preview-teacher .question-advanced-tools{ display:none !important; }
+
+/* ---------- Bottom actions ---------- */
+.bottom-actions-card{ display:flex; align-items:center; gap:10px; flex-wrap:wrap; }
+.bottom-action-notice{ color:var(--bp-muted); font-size:12.5px; }
+@media (prefers-reduced-motion:reduce){ .question-card{ transition:none; } }

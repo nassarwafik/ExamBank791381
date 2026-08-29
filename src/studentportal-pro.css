@@ -1,0 +1,59 @@
+:root{
+  --navy:var(--eb-navy);--primary:var(--eb-primary);--primary2:var(--eb-primary-strong);--primary050:var(--eb-primary-050);
+  --text:var(--eb-text);--muted:var(--eb-muted);--faint:var(--eb-faint);--line:var(--eb-line);--line2:var(--eb-line-2);
+  --surface:var(--eb-surface);--surface2:var(--eb-surface-2);--ok:var(--eb-success);--okbg:var(--eb-success-bg);--warn:var(--eb-warn);--warnbg:var(--eb-warn-bg);--danger:var(--eb-danger);--dangerbg:var(--eb-danger-bg);
+  --r:var(--eb-r);--rlg:var(--eb-r-lg);--rxl:var(--eb-r-xl);--pill:var(--eb-pill);--ease:var(--eb-ease);
+}
+
+/* Calm, light hero — deliberately not the dark teacher-dashboard style */
+.student-welcome-card{border-radius:var(--rxl);padding:24px 26px;color:var(--navy);position:relative;overflow:hidden;margin-block-end:16px;
+  background:var(--primary050);border:1px solid #dce7fb;box-shadow:none}
+.student-welcome-card h2{margin:6px 0 6px;font-size:22px;font-weight:800;color:var(--navy)}
+.student-welcome-card p{margin:0;color:var(--muted);line-height:1.8}
+.portal-mini{display:flex;gap:12px;flex-wrap:wrap;margin-top:16px;position:relative;z-index:2}
+.portal-mini>div{background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.16);border-radius:14px;padding:12px 16px;text-align:center}
+.portal-mini strong{display:block;font-size:22px}
+.portal-list{display:flex;flex-direction:column;gap:10px}
+.student-assignment-card{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;
+  background:var(--surface);border:1px solid var(--line);border-radius:var(--rlg);padding:16px 18px;transition:.16s var(--ease);box-shadow:none}
+.student-assignment-card:hover{border-color:#c7d7f5;background:var(--surface2)}
+.student-assignment-card-main{display:flex;flex-direction:column;gap:5px}
+.sac-title{font-weight:800;color:var(--navy);font-size:15px}
+.sac-sub{display:flex;gap:14px;flex-wrap:wrap;color:var(--muted);font-size:12.5px}
+.sac-status{padding:3px 11px;border-radius:var(--pill);font-size:11.5px;font-weight:800}
+.sac-status.todo{background:var(--primary050);color:var(--primary2)}
+.sac-status.done{background:var(--okbg);color:#15803d}
+.sac-status.progress{background:var(--warnbg);color:#b45309}
+.sac-grade{font-weight:800;color:var(--navy);font-variant-numeric:tabular-nums}
+.pbtn{border:0;border-radius:10px;padding:9px 18px;font-weight:800;cursor:pointer;color:#fff;background:var(--primary);box-shadow:0 8px 18px -10px rgba(37,99,235,.55)}
+.pbtn.ghost{background:var(--surface);color:var(--text);border:1px solid var(--line2);box-shadow:none}
+
+
+/* === ExamBank actual JSX selector bridge === */
+.student-stat-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin-bottom:16px}
+.student-stat-grid>article{background:#fff;border:1px solid var(--line);border-radius:14px;padding:14px 16px;box-shadow:none}
+.student-stat-grid strong{display:block;color:var(--navy);font-size:23px}.student-stat-grid span{color:var(--muted);font-size:12px}
+.student-assignment-list{display:flex;flex-direction:column;gap:10px}
+.student-assignment-card-title{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.student-assignment-card-title strong{font-weight:800;color:var(--navy);font-size:15px}
+.student-assignment-card-title span{padding:3px 10px;border-radius:var(--pill);font-size:11px;font-weight:800;background:var(--primary050);color:var(--primary2)}
+.student-assignment-card.scheduled .student-assignment-card-title span{background:#f1f5f9;color:var(--muted)}
+.student-assignment-card.closed .student-assignment-card-title span{background:var(--warnbg);color:#b45309}
+.student-assignment-card-main p{margin:0;color:var(--muted);font-size:12.5px;line-height:1.7}
+.student-assignment-card-main small{color:var(--faint);font-size:11.5px}
+.student-latest-score{font-weight:800;color:#15803d;font-variant-numeric:tabular-nums}
+.student-assignment-card>button{border:0;border-radius:10px;padding:10px 18px;font-weight:800;cursor:pointer;color:#fff;background:var(--primary);box-shadow:none;transition:.16s var(--ease)}
+.student-assignment-card>button:hover:not(:disabled){background:var(--primary2)}
+.student-assignment-card>button:disabled{opacity:.5;cursor:not-allowed;box-shadow:none}
+.student-code-chip{background:#fff;border:1px solid #dce7fb;color:var(--navy);border-radius:12px;padding:9px 12px}
+.student-panel{background:#fff;border:1px solid var(--line);border-radius:var(--rxl);padding:18px;box-shadow:none}
+.student-panel-heading{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:12px}.student-panel-heading h3{margin:3px 0 0;color:var(--navy)}
+.student-next-panel{background:var(--surface2);border-color:var(--line)}
+.student-empty-state{background:var(--surface2)}
+.student-empty-state>svg{display:block;margin:0 auto 10px;color:var(--faint)}
+.student-logout{display:inline-flex;align-items:center;gap:7px}
+@media(max-width:640px){
+  .student-stat-grid{grid-template-columns:1fr}
+  .student-assignment-card{align-items:stretch}
+  .student-assignment-card>button{width:100%;padding:13px 18px;font-size:14.5px}
+}
