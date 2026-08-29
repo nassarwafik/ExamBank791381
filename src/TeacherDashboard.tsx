@@ -1,4 +1,7 @@
-import {useEffect,useMemo,useState} from "react";
+import {useEffect,useMemo,useRef,useState} from "react";
+import {Chart as ChartJS,CategoryScale,LinearScale,PointElement,LineElement,BarElement,ArcElement,Tooltip,Legend,Filler,type ChartOptions} from "chart.js";
+import {Line,Doughnut,Bar} from "react-chartjs-2";
+ChartJS.register(CategoryScale,LinearScale,PointElement,LineElement,BarElement,ArcElement,Tooltip,Legend,Filler);
 
 type DashboardProps={token:string};
 type ClassItem={classId:string;name:string;grade:string;schoolYear:string;active:boolean;studentCount:number};
@@ -50,43 +53,46 @@ const trendText=(delta:number)=>delta>=5?"يتحسن":delta<=-5?"يتراجع":"
 const trendIcon=(delta:number)=>delta>=5?"↑":delta<=-5?"↓":"→";
 const csvCell=(value:unknown)=>`"${String(value??"").replace(/"/g,'""')}"`;
 
-function LineChart({items}:{items:AssignmentTrend[]}){
- const points=items.filter(item=>item.average!==null);
- if(points.length<2)return <div className="analytics-empty-chart">تظهر حركة الأداء بعد توفر نتيجتين على الأقل.</div>;
- const width=760,height=250,padX=42,padTop=24,padBottom=48;
- const usableW=width-padX*2,usableH=height-padTop-padBottom;
- const coords=points.map((item,index)=>{
-  const x=padX+(index/(points.length-1))*usableW;
-  const y=padTop+(100-clampPct(item.average))/100*usableH;
-  return {x,y,item};
- });
- const path=coords.map((point,index)=>(index?"L":"M")+point.x.toFixed(1)+" "+point.y.toFixed(1)).join(" ");
- return <div className="analytics-line-wrap"><svg viewBox={`0 0 ${width} ${height}`} role="img" aria-label="تطور متوسط العلامات">
-  {[0,25,50,75,100].map(value=>{const y=padTop+(100-value)/100*usableH;return <g key={value}><line className="analytics-grid-line" x1={padX} x2={width-padX} y1={y} y2={y}/><text className="analytics-axis-text" x={8} y={y+4}>{value}%</text></g>})}
-  <path className="analytics-trend-area" d={`${path} L ${coords.at(-1)?.x} ${padTop+usableH} L ${coords[0].x} ${padTop+usableH} Z`}/>
-  <path className="analytics-trend-line" d={path}/>
-  {coords.map(({x,y,item},index)=><g key={item.assignmentId}>
-   <circle className="analytics-trend-dot" cx={x} cy={y} r={4}/>
-   <text className="analytics-point-value" x={x} y={y-10} textAnchor="middle">{fmtPct(item.average)}</text>
-   {(points.length<=8||index===0||index===points.length-1||index%2===0)&&<text className="analytics-axis-label" x={x} y={height-18} textAnchor="middle">{item.title.length>12?item.title.slice(0,12)+"…":item.title}</text>}
-  </g>)}
- </svg></div>;
-}
 
+function AnimatedNumber({value,suffix="",decimals=0}:{value:number|null;suffix?:string;decimals?:number}){
+ const [shown,setShown]=useState(0),previous=useRef(0);
+ useEffect(()=>{const target=Number(value??0),from=previous.current,start=performance.now();let id=0;
+  const tick=(now:number)=>{const p=Math.min(1,(now-start)/850),e=1-Math.pow(1-p,3);setShown(from+(target-from)*e);if(p<1)id=requestAnimationFrame(tick);else previous.current=target};
+  id=requestAnimationFrame(tick);return()=>cancelAnimationFrame(id)},[value]);
+ if(value===null)return <>—</>;
+ return <>{shown.toFixed(decimals).replace(/.0$/,"")}{suffix}</>;
+}
+function LineChart({items}:{items:AssignmentTrend[]}){
+ const points=items.filter(x=>x.average!==null);
+ const data=useMemo(()=>({labels:points.map(x=>x.title),datasets:[{label:"متوسط العلامات",data:points.map(x=>clampPct(x.average)),borderColor:"#2563eb",backgroundColor:"rgba(37,99,235,.13)",pointBackgroundColor:"#2563eb",pointBorderColor:"#fff",pointBorderWidth:2,pointRadius:4,pointHoverRadius:7,borderWidth:3,tension:.38,fill:true}]}),[points]);
+ const options:ChartOptions<"line">=useMemo(()=>({responsive:true,maintainAspectRatio:false,animation:{duration:1050,easing:"easeOutQuart"},interaction:{mode:"index",intersect:false},plugins:{legend:{display:false},tooltip:{rtl:true,callbacks:{label:i=>" المتوسط: "+Number(i.raw||0).toFixed(1)+"%"}}},scales:{y:{beginAtZero:true,max:100,ticks:{callback:v=>v+"%"},grid:{color:"rgba(148,163,184,.18)"}},x:{grid:{display:false},ticks:{maxRotation:0,autoSkip:true,maxTicksLimit:8}}}}),[]);
+ if(points.length<2)return <div className="analytics-empty-chart">تظهر حركة الأداء بعد توفر نتيجتين على الأقل.</div>;
+ return <div className="analytics-chart-canvas analytics-chart-line"><Line data={data} options={options}/></div>;
+}
 function DonutChart({submitted,missing,pendingReview}:{submitted:number;missing:number;pendingReview:number}){
- const total=Math.max(1,submitted+missing),circumference=263.89;
- const submittedPct=submitted/total;
- const missingPct=missing/total;
- return <div className="analytics-donut-layout">
-  <svg className="analytics-donut" viewBox="0 0 120 120" role="img" aria-label="حالة التسليم">
-   <circle className="donut-track" cx="60" cy="60" r="42"/>
-   <circle className="donut-submitted" cx="60" cy="60" r="42" strokeDasharray={`${submittedPct*circumference} ${circumference}`} strokeDashoffset="0"/>
-   <circle className="donut-missing" cx="60" cy="60" r="42" strokeDasharray={`${missingPct*circumference} ${circumference}`} strokeDashoffset={-submittedPct*circumference}/>
-   <text className="donut-main" x="60" y="57" textAnchor="middle">{Math.round(submittedPct*100)}%</text>
-   <text className="donut-sub" x="60" y="72" textAnchor="middle">تسليم</text>
-  </svg>
-  <div className="analytics-legend"><span><i className="legend-dot submitted"/>تم التسليم <b>{submitted}</b></span><span><i className="legend-dot missing"/>لم يُسلّم <b>{missing}</b></span><span><i className="legend-dot review"/>تحتاج مراجعة <b>{pendingReview}</b></span></div>
- </div>;
+ const total=Math.max(1,submitted+missing);
+ const data=useMemo(()=>({labels:["تم التسليم","لم يُسلّم"],datasets:[{data:[submitted,missing],backgroundColor:["#2563eb","#e2e8f0"],borderColor:["#fff","#fff"],borderWidth:4,hoverOffset:8}]}),[submitted,missing]);
+ const options:ChartOptions<"doughnut">=useMemo(()=>({responsive:true,maintainAspectRatio:false,cutout:"72%",animation:{duration:1150,easing:"easeOutQuart"},plugins:{legend:{display:false},tooltip:{rtl:true}}}),[]);
+ return <div className="analytics-donut-layout"><div className="analytics-chart-canvas analytics-chart-donut"><Doughnut data={data} options={options}/><div className="analytics-donut-center"><strong><AnimatedNumber value={submitted/total*100} suffix="%"/></strong><span>تسليم</span></div></div><div className="analytics-legend"><span><i className="legend-dot submitted"/>تم التسليم <b>{submitted}</b></span><span><i className="legend-dot missing"/>لم يُسلّم <b>{missing}</b></span><span><i className="legend-dot review"/>تحتاج مراجعة <b>{pendingReview}</b></span></div></div>;
+}
+function GradeDistributionChart({items}:{items:Array<{label:string;count:number}>}){
+ const data=useMemo(()=>({labels:items.map(x=>x.label),datasets:[{label:"عدد الطلاب",data:items.map(x=>x.count),backgroundColor:"rgba(37,99,235,.78)",borderRadius:8,borderSkipped:false}]}),[items]);
+ const options:ChartOptions<"bar">=useMemo(()=>({responsive:true,maintainAspectRatio:false,animation:{duration:1000,easing:"easeOutQuart"},plugins:{legend:{display:false},tooltip:{rtl:true}},scales:{y:{beginAtZero:true,ticks:{precision:0},grid:{color:"rgba(148,163,184,.18)"}},x:{grid:{display:false}}}}),[]);
+ if(!items.length)return <div className="analytics-empty-chart">لا توجد علامات بعد.</div>;
+ return <div className="analytics-chart-canvas analytics-chart-bar"><Bar data={data} options={options}/></div>;
+}
+function ClassComparisonChart({items,onSelect}:{items:ClassComparison[];onSelect:(id:string)=>void}){
+ const data=useMemo(()=>({labels:items.map(x=>x.name),datasets:[{label:"متوسط الصف",data:items.map(x=>clampPct(x.average)),backgroundColor:"rgba(14,165,233,.78)",borderRadius:8,borderSkipped:false}]}),[items]);
+ const options:ChartOptions<"bar">=useMemo(()=>({responsive:true,maintainAspectRatio:false,indexAxis:"y",animation:{duration:1050,easing:"easeOutQuart"},onClick:(_e,els)=>{const i=els[0]?.index;if(i!==undefined&&items[i])onSelect(items[i].classId)},plugins:{legend:{display:false},tooltip:{rtl:true,callbacks:{label:i=>" المتوسط: "+Number(i.raw||0).toFixed(1)+"%"}}},scales:{x:{beginAtZero:true,max:100,ticks:{callback:v=>v+"%"},grid:{color:"rgba(148,163,184,.18)"}},y:{grid:{display:false}}}}),[items,onSelect]);
+ if(!items.length)return <div className="analytics-empty-chart">لا توجد بيانات صفوف بعد.</div>;
+ return <div className="analytics-chart-canvas analytics-chart-class"><Bar data={data} options={options}/><small className="analytics-chart-hint">اضغط على صف لعرض تفاصيله</small></div>;
+}
+function TopicChart({items}:{items:TopicAnalytics[]}){
+ const visible=items.slice(0,10);
+ const data=useMemo(()=>({labels:visible.map(x=>x.topic),datasets:[{label:"متوسط الموضوع",data:visible.map(x=>clampPct(x.average)),backgroundColor:visible.map(x=>Number(x.average||0)<60?"rgba(239,68,68,.76)":Number(x.average||0)>=80?"rgba(22,163,74,.76)":"rgba(245,158,11,.76)"),borderRadius:7,borderSkipped:false}]}),[visible]);
+ const options:ChartOptions<"bar">=useMemo(()=>({responsive:true,maintainAspectRatio:false,indexAxis:"y",animation:{duration:1100,easing:"easeOutQuart"},plugins:{legend:{display:false},tooltip:{rtl:true,callbacks:{label:i=>" المتوسط: "+Number(i.raw||0).toFixed(1)+"%"}}},scales:{x:{beginAtZero:true,max:100,ticks:{callback:v=>v+"%"},grid:{color:"rgba(148,163,184,.18)"}},y:{grid:{display:false}}}}),[]);
+ if(!visible.length)return <div className="analytics-empty-chart">ستظهر تحليلات الموضوعات بعد وجود إجابات مصححة.</div>;
+ return <div className="analytics-chart-canvas analytics-chart-topic"><Bar data={data} options={options}/></div>;
 }
 
 function TeacherDashboard({token}:DashboardProps){
@@ -132,9 +138,6 @@ function TeacherDashboard({token}:DashboardProps){
  }
 
  useEffect(()=>{void loadDashboard()},[classId,range]);
-
- const maxDistribution=useMemo(()=>Math.max(1,...(data?.gradeDistribution.map(item=>item.count)||[1])),[data]);
- const maxClassAverage=useMemo(()=>Math.max(1,...(data?.classComparison.map(item=>Number(item.average||0))||[1])),[data]);
 
  async function openAssignment(item:AssignmentTrend){
   setAssignmentBusy(true);setError("");setReview(null);
@@ -202,7 +205,7 @@ function TeacherDashboard({token}:DashboardProps){
 
  return <div className="analytics-dashboard" dir="rtl">
   <section className="analytics-hero">
-   <div><span className="platform-eyebrow">Professional Teacher Analytics</span><h2>لوحة المتابعة والتحليل</h2><p>نظرة شاملة على أداء الطلاب، التسليمات، الاتجاهات والموضوعات التي تحتاج تدخلًا.</p></div>
+   <div><span className="platform-eyebrow">Professional Teacher Analytics · Chart.js</span><h2>لوحة المتابعة والتحليل</h2><p>نظرة شاملة على أداء الطلاب، التسليمات، الاتجاهات والموضوعات التي تحتاج تدخلًا.</p></div>
    <div className="analytics-hero-actions"><button onClick={()=>void loadDashboard()} disabled={loading}>↻ تحديث</button><button onClick={exportCsv}>⬇ Excel / CSV</button><button onClick={()=>window.print()}>🖨 طباعة / PDF</button></div>
   </section>
 
@@ -215,12 +218,12 @@ function TeacherDashboard({token}:DashboardProps){
   {error&&<div className="platform-error">{error}</div>}
 
   <section className="analytics-kpi-grid">
-   <article className="analytics-kpi"><span>الطلاب الفعّالون</span><strong>{k.activeStudents}</strong><small>{classId?"في الصف المختار":k.activeClasses+" صفوف فعّالة"}</small></article>
-   <article className="analytics-kpi"><span>متوسط العلامات</span><strong>{fmtPct(k.average)}</strong><small>{k.highest===null?"لا توجد نتائج":"أعلى "+fmtPct(k.highest)+" · أدنى "+fmtPct(k.lowest)}</small></article>
-   <article className="analytics-kpi"><span>نسبة التسليم</span><strong>{fmtPct(k.completionRate)}</strong><small>{k.submissions} من {k.expectedSubmissions} حالة متوقعة</small></article>
-   <article className="analytics-kpi attention"><span>يحتاجون متابعة</span><strong>{k.followUpStudents}</strong><small>{k.neverLogged} لم يسجلوا الدخول</small></article>
-   <article className="analytics-kpi"><span>واجبات منشورة</span><strong>{k.publishedAssignments}</strong><small>{k.pendingReview} تحتاج مراجعة</small></article>
-   <article className={`analytics-kpi ${k.performanceChange<0?"negative":"positive"}`}><span>اتجاه الأداء</span><strong>{trendIcon(k.performanceChange)} {Math.abs(k.performanceChange).toFixed(1)}%</strong><small>{trendText(k.performanceChange)} مقارنة بالواجبات السابقة</small></article>
+   <article className="analytics-kpi"><span>الطلاب الفعّالون</span><strong><AnimatedNumber value={k.activeStudents}/></strong><small>{classId?"في الصف المختار":k.activeClasses+" صفوف فعّالة"}</small></article>
+   <article className="analytics-kpi"><span>متوسط العلامات</span><strong><AnimatedNumber value={k.average} suffix="%" decimals={1}/></strong><small>{k.highest===null?"لا توجد نتائج":"أعلى "+fmtPct(k.highest)+" · أدنى "+fmtPct(k.lowest)}</small></article>
+   <article className="analytics-kpi"><span>نسبة التسليم</span><strong><AnimatedNumber value={k.completionRate} suffix="%" decimals={1}/></strong><small>{k.submissions} من {k.expectedSubmissions} حالة متوقعة</small></article>
+   <article className="analytics-kpi attention"><span>يحتاجون متابعة</span><strong><AnimatedNumber value={k.followUpStudents}/></strong><small>{k.neverLogged} لم يسجلوا الدخول</small></article>
+   <article className="analytics-kpi"><span>واجبات منشورة</span><strong><AnimatedNumber value={k.publishedAssignments}/></strong><small>{k.pendingReview} تحتاج مراجعة</small></article>
+   <article className={`analytics-kpi ${k.performanceChange<0?"negative":"positive"}`}><span>اتجاه الأداء</span><strong>{trendIcon(k.performanceChange)} <AnimatedNumber value={Math.abs(k.performanceChange)} suffix="%" decimals={1}/></strong><small>{trendText(k.performanceChange)} مقارنة بالواجبات السابقة</small></article>
   </section>
 
   <section className="analytics-main-grid">
@@ -229,12 +232,12 @@ function TeacherDashboard({token}:DashboardProps){
   </section>
 
   <section className="analytics-main-grid">
-   <article className="analytics-card"><div className="analytics-card-head"><div><span className="platform-eyebrow">Grade Distribution</span><h3>توزيع العلامات</h3></div></div><div className="analytics-bars">{data.gradeDistribution.map(item=><div className="analytics-bar-row" key={item.label}><span>{item.label}</span><div><i style={{width:(item.count/maxDistribution*100)+"%"}}/></div><b>{item.count}</b></div>)}</div></article>
-   <article className="analytics-card"><div className="analytics-card-head"><div><span className="platform-eyebrow">Class Comparison</span><h3>مقارنة الصفوف</h3></div></div><div className="analytics-bars">{data.classComparison.map(item=><button className="analytics-bar-row analytics-bar-button" key={item.classId} onClick={()=>setClassId(item.classId)}><span>{item.name}</span><div><i style={{width:(Number(item.average||0)/maxClassAverage*100)+"%"}}/></div><b>{fmtPct(item.average)}</b></button>)}{!data.classComparison.length&&<div className="analytics-empty-chart">لا توجد بيانات صفوف بعد.</div>}</div></article>
+   <article className="analytics-card"><div className="analytics-card-head"><div><span className="platform-eyebrow">Grade Distribution</span><h3>توزيع العلامات</h3></div></div><GradeDistributionChart items={data.gradeDistribution}/></article>
+   <article className="analytics-card"><div className="analytics-card-head"><div><span className="platform-eyebrow">Class Comparison</span><h3>مقارنة الصفوف</h3></div></div><ClassComparisonChart items={data.classComparison} onSelect={setClassId}/></article>
   </section>
 
   <section className="analytics-main-grid">
-   <article className="analytics-card"><div className="analytics-card-head"><div><span className="platform-eyebrow">Topic Analytics</span><h3>الأداء حسب الموضوع</h3></div><span className="analytics-chip">الأضعف أولًا</span></div><div className="analytics-topic-list">{data.topicAnalytics.map(item=><div key={item.topic}><div><strong>{item.topic}</strong><span>{fmtPct(item.average)} · {item.gradedQuestions} إجابة مصححة</span></div><div className="analytics-topic-track"><i className={Number(item.average||0)<60?"weak":Number(item.average||0)>=80?"strong":""} style={{width:clampPct(item.average)+"%"}}/></div></div>)}{!data.topicAnalytics.length&&<div className="analytics-empty-chart">ستظهر تحليلات الموضوعات بعد وجود إجابات مصححة.</div>}</div></article>
+   <article className="analytics-card"><div className="analytics-card-head"><div><span className="platform-eyebrow">Topic Analytics</span><h3>الأداء حسب الموضوع</h3></div><span className="analytics-chip">الأضعف أولًا</span></div><TopicChart items={data.topicAnalytics}/></article>
    <article className="analytics-card"><div className="analytics-card-head"><div><span className="platform-eyebrow">Smart Insights</span><h3>مؤشرات ذكية للمعلم</h3></div></div><div className="analytics-insights">{data.insights.map((item,index)=><article key={index} className={"analytics-insight "+item.tone}><div className="analytics-insight-icon">{item.tone==="success"?"✓":item.tone==="warning"?"!":"i"}</div><div><strong>{item.title}</strong><p>{item.text}</p></div></article>)}</div></article>
   </section>
 
