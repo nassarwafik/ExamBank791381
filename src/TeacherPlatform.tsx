@@ -1,5 +1,6 @@
 import {useEffect,useMemo,useState} from "react";
 import AssignmentsPanel from "./AssignmentsPanel";
+import TeacherDashboard from "./TeacherDashboard";
 
 type TeacherPlatformProps={token:string;currentExam:unknown|null};
 type Classroom={classId:string;name:string;grade:string;schoolYear:string;active:boolean;studentCount:number;createdAt:string};
@@ -82,6 +83,7 @@ function TeacherPlatform({token,currentExam}:TeacherPlatformProps){
 
  const [profile,setProfile]=useState<StudentProfile|null>(null);
  const [profileBusy,setProfileBusy]=useState(false);
+ const [workspaceTab,setWorkspaceTab]=useState<"dashboard"|"students"|"assignments">("dashboard");
 
  const selectedClass=useMemo(()=>classes.find(c=>c.classId===selectedClassId)||null,[classes,selectedClassId]);
 
@@ -434,14 +436,24 @@ function TeacherPlatform({token,currentExam}:TeacherPlatformProps){
   </button>;
  }
 
+ const workspaceNav=<nav className="teacher-workspace-nav" aria-label="أقسام منصة المعلم">
+  <button className={workspaceTab==="dashboard"?"active":""} onClick={()=>setWorkspaceTab("dashboard")}>📊 لوحة المتابعة</button>
+  <button className={workspaceTab==="students"?"active":""} onClick={()=>setWorkspaceTab("students")}>👥 الصفوف والطلاب</button>
+  <button className={workspaceTab==="assignments"?"active":""} onClick={()=>setWorkspaceTab("assignments")}>📝 الواجبات</button>
+ </nav>;
+
+ if(workspaceTab==="dashboard")return <section className="teacher-platform" dir="rtl"><div className="teacher-platform-inner">{workspaceNav}<TeacherDashboard token={token}/></div></section>;
+ if(workspaceTab==="assignments")return <section className="teacher-platform" dir="rtl"><div className="teacher-platform-inner">{workspaceNav}<section className="teacher-assignment-heading"><span className="platform-eyebrow">Assignments</span><h2>الواجبات والاختبارات المرسلة</h2><p>إنشاء الواجبات، متابعة التسليمات، التصحيح والنتائج.</p></section><AssignmentsPanel token={token} classes={classes} currentExam={currentExam}/></div></section>;
+
  const selectedCount=selectedIds.length;
  const previewValid=importPreview.filter(x=>x.status==="valid").length;
  const previewDuplicates=importPreview.filter(x=>x.status==="duplicate").length;
  const previewInvalid=importPreview.filter(x=>x.status==="invalid").length;
 
  return <section className="teacher-platform" dir="rtl"><div className="teacher-platform-inner">
+  {workspaceNav}
   <section className="platform-hero">
-   <div><span className="platform-eyebrow">ExamBank 2.0H</span><h2>إدارة الطلاب المتقدمة</h2><p>بحث وفرز، عمليات جماعية، معاينة استيراد، أرشفة، ملف طالب، علامات وتصدير.</p></div>
+   <div><span className="platform-eyebrow">ExamBank 2.0I</span><h2>إدارة الطلاب المتقدمة</h2><p>بحث وفرز، عمليات جماعية، معاينة استيراد، أرشفة، ملف طالب، علامات وتصدير.</p></div>
    <div className="platform-hero-stat"><strong>{classes.filter(c=>c.active).length}</strong><span>صفوف فعّالة</span></div>
   </section>
 
@@ -630,7 +642,6 @@ function TeacherPlatform({token,currentExam}:TeacherPlatformProps){
    </section>
   </div>
 
-  <AssignmentsPanel token={token} classes={classes} currentExam={currentExam}/>
  </div></section>;
 }
 
