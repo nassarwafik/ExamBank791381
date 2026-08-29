@@ -3,8 +3,6 @@ const { BlobServiceClient } = require("@azure/storage-blob");
 const crypto = require("crypto");
 const { requireBuilderAuth } = require("../lib/builder-auth");
 const {
-  normalizeStudentCode,
-  isValidStudentCode,
   studentCodeHash,
   hashPassword,
   generateTemporaryPassword
@@ -46,11 +44,44 @@ async function uploadJson(container, blobName, document) {
   });
 }
 
+function normalizeIdentityNumber(value) {
+  const digits = String(value ?? "").replace(/\D/g, "");
+  if (!digits) return "";
+  return digits.length <= 9 ? digits.padStart(9, "0") : digits;
+}
+
+function isValidIdentityNumber(value) {
+  return /^\d{9}$/.test(String(value || ""));
+}
+
+function splitLegacyName(value) {
+  const parts = String(value || "").trim().split(/\s+/).filter(Boolean);
+  return {
+    firstName: parts.shift() || "",
+    familyName: parts.join(" ")
+  };
+}
+
+function getStudentNames(document) {
+  const legacy = splitLegacyName(document?.displayName);
+  return {
+    firstName: String(document?.firstName || legacy.firstName || "").trim(),
+    familyName: String(document?.familyName || legacy.familyName || "").trim()
+  };
+}
+
 function publicStudent(document) {
+  const names = getStudentNames(document);
+  const identityNumber = normalizeIdentityNumber(
+    document.identityNumber || (/^\d{9}$/.test(String(document.code || "")) ? document.code : "")
+  );
   return {
     userId: String(document.userId || ""),
-    code: String(document.code || ""),
-    displayName: String(document.displayName || ""),
+    code: String(document.code || identityNumber || ""),
+    identityNumber,
+    firstName: names.firstName,
+    familyName: names.familyName,
+    displayName: String(document.displayName || [names.firstName, names.familyName].filter(Boolean).join(" ")),
     classId: String(document.classId || ""),
     active: document.active !== false,
     createdAt: String(document.createdAt || ""),
@@ -82,7 +113,10 @@ async function listStudents(container, classId) {
     if (classId && String(student.classId || "") !== classId) continue;
     result.push(publicStudent(student));
   }
-  result.sort((a, b) => String(a.displayName).localeCompare(String(b.displayName), "ar"));
+  result.sort((a, b) => {
+    const family = String(a.familyName).localeCompare(String(b.familyName), "ar");
+    return family || String(a.firstName).localeCompare(String(b.firstName), "ar");
+  });
   return result;
 }
 
@@ -91,36 +125,62 @@ async function codeExists(container, code, exceptUserId = "") {
   return !!(auth && String(auth.userId || "") !== exceptUserId);
 }
 
-async function generateUniqueStudentCode(container) {
-  for (let i = 0; i < 40; i += 1) {
-    const code = "S" + String(crypto.randomInt(100000, 1000000));
-    if (!(await codeExists(container, code))) return code;
-  }
-  throw new Error("تعذر توليد كود فريد للطالب. حاول مرة أخرى.");
+function namesFromInput(input) {
+  const directFirst = String(input?.firstName ?? input?.givenName ?? "").trim();
+  const directFamily = String(input?.familyName ?? input?.lastName ?? input?.surname ?? "").trim();
+  if (directFirst || directFamily) return { firstName: directFirst, familyName: directFamily };
+  return splitLegacyName(input?.displayName ?? input?.name ?? input?.studentName ?? "");
+}
+
+function identityFromInput(input) {
+  return normalizeIdentityNumber(
+    input?.identityNumber ??
+    input?.idNumber ??
+    input?.studentId ??
+    input?.identity ??
+    input?.id ??
+    input?.code ??
+    input?.studentCode ??
+    ""
+  );
 }
 
 async function createStudentRecord(container, classroom, input, options = {}) {
-  const displayName = String(input?.displayName ?? input?.name ?? "").trim();
-  let code = normalizeStudentCode(input?.code);
-  if (!code && options.generateCode) code = await generateUniqueStudentCode(container);
-  if (!displayName || !isValidStudentCode(code)) {
-    throw new Error("أدخل اسمًا صحيحًا وكود طالب مكوّنًا من أحرف/أرقام إنجليزية.");
+  const { firstName, familyName } = namesFromInput(input);
+  const identityNumber = identityFromInput(input);
+  const code = identityNumber;
+
+  if (!firstName || !familyName) {
+    throw new Error("يجب إدخال الاسم الشخصي واسم العائلة.");
   }
-  if (await codeExists(container, code)) throw new Error("كود الطالب مستخدم مسبقًا: " + code);
+  if (!isValidIdentityNumber(identityNumber)) {
+    throw new Error("رقم الهوية يجب أن يتكوّن من 9 أرقام.");
+  }
+  if (await codeExists(container, code)) {
+    throw new Error("رقم الهوية مستخدم مسبقًا: " + identityNumber);
+  }
 
   const password = options.forceGeneratedPassword
     ? generateTemporaryPassword()
     : String(input?.password || "") || generateTemporaryPassword();
-  if (password.length < 6) throw new Error("كلمة المرور يجب أن تحتوي على 6 محارف على الأقل.");
+
+  if (password.length < 6) {
+    throw new Error("كلمة المرور يجب أن تحتوي على 6 محارف على الأقل.");
+  }
 
   const { salt, passwordHash } = hashPassword(password);
   const userId = crypto.randomUUID();
   const now = new Date().toISOString();
+  const displayName = firstName + " " + familyName;
+
   const student = {
-    schemaVersion: 1,
+    schemaVersion: 2,
     role: "student",
     userId,
     code,
+    identityNumber,
+    firstName,
+    familyName,
     displayName,
     classId: classroom.classId,
     active: true,
@@ -128,8 +188,9 @@ async function createStudentRecord(container, classroom, input, options = {}) {
     updatedAt: now,
     lastLoginAt: ""
   };
+
   const authDocument = {
-    schemaVersion: 1,
+    schemaVersion: 2,
     userId,
     codeHash: studentCodeHash(code),
     salt,
@@ -141,6 +202,7 @@ async function createStudentRecord(container, classroom, input, options = {}) {
 
   await uploadJson(container, USER_PREFIX + userId + ".json", student);
   await uploadJson(container, AUTH_PREFIX + studentCodeHash(code) + ".json", authDocument);
+
   const ids = ensureStudentIds(classroom);
   if (!ids.includes(userId)) ids.push(userId);
 
@@ -150,12 +212,17 @@ async function createStudentRecord(container, classroom, input, options = {}) {
 function normalizeBulkStudents(value) {
   const raw = Array.isArray(value) ? value : Array.isArray(value?.students) ? value.students : [];
   return raw.map(item => {
-    if (typeof item === "string") return { displayName: item };
+    if (typeof item === "string") {
+      const names = splitLegacyName(item);
+      return { ...names, identityNumber: "" };
+    }
+    const names = namesFromInput(item);
     return {
-      displayName: String(item?.displayName ?? item?.name ?? item?.studentName ?? "").trim(),
-      code: String(item?.code ?? item?.studentCode ?? "").trim()
+      firstName: names.firstName,
+      familyName: names.familyName,
+      identityNumber: identityFromInput(item)
     };
-  }).filter(item => item.displayName);
+  }).filter(item => item.firstName || item.familyName || item.identityNumber);
 }
 
 app.http("manageStudents", {
@@ -166,12 +233,16 @@ app.http("manageStudents", {
     try {
       const auth = requireBuilderAuth(request);
       if (!auth.ok) return auth.response;
+
       const container = getContainer();
 
       if (request.method === "GET") {
         const url = new URL(request.url);
         const classId = String(url.searchParams.get("classId") || "").trim();
-        return { status: 200, jsonBody: { ok: true, students: await listStudents(container, classId) } };
+        return {
+          status: 200,
+          jsonBody: { ok: true, students: await listStudents(container, classId) }
+        };
       }
 
       let body = {};
@@ -184,7 +255,11 @@ app.http("manageStudents", {
         if (!classroom || classroom.active === false) {
           return { status: 400, jsonBody: { ok: false, error: "الصف غير موجود أو مؤرشف." } };
         }
-        const result = await createStudentRecord(container, classroom, body, { generateCode: false, forceGeneratedPassword: false });
+
+        const result = await createStudentRecord(container, classroom, body, {
+          forceGeneratedPassword: false
+        });
+
         await saveClassroom(container, classroom);
         return { status: 200, jsonBody: { ok: true, ...result } };
       }
@@ -195,39 +270,54 @@ app.http("manageStudents", {
         if (!classroom || classroom.active === false) {
           return { status: 400, jsonBody: { ok: false, error: "الصف غير موجود أو مؤرشف." } };
         }
+
         const students = normalizeBulkStudents(body?.students ?? body?.data);
         if (!students.length) {
-          return { status: 400, jsonBody: { ok: false, error: "ملف JSON لا يحتوي أسماء طلاب صالحة." } };
+          return {
+            status: 400,
+            jsonBody: { ok: false, error: "ملف JSON لا يحتوي بيانات طلاب صالحة." }
+          };
         }
         if (students.length > 250) {
-          return { status: 400, jsonBody: { ok: false, error: "يمكن استيراد 250 طالبًا كحد أقصى في العملية الواحدة." } };
+          return {
+            status: 400,
+            jsonBody: { ok: false, error: "يمكن استيراد 250 طالبًا كحد أقصى في العملية الواحدة." }
+          };
         }
 
         const credentials = [];
         const errors = [];
+
         for (let index = 0; index < students.length; index += 1) {
           const item = students[index];
           try {
             const result = await createStudentRecord(container, classroom, item, {
-              generateCode: !String(item.code || "").trim(),
               forceGeneratedPassword: true
             });
             credentials.push({
               userId: result.student.userId,
+              firstName: result.student.firstName,
+              familyName: result.student.familyName,
               displayName: result.student.displayName,
+              identityNumber: result.student.identityNumber,
               code: result.student.code,
               password: result.temporaryPassword
             });
           } catch (error) {
             errors.push({
               index,
-              displayName: item.displayName,
-              code: item.code || "",
+              firstName: item.firstName,
+              familyName: item.familyName,
+              identityNumber: item.identityNumber,
+              displayName: [item.firstName, item.familyName].filter(Boolean).join(" "),
+              code: item.identityNumber || "",
               error: error instanceof Error ? error.message : "تعذر إنشاء الطالب."
             });
           }
         }
+
         await saveClassroom(container, classroom);
+
         return {
           status: 200,
           jsonBody: {
@@ -244,37 +334,78 @@ app.http("manageStudents", {
         const userId = String(body?.userId || "").trim();
         const studentBlobName = USER_PREFIX + userId + ".json";
         const student = await downloadJsonOrNull(container, studentBlobName);
+
         if (!student || student.role !== "student") {
           return { status: 404, jsonBody: { ok: false, error: "الطالب غير موجود." } };
         }
 
-        const newName = String(body?.displayName ?? student.displayName ?? "").trim();
-        const newCode = normalizeStudentCode(body?.code ?? student.code);
+        const currentNames = getStudentNames(student);
+        const firstName = String(body?.firstName ?? currentNames.firstName ?? "").trim();
+        const familyName = String(body?.familyName ?? currentNames.familyName ?? "").trim();
+        const identityNumber = normalizeIdentityNumber(
+          body?.identityNumber ??
+          body?.code ??
+          student.identityNumber ??
+          (/^\d{9}$/.test(String(student.code || "")) ? student.code : "")
+        );
+        const newCode = identityNumber;
         const newClassId = String(body?.classId ?? student.classId ?? "").trim();
         const newPassword = String(body?.password || "");
-        if (!newName || !isValidStudentCode(newCode) || !newClassId) {
-          return { status: 400, jsonBody: { ok: false, error: "تأكد من الاسم، الكود والصف." } };
+
+        if (!firstName || !familyName) {
+          return {
+            status: 400,
+            jsonBody: { ok: false, error: "يجب إدخال الاسم الشخصي واسم العائلة." }
+          };
+        }
+        if (!isValidIdentityNumber(identityNumber)) {
+          return {
+            status: 400,
+            jsonBody: { ok: false, error: "رقم الهوية يجب أن يتكوّن من 9 أرقام." }
+          };
+        }
+        if (!newClassId) {
+          return { status: 400, jsonBody: { ok: false, error: "اختر الصف." } };
         }
         if (newPassword && newPassword.length < 6) {
-          return { status: 400, jsonBody: { ok: false, error: "كلمة المرور الجديدة يجب أن تحتوي على 6 محارف على الأقل." } };
+          return {
+            status: 400,
+            jsonBody: { ok: false, error: "كلمة المرور الجديدة يجب أن تحتوي على 6 محارف على الأقل." }
+          };
         }
+
         const newClassroom = await getClassroom(container, newClassId);
         if (!newClassroom || newClassroom.active === false) {
-          return { status: 400, jsonBody: { ok: false, error: "الصف الجديد غير موجود أو مؤرشف." } };
-        }
-        if (newCode !== student.code && await codeExists(container, newCode, userId)) {
-          return { status: 409, jsonBody: { ok: false, error: "كود الطالب مستخدم مسبقًا." } };
+          return {
+            status: 400,
+            jsonBody: { ok: false, error: "الصف الجديد غير موجود أو مؤرشف." }
+          };
         }
 
-        const oldCode = student.code;
-        const oldClassId = student.classId;
+        const oldCode = String(student.code || "");
+        if (newCode !== oldCode && await codeExists(container, newCode, userId)) {
+          return {
+            status: 409,
+            jsonBody: { ok: false, error: "رقم الهوية مستخدم مسبقًا." }
+          };
+        }
+
+        const oldClassId = String(student.classId || "");
         const oldAuthName = AUTH_PREFIX + studentCodeHash(oldCode) + ".json";
         const oldAuth = await downloadJsonOrNull(container, oldAuthName);
+
         if (!oldAuth) {
-          return { status: 404, jsonBody: { ok: false, error: "ملف دخول الطالب غير موجود." } };
+          return {
+            status: 404,
+            jsonBody: { ok: false, error: "ملف دخول الطالب غير موجود." }
+          };
         }
 
-        student.displayName = newName;
+        student.schemaVersion = 2;
+        student.firstName = firstName;
+        student.familyName = familyName;
+        student.displayName = firstName + " " + familyName;
+        student.identityNumber = identityNumber;
         student.code = newCode;
         student.classId = newClassId;
         student.updatedAt = new Date().toISOString();
@@ -284,14 +415,19 @@ app.http("manageStudents", {
           oldAuth.salt = salt;
           oldAuth.passwordHash = passwordHash;
         }
+
+        oldAuth.schemaVersion = 2;
         oldAuth.codeHash = studentCodeHash(newCode);
         oldAuth.active = student.active !== false;
         oldAuth.updatedAt = new Date().toISOString();
 
         await uploadJson(container, studentBlobName, student);
+
         const newAuthName = AUTH_PREFIX + studentCodeHash(newCode) + ".json";
         await uploadJson(container, newAuthName, oldAuth);
-        if (newAuthName !== oldAuthName) await container.getBlobClient(oldAuthName).deleteIfExists();
+        if (newAuthName !== oldAuthName) {
+          await container.getBlobClient(oldAuthName).deleteIfExists();
+        }
 
         if (oldClassId !== newClassId) {
           const oldClassroom = await getClassroom(container, oldClassId);
@@ -306,25 +442,45 @@ app.http("manageStudents", {
 
         return {
           status: 200,
-          jsonBody: { ok: true, student: publicStudent(student), passwordChanged: !!newPassword }
+          jsonBody: {
+            ok: true,
+            student: publicStudent(student),
+            passwordChanged: !!newPassword
+          }
         };
       }
 
       if (action === "resetpassword") {
         const userId = String(body?.userId || "").trim();
         const student = await downloadJsonOrNull(container, USER_PREFIX + userId + ".json");
-        if (!student) return { status: 404, jsonBody: { ok: false, error: "الطالب غير موجود." } };
+
+        if (!student) {
+          return { status: 404, jsonBody: { ok: false, error: "الطالب غير موجود." } };
+        }
+
         const temporaryPassword = String(body?.password || "") || generateTemporaryPassword();
         if (temporaryPassword.length < 6) {
-          return { status: 400, jsonBody: { ok: false, error: "كلمة المرور يجب أن تحتوي على 6 محارف على الأقل." } };
+          return {
+            status: 400,
+            jsonBody: { ok: false, error: "كلمة المرور يجب أن تحتوي على 6 محارف على الأقل." }
+          };
         }
+
         const { salt, passwordHash } = hashPassword(temporaryPassword);
         const authBlobName = AUTH_PREFIX + studentCodeHash(student.code) + ".json";
         const authDocument = await downloadJsonOrNull(container, authBlobName);
-        if (!authDocument) return { status: 404, jsonBody: { ok: false, error: "ملف دخول الطالب غير موجود." } };
+
+        if (!authDocument) {
+          return {
+            status: 404,
+            jsonBody: { ok: false, error: "ملف دخول الطالب غير موجود." }
+          };
+        }
+
         authDocument.salt = salt;
         authDocument.passwordHash = passwordHash;
         authDocument.updatedAt = new Date().toISOString();
+
         await uploadJson(container, authBlobName, authDocument);
         return { status: 200, jsonBody: { ok: true, temporaryPassword } };
       }
@@ -333,25 +489,41 @@ app.http("manageStudents", {
         const userId = String(body?.userId || "").trim();
         const studentBlobName = USER_PREFIX + userId + ".json";
         const student = await downloadJsonOrNull(container, studentBlobName);
-        if (!student) return { status: 404, jsonBody: { ok: false, error: "الطالب غير موجود." } };
+
+        if (!student) {
+          return { status: 404, jsonBody: { ok: false, error: "الطالب غير موجود." } };
+        }
+
         student.active = !(student.active !== false);
         student.updatedAt = new Date().toISOString();
         await uploadJson(container, studentBlobName, student);
+
         const authBlobName = AUTH_PREFIX + studentCodeHash(student.code) + ".json";
         const authDocument = await downloadJsonOrNull(container, authBlobName);
+
         if (authDocument) {
           authDocument.active = student.active;
           authDocument.updatedAt = new Date().toISOString();
           await uploadJson(container, authBlobName, authDocument);
         }
-        return { status: 200, jsonBody: { ok: true, active: student.active } };
+
+        return {
+          status: 200,
+          jsonBody: { ok: true, active: student.active }
+        };
       }
 
-      return { status: 400, jsonBody: { ok: false, error: "Unsupported student action." } };
+      return {
+        status: 400,
+        jsonBody: { ok: false, error: "Unsupported student action." }
+      };
     } catch (error) {
       return {
         status: 500,
-        jsonBody: { ok: false, error: error instanceof Error ? error.message : "Student action failed." }
+        jsonBody: {
+          ok: false,
+          error: error instanceof Error ? error.message : "Student action failed."
+        }
       };
     }
   }
