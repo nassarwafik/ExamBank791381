@@ -8,6 +8,7 @@ import "./platform.css";
 // EXAMBANK_2_PHASE_A
 // EXAMBANK_2_PHASE_B
 // EXAMBANK_2_PHASE_C
+// EXAMBANK_2_PHASE_D
 // EXAMBANK_IMAGE_UPLOAD_AND_TYPE_CONVERSION
 
 type DifficultyMap = Record<"1" | "2" | "3" | "4" | "5", number>;
