@@ -1,8 +1,9 @@
 
 const {app}=require("@azure/functions");
 const {requireBuilderAuth}=require("../lib/builder-auth");
-const {getContainer,downloadJsonOrNull,uploadJson,listJson}=require("../lib/platform-storage");
+const {getContainer,downloadJsonOrNull,listJson,mutateJsonWithRetry,StorageConflictError}=require("../lib/platform-storage");
 const AP="platform/assignments/",SP="platform/submissions/",UP="platform/users/";
+const CONFLICT_MESSAGE="حدث تعارض مؤقت أثناء حفظ البيانات. حاول مرة أخرى.";
 app.http("assignmentResults",{methods:["GET","POST"],authLevel:"anonymous",route:"assignment-results",handler:async request=>{
  try{const auth=requireBuilderAuth(request);if(!auth.ok)return auth.response;const c=getContainer();
   if(request.method==="GET"){
@@ -17,26 +18,51 @@ app.http("assignmentResults",{methods:["GET","POST"],authLevel:"anonymous",route
    const a=await downloadJsonOrNull(c,AP+id+".json");if(!a)return {status:404,jsonBody:{ok:false,error:"الواجب غير موجود."}};
    const student=await downloadJsonOrNull(c,UP+studentId+".json");if(!student)return {status:404,jsonBody:{ok:false,error:"الطالب غير موجود."}};
    if(String(student.classId||"")!==String(a.classId||""))return {status:403,jsonBody:{ok:false,error:"الطالب لا ينتمي إلى صف هذا الواجب."}};
-   // Whole-record read-modify-write, unguarded against concurrent student autosave/submit writes to the same file — accepted technical debt shared with setDueAtOverride/saveReview until a dedicated storage-concurrency pass.
-   const name=SP+id+"/"+studentId+".json";let s=await downloadJsonOrNull(c,name);if(!s)s={schemaVersion:1,assignmentId:id,studentId,classId:a.classId,allowedAttempts:null,draftAnswers:{},attempts:[],createdAt:new Date().toISOString()};const used=Array.isArray(s.attempts)?s.attempts.length:0,base=Math.max(1,Number(a.maxAttempts||1));s.allowedAttempts=Math.max(base,Number(s.allowedAttempts||0),used+1);s.updatedAt=new Date().toISOString();await uploadJson(c,name,s);return {status:200,jsonBody:{ok:true,allowedAttempts:s.allowedAttempts}}
+   const name=SP+id+"/"+studentId+".json";
+   let finalAllowed=null;
+   try{
+    await mutateJsonWithRetry(c,name,current=>{
+     const doc=current||{schemaVersion:1,assignmentId:id,studentId,classId:a.classId,studentCode:String(student.code||""),studentName:String(student.displayName||""),allowedAttempts:null,draftAnswers:{},attempts:[],createdAt:new Date().toISOString(),updatedAt:new Date().toISOString()};
+     const used=Array.isArray(doc.attempts)?doc.attempts.length:0,base=Math.max(1,Number(a.maxAttempts||1));
+     doc.allowedAttempts=Math.max(base,Number(doc.allowedAttempts||0),used+1);
+     doc.updatedAt=new Date().toISOString();
+     finalAllowed=doc.allowedAttempts;
+     return doc;
+    });
+   }catch(e){
+    if(e instanceof StorageConflictError)return {status:503,jsonBody:{ok:false,error:CONFLICT_MESSAGE}};
+    throw e;
+   }
+   return {status:200,jsonBody:{ok:true,allowedAttempts:finalAllowed}};
   }
   if(resultAction==="setDueAtOverride"){
    const id=String(b.assignmentId||""),studentId=String(b.studentId||"");if(!id||!studentId)return {status:400,jsonBody:{ok:false,error:"assignmentId and studentId are required."}};
    const a=await downloadJsonOrNull(c,AP+id+".json");if(!a)return {status:404,jsonBody:{ok:false,error:"الواجب غير موجود."}};
    const student=await downloadJsonOrNull(c,UP+studentId+".json");if(!student)return {status:404,jsonBody:{ok:false,error:"الطالب غير موجود."}};
    if(String(student.classId||"")!==String(a.classId||""))return {status:403,jsonBody:{ok:false,error:"الطالب لا ينتمي إلى صف هذا الواجب."}};
-   const name=SP+id+"/"+studentId+".json";let s=await downloadJsonOrNull(c,name);if(!s)s={schemaVersion:1,assignmentId:id,studentId,classId:a.classId,studentCode:String(student.code||""),studentName:String(student.displayName||""),allowedAttempts:null,draftAnswers:{},attempts:[],createdAt:new Date().toISOString(),updatedAt:new Date().toISOString()};
    const raw=b.dueAtOverride;
-   if(raw===null||raw===undefined||raw===""){s.dueAtOverride=null}
+   let nextOverride;
+   if(raw===null||raw===undefined||raw===""){nextOverride=null}
    else{
     if(!a.dueAt)return {status:400,jsonBody:{ok:false,error:"الواجب لا يملك موعد تسليم أصلي لتمديده."}};
     const ms=new Date(raw).getTime();if(!Number.isFinite(ms))return {status:400,jsonBody:{ok:false,error:"تاريخ غير صالح."}};
     if(ms<=new Date(a.dueAt).getTime())return {status:400,jsonBody:{ok:false,error:"يجب أن يكون الموعد الجديد بعد الموعد الأصلي للواجب."}};
-    s.dueAtOverride=new Date(ms).toISOString()
+    nextOverride=new Date(ms).toISOString();
    }
-   // Whole-record read-modify-write, unguarded against concurrent student autosave/submit writes to the same file — accepted technical debt shared with allowRetry/saveReview until a dedicated storage-concurrency pass.
-   s.updatedAt=new Date().toISOString();await uploadJson(c,name,s);return {status:200,jsonBody:{ok:true,dueAtOverride:s.dueAtOverride}}
+   const name=SP+id+"/"+studentId+".json";
+   try{
+    await mutateJsonWithRetry(c,name,current=>{
+     const doc=current||{schemaVersion:1,assignmentId:id,studentId,classId:a.classId,studentCode:String(student.code||""),studentName:String(student.displayName||""),allowedAttempts:null,draftAnswers:{},attempts:[],createdAt:new Date().toISOString(),updatedAt:new Date().toISOString()};
+     doc.dueAtOverride=nextOverride;
+     doc.updatedAt=new Date().toISOString();
+     return doc;
+    });
+   }catch(e){
+    if(e instanceof StorageConflictError)return {status:503,jsonBody:{ok:false,error:CONFLICT_MESSAGE}};
+    throw e;
+   }
+   return {status:200,jsonBody:{ok:true,dueAtOverride:nextOverride}};
   }
   return {status:400,jsonBody:{ok:false,error:"Unsupported result action."}};
- }catch(e){return {status:500,jsonBody:{ok:false,error:e instanceof Error?e.message:"Results action failed."}}}
+ }catch{return {status:500,jsonBody:{ok:false,error:"تعذر تنفيذ عملية النتائج حاليًا."}}}
 }});
