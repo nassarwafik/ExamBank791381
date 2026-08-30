@@ -17,8 +17,11 @@ app.http("assignmentReview",{methods:["GET","POST"],authLevel:"anonymous",route:
   if(request.method==="GET"){
    const u=new URL(request.url),assignmentId=String(u.searchParams.get("assignmentId")||""),studentId=String(u.searchParams.get("studentId")||""),attemptNumber=Math.max(1,Number(u.searchParams.get("attemptNumber")||1));
    if(!assignmentId||!studentId)return {status:400,jsonBody:{ok:false,error:"assignmentId and studentId are required."}};
-   const assignment=await downloadJsonOrNull(c,AP+assignmentId+".json"),student=await downloadJsonOrNull(c,UP+studentId+".json"),submission=await downloadJsonOrNull(c,SP+assignmentId+"/"+studentId+".json");
-   if(!assignment||!student||!submission)return {status:404,jsonBody:{ok:false,error:"لم يتم العثور على بيانات المحاولة."}};
+   const assignment=await downloadJsonOrNull(c,AP+assignmentId+".json"),student=await downloadJsonOrNull(c,UP+studentId+".json");
+   if(!assignment||!student)return {status:404,jsonBody:{ok:false,error:"لم يتم العثور على بيانات المحاولة."}};
+   if(String(student.classId||"")!==String(assignment.classId||""))return {status:403,jsonBody:{ok:false,error:"الطالب لا ينتمي إلى صف هذا الواجب."}};
+   const submission=await downloadJsonOrNull(c,SP+assignmentId+"/"+studentId+".json");
+   if(!submission)return {status:404,jsonBody:{ok:false,error:"لم يتم العثور على بيانات المحاولة."}};
    const attempts=Array.isArray(submission.attempts)?submission.attempts:[],attempt=attempts.find(x=>Number(x.attemptNumber)===attemptNumber);if(!attempt)return {status:404,jsonBody:{ok:false,error:"المحاولة غير موجودة."}};
    const qs=Array.isArray(assignment.examSnapshot?.questions)?assignment.examSnapshot.questions:[],gradeMap=new Map((attempt.questionGrades||[]).map(x=>[String(x.questionId),x]));
    const questions=qs.map((q,i)=>{const id=qid(q,i),grade=gradeMap.get(id)||null,o=attempt.manualOverrides?.[id]??null;return {questionId:id,questionNumber:i+1,text:String(q.text||""),textHtml:String(q.textHtml||""),marks:Number(q.marks||q.points||0),type:String(q.presentationType||q.type||""),options:Array.isArray(q.options)?q.options:[],fields:Array.isArray(q.fields)?q.fields:[],wordBank:Array.isArray(q.wordBank)?q.wordBank:[],studentAnswer:attempt.answers?.[id]??null,expectedAnswer:q.answer??null,autoGrade:grade,manualScore:o?.score??null,teacherComment:String(o?.comment||"")}});
@@ -26,6 +29,9 @@ app.http("assignmentReview",{methods:["GET","POST"],authLevel:"anonymous",route:
   }
   let b={};try{b=await request.json()}catch{}if(String(b.action)!=="saveReview")return {status:400,jsonBody:{ok:false,error:"Unsupported review action."}};
   const assignmentId=String(b.assignmentId||""),studentId=String(b.studentId||""),attemptNumber=Math.max(1,Number(b.attemptNumber||1));if(!assignmentId||!studentId)return {status:400,jsonBody:{ok:false,error:"assignmentId and studentId are required."}};
+  const reviewAssignment=await downloadJsonOrNull(c,AP+assignmentId+".json");if(!reviewAssignment)return {status:404,jsonBody:{ok:false,error:"الواجب غير موجود."}};
+  const reviewStudent=await downloadJsonOrNull(c,UP+studentId+".json");if(!reviewStudent)return {status:404,jsonBody:{ok:false,error:"الطالب غير موجود."}};
+  if(String(reviewStudent.classId||"")!==String(reviewAssignment.classId||""))return {status:403,jsonBody:{ok:false,error:"الطالب لا ينتمي إلى صف هذا الواجب."}};
   const incoming=b.overrides&&typeof b.overrides==="object"?b.overrides:{},teacherFeedback=String(b.teacherFeedback||"").trim(),reviewedAt=new Date().toISOString();
   const name=SP+assignmentId+"/"+studentId+".json";
   let resultOut=null;
