@@ -1,21 +1,25 @@
-import {useEffect,useMemo,useState} from "react";
+import {useEffect,useMemo,useRef,useState,Fragment} from "react";
 import AssignmentsPanel from "./AssignmentsPanel";
+import AssignmentReview from "./AssignmentReview";
 import TeacherDashboard from "./TeacherDashboard";
 import {IconSearch,IconDownload,IconUpload,IconPlus,IconChevronDown,IconMore,IconUser,IconEdit,IconCopy,IconKey,IconTrash} from "./icons";
 
 type WorkspaceTab="dashboard"|"students"|"assignments";
 type TeacherPlatformProps={token:string;currentExam:unknown|null;workspaceTab:WorkspaceTab};
 type Classroom={classId:string;name:string;grade:string;schoolYear:string;active:boolean;studentCount:number;createdAt:string};
-type Student={userId:string;code:string;identityNumber:string;firstName:string;familyName:string;displayName:string;classId:string;active:boolean;archived:boolean;createdAt:string;updatedAt:string;lastLoginAt:string};
+type Student={userId:string;code:string;identityNumber:string;firstName:string;familyName:string;displayName:string;classId:string;active:boolean;archived:boolean;createdAt:string;updatedAt:string;lastLoginAt:string;submittedAssignmentsCount:number};
 type Credential={userId?:string;firstName?:string;familyName?:string;displayName?:string;code:string;identityNumber?:string;password:string};
 type BulkStudent={firstName:string;familyName:string;identityNumber:string};
 type BulkError={index?:number;firstName?:string;familyName?:string;identityNumber?:string;displayName?:string;code?:string;error:string;userId?:string};
 type ImportPreviewRow={index:number;firstName:string;familyName:string;identityNumber:string;status:"valid"|"duplicate"|"invalid";error:string;existingStudent?:{userId:string;displayName:string;classId:string;className:string;active:boolean;archived:boolean}|null};
+type SubmittedAssignment={assignmentId:string;title:string;submittedAt:string;latestAttemptNumber:number;attemptsUsed:number;allowedAttempts:number;score:number;totalMarks:number;percentage:number;finalized:boolean;isCurrentClassAssignment:boolean;dueAt:string;dueAtOverride:string|null;effectiveDueAt:string};
 type StudentProfile={
  student:Student;
  classroom:{classId:string;name:string;grade:string;schoolYear:string}|null;
  stats:{assigned:number;completed:number;pending:number;average:number|null;lastLoginAt:string};
- assignments:Array<{assignmentId:string;title:string;status:string;dueAt:string;totalMarks:number;attemptsUsed:number;latestScore:number|null;latestPercentage:number|null;submittedAt:string;finalized:boolean}>
+ assignments:Array<{assignmentId:string;title:string;status:string;dueAt:string;totalMarks:number;attemptsUsed:number;latestScore:number|null;latestPercentage:number|null;submittedAt:string;finalized:boolean}>;
+ submittedAssignmentsCount:number;
+ submittedAssignments:SubmittedAssignment[];
 };
 type ApiError={ok?:boolean;error?:string};
 type SortKey="firstName"|"familyName"|"identityNumber"|"status";
@@ -24,6 +28,7 @@ type StatusFilter="all"|"active"|"disabled"|"archived";
 const onlyDigits=(value:string)=>value.replace(/\D/g,"").slice(0,9);
 const validIdentity=(value:string)=>/^\d{9}$/.test(value);
 const fmtDate=(value:string)=>value?new Date(value).toLocaleString("ar"):"—";
+const toLocalInput=(iso:string)=>{if(!iso)return "";const d=new Date(iso);return new Date(d.getTime()-d.getTimezoneOffset()*60000).toISOString().slice(0,16)};
 
 function normalizeImportedIdentity(value:unknown){
  const digits=String(value??"").replace(/\D/g,"");
@@ -85,6 +90,14 @@ function TeacherPlatform({token,currentExam,workspaceTab}:TeacherPlatformProps){
 
  const [profile,setProfile]=useState<StudentProfile|null>(null);
  const [profileBusy,setProfileBusy]=useState(false);
+ const [passwordReveal,setPasswordReveal]=useState<{password:string;secondsLeft:number}|null>(null);
+ const passwordRevealTimer=useRef<number|null>(null);
+
+ const [history,setHistory]=useState<StudentProfile|null>(null);
+ const [historyBusy,setHistoryBusy]=useState(false);
+ const [reviewTarget,setReviewTarget]=useState<{assignmentId:string;studentId:string;attemptNumber:number}|null>(null);
+ const [historyDeadlineFor,setHistoryDeadlineFor]=useState<string|null>(null);
+ const [historyDeadlineValue,setHistoryDeadlineValue]=useState("");
 
  const selectedClass=useMemo(()=>classes.find(c=>c.classId===selectedClassId)||null,[classes,selectedClassId]);
 
@@ -157,9 +170,29 @@ function TeacherPlatform({token,currentExam,workspaceTab}:TeacherPlatformProps){
 
  useEffect(()=>{void loadClasses(false)},[]);
  useEffect(()=>{
-  setSelectedIds([]);setProfile(null);setEditingStudent(null);
+  setSelectedIds([]);setProfile(null);setEditingStudent(null);setHistory(null);setReviewTarget(null);clearPasswordReveal();
   if(selectedClassId)void loadStudents(selectedClassId);else setStudents([]);
  },[selectedClassId]);
+ useEffect(()=>()=>{if(passwordRevealTimer.current)window.clearInterval(passwordRevealTimer.current)},[]);
+
+ function clearPasswordReveal(){
+  if(passwordRevealTimer.current){window.clearInterval(passwordRevealTimer.current);passwordRevealTimer.current=null}
+  setPasswordReveal(null);
+ }
+ function startPasswordReveal(password:string){
+  clearPasswordReveal();
+  setPasswordReveal({password,secondsLeft:10});
+  passwordRevealTimer.current=window.setInterval(()=>{
+   setPasswordReveal(prev=>{
+    if(!prev)return null;
+    if(prev.secondsLeft<=1){
+     if(passwordRevealTimer.current){window.clearInterval(passwordRevealTimer.current);passwordRevealTimer.current=null}
+     return null;
+    }
+    return {...prev,secondsLeft:prev.secondsLeft-1};
+   });
+  },1000);
+ }
 
  async function createClass(){
   if(!newClassName.trim()||actionBusy)return;
@@ -211,17 +244,6 @@ function TeacherPlatform({token,currentExam,workspaceTab}:TeacherPlatformProps){
 
  function credentialText(name:string,identityNumber:string,password:string){
   return `الطالب: ${name}\nرقم الهوية / الدخول: ${identityNumber}\nكلمة المرور: ${password}`;
- }
-
- async function resetPassword(student:Student){
-  if(actionBusy||student.archived||!window.confirm("إنشاء كلمة مرور جديدة للطالب "+student.displayName+"؟"))return;
-  setActionBusy(true);setError("");setNotice("");setCredentialBox(null);
-  try{
-   const result=await teacherApi<{ok:true;temporaryPassword:string}>("/api/students",{method:"POST",body:JSON.stringify({action:"resetPassword",userId:student.userId})});
-   setCredentialBox({name:student.displayName,identityNumber:student.identityNumber||student.code,password:result.temporaryPassword});
-   setNotice("✓ تم تغيير كلمة المرور. يمكنك الآن نسخ بيانات الدخول.");
-  }catch(e){setError(e instanceof Error?e.message:"تعذر تغيير كلمة المرور.")}
-  finally{setActionBusy(false)}
  }
 
  async function toggleStudent(student:Student){
@@ -383,12 +405,72 @@ function TeacherPlatform({token,currentExam,workspaceTab}:TeacherPlatformProps){
  }
 
  async function openProfile(student:Student){
+  clearPasswordReveal();
   setProfileBusy(true);setError("");
   try{
    const result=await teacherApi<{ok:true;profile:StudentProfile}>("/api/students?profileUserId="+encodeURIComponent(student.userId));
    setProfile(result.profile);
   }catch(e){setError(e instanceof Error?e.message:"تعذر تحميل تفاصيل الطالب.")}
   finally{setProfileBusy(false)}
+ }
+
+ async function resetProfilePassword(){
+  if(!profile||actionBusy)return;
+  if(!window.confirm("سيتم إنشاء كلمة مرور جديدة للطالب، ولن تعمل كلمة المرور القديمة. هل تريد المتابعة؟"))return;
+  setActionBusy(true);setError("");
+  try{
+   const result=await teacherApi<{ok:true;temporaryPassword:string}>("/api/students",{method:"POST",body:JSON.stringify({action:"resetPassword",userId:profile.student.userId})});
+   startPasswordReveal(result.temporaryPassword);
+  }catch(e){setError(e instanceof Error?e.message:"تعذر إنشاء كلمة مرور جديدة.")}
+  finally{setActionBusy(false)}
+ }
+
+ async function openHistory(userId:string){
+  setHistoryBusy(true);setError("");
+  try{
+   const result=await teacherApi<{ok:true;profile:StudentProfile}>("/api/students?profileUserId="+encodeURIComponent(userId));
+   setHistory(result.profile);
+  }catch(e){setError(e instanceof Error?e.message:"تعذر تحميل سجل الوظائف.")}
+  finally{setHistoryBusy(false)}
+ }
+
+ async function historyAllowRetry(item:SubmittedAssignment){
+  if(!history||actionBusy)return;
+  setActionBusy(true);setError("");
+  try{
+   const result=await teacherApi<{ok:true;allowedAttempts:number}>("/api/assignment-results",{method:"POST",body:JSON.stringify({action:"allowRetry",assignmentId:item.assignmentId,studentId:history.student.userId})});
+   setHistory(h=>h?{...h,submittedAssignments:h.submittedAssignments.map(x=>x.assignmentId===item.assignmentId?{...x,allowedAttempts:result.allowedAttempts}:x)}:h);
+   setNotice("✓ تم السماح بمحاولة إضافية.");
+  }catch(e){setError(e instanceof Error?e.message:"تعذر السماح بالمحاولة.")}
+  finally{setActionBusy(false)}
+ }
+
+ function openHistoryDeadline(item:SubmittedAssignment){
+  setError("");setHistoryDeadlineFor(item.assignmentId);setHistoryDeadlineValue(item.dueAtOverride?toLocalInput(item.dueAtOverride):"");
+ }
+
+ async function saveHistoryDeadline(item:SubmittedAssignment){
+  if(!history||!historyDeadlineValue||actionBusy)return;
+  setActionBusy(true);setError("");
+  try{
+   const result=await teacherApi<{ok:true;dueAtOverride:string|null}>("/api/assignment-results",{method:"POST",body:JSON.stringify({action:"setDueAtOverride",assignmentId:item.assignmentId,studentId:history.student.userId,dueAtOverride:new Date(historyDeadlineValue).toISOString()})});
+   setHistory(h=>h?{...h,submittedAssignments:h.submittedAssignments.map(x=>x.assignmentId===item.assignmentId?{...x,dueAtOverride:result.dueAtOverride,effectiveDueAt:result.dueAtOverride||x.dueAt}:x)}:h);
+   setHistoryDeadlineFor(null);
+   setNotice("✓ تم تمديد الموعد.");
+  }catch(e){setError(e instanceof Error?e.message:"تعذر حفظ التمديد.")}
+  finally{setActionBusy(false)}
+ }
+
+ async function clearHistoryDeadline(item:SubmittedAssignment){
+  if(!history||actionBusy)return;
+  setActionBusy(true);setError("");
+  try{
+   const result=await teacherApi<{ok:true;dueAtOverride:string|null}>("/api/assignment-results",{method:"POST",body:JSON.stringify({action:"setDueAtOverride",assignmentId:item.assignmentId,studentId:history.student.userId,dueAtOverride:null})});
+   setHistory(h=>h?{...h,submittedAssignments:h.submittedAssignments.map(x=>x.assignmentId===item.assignmentId?{...x,dueAtOverride:result.dueAtOverride,effectiveDueAt:x.dueAt}:x)}:h);
+   setHistoryDeadlineFor(null);
+   setNotice("✓ تم إلغاء التمديد.");
+  }catch(e){setError(e instanceof Error?e.message:"تعذر إلغاء التمديد.")}
+  finally{setActionBusy(false)}
  }
 
  function toggleSelected(id:string){
@@ -599,8 +681,17 @@ function TeacherPlatform({token,currentExam,workspaceTab}:TeacherPlatformProps){
      {profile&&<section className="student-profile-card slide-over-panel">
       <div className="platform-card-heading">
        <div><span className="platform-eyebrow">Student Profile</span><h3>{profile.student.displayName}</h3><small>{profile.classroom?.name||"—"} · {profile.student.identityNumber}</small></div>
-       <button onClick={()=>setProfile(null)}>إغلاق</button>
+       <div className="student-row-actions">
+        <button onClick={resetProfilePassword} disabled={actionBusy}><IconKey size={14}/>كلمة المرور</button>
+        <button onClick={()=>{clearPasswordReveal();setProfile(null)}}>إغلاق</button>
+       </div>
       </div>
+      {passwordReveal&&<div className="credential-box">
+       <div><span className="platform-eyebrow">كلمة مرور جديدة</span></div>
+       <div className="credential-values"><div><span>كلمة المرور الجديدة</span><strong>{passwordReveal.password}</strong></div></div>
+       <div className="student-row-actions"><button onClick={()=>void copyText(passwordReveal.password,"✓ تم نسخ كلمة المرور.")}><IconCopy size={14}/>نسخ</button></div>
+       <p>ستختفي كلمة المرور بعد {passwordReveal.secondsLeft} ثوانٍ</p>
+      </div>}
       <div className="student-profile-stats">
        <article><strong>{profile.stats.assigned}</strong><span>واجبات</span></article>
        <article><strong>{profile.stats.completed}</strong><span>مكتملة</span></article>
@@ -617,6 +708,43 @@ function TeacherPlatform({token,currentExam,workspaceTab}:TeacherPlatformProps){
       </table></div>
      </section>}
 
+     {historyBusy&&<div className="platform-loading">⏳ جارٍ تحميل سجل الوظائف...</div>}
+     {history&&<section className="student-profile-card slide-over-panel">
+      <div className="platform-card-heading">
+       <div><span className="platform-eyebrow">Assignment History</span><h3>{history.student.displayName}</h3><small>{history.classroom?.name||"—"} · {history.student.identityNumber}</small></div>
+       <button onClick={()=>{setHistory(null);setHistoryDeadlineFor(null)}}>إغلاق</button>
+      </div>
+      <div className="students-table-wrap"><table className="students-table">
+       <thead><tr><th>اسم الوظيفة</th><th>تاريخ آخر تسليم</th><th>العلامة</th><th>عدد المحاولات</th><th>الحالة</th><th>إجراءات</th></tr></thead>
+       <tbody>{history.submittedAssignments.map(item=><Fragment key={item.assignmentId}>
+        <tr>
+         <td>{item.title||"—"}</td>
+         <td>{item.submittedAt?fmtDate(item.submittedAt):"—"}</td>
+         <td>{item.score+"/"+item.totalMarks+" - "+item.percentage+"%"}</td>
+         <td>{item.attemptsUsed>1?"المحاولات: "+item.attemptsUsed:item.attemptsUsed}</td>
+         <td>{item.finalized?"تم التسليم":"بانتظار المراجعة"}</td>
+         <td><div className="student-row-actions">
+          <button onClick={()=>setReviewTarget({assignmentId:item.assignmentId,studentId:history.student.userId,attemptNumber:item.latestAttemptNumber})}>👁 فحص الوظيفة</button>
+          {item.isCurrentClassAssignment?<>
+           <button onClick={()=>void historyAllowRetry(item)} disabled={actionBusy}>🔄 محاولة إضافية</button>
+           <button onClick={()=>historyDeadlineFor===item.assignmentId?setHistoryDeadlineFor(null):openHistoryDeadline(item)} disabled={actionBusy}>⏰ تمديد الموعد</button>
+          </>:<small className="result-code">سجل سابق</small>}
+         </div></td>
+        </tr>
+        {historyDeadlineFor===item.assignmentId&&<tr className="deadline-edit-row"><td colSpan={6}><div className="deadline-edit-inline">
+         <span>الموعد الأصلي: {fmtDate(item.dueAt)}</span>
+         {item.dueAtOverride&&<span>التمديد الحالي: {fmtDate(item.dueAtOverride)}</span>}
+         <input type="datetime-local" value={historyDeadlineValue} onChange={e=>setHistoryDeadlineValue(e.target.value)}/>
+         <button onClick={()=>void saveHistoryDeadline(item)} disabled={actionBusy||!historyDeadlineValue}>حفظ التمديد</button>
+         {item.dueAtOverride&&<button onClick={()=>void clearHistoryDeadline(item)} disabled={actionBusy}>إلغاء التمديد</button>}
+         <button onClick={()=>setHistoryDeadlineFor(null)}>إغلاق</button>
+        </div></td></tr>}
+       </Fragment>)}
+       {!history.submittedAssignments.length&&<tr><td colSpan={6}>لا توجد وظائف مسلّمة.</td></tr>}</tbody>
+      </table></div>
+     </section>}
+     {reviewTarget&&<AssignmentReview token={token} assignmentId={reviewTarget.assignmentId} studentId={reviewTarget.studentId} initialAttempt={reviewTarget.attemptNumber} onClose={()=>setReviewTarget(null)} onSaved={()=>{if(history)void openHistory(history.student.userId)}}/>}
+
      <div className="students-table-wrap"><table className="students-table students-table-pro">
       <thead><tr>
        <th><input type="checkbox" checked={visibleStudents.length>0&&visibleStudents.every(s=>selectedIds.includes(s.userId))} onChange={toggleSelectVisible} aria-label="تحديد الكل"/></th>
@@ -631,12 +759,12 @@ function TeacherPlatform({token,currentExam,workspaceTab}:TeacherPlatformProps){
        <td>{student.lastLoginAt?fmtDate(student.lastLoginAt):<span className="never-login">لم يدخل بعد</span>}</td>
        <td><div className="student-row-actions">
         <button className="student-row-primary" onClick={()=>void openProfile(student)} disabled={actionBusy}><IconUser size={14}/>التفاصيل</button>
+        {student.submittedAssignmentsCount>0&&<button onClick={()=>void openHistory(student.userId)} disabled={actionBusy}>📚 الوظائف ({student.submittedAssignmentsCount})</button>}
         <details className="row-menu" name="student-row-menu">
          <summary aria-label="مزيد من الإجراءات"><IconMore size={16}/></summary>
          <div className="row-menu-panel">
           <button onClick={()=>startEdit(student)} disabled={actionBusy}><IconEdit size={14}/>تعديل</button>
           <button onClick={()=>void copyText(student.identityNumber||student.code,"✓ تم نسخ رقم الهوية.")}><IconCopy size={14}/>نسخ رقم الهوية</button>
-          {!student.archived&&<button onClick={()=>resetPassword(student)} disabled={actionBusy}><IconKey size={14}/>كلمة مرور جديدة</button>}
           {!student.archived&&<button onClick={()=>toggleStudent(student)} disabled={actionBusy}>{student.active?"تعطيل الحساب":"تفعيل الحساب"}</button>}
           <button onClick={()=>archiveStudent(student)} disabled={actionBusy}>{student.archived?"↩ استعادة":"📦 أرشفة"}</button>
           <hr className="row-menu-sep"/>

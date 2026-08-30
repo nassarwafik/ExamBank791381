@@ -129,7 +129,37 @@ async function listStudents(container, classId, includeArchived = false) {
     const family = String(a.familyName).localeCompare(String(b.familyName), "ar");
     return family || String(a.firstName).localeCompare(String(b.firstName), "ar");
   });
-  return result;
+
+  // Table-row badge only needs a count, not full history — and it must not hide a student's
+  // historical submissions from a class they no longer belong to, so this is not scoped to
+  // classId. One single listing pass under SUBMISSION_PREFIX (not one per assignment), parsing
+  // "platform/submissions/{assignmentId}/{studentId}.json" directly; assignment documents are
+  // never downloaded here, and submission content is only fetched for students already in the
+  // current roster (no per-student N+1 request).
+  const idSet = new Set(result.map(s => s.userId));
+  const submittedSets = new Map(); // studentId -> Set<assignmentId>
+  if (idSet.size) {
+    for await (const blob of container.listBlobsFlat({ prefix: SUBMISSION_PREFIX })) {
+      if (!blob.name.endsWith(".json")) continue;
+      const rest = blob.name.slice(SUBMISSION_PREFIX.length); // "{assignmentId}/{studentId}.json"
+      const slashIndex = rest.indexOf("/");
+      if (slashIndex < 0) continue;
+      const assignmentId = rest.slice(0, slashIndex);
+      const studentId = rest.slice(slashIndex + 1, -".json".length);
+      if (!assignmentId || !studentId) continue;
+      if (!idSet.has(studentId)) continue;
+      const submission = await downloadJsonOrNull(container, blob.name);
+      const attempts = Array.isArray(submission?.attempts) ? submission.attempts : [];
+      if (!attempts.length) continue;
+      if (!submittedSets.has(studentId)) submittedSets.set(studentId, new Set());
+      submittedSets.get(studentId).add(assignmentId);
+    }
+  }
+
+  return result.map(student => ({
+    ...student,
+    submittedAssignmentsCount: submittedSets.get(student.userId)?.size || 0
+  }));
 }
 
 async function findStudentByIdentity(container, identityNumber) {
@@ -410,41 +440,76 @@ async function buildStudentProfile(container, userId) {
   if (!student || student.role !== "student") return null;
 
   const classroom = await getClassroom(container, String(student.classId || ""));
-  const assignments = (await listJson(container, ASSIGNMENT_PREFIX))
-    .filter(a => String(a.classId || "") === String(student.classId || ""))
+  const currentClassId = String(student.classId || "");
+
+  // Sorted once, newest first; the current-class "assignments" list below is a filtered view of
+  // this same sorted array, so it preserves the exact ordering already relied on elsewhere.
+  const allAssignments = (await listJson(container, ASSIGNMENT_PREFIX))
     .sort((a, b) => String(b.createdAt || "").localeCompare(String(a.createdAt || "")));
 
   const history = [];
+  const submittedAssignments = [];
   let completed = 0;
   let percentageSum = 0;
 
-  for (const assignment of assignments) {
+  for (const assignment of allAssignments) {
+    const assignmentId = String(assignment.assignmentId || "");
+    if (!assignmentId) continue;
+
+    // One submission read per assignment, reused for both the existing (current-class-only)
+    // "assignments" list and the new cross-class "submittedAssignments" history below.
     const submission = await downloadJsonOrNull(
       container,
-      SUBMISSION_PREFIX + assignment.assignmentId + "/" + student.userId + ".json"
+      SUBMISSION_PREFIX + assignmentId + "/" + student.userId + ".json"
     );
     const attempts = Array.isArray(submission?.attempts) ? submission.attempts : [];
     const latest = attempts.length ? attempts[attempts.length - 1] : null;
 
-    if (latest) {
-      completed += 1;
-      percentageSum += Number(latest.percentage || 0);
+    if (String(assignment.classId || "") === currentClassId) {
+      if (latest) {
+        completed += 1;
+        percentageSum += Number(latest.percentage || 0);
+      }
+      history.push({
+        assignmentId,
+        title: String(assignment.title || ""),
+        status: String(assignment.status || ""),
+        dueAt: String(assignment.dueAt || ""),
+        effectiveDueAt: String(submission?.dueAtOverride || assignment.dueAt || ""),
+        totalMarks: Number(assignment.totalMarks || 0),
+        attemptsUsed: attempts.length,
+        latestScore: latest ? Number(latest.score || 0) : null,
+        latestPercentage: latest ? Number(latest.percentage || 0) : null,
+        submittedAt: latest ? String(latest.submittedAt || "") : "",
+        finalized: latest ? latest.finalized === true : false
+      });
     }
 
-    history.push({
-      assignmentId: String(assignment.assignmentId || ""),
-      title: String(assignment.title || ""),
-      status: String(assignment.status || ""),
-      dueAt: String(assignment.dueAt || ""),
-      effectiveDueAt: String(submission?.dueAtOverride || assignment.dueAt || ""),
-      totalMarks: Number(assignment.totalMarks || 0),
-      attemptsUsed: attempts.length,
-      latestScore: latest ? Number(latest.score || 0) : null,
-      latestPercentage: latest ? Number(latest.percentage || 0) : null,
-      submittedAt: latest ? String(latest.submittedAt || "") : "",
-      finalized: latest ? latest.finalized === true : false
-    });
+    // Submitted-history entry: independent of the student's CURRENT class, so a class change
+    // never hides a real historical submission (only a fully-deleted assignment document can —
+    // see the report note on that limitation).
+    if (latest) {
+      const base = Math.max(1, Number(assignment.maxAttempts || 1));
+      submittedAssignments.push({
+        assignmentId,
+        title: String(assignment.title || ""),
+        submittedAt: String(latest.submittedAt || ""),
+        latestAttemptNumber: Number(latest.attemptNumber || attempts.length),
+        attemptsUsed: attempts.length,
+        allowedAttempts: Math.max(base, Number(submission?.allowedAttempts || 0)),
+        score: Number(latest.score || 0),
+        totalMarks: Number(latest.totalMarks || 0),
+        percentage: Number(latest.percentage || 0),
+        finalized: latest.finalized === true,
+        isCurrentClassAssignment: String(assignment.classId || "") === currentClassId,
+        dueAt: String(assignment.dueAt || ""),
+        dueAtOverride: submission?.dueAtOverride ? String(submission.dueAtOverride) : null,
+        effectiveDueAt: String(submission?.dueAtOverride || assignment.dueAt || "")
+      });
+    }
   }
+
+  submittedAssignments.sort((a, b) => String(b.submittedAt || "").localeCompare(String(a.submittedAt || "")));
 
   return {
     student: publicStudent(student),
@@ -455,13 +520,15 @@ async function buildStudentProfile(container, userId) {
       schoolYear: String(classroom.schoolYear || "")
     } : null,
     stats: {
-      assigned: assignments.length,
+      assigned: history.length,
       completed,
-      pending: Math.max(0, assignments.length - completed),
+      pending: Math.max(0, history.length - completed),
       average: completed ? Number((percentageSum / completed).toFixed(1)) : null,
       lastLoginAt: String(student.lastLoginAt || "")
     },
-    assignments: history
+    assignments: history,
+    submittedAssignmentsCount: submittedAssignments.length,
+    submittedAssignments
   };
 }
 
@@ -692,7 +759,11 @@ app.http("manageStudents", {
 
         if (action === "resetpassword") {
           const temporaryPassword = await resetStudentPassword(container, student, body?.password);
-          return { status: 200, jsonBody: { ok: true, temporaryPassword } };
+          return {
+            status: 200,
+            headers: { "Cache-Control": "no-store" },
+            jsonBody: { ok: true, temporaryPassword }
+          };
         }
         if (action === "toggleactive") {
           const active = !(student.active !== false);
