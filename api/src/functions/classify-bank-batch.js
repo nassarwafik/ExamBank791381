@@ -2,6 +2,7 @@ const { app } = require("@azure/functions");
 const { BlobServiceClient } = require("@azure/storage-blob");
 const fs = require("fs");
 const path = require("path");
+const { requireBuilderAuth } = require("../lib/builder-auth");
 
 const BANK_CONTAINER = "bank";
 const ASSETS_CONTAINER = "assets";
@@ -1793,42 +1794,16 @@ app.http(
         try {
 
           // =================================================
-          // AUTH
+          // AUTH (teacher/builder session required)
           // =================================================
 
-          const configuredKey =
-            process.env.BANK_SETUP_KEY;
-
-
-          const suppliedKey =
-            request.headers.get(
-              "x-bank-setup-key"
+          const auth =
+            requireBuilderAuth(
+              request
             );
 
-
-          if (
-            !configuredKey
-            ||
-            suppliedKey
-              !== configuredKey
-          ) {
-
-            return {
-
-              status:
-                401,
-
-
-              jsonBody: {
-
-                ok:
-                  false,
-
-
-                error:
-                  "Unauthorized"
-              }
-            };
+          if (!auth.ok) {
+            return auth.response;
           }
 
 

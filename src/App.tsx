@@ -406,6 +406,23 @@ function App() {
   const [hasUnsavedChanges, setHasUnsavedChanges] =
     useState(false);
 
+  useEffect(() => {
+    if (!hasUnsavedChanges) {
+      return;
+    }
+
+    const handleBeforeUnload = (event: BeforeUnloadEvent) => {
+      event.preventDefault();
+      event.returnValue = "";
+    };
+
+    window.addEventListener("beforeunload", handleBeforeUnload);
+
+    return () => {
+      window.removeEventListener("beforeunload", handleBeforeUnload);
+    };
+  }, [hasUnsavedChanges]);
+
   const [lastCloudSaveAt, setLastCloudSaveAt] =
     useState("");
 

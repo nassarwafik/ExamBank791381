@@ -6,6 +6,7 @@ const {
 const crypto = require("crypto");
 const fs = require("fs");
 const path = require("path");
+const { requireBuilderAuth } = require("../lib/builder-auth");
 
 
 const RAW_CONTAINER = "raw";
@@ -3935,34 +3936,16 @@ app.http(
         try {
 
           // =================================================
-          // Protection
+          // Authentication (teacher/builder session required)
           // =================================================
 
-          const configuredKey =
-            process.env
-              .BANK_SETUP_KEY;
-
-
-          const suppliedKey =
-            request.headers.get(
-              "x-bank-setup-key"
+          const auth =
+            requireBuilderAuth(
+              request
             );
 
-
-          if (
-            !configuredKey ||
-            suppliedKey !==
-              configuredKey
-          ) {
-            return {
-              status: 401,
-
-              jsonBody: {
-                ok: false,
-                error:
-                  "Unauthorized"
-              }
-            };
+          if (!auth.ok) {
+            return auth.response;
           }
 
 
