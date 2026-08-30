@@ -49,6 +49,14 @@
 .deadline-edit-inline{display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:10px 4px;color:var(--muted);font-size:12.5px}
 .deadline-edit-inline input{border:1px solid var(--line2);border-radius:9px;padding:7px 10px;font:inherit}
 .deadline-edit-inline button{border:1px solid var(--line2);background:#fff;color:var(--text);border-radius:9px;padding:7px 10px;font-weight:700;cursor:pointer}
+.item-analysis-sort{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin:4px 0 14px;color:var(--muted);font-size:12.5px}
+.item-analysis-sort button{border:1px solid var(--line2);background:#fff;color:var(--text);border-radius:var(--pill);padding:6px 12px;font-weight:700;font-size:12px;cursor:pointer}
+.item-analysis-sort button.active{border-color:var(--primary);background:var(--primary050);color:var(--primary2)}
+.item-analysis-text{max-width:320px;white-space:normal;line-height:1.6}
+.difficulty-badge{display:inline-flex;border-radius:var(--pill);padding:4px 10px;font-size:11px;font-weight:800}
+.difficulty-badge.easy{background:var(--okbg);color:#15803d}
+.difficulty-badge.medium{background:var(--warnbg);color:#b45309}
+.difficulty-badge.hard{background:var(--dangerbg);color:var(--danger)}
 
 /* ============================================================
    Phase 5 — Assignments: 3 clear zones (create / list / gradebook)
