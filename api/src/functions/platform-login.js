@@ -64,6 +64,13 @@ app.http("platformLogin", {
         };
       }
 
+      if (userCode.length > 128 || password.length > 512) {
+        return {
+          status: 400,
+          jsonBody: { ok: false, error: "بيانات الدخول غير صالحة." }
+        };
+      }
+
       let isTeacher = false;
       try { isTeacher = validateBuilderCredentials(userCode, password); } catch { isTeacher = false; }
 
@@ -120,12 +127,12 @@ app.http("platformLogin", {
           expiresInSeconds: STUDENT_TOKEN_TTL_SECONDS
         }
       };
-    } catch (error) {
+    } catch {
       return {
         status: 500,
         jsonBody: {
           ok: false,
-          error: error instanceof Error ? error.message : "Platform login failed."
+          error: "تعذر تسجيل الدخول حاليًا."
         }
       };
     }

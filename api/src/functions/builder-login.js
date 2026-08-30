@@ -34,6 +34,16 @@ app.http("builderLogin", {
         };
       }
 
+      if (userCode.length > 128 || password.length > 512) {
+        return {
+          status: 400,
+          jsonBody: {
+            ok: false,
+            error: "بيانات الدخول غير صالحة."
+          }
+        };
+      }
+
       if (!validateBuilderCredentials(userCode, password)) {
         return {
           status: 401,
@@ -56,15 +66,12 @@ app.http("builderLogin", {
         }
       };
     }
-    catch (error) {
+    catch {
       return {
         status: 500,
         jsonBody: {
           ok: false,
-          error:
-            error instanceof Error
-              ? error.message
-              : "Unknown builder login error"
+          error: "تعذر تسجيل الدخول حاليًا."
         }
       };
     }
