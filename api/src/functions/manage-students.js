@@ -436,6 +436,7 @@ async function buildStudentProfile(container, userId) {
       title: String(assignment.title || ""),
       status: String(assignment.status || ""),
       dueAt: String(assignment.dueAt || ""),
+      effectiveDueAt: String(submission?.dueAtOverride || assignment.dueAt || ""),
       totalMarks: Number(assignment.totalMarks || 0),
       attemptsUsed: attempts.length,
       latestScore: latest ? Number(latest.score || 0) : null,

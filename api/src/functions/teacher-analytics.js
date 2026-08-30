@@ -168,7 +168,7 @@ app.http("teacherAnalytics", {
       const missing = Math.max(0, expected - submitted);
       const pendingReview = submittedRecords.filter(record => record.attempt.finalized === false).length;
       const late = submittedRecords.filter(record => {
-        const due = timestamp(record.assignment.dueAt);
+        const due = timestamp(record.submission?.dueAtOverride || record.assignment.dueAt);
         return due && timestamp(record.attempt.submittedAt) > due;
       }).length;
 
