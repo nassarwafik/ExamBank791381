@@ -74,14 +74,15 @@
 .auth-form{ display:flex; flex-direction:column; gap:16px; }
 .auth-field{ display:flex; flex-direction:column; gap:7px; }
 .auth-field > span{ font-weight:700; font-size:13px; color:var(--lg-text); }
-.auth-input{ position:relative; }
+.auth-input{ position:relative; display:flex; align-items:center; }
 .auth-input svg{
   position:absolute; inset-inline-start:14px; inset-block-start:50%; transform:translateY(-50%);
-  width:18px; height:18px; stroke:var(--lg-faint); pointer-events:none;
+  width:18px; height:18px; stroke:var(--lg-faint); pointer-events:none; z-index:1;
 }
 .auth-input input{
   width:100%; box-sizing:border-box; font:inherit; font-size:14px; color:var(--lg-text);
-  padding:13px 15px 13px 44px; background:var(--lg-surface);
+  padding-block:13px; padding-inline-start:44px; padding-inline-end:15px;
+  background:var(--lg-surface);
   border:1px solid var(--lg-line-2); border-radius:var(--lg-r);
   transition:border-color .18s var(--lg-ease), box-shadow .18s var(--lg-ease);
 }
