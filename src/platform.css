@@ -81,8 +81,8 @@
 .platform-grid {
   display: grid;
   grid-template-columns:
-    minmax(300px, 0.8fr)
-    minmax(480px, 1.4fr);
+    minmax(300px, 1fr)
+    minmax(480px, 2fr);
   gap: 18px;
   margin-top: 18px;
 }
