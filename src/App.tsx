@@ -4677,7 +4677,7 @@ function App() {
 
   if (!loggedIn) {
     return (
-      <main className="auth login-page" dir="rtl">
+      <main className="auth" dir="rtl">
         <section className="auth-brand">
           <svg className="auth-net" viewBox="0 0 400 300" aria-hidden="true" focusable="false">
             <g fill="none" stroke="#fff" strokeWidth="1">
