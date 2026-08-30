@@ -1,13 +1,17 @@
 const { app } = require("@azure/functions");
 const { BlobServiceClient } = require("@azure/storage-blob");
+const { requireBuilderAuth } = require("../lib/builder-auth");
 
 app.http("storageStatus", {
   methods: ["GET"],
   authLevel: "anonymous",
   route: "storage-status",
 
-  handler: async () => {
+  handler: async request => {
     try {
+      const auth = requireBuilderAuth(request);
+      if (!auth.ok) return auth.response;
+
       const connectionString =
         process.env.AZURE_STORAGE_CONNECTION_STRING;
 
@@ -16,7 +20,7 @@ app.http("storageStatus", {
           status: 500,
           jsonBody: {
             ok: false,
-            error: "AZURE_STORAGE_CONNECTION_STRING is not configured"
+            error: "تعذر فحص حالة التخزين حاليًا."
           }
         };
       }
@@ -50,15 +54,12 @@ app.http("storageStatus", {
           files
         }
       };
-    } catch (error) {
+    } catch {
       return {
         status: 500,
         jsonBody: {
           ok: false,
-          error:
-            error instanceof Error
-              ? error.message
-              : "Unknown storage error"
+          error: "تعذر فحص حالة التخزين حاليًا."
         }
       };
     }
