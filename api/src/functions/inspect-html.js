@@ -1,5 +1,6 @@
 const { app } = require("@azure/functions");
 const { BlobServiceClient } = require("@azure/storage-blob");
+const { requireBuilderAuth } = require("../lib/builder-auth");
 
 // ==========================================================
 // Convert downloaded Blob stream to UTF-8 string
@@ -148,8 +149,14 @@ app.http("inspectHtml", {
   authLevel: "anonymous",
   route: "inspect-html",
 
-  handler: async () => {
+  handler: async request => {
     try {
+      const auth = requireBuilderAuth(request);
+
+      if (!auth.ok) {
+        return auth.response;
+      }
+
       const connectionString =
         process.env.AZURE_STORAGE_CONNECTION_STRING;
 

@@ -2,6 +2,9 @@ const { app } = require("@azure/functions");
 const {
   BlobServiceClient
 } = require("@azure/storage-blob");
+const {
+  requireBuilderAuth
+} = require("../lib/builder-auth");
 
 
 const BANK_CONTAINER = "bank";
@@ -111,31 +114,14 @@ app.http("bankSummary", {
   handler: async request => {
     try {
       // ----------------------------------------------------
-      // Temporary protection
+      // Authentication (teacher/builder session required)
       // ----------------------------------------------------
 
-      const configuredKey =
-        process.env.BANK_SETUP_KEY;
+      const auth =
+        requireBuilderAuth(request);
 
-
-      const suppliedKey =
-        request.headers.get(
-          "x-bank-setup-key"
-        );
-
-
-      if (
-        !configuredKey ||
-        suppliedKey !== configuredKey
-      ) {
-        return {
-          status: 401,
-
-          jsonBody: {
-            ok: false,
-            error: "Unauthorized"
-          }
-        };
+      if (!auth.ok) {
+        return auth.response;
       }
 
 
