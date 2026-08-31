@@ -1201,7 +1201,7 @@ app.http("classifyQuestionPreview", {
         }
       };
     }
-    catch (error) {
+    catch {
       return {
         status:
           500,
@@ -1210,10 +1210,7 @@ app.http("classifyQuestionPreview", {
           ok:
             false,
 
-          error:
-            error instanceof Error
-              ? error.message
-              : "Unknown classification error"
+          error: "تعذر تصنيف السؤال حاليًا."
         }
       };
     }

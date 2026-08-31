@@ -12,5 +12,5 @@ app.http("studentAssignment",{methods:["GET"],authLevel:"anonymous",route:"stude
   if(a.openAt&&new Date(a.openAt).getTime()>Date.now())return {status:403,jsonBody:{ok:false,error:"الواجب لم يُفتح بعد."}};
   const s=await downloadJsonOrNull(c,SUB_PREFIX+id+"/"+student.userId+".json"),effectiveDueAt=(s&&s.dueAtOverride)?s.dueAtOverride:(a.dueAt||"");
   return {status:200,jsonBody:{ok:true,assignment:{assignmentId:a.assignmentId,title:a.title,instructions:a.instructions,openAt:a.openAt||"",dueAt:a.dueAt||"",effectiveDueAt,maxAttempts:Math.max(1,Number(a.maxAttempts||1)),sourceExamTitle:a.sourceExamTitle||"",questionCount:Number(a.questionCount||0),totalMarks:Number(a.totalMarks||0),exam:studentExam(a.examSnapshot)}}};
- }catch(e){return {status:500,jsonBody:{ok:false,error:e instanceof Error?e.message:"Unable to open assignment."}}}
+ }catch{return {status:500,jsonBody:{ok:false,error:"تعذر فتح الواجب حاليًا."}}}
 }});

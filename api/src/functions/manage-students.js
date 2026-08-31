@@ -969,12 +969,12 @@ app.http("manageStudents", {
         status: 400,
         jsonBody: { ok: false, error: "Unsupported student action." }
       };
-    } catch (error) {
+    } catch {
       return {
         status: 500,
         jsonBody: {
           ok: false,
-          error: error instanceof Error ? error.message : "Student action failed."
+          error: "تعذر تنفيذ إجراء الطالب حاليًا."
         }
       };
     }

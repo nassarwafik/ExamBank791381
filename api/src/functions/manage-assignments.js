@@ -30,5 +30,5 @@ app.http("manageAssignments",{methods:["GET","POST"],authLevel:"anonymous",route
   }
   if(action==="delete"){const id=String(b.assignmentId||"");if(!id)return {status:400,jsonBody:{ok:false,error:"assignmentId is required."}};await c.getBlobClient(PREFIX+id+".json").deleteIfExists();return {status:200,jsonBody:{ok:true,deleted:true}}}
   return {status:400,jsonBody:{ok:false,error:"Unsupported assignment action."}};
- }catch(e){return {status:500,jsonBody:{ok:false,error:e instanceof Error?e.message:"Assignment action failed."}}}
+ }catch{return {status:500,jsonBody:{ok:false,error:"تعذر تنفيذ إجراء الواجب حاليًا."}}}
 }});

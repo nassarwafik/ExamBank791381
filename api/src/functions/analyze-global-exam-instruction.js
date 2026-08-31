@@ -710,18 +710,14 @@ app.http(
             }
           };
         }
-        catch (error) {
+        catch {
           return {
             status: 500,
 
             jsonBody: {
               ok: false,
 
-              error:
-                error
-                instanceof Error
-                  ? error.message
-                  : "Global AI analysis failed."
+              error: "تعذر تحليل التعليمات حاليًا."
             }
           };
         }

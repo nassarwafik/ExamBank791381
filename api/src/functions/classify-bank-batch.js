@@ -3143,7 +3143,7 @@ app.http(
             }
           };
         }
-        catch (error) {
+        catch {
 
           // =================================================
           // ERROR
@@ -3161,12 +3161,7 @@ app.http(
                 false,
 
 
-              error:
-                error instanceof Error
-
-                  ? error.message
-
-                  : "Unknown batch classification error"
+              error: "تعذر تنفيذ التصنيف الجماعي حاليًا."
             }
           };
         }

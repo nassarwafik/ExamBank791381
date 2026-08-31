@@ -463,18 +463,14 @@ app.http(
             }
           };
         }
-        catch (error) {
+        catch {
           return {
             status: 500,
 
             jsonBody: {
               ok: false,
 
-              error:
-                error
-                instanceof Error
-                  ? error.message
-                  : "Classroom action failed."
+              error: "تعذر تنفيذ إجراء الصف حاليًا."
             }
           };
         }

@@ -706,15 +706,12 @@ app.http("interpretExamRequest", {
         }
       };
     }
-    catch (error) {
+    catch {
       return {
         status: 500,
         jsonBody: {
           ok: false,
-          error:
-            error instanceof Error
-              ? error.message
-              : "Unknown exam request analysis error"
+          error: "تعذر تحليل طلب الامتحان حاليًا."
         }
       };
     }
