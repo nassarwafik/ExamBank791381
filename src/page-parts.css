@@ -128,6 +128,32 @@
 @keyframes ppSlideIn{ from{ transform:translateX(-100%); } to{ transform:translateX(0); } }
 @media (prefers-reduced-motion:reduce){ .slide-over-panel, .student-edit-panel{ animation:none; } }
 
+/* ---------- Centered modal: Student Details / Assignment History ---------- */
+.centered-modal-panel{
+  position:fixed; top:50%; left:50%; transform:translate(-50%,-50%); z-index:71;
+  box-sizing:border-box;
+  width:min(720px, calc(100vw - 32px)); max-height:min(88vh,900px); overflow-y:auto;
+  border-radius:18px; box-shadow:0 30px 70px -20px rgba(15,23,42,.35);
+  animation:ebFadeIn .18s var(--pp-ease) both;
+}
+@media (prefers-reduced-motion:reduce){ .centered-modal-panel{ animation:none; } }
+@media (max-width:640px){
+  .centered-modal-panel{ width:calc(100vw - 20px); max-height:92vh; }
+}
+
+.student-medals-section{ margin:14px 0; }
+.student-medals-section h4{ margin:0 0 8px; color:var(--pp-navy); font-size:13px; }
+.medal-badge-grid{ display:flex; flex-wrap:wrap; gap:10px; }
+.medal-badge{
+  display:flex; align-items:flex-start; gap:8px;
+  border:1px solid var(--pp-line); background:var(--pp-surface2);
+  border-radius:12px; padding:9px 11px; min-width:170px; max-width:260px;
+}
+.medal-badge strong{ display:block; font-size:12px; color:var(--pp-text); }
+.medal-badge span{ display:block; font-size:11px; color:var(--pp-muted); margin-top:2px; }
+.medal-badge small{ display:block; font-size:10px; color:var(--pp-muted); margin-top:2px; }
+.medal-badge-empty{ color:var(--pp-muted); font-size:12px; margin:0; }
+
 @media(max-width:760px){
   .student-quick-actions{ grid-template-columns:1fr; }
   .student-toolbar-export{ margin-inline-start:0; width:100%; justify-content:center; }

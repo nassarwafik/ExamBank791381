@@ -3,14 +3,13 @@ import {useEffect,useState} from "react";
 import StudentExamPage from "./StudentExamPage";
 import {IconLogout,IconAssignments,IconMedal} from "./icons";
 import {AVATAR_OPTIONS,AvatarCircle} from "./avatars";
+import {MEDAL_COLORS,medalTier} from "./medals";
 type Props={token:string;displayName:string;onLogout:()=>void};
 type Summary={assignmentId:string;title:string;instructions:string;openAt:string;dueAt:string;effectiveDueAt?:string;questionCount:number;totalMarks:number;availability:"scheduled"|"open"|"closed";attemptsUsed:number;allowedAttempts:number;canAttempt:boolean;latestScore:number|null;latestPercentage:number|null;createdAt:string};
 type Detail={assignmentId:string;title:string;instructions:string;openAt:string;dueAt:string;effectiveDueAt?:string;maxAttempts:number;questionCount:number;totalMarks:number;exam:{title?:string;metadata?:{school?:string;subject?:string;grade?:string;className?:string;generalInstructions?:string};questions?:any[]}};
 type Dashboard={student:{userId:string;code:string;displayName:string;classId:string;avatarId?:string};classroom:{classId:string;name:string;grade:string;schoolYear:string}|null;assignments:Summary[];stats:{assigned:number;completed:number;average:number|null}};
 const fmt=(v:string)=>v?new Date(v).toLocaleString("ar"):"بدون موعد";
 const label=(v:Summary["availability"])=>v==="scheduled"?"قريبًا":v==="closed"?"انتهى الموعد":"متاح الآن";
-const MEDAL_COLORS:Record<"gold"|"silver"|"bronze",string>={gold:"#eab308",silver:"#94a3b8",bronze:"#c2703d"};
-function medalTier(pct:number):"gold"|"silver"|"bronze"|null{if(pct>=90)return "gold";if(pct>=80)return "silver";if(pct>=70)return "bronze";return null}
 export default function StudentPortal({token,displayName,onLogout}:Props){
  const [data,setData]=useState<Dashboard|null>(null),[loading,setLoading]=useState(true),[error,setError]=useState(""),[detail,setDetail]=useState<Detail|null>(null),[busy,setBusy]=useState(false);
  const [avatarPickerOpen,setAvatarPickerOpen]=useState(false),[avatarSaving,setAvatarSaving]=useState(false);
