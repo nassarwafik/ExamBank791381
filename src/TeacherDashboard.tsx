@@ -11,6 +11,7 @@ type ClassComparison={classId:string;name:string;grade:string;students:number;as
 type TopicAnalytics={topic:string;average:number|null;gradedQuestions:number};
 type FollowUp={userId:string;displayName:string;identityNumber:string;classId:string;className:string;average:number|null;assigned:number;completed:number;missing:number;completionRate:number;trendDelta:number;trend:"improving"|"declining"|"stable";lastLoginAt:string;severity:"high"|"medium"|"low";reasons:string[]};
 type Insight={tone:"success"|"warning"|"info";title:string;text:string};
+type StudentDetail={userId:string;displayName:string;classId:string;className:string;average:number|null;assigned:number;completed:number;missing:number;completionRate:number;trendDelta:number;trend:"improving"|"declining"|"stable";lastLoginAt:string;scoreTrend:Array<{assignmentId:string;title:string;date:string;percentage:number}>;topicAnalytics:TopicAnalytics[]};
 type Analytics={
  ok:true;generatedAt:string;
  scope:{classId:string;className:string;from:string;to:string};
@@ -24,6 +25,8 @@ type Analytics={
  followUp:FollowUp[];
  topImprovers:FollowUp[];
  insights:Insight[];
+ students:Array<{userId:string;displayName:string}>;
+ studentDetail:StudentDetail|null;
 };
 type ApiError={ok?:boolean;error?:string};
 type StudentProfile={
@@ -88,6 +91,12 @@ function ClassComparisonChart({items,onSelect}:{items:ClassComparison[];onSelect
  if(!items.length)return <div className="analytics-empty-chart">لا توجد بيانات صفوف بعد.</div>;
  return <div className="analytics-chart-canvas analytics-chart-class"><Bar data={data} options={options}/><small className="analytics-chart-hint">اضغط على صف لعرض تفاصيله</small></div>;
 }
+function StudentTrendChart({items}:{items:Array<{title:string;percentage:number}>}){
+ const data=useMemo(()=>({labels:items.map(x=>x.title),datasets:[{label:"العلامة",data:items.map(x=>clampPct(x.percentage)),borderColor:"#7c3aed",backgroundColor:"rgba(124,58,237,.13)",pointBackgroundColor:"#7c3aed",pointBorderColor:"#fff",pointBorderWidth:2,pointRadius:4,pointHoverRadius:7,borderWidth:3,tension:.38,fill:true}]}),[items]);
+ const options:ChartOptions<"line">=useMemo(()=>({responsive:true,maintainAspectRatio:false,animation:{duration:1050,easing:"easeOutQuart"},interaction:{mode:"index",intersect:false},plugins:{legend:{display:false},tooltip:{rtl:true,callbacks:{label:i=>" العلامة: "+Number(i.raw||0).toFixed(1)+"%"}}},scales:{y:{beginAtZero:true,max:100,ticks:{callback:v=>v+"%"},grid:{color:"rgba(148,163,184,.18)"}},x:{grid:{display:false},ticks:{maxRotation:0,autoSkip:true,maxTicksLimit:8}}}}),[]);
+ if(items.length<2)return <div className="analytics-empty-chart">تظهر حركة العلامات بعد توفر نتيجتين على الأقل لهذا الطالب.</div>;
+ return <div className="analytics-chart-canvas analytics-chart-line"><Line data={data} options={options}/></div>;
+}
 function TopicChart({items}:{items:TopicAnalytics[]}){
  const visible=items.slice(0,10);
  const data=useMemo(()=>({labels:visible.map(x=>x.topic),datasets:[{label:"متوسط الموضوع",data:visible.map(x=>clampPct(x.average)),backgroundColor:visible.map(x=>Number(x.average||0)<60?"rgba(239,68,68,.76)":Number(x.average||0)>=80?"rgba(22,163,74,.76)":"rgba(245,158,11,.76)"),borderRadius:7,borderSkipped:false}]}),[visible]);
@@ -99,9 +108,14 @@ function TopicChart({items}:{items:TopicAnalytics[]}){
 function TeacherDashboard({token}:DashboardProps){
  const [data,setData]=useState<Analytics|null>(null);
  const [classId,setClassId]=useState("");
+ const [studentId,setStudentId]=useState("");
  const [range,setRange]=useState<RangeKey>("all");
  const [loading,setLoading]=useState(false);
  const [error,setError]=useState("");
+ const [aiScope,setAiScope]=useState<"class"|"student"|"">("");
+ const [aiAdvice,setAiAdvice]=useState("");
+ const [aiBusy,setAiBusy]=useState(false);
+ const [aiError,setAiError]=useState("");
  const [assignmentResults,setAssignmentResults]=useState<AssignmentResults|null>(null);
  const [assignmentBusy,setAssignmentBusy]=useState(false);
  const [profile,setProfile]=useState<StudentProfile|null>(null);
@@ -120,6 +134,7 @@ function TeacherDashboard({token}:DashboardProps){
  function queryString(){
   const params=new URLSearchParams();
   if(classId)params.set("classId",classId);
+  if(studentId)params.set("studentId",studentId);
   if(range!=="all"){
    const days=Number(range);
    const from=new Date(Date.now()-days*24*60*60*1000);
@@ -139,7 +154,23 @@ function TeacherDashboard({token}:DashboardProps){
   finally{setLoading(false)}
  }
 
- useEffect(()=>{void loadDashboard()},[classId,range]);
+ useEffect(()=>{void loadDashboard()},[classId,studentId,range]);
+
+ function selectClass(id:string){setClassId(id);setStudentId("");setAiAdvice("");setAiScope("");setAiError("")}
+ function selectStudent(id:string){setStudentId(id);setAiAdvice("");setAiScope("");setAiError("")}
+
+ async function runAiAnalysis(scope:"class"|"student"){
+  setAiBusy(true);setAiError("");setAiAdvice("");setAiScope(scope);
+  try{
+   const payload:{classId:string;studentId?:string}={classId};
+   if(scope==="student")payload.studentId=studentId;
+   const response=await fetch("/api/teacher-analytics-ai",{method:"POST",headers:{"Content-Type":"application/json","x-builder-token":token,"Authorization":"Bearer "+token},body:JSON.stringify(payload)});
+   const result=await response.json() as {ok?:boolean;advice?:string;error?:string};
+   if(!response.ok||!result.ok||!result.advice)throw new Error(result.error||"تعذر إجراء التحليل الذكي.");
+   setAiAdvice(result.advice);
+  }catch(e){setAiError(e instanceof Error?e.message:"تعذر إجراء التحليل الذكي.");}
+  finally{setAiBusy(false)}
+ }
 
  async function openAssignment(item:AssignmentTrend){
   setAssignmentBusy(true);setError("");setReview(null);
@@ -212,7 +243,8 @@ function TeacherDashboard({token}:DashboardProps){
   </section>
 
   <section className="analytics-filter-bar">
-   <label>الصف<select value={classId} onChange={(e:{target:{value:string}})=>setClassId(e.target.value)}><option value="">كل الصفوف</option>{data.classes.filter(item=>item.active).map(item=><option key={item.classId} value={item.classId}>{item.name} · {item.grade||"—"}</option>)}</select></label>
+   <label>الصف<select value={classId} onChange={(e:{target:{value:string}})=>selectClass(e.target.value)}><option value="">كل الصفوف</option>{data.classes.filter(item=>item.active).map(item=><option key={item.classId} value={item.classId}>{item.name} · {item.grade||"—"}</option>)}</select></label>
+   {classId&&<label>الطالب<select value={studentId} onChange={(e:{target:{value:string}})=>selectStudent(e.target.value)}><option value="">كل طلاب الصف</option>{data.students.map(item=><option key={item.userId} value={item.userId}>{item.displayName}</option>)}</select></label>}
    <div className="analytics-field"><span>الفترة</span><div className="analytics-segmented" role="group" aria-label="الفترة">
     <button type="button" className={range==="all"?"active":""} onClick={()=>setRange("all" as RangeKey)}>كل الفترة</button>
     <button type="button" className={range==="30"?"active":""} onClick={()=>setRange("30" as RangeKey)}>30 يومًا</button>
@@ -223,6 +255,11 @@ function TeacherDashboard({token}:DashboardProps){
   </section>
 
   {error&&<div className="platform-error">{error}</div>}
+
+  {studentId&&data.studentDetail&&<section className="analytics-main-grid">
+   <article className="analytics-card analytics-wide"><div className="analytics-card-head"><div><span className="platform-eyebrow">Student Focus</span><h3>{data.studentDetail.displayName}</h3></div><span className="analytics-chip">{data.studentDetail.className}</span></div><div className="analytics-mini-kpis"><span>المعدل <b>{fmtPct(data.studentDetail.average)}</b></span><span>مكتملة <b>{data.studentDetail.completed}/{data.studentDetail.assigned}</b></span><span>ناقصة <b>{data.studentDetail.missing}</b></span><span>الاتجاه <b>{trendIcon(data.studentDetail.trendDelta)} {trendText(data.studentDetail.trendDelta)}</b></span></div><StudentTrendChart items={data.studentDetail.scoreTrend}/></article>
+   <article className="analytics-card"><div className="analytics-card-head"><div><span className="platform-eyebrow">Student Topics</span><h3>الموضوعات لهذا الطالب</h3></div></div><TopicChart items={data.studentDetail.topicAnalytics}/><button type="button" className="analytics-ai-button" onClick={()=>void runAiAnalysis("student")} disabled={aiBusy}>{aiBusy&&aiScope==="student"?"⏳ جارٍ التحليل...":"🤖 تحليل بيانات هذا الطالب بالذكاء الاصطناعي"}</button>{aiError&&aiScope==="student"&&<div className="platform-error">{aiError}</div>}{aiAdvice&&aiScope==="student"&&<div className="analytics-ai-advice">{aiAdvice.split(/\n+/).filter(Boolean).map((line,index)=><p key={index}>{line}</p>)}</div>}</article>
+  </section>}
 
   <section className="analytics-kpi-hierarchy">
    <article className="analytics-kpi analytics-kpi-primary"><span>متوسط العلامات</span><strong><AnimatedNumber value={k.average} suffix="%" decimals={1}/></strong><small>{k.highest===null?"لا توجد نتائج":"أعلى "+fmtPct(k.highest)+" · أدنى "+fmtPct(k.lowest)}</small></article>
@@ -277,6 +314,8 @@ function TeacherDashboard({token}:DashboardProps){
 
   {reviewBusy&&<div className="analytics-loading">جارٍ فتح تفاصيل المحاولة...</div>}
   {review&&<section className="analytics-drill-card"><div className="analytics-card-head"><div><span className="platform-eyebrow">Drill Down · Attempt · Questions</span><h3>{review.student.studentName} · المحاولة #{review.attempt.attemptNumber}</h3><p>{review.assignment.title} · {fmtPct(review.attempt.percentage)} · {review.attempt.finalized?"مصححة بالكامل":"تحتاج مراجعة"}</p></div><button onClick={()=>setReview(null)}>إغلاق</button></div><div className="analytics-attempt-buttons analytics-attempt-switcher">{review.attempts.map(attempt=><button className={attempt.attemptNumber===review.attempt.attemptNumber?"active":""} key={attempt.attemptNumber} onClick={()=>void openAttempt(review.assignment.assignmentId,review.student.studentId,attempt.attemptNumber)}>محاولة #{attempt.attemptNumber} · {fmtPct(attempt.percentage)}</button>)}</div><div className="students-table-wrap"><table className="students-table analytics-table"><thead><tr><th>#</th><th>السؤال</th><th>النوع</th><th>العلامة</th><th>الحالة</th></tr></thead><tbody>{review.questions.map(question=>{const score=question.manualScore??question.autoGrade?.score??0;const max=question.autoGrade?.maxMarks??question.marks;const pending=question.autoGrade?.manualReview===true&&question.autoGrade?.reviewed!==true&&question.manualScore===null;return <tr key={question.questionId}><td>{question.questionNumber}</td><td className="analytics-question-text">{question.text}</td><td>{question.type||"—"}</td><td>{score}/{max}</td><td>{pending?<span className="analytics-risk high">مراجعة</span>:<span className="status-active">مصحح</span>}</td></tr>})}</tbody></table></div>{review.attempt.teacherFeedback&&<div className="analytics-feedback"><strong>ملاحظة المعلم:</strong> {review.attempt.teacherFeedback}</div>}</section>}
+
+  <section className="analytics-card analytics-ai-section"><div className="analytics-card-head"><div><span className="platform-eyebrow">AI Insights</span><h3>تحليل البيانات العامة واستخلاص العبر</h3><p>يحلل الذكاء الاصطناعي بيانات {selectedClass?.name||"كل الصفوف"} ويقترح خطوات عملية للتطوير.</p></div></div><button type="button" className="analytics-ai-button primary" onClick={()=>void runAiAnalysis("class")} disabled={aiBusy}>{aiBusy&&aiScope==="class"?"⏳ جارٍ التحليل...":"🤖 تحليل البيانات العامة واستخلاص العبر"}</button>{aiError&&aiScope==="class"&&<div className="platform-error">{aiError}</div>}{aiAdvice&&aiScope==="class"&&<div className="analytics-ai-advice">{aiAdvice.split(/\n+/).filter(Boolean).map((line,index)=><p key={index}>{line}</p>)}</div>}</section>
  </div>;
 }
 

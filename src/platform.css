@@ -1438,6 +1438,42 @@
 .analytics-question-text { min-width: 300px; max-width: 560px; white-space: normal; line-height: 1.55; }
 .analytics-feedback { margin-top: 10px; padding: 10px 12px; border-radius: 10px; background: #fffbeb; color: #92400e; font-size: 11px; }
 
+.analytics-ai-section { margin-top: 18px; }
+
+.analytics-ai-button {
+  border: 1px solid #cfe0f8;
+  background: #eef4ff;
+  color: #1d4ed8;
+  border-radius: 12px;
+  padding: 11px 16px;
+  font-weight: 900;
+  cursor: pointer;
+  width: 100%;
+}
+
+.analytics-ai-button:disabled { opacity: .65; cursor: default; }
+
+.analytics-ai-button.primary {
+  background: linear-gradient(135deg, #1d4ed8, #7c3aed);
+  color: white;
+  border-color: transparent;
+  width: auto;
+  padding: 12px 22px;
+}
+
+.analytics-ai-advice {
+  margin-top: 12px;
+  padding: 14px 16px;
+  border-radius: 14px;
+  background: #f5f3ff;
+  border: 1px solid #ddd6fe;
+  color: #3730a3;
+  line-height: 1.9;
+}
+
+.analytics-ai-advice p { margin: 0 0 8px; }
+.analytics-ai-advice p:last-child { margin-bottom: 0; }
+
 @media (max-width: 1100px) {
   .analytics-kpi-grid { grid-template-columns: repeat(3,minmax(150px,1fr)); }
   .analytics-main-grid { grid-template-columns: 1fr; }
