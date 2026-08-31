@@ -60,5 +60,5 @@ app.http("assignmentItemAnalysis",{methods:["GET"],authLevel:"anonymous",route:"
    };
   });
   return {status:200,jsonBody:{ok:true,assignmentId:a.assignmentId,title:String(a.title||""),studentsInClass:users.length,studentsSubmitted:latestAttempts.length,attemptsAnalyzed:latestAttempts.length,questions:questionStats}};
- }catch(e){return {status:500,jsonBody:{ok:false,error:e instanceof Error?e.message:"Item analysis failed."}}}
+ }catch{return {status:500,jsonBody:{ok:false,error:"تعذر تحليل أسئلة الواجب حاليًا."}}}
 }});

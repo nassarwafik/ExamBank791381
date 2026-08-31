@@ -86,13 +86,10 @@ app.http("questionImage", {
         }
       };
     }
-    catch (error) {
+    catch {
       return {
         status: 500,
-        body:
-          error instanceof Error
-            ? error.message
-            : "Unknown image error"
+        body: "تعذر تحميل الصورة حاليًا."
       };
     }
   }

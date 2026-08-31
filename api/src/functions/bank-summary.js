@@ -384,17 +384,14 @@ app.http("bankSummary", {
         }
       };
     }
-    catch (error) {
+    catch {
       return {
         status: 500,
 
         jsonBody: {
           ok: false,
 
-          error:
-            error instanceof Error
-              ? error.message
-              : "Unknown bank summary error"
+          error: "تعذر جلب ملخص البنك حاليًا."
         }
       };
     }

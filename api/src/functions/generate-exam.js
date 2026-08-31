@@ -728,15 +728,12 @@ app.http("generateExam", {
         }
       };
     }
-    catch (error) {
+    catch {
       return {
         status: 500,
         jsonBody: {
           ok: false,
-          error:
-            error instanceof Error
-              ? error.message
-              : "Unknown exam generation error"
+          error: "تعذر توليد الامتحان حاليًا."
         }
       };
     }

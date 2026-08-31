@@ -5047,7 +5047,7 @@ app.http(
         }
 
 
-        catch (error) {
+        catch {
           return {
             status: 500,
 
@@ -5055,11 +5055,7 @@ app.http(
               ok:
                 false,
 
-              error:
-                error instanceof
-                  Error
-                  ? error.message
-                  : "Unknown HTML import error"
+              error: "تعذر استيراد ملف HTML حاليًا."
             }
           };
         }

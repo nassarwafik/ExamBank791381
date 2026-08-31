@@ -423,7 +423,7 @@ app.http("teacherAnalytics", {
         status: 500,
         jsonBody: {
           ok: false,
-          error: error instanceof Error ? error.message : "Teacher analytics failed."
+          error: "تعذر جلب تحليلات المعلم حاليًا."
         }
       };
     }

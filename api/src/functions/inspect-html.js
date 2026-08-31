@@ -313,17 +313,14 @@ app.http("inspectHtml", {
             "HTML source was downloaded and parsed successfully."
         }
       };
-    } catch (error) {
+    } catch {
       return {
         status: 500,
 
         jsonBody: {
           ok: false,
 
-          error:
-            error instanceof Error
-              ? error.message
-              : "Unknown HTML inspection error"
+          error: "تعذر فحص صفحة HTML حاليًا."
         }
       };
     }

@@ -1372,17 +1372,14 @@ app.http("buildBank2025", {
         }
       };
     }
-    catch (error) {
+    catch {
       return {
         status: 500,
 
         jsonBody: {
           ok: false,
 
-          error:
-            error instanceof Error
-              ? error.message
-              : "Unknown build-bank error"
+          error: "تعذر إنشاء بنك الأسئلة حاليًا."
         }
       };
     }
