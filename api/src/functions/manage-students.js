@@ -7,6 +7,16 @@ const {
   hashPassword,
   generateTemporaryPassword
 } = require("../lib/student-auth");
+const {
+  mutateJsonWithRetry,
+  uploadJsonConditional,
+  isConcurrencyConflict
+} = require("../lib/platform-storage");
+
+// Thrown from inside a mutateJsonWithRetry callback to mean "nothing to do" (target document is
+// missing, or already in the desired state) — caught at each call site and treated as a silent
+// no-op, matching the equivalent early-returns the unprotected code used to have.
+class SkipMutation extends Error {}
 
 const BANK_CONTAINER = "bank";
 const USER_PREFIX = "platform/users/";
@@ -115,6 +125,24 @@ function ensureStudentIds(classroom) {
   return classroom.studentIds;
 }
 
+// Re-reads the classroom fresh on every attempt (via mutateJsonWithRetry) instead of trusting a
+// possibly-stale in-memory copy, so concurrent roster changes (archive/unarchive/move/delete/create
+// racing each other) never silently drop one another's studentIds update. Silently does nothing if
+// the classroom no longer exists, matching the previous `if (classroom) {...}` call sites.
+async function mutateClassroomStudentIds(container, classId, applyMutation) {
+  if (!classId) return;
+  try {
+    await mutateJsonWithRetry(container, CLASS_PREFIX + classId + ".json", current => {
+      if (!current) throw new SkipMutation();
+      applyMutation(current);
+      current.updatedAt = new Date().toISOString();
+      return current;
+    });
+  } catch (e) {
+    if (!(e instanceof SkipMutation)) throw e;
+  }
+}
+
 async function listStudents(container, classId, includeArchived = false) {
   const result = [];
   for await (const blob of container.listBlobsFlat({ prefix: USER_PREFIX })) {
@@ -214,11 +242,16 @@ async function setAuthActive(container, student, active) {
   const code = String(student.code || student.identityNumber || "");
   if (!code) return;
   const name = AUTH_PREFIX + studentCodeHash(code) + ".json";
-  const auth = await downloadJsonOrNull(container, name);
-  if (!auth) return;
-  auth.active = active;
-  auth.updatedAt = new Date().toISOString();
-  await uploadJson(container, name, auth);
+  try {
+    await mutateJsonWithRetry(container, name, current => {
+      if (!current) throw new SkipMutation();
+      current.active = active;
+      current.updatedAt = new Date().toISOString();
+      return current;
+    });
+  } catch (e) {
+    if (!(e instanceof SkipMutation)) throw e;
+  }
 }
 
 async function createStudentRecord(container, classroom, input, options = {}) {
@@ -278,8 +311,19 @@ async function createStudentRecord(container, classroom, input, options = {}) {
     updatedAt: now
   };
 
+  // Auth document is written first, with a create-only conditional write (fails if a blob already
+  // exists at this path). The identityNumber uniqueness check above has a narrow TOCTOU window —
+  // two concurrent creates for the same identity number could both pass it — so this conditional
+  // write is the real guard: it turns a collision into an explicit error instead of one request
+  // silently overwriting the other's auth record. Only once it succeeds do we create the student
+  // document, so a collision here never leaves an orphaned student with no matching login.
+  try {
+    await uploadJsonConditional(container, AUTH_PREFIX + studentCodeHash(code) + ".json", authDocument, null);
+  } catch (e) {
+    if (isConcurrencyConflict(e)) throw new Error("رقم الهوية مستخدم مسبقًا لطالب آخر. أعد المحاولة.");
+    throw e;
+  }
   await uploadJson(container, USER_PREFIX + userId + ".json", student);
-  await uploadJson(container, AUTH_PREFIX + studentCodeHash(code) + ".json", authDocument);
   const ids = ensureStudentIds(classroom);
   if (!ids.includes(userId)) ids.push(userId);
 
@@ -292,56 +336,78 @@ async function resetStudentPassword(container, student, requestedPassword = "") 
 
   const code = String(student.code || student.identityNumber || "");
   const authBlobName = AUTH_PREFIX + studentCodeHash(code) + ".json";
-  const authDocument = await downloadJsonOrNull(container, authBlobName);
-  if (!authDocument) throw new Error("ملف دخول الطالب غير موجود.");
-
   const { salt, passwordHash } = hashPassword(temporaryPassword);
-  authDocument.salt = salt;
-  authDocument.passwordHash = passwordHash;
-  authDocument.updatedAt = new Date().toISOString();
-  await uploadJson(container, authBlobName, authDocument);
+  await mutateJsonWithRetry(container, authBlobName, current => {
+    if (!current) throw new Error("ملف دخول الطالب غير موجود.");
+    current.salt = salt;
+    current.passwordHash = passwordHash;
+    current.updatedAt = new Date().toISOString();
+    return current;
+  });
   return temporaryPassword;
 }
 
+// Every function below keeps its original (container, student, ...) signature — callers (both the
+// single-row actions and the bulk-action loop) need zero changes — but now re-reads the student
+// document fresh inside mutateJsonWithRetry instead of trusting the pre-loaded `student` object, so
+// a concurrent action on the same student can never be silently lost. `student.userId`/`.code`/
+// `.identityNumber`/`.classId` are only used as stable lookup keys (never as the value written).
+
 async function changeStudentActive(container, student, active) {
-  if (student.archived === true && active) throw new Error("استعد الطالب من الأرشيف أولًا.");
-  student.active = !!active;
-  student.updatedAt = new Date().toISOString();
-  await uploadJson(container, USER_PREFIX + student.userId + ".json", student);
+  await mutateJsonWithRetry(container, USER_PREFIX + student.userId + ".json", current => {
+    if (!current) throw new Error("الطالب غير موجود.");
+    if (current.archived === true && active) throw new Error("استعد الطالب من الأرشيف أولًا.");
+    current.active = !!active;
+    current.updatedAt = new Date().toISOString();
+    return current;
+  });
   await setAuthActive(container, student, !!active);
 }
 
 async function archiveStudent(container, student) {
-  if (student.archived === true) return;
-  student.archived = true;
-  student.active = false;
-  student.archivedAt = new Date().toISOString();
-  student.updatedAt = student.archivedAt;
-  await uploadJson(container, USER_PREFIX + student.userId + ".json", student);
-  await setAuthActive(container, student, false);
-
-  const classroom = await getClassroom(container, String(student.classId || ""));
-  if (classroom) {
-    classroom.studentIds = ensureStudentIds(classroom).filter(id => id !== student.userId);
-    await saveClassroom(container, classroom);
+  try {
+    await mutateJsonWithRetry(container, USER_PREFIX + student.userId + ".json", current => {
+      if (!current || current.archived === true) throw new SkipMutation();
+      const now = new Date().toISOString();
+      current.archived = true;
+      current.active = false;
+      current.archivedAt = now;
+      current.updatedAt = now;
+      return current;
+    });
+  } catch (e) {
+    if (e instanceof SkipMutation) return;
+    throw e;
   }
+  await setAuthActive(container, student, false);
+  await mutateClassroomStudentIds(container, String(student.classId || ""), classroom => {
+    classroom.studentIds = ensureStudentIds(classroom).filter(id => id !== student.userId);
+  });
 }
 
 async function unarchiveStudent(container, student) {
-  if (student.archived !== true) return;
-  const classroom = await getClassroom(container, String(student.classId || ""));
+  const classId = String(student.classId || "");
+  const classroom = await getClassroom(container, classId);
   if (!classroom || classroom.active === false) throw new Error("فعّل الصف قبل استعادة الطالب.");
 
-  student.archived = false;
-  student.active = true;
-  student.archivedAt = "";
-  student.updatedAt = new Date().toISOString();
-  await uploadJson(container, USER_PREFIX + student.userId + ".json", student);
+  try {
+    await mutateJsonWithRetry(container, USER_PREFIX + student.userId + ".json", current => {
+      if (!current || current.archived !== true) throw new SkipMutation();
+      current.archived = false;
+      current.active = true;
+      current.archivedAt = "";
+      current.updatedAt = new Date().toISOString();
+      return current;
+    });
+  } catch (e) {
+    if (e instanceof SkipMutation) return;
+    throw e;
+  }
   await setAuthActive(container, student, true);
-
-  const ids = ensureStudentIds(classroom);
-  if (!ids.includes(student.userId)) ids.push(student.userId);
-  await saveClassroom(container, classroom);
+  await mutateClassroomStudentIds(container, classId, freshClassroom => {
+    const ids = ensureStudentIds(freshClassroom);
+    if (!ids.includes(student.userId)) ids.push(student.userId);
+  });
 }
 
 async function moveStudent(container, student, targetClassId) {
@@ -351,29 +417,33 @@ async function moveStudent(container, student, targetClassId) {
   const oldClassId = String(student.classId || "");
   if (oldClassId === targetClassId) return;
 
-  const oldClass = await getClassroom(container, oldClassId);
-  if (oldClass) {
-    oldClass.studentIds = ensureStudentIds(oldClass).filter(id => id !== student.userId);
-    await saveClassroom(container, oldClass);
+  await mutateClassroomStudentIds(container, oldClassId, classroom => {
+    classroom.studentIds = ensureStudentIds(classroom).filter(id => id !== student.userId);
+  });
+
+  try {
+    await mutateJsonWithRetry(container, USER_PREFIX + student.userId + ".json", current => {
+      if (!current) throw new SkipMutation();
+      current.classId = targetClassId;
+      current.updatedAt = new Date().toISOString();
+      return current;
+    });
+  } catch (e) {
+    if (!(e instanceof SkipMutation)) throw e;
   }
 
-  student.classId = targetClassId;
-  student.updatedAt = new Date().toISOString();
-  await uploadJson(container, USER_PREFIX + student.userId + ".json", student);
-
   if (student.archived !== true) {
-    const ids = ensureStudentIds(target);
-    if (!ids.includes(student.userId)) ids.push(student.userId);
-    await saveClassroom(container, target);
+    await mutateClassroomStudentIds(container, targetClassId, classroom => {
+      const ids = ensureStudentIds(classroom);
+      if (!ids.includes(student.userId)) ids.push(student.userId);
+    });
   }
 }
 
 async function deleteStudent(container, student) {
-  const classroom = await getClassroom(container, String(student.classId || ""));
-  if (classroom) {
+  await mutateClassroomStudentIds(container, String(student.classId || ""), classroom => {
     classroom.studentIds = ensureStudentIds(classroom).filter(id => id !== student.userId);
-    await saveClassroom(container, classroom);
-  }
+  });
 
   const code = String(student.code || student.identityNumber || "");
   if (code) {
@@ -572,7 +642,10 @@ app.http("manageStudents", {
         }
 
         const result = await createStudentRecord(container, classroom, body, { forceGeneratedPassword: false });
-        await saveClassroom(container, classroom);
+        await mutateClassroomStudentIds(container, classId, freshClassroom => {
+          const ids = ensureStudentIds(freshClassroom);
+          if (!ids.includes(result.student.userId)) ids.push(result.student.userId);
+        });
         return { status: 200, jsonBody: { ok: true, ...result } };
       }
 
@@ -706,47 +779,84 @@ app.http("manageStudents", {
           return { status: 404, jsonBody: { ok: false, error: "ملف دخول الطالب غير موجود." } };
         }
 
-        student.schemaVersion = 3;
-        student.firstName = firstName;
-        student.familyName = familyName;
-        student.displayName = firstName + " " + familyName;
-        student.identityNumber = identityNumber;
-        student.code = newCode;
-        student.classId = newClassId;
-        student.updatedAt = new Date().toISOString();
-
-        if (newPassword) {
-          const { salt, passwordHash } = hashPassword(newPassword);
-          oldAuth.salt = salt;
-          oldAuth.passwordHash = passwordHash;
-        }
-
-        oldAuth.schemaVersion = 3;
-        oldAuth.codeHash = studentCodeHash(newCode);
-        oldAuth.active = student.active !== false && student.archived !== true;
-        oldAuth.updatedAt = new Date().toISOString();
-
-        await uploadJson(container, studentBlobName, student);
+        // student.active/.archived aren't touched by this action, so reading them off the
+        // already-loaded `student` (rather than a fresh re-read) to compute the auth doc's
+        // `active` flag below matches this code's own pre-existing behavior/risk level.
+        const authActive = student.active !== false && student.archived !== true;
         const newAuthName = AUTH_PREFIX + studentCodeHash(newCode) + ".json";
-        await uploadJson(container, newAuthName, oldAuth);
-        if (newAuthName !== oldAuthName) await container.getBlobClient(oldAuthName).deleteIfExists();
+
+        await mutateJsonWithRetry(container, studentBlobName, current => {
+          if (!current || current.role !== "student") throw new Error("الطالب غير موجود.");
+          current.schemaVersion = 3;
+          current.firstName = firstName;
+          current.familyName = familyName;
+          current.displayName = firstName + " " + familyName;
+          current.identityNumber = identityNumber;
+          current.code = newCode;
+          current.classId = newClassId;
+          current.updatedAt = new Date().toISOString();
+          return current;
+        });
+
+        if (newAuthName === oldAuthName) {
+          await mutateJsonWithRetry(container, oldAuthName, current => {
+            if (!current) throw new Error("ملف دخول الطالب غير موجود.");
+            if (newPassword) {
+              const { salt, passwordHash } = hashPassword(newPassword);
+              current.salt = salt;
+              current.passwordHash = passwordHash;
+            }
+            current.schemaVersion = 3;
+            current.codeHash = studentCodeHash(newCode);
+            current.active = authActive;
+            current.updatedAt = new Date().toISOString();
+            return current;
+          });
+        } else {
+          // Identity-number change (rename): a narrow, infrequent, deliberate admin action.
+          // Still protect the new auth path with a create-only conditional write, so this can
+          // never silently clobber an unrelated student who independently claimed the exact same
+          // identity number in the interim (the findStudentByIdentity check above already covers
+          // the common case; this is the retry-safe backstop for the remaining TOCTOU window).
+          const newAuthDoc = {
+            ...oldAuth,
+            schemaVersion: 3,
+            codeHash: studentCodeHash(newCode),
+            active: authActive,
+            updatedAt: new Date().toISOString()
+          };
+          if (newPassword) {
+            const { salt, passwordHash } = hashPassword(newPassword);
+            newAuthDoc.salt = salt;
+            newAuthDoc.passwordHash = passwordHash;
+          }
+          try {
+            await uploadJsonConditional(container, newAuthName, newAuthDoc, null);
+          } catch (e) {
+            if (isConcurrencyConflict(e)) {
+              return { status: 409, jsonBody: { ok: false, error: "رقم الهوية مستخدم مسبقًا." } };
+            }
+            throw e;
+          }
+          await container.getBlobClient(oldAuthName).deleteIfExists();
+        }
 
         if (oldClassId !== newClassId) {
-          const oldClassroom = await getClassroom(container, oldClassId);
-          if (oldClassroom) {
-            oldClassroom.studentIds = ensureStudentIds(oldClassroom).filter(id => id !== userId);
-            await saveClassroom(container, oldClassroom);
-          }
+          await mutateClassroomStudentIds(container, oldClassId, classroom => {
+            classroom.studentIds = ensureStudentIds(classroom).filter(id => id !== userId);
+          });
           if (student.archived !== true) {
-            const ids = ensureStudentIds(newClassroom);
-            if (!ids.includes(userId)) ids.push(userId);
-            await saveClassroom(container, newClassroom);
+            await mutateClassroomStudentIds(container, newClassId, classroom => {
+              const ids = ensureStudentIds(classroom);
+              if (!ids.includes(userId)) ids.push(userId);
+            });
           }
         }
 
+        const updatedStudent = await downloadJsonOrNull(container, studentBlobName);
         return {
           status: 200,
-          jsonBody: { ok: true, student: publicStudent(student), passwordChanged: !!newPassword }
+          jsonBody: { ok: true, student: publicStudent(updatedStudent || student), passwordChanged: !!newPassword }
         };
       }
 
