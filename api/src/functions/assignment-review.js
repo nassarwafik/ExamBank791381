@@ -2,6 +2,7 @@
 const {app}=require("@azure/functions");
 const {requireBuilderAuth}=require("../lib/builder-auth");
 const {getContainer,downloadJsonOrNull,mutateJsonWithRetry,StorageConflictError}=require("../lib/platform-storage");
+const {recordAuditEvent}=require("../lib/audit-log");
 const AP="platform/assignments/",SP="platform/submissions/",UP="platform/users/";
 const CONFLICT_MESSAGE="حدث تعارض مؤقت أثناء حفظ البيانات. حاول مرة أخرى.";
 function qid(q,i){return String(q?.examQuestionId||q?.id||q?.number||i+1)}
@@ -50,7 +51,7 @@ app.http("assignmentReview",{methods:["GET","POST"],authLevel:"anonymous",route:
   const reviewSameClass=String(reviewStudent.classId||"")===String(reviewAssignment.classId||"");
   if(!reviewSameClass&&!historicalSubmissionProvesOwnership(existingSubmission,assignmentId,studentId,String(reviewAssignment.classId||"")))return {status:403,jsonBody:{ok:false,error:"الطالب لا ينتمي إلى صف هذا الواجب."}};
   const incoming=b.overrides&&typeof b.overrides==="object"?b.overrides:{},teacherFeedback=String(b.teacherFeedback||"").trim(),reviewedAt=new Date().toISOString();
-  let resultOut=null;
+  let resultOut=null,appliedCount=0;
   try{
    await mutateJsonWithRetry(c,name,current=>{
     if(!current){const err=new Error("التسليم غير موجود.");err.httpStatus=404;throw err}
@@ -58,7 +59,8 @@ app.http("assignmentReview",{methods:["GET","POST"],authLevel:"anonymous",route:
     if(index<0){const err=new Error("المحاولة غير موجودة.");err.httpStatus=404;throw err}
     const attempt=attempts[index];
     attempt.manualOverrides=attempt.manualOverrides&&typeof attempt.manualOverrides==="object"?attempt.manualOverrides:{};
-    for(const [questionId,value] of Object.entries(incoming)){if(!value||typeof value!=="object")continue;const grade=(attempt.questionGrades||[]).find(g=>String(g.questionId)===String(questionId));if(!grade)continue;attempt.manualOverrides[String(questionId)]={score:round(clamp(value.score,0,Number(grade.maxMarks||0))),comment:String(value.comment||"").trim(),reviewedAt}}
+    appliedCount=0;
+    for(const [questionId,value] of Object.entries(incoming)){if(!value||typeof value!=="object")continue;const grade=(attempt.questionGrades||[]).find(g=>String(g.questionId)===String(questionId));if(!grade)continue;attempt.manualOverrides[String(questionId)]={score:round(clamp(value.score,0,Number(grade.maxMarks||0))),comment:String(value.comment||"").trim(),reviewedAt};appliedCount++}
     attempt.teacherFeedback=teacherFeedback;attempt.reviewedAt=reviewedAt;rebuildAttempt(attempt);
     attempts[index]=attempt;current.attempts=attempts;current.updatedAt=reviewedAt;
     resultOut={attemptNumber:attempt.attemptNumber,score:attempt.score,totalMarks:attempt.totalMarks,percentage:attempt.percentage,manualReviewMarks:attempt.manualReviewMarks,finalized:attempt.finalized,teacherFeedback:attempt.teacherFeedback};
@@ -68,6 +70,9 @@ app.http("assignmentReview",{methods:["GET","POST"],authLevel:"anonymous",route:
    if(e instanceof StorageConflictError)return {status:503,jsonBody:{ok:false,error:CONFLICT_MESSAGE}};
    if(e?.httpStatus)return {status:e.httpStatus,jsonBody:{ok:false,error:e.message}};
    throw e;
+  }
+  if(appliedCount>0){
+   await recordAuditEvent(c,{actor:auth.user?.sub,action:"assignment.manualGradeOverride",targetType:"student",targetId:studentId,targetLabel:String(reviewStudent.displayName||reviewStudent.code||""),details:{assignmentId,attemptNumber,overriddenQuestions:appliedCount,newScore:resultOut?.score}});
   }
   return {status:200,jsonBody:{ok:true,result:resultOut}};
  }catch{return {status:500,jsonBody:{ok:false,error:"تعذر تنفيذ عملية التصحيح حاليًا."}}}

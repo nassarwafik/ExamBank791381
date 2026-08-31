@@ -2,6 +2,7 @@
 const {app}=require("@azure/functions"),crypto=require("crypto");
 const {requireBuilderAuth}=require("../lib/builder-auth");
 const {getContainer,downloadJsonOrNull,uploadJson,listJson}=require("../lib/platform-storage");
+const {recordAuditEvent}=require("../lib/audit-log");
 const PREFIX="platform/assignments/",CLASS_PREFIX="platform/classes/";
 const iso=v=>{const s=String(v||"").trim();if(!s)return "";const d=new Date(s);if(Number.isNaN(d.getTime()))throw new Error("صيغة التاريخ غير صحيحة.");return d.toISOString()};
 function cleanExam(v){const x=JSON.parse(JSON.stringify(v||{}));if(Array.isArray(x.questions))x.questions=x.questions.map(q=>({...q,history:[],redoStack:[]}));x.revisionHistory=[];return x}
@@ -28,7 +29,7 @@ app.http("manageAssignments",{methods:["GET","POST"],authLevel:"anonymous",route
    else a.maxAttempts=Math.min(10,Math.max(1,Number(b.maxAttempts||1)));
    a.updatedAt=new Date().toISOString();await uploadJson(c,name,a);return {status:200,jsonBody:{ok:true,assignment:summary(a)}};
   }
-  if(action==="delete"){const id=String(b.assignmentId||"");if(!id)return {status:400,jsonBody:{ok:false,error:"assignmentId is required."}};await c.getBlobClient(PREFIX+id+".json").deleteIfExists();return {status:200,jsonBody:{ok:true,deleted:true}}}
+  if(action==="delete"){const id=String(b.assignmentId||"");if(!id)return {status:400,jsonBody:{ok:false,error:"assignmentId is required."}};const existing=await downloadJsonOrNull(c,PREFIX+id+".json");await c.getBlobClient(PREFIX+id+".json").deleteIfExists();await recordAuditEvent(c,{actor:auth.user?.sub,action:"assignment.delete",targetType:"assignment",targetId:id,targetLabel:existing?.title||""});return {status:200,jsonBody:{ok:true,deleted:true}}}
   return {status:400,jsonBody:{ok:false,error:"Unsupported assignment action."}};
  }catch{return {status:500,jsonBody:{ok:false,error:"تعذر تنفيذ إجراء الواجب حاليًا."}}}
 }});
