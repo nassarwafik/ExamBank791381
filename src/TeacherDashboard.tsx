@@ -256,10 +256,13 @@ function TeacherDashboard({token}:DashboardProps){
 
   {error&&<div className="platform-error">{error}</div>}
 
-  {studentId&&data.studentDetail&&<section className="analytics-main-grid">
-   <article className="analytics-card analytics-wide"><div className="analytics-card-head"><div><span className="platform-eyebrow">Student Focus</span><h3>{data.studentDetail.displayName}</h3></div><span className="analytics-chip">{data.studentDetail.className}</span></div><div className="analytics-mini-kpis"><span>المعدل <b>{fmtPct(data.studentDetail.average)}</b></span><span>مكتملة <b>{data.studentDetail.completed}/{data.studentDetail.assigned}</b></span><span>ناقصة <b>{data.studentDetail.missing}</b></span><span>الاتجاه <b>{trendIcon(data.studentDetail.trendDelta)} {trendText(data.studentDetail.trendDelta)}</b></span></div><StudentTrendChart items={data.studentDetail.scoreTrend}/></article>
-   <article className="analytics-card"><div className="analytics-card-head"><div><span className="platform-eyebrow">Student Topics</span><h3>الموضوعات لهذا الطالب</h3></div></div><TopicChart items={data.studentDetail.topicAnalytics}/><button type="button" className="analytics-ai-button" onClick={()=>void runAiAnalysis("student")} disabled={aiBusy}>{aiBusy&&aiScope==="student"?"⏳ جارٍ التحليل...":"🤖 تحليل بيانات هذا الطالب بالذكاء الاصطناعي"}</button>{aiError&&aiScope==="student"&&<div className="platform-error">{aiError}</div>}{aiAdvice&&aiScope==="student"&&<div className="analytics-ai-advice">{aiAdvice.split(/\n+/).filter(Boolean).map((line,index)=><p key={index}>{line}</p>)}</div>}</article>
-  </section>}
+  {studentId&&data.studentDetail&&<>
+  <section className="analytics-card analytics-wide"><div className="analytics-card-head"><div><span className="platform-eyebrow">Student Focus</span><h3>{data.studentDetail.displayName}</h3></div><span className="analytics-chip">{data.studentDetail.className}</span></div><div className="analytics-mini-kpis"><span>المعدل <b>{fmtPct(data.studentDetail.average)}</b></span><span>مكتملة <b>{data.studentDetail.completed}/{data.studentDetail.assigned}</b></span><span>ناقصة <b>{data.studentDetail.missing}</b></span><span>الاتجاه <b>{trendIcon(data.studentDetail.trendDelta)} {trendText(data.studentDetail.trendDelta)}</b></span></div><StudentTrendChart items={data.studentDetail.scoreTrend}/></section>
+  <section className="analytics-student-focus-grid">
+   <article className="analytics-card"><div className="analytics-card-head"><div><span className="platform-eyebrow">Student Topics</span><h3>الموضوعات لهذا الطالب</h3></div></div><TopicChart items={data.studentDetail.topicAnalytics}/></article>
+   <article className="analytics-card analytics-student-ai-card"><button type="button" className="analytics-ai-button" onClick={()=>void runAiAnalysis("student")} disabled={aiBusy}>{aiBusy&&aiScope==="student"?"⏳ جارٍ التحليل...":"🤖 تحليل بيانات هذا الطالب بالذكاء الاصطناعي"}</button>{aiError&&aiScope==="student"&&<div className="platform-error">{aiError}</div>}{aiAdvice&&aiScope==="student"&&<div className="analytics-ai-advice">{aiAdvice.split(/\n+/).filter(Boolean).map((line,index)=><p key={index}>{line}</p>)}</div>}</article>
+  </section>
+  </>}
 
   <section className="analytics-kpi-hierarchy">
    <article className="analytics-kpi analytics-kpi-primary"><span>متوسط العلامات</span><strong><AnimatedNumber value={k.average} suffix="%" decimals={1}/></strong><small>{k.highest===null?"لا توجد نتائج":"أعلى "+fmtPct(k.highest)+" · أدنى "+fmtPct(k.lowest)}</small></article>
