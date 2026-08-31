@@ -12,6 +12,7 @@ const {
   uploadJsonConditional,
   isConcurrencyConflict
 } = require("../lib/platform-storage");
+const { recordAuditEvent } = require("../lib/audit-log");
 
 // Thrown from inside a mutateJsonWithRetry callback to mean "nothing to do" (target document is
 // missing, or already in the desired state) — caught at each call site and treated as a silent
@@ -854,6 +855,16 @@ app.http("manageStudents", {
         }
 
         const updatedStudent = await downloadJsonOrNull(container, studentBlobName);
+        if (newPassword) {
+          await recordAuditEvent(container, {
+            actor: auth.user?.sub,
+            action: "student.resetPassword",
+            targetType: "student",
+            targetId: userId,
+            targetLabel: (updatedStudent || student).displayName || newCode,
+            details: { viaProfileUpdate: true }
+          });
+        }
         return {
           status: 200,
           jsonBody: { ok: true, student: publicStudent(updatedStudent || student), passwordChanged: !!newPassword }
@@ -869,6 +880,13 @@ app.http("manageStudents", {
 
         if (action === "resetpassword") {
           const temporaryPassword = await resetStudentPassword(container, student, body?.password);
+          await recordAuditEvent(container, {
+            actor: auth.user?.sub,
+            action: "student.resetPassword",
+            targetType: "student",
+            targetId: student.userId,
+            targetLabel: student.displayName || student.code
+          });
           return {
             status: 200,
             headers: { "Cache-Control": "no-store" },
@@ -890,6 +908,13 @@ app.http("manageStudents", {
         }
 
         await deleteStudent(container, student);
+        await recordAuditEvent(container, {
+          actor: auth.user?.sub,
+          action: "student.delete",
+          targetType: "student",
+          targetId: student.userId,
+          targetLabel: student.displayName || student.code
+        });
         return { status: 200, jsonBody: { ok: true, deleted: true } };
       }
 
@@ -941,7 +966,25 @@ app.http("manageStudents", {
                 code: publicValue.code,
                 password
               });
-            } else if (operation === "delete") await deleteStudent(container, student);
+              await recordAuditEvent(container, {
+                actor: auth.user?.sub,
+                action: "student.resetPassword",
+                targetType: "student",
+                targetId: userId,
+                targetLabel: publicValue.displayName || publicValue.code,
+                details: { bulk: true }
+              });
+            } else if (operation === "delete") {
+              await deleteStudent(container, student);
+              await recordAuditEvent(container, {
+                actor: auth.user?.sub,
+                action: "student.delete",
+                targetType: "student",
+                targetId: userId,
+                targetLabel: student.displayName || student.code,
+                details: { bulk: true }
+              });
+            }
 
             results.push(userId);
           } catch (error) {

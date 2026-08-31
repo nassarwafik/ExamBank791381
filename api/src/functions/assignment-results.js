@@ -2,6 +2,7 @@
 const {app}=require("@azure/functions");
 const {requireBuilderAuth}=require("../lib/builder-auth");
 const {getContainer,downloadJsonOrNull,listJson,mutateJsonWithRetry,StorageConflictError}=require("../lib/platform-storage");
+const {recordAuditEvent}=require("../lib/audit-log");
 const AP="platform/assignments/",SP="platform/submissions/",UP="platform/users/";
 const CONFLICT_MESSAGE="حدث تعارض مؤقت أثناء حفظ البيانات. حاول مرة أخرى.";
 app.http("assignmentResults",{methods:["GET","POST"],authLevel:"anonymous",route:"assignment-results",handler:async request=>{
@@ -33,6 +34,7 @@ app.http("assignmentResults",{methods:["GET","POST"],authLevel:"anonymous",route
     if(e instanceof StorageConflictError)return {status:503,jsonBody:{ok:false,error:CONFLICT_MESSAGE}};
     throw e;
    }
+   await recordAuditEvent(c,{actor:auth.user?.sub,action:"assignment.allowRetry",targetType:"student",targetId:studentId,targetLabel:String(student.displayName||student.code||""),details:{assignmentId:id,allowedAttempts:finalAllowed}});
    return {status:200,jsonBody:{ok:true,allowedAttempts:finalAllowed}};
   }
   if(resultAction==="setDueAtOverride"){
@@ -61,6 +63,7 @@ app.http("assignmentResults",{methods:["GET","POST"],authLevel:"anonymous",route
     if(e instanceof StorageConflictError)return {status:503,jsonBody:{ok:false,error:CONFLICT_MESSAGE}};
     throw e;
    }
+   await recordAuditEvent(c,{actor:auth.user?.sub,action:"assignment.setDueAtOverride",targetType:"student",targetId:studentId,targetLabel:String(student.displayName||student.code||""),details:{assignmentId:id,dueAtOverride:nextOverride}});
    return {status:200,jsonBody:{ok:true,dueAtOverride:nextOverride}};
   }
   return {status:400,jsonBody:{ok:false,error:"Unsupported result action."}};
