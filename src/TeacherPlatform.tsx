@@ -2,7 +2,8 @@ import {useEffect,useMemo,useRef,useState,Fragment} from "react";
 import AssignmentsPanel from "./AssignmentsPanel";
 import AssignmentReview from "./AssignmentReview";
 import TeacherDashboard from "./TeacherDashboard";
-import {IconSearch,IconDownload,IconUpload,IconPlus,IconChevronDown,IconMore,IconUser,IconEdit,IconCopy,IconKey,IconTrash} from "./icons";
+import {IconSearch,IconDownload,IconUpload,IconPlus,IconChevronDown,IconMore,IconUser,IconEdit,IconCopy,IconKey,IconTrash,IconClose,IconMedal} from "./icons";
+import {MEDAL_COLORS,MEDAL_LABELS,medalTier} from "./medals";
 
 type WorkspaceTab="dashboard"|"students"|"assignments";
 type TeacherPlatformProps={token:string;currentExam:unknown|null;workspaceTab:WorkspaceTab};
@@ -29,6 +30,12 @@ const onlyDigits=(value:string)=>value.replace(/\D/g,"").slice(0,9);
 const validIdentity=(value:string)=>/^\d{9}$/.test(value);
 const fmtDate=(value:string)=>value?new Date(value).toLocaleString("ar"):"—";
 const toLocalInput=(iso:string)=>{if(!iso)return "";const d=new Date(iso);return new Date(d.getTime()-d.getTimezoneOffset()*60000).toISOString().slice(0,16)};
+function medalItemsFor(assignments:StudentProfile["assignments"]){
+ return assignments
+  .filter(a=>a.latestPercentage!==null)
+  .map(a=>({assignmentId:a.assignmentId,title:a.title,submittedAt:a.submittedAt,tier:medalTier(a.latestPercentage as number)}))
+  .filter((item):item is {assignmentId:string;title:string;submittedAt:string;tier:"gold"|"silver"|"bronze"}=>item.tier!==null);
+}
 
 function normalizeImportedIdentity(value:unknown){
  const digits=String(value??"").replace(/\D/g,"");
@@ -663,7 +670,7 @@ function TeacherPlatform({token,currentExam,workspaceTab}:TeacherPlatformProps){
 
      {bulkErrors.length>0&&<div className="platform-warning"><strong>عمليات لم تكتمل:</strong>{bulkErrors.map((x,i)=><div key={x.userId||i}>{x.displayName||x.userId||"السطر "+((x.index??i)+1)}: {x.error}</div>)}</div>}
 
-     {(profile||editingStudent)&&<div className="slide-over-backdrop" onClick={()=>{setProfile(null);setEditingStudent(null)}}/>}
+     {(profile||editingStudent||history)&&<div className="slide-over-backdrop" onClick={()=>{setProfile(null);setEditingStudent(null);setHistory(null);setHistoryDeadlineFor(null)}}/>}
 
      {editingStudent&&<section className="credential-box student-edit-panel">
       <div className="platform-card-heading"><div><span className="platform-eyebrow">Edit Student</span><h3>تعديل تفاصيل الطالب</h3></div><button onClick={()=>setEditingStudent(null)}>إلغاء</button></div>
@@ -678,12 +685,12 @@ function TeacherPlatform({token,currentExam,workspaceTab}:TeacherPlatformProps){
      </section>}
 
      {profileBusy&&<div className="platform-loading">⏳ جارٍ تحميل ملف الطالب...</div>}
-     {profile&&<section className="student-profile-card slide-over-panel">
+     {profile&&<section className="student-profile-card centered-modal-panel">
       <div className="platform-card-heading">
        <div><span className="platform-eyebrow">Student Profile</span><h3>{profile.student.displayName}</h3><small>{profile.classroom?.name||"—"} · {profile.student.identityNumber}</small></div>
        <div className="student-row-actions">
         <button onClick={resetProfilePassword} disabled={actionBusy}><IconKey size={14}/>كلمة المرور</button>
-        <button onClick={()=>{clearPasswordReveal();setProfile(null)}}>إغلاق</button>
+        <button onClick={()=>{clearPasswordReveal();setProfile(null)}}><IconClose size={14}/>إغلاق</button>
        </div>
       </div>
       {passwordReveal&&<div className="credential-box">
@@ -699,6 +706,10 @@ function TeacherPlatform({token,currentExam,workspaceTab}:TeacherPlatformProps){
        <article><strong>{profile.stats.average===null?"—":profile.stats.average+"%"}</strong><span>المعدل</span></article>
       </div>
       <p><b>آخر دخول:</b> {profile.stats.lastLoginAt?fmtDate(profile.stats.lastLoginAt):"لم يسجل الدخول بعد"} · <b>إنشاء الحساب:</b> {fmtDate(profile.student.createdAt)}</p>
+      <div className="student-medals-section">
+       <h4>الميداليات والإنجازات</h4>
+       {(()=>{const medals=medalItemsFor(profile.assignments);return medals.length?<div className="medal-badge-grid">{medals.map(item=><div key={item.assignmentId} className="medal-badge"><IconMedal size={22} style={{color:MEDAL_COLORS[item.tier]}}/><div><strong>ميدالية {MEDAL_LABELS[item.tier]}</strong><span>{item.title}</span>{item.submittedAt&&<small>{fmtDate(item.submittedAt)}</small>}</div></div>)}</div>:<p className="medal-badge-empty">لم يحصل الطالب على ميداليات بعد.</p>})()}
+      </div>
       <div className="students-table-wrap"><table className="students-table">
        <thead><tr><th>الواجب</th><th>الحالة</th><th>المحاولات</th><th>العلامة</th><th>النسبة</th><th>آخر تسليم</th></tr></thead>
        <tbody>{profile.assignments.map(a=><tr key={a.assignmentId}>
@@ -709,10 +720,10 @@ function TeacherPlatform({token,currentExam,workspaceTab}:TeacherPlatformProps){
      </section>}
 
      {historyBusy&&<div className="platform-loading">⏳ جارٍ تحميل سجل الوظائف...</div>}
-     {history&&<section className="student-profile-card slide-over-panel">
+     {history&&<section className="student-profile-card centered-modal-panel">
       <div className="platform-card-heading">
        <div><span className="platform-eyebrow">Assignment History</span><h3>{history.student.displayName}</h3><small>{history.classroom?.name||"—"} · {history.student.identityNumber}</small></div>
-       <button onClick={()=>{setHistory(null);setHistoryDeadlineFor(null)}}>إغلاق</button>
+       <button onClick={()=>{setHistory(null);setHistoryDeadlineFor(null)}}><IconClose size={14}/>إغلاق</button>
       </div>
       <div className="students-table-wrap"><table className="students-table">
        <thead><tr><th>اسم الوظيفة</th><th>تاريخ آخر تسليم</th><th>العلامة</th><th>عدد المحاولات</th><th>الحالة</th><th>إجراءات</th></tr></thead>
