@@ -477,6 +477,88 @@
   white-space: nowrap;
 }
 
+.student-welcome-identity {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.student-avatar-circle {
+  flex: none;
+  border: 2px solid rgba(255,255,255,0.55);
+  border-radius: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  line-height: 1;
+  padding: 0;
+}
+
+.student-avatar-circle:hover {
+  border-color: white;
+}
+
+.student-medal-row {
+  display: flex;
+  gap: 4px;
+  margin: 4px 0;
+}
+
+.avatar-picker-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  background: rgba(15,23,42,.62);
+  backdrop-filter: blur(4px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+}
+
+.avatar-picker-modal {
+  width: min(420px, 100%);
+  background: #f5f7fa;
+  border-radius: 20px;
+  padding: 20px;
+  text-align: center;
+}
+
+.avatar-picker-modal h3 {
+  margin: 0 0 14px;
+}
+
+.avatar-picker-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+  margin-bottom: 16px;
+}
+
+.avatar-picker-option {
+  border: 2px solid transparent;
+  border-radius: 50%;
+  aspect-ratio: 1;
+  font-size: 26px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+
+.avatar-picker-option.active {
+  border-color: #1d4ed8;
+}
+
+.avatar-picker-close {
+  border: 1px solid #dce2ec;
+  background: white;
+  border-radius: 10px;
+  padding: 9px 16px;
+  cursor: pointer;
+}
+
 .student-stat-grid {
   display: grid;
   grid-template-columns:
