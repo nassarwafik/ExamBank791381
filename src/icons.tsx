@@ -203,6 +203,24 @@ export function IconArrowUp(props: IconProps) {
   );
 }
 
+// Filled medal badge — color comes from currentColor (set via style={{color: "#hex"}} on the
+// caller), unlike the outline icons above which are stroke-only.
+export function IconMedal(props: IconProps) {
+  const { size = 18, ...rest } = props;
+  return (
+    <svg width={size} height={size} viewBox="0 0 20 20" fill="none" {...rest}>
+      <path d="M7 2.5h6l-1.9 5-2.1-0.9-2.1 0.9L7 2.5Z" fill="currentColor" opacity="0.55" />
+      <circle cx="10" cy="12.2" r="6" fill="currentColor" />
+      <circle cx="10" cy="12.2" r="6" fill="none" stroke="white" strokeOpacity="0.55" strokeWidth="1" />
+      <path
+        d="M10 9.4l0.95 1.9 2.1 0.3-1.5 1.5.35 2.1-1.9-1-1.9 1 .35-2.1-1.5-1.5 2.1-.3Z"
+        fill="white"
+        fillOpacity="0.9"
+      />
+    </svg>
+  );
+}
+
 export function IconArrowDown(props: IconProps) {
   return (
     <svg {...base(props)}>
