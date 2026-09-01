@@ -181,6 +181,12 @@ function TeacherPlatform({token,currentExam,workspaceTab}:TeacherPlatformProps){
   if(selectedClassId)void loadStudents(selectedClassId);else setStudents([]);
  },[selectedClassId]);
  useEffect(()=>()=>{if(passwordRevealTimer.current)window.clearInterval(passwordRevealTimer.current)},[]);
+ useEffect(()=>{
+  if(!(profile||editingStudent||history))return;
+  function onKey(e:KeyboardEvent){if(e.key==="Escape"){setProfile(null);setEditingStudent(null);setHistory(null);setHistoryDeadlineFor(null)}}
+  window.addEventListener("keydown",onKey);
+  return()=>window.removeEventListener("keydown",onKey);
+ },[profile,editingStudent,history]);
 
  function clearPasswordReveal(){
   if(passwordRevealTimer.current){window.clearInterval(passwordRevealTimer.current);passwordRevealTimer.current=null}
@@ -672,7 +678,7 @@ function TeacherPlatform({token,currentExam,workspaceTab}:TeacherPlatformProps){
 
      {(profile||editingStudent||history)&&<div className="slide-over-backdrop" onClick={()=>{setProfile(null);setEditingStudent(null);setHistory(null);setHistoryDeadlineFor(null)}}/>}
 
-     {editingStudent&&<section className="credential-box student-edit-panel">
+     {editingStudent&&<section className="credential-box centered-modal-panel">
       <div className="platform-card-heading"><div><span className="platform-eyebrow">Edit Student</span><h3>تعديل تفاصيل الطالب</h3></div><button onClick={()=>setEditingStudent(null)}>إلغاء</button></div>
       <div className="student-create-grid">
        <label>الاسم<input value={editFirstName} onChange={e=>setEditFirstName(e.target.value)}/></label>

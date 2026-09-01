@@ -438,4 +438,4 @@ async function computeTeacherAnalytics(container, { classId: requestedClassId = 
   };
 }
 
-module.exports = { computeTeacherAnalytics };
+module.exports = { computeTeacherAnalytics, round, average, trendDelta, trendLabel };

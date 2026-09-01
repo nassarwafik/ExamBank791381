@@ -15,6 +15,15 @@ const {
 } =
   require("../lib/builder-auth");
 
+const {
+  mutateJsonWithRetry,
+  StorageConflictError
+} =
+  require("../lib/platform-storage");
+
+const CONFLICT_MESSAGE =
+  "حدث تعارض مؤقت أثناء حفظ البيانات. حاول مرة أخرى.";
+
 const BANK_CONTAINER =
   "bank";
 
@@ -410,37 +419,69 @@ app.http(
               classId +
               ".json";
 
-            const classroom =
-              await downloadJsonOrNull(
-                container,
-                blobName
-              );
-
-            if (!classroom) {
-              return {
-                status: 404,
-
-                jsonBody: {
-                  ok: false,
-                  error:
-                    "الصف غير موجود."
-                }
-              };
-            }
-
-            classroom.active =
+            const nextActive =
               action ===
               "unarchive";
 
-            classroom.updatedAt =
-              new Date()
-                .toISOString();
+            let updatedClassroom =
+              null;
 
-            await uploadJson(
-              container,
-              blobName,
-              classroom
-            );
+            try {
+              updatedClassroom =
+                await mutateJsonWithRetry(
+                  container,
+                  blobName,
+                  current => {
+                    if (!current) {
+                      const notFound =
+                        new Error(
+                          "الصف غير موجود."
+                        );
+
+                      notFound.httpStatus = 404;
+
+                      throw notFound;
+                    }
+
+                    current.active =
+                      nextActive;
+
+                    current.updatedAt =
+                      new Date()
+                        .toISOString();
+
+                    return current;
+                  }
+                );
+            }
+            catch (mutateError) {
+              if (
+                mutateError instanceof
+                StorageConflictError
+              ) {
+                return {
+                  status: 503,
+
+                  jsonBody: {
+                    ok: false,
+                    error: CONFLICT_MESSAGE
+                  }
+                };
+              }
+
+              if (mutateError?.httpStatus) {
+                return {
+                  status: mutateError.httpStatus,
+
+                  jsonBody: {
+                    ok: false,
+                    error: mutateError.message
+                  }
+                };
+              }
+
+              throw mutateError;
+            }
 
             return {
               status: 200,
@@ -448,7 +489,7 @@ app.http(
               jsonBody: {
                 ok: true,
                 active:
-                  classroom.active
+                  updatedClassroom.active
               }
             };
           }
