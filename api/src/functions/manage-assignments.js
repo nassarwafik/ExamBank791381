@@ -1,9 +1,10 @@
 
 const {app}=require("@azure/functions"),crypto=require("crypto");
 const {requireBuilderAuth}=require("../lib/builder-auth");
-const {getContainer,downloadJsonOrNull,uploadJson,listJson}=require("../lib/platform-storage");
+const {getContainer,downloadJsonOrNull,uploadJson,listJson,mutateJsonWithRetry,StorageConflictError}=require("../lib/platform-storage");
 const {recordAuditEvent}=require("../lib/audit-log");
 const PREFIX="platform/assignments/",CLASS_PREFIX="platform/classes/";
+const CONFLICT_MESSAGE="حدث تعارض مؤقت أثناء حفظ البيانات. حاول مرة أخرى.";
 const iso=v=>{const s=String(v||"").trim();if(!s)return "";const d=new Date(s);if(Number.isNaN(d.getTime()))throw new Error("صيغة التاريخ غير صحيحة.");return d.toISOString()};
 function cleanExam(v){const x=JSON.parse(JSON.stringify(v||{}));if(Array.isArray(x.questions))x.questions=x.questions.map(q=>({...q,history:[],redoStack:[]}));x.revisionHistory=[];return x}
 function summary(a){return {assignmentId:a.assignmentId,classId:a.classId,className:a.className,title:a.title,instructions:a.instructions,status:a.status,openAt:a.openAt||"",dueAt:a.dueAt||"",sourceExamId:a.sourceExamId||"",sourceExamTitle:a.sourceExamTitle||"",questionCount:Number(a.questionCount||0),totalMarks:Number(a.totalMarks||0),maxAttempts:Math.max(1,Number(a.maxAttempts||1)),createdAt:a.createdAt||"",updatedAt:a.updatedAt||""}}
@@ -24,10 +25,28 @@ app.http("manageAssignments",{methods:["GET","POST"],authLevel:"anonymous",route
    await uploadJson(c,PREFIX+assignmentId+".json",a);return {status:200,jsonBody:{ok:true,assignment:summary(a)}};
   }
   if(action==="setstatus"||action==="setmaxattempts"){
-   const id=String(b.assignmentId||""),name=PREFIX+id+".json",a=await downloadJsonOrNull(c,name);if(!a)return {status:404,jsonBody:{ok:false,error:"الواجب غير موجود."}};
-   if(action==="setstatus"){const status=String(b.status||"").toLowerCase();if(!["draft","published","archived"].includes(status))return {status:400,jsonBody:{ok:false,error:"حالة الواجب غير صحيحة."}};a.status=status}
-   else a.maxAttempts=Math.min(10,Math.max(1,Number(b.maxAttempts||1)));
-   a.updatedAt=new Date().toISOString();await uploadJson(c,name,a);return {status:200,jsonBody:{ok:true,assignment:summary(a)}};
+   const id=String(b.assignmentId||""),name=PREFIX+id+".json";
+   let nextStatus=null,nextMaxAttempts=null;
+   if(action==="setstatus"){
+    nextStatus=String(b.status||"").toLowerCase();
+    if(!["draft","published","archived"].includes(nextStatus))return {status:400,jsonBody:{ok:false,error:"حالة الواجب غير صحيحة."}};
+   }else{
+    nextMaxAttempts=Math.min(10,Math.max(1,Number(b.maxAttempts||1)));
+   }
+   let updated=null;
+   try{
+    updated=await mutateJsonWithRetry(c,name,current=>{
+     if(!current){const err=new Error("الواجب غير موجود.");err.httpStatus=404;throw err}
+     if(action==="setstatus")current.status=nextStatus;else current.maxAttempts=nextMaxAttempts;
+     current.updatedAt=new Date().toISOString();
+     return current;
+    });
+   }catch(e){
+    if(e instanceof StorageConflictError)return {status:503,jsonBody:{ok:false,error:CONFLICT_MESSAGE}};
+    if(e?.httpStatus)return {status:e.httpStatus,jsonBody:{ok:false,error:e.message}};
+    throw e;
+   }
+   return {status:200,jsonBody:{ok:true,assignment:summary(updated)}};
   }
   if(action==="delete"){const id=String(b.assignmentId||"");if(!id)return {status:400,jsonBody:{ok:false,error:"assignmentId is required."}};const existing=await downloadJsonOrNull(c,PREFIX+id+".json");await c.getBlobClient(PREFIX+id+".json").deleteIfExists();await recordAuditEvent(c,{actor:auth.user?.sub,action:"assignment.delete",targetType:"assignment",targetId:id,targetLabel:existing?.title||""});return {status:200,jsonBody:{ok:true,deleted:true}}}
   return {status:400,jsonBody:{ok:false,error:"Unsupported assignment action."}};
