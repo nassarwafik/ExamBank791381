@@ -3,6 +3,7 @@ const {app}=require("@azure/functions");
 const {requireBuilderAuth}=require("../lib/builder-auth");
 const {getContainer,downloadJsonOrNull,mutateJsonWithRetry,StorageConflictError}=require("../lib/platform-storage");
 const {recordAuditEvent}=require("../lib/audit-log");
+const {recordAchievementIfEligible}=require("../lib/achievement-feed");
 const AP="platform/assignments/",SP="platform/submissions/",UP="platform/users/";
 const CONFLICT_MESSAGE="حدث تعارض مؤقت أثناء حفظ البيانات. حاول مرة أخرى.";
 function qid(q,i){return String(q?.examQuestionId||q?.id||q?.number||i+1)}
@@ -73,6 +74,9 @@ app.http("assignmentReview",{methods:["GET","POST"],authLevel:"anonymous",route:
   }
   if(appliedCount>0){
    await recordAuditEvent(c,{actor:auth.user?.sub,action:"assignment.manualGradeOverride",targetType:"student",targetId:studentId,targetLabel:String(reviewStudent.displayName||reviewStudent.code||""),details:{assignmentId,attemptNumber,overriddenQuestions:appliedCount,newScore:resultOut?.score}});
+  }
+  if(resultOut?.finalized){
+   await recordAchievementIfEligible(c,{classId:reviewAssignment.classId,studentId,studentDisplayName:reviewStudent.displayName,assignmentId,assignmentTitle:reviewAssignment.title,percentage:resultOut.percentage,shareAchievements:reviewStudent.shareAchievements});
   }
   return {status:200,jsonBody:{ok:true,result:resultOut}};
  }catch{return {status:500,jsonBody:{ok:false,error:"تعذر تنفيذ عملية التصحيح حاليًا."}}}

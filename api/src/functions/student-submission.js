@@ -3,6 +3,7 @@ const {app}=require("@azure/functions");
 const {requireStudentAuth}=require("../lib/student-auth");
 const {getContainer,downloadJsonOrNull,mutateJsonWithRetry,StorageConflictError}=require("../lib/platform-storage");
 const {gradeExam}=require("../lib/assignment-grading");
+const {recordAchievementIfEligible}=require("../lib/achievement-feed");
 const AP="platform/assignments/",SP="platform/submissions/";
 const CONFLICT_MESSAGE="حدث تعارض مؤقت أثناء حفظ البيانات. حاول مرة أخرى.";
 function pub(x){return {attemptNumber:x.attemptNumber,submittedAt:x.submittedAt,score:x.score,totalMarks:x.totalMarks,percentage:x.percentage,manualReviewMarks:x.manualReviewMarks,finalized:x.finalized,teacherFeedback:String(x.teacherFeedback||"")}}
@@ -50,6 +51,9 @@ app.http("studentSubmission",{methods:["GET","POST"],authLevel:"anonymous",route
     if(e instanceof StorageConflictError)return {status:503,jsonBody:{ok:false,error:CONFLICT_MESSAGE}};
     if(e?.httpStatus)return {status:e.httpStatus,jsonBody:{ok:false,error:e.message}};
     throw e;
+   }
+   if(resultAttempt.finalized){
+    await recordAchievementIfEligible(c,{classId:student.classId,studentId:student.userId,studentDisplayName:student.displayName,assignmentId:id,assignmentTitle:a.title,percentage:resultAttempt.percentage,shareAchievements:student.shareAchievements});
    }
    return {status:200,jsonBody:{ok:true,result:pub(resultAttempt),state:finalState}};
   }

@@ -13,22 +13,41 @@ app.http("studentProfile",{methods:["POST"],authLevel:"anonymous",route:"student
   const c=getContainer();
   let b={};try{b=await request.json()}catch{}
   const action=String(b?.action||"").trim();
-  if(action!=="setAvatar")return {status:400,jsonBody:{ok:false,error:"Unsupported profile action."}};
-  const avatarId=String(b?.avatarId||"").trim();
-  if(!VALID_AVATARS.has(avatarId))return {status:400,jsonBody:{ok:false,error:"الأيقونة غير صالحة."}};
-  let updated=null;
-  try{
-   updated=await mutateJsonWithRetry(c,UP+auth.user.sub+".json",current=>{
-    if(!current||current.role!=="student"){const err=new Error("الطالب غير موجود.");err.httpStatus=404;throw err}
-    current.avatarId=avatarId;
-    current.updatedAt=new Date().toISOString();
-    return current;
-   });
-  }catch(e){
-   if(e instanceof StorageConflictError)return {status:503,jsonBody:{ok:false,error:CONFLICT_MESSAGE}};
-   if(e?.httpStatus)return {status:e.httpStatus,jsonBody:{ok:false,error:e.message}};
-   throw e;
+  if(action==="setAvatar"){
+   const avatarId=String(b?.avatarId||"").trim();
+   if(!VALID_AVATARS.has(avatarId))return {status:400,jsonBody:{ok:false,error:"الأيقونة غير صالحة."}};
+   let updated=null;
+   try{
+    updated=await mutateJsonWithRetry(c,UP+auth.user.sub+".json",current=>{
+     if(!current||current.role!=="student"){const err=new Error("الطالب غير موجود.");err.httpStatus=404;throw err}
+     current.avatarId=avatarId;
+     current.updatedAt=new Date().toISOString();
+     return current;
+    });
+   }catch(e){
+    if(e instanceof StorageConflictError)return {status:503,jsonBody:{ok:false,error:CONFLICT_MESSAGE}};
+    if(e?.httpStatus)return {status:e.httpStatus,jsonBody:{ok:false,error:e.message}};
+    throw e;
+   }
+   return {status:200,jsonBody:{ok:true,avatarId:updated.avatarId}};
   }
-  return {status:200,jsonBody:{ok:true,avatarId:updated.avatarId}};
+  if(action==="setShareAchievements"){
+   const share=b?.share!==false;
+   let updated=null;
+   try{
+    updated=await mutateJsonWithRetry(c,UP+auth.user.sub+".json",current=>{
+     if(!current||current.role!=="student"){const err=new Error("الطالب غير موجود.");err.httpStatus=404;throw err}
+     current.shareAchievements=share;
+     current.updatedAt=new Date().toISOString();
+     return current;
+    });
+   }catch(e){
+    if(e instanceof StorageConflictError)return {status:503,jsonBody:{ok:false,error:CONFLICT_MESSAGE}};
+    if(e?.httpStatus)return {status:e.httpStatus,jsonBody:{ok:false,error:e.message}};
+    throw e;
+   }
+   return {status:200,jsonBody:{ok:true,shareAchievements:updated.shareAchievements!==false}};
+  }
+  return {status:400,jsonBody:{ok:false,error:"Unsupported profile action."}};
  }catch{return {status:500,jsonBody:{ok:false,error:"تعذر تحديث الأيقونة حاليًا."}}}
 }});
