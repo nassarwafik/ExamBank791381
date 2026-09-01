@@ -46,7 +46,9 @@ app.http("achievementFeed", {
             createdAt: String(post.createdAt || ""),
             isOwnPost: String(post.studentId || "") === String(student.userId),
             reactionCounts: reactionCounts(post.reactions),
-            myReaction: myReaction(post.reactions, String(student.userId))
+            myReaction: myReaction(post.reactions, String(student.userId)),
+            teacherReaction: REACTIONS.includes(post.teacherReaction) ? post.teacherReaction : null,
+            teacherNote: String(post.teacherNote || "")
           }));
         return { status: 200, jsonBody: { ok: true, posts } };
       }

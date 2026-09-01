@@ -1,7 +1,9 @@
 import {useEffect,useMemo,useRef,useState} from "react";
 import {Chart as ChartJS,CategoryScale,LinearScale,PointElement,LineElement,BarElement,ArcElement,Tooltip,Legend,Filler,type ChartOptions} from "chart.js";
 import {Line,Doughnut,Bar} from "react-chartjs-2";
-import {IconDashboard,IconStudents,IconAssignments} from "./icons";
+import {IconDashboard,IconStudents,IconAssignments,IconMedal} from "./icons";
+import {MEDAL_COLORS,MEDAL_LABELS} from "./medals";
+import {REACTIONS,type ReactionId} from "./achievements";
 ChartJS.register(CategoryScale,LinearScale,PointElement,LineElement,BarElement,ArcElement,Tooltip,Legend,Filler);
 
 type DashboardProps={token:string};
@@ -48,6 +50,7 @@ type AttemptReview={
  questions:Array<{questionId:string;questionNumber:number;text:string;marks:number;type:string;autoGrade:{score:number;maxMarks:number;correct:boolean;manualReview:boolean;reviewed?:boolean}|null;manualScore:number|null;teacherComment:string}>;
 };
 type RangeKey="all"|"30"|"90"|"365";
+type AchievementPost={postId:string;classId:string;className:string;studentDisplayName:string;assignmentTitle:string;tier:"gold"|"silver"|"bronze";createdAt:string;reactionCounts:Record<ReactionId,number>;teacherReaction:ReactionId|null;teacherNote:string};
 
 const fmtDate=(value:string)=>value?new Date(value).toLocaleString("ar",{dateStyle:"medium",timeStyle:"short"}):"—";
 const fmtPct=(value:number|null)=>value===null?"—":value.toFixed(1).replace(/\.0$/,"")+"%";
@@ -155,6 +158,39 @@ function TeacherDashboard({token}:DashboardProps){
  }
 
  useEffect(()=>{void loadDashboard()},[classId,studentId,range]);
+
+ const [achievements,setAchievements]=useState<AchievementPost[]>([]);
+ const [achievementsError,setAchievementsError]=useState("");
+ const [noteDrafts,setNoteDrafts]=useState<Record<string,string>>({});
+ const [noteBusy,setNoteBusy]=useState<string>("");
+
+ async function loadAchievements(){
+  try{const result=await teacherApi<{ok:true;posts:AchievementPost[]}>("/api/teacher-achievement-feed");setAchievements(result.posts||[]);}
+  catch(e){setAchievementsError(e instanceof Error?e.message:"تعذر تحميل إشعارات الإنجازات.");}
+ }
+ useEffect(()=>{void loadAchievements()},[]);
+
+ async function teacherReact(post:AchievementPost,reaction:ReactionId){
+  try{
+   const response=await fetch("/api/teacher-achievement-feed",{method:"POST",headers:{"Content-Type":"application/json","x-builder-token":token,"Authorization":"Bearer "+token},body:JSON.stringify({action:"react",classId:post.classId,postId:post.postId,reaction})});
+   const result=await response.json() as {ok?:boolean;teacherReaction?:ReactionId|null;error?:string};
+   if(!response.ok||!result.ok)throw new Error(result.error||"تعذر إرسال ردّ الفعل.");
+   setAchievements(prev=>prev.map(p=>p.postId===post.postId?{...p,teacherReaction:result.teacherReaction??null}:p));
+  }catch(e){setAchievementsError(e instanceof Error?e.message:"تعذر إرسال ردّ الفعل.");}
+ }
+
+ async function saveNote(post:AchievementPost){
+  const note=(noteDrafts[post.postId]??post.teacherNote).trim();
+  setNoteBusy(post.postId);
+  try{
+   const response=await fetch("/api/teacher-achievement-feed",{method:"POST",headers:{"Content-Type":"application/json","x-builder-token":token,"Authorization":"Bearer "+token},body:JSON.stringify({action:"setNote",classId:post.classId,postId:post.postId,note})});
+   const result=await response.json() as {ok?:boolean;teacherNote?:string;error?:string};
+   if(!response.ok||!result.ok)throw new Error(result.error||"تعذر حفظ الملاحظة.");
+   setAchievements(prev=>prev.map(p=>p.postId===post.postId?{...p,teacherNote:result.teacherNote??""}:p));
+   setNoteDrafts(prev=>{const next={...prev};delete next[post.postId];return next});
+  }catch(e){setAchievementsError(e instanceof Error?e.message:"تعذر حفظ الملاحظة.");}
+  finally{setNoteBusy("")}
+ }
 
  function selectClass(id:string){setClassId(id);setStudentId("");setAiAdvice("");setAiScope("");setAiError("")}
  function selectStudent(id:string){setStudentId(id);setAiAdvice("");setAiScope("");setAiError("")}
@@ -274,6 +310,8 @@ function TeacherDashboard({token}:DashboardProps){
     <article className={`analytics-kpi ${k.performanceChange<0?"negative":"positive"}`}><span>اتجاه الأداء</span><strong>{trendIcon(k.performanceChange)} <AnimatedNumber value={Math.abs(k.performanceChange)} suffix="%" decimals={1}/></strong><small>{trendText(k.performanceChange)} مقارنة بالواجبات السابقة</small></article>
    </div>
   </section>
+
+  <section className="analytics-card achievement-notify-card"><div className="analytics-card-head"><div><span className="platform-eyebrow">Notifications</span><h3>إنجازات الطلاب الأخيرة</h3></div>{achievements.length>0&&<span className="analytics-chip">{achievements.length}</span>}</div>{achievementsError&&<div className="platform-error">{achievementsError}</div>}<div className="achievement-notify-list">{achievements.map(post=><article key={post.postId} className="achievement-notify-item"><IconMedal size={22} style={{color:MEDAL_COLORS[post.tier]}}/><div className="achievement-notify-body"><p><strong>{post.studentDisplayName}</strong> ({post.className}) حصل على ميدالية {MEDAL_LABELS[post.tier]} في <strong>{post.assignmentTitle}</strong></p><div className="achievement-reaction-row">{REACTIONS.map(r=><button key={r.id} type="button" className={"achievement-reaction"+(post.teacherReaction===r.id?" active":"")} title={r.label} onClick={()=>void teacherReact(post,r.id)}>{r.emoji}</button>)}</div><div className="achievement-note-row"><input type="text" placeholder="اكتب كلمة تشجيع..." maxLength={200} value={noteDrafts[post.postId]??post.teacherNote} onChange={e=>setNoteDrafts(prev=>({...prev,[post.postId]:e.target.value}))}/><button type="button" onClick={()=>void saveNote(post)} disabled={noteBusy===post.postId}>{noteBusy===post.postId?"⏳":"إرسال"}</button></div></div></article>)}{!achievements.length&&<div className="analytics-empty-chart">لا توجد إنجازات بعد.</div>}</div></section>
 
   <nav className="analytics-view-tabs" role="tablist" aria-label="أقسام لوحة المتابعة">
    <button type="button" className={"analytics-view-tab "+(view==="overview"?"active":"")} onClick={()=>setView("overview")}><IconDashboard size={16}/>نظرة عامة</button>
