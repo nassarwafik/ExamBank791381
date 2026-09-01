@@ -18,4 +18,6 @@ export type FeedPost = {
   isOwnPost: boolean;
   reactionCounts: Record<ReactionId, number>;
   myReaction: ReactionId | null;
+  teacherReaction: ReactionId | null;
+  teacherNote: string;
 };
