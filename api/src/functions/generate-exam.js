@@ -7,6 +7,9 @@ const {
   requireBuilderAuth,
   createSignedAssetParams
 } = require("../lib/builder-auth");
+const {
+  filterEligibleCandidates
+} = require("../lib/exam-question-selection");
 
 const BANK_CONTAINER = "bank";
 const ASSETS_CONTAINER = "assets";
@@ -241,53 +244,22 @@ function updateSelectionState(state, question, plan) {
 }
 
 function selectQuestions(indexQuestions, plan) {
-  const totalQuestions = Math.max(
-    1,
-    Number(plan.totalQuestions || 20)
+  // Defense in depth: interpret-exam-request.js already clamps to 40, but generate-exam.js has
+  // no cap of its own today, so a direct/manual API call bypassing that step would otherwise be
+  // unbounded. 40 is the absolute maximum exam size regardless of what the request claims.
+  const totalQuestions = Math.min(
+    40,
+    Math.max(
+      1,
+      Number(plan.totalQuestions || 20)
+    )
   );
 
-  const excludedTopics = new Set(
-    Array.isArray(plan.excludedTopics)
-      ? plan.excludedTopics.map(String)
-      : []
-  );
-
-  let candidates = indexQuestions.filter(question => {
-    if (!question || !question.id || !question.sourceId) {
-      return false;
-    }
-
-    if (!["BASIC", "INFRASTRUCTURE"].includes(question.section)) {
-      return false;
-    }
-
-    if (!Number.isInteger(Number(question.difficulty))) {
-      return false;
-    }
-
-    if (!question.topic || question.topic === "UNKNOWN") {
-      return false;
-    }
-
-    if (excludedTopics.has(String(question.topic))) {
-      return false;
-    }
-
-    if (
-      plan.rules?.excludeNeedsReview !== false &&
-      question.needsReview === true
-    ) {
-      return false;
-    }
-
-    if (
-      plan.rules?.excludeNeedsReview !== false &&
-      question.reviewStatus === "needs-review"
-    ) {
-      return false;
-    }
-
-    return true;
+  let candidates = filterEligibleCandidates(indexQuestions, {
+    excludedTopics: plan.excludedTopics,
+    allowedDifficulties: plan.allowedDifficulties,
+    allowedTypes: plan.allowedTypes,
+    excludeNeedsReview: plan.rules?.excludeNeedsReview
   });
 
   if (candidates.length < totalQuestions) {
@@ -739,3 +711,7 @@ app.http("generateExam", {
     }
   }
 });
+
+// Exported only for unit testing the 40-question cap and strict topic/difficulty/type
+// enforcement in selectQuestions (app.http's own route registration above is unaffected).
+module.exports = { selectQuestions };

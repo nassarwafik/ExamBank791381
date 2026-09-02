@@ -94,7 +94,7 @@ function buildSchema(topicCodes) {
   const countProperty = {
     type: "integer",
     minimum: 0,
-    maximum: 80
+    maximum: 40
   };
 
   return {
@@ -107,7 +107,12 @@ function buildSchema(topicCodes) {
       totalQuestions: {
         type: "integer",
         minimum: 1,
-        maximum: 80
+        maximum: 40
+      },
+      requestedQuestionCount: {
+        type: "integer",
+        minimum: 0,
+        maximum: 10000
       },
       totalMarks: {
         type: "integer",
@@ -149,7 +154,7 @@ function buildSchema(topicCodes) {
             count: {
               type: "integer",
               minimum: 1,
-              maximum: 80
+              maximum: 40
             }
           },
           required: ["topic", "count"]
@@ -225,6 +230,7 @@ function buildSchema(topicCodes) {
     required: [
       "title",
       "totalQuestions",
+      "requestedQuestionCount",
       "totalMarks",
       "sectionTargets",
       "difficultyTargets",
@@ -252,7 +258,8 @@ function buildInstructions(topicsConfig) {
 ${JSON.stringify(topicsConfig.topics, null, 2)}
 
 قواعد الخطة:
-1. إذا ذكر المستخدم عدد الأسئلة فاحترمه. إذا لم يذكره استخدم 20.
+1. الحد الأقصى المطلق لعدد الأسئلة في أي امتحان هو 40. totalQuestions هو العدد الفعلي الذي سيُستخدم لبناء الامتحان ويجب ألا يتجاوز 40 أبدًا مهما كان طلب المستخدم أكبر. إذا لم يذكر المستخدم عددًا استخدم 20 لـtotalQuestions.
+1ب. requestedQuestionCount يمثل العدد الذي طلبه المستخدم فعليًا في نص طلبه بالضبط (حتى لو كان أكبر من 40 أو غير منطقي مثل 100 أو 1000)، بدون أي تقييد. إذا لم يذكر المستخدم عددًا صريحًا، اجعله مساويًا لنفس قيمة totalQuestions.
 2. إذا ذكر العلامة النهائية فاحترمها. إذا لم يذكرها استخدم 100.
 3. sectionTargets يجب أن يساوي مجموعهما totalQuestions بالضبط.
 4. إذا لم يحدد توزيع BASIC / INFRASTRUCTURE، استخدم تقريبًا 60% BASIC و40% INFRASTRUCTURE.
@@ -363,7 +370,16 @@ function normalizePlan(plan, prompt) {
   const totalQuestions = clampInteger(
     plan?.totalQuestions || 20,
     1,
-    80
+    40
+  );
+
+  // Reported by the AI separately from totalQuestions so a request like "100 questions" can
+  // still be shown to the teacher as "requested: 100 / approved: 40" instead of being silently
+  // clamped away before the teacher ever sees the original number.
+  const requestedQuestionCount = clampInteger(
+    plan?.requestedQuestionCount || totalQuestions,
+    0,
+    10000
   );
 
   const totalMarks = clampInteger(
@@ -449,6 +465,7 @@ function normalizePlan(plan, prompt) {
     title: String(plan?.title || "امتحان شبكات").trim(),
     originalRequest: String(prompt || "").trim(),
     totalQuestions,
+    requestedQuestionCount,
     totalMarks,
     sectionTargets,
     difficultyTargets,
@@ -701,6 +718,7 @@ app.http("interpretExamRequest", {
         jsonBody: {
           ok: true,
           plan,
+          topics: topicsConfig.topics,
           provider,
           model
         }
@@ -718,5 +736,8 @@ app.http("interpretExamRequest", {
   }
 });
 
+// Exported only for unit testing the question-count clamping rule (clampInteger/normalizePlan
+// have no other external callers — app.http's own route registration above is unaffected).
+module.exports = { clampInteger, normalizePlan };
 
 

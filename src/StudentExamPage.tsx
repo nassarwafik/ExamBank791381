@@ -1,6 +1,7 @@
 
 import {useEffect,useMemo,useRef,useState} from "react";
 import {IconCheck} from "./icons";
+import {parseTable,promptText} from "./questionContent";
 
 type Opt={value?:string;label?:string;text?:string;order?:number;number?:number};
 type Field={id?:string;number?:number;label?:string;kind?:string;options?:Opt[]};
@@ -21,14 +22,6 @@ class ApiError extends Error{
 const qid=(q:Question,i:number)=>String(q.examQuestionId||q.id||q.number||i+1);
 const typeOf=(q:Question)=>String(q.presentationType||q.type||"").toLowerCase();
 const fmt=(v:string)=>v?new Date(v).toLocaleString("ar"):"بدون موعد";
-function parseTable(text:string){
- const lines=text.split(/\r?\n/).map(x=>x.trim()).filter(x=>x.startsWith("|")&&x.endsWith("|"));
- if(lines.length<2)return null;
- const split=(x:string)=>x.slice(1,-1).split("|").map(y=>y.trim());
- const all=lines.map(split),headers=all[0],rows=all.slice(1).filter(r=>!r.every(c=>/^:?-{3,}:?$/.test(c.replace(/\s/g,""))));
- return rows.length?{headers,rows}:null;
-}
-function promptText(text:string){const p=text.indexOf("\n|");return p>=0?text.slice(0,p).trim():text}
 function answered(a:Answer|undefined){if(!a)return false;if(a.kind==="choice")return Number.isInteger(a.index);if(a.kind==="text")return !!a.value.trim();return a.values.some(v=>typeof v==="boolean"?v:String(v).trim()!=="")}
 function tableCheckbox(q:Question){return /وضع علامة|✓|خاص بالشبكات الخاصة\?|private\?/i.test(q.text)}
 function imageList(q:Question){if(q.image?.exists&&q.image.visible&&Array.isArray(q.image.assets))return q.image.assets;return Array.isArray(q.images)?q.images:[]}
