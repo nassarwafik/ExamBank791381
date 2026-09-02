@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { selectQuestions } from "./generate-exam.js";
+import { selectQuestions } from "../src/functions/generate-exam.js";
 
 function makeCandidate(id, overrides = {}) {
   return {

@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { clampInteger, normalizePlan } from "./interpret-exam-request.js";
+import { clampInteger, normalizePlan } from "../src/functions/interpret-exam-request.js";
 
 describe("clampInteger", () => {
   it("passes values already within range through unchanged", () => {
