@@ -72,11 +72,21 @@ function normalizeProvider(requested) {
   return ["glm", "qwen", "qwenplus", "openai"].includes(value) ? value : "glm";
 }
 
+// Azure Static Web Apps' managed-Functions proxy has its own gateway timeout, shorter than (and
+// independent of) whatever budget import-analyze.js tracks internally - if a single AI call runs
+// past it, the platform itself severs the connection and the browser receives a raw, non-JSON
+// "Backend call failure" text instead of any JSON this code ever gets a chance to return (there is
+// no catch block that can intercept that - the whole function invocation is aborted from outside).
+// This default is used only when a caller doesn't pass its own timeoutMs; import-analyze.js always
+// computes a dynamic, deadline-aware value instead (see runRemainingChunks) so a single call can
+// never by itself be allowed to run past what's actually left of the whole request's own budget.
+const AI_CALL_TIMEOUT_MS = 25000;
+
 // Sends one text-only prompt to the configured provider and returns the parsed JSON response,
 // validated against `schema` via strict json_schema mode when the provider supports it (OpenAI
 // responses API); GLM/Qwen use non-strict JSON mode, so callers MUST still validate/clamp every
 // field of the parsed result themselves (see import-ai-detect.js's normalizeDetectedQuestion).
-async function callTextJson({ provider, instructions, prompt, schema, schemaName, maxTokens = 3200 }) {
+async function callTextJson({ provider, instructions, prompt, schema, schemaName, maxTokens = 3200, timeoutMs = AI_CALL_TIMEOUT_MS }) {
   const { client, model, mode } = await createClient(normalizeProvider(provider));
 
   if (mode === "responses") {
@@ -86,7 +96,7 @@ async function callTextJson({ provider, instructions, prompt, schema, schemaName
       instructions,
       input: [{ role: "user", content: [{ type: "input_text", text: prompt }] }],
       text: { format: { type: "json_schema", name: schemaName, strict: true, schema } }
-    });
+    }, { timeout: timeoutMs });
     return { result: parseJsonObjectText(response.output_text), provider: normalizeProvider(provider), model };
   }
 
@@ -100,7 +110,7 @@ async function callTextJson({ provider, instructions, prompt, schema, schemaName
     temperature: 0.1,
     max_tokens: maxTokens,
     ...(mode === "qwen" ? { enable_thinking: false } : {})
-  });
+  }, { timeout: timeoutMs });
 
   return {
     result: parseJsonObjectText(response?.choices?.[0]?.message?.content),
@@ -112,7 +122,7 @@ async function callTextJson({ provider, instructions, prompt, schema, schemaName
 // Vision fallback for a scanned page image. Always uses OpenAI's responses API + input_image
 // (the one vision mechanism already proven in this codebase, in classify-bank-batch.js), rather
 // than trying to route images through GLM/Qwen (unproven for this codebase's usage).
-async function callVisionJson({ instructions, prompt, schema, schemaName, imageBuffer, contentType }) {
+async function callVisionJson({ instructions, prompt, schema, schemaName, imageBuffer, contentType, timeoutMs = AI_CALL_TIMEOUT_MS }) {
   const { client, model } = await createClient("openai");
   const dataUrl = `data:${contentType || "image/png"};base64,${imageBuffer.toString("base64")}`;
 
@@ -130,9 +140,9 @@ async function callVisionJson({ instructions, prompt, schema, schemaName, imageB
       }
     ],
     text: { format: { type: "json_schema", name: schemaName, strict: true, schema } }
-  });
+  }, { timeout: timeoutMs });
 
   return { result: parseJsonObjectText(response.output_text), provider: "openai", model };
 }
 
-module.exports = { createClient, parseJsonObjectText, normalizeProvider, callTextJson, callVisionJson };
+module.exports = { createClient, parseJsonObjectText, normalizeProvider, callTextJson, callVisionJson, AI_CALL_TIMEOUT_MS };

@@ -19,10 +19,32 @@ const htmlExtract = require("../lib/html-extract");
 const RAW_CONTAINER = "raw";
 const MAX_QUESTIONS_PER_JOB = 300;
 
-// Azure Functions HTTP triggers are hard-capped well under 300s on the plans this app can run on;
-// stop starting new chunks once this much wall-clock time has elapsed and report status:"partial"
-// instead of letting the platform kill the request mid-flight with no persisted progress.
-const TIME_BUDGET_MS = 170 * 1000;
+// Azure Static Web Apps' managed-Functions proxy has its OWN gateway timeout, confirmed in
+// production to be much shorter than the generic ~230s Azure Functions Consumption-plan ceiling
+// an earlier version of this budget assumed (a ~30-question HTML file needing a handful of
+// sequential chunk calls was enough to hit it, and the platform severed the connection with a raw,
+// non-JSON "Backend call failure" response the code below never got a chance to handle).
+//
+// A single fixed "check elapsed > budget before starting a chunk" guard is NOT enough on its own:
+// if chunk 1 takes 22s of a 40s budget, 18s remain, so chunk 2 is allowed to start - but chunk 2's
+// own AI call can still take up to its own timeout (e.g. 25s), pushing the real wall-clock total to
+// 47s+, past the budget the guard was supposed to enforce. The fix is to make every AI call's own
+// timeout DYNAMIC - shrunk to whatever safely fits in what's actually left of the request - so the
+// worst case for the whole request is bounded by REQUEST_BUDGET_MS, not by (guard check) +
+// (whatever a subsequent call independently decides to take).
+//
+// REQUEST_BUDGET_MS: hard ceiling for the whole handler invocation, deliberately far under any
+// plausible (undocumented) platform gateway timeout.
+// SAFETY_MARGIN_MS: reserved AFTER the last AI call finishes, for state.json upload, merge, image
+// linking, serialization, and sending the HTTP response - never spent on the AI call itself.
+// MAX_AI_TIMEOUT_MS: no single call is ever given more than this even early in the request, when
+// remainingMs alone would allow a longer one - keeps any one chunk from dominating the budget.
+// MIN_USEFUL_AI_TIMEOUT_MS: below this, a new call isn't even worth starting (too likely to be cut
+// off uselessly) - the loop stops and reports status:"partial" instead.
+const REQUEST_BUDGET_MS = 35 * 1000;
+const SAFETY_MARGIN_MS = 5 * 1000;
+const MAX_AI_TIMEOUT_MS = 20 * 1000;
+const MIN_USEFUL_AI_TIMEOUT_MS = 5 * 1000;
 
 function getRawContainer() {
   const connectionString = process.env.AZURE_STORAGE_CONNECTION_STRING;
@@ -104,7 +126,7 @@ function extractorForKind(kind) {
 // pdf-extract.js's own comment), so a chunk built purely from scanned PDF pages always has empty
 // text AND empty images. There is therefore no working Vision/OCR fallback path here - a scanned
 // page is reported as a warning and simply produces zero questions, never a guessed transcription.
-async function detectQuestionsInChunk(chunk, { provider, topicCodes }) {
+async function detectQuestionsInChunk(chunk, { provider, topicCodes, aiTimeoutMs }) {
   if (!chunk.text.trim()) {
     return {
       pageNumbers: chunk.pageNumbers,
@@ -120,7 +142,8 @@ async function detectQuestionsInChunk(chunk, { provider, topicCodes }) {
     instructions: DETECTION_INSTRUCTIONS,
     prompt,
     schema,
-    schemaName: "detected_questions"
+    schemaName: "detected_questions",
+    timeoutMs: aiTimeoutMs
   });
 
   const questions = Array.isArray(response.result?.questions)
@@ -130,23 +153,36 @@ async function detectQuestionsInChunk(chunk, { provider, topicCodes }) {
   return { pageNumbers: chunk.pageNumbers, questions };
 }
 
-// Mutates state.results/processedChunks in place, calling `detector` (the AI-calling function)
-// exactly once per remaining chunk, up to the time budget. CRITICALLY: if state.processedChunks
-// is already >= state.totalChunks (a previously "done" job), the loop body never runs at all -
-// detector is called zero times, so re-opening an already-analyzed import session never re-calls
-// the AI provider. Extracted as its own function (with the AI call injected as `detector`) so this
-// guarantee is directly unit-testable with a spy, instead of only being provable by code reading.
-async function runRemainingChunks(state, { detector, onChunkDone, warnings, timeBudgetMs, now }) {
-  const startedAt = now();
-
+// Mutates state.results/processedChunks in place, calling `detector(chunk, aiTimeoutMs)` at most
+// once per remaining chunk. CRITICALLY: if state.processedChunks is already >= state.totalChunks
+// (a previously "done" job), the loop body never runs at all - detector is called zero times, so
+// re-opening an already-analyzed import session never re-calls the AI provider.
+//
+// Deadline-aware by construction, not just by a pre-loop guard: `startedAt` is the moment the
+// WHOLE request began (passed in by the caller, not captured here), so elapsed time already
+// includes file download/extraction, not just chunk processing. Before every chunk, remainingMs is
+// recomputed from the real clock, and the AI call's own timeout is capped to
+// min(maxAiTimeoutMs, remainingMs - safetyMarginMs) - never more than what's actually left after
+// reserving room for the post-loop work (merge, image linking, serialization, response). If that
+// computed timeout would be too small to be useful, the loop stops immediately (no call started)
+// and the request returns status:"partial" well inside the budget, instead of gambling that "we
+// were under budget when we started" is enough - which is exactly what let a slow first chunk push
+// a second chunk's call past the real deadline before this fix.
+async function runRemainingChunks(state, {
+  detector, onChunkDone, warnings, startedAt, requestBudgetMs, safetyMarginMs, maxAiTimeoutMs, minUsefulAiTimeoutMs, now
+}) {
   while (state.processedChunks < state.totalChunks) {
-    if (now() - startedAt > timeBudgetMs) {
+    const elapsed = now() - startedAt;
+    const remainingMs = requestBudgetMs - elapsed;
+    const aiTimeoutMs = Math.min(maxAiTimeoutMs, remainingMs - safetyMarginMs);
+
+    if (aiTimeoutMs < minUsefulAiTimeoutMs) {
       break;
     }
 
     const chunk = state.chunks[state.processedChunks];
     try {
-      const chunkResult = await detector(chunk);
+      const chunkResult = await detector(chunk, aiTimeoutMs);
       if (chunkResult.warning) {
         warnings.push(chunkResult.warning);
       }
@@ -166,6 +202,11 @@ app.http("importAnalyze", {
   authLevel: "anonymous",
   route: "import-analyze",
   handler: async request => {
+    // Captured before ANY work (auth, download, extraction) so the deadline covers the whole
+    // request's real wall-clock time, not just chunk-processing - a slow extraction step eating
+    // into the budget is exactly as dangerous to the gateway timeout as a slow AI call.
+    const requestStartedAt = Date.now();
+
     try {
       const auth = requireBuilderAuth(request);
       if (!auth.ok) {
@@ -222,10 +263,14 @@ app.http("importAnalyze", {
       const warnings = [...(state.extractionWarnings || [])];
 
       await runRemainingChunks(state, {
-        detector: chunk => detectQuestionsInChunk(chunk, { provider, topicCodes }),
+        detector: (chunk, aiTimeoutMs) => detectQuestionsInChunk(chunk, { provider, topicCodes, aiTimeoutMs }),
         onChunkDone: async () => uploadJson(container, blobPrefix + "state.json", serializeStateForStorage(state)),
         warnings,
-        timeBudgetMs: TIME_BUDGET_MS,
+        startedAt: requestStartedAt,
+        requestBudgetMs: REQUEST_BUDGET_MS,
+        safetyMarginMs: SAFETY_MARGIN_MS,
+        maxAiTimeoutMs: MAX_AI_TIMEOUT_MS,
+        minUsefulAiTimeoutMs: MIN_USEFUL_AI_TIMEOUT_MS,
         now: () => Date.now()
       });
 
