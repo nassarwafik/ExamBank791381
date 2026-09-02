@@ -13,6 +13,7 @@ const {
   isConcurrencyConflict
 } = require("../lib/platform-storage");
 const { recordAuditEvent } = require("../lib/audit-log");
+const { FEED_PREFIX, REACTIONS } = require("../lib/achievement-feed");
 
 // Thrown from inside a mutateJsonWithRetry callback to mean "nothing to do" (target document is
 // missing, or already in the desired state) — caught at each call site and treated as a silent
@@ -185,9 +186,31 @@ async function listStudents(container, classId, includeArchived = false) {
     }
   }
 
+  // Same single-pass pattern as the submissions count above: one listing pass under FEED_PREFIX
+  // (not scoped to classId, since a student's achievement history should still count after they
+  // move classes), summing every reaction — classmates' plus the teacher's — across every post
+  // that belongs to this student.
+  const likesByStudent = new Map(); // studentId -> total like count
+  if (idSet.size) {
+    for await (const blob of container.listBlobsFlat({ prefix: FEED_PREFIX })) {
+      if (!blob.name.endsWith(".json")) continue;
+      const post = await downloadJsonOrNull(container, blob.name);
+      if (!post) continue;
+      const studentId = String(post.studentId || "");
+      if (!idSet.has(studentId)) continue;
+      let total = 0;
+      for (const key of REACTIONS) {
+        if (Array.isArray(post.reactions?.[key])) total += post.reactions[key].length;
+      }
+      if (post.teacherReaction) total += 1;
+      likesByStudent.set(studentId, (likesByStudent.get(studentId) || 0) + total);
+    }
+  }
+
   return result.map(student => ({
     ...student,
-    submittedAssignmentsCount: submittedSets.get(student.userId)?.size || 0
+    submittedAssignmentsCount: submittedSets.get(student.userId)?.size || 0,
+    likesCount: likesByStudent.get(student.userId) || 0
   }));
 }
 

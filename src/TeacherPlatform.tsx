@@ -8,7 +8,7 @@ import {MEDAL_COLORS,MEDAL_LABELS,medalTier} from "./medals";
 type WorkspaceTab="dashboard"|"students"|"assignments";
 type TeacherPlatformProps={token:string;currentExam:unknown|null;workspaceTab:WorkspaceTab};
 type Classroom={classId:string;name:string;grade:string;schoolYear:string;active:boolean;studentCount:number;createdAt:string};
-type Student={userId:string;code:string;identityNumber:string;firstName:string;familyName:string;displayName:string;classId:string;active:boolean;archived:boolean;createdAt:string;updatedAt:string;lastLoginAt:string;submittedAssignmentsCount:number};
+type Student={userId:string;code:string;identityNumber:string;firstName:string;familyName:string;displayName:string;classId:string;active:boolean;archived:boolean;createdAt:string;updatedAt:string;lastLoginAt:string;submittedAssignmentsCount:number;likesCount:number};
 type Credential={userId?:string;firstName?:string;familyName?:string;displayName?:string;code:string;identityNumber?:string;password:string};
 type BulkStudent={firstName:string;familyName:string;identityNumber:string};
 type BulkError={index?:number;firstName?:string;familyName?:string;identityNumber?:string;displayName?:string;code?:string;error:string;userId?:string};
@@ -769,7 +769,7 @@ function TeacherPlatform({token,currentExam,workspaceTab}:TeacherPlatformProps){
       </tr></thead>
       <tbody>{visibleStudents.map(student=><tr key={student.userId} className={student.archived?"student-row-archived":""}>
        <td><input type="checkbox" checked={selectedIds.includes(student.userId)} onChange={()=>toggleSelected(student.userId)} aria-label={"تحديد "+student.displayName}/></td>
-       <td><strong>{student.firstName||splitName(student.displayName).firstName}</strong></td>
+       <td><strong>{student.firstName||splitName(student.displayName).firstName}</strong>{student.likesCount>0&&<span className="student-likes-badge" title={student.likesCount+" ردّ فعل على إنجازاته"}>❤️ {student.likesCount}</span>}</td>
        <td>{student.familyName||splitName(student.displayName).familyName||"—"}</td>
        <td dir="ltr">{student.identityNumber||student.code||"يحتاج تحديث"}</td>
        <td><span className={student.archived?"status-archived":student.active?"status-active":"status-disabled"}>{statusLabel(student)}</span></td>
