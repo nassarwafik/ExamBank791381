@@ -30,7 +30,12 @@ describe("state <-> storage Buffer serialization boundary", () => {
   });
 });
 
-describe("runRemainingChunks - reopening an already-done job never re-calls the AI provider", () => {
+describe("runRemainingChunks - deadline-aware chunk processing", () => {
+  // Production-matching defaults (see import-analyze.js): 35s request budget, 5s safety margin
+  // reserved for post-loop work (merge/link/serialize/respond), 20s max per AI call, 5s floor
+  // below which starting a new call isn't worth it.
+  const DEFAULTS = { requestBudgetMs: 35000, safetyMarginMs: 5000, maxAiTimeoutMs: 20000, minUsefulAiTimeoutMs: 5000 };
+
   function makeState(processedChunks, totalChunks) {
     return {
       processedChunks,
@@ -40,47 +45,34 @@ describe("runRemainingChunks - reopening an already-done job never re-calls the 
     };
   }
 
+  // Returns a `now` fn that yields each value in `sequence` in turn (one call per loop iteration's
+  // elapsed-time check), holding the last value if called more times than the sequence has.
+  function sequencedClock(sequence) {
+    let index = 0;
+    return () => sequence[Math.min(index++, sequence.length - 1)];
+  }
+
   it("calls the detector zero times when the job is already fully processed (status was 'done')", async () => {
     const state = makeState(3, 3);
     const detector = vi.fn().mockResolvedValue({ pageNumbers: [1], questions: [] });
     const onChunkDone = vi.fn().mockResolvedValue(undefined);
 
-    await runRemainingChunks(state, { detector, onChunkDone, warnings: [], timeBudgetMs: 170000, now: () => Date.now() });
+    await runRemainingChunks(state, { detector, onChunkDone, warnings: [], startedAt: 0, now: sequencedClock([0]), ...DEFAULTS });
 
     expect(detector).not.toHaveBeenCalled();
     expect(onChunkDone).not.toHaveBeenCalled();
     expect(state.processedChunks).toBe(3);
   });
 
-  it("calls the detector exactly once per remaining chunk when some are still pending (a resumed 'partial' job)", async () => {
+  it("calls the detector exactly once per remaining chunk when comfortably under budget (a resumed 'partial' job)", async () => {
     const state = makeState(1, 3);
     const detector = vi.fn().mockResolvedValue({ pageNumbers: [1], questions: [] });
     const onChunkDone = vi.fn().mockResolvedValue(undefined);
 
-    await runRemainingChunks(state, { detector, onChunkDone, warnings: [], timeBudgetMs: 170000, now: () => Date.now() });
+    await runRemainingChunks(state, { detector, onChunkDone, warnings: [], startedAt: 0, now: sequencedClock([0, 1000]), ...DEFAULTS });
 
     expect(detector).toHaveBeenCalledTimes(2);
     expect(state.processedChunks).toBe(3);
-  });
-
-  it("stops starting new chunks once the time budget is exceeded, leaving the job 'partial'", async () => {
-    const state = makeState(0, 5);
-    let callCount = 0;
-    const detector = vi.fn().mockImplementation(async () => {
-      callCount += 1;
-      return { pageNumbers: [1], questions: [] };
-    });
-    let fakeNow = 0;
-    const now = () => {
-      fakeNow += 100000; // each check advances the clock well past the budget after 2 chunks
-      return fakeNow;
-    };
-
-    await runRemainingChunks(state, { detector, onChunkDone: async () => {}, warnings: [], timeBudgetMs: 170000, now });
-
-    expect(callCount).toBeLessThan(5);
-    expect(state.processedChunks).toBeLessThan(5);
-    expect(state.processedChunks).toBeGreaterThan(0);
   });
 
   it("records a per-chunk failure as a warning and continues with the remaining chunks", async () => {
@@ -90,10 +82,86 @@ describe("runRemainingChunks - reopening an already-done job never re-calls the 
       .mockResolvedValueOnce({ pageNumbers: [2], questions: [] });
     const warnings = [];
 
-    await runRemainingChunks(state, { detector, onChunkDone: async () => {}, warnings, timeBudgetMs: 170000, now: () => Date.now() });
+    await runRemainingChunks(state, { detector, onChunkDone: async () => {}, warnings, startedAt: 0, now: sequencedClock([0, 1000]), ...DEFAULTS });
 
     expect(state.processedChunks).toBe(2);
     expect(warnings.some(w => w.includes("provider unavailable"))).toBe(true);
     expect(state.results).toHaveLength(2);
+  });
+
+  // Scenario A: a slow first chunk consuming most of the budget must prevent a second chunk from
+  // ever starting - not merely be caught by a stale "were we under budget when we started" check.
+  it("(A) does not start a second chunk once the first consumed most of the request budget", async () => {
+    const state = makeState(0, 3);
+    const detector = vi.fn().mockResolvedValue({ pageNumbers: [1], questions: [] });
+    // Chunk 1 check happens at elapsed=0. Chunk 1 itself takes 28s of wall-clock time, so the
+    // NEXT check (before chunk 2) sees elapsed=28000: remaining=35000-28000=7000,
+    // aiTimeout=min(20000, 7000-5000=2000)=2000, which is below the 5000 floor -> stop.
+    const now = sequencedClock([0, 28000]);
+
+    await runRemainingChunks(state, { detector, onChunkDone: async () => {}, warnings: [], startedAt: 0, now, ...DEFAULTS });
+
+    expect(detector).toHaveBeenCalledTimes(1);
+    expect(state.processedChunks).toBe(1);
+  });
+
+  // Scenario B: the timeout actually handed to the detector for each chunk must never exceed
+  // (remainingMs - safetyMarginMs) at the moment that chunk started, and must shrink as the
+  // request's remaining time shrinks - not stay fixed regardless of elapsed time.
+  it("(B) never hands the detector a timeout larger than the remaining time minus the safety margin, and shrinks it over successive chunks", async () => {
+    const state = makeState(0, 3);
+    const seenTimeouts = [];
+    const detector = vi.fn().mockImplementation(async (chunk, aiTimeoutMs) => {
+      seenTimeouts.push(aiTimeoutMs);
+      return { pageNumbers: chunk.pageNumbers, questions: [] };
+    });
+    // elapsed at each of the 3 chunk-start checks: 0s, 10s (chunk 1 "took" 10s), 20s (chunk 2 also
+    // took 10s) - each still comfortably under budget.
+    const now = sequencedClock([0, 10000, 20000]);
+
+    await runRemainingChunks(state, { detector, onChunkDone: async () => {}, warnings: [], startedAt: 0, now, ...DEFAULTS });
+
+    expect(detector).toHaveBeenCalledTimes(3);
+    // chunk 1: remaining=35000, cap=min(20000,30000)=20000
+    expect(seenTimeouts[0]).toBe(20000);
+    // chunk 2: remaining=25000, cap=min(20000,20000)=20000
+    expect(seenTimeouts[1]).toBe(20000);
+    // chunk 3: remaining=15000, cap=min(20000,10000)=10000 - strictly smaller, proving it shrinks
+    expect(seenTimeouts[2]).toBe(10000);
+    for (const timeout of seenTimeouts) {
+      expect(timeout).toBeLessThanOrEqual(DEFAULTS.maxAiTimeoutMs);
+    }
+  });
+
+  // Scenario C: if the request already has almost no safe time left (e.g. extraction alone ate
+  // most of the budget before the loop even started), no AI call is attempted at all - the request
+  // returns status:"partial" immediately rather than starting a call doomed to be cut off.
+  it("(C) starts zero AI calls and reports partial immediately when almost no safe time remains", async () => {
+    const state = makeState(0, 4);
+    const detector = vi.fn();
+    // elapsed=32000 on the very first check: remaining=3000, cap=min(20000,3000-5000=-2000)=-2000.
+    const now = sequencedClock([32000]);
+
+    await runRemainingChunks(state, { detector, onChunkDone: async () => {}, warnings: [], startedAt: 0, now, ...DEFAULTS });
+
+    expect(detector).not.toHaveBeenCalled();
+    expect(state.processedChunks).toBe(0);
+  });
+
+  // Scenario D: processedChunks/results must reflect exactly how many chunks genuinely completed
+  // before the deadline stopped the loop - no off-by-one, no phantom "completed" entries.
+  it("(D) leaves processedChunks and results consistent (exactly the chunks that actually ran) when stopped by the deadline", async () => {
+    const state = makeState(0, 5);
+    const detector = vi.fn().mockResolvedValue({ pageNumbers: [1], questions: [{ text: "q" }] });
+    // Chunks 1 and 2 run (checks at 0 and 5000), then chunk 3's check at 28000 stops the loop
+    // (remaining=7000, cap=2000 < floor).
+    const now = sequencedClock([0, 5000, 28000]);
+
+    await runRemainingChunks(state, { detector, onChunkDone: async () => {}, warnings: [], startedAt: 0, now, ...DEFAULTS });
+
+    expect(detector).toHaveBeenCalledTimes(2);
+    expect(state.processedChunks).toBe(2);
+    expect(state.results).toHaveLength(2);
+    expect(state.processedChunks).toBe(state.results.length);
   });
 });
