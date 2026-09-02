@@ -1,8 +1,9 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import type { FormEvent } from "react";
 import StudentPortal from "./StudentPortal";
 import TeacherPlatform from "./TeacherPlatform";
 import { IconUser, IconLock, IconWarning, IconBuilder, IconDashboard, IconStudents, IconAssignments, IconLogout, IconChevronDown, IconImage, IconSparkles } from "./icons";
+import { QuestionTextBlock } from "./questionContent";
 import "./App.css";
 import "./platform.css";
 import "./page-parts.css";
@@ -27,7 +28,10 @@ type ExamPlan = {
   title: string;
   originalRequest: string;
   totalQuestions: number;
+  requestedQuestionCount: number;
   totalMarks: number;
+  allowedDifficulties?: number[];
+  allowedTypes?: string[];
   sectionTargets: {
     BASIC: number;
     INFRASTRUCTURE: number;
@@ -59,6 +63,16 @@ type ExamPlan = {
   explanation: string;
   aiProvider?: "glm" | "qwen" | "qwenplus" | "openai";
   aiModel?: string;
+};
+
+type TopicOption = { code: string; name: string; parent: string | null };
+type FacetCount = { topic?: string; difficulty?: number; type?: string; count: number };
+type ExamAvailability = {
+  availableCount: number;
+  topicFacets: FacetCount[];
+  difficultyFacets: FacetCount[];
+  typeFacets: FacetCount[];
+  preview?: Array<{ id: string; text: string; topic: string; difficulty: number; type: string }>;
 };
 
 type QuestionOption = {
@@ -349,6 +363,19 @@ function App() {
   const [exam, setExam] = useState<ExamDraft | null>(null);
   const [generateBusy, setGenerateBusy] = useState(false);
   const [builderError, setBuilderError] = useState("");
+
+  const [analyzeBusy, setAnalyzeBusy] = useState(false);
+  const [topicsCatalog, setTopicsCatalog] = useState<TopicOption[]>([]);
+  const [availability, setAvailability] = useState<ExamAvailability | null>(null);
+  const [availabilityBusy, setAvailabilityBusy] = useState(false);
+  const [selectedTopics, setSelectedTopics] = useState<string[]>([]);
+  const [selectedDifficulties, setSelectedDifficulties] = useState<number[]>([]);
+  const [selectedTypes, setSelectedTypes] = useState<string[]>([]);
+  const [manualQuestionCount, setManualQuestionCount] = useState(0);
+  const [previewBusy, setPreviewBusy] = useState(false);
+  // Guards against out-of-order responses when the teacher toggles filters faster than the
+  // network round-trip: only the response to the most recently issued request is ever applied.
+  const availabilityRequestId = useRef(0);
   const [globalInstruction, setGlobalInstruction] = useState("");
   const [questionBusy, setQuestionBusy] = useState<
     Record<string, boolean>
@@ -642,22 +669,99 @@ function App() {
     setPlan(null);
     setExam(null);
     setBuilderError("");
+    setAvailability(null);
+    setTopicsCatalog([]);
+    setSelectedTopics([]);
+    setSelectedDifficulties([]);
+    setSelectedTypes([]);
+    setManualQuestionCount(0);
   }
 
-  async function handleGenerateExam() {
-    if (!examPrompt.trim() || generateBusy) {
+  async function fetchAvailability(
+    topics: string[],
+    difficulties: number[],
+    types: string[],
+    preview = false
+  ) {
+    const requestId = ++availabilityRequestId.current;
+    if (preview) setPreviewBusy(true); else setAvailabilityBusy(true);
+
+    // A teacher can uncheck every topic. Treating that as "no restriction" would silently allow
+    // every topic in the bank, which is exactly the accidental behavior this feature exists to
+    // prevent — so it is never sent to the backend as an unrestricted request.
+    if (topicsCatalog.length > 0 && topics.length === 0) {
+      if (availabilityRequestId.current === requestId) {
+        setAvailability(prev => ({
+          availableCount: 0,
+          topicFacets: prev?.topicFacets ?? [],
+          difficultyFacets: [],
+          typeFacets: [],
+          preview: preview ? [] : prev?.preview
+        }));
+        if (preview) setPreviewBusy(false); else setAvailabilityBusy(false);
+      }
       return;
     }
 
-    setGenerateBusy(true);
+    try {
+      const result = await apiRequest<{ ok: true } & ExamAvailability>(
+        "/api/exam-question-availability",
+        {
+          method: "POST",
+          body: JSON.stringify({
+            selectedTopics: topics,
+            allowedDifficulties: difficulties,
+            allowedTypes: types,
+            preview
+          })
+        }
+      );
+      // Discard this response if a newer request has been issued since (out-of-order network
+      // replies from rapid filter toggling must never overwrite a more recent filter's result).
+      if (availabilityRequestId.current !== requestId) {
+        return;
+      }
+      setAvailability(prev => ({
+        availableCount: result.availableCount,
+        topicFacets: result.topicFacets,
+        difficultyFacets: result.difficultyFacets,
+        typeFacets: result.typeFacets,
+        preview: preview ? result.preview : prev?.preview
+      }));
+    }
+    catch (error) {
+      if (availabilityRequestId.current !== requestId) {
+        return;
+      }
+      setBuilderError(
+        error instanceof Error
+          ? error.message
+          : "تعذر حساب الأسئلة المتاحة حاليًا."
+      );
+    }
+    finally {
+      if (availabilityRequestId.current === requestId) {
+        if (preview) setPreviewBusy(false); else setAvailabilityBusy(false);
+      }
+    }
+  }
+
+  async function handleAnalyzeRequest() {
+    if (!examPrompt.trim() || analyzeBusy) {
+      return;
+    }
+
+    setAnalyzeBusy(true);
     setBuilderError("");
     setPlan(null);
     setExam(null);
+    setAvailability(null);
 
     try {
       const interpreted = await apiRequest<{
         ok: true;
         plan: ExamPlan;
+        topics: TopicOption[];
       }>("/api/interpret-exam-request", {
         method: "POST",
         body: JSON.stringify({
@@ -667,6 +771,103 @@ function App() {
       });
 
       setPlan(interpreted.plan);
+      setTopicsCatalog(interpreted.topics);
+      setManualQuestionCount(interpreted.plan.totalQuestions);
+
+      // Only topics/difficulty/type the AI actually detected in the prompt start checked — never
+      // auto-select anything the teacher didn't ask for. Any topic code the AI returned that
+      // isn't a real, known topic (possible with providers that don't strictly enforce the
+      // schema) is silently dropped rather than invented as a new topic or left as an invisible
+      // selection with no matching checkbox.
+      const knownTopicCodes = new Set(interpreted.topics.map(topic => topic.code));
+      const initialTopics = interpreted.plan.topicTargets
+        .map(item => item.topic)
+        .filter(topic => knownTopicCodes.has(topic));
+      const initialDifficulties = Object.entries(interpreted.plan.difficultyTargets)
+        .filter(([, count]) => Number(count) > 0)
+        .map(([level]) => Number(level));
+      const initialTypes = Object.entries(interpreted.plan.typeTargets)
+        .filter(([, count]) => Number(count) > 0)
+        .map(([type]) => type);
+
+      setSelectedTopics(initialTopics);
+      setSelectedDifficulties(initialDifficulties);
+      setSelectedTypes(initialTypes);
+
+      await fetchAvailability(initialTopics, initialDifficulties, initialTypes);
+
+      window.setTimeout(() => {
+        document
+          .getElementById("exam-availability-panel")
+          ?.scrollIntoView({
+            behavior: "smooth",
+            block: "start"
+          });
+      }, 80);
+    }
+    catch (error) {
+      setBuilderError(
+        error instanceof Error
+          ? error.message
+          : "حدث خطأ أثناء تحليل الطلب."
+      );
+    }
+    finally {
+      setAnalyzeBusy(false);
+    }
+  }
+
+  function toggleTopic(code: string) {
+    const next = selectedTopics.includes(code)
+      ? selectedTopics.filter(t => t !== code)
+      : [...selectedTopics, code];
+    setSelectedTopics(next);
+    void fetchAvailability(next, selectedDifficulties, selectedTypes);
+  }
+
+  function toggleDifficulty(level: number) {
+    const next = selectedDifficulties.includes(level)
+      ? selectedDifficulties.filter(d => d !== level)
+      : [...selectedDifficulties, level];
+    setSelectedDifficulties(next);
+    void fetchAvailability(selectedTopics, next, selectedTypes);
+  }
+
+  function toggleType(type: string) {
+    const next = selectedTypes.includes(type)
+      ? selectedTypes.filter(t => t !== type)
+      : [...selectedTypes, type];
+    setSelectedTypes(next);
+    void fetchAvailability(selectedTopics, selectedDifficulties, next);
+  }
+
+  async function handlePreviewQuestions() {
+    await fetchAvailability(selectedTopics, selectedDifficulties, selectedTypes, true);
+  }
+
+  async function handleCreateExam() {
+    if (!plan || generateBusy) {
+      return;
+    }
+
+    setGenerateBusy(true);
+    setBuilderError("");
+    setExam(null);
+
+    try {
+      const excludedTopics = selectedTopics.length
+        ? topicsCatalog
+            .map(topic => topic.code)
+            .filter(code => !selectedTopics.includes(code))
+        : [];
+
+      const finalPlan: ExamPlan = {
+        ...plan,
+        totalQuestions: Math.min(40, Math.max(1, manualQuestionCount || plan.totalQuestions)),
+        excludedTopics,
+        allowedDifficulties: selectedDifficulties,
+        allowedTypes: selectedTypes
+      };
 
       const generated = await apiRequest<{
         ok: true;
@@ -674,7 +875,7 @@ function App() {
       }>("/api/generate-exam", {
         method: "POST",
         body: JSON.stringify({
-          plan: interpreted.plan
+          plan: finalPlan
         })
       });
 
@@ -4958,16 +5159,169 @@ function App() {
 
               <button
               className="generate-button"
-              onClick={handleGenerateExam}
-              disabled={!examPrompt.trim() || generateBusy}
+              onClick={handleAnalyzeRequest}
+              disabled={!examPrompt.trim() || analyzeBusy}
             >
-              {generateBusy
-                ? "جارٍ تحليل الطلب وبناء الامتحان..."
-                : "إنشاء الامتحان"}
+              {analyzeBusy
+                ? "جارٍ تحليل الطلب والبحث عن الأسئلة..."
+                : "تحليل الطلب والبحث عن الأسئلة"}
             </button>
             </div>
           </div>
         </div>
+
+        {plan && (
+          <div id="exam-availability-panel" className="builder-card exam-availability-card">
+            <div className="builder-heading">
+              <div>
+                <h2>الأسئلة المتاحة لهذا الطلب</h2>
+                <p>
+                  راجع الفلاتر أدناه قبل إنشاء الامتحان. الأسئلة لن تتوسع تلقائيًا خارج المواضيع
+                  التي تختارها.
+                </p>
+              </div>
+            </div>
+
+            <div className="availability-summary">
+              <span>
+                المطلوب: <strong>{plan.requestedQuestionCount}</strong>
+              </span>
+              <span>
+                المعتمد:{" "}
+                <input
+                  type="number"
+                  min={1}
+                  max={40}
+                  value={manualQuestionCount}
+                  onChange={event =>
+                    setManualQuestionCount(
+                      Math.min(40, Math.max(1, Number(event.target.value) || 1))
+                    )
+                  }
+                />{" "}
+                / 40
+              </span>
+              <span>
+                الحد الأقصى: <strong>40</strong>
+              </span>
+              <span>
+                المتوفر حاليًا:{" "}
+                <strong>{availabilityBusy ? "…" : availability?.availableCount ?? "—"}</strong>
+              </span>
+            </div>
+
+            {plan.requestedQuestionCount > 40 && (
+              <p className="platform-notice">
+                لقد طلبت {plan.requestedQuestionCount} سؤالًا. الحد الأقصى المسموح به هو 40
+                سؤالًا، لذلك سيتم اعتماد 40 سؤالًا فقط (أو العدد الذي تحدده أعلاه).
+              </p>
+            )}
+
+            <div className="availability-filters">
+              <fieldset>
+                <legend>المواضيع</legend>
+                {topicsCatalog.map(topic => (
+                  <label key={topic.code} className="availability-checkbox">
+                    <input
+                      type="checkbox"
+                      checked={selectedTopics.includes(topic.code)}
+                      onChange={() => toggleTopic(topic.code)}
+                    />
+                    {topic.name}
+                    {" "}
+                    <span className="availability-facet-count">
+                      (
+                      {availability?.topicFacets.find(f => f.topic === topic.code)?.count ?? 0}
+                      )
+                    </span>
+                  </label>
+                ))}
+              </fieldset>
+
+              <fieldset>
+                <legend>الصعوبة</legend>
+                {[1, 2, 3, 4, 5].map(level => (
+                  <label key={level} className="availability-checkbox">
+                    <input
+                      type="checkbox"
+                      checked={selectedDifficulties.includes(level)}
+                      onChange={() => toggleDifficulty(level)}
+                    />
+                    {difficultyNames[level] || `Level ${level}`}
+                  </label>
+                ))}
+              </fieldset>
+
+              <fieldset>
+                <legend>نوع السؤال</legend>
+                {(Object.keys(typeNames) as Array<keyof typeof typeNames>).map(type => (
+                  <label key={type} className="availability-checkbox">
+                    <input
+                      type="checkbox"
+                      checked={selectedTypes.includes(type)}
+                      onChange={() => toggleType(type)}
+                    />
+                    {typeNames[type]}
+                  </label>
+                ))}
+              </fieldset>
+            </div>
+
+            <div className="builder-actions">
+              <button onClick={handlePreviewQuestions} disabled={previewBusy}>
+                {previewBusy ? "⏳ جارٍ التحميل..." : "معاينة الأسئلة المطابقة"}
+              </button>
+
+              <button
+                className="generate-button"
+                onClick={handleCreateExam}
+                disabled={
+                  generateBusy ||
+                  availabilityBusy ||
+                  !availability ||
+                  availability.availableCount < manualQuestionCount
+                }
+              >
+                {generateBusy ? "جارٍ إنشاء الامتحان..." : "إنشاء الامتحان"}
+              </button>
+            </div>
+
+            {topicsCatalog.length > 0 && selectedTopics.length === 0 && (
+              <p className="platform-error">
+                اختر موضوعًا واحدًا على الأقل لعرض الأسئلة المتاحة وتفعيل زر الإنشاء.
+              </p>
+            )}
+
+            {selectedTopics.length > 0 &&
+              availability &&
+              availability.availableCount < manualQuestionCount && (
+              <p className="platform-error">
+                المتوفر ({availability.availableCount}) أقل من المعتمد ({manualQuestionCount}).
+                عدّل الفلاتر أو قلّل عدد الأسئلة المطلوب أعلاه.
+              </p>
+            )}
+
+            {availability?.preview && (
+              <div className="availability-preview-list">
+                {availability.preview.map(item => (
+                  <article key={item.id} className="availability-preview-item">
+                    <QuestionTextBlock text={item.text} />
+                    <small>
+                      {topicsCatalog.find(t => t.code === item.topic)?.name || item.topic}
+                      {" · "}
+                      {difficultyNames[item.difficulty] || `Level ${item.difficulty}`}
+                      {" · "}
+                      {typeNames[item.type as keyof typeof typeNames] || item.type}
+                    </small>
+                  </article>
+                ))}
+                {!availability.preview.length && (
+                  <p className="platform-notice">لا توجد أسئلة مطابقة للفلاتر الحالية.</p>
+                )}
+              </div>
+            )}
+          </div>
+        )}
 
         {recoveryAvailable && (
           <div className="recovery-draft-bar">
@@ -5865,7 +6219,7 @@ function App() {
                     <div className="question-content">
                     <div className="question-text-panel">
                       <div className="question-text">
-                        {question.text}
+                        <QuestionTextBlock text={question.text} />
                       </div>
                     </div>
 

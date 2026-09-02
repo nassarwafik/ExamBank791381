@@ -212,3 +212,21 @@
 .bottom-actions-card{ display:flex; align-items:center; gap:10px; flex-wrap:wrap; }
 .bottom-action-notice{ color:var(--bp-muted); font-size:12.5px; }
 @media (prefers-reduced-motion:reduce){ .question-card{ transition:none; } }
+
+/* ---------- Exam Builder: two-phase availability panel ---------- */
+.exam-availability-card{ border-top:3px solid var(--bp-primary); margin-top:16px; }
+.availability-summary{ display:flex; flex-wrap:wrap; gap:14px; align-items:center; margin:10px 0 14px; font-size:13.5px; color:var(--bp-text); }
+.availability-summary input[type="number"]{ width:64px; border:1px solid var(--bp-line); border-radius:var(--bp-r); padding:4px 6px; font:inherit; text-align:center; }
+.availability-filters{ display:grid; grid-template-columns:repeat(3, minmax(180px, 1fr)); gap:16px; margin-bottom:14px; }
+.availability-filters fieldset{ border:1px solid var(--bp-line); border-radius:var(--bp-r-lg); padding:10px 12px; background:var(--bp-surface); }
+.availability-filters legend{ padding:0 6px; font-weight:800; color:var(--bp-navy); font-size:12.5px; }
+.availability-checkbox{ display:flex; align-items:center; gap:6px; font-size:12.5px; color:var(--bp-text); padding:3px 0; cursor:pointer; }
+.availability-facet-count{ color:var(--bp-muted); font-size:11px; }
+.availability-preview-list{ display:flex; flex-direction:column; gap:10px; margin-top:14px; }
+.availability-preview-item{ border:1px solid var(--bp-line); border-radius:var(--bp-r-lg); padding:12px 14px; background:var(--bp-surface-2); }
+.availability-preview-item small{ color:var(--bp-muted); }
+.question-table-wrap{ overflow-x:auto; margin-top:8px; }
+.question-table-wrap table{ border-collapse:collapse; width:100%; }
+.question-table-wrap th, .question-table-wrap td{ border:1px solid var(--bp-line); padding:6px 10px; font-size:12.5px; text-align:center; }
+.question-table-wrap th{ background:var(--bp-surface-2); font-weight:800; }
+@media (max-width:900px){ .availability-filters{ grid-template-columns:1fr; } }
