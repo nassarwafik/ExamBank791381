@@ -2,7 +2,9 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import type { FormEvent } from "react";
 import StudentPortal from "./StudentPortal";
 import TeacherPlatform from "./TeacherPlatform";
-import { IconUser, IconLock, IconWarning, IconBuilder, IconDashboard, IconStudents, IconAssignments, IconLogout, IconChevronDown, IconImage, IconSparkles } from "./icons";
+import ImportQuestionsPanel, { createEmptyImportSession } from "./ImportQuestionsPanel";
+import type { ImportSessionState } from "./ImportQuestionsPanel";
+import { IconUser, IconLock, IconWarning, IconBuilder, IconDashboard, IconStudents, IconAssignments, IconLogout, IconChevronDown, IconImage, IconSparkles, IconUpload } from "./icons";
 import { QuestionTextBlock } from "./questionContent";
 import "./App.css";
 import "./platform.css";
@@ -24,7 +26,7 @@ import "./login-pro.css";
 
 type DifficultyMap = Record<"1" | "2" | "3" | "4" | "5", number>;
 
-type ExamPlan = {
+export type ExamPlan = {
   title: string;
   originalRequest: string;
   totalQuestions: number;
@@ -65,7 +67,7 @@ type ExamPlan = {
   aiModel?: string;
 };
 
-type TopicOption = { code: string; name: string; parent: string | null };
+export type TopicOption = { code: string; name: string; parent: string | null };
 type FacetCount = { topic?: string; difficulty?: number; type?: string; count: number };
 type ExamAvailability = {
   availableCount: number;
@@ -75,14 +77,14 @@ type ExamAvailability = {
   preview?: Array<{ id: string; text: string; topic: string; difficulty: number; type: string }>;
 };
 
-type QuestionOption = {
+export type QuestionOption = {
   value?: string;
   label?: string;
   text?: string;
   order?: number;
 };
 
-type QuestionField = {
+export type QuestionField = {
   id?: string;
   label?: string;
   order?: number;
@@ -90,7 +92,7 @@ type QuestionField = {
   options?: QuestionOption[];
 };
 
-type QuestionImageAsset = {
+export type QuestionImageAsset = {
   id?: string;
   origin: "bank" | "ai-generated" | "uploaded";
   blobName?: string;
@@ -98,9 +100,9 @@ type QuestionImageAsset = {
   dataUrl: string;
 };
 
-type ExamQuestion = {
+export type ExamQuestion = {
   examQuestionId: string;
-  origin: "bank" | "ai-generated";
+  origin: "bank" | "ai-generated" | "imported";
   bankQuestionId?: string;
   sourceId?: string;
   sourceQuestionId?: string;
@@ -155,7 +157,7 @@ type ExamMetadata = {
   generalInstructions: string;
 };
 
-type ExamDraft = {
+export type ExamDraft = {
   schemaVersion: number;
   examId: string;
   title: string;
@@ -214,7 +216,7 @@ type GlobalAiOperation = {
   instruction: string;
 };
 
-const difficultyNames: Record<number, string> = {
+export const difficultyNames: Record<number, string> = {
   1: "Easy",
   2: "Easy-Medium",
   3: "Medium",
@@ -222,7 +224,7 @@ const difficultyNames: Record<number, string> = {
   5: "Advanced"
 };
 
-const typeNames: Record<ExamQuestion["presentationType"], string> = {
+export const typeNames: Record<ExamQuestion["presentationType"], string> = {
   multipleChoice: "أمريكي",
   fillBlank: "أكمل الناقص",
   wordBank: "مخزن كلمات",
@@ -340,7 +342,8 @@ function App() {
   ] =
     useState<
       "builder" |
-      "platform"
+      "platform" |
+      "import"
     >(
       "builder"
     );
@@ -366,6 +369,10 @@ function App() {
 
   const [analyzeBusy, setAnalyzeBusy] = useState(false);
   const [topicsCatalog, setTopicsCatalog] = useState<TopicOption[]>([]);
+  // Lifted above ImportQuestionsPanel (rather than owned inside it) so uploaded files, extraction
+  // state, extracted questions, selections, and duplicate-check results all survive navigating
+  // away to the Exam Draft and back — the panel would otherwise lose all of this on unmount.
+  const [importSession, setImportSession] = useState<ImportSessionState>(() => createEmptyImportSession());
   const [availability, setAvailability] = useState<ExamAvailability | null>(null);
   const [availabilityBusy, setAvailabilityBusy] = useState(false);
   const [selectedTopics, setSelectedTopics] = useState<string[]>([]);
@@ -675,6 +682,7 @@ function App() {
     setSelectedDifficulties([]);
     setSelectedTypes([]);
     setManualQuestionCount(0);
+    setImportSession(createEmptyImportSession());
   }
 
   async function fetchAvailability(
@@ -915,6 +923,82 @@ function App() {
     finally {
       setGenerateBusy(false);
     }
+  }
+
+  // Builds a full ExamDraft locally from questions the teacher selected in the file-import panel -
+  // no call to /api/generate-exam or the Question Bank selection algorithm, since these questions
+  // were already chosen manually (mirrors how a bank-replace via question-bank-action.js never
+  // re-runs generation either).
+  function buildDraftFromImportedQuestions(questions: ExamQuestion[], title: string): ExamDraft {
+    const now = new Date().toISOString();
+    const totalMarks = questions.reduce((sum, question) => sum + Number(question.marks || 0), 0);
+
+    const placeholderPlan: ExamPlan = {
+      title,
+      originalRequest: "",
+      totalQuestions: questions.length,
+      requestedQuestionCount: questions.length,
+      totalMarks,
+      sectionTargets: { BASIC: questions.length, INFRASTRUCTURE: 0 },
+      difficultyTargets: { "1": 0, "2": 0, "3": 0, "4": 0, "5": 0 },
+      topicTargets: [],
+      excludedTopics: [],
+      typeTargets: { multipleChoice: 0, fillBlank: 0, wordBank: 0, open: 0 },
+      minimums: { images: 0, cli: 0, calculations: 0 },
+      rules: {
+        excludeNeedsReview: false,
+        avoidSameFamily: false,
+        preferOfficialSources: false,
+        avoidPreviouslyUsed: false,
+        recentExamCount: 0
+      },
+      explanation: "امتحان مبني من أسئلة مستوردة من ملفات خارجية، بلا توليد بالذكاء الاصطناعي."
+    };
+
+    return {
+      schemaVersion: 1,
+      examId: `DRAFT-${Date.now()}-${Math.random().toString(16).slice(2, 8)}`,
+      title,
+      originalRequest: "",
+      plan: placeholderPlan,
+      totalMarks,
+      status: "draft",
+      createdAt: now,
+      updatedAt: now,
+      metadata: defaultExamMetadata(),
+      questions,
+      summary: rebuildSummary(questions),
+      warnings: [],
+      revisionHistory: []
+    };
+  }
+
+  function handleBuildExamFromImportedQuestions(questions: ExamQuestion[]) {
+    setPlan(null);
+    setExam(buildDraftFromImportedQuestions(questions, "امتحان من أسئلة مستوردة"));
+    setHasUnsavedChanges(true);
+    setTeacherView("builder");
+
+    window.setTimeout(() => {
+      document.getElementById("generated-exam")?.scrollIntoView({ behavior: "smooth", block: "start" });
+    }, 80);
+  }
+
+  function handleAppendImportedQuestions(questions: ExamQuestion[]) {
+    setExam(previous => {
+      if (!previous) {
+        return buildDraftFromImportedQuestions(questions, "امتحان من أسئلة مستوردة");
+      }
+      const merged = [...previous.questions, ...questions];
+      return {
+        ...previous,
+        questions: merged,
+        summary: rebuildSummary(merged),
+        updatedAt: new Date().toISOString()
+      };
+    });
+    setHasUnsavedChanges(true);
+    setTeacherView("builder");
   }
 
   function rebuildSummary(
@@ -5061,6 +5145,14 @@ function App() {
             <IconAssignments size={20} />
             <span>الواجبات</span>
           </button>
+
+          <button
+            className={"app-sidebar-link " + (teacherView === "import" ? "active" : "")}
+            onClick={() => setTeacherView("import")}
+          >
+            <IconUpload size={20} />
+            <span>استيراد من ملف</span>
+          </button>
         </nav>
 
         <div className="app-sidebar-user">
@@ -5091,6 +5183,19 @@ function App() {
           token={token}
           currentExam={exam}
           workspaceTab={workspaceTab}
+        />
+      )}
+
+      {teacherView === "import" && (
+        <ImportQuestionsPanel
+          token={token}
+          topicsCatalog={topicsCatalog}
+          hasOpenDraft={Boolean(exam)}
+          currentExamQuestionCount={exam?.questions.length || 0}
+          session={importSession}
+          onSessionChange={setImportSession}
+          onBuildNewExam={handleBuildExamFromImportedQuestions}
+          onAppendToExam={handleAppendImportedQuestions}
         />
       )}
 

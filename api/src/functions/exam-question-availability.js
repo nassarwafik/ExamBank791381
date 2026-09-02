@@ -1,9 +1,25 @@
 const { app } = require("@azure/functions");
+const fs = require("fs");
+const path = require("path");
 const { requireBuilderAuth } = require("../lib/builder-auth");
 const { getContainer, downloadJsonOrNull } = require("../lib/platform-storage");
 const { INDEX_BLOB, filterEligibleCandidates, presentationTypeFromIndex } = require("../lib/exam-question-selection");
+const { resolveSectionFromTopic } = require("../lib/section-resolver");
 
 const PREVIEW_LIMIT = 20;
+
+function loadTopicsConfig() {
+  const candidates = [
+    path.join(process.cwd(), "config", "topics.json"),
+    path.join(__dirname, "..", "..", "config", "topics.json")
+  ];
+  for (const filePath of candidates) {
+    if (fs.existsSync(filePath)) {
+      return JSON.parse(fs.readFileSync(filePath, "utf8"));
+    }
+  }
+  return { topics: [] };
+}
 
 app.http("examQuestionAvailability", {
   methods: ["POST"],
@@ -69,12 +85,27 @@ app.http("examQuestionAvailability", {
         typeCounts.set(type, (typeCounts.get(type) || 0) + 1);
       }
 
+      // Included unconditionally (cheap local file read) so any caller of this endpoint can render
+      // topic display names without needing to have already gone through /api/interpret-exam-request
+      // first (e.g. the file-import panel, which has no AI-parsed prompt to derive topics from).
+      // defaultSection/sectionConfidence are the same majority-mapping bank-import-action.js uses
+      // to VALIDATE a section server-side - exposed here only as a display hint for the frontend;
+      // the frontend must never treat sectionConfidence < threshold as anything but "ask the
+      // teacher", and the backend independently re-validates on commit regardless of what the
+      // frontend sends.
+      const topicsConfig = loadTopicsConfig();
+      const topicsWithSection = (topicsConfig.topics || []).map(topic => {
+        const resolved = resolveSectionFromTopic(topic.code);
+        return { ...topic, defaultSection: resolved.section, sectionConfidence: resolved.confidence };
+      });
+
       const result = {
         ok: true,
         availableCount: candidates.length,
         topicFacets: [...topicCounts.entries()].map(([topic, count]) => ({ topic, count })),
         difficultyFacets: [...difficultyCounts.entries()].map(([difficulty, count]) => ({ difficulty, count })),
-        typeFacets: [...typeCounts.entries()].map(([type, count]) => ({ type, count }))
+        typeFacets: [...typeCounts.entries()].map(([type, count]) => ({ type, count })),
+        topics: topicsWithSection
       };
 
       if (wantPreview) {
