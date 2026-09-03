@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { applySectionOverride } from "./ImportQuestionsPanel";
+import { applySectionOverride, distributeMarks, convertTableRowsToWordBankFields, parseWordBankInput } from "./ImportQuestionsPanel";
 import type { ImportedQuestion } from "./ImportQuestionsPanel";
 
 function question(overrides: Partial<ImportedQuestion> = {}): ImportedQuestion {
@@ -21,6 +21,7 @@ function question(overrides: Partial<ImportedQuestion> = {}): ImportedQuestion {
     images: [],
     section: "INFRASTRUCTURE",
     sectionConfidence: 1,
+    wordBankInput: "",
     ...overrides
   };
 }
@@ -50,5 +51,88 @@ describe("applySectionOverride - the teacher can always change the auto-resolved
     const updated = applySectionOverride(pool, "q1", "INFRASTRUCTURE");
     expect(updated[0].section).toBe("INFRASTRUCTURE");
     expect(updated[1].section).toBe("INFRASTRUCTURE"); // q2's own original value, unrelated to the override
+  });
+});
+
+describe("distributeMarks - spreads 100 marks evenly across an imported selection (same algorithm as generate-exam.js)", () => {
+  it("splits evenly when the count divides 100 exactly", () => {
+    expect(distributeMarks(100, 4)).toEqual([25, 25, 25, 25]);
+    expect(distributeMarks(100, 5)).toEqual([20, 20, 20, 20, 20]);
+  });
+
+  it("hands the remainder to the first questions, one mark each, so the total is always exact", () => {
+    const marks = distributeMarks(100, 3);
+    expect(marks).toEqual([34, 33, 33]);
+    expect(marks.reduce((a, b) => a + b, 0)).toBe(100);
+  });
+
+  it("gives all 100 marks to a single selected question", () => {
+    expect(distributeMarks(100, 1)).toEqual([100]);
+  });
+
+  it("always sums to exactly the requested total regardless of question count", () => {
+    for (const count of [1, 2, 3, 6, 7, 9, 13, 40]) {
+      const marks = distributeMarks(100, count);
+      expect(marks).toHaveLength(count);
+      expect(marks.reduce((a, b) => a + b, 0)).toBe(100);
+    }
+  });
+
+  it("falls back to a count of 1 for zero/negative input instead of dividing by zero", () => {
+    expect(distributeMarks(100, 0)).toEqual([100]);
+    expect(distributeMarks(100, -3)).toEqual([100]);
+  });
+});
+
+describe("convertTableRowsToWordBankFields - manually converting an imported table question to wordBank", () => {
+  it("builds one field per row using the non-blank cell as the label (blank-first layout, matching the screenshot)", () => {
+    const text =
+      "جزء الشبكة وجزء الحاسوب أكمل الجدول التالي للعنوان 192.168.10.55/24:\n" +
+      "| الإجابة | المعطى |\n" +
+      "| --- | --- |\n" +
+      "| ___ | Network Address |\n" +
+      "| ____ | Host Part |\n" +
+      "| _ | Subnet Mask |";
+
+    const converted = convertTableRowsToWordBankFields(text);
+    expect(converted).not.toBeNull();
+    expect(converted!.prose).toBe("جزء الشبكة وجزء الحاسوب أكمل الجدول التالي للعنوان 192.168.10.55/24:");
+    expect(converted!.fields.map(f => f.label)).toEqual(["Network Address", "Host Part", "Subnet Mask"]);
+    expect(converted!.fields.map(f => f.kind)).toEqual(["select", "select", "select"]);
+  });
+
+  it("builds fields the same way when the blank column comes second instead of first", () => {
+    const text = "اكتب لكل عنوان الفئة التي ينتمي إليها:\n| العنوان | الفئة |\n| --- | --- |\n| 223.100.220.100 | -- |\n| 92.168.100.29 | -- |";
+    const converted = convertTableRowsToWordBankFields(text);
+    expect(converted!.fields.map(f => f.label)).toEqual(["223.100.220.100", "92.168.100.29"]);
+  });
+
+  it("returns null when the question has no table to convert", () => {
+    expect(convertTableRowsToWordBankFields("سؤال عادي بلا جدول إطلاقًا.")).toBeNull();
+  });
+
+  it("assigns sequential order matching row order", () => {
+    const text = "س:\n| أ | ب |\n| --- | --- |\n| _ | one |\n| _ | two |\n| _ | three |";
+    const converted = convertTableRowsToWordBankFields(text);
+    expect(converted!.fields.map(f => f.order)).toEqual([0, 1, 2]);
+  });
+});
+
+describe("parseWordBankInput - the teacher's typed answer pool", () => {
+  it("splits on commas and trims whitespace", () => {
+    expect(parseWordBankInput("192.168.10.0, 0.0.0.55 , 255.255.255.0")).toEqual(["192.168.10.0", "0.0.0.55", "255.255.255.0"]);
+  });
+
+  it("also splits on newlines", () => {
+    expect(parseWordBankInput("Class A\nClass B\nClass C")).toEqual(["Class A", "Class B", "Class C"]);
+  });
+
+  it("drops empty entries and duplicates", () => {
+    expect(parseWordBankInput("a, , a, b,")).toEqual(["a", "b"]);
+  });
+
+  it("returns an empty array for empty/whitespace-only input", () => {
+    expect(parseWordBankInput("")).toEqual([]);
+    expect(parseWordBankInput("   ")).toEqual([]);
   });
 });

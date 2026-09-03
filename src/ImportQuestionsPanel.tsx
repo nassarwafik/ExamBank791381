@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { QuestionTextBlock } from "./questionContent";
+import { QuestionTextBlock, parseTable, promptText } from "./questionContent";
 import type { ExamQuestion, QuestionOption, TopicOption } from "./App";
 import { difficultyNames, typeNames } from "./App";
 
@@ -39,6 +39,9 @@ export type ImportedQuestion = {
   // never guessed. The exam-draft path (not the Bank) is more lenient (see toExamQuestion).
   section: "BASIC" | "INFRASTRUCTURE" | null;
   sectionConfidence: number;
+  // Raw teacher-typed answer pool (comma/newline separated) used only when the teacher manually
+  // converts this question to presentationType "wordBank" - see convertTableRowsToWordBank().
+  wordBankInput: string;
 };
 
 export type DuplicateMatch = {
@@ -111,6 +114,42 @@ function defaultPresentationType(question: ImportedQuestion): ExamQuestion["pres
   return question.presentationType || "open";
 }
 
+// A cell containing only underscores/dashes (Arabic or Latin) is the blank the student is meant to
+// fill in - the OTHER cell in that row is the row's label (e.g. "Network Address"). This mirrors
+// how these worksheet-style tables are actually authored (a blank-answer column + a given/label
+// column), rather than assuming a fixed column order.
+function isBlankPlaceholderCell(cell: string): boolean {
+  return /^[_\-ـ\s]*$/.test(cell.trim()) || cell.trim() === "";
+}
+
+export type ConvertedWordBankFields = { prose: string; fields: { id: string; label: string; order: number; kind: string }[] };
+
+// Pure, exported for unit testing. Converts a table-formatted question's text into the shape
+// StudentExamPage.tsx's EXISTING wordBank/fillBlank rendering already expects (one field per row,
+// answered via a dropdown populated from ExamQuestion.wordBank) - this is a pure data
+// transformation, not a UI or student-facing rendering change, so StudentExamPage.tsx itself is
+// never touched. Returns null when the question has no parseable table (nothing to convert).
+export function convertTableRowsToWordBankFields(text: string): ConvertedWordBankFields | null {
+  const table = parseTable(text);
+  if (!table) {
+    return null;
+  }
+
+  const fields = table.rows.map((row, index) => {
+    const blankIndex = row.findIndex(isBlankPlaceholderCell);
+    const labelCell = blankIndex >= 0 ? row[(blankIndex + 1) % row.length] : row[row.length - 1];
+    return { id: `field-${index}`, label: (labelCell || "").trim(), order: index, kind: "select" };
+  });
+
+  return { prose: promptText(text), fields };
+}
+
+// Splits the teacher's free-typed answer pool on commas/newlines, trims, and drops empties/dupes.
+export function parseWordBankInput(raw: string): string[] {
+  const values = String(raw || "").split(/[,\n]/).map(value => value.trim()).filter(Boolean);
+  return [...new Set(values)];
+}
+
 // Pure, exported for unit testing: the teacher's manual section choice always overwrites whatever
 // topic-section-map.json auto-resolved, REGARDLESS of how confident that auto-resolution was (a
 // >=90%-confidence suggestion is still only ever a pre-filled default, never a locked value - the
@@ -123,18 +162,44 @@ export function applySectionOverride(
   return pool.map(question => (question.importedQuestionId === importedQuestionId ? { ...question, section } : question));
 }
 
+// Same algorithm as generate-exam.js's distributeMarks(): split totalMarks as evenly as possible
+// across `count` questions, handing the 1-mark remainder to the first few so the sum is exact.
+export function distributeMarks(totalMarks: number, count: number): number[] {
+  const total = Math.max(1, totalMarks || 100);
+  const safeCount = Math.max(1, count);
+  const base = Math.floor(total / safeCount);
+  let remainder = total - base * safeCount;
+
+  return Array.from({ length: safeCount }, () => {
+    const value = base + (remainder > 0 ? 1 : 0);
+    if (remainder > 0) {
+      remainder -= 1;
+    }
+    return value;
+  });
+}
+
 // Draft-building is intentionally more lenient than the Bank commit gate: ExamQuestion.section is
 // a non-nullable BASIC|INFRASTRUCTURE field used only for the draft's own summary tally, and the
 // "never LEGACY / never guess" hard rule the teacher asked for applies specifically to what gets
 // permanently written to the Question Bank (see bank-import-action.js's partitionQuestionsBySectionValidity),
 // not to a transient, freely-editable exam draft. A best-effort fallback here is acceptable.
-function toExamQuestion(question: ImportedQuestion, index: number): ExamQuestion {
+function toExamQuestion(question: ImportedQuestion, index: number, marks: number): ExamQuestion {
   const imageAssets = question.images.map(image => ({
     id: image.id,
     origin: "uploaded" as const,
     contentType: image.contentType,
     dataUrl: image.dataUrl
   }));
+
+  // Manual teacher conversion (see the "النوع" selector in the review UI): a table-formatted
+  // question the teacher retyped as "wordBank" gets its markdown table stripped out of `text` and
+  // rebuilt as fields+wordBank instead - the exact shape StudentExamPage.tsx's ALREADY-WORKING
+  // dropdown-per-field rendering expects for any other wordBank question. Falls back to the
+  // original text/no-fields if there's no table to convert (nothing to do).
+  const wordBankConversion = question.presentationType === "wordBank"
+    ? convertTableRowsToWordBankFields(question.text)
+    : null;
 
   return {
     examQuestionId: `IMP-${Date.now()}-${index}`,
@@ -148,12 +213,13 @@ function toExamQuestion(question: ImportedQuestion, index: number): ExamQuestion
     hasCLI: false,
     requiresCalculation: false,
     presentationType: defaultPresentationType(question),
-    marks: 5,
+    marks,
     locked: false,
-    text: question.text,
+    text: wordBankConversion ? wordBankConversion.prose : question.text,
     textHtml: "",
     options: question.options,
-    fields: [],
+    fields: wordBankConversion ? wordBankConversion.fields : [],
+    wordBank: wordBankConversion ? parseWordBankInput(question.wordBankInput) : undefined,
     parts: [],
     answer: question.hasVisibleAnswer && question.answerText
       ? { mode: "anyAccepted", values: [question.answerText] }
@@ -279,7 +345,7 @@ export default function ImportQuestionsPanel({
 
       const stamped = result.questions.map(question => {
         const { section, sectionConfidence } = resolveSection(question.topic);
-        return { ...question, sourceFileName: fileName, importJobId, section, sectionConfidence };
+        return { ...question, sourceFileName: fileName, importJobId, section, sectionConfidence, wordBankInput: "" };
       });
 
       const newUnassigned: UnassignedAsset[] = (result.unassignedAssets || []).map(asset => ({ ...asset, importJobId, sourceFileName: fileName }));
@@ -425,6 +491,18 @@ export default function ImportQuestionsPanel({
     patchSession(previous => ({ pool: applySectionOverride(previous.pool, importedQuestionId, section) }));
   }
 
+  function setQuestionType(importedQuestionId: string, presentationType: ExamQuestion["presentationType"]) {
+    patchSession(previous => ({
+      pool: previous.pool.map(question => (question.importedQuestionId === importedQuestionId ? { ...question, presentationType } : question))
+    }));
+  }
+
+  function setQuestionWordBankInput(importedQuestionId: string, wordBankInput: string) {
+    patchSession(previous => ({
+      pool: previous.pool.map(question => (question.importedQuestionId === importedQuestionId ? { ...question, wordBankInput } : question))
+    }));
+  }
+
   const selectedQuestions = useMemo(
     () => pool.filter(question => selectedIds.has(question.importedQuestionId)),
     [pool, selectedIds]
@@ -433,7 +511,8 @@ export default function ImportQuestionsPanel({
   const sourceFileNames = useMemo(() => [...new Set(pool.map(question => question.sourceFileName))], [pool]);
 
   function buildExamQuestionsFromSelection(): ExamQuestion[] {
-    return selectedQuestions.map((question, index) => toExamQuestion(question, index));
+    const marks = distributeMarks(100, selectedQuestions.length);
+    return selectedQuestions.map((question, index) => toExamQuestion(question, index, marks[index]));
   }
 
   function handleBuildNewExam() {
@@ -740,7 +819,6 @@ export default function ImportQuestionsPanel({
                   <div className="import-question-badges">
                     <span>{question.topic ? (effectiveTopics.find(t => t.code === question.topic)?.name || question.topic) : "موضوع غير محدد"}</span>
                     <span>{question.difficulty ? (difficultyNames[question.difficulty] || question.difficulty) : "صعوبة غير محددة"}</span>
-                    <span>{question.presentationType ? typeNames[question.presentationType] : "نوع غير محدد"}</span>
                     {question.requiresManualReview && <span className="import-badge-review">يحتاج مراجعة</span>}
                     <label className="import-section-picker">
                       القسم:
@@ -753,9 +831,49 @@ export default function ImportQuestionsPanel({
                         <option value="INFRASTRUCTURE">بنية تحتية (INFRASTRUCTURE)</option>
                       </select>
                     </label>
+                    <label className="import-section-picker">
+                      النوع:
+                      <select
+                        value={question.presentationType || "open"}
+                        onChange={event => setQuestionType(question.importedQuestionId, event.target.value as ExamQuestion["presentationType"])}
+                      >
+                        {(Object.keys(typeNames) as Array<keyof typeof typeNames>).map(type => (
+                          <option key={type} value={type}>{typeNames[type]}</option>
+                        ))}
+                      </select>
+                    </label>
                   </div>
 
                   <QuestionTextBlock text={question.text} />
+
+                  {question.presentationType === "wordBank" && (() => {
+                    const converted = convertTableRowsToWordBankFields(question.text);
+                    if (!converted) {
+                      return (
+                        <p className="platform-error">
+                          لا يوجد جدول في هذا السؤال لتحويله إلى قائمة منسدلة — سيبقى كسؤال عادي.
+                        </p>
+                      );
+                    }
+                    return (
+                      <div className="import-wordbank-editor">
+                        <p>
+                          الحقول المكتشفة: {converted.fields.map(f => f.label).filter(Boolean).join("، ") || "—"}
+                        </p>
+                        <label>
+                          قائمة الإجابات (افصل بينها بفاصلة):
+                          <textarea
+                            value={question.wordBankInput}
+                            onChange={event => setQuestionWordBankInput(question.importedQuestionId, event.target.value)}
+                            placeholder="مثال: 192.168.10.0, 0.0.0.55, 255.255.255.0"
+                          />
+                        </label>
+                        {parseWordBankInput(question.wordBankInput).length === 0 && (
+                          <p className="platform-error">اكتب قائمة الإجابات قبل إضافة هذا السؤال، وإلا ستظهر القائمة المنسدلة فارغة للطالب.</p>
+                        )}
+                      </div>
+                    );
+                  })()}
 
                   {question.images.length > 0 && (
                     <div className="import-question-images">
