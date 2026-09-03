@@ -120,6 +120,14 @@ function extractorForKind(kind) {
   return htmlExtract.extractPages;
 }
 
+// Import Questions From Files defaults to OpenAI (not GLM) for question detection - an explicit
+// product decision, independent of import-ai-client.js's own generic fallback behavior. A caller
+// can still explicitly request "glm"/"qwen"/"qwenplus" (e.g. for a future manual override), but
+// omitting `provider` entirely - or the frontend simply not sending it - must resolve to OpenAI.
+function resolveImportProvider(body) {
+  return String(body?.provider || "openai").trim().toLowerCase();
+}
+
 // PDF Scan (scanned pages with no extractable text): NOT implemented in this phase. pdf-extract.js
 // deliberately never extracts embedded page images (avoiding a fragile pdfjs-dist+canvas native
 // dependency right after a production outage caused by a fragile dependency chain - see
@@ -168,9 +176,20 @@ async function detectQuestionsInChunk(chunk, { provider, topicCodes, aiTimeoutMs
 // and the request returns status:"partial" well inside the budget, instead of gambling that "we
 // were under budget when we started" is enough - which is exactly what let a slow first chunk push
 // a second chunk's call past the real deadline before this fix.
+//
+// A chunk that genuinely FAILS (AI call throws/times out) is NOT treated the same as a chunk that
+// legitimately detected zero questions: it is never marked processed, never given a fabricated
+// questions:[] result, and immediately stops the loop (no further chunks are attempted this
+// request) - the exact same chunk index is retried on the next import-analyze call instead of
+// being silently skipped forever. This also means a real provider failure (e.g. a missing API key,
+// or a call that genuinely times out) is never disguised as "this chunk had 0 questions" - it is
+// reported back via the returned lastChunkError so the caller can surface a real, retryable error
+// instead of a misleadingly cheerful "found 0 questions".
 async function runRemainingChunks(state, {
   detector, onChunkDone, warnings, startedAt, requestBudgetMs, safetyMarginMs, maxAiTimeoutMs, minUsefulAiTimeoutMs, now
 }) {
+  let lastChunkError = null;
+
   while (state.processedChunks < state.totalChunks) {
     const elapsed = now() - startedAt;
     const remainingMs = requestBudgetMs - elapsed;
@@ -181,20 +200,24 @@ async function runRemainingChunks(state, {
     }
 
     const chunk = state.chunks[state.processedChunks];
+    let chunkResult;
     try {
-      const chunkResult = await detector(chunk, aiTimeoutMs);
-      if (chunkResult.warning) {
-        warnings.push(chunkResult.warning);
-      }
-      state.results.push(chunkResult);
+      chunkResult = await detector(chunk, aiTimeoutMs);
     } catch (error) {
+      lastChunkError = error.message;
       warnings.push(`Chunk ${chunk.chunkIndex} (pages ${chunk.pageNumbers.join(",")}) failed: ${error.message}`);
-      state.results.push({ pageNumbers: chunk.pageNumbers, questions: [] });
+      break;
     }
 
+    if (chunkResult.warning) {
+      warnings.push(chunkResult.warning);
+    }
+    state.results.push(chunkResult);
     state.processedChunks += 1;
     await onChunkDone();
   }
+
+  return { lastChunkError };
 }
 
 app.http("importAnalyze", {
@@ -221,7 +244,7 @@ app.http("importAnalyze", {
       }
 
       const importJobId = String(body?.importJobId || "").trim();
-      const provider = String(body?.provider || "glm").trim().toLowerCase();
+      const provider = resolveImportProvider(body);
 
       if (!importJobId || !/^imp-[a-z0-9-]+$/i.test(importJobId)) {
         return { status: 400, jsonBody: { ok: false, error: "Valid importJobId is required." } };
@@ -262,7 +285,7 @@ app.http("importAnalyze", {
       const topicCodes = loadTopicCodes();
       const warnings = [...(state.extractionWarnings || [])];
 
-      await runRemainingChunks(state, {
+      const { lastChunkError } = await runRemainingChunks(state, {
         detector: (chunk, aiTimeoutMs) => detectQuestionsInChunk(chunk, { provider, topicCodes, aiTimeoutMs }),
         onChunkDone: async () => uploadJson(container, blobPrefix + "state.json", serializeStateForStorage(state)),
         warnings,
@@ -312,6 +335,11 @@ app.http("importAnalyze", {
           status,
           processedChunks: state.processedChunks,
           totalChunks: state.totalChunks,
+          // Non-null specifically when the loop stopped because a chunk's AI call genuinely
+          // failed/timed out (as opposed to stopping because the request's own time budget ran
+          // out with more chunks still to try) - lets the caller show a real, retryable error
+          // ("تعذر تحليل الملف بواسطة OpenAI حاليًا") instead of a misleading "found 0 questions".
+          lastChunkError,
           questions: questionsWithImages,
           unassignedAssets,
           warnings
@@ -323,7 +351,7 @@ app.http("importAnalyze", {
   }
 });
 
-// Exported only for unit testing the Buffer<->base64 state-persistence boundary and the
-// already-done-job-never-recalls-AI guarantee (app.http's own route registration above is
-// unaffected).
-module.exports = { serializeStateForStorage, deserializeStateFromStorage, runRemainingChunks };
+// Exported only for unit testing the Buffer<->base64 state-persistence boundary, the
+// already-done-job-never-recalls-AI guarantee, and the OpenAI-by-default provider resolution
+// (app.http's own route registration above is unaffected).
+module.exports = { serializeStateForStorage, deserializeStateFromStorage, runRemainingChunks, resolveImportProvider };

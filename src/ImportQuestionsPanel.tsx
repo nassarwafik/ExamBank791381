@@ -265,12 +265,12 @@ export default function ImportQuestionsPanel({
     for (let attempt = 0; attempt < 20; attempt += 1) {
       let result: {
         ok: true; status: string; questions: RawDetectedQuestion[]; processedChunks: number; totalChunks: number;
-        warnings: string[]; unassignedAssets: ImportedImage[];
+        warnings: string[]; unassignedAssets: ImportedImage[]; lastChunkError: string | null;
       };
       try {
         result = await api("/api/import-analyze", {
           method: "POST",
-          body: JSON.stringify({ importJobId, provider: "glm" })
+          body: JSON.stringify({ importJobId, provider: "openai" })
         });
       } catch (err) {
         updateFile(importJobId, { status: "failed", error: err instanceof Error ? err.message : "تعذر تحليل الملف." });
@@ -298,6 +298,18 @@ export default function ImportQuestionsPanel({
         updateFile(importJobId, {
           status: "done",
           progressLabel: `تم العثور على ${addedSoFar} سؤالًا`
+        });
+        return;
+      }
+
+      // A real AI-provider failure (missing key, timeout, ...) must never look like ordinary "still
+      // processing" progress or a cheerful "found 0 questions" - stop retrying automatically and
+      // surface a clear, explicitly retryable error instead (the teacher can press "إعادة التحليل"
+      // once the underlying issue is resolved; the same unprocessed chunk will be retried then).
+      if (result.lastChunkError) {
+        updateFile(importJobId, {
+          status: "failed",
+          error: "تعذر تحليل الملف بواسطة OpenAI حاليًا."
         });
         return;
       }
