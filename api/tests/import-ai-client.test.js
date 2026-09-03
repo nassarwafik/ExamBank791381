@@ -1,11 +1,13 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
 const createMock = vi.fn();
+const constructorArgsSeen = [];
 
 vi.mock("openai", () => {
   return {
     default: class MockOpenAI {
-      constructor() {
+      constructor(options) {
+        constructorArgsSeen.push(options);
         this.chat = { completions: { create: createMock } };
         this.responses = { create: createMock };
       }
@@ -23,8 +25,10 @@ vi.mock("openai", () => {
 describe("callTextJson / callVisionJson - AI_CALL_TIMEOUT_MS is actually passed to the SDK", () => {
   beforeEach(() => {
     createMock.mockReset();
+    constructorArgsSeen.length = 0;
     process.env.ZAI_API_KEY = "test-key";
     process.env.OPENAI_API_KEY = "test-key";
+    process.env.QWEN_API_KEY = "test-key";
   });
 
   it("passes a timeout option to chat.completions.create for a chat-mode provider (glm)", async () => {
@@ -65,5 +69,42 @@ describe("callTextJson / callVisionJson - AI_CALL_TIMEOUT_MS is actually passed 
     // be smaller OR larger than this default depending on how much of the request budget remains.
     // This default still shouldn't itself be an unreasonably large fraction of a short request.
     expect(AI_CALL_TIMEOUT_MS).toBeLessThan(35000);
+  });
+});
+
+// Regression test for a second, real production incident: even after bounding every AI call to a
+// short per-call timeout, a live request still took ~45s wall-clock and failed - LONGER than the
+// 35s whole-request budget the timeout was supposed to fit inside. Root cause: the openai SDK
+// retries a failed/timed-out request up to `maxRetries` additional times by default (documented
+// default: 2), so a single "timeout: 20000" call could actually run up to ~3x that before finally
+// rejecting. This feature already has its own higher-level retry mechanism (a failed chunk is
+// caught and warned about; the resumable import-analyze loop picks up later chunks on a later
+// call), so SDK-level retries must be disabled - otherwise `timeout` is a per-ATTEMPT limit, not
+// the hard per-call ceiling the deadline math in import-analyze.js assumes it is.
+describe("createClient - SDK-level retries are disabled for every provider", () => {
+  beforeEach(() => {
+    createMock.mockReset();
+    constructorArgsSeen.length = 0;
+    process.env.ZAI_API_KEY = "test-key";
+    process.env.QWEN_API_KEY = "test-key";
+    process.env.OPENAI_API_KEY = "test-key";
+  });
+
+  it("passes maxRetries:0 when constructing the glm (Z.ai) client", async () => {
+    const { createClient } = await import("../src/lib/import-ai-client.js");
+    await createClient("glm");
+    expect(constructorArgsSeen[0]).toMatchObject({ maxRetries: 0 });
+  });
+
+  it("passes maxRetries:0 when constructing the qwen client", async () => {
+    const { createClient } = await import("../src/lib/import-ai-client.js");
+    await createClient("qwen");
+    expect(constructorArgsSeen[0]).toMatchObject({ maxRetries: 0 });
+  });
+
+  it("passes maxRetries:0 when constructing the openai client", async () => {
+    const { createClient } = await import("../src/lib/import-ai-client.js");
+    await createClient("openai");
+    expect(constructorArgsSeen[0]).toMatchObject({ maxRetries: 0 });
   });
 });
