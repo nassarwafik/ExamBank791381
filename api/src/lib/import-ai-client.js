@@ -10,6 +10,17 @@ async function loadOpenAI() {
   return module.default;
 }
 
+// The openai SDK retries a failed/timed-out request up to `maxRetries` additional times by
+// default (its own documented default is 2) - meaning a single "timeout: 20000" call could
+// actually run for up to 3x that (~60s) before finally rejecting, which is exactly what let a
+// real request blow through this module's deadline-aware budget (confirmed in production: a
+// request timed out at 20s per call still took 45s wall-clock overall). This whole feature already
+// has its OWN higher-level retry mechanism - a failed chunk is caught, warned about, and the
+// resumable import-analyze loop can pick up the next chunk on a later call - so SDK-level retries
+// are redundant here and must be disabled so `timeout` is an actual hard ceiling, not a per-attempt
+// one multiplied by silent retries.
+const NO_SDK_RETRIES = { maxRetries: 0 };
+
 async function createClient(provider) {
   const OpenAI = await loadOpenAI();
 
@@ -19,7 +30,7 @@ async function createClient(provider) {
       throw new Error("ZAI_API_KEY is not configured.");
     }
     return {
-      client: new OpenAI({ apiKey, baseURL: process.env.ZAI_BASE_URL || "https://api.z.ai/api/paas/v4" }),
+      client: new OpenAI({ apiKey, baseURL: process.env.ZAI_BASE_URL || "https://api.z.ai/api/paas/v4", ...NO_SDK_RETRIES }),
       model: process.env.ZAI_MODEL || "glm-5.3-flash",
       mode: "chat"
     };
@@ -31,7 +42,7 @@ async function createClient(provider) {
       throw new Error("QWEN_API_KEY is not configured.");
     }
     return {
-      client: new OpenAI({ apiKey, baseURL: process.env.QWEN_BASE_URL || "https://dashscope-intl.aliyuncs.com/compatible-mode/v1" }),
+      client: new OpenAI({ apiKey, baseURL: process.env.QWEN_BASE_URL || "https://dashscope-intl.aliyuncs.com/compatible-mode/v1", ...NO_SDK_RETRIES }),
       model: provider === "qwenplus"
         ? (process.env.QWEN_PLUS_MODEL || "qwen3.7-plus")
         : (process.env.QWEN_MODEL || "qwen3.5-flash"),
@@ -44,7 +55,7 @@ async function createClient(provider) {
     throw new Error("OPENAI_API_KEY is not configured.");
   }
   return {
-    client: new OpenAI({ apiKey }),
+    client: new OpenAI({ apiKey, ...NO_SDK_RETRIES }),
     model: process.env.OPENAI_MODEL || "gpt-5.6-luna",
     mode: "responses"
   };
