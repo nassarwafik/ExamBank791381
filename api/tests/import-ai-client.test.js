@@ -108,3 +108,24 @@ describe("createClient - SDK-level retries are disabled for every provider", () 
     expect(constructorArgsSeen[0]).toMatchObject({ maxRetries: 0 });
   });
 });
+
+describe("normalizeProvider - Import Questions From Files defaults to OpenAI, not GLM", () => {
+  it("defaults to openai for an empty/undefined value", async () => {
+    const { normalizeProvider } = await import("../src/lib/import-ai-client.js");
+    expect(normalizeProvider(undefined)).toBe("openai");
+    expect(normalizeProvider("")).toBe("openai");
+  });
+
+  it("defaults to openai for an unrecognized/garbage value rather than silently landing on glm", async () => {
+    const { normalizeProvider } = await import("../src/lib/import-ai-client.js");
+    expect(normalizeProvider("not-a-real-provider")).toBe("openai");
+  });
+
+  it("still honors an explicit glm/qwen/qwenplus/openai request", async () => {
+    const { normalizeProvider } = await import("../src/lib/import-ai-client.js");
+    expect(normalizeProvider("glm")).toBe("glm");
+    expect(normalizeProvider("qwen")).toBe("qwen");
+    expect(normalizeProvider("qwenplus")).toBe("qwenplus");
+    expect(normalizeProvider("openai")).toBe("openai");
+  });
+});

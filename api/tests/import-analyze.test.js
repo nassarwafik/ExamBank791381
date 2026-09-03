@@ -1,5 +1,6 @@
 import { describe, it, expect, vi } from "vitest";
-import { serializeStateForStorage, deserializeStateFromStorage, runRemainingChunks } from "../src/functions/import-analyze.js";
+import { serializeStateForStorage, deserializeStateFromStorage, runRemainingChunks, resolveImportProvider } from "../src/functions/import-analyze.js";
+import { mergeChunkResults } from "../src/lib/import-ai-detect.js";
 
 describe("state <-> storage Buffer serialization boundary", () => {
   it("round-trips a chunk image buffer through JSON as base64, not the broken default {type:'Buffer',data:[...]} shape", () => {
@@ -75,18 +76,60 @@ describe("runRemainingChunks - deadline-aware chunk processing", () => {
     expect(state.processedChunks).toBe(3);
   });
 
-  it("records a per-chunk failure as a warning and continues with the remaining chunks", async () => {
-    const state = makeState(0, 2);
+  // A genuine chunk failure (AI call throws/times out) must NEVER be treated as "this chunk had 0
+  // questions" and must NEVER let the loop continue on to later chunks in the same request - the
+  // exact same chunk index has to be retried on a later import-analyze call, not silently skipped.
+  it("stops immediately on a chunk failure (does not continue to the next chunk, does not fabricate a questions:[] result)", async () => {
+    const state = makeState(0, 3);
     const detector = vi.fn()
-      .mockRejectedValueOnce(new Error("provider unavailable"))
-      .mockResolvedValueOnce({ pageNumbers: [2], questions: [] });
+      .mockRejectedValueOnce(new Error("OPENAI_API_KEY is not configured."))
+      .mockResolvedValue({ pageNumbers: [2], questions: [] });
     const warnings = [];
 
-    await runRemainingChunks(state, { detector, onChunkDone: async () => {}, warnings, startedAt: 0, now: sequencedClock([0, 1000]), ...DEFAULTS });
+    const { lastChunkError } = await runRemainingChunks(state, { detector, onChunkDone: async () => {}, warnings, startedAt: 0, now: sequencedClock([0]), ...DEFAULTS });
 
-    expect(state.processedChunks).toBe(2);
-    expect(warnings.some(w => w.includes("provider unavailable"))).toBe(true);
-    expect(state.results).toHaveLength(2);
+    expect(detector).toHaveBeenCalledTimes(1);
+    expect(state.processedChunks).toBe(0);
+    expect(state.results).toHaveLength(0);
+    expect(lastChunkError).toBe("OPENAI_API_KEY is not configured.");
+    expect(warnings.some(w => w.includes("OPENAI_API_KEY is not configured."))).toBe(true);
+  });
+
+  // Requirement: "OpenAI timeout -> questions لا تتحول إلى [] -> processedChunks لا يزيد ->
+  // status partial -> المحاولة التالية يمكن أن تعيد نفس chunk."
+  it("(E) an OpenAI timeout leaves processedChunks unchanged so the same chunk can be retried next time", async () => {
+    const state = makeState(1, 3); // chunk 0 already done; chunk 1 is about to be retried
+    const detector = vi.fn().mockRejectedValue(new Error("Request timed out."));
+
+    const { lastChunkError } = await runRemainingChunks(state, { detector, onChunkDone: async () => {}, warnings: [], startedAt: 0, now: sequencedClock([0]), ...DEFAULTS });
+
+    expect(state.processedChunks).toBe(1); // unchanged - chunk index 1 is still "next up"
+    expect(lastChunkError).toBe("Request timed out.");
+    // Re-running with the SAME state (as a later import-analyze call would) retries chunk 1 again.
+    const detectorRetry = vi.fn().mockResolvedValue({ pageNumbers: [2], questions: [{ text: "recovered" }] });
+    await runRemainingChunks(state, { detector: detectorRetry, onChunkDone: async () => {}, warnings: [], startedAt: 0, now: sequencedClock([0, 1000]), ...DEFAULTS });
+    expect(detectorRetry).toHaveBeenCalledTimes(2); // chunk 1 (retried) then chunk 2
+    expect(state.processedChunks).toBe(3);
+  });
+
+  // Requirement: real end-to-end shape - extraction succeeds, a non-empty chunk is handed to an
+  // OpenAI-mocked detector that returns 10 questions, and the final merged result has exactly 10
+  // questions with the request reporting status "done" (processedChunks === totalChunks).
+  it("(F) a non-empty chunk detected by a mocked OpenAI detector yields 10 merged questions and status done", async () => {
+    const state = makeState(0, 1);
+    state.chunks[0].text = "10 real questions worth of extracted HTML text";
+    const tenQuestions = Array.from({ length: 10 }, (_, i) => ({
+      questionNumberGuess: String(i + 1), topic: null, difficulty: null, presentationType: null,
+      text: `Question ${i + 1}`, options: [], hasVisibleAnswer: false, answerText: "", confidence: 0.9
+    }));
+    const detector = vi.fn().mockResolvedValue({ pageNumbers: [1], questions: tenQuestions });
+
+    const { lastChunkError } = await runRemainingChunks(state, { detector, onChunkDone: async () => {}, warnings: [], startedAt: 0, now: sequencedClock([0]), ...DEFAULTS });
+
+    expect(lastChunkError).toBeNull();
+    expect(state.processedChunks).toBe(state.totalChunks); // caller computes status:"done" from this
+    const merged = mergeChunkResults("imp-test", state.results);
+    expect(merged).toHaveLength(10);
   });
 
   // Scenario A: a slow first chunk consuming most of the budget must prevent a second chunk from
@@ -163,5 +206,28 @@ describe("runRemainingChunks - deadline-aware chunk processing", () => {
     expect(state.processedChunks).toBe(2);
     expect(state.results).toHaveLength(2);
     expect(state.processedChunks).toBe(state.results.length);
+  });
+});
+
+describe("resolveImportProvider - Import Questions From Files defaults to OpenAI, not GLM", () => {
+  it("resolves to openai when the request body has no provider field at all", () => {
+    expect(resolveImportProvider({})).toBe("openai");
+  });
+
+  it("resolves to openai when the body itself is missing/undefined", () => {
+    expect(resolveImportProvider(undefined)).toBe("openai");
+  });
+
+  it("resolves to openai when the body explicitly requests it", () => {
+    expect(resolveImportProvider({ provider: "openai" })).toBe("openai");
+  });
+
+  it("still honors an explicit non-default provider if one is deliberately requested", () => {
+    expect(resolveImportProvider({ provider: "glm" })).toBe("glm");
+    expect(resolveImportProvider({ provider: "qwen" })).toBe("qwen");
+  });
+
+  it("normalizes case/whitespace the same way as before", () => {
+    expect(resolveImportProvider({ provider: " OpenAI " })).toBe("openai");
   });
 });

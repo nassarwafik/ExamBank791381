@@ -78,9 +78,13 @@ function parseJsonObjectText(value) {
   return JSON.parse(text);
 }
 
+// Defaults to "openai" (not "glm") - this module exists only for the Import Questions From Files
+// feature, which explicitly defaults to OpenAI for question detection (see
+// import-analyze.js's resolveImportProvider). An unrecognized/garbage value also falls back to
+// "openai" for the same reason, rather than silently landing on a different provider.
 function normalizeProvider(requested) {
-  const value = String(requested || "glm").trim().toLowerCase();
-  return ["glm", "qwen", "qwenplus", "openai"].includes(value) ? value : "glm";
+  const value = String(requested || "openai").trim().toLowerCase();
+  return ["glm", "qwen", "qwenplus", "openai"].includes(value) ? value : "openai";
 }
 
 // Azure Static Web Apps' managed-Functions proxy has its own gateway timeout, shorter than (and
