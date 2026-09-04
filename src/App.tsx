@@ -5,7 +5,7 @@ import TeacherPlatform from "./TeacherPlatform";
 import ImportQuestionsPanel, { createEmptyImportSession } from "./ImportQuestionsPanel";
 import type { ImportSessionState } from "./ImportQuestionsPanel";
 import { IconUser, IconLock, IconWarning, IconBuilder, IconDashboard, IconStudents, IconAssignments, IconLogout, IconChevronDown, IconImage, IconSparkles, IconUpload } from "./icons";
-import { QuestionTextBlock } from "./questionContent";
+import { QuestionTextBlock, parseTable } from "./questionContent";
 import "./App.css";
 import "./platform.css";
 import "./page-parts.css";
@@ -143,6 +143,33 @@ export type ExamQuestion = {
   };
   history: unknown[];
   redoStack: unknown[];
+};
+
+export type QualityIssueCode =
+  | "MARKS_TOTAL_MISMATCH"
+  | "QUESTION_COUNT_MISMATCH"
+  | "EMPTY_TEXT"
+  | "MARKS_PROBLEM"
+  | "MISSING_ANSWER"
+  | "QUESTION_TYPE_PROBLEM"
+  | "MISSING_FIELDS"
+  | "MISSING_OPTIONS"
+  | "TABLE_MISSING_OPTIONS"
+  | "INVALID_FIELDS"
+  | "IMAGE_MISSING"
+  | "DUPLICATE_BANK_QUESTION"
+  | "DUPLICATE_FAMILY"
+  | "EXPORT_PREFLIGHT";
+
+// message is Arabic text for display ONLY - runAutoFix() must never parse it to decide what to do;
+// every decision is driven by `code` and `autoFixable`.
+export type QualityIssue = {
+  id: string;
+  questionId?: string;
+  questionNumber?: number;
+  code: QualityIssueCode;
+  message: string;
+  autoFixable: boolean;
 };
 
 type ExamMetadata = {
@@ -408,7 +435,17 @@ function App() {
   const [actionNotice, setActionNotice] = useState("");
 
   const [qualityReport, setQualityReport] = useState<
-    string[] | null
+    QualityIssue[] | null
+  >(null);
+
+  const [preAutoFixSnapshot, setPreAutoFixSnapshot] = useState<
+    ExamDraft | null
+  >(null);
+
+  const [autoFixBusy, setAutoFixBusy] = useState(false);
+
+  const [autoFixProgress, setAutoFixProgress] = useState<
+    { current: number; total: number } | null
   >(null);
 
   const [savedExams, setSavedExams] = useState<
@@ -2366,243 +2403,272 @@ function App() {
     );
   }
 
+  // Pure - builds the structured issue list without touching any state, so runAutoFix() can call
+  // it both before the batch (to decide what to fix) and after (to report what's left), and so it
+  // stays independently testable. `message` is Arabic text for on-screen display only; every
+  // decision Auto-Fix makes is driven by `code`/`autoFixable`, never by parsing `message`.
+  function buildQualityIssues(current: ExamDraft): QualityIssue[] {
+    const issues: QualityIssue[] = [];
+    let nextId = 0;
+    const push = (issue: Omit<QualityIssue, "id">) => {
+      nextId += 1;
+      issues.push({ id: "quality-" + nextId, ...issue });
+    };
+
+    const currentMarks = current.questions.reduce((total, question) => total + Number(question.marks || 0), 0);
+
+    if (currentMarks !== Number(current.totalMarks)) {
+      push({
+        code: "MARKS_TOTAL_MISMATCH",
+        autoFixable: false,
+        message: "مجموع علامات الأسئلة هو " + currentMarks + " بينما علامة الامتحان المطلوبة هي " + current.totalMarks + "."
+      });
+    }
+
+    if (current.questions.length !== Number(current.plan?.totalQuestions || current.questions.length)) {
+      push({
+        code: "QUESTION_COUNT_MISMATCH",
+        autoFixable: false,
+        message: "عدد الأسئلة الحالي لا يطابق عدد الأسئلة في الخطة."
+      });
+    }
+
+    const seenBankIds = new Set<string>();
+    const seenFamilies = new Set<string>();
+
+    current.questions.forEach((question, index) => {
+      const number = index + 1;
+      const questionId = question.examQuestionId;
+
+      if (!question.text?.trim()) {
+        push({ code: "EMPTY_TEXT", autoFixable: false, questionId, questionNumber: number, message: "السؤال " + number + " لا يحتوي على نص." });
+      }
+
+      if (Number(question.marks) <= 0) {
+        push({ code: "MARKS_PROBLEM", autoFixable: true, questionId, questionNumber: number, message: "السؤال " + number + " علامته صفر أو غير صالحة." });
+      }
+
+      if (!questionHasAnswer(question)) {
+        push({ code: "MISSING_ANSWER", autoFixable: true, questionId, questionNumber: number, message: "السؤال " + number + " لا يحتوي على نموذج إجابة." });
+      }
+      else if (question.presentationType === "multipleChoice") {
+        const correctIndex = Number((question.answer as { correctOptionIndex?: unknown })?.correctOptionIndex);
+        if (!Number.isInteger(correctIndex) || correctIndex < 0 || correctIndex >= (question.options?.length || 0)) {
+          push({ code: "MISSING_ANSWER", autoFixable: true, questionId, questionNumber: number, message: "السؤال " + number + " اختيار من متعدد بلا إجابة صحيحة محددة." });
+        }
+      }
+
+      if (question.presentationType === "multipleChoice" && (!Array.isArray(question.options) || question.options.length < 2)) {
+        push({ code: "QUESTION_TYPE_PROBLEM", autoFixable: true, questionId, questionNumber: number, message: "السؤال " + number + " أمريكي ولكن عدد الخيارات غير كافٍ." });
+      }
+
+      const table = parseTable(question.text || "");
+
+      if (table) {
+        if (!Array.isArray(question.fields) || question.fields.length === 0) {
+          push({ code: "MISSING_FIELDS", autoFixable: true, questionId, questionNumber: number, message: "السؤال " + number + " جدول ولكن بلا حقول إجابة لكل صف." });
+        }
+        else {
+          if (question.fields.length !== table.rows.length) {
+            push({ code: "INVALID_FIELDS", autoFixable: true, questionId, questionNumber: number, message: "السؤال " + number + " عدد حقوله لا يطابق عدد صفوف الجدول." });
+          }
+
+          const rowMissingOptions = question.fields.some(field => field.kind !== "boolean" && (!Array.isArray(field.options) || field.options.length === 0));
+          if (rowMissingOptions) {
+            push({ code: "TABLE_MISSING_OPTIONS", autoFixable: true, questionId, questionNumber: number, message: "السؤال " + number + " جدول ولكن بعض صفوفه بلا خيارات منسدلة." });
+          }
+        }
+      }
+      else if (question.presentationType === "fillBlank" || question.presentationType === "wordBank") {
+        if (!Array.isArray(question.fields) || question.fields.length === 0) {
+          push({ code: "MISSING_FIELDS", autoFixable: true, questionId, questionNumber: number, message: "السؤال " + number + " يحتاج حقول إجابة ولكنه لا يحتوي على حقول." });
+        }
+
+        if (question.presentationType === "wordBank" && (!Array.isArray(question.wordBank) || question.wordBank.length === 0)) {
+          push({ code: "MISSING_OPTIONS", autoFixable: true, questionId, questionNumber: number, message: "السؤال " + number + " من نوع مخزن كلمات ولكن مخزن الكلمات فارغ." });
+        }
+      }
+
+      if (question.image?.exists && (!Array.isArray(question.image.assets) || question.image.assets.length === 0)) {
+        push({ code: "IMAGE_MISSING", autoFixable: false, questionId, questionNumber: number, message: "السؤال " + number + " مسجل كسؤال صورة ولكن لا توجد صورة فعلية." });
+      }
+
+      if (question.bankQuestionId) {
+        if (seenBankIds.has(question.bankQuestionId)) {
+          push({ code: "DUPLICATE_BANK_QUESTION", autoFixable: false, questionId, questionNumber: number, message: "يوجد تكرار للسؤال الأصلي عند السؤال " + number + "." });
+        }
+        seenBankIds.add(question.bankQuestionId);
+      }
+
+      if (question.familyKey) {
+        if (seenFamilies.has(question.familyKey)) {
+          push({ code: "DUPLICATE_FAMILY", autoFixable: false, questionId, questionNumber: number, message: "يوجد أكثر من سؤال من نفس العائلة عند السؤال " + number + "." });
+        }
+        seenFamilies.add(question.familyKey);
+      }
+    });
+
+    return issues;
+  }
+
   function runQualityCheck() {
-    if (
-      !exam
-    ) {
+    if (!exam) {
       return;
     }
 
-    const issues:
-      string[] = [];
+    const issues = buildQualityIssues(exam);
+    setQualityReport(issues);
 
-    const currentMarks =
-      exam.questions.reduce(
-        (
-          total,
-          question
-        ) =>
-          total +
-          Number(
-            question.marks ||
-            0
-          ),
-        0
-      );
-
-    if (
-      currentMarks !==
-      Number(
-        exam.totalMarks
-      )
-    ) {
-      issues.push(
-        "مجموع علامات الأسئلة هو " +
-        currentMarks +
-        " بينما علامة الامتحان المطلوبة هي " +
-        exam.totalMarks +
-        "."
-      );
-    }
-
-    if (
-      exam.questions.length !==
-      Number(
-        exam.plan
-          ?.totalQuestions ||
-        exam.questions.length
-      )
-    ) {
-      issues.push(
-        "عدد الأسئلة الحالي لا يطابق عدد الأسئلة في الخطة."
-      );
-    }
-
-    const seenBankIds =
-      new Set();
-
-    const seenFamilies =
-      new Set();
-
-    exam.questions.forEach(
-      (
-        question,
-        index
-      ) => {
-        const number =
-          index + 1;
-
-        if (
-          !question.text
-            ?.trim()
-        ) {
-          issues.push(
-            "السؤال " +
-            number +
-            " لا يحتوي على نص."
-          );
-        }
-
-        if (
-          Number(
-            question.marks
-          ) <= 0
-        ) {
-          issues.push(
-            "السؤال " +
-            number +
-            " علامته صفر أو غير صالحة."
-          );
-        }
-
-        if (
-          !questionHasAnswer(
-            question
-          )
-        ) {
-          issues.push(
-            "السؤال " +
-            number +
-            " لا يحتوي على نموذج إجابة."
-          );
-        }
-
-        if (
-          question.presentationType ===
-            "multipleChoice" &&
-          (
-            !Array.isArray(
-              question.options
-            ) ||
-            question.options.length <
-              2
-          )
-        ) {
-          issues.push(
-            "السؤال " +
-            number +
-            " أمريكي ولكن عدد الخيارات غير كافٍ."
-          );
-        }
-
-        if (
-          (
-            question.presentationType ===
-              "fillBlank" ||
-            question.presentationType ===
-              "wordBank"
-          ) &&
-          (
-            !Array.isArray(
-              question.fields
-            ) ||
-            question.fields.length ===
-              0
-          )
-        ) {
-          issues.push(
-            "السؤال " +
-            number +
-            " يحتاج حقول إجابة ولكنه لا يحتوي على حقول."
-          );
-        }
-
-        if (
-          question.presentationType ===
-            "wordBank" &&
-          (
-            !Array.isArray(
-              question.wordBank
-            ) ||
-            question.wordBank.length ===
-              0
-          )
-        ) {
-          issues.push(
-            "السؤال " +
-            number +
-            " من نوع مخزن كلمات ولكن مخزن الكلمات فارغ."
-          );
-        }
-
-        if (
-          question.image
-            ?.exists &&
-          (
-            !Array.isArray(
-              question.image.assets
-            ) ||
-            question.image.assets.length ===
-              0
-          )
-        ) {
-          issues.push(
-            "السؤال " +
-            number +
-            " مسجل كسؤال صورة ولكن لا توجد صورة فعلية."
-          );
-        }
-
-        if (
-          question.bankQuestionId
-        ) {
-          if (
-            seenBankIds.has(
-              question.bankQuestionId
-            )
-          ) {
-            issues.push(
-              "يوجد تكرار للسؤال الأصلي عند السؤال " +
-              number +
-              "."
-            );
-          }
-
-          seenBankIds.add(
-            question.bankQuestionId
-          );
-        }
-
-        if (
-          question.familyKey
-        ) {
-          if (
-            seenFamilies.has(
-              question.familyKey
-            )
-          ) {
-            issues.push(
-              "يوجد أكثر من سؤال من نفس العائلة عند السؤال " +
-              number +
-              "."
-            );
-          }
-
-          seenFamilies.add(
-            question.familyKey
-          );
-        }
-      }
-    );
-
-    setQualityReport(
-      issues
-    );
-
-    if (
-      issues.length === 0
-    ) {
-      setActionNotice(
-        "✓ فحص الجودة اكتمل: لم يتم العثور على مشاكل."
-      );
+    if (issues.length === 0) {
+      setActionNotice("✓ فحص الجودة اكتمل: لم يتم العثور على مشاكل.");
     }
     else {
-      setActionNotice(
-        "⚠ فحص الجودة وجد " +
-        issues.length +
-        " ملاحظة."
-      );
+      setActionNotice("⚠ فحص الجودة وجد " + issues.length + " ملاحظة.");
     }
+  }
+
+  // Codes that genuinely need the AI to reason about the question (infer plausible table/word-bank
+  // options, or solve a question with no answer at all) rather than a deterministic local fix.
+  const AI_FIXABLE_CODES: QualityIssueCode[] = ["MISSING_ANSWER", "QUESTION_TYPE_PROBLEM", "MISSING_FIELDS", "MISSING_OPTIONS", "TABLE_MISSING_OPTIONS"];
+
+  async function runAutoFix() {
+    if (!exam || autoFixBusy) {
+      return;
+    }
+
+    setAutoFixBusy(true);
+    setPreAutoFixSnapshot(JSON.parse(JSON.stringify(exam)) as ExamDraft);
+
+    try {
+      const issuesBefore = buildQualityIssues(exam);
+
+      // Work off a local copy of the questions array, keyed by id, so this whole operation is
+      // immune to React state being stale/batched across the awaits below - only one setExam call
+      // happens, at the very end, once every fix (deterministic and AI) has been decided.
+      const questionById = new Map(exam.questions.map(q => [q.examQuestionId, { ...q }]));
+
+      // 1) Deterministic fixes - no AI call needed.
+      const validMarks = exam.questions.map(q => Number(q.marks)).filter(m => Number.isFinite(m) && m > 0);
+      const fallbackMarks = validMarks.length ? Math.max(1, Math.round(validMarks.reduce((a, b) => a + b, 0) / validMarks.length)) : 5;
+
+      issuesBefore.forEach(issue => {
+        if (!issue.questionId) {
+          return;
+        }
+        const question = questionById.get(issue.questionId);
+        if (!question) {
+          return;
+        }
+
+        if (issue.code === "MARKS_PROBLEM") {
+          question.marks = fallbackMarks;
+        }
+        else if (issue.code === "INVALID_FIELDS") {
+          const table = parseTable(question.text || "");
+          if (table) {
+            const fields = [...(question.fields || [])];
+            while (fields.length < table.rows.length) {
+              fields.push({ id: "auto-fix-field-" + fields.length, order: fields.length, kind: "select", options: [] });
+            }
+            fields.length = table.rows.length;
+            question.fields = fields;
+          }
+        }
+      });
+
+      // 2) Re-derive which issues remain against the deterministically-fixed copy, to know exactly
+      // which questions still need an AI call and for which issue codes.
+      const workingExam: ExamDraft = { ...exam, questions: [...questionById.values()] };
+      const issuesNeedingAi = buildQualityIssues(workingExam).filter(issue => issue.autoFixable && issue.questionId && AI_FIXABLE_CODES.includes(issue.code));
+
+      const codesByQuestion = new Map<string, QualityIssueCode[]>();
+      issuesNeedingAi.forEach(issue => {
+        const list = codesByQuestion.get(issue.questionId as string) || [];
+        list.push(issue.code);
+        codesByQuestion.set(issue.questionId as string, list);
+      });
+
+      const questionIdsNeedingAi = [...codesByQuestion.keys()];
+      const failedQuestionIds = new Set<string>();
+      const total = questionIdsNeedingAi.length;
+
+      // 3) One AI call per question, sequentially - gives real per-question progress and means a
+      // single failure only affects that one question, never the rest of the batch.
+      for (let i = 0; i < questionIdsNeedingAi.length; i++) {
+        const questionId = questionIdsNeedingAi[i];
+        setAutoFixProgress({ current: i + 1, total });
+
+        const question = questionById.get(questionId);
+        if (!question) {
+          continue;
+        }
+
+        try {
+          const response = await apiRequest<{ ok: true; patch: Partial<ExamQuestion> }>("/api/exam-quality-fix", {
+            method: "POST",
+            body: JSON.stringify({
+              question: {
+                text: question.text,
+                presentationType: question.presentationType,
+                options: question.options,
+                fields: question.fields,
+                answer: question.answer,
+                wordBank: question.wordBank,
+                topic: question.topic,
+                difficulty: question.difficulty
+              },
+              issueCodes: codesByQuestion.get(questionId)
+            })
+          });
+
+          questionById.set(questionId, buildReplacementWithHistory(question, { ...question, ...response.patch }));
+        }
+        catch {
+          // Leave this question completely unchanged - the failure is surfaced below, in the
+          // re-run quality report, as a non-autoFixable issue with a manual-review message.
+          failedQuestionIds.add(questionId);
+        }
+      }
+
+      setAutoFixProgress(null);
+
+      const finalQuestions = exam.questions.map(q => questionById.get(q.examQuestionId) || q);
+      const finalExam: ExamDraft = { ...exam, updatedAt: new Date().toISOString(), questions: finalQuestions, summary: rebuildSummary(finalQuestions) };
+
+      setHasUnsavedChanges(true);
+      setExam(finalExam);
+
+      const finalIssues = buildQualityIssues(finalExam).map(issue => {
+        if (issue.questionId && failedQuestionIds.has(issue.questionId) && AI_FIXABLE_CODES.includes(issue.code)) {
+          return { ...issue, autoFixable: false, message: "تعذر إصلاح نموذج إجابة السؤال " + (issue.questionNumber ?? "") + " تلقائيًا — يحتاج مراجعة المعلم." };
+        }
+        return issue;
+      });
+
+      setQualityReport(finalIssues);
+
+      const fixedCount = Math.max(0, issuesBefore.length - finalIssues.length);
+      if (finalIssues.length === 0) {
+        setActionNotice("✅ الامتحان جاهز — لم يتم العثور على مشاكل أساسية في الامتحان.");
+      }
+      else {
+        setActionNotice("✅ تم إصلاح " + fixedCount + " مشاكل — ⚠ " + finalIssues.length + " مشكلة تحتاج مراجعة يدوية.");
+      }
+    }
+    finally {
+      setAutoFixBusy(false);
+      setAutoFixProgress(null);
+    }
+  }
+
+  function undoAutoFix() {
+    if (!preAutoFixSnapshot) {
+      return;
+    }
+    setExam(preAutoFixSnapshot);
+    setPreAutoFixSnapshot(null);
+    setQualityReport(null);
+    setActionNotice("↩ تم التراجع عن الإصلاح التلقائي.");
   }
 
   function showStudentCopy() {
@@ -2878,7 +2944,12 @@ function App() {
       0
     ) {
       setQualityReport(
-        preflightIssues
+        preflightIssues.map((message, index) => ({
+          id: "export-preflight-" + index,
+          code: "EXPORT_PREFLIGHT",
+          autoFixable: false,
+          message
+        }))
       );
 
       const continueExport =
@@ -6952,23 +7023,33 @@ function App() {
                     لم يتم العثور على مشاكل أساسية في الامتحان.
                   </p>
                 ) : (
-                  <ul>
-                    {qualityReport.map(
-                      (
-                        issue,
-                        index
-                      ) => (
-                        <li
-                          key={
-                            "quality-" +
-                            index
-                          }
-                        >
-                          {issue}
+                  <>
+                    <ul>
+                      {qualityReport.map(issue => (
+                        <li key={issue.id}>
+                          {issue.message}
                         </li>
-                      )
+                      ))}
+                    </ul>
+
+                    {qualityReport.some(issue => issue.autoFixable) && (
+                      <div className="quality-autofix-actions">
+                        <button onClick={runAutoFix} disabled={autoFixBusy}>
+                          {autoFixBusy
+                            ? (autoFixProgress
+                              ? "⏳ جارٍ إصلاح الامتحان... السؤال " + autoFixProgress.current + " من " + autoFixProgress.total
+                              : "⏳ جارٍ إصلاح الامتحان...")
+                            : "✨ تصحيح جميع الأخطاء"}
+                        </button>
+                      </div>
                     )}
-                  </ul>
+                  </>
+                )}
+
+                {preAutoFixSnapshot && !autoFixBusy && (
+                  <div className="quality-autofix-actions">
+                    <button onClick={undoAutoFix}>↩ التراجع عن الإصلاح التلقائي</button>
+                  </div>
                 )}
               </div>
             )}
