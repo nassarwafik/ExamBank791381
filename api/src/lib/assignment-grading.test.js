@@ -103,3 +103,53 @@ describe("gradeExam", () => {
     expect(result.questions[0].score).toBe(0);
   });
 });
+
+// Table questions are graded purely by response.kind==="table" plus a "rowLabel=value;..." pairMap
+// in answer.text - these tests confirm that a per-row dropdown's plain string value (exactly what
+// StudentExamPage.tsx's new <select> sends via setTable) grades correctly with zero changes to this
+// file, including the two new conventions introduced for the dropdown feature: a shared word/value
+// set per row, and a genuinely boolean row using literal "true"/"false" strings.
+describe("gradeExam - table questions with dropdown-sourced answers", () => {
+  const text =
+    "صنّف صلاحية العناوين التالية:\n" +
+    "| العنوان | الحالة |\n" +
+    "| --- | --- |\n" +
+    "| 192.168.1.10 | |\n" +
+    "| 169.254.10.20 | |";
+
+  it("gives full marks when every row's selected option matches the pairMap answer", () => {
+    const exam = { questions: [{ examQuestionId: "q1", marks: 4, text, answer: { text: "192.168.1.10=صالح;169.254.10.20=غير صالح" } }] };
+    const result = gradeExam(exam, { q1: { kind: "table", values: ["صالح", "غير صالح"] } });
+    expect(result.questions[0].score).toBe(4);
+    expect(result.questions[0].correct).toBe(true);
+    expect(result.questions[0].manualReview).toBe(false);
+  });
+
+  it("gives partial credit per row when only some dropdown selections are correct", () => {
+    const exam = { questions: [{ examQuestionId: "q1", marks: 4, text, answer: { text: "192.168.1.10=صالح;169.254.10.20=غير صالح" } }] };
+    const result = gradeExam(exam, { q1: { kind: "table", values: ["صالح", "صالح"] } });
+    expect(result.questions[0].score).toBe(2);
+  });
+
+  it("grades a genuinely boolean row using the literal true/false strings the boolean <select> submits", () => {
+    const boolText = "حدد صحة كل عبارة:\n| العبارة | الحكم |\n| --- | --- |\n| DHCP يعمل على منفذ 67 | |\n| Trunk ينقل VLAN واحد فقط | |";
+    const exam = { questions: [{ examQuestionId: "q1", marks: 2, text: boolText, answer: { text: "DHCP يعمل على منفذ 67=true;Trunk ينقل VLAN واحد فقط=false" } }] };
+    const result = gradeExam(exam, { q1: { kind: "table", values: ["true", "false"] } });
+    expect(result.questions[0].score).toBe(2);
+    expect(result.questions[0].correct).toBe(true);
+  });
+
+  it("still needs manual review when the table can't be parsed or no answer was submitted", () => {
+    const exam = { questions: [{ examQuestionId: "q1", marks: 4, text, answer: { text: "192.168.1.10=صالح;169.254.10.20=غير صالح" } }] };
+    const result = gradeExam(exam, { q1: { kind: "table", values: [] } });
+    expect(result.questions[0].manualReview).toBe(true);
+    expect(result.questions[0].score).toBe(0);
+  });
+
+  it("legacy checkbox-style table (plain membership answer.text, no '=' pairs) keeps working exactly as before", () => {
+    const checkboxText = "ضع علامة أمام الشبكات الخاصة:\n| العنوان | خاص؟ |\n| --- | --- |\n| 192.168.1.10 | |\n| 8.8.8.8 | |";
+    const exam = { questions: [{ examQuestionId: "q1", marks: 2, text: checkboxText, answer: { text: "192.168.1.10" } }] };
+    const result = gradeExam(exam, { q1: { kind: "table", values: [true, false] } });
+    expect(result.questions[0].score).toBe(2);
+  });
+});
