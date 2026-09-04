@@ -208,6 +208,36 @@
 .preview-student .question-advanced-tools,
 .preview-teacher .question-advanced-tools{ display:none !important; }
 
+/* ---------- Exam presentation theme picker ---------- */
+.theme-picker-card{ background:var(--bp-surface); border:1px solid var(--bp-line); border-radius:var(--bp-r-xl); padding:18px 20px; box-shadow:0 10px 28px -22px rgba(15,23,42,.16); display:flex; flex-direction:column; gap:14px; margin-top:16px; }
+.theme-picker-grid{ display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:12px; }
+.theme-card{ position:relative; display:flex; flex-direction:column; align-items:center; gap:8px; text-align:center; border:1px solid var(--bp-line-2); border-radius:var(--bp-r-lg); background:var(--bp-surface); padding:14px 12px; cursor:pointer; transition:.16s var(--bp-ease); font:inherit; }
+.theme-card:hover{ border-color:var(--bp-primary); background:var(--bp-primary-050); }
+.theme-card.selected{ border-color:var(--bp-primary); background:var(--bp-primary-050); box-shadow:inset 0 0 0 1px var(--bp-primary); }
+.theme-card strong{ color:var(--bp-navy); font-size:13px; }
+.theme-card span{ color:var(--bp-muted); font-size:11px; line-height:1.5; }
+.theme-card-check{ position:absolute; inset-block-start:6px; inset-inline-end:8px; color:var(--bp-primary-2); font-size:10.5px; font-weight:800; font-style:normal; }
+.theme-preview-open-btn{ align-self:flex-start; border:1px solid var(--bp-line-2); background:var(--bp-surface); color:var(--bp-primary-2); border-radius:var(--bp-r); padding:9px 16px; font-weight:700; font-size:13px; cursor:pointer; }
+.theme-preview-open-btn:hover{ background:var(--bp-primary-050); }
+
+/* Mini theme previews - CSS-only, no images/canvas/external libraries */
+.theme-mini-preview{ width:100%; height:56px; border-radius:8px; background:var(--bp-surface-2); border:1px solid var(--bp-line); padding:6px; display:flex; flex-direction:column; gap:4px; overflow:hidden; }
+.theme-mini-preview .tm-bar{ height:6px; border-radius:3px; background:var(--bp-line-2); }
+.theme-mini-preview .tm-line{ height:4px; border-radius:2px; background:var(--bp-line-2); }
+.theme-mini-default .tm-bar{ width:60%; background:var(--bp-primary-050); }
+.theme-mini-cards{ flex-direction:row; gap:4px; }
+.theme-mini-cards .tm-card{ flex:1; border-radius:5px; background:#fff; border:1px solid var(--bp-line); box-shadow:0 3px 6px -3px rgba(15,23,42,.3); }
+.theme-mini-classic{ border-radius:0; background:#fffdf7; }
+.theme-mini-classic .tm-bar{ border-radius:0; background:#000; width:40%; height:2px; }
+.theme-mini-focus{ align-items:center; justify-content:center; }
+.theme-mini-focus .tm-single{ width:70%; height:22px; border-radius:4px; background:var(--bp-primary-050); border:1px solid var(--bp-primary); }
+.theme-mini-focus .tm-dots{ display:flex; gap:3px; }
+.theme-mini-focus .tm-dots span{ width:4px; height:4px; border-radius:50%; background:var(--bp-line-2); display:block; }
+.theme-mini-focus .tm-dots span.active{ background:var(--bp-primary); }
+.theme-mini-compact .tm-line{ height:3px; }
+.theme-mini-modern .tm-bar{ background:linear-gradient(90deg,var(--bp-primary),var(--bp-primary-2)); height:10px; border-radius:5px 5px 0 0; }
+.theme-mini-modern .tm-card{ flex:1; border-radius:8px; background:#fff; }
+
 /* ---------- Bottom actions ---------- */
 .bottom-actions-card{ display:flex; align-items:center; gap:10px; flex-wrap:wrap; }
 .bottom-action-notice{ color:var(--bp-muted); font-size:12.5px; }

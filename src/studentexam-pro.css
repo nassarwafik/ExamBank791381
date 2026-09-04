@@ -61,3 +61,62 @@
   .iex-foot button,.iex-result-actions button{width:100%;padding:14px 18px;font-size:15px}
   .interactive-exam-page{padding-block-end:24px}
 }
+
+/* ============================================================
+   Exam presentation themes (exam-themes-preview) — additive
+   only. Every .iex-* rule above is untouched; each theme below
+   either re-declares the same local custom properties (--r,
+   --rxl, etc. — already consumed by every .iex-* rule, so the
+   override cascades to descendants automatically) or adds a
+   handful of genuinely new, theme-scoped rules. .exam-theme-default
+   is intentionally empty so legacy exams render pixel-identical
+   to pre-theme behavior.
+   ============================================================ */
+
+.exam-theme-default{}
+
+/* ---------- cards: clear separation + shadow + numbered badge ---------- */
+.exam-theme-cards .iex-flow{gap:24px}
+.exam-theme-cards .iex-card{border-radius:20px;box-shadow:0 20px 46px -24px rgba(15,23,42,.35);border:1px solid var(--line)}
+.exam-theme-cards .iex-q{padding-inline-start:6px}
+.exam-theme-cards .iex-node{position:absolute;inset-inline-start:-14px;inset-block-start:-14px;width:34px;height:34px;border-radius:50%;background:linear-gradient(135deg,var(--primary),var(--primary2));color:#fff;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:14px;box-shadow:0 8px 18px -8px rgba(37,99,235,.6);z-index:1}
+@media(max-width:650px){
+  .exam-theme-cards .iex-node{width:28px;height:28px;font-size:12px;inset-inline-start:-8px;inset-block-start:-8px}
+}
+
+/* ---------- classic: paper-like, serif, no shadows/effects ---------- */
+.exam-theme-classic .iex-card{border:1px solid #000;border-radius:4px;box-shadow:none;background:#fffdf7}
+.exam-theme-classic .iex-qtext,.exam-theme-classic .iex-head h1,.exam-theme-classic .iex-qhead{font-family:"Times New Roman",Georgia,serif}
+.exam-theme-classic .iex-option{border-radius:2px;box-shadow:none;transition:none}
+.exam-theme-classic .iex-option:hover,.exam-theme-classic .iex-option.selected{background:#f3f1ea;box-shadow:none}
+.exam-theme-classic .iex-node{box-shadow:none;background:none;color:var(--navy);border:1px solid #000;border-radius:0}
+.exam-theme-classic .iex-head{border-radius:4px;box-shadow:none;border:1px solid #000}
+
+/* ---------- focus: single-question navigation + position progress ---------- */
+.iex-focus-mode{display:flex;flex-direction:column;gap:14px}
+.iex-focus-nav{display:flex;align-items:center;justify-content:space-between;gap:10px;background:var(--surface);border:1px solid var(--line);border-radius:var(--rlg);padding:10px 16px;font-weight:800;color:var(--navy)}
+.iex-focus-nav button{border:1px solid var(--line2);background:var(--surface2);color:var(--text);border-radius:var(--r);padding:8px 16px;font-weight:800;cursor:pointer}
+.iex-focus-nav button:disabled{opacity:.45;cursor:not-allowed}
+.iex-focus-progress{height:6px;border-radius:var(--pill);background:var(--line);overflow:hidden}
+.iex-focus-progress>i{display:block;height:100%;background:linear-gradient(90deg,var(--primary),var(--primary2));transition:width .25s var(--ease)}
+
+/* ---------- compact: tighter spacing, smaller tables ---------- */
+.exam-theme-compact .iex-flow{gap:10px}
+.exam-theme-compact .iex-card{padding:14px;border-radius:var(--r)}
+.exam-theme-compact .iex-qtext{font-size:15px;line-height:1.6;margin-bottom:10px}
+.exam-theme-compact .iex-option{padding:9px 12px;font-size:13.5px}
+.exam-theme-compact .iex-table-wrap th,.exam-theme-compact .iex-table-wrap td{padding:5px 8px;font-size:12.5px}
+.exam-theme-compact .iex-bank span{padding:3px 8px;font-size:11px}
+
+/* ---------- modern: gradient header, rounded cards, no animations ---------- */
+.exam-theme-modern .iex-head{background:linear-gradient(135deg,var(--primary),var(--primary2));border:none}
+.exam-theme-modern .iex-head h1,.exam-theme-modern .iex-head p,.exam-theme-modern .iex-school{color:#fff}
+.exam-theme-modern .iex-badges span{background:rgba(255,255,255,.18);border-color:rgba(255,255,255,.35);color:#fff}
+.exam-theme-modern .iex-card{border-radius:24px;border:none;box-shadow:0 24px 50px -28px rgba(37,99,235,.35)}
+.exam-theme-modern .iex-option.selected{box-shadow:0 0 0 2px var(--primary)}
+
+/* ---------- Theme preview overlay (Exam Builder "👁 معاينة هذا التنسيق") ---------- */
+.exam-theme-preview-overlay{position:fixed;inset:0;z-index:1000;background:#f5f7fa;overflow-y:auto}
+.exam-theme-preview-head{position:sticky;top:0;z-index:1;display:flex;align-items:center;justify-content:space-between;gap:12px;background:var(--navy);color:#fff;padding:14px 20px}
+.exam-theme-preview-head button{border:1px solid rgba(255,255,255,.4);background:transparent;color:#fff;border-radius:var(--r);padding:8px 16px;font-weight:700;cursor:pointer}
+.exam-theme-preview-note{background:var(--primary050);border:1px solid #d7e3fb;color:var(--primary2);border-radius:var(--r);padding:10px 14px;font-size:12.5px;font-weight:700}

@@ -70,6 +70,49 @@ function cleanExam(
   };
 }
 
+function buildTemplateDocument(
+  exam,
+  savedAt
+) {
+  return {
+    schemaVersion: 1,
+
+    kind:
+      "exam-template",
+
+    templateId:
+      "TPL-" +
+      Date.now(),
+
+    title:
+      exam.title ||
+      exam.plan
+        ?.title ||
+      "Exam Template",
+
+    originalRequest:
+      exam.originalRequest ||
+      exam.plan
+        ?.originalRequest ||
+      "",
+
+    plan:
+      exam.plan,
+
+    totalMarks:
+      exam.totalMarks,
+
+    metadata:
+      exam.metadata ||
+      {},
+
+    presentationTheme:
+      exam.presentationTheme,
+
+    savedAt
+  };
+}
+
 app.http(
   "saveExamArtifact",
   {
@@ -169,40 +212,11 @@ app.http(
             kind ===
             "template"
           ) {
-            document = {
-              schemaVersion: 1,
-
-              kind:
-                "exam-template",
-
-              templateId:
-                "TPL-" +
-                Date.now(),
-
-              title:
-                exam.title ||
-                exam.plan
-                  ?.title ||
-                "Exam Template",
-
-              originalRequest:
-                exam.originalRequest ||
-                exam.plan
-                  ?.originalRequest ||
-                "",
-
-              plan:
-                exam.plan,
-
-              totalMarks:
-                exam.totalMarks,
-
-              metadata:
-                exam.metadata ||
-                {},
-
-              savedAt
-            };
+            document =
+              buildTemplateDocument(
+                exam,
+                savedAt
+              );
 
             const day =
               savedAt.slice(
@@ -299,3 +313,9 @@ app.http(
       }
   }
 );
+
+module.exports = {
+  cleanExam,
+  cleanQuestion,
+  buildTemplateDocument
+};
