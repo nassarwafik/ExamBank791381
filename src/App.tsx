@@ -6,6 +6,10 @@ import ImportQuestionsPanel, { createEmptyImportSession } from "./ImportQuestion
 import type { ImportSessionState } from "./ImportQuestionsPanel";
 import { IconUser, IconLock, IconWarning, IconBuilder, IconDashboard, IconStudents, IconAssignments, IconLogout, IconChevronDown, IconImage, IconSparkles, IconUpload } from "./icons";
 import { QuestionTextBlock, parseTable } from "./questionContent";
+import { normalizeExamTheme, EXAM_THEMES, THEME_LABELS } from "./examTheme";
+import type { ExamTheme } from "./examTheme";
+import ExamThemePreview from "./ExamThemePreview";
+import ThemeMiniPreview from "./ThemeMiniPreview";
 import "./App.css";
 import "./platform.css";
 import "./page-parts.css";
@@ -172,7 +176,7 @@ export type QualityIssue = {
   autoFixable: boolean;
 };
 
-type ExamMetadata = {
+export type ExamMetadata = {
   school: string;
   subject: string;
   grade: string;
@@ -195,6 +199,7 @@ export type ExamDraft = {
   createdAt: string;
   updatedAt: string;
   metadata?: ExamMetadata;
+  presentationTheme?: ExamTheme;
   questions: ExamQuestion[];
   summary: {
     sections: Record<string, number>;
@@ -274,6 +279,31 @@ function defaultExamMetadata(): ExamMetadata {
     semester: "",
     generalInstructions:
       "أجب عن جميع الأسئلة، واقرأ السؤال جيدًا قبل الإجابة."
+  };
+}
+
+export function buildExamCopy(exam: ExamDraft): ExamDraft {
+  const now = new Date().toISOString();
+  return {
+    ...(JSON.parse(JSON.stringify(exam)) as ExamDraft),
+    examId: "EXAM-" + Date.now(),
+    title: exam.title + " - نسخة",
+    createdAt: now,
+    updatedAt: now
+  };
+}
+
+export function mergeTemplateIntoGeneratedExam(
+  generated: ExamDraft,
+  template: { metadata?: ExamMetadata; presentationTheme?: ExamTheme }
+): ExamDraft {
+  return {
+    ...generated,
+    metadata: {
+      ...defaultExamMetadata(),
+      ...(template.metadata || {})
+    },
+    presentationTheme: template.presentationTheme
   };
 }
 
@@ -427,6 +457,8 @@ function App() {
   const [previewMode, setPreviewMode] = useState<
     "edit" | "student" | "teacher"
   >("edit");
+
+  const [themePreviewOpen, setThemePreviewOpen] = useState(false);
 
   const [saveBusy, setSaveBusy] = useState<
     "exam" | "template" | null
@@ -4225,27 +4257,10 @@ function App() {
         .toISOString();
 
     const copy:
-      ExamDraft = {
-        ...JSON.parse(
-          JSON.stringify(
-            exam
-          )
-        ) as ExamDraft,
-
-        examId:
-          "EXAM-" +
-          Date.now(),
-
-        title:
-          exam.title +
-          " - نسخة",
-
-        createdAt:
-          now,
-
-        updatedAt:
-          now
-      };
+      ExamDraft =
+        buildExamCopy(
+          exam
+        );
 
     setSaveBusy(
       "exam"
@@ -4328,6 +4343,15 @@ function App() {
         null
       );
     }
+  }
+
+  function setExamTheme(theme: ExamTheme) {
+    setExam(current =>
+      current
+        ? { ...current, presentationTheme: theme, updatedAt: new Date().toISOString() }
+        : current
+    );
+    setHasUnsavedChanges(true);
   }
 
   function collectFinalIssues(
@@ -4524,6 +4548,8 @@ function App() {
               ExamPlan;
             metadata?:
               ExamMetadata;
+            presentationTheme?:
+              ExamTheme;
           };
         }>(
           "/api/templates",
@@ -4572,17 +4598,11 @@ function App() {
           }
         );
 
-      const freshExam = {
-        ...generated.exam,
-
-        metadata: {
-          ...defaultExamMetadata(),
-          ...(
-            template.metadata ||
-            {}
-          )
-        }
-      };
+      const freshExam =
+        mergeTemplateIntoGeneratedExam(
+          generated.exam,
+          template
+        );
 
       setPlan(
         template.plan
@@ -7058,6 +7078,50 @@ function App() {
               <div className="bottom-action-notice">
                 {actionNotice}
               </div>
+            )}
+
+            {/* previewMode==="edit" gate is the ONLY thing hiding this section during the
+                نسخة الطالب/نسخة المعلم overlay - App.css's .preview-student/.preview-teacher
+                hide-list does NOT include .theme-picker-card, so do not remove this guard. */}
+            {previewMode === "edit" && exam && (
+              <section className="theme-picker-card">
+                <div className="section-title-row">
+                  <strong>🎨 اختر تنسيق الامتحان</strong>
+                </div>
+                <div className="theme-picker-grid">
+                  {EXAM_THEMES.map(themeOption => {
+                    const active = normalizeExamTheme(exam.presentationTheme) === themeOption;
+                    return (
+                      <button
+                        type="button"
+                        key={themeOption}
+                        className={"theme-card" + (active ? " selected" : "")}
+                        onClick={() => setExamTheme(themeOption)}
+                      >
+                        <ThemeMiniPreview theme={themeOption} />
+                        <strong>{THEME_LABELS[themeOption].name}</strong>
+                        <span>{THEME_LABELS[themeOption].description}</span>
+                        {active && <em className="theme-card-check">✓ تم الاختيار</em>}
+                      </button>
+                    );
+                  })}
+                </div>
+                <button
+                  type="button"
+                  className="theme-preview-open-btn"
+                  onClick={() => setThemePreviewOpen(true)}
+                >
+                  👁 معاينة هذا التنسيق
+                </button>
+              </section>
+            )}
+
+            {themePreviewOpen && previewMode === "edit" && exam && (
+              <ExamThemePreview
+                questions={exam.questions}
+                theme={normalizeExamTheme(exam.presentationTheme)}
+                onClose={() => setThemePreviewOpen(false)}
+              />
             )}
 
             <div className="bottom-actions-card">

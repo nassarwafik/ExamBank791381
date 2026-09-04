@@ -7,7 +7,7 @@ import {MEDAL_COLORS,MEDAL_LABELS,medalTier} from "./medals";
 import {REACTIONS,type FeedPost,type ReactionId} from "./achievements";
 type Props={token:string;displayName:string;onLogout:()=>void};
 type Summary={assignmentId:string;title:string;instructions:string;openAt:string;dueAt:string;effectiveDueAt?:string;questionCount:number;totalMarks:number;availability:"scheduled"|"open"|"closed";attemptsUsed:number;allowedAttempts:number;canAttempt:boolean;latestScore:number|null;latestPercentage:number|null;createdAt:string};
-type Detail={assignmentId:string;title:string;instructions:string;openAt:string;dueAt:string;effectiveDueAt?:string;maxAttempts:number;questionCount:number;totalMarks:number;exam:{title?:string;metadata?:{school?:string;subject?:string;grade?:string;className?:string;generalInstructions?:string};questions?:any[]}};
+type Detail={assignmentId:string;title:string;instructions:string;openAt:string;dueAt:string;effectiveDueAt?:string;maxAttempts:number;questionCount:number;totalMarks:number;exam:{title?:string;metadata?:{school?:string;subject?:string;grade?:string;className?:string;generalInstructions?:string};presentationTheme?:string;questions?:any[]}};
 type Dashboard={student:{userId:string;code:string;displayName:string;classId:string;avatarId?:string;shareAchievements?:boolean};classroom:{classId:string;name:string;grade:string;schoolYear:string}|null;assignments:Summary[];stats:{assigned:number;completed:number;average:number|null}};
 const fmt=(v:string)=>v?new Date(v).toLocaleString("ar"):"بدون موعد";
 const label=(v:Summary["availability"])=>v==="scheduled"?"قريبًا":v==="closed"?"انتهى الموعد":"متاح الآن";
