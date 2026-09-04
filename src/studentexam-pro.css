@@ -75,13 +75,17 @@
 
 .exam-theme-default{}
 
-/* ---------- cards: clear separation + shadow + numbered badge ---------- */
+/* ---------- cards: clear separation + shadow + numbered badge ----------
+   .iex-node was previously position:absolute to float it over the card's
+   corner, but that (the only position:absolute used by any theme) broke
+   the card's layout on the real builder/student page - some ancestor's
+   transform/stacking context interacts badly with it. Kept in normal flow
+   instead: still a clear, colored circular badge, just not overlapping. */
 .exam-theme-cards .iex-flow{gap:24px}
 .exam-theme-cards .iex-card{border-radius:20px;box-shadow:0 20px 46px -24px rgba(15,23,42,.35);border:1px solid var(--line)}
-.exam-theme-cards .iex-q{padding-inline-start:6px}
-.exam-theme-cards .iex-node{position:absolute;inset-inline-start:-14px;inset-block-start:-14px;width:34px;height:34px;border-radius:50%;background:linear-gradient(135deg,var(--primary),var(--primary2));color:#fff;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:14px;box-shadow:0 8px 18px -8px rgba(37,99,235,.6);z-index:1}
+.exam-theme-cards .iex-node{width:34px;height:34px;border-radius:50%;background:linear-gradient(135deg,var(--primary),var(--primary2));color:#fff;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:14px;box-shadow:0 8px 18px -8px rgba(37,99,235,.6);margin-block-end:8px}
 @media(max-width:650px){
-  .exam-theme-cards .iex-node{width:28px;height:28px;font-size:12px;inset-inline-start:-8px;inset-block-start:-8px}
+  .exam-theme-cards .iex-node{width:28px;height:28px;font-size:12px}
 }
 
 /* ---------- classic: paper-like, serif, no shadows/effects ---------- */
