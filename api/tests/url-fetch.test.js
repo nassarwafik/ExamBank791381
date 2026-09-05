@@ -7,7 +7,8 @@ import {
   isBlockedIPv6,
   validateUrlShape,
   resolveAndValidate,
-  requestOnce
+  requestOnce,
+  pickPreferredAddress
 } from "../src/lib/url-fetch.js";
 
 describe("isBlockedIPv4 - the actual SSRF boundary", () => {
@@ -73,6 +74,31 @@ describe("validateUrlShape", () => {
 describe("resolveAndValidate - the DNS-time SSRF check", () => {
   it("rejects a hostname that resolves to a loopback address", async () => {
     await expect(resolveAndValidate("localhost")).rejects.toThrow(UnsafeUrlError);
+  });
+});
+
+describe("pickPreferredAddress - avoids pinning to an unreachable IPv6 record", () => {
+  it("prefers an IPv4 record when the host resolves to both families (e.g. GitHub Pages)", () => {
+    const records = [
+      { address: "2606:50c0:8003::153", family: 6 },
+      { address: "2606:50c0:8000::153", family: 6 },
+      { address: "185.199.108.153", family: 4 },
+      { address: "185.199.109.153", family: 4 }
+    ];
+    expect(pickPreferredAddress(records)).toEqual({ address: "185.199.108.153", family: 4 });
+  });
+
+  it("falls back to the first record when only IPv6 is available", () => {
+    const records = [{ address: "2001:4860:4860::8888", family: 6 }];
+    expect(pickPreferredAddress(records)).toEqual({ address: "2001:4860:4860::8888", family: 6 });
+  });
+
+  it("keeps the first IPv4 record's order when multiple IPv4 records exist", () => {
+    const records = [
+      { address: "192.0.2.10", family: 4 },
+      { address: "192.0.2.20", family: 4 }
+    ];
+    expect(pickPreferredAddress(records)).toEqual({ address: "192.0.2.10", family: 4 });
   });
 });
 

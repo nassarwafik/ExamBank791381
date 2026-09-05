@@ -13,6 +13,10 @@ export type ImportedFile = {
   status: FileStatus;
   progressLabel: string;
   error?: string;
+  // Only set for a URL-sourced import (submitUrl) - lets retryAnalysis re-fetch the URL when the
+  // failure happened before a real, server-assigned importJobId ever existed (see retryAnalysis).
+  sourceUrl?: string;
+  sourceKind?: "html" | "gform";
 };
 
 export type ImportedImage = { id: string; dataUrl: string; contentType: string };
@@ -456,33 +460,21 @@ export default function ImportQuestionsPanel({
   // URL server-side instead of uploading file bytes). Once that call returns an importJobId, it
   // hands off to the SAME, unmodified analyzeFile() - the whole progress/retry/question-list UI
   // below needs zero changes to also handle URL-sourced imports.
-  async function submitUrl(url: string, kind: "html" | "gform") {
-    setError("");
-    const trimmed = url.trim();
-    if (!trimmed) {
-      return;
-    }
-    if (files.length >= MAX_FILES_PER_SESSION) {
-      setError(`لا يمكن رفع أكثر من ${MAX_FILES_PER_SESSION} ملفًا في نفس الجلسة.`);
-      return;
-    }
-
-    const placeholderId = "fetching-" + Date.now() + "-" + Math.random().toString(16).slice(2, 8);
+  //
+  // Extracted from submitUrl so retryAnalysis can re-run this exact step in place (updating the
+  // same row by placeholderId) when a previous attempt failed before ever getting a real,
+  // server-assigned importJobId - see retryAnalysis for why that distinction matters.
+  async function fetchUrlAndAnalyze(placeholderId: string, url: string, kind: "html" | "gform") {
     patchSession(previous => ({
-      files: [...previous.files, { importJobId: placeholderId, fileName: trimmed, status: "uploading", progressLabel: "جارٍ جلب الرابط..." }]
+      files: previous.files.map(item => (item.importJobId === placeholderId
+        ? { ...item, status: "uploading" as FileStatus, progressLabel: "جارٍ جلب الرابط...", error: undefined }
+        : item))
     }));
-
-    if (kind === "html") {
-      setHtmlUrlInput("");
-    }
-    else {
-      setGformUrlInput("");
-    }
 
     try {
       const result = await api<{ ok: true; importJobId: string; fileName: string }>("/api/import-fetch-url", {
         method: "POST",
-        body: JSON.stringify({ url: trimmed, kind })
+        body: JSON.stringify({ url, kind })
       });
 
       patchSession(previous => ({
@@ -499,6 +491,32 @@ export default function ImportQuestionsPanel({
           : item))
       }));
     }
+  }
+
+  async function submitUrl(url: string, kind: "html" | "gform") {
+    setError("");
+    const trimmed = url.trim();
+    if (!trimmed) {
+      return;
+    }
+    if (files.length >= MAX_FILES_PER_SESSION) {
+      setError(`لا يمكن رفع أكثر من ${MAX_FILES_PER_SESSION} ملفًا في نفس الجلسة.`);
+      return;
+    }
+
+    const placeholderId = "fetching-" + Date.now() + "-" + Math.random().toString(16).slice(2, 8);
+    patchSession(previous => ({
+      files: [...previous.files, { importJobId: placeholderId, fileName: trimmed, status: "uploading", progressLabel: "جارٍ جلب الرابط...", sourceUrl: trimmed, sourceKind: kind }]
+    }));
+
+    if (kind === "html") {
+      setHtmlUrlInput("");
+    }
+    else {
+      setGformUrlInput("");
+    }
+
+    await fetchUrlAndAnalyze(placeholderId, trimmed, kind);
   }
 
   async function handleFilesSelected(fileList: FileList | null) {
@@ -521,6 +539,15 @@ export default function ImportQuestionsPanel({
   }
 
   function retryAnalysis(file: ImportedFile) {
+    // A URL-sourced import whose importJobId is still the local "fetching-..." placeholder means
+    // the fetch itself never completed (e.g. the SSRF-safe fetch failed to connect) - there is no
+    // real server-side job to (re-)analyze yet, so retry must re-fetch the URL, not call
+    // analyzeFile with a placeholder id (which the backend rejects as "Valid importJobId is
+    // required.").
+    if (!file.importJobId.startsWith("imp-") && file.sourceUrl) {
+      void fetchUrlAndAnalyze(file.importJobId, file.sourceUrl, file.sourceKind || "html");
+      return;
+    }
     void analyzeFile(file.importJobId, file.fileName);
   }
 

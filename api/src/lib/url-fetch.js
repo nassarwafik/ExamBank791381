@@ -95,6 +95,14 @@ function validateUrlShape(rawUrl, allowedHosts) {
   return parsed;
 }
 
+// Pure and exported for testing. Many hosting environments (including this app's Azure Functions
+// host) have no outbound IPv6 route at all, so pinning to an IPv6 record from a dual-stack host
+// (e.g. GitHub Pages, which publishes both AAAA and A records) fails to connect even though the
+// address itself is safe. Prefer an IPv4 record when one exists.
+function pickPreferredAddress(records) {
+  return records.find(record => record.family === 4) || records[0];
+}
+
 async function resolveAndValidate(hostname) {
   let records;
   try {
@@ -115,7 +123,7 @@ async function resolveAndValidate(hostname) {
     }
   }
 
-  return records[0];
+  return pickPreferredAddress(records);
 }
 
 function requestOnce(parsedUrl, pinnedAddress, { timeoutMs, maxBytes }) {
@@ -218,5 +226,6 @@ module.exports = {
   isBlockedIP,
   validateUrlShape,
   resolveAndValidate,
-  requestOnce
+  requestOnce,
+  pickPreferredAddress
 };
