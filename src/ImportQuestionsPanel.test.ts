@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { applySectionOverride, distributeMarks, convertTableRowsToWordBankFields, parseWordBankInput } from "./ImportQuestionsPanel";
+import { applySectionOverride, distributeMarks, convertTableRowsToWordBankFields, parseWordBankInput, toExamQuestion } from "./ImportQuestionsPanel";
 import type { ImportedQuestion } from "./ImportQuestionsPanel";
 
 function question(overrides: Partial<ImportedQuestion> = {}): ImportedQuestion {
@@ -115,6 +115,53 @@ describe("convertTableRowsToWordBankFields - manually converting an imported tab
     const text = "س:\n| أ | ب |\n| --- | --- |\n| _ | one |\n| _ | two |\n| _ | three |";
     const converted = convertTableRowsToWordBankFields(text);
     expect(converted!.fields.map(f => f.order)).toEqual([0, 1, 2]);
+  });
+});
+
+describe("toExamQuestion - manually authoring a matching question (طابق)", () => {
+  const text = "طابق كل بروتوكول بالطبقة الصحيحة:\n| البروتوكول | الطبقة |\n| --- | --- |\n| HTTP | -- |\n| IP | -- |";
+
+  it("builds one field per row, each carrying the SAME shared options pool (a real matching dropdown, not per-row-different)", () => {
+    const q = question({ presentationType: "matching", text, wordBankInput: "طبقة التطبيقات, طبقة الشبكة" });
+    const exam = toExamQuestion(q, 0, 10);
+    expect(exam.fields.map(f => f.label)).toEqual(["HTTP", "IP"]);
+    expect(exam.fields[0].options?.map(o => o.value)).toEqual(["طبقة التطبيقات", "طبقة الشبكة"]);
+    expect(exam.fields[1].options?.map(o => o.value)).toEqual(["طبقة التطبيقات", "طبقة الشبكة"]);
+  });
+
+  it("leaves wordBank undefined for matching - resolveTableRowOptions reads field.options first, never q.wordBank for matching", () => {
+    const q = question({ presentationType: "matching", text, wordBankInput: "طبقة التطبيقات, طبقة الشبكة" });
+    const exam = toExamQuestion(q, 0, 10);
+    expect(exam.wordBank).toBeUndefined();
+  });
+
+  it("does not invent an answer - answer stays empty, left for Auto-Fix to fill in later", () => {
+    const q = question({ presentationType: "matching", text, wordBankInput: "طبقة التطبيقات, طبقة الشبكة" });
+    const exam = toExamQuestion(q, 0, 10);
+    expect(exam.answer).toEqual({});
+  });
+});
+
+describe("toExamQuestion - manually authoring an ordering question (رتّب)", () => {
+  const text = "رتّب خطوات عملية DHCP التالية:\n| الخطوة | - |\n| --- | --- |\n| DHCP Discover | -- |\n| DHCP Offer | -- |\n| DHCP Request | -- |\n| DHCP Ack | -- |";
+
+  it("builds one field per item and a deterministic 1..N word bank - never teacher-typed or invented", () => {
+    const q = question({ presentationType: "ordering", text });
+    const exam = toExamQuestion(q, 0, 10);
+    expect(exam.fields.map(f => f.label)).toEqual(["DHCP Discover", "DHCP Offer", "DHCP Request", "DHCP Ack"]);
+    expect(exam.wordBank).toEqual(["1", "2", "3", "4"]);
+  });
+
+  it("ignores wordBankInput entirely for ordering (no manual pool needed)", () => {
+    const q = question({ presentationType: "ordering", text, wordBankInput: "should be ignored" });
+    const exam = toExamQuestion(q, 0, 10);
+    expect(exam.wordBank).toEqual(["1", "2", "3", "4"]);
+  });
+
+  it("does not invent an answer - the correct order stays empty, left for Auto-Fix", () => {
+    const q = question({ presentationType: "ordering", text });
+    const exam = toExamQuestion(q, 0, 10);
+    expect(exam.answer).toEqual({});
   });
 });
 

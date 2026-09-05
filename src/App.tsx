@@ -123,7 +123,9 @@ export type ExamQuestion = {
     | "multipleChoice"
     | "fillBlank"
     | "wordBank"
-    | "open";
+    | "open"
+    | "matching"
+    | "ordering";
   bankType?: string;
   marks: number;
   locked: boolean;
@@ -260,7 +262,9 @@ export const typeNames: Record<ExamQuestion["presentationType"], string> = {
   multipleChoice: "أمريكي",
   fillBlank: "أكمل الناقص",
   wordBank: "مخزن كلمات",
-  open: "مفتوح"
+  open: "مفتوح",
+  matching: "طابق",
+  ordering: "رتّب"
 };
 
 const RECOVERY_KEY =
@@ -305,6 +309,124 @@ export function mergeTemplateIntoGeneratedExam(
     },
     presentationTheme: template.presentationTheme
   };
+}
+
+function questionHasAnswer(question: ExamQuestion) {
+  if (!question.answer) {
+    return false;
+  }
+  return Object.keys(question.answer).length > 0;
+}
+
+// Pure - builds the structured issue list without touching any state, so runAutoFix() can call
+// it both before the batch (to decide what to fix) and after (to report what's left), and so it
+// stays independently testable. `message` is Arabic text for on-screen display only; every
+// decision Auto-Fix makes is driven by `code`/`autoFixable`, never by parsing `message`.
+export function buildQualityIssues(current: ExamDraft): QualityIssue[] {
+  const issues: QualityIssue[] = [];
+  let nextId = 0;
+  const push = (issue: Omit<QualityIssue, "id">) => {
+    nextId += 1;
+    issues.push({ id: "quality-" + nextId, ...issue });
+  };
+
+  const currentMarks = current.questions.reduce((total, question) => total + Number(question.marks || 0), 0);
+
+  if (currentMarks !== Number(current.totalMarks)) {
+    push({
+      code: "MARKS_TOTAL_MISMATCH",
+      autoFixable: false,
+      message: "مجموع علامات الأسئلة هو " + currentMarks + " بينما علامة الامتحان المطلوبة هي " + current.totalMarks + "."
+    });
+  }
+
+  if (current.questions.length !== Number(current.plan?.totalQuestions || current.questions.length)) {
+    push({
+      code: "QUESTION_COUNT_MISMATCH",
+      autoFixable: false,
+      message: "عدد الأسئلة الحالي لا يطابق عدد الأسئلة في الخطة."
+    });
+  }
+
+  const seenBankIds = new Set<string>();
+  const seenFamilies = new Set<string>();
+
+  current.questions.forEach((question, index) => {
+    const number = index + 1;
+    const questionId = question.examQuestionId;
+
+    if (!question.text?.trim()) {
+      push({ code: "EMPTY_TEXT", autoFixable: false, questionId, questionNumber: number, message: "السؤال " + number + " لا يحتوي على نص." });
+    }
+
+    if (Number(question.marks) <= 0) {
+      push({ code: "MARKS_PROBLEM", autoFixable: true, questionId, questionNumber: number, message: "السؤال " + number + " علامته صفر أو غير صالحة." });
+    }
+
+    if (!questionHasAnswer(question)) {
+      push({ code: "MISSING_ANSWER", autoFixable: true, questionId, questionNumber: number, message: "السؤال " + number + " لا يحتوي على نموذج إجابة." });
+    }
+    else if (question.presentationType === "multipleChoice") {
+      const correctIndex = Number((question.answer as { correctOptionIndex?: unknown })?.correctOptionIndex);
+      if (!Number.isInteger(correctIndex) || correctIndex < 0 || correctIndex >= (question.options?.length || 0)) {
+        push({ code: "MISSING_ANSWER", autoFixable: true, questionId, questionNumber: number, message: "السؤال " + number + " اختيار من متعدد بلا إجابة صحيحة محددة." });
+      }
+    }
+
+    if (question.presentationType === "multipleChoice" && (!Array.isArray(question.options) || question.options.length < 2)) {
+      push({ code: "QUESTION_TYPE_PROBLEM", autoFixable: true, questionId, questionNumber: number, message: "السؤال " + number + " أمريكي ولكن عدد الخيارات غير كافٍ." });
+    }
+
+    const table = parseTable(question.text || "");
+
+    if (table) {
+      if (!Array.isArray(question.fields) || question.fields.length === 0) {
+        push({ code: "MISSING_FIELDS", autoFixable: true, questionId, questionNumber: number, message: "السؤال " + number + " جدول ولكن بلا حقول إجابة لكل صف." });
+      }
+      else {
+        if (question.fields.length !== table.rows.length) {
+          push({ code: "INVALID_FIELDS", autoFixable: true, questionId, questionNumber: number, message: "السؤال " + number + " عدد حقوله لا يطابق عدد صفوف الجدول." });
+        }
+
+        const rowMissingOptions = question.fields.some(field => field.kind !== "boolean" && (!Array.isArray(field.options) || field.options.length === 0));
+        if (rowMissingOptions) {
+          push({ code: "TABLE_MISSING_OPTIONS", autoFixable: true, questionId, questionNumber: number, message: "السؤال " + number + " جدول ولكن بعض صفوفه بلا خيارات منسدلة." });
+        }
+      }
+    }
+    else if (question.presentationType === "fillBlank" || question.presentationType === "wordBank" || question.presentationType === "ordering") {
+      if (!Array.isArray(question.fields) || question.fields.length === 0) {
+        push({ code: "MISSING_FIELDS", autoFixable: true, questionId, questionNumber: number, message: "السؤال " + number + " يحتاج حقول إجابة ولكنه لا يحتوي على حقول." });
+      }
+
+      if ((question.presentationType === "wordBank" || question.presentationType === "ordering") && (!Array.isArray(question.wordBank) || question.wordBank.length === 0)) {
+        push({ code: "MISSING_OPTIONS", autoFixable: true, questionId, questionNumber: number, message: question.presentationType === "ordering" ? "السؤال " + number + " من نوع ترتيب ولكن أرقام المواضع غير موجودة." : "السؤال " + number + " من نوع مخزن كلمات ولكن مخزن الكلمات فارغ." });
+      }
+    }
+    else if (question.presentationType === "matching") {
+      push({ code: "MISSING_FIELDS", autoFixable: true, questionId, questionNumber: number, message: "السؤال " + number + " من نوع مطابقة ولكن نصه لا يحتوي جدولًا مكوّنًا من عمودين." });
+    }
+
+    if (question.image?.exists && (!Array.isArray(question.image.assets) || question.image.assets.length === 0)) {
+      push({ code: "IMAGE_MISSING", autoFixable: false, questionId, questionNumber: number, message: "السؤال " + number + " مسجل كسؤال صورة ولكن لا توجد صورة فعلية." });
+    }
+
+    if (question.bankQuestionId) {
+      if (seenBankIds.has(question.bankQuestionId)) {
+        push({ code: "DUPLICATE_BANK_QUESTION", autoFixable: false, questionId, questionNumber: number, message: "يوجد تكرار للسؤال الأصلي عند السؤال " + number + "." });
+      }
+      seenBankIds.add(question.bankQuestionId);
+    }
+
+    if (question.familyKey) {
+      if (seenFamilies.has(question.familyKey)) {
+        push({ code: "DUPLICATE_FAMILY", autoFixable: false, questionId, questionNumber: number, message: "يوجد أكثر من سؤال من نفس العائلة عند السؤال " + number + "." });
+      }
+      seenFamilies.add(question.familyKey);
+    }
+  });
+
+  return issues;
 }
 
 function hasRecoveryDraft() {
@@ -2416,131 +2538,6 @@ function App() {
         null
       );
     }
-  }
-
-  function questionHasAnswer(
-    question:
-      ExamQuestion
-  ) {
-    if (
-      !question.answer
-    ) {
-      return false;
-    }
-
-    return (
-      Object.keys(
-        question.answer
-      ).length > 0
-    );
-  }
-
-  // Pure - builds the structured issue list without touching any state, so runAutoFix() can call
-  // it both before the batch (to decide what to fix) and after (to report what's left), and so it
-  // stays independently testable. `message` is Arabic text for on-screen display only; every
-  // decision Auto-Fix makes is driven by `code`/`autoFixable`, never by parsing `message`.
-  function buildQualityIssues(current: ExamDraft): QualityIssue[] {
-    const issues: QualityIssue[] = [];
-    let nextId = 0;
-    const push = (issue: Omit<QualityIssue, "id">) => {
-      nextId += 1;
-      issues.push({ id: "quality-" + nextId, ...issue });
-    };
-
-    const currentMarks = current.questions.reduce((total, question) => total + Number(question.marks || 0), 0);
-
-    if (currentMarks !== Number(current.totalMarks)) {
-      push({
-        code: "MARKS_TOTAL_MISMATCH",
-        autoFixable: false,
-        message: "مجموع علامات الأسئلة هو " + currentMarks + " بينما علامة الامتحان المطلوبة هي " + current.totalMarks + "."
-      });
-    }
-
-    if (current.questions.length !== Number(current.plan?.totalQuestions || current.questions.length)) {
-      push({
-        code: "QUESTION_COUNT_MISMATCH",
-        autoFixable: false,
-        message: "عدد الأسئلة الحالي لا يطابق عدد الأسئلة في الخطة."
-      });
-    }
-
-    const seenBankIds = new Set<string>();
-    const seenFamilies = new Set<string>();
-
-    current.questions.forEach((question, index) => {
-      const number = index + 1;
-      const questionId = question.examQuestionId;
-
-      if (!question.text?.trim()) {
-        push({ code: "EMPTY_TEXT", autoFixable: false, questionId, questionNumber: number, message: "السؤال " + number + " لا يحتوي على نص." });
-      }
-
-      if (Number(question.marks) <= 0) {
-        push({ code: "MARKS_PROBLEM", autoFixable: true, questionId, questionNumber: number, message: "السؤال " + number + " علامته صفر أو غير صالحة." });
-      }
-
-      if (!questionHasAnswer(question)) {
-        push({ code: "MISSING_ANSWER", autoFixable: true, questionId, questionNumber: number, message: "السؤال " + number + " لا يحتوي على نموذج إجابة." });
-      }
-      else if (question.presentationType === "multipleChoice") {
-        const correctIndex = Number((question.answer as { correctOptionIndex?: unknown })?.correctOptionIndex);
-        if (!Number.isInteger(correctIndex) || correctIndex < 0 || correctIndex >= (question.options?.length || 0)) {
-          push({ code: "MISSING_ANSWER", autoFixable: true, questionId, questionNumber: number, message: "السؤال " + number + " اختيار من متعدد بلا إجابة صحيحة محددة." });
-        }
-      }
-
-      if (question.presentationType === "multipleChoice" && (!Array.isArray(question.options) || question.options.length < 2)) {
-        push({ code: "QUESTION_TYPE_PROBLEM", autoFixable: true, questionId, questionNumber: number, message: "السؤال " + number + " أمريكي ولكن عدد الخيارات غير كافٍ." });
-      }
-
-      const table = parseTable(question.text || "");
-
-      if (table) {
-        if (!Array.isArray(question.fields) || question.fields.length === 0) {
-          push({ code: "MISSING_FIELDS", autoFixable: true, questionId, questionNumber: number, message: "السؤال " + number + " جدول ولكن بلا حقول إجابة لكل صف." });
-        }
-        else {
-          if (question.fields.length !== table.rows.length) {
-            push({ code: "INVALID_FIELDS", autoFixable: true, questionId, questionNumber: number, message: "السؤال " + number + " عدد حقوله لا يطابق عدد صفوف الجدول." });
-          }
-
-          const rowMissingOptions = question.fields.some(field => field.kind !== "boolean" && (!Array.isArray(field.options) || field.options.length === 0));
-          if (rowMissingOptions) {
-            push({ code: "TABLE_MISSING_OPTIONS", autoFixable: true, questionId, questionNumber: number, message: "السؤال " + number + " جدول ولكن بعض صفوفه بلا خيارات منسدلة." });
-          }
-        }
-      }
-      else if (question.presentationType === "fillBlank" || question.presentationType === "wordBank") {
-        if (!Array.isArray(question.fields) || question.fields.length === 0) {
-          push({ code: "MISSING_FIELDS", autoFixable: true, questionId, questionNumber: number, message: "السؤال " + number + " يحتاج حقول إجابة ولكنه لا يحتوي على حقول." });
-        }
-
-        if (question.presentationType === "wordBank" && (!Array.isArray(question.wordBank) || question.wordBank.length === 0)) {
-          push({ code: "MISSING_OPTIONS", autoFixable: true, questionId, questionNumber: number, message: "السؤال " + number + " من نوع مخزن كلمات ولكن مخزن الكلمات فارغ." });
-        }
-      }
-
-      if (question.image?.exists && (!Array.isArray(question.image.assets) || question.image.assets.length === 0)) {
-        push({ code: "IMAGE_MISSING", autoFixable: false, questionId, questionNumber: number, message: "السؤال " + number + " مسجل كسؤال صورة ولكن لا توجد صورة فعلية." });
-      }
-
-      if (question.bankQuestionId) {
-        if (seenBankIds.has(question.bankQuestionId)) {
-          push({ code: "DUPLICATE_BANK_QUESTION", autoFixable: false, questionId, questionNumber: number, message: "يوجد تكرار للسؤال الأصلي عند السؤال " + number + "." });
-        }
-        seenBankIds.add(question.bankQuestionId);
-      }
-
-      if (question.familyKey) {
-        if (seenFamilies.has(question.familyKey)) {
-          push({ code: "DUPLICATE_FAMILY", autoFixable: false, questionId, questionNumber: number, message: "يوجد أكثر من سؤال من نفس العائلة عند السؤال " + number + "." });
-        }
-        seenFamilies.add(question.familyKey);
-      }
-    });
-
-    return issues;
   }
 
   function runQualityCheck() {

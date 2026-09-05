@@ -153,3 +153,42 @@ describe("gradeExam - table questions with dropdown-sourced answers", () => {
     expect(result.questions[0].score).toBe(2);
   });
 });
+
+// The whole premise of adding "matching"/"ordering" as new presentationType values is that
+// grading needs ZERO changes, because gradeQuestion never checks presentationType for anything
+// other than multipleChoice - it dispatches purely on answer.mode/response.kind. These tests are
+// the regression proof: a "matching" question is graded via the exact same table/pairMap path a
+// table question already uses, and an "ordering" question via the exact same exactSequence path a
+// fillBlank/wordBank question already uses.
+describe("gradeExam - matching (طابق) questions reuse the existing table/pairMap grading untouched", () => {
+  const text = "طابق كل بروتوكول بالطبقة الصحيحة:\n| البروتوكول | الطبقة |\n| --- | --- |\n| HTTP | |\n| IP | |";
+
+  it("grades a fully correct matching submission as full marks", () => {
+    const exam = { questions: [{ examQuestionId: "q1", marks: 4, presentationType: "matching", text, answer: { text: "HTTP=طبقة التطبيقات;IP=طبقة الشبكة" } }] };
+    const result = gradeExam(exam, { q1: { kind: "table", values: ["طبقة التطبيقات", "طبقة الشبكة"] } });
+    expect(result.questions[0].score).toBe(4);
+    expect(result.questions[0].correct).toBe(true);
+  });
+
+  it("gives partial credit for a partially correct matching submission", () => {
+    const exam = { questions: [{ examQuestionId: "q1", marks: 4, presentationType: "matching", text, answer: { text: "HTTP=طبقة التطبيقات;IP=طبقة الشبكة" } }] };
+    const result = gradeExam(exam, { q1: { kind: "table", values: ["طبقة التطبيقات", "طبقة التطبيقات"] } });
+    expect(result.questions[0].score).toBe(2);
+  });
+});
+
+describe("gradeExam - ordering (رتّب) questions reuse the existing exactSequence grading untouched", () => {
+  it("grades a fully correct ordering submission as full marks", () => {
+    const exam = { questions: [{ examQuestionId: "q1", marks: 3, presentationType: "ordering", answer: { mode: "exactSequence", values: ["2", "1", "3"] } }] };
+    const result = gradeExam(exam, { q1: { kind: "sequence", values: ["2", "1", "3"] } });
+    expect(result.questions[0].score).toBe(3);
+    expect(result.questions[0].correct).toBe(true);
+  });
+
+  it("gives partial credit for a partially correct ordering submission", () => {
+    const exam = { questions: [{ examQuestionId: "q1", marks: 3, presentationType: "ordering", answer: { mode: "exactSequence", values: ["2", "1", "3"] } }] };
+    const result = gradeExam(exam, { q1: { kind: "sequence", values: ["2", "1", "1"] } });
+    expect(result.questions[0].score).toBeCloseTo(2, 5);
+    expect(result.questions[0].correct).toBe(false);
+  });
+});
