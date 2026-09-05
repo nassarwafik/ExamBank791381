@@ -2,19 +2,25 @@
 // Builds the exam-library catalog + item JSONs from a local snapshot of Book791381's HTML files.
 //
 // Usage:
-//   node scripts/build-791381-library.js <sourceDir> [outputDir]
+//   node scripts/build-791381-library.cjs <sourceDir> [dataOutputDir] [assetsOutputDir]
 //
-// <sourceDir> must contain index.html plus T01.html..T30.html and (optionally) F01.html..F06.html,
-// saved locally from https://nassarwafik.github.io/Book791381/ - this script never fetches over
-// the network itself. Building the library is a deliberate, reviewable, offline/build-time step
-// (see the Discovery report, Phase M/W): no network or AI call may ever happen at
-// assignment-creation or student-answer time, only here.
+// With only <sourceDir>, output goes to the versioned in-repo locations, so the library ships with
+// the app (git -> deploy -> available, no manual Azure upload):
+//   api/src/data/exam-library/{catalog.json, quality-report.json, items/<code>.json}
+//   public/exam-library/assets/<code>/<sha8>.<ext>
+// Passing explicit output dirs (as the tests do) writes elsewhere instead.
 //
-// Only T-series files are converted in this phase - each F-series file uses its own, different
-// schema (see the Discovery report, Phase A) and is deliberately reported as "unsupported" rather
-// than guessed at (Phase Z). Running this script twice on the same source produces byte-identical
-// examQuestionId values and contentHash (no Date.now()/random anywhere in the conversion itself -
-// only the informational convertedAt timestamp differs between runs).
+// <sourceDir> must contain index.html plus T01.html..T30.html and F01.html..F06.html, saved locally
+// from https://nassarwafik.github.io/Book791381/ - this script never fetches over the network.
+// Building the library is a deliberate, reviewable, offline/build-time step: no network or AI call
+// ever happens at assignment-creation or student-answer time, only here.
+//
+// Every T and F file is converted. Conversion status per item is READY (all questions
+// auto-gradable), NEEDS_REVIEW (some questions have no certain answer and are flagged for manual
+// review - never guessed), or UNSUPPORTED (structural parse failure). Publishing status
+// (publishable) is separate and true only for READY. Question images are externalized to standalone
+// static files (content-addressed) so item JSON never carries base64. The build is idempotent: same
+// source -> identical examQuestionId, asset filenames, and contentHash (only convertedAt varies).
 
 const fs = require("fs");
 const path = require("path");
@@ -26,6 +32,10 @@ const { extractQCards } = require("../api/src/lib/qcard-dom-extract");
 const { resolveAnswerMap } = require("../api/src/lib/library-answer-resolvers");
 const { mapQCard } = require("../api/src/lib/library-fseries-map");
 const { mapF03Question, mapF06Question, extractF03ImagesByQid } = require("../api/src/lib/library-json-map");
+const { externalizeSnapshotImages } = require("../api/src/lib/library-assets");
+
+const REPO_DATA_DIR = path.join(__dirname, "..", "api", "src", "data", "exam-library");
+const REPO_ASSETS_DIR = path.join(__dirname, "..", "public", "exam-library", "assets");
 
 const T_FILE_REGEX = /^T(\d{2})\.html$/;
 const F_FILE_REGEX = /^F(\d{2})\.html$/;
@@ -155,7 +165,9 @@ function validateTExamSnapshot(snapshot, expectedQuestionCount) {
   return issues;
 }
 
-function buildLibrary(sourceDir, outputDir) {
+function buildLibrary(sourceDir, dataDir, assetsDir) {
+  const outputDir = dataDir || REPO_DATA_DIR;
+  const assetsOutputDir = assetsDir || REPO_ASSETS_DIR;
   const indexHtml = fs.readFileSync(path.join(sourceDir, "index.html"), "utf8");
   const catalogMeta = parseBookCatalogIndex(indexHtml);
   const metaById = new Map(catalogMeta.map(item => [item.libraryItemId, item]));
@@ -163,6 +175,7 @@ function buildLibrary(sourceDir, outputDir) {
   const files = fs.readdirSync(sourceDir);
   const catalog = [];
   const report = [];
+  let assetsWritten = 0;
   const now = new Date().toISOString();
 
   fs.mkdirSync(path.join(outputDir, "items"), { recursive: true });
@@ -211,9 +224,20 @@ function buildLibrary(sourceDir, outputDir) {
     // of the ExamQuestion type); its intent is preserved in each question's teacherNote and
     // surfaced in aggregate in the quality report.
     const cleanQuestions = snapshot.questions.map(q => { const { requiresManualReview, ...rest } = q; return rest; });
-    const storedSnapshot = { ...snapshot, questions: cleanQuestions };
+    // Externalize every question image to a static file and replace its base64 with a served URL,
+    // so the item JSON (and the Functions bundle) never carries multi-megabyte data: URIs.
+    const externalized = externalizeSnapshotImages({ ...snapshot, questions: cleanQuestions }, code, assetsOutputDir);
+    const storedSnapshot = externalized;
 
-    const contentHash = sha256(JSON.stringify(cleanQuestions));
+    const itemJson = JSON.stringify({ schemaVersion: 1, examSnapshot: storedSnapshot }, null, 2);
+    // Hard guard: no data: URI may survive into a stored item (that would defeat the whole point).
+    if (/data:[\w/+.-]+;base64,/.test(itemJson)) {
+      throw new Error(code + ": a base64 data: URI leaked into the stored item JSON after externalization");
+    }
+    assetsWritten += storedSnapshot.questions.reduce((sum, q) => sum + (q.image && q.image.assets ? q.image.assets.length : 0), 0);
+
+    const publishable = status === "ready";
+    const contentHash = sha256(JSON.stringify(storedSnapshot.questions));
     const catalogItem = {
       libraryItemId: code,
       title: snapshot.title,
@@ -224,7 +248,8 @@ function buildLibrary(sourceDir, outputDir) {
       totalMarks: storedSnapshot.totalMarks,
       pageRange: meta ? meta.pageRange : "",
       parserFamily,
-      status,
+      conversionStatus: status,
+      publishable,
       autoGradableCount: cleanQuestions.length - reviewQuestions.length,
       manualReviewCount: reviewQuestions.length,
       libraryVersion: 1,
@@ -234,6 +259,7 @@ function buildLibrary(sourceDir, outputDir) {
       source: { repository: "Book791381", sourceFile: file }
     };
 
+    // catalog.json stays small: metadata only, never the examSnapshot (loaded per-item on demand).
     fs.writeFileSync(
       path.join(outputDir, "items", code + ".json"),
       JSON.stringify({ ...catalogItem, schemaVersion: 1, examSnapshot: storedSnapshot }, null, 2)
@@ -243,7 +269,8 @@ function buildLibrary(sourceDir, outputDir) {
     report.push({
       file,
       libraryItemId: code,
-      status,
+      conversionStatus: status,
+      publishable,
       questionCount: cleanQuestions.length,
       autoGradableCount: cleanQuestions.length - reviewQuestions.length,
       manualReviewCount: reviewQuestions.length,
@@ -254,25 +281,27 @@ function buildLibrary(sourceDir, outputDir) {
   fs.writeFileSync(path.join(outputDir, "catalog.json"), JSON.stringify(catalog, null, 2));
   fs.writeFileSync(path.join(outputDir, "quality-report.json"), JSON.stringify(report, null, 2));
 
-  return { catalog, report };
+  return { catalog, report, assetsWritten, dataDir: outputDir, assetsDir: assetsOutputDir };
 }
 
 function main() {
   const sourceDir = process.argv[2];
-  const outputDir = process.argv[3] || path.join(__dirname, "output");
+  const dataDir = process.argv[3];
+  const assetsDir = process.argv[4];
 
   if (!sourceDir) {
-    console.error("Usage: node scripts/build-791381-library.js <sourceDir> [outputDir]");
+    console.error("Usage: node scripts/build-791381-library.cjs <sourceDir> [dataOutputDir] [assetsOutputDir]");
     process.exit(1);
   }
 
-  const { catalog, report } = buildLibrary(sourceDir, outputDir);
-  const ready = report.filter(item => item.status === "ready").length;
-  const needsReview = report.filter(item => item.status === "needs_review").length;
-  const unsupported = report.filter(item => item.status === "unsupported").length;
+  const { catalog, report, assetsWritten, dataDir: usedData, assetsDir: usedAssets } = buildLibrary(sourceDir, dataDir, assetsDir);
+  const ready = report.filter(item => item.conversionStatus === "ready").length;
+  const needsReview = report.filter(item => item.conversionStatus === "needs_review").length;
+  const unsupported = report.filter(item => item.conversionStatus === "unsupported").length;
 
   console.log("Built " + catalog.length + " library items from " + report.length + " files: " +
-    ready + " ready, " + needsReview + " needs_review, " + unsupported + " unsupported. Output: " + outputDir);
+    ready + " ready, " + needsReview + " needs_review, " + unsupported + " unsupported.");
+  console.log("Assets externalized: " + assetsWritten + " image refs. Data: " + usedData + " | Assets: " + usedAssets);
 }
 
 if (require.main === module) {

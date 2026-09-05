@@ -1,0 +1,382 @@
+[
+  {
+    "file": "F01.html",
+    "libraryItemId": "F01",
+    "conversionStatus": "needs_review",
+    "publishable": false,
+    "questionCount": 34,
+    "autoGradableCount": 30,
+    "manualReviewCount": 4,
+    "manualReviewReasons": [
+      "شكل سؤال متعدد الأجزاء غير قابل للتحويل الحتمي — يحتاج مراجعة.",
+      "لا يوجد مفتاح إجابة لهذا السؤال في المصدر."
+    ]
+  },
+  {
+    "file": "F02.html",
+    "libraryItemId": "F02",
+    "conversionStatus": "needs_review",
+    "publishable": false,
+    "questionCount": 40,
+    "autoGradableCount": 32,
+    "manualReviewCount": 8,
+    "manualReviewReasons": [
+      "شكل سؤال متعدد الأجزاء غير قابل للتحويل الحتمي — يحتاج مراجعة.",
+      "بعض صفوف الجدول بلا مفتاح إجابة في المصدر."
+    ]
+  },
+  {
+    "file": "F03.html",
+    "libraryItemId": "F03",
+    "conversionStatus": "ready",
+    "publishable": true,
+    "questionCount": 40,
+    "autoGradableCount": 40,
+    "manualReviewCount": 0,
+    "manualReviewReasons": []
+  },
+  {
+    "file": "F04.html",
+    "libraryItemId": "F04",
+    "conversionStatus": "needs_review",
+    "publishable": false,
+    "questionCount": 42,
+    "autoGradableCount": 37,
+    "manualReviewCount": 5,
+    "manualReviewReasons": [
+      "شكل سؤال متعدد الأجزاء غير قابل للتحويل الحتمي — يحتاج مراجعة.",
+      "بعض صفوف الجدول بلا مفتاح إجابة في المصدر.",
+      "لا يوجد مفتاح إجابة لهذا السؤال في المصدر."
+    ]
+  },
+  {
+    "file": "F05.html",
+    "libraryItemId": "F05",
+    "conversionStatus": "needs_review",
+    "publishable": false,
+    "questionCount": 41,
+    "autoGradableCount": 0,
+    "manualReviewCount": 41,
+    "manualReviewReasons": [
+      "سؤال مفتوح بلا مفتاح إجابة في المصدر.",
+      "لا يوجد مفتاح إجابة لهذا السؤال في المصدر.",
+      "شكل سؤال متعدد الأجزاء غير قابل للتحويل الحتمي — يحتاج مراجعة."
+    ]
+  },
+  {
+    "file": "F06.html",
+    "libraryItemId": "F06",
+    "conversionStatus": "needs_review",
+    "publishable": false,
+    "questionCount": 45,
+    "autoGradableCount": 36,
+    "manualReviewCount": 9,
+    "manualReviewReasons": [
+      "المصدر يقبل عدة إجابات نصية؛ التصحيح الآلي الحالي يقارن إجابة واحدة فقط.",
+      "لا يوجد مفتاح إجابة في المصدر.",
+      "بعض بنود السؤال بلا مفتاح إجابة في المصدر.",
+      "سؤال متعدد الأجزاء مختلط (radio+text+select) لا يُمثَّل بوحدة تصحيح واحدة — يحتاج مراجعة.",
+      "سؤال فحص يدوي في المصدر (mark=يدوي)."
+    ]
+  },
+  {
+    "file": "T01.html",
+    "libraryItemId": "T01",
+    "conversionStatus": "ready",
+    "publishable": true,
+    "questionCount": 10,
+    "autoGradableCount": 10,
+    "manualReviewCount": 0,
+    "manualReviewReasons": []
+  },
+  {
+    "file": "T02.html",
+    "libraryItemId": "T02",
+    "conversionStatus": "ready",
+    "publishable": true,
+    "questionCount": 10,
+    "autoGradableCount": 10,
+    "manualReviewCount": 0,
+    "manualReviewReasons": []
+  },
+  {
+    "file": "T03.html",
+    "libraryItemId": "T03",
+    "conversionStatus": "ready",
+    "publishable": true,
+    "questionCount": 10,
+    "autoGradableCount": 10,
+    "manualReviewCount": 0,
+    "manualReviewReasons": []
+  },
+  {
+    "file": "T04.html",
+    "libraryItemId": "T04",
+    "conversionStatus": "ready",
+    "publishable": true,
+    "questionCount": 10,
+    "autoGradableCount": 10,
+    "manualReviewCount": 0,
+    "manualReviewReasons": []
+  },
+  {
+    "file": "T05.html",
+    "libraryItemId": "T05",
+    "conversionStatus": "ready",
+    "publishable": true,
+    "questionCount": 10,
+    "autoGradableCount": 10,
+    "manualReviewCount": 0,
+    "manualReviewReasons": []
+  },
+  {
+    "file": "T06.html",
+    "libraryItemId": "T06",
+    "conversionStatus": "ready",
+    "publishable": true,
+    "questionCount": 10,
+    "autoGradableCount": 10,
+    "manualReviewCount": 0,
+    "manualReviewReasons": []
+  },
+  {
+    "file": "T07.html",
+    "libraryItemId": "T07",
+    "conversionStatus": "ready",
+    "publishable": true,
+    "questionCount": 10,
+    "autoGradableCount": 10,
+    "manualReviewCount": 0,
+    "manualReviewReasons": []
+  },
+  {
+    "file": "T08.html",
+    "libraryItemId": "T08",
+    "conversionStatus": "ready",
+    "publishable": true,
+    "questionCount": 10,
+    "autoGradableCount": 10,
+    "manualReviewCount": 0,
+    "manualReviewReasons": []
+  },
+  {
+    "file": "T09.html",
+    "libraryItemId": "T09",
+    "conversionStatus": "ready",
+    "publishable": true,
+    "questionCount": 10,
+    "autoGradableCount": 10,
+    "manualReviewCount": 0,
+    "manualReviewReasons": []
+  },
+  {
+    "file": "T10.html",
+    "libraryItemId": "T10",
+    "conversionStatus": "ready",
+    "publishable": true,
+    "questionCount": 10,
+    "autoGradableCount": 10,
+    "manualReviewCount": 0,
+    "manualReviewReasons": []
+  },
+  {
+    "file": "T11.html",
+    "libraryItemId": "T11",
+    "conversionStatus": "ready",
+    "publishable": true,
+    "questionCount": 10,
+    "autoGradableCount": 10,
+    "manualReviewCount": 0,
+    "manualReviewReasons": []
+  },
+  {
+    "file": "T12.html",
+    "libraryItemId": "T12",
+    "conversionStatus": "ready",
+    "publishable": true,
+    "questionCount": 10,
+    "autoGradableCount": 10,
+    "manualReviewCount": 0,
+    "manualReviewReasons": []
+  },
+  {
+    "file": "T13.html",
+    "libraryItemId": "T13",
+    "conversionStatus": "ready",
+    "publishable": true,
+    "questionCount": 10,
+    "autoGradableCount": 10,
+    "manualReviewCount": 0,
+    "manualReviewReasons": []
+  },
+  {
+    "file": "T14.html",
+    "libraryItemId": "T14",
+    "conversionStatus": "ready",
+    "publishable": true,
+    "questionCount": 10,
+    "autoGradableCount": 10,
+    "manualReviewCount": 0,
+    "manualReviewReasons": []
+  },
+  {
+    "file": "T15.html",
+    "libraryItemId": "T15",
+    "conversionStatus": "ready",
+    "publishable": true,
+    "questionCount": 10,
+    "autoGradableCount": 10,
+    "manualReviewCount": 0,
+    "manualReviewReasons": []
+  },
+  {
+    "file": "T16.html",
+    "libraryItemId": "T16",
+    "conversionStatus": "ready",
+    "publishable": true,
+    "questionCount": 10,
+    "autoGradableCount": 10,
+    "manualReviewCount": 0,
+    "manualReviewReasons": []
+  },
+  {
+    "file": "T17.html",
+    "libraryItemId": "T17",
+    "conversionStatus": "ready",
+    "publishable": true,
+    "questionCount": 10,
+    "autoGradableCount": 10,
+    "manualReviewCount": 0,
+    "manualReviewReasons": []
+  },
+  {
+    "file": "T18.html",
+    "libraryItemId": "T18",
+    "conversionStatus": "ready",
+    "publishable": true,
+    "questionCount": 10,
+    "autoGradableCount": 10,
+    "manualReviewCount": 0,
+    "manualReviewReasons": []
+  },
+  {
+    "file": "T19.html",
+    "libraryItemId": "T19",
+    "conversionStatus": "ready",
+    "publishable": true,
+    "questionCount": 10,
+    "autoGradableCount": 10,
+    "manualReviewCount": 0,
+    "manualReviewReasons": []
+  },
+  {
+    "file": "T20.html",
+    "libraryItemId": "T20",
+    "conversionStatus": "ready",
+    "publishable": true,
+    "questionCount": 10,
+    "autoGradableCount": 10,
+    "manualReviewCount": 0,
+    "manualReviewReasons": []
+  },
+  {
+    "file": "T21.html",
+    "libraryItemId": "T21",
+    "conversionStatus": "ready",
+    "publishable": true,
+    "questionCount": 15,
+    "autoGradableCount": 15,
+    "manualReviewCount": 0,
+    "manualReviewReasons": []
+  },
+  {
+    "file": "T22.html",
+    "libraryItemId": "T22",
+    "conversionStatus": "ready",
+    "publishable": true,
+    "questionCount": 10,
+    "autoGradableCount": 10,
+    "manualReviewCount": 0,
+    "manualReviewReasons": []
+  },
+  {
+    "file": "T23.html",
+    "libraryItemId": "T23",
+    "conversionStatus": "ready",
+    "publishable": true,
+    "questionCount": 10,
+    "autoGradableCount": 10,
+    "manualReviewCount": 0,
+    "manualReviewReasons": []
+  },
+  {
+    "file": "T24.html",
+    "libraryItemId": "T24",
+    "conversionStatus": "ready",
+    "publishable": true,
+    "questionCount": 10,
+    "autoGradableCount": 10,
+    "manualReviewCount": 0,
+    "manualReviewReasons": []
+  },
+  {
+    "file": "T25.html",
+    "libraryItemId": "T25",
+    "conversionStatus": "ready",
+    "publishable": true,
+    "questionCount": 20,
+    "autoGradableCount": 20,
+    "manualReviewCount": 0,
+    "manualReviewReasons": []
+  },
+  {
+    "file": "T26.html",
+    "libraryItemId": "T26",
+    "conversionStatus": "ready",
+    "publishable": true,
+    "questionCount": 20,
+    "autoGradableCount": 20,
+    "manualReviewCount": 0,
+    "manualReviewReasons": []
+  },
+  {
+    "file": "T27.html",
+    "libraryItemId": "T27",
+    "conversionStatus": "ready",
+    "publishable": true,
+    "questionCount": 20,
+    "autoGradableCount": 20,
+    "manualReviewCount": 0,
+    "manualReviewReasons": []
+  },
+  {
+    "file": "T28.html",
+    "libraryItemId": "T28",
+    "conversionStatus": "ready",
+    "publishable": true,
+    "questionCount": 20,
+    "autoGradableCount": 20,
+    "manualReviewCount": 0,
+    "manualReviewReasons": []
+  },
+  {
+    "file": "T29.html",
+    "libraryItemId": "T29",
+    "conversionStatus": "ready",
+    "publishable": true,
+    "questionCount": 20,
+    "autoGradableCount": 20,
+    "manualReviewCount": 0,
+    "manualReviewReasons": []
+  },
+  {
+    "file": "T30.html",
+    "libraryItemId": "T30",
+    "conversionStatus": "ready",
+    "publishable": true,
+    "questionCount": 20,
+    "autoGradableCount": 20,
+    "manualReviewCount": 0,
+    "manualReviewReasons": []
+  }
+]

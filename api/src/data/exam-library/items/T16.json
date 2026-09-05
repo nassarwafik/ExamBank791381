@@ -1,0 +1,589 @@
+{
+  "libraryItemId": "T16",
+  "title": "بروتوكول VTP",
+  "category": "infra",
+  "description": "VTP Server وClient وDomain وPassword ونقل تحديثات VLAN.",
+  "tags": [
+    "VTP Server",
+    "VTP Client",
+    "Domain"
+  ],
+  "questionCount": 10,
+  "totalMarks": 100,
+  "pageRange": "137–142",
+  "parserFamily": "t-series-v1",
+  "conversionStatus": "ready",
+  "publishable": true,
+  "autoGradableCount": 10,
+  "manualReviewCount": 0,
+  "libraryVersion": 1,
+  "sourceSha": "40d45fd2cd362cd78163c142e81536a80cd78a971e53ee1bd974c9e2ea58e0a1",
+  "contentHash": "d109638dc7ef271ca0d97b200f46504fdc7b60443f822d2e40115cc7c3bfd612",
+  "convertedAt": "2026-09-05T18:57:19.063Z",
+  "source": {
+    "repository": "Book791381",
+    "sourceFile": "T16.html"
+  },
+  "schemaVersion": 1,
+  "examSnapshot": {
+    "schemaVersion": 1,
+    "examId": "LIB-T16",
+    "title": "بروتوكول VTP",
+    "questions": [
+      {
+        "examQuestionId": "LIB-T16-Q01",
+        "origin": "imported",
+        "sourceId": "LIB-T16",
+        "sourceQuestionId": "1",
+        "section": "BASIC",
+        "topic": "OTHER_NETWORKING",
+        "secondaryTopics": [],
+        "difficulty": 2,
+        "difficultyLabel": "",
+        "familyKey": "LIB-T16-Q01",
+        "hasCLI": false,
+        "requiresCalculation": false,
+        "presentationType": "multipleChoice",
+        "marks": 10,
+        "locked": false,
+        "text": "ما وظيفة بروتوكول VTP؟",
+        "textHtml": "",
+        "options": [
+          {
+            "value": "0",
+            "text": "إدارة معلومات VLAN على عدة سويتشات"
+          },
+          {
+            "value": "1",
+            "text": "توزيع عناوين IP"
+          },
+          {
+            "value": "2",
+            "text": "تحويل أسماء المواقع إلى IP"
+          },
+          {
+            "value": "3",
+            "text": "فحص الاتصال"
+          }
+        ],
+        "fields": [],
+        "parts": [],
+        "answer": {
+          "correctOptionIndex": 0
+        },
+        "hint": "VTP بروتوكول من Cisco يساعد على إدارة معلومات VLAN ونشرها بين عدة سويتشات.",
+        "teacherNote": "",
+        "aiInstruction": "",
+        "wasModified": false,
+        "image": {
+          "exists": false,
+          "visible": false,
+          "origin": null,
+          "assets": [],
+          "prompt": null
+        },
+        "history": [],
+        "redoStack": []
+      },
+      {
+        "examQuestionId": "LIB-T16-Q02",
+        "origin": "imported",
+        "sourceId": "LIB-T16",
+        "sourceQuestionId": "2",
+        "section": "BASIC",
+        "topic": "OTHER_NETWORKING",
+        "secondaryTopics": [],
+        "difficulty": 2,
+        "difficultyLabel": "",
+        "familyKey": "LIB-T16-Q02",
+        "hasCLI": false,
+        "requiresCalculation": false,
+        "presentationType": "multipleChoice",
+        "marks": 10,
+        "locked": false,
+        "text": "ما معنى الاختصار VTP؟",
+        "textHtml": "",
+        "options": [
+          {
+            "value": "0",
+            "text": "Virtual Transfer Port"
+          },
+          {
+            "value": "1",
+            "text": "VLAN Trunking Protocol"
+          },
+          {
+            "value": "2",
+            "text": "Verified Trunk Path"
+          },
+          {
+            "value": "3",
+            "text": "VLAN Transport Packet"
+          }
+        ],
+        "fields": [],
+        "parts": [],
+        "answer": {
+          "correctOptionIndex": 1
+        },
+        "hint": "VTP هو اختصار VLAN Trunking Protocol.",
+        "teacherNote": "",
+        "aiInstruction": "",
+        "wasModified": false,
+        "image": {
+          "exists": false,
+          "visible": false,
+          "origin": null,
+          "assets": [],
+          "prompt": null
+        },
+        "history": [],
+        "redoStack": []
+      },
+      {
+        "examQuestionId": "LIB-T16-Q03",
+        "origin": "imported",
+        "sourceId": "LIB-T16",
+        "sourceQuestionId": "3",
+        "section": "BASIC",
+        "topic": "OTHER_NETWORKING",
+        "secondaryTopics": [],
+        "difficulty": 2,
+        "difficultyLabel": "",
+        "familyKey": "LIB-T16-Q03",
+        "hasCLI": false,
+        "requiresCalculation": false,
+        "presentationType": "multipleChoice",
+        "marks": 10,
+        "locked": false,
+        "text": "ما دور السويتش الذي يعمل بوضع VTP Server؟",
+        "textHtml": "",
+        "options": [
+          {
+            "value": "0",
+            "text": "يستقبل عناوين IP فقط"
+          },
+          {
+            "value": "1",
+            "text": "يعطل جميع VLANs"
+          },
+          {
+            "value": "2",
+            "text": "ينشئ ويدير تعريفات VLAN ويرسل التحديثات"
+          },
+          {
+            "value": "3",
+            "text": "يعمل كـDNS Server"
+          }
+        ],
+        "fields": [],
+        "parts": [],
+        "answer": {
+          "correctOptionIndex": 2
+        },
+        "hint": "VTP Server يدير تعريفات VLAN ويرسل التحديثات إلى السويتشات العميلة.",
+        "teacherNote": "",
+        "aiInstruction": "",
+        "wasModified": false,
+        "image": {
+          "exists": false,
+          "visible": false,
+          "origin": null,
+          "assets": [],
+          "prompt": null
+        },
+        "history": [],
+        "redoStack": []
+      },
+      {
+        "examQuestionId": "LIB-T16-Q04",
+        "origin": "imported",
+        "sourceId": "LIB-T16",
+        "sourceQuestionId": "4",
+        "section": "BASIC",
+        "topic": "OTHER_NETWORKING",
+        "secondaryTopics": [],
+        "difficulty": 2,
+        "difficultyLabel": "",
+        "familyKey": "LIB-T16-Q04",
+        "hasCLI": false,
+        "requiresCalculation": false,
+        "presentationType": "multipleChoice",
+        "marks": 10,
+        "locked": false,
+        "text": "ما دور السويتش الذي يعمل بوضع VTP Client؟",
+        "textHtml": "",
+        "options": [
+          {
+            "value": "0",
+            "text": "ينشئ الإنترنت"
+          },
+          {
+            "value": "1",
+            "text": "يوزع DHCP"
+          },
+          {
+            "value": "2",
+            "text": "يمنع Trunk"
+          },
+          {
+            "value": "3",
+            "text": "يستقبل تحديثات VLAN من الخادم"
+          }
+        ],
+        "fields": [],
+        "parts": [],
+        "answer": {
+          "correctOptionIndex": 3
+        },
+        "hint": "VTP Client يستقبل معلومات VLAN من VTP Server.",
+        "teacherNote": "",
+        "aiInstruction": "",
+        "wasModified": false,
+        "image": {
+          "exists": false,
+          "visible": false,
+          "origin": null,
+          "assets": [],
+          "prompt": null
+        },
+        "history": [],
+        "redoStack": []
+      },
+      {
+        "examQuestionId": "LIB-T16-Q05",
+        "origin": "imported",
+        "sourceId": "LIB-T16",
+        "sourceQuestionId": "5",
+        "section": "BASIC",
+        "topic": "OTHER_NETWORKING",
+        "secondaryTopics": [],
+        "difficulty": 2,
+        "difficultyLabel": "",
+        "familyKey": "LIB-T16-Q05",
+        "hasCLI": false,
+        "requiresCalculation": false,
+        "presentationType": "multipleChoice",
+        "marks": 10,
+        "locked": false,
+        "text": "عبر أي نوع وصلة تنتقل تحديثات VTP غالبًا بين السويتشات؟",
+        "textHtml": "",
+        "options": [
+          {
+            "value": "0",
+            "text": "Trunk"
+          },
+          {
+            "value": "1",
+            "text": "Access"
+          },
+          {
+            "value": "2",
+            "text": "Console"
+          },
+          {
+            "value": "3",
+            "text": "Loopback"
+          }
+        ],
+        "fields": [],
+        "parts": [],
+        "answer": {
+          "correctOptionIndex": 0
+        },
+        "hint": "يعمل VTP غالبًا عبر وصلات Trunk التي تنقل معلومات عدة VLANs بين السويتشات.",
+        "teacherNote": "",
+        "aiInstruction": "",
+        "wasModified": false,
+        "image": {
+          "exists": false,
+          "visible": false,
+          "origin": null,
+          "assets": [],
+          "prompt": null
+        },
+        "history": [],
+        "redoStack": []
+      },
+      {
+        "examQuestionId": "LIB-T16-Q06",
+        "origin": "imported",
+        "sourceId": "LIB-T16",
+        "sourceQuestionId": "6",
+        "section": "BASIC",
+        "topic": "OTHER_NETWORKING",
+        "secondaryTopics": [],
+        "difficulty": 2,
+        "difficultyLabel": "",
+        "familyKey": "LIB-T16-Q06",
+        "hasCLI": false,
+        "requiresCalculation": false,
+        "presentationType": "multipleChoice",
+        "marks": 10,
+        "locked": false,
+        "text": "أي أمر يضبط السويتش بوضع VTP Server؟",
+        "textHtml": "",
+        "options": [
+          {
+            "value": "0",
+            "text": "vtp server on"
+          },
+          {
+            "value": "1",
+            "text": "vtp mode server"
+          },
+          {
+            "value": "2",
+            "text": "switchport mode server"
+          },
+          {
+            "value": "3",
+            "text": "vlan mode server"
+          }
+        ],
+        "fields": [],
+        "parts": [],
+        "answer": {
+          "correctOptionIndex": 1
+        },
+        "hint": "الأمر الصحيح هو vtp mode server.",
+        "teacherNote": "",
+        "aiInstruction": "",
+        "wasModified": false,
+        "image": {
+          "exists": false,
+          "visible": false,
+          "origin": null,
+          "assets": [],
+          "prompt": null
+        },
+        "history": [],
+        "redoStack": []
+      },
+      {
+        "examQuestionId": "LIB-T16-Q07",
+        "origin": "imported",
+        "sourceId": "LIB-T16",
+        "sourceQuestionId": "7",
+        "section": "BASIC",
+        "topic": "OTHER_NETWORKING",
+        "secondaryTopics": [],
+        "difficulty": 2,
+        "difficultyLabel": "",
+        "familyKey": "LIB-T16-Q07",
+        "hasCLI": false,
+        "requiresCalculation": false,
+        "presentationType": "multipleChoice",
+        "marks": 10,
+        "locked": false,
+        "text": "أي أمر يحدد اسم نطاق VTP ليكون HFA؟",
+        "textHtml": "",
+        "options": [
+          {
+            "value": "0",
+            "text": "hostname HFA"
+          },
+          {
+            "value": "1",
+            "text": "domain HFA"
+          },
+          {
+            "value": "2",
+            "text": "vtp domain HFA"
+          },
+          {
+            "value": "3",
+            "text": "vtp name HFA"
+          }
+        ],
+        "fields": [],
+        "parts": [],
+        "answer": {
+          "correctOptionIndex": 2
+        },
+        "hint": "الأمر vtp domain HFA يحدد اسم النطاق المشترك بين السويتشات.",
+        "teacherNote": "",
+        "aiInstruction": "",
+        "wasModified": false,
+        "image": {
+          "exists": false,
+          "visible": false,
+          "origin": null,
+          "assets": [],
+          "prompt": null
+        },
+        "history": [],
+        "redoStack": []
+      },
+      {
+        "examQuestionId": "LIB-T16-Q08",
+        "origin": "imported",
+        "sourceId": "LIB-T16",
+        "sourceQuestionId": "8",
+        "section": "BASIC",
+        "topic": "OTHER_NETWORKING",
+        "secondaryTopics": [],
+        "difficulty": 2,
+        "difficultyLabel": "",
+        "familyKey": "LIB-T16-Q08",
+        "hasCLI": false,
+        "requiresCalculation": false,
+        "presentationType": "multipleChoice",
+        "marks": 10,
+        "locked": false,
+        "text": "أي أمر يحدد كلمة مرور VTP لتكون Wn1234؟",
+        "textHtml": "",
+        "options": [
+          {
+            "value": "0",
+            "text": "enable secret Wn1234"
+          },
+          {
+            "value": "1",
+            "text": "password Wn1234"
+          },
+          {
+            "value": "2",
+            "text": "login Wn1234"
+          },
+          {
+            "value": "3",
+            "text": "vtp password Wn1234"
+          }
+        ],
+        "fields": [],
+        "parts": [],
+        "answer": {
+          "correctOptionIndex": 3
+        },
+        "hint": "الأمر vtp password Wn1234 يحدد كلمة مرور VTP.",
+        "teacherNote": "",
+        "aiInstruction": "",
+        "wasModified": false,
+        "image": {
+          "exists": false,
+          "visible": false,
+          "origin": null,
+          "assets": [],
+          "prompt": null
+        },
+        "history": [],
+        "redoStack": []
+      },
+      {
+        "examQuestionId": "LIB-T16-Q09",
+        "origin": "imported",
+        "sourceId": "LIB-T16",
+        "sourceQuestionId": "9",
+        "section": "BASIC",
+        "topic": "OTHER_NETWORKING",
+        "secondaryTopics": [],
+        "difficulty": 2,
+        "difficultyLabel": "",
+        "familyKey": "LIB-T16-Q09",
+        "hasCLI": false,
+        "requiresCalculation": false,
+        "presentationType": "multipleChoice",
+        "marks": 10,
+        "locked": false,
+        "text": "ماذا يحدث إذا اختلف VTP Domain أو Password بين Server وClient؟",
+        "textHtml": "",
+        "options": [
+          {
+            "value": "0",
+            "text": "لا تصل تحديثات VLAN بصورة صحيحة"
+          },
+          {
+            "value": "1",
+            "text": "تزداد سرعة الشبكة"
+          },
+          {
+            "value": "2",
+            "text": "يتحول المنفذ إلى Access"
+          },
+          {
+            "value": "3",
+            "text": "يحصل الجهاز على APIPA"
+          }
+        ],
+        "fields": [],
+        "parts": [],
+        "answer": {
+          "correctOptionIndex": 0
+        },
+        "hint": "يجب أن يتطابق Domain وPassword، وإلا لن يستقبل Client تحديثات VLAN بصورة صحيحة.",
+        "teacherNote": "",
+        "aiInstruction": "",
+        "wasModified": false,
+        "image": {
+          "exists": false,
+          "visible": false,
+          "origin": null,
+          "assets": [],
+          "prompt": null
+        },
+        "history": [],
+        "redoStack": []
+      },
+      {
+        "examQuestionId": "LIB-T16-Q10",
+        "origin": "imported",
+        "sourceId": "LIB-T16",
+        "sourceQuestionId": "10",
+        "section": "BASIC",
+        "topic": "OTHER_NETWORKING",
+        "secondaryTopics": [],
+        "difficulty": 2,
+        "difficultyLabel": "",
+        "familyKey": "LIB-T16-Q10",
+        "hasCLI": false,
+        "requiresCalculation": false,
+        "presentationType": "multipleChoice",
+        "marks": 10,
+        "locked": false,
+        "text": "أي مجموعة أوامر تضبط السويتش SW2 كـVTP Client في النطاق HFA بكلمة المرور 123؟",
+        "textHtml": "",
+        "options": [
+          {
+            "value": "0",
+            "text": "vtp mode server / vtp domain 123 / vtp password HFA"
+          },
+          {
+            "value": "1",
+            "text": "vtp mode client / vtp domain HFA / vtp password 123"
+          },
+          {
+            "value": "2",
+            "text": "switchport mode client / hostname HFA / password 123"
+          },
+          {
+            "value": "3",
+            "text": "vtp client HFA / vtp secret 123 / trunk on"
+          }
+        ],
+        "fields": [],
+        "parts": [],
+        "answer": {
+          "correctOptionIndex": 1
+        },
+        "hint": "نحدد الوضع Client، ثم اسم Domain، ثم كلمة المرور نفسها المستعملة في الخادم.",
+        "teacherNote": "",
+        "aiInstruction": "",
+        "wasModified": false,
+        "image": {
+          "exists": false,
+          "visible": false,
+          "origin": null,
+          "assets": [],
+          "prompt": null
+        },
+        "history": [],
+        "redoStack": []
+      }
+    ],
+    "totalMarks": 100,
+    "status": "final",
+    "createdAt": "2026-09-05T18:57:20.342Z",
+    "updatedAt": "2026-09-05T18:57:20.342Z"
+  }
+}

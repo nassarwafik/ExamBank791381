@@ -1,0 +1,589 @@
+{
+  "libraryItemId": "T11",
+  "title": "البروتوكولات الأساسية",
+  "category": "foundation",
+  "description": "HTTP وHTTPS وDNS وDHCP والبريد وFTP وSSH وTelnet.",
+  "tags": [
+    "HTTP / HTTPS",
+    "DNS / DHCP",
+    "SSH / Telnet"
+  ],
+  "questionCount": 10,
+  "totalMarks": 100,
+  "pageRange": "85–90",
+  "parserFamily": "t-series-v1",
+  "conversionStatus": "ready",
+  "publishable": true,
+  "autoGradableCount": 10,
+  "manualReviewCount": 0,
+  "libraryVersion": 1,
+  "sourceSha": "b4c042129d8cc0890a159a18c224e970d1d8788f5bd332d1919891e2945dea5e",
+  "contentHash": "3919eeaae0a4feeb85383cee07bac271697297b8944261833d50ba97b705767e",
+  "convertedAt": "2026-09-05T18:57:19.063Z",
+  "source": {
+    "repository": "Book791381",
+    "sourceFile": "T11.html"
+  },
+  "schemaVersion": 1,
+  "examSnapshot": {
+    "schemaVersion": 1,
+    "examId": "LIB-T11",
+    "title": "البروتوكولات الأساسية",
+    "questions": [
+      {
+        "examQuestionId": "LIB-T11-Q01",
+        "origin": "imported",
+        "sourceId": "LIB-T11",
+        "sourceQuestionId": "1",
+        "section": "BASIC",
+        "topic": "OTHER_NETWORKING",
+        "secondaryTopics": [],
+        "difficulty": 2,
+        "difficultyLabel": "",
+        "familyKey": "LIB-T11-Q01",
+        "hasCLI": false,
+        "requiresCalculation": false,
+        "presentationType": "multipleChoice",
+        "marks": 10,
+        "locked": false,
+        "text": "أي بروتوكول يُستخدم لتصفح مواقع الويب؟",
+        "textHtml": "",
+        "options": [
+          {
+            "value": "0",
+            "text": "HTTP أو HTTPS"
+          },
+          {
+            "value": "1",
+            "text": "DHCP"
+          },
+          {
+            "value": "2",
+            "text": "SMTP"
+          },
+          {
+            "value": "3",
+            "text": "TFTP"
+          }
+        ],
+        "fields": [],
+        "parts": [],
+        "answer": {
+          "correctOptionIndex": 0
+        },
+        "hint": "يُستخدم HTTP أو HTTPS لتصفح مواقع الويب.",
+        "teacherNote": "",
+        "aiInstruction": "",
+        "wasModified": false,
+        "image": {
+          "exists": false,
+          "visible": false,
+          "origin": null,
+          "assets": [],
+          "prompt": null
+        },
+        "history": [],
+        "redoStack": []
+      },
+      {
+        "examQuestionId": "LIB-T11-Q02",
+        "origin": "imported",
+        "sourceId": "LIB-T11",
+        "sourceQuestionId": "2",
+        "section": "BASIC",
+        "topic": "OTHER_NETWORKING",
+        "secondaryTopics": [],
+        "difficulty": 2,
+        "difficultyLabel": "",
+        "familyKey": "LIB-T11-Q02",
+        "hasCLI": false,
+        "requiresCalculation": false,
+        "presentationType": "multipleChoice",
+        "marks": 10,
+        "locked": false,
+        "text": "ما وظيفة DNS؟",
+        "textHtml": "",
+        "options": [
+          {
+            "value": "0",
+            "text": "توزيع عناوين IP"
+          },
+          {
+            "value": "1",
+            "text": "إرسال البريد"
+          },
+          {
+            "value": "2",
+            "text": "تحويل اسم الموقع إلى عنوان IP"
+          },
+          {
+            "value": "3",
+            "text": "نقل الملفات فقط"
+          }
+        ],
+        "fields": [],
+        "parts": [],
+        "answer": {
+          "correctOptionIndex": 2
+        },
+        "hint": "DNS يحول أسماء المواقع إلى عناوين IP.",
+        "teacherNote": "",
+        "aiInstruction": "",
+        "wasModified": false,
+        "image": {
+          "exists": false,
+          "visible": false,
+          "origin": null,
+          "assets": [],
+          "prompt": null
+        },
+        "history": [],
+        "redoStack": []
+      },
+      {
+        "examQuestionId": "LIB-T11-Q03",
+        "origin": "imported",
+        "sourceId": "LIB-T11",
+        "sourceQuestionId": "3",
+        "section": "BASIC",
+        "topic": "OTHER_NETWORKING",
+        "secondaryTopics": [],
+        "difficulty": 2,
+        "difficultyLabel": "",
+        "familyKey": "LIB-T11-Q03",
+        "hasCLI": false,
+        "requiresCalculation": false,
+        "presentationType": "multipleChoice",
+        "marks": 10,
+        "locked": false,
+        "text": "ما وظيفة DHCP؟",
+        "textHtml": "",
+        "options": [
+          {
+            "value": "0",
+            "text": "تشفير صفحات الويب"
+          },
+          {
+            "value": "1",
+            "text": "توزيع عناوين IP على الأجهزة"
+          },
+          {
+            "value": "2",
+            "text": "إرسال البريد الإلكتروني"
+          },
+          {
+            "value": "3",
+            "text": "التحكم عن بعد"
+          }
+        ],
+        "fields": [],
+        "parts": [],
+        "answer": {
+          "correctOptionIndex": 1
+        },
+        "hint": "DHCP يوزع عناوين IP وإعدادات الشبكة على الأجهزة.",
+        "teacherNote": "",
+        "aiInstruction": "",
+        "wasModified": false,
+        "image": {
+          "exists": false,
+          "visible": false,
+          "origin": null,
+          "assets": [],
+          "prompt": null
+        },
+        "history": [],
+        "redoStack": []
+      },
+      {
+        "examQuestionId": "LIB-T11-Q04",
+        "origin": "imported",
+        "sourceId": "LIB-T11",
+        "sourceQuestionId": "4",
+        "section": "BASIC",
+        "topic": "OTHER_NETWORKING",
+        "secondaryTopics": [],
+        "difficulty": 2,
+        "difficultyLabel": "",
+        "familyKey": "LIB-T11-Q04",
+        "hasCLI": false,
+        "requiresCalculation": false,
+        "presentationType": "multipleChoice",
+        "marks": 10,
+        "locked": false,
+        "text": "أي مجموعة بروتوكولات مرتبطة بالبريد الإلكتروني؟",
+        "textHtml": "",
+        "options": [
+          {
+            "value": "0",
+            "text": "HTTP وHTTPS"
+          },
+          {
+            "value": "1",
+            "text": "FTP وTFTP"
+          },
+          {
+            "value": "2",
+            "text": "DNS وDHCP"
+          },
+          {
+            "value": "3",
+            "text": "SMTP وPOP وIMAP"
+          }
+        ],
+        "fields": [],
+        "parts": [],
+        "answer": {
+          "correctOptionIndex": 3
+        },
+        "hint": "SMTP وPOP وIMAP هي بروتوكولات مرتبطة بخدمة البريد الإلكتروني.",
+        "teacherNote": "",
+        "aiInstruction": "",
+        "wasModified": false,
+        "image": {
+          "exists": false,
+          "visible": false,
+          "origin": null,
+          "assets": [],
+          "prompt": null
+        },
+        "history": [],
+        "redoStack": []
+      },
+      {
+        "examQuestionId": "LIB-T11-Q05",
+        "origin": "imported",
+        "sourceId": "LIB-T11",
+        "sourceQuestionId": "5",
+        "section": "BASIC",
+        "topic": "OTHER_NETWORKING",
+        "secondaryTopics": [],
+        "difficulty": 2,
+        "difficultyLabel": "",
+        "familyKey": "LIB-T11-Q05",
+        "hasCLI": false,
+        "requiresCalculation": false,
+        "presentationType": "multipleChoice",
+        "marks": 10,
+        "locked": false,
+        "text": "أي بروتوكول يُستخدم لنقل الملفات بصورة موثوقة؟",
+        "textHtml": "",
+        "options": [
+          {
+            "value": "0",
+            "text": "FTP"
+          },
+          {
+            "value": "1",
+            "text": "DNS"
+          },
+          {
+            "value": "2",
+            "text": "DHCP"
+          },
+          {
+            "value": "3",
+            "text": "ICMP"
+          }
+        ],
+        "fields": [],
+        "parts": [],
+        "answer": {
+          "correctOptionIndex": 0
+        },
+        "hint": "FTP من بروتوكولات نقل الملفات ويعمل وفق الجدول فوق TCP.",
+        "teacherNote": "",
+        "aiInstruction": "",
+        "wasModified": false,
+        "image": {
+          "exists": false,
+          "visible": false,
+          "origin": null,
+          "assets": [],
+          "prompt": null
+        },
+        "history": [],
+        "redoStack": []
+      },
+      {
+        "examQuestionId": "LIB-T11-Q06",
+        "origin": "imported",
+        "sourceId": "LIB-T11",
+        "sourceQuestionId": "6",
+        "section": "BASIC",
+        "topic": "OTHER_NETWORKING",
+        "secondaryTopics": [],
+        "difficulty": 2,
+        "difficultyLabel": "",
+        "familyKey": "LIB-T11-Q06",
+        "hasCLI": false,
+        "requiresCalculation": false,
+        "presentationType": "multipleChoice",
+        "marks": 10,
+        "locked": false,
+        "text": "أي بروتوكولين يُستخدمان للتحكم عن بعد حسب ملخص الكتاب؟",
+        "textHtml": "",
+        "options": [
+          {
+            "value": "0",
+            "text": "HTTP وHTTPS"
+          },
+          {
+            "value": "1",
+            "text": "SMTP وPOP"
+          },
+          {
+            "value": "2",
+            "text": "SSH وTelnet"
+          },
+          {
+            "value": "3",
+            "text": "DNS وDHCP"
+          }
+        ],
+        "fields": [],
+        "parts": [],
+        "answer": {
+          "correctOptionIndex": 2
+        },
+        "hint": "SSH وTelnet يُستعملان للتحكم عن بعد، ويظهران مع FTP ضمن بروتوكولات TCP.",
+        "teacherNote": "",
+        "aiInstruction": "",
+        "wasModified": false,
+        "image": {
+          "exists": false,
+          "visible": false,
+          "origin": null,
+          "assets": [],
+          "prompt": null
+        },
+        "history": [],
+        "redoStack": []
+      },
+      {
+        "examQuestionId": "LIB-T11-Q07",
+        "origin": "imported",
+        "sourceId": "LIB-T11",
+        "sourceQuestionId": "7",
+        "section": "BASIC",
+        "topic": "OTHER_NETWORKING",
+        "secondaryTopics": [],
+        "difficulty": 2,
+        "difficultyLabel": "",
+        "familyKey": "LIB-T11-Q07",
+        "hasCLI": false,
+        "requiresCalculation": false,
+        "presentationType": "multipleChoice",
+        "marks": 10,
+        "locked": false,
+        "text": "ما وظيفة TFTP؟",
+        "textHtml": "",
+        "options": [
+          {
+            "value": "0",
+            "text": "تصفح آمن"
+          },
+          {
+            "value": "1",
+            "text": "نقل ملفات بسيط"
+          },
+          {
+            "value": "2",
+            "text": "إرسال بريد"
+          },
+          {
+            "value": "3",
+            "text": "توزيع IP"
+          }
+        ],
+        "fields": [],
+        "parts": [],
+        "answer": {
+          "correctOptionIndex": 1
+        },
+        "hint": "TFTP يُستخدم لنقل ملفات بسيط ويعمل فوق UDP وفق الجدول.",
+        "teacherNote": "",
+        "aiInstruction": "",
+        "wasModified": false,
+        "image": {
+          "exists": false,
+          "visible": false,
+          "origin": null,
+          "assets": [],
+          "prompt": null
+        },
+        "history": [],
+        "redoStack": []
+      },
+      {
+        "examQuestionId": "LIB-T11-Q08",
+        "origin": "imported",
+        "sourceId": "LIB-T11",
+        "sourceQuestionId": "8",
+        "section": "BASIC",
+        "topic": "OTHER_NETWORKING",
+        "secondaryTopics": [],
+        "difficulty": 2,
+        "difficultyLabel": "",
+        "familyKey": "LIB-T11-Q08",
+        "hasCLI": false,
+        "requiresCalculation": false,
+        "presentationType": "multipleChoice",
+        "marks": 10,
+        "locked": false,
+        "text": "أي بروتوكول نقل يناسب الويب والبريد والملفات عندما نحتاج الموثوقية؟",
+        "textHtml": "",
+        "options": [
+          {
+            "value": "0",
+            "text": "UDP"
+          },
+          {
+            "value": "1",
+            "text": "ARP"
+          },
+          {
+            "value": "2",
+            "text": "IP"
+          },
+          {
+            "value": "3",
+            "text": "TCP"
+          }
+        ],
+        "fields": [],
+        "parts": [],
+        "answer": {
+          "correctOptionIndex": 3
+        },
+        "hint": "يُستخدم TCP عندما نحتاج وصول البيانات كاملة وبالترتيب، مثل الويب والبريد والملفات.",
+        "teacherNote": "",
+        "aiInstruction": "",
+        "wasModified": false,
+        "image": {
+          "exists": false,
+          "visible": false,
+          "origin": null,
+          "assets": [],
+          "prompt": null
+        },
+        "history": [],
+        "redoStack": []
+      },
+      {
+        "examQuestionId": "LIB-T11-Q09",
+        "origin": "imported",
+        "sourceId": "LIB-T11",
+        "sourceQuestionId": "9",
+        "section": "BASIC",
+        "topic": "OTHER_NETWORKING",
+        "secondaryTopics": [],
+        "difficulty": 2,
+        "difficultyLabel": "",
+        "familyKey": "LIB-T11-Q09",
+        "hasCLI": false,
+        "requiresCalculation": false,
+        "presentationType": "multipleChoice",
+        "marks": 10,
+        "locked": false,
+        "text": "أي من الخدمات التالية تعمل غالبًا فوق UDP وفق ملخص الكتاب؟",
+        "textHtml": "",
+        "options": [
+          {
+            "value": "0",
+            "text": "HTTP"
+          },
+          {
+            "value": "1",
+            "text": "SMTP"
+          },
+          {
+            "value": "2",
+            "text": "DNS"
+          },
+          {
+            "value": "3",
+            "text": "FTP"
+          }
+        ],
+        "fields": [],
+        "parts": [],
+        "answer": {
+          "correctOptionIndex": 2
+        },
+        "hint": "يعمل DNS غالبًا فوق UDP، كما يعمل DHCP وTFTP فوق UDP.",
+        "teacherNote": "",
+        "aiInstruction": "",
+        "wasModified": false,
+        "image": {
+          "exists": false,
+          "visible": false,
+          "origin": null,
+          "assets": [],
+          "prompt": null
+        },
+        "history": [],
+        "redoStack": []
+      },
+      {
+        "examQuestionId": "LIB-T11-Q10",
+        "origin": "imported",
+        "sourceId": "LIB-T11",
+        "sourceQuestionId": "10",
+        "section": "BASIC",
+        "topic": "OTHER_NETWORKING",
+        "secondaryTopics": [],
+        "difficulty": 2,
+        "difficultyLabel": "",
+        "familyKey": "LIB-T11-Q10",
+        "hasCLI": false,
+        "requiresCalculation": false,
+        "presentationType": "multipleChoice",
+        "marks": 10,
+        "locked": false,
+        "text": "جهاز جديد يريد الحصول تلقائيًا على عنوان IP، ثم فتح موقع باسمه بدل كتابة عنوانه الرقمي. أي بروتوكولين يحتاج بالترتيب؟",
+        "textHtml": "",
+        "options": [
+          {
+            "value": "0",
+            "text": "DHCP ثم DNS"
+          },
+          {
+            "value": "1",
+            "text": "DNS ثم SMTP"
+          },
+          {
+            "value": "2",
+            "text": "HTTP ثم FTP"
+          },
+          {
+            "value": "3",
+            "text": "TFTP ثم Telnet"
+          }
+        ],
+        "fields": [],
+        "parts": [],
+        "answer": {
+          "correctOptionIndex": 0
+        },
+        "hint": "يحتاج الجهاز أولًا DHCP للحصول على إعدادات الشبكة، ثم DNS لتحويل اسم الموقع إلى عنوان IP.",
+        "teacherNote": "",
+        "aiInstruction": "",
+        "wasModified": false,
+        "image": {
+          "exists": false,
+          "visible": false,
+          "origin": null,
+          "assets": [],
+          "prompt": null
+        },
+        "history": [],
+        "redoStack": []
+      }
+    ],
+    "totalMarks": 100,
+    "status": "final",
+    "createdAt": "2026-09-05T18:57:20.332Z",
+    "updatedAt": "2026-09-05T18:57:20.332Z"
+  }
+}

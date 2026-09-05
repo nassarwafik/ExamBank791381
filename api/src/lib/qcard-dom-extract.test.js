@@ -53,6 +53,17 @@ describe("extractQCards - the shared F-series q-card template", () => {
     expect(cards[0].field.kind).toBe("openText");
   });
 
+  it("extracts inline data-uri images that live inside a card, linked by containment", () => {
+    const html = `<div class="q-card" id="card_q11">
+      <div class="q-header"><div class="q-num">11</div><div class="q-text">حسب الصورة:</div><span class="q-marks">3</span></div>
+      <img src="data:image/png;base64,AAAABBBB">
+      <label><input type="radio" name="q11" value="a"><span>A</span></label>
+    </div>`;
+    const cards = extractQCards(html);
+    expect(cards[0].images).toHaveLength(1);
+    expect(cards[0].images[0]).toEqual({ id: "img-0", contentType: "image/png", base64: "AAAABBBB" });
+  });
+
   it("walks nested divs correctly so a card's boundary is its own matching close", () => {
     const html = `<div class="q-card" id="card_q1">
       <div class="q-header"><div class="q-num">1</div><div class="q-text">س</div><span class="q-marks">2</span></div>

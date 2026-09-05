@@ -1,0 +1,589 @@
+{
+  "libraryItemId": "T13",
+  "title": "المجالات والمفاهيم",
+  "category": "foundation",
+  "description": "Collision Domain وBroadcast Domain وSTP وDuplex وLocalhost.",
+  "tags": [
+    "Collision Domain",
+    "Broadcast Domain",
+    "STP"
+  ],
+  "questionCount": 10,
+  "totalMarks": 100,
+  "pageRange": "96–102",
+  "parserFamily": "t-series-v1",
+  "conversionStatus": "ready",
+  "publishable": true,
+  "autoGradableCount": 10,
+  "manualReviewCount": 0,
+  "libraryVersion": 1,
+  "sourceSha": "db95dd1e2b69363735f44f2ae4155223fff40445beea4cb09632c15deb1f48d0",
+  "contentHash": "44f22ce07f7d8ecc60a9bb0c31f4df9db1e8882b330094b4aaff5ce7718e3f98",
+  "convertedAt": "2026-09-05T18:57:19.063Z",
+  "source": {
+    "repository": "Book791381",
+    "sourceFile": "T13.html"
+  },
+  "schemaVersion": 1,
+  "examSnapshot": {
+    "schemaVersion": 1,
+    "examId": "LIB-T13",
+    "title": "المجالات والمفاهيم",
+    "questions": [
+      {
+        "examQuestionId": "LIB-T13-Q01",
+        "origin": "imported",
+        "sourceId": "LIB-T13",
+        "sourceQuestionId": "1",
+        "section": "BASIC",
+        "topic": "OTHER_NETWORKING",
+        "secondaryTopics": [],
+        "difficulty": 2,
+        "difficultyLabel": "",
+        "familyKey": "LIB-T13-Q01",
+        "hasCLI": false,
+        "requiresCalculation": false,
+        "presentationType": "multipleChoice",
+        "marks": 10,
+        "locked": false,
+        "text": "ما هو Collision Domain؟",
+        "textHtml": "",
+        "options": [
+          {
+            "value": "0",
+            "text": "منطقة يمكن أن يحدث فيها تصادم بين الرسائل"
+          },
+          {
+            "value": "1",
+            "text": "مجموعة عناوين DNS"
+          },
+          {
+            "value": "2",
+            "text": "خادم يوزع عناوين IP"
+          },
+          {
+            "value": "3",
+            "text": "منطقة خاصة بالتشفير"
+          }
+        ],
+        "fields": [],
+        "parts": [],
+        "answer": {
+          "correctOptionIndex": 0
+        },
+        "hint": "Collision Domain هو منطقة يمكن أن يحدث فيها تصادم عندما يرسل أكثر من جهاز في الوقت نفسه.",
+        "teacherNote": "",
+        "aiInstruction": "",
+        "wasModified": false,
+        "image": {
+          "exists": false,
+          "visible": false,
+          "origin": null,
+          "assets": [],
+          "prompt": null
+        },
+        "history": [],
+        "redoStack": []
+      },
+      {
+        "examQuestionId": "LIB-T13-Q02",
+        "origin": "imported",
+        "sourceId": "LIB-T13",
+        "sourceQuestionId": "2",
+        "section": "BASIC",
+        "topic": "OTHER_NETWORKING",
+        "secondaryTopics": [],
+        "difficulty": 2,
+        "difficultyLabel": "",
+        "familyKey": "LIB-T13-Q02",
+        "hasCLI": false,
+        "requiresCalculation": false,
+        "presentationType": "multipleChoice",
+        "marks": 10,
+        "locked": false,
+        "text": "كم Collision Domain ينشئ Hub عادة حسب الكتاب؟",
+        "textHtml": "",
+        "options": [
+          {
+            "value": "0",
+            "text": "مجال لكل منفذ"
+          },
+          {
+            "value": "1",
+            "text": "مجال واحد لجميع الأجهزة"
+          },
+          {
+            "value": "2",
+            "text": "لا يوجد أي مجال"
+          },
+          {
+            "value": "3",
+            "text": "مجال لكل عنوان IP"
+          }
+        ],
+        "fields": [],
+        "parts": [],
+        "answer": {
+          "correctOptionIndex": 1
+        },
+        "hint": "Hub يجعل جميع الأجهزة في Collision Domain واحد، ولذلك يمكن أن يحدث التصادم بينها.",
+        "teacherNote": "",
+        "aiInstruction": "",
+        "wasModified": false,
+        "image": {
+          "exists": false,
+          "visible": false,
+          "origin": null,
+          "assets": [],
+          "prompt": null
+        },
+        "history": [],
+        "redoStack": []
+      },
+      {
+        "examQuestionId": "LIB-T13-Q03",
+        "origin": "imported",
+        "sourceId": "LIB-T13",
+        "sourceQuestionId": "3",
+        "section": "BASIC",
+        "topic": "OTHER_NETWORKING",
+        "secondaryTopics": [],
+        "difficulty": 2,
+        "difficultyLabel": "",
+        "familyKey": "LIB-T13-Q03",
+        "hasCLI": false,
+        "requiresCalculation": false,
+        "presentationType": "multipleChoice",
+        "marks": 10,
+        "locked": false,
+        "text": "كيف يقلل Switch من التصادم؟",
+        "textHtml": "",
+        "options": [
+          {
+            "value": "0",
+            "text": "يرسل الرسالة دائمًا للجميع"
+          },
+          {
+            "value": "1",
+            "text": "يغلق جميع المنافذ"
+          },
+          {
+            "value": "2",
+            "text": "يجعل كل منفذ Collision Domain مستقلًا"
+          },
+          {
+            "value": "3",
+            "text": "يستبدل عنوان IP بعنوان DNS"
+          }
+        ],
+        "fields": [],
+        "parts": [],
+        "answer": {
+          "correctOptionIndex": 2
+        },
+        "hint": "كل منفذ في Switch يمثل Collision Domain مستقلًا، وهذا يقلل التداخل والتصادم.",
+        "teacherNote": "",
+        "aiInstruction": "",
+        "wasModified": false,
+        "image": {
+          "exists": false,
+          "visible": false,
+          "origin": null,
+          "assets": [],
+          "prompt": null
+        },
+        "history": [],
+        "redoStack": []
+      },
+      {
+        "examQuestionId": "LIB-T13-Q04",
+        "origin": "imported",
+        "sourceId": "LIB-T13",
+        "sourceQuestionId": "4",
+        "section": "BASIC",
+        "topic": "OTHER_NETWORKING",
+        "secondaryTopics": [],
+        "difficulty": 2,
+        "difficultyLabel": "",
+        "familyKey": "LIB-T13-Q04",
+        "hasCLI": false,
+        "requiresCalculation": false,
+        "presentationType": "multipleChoice",
+        "marks": 10,
+        "locked": false,
+        "text": "ما هو Broadcast Domain؟",
+        "textHtml": "",
+        "options": [
+          {
+            "value": "0",
+            "text": "مجموعة أجهزة تستعمل كلمة مرور واحدة"
+          },
+          {
+            "value": "1",
+            "text": "منطقة لا تحتوي أجهزة"
+          },
+          {
+            "value": "2",
+            "text": "خادم بريد إلكتروني"
+          },
+          {
+            "value": "3",
+            "text": "مجموعة أجهزة تستقبل رسائل Broadcast من بعضها"
+          }
+        ],
+        "fields": [],
+        "parts": [],
+        "answer": {
+          "correctOptionIndex": 3
+        },
+        "hint": "Broadcast Domain هو مجموعة الأجهزة التي تصلها رسائل البث العام من بعضها داخل المجال نفسه.",
+        "teacherNote": "",
+        "aiInstruction": "",
+        "wasModified": false,
+        "image": {
+          "exists": false,
+          "visible": false,
+          "origin": null,
+          "assets": [],
+          "prompt": null
+        },
+        "history": [],
+        "redoStack": []
+      },
+      {
+        "examQuestionId": "LIB-T13-Q05",
+        "origin": "imported",
+        "sourceId": "LIB-T13",
+        "sourceQuestionId": "5",
+        "section": "BASIC",
+        "topic": "OTHER_NETWORKING",
+        "secondaryTopics": [],
+        "difficulty": 2,
+        "difficultyLabel": "",
+        "familyKey": "LIB-T13-Q05",
+        "hasCLI": false,
+        "requiresCalculation": false,
+        "presentationType": "multipleChoice",
+        "marks": 10,
+        "locked": false,
+        "text": "أي جهاز يمكنه تقسيم Broadcast Domain إلى مجالات أصغر؟",
+        "textHtml": "",
+        "options": [
+          {
+            "value": "0",
+            "text": "Router"
+          },
+          {
+            "value": "1",
+            "text": "Hub"
+          },
+          {
+            "value": "2",
+            "text": "Repeater"
+          },
+          {
+            "value": "3",
+            "text": "كابل UTP"
+          }
+        ],
+        "fields": [],
+        "parts": [],
+        "answer": {
+          "correctOptionIndex": 0
+        },
+        "hint": "الراوتر يقسم Broadcast Domain، كما يمكن لـVLAN تقسيم الشبكة إلى مجالات بث منفصلة.",
+        "teacherNote": "",
+        "aiInstruction": "",
+        "wasModified": false,
+        "image": {
+          "exists": false,
+          "visible": false,
+          "origin": null,
+          "assets": [],
+          "prompt": null
+        },
+        "history": [],
+        "redoStack": []
+      },
+      {
+        "examQuestionId": "LIB-T13-Q06",
+        "origin": "imported",
+        "sourceId": "LIB-T13",
+        "sourceQuestionId": "6",
+        "section": "BASIC",
+        "topic": "OTHER_NETWORKING",
+        "secondaryTopics": [],
+        "difficulty": 2,
+        "difficultyLabel": "",
+        "familyKey": "LIB-T13-Q06",
+        "hasCLI": false,
+        "requiresCalculation": false,
+        "presentationType": "multipleChoice",
+        "marks": 10,
+        "locked": false,
+        "text": "ما الوظيفة الأساسية لبروتوكول STP؟",
+        "textHtml": "",
+        "options": [
+          {
+            "value": "0",
+            "text": "توزيع عناوين IP"
+          },
+          {
+            "value": "1",
+            "text": "منع حدوث Loops بين السويتشات"
+          },
+          {
+            "value": "2",
+            "text": "تشفير البريد الإلكتروني"
+          },
+          {
+            "value": "3",
+            "text": "تحويل أسماء المواقع"
+          }
+        ],
+        "fields": [],
+        "parts": [],
+        "answer": {
+          "correctOptionIndex": 1
+        },
+        "hint": "STP يمنع حلقات الشبكة، ويعطل الروابط الزائدة مؤقتًا مع إبقاء طريق فعّال.",
+        "teacherNote": "",
+        "aiInstruction": "",
+        "wasModified": false,
+        "image": {
+          "exists": false,
+          "visible": false,
+          "origin": null,
+          "assets": [],
+          "prompt": null
+        },
+        "history": [],
+        "redoStack": []
+      },
+      {
+        "examQuestionId": "LIB-T13-Q07",
+        "origin": "imported",
+        "sourceId": "LIB-T13",
+        "sourceQuestionId": "7",
+        "section": "BASIC",
+        "topic": "OTHER_NETWORKING",
+        "secondaryTopics": [],
+        "difficulty": 2,
+        "difficultyLabel": "",
+        "familyKey": "LIB-T13-Q07",
+        "hasCLI": false,
+        "requiresCalculation": false,
+        "presentationType": "multipleChoice",
+        "marks": 10,
+        "locked": false,
+        "text": "متى يصبح STP مهمًا بصورة خاصة؟",
+        "textHtml": "",
+        "options": [
+          {
+            "value": "0",
+            "text": "عند وجود حاسوب واحد فقط"
+          },
+          {
+            "value": "1",
+            "text": "عند عدم وجود أي Switch"
+          },
+          {
+            "value": "2",
+            "text": "عند وجود أكثر من طريق بين السويتشات"
+          },
+          {
+            "value": "3",
+            "text": "عند تحويل عشري إلى ثنائي"
+          }
+        ],
+        "fields": [],
+        "parts": [],
+        "answer": {
+          "correctOptionIndex": 2
+        },
+        "hint": "STP مهم عند وجود أكثر من طريق بين السويتشات حتى لا تدور البيانات في حلقة.",
+        "teacherNote": "",
+        "aiInstruction": "",
+        "wasModified": false,
+        "image": {
+          "exists": false,
+          "visible": false,
+          "origin": null,
+          "assets": [],
+          "prompt": null
+        },
+        "history": [],
+        "redoStack": []
+      },
+      {
+        "examQuestionId": "LIB-T13-Q08",
+        "origin": "imported",
+        "sourceId": "LIB-T13",
+        "sourceQuestionId": "8",
+        "section": "BASIC",
+        "topic": "OTHER_NETWORKING",
+        "secondaryTopics": [],
+        "difficulty": 2,
+        "difficultyLabel": "",
+        "familyKey": "LIB-T13-Q08",
+        "hasCLI": false,
+        "requiresCalculation": false,
+        "presentationType": "multipleChoice",
+        "marks": 10,
+        "locked": false,
+        "text": "ما المقصود بـFull Duplex؟",
+        "textHtml": "",
+        "options": [
+          {
+            "value": "0",
+            "text": "الإرسال فقط"
+          },
+          {
+            "value": "1",
+            "text": "الاستقبال فقط"
+          },
+          {
+            "value": "2",
+            "text": "الإرسال أو الاستقبال بالتناوب"
+          },
+          {
+            "value": "3",
+            "text": "الإرسال والاستقبال في الوقت نفسه"
+          }
+        ],
+        "fields": [],
+        "parts": [],
+        "answer": {
+          "correctOptionIndex": 3
+        },
+        "hint": "في Full Duplex يستطيع الجهاز الإرسال والاستقبال معًا في اللحظة نفسها.",
+        "teacherNote": "",
+        "aiInstruction": "",
+        "wasModified": false,
+        "image": {
+          "exists": false,
+          "visible": false,
+          "origin": null,
+          "assets": [],
+          "prompt": null
+        },
+        "history": [],
+        "redoStack": []
+      },
+      {
+        "examQuestionId": "LIB-T13-Q09",
+        "origin": "imported",
+        "sourceId": "LIB-T13",
+        "sourceQuestionId": "9",
+        "section": "BASIC",
+        "topic": "OTHER_NETWORKING",
+        "secondaryTopics": [],
+        "difficulty": 2,
+        "difficultyLabel": "",
+        "familyKey": "LIB-T13-Q09",
+        "hasCLI": false,
+        "requiresCalculation": false,
+        "presentationType": "multipleChoice",
+        "marks": 10,
+        "locked": false,
+        "text": "أي وصف يناسب Half Duplex؟",
+        "textHtml": "",
+        "options": [
+          {
+            "value": "0",
+            "text": "إرسال أو استقبال، ولكن ليس في الوقت نفسه"
+          },
+          {
+            "value": "1",
+            "text": "إرسال واستقبال معًا"
+          },
+          {
+            "value": "2",
+            "text": "لا إرسال ولا استقبال"
+          },
+          {
+            "value": "3",
+            "text": "اتصال مشفر فقط"
+          }
+        ],
+        "fields": [],
+        "parts": [],
+        "answer": {
+          "correctOptionIndex": 0
+        },
+        "hint": "Half Duplex يسمح باتجاه واحد في كل مرة: إما إرسال أو استقبال.",
+        "teacherNote": "",
+        "aiInstruction": "",
+        "wasModified": false,
+        "image": {
+          "exists": false,
+          "visible": false,
+          "origin": null,
+          "assets": [],
+          "prompt": null
+        },
+        "history": [],
+        "redoStack": []
+      },
+      {
+        "examQuestionId": "LIB-T13-Q10",
+        "origin": "imported",
+        "sourceId": "LIB-T13",
+        "sourceQuestionId": "10",
+        "section": "BASIC",
+        "topic": "OTHER_NETWORKING",
+        "secondaryTopics": [],
+        "difficulty": 2,
+        "difficultyLabel": "",
+        "familyKey": "LIB-T13-Q10",
+        "hasCLI": false,
+        "requiresCalculation": false,
+        "presentationType": "multipleChoice",
+        "marks": 10,
+        "locked": false,
+        "text": "يريد المبرمج اختبار موقع على جهازه نفسه دون اتصال بالإنترنت. أي عنوان يستخدم؟",
+        "textHtml": "",
+        "options": [
+          {
+            "value": "0",
+            "text": "8.8.8.8"
+          },
+          {
+            "value": "1",
+            "text": "127.0.0.1"
+          },
+          {
+            "value": "2",
+            "text": "169.254.1.1"
+          },
+          {
+            "value": "3",
+            "text": "255.255.255.255"
+          }
+        ],
+        "fields": [],
+        "parts": [],
+        "answer": {
+          "correctOptionIndex": 1
+        },
+        "hint": "يشير Localhost إلى الجهاز نفسه، وعنوانه 127.0.0.1، ويمكن استعماله للاختبار المحلي.",
+        "teacherNote": "",
+        "aiInstruction": "",
+        "wasModified": false,
+        "image": {
+          "exists": false,
+          "visible": false,
+          "origin": null,
+          "assets": [],
+          "prompt": null
+        },
+        "history": [],
+        "redoStack": []
+      }
+    ],
+    "totalMarks": 100,
+    "status": "final",
+    "createdAt": "2026-09-05T18:57:20.337Z",
+    "updatedAt": "2026-09-05T18:57:20.337Z"
+  }
+}

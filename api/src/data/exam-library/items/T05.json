@@ -1,0 +1,589 @@
+{
+  "libraryItemId": "T05",
+  "title": "Class وSubnet وCIDR",
+  "category": "foundation",
+  "description": "فئات العناوين، أقنعة الشبكة، CIDR، Network وHost والبوابة الافتراضية.",
+  "tags": [
+    "Class A/B/C",
+    "Subnet Mask",
+    "CIDR"
+  ],
+  "questionCount": 10,
+  "totalMarks": 100,
+  "pageRange": "33–43",
+  "parserFamily": "t-series-v1",
+  "conversionStatus": "ready",
+  "publishable": true,
+  "autoGradableCount": 10,
+  "manualReviewCount": 0,
+  "libraryVersion": 1,
+  "sourceSha": "82b8476272a632b1fbe1ef787a7f0b0a4c1371ce66cfa359992db21af4b4505e",
+  "contentHash": "825f49eebc8cb0bf4cba515181b087aa17ff1044718070226853b6e787104ddb",
+  "convertedAt": "2026-09-05T18:57:19.063Z",
+  "source": {
+    "repository": "Book791381",
+    "sourceFile": "T05.html"
+  },
+  "schemaVersion": 1,
+  "examSnapshot": {
+    "schemaVersion": 1,
+    "examId": "LIB-T05",
+    "title": "Class وSubnet وCIDR",
+    "questions": [
+      {
+        "examQuestionId": "LIB-T05-Q01",
+        "origin": "imported",
+        "sourceId": "LIB-T05",
+        "sourceQuestionId": "1",
+        "section": "BASIC",
+        "topic": "OTHER_NETWORKING",
+        "secondaryTopics": [],
+        "difficulty": 2,
+        "difficultyLabel": "",
+        "familyKey": "LIB-T05-Q01",
+        "hasCLI": false,
+        "requiresCalculation": false,
+        "presentationType": "multipleChoice",
+        "marks": 10,
+        "locked": false,
+        "text": "إلى أي فئة ينتمي العنوان 20.20.20.10؟",
+        "textHtml": "",
+        "options": [
+          {
+            "value": "0",
+            "text": "Class A"
+          },
+          {
+            "value": "1",
+            "text": "Class B"
+          },
+          {
+            "value": "2",
+            "text": "Class C"
+          },
+          {
+            "value": "3",
+            "text": "لا ينتمي لأي فئة"
+          }
+        ],
+        "fields": [],
+        "parts": [],
+        "answer": {
+          "correctOptionIndex": 0
+        },
+        "hint": "نحدد الفئة من الرقم الأول فقط، والعدد 20 يقع ضمن مجال Class A.",
+        "teacherNote": "",
+        "aiInstruction": "",
+        "wasModified": false,
+        "image": {
+          "exists": false,
+          "visible": false,
+          "origin": null,
+          "assets": [],
+          "prompt": null
+        },
+        "history": [],
+        "redoStack": []
+      },
+      {
+        "examQuestionId": "LIB-T05-Q02",
+        "origin": "imported",
+        "sourceId": "LIB-T05",
+        "sourceQuestionId": "2",
+        "section": "BASIC",
+        "topic": "OTHER_NETWORKING",
+        "secondaryTopics": [],
+        "difficulty": 2,
+        "difficultyLabel": "",
+        "familyKey": "LIB-T05-Q02",
+        "hasCLI": false,
+        "requiresCalculation": false,
+        "presentationType": "multipleChoice",
+        "marks": 10,
+        "locked": false,
+        "text": "إلى أي فئة ينتمي العنوان 150.10.20.30؟",
+        "textHtml": "",
+        "options": [
+          {
+            "value": "0",
+            "text": "Class A"
+          },
+          {
+            "value": "1",
+            "text": "Class B"
+          },
+          {
+            "value": "2",
+            "text": "Class C"
+          },
+          {
+            "value": "3",
+            "text": "Class D"
+          }
+        ],
+        "fields": [],
+        "parts": [],
+        "answer": {
+          "correctOptionIndex": 1
+        },
+        "hint": "العدد الأول 150 يقع ضمن المجال 128–191، ولذلك العنوان من Class B.",
+        "teacherNote": "",
+        "aiInstruction": "",
+        "wasModified": false,
+        "image": {
+          "exists": false,
+          "visible": false,
+          "origin": null,
+          "assets": [],
+          "prompt": null
+        },
+        "history": [],
+        "redoStack": []
+      },
+      {
+        "examQuestionId": "LIB-T05-Q03",
+        "origin": "imported",
+        "sourceId": "LIB-T05",
+        "sourceQuestionId": "3",
+        "section": "BASIC",
+        "topic": "OTHER_NETWORKING",
+        "secondaryTopics": [],
+        "difficulty": 2,
+        "difficultyLabel": "",
+        "familyKey": "LIB-T05-Q03",
+        "hasCLI": false,
+        "requiresCalculation": false,
+        "presentationType": "multipleChoice",
+        "marks": 10,
+        "locked": false,
+        "text": "إلى أي فئة ينتمي العنوان 200.10.10.1؟",
+        "textHtml": "",
+        "options": [
+          {
+            "value": "0",
+            "text": "Class A"
+          },
+          {
+            "value": "1",
+            "text": "Class B"
+          },
+          {
+            "value": "2",
+            "text": "Class C"
+          },
+          {
+            "value": "3",
+            "text": "Class E"
+          }
+        ],
+        "fields": [],
+        "parts": [],
+        "answer": {
+          "correctOptionIndex": 2
+        },
+        "hint": "العدد الأول 200 يقع ضمن المجال 192–223، ولذلك العنوان من Class C.",
+        "teacherNote": "",
+        "aiInstruction": "",
+        "wasModified": false,
+        "image": {
+          "exists": false,
+          "visible": false,
+          "origin": null,
+          "assets": [],
+          "prompt": null
+        },
+        "history": [],
+        "redoStack": []
+      },
+      {
+        "examQuestionId": "LIB-T05-Q04",
+        "origin": "imported",
+        "sourceId": "LIB-T05",
+        "sourceQuestionId": "4",
+        "section": "BASIC",
+        "topic": "OTHER_NETWORKING",
+        "secondaryTopics": [],
+        "difficulty": 2,
+        "difficultyLabel": "",
+        "familyKey": "LIB-T05-Q04",
+        "hasCLI": false,
+        "requiresCalculation": false,
+        "presentationType": "multipleChoice",
+        "marks": 10,
+        "locked": false,
+        "text": "ما قناع الشبكة الطبيعي للفئة Class C؟",
+        "textHtml": "",
+        "options": [
+          {
+            "value": "0",
+            "text": "255.0.0.0"
+          },
+          {
+            "value": "1",
+            "text": "255.255.0.0"
+          },
+          {
+            "value": "2",
+            "text": "0.0.0.255"
+          },
+          {
+            "value": "3",
+            "text": "255.255.255.0"
+          }
+        ],
+        "fields": [],
+        "parts": [],
+        "answer": {
+          "correctOptionIndex": 3
+        },
+        "hint": "القناع الطبيعي للفئة C هو 255.255.255.0، ويُكتب أيضًا /24.",
+        "teacherNote": "",
+        "aiInstruction": "",
+        "wasModified": false,
+        "image": {
+          "exists": false,
+          "visible": false,
+          "origin": null,
+          "assets": [],
+          "prompt": null
+        },
+        "history": [],
+        "redoStack": []
+      },
+      {
+        "examQuestionId": "LIB-T05-Q05",
+        "origin": "imported",
+        "sourceId": "LIB-T05",
+        "sourceQuestionId": "5",
+        "section": "BASIC",
+        "topic": "OTHER_NETWORKING",
+        "secondaryTopics": [],
+        "difficulty": 2,
+        "difficultyLabel": "",
+        "familyKey": "LIB-T05-Q05",
+        "hasCLI": false,
+        "requiresCalculation": false,
+        "presentationType": "multipleChoice",
+        "marks": 10,
+        "locked": false,
+        "text": "ما رمز CIDR للقناع 255.255.0.0؟",
+        "textHtml": "",
+        "options": [
+          {
+            "value": "0",
+            "text": "/16"
+          },
+          {
+            "value": "1",
+            "text": "/8"
+          },
+          {
+            "value": "2",
+            "text": "/24"
+          },
+          {
+            "value": "3",
+            "text": "/32"
+          }
+        ],
+        "fields": [],
+        "parts": [],
+        "answer": {
+          "correctOptionIndex": 0
+        },
+        "hint": "القناع 255.255.0.0 يحتوي 16 بتًا للشبكة، ولذلك رمزه /16.",
+        "teacherNote": "",
+        "aiInstruction": "",
+        "wasModified": false,
+        "image": {
+          "exists": false,
+          "visible": false,
+          "origin": null,
+          "assets": [],
+          "prompt": null
+        },
+        "history": [],
+        "redoStack": []
+      },
+      {
+        "examQuestionId": "LIB-T05-Q06",
+        "origin": "imported",
+        "sourceId": "LIB-T05",
+        "sourceQuestionId": "6",
+        "section": "BASIC",
+        "topic": "OTHER_NETWORKING",
+        "secondaryTopics": [],
+        "difficulty": 2,
+        "difficultyLabel": "",
+        "familyKey": "LIB-T05-Q06",
+        "hasCLI": false,
+        "requiresCalculation": false,
+        "presentationType": "multipleChoice",
+        "marks": 10,
+        "locked": false,
+        "text": "في العنوان 192.168.10.20/24، أي جزء يمثل الجهاز؟",
+        "textHtml": "",
+        "options": [
+          {
+            "value": "0",
+            "text": "192 فقط"
+          },
+          {
+            "value": "1",
+            "text": "20 فقط"
+          },
+          {
+            "value": "2",
+            "text": "192.168 فقط"
+          },
+          {
+            "value": "3",
+            "text": "192.168.10 كاملًا"
+          }
+        ],
+        "fields": [],
+        "parts": [],
+        "answer": {
+          "correctOptionIndex": 1
+        },
+        "hint": "في القناع /24 تكون أول ثلاثة أقسام للشبكة، ويكون القسم الأخير هو جزء الجهاز.",
+        "teacherNote": "",
+        "aiInstruction": "",
+        "wasModified": false,
+        "image": {
+          "exists": false,
+          "visible": false,
+          "origin": null,
+          "assets": [],
+          "prompt": null
+        },
+        "history": [],
+        "redoStack": []
+      },
+      {
+        "examQuestionId": "LIB-T05-Q07",
+        "origin": "imported",
+        "sourceId": "LIB-T05",
+        "sourceQuestionId": "7",
+        "section": "BASIC",
+        "topic": "OTHER_NETWORKING",
+        "secondaryTopics": [],
+        "difficulty": 2,
+        "difficultyLabel": "",
+        "familyKey": "LIB-T05-Q07",
+        "hasCLI": false,
+        "requiresCalculation": false,
+        "presentationType": "multipleChoice",
+        "marks": 10,
+        "locked": false,
+        "text": "ماذا يحدث عندما يزداد رقم CIDR؟",
+        "textHtml": "",
+        "options": [
+          {
+            "value": "0",
+            "text": "يزداد جزء الجهاز دائمًا"
+          },
+          {
+            "value": "1",
+            "text": "يختفي عنوان IP"
+          },
+          {
+            "value": "2",
+            "text": "يزداد الجزء المخصص للشبكة ويقل جزء الجهاز"
+          },
+          {
+            "value": "3",
+            "text": "يتحول IPv4 إلى IPv6"
+          }
+        ],
+        "fields": [],
+        "parts": [],
+        "answer": {
+          "correctOptionIndex": 2
+        },
+        "hint": "كلما زاد رقم CIDR زاد عدد البتات المخصصة للشبكة، وقل الجزء المتاح للأجهزة.",
+        "teacherNote": "",
+        "aiInstruction": "",
+        "wasModified": false,
+        "image": {
+          "exists": false,
+          "visible": false,
+          "origin": null,
+          "assets": [],
+          "prompt": null
+        },
+        "history": [],
+        "redoStack": []
+      },
+      {
+        "examQuestionId": "LIB-T05-Q08",
+        "origin": "imported",
+        "sourceId": "LIB-T05",
+        "sourceQuestionId": "8",
+        "section": "BASIC",
+        "topic": "OTHER_NETWORKING",
+        "secondaryTopics": [],
+        "difficulty": 2,
+        "difficultyLabel": "",
+        "familyKey": "LIB-T05-Q08",
+        "hasCLI": false,
+        "requiresCalculation": false,
+        "presentationType": "multipleChoice",
+        "marks": 10,
+        "locked": false,
+        "text": "الحاسوب PC1 عنوانه 192.168.20.1/24. أي عنوان مناسب لـPC2 في الشبكة نفسها؟",
+        "textHtml": "",
+        "options": [
+          {
+            "value": "0",
+            "text": "192.168.21.1"
+          },
+          {
+            "value": "1",
+            "text": "192.169.20.2"
+          },
+          {
+            "value": "2",
+            "text": "10.168.20.2"
+          },
+          {
+            "value": "3",
+            "text": "192.168.20.2"
+          }
+        ],
+        "fields": [],
+        "parts": [],
+        "answer": {
+          "correctOptionIndex": 3
+        },
+        "hint": "في /24 يجب أن تبقى أول ثلاثة أقسام متشابهة، ونغير القسم الأخير فقط دون تكرار عنوان PC1.",
+        "teacherNote": "",
+        "aiInstruction": "",
+        "wasModified": false,
+        "image": {
+          "exists": false,
+          "visible": false,
+          "origin": null,
+          "assets": [],
+          "prompt": null
+        },
+        "history": [],
+        "redoStack": []
+      },
+      {
+        "examQuestionId": "LIB-T05-Q09",
+        "origin": "imported",
+        "sourceId": "LIB-T05",
+        "sourceQuestionId": "9",
+        "section": "BASIC",
+        "topic": "OTHER_NETWORKING",
+        "secondaryTopics": [],
+        "difficulty": 2,
+        "difficultyLabel": "",
+        "familyKey": "LIB-T05-Q09",
+        "hasCLI": false,
+        "requiresCalculation": false,
+        "presentationType": "multipleChoice",
+        "marks": 10,
+        "locked": false,
+        "text": "ما مجال عناوين الأجهزة المعتاد للشبكة 10.10.10.0/24؟",
+        "textHtml": "",
+        "options": [
+          {
+            "value": "0",
+            "text": "10.10.10.1 إلى 10.10.10.254"
+          },
+          {
+            "value": "1",
+            "text": "10.10.10.0 إلى 10.10.10.255"
+          },
+          {
+            "value": "2",
+            "text": "10.10.0.1 إلى 10.10.255.254"
+          },
+          {
+            "value": "3",
+            "text": "10.0.0.1 إلى 10.255.255.254"
+          }
+        ],
+        "fields": [],
+        "parts": [],
+        "answer": {
+          "correctOptionIndex": 0
+        },
+        "hint": "في شبكة /24 يكون العنوان الأول للشبكة والأخير للبث عادةً، فتُستخدم العناوين من .1 إلى .254 للأجهزة.",
+        "teacherNote": "",
+        "aiInstruction": "",
+        "wasModified": false,
+        "image": {
+          "exists": false,
+          "visible": false,
+          "origin": null,
+          "assets": [],
+          "prompt": null
+        },
+        "history": [],
+        "redoStack": []
+      },
+      {
+        "examQuestionId": "LIB-T05-Q10",
+        "origin": "imported",
+        "sourceId": "LIB-T05",
+        "sourceQuestionId": "10",
+        "section": "BASIC",
+        "topic": "OTHER_NETWORKING",
+        "secondaryTopics": [],
+        "difficulty": 2,
+        "difficultyLabel": "",
+        "familyKey": "LIB-T05-Q10",
+        "hasCLI": false,
+        "requiresCalculation": false,
+        "presentationType": "multipleChoice",
+        "marks": 10,
+        "locked": false,
+        "text": "جهاز داخل الشبكة المحلية يستطيع التواصل مع الأجهزة القريبة لكنه لا يصل إلى الإنترنت. أي إعداد يجب فحصه أولًا؟",
+        "textHtml": "",
+        "options": [
+          {
+            "value": "0",
+            "text": "اسم الطابعة"
+          },
+          {
+            "value": "1",
+            "text": "Default Gateway"
+          },
+          {
+            "value": "2",
+            "text": "لون كابل الشبكة"
+          },
+          {
+            "value": "3",
+            "text": "اسم المستخدم"
+          }
+        ],
+        "fields": [],
+        "parts": [],
+        "answer": {
+          "correctOptionIndex": 1
+        },
+        "hint": "البوابة الافتراضية Default Gateway هي غالبًا عنوان الراوتر، ومن دونها قد تعمل الشبكة المحلية لكن لا يصل الجهاز إلى الإنترنت.",
+        "teacherNote": "",
+        "aiInstruction": "",
+        "wasModified": false,
+        "image": {
+          "exists": false,
+          "visible": false,
+          "origin": null,
+          "assets": [],
+          "prompt": null
+        },
+        "history": [],
+        "redoStack": []
+      }
+    ],
+    "totalMarks": 100,
+    "status": "final",
+    "createdAt": "2026-09-05T18:57:20.313Z",
+    "updatedAt": "2026-09-05T18:57:20.313Z"
+  }
+}

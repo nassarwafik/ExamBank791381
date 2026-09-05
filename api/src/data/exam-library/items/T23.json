@@ -1,0 +1,589 @@
+{
+  "libraryItemId": "T23",
+  "title": "بروتوكولات التوجيه",
+  "category": "infra",
+  "description": "Static Route وOSPF وEIGRP وMetric وAdministrative Distance.",
+  "tags": [
+    "Static Route",
+    "OSPF",
+    "EIGRP"
+  ],
+  "questionCount": 10,
+  "totalMarks": 100,
+  "pageRange": "212–220",
+  "parserFamily": "t-series-v1",
+  "conversionStatus": "ready",
+  "publishable": true,
+  "autoGradableCount": 10,
+  "manualReviewCount": 0,
+  "libraryVersion": 1,
+  "sourceSha": "c5d48db485bfef51e54bc7bcafb05d708073c84a8ac8e8e41b4057991b4180ba",
+  "contentHash": "6f6b9d35acd2c46f94ca42a9f4e799858e3862493bf98cd780af737e93f84ce6",
+  "convertedAt": "2026-09-05T18:57:19.063Z",
+  "source": {
+    "repository": "Book791381",
+    "sourceFile": "T23.html"
+  },
+  "schemaVersion": 1,
+  "examSnapshot": {
+    "schemaVersion": 1,
+    "examId": "LIB-T23",
+    "title": "بروتوكولات التوجيه",
+    "questions": [
+      {
+        "examQuestionId": "LIB-T23-Q01",
+        "origin": "imported",
+        "sourceId": "LIB-T23",
+        "sourceQuestionId": "1",
+        "section": "BASIC",
+        "topic": "OTHER_NETWORKING",
+        "secondaryTopics": [],
+        "difficulty": 2,
+        "difficultyLabel": "",
+        "familyKey": "LIB-T23-Q01",
+        "hasCLI": false,
+        "requiresCalculation": false,
+        "presentationType": "multipleChoice",
+        "marks": 10,
+        "locked": false,
+        "text": "ما المقصود بالتوجيه Routing؟",
+        "textHtml": "",
+        "options": [
+          {
+            "value": "0",
+            "text": "اختيار الطريق الذي تسلكه البيانات للوصول إلى الشبكة المطلوبة"
+          },
+          {
+            "value": "1",
+            "text": "تغيير اسم الراوتر"
+          },
+          {
+            "value": "2",
+            "text": "إنشاء VLAN فقط"
+          },
+          {
+            "value": "3",
+            "text": "توزيع عناوين MAC"
+          }
+        ],
+        "fields": [],
+        "parts": [],
+        "answer": {
+          "correctOptionIndex": 0
+        },
+        "hint": "التوجيه هو اختيار المسار إلى الشبكة المطلوبة.",
+        "teacherNote": "",
+        "aiInstruction": "",
+        "wasModified": false,
+        "image": {
+          "exists": false,
+          "visible": false,
+          "origin": null,
+          "assets": [],
+          "prompt": null
+        },
+        "history": [],
+        "redoStack": []
+      },
+      {
+        "examQuestionId": "LIB-T23-Q02",
+        "origin": "imported",
+        "sourceId": "LIB-T23",
+        "sourceQuestionId": "2",
+        "section": "BASIC",
+        "topic": "OTHER_NETWORKING",
+        "secondaryTopics": [],
+        "difficulty": 2,
+        "difficultyLabel": "",
+        "familyKey": "LIB-T23-Q02",
+        "hasCLI": false,
+        "requiresCalculation": false,
+        "presentationType": "multipleChoice",
+        "marks": 10,
+        "locked": false,
+        "text": "من يحدد Static Route؟",
+        "textHtml": "",
+        "options": [
+          {
+            "value": "0",
+            "text": "خادم DNS"
+          },
+          {
+            "value": "1",
+            "text": "مدير الشبكة يدويًا"
+          },
+          {
+            "value": "2",
+            "text": "السويتش تلقائيًا"
+          },
+          {
+            "value": "3",
+            "text": "جهاز المستخدم"
+          }
+        ],
+        "fields": [],
+        "parts": [],
+        "answer": {
+          "correctOptionIndex": 1
+        },
+        "hint": "المسار الثابت يُكتب يدويًا بواسطة مدير الشبكة.",
+        "teacherNote": "",
+        "aiInstruction": "",
+        "wasModified": false,
+        "image": {
+          "exists": false,
+          "visible": false,
+          "origin": null,
+          "assets": [],
+          "prompt": null
+        },
+        "history": [],
+        "redoStack": []
+      },
+      {
+        "examQuestionId": "LIB-T23-Q03",
+        "origin": "imported",
+        "sourceId": "LIB-T23",
+        "sourceQuestionId": "3",
+        "section": "BASIC",
+        "topic": "OTHER_NETWORKING",
+        "secondaryTopics": [],
+        "difficulty": 2,
+        "difficultyLabel": "",
+        "familyKey": "LIB-T23-Q03",
+        "hasCLI": false,
+        "requiresCalculation": false,
+        "presentationType": "multipleChoice",
+        "marks": 10,
+        "locked": false,
+        "text": "أي بروتوكول يُعد Link-State؟",
+        "textHtml": "",
+        "options": [
+          {
+            "value": "0",
+            "text": "EIGRP"
+          },
+          {
+            "value": "1",
+            "text": "Static Route"
+          },
+          {
+            "value": "2",
+            "text": "OSPF"
+          },
+          {
+            "value": "3",
+            "text": "DHCP"
+          }
+        ],
+        "fields": [],
+        "parts": [],
+        "answer": {
+          "correctOptionIndex": 2
+        },
+        "hint": "OSPF بروتوكول Link-State.",
+        "teacherNote": "",
+        "aiInstruction": "",
+        "wasModified": false,
+        "image": {
+          "exists": false,
+          "visible": false,
+          "origin": null,
+          "assets": [],
+          "prompt": null
+        },
+        "history": [],
+        "redoStack": []
+      },
+      {
+        "examQuestionId": "LIB-T23-Q04",
+        "origin": "imported",
+        "sourceId": "LIB-T23",
+        "sourceQuestionId": "4",
+        "section": "BASIC",
+        "topic": "OTHER_NETWORKING",
+        "secondaryTopics": [],
+        "difficulty": 2,
+        "difficultyLabel": "",
+        "familyKey": "LIB-T23-Q04",
+        "hasCLI": false,
+        "requiresCalculation": false,
+        "presentationType": "multipleChoice",
+        "marks": 10,
+        "locked": false,
+        "text": "أي بروتوكول يُعد Distance Vector متطورًا من Cisco؟",
+        "textHtml": "",
+        "options": [
+          {
+            "value": "0",
+            "text": "OSPF"
+          },
+          {
+            "value": "1",
+            "text": "HTTP"
+          },
+          {
+            "value": "2",
+            "text": "STP"
+          },
+          {
+            "value": "3",
+            "text": "EIGRP"
+          }
+        ],
+        "fields": [],
+        "parts": [],
+        "answer": {
+          "correctOptionIndex": 3
+        },
+        "hint": "EIGRP بروتوكول Distance Vector متطور من Cisco.",
+        "teacherNote": "",
+        "aiInstruction": "",
+        "wasModified": false,
+        "image": {
+          "exists": false,
+          "visible": false,
+          "origin": null,
+          "assets": [],
+          "prompt": null
+        },
+        "history": [],
+        "redoStack": []
+      },
+      {
+        "examQuestionId": "LIB-T23-Q05",
+        "origin": "imported",
+        "sourceId": "LIB-T23",
+        "sourceQuestionId": "5",
+        "section": "BASIC",
+        "topic": "OTHER_NETWORKING",
+        "secondaryTopics": [],
+        "difficulty": 2,
+        "difficultyLabel": "",
+        "familyKey": "LIB-T23-Q05",
+        "hasCLI": false,
+        "requiresCalculation": false,
+        "presentationType": "multipleChoice",
+        "marks": 10,
+        "locked": false,
+        "text": "على ماذا يعتمد OSPF غالبًا لاختيار الطريق؟",
+        "textHtml": "",
+        "options": [
+          {
+            "value": "0",
+            "text": "Bandwidth"
+          },
+          {
+            "value": "1",
+            "text": "اسم الجهاز"
+          },
+          {
+            "value": "2",
+            "text": "عنوان MAC فقط"
+          },
+          {
+            "value": "3",
+            "text": "عدد VLANs"
+          }
+        ],
+        "fields": [],
+        "parts": [],
+        "answer": {
+          "correctOptionIndex": 0
+        },
+        "hint": "يعتمد OSPF غالبًا على Bandwidth.",
+        "teacherNote": "",
+        "aiInstruction": "",
+        "wasModified": false,
+        "image": {
+          "exists": false,
+          "visible": false,
+          "origin": null,
+          "assets": [],
+          "prompt": null
+        },
+        "history": [],
+        "redoStack": []
+      },
+      {
+        "examQuestionId": "LIB-T23-Q06",
+        "origin": "imported",
+        "sourceId": "LIB-T23",
+        "sourceQuestionId": "6",
+        "section": "BASIC",
+        "topic": "OTHER_NETWORKING",
+        "secondaryTopics": [],
+        "difficulty": 2,
+        "difficultyLabel": "",
+        "familyKey": "LIB-T23-Q06",
+        "hasCLI": false,
+        "requiresCalculation": false,
+        "presentationType": "multipleChoice",
+        "marks": 10,
+        "locked": false,
+        "text": "على ماذا يعتمد EIGRP غالبًا؟",
+        "textHtml": "",
+        "options": [
+          {
+            "value": "0",
+            "text": "عدد المستخدمين"
+          },
+          {
+            "value": "1",
+            "text": "Bandwidth وDelay"
+          },
+          {
+            "value": "2",
+            "text": "DNS وDHCP"
+          },
+          {
+            "value": "3",
+            "text": "SSID وWPA"
+          }
+        ],
+        "fields": [],
+        "parts": [],
+        "answer": {
+          "correctOptionIndex": 1
+        },
+        "hint": "يعتمد EIGRP غالبًا على Bandwidth وDelay.",
+        "teacherNote": "",
+        "aiInstruction": "",
+        "wasModified": false,
+        "image": {
+          "exists": false,
+          "visible": false,
+          "origin": null,
+          "assets": [],
+          "prompt": null
+        },
+        "history": [],
+        "redoStack": []
+      },
+      {
+        "examQuestionId": "LIB-T23-Q07",
+        "origin": "imported",
+        "sourceId": "LIB-T23",
+        "sourceQuestionId": "7",
+        "section": "BASIC",
+        "topic": "OTHER_NETWORKING",
+        "secondaryTopics": [],
+        "difficulty": 2,
+        "difficultyLabel": "",
+        "familyKey": "LIB-T23-Q07",
+        "hasCLI": false,
+        "requiresCalculation": false,
+        "presentationType": "multipleChoice",
+        "marks": 10,
+        "locked": false,
+        "text": "عند مقارنة Administrative Distance، أي قيمة تُفضّل؟",
+        "textHtml": "",
+        "options": [
+          {
+            "value": "0",
+            "text": "الأكبر دائمًا"
+          },
+          {
+            "value": "1",
+            "text": "القيمة 255 فقط"
+          },
+          {
+            "value": "2",
+            "text": "الأصغر"
+          },
+          {
+            "value": "3",
+            "text": "لا تؤثر القيمة"
+          }
+        ],
+        "fields": [],
+        "parts": [],
+        "answer": {
+          "correctOptionIndex": 2
+        },
+        "hint": "الأصغر أفضل عند تفضيل مصادر المسارات.",
+        "teacherNote": "",
+        "aiInstruction": "",
+        "wasModified": false,
+        "image": {
+          "exists": false,
+          "visible": false,
+          "origin": null,
+          "assets": [],
+          "prompt": null
+        },
+        "history": [],
+        "redoStack": []
+      },
+      {
+        "examQuestionId": "LIB-T23-Q08",
+        "origin": "imported",
+        "sourceId": "LIB-T23",
+        "sourceQuestionId": "8",
+        "section": "BASIC",
+        "topic": "OTHER_NETWORKING",
+        "secondaryTopics": [],
+        "difficulty": 2,
+        "difficultyLabel": "",
+        "familyKey": "LIB-T23-Q08",
+        "hasCLI": false,
+        "requiresCalculation": false,
+        "presentationType": "multipleChoice",
+        "marks": 10,
+        "locked": false,
+        "text": "أي أمر يبدأ إعداد OSPF بالعملية رقم 1؟",
+        "textHtml": "",
+        "options": [
+          {
+            "value": "0",
+            "text": "ip ospf 1"
+          },
+          {
+            "value": "1",
+            "text": "network ospf 1"
+          },
+          {
+            "value": "2",
+            "text": "enable ospf 1"
+          },
+          {
+            "value": "3",
+            "text": "router ospf 1"
+          }
+        ],
+        "fields": [],
+        "parts": [],
+        "answer": {
+          "correctOptionIndex": 3
+        },
+        "hint": "الأمر router ospf 1 يدخل إلى إعداد عملية OSPF.",
+        "teacherNote": "",
+        "aiInstruction": "",
+        "wasModified": false,
+        "image": {
+          "exists": false,
+          "visible": false,
+          "origin": null,
+          "assets": [],
+          "prompt": null
+        },
+        "history": [],
+        "redoStack": []
+      },
+      {
+        "examQuestionId": "LIB-T23-Q09",
+        "origin": "imported",
+        "sourceId": "LIB-T23",
+        "sourceQuestionId": "9",
+        "section": "BASIC",
+        "topic": "OTHER_NETWORKING",
+        "secondaryTopics": [],
+        "difficulty": 2,
+        "difficultyLabel": "",
+        "familyKey": "LIB-T23-Q09",
+        "hasCLI": false,
+        "requiresCalculation": false,
+        "presentationType": "multipleChoice",
+        "marks": 10,
+        "locked": false,
+        "text": "أي أمر يعلن الشبكة 192.168.10.0/24 داخل area 0؟",
+        "textHtml": "",
+        "options": [
+          {
+            "value": "0",
+            "text": "network 192.168.10.0 0.0.0.255 area 0"
+          },
+          {
+            "value": "1",
+            "text": "network 192.168.10.0 255.255.255.0 area 0"
+          },
+          {
+            "value": "2",
+            "text": "ip route 192.168.10.0 0.0.0.255"
+          },
+          {
+            "value": "3",
+            "text": "router ospf 192.168.10.0"
+          }
+        ],
+        "fields": [],
+        "parts": [],
+        "answer": {
+          "correctOptionIndex": 0
+        },
+        "hint": "OSPF يستخدم Wildcard Mask؛ القناع المقابل لـ/24 هو 0.0.0.255.",
+        "teacherNote": "",
+        "aiInstruction": "",
+        "wasModified": false,
+        "image": {
+          "exists": false,
+          "visible": false,
+          "origin": null,
+          "assets": [],
+          "prompt": null
+        },
+        "history": [],
+        "redoStack": []
+      },
+      {
+        "examQuestionId": "LIB-T23-Q10",
+        "origin": "imported",
+        "sourceId": "LIB-T23",
+        "sourceQuestionId": "10",
+        "section": "BASIC",
+        "topic": "OTHER_NETWORKING",
+        "secondaryTopics": [],
+        "difficulty": 2,
+        "difficultyLabel": "",
+        "familyKey": "LIB-T23-Q10",
+        "hasCLI": false,
+        "requiresCalculation": false,
+        "presentationType": "multipleChoice",
+        "marks": 10,
+        "locked": false,
+        "text": "أي أمر يضيف مسارًا ثابتًا إلى 192.168.30.0/24 عبر 10.1.1.2؟",
+        "textHtml": "",
+        "options": [
+          {
+            "value": "0",
+            "text": "ip route 10.1.1.2 255.255.255.0 192.168.30.0"
+          },
+          {
+            "value": "1",
+            "text": "ip route 192.168.30.0 255.255.255.0 10.1.1.2"
+          },
+          {
+            "value": "2",
+            "text": "router static 192.168.30.0 10.1.1.2"
+          },
+          {
+            "value": "3",
+            "text": "network 192.168.30.0 0.0.0.255 area 0"
+          }
+        ],
+        "fields": [],
+        "parts": [],
+        "answer": {
+          "correctOptionIndex": 1
+        },
+        "hint": "صيغة المسار الثابت هي ip route NETWORK MASK NEXT-HOP.",
+        "teacherNote": "",
+        "aiInstruction": "",
+        "wasModified": false,
+        "image": {
+          "exists": false,
+          "visible": false,
+          "origin": null,
+          "assets": [],
+          "prompt": null
+        },
+        "history": [],
+        "redoStack": []
+      }
+    ],
+    "totalMarks": 100,
+    "status": "final",
+    "createdAt": "2026-09-05T18:57:20.366Z",
+    "updatedAt": "2026-09-05T18:57:20.366Z"
+  }
+}

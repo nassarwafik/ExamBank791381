@@ -1,0 +1,589 @@
+{
+  "libraryItemId": "T20",
+  "title": "Port Security وحماية Cisco",
+  "category": "infra",
+  "description": "Sticky MAC وMaximum وViolation وحماية Console وVTY وEnable.",
+  "tags": [
+    "Port Security",
+    "Sticky MAC",
+    "Passwords"
+  ],
+  "questionCount": 10,
+  "totalMarks": 100,
+  "pageRange": "178–188",
+  "parserFamily": "t-series-v1",
+  "conversionStatus": "ready",
+  "publishable": true,
+  "autoGradableCount": 10,
+  "manualReviewCount": 0,
+  "libraryVersion": 1,
+  "sourceSha": "ed0992d15510e6a8b394b8a17e2f9d3c316f494ee5c9f4a3dd541f6964e57bb9",
+  "contentHash": "0283c8163b2ea12b21de138cc9b10fb4bf2f4f2d8b5a343558831908fd253162",
+  "convertedAt": "2026-09-05T18:57:19.063Z",
+  "source": {
+    "repository": "Book791381",
+    "sourceFile": "T20.html"
+  },
+  "schemaVersion": 1,
+  "examSnapshot": {
+    "schemaVersion": 1,
+    "examId": "LIB-T20",
+    "title": "Port Security وحماية Cisco",
+    "questions": [
+      {
+        "examQuestionId": "LIB-T20-Q01",
+        "origin": "imported",
+        "sourceId": "LIB-T20",
+        "sourceQuestionId": "1",
+        "section": "BASIC",
+        "topic": "OTHER_NETWORKING",
+        "secondaryTopics": [],
+        "difficulty": 2,
+        "difficultyLabel": "",
+        "familyKey": "LIB-T20-Q01",
+        "hasCLI": false,
+        "requiresCalculation": false,
+        "presentationType": "multipleChoice",
+        "marks": 10,
+        "locked": false,
+        "text": "على أي معلومة تعتمد Port Security غالبًا لتحديد الجهاز المسموح؟",
+        "textHtml": "",
+        "options": [
+          {
+            "value": "0",
+            "text": "عنوان IP العام"
+          },
+          {
+            "value": "1",
+            "text": "اسم المستخدم"
+          },
+          {
+            "value": "2",
+            "text": "عنوان MAC"
+          },
+          {
+            "value": "3",
+            "text": "اسم شبكة Wi-Fi"
+          }
+        ],
+        "fields": [],
+        "parts": [],
+        "answer": {
+          "correctOptionIndex": 2
+        },
+        "hint": "Port Security خاصية في السويتش تعتمد غالبًا على MAC Address للتحكم بالأجهزة المتصلة.",
+        "teacherNote": "",
+        "aiInstruction": "",
+        "wasModified": false,
+        "image": {
+          "exists": false,
+          "visible": false,
+          "origin": null,
+          "assets": [],
+          "prompt": null
+        },
+        "history": [],
+        "redoStack": []
+      },
+      {
+        "examQuestionId": "LIB-T20-Q02",
+        "origin": "imported",
+        "sourceId": "LIB-T20",
+        "sourceQuestionId": "2",
+        "section": "BASIC",
+        "topic": "OTHER_NETWORKING",
+        "secondaryTopics": [],
+        "difficulty": 2,
+        "difficultyLabel": "",
+        "familyKey": "LIB-T20-Q02",
+        "hasCLI": false,
+        "requiresCalculation": false,
+        "presentationType": "multipleChoice",
+        "marks": 10,
+        "locked": false,
+        "text": "ما الهدف الأساسي من Port Security؟",
+        "textHtml": "",
+        "options": [
+          {
+            "value": "0",
+            "text": "منع أجهزة غير مصرح بها من استعمال منفذ السويتش"
+          },
+          {
+            "value": "1",
+            "text": "توزيع عناوين IP"
+          },
+          {
+            "value": "2",
+            "text": "إنشاء مسارات OSPF"
+          },
+          {
+            "value": "3",
+            "text": "تحويل DNS"
+          }
+        ],
+        "fields": [],
+        "parts": [],
+        "answer": {
+          "correctOptionIndex": 0
+        },
+        "hint": "تحمي Port Security المنافذ من أجهزة مجهولة، وتسمح بالأجهزة المصرح بها فقط.",
+        "teacherNote": "",
+        "aiInstruction": "",
+        "wasModified": false,
+        "image": {
+          "exists": false,
+          "visible": false,
+          "origin": null,
+          "assets": [],
+          "prompt": null
+        },
+        "history": [],
+        "redoStack": []
+      },
+      {
+        "examQuestionId": "LIB-T20-Q03",
+        "origin": "imported",
+        "sourceId": "LIB-T20",
+        "sourceQuestionId": "3",
+        "section": "BASIC",
+        "topic": "OTHER_NETWORKING",
+        "secondaryTopics": [],
+        "difficulty": 2,
+        "difficultyLabel": "",
+        "familyKey": "LIB-T20-Q03",
+        "hasCLI": false,
+        "requiresCalculation": false,
+        "presentationType": "multipleChoice",
+        "marks": 10,
+        "locked": false,
+        "text": "أي أمر يحدد عنوان MAC ثابتًا مسموحًا على المنفذ؟",
+        "textHtml": "",
+        "options": [
+          {
+            "value": "0",
+            "text": "switchport mode trunk"
+          },
+          {
+            "value": "1",
+            "text": "ip address MAC"
+          },
+          {
+            "value": "2",
+            "text": "service password-encryption"
+          },
+          {
+            "value": "3",
+            "text": "switchport port-security mac-address 00A0.1234.5678"
+          }
+        ],
+        "fields": [],
+        "parts": [],
+        "answer": {
+          "correctOptionIndex": 3
+        },
+        "hint": "يُستخدم switchport port-security mac-address متبوعًا بعنوان MAC المسموح.",
+        "teacherNote": "",
+        "aiInstruction": "",
+        "wasModified": false,
+        "image": {
+          "exists": false,
+          "visible": false,
+          "origin": null,
+          "assets": [],
+          "prompt": null
+        },
+        "history": [],
+        "redoStack": []
+      },
+      {
+        "examQuestionId": "LIB-T20-Q04",
+        "origin": "imported",
+        "sourceId": "LIB-T20",
+        "sourceQuestionId": "4",
+        "section": "BASIC",
+        "topic": "OTHER_NETWORKING",
+        "secondaryTopics": [],
+        "difficulty": 2,
+        "difficultyLabel": "",
+        "familyKey": "LIB-T20-Q04",
+        "hasCLI": false,
+        "requiresCalculation": false,
+        "presentationType": "multipleChoice",
+        "marks": 10,
+        "locked": false,
+        "text": "ماذا يعني violation shutdown؟",
+        "textHtml": "",
+        "options": [
+          {
+            "value": "0",
+            "text": "تشغيل المنفذ تلقائيًا"
+          },
+          {
+            "value": "1",
+            "text": "إغلاق المنفذ عند حدوث مخالفة"
+          },
+          {
+            "value": "2",
+            "text": "تحويل المنفذ إلى Trunk"
+          },
+          {
+            "value": "3",
+            "text": "حذف VLAN"
+          }
+        ],
+        "fields": [],
+        "parts": [],
+        "answer": {
+          "correctOptionIndex": 1
+        },
+        "hint": "violation shutdown يغلق المنفذ عندما يتصل جهاز غير مسموح أو يزيد العدد المسموح.",
+        "teacherNote": "",
+        "aiInstruction": "",
+        "wasModified": false,
+        "image": {
+          "exists": false,
+          "visible": false,
+          "origin": null,
+          "assets": [],
+          "prompt": null
+        },
+        "history": [],
+        "redoStack": []
+      },
+      {
+        "examQuestionId": "LIB-T20-Q05",
+        "origin": "imported",
+        "sourceId": "LIB-T20",
+        "sourceQuestionId": "5",
+        "section": "BASIC",
+        "topic": "OTHER_NETWORKING",
+        "secondaryTopics": [],
+        "difficulty": 2,
+        "difficultyLabel": "",
+        "familyKey": "LIB-T20-Q05",
+        "hasCLI": false,
+        "requiresCalculation": false,
+        "presentationType": "multipleChoice",
+        "marks": 10,
+        "locked": false,
+        "text": "ما فائدة Sticky MAC؟",
+        "textHtml": "",
+        "options": [
+          {
+            "value": "0",
+            "text": "توزيع DNS"
+          },
+          {
+            "value": "1",
+            "text": "إخفاء SSID"
+          },
+          {
+            "value": "2",
+            "text": "تعلم عنوان MAC تلقائيًا والسماح للجهاز المتعلم"
+          },
+          {
+            "value": "3",
+            "text": "زيادة عدد منافذ الراوتر"
+          }
+        ],
+        "fields": [],
+        "parts": [],
+        "answer": {
+          "correctOptionIndex": 2
+        },
+        "hint": "Sticky يجعل السويتش يتعلم MAC تلقائيًا، وهو مفيد عندما لا نعرف العنوان مسبقًا.",
+        "teacherNote": "",
+        "aiInstruction": "",
+        "wasModified": false,
+        "image": {
+          "exists": false,
+          "visible": false,
+          "origin": null,
+          "assets": [],
+          "prompt": null
+        },
+        "history": [],
+        "redoStack": []
+      },
+      {
+        "examQuestionId": "LIB-T20-Q06",
+        "origin": "imported",
+        "sourceId": "LIB-T20",
+        "sourceQuestionId": "6",
+        "section": "BASIC",
+        "topic": "OTHER_NETWORKING",
+        "secondaryTopics": [],
+        "difficulty": 2,
+        "difficultyLabel": "",
+        "familyKey": "LIB-T20-Q06",
+        "hasCLI": false,
+        "requiresCalculation": false,
+        "presentationType": "multipleChoice",
+        "marks": 10,
+        "locked": false,
+        "text": "ماذا يفعل الأمر switchport port-security maximum 3؟",
+        "textHtml": "",
+        "options": [
+          {
+            "value": "0",
+            "text": "يسمح بثلاثة أجهزة فقط على المنفذ"
+          },
+          {
+            "value": "1",
+            "text": "ينشئ VLAN 3"
+          },
+          {
+            "value": "2",
+            "text": "يحدد المنفذ F0/3"
+          },
+          {
+            "value": "3",
+            "text": "يمنع جميع الأجهزة"
+          }
+        ],
+        "fields": [],
+        "parts": [],
+        "answer": {
+          "correctOptionIndex": 0
+        },
+        "hint": "الأمر maximum 3 يحدد العدد الأقصى للأجهزة المسموح بها بثلاثة.",
+        "teacherNote": "",
+        "aiInstruction": "",
+        "wasModified": false,
+        "image": {
+          "exists": false,
+          "visible": false,
+          "origin": null,
+          "assets": [],
+          "prompt": null
+        },
+        "history": [],
+        "redoStack": []
+      },
+      {
+        "examQuestionId": "LIB-T20-Q07",
+        "origin": "imported",
+        "sourceId": "LIB-T20",
+        "sourceQuestionId": "7",
+        "section": "BASIC",
+        "topic": "OTHER_NETWORKING",
+        "secondaryTopics": [],
+        "difficulty": 2,
+        "difficultyLabel": "",
+        "familyKey": "LIB-T20-Q07",
+        "hasCLI": false,
+        "requiresCalculation": false,
+        "presentationType": "multipleChoice",
+        "marks": 10,
+        "locked": false,
+        "text": "أي نوع دخول يُستخدم للتحكم عن بعد بواسطة Telnet أوSSH؟",
+        "textHtml": "",
+        "options": [
+          {
+            "value": "0",
+            "text": "Console"
+          },
+          {
+            "value": "1",
+            "text": "VTY"
+          },
+          {
+            "value": "2",
+            "text": "Enable فقط"
+          },
+          {
+            "value": "3",
+            "text": "Access Point"
+          }
+        ],
+        "fields": [],
+        "parts": [],
+        "answer": {
+          "correctOptionIndex": 1
+        },
+        "hint": "VTY هو دخول عن بعد، بينما Console دخول مباشر بكابل.",
+        "teacherNote": "",
+        "aiInstruction": "",
+        "wasModified": false,
+        "image": {
+          "exists": false,
+          "visible": false,
+          "origin": null,
+          "assets": [],
+          "prompt": null
+        },
+        "history": [],
+        "redoStack": []
+      },
+      {
+        "examQuestionId": "LIB-T20-Q08",
+        "origin": "imported",
+        "sourceId": "LIB-T20",
+        "sourceQuestionId": "8",
+        "section": "BASIC",
+        "topic": "OTHER_NETWORKING",
+        "secondaryTopics": [],
+        "difficulty": 2,
+        "difficultyLabel": "",
+        "familyKey": "LIB-T20-Q08",
+        "hasCLI": false,
+        "requiresCalculation": false,
+        "presentationType": "multipleChoice",
+        "marks": 10,
+        "locked": false,
+        "text": "أي أمر يجعل الجهاز يطلب كلمة مرور بعد ضبط line vty 0 4؟",
+        "textHtml": "",
+        "options": [
+          {
+            "value": "0",
+            "text": "enable"
+          },
+          {
+            "value": "1",
+            "text": "show run"
+          },
+          {
+            "value": "2",
+            "text": "no shutdown"
+          },
+          {
+            "value": "3",
+            "text": "login"
+          }
+        ],
+        "fields": [],
+        "parts": [],
+        "answer": {
+          "correctOptionIndex": 3
+        },
+        "hint": "بعد تحديد password نكتب login حتى يطلب الجهاز كلمة المرور عند الدخول.",
+        "teacherNote": "",
+        "aiInstruction": "",
+        "wasModified": false,
+        "image": {
+          "exists": false,
+          "visible": false,
+          "origin": null,
+          "assets": [],
+          "prompt": null
+        },
+        "history": [],
+        "redoStack": []
+      },
+      {
+        "examQuestionId": "LIB-T20-Q09",
+        "origin": "imported",
+        "sourceId": "LIB-T20",
+        "sourceQuestionId": "9",
+        "section": "BASIC",
+        "topic": "OTHER_NETWORKING",
+        "secondaryTopics": [],
+        "difficulty": 2,
+        "difficultyLabel": "",
+        "familyKey": "LIB-T20-Q09",
+        "hasCLI": false,
+        "requiresCalculation": false,
+        "presentationType": "multipleChoice",
+        "marks": 10,
+        "locked": false,
+        "text": "أي أمر يخفي كلمات المرور العادية في الإعدادات؟",
+        "textHtml": "",
+        "options": [
+          {
+            "value": "0",
+            "text": "service password-encryption"
+          },
+          {
+            "value": "1",
+            "text": "enable password"
+          },
+          {
+            "value": "2",
+            "text": "show startup-config"
+          },
+          {
+            "value": "3",
+            "text": "switchport port-security"
+          }
+        ],
+        "fields": [],
+        "parts": [],
+        "answer": {
+          "correctOptionIndex": 0
+        },
+        "hint": "service password-encryption يخفي كلمات المرور العادية في ملف الإعدادات.",
+        "teacherNote": "",
+        "aiInstruction": "",
+        "wasModified": false,
+        "image": {
+          "exists": false,
+          "visible": false,
+          "origin": null,
+          "assets": [],
+          "prompt": null
+        },
+        "history": [],
+        "redoStack": []
+      },
+      {
+        "examQuestionId": "LIB-T20-Q10",
+        "origin": "imported",
+        "sourceId": "LIB-T20",
+        "sourceQuestionId": "10",
+        "section": "BASIC",
+        "topic": "OTHER_NETWORKING",
+        "secondaryTopics": [],
+        "difficulty": 2,
+        "difficultyLabel": "",
+        "familyKey": "LIB-T20-Q10",
+        "hasCLI": false,
+        "requiresCalculation": false,
+        "presentationType": "multipleChoice",
+        "marks": 10,
+        "locked": false,
+        "text": "أي إعداد هو الأفضل لحماية وضع Enable والدخول البعيد؟",
+        "textHtml": "",
+        "options": [
+          {
+            "value": "0",
+            "text": "enable password فقط وTelnet بلا كلمة مرور"
+          },
+          {
+            "value": "1",
+            "text": "enable secret مع كلمة مرور VTY وlogin ويفضل SSH"
+          },
+          {
+            "value": "2",
+            "text": "حذف line vty واستخدام Hub"
+          },
+          {
+            "value": "3",
+            "text": "فتح جميع المنافذ دون Port Security"
+          }
+        ],
+        "fields": [],
+        "parts": [],
+        "answer": {
+          "correctOptionIndex": 1
+        },
+        "hint": "يحمي enable secret الوضع المتقدم، وتحمي كلمة مرور VTY مع login الدخول البعيد، ويفضل SSH لأنه يشفر البيانات.",
+        "teacherNote": "",
+        "aiInstruction": "",
+        "wasModified": false,
+        "image": {
+          "exists": false,
+          "visible": false,
+          "origin": null,
+          "assets": [],
+          "prompt": null
+        },
+        "history": [],
+        "redoStack": []
+      }
+    ],
+    "totalMarks": 100,
+    "status": "final",
+    "createdAt": "2026-09-05T18:57:20.350Z",
+    "updatedAt": "2026-09-05T18:57:20.350Z"
+  }
+}

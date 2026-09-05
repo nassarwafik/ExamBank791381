@@ -1,0 +1,589 @@
+{
+  "libraryItemId": "T17",
+  "title": "Trunk وdot1Q وRouter-on-a-Stick",
+  "category": "infra",
+  "description": "Access وTrunk وdot1Q والواجهات الفرعية والتوجيه بين VLANs.",
+  "tags": [
+    "Trunk",
+    "dot1Q",
+    "Router-on-a-Stick"
+  ],
+  "questionCount": 10,
+  "totalMarks": 100,
+  "pageRange": "143–154",
+  "parserFamily": "t-series-v1",
+  "conversionStatus": "ready",
+  "publishable": true,
+  "autoGradableCount": 10,
+  "manualReviewCount": 0,
+  "libraryVersion": 1,
+  "sourceSha": "d6594f9b462288d3be2dc152a5ed485cb64a933c8b2f9c2a3cc6e21889996b4c",
+  "contentHash": "7005b6223ecf6d994c691cd2eac8c2f83e5a92c94c692039ead2efc620597360",
+  "convertedAt": "2026-09-05T18:57:19.063Z",
+  "source": {
+    "repository": "Book791381",
+    "sourceFile": "T17.html"
+  },
+  "schemaVersion": 1,
+  "examSnapshot": {
+    "schemaVersion": 1,
+    "examId": "LIB-T17",
+    "title": "Trunk وdot1Q وRouter-on-a-Stick",
+    "questions": [
+      {
+        "examQuestionId": "LIB-T17-Q01",
+        "origin": "imported",
+        "sourceId": "LIB-T17",
+        "sourceQuestionId": "1",
+        "section": "BASIC",
+        "topic": "OTHER_NETWORKING",
+        "secondaryTopics": [],
+        "difficulty": 2,
+        "difficultyLabel": "",
+        "familyKey": "LIB-T17-Q01",
+        "hasCLI": false,
+        "requiresCalculation": false,
+        "presentationType": "multipleChoice",
+        "marks": 10,
+        "locked": false,
+        "text": "ما هو منفذ Trunk؟",
+        "textHtml": "",
+        "options": [
+          {
+            "value": "0",
+            "text": "منفذ ينقل عدة VLANs عبر وصلة واحدة"
+          },
+          {
+            "value": "1",
+            "text": "منفذ لجهاز نهائي داخل VLAN واحدة"
+          },
+          {
+            "value": "2",
+            "text": "منفذ Console فقط"
+          },
+          {
+            "value": "3",
+            "text": "منفذ لتوزيع DHCP"
+          }
+        ],
+        "fields": [],
+        "parts": [],
+        "answer": {
+          "correctOptionIndex": 0
+        },
+        "hint": "Trunk ينقل حركة عدة VLANs عبر الكابل نفسه بين أجهزة الشبكة.",
+        "teacherNote": "",
+        "aiInstruction": "",
+        "wasModified": false,
+        "image": {
+          "exists": false,
+          "visible": false,
+          "origin": null,
+          "assets": [],
+          "prompt": null
+        },
+        "history": [],
+        "redoStack": []
+      },
+      {
+        "examQuestionId": "LIB-T17-Q02",
+        "origin": "imported",
+        "sourceId": "LIB-T17",
+        "sourceQuestionId": "2",
+        "section": "BASIC",
+        "topic": "OTHER_NETWORKING",
+        "secondaryTopics": [],
+        "difficulty": 2,
+        "difficultyLabel": "",
+        "familyKey": "LIB-T17-Q02",
+        "hasCLI": false,
+        "requiresCalculation": false,
+        "presentationType": "multipleChoice",
+        "marks": 10,
+        "locked": false,
+        "text": "ما الفرق الصحيح بين Access وTrunk؟",
+        "textHtml": "",
+        "options": [
+          {
+            "value": "0",
+            "text": "Access يحمل عدة VLANs وTrunk واحدة"
+          },
+          {
+            "value": "1",
+            "text": "Access غالبًا لـVLAN واحدة وTrunk لعدة VLANs"
+          },
+          {
+            "value": "2",
+            "text": "كلاهما للبريد الإلكتروني"
+          },
+          {
+            "value": "3",
+            "text": "Trunk لا يعمل بين السويتشات"
+          }
+        ],
+        "fields": [],
+        "parts": [],
+        "answer": {
+          "correctOptionIndex": 1
+        },
+        "hint": "Access يُستخدم غالبًا لجهاز نهائي ضمن VLAN واحدة، بينما Trunk ينقل عدة VLANs.",
+        "teacherNote": "",
+        "aiInstruction": "",
+        "wasModified": false,
+        "image": {
+          "exists": false,
+          "visible": false,
+          "origin": null,
+          "assets": [],
+          "prompt": null
+        },
+        "history": [],
+        "redoStack": []
+      },
+      {
+        "examQuestionId": "LIB-T17-Q03",
+        "origin": "imported",
+        "sourceId": "LIB-T17",
+        "sourceQuestionId": "3",
+        "section": "BASIC",
+        "topic": "OTHER_NETWORKING",
+        "secondaryTopics": [],
+        "difficulty": 2,
+        "difficultyLabel": "",
+        "familyKey": "LIB-T17-Q03",
+        "hasCLI": false,
+        "requiresCalculation": false,
+        "presentationType": "multipleChoice",
+        "marks": 10,
+        "locked": false,
+        "text": "ما وظيفة dot1Q؟",
+        "textHtml": "",
+        "options": [
+          {
+            "value": "0",
+            "text": "توزيع عناوين IP"
+          },
+          {
+            "value": "1",
+            "text": "منع كل Broadcast"
+          },
+          {
+            "value": "2",
+            "text": "إضافة Tag يحدد رقم VLAN داخل الحزمة"
+          },
+          {
+            "value": "3",
+            "text": "عرض جدول MAC"
+          }
+        ],
+        "fields": [],
+        "parts": [],
+        "answer": {
+          "correctOptionIndex": 2
+        },
+        "hint": "dot1Q يضيف Tag يحمل رقم VLAN حتى يمكن تمييز الحزم على وصلة Trunk.",
+        "teacherNote": "",
+        "aiInstruction": "",
+        "wasModified": false,
+        "image": {
+          "exists": false,
+          "visible": false,
+          "origin": null,
+          "assets": [],
+          "prompt": null
+        },
+        "history": [],
+        "redoStack": []
+      },
+      {
+        "examQuestionId": "LIB-T17-Q04",
+        "origin": "imported",
+        "sourceId": "LIB-T17",
+        "sourceQuestionId": "4",
+        "section": "BASIC",
+        "topic": "OTHER_NETWORKING",
+        "secondaryTopics": [],
+        "difficulty": 2,
+        "difficultyLabel": "",
+        "familyKey": "LIB-T17-Q04",
+        "hasCLI": false,
+        "requiresCalculation": false,
+        "presentationType": "multipleChoice",
+        "marks": 10,
+        "locked": false,
+        "text": "أي أمر يحول منفذ السويتش إلى Trunk؟",
+        "textHtml": "",
+        "options": [
+          {
+            "value": "0",
+            "text": "switchport mode access"
+          },
+          {
+            "value": "1",
+            "text": "switchport access vlan 10"
+          },
+          {
+            "value": "2",
+            "text": "encapsulation dot1Q 10"
+          },
+          {
+            "value": "3",
+            "text": "switchport mode trunk"
+          }
+        ],
+        "fields": [],
+        "parts": [],
+        "answer": {
+          "correctOptionIndex": 3
+        },
+        "hint": "الأمر switchport mode trunk يحول المنفذ إلى وصلة Trunk.",
+        "teacherNote": "",
+        "aiInstruction": "",
+        "wasModified": false,
+        "image": {
+          "exists": false,
+          "visible": false,
+          "origin": null,
+          "assets": [],
+          "prompt": null
+        },
+        "history": [],
+        "redoStack": []
+      },
+      {
+        "examQuestionId": "LIB-T17-Q05",
+        "origin": "imported",
+        "sourceId": "LIB-T17",
+        "sourceQuestionId": "5",
+        "section": "BASIC",
+        "topic": "OTHER_NETWORKING",
+        "secondaryTopics": [],
+        "difficulty": 2,
+        "difficultyLabel": "",
+        "familyKey": "LIB-T17-Q05",
+        "hasCLI": false,
+        "requiresCalculation": false,
+        "presentationType": "multipleChoice",
+        "marks": 10,
+        "locked": false,
+        "text": "ماذا يفعل الأمر switchport trunk allowed vlan 10,20,30؟",
+        "textHtml": "",
+        "options": [
+          {
+            "value": "0",
+            "text": "يسمح فقط لـVLAN 10 و20 و30 بالمرور على Trunk"
+          },
+          {
+            "value": "1",
+            "text": "ينشئ ثلاث واجهات راوتر"
+          },
+          {
+            "value": "2",
+            "text": "يحذف VLAN 10 و20 و30"
+          },
+          {
+            "value": "3",
+            "text": "يحول المنفذ إلى Access"
+          }
+        ],
+        "fields": [],
+        "parts": [],
+        "answer": {
+          "correctOptionIndex": 0
+        },
+        "hint": "هذا الأمر يحدد VLANs المسموح لها بالمرور عبر وصلة Trunk.",
+        "teacherNote": "",
+        "aiInstruction": "",
+        "wasModified": false,
+        "image": {
+          "exists": false,
+          "visible": false,
+          "origin": null,
+          "assets": [],
+          "prompt": null
+        },
+        "history": [],
+        "redoStack": []
+      },
+      {
+        "examQuestionId": "LIB-T17-Q06",
+        "origin": "imported",
+        "sourceId": "LIB-T17",
+        "sourceQuestionId": "6",
+        "section": "BASIC",
+        "topic": "OTHER_NETWORKING",
+        "secondaryTopics": [],
+        "difficulty": 2,
+        "difficultyLabel": "",
+        "familyKey": "LIB-T17-Q06",
+        "hasCLI": false,
+        "requiresCalculation": false,
+        "presentationType": "multipleChoice",
+        "marks": 10,
+        "locked": false,
+        "text": "ما الهدف من Router-on-a-Stick؟",
+        "textHtml": "",
+        "options": [
+          {
+            "value": "0",
+            "text": "إنشاء كلمات مرور للسويتش"
+          },
+          {
+            "value": "1",
+            "text": "التوجيه بين VLANs مختلفة باستعمال راوتر واحد"
+          },
+          {
+            "value": "2",
+            "text": "استبدال Switch بجهاز Hub"
+          },
+          {
+            "value": "3",
+            "text": "إلغاء عناوين IP"
+          }
+        ],
+        "fields": [],
+        "parts": [],
+        "answer": {
+          "correctOptionIndex": 1
+        },
+        "hint": "Router-on-a-Stick يسمح بالتوجيه بين VLANs مختلفة عبر منفذ راوتر واحد ووصلة Trunk.",
+        "teacherNote": "",
+        "aiInstruction": "",
+        "wasModified": false,
+        "image": {
+          "exists": false,
+          "visible": false,
+          "origin": null,
+          "assets": [],
+          "prompt": null
+        },
+        "history": [],
+        "redoStack": []
+      },
+      {
+        "examQuestionId": "LIB-T17-Q07",
+        "origin": "imported",
+        "sourceId": "LIB-T17",
+        "sourceQuestionId": "7",
+        "section": "BASIC",
+        "topic": "OTHER_NETWORKING",
+        "secondaryTopics": [],
+        "difficulty": 2,
+        "difficultyLabel": "",
+        "familyKey": "LIB-T17-Q07",
+        "hasCLI": false,
+        "requiresCalculation": false,
+        "presentationType": "multipleChoice",
+        "marks": 10,
+        "locked": false,
+        "text": "لماذا نستخدم Subinterfaces على منفذ الراوتر؟",
+        "textHtml": "",
+        "options": [
+          {
+            "value": "0",
+            "text": "لزيادة عدد الكابلات"
+          },
+          {
+            "value": "1",
+            "text": "لإلغاء VLAN"
+          },
+          {
+            "value": "2",
+            "text": "لإنشاء واجهة منطقية مستقلة لكل VLAN"
+          },
+          {
+            "value": "3",
+            "text": "لمنع Trunk"
+          }
+        ],
+        "fields": [],
+        "parts": [],
+        "answer": {
+          "correctOptionIndex": 2
+        },
+        "hint": "ننشئ Subinterface لكل VLAN حتى تحصل على تغليف dot1Q وعنوان Gateway خاص بها.",
+        "teacherNote": "",
+        "aiInstruction": "",
+        "wasModified": false,
+        "image": {
+          "exists": false,
+          "visible": false,
+          "origin": null,
+          "assets": [],
+          "prompt": null
+        },
+        "history": [],
+        "redoStack": []
+      },
+      {
+        "examQuestionId": "LIB-T17-Q08",
+        "origin": "imported",
+        "sourceId": "LIB-T17",
+        "sourceQuestionId": "8",
+        "section": "BASIC",
+        "topic": "OTHER_NETWORKING",
+        "secondaryTopics": [],
+        "difficulty": 2,
+        "difficultyLabel": "",
+        "familyKey": "LIB-T17-Q08",
+        "hasCLI": false,
+        "requiresCalculation": false,
+        "presentationType": "multipleChoice",
+        "marks": 10,
+        "locked": false,
+        "text": "أي أمر يختار Subinterface الخاصة بـVLAN 20 على المنفذ G0/0؟",
+        "textHtml": "",
+        "options": [
+          {
+            "value": "0",
+            "text": "interface vlan 20"
+          },
+          {
+            "value": "1",
+            "text": "interface g0/20"
+          },
+          {
+            "value": "2",
+            "text": "switchport g0/0.20"
+          },
+          {
+            "value": "3",
+            "text": "interface g0/0.20"
+          }
+        ],
+        "fields": [],
+        "parts": [],
+        "answer": {
+          "correctOptionIndex": 3
+        },
+        "hint": "نستعمل interface g0/0.20 لإنشاء أو اختيار الواجهة الفرعية الخاصة بـVLAN 20.",
+        "teacherNote": "",
+        "aiInstruction": "",
+        "wasModified": false,
+        "image": {
+          "exists": false,
+          "visible": false,
+          "origin": null,
+          "assets": [],
+          "prompt": null
+        },
+        "history": [],
+        "redoStack": []
+      },
+      {
+        "examQuestionId": "LIB-T17-Q09",
+        "origin": "imported",
+        "sourceId": "LIB-T17",
+        "sourceQuestionId": "9",
+        "section": "BASIC",
+        "topic": "OTHER_NETWORKING",
+        "secondaryTopics": [],
+        "difficulty": 2,
+        "difficultyLabel": "",
+        "familyKey": "LIB-T17-Q09",
+        "hasCLI": false,
+        "requiresCalculation": false,
+        "presentationType": "multipleChoice",
+        "marks": 10,
+        "locked": false,
+        "text": "ما الأمر الصحيح لربط Subinterface بـVLAN 20؟",
+        "textHtml": "",
+        "options": [
+          {
+            "value": "0",
+            "text": "encapsulation dot1Q 20"
+          },
+          {
+            "value": "1",
+            "text": "switchport access vlan 20"
+          },
+          {
+            "value": "2",
+            "text": "vtp domain 20"
+          },
+          {
+            "value": "3",
+            "text": "ip helper-address 20"
+          }
+        ],
+        "fields": [],
+        "parts": [],
+        "answer": {
+          "correctOptionIndex": 0
+        },
+        "hint": "داخل Subinterface نكتب encapsulation dot1Q 20 لتحديد رقم VLAN.",
+        "teacherNote": "",
+        "aiInstruction": "",
+        "wasModified": false,
+        "image": {
+          "exists": false,
+          "visible": false,
+          "origin": null,
+          "assets": [],
+          "prompt": null
+        },
+        "history": [],
+        "redoStack": []
+      },
+      {
+        "examQuestionId": "LIB-T17-Q10",
+        "origin": "imported",
+        "sourceId": "LIB-T17",
+        "sourceQuestionId": "10",
+        "section": "BASIC",
+        "topic": "OTHER_NETWORKING",
+        "secondaryTopics": [],
+        "difficulty": 2,
+        "difficultyLabel": "",
+        "familyKey": "LIB-T17-Q10",
+        "hasCLI": false,
+        "requiresCalculation": false,
+        "presentationType": "multipleChoice",
+        "marks": 10,
+        "locked": false,
+        "text": "أي مجموعة أوامر تُعد Subinterface لـVLAN 30 وتجعل 192.168.30.254 بوابة لها؟",
+        "textHtml": "",
+        "options": [
+          {
+            "value": "0",
+            "text": "interface g0/0.20 / encapsulation dot1Q 30 / ip address 192.168.20.254 255.255.255.0"
+          },
+          {
+            "value": "1",
+            "text": "interface g0/0.30 / encapsulation dot1Q 30 / ip address 192.168.30.254 255.255.255.0"
+          },
+          {
+            "value": "2",
+            "text": "interface vlan 30 / switchport mode access / ip address 192.168.30.254"
+          },
+          {
+            "value": "3",
+            "text": "interface g0/0 / switchport access vlan 30 / vtp mode server"
+          }
+        ],
+        "fields": [],
+        "parts": [],
+        "answer": {
+          "correctOptionIndex": 1
+        },
+        "hint": "لكل VLAN نستخدم Subinterface تحمل رقمها، وencapsulation dot1Q مطابقًا، وعنوان Gateway من شبكتها.",
+        "teacherNote": "",
+        "aiInstruction": "",
+        "wasModified": false,
+        "image": {
+          "exists": false,
+          "visible": false,
+          "origin": null,
+          "assets": [],
+          "prompt": null
+        },
+        "history": [],
+        "redoStack": []
+      }
+    ],
+    "totalMarks": 100,
+    "status": "final",
+    "createdAt": "2026-09-05T18:57:20.345Z",
+    "updatedAt": "2026-09-05T18:57:20.345Z"
+  }
+}

@@ -11,7 +11,9 @@
 //     <div class="tags"><span class="tag">أساسيات</span><span class="tag">LAN / WAN</span></div>
 //     <a class="open-btn" href="T01.html">فتح T01</a>
 //   </article>
-const ARTICLE_REGEX = /<article class="card item-card" data-group="([^"]*)"[^>]*>([\s\S]*?)<\/article>/g;
+// Matches both training cards (class="card item-card") and final-exam cards
+// (class="card exam-card item-card") - both carry the same metadata shape (code/title/description/tags).
+const ARTICLE_REGEX = /<article class="card (?:exam-card )?item-card" data-group="([^"]*)"[^>]*>([\s\S]*?)<\/article>/g;
 const CODE_REGEX = /<div class="code[^"]*">([^<]*)<\/div>/;
 const TITLE_REGEX = /<h3>([\s\S]*?)<\/h3>/;
 const DESCRIPTION_REGEX = /<\/div>\s*<p>([\s\S]*?)<\/p>/;

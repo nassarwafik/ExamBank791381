@@ -1,0 +1,589 @@
+{
+  "libraryItemId": "T03",
+  "title": "عناوين IPv4 وصلاحية العنوان",
+  "category": "foundation",
+  "description": "بنية عنوان IPv4، صلاحية العناوين، Localhost وAPIPA.",
+  "tags": [
+    "IPv4",
+    "APIPA",
+    "Localhost"
+  ],
+  "questionCount": 10,
+  "totalMarks": 100,
+  "pageRange": "23–27",
+  "parserFamily": "t-series-v1",
+  "conversionStatus": "ready",
+  "publishable": true,
+  "autoGradableCount": 10,
+  "manualReviewCount": 0,
+  "libraryVersion": 1,
+  "sourceSha": "b5f8246794eaf788e598b602ea6c0c3081051894f1b9bc6f997378dccb9a0f8b",
+  "contentHash": "b35f0656f99dd7843594aab3311e22c1776942b58cfe8886e3461ea83a89bad1",
+  "convertedAt": "2026-09-05T18:57:19.063Z",
+  "source": {
+    "repository": "Book791381",
+    "sourceFile": "T03.html"
+  },
+  "schemaVersion": 1,
+  "examSnapshot": {
+    "schemaVersion": 1,
+    "examId": "LIB-T03",
+    "title": "عناوين IPv4 وصلاحية العنوان",
+    "questions": [
+      {
+        "examQuestionId": "LIB-T03-Q01",
+        "origin": "imported",
+        "sourceId": "LIB-T03",
+        "sourceQuestionId": "1",
+        "section": "BASIC",
+        "topic": "OTHER_NETWORKING",
+        "secondaryTopics": [],
+        "difficulty": 2,
+        "difficultyLabel": "",
+        "familyKey": "LIB-T03-Q01",
+        "hasCLI": false,
+        "requiresCalculation": false,
+        "presentationType": "multipleChoice",
+        "marks": 10,
+        "locked": false,
+        "text": "ما هو عنوان IP؟",
+        "textHtml": "",
+        "options": [
+          {
+            "value": "0",
+            "text": "رقم خاص يميّز الجهاز على الشبكة"
+          },
+          {
+            "value": "1",
+            "text": "اسم المستخدم في الحاسوب"
+          },
+          {
+            "value": "2",
+            "text": "نوع من أنواع الكوابل"
+          },
+          {
+            "value": "3",
+            "text": "برنامج لفحص الفيروسات"
+          }
+        ],
+        "fields": [],
+        "parts": [],
+        "answer": {
+          "correctOptionIndex": 0
+        },
+        "hint": "عنوان IP هو رقم خاص لكل جهاز على الشبكة، ويساعد على وصول البيانات إلى الجهاز الصحيح.",
+        "teacherNote": "",
+        "aiInstruction": "",
+        "wasModified": false,
+        "image": {
+          "exists": false,
+          "visible": false,
+          "origin": null,
+          "assets": [],
+          "prompt": null
+        },
+        "history": [],
+        "redoStack": []
+      },
+      {
+        "examQuestionId": "LIB-T03-Q02",
+        "origin": "imported",
+        "sourceId": "LIB-T03",
+        "sourceQuestionId": "2",
+        "section": "BASIC",
+        "topic": "OTHER_NETWORKING",
+        "secondaryTopics": [],
+        "difficulty": 2,
+        "difficultyLabel": "",
+        "familyKey": "LIB-T03-Q02",
+        "hasCLI": false,
+        "requiresCalculation": false,
+        "presentationType": "multipleChoice",
+        "marks": 10,
+        "locked": false,
+        "text": "ما الوظيفة الأساسية لعنوان IP؟",
+        "textHtml": "",
+        "options": [
+          {
+            "value": "0",
+            "text": "زيادة سرعة الطباعة"
+          },
+          {
+            "value": "1",
+            "text": "تحديد الجهاز ومساعدته على إرسال البيانات واستقبالها"
+          },
+          {
+            "value": "2",
+            "text": "تغيير اسم الشبكة"
+          },
+          {
+            "value": "3",
+            "text": "تشفير كل الملفات تلقائيًا"
+          }
+        ],
+        "fields": [],
+        "parts": [],
+        "answer": {
+          "correctOptionIndex": 1
+        },
+        "hint": "عنوان IP يحدد موقع الجهاز على الشبكة ويساعد في إرسال البيانات واستقبالها.",
+        "teacherNote": "",
+        "aiInstruction": "",
+        "wasModified": false,
+        "image": {
+          "exists": false,
+          "visible": false,
+          "origin": null,
+          "assets": [],
+          "prompt": null
+        },
+        "history": [],
+        "redoStack": []
+      },
+      {
+        "examQuestionId": "LIB-T03-Q03",
+        "origin": "imported",
+        "sourceId": "LIB-T03",
+        "sourceQuestionId": "3",
+        "section": "BASIC",
+        "topic": "OTHER_NETWORKING",
+        "secondaryTopics": [],
+        "difficulty": 2,
+        "difficultyLabel": "",
+        "familyKey": "LIB-T03-Q03",
+        "hasCLI": false,
+        "requiresCalculation": false,
+        "presentationType": "multipleChoice",
+        "marks": 10,
+        "locked": false,
+        "text": "أي عنوان من العناوين التالية هو مثال على IPv4؟",
+        "textHtml": "",
+        "options": [
+          {
+            "value": "0",
+            "text": "2001:db8::1"
+          },
+          {
+            "value": "1",
+            "text": "AA-BB-CC-DD-EE-FF"
+          },
+          {
+            "value": "2",
+            "text": "192.168.1.5"
+          },
+          {
+            "value": "3",
+            "text": "www.school.com"
+          }
+        ],
+        "fields": [],
+        "parts": [],
+        "answer": {
+          "correctOptionIndex": 2
+        },
+        "hint": "عنوان IPv4 يتكوّن من أربعة أقسام رقمية، مثل 192.168.1.5.",
+        "teacherNote": "",
+        "aiInstruction": "",
+        "wasModified": false,
+        "image": {
+          "exists": false,
+          "visible": false,
+          "origin": null,
+          "assets": [],
+          "prompt": null
+        },
+        "history": [],
+        "redoStack": []
+      },
+      {
+        "examQuestionId": "LIB-T03-Q04",
+        "origin": "imported",
+        "sourceId": "LIB-T03",
+        "sourceQuestionId": "4",
+        "section": "BASIC",
+        "topic": "OTHER_NETWORKING",
+        "secondaryTopics": [],
+        "difficulty": 2,
+        "difficultyLabel": "",
+        "familyKey": "LIB-T03-Q04",
+        "hasCLI": false,
+        "requiresCalculation": false,
+        "presentationType": "multipleChoice",
+        "marks": 10,
+        "locked": false,
+        "text": "كم قسمًا Octet يتكوّن منه عنوان IPv4؟",
+        "textHtml": "",
+        "options": [
+          {
+            "value": "0",
+            "text": "قسمان"
+          },
+          {
+            "value": "1",
+            "text": "ثلاثة أقسام"
+          },
+          {
+            "value": "2",
+            "text": "خمسة أقسام"
+          },
+          {
+            "value": "3",
+            "text": "أربعة أقسام"
+          }
+        ],
+        "fields": [],
+        "parts": [],
+        "answer": {
+          "correctOptionIndex": 3
+        },
+        "hint": "يتكوّن عنوان IPv4 من أربعة أقسام تفصل بينها نقاط.",
+        "teacherNote": "",
+        "aiInstruction": "",
+        "wasModified": false,
+        "image": {
+          "exists": false,
+          "visible": false,
+          "origin": null,
+          "assets": [],
+          "prompt": null
+        },
+        "history": [],
+        "redoStack": []
+      },
+      {
+        "examQuestionId": "LIB-T03-Q05",
+        "origin": "imported",
+        "sourceId": "LIB-T03",
+        "sourceQuestionId": "5",
+        "section": "BASIC",
+        "topic": "OTHER_NETWORKING",
+        "secondaryTopics": [],
+        "difficulty": 2,
+        "difficultyLabel": "",
+        "familyKey": "LIB-T03-Q05",
+        "hasCLI": false,
+        "requiresCalculation": false,
+        "presentationType": "multipleChoice",
+        "marks": 10,
+        "locked": false,
+        "text": "ما المجال المسموح لكل قسم في عنوان IPv4؟",
+        "textHtml": "",
+        "options": [
+          {
+            "value": "0",
+            "text": "من 0 إلى 255"
+          },
+          {
+            "value": "1",
+            "text": "من 1 إلى 100"
+          },
+          {
+            "value": "2",
+            "text": "من 0 إلى 999"
+          },
+          {
+            "value": "3",
+            "text": "من 1 إلى 16"
+          }
+        ],
+        "fields": [],
+        "parts": [],
+        "answer": {
+          "correctOptionIndex": 0
+        },
+        "hint": "كل قسم في عنوان IPv4 يكون رقمًا من 0 إلى 255.",
+        "teacherNote": "",
+        "aiInstruction": "",
+        "wasModified": false,
+        "image": {
+          "exists": false,
+          "visible": false,
+          "origin": null,
+          "assets": [],
+          "prompt": null
+        },
+        "history": [],
+        "redoStack": []
+      },
+      {
+        "examQuestionId": "LIB-T03-Q06",
+        "origin": "imported",
+        "sourceId": "LIB-T03",
+        "sourceQuestionId": "6",
+        "section": "BASIC",
+        "topic": "OTHER_NETWORKING",
+        "secondaryTopics": [],
+        "difficulty": 2,
+        "difficultyLabel": "",
+        "familyKey": "LIB-T03-Q06",
+        "hasCLI": false,
+        "requiresCalculation": false,
+        "presentationType": "multipleChoice",
+        "marks": 10,
+        "locked": false,
+        "text": "أي عنوان من العناوين التالية صالح وفق القواعد المعروضة في الكتاب؟",
+        "textHtml": "",
+        "options": [
+          {
+            "value": "0",
+            "text": "192.168.300.10"
+          },
+          {
+            "value": "1",
+            "text": "192.168.10.1"
+          },
+          {
+            "value": "2",
+            "text": "127.10.10.1"
+          },
+          {
+            "value": "3",
+            "text": "169.254.10.20"
+          }
+        ],
+        "fields": [],
+        "parts": [],
+        "answer": {
+          "correctOptionIndex": 1
+        },
+        "hint": "العنوان 192.168.10.1 يحتوي أربعة أقسام صحيحة ولا يبدأ بالمجالات المستثناة المذكورة في الكتاب.",
+        "teacherNote": "",
+        "aiInstruction": "",
+        "wasModified": false,
+        "image": {
+          "exists": false,
+          "visible": false,
+          "origin": null,
+          "assets": [],
+          "prompt": null
+        },
+        "history": [],
+        "redoStack": []
+      },
+      {
+        "examQuestionId": "LIB-T03-Q07",
+        "origin": "imported",
+        "sourceId": "LIB-T03",
+        "sourceQuestionId": "7",
+        "section": "BASIC",
+        "topic": "OTHER_NETWORKING",
+        "secondaryTopics": [],
+        "difficulty": 2,
+        "difficultyLabel": "",
+        "familyKey": "LIB-T03-Q07",
+        "hasCLI": false,
+        "requiresCalculation": false,
+        "presentationType": "multipleChoice",
+        "marks": 10,
+        "locked": false,
+        "text": "لماذا العنوان 192.168.300.10 غير صالح؟",
+        "textHtml": "",
+        "options": [
+          {
+            "value": "0",
+            "text": "لأنه يبدأ بالعدد 192"
+          },
+          {
+            "value": "1",
+            "text": "لأنه يحتوي أربعة أقسام"
+          },
+          {
+            "value": "2",
+            "text": "لأن القسم 300 أكبر من 255"
+          },
+          {
+            "value": "3",
+            "text": "لأنه عنوان خاص"
+          }
+        ],
+        "fields": [],
+        "parts": [],
+        "answer": {
+          "correctOptionIndex": 2
+        },
+        "hint": "أكبر قيمة مسموحة في أي قسم من عنوان IPv4 هي 255، ولذلك القيمة 300 غير صالحة.",
+        "teacherNote": "",
+        "aiInstruction": "",
+        "wasModified": false,
+        "image": {
+          "exists": false,
+          "visible": false,
+          "origin": null,
+          "assets": [],
+          "prompt": null
+        },
+        "history": [],
+        "redoStack": []
+      },
+      {
+        "examQuestionId": "LIB-T03-Q08",
+        "origin": "imported",
+        "sourceId": "LIB-T03",
+        "sourceQuestionId": "8",
+        "section": "BASIC",
+        "topic": "OTHER_NETWORKING",
+        "secondaryTopics": [],
+        "difficulty": 2,
+        "difficultyLabel": "",
+        "familyKey": "LIB-T03-Q08",
+        "hasCLI": false,
+        "requiresCalculation": false,
+        "presentationType": "multipleChoice",
+        "marks": 10,
+        "locked": false,
+        "text": "أي عنوان يبدأ بمجال Localhost المذكور في الكتاب؟",
+        "textHtml": "",
+        "options": [
+          {
+            "value": "0",
+            "text": "10.0.0.1"
+          },
+          {
+            "value": "1",
+            "text": "192.168.1.1"
+          },
+          {
+            "value": "2",
+            "text": "169.254.1.1"
+          },
+          {
+            "value": "3",
+            "text": "127.11.10.1"
+          }
+        ],
+        "fields": [],
+        "parts": [],
+        "answer": {
+          "correctOptionIndex": 3
+        },
+        "hint": "العناوين التي تبدأ بـ127 مرتبطة بـLocalhost، ولذلك لا تُعطى كعنوان عادي لجهاز على الشبكة.",
+        "teacherNote": "",
+        "aiInstruction": "",
+        "wasModified": false,
+        "image": {
+          "exists": false,
+          "visible": false,
+          "origin": null,
+          "assets": [],
+          "prompt": null
+        },
+        "history": [],
+        "redoStack": []
+      },
+      {
+        "examQuestionId": "LIB-T03-Q09",
+        "origin": "imported",
+        "sourceId": "LIB-T03",
+        "sourceQuestionId": "9",
+        "section": "BASIC",
+        "topic": "OTHER_NETWORKING",
+        "secondaryTopics": [],
+        "difficulty": 2,
+        "difficultyLabel": "",
+        "familyKey": "LIB-T03-Q09",
+        "hasCLI": false,
+        "requiresCalculation": false,
+        "presentationType": "multipleChoice",
+        "marks": 10,
+        "locked": false,
+        "text": "أي عنوان من العناوين التالية يقع ضمن مجال APIPA؟",
+        "textHtml": "",
+        "options": [
+          {
+            "value": "0",
+            "text": "169.254.10.234"
+          },
+          {
+            "value": "1",
+            "text": "172.16.10.10"
+          },
+          {
+            "value": "2",
+            "text": "192.168.10.10"
+          },
+          {
+            "value": "3",
+            "text": "8.8.8.8"
+          }
+        ],
+        "fields": [],
+        "parts": [],
+        "answer": {
+          "correctOptionIndex": 0
+        },
+        "hint": "مجال APIPA يبدأ بـ169.254، مثل 169.254.10.234.",
+        "teacherNote": "",
+        "aiInstruction": "",
+        "wasModified": false,
+        "image": {
+          "exists": false,
+          "visible": false,
+          "origin": null,
+          "assets": [],
+          "prompt": null
+        },
+        "history": [],
+        "redoStack": []
+      },
+      {
+        "examQuestionId": "LIB-T03-Q10",
+        "origin": "imported",
+        "sourceId": "LIB-T03",
+        "sourceQuestionId": "10",
+        "section": "BASIC",
+        "topic": "OTHER_NETWORKING",
+        "secondaryTopics": [],
+        "difficulty": 2,
+        "difficultyLabel": "",
+        "familyKey": "LIB-T03-Q10",
+        "hasCLI": false,
+        "requiresCalculation": false,
+        "presentationType": "multipleChoice",
+        "marks": 10,
+        "locked": false,
+        "text": "يريد فني إعطاء حاسوب عنوانًا صالحًا. أي عنوان يختار؟",
+        "textHtml": "",
+        "options": [
+          {
+            "value": "0",
+            "text": "192.168.10.255"
+          },
+          {
+            "value": "1",
+            "text": "192.255.10.10"
+          },
+          {
+            "value": "2",
+            "text": "127.1.1.1"
+          },
+          {
+            "value": "3",
+            "text": "169.254.20.5"
+          }
+        ],
+        "fields": [],
+        "parts": [],
+        "answer": {
+          "correctOptionIndex": 1
+        },
+        "hint": "وفق القواعد المعروضة في الكتاب، العنوان 192.255.10.10 صالح، بينما بقية الخيارات تنتهي بـ255 أو تبدأ بمجال Localhost أو APIPA.",
+        "teacherNote": "",
+        "aiInstruction": "",
+        "wasModified": false,
+        "image": {
+          "exists": false,
+          "visible": false,
+          "origin": null,
+          "assets": [],
+          "prompt": null
+        },
+        "history": [],
+        "redoStack": []
+      }
+    ],
+    "totalMarks": 100,
+    "status": "final",
+    "createdAt": "2026-09-05T18:57:20.309Z",
+    "updatedAt": "2026-09-05T18:57:20.309Z"
+  }
+}

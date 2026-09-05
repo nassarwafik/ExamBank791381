@@ -1,0 +1,2157 @@
+{
+  "libraryItemId": "F01",
+  "title": "نموذج A — 2025",
+  "category": "final",
+  "description": "نموذج تمهيدي إلى متوسط يراجع الأساسيات وعناوين IP والبنى التحتية.",
+  "tags": [
+    "مدرسي",
+    "تمهيدي–متوسط",
+    "تفاعلي"
+  ],
+  "questionCount": 34,
+  "totalMarks": 100,
+  "pageRange": "",
+  "parserFamily": "f-dom-qcard-v1",
+  "conversionStatus": "needs_review",
+  "publishable": false,
+  "autoGradableCount": 30,
+  "manualReviewCount": 4,
+  "libraryVersion": 1,
+  "sourceSha": "1ee220d9c7192a42897c00090ee801c624b7b8c274356ebd07fc9ae90fc8eaa5",
+  "contentHash": "c6ce200bd497f9f758017d5d8cdd68c95fc43762b27200d5b1fa0558795fb82f",
+  "convertedAt": "2026-09-05T18:57:19.063Z",
+  "source": {
+    "repository": "Book791381",
+    "sourceFile": "F01.html"
+  },
+  "schemaVersion": 1,
+  "examSnapshot": {
+    "schemaVersion": 1,
+    "examId": "LIB-F01",
+    "title": "نموذج A — 2025",
+    "questions": [
+      {
+        "examQuestionId": "LIB-F01-Q01",
+        "origin": "imported",
+        "sourceId": "LIB-F01",
+        "sourceQuestionId": "q1",
+        "section": "BASIC",
+        "topic": "OTHER_NETWORKING",
+        "secondaryTopics": [],
+        "difficulty": 2,
+        "difficultyLabel": "",
+        "familyKey": "LIB-F01-Q01",
+        "hasCLI": false,
+        "requiresCalculation": false,
+        "presentationType": "multipleChoice",
+        "marks": 2,
+        "locked": false,
+        "text": "ما هو عنوان الشبكة (Network Address) للعنوان 192.168.10.33/24 ؟",
+        "textHtml": "",
+        "options": [
+          {
+            "value": "0",
+            "text": "192.168.10.0"
+          },
+          {
+            "value": "1",
+            "text": "192.168.0.0"
+          },
+          {
+            "value": "2",
+            "text": "192.168.10.1"
+          },
+          {
+            "value": "3",
+            "text": "255.255.255.0"
+          }
+        ],
+        "fields": [],
+        "parts": [],
+        "answer": {
+          "correctOptionIndex": 0
+        },
+        "hint": "",
+        "teacherNote": "",
+        "aiInstruction": "",
+        "wasModified": false,
+        "image": {
+          "exists": false,
+          "visible": false,
+          "origin": null,
+          "assets": [],
+          "prompt": null
+        },
+        "history": [],
+        "redoStack": []
+      },
+      {
+        "examQuestionId": "LIB-F01-Q02",
+        "origin": "imported",
+        "sourceId": "LIB-F01",
+        "sourceQuestionId": "q2",
+        "section": "BASIC",
+        "topic": "OTHER_NETWORKING",
+        "secondaryTopics": [],
+        "difficulty": 2,
+        "difficultyLabel": "",
+        "familyKey": "LIB-F01-Q02",
+        "hasCLI": false,
+        "requiresCalculation": false,
+        "presentationType": "multipleChoice",
+        "marks": 2,
+        "locked": false,
+        "text": "ما هو الغرض الأساسي من بروتوكول DHCP في الشبكة؟",
+        "textHtml": "",
+        "options": [
+          {
+            "value": "0",
+            "text": "لتشفير حزم البيانات"
+          },
+          {
+            "value": "1",
+            "text": "لتخصيص عناوين IP ديناميكية للأجهزة"
+          },
+          {
+            "value": "2",
+            "text": "لتوجيه الحزم بين شبكات مختلفة"
+          },
+          {
+            "value": "3",
+            "text": "لتصفية حركة الشبكة بناءً على عناوين IP"
+          }
+        ],
+        "fields": [],
+        "parts": [],
+        "answer": {
+          "correctOptionIndex": 1
+        },
+        "hint": "",
+        "teacherNote": "",
+        "aiInstruction": "",
+        "wasModified": false,
+        "image": {
+          "exists": false,
+          "visible": false,
+          "origin": null,
+          "assets": [],
+          "prompt": null
+        },
+        "history": [],
+        "redoStack": []
+      },
+      {
+        "examQuestionId": "LIB-F01-Q03",
+        "origin": "imported",
+        "sourceId": "LIB-F01",
+        "sourceQuestionId": "q3",
+        "section": "BASIC",
+        "topic": "OTHER_NETWORKING",
+        "secondaryTopics": [],
+        "difficulty": 2,
+        "difficultyLabel": "",
+        "familyKey": "LIB-F01-Q03",
+        "hasCLI": false,
+        "requiresCalculation": false,
+        "presentationType": "open",
+        "marks": 2,
+        "locked": false,
+        "text": "حوّل العدد الثنائي 11001010 إلى النظام العشري:",
+        "textHtml": "",
+        "options": [],
+        "fields": [],
+        "parts": [],
+        "answer": {
+          "text": "202"
+        },
+        "hint": "",
+        "teacherNote": "",
+        "aiInstruction": "",
+        "wasModified": false,
+        "image": {
+          "exists": false,
+          "visible": false,
+          "origin": null,
+          "assets": [],
+          "prompt": null
+        },
+        "history": [],
+        "redoStack": []
+      },
+      {
+        "examQuestionId": "LIB-F01-Q04",
+        "origin": "imported",
+        "sourceId": "LIB-F01",
+        "sourceQuestionId": "q4",
+        "section": "BASIC",
+        "topic": "OTHER_NETWORKING",
+        "secondaryTopics": [],
+        "difficulty": 2,
+        "difficultyLabel": "",
+        "familyKey": "LIB-F01-Q04",
+        "hasCLI": false,
+        "requiresCalculation": false,
+        "presentationType": "open",
+        "marks": 2,
+        "locked": false,
+        "text": "عنوان IP يتكون من بت في الإصدار الرابع (IPv4)",
+        "textHtml": "",
+        "options": [],
+        "fields": [],
+        "parts": [],
+        "answer": {
+          "text": "32"
+        },
+        "hint": "",
+        "teacherNote": "",
+        "aiInstruction": "",
+        "wasModified": false,
+        "image": {
+          "exists": false,
+          "visible": false,
+          "origin": null,
+          "assets": [],
+          "prompt": null
+        },
+        "history": [],
+        "redoStack": []
+      },
+      {
+        "examQuestionId": "LIB-F01-Q05",
+        "origin": "imported",
+        "sourceId": "LIB-F01",
+        "sourceQuestionId": "q5",
+        "section": "BASIC",
+        "topic": "OTHER_NETWORKING",
+        "secondaryTopics": [],
+        "difficulty": 2,
+        "difficultyLabel": "",
+        "familyKey": "LIB-F01-Q05",
+        "hasCLI": false,
+        "requiresCalculation": false,
+        "presentationType": "matching",
+        "marks": 4,
+        "locked": false,
+        "text": "اربط كل بروتوكول بوظيفته:\n\n| البند | الإجابة |\n| --- | --- |\n| DNS | |\n| DHCP | |\n| FTP | |\n| HTTP | |",
+        "textHtml": "",
+        "options": [],
+        "fields": [
+          {
+            "id": "q5_dns",
+            "label": "DNS",
+            "order": 0,
+            "kind": "select",
+            "options": [
+              {
+                "value": "تعيين عنوان IP تلقائية"
+              },
+              {
+                "value": "تحويل أسماء النطاق"
+              },
+              {
+                "value": "نقل الملفات"
+              },
+              {
+                "value": "تصفح المواقع"
+              }
+            ]
+          },
+          {
+            "id": "q5_dhcp",
+            "label": "DHCP",
+            "order": 1,
+            "kind": "select",
+            "options": [
+              {
+                "value": "تعيين عنوان IP تلقائية"
+              },
+              {
+                "value": "تحويل أسماء النطاق"
+              },
+              {
+                "value": "نقل الملفات"
+              },
+              {
+                "value": "تصفح المواقع"
+              }
+            ]
+          },
+          {
+            "id": "q5_ftp",
+            "label": "FTP",
+            "order": 2,
+            "kind": "select",
+            "options": [
+              {
+                "value": "تعيين عنوان IP تلقائية"
+              },
+              {
+                "value": "تحويل أسماء النطاق"
+              },
+              {
+                "value": "نقل الملفات"
+              },
+              {
+                "value": "تصفح المواقع"
+              }
+            ]
+          },
+          {
+            "id": "q5_http",
+            "label": "HTTP",
+            "order": 3,
+            "kind": "select",
+            "options": [
+              {
+                "value": "تعيين عنوان IP تلقائية"
+              },
+              {
+                "value": "تحويل أسماء النطاق"
+              },
+              {
+                "value": "نقل الملفات"
+              },
+              {
+                "value": "تصفح المواقع"
+              }
+            ]
+          }
+        ],
+        "parts": [],
+        "answer": {
+          "text": "DNS=تحويل أسماء النطاق؛ DHCP=تعيين عنوان IP تلقائية؛ FTP=نقل الملفات؛ HTTP=تصفح المواقع"
+        },
+        "hint": "",
+        "teacherNote": "",
+        "aiInstruction": "",
+        "wasModified": false,
+        "image": {
+          "exists": false,
+          "visible": false,
+          "origin": null,
+          "assets": [],
+          "prompt": null
+        },
+        "history": [],
+        "redoStack": []
+      },
+      {
+        "examQuestionId": "LIB-F01-Q06",
+        "origin": "imported",
+        "sourceId": "LIB-F01",
+        "sourceQuestionId": "q6",
+        "section": "BASIC",
+        "topic": "OTHER_NETWORKING",
+        "secondaryTopics": [],
+        "difficulty": 2,
+        "difficultyLabel": "",
+        "familyKey": "LIB-F01-Q06",
+        "hasCLI": false,
+        "requiresCalculation": false,
+        "presentationType": "multipleChoice",
+        "marks": 2,
+        "locked": false,
+        "text": "حوّل عنوان الـ IP 192.134.5.9 إلى النظام الثنائي:",
+        "textHtml": "",
+        "options": [
+          {
+            "value": "0",
+            "text": "11000000.10000110.00000101.00001001"
+          },
+          {
+            "value": "1",
+            "text": "11000000.10000101.00000101.00001001"
+          },
+          {
+            "value": "2",
+            "text": "11000000.10000110.00000100.00001001"
+          },
+          {
+            "value": "3",
+            "text": "11000000.10000110.00000101.00001010"
+          }
+        ],
+        "fields": [],
+        "parts": [],
+        "answer": {
+          "correctOptionIndex": 0
+        },
+        "hint": "",
+        "teacherNote": "",
+        "aiInstruction": "",
+        "wasModified": false,
+        "image": {
+          "exists": false,
+          "visible": false,
+          "origin": null,
+          "assets": [],
+          "prompt": null
+        },
+        "history": [],
+        "redoStack": []
+      },
+      {
+        "examQuestionId": "LIB-F01-Q07",
+        "origin": "imported",
+        "sourceId": "LIB-F01",
+        "sourceQuestionId": "q7",
+        "section": "BASIC",
+        "topic": "OTHER_NETWORKING",
+        "secondaryTopics": [],
+        "difficulty": 2,
+        "difficultyLabel": "",
+        "familyKey": "LIB-F01-Q07",
+        "hasCLI": false,
+        "requiresCalculation": false,
+        "presentationType": "matching",
+        "marks": 4,
+        "locked": false,
+        "text": "اربط الطبقة بوظيفتها في نموذج OSI:\n\n| البند | الإجابة |\n| --- | --- |\n| Physical | |\n| Network | |\n| Data Link | |\n| Application | |",
+        "textHtml": "",
+        "options": [],
+        "fields": [
+          {
+            "id": "q7_phy",
+            "label": "Physical",
+            "order": 0,
+            "kind": "select",
+            "options": [
+              {
+                "value": "طبقة التوجيه"
+              },
+              {
+                "value": "ربط البيانات"
+              },
+              {
+                "value": "الطبقة الفيزيائية"
+              },
+              {
+                "value": "التطبيقات"
+              }
+            ]
+          },
+          {
+            "id": "q7_net",
+            "label": "Network",
+            "order": 1,
+            "kind": "select",
+            "options": [
+              {
+                "value": "طبقة التوجيه"
+              },
+              {
+                "value": "ربط البيانات"
+              },
+              {
+                "value": "الطبقة الفيزيائية"
+              },
+              {
+                "value": "التطبيقات"
+              }
+            ]
+          },
+          {
+            "id": "q7_dl",
+            "label": "Data Link",
+            "order": 2,
+            "kind": "select",
+            "options": [
+              {
+                "value": "طبقة التوجيه"
+              },
+              {
+                "value": "ربط البيانات"
+              },
+              {
+                "value": "الطبقة الفيزيائية"
+              },
+              {
+                "value": "التطبيقات"
+              }
+            ]
+          },
+          {
+            "id": "q7_app",
+            "label": "Application",
+            "order": 3,
+            "kind": "select",
+            "options": [
+              {
+                "value": "طبقة التوجيه"
+              },
+              {
+                "value": "ربط البيانات"
+              },
+              {
+                "value": "الطبقة الفيزيائية"
+              },
+              {
+                "value": "التطبيقات"
+              }
+            ]
+          }
+        ],
+        "parts": [],
+        "answer": {
+          "text": "Physical=الطبقة الفيزيائية؛ Network=طبقة التوجيه؛ Data Link=ربط البيانات؛ Application=التطبيقات"
+        },
+        "hint": "",
+        "teacherNote": "",
+        "aiInstruction": "",
+        "wasModified": false,
+        "image": {
+          "exists": false,
+          "visible": false,
+          "origin": null,
+          "assets": [],
+          "prompt": null
+        },
+        "history": [],
+        "redoStack": []
+      },
+      {
+        "examQuestionId": "LIB-F01-Q08",
+        "origin": "imported",
+        "sourceId": "LIB-F01",
+        "sourceQuestionId": "q8",
+        "section": "BASIC",
+        "topic": "OTHER_NETWORKING",
+        "secondaryTopics": [],
+        "difficulty": 2,
+        "difficultyLabel": "",
+        "familyKey": "LIB-F01-Q08",
+        "hasCLI": false,
+        "requiresCalculation": false,
+        "presentationType": "matching",
+        "marks": 4,
+        "locked": false,
+        "text": "أي من العناوين التالية هو عنوان خاص وأيها عنوان عام؟\n\n| البند | الإجابة |\n| --- | --- |\n| 1 | |\n| 2 | |\n| 3 | |\n| 4 | |",
+        "textHtml": "",
+        "options": [],
+        "fields": [
+          {
+            "id": "q8_1",
+            "label": "1",
+            "order": 0,
+            "kind": "select",
+            "options": [
+              {
+                "value": "خاص"
+              },
+              {
+                "value": "عام"
+              }
+            ]
+          },
+          {
+            "id": "q8_2",
+            "label": "2",
+            "order": 1,
+            "kind": "select",
+            "options": [
+              {
+                "value": "خاص"
+              },
+              {
+                "value": "عام"
+              }
+            ]
+          },
+          {
+            "id": "q8_3",
+            "label": "3",
+            "order": 2,
+            "kind": "select",
+            "options": [
+              {
+                "value": "خاص"
+              },
+              {
+                "value": "عام"
+              }
+            ]
+          },
+          {
+            "id": "q8_4",
+            "label": "4",
+            "order": 3,
+            "kind": "select",
+            "options": [
+              {
+                "value": "خاص"
+              },
+              {
+                "value": "عام"
+              }
+            ]
+          }
+        ],
+        "parts": [],
+        "answer": {
+          "text": "1=عام؛ 2=خاص؛ 3=خاص؛ 4=عام"
+        },
+        "hint": "",
+        "teacherNote": "",
+        "aiInstruction": "",
+        "wasModified": false,
+        "image": {
+          "exists": false,
+          "visible": false,
+          "origin": null,
+          "assets": [],
+          "prompt": null
+        },
+        "history": [],
+        "redoStack": []
+      },
+      {
+        "examQuestionId": "LIB-F01-Q09",
+        "origin": "imported",
+        "sourceId": "LIB-F01",
+        "sourceQuestionId": "q9",
+        "section": "BASIC",
+        "topic": "OTHER_NETWORKING",
+        "secondaryTopics": [],
+        "difficulty": 2,
+        "difficultyLabel": "",
+        "familyKey": "LIB-F01-Q09",
+        "hasCLI": false,
+        "requiresCalculation": false,
+        "presentationType": "matching",
+        "marks": 3,
+        "locked": false,
+        "text": "اقرأ الجمل التالية وحدد إذا كانت صحيحة أم غير صحيحة:\n\n| البند | الإجابة |\n| --- | --- |\n| أ) بروتوكول TCP يوفر إرسالاً موثوقاً مع التحقق من الوصول. | |\n| ب) بروتوكول UDP يستخدم ثلاث خطوات لإنشاء الاتصال (Handshake). | |\n| ج) بروتوكول UDP يُستخدم في تطبيقات البث الصوتي والمرئي بسبب سرعته وخفته. | |",
+        "textHtml": "",
+        "options": [],
+        "fields": [
+          {
+            "id": "q9a",
+            "label": "أ) بروتوكول TCP يوفر إرسالاً موثوقاً مع التحقق من الوصول.",
+            "order": 0,
+            "kind": "select",
+            "options": [
+              {
+                "value": "صحيح"
+              },
+              {
+                "value": "غير صحيح"
+              }
+            ]
+          },
+          {
+            "id": "q9b",
+            "label": "ب) بروتوكول UDP يستخدم ثلاث خطوات لإنشاء الاتصال (Handshake).",
+            "order": 1,
+            "kind": "select",
+            "options": [
+              {
+                "value": "صحيح"
+              },
+              {
+                "value": "غير صحيح"
+              }
+            ]
+          },
+          {
+            "id": "q9c",
+            "label": "ج) بروتوكول UDP يُستخدم في تطبيقات البث الصوتي والمرئي بسبب سرعته وخفته.",
+            "order": 2,
+            "kind": "select",
+            "options": [
+              {
+                "value": "صحيح"
+              },
+              {
+                "value": "غير صحيح"
+              }
+            ]
+          }
+        ],
+        "parts": [],
+        "answer": {
+          "text": "أ) بروتوكول TCP يوفر إرسالاً موثوقاً مع التحقق من الوصول.=صحيح؛ ب) بروتوكول UDP يستخدم ثلاث خطوات لإنشاء الاتصال (Handshake).=غير صحيح؛ ج) بروتوكول UDP يُستخدم في تطبيقات البث الصوتي والمرئي بسبب سرعته وخفته.=صحيح"
+        },
+        "hint": "",
+        "teacherNote": "",
+        "aiInstruction": "",
+        "wasModified": false,
+        "image": {
+          "exists": false,
+          "visible": false,
+          "origin": null,
+          "assets": [],
+          "prompt": null
+        },
+        "history": [],
+        "redoStack": []
+      },
+      {
+        "examQuestionId": "LIB-F01-Q10",
+        "origin": "imported",
+        "sourceId": "LIB-F01",
+        "sourceQuestionId": "q10",
+        "section": "BASIC",
+        "topic": "OTHER_NETWORKING",
+        "secondaryTopics": [],
+        "difficulty": 2,
+        "difficultyLabel": "",
+        "familyKey": "LIB-F01-Q10",
+        "hasCLI": false,
+        "requiresCalculation": false,
+        "presentationType": "multipleChoice",
+        "marks": 2,
+        "locked": false,
+        "text": "أي عنوان من العناوين التالية ينتمي للفئة B؟",
+        "textHtml": "",
+        "options": [
+          {
+            "value": "0",
+            "text": "10.0.0.1"
+          },
+          {
+            "value": "1",
+            "text": "172.16.0.1"
+          },
+          {
+            "value": "2",
+            "text": "192.168.1.1"
+          },
+          {
+            "value": "3",
+            "text": "224.0.0.1"
+          }
+        ],
+        "fields": [],
+        "parts": [],
+        "answer": {
+          "correctOptionIndex": 1
+        },
+        "hint": "",
+        "teacherNote": "",
+        "aiInstruction": "",
+        "wasModified": false,
+        "image": {
+          "exists": false,
+          "visible": false,
+          "origin": null,
+          "assets": [],
+          "prompt": null
+        },
+        "history": [],
+        "redoStack": []
+      },
+      {
+        "examQuestionId": "LIB-F01-Q11",
+        "origin": "imported",
+        "sourceId": "LIB-F01",
+        "sourceQuestionId": "q11",
+        "section": "BASIC",
+        "topic": "OTHER_NETWORKING",
+        "secondaryTopics": [],
+        "difficulty": 2,
+        "difficultyLabel": "",
+        "familyKey": "LIB-F01-Q11",
+        "hasCLI": false,
+        "requiresCalculation": false,
+        "presentationType": "open",
+        "marks": 2,
+        "locked": false,
+        "text": "بالنسبة للطوبولوجيا الظاهرة في الصورة، أكمل الناقص في الجملة:",
+        "textHtml": "",
+        "options": [],
+        "fields": [],
+        "parts": [],
+        "answer": {},
+        "hint": "",
+        "teacherNote": "شكل سؤال متعدد الأجزاء غير قابل للتحويل الحتمي — يحتاج مراجعة.",
+        "aiInstruction": "",
+        "wasModified": false,
+        "image": {
+          "exists": true,
+          "visible": true,
+          "origin": "uploaded",
+          "assets": [
+            {
+              "id": "img-0",
+              "origin": "uploaded",
+              "contentType": "image/png",
+              "dataUrl": "/exam-library/assets/F01/3bdf04b82e0d539b.png"
+            }
+          ],
+          "prompt": null
+        },
+        "history": [],
+        "redoStack": []
+      },
+      {
+        "examQuestionId": "LIB-F01-Q12",
+        "origin": "imported",
+        "sourceId": "LIB-F01",
+        "sourceQuestionId": "q12",
+        "section": "BASIC",
+        "topic": "OTHER_NETWORKING",
+        "secondaryTopics": [],
+        "difficulty": 2,
+        "difficultyLabel": "",
+        "familyKey": "LIB-F01-Q12",
+        "hasCLI": false,
+        "requiresCalculation": false,
+        "presentationType": "matching",
+        "marks": 4,
+        "locked": false,
+        "text": "اربط كل بروتوكول TCP أو UDP بأنواع النقل المناسبة له:\n\n| البند | الإجابة |\n| --- | --- |\n| موثوق (Reliable) | |\n| يُستخدم للبث الحي وتطبيقات الزمن الحقيقي | |\n| يتحقق من ترتيب البيانات (Sequencing) | |\n| غير موثوق (Unreliable) | |\n| لا يستخدم Handshake | |",
+        "textHtml": "",
+        "options": [],
+        "fields": [
+          {
+            "id": "q12_1",
+            "label": "موثوق (Reliable)",
+            "order": 0,
+            "kind": "select",
+            "options": [
+              {
+                "value": "TCP"
+              },
+              {
+                "value": "UDP"
+              }
+            ]
+          },
+          {
+            "id": "q12_2",
+            "label": "يُستخدم للبث الحي وتطبيقات الزمن الحقيقي",
+            "order": 1,
+            "kind": "select",
+            "options": [
+              {
+                "value": "TCP"
+              },
+              {
+                "value": "UDP"
+              }
+            ]
+          },
+          {
+            "id": "q12_3",
+            "label": "يتحقق من ترتيب البيانات (Sequencing)",
+            "order": 2,
+            "kind": "select",
+            "options": [
+              {
+                "value": "TCP"
+              },
+              {
+                "value": "UDP"
+              }
+            ]
+          },
+          {
+            "id": "q12_4",
+            "label": "غير موثوق (Unreliable)",
+            "order": 3,
+            "kind": "select",
+            "options": [
+              {
+                "value": "TCP"
+              },
+              {
+                "value": "UDP"
+              }
+            ]
+          },
+          {
+            "id": "q12_5",
+            "label": "لا يستخدم Handshake",
+            "order": 4,
+            "kind": "select",
+            "options": [
+              {
+                "value": "TCP"
+              },
+              {
+                "value": "UDP"
+              }
+            ]
+          }
+        ],
+        "parts": [],
+        "answer": {
+          "text": "موثوق (Reliable)=TCP؛ يُستخدم للبث الحي وتطبيقات الزمن الحقيقي=UDP؛ يتحقق من ترتيب البيانات (Sequencing)=TCP؛ غير موثوق (Unreliable)=UDP؛ لا يستخدم Handshake=UDP"
+        },
+        "hint": "",
+        "teacherNote": "",
+        "aiInstruction": "",
+        "wasModified": false,
+        "image": {
+          "exists": false,
+          "visible": false,
+          "origin": null,
+          "assets": [],
+          "prompt": null
+        },
+        "history": [],
+        "redoStack": []
+      },
+      {
+        "examQuestionId": "LIB-F01-Q13",
+        "origin": "imported",
+        "sourceId": "LIB-F01",
+        "sourceQuestionId": "q13",
+        "section": "BASIC",
+        "topic": "OTHER_NETWORKING",
+        "secondaryTopics": [],
+        "difficulty": 2,
+        "difficultyLabel": "",
+        "familyKey": "LIB-F01-Q13",
+        "hasCLI": false,
+        "requiresCalculation": false,
+        "presentationType": "open",
+        "marks": 2,
+        "locked": false,
+        "text": "يتلقى الحاسوب عنواناً من نوع ________ عندما تكون خدمة الـ DHCP غير متوفرة",
+        "textHtml": "",
+        "options": [],
+        "fields": [],
+        "parts": [],
+        "answer": {
+          "text": "apipa"
+        },
+        "hint": "",
+        "teacherNote": "",
+        "aiInstruction": "",
+        "wasModified": false,
+        "image": {
+          "exists": false,
+          "visible": false,
+          "origin": null,
+          "assets": [],
+          "prompt": null
+        },
+        "history": [],
+        "redoStack": []
+      },
+      {
+        "examQuestionId": "LIB-F01-Q14",
+        "origin": "imported",
+        "sourceId": "LIB-F01",
+        "sourceQuestionId": "q14",
+        "section": "BASIC",
+        "topic": "OTHER_NETWORKING",
+        "secondaryTopics": [],
+        "difficulty": 2,
+        "difficultyLabel": "",
+        "familyKey": "LIB-F01-Q14",
+        "hasCLI": false,
+        "requiresCalculation": false,
+        "presentationType": "multipleChoice",
+        "marks": 2,
+        "locked": false,
+        "text": "ما هو المنفذ الافتراضي المستخدم في بروتوكول HTTPS؟",
+        "textHtml": "",
+        "options": [
+          {
+            "value": "0",
+            "text": "80"
+          },
+          {
+            "value": "1",
+            "text": "20"
+          },
+          {
+            "value": "2",
+            "text": "443"
+          },
+          {
+            "value": "3",
+            "text": "25"
+          }
+        ],
+        "fields": [],
+        "parts": [],
+        "answer": {
+          "correctOptionIndex": 2
+        },
+        "hint": "",
+        "teacherNote": "",
+        "aiInstruction": "",
+        "wasModified": false,
+        "image": {
+          "exists": false,
+          "visible": false,
+          "origin": null,
+          "assets": [],
+          "prompt": null
+        },
+        "history": [],
+        "redoStack": []
+      },
+      {
+        "examQuestionId": "LIB-F01-Q15",
+        "origin": "imported",
+        "sourceId": "LIB-F01",
+        "sourceQuestionId": "q15",
+        "section": "BASIC",
+        "topic": "OTHER_NETWORKING",
+        "secondaryTopics": [],
+        "difficulty": 2,
+        "difficultyLabel": "",
+        "familyKey": "LIB-F01-Q15",
+        "hasCLI": false,
+        "requiresCalculation": false,
+        "presentationType": "multipleChoice",
+        "marks": 2,
+        "locked": false,
+        "text": "ما هي وظيفة بروتوكول ARP؟",
+        "textHtml": "",
+        "options": [
+          {
+            "value": "0",
+            "text": "تحديد عنوان الـ IP للمضيف بالشبكة المحلية عن طريق عنوان الـ MAC"
+          },
+          {
+            "value": "1",
+            "text": "تحديد عنوان الـ MAC للمضيف بالشبكة المحلية عن طريق عنوان الـ IP"
+          },
+          {
+            "value": "2",
+            "text": "تحويل عنوان IP خاص إلى عنوان عام"
+          },
+          {
+            "value": "3",
+            "text": "ترجمة اسم النطاق (domain name) إلى عنوان IP"
+          }
+        ],
+        "fields": [],
+        "parts": [],
+        "answer": {
+          "correctOptionIndex": 1
+        },
+        "hint": "",
+        "teacherNote": "",
+        "aiInstruction": "",
+        "wasModified": false,
+        "image": {
+          "exists": false,
+          "visible": false,
+          "origin": null,
+          "assets": [],
+          "prompt": null
+        },
+        "history": [],
+        "redoStack": []
+      },
+      {
+        "examQuestionId": "LIB-F01-Q16",
+        "origin": "imported",
+        "sourceId": "LIB-F01",
+        "sourceQuestionId": "q16",
+        "section": "BASIC",
+        "topic": "OTHER_NETWORKING",
+        "secondaryTopics": [],
+        "difficulty": 2,
+        "difficultyLabel": "",
+        "familyKey": "LIB-F01-Q16",
+        "hasCLI": false,
+        "requiresCalculation": false,
+        "presentationType": "multipleChoice",
+        "marks": 2,
+        "locked": false,
+        "text": "إلى أي خادم يتم توجيه المعلومات في المنفذ 110 (PORT 110)؟",
+        "textHtml": "",
+        "options": [
+          {
+            "value": "0",
+            "text": "HTTP"
+          },
+          {
+            "value": "1",
+            "text": "POP3"
+          },
+          {
+            "value": "2",
+            "text": "SMTP"
+          },
+          {
+            "value": "3",
+            "text": "FTP"
+          }
+        ],
+        "fields": [],
+        "parts": [],
+        "answer": {
+          "correctOptionIndex": 1
+        },
+        "hint": "",
+        "teacherNote": "",
+        "aiInstruction": "",
+        "wasModified": false,
+        "image": {
+          "exists": false,
+          "visible": false,
+          "origin": null,
+          "assets": [],
+          "prompt": null
+        },
+        "history": [],
+        "redoStack": []
+      },
+      {
+        "examQuestionId": "LIB-F01-Q17",
+        "origin": "imported",
+        "sourceId": "LIB-F01",
+        "sourceQuestionId": "q17",
+        "section": "BASIC",
+        "topic": "OTHER_NETWORKING",
+        "secondaryTopics": [],
+        "difficulty": 2,
+        "difficultyLabel": "",
+        "familyKey": "LIB-F01-Q17",
+        "hasCLI": false,
+        "requiresCalculation": false,
+        "presentationType": "multipleChoice",
+        "marks": 2,
+        "locked": false,
+        "text": "أي من العناوين يمثل عنوان الهدف للرسائل التي تُرسل كرسالة بث (Broadcast) في شبكة الإيثرنت (Ethernet)؟",
+        "textHtml": "",
+        "options": [
+          {
+            "value": "0",
+            "text": "AA-AA-AA-FF-FF-FF"
+          },
+          {
+            "value": "1",
+            "text": "255.255.255.255"
+          },
+          {
+            "value": "2",
+            "text": "1.1.1.1"
+          },
+          {
+            "value": "3",
+            "text": "FF-FF-FF-FF-FF-FF"
+          }
+        ],
+        "fields": [],
+        "parts": [],
+        "answer": {
+          "correctOptionIndex": 3
+        },
+        "hint": "",
+        "teacherNote": "",
+        "aiInstruction": "",
+        "wasModified": false,
+        "image": {
+          "exists": false,
+          "visible": false,
+          "origin": null,
+          "assets": [],
+          "prompt": null
+        },
+        "history": [],
+        "redoStack": []
+      },
+      {
+        "examQuestionId": "LIB-F01-Q18",
+        "origin": "imported",
+        "sourceId": "LIB-F01",
+        "sourceQuestionId": "q18",
+        "section": "BASIC",
+        "topic": "OTHER_NETWORKING",
+        "secondaryTopics": [],
+        "difficulty": 2,
+        "difficultyLabel": "",
+        "familyKey": "LIB-F01-Q18",
+        "hasCLI": false,
+        "requiresCalculation": false,
+        "presentationType": "matching",
+        "marks": 3,
+        "locked": false,
+        "text": "أجب عن كل واحد من الأقسام التالية — صح / خطأ:\n\n| البند | الإجابة |\n| --- | --- |\n| عند إرسال رسالة مع العنوان Destination MAC: FFFF.FFFF.FFFF ، هل يعتبر هذا عنوان بث (Broadcast)؟ | |\n| عنوان IP المُعطى هو 172.17.0.0/16 . هل يمكن لهذه الشبكة استيعاب أكثر من 65,000 جهاز؟ | |\n| عنوان 169.254.1.1 يُستخدم عادةً عند فشل الحصول على عنوان IP عبر DHCP. هل هذه العبارة صحيحة؟ | |",
+        "textHtml": "",
+        "options": [],
+        "fields": [
+          {
+            "id": "q18a",
+            "label": "عند إرسال رسالة مع العنوان Destination MAC: FFFF.FFFF.FFFF ، هل يعتبر هذا عنوان بث (Broadcast)؟",
+            "order": 0,
+            "kind": "select",
+            "options": [
+              {
+                "value": "صحيح"
+              },
+              {
+                "value": "غير صحيح"
+              }
+            ]
+          },
+          {
+            "id": "q18b",
+            "label": "عنوان IP المُعطى هو 172.17.0.0/16 . هل يمكن لهذه الشبكة استيعاب أكثر من 65,000 جهاز؟",
+            "order": 1,
+            "kind": "select",
+            "options": [
+              {
+                "value": "صحيح"
+              },
+              {
+                "value": "غير صحيح"
+              }
+            ]
+          },
+          {
+            "id": "q18c",
+            "label": "عنوان 169.254.1.1 يُستخدم عادةً عند فشل الحصول على عنوان IP عبر DHCP. هل هذه العبارة صحيحة؟",
+            "order": 2,
+            "kind": "select",
+            "options": [
+              {
+                "value": "صحيح"
+              },
+              {
+                "value": "غير صحيح"
+              }
+            ]
+          }
+        ],
+        "parts": [],
+        "answer": {
+          "text": "عند إرسال رسالة مع العنوان Destination MAC: FFFF.FFFF.FFFF ، هل يعتبر هذا عنوان بث (Broadcast)؟=صحيح؛ عنوان IP المُعطى هو 172.17.0.0/16 . هل يمكن لهذه الشبكة استيعاب أكثر من 65,000 جهاز؟=صحيح؛ عنوان 169.254.1.1 يُستخدم عادةً عند فشل الحصول على عنوان IP عبر DHCP. هل هذه العبارة صحيحة؟=صحيح"
+        },
+        "hint": "",
+        "teacherNote": "",
+        "aiInstruction": "",
+        "wasModified": false,
+        "image": {
+          "exists": false,
+          "visible": false,
+          "origin": null,
+          "assets": [],
+          "prompt": null
+        },
+        "history": [],
+        "redoStack": []
+      },
+      {
+        "examQuestionId": "LIB-F01-Q19",
+        "origin": "imported",
+        "sourceId": "LIB-F01",
+        "sourceQuestionId": "q19",
+        "section": "BASIC",
+        "topic": "OTHER_NETWORKING",
+        "secondaryTopics": [],
+        "difficulty": 2,
+        "difficultyLabel": "",
+        "familyKey": "LIB-F01-Q19",
+        "hasCLI": false,
+        "requiresCalculation": false,
+        "presentationType": "multipleChoice",
+        "marks": 2,
+        "locked": false,
+        "text": "معطى عنوان الـ IP التالي: 172.16.23.56/16 ما عنوان البث (Broadcast) لهذا العنوان؟",
+        "textHtml": "",
+        "options": [
+          {
+            "value": "0",
+            "text": "172.16.255.255"
+          },
+          {
+            "value": "1",
+            "text": "172.255.255.255"
+          },
+          {
+            "value": "2",
+            "text": "172.16.23.255"
+          },
+          {
+            "value": "3",
+            "text": "172.16.23.0"
+          }
+        ],
+        "fields": [],
+        "parts": [],
+        "answer": {
+          "correctOptionIndex": 0
+        },
+        "hint": "",
+        "teacherNote": "",
+        "aiInstruction": "",
+        "wasModified": false,
+        "image": {
+          "exists": false,
+          "visible": false,
+          "origin": null,
+          "assets": [],
+          "prompt": null
+        },
+        "history": [],
+        "redoStack": []
+      },
+      {
+        "examQuestionId": "LIB-F01-Q20",
+        "origin": "imported",
+        "sourceId": "LIB-F01",
+        "sourceQuestionId": "q20",
+        "section": "BASIC",
+        "topic": "OTHER_NETWORKING",
+        "secondaryTopics": [],
+        "difficulty": 2,
+        "difficultyLabel": "",
+        "familyKey": "LIB-F01-Q20",
+        "hasCLI": false,
+        "requiresCalculation": false,
+        "presentationType": "matching",
+        "marks": 2,
+        "locked": false,
+        "text": "أجب عن كل واحد من الأقسام التالية — صح / خطأ:\n\n| البند | الإجابة |\n| --- | --- |\n| عنوان 10.255.255.255 يُعتبر عنوان بث (Broadcast) في شبكته. | |\n| عنوان الشبكة 192.168.5.0/24 يتبع Class C. | |",
+        "textHtml": "",
+        "options": [],
+        "fields": [
+          {
+            "id": "q20a",
+            "label": "عنوان 10.255.255.255 يُعتبر عنوان بث (Broadcast) في شبكته.",
+            "order": 0,
+            "kind": "select",
+            "options": [
+              {
+                "value": "صحيح"
+              },
+              {
+                "value": "غير صحيح"
+              }
+            ]
+          },
+          {
+            "id": "q20b",
+            "label": "عنوان الشبكة 192.168.5.0/24 يتبع Class C.",
+            "order": 1,
+            "kind": "select",
+            "options": [
+              {
+                "value": "صحيح"
+              },
+              {
+                "value": "غير صحيح"
+              }
+            ]
+          }
+        ],
+        "parts": [],
+        "answer": {
+          "text": "عنوان 10.255.255.255 يُعتبر عنوان بث (Broadcast) في شبكته.=صحيح؛ عنوان الشبكة 192.168.5.0/24 يتبع Class C.=صحيح"
+        },
+        "hint": "",
+        "teacherNote": "",
+        "aiInstruction": "",
+        "wasModified": false,
+        "image": {
+          "exists": false,
+          "visible": false,
+          "origin": null,
+          "assets": [],
+          "prompt": null
+        },
+        "history": [],
+        "redoStack": []
+      },
+      {
+        "examQuestionId": "LIB-F01-Q21",
+        "origin": "imported",
+        "sourceId": "LIB-F01",
+        "sourceQuestionId": "q21",
+        "section": "BASIC",
+        "topic": "OTHER_NETWORKING",
+        "secondaryTopics": [],
+        "difficulty": 2,
+        "difficultyLabel": "",
+        "familyKey": "LIB-F01-Q21",
+        "hasCLI": false,
+        "requiresCalculation": false,
+        "presentationType": "matching",
+        "marks": 4,
+        "locked": false,
+        "text": "أي من البروتوكولات التالية يستخدم اتصالاً من نوع UDP وأيها TCP؟\n\n| البند | الإجابة |\n| --- | --- |\n| DNS | |\n| FTP | |\n| HTTPs | |\n| DHCP | |",
+        "textHtml": "",
+        "options": [],
+        "fields": [
+          {
+            "id": "q21_dns",
+            "label": "DNS",
+            "order": 0,
+            "kind": "select",
+            "options": [
+              {
+                "value": "TCP"
+              },
+              {
+                "value": "UDP"
+              }
+            ]
+          },
+          {
+            "id": "q21_ftp",
+            "label": "FTP",
+            "order": 1,
+            "kind": "select",
+            "options": [
+              {
+                "value": "TCP"
+              },
+              {
+                "value": "UDP"
+              }
+            ]
+          },
+          {
+            "id": "q21_https",
+            "label": "HTTPs",
+            "order": 2,
+            "kind": "select",
+            "options": [
+              {
+                "value": "TCP"
+              },
+              {
+                "value": "UDP"
+              }
+            ]
+          },
+          {
+            "id": "q21_dhcp",
+            "label": "DHCP",
+            "order": 3,
+            "kind": "select",
+            "options": [
+              {
+                "value": "TCP"
+              },
+              {
+                "value": "UDP"
+              }
+            ]
+          }
+        ],
+        "parts": [],
+        "answer": {
+          "text": "DNS=UDP؛ FTP=TCP؛ HTTPs=TCP؛ DHCP=UDP"
+        },
+        "hint": "",
+        "teacherNote": "",
+        "aiInstruction": "",
+        "wasModified": false,
+        "image": {
+          "exists": false,
+          "visible": false,
+          "origin": null,
+          "assets": [],
+          "prompt": null
+        },
+        "history": [],
+        "redoStack": []
+      },
+      {
+        "examQuestionId": "LIB-F01-Q22",
+        "origin": "imported",
+        "sourceId": "LIB-F01",
+        "sourceQuestionId": "q22",
+        "section": "BASIC",
+        "topic": "OTHER_NETWORKING",
+        "secondaryTopics": [],
+        "difficulty": 2,
+        "difficultyLabel": "",
+        "familyKey": "LIB-F01-Q22",
+        "hasCLI": false,
+        "requiresCalculation": false,
+        "presentationType": "multipleChoice",
+        "marks": 2,
+        "locked": false,
+        "text": "بروتوكول ARP يُستخدم للحصول على عنوان MAC عندما نعرف عنوان IP.",
+        "textHtml": "",
+        "options": [
+          {
+            "value": "0",
+            "text": "صحيح"
+          },
+          {
+            "value": "1",
+            "text": "غير صحيح"
+          }
+        ],
+        "fields": [],
+        "parts": [],
+        "answer": {
+          "correctOptionIndex": 0
+        },
+        "hint": "",
+        "teacherNote": "",
+        "aiInstruction": "",
+        "wasModified": false,
+        "image": {
+          "exists": false,
+          "visible": false,
+          "origin": null,
+          "assets": [],
+          "prompt": null
+        },
+        "history": [],
+        "redoStack": []
+      },
+      {
+        "examQuestionId": "LIB-F01-Q23",
+        "origin": "imported",
+        "sourceId": "LIB-F01",
+        "sourceQuestionId": "q23",
+        "section": "BASIC",
+        "topic": "OTHER_NETWORKING",
+        "secondaryTopics": [],
+        "difficulty": 2,
+        "difficultyLabel": "",
+        "familyKey": "LIB-F01-Q23",
+        "hasCLI": false,
+        "requiresCalculation": false,
+        "presentationType": "multipleChoice",
+        "marks": 2,
+        "locked": false,
+        "text": "انظر إلى الصورة للشبكة المعطاة واكتب ما هو رقم البوابة الافتراضية:",
+        "textHtml": "",
+        "options": [
+          {
+            "value": "0",
+            "text": "192.168.10.2"
+          },
+          {
+            "value": "1",
+            "text": "192.168.10.3"
+          },
+          {
+            "value": "2",
+            "text": "192.168.10.1"
+          },
+          {
+            "value": "3",
+            "text": "255.255.255.0"
+          }
+        ],
+        "fields": [],
+        "parts": [],
+        "answer": {
+          "correctOptionIndex": 2
+        },
+        "hint": "",
+        "teacherNote": "",
+        "aiInstruction": "",
+        "wasModified": false,
+        "image": {
+          "exists": true,
+          "visible": true,
+          "origin": "uploaded",
+          "assets": [
+            {
+              "id": "img-0",
+              "origin": "uploaded",
+              "contentType": "image/png",
+              "dataUrl": "/exam-library/assets/F01/cd7df3dfbdffa9bf.png"
+            }
+          ],
+          "prompt": null
+        },
+        "history": [],
+        "redoStack": []
+      },
+      {
+        "examQuestionId": "LIB-F01-Q24",
+        "origin": "imported",
+        "sourceId": "LIB-F01",
+        "sourceQuestionId": "q24",
+        "section": "BASIC",
+        "topic": "OTHER_NETWORKING",
+        "secondaryTopics": [],
+        "difficulty": 2,
+        "difficultyLabel": "",
+        "familyKey": "LIB-F01-Q24",
+        "hasCLI": false,
+        "requiresCalculation": false,
+        "presentationType": "open",
+        "marks": 2,
+        "locked": false,
+        "text": "تمعن في المخرج (OUTPUT) التالي: بناءً على المخرج ما هو رقم الـ VLAN الذي أنشأه مدير الشبكة؟",
+        "textHtml": "",
+        "options": [],
+        "fields": [],
+        "parts": [],
+        "answer": {},
+        "hint": "",
+        "teacherNote": "لا يوجد مفتاح إجابة لهذا السؤال في المصدر.",
+        "aiInstruction": "",
+        "wasModified": false,
+        "image": {
+          "exists": true,
+          "visible": true,
+          "origin": "uploaded",
+          "assets": [
+            {
+              "id": "img-0",
+              "origin": "uploaded",
+              "contentType": "image/png",
+              "dataUrl": "/exam-library/assets/F01/05d7230c968bfe23.png"
+            }
+          ],
+          "prompt": null
+        },
+        "history": [],
+        "redoStack": []
+      },
+      {
+        "examQuestionId": "LIB-F01-Q25",
+        "origin": "imported",
+        "sourceId": "LIB-F01",
+        "sourceQuestionId": "s2q1",
+        "section": "BASIC",
+        "topic": "OTHER_NETWORKING",
+        "secondaryTopics": [],
+        "difficulty": 2,
+        "difficultyLabel": "",
+        "familyKey": "LIB-F01-Q25",
+        "hasCLI": false,
+        "requiresCalculation": false,
+        "presentationType": "multipleChoice",
+        "marks": 4,
+        "locked": false,
+        "text": "ما الفائدة الأساسية من VLAN؟",
+        "textHtml": "",
+        "options": [
+          {
+            "value": "0",
+            "text": "تقليل استهلاك الإنترنت"
+          },
+          {
+            "value": "1",
+            "text": "تقسيم الشبكة إلى أقسام منطقية لزيادة الأمان والكفاءة"
+          },
+          {
+            "value": "2",
+            "text": "تحسين سرعة المعالج"
+          },
+          {
+            "value": "3",
+            "text": "تحويل البيانات إلى صوت"
+          }
+        ],
+        "fields": [],
+        "parts": [],
+        "answer": {
+          "correctOptionIndex": 1
+        },
+        "hint": "",
+        "teacherNote": "",
+        "aiInstruction": "",
+        "wasModified": false,
+        "image": {
+          "exists": false,
+          "visible": false,
+          "origin": null,
+          "assets": [],
+          "prompt": null
+        },
+        "history": [],
+        "redoStack": []
+      },
+      {
+        "examQuestionId": "LIB-F01-Q26",
+        "origin": "imported",
+        "sourceId": "LIB-F01",
+        "sourceQuestionId": "s2q2",
+        "section": "BASIC",
+        "topic": "OTHER_NETWORKING",
+        "secondaryTopics": [],
+        "difficulty": 2,
+        "difficultyLabel": "",
+        "familyKey": "LIB-F01-Q26",
+        "hasCLI": false,
+        "requiresCalculation": false,
+        "presentationType": "multipleChoice",
+        "marks": 4,
+        "locked": false,
+        "text": "ماذا يعني العنوان التالي الذي تم الحصول عليه عند تشغيل الأمر ipconfig ؟ 169.254.x.x",
+        "textHtml": "",
+        "options": [
+          {
+            "value": "0",
+            "text": "لم يتمكن الحاسوب من تحديد موقع خادم DHCP ولهذا تم إعطاء عنوان من نوع APIPA"
+          },
+          {
+            "value": "1",
+            "text": "لم يتمكن الحاسوب من تحديد موقع خادم DNS ولهذا تم إعطاء عنوان من نوع APIPA"
+          },
+          {
+            "value": "2",
+            "text": "لم يتمكن الحاسوب من تحديد موقع خادم HTTP ولهذا تم إعطاء عنوان من نوع APIPA"
+          },
+          {
+            "value": "3",
+            "text": "لم يتمكن الحاسوب من تحديد موقع خادم SMTP ولهذا تم إعطاء عنوان من نوع APIPA"
+          }
+        ],
+        "fields": [],
+        "parts": [],
+        "answer": {
+          "correctOptionIndex": 0
+        },
+        "hint": "",
+        "teacherNote": "",
+        "aiInstruction": "",
+        "wasModified": false,
+        "image": {
+          "exists": true,
+          "visible": true,
+          "origin": "uploaded",
+          "assets": [
+            {
+              "id": "img-0",
+              "origin": "uploaded",
+              "contentType": "image/png",
+              "dataUrl": "/exam-library/assets/F01/f1fe0d97500c01c0.png"
+            }
+          ],
+          "prompt": null
+        },
+        "history": [],
+        "redoStack": []
+      },
+      {
+        "examQuestionId": "LIB-F01-Q27",
+        "origin": "imported",
+        "sourceId": "LIB-F01",
+        "sourceQuestionId": "s2q3",
+        "section": "BASIC",
+        "topic": "OTHER_NETWORKING",
+        "secondaryTopics": [],
+        "difficulty": 2,
+        "difficultyLabel": "",
+        "familyKey": "LIB-F01-Q27",
+        "hasCLI": false,
+        "requiresCalculation": false,
+        "presentationType": "multipleChoice",
+        "marks": 4,
+        "locked": false,
+        "text": "أمامكم الطوبولوجيا التالية، أكملوا الأسئلة التي تليها:",
+        "textHtml": "",
+        "options": [
+          {
+            "value": "0",
+            "text": "512"
+          },
+          {
+            "value": "1",
+            "text": "255"
+          },
+          {
+            "value": "2",
+            "text": "254"
+          },
+          {
+            "value": "3",
+            "text": "300"
+          },
+          {
+            "value": "4",
+            "text": "صحيح"
+          },
+          {
+            "value": "5",
+            "text": "غير صحيح"
+          }
+        ],
+        "fields": [],
+        "parts": [],
+        "answer": {
+          "correctOptionIndex": 5
+        },
+        "hint": "",
+        "teacherNote": "",
+        "aiInstruction": "",
+        "wasModified": false,
+        "image": {
+          "exists": true,
+          "visible": true,
+          "origin": "uploaded",
+          "assets": [
+            {
+              "id": "img-0",
+              "origin": "uploaded",
+              "contentType": "image/png",
+              "dataUrl": "/exam-library/assets/F01/9c6391a632decf18.png"
+            }
+          ],
+          "prompt": null
+        },
+        "history": [],
+        "redoStack": []
+      },
+      {
+        "examQuestionId": "LIB-F01-Q28",
+        "origin": "imported",
+        "sourceId": "LIB-F01",
+        "sourceQuestionId": "s2q4",
+        "section": "BASIC",
+        "topic": "OTHER_NETWORKING",
+        "secondaryTopics": [],
+        "difficulty": 2,
+        "difficultyLabel": "",
+        "familyKey": "LIB-F01-Q28",
+        "hasCLI": false,
+        "requiresCalculation": false,
+        "presentationType": "multipleChoice",
+        "marks": 4,
+        "locked": false,
+        "text": "لكي يتم تعريف VLAN 10 في المفتاح SW1، اختر التعريف الصحيح من بين التعريفات التالية:",
+        "textHtml": "",
+        "options": [
+          {
+            "value": "0",
+            "text": "Sw1(config)#vlan 10 / Sw1(config-if)#name mng"
+          },
+          {
+            "value": "1",
+            "text": "Sw1(config)#vlan 20 / Sw1(config-if)#name mng"
+          },
+          {
+            "value": "2",
+            "text": "Sw1(config)#name 10 / Sw1(config-if)#vlan mng"
+          },
+          {
+            "value": "3",
+            "text": "Sw1(config)#name 20 / Sw1(config-if)#vlan mng"
+          }
+        ],
+        "fields": [],
+        "parts": [],
+        "answer": {
+          "correctOptionIndex": 0
+        },
+        "hint": "",
+        "teacherNote": "",
+        "aiInstruction": "",
+        "wasModified": false,
+        "image": {
+          "exists": false,
+          "visible": false,
+          "origin": null,
+          "assets": [],
+          "prompt": null
+        },
+        "history": [],
+        "redoStack": []
+      },
+      {
+        "examQuestionId": "LIB-F01-Q29",
+        "origin": "imported",
+        "sourceId": "LIB-F01",
+        "sourceQuestionId": "s2q5",
+        "section": "BASIC",
+        "topic": "OTHER_NETWORKING",
+        "secondaryTopics": [],
+        "difficulty": 2,
+        "difficultyLabel": "",
+        "familyKey": "LIB-F01-Q29",
+        "hasCLI": false,
+        "requiresCalculation": false,
+        "presentationType": "multipleChoice",
+        "marks": 4,
+        "locked": false,
+        "text": "لكي يتم ربط pc0 و pc1 لـ VLAN 10 في المفتاح SW1، اختر التعريف الصحيح:",
+        "textHtml": "",
+        "options": [
+          {
+            "value": "0",
+            "text": "Sw1(config)#interface fastethernet 0/1-2 Sw1(config-if)#switchport mode access Sw1(config-if)#switchport access vlan 10"
+          },
+          {
+            "value": "1",
+            "text": "Sw1(config)# interface range fastethernet 0/1-2 Sw1(config-if)#switchport mode access Sw1(config-if)#switchport access vlan 10"
+          },
+          {
+            "value": "2",
+            "text": "Sw1(config)# interface range fastethernet 0/1-24 Sw1(config-if)#switchport mode trunk Sw1(config-if)#switchport access vlan 10"
+          },
+          {
+            "value": "3",
+            "text": "Sw1(config)# interface fastethernet 0/1-2 Sw1(config-if)#switchport mode trunk Sw1(config-if)#switchport access vlan 20"
+          }
+        ],
+        "fields": [],
+        "parts": [],
+        "answer": {
+          "correctOptionIndex": 1
+        },
+        "hint": "",
+        "teacherNote": "",
+        "aiInstruction": "",
+        "wasModified": false,
+        "image": {
+          "exists": false,
+          "visible": false,
+          "origin": null,
+          "assets": [],
+          "prompt": null
+        },
+        "history": [],
+        "redoStack": []
+      },
+      {
+        "examQuestionId": "LIB-F01-Q30",
+        "origin": "imported",
+        "sourceId": "LIB-F01",
+        "sourceQuestionId": "s2q6",
+        "section": "BASIC",
+        "topic": "OTHER_NETWORKING",
+        "secondaryTopics": [],
+        "difficulty": 2,
+        "difficultyLabel": "",
+        "familyKey": "LIB-F01-Q30",
+        "hasCLI": false,
+        "requiresCalculation": false,
+        "presentationType": "multipleChoice",
+        "marks": 4,
+        "locked": false,
+        "text": "الحاسوب pc1 قام بإرسال رسالة من نوع broadcast — لأي حواسيب في الشبكة ستصل؟",
+        "textHtml": "",
+        "options": [
+          {
+            "value": "0",
+            "text": "Pc0"
+          },
+          {
+            "value": "1",
+            "text": "Pc1"
+          },
+          {
+            "value": "2",
+            "text": "Pc2"
+          },
+          {
+            "value": "3",
+            "text": "Pc3"
+          }
+        ],
+        "fields": [],
+        "parts": [],
+        "answer": {
+          "correctOptionIndex": 0
+        },
+        "hint": "",
+        "teacherNote": "",
+        "aiInstruction": "",
+        "wasModified": false,
+        "image": {
+          "exists": false,
+          "visible": false,
+          "origin": null,
+          "assets": [],
+          "prompt": null
+        },
+        "history": [],
+        "redoStack": []
+      },
+      {
+        "examQuestionId": "LIB-F01-Q31",
+        "origin": "imported",
+        "sourceId": "LIB-F01",
+        "sourceQuestionId": "s2q7",
+        "section": "BASIC",
+        "topic": "OTHER_NETWORKING",
+        "secondaryTopics": [],
+        "difficulty": 2,
+        "difficultyLabel": "",
+        "familyKey": "LIB-F01-Q31",
+        "hasCLI": false,
+        "requiresCalculation": false,
+        "presentationType": "multipleChoice",
+        "marks": 4,
+        "locked": false,
+        "text": "ما هي وظيفة بروتوكول VTP؟",
+        "textHtml": "",
+        "options": [
+          {
+            "value": "0",
+            "text": "لمنع حلقات التبديل"
+          },
+          {
+            "value": "1",
+            "text": "لإدارة تعريفات الـ VLAN في السويتش"
+          },
+          {
+            "value": "2",
+            "text": "للتوزيع الفيزيائي لجهاز السويتش"
+          },
+          {
+            "value": "3",
+            "text": "لتعريف عناوين IP بالسويتش"
+          }
+        ],
+        "fields": [],
+        "parts": [],
+        "answer": {
+          "correctOptionIndex": 1
+        },
+        "hint": "",
+        "teacherNote": "",
+        "aiInstruction": "",
+        "wasModified": false,
+        "image": {
+          "exists": false,
+          "visible": false,
+          "origin": null,
+          "assets": [],
+          "prompt": null
+        },
+        "history": [],
+        "redoStack": []
+      },
+      {
+        "examQuestionId": "LIB-F01-Q32",
+        "origin": "imported",
+        "sourceId": "LIB-F01",
+        "sourceQuestionId": "s2q8",
+        "section": "BASIC",
+        "topic": "OTHER_NETWORKING",
+        "secondaryTopics": [],
+        "difficulty": 2,
+        "difficultyLabel": "",
+        "familyKey": "LIB-F01-Q32",
+        "hasCLI": false,
+        "requiresCalculation": false,
+        "presentationType": "open",
+        "marks": 4,
+        "locked": false,
+        "text": "معطى مجموعة أوامر لتعريف vlan 10 (MANAGER) و vlan 20 (EMPLOYEE) في المفتاح SW1، أكمل الناقص:",
+        "textHtml": "",
+        "options": [],
+        "fields": [],
+        "parts": [],
+        "answer": {},
+        "hint": "",
+        "teacherNote": "شكل سؤال متعدد الأجزاء غير قابل للتحويل الحتمي — يحتاج مراجعة.",
+        "aiInstruction": "",
+        "wasModified": false,
+        "image": {
+          "exists": false,
+          "visible": false,
+          "origin": null,
+          "assets": [],
+          "prompt": null
+        },
+        "history": [],
+        "redoStack": []
+      },
+      {
+        "examQuestionId": "LIB-F01-Q33",
+        "origin": "imported",
+        "sourceId": "LIB-F01",
+        "sourceQuestionId": "s2q9",
+        "section": "BASIC",
+        "topic": "OTHER_NETWORKING",
+        "secondaryTopics": [],
+        "difficulty": 2,
+        "difficultyLabel": "",
+        "familyKey": "LIB-F01-Q33",
+        "hasCLI": false,
+        "requiresCalculation": false,
+        "presentationType": "open",
+        "marks": 4,
+        "locked": false,
+        "text": "ما هو عدد مناطق التصادم (Collision Domains) في الطوبولوجيا الظاهرة في الصورة؟",
+        "textHtml": "",
+        "options": [],
+        "fields": [],
+        "parts": [],
+        "answer": {},
+        "hint": "",
+        "teacherNote": "لا يوجد مفتاح إجابة لهذا السؤال في المصدر.",
+        "aiInstruction": "",
+        "wasModified": false,
+        "image": {
+          "exists": true,
+          "visible": true,
+          "origin": "uploaded",
+          "assets": [
+            {
+              "id": "img-0",
+              "origin": "uploaded",
+              "contentType": "image/png",
+              "dataUrl": "/exam-library/assets/F01/2eb53c6d238bf813.png"
+            }
+          ],
+          "prompt": null
+        },
+        "history": [],
+        "redoStack": []
+      },
+      {
+        "examQuestionId": "LIB-F01-Q34",
+        "origin": "imported",
+        "sourceId": "LIB-F01",
+        "sourceQuestionId": "s2q10",
+        "section": "BASIC",
+        "topic": "OTHER_NETWORKING",
+        "secondaryTopics": [],
+        "difficulty": 2,
+        "difficultyLabel": "",
+        "familyKey": "LIB-F01-Q34",
+        "hasCLI": false,
+        "requiresCalculation": false,
+        "presentationType": "multipleChoice",
+        "marks": 4,
+        "locked": false,
+        "text": "ما هو عدد مناطق البث (Broadcast Domains) في الطوبولوجيا الظاهرة في الصورة؟",
+        "textHtml": "",
+        "options": [
+          {
+            "value": "0",
+            "text": "1"
+          },
+          {
+            "value": "1",
+            "text": "2"
+          },
+          {
+            "value": "2",
+            "text": "3"
+          },
+          {
+            "value": "3",
+            "text": "4"
+          }
+        ],
+        "fields": [],
+        "parts": [],
+        "answer": {
+          "correctOptionIndex": 1
+        },
+        "hint": "",
+        "teacherNote": "",
+        "aiInstruction": "",
+        "wasModified": false,
+        "image": {
+          "exists": true,
+          "visible": true,
+          "origin": "uploaded",
+          "assets": [
+            {
+              "id": "img-0",
+              "origin": "uploaded",
+              "contentType": "image/png",
+              "dataUrl": "/exam-library/assets/F01/6ba8e29508687e1b.png"
+            }
+          ],
+          "prompt": null
+        },
+        "history": [],
+        "redoStack": []
+      }
+    ],
+    "totalMarks": 100,
+    "status": "final",
+    "createdAt": "2026-09-05T18:57:19.072Z",
+    "updatedAt": "2026-09-05T18:57:19.072Z"
+  }
+}

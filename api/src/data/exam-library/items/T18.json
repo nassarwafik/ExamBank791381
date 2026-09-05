@@ -1,0 +1,589 @@
+{
+  "libraryItemId": "T18",
+  "title": "DMZ وWi-Fi وIPv6 والمنافذ",
+  "category": "infra",
+  "description": "DMZ وSSID وأمان Wi-Fi وIPv6 وأرقام منافذ الخدمات.",
+  "tags": [
+    "DMZ",
+    "Wi-Fi",
+    "IPv6 / Ports"
+  ],
+  "questionCount": 10,
+  "totalMarks": 100,
+  "pageRange": "157–166",
+  "parserFamily": "t-series-v1",
+  "conversionStatus": "ready",
+  "publishable": true,
+  "autoGradableCount": 10,
+  "manualReviewCount": 0,
+  "libraryVersion": 1,
+  "sourceSha": "9315b45c57c39905879a885acf87caafa71281fd8b38c729e7f98687527682bb",
+  "contentHash": "dd32d357114bf885ed0cb52291192560700ebbb3081fbc119db0930ec0699b5d",
+  "convertedAt": "2026-09-05T18:57:19.063Z",
+  "source": {
+    "repository": "Book791381",
+    "sourceFile": "T18.html"
+  },
+  "schemaVersion": 1,
+  "examSnapshot": {
+    "schemaVersion": 1,
+    "examId": "LIB-T18",
+    "title": "DMZ وWi-Fi وIPv6 والمنافذ",
+    "questions": [
+      {
+        "examQuestionId": "LIB-T18-Q01",
+        "origin": "imported",
+        "sourceId": "LIB-T18",
+        "sourceQuestionId": "1",
+        "section": "BASIC",
+        "topic": "OTHER_NETWORKING",
+        "secondaryTopics": [],
+        "difficulty": 2,
+        "difficultyLabel": "",
+        "familyKey": "LIB-T18-Q01",
+        "hasCLI": false,
+        "requiresCalculation": false,
+        "presentationType": "multipleChoice",
+        "marks": 10,
+        "locked": false,
+        "text": "ما وظيفة منطقة DMZ في الشبكة؟",
+        "textHtml": "",
+        "options": [
+          {
+            "value": "0",
+            "text": "وضع الخدمات العامة في منطقة تفصلها عن الشبكة الداخلية"
+          },
+          {
+            "value": "1",
+            "text": "توزيع عناوين IP على الأجهزة"
+          },
+          {
+            "value": "2",
+            "text": "ربط الهاتف بسماعة Bluetooth"
+          },
+          {
+            "value": "3",
+            "text": "تحويل اسم الموقع إلى عنوان IP"
+          }
+        ],
+        "fields": [],
+        "parts": [],
+        "answer": {
+          "correctOptionIndex": 0
+        },
+        "hint": "DMZ منطقة بين الشبكة الداخلية والإنترنت، تستضيف خدمات عامة مثل Web وMail وDNS وتحمي الشبكة الداخلية من الوصول المباشر.",
+        "teacherNote": "",
+        "aiInstruction": "",
+        "wasModified": false,
+        "image": {
+          "exists": false,
+          "visible": false,
+          "origin": null,
+          "assets": [],
+          "prompt": null
+        },
+        "history": [],
+        "redoStack": []
+      },
+      {
+        "examQuestionId": "LIB-T18-Q02",
+        "origin": "imported",
+        "sourceId": "LIB-T18",
+        "sourceQuestionId": "2",
+        "section": "BASIC",
+        "topic": "OTHER_NETWORKING",
+        "secondaryTopics": [],
+        "difficulty": 2,
+        "difficultyLabel": "",
+        "familyKey": "LIB-T18-Q02",
+        "hasCLI": false,
+        "requiresCalculation": false,
+        "presentationType": "multipleChoice",
+        "marks": 10,
+        "locked": false,
+        "text": "على ماذا تعتمد تقنية Wi-Fi لنقل البيانات دون كابلات؟",
+        "textHtml": "",
+        "options": [
+          {
+            "value": "0",
+            "text": "الضوء داخل الألياف"
+          },
+          {
+            "value": "1",
+            "text": "عنوان MAC فقط"
+          },
+          {
+            "value": "2",
+            "text": "موجات الراديو"
+          },
+          {
+            "value": "3",
+            "text": "كابل Coaxial"
+          }
+        ],
+        "fields": [],
+        "parts": [],
+        "answer": {
+          "correctOptionIndex": 2
+        },
+        "hint": "Wi-Fi تقنية اتصال لاسلكي تعتمد على موجات الراديو.",
+        "teacherNote": "",
+        "aiInstruction": "",
+        "wasModified": false,
+        "image": {
+          "exists": false,
+          "visible": false,
+          "origin": null,
+          "assets": [],
+          "prompt": null
+        },
+        "history": [],
+        "redoStack": []
+      },
+      {
+        "examQuestionId": "LIB-T18-Q03",
+        "origin": "imported",
+        "sourceId": "LIB-T18",
+        "sourceQuestionId": "3",
+        "section": "BASIC",
+        "topic": "OTHER_NETWORKING",
+        "secondaryTopics": [],
+        "difficulty": 2,
+        "difficultyLabel": "",
+        "familyKey": "LIB-T18-Q03",
+        "hasCLI": false,
+        "requiresCalculation": false,
+        "presentationType": "multipleChoice",
+        "marks": 10,
+        "locked": false,
+        "text": "أي نوع يمثل شبكة محلية لاسلكية داخل بيت أو مدرسة؟",
+        "textHtml": "",
+        "options": [
+          {
+            "value": "0",
+            "text": "WWAN"
+          },
+          {
+            "value": "1",
+            "text": "WLAN"
+          },
+          {
+            "value": "2",
+            "text": "WPAN"
+          },
+          {
+            "value": "3",
+            "text": "WAN سلكية"
+          }
+        ],
+        "fields": [],
+        "parts": [],
+        "answer": {
+          "correctOptionIndex": 1
+        },
+        "hint": "WLAN هي شبكة محلية لاسلكية، مثل شبكة البيت أو المدرسة.",
+        "teacherNote": "",
+        "aiInstruction": "",
+        "wasModified": false,
+        "image": {
+          "exists": false,
+          "visible": false,
+          "origin": null,
+          "assets": [],
+          "prompt": null
+        },
+        "history": [],
+        "redoStack": []
+      },
+      {
+        "examQuestionId": "LIB-T18-Q04",
+        "origin": "imported",
+        "sourceId": "LIB-T18",
+        "sourceQuestionId": "4",
+        "section": "BASIC",
+        "topic": "OTHER_NETWORKING",
+        "secondaryTopics": [],
+        "difficulty": 2,
+        "difficultyLabel": "",
+        "familyKey": "LIB-T18-Q04",
+        "hasCLI": false,
+        "requiresCalculation": false,
+        "presentationType": "multipleChoice",
+        "marks": 10,
+        "locked": false,
+        "text": "ما المقصود بـSSID؟",
+        "textHtml": "",
+        "options": [
+          {
+            "value": "0",
+            "text": "كلمة مرور الراوتر"
+          },
+          {
+            "value": "1",
+            "text": "عنوان IPv6"
+          },
+          {
+            "value": "2",
+            "text": "رقم منفذ الخدمة"
+          },
+          {
+            "value": "3",
+            "text": "اسم شبكة Wi-Fi الذي يظهر للمستخدم"
+          }
+        ],
+        "fields": [],
+        "parts": [],
+        "answer": {
+          "correctOptionIndex": 3
+        },
+        "hint": "SSID هو اسم الشبكة اللاسلكية الذي يبثه الراوتر أو Access Point ويظهر للمستخدم.",
+        "teacherNote": "",
+        "aiInstruction": "",
+        "wasModified": false,
+        "image": {
+          "exists": false,
+          "visible": false,
+          "origin": null,
+          "assets": [],
+          "prompt": null
+        },
+        "history": [],
+        "redoStack": []
+      },
+      {
+        "examQuestionId": "LIB-T18-Q05",
+        "origin": "imported",
+        "sourceId": "LIB-T18",
+        "sourceQuestionId": "5",
+        "section": "BASIC",
+        "topic": "OTHER_NETWORKING",
+        "secondaryTopics": [],
+        "difficulty": 2,
+        "difficultyLabel": "",
+        "familyKey": "LIB-T18-Q05",
+        "hasCLI": false,
+        "requiresCalculation": false,
+        "presentationType": "multipleChoice",
+        "marks": 10,
+        "locked": false,
+        "text": "أي تقنية حماية هي الأفضل بين الخيارات التالية حسب الكتاب؟",
+        "textHtml": "",
+        "options": [
+          {
+            "value": "0",
+            "text": "WEP"
+          },
+          {
+            "value": "1",
+            "text": "شبكة مفتوحة"
+          },
+          {
+            "value": "2",
+            "text": "WPA2 أو WPA3"
+          },
+          {
+            "value": "3",
+            "text": "إخفاء SSID دون كلمة مرور"
+          }
+        ],
+        "fields": [],
+        "parts": [],
+        "answer": {
+          "correctOptionIndex": 2
+        },
+        "hint": "WPA2 وWPA3 أحدث وأكثر أمانًا، بينما WEP قديم وضعيف.",
+        "teacherNote": "",
+        "aiInstruction": "",
+        "wasModified": false,
+        "image": {
+          "exists": false,
+          "visible": false,
+          "origin": null,
+          "assets": [],
+          "prompt": null
+        },
+        "history": [],
+        "redoStack": []
+      },
+      {
+        "examQuestionId": "LIB-T18-Q06",
+        "origin": "imported",
+        "sourceId": "LIB-T18",
+        "sourceQuestionId": "6",
+        "section": "BASIC",
+        "topic": "OTHER_NETWORKING",
+        "secondaryTopics": [],
+        "difficulty": 2,
+        "difficultyLabel": "",
+        "familyKey": "LIB-T18-Q06",
+        "hasCLI": false,
+        "requiresCalculation": false,
+        "presentationType": "multipleChoice",
+        "marks": 10,
+        "locked": false,
+        "text": "ما وظيفة Access Point؟",
+        "textHtml": "",
+        "options": [
+          {
+            "value": "0",
+            "text": "ربط الأجهزة اللاسلكية بالشبكة وتوفير نقطة Wi-Fi"
+          },
+          {
+            "value": "1",
+            "text": "تحويل IPv4 إلى IPv6 فقط"
+          },
+          {
+            "value": "2",
+            "text": "توزيع البريد الإلكتروني"
+          },
+          {
+            "value": "3",
+            "text": "تحديد أرقام المنافذ"
+          }
+        ],
+        "fields": [],
+        "parts": [],
+        "answer": {
+          "correctOptionIndex": 0
+        },
+        "hint": "Access Point يربط الأجهزة اللاسلكية بالشبكة، وينشئ نقطة اتصال ويوسع التغطية.",
+        "teacherNote": "",
+        "aiInstruction": "",
+        "wasModified": false,
+        "image": {
+          "exists": false,
+          "visible": false,
+          "origin": null,
+          "assets": [],
+          "prompt": null
+        },
+        "history": [],
+        "redoStack": []
+      },
+      {
+        "examQuestionId": "LIB-T18-Q07",
+        "origin": "imported",
+        "sourceId": "LIB-T18",
+        "sourceQuestionId": "7",
+        "section": "BASIC",
+        "topic": "OTHER_NETWORKING",
+        "secondaryTopics": [],
+        "difficulty": 2,
+        "difficultyLabel": "",
+        "familyKey": "LIB-T18-Q07",
+        "hasCLI": false,
+        "requiresCalculation": false,
+        "presentationType": "multipleChoice",
+        "marks": 10,
+        "locked": false,
+        "text": "كم يبلغ طول عنوان IPv6؟",
+        "textHtml": "",
+        "options": [
+          {
+            "value": "0",
+            "text": "32 بت"
+          },
+          {
+            "value": "1",
+            "text": "64 بت"
+          },
+          {
+            "value": "2",
+            "text": "48 بت"
+          },
+          {
+            "value": "3",
+            "text": "128 بت"
+          }
+        ],
+        "fields": [],
+        "parts": [],
+        "answer": {
+          "correctOptionIndex": 3
+        },
+        "hint": "عنوان IPv6 طوله 128 بت، بينما IPv4 طوله 32 بت.",
+        "teacherNote": "",
+        "aiInstruction": "",
+        "wasModified": false,
+        "image": {
+          "exists": false,
+          "visible": false,
+          "origin": null,
+          "assets": [],
+          "prompt": null
+        },
+        "history": [],
+        "redoStack": []
+      },
+      {
+        "examQuestionId": "LIB-T18-Q08",
+        "origin": "imported",
+        "sourceId": "LIB-T18",
+        "sourceQuestionId": "8",
+        "section": "BASIC",
+        "topic": "OTHER_NETWORKING",
+        "secondaryTopics": [],
+        "difficulty": 2,
+        "difficultyLabel": "",
+        "familyKey": "LIB-T18-Q08",
+        "hasCLI": false,
+        "requiresCalculation": false,
+        "presentationType": "multipleChoice",
+        "marks": 10,
+        "locked": false,
+        "text": "ما القاعدة الصحيحة عند اختصار الأصفار المتتالية في عنوان IPv6؟",
+        "textHtml": "",
+        "options": [
+          {
+            "value": "0",
+            "text": "نستعمل شرطة واحدة -"
+          },
+          {
+            "value": "1",
+            "text": "نستعمل :: مرة واحدة فقط في العنوان"
+          },
+          {
+            "value": "2",
+            "text": "نحذف كل الأرقام والحروف"
+          },
+          {
+            "value": "3",
+            "text": "نستبدل الأصفار بعنوان IPv4"
+          }
+        ],
+        "fields": [],
+        "parts": [],
+        "answer": {
+          "correctOptionIndex": 1
+        },
+        "hint": "يمكن اختصار مجموعة أصفار متتالية باستعمال :: مرة واحدة فقط في عنوان IPv6.",
+        "teacherNote": "",
+        "aiInstruction": "",
+        "wasModified": false,
+        "image": {
+          "exists": false,
+          "visible": false,
+          "origin": null,
+          "assets": [],
+          "prompt": null
+        },
+        "history": [],
+        "redoStack": []
+      },
+      {
+        "examQuestionId": "LIB-T18-Q09",
+        "origin": "imported",
+        "sourceId": "LIB-T18",
+        "sourceQuestionId": "9",
+        "section": "BASIC",
+        "topic": "OTHER_NETWORKING",
+        "secondaryTopics": [],
+        "difficulty": 2,
+        "difficultyLabel": "",
+        "familyKey": "LIB-T18-Q09",
+        "hasCLI": false,
+        "requiresCalculation": false,
+        "presentationType": "multipleChoice",
+        "marks": 10,
+        "locked": false,
+        "text": "أي منفذ يُستخدم لخدمة HTTPS؟",
+        "textHtml": "",
+        "options": [
+          {
+            "value": "0",
+            "text": "443"
+          },
+          {
+            "value": "1",
+            "text": "80"
+          },
+          {
+            "value": "2",
+            "text": "25"
+          },
+          {
+            "value": "3",
+            "text": "53"
+          }
+        ],
+        "fields": [],
+        "parts": [],
+        "answer": {
+          "correctOptionIndex": 0
+        },
+        "hint": "HTTPS يستخدم المنفذ 443، بينما HTTP يستخدم المنفذ 80.",
+        "teacherNote": "",
+        "aiInstruction": "",
+        "wasModified": false,
+        "image": {
+          "exists": false,
+          "visible": false,
+          "origin": null,
+          "assets": [],
+          "prompt": null
+        },
+        "history": [],
+        "redoStack": []
+      },
+      {
+        "examQuestionId": "LIB-T18-Q10",
+        "origin": "imported",
+        "sourceId": "LIB-T18",
+        "sourceQuestionId": "10",
+        "section": "BASIC",
+        "topic": "OTHER_NETWORKING",
+        "secondaryTopics": [],
+        "difficulty": 2,
+        "difficultyLabel": "",
+        "familyKey": "LIB-T18-Q10",
+        "hasCLI": false,
+        "requiresCalculation": false,
+        "presentationType": "multipleChoice",
+        "marks": 10,
+        "locked": false,
+        "text": "يريد الفني السماح بخدمة DNS واتصال SSH آمن. أي زوج منافذ يختار؟",
+        "textHtml": "",
+        "options": [
+          {
+            "value": "0",
+            "text": "80 و443"
+          },
+          {
+            "value": "1",
+            "text": "25 و110"
+          },
+          {
+            "value": "2",
+            "text": "53 و22"
+          },
+          {
+            "value": "3",
+            "text": "21 و23"
+          }
+        ],
+        "fields": [],
+        "parts": [],
+        "answer": {
+          "correctOptionIndex": 2
+        },
+        "hint": "DNS يستخدم المنفذ 53، وSSH يستخدم المنفذ 22.",
+        "teacherNote": "",
+        "aiInstruction": "",
+        "wasModified": false,
+        "image": {
+          "exists": false,
+          "visible": false,
+          "origin": null,
+          "assets": [],
+          "prompt": null
+        },
+        "history": [],
+        "redoStack": []
+      }
+    ],
+    "totalMarks": 100,
+    "status": "final",
+    "createdAt": "2026-09-05T18:57:20.347Z",
+    "updatedAt": "2026-09-05T18:57:20.347Z"
+  }
+}

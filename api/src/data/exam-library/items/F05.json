@@ -1,0 +1,1971 @@
+{
+  "libraryItemId": "F05",
+  "title": "بجروت صيف 2024",
+  "category": "final",
+  "description": "نسخة رسمية مرتبة مع الرسومات والأسئلة الأصلية للحل والكتابة.",
+  "tags": [
+    "بجروت رسمي",
+    "2024",
+    "رسومات أصلية"
+  ],
+  "questionCount": 41,
+  "totalMarks": 164,
+  "pageRange": "",
+  "parserFamily": "f-dom-qcard-v1",
+  "conversionStatus": "needs_review",
+  "publishable": false,
+  "autoGradableCount": 0,
+  "manualReviewCount": 41,
+  "libraryVersion": 1,
+  "sourceSha": "1f81a85ce8a8dcb0844f4121f0ab25a32a2515c59c770a09285a9bb2992be1f9",
+  "contentHash": "ab8b5ed293b19cf19c079cafcce6c288931a11ed5eae5d529174e474cd1a1a6c",
+  "convertedAt": "2026-09-05T18:57:19.063Z",
+  "source": {
+    "repository": "Book791381",
+    "sourceFile": "F05.html"
+  },
+  "schemaVersion": 1,
+  "examSnapshot": {
+    "schemaVersion": 1,
+    "examId": "LIB-F05",
+    "title": "بجروت صيف 2024",
+    "questions": [
+      {
+        "examQuestionId": "LIB-F05-Q01",
+        "origin": "imported",
+        "sourceId": "LIB-F05",
+        "sourceQuestionId": "q1",
+        "section": "BASIC",
+        "topic": "OTHER_NETWORKING",
+        "secondaryTopics": [],
+        "difficulty": 2,
+        "difficultyLabel": "",
+        "familyKey": "LIB-F05-Q01",
+        "hasCLI": false,
+        "requiresCalculation": false,
+        "presentationType": "open",
+        "marks": 4,
+        "locked": false,
+        "text": "ما هي القيمة الثنائية للعدد العشري 193؟",
+        "textHtml": "",
+        "options": [],
+        "fields": [],
+        "parts": [],
+        "answer": {},
+        "hint": "",
+        "teacherNote": "سؤال مفتوح بلا مفتاح إجابة في المصدر.",
+        "aiInstruction": "",
+        "wasModified": false,
+        "image": {
+          "exists": false,
+          "visible": false,
+          "origin": null,
+          "assets": [],
+          "prompt": null
+        },
+        "history": [],
+        "redoStack": []
+      },
+      {
+        "examQuestionId": "LIB-F05-Q02",
+        "origin": "imported",
+        "sourceId": "LIB-F05",
+        "sourceQuestionId": "q2",
+        "section": "BASIC",
+        "topic": "OTHER_NETWORKING",
+        "secondaryTopics": [],
+        "difficulty": 2,
+        "difficultyLabel": "",
+        "familyKey": "LIB-F05-Q02",
+        "hasCLI": false,
+        "requiresCalculation": false,
+        "presentationType": "multipleChoice",
+        "marks": 4,
+        "locked": false,
+        "text": "أي بروتوكول يمكنّن نقل وعرض صور أو أفلام في شبكة الإنترنت؟",
+        "textHtml": "",
+        "options": [
+          {
+            "value": "0",
+            "text": "DHCP"
+          },
+          {
+            "value": "1",
+            "text": "HTTP"
+          },
+          {
+            "value": "2",
+            "text": "DNS"
+          },
+          {
+            "value": "3",
+            "text": "APIPA"
+          }
+        ],
+        "fields": [],
+        "parts": [],
+        "answer": {},
+        "hint": "",
+        "teacherNote": "لا يوجد مفتاح إجابة لهذا السؤال في المصدر.",
+        "aiInstruction": "",
+        "wasModified": false,
+        "image": {
+          "exists": false,
+          "visible": false,
+          "origin": null,
+          "assets": [],
+          "prompt": null
+        },
+        "history": [],
+        "redoStack": []
+      },
+      {
+        "examQuestionId": "LIB-F05-Q03",
+        "origin": "imported",
+        "sourceId": "LIB-F05",
+        "sourceQuestionId": "q3",
+        "section": "BASIC",
+        "topic": "OTHER_NETWORKING",
+        "secondaryTopics": [],
+        "difficulty": 2,
+        "difficultyLabel": "",
+        "familyKey": "LIB-F05-Q03",
+        "hasCLI": false,
+        "requiresCalculation": false,
+        "presentationType": "open",
+        "marks": 4,
+        "locked": false,
+        "text": "أمامكم أقوال تتطرق إلى عنوان الـ IP التالي: 192.15.3.0/24",
+        "textHtml": "",
+        "options": [],
+        "fields": [],
+        "parts": [],
+        "answer": {},
+        "hint": "",
+        "teacherNote": "شكل سؤال متعدد الأجزاء غير قابل للتحويل الحتمي — يحتاج مراجعة.",
+        "aiInstruction": "",
+        "wasModified": false,
+        "image": {
+          "exists": false,
+          "visible": false,
+          "origin": null,
+          "assets": [],
+          "prompt": null
+        },
+        "history": [],
+        "redoStack": []
+      },
+      {
+        "examQuestionId": "LIB-F05-Q04",
+        "origin": "imported",
+        "sourceId": "LIB-F05",
+        "sourceQuestionId": "q4",
+        "section": "BASIC",
+        "topic": "OTHER_NETWORKING",
+        "secondaryTopics": [],
+        "difficulty": 2,
+        "difficultyLabel": "",
+        "familyKey": "LIB-F05-Q04",
+        "hasCLI": false,
+        "requiresCalculation": false,
+        "presentationType": "multipleChoice",
+        "marks": 4,
+        "locked": false,
+        "text": "أي عنوان من بين العناوين التالية هو عنوان APIPA؟",
+        "textHtml": "",
+        "options": [
+          {
+            "value": "0",
+            "text": "127.0.0.1"
+          },
+          {
+            "value": "1",
+            "text": "169.254.254.255"
+          },
+          {
+            "value": "2",
+            "text": "169.254.0.10"
+          },
+          {
+            "value": "3",
+            "text": "169.254.0.0"
+          }
+        ],
+        "fields": [],
+        "parts": [],
+        "answer": {},
+        "hint": "",
+        "teacherNote": "لا يوجد مفتاح إجابة لهذا السؤال في المصدر.",
+        "aiInstruction": "",
+        "wasModified": false,
+        "image": {
+          "exists": false,
+          "visible": false,
+          "origin": null,
+          "assets": [],
+          "prompt": null
+        },
+        "history": [],
+        "redoStack": []
+      },
+      {
+        "examQuestionId": "LIB-F05-Q05",
+        "origin": "imported",
+        "sourceId": "LIB-F05",
+        "sourceQuestionId": "q5",
+        "section": "BASIC",
+        "topic": "OTHER_NETWORKING",
+        "secondaryTopics": [],
+        "difficulty": 2,
+        "difficultyLabel": "",
+        "familyKey": "LIB-F05-Q05",
+        "hasCLI": false,
+        "requiresCalculation": false,
+        "presentationType": "open",
+        "marks": 4,
+        "locked": false,
+        "text": "أكملوا الأمر التالي لتعريف اسم الراوتر EXAM.",
+        "textHtml": "",
+        "options": [],
+        "fields": [],
+        "parts": [],
+        "answer": {},
+        "hint": "",
+        "teacherNote": "شكل سؤال متعدد الأجزاء غير قابل للتحويل الحتمي — يحتاج مراجعة.",
+        "aiInstruction": "",
+        "wasModified": false,
+        "image": {
+          "exists": false,
+          "visible": false,
+          "origin": null,
+          "assets": [],
+          "prompt": null
+        },
+        "history": [],
+        "redoStack": []
+      },
+      {
+        "examQuestionId": "LIB-F05-Q06",
+        "origin": "imported",
+        "sourceId": "LIB-F05",
+        "sourceQuestionId": "q6",
+        "section": "BASIC",
+        "topic": "OTHER_NETWORKING",
+        "secondaryTopics": [],
+        "difficulty": 2,
+        "difficultyLabel": "",
+        "familyKey": "LIB-F05-Q06",
+        "hasCLI": false,
+        "requiresCalculation": false,
+        "presentationType": "open",
+        "marks": 4,
+        "locked": false,
+        "text": "اكتبوا الأمر الذي يمكن فحص الاتصال السليم بين حاسوب التلميذ 1 وبين حاسوب التلميذ 2:",
+        "textHtml": "",
+        "options": [],
+        "fields": [],
+        "parts": [],
+        "answer": {},
+        "hint": "",
+        "teacherNote": "سؤال مفتوح بلا مفتاح إجابة في المصدر.",
+        "aiInstruction": "",
+        "wasModified": false,
+        "image": {
+          "exists": true,
+          "visible": true,
+          "origin": "uploaded",
+          "assets": [
+            {
+              "id": "img-0",
+              "origin": "uploaded",
+              "contentType": "image/png",
+              "dataUrl": "/exam-library/assets/F05/cf21fce87d2d80b9.png"
+            }
+          ],
+          "prompt": null
+        },
+        "history": [],
+        "redoStack": []
+      },
+      {
+        "examQuestionId": "LIB-F05-Q07",
+        "origin": "imported",
+        "sourceId": "LIB-F05",
+        "sourceQuestionId": "q7",
+        "section": "BASIC",
+        "topic": "OTHER_NETWORKING",
+        "secondaryTopics": [],
+        "difficulty": 2,
+        "difficultyLabel": "",
+        "familyKey": "LIB-F05-Q07",
+        "hasCLI": false,
+        "requiresCalculation": false,
+        "presentationType": "open",
+        "marks": 4,
+        "locked": false,
+        "text": "ما هي القيمة العشرية (أساس 10) للرقم الثنائي 101111؟",
+        "textHtml": "",
+        "options": [],
+        "fields": [],
+        "parts": [],
+        "answer": {},
+        "hint": "",
+        "teacherNote": "سؤال مفتوح بلا مفتاح إجابة في المصدر.",
+        "aiInstruction": "",
+        "wasModified": false,
+        "image": {
+          "exists": false,
+          "visible": false,
+          "origin": null,
+          "assets": [],
+          "prompt": null
+        },
+        "history": [],
+        "redoStack": []
+      },
+      {
+        "examQuestionId": "LIB-F05-Q08",
+        "origin": "imported",
+        "sourceId": "LIB-F05",
+        "sourceQuestionId": "q8",
+        "section": "BASIC",
+        "topic": "OTHER_NETWORKING",
+        "secondaryTopics": [],
+        "difficulty": 2,
+        "difficultyLabel": "",
+        "familyKey": "LIB-F05-Q08",
+        "hasCLI": false,
+        "requiresCalculation": false,
+        "presentationType": "multipleChoice",
+        "marks": 4,
+        "locked": false,
+        "text": "أي بروتوكول يمكن إيجاد عنوان IP لمواقع إنترنت؟",
+        "textHtml": "",
+        "options": [
+          {
+            "value": "0",
+            "text": "VTP"
+          },
+          {
+            "value": "1",
+            "text": "HTTPS"
+          },
+          {
+            "value": "2",
+            "text": "DNS"
+          },
+          {
+            "value": "3",
+            "text": "DHCP"
+          }
+        ],
+        "fields": [],
+        "parts": [],
+        "answer": {},
+        "hint": "",
+        "teacherNote": "لا يوجد مفتاح إجابة لهذا السؤال في المصدر.",
+        "aiInstruction": "",
+        "wasModified": false,
+        "image": {
+          "exists": false,
+          "visible": false,
+          "origin": null,
+          "assets": [],
+          "prompt": null
+        },
+        "history": [],
+        "redoStack": []
+      },
+      {
+        "examQuestionId": "LIB-F05-Q09",
+        "origin": "imported",
+        "sourceId": "LIB-F05",
+        "sourceQuestionId": "q9",
+        "section": "BASIC",
+        "topic": "OTHER_NETWORKING",
+        "secondaryTopics": [],
+        "difficulty": 2,
+        "difficultyLabel": "",
+        "familyKey": "LIB-F05-Q09",
+        "hasCLI": false,
+        "requiresCalculation": false,
+        "presentationType": "open",
+        "marks": 4,
+        "locked": false,
+        "text": "أمامكم أقوال تتطرق إلى عنوان الـ IP التالي: 172.16.3.0/16",
+        "textHtml": "",
+        "options": [],
+        "fields": [],
+        "parts": [],
+        "answer": {},
+        "hint": "",
+        "teacherNote": "شكل سؤال متعدد الأجزاء غير قابل للتحويل الحتمي — يحتاج مراجعة.",
+        "aiInstruction": "",
+        "wasModified": false,
+        "image": {
+          "exists": false,
+          "visible": false,
+          "origin": null,
+          "assets": [],
+          "prompt": null
+        },
+        "history": [],
+        "redoStack": []
+      },
+      {
+        "examQuestionId": "LIB-F05-Q10",
+        "origin": "imported",
+        "sourceId": "LIB-F05",
+        "sourceQuestionId": "q10",
+        "section": "BASIC",
+        "topic": "OTHER_NETWORKING",
+        "secondaryTopics": [],
+        "difficulty": 2,
+        "difficultyLabel": "",
+        "familyKey": "LIB-F05-Q10",
+        "hasCLI": false,
+        "requiresCalculation": false,
+        "presentationType": "multipleChoice",
+        "marks": 4,
+        "locked": false,
+        "text": "بأي طريقة بث يتم إرسال معلومات من محطة واحدة إلى مجموعة حواسيب داخل الشبكة المحلية؟",
+        "textHtml": "",
+        "options": [
+          {
+            "value": "0",
+            "text": "broadcast"
+          },
+          {
+            "value": "1",
+            "text": "multicast"
+          },
+          {
+            "value": "2",
+            "text": "all-to-all"
+          },
+          {
+            "value": "3",
+            "text": "unicast"
+          }
+        ],
+        "fields": [],
+        "parts": [],
+        "answer": {},
+        "hint": "",
+        "teacherNote": "لا يوجد مفتاح إجابة لهذا السؤال في المصدر.",
+        "aiInstruction": "",
+        "wasModified": false,
+        "image": {
+          "exists": false,
+          "visible": false,
+          "origin": null,
+          "assets": [],
+          "prompt": null
+        },
+        "history": [],
+        "redoStack": []
+      },
+      {
+        "examQuestionId": "LIB-F05-Q11",
+        "origin": "imported",
+        "sourceId": "LIB-F05",
+        "sourceQuestionId": "q11",
+        "section": "BASIC",
+        "topic": "OTHER_NETWORKING",
+        "secondaryTopics": [],
+        "difficulty": 2,
+        "difficultyLabel": "",
+        "familyKey": "LIB-F05-Q11",
+        "hasCLI": false,
+        "requiresCalculation": false,
+        "presentationType": "multipleChoice",
+        "marks": 4,
+        "locked": false,
+        "text": "أي أمر يمكن إجراء تعريف للمنفذ 0/0Gig في الراوتر 1R لعنوان IP التالي: 192.168.1.254/24 ؟",
+        "textHtml": "",
+        "options": [
+          {
+            "value": "0",
+            "text": "R1(config-if)# ip address 192.168.1.254 255.255.255.0"
+          },
+          {
+            "value": "1",
+            "text": "R1(config)# ip address 192.168.1.254 255.255.255.0"
+          },
+          {
+            "value": "2",
+            "text": "R1(config-if)# ip address 192.168.1.254 0.0.0.0"
+          },
+          {
+            "value": "3",
+            "text": "R1(config)# ip address 192.168.1.254 255.0.0.0"
+          }
+        ],
+        "fields": [],
+        "parts": [],
+        "answer": {},
+        "hint": "",
+        "teacherNote": "لا يوجد مفتاح إجابة لهذا السؤال في المصدر.",
+        "aiInstruction": "",
+        "wasModified": false,
+        "image": {
+          "exists": false,
+          "visible": false,
+          "origin": null,
+          "assets": [],
+          "prompt": null
+        },
+        "history": [],
+        "redoStack": []
+      },
+      {
+        "examQuestionId": "LIB-F05-Q12",
+        "origin": "imported",
+        "sourceId": "LIB-F05",
+        "sourceQuestionId": "q12",
+        "section": "BASIC",
+        "topic": "OTHER_NETWORKING",
+        "secondaryTopics": [],
+        "difficulty": 2,
+        "difficultyLabel": "",
+        "familyKey": "LIB-F05-Q12",
+        "hasCLI": false,
+        "requiresCalculation": false,
+        "presentationType": "multipleChoice",
+        "marks": 4,
+        "locked": false,
+        "text": "أي من بين العناوين التالية لا يمكن تصفح شبكة الإنترنت؟",
+        "textHtml": "",
+        "options": [
+          {
+            "value": "0",
+            "text": "188.22.33.14"
+          },
+          {
+            "value": "1",
+            "text": "172.15.23.46"
+          },
+          {
+            "value": "2",
+            "text": "127.0.0.1"
+          },
+          {
+            "value": "3",
+            "text": "193.67.87.34"
+          }
+        ],
+        "fields": [],
+        "parts": [],
+        "answer": {},
+        "hint": "",
+        "teacherNote": "لا يوجد مفتاح إجابة لهذا السؤال في المصدر.",
+        "aiInstruction": "",
+        "wasModified": false,
+        "image": {
+          "exists": false,
+          "visible": false,
+          "origin": null,
+          "assets": [],
+          "prompt": null
+        },
+        "history": [],
+        "redoStack": []
+      },
+      {
+        "examQuestionId": "LIB-F05-Q13",
+        "origin": "imported",
+        "sourceId": "LIB-F05",
+        "sourceQuestionId": "q13",
+        "section": "BASIC",
+        "topic": "OTHER_NETWORKING",
+        "secondaryTopics": [],
+        "difficulty": 2,
+        "difficultyLabel": "",
+        "familyKey": "LIB-F05-Q13",
+        "hasCLI": false,
+        "requiresCalculation": false,
+        "presentationType": "multipleChoice",
+        "marks": 4,
+        "locked": false,
+        "text": "ما هو البروتوكول الذي يمكن توجيه رزم معطيات بين شبكات مختلفة؟",
+        "textHtml": "",
+        "options": [
+          {
+            "value": "0",
+            "text": "TCP"
+          },
+          {
+            "value": "1",
+            "text": "UDP"
+          },
+          {
+            "value": "2",
+            "text": "IP"
+          },
+          {
+            "value": "3",
+            "text": "ARP"
+          }
+        ],
+        "fields": [],
+        "parts": [],
+        "answer": {},
+        "hint": "",
+        "teacherNote": "لا يوجد مفتاح إجابة لهذا السؤال في المصدر.",
+        "aiInstruction": "",
+        "wasModified": false,
+        "image": {
+          "exists": false,
+          "visible": false,
+          "origin": null,
+          "assets": [],
+          "prompt": null
+        },
+        "history": [],
+        "redoStack": []
+      },
+      {
+        "examQuestionId": "LIB-F05-Q14",
+        "origin": "imported",
+        "sourceId": "LIB-F05",
+        "sourceQuestionId": "q14",
+        "section": "BASIC",
+        "topic": "OTHER_NETWORKING",
+        "secondaryTopics": [],
+        "difficulty": 2,
+        "difficultyLabel": "",
+        "familyKey": "LIB-F05-Q14",
+        "hasCLI": false,
+        "requiresCalculation": false,
+        "presentationType": "multipleChoice",
+        "marks": 4,
+        "locked": false,
+        "text": "ما هي وظيفة الخادم في الشبكة؟",
+        "textHtml": "",
+        "options": [
+          {
+            "value": "0",
+            "text": "تزويد خدمات لمستخدمي الشبكة."
+          },
+          {
+            "value": "1",
+            "text": "تزويد اتصالات معطيات أحادية الاتجاه."
+          },
+          {
+            "value": "2",
+            "text": "تزويد ربط بديل في حالة توقف راوتر."
+          },
+          {
+            "value": "3",
+            "text": "تزويد عناوين MAC أوتوماتيكيًا."
+          }
+        ],
+        "fields": [],
+        "parts": [],
+        "answer": {},
+        "hint": "",
+        "teacherNote": "لا يوجد مفتاح إجابة لهذا السؤال في المصدر.",
+        "aiInstruction": "",
+        "wasModified": false,
+        "image": {
+          "exists": false,
+          "visible": false,
+          "origin": null,
+          "assets": [],
+          "prompt": null
+        },
+        "history": [],
+        "redoStack": []
+      },
+      {
+        "examQuestionId": "LIB-F05-Q15",
+        "origin": "imported",
+        "sourceId": "LIB-F05",
+        "sourceQuestionId": "q15",
+        "section": "BASIC",
+        "topic": "OTHER_NETWORKING",
+        "secondaryTopics": [],
+        "difficulty": 2,
+        "difficultyLabel": "",
+        "familyKey": "LIB-F05-Q15",
+        "hasCLI": false,
+        "requiresCalculation": false,
+        "presentationType": "multipleChoice",
+        "marks": 4,
+        "locked": false,
+        "text": "أي مما يلي يجب أن يكون مركبًا في الحاسوب لكي يكون تصفح شبكة الإنترنت ممكنًا؟",
+        "textHtml": "",
+        "options": [
+          {
+            "value": "0",
+            "text": "متصفح browser"
+          },
+          {
+            "value": "1",
+            "text": "بطاقة شاشة"
+          },
+          {
+            "value": "2",
+            "text": "برمجية تحرير صفحات html"
+          },
+          {
+            "value": "3",
+            "text": "بطاقة صوت"
+          }
+        ],
+        "fields": [],
+        "parts": [],
+        "answer": {},
+        "hint": "",
+        "teacherNote": "لا يوجد مفتاح إجابة لهذا السؤال في المصدر.",
+        "aiInstruction": "",
+        "wasModified": false,
+        "image": {
+          "exists": false,
+          "visible": false,
+          "origin": null,
+          "assets": [],
+          "prompt": null
+        },
+        "history": [],
+        "redoStack": []
+      },
+      {
+        "examQuestionId": "LIB-F05-Q16",
+        "origin": "imported",
+        "sourceId": "LIB-F05",
+        "sourceQuestionId": "q16",
+        "section": "BASIC",
+        "topic": "OTHER_NETWORKING",
+        "secondaryTopics": [],
+        "difficulty": 2,
+        "difficultyLabel": "",
+        "familyKey": "LIB-F05-Q16",
+        "hasCLI": false,
+        "requiresCalculation": false,
+        "presentationType": "multipleChoice",
+        "marks": 4,
+        "locked": false,
+        "text": "معطى عنوان الـ IP التالي: 130.22.56.254 . ما هو القول الصحيح بالنسبة لهذا العنوان؟",
+        "textHtml": "",
+        "options": [
+          {
+            "value": "0",
+            "text": "العنوان ليس قانونيًا."
+          },
+          {
+            "value": "1",
+            "text": "العنوان تابع لـ Class A."
+          },
+          {
+            "value": "2",
+            "text": "العنوان تابع لـ Class B."
+          },
+          {
+            "value": "3",
+            "text": "العنوان تابع لـ Class C."
+          }
+        ],
+        "fields": [],
+        "parts": [],
+        "answer": {},
+        "hint": "",
+        "teacherNote": "لا يوجد مفتاح إجابة لهذا السؤال في المصدر.",
+        "aiInstruction": "",
+        "wasModified": false,
+        "image": {
+          "exists": false,
+          "visible": false,
+          "origin": null,
+          "assets": [],
+          "prompt": null
+        },
+        "history": [],
+        "redoStack": []
+      },
+      {
+        "examQuestionId": "LIB-F05-Q17",
+        "origin": "imported",
+        "sourceId": "LIB-F05",
+        "sourceQuestionId": "q17",
+        "section": "BASIC",
+        "topic": "OTHER_NETWORKING",
+        "secondaryTopics": [],
+        "difficulty": 2,
+        "difficultyLabel": "",
+        "familyKey": "LIB-F05-Q17",
+        "hasCLI": false,
+        "requiresCalculation": false,
+        "presentationType": "open",
+        "marks": 4,
+        "locked": false,
+        "text": "أمامكم أقوال تتطرق إلى البروتوكول DHCP.",
+        "textHtml": "",
+        "options": [],
+        "fields": [],
+        "parts": [],
+        "answer": {},
+        "hint": "",
+        "teacherNote": "شكل سؤال متعدد الأجزاء غير قابل للتحويل الحتمي — يحتاج مراجعة.",
+        "aiInstruction": "",
+        "wasModified": false,
+        "image": {
+          "exists": false,
+          "visible": false,
+          "origin": null,
+          "assets": [],
+          "prompt": null
+        },
+        "history": [],
+        "redoStack": []
+      },
+      {
+        "examQuestionId": "LIB-F05-Q18",
+        "origin": "imported",
+        "sourceId": "LIB-F05",
+        "sourceQuestionId": "q18",
+        "section": "BASIC",
+        "topic": "OTHER_NETWORKING",
+        "secondaryTopics": [],
+        "difficulty": 2,
+        "difficultyLabel": "",
+        "familyKey": "LIB-F05-Q18",
+        "hasCLI": false,
+        "requiresCalculation": false,
+        "presentationType": "open",
+        "marks": 4,
+        "locked": false,
+        "text": "معطى عنوان الـ IP التالي: 10.10.10.10/8 . ما هو معرف الشبكة (Network ID) لهذا العنوان؟",
+        "textHtml": "",
+        "options": [],
+        "fields": [],
+        "parts": [],
+        "answer": {},
+        "hint": "",
+        "teacherNote": "سؤال مفتوح بلا مفتاح إجابة في المصدر.",
+        "aiInstruction": "",
+        "wasModified": false,
+        "image": {
+          "exists": false,
+          "visible": false,
+          "origin": null,
+          "assets": [],
+          "prompt": null
+        },
+        "history": [],
+        "redoStack": []
+      },
+      {
+        "examQuestionId": "LIB-F05-Q19",
+        "origin": "imported",
+        "sourceId": "LIB-F05",
+        "sourceQuestionId": "q19",
+        "section": "BASIC",
+        "topic": "OTHER_NETWORKING",
+        "secondaryTopics": [],
+        "difficulty": 2,
+        "difficultyLabel": "",
+        "familyKey": "LIB-F05-Q19",
+        "hasCLI": false,
+        "requiresCalculation": false,
+        "presentationType": "multipleChoice",
+        "marks": 4,
+        "locked": false,
+        "text": "أي من بين العناوين التالية هو عنوان منطقي؟",
+        "textHtml": "",
+        "options": [
+          {
+            "value": "0",
+            "text": "MAC"
+          },
+          {
+            "value": "1",
+            "text": "ARP"
+          },
+          {
+            "value": "2",
+            "text": "IP"
+          },
+          {
+            "value": "3",
+            "text": "FF:FF:FF:FF:FF:FF"
+          }
+        ],
+        "fields": [],
+        "parts": [],
+        "answer": {},
+        "hint": "",
+        "teacherNote": "لا يوجد مفتاح إجابة لهذا السؤال في المصدر.",
+        "aiInstruction": "",
+        "wasModified": false,
+        "image": {
+          "exists": false,
+          "visible": false,
+          "origin": null,
+          "assets": [],
+          "prompt": null
+        },
+        "history": [],
+        "redoStack": []
+      },
+      {
+        "examQuestionId": "LIB-F05-Q20",
+        "origin": "imported",
+        "sourceId": "LIB-F05",
+        "sourceQuestionId": "q20",
+        "section": "BASIC",
+        "topic": "OTHER_NETWORKING",
+        "secondaryTopics": [],
+        "difficulty": 2,
+        "difficultyLabel": "",
+        "familyKey": "LIB-F05-Q20",
+        "hasCLI": false,
+        "requiresCalculation": false,
+        "presentationType": "multipleChoice",
+        "marks": 4,
+        "locked": false,
+        "text": "حاسوب يرتبط لأول مرة بالشبكة. أي طريقة بث يستعمل الحاسوب لكي يجد خادم DHCP في الشبكة؟",
+        "textHtml": "",
+        "options": [
+          {
+            "value": "0",
+            "text": "multicast"
+          },
+          {
+            "value": "1",
+            "text": "unicast"
+          },
+          {
+            "value": "2",
+            "text": "anycast"
+          },
+          {
+            "value": "3",
+            "text": "broadcast"
+          }
+        ],
+        "fields": [],
+        "parts": [],
+        "answer": {},
+        "hint": "",
+        "teacherNote": "لا يوجد مفتاح إجابة لهذا السؤال في المصدر.",
+        "aiInstruction": "",
+        "wasModified": false,
+        "image": {
+          "exists": false,
+          "visible": false,
+          "origin": null,
+          "assets": [],
+          "prompt": null
+        },
+        "history": [],
+        "redoStack": []
+      },
+      {
+        "examQuestionId": "LIB-F05-Q21",
+        "origin": "imported",
+        "sourceId": "LIB-F05",
+        "sourceQuestionId": "q21",
+        "section": "BASIC",
+        "topic": "OTHER_NETWORKING",
+        "secondaryTopics": [],
+        "difficulty": 2,
+        "difficultyLabel": "",
+        "familyKey": "LIB-F05-Q21",
+        "hasCLI": false,
+        "requiresCalculation": false,
+        "presentationType": "multipleChoice",
+        "marks": 4,
+        "locked": false,
+        "text": "بحسب أي عنوان يتعرف المفتاح على الأجهزة المربوطة به؟",
+        "textHtml": "",
+        "options": [
+          {
+            "value": "0",
+            "text": "عنوان IP"
+          },
+          {
+            "value": "1",
+            "text": "عنوان MAC"
+          },
+          {
+            "value": "2",
+            "text": "عنوان دينامي"
+          },
+          {
+            "value": "3",
+            "text": "عنوان ثابت"
+          }
+        ],
+        "fields": [],
+        "parts": [],
+        "answer": {},
+        "hint": "",
+        "teacherNote": "لا يوجد مفتاح إجابة لهذا السؤال في المصدر.",
+        "aiInstruction": "",
+        "wasModified": false,
+        "image": {
+          "exists": false,
+          "visible": false,
+          "origin": null,
+          "assets": [],
+          "prompt": null
+        },
+        "history": [],
+        "redoStack": []
+      },
+      {
+        "examQuestionId": "LIB-F05-Q22",
+        "origin": "imported",
+        "sourceId": "LIB-F05",
+        "sourceQuestionId": "q22",
+        "section": "BASIC",
+        "topic": "OTHER_NETWORKING",
+        "secondaryTopics": [],
+        "difficulty": 2,
+        "difficultyLabel": "",
+        "familyKey": "LIB-F05-Q22",
+        "hasCLI": false,
+        "requiresCalculation": false,
+        "presentationType": "open",
+        "marks": 4,
+        "locked": false,
+        "text": "ما هي القيمة القصوى لعدد المستضيفات التي يمكن تعريفها في شبكة Class C؟",
+        "textHtml": "",
+        "options": [],
+        "fields": [],
+        "parts": [],
+        "answer": {},
+        "hint": "",
+        "teacherNote": "سؤال مفتوح بلا مفتاح إجابة في المصدر.",
+        "aiInstruction": "",
+        "wasModified": false,
+        "image": {
+          "exists": false,
+          "visible": false,
+          "origin": null,
+          "assets": [],
+          "prompt": null
+        },
+        "history": [],
+        "redoStack": []
+      },
+      {
+        "examQuestionId": "LIB-F05-Q23",
+        "origin": "imported",
+        "sourceId": "LIB-F05",
+        "sourceQuestionId": "q23",
+        "section": "BASIC",
+        "topic": "OTHER_NETWORKING",
+        "secondaryTopics": [],
+        "difficulty": 2,
+        "difficultyLabel": "",
+        "familyKey": "LIB-F05-Q23",
+        "hasCLI": false,
+        "requiresCalculation": false,
+        "presentationType": "open",
+        "marks": 4,
+        "locked": false,
+        "text": "أمامكم أقوال تتطرق إلى تعليمات الأمان في المختبر.",
+        "textHtml": "",
+        "options": [],
+        "fields": [],
+        "parts": [],
+        "answer": {},
+        "hint": "",
+        "teacherNote": "شكل سؤال متعدد الأجزاء غير قابل للتحويل الحتمي — يحتاج مراجعة.",
+        "aiInstruction": "",
+        "wasModified": false,
+        "image": {
+          "exists": false,
+          "visible": false,
+          "origin": null,
+          "assets": [],
+          "prompt": null
+        },
+        "history": [],
+        "redoStack": []
+      },
+      {
+        "examQuestionId": "LIB-F05-Q24",
+        "origin": "imported",
+        "sourceId": "LIB-F05",
+        "sourceQuestionId": "q24",
+        "section": "BASIC",
+        "topic": "OTHER_NETWORKING",
+        "secondaryTopics": [],
+        "difficulty": 2,
+        "difficultyLabel": "",
+        "familyKey": "LIB-F05-Q24",
+        "hasCLI": false,
+        "requiresCalculation": false,
+        "presentationType": "multipleChoice",
+        "marks": 4,
+        "locked": false,
+        "text": "لأي نوع رسائل يُستعمل عنوان الـ MAC التالي: FF:FF:FF:FF:FF:FF ؟",
+        "textHtml": "",
+        "options": [
+          {
+            "value": "0",
+            "text": "unicast"
+          },
+          {
+            "value": "1",
+            "text": "broadcast"
+          },
+          {
+            "value": "2",
+            "text": "multicast"
+          },
+          {
+            "value": "3",
+            "text": "podcast"
+          }
+        ],
+        "fields": [],
+        "parts": [],
+        "answer": {},
+        "hint": "",
+        "teacherNote": "لا يوجد مفتاح إجابة لهذا السؤال في المصدر.",
+        "aiInstruction": "",
+        "wasModified": false,
+        "image": {
+          "exists": false,
+          "visible": false,
+          "origin": null,
+          "assets": [],
+          "prompt": null
+        },
+        "history": [],
+        "redoStack": []
+      },
+      {
+        "examQuestionId": "LIB-F05-Q25",
+        "origin": "imported",
+        "sourceId": "LIB-F05",
+        "sourceQuestionId": "q25",
+        "section": "BASIC",
+        "topic": "OTHER_NETWORKING",
+        "secondaryTopics": [],
+        "difficulty": 2,
+        "difficultyLabel": "",
+        "familyKey": "LIB-F05-Q25",
+        "hasCLI": false,
+        "requiresCalculation": false,
+        "presentationType": "multipleChoice",
+        "marks": 4,
+        "locked": false,
+        "text": "أي أمر لإنتاج كلمة مرور مشفرة تقيّد الوصول إلى حالة enable في الراوتر RouterA؟",
+        "textHtml": "",
+        "options": [
+          {
+            "value": "0",
+            "text": "RouterA(config)# encrypted password class"
+          },
+          {
+            "value": "1",
+            "text": "RouterA(config)# password encrypted class"
+          },
+          {
+            "value": "2",
+            "text": "RouterA(config)# enable password class"
+          },
+          {
+            "value": "3",
+            "text": "RouterA(config)# enable secret class"
+          }
+        ],
+        "fields": [],
+        "parts": [],
+        "answer": {},
+        "hint": "",
+        "teacherNote": "لا يوجد مفتاح إجابة لهذا السؤال في المصدر.",
+        "aiInstruction": "",
+        "wasModified": false,
+        "image": {
+          "exists": false,
+          "visible": false,
+          "origin": null,
+          "assets": [],
+          "prompt": null
+        },
+        "history": [],
+        "redoStack": []
+      },
+      {
+        "examQuestionId": "LIB-F05-Q26",
+        "origin": "imported",
+        "sourceId": "LIB-F05",
+        "sourceQuestionId": "q26",
+        "section": "BASIC",
+        "topic": "OTHER_NETWORKING",
+        "secondaryTopics": [],
+        "difficulty": 2,
+        "difficultyLabel": "",
+        "familyKey": "LIB-F05-Q26",
+        "hasCLI": false,
+        "requiresCalculation": false,
+        "presentationType": "multipleChoice",
+        "marks": 4,
+        "locked": false,
+        "text": "معطى عنوان الـ IP التالي: 195.23.2.240/24 . ما هو التمثيل الثنائي للجزء HOST؟",
+        "textHtml": "",
+        "options": [
+          {
+            "value": "0",
+            "text": "11111000"
+          },
+          {
+            "value": "1",
+            "text": "11000111"
+          },
+          {
+            "value": "2",
+            "text": "11110000"
+          },
+          {
+            "value": "3",
+            "text": "11100001"
+          }
+        ],
+        "fields": [],
+        "parts": [],
+        "answer": {},
+        "hint": "",
+        "teacherNote": "لا يوجد مفتاح إجابة لهذا السؤال في المصدر.",
+        "aiInstruction": "",
+        "wasModified": false,
+        "image": {
+          "exists": false,
+          "visible": false,
+          "origin": null,
+          "assets": [],
+          "prompt": null
+        },
+        "history": [],
+        "redoStack": []
+      },
+      {
+        "examQuestionId": "LIB-F05-Q27",
+        "origin": "imported",
+        "sourceId": "LIB-F05",
+        "sourceQuestionId": "q27",
+        "section": "BASIC",
+        "topic": "OTHER_NETWORKING",
+        "secondaryTopics": [],
+        "difficulty": 2,
+        "difficultyLabel": "",
+        "familyKey": "LIB-F05-Q27",
+        "hasCLI": false,
+        "requiresCalculation": false,
+        "presentationType": "multipleChoice",
+        "marks": 4,
+        "locked": false,
+        "text": "أي عنوان من العناوين التالية يمكن الارتباط بشبكة الإنترنت؟",
+        "textHtml": "",
+        "options": [
+          {
+            "value": "0",
+            "text": "80.0.0.0"
+          },
+          {
+            "value": "1",
+            "text": "127.0.0.1"
+          },
+          {
+            "value": "2",
+            "text": "169.254.0.1"
+          },
+          {
+            "value": "3",
+            "text": "80.30.12.4"
+          }
+        ],
+        "fields": [],
+        "parts": [],
+        "answer": {},
+        "hint": "",
+        "teacherNote": "لا يوجد مفتاح إجابة لهذا السؤال في المصدر.",
+        "aiInstruction": "",
+        "wasModified": false,
+        "image": {
+          "exists": false,
+          "visible": false,
+          "origin": null,
+          "assets": [],
+          "prompt": null
+        },
+        "history": [],
+        "redoStack": []
+      },
+      {
+        "examQuestionId": "LIB-F05-Q28",
+        "origin": "imported",
+        "sourceId": "LIB-F05",
+        "sourceQuestionId": "q28",
+        "section": "BASIC",
+        "topic": "OTHER_NETWORKING",
+        "secondaryTopics": [],
+        "difficulty": 2,
+        "difficultyLabel": "",
+        "familyKey": "LIB-F05-Q28",
+        "hasCLI": false,
+        "requiresCalculation": false,
+        "presentationType": "open",
+        "marks": 4,
+        "locked": false,
+        "text": "حددوا بالنسبة لكل قول من الأقوال التالية هل هو صحيح أو غير صحيح.",
+        "textHtml": "",
+        "options": [],
+        "fields": [],
+        "parts": [],
+        "answer": {},
+        "hint": "",
+        "teacherNote": "شكل سؤال متعدد الأجزاء غير قابل للتحويل الحتمي — يحتاج مراجعة.",
+        "aiInstruction": "",
+        "wasModified": false,
+        "image": {
+          "exists": false,
+          "visible": false,
+          "origin": null,
+          "assets": [],
+          "prompt": null
+        },
+        "history": [],
+        "redoStack": []
+      },
+      {
+        "examQuestionId": "LIB-F05-Q29",
+        "origin": "imported",
+        "sourceId": "LIB-F05",
+        "sourceQuestionId": "q29",
+        "section": "BASIC",
+        "topic": "OTHER_NETWORKING",
+        "secondaryTopics": [],
+        "difficulty": 2,
+        "difficultyLabel": "",
+        "familyKey": "LIB-F05-Q29",
+        "hasCLI": false,
+        "requiresCalculation": false,
+        "presentationType": "multipleChoice",
+        "marks": 4,
+        "locked": false,
+        "text": "في أي حالة يرسل المفتاح إطار معطيات لجميع المخارج التابعة له؟",
+        "textHtml": "",
+        "options": [
+          {
+            "value": "0",
+            "text": "عندما يكون عنوان MAC للمصدر غير معروف له."
+          },
+          {
+            "value": "1",
+            "text": "عندما يكون عنوانا MAC للمصدر والهدف متماثلين."
+          },
+          {
+            "value": "2",
+            "text": "عندما يكون عنوان MAC للهدف غير معروف."
+          },
+          {
+            "value": "3",
+            "text": "عندما يكون عنوان MAC للهدف مساويًا لـ 0."
+          }
+        ],
+        "fields": [],
+        "parts": [],
+        "answer": {},
+        "hint": "",
+        "teacherNote": "لا يوجد مفتاح إجابة لهذا السؤال في المصدر.",
+        "aiInstruction": "",
+        "wasModified": false,
+        "image": {
+          "exists": false,
+          "visible": false,
+          "origin": null,
+          "assets": [],
+          "prompt": null
+        },
+        "history": [],
+        "redoStack": []
+      },
+      {
+        "examQuestionId": "LIB-F05-Q30",
+        "origin": "imported",
+        "sourceId": "LIB-F05",
+        "sourceQuestionId": "q30",
+        "section": "BASIC",
+        "topic": "OTHER_NETWORKING",
+        "secondaryTopics": [],
+        "difficulty": 2,
+        "difficultyLabel": "",
+        "familyKey": "LIB-F05-Q30",
+        "hasCLI": false,
+        "requiresCalculation": false,
+        "presentationType": "multipleChoice",
+        "marks": 4,
+        "locked": false,
+        "text": "في أي حالة يجب إدخال كلمة المرور good؟",
+        "textHtml": "",
+        "options": [
+          {
+            "value": "0",
+            "text": "إذا كُتب في الراوتر: no enable secret tal"
+          },
+          {
+            "value": "1",
+            "text": "إذا كُتب في الراوتر: no enable console 123!"
+          },
+          {
+            "value": "2",
+            "text": "إذا أردنا الارتباط إلى حالة enable في الراوتر."
+          },
+          {
+            "value": "3",
+            "text": "إذا أردنا الارتباط بالراوتر من بعيد."
+          }
+        ],
+        "fields": [],
+        "parts": [],
+        "answer": {},
+        "hint": "",
+        "teacherNote": "لا يوجد مفتاح إجابة لهذا السؤال في المصدر.",
+        "aiInstruction": "",
+        "wasModified": false,
+        "image": {
+          "exists": true,
+          "visible": true,
+          "origin": "uploaded",
+          "assets": [
+            {
+              "id": "img-0",
+              "origin": "uploaded",
+              "contentType": "image/png",
+              "dataUrl": "/exam-library/assets/F05/3463bd194f023546.png"
+            }
+          ],
+          "prompt": null
+        },
+        "history": [],
+        "redoStack": []
+      },
+      {
+        "examQuestionId": "LIB-F05-Q31",
+        "origin": "imported",
+        "sourceId": "LIB-F05",
+        "sourceQuestionId": "q31",
+        "section": "BASIC",
+        "topic": "OTHER_NETWORKING",
+        "secondaryTopics": [],
+        "difficulty": 2,
+        "difficultyLabel": "",
+        "familyKey": "LIB-F05-Q31",
+        "hasCLI": false,
+        "requiresCalculation": false,
+        "presentationType": "open",
+        "marks": 4,
+        "locked": false,
+        "text": "أكملوا: راوتر BAGRUT موجود في فرع مدرسة في إيلات. للارتباط بهذا الراوتر من القدس، يجب إدخال كلمة المرور:",
+        "textHtml": "",
+        "options": [],
+        "fields": [],
+        "parts": [],
+        "answer": {},
+        "hint": "",
+        "teacherNote": "لا يوجد مفتاح إجابة لهذا السؤال في المصدر.",
+        "aiInstruction": "",
+        "wasModified": false,
+        "image": {
+          "exists": true,
+          "visible": true,
+          "origin": "uploaded",
+          "assets": [
+            {
+              "id": "img-0",
+              "origin": "uploaded",
+              "contentType": "image/png",
+              "dataUrl": "/exam-library/assets/F05/3463bd194f023546.png"
+            }
+          ],
+          "prompt": null
+        },
+        "history": [],
+        "redoStack": []
+      },
+      {
+        "examQuestionId": "LIB-F05-Q32",
+        "origin": "imported",
+        "sourceId": "LIB-F05",
+        "sourceQuestionId": "q32",
+        "section": "BASIC",
+        "topic": "OTHER_NETWORKING",
+        "secondaryTopics": [],
+        "difficulty": 2,
+        "difficultyLabel": "",
+        "familyKey": "LIB-F05-Q32",
+        "hasCLI": false,
+        "requiresCalculation": false,
+        "presentationType": "open",
+        "marks": 4,
+        "locked": false,
+        "text": "حددوا بالنسبة لكل قول هل هو صحيح أو غير صحيح.",
+        "textHtml": "",
+        "options": [],
+        "fields": [],
+        "parts": [],
+        "answer": {},
+        "hint": "",
+        "teacherNote": "شكل سؤال متعدد الأجزاء غير قابل للتحويل الحتمي — يحتاج مراجعة.",
+        "aiInstruction": "",
+        "wasModified": false,
+        "image": {
+          "exists": false,
+          "visible": false,
+          "origin": null,
+          "assets": [],
+          "prompt": null
+        },
+        "history": [],
+        "redoStack": []
+      },
+      {
+        "examQuestionId": "LIB-F05-Q33",
+        "origin": "imported",
+        "sourceId": "LIB-F05",
+        "sourceQuestionId": "q33",
+        "section": "BASIC",
+        "topic": "OTHER_NETWORKING",
+        "secondaryTopics": [],
+        "difficulty": 2,
+        "difficultyLabel": "",
+        "familyKey": "LIB-F05-Q33",
+        "hasCLI": false,
+        "requiresCalculation": false,
+        "presentationType": "open",
+        "marks": 4,
+        "locked": false,
+        "text": "حددوا بالنسبة لكل قول هل هو صحيح أو غير صحيح.",
+        "textHtml": "",
+        "options": [],
+        "fields": [],
+        "parts": [],
+        "answer": {},
+        "hint": "",
+        "teacherNote": "شكل سؤال متعدد الأجزاء غير قابل للتحويل الحتمي — يحتاج مراجعة.",
+        "aiInstruction": "",
+        "wasModified": false,
+        "image": {
+          "exists": false,
+          "visible": false,
+          "origin": null,
+          "assets": [],
+          "prompt": null
+        },
+        "history": [],
+        "redoStack": []
+      },
+      {
+        "examQuestionId": "LIB-F05-Q34",
+        "origin": "imported",
+        "sourceId": "LIB-F05",
+        "sourceQuestionId": "q34",
+        "section": "BASIC",
+        "topic": "OTHER_NETWORKING",
+        "secondaryTopics": [],
+        "difficulty": 2,
+        "difficultyLabel": "",
+        "familyKey": "LIB-F05-Q34",
+        "hasCLI": false,
+        "requiresCalculation": false,
+        "presentationType": "multipleChoice",
+        "marks": 4,
+        "locked": false,
+        "text": "ما هو الفرق الأساسي بين بروتوكول TCP وبين بروتوكول UDP؟",
+        "textHtml": "",
+        "options": [
+          {
+            "value": "0",
+            "text": "TCP يحاول إيصال المعطيات إلى هدفها بالترتيب الصحيح، وUDP ليس موثوقًا ويعمل دون مراقبة تدفق."
+          },
+          {
+            "value": "1",
+            "text": "TCP يرسل الرزم عشوائيًا، وUDP يرسل مع مراقبة تدفق."
+          },
+          {
+            "value": "2",
+            "text": "TCP ليس موثوقًا وUDP موثوق."
+          },
+          {
+            "value": "3",
+            "text": "TCP موثوق ويضمن إيصال المعطيات بالترتيب الصحيح، وUDP ليس موثوقًا ويُرسل دون مراقبة تدفق."
+          }
+        ],
+        "fields": [],
+        "parts": [],
+        "answer": {},
+        "hint": "",
+        "teacherNote": "لا يوجد مفتاح إجابة لهذا السؤال في المصدر.",
+        "aiInstruction": "",
+        "wasModified": false,
+        "image": {
+          "exists": false,
+          "visible": false,
+          "origin": null,
+          "assets": [],
+          "prompt": null
+        },
+        "history": [],
+        "redoStack": []
+      },
+      {
+        "examQuestionId": "LIB-F05-Q35",
+        "origin": "imported",
+        "sourceId": "LIB-F05",
+        "sourceQuestionId": "q35",
+        "section": "BASIC",
+        "topic": "OTHER_NETWORKING",
+        "secondaryTopics": [],
+        "difficulty": 2,
+        "difficultyLabel": "",
+        "familyKey": "LIB-F05-Q35",
+        "hasCLI": false,
+        "requiresCalculation": false,
+        "presentationType": "multipleChoice",
+        "marks": 4,
+        "locked": false,
+        "text": "أمامكم طوبولوجيا. جميع الأجهزة معرفة بشكل سليم ويوجد اتصال بين الراوترين. ماذا سيحدث عندما يرتبط حاسوب Host A بالشبكة ويرسل طلب DHCP إلى الراوتر R2 الذي هو أيضًا DHCP Server؟",
+        "textHtml": "",
+        "options": [
+          {
+            "value": "0",
+            "text": "الراوتر R1 سيوزع عناوين IP بشكل أوتوماتيكي إلى الحاسوب Host A."
+          },
+          {
+            "value": "1",
+            "text": "الراوتر R1 سينقل الطلب إلى الراوتر R2، والراوتر R2 سيعيد إلى الحاسوب Host A اقتراحًا لعنوان IP."
+          },
+          {
+            "value": "2",
+            "text": "الراوتر R1 سينقل الطلب إلى الراوتر R2، لكن الراوتر R2 لن يعيد اقتراحًا لعنوان IP لأن الأمر الذي تم تعريفه في الراوتر R1 غير صحيح."
+          },
+          {
+            "value": "3",
+            "text": "الراوتر R1 سيعيد إلى الحاسوب Host A عنوان APIPA."
+          }
+        ],
+        "fields": [],
+        "parts": [],
+        "answer": {},
+        "hint": "",
+        "teacherNote": "لا يوجد مفتاح إجابة لهذا السؤال في المصدر.",
+        "aiInstruction": "",
+        "wasModified": false,
+        "image": {
+          "exists": true,
+          "visible": true,
+          "origin": "uploaded",
+          "assets": [
+            {
+              "id": "img-0",
+              "origin": "uploaded",
+              "contentType": "image/png",
+              "dataUrl": "/exam-library/assets/F05/302a39f503341b92.png"
+            },
+            {
+              "id": "img-1",
+              "origin": "uploaded",
+              "contentType": "image/png",
+              "dataUrl": "/exam-library/assets/F05/c3fa40969bfb38db.png"
+            }
+          ],
+          "prompt": null
+        },
+        "history": [],
+        "redoStack": []
+      },
+      {
+        "examQuestionId": "LIB-F05-Q36",
+        "origin": "imported",
+        "sourceId": "LIB-F05",
+        "sourceQuestionId": "q36",
+        "section": "BASIC",
+        "topic": "OTHER_NETWORKING",
+        "secondaryTopics": [],
+        "difficulty": 2,
+        "difficultyLabel": "",
+        "familyKey": "LIB-F05-Q36",
+        "hasCLI": false,
+        "requiresCalculation": false,
+        "presentationType": "open",
+        "marks": 4,
+        "locked": false,
+        "text": "أكملوا الأوامر التالية لكي نعرّف بروتوكول التوجيه OSPF في الراوتر 1R:",
+        "textHtml": "",
+        "options": [],
+        "fields": [],
+        "parts": [],
+        "answer": {},
+        "hint": "",
+        "teacherNote": "شكل سؤال متعدد الأجزاء غير قابل للتحويل الحتمي — يحتاج مراجعة.",
+        "aiInstruction": "",
+        "wasModified": false,
+        "image": {
+          "exists": true,
+          "visible": true,
+          "origin": "uploaded",
+          "assets": [
+            {
+              "id": "img-0",
+              "origin": "uploaded",
+              "contentType": "image/png",
+              "dataUrl": "/exam-library/assets/F05/6a983ee43b329d04.png"
+            }
+          ],
+          "prompt": null
+        },
+        "history": [],
+        "redoStack": []
+      },
+      {
+        "examQuestionId": "LIB-F05-Q37",
+        "origin": "imported",
+        "sourceId": "LIB-F05",
+        "sourceQuestionId": "q37",
+        "section": "BASIC",
+        "topic": "OTHER_NETWORKING",
+        "secondaryTopics": [],
+        "difficulty": 2,
+        "difficultyLabel": "",
+        "familyKey": "LIB-F05-Q37",
+        "hasCLI": false,
+        "requiresCalculation": false,
+        "presentationType": "multipleChoice",
+        "marks": 4,
+        "locked": false,
+        "text": "أي أمر يجب أن نكتب في الراوتر 2R لكي نقوم بتعريف توجيه ثابت لشبكة حاسوب PC-2؟",
+        "textHtml": "",
+        "options": [
+          {
+            "value": "0",
+            "text": "R2(config)# ip route 192.16.2.1 255.255.255.0 192.16.3.1"
+          },
+          {
+            "value": "1",
+            "text": "R2(config)# ip route 192.16.2.0 255.255.0.0 192.16.2.254"
+          },
+          {
+            "value": "2",
+            "text": "R2(config)# ip route 192.16.2.0 255.255.255.0 192.16.3.1"
+          },
+          {
+            "value": "3",
+            "text": "R2(config)# ip route 192.16.3.0 255.255.255.0 192.16.2.254"
+          }
+        ],
+        "fields": [],
+        "parts": [],
+        "answer": {},
+        "hint": "",
+        "teacherNote": "لا يوجد مفتاح إجابة لهذا السؤال في المصدر.",
+        "aiInstruction": "",
+        "wasModified": false,
+        "image": {
+          "exists": true,
+          "visible": true,
+          "origin": "uploaded",
+          "assets": [
+            {
+              "id": "img-0",
+              "origin": "uploaded",
+              "contentType": "image/png",
+              "dataUrl": "/exam-library/assets/F05/8763958166eb6742.png"
+            }
+          ],
+          "prompt": null
+        },
+        "history": [],
+        "redoStack": []
+      },
+      {
+        "examQuestionId": "LIB-F05-Q38",
+        "origin": "imported",
+        "sourceId": "LIB-F05",
+        "sourceQuestionId": "q38",
+        "section": "BASIC",
+        "topic": "OTHER_NETWORKING",
+        "secondaryTopics": [],
+        "difficulty": 2,
+        "difficultyLabel": "",
+        "familyKey": "LIB-F05-Q38",
+        "hasCLI": false,
+        "requiresCalculation": false,
+        "presentationType": "open",
+        "marks": 4,
+        "locked": false,
+        "text": "أكملوا حسب الطوبولوجيا.",
+        "textHtml": "",
+        "options": [],
+        "fields": [],
+        "parts": [],
+        "answer": {},
+        "hint": "",
+        "teacherNote": "شكل سؤال متعدد الأجزاء غير قابل للتحويل الحتمي — يحتاج مراجعة.",
+        "aiInstruction": "",
+        "wasModified": false,
+        "image": {
+          "exists": true,
+          "visible": true,
+          "origin": "uploaded",
+          "assets": [
+            {
+              "id": "img-0",
+              "origin": "uploaded",
+              "contentType": "image/png",
+              "dataUrl": "/exam-library/assets/F05/8763958166eb6742.png"
+            }
+          ],
+          "prompt": null
+        },
+        "history": [],
+        "redoStack": []
+      },
+      {
+        "examQuestionId": "LIB-F05-Q39",
+        "origin": "imported",
+        "sourceId": "LIB-F05",
+        "sourceQuestionId": "q39",
+        "section": "BASIC",
+        "topic": "OTHER_NETWORKING",
+        "secondaryTopics": [],
+        "difficulty": 2,
+        "difficultyLabel": "",
+        "familyKey": "LIB-F05-Q39",
+        "hasCLI": false,
+        "requiresCalculation": false,
+        "presentationType": "open",
+        "marks": 4,
+        "locked": false,
+        "text": "طلب من مدير الشركة ألّا يسمح للحاسوب PC-2 بالدخول إلى المقطع Fa0/0 في الراوتر R1. أكملوا الأوامر:",
+        "textHtml": "",
+        "options": [],
+        "fields": [],
+        "parts": [],
+        "answer": {},
+        "hint": "",
+        "teacherNote": "شكل سؤال متعدد الأجزاء غير قابل للتحويل الحتمي — يحتاج مراجعة.",
+        "aiInstruction": "",
+        "wasModified": false,
+        "image": {
+          "exists": true,
+          "visible": true,
+          "origin": "uploaded",
+          "assets": [
+            {
+              "id": "img-0",
+              "origin": "uploaded",
+              "contentType": "image/png",
+              "dataUrl": "/exam-library/assets/F05/8763958166eb6742.png"
+            }
+          ],
+          "prompt": null
+        },
+        "history": [],
+        "redoStack": []
+      },
+      {
+        "examQuestionId": "LIB-F05-Q40",
+        "origin": "imported",
+        "sourceId": "LIB-F05",
+        "sourceQuestionId": "q40",
+        "section": "BASIC",
+        "topic": "OTHER_NETWORKING",
+        "secondaryTopics": [],
+        "difficulty": 2,
+        "difficultyLabel": "",
+        "familyKey": "LIB-F05-Q40",
+        "hasCLI": false,
+        "requiresCalculation": false,
+        "presentationType": "open",
+        "marks": 4,
+        "locked": false,
+        "text": "معطاة رزمة معطيات وصلت إلى المفتاح Main-Switch. حددوا بالنسبة لكل قول هل هو صحيح أو غير صحيح.",
+        "textHtml": "",
+        "options": [],
+        "fields": [],
+        "parts": [],
+        "answer": {},
+        "hint": "",
+        "teacherNote": "شكل سؤال متعدد الأجزاء غير قابل للتحويل الحتمي — يحتاج مراجعة.",
+        "aiInstruction": "",
+        "wasModified": false,
+        "image": {
+          "exists": true,
+          "visible": true,
+          "origin": "uploaded",
+          "assets": [
+            {
+              "id": "img-0",
+              "origin": "uploaded",
+              "contentType": "image/png",
+              "dataUrl": "/exam-library/assets/F05/896ec73b4fffe859.png"
+            }
+          ],
+          "prompt": null
+        },
+        "history": [],
+        "redoStack": []
+      },
+      {
+        "examQuestionId": "LIB-F05-Q41",
+        "origin": "imported",
+        "sourceId": "LIB-F05",
+        "sourceQuestionId": "q41",
+        "section": "BASIC",
+        "topic": "OTHER_NETWORKING",
+        "secondaryTopics": [],
+        "difficulty": 2,
+        "difficultyLabel": "",
+        "familyKey": "LIB-F05-Q41",
+        "hasCLI": false,
+        "requiresCalculation": false,
+        "presentationType": "open",
+        "marks": 4,
+        "locked": false,
+        "text": "أمامكم طوبولوجيا وتم تعريف كل الأجهزة فيها. حددوا بالنسبة لكل قول هل هو صحيح أو غير صحيح.",
+        "textHtml": "",
+        "options": [],
+        "fields": [],
+        "parts": [],
+        "answer": {},
+        "hint": "",
+        "teacherNote": "شكل سؤال متعدد الأجزاء غير قابل للتحويل الحتمي — يحتاج مراجعة.",
+        "aiInstruction": "",
+        "wasModified": false,
+        "image": {
+          "exists": true,
+          "visible": true,
+          "origin": "uploaded",
+          "assets": [
+            {
+              "id": "img-0",
+              "origin": "uploaded",
+              "contentType": "image/png",
+              "dataUrl": "/exam-library/assets/F05/095886a3e5f1234e.png"
+            },
+            {
+              "id": "img-1",
+              "origin": "uploaded",
+              "contentType": "image/png",
+              "dataUrl": "/exam-library/assets/F05/23d3396dc005b1aa.png"
+            }
+          ],
+          "prompt": null
+        },
+        "history": [],
+        "redoStack": []
+      }
+    ],
+    "totalMarks": 164,
+    "status": "final",
+    "createdAt": "2026-09-05T18:57:19.123Z",
+    "updatedAt": "2026-09-05T18:57:19.123Z"
+  }
+}

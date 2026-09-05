@@ -1,0 +1,589 @@
+{
+  "libraryItemId": "T04",
+  "title": "العناوين الخاصة والعامة",
+  "category": "foundation",
+  "description": "التمييز بين Public وPrivate IP والفرق بين Static وDynamic.",
+  "tags": [
+    "Private IP",
+    "Public IP",
+    "Static / Dynamic"
+  ],
+  "questionCount": 10,
+  "totalMarks": 100,
+  "pageRange": "28–31",
+  "parserFamily": "t-series-v1",
+  "conversionStatus": "ready",
+  "publishable": true,
+  "autoGradableCount": 10,
+  "manualReviewCount": 0,
+  "libraryVersion": 1,
+  "sourceSha": "ed7993ec5e4d4b54282e496e7f7082b3c402efbab860548f0144ce5a99faa951",
+  "contentHash": "e7735f9aecf3614634cc0a72c75344fe4d2c9da3650955d259823d3ec2f47d0f",
+  "convertedAt": "2026-09-05T18:57:19.063Z",
+  "source": {
+    "repository": "Book791381",
+    "sourceFile": "T04.html"
+  },
+  "schemaVersion": 1,
+  "examSnapshot": {
+    "schemaVersion": 1,
+    "examId": "LIB-T04",
+    "title": "العناوين الخاصة والعامة",
+    "questions": [
+      {
+        "examQuestionId": "LIB-T04-Q01",
+        "origin": "imported",
+        "sourceId": "LIB-T04",
+        "sourceQuestionId": "1",
+        "section": "BASIC",
+        "topic": "OTHER_NETWORKING",
+        "secondaryTopics": [],
+        "difficulty": 2,
+        "difficultyLabel": "",
+        "familyKey": "LIB-T04-Q01",
+        "hasCLI": false,
+        "requiresCalculation": false,
+        "presentationType": "multipleChoice",
+        "marks": 10,
+        "locked": false,
+        "text": "ما هو Public IP؟",
+        "textHtml": "",
+        "options": [
+          {
+            "value": "0",
+            "text": "عنوان يمكن الوصول إليه من الإنترنت"
+          },
+          {
+            "value": "1",
+            "text": "عنوان يُستخدم فقط داخل الحاسوب نفسه"
+          },
+          {
+            "value": "2",
+            "text": "عنوان خاص بالطابعة فقط"
+          },
+          {
+            "value": "3",
+            "text": "عنوان لا يتصل بأي شبكة"
+          }
+        ],
+        "fields": [],
+        "parts": [],
+        "answer": {
+          "correctOptionIndex": 0
+        },
+        "hint": "العنوان العام Public IP يمكن الوصول إليه من الإنترنت، ويُستخدم للمواقع والخوادم.",
+        "teacherNote": "",
+        "aiInstruction": "",
+        "wasModified": false,
+        "image": {
+          "exists": false,
+          "visible": false,
+          "origin": null,
+          "assets": [],
+          "prompt": null
+        },
+        "history": [],
+        "redoStack": []
+      },
+      {
+        "examQuestionId": "LIB-T04-Q02",
+        "origin": "imported",
+        "sourceId": "LIB-T04",
+        "sourceQuestionId": "2",
+        "section": "BASIC",
+        "topic": "OTHER_NETWORKING",
+        "secondaryTopics": [],
+        "difficulty": 2,
+        "difficultyLabel": "",
+        "familyKey": "LIB-T04-Q02",
+        "hasCLI": false,
+        "requiresCalculation": false,
+        "presentationType": "multipleChoice",
+        "marks": 10,
+        "locked": false,
+        "text": "أين يُستخدم Private IP غالبًا؟",
+        "textHtml": "",
+        "options": [
+          {
+            "value": "0",
+            "text": "في الأقمار الصناعية فقط"
+          },
+          {
+            "value": "1",
+            "text": "داخل شبكة محلية مثل البيت أو المدرسة"
+          },
+          {
+            "value": "2",
+            "text": "في أسماء المواقع فقط"
+          },
+          {
+            "value": "3",
+            "text": "في عناوين البريد الإلكتروني"
+          }
+        ],
+        "fields": [],
+        "parts": [],
+        "answer": {
+          "correctOptionIndex": 1
+        },
+        "hint": "العنوان الخاص يُستخدم داخل الشبكات المحلية مثل البيت أو المدرسة، ولا يظهر مباشرة على الإنترنت العام.",
+        "teacherNote": "",
+        "aiInstruction": "",
+        "wasModified": false,
+        "image": {
+          "exists": false,
+          "visible": false,
+          "origin": null,
+          "assets": [],
+          "prompt": null
+        },
+        "history": [],
+        "redoStack": []
+      },
+      {
+        "examQuestionId": "LIB-T04-Q03",
+        "origin": "imported",
+        "sourceId": "LIB-T04",
+        "sourceQuestionId": "3",
+        "section": "BASIC",
+        "topic": "OTHER_NETWORKING",
+        "secondaryTopics": [],
+        "difficulty": 2,
+        "difficultyLabel": "",
+        "familyKey": "LIB-T04-Q03",
+        "hasCLI": false,
+        "requiresCalculation": false,
+        "presentationType": "multipleChoice",
+        "marks": 10,
+        "locked": false,
+        "text": "أي عنوان من العناوين التالية هو عنوان خاص من مجال Class A؟",
+        "textHtml": "",
+        "options": [
+          {
+            "value": "0",
+            "text": "9.10.10.10"
+          },
+          {
+            "value": "1",
+            "text": "11.0.0.1"
+          },
+          {
+            "value": "2",
+            "text": "10.100.10.10"
+          },
+          {
+            "value": "3",
+            "text": "100.10.10.10"
+          }
+        ],
+        "fields": [],
+        "parts": [],
+        "answer": {
+          "correctOptionIndex": 2
+        },
+        "hint": "كل عنوان يبدأ بـ10 يقع ضمن المجال الخاص المذكور للفئة A.",
+        "teacherNote": "",
+        "aiInstruction": "",
+        "wasModified": false,
+        "image": {
+          "exists": false,
+          "visible": false,
+          "origin": null,
+          "assets": [],
+          "prompt": null
+        },
+        "history": [],
+        "redoStack": []
+      },
+      {
+        "examQuestionId": "LIB-T04-Q04",
+        "origin": "imported",
+        "sourceId": "LIB-T04",
+        "sourceQuestionId": "4",
+        "section": "BASIC",
+        "topic": "OTHER_NETWORKING",
+        "secondaryTopics": [],
+        "difficulty": 2,
+        "difficultyLabel": "",
+        "familyKey": "LIB-T04-Q04",
+        "hasCLI": false,
+        "requiresCalculation": false,
+        "presentationType": "multipleChoice",
+        "marks": 10,
+        "locked": false,
+        "text": "أي عنوان من العناوين التالية هو عنوان خاص؟",
+        "textHtml": "",
+        "options": [
+          {
+            "value": "0",
+            "text": "192.167.1.5"
+          },
+          {
+            "value": "1",
+            "text": "192.169.1.5"
+          },
+          {
+            "value": "2",
+            "text": "193.168.1.5"
+          },
+          {
+            "value": "3",
+            "text": "192.168.1.5"
+          }
+        ],
+        "fields": [],
+        "parts": [],
+        "answer": {
+          "correctOptionIndex": 3
+        },
+        "hint": "المجال الخاص الصحيح يبدأ بـ192.168، ويجب الانتباه إلى الأرقام بدقة.",
+        "teacherNote": "",
+        "aiInstruction": "",
+        "wasModified": false,
+        "image": {
+          "exists": false,
+          "visible": false,
+          "origin": null,
+          "assets": [],
+          "prompt": null
+        },
+        "history": [],
+        "redoStack": []
+      },
+      {
+        "examQuestionId": "LIB-T04-Q05",
+        "origin": "imported",
+        "sourceId": "LIB-T04",
+        "sourceQuestionId": "5",
+        "section": "BASIC",
+        "topic": "OTHER_NETWORKING",
+        "secondaryTopics": [],
+        "difficulty": 2,
+        "difficultyLabel": "",
+        "familyKey": "LIB-T04-Q05",
+        "hasCLI": false,
+        "requiresCalculation": false,
+        "presentationType": "multipleChoice",
+        "marks": 10,
+        "locked": false,
+        "text": "أي عنوان من العناوين التالية يقع ضمن المجال الخاص 172.16–172.31؟",
+        "textHtml": "",
+        "options": [
+          {
+            "value": "0",
+            "text": "172.23.100.13"
+          },
+          {
+            "value": "1",
+            "text": "172.15.10.10"
+          },
+          {
+            "value": "2",
+            "text": "172.32.10.10"
+          },
+          {
+            "value": "3",
+            "text": "173.16.10.10"
+          }
+        ],
+        "fields": [],
+        "parts": [],
+        "answer": {
+          "correctOptionIndex": 0
+        },
+        "hint": "في المجال الخاص الذي يبدأ بـ172 يجب أن يكون القسم الثاني بين 16 و31.",
+        "teacherNote": "",
+        "aiInstruction": "",
+        "wasModified": false,
+        "image": {
+          "exists": false,
+          "visible": false,
+          "origin": null,
+          "assets": [],
+          "prompt": null
+        },
+        "history": [],
+        "redoStack": []
+      },
+      {
+        "examQuestionId": "LIB-T04-Q06",
+        "origin": "imported",
+        "sourceId": "LIB-T04",
+        "sourceQuestionId": "6",
+        "section": "BASIC",
+        "topic": "OTHER_NETWORKING",
+        "secondaryTopics": [],
+        "difficulty": 2,
+        "difficultyLabel": "",
+        "familyKey": "LIB-T04-Q06",
+        "hasCLI": false,
+        "requiresCalculation": false,
+        "presentationType": "multipleChoice",
+        "marks": 10,
+        "locked": false,
+        "text": "أي عنوان من العناوين التالية يُعد عنوانًا عامًا؟",
+        "textHtml": "",
+        "options": [
+          {
+            "value": "0",
+            "text": "10.1.1.1"
+          },
+          {
+            "value": "1",
+            "text": "8.8.8.8"
+          },
+          {
+            "value": "2",
+            "text": "172.16.1.1"
+          },
+          {
+            "value": "3",
+            "text": "192.168.1.1"
+          }
+        ],
+        "fields": [],
+        "parts": [],
+        "answer": {
+          "correctOptionIndex": 1
+        },
+        "hint": "العنوان 8.8.8.8 لا يقع ضمن أي مجال من مجالات العناوين الخاصة المذكورة في الكتاب.",
+        "teacherNote": "",
+        "aiInstruction": "",
+        "wasModified": false,
+        "image": {
+          "exists": false,
+          "visible": false,
+          "origin": null,
+          "assets": [],
+          "prompt": null
+        },
+        "history": [],
+        "redoStack": []
+      },
+      {
+        "examQuestionId": "LIB-T04-Q07",
+        "origin": "imported",
+        "sourceId": "LIB-T04",
+        "sourceQuestionId": "7",
+        "section": "BASIC",
+        "topic": "OTHER_NETWORKING",
+        "secondaryTopics": [],
+        "difficulty": 2,
+        "difficultyLabel": "",
+        "familyKey": "LIB-T04-Q07",
+        "hasCLI": false,
+        "requiresCalculation": false,
+        "presentationType": "multipleChoice",
+        "marks": 10,
+        "locked": false,
+        "text": "كيف نصنّف العنوان 192.167.100.2؟",
+        "textHtml": "",
+        "options": [
+          {
+            "value": "0",
+            "text": "عنوان خاص لأنه يبدأ بـ192"
+          },
+          {
+            "value": "1",
+            "text": "عنوان APIPA"
+          },
+          {
+            "value": "2",
+            "text": "عنوان عام لأنه لا يبدأ بـ192.168"
+          },
+          {
+            "value": "3",
+            "text": "عنوان Localhost"
+          }
+        ],
+        "fields": [],
+        "parts": [],
+        "answer": {
+          "correctOptionIndex": 2
+        },
+        "hint": "العنوان 192.167 ليس من المجال الخاص 192.168، ولذلك يُصنّف هنا عنوانًا عامًا.",
+        "teacherNote": "",
+        "aiInstruction": "",
+        "wasModified": false,
+        "image": {
+          "exists": false,
+          "visible": false,
+          "origin": null,
+          "assets": [],
+          "prompt": null
+        },
+        "history": [],
+        "redoStack": []
+      },
+      {
+        "examQuestionId": "LIB-T04-Q08",
+        "origin": "imported",
+        "sourceId": "LIB-T04",
+        "sourceQuestionId": "8",
+        "section": "BASIC",
+        "topic": "OTHER_NETWORKING",
+        "secondaryTopics": [],
+        "difficulty": 2,
+        "difficultyLabel": "",
+        "familyKey": "LIB-T04-Q08",
+        "hasCLI": false,
+        "requiresCalculation": false,
+        "presentationType": "multipleChoice",
+        "marks": 10,
+        "locked": false,
+        "text": "ما المقصود بعنوان Static IP؟",
+        "textHtml": "",
+        "options": [
+          {
+            "value": "0",
+            "text": "عنوان يتغير كل دقيقة"
+          },
+          {
+            "value": "1",
+            "text": "عنوان يظهر فقط عند انقطاع الشبكة"
+          },
+          {
+            "value": "2",
+            "text": "عنوان مخصص للهاتف فقط"
+          },
+          {
+            "value": "3",
+            "text": "عنوان ثابت لا يتغير إلا إذا غُيّر يدويًا"
+          }
+        ],
+        "fields": [],
+        "parts": [],
+        "answer": {
+          "correctOptionIndex": 3
+        },
+        "hint": "Static IP هو عنوان ثابت، ويُستعمل غالبًا للطابعات والكاميرات والخوادم.",
+        "teacherNote": "",
+        "aiInstruction": "",
+        "wasModified": false,
+        "image": {
+          "exists": false,
+          "visible": false,
+          "origin": null,
+          "assets": [],
+          "prompt": null
+        },
+        "history": [],
+        "redoStack": []
+      },
+      {
+        "examQuestionId": "LIB-T04-Q09",
+        "origin": "imported",
+        "sourceId": "LIB-T04",
+        "sourceQuestionId": "9",
+        "section": "BASIC",
+        "topic": "OTHER_NETWORKING",
+        "secondaryTopics": [],
+        "difficulty": 2,
+        "difficultyLabel": "",
+        "familyKey": "LIB-T04-Q09",
+        "hasCLI": false,
+        "requiresCalculation": false,
+        "presentationType": "multipleChoice",
+        "marks": 10,
+        "locked": false,
+        "text": "ما المقصود بعنوان Dynamic IP؟",
+        "textHtml": "",
+        "options": [
+          {
+            "value": "0",
+            "text": "عنوان قد يتغير من وقت إلى آخر"
+          },
+          {
+            "value": "1",
+            "text": "عنوان لا يمكن استعماله داخل البيت"
+          },
+          {
+            "value": "2",
+            "text": "عنوان يبدأ دائمًا بـ127"
+          },
+          {
+            "value": "3",
+            "text": "عنوان مخصص للخوادم فقط"
+          }
+        ],
+        "fields": [],
+        "parts": [],
+        "answer": {
+          "correctOptionIndex": 0
+        },
+        "hint": "Dynamic IP عنوان متغير، وقد يتغير عند إعادة تشغيل المودم أو عند توزيعه من جديد.",
+        "teacherNote": "",
+        "aiInstruction": "",
+        "wasModified": false,
+        "image": {
+          "exists": false,
+          "visible": false,
+          "origin": null,
+          "assets": [],
+          "prompt": null
+        },
+        "history": [],
+        "redoStack": []
+      },
+      {
+        "examQuestionId": "LIB-T04-Q10",
+        "origin": "imported",
+        "sourceId": "LIB-T04",
+        "sourceQuestionId": "10",
+        "section": "BASIC",
+        "topic": "OTHER_NETWORKING",
+        "secondaryTopics": [],
+        "difficulty": 2,
+        "difficultyLabel": "",
+        "familyKey": "LIB-T04-Q10",
+        "hasCLI": false,
+        "requiresCalculation": false,
+        "presentationType": "multipleChoice",
+        "marks": 10,
+        "locked": false,
+        "text": "تريد المدرسة إعطاء طابعة الشبكة عنوانًا لا يتغير حتى تصل إليها الحواسيب دائمًا. أي نوع تختار؟",
+        "textHtml": "",
+        "options": [
+          {
+            "value": "0",
+            "text": "Dynamic IP"
+          },
+          {
+            "value": "1",
+            "text": "Static IP"
+          },
+          {
+            "value": "2",
+            "text": "APIPA"
+          },
+          {
+            "value": "3",
+            "text": "Localhost"
+          }
+        ],
+        "fields": [],
+        "parts": [],
+        "answer": {
+          "correctOptionIndex": 1
+        },
+        "hint": "الأجهزة التي يجب الوصول إليها باستمرار مثل الطابعات والخوادم يناسبها عنوان Static IP.",
+        "teacherNote": "",
+        "aiInstruction": "",
+        "wasModified": false,
+        "image": {
+          "exists": false,
+          "visible": false,
+          "origin": null,
+          "assets": [],
+          "prompt": null
+        },
+        "history": [],
+        "redoStack": []
+      }
+    ],
+    "totalMarks": 100,
+    "status": "final",
+    "createdAt": "2026-09-05T18:57:20.312Z",
+    "updatedAt": "2026-09-05T18:57:20.312Z"
+  }
+}

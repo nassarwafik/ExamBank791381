@@ -1,0 +1,589 @@
+{
+  "libraryItemId": "T24",
+  "title": "قوائم التحكم ACL",
+  "category": "infra",
+  "description": "Standard وExtended ACL وpermit وdeny وWildcard.",
+  "tags": [
+    "ACL",
+    "Standard / Extended",
+    "Wildcard"
+  ],
+  "questionCount": 10,
+  "totalMarks": 100,
+  "pageRange": "221–225",
+  "parserFamily": "t-series-v1",
+  "conversionStatus": "ready",
+  "publishable": true,
+  "autoGradableCount": 10,
+  "manualReviewCount": 0,
+  "libraryVersion": 1,
+  "sourceSha": "7a4bc9acc3eea30810d11da4bbb1c7f41268f271e75ea2540d23950f88bb93e7",
+  "contentHash": "1ff788e2d99d8736165643d226768216a740e3bf6ee7260a868338282ceaafc0",
+  "convertedAt": "2026-09-05T18:57:19.063Z",
+  "source": {
+    "repository": "Book791381",
+    "sourceFile": "T24.html"
+  },
+  "schemaVersion": 1,
+  "examSnapshot": {
+    "schemaVersion": 1,
+    "examId": "LIB-T24",
+    "title": "قوائم التحكم ACL",
+    "questions": [
+      {
+        "examQuestionId": "LIB-T24-Q01",
+        "origin": "imported",
+        "sourceId": "LIB-T24",
+        "sourceQuestionId": "1",
+        "section": "BASIC",
+        "topic": "OTHER_NETWORKING",
+        "secondaryTopics": [],
+        "difficulty": 2,
+        "difficultyLabel": "",
+        "familyKey": "LIB-T24-Q01",
+        "hasCLI": false,
+        "requiresCalculation": false,
+        "presentationType": "multipleChoice",
+        "marks": 10,
+        "locked": false,
+        "text": "ما وظيفة ACL؟",
+        "textHtml": "",
+        "options": [
+          {
+            "value": "0",
+            "text": "السماح أو منع مرور بيانات وفق قواعد محددة"
+          },
+          {
+            "value": "1",
+            "text": "توزيع عناوين IP"
+          },
+          {
+            "value": "2",
+            "text": "إنشاء شبكة Wi-Fi"
+          },
+          {
+            "value": "3",
+            "text": "منع كل التوجيه"
+          }
+        ],
+        "fields": [],
+        "parts": [],
+        "answer": {
+          "correctOptionIndex": 0
+        },
+        "hint": "ACL مجموعة قواعد تتحكم في السماح أو المنع لحركة المرور.",
+        "teacherNote": "",
+        "aiInstruction": "",
+        "wasModified": false,
+        "image": {
+          "exists": false,
+          "visible": false,
+          "origin": null,
+          "assets": [],
+          "prompt": null
+        },
+        "history": [],
+        "redoStack": []
+      },
+      {
+        "examQuestionId": "LIB-T24-Q02",
+        "origin": "imported",
+        "sourceId": "LIB-T24",
+        "sourceQuestionId": "2",
+        "section": "BASIC",
+        "topic": "OTHER_NETWORKING",
+        "secondaryTopics": [],
+        "difficulty": 2,
+        "difficultyLabel": "",
+        "familyKey": "LIB-T24-Q02",
+        "hasCLI": false,
+        "requiresCalculation": false,
+        "presentationType": "multipleChoice",
+        "marks": 10,
+        "locked": false,
+        "text": "على ماذا تعتمد Standard ACL؟",
+        "textHtml": "",
+        "options": [
+          {
+            "value": "0",
+            "text": "عنوان الوجهة والمنفذ"
+          },
+          {
+            "value": "1",
+            "text": "عنوان IP المصدر فقط"
+          },
+          {
+            "value": "2",
+            "text": "MAC المصدر فقط"
+          },
+          {
+            "value": "3",
+            "text": "اسم المستخدم"
+          }
+        ],
+        "fields": [],
+        "parts": [],
+        "answer": {
+          "correctOptionIndex": 1
+        },
+        "hint": "Standard ACL تفحص عنوان IP المصدر فقط.",
+        "teacherNote": "",
+        "aiInstruction": "",
+        "wasModified": false,
+        "image": {
+          "exists": false,
+          "visible": false,
+          "origin": null,
+          "assets": [],
+          "prompt": null
+        },
+        "history": [],
+        "redoStack": []
+      },
+      {
+        "examQuestionId": "LIB-T24-Q03",
+        "origin": "imported",
+        "sourceId": "LIB-T24",
+        "sourceQuestionId": "3",
+        "section": "BASIC",
+        "topic": "OTHER_NETWORKING",
+        "secondaryTopics": [],
+        "difficulty": 2,
+        "difficultyLabel": "",
+        "familyKey": "LIB-T24-Q03",
+        "hasCLI": false,
+        "requiresCalculation": false,
+        "presentationType": "multipleChoice",
+        "marks": 10,
+        "locked": false,
+        "text": "ما الذي تستطيع Extended ACL فحصه؟",
+        "textHtml": "",
+        "options": [
+          {
+            "value": "0",
+            "text": "المصدر فقط"
+          },
+          {
+            "value": "1",
+            "text": "اسم الراوتر فقط"
+          },
+          {
+            "value": "2",
+            "text": "المصدر والوجهة والبروتوكول والمنفذ"
+          },
+          {
+            "value": "3",
+            "text": "عنوان MAC فقط"
+          }
+        ],
+        "fields": [],
+        "parts": [],
+        "answer": {
+          "correctOptionIndex": 2
+        },
+        "hint": "Extended ACL أكثر تفصيلًا وتفحص عدة عناصر.",
+        "teacherNote": "",
+        "aiInstruction": "",
+        "wasModified": false,
+        "image": {
+          "exists": false,
+          "visible": false,
+          "origin": null,
+          "assets": [],
+          "prompt": null
+        },
+        "history": [],
+        "redoStack": []
+      },
+      {
+        "examQuestionId": "LIB-T24-Q04",
+        "origin": "imported",
+        "sourceId": "LIB-T24",
+        "sourceQuestionId": "4",
+        "section": "BASIC",
+        "topic": "OTHER_NETWORKING",
+        "secondaryTopics": [],
+        "difficulty": 2,
+        "difficultyLabel": "",
+        "familyKey": "LIB-T24-Q04",
+        "hasCLI": false,
+        "requiresCalculation": false,
+        "presentationType": "multipleChoice",
+        "marks": 10,
+        "locked": false,
+        "text": "ما معنى deny داخل ACL؟",
+        "textHtml": "",
+        "options": [
+          {
+            "value": "0",
+            "text": "تسجيل الحركة"
+          },
+          {
+            "value": "1",
+            "text": "إعادة توجيه الحركة"
+          },
+          {
+            "value": "2",
+            "text": "تشفير الحركة"
+          },
+          {
+            "value": "3",
+            "text": "منع الحركة المطابقة"
+          }
+        ],
+        "fields": [],
+        "parts": [],
+        "answer": {
+          "correctOptionIndex": 3
+        },
+        "hint": "deny تمنع الحركة التي تطابق القاعدة.",
+        "teacherNote": "",
+        "aiInstruction": "",
+        "wasModified": false,
+        "image": {
+          "exists": false,
+          "visible": false,
+          "origin": null,
+          "assets": [],
+          "prompt": null
+        },
+        "history": [],
+        "redoStack": []
+      },
+      {
+        "examQuestionId": "LIB-T24-Q05",
+        "origin": "imported",
+        "sourceId": "LIB-T24",
+        "sourceQuestionId": "5",
+        "section": "BASIC",
+        "topic": "OTHER_NETWORKING",
+        "secondaryTopics": [],
+        "difficulty": 2,
+        "difficultyLabel": "",
+        "familyKey": "LIB-T24-Q05",
+        "hasCLI": false,
+        "requiresCalculation": false,
+        "presentationType": "multipleChoice",
+        "marks": 10,
+        "locked": false,
+        "text": "ما Wildcard Mask المقابل لشبكة /24؟",
+        "textHtml": "",
+        "options": [
+          {
+            "value": "0",
+            "text": "0.0.0.255"
+          },
+          {
+            "value": "1",
+            "text": "255.255.255.0"
+          },
+          {
+            "value": "2",
+            "text": "0.0.255.255"
+          },
+          {
+            "value": "3",
+            "text": "255.0.0.0"
+          }
+        ],
+        "fields": [],
+        "parts": [],
+        "answer": {
+          "correctOptionIndex": 0
+        },
+        "hint": "Wildcard هو عكس Subnet Mask؛ لـ/24 يكون 0.0.0.255.",
+        "teacherNote": "",
+        "aiInstruction": "",
+        "wasModified": false,
+        "image": {
+          "exists": false,
+          "visible": false,
+          "origin": null,
+          "assets": [],
+          "prompt": null
+        },
+        "history": [],
+        "redoStack": []
+      },
+      {
+        "examQuestionId": "LIB-T24-Q06",
+        "origin": "imported",
+        "sourceId": "LIB-T24",
+        "sourceQuestionId": "6",
+        "section": "BASIC",
+        "topic": "OTHER_NETWORKING",
+        "secondaryTopics": [],
+        "difficulty": 2,
+        "difficultyLabel": "",
+        "familyKey": "LIB-T24-Q06",
+        "hasCLI": false,
+        "requiresCalculation": false,
+        "presentationType": "multipleChoice",
+        "marks": 10,
+        "locked": false,
+        "text": "أي أمر يسمح لشبكة 192.168.1.0/24 في Standard ACL رقم 10؟",
+        "textHtml": "",
+        "options": [
+          {
+            "value": "0",
+            "text": "access-list 10 permit any 192.168.1.0"
+          },
+          {
+            "value": "1",
+            "text": "access-list 10 permit 192.168.1.0 0.0.0.255"
+          },
+          {
+            "value": "2",
+            "text": "access-list 100 permit tcp 192.168.1.0"
+          },
+          {
+            "value": "3",
+            "text": "ip access-group 10 permit"
+          }
+        ],
+        "fields": [],
+        "parts": [],
+        "answer": {
+          "correctOptionIndex": 1
+        },
+        "hint": "الصيغة تتضمن رقم القائمة وpermit وشبكة المصدر وWildcard.",
+        "teacherNote": "",
+        "aiInstruction": "",
+        "wasModified": false,
+        "image": {
+          "exists": false,
+          "visible": false,
+          "origin": null,
+          "assets": [],
+          "prompt": null
+        },
+        "history": [],
+        "redoStack": []
+      },
+      {
+        "examQuestionId": "LIB-T24-Q07",
+        "origin": "imported",
+        "sourceId": "LIB-T24",
+        "sourceQuestionId": "7",
+        "section": "BASIC",
+        "topic": "OTHER_NETWORKING",
+        "secondaryTopics": [],
+        "difficulty": 2,
+        "difficultyLabel": "",
+        "familyKey": "LIB-T24-Q07",
+        "hasCLI": false,
+        "requiresCalculation": false,
+        "presentationType": "multipleChoice",
+        "marks": 10,
+        "locked": false,
+        "text": "أي أمر يربط ACL رقم 10 بواجهة في اتجاه الدخول؟",
+        "textHtml": "",
+        "options": [
+          {
+            "value": "0",
+            "text": "access-list 10 in"
+          },
+          {
+            "value": "1",
+            "text": "interface access 10"
+          },
+          {
+            "value": "2",
+            "text": "ip access-group 10 in"
+          },
+          {
+            "value": "3",
+            "text": "show access-lists 10"
+          }
+        ],
+        "fields": [],
+        "parts": [],
+        "answer": {
+          "correctOptionIndex": 2
+        },
+        "hint": "ip access-group 10 in يطبق القائمة على الواجهة في اتجاه الدخول.",
+        "teacherNote": "",
+        "aiInstruction": "",
+        "wasModified": false,
+        "image": {
+          "exists": false,
+          "visible": false,
+          "origin": null,
+          "assets": [],
+          "prompt": null
+        },
+        "history": [],
+        "redoStack": []
+      },
+      {
+        "examQuestionId": "LIB-T24-Q08",
+        "origin": "imported",
+        "sourceId": "LIB-T24",
+        "sourceQuestionId": "8",
+        "section": "BASIC",
+        "topic": "OTHER_NETWORKING",
+        "secondaryTopics": [],
+        "difficulty": 2,
+        "difficultyLabel": "",
+        "familyKey": "LIB-T24-Q08",
+        "hasCLI": false,
+        "requiresCalculation": false,
+        "presentationType": "multipleChoice",
+        "marks": 10,
+        "locked": false,
+        "text": "أي كلمة تُستخدم للدلالة على جهاز واحد فقط في ACL؟",
+        "textHtml": "",
+        "options": [
+          {
+            "value": "0",
+            "text": "network"
+          },
+          {
+            "value": "1",
+            "text": "single"
+          },
+          {
+            "value": "2",
+            "text": "only"
+          },
+          {
+            "value": "3",
+            "text": "host"
+          }
+        ],
+        "fields": [],
+        "parts": [],
+        "answer": {
+          "correctOptionIndex": 3
+        },
+        "hint": "host متبوعة بعنوان IP تعني جهازًا واحدًا.",
+        "teacherNote": "",
+        "aiInstruction": "",
+        "wasModified": false,
+        "image": {
+          "exists": false,
+          "visible": false,
+          "origin": null,
+          "assets": [],
+          "prompt": null
+        },
+        "history": [],
+        "redoStack": []
+      },
+      {
+        "examQuestionId": "LIB-T24-Q09",
+        "origin": "imported",
+        "sourceId": "LIB-T24",
+        "sourceQuestionId": "9",
+        "section": "BASIC",
+        "topic": "OTHER_NETWORKING",
+        "secondaryTopics": [],
+        "difficulty": 2,
+        "difficultyLabel": "",
+        "familyKey": "LIB-T24-Q09",
+        "hasCLI": false,
+        "requiresCalculation": false,
+        "presentationType": "multipleChoice",
+        "marks": 10,
+        "locked": false,
+        "text": "أين يُفضّل وضع Standard ACL غالبًا؟",
+        "textHtml": "",
+        "options": [
+          {
+            "value": "0",
+            "text": "قريبة من الوجهة"
+          },
+          {
+            "value": "1",
+            "text": "قريبة من المصدر دائمًا"
+          },
+          {
+            "value": "2",
+            "text": "داخل DNS"
+          },
+          {
+            "value": "3",
+            "text": "على كل حاسوب"
+          }
+        ],
+        "fields": [],
+        "parts": [],
+        "answer": {
+          "correctOptionIndex": 0
+        },
+        "hint": "لأن Standard ACL تفحص المصدر فقط، توضع غالبًا قريبة من الوجهة.",
+        "teacherNote": "",
+        "aiInstruction": "",
+        "wasModified": false,
+        "image": {
+          "exists": false,
+          "visible": false,
+          "origin": null,
+          "assets": [],
+          "prompt": null
+        },
+        "history": [],
+        "redoStack": []
+      },
+      {
+        "examQuestionId": "LIB-T24-Q10",
+        "origin": "imported",
+        "sourceId": "LIB-T24",
+        "sourceQuestionId": "10",
+        "section": "BASIC",
+        "topic": "OTHER_NETWORKING",
+        "secondaryTopics": [],
+        "difficulty": 2,
+        "difficultyLabel": "",
+        "familyKey": "LIB-T24-Q10",
+        "hasCLI": false,
+        "requiresCalculation": false,
+        "presentationType": "multipleChoice",
+        "marks": 10,
+        "locked": false,
+        "text": "أي قاعدة تمنع الجهاز 10.1.1.10 من HTTP إلى الخادم 172.16.1.5؟",
+        "textHtml": "",
+        "options": [
+          {
+            "value": "0",
+            "text": "access-list 10 deny host 10.1.1.10"
+          },
+          {
+            "value": "1",
+            "text": "access-list 101 deny tcp host 10.1.1.10 host 172.16.1.5 eq 80"
+          },
+          {
+            "value": "2",
+            "text": "access-list 101 deny udp any any eq 53"
+          },
+          {
+            "value": "3",
+            "text": "access-list 101 permit ip any any"
+          }
+        ],
+        "fields": [],
+        "parts": [],
+        "answer": {
+          "correctOptionIndex": 1
+        },
+        "hint": "HTTP يستخدم TCP والمنفذ 80، وExtended ACL تحدد المصدر والوجهة والبروتوكول والمنفذ.",
+        "teacherNote": "",
+        "aiInstruction": "",
+        "wasModified": false,
+        "image": {
+          "exists": false,
+          "visible": false,
+          "origin": null,
+          "assets": [],
+          "prompt": null
+        },
+        "history": [],
+        "redoStack": []
+      }
+    ],
+    "totalMarks": 100,
+    "status": "final",
+    "createdAt": "2026-09-05T18:57:20.369Z",
+    "updatedAt": "2026-09-05T18:57:20.369Z"
+  }
+}

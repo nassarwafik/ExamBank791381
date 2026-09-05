@@ -1,0 +1,589 @@
+{
+  "libraryItemId": "T08",
+  "title": "الكوابل وعنوان MAC",
+  "category": "foundation",
+  "description": "UTP وSTP وFiber وCoaxial وبنية عنوان MAC.",
+  "tags": [
+    "Cables",
+    "MAC",
+    "Layer 2"
+  ],
+  "questionCount": 10,
+  "totalMarks": 100,
+  "pageRange": "60–63",
+  "parserFamily": "t-series-v1",
+  "conversionStatus": "ready",
+  "publishable": true,
+  "autoGradableCount": 10,
+  "manualReviewCount": 0,
+  "libraryVersion": 1,
+  "sourceSha": "d540ea43ac41286932b7fe4abe8c7c842267622a9a3345efd0a682d8aaabf608",
+  "contentHash": "77179cad392dab11e843ce1352928d0b3781d28f01039fe35e6d21e33dee28ae",
+  "convertedAt": "2026-09-05T18:57:19.063Z",
+  "source": {
+    "repository": "Book791381",
+    "sourceFile": "T08.html"
+  },
+  "schemaVersion": 1,
+  "examSnapshot": {
+    "schemaVersion": 1,
+    "examId": "LIB-T08",
+    "title": "الكوابل وعنوان MAC",
+    "questions": [
+      {
+        "examQuestionId": "LIB-T08-Q01",
+        "origin": "imported",
+        "sourceId": "LIB-T08",
+        "sourceQuestionId": "1",
+        "section": "BASIC",
+        "topic": "OTHER_NETWORKING",
+        "secondaryTopics": [],
+        "difficulty": 2,
+        "difficultyLabel": "",
+        "familyKey": "LIB-T08-Q01",
+        "hasCLI": false,
+        "requiresCalculation": false,
+        "presentationType": "multipleChoice",
+        "marks": 10,
+        "locked": false,
+        "text": "ما وظيفة الكوابل في الشبكة؟",
+        "textHtml": "",
+        "options": [
+          {
+            "value": "0",
+            "text": "توفير الطريق الذي تنتقل عبره البيانات"
+          },
+          {
+            "value": "1",
+            "text": "تغيير عناوين IP"
+          },
+          {
+            "value": "2",
+            "text": "تحديد كلمات المرور"
+          },
+          {
+            "value": "3",
+            "text": "إنشاء حسابات المستخدمين"
+          }
+        ],
+        "fields": [],
+        "parts": [],
+        "answer": {
+          "correctOptionIndex": 0
+        },
+        "hint": "الكوابل هي الوسط أو الطريق الذي تنتقل عبره البيانات بين الأجهزة.",
+        "teacherNote": "",
+        "aiInstruction": "",
+        "wasModified": false,
+        "image": {
+          "exists": false,
+          "visible": false,
+          "origin": null,
+          "assets": [],
+          "prompt": null
+        },
+        "history": [],
+        "redoStack": []
+      },
+      {
+        "examQuestionId": "LIB-T08-Q02",
+        "origin": "imported",
+        "sourceId": "LIB-T08",
+        "sourceQuestionId": "2",
+        "section": "BASIC",
+        "topic": "OTHER_NETWORKING",
+        "secondaryTopics": [],
+        "difficulty": 2,
+        "difficultyLabel": "",
+        "familyKey": "LIB-T08-Q02",
+        "hasCLI": false,
+        "requiresCalculation": false,
+        "presentationType": "multipleChoice",
+        "marks": 10,
+        "locked": false,
+        "text": "أي نوع كابل هو زوج ملتوي غير محمي وشائع ورخيص؟",
+        "textHtml": "",
+        "options": [
+          {
+            "value": "0",
+            "text": "STP"
+          },
+          {
+            "value": "1",
+            "text": "UTP"
+          },
+          {
+            "value": "2",
+            "text": "Fiber Optic"
+          },
+          {
+            "value": "3",
+            "text": "Coaxial"
+          }
+        ],
+        "fields": [],
+        "parts": [],
+        "answer": {
+          "correctOptionIndex": 1
+        },
+        "hint": "UTP هو زوج ملتوي غير محمي، ويعد شائعًا ورخيصًا.",
+        "teacherNote": "",
+        "aiInstruction": "",
+        "wasModified": false,
+        "image": {
+          "exists": false,
+          "visible": false,
+          "origin": null,
+          "assets": [],
+          "prompt": null
+        },
+        "history": [],
+        "redoStack": []
+      },
+      {
+        "examQuestionId": "LIB-T08-Q03",
+        "origin": "imported",
+        "sourceId": "LIB-T08",
+        "sourceQuestionId": "3",
+        "section": "BASIC",
+        "topic": "OTHER_NETWORKING",
+        "secondaryTopics": [],
+        "difficulty": 2,
+        "difficultyLabel": "",
+        "familyKey": "LIB-T08-Q03",
+        "hasCLI": false,
+        "requiresCalculation": false,
+        "presentationType": "multipleChoice",
+        "marks": 10,
+        "locked": false,
+        "text": "أي كابل يحتوي طبقة حماية معدنية ويقاوم التشويش بصورة أفضل؟",
+        "textHtml": "",
+        "options": [
+          {
+            "value": "0",
+            "text": "UTP"
+          },
+          {
+            "value": "1",
+            "text": "Coaxial فقط"
+          },
+          {
+            "value": "2",
+            "text": "STP"
+          },
+          {
+            "value": "3",
+            "text": "كابل بلا غلاف"
+          }
+        ],
+        "fields": [],
+        "parts": [],
+        "answer": {
+          "correctOptionIndex": 2
+        },
+        "hint": "STP زوج ملتوي محمي بطبقة معدنية تساعد على مقاومة التشويش الخارجي.",
+        "teacherNote": "",
+        "aiInstruction": "",
+        "wasModified": false,
+        "image": {
+          "exists": false,
+          "visible": false,
+          "origin": null,
+          "assets": [],
+          "prompt": null
+        },
+        "history": [],
+        "redoStack": []
+      },
+      {
+        "examQuestionId": "LIB-T08-Q04",
+        "origin": "imported",
+        "sourceId": "LIB-T08",
+        "sourceQuestionId": "4",
+        "section": "BASIC",
+        "topic": "OTHER_NETWORKING",
+        "secondaryTopics": [],
+        "difficulty": 2,
+        "difficultyLabel": "",
+        "familyKey": "LIB-T08-Q04",
+        "hasCLI": false,
+        "requiresCalculation": false,
+        "presentationType": "multipleChoice",
+        "marks": 10,
+        "locked": false,
+        "text": "أي كابل يستعمل الضوء لنقل البيانات؟",
+        "textHtml": "",
+        "options": [
+          {
+            "value": "0",
+            "text": "UTP"
+          },
+          {
+            "value": "1",
+            "text": "STP"
+          },
+          {
+            "value": "2",
+            "text": "Coaxial"
+          },
+          {
+            "value": "3",
+            "text": "Fiber Optic"
+          }
+        ],
+        "fields": [],
+        "parts": [],
+        "answer": {
+          "correctOptionIndex": 3
+        },
+        "hint": "الألياف البصرية Fiber Optic تستعمل الضوء لنقل البيانات بسرعة عالية ولمسافات طويلة.",
+        "teacherNote": "",
+        "aiInstruction": "",
+        "wasModified": false,
+        "image": {
+          "exists": false,
+          "visible": false,
+          "origin": null,
+          "assets": [],
+          "prompt": null
+        },
+        "history": [],
+        "redoStack": []
+      },
+      {
+        "examQuestionId": "LIB-T08-Q05",
+        "origin": "imported",
+        "sourceId": "LIB-T08",
+        "sourceQuestionId": "5",
+        "section": "BASIC",
+        "topic": "OTHER_NETWORKING",
+        "secondaryTopics": [],
+        "difficulty": 2,
+        "difficultyLabel": "",
+        "familyKey": "LIB-T08-Q05",
+        "hasCLI": false,
+        "requiresCalculation": false,
+        "presentationType": "multipleChoice",
+        "marks": 10,
+        "locked": false,
+        "text": "أي نوع كابل يُستعمل في التلفزيون والإنترنت عبر الكابل؟",
+        "textHtml": "",
+        "options": [
+          {
+            "value": "0",
+            "text": "Coaxial"
+          },
+          {
+            "value": "1",
+            "text": "Fiber Optic فقط"
+          },
+          {
+            "value": "2",
+            "text": "UTP فقط"
+          },
+          {
+            "value": "3",
+            "text": "Roll-over"
+          }
+        ],
+        "fields": [],
+        "parts": [],
+        "answer": {
+          "correctOptionIndex": 0
+        },
+        "hint": "الكابل المحوري Coaxial يحتوي موصلًا نحاسيًا في المنتصف ويستعمل في التلفزيون والإنترنت عبر الكابل.",
+        "teacherNote": "",
+        "aiInstruction": "",
+        "wasModified": false,
+        "image": {
+          "exists": false,
+          "visible": false,
+          "origin": null,
+          "assets": [],
+          "prompt": null
+        },
+        "history": [],
+        "redoStack": []
+      },
+      {
+        "examQuestionId": "LIB-T08-Q06",
+        "origin": "imported",
+        "sourceId": "LIB-T08",
+        "sourceQuestionId": "6",
+        "section": "BASIC",
+        "topic": "OTHER_NETWORKING",
+        "secondaryTopics": [],
+        "difficulty": 2,
+        "difficultyLabel": "",
+        "familyKey": "LIB-T08-Q06",
+        "hasCLI": false,
+        "requiresCalculation": false,
+        "presentationType": "multipleChoice",
+        "marks": 10,
+        "locked": false,
+        "text": "ما هو MAC Address؟",
+        "textHtml": "",
+        "options": [
+          {
+            "value": "0",
+            "text": "عنوان موقع على الإنترنت"
+          },
+          {
+            "value": "1",
+            "text": "رقم فيزيائي خاص بكرت الشبكة"
+          },
+          {
+            "value": "2",
+            "text": "قناع الشبكة"
+          },
+          {
+            "value": "3",
+            "text": "عنوان الراوتر فقط"
+          }
+        ],
+        "fields": [],
+        "parts": [],
+        "answer": {
+          "correctOptionIndex": 1
+        },
+        "hint": "MAC Address هو رقم فيزيائي خاص بكرت الشبكة، ويكون فريدًا لكل جهاز تقريبًا.",
+        "teacherNote": "",
+        "aiInstruction": "",
+        "wasModified": false,
+        "image": {
+          "exists": false,
+          "visible": false,
+          "origin": null,
+          "assets": [],
+          "prompt": null
+        },
+        "history": [],
+        "redoStack": []
+      },
+      {
+        "examQuestionId": "LIB-T08-Q07",
+        "origin": "imported",
+        "sourceId": "LIB-T08",
+        "sourceQuestionId": "7",
+        "section": "BASIC",
+        "topic": "OTHER_NETWORKING",
+        "secondaryTopics": [],
+        "difficulty": 2,
+        "difficultyLabel": "",
+        "familyKey": "LIB-T08-Q07",
+        "hasCLI": false,
+        "requiresCalculation": false,
+        "presentationType": "multipleChoice",
+        "marks": 10,
+        "locked": false,
+        "text": "كم منزلة سداسية عشرية يتكون منها عنوان MAC حسب الكتاب؟",
+        "textHtml": "",
+        "options": [
+          {
+            "value": "0",
+            "text": "4"
+          },
+          {
+            "value": "1",
+            "text": "8"
+          },
+          {
+            "value": "2",
+            "text": "12"
+          },
+          {
+            "value": "3",
+            "text": "16"
+          }
+        ],
+        "fields": [],
+        "parts": [],
+        "answer": {
+          "correctOptionIndex": 2
+        },
+        "hint": "عنوان MAC مكوّن من 12 منزلة سداسية عشرية، مثل A0:02:AF:2D:10:22.",
+        "teacherNote": "",
+        "aiInstruction": "",
+        "wasModified": false,
+        "image": {
+          "exists": false,
+          "visible": false,
+          "origin": null,
+          "assets": [],
+          "prompt": null
+        },
+        "history": [],
+        "redoStack": []
+      },
+      {
+        "examQuestionId": "LIB-T08-Q08",
+        "origin": "imported",
+        "sourceId": "LIB-T08",
+        "sourceQuestionId": "8",
+        "section": "BASIC",
+        "topic": "OTHER_NETWORKING",
+        "secondaryTopics": [],
+        "difficulty": 2,
+        "difficultyLabel": "",
+        "familyKey": "LIB-T08-Q08",
+        "hasCLI": false,
+        "requiresCalculation": false,
+        "presentationType": "multipleChoice",
+        "marks": 10,
+        "locked": false,
+        "text": "في أي طبقة من نموذج OSI يعمل MAC Address؟",
+        "textHtml": "",
+        "options": [
+          {
+            "value": "0",
+            "text": "الطبقة الأولى"
+          },
+          {
+            "value": "1",
+            "text": "الطبقة الثالثة"
+          },
+          {
+            "value": "2",
+            "text": "الطبقة السابعة"
+          },
+          {
+            "value": "3",
+            "text": "الطبقة الثانية"
+          }
+        ],
+        "fields": [],
+        "parts": [],
+        "answer": {
+          "correctOptionIndex": 3
+        },
+        "hint": "عنوان MAC يعمل في الطبقة الثانية Data Link من نموذج OSI.",
+        "teacherNote": "",
+        "aiInstruction": "",
+        "wasModified": false,
+        "image": {
+          "exists": false,
+          "visible": false,
+          "origin": null,
+          "assets": [],
+          "prompt": null
+        },
+        "history": [],
+        "redoStack": []
+      },
+      {
+        "examQuestionId": "LIB-T08-Q09",
+        "origin": "imported",
+        "sourceId": "LIB-T08",
+        "sourceQuestionId": "9",
+        "section": "BASIC",
+        "topic": "OTHER_NETWORKING",
+        "secondaryTopics": [],
+        "difficulty": 2,
+        "difficultyLabel": "",
+        "familyKey": "LIB-T08-Q09",
+        "hasCLI": false,
+        "requiresCalculation": false,
+        "presentationType": "multipleChoice",
+        "marks": 10,
+        "locked": false,
+        "text": "أي عنوان MAC يمثل عنوان البث Broadcast؟",
+        "textHtml": "",
+        "options": [
+          {
+            "value": "0",
+            "text": "FF:FF:FF:FF:FF:FF"
+          },
+          {
+            "value": "1",
+            "text": "00:00:00:00:00:00"
+          },
+          {
+            "value": "2",
+            "text": "A0:02:AF:2D:10:22"
+          },
+          {
+            "value": "3",
+            "text": "192.168.1.255"
+          }
+        ],
+        "fields": [],
+        "parts": [],
+        "answer": {
+          "correctOptionIndex": 0
+        },
+        "hint": "عنوان البث العام في MAC هو FF:FF:FF:FF:FF:FF.",
+        "teacherNote": "",
+        "aiInstruction": "",
+        "wasModified": false,
+        "image": {
+          "exists": false,
+          "visible": false,
+          "origin": null,
+          "assets": [],
+          "prompt": null
+        },
+        "history": [],
+        "redoStack": []
+      },
+      {
+        "examQuestionId": "LIB-T08-Q10",
+        "origin": "imported",
+        "sourceId": "LIB-T08",
+        "sourceQuestionId": "10",
+        "section": "BASIC",
+        "topic": "OTHER_NETWORKING",
+        "secondaryTopics": [],
+        "difficulty": 2,
+        "difficultyLabel": "",
+        "familyKey": "LIB-T08-Q10",
+        "hasCLI": false,
+        "requiresCalculation": false,
+        "presentationType": "multipleChoice",
+        "marks": 10,
+        "locked": false,
+        "text": "كيف يستفيد Switch من عنوان MAC؟",
+        "textHtml": "",
+        "options": [
+          {
+            "value": "0",
+            "text": "يستعمله لتغيير اسم الجهاز"
+          },
+          {
+            "value": "1",
+            "text": "يستعمله لمعرفة الجهاز المقصود وإرسال البيانات إليه"
+          },
+          {
+            "value": "2",
+            "text": "يستعمله لتحويل العشري إلى الثنائي"
+          },
+          {
+            "value": "3",
+            "text": "يستعمله لتحديد سرعة الإنترنت فقط"
+          }
+        ],
+        "fields": [],
+        "parts": [],
+        "answer": {
+          "correctOptionIndex": 1
+        },
+        "hint": "يستعمل Switch عنوان MAC لتمييز الأجهزة وتوجيه البيانات إلى الجهاز المقصود داخل الشبكة.",
+        "teacherNote": "",
+        "aiInstruction": "",
+        "wasModified": false,
+        "image": {
+          "exists": false,
+          "visible": false,
+          "origin": null,
+          "assets": [],
+          "prompt": null
+        },
+        "history": [],
+        "redoStack": []
+      }
+    ],
+    "totalMarks": 100,
+    "status": "final",
+    "createdAt": "2026-09-05T18:57:20.317Z",
+    "updatedAt": "2026-09-05T18:57:20.317Z"
+  }
+}

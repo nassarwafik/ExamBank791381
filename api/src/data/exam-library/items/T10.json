@@ -1,0 +1,589 @@
+{
+  "libraryItemId": "T10",
+  "title": "نماذج OSI وTCP/IP",
+  "category": "foundation",
+  "description": "طبقات OSI وTCP/IP ووظائف الطبقات والفرق بين TCP وUDP.",
+  "tags": [
+    "OSI",
+    "TCP/IP",
+    "TCP / UDP"
+  ],
+  "questionCount": 10,
+  "totalMarks": 100,
+  "pageRange": "75–84",
+  "parserFamily": "t-series-v1",
+  "conversionStatus": "ready",
+  "publishable": true,
+  "autoGradableCount": 10,
+  "manualReviewCount": 0,
+  "libraryVersion": 1,
+  "sourceSha": "058f1861210b8e2207b480e789f2e398c04b54a10a08493d7cd2353864f174fd",
+  "contentHash": "4d784814e6f90892c120ede8642bea292e5e7945cd13ff6be0c73ee70aea5006",
+  "convertedAt": "2026-09-05T18:57:19.063Z",
+  "source": {
+    "repository": "Book791381",
+    "sourceFile": "T10.html"
+  },
+  "schemaVersion": 1,
+  "examSnapshot": {
+    "schemaVersion": 1,
+    "examId": "LIB-T10",
+    "title": "نماذج OSI وTCP/IP",
+    "questions": [
+      {
+        "examQuestionId": "LIB-T10-Q01",
+        "origin": "imported",
+        "sourceId": "LIB-T10",
+        "sourceQuestionId": "1",
+        "section": "BASIC",
+        "topic": "OTHER_NETWORKING",
+        "secondaryTopics": [],
+        "difficulty": 2,
+        "difficultyLabel": "",
+        "familyKey": "LIB-T10-Q01",
+        "hasCLI": false,
+        "requiresCalculation": false,
+        "presentationType": "multipleChoice",
+        "marks": 10,
+        "locked": false,
+        "text": "كم طبقة يتكوّن منها نموذج OSI؟",
+        "textHtml": "",
+        "options": [
+          {
+            "value": "0",
+            "text": "4 طبقات"
+          },
+          {
+            "value": "1",
+            "text": "7 طبقات"
+          },
+          {
+            "value": "2",
+            "text": "5 طبقات"
+          },
+          {
+            "value": "3",
+            "text": "3 طبقات"
+          }
+        ],
+        "fields": [],
+        "parts": [],
+        "answer": {
+          "correctOptionIndex": 1
+        },
+        "hint": "يقسّم نموذج OSI عملية الاتصال إلى سبع طبقات.",
+        "teacherNote": "",
+        "aiInstruction": "",
+        "wasModified": false,
+        "image": {
+          "exists": false,
+          "visible": false,
+          "origin": null,
+          "assets": [],
+          "prompt": null
+        },
+        "history": [],
+        "redoStack": []
+      },
+      {
+        "examQuestionId": "LIB-T10-Q02",
+        "origin": "imported",
+        "sourceId": "LIB-T10",
+        "sourceQuestionId": "2",
+        "section": "BASIC",
+        "topic": "OTHER_NETWORKING",
+        "secondaryTopics": [],
+        "difficulty": 2,
+        "difficultyLabel": "",
+        "familyKey": "LIB-T10-Q02",
+        "hasCLI": false,
+        "requiresCalculation": false,
+        "presentationType": "multipleChoice",
+        "marks": 10,
+        "locked": false,
+        "text": "أي طبقة تتعامل مع الكابلات والإشارات والواي فاي؟",
+        "textHtml": "",
+        "options": [
+          {
+            "value": "0",
+            "text": "Application"
+          },
+          {
+            "value": "1",
+            "text": "Network"
+          },
+          {
+            "value": "2",
+            "text": "Transport"
+          },
+          {
+            "value": "3",
+            "text": "Physical"
+          }
+        ],
+        "fields": [],
+        "parts": [],
+        "answer": {
+          "correctOptionIndex": 3
+        },
+        "hint": "الطبقة الفيزيائية Physical تتعامل مع الوسط الفعلي والإشارات والبتات.",
+        "teacherNote": "",
+        "aiInstruction": "",
+        "wasModified": false,
+        "image": {
+          "exists": false,
+          "visible": false,
+          "origin": null,
+          "assets": [],
+          "prompt": null
+        },
+        "history": [],
+        "redoStack": []
+      },
+      {
+        "examQuestionId": "LIB-T10-Q03",
+        "origin": "imported",
+        "sourceId": "LIB-T10",
+        "sourceQuestionId": "3",
+        "section": "BASIC",
+        "topic": "OTHER_NETWORKING",
+        "secondaryTopics": [],
+        "difficulty": 2,
+        "difficultyLabel": "",
+        "familyKey": "LIB-T10-Q03",
+        "hasCLI": false,
+        "requiresCalculation": false,
+        "presentationType": "multipleChoice",
+        "marks": 10,
+        "locked": false,
+        "text": "أي طبقة تتعامل مع عنوان MAC والإطار Frame؟",
+        "textHtml": "",
+        "options": [
+          {
+            "value": "0",
+            "text": "Data Link"
+          },
+          {
+            "value": "1",
+            "text": "Network"
+          },
+          {
+            "value": "2",
+            "text": "Transport"
+          },
+          {
+            "value": "3",
+            "text": "Session"
+          }
+        ],
+        "fields": [],
+        "parts": [],
+        "answer": {
+          "correctOptionIndex": 0
+        },
+        "hint": "طبقة Data Link تتعامل مع عناوين MAC وتنقل Frames داخل الشبكة.",
+        "teacherNote": "",
+        "aiInstruction": "",
+        "wasModified": false,
+        "image": {
+          "exists": false,
+          "visible": false,
+          "origin": null,
+          "assets": [],
+          "prompt": null
+        },
+        "history": [],
+        "redoStack": []
+      },
+      {
+        "examQuestionId": "LIB-T10-Q04",
+        "origin": "imported",
+        "sourceId": "LIB-T10",
+        "sourceQuestionId": "4",
+        "section": "BASIC",
+        "topic": "OTHER_NETWORKING",
+        "secondaryTopics": [],
+        "difficulty": 2,
+        "difficultyLabel": "",
+        "familyKey": "LIB-T10-Q04",
+        "hasCLI": false,
+        "requiresCalculation": false,
+        "presentationType": "multipleChoice",
+        "marks": 10,
+        "locked": false,
+        "text": "أي طبقة تختار الطريق باستعمال عنوان IP؟",
+        "textHtml": "",
+        "options": [
+          {
+            "value": "0",
+            "text": "Presentation"
+          },
+          {
+            "value": "1",
+            "text": "Application"
+          },
+          {
+            "value": "2",
+            "text": "Network"
+          },
+          {
+            "value": "3",
+            "text": "Physical"
+          }
+        ],
+        "fields": [],
+        "parts": [],
+        "answer": {
+          "correctOptionIndex": 2
+        },
+        "hint": "طبقة Network مسؤولة عن التوجيه واختيار الطريق باستخدام عنوان IP.",
+        "teacherNote": "",
+        "aiInstruction": "",
+        "wasModified": false,
+        "image": {
+          "exists": false,
+          "visible": false,
+          "origin": null,
+          "assets": [],
+          "prompt": null
+        },
+        "history": [],
+        "redoStack": []
+      },
+      {
+        "examQuestionId": "LIB-T10-Q05",
+        "origin": "imported",
+        "sourceId": "LIB-T10",
+        "sourceQuestionId": "5",
+        "section": "BASIC",
+        "topic": "OTHER_NETWORKING",
+        "secondaryTopics": [],
+        "difficulty": 2,
+        "difficultyLabel": "",
+        "familyKey": "LIB-T10-Q05",
+        "hasCLI": false,
+        "requiresCalculation": false,
+        "presentationType": "multipleChoice",
+        "marks": 10,
+        "locked": false,
+        "text": "في أي طبقة يعمل البروتوكولان TCP وUDP؟",
+        "textHtml": "",
+        "options": [
+          {
+            "value": "0",
+            "text": "Data Link"
+          },
+          {
+            "value": "1",
+            "text": "Transport"
+          },
+          {
+            "value": "2",
+            "text": "Network"
+          },
+          {
+            "value": "3",
+            "text": "Application"
+          }
+        ],
+        "fields": [],
+        "parts": [],
+        "answer": {
+          "correctOptionIndex": 1
+        },
+        "hint": "يعمل TCP وUDP في طبقة النقل Transport.",
+        "teacherNote": "",
+        "aiInstruction": "",
+        "wasModified": false,
+        "image": {
+          "exists": false,
+          "visible": false,
+          "origin": null,
+          "assets": [],
+          "prompt": null
+        },
+        "history": [],
+        "redoStack": []
+      },
+      {
+        "examQuestionId": "LIB-T10-Q06",
+        "origin": "imported",
+        "sourceId": "LIB-T10",
+        "sourceQuestionId": "6",
+        "section": "BASIC",
+        "topic": "OTHER_NETWORKING",
+        "secondaryTopics": [],
+        "difficulty": 2,
+        "difficultyLabel": "",
+        "familyKey": "LIB-T10-Q06",
+        "hasCLI": false,
+        "requiresCalculation": false,
+        "presentationType": "multipleChoice",
+        "marks": 10,
+        "locked": false,
+        "text": "أي طبقة مسؤولة عن تنسيق البيانات وتشفيرها؟",
+        "textHtml": "",
+        "options": [
+          {
+            "value": "0",
+            "text": "Presentation"
+          },
+          {
+            "value": "1",
+            "text": "Physical"
+          },
+          {
+            "value": "2",
+            "text": "Network"
+          },
+          {
+            "value": "3",
+            "text": "Data Link"
+          }
+        ],
+        "fields": [],
+        "parts": [],
+        "answer": {
+          "correctOptionIndex": 0
+        },
+        "hint": "طبقة Presentation مسؤولة عن تنسيق البيانات وتشفيرها.",
+        "teacherNote": "",
+        "aiInstruction": "",
+        "wasModified": false,
+        "image": {
+          "exists": false,
+          "visible": false,
+          "origin": null,
+          "assets": [],
+          "prompt": null
+        },
+        "history": [],
+        "redoStack": []
+      },
+      {
+        "examQuestionId": "LIB-T10-Q07",
+        "origin": "imported",
+        "sourceId": "LIB-T10",
+        "sourceQuestionId": "7",
+        "section": "BASIC",
+        "topic": "OTHER_NETWORKING",
+        "secondaryTopics": [],
+        "difficulty": 2,
+        "difficultyLabel": "",
+        "familyKey": "LIB-T10-Q07",
+        "hasCLI": false,
+        "requiresCalculation": false,
+        "presentationType": "multipleChoice",
+        "marks": 10,
+        "locked": false,
+        "text": "أي طبقة تفتح الاتصال وتحافظ على الجلسة وتنهيها؟",
+        "textHtml": "",
+        "options": [
+          {
+            "value": "0",
+            "text": "Application"
+          },
+          {
+            "value": "1",
+            "text": "Transport"
+          },
+          {
+            "value": "2",
+            "text": "Presentation"
+          },
+          {
+            "value": "3",
+            "text": "Session"
+          }
+        ],
+        "fields": [],
+        "parts": [],
+        "answer": {
+          "correctOptionIndex": 3
+        },
+        "hint": "طبقة Session تدير الجلسة من بدايتها حتى نهايتها.",
+        "teacherNote": "",
+        "aiInstruction": "",
+        "wasModified": false,
+        "image": {
+          "exists": false,
+          "visible": false,
+          "origin": null,
+          "assets": [],
+          "prompt": null
+        },
+        "history": [],
+        "redoStack": []
+      },
+      {
+        "examQuestionId": "LIB-T10-Q08",
+        "origin": "imported",
+        "sourceId": "LIB-T10",
+        "sourceQuestionId": "8",
+        "section": "BASIC",
+        "topic": "OTHER_NETWORKING",
+        "secondaryTopics": [],
+        "difficulty": 2,
+        "difficultyLabel": "",
+        "familyKey": "LIB-T10-Q08",
+        "hasCLI": false,
+        "requiresCalculation": false,
+        "presentationType": "multipleChoice",
+        "marks": 10,
+        "locked": false,
+        "text": "كم طبقة يتكوّن منها نموذج TCP/IP في الكتاب؟",
+        "textHtml": "",
+        "options": [
+          {
+            "value": "0",
+            "text": "7 طبقات"
+          },
+          {
+            "value": "1",
+            "text": "5 طبقات"
+          },
+          {
+            "value": "2",
+            "text": "4 طبقات"
+          },
+          {
+            "value": "3",
+            "text": "طبقتان"
+          }
+        ],
+        "fields": [],
+        "parts": [],
+        "answer": {
+          "correctOptionIndex": 2
+        },
+        "hint": "يتكوّن نموذج TCP/IP من أربع طبقات: Application وTransport وInternet وLink.",
+        "teacherNote": "",
+        "aiInstruction": "",
+        "wasModified": false,
+        "image": {
+          "exists": false,
+          "visible": false,
+          "origin": null,
+          "assets": [],
+          "prompt": null
+        },
+        "history": [],
+        "redoStack": []
+      },
+      {
+        "examQuestionId": "LIB-T10-Q09",
+        "origin": "imported",
+        "sourceId": "LIB-T10",
+        "sourceQuestionId": "9",
+        "section": "BASIC",
+        "topic": "OTHER_NETWORKING",
+        "secondaryTopics": [],
+        "difficulty": 2,
+        "difficultyLabel": "",
+        "familyKey": "LIB-T10-Q09",
+        "hasCLI": false,
+        "requiresCalculation": false,
+        "presentationType": "multipleChoice",
+        "marks": 10,
+        "locked": false,
+        "text": "ما الفرق الأساسي المذكور بين OSI وTCP/IP؟",
+        "textHtml": "",
+        "options": [
+          {
+            "value": "0",
+            "text": "OSI نموذج تعليمي من 7 طبقات وTCP/IP نموذج عملي من 4 طبقات"
+          },
+          {
+            "value": "1",
+            "text": "OSI لا يحتوي Transport"
+          },
+          {
+            "value": "2",
+            "text": "TCP/IP لا يحتوي IP"
+          },
+          {
+            "value": "3",
+            "text": "كلاهما يتكوّن من 7 طبقات"
+          }
+        ],
+        "fields": [],
+        "parts": [],
+        "answer": {
+          "correctOptionIndex": 0
+        },
+        "hint": "OSI نموذج تعليمي يساعد على الفهم، بينما TCP/IP نموذج عملي أكثر استعمالًا ويتكوّن من أربع طبقات.",
+        "teacherNote": "",
+        "aiInstruction": "",
+        "wasModified": false,
+        "image": {
+          "exists": false,
+          "visible": false,
+          "origin": null,
+          "assets": [],
+          "prompt": null
+        },
+        "history": [],
+        "redoStack": []
+      },
+      {
+        "examQuestionId": "LIB-T10-Q10",
+        "origin": "imported",
+        "sourceId": "LIB-T10",
+        "sourceQuestionId": "10",
+        "section": "BASIC",
+        "topic": "OTHER_NETWORKING",
+        "secondaryTopics": [],
+        "difficulty": 2,
+        "difficultyLabel": "",
+        "familyKey": "LIB-T10-Q10",
+        "hasCLI": false,
+        "requiresCalculation": false,
+        "presentationType": "multipleChoice",
+        "marks": 10,
+        "locked": false,
+        "text": "أي اختيار يناسب بثًا مباشرًا تكون فيه السرعة أهم ويمكن تحمل فقد جزء بسيط من البيانات؟",
+        "textHtml": "",
+        "options": [
+          {
+            "value": "0",
+            "text": "TCP لأنه ينتظر تأكيد كل رسالة"
+          },
+          {
+            "value": "1",
+            "text": "UDP لأنه أسرع ولا يضمن وصول كل البيانات"
+          },
+          {
+            "value": "2",
+            "text": "HTTP لأنه طبقة نقل"
+          },
+          {
+            "value": "3",
+            "text": "FTP لأنه يختار الطريق"
+          }
+        ],
+        "fields": [],
+        "parts": [],
+        "answer": {
+          "correctOptionIndex": 1
+        },
+        "hint": "يُستخدم UDP عندما تكون السرعة أهم ويمكن تحمل فقد جزء صغير من البيانات، مثل البث المباشر والألعاب.",
+        "teacherNote": "",
+        "aiInstruction": "",
+        "wasModified": false,
+        "image": {
+          "exists": false,
+          "visible": false,
+          "origin": null,
+          "assets": [],
+          "prompt": null
+        },
+        "history": [],
+        "redoStack": []
+      }
+    ],
+    "totalMarks": 100,
+    "status": "final",
+    "createdAt": "2026-09-05T18:57:20.330Z",
+    "updatedAt": "2026-09-05T18:57:20.330Z"
+  }
+}

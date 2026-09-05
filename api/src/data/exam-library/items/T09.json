@@ -1,0 +1,589 @@
+{
+  "libraryItemId": "T09",
+  "title": "Unicast وMulticast وBroadcast",
+  "category": "foundation",
+  "description": "أنواع إرسال الرسائل والبث داخل الشبكة المحلية.",
+  "tags": [
+    "Unicast",
+    "Multicast",
+    "Broadcast"
+  ],
+  "questionCount": 10,
+  "totalMarks": 100,
+  "pageRange": "65–72",
+  "parserFamily": "t-series-v1",
+  "conversionStatus": "ready",
+  "publishable": true,
+  "autoGradableCount": 10,
+  "manualReviewCount": 0,
+  "libraryVersion": 1,
+  "sourceSha": "b789574d8d5149eb25d6638762303649256232a20fa0a002a2bc1b1d03e97a89",
+  "contentHash": "e480aff51a8024ccadce32bdc5321879bc54f0455b0d2473bb8f6d10ff0eef2a",
+  "convertedAt": "2026-09-05T18:57:19.063Z",
+  "source": {
+    "repository": "Book791381",
+    "sourceFile": "T09.html"
+  },
+  "schemaVersion": 1,
+  "examSnapshot": {
+    "schemaVersion": 1,
+    "examId": "LIB-T09",
+    "title": "Unicast وMulticast وBroadcast",
+    "questions": [
+      {
+        "examQuestionId": "LIB-T09-Q01",
+        "origin": "imported",
+        "sourceId": "LIB-T09",
+        "sourceQuestionId": "1",
+        "section": "BASIC",
+        "topic": "OTHER_NETWORKING",
+        "secondaryTopics": [],
+        "difficulty": 2,
+        "difficultyLabel": "",
+        "familyKey": "LIB-T09-Q01",
+        "hasCLI": false,
+        "requiresCalculation": false,
+        "presentationType": "multipleChoice",
+        "marks": 10,
+        "locked": false,
+        "text": "ما نوع الرسالة التي تُرسل من جهاز واحد إلى جهاز واحد محدد؟",
+        "textHtml": "",
+        "options": [
+          {
+            "value": "0",
+            "text": "Broadcast"
+          },
+          {
+            "value": "1",
+            "text": "Multicast"
+          },
+          {
+            "value": "2",
+            "text": "Unicast"
+          },
+          {
+            "value": "3",
+            "text": "All-to-All"
+          }
+        ],
+        "fields": [],
+        "parts": [],
+        "answer": {
+          "correctOptionIndex": 2
+        },
+        "hint": "Unicast تعني إرسال رسالة من مصدر واحد إلى هدف واحد محدد.",
+        "teacherNote": "",
+        "aiInstruction": "",
+        "wasModified": false,
+        "image": {
+          "exists": false,
+          "visible": false,
+          "origin": null,
+          "assets": [],
+          "prompt": null
+        },
+        "history": [],
+        "redoStack": []
+      },
+      {
+        "examQuestionId": "LIB-T09-Q02",
+        "origin": "imported",
+        "sourceId": "LIB-T09",
+        "sourceQuestionId": "2",
+        "section": "BASIC",
+        "topic": "OTHER_NETWORKING",
+        "secondaryTopics": [],
+        "difficulty": 2,
+        "difficultyLabel": "",
+        "familyKey": "LIB-T09-Q02",
+        "hasCLI": false,
+        "requiresCalculation": false,
+        "presentationType": "multipleChoice",
+        "marks": 10,
+        "locked": false,
+        "text": "ما نوع الرسالة التي تصل إلى مجموعة محددة من الأجهزة فقط؟",
+        "textHtml": "",
+        "options": [
+          {
+            "value": "0",
+            "text": "Multicast"
+          },
+          {
+            "value": "1",
+            "text": "Broadcast"
+          },
+          {
+            "value": "2",
+            "text": "Unicast"
+          },
+          {
+            "value": "3",
+            "text": "Loopback"
+          }
+        ],
+        "fields": [],
+        "parts": [],
+        "answer": {
+          "correctOptionIndex": 0
+        },
+        "hint": "Multicast تعني إرسال الرسالة إلى مجموعة محددة، وليس إلى جميع الأجهزة.",
+        "teacherNote": "",
+        "aiInstruction": "",
+        "wasModified": false,
+        "image": {
+          "exists": false,
+          "visible": false,
+          "origin": null,
+          "assets": [],
+          "prompt": null
+        },
+        "history": [],
+        "redoStack": []
+      },
+      {
+        "examQuestionId": "LIB-T09-Q03",
+        "origin": "imported",
+        "sourceId": "LIB-T09",
+        "sourceQuestionId": "3",
+        "section": "BASIC",
+        "topic": "OTHER_NETWORKING",
+        "secondaryTopics": [],
+        "difficulty": 2,
+        "difficultyLabel": "",
+        "familyKey": "LIB-T09-Q03",
+        "hasCLI": false,
+        "requiresCalculation": false,
+        "presentationType": "multipleChoice",
+        "marks": 10,
+        "locked": false,
+        "text": "ما نوع الرسالة التي تصل إلى جميع الأجهزة داخل الشبكة المحلية؟",
+        "textHtml": "",
+        "options": [
+          {
+            "value": "0",
+            "text": "Unicast"
+          },
+          {
+            "value": "1",
+            "text": "Multicast"
+          },
+          {
+            "value": "2",
+            "text": "Anycast"
+          },
+          {
+            "value": "3",
+            "text": "Broadcast"
+          }
+        ],
+        "fields": [],
+        "parts": [],
+        "answer": {
+          "correctOptionIndex": 3
+        },
+        "hint": "Broadcast هي رسالة من جهاز واحد إلى جميع الأجهزة داخل نفس الشبكة المحلية.",
+        "teacherNote": "",
+        "aiInstruction": "",
+        "wasModified": false,
+        "image": {
+          "exists": false,
+          "visible": false,
+          "origin": null,
+          "assets": [],
+          "prompt": null
+        },
+        "history": [],
+        "redoStack": []
+      },
+      {
+        "examQuestionId": "LIB-T09-Q04",
+        "origin": "imported",
+        "sourceId": "LIB-T09",
+        "sourceQuestionId": "4",
+        "section": "BASIC",
+        "topic": "OTHER_NETWORKING",
+        "secondaryTopics": [],
+        "difficulty": 2,
+        "difficultyLabel": "",
+        "familyKey": "LIB-T09-Q04",
+        "hasCLI": false,
+        "requiresCalculation": false,
+        "presentationType": "multipleChoice",
+        "marks": 10,
+        "locked": false,
+        "text": "تصفح موقع أو إرسال رسالة إلى جهاز محدد هو مثال على:",
+        "textHtml": "",
+        "options": [
+          {
+            "value": "0",
+            "text": "Multicast"
+          },
+          {
+            "value": "1",
+            "text": "Unicast"
+          },
+          {
+            "value": "2",
+            "text": "Broadcast"
+          },
+          {
+            "value": "3",
+            "text": "RIP"
+          }
+        ],
+        "fields": [],
+        "parts": [],
+        "answer": {
+          "correctOptionIndex": 1
+        },
+        "hint": "التصفح أو إرسال رسالة لهدف محدد يُعد مثالًا على Unicast.",
+        "teacherNote": "",
+        "aiInstruction": "",
+        "wasModified": false,
+        "image": {
+          "exists": false,
+          "visible": false,
+          "origin": null,
+          "assets": [],
+          "prompt": null
+        },
+        "history": [],
+        "redoStack": []
+      },
+      {
+        "examQuestionId": "LIB-T09-Q05",
+        "origin": "imported",
+        "sourceId": "LIB-T09",
+        "sourceQuestionId": "5",
+        "section": "BASIC",
+        "topic": "OTHER_NETWORKING",
+        "secondaryTopics": [],
+        "difficulty": 2,
+        "difficultyLabel": "",
+        "familyKey": "LIB-T09-Q05",
+        "hasCLI": false,
+        "requiresCalculation": false,
+        "presentationType": "multipleChoice",
+        "marks": 10,
+        "locked": false,
+        "text": "بث فيديو لمجموعة مشتركين فقط هو مثال على:",
+        "textHtml": "",
+        "options": [
+          {
+            "value": "0",
+            "text": "Multicast"
+          },
+          {
+            "value": "1",
+            "text": "Unicast"
+          },
+          {
+            "value": "2",
+            "text": "Broadcast"
+          },
+          {
+            "value": "3",
+            "text": "Localhost"
+          }
+        ],
+        "fields": [],
+        "parts": [],
+        "answer": {
+          "correctOptionIndex": 0
+        },
+        "hint": "عندما تصل الرسالة إلى مجموعة محددة من المشتركين نسمّيها Multicast.",
+        "teacherNote": "",
+        "aiInstruction": "",
+        "wasModified": false,
+        "image": {
+          "exists": false,
+          "visible": false,
+          "origin": null,
+          "assets": [],
+          "prompt": null
+        },
+        "history": [],
+        "redoStack": []
+      },
+      {
+        "examQuestionId": "LIB-T09-Q06",
+        "origin": "imported",
+        "sourceId": "LIB-T09",
+        "sourceQuestionId": "6",
+        "section": "BASIC",
+        "topic": "OTHER_NETWORKING",
+        "secondaryTopics": [],
+        "difficulty": 2,
+        "difficultyLabel": "",
+        "familyKey": "LIB-T09-Q06",
+        "hasCLI": false,
+        "requiresCalculation": false,
+        "presentationType": "multipleChoice",
+        "marks": 10,
+        "locked": false,
+        "text": "ما عنوان MAC الهدف في رسالة Broadcast؟",
+        "textHtml": "",
+        "options": [
+          {
+            "value": "0",
+            "text": "00:00:00:00:00:00"
+          },
+          {
+            "value": "1",
+            "text": "AA:AA:AA:AA:AA:AA"
+          },
+          {
+            "value": "2",
+            "text": "11:22:33:44:55:66"
+          },
+          {
+            "value": "3",
+            "text": "FF:FF:FF:FF:FF:FF"
+          }
+        ],
+        "fields": [],
+        "parts": [],
+        "answer": {
+          "correctOptionIndex": 3
+        },
+        "hint": "عنوان MAC الخاص بالبث العام هو FF:FF:FF:FF:FF:FF.",
+        "teacherNote": "",
+        "aiInstruction": "",
+        "wasModified": false,
+        "image": {
+          "exists": false,
+          "visible": false,
+          "origin": null,
+          "assets": [],
+          "prompt": null
+        },
+        "history": [],
+        "redoStack": []
+      },
+      {
+        "examQuestionId": "LIB-T09-Q07",
+        "origin": "imported",
+        "sourceId": "LIB-T09",
+        "sourceQuestionId": "7",
+        "section": "BASIC",
+        "topic": "OTHER_NETWORKING",
+        "secondaryTopics": [],
+        "difficulty": 2,
+        "difficultyLabel": "",
+        "familyKey": "LIB-T09-Q07",
+        "hasCLI": false,
+        "requiresCalculation": false,
+        "presentationType": "multipleChoice",
+        "marks": 10,
+        "locked": false,
+        "text": "أي بروتوكول يستعمل Broadcast عندما يبحث الجهاز عن عنوان MAC لجهاز داخل الشبكة؟",
+        "textHtml": "",
+        "options": [
+          {
+            "value": "0",
+            "text": "DNS"
+          },
+          {
+            "value": "1",
+            "text": "HTTP"
+          },
+          {
+            "value": "2",
+            "text": "ARP"
+          },
+          {
+            "value": "3",
+            "text": "FTP"
+          }
+        ],
+        "fields": [],
+        "parts": [],
+        "answer": {
+          "correctOptionIndex": 2
+        },
+        "hint": "يستعمل ARP رسالة Broadcast عندما يبحث عن عنوان MAC الموافق لعنوان IP داخل الشبكة.",
+        "teacherNote": "",
+        "aiInstruction": "",
+        "wasModified": false,
+        "image": {
+          "exists": false,
+          "visible": false,
+          "origin": null,
+          "assets": [],
+          "prompt": null
+        },
+        "history": [],
+        "redoStack": []
+      },
+      {
+        "examQuestionId": "LIB-T09-Q08",
+        "origin": "imported",
+        "sourceId": "LIB-T09",
+        "sourceQuestionId": "8",
+        "section": "BASIC",
+        "topic": "OTHER_NETWORKING",
+        "secondaryTopics": [],
+        "difficulty": 2,
+        "difficultyLabel": "",
+        "familyKey": "LIB-T09-Q08",
+        "hasCLI": false,
+        "requiresCalculation": false,
+        "presentationType": "multipleChoice",
+        "marks": 10,
+        "locked": false,
+        "text": "أي بروتوكول يستعمل Broadcast عندما يبحث الجهاز عن خادم يمنحه عنوان IP؟",
+        "textHtml": "",
+        "options": [
+          {
+            "value": "0",
+            "text": "SMTP"
+          },
+          {
+            "value": "1",
+            "text": "DHCP"
+          },
+          {
+            "value": "2",
+            "text": "HTTPS"
+          },
+          {
+            "value": "3",
+            "text": "SSH"
+          }
+        ],
+        "fields": [],
+        "parts": [],
+        "answer": {
+          "correctOptionIndex": 1
+        },
+        "hint": "يرسل الجهاز DHCP Discover كبث عام لأنه لا يعرف بعد عنوان خادم DHCP.",
+        "teacherNote": "",
+        "aiInstruction": "",
+        "wasModified": false,
+        "image": {
+          "exists": false,
+          "visible": false,
+          "origin": null,
+          "assets": [],
+          "prompt": null
+        },
+        "history": [],
+        "redoStack": []
+      },
+      {
+        "examQuestionId": "LIB-T09-Q09",
+        "origin": "imported",
+        "sourceId": "LIB-T09",
+        "sourceQuestionId": "9",
+        "section": "BASIC",
+        "topic": "OTHER_NETWORKING",
+        "secondaryTopics": [],
+        "difficulty": 2,
+        "difficultyLabel": "",
+        "familyKey": "LIB-T09-Q09",
+        "hasCLI": false,
+        "requiresCalculation": false,
+        "presentationType": "multipleChoice",
+        "marks": 10,
+        "locked": false,
+        "text": "أي جهاز يفصل بين مجالات Broadcast؟",
+        "textHtml": "",
+        "options": [
+          {
+            "value": "0",
+            "text": "Hub"
+          },
+          {
+            "value": "1",
+            "text": "Repeater"
+          },
+          {
+            "value": "2",
+            "text": "Switch فقط"
+          },
+          {
+            "value": "3",
+            "text": "Router"
+          }
+        ],
+        "fields": [],
+        "parts": [],
+        "answer": {
+          "correctOptionIndex": 3
+        },
+        "hint": "الراوتر Router يفصل بين مجالات Broadcast ولا يمرر البث العام عادة إلى شبكة أخرى.",
+        "teacherNote": "",
+        "aiInstruction": "",
+        "wasModified": false,
+        "image": {
+          "exists": false,
+          "visible": false,
+          "origin": null,
+          "assets": [],
+          "prompt": null
+        },
+        "history": [],
+        "redoStack": []
+      },
+      {
+        "examQuestionId": "LIB-T09-Q10",
+        "origin": "imported",
+        "sourceId": "LIB-T09",
+        "sourceQuestionId": "10",
+        "section": "BASIC",
+        "topic": "OTHER_NETWORKING",
+        "secondaryTopics": [],
+        "difficulty": 2,
+        "difficultyLabel": "",
+        "familyKey": "LIB-T09-Q10",
+        "hasCLI": false,
+        "requiresCalculation": false,
+        "presentationType": "multipleChoice",
+        "marks": 10,
+        "locked": false,
+        "text": "في رسالة Unicast، أي مجموعة معلومات تكون معروفة لتوجيه الرسالة إلى هدف محدد؟",
+        "textHtml": "",
+        "options": [
+          {
+            "value": "0",
+            "text": "IP المصدر وIP الهدف وMAC المصدر وMAC الهدف"
+          },
+          {
+            "value": "1",
+            "text": "اسم المستخدم فقط"
+          },
+          {
+            "value": "2",
+            "text": "عنوان Broadcast فقط"
+          },
+          {
+            "value": "3",
+            "text": "عنوان DNS فقط"
+          }
+        ],
+        "fields": [],
+        "parts": [],
+        "answer": {
+          "correctOptionIndex": 0
+        },
+        "hint": "في Unicast تكون عناوين المصدر والهدف معروفة: IP للمصدر والهدف وMAC للمصدر والهدف.",
+        "teacherNote": "",
+        "aiInstruction": "",
+        "wasModified": false,
+        "image": {
+          "exists": false,
+          "visible": false,
+          "origin": null,
+          "assets": [],
+          "prompt": null
+        },
+        "history": [],
+        "redoStack": []
+      }
+    ],
+    "totalMarks": 100,
+    "status": "final",
+    "createdAt": "2026-09-05T18:57:20.328Z",
+    "updatedAt": "2026-09-05T18:57:20.328Z"
+  }
+}

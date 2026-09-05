@@ -1,0 +1,589 @@
+{
+  "libraryItemId": "T01",
+  "title": "أساسيات الشبكات",
+  "category": "foundation",
+  "description": "تعريف الشبكة، فوائدها، أنواعها الأساسية، ومتطلبات بناء شبكة بسيطة.",
+  "tags": [
+    "أساسيات",
+    "LAN / WAN",
+    "مفاهيم أولية"
+  ],
+  "questionCount": 10,
+  "totalMarks": 100,
+  "pageRange": "6–11",
+  "parserFamily": "t-series-v1",
+  "conversionStatus": "ready",
+  "publishable": true,
+  "autoGradableCount": 10,
+  "manualReviewCount": 0,
+  "libraryVersion": 1,
+  "sourceSha": "9300c4f63f038037d109b83ec4f05df025897db7b6a412d564337bd2467a1f9f",
+  "contentHash": "b71604dc16fdabf7460ce7e9f428a24def045e64e3b9972c073cc846dcd5cda7",
+  "convertedAt": "2026-09-05T18:57:19.063Z",
+  "source": {
+    "repository": "Book791381",
+    "sourceFile": "T01.html"
+  },
+  "schemaVersion": 1,
+  "examSnapshot": {
+    "schemaVersion": 1,
+    "examId": "LIB-T01",
+    "title": "أساسيات الشبكات",
+    "questions": [
+      {
+        "examQuestionId": "LIB-T01-Q01",
+        "origin": "imported",
+        "sourceId": "LIB-T01",
+        "sourceQuestionId": "1",
+        "section": "BASIC",
+        "topic": "OTHER_NETWORKING",
+        "secondaryTopics": [],
+        "difficulty": 2,
+        "difficultyLabel": "",
+        "familyKey": "LIB-T01-Q01",
+        "hasCLI": false,
+        "requiresCalculation": false,
+        "presentationType": "multipleChoice",
+        "marks": 10,
+        "locked": false,
+        "text": "ما هي الشبكة؟",
+        "textHtml": "",
+        "options": [
+          {
+            "value": "0",
+            "text": "برنامج يُستخدم لكتابة النصوص فقط"
+          },
+          {
+            "value": "1",
+            "text": "مجموعة أجهزة متصلة معًا لتبادل المعلومات والملفات"
+          },
+          {
+            "value": "2",
+            "text": "نوع من أنواع الطابعات"
+          },
+          {
+            "value": "3",
+            "text": "جهاز واحد غير متصل بأي جهاز آخر"
+          }
+        ],
+        "fields": [],
+        "parts": [],
+        "answer": {
+          "correctOptionIndex": 1
+        },
+        "hint": "الشبكة هي مجموعة أجهزة متصلة مع بعضها لتبادل المعلومات والملفات والوصول إلى الإنترنت.",
+        "teacherNote": "",
+        "aiInstruction": "",
+        "wasModified": false,
+        "image": {
+          "exists": false,
+          "visible": false,
+          "origin": null,
+          "assets": [],
+          "prompt": null
+        },
+        "history": [],
+        "redoStack": []
+      },
+      {
+        "examQuestionId": "LIB-T01-Q02",
+        "origin": "imported",
+        "sourceId": "LIB-T01",
+        "sourceQuestionId": "2",
+        "section": "BASIC",
+        "topic": "OTHER_NETWORKING",
+        "secondaryTopics": [],
+        "difficulty": 2,
+        "difficultyLabel": "",
+        "familyKey": "LIB-T01-Q02",
+        "hasCLI": false,
+        "requiresCalculation": false,
+        "presentationType": "multipleChoice",
+        "marks": 10,
+        "locked": false,
+        "text": "أي مما يلي يُعد استخدامًا صحيحًا للشبكة؟",
+        "textHtml": "",
+        "options": [
+          {
+            "value": "0",
+            "text": "إطفاء جميع أجهزة المدرسة"
+          },
+          {
+            "value": "1",
+            "text": "منع الأجهزة من التواصل دائمًا"
+          },
+          {
+            "value": "2",
+            "text": "مشاركة الملفات والصور بين الأجهزة"
+          },
+          {
+            "value": "3",
+            "text": "إلغاء نظام التشغيل من الحاسوب"
+          }
+        ],
+        "fields": [],
+        "parts": [],
+        "answer": {
+          "correctOptionIndex": 2
+        },
+        "hint": "من أهم استخدامات الشبكة مشاركة الملفات والصور، والوصول إلى الإنترنت، والتواصل والعمل الجماعي.",
+        "teacherNote": "",
+        "aiInstruction": "",
+        "wasModified": false,
+        "image": {
+          "exists": false,
+          "visible": false,
+          "origin": null,
+          "assets": [],
+          "prompt": null
+        },
+        "history": [],
+        "redoStack": []
+      },
+      {
+        "examQuestionId": "LIB-T01-Q03",
+        "origin": "imported",
+        "sourceId": "LIB-T01",
+        "sourceQuestionId": "3",
+        "section": "BASIC",
+        "topic": "OTHER_NETWORKING",
+        "secondaryTopics": [],
+        "difficulty": 2,
+        "difficultyLabel": "",
+        "familyKey": "LIB-T01-Q03",
+        "hasCLI": false,
+        "requiresCalculation": false,
+        "presentationType": "multipleChoice",
+        "marks": 10,
+        "locked": false,
+        "text": "تستعمل عدة حواسيب في المدرسة الطابعة نفسها عبر الشبكة. ما الفائدة الظاهرة هنا؟",
+        "textHtml": "",
+        "options": [
+          {
+            "value": "0",
+            "text": "زيادة عدد الطابعات المطلوبة"
+          },
+          {
+            "value": "1",
+            "text": "منع تبادل المعلومات"
+          },
+          {
+            "value": "2",
+            "text": "فصل الحواسيب عن بعضها"
+          },
+          {
+            "value": "3",
+            "text": "مشاركة الأجهزة والموارد"
+          }
+        ],
+        "fields": [],
+        "parts": [],
+        "answer": {
+          "correctOptionIndex": 3
+        },
+        "hint": "تسمح الشبكة لعدة حواسيب باستعمال الطابعة نفسها بدل شراء طابعة لكل جهاز.",
+        "teacherNote": "",
+        "aiInstruction": "",
+        "wasModified": false,
+        "image": {
+          "exists": false,
+          "visible": false,
+          "origin": null,
+          "assets": [],
+          "prompt": null
+        },
+        "history": [],
+        "redoStack": []
+      },
+      {
+        "examQuestionId": "LIB-T01-Q04",
+        "origin": "imported",
+        "sourceId": "LIB-T01",
+        "sourceQuestionId": "4",
+        "section": "BASIC",
+        "topic": "OTHER_NETWORKING",
+        "secondaryTopics": [],
+        "difficulty": 2,
+        "difficultyLabel": "",
+        "familyKey": "LIB-T01-Q04",
+        "hasCLI": false,
+        "requiresCalculation": false,
+        "presentationType": "multipleChoice",
+        "marks": 10,
+        "locked": false,
+        "text": "هاتف متصل بسماعة Bluetooth قريبة يمثل غالبًا شبكة من نوع:",
+        "textHtml": "",
+        "options": [
+          {
+            "value": "0",
+            "text": "PAN"
+          },
+          {
+            "value": "1",
+            "text": "WAN"
+          },
+          {
+            "value": "2",
+            "text": "Internet"
+          },
+          {
+            "value": "3",
+            "text": "LAN"
+          }
+        ],
+        "fields": [],
+        "parts": [],
+        "answer": {
+          "correctOptionIndex": 0
+        },
+        "hint": "PAN شبكة شخصية تربط أجهزة قريبة جدًا، مثل الهاتف وسماعة Bluetooth.",
+        "teacherNote": "",
+        "aiInstruction": "",
+        "wasModified": false,
+        "image": {
+          "exists": false,
+          "visible": false,
+          "origin": null,
+          "assets": [],
+          "prompt": null
+        },
+        "history": [],
+        "redoStack": []
+      },
+      {
+        "examQuestionId": "LIB-T01-Q05",
+        "origin": "imported",
+        "sourceId": "LIB-T01",
+        "sourceQuestionId": "5",
+        "section": "BASIC",
+        "topic": "OTHER_NETWORKING",
+        "secondaryTopics": [],
+        "difficulty": 2,
+        "difficultyLabel": "",
+        "familyKey": "LIB-T01-Q05",
+        "hasCLI": false,
+        "requiresCalculation": false,
+        "presentationType": "multipleChoice",
+        "marks": 10,
+        "locked": false,
+        "text": "شبكة الحواسيب الموجودة داخل غرفة الحاسوب في المدرسة تُعد غالبًا:",
+        "textHtml": "",
+        "options": [
+          {
+            "value": "0",
+            "text": "شبكة بين دول"
+          },
+          {
+            "value": "1",
+            "text": "LAN"
+          },
+          {
+            "value": "2",
+            "text": "WAN"
+          },
+          {
+            "value": "3",
+            "text": "PAN"
+          }
+        ],
+        "fields": [],
+        "parts": [],
+        "answer": {
+          "correctOptionIndex": 1
+        },
+        "hint": "LAN هي شبكة محلية داخل مكان محدود مثل البيت أو المدرسة أو غرفة الحاسوب.",
+        "teacherNote": "",
+        "aiInstruction": "",
+        "wasModified": false,
+        "image": {
+          "exists": false,
+          "visible": false,
+          "origin": null,
+          "assets": [],
+          "prompt": null
+        },
+        "history": [],
+        "redoStack": []
+      },
+      {
+        "examQuestionId": "LIB-T01-Q06",
+        "origin": "imported",
+        "sourceId": "LIB-T01",
+        "sourceQuestionId": "6",
+        "section": "BASIC",
+        "topic": "OTHER_NETWORKING",
+        "secondaryTopics": [],
+        "difficulty": 2,
+        "difficultyLabel": "",
+        "familyKey": "LIB-T01-Q06",
+        "hasCLI": false,
+        "requiresCalculation": false,
+        "presentationType": "multipleChoice",
+        "marks": 10,
+        "locked": false,
+        "text": "شبكة تربط أجهزة موجودة في مدن أو دول مختلفة تسمى:",
+        "textHtml": "",
+        "options": [
+          {
+            "value": "0",
+            "text": "Bluetooth"
+          },
+          {
+            "value": "1",
+            "text": "PAN"
+          },
+          {
+            "value": "2",
+            "text": "WAN"
+          },
+          {
+            "value": "3",
+            "text": "LAN"
+          }
+        ],
+        "fields": [],
+        "parts": [],
+        "answer": {
+          "correctOptionIndex": 2
+        },
+        "hint": "WAN شبكة واسعة تمتد بين مدن أو دول، وأكبر مثال عليها الإنترنت.",
+        "teacherNote": "",
+        "aiInstruction": "",
+        "wasModified": false,
+        "image": {
+          "exists": false,
+          "visible": false,
+          "origin": null,
+          "assets": [],
+          "prompt": null
+        },
+        "history": [],
+        "redoStack": []
+      },
+      {
+        "examQuestionId": "LIB-T01-Q07",
+        "origin": "imported",
+        "sourceId": "LIB-T01",
+        "sourceQuestionId": "7",
+        "section": "BASIC",
+        "topic": "OTHER_NETWORKING",
+        "secondaryTopics": [],
+        "difficulty": 2,
+        "difficultyLabel": "",
+        "familyKey": "LIB-T01-Q07",
+        "hasCLI": false,
+        "requiresCalculation": false,
+        "presentationType": "multipleChoice",
+        "marks": 10,
+        "locked": false,
+        "text": "أي مجموعة تمثل الاحتياجات الأساسية لبناء شبكة بصورة صحيحة؟",
+        "textHtml": "",
+        "options": [
+          {
+            "value": "0",
+            "text": "كلمات مرور فقط دون أجهزة"
+          },
+          {
+            "value": "1",
+            "text": "حاسوب واحد غير متصل"
+          },
+          {
+            "value": "2",
+            "text": "طابعة فقط دون عناوين أو إعدادات"
+          },
+          {
+            "value": "3",
+            "text": "أجهزة ربط وكابلات أو Wi-Fi، عناوين IP، وبروتوكول اتصال"
+          }
+        ],
+        "fields": [],
+        "parts": [],
+        "answer": {
+          "correctOptionIndex": 3
+        },
+        "hint": "بناء الشبكة يحتاج بنية تحتية، وعناوين IP تميز الأجهزة، وبروتوكولًا ينظم الاتصال.",
+        "teacherNote": "",
+        "aiInstruction": "",
+        "wasModified": false,
+        "image": {
+          "exists": false,
+          "visible": false,
+          "origin": null,
+          "assets": [],
+          "prompt": null
+        },
+        "history": [],
+        "redoStack": []
+      },
+      {
+        "examQuestionId": "LIB-T01-Q08",
+        "origin": "imported",
+        "sourceId": "LIB-T01",
+        "sourceQuestionId": "8",
+        "section": "BASIC",
+        "topic": "OTHER_NETWORKING",
+        "secondaryTopics": [],
+        "difficulty": 2,
+        "difficultyLabel": "",
+        "familyKey": "LIB-T01-Q08",
+        "hasCLI": false,
+        "requiresCalculation": false,
+        "presentationType": "multipleChoice",
+        "marks": 10,
+        "locked": false,
+        "text": "لماذا يحتاج كل جهاز في الشبكة إلى عنوان IP؟",
+        "textHtml": "",
+        "options": [
+          {
+            "value": "0",
+            "text": "ليكون له رقم يميزه ويسمح له بالتواصل مع الأجهزة الأخرى"
+          },
+          {
+            "value": "1",
+            "text": "لتغيير لون الحاسوب"
+          },
+          {
+            "value": "2",
+            "text": "لمنع الجهاز من إرسال البيانات"
+          },
+          {
+            "value": "3",
+            "text": "ليزداد حجم شاشة الجهاز"
+          }
+        ],
+        "fields": [],
+        "parts": [],
+        "answer": {
+          "correctOptionIndex": 0
+        },
+        "hint": "عنوان IP يميز الجهاز داخل الشبكة ويساعد على إرسال البيانات واستقبالها.",
+        "teacherNote": "",
+        "aiInstruction": "",
+        "wasModified": false,
+        "image": {
+          "exists": false,
+          "visible": false,
+          "origin": null,
+          "assets": [],
+          "prompt": null
+        },
+        "history": [],
+        "redoStack": []
+      },
+      {
+        "examQuestionId": "LIB-T01-Q09",
+        "origin": "imported",
+        "sourceId": "LIB-T01",
+        "sourceQuestionId": "9",
+        "section": "BASIC",
+        "topic": "OTHER_NETWORKING",
+        "secondaryTopics": [],
+        "difficulty": 2,
+        "difficultyLabel": "",
+        "familyKey": "LIB-T01-Q09",
+        "hasCLI": false,
+        "requiresCalculation": false,
+        "presentationType": "multipleChoice",
+        "marks": 10,
+        "locked": false,
+        "text": "أي مهمة من المهام التالية تدخل ضمن أمان الشبكة؟",
+        "textHtml": "",
+        "options": [
+          {
+            "value": "0",
+            "text": "زيادة حجم شاشة الحاسوب"
+          },
+          {
+            "value": "1",
+            "text": "حماية الشبكة من الدخول غير المصرح به"
+          },
+          {
+            "value": "2",
+            "text": "كتابة ملف نصي"
+          },
+          {
+            "value": "3",
+            "text": "مشاركة الطابعة بين الحواسيب"
+          }
+        ],
+        "fields": [],
+        "parts": [],
+        "answer": {
+          "correctOptionIndex": 1
+        },
+        "hint": "أمان الشبكة يعني حماية الشبكة والأجهزة من الدخول غير المصرح به.",
+        "teacherNote": "",
+        "aiInstruction": "",
+        "wasModified": false,
+        "image": {
+          "exists": false,
+          "visible": false,
+          "origin": null,
+          "assets": [],
+          "prompt": null
+        },
+        "history": [],
+        "redoStack": []
+      },
+      {
+        "examQuestionId": "LIB-T01-Q10",
+        "origin": "imported",
+        "sourceId": "LIB-T01",
+        "sourceQuestionId": "10",
+        "section": "BASIC",
+        "topic": "OTHER_NETWORKING",
+        "secondaryTopics": [],
+        "difficulty": 2,
+        "difficultyLabel": "",
+        "familyKey": "LIB-T01-Q10",
+        "hasCLI": false,
+        "requiresCalculation": false,
+        "presentationType": "multipleChoice",
+        "marks": 10,
+        "locked": false,
+        "text": "بعد تركيب شبكة المدرسة، أراد الفني التأكد من أن الأجهزة تتواصل بشكل صحيح. ما الإجراء الأنسب؟",
+        "textHtml": "",
+        "options": [
+          {
+            "value": "0",
+            "text": "فصل جميع الكابلات"
+          },
+          {
+            "value": "1",
+            "text": "إطفاء جميع الأجهزة دون فحص"
+          },
+          {
+            "value": "2",
+            "text": "فحص الاتصال باستعمال أوامر مثل ping و ipconfig"
+          },
+          {
+            "value": "3",
+            "text": "حذف عناوين IP من الأجهزة"
+          }
+        ],
+        "fields": [],
+        "parts": [],
+        "answer": {
+          "correctOptionIndex": 2
+        },
+        "hint": "بعد بناء الشبكة نختبر الاتصال ونبحث عن الأعطال باستعمال أوامر فحص مثل ping و ipconfig.",
+        "teacherNote": "",
+        "aiInstruction": "",
+        "wasModified": false,
+        "image": {
+          "exists": false,
+          "visible": false,
+          "origin": null,
+          "assets": [],
+          "prompt": null
+        },
+        "history": [],
+        "redoStack": []
+      }
+    ],
+    "totalMarks": 100,
+    "status": "final",
+    "createdAt": "2026-09-05T18:57:20.306Z",
+    "updatedAt": "2026-09-05T18:57:20.306Z"
+  }
+}
