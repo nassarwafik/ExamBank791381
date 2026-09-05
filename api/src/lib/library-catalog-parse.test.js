@@ -34,8 +34,8 @@ const SAMPLE_HTML = `
 describe("parseBookCatalogIndex", () => {
   it("extracts libraryItemId, category, title, description, questionCount, pageRange, and tags from a .card.item-card article", () => {
     const items = parseBookCatalogIndex(SAMPLE_HTML);
-    expect(items).toHaveLength(1);
-    expect(items[0]).toEqual({
+    const t01 = items.find(item => item.libraryItemId === "T01");
+    expect(t01).toEqual({
       libraryItemId: "T01",
       category: "foundation",
       title: "أساسيات الشبكات",
@@ -46,9 +46,12 @@ describe("parseBookCatalogIndex", () => {
     });
   });
 
-  it("does not match an exam-card (F-series) article - only the plain .card.item-card class this phase targets", () => {
+  it("also matches an exam-card (F-series) article, carrying its title/category", () => {
     const items = parseBookCatalogIndex(SAMPLE_HTML);
-    expect(items.find(item => item.libraryItemId === "F01")).toBeUndefined();
+    const f01 = items.find(item => item.libraryItemId === "F01");
+    expect(f01).toBeDefined();
+    expect(f01.category).toBe("final");
+    expect(f01.title).toBe("نموذج A – 2025");
   });
 
   it("returns an empty array when there are no matching articles at all", () => {

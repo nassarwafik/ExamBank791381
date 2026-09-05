@@ -1,0 +1,589 @@
+{
+  "libraryItemId": "T02",
+  "title": "أنظمة العد",
+  "category": "foundation",
+  "description": "التحويل بين النظام العشري والثنائي والسادس عشري، وفهم قيمة الخانات.",
+  "tags": [
+    "Decimal",
+    "Binary",
+    "Hexadecimal"
+  ],
+  "questionCount": 10,
+  "totalMarks": 100,
+  "pageRange": "13–21",
+  "parserFamily": "t-series-v1",
+  "conversionStatus": "ready",
+  "publishable": true,
+  "autoGradableCount": 10,
+  "manualReviewCount": 0,
+  "libraryVersion": 1,
+  "sourceSha": "cb82ecfa43ccb525a0247171ed831857ccad53377171ba5c75fadc9e87769772",
+  "contentHash": "5c7d5e545a42bbe24bfbdb22d883cc281147ea1da6deadcd00daf379270a9d2e",
+  "convertedAt": "2026-09-05T18:57:19.063Z",
+  "source": {
+    "repository": "Book791381",
+    "sourceFile": "T02.html"
+  },
+  "schemaVersion": 1,
+  "examSnapshot": {
+    "schemaVersion": 1,
+    "examId": "LIB-T02",
+    "title": "أنظمة العد",
+    "questions": [
+      {
+        "examQuestionId": "LIB-T02-Q01",
+        "origin": "imported",
+        "sourceId": "LIB-T02",
+        "sourceQuestionId": "1",
+        "section": "BASIC",
+        "topic": "OTHER_NETWORKING",
+        "secondaryTopics": [],
+        "difficulty": 2,
+        "difficultyLabel": "",
+        "familyKey": "LIB-T02-Q01",
+        "hasCLI": false,
+        "requiresCalculation": false,
+        "presentationType": "multipleChoice",
+        "marks": 10,
+        "locked": false,
+        "text": "أي مجموعة تمثل رموز النظام الثنائي؟",
+        "textHtml": "",
+        "options": [
+          {
+            "value": "0",
+            "text": "0 و 1"
+          },
+          {
+            "value": "1",
+            "text": "0 إلى 9"
+          },
+          {
+            "value": "2",
+            "text": "A إلى F"
+          },
+          {
+            "value": "3",
+            "text": "1 إلى 16"
+          }
+        ],
+        "fields": [],
+        "parts": [],
+        "answer": {
+          "correctOptionIndex": 0
+        },
+        "hint": "النظام الثنائي يستعمل رقمين فقط، هما 0 و1.",
+        "teacherNote": "",
+        "aiInstruction": "",
+        "wasModified": false,
+        "image": {
+          "exists": false,
+          "visible": false,
+          "origin": null,
+          "assets": [],
+          "prompt": null
+        },
+        "history": [],
+        "redoStack": []
+      },
+      {
+        "examQuestionId": "LIB-T02-Q02",
+        "origin": "imported",
+        "sourceId": "LIB-T02",
+        "sourceQuestionId": "2",
+        "section": "BASIC",
+        "topic": "OTHER_NETWORKING",
+        "secondaryTopics": [],
+        "difficulty": 2,
+        "difficultyLabel": "",
+        "familyKey": "LIB-T02-Q02",
+        "hasCLI": false,
+        "requiresCalculation": false,
+        "presentationType": "multipleChoice",
+        "marks": 10,
+        "locked": false,
+        "text": "أي نظام عد نستعمله غالبًا في حياتنا اليومية؟",
+        "textHtml": "",
+        "options": [
+          {
+            "value": "0",
+            "text": "النظام الثنائي"
+          },
+          {
+            "value": "1",
+            "text": "النظام العشري"
+          },
+          {
+            "value": "2",
+            "text": "النظام السادس عشر"
+          },
+          {
+            "value": "3",
+            "text": "نظام يعتمد على حرفين فقط"
+          }
+        ],
+        "fields": [],
+        "parts": [],
+        "answer": {
+          "correctOptionIndex": 1
+        },
+        "hint": "النظام العشري هو النظام المستعمل يوميًا، ويستخدم الأرقام من 0 إلى 9.",
+        "teacherNote": "",
+        "aiInstruction": "",
+        "wasModified": false,
+        "image": {
+          "exists": false,
+          "visible": false,
+          "origin": null,
+          "assets": [],
+          "prompt": null
+        },
+        "history": [],
+        "redoStack": []
+      },
+      {
+        "examQuestionId": "LIB-T02-Q03",
+        "origin": "imported",
+        "sourceId": "LIB-T02",
+        "sourceQuestionId": "3",
+        "section": "BASIC",
+        "topic": "OTHER_NETWORKING",
+        "secondaryTopics": [],
+        "difficulty": 2,
+        "difficultyLabel": "",
+        "familyKey": "LIB-T02-Q03",
+        "hasCLI": false,
+        "requiresCalculation": false,
+        "presentationType": "multipleChoice",
+        "marks": 10,
+        "locked": false,
+        "text": "في التمثيل الثنائي داخل الحاسوب، ماذا يدل الرقم 1 بصورة مبسطة؟",
+        "textHtml": "",
+        "options": [
+          {
+            "value": "0",
+            "text": "إطفاء"
+          },
+          {
+            "value": "1",
+            "text": "حذف"
+          },
+          {
+            "value": "2",
+            "text": "تشغيل"
+          },
+          {
+            "value": "3",
+            "text": "خطأ في النظام"
+          }
+        ],
+        "fields": [],
+        "parts": [],
+        "answer": {
+          "correctOptionIndex": 2
+        },
+        "hint": "في الشرح المبسط للحاسوب، يمثل 1 حالة تشغيل ويمثل 0 حالة إطفاء.",
+        "teacherNote": "",
+        "aiInstruction": "",
+        "wasModified": false,
+        "image": {
+          "exists": false,
+          "visible": false,
+          "origin": null,
+          "assets": [],
+          "prompt": null
+        },
+        "history": [],
+        "redoStack": []
+      },
+      {
+        "examQuestionId": "LIB-T02-Q04",
+        "origin": "imported",
+        "sourceId": "LIB-T02",
+        "sourceQuestionId": "4",
+        "section": "BASIC",
+        "topic": "OTHER_NETWORKING",
+        "secondaryTopics": [],
+        "difficulty": 2,
+        "difficultyLabel": "",
+        "familyKey": "LIB-T02-Q04",
+        "hasCLI": false,
+        "requiresCalculation": false,
+        "presentationType": "multipleChoice",
+        "marks": 10,
+        "locked": false,
+        "text": "ما القيمة العشرية للعدد الثنائي 00000101؟",
+        "textHtml": "",
+        "options": [
+          {
+            "value": "0",
+            "text": "3"
+          },
+          {
+            "value": "1",
+            "text": "4"
+          },
+          {
+            "value": "2",
+            "text": "6"
+          },
+          {
+            "value": "3",
+            "text": "5"
+          }
+        ],
+        "fields": [],
+        "parts": [],
+        "answer": {
+          "correctOptionIndex": 3
+        },
+        "hint": "الخانتان المضيئتان هما 4 و1؛ لذلك 4 + 1 = 5.",
+        "teacherNote": "",
+        "aiInstruction": "",
+        "wasModified": false,
+        "image": {
+          "exists": false,
+          "visible": false,
+          "origin": null,
+          "assets": [],
+          "prompt": null
+        },
+        "history": [],
+        "redoStack": []
+      },
+      {
+        "examQuestionId": "LIB-T02-Q05",
+        "origin": "imported",
+        "sourceId": "LIB-T02",
+        "sourceQuestionId": "5",
+        "section": "BASIC",
+        "topic": "OTHER_NETWORKING",
+        "secondaryTopics": [],
+        "difficulty": 2,
+        "difficultyLabel": "",
+        "familyKey": "LIB-T02-Q05",
+        "hasCLI": false,
+        "requiresCalculation": false,
+        "presentationType": "multipleChoice",
+        "marks": 10,
+        "locked": false,
+        "text": "ما القيمة العشرية للعدد الثنائي 00001010؟",
+        "textHtml": "",
+        "options": [
+          {
+            "value": "0",
+            "text": "10"
+          },
+          {
+            "value": "1",
+            "text": "8"
+          },
+          {
+            "value": "2",
+            "text": "12"
+          },
+          {
+            "value": "3",
+            "text": "14"
+          }
+        ],
+        "fields": [],
+        "parts": [],
+        "answer": {
+          "correctOptionIndex": 0
+        },
+        "hint": "الخانتان المضيئتان هما 8 و2؛ لذلك 8 + 2 = 10.",
+        "teacherNote": "",
+        "aiInstruction": "",
+        "wasModified": false,
+        "image": {
+          "exists": false,
+          "visible": false,
+          "origin": null,
+          "assets": [],
+          "prompt": null
+        },
+        "history": [],
+        "redoStack": []
+      },
+      {
+        "examQuestionId": "LIB-T02-Q06",
+        "origin": "imported",
+        "sourceId": "LIB-T02",
+        "sourceQuestionId": "6",
+        "section": "BASIC",
+        "topic": "OTHER_NETWORKING",
+        "secondaryTopics": [],
+        "difficulty": 2,
+        "difficultyLabel": "",
+        "familyKey": "LIB-T02-Q06",
+        "hasCLI": false,
+        "requiresCalculation": false,
+        "presentationType": "multipleChoice",
+        "marks": 10,
+        "locked": false,
+        "text": "ما التمثيل الثنائي الصحيح للعدد العشري 6 باستخدام 8 بتات؟",
+        "textHtml": "",
+        "options": [
+          {
+            "value": "0",
+            "text": "00000101"
+          },
+          {
+            "value": "1",
+            "text": "00000110"
+          },
+          {
+            "value": "2",
+            "text": "00001000"
+          },
+          {
+            "value": "3",
+            "text": "00001010"
+          }
+        ],
+        "fields": [],
+        "parts": [],
+        "answer": {
+          "correctOptionIndex": 1
+        },
+        "hint": "العدد 6 يساوي 4 + 2، لذلك تمثيله الثنائي هو 00000110.",
+        "teacherNote": "",
+        "aiInstruction": "",
+        "wasModified": false,
+        "image": {
+          "exists": false,
+          "visible": false,
+          "origin": null,
+          "assets": [],
+          "prompt": null
+        },
+        "history": [],
+        "redoStack": []
+      },
+      {
+        "examQuestionId": "LIB-T02-Q07",
+        "origin": "imported",
+        "sourceId": "LIB-T02",
+        "sourceQuestionId": "7",
+        "section": "BASIC",
+        "topic": "OTHER_NETWORKING",
+        "secondaryTopics": [],
+        "difficulty": 2,
+        "difficultyLabel": "",
+        "familyKey": "LIB-T02-Q07",
+        "hasCLI": false,
+        "requiresCalculation": false,
+        "presentationType": "multipleChoice",
+        "marks": 10,
+        "locked": false,
+        "text": "ما التمثيل الثنائي الصحيح للعدد العشري 12 باستخدام 8 بتات؟",
+        "textHtml": "",
+        "options": [
+          {
+            "value": "0",
+            "text": "00001110"
+          },
+          {
+            "value": "1",
+            "text": "00001010"
+          },
+          {
+            "value": "2",
+            "text": "00001100"
+          },
+          {
+            "value": "3",
+            "text": "00010100"
+          }
+        ],
+        "fields": [],
+        "parts": [],
+        "answer": {
+          "correctOptionIndex": 2
+        },
+        "hint": "العدد 12 يساوي 8 + 4، لذلك تمثيله الثنائي هو 00001100.",
+        "teacherNote": "",
+        "aiInstruction": "",
+        "wasModified": false,
+        "image": {
+          "exists": false,
+          "visible": false,
+          "origin": null,
+          "assets": [],
+          "prompt": null
+        },
+        "history": [],
+        "redoStack": []
+      },
+      {
+        "examQuestionId": "LIB-T02-Q08",
+        "origin": "imported",
+        "sourceId": "LIB-T02",
+        "sourceQuestionId": "8",
+        "section": "BASIC",
+        "topic": "OTHER_NETWORKING",
+        "secondaryTopics": [],
+        "difficulty": 2,
+        "difficultyLabel": "",
+        "familyKey": "LIB-T02-Q08",
+        "hasCLI": false,
+        "requiresCalculation": false,
+        "presentationType": "multipleChoice",
+        "marks": 10,
+        "locked": false,
+        "text": "ما القيمة العشرية للرمز F في النظام السادس عشر؟",
+        "textHtml": "",
+        "options": [
+          {
+            "value": "0",
+            "text": "10"
+          },
+          {
+            "value": "1",
+            "text": "12"
+          },
+          {
+            "value": "2",
+            "text": "14"
+          },
+          {
+            "value": "3",
+            "text": "15"
+          }
+        ],
+        "fields": [],
+        "parts": [],
+        "answer": {
+          "correctOptionIndex": 3
+        },
+        "hint": "في النظام السادس عشر: A=10، B=11، C=12، D=13، E=14، F=15.",
+        "teacherNote": "",
+        "aiInstruction": "",
+        "wasModified": false,
+        "image": {
+          "exists": false,
+          "visible": false,
+          "origin": null,
+          "assets": [],
+          "prompt": null
+        },
+        "history": [],
+        "redoStack": []
+      },
+      {
+        "examQuestionId": "LIB-T02-Q09",
+        "origin": "imported",
+        "sourceId": "LIB-T02",
+        "sourceQuestionId": "9",
+        "section": "BASIC",
+        "topic": "OTHER_NETWORKING",
+        "secondaryTopics": [],
+        "difficulty": 2,
+        "difficultyLabel": "",
+        "familyKey": "LIB-T02-Q09",
+        "hasCLI": false,
+        "requiresCalculation": false,
+        "presentationType": "multipleChoice",
+        "marks": 10,
+        "locked": false,
+        "text": "ما التمثيل الثنائي الصحيح للعدد السادس عشري 5D؟",
+        "textHtml": "",
+        "options": [
+          {
+            "value": "0",
+            "text": "0101 1101"
+          },
+          {
+            "value": "1",
+            "text": "0101 1011"
+          },
+          {
+            "value": "2",
+            "text": "1101 0101"
+          },
+          {
+            "value": "3",
+            "text": "1010 1101"
+          }
+        ],
+        "fields": [],
+        "parts": [],
+        "answer": {
+          "correctOptionIndex": 0
+        },
+        "hint": "الرمز 5 يساوي 0101، والرمز D يساوي 1101؛ إذن 5D = 0101 1101.",
+        "teacherNote": "",
+        "aiInstruction": "",
+        "wasModified": false,
+        "image": {
+          "exists": false,
+          "visible": false,
+          "origin": null,
+          "assets": [],
+          "prompt": null
+        },
+        "history": [],
+        "redoStack": []
+      },
+      {
+        "examQuestionId": "LIB-T02-Q10",
+        "origin": "imported",
+        "sourceId": "LIB-T02",
+        "sourceQuestionId": "10",
+        "section": "BASIC",
+        "topic": "OTHER_NETWORKING",
+        "secondaryTopics": [],
+        "difficulty": 2,
+        "difficultyLabel": "",
+        "familyKey": "LIB-T02-Q10",
+        "hasCLI": false,
+        "requiresCalculation": false,
+        "presentationType": "multipleChoice",
+        "marks": 10,
+        "locked": false,
+        "text": "حوّل العدد الثنائي 0010 1010 إلى النظام السادس عشر.",
+        "textHtml": "",
+        "options": [
+          {
+            "value": "0",
+            "text": "2B"
+          },
+          {
+            "value": "1",
+            "text": "2A"
+          },
+          {
+            "value": "2",
+            "text": "A2"
+          },
+          {
+            "value": "3",
+            "text": "3A"
+          }
+        ],
+        "fields": [],
+        "parts": [],
+        "answer": {
+          "correctOptionIndex": 1
+        },
+        "hint": "المجموعة 0010 تساوي 2، والمجموعة 1010 تساوي A؛ لذلك النتيجة هي 2A.",
+        "teacherNote": "",
+        "aiInstruction": "",
+        "wasModified": false,
+        "image": {
+          "exists": false,
+          "visible": false,
+          "origin": null,
+          "assets": [],
+          "prompt": null
+        },
+        "history": [],
+        "redoStack": []
+      }
+    ],
+    "totalMarks": 100,
+    "status": "final",
+    "createdAt": "2026-09-05T18:57:20.308Z",
+    "updatedAt": "2026-09-05T18:57:20.308Z"
+  }
+}

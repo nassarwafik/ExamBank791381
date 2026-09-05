@@ -1,0 +1,589 @@
+{
+  "libraryItemId": "T14",
+  "title": "أمان الشبكات وتجزئة البيانات",
+  "category": "foundation",
+  "description": "هجمات الشبكات ثم Segment وPacket وFrame.",
+  "tags": [
+    "Network Security",
+    "Attacks",
+    "Data Units"
+  ],
+  "questionCount": 10,
+  "totalMarks": 100,
+  "pageRange": "107–115",
+  "parserFamily": "t-series-v1",
+  "conversionStatus": "ready",
+  "publishable": true,
+  "autoGradableCount": 10,
+  "manualReviewCount": 0,
+  "libraryVersion": 1,
+  "sourceSha": "e692db956a3e8f946fd4a0df45bdd4e3c2ba1bb3532fe49694f7b45fc278ad71",
+  "contentHash": "831f9e86886caca021a46f47461475a8e74d7adb66f0a171d7c4998ed23aad9f",
+  "convertedAt": "2026-09-05T18:57:19.063Z",
+  "source": {
+    "repository": "Book791381",
+    "sourceFile": "T14.html"
+  },
+  "schemaVersion": 1,
+  "examSnapshot": {
+    "schemaVersion": 1,
+    "examId": "LIB-T14",
+    "title": "أمان الشبكات وتجزئة البيانات",
+    "questions": [
+      {
+        "examQuestionId": "LIB-T14-Q01",
+        "origin": "imported",
+        "sourceId": "LIB-T14",
+        "sourceQuestionId": "1",
+        "section": "BASIC",
+        "topic": "OTHER_NETWORKING",
+        "secondaryTopics": [],
+        "difficulty": 2,
+        "difficultyLabel": "",
+        "familyKey": "LIB-T14-Q01",
+        "hasCLI": false,
+        "requiresCalculation": false,
+        "presentationType": "multipleChoice",
+        "marks": 10,
+        "locked": false,
+        "text": "ما هو هجوم DoS؟",
+        "textHtml": "",
+        "options": [
+          {
+            "value": "0",
+            "text": "إغراق خادم بطلبات كثيرة من مصدر واحد حتى يبطؤ أو يتوقف"
+          },
+          {
+            "value": "1",
+            "text": "تشفير اتصال بين جهازين"
+          },
+          {
+            "value": "2",
+            "text": "توزيع عناوين IP"
+          },
+          {
+            "value": "3",
+            "text": "تحويل اسم الموقع إلى IP"
+          }
+        ],
+        "fields": [],
+        "parts": [],
+        "answer": {
+          "correctOptionIndex": 0
+        },
+        "hint": "DoS هو إغراق الخادم بطلبات كثيرة من مصدر واحد حتى يتباطأ أو يتوقف.",
+        "teacherNote": "",
+        "aiInstruction": "",
+        "wasModified": false,
+        "image": {
+          "exists": false,
+          "visible": false,
+          "origin": null,
+          "assets": [],
+          "prompt": null
+        },
+        "history": [],
+        "redoStack": []
+      },
+      {
+        "examQuestionId": "LIB-T14-Q02",
+        "origin": "imported",
+        "sourceId": "LIB-T14",
+        "sourceQuestionId": "2",
+        "section": "BASIC",
+        "topic": "OTHER_NETWORKING",
+        "secondaryTopics": [],
+        "difficulty": 2,
+        "difficultyLabel": "",
+        "familyKey": "LIB-T14-Q02",
+        "hasCLI": false,
+        "requiresCalculation": false,
+        "presentationType": "multipleChoice",
+        "marks": 10,
+        "locked": false,
+        "text": "ما الفرق الأساسي بين DoS وDDoS؟",
+        "textHtml": "",
+        "options": [
+          {
+            "value": "0",
+            "text": "DoS يستعمل التشفير"
+          },
+          {
+            "value": "1",
+            "text": "DDoS يأتي من أجهزة كثيرة في الوقت نفسه"
+          },
+          {
+            "value": "2",
+            "text": "DDoS يوزع عناوين IP"
+          },
+          {
+            "value": "3",
+            "text": "لا يوجد فرق"
+          }
+        ],
+        "fields": [],
+        "parts": [],
+        "answer": {
+          "correctOptionIndex": 1
+        },
+        "hint": "DDoS هجوم موزع يأتي من أجهزة كثيرة، بينما DoS يأتي من مصدر واحد.",
+        "teacherNote": "",
+        "aiInstruction": "",
+        "wasModified": false,
+        "image": {
+          "exists": false,
+          "visible": false,
+          "origin": null,
+          "assets": [],
+          "prompt": null
+        },
+        "history": [],
+        "redoStack": []
+      },
+      {
+        "examQuestionId": "LIB-T14-Q03",
+        "origin": "imported",
+        "sourceId": "LIB-T14",
+        "sourceQuestionId": "3",
+        "section": "BASIC",
+        "topic": "OTHER_NETWORKING",
+        "secondaryTopics": [],
+        "difficulty": 2,
+        "difficultyLabel": "",
+        "familyKey": "LIB-T14-Q03",
+        "hasCLI": false,
+        "requiresCalculation": false,
+        "presentationType": "multipleChoice",
+        "marks": 10,
+        "locked": false,
+        "text": "ما المقصود بـSession Hijacking؟",
+        "textHtml": "",
+        "options": [
+          {
+            "value": "0",
+            "text": "إغلاق السويتش"
+          },
+          {
+            "value": "1",
+            "text": "تغيير عنوان MAC"
+          },
+          {
+            "value": "2",
+            "text": "سيطرة المهاجم على جلسة اتصال مفتوحة"
+          },
+          {
+            "value": "3",
+            "text": "منع Broadcast"
+          }
+        ],
+        "fields": [],
+        "parts": [],
+        "answer": {
+          "correctOptionIndex": 2
+        },
+        "hint": "اختطاف الجلسة يعني أن المهاجم يسيطر على جلسة مفتوحة بين المستخدم والخادم.",
+        "teacherNote": "",
+        "aiInstruction": "",
+        "wasModified": false,
+        "image": {
+          "exists": false,
+          "visible": false,
+          "origin": null,
+          "assets": [],
+          "prompt": null
+        },
+        "history": [],
+        "redoStack": []
+      },
+      {
+        "examQuestionId": "LIB-T14-Q04",
+        "origin": "imported",
+        "sourceId": "LIB-T14",
+        "sourceQuestionId": "4",
+        "section": "BASIC",
+        "topic": "OTHER_NETWORKING",
+        "secondaryTopics": [],
+        "difficulty": 2,
+        "difficultyLabel": "",
+        "familyKey": "LIB-T14-Q04",
+        "hasCLI": false,
+        "requiresCalculation": false,
+        "presentationType": "multipleChoice",
+        "marks": 10,
+        "locked": false,
+        "text": "ماذا يفعل المهاجم في هجوم الرجل في الوسط MitM؟",
+        "textHtml": "",
+        "options": [
+          {
+            "value": "0",
+            "text": "يوزع عناوين IP"
+          },
+          {
+            "value": "1",
+            "text": "يصلح الكابل"
+          },
+          {
+            "value": "2",
+            "text": "يزيد Bandwidth"
+          },
+          {
+            "value": "3",
+            "text": "يقف بين الطرفين ويعترض البيانات وقد يغيّرها"
+          }
+        ],
+        "fields": [],
+        "parts": [],
+        "answer": {
+          "correctOptionIndex": 3
+        },
+        "hint": "في MitM يقف المهاجم بين الطرفين ويقرأ البيانات أو يغيّرها.",
+        "teacherNote": "",
+        "aiInstruction": "",
+        "wasModified": false,
+        "image": {
+          "exists": false,
+          "visible": false,
+          "origin": null,
+          "assets": [],
+          "prompt": null
+        },
+        "history": [],
+        "redoStack": []
+      },
+      {
+        "examQuestionId": "LIB-T14-Q05",
+        "origin": "imported",
+        "sourceId": "LIB-T14",
+        "sourceQuestionId": "5",
+        "section": "BASIC",
+        "topic": "OTHER_NETWORKING",
+        "secondaryTopics": [],
+        "difficulty": 2,
+        "difficultyLabel": "",
+        "familyKey": "LIB-T14-Q05",
+        "hasCLI": false,
+        "requiresCalculation": false,
+        "presentationType": "multipleChoice",
+        "marks": 10,
+        "locked": false,
+        "text": "أي وصف يناسب Phishing؟",
+        "textHtml": "",
+        "options": [
+          {
+            "value": "0",
+            "text": "خداع المستخدم برسالة أو موقع شبيه بجهة حقيقية للحصول على معلوماته"
+          },
+          {
+            "value": "1",
+            "text": "إرسال Broadcast داخل LAN"
+          },
+          {
+            "value": "2",
+            "text": "تحديد عنوان MAC"
+          },
+          {
+            "value": "3",
+            "text": "إنشاء VLAN"
+          }
+        ],
+        "fields": [],
+        "parts": [],
+        "answer": {
+          "correctOptionIndex": 0
+        },
+        "hint": "Phishing يعتمد على خداع المستخدم برسالة أو موقع مزيف يشبه جهة موثوقة.",
+        "teacherNote": "",
+        "aiInstruction": "",
+        "wasModified": false,
+        "image": {
+          "exists": false,
+          "visible": false,
+          "origin": null,
+          "assets": [],
+          "prompt": null
+        },
+        "history": [],
+        "redoStack": []
+      },
+      {
+        "examQuestionId": "LIB-T14-Q06",
+        "origin": "imported",
+        "sourceId": "LIB-T14",
+        "sourceQuestionId": "6",
+        "section": "BASIC",
+        "topic": "OTHER_NETWORKING",
+        "secondaryTopics": [],
+        "difficulty": 2,
+        "difficultyLabel": "",
+        "familyKey": "LIB-T14-Q06",
+        "hasCLI": false,
+        "requiresCalculation": false,
+        "presentationType": "multipleChoice",
+        "marks": 10,
+        "locked": false,
+        "text": "ما المقصود بـSpoofing حسب الكتاب؟",
+        "textHtml": "",
+        "options": [
+          {
+            "value": "0",
+            "text": "منع الحلقات"
+          },
+          {
+            "value": "1",
+            "text": "تزييف عنوان IP أو بريد إلكتروني ليبدو من جهة موثوقة"
+          },
+          {
+            "value": "2",
+            "text": "تقسيم Packet إلى Segment"
+          },
+          {
+            "value": "3",
+            "text": "فحص الاتصال بواسطة ping"
+          }
+        ],
+        "fields": [],
+        "parts": [],
+        "answer": {
+          "correctOptionIndex": 1
+        },
+        "hint": "Spoofing هو تزييف عنوان أو هوية رقمية حتى يبدو المصدر موثوقًا.",
+        "teacherNote": "",
+        "aiInstruction": "",
+        "wasModified": false,
+        "image": {
+          "exists": false,
+          "visible": false,
+          "origin": null,
+          "assets": [],
+          "prompt": null
+        },
+        "history": [],
+        "redoStack": []
+      },
+      {
+        "examQuestionId": "LIB-T14-Q07",
+        "origin": "imported",
+        "sourceId": "LIB-T14",
+        "sourceQuestionId": "7",
+        "section": "BASIC",
+        "topic": "OTHER_NETWORKING",
+        "secondaryTopics": [],
+        "difficulty": 2,
+        "difficultyLabel": "",
+        "familyKey": "LIB-T14-Q07",
+        "hasCLI": false,
+        "requiresCalculation": false,
+        "presentationType": "multipleChoice",
+        "marks": 10,
+        "locked": false,
+        "text": "أي مجموعة تتضمن أمثلة على اتصالات آمنة؟",
+        "textHtml": "",
+        "options": [
+          {
+            "value": "0",
+            "text": "HTTP وTelnet وHub"
+          },
+          {
+            "value": "1",
+            "text": "ARP وBroadcast وBus"
+          },
+          {
+            "value": "2",
+            "text": "VPN وSSL/TLS وSSH"
+          },
+          {
+            "value": "3",
+            "text": "DNS وDHCP فقط"
+          }
+        ],
+        "fields": [],
+        "parts": [],
+        "answer": {
+          "correctOptionIndex": 2
+        },
+        "hint": "يذكر الكتاب VPN وSSL/TLS وSSH كأمثلة على الاتصالات الآمنة التي تستعمل التشفير.",
+        "teacherNote": "",
+        "aiInstruction": "",
+        "wasModified": false,
+        "image": {
+          "exists": false,
+          "visible": false,
+          "origin": null,
+          "assets": [],
+          "prompt": null
+        },
+        "history": [],
+        "redoStack": []
+      },
+      {
+        "examQuestionId": "LIB-T14-Q08",
+        "origin": "imported",
+        "sourceId": "LIB-T14",
+        "sourceQuestionId": "8",
+        "section": "BASIC",
+        "topic": "OTHER_NETWORKING",
+        "secondaryTopics": [],
+        "difficulty": 2,
+        "difficultyLabel": "",
+        "familyKey": "LIB-T14-Q08",
+        "hasCLI": false,
+        "requiresCalculation": false,
+        "presentationType": "multipleChoice",
+        "marks": 10,
+        "locked": false,
+        "text": "ما اسم البيانات في طبقة Transport؟",
+        "textHtml": "",
+        "options": [
+          {
+            "value": "0",
+            "text": "Frame"
+          },
+          {
+            "value": "1",
+            "text": "Packet"
+          },
+          {
+            "value": "2",
+            "text": "Bit"
+          },
+          {
+            "value": "3",
+            "text": "Segment"
+          }
+        ],
+        "fields": [],
+        "parts": [],
+        "answer": {
+          "correctOptionIndex": 3
+        },
+        "hint": "في طبقة النقل تسمى البيانات Segment، وتحتوي معلومات مثل أرقام المنافذ.",
+        "teacherNote": "",
+        "aiInstruction": "",
+        "wasModified": false,
+        "image": {
+          "exists": false,
+          "visible": false,
+          "origin": null,
+          "assets": [],
+          "prompt": null
+        },
+        "history": [],
+        "redoStack": []
+      },
+      {
+        "examQuestionId": "LIB-T14-Q09",
+        "origin": "imported",
+        "sourceId": "LIB-T14",
+        "sourceQuestionId": "9",
+        "section": "BASIC",
+        "topic": "OTHER_NETWORKING",
+        "secondaryTopics": [],
+        "difficulty": 2,
+        "difficultyLabel": "",
+        "familyKey": "LIB-T14-Q09",
+        "hasCLI": false,
+        "requiresCalculation": false,
+        "presentationType": "multipleChoice",
+        "marks": 10,
+        "locked": false,
+        "text": "ما اسم البيانات في طبقة Network، وما أهم العناوين الموجودة فيها؟",
+        "textHtml": "",
+        "options": [
+          {
+            "value": "0",
+            "text": "Packet ويحتوي IP المصدر والهدف"
+          },
+          {
+            "value": "1",
+            "text": "Frame ويحتوي MAC فقط"
+          },
+          {
+            "value": "2",
+            "text": "Segment ويحتوي VLAN"
+          },
+          {
+            "value": "3",
+            "text": "Bit ويحتوي DNS"
+          }
+        ],
+        "fields": [],
+        "parts": [],
+        "answer": {
+          "correctOptionIndex": 0
+        },
+        "hint": "في طبقة Network تسمى البيانات Packet، وتحتوي عنوان IP للمصدر والهدف ومعلومات التوجيه.",
+        "teacherNote": "",
+        "aiInstruction": "",
+        "wasModified": false,
+        "image": {
+          "exists": false,
+          "visible": false,
+          "origin": null,
+          "assets": [],
+          "prompt": null
+        },
+        "history": [],
+        "redoStack": []
+      },
+      {
+        "examQuestionId": "LIB-T14-Q10",
+        "origin": "imported",
+        "sourceId": "LIB-T14",
+        "sourceQuestionId": "10",
+        "section": "BASIC",
+        "topic": "OTHER_NETWORKING",
+        "secondaryTopics": [],
+        "difficulty": 2,
+        "difficultyLabel": "",
+        "familyKey": "LIB-T14-Q10",
+        "hasCLI": false,
+        "requiresCalculation": false,
+        "presentationType": "multipleChoice",
+        "marks": 10,
+        "locked": false,
+        "text": "أي وصف صحيح للـFrame في طبقة Data Link؟",
+        "textHtml": "",
+        "options": [
+          {
+            "value": "0",
+            "text": "يحتوي أرقام المنافذ فقط"
+          },
+          {
+            "value": "1",
+            "text": "يحتوي MAC المصدر والهدف ومعلومات فحص الأخطاء"
+          },
+          {
+            "value": "2",
+            "text": "يحتوي اسم الموقع فقط"
+          },
+          {
+            "value": "3",
+            "text": "لا يضيف أي معلومات"
+          }
+        ],
+        "fields": [],
+        "parts": [],
+        "answer": {
+          "correctOptionIndex": 1
+        },
+        "hint": "Frame هو اسم البيانات في Data Link، ويحتوي عناوين MAC ومعلومات تساعد في فحص الأخطاء.",
+        "teacherNote": "",
+        "aiInstruction": "",
+        "wasModified": false,
+        "image": {
+          "exists": false,
+          "visible": false,
+          "origin": null,
+          "assets": [],
+          "prompt": null
+        },
+        "history": [],
+        "redoStack": []
+      }
+    ],
+    "totalMarks": 100,
+    "status": "final",
+    "createdAt": "2026-09-05T18:57:20.339Z",
+    "updatedAt": "2026-09-05T18:57:20.339Z"
+  }
+}

@@ -1,0 +1,589 @@
+{
+  "libraryItemId": "T15",
+  "title": "برمجة السويتش وVLAN الأساسية",
+  "category": "infra",
+  "description": "واجهة CLI وإنشاء VLAN وتسميتها وربط منافذ Access بها.",
+  "tags": [
+    "Cisco CLI",
+    "VLAN",
+    "Access Port"
+  ],
+  "questionCount": 10,
+  "totalMarks": 100,
+  "pageRange": "119–126",
+  "parserFamily": "t-series-v1",
+  "conversionStatus": "ready",
+  "publishable": true,
+  "autoGradableCount": 10,
+  "manualReviewCount": 0,
+  "libraryVersion": 1,
+  "sourceSha": "f7c4393d16cbb6232252affab312731b5e2bda3fa41c5c48cd6dc92554c5f0ec",
+  "contentHash": "d4012a362f7488b8c3fc5d8324590d9b4e674489dedaa50c14e78bc8b232a379",
+  "convertedAt": "2026-09-05T18:57:19.063Z",
+  "source": {
+    "repository": "Book791381",
+    "sourceFile": "T15.html"
+  },
+  "schemaVersion": 1,
+  "examSnapshot": {
+    "schemaVersion": 1,
+    "examId": "LIB-T15",
+    "title": "برمجة السويتش وVLAN الأساسية",
+    "questions": [
+      {
+        "examQuestionId": "LIB-T15-Q01",
+        "origin": "imported",
+        "sourceId": "LIB-T15",
+        "sourceQuestionId": "1",
+        "section": "BASIC",
+        "topic": "OTHER_NETWORKING",
+        "secondaryTopics": [],
+        "difficulty": 2,
+        "difficultyLabel": "",
+        "familyKey": "LIB-T15-Q01",
+        "hasCLI": false,
+        "requiresCalculation": false,
+        "presentationType": "multipleChoice",
+        "marks": 10,
+        "locked": false,
+        "text": "ما معنى CLI في أجهزة Cisco؟",
+        "textHtml": "",
+        "options": [
+          {
+            "value": "0",
+            "text": "واجهة أوامر لبرمجة الجهاز"
+          },
+          {
+            "value": "1",
+            "text": "كابل لربط السويتشات"
+          },
+          {
+            "value": "2",
+            "text": "نوع من عناوين IP"
+          },
+          {
+            "value": "3",
+            "text": "بروتوكول لتوزيع VLAN"
+          }
+        ],
+        "fields": [],
+        "parts": [],
+        "answer": {
+          "correctOptionIndex": 0
+        },
+        "hint": "CLI هي Command Line Interface، أي واجهة الأوامر التي نستخدمها لبرمجة السويتش أو الراوتر.",
+        "teacherNote": "",
+        "aiInstruction": "",
+        "wasModified": false,
+        "image": {
+          "exists": false,
+          "visible": false,
+          "origin": null,
+          "assets": [],
+          "prompt": null
+        },
+        "history": [],
+        "redoStack": []
+      },
+      {
+        "examQuestionId": "LIB-T15-Q02",
+        "origin": "imported",
+        "sourceId": "LIB-T15",
+        "sourceQuestionId": "2",
+        "section": "BASIC",
+        "topic": "OTHER_NETWORKING",
+        "secondaryTopics": [],
+        "difficulty": 2,
+        "difficultyLabel": "",
+        "familyKey": "LIB-T15-Q02",
+        "hasCLI": false,
+        "requiresCalculation": false,
+        "presentationType": "multipleChoice",
+        "marks": 10,
+        "locked": false,
+        "text": "أي أمر ينقلنا من Switch> إلى وضع الأوامر المتقدم Switch#؟",
+        "textHtml": "",
+        "options": [
+          {
+            "value": "0",
+            "text": "config t"
+          },
+          {
+            "value": "1",
+            "text": "enable"
+          },
+          {
+            "value": "2",
+            "text": "hostname"
+          },
+          {
+            "value": "3",
+            "text": "vlan 10"
+          }
+        ],
+        "fields": [],
+        "parts": [],
+        "answer": {
+          "correctOptionIndex": 1
+        },
+        "hint": "الأمر enable ينقلنا من وضع المستخدم Switch> إلى الوضع المتقدم Switch#.",
+        "teacherNote": "",
+        "aiInstruction": "",
+        "wasModified": false,
+        "image": {
+          "exists": false,
+          "visible": false,
+          "origin": null,
+          "assets": [],
+          "prompt": null
+        },
+        "history": [],
+        "redoStack": []
+      },
+      {
+        "examQuestionId": "LIB-T15-Q03",
+        "origin": "imported",
+        "sourceId": "LIB-T15",
+        "sourceQuestionId": "3",
+        "section": "BASIC",
+        "topic": "OTHER_NETWORKING",
+        "secondaryTopics": [],
+        "difficulty": 2,
+        "difficultyLabel": "",
+        "familyKey": "LIB-T15-Q03",
+        "hasCLI": false,
+        "requiresCalculation": false,
+        "presentationType": "multipleChoice",
+        "marks": 10,
+        "locked": false,
+        "text": "أي أمر يدخل إلى وضع الإعدادات العامة Switch(config)#؟",
+        "textHtml": "",
+        "options": [
+          {
+            "value": "0",
+            "text": "show vlan brief"
+          },
+          {
+            "value": "1",
+            "text": "exit"
+          },
+          {
+            "value": "2",
+            "text": "config t"
+          },
+          {
+            "value": "3",
+            "text": "ping"
+          }
+        ],
+        "fields": [],
+        "parts": [],
+        "answer": {
+          "correctOptionIndex": 2
+        },
+        "hint": "بعد enable نكتب config t للدخول إلى وضع الإعدادات العامة.",
+        "teacherNote": "",
+        "aiInstruction": "",
+        "wasModified": false,
+        "image": {
+          "exists": false,
+          "visible": false,
+          "origin": null,
+          "assets": [],
+          "prompt": null
+        },
+        "history": [],
+        "redoStack": []
+      },
+      {
+        "examQuestionId": "LIB-T15-Q04",
+        "origin": "imported",
+        "sourceId": "LIB-T15",
+        "sourceQuestionId": "4",
+        "section": "BASIC",
+        "topic": "OTHER_NETWORKING",
+        "secondaryTopics": [],
+        "difficulty": 2,
+        "difficultyLabel": "",
+        "familyKey": "LIB-T15-Q04",
+        "hasCLI": false,
+        "requiresCalculation": false,
+        "presentationType": "multipleChoice",
+        "marks": 10,
+        "locked": false,
+        "text": "ماذا يعني الرمز F0/1 في السويتش؟",
+        "textHtml": "",
+        "options": [
+          {
+            "value": "0",
+            "text": "VLAN رقم 1"
+          },
+          {
+            "value": "1",
+            "text": "عنوان IP للجهاز"
+          },
+          {
+            "value": "2",
+            "text": "منفذ Gigabit رقم 1"
+          },
+          {
+            "value": "3",
+            "text": "منفذ FastEthernet رقم 1"
+          }
+        ],
+        "fields": [],
+        "parts": [],
+        "answer": {
+          "correctOptionIndex": 3
+        },
+        "hint": "F0/1 هو اختصار لمنفذ FastEthernet رقم 1 في السويتش.",
+        "teacherNote": "",
+        "aiInstruction": "",
+        "wasModified": false,
+        "image": {
+          "exists": false,
+          "visible": false,
+          "origin": null,
+          "assets": [],
+          "prompt": null
+        },
+        "history": [],
+        "redoStack": []
+      },
+      {
+        "examQuestionId": "LIB-T15-Q05",
+        "origin": "imported",
+        "sourceId": "LIB-T15",
+        "sourceQuestionId": "5",
+        "section": "BASIC",
+        "topic": "OTHER_NETWORKING",
+        "secondaryTopics": [],
+        "difficulty": 2,
+        "difficultyLabel": "",
+        "familyKey": "LIB-T15-Q05",
+        "hasCLI": false,
+        "requiresCalculation": false,
+        "presentationType": "multipleChoice",
+        "marks": 10,
+        "locked": false,
+        "text": "ما الفائدة الأساسية من VLAN؟",
+        "textHtml": "",
+        "options": [
+          {
+            "value": "0",
+            "text": "تقسيم الشبكة منطقيًا إلى أقسام مستقلة"
+          },
+          {
+            "value": "1",
+            "text": "زيادة عدد الكابلات المطلوبة"
+          },
+          {
+            "value": "2",
+            "text": "منع استعمال السويتش"
+          },
+          {
+            "value": "3",
+            "text": "تحويل MAC إلى IP"
+          }
+        ],
+        "fields": [],
+        "parts": [],
+        "answer": {
+          "correctOptionIndex": 0
+        },
+        "hint": "VLAN تقسم الشبكة منطقيًا إلى أقسام منفصلة دون الحاجة إلى تغيير الكابلات.",
+        "teacherNote": "",
+        "aiInstruction": "",
+        "wasModified": false,
+        "image": {
+          "exists": false,
+          "visible": false,
+          "origin": null,
+          "assets": [],
+          "prompt": null
+        },
+        "history": [],
+        "redoStack": []
+      },
+      {
+        "examQuestionId": "LIB-T15-Q06",
+        "origin": "imported",
+        "sourceId": "LIB-T15",
+        "sourceQuestionId": "6",
+        "section": "BASIC",
+        "topic": "OTHER_NETWORKING",
+        "secondaryTopics": [],
+        "difficulty": 2,
+        "difficultyLabel": "",
+        "familyKey": "LIB-T15-Q06",
+        "hasCLI": false,
+        "requiresCalculation": false,
+        "presentationType": "multipleChoice",
+        "marks": 10,
+        "locked": false,
+        "text": "أي أمر ينشئ VLAN رقم 10 على السويتش؟",
+        "textHtml": "",
+        "options": [
+          {
+            "value": "0",
+            "text": "name 10"
+          },
+          {
+            "value": "1",
+            "text": "vlan 10"
+          },
+          {
+            "value": "2",
+            "text": "interface vlan 10"
+          },
+          {
+            "value": "3",
+            "text": "switchport vlan 10"
+          }
+        ],
+        "fields": [],
+        "parts": [],
+        "answer": {
+          "correctOptionIndex": 1
+        },
+        "hint": "الأمر vlan 10 ينشئ VLAN تحمل الرقم 10.",
+        "teacherNote": "",
+        "aiInstruction": "",
+        "wasModified": false,
+        "image": {
+          "exists": false,
+          "visible": false,
+          "origin": null,
+          "assets": [],
+          "prompt": null
+        },
+        "history": [],
+        "redoStack": []
+      },
+      {
+        "examQuestionId": "LIB-T15-Q07",
+        "origin": "imported",
+        "sourceId": "LIB-T15",
+        "sourceQuestionId": "7",
+        "section": "BASIC",
+        "topic": "OTHER_NETWORKING",
+        "secondaryTopics": [],
+        "difficulty": 2,
+        "difficultyLabel": "",
+        "familyKey": "LIB-T15-Q07",
+        "hasCLI": false,
+        "requiresCalculation": false,
+        "presentationType": "multipleChoice",
+        "marks": 10,
+        "locked": false,
+        "text": "بعد إنشاء VLAN 10، أي أمر يعطيها الاسم MNG؟",
+        "textHtml": "",
+        "options": [
+          {
+            "value": "0",
+            "text": "hostname MNG"
+          },
+          {
+            "value": "1",
+            "text": "vlan MNG"
+          },
+          {
+            "value": "2",
+            "text": "name MNG"
+          },
+          {
+            "value": "3",
+            "text": "interface MNG"
+          }
+        ],
+        "fields": [],
+        "parts": [],
+        "answer": {
+          "correctOptionIndex": 2
+        },
+        "hint": "داخل وضع config-vlan نكتب name MNG لإعطاء VLAN اسمًا واضحًا.",
+        "teacherNote": "",
+        "aiInstruction": "",
+        "wasModified": false,
+        "image": {
+          "exists": false,
+          "visible": false,
+          "origin": null,
+          "assets": [],
+          "prompt": null
+        },
+        "history": [],
+        "redoStack": []
+      },
+      {
+        "examQuestionId": "LIB-T15-Q08",
+        "origin": "imported",
+        "sourceId": "LIB-T15",
+        "sourceQuestionId": "8",
+        "section": "BASIC",
+        "topic": "OTHER_NETWORKING",
+        "secondaryTopics": [],
+        "difficulty": 2,
+        "difficultyLabel": "",
+        "familyKey": "LIB-T15-Q08",
+        "hasCLI": false,
+        "requiresCalculation": false,
+        "presentationType": "multipleChoice",
+        "marks": 10,
+        "locked": false,
+        "text": "أي أمر يحدد المنافذ FastEthernet من 0/1 إلى 0/4 معًا؟",
+        "textHtml": "",
+        "options": [
+          {
+            "value": "0",
+            "text": "vlan range 1-4"
+          },
+          {
+            "value": "1",
+            "text": "show interfaces 1-4"
+          },
+          {
+            "value": "2",
+            "text": "switchport range 1-4"
+          },
+          {
+            "value": "3",
+            "text": "interface range fastEthernet 0/1-4"
+          }
+        ],
+        "fields": [],
+        "parts": [],
+        "answer": {
+          "correctOptionIndex": 3
+        },
+        "hint": "interface range يسمح بتحديد مجموعة منافذ وتهيئتها بالأوامر نفسها.",
+        "teacherNote": "",
+        "aiInstruction": "",
+        "wasModified": false,
+        "image": {
+          "exists": false,
+          "visible": false,
+          "origin": null,
+          "assets": [],
+          "prompt": null
+        },
+        "history": [],
+        "redoStack": []
+      },
+      {
+        "examQuestionId": "LIB-T15-Q09",
+        "origin": "imported",
+        "sourceId": "LIB-T15",
+        "sourceQuestionId": "9",
+        "section": "BASIC",
+        "topic": "OTHER_NETWORKING",
+        "secondaryTopics": [],
+        "difficulty": 2,
+        "difficultyLabel": "",
+        "familyKey": "LIB-T15-Q09",
+        "hasCLI": false,
+        "requiresCalculation": false,
+        "presentationType": "multipleChoice",
+        "marks": 10,
+        "locked": false,
+        "text": "أي أمر يجعل المنفذ منفذ Access لجهاز نهائي؟",
+        "textHtml": "",
+        "options": [
+          {
+            "value": "0",
+            "text": "switchport mode access"
+          },
+          {
+            "value": "1",
+            "text": "switchport mode trunk"
+          },
+          {
+            "value": "2",
+            "text": "encapsulation dot1Q"
+          },
+          {
+            "value": "3",
+            "text": "vtp mode client"
+          }
+        ],
+        "fields": [],
+        "parts": [],
+        "answer": {
+          "correctOptionIndex": 0
+        },
+        "hint": "الأمر switchport mode access يجعل المنفذ مخصصًا عادة لجهاز نهائي وينتمي إلى VLAN واحدة.",
+        "teacherNote": "",
+        "aiInstruction": "",
+        "wasModified": false,
+        "image": {
+          "exists": false,
+          "visible": false,
+          "origin": null,
+          "assets": [],
+          "prompt": null
+        },
+        "history": [],
+        "redoStack": []
+      },
+      {
+        "examQuestionId": "LIB-T15-Q10",
+        "origin": "imported",
+        "sourceId": "LIB-T15",
+        "sourceQuestionId": "10",
+        "section": "BASIC",
+        "topic": "OTHER_NETWORKING",
+        "secondaryTopics": [],
+        "difficulty": 2,
+        "difficultyLabel": "",
+        "familyKey": "LIB-T15-Q10",
+        "hasCLI": false,
+        "requiresCalculation": false,
+        "presentationType": "multipleChoice",
+        "marks": 10,
+        "locked": false,
+        "text": "تريد ربط المنافذ F0/1-4 بـVLAN 20. أي ترتيب أوامر هو الأنسب بعد إنشاء VLAN؟",
+        "textHtml": "",
+        "options": [
+          {
+            "value": "0",
+            "text": "switchport access vlan 20 ثم interface range فقط"
+          },
+          {
+            "value": "1",
+            "text": "interface range f0/1-4 ثم switchport mode access ثم switchport access vlan 20"
+          },
+          {
+            "value": "2",
+            "text": "interface vlan 20 ثم vtp mode server"
+          },
+          {
+            "value": "3",
+            "text": "switchport mode trunk ثم encapsulation dot1Q 20"
+          }
+        ],
+        "fields": [],
+        "parts": [],
+        "answer": {
+          "correctOptionIndex": 1
+        },
+        "hint": "نحدد المنافذ أولًا، ثم نجعلها Access، ثم نربطها بـVLAN 20.",
+        "teacherNote": "",
+        "aiInstruction": "",
+        "wasModified": false,
+        "image": {
+          "exists": false,
+          "visible": false,
+          "origin": null,
+          "assets": [],
+          "prompt": null
+        },
+        "history": [],
+        "redoStack": []
+      }
+    ],
+    "totalMarks": 100,
+    "status": "final",
+    "createdAt": "2026-09-05T18:57:20.340Z",
+    "updatedAt": "2026-09-05T18:57:20.340Z"
+  }
+}

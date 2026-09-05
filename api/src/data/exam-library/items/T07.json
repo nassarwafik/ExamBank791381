@@ -1,0 +1,589 @@
+{
+  "libraryItemId": "T07",
+  "title": "أشكال توصيل الشبكات",
+  "category": "foundation",
+  "description": "Bus وRing وStar وTree وHybrid واختيار الشكل المناسب.",
+  "tags": [
+    "Topologies",
+    "Star",
+    "Hybrid"
+  ],
+  "questionCount": 10,
+  "totalMarks": 100,
+  "pageRange": "56–58",
+  "parserFamily": "t-series-v1",
+  "conversionStatus": "ready",
+  "publishable": true,
+  "autoGradableCount": 10,
+  "manualReviewCount": 0,
+  "libraryVersion": 1,
+  "sourceSha": "f670ba4d47d3fd081e113d7600b15b2358c2db290e3e2a00046e47778078cdc1",
+  "contentHash": "10c53e37805069ce574a95809daa238a6b9e29f46ccdabef7cb93a240168feb3",
+  "convertedAt": "2026-09-05T18:57:19.063Z",
+  "source": {
+    "repository": "Book791381",
+    "sourceFile": "T07.html"
+  },
+  "schemaVersion": 1,
+  "examSnapshot": {
+    "schemaVersion": 1,
+    "examId": "LIB-T07",
+    "title": "أشكال توصيل الشبكات",
+    "questions": [
+      {
+        "examQuestionId": "LIB-T07-Q01",
+        "origin": "imported",
+        "sourceId": "LIB-T07",
+        "sourceQuestionId": "1",
+        "section": "BASIC",
+        "topic": "OTHER_NETWORKING",
+        "secondaryTopics": [],
+        "difficulty": 2,
+        "difficultyLabel": "",
+        "familyKey": "LIB-T07-Q01",
+        "hasCLI": false,
+        "requiresCalculation": false,
+        "presentationType": "multipleChoice",
+        "marks": 10,
+        "locked": false,
+        "text": "ماذا يحدد شكل توصيل الأجهزة داخل الشبكة؟",
+        "textHtml": "",
+        "options": [
+          {
+            "value": "0",
+            "text": "طريقة انتقال البيانات بين الأجهزة"
+          },
+          {
+            "value": "1",
+            "text": "لون أجهزة الشبكة"
+          },
+          {
+            "value": "2",
+            "text": "اسم المستخدم"
+          },
+          {
+            "value": "3",
+            "text": "حجم الشاشة"
+          }
+        ],
+        "fields": [],
+        "parts": [],
+        "answer": {
+          "correctOptionIndex": 0
+        },
+        "hint": "شكل التوصيل يحدد الطريقة التي تنتقل بها البيانات بين الأجهزة داخل الشبكة.",
+        "teacherNote": "",
+        "aiInstruction": "",
+        "wasModified": false,
+        "image": {
+          "exists": false,
+          "visible": false,
+          "origin": null,
+          "assets": [],
+          "prompt": null
+        },
+        "history": [],
+        "redoStack": []
+      },
+      {
+        "examQuestionId": "LIB-T07-Q02",
+        "origin": "imported",
+        "sourceId": "LIB-T07",
+        "sourceQuestionId": "2",
+        "section": "BASIC",
+        "topic": "OTHER_NETWORKING",
+        "secondaryTopics": [],
+        "difficulty": 2,
+        "difficultyLabel": "",
+        "familyKey": "LIB-T07-Q02",
+        "hasCLI": false,
+        "requiresCalculation": false,
+        "presentationType": "multipleChoice",
+        "marks": 10,
+        "locked": false,
+        "text": "ما المقصود بتوصيل نقطة إلى نقطة P2P في الصفحة 56؟",
+        "textHtml": "",
+        "options": [
+          {
+            "value": "0",
+            "text": "جميع الأجهزة تتصل بسويتش"
+          },
+          {
+            "value": "1",
+            "text": "جهازان يتواصلان مباشرة دون جهاز وسيط"
+          },
+          {
+            "value": "2",
+            "text": "الأجهزة على شكل دائرة"
+          },
+          {
+            "value": "3",
+            "text": "دمج أكثر من شكل"
+          }
+        ],
+        "fields": [],
+        "parts": [],
+        "answer": {
+          "correctOptionIndex": 1
+        },
+        "hint": "في توصيل نقطة إلى نقطة يتصل جهازان مباشرة بواسطة كابل دون جهاز وسيط.",
+        "teacherNote": "",
+        "aiInstruction": "",
+        "wasModified": false,
+        "image": {
+          "exists": false,
+          "visible": false,
+          "origin": null,
+          "assets": [],
+          "prompt": null
+        },
+        "history": [],
+        "redoStack": []
+      },
+      {
+        "examQuestionId": "LIB-T07-Q03",
+        "origin": "imported",
+        "sourceId": "LIB-T07",
+        "sourceQuestionId": "3",
+        "section": "BASIC",
+        "topic": "OTHER_NETWORKING",
+        "secondaryTopics": [],
+        "difficulty": 2,
+        "difficultyLabel": "",
+        "familyKey": "LIB-T07-Q03",
+        "hasCLI": false,
+        "requiresCalculation": false,
+        "presentationType": "multipleChoice",
+        "marks": 10,
+        "locked": false,
+        "text": "في توصيل عقدة لعقدة، ماذا يستطيع كل جهاز أن يفعل؟",
+        "textHtml": "",
+        "options": [
+          {
+            "value": "0",
+            "text": "يتصل بالإنترنت فقط"
+          },
+          {
+            "value": "1",
+            "text": "يرسل للطابعة فقط"
+          },
+          {
+            "value": "2",
+            "text": "يتواصل مع جهاز آخر داخل الشبكة"
+          },
+          {
+            "value": "3",
+            "text": "يتوقف عن استقبال البيانات"
+          }
+        ],
+        "fields": [],
+        "parts": [],
+        "answer": {
+          "correctOptionIndex": 2
+        },
+        "hint": "في عقدة لعقدة يستطيع كل جهاز التواصل مع جهاز آخر داخل الشبكة.",
+        "teacherNote": "",
+        "aiInstruction": "",
+        "wasModified": false,
+        "image": {
+          "exists": false,
+          "visible": false,
+          "origin": null,
+          "assets": [],
+          "prompt": null
+        },
+        "history": [],
+        "redoStack": []
+      },
+      {
+        "examQuestionId": "LIB-T07-Q04",
+        "origin": "imported",
+        "sourceId": "LIB-T07",
+        "sourceQuestionId": "4",
+        "section": "BASIC",
+        "topic": "OTHER_NETWORKING",
+        "secondaryTopics": [],
+        "difficulty": 2,
+        "difficultyLabel": "",
+        "familyKey": "LIB-T07-Q04",
+        "hasCLI": false,
+        "requiresCalculation": false,
+        "presentationType": "multipleChoice",
+        "marks": 10,
+        "locked": false,
+        "text": "كيف تتصل الأجهزة في شبكة Bus؟",
+        "textHtml": "",
+        "options": [
+          {
+            "value": "0",
+            "text": "كل جهاز مع راوتر مستقل"
+          },
+          {
+            "value": "1",
+            "text": "على شكل دائرة مغلقة"
+          },
+          {
+            "value": "2",
+            "text": "على مستويات متعددة"
+          },
+          {
+            "value": "3",
+            "text": "بخط واحد مشترك بين الأجهزة"
+          }
+        ],
+        "fields": [],
+        "parts": [],
+        "answer": {
+          "correctOptionIndex": 3
+        },
+        "hint": "في Bus تشترك جميع الأجهزة في خط واحد لنقل البيانات.",
+        "teacherNote": "",
+        "aiInstruction": "",
+        "wasModified": false,
+        "image": {
+          "exists": false,
+          "visible": false,
+          "origin": null,
+          "assets": [],
+          "prompt": null
+        },
+        "history": [],
+        "redoStack": []
+      },
+      {
+        "examQuestionId": "LIB-T07-Q05",
+        "origin": "imported",
+        "sourceId": "LIB-T07",
+        "sourceQuestionId": "5",
+        "section": "BASIC",
+        "topic": "OTHER_NETWORKING",
+        "secondaryTopics": [],
+        "difficulty": 2,
+        "difficultyLabel": "",
+        "familyKey": "LIB-T07-Q05",
+        "hasCLI": false,
+        "requiresCalculation": false,
+        "presentationType": "multipleChoice",
+        "marks": 10,
+        "locked": false,
+        "text": "ما المشكلة التي قد تحدث إذا أرسل أكثر من جهاز في شبكة Bus في الوقت نفسه؟",
+        "textHtml": "",
+        "options": [
+          {
+            "value": "0",
+            "text": "تصادم Collision للبيانات"
+          },
+          {
+            "value": "1",
+            "text": "تحول الشبكة إلى Star"
+          },
+          {
+            "value": "2",
+            "text": "اختفاء عنوان MAC"
+          },
+          {
+            "value": "3",
+            "text": "زيادة عدد السويتشات"
+          }
+        ],
+        "fields": [],
+        "parts": [],
+        "answer": {
+          "correctOptionIndex": 0
+        },
+        "hint": "قد يحدث تصادم للبيانات في Bus إذا أرسل أكثر من جهاز في الوقت نفسه.",
+        "teacherNote": "",
+        "aiInstruction": "",
+        "wasModified": false,
+        "image": {
+          "exists": false,
+          "visible": false,
+          "origin": null,
+          "assets": [],
+          "prompt": null
+        },
+        "history": [],
+        "redoStack": []
+      },
+      {
+        "examQuestionId": "LIB-T07-Q06",
+        "origin": "imported",
+        "sourceId": "LIB-T07",
+        "sourceQuestionId": "6",
+        "section": "BASIC",
+        "topic": "OTHER_NETWORKING",
+        "secondaryTopics": [],
+        "difficulty": 2,
+        "difficultyLabel": "",
+        "familyKey": "LIB-T07-Q06",
+        "hasCLI": false,
+        "requiresCalculation": false,
+        "presentationType": "multipleChoice",
+        "marks": 10,
+        "locked": false,
+        "text": "كيف تُرتب الأجهزة في شبكة Ring؟",
+        "textHtml": "",
+        "options": [
+          {
+            "value": "0",
+            "text": "بخط مستقيم فقط"
+          },
+          {
+            "value": "1",
+            "text": "على شكل دائرة مغلقة"
+          },
+          {
+            "value": "2",
+            "text": "حول خادم DNS"
+          },
+          {
+            "value": "3",
+            "text": "في مجموعات منفصلة بلا اتصال"
+          }
+        ],
+        "fields": [],
+        "parts": [],
+        "answer": {
+          "correctOptionIndex": 1
+        },
+        "hint": "في Ring تكون الأجهزة مرتبة على شكل دائرة مغلقة، وتسير البيانات باتجاه محدد.",
+        "teacherNote": "",
+        "aiInstruction": "",
+        "wasModified": false,
+        "image": {
+          "exists": false,
+          "visible": false,
+          "origin": null,
+          "assets": [],
+          "prompt": null
+        },
+        "history": [],
+        "redoStack": []
+      },
+      {
+        "examQuestionId": "LIB-T07-Q07",
+        "origin": "imported",
+        "sourceId": "LIB-T07",
+        "sourceQuestionId": "7",
+        "section": "BASIC",
+        "topic": "OTHER_NETWORKING",
+        "secondaryTopics": [],
+        "difficulty": 2,
+        "difficultyLabel": "",
+        "familyKey": "LIB-T07-Q07",
+        "hasCLI": false,
+        "requiresCalculation": false,
+        "presentationType": "multipleChoice",
+        "marks": 10,
+        "locked": false,
+        "text": "في الشكل النجمي Star، بماذا تتصل جميع الأجهزة؟",
+        "textHtml": "",
+        "options": [
+          {
+            "value": "0",
+            "text": "بكابل واحد بلا جهاز وسيط"
+          },
+          {
+            "value": "1",
+            "text": "بجهازين فقط"
+          },
+          {
+            "value": "2",
+            "text": "بجهاز مركزي مثل Switch"
+          },
+          {
+            "value": "3",
+            "text": "بكل الأجهزة مباشرة"
+          }
+        ],
+        "fields": [],
+        "parts": [],
+        "answer": {
+          "correctOptionIndex": 2
+        },
+        "hint": "في Star تتصل جميع الأجهزة بجهاز مركزي، وغالبًا يكون Switch.",
+        "teacherNote": "",
+        "aiInstruction": "",
+        "wasModified": false,
+        "image": {
+          "exists": false,
+          "visible": false,
+          "origin": null,
+          "assets": [],
+          "prompt": null
+        },
+        "history": [],
+        "redoStack": []
+      },
+      {
+        "examQuestionId": "LIB-T07-Q08",
+        "origin": "imported",
+        "sourceId": "LIB-T07",
+        "sourceQuestionId": "8",
+        "section": "BASIC",
+        "topic": "OTHER_NETWORKING",
+        "secondaryTopics": [],
+        "difficulty": 2,
+        "difficultyLabel": "",
+        "familyKey": "LIB-T07-Q08",
+        "hasCLI": false,
+        "requiresCalculation": false,
+        "presentationType": "multipleChoice",
+        "marks": 10,
+        "locked": false,
+        "text": "أي وصف يناسب شبكة Tree؟",
+        "textHtml": "",
+        "options": [
+          {
+            "value": "0",
+            "text": "جهازان فقط"
+          },
+          {
+            "value": "1",
+            "text": "دائرة مغلقة"
+          },
+          {
+            "value": "2",
+            "text": "خط واحد مشترك"
+          },
+          {
+            "value": "3",
+            "text": "مستويات أو طبقات فوق بعضها"
+          }
+        ],
+        "fields": [],
+        "parts": [],
+        "answer": {
+          "correctOptionIndex": 3
+        },
+        "hint": "شبكة Tree تُبنى على شكل مستويات أو طبقات مترابطة.",
+        "teacherNote": "",
+        "aiInstruction": "",
+        "wasModified": false,
+        "image": {
+          "exists": false,
+          "visible": false,
+          "origin": null,
+          "assets": [],
+          "prompt": null
+        },
+        "history": [],
+        "redoStack": []
+      },
+      {
+        "examQuestionId": "LIB-T07-Q09",
+        "origin": "imported",
+        "sourceId": "LIB-T07",
+        "sourceQuestionId": "9",
+        "section": "BASIC",
+        "topic": "OTHER_NETWORKING",
+        "secondaryTopics": [],
+        "difficulty": 2,
+        "difficultyLabel": "",
+        "familyKey": "LIB-T07-Q09",
+        "hasCLI": false,
+        "requiresCalculation": false,
+        "presentationType": "multipleChoice",
+        "marks": 10,
+        "locked": false,
+        "text": "ما المقصود بشبكة Hybrid؟",
+        "textHtml": "",
+        "options": [
+          {
+            "value": "0",
+            "text": "دمج أكثر من نوع توصيل في شبكة واحدة"
+          },
+          {
+            "value": "1",
+            "text": "استعمال شبكة Ring فقط"
+          },
+          {
+            "value": "2",
+            "text": "عدم استعمال أي كابل"
+          },
+          {
+            "value": "3",
+            "text": "اتصال جهاز واحد بنفسه"
+          }
+        ],
+        "fields": [],
+        "parts": [],
+        "answer": {
+          "correctOptionIndex": 0
+        },
+        "hint": "Hybrid تعني دمج أكثر من شكل توصيل، مثل Bus وStar، داخل شبكة واحدة.",
+        "teacherNote": "",
+        "aiInstruction": "",
+        "wasModified": false,
+        "image": {
+          "exists": false,
+          "visible": false,
+          "origin": null,
+          "assets": [],
+          "prompt": null
+        },
+        "history": [],
+        "redoStack": []
+      },
+      {
+        "examQuestionId": "LIB-T07-Q10",
+        "origin": "imported",
+        "sourceId": "LIB-T07",
+        "sourceQuestionId": "10",
+        "section": "BASIC",
+        "topic": "OTHER_NETWORKING",
+        "secondaryTopics": [],
+        "difficulty": 2,
+        "difficultyLabel": "",
+        "familyKey": "LIB-T07-Q10",
+        "hasCLI": false,
+        "requiresCalculation": false,
+        "presentationType": "multipleChoice",
+        "marks": 10,
+        "locked": false,
+        "text": "أي شكل توصيل هو الأكثر استعمالًا في المدارس والشركات حسب الكتاب؟",
+        "textHtml": "",
+        "options": [
+          {
+            "value": "0",
+            "text": "Bus"
+          },
+          {
+            "value": "1",
+            "text": "Star"
+          },
+          {
+            "value": "2",
+            "text": "Ring"
+          },
+          {
+            "value": "3",
+            "text": "Point to Point فقط"
+          }
+        ],
+        "fields": [],
+        "parts": [],
+        "answer": {
+          "correctOptionIndex": 1
+        },
+        "hint": "يذكر الكتاب أن الشكل النجمي Star هو الأكثر استعمالًا في المدارس والشركات.",
+        "teacherNote": "",
+        "aiInstruction": "",
+        "wasModified": false,
+        "image": {
+          "exists": false,
+          "visible": false,
+          "origin": null,
+          "assets": [],
+          "prompt": null
+        },
+        "history": [],
+        "redoStack": []
+      }
+    ],
+    "totalMarks": 100,
+    "status": "final",
+    "createdAt": "2026-09-05T18:57:20.316Z",
+    "updatedAt": "2026-09-05T18:57:20.316Z"
+  }
+}

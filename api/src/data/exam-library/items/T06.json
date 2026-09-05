@@ -1,0 +1,589 @@
+{
+  "libraryItemId": "T06",
+  "title": "أجهزة الشبكات",
+  "category": "foundation",
+  "description": "الفرق بين Hub وSwitch وRouter ووظيفة كل جهاز.",
+  "tags": [
+    "Hub",
+    "Switch",
+    "Router"
+  ],
+  "questionCount": 10,
+  "totalMarks": 100,
+  "pageRange": "47–54",
+  "parserFamily": "t-series-v1",
+  "conversionStatus": "ready",
+  "publishable": true,
+  "autoGradableCount": 10,
+  "manualReviewCount": 0,
+  "libraryVersion": 1,
+  "sourceSha": "5982452fd1ecd2fd58e49aa76c6f20588ee0f20788cece21f1cf785e606c4e3a",
+  "contentHash": "62e4ca3d0c10008a0f8dda412e44a25b6f4680ba2e5dbee2b4db1f1ca91b1c5b",
+  "convertedAt": "2026-09-05T18:57:19.063Z",
+  "source": {
+    "repository": "Book791381",
+    "sourceFile": "T06.html"
+  },
+  "schemaVersion": 1,
+  "examSnapshot": {
+    "schemaVersion": 1,
+    "examId": "LIB-T06",
+    "title": "أجهزة الشبكات",
+    "questions": [
+      {
+        "examQuestionId": "LIB-T06-Q01",
+        "origin": "imported",
+        "sourceId": "LIB-T06",
+        "sourceQuestionId": "1",
+        "section": "BASIC",
+        "topic": "OTHER_NETWORKING",
+        "secondaryTopics": [],
+        "difficulty": 2,
+        "difficultyLabel": "",
+        "familyKey": "LIB-T06-Q01",
+        "hasCLI": false,
+        "requiresCalculation": false,
+        "presentationType": "multipleChoice",
+        "marks": 10,
+        "locked": false,
+        "text": "أي جهاز يرسل البيانات إلى جميع الأجهزة المتصلة به؟",
+        "textHtml": "",
+        "options": [
+          {
+            "value": "0",
+            "text": "Hub"
+          },
+          {
+            "value": "1",
+            "text": "Switch"
+          },
+          {
+            "value": "2",
+            "text": "Router"
+          },
+          {
+            "value": "3",
+            "text": "Printer"
+          }
+        ],
+        "fields": [],
+        "parts": [],
+        "answer": {
+          "correctOptionIndex": 0
+        },
+        "hint": "جهاز Hub يرسل البيانات إلى جميع الأجهزة، والجهاز المقصود فقط يستعملها.",
+        "teacherNote": "",
+        "aiInstruction": "",
+        "wasModified": false,
+        "image": {
+          "exists": false,
+          "visible": false,
+          "origin": null,
+          "assets": [],
+          "prompt": null
+        },
+        "history": [],
+        "redoStack": []
+      },
+      {
+        "examQuestionId": "LIB-T06-Q02",
+        "origin": "imported",
+        "sourceId": "LIB-T06",
+        "sourceQuestionId": "2",
+        "section": "BASIC",
+        "topic": "OTHER_NETWORKING",
+        "secondaryTopics": [],
+        "difficulty": 2,
+        "difficultyLabel": "",
+        "familyKey": "LIB-T06-Q02",
+        "hasCLI": false,
+        "requiresCalculation": false,
+        "presentationType": "multipleChoice",
+        "marks": 10,
+        "locked": false,
+        "text": "أي جهاز يرسل البيانات إلى الجهاز المقصود فقط داخل الشبكة المحلية؟",
+        "textHtml": "",
+        "options": [
+          {
+            "value": "0",
+            "text": "Hub"
+          },
+          {
+            "value": "1",
+            "text": "Switch"
+          },
+          {
+            "value": "2",
+            "text": "Router"
+          },
+          {
+            "value": "3",
+            "text": "Modem"
+          }
+        ],
+        "fields": [],
+        "parts": [],
+        "answer": {
+          "correctOptionIndex": 1
+        },
+        "hint": "جهاز Switch يرسل البيانات إلى الجهاز المقصود فقط بدل إرسالها للجميع.",
+        "teacherNote": "",
+        "aiInstruction": "",
+        "wasModified": false,
+        "image": {
+          "exists": false,
+          "visible": false,
+          "origin": null,
+          "assets": [],
+          "prompt": null
+        },
+        "history": [],
+        "redoStack": []
+      },
+      {
+        "examQuestionId": "LIB-T06-Q03",
+        "origin": "imported",
+        "sourceId": "LIB-T06",
+        "sourceQuestionId": "3",
+        "section": "BASIC",
+        "topic": "OTHER_NETWORKING",
+        "secondaryTopics": [],
+        "difficulty": 2,
+        "difficultyLabel": "",
+        "familyKey": "LIB-T06-Q03",
+        "hasCLI": false,
+        "requiresCalculation": false,
+        "presentationType": "multipleChoice",
+        "marks": 10,
+        "locked": false,
+        "text": "أي جهاز يربط بين شبكات مختلفة ويساعد على الوصول إلى الإنترنت؟",
+        "textHtml": "",
+        "options": [
+          {
+            "value": "0",
+            "text": "Hub"
+          },
+          {
+            "value": "1",
+            "text": "Switch"
+          },
+          {
+            "value": "2",
+            "text": "Router"
+          },
+          {
+            "value": "3",
+            "text": "Keyboard"
+          }
+        ],
+        "fields": [],
+        "parts": [],
+        "answer": {
+          "correctOptionIndex": 2
+        },
+        "hint": "الراوتر Router يربط بين شبكات مختلفة ويربط شبكة البيت أو المدرسة بالإنترنت.",
+        "teacherNote": "",
+        "aiInstruction": "",
+        "wasModified": false,
+        "image": {
+          "exists": false,
+          "visible": false,
+          "origin": null,
+          "assets": [],
+          "prompt": null
+        },
+        "history": [],
+        "redoStack": []
+      },
+      {
+        "examQuestionId": "LIB-T06-Q04",
+        "origin": "imported",
+        "sourceId": "LIB-T06",
+        "sourceQuestionId": "4",
+        "section": "BASIC",
+        "topic": "OTHER_NETWORKING",
+        "secondaryTopics": [],
+        "difficulty": 2,
+        "difficultyLabel": "",
+        "familyKey": "LIB-T06-Q04",
+        "hasCLI": false,
+        "requiresCalculation": false,
+        "presentationType": "multipleChoice",
+        "marks": 10,
+        "locked": false,
+        "text": "ما المشكلة الأساسية في طريقة عمل Hub؟",
+        "textHtml": "",
+        "options": [
+          {
+            "value": "0",
+            "text": "لا يستطيع ربط أي جهاز"
+          },
+          {
+            "value": "1",
+            "text": "لا يستعمل كابلات"
+          },
+          {
+            "value": "2",
+            "text": "يحفظ عناوين MAC بدقة"
+          },
+          {
+            "value": "3",
+            "text": "قد يسبب ازدحامًا وتداخلًا لأنه يرسل للجميع"
+          }
+        ],
+        "fields": [],
+        "parts": [],
+        "answer": {
+          "correctOptionIndex": 3
+        },
+        "hint": "لأن Hub يرسل البيانات إلى جميع الأجهزة، فقد يسبب ازدحامًا وتداخلًا داخل الشبكة.",
+        "teacherNote": "",
+        "aiInstruction": "",
+        "wasModified": false,
+        "image": {
+          "exists": false,
+          "visible": false,
+          "origin": null,
+          "assets": [],
+          "prompt": null
+        },
+        "history": [],
+        "redoStack": []
+      },
+      {
+        "examQuestionId": "LIB-T06-Q05",
+        "origin": "imported",
+        "sourceId": "LIB-T06",
+        "sourceQuestionId": "5",
+        "section": "BASIC",
+        "topic": "OTHER_NETWORKING",
+        "secondaryTopics": [],
+        "difficulty": 2,
+        "difficultyLabel": "",
+        "familyKey": "LIB-T06-Q05",
+        "hasCLI": false,
+        "requiresCalculation": false,
+        "presentationType": "multipleChoice",
+        "marks": 10,
+        "locked": false,
+        "text": "أي معلومة يحفظها Switch ليتعرف على الأجهزة؟",
+        "textHtml": "",
+        "options": [
+          {
+            "value": "0",
+            "text": "عناوين MAC"
+          },
+          {
+            "value": "1",
+            "text": "أسماء الطلاب"
+          },
+          {
+            "value": "2",
+            "text": "كلمات مرور المواقع"
+          },
+          {
+            "value": "3",
+            "text": "أحجام الملفات"
+          }
+        ],
+        "fields": [],
+        "parts": [],
+        "answer": {
+          "correctOptionIndex": 0
+        },
+        "hint": "يحفظ Switch عناوين MAC للأجهزة حتى يرسل البيانات إلى الجهاز المقصود.",
+        "teacherNote": "",
+        "aiInstruction": "",
+        "wasModified": false,
+        "image": {
+          "exists": false,
+          "visible": false,
+          "origin": null,
+          "assets": [],
+          "prompt": null
+        },
+        "history": [],
+        "redoStack": []
+      },
+      {
+        "examQuestionId": "LIB-T06-Q06",
+        "origin": "imported",
+        "sourceId": "LIB-T06",
+        "sourceQuestionId": "6",
+        "section": "BASIC",
+        "topic": "OTHER_NETWORKING",
+        "secondaryTopics": [],
+        "difficulty": 2,
+        "difficultyLabel": "",
+        "familyKey": "LIB-T06-Q06",
+        "hasCLI": false,
+        "requiresCalculation": false,
+        "presentationType": "multipleChoice",
+        "marks": 10,
+        "locked": false,
+        "text": "ما إحدى فوائد استعمال Switch بدل Hub؟",
+        "textHtml": "",
+        "options": [
+          {
+            "value": "0",
+            "text": "يزيد الازدحام"
+          },
+          {
+            "value": "1",
+            "text": "يقلل الازدحام ويوجه البيانات بدقة"
+          },
+          {
+            "value": "2",
+            "text": "يرسل كل البيانات للجميع"
+          },
+          {
+            "value": "3",
+            "text": "يمنع إضافة أجهزة جديدة"
+          }
+        ],
+        "fields": [],
+        "parts": [],
+        "answer": {
+          "correctOptionIndex": 1
+        },
+        "hint": "Switch يقلل التداخل والازدحام، ويوجه البيانات للجهاز الصحيح، ويسمح بتوسيع الشبكة.",
+        "teacherNote": "",
+        "aiInstruction": "",
+        "wasModified": false,
+        "image": {
+          "exists": false,
+          "visible": false,
+          "origin": null,
+          "assets": [],
+          "prompt": null
+        },
+        "history": [],
+        "redoStack": []
+      },
+      {
+        "examQuestionId": "LIB-T06-Q07",
+        "origin": "imported",
+        "sourceId": "LIB-T06",
+        "sourceQuestionId": "7",
+        "section": "BASIC",
+        "topic": "OTHER_NETWORKING",
+        "secondaryTopics": [],
+        "difficulty": 2,
+        "difficultyLabel": "",
+        "familyKey": "LIB-T06-Q07",
+        "hasCLI": false,
+        "requiresCalculation": false,
+        "presentationType": "multipleChoice",
+        "marks": 10,
+        "locked": false,
+        "text": "ما الوظيفة الأساسية لجهاز Router؟",
+        "textHtml": "",
+        "options": [
+          {
+            "value": "0",
+            "text": "تخزين الملفات فقط"
+          },
+          {
+            "value": "1",
+            "text": "طباعة المستندات"
+          },
+          {
+            "value": "2",
+            "text": "اختيار الطريق وربط الشبكات المختلفة"
+          },
+          {
+            "value": "3",
+            "text": "تحويل الشاشة إلى شبكة"
+          }
+        ],
+        "fields": [],
+        "parts": [],
+        "answer": {
+          "correctOptionIndex": 2
+        },
+        "hint": "الراوتر يربط الشبكات المختلفة ويختار الطريق المناسب لوصول البيانات.",
+        "teacherNote": "",
+        "aiInstruction": "",
+        "wasModified": false,
+        "image": {
+          "exists": false,
+          "visible": false,
+          "origin": null,
+          "assets": [],
+          "prompt": null
+        },
+        "history": [],
+        "redoStack": []
+      },
+      {
+        "examQuestionId": "LIB-T06-Q08",
+        "origin": "imported",
+        "sourceId": "LIB-T06",
+        "sourceQuestionId": "8",
+        "section": "BASIC",
+        "topic": "OTHER_NETWORKING",
+        "secondaryTopics": [],
+        "difficulty": 2,
+        "difficultyLabel": "",
+        "familyKey": "LIB-T06-Q08",
+        "hasCLI": false,
+        "requiresCalculation": false,
+        "presentationType": "multipleChoice",
+        "marks": 10,
+        "locked": false,
+        "text": "أي خدمة قد يقدمها Router لتوزيع عناوين IP تلقائيًا؟",
+        "textHtml": "",
+        "options": [
+          {
+            "value": "0",
+            "text": "HTTP"
+          },
+          {
+            "value": "1",
+            "text": "FTP"
+          },
+          {
+            "value": "2",
+            "text": "DNS فقط"
+          },
+          {
+            "value": "3",
+            "text": "DHCP"
+          }
+        ],
+        "fields": [],
+        "parts": [],
+        "answer": {
+          "correctOptionIndex": 3
+        },
+        "hint": "قد يوزع الراوتر عناوين IP تلقائيًا باستخدام خدمة DHCP.",
+        "teacherNote": "",
+        "aiInstruction": "",
+        "wasModified": false,
+        "image": {
+          "exists": false,
+          "visible": false,
+          "origin": null,
+          "assets": [],
+          "prompt": null
+        },
+        "history": [],
+        "redoStack": []
+      },
+      {
+        "examQuestionId": "LIB-T06-Q09",
+        "origin": "imported",
+        "sourceId": "LIB-T06",
+        "sourceQuestionId": "9",
+        "section": "BASIC",
+        "topic": "OTHER_NETWORKING",
+        "secondaryTopics": [],
+        "difficulty": 2,
+        "difficultyLabel": "",
+        "familyKey": "LIB-T06-Q09",
+        "hasCLI": false,
+        "requiresCalculation": false,
+        "presentationType": "multipleChoice",
+        "marks": 10,
+        "locked": false,
+        "text": "مع أي نوع من العناوين يتعامل Router غالبًا عند التوجيه؟",
+        "textHtml": "",
+        "options": [
+          {
+            "value": "0",
+            "text": "عناوين IP"
+          },
+          {
+            "value": "1",
+            "text": "عناوين البريد الإلكتروني"
+          },
+          {
+            "value": "2",
+            "text": "أسماء الملفات"
+          },
+          {
+            "value": "3",
+            "text": "عناوين المنازل"
+          }
+        ],
+        "fields": [],
+        "parts": [],
+        "answer": {
+          "correctOptionIndex": 0
+        },
+        "hint": "الراوتر يعمل غالبًا في طبقة الشبكة ويتعامل مع عناوين IP.",
+        "teacherNote": "",
+        "aiInstruction": "",
+        "wasModified": false,
+        "image": {
+          "exists": false,
+          "visible": false,
+          "origin": null,
+          "assets": [],
+          "prompt": null
+        },
+        "history": [],
+        "redoStack": []
+      },
+      {
+        "examQuestionId": "LIB-T06-Q10",
+        "origin": "imported",
+        "sourceId": "LIB-T06",
+        "sourceQuestionId": "10",
+        "section": "BASIC",
+        "topic": "OTHER_NETWORKING",
+        "secondaryTopics": [],
+        "difficulty": 2,
+        "difficultyLabel": "",
+        "familyKey": "LIB-T06-Q10",
+        "hasCLI": false,
+        "requiresCalculation": false,
+        "presentationType": "multipleChoice",
+        "marks": 10,
+        "locked": false,
+        "text": "مدرسة تريد ربط حواسيب المختبر محليًا وإيصال الشبكة إلى الإنترنت. ما الاختيار الأنسب؟",
+        "textHtml": "",
+        "options": [
+          {
+            "value": "0",
+            "text": "Hub فقط"
+          },
+          {
+            "value": "1",
+            "text": "Switch للحواسيب وRouter للاتصال بالشبكات والإنترنت"
+          },
+          {
+            "value": "2",
+            "text": "Router لكل حاسوب دون Switch"
+          },
+          {
+            "value": "3",
+            "text": "طابعة وكابل فقط"
+          }
+        ],
+        "fields": [],
+        "parts": [],
+        "answer": {
+          "correctOptionIndex": 1
+        },
+        "hint": "يستعمل Switch لربط أجهزة LAN بكفاءة، ويستعمل Router لربط الشبكة المحلية بشبكات أخرى والإنترنت.",
+        "teacherNote": "",
+        "aiInstruction": "",
+        "wasModified": false,
+        "image": {
+          "exists": false,
+          "visible": false,
+          "origin": null,
+          "assets": [],
+          "prompt": null
+        },
+        "history": [],
+        "redoStack": []
+      }
+    ],
+    "totalMarks": 100,
+    "status": "final",
+    "createdAt": "2026-09-05T18:57:20.314Z",
+    "updatedAt": "2026-09-05T18:57:20.314Z"
+  }
+}

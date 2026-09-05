@@ -1,0 +1,2281 @@
+{
+  "libraryItemId": "F04",
+  "title": "نموذج B — 2024",
+  "category": "final",
+  "description": "نموذج متنوع يجمع بين المعرفة والتطبيق وأوامر الشبكات.",
+  "tags": [
+    "مدرسي",
+    "تطبيقي",
+    "شبكات"
+  ],
+  "questionCount": 42,
+  "totalMarks": 121,
+  "pageRange": "",
+  "parserFamily": "f-dom-qcard-v1",
+  "conversionStatus": "needs_review",
+  "publishable": false,
+  "autoGradableCount": 37,
+  "manualReviewCount": 5,
+  "libraryVersion": 1,
+  "sourceSha": "804aedb6b4543d5dbaa0e2ad5e6559a36856f34a7b41024ed368c7605a993011",
+  "contentHash": "7f74a6f761f260cf57a862b2067f34a06750ab7998928b387bedd9a21d6706aa",
+  "convertedAt": "2026-09-05T18:57:19.063Z",
+  "source": {
+    "repository": "Book791381",
+    "sourceFile": "F04.html"
+  },
+  "schemaVersion": 1,
+  "examSnapshot": {
+    "schemaVersion": 1,
+    "examId": "LIB-F04",
+    "title": "نموذج B — 2024",
+    "questions": [
+      {
+        "examQuestionId": "LIB-F04-Q01",
+        "origin": "imported",
+        "sourceId": "LIB-F04",
+        "sourceQuestionId": "q1",
+        "section": "BASIC",
+        "topic": "OTHER_NETWORKING",
+        "secondaryTopics": [],
+        "difficulty": 2,
+        "difficultyLabel": "",
+        "familyKey": "LIB-F04-Q01",
+        "hasCLI": false,
+        "requiresCalculation": false,
+        "presentationType": "multipleChoice",
+        "marks": 2,
+        "locked": false,
+        "text": "ما هو عدد الثنائيات (bits) التي يشتمل عليها عنوان IPv4 ؟",
+        "textHtml": "",
+        "options": [
+          {
+            "value": "0",
+            "text": "16"
+          },
+          {
+            "value": "1",
+            "text": "32"
+          },
+          {
+            "value": "2",
+            "text": "64"
+          },
+          {
+            "value": "3",
+            "text": "128"
+          }
+        ],
+        "fields": [],
+        "parts": [],
+        "answer": {
+          "correctOptionIndex": 1
+        },
+        "hint": "",
+        "teacherNote": "",
+        "aiInstruction": "",
+        "wasModified": false,
+        "image": {
+          "exists": false,
+          "visible": false,
+          "origin": null,
+          "assets": [],
+          "prompt": null
+        },
+        "history": [],
+        "redoStack": []
+      },
+      {
+        "examQuestionId": "LIB-F04-Q02",
+        "origin": "imported",
+        "sourceId": "LIB-F04",
+        "sourceQuestionId": "q2",
+        "section": "BASIC",
+        "topic": "OTHER_NETWORKING",
+        "secondaryTopics": [],
+        "difficulty": 2,
+        "difficultyLabel": "",
+        "familyKey": "LIB-F04-Q02",
+        "hasCLI": false,
+        "requiresCalculation": false,
+        "presentationType": "multipleChoice",
+        "marks": 2,
+        "locked": false,
+        "text": "أي من الأجهزة التالية وظيفته ربط عدة شبكات محلية بعضها ببعض ؟",
+        "textHtml": "",
+        "options": [
+          {
+            "value": "0",
+            "text": "MAC-Address"
+          },
+          {
+            "value": "1",
+            "text": "Router"
+          },
+          {
+            "value": "2",
+            "text": "Hub"
+          },
+          {
+            "value": "3",
+            "text": "Switch"
+          }
+        ],
+        "fields": [],
+        "parts": [],
+        "answer": {
+          "correctOptionIndex": 1
+        },
+        "hint": "",
+        "teacherNote": "",
+        "aiInstruction": "",
+        "wasModified": false,
+        "image": {
+          "exists": false,
+          "visible": false,
+          "origin": null,
+          "assets": [],
+          "prompt": null
+        },
+        "history": [],
+        "redoStack": []
+      },
+      {
+        "examQuestionId": "LIB-F04-Q03",
+        "origin": "imported",
+        "sourceId": "LIB-F04",
+        "sourceQuestionId": "q3",
+        "section": "BASIC",
+        "topic": "OTHER_NETWORKING",
+        "secondaryTopics": [],
+        "difficulty": 2,
+        "difficultyLabel": "",
+        "familyKey": "LIB-F04-Q03",
+        "hasCLI": false,
+        "requiresCalculation": false,
+        "presentationType": "multipleChoice",
+        "marks": 2,
+        "locked": false,
+        "text": "عنوان __________ هو رقم يميّز كرت الشبكة عن أي كرت شبكة آخر",
+        "textHtml": "",
+        "options": [
+          {
+            "value": "0",
+            "text": "MAC-Address"
+          },
+          {
+            "value": "1",
+            "text": "Router"
+          },
+          {
+            "value": "2",
+            "text": "Hub"
+          },
+          {
+            "value": "3",
+            "text": "Switch"
+          }
+        ],
+        "fields": [],
+        "parts": [],
+        "answer": {
+          "correctOptionIndex": 0
+        },
+        "hint": "",
+        "teacherNote": "",
+        "aiInstruction": "",
+        "wasModified": false,
+        "image": {
+          "exists": false,
+          "visible": false,
+          "origin": null,
+          "assets": [],
+          "prompt": null
+        },
+        "history": [],
+        "redoStack": []
+      },
+      {
+        "examQuestionId": "LIB-F04-Q04",
+        "origin": "imported",
+        "sourceId": "LIB-F04",
+        "sourceQuestionId": "q4",
+        "section": "BASIC",
+        "topic": "OTHER_NETWORKING",
+        "secondaryTopics": [],
+        "difficulty": 2,
+        "difficultyLabel": "",
+        "familyKey": "LIB-F04-Q04",
+        "hasCLI": false,
+        "requiresCalculation": false,
+        "presentationType": "open",
+        "marks": 2,
+        "locked": false,
+        "text": "عدد منازل الميزان العشري هي بينما عدد منازل الميزان السادس عشر هي",
+        "textHtml": "",
+        "options": [],
+        "fields": [],
+        "parts": [],
+        "answer": {},
+        "hint": "",
+        "teacherNote": "شكل سؤال متعدد الأجزاء غير قابل للتحويل الحتمي — يحتاج مراجعة.",
+        "aiInstruction": "",
+        "wasModified": false,
+        "image": {
+          "exists": false,
+          "visible": false,
+          "origin": null,
+          "assets": [],
+          "prompt": null
+        },
+        "history": [],
+        "redoStack": []
+      },
+      {
+        "examQuestionId": "LIB-F04-Q05",
+        "origin": "imported",
+        "sourceId": "LIB-F04",
+        "sourceQuestionId": "q5",
+        "section": "BASIC",
+        "topic": "OTHER_NETWORKING",
+        "secondaryTopics": [],
+        "difficulty": 2,
+        "difficultyLabel": "",
+        "familyKey": "LIB-F04-Q05",
+        "hasCLI": false,
+        "requiresCalculation": false,
+        "presentationType": "open",
+        "marks": 4,
+        "locked": false,
+        "text": "حسب الصورة المعطاة في الامتحان أجب عن الأسئلة التالية:",
+        "textHtml": "",
+        "options": [],
+        "fields": [],
+        "parts": [],
+        "answer": {},
+        "hint": "",
+        "teacherNote": "شكل سؤال متعدد الأجزاء غير قابل للتحويل الحتمي — يحتاج مراجعة.",
+        "aiInstruction": "",
+        "wasModified": false,
+        "image": {
+          "exists": true,
+          "visible": true,
+          "origin": "uploaded",
+          "assets": [
+            {
+              "id": "img-0",
+              "origin": "uploaded",
+              "contentType": "image/png",
+              "dataUrl": "/exam-library/assets/F04/2cc083f738b791e6.png"
+            }
+          ],
+          "prompt": null
+        },
+        "history": [],
+        "redoStack": []
+      },
+      {
+        "examQuestionId": "LIB-F04-Q06",
+        "origin": "imported",
+        "sourceId": "LIB-F04",
+        "sourceQuestionId": "q6",
+        "section": "BASIC",
+        "topic": "OTHER_NETWORKING",
+        "secondaryTopics": [],
+        "difficulty": 2,
+        "difficultyLabel": "",
+        "familyKey": "LIB-F04-Q06",
+        "hasCLI": false,
+        "requiresCalculation": false,
+        "presentationType": "matching",
+        "marks": 4,
+        "locked": false,
+        "text": "أي من العناوين التالية هي عناوين APIPA ؟ — ضع صحيح أو غير صحيح\n\n| البند | الإجابة |\n| --- | --- |\n| 192.168.10.1 | |\n| 169.254.0.3 | |\n| 10.0.0.127 | |\n| 169.254.10.1 | |",
+        "textHtml": "",
+        "options": [],
+        "fields": [
+          {
+            "id": "q6a",
+            "label": "192.168.10.1",
+            "order": 0,
+            "kind": "select",
+            "options": [
+              {
+                "value": "صحيح"
+              },
+              {
+                "value": "غير صحيح"
+              }
+            ]
+          },
+          {
+            "id": "q6b",
+            "label": "169.254.0.3",
+            "order": 1,
+            "kind": "select",
+            "options": [
+              {
+                "value": "صحيح"
+              },
+              {
+                "value": "غير صحيح"
+              }
+            ]
+          },
+          {
+            "id": "q6c",
+            "label": "10.0.0.127",
+            "order": 2,
+            "kind": "select",
+            "options": [
+              {
+                "value": "صحيح"
+              },
+              {
+                "value": "غير صحيح"
+              }
+            ]
+          },
+          {
+            "id": "q6d",
+            "label": "169.254.10.1",
+            "order": 3,
+            "kind": "select",
+            "options": [
+              {
+                "value": "صحيح"
+              },
+              {
+                "value": "غير صحيح"
+              }
+            ]
+          }
+        ],
+        "parts": [],
+        "answer": {
+          "text": "192.168.10.1=غير صحيح؛ 169.254.0.3=صحيح؛ 10.0.0.127=غير صحيح؛ 169.254.10.1=صحيح"
+        },
+        "hint": "",
+        "teacherNote": "",
+        "aiInstruction": "",
+        "wasModified": false,
+        "image": {
+          "exists": false,
+          "visible": false,
+          "origin": null,
+          "assets": [],
+          "prompt": null
+        },
+        "history": [],
+        "redoStack": []
+      },
+      {
+        "examQuestionId": "LIB-F04-Q07",
+        "origin": "imported",
+        "sourceId": "LIB-F04",
+        "sourceQuestionId": "q7",
+        "section": "BASIC",
+        "topic": "OTHER_NETWORKING",
+        "secondaryTopics": [],
+        "difficulty": 2,
+        "difficultyLabel": "",
+        "familyKey": "LIB-F04-Q07",
+        "hasCLI": false,
+        "requiresCalculation": false,
+        "presentationType": "multipleChoice",
+        "marks": 6,
+        "locked": false,
+        "text": "أكمل الجدول التالي — ضع في الخانة المناسبة (عدد الأجهزة الأقصى لكل نوع شبكة)",
+        "textHtml": "",
+        "options": [
+          {
+            "value": "0",
+            "text": ""
+          },
+          {
+            "value": "1",
+            "text": ""
+          },
+          {
+            "value": "2",
+            "text": ""
+          },
+          {
+            "value": "3",
+            "text": ""
+          },
+          {
+            "value": "4",
+            "text": ""
+          },
+          {
+            "value": "5",
+            "text": ""
+          }
+        ],
+        "fields": [],
+        "parts": [],
+        "answer": {
+          "correctOptionIndex": 4
+        },
+        "hint": "",
+        "teacherNote": "",
+        "aiInstruction": "",
+        "wasModified": false,
+        "image": {
+          "exists": false,
+          "visible": false,
+          "origin": null,
+          "assets": [],
+          "prompt": null
+        },
+        "history": [],
+        "redoStack": []
+      },
+      {
+        "examQuestionId": "LIB-F04-Q08",
+        "origin": "imported",
+        "sourceId": "LIB-F04",
+        "sourceQuestionId": "q8",
+        "section": "BASIC",
+        "topic": "OTHER_NETWORKING",
+        "secondaryTopics": [],
+        "difficulty": 2,
+        "difficultyLabel": "",
+        "familyKey": "LIB-F04-Q08",
+        "hasCLI": false,
+        "requiresCalculation": false,
+        "presentationType": "multipleChoice",
+        "marks": 2,
+        "locked": false,
+        "text": "أي من البروتوكولات التالية يستعمل طريقة البث للجميع (Broadcast) في عمله ؟",
+        "textHtml": "",
+        "options": [
+          {
+            "value": "0",
+            "text": "ARP"
+          },
+          {
+            "value": "1",
+            "text": "UTP"
+          },
+          {
+            "value": "2",
+            "text": "TCP"
+          },
+          {
+            "value": "3",
+            "text": "DNA"
+          }
+        ],
+        "fields": [],
+        "parts": [],
+        "answer": {
+          "correctOptionIndex": 0
+        },
+        "hint": "",
+        "teacherNote": "",
+        "aiInstruction": "",
+        "wasModified": false,
+        "image": {
+          "exists": false,
+          "visible": false,
+          "origin": null,
+          "assets": [],
+          "prompt": null
+        },
+        "history": [],
+        "redoStack": []
+      },
+      {
+        "examQuestionId": "LIB-F04-Q09",
+        "origin": "imported",
+        "sourceId": "LIB-F04",
+        "sourceQuestionId": "q9",
+        "section": "BASIC",
+        "topic": "OTHER_NETWORKING",
+        "secondaryTopics": [],
+        "difficulty": 2,
+        "difficultyLabel": "",
+        "familyKey": "LIB-F04-Q09",
+        "hasCLI": false,
+        "requiresCalculation": false,
+        "presentationType": "matching",
+        "marks": 4,
+        "locked": false,
+        "text": "معطى عنوان IPv4 التالي — اكتب ما هو جزء الشبكة وجزء الجهاز\n\n| البند | الإجابة |\n| --- | --- |\n| 1 | |\n| 2 | |\n| 3 | |\n| 4 | |",
+        "textHtml": "",
+        "options": [],
+        "fields": [
+          {
+            "id": "q9_1h",
+            "label": "1",
+            "order": 0,
+            "kind": "select",
+            "options": []
+          },
+          {
+            "id": "q9_2h",
+            "label": "2",
+            "order": 1,
+            "kind": "select",
+            "options": []
+          },
+          {
+            "id": "q9_3h",
+            "label": "3",
+            "order": 2,
+            "kind": "select",
+            "options": []
+          },
+          {
+            "id": "q9_4h",
+            "label": "4",
+            "order": 3,
+            "kind": "select",
+            "options": []
+          }
+        ],
+        "parts": [],
+        "answer": {
+          "text": "1=10.100؛ 2=13؛ 3=16.1.10؛ 4=1.4"
+        },
+        "hint": "",
+        "teacherNote": "",
+        "aiInstruction": "",
+        "wasModified": false,
+        "image": {
+          "exists": false,
+          "visible": false,
+          "origin": null,
+          "assets": [],
+          "prompt": null
+        },
+        "history": [],
+        "redoStack": []
+      },
+      {
+        "examQuestionId": "LIB-F04-Q10",
+        "origin": "imported",
+        "sourceId": "LIB-F04",
+        "sourceQuestionId": "q10",
+        "section": "BASIC",
+        "topic": "OTHER_NETWORKING",
+        "secondaryTopics": [],
+        "difficulty": 2,
+        "difficultyLabel": "",
+        "familyKey": "LIB-F04-Q10",
+        "hasCLI": false,
+        "requiresCalculation": false,
+        "presentationType": "multipleChoice",
+        "marks": 2,
+        "locked": false,
+        "text": "ترجم عنوان الـ IP التالي 101.1.0.170 إلى الميزان الثنائي",
+        "textHtml": "",
+        "options": [
+          {
+            "value": "0",
+            "text": "10101010.11111111.00000001.01100100"
+          },
+          {
+            "value": "1",
+            "text": "10101010.11111111.00000000.00000001"
+          },
+          {
+            "value": "2",
+            "text": "10101010.00000000.00000001.00000100"
+          },
+          {
+            "value": "3",
+            "text": "10101010.00000000.00000001.01100101"
+          }
+        ],
+        "fields": [],
+        "parts": [],
+        "answer": {
+          "correctOptionIndex": 3
+        },
+        "hint": "",
+        "teacherNote": "",
+        "aiInstruction": "",
+        "wasModified": false,
+        "image": {
+          "exists": false,
+          "visible": false,
+          "origin": null,
+          "assets": [],
+          "prompt": null
+        },
+        "history": [],
+        "redoStack": []
+      },
+      {
+        "examQuestionId": "LIB-F04-Q11",
+        "origin": "imported",
+        "sourceId": "LIB-F04",
+        "sourceQuestionId": "q11",
+        "section": "BASIC",
+        "topic": "OTHER_NETWORKING",
+        "secondaryTopics": [],
+        "difficulty": 2,
+        "difficultyLabel": "",
+        "familyKey": "LIB-F04-Q11",
+        "hasCLI": false,
+        "requiresCalculation": false,
+        "presentationType": "multipleChoice",
+        "marks": 2,
+        "locked": false,
+        "text": "أكمل الجملة: العنوان 10.11.20.10 هو عنوان _____ بينما العنوان 127.0.0.1 هو عنوان _____",
+        "textHtml": "",
+        "options": [
+          {
+            "value": "0",
+            "text": "عام — خاص"
+          },
+          {
+            "value": "1",
+            "text": "خاص — Localhost"
+          },
+          {
+            "value": "2",
+            "text": "تلقائي — ثابت"
+          },
+          {
+            "value": "3",
+            "text": "APIPA — عام"
+          }
+        ],
+        "fields": [],
+        "parts": [],
+        "answer": {
+          "correctOptionIndex": 1
+        },
+        "hint": "",
+        "teacherNote": "",
+        "aiInstruction": "",
+        "wasModified": false,
+        "image": {
+          "exists": false,
+          "visible": false,
+          "origin": null,
+          "assets": [],
+          "prompt": null
+        },
+        "history": [],
+        "redoStack": []
+      },
+      {
+        "examQuestionId": "LIB-F04-Q12",
+        "origin": "imported",
+        "sourceId": "LIB-F04",
+        "sourceQuestionId": "q12",
+        "section": "BASIC",
+        "topic": "OTHER_NETWORKING",
+        "secondaryTopics": [],
+        "difficulty": 2,
+        "difficultyLabel": "",
+        "familyKey": "LIB-F04-Q12",
+        "hasCLI": false,
+        "requiresCalculation": false,
+        "presentationType": "multipleChoice",
+        "marks": 2,
+        "locked": false,
+        "text": "ما وظيفة بطاقة الشبكة (NIC) في جهاز الحاسوب ؟",
+        "textHtml": "",
+        "options": [
+          {
+            "value": "0",
+            "text": "أ. حفظ البيانات"
+          },
+          {
+            "value": "1",
+            "text": "ب. معالجة البيانات"
+          },
+          {
+            "value": "2",
+            "text": "ج. إرسال واستقبال البيانات عبر الشبكة"
+          },
+          {
+            "value": "3",
+            "text": "د. تبريد المعالج"
+          }
+        ],
+        "fields": [],
+        "parts": [],
+        "answer": {
+          "correctOptionIndex": 2
+        },
+        "hint": "",
+        "teacherNote": "",
+        "aiInstruction": "",
+        "wasModified": false,
+        "image": {
+          "exists": false,
+          "visible": false,
+          "origin": null,
+          "assets": [],
+          "prompt": null
+        },
+        "history": [],
+        "redoStack": []
+      },
+      {
+        "examQuestionId": "LIB-F04-Q13",
+        "origin": "imported",
+        "sourceId": "LIB-F04",
+        "sourceQuestionId": "q13",
+        "section": "BASIC",
+        "topic": "OTHER_NETWORKING",
+        "secondaryTopics": [],
+        "difficulty": 2,
+        "difficultyLabel": "",
+        "familyKey": "LIB-F04-Q13",
+        "hasCLI": false,
+        "requiresCalculation": false,
+        "presentationType": "multipleChoice",
+        "marks": 2,
+        "locked": false,
+        "text": "ما اسم الجهاز الذي يربط الحواسيب بعضها ببعض في الشبكة المحلية ؟",
+        "textHtml": "",
+        "options": [
+          {
+            "value": "0",
+            "text": "MAC-Address"
+          },
+          {
+            "value": "1",
+            "text": "Router"
+          },
+          {
+            "value": "2",
+            "text": "Hub"
+          },
+          {
+            "value": "3",
+            "text": "Switch"
+          }
+        ],
+        "fields": [],
+        "parts": [],
+        "answer": {
+          "correctOptionIndex": 3
+        },
+        "hint": "",
+        "teacherNote": "",
+        "aiInstruction": "",
+        "wasModified": false,
+        "image": {
+          "exists": true,
+          "visible": true,
+          "origin": "uploaded",
+          "assets": [
+            {
+              "id": "img-0",
+              "origin": "uploaded",
+              "contentType": "image/png",
+              "dataUrl": "/exam-library/assets/F04/5b3953bb84a9aa73.png"
+            }
+          ],
+          "prompt": null
+        },
+        "history": [],
+        "redoStack": []
+      },
+      {
+        "examQuestionId": "LIB-F04-Q14",
+        "origin": "imported",
+        "sourceId": "LIB-F04",
+        "sourceQuestionId": "q14",
+        "section": "BASIC",
+        "topic": "OTHER_NETWORKING",
+        "secondaryTopics": [],
+        "difficulty": 2,
+        "difficultyLabel": "",
+        "familyKey": "LIB-F04-Q14",
+        "hasCLI": false,
+        "requiresCalculation": false,
+        "presentationType": "matching",
+        "marks": 2,
+        "locked": false,
+        "text": "ترجم الرقم 229 من الميزان العشري للميزان الثنائي باستعمال الصناديق\n\n| البند | الإجابة |\n| --- | --- |\n|  | |",
+        "textHtml": "",
+        "options": [],
+        "fields": [
+          {
+            "id": "q14_7",
+            "label": "",
+            "order": 0,
+            "kind": "select",
+            "options": []
+          }
+        ],
+        "parts": [],
+        "answer": {},
+        "hint": "",
+        "teacherNote": "بعض صفوف الجدول بلا مفتاح إجابة في المصدر.",
+        "aiInstruction": "",
+        "wasModified": false,
+        "image": {
+          "exists": false,
+          "visible": false,
+          "origin": null,
+          "assets": [],
+          "prompt": null
+        },
+        "history": [],
+        "redoStack": []
+      },
+      {
+        "examQuestionId": "LIB-F04-Q15",
+        "origin": "imported",
+        "sourceId": "LIB-F04",
+        "sourceQuestionId": "q15",
+        "section": "BASIC",
+        "topic": "OTHER_NETWORKING",
+        "secondaryTopics": [],
+        "difficulty": 2,
+        "difficultyLabel": "",
+        "familyKey": "LIB-F04-Q15",
+        "hasCLI": false,
+        "requiresCalculation": false,
+        "presentationType": "matching",
+        "marks": 4,
+        "locked": false,
+        "text": "ترجم الأعداد التالية من الميزان الثنائي للميزان السادس عشر\n\n| البند | الإجابة |\n| --- | --- |\n| 011010 | |\n| 101100101 | |\n| 010101010101 | |\n| 1111000011110 | |",
+        "textHtml": "",
+        "options": [],
+        "fields": [
+          {
+            "id": "q15_1",
+            "label": "011010",
+            "order": 0,
+            "kind": "select",
+            "options": []
+          },
+          {
+            "id": "q15_2",
+            "label": "101100101",
+            "order": 1,
+            "kind": "select",
+            "options": []
+          },
+          {
+            "id": "q15_3",
+            "label": "010101010101",
+            "order": 2,
+            "kind": "select",
+            "options": []
+          },
+          {
+            "id": "q15_4",
+            "label": "1111000011110",
+            "order": 3,
+            "kind": "select",
+            "options": []
+          }
+        ],
+        "parts": [],
+        "answer": {
+          "text": "011010=1a؛ 101100101=165؛ 010101010101=555؛ 1111000011110=1e1e"
+        },
+        "hint": "",
+        "teacherNote": "",
+        "aiInstruction": "",
+        "wasModified": false,
+        "image": {
+          "exists": false,
+          "visible": false,
+          "origin": null,
+          "assets": [],
+          "prompt": null
+        },
+        "history": [],
+        "redoStack": []
+      },
+      {
+        "examQuestionId": "LIB-F04-Q16",
+        "origin": "imported",
+        "sourceId": "LIB-F04",
+        "sourceQuestionId": "q16",
+        "section": "BASIC",
+        "topic": "OTHER_NETWORKING",
+        "secondaryTopics": [],
+        "difficulty": 2,
+        "difficultyLabel": "",
+        "familyKey": "LIB-F04-Q16",
+        "hasCLI": false,
+        "requiresCalculation": false,
+        "presentationType": "multipleChoice",
+        "marks": 4,
+        "locked": false,
+        "text": "أي من البروتوكولات التالية يستعمل طريقة البث للجميع (broadcast) في عملها ؟",
+        "textHtml": "",
+        "options": [
+          {
+            "value": "0",
+            "text": "1. ARP"
+          },
+          {
+            "value": "1",
+            "text": "2. UTP"
+          },
+          {
+            "value": "2",
+            "text": "3. TCP"
+          },
+          {
+            "value": "3",
+            "text": "4. DNA"
+          }
+        ],
+        "fields": [],
+        "parts": [],
+        "answer": {
+          "correctOptionIndex": 0
+        },
+        "hint": "",
+        "teacherNote": "",
+        "aiInstruction": "",
+        "wasModified": false,
+        "image": {
+          "exists": false,
+          "visible": false,
+          "origin": null,
+          "assets": [],
+          "prompt": null
+        },
+        "history": [],
+        "redoStack": []
+      },
+      {
+        "examQuestionId": "LIB-F04-Q17",
+        "origin": "imported",
+        "sourceId": "LIB-F04",
+        "sourceQuestionId": "q17",
+        "section": "BASIC",
+        "topic": "OTHER_NETWORKING",
+        "secondaryTopics": [],
+        "difficulty": 2,
+        "difficultyLabel": "",
+        "familyKey": "LIB-F04-Q17",
+        "hasCLI": false,
+        "requiresCalculation": false,
+        "presentationType": "open",
+        "marks": 4,
+        "locked": false,
+        "text": "ما هو قناع الشبكة للعنوان التالي 172.18.20.18/16 ؟",
+        "textHtml": "",
+        "options": [],
+        "fields": [],
+        "parts": [],
+        "answer": {
+          "text": "255.255.0.0"
+        },
+        "hint": "",
+        "teacherNote": "",
+        "aiInstruction": "",
+        "wasModified": false,
+        "image": {
+          "exists": false,
+          "visible": false,
+          "origin": null,
+          "assets": [],
+          "prompt": null
+        },
+        "history": [],
+        "redoStack": []
+      },
+      {
+        "examQuestionId": "LIB-F04-Q18",
+        "origin": "imported",
+        "sourceId": "LIB-F04",
+        "sourceQuestionId": "q18",
+        "section": "BASIC",
+        "topic": "OTHER_NETWORKING",
+        "secondaryTopics": [],
+        "difficulty": 2,
+        "difficultyLabel": "",
+        "familyKey": "LIB-F04-Q18",
+        "hasCLI": false,
+        "requiresCalculation": false,
+        "presentationType": "open",
+        "marks": 4,
+        "locked": false,
+        "text": "اكتب ما هي الترجمة للعنوان الـ IP التالي المعطى في الميزان الثنائي للميزان العشري",
+        "textHtml": "",
+        "options": [],
+        "fields": [],
+        "parts": [],
+        "answer": {
+          "text": "202.170.204.222"
+        },
+        "hint": "",
+        "teacherNote": "",
+        "aiInstruction": "",
+        "wasModified": false,
+        "image": {
+          "exists": false,
+          "visible": false,
+          "origin": null,
+          "assets": [],
+          "prompt": null
+        },
+        "history": [],
+        "redoStack": []
+      },
+      {
+        "examQuestionId": "LIB-F04-Q19",
+        "origin": "imported",
+        "sourceId": "LIB-F04",
+        "sourceQuestionId": "q19",
+        "section": "BASIC",
+        "topic": "OTHER_NETWORKING",
+        "secondaryTopics": [],
+        "difficulty": 2,
+        "difficultyLabel": "",
+        "familyKey": "LIB-F04-Q19",
+        "hasCLI": false,
+        "requiresCalculation": false,
+        "presentationType": "multipleChoice",
+        "marks": 4,
+        "locked": false,
+        "text": "ما هو عدد الحواسيب الأكبر الذي يمكن ربطه في شبكة من النوع باص ؟",
+        "textHtml": "",
+        "options": [
+          {
+            "value": "0",
+            "text": "1. 10"
+          },
+          {
+            "value": "1",
+            "text": "2. 20"
+          },
+          {
+            "value": "2",
+            "text": "3. 50"
+          },
+          {
+            "value": "3",
+            "text": "4. 100"
+          }
+        ],
+        "fields": [],
+        "parts": [],
+        "answer": {
+          "correctOptionIndex": 0
+        },
+        "hint": "",
+        "teacherNote": "",
+        "aiInstruction": "",
+        "wasModified": false,
+        "image": {
+          "exists": false,
+          "visible": false,
+          "origin": null,
+          "assets": [],
+          "prompt": null
+        },
+        "history": [],
+        "redoStack": []
+      },
+      {
+        "examQuestionId": "LIB-F04-Q20",
+        "origin": "imported",
+        "sourceId": "LIB-F04",
+        "sourceQuestionId": "q20",
+        "section": "BASIC",
+        "topic": "OTHER_NETWORKING",
+        "secondaryTopics": [],
+        "difficulty": 2,
+        "difficultyLabel": "",
+        "familyKey": "LIB-F04-Q20",
+        "hasCLI": false,
+        "requiresCalculation": false,
+        "presentationType": "open",
+        "marks": 4,
+        "locked": false,
+        "text": "ترجم عنوان الـ IP التالي إلى الميزان الثنائي",
+        "textHtml": "",
+        "options": [],
+        "fields": [],
+        "parts": [],
+        "answer": {
+          "text": "10101010.00000000.00000001.01100101"
+        },
+        "hint": "",
+        "teacherNote": "",
+        "aiInstruction": "",
+        "wasModified": false,
+        "image": {
+          "exists": false,
+          "visible": false,
+          "origin": null,
+          "assets": [],
+          "prompt": null
+        },
+        "history": [],
+        "redoStack": []
+      },
+      {
+        "examQuestionId": "LIB-F04-Q21",
+        "origin": "imported",
+        "sourceId": "LIB-F04",
+        "sourceQuestionId": "q21",
+        "section": "BASIC",
+        "topic": "OTHER_NETWORKING",
+        "secondaryTopics": [],
+        "difficulty": 2,
+        "difficultyLabel": "",
+        "familyKey": "LIB-F04-Q21",
+        "hasCLI": false,
+        "requiresCalculation": false,
+        "presentationType": "open",
+        "marks": 4,
+        "locked": false,
+        "text": "عنوان الـ MAC-Address لجهاز الهدف عند بعث رسالة للجميع (broadcast) ستكون:",
+        "textHtml": "",
+        "options": [],
+        "fields": [],
+        "parts": [],
+        "answer": {
+          "text": "ff:ff:ff:ff:ff:ff"
+        },
+        "hint": "",
+        "teacherNote": "",
+        "aiInstruction": "",
+        "wasModified": false,
+        "image": {
+          "exists": false,
+          "visible": false,
+          "origin": null,
+          "assets": [],
+          "prompt": null
+        },
+        "history": [],
+        "redoStack": []
+      },
+      {
+        "examQuestionId": "LIB-F04-Q22",
+        "origin": "imported",
+        "sourceId": "LIB-F04",
+        "sourceQuestionId": "q22",
+        "section": "BASIC",
+        "topic": "OTHER_NETWORKING",
+        "secondaryTopics": [],
+        "difficulty": 2,
+        "difficultyLabel": "",
+        "familyKey": "LIB-F04-Q22",
+        "hasCLI": false,
+        "requiresCalculation": false,
+        "presentationType": "multipleChoice",
+        "marks": 4,
+        "locked": false,
+        "text": "ما هي الترجمة الصحيحة للرقم A23D إلى الميزان الثنائي ؟",
+        "textHtml": "",
+        "options": [
+          {
+            "value": "0",
+            "text": "1. 1010001000111101"
+          },
+          {
+            "value": "1",
+            "text": "2. 1010001000110101"
+          },
+          {
+            "value": "2",
+            "text": "3. 1010001001110101"
+          },
+          {
+            "value": "3",
+            "text": "4. 1010001000100101"
+          }
+        ],
+        "fields": [],
+        "parts": [],
+        "answer": {
+          "correctOptionIndex": 0
+        },
+        "hint": "",
+        "teacherNote": "",
+        "aiInstruction": "",
+        "wasModified": false,
+        "image": {
+          "exists": false,
+          "visible": false,
+          "origin": null,
+          "assets": [],
+          "prompt": null
+        },
+        "history": [],
+        "redoStack": []
+      },
+      {
+        "examQuestionId": "LIB-F04-Q23",
+        "origin": "imported",
+        "sourceId": "LIB-F04",
+        "sourceQuestionId": "q23",
+        "section": "BASIC",
+        "topic": "OTHER_NETWORKING",
+        "secondaryTopics": [],
+        "difficulty": 2,
+        "difficultyLabel": "",
+        "familyKey": "LIB-F04-Q23",
+        "hasCLI": false,
+        "requiresCalculation": false,
+        "presentationType": "matching",
+        "marks": 3,
+        "locked": false,
+        "text": "ترجم الرقم 119 من الميزان العشري للميزان الثنائي باستعمال الصناديق\n\n| البند | الإجابة |\n| --- | --- |\n|  | |",
+        "textHtml": "",
+        "options": [],
+        "fields": [
+          {
+            "id": "q23_7",
+            "label": "",
+            "order": 0,
+            "kind": "select",
+            "options": []
+          }
+        ],
+        "parts": [],
+        "answer": {},
+        "hint": "",
+        "teacherNote": "بعض صفوف الجدول بلا مفتاح إجابة في المصدر.",
+        "aiInstruction": "",
+        "wasModified": false,
+        "image": {
+          "exists": false,
+          "visible": false,
+          "origin": null,
+          "assets": [],
+          "prompt": null
+        },
+        "history": [],
+        "redoStack": []
+      },
+      {
+        "examQuestionId": "LIB-F04-Q24",
+        "origin": "imported",
+        "sourceId": "LIB-F04",
+        "sourceQuestionId": "q24",
+        "section": "BASIC",
+        "topic": "OTHER_NETWORKING",
+        "secondaryTopics": [],
+        "difficulty": 2,
+        "difficultyLabel": "",
+        "familyKey": "LIB-F04-Q24",
+        "hasCLI": false,
+        "requiresCalculation": false,
+        "presentationType": "multipleChoice",
+        "marks": 3,
+        "locked": false,
+        "text": "أي من بين عناوين كرت الشبكة (MAC Address) التالية هو صحيح ؟",
+        "textHtml": "",
+        "options": [
+          {
+            "value": "0",
+            "text": "AF:2D:11:2B:12:12"
+          },
+          {
+            "value": "1",
+            "text": "AF:2D:13:2C:12"
+          },
+          {
+            "value": "2",
+            "text": "192.168.30.2"
+          },
+          {
+            "value": "3",
+            "text": "AF:2D:1G:2W:12:12"
+          }
+        ],
+        "fields": [],
+        "parts": [],
+        "answer": {
+          "correctOptionIndex": 0
+        },
+        "hint": "",
+        "teacherNote": "",
+        "aiInstruction": "",
+        "wasModified": false,
+        "image": {
+          "exists": false,
+          "visible": false,
+          "origin": null,
+          "assets": [],
+          "prompt": null
+        },
+        "history": [],
+        "redoStack": []
+      },
+      {
+        "examQuestionId": "LIB-F04-Q25",
+        "origin": "imported",
+        "sourceId": "LIB-F04",
+        "sourceQuestionId": "q25",
+        "section": "BASIC",
+        "topic": "OTHER_NETWORKING",
+        "secondaryTopics": [],
+        "difficulty": 2,
+        "difficultyLabel": "",
+        "familyKey": "LIB-F04-Q25",
+        "hasCLI": false,
+        "requiresCalculation": false,
+        "presentationType": "open",
+        "marks": 3,
+        "locked": false,
+        "text": "جزء الشركة المنتجة (OUI) لكرت الشبكة التالي: B0-D0-63-C2-26-FD",
+        "textHtml": "",
+        "options": [],
+        "fields": [],
+        "parts": [],
+        "answer": {
+          "text": "b0-d0-63"
+        },
+        "hint": "",
+        "teacherNote": "",
+        "aiInstruction": "",
+        "wasModified": false,
+        "image": {
+          "exists": false,
+          "visible": false,
+          "origin": null,
+          "assets": [],
+          "prompt": null
+        },
+        "history": [],
+        "redoStack": []
+      },
+      {
+        "examQuestionId": "LIB-F04-Q26",
+        "origin": "imported",
+        "sourceId": "LIB-F04",
+        "sourceQuestionId": "q26",
+        "section": "BASIC",
+        "topic": "OTHER_NETWORKING",
+        "secondaryTopics": [],
+        "difficulty": 2,
+        "difficultyLabel": "",
+        "familyKey": "LIB-F04-Q26",
+        "hasCLI": false,
+        "requiresCalculation": false,
+        "presentationType": "matching",
+        "marks": 3,
+        "locked": false,
+        "text": "أي من عناوين الـ IP التالية هي عناوين صالحة للحواسيب وأيها غير صالحة ؟\n\n| البند | الإجابة |\n| --- | --- |\n| 192.168.10.1 | |\n| 192.255.10.10 | |\n| 127.11.10.1 | |\n| 169.169.10.10 | |\n| 169.254.10.234 | |",
+        "textHtml": "",
+        "options": [],
+        "fields": [
+          {
+            "id": "q26a",
+            "label": "192.168.10.1",
+            "order": 0,
+            "kind": "select",
+            "options": [
+              {
+                "value": "صالح"
+              },
+              {
+                "value": "غير صالح"
+              }
+            ]
+          },
+          {
+            "id": "q26b",
+            "label": "192.255.10.10",
+            "order": 1,
+            "kind": "select",
+            "options": [
+              {
+                "value": "صالح"
+              },
+              {
+                "value": "غير صالح"
+              }
+            ]
+          },
+          {
+            "id": "q26c",
+            "label": "127.11.10.1",
+            "order": 2,
+            "kind": "select",
+            "options": [
+              {
+                "value": "صالح"
+              },
+              {
+                "value": "غير صالح"
+              }
+            ]
+          },
+          {
+            "id": "q26d",
+            "label": "169.169.10.10",
+            "order": 3,
+            "kind": "select",
+            "options": [
+              {
+                "value": "صالح"
+              },
+              {
+                "value": "غير صالح"
+              }
+            ]
+          },
+          {
+            "id": "q26e",
+            "label": "169.254.10.234",
+            "order": 4,
+            "kind": "select",
+            "options": [
+              {
+                "value": "صالح"
+              },
+              {
+                "value": "غير صالح"
+              }
+            ]
+          }
+        ],
+        "parts": [],
+        "answer": {
+          "text": "192.168.10.1=صالح؛ 192.255.10.10=صالح؛ 127.11.10.1=غير صالح؛ 169.169.10.10=صالح؛ 169.254.10.234=غير صالح"
+        },
+        "hint": "",
+        "teacherNote": "",
+        "aiInstruction": "",
+        "wasModified": false,
+        "image": {
+          "exists": false,
+          "visible": false,
+          "origin": null,
+          "assets": [],
+          "prompt": null
+        },
+        "history": [],
+        "redoStack": []
+      },
+      {
+        "examQuestionId": "LIB-F04-Q27",
+        "origin": "imported",
+        "sourceId": "LIB-F04",
+        "sourceQuestionId": "q27",
+        "section": "BASIC",
+        "topic": "OTHER_NETWORKING",
+        "secondaryTopics": [],
+        "difficulty": 2,
+        "difficultyLabel": "",
+        "familyKey": "LIB-F04-Q27",
+        "hasCLI": false,
+        "requiresCalculation": false,
+        "presentationType": "open",
+        "marks": 3,
+        "locked": false,
+        "text": "ترجم الرقم 101001111011 من الميزان الثنائي إلى الميزان السادس عشر (Hex)",
+        "textHtml": "",
+        "options": [],
+        "fields": [],
+        "parts": [],
+        "answer": {
+          "text": "a7b"
+        },
+        "hint": "",
+        "teacherNote": "",
+        "aiInstruction": "",
+        "wasModified": false,
+        "image": {
+          "exists": false,
+          "visible": false,
+          "origin": null,
+          "assets": [],
+          "prompt": null
+        },
+        "history": [],
+        "redoStack": []
+      },
+      {
+        "examQuestionId": "LIB-F04-Q28",
+        "origin": "imported",
+        "sourceId": "LIB-F04",
+        "sourceQuestionId": "q28",
+        "section": "BASIC",
+        "topic": "OTHER_NETWORKING",
+        "secondaryTopics": [],
+        "difficulty": 2,
+        "difficultyLabel": "",
+        "familyKey": "LIB-F04-Q28",
+        "hasCLI": false,
+        "requiresCalculation": false,
+        "presentationType": "open",
+        "marks": 3,
+        "locked": false,
+        "text": "ما هو قناع الشبكة (Subnet Mask) للعنوان التالي: 172.16.10.100 ؟",
+        "textHtml": "",
+        "options": [],
+        "fields": [],
+        "parts": [],
+        "answer": {
+          "text": "255.255.0.0"
+        },
+        "hint": "",
+        "teacherNote": "",
+        "aiInstruction": "",
+        "wasModified": false,
+        "image": {
+          "exists": false,
+          "visible": false,
+          "origin": null,
+          "assets": [],
+          "prompt": null
+        },
+        "history": [],
+        "redoStack": []
+      },
+      {
+        "examQuestionId": "LIB-F04-Q29",
+        "origin": "imported",
+        "sourceId": "LIB-F04",
+        "sourceQuestionId": "q29",
+        "section": "BASIC",
+        "topic": "OTHER_NETWORKING",
+        "secondaryTopics": [],
+        "difficulty": 2,
+        "difficultyLabel": "",
+        "familyKey": "LIB-F04-Q29",
+        "hasCLI": false,
+        "requiresCalculation": false,
+        "presentationType": "multipleChoice",
+        "marks": 3,
+        "locked": false,
+        "text": "ما هي الترجمة الصحيحة لعنوان الـ IP التالي المعطى في الميزان الثنائي إلى الميزان العشري ؟",
+        "textHtml": "",
+        "options": [
+          {
+            "value": "0",
+            "text": "192.168.10.100"
+          },
+          {
+            "value": "1",
+            "text": "192.168.10.110"
+          },
+          {
+            "value": "2",
+            "text": "194.168.10.100"
+          },
+          {
+            "value": "3",
+            "text": "192.170.10.100"
+          }
+        ],
+        "fields": [],
+        "parts": [],
+        "answer": {},
+        "hint": "",
+        "teacherNote": "لا يوجد مفتاح إجابة لهذا السؤال في المصدر.",
+        "aiInstruction": "",
+        "wasModified": false,
+        "image": {
+          "exists": false,
+          "visible": false,
+          "origin": null,
+          "assets": [],
+          "prompt": null
+        },
+        "history": [],
+        "redoStack": []
+      },
+      {
+        "examQuestionId": "LIB-F04-Q30",
+        "origin": "imported",
+        "sourceId": "LIB-F04",
+        "sourceQuestionId": "q30",
+        "section": "BASIC",
+        "topic": "OTHER_NETWORKING",
+        "secondaryTopics": [],
+        "difficulty": 2,
+        "difficultyLabel": "",
+        "familyKey": "LIB-F04-Q30",
+        "hasCLI": false,
+        "requiresCalculation": false,
+        "presentationType": "multipleChoice",
+        "marks": 3,
+        "locked": false,
+        "text": "ماذا يعني العنوان الذي تم الحصول عليه عند تشغيل الأمر ipconfig ؟",
+        "textHtml": "",
+        "options": [
+          {
+            "value": "0",
+            "text": "لم يتمكن الحاسوب من تحديد خادم HTTP ولهذا تم إعطاء الحاسوب عنوان من نوع APIPA"
+          },
+          {
+            "value": "1",
+            "text": "لم يتمكن الحاسوب من تحديد خادم DHCP ولهذا تم إعطاء الحاسوب عنوان من نوع APIPA"
+          },
+          {
+            "value": "2",
+            "text": "لم يتمكن الحاسوب من تحديد خادم DHCP ولهذا تم إعطاء الحاسوب عنوان من نوع Localhost"
+          },
+          {
+            "value": "3",
+            "text": "لم يتمكن الحاسوب من تحديد خادم DNS ولهذا تم إعطاء الحاسوب عنوان من نوع APIPA"
+          }
+        ],
+        "fields": [],
+        "parts": [],
+        "answer": {
+          "correctOptionIndex": 1
+        },
+        "hint": "",
+        "teacherNote": "",
+        "aiInstruction": "",
+        "wasModified": false,
+        "image": {
+          "exists": true,
+          "visible": true,
+          "origin": "uploaded",
+          "assets": [
+            {
+              "id": "img-0",
+              "origin": "uploaded",
+              "contentType": "image/png",
+              "dataUrl": "/exam-library/assets/F04/dac44f2c58b105b9.png"
+            }
+          ],
+          "prompt": null
+        },
+        "history": [],
+        "redoStack": []
+      },
+      {
+        "examQuestionId": "LIB-F04-Q31",
+        "origin": "imported",
+        "sourceId": "LIB-F04",
+        "sourceQuestionId": "q31",
+        "section": "BASIC",
+        "topic": "OTHER_NETWORKING",
+        "secondaryTopics": [],
+        "difficulty": 2,
+        "difficultyLabel": "",
+        "familyKey": "LIB-F04-Q31",
+        "hasCLI": false,
+        "requiresCalculation": false,
+        "presentationType": "open",
+        "marks": 3,
+        "locked": false,
+        "text": "ترجم عنوان الـ IP التالي 170.0.1.101 إلى الميزان الثنائي",
+        "textHtml": "",
+        "options": [],
+        "fields": [],
+        "parts": [],
+        "answer": {
+          "text": "10101010.00000000.00000001.01100101"
+        },
+        "hint": "",
+        "teacherNote": "",
+        "aiInstruction": "",
+        "wasModified": false,
+        "image": {
+          "exists": false,
+          "visible": false,
+          "origin": null,
+          "assets": [],
+          "prompt": null
+        },
+        "history": [],
+        "redoStack": []
+      },
+      {
+        "examQuestionId": "LIB-F04-Q32",
+        "origin": "imported",
+        "sourceId": "LIB-F04",
+        "sourceQuestionId": "q32",
+        "section": "BASIC",
+        "topic": "OTHER_NETWORKING",
+        "secondaryTopics": [],
+        "difficulty": 2,
+        "difficultyLabel": "",
+        "familyKey": "LIB-F04-Q32",
+        "hasCLI": false,
+        "requiresCalculation": false,
+        "presentationType": "open",
+        "marks": 4,
+        "locked": false,
+        "text": "عنوان الـ MAC-Address لجهاز الهدف عند بعث رسالة للجميع (Broadcast) سيكون:",
+        "textHtml": "",
+        "options": [],
+        "fields": [],
+        "parts": [],
+        "answer": {
+          "text": "ff:ff:ff:ff:ff:ff"
+        },
+        "hint": "",
+        "teacherNote": "",
+        "aiInstruction": "",
+        "wasModified": false,
+        "image": {
+          "exists": false,
+          "visible": false,
+          "origin": null,
+          "assets": [],
+          "prompt": null
+        },
+        "history": [],
+        "redoStack": []
+      },
+      {
+        "examQuestionId": "LIB-F04-Q33",
+        "origin": "imported",
+        "sourceId": "LIB-F04",
+        "sourceQuestionId": "q33",
+        "section": "BASIC",
+        "topic": "OTHER_NETWORKING",
+        "secondaryTopics": [],
+        "difficulty": 2,
+        "difficultyLabel": "",
+        "familyKey": "LIB-F04-Q33",
+        "hasCLI": false,
+        "requiresCalculation": false,
+        "presentationType": "multipleChoice",
+        "marks": 2,
+        "locked": false,
+        "text": "ما هي قيمة العدد 7F في النظام العشري؟",
+        "textHtml": "",
+        "options": [
+          {
+            "value": "0",
+            "text": "127"
+          },
+          {
+            "value": "1",
+            "text": "128"
+          },
+          {
+            "value": "2",
+            "text": "130"
+          },
+          {
+            "value": "3",
+            "text": "255"
+          }
+        ],
+        "fields": [],
+        "parts": [],
+        "answer": {
+          "correctOptionIndex": 0
+        },
+        "hint": "",
+        "teacherNote": "",
+        "aiInstruction": "",
+        "wasModified": false,
+        "image": {
+          "exists": false,
+          "visible": false,
+          "origin": null,
+          "assets": [],
+          "prompt": null
+        },
+        "history": [],
+        "redoStack": []
+      },
+      {
+        "examQuestionId": "LIB-F04-Q34",
+        "origin": "imported",
+        "sourceId": "LIB-F04",
+        "sourceQuestionId": "q34",
+        "section": "BASIC",
+        "topic": "OTHER_NETWORKING",
+        "secondaryTopics": [],
+        "difficulty": 2,
+        "difficultyLabel": "",
+        "familyKey": "LIB-F04-Q34",
+        "hasCLI": false,
+        "requiresCalculation": false,
+        "presentationType": "multipleChoice",
+        "marks": 2,
+        "locked": false,
+        "text": "أي نوع من الكابلات يُستخدم بشكل شائع لربط الأجهزة في الشبكة المحلية ؟",
+        "textHtml": "",
+        "options": [
+          {
+            "value": "0",
+            "text": "كابل محوري"
+          },
+          {
+            "value": "1",
+            "text": "كابل الألياف البصرية"
+          },
+          {
+            "value": "2",
+            "text": "كابل HDMI"
+          },
+          {
+            "value": "3",
+            "text": "كابل زوج ملتوي (مثل Cat5e، Cat6)"
+          }
+        ],
+        "fields": [],
+        "parts": [],
+        "answer": {
+          "correctOptionIndex": 3
+        },
+        "hint": "",
+        "teacherNote": "",
+        "aiInstruction": "",
+        "wasModified": false,
+        "image": {
+          "exists": false,
+          "visible": false,
+          "origin": null,
+          "assets": [],
+          "prompt": null
+        },
+        "history": [],
+        "redoStack": []
+      },
+      {
+        "examQuestionId": "LIB-F04-Q35",
+        "origin": "imported",
+        "sourceId": "LIB-F04",
+        "sourceQuestionId": "q35",
+        "section": "BASIC",
+        "topic": "OTHER_NETWORKING",
+        "secondaryTopics": [],
+        "difficulty": 2,
+        "difficultyLabel": "",
+        "familyKey": "LIB-F04-Q35",
+        "hasCLI": false,
+        "requiresCalculation": false,
+        "presentationType": "multipleChoice",
+        "marks": 2,
+        "locked": false,
+        "text": "ما هي الأجزاء التي يتركب منها عنوان الـ IP ؟",
+        "textHtml": "",
+        "options": [
+          {
+            "value": "0",
+            "text": "عنوان كرت الشبكة"
+          },
+          {
+            "value": "1",
+            "text": "عنوان كرت الشبكة والـ IP للحاسوب"
+          },
+          {
+            "value": "2",
+            "text": "جزء الشبكة وجزء الجهاز"
+          },
+          {
+            "value": "3",
+            "text": "جزء الشبكة ورقم البوابة الافتراضية"
+          }
+        ],
+        "fields": [],
+        "parts": [],
+        "answer": {
+          "correctOptionIndex": 2
+        },
+        "hint": "",
+        "teacherNote": "",
+        "aiInstruction": "",
+        "wasModified": false,
+        "image": {
+          "exists": false,
+          "visible": false,
+          "origin": null,
+          "assets": [],
+          "prompt": null
+        },
+        "history": [],
+        "redoStack": []
+      },
+      {
+        "examQuestionId": "LIB-F04-Q36",
+        "origin": "imported",
+        "sourceId": "LIB-F04",
+        "sourceQuestionId": "q36",
+        "section": "BASIC",
+        "topic": "OTHER_NETWORKING",
+        "secondaryTopics": [],
+        "difficulty": 2,
+        "difficultyLabel": "",
+        "familyKey": "LIB-F04-Q36",
+        "hasCLI": false,
+        "requiresCalculation": false,
+        "presentationType": "multipleChoice",
+        "marks": 2,
+        "locked": false,
+        "text": "كم منزلة تتبع لجزء الشبكة في عنوان الـ IP التالي: 192.168.10.55 ؟",
+        "textHtml": "",
+        "options": [
+          {
+            "value": "0",
+            "text": "27"
+          },
+          {
+            "value": "1",
+            "text": "28"
+          },
+          {
+            "value": "2",
+            "text": "30"
+          },
+          {
+            "value": "3",
+            "text": "24"
+          }
+        ],
+        "fields": [],
+        "parts": [],
+        "answer": {
+          "correctOptionIndex": 3
+        },
+        "hint": "",
+        "teacherNote": "",
+        "aiInstruction": "",
+        "wasModified": false,
+        "image": {
+          "exists": false,
+          "visible": false,
+          "origin": null,
+          "assets": [],
+          "prompt": null
+        },
+        "history": [],
+        "redoStack": []
+      },
+      {
+        "examQuestionId": "LIB-F04-Q37",
+        "origin": "imported",
+        "sourceId": "LIB-F04",
+        "sourceQuestionId": "q37",
+        "section": "BASIC",
+        "topic": "OTHER_NETWORKING",
+        "secondaryTopics": [],
+        "difficulty": 2,
+        "difficultyLabel": "",
+        "familyKey": "LIB-F04-Q37",
+        "hasCLI": false,
+        "requiresCalculation": false,
+        "presentationType": "multipleChoice",
+        "marks": 2,
+        "locked": false,
+        "text": "ما وظيفة جهاز الموجّه (Router) في الشبكة ؟",
+        "textHtml": "",
+        "options": [
+          {
+            "value": "0",
+            "text": "لتوزيع عناوين IP على الأجهزة في الشبكة"
+          },
+          {
+            "value": "1",
+            "text": "للربط بين عدة شبكات محلية"
+          },
+          {
+            "value": "2",
+            "text": "لفحص شاشات الحاسوب"
+          },
+          {
+            "value": "3",
+            "text": "لفصل الحاسوب عن الكهرباء"
+          }
+        ],
+        "fields": [],
+        "parts": [],
+        "answer": {
+          "correctOptionIndex": 1
+        },
+        "hint": "",
+        "teacherNote": "",
+        "aiInstruction": "",
+        "wasModified": false,
+        "image": {
+          "exists": false,
+          "visible": false,
+          "origin": null,
+          "assets": [],
+          "prompt": null
+        },
+        "history": [],
+        "redoStack": []
+      },
+      {
+        "examQuestionId": "LIB-F04-Q38",
+        "origin": "imported",
+        "sourceId": "LIB-F04",
+        "sourceQuestionId": "q38",
+        "section": "BASIC",
+        "topic": "OTHER_NETWORKING",
+        "secondaryTopics": [],
+        "difficulty": 2,
+        "difficultyLabel": "",
+        "familyKey": "LIB-F04-Q38",
+        "hasCLI": false,
+        "requiresCalculation": false,
+        "presentationType": "multipleChoice",
+        "marks": 2,
+        "locked": false,
+        "text": "أي من الأجهزة التالية يُستخدم لربط شبكات مختلفة ؟",
+        "textHtml": "",
+        "options": [
+          {
+            "value": "0",
+            "text": "Switch"
+          },
+          {
+            "value": "1",
+            "text": "Router"
+          },
+          {
+            "value": "2",
+            "text": "Hub"
+          },
+          {
+            "value": "3",
+            "text": "NIC"
+          }
+        ],
+        "fields": [],
+        "parts": [],
+        "answer": {
+          "correctOptionIndex": 1
+        },
+        "hint": "",
+        "teacherNote": "",
+        "aiInstruction": "",
+        "wasModified": false,
+        "image": {
+          "exists": false,
+          "visible": false,
+          "origin": null,
+          "assets": [],
+          "prompt": null
+        },
+        "history": [],
+        "redoStack": []
+      },
+      {
+        "examQuestionId": "LIB-F04-Q39",
+        "origin": "imported",
+        "sourceId": "LIB-F04",
+        "sourceQuestionId": "q39",
+        "section": "BASIC",
+        "topic": "OTHER_NETWORKING",
+        "secondaryTopics": [],
+        "difficulty": 2,
+        "difficultyLabel": "",
+        "familyKey": "LIB-F04-Q39",
+        "hasCLI": false,
+        "requiresCalculation": false,
+        "presentationType": "multipleChoice",
+        "marks": 2,
+        "locked": false,
+        "text": "أي من الخيارات التالية يمثل عنواناً مناسباً للبوابة الافتراضية (Default Gateway) ؟",
+        "textHtml": "",
+        "options": [
+          {
+            "value": "0",
+            "text": "192.168.1.254"
+          },
+          {
+            "value": "1",
+            "text": "255.255.255.255"
+          },
+          {
+            "value": "2",
+            "text": "192.168.1.256"
+          },
+          {
+            "value": "3",
+            "text": "0.0.0.0"
+          }
+        ],
+        "fields": [],
+        "parts": [],
+        "answer": {
+          "correctOptionIndex": 0
+        },
+        "hint": "",
+        "teacherNote": "",
+        "aiInstruction": "",
+        "wasModified": false,
+        "image": {
+          "exists": false,
+          "visible": false,
+          "origin": null,
+          "assets": [],
+          "prompt": null
+        },
+        "history": [],
+        "redoStack": []
+      },
+      {
+        "examQuestionId": "LIB-F04-Q40",
+        "origin": "imported",
+        "sourceId": "LIB-F04",
+        "sourceQuestionId": "q40",
+        "section": "BASIC",
+        "topic": "OTHER_NETWORKING",
+        "secondaryTopics": [],
+        "difficulty": 2,
+        "difficultyLabel": "",
+        "familyKey": "LIB-F04-Q40",
+        "hasCLI": false,
+        "requiresCalculation": false,
+        "presentationType": "multipleChoice",
+        "marks": 2,
+        "locked": false,
+        "text": "ما هي الترجمة الصحيحة للعدد A7 المعطى في الميزان السادس عشر إلى الميزان الثنائي ؟",
+        "textHtml": "",
+        "options": [
+          {
+            "value": "0",
+            "text": "10100111"
+          },
+          {
+            "value": "1",
+            "text": "10100110"
+          },
+          {
+            "value": "2",
+            "text": "10101100"
+          },
+          {
+            "value": "3",
+            "text": "01111010"
+          }
+        ],
+        "fields": [],
+        "parts": [],
+        "answer": {
+          "correctOptionIndex": 0
+        },
+        "hint": "",
+        "teacherNote": "",
+        "aiInstruction": "",
+        "wasModified": false,
+        "image": {
+          "exists": false,
+          "visible": false,
+          "origin": null,
+          "assets": [],
+          "prompt": null
+        },
+        "history": [],
+        "redoStack": []
+      },
+      {
+        "examQuestionId": "LIB-F04-Q41",
+        "origin": "imported",
+        "sourceId": "LIB-F04",
+        "sourceQuestionId": "q41",
+        "section": "BASIC",
+        "topic": "OTHER_NETWORKING",
+        "secondaryTopics": [],
+        "difficulty": 2,
+        "difficultyLabel": "",
+        "familyKey": "LIB-F04-Q41",
+        "hasCLI": false,
+        "requiresCalculation": false,
+        "presentationType": "multipleChoice",
+        "marks": 2,
+        "locked": false,
+        "text": "ما هو العنوان الذي نعتمد عليه لكي نعرف جزء الشبكة وجزء الحاسوب في عنوان IP معطى ؟",
+        "textHtml": "",
+        "options": [
+          {
+            "value": "0",
+            "text": "عنوان البوابة الافتراضية (Default Gateway)"
+          },
+          {
+            "value": "1",
+            "text": "عنوان كرت الشبكة (MAC Address)"
+          },
+          {
+            "value": "2",
+            "text": "عنوان تلقائي باستعمال DHCP"
+          },
+          {
+            "value": "3",
+            "text": "عنوان قناع الشبكة (Subnet Mask)"
+          }
+        ],
+        "fields": [],
+        "parts": [],
+        "answer": {
+          "correctOptionIndex": 3
+        },
+        "hint": "",
+        "teacherNote": "",
+        "aiInstruction": "",
+        "wasModified": false,
+        "image": {
+          "exists": false,
+          "visible": false,
+          "origin": null,
+          "assets": [],
+          "prompt": null
+        },
+        "history": [],
+        "redoStack": []
+      },
+      {
+        "examQuestionId": "LIB-F04-Q42",
+        "origin": "imported",
+        "sourceId": "LIB-F04",
+        "sourceQuestionId": "q42",
+        "section": "BASIC",
+        "topic": "OTHER_NETWORKING",
+        "secondaryTopics": [],
+        "difficulty": 2,
+        "difficultyLabel": "",
+        "familyKey": "LIB-F04-Q42",
+        "hasCLI": false,
+        "requiresCalculation": false,
+        "presentationType": "multipleChoice",
+        "marks": 2,
+        "locked": false,
+        "text": "أي من بين العناوين التالية يتبع لـ Class C ؟",
+        "textHtml": "",
+        "options": [
+          {
+            "value": "0",
+            "text": "122.12.2.1"
+          },
+          {
+            "value": "1",
+            "text": "22.2.0.22"
+          },
+          {
+            "value": "2",
+            "text": "135.35.5.53"
+          },
+          {
+            "value": "3",
+            "text": "197.0.0.1"
+          }
+        ],
+        "fields": [],
+        "parts": [],
+        "answer": {
+          "correctOptionIndex": 3
+        },
+        "hint": "",
+        "teacherNote": "",
+        "aiInstruction": "",
+        "wasModified": false,
+        "image": {
+          "exists": false,
+          "visible": false,
+          "origin": null,
+          "assets": [],
+          "prompt": null
+        },
+        "history": [],
+        "redoStack": []
+      }
+    ],
+    "totalMarks": 121,
+    "status": "final",
+    "createdAt": "2026-09-05T18:57:19.107Z",
+    "updatedAt": "2026-09-05T18:57:19.107Z"
+  }
+}

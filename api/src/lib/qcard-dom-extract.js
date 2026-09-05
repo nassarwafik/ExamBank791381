@@ -138,6 +138,13 @@ function extractControlTable(inner) {
   return rows.length ? { rows } : null;
 }
 
+// Pulls every inline data:-URI <img> that lives inside this card, so a question's own diagram
+// travels with it (linked by containment - no positional guessing across cards).
+function extractCardImages(inner) {
+  return Array.from(inner.matchAll(/<img[^>]*src=['"]data:([\w/+.-]+);base64,([A-Za-z0-9+/=]+)['"]/g))
+    .map((match, index) => ({ id: "img-" + index, contentType: match[1], base64: match[2] }));
+}
+
 // Parses one q-card into a structured, source-shape-agnostic descriptor. `field` is exactly one of
 // radioGroup | singleText | controlTable | null (unrecognized).
 function parseQCard(card) {
@@ -156,7 +163,7 @@ function parseQCard(card) {
   else if (singleText) field = { kind: "singleText", ...singleText };
   else if (hasTextarea) field = { kind: "openText" };
 
-  return { id: card.id, ...header, field };
+  return { id: card.id, ...header, field, images: extractCardImages(card.inner) };
 }
 
 function extractQCards(html) {

@@ -1,0 +1,589 @@
+{
+  "libraryItemId": "T22",
+  "title": "الشبكات الواسعة WAN",
+  "category": "infra",
+  "description": "WAN وFrame Relay وATM وHDLC وMetro Ethernet.",
+  "tags": [
+    "WAN",
+    "Metro Ethernet",
+    "HDLC / ATM"
+  ],
+  "questionCount": 10,
+  "totalMarks": 100,
+  "pageRange": "205–211",
+  "parserFamily": "t-series-v1",
+  "conversionStatus": "ready",
+  "publishable": true,
+  "autoGradableCount": 10,
+  "manualReviewCount": 0,
+  "libraryVersion": 1,
+  "sourceSha": "0d3303877f1fbccb6012276e3726c184166852577e819ba210d747c8f0661c94",
+  "contentHash": "97e73d1efe93d26d595db390f73307d517a381b26aa6d245eec63ebf191cfca1",
+  "convertedAt": "2026-09-05T18:57:19.063Z",
+  "source": {
+    "repository": "Book791381",
+    "sourceFile": "T22.html"
+  },
+  "schemaVersion": 1,
+  "examSnapshot": {
+    "schemaVersion": 1,
+    "examId": "LIB-T22",
+    "title": "الشبكات الواسعة WAN",
+    "questions": [
+      {
+        "examQuestionId": "LIB-T22-Q01",
+        "origin": "imported",
+        "sourceId": "LIB-T22",
+        "sourceQuestionId": "1",
+        "section": "BASIC",
+        "topic": "OTHER_NETWORKING",
+        "secondaryTopics": [],
+        "difficulty": 2,
+        "difficultyLabel": "",
+        "familyKey": "LIB-T22-Q01",
+        "hasCLI": false,
+        "requiresCalculation": false,
+        "presentationType": "multipleChoice",
+        "marks": 10,
+        "locked": false,
+        "text": "ما هي WAN؟",
+        "textHtml": "",
+        "options": [
+          {
+            "value": "0",
+            "text": "شبكة تربط مواقع بعيدة مثل مدن أو دول"
+          },
+          {
+            "value": "1",
+            "text": "شبكة شخصية بين هاتف وسماعة"
+          },
+          {
+            "value": "2",
+            "text": "شبكة داخل غرفة واحدة فقط"
+          },
+          {
+            "value": "3",
+            "text": "عنوان خاص داخل LAN"
+          }
+        ],
+        "fields": [],
+        "parts": [],
+        "answer": {
+          "correctOptionIndex": 0
+        },
+        "hint": "WAN شبكة واسعة تربط شبكات ومواقع بعيدة.",
+        "teacherNote": "",
+        "aiInstruction": "",
+        "wasModified": false,
+        "image": {
+          "exists": false,
+          "visible": false,
+          "origin": null,
+          "assets": [],
+          "prompt": null
+        },
+        "history": [],
+        "redoStack": []
+      },
+      {
+        "examQuestionId": "LIB-T22-Q02",
+        "origin": "imported",
+        "sourceId": "LIB-T22",
+        "sourceQuestionId": "2",
+        "section": "BASIC",
+        "topic": "OTHER_NETWORKING",
+        "secondaryTopics": [],
+        "difficulty": 2,
+        "difficultyLabel": "",
+        "familyKey": "LIB-T22-Q02",
+        "hasCLI": false,
+        "requiresCalculation": false,
+        "presentationType": "multipleChoice",
+        "marks": 10,
+        "locked": false,
+        "text": "أي مثال يمثل استعمال WAN؟",
+        "textHtml": "",
+        "options": [
+          {
+            "value": "0",
+            "text": "ربط هاتف بسماعة Bluetooth"
+          },
+          {
+            "value": "1",
+            "text": "ربط فرع شركة بالمقر الرئيسي في مدينة أخرى"
+          },
+          {
+            "value": "2",
+            "text": "ربط حاسوب بطابعة على المكتب"
+          },
+          {
+            "value": "3",
+            "text": "توصيل جهازين بكابل قصير فقط"
+          }
+        ],
+        "fields": [],
+        "parts": [],
+        "answer": {
+          "correctOptionIndex": 1
+        },
+        "hint": "ربط الفروع البعيدة مثال واضح على WAN.",
+        "teacherNote": "",
+        "aiInstruction": "",
+        "wasModified": false,
+        "image": {
+          "exists": false,
+          "visible": false,
+          "origin": null,
+          "assets": [],
+          "prompt": null
+        },
+        "history": [],
+        "redoStack": []
+      },
+      {
+        "examQuestionId": "LIB-T22-Q03",
+        "origin": "imported",
+        "sourceId": "LIB-T22",
+        "sourceQuestionId": "3",
+        "section": "BASIC",
+        "topic": "OTHER_NETWORKING",
+        "secondaryTopics": [],
+        "difficulty": 2,
+        "difficultyLabel": "",
+        "familyKey": "LIB-T22-Q03",
+        "hasCLI": false,
+        "requiresCalculation": false,
+        "presentationType": "multipleChoice",
+        "marks": 10,
+        "locked": false,
+        "text": "أي وسيلة قد تُستخدم في WAN؟",
+        "textHtml": "",
+        "options": [
+          {
+            "value": "0",
+            "text": "كابل لوحة المفاتيح"
+          },
+          {
+            "value": "1",
+            "text": "ذاكرة USB فقط"
+          },
+          {
+            "value": "2",
+            "text": "الألياف الضوئية والإنترنت والاتصالات السلكية أو اللاسلكية"
+          },
+          {
+            "value": "3",
+            "text": "منفذ Console فقط"
+          }
+        ],
+        "fields": [],
+        "parts": [],
+        "answer": {
+          "correctOptionIndex": 2
+        },
+        "hint": "WAN قد تعتمد على الألياف والإنترنت ووسائل اتصال متنوعة.",
+        "teacherNote": "",
+        "aiInstruction": "",
+        "wasModified": false,
+        "image": {
+          "exists": false,
+          "visible": false,
+          "origin": null,
+          "assets": [],
+          "prompt": null
+        },
+        "history": [],
+        "redoStack": []
+      },
+      {
+        "examQuestionId": "LIB-T22-Q04",
+        "origin": "imported",
+        "sourceId": "LIB-T22",
+        "sourceQuestionId": "4",
+        "section": "BASIC",
+        "topic": "OTHER_NETWORKING",
+        "secondaryTopics": [],
+        "difficulty": 2,
+        "difficultyLabel": "",
+        "familyKey": "LIB-T22-Q04",
+        "hasCLI": false,
+        "requiresCalculation": false,
+        "presentationType": "multipleChoice",
+        "marks": 10,
+        "locked": false,
+        "text": "كيف تنقل Frame Relay البيانات؟",
+        "textHtml": "",
+        "options": [
+          {
+            "value": "0",
+            "text": "كإشارات صوتية فقط"
+          },
+          {
+            "value": "1",
+            "text": "كعناوين MAC فقط"
+          },
+          {
+            "value": "2",
+            "text": "بلا حزم"
+          },
+          {
+            "value": "3",
+            "text": "على شكل Frames وتعتمد على Packet Switching"
+          }
+        ],
+        "fields": [],
+        "parts": [],
+        "answer": {
+          "correctOptionIndex": 3
+        },
+        "hint": "Frame Relay تنقل البيانات على شكل Frames وتعتمد على Packet Switching.",
+        "teacherNote": "",
+        "aiInstruction": "",
+        "wasModified": false,
+        "image": {
+          "exists": false,
+          "visible": false,
+          "origin": null,
+          "assets": [],
+          "prompt": null
+        },
+        "history": [],
+        "redoStack": []
+      },
+      {
+        "examQuestionId": "LIB-T22-Q05",
+        "origin": "imported",
+        "sourceId": "LIB-T22",
+        "sourceQuestionId": "5",
+        "section": "BASIC",
+        "topic": "OTHER_NETWORKING",
+        "secondaryTopics": [],
+        "difficulty": 2,
+        "difficultyLabel": "",
+        "familyKey": "LIB-T22-Q05",
+        "hasCLI": false,
+        "requiresCalculation": false,
+        "presentationType": "multipleChoice",
+        "marks": 10,
+        "locked": false,
+        "text": "أي نوع بيانات يمكن أن تنقله ATM؟",
+        "textHtml": "",
+        "options": [
+          {
+            "value": "0",
+            "text": "الصوت والفيديو والبيانات"
+          },
+          {
+            "value": "1",
+            "text": "النصوص فقط"
+          },
+          {
+            "value": "2",
+            "text": "عناوين IP فقط"
+          },
+          {
+            "value": "3",
+            "text": "أوامر Cisco فقط"
+          }
+        ],
+        "fields": [],
+        "parts": [],
+        "answer": {
+          "correctOptionIndex": 0
+        },
+        "hint": "ATM صُممت لنقل الصوت والفيديو والبيانات.",
+        "teacherNote": "",
+        "aiInstruction": "",
+        "wasModified": false,
+        "image": {
+          "exists": false,
+          "visible": false,
+          "origin": null,
+          "assets": [],
+          "prompt": null
+        },
+        "history": [],
+        "redoStack": []
+      },
+      {
+        "examQuestionId": "LIB-T22-Q06",
+        "origin": "imported",
+        "sourceId": "LIB-T22",
+        "sourceQuestionId": "6",
+        "section": "BASIC",
+        "topic": "OTHER_NETWORKING",
+        "secondaryTopics": [],
+        "difficulty": 2,
+        "difficultyLabel": "",
+        "familyKey": "LIB-T22-Q06",
+        "hasCLI": false,
+        "requiresCalculation": false,
+        "presentationType": "multipleChoice",
+        "marks": 10,
+        "locked": false,
+        "text": "ما وظيفة HDLC؟",
+        "textHtml": "",
+        "options": [
+          {
+            "value": "0",
+            "text": "توزيع DHCP"
+          },
+          {
+            "value": "1",
+            "text": "ربط الأجهزة عبر خطوط WAN"
+          },
+          {
+            "value": "2",
+            "text": "إدارة VLAN"
+          },
+          {
+            "value": "3",
+            "text": "تحويل DNS"
+          }
+        ],
+        "fields": [],
+        "parts": [],
+        "answer": {
+          "correctOptionIndex": 1
+        },
+        "hint": "HDLC بروتوكول موثوق لربط الأجهزة عبر خطوط WAN.",
+        "teacherNote": "",
+        "aiInstruction": "",
+        "wasModified": false,
+        "image": {
+          "exists": false,
+          "visible": false,
+          "origin": null,
+          "assets": [],
+          "prompt": null
+        },
+        "history": [],
+        "redoStack": []
+      },
+      {
+        "examQuestionId": "LIB-T22-Q07",
+        "origin": "imported",
+        "sourceId": "LIB-T22",
+        "sourceQuestionId": "7",
+        "section": "BASIC",
+        "topic": "OTHER_NETWORKING",
+        "secondaryTopics": [],
+        "difficulty": 2,
+        "difficultyLabel": "",
+        "familyKey": "LIB-T22-Q07",
+        "hasCLI": false,
+        "requiresCalculation": false,
+        "presentationType": "multipleChoice",
+        "marks": 10,
+        "locked": false,
+        "text": "أين يناسب Metro Ethernet غالبًا؟",
+        "textHtml": "",
+        "options": [
+          {
+            "value": "0",
+            "text": "بين جهازين داخل PAN"
+          },
+          {
+            "value": "1",
+            "text": "داخل حاسوب واحد"
+          },
+          {
+            "value": "2",
+            "text": "لربط مواقع متعددة داخل مدينة أو منطقة حضرية"
+          },
+          {
+            "value": "3",
+            "text": "لإدارة البريد فقط"
+          }
+        ],
+        "fields": [],
+        "parts": [],
+        "answer": {
+          "correctOptionIndex": 2
+        },
+        "hint": "Metro Ethernet شائع لربط الفروع داخل المدن.",
+        "teacherNote": "",
+        "aiInstruction": "",
+        "wasModified": false,
+        "image": {
+          "exists": false,
+          "visible": false,
+          "origin": null,
+          "assets": [],
+          "prompt": null
+        },
+        "history": [],
+        "redoStack": []
+      },
+      {
+        "examQuestionId": "LIB-T22-Q08",
+        "origin": "imported",
+        "sourceId": "LIB-T22",
+        "sourceQuestionId": "8",
+        "section": "BASIC",
+        "topic": "OTHER_NETWORKING",
+        "secondaryTopics": [],
+        "difficulty": 2,
+        "difficultyLabel": "",
+        "familyKey": "LIB-T22-Q08",
+        "hasCLI": false,
+        "requiresCalculation": false,
+        "presentationType": "multipleChoice",
+        "marks": 10,
+        "locked": false,
+        "text": "أي صفة ليست من الصفات المذكورة لـMetro Ethernet؟",
+        "textHtml": "",
+        "options": [
+          {
+            "value": "0",
+            "text": "سرعة عالية"
+          },
+          {
+            "value": "1",
+            "text": "سهولة التوسعة"
+          },
+          {
+            "value": "2",
+            "text": "استقرار الأداء"
+          },
+          {
+            "value": "3",
+            "text": "يعتمد على Bluetooth فقط"
+          }
+        ],
+        "fields": [],
+        "parts": [],
+        "answer": {
+          "correctOptionIndex": 3
+        },
+        "hint": "Metro Ethernet يمتاز بالسرعة والاستقرار وسهولة التوسعة.",
+        "teacherNote": "",
+        "aiInstruction": "",
+        "wasModified": false,
+        "image": {
+          "exists": false,
+          "visible": false,
+          "origin": null,
+          "assets": [],
+          "prompt": null
+        },
+        "history": [],
+        "redoStack": []
+      },
+      {
+        "examQuestionId": "LIB-T22-Q09",
+        "origin": "imported",
+        "sourceId": "LIB-T22",
+        "sourceQuestionId": "9",
+        "section": "BASIC",
+        "topic": "OTHER_NETWORKING",
+        "secondaryTopics": [],
+        "difficulty": 2,
+        "difficultyLabel": "",
+        "familyKey": "LIB-T22-Q09",
+        "hasCLI": false,
+        "requiresCalculation": false,
+        "presentationType": "multipleChoice",
+        "marks": 10,
+        "locked": false,
+        "text": "أي تقنية تعتمد على Ethernet لربط مواقع حضرية؟",
+        "textHtml": "",
+        "options": [
+          {
+            "value": "0",
+            "text": "Metro Ethernet"
+          },
+          {
+            "value": "1",
+            "text": "Frame Relay"
+          },
+          {
+            "value": "2",
+            "text": "ATM"
+          },
+          {
+            "value": "3",
+            "text": "HDLC فقط"
+          }
+        ],
+        "fields": [],
+        "parts": [],
+        "answer": {
+          "correctOptionIndex": 0
+        },
+        "hint": "Metro Ethernet يعتمد على Ethernet ويربط مواقع متعددة داخل المدينة.",
+        "teacherNote": "",
+        "aiInstruction": "",
+        "wasModified": false,
+        "image": {
+          "exists": false,
+          "visible": false,
+          "origin": null,
+          "assets": [],
+          "prompt": null
+        },
+        "history": [],
+        "redoStack": []
+      },
+      {
+        "examQuestionId": "LIB-T22-Q10",
+        "origin": "imported",
+        "sourceId": "LIB-T22",
+        "sourceQuestionId": "10",
+        "section": "BASIC",
+        "topic": "OTHER_NETWORKING",
+        "secondaryTopics": [],
+        "difficulty": 2,
+        "difficultyLabel": "",
+        "familyKey": "LIB-T22-Q10",
+        "hasCLI": false,
+        "requiresCalculation": false,
+        "presentationType": "multipleChoice",
+        "marks": 10,
+        "locked": false,
+        "text": "شركة لديها ثلاثة فروع داخل المدينة وتريد سرعة عالية وتوسعة سهلة. ما الاختيار الأنسب؟",
+        "textHtml": "",
+        "options": [
+          {
+            "value": "0",
+            "text": "PAN"
+          },
+          {
+            "value": "1",
+            "text": "Metro Ethernet"
+          },
+          {
+            "value": "2",
+            "text": "Bluetooth"
+          },
+          {
+            "value": "3",
+            "text": "Localhost"
+          }
+        ],
+        "fields": [],
+        "parts": [],
+        "answer": {
+          "correctOptionIndex": 1
+        },
+        "hint": "Metro Ethernet مناسب للفروع الحضرية ويوفر سرعة واستقرارًا وتوسعة سهلة.",
+        "teacherNote": "",
+        "aiInstruction": "",
+        "wasModified": false,
+        "image": {
+          "exists": false,
+          "visible": false,
+          "origin": null,
+          "assets": [],
+          "prompt": null
+        },
+        "history": [],
+        "redoStack": []
+      }
+    ],
+    "totalMarks": 100,
+    "status": "final",
+    "createdAt": "2026-09-05T18:57:20.365Z",
+    "updatedAt": "2026-09-05T18:57:20.365Z"
+  }
+}

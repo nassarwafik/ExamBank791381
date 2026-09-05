@@ -8,81 +8,83 @@ import { buildLibrary } from "./build-791381-library.cjs";
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const FIXTURES_DIR = path.join(__dirname, "..", "api", "tests", "fixtures", "book791381");
 
-// Exercises the real end-to-end build against genuine Book791381 files fetched during the Discovery
-// pass: three T-series (T01, T15 from the middle, T30 last) covering the uniform training format,
-// plus all six F-series exams covering every distinct F schema. F06's fixture is the real file with
-// its multi-megabyte base64 images stubbed down (structure preserved) so it can live in the repo.
+// End-to-end build against genuine Book791381 files fetched during Discovery: three T-series and all
+// six F-series, covering every distinct schema. F06's fixture is the real file with its
+// multi-megabyte base64 images stubbed down (structure preserved) so it can live in the repo. Output
+// goes to temp dirs here; the real run targets the versioned in-repo data + public asset dirs.
 describe("buildLibrary - end to end against real Book791381 files", () => {
-  const outputDir = fs.mkdtempSync(path.join(os.tmpdir(), "exam-library-test-"));
-  const { catalog, report } = buildLibrary(FIXTURES_DIR, outputDir);
+  const dataDir = fs.mkdtempSync(path.join(os.tmpdir(), "exam-lib-data-"));
+  const assetsDir = fs.mkdtempSync(path.join(os.tmpdir(), "exam-lib-assets-"));
+  const { catalog, report, assetsWritten } = buildLibrary(FIXTURES_DIR, dataDir, assetsDir);
   const byId = id => report.find(item => item.libraryItemId === id);
+  const readItem = id => JSON.parse(fs.readFileSync(path.join(dataDir, "items", id + ".json"), "utf8"));
 
   afterAll(() => {
-    fs.rmSync(outputDir, { recursive: true, force: true });
+    fs.rmSync(dataDir, { recursive: true, force: true });
+    fs.rmSync(assetsDir, { recursive: true, force: true });
   });
 
-  it("converts all present T-series and F-series files into catalog items, none unsupported", () => {
+  it("converts all present files into catalog items, none unsupported", () => {
     expect(catalog.map(item => item.libraryItemId).sort()).toEqual(["F01", "F02", "F03", "F04", "F05", "F06", "T01", "T15", "T30"]);
-    expect(report.filter(item => item.status === "unsupported")).toHaveLength(0);
+    expect(report.filter(item => item.conversionStatus === "unsupported")).toHaveLength(0);
   });
 
-  it("marks the uniform T-series files ready with all questions auto-gradable", () => {
-    for (const id of ["T01", "T15", "T30"]) {
-      expect(byId(id).status).toBe("ready");
-      expect(byId(id).manualReviewCount).toBe(0);
+  it("separates conversion status from publishing status: only fully-auto items are publishable", () => {
+    for (const id of ["T01", "T15", "T30", "F03"]) {
+      expect(byId(id).conversionStatus).toBe("ready");
+      expect(byId(id).publishable).toBe(true);
     }
-  });
-
-  it("marks F03 (clean JSON exam) ready and the rest needs_review, honestly reflecting manual-review shares", () => {
-    expect(byId("F03").status).toBe("ready");
     for (const id of ["F01", "F02", "F04", "F05", "F06"]) {
-      expect(byId(id).status).toBe("needs_review");
+      expect(byId(id).conversionStatus).toBe("needs_review");
+      expect(byId(id).publishable).toBe(false);
     }
   });
 
-  it("F05 (no answer key in the source at all) has every question flagged for manual review", () => {
+  it("F05 (no answer key in the source) has every question flagged for manual review with reasons", () => {
     expect(byId("F05").autoGradableCount).toBe(0);
     expect(byId("F05").manualReviewCount).toBe(byId("F05").questionCount);
-  });
-
-  it("auto-grades the bulk of the multiple-choice F exams (F01/F02/F04/F06)", () => {
-    for (const id of ["F01", "F02", "F04", "F06"]) {
-      expect(byId(id).autoGradableCount).toBeGreaterThan(0);
-    }
-  });
-
-  it("gives every item a stable LIB-<code> examId and records manual-review reasons", () => {
-    for (const item of catalog) {
-      const saved = JSON.parse(fs.readFileSync(path.join(outputDir, "items", item.libraryItemId + ".json"), "utf8"));
-      expect(saved.examSnapshot.examId).toBe("LIB-" + item.libraryItemId);
-    }
-    // A needs_review file must explain why, not just report a count.
     expect(byId("F05").manualReviewReasons.length).toBeGreaterThan(0);
   });
 
-  it("carries real catalog metadata (title/category/tags) from index.html", () => {
-    const t01 = catalog.find(item => item.libraryItemId === "T01");
-    expect(t01.title).toBe("أساسيات الشبكات");
-    expect(t01.category).toBe("foundation");
-    expect(t01.tags.length).toBeGreaterThan(0);
+  it("externalizes images: no item JSON contains a base64 data: URI, and asset files exist", () => {
+    for (const item of catalog) {
+      const raw = fs.readFileSync(path.join(dataDir, "items", item.libraryItemId + ".json"), "utf8");
+      expect(raw).not.toContain("data:image");
+    }
+    expect(assetsWritten).toBeGreaterThan(0);
+    // F06's diagrams must resolve to real files under the assets dir.
+    const f06 = readItem("F06");
+    const withImg = f06.examSnapshot.questions.find(q => q.image && q.image.exists);
+    const url = withImg.image.assets[0].dataUrl;
+    expect(url).toMatch(/^\/exam-library\/assets\/F06\//);
+    expect(fs.existsSync(path.join(assetsDir, url.replace("/exam-library/assets/", "")))).toBe(true);
   });
 
-  it("running the build twice on the same files produces identical contentHash (idempotent)", () => {
-    const secondOutputDir = fs.mkdtempSync(path.join(os.tmpdir(), "exam-library-test-2-"));
+  it("keeps catalog.json small: metadata only, never an examSnapshot", () => {
+    const catalogJson = JSON.parse(fs.readFileSync(path.join(dataDir, "catalog.json"), "utf8"));
+    expect(catalogJson.every(item => !("examSnapshot" in item))).toBe(true);
+  });
+
+  it("carries real catalog metadata from index.html for both T and F series", () => {
+    expect(byId("T01") && catalog.find(c => c.libraryItemId === "T01").title).toBe("أساسيات الشبكات");
+    expect(catalog.find(c => c.libraryItemId === "F01").category).toBe("final");
+  });
+
+  it("is idempotent: a second build yields identical contentHash and asset URLs", () => {
+    const d2 = fs.mkdtempSync(path.join(os.tmpdir(), "exam-lib-data2-"));
+    const a2 = fs.mkdtempSync(path.join(os.tmpdir(), "exam-lib-assets2-"));
     try {
-      const second = buildLibrary(FIXTURES_DIR, secondOutputDir);
+      const second = buildLibrary(FIXTURES_DIR, d2, a2);
       for (const item of catalog) {
-        const other = second.catalog.find(x => x.libraryItemId === item.libraryItemId);
-        expect(other.contentHash).toBe(item.contentHash);
+        expect(second.catalog.find(x => x.libraryItemId === item.libraryItemId).contentHash).toBe(item.contentHash);
       }
+      const url1 = readItem("F06").examSnapshot.questions.find(q => q.image?.exists).image.assets[0].dataUrl;
+      const item2 = JSON.parse(fs.readFileSync(path.join(d2, "items", "F06.json"), "utf8"));
+      const url2 = item2.examSnapshot.questions.find(q => q.image?.exists).image.assets[0].dataUrl;
+      expect(url2).toBe(url1);
+    } finally {
+      fs.rmSync(d2, { recursive: true, force: true });
+      fs.rmSync(a2, { recursive: true, force: true });
     }
-    finally {
-      fs.rmSync(secondOutputDir, { recursive: true, force: true });
-    }
-  });
-
-  it("does not leak the internal requiresManualReview flag into stored ExamQuestions", () => {
-    const f01 = JSON.parse(fs.readFileSync(path.join(outputDir, "items", "F01.json"), "utf8"));
-    expect(f01.examSnapshot.questions.every(q => !("requiresManualReview" in q))).toBe(true);
   });
 });

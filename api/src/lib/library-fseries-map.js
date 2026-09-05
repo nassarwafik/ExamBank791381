@@ -133,8 +133,19 @@ function mapControlTable(question, field, answerMap, headerLabels) {
 // Maps one parsed q-card (from qcard-dom-extract.js) using an answer Map (from
 // library-answer-resolvers.js). field===null (multi-blank / unrecognized shapes) becomes an open,
 // manual-review question with its full text preserved - never dropped, never guessed.
+// Builds an image block from a card's inline images (base64, later externalized by the build step).
+function cardImageBlock(card) {
+  const images = Array.isArray(card.images) ? card.images : [];
+  if (!images.length) return { exists: false, visible: false, origin: null, assets: [], prompt: null };
+  return {
+    exists: true, visible: true, origin: "uploaded",
+    assets: images.map(img => ({ id: img.id, origin: "uploaded", contentType: img.contentType, dataUrl: "data:" + img.contentType + ";base64," + img.base64 })),
+    prompt: null
+  };
+}
+
 function mapQCard(card, { examId, ordinal, marks, answerMap }) {
-  const question = { ...baseQuestion(examId, ordinal, card.id), text: card.text, marks };
+  const question = { ...baseQuestion(examId, ordinal, card.id), text: card.text, marks, image: cardImageBlock(card) };
 
   if (!card.field) {
     return withManualReview({ ...question, presentationType: "open" }, "شكل سؤال متعدد الأجزاء غير قابل للتحويل الحتمي — يحتاج مراجعة.");

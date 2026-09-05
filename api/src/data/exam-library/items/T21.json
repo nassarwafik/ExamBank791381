@@ -1,0 +1,864 @@
+{
+  "libraryItemId": "T21",
+  "title": "مرجع أوامر Cisco",
+  "category": "infra",
+  "description": "مراجعة موسعة لأوامر الإعداد والفحص الخاصة بأجهزة Cisco.",
+  "tags": [
+    "15 سؤالًا",
+    "Cisco Commands",
+    "show commands"
+  ],
+  "questionCount": 15,
+  "totalMarks": 100,
+  "pageRange": "190–197",
+  "parserFamily": "t-series-v1",
+  "conversionStatus": "ready",
+  "publishable": true,
+  "autoGradableCount": 15,
+  "manualReviewCount": 0,
+  "libraryVersion": 1,
+  "sourceSha": "0dbd09a81c9cb6d392c708111b31a9f7f316a7df97264ea8aea915644d68280b",
+  "contentHash": "e26ee3eb806ead72a8c7d8370c90d3e9289ae2b63251c30a7daf15a77fdfd2a7",
+  "convertedAt": "2026-09-05T18:57:19.063Z",
+  "source": {
+    "repository": "Book791381",
+    "sourceFile": "T21.html"
+  },
+  "schemaVersion": 1,
+  "examSnapshot": {
+    "schemaVersion": 1,
+    "examId": "LIB-T21",
+    "title": "مرجع أوامر Cisco",
+    "questions": [
+      {
+        "examQuestionId": "LIB-T21-Q01",
+        "origin": "imported",
+        "sourceId": "LIB-T21",
+        "sourceQuestionId": "1",
+        "section": "BASIC",
+        "topic": "OTHER_NETWORKING",
+        "secondaryTopics": [],
+        "difficulty": 2,
+        "difficultyLabel": "",
+        "familyKey": "LIB-T21-Q01",
+        "hasCLI": false,
+        "requiresCalculation": false,
+        "presentationType": "multipleChoice",
+        "marks": 7,
+        "locked": false,
+        "text": "أي أمر ينقل الجهاز من وضع المستخدم إلى وضع الأوامر المتقدم؟",
+        "textHtml": "",
+        "options": [
+          {
+            "value": "0",
+            "text": "enable"
+          },
+          {
+            "value": "1",
+            "text": "configure terminal"
+          },
+          {
+            "value": "2",
+            "text": "hostname R1"
+          },
+          {
+            "value": "3",
+            "text": "show running-config"
+          }
+        ],
+        "fields": [],
+        "parts": [],
+        "answer": {
+          "correctOptionIndex": 0
+        },
+        "hint": "الأمر enable ينقلنا من Device> إلى Device#.",
+        "teacherNote": "",
+        "aiInstruction": "",
+        "wasModified": false,
+        "image": {
+          "exists": false,
+          "visible": false,
+          "origin": null,
+          "assets": [],
+          "prompt": null
+        },
+        "history": [],
+        "redoStack": []
+      },
+      {
+        "examQuestionId": "LIB-T21-Q02",
+        "origin": "imported",
+        "sourceId": "LIB-T21",
+        "sourceQuestionId": "2",
+        "section": "BASIC",
+        "topic": "OTHER_NETWORKING",
+        "secondaryTopics": [],
+        "difficulty": 2,
+        "difficultyLabel": "",
+        "familyKey": "LIB-T21-Q02",
+        "hasCLI": false,
+        "requiresCalculation": false,
+        "presentationType": "multipleChoice",
+        "marks": 7,
+        "locked": false,
+        "text": "أي أمر يدخل إلى وضع الإعدادات العامة؟",
+        "textHtml": "",
+        "options": [
+          {
+            "value": "0",
+            "text": "show interfaces"
+          },
+          {
+            "value": "1",
+            "text": "configure terminal"
+          },
+          {
+            "value": "2",
+            "text": "enable secret"
+          },
+          {
+            "value": "3",
+            "text": "no shutdown"
+          }
+        ],
+        "fields": [],
+        "parts": [],
+        "answer": {
+          "correctOptionIndex": 1
+        },
+        "hint": "configure terminal أو config t يدخل إلى وضع الإعدادات العامة.",
+        "teacherNote": "",
+        "aiInstruction": "",
+        "wasModified": false,
+        "image": {
+          "exists": false,
+          "visible": false,
+          "origin": null,
+          "assets": [],
+          "prompt": null
+        },
+        "history": [],
+        "redoStack": []
+      },
+      {
+        "examQuestionId": "LIB-T21-Q03",
+        "origin": "imported",
+        "sourceId": "LIB-T21",
+        "sourceQuestionId": "3",
+        "section": "BASIC",
+        "topic": "OTHER_NETWORKING",
+        "secondaryTopics": [],
+        "difficulty": 2,
+        "difficultyLabel": "",
+        "familyKey": "LIB-T21-Q03",
+        "hasCLI": false,
+        "requiresCalculation": false,
+        "presentationType": "multipleChoice",
+        "marks": 7,
+        "locked": false,
+        "text": "أي أمر يغيّر اسم الجهاز إلى R1؟",
+        "textHtml": "",
+        "options": [
+          {
+            "value": "0",
+            "text": "name R1"
+          },
+          {
+            "value": "1",
+            "text": "device R1"
+          },
+          {
+            "value": "2",
+            "text": "hostname R1"
+          },
+          {
+            "value": "3",
+            "text": "router name R1"
+          }
+        ],
+        "fields": [],
+        "parts": [],
+        "answer": {
+          "correctOptionIndex": 2
+        },
+        "hint": "يُستخدم hostname R1 لتغيير اسم الجهاز.",
+        "teacherNote": "",
+        "aiInstruction": "",
+        "wasModified": false,
+        "image": {
+          "exists": false,
+          "visible": false,
+          "origin": null,
+          "assets": [],
+          "prompt": null
+        },
+        "history": [],
+        "redoStack": []
+      },
+      {
+        "examQuestionId": "LIB-T21-Q04",
+        "origin": "imported",
+        "sourceId": "LIB-T21",
+        "sourceQuestionId": "4",
+        "section": "BASIC",
+        "topic": "OTHER_NETWORKING",
+        "secondaryTopics": [],
+        "difficulty": 2,
+        "difficultyLabel": "",
+        "familyKey": "LIB-T21-Q04",
+        "hasCLI": false,
+        "requiresCalculation": false,
+        "presentationType": "multipleChoice",
+        "marks": 7,
+        "locked": false,
+        "text": "أي أمر يشغّل المنفذ بعد ضبطه؟",
+        "textHtml": "",
+        "options": [
+          {
+            "value": "0",
+            "text": "shutdown off"
+          },
+          {
+            "value": "1",
+            "text": "interface up"
+          },
+          {
+            "value": "2",
+            "text": "enable interface"
+          },
+          {
+            "value": "3",
+            "text": "no shutdown"
+          }
+        ],
+        "fields": [],
+        "parts": [],
+        "answer": {
+          "correctOptionIndex": 3
+        },
+        "hint": "الأمر no shutdown يفعّل المنفذ.",
+        "teacherNote": "",
+        "aiInstruction": "",
+        "wasModified": false,
+        "image": {
+          "exists": false,
+          "visible": false,
+          "origin": null,
+          "assets": [],
+          "prompt": null
+        },
+        "history": [],
+        "redoStack": []
+      },
+      {
+        "examQuestionId": "LIB-T21-Q05",
+        "origin": "imported",
+        "sourceId": "LIB-T21",
+        "sourceQuestionId": "5",
+        "section": "BASIC",
+        "topic": "OTHER_NETWORKING",
+        "secondaryTopics": [],
+        "difficulty": 2,
+        "difficultyLabel": "",
+        "familyKey": "LIB-T21-Q05",
+        "hasCLI": false,
+        "requiresCalculation": false,
+        "presentationType": "multipleChoice",
+        "marks": 7,
+        "locked": false,
+        "text": "أي أمر يحدد مجموعة المنافذ F0/1 إلى F0/10؟",
+        "textHtml": "",
+        "options": [
+          {
+            "value": "0",
+            "text": "interface range f0/1-10"
+          },
+          {
+            "value": "1",
+            "text": "interfaces f0/1-10"
+          },
+          {
+            "value": "2",
+            "text": "port range 1-10"
+          },
+          {
+            "value": "3",
+            "text": "switchport range f0/1-10"
+          }
+        ],
+        "fields": [],
+        "parts": [],
+        "answer": {
+          "correctOptionIndex": 0
+        },
+        "hint": "interface range يسمح بتطبيق الأوامر نفسها على عدة منافذ.",
+        "teacherNote": "",
+        "aiInstruction": "",
+        "wasModified": false,
+        "image": {
+          "exists": false,
+          "visible": false,
+          "origin": null,
+          "assets": [],
+          "prompt": null
+        },
+        "history": [],
+        "redoStack": []
+      },
+      {
+        "examQuestionId": "LIB-T21-Q06",
+        "origin": "imported",
+        "sourceId": "LIB-T21",
+        "sourceQuestionId": "6",
+        "section": "BASIC",
+        "topic": "OTHER_NETWORKING",
+        "secondaryTopics": [],
+        "difficulty": 2,
+        "difficultyLabel": "",
+        "familyKey": "LIB-T21-Q06",
+        "hasCLI": false,
+        "requiresCalculation": false,
+        "presentationType": "multipleChoice",
+        "marks": 7,
+        "locked": false,
+        "text": "أي أمر ينشئ VLAN رقم 20؟",
+        "textHtml": "",
+        "options": [
+          {
+            "value": "0",
+            "text": "interface vlan 20"
+          },
+          {
+            "value": "1",
+            "text": "vlan 20"
+          },
+          {
+            "value": "2",
+            "text": "switchport vlan 20"
+          },
+          {
+            "value": "3",
+            "text": "create vlan 20"
+          }
+        ],
+        "fields": [],
+        "parts": [],
+        "answer": {
+          "correctOptionIndex": 1
+        },
+        "hint": "الأمر vlan 20 ينشئ الشبكة الظاهرية.",
+        "teacherNote": "",
+        "aiInstruction": "",
+        "wasModified": false,
+        "image": {
+          "exists": false,
+          "visible": false,
+          "origin": null,
+          "assets": [],
+          "prompt": null
+        },
+        "history": [],
+        "redoStack": []
+      },
+      {
+        "examQuestionId": "LIB-T21-Q07",
+        "origin": "imported",
+        "sourceId": "LIB-T21",
+        "sourceQuestionId": "7",
+        "section": "BASIC",
+        "topic": "OTHER_NETWORKING",
+        "secondaryTopics": [],
+        "difficulty": 2,
+        "difficultyLabel": "",
+        "familyKey": "LIB-T21-Q07",
+        "hasCLI": false,
+        "requiresCalculation": false,
+        "presentationType": "multipleChoice",
+        "marks": 7,
+        "locked": false,
+        "text": "أي أمر يربط منفذ Access بـVLAN 20؟",
+        "textHtml": "",
+        "options": [
+          {
+            "value": "0",
+            "text": "switchport mode trunk"
+          },
+          {
+            "value": "1",
+            "text": "vlan access 20"
+          },
+          {
+            "value": "2",
+            "text": "switchport access vlan 20"
+          },
+          {
+            "value": "3",
+            "text": "interface vlan 20"
+          }
+        ],
+        "fields": [],
+        "parts": [],
+        "answer": {
+          "correctOptionIndex": 2
+        },
+        "hint": "داخل المنفذ نستخدم switchport access vlan 20.",
+        "teacherNote": "",
+        "aiInstruction": "",
+        "wasModified": false,
+        "image": {
+          "exists": false,
+          "visible": false,
+          "origin": null,
+          "assets": [],
+          "prompt": null
+        },
+        "history": [],
+        "redoStack": []
+      },
+      {
+        "examQuestionId": "LIB-T21-Q08",
+        "origin": "imported",
+        "sourceId": "LIB-T21",
+        "sourceQuestionId": "8",
+        "section": "BASIC",
+        "topic": "OTHER_NETWORKING",
+        "secondaryTopics": [],
+        "difficulty": 2,
+        "difficultyLabel": "",
+        "familyKey": "LIB-T21-Q08",
+        "hasCLI": false,
+        "requiresCalculation": false,
+        "presentationType": "multipleChoice",
+        "marks": 7,
+        "locked": false,
+        "text": "أي أمر يجعل المنفذ ناقلًا لعدة VLANs؟",
+        "textHtml": "",
+        "options": [
+          {
+            "value": "0",
+            "text": "switchport mode access"
+          },
+          {
+            "value": "1",
+            "text": "switchport access vlan 1"
+          },
+          {
+            "value": "2",
+            "text": "encapsulation access"
+          },
+          {
+            "value": "3",
+            "text": "switchport mode trunk"
+          }
+        ],
+        "fields": [],
+        "parts": [],
+        "answer": {
+          "correctOptionIndex": 3
+        },
+        "hint": "switchport mode trunk يحوّل المنفذ إلى Trunk.",
+        "teacherNote": "",
+        "aiInstruction": "",
+        "wasModified": false,
+        "image": {
+          "exists": false,
+          "visible": false,
+          "origin": null,
+          "assets": [],
+          "prompt": null
+        },
+        "history": [],
+        "redoStack": []
+      },
+      {
+        "examQuestionId": "LIB-T21-Q09",
+        "origin": "imported",
+        "sourceId": "LIB-T21",
+        "sourceQuestionId": "9",
+        "section": "BASIC",
+        "topic": "OTHER_NETWORKING",
+        "secondaryTopics": [],
+        "difficulty": 2,
+        "difficultyLabel": "",
+        "familyKey": "LIB-T21-Q09",
+        "hasCLI": false,
+        "requiresCalculation": false,
+        "presentationType": "multipleChoice",
+        "marks": 7,
+        "locked": false,
+        "text": "أي أمر يضبط السويتش ليستقبل تحديثات VLAN من الخادم؟",
+        "textHtml": "",
+        "options": [
+          {
+            "value": "0",
+            "text": "vtp mode client"
+          },
+          {
+            "value": "1",
+            "text": "vtp mode server"
+          },
+          {
+            "value": "2",
+            "text": "vtp domain client"
+          },
+          {
+            "value": "3",
+            "text": "switchport mode client"
+          }
+        ],
+        "fields": [],
+        "parts": [],
+        "answer": {
+          "correctOptionIndex": 0
+        },
+        "hint": "VTP Client يستقبل تحديثات VLAN من VTP Server.",
+        "teacherNote": "",
+        "aiInstruction": "",
+        "wasModified": false,
+        "image": {
+          "exists": false,
+          "visible": false,
+          "origin": null,
+          "assets": [],
+          "prompt": null
+        },
+        "history": [],
+        "redoStack": []
+      },
+      {
+        "examQuestionId": "LIB-T21-Q10",
+        "origin": "imported",
+        "sourceId": "LIB-T21",
+        "sourceQuestionId": "10",
+        "section": "BASIC",
+        "topic": "OTHER_NETWORKING",
+        "secondaryTopics": [],
+        "difficulty": 2,
+        "difficultyLabel": "",
+        "familyKey": "LIB-T21-Q10",
+        "hasCLI": false,
+        "requiresCalculation": false,
+        "presentationType": "multipleChoice",
+        "marks": 7,
+        "locked": false,
+        "text": "أي أمر هو الأفضل لحماية الدخول إلى وضع Enable؟",
+        "textHtml": "",
+        "options": [
+          {
+            "value": "0",
+            "text": "enable password cisco"
+          },
+          {
+            "value": "1",
+            "text": "enable secret cisco123"
+          },
+          {
+            "value": "2",
+            "text": "password enable cisco"
+          },
+          {
+            "value": "3",
+            "text": "line enable 0"
+          }
+        ],
+        "fields": [],
+        "parts": [],
+        "answer": {
+          "correctOptionIndex": 1
+        },
+        "hint": "enable secret أكثر أمانًا من enable password.",
+        "teacherNote": "",
+        "aiInstruction": "",
+        "wasModified": false,
+        "image": {
+          "exists": false,
+          "visible": false,
+          "origin": null,
+          "assets": [],
+          "prompt": null
+        },
+        "history": [],
+        "redoStack": []
+      },
+      {
+        "examQuestionId": "LIB-T21-Q11",
+        "origin": "imported",
+        "sourceId": "LIB-T21",
+        "sourceQuestionId": "11",
+        "section": "BASIC",
+        "topic": "OTHER_NETWORKING",
+        "secondaryTopics": [],
+        "difficulty": 2,
+        "difficultyLabel": "",
+        "familyKey": "LIB-T21-Q11",
+        "hasCLI": false,
+        "requiresCalculation": false,
+        "presentationType": "multipleChoice",
+        "marks": 6,
+        "locked": false,
+        "text": "أي أمر يربط الواجهة الفرعية G0/0.10 بـVLAN 10؟",
+        "textHtml": "",
+        "options": [
+          {
+            "value": "0",
+            "text": "switchport access vlan 10"
+          },
+          {
+            "value": "1",
+            "text": "interface vlan 10"
+          },
+          {
+            "value": "2",
+            "text": "encapsulation dot1Q 10"
+          },
+          {
+            "value": "3",
+            "text": "vtp domain 10"
+          }
+        ],
+        "fields": [],
+        "parts": [],
+        "answer": {
+          "correctOptionIndex": 2
+        },
+        "hint": "داخل Subinterface نستخدم encapsulation dot1Q مع رقم VLAN.",
+        "teacherNote": "",
+        "aiInstruction": "",
+        "wasModified": false,
+        "image": {
+          "exists": false,
+          "visible": false,
+          "origin": null,
+          "assets": [],
+          "prompt": null
+        },
+        "history": [],
+        "redoStack": []
+      },
+      {
+        "examQuestionId": "LIB-T21-Q12",
+        "origin": "imported",
+        "sourceId": "LIB-T21",
+        "sourceQuestionId": "12",
+        "section": "BASIC",
+        "topic": "OTHER_NETWORKING",
+        "secondaryTopics": [],
+        "difficulty": 2,
+        "difficultyLabel": "",
+        "familyKey": "LIB-T21-Q12",
+        "hasCLI": false,
+        "requiresCalculation": false,
+        "presentationType": "multipleChoice",
+        "marks": 6,
+        "locked": false,
+        "text": "أي أمر يغلق المنفذ عند حدوث مخالفة Port Security؟",
+        "textHtml": "",
+        "options": [
+          {
+            "value": "0",
+            "text": "switchport port-security maximum 1"
+          },
+          {
+            "value": "1",
+            "text": "shutdown"
+          },
+          {
+            "value": "2",
+            "text": "port-security deny"
+          },
+          {
+            "value": "3",
+            "text": "switchport port-security violation shutdown"
+          }
+        ],
+        "fields": [],
+        "parts": [],
+        "answer": {
+          "correctOptionIndex": 3
+        },
+        "hint": "violation shutdown يحدد العقوبة عند المخالفة.",
+        "teacherNote": "",
+        "aiInstruction": "",
+        "wasModified": false,
+        "image": {
+          "exists": false,
+          "visible": false,
+          "origin": null,
+          "assets": [],
+          "prompt": null
+        },
+        "history": [],
+        "redoStack": []
+      },
+      {
+        "examQuestionId": "LIB-T21-Q13",
+        "origin": "imported",
+        "sourceId": "LIB-T21",
+        "sourceQuestionId": "13",
+        "section": "BASIC",
+        "topic": "OTHER_NETWORKING",
+        "secondaryTopics": [],
+        "difficulty": 2,
+        "difficultyLabel": "",
+        "familyKey": "LIB-T21-Q13",
+        "hasCLI": false,
+        "requiresCalculation": false,
+        "presentationType": "multipleChoice",
+        "marks": 6,
+        "locked": false,
+        "text": "أي أمر يعرض قائمة VLANs والمنافذ التابعة لها؟",
+        "textHtml": "",
+        "options": [
+          {
+            "value": "0",
+            "text": "show vlan brief"
+          },
+          {
+            "value": "1",
+            "text": "show ip route"
+          },
+          {
+            "value": "2",
+            "text": "show arp"
+          },
+          {
+            "value": "3",
+            "text": "show vtp status"
+          }
+        ],
+        "fields": [],
+        "parts": [],
+        "answer": {
+          "correctOptionIndex": 0
+        },
+        "hint": "show vlan brief يعرض VLANs وحالة المنافذ المرتبطة بها.",
+        "teacherNote": "",
+        "aiInstruction": "",
+        "wasModified": false,
+        "image": {
+          "exists": false,
+          "visible": false,
+          "origin": null,
+          "assets": [],
+          "prompt": null
+        },
+        "history": [],
+        "redoStack": []
+      },
+      {
+        "examQuestionId": "LIB-T21-Q14",
+        "origin": "imported",
+        "sourceId": "LIB-T21",
+        "sourceQuestionId": "14",
+        "section": "BASIC",
+        "topic": "OTHER_NETWORKING",
+        "secondaryTopics": [],
+        "difficulty": 2,
+        "difficultyLabel": "",
+        "familyKey": "LIB-T21-Q14",
+        "hasCLI": false,
+        "requiresCalculation": false,
+        "presentationType": "multipleChoice",
+        "marks": 6,
+        "locked": false,
+        "text": "أي أمر يعرض حالة واجهات IP بصورة مختصرة؟",
+        "textHtml": "",
+        "options": [
+          {
+            "value": "0",
+            "text": "show interfaces trunk"
+          },
+          {
+            "value": "1",
+            "text": "show ip interface brief"
+          },
+          {
+            "value": "2",
+            "text": "show mac-address-table"
+          },
+          {
+            "value": "3",
+            "text": "show startup-config"
+          }
+        ],
+        "fields": [],
+        "parts": [],
+        "answer": {
+          "correctOptionIndex": 1
+        },
+        "hint": "show ip interface brief يعرض الواجهات وعناوين IP وحالتها.",
+        "teacherNote": "",
+        "aiInstruction": "",
+        "wasModified": false,
+        "image": {
+          "exists": false,
+          "visible": false,
+          "origin": null,
+          "assets": [],
+          "prompt": null
+        },
+        "history": [],
+        "redoStack": []
+      },
+      {
+        "examQuestionId": "LIB-T21-Q15",
+        "origin": "imported",
+        "sourceId": "LIB-T21",
+        "sourceQuestionId": "15",
+        "section": "BASIC",
+        "topic": "OTHER_NETWORKING",
+        "secondaryTopics": [],
+        "difficulty": 2,
+        "difficultyLabel": "",
+        "familyKey": "LIB-T21-Q15",
+        "hasCLI": false,
+        "requiresCalculation": false,
+        "presentationType": "multipleChoice",
+        "marks": 6,
+        "locked": false,
+        "text": "يريد الفني فحص المسارات الموجودة ثم فحص قوائم ACL. أي أمرين يختار؟",
+        "textHtml": "",
+        "options": [
+          {
+            "value": "0",
+            "text": "show running-config ثم show vlan brief"
+          },
+          {
+            "value": "1",
+            "text": "show arp ثم show cdp neighbors"
+          },
+          {
+            "value": "2",
+            "text": "show ip route ثم show access-lists"
+          },
+          {
+            "value": "3",
+            "text": "show ip dhcp pool ثم show interfaces"
+          }
+        ],
+        "fields": [],
+        "parts": [],
+        "answer": {
+          "correctOptionIndex": 2
+        },
+        "hint": "show ip route يفحص جدول التوجيه، وshow access-lists يفحص قوائم التحكم.",
+        "teacherNote": "",
+        "aiInstruction": "",
+        "wasModified": false,
+        "image": {
+          "exists": false,
+          "visible": false,
+          "origin": null,
+          "assets": [],
+          "prompt": null
+        },
+        "history": [],
+        "redoStack": []
+      }
+    ],
+    "totalMarks": 100,
+    "status": "final",
+    "createdAt": "2026-09-05T18:57:20.364Z",
+    "updatedAt": "2026-09-05T18:57:20.364Z"
+  }
+}

@@ -1,0 +1,1139 @@
+{
+  "libraryItemId": "T29",
+  "title": "مراجعة امتحان 2023",
+  "category": "advanced",
+  "description": "عشرون سؤالًا متدرّجًا من نموذج 2023، تجمع أساسيات IP وMAC وDHCP مع SSH وPort Security وOSPF.",
+  "tags": [
+    "2023",
+    "IP / MAC",
+    "SSH / OSPF"
+  ],
+  "questionCount": 20,
+  "totalMarks": 100,
+  "pageRange": "226",
+  "parserFamily": "t-series-v1",
+  "conversionStatus": "ready",
+  "publishable": true,
+  "autoGradableCount": 20,
+  "manualReviewCount": 0,
+  "libraryVersion": 1,
+  "sourceSha": "fd23ab467680c2f0b8ff776073df59db2cf24200981b9c536cf49ca962bf9d9d",
+  "contentHash": "338ffc91ad3875ac30897f798bd32f11e739d1e9262dbb39851124babf848ba6",
+  "convertedAt": "2026-09-05T18:57:19.063Z",
+  "source": {
+    "repository": "Book791381",
+    "sourceFile": "T29.html"
+  },
+  "schemaVersion": 1,
+  "examSnapshot": {
+    "schemaVersion": 1,
+    "examId": "LIB-T29",
+    "title": "مراجعة امتحان 2023",
+    "questions": [
+      {
+        "examQuestionId": "LIB-T29-Q01",
+        "origin": "imported",
+        "sourceId": "LIB-T29",
+        "sourceQuestionId": "1",
+        "section": "BASIC",
+        "topic": "OTHER_NETWORKING",
+        "secondaryTopics": [],
+        "difficulty": 2,
+        "difficultyLabel": "",
+        "familyKey": "LIB-T29-Q01",
+        "hasCLI": false,
+        "requiresCalculation": false,
+        "presentationType": "multipleChoice",
+        "marks": 5,
+        "locked": false,
+        "text": "أي عنوان من الآتي يقع ضمن مجال العناوين الخاصة؟",
+        "textHtml": "",
+        "options": [
+          {
+            "value": "0",
+            "text": "172.168.33.1"
+          },
+          {
+            "value": "1",
+            "text": "192.33.50.89"
+          },
+          {
+            "value": "2",
+            "text": "172.35.15.4"
+          },
+          {
+            "value": "3",
+            "text": "10.35.60.70"
+          }
+        ],
+        "fields": [],
+        "parts": [],
+        "answer": {
+          "correctOptionIndex": 3
+        },
+        "hint": "المجال 10.0.0.0/8 خاص بالكامل، لذلك 10.35.60.70 عنوان Private.",
+        "teacherNote": "",
+        "aiInstruction": "",
+        "wasModified": false,
+        "image": {
+          "exists": false,
+          "visible": false,
+          "origin": null,
+          "assets": [],
+          "prompt": null
+        },
+        "history": [],
+        "redoStack": []
+      },
+      {
+        "examQuestionId": "LIB-T29-Q02",
+        "origin": "imported",
+        "sourceId": "LIB-T29",
+        "sourceQuestionId": "2",
+        "section": "BASIC",
+        "topic": "OTHER_NETWORKING",
+        "secondaryTopics": [],
+        "difficulty": 2,
+        "difficultyLabel": "",
+        "familyKey": "LIB-T29-Q02",
+        "hasCLI": false,
+        "requiresCalculation": false,
+        "presentationType": "multipleChoice",
+        "marks": 5,
+        "locked": false,
+        "text": "ما التمثيل الثنائي للعدد العشري 250؟",
+        "textHtml": "",
+        "options": [
+          {
+            "value": "0",
+            "text": "11111010"
+          },
+          {
+            "value": "1",
+            "text": "11110110"
+          },
+          {
+            "value": "2",
+            "text": "11011010"
+          },
+          {
+            "value": "3",
+            "text": "11111100"
+          }
+        ],
+        "fields": [],
+        "parts": [],
+        "answer": {
+          "correctOptionIndex": 0
+        },
+        "hint": "250 = 128+64+32+16+8+2، ولذلك يساوي 11111010₂.",
+        "teacherNote": "",
+        "aiInstruction": "",
+        "wasModified": false,
+        "image": {
+          "exists": false,
+          "visible": false,
+          "origin": null,
+          "assets": [],
+          "prompt": null
+        },
+        "history": [],
+        "redoStack": []
+      },
+      {
+        "examQuestionId": "LIB-T29-Q03",
+        "origin": "imported",
+        "sourceId": "LIB-T29",
+        "sourceQuestionId": "3",
+        "section": "BASIC",
+        "topic": "OTHER_NETWORKING",
+        "secondaryTopics": [],
+        "difficulty": 2,
+        "difficultyLabel": "",
+        "familyKey": "LIB-T29-Q03",
+        "hasCLI": false,
+        "requiresCalculation": false,
+        "presentationType": "multipleChoice",
+        "marks": 5,
+        "locked": false,
+        "text": "كم بتًا يمثل Network ID افتراضيًا في عنوان Class B؟",
+        "textHtml": "",
+        "options": [
+          {
+            "value": "0",
+            "text": "8"
+          },
+          {
+            "value": "1",
+            "text": "16"
+          },
+          {
+            "value": "2",
+            "text": "24"
+          },
+          {
+            "value": "3",
+            "text": "32"
+          }
+        ],
+        "fields": [],
+        "parts": [],
+        "answer": {
+          "correctOptionIndex": 1
+        },
+        "hint": "القناع الافتراضي لـClass B هو /16.",
+        "teacherNote": "",
+        "aiInstruction": "",
+        "wasModified": false,
+        "image": {
+          "exists": false,
+          "visible": false,
+          "origin": null,
+          "assets": [],
+          "prompt": null
+        },
+        "history": [],
+        "redoStack": []
+      },
+      {
+        "examQuestionId": "LIB-T29-Q04",
+        "origin": "imported",
+        "sourceId": "LIB-T29",
+        "sourceQuestionId": "4",
+        "section": "BASIC",
+        "topic": "OTHER_NETWORKING",
+        "secondaryTopics": [],
+        "difficulty": 2,
+        "difficultyLabel": "",
+        "familyKey": "LIB-T29-Q04",
+        "hasCLI": false,
+        "requiresCalculation": false,
+        "presentationType": "multipleChoice",
+        "marks": 5,
+        "locked": false,
+        "text": "أي عبارة صحيحة؟",
+        "textHtml": "",
+        "options": [
+          {
+            "value": "0",
+            "text": "MAC عنوان منطقي وIP فيزيائي"
+          },
+          {
+            "value": "1",
+            "text": "MAC عنوان فيزيائي وIP منطقي"
+          },
+          {
+            "value": "2",
+            "text": "كلاهما أسماء نطاقات"
+          },
+          {
+            "value": "3",
+            "text": "IPv4 يحتوي حروفًا دائمًا"
+          }
+        ],
+        "fields": [],
+        "parts": [],
+        "answer": {
+          "correctOptionIndex": 1
+        },
+        "hint": "MAC عنوان بطاقة الشبكة الفيزيائي، وIP عنوان منطقي قابل للتعيين.",
+        "teacherNote": "",
+        "aiInstruction": "",
+        "wasModified": false,
+        "image": {
+          "exists": false,
+          "visible": false,
+          "origin": null,
+          "assets": [],
+          "prompt": null
+        },
+        "history": [],
+        "redoStack": []
+      },
+      {
+        "examQuestionId": "LIB-T29-Q05",
+        "origin": "imported",
+        "sourceId": "LIB-T29",
+        "sourceQuestionId": "5",
+        "section": "BASIC",
+        "topic": "OTHER_NETWORKING",
+        "secondaryTopics": [],
+        "difficulty": 2,
+        "difficultyLabel": "",
+        "familyKey": "LIB-T29-Q05",
+        "hasCLI": false,
+        "requiresCalculation": false,
+        "presentationType": "multipleChoice",
+        "marks": 5,
+        "locked": false,
+        "text": "أي جزء من عنوان MAC يدل عادة على الشركة المصنعة؟",
+        "textHtml": "",
+        "options": [
+          {
+            "value": "0",
+            "text": "أول 24 بت OUI"
+          },
+          {
+            "value": "1",
+            "text": "آخر 8 بت"
+          },
+          {
+            "value": "2",
+            "text": "عنوان IP المرافق"
+          },
+          {
+            "value": "3",
+            "text": "قناع الشبكة"
+          }
+        ],
+        "fields": [],
+        "parts": [],
+        "answer": {
+          "correctOptionIndex": 0
+        },
+        "hint": "أول 24 bit تسمى OUI وتحدد الجهة المصنعة.",
+        "teacherNote": "",
+        "aiInstruction": "",
+        "wasModified": false,
+        "image": {
+          "exists": false,
+          "visible": false,
+          "origin": null,
+          "assets": [],
+          "prompt": null
+        },
+        "history": [],
+        "redoStack": []
+      },
+      {
+        "examQuestionId": "LIB-T29-Q06",
+        "origin": "imported",
+        "sourceId": "LIB-T29",
+        "sourceQuestionId": "6",
+        "section": "BASIC",
+        "topic": "OTHER_NETWORKING",
+        "secondaryTopics": [],
+        "difficulty": 2,
+        "difficultyLabel": "",
+        "familyKey": "LIB-T29-Q06",
+        "hasCLI": false,
+        "requiresCalculation": false,
+        "presentationType": "multipleChoice",
+        "marks": 5,
+        "locked": false,
+        "text": "ما الاختصار الصحيح للعنوان 15b3:0004:1a62:0000:0000:0000:0000:01ef؟",
+        "textHtml": "",
+        "options": [
+          {
+            "value": "0",
+            "text": "15b3:4:1a62::1ef"
+          },
+          {
+            "value": "1",
+            "text": "15b3::4::1a62:1ef"
+          },
+          {
+            "value": "2",
+            "text": "15b3:4:1a62:0:0:0:0"
+          },
+          {
+            "value": "3",
+            "text": "15b3:0004:1a62:::01ef"
+          }
+        ],
+        "fields": [],
+        "parts": [],
+        "answer": {
+          "correctOptionIndex": 0
+        },
+        "hint": "نحذف الأصفار البادئة ونستبدل أطول سلسلة مجموعات صفرية متتالية بـ:: مرة واحدة.",
+        "teacherNote": "",
+        "aiInstruction": "",
+        "wasModified": false,
+        "image": {
+          "exists": false,
+          "visible": false,
+          "origin": null,
+          "assets": [],
+          "prompt": null
+        },
+        "history": [],
+        "redoStack": []
+      },
+      {
+        "examQuestionId": "LIB-T29-Q07",
+        "origin": "imported",
+        "sourceId": "LIB-T29",
+        "sourceQuestionId": "7",
+        "section": "BASIC",
+        "topic": "OTHER_NETWORKING",
+        "secondaryTopics": [],
+        "difficulty": 2,
+        "difficultyLabel": "",
+        "familyKey": "LIB-T29-Q07",
+        "hasCLI": false,
+        "requiresCalculation": false,
+        "presentationType": "multipleChoice",
+        "marks": 5,
+        "locked": false,
+        "text": "كيف تتوزع Collision Domains في السويتش؟",
+        "textHtml": "",
+        "options": [
+          {
+            "value": "0",
+            "text": "كل السويتش مجال واحد"
+          },
+          {
+            "value": "1",
+            "text": "كل منفذ مجال مستقل"
+          },
+          {
+            "value": "2",
+            "text": "لا توجد مجالات تصادم"
+          },
+          {
+            "value": "3",
+            "text": "كل VLAN مجال تصادم واحد"
+          }
+        ],
+        "fields": [],
+        "parts": [],
+        "answer": {
+          "correctOptionIndex": 1
+        },
+        "hint": "كل منفذ في السويتش يمثل Collision Domain مستقلًا.",
+        "teacherNote": "",
+        "aiInstruction": "",
+        "wasModified": false,
+        "image": {
+          "exists": false,
+          "visible": false,
+          "origin": null,
+          "assets": [],
+          "prompt": null
+        },
+        "history": [],
+        "redoStack": []
+      },
+      {
+        "examQuestionId": "LIB-T29-Q08",
+        "origin": "imported",
+        "sourceId": "LIB-T29",
+        "sourceQuestionId": "8",
+        "section": "BASIC",
+        "topic": "OTHER_NETWORKING",
+        "secondaryTopics": [],
+        "difficulty": 2,
+        "difficultyLabel": "",
+        "familyKey": "LIB-T29-Q08",
+        "hasCLI": false,
+        "requiresCalculation": false,
+        "presentationType": "multipleChoice",
+        "marks": 5,
+        "locked": false,
+        "text": "ما Network ID للعنوان 10.2.4.0/8؟",
+        "textHtml": "",
+        "options": [
+          {
+            "value": "0",
+            "text": "10.0.0.0"
+          },
+          {
+            "value": "1",
+            "text": "10.2.0.0"
+          },
+          {
+            "value": "2",
+            "text": "10.2.4.0"
+          },
+          {
+            "value": "3",
+            "text": "0.0.0.0"
+          }
+        ],
+        "fields": [],
+        "parts": [],
+        "answer": {
+          "correctOptionIndex": 0
+        },
+        "hint": "القناع /8 يثبت الـOctet الأول فقط، لذلك الشبكة هي 10.0.0.0.",
+        "teacherNote": "",
+        "aiInstruction": "",
+        "wasModified": false,
+        "image": {
+          "exists": false,
+          "visible": false,
+          "origin": null,
+          "assets": [],
+          "prompt": null
+        },
+        "history": [],
+        "redoStack": []
+      },
+      {
+        "examQuestionId": "LIB-T29-Q09",
+        "origin": "imported",
+        "sourceId": "LIB-T29",
+        "sourceQuestionId": "9",
+        "section": "BASIC",
+        "topic": "OTHER_NETWORKING",
+        "secondaryTopics": [],
+        "difficulty": 2,
+        "difficultyLabel": "",
+        "familyKey": "LIB-T29-Q09",
+        "hasCLI": false,
+        "requiresCalculation": false,
+        "presentationType": "multipleChoice",
+        "marks": 5,
+        "locked": false,
+        "text": "ما الرسالة الأولى التي يبثها الحاسوب للحصول على عنوان ديناميكي؟",
+        "textHtml": "",
+        "options": [
+          {
+            "value": "0",
+            "text": "DHCP Offer"
+          },
+          {
+            "value": "1",
+            "text": "DHCP Request"
+          },
+          {
+            "value": "2",
+            "text": "DHCP Discover"
+          },
+          {
+            "value": "3",
+            "text": "DHCP ACK"
+          }
+        ],
+        "fields": [],
+        "parts": [],
+        "answer": {
+          "correctOptionIndex": 2
+        },
+        "hint": "الجهاز يبدأ بـDiscover للعثور على خادم DHCP.",
+        "teacherNote": "",
+        "aiInstruction": "",
+        "wasModified": false,
+        "image": {
+          "exists": false,
+          "visible": false,
+          "origin": null,
+          "assets": [],
+          "prompt": null
+        },
+        "history": [],
+        "redoStack": []
+      },
+      {
+        "examQuestionId": "LIB-T29-Q10",
+        "origin": "imported",
+        "sourceId": "LIB-T29",
+        "sourceQuestionId": "10",
+        "section": "BASIC",
+        "topic": "OTHER_NETWORKING",
+        "secondaryTopics": [],
+        "difficulty": 2,
+        "difficultyLabel": "",
+        "familyKey": "LIB-T29-Q10",
+        "hasCLI": false,
+        "requiresCalculation": false,
+        "presentationType": "multipleChoice",
+        "marks": 5,
+        "locked": false,
+        "text": "أي نوع إرسال يعني أن جهازًا واحدًا يرسل إلى جهاز واحد محدد؟",
+        "textHtml": "",
+        "options": [
+          {
+            "value": "0",
+            "text": "Broadcast"
+          },
+          {
+            "value": "1",
+            "text": "Multicast"
+          },
+          {
+            "value": "2",
+            "text": "Unicast"
+          },
+          {
+            "value": "3",
+            "text": "Anycast"
+          }
+        ],
+        "fields": [],
+        "parts": [],
+        "answer": {
+          "correctOptionIndex": 2
+        },
+        "hint": "Unicast هو اتصال واحد إلى واحد.",
+        "teacherNote": "",
+        "aiInstruction": "",
+        "wasModified": false,
+        "image": {
+          "exists": false,
+          "visible": false,
+          "origin": null,
+          "assets": [],
+          "prompt": null
+        },
+        "history": [],
+        "redoStack": []
+      },
+      {
+        "examQuestionId": "LIB-T29-Q11",
+        "origin": "imported",
+        "sourceId": "LIB-T29",
+        "sourceQuestionId": "11",
+        "section": "BASIC",
+        "topic": "OTHER_NETWORKING",
+        "secondaryTopics": [],
+        "difficulty": 2,
+        "difficultyLabel": "",
+        "familyKey": "LIB-T29-Q11",
+        "hasCLI": false,
+        "requiresCalculation": false,
+        "presentationType": "multipleChoice",
+        "marks": 5,
+        "locked": false,
+        "text": "ما الوظيفة الأساسية لآلية CSMA/CD في Ethernet التقليدي المشترك؟",
+        "textHtml": "",
+        "options": [
+          {
+            "value": "0",
+            "text": "توزيع IP"
+          },
+          {
+            "value": "1",
+            "text": "اكتشاف التصادمات والتعامل معها"
+          },
+          {
+            "value": "2",
+            "text": "تشفير كلمات المرور"
+          },
+          {
+            "value": "3",
+            "text": "ترجمة أسماء النطاقات"
+          }
+        ],
+        "fields": [],
+        "parts": [],
+        "answer": {
+          "correctOptionIndex": 1
+        },
+        "hint": "CSMA/CD تتحسس الوسط وتكتشف التصادم ثم تعيد المحاولة بعد انتظار عشوائي.",
+        "teacherNote": "",
+        "aiInstruction": "",
+        "wasModified": false,
+        "image": {
+          "exists": false,
+          "visible": false,
+          "origin": null,
+          "assets": [],
+          "prompt": null
+        },
+        "history": [],
+        "redoStack": []
+      },
+      {
+        "examQuestionId": "LIB-T29-Q12",
+        "origin": "imported",
+        "sourceId": "LIB-T29",
+        "sourceQuestionId": "12",
+        "section": "BASIC",
+        "topic": "OTHER_NETWORKING",
+        "secondaryTopics": [],
+        "difficulty": 2,
+        "difficultyLabel": "",
+        "familyKey": "LIB-T29-Q12",
+        "hasCLI": false,
+        "requiresCalculation": false,
+        "presentationType": "multipleChoice",
+        "marks": 5,
+        "locked": false,
+        "text": "ما الهدف الأساسي من عملية Routing؟",
+        "textHtml": "",
+        "options": [
+          {
+            "value": "0",
+            "text": "اختيار مسار الرزم نحو الشبكات الهدف"
+          },
+          {
+            "value": "1",
+            "text": "تحويل أسماء المواقع إلى IP"
+          },
+          {
+            "value": "2",
+            "text": "تخصيص MAC"
+          },
+          {
+            "value": "3",
+            "text": "تشفير الملفات"
+          }
+        ],
+        "fields": [],
+        "parts": [],
+        "answer": {
+          "correctOptionIndex": 0
+        },
+        "hint": "التوجيه يحدد الطريق المناسب لإيصال الرزم إلى شبكة الوجهة.",
+        "teacherNote": "",
+        "aiInstruction": "",
+        "wasModified": false,
+        "image": {
+          "exists": false,
+          "visible": false,
+          "origin": null,
+          "assets": [],
+          "prompt": null
+        },
+        "history": [],
+        "redoStack": []
+      },
+      {
+        "examQuestionId": "LIB-T29-Q13",
+        "origin": "imported",
+        "sourceId": "LIB-T29",
+        "sourceQuestionId": "13",
+        "section": "BASIC",
+        "topic": "OTHER_NETWORKING",
+        "secondaryTopics": [],
+        "difficulty": 2,
+        "difficultyLabel": "",
+        "familyKey": "LIB-T29-Q13",
+        "hasCLI": false,
+        "requiresCalculation": false,
+        "presentationType": "multipleChoice",
+        "marks": 5,
+        "locked": false,
+        "text": "أي ترتيب يمثل Encapsulation من الطبقات العليا إلى الفيزيائية؟",
+        "textHtml": "",
+        "options": [
+          {
+            "value": "0",
+            "text": "Data → Segment → Packet → Frame → Bits"
+          },
+          {
+            "value": "1",
+            "text": "Bits → Frame → Packet → Segment → Data"
+          },
+          {
+            "value": "2",
+            "text": "Packet → Segment → Data → Frame → Bits"
+          },
+          {
+            "value": "3",
+            "text": "Data → Frame → Segment → Packet → Bits"
+          }
+        ],
+        "fields": [],
+        "parts": [],
+        "answer": {
+          "correctOptionIndex": 0
+        },
+        "hint": "تتغير وحدة البيانات تدريجيًا حتى تصبح Bits على الوسط.",
+        "teacherNote": "",
+        "aiInstruction": "",
+        "wasModified": false,
+        "image": {
+          "exists": false,
+          "visible": false,
+          "origin": null,
+          "assets": [],
+          "prompt": null
+        },
+        "history": [],
+        "redoStack": []
+      },
+      {
+        "examQuestionId": "LIB-T29-Q14",
+        "origin": "imported",
+        "sourceId": "LIB-T29",
+        "sourceQuestionId": "14",
+        "section": "BASIC",
+        "topic": "OTHER_NETWORKING",
+        "secondaryTopics": [],
+        "difficulty": 2,
+        "difficultyLabel": "",
+        "familyKey": "LIB-T29-Q14",
+        "hasCLI": false,
+        "requiresCalculation": false,
+        "presentationType": "multipleChoice",
+        "marks": 5,
+        "locked": false,
+        "text": "عند ظهور أربع رسائل Reply في نتيجة ping دون فقدان، ماذا نستنتج؟",
+        "textHtml": "",
+        "options": [
+          {
+            "value": "0",
+            "text": "لا يوجد اتصال"
+          },
+          {
+            "value": "1",
+            "text": "الاتصال ناجح"
+          },
+          {
+            "value": "2",
+            "text": "خادم DNS متوقف حتمًا"
+          },
+          {
+            "value": "3",
+            "text": "عنوان MAC غير موجود"
+          }
+        ],
+        "fields": [],
+        "parts": [],
+        "answer": {
+          "correctOptionIndex": 1
+        },
+        "hint": "Reply دون فقدان يدل على وصول رسائل ICMP والرد عليها.",
+        "teacherNote": "",
+        "aiInstruction": "",
+        "wasModified": false,
+        "image": {
+          "exists": false,
+          "visible": false,
+          "origin": null,
+          "assets": [],
+          "prompt": null
+        },
+        "history": [],
+        "redoStack": []
+      },
+      {
+        "examQuestionId": "LIB-T29-Q15",
+        "origin": "imported",
+        "sourceId": "LIB-T29",
+        "sourceQuestionId": "15",
+        "section": "BASIC",
+        "topic": "OTHER_NETWORKING",
+        "secondaryTopics": [],
+        "difficulty": 2,
+        "difficultyLabel": "",
+        "familyKey": "LIB-T29-Q15",
+        "hasCLI": false,
+        "requiresCalculation": false,
+        "presentationType": "multipleChoice",
+        "marks": 5,
+        "locked": false,
+        "text": "أي طبقة في OSI هي الأقرب إلى برامج المستخدم؟",
+        "textHtml": "",
+        "options": [
+          {
+            "value": "0",
+            "text": "Physical"
+          },
+          {
+            "value": "1",
+            "text": "Data Link"
+          },
+          {
+            "value": "2",
+            "text": "Network"
+          },
+          {
+            "value": "3",
+            "text": "Application"
+          }
+        ],
+        "fields": [],
+        "parts": [],
+        "answer": {
+          "correctOptionIndex": 3
+        },
+        "hint": "طبقة Application توفر خدمات الشبكة للتطبيقات والمستخدم.",
+        "teacherNote": "",
+        "aiInstruction": "",
+        "wasModified": false,
+        "image": {
+          "exists": false,
+          "visible": false,
+          "origin": null,
+          "assets": [],
+          "prompt": null
+        },
+        "history": [],
+        "redoStack": []
+      },
+      {
+        "examQuestionId": "LIB-T29-Q16",
+        "origin": "imported",
+        "sourceId": "LIB-T29",
+        "sourceQuestionId": "16",
+        "section": "BASIC",
+        "topic": "OTHER_NETWORKING",
+        "secondaryTopics": [],
+        "difficulty": 2,
+        "difficultyLabel": "",
+        "familyKey": "LIB-T29-Q16",
+        "hasCLI": false,
+        "requiresCalculation": false,
+        "presentationType": "multipleChoice",
+        "marks": 5,
+        "locked": false,
+        "text": "ما البروتوكول الأنسب لاتصال Terminal آمن بجهاز بعيد؟",
+        "textHtml": "",
+        "options": [
+          {
+            "value": "0",
+            "text": "Telnet"
+          },
+          {
+            "value": "1",
+            "text": "SSH"
+          },
+          {
+            "value": "2",
+            "text": "TFTP"
+          },
+          {
+            "value": "3",
+            "text": "ARP"
+          }
+        ],
+        "fields": [],
+        "parts": [],
+        "answer": {
+          "correctOptionIndex": 1
+        },
+        "hint": "SSH يشفر جلسة الإدارة البعيدة، بخلاف Telnet.",
+        "teacherNote": "",
+        "aiInstruction": "",
+        "wasModified": false,
+        "image": {
+          "exists": false,
+          "visible": false,
+          "origin": null,
+          "assets": [],
+          "prompt": null
+        },
+        "history": [],
+        "redoStack": []
+      },
+      {
+        "examQuestionId": "LIB-T29-Q17",
+        "origin": "imported",
+        "sourceId": "LIB-T29",
+        "sourceQuestionId": "17",
+        "section": "BASIC",
+        "topic": "OTHER_NETWORKING",
+        "secondaryTopics": [],
+        "difficulty": 2,
+        "difficultyLabel": "",
+        "familyKey": "LIB-T29-Q17",
+        "hasCLI": false,
+        "requiresCalculation": false,
+        "presentationType": "multipleChoice",
+        "marks": 5,
+        "locked": false,
+        "text": "ماذا تمثل قيمة SSID في شبكة Wi-Fi؟",
+        "textHtml": "",
+        "options": [
+          {
+            "value": "0",
+            "text": "اسم الشبكة اللاسلكية"
+          },
+          {
+            "value": "1",
+            "text": "عنوان MAC للراوتر"
+          },
+          {
+            "value": "2",
+            "text": "مفتاح التشفير"
+          },
+          {
+            "value": "3",
+            "text": "رقم منفذ HTTP"
+          }
+        ],
+        "fields": [],
+        "parts": [],
+        "answer": {
+          "correctOptionIndex": 0
+        },
+        "hint": "SSID هو الاسم الذي تظهر به الشبكة اللاسلكية للمستخدمين.",
+        "teacherNote": "",
+        "aiInstruction": "",
+        "wasModified": false,
+        "image": {
+          "exists": false,
+          "visible": false,
+          "origin": null,
+          "assets": [],
+          "prompt": null
+        },
+        "history": [],
+        "redoStack": []
+      },
+      {
+        "examQuestionId": "LIB-T29-Q18",
+        "origin": "imported",
+        "sourceId": "LIB-T29",
+        "sourceQuestionId": "18",
+        "section": "BASIC",
+        "topic": "OTHER_NETWORKING",
+        "secondaryTopics": [],
+        "difficulty": 2,
+        "difficultyLabel": "",
+        "familyKey": "LIB-T29-Q18",
+        "hasCLI": false,
+        "requiresCalculation": false,
+        "presentationType": "multipleChoice",
+        "marks": 5,
+        "locked": false,
+        "text": "ما الهدف من ipconfig /release ثم ipconfig /renew؟",
+        "textHtml": "",
+        "options": [
+          {
+            "value": "0",
+            "text": "حذف DNS نهائيًا"
+          },
+          {
+            "value": "1",
+            "text": "تحرير عنوان IP وطلب عنوان جديد من DHCP"
+          },
+          {
+            "value": "2",
+            "text": "تغيير MAC"
+          },
+          {
+            "value": "3",
+            "text": "تفعيل OSPF"
+          }
+        ],
+        "fields": [],
+        "parts": [],
+        "answer": {
+          "correctOptionIndex": 1
+        },
+        "hint": "release يحرر عقد DHCP وrenew يطلب عنوانًا جديدًا.",
+        "teacherNote": "",
+        "aiInstruction": "",
+        "wasModified": false,
+        "image": {
+          "exists": false,
+          "visible": false,
+          "origin": null,
+          "assets": [],
+          "prompt": null
+        },
+        "history": [],
+        "redoStack": []
+      },
+      {
+        "examQuestionId": "LIB-T29-Q19",
+        "origin": "imported",
+        "sourceId": "LIB-T29",
+        "sourceQuestionId": "19",
+        "section": "BASIC",
+        "topic": "OTHER_NETWORKING",
+        "secondaryTopics": [],
+        "difficulty": 2,
+        "difficultyLabel": "",
+        "familyKey": "LIB-T29-Q19",
+        "hasCLI": false,
+        "requiresCalculation": false,
+        "presentationType": "multipleChoice",
+        "marks": 5,
+        "locked": false,
+        "text": "ظهور المنفذ في حالة err-disabled بعد خرق Port Security يدل غالبًا على وضع:",
+        "textHtml": "",
+        "options": [
+          {
+            "value": "0",
+            "text": "protect"
+          },
+          {
+            "value": "1",
+            "text": "restrict"
+          },
+          {
+            "value": "2",
+            "text": "shutdown"
+          },
+          {
+            "value": "3",
+            "text": "trunk"
+          }
+        ],
+        "fields": [],
+        "parts": [],
+        "answer": {
+          "correctOptionIndex": 2
+        },
+        "hint": "وضع shutdown يغلق المنفذ ويضعه في err-disabled عند حدوث الخرق.",
+        "teacherNote": "",
+        "aiInstruction": "",
+        "wasModified": false,
+        "image": {
+          "exists": false,
+          "visible": false,
+          "origin": null,
+          "assets": [],
+          "prompt": null
+        },
+        "history": [],
+        "redoStack": []
+      },
+      {
+        "examQuestionId": "LIB-T29-Q20",
+        "origin": "imported",
+        "sourceId": "LIB-T29",
+        "sourceQuestionId": "20",
+        "section": "BASIC",
+        "topic": "OTHER_NETWORKING",
+        "secondaryTopics": [],
+        "difficulty": 2,
+        "difficultyLabel": "",
+        "familyKey": "LIB-T29-Q20",
+        "hasCLI": false,
+        "requiresCalculation": false,
+        "presentationType": "multipleChoice",
+        "marks": 5,
+        "locked": false,
+        "text": "أي مجموعة أوامر صحيحة لإعلان الشبكة 192.168.8.0/24 في OSPF process 1 داخل area 0؟",
+        "textHtml": "",
+        "options": [
+          {
+            "value": "0",
+            "text": "router ospf 1 ثم network 192.168.8.0 0.0.0.255 area 0"
+          },
+          {
+            "value": "1",
+            "text": "router ospf ثم network 192.168.8.0 255.255.255.0 area 0"
+          },
+          {
+            "value": "2",
+            "text": "router rip 1 ثم network 192.168.8.0 area 0"
+          },
+          {
+            "value": "3",
+            "text": "router ospf 1 ثم network 192.168.8.0 0.0.255.255 area 1"
+          }
+        ],
+        "fields": [],
+        "parts": [],
+        "answer": {
+          "correctOptionIndex": 0
+        },
+        "hint": "OSPF يحتاج process-id، ويستعمل Wildcard 0.0.0.255 لشبكة /24 مع area 0.",
+        "teacherNote": "",
+        "aiInstruction": "",
+        "wasModified": false,
+        "image": {
+          "exists": false,
+          "visible": false,
+          "origin": null,
+          "assets": [],
+          "prompt": null
+        },
+        "history": [],
+        "redoStack": []
+      }
+    ],
+    "totalMarks": 100,
+    "status": "final",
+    "createdAt": "2026-09-05T18:57:20.380Z",
+    "updatedAt": "2026-09-05T18:57:20.380Z"
+  }
+}

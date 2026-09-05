@@ -1,0 +1,1139 @@
+{
+  "libraryItemId": "T25",
+  "title": "امتحان شامل للقسم الأساسي — A",
+  "category": "comprehensive",
+  "description": "نموذج شامل أول من 20 سؤالًا يغطي موضوعات القسم الأساسي.",
+  "tags": [
+    "20 سؤالًا",
+    "مراجعة شاملة",
+    "النموذج A"
+  ],
+  "questionCount": 20,
+  "totalMarks": 100,
+  "pageRange": "6–188",
+  "parserFamily": "t-series-v1",
+  "conversionStatus": "ready",
+  "publishable": true,
+  "autoGradableCount": 20,
+  "manualReviewCount": 0,
+  "libraryVersion": 1,
+  "sourceSha": "fc5c2483053b01132713e9ee08481de386e0b30a63c29f6cb9ceadbf2541d14e",
+  "contentHash": "bbaf2682a9bad2ff715d6db56e8df408781b4516e65db29b67e31015a386d35e",
+  "convertedAt": "2026-09-05T18:57:19.063Z",
+  "source": {
+    "repository": "Book791381",
+    "sourceFile": "T25.html"
+  },
+  "schemaVersion": 1,
+  "examSnapshot": {
+    "schemaVersion": 1,
+    "examId": "LIB-T25",
+    "title": "امتحان شامل للقسم الأساسي — A",
+    "questions": [
+      {
+        "examQuestionId": "LIB-T25-Q01",
+        "origin": "imported",
+        "sourceId": "LIB-T25",
+        "sourceQuestionId": "1",
+        "section": "BASIC",
+        "topic": "OTHER_NETWORKING",
+        "secondaryTopics": [],
+        "difficulty": 2,
+        "difficultyLabel": "",
+        "familyKey": "LIB-T25-Q01",
+        "hasCLI": false,
+        "requiresCalculation": false,
+        "presentationType": "multipleChoice",
+        "marks": 5,
+        "locked": false,
+        "text": "ما التعريف الصحيح للشبكة؟",
+        "textHtml": "",
+        "options": [
+          {
+            "value": "0",
+            "text": "أجهزة متصلة لتبادل المعلومات والموارد"
+          },
+          {
+            "value": "1",
+            "text": "جهاز واحد بلا اتصال"
+          },
+          {
+            "value": "2",
+            "text": "برنامج نصوص"
+          },
+          {
+            "value": "3",
+            "text": "نوع طابعة"
+          }
+        ],
+        "fields": [],
+        "parts": [],
+        "answer": {
+          "correctOptionIndex": 0
+        },
+        "hint": "الشبكة مجموعة أجهزة متصلة للعمل والتواصل معًا.",
+        "teacherNote": "",
+        "aiInstruction": "",
+        "wasModified": false,
+        "image": {
+          "exists": false,
+          "visible": false,
+          "origin": null,
+          "assets": [],
+          "prompt": null
+        },
+        "history": [],
+        "redoStack": []
+      },
+      {
+        "examQuestionId": "LIB-T25-Q02",
+        "origin": "imported",
+        "sourceId": "LIB-T25",
+        "sourceQuestionId": "2",
+        "section": "BASIC",
+        "topic": "OTHER_NETWORKING",
+        "secondaryTopics": [],
+        "difficulty": 2,
+        "difficultyLabel": "",
+        "familyKey": "LIB-T25-Q02",
+        "hasCLI": false,
+        "requiresCalculation": false,
+        "presentationType": "multipleChoice",
+        "marks": 5,
+        "locked": false,
+        "text": "شبكة داخل المدرسة تُصنّف غالبًا:",
+        "textHtml": "",
+        "options": [
+          {
+            "value": "0",
+            "text": "PAN"
+          },
+          {
+            "value": "1",
+            "text": "LAN"
+          },
+          {
+            "value": "2",
+            "text": "WAN"
+          },
+          {
+            "value": "3",
+            "text": "MAN فقط"
+          }
+        ],
+        "fields": [],
+        "parts": [],
+        "answer": {
+          "correctOptionIndex": 1
+        },
+        "hint": "LAN شبكة محلية داخل مكان محدود.",
+        "teacherNote": "",
+        "aiInstruction": "",
+        "wasModified": false,
+        "image": {
+          "exists": false,
+          "visible": false,
+          "origin": null,
+          "assets": [],
+          "prompt": null
+        },
+        "history": [],
+        "redoStack": []
+      },
+      {
+        "examQuestionId": "LIB-T25-Q03",
+        "origin": "imported",
+        "sourceId": "LIB-T25",
+        "sourceQuestionId": "3",
+        "section": "BASIC",
+        "topic": "OTHER_NETWORKING",
+        "secondaryTopics": [],
+        "difficulty": 2,
+        "difficultyLabel": "",
+        "familyKey": "LIB-T25-Q03",
+        "hasCLI": false,
+        "requiresCalculation": false,
+        "presentationType": "multipleChoice",
+        "marks": 5,
+        "locked": false,
+        "text": "أي رمزين يستعملهما النظام الثنائي؟",
+        "textHtml": "",
+        "options": [
+          {
+            "value": "0",
+            "text": "1 و2"
+          },
+          {
+            "value": "1",
+            "text": "A وB"
+          },
+          {
+            "value": "2",
+            "text": "0 و1"
+          },
+          {
+            "value": "3",
+            "text": "0 إلى 9"
+          }
+        ],
+        "fields": [],
+        "parts": [],
+        "answer": {
+          "correctOptionIndex": 2
+        },
+        "hint": "النظام الثنائي يستخدم 0 و1 فقط.",
+        "teacherNote": "",
+        "aiInstruction": "",
+        "wasModified": false,
+        "image": {
+          "exists": false,
+          "visible": false,
+          "origin": null,
+          "assets": [],
+          "prompt": null
+        },
+        "history": [],
+        "redoStack": []
+      },
+      {
+        "examQuestionId": "LIB-T25-Q04",
+        "origin": "imported",
+        "sourceId": "LIB-T25",
+        "sourceQuestionId": "4",
+        "section": "BASIC",
+        "topic": "OTHER_NETWORKING",
+        "secondaryTopics": [],
+        "difficulty": 2,
+        "difficultyLabel": "",
+        "familyKey": "LIB-T25-Q04",
+        "hasCLI": false,
+        "requiresCalculation": false,
+        "presentationType": "multipleChoice",
+        "marks": 5,
+        "locked": false,
+        "text": "كم Octet في عنوان IPv4؟",
+        "textHtml": "",
+        "options": [
+          {
+            "value": "0",
+            "text": "2"
+          },
+          {
+            "value": "1",
+            "text": "3"
+          },
+          {
+            "value": "2",
+            "text": "8"
+          },
+          {
+            "value": "3",
+            "text": "4"
+          }
+        ],
+        "fields": [],
+        "parts": [],
+        "answer": {
+          "correctOptionIndex": 3
+        },
+        "hint": "IPv4 يتكون من أربعة أقسام.",
+        "teacherNote": "",
+        "aiInstruction": "",
+        "wasModified": false,
+        "image": {
+          "exists": false,
+          "visible": false,
+          "origin": null,
+          "assets": [],
+          "prompt": null
+        },
+        "history": [],
+        "redoStack": []
+      },
+      {
+        "examQuestionId": "LIB-T25-Q05",
+        "origin": "imported",
+        "sourceId": "LIB-T25",
+        "sourceQuestionId": "5",
+        "section": "BASIC",
+        "topic": "OTHER_NETWORKING",
+        "secondaryTopics": [],
+        "difficulty": 2,
+        "difficultyLabel": "",
+        "familyKey": "LIB-T25-Q05",
+        "hasCLI": false,
+        "requiresCalculation": false,
+        "presentationType": "multipleChoice",
+        "marks": 5,
+        "locked": false,
+        "text": "أي عنوان هو Private IP؟",
+        "textHtml": "",
+        "options": [
+          {
+            "value": "0",
+            "text": "192.168.1.10"
+          },
+          {
+            "value": "1",
+            "text": "8.8.8.8"
+          },
+          {
+            "value": "2",
+            "text": "172.40.1.1"
+          },
+          {
+            "value": "3",
+            "text": "11.0.0.1"
+          }
+        ],
+        "fields": [],
+        "parts": [],
+        "answer": {
+          "correctOptionIndex": 0
+        },
+        "hint": "192.168.0.0/16 مجال خاص.",
+        "teacherNote": "",
+        "aiInstruction": "",
+        "wasModified": false,
+        "image": {
+          "exists": false,
+          "visible": false,
+          "origin": null,
+          "assets": [],
+          "prompt": null
+        },
+        "history": [],
+        "redoStack": []
+      },
+      {
+        "examQuestionId": "LIB-T25-Q06",
+        "origin": "imported",
+        "sourceId": "LIB-T25",
+        "sourceQuestionId": "6",
+        "section": "BASIC",
+        "topic": "OTHER_NETWORKING",
+        "secondaryTopics": [],
+        "difficulty": 2,
+        "difficultyLabel": "",
+        "familyKey": "LIB-T25-Q06",
+        "hasCLI": false,
+        "requiresCalculation": false,
+        "presentationType": "multipleChoice",
+        "marks": 5,
+        "locked": false,
+        "text": "ما CIDR للقناع 255.255.255.0؟",
+        "textHtml": "",
+        "options": [
+          {
+            "value": "0",
+            "text": "/16"
+          },
+          {
+            "value": "1",
+            "text": "/24"
+          },
+          {
+            "value": "2",
+            "text": "/8"
+          },
+          {
+            "value": "3",
+            "text": "/32"
+          }
+        ],
+        "fields": [],
+        "parts": [],
+        "answer": {
+          "correctOptionIndex": 1
+        },
+        "hint": "255.255.255.0 يساوي /24.",
+        "teacherNote": "",
+        "aiInstruction": "",
+        "wasModified": false,
+        "image": {
+          "exists": false,
+          "visible": false,
+          "origin": null,
+          "assets": [],
+          "prompt": null
+        },
+        "history": [],
+        "redoStack": []
+      },
+      {
+        "examQuestionId": "LIB-T25-Q07",
+        "origin": "imported",
+        "sourceId": "LIB-T25",
+        "sourceQuestionId": "7",
+        "section": "BASIC",
+        "topic": "OTHER_NETWORKING",
+        "secondaryTopics": [],
+        "difficulty": 2,
+        "difficultyLabel": "",
+        "familyKey": "LIB-T25-Q07",
+        "hasCLI": false,
+        "requiresCalculation": false,
+        "presentationType": "multipleChoice",
+        "marks": 5,
+        "locked": false,
+        "text": "أي جهاز يربط بين شبكات مختلفة؟",
+        "textHtml": "",
+        "options": [
+          {
+            "value": "0",
+            "text": "Hub"
+          },
+          {
+            "value": "1",
+            "text": "Switch"
+          },
+          {
+            "value": "2",
+            "text": "Router"
+          },
+          {
+            "value": "3",
+            "text": "Access Point فقط"
+          }
+        ],
+        "fields": [],
+        "parts": [],
+        "answer": {
+          "correctOptionIndex": 2
+        },
+        "hint": "Router يربط الشبكات ويختار المسار.",
+        "teacherNote": "",
+        "aiInstruction": "",
+        "wasModified": false,
+        "image": {
+          "exists": false,
+          "visible": false,
+          "origin": null,
+          "assets": [],
+          "prompt": null
+        },
+        "history": [],
+        "redoStack": []
+      },
+      {
+        "examQuestionId": "LIB-T25-Q08",
+        "origin": "imported",
+        "sourceId": "LIB-T25",
+        "sourceQuestionId": "8",
+        "section": "BASIC",
+        "topic": "OTHER_NETWORKING",
+        "secondaryTopics": [],
+        "difficulty": 2,
+        "difficultyLabel": "",
+        "familyKey": "LIB-T25-Q08",
+        "hasCLI": false,
+        "requiresCalculation": false,
+        "presentationType": "multipleChoice",
+        "marks": 5,
+        "locked": false,
+        "text": "في Star تتصل الأجهزة:",
+        "textHtml": "",
+        "options": [
+          {
+            "value": "0",
+            "text": "بدائرة"
+          },
+          {
+            "value": "1",
+            "text": "بخط مشترك"
+          },
+          {
+            "value": "2",
+            "text": "بكل جهاز مباشرة"
+          },
+          {
+            "value": "3",
+            "text": "بجهاز مركزي"
+          }
+        ],
+        "fields": [],
+        "parts": [],
+        "answer": {
+          "correctOptionIndex": 3
+        },
+        "hint": "Star تعتمد على جهاز مركزي مثل Switch.",
+        "teacherNote": "",
+        "aiInstruction": "",
+        "wasModified": false,
+        "image": {
+          "exists": false,
+          "visible": false,
+          "origin": null,
+          "assets": [],
+          "prompt": null
+        },
+        "history": [],
+        "redoStack": []
+      },
+      {
+        "examQuestionId": "LIB-T25-Q09",
+        "origin": "imported",
+        "sourceId": "LIB-T25",
+        "sourceQuestionId": "9",
+        "section": "BASIC",
+        "topic": "OTHER_NETWORKING",
+        "secondaryTopics": [],
+        "difficulty": 2,
+        "difficultyLabel": "",
+        "familyKey": "LIB-T25-Q09",
+        "hasCLI": false,
+        "requiresCalculation": false,
+        "presentationType": "multipleChoice",
+        "marks": 5,
+        "locked": false,
+        "text": "أي كابل ينقل البيانات بالضوء؟",
+        "textHtml": "",
+        "options": [
+          {
+            "value": "0",
+            "text": "Fiber Optic"
+          },
+          {
+            "value": "1",
+            "text": "UTP"
+          },
+          {
+            "value": "2",
+            "text": "STP"
+          },
+          {
+            "value": "3",
+            "text": "Coaxial"
+          }
+        ],
+        "fields": [],
+        "parts": [],
+        "answer": {
+          "correctOptionIndex": 0
+        },
+        "hint": "Fiber Optic يستخدم الضوء.",
+        "teacherNote": "",
+        "aiInstruction": "",
+        "wasModified": false,
+        "image": {
+          "exists": false,
+          "visible": false,
+          "origin": null,
+          "assets": [],
+          "prompt": null
+        },
+        "history": [],
+        "redoStack": []
+      },
+      {
+        "examQuestionId": "LIB-T25-Q10",
+        "origin": "imported",
+        "sourceId": "LIB-T25",
+        "sourceQuestionId": "10",
+        "section": "BASIC",
+        "topic": "OTHER_NETWORKING",
+        "secondaryTopics": [],
+        "difficulty": 2,
+        "difficultyLabel": "",
+        "familyKey": "LIB-T25-Q10",
+        "hasCLI": false,
+        "requiresCalculation": false,
+        "presentationType": "multipleChoice",
+        "marks": 5,
+        "locked": false,
+        "text": "في أي طبقة يعمل MAC Address؟",
+        "textHtml": "",
+        "options": [
+          {
+            "value": "0",
+            "text": "Network"
+          },
+          {
+            "value": "1",
+            "text": "Data Link"
+          },
+          {
+            "value": "2",
+            "text": "Transport"
+          },
+          {
+            "value": "3",
+            "text": "Application"
+          }
+        ],
+        "fields": [],
+        "parts": [],
+        "answer": {
+          "correctOptionIndex": 1
+        },
+        "hint": "MAC يعمل في الطبقة الثانية Data Link.",
+        "teacherNote": "",
+        "aiInstruction": "",
+        "wasModified": false,
+        "image": {
+          "exists": false,
+          "visible": false,
+          "origin": null,
+          "assets": [],
+          "prompt": null
+        },
+        "history": [],
+        "redoStack": []
+      },
+      {
+        "examQuestionId": "LIB-T25-Q11",
+        "origin": "imported",
+        "sourceId": "LIB-T25",
+        "sourceQuestionId": "11",
+        "section": "BASIC",
+        "topic": "OTHER_NETWORKING",
+        "secondaryTopics": [],
+        "difficulty": 2,
+        "difficultyLabel": "",
+        "familyKey": "LIB-T25-Q11",
+        "hasCLI": false,
+        "requiresCalculation": false,
+        "presentationType": "multipleChoice",
+        "marks": 5,
+        "locked": false,
+        "text": "رسالة إلى جميع أجهزة LAN هي:",
+        "textHtml": "",
+        "options": [
+          {
+            "value": "0",
+            "text": "Unicast"
+          },
+          {
+            "value": "1",
+            "text": "Multicast"
+          },
+          {
+            "value": "2",
+            "text": "Broadcast"
+          },
+          {
+            "value": "3",
+            "text": "Anycast"
+          }
+        ],
+        "fields": [],
+        "parts": [],
+        "answer": {
+          "correctOptionIndex": 2
+        },
+        "hint": "Broadcast تصل إلى جميع الأجهزة داخل المجال.",
+        "teacherNote": "",
+        "aiInstruction": "",
+        "wasModified": false,
+        "image": {
+          "exists": false,
+          "visible": false,
+          "origin": null,
+          "assets": [],
+          "prompt": null
+        },
+        "history": [],
+        "redoStack": []
+      },
+      {
+        "examQuestionId": "LIB-T25-Q12",
+        "origin": "imported",
+        "sourceId": "LIB-T25",
+        "sourceQuestionId": "12",
+        "section": "BASIC",
+        "topic": "OTHER_NETWORKING",
+        "secondaryTopics": [],
+        "difficulty": 2,
+        "difficultyLabel": "",
+        "familyKey": "LIB-T25-Q12",
+        "hasCLI": false,
+        "requiresCalculation": false,
+        "presentationType": "multipleChoice",
+        "marks": 5,
+        "locked": false,
+        "text": "أي طبقة تتعامل مع IP والتوجيه؟",
+        "textHtml": "",
+        "options": [
+          {
+            "value": "0",
+            "text": "Physical"
+          },
+          {
+            "value": "1",
+            "text": "Data Link"
+          },
+          {
+            "value": "2",
+            "text": "Transport"
+          },
+          {
+            "value": "3",
+            "text": "Network"
+          }
+        ],
+        "fields": [],
+        "parts": [],
+        "answer": {
+          "correctOptionIndex": 3
+        },
+        "hint": "طبقة Network مسؤولة عن IP والتوجيه.",
+        "teacherNote": "",
+        "aiInstruction": "",
+        "wasModified": false,
+        "image": {
+          "exists": false,
+          "visible": false,
+          "origin": null,
+          "assets": [],
+          "prompt": null
+        },
+        "history": [],
+        "redoStack": []
+      },
+      {
+        "examQuestionId": "LIB-T25-Q13",
+        "origin": "imported",
+        "sourceId": "LIB-T25",
+        "sourceQuestionId": "13",
+        "section": "BASIC",
+        "topic": "OTHER_NETWORKING",
+        "secondaryTopics": [],
+        "difficulty": 2,
+        "difficultyLabel": "",
+        "familyKey": "LIB-T25-Q13",
+        "hasCLI": false,
+        "requiresCalculation": false,
+        "presentationType": "multipleChoice",
+        "marks": 5,
+        "locked": false,
+        "text": "ما وظيفة DNS؟",
+        "textHtml": "",
+        "options": [
+          {
+            "value": "0",
+            "text": "تحويل اسم الموقع إلى IP"
+          },
+          {
+            "value": "1",
+            "text": "توزيع IP"
+          },
+          {
+            "value": "2",
+            "text": "نقل الملفات"
+          },
+          {
+            "value": "3",
+            "text": "إرسال البريد"
+          }
+        ],
+        "fields": [],
+        "parts": [],
+        "answer": {
+          "correctOptionIndex": 0
+        },
+        "hint": "DNS يترجم أسماء المواقع إلى عناوين IP.",
+        "teacherNote": "",
+        "aiInstruction": "",
+        "wasModified": false,
+        "image": {
+          "exists": false,
+          "visible": false,
+          "origin": null,
+          "assets": [],
+          "prompt": null
+        },
+        "history": [],
+        "redoStack": []
+      },
+      {
+        "examQuestionId": "LIB-T25-Q14",
+        "origin": "imported",
+        "sourceId": "LIB-T25",
+        "sourceQuestionId": "14",
+        "section": "BASIC",
+        "topic": "OTHER_NETWORKING",
+        "secondaryTopics": [],
+        "difficulty": 2,
+        "difficultyLabel": "",
+        "familyKey": "LIB-T25-Q14",
+        "hasCLI": false,
+        "requiresCalculation": false,
+        "presentationType": "multipleChoice",
+        "marks": 5,
+        "locked": false,
+        "text": "أي أمر يعرض مسار الرسالة؟",
+        "textHtml": "",
+        "options": [
+          {
+            "value": "0",
+            "text": "ping"
+          },
+          {
+            "value": "1",
+            "text": "tracert"
+          },
+          {
+            "value": "2",
+            "text": "ipconfig"
+          },
+          {
+            "value": "3",
+            "text": "arp -a"
+          }
+        ],
+        "fields": [],
+        "parts": [],
+        "answer": {
+          "correctOptionIndex": 1
+        },
+        "hint": "tracert يعرض القفزات نحو الهدف.",
+        "teacherNote": "",
+        "aiInstruction": "",
+        "wasModified": false,
+        "image": {
+          "exists": false,
+          "visible": false,
+          "origin": null,
+          "assets": [],
+          "prompt": null
+        },
+        "history": [],
+        "redoStack": []
+      },
+      {
+        "examQuestionId": "LIB-T25-Q15",
+        "origin": "imported",
+        "sourceId": "LIB-T25",
+        "sourceQuestionId": "15",
+        "section": "BASIC",
+        "topic": "OTHER_NETWORKING",
+        "secondaryTopics": [],
+        "difficulty": 2,
+        "difficultyLabel": "",
+        "familyKey": "LIB-T25-Q15",
+        "hasCLI": false,
+        "requiresCalculation": false,
+        "presentationType": "multipleChoice",
+        "marks": 5,
+        "locked": false,
+        "text": "ما وظيفة STP؟",
+        "textHtml": "",
+        "options": [
+          {
+            "value": "0",
+            "text": "توزيع DHCP"
+          },
+          {
+            "value": "1",
+            "text": "تشفير Wi-Fi"
+          },
+          {
+            "value": "2",
+            "text": "منع Loops بين السويتشات"
+          },
+          {
+            "value": "3",
+            "text": "إنشاء IPv6"
+          }
+        ],
+        "fields": [],
+        "parts": [],
+        "answer": {
+          "correctOptionIndex": 2
+        },
+        "hint": "STP يمنع الحلقات في الشبكة.",
+        "teacherNote": "",
+        "aiInstruction": "",
+        "wasModified": false,
+        "image": {
+          "exists": false,
+          "visible": false,
+          "origin": null,
+          "assets": [],
+          "prompt": null
+        },
+        "history": [],
+        "redoStack": []
+      },
+      {
+        "examQuestionId": "LIB-T25-Q16",
+        "origin": "imported",
+        "sourceId": "LIB-T25",
+        "sourceQuestionId": "16",
+        "section": "BASIC",
+        "topic": "OTHER_NETWORKING",
+        "secondaryTopics": [],
+        "difficulty": 2,
+        "difficultyLabel": "",
+        "familyKey": "LIB-T25-Q16",
+        "hasCLI": false,
+        "requiresCalculation": false,
+        "presentationType": "multipleChoice",
+        "marks": 5,
+        "locked": false,
+        "text": "رسالة مزيفة لخداع المستخدم وسرقة بياناته هي:",
+        "textHtml": "",
+        "options": [
+          {
+            "value": "0",
+            "text": "DDoS"
+          },
+          {
+            "value": "1",
+            "text": "Spoofing فقط"
+          },
+          {
+            "value": "2",
+            "text": "MitM"
+          },
+          {
+            "value": "3",
+            "text": "Phishing"
+          }
+        ],
+        "fields": [],
+        "parts": [],
+        "answer": {
+          "correctOptionIndex": 3
+        },
+        "hint": "Phishing يعتمد على الخداع برسائل أو مواقع مزيفة.",
+        "teacherNote": "",
+        "aiInstruction": "",
+        "wasModified": false,
+        "image": {
+          "exists": false,
+          "visible": false,
+          "origin": null,
+          "assets": [],
+          "prompt": null
+        },
+        "history": [],
+        "redoStack": []
+      },
+      {
+        "examQuestionId": "LIB-T25-Q17",
+        "origin": "imported",
+        "sourceId": "LIB-T25",
+        "sourceQuestionId": "17",
+        "section": "BASIC",
+        "topic": "OTHER_NETWORKING",
+        "secondaryTopics": [],
+        "difficulty": 2,
+        "difficultyLabel": "",
+        "familyKey": "LIB-T25-Q17",
+        "hasCLI": false,
+        "requiresCalculation": false,
+        "presentationType": "multipleChoice",
+        "marks": 5,
+        "locked": false,
+        "text": "ما SSID؟",
+        "textHtml": "",
+        "options": [
+          {
+            "value": "0",
+            "text": "اسم شبكة Wi-Fi"
+          },
+          {
+            "value": "1",
+            "text": "كلمة مرور VTY"
+          },
+          {
+            "value": "2",
+            "text": "عنوان MAC للبث"
+          },
+          {
+            "value": "3",
+            "text": "منفذ HTTPS"
+          }
+        ],
+        "fields": [],
+        "parts": [],
+        "answer": {
+          "correctOptionIndex": 0
+        },
+        "hint": "SSID هو الاسم الظاهر للشبكة اللاسلكية.",
+        "teacherNote": "",
+        "aiInstruction": "",
+        "wasModified": false,
+        "image": {
+          "exists": false,
+          "visible": false,
+          "origin": null,
+          "assets": [],
+          "prompt": null
+        },
+        "history": [],
+        "redoStack": []
+      },
+      {
+        "examQuestionId": "LIB-T25-Q18",
+        "origin": "imported",
+        "sourceId": "LIB-T25",
+        "sourceQuestionId": "18",
+        "section": "BASIC",
+        "topic": "OTHER_NETWORKING",
+        "secondaryTopics": [],
+        "difficulty": 2,
+        "difficultyLabel": "",
+        "familyKey": "LIB-T25-Q18",
+        "hasCLI": false,
+        "requiresCalculation": false,
+        "presentationType": "multipleChoice",
+        "marks": 5,
+        "locked": false,
+        "text": "كم طول IPv6؟",
+        "textHtml": "",
+        "options": [
+          {
+            "value": "0",
+            "text": "32 بت"
+          },
+          {
+            "value": "1",
+            "text": "128 بت"
+          },
+          {
+            "value": "2",
+            "text": "48 بت"
+          },
+          {
+            "value": "3",
+            "text": "64 بت"
+          }
+        ],
+        "fields": [],
+        "parts": [],
+        "answer": {
+          "correctOptionIndex": 1
+        },
+        "hint": "IPv6 طوله 128 بت.",
+        "teacherNote": "",
+        "aiInstruction": "",
+        "wasModified": false,
+        "image": {
+          "exists": false,
+          "visible": false,
+          "origin": null,
+          "assets": [],
+          "prompt": null
+        },
+        "history": [],
+        "redoStack": []
+      },
+      {
+        "examQuestionId": "LIB-T25-Q19",
+        "origin": "imported",
+        "sourceId": "LIB-T25",
+        "sourceQuestionId": "19",
+        "section": "BASIC",
+        "topic": "OTHER_NETWORKING",
+        "secondaryTopics": [],
+        "difficulty": 2,
+        "difficultyLabel": "",
+        "familyKey": "LIB-T25-Q19",
+        "hasCLI": false,
+        "requiresCalculation": false,
+        "presentationType": "multipleChoice",
+        "marks": 5,
+        "locked": false,
+        "text": "أي منفذ لـHTTPS؟",
+        "textHtml": "",
+        "options": [
+          {
+            "value": "0",
+            "text": "80"
+          },
+          {
+            "value": "1",
+            "text": "53"
+          },
+          {
+            "value": "2",
+            "text": "443"
+          },
+          {
+            "value": "3",
+            "text": "22"
+          }
+        ],
+        "fields": [],
+        "parts": [],
+        "answer": {
+          "correctOptionIndex": 2
+        },
+        "hint": "HTTPS يستخدم 443.",
+        "teacherNote": "",
+        "aiInstruction": "",
+        "wasModified": false,
+        "image": {
+          "exists": false,
+          "visible": false,
+          "origin": null,
+          "assets": [],
+          "prompt": null
+        },
+        "history": [],
+        "redoStack": []
+      },
+      {
+        "examQuestionId": "LIB-T25-Q20",
+        "origin": "imported",
+        "sourceId": "LIB-T25",
+        "sourceQuestionId": "20",
+        "section": "BASIC",
+        "topic": "OTHER_NETWORKING",
+        "secondaryTopics": [],
+        "difficulty": 2,
+        "difficultyLabel": "",
+        "familyKey": "LIB-T25-Q20",
+        "hasCLI": false,
+        "requiresCalculation": false,
+        "presentationType": "multipleChoice",
+        "marks": 5,
+        "locked": false,
+        "text": "أي ترتيب يمثل DORA؟",
+        "textHtml": "",
+        "options": [
+          {
+            "value": "0",
+            "text": "Offer, Discover, ACK, Request"
+          },
+          {
+            "value": "1",
+            "text": "Request, Offer, Discover, ACK"
+          },
+          {
+            "value": "2",
+            "text": "ACK, Request, Offer, Discover"
+          },
+          {
+            "value": "3",
+            "text": "Discover, Offer, Request, ACK"
+          }
+        ],
+        "fields": [],
+        "parts": [],
+        "answer": {
+          "correctOptionIndex": 3
+        },
+        "hint": "DORA: Discover ثم Offer ثم Request ثم ACK.",
+        "teacherNote": "",
+        "aiInstruction": "",
+        "wasModified": false,
+        "image": {
+          "exists": false,
+          "visible": false,
+          "origin": null,
+          "assets": [],
+          "prompt": null
+        },
+        "history": [],
+        "redoStack": []
+      }
+    ],
+    "totalMarks": 100,
+    "status": "final",
+    "createdAt": "2026-09-05T18:57:20.371Z",
+    "updatedAt": "2026-09-05T18:57:20.371Z"
+  }
+}

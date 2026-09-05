@@ -1,0 +1,589 @@
+{
+  "libraryItemId": "T12",
+  "title": "أوامر فحص الشبكة",
+  "category": "foundation",
+  "description": "ping وipconfig وtracert وnslookup وarp لتشخيص المشكلات.",
+  "tags": [
+    "ping",
+    "ipconfig",
+    "tracert / nslookup"
+  ],
+  "questionCount": 10,
+  "totalMarks": 100,
+  "pageRange": "91–95",
+  "parserFamily": "t-series-v1",
+  "conversionStatus": "ready",
+  "publishable": true,
+  "autoGradableCount": 10,
+  "manualReviewCount": 0,
+  "libraryVersion": 1,
+  "sourceSha": "f6894e5b4bcb52d6fc1625bf2b9ca53912e9947f0c84bc200cf2d6fc49eea15b",
+  "contentHash": "24ce6ba936690777702df7a649ef3bda53758cbb52e07dde559f28125af1f214",
+  "convertedAt": "2026-09-05T18:57:19.063Z",
+  "source": {
+    "repository": "Book791381",
+    "sourceFile": "T12.html"
+  },
+  "schemaVersion": 1,
+  "examSnapshot": {
+    "schemaVersion": 1,
+    "examId": "LIB-T12",
+    "title": "أوامر فحص الشبكة",
+    "questions": [
+      {
+        "examQuestionId": "LIB-T12-Q01",
+        "origin": "imported",
+        "sourceId": "LIB-T12",
+        "sourceQuestionId": "1",
+        "section": "BASIC",
+        "topic": "OTHER_NETWORKING",
+        "secondaryTopics": [],
+        "difficulty": 2,
+        "difficultyLabel": "",
+        "familyKey": "LIB-T12-Q01",
+        "hasCLI": false,
+        "requiresCalculation": false,
+        "presentationType": "multipleChoice",
+        "marks": 10,
+        "locked": false,
+        "text": "ما الوظيفة الأساسية للأمر ping؟",
+        "textHtml": "",
+        "options": [
+          {
+            "value": "0",
+            "text": "فحص وجود اتصال بين جهازك وجهاز آخر أو موقع"
+          },
+          {
+            "value": "1",
+            "text": "عرض جدول عناوين MAC فقط"
+          },
+          {
+            "value": "2",
+            "text": "تحويل اسم الموقع إلى عنوان IP"
+          },
+          {
+            "value": "3",
+            "text": "عرض جميع إعدادات بطاقة الشبكة"
+          }
+        ],
+        "fields": [],
+        "parts": [],
+        "answer": {
+          "correctOptionIndex": 0
+        },
+        "hint": "الأمر ping يفحص هل يوجد اتصال بين جهازك وجهاز آخر أو موقع، ويعرض أيضًا زمن الوصول.",
+        "teacherNote": "",
+        "aiInstruction": "",
+        "wasModified": false,
+        "image": {
+          "exists": false,
+          "visible": false,
+          "origin": null,
+          "assets": [],
+          "prompt": null
+        },
+        "history": [],
+        "redoStack": []
+      },
+      {
+        "examQuestionId": "LIB-T12-Q02",
+        "origin": "imported",
+        "sourceId": "LIB-T12",
+        "sourceQuestionId": "2",
+        "section": "BASIC",
+        "topic": "OTHER_NETWORKING",
+        "secondaryTopics": [],
+        "difficulty": 2,
+        "difficultyLabel": "",
+        "familyKey": "LIB-T12-Q02",
+        "hasCLI": false,
+        "requiresCalculation": false,
+        "presentationType": "multipleChoice",
+        "marks": 10,
+        "locked": false,
+        "text": "أي معلومة إضافية يمكن أن يعرضها ping إلى جانب نجاح الاتصال؟",
+        "textHtml": "",
+        "options": [
+          {
+            "value": "0",
+            "text": "اسم المستخدم"
+          },
+          {
+            "value": "1",
+            "text": "زمن الوصول"
+          },
+          {
+            "value": "2",
+            "text": "كلمة مرور الراوتر"
+          },
+          {
+            "value": "3",
+            "text": "عدد شبكات VLAN"
+          }
+        ],
+        "fields": [],
+        "parts": [],
+        "answer": {
+          "correctOptionIndex": 1
+        },
+        "hint": "يعرض ping زمن الوصول بين الجهاز والهدف إلى جانب نتيجة الاتصال.",
+        "teacherNote": "",
+        "aiInstruction": "",
+        "wasModified": false,
+        "image": {
+          "exists": false,
+          "visible": false,
+          "origin": null,
+          "assets": [],
+          "prompt": null
+        },
+        "history": [],
+        "redoStack": []
+      },
+      {
+        "examQuestionId": "LIB-T12-Q03",
+        "origin": "imported",
+        "sourceId": "LIB-T12",
+        "sourceQuestionId": "3",
+        "section": "BASIC",
+        "topic": "OTHER_NETWORKING",
+        "secondaryTopics": [],
+        "difficulty": 2,
+        "difficultyLabel": "",
+        "familyKey": "LIB-T12-Q03",
+        "hasCLI": false,
+        "requiresCalculation": false,
+        "presentationType": "multipleChoice",
+        "marks": 10,
+        "locked": false,
+        "text": "أي أمر يعرض عنوان IP وقناع الشبكة والبوابة الافتراضية في جهاز Windows؟",
+        "textHtml": "",
+        "options": [
+          {
+            "value": "0",
+            "text": "tracert"
+          },
+          {
+            "value": "1",
+            "text": "arp -a"
+          },
+          {
+            "value": "2",
+            "text": "ipconfig /all"
+          },
+          {
+            "value": "3",
+            "text": "nslookup"
+          }
+        ],
+        "fields": [],
+        "parts": [],
+        "answer": {
+          "correctOptionIndex": 2
+        },
+        "hint": "يعرض ipconfig /all إعدادات الشبكة، ومنها IP وSubnet Mask وDefault Gateway وMAC Address.",
+        "teacherNote": "",
+        "aiInstruction": "",
+        "wasModified": false,
+        "image": {
+          "exists": false,
+          "visible": false,
+          "origin": null,
+          "assets": [],
+          "prompt": null
+        },
+        "history": [],
+        "redoStack": []
+      },
+      {
+        "examQuestionId": "LIB-T12-Q04",
+        "origin": "imported",
+        "sourceId": "LIB-T12",
+        "sourceQuestionId": "4",
+        "section": "BASIC",
+        "topic": "OTHER_NETWORKING",
+        "secondaryTopics": [],
+        "difficulty": 2,
+        "difficultyLabel": "",
+        "familyKey": "LIB-T12-Q04",
+        "hasCLI": false,
+        "requiresCalculation": false,
+        "presentationType": "multipleChoice",
+        "marks": 10,
+        "locked": false,
+        "text": "أي أمر يعرض الطريق الذي تسلكه الرسالة إلى الموقع خطوة بعد خطوة؟",
+        "textHtml": "",
+        "options": [
+          {
+            "value": "0",
+            "text": "ping"
+          },
+          {
+            "value": "1",
+            "text": "ipconfig"
+          },
+          {
+            "value": "2",
+            "text": "arp -a"
+          },
+          {
+            "value": "3",
+            "text": "tracert"
+          }
+        ],
+        "fields": [],
+        "parts": [],
+        "answer": {
+          "correctOptionIndex": 3
+        },
+        "hint": "يعرض tracert القفزات أو الطريق الذي تمر به الرسالة حتى تصل إلى الهدف.",
+        "teacherNote": "",
+        "aiInstruction": "",
+        "wasModified": false,
+        "image": {
+          "exists": false,
+          "visible": false,
+          "origin": null,
+          "assets": [],
+          "prompt": null
+        },
+        "history": [],
+        "redoStack": []
+      },
+      {
+        "examQuestionId": "LIB-T12-Q05",
+        "origin": "imported",
+        "sourceId": "LIB-T12",
+        "sourceQuestionId": "5",
+        "section": "BASIC",
+        "topic": "OTHER_NETWORKING",
+        "secondaryTopics": [],
+        "difficulty": 2,
+        "difficultyLabel": "",
+        "familyKey": "LIB-T12-Q05",
+        "hasCLI": false,
+        "requiresCalculation": false,
+        "presentationType": "multipleChoice",
+        "marks": 10,
+        "locked": false,
+        "text": "أي أمر يُستخدم لفحص خدمة DNS وعرض عنوان IP المرتبط باسم موقع؟",
+        "textHtml": "",
+        "options": [
+          {
+            "value": "0",
+            "text": "nslookup"
+          },
+          {
+            "value": "1",
+            "text": "ping"
+          },
+          {
+            "value": "2",
+            "text": "ipconfig"
+          },
+          {
+            "value": "3",
+            "text": "arp -a"
+          }
+        ],
+        "fields": [],
+        "parts": [],
+        "answer": {
+          "correctOptionIndex": 0
+        },
+        "hint": "يُستخدم nslookup لفحص ترجمة اسم الموقع إلى عنوان IP بواسطة DNS.",
+        "teacherNote": "",
+        "aiInstruction": "",
+        "wasModified": false,
+        "image": {
+          "exists": false,
+          "visible": false,
+          "origin": null,
+          "assets": [],
+          "prompt": null
+        },
+        "history": [],
+        "redoStack": []
+      },
+      {
+        "examQuestionId": "LIB-T12-Q06",
+        "origin": "imported",
+        "sourceId": "LIB-T12",
+        "sourceQuestionId": "6",
+        "section": "BASIC",
+        "topic": "OTHER_NETWORKING",
+        "secondaryTopics": [],
+        "difficulty": 2,
+        "difficultyLabel": "",
+        "familyKey": "LIB-T12-Q06",
+        "hasCLI": false,
+        "requiresCalculation": false,
+        "presentationType": "multipleChoice",
+        "marks": 10,
+        "locked": false,
+        "text": "ما الذي يعرضه الأمر arp -a؟",
+        "textHtml": "",
+        "options": [
+          {
+            "value": "0",
+            "text": "سرعة الإنترنت"
+          },
+          {
+            "value": "1",
+            "text": "جدولًا يربط عناوين IP بعناوين MAC المعروفة للجهاز"
+          },
+          {
+            "value": "2",
+            "text": "كلمات مرور الشبكة"
+          },
+          {
+            "value": "3",
+            "text": "قائمة المواقع المفتوحة"
+          }
+        ],
+        "fields": [],
+        "parts": [],
+        "answer": {
+          "correctOptionIndex": 1
+        },
+        "hint": "يعرض arp -a جدول عناوين IP وعناوين MAC التي تعرف عليها الجهاز مؤخرًا.",
+        "teacherNote": "",
+        "aiInstruction": "",
+        "wasModified": false,
+        "image": {
+          "exists": false,
+          "visible": false,
+          "origin": null,
+          "assets": [],
+          "prompt": null
+        },
+        "history": [],
+        "redoStack": []
+      },
+      {
+        "examQuestionId": "LIB-T12-Q07",
+        "origin": "imported",
+        "sourceId": "LIB-T12",
+        "sourceQuestionId": "7",
+        "section": "BASIC",
+        "topic": "OTHER_NETWORKING",
+        "secondaryTopics": [],
+        "difficulty": 2,
+        "difficultyLabel": "",
+        "familyKey": "LIB-T12-Q07",
+        "hasCLI": false,
+        "requiresCalculation": false,
+        "presentationType": "multipleChoice",
+        "marks": 10,
+        "locked": false,
+        "text": "يستطيع الحاسوب فتح موقع بواسطة عنوان IP لكنه لا يفتحه بواسطة الاسم. أي أمر يساعد على فحص المشكلة؟",
+        "textHtml": "",
+        "options": [
+          {
+            "value": "0",
+            "text": "arp -a"
+          },
+          {
+            "value": "1",
+            "text": "tracert"
+          },
+          {
+            "value": "2",
+            "text": "nslookup"
+          },
+          {
+            "value": "3",
+            "text": "ipconfig فقط"
+          }
+        ],
+        "fields": [],
+        "parts": [],
+        "answer": {
+          "correctOptionIndex": 2
+        },
+        "hint": "هذه مشكلة محتملة في DNS، ولذلك نستعمل nslookup لفحص ترجمة اسم الموقع.",
+        "teacherNote": "",
+        "aiInstruction": "",
+        "wasModified": false,
+        "image": {
+          "exists": false,
+          "visible": false,
+          "origin": null,
+          "assets": [],
+          "prompt": null
+        },
+        "history": [],
+        "redoStack": []
+      },
+      {
+        "examQuestionId": "LIB-T12-Q08",
+        "origin": "imported",
+        "sourceId": "LIB-T12",
+        "sourceQuestionId": "8",
+        "section": "BASIC",
+        "topic": "OTHER_NETWORKING",
+        "secondaryTopics": [],
+        "difficulty": 2,
+        "difficultyLabel": "",
+        "familyKey": "LIB-T12-Q08",
+        "hasCLI": false,
+        "requiresCalculation": false,
+        "presentationType": "multipleChoice",
+        "marks": 10,
+        "locked": false,
+        "text": "يريد الفني معرفة عند أي راوتر يتوقف الطريق نحو موقع بعيد. أي أمر يختار؟",
+        "textHtml": "",
+        "options": [
+          {
+            "value": "0",
+            "text": "ipconfig"
+          },
+          {
+            "value": "1",
+            "text": "ping فقط"
+          },
+          {
+            "value": "2",
+            "text": "arp -a"
+          },
+          {
+            "value": "3",
+            "text": "tracert"
+          }
+        ],
+        "fields": [],
+        "parts": [],
+        "answer": {
+          "correctOptionIndex": 3
+        },
+        "hint": "يعرض tracert القفزات المتتابعة، فيساعد على تحديد المكان الذي يتوقف عنده المسار.",
+        "teacherNote": "",
+        "aiInstruction": "",
+        "wasModified": false,
+        "image": {
+          "exists": false,
+          "visible": false,
+          "origin": null,
+          "assets": [],
+          "prompt": null
+        },
+        "history": [],
+        "redoStack": []
+      },
+      {
+        "examQuestionId": "LIB-T12-Q09",
+        "origin": "imported",
+        "sourceId": "LIB-T12",
+        "sourceQuestionId": "9",
+        "section": "BASIC",
+        "topic": "OTHER_NETWORKING",
+        "secondaryTopics": [],
+        "difficulty": 2,
+        "difficultyLabel": "",
+        "familyKey": "LIB-T12-Q09",
+        "hasCLI": false,
+        "requiresCalculation": false,
+        "presentationType": "multipleChoice",
+        "marks": 10,
+        "locked": false,
+        "text": "ماذا يعني نجاح ping بصورة صحيحة؟",
+        "textHtml": "",
+        "options": [
+          {
+            "value": "0",
+            "text": "يوجد اتصال أساسي على مستوى الشبكة، لكنه لا يضمن أن كل الخدمات تعمل"
+          },
+          {
+            "value": "1",
+            "text": "جميع خدمات الويب والبريد تعمل بالتأكيد"
+          },
+          {
+            "value": "2",
+            "text": "DNS يعمل دائمًا"
+          },
+          {
+            "value": "3",
+            "text": "لا توجد أي مشكلة في الشبكة"
+          }
+        ],
+        "fields": [],
+        "parts": [],
+        "answer": {
+          "correctOptionIndex": 0
+        },
+        "hint": "نجاح ping يعني وجود اتصال أساسي، لكنه لا يضمن عمل جميع الخدمات أو التطبيقات.",
+        "teacherNote": "",
+        "aiInstruction": "",
+        "wasModified": false,
+        "image": {
+          "exists": false,
+          "visible": false,
+          "origin": null,
+          "assets": [],
+          "prompt": null
+        },
+        "history": [],
+        "redoStack": []
+      },
+      {
+        "examQuestionId": "LIB-T12-Q10",
+        "origin": "imported",
+        "sourceId": "LIB-T12",
+        "sourceQuestionId": "10",
+        "section": "BASIC",
+        "topic": "OTHER_NETWORKING",
+        "secondaryTopics": [],
+        "difficulty": 2,
+        "difficultyLabel": "",
+        "familyKey": "LIB-T12-Q10",
+        "hasCLI": false,
+        "requiresCalculation": false,
+        "presentationType": "multipleChoice",
+        "marks": 10,
+        "locked": false,
+        "text": "أي ترتيب منطقي يساعد الفني على فحص إعداد الجهاز ثم الاتصال ثم ترجمة اسم موقع؟",
+        "textHtml": "",
+        "options": [
+          {
+            "value": "0",
+            "text": "nslookup ثم arp -a ثم ipconfig"
+          },
+          {
+            "value": "1",
+            "text": "ipconfig ثم ping ثم nslookup"
+          },
+          {
+            "value": "2",
+            "text": "tracert ثم arp -a ثم ipconfig"
+          },
+          {
+            "value": "3",
+            "text": "arp -a ثم nslookup ثم ping"
+          }
+        ],
+        "fields": [],
+        "parts": [],
+        "answer": {
+          "correctOptionIndex": 1
+        },
+        "hint": "نبدأ بـipconfig لفحص الإعدادات، ثم ping لفحص الاتصال، ثم nslookup لفحص DNS.",
+        "teacherNote": "",
+        "aiInstruction": "",
+        "wasModified": false,
+        "image": {
+          "exists": false,
+          "visible": false,
+          "origin": null,
+          "assets": [],
+          "prompt": null
+        },
+        "history": [],
+        "redoStack": []
+      }
+    ],
+    "totalMarks": 100,
+    "status": "final",
+    "createdAt": "2026-09-05T18:57:20.333Z",
+    "updatedAt": "2026-09-05T18:57:20.333Z"
+  }
+}

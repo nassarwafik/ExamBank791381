@@ -1,0 +1,974 @@
+[
+  {
+    "libraryItemId": "F01",
+    "title": "نموذج A — 2025",
+    "category": "final",
+    "description": "نموذج تمهيدي إلى متوسط يراجع الأساسيات وعناوين IP والبنى التحتية.",
+    "tags": [
+      "مدرسي",
+      "تمهيدي–متوسط",
+      "تفاعلي"
+    ],
+    "questionCount": 34,
+    "totalMarks": 100,
+    "pageRange": "",
+    "parserFamily": "f-dom-qcard-v1",
+    "conversionStatus": "needs_review",
+    "publishable": false,
+    "autoGradableCount": 30,
+    "manualReviewCount": 4,
+    "libraryVersion": 1,
+    "sourceSha": "1ee220d9c7192a42897c00090ee801c624b7b8c274356ebd07fc9ae90fc8eaa5",
+    "contentHash": "c6ce200bd497f9f758017d5d8cdd68c95fc43762b27200d5b1fa0558795fb82f",
+    "convertedAt": "2026-09-05T18:57:19.063Z",
+    "source": {
+      "repository": "Book791381",
+      "sourceFile": "F01.html"
+    }
+  },
+  {
+    "libraryItemId": "F02",
+    "title": "نموذج C — 2025",
+    "category": "final",
+    "description": "امتحان شامل من أربعة أقسام يجمع بين المفاهيم والأوامر والأسئلة المتنوعة.",
+    "tags": [
+      "أربعة أقسام",
+      "شامل",
+      "تفاعلي"
+    ],
+    "questionCount": 40,
+    "totalMarks": 100,
+    "pageRange": "",
+    "parserFamily": "f-dom-qcard-v1",
+    "conversionStatus": "needs_review",
+    "publishable": false,
+    "autoGradableCount": 32,
+    "manualReviewCount": 8,
+    "libraryVersion": 1,
+    "sourceSha": "f1c75498638df9d599378234c3914a640a415e1e671c6d0d94695d6097f6166c",
+    "contentHash": "4331e608b86b147cd4b66525aed098149ada465eae1aad723af84ba5c73a89fc",
+    "convertedAt": "2026-09-05T18:57:19.063Z",
+    "source": {
+      "repository": "Book791381",
+      "sourceFile": "F02.html"
+    }
+  },
+  {
+    "libraryItemId": "F03",
+    "title": "نموذج D — 2025",
+    "category": "final",
+    "description": "امتحان متوسط إلى متقدم يتيح الاختيار من عدد أكبر من الأسئلة.",
+    "tags": [
+      "دبلوم",
+      "60 + 40",
+      "متقدم"
+    ],
+    "questionCount": 40,
+    "totalMarks": 160,
+    "pageRange": "",
+    "parserFamily": "f-json-exam-v1",
+    "conversionStatus": "ready",
+    "publishable": true,
+    "autoGradableCount": 40,
+    "manualReviewCount": 0,
+    "libraryVersion": 1,
+    "sourceSha": "9b7a81d16183f8e7e23657d6bddb05f56a8e57b2efd2dc827e37d0f4a3388c1f",
+    "contentHash": "bbf1a0d5661c589e5ef98b7f4c633556393d60f1f837d95e7bf0a9d6a222821b",
+    "convertedAt": "2026-09-05T18:57:19.063Z",
+    "source": {
+      "repository": "Book791381",
+      "sourceFile": "F03.html"
+    }
+  },
+  {
+    "libraryItemId": "F04",
+    "title": "نموذج B — 2024",
+    "category": "final",
+    "description": "نموذج متنوع يجمع بين المعرفة والتطبيق وأوامر الشبكات.",
+    "tags": [
+      "مدرسي",
+      "تطبيقي",
+      "شبكات"
+    ],
+    "questionCount": 42,
+    "totalMarks": 121,
+    "pageRange": "",
+    "parserFamily": "f-dom-qcard-v1",
+    "conversionStatus": "needs_review",
+    "publishable": false,
+    "autoGradableCount": 37,
+    "manualReviewCount": 5,
+    "libraryVersion": 1,
+    "sourceSha": "804aedb6b4543d5dbaa0e2ad5e6559a36856f34a7b41024ed368c7605a993011",
+    "contentHash": "7f74a6f761f260cf57a862b2067f34a06750ab7998928b387bedd9a21d6706aa",
+    "convertedAt": "2026-09-05T18:57:19.063Z",
+    "source": {
+      "repository": "Book791381",
+      "sourceFile": "F04.html"
+    }
+  },
+  {
+    "libraryItemId": "F05",
+    "title": "بجروت صيف 2024",
+    "category": "final",
+    "description": "نسخة رسمية مرتبة مع الرسومات والأسئلة الأصلية للحل والكتابة.",
+    "tags": [
+      "بجروت رسمي",
+      "2024",
+      "رسومات أصلية"
+    ],
+    "questionCount": 41,
+    "totalMarks": 164,
+    "pageRange": "",
+    "parserFamily": "f-dom-qcard-v1",
+    "conversionStatus": "needs_review",
+    "publishable": false,
+    "autoGradableCount": 0,
+    "manualReviewCount": 41,
+    "libraryVersion": 1,
+    "sourceSha": "1f81a85ce8a8dcb0844f4121f0ab25a32a2515c59c770a09285a9bb2992be1f9",
+    "contentHash": "ab8b5ed293b19cf19c079cafcce6c288931a11ed5eae5d529174e474cd1a1a6c",
+    "convertedAt": "2026-09-05T18:57:19.063Z",
+    "source": {
+      "repository": "Book791381",
+      "sourceFile": "F05.html"
+    }
+  },
+  {
+    "libraryItemId": "F06",
+    "title": "بجروت صيف 2025",
+    "category": "final",
+    "description": "أحدث امتحان في الحزمة ويضم القسم الأساسي وتخصص البنى التحتية.",
+    "tags": [
+      "بجروت رسمي",
+      "2025",
+      "تفاعلي"
+    ],
+    "questionCount": 45,
+    "totalMarks": 154,
+    "pageRange": "",
+    "parserFamily": "f-json-sections-v1",
+    "conversionStatus": "needs_review",
+    "publishable": false,
+    "autoGradableCount": 36,
+    "manualReviewCount": 9,
+    "libraryVersion": 1,
+    "sourceSha": "2da394df99c1398a5d1e08a92d310f9c295cbe07ab5b3f771f3aba5673de1b82",
+    "contentHash": "0b6c253dd98cf158d904b35e89bba30267ee0831d2b926a80a2273b8376820e7",
+    "convertedAt": "2026-09-05T18:57:19.063Z",
+    "source": {
+      "repository": "Book791381",
+      "sourceFile": "F06.html"
+    }
+  },
+  {
+    "libraryItemId": "T01",
+    "title": "أساسيات الشبكات",
+    "category": "foundation",
+    "description": "تعريف الشبكة، فوائدها، أنواعها الأساسية، ومتطلبات بناء شبكة بسيطة.",
+    "tags": [
+      "أساسيات",
+      "LAN / WAN",
+      "مفاهيم أولية"
+    ],
+    "questionCount": 10,
+    "totalMarks": 100,
+    "pageRange": "6–11",
+    "parserFamily": "t-series-v1",
+    "conversionStatus": "ready",
+    "publishable": true,
+    "autoGradableCount": 10,
+    "manualReviewCount": 0,
+    "libraryVersion": 1,
+    "sourceSha": "9300c4f63f038037d109b83ec4f05df025897db7b6a412d564337bd2467a1f9f",
+    "contentHash": "b71604dc16fdabf7460ce7e9f428a24def045e64e3b9972c073cc846dcd5cda7",
+    "convertedAt": "2026-09-05T18:57:19.063Z",
+    "source": {
+      "repository": "Book791381",
+      "sourceFile": "T01.html"
+    }
+  },
+  {
+    "libraryItemId": "T02",
+    "title": "أنظمة العد",
+    "category": "foundation",
+    "description": "التحويل بين النظام العشري والثنائي والسادس عشري، وفهم قيمة الخانات.",
+    "tags": [
+      "Decimal",
+      "Binary",
+      "Hexadecimal"
+    ],
+    "questionCount": 10,
+    "totalMarks": 100,
+    "pageRange": "13–21",
+    "parserFamily": "t-series-v1",
+    "conversionStatus": "ready",
+    "publishable": true,
+    "autoGradableCount": 10,
+    "manualReviewCount": 0,
+    "libraryVersion": 1,
+    "sourceSha": "cb82ecfa43ccb525a0247171ed831857ccad53377171ba5c75fadc9e87769772",
+    "contentHash": "5c7d5e545a42bbe24bfbdb22d883cc281147ea1da6deadcd00daf379270a9d2e",
+    "convertedAt": "2026-09-05T18:57:19.063Z",
+    "source": {
+      "repository": "Book791381",
+      "sourceFile": "T02.html"
+    }
+  },
+  {
+    "libraryItemId": "T03",
+    "title": "عناوين IPv4 وصلاحية العنوان",
+    "category": "foundation",
+    "description": "بنية عنوان IPv4، صلاحية العناوين، Localhost وAPIPA.",
+    "tags": [
+      "IPv4",
+      "APIPA",
+      "Localhost"
+    ],
+    "questionCount": 10,
+    "totalMarks": 100,
+    "pageRange": "23–27",
+    "parserFamily": "t-series-v1",
+    "conversionStatus": "ready",
+    "publishable": true,
+    "autoGradableCount": 10,
+    "manualReviewCount": 0,
+    "libraryVersion": 1,
+    "sourceSha": "b5f8246794eaf788e598b602ea6c0c3081051894f1b9bc6f997378dccb9a0f8b",
+    "contentHash": "b35f0656f99dd7843594aab3311e22c1776942b58cfe8886e3461ea83a89bad1",
+    "convertedAt": "2026-09-05T18:57:19.063Z",
+    "source": {
+      "repository": "Book791381",
+      "sourceFile": "T03.html"
+    }
+  },
+  {
+    "libraryItemId": "T04",
+    "title": "العناوين الخاصة والعامة",
+    "category": "foundation",
+    "description": "التمييز بين Public وPrivate IP والفرق بين Static وDynamic.",
+    "tags": [
+      "Private IP",
+      "Public IP",
+      "Static / Dynamic"
+    ],
+    "questionCount": 10,
+    "totalMarks": 100,
+    "pageRange": "28–31",
+    "parserFamily": "t-series-v1",
+    "conversionStatus": "ready",
+    "publishable": true,
+    "autoGradableCount": 10,
+    "manualReviewCount": 0,
+    "libraryVersion": 1,
+    "sourceSha": "ed7993ec5e4d4b54282e496e7f7082b3c402efbab860548f0144ce5a99faa951",
+    "contentHash": "e7735f9aecf3614634cc0a72c75344fe4d2c9da3650955d259823d3ec2f47d0f",
+    "convertedAt": "2026-09-05T18:57:19.063Z",
+    "source": {
+      "repository": "Book791381",
+      "sourceFile": "T04.html"
+    }
+  },
+  {
+    "libraryItemId": "T05",
+    "title": "Class وSubnet وCIDR",
+    "category": "foundation",
+    "description": "فئات العناوين، أقنعة الشبكة، CIDR، Network وHost والبوابة الافتراضية.",
+    "tags": [
+      "Class A/B/C",
+      "Subnet Mask",
+      "CIDR"
+    ],
+    "questionCount": 10,
+    "totalMarks": 100,
+    "pageRange": "33–43",
+    "parserFamily": "t-series-v1",
+    "conversionStatus": "ready",
+    "publishable": true,
+    "autoGradableCount": 10,
+    "manualReviewCount": 0,
+    "libraryVersion": 1,
+    "sourceSha": "82b8476272a632b1fbe1ef787a7f0b0a4c1371ce66cfa359992db21af4b4505e",
+    "contentHash": "825f49eebc8cb0bf4cba515181b087aa17ff1044718070226853b6e787104ddb",
+    "convertedAt": "2026-09-05T18:57:19.063Z",
+    "source": {
+      "repository": "Book791381",
+      "sourceFile": "T05.html"
+    }
+  },
+  {
+    "libraryItemId": "T06",
+    "title": "أجهزة الشبكات",
+    "category": "foundation",
+    "description": "الفرق بين Hub وSwitch وRouter ووظيفة كل جهاز.",
+    "tags": [
+      "Hub",
+      "Switch",
+      "Router"
+    ],
+    "questionCount": 10,
+    "totalMarks": 100,
+    "pageRange": "47–54",
+    "parserFamily": "t-series-v1",
+    "conversionStatus": "ready",
+    "publishable": true,
+    "autoGradableCount": 10,
+    "manualReviewCount": 0,
+    "libraryVersion": 1,
+    "sourceSha": "5982452fd1ecd2fd58e49aa76c6f20588ee0f20788cece21f1cf785e606c4e3a",
+    "contentHash": "62e4ca3d0c10008a0f8dda412e44a25b6f4680ba2e5dbee2b4db1f1ca91b1c5b",
+    "convertedAt": "2026-09-05T18:57:19.063Z",
+    "source": {
+      "repository": "Book791381",
+      "sourceFile": "T06.html"
+    }
+  },
+  {
+    "libraryItemId": "T07",
+    "title": "أشكال توصيل الشبكات",
+    "category": "foundation",
+    "description": "Bus وRing وStar وTree وHybrid واختيار الشكل المناسب.",
+    "tags": [
+      "Topologies",
+      "Star",
+      "Hybrid"
+    ],
+    "questionCount": 10,
+    "totalMarks": 100,
+    "pageRange": "56–58",
+    "parserFamily": "t-series-v1",
+    "conversionStatus": "ready",
+    "publishable": true,
+    "autoGradableCount": 10,
+    "manualReviewCount": 0,
+    "libraryVersion": 1,
+    "sourceSha": "f670ba4d47d3fd081e113d7600b15b2358c2db290e3e2a00046e47778078cdc1",
+    "contentHash": "10c53e37805069ce574a95809daa238a6b9e29f46ccdabef7cb93a240168feb3",
+    "convertedAt": "2026-09-05T18:57:19.063Z",
+    "source": {
+      "repository": "Book791381",
+      "sourceFile": "T07.html"
+    }
+  },
+  {
+    "libraryItemId": "T08",
+    "title": "الكوابل وعنوان MAC",
+    "category": "foundation",
+    "description": "UTP وSTP وFiber وCoaxial وبنية عنوان MAC.",
+    "tags": [
+      "Cables",
+      "MAC",
+      "Layer 2"
+    ],
+    "questionCount": 10,
+    "totalMarks": 100,
+    "pageRange": "60–63",
+    "parserFamily": "t-series-v1",
+    "conversionStatus": "ready",
+    "publishable": true,
+    "autoGradableCount": 10,
+    "manualReviewCount": 0,
+    "libraryVersion": 1,
+    "sourceSha": "d540ea43ac41286932b7fe4abe8c7c842267622a9a3345efd0a682d8aaabf608",
+    "contentHash": "77179cad392dab11e843ce1352928d0b3781d28f01039fe35e6d21e33dee28ae",
+    "convertedAt": "2026-09-05T18:57:19.063Z",
+    "source": {
+      "repository": "Book791381",
+      "sourceFile": "T08.html"
+    }
+  },
+  {
+    "libraryItemId": "T09",
+    "title": "Unicast وMulticast وBroadcast",
+    "category": "foundation",
+    "description": "أنواع إرسال الرسائل والبث داخل الشبكة المحلية.",
+    "tags": [
+      "Unicast",
+      "Multicast",
+      "Broadcast"
+    ],
+    "questionCount": 10,
+    "totalMarks": 100,
+    "pageRange": "65–72",
+    "parserFamily": "t-series-v1",
+    "conversionStatus": "ready",
+    "publishable": true,
+    "autoGradableCount": 10,
+    "manualReviewCount": 0,
+    "libraryVersion": 1,
+    "sourceSha": "b789574d8d5149eb25d6638762303649256232a20fa0a002a2bc1b1d03e97a89",
+    "contentHash": "e480aff51a8024ccadce32bdc5321879bc54f0455b0d2473bb8f6d10ff0eef2a",
+    "convertedAt": "2026-09-05T18:57:19.063Z",
+    "source": {
+      "repository": "Book791381",
+      "sourceFile": "T09.html"
+    }
+  },
+  {
+    "libraryItemId": "T10",
+    "title": "نماذج OSI وTCP/IP",
+    "category": "foundation",
+    "description": "طبقات OSI وTCP/IP ووظائف الطبقات والفرق بين TCP وUDP.",
+    "tags": [
+      "OSI",
+      "TCP/IP",
+      "TCP / UDP"
+    ],
+    "questionCount": 10,
+    "totalMarks": 100,
+    "pageRange": "75–84",
+    "parserFamily": "t-series-v1",
+    "conversionStatus": "ready",
+    "publishable": true,
+    "autoGradableCount": 10,
+    "manualReviewCount": 0,
+    "libraryVersion": 1,
+    "sourceSha": "058f1861210b8e2207b480e789f2e398c04b54a10a08493d7cd2353864f174fd",
+    "contentHash": "4d784814e6f90892c120ede8642bea292e5e7945cd13ff6be0c73ee70aea5006",
+    "convertedAt": "2026-09-05T18:57:19.063Z",
+    "source": {
+      "repository": "Book791381",
+      "sourceFile": "T10.html"
+    }
+  },
+  {
+    "libraryItemId": "T11",
+    "title": "البروتوكولات الأساسية",
+    "category": "foundation",
+    "description": "HTTP وHTTPS وDNS وDHCP والبريد وFTP وSSH وTelnet.",
+    "tags": [
+      "HTTP / HTTPS",
+      "DNS / DHCP",
+      "SSH / Telnet"
+    ],
+    "questionCount": 10,
+    "totalMarks": 100,
+    "pageRange": "85–90",
+    "parserFamily": "t-series-v1",
+    "conversionStatus": "ready",
+    "publishable": true,
+    "autoGradableCount": 10,
+    "manualReviewCount": 0,
+    "libraryVersion": 1,
+    "sourceSha": "b4c042129d8cc0890a159a18c224e970d1d8788f5bd332d1919891e2945dea5e",
+    "contentHash": "3919eeaae0a4feeb85383cee07bac271697297b8944261833d50ba97b705767e",
+    "convertedAt": "2026-09-05T18:57:19.063Z",
+    "source": {
+      "repository": "Book791381",
+      "sourceFile": "T11.html"
+    }
+  },
+  {
+    "libraryItemId": "T12",
+    "title": "أوامر فحص الشبكة",
+    "category": "foundation",
+    "description": "ping وipconfig وtracert وnslookup وarp لتشخيص المشكلات.",
+    "tags": [
+      "ping",
+      "ipconfig",
+      "tracert / nslookup"
+    ],
+    "questionCount": 10,
+    "totalMarks": 100,
+    "pageRange": "91–95",
+    "parserFamily": "t-series-v1",
+    "conversionStatus": "ready",
+    "publishable": true,
+    "autoGradableCount": 10,
+    "manualReviewCount": 0,
+    "libraryVersion": 1,
+    "sourceSha": "f6894e5b4bcb52d6fc1625bf2b9ca53912e9947f0c84bc200cf2d6fc49eea15b",
+    "contentHash": "24ce6ba936690777702df7a649ef3bda53758cbb52e07dde559f28125af1f214",
+    "convertedAt": "2026-09-05T18:57:19.063Z",
+    "source": {
+      "repository": "Book791381",
+      "sourceFile": "T12.html"
+    }
+  },
+  {
+    "libraryItemId": "T13",
+    "title": "المجالات والمفاهيم",
+    "category": "foundation",
+    "description": "Collision Domain وBroadcast Domain وSTP وDuplex وLocalhost.",
+    "tags": [
+      "Collision Domain",
+      "Broadcast Domain",
+      "STP"
+    ],
+    "questionCount": 10,
+    "totalMarks": 100,
+    "pageRange": "96–102",
+    "parserFamily": "t-series-v1",
+    "conversionStatus": "ready",
+    "publishable": true,
+    "autoGradableCount": 10,
+    "manualReviewCount": 0,
+    "libraryVersion": 1,
+    "sourceSha": "db95dd1e2b69363735f44f2ae4155223fff40445beea4cb09632c15deb1f48d0",
+    "contentHash": "44f22ce07f7d8ecc60a9bb0c31f4df9db1e8882b330094b4aaff5ce7718e3f98",
+    "convertedAt": "2026-09-05T18:57:19.063Z",
+    "source": {
+      "repository": "Book791381",
+      "sourceFile": "T13.html"
+    }
+  },
+  {
+    "libraryItemId": "T14",
+    "title": "أمان الشبكات وتجزئة البيانات",
+    "category": "foundation",
+    "description": "هجمات الشبكات ثم Segment وPacket وFrame.",
+    "tags": [
+      "Network Security",
+      "Attacks",
+      "Data Units"
+    ],
+    "questionCount": 10,
+    "totalMarks": 100,
+    "pageRange": "107–115",
+    "parserFamily": "t-series-v1",
+    "conversionStatus": "ready",
+    "publishable": true,
+    "autoGradableCount": 10,
+    "manualReviewCount": 0,
+    "libraryVersion": 1,
+    "sourceSha": "e692db956a3e8f946fd4a0df45bdd4e3c2ba1bb3532fe49694f7b45fc278ad71",
+    "contentHash": "831f9e86886caca021a46f47461475a8e74d7adb66f0a171d7c4998ed23aad9f",
+    "convertedAt": "2026-09-05T18:57:19.063Z",
+    "source": {
+      "repository": "Book791381",
+      "sourceFile": "T14.html"
+    }
+  },
+  {
+    "libraryItemId": "T15",
+    "title": "برمجة السويتش وVLAN الأساسية",
+    "category": "infra",
+    "description": "واجهة CLI وإنشاء VLAN وتسميتها وربط منافذ Access بها.",
+    "tags": [
+      "Cisco CLI",
+      "VLAN",
+      "Access Port"
+    ],
+    "questionCount": 10,
+    "totalMarks": 100,
+    "pageRange": "119–126",
+    "parserFamily": "t-series-v1",
+    "conversionStatus": "ready",
+    "publishable": true,
+    "autoGradableCount": 10,
+    "manualReviewCount": 0,
+    "libraryVersion": 1,
+    "sourceSha": "f7c4393d16cbb6232252affab312731b5e2bda3fa41c5c48cd6dc92554c5f0ec",
+    "contentHash": "d4012a362f7488b8c3fc5d8324590d9b4e674489dedaa50c14e78bc8b232a379",
+    "convertedAt": "2026-09-05T18:57:19.063Z",
+    "source": {
+      "repository": "Book791381",
+      "sourceFile": "T15.html"
+    }
+  },
+  {
+    "libraryItemId": "T16",
+    "title": "بروتوكول VTP",
+    "category": "infra",
+    "description": "VTP Server وClient وDomain وPassword ونقل تحديثات VLAN.",
+    "tags": [
+      "VTP Server",
+      "VTP Client",
+      "Domain"
+    ],
+    "questionCount": 10,
+    "totalMarks": 100,
+    "pageRange": "137–142",
+    "parserFamily": "t-series-v1",
+    "conversionStatus": "ready",
+    "publishable": true,
+    "autoGradableCount": 10,
+    "manualReviewCount": 0,
+    "libraryVersion": 1,
+    "sourceSha": "40d45fd2cd362cd78163c142e81536a80cd78a971e53ee1bd974c9e2ea58e0a1",
+    "contentHash": "d109638dc7ef271ca0d97b200f46504fdc7b60443f822d2e40115cc7c3bfd612",
+    "convertedAt": "2026-09-05T18:57:19.063Z",
+    "source": {
+      "repository": "Book791381",
+      "sourceFile": "T16.html"
+    }
+  },
+  {
+    "libraryItemId": "T17",
+    "title": "Trunk وdot1Q وRouter-on-a-Stick",
+    "category": "infra",
+    "description": "Access وTrunk وdot1Q والواجهات الفرعية والتوجيه بين VLANs.",
+    "tags": [
+      "Trunk",
+      "dot1Q",
+      "Router-on-a-Stick"
+    ],
+    "questionCount": 10,
+    "totalMarks": 100,
+    "pageRange": "143–154",
+    "parserFamily": "t-series-v1",
+    "conversionStatus": "ready",
+    "publishable": true,
+    "autoGradableCount": 10,
+    "manualReviewCount": 0,
+    "libraryVersion": 1,
+    "sourceSha": "d6594f9b462288d3be2dc152a5ed485cb64a933c8b2f9c2a3cc6e21889996b4c",
+    "contentHash": "7005b6223ecf6d994c691cd2eac8c2f83e5a92c94c692039ead2efc620597360",
+    "convertedAt": "2026-09-05T18:57:19.063Z",
+    "source": {
+      "repository": "Book791381",
+      "sourceFile": "T17.html"
+    }
+  },
+  {
+    "libraryItemId": "T18",
+    "title": "DMZ وWi-Fi وIPv6 والمنافذ",
+    "category": "infra",
+    "description": "DMZ وSSID وأمان Wi-Fi وIPv6 وأرقام منافذ الخدمات.",
+    "tags": [
+      "DMZ",
+      "Wi-Fi",
+      "IPv6 / Ports"
+    ],
+    "questionCount": 10,
+    "totalMarks": 100,
+    "pageRange": "157–166",
+    "parserFamily": "t-series-v1",
+    "conversionStatus": "ready",
+    "publishable": true,
+    "autoGradableCount": 10,
+    "manualReviewCount": 0,
+    "libraryVersion": 1,
+    "sourceSha": "9315b45c57c39905879a885acf87caafa71281fd8b38c729e7f98687527682bb",
+    "contentHash": "dd32d357114bf885ed0cb52291192560700ebbb3081fbc119db0930ec0699b5d",
+    "convertedAt": "2026-09-05T18:57:19.063Z",
+    "source": {
+      "repository": "Book791381",
+      "sourceFile": "T18.html"
+    }
+  },
+  {
+    "libraryItemId": "T19",
+    "title": "بروتوكول DHCP",
+    "category": "infra",
+    "description": "DORA وإعداد DHCP والاستثناءات وAPIPA.",
+    "tags": [
+      "DHCP",
+      "DORA",
+      "Excluded Address"
+    ],
+    "questionCount": 10,
+    "totalMarks": 100,
+    "pageRange": "167–177",
+    "parserFamily": "t-series-v1",
+    "conversionStatus": "ready",
+    "publishable": true,
+    "autoGradableCount": 10,
+    "manualReviewCount": 0,
+    "libraryVersion": 1,
+    "sourceSha": "c339ca099507f5f092040d051118e74c76622c4b532976bd39e5d44c35422881",
+    "contentHash": "c86f3855555eeba52f6d461ea663f7783eeac566a18e001db657ac41ad1b2288",
+    "convertedAt": "2026-09-05T18:57:19.063Z",
+    "source": {
+      "repository": "Book791381",
+      "sourceFile": "T19.html"
+    }
+  },
+  {
+    "libraryItemId": "T20",
+    "title": "Port Security وحماية Cisco",
+    "category": "infra",
+    "description": "Sticky MAC وMaximum وViolation وحماية Console وVTY وEnable.",
+    "tags": [
+      "Port Security",
+      "Sticky MAC",
+      "Passwords"
+    ],
+    "questionCount": 10,
+    "totalMarks": 100,
+    "pageRange": "178–188",
+    "parserFamily": "t-series-v1",
+    "conversionStatus": "ready",
+    "publishable": true,
+    "autoGradableCount": 10,
+    "manualReviewCount": 0,
+    "libraryVersion": 1,
+    "sourceSha": "ed0992d15510e6a8b394b8a17e2f9d3c316f494ee5c9f4a3dd541f6964e57bb9",
+    "contentHash": "0283c8163b2ea12b21de138cc9b10fb4bf2f4f2d8b5a343558831908fd253162",
+    "convertedAt": "2026-09-05T18:57:19.063Z",
+    "source": {
+      "repository": "Book791381",
+      "sourceFile": "T20.html"
+    }
+  },
+  {
+    "libraryItemId": "T21",
+    "title": "مرجع أوامر Cisco",
+    "category": "infra",
+    "description": "مراجعة موسعة لأوامر الإعداد والفحص الخاصة بأجهزة Cisco.",
+    "tags": [
+      "15 سؤالًا",
+      "Cisco Commands",
+      "show commands"
+    ],
+    "questionCount": 15,
+    "totalMarks": 100,
+    "pageRange": "190–197",
+    "parserFamily": "t-series-v1",
+    "conversionStatus": "ready",
+    "publishable": true,
+    "autoGradableCount": 15,
+    "manualReviewCount": 0,
+    "libraryVersion": 1,
+    "sourceSha": "0dbd09a81c9cb6d392c708111b31a9f7f316a7df97264ea8aea915644d68280b",
+    "contentHash": "e26ee3eb806ead72a8c7d8370c90d3e9289ae2b63251c30a7daf15a77fdfd2a7",
+    "convertedAt": "2026-09-05T18:57:19.063Z",
+    "source": {
+      "repository": "Book791381",
+      "sourceFile": "T21.html"
+    }
+  },
+  {
+    "libraryItemId": "T22",
+    "title": "الشبكات الواسعة WAN",
+    "category": "infra",
+    "description": "WAN وFrame Relay وATM وHDLC وMetro Ethernet.",
+    "tags": [
+      "WAN",
+      "Metro Ethernet",
+      "HDLC / ATM"
+    ],
+    "questionCount": 10,
+    "totalMarks": 100,
+    "pageRange": "205–211",
+    "parserFamily": "t-series-v1",
+    "conversionStatus": "ready",
+    "publishable": true,
+    "autoGradableCount": 10,
+    "manualReviewCount": 0,
+    "libraryVersion": 1,
+    "sourceSha": "0d3303877f1fbccb6012276e3726c184166852577e819ba210d747c8f0661c94",
+    "contentHash": "97e73d1efe93d26d595db390f73307d517a381b26aa6d245eec63ebf191cfca1",
+    "convertedAt": "2026-09-05T18:57:19.063Z",
+    "source": {
+      "repository": "Book791381",
+      "sourceFile": "T22.html"
+    }
+  },
+  {
+    "libraryItemId": "T23",
+    "title": "بروتوكولات التوجيه",
+    "category": "infra",
+    "description": "Static Route وOSPF وEIGRP وMetric وAdministrative Distance.",
+    "tags": [
+      "Static Route",
+      "OSPF",
+      "EIGRP"
+    ],
+    "questionCount": 10,
+    "totalMarks": 100,
+    "pageRange": "212–220",
+    "parserFamily": "t-series-v1",
+    "conversionStatus": "ready",
+    "publishable": true,
+    "autoGradableCount": 10,
+    "manualReviewCount": 0,
+    "libraryVersion": 1,
+    "sourceSha": "c5d48db485bfef51e54bc7bcafb05d708073c84a8ac8e8e41b4057991b4180ba",
+    "contentHash": "6f6b9d35acd2c46f94ca42a9f4e799858e3862493bf98cd780af737e93f84ce6",
+    "convertedAt": "2026-09-05T18:57:19.063Z",
+    "source": {
+      "repository": "Book791381",
+      "sourceFile": "T23.html"
+    }
+  },
+  {
+    "libraryItemId": "T24",
+    "title": "قوائم التحكم ACL",
+    "category": "infra",
+    "description": "Standard وExtended ACL وpermit وdeny وWildcard.",
+    "tags": [
+      "ACL",
+      "Standard / Extended",
+      "Wildcard"
+    ],
+    "questionCount": 10,
+    "totalMarks": 100,
+    "pageRange": "221–225",
+    "parserFamily": "t-series-v1",
+    "conversionStatus": "ready",
+    "publishable": true,
+    "autoGradableCount": 10,
+    "manualReviewCount": 0,
+    "libraryVersion": 1,
+    "sourceSha": "7a4bc9acc3eea30810d11da4bbb1c7f41268f271e75ea2540d23950f88bb93e7",
+    "contentHash": "1ff788e2d99d8736165643d226768216a740e3bf6ee7260a868338282ceaafc0",
+    "convertedAt": "2026-09-05T18:57:19.063Z",
+    "source": {
+      "repository": "Book791381",
+      "sourceFile": "T24.html"
+    }
+  },
+  {
+    "libraryItemId": "T25",
+    "title": "امتحان شامل للقسم الأساسي — A",
+    "category": "comprehensive",
+    "description": "نموذج شامل أول من 20 سؤالًا يغطي موضوعات القسم الأساسي.",
+    "tags": [
+      "20 سؤالًا",
+      "مراجعة شاملة",
+      "النموذج A"
+    ],
+    "questionCount": 20,
+    "totalMarks": 100,
+    "pageRange": "6–188",
+    "parserFamily": "t-series-v1",
+    "conversionStatus": "ready",
+    "publishable": true,
+    "autoGradableCount": 20,
+    "manualReviewCount": 0,
+    "libraryVersion": 1,
+    "sourceSha": "fc5c2483053b01132713e9ee08481de386e0b30a63c29f6cb9ceadbf2541d14e",
+    "contentHash": "bbaf2682a9bad2ff715d6db56e8df408781b4516e65db29b67e31015a386d35e",
+    "convertedAt": "2026-09-05T18:57:19.063Z",
+    "source": {
+      "repository": "Book791381",
+      "sourceFile": "T25.html"
+    }
+  },
+  {
+    "libraryItemId": "T26",
+    "title": "امتحان شامل للقسم الأساسي — B",
+    "category": "comprehensive",
+    "description": "نموذج شامل ثانٍ من 20 سؤالًا بصياغات مختلفة.",
+    "tags": [
+      "20 سؤالًا",
+      "مراجعة شاملة",
+      "النموذج B"
+    ],
+    "questionCount": 20,
+    "totalMarks": 100,
+    "pageRange": "6–188",
+    "parserFamily": "t-series-v1",
+    "conversionStatus": "ready",
+    "publishable": true,
+    "autoGradableCount": 20,
+    "manualReviewCount": 0,
+    "libraryVersion": 1,
+    "sourceSha": "0452a2d5bb5a670206912c4844efe4072f2a15688e4e872b62ccd1e84c93e334",
+    "contentHash": "ae98d2dbce46e3f7701a1a77e34f3f71711c2ca489de0af6b84db7fc40d3cb6c",
+    "convertedAt": "2026-09-05T18:57:19.063Z",
+    "source": {
+      "repository": "Book791381",
+      "sourceFile": "T26.html"
+    }
+  },
+  {
+    "libraryItemId": "T27",
+    "title": "مراجعة امتحان 2021",
+    "category": "advanced",
+    "description": "عشرون سؤالًا متدرّجًا مستخلصًا من نموذج 2021، تشمل DHCP وكلمات المرور وVLAN وOSPF وPort Security.",
+    "tags": [
+      "2021",
+      "Cisco",
+      "DHCP / OSPF"
+    ],
+    "questionCount": 20,
+    "totalMarks": 100,
+    "pageRange": "226",
+    "parserFamily": "t-series-v1",
+    "conversionStatus": "ready",
+    "publishable": true,
+    "autoGradableCount": 20,
+    "manualReviewCount": 0,
+    "libraryVersion": 1,
+    "sourceSha": "44a7dabdf0b15450549b5a8af8f1f48cf6545c224850fbb1f9b5c9a238fbd400",
+    "contentHash": "afa40712d62b47bb9cf332839d75a6a406d7c4b2157f8c3ec84c368174b83d1a",
+    "convertedAt": "2026-09-05T18:57:19.063Z",
+    "source": {
+      "repository": "Book791381",
+      "sourceFile": "T27.html"
+    }
+  },
+  {
+    "libraryItemId": "T28",
+    "title": "مراجعة امتحان 2022",
+    "category": "advanced",
+    "description": "عشرون سؤالًا متدرّجًا من نموذج 2022، تراجع العناوين وأنظمة العد وOSI وأوامر الفحص وPort Security وVLAN.",
+    "tags": [
+      "2022",
+      "OSI",
+      "VLAN"
+    ],
+    "questionCount": 20,
+    "totalMarks": 100,
+    "pageRange": "226",
+    "parserFamily": "t-series-v1",
+    "conversionStatus": "ready",
+    "publishable": true,
+    "autoGradableCount": 20,
+    "manualReviewCount": 0,
+    "libraryVersion": 1,
+    "sourceSha": "f9f69a78f180e1345b53c0064f25b42dbf4bac7248f686ff65b733d234dacf05",
+    "contentHash": "2a3cde8a7461f4532c16e0663818ed8d14a09044b2a29bbe791970ad832de838",
+    "convertedAt": "2026-09-05T18:57:19.063Z",
+    "source": {
+      "repository": "Book791381",
+      "sourceFile": "T28.html"
+    }
+  },
+  {
+    "libraryItemId": "T29",
+    "title": "مراجعة امتحان 2023",
+    "category": "advanced",
+    "description": "عشرون سؤالًا متدرّجًا من نموذج 2023، تجمع أساسيات IP وMAC وDHCP مع SSH وPort Security وOSPF.",
+    "tags": [
+      "2023",
+      "IP / MAC",
+      "SSH / OSPF"
+    ],
+    "questionCount": 20,
+    "totalMarks": 100,
+    "pageRange": "226",
+    "parserFamily": "t-series-v1",
+    "conversionStatus": "ready",
+    "publishable": true,
+    "autoGradableCount": 20,
+    "manualReviewCount": 0,
+    "libraryVersion": 1,
+    "sourceSha": "fd23ab467680c2f0b8ff776073df59db2cf24200981b9c536cf49ca962bf9d9d",
+    "contentHash": "338ffc91ad3875ac30897f798bd32f11e739d1e9262dbb39851124babf848ba6",
+    "convertedAt": "2026-09-05T18:57:19.063Z",
+    "source": {
+      "repository": "Book791381",
+      "sourceFile": "T29.html"
+    }
+  },
+  {
+    "libraryItemId": "T30",
+    "title": "مراجعة إضافية 2023",
+    "category": "advanced",
+    "description": "عشرون سؤالًا إضافيًا تغطي الأساسيات ثم تنتقل إلى ARP وSVI وStore-and-Forward وAdministrative Distance وVLAN.",
+    "tags": [
+      "2023 إضافي",
+      "ARP / SVI",
+      "AD / VLAN"
+    ],
+    "questionCount": 20,
+    "totalMarks": 100,
+    "pageRange": "226",
+    "parserFamily": "t-series-v1",
+    "conversionStatus": "ready",
+    "publishable": true,
+    "autoGradableCount": 20,
+    "manualReviewCount": 0,
+    "libraryVersion": 1,
+    "sourceSha": "1fa0e3afa1cf3b9a227dc1e615d8f66037cb6e7468a78243e80a5fb7510f7be4",
+    "contentHash": "4555f65ddb044b5c97c79e3c53df818ecb12d29305fca13d922416e7fde7e5e8",
+    "convertedAt": "2026-09-05T18:57:19.063Z",
+    "source": {
+      "repository": "Book791381",
+      "sourceFile": "T30.html"
+    }
+  }
+]

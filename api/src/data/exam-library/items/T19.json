@@ -1,0 +1,589 @@
+{
+  "libraryItemId": "T19",
+  "title": "بروتوكول DHCP",
+  "category": "infra",
+  "description": "DORA وإعداد DHCP والاستثناءات وAPIPA.",
+  "tags": [
+    "DHCP",
+    "DORA",
+    "Excluded Address"
+  ],
+  "questionCount": 10,
+  "totalMarks": 100,
+  "pageRange": "167–177",
+  "parserFamily": "t-series-v1",
+  "conversionStatus": "ready",
+  "publishable": true,
+  "autoGradableCount": 10,
+  "manualReviewCount": 0,
+  "libraryVersion": 1,
+  "sourceSha": "c339ca099507f5f092040d051118e74c76622c4b532976bd39e5d44c35422881",
+  "contentHash": "c86f3855555eeba52f6d461ea663f7783eeac566a18e001db657ac41ad1b2288",
+  "convertedAt": "2026-09-05T18:57:19.063Z",
+  "source": {
+    "repository": "Book791381",
+    "sourceFile": "T19.html"
+  },
+  "schemaVersion": 1,
+  "examSnapshot": {
+    "schemaVersion": 1,
+    "examId": "LIB-T19",
+    "title": "بروتوكول DHCP",
+    "questions": [
+      {
+        "examQuestionId": "LIB-T19-Q01",
+        "origin": "imported",
+        "sourceId": "LIB-T19",
+        "sourceQuestionId": "1",
+        "section": "BASIC",
+        "topic": "OTHER_NETWORKING",
+        "secondaryTopics": [],
+        "difficulty": 2,
+        "difficultyLabel": "",
+        "familyKey": "LIB-T19-Q01",
+        "hasCLI": false,
+        "requiresCalculation": false,
+        "presentationType": "multipleChoice",
+        "marks": 10,
+        "locked": false,
+        "text": "ما الوظيفة الأساسية لبروتوكول DHCP؟",
+        "textHtml": "",
+        "options": [
+          {
+            "value": "0",
+            "text": "تشفير Wi-Fi"
+          },
+          {
+            "value": "1",
+            "text": "توزيع إعدادات الشبكة تلقائيًا على الأجهزة"
+          },
+          {
+            "value": "2",
+            "text": "نقل الملفات"
+          },
+          {
+            "value": "3",
+            "text": "منع Loops"
+          }
+        ],
+        "fields": [],
+        "parts": [],
+        "answer": {
+          "correctOptionIndex": 1
+        },
+        "hint": "DHCP يوزع عنوان IP وGateway وDNS تلقائيًا، ويوفر الوقت ويقلل أخطاء الإعداد.",
+        "teacherNote": "",
+        "aiInstruction": "",
+        "wasModified": false,
+        "image": {
+          "exists": false,
+          "visible": false,
+          "origin": null,
+          "assets": [],
+          "prompt": null
+        },
+        "history": [],
+        "redoStack": []
+      },
+      {
+        "examQuestionId": "LIB-T19-Q02",
+        "origin": "imported",
+        "sourceId": "LIB-T19",
+        "sourceQuestionId": "2",
+        "section": "BASIC",
+        "topic": "OTHER_NETWORKING",
+        "secondaryTopics": [],
+        "difficulty": 2,
+        "difficultyLabel": "",
+        "familyKey": "LIB-T19-Q02",
+        "hasCLI": false,
+        "requiresCalculation": false,
+        "presentationType": "multipleChoice",
+        "marks": 10,
+        "locked": false,
+        "text": "ما الترتيب الصحيح لمراحل عمل DHCP؟",
+        "textHtml": "",
+        "options": [
+          {
+            "value": "0",
+            "text": "Request ثم ACK ثم Discover ثم Offer"
+          },
+          {
+            "value": "1",
+            "text": "Offer ثم Discover ثم ACK ثم Request"
+          },
+          {
+            "value": "2",
+            "text": "ACK ثم Request ثم Offer ثم Discover"
+          },
+          {
+            "value": "3",
+            "text": "Discover ثم Offer ثم Request ثم ACK"
+          }
+        ],
+        "fields": [],
+        "parts": [],
+        "answer": {
+          "correctOptionIndex": 3
+        },
+        "hint": "ترتيب المراحل هو Discover ثم Offer ثم Request ثم ACK، ويختصر باسم DORA.",
+        "teacherNote": "",
+        "aiInstruction": "",
+        "wasModified": false,
+        "image": {
+          "exists": false,
+          "visible": false,
+          "origin": null,
+          "assets": [],
+          "prompt": null
+        },
+        "history": [],
+        "redoStack": []
+      },
+      {
+        "examQuestionId": "LIB-T19-Q03",
+        "origin": "imported",
+        "sourceId": "LIB-T19",
+        "sourceQuestionId": "3",
+        "section": "BASIC",
+        "topic": "OTHER_NETWORKING",
+        "secondaryTopics": [],
+        "difficulty": 2,
+        "difficultyLabel": "",
+        "familyKey": "LIB-T19-Q03",
+        "hasCLI": false,
+        "requiresCalculation": false,
+        "presentationType": "multipleChoice",
+        "marks": 10,
+        "locked": false,
+        "text": "في المثال الموجود في الكتاب، ما عنوان Gateway للشبكة 192.168.1.0/24؟",
+        "textHtml": "",
+        "options": [
+          {
+            "value": "0",
+            "text": "192.168.1.254"
+          },
+          {
+            "value": "1",
+            "text": "192.168.1.0"
+          },
+          {
+            "value": "2",
+            "text": "192.168.1.10"
+          },
+          {
+            "value": "3",
+            "text": "8.8.8.8"
+          }
+        ],
+        "fields": [],
+        "parts": [],
+        "answer": {
+          "correctOptionIndex": 0
+        },
+        "hint": "في المثال يعمل الراوتر كخادم DHCP وبوابة افتراضية بالعنوان 192.168.1.254.",
+        "teacherNote": "",
+        "aiInstruction": "",
+        "wasModified": false,
+        "image": {
+          "exists": false,
+          "visible": false,
+          "origin": null,
+          "assets": [],
+          "prompt": null
+        },
+        "history": [],
+        "redoStack": []
+      },
+      {
+        "examQuestionId": "LIB-T19-Q04",
+        "origin": "imported",
+        "sourceId": "LIB-T19",
+        "sourceQuestionId": "4",
+        "section": "BASIC",
+        "topic": "OTHER_NETWORKING",
+        "secondaryTopics": [],
+        "difficulty": 2,
+        "difficultyLabel": "",
+        "familyKey": "LIB-T19-Q04",
+        "hasCLI": false,
+        "requiresCalculation": false,
+        "presentationType": "multipleChoice",
+        "marks": 10,
+        "locked": false,
+        "text": "أي أمر ينشئ مجموعة توزيع DHCP باسم LAN؟",
+        "textHtml": "",
+        "options": [
+          {
+            "value": "0",
+            "text": "network LAN"
+          },
+          {
+            "value": "1",
+            "text": "default-router LAN"
+          },
+          {
+            "value": "2",
+            "text": "ip dhcp pool LAN"
+          },
+          {
+            "value": "3",
+            "text": "interface dhcp LAN"
+          }
+        ],
+        "fields": [],
+        "parts": [],
+        "answer": {
+          "correctOptionIndex": 2
+        },
+        "hint": "الأمر ip dhcp pool LAN ينشئ مجموعة توزيع DHCP باسم LAN.",
+        "teacherNote": "",
+        "aiInstruction": "",
+        "wasModified": false,
+        "image": {
+          "exists": false,
+          "visible": false,
+          "origin": null,
+          "assets": [],
+          "prompt": null
+        },
+        "history": [],
+        "redoStack": []
+      },
+      {
+        "examQuestionId": "LIB-T19-Q05",
+        "origin": "imported",
+        "sourceId": "LIB-T19",
+        "sourceQuestionId": "5",
+        "section": "BASIC",
+        "topic": "OTHER_NETWORKING",
+        "secondaryTopics": [],
+        "difficulty": 2,
+        "difficultyLabel": "",
+        "familyKey": "LIB-T19-Q05",
+        "hasCLI": false,
+        "requiresCalculation": false,
+        "presentationType": "multipleChoice",
+        "marks": 10,
+        "locked": false,
+        "text": "أي أمر يحدد الشبكة التي سيوزع منها DHCP العناوين؟",
+        "textHtml": "",
+        "options": [
+          {
+            "value": "0",
+            "text": "dns-server"
+          },
+          {
+            "value": "1",
+            "text": "network"
+          },
+          {
+            "value": "2",
+            "text": "login"
+          },
+          {
+            "value": "3",
+            "text": "switchport access vlan"
+          }
+        ],
+        "fields": [],
+        "parts": [],
+        "answer": {
+          "correctOptionIndex": 1
+        },
+        "hint": "داخل DHCP pool نستخدم network متبوعًا بعنوان الشبكة وقناعها.",
+        "teacherNote": "",
+        "aiInstruction": "",
+        "wasModified": false,
+        "image": {
+          "exists": false,
+          "visible": false,
+          "origin": null,
+          "assets": [],
+          "prompt": null
+        },
+        "history": [],
+        "redoStack": []
+      },
+      {
+        "examQuestionId": "LIB-T19-Q06",
+        "origin": "imported",
+        "sourceId": "LIB-T19",
+        "sourceQuestionId": "6",
+        "section": "BASIC",
+        "topic": "OTHER_NETWORKING",
+        "secondaryTopics": [],
+        "difficulty": 2,
+        "difficultyLabel": "",
+        "familyKey": "LIB-T19-Q06",
+        "hasCLI": false,
+        "requiresCalculation": false,
+        "presentationType": "multipleChoice",
+        "marks": 10,
+        "locked": false,
+        "text": "أي أمر يحدد البوابة الافتراضية التي تحصل عليها أجهزة DHCP؟",
+        "textHtml": "",
+        "options": [
+          {
+            "value": "0",
+            "text": "default-router 192.168.1.254"
+          },
+          {
+            "value": "1",
+            "text": "ip route 192.168.1.254"
+          },
+          {
+            "value": "2",
+            "text": "gateway enable"
+          },
+          {
+            "value": "3",
+            "text": "ip helper-address 192.168.1.254"
+          }
+        ],
+        "fields": [],
+        "parts": [],
+        "answer": {
+          "correctOptionIndex": 0
+        },
+        "hint": "داخل DHCP pool يحدد الأمر default-router عنوان Gateway للأجهزة.",
+        "teacherNote": "",
+        "aiInstruction": "",
+        "wasModified": false,
+        "image": {
+          "exists": false,
+          "visible": false,
+          "origin": null,
+          "assets": [],
+          "prompt": null
+        },
+        "history": [],
+        "redoStack": []
+      },
+      {
+        "examQuestionId": "LIB-T19-Q07",
+        "origin": "imported",
+        "sourceId": "LIB-T19",
+        "sourceQuestionId": "7",
+        "section": "BASIC",
+        "topic": "OTHER_NETWORKING",
+        "secondaryTopics": [],
+        "difficulty": 2,
+        "difficultyLabel": "",
+        "familyKey": "LIB-T19-Q07",
+        "hasCLI": false,
+        "requiresCalculation": false,
+        "presentationType": "multipleChoice",
+        "marks": 10,
+        "locked": false,
+        "text": "ما وظيفة الأمر ip dhcp excluded-address؟",
+        "textHtml": "",
+        "options": [
+          {
+            "value": "0",
+            "text": "تشغيل خدمة DNS"
+          },
+          {
+            "value": "1",
+            "text": "إنشاء VLAN"
+          },
+          {
+            "value": "2",
+            "text": "إيقاف الراوتر"
+          },
+          {
+            "value": "3",
+            "text": "منع توزيع عناوين محددة على الأجهزة"
+          }
+        ],
+        "fields": [],
+        "parts": [],
+        "answer": {
+          "correctOptionIndex": 3
+        },
+        "hint": "نستثني عادة عناوين الراوتر والسيرفرات والطابعات حتى لا يحصل عليها جهاز عادي.",
+        "teacherNote": "",
+        "aiInstruction": "",
+        "wasModified": false,
+        "image": {
+          "exists": false,
+          "visible": false,
+          "origin": null,
+          "assets": [],
+          "prompt": null
+        },
+        "history": [],
+        "redoStack": []
+      },
+      {
+        "examQuestionId": "LIB-T19-Q08",
+        "origin": "imported",
+        "sourceId": "LIB-T19",
+        "sourceQuestionId": "8",
+        "section": "BASIC",
+        "topic": "OTHER_NETWORKING",
+        "secondaryTopics": [],
+        "difficulty": 2,
+        "difficultyLabel": "",
+        "familyKey": "LIB-T19-Q08",
+        "hasCLI": false,
+        "requiresCalculation": false,
+        "presentationType": "multipleChoice",
+        "marks": 10,
+        "locked": false,
+        "text": "ماذا قد يحصل للجهاز إذا فشل في الحصول على عنوان من DHCP؟",
+        "textHtml": "",
+        "options": [
+          {
+            "value": "0",
+            "text": "يحصل دائمًا على 8.8.8.8"
+          },
+          {
+            "value": "1",
+            "text": "يتحول إلى IPv6 فقط"
+          },
+          {
+            "value": "2",
+            "text": "يحصل على عنوان APIPA يبدأ غالبًا بـ169.254"
+          },
+          {
+            "value": "3",
+            "text": "يحذف عنوان MAC"
+          }
+        ],
+        "fields": [],
+        "parts": [],
+        "answer": {
+          "correctOptionIndex": 2
+        },
+        "hint": "فشل DHCP قد يؤدي إلى عنوان APIPA يبدأ غالبًا بـ169.254، وهو إشارة إلى مشكلة في التوزيع.",
+        "teacherNote": "",
+        "aiInstruction": "",
+        "wasModified": false,
+        "image": {
+          "exists": false,
+          "visible": false,
+          "origin": null,
+          "assets": [],
+          "prompt": null
+        },
+        "history": [],
+        "redoStack": []
+      },
+      {
+        "examQuestionId": "LIB-T19-Q09",
+        "origin": "imported",
+        "sourceId": "LIB-T19",
+        "sourceQuestionId": "9",
+        "section": "BASIC",
+        "topic": "OTHER_NETWORKING",
+        "secondaryTopics": [],
+        "difficulty": 2,
+        "difficultyLabel": "",
+        "familyKey": "LIB-T19-Q09",
+        "hasCLI": false,
+        "requiresCalculation": false,
+        "presentationType": "multipleChoice",
+        "marks": 10,
+        "locked": false,
+        "text": "ما أول خطوة لإعداد DHCP على Server في Packet Tracer؟",
+        "textHtml": "",
+        "options": [
+          {
+            "value": "0",
+            "text": "فتح Server ثم Services ثم DHCP"
+          },
+          {
+            "value": "1",
+            "text": "كتابة switchport mode trunk"
+          },
+          {
+            "value": "2",
+            "text": "تشغيل STP"
+          },
+          {
+            "value": "3",
+            "text": "فتح Command Prompt وكتابة tracert"
+          }
+        ],
+        "fields": [],
+        "parts": [],
+        "answer": {
+          "correctOptionIndex": 0
+        },
+        "hint": "نفتح جهاز Server، ثم تبويب Services، ثم خدمة DHCP.",
+        "teacherNote": "",
+        "aiInstruction": "",
+        "wasModified": false,
+        "image": {
+          "exists": false,
+          "visible": false,
+          "origin": null,
+          "assets": [],
+          "prompt": null
+        },
+        "history": [],
+        "redoStack": []
+      },
+      {
+        "examQuestionId": "LIB-T19-Q10",
+        "origin": "imported",
+        "sourceId": "LIB-T19",
+        "sourceQuestionId": "10",
+        "section": "BASIC",
+        "topic": "OTHER_NETWORKING",
+        "secondaryTopics": [],
+        "difficulty": 2,
+        "difficultyLabel": "",
+        "familyKey": "LIB-T19-Q10",
+        "hasCLI": false,
+        "requiresCalculation": false,
+        "presentationType": "multipleChoice",
+        "marks": 10,
+        "locked": false,
+        "text": "أي مجموعة أوامر تكمل إعداد DHCP بعد إنشاء pool لشبكة 192.168.10.0/24؟",
+        "textHtml": "",
+        "options": [
+          {
+            "value": "0",
+            "text": "hostname 192.168.10.0 / login / enable"
+          },
+          {
+            "value": "1",
+            "text": "network 192.168.10.0 255.255.255.0 / default-router 192.168.10.254 / dns-server 8.8.8.8"
+          },
+          {
+            "value": "2",
+            "text": "switchport mode access / vlan 10 / name DHCP"
+          },
+          {
+            "value": "3",
+            "text": "ip route 192.168.10.0 / arp -a / nslookup"
+          }
+        ],
+        "fields": [],
+        "parts": [],
+        "answer": {
+          "correctOptionIndex": 1
+        },
+        "hint": "يجب تحديد network وDefault Gateway وDNS داخل DHCP pool.",
+        "teacherNote": "",
+        "aiInstruction": "",
+        "wasModified": false,
+        "image": {
+          "exists": false,
+          "visible": false,
+          "origin": null,
+          "assets": [],
+          "prompt": null
+        },
+        "history": [],
+        "redoStack": []
+      }
+    ],
+    "totalMarks": 100,
+    "status": "final",
+    "createdAt": "2026-09-05T18:57:20.348Z",
+    "updatedAt": "2026-09-05T18:57:20.348Z"
+  }
+}

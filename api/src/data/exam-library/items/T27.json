@@ -1,0 +1,1139 @@
+{
+  "libraryItemId": "T27",
+  "title": "مراجعة امتحان 2021",
+  "category": "advanced",
+  "description": "عشرون سؤالًا متدرّجًا مستخلصًا من نموذج 2021، تشمل DHCP وكلمات المرور وVLAN وOSPF وPort Security.",
+  "tags": [
+    "2021",
+    "Cisco",
+    "DHCP / OSPF"
+  ],
+  "questionCount": 20,
+  "totalMarks": 100,
+  "pageRange": "226",
+  "parserFamily": "t-series-v1",
+  "conversionStatus": "ready",
+  "publishable": true,
+  "autoGradableCount": 20,
+  "manualReviewCount": 0,
+  "libraryVersion": 1,
+  "sourceSha": "44a7dabdf0b15450549b5a8af8f1f48cf6545c224850fbb1f9b5c9a238fbd400",
+  "contentHash": "afa40712d62b47bb9cf332839d75a6a406d7c4b2157f8c3ec84c368174b83d1a",
+  "convertedAt": "2026-09-05T18:57:19.063Z",
+  "source": {
+    "repository": "Book791381",
+    "sourceFile": "T27.html"
+  },
+  "schemaVersion": 1,
+  "examSnapshot": {
+    "schemaVersion": 1,
+    "examId": "LIB-T27",
+    "title": "مراجعة امتحان 2021",
+    "questions": [
+      {
+        "examQuestionId": "LIB-T27-Q01",
+        "origin": "imported",
+        "sourceId": "LIB-T27",
+        "sourceQuestionId": "1",
+        "section": "BASIC",
+        "topic": "OTHER_NETWORKING",
+        "secondaryTopics": [],
+        "difficulty": 2,
+        "difficultyLabel": "",
+        "familyKey": "LIB-T27-Q01",
+        "hasCLI": false,
+        "requiresCalculation": false,
+        "presentationType": "multipleChoice",
+        "marks": 5,
+        "locked": false,
+        "text": "بعد الدخول إلى وضع line vty 0 1، ما الأمر الذي يعيّن كلمة المرور STAR؟",
+        "textHtml": "",
+        "options": [
+          {
+            "value": "0",
+            "text": "enable secret STAR"
+          },
+          {
+            "value": "1",
+            "text": "password STAR"
+          },
+          {
+            "value": "2",
+            "text": "service password-encryption"
+          },
+          {
+            "value": "3",
+            "text": "login local"
+          }
+        ],
+        "fields": [],
+        "parts": [],
+        "answer": {
+          "correctOptionIndex": 1
+        },
+        "hint": "داخل وضع line يجب استعمال الأمر password متبوعًا بكلمة المرور، ثم استعمال login لتفعيل طلبها.",
+        "teacherNote": "",
+        "aiInstruction": "",
+        "wasModified": false,
+        "image": {
+          "exists": false,
+          "visible": false,
+          "origin": null,
+          "assets": [],
+          "prompt": null
+        },
+        "history": [],
+        "redoStack": []
+      },
+      {
+        "examQuestionId": "LIB-T27-Q02",
+        "origin": "imported",
+        "sourceId": "LIB-T27",
+        "sourceQuestionId": "2",
+        "section": "BASIC",
+        "topic": "OTHER_NETWORKING",
+        "secondaryTopics": [],
+        "difficulty": 2,
+        "difficultyLabel": "",
+        "familyKey": "LIB-T27-Q02",
+        "hasCLI": false,
+        "requiresCalculation": false,
+        "presentationType": "multipleChoice",
+        "marks": 5,
+        "locked": false,
+        "text": "ما عدد جلسات الاتصال البعيد التي يسمح بها الأمر line vty 0 1؟",
+        "textHtml": "",
+        "options": [
+          {
+            "value": "0",
+            "text": "جلسة واحدة"
+          },
+          {
+            "value": "1",
+            "text": "جلستان"
+          },
+          {
+            "value": "2",
+            "text": "خمس جلسات"
+          },
+          {
+            "value": "3",
+            "text": "عشر جلسات"
+          }
+        ],
+        "fields": [],
+        "parts": [],
+        "answer": {
+          "correctOptionIndex": 1
+        },
+        "hint": "المدى يبدأ من 0 وينتهي عند 1، ولذلك يشمل خطين: 0 و1.",
+        "teacherNote": "",
+        "aiInstruction": "",
+        "wasModified": false,
+        "image": {
+          "exists": false,
+          "visible": false,
+          "origin": null,
+          "assets": [],
+          "prompt": null
+        },
+        "history": [],
+        "redoStack": []
+      },
+      {
+        "examQuestionId": "LIB-T27-Q03",
+        "origin": "imported",
+        "sourceId": "LIB-T27",
+        "sourceQuestionId": "3",
+        "section": "BASIC",
+        "topic": "OTHER_NETWORKING",
+        "secondaryTopics": [],
+        "difficulty": 2,
+        "difficultyLabel": "",
+        "familyKey": "LIB-T27-Q03",
+        "hasCLI": false,
+        "requiresCalculation": false,
+        "presentationType": "multipleChoice",
+        "marks": 5,
+        "locked": false,
+        "text": "ماذا يحدد الأمر ip dhcp pool TIKSHUV؟",
+        "textHtml": "",
+        "options": [
+          {
+            "value": "0",
+            "text": "اسم مجمع عناوين DHCP"
+          },
+          {
+            "value": "1",
+            "text": "عنوان خادم DNS"
+          },
+          {
+            "value": "2",
+            "text": "كلمة مرور الراوتر"
+          },
+          {
+            "value": "3",
+            "text": "عنوان واجهة الراوتر"
+          }
+        ],
+        "fields": [],
+        "parts": [],
+        "answer": {
+          "correctOptionIndex": 0
+        },
+        "hint": "الأمر ينشئ مجمع DHCP ويعطيه الاسم TIKSHUV، ثم تضاف داخله الشبكة والبوابة وDNS.",
+        "teacherNote": "",
+        "aiInstruction": "",
+        "wasModified": false,
+        "image": {
+          "exists": false,
+          "visible": false,
+          "origin": null,
+          "assets": [],
+          "prompt": null
+        },
+        "history": [],
+        "redoStack": []
+      },
+      {
+        "examQuestionId": "LIB-T27-Q04",
+        "origin": "imported",
+        "sourceId": "LIB-T27",
+        "sourceQuestionId": "4",
+        "section": "BASIC",
+        "topic": "OTHER_NETWORKING",
+        "secondaryTopics": [],
+        "difficulty": 2,
+        "difficultyLabel": "",
+        "familyKey": "LIB-T27-Q04",
+        "hasCLI": false,
+        "requiresCalculation": false,
+        "presentationType": "multipleChoice",
+        "marks": 5,
+        "locked": false,
+        "text": "أي نوع عنوان يخصصه Windows لنفسه عند تعذر الوصول إلى خادم DHCP؟",
+        "textHtml": "",
+        "options": [
+          {
+            "value": "0",
+            "text": "Loopback"
+          },
+          {
+            "value": "1",
+            "text": "Public IP"
+          },
+          {
+            "value": "2",
+            "text": "APIPA"
+          },
+          {
+            "value": "3",
+            "text": "Multicast"
+          }
+        ],
+        "fields": [],
+        "parts": [],
+        "answer": {
+          "correctOptionIndex": 2
+        },
+        "hint": "يستخدم Windows عنوان APIPA من المجال 169.254.0.0/16 عند فشل الحصول على عنوان من DHCP.",
+        "teacherNote": "",
+        "aiInstruction": "",
+        "wasModified": false,
+        "image": {
+          "exists": false,
+          "visible": false,
+          "origin": null,
+          "assets": [],
+          "prompt": null
+        },
+        "history": [],
+        "redoStack": []
+      },
+      {
+        "examQuestionId": "LIB-T27-Q05",
+        "origin": "imported",
+        "sourceId": "LIB-T27",
+        "sourceQuestionId": "5",
+        "section": "BASIC",
+        "topic": "OTHER_NETWORKING",
+        "secondaryTopics": [],
+        "difficulty": 2,
+        "difficultyLabel": "",
+        "familyKey": "LIB-T27-Q05",
+        "hasCLI": false,
+        "requiresCalculation": false,
+        "presentationType": "multipleChoice",
+        "marks": 5,
+        "locked": false,
+        "text": "على أي عنوان يعتمد الراوتر عند اختيار المسار نحو الشبكة الهدف؟",
+        "textHtml": "",
+        "options": [
+          {
+            "value": "0",
+            "text": "عنوان MAC للمصدر"
+          },
+          {
+            "value": "1",
+            "text": "عنوان IP للوجهة"
+          },
+          {
+            "value": "2",
+            "text": "اسم المستخدم"
+          },
+          {
+            "value": "3",
+            "text": "رقم VLAN فقط"
+          }
+        ],
+        "fields": [],
+        "parts": [],
+        "answer": {
+          "correctOptionIndex": 1
+        },
+        "hint": "الراوتر يعمل في طبقة الشبكة ويستخدم عنوان IP للوجهة وجدول التوجيه.",
+        "teacherNote": "",
+        "aiInstruction": "",
+        "wasModified": false,
+        "image": {
+          "exists": false,
+          "visible": false,
+          "origin": null,
+          "assets": [],
+          "prompt": null
+        },
+        "history": [],
+        "redoStack": []
+      },
+      {
+        "examQuestionId": "LIB-T27-Q06",
+        "origin": "imported",
+        "sourceId": "LIB-T27",
+        "sourceQuestionId": "6",
+        "section": "BASIC",
+        "topic": "OTHER_NETWORKING",
+        "secondaryTopics": [],
+        "difficulty": 2,
+        "difficultyLabel": "",
+        "familyKey": "LIB-T27-Q06",
+        "hasCLI": false,
+        "requiresCalculation": false,
+        "presentationType": "multipleChoice",
+        "marks": 5,
+        "locked": false,
+        "text": "قبل تفعيل Port Security على منفذ في السويتش، يجب أن يكون المنفذ غالبًا في وضع:",
+        "textHtml": "",
+        "options": [
+          {
+            "value": "0",
+            "text": "trunk"
+          },
+          {
+            "value": "1",
+            "text": "dynamic auto"
+          },
+          {
+            "value": "2",
+            "text": "access"
+          },
+          {
+            "value": "3",
+            "text": "routed port"
+          }
+        ],
+        "fields": [],
+        "parts": [],
+        "answer": {
+          "correctOptionIndex": 2
+        },
+        "hint": "يجب تثبيت المنفذ كـ access port قبل تطبيق أوامر switchport port-security.",
+        "teacherNote": "",
+        "aiInstruction": "",
+        "wasModified": false,
+        "image": {
+          "exists": false,
+          "visible": false,
+          "origin": null,
+          "assets": [],
+          "prompt": null
+        },
+        "history": [],
+        "redoStack": []
+      },
+      {
+        "examQuestionId": "LIB-T27-Q07",
+        "origin": "imported",
+        "sourceId": "LIB-T27",
+        "sourceQuestionId": "7",
+        "section": "BASIC",
+        "topic": "OTHER_NETWORKING",
+        "secondaryTopics": [],
+        "difficulty": 2,
+        "difficultyLabel": "",
+        "familyKey": "LIB-T27-Q07",
+        "hasCLI": false,
+        "requiresCalculation": false,
+        "presentationType": "multipleChoice",
+        "marks": 5,
+        "locked": false,
+        "text": "ما البروتوكول المستخدم لنشر معلومات VLAN بين سويتشات المجال نفسه؟",
+        "textHtml": "",
+        "options": [
+          {
+            "value": "0",
+            "text": "VTP"
+          },
+          {
+            "value": "1",
+            "text": "ARP"
+          },
+          {
+            "value": "2",
+            "text": "FTP"
+          },
+          {
+            "value": "3",
+            "text": "ICMP"
+          }
+        ],
+        "fields": [],
+        "parts": [],
+        "answer": {
+          "correctOptionIndex": 0
+        },
+        "hint": "VTP يوزع معلومات VLAN بين السويتشات التي تتشارك Domain وإعدادات متوافقة.",
+        "teacherNote": "",
+        "aiInstruction": "",
+        "wasModified": false,
+        "image": {
+          "exists": false,
+          "visible": false,
+          "origin": null,
+          "assets": [],
+          "prompt": null
+        },
+        "history": [],
+        "redoStack": []
+      },
+      {
+        "examQuestionId": "LIB-T27-Q08",
+        "origin": "imported",
+        "sourceId": "LIB-T27",
+        "sourceQuestionId": "8",
+        "section": "BASIC",
+        "topic": "OTHER_NETWORKING",
+        "secondaryTopics": [],
+        "difficulty": 2,
+        "difficultyLabel": "",
+        "familyKey": "LIB-T27-Q08",
+        "hasCLI": false,
+        "requiresCalculation": false,
+        "presentationType": "multipleChoice",
+        "marks": 5,
+        "locked": false,
+        "text": "ما التمثيل الثنائي للعدد العشري 193؟",
+        "textHtml": "",
+        "options": [
+          {
+            "value": "0",
+            "text": "11000001"
+          },
+          {
+            "value": "1",
+            "text": "10110001"
+          },
+          {
+            "value": "2",
+            "text": "11100001"
+          },
+          {
+            "value": "3",
+            "text": "11000110"
+          }
+        ],
+        "fields": [],
+        "parts": [],
+        "answer": {
+          "correctOptionIndex": 0
+        },
+        "hint": "193 = 128 + 64 + 1، ولذلك تمثيله الثنائي هو 11000001.",
+        "teacherNote": "",
+        "aiInstruction": "",
+        "wasModified": false,
+        "image": {
+          "exists": false,
+          "visible": false,
+          "origin": null,
+          "assets": [],
+          "prompt": null
+        },
+        "history": [],
+        "redoStack": []
+      },
+      {
+        "examQuestionId": "LIB-T27-Q09",
+        "origin": "imported",
+        "sourceId": "LIB-T27",
+        "sourceQuestionId": "9",
+        "section": "BASIC",
+        "topic": "OTHER_NETWORKING",
+        "secondaryTopics": [],
+        "difficulty": 2,
+        "difficultyLabel": "",
+        "familyKey": "LIB-T27-Q09",
+        "hasCLI": false,
+        "requiresCalculation": false,
+        "presentationType": "multipleChoice",
+        "marks": 5,
+        "locked": false,
+        "text": "عند إعداد شبكة OSPF بمنطقة واحدة فقط، ما رقم المنطقة الموصى به؟",
+        "textHtml": "",
+        "options": [
+          {
+            "value": "0",
+            "text": "1"
+          },
+          {
+            "value": "1",
+            "text": "10"
+          },
+          {
+            "value": "2",
+            "text": "100"
+          },
+          {
+            "value": "3",
+            "text": "0"
+          }
+        ],
+        "fields": [],
+        "parts": [],
+        "answer": {
+          "correctOptionIndex": 3
+        },
+        "hint": "المنطقة 0 هي Backbone Area، وتكون المنطقة الوحيدة في تصميم OSPF أحادي المنطقة.",
+        "teacherNote": "",
+        "aiInstruction": "",
+        "wasModified": false,
+        "image": {
+          "exists": false,
+          "visible": false,
+          "origin": null,
+          "assets": [],
+          "prompt": null
+        },
+        "history": [],
+        "redoStack": []
+      },
+      {
+        "examQuestionId": "LIB-T27-Q10",
+        "origin": "imported",
+        "sourceId": "LIB-T27",
+        "sourceQuestionId": "10",
+        "section": "BASIC",
+        "topic": "OTHER_NETWORKING",
+        "secondaryTopics": [],
+        "difficulty": 2,
+        "difficultyLabel": "",
+        "familyKey": "LIB-T27-Q10",
+        "hasCLI": false,
+        "requiresCalculation": false,
+        "presentationType": "multipleChoice",
+        "marks": 5,
+        "locked": false,
+        "text": "فشل ping إلى 127.0.0.1 على الحاسوب نفسه يشير غالبًا إلى مشكلة في:",
+        "textHtml": "",
+        "options": [
+          {
+            "value": "0",
+            "text": "خادم DNS الخارجي"
+          },
+          {
+            "value": "1",
+            "text": "المكدس المحلي TCP/IP"
+          },
+          {
+            "value": "2",
+            "text": "كابل الإنترنت فقط"
+          },
+          {
+            "value": "3",
+            "text": "الراوتر البعيد"
+          }
+        ],
+        "fields": [],
+        "parts": [],
+        "answer": {
+          "correctOptionIndex": 1
+        },
+        "hint": "127.0.0.1 هو عنوان Loopback؛ فشله يدل على مشكلة محلية في TCP/IP وليس في الشبكة الخارجية.",
+        "teacherNote": "",
+        "aiInstruction": "",
+        "wasModified": false,
+        "image": {
+          "exists": false,
+          "visible": false,
+          "origin": null,
+          "assets": [],
+          "prompt": null
+        },
+        "history": [],
+        "redoStack": []
+      },
+      {
+        "examQuestionId": "LIB-T27-Q11",
+        "origin": "imported",
+        "sourceId": "LIB-T27",
+        "sourceQuestionId": "11",
+        "section": "BASIC",
+        "topic": "OTHER_NETWORKING",
+        "secondaryTopics": [],
+        "difficulty": 2,
+        "difficultyLabel": "",
+        "familyKey": "LIB-T27-Q11",
+        "hasCLI": false,
+        "requiresCalculation": false,
+        "presentationType": "multipleChoice",
+        "marks": 5,
+        "locked": false,
+        "text": "ما أول رسالة يرسلها جهاز جديد يبحث عن خادم DHCP؟",
+        "textHtml": "",
+        "options": [
+          {
+            "value": "0",
+            "text": "DHCP Offer"
+          },
+          {
+            "value": "1",
+            "text": "DHCP Discover"
+          },
+          {
+            "value": "2",
+            "text": "DHCP Request"
+          },
+          {
+            "value": "3",
+            "text": "DHCP ACK"
+          }
+        ],
+        "fields": [],
+        "parts": [],
+        "answer": {
+          "correctOptionIndex": 1
+        },
+        "hint": "تبدأ DORA برسالة Discover، ثم Offer، ثم Request، ثم ACK.",
+        "teacherNote": "",
+        "aiInstruction": "",
+        "wasModified": false,
+        "image": {
+          "exists": false,
+          "visible": false,
+          "origin": null,
+          "assets": [],
+          "prompt": null
+        },
+        "history": [],
+        "redoStack": []
+      },
+      {
+        "examQuestionId": "LIB-T27-Q12",
+        "origin": "imported",
+        "sourceId": "LIB-T27",
+        "sourceQuestionId": "12",
+        "section": "BASIC",
+        "topic": "OTHER_NETWORKING",
+        "secondaryTopics": [],
+        "difficulty": 2,
+        "difficultyLabel": "",
+        "familyKey": "LIB-T27-Q12",
+        "hasCLI": false,
+        "requiresCalculation": false,
+        "presentationType": "multipleChoice",
+        "marks": 5,
+        "locked": false,
+        "text": "أي أمر يعرّف كلمة مرور غير مشفرة باسم cisco للدخول إلى وضع privileged EXEC؟",
+        "textHtml": "",
+        "options": [
+          {
+            "value": "0",
+            "text": "enable password cisco"
+          },
+          {
+            "value": "1",
+            "text": "password enable cisco"
+          },
+          {
+            "value": "2",
+            "text": "enable secret encrypted"
+          },
+          {
+            "value": "3",
+            "text": "line console cisco"
+          }
+        ],
+        "fields": [],
+        "parts": [],
+        "answer": {
+          "correctOptionIndex": 0
+        },
+        "hint": "enable password يحدد كلمة مرور وضع enable، لكنه أقل أمانًا من enable secret.",
+        "teacherNote": "",
+        "aiInstruction": "",
+        "wasModified": false,
+        "image": {
+          "exists": false,
+          "visible": false,
+          "origin": null,
+          "assets": [],
+          "prompt": null
+        },
+        "history": [],
+        "redoStack": []
+      },
+      {
+        "examQuestionId": "LIB-T27-Q13",
+        "origin": "imported",
+        "sourceId": "LIB-T27",
+        "sourceQuestionId": "13",
+        "section": "BASIC",
+        "topic": "OTHER_NETWORKING",
+        "secondaryTopics": [],
+        "difficulty": 2,
+        "difficultyLabel": "",
+        "familyKey": "LIB-T27-Q13",
+        "hasCLI": false,
+        "requiresCalculation": false,
+        "presentationType": "multipleChoice",
+        "marks": 5,
+        "locked": false,
+        "text": "إلى أي نوع من بروتوكولات التوجيه ينتمي OSPF؟",
+        "textHtml": "",
+        "options": [
+          {
+            "value": "0",
+            "text": "Distance Vector"
+          },
+          {
+            "value": "1",
+            "text": "Link State"
+          },
+          {
+            "value": "2",
+            "text": "Exterior Gateway"
+          },
+          {
+            "value": "3",
+            "text": "Static"
+          }
+        ],
+        "fields": [],
+        "parts": [],
+        "answer": {
+          "correctOptionIndex": 1
+        },
+        "hint": "OSPF بروتوكول Link-State يبني خريطة للطوبولوجيا ويحسب أفضل المسارات.",
+        "teacherNote": "",
+        "aiInstruction": "",
+        "wasModified": false,
+        "image": {
+          "exists": false,
+          "visible": false,
+          "origin": null,
+          "assets": [],
+          "prompt": null
+        },
+        "history": [],
+        "redoStack": []
+      },
+      {
+        "examQuestionId": "LIB-T27-Q14",
+        "origin": "imported",
+        "sourceId": "LIB-T27",
+        "sourceQuestionId": "14",
+        "section": "BASIC",
+        "topic": "OTHER_NETWORKING",
+        "secondaryTopics": [],
+        "difficulty": 2,
+        "difficultyLabel": "",
+        "familyKey": "LIB-T27-Q14",
+        "hasCLI": false,
+        "requiresCalculation": false,
+        "presentationType": "multipleChoice",
+        "marks": 5,
+        "locked": false,
+        "text": "أي وصف أدق لبروتوكول UDP؟",
+        "textHtml": "",
+        "options": [
+          {
+            "value": "0",
+            "text": "موثوق ويقيم اتصالًا مسبقًا"
+          },
+          {
+            "value": "1",
+            "text": "Connectionless وسريع ولا يضمن التسليم"
+          },
+          {
+            "value": "2",
+            "text": "يعمل في الطبقة الثانية"
+          },
+          {
+            "value": "3",
+            "text": "يصحح جميع الأخطاء تلقائيًا"
+          }
+        ],
+        "fields": [],
+        "parts": [],
+        "answer": {
+          "correctOptionIndex": 1
+        },
+        "hint": "UDP يعمل في طبقة النقل، ولا ينشئ اتصالًا مسبقًا ولا يضمن وصول الرزم.",
+        "teacherNote": "",
+        "aiInstruction": "",
+        "wasModified": false,
+        "image": {
+          "exists": false,
+          "visible": false,
+          "origin": null,
+          "assets": [],
+          "prompt": null
+        },
+        "history": [],
+        "redoStack": []
+      },
+      {
+        "examQuestionId": "LIB-T27-Q15",
+        "origin": "imported",
+        "sourceId": "LIB-T27",
+        "sourceQuestionId": "15",
+        "section": "BASIC",
+        "topic": "OTHER_NETWORKING",
+        "secondaryTopics": [],
+        "difficulty": 2,
+        "difficultyLabel": "",
+        "familyKey": "LIB-T27-Q15",
+        "hasCLI": false,
+        "requiresCalculation": false,
+        "presentationType": "multipleChoice",
+        "marks": 5,
+        "locked": false,
+        "text": "ما الترتيب الصحيح لوحدات البيانات أثناء الانتقال من طبقة التطبيق إلى الوسط الفيزيائي؟",
+        "textHtml": "",
+        "options": [
+          {
+            "value": "0",
+            "text": "Data → Segment → Packet → Frame → Bits"
+          },
+          {
+            "value": "1",
+            "text": "Bits → Frame → Packet → Segment → Data"
+          },
+          {
+            "value": "2",
+            "text": "Data → Packet → Segment → Bits → Frame"
+          },
+          {
+            "value": "3",
+            "text": "Frame → Data → Packet → Segment → Bits"
+          }
+        ],
+        "fields": [],
+        "parts": [],
+        "answer": {
+          "correctOptionIndex": 0
+        },
+        "hint": "تُجزأ البيانات إلى Segment، ثم Packet، ثم Frame، وأخيرًا تتحول إلى Bits.",
+        "teacherNote": "",
+        "aiInstruction": "",
+        "wasModified": false,
+        "image": {
+          "exists": false,
+          "visible": false,
+          "origin": null,
+          "assets": [],
+          "prompt": null
+        },
+        "history": [],
+        "redoStack": []
+      },
+      {
+        "examQuestionId": "LIB-T27-Q16",
+        "origin": "imported",
+        "sourceId": "LIB-T27",
+        "sourceQuestionId": "16",
+        "section": "BASIC",
+        "topic": "OTHER_NETWORKING",
+        "secondaryTopics": [],
+        "difficulty": 2,
+        "difficultyLabel": "",
+        "familyKey": "LIB-T27-Q16",
+        "hasCLI": false,
+        "requiresCalculation": false,
+        "presentationType": "multipleChoice",
+        "marks": 5,
+        "locked": false,
+        "text": "ما القيمة الهيكساديسيمالية للعدد الثنائي 101010111100؟",
+        "textHtml": "",
+        "options": [
+          {
+            "value": "0",
+            "text": "ABC"
+          },
+          {
+            "value": "1",
+            "text": "ACB"
+          },
+          {
+            "value": "2",
+            "text": "BAC"
+          },
+          {
+            "value": "3",
+            "text": "AFC"
+          }
+        ],
+        "fields": [],
+        "parts": [],
+        "answer": {
+          "correctOptionIndex": 0
+        },
+        "hint": "بتقسيم العدد إلى مجموعات رباعية: 1010=A، 1011=B، 1100=C، فتكون النتيجة ABC.",
+        "teacherNote": "",
+        "aiInstruction": "",
+        "wasModified": false,
+        "image": {
+          "exists": false,
+          "visible": false,
+          "origin": null,
+          "assets": [],
+          "prompt": null
+        },
+        "history": [],
+        "redoStack": []
+      },
+      {
+        "examQuestionId": "LIB-T27-Q17",
+        "origin": "imported",
+        "sourceId": "LIB-T27",
+        "sourceQuestionId": "17",
+        "section": "BASIC",
+        "topic": "OTHER_NETWORKING",
+        "secondaryTopics": [],
+        "difficulty": 2,
+        "difficultyLabel": "",
+        "familyKey": "LIB-T27-Q17",
+        "hasCLI": false,
+        "requiresCalculation": false,
+        "presentationType": "multipleChoice",
+        "marks": 5,
+        "locked": false,
+        "text": "أي نوع عنوان يستعمله Port Security لتحديد الجهاز المسموح على المنفذ؟",
+        "textHtml": "",
+        "options": [
+          {
+            "value": "0",
+            "text": "عنوان IP"
+          },
+          {
+            "value": "1",
+            "text": "عنوان MAC"
+          },
+          {
+            "value": "2",
+            "text": "عنوان DNS"
+          },
+          {
+            "value": "3",
+            "text": "عنوان Gateway"
+          }
+        ],
+        "fields": [],
+        "parts": [],
+        "answer": {
+          "correctOptionIndex": 1
+        },
+        "hint": "Port Security يقيد المنفذ بحسب عناوين MAC الثابتة أو Sticky MAC.",
+        "teacherNote": "",
+        "aiInstruction": "",
+        "wasModified": false,
+        "image": {
+          "exists": false,
+          "visible": false,
+          "origin": null,
+          "assets": [],
+          "prompt": null
+        },
+        "history": [],
+        "redoStack": []
+      },
+      {
+        "examQuestionId": "LIB-T27-Q18",
+        "origin": "imported",
+        "sourceId": "LIB-T27",
+        "sourceQuestionId": "18",
+        "section": "BASIC",
+        "topic": "OTHER_NETWORKING",
+        "secondaryTopics": [],
+        "difficulty": 2,
+        "difficultyLabel": "",
+        "familyKey": "LIB-T27-Q18",
+        "hasCLI": false,
+        "requiresCalculation": false,
+        "presentationType": "multipleChoice",
+        "marks": 5,
+        "locked": false,
+        "text": "ما المقصود بواجهة SVI في السويتش؟",
+        "textHtml": "",
+        "options": [
+          {
+            "value": "0",
+            "text": "منفذ كابل فيزيائي"
+          },
+          {
+            "value": "1",
+            "text": "واجهة افتراضية مرتبطة بـ VLAN"
+          },
+          {
+            "value": "2",
+            "text": "منفذ Console"
+          },
+          {
+            "value": "3",
+            "text": "واجهة Serial"
+          }
+        ],
+        "fields": [],
+        "parts": [],
+        "answer": {
+          "correctOptionIndex": 1
+        },
+        "hint": "SVI هي Switch Virtual Interface، وتستخدم للإدارة أو للتوجيه في سويتشات الطبقة الثالثة.",
+        "teacherNote": "",
+        "aiInstruction": "",
+        "wasModified": false,
+        "image": {
+          "exists": false,
+          "visible": false,
+          "origin": null,
+          "assets": [],
+          "prompt": null
+        },
+        "history": [],
+        "redoStack": []
+      },
+      {
+        "examQuestionId": "LIB-T27-Q19",
+        "origin": "imported",
+        "sourceId": "LIB-T27",
+        "sourceQuestionId": "19",
+        "section": "BASIC",
+        "topic": "OTHER_NETWORKING",
+        "secondaryTopics": [],
+        "difficulty": 2,
+        "difficultyLabel": "",
+        "familyKey": "LIB-T27-Q19",
+        "hasCLI": false,
+        "requiresCalculation": false,
+        "presentationType": "multipleChoice",
+        "marks": 5,
+        "locked": false,
+        "text": "كم عدد البتات في عنوان IPv6؟",
+        "textHtml": "",
+        "options": [
+          {
+            "value": "0",
+            "text": "32"
+          },
+          {
+            "value": "1",
+            "text": "48"
+          },
+          {
+            "value": "2",
+            "text": "64"
+          },
+          {
+            "value": "3",
+            "text": "128"
+          }
+        ],
+        "fields": [],
+        "parts": [],
+        "answer": {
+          "correctOptionIndex": 3
+        },
+        "hint": "عنوان IPv6 طوله 128 bit، ويكتب عادة في ثماني مجموعات هيكساديسيمالية.",
+        "teacherNote": "",
+        "aiInstruction": "",
+        "wasModified": false,
+        "image": {
+          "exists": false,
+          "visible": false,
+          "origin": null,
+          "assets": [],
+          "prompt": null
+        },
+        "history": [],
+        "redoStack": []
+      },
+      {
+        "examQuestionId": "LIB-T27-Q20",
+        "origin": "imported",
+        "sourceId": "LIB-T27",
+        "sourceQuestionId": "20",
+        "section": "BASIC",
+        "topic": "OTHER_NETWORKING",
+        "secondaryTopics": [],
+        "difficulty": 2,
+        "difficultyLabel": "",
+        "familyKey": "LIB-T27-Q20",
+        "hasCLI": false,
+        "requiresCalculation": false,
+        "presentationType": "multipleChoice",
+        "marks": 5,
+        "locked": false,
+        "text": "أي أمر يخفي كلمات المرور النصية البسيطة الظاهرة في running-config؟",
+        "textHtml": "",
+        "options": [
+          {
+            "value": "0",
+            "text": "service password-encryption"
+          },
+          {
+            "value": "1",
+            "text": "enable password-encryption"
+          },
+          {
+            "value": "2",
+            "text": "password secret"
+          },
+          {
+            "value": "3",
+            "text": "crypto password all"
+          }
+        ],
+        "fields": [],
+        "parts": [],
+        "answer": {
+          "correctOptionIndex": 0
+        },
+        "hint": "الأمر service password-encryption يشفّر كلمات المرور النصية البسيطة في ملف الإعداد.",
+        "teacherNote": "",
+        "aiInstruction": "",
+        "wasModified": false,
+        "image": {
+          "exists": false,
+          "visible": false,
+          "origin": null,
+          "assets": [],
+          "prompt": null
+        },
+        "history": [],
+        "redoStack": []
+      }
+    ],
+    "totalMarks": 100,
+    "status": "final",
+    "createdAt": "2026-09-05T18:57:20.374Z",
+    "updatedAt": "2026-09-05T18:57:20.374Z"
+  }
+}
