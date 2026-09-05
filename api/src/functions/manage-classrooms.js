@@ -21,6 +21,14 @@ const {
 } =
   require("../lib/platform-storage");
 
+const {
+  normalizeClassStatus,
+  applyClassLifecycleAction
+} =
+  require("../lib/class-lifecycle");
+
+const { recordAuditEvent } = require("../lib/audit-log");
+
 const CONFLICT_MESSAGE =
   "حدث تعارض مؤقت أثناء حفظ البيانات. حاول مرة أخرى.";
 
@@ -209,6 +217,27 @@ async function listClasses(
         document.active !==
         false,
 
+      status:
+        normalizeClassStatus(
+          document
+        ),
+
+      archivedAt:
+        document.archivedAt ||
+        "",
+
+      archivedBy:
+        document.archivedBy ||
+        "",
+
+      archiveReason:
+        document.archiveReason ||
+        "",
+
+      graduationYear:
+        document.graduationYear ||
+        "",
+
       studentCount:
         Array.isArray(
           document.studentIds
@@ -238,6 +267,23 @@ async function listClasses(
   );
 
   return classes;
+}
+
+function buildNewClassroomDocument(
+  { name, grade, schoolYear },
+  now
+) {
+  return {
+    schemaVersion: 1,
+    classId: crypto.randomUUID(),
+    name,
+    grade,
+    schoolYear,
+    active: true,
+    studentIds: [],
+    createdAt: now,
+    updatedAt: now
+  };
 }
 
 app.http(
@@ -343,23 +389,14 @@ app.http(
               new Date()
                 .toISOString();
 
-            const classId =
-              crypto
-                .randomUUID();
-
-            const classroom = {
-              schemaVersion: 1,
-              classId,
-              name,
-              grade,
-              schoolYear,
-              active: true,
-              studentIds: [],
-              createdAt:
-                now,
-              updatedAt:
+            const classroom =
+              buildNewClassroomDocument(
+                { name, grade, schoolYear },
                 now
-            };
+              );
+
+            const classId =
+              classroom.classId;
 
             await uploadJson(
               container,
@@ -394,7 +431,9 @@ app.http(
             action ===
               "archive" ||
             action ===
-              "unarchive"
+              "unarchive" ||
+            action ===
+              "graduateandarchive"
           ) {
             const classId =
               String(
@@ -419,10 +458,6 @@ app.http(
               classId +
               ".json";
 
-            const nextActive =
-              action ===
-              "unarchive";
-
             let updatedClassroom =
               null;
 
@@ -443,14 +478,14 @@ app.http(
                       throw notFound;
                     }
 
-                    current.active =
-                      nextActive;
-
-                    current.updatedAt =
-                      new Date()
-                        .toISOString();
-
-                    return current;
+                    return applyClassLifecycleAction(
+                      current,
+                      action,
+                      {
+                        actor: auth.user?.sub,
+                        now: new Date().toISOString()
+                      }
+                    );
                   }
                 );
             }
@@ -483,13 +518,42 @@ app.http(
               throw mutateError;
             }
 
+            await recordAuditEvent(
+              container,
+              {
+                actor: auth.user?.sub,
+                action:
+                  action === "unarchive"
+                    ? "class.unarchive"
+                    : action === "graduateandarchive"
+                      ? "class.graduate"
+                      : "class.archive",
+                targetType: "class",
+                targetId: classId,
+                targetLabel: updatedClassroom.name || ""
+              }
+            );
+
             return {
               status: 200,
 
               jsonBody: {
                 ok: true,
                 active:
-                  updatedClassroom.active
+                  updatedClassroom.active,
+                status:
+                  normalizeClassStatus(
+                    updatedClassroom
+                  ),
+                archivedAt:
+                  updatedClassroom.archivedAt ||
+                  "",
+                archiveReason:
+                  updatedClassroom.archiveReason ||
+                  "",
+                graduationYear:
+                  updatedClassroom.graduationYear ||
+                  ""
               }
             };
           }
@@ -518,3 +582,5 @@ app.http(
       }
   }
 );
+
+module.exports = { buildNewClassroomDocument };

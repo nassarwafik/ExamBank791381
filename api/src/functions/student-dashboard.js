@@ -2,12 +2,15 @@
 const {app}=require("@azure/functions");
 const {requireStudentAuth}=require("../lib/student-auth");
 const {getContainer,downloadJsonOrNull,listJson}=require("../lib/platform-storage");
+const {normalizeClassStatus}=require("../lib/class-lifecycle");
 const AP="platform/assignments/",SP="platform/submissions/";
 function availability(a,dueMs){const now=Date.now(),o=a.openAt?new Date(a.openAt).getTime():0;if(o&&o>now)return "scheduled";if(dueMs&&dueMs<now)return "closed";return "open"}
 app.http("studentDashboard",{methods:["GET"],authLevel:"anonymous",route:"student-dashboard",handler:async request=>{
  try{
   const auth=requireStudentAuth(request);if(!auth.ok)return auth.response;const c=getContainer(),student=await downloadJsonOrNull(c,"platform/users/"+auth.user.sub+".json");if(!student||student.active===false)return {status:401,jsonBody:{ok:false,error:"الحساب غير فعّال."}};
-  const classroom=student.classId?await downloadJsonOrNull(c,"platform/classes/"+student.classId+".json"):null,raw=await listJson(c,AP),assignments=[];let completed=0,sum=0;
+  const classroom=student.classId?await downloadJsonOrNull(c,"platform/classes/"+student.classId+".json"):null;
+  if(classroom&&normalizeClassStatus(classroom)==="archived")return {status:403,jsonBody:{ok:false,error:"هذا الصف مؤرشف وانتهت السنة الدراسية."}};
+  const raw=await listJson(c,AP),assignments=[];let completed=0,sum=0;
   for(const a of raw.filter(x=>x.status==="published"&&String(x.classId||"")===String(student.classId||""))){
    const s=await downloadJsonOrNull(c,SP+a.assignmentId+"/"+student.userId+".json"),attempts=Array.isArray(s?.attempts)?s.attempts:[],latest=attempts.length?attempts[attempts.length-1]:null,base=Math.max(1,Number(a.maxAttempts||1)),allowed=Math.max(base,Number(s?.allowedAttempts||0)),effectiveDueAt=(s&&s.dueAtOverride)?s.dueAtOverride:(a.dueAt||""),dueMs=effectiveDueAt?new Date(effectiveDueAt).getTime():0,avail=availability(a,dueMs),canAttempt=avail==="open"&&attempts.length<allowed;
    if(latest){completed++;sum+=Number(latest.percentage||0)}
