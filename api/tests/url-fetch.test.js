@@ -136,6 +136,26 @@ describe("requestOnce - redirect handling and size cap against a real local serv
     expect(result.contentType).toContain("text/html");
   });
 
+  // Unlike every other test in this block, the target hostname here is deliberately NOT a literal
+  // IP - Node skips the custom `lookup` entirely when the hostname is already a valid IP literal
+  // (as "127.0.0.1" is above), so those tests never actually exercise it. A real hostname forces
+  // Node to call `lookup`, and on Node 20+ (Happy Eyeballs / autoSelectFamily, on by default) that
+  // call arrives as `lookup(hostname, {all:true}, cb)` expecting an ARRAY back - the single
+  // (address, family) callback shape crashed with ERR_INVALID_IP_ADDRESS, reported to the caller
+  // as a generic "couldn't connect" (see production bug: a real, reachable, GitHub Pages URL was
+  // rejected this way).
+  it("honors the pinned address when Node requests it via the Happy-Eyeballs {all:true} lookup shape", async () => {
+    const port = await listen((req, res) => {
+      res.writeHead(200, { "content-type": "text/plain" });
+      res.end("ok");
+    });
+
+    const url = new URL(`http://this-hostname-is-not-a-literal-ip.invalid:${port}/page`);
+    const result = await requestOnce(url, { address: "127.0.0.1", family: 4 }, { timeoutMs: 2000, maxBytes: 1024 });
+
+    expect(result.buffer.toString("utf8")).toBe("ok");
+  });
+
   it("reports a redirect instead of following it automatically", async () => {
     const port = await listen((req, res) => {
       res.writeHead(302, { location: "https://example.com/elsewhere" });

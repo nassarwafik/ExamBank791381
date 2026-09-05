@@ -138,7 +138,15 @@ function requestOnce(parsedUrl, pinnedAddress, { timeoutMs, maxBytes }) {
       method: "GET",
       headers: { "User-Agent": "ExamBank791381-ImportBot/1.0", Accept: "text/html, */*" },
       timeout: timeoutMs,
-      lookup: (_hostname, _options, callback) => callback(null, pinnedAddress.address, pinnedAddress.family)
+      // Node's Happy Eyeballs (autoSelectFamily, on by default since Node 20+) calls a custom
+      // `lookup` with options.all=true and expects an ARRAY of {address, family} back - the old
+      // single-address (address, family) callback form silently crashed the connection with
+      // ERR_INVALID_IP_ADDRESS ("Invalid IP address: undefined"), which the generic error handler
+      // below then reported as an ordinary "couldn't connect" - masking the real cause. Support
+      // both callback shapes so the pinned address is honored either way.
+      lookup: (_hostname, options, callback) => (options && options.all
+        ? callback(null, [{ address: pinnedAddress.address, family: pinnedAddress.family }])
+        : callback(null, pinnedAddress.address, pinnedAddress.family))
     }, res => {
       const status = res.statusCode || 0;
 
