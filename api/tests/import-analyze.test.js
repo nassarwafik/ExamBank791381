@@ -1,6 +1,27 @@
 import { describe, it, expect, vi } from "vitest";
-import { serializeStateForStorage, deserializeStateFromStorage, runRemainingChunks, resolveImportProvider } from "../src/functions/import-analyze.js";
+import { serializeStateForStorage, deserializeStateFromStorage, runRemainingChunks, resolveImportProvider, extractorForKind } from "../src/functions/import-analyze.js";
 import { mergeChunkResults } from "../src/lib/import-ai-detect.js";
+
+describe("extractorForKind - dispatches purely on manifest.detectedKind", () => {
+  it("routes pdf, docx, gform, and html/anything-else to four distinct extractor functions", () => {
+    const pdf = extractorForKind("pdf");
+    const docx = extractorForKind("docx");
+    const gform = extractorForKind("gform");
+    const html = extractorForKind("html");
+    const fallback = extractorForKind("anything-unrecognized");
+
+    [pdf, docx, gform, html].forEach(fn => expect(typeof fn).toBe("function"));
+    expect(pdf).not.toBe(docx);
+    expect(pdf).not.toBe(gform);
+    expect(pdf).not.toBe(html);
+    expect(docx).not.toBe(gform);
+    expect(docx).not.toBe(html);
+    expect(gform).not.toBe(html);
+    // Anything not explicitly pdf/docx/gform (including a legacy/unknown kind) falls back to the
+    // same html extractor "html" itself resolves to - never a hard error on an unrecognized kind.
+    expect(fallback).toBe(html);
+  });
+});
 
 describe("state <-> storage Buffer serialization boundary", () => {
   it("round-trips a chunk image buffer through JSON as base64, not the broken default {type:'Buffer',data:[...]} shape", () => {
