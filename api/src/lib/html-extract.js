@@ -2,6 +2,7 @@ const sanitizeHtml = require("sanitize-html");
 const { htmlDocumentToMarkdownText } = require("./table-markdown");
 const { SANITIZE_HTML_OPTIONS } = require("./html-sanitize-config");
 const { makeImageToken } = require("./image-linking");
+const { extractEmbeddedQuestionBank, renderQuestionBankAsText } = require("./embedded-quiz-extract");
 
 const DATA_IMAGE_REGEX = /<img[^>]+src=["']data:([\w/+-]+);base64,([A-Za-z0-9+/=]+)["'][^>]*>/gi;
 
@@ -32,6 +33,18 @@ function extractDataImages(sanitizedHtml) {
 // treatment.
 async function extractPages(buffer) {
   const html = buffer.toString("utf8");
+
+  // A self-contained interactive quiz page (see embedded-quiz-extract.js) keeps its questions in a
+  // JS array inside <script>, invisible to the sanitize-then-markdown path below - detect and
+  // render that array as plain text FIRST, before any of that content is stripped out.
+  const embeddedQuestions = extractEmbeddedQuestionBank(html);
+  if (embeddedQuestions) {
+    return {
+      pages: [{ pageNumber: 1, text: renderQuestionBankAsText(embeddedQuestions), kind: "text", images: [] }],
+      warnings: []
+    };
+  }
+
   const sanitized = sanitizeHtml(html, SANITIZE_HTML_OPTIONS);
   const { html: withoutImages, images } = extractDataImages(sanitized);
   const text = htmlDocumentToMarkdownText(withoutImages);
