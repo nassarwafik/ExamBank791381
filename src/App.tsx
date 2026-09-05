@@ -1701,6 +1701,12 @@ function App() {
         : "",
       targetType === "wordBank"
         ? "عند التحويل إلى مخزن كلمات: أنشئ الحقول والكلمات من نفس محتوى السؤال دون إدخال موضوع جديد."
+        : "",
+      targetType === "matching"
+        ? "عند التحويل إلى طابق: حوّل محتوى السؤال إلى مصطلحات يسارية (حقول) تُطابَق بقائمة يمينية مشتركة (نفس الخيارات لكل حقل)، دون إدخال موضوع جديد."
+        : "",
+      targetType === "ordering"
+        ? "عند التحويل إلى رتّب: حوّل محتوى السؤال إلى عناصر يجب ترتيبها بالتسلسل الصحيح، دون إدخال موضوع جديد."
         : ""
     ]
       .filter(Boolean)
@@ -6866,6 +6872,8 @@ function App() {
                           <option value="fillBlank">أكمل الناقص</option>
                           <option value="wordBank">مخزن كلمات</option>
                           <option value="open">مفتوح</option>
+                          <option value="matching">طابق</option>
+                          <option value="ordering">رتّب</option>
                         </select>
                       </label>
 

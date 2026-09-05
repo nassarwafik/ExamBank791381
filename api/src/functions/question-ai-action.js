@@ -138,7 +138,9 @@ function buildSchema() {
           "multipleChoice",
           "fillBlank",
           "wordBank",
-          "open"
+          "open",
+          "matching",
+          "ordering"
         ]
       },
 
@@ -336,6 +338,10 @@ function buildPrompt(
 
     "For fillBlank and wordBank provide fields and fieldAnswers. Also provide a wordBank containing every correct field answer plus several plausible distractor words. Keep the word bank shuffled and normally between 4 and 10 items.",
 
+    "For matching, provide one field per left-hand term in `fields`, and a shared `wordBank` of the right-hand terms every field should be matched against (the SAME pool for every field, not a different one per field). Provide the correct right-hand term for each field, at the same index, in `fieldAnswers`.",
+
+    "For ordering, provide one field per item to be arranged in `fields` (do not provide a wordBank - the position numbers are generated automatically), and provide the correct 1-based position of each item, as a string, at the matching index in `fieldAnswers`.",
+
     "For open questions provide answerText.",
 
     "Use clear Arabic appropriate for the exam unless technical CLI/code requires English."
@@ -354,7 +360,9 @@ function convertResult(
       "multipleChoice",
       "fillBlank",
       "wordBank",
-      "open"
+      "open",
+      "matching",
+      "ordering"
     ].includes(
       result.presentationType
     )
@@ -425,7 +433,11 @@ function convertResult(
     presentationType ===
       "fillBlank" ||
     presentationType ===
-      "wordBank"
+      "wordBank" ||
+    presentationType ===
+      "matching" ||
+    presentationType ===
+      "ordering"
       ? (
           result.fields ||
           []
@@ -456,33 +468,52 @@ function convertResult(
 
             kind:
               presentationType ===
-                "wordBank"
-                ? "select"
-                : "text",
+                "fillBlank"
+                ? "text"
+                : "select",
 
+            // Ordering's options are always empty here - the position-number word bank is built
+            // deterministically below (see orderingWordBank), never left to the AI to invent.
             options:
-              wordBankValues.map(
-                (
-                  word,
-                  optionIndex
-                ) => ({
-                  value:
-                    String(
-                      optionIndex +
-                      1
-                    ),
+              presentationType ===
+              "ordering"
+                ? []
+                : wordBankValues.map(
+                    (
+                      word,
+                      optionIndex
+                    ) => ({
+                      value:
+                        String(
+                          optionIndex +
+                          1
+                        ),
 
-                  text:
-                    word,
+                      text:
+                        word,
 
-                  order:
-                    optionIndex +
-                    1
-                })
-              )
+                      order:
+                        optionIndex +
+                        1
+                    })
+                  )
           })
         )
       : [];
+
+  // Ordering's word bank is just the position numbers 1..N, deterministic from the field count -
+  // never AI-invented, since there is only ever one correct set of numbers (mirrors the same
+  // deterministic approach already used for this in exam-quality-fix.js's buildQualityFixPatch).
+  const orderingWordBank =
+    fields.map(
+      (
+        _,
+        index
+      ) =>
+        String(
+          index + 1
+        )
+    );
 
   let answer = {};
 
@@ -525,10 +556,21 @@ function convertResult(
     presentationType ===
       "fillBlank" ||
     presentationType ===
-      "wordBank"
+      "wordBank" ||
+    presentationType ===
+      "matching" ||
+    presentationType ===
+      "ordering"
   ) {
+    // Pre-existing bug fixed here: this used to build {answers:[...]}, but
+    // assignment-grading.js's gradeSequence() only ever reads answer.values - meaning any
+    // fillBlank/wordBank question created via this endpoint graded as 0 regardless of the
+    // student's answer. {mode:"exactSequence", values} is the shape gradeSequence actually reads.
     answer = {
-      answers:
+      mode:
+        "exactSequence",
+
+      values:
         Array.isArray(
           result
             .fieldAnswers
@@ -627,14 +669,19 @@ function convertResult(
     wasModified: true,
 
     wordBank:
-      (
-        presentationType ===
-          "fillBlank" ||
-        presentationType ===
-          "wordBank"
-      )
-        ? wordBankValues
-        : [],
+      presentationType ===
+      "ordering"
+        ? orderingWordBank
+        : (
+            presentationType ===
+              "fillBlank" ||
+            presentationType ===
+              "wordBank" ||
+            presentationType ===
+              "matching"
+          )
+          ? wordBankValues
+          : [],
 
     image:
       action ===
@@ -960,3 +1007,5 @@ app.http(
       }
   }
 );
+
+module.exports = { convertResult, buildPrompt, buildSchema };
