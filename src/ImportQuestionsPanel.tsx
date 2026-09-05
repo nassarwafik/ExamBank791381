@@ -277,6 +277,8 @@ export default function ImportQuestionsPanel({
   const [notice, setNotice] = useState("");
   const [checkBusy, setCheckBusy] = useState(false);
   const [commitBusy, setCommitBusy] = useState(false);
+  const [htmlUrlInput, setHtmlUrlInput] = useState("");
+  const [gformUrlInput, setGformUrlInput] = useState("");
 
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
@@ -445,6 +447,55 @@ export default function ImportQuestionsPanel({
       patchSession(previous => ({
         files: previous.files.map(item => (item.importJobId === placeholderId
           ? { ...item, status: "failed" as FileStatus, error: err instanceof Error ? err.message : "تعذر رفع الملف." }
+          : item))
+      }));
+    }
+  }
+
+  // Mirrors uploadOneFile's exact shape - the only difference is the first network call (fetch a
+  // URL server-side instead of uploading file bytes). Once that call returns an importJobId, it
+  // hands off to the SAME, unmodified analyzeFile() - the whole progress/retry/question-list UI
+  // below needs zero changes to also handle URL-sourced imports.
+  async function submitUrl(url: string, kind: "html" | "gform") {
+    setError("");
+    const trimmed = url.trim();
+    if (!trimmed) {
+      return;
+    }
+    if (files.length >= MAX_FILES_PER_SESSION) {
+      setError(`لا يمكن رفع أكثر من ${MAX_FILES_PER_SESSION} ملفًا في نفس الجلسة.`);
+      return;
+    }
+
+    const placeholderId = "fetching-" + Date.now() + "-" + Math.random().toString(16).slice(2, 8);
+    patchSession(previous => ({
+      files: [...previous.files, { importJobId: placeholderId, fileName: trimmed, status: "uploading", progressLabel: "جارٍ جلب الرابط..." }]
+    }));
+
+    if (kind === "html") {
+      setHtmlUrlInput("");
+    }
+    else {
+      setGformUrlInput("");
+    }
+
+    try {
+      const result = await api<{ ok: true; importJobId: string; fileName: string }>("/api/import-fetch-url", {
+        method: "POST",
+        body: JSON.stringify({ url: trimmed, kind })
+      });
+
+      patchSession(previous => ({
+        files: previous.files.map(item => (item.importJobId === placeholderId
+          ? { ...item, importJobId: result.importJobId, fileName: result.fileName, status: "analyzing" as FileStatus, progressLabel: "جارٍ استخراج النص..." }
+          : item))
+      }));
+
+      await analyzeFile(result.importJobId, result.fileName);
+    } catch (err) {
+      patchSession(previous => ({
+        files: previous.files.map(item => (item.importJobId === placeholderId
+          ? { ...item, status: "failed" as FileStatus, error: err instanceof Error ? err.message : "تعذر جلب هذا الرابط." }
           : item))
       }));
     }
@@ -685,6 +736,48 @@ export default function ImportQuestionsPanel({
             hidden
             onChange={event => void handleFilesSelected(event.target.files)}
           />
+        </div>
+
+        <div className="import-url-forms">
+          <form
+            className="import-url-form"
+            onSubmit={event => { event.preventDefault(); void submitUrl(htmlUrlInput, "html"); }}
+          >
+            <label htmlFor="import-html-url">🔗 استيراد من رابط صفحة HTML</label>
+            <div className="import-url-row">
+              <input
+                id="import-html-url"
+                type="url"
+                required
+                placeholder="https://username.github.io/exam.html"
+                value={htmlUrlInput}
+                onChange={event => setHtmlUrlInput(event.target.value)}
+              />
+              <button type="submit">استيراد</button>
+            </div>
+          </form>
+
+          <form
+            className="import-url-form"
+            onSubmit={event => { event.preventDefault(); void submitUrl(gformUrlInput, "gform"); }}
+          >
+            <label htmlFor="import-gform-url">📋 استيراد من رابط Google Form</label>
+            <div className="import-url-row">
+              <input
+                id="import-gform-url"
+                type="url"
+                required
+                placeholder="https://docs.google.com/forms/d/e/.../viewform"
+                value={gformUrlInput}
+                onChange={event => setGformUrlInput(event.target.value)}
+              />
+              <button type="submit">استيراد</button>
+            </div>
+            <p className="import-url-warning">
+              ⚠ تعتمد هذه الطريقة على قراءة بنية داخلية غير رسمية لصفحات Google، وقد تتوقف عن العمل
+              إذا غيّرت Google تصميم النموذج. تعمل فقط مع النماذج العامة (يمكن لأي شخص لديه الرابط عرضها).
+            </p>
+          </form>
         </div>
 
         {error && <p className="platform-error">{error}</p>}

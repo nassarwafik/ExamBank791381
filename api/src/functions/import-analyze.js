@@ -15,6 +15,7 @@ const { linkImagesToQuestions } = require("../lib/image-linking");
 const pdfExtract = require("../lib/pdf-extract");
 const docxExtract = require("../lib/docx-extract");
 const htmlExtract = require("../lib/html-extract");
+const googleFormExtract = require("../lib/google-form-extract");
 
 const RAW_CONTAINER = "raw";
 const MAX_QUESTIONS_PER_JOB = 300;
@@ -117,6 +118,7 @@ function deserializeStateFromStorage(state) {
 function extractorForKind(kind) {
   if (kind === "pdf") return pdfExtract.extractPages;
   if (kind === "docx") return docxExtract.extractPages;
+  if (kind === "gform") return googleFormExtract.extractPages;
   return htmlExtract.extractPages;
 }
 
@@ -354,4 +356,4 @@ app.http("importAnalyze", {
 // Exported only for unit testing the Buffer<->base64 state-persistence boundary, the
 // already-done-job-never-recalls-AI guarantee, and the OpenAI-by-default provider resolution
 // (app.http's own route registration above is unaffected).
-module.exports = { serializeStateForStorage, deserializeStateFromStorage, runRemainingChunks, resolveImportProvider };
+module.exports = { serializeStateForStorage, deserializeStateFromStorage, runRemainingChunks, resolveImportProvider, extractorForKind };
