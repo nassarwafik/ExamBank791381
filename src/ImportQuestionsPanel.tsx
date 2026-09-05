@@ -184,7 +184,7 @@ export function distributeMarks(totalMarks: number, count: number): number[] {
 // "never LEGACY / never guess" hard rule the teacher asked for applies specifically to what gets
 // permanently written to the Question Bank (see bank-import-action.js's partitionQuestionsBySectionValidity),
 // not to a transient, freely-editable exam draft. A best-effort fallback here is acceptable.
-function toExamQuestion(question: ImportedQuestion, index: number, marks: number): ExamQuestion {
+export function toExamQuestion(question: ImportedQuestion, index: number, marks: number): ExamQuestion {
   const imageAssets = question.images.map(image => ({
     id: image.id,
     origin: "uploaded" as const,
@@ -193,13 +193,28 @@ function toExamQuestion(question: ImportedQuestion, index: number, marks: number
   }));
 
   // Manual teacher conversion (see the "النوع" selector in the review UI): a table-formatted
-  // question the teacher retyped as "wordBank" gets its markdown table stripped out of `text` and
-  // rebuilt as fields+wordBank instead - the exact shape StudentExamPage.tsx's ALREADY-WORKING
-  // dropdown-per-field rendering expects for any other wordBank question. Falls back to the
-  // original text/no-fields if there's no table to convert (nothing to do).
-  const wordBankConversion = question.presentationType === "wordBank"
-    ? convertTableRowsToWordBankFields(question.text)
-    : null;
+  // question the teacher retyped as "wordBank"/"matching"/"ordering" gets its markdown table
+  // stripped out of `text` and rebuilt as fields instead - the same convertTableRowsToWordBankFields
+  // extraction (one field per row) already proven for wordBank is reused verbatim for all three,
+  // since "matching" and "ordering" also just need one field per row/item. Only how each type's
+  // options/wordBank get filled in differs below. Falls back to the original text/no-fields if
+  // there's no table to convert (nothing to do).
+  const needsFieldConversion = question.presentationType === "wordBank" || question.presentationType === "matching" || question.presentationType === "ordering";
+  const wordBankConversion = needsFieldConversion ? convertTableRowsToWordBankFields(question.text) : null;
+
+  // Matching: every row shares the exact same teacher-typed pool of right-hand terms as its
+  // dropdown options - resolveTableRowOptions() (StudentExamPage's existing table-dropdown
+  // mechanism) reads field.options FIRST, so this is all that's needed for the dropdown to work.
+  const matchingSharedOptions = question.presentationType === "matching" ? parseWordBankInput(question.wordBankInput) : [];
+  const fieldsWithMatchingOptions = wordBankConversion && question.presentationType === "matching"
+    ? wordBankConversion.fields.map(field => ({ ...field, options: matchingSharedOptions.map(value => ({ value })) }))
+    : wordBankConversion?.fields;
+
+  // Ordering: the word bank is just the position numbers 1..N, deterministic from the item count -
+  // never teacher-typed or AI-invented, since there is only ever one correct set of numbers.
+  const orderingWordBank = wordBankConversion && question.presentationType === "ordering"
+    ? wordBankConversion.fields.map((_, index) => String(index + 1))
+    : undefined;
 
   return {
     examQuestionId: `IMP-${Date.now()}-${index}`,
@@ -218,8 +233,10 @@ function toExamQuestion(question: ImportedQuestion, index: number, marks: number
     text: wordBankConversion ? wordBankConversion.prose : question.text,
     textHtml: "",
     options: question.options,
-    fields: wordBankConversion ? wordBankConversion.fields : [],
-    wordBank: wordBankConversion ? parseWordBankInput(question.wordBankInput) : undefined,
+    fields: (question.presentationType === "matching" ? fieldsWithMatchingOptions : wordBankConversion?.fields) || [],
+    wordBank: question.presentationType === "ordering"
+      ? orderingWordBank
+      : (wordBankConversion && question.presentationType === "wordBank" ? parseWordBankInput(question.wordBankInput) : undefined),
     parts: [],
     answer: question.hasVisibleAnswer && question.answerText
       ? { mode: "anyAccepted", values: [question.answerText] }
@@ -846,7 +863,7 @@ export default function ImportQuestionsPanel({
 
                   <QuestionTextBlock text={question.text} />
 
-                  {question.presentationType === "wordBank" && (() => {
+                  {(question.presentationType === "wordBank" || question.presentationType === "matching" || question.presentationType === "ordering") && (() => {
                     const converted = convertTableRowsToWordBankFields(question.text);
                     if (!converted) {
                       return (
@@ -855,13 +872,23 @@ export default function ImportQuestionsPanel({
                         </p>
                       );
                     }
+                    if (question.presentationType === "ordering") {
+                      return (
+                        <div className="import-wordbank-editor">
+                          <p>
+                            العناصر المكتشفة (سيُطلَب من الطالب ترتيبها): {converted.fields.map(f => f.label).filter(Boolean).join("، ") || "—"}
+                          </p>
+                          <p>الترتيب الصحيح غير مطلوب هنا — استخدم "✨ تصحيح جميع الأخطاء" بعد إضافة السؤال للامتحان ليحدده تلقائيًا.</p>
+                        </div>
+                      );
+                    }
                     return (
                       <div className="import-wordbank-editor">
                         <p>
                           الحقول المكتشفة: {converted.fields.map(f => f.label).filter(Boolean).join("، ") || "—"}
                         </p>
                         <label>
-                          قائمة الإجابات (افصل بينها بفاصلة):
+                          {question.presentationType === "matching" ? "قائمة خيارات المطابقة المشتركة (افصل بينها بفاصلة):" : "قائمة الإجابات (افصل بينها بفاصلة):"}
                           <textarea
                             value={question.wordBankInput}
                             onChange={event => setQuestionWordBankInput(question.importedQuestionId, event.target.value)}

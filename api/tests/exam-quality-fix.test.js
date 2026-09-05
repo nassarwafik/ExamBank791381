@@ -133,3 +133,95 @@ describe("buildQualityFixPatch - falls back to the original presentationType whe
     expect(patch.presentationType).toBe("open");
   });
 });
+
+describe("buildPrompt / buildQualityFixPatch - matching (طابق)", () => {
+  const question = {
+    presentationType: "matching",
+    text: "طابق كل بروتوكول بالطبقة الصحيحة:\n| البروتوكول | الطبقة |\n| --- | --- |\n| HTTP | |\n| IP | |",
+    answer: {}
+  };
+
+  it("buildPrompt tells the AI every row must share the exact same options pool", () => {
+    const prompt = buildPrompt(question, ["TABLE_MISSING_OPTIONS"]);
+    expect(prompt).toMatch(/MATCHING question/i);
+    expect(prompt).toMatch(/same shared list/i);
+  });
+
+  it("no longer falls back away from 'matching' - it is now a valid presentationType", () => {
+    const patch = buildQualityFixPatch(
+      { presentationType: "matching", text: question.text, options: [], fields: [], fieldAnswers: [], wordBank: [] },
+      question
+    );
+    expect(patch.presentationType).toBe("matching");
+  });
+
+  it("reuses the existing generic table-answer branch untouched - builds the same pairMap format", () => {
+    const aiResult = {
+      presentationType: "matching",
+      text: question.text,
+      options: [],
+      fields: [
+        { label: "HTTP", options: ["طبقة التطبيقات", "طبقة الشبكة"], isBoolean: false },
+        { label: "IP", options: ["طبقة التطبيقات", "طبقة الشبكة"], isBoolean: false }
+      ],
+      fieldAnswers: ["طبقة التطبيقات", "طبقة الشبكة"],
+      wordBank: []
+    };
+
+    const patch = buildQualityFixPatch(aiResult, question);
+
+    expect(patch.answer.text).toBe("HTTP=طبقة التطبيقات;IP=طبقة الشبكة");
+    // Every row shares the exact same options pool - a real matching dropdown, not per-row-different.
+    expect(patch.fields[0].options.map(o => o.value)).toEqual(patch.fields[1].options.map(o => o.value));
+
+    const exam = { questions: [{ examQuestionId: "q1", marks: 4, text: patch.text, answer: patch.answer }] };
+    const graded = gradeExam(exam, { q1: { kind: "table", values: ["طبقة التطبيقات", "طبقة الشبكة"] } });
+    expect(graded.questions[0].score).toBe(4);
+    expect(graded.questions[0].correct).toBe(true);
+  });
+});
+
+describe("buildPrompt / buildQualityFixPatch - ordering (رتّب)", () => {
+  const question = { presentationType: "ordering", text: "رتّب خطوات عملية DHCP:", answer: {} };
+
+  it("buildPrompt tells the AI to return the correct 1-based position per item", () => {
+    const prompt = buildPrompt(question, ["MISSING_ANSWER"]);
+    expect(prompt).toMatch(/ORDERING question/i);
+    expect(prompt).toMatch(/1-based position/i);
+  });
+
+  it("builds the same exactSequence answer shape as fillBlank/wordBank, with zero new grading code", () => {
+    const aiResult = {
+      presentationType: "ordering",
+      text: question.text,
+      options: [],
+      fields: [
+        { label: "DHCP Discover", options: [], isBoolean: false },
+        { label: "DHCP Offer", options: [], isBoolean: false },
+        { label: "DHCP Request", options: [], isBoolean: false },
+        { label: "DHCP Ack", options: [], isBoolean: false }
+      ],
+      fieldAnswers: ["1", "2", "3", "4"],
+      wordBank: []
+    };
+
+    const patch = buildQualityFixPatch(aiResult, question);
+
+    expect(patch.answer).toEqual({ mode: "exactSequence", values: ["1", "2", "3", "4"] });
+
+    const exam = { questions: [{ examQuestionId: "q1", marks: 4, answer: patch.answer }] };
+    const graded = gradeExam(exam, { q1: { kind: "sequence", values: ["1", "2", "3", "4"] } });
+    expect(graded.questions[0].score).toBe(4);
+  });
+
+  it("builds the position-number word bank deterministically in code, ignoring whatever the AI returned for wordBank", () => {
+    const aiResult = {
+      presentationType: "ordering", text: question.text, options: [],
+      fields: [{ label: "Step A", options: [], isBoolean: false }, { label: "Step B", options: [], isBoolean: false }],
+      fieldAnswers: ["2", "1"],
+      wordBank: ["not", "the", "right", "values"]
+    };
+    const patch = buildQualityFixPatch(aiResult, question);
+    expect(patch.wordBank).toEqual(["1", "2"]);
+  });
+});

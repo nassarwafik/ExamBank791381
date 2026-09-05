@@ -17,7 +17,7 @@ function tableRows(text) {
   return rows.length > 1 ? rows.slice(1) : [];
 }
 
-const VALID_PRESENTATION_TYPES = ["multipleChoice", "fillBlank", "wordBank", "open"];
+const VALID_PRESENTATION_TYPES = ["multipleChoice", "fillBlank", "wordBank", "open", "matching", "ordering"];
 
 // additionalProperties:false + an explicit property list is what keeps the AI from ever being able
 // to return topic/difficulty/section/marks/origin/images at all - the same enforcement-by-omission
@@ -81,6 +81,12 @@ function buildPrompt(question, issueCodes) {
         "If every row shares the same answer domain, you may reuse the same options list for all of them; otherwise vary options per row. " +
         "Return the correct value for each row in `fieldAnswers`, at the same index as its field, and it MUST exactly match one of that row's `options` values - EXCEPT when isBoolean is true, in which case `fieldAnswers` for that row must be the literal English string \"true\" or \"false\" (lowercase, not the Arabic label), since that is the value the student's dropdown actually submits."
       : "For fillBlank/wordBank fields (if any), return one `fields` entry per blank with inferred `options` and the correct value at the matching index in `fieldAnswers`.",
+    question?.presentationType === "matching" && rows.length
+      ? "This is a MATCHING question specifically: every row's `options` MUST be the exact same shared list (the pool of right-hand terms to match against), not a different set per row, and no row should be `isBoolean`."
+      : "",
+    question?.presentationType === "ordering"
+      ? "This is an ORDERING question: each entry in `fields` is one item from a list the student must arrange into the correct sequence (leave its `options` empty and `isBoolean` false). Return, at the matching index in `fieldAnswers`, the correct 1-based position of that item as a string (e.g. \"1\", \"2\", ...) - do not return `wordBank`, the position numbers are generated automatically."
+      : "",
     "For multipleChoice, provide 4 plausible options in `options` and a zero-based `correctOptionIndex`.",
     "For a question with no answer model at all, solve the question yourself and provide a complete, correct answer using whichever of these fields fits its presentationType.",
     "For open questions, provide the answer in `answerText`.",
@@ -149,7 +155,7 @@ function buildQualityFixPatch(result, currentQuestion) {
       .filter(Boolean);
     answer = { text: pairs.join(";") };
   }
-  else if (presentationType === "fillBlank" || presentationType === "wordBank") {
+  else if (presentationType === "fillBlank" || presentationType === "wordBank" || presentationType === "ordering") {
     answer = { mode: "exactSequence", values: fieldAnswers };
   }
   else {
@@ -162,13 +168,19 @@ function buildQualityFixPatch(result, currentQuestion) {
       .filter(Boolean)
   ));
 
+  // Ordering's word bank is just the position numbers 1..N, deterministic from the field count -
+  // built here in code rather than trusted to the AI, since there's only ever one correct set.
+  const orderingWordBank = fields.map((_, index) => String(index + 1));
+
   return {
     presentationType,
     text: String(result.text || currentQuestion?.text || "").trim(),
     options,
     fields,
     answer,
-    wordBank: (presentationType === "fillBlank" || presentationType === "wordBank") ? wordBank : (currentQuestion?.wordBank || [])
+    wordBank: presentationType === "ordering"
+      ? orderingWordBank
+      : (presentationType === "fillBlank" || presentationType === "wordBank") ? wordBank : (currentQuestion?.wordBank || [])
   };
 }
 

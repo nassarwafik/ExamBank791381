@@ -45,6 +45,9 @@
 .iex-qhead{display:flex;justify-content:space-between;gap:10px;color:var(--muted);font-size:12px;font-weight:800;margin-bottom:12px}.iex-qhead strong{color:var(--navy)}
 .iex-bank{display:flex;gap:7px;flex-wrap:wrap;margin:12px 0}.iex-bank span{background:var(--primary050);border:1px solid #d7e3fb;color:var(--primary2);border-radius:var(--pill);padding:5px 10px;font-size:12px;font-weight:700}
 .iex-seq{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:10px;color:var(--text)}.iex-seq label{display:flex;flex-direction:column;gap:6px}.iex-seq select,.iex-open,.iex-cell{border:1px solid var(--line2);border-radius:10px;background:#fff;padding:10px 12px;font:inherit;color:var(--text)}
+/* Ordering questions need single-column top-to-bottom reading order - the auto-fit grid above
+   reflows into multiple columns which makes an "arrange these into order" list confusing. */
+.iex-order-list{display:flex;flex-direction:column}
 .iex-open{width:100%;min-height:120px;resize:vertical}.iex-image{max-width:100%;height:auto;border-radius:14px;border:1px solid var(--line);display:block;margin:12px auto}
 .iex-table-wrap{overflow:auto;border:1px solid var(--line);border-radius:14px}.iex-table-wrap table{width:100%;border-collapse:collapse}.iex-table-wrap th,.iex-table-wrap td{padding:10px 12px;border-bottom:1px solid var(--line);text-align:start}.iex-table-wrap th{background:var(--surface2);color:var(--muted);font-size:12px}
 .iex-cell-select{border:1px solid var(--line2);border-radius:10px;background:#fff;padding:10px 12px;font:inherit;color:var(--text);width:100%}

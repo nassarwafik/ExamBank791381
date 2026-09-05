@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
-import { buildExamCopy, mergeTemplateIntoGeneratedExam } from "./App";
-import type { ExamDraft, ExamPlan, ExamMetadata } from "./App";
+import { buildExamCopy, mergeTemplateIntoGeneratedExam, buildQualityIssues } from "./App";
+import type { ExamDraft, ExamPlan, ExamMetadata, ExamQuestion } from "./App";
 
 function plan(): ExamPlan {
   return {
@@ -53,6 +53,92 @@ function examDraft(overrides: Partial<ExamDraft> = {}): ExamDraft {
     ...overrides
   };
 }
+
+function examQuestion(overrides: Partial<ExamQuestion> = {}): ExamQuestion {
+  return {
+    examQuestionId: "q1",
+    origin: "imported",
+    section: "BASIC",
+    topic: "OTHER_NETWORKING",
+    secondaryTopics: [],
+    difficulty: 2,
+    difficultyLabel: "",
+    familyKey: "F1",
+    hasCLI: false,
+    requiresCalculation: false,
+    presentationType: "open",
+    marks: 10,
+    locked: false,
+    text: "نص السؤال",
+    options: [],
+    fields: [],
+    parts: [],
+    answer: {},
+    teacherNote: "",
+    aiInstruction: "",
+    wasModified: false,
+    image: { exists: false, visible: false, origin: null, assets: [], prompt: null },
+    history: [],
+    redoStack: [],
+    ...overrides
+  };
+}
+
+function examWithQuestion(question: ExamQuestion): ExamDraft {
+  return examDraft({ questions: [question], totalMarks: question.marks });
+}
+
+describe("buildQualityIssues - matching (طابق) question checks", () => {
+  it("flags a matching question whose text has no table at all", () => {
+    const issues = buildQualityIssues(examWithQuestion(examQuestion({ presentationType: "matching", text: "طابق بلا جدول", answer: { text: "x=y" } })));
+    expect(issues.some(i => i.code === "MISSING_FIELDS")).toBe(true);
+  });
+
+  it("reuses the existing generic table checks for a matching question missing per-row options", () => {
+    const text = "طابق:\n| HTTP | -- |\n| --- | --- |\n| IP | -- |";
+    const q = examQuestion({ presentationType: "matching", text, fields: [{ id: "f1", label: "HTTP", order: 0, kind: "select", options: [] }], answer: { text: "HTTP=x" } });
+    const issues = buildQualityIssues(examWithQuestion(q));
+    expect(issues.some(i => i.code === "TABLE_MISSING_OPTIONS")).toBe(true);
+  });
+
+  it("reports no issue for a complete matching question", () => {
+    const text = "طابق:\n| HTTP | -- |\n| --- | --- |\n| IP | -- |";
+    const q = examQuestion({
+      presentationType: "matching",
+      text,
+      fields: [
+        { id: "f1", label: "HTTP", order: 0, kind: "select", options: [{ value: "طبقة التطبيقات" }, { value: "طبقة الشبكة" }] }
+      ],
+      answer: { text: "HTTP=طبقة التطبيقات" }
+    });
+    const issues = buildQualityIssues(examWithQuestion(q));
+    expect(issues.filter(i => i.questionId === "q1")).toEqual([]);
+  });
+});
+
+describe("buildQualityIssues - ordering (رتّب) question checks", () => {
+  it("flags an ordering question with no fields at all", () => {
+    const issues = buildQualityIssues(examWithQuestion(examQuestion({ presentationType: "ordering", fields: [], answer: { mode: "exactSequence", values: ["1"] } })));
+    expect(issues.some(i => i.code === "MISSING_FIELDS")).toBe(true);
+  });
+
+  it("flags an ordering question with fields but no position word bank", () => {
+    const q = examQuestion({ presentationType: "ordering", fields: [{ id: "f1", label: "Step 1", order: 0 }], wordBank: [], answer: { mode: "exactSequence", values: ["1"] } });
+    const issues = buildQualityIssues(examWithQuestion(q));
+    expect(issues.some(i => i.code === "MISSING_OPTIONS")).toBe(true);
+  });
+
+  it("reports no issue for a complete ordering question", () => {
+    const q = examQuestion({
+      presentationType: "ordering",
+      fields: [{ id: "f1", label: "DHCP Discover", order: 0 }, { id: "f2", label: "DHCP Offer", order: 1 }],
+      wordBank: ["1", "2"],
+      answer: { mode: "exactSequence", values: ["1", "2"] }
+    });
+    const issues = buildQualityIssues(examWithQuestion(q));
+    expect(issues.filter(i => i.questionId === "q1")).toEqual([]);
+  });
+});
 
 describe("buildExamCopy - Save As Copy preserves the exam's theme", () => {
   it("carries the source exam's presentationTheme into the copy", () => {
