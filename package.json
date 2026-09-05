@@ -8,7 +8,8 @@
     "build": "tsc -b && vite build",
     "lint": "oxlint",
     "preview": "vite preview",
-    "test": "vitest run"
+    "test": "vitest run",
+    "build:exam-library": "node scripts/build-791381-library.cjs"
   },
   "dependencies": {
     "chart.js": "^4.5.1",
