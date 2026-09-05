@@ -4,10 +4,12 @@ import AssignmentReview from "./AssignmentReview";
 import TeacherDashboard from "./TeacherDashboard";
 import {IconSearch,IconDownload,IconUpload,IconPlus,IconChevronDown,IconMore,IconUser,IconEdit,IconCopy,IconKey,IconTrash,IconClose,IconMedal} from "./icons";
 import {MEDAL_COLORS,MEDAL_LABELS,medalTier} from "./medals";
+import {normalizeClassStatus} from "./classLifecycle";
 
 type WorkspaceTab="dashboard"|"students"|"assignments";
 type TeacherPlatformProps={token:string;currentExam:unknown|null;workspaceTab:WorkspaceTab};
-type Classroom={classId:string;name:string;grade:string;schoolYear:string;active:boolean;studentCount:number;createdAt:string};
+type ClassArchiveView="active"|"archived";
+type Classroom={classId:string;name:string;grade:string;schoolYear:string;active:boolean;status?:string;archivedAt?:string;archivedBy?:string;archiveReason?:string;graduationYear?:string;studentCount:number;createdAt:string};
 type Student={userId:string;code:string;identityNumber:string;firstName:string;familyName:string;displayName:string;classId:string;active:boolean;archived:boolean;createdAt:string;updatedAt:string;lastLoginAt:string;submittedAssignmentsCount:number;likesCount:number};
 type Credential={userId?:string;firstName?:string;familyName?:string;displayName?:string;code:string;identityNumber?:string;password:string};
 type BulkStudent={firstName:string;familyName:string;identityNumber:string};
@@ -56,6 +58,7 @@ function csvCell(value:unknown){
 
 function TeacherPlatform({token,currentExam,workspaceTab}:TeacherPlatformProps){
  const [classes,setClasses]=useState<Classroom[]>([]);
+ const [classArchiveView,setClassArchiveView]=useState<ClassArchiveView>("active");
  const [students,setStudents]=useState<Student[]>([]);
  const [selectedClassId,setSelectedClassId]=useState("");
  const [loading,setLoading]=useState(false);
@@ -107,6 +110,13 @@ function TeacherPlatform({token,currentExam,workspaceTab}:TeacherPlatformProps){
  const [historyDeadlineValue,setHistoryDeadlineValue]=useState("");
 
  const selectedClass=useMemo(()=>classes.find(c=>c.classId===selectedClassId)||null,[classes,selectedClassId]);
+ const activeClasses=useMemo(()=>classes.filter(c=>normalizeClassStatus(c)==="active"),[classes]);
+ const archivedClasses=useMemo(()=>classes.filter(c=>normalizeClassStatus(c)==="archived"),[classes]);
+ const visibleClasses=classArchiveView==="active"?activeClasses:archivedClasses;
+ function isGraduationEligible(classroom:Classroom){
+  const grade=classroom.grade||"";
+  return grade.includes("12")||grade.includes("الثاني عشر");
+ }
 
  const stats=useMemo(()=>{
   const current=students.filter(s=>!s.archived);
@@ -221,13 +231,29 @@ function TeacherPlatform({token,currentExam,workspaceTab}:TeacherPlatformProps){
  }
 
  async function toggleClassArchive(classroom:Classroom){
-  if(actionBusy)return;
+  const archiving=normalizeClassStatus(classroom)==="active";
+  const message=archiving
+   ?"أرشفة الصف "+classroom.name+"؟\n\nسيُنقل إلى الأرشيف مع الاحتفاظ بجميع الطلاب والواجبات والنتائج. لن يتم حذف أي بيانات."
+   :"إعادة تفعيل الصف "+classroom.name+"؟";
+  if(actionBusy||!window.confirm(message))return;
   setActionBusy(true);setError("");setNotice("");
   try{
-   await teacherApi("/api/classrooms",{method:"POST",body:JSON.stringify({action:classroom.active?"archive":"unarchive",classId:classroom.classId})});
+   await teacherApi("/api/classrooms",{method:"POST",body:JSON.stringify({action:archiving?"archive":"unarchive",classId:classroom.classId})});
    await loadClasses();
-   setNotice(classroom.active?"✓ تم أرشفة الصف.":"✓ تم تفعيل الصف.");
+   setNotice(archiving?"✓ تم أرشفة الصف.":"✓ تم تفعيل الصف.");
   }catch(e){setError(e instanceof Error?e.message:"تعذر تعديل الصف.")}
+  finally{setActionBusy(false)}
+ }
+
+ async function graduateAndArchiveClass(classroom:Classroom){
+  const message="سيتم نقل الصف إلى الأرشيف مع الاحتفاظ بجميع الطلاب والواجبات والنتائج. لن يتم حذف أي بيانات.";
+  if(actionBusy||!window.confirm(message))return;
+  setActionBusy(true);setError("");setNotice("");
+  try{
+   await teacherApi("/api/classrooms",{method:"POST",body:JSON.stringify({action:"graduateAndArchive",classId:classroom.classId})});
+   await loadClasses();
+   setNotice("✓ تم تخريج وأرشفة الصف.");
+  }catch(e){setError(e instanceof Error?e.message:"تعذر تخريج الصف.")}
   finally{setActionBusy(false)}
  }
 
@@ -571,12 +597,19 @@ function TeacherPlatform({token,currentExam,workspaceTab}:TeacherPlatformProps){
      <button className="platform-primary" onClick={createClass} disabled={actionBusy||!newClassName.trim()}>+ إنشاء صف</button>
     </div>
     {loading&&classes.length===0&&<div className="platform-loading">⏳ جارٍ التحميل...</div>}
+    <nav className="analytics-view-tabs" role="tablist" aria-label="أقسام الصفوف">
+     <button type="button" className={"analytics-view-tab "+(classArchiveView==="active"?"active":"")} onClick={()=>setClassArchiveView("active")}>الصفوف النشطة<span className="analytics-view-tab-badge">{activeClasses.length}</span></button>
+     <button type="button" className={"analytics-view-tab "+(classArchiveView==="archived"?"active":"")} onClick={()=>setClassArchiveView("archived")}>الأرشيف<span className="analytics-view-tab-badge">{archivedClasses.length}</span></button>
+    </nav>
     <div className="class-list">
-     {classes.map(classroom=><article key={classroom.classId} className={"class-row "+(classroom.classId===selectedClassId?"selected ":"")+(classroom.active?"":"archived")}>
-      <button className="class-select" onClick={()=>setSelectedClassId(classroom.classId)}><strong>{classroom.name}</strong><span>{classroom.grade||"—"} · {classroom.studentCount} طالب</span><small>{classroom.schoolYear||""}</small></button>
-      <button className="class-archive" onClick={()=>toggleClassArchive(classroom)} disabled={actionBusy}>{classroom.active?"أرشفة":"تفعيل"}</button>
+     {visibleClasses.map(classroom=><article key={classroom.classId} className={"class-row "+(classroom.classId===selectedClassId?"selected ":"")+(classroom.active?"":"archived")}>
+      <button className="class-select" onClick={()=>setSelectedClassId(classroom.classId)}><strong>{classroom.name}</strong><span>{classroom.grade||"—"} · {classroom.studentCount} طالب</span><small>{classroom.schoolYear||""}</small>
+       {classArchiveView==="archived"&&<small>{classroom.archiveReason==="graduated"?"مُخرَّج":"مؤرشف"}{classroom.archivedAt?" · "+fmtDate(classroom.archivedAt):""}{classroom.graduationYear?" · دفعة "+classroom.graduationYear:""}</small>}
+      </button>
+      {classArchiveView==="active"&&isGraduationEligible(classroom)&&<button className="class-archive" onClick={()=>graduateAndArchiveClass(classroom)} disabled={actionBusy}>🎓 تخريج وأرشفة الصف</button>}
+      <button className="class-archive" onClick={()=>toggleClassArchive(classroom)} disabled={actionBusy}>{classroom.active?"أرشفة الصف":"تفعيل"}</button>
      </article>)}
-     {!loading&&classes.length===0&&<div className="platform-empty">لا توجد صفوف بعد.</div>}
+     {!loading&&visibleClasses.length===0&&<div className="platform-empty">{classArchiveView==="active"?"لا توجد صفوف نشطة بعد.":"لا توجد صفوف مؤرشفة."}</div>}
     </div>
    </section>
 
