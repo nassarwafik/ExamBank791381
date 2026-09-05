@@ -22,12 +22,27 @@ const crypto = require("crypto");
 const { parseLiteral } = require("../api/src/lib/embedded-quiz-extract");
 const { buildTExamSnapshot } = require("../api/src/lib/library-question-map");
 const { parseBookCatalogIndex } = require("../api/src/lib/library-catalog-parse");
+const { extractQCards } = require("../api/src/lib/qcard-dom-extract");
+const { resolveAnswerMap } = require("../api/src/lib/library-answer-resolvers");
+const { mapQCard } = require("../api/src/lib/library-fseries-map");
+const { mapF03Question, mapF06Question, extractF03ImagesByQid } = require("../api/src/lib/library-json-map");
 
 const T_FILE_REGEX = /^T(\d{2})\.html$/;
 const F_FILE_REGEX = /^F(\d{2})\.html$/;
 
+// A ready item has essentially every question auto-gradable; anything with a real share of
+// manual-review questions is honestly labeled NEEDS_REVIEW (never silently "ready"). A file that
+// fails to parse structurally is UNSUPPORTED.
+const READY_REVIEW_RATIO = 0.10;
+
 function sha256(text) {
   return crypto.createHash("sha256").update(text, "utf8").digest("hex");
+}
+
+// Extracts a numeric mark from a source label like "2.5 علامة" / "4 درجات"; null when absent.
+function parseMarks(marksText) {
+  const match = /(\d+(?:\.\d+)?)/.exec(String(marksText || ""));
+  return match ? Number(match[1]) : null;
 }
 
 function extractTQuestions(html) {
@@ -36,6 +51,79 @@ function extractTQuestions(html) {
     throw new Error("No 'const QUESTIONS = [...]' array found in this file.");
   }
   return parseLiteral(html.slice(match.index + match[0].length)).value;
+}
+
+function grabArray(html, varName) {
+  const match = new RegExp("\\bconst\\s+" + varName + "\\s*=\\s*(?=\\[)").exec(html);
+  if (!match) throw new Error("array '" + varName + "' not found");
+  return parseLiteral(html.slice(match.index + match[0].length)).value;
+}
+
+function grabObject(html, varName) {
+  const match = new RegExp("\\bconst\\s+" + varName + "\\s*=\\s*(?=\\{)").exec(html);
+  if (!match) throw new Error("object '" + varName + "' not found");
+  return parseLiteral(html.slice(match.index + match[0].length)).value;
+}
+
+function finalizeSnapshot(examId, title, questions) {
+  const now = new Date().toISOString();
+  return {
+    schemaVersion: 1,
+    examId,
+    title,
+    questions,
+    totalMarks: questions.reduce((sum, q) => sum + (Number(q.marks) || 0), 0),
+    status: "final",
+    createdAt: now,
+    updatedAt: now
+  };
+}
+
+// F01/F02/F04/F05: DOM q-cards + a resolved answer key (AK object or g() calls; empty for F05).
+function buildFDomSnapshot(examId, title, html) {
+  const cards = extractQCards(html);
+  if (!cards.length) throw new Error("no q-card questions found");
+  const answerMap = resolveAnswerMap(html);
+  const questions = cards.map((card, index) =>
+    mapQCard(card, { examId, ordinal: index + 1, marks: parseMarks(card.marksText) || 0, answerMap })
+  );
+  return finalizeSnapshot(examId, title, questions);
+}
+
+// F03: const EXAM = {s1,s2}, images linked to questions by data-qid in the rendered q-cards.
+function buildF03Snapshot(examId, title, html) {
+  const exam = grabObject(html, "EXAM");
+  const imagesByQid = extractF03ImagesByQid(html);
+  const raw = Object.keys(exam).flatMap(section => exam[section]);
+  if (!raw.length) throw new Error("EXAM object has no questions");
+  const questions = raw.map((item, index) =>
+    mapF03Question(item, { examId, ordinal: index + 1, marks: 4, imagesByQid })
+  );
+  return finalizeSnapshot(examId, title, questions);
+}
+
+// F06: const baseQ/infraQ/graphicQ arrays + a const images = {key:base64} map; marks are per-question.
+function buildF06Snapshot(examId, title, html) {
+  const imagesMap = grabObject(html, "images");
+  const raw = [...grabArray(html, "baseQ"), ...grabArray(html, "infraQ"), ...grabArray(html, "graphicQ")];
+  if (!raw.length) throw new Error("no baseQ/infraQ/graphicQ questions found");
+  const questions = raw.map((item, index) =>
+    mapF06Question(item, { examId, ordinal: index + 1, marks: Number(item.mark) || 0, imagesMap })
+  );
+  return finalizeSnapshot(examId, title, questions);
+}
+
+function buildFSnapshot(code, examId, title, html) {
+  if (/\bconst\s+EXAM\s*=/.test(html)) return { snapshot: buildF03Snapshot(examId, title, html), parserFamily: "f-json-exam-v1" };
+  if (/\bconst\s+baseQ\s*=/.test(html)) return { snapshot: buildF06Snapshot(examId, title, html), parserFamily: "f-json-sections-v1" };
+  return { snapshot: buildFDomSnapshot(examId, title, html), parserFamily: "f-dom-qcard-v1" };
+}
+
+function classifyStatus(snapshot) {
+  const total = snapshot.questions.length;
+  if (!total) return "unsupported";
+  const review = snapshot.questions.filter(q => q.requiresManualReview).length;
+  return review / total <= READY_REVIEW_RATIO ? "ready" : "needs_review";
 }
 
 // Quality Gate for a T-series conversion: never let a question with a broken/out-of-range answer,
@@ -85,49 +173,60 @@ function buildLibrary(sourceDir, outputDir) {
     if (!tMatch && !fMatch) continue;
 
     const code = (tMatch ? "T" : "F") + (tMatch ? tMatch[1] : fMatch[1]);
-
-    if (fMatch) {
-      report.push({
-        file,
-        libraryItemId: code,
-        status: "unsupported",
-        reason: "F-series schema not yet reverse-engineered in this phase (see Discovery report, Phase A/Z) - needs its own dedicated converter."
-      });
-      continue;
-    }
-
     const sourceHtml = fs.readFileSync(path.join(sourceDir, file), "utf8");
     const examId = "LIB-" + code;
     const meta = metaById.get(code) || null;
+    const title = meta ? meta.title : code;
 
     let snapshot = null;
+    let parserFamily = "";
+    let status = "unsupported";
     let issues = [];
     try {
-      const rawQuestions = extractTQuestions(sourceHtml);
-      const title = meta ? meta.title : code;
-      snapshot = buildTExamSnapshot(examId, title, rawQuestions);
-      issues = validateTExamSnapshot(snapshot, meta ? meta.questionCount : undefined);
+      if (tMatch) {
+        snapshot = buildTExamSnapshot(examId, title, extractTQuestions(sourceHtml));
+        parserFamily = "t-series-v1";
+        issues = validateTExamSnapshot(snapshot, meta ? meta.questionCount : undefined);
+        status = issues.length ? "unsupported" : "ready";
+      }
+      else {
+        const built = buildFSnapshot(code, examId, title, sourceHtml);
+        snapshot = built.snapshot;
+        parserFamily = built.parserFamily;
+        status = classifyStatus(snapshot);
+      }
     }
     catch (error) {
       issues = ["parse error: " + error.message];
+      status = "unsupported";
     }
 
-    if (issues.length || !snapshot) {
-      report.push({ file, libraryItemId: code, status: "unsupported", reason: issues.join("; ") || "unknown parse failure" });
+    if (!snapshot || status === "unsupported") {
+      report.push({ file, libraryItemId: code, status: "unsupported", reason: issues.join("; ") || "structural parse failure - schema not recognized" });
       continue;
     }
 
-    const contentHash = sha256(JSON.stringify(snapshot.questions));
+    const reviewQuestions = snapshot.questions.filter(q => q.requiresManualReview);
+    // Strip the build-only requiresManualReview flag out of the stored ExamQuestion (it isn't part
+    // of the ExamQuestion type); its intent is preserved in each question's teacherNote and
+    // surfaced in aggregate in the quality report.
+    const cleanQuestions = snapshot.questions.map(q => { const { requiresManualReview, ...rest } = q; return rest; });
+    const storedSnapshot = { ...snapshot, questions: cleanQuestions };
+
+    const contentHash = sha256(JSON.stringify(cleanQuestions));
     const catalogItem = {
       libraryItemId: code,
       title: snapshot.title,
       category: meta ? meta.category : "",
       description: meta ? meta.description : "",
       tags: meta ? meta.tags : [],
-      questionCount: snapshot.questions.length,
-      totalMarks: snapshot.totalMarks,
+      questionCount: cleanQuestions.length,
+      totalMarks: storedSnapshot.totalMarks,
       pageRange: meta ? meta.pageRange : "",
-      parserFamily: "t-series-v1",
+      parserFamily,
+      status,
+      autoGradableCount: cleanQuestions.length - reviewQuestions.length,
+      manualReviewCount: reviewQuestions.length,
       libraryVersion: 1,
       sourceSha: sha256(sourceHtml),
       contentHash,
@@ -137,11 +236,19 @@ function buildLibrary(sourceDir, outputDir) {
 
     fs.writeFileSync(
       path.join(outputDir, "items", code + ".json"),
-      JSON.stringify({ ...catalogItem, schemaVersion: 1, examSnapshot: snapshot }, null, 2)
+      JSON.stringify({ ...catalogItem, schemaVersion: 1, examSnapshot: storedSnapshot }, null, 2)
     );
 
     catalog.push(catalogItem);
-    report.push({ file, libraryItemId: code, status: "ready", questionCount: snapshot.questions.length });
+    report.push({
+      file,
+      libraryItemId: code,
+      status,
+      questionCount: cleanQuestions.length,
+      autoGradableCount: cleanQuestions.length - reviewQuestions.length,
+      manualReviewCount: reviewQuestions.length,
+      manualReviewReasons: [...new Set(reviewQuestions.map(q => q.teacherNote))]
+    });
   }
 
   fs.writeFileSync(path.join(outputDir, "catalog.json"), JSON.stringify(catalog, null, 2));
@@ -160,10 +267,12 @@ function main() {
   }
 
   const { catalog, report } = buildLibrary(sourceDir, outputDir);
-  const readyCount = report.filter(item => item.status === "ready").length;
-  const unsupportedCount = report.filter(item => item.status === "unsupported").length;
+  const ready = report.filter(item => item.status === "ready").length;
+  const needsReview = report.filter(item => item.status === "needs_review").length;
+  const unsupported = report.filter(item => item.status === "unsupported").length;
 
-  console.log("Built " + catalog.length + " library items (" + readyCount + " ready, " + unsupportedCount + " unsupported). Output: " + outputDir);
+  console.log("Built " + catalog.length + " library items from " + report.length + " files: " +
+    ready + " ready, " + needsReview + " needs_review, " + unsupported + " unsupported. Output: " + outputDir);
 }
 
 if (require.main === module) {

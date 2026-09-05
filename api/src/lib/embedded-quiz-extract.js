@@ -146,8 +146,8 @@ function parseLiteral(source) {
   }
 
   skipWs();
-  if (source[i] !== "[") fail("expected top-level array");
-  const result = parseArray();
+  if (source[i] !== "[" && source[i] !== "{") fail("expected top-level array or object");
+  const result = source[i] === "{" ? parseObject() : parseArray();
   return { value: result, endOffset: i };
 }
 

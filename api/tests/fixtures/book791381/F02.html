@@ -1,0 +1,954 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>F02 | نموذج C – 2025 | 791381</title>
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.rtl.min.css" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800;900&display=swap" rel="stylesheet">
+<style>
+  *{font-family:'Tajawal',sans-serif;box-sizing:border-box;}
+  body{background:#f4f6fb;color:#1a1a2e;}
+  .exam-header{background:linear-gradient(135deg,#0d2137 0%,#1a4a7a 60%,#1d6fa0 100%);color:white;padding:2.2rem 1.5rem 1.8rem;text-align:center;border-radius:0 0 24px 24px;margin-bottom:2rem;box-shadow:0 6px 30px rgba(13,33,55,0.25);}
+  .exam-header .school{font-size:1.05rem;font-weight:500;opacity:0.85;}
+  .exam-header .exam-title{font-size:1.7rem;font-weight:900;margin:0.4rem 0 0.2rem;}
+  .exam-header .exam-sub{font-size:0.9rem;opacity:0.8;}
+  .teacher-badge{display:inline-block;background:rgba(255,255,255,0.15);border:1px solid rgba(255,255,255,0.3);border-radius:20px;padding:4px 16px;font-size:0.85rem;margin-top:0.6rem;}
+  .student-card{background:white;border-radius:16px;padding:1.8rem 2rem;margin-bottom:2rem;box-shadow:0 2px 16px rgba(0,0,0,0.08);border:2px solid #d0e4f5;}
+  .student-card h5{color:#0d2137;font-weight:800;margin-bottom:1.2rem;font-size:1.1rem;}
+  .section-block{margin-bottom:2.5rem;border-radius:14px;overflow:hidden;box-shadow:0 3px 20px rgba(0,0,0,0.09);}
+  .section-header{padding:1rem 1.5rem;font-weight:800;font-size:1.05rem;color:white;display:flex;justify-content:space-between;align-items:center;}
+  .s1-header{background:linear-gradient(135deg,#0d2137,#1a4a7a);}
+  .s2-header{background:linear-gradient(135deg,#1a4a7a,#0d8a6e);}
+  .s3-header{background:linear-gradient(135deg,#0d6a9a,#0d2137);}
+  .s4-header{background:linear-gradient(135deg,#6a0d7a,#0d2137);}
+  .section-body{background:#ffffff;padding:1.5rem;}
+  .q-card{background:#fdfdfd;border:1.5px solid #e4e9f2;border-radius:10px;padding:1.3rem 1.5rem;margin-bottom:1rem;transition:box-shadow .2s;}
+  .q-card:hover{box-shadow:0 4px 18px rgba(0,0,0,0.07);}
+  .q-header{display:flex;align-items:flex-start;gap:10px;margin-bottom:1rem;}
+  .q-num{background:#0d2137;color:white;min-width:32px;height:32px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:0.82rem;flex-shrink:0;}
+  .q-text{font-weight:700;font-size:0.97rem;line-height:1.6;color:#1a1a2e;}
+  .q-marks{background:#e94560;color:white;font-size:0.7rem;padding:2px 9px;border-radius:12px;font-weight:700;white-space:nowrap;flex-shrink:0;}
+  .opt-label{display:flex;align-items:center;padding:0.55rem 1rem;border:2px solid #e0e7f0;border-radius:8px;margin-bottom:0.45rem;cursor:pointer;transition:all .18s;font-size:0.93rem;}
+  .opt-label:hover{border-color:#1a4a7a;background:#f0f6ff;}
+  .opt-label input[type=radio]{margin-left:0.7rem;width:17px;height:17px;cursor:pointer;accent-color:#0d2137;}
+  .opt-label input[type=radio]:checked+span{color:#0d2137;font-weight:700;}
+  .opt-label:has(input:checked){border-color:#0d2137;background:#eef4ff;}
+  .fi{border:2px solid #d0dce8;border-radius:7px;padding:0.38rem 0.8rem;font-family:'Tajawal',sans-serif;font-size:0.93rem;transition:border-color .2s;background:#fafcff;color:#1a1a2e;min-width:100px;}
+  .fi:focus{border-color:#1a4a7a;outline:none;box-shadow:0 0 0 3px rgba(26,74,122,0.1);}
+  .fi-sm{max-width:90px;}
+  .fi-lg{width:100%;max-width:340px;}
+  .fi-xl{width:100%;}
+  .qa-table{width:100%;border-collapse:collapse;font-size:0.92rem;}
+  .qa-table th{background:#0d2137;color:white;padding:0.55rem 0.9rem;text-align:center;font-size:0.88rem;}
+  .qa-table td{padding:0.5rem 0.9rem;border:1px solid #dce3ef;text-align:center;vertical-align:middle;}
+  .qa-table tr:nth-child(even) td{background:#f5f8ff;}
+  .r-ok{background-color:#d4edda!important;border-color:#28a745!important;}
+  .r-bad{background-color:#f8d7da!important;border-color:#dc3545!important;}
+  .r-skip{background-color:#fff3cd!important;border-color:#ffc107!important;}
+  .answer-hint{font-size:0.82rem;margin-top:0.5rem;padding:4px 10px;border-radius:6px;display:inline-block;}
+  .hint-ok{background:#d4edda;color:#155724;}
+  .hint-bad{background:#f8d7da;color:#721c24;}
+  .score-card{background:linear-gradient(135deg,#0d2137 0%,#1a4a7a 100%);color:white;border-radius:18px;padding:2.5rem;text-align:center;margin:2rem 0;box-shadow:0 10px 40px rgba(13,33,55,0.3);}
+  .score-num{font-size:4.5rem;font-weight:900;line-height:1;}
+  .score-of{font-size:1.4rem;opacity:0.8;margin-top:0.3rem;}
+  .score-grade{font-size:1.1rem;font-weight:700;margin-top:1rem;opacity:0.9;}
+  .btn-check{background:linear-gradient(135deg,#0d2137,#1a4a7a);color:white;border:none;padding:0.9rem 2.5rem;font-size:1.05rem;font-weight:700;border-radius:50px;font-family:'Tajawal',sans-serif;transition:all .3s;box-shadow:0 4px 15px rgba(13,33,55,0.3);}
+  .btn-check:hover{transform:translateY(-2px);box-shadow:0 8px 25px rgba(13,33,55,0.4);color:white;}
+  .btn-wa{background:#25D366;color:white;border:none;padding:0.9rem 2.5rem;font-size:1.05rem;font-weight:700;border-radius:50px;font-family:'Tajawal',sans-serif;transition:all .3s;}
+  .btn-wa:hover{background:#1ebe57;transform:translateY(-2px);color:white;}
+  .btn-reset{background:#6c757d;color:white;border:none;padding:0.7rem 1.8rem;font-size:0.95rem;font-weight:700;border-radius:50px;font-family:'Tajawal',sans-serif;transition:all .3s;}
+  .btn-reset:hover{background:#5a6268;color:white;}
+  .warn-box{background:#fff8e1;border:2px dashed #ffa000;border-radius:8px;padding:0.8rem 1rem;color:#6d4c00;font-size:0.88rem;margin-bottom:0.8rem;}
+  .code-box{background:#1e1e2e;color:#cdd6f4;border-radius:8px;padding:0.9rem 1.2rem;font-family:monospace;font-size:0.88rem;direction:ltr;text-align:left;margin:0.5rem 0;line-height:1.8;}
+  .instr-card{background:white;border-radius:14px;padding:1.5rem 2rem;margin-bottom:2rem;box-shadow:0 2px 14px rgba(0,0,0,0.07);border-right:5px solid #1a4a7a;}
+  .instr-card h5{color:#0d2137;font-weight:800;margin-bottom:0.8rem;}
+  .instr-item{padding:3px 0;font-size:0.93rem;}
+  .progress-bar-wrap{position:sticky;top:0;z-index:200;background:white;padding:8px 0;border-bottom:2px solid #e4e9f2;box-shadow:0 2px 10px rgba(0,0,0,0.05);}
+  .prog-inner{max-width:900px;margin:0 auto;padding:0 1rem;display:flex;align-items:center;gap:10px;font-size:0.85rem;font-weight:700;color:#1a4a7a;}
+  .locked-exam input,.locked-exam select,.locked-exam textarea{pointer-events:none;}
+  @media(max-width:600px){.exam-header .exam-title{font-size:1.3rem;}.score-num{font-size:3rem;}}
+</style>
+
+<style id="f-series-common-style">
+.f-series-nav{
+  position:sticky;top:0;z-index:9999;
+  display:flex;align-items:center;justify-content:space-between;gap:10px;
+  padding:9px 14px;background:#071a2d;color:#fff;
+  box-shadow:0 3px 14px rgba(0,0,0,.18);
+  font-family:'Tajawal',Arial,sans-serif;direction:rtl
+}
+.f-series-nav a{color:#fff;text-decoration:none;font-weight:800}
+.f-series-code{
+  display:inline-flex;align-items:center;justify-content:center;
+  min-width:48px;padding:5px 12px;border-radius:999px;
+  background:#e94560;color:#fff;font-weight:900
+}
+.f-series-note{font-size:.85rem;opacity:.9}
+@media(max-width:620px){.f-series-note{display:none}.f-series-nav{font-size:.9rem}}
+</style>
+
+</head>
+<body>
+
+<div class="f-series-nav">
+  <a href="index.html">← صفحة الامتحانات</a>
+  <span class="f-series-note">نموذج C – 2025 · تصحيح آلي</span>
+  <span class="f-series-code">F02</span>
+</div>
+
+
+<div class="exam-header">
+  <div class="school">🏫 مدرسة البطوف الثانوية</div>
+  <div class="exam-title">امتحان الفصل الثاني في الأنظمة المحوسبة</div>
+  <div class="exam-sub">للصف الحادي عشر 8 — وحدة 791381 — نموذج C</div>
+  <div class="teacher-badge">👨‍🏫 معلم الموضوع: نصار وفيق</div>
+  <div style="font-size:0.82rem;opacity:0.75;margin-top:0.4rem;">📅 8/12/2025</div>
+</div>
+
+<div class="container" style="max-width:900px;">
+
+  <div class="progress-bar-wrap">
+    <div class="prog-inner">
+      <span id="prog-text">📝 أجب على الأسئلة ثم اضغط "تصحيح الامتحان"</span>
+      <div class="ms-auto">
+        <div class="progress" style="width:200px;height:10px;background:#e4e9f2;border-radius:5px;">
+          <div id="prog-bar" class="progress-bar" style="width:0%;background:linear-gradient(90deg,#1a4a7a,#25D366);border-radius:5px;transition:width .4s;"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="student-card">
+    <h5>📋 معلومات الطالب / الطالبة <span style="color:#e94560">*</span></h5>
+    <div class="row g-3">
+      <div class="col-md-7">
+        <label class="form-label fw-bold" style="color:#0d2137">الاسم الكامل</label>
+        <input type="text" id="student-name" class="fi fi-xl" placeholder="أكتب اسمك الكامل هنا..." oninput="updateProgress()">
+      </div>
+      <div class="col-md-5">
+        <label class="form-label fw-bold" style="color:#0d2137">الصف</label>
+        <input type="text" id="student-class" class="fi fi-xl" placeholder="مثال: ١١ / ٨" oninput="updateProgress()">
+      </div>
+    </div>
+  </div>
+
+  <div class="instr-card">
+    <h5>📌 تعليمات الامتحان</h5>
+    <div class="instr-item">⏱ مدة الامتحان: ساعة ونصف (حصتان تعليميتان)</div>
+    <div class="instr-item">📚 مواد مساعدة: مادة مفتوحة (كتب، دفاتر، أوراق) + آلة حاسبة بسيطة</div>
+    <div class="row mt-2 g-2" style="font-size:0.88rem;">
+      <div class="col-6 col-md-3"><span class="badge" style="background:#0d2137;font-family:Tajawal">القسم الأول</span> 10 أسئلة — 25 علامة</div>
+      <div class="col-6 col-md-3"><span class="badge" style="background:#0d8a6e;font-family:Tajawal">القسم الثاني</span> 10 أسئلة — 25 علامة</div>
+      <div class="col-6 col-md-3"><span class="badge" style="background:#0d6a9a;font-family:Tajawal">القسم الثالث</span> 10 أسئلة — 25 علامة</div>
+      <div class="col-6 col-md-3"><span class="badge" style="background:#6a0d7a;font-family:Tajawal">القسم الرابع</span> 10 أسئلة — 25 علامة</div>
+    </div>
+  </div>
+
+  <!-- ===== SECTION 1 ===== -->
+  <div class="section-block">
+    <div class="section-header s1-header">
+      <span>🔵 القسم الأول</span>
+      <span style="font-size:0.88rem;opacity:0.9;">10 أسئلة — 2.5 علامة لكل سؤال — 25 علامة</span>
+    </div>
+    <div class="section-body">
+
+      <!-- S1 Q1 -->
+      <div class="q-card" id="card_s1q1">
+        <div class="q-header"><div class="q-num">1</div>
+          <div class="q-text">يُعتبر عنوان <span dir="ltr" style="font-weight:800;">193.168.1.1</span> عنوانًا خاصًّا (Private IP)؟</div>
+          <span class="q-marks">2.5 علامة</span></div>
+        <label class="opt-label"><input type="radio" name="s1q1" value="صحيح"><span>☐ صحيح</span></label>
+        <label class="opt-label"><input type="radio" name="s1q1" value="غير صحيح"><span>☐ غير صحيح</span></label>
+        <div class="answer-hint d-none" id="hint_s1q1"></div>
+      </div>
+
+      <!-- S1 Q2 -->
+      <div class="q-card" id="card_s1q2">
+        <div class="q-header"><div class="q-num">2</div>
+          <div class="q-text">يُستخدم الأمر ___________ لاختبار الاتصال بين جهازين في الشبكة عبر إرسال طلبات واستقبال ردود.</div>
+          <span class="q-marks">2.5 علامة</span></div>
+        <label class="opt-label"><input type="radio" name="s1q2" value="a"><span>Tracert</span></label>
+        <label class="opt-label"><input type="radio" name="s1q2" value="b"><span>Ping</span></label>
+        <label class="opt-label"><input type="radio" name="s1q2" value="c"><span>Netstat</span></label>
+        <label class="opt-label"><input type="radio" name="s1q2" value="d"><span>nslookup</span></label>
+        <div class="answer-hint d-none" id="hint_s1q2"></div>
+      </div>
+
+      <!-- S1 Q3 -->
+      <div class="q-card" id="card_s1q3">
+        <div class="q-header"><div class="q-num">3</div>
+          <div class="q-text">أي من الأجهزة التالية يُستخدم لربط عدة شبكات محلية معًا؟</div>
+          <span class="q-marks">2.5 علامة</span></div>
+        <label class="opt-label"><input type="radio" name="s1q3" value="a"><span>Switch</span></label>
+        <label class="opt-label"><input type="radio" name="s1q3" value="b"><span>Router</span></label>
+        <label class="opt-label"><input type="radio" name="s1q3" value="c"><span>Hub</span></label>
+        <label class="opt-label"><input type="radio" name="s1q3" value="d"><span>Repeater</span></label>
+        <div class="answer-hint d-none" id="hint_s1q3"></div>
+      </div>
+
+      <!-- S1 Q4 -->
+      <div class="q-card" id="card_s1q4">
+        <div class="q-header"><div class="q-num">4</div>
+          <div class="q-text">كم عدد البتات في عنوان IPv4؟</div>
+          <span class="q-marks">2.5 علامة</span></div>
+        <label class="opt-label"><input type="radio" name="s1q4" value="a"><span>32</span></label>
+        <label class="opt-label"><input type="radio" name="s1q4" value="b"><span>64</span></label>
+        <label class="opt-label"><input type="radio" name="s1q4" value="c"><span>128</span></label>
+        <label class="opt-label"><input type="radio" name="s1q4" value="d"><span>256</span></label>
+        <div class="answer-hint d-none" id="hint_s1q4"></div>
+      </div>
+
+      <!-- S1 Q5 -->
+      <div class="q-card" id="card_s1q5">
+        <div class="q-header"><div class="q-num">5</div>
+          <div class="q-text">ما هو الغرض الأساسي من بروتوكول DHCP؟</div>
+          <span class="q-marks">2.5 علامة</span></div>
+        <label class="opt-label"><input type="radio" name="s1q5" value="a"><span>تشفير البيانات</span></label>
+        <label class="opt-label"><input type="radio" name="s1q5" value="b"><span>تخصيص عناوين IP ديناميكيًا</span></label>
+        <label class="opt-label"><input type="radio" name="s1q5" value="c"><span>نقل البيانات بين الشبكات</span></label>
+        <label class="opt-label"><input type="radio" name="s1q5" value="d"><span>مراقبة حركة المرور على الشبكة</span></label>
+        <div class="answer-hint d-none" id="hint_s1q5"></div>
+      </div>
+
+      <!-- S1 Q6 -->
+      <div class="q-card" id="card_s1q6">
+        <div class="q-header"><div class="q-num">6</div>
+          <div class="q-text">ما هي الوظيفة الأساسية لبروتوكول ARP في الشبكات؟</div>
+          <span class="q-marks">2.5 علامة</span></div>
+        <label class="opt-label"><input type="radio" name="s1q6" value="a"><span>ترجمة العناوين الفعلية (MAC) إلى عناوين IP</span></label>
+        <label class="opt-label"><input type="radio" name="s1q6" value="b"><span>تحويل العناوين المنطقية (IP) إلى عناوين فعلية (MAC)</span></label>
+        <label class="opt-label"><input type="radio" name="s1q6" value="c"><span>توجيه البيانات بين الشبكات المختلفة</span></label>
+        <label class="opt-label"><input type="radio" name="s1q6" value="d"><span>تشفير البيانات أثناء نقلها</span></label>
+        <div class="answer-hint d-none" id="hint_s1q6"></div>
+      </div>
+
+      <!-- S1 Q7 -->
+      <div class="q-card" id="card_s1q7">
+        <div class="q-header"><div class="q-num">7</div>
+          <div class="q-text">ما هو عنوان البث العام في الشبكات؟</div>
+          <span class="q-marks">2.5 علامة</span></div>
+        <label class="opt-label"><input type="radio" name="s1q7" value="a"><span dir="ltr">255.255.255.255</span></label>
+        <label class="opt-label"><input type="radio" name="s1q7" value="b"><span dir="ltr">192.168.1.255</span></label>
+        <label class="opt-label"><input type="radio" name="s1q7" value="c"><span dir="ltr">10.0.0.0</span></label>
+        <label class="opt-label"><input type="radio" name="s1q7" value="d"><span dir="ltr">0.0.0.0</span></label>
+        <div class="answer-hint d-none" id="hint_s1q7"></div>
+      </div>
+
+      <!-- S1 Q8 -->
+      <div class="q-card" id="card_s1q8">
+        <div class="q-header"><div class="q-num">8</div>
+          <div class="q-text">أي طبقة من نموذج OSI مسؤولة عن التوجيه بين الشبكات؟</div>
+          <span class="q-marks">2.5 علامة</span></div>
+        <label class="opt-label"><input type="radio" name="s1q8" value="a"><span>الطبقة الفيزيائية</span></label>
+        <label class="opt-label"><input type="radio" name="s1q8" value="b"><span>طبقة النقل</span></label>
+        <label class="opt-label"><input type="radio" name="s1q8" value="c"><span>طبقة الشبكة</span></label>
+        <label class="opt-label"><input type="radio" name="s1q8" value="d"><span>طبقة التطبيق</span></label>
+        <div class="answer-hint d-none" id="hint_s1q8"></div>
+      </div>
+
+      <!-- S1 Q9 -->
+      <div class="q-card" id="card_s1q9">
+        <div class="q-header"><div class="q-num">9</div>
+          <div class="q-text">أي من العناوين التالية يُعتبر عنوان شبكة عام (Public IP)؟</div>
+          <span class="q-marks">2.5 علامة</span></div>
+        <label class="opt-label"><input type="radio" name="s1q9" value="a"><span dir="ltr">192.168.1.1</span></label>
+        <label class="opt-label"><input type="radio" name="s1q9" value="b"><span dir="ltr">10.0.0.1</span></label>
+        <label class="opt-label"><input type="radio" name="s1q9" value="c"><span dir="ltr">172.16.0.1</span></label>
+        <label class="opt-label"><input type="radio" name="s1q9" value="d"><span dir="ltr">8.8.8.8</span></label>
+        <div class="answer-hint d-none" id="hint_s1q9"></div>
+      </div>
+
+      <!-- S1 Q10 -->
+      <div class="q-card" id="card_s1q10">
+        <div class="q-header"><div class="q-num">10</div>
+          <div class="q-text">بروتوكول يُستخدم لضمان توصيل البيانات بين الأجهزة عبر شبكة الإنترنت؟</div>
+          <span class="q-marks">2.5 علامة</span></div>
+        <label class="opt-label"><input type="radio" name="s1q10" value="a"><span>TCP</span></label>
+        <label class="opt-label"><input type="radio" name="s1q10" value="b"><span>UDP</span></label>
+        <label class="opt-label"><input type="radio" name="s1q10" value="c"><span>IP</span></label>
+        <label class="opt-label"><input type="radio" name="s1q10" value="d"><span>FTP</span></label>
+        <div class="answer-hint d-none" id="hint_s1q10"></div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ===== SECTION 2 ===== -->
+  <div class="section-block">
+    <div class="section-header s2-header">
+      <span>🟢 القسم الثاني</span>
+      <span style="font-size:0.88rem;opacity:0.9;">10 أسئلة — 2.5 علامة لكل سؤال — 25 علامة</span>
+    </div>
+    <div class="section-body">
+
+      <!-- S2 Q1 -->
+      <div class="q-card" id="card_s2q1">
+        <div class="q-header"><div class="q-num">1</div>
+          <div class="q-text">بروتوكول <input type="text" class="fi fi-sm" id="s2q1a" placeholder="..." oninput="updateProgress()"> هو المسؤول عن تحويل أسماء المواقع إلى عناوين IP، بينما بروتوكول <input type="text" class="fi fi-sm" id="s2q1b" placeholder="..." oninput="updateProgress()"> يُستخدم لتوزيع وإدارة عناوين IP للأجهزة بشكل تلقائي.</div>
+          <span class="q-marks">2.5 علامة</span></div>
+        <div class="warn-box" style="font-size:0.88rem;">📦 المخزن: <span dir="ltr" style="font-weight:700;">FTP , ARP , TFTP , DNS , SSH , DHCP</span></div>
+        <div class="answer-hint d-none" id="hint_s2q1"></div>
+      </div>
+
+      <!-- S2 Q2 -->
+      <div class="q-card" id="card_s2q2">
+        <div class="q-header"><div class="q-num">2</div>
+          <div class="q-text">أجب بصحيح أو غير صحيح:</div>
+          <span class="q-marks">2.5 علامة</span></div>
+        <table class="qa-table">
+          <thead><tr><th>الجملة</th><th>صحيح / غير صحيح</th></tr></thead>
+          <tbody>
+            <tr><td style="text-align:right;">عنوان <span dir="ltr">10.255.255.255</span> يُعتبر عنوان بث (Broadcast) في شبكته.</td>
+              <td><select class="fi" id="s2q2a"><option value="">-- اختر --</option><option>صحيح</option><option>غير صحيح</option></select></td></tr>
+            <tr><td style="text-align:right;">عنوان الشبكة <span dir="ltr">192.168.5.0/24</span> يتبع Class C.</td>
+              <td><select class="fi" id="s2q2b"><option value="">-- اختر --</option><option>صحيح</option><option>غير صحيح</option></select></td></tr>
+          </tbody>
+        </table>
+        <div class="answer-hint d-none" id="hint_s2q2"></div>
+      </div>
+
+      <!-- S2 Q3 -->
+      <div class="q-card" id="card_s2q3">
+        <div class="q-header"><div class="q-num">3</div>
+          <div class="q-text">ما الجهاز الذي يقوم بتوجيه البيانات بين الشبكات المختلفة باستخدام جداول التوجيه؟</div>
+          <span class="q-marks">2.5 علامة</span></div>
+        <label class="opt-label"><input type="radio" name="s2q3" value="a"><span>Switch</span></label>
+        <label class="opt-label"><input type="radio" name="s2q3" value="b"><span>Router</span></label>
+        <label class="opt-label"><input type="radio" name="s2q3" value="c"><span>Hub</span></label>
+        <label class="opt-label"><input type="radio" name="s2q3" value="d"><span>Modem</span></label>
+        <div class="answer-hint d-none" id="hint_s2q3"></div>
+      </div>
+
+      <!-- S2 Q4 -->
+      <div class="q-card" id="card_s2q4">
+        <div class="q-header"><div class="q-num">4</div>
+          <div class="q-text">أي من التالي يُستخدم لتحديد الجزء الخاص بالشبكة والجزء الخاص بالمضيف في عنوان الشبكة؟</div>
+          <span class="q-marks">2.5 علامة</span></div>
+        <label class="opt-label"><input type="radio" name="s2q4" value="a"><span>Subnet Mask</span></label>
+        <label class="opt-label"><input type="radio" name="s2q4" value="b"><span>MAC Address</span></label>
+        <label class="opt-label"><input type="radio" name="s2q4" value="c"><span>Gateway</span></label>
+        <label class="opt-label"><input type="radio" name="s2q4" value="d"><span>DNS</span></label>
+        <div class="answer-hint d-none" id="hint_s2q4"></div>
+      </div>
+
+      <!-- S2 Q5 -->
+      <div class="q-card" id="card_s2q5">
+        <div class="q-header"><div class="q-num">5</div>
+          <div class="q-text">ما هو العنوان الفيزيائي لكرت الشبكة؟</div>
+          <span class="q-marks">2.5 علامة</span></div>
+        <label class="opt-label"><input type="radio" name="s2q5" value="a"><span>IP Address</span></label>
+        <label class="opt-label"><input type="radio" name="s2q5" value="b"><span>MAC Address</span></label>
+        <label class="opt-label"><input type="radio" name="s2q5" value="c"><span>Gateway Address</span></label>
+        <label class="opt-label"><input type="radio" name="s2q5" value="d"><span>Subnet Mask</span></label>
+        <div class="answer-hint d-none" id="hint_s2q5"></div>
+      </div>
+
+      <!-- S2 Q6 -->
+      <div class="q-card" id="card_s2q6">
+        <div class="q-header"><div class="q-num">6</div>
+          <div class="q-text">ما هو الرقم الثنائي المكافئ للرقم العشري <strong>178</strong>؟</div>
+          <span class="q-marks">2.5 علامة</span></div>
+        <label class="opt-label"><input type="radio" name="s2q6" value="a"><span dir="ltr">10110010</span></label>
+        <label class="opt-label"><input type="radio" name="s2q6" value="b"><span dir="ltr">10101110</span></label>
+        <label class="opt-label"><input type="radio" name="s2q6" value="c"><span dir="ltr">10110011</span></label>
+        <label class="opt-label"><input type="radio" name="s2q6" value="d"><span dir="ltr">10101100</span></label>
+        <div class="answer-hint d-none" id="hint_s2q6"></div>
+      </div>
+
+      <!-- S2 Q7 -->
+      <div class="q-card" id="card_s2q7">
+        <div class="q-header"><div class="q-num">7</div>
+          <div class="q-text">ما هو نوع الكابل الذي يُستخدم عادةً لنقل البيانات بسرعات عالية جدًا عبر مسافات طويلة؟</div>
+          <span class="q-marks">2.5 علامة</span></div>
+        <label class="opt-label"><input type="radio" name="s2q7" value="a"><span>UTP</span></label>
+        <label class="opt-label"><input type="radio" name="s2q7" value="b"><span>STP</span></label>
+        <label class="opt-label"><input type="radio" name="s2q7" value="c"><span>Fiber Optic Cable</span></label>
+        <label class="opt-label"><input type="radio" name="s2q7" value="d"><span>Coaxial Cable</span></label>
+        <div class="answer-hint d-none" id="hint_s2q7"></div>
+      </div>
+
+      <!-- S2 Q8 -->
+      <div class="q-card" id="card_s2q8">
+        <div class="q-header"><div class="q-num">8</div>
+          <div class="q-text">كيف يتم تمثيل عنوان <span dir="ltr" style="font-weight:800;">192.168.0.1</span> بالنظام الثنائي؟</div>
+          <span class="q-marks">2.5 علامة</span></div>
+        <label class="opt-label"><input type="radio" name="s2q8" value="a"><span dir="ltr">11000000.10101000.00000000.00000001</span></label>
+        <label class="opt-label"><input type="radio" name="s2q8" value="b"><span dir="ltr">11111111.00000000.11111111.00000000</span></label>
+        <label class="opt-label"><input type="radio" name="s2q8" value="c"><span dir="ltr">10101010.11000000.00000000.00000001</span></label>
+        <label class="opt-label"><input type="radio" name="s2q8" value="d"><span dir="ltr">11000000.11111111.00000000.00000001</span></label>
+        <div class="answer-hint d-none" id="hint_s2q8"></div>
+      </div>
+
+      <!-- S2 Q9 -->
+      <div class="q-card" id="card_s2q9">
+        <div class="q-header"><div class="q-num">9</div>
+          <div class="q-text">هل العنوانان التاليان ينتميان إلى نفس الشبكة؟<br><span dir="ltr" style="font-weight:700;">162.20.1.13/24</span> و <span dir="ltr" style="font-weight:700;">162.20.100.16/24</span></div>
+          <span class="q-marks">2.5 علامة</span></div>
+        <label class="opt-label"><input type="radio" name="s2q9" value="نعم"><span>نعم — ينتميان لنفس الشبكة</span></label>
+        <label class="opt-label"><input type="radio" name="s2q9" value="لا"><span>لا — ينتميان لشبكتين مختلفتين</span></label>
+        <div class="answer-hint d-none" id="hint_s2q9"></div>
+      </div>
+
+      <!-- S2 Q10 -->
+      <div class="q-card" id="card_s2q10">
+        <div class="q-header"><div class="q-num">10</div>
+          <div class="q-text">ما هي وظيفة البروتوكول UDP؟</div>
+          <span class="q-marks">2.5 علامة</span></div>
+        <label class="opt-label"><input type="radio" name="s2q10" value="a"><span>نقل البيانات بشكل موثوق مع تأكيد الاستلام</span></label>
+        <label class="opt-label"><input type="radio" name="s2q10" value="b"><span>نقل البيانات بسرعة دون تأكيد الاستلام</span></label>
+        <label class="opt-label"><input type="radio" name="s2q10" value="c"><span>تحديد عناوين الشبكة</span></label>
+        <label class="opt-label"><input type="radio" name="s2q10" value="d"><span>إدارة عمليات التوجيه</span></label>
+        <div class="answer-hint d-none" id="hint_s2q10"></div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ===== SECTION 3 ===== -->
+  <div class="section-block">
+    <div class="section-header s3-header">
+      <span>🔷 القسم الثالث</span>
+      <span style="font-size:0.88rem;opacity:0.9;">10 أسئلة — 2.5 علامة لكل سؤال — 25 علامة</span>
+    </div>
+    <div class="section-body">
+
+      <!-- S3 Q1 -->
+      <div class="q-card" id="card_s3q1">
+        <div class="q-header"><div class="q-num">1</div>
+          <div class="q-text">بروتوكول ___________ يُستخدم لاسترجاع عنوان MAC الخاص بجهاز معين عند معرفة عنوان IP الخاص به.</div>
+          <span class="q-marks">2.5 علامة</span></div>
+        <label class="opt-label"><input type="radio" name="s3q1" value="a"><span>A) FTP</span></label>
+        <label class="opt-label"><input type="radio" name="s3q1" value="b"><span>B) DHCP</span></label>
+        <label class="opt-label"><input type="radio" name="s3q1" value="c"><span>C) ARP</span></label>
+        <label class="opt-label"><input type="radio" name="s3q1" value="d"><span>D) SSH</span></label>
+        <div class="answer-hint d-none" id="hint_s3q1"></div>
+      </div>
+
+      <!-- S3 Q2 -->
+      <div class="q-card" id="card_s3q2">
+        <div class="q-header"><div class="q-num">2</div>
+          <div class="q-text">ما هي العبارة الصحيحة بخصوص بروتوكول TCP؟</div>
+          <span class="q-marks">2.5 علامة</span></div>
+        <label class="opt-label"><input type="radio" name="s3q2" value="a"><span>أ. غير متصل (Connectionless) ويعمل في طبقة الشبكة (Layer 3)</span></label>
+        <label class="opt-label"><input type="radio" name="s3q2" value="b"><span>ب. غير متصل (Connectionless) ويعمل في طبقة النقل (Layer 4)</span></label>
+        <label class="opt-label"><input type="radio" name="s3q2" value="c"><span>ج. متصل (Connection Oriented) ويعمل في طبقة النقل (Layer 4)</span></label>
+        <label class="opt-label"><input type="radio" name="s3q2" value="d"><span>د. متصل (Connection Oriented) ويعمل في طبقة الشبكة (Layer 3)</span></label>
+        <div class="answer-hint d-none" id="hint_s3q2"></div>
+      </div>
+
+      <!-- S3 Q3 -->
+      <div class="q-card" id="card_s3q3">
+        <div class="q-header"><div class="q-num">3</div>
+          <div class="q-text">أي من العبارات التالية صحيحة بخصوص VLAN؟</div>
+          <span class="q-marks">2.5 علامة</span></div>
+        <label class="opt-label"><input type="radio" name="s3q3" value="a"><span>أ. كابل من نوع Trunk يُعرَّف بين المفاتيح ليسمح لعدة VLANs من المرور عبره</span></label>
+        <label class="opt-label"><input type="radio" name="s3q3" value="b"><span>ب. VLAN لا يقسم الشبكة بكفاءة ويخلق مجال بث واحد مشترك</span></label>
+        <label class="opt-label"><input type="radio" name="s3q3" value="c"><span>ج. لكي يتمكن VLANs من الاتصال ببعضها، نستخدم بروتوكول ARP</span></label>
+        <label class="opt-label"><input type="radio" name="s3q3" value="d"><span>د. يمكن تحديد VLAN في أي جهاز وليس فقط في الموجه</span></label>
+        <div class="answer-hint d-none" id="hint_s3q3"></div>
+      </div>
+
+      <!-- S3 Q4 -->
+      <div class="q-card" id="card_s3q4">
+        <div class="q-header"><div class="q-num">4</div>
+          <div class="q-text">أي بروتوكول يُستخدم لنقل الفيديو المباشر (Live Streaming)؟</div>
+          <span class="q-marks">2.5 علامة</span></div>
+        <label class="opt-label"><input type="radio" name="s3q4" value="a"><span>TCP</span></label>
+        <label class="opt-label"><input type="radio" name="s3q4" value="b"><span>UDP</span></label>
+        <label class="opt-label"><input type="radio" name="s3q4" value="c"><span>FTP</span></label>
+        <label class="opt-label"><input type="radio" name="s3q4" value="d"><span>HTTP</span></label>
+        <div class="answer-hint d-none" id="hint_s3q4"></div>
+      </div>
+
+      <!-- S3 Q5 -->
+      <div class="q-card" id="card_s3q5">
+        <div class="q-header"><div class="q-num">5</div>
+          <div class="q-text">أجب بصحيح أو غير صحيح لكل جملة:</div>
+          <span class="q-marks">2.5 علامة</span></div>
+        <table class="qa-table">
+          <thead><tr><th>الجملة</th><th>صحيح / غير صحيح</th></tr></thead>
+          <tbody>
+            <tr><td style="text-align:right;">عند إرسال إطار بـ <span dir="ltr">Destination MAC: FFFF.FFFF.FFFF</span>، هل يعتبر عنوان بث (Broadcast)؟</td>
+              <td><select class="fi" id="s3q5a"><option value="">-- اختر --</option><option>صحيح</option><option>غير صحيح</option></select></td></tr>
+            <tr><td style="text-align:right;">عنوان IP المُعطى هو <span dir="ltr">172.17.0.0/16</span>. هل يمكن لهذه الشبكة استيعاب أكثر من 65,000 جهاز؟</td>
+              <td><select class="fi" id="s3q5b"><option value="">-- اختر --</option><option>صحيح</option><option>غير صحيح</option></select></td></tr>
+            <tr><td style="text-align:right;">عنوان <span dir="ltr">169.254.1.1</span> يُستخدم عادةً عند فشل الحصول على عنوان IP عبر DHCP.</td>
+              <td><select class="fi" id="s3q5c"><option value="">-- اختر --</option><option>صحيح</option><option>غير صحيح</option></select></td></tr>
+          </tbody>
+        </table>
+        <div class="answer-hint d-none" id="hint_s3q5"></div>
+      </div>
+
+      <!-- S3 Q6 -->
+      <div class="q-card" id="card_s3q6">
+        <div class="q-header"><div class="q-num">6</div>
+          <div class="q-text">مدير الشبكة حدد VLANs كالتالي (من الشكل المرفق):<br>
+          VLAN 10: لأجهزة A و B و C | VLAN 20: لأجهزة D و E و F و G.<br>
+          إذا كان الاتصال بين SW1 و SW2 محدد كـ TRUNK، أي من الأجهزة سيتلقى طلب ARP الذي أرسله الكمبيوتر A؟</div>
+          <span class="q-marks">2.5 علامة</span></div>
+        <div class="text-center mb-3"><img src="data:image/png;base64,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" style="max-width:100%;border-radius:10px;border:2px solid #d0e4f5;margin:0.5rem 0;" alt="VLAN topology"></div>
+        <label class="opt-label"><input type="radio" name="s3q6" value="a"><span>أ. B و C فقط</span></label>
+        <label class="opt-label"><input type="radio" name="s3q6" value="b"><span>ب. C و D و F</span></label>
+        <label class="opt-label"><input type="radio" name="s3q6" value="c"><span>ج. B و E و G</span></label>
+        <label class="opt-label"><input type="radio" name="s3q6" value="d"><span>د. جميع الأجهزة</span></label>
+        <div class="answer-hint d-none" id="hint_s3q6"></div>
+      </div>
+
+      <!-- S3 Q7 -->
+      <div class="q-card" id="card_s3q7">
+        <div class="q-header"><div class="q-num">7</div>
+          <div class="q-text">أي من التالي صحيح حول TRUNK؟</div>
+          <span class="q-marks">2.5 علامة</span></div>
+        <label class="opt-label"><input type="radio" name="s3q7" value="a"><span>أ. يسمح فقط لـ VLAN واحدة</span></label>
+        <label class="opt-label"><input type="radio" name="s3q7" value="b"><span>ب. يستخدم بين سويتش وسويتش</span></label>
+        <label class="opt-label"><input type="radio" name="s3q7" value="c"><span>ج. يستخدم بين PC والسويتش</span></label>
+        <label class="opt-label"><input type="radio" name="s3q7" value="d"><span>د. لا يسمح بمرور Tags</span></label>
+        <div class="answer-hint d-none" id="hint_s3q7"></div>
+      </div>
+
+      <!-- S3 Q8 -->
+      <div class="q-card" id="card_s3q8">
+        <div class="q-header"><div class="q-num">8</div>
+          <div class="q-text">عند إرسال رسالة إلى جميع الأجهزة في الشبكة يُستخدم نمط الإرسال <input type="text" class="fi fi-sm" id="s3q8a" placeholder="..." oninput="updateProgress()">، بينما عند إرسالها لجهاز واحد فقط يُستخدم <input type="text" class="fi fi-sm" id="s3q8b" placeholder="..." oninput="updateProgress()">.</div>
+          <span class="q-marks">2.5 علامة</span></div>
+        <div class="warn-box" style="font-size:0.88rem;">📦 المخزن: <span dir="ltr" style="font-weight:700;">broadcast , unicast , multicast , podcast</span></div>
+        <div class="answer-hint d-none" id="hint_s3q8"></div>
+      </div>
+
+      <!-- S3 Q9 -->
+      <div class="q-card" id="card_s3q9">
+        <div class="q-header"><div class="q-num">9</div>
+          <div class="q-text">بروتوكول <input type="text" class="fi fi-sm" id="s3q9a" placeholder="..." oninput="updateProgress()"> يعمل في طبقة النقل ويضمن نقل البيانات بموثوقية، بينما بروتوكول <input type="text" class="fi fi-sm" id="s3q9b" placeholder="..." oninput="updateProgress()"> يُستخدم في البث الحي والمكالمات الصوتية.</div>
+          <span class="q-marks">2.5 علامة</span></div>
+        <div class="warn-box" style="font-size:0.88rem;">📦 المخزن: <span dir="ltr" style="font-weight:700;">DNS , TCP , FTP , UDP , DHCP</span></div>
+        <div class="answer-hint d-none" id="hint_s3q9"></div>
+      </div>
+
+      <!-- S3 Q10 -->
+      <div class="q-card" id="card_s3q10">
+        <div class="q-header"><div class="q-num">10</div>
+          <div class="q-text">أكمل الأوامر التالية لتعريف VLAN 10 على سويتش:</div>
+          <span class="q-marks">2.5 علامة</span></div>
+        <div class="warn-box" style="font-size:0.88rem;">📦 المخزن: <span dir="ltr" style="font-weight:700;">vlan 10 , config t , enable , show</span></div>
+        <div class="code-box">
+          Switch> enable<br>
+          Switch# <input type="text" class="fi fi-sm" id="s3q10a" placeholder="..." dir="ltr" style="background:#2a2a3e;color:#cdd6f4;border-color:#444;" oninput="updateProgress()"><br>
+          Switch(config)# <input type="text" class="fi" id="s3q10b" placeholder="..." dir="ltr" style="background:#2a2a3e;color:#cdd6f4;border-color:#444;max-width:160px;" oninput="updateProgress()"><br>
+          Switch(config-vlan)# name ADMIN
+        </div>
+        <div class="answer-hint d-none" id="hint_s3q10"></div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ===== SECTION 4 ===== -->
+  <div class="section-block">
+    <div class="section-header s4-header">
+      <span>🟣 القسم الرابع</span>
+      <span style="font-size:0.88rem;opacity:0.9;">10 أسئلة — 2.5 علامة لكل سؤال — 25 علامة</span>
+    </div>
+    <div class="section-body">
+
+      <!-- S4 Q1 -->
+      <div class="q-card" id="card_s4q1">
+        <div class="q-header"><div class="q-num">1</div>
+          <div class="q-text">أجب بصحيح أو غير صحيح:</div>
+          <span class="q-marks">2.5 علامة</span></div>
+        <table class="qa-table">
+          <thead><tr><th>الجملة</th><th>صحيح / غير صحيح</th></tr></thead>
+          <tbody>
+            <tr><td style="text-align:right;">يستخدم بروتوكول DHCP لتوزيع عناوين IP بشكل ديناميكي على الأجهزة في الشبكة.</td>
+              <td><select class="fi" id="s4q1a"><option value="">-- اختر --</option><option>صحيح</option><option>غير صحيح</option></select></td></tr>
+            <tr><td style="text-align:right;">يستخدم بروتوكول DNS لتحويل أسماء النطاقات إلى عناوين IP.</td>
+              <td><select class="fi" id="s4q1b"><option value="">-- اختر --</option><option>صحيح</option><option>غير صحيح</option></select></td></tr>
+            <tr><td style="text-align:right;">تصيد المعلومات (Phishing) هو نوع من الهجمات الإلكترونية التي تهدف إلى سرقة معلوماتك الشخصية.</td>
+              <td><select class="fi" id="s4q1c"><option value="">-- اختر --</option><option>صحيح</option><option>غير صحيح</option></select></td></tr>
+            <tr><td style="text-align:right;">في تكوين VLAN، إذا كان المنفذ في وضع Access Mode لـ VLAN 10، هل يمكنه نقل بيانات من VLAN 20؟</td>
+              <td><select class="fi" id="s4q1d"><option value="">-- اختر --</option><option>صحيح</option><option>غير صحيح</option></select></td></tr>
+          </tbody>
+        </table>
+        <div class="answer-hint d-none" id="hint_s4q1"></div>
+      </div>
+
+      <!-- S4 Q2 -->
+      <div class="q-card" id="card_s4q2">
+        <div class="q-header"><div class="q-num">2</div>
+          <div class="q-text">بناءً على الأوامر التالية، أي من الشبكات الظاهرية الثلاثة (VLAN 10, 20, 30) يُسمح لها بالمرور على المنفذ <span dir="ltr">GigabitEthernet0/1</span>؟</div>
+          <span class="q-marks">2.5 علامة</span></div>
+        <div class="code-box">interface GigabitEthernet0/1<br>switchport mode trunk<br>switchport trunk allowed vlan 10,20</div>
+        <label class="opt-label"><input type="radio" name="s4q2" value="a"><span>10 و 30</span></label>
+        <label class="opt-label"><input type="radio" name="s4q2" value="b"><span>20 و 30</span></label>
+        <label class="opt-label"><input type="radio" name="s4q2" value="c"><span>10 و 20 فقط</span></label>
+        <label class="opt-label"><input type="radio" name="s4q2" value="d"><span>10 و 20 و 30</span></label>
+        <div class="answer-hint d-none" id="hint_s4q2"></div>
+      </div>
+
+      <!-- S4 Q3 -->
+      <div class="q-card" id="card_s4q3">
+        <div class="q-header"><div class="q-num">3</div>
+          <div class="q-text">العنوان ___________ هو العنوان الذي يتم استخدامه بشكل تلقائي عندما يفشل الجهاز في الحصول على عنوان IP من DHCP.</div>
+          <span class="q-marks">2.5 علامة</span></div>
+        <label class="opt-label"><input type="radio" name="s4q3" value="a"><span>DNS</span></label>
+        <label class="opt-label"><input type="radio" name="s4q3" value="b"><span>HTTP</span></label>
+        <label class="opt-label"><input type="radio" name="s4q3" value="c"><span>APIPA</span></label>
+        <label class="opt-label"><input type="radio" name="s4q3" value="d"><span>DHCP</span></label>
+        <div class="answer-hint d-none" id="hint_s4q3"></div>
+      </div>
+
+      <!-- S4 Q4 -->
+      <div class="q-card" id="card_s4q4">
+        <div class="q-header"><div class="q-num">4</div>
+          <div class="q-text">أكمل الناقص في تعريفات <span dir="ltr">dot1Q</span> على جهاز الراوتر (VLAN 10 الإدارة، VLAN 20 الموظفين):</div>
+          <span class="q-marks">2.5 علامة</span></div>
+        <div class="warn-box" style="font-size:0.85rem;">📦 المخزن: <span dir="ltr" style="font-weight:700;">10 , 20 , 192.168.10.1 , 255.255.255.0 , 30 , 192.168.20.1</span></div>
+        <div class="code-box">
+          interface GigabitEthernet 0/0.10<br>
+          &nbsp;encapsulation dot1Q <input type="text" class="fi fi-sm" id="s4q4a" placeholder="?" dir="ltr" style="background:#2a2a3e;color:#cdd6f4;border-color:#444;" oninput="updateProgress()"><br>
+          &nbsp;ip address <input type="text" class="fi fi-sm" id="s4q4b" placeholder="??.??.??.??" dir="ltr" style="background:#2a2a3e;color:#cdd6f4;border-color:#444;max-width:160px;" oninput="updateProgress()"> 255.255.255.0<br>
+          interface GigabitEthernet 0/0.20<br>
+          &nbsp;encapsulation dot1Q <input type="text" class="fi fi-sm" id="s4q4c" placeholder="?" dir="ltr" style="background:#2a2a3e;color:#cdd6f4;border-color:#444;" oninput="updateProgress()"><br>
+          &nbsp;ip address <input type="text" class="fi fi-sm" id="s4q4d" placeholder="??.??.??.??" dir="ltr" style="background:#2a2a3e;color:#cdd6f4;border-color:#444;max-width:160px;" oninput="updateProgress()"> 255.255.255.0
+        </div>
+        <div class="answer-hint d-none" id="hint_s4q4"></div>
+      </div>
+
+      <!-- S4 Q5 -->
+      <div class="q-card" id="card_s4q5">
+        <div class="q-header"><div class="q-num">5</div>
+          <div class="q-text">ما هي وظيفة الأمر التالي؟ <span dir="ltr" style="font-weight:800;font-family:monospace;background:#f0f6ff;padding:2px 8px;border-radius:4px;">switchport trunk allowed vlan 10,20</span></div>
+          <span class="q-marks">2.5 علامة</span></div>
+        <label class="opt-label"><input type="radio" name="s4q5" value="a"><span>يسمح بتمرير جميع الشبكات المحلية الافتراضية (VLANs) عبر المنفذ</span></label>
+        <label class="opt-label"><input type="radio" name="s4q5" value="b"><span>يسمح بتمرير الشبكات المحلية الافتراضية 10 و 20 فقط عبر المنفذ</span></label>
+        <label class="opt-label"><input type="radio" name="s4q5" value="c"><span>يمنع جميع الشبكات المحلية الافتراضية من المرور عبر المنفذ</span></label>
+        <label class="opt-label"><input type="radio" name="s4q5" value="d"><span>يحول المنفذ إلى Access Mode لشبكتي VLAN 10 و 20</span></label>
+        <div class="answer-hint d-none" id="hint_s4q5"></div>
+      </div>
+
+      <!-- S4 Q6 -->
+      <div class="q-card" id="card_s4q6">
+        <div class="q-header"><div class="q-num">6</div>
+          <div class="q-text">قناع الشبكة الفرعية ___________ يعبر عن شبكة تحتوي على 256 عنوان IP، بما في ذلك عنوان الشبكة وعنوان البث (Broadcast).</div>
+          <span class="q-marks">2.5 علامة</span></div>
+        <label class="opt-label"><input type="radio" name="s4q6" value="a"><span dir="ltr">255.0.0.0</span></label>
+        <label class="opt-label"><input type="radio" name="s4q6" value="b"><span dir="ltr">255.255.0.0</span></label>
+        <label class="opt-label"><input type="radio" name="s4q6" value="c"><span dir="ltr">255.255.255.0</span></label>
+        <label class="opt-label"><input type="radio" name="s4q6" value="d"><span dir="ltr">255.255.255.255</span></label>
+        <div class="answer-hint d-none" id="hint_s4q6"></div>
+      </div>
+
+      <!-- S4 Q7 -->
+      <div class="q-card" id="card_s4q7">
+        <div class="q-header"><div class="q-num">7</div>
+          <div class="q-text">أي أمر يُستخدم لإنشاء VLAN 10 على السويتش؟</div>
+          <span class="q-marks">2.5 علامة</span></div>
+        <label class="opt-label"><input type="radio" name="s4q7" value="a"><span dir="ltr">Switch(config)# vtp domain 10</span></label>
+        <label class="opt-label"><input type="radio" name="s4q7" value="b"><span dir="ltr">Switch(config)# vlan 10</span></label>
+        <label class="opt-label"><input type="radio" name="s4q7" value="c"><span dir="ltr">Switch(config)# interface vlan 10</span></label>
+        <label class="opt-label"><input type="radio" name="s4q7" value="d"><span dir="ltr">Switch(config)# trunk allowed vlan 10</span></label>
+        <div class="answer-hint d-none" id="hint_s4q7"></div>
+      </div>
+
+      <!-- S4 Q8 -->
+      <div class="q-card" id="card_s4q8">
+        <div class="q-header"><div class="q-num">8</div>
+          <div class="q-text">ما هو الغرض الأساسي من Native VLAN في اتصال Trunk؟</div>
+          <span class="q-marks">2.5 علامة</span></div>
+        <label class="opt-label"><input type="radio" name="s4q8" value="a"><span>نقل حركة مرور VLANs الموسومة (tagged)</span></label>
+        <label class="opt-label"><input type="radio" name="s4q8" value="b"><span>نقل حركة مرور VLANs غير الموسومة (untagged)</span></label>
+        <label class="opt-label"><input type="radio" name="s4q8" value="c"><span>منع الاتصال بين VLANs</span></label>
+        <label class="opt-label"><input type="radio" name="s4q8" value="d"><span>تعيين عناوين IP تلقائيًا</span></label>
+        <div class="answer-hint d-none" id="hint_s4q8"></div>
+      </div>
+
+      <!-- S4 Q9 -->
+      <div class="q-card" id="card_s4q9">
+        <div class="q-header"><div class="q-num">9</div>
+          <div class="q-text">لتمكين مرور البيانات بين SW1 و SW2 لشبكتي VLAN 40 و VLAN 50، ما الأمر الذي يجب تحديده في SW1؟</div>
+          <span class="q-marks">2.5 علامة</span></div>
+        <label class="opt-label"><input type="radio" name="s4q9" value="a"><span dir="ltr">SW1(config-if)#switchport mode trunk</span></label>
+        <label class="opt-label"><input type="radio" name="s4q9" value="b"><span dir="ltr">SW1(config-if)#switchport access vlan 40</span></label>
+        <label class="opt-label"><input type="radio" name="s4q9" value="c"><span dir="ltr">SW1(config-if)#switchport voice vlan 50</span></label>
+        <label class="opt-label"><input type="radio" name="s4q9" value="d"><span dir="ltr">SW1(config)#vlan 40,50</span></label>
+        <div class="answer-hint d-none" id="hint_s4q9"></div>
+      </div>
+
+      <!-- S4 Q10 -->
+      <div class="q-card" id="card_s4q10">
+        <div class="q-header"><div class="q-num">10</div>
+          <div class="q-text">أي من الخيارات التالية يصف وظيفة الأمر <span dir="ltr" style="font-weight:800;font-family:monospace;background:#f0f6ff;padding:2px 8px;border-radius:4px;">show vlan</span>؟</div>
+          <span class="q-marks">2.5 علامة</span></div>
+        <label class="opt-label"><input type="radio" name="s4q10" value="a"><span>يعرض معلومات عن المنافذ المعينة لكل VLAN وجميع الشبكات الافتراضية الموجودة على المبدل</span></label>
+        <label class="opt-label"><input type="radio" name="s4q10" value="b"><span>يعرض فقط VLANs النشطة حاليًا على المبدل</span></label>
+        <label class="opt-label"><input type="radio" name="s4q10" value="c"><span>يعرض تفاصيل التكوين الخاصة بمنفذ معين في وضع trunk</span></label>
+        <label class="opt-label"><input type="radio" name="s4q10" value="d"><span>يستخدم لإنشاء VLAN جديدة على المبدل</span></label>
+        <div class="answer-hint d-none" id="hint_s4q10"></div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- SCORE CARD -->
+  <div class="score-card d-none" id="score-card">
+    <div class="score-num" id="score-val">0</div>
+    <div class="score-of" id="score-of">/ 100 علامة</div>
+    <div class="score-grade" id="score-grade"></div>
+  </div>
+
+  <div class="text-center mb-4 d-flex flex-wrap gap-3 justify-content-center">
+    <button class="btn-check" onclick="checkExam()">✅ تصحيح الامتحان</button>
+    <button class="btn-wa" onclick="sendWhatsApp()">📱 إرسال عبر WhatsApp</button>
+    <button class="btn-reset" onclick="resetExam()">🔄 إعادة الامتحان</button>
+  </div>
+  <div style="text-align:center;padding:1rem;font-size:0.8rem;color:#888;margin-bottom:2rem;">
+    💡 بالنجاح للجميع! 😊 — امتحان 791381 — نموذج C — 8/12/2025
+  </div>
+</div>
+
+<script>
+const nrm = s => (s||'').trim().toLowerCase().replace(/[\s]/g,'');
+const getR = n => { const e=document.querySelector(`input[name="${n}"]:checked`); return e?e.value:''; };
+const getT = id => { const e=document.getElementById(id); return e?e.value.trim():''; };
+const getS = id => { const e=document.getElementById(id); return e?e.value:''; };
+
+function markCard(id, ok) {
+  const c=document.getElementById(`card_${id}`);
+  if(c){c.classList.remove('r-ok','r-bad');c.classList.add(ok?'r-ok':'r-bad');}
+}
+function showHint(id, html) {
+  const h=document.getElementById(`hint_${id}`);
+  if(h){h.innerHTML=html;h.classList.remove('d-none');}
+}
+
+const MARKS = 2.5;
+let waL = [];
+
+function g(id, ak, val, disp) {
+  const ok = nrm(val) === nrm(ak);
+  if(ok){markCard(id,true);showHint(id,`<span class="answer-hint hint-ok">✅ إجابة صحيحة +${MARKS}</span>`);}
+  else{markCard(id,false);showHint(id,`<span class="answer-hint hint-bad">❌ خطأ — الإجابة الصحيحة: <strong>${disp||ak}</strong></span>`);}
+  waL.push(`${id}: ${val||'؟'} ${ok?'✅':'❌'}`);
+  return ok ? MARKS : 0;
+}
+
+function updateProgress() {
+  const radios=['s1q1','s1q2','s1q3','s1q4','s1q5','s1q6','s1q7','s1q8','s1q9','s1q10',
+    's2q3','s2q4','s2q5','s2q6','s2q7','s2q8','s2q9','s2q10',
+    's3q1','s3q2','s3q3','s3q4','s3q6','s3q7',
+    's4q2','s4q3','s4q5','s4q6','s4q7','s4q8','s4q9','s4q10'];
+  const texts=['s2q1a','s2q1b','s3q8a','s3q8b','s3q9a','s3q9b','s3q10a','s3q10b',
+    's4q4a','s4q4b','s4q4c','s4q4d'];
+  const sels=['s2q2a','s2q2b','s3q5a','s3q5b','s3q5c','s4q1a','s4q1b','s4q1c','s4q1d'];
+  let filled=0, total=radios.length+texts.length+sels.length;
+  radios.forEach(n=>{ if(document.querySelector(`input[name="${n}"]:checked`)) filled++; });
+  texts.forEach(id=>{ if(getT(id)) filled++; });
+  sels.forEach(id=>{ if(getS(id)) filled++; });
+  const pct=Math.round(filled/total*100);
+  document.getElementById('prog-bar').style.width=pct+'%';
+  document.getElementById('prog-text').textContent=`📝 ${filled}/${total} سؤالاً (${pct}%)`;
+}
+
+function checkExam() {
+  const name=getT('student-name'), cls=getT('student-class');
+  if(!name||!cls){alert('⚠️ يرجى إدخال الاسم الكامل والصف أولاً!');return;}
+
+  waL=[];
+  waL.push(`📝 *امتحان الأنظمة المحوسبة 791381 – نموذج C*`);
+  waL.push(`👤 الطالب/ة: *${name}*  |  🏫 الصف: *${cls}*`);
+  waL.push(`📅 ${new Date().toLocaleDateString('ar-SA')}`);
+  waL.push('─────────────────────');
+
+  let score = 0;
+
+  // === SECTION 1 ===
+  waL.push('📚 *القسم الأول:*');
+  score += g('s1q1','غير صحيح',getR('s1q1'),'غير صحيح — 193.168.1.1 عنوان عام');
+  score += g('s1q2','b',getR('s1q2'),'ب — Ping');
+  score += g('s1q3','b',getR('s1q3'),'ب — Router');
+  score += g('s1q4','a',getR('s1q4'),'أ — 32 بت');
+  score += g('s1q5','b',getR('s1q5'),'ب — تخصيص عناوين IP ديناميكيًا');
+  score += g('s1q6','b',getR('s1q6'),'ب — تحويل IP إلى MAC');
+  score += g('s1q7','a',getR('s1q7'),'أ — 255.255.255.255');
+  score += g('s1q8','c',getR('s1q8'),'ج — طبقة الشبكة (Network Layer)');
+  score += g('s1q9','d',getR('s1q9'),'د — 8.8.8.8 (Google DNS)');
+  score += g('s1q10','a',getR('s1q10'),'أ — TCP');
+
+  // === SECTION 2 ===
+  waL.push('📚 *القسم الثاني:*');
+  // Q1 fill blanks DNS + DHCP
+  { let s=0;
+    if(nrm(getT('s2q1a'))==='dns') s+=MARKS/2;
+    if(nrm(getT('s2q1b'))==='dhcp') s+=MARKS/2;
+    score+=s;
+    const ok=(s===MARKS);
+    markCard('s2q1',ok);
+    showHint('s2q1',ok?'<span class="answer-hint hint-ok">✅ صحيح +2.5</span>'
+      :`<span class="answer-hint hint-bad">❌ الإجابة: الفراغ الأول=DNS | الفراغ الثاني=DHCP (${s}/2.5)</span>`);
+    waL.push(`s2q1: ${getT('s2q1a')}|${getT('s2q1b')} ${ok?'✅':'❌'}`);
+  }
+  // Q2 T/F (2 items)
+  { let s=0;
+    if(getS('s2q2a')==='صحيح') s+=MARKS/2;
+    if(getS('s2q2b')==='صحيح') s+=MARKS/2;
+    score+=s;
+    const ok=(s===MARKS);
+    markCard('s2q2',ok);
+    showHint('s2q2',ok?'<span class="answer-hint hint-ok">✅ صحيح +2.5</span>'
+      :`<span class="answer-hint hint-bad">❌ كلا الجوابان صحيحان (${s}/2.5)</span>`);
+    waL.push(`s2q2: ${s}/2.5 ${ok?'✅':'❌'}`);
+  }
+  score += g('s2q3','b',getR('s2q3'),'ب — Router');
+  score += g('s2q4','a',getR('s2q4'),'أ — Subnet Mask');
+  score += g('s2q5','b',getR('s2q5'),'ب — MAC Address');
+  score += g('s2q6','a',getR('s2q6'),'أ — 10110010 (128+32+16+2=178)');
+  score += g('s2q7','c',getR('s2q7'),'ج — Fiber Optic Cable');
+  score += g('s2q8','a',getR('s2q8'),'أ — 11000000.10101000.00000000.00000001');
+  score += g('s2q9','لا',getR('s2q9'),'لا — 162.20.1.0 ≠ 162.20.100.0');
+  score += g('s2q10','b',getR('s2q10'),'ب — نقل البيانات بسرعة دون تأكيد الاستلام');
+
+  // === SECTION 3 ===
+  waL.push('📚 *القسم الثالث:*');
+  score += g('s3q1','c',getR('s3q1'),'ج — ARP');
+  score += g('s3q2','c',getR('s3q2'),'ج — متصل (Connection Oriented) طبقة النقل Layer 4');
+  score += g('s3q3','a',getR('s3q3'),'أ — Trunk بين المفاتيح لعدة VLANs');
+  score += g('s3q4','b',getR('s3q4'),'ب — UDP');
+  // Q5 T/F (3 items)
+  { let s=0;
+    if(getS('s3q5a')==='صحيح') s+=MARKS/3;
+    if(getS('s3q5b')==='صحيح') s+=MARKS/3;
+    if(getS('s3q5c')==='صحيح') s+=MARKS/3;
+    s=Math.round(s*10)/10;
+    score+=s;
+    const ok=(s>=MARKS-0.1);
+    markCard('s3q5',ok);
+    showHint('s3q5',ok?'<span class="answer-hint hint-ok">✅ جميع الإجابات صحيحة +2.5</span>'
+      :`<span class="answer-hint hint-bad">❌ جميع الجمل الثلاثة صحيحة (${s}/2.5)</span>`);
+    waL.push(`s3q5: ${s}/2.5 ${ok?'✅':'❌'}`);
+  }
+  score += g('s3q6','a',getR('s3q6'),'أ — B و C فقط (نفس VLAN 10)');
+  score += g('s3q7','b',getR('s3q7'),'ب — يستخدم بين سويتش وسويتش');
+  // Q8 fill blanks broadcast + unicast
+  { let s=0;
+    if(nrm(getT('s3q8a'))==='broadcast') s+=MARKS/2;
+    if(nrm(getT('s3q8b'))==='unicast') s+=MARKS/2;
+    score+=s;
+    const ok=(s===MARKS);
+    markCard('s3q8',ok);
+    showHint('s3q8',ok?'<span class="answer-hint hint-ok">✅ صحيح +2.5</span>'
+      :`<span class="answer-hint hint-bad">❌ الأول=broadcast | الثاني=unicast (${s}/2.5)</span>`);
+    waL.push(`s3q8: ${getT('s3q8a')}|${getT('s3q8b')} ${ok?'✅':'❌'}`);
+  }
+  // Q9 fill blanks TCP + UDP
+  { let s=0;
+    if(nrm(getT('s3q9a'))==='tcp') s+=MARKS/2;
+    if(nrm(getT('s3q9b'))==='udp') s+=MARKS/2;
+    score+=s;
+    const ok=(s===MARKS);
+    markCard('s3q9',ok);
+    showHint('s3q9',ok?'<span class="answer-hint hint-ok">✅ صحيح +2.5</span>'
+      :`<span class="answer-hint hint-bad">❌ الأول=TCP | الثاني=UDP (${s}/2.5)</span>`);
+    waL.push(`s3q9: ${getT('s3q9a')}|${getT('s3q9b')} ${ok?'✅':'❌'}`);
+  }
+  // Q10 VLAN commands
+  { let s=0;
+    if(nrm(getT('s3q10a'))==='configt') s+=MARKS/2;
+    if(nrm(getT('s3q10b'))==='vlan10') s+=MARKS/2;
+    score+=s;
+    const ok=(s===MARKS);
+    markCard('s3q10',ok);
+    showHint('s3q10',ok?'<span class="answer-hint hint-ok">✅ صحيح +2.5</span>'
+      :`<span class="answer-hint hint-bad">❌ Switch# config t → Switch(config)# vlan 10 (${s}/2.5)</span>`);
+    waL.push(`s3q10: ${getT('s3q10a')}|${getT('s3q10b')} ${ok?'✅':'❌'}`);
+  }
+
+  // === SECTION 4 ===
+  waL.push('📚 *القسم الرابع:*');
+  // Q1 T/F (4 items)
+  { let s=0;
+    if(getS('s4q1a')==='صحيح') s+=MARKS/4;
+    if(getS('s4q1b')==='صحيح') s+=MARKS/4;
+    if(getS('s4q1c')==='صحيح') s+=MARKS/4;
+    if(getS('s4q1d')==='غير صحيح') s+=MARKS/4;
+    s=Math.round(s*10)/10;
+    score+=s;
+    const ok=(s>=MARKS-0.1);
+    markCard('s4q1',ok);
+    showHint('s4q1',ok?'<span class="answer-hint hint-ok">✅ جميع الإجابات صحيحة +2.5</span>'
+      :`<span class="answer-hint hint-bad">❌ أ=صحيح، ب=صحيح، ج=صحيح، د=غير صحيح (${s}/2.5)</span>`);
+    waL.push(`s4q1: ${s}/2.5 ${ok?'✅':'❌'}`);
+  }
+  score += g('s4q2','c',getR('s4q2'),'ج — 10 و 20 فقط');
+  score += g('s4q3','c',getR('s4q3'),'ج — APIPA');
+  // Q4 dot1Q commands
+  { let s=0;
+    if(nrm(getT('s4q4a'))==='10') s+=MARKS/4;
+    if(nrm(getT('s4q4b'))==='192.168.10.1') s+=MARKS/4;
+    if(nrm(getT('s4q4c'))==='20') s+=MARKS/4;
+    if(nrm(getT('s4q4d'))==='192.168.20.1') s+=MARKS/4;
+    s=Math.round(s*10)/10;
+    score+=s;
+    const ok=(s>=MARKS-0.1);
+    markCard('s4q4',ok);
+    showHint('s4q4',ok?'<span class="answer-hint hint-ok">✅ صحيح +2.5</span>'
+      :`<span class="answer-hint hint-bad">❌ dot1Q 10 | 192.168.10.1 | dot1Q 20 | 192.168.20.1 (${s}/2.5)</span>`);
+    waL.push(`s4q4: ${s}/2.5 ${ok?'✅':'❌'}`);
+  }
+  score += g('s4q5','b',getR('s4q5'),'ب — يسمح بتمرير VLAN 10 و 20 فقط');
+  score += g('s4q6','c',getR('s4q6'),'ج — 255.255.255.0 (/24 = 256 عنوان)');
+  score += g('s4q7','b',getR('s4q7'),'ب — Switch(config)# vlan 10');
+  score += g('s4q8','b',getR('s4q8'),'ب — نقل حركة مرور VLANs غير الموسومة (untagged)');
+  score += g('s4q9','a',getR('s4q9'),'أ — switchport mode trunk');
+  score += g('s4q10','a',getR('s4q10'),'أ — يعرض معلومات عن المنافذ المعينة لكل VLAN');
+
+  // SHOW RESULT
+  score = Math.round(score * 10) / 10;
+  waL.push('─────────────────────');
+  waL.push(`📊 *العلامة الكلية: ${score}/100*`);
+
+  document.getElementById('score-val').textContent = score;
+  document.getElementById('score-of').textContent = '/ 100 علامة';
+  const pct = score;
+  let grade_txt = '';
+  if(pct>=90) grade_txt='🌟 ممتاز!';
+  else if(pct>=80) grade_txt='⭐ جيد جداً';
+  else if(pct>=70) grade_txt='👍 جيد';
+  else if(pct>=55) grade_txt='📖 مقبول — استمر في المراجعة';
+  else grade_txt='❗ يحتاج مراجعة إضافية';
+  document.getElementById('score-grade').textContent = grade_txt;
+  document.getElementById('score-card').classList.remove('d-none');
+  document.getElementById('score-card').scrollIntoView({behavior:'smooth',block:'center'});
+  document.querySelector('.container').classList.add('locked-exam');
+  window._waMsg = waL.join('\n');
+}
+
+function sendWhatsApp() {
+  const name=getT('student-name'), cls=getT('student-class');
+  if(!name||!cls){alert('⚠️ يرجى إدخال الاسم الكامل والصف أولاً!');return;}
+  let msg = window._waMsg;
+  if(!msg){ msg = `📝 امتحان 791381 C\n👤 ${name}\n🏫 ${cls}\n⚠️ اضغط تصحيح الامتحان أولاً`; }
+  window.open(`https://wa.me/972543032020?text=${encodeURIComponent(msg)}`,'_blank');
+}
+
+function resetExam() {
+  if(!confirm('هل تريد إعادة الامتحان؟ ستُحذف جميع إجاباتك.')) return;
+  document.querySelector('.container').classList.remove('locked-exam');
+  document.getElementById('score-card').classList.add('d-none');
+  document.querySelectorAll('input[type=radio]').forEach(e=>e.checked=false);
+  document.querySelectorAll('input[type=text]').forEach(e=>e.value='');
+  document.querySelectorAll('select').forEach(e=>e.selectedIndex=0);
+  document.querySelectorAll('.q-card').forEach(c=>c.classList.remove('r-ok','r-bad','r-skip'));
+  document.querySelectorAll('.answer-hint').forEach(h=>{ h.classList.add('d-none'); h.innerHTML=''; });
+  window._waMsg=null;
+  document.getElementById('student-name').value='';
+  document.getElementById('student-class').value='';
+  updateProgress();
+  window.scrollTo({top:0,behavior:'smooth'});
+}
+
+updateProgress();
+document.querySelectorAll('input,select').forEach(e=>e.addEventListener('change',updateProgress));
+</script>
+<!-- F02: original questions and graphics preserved. -->
+</body>
+</html>
