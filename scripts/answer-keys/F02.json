@@ -1,0 +1,13 @@
+{
+  "provenance": "AI-derived and teacher-authorized (session 01RaUviSgdQWPmnCbV2aWP1J). NOT an official ministry key. True/false tables derived from the statements; fill-in-the-blank questions converted to multiple-choice via toChoice (distractors AI-authored, review them); multi-line VLAN/dot1Q command questions kept manual.",
+  "answers": {
+    "s2q1":  { "toChoice": { "options": ["DNS ثم DHCP", "DHCP ثم DNS", "DNS ثم HTTP", "ARP ثم DHCP"], "correct": 0 } },
+    "s2q2":  { "table": ["صحيح", "صحيح"] },
+    "s3q5":  { "table": ["صحيح", "صحيح", "صحيح"] },
+    "s3q8":  { "toChoice": { "options": ["Broadcast ثم Unicast", "Unicast ثم Broadcast", "Multicast ثم Unicast", "Broadcast ثم Multicast"], "correct": 0 } },
+    "s3q9":  { "toChoice": { "options": ["TCP ثم UDP", "UDP ثم TCP", "TCP ثم IP", "UDP ثم HTTP"], "correct": 0 } },
+    "s3q10": { "manual": true },
+    "s4q1":  { "table": ["صحيح", "صحيح", "صحيح", "غير صحيح"] },
+    "s4q4":  { "manual": true }
+  }
+}

@@ -18,8 +18,8 @@
   "manualReviewCount": 0,
   "libraryVersion": 1,
   "sourceSha": "9b7a81d16183f8e7e23657d6bddb05f56a8e57b2efd2dc827e37d0f4a3388c1f",
-  "contentHash": "bbf1a0d5661c589e5ef98b7f4c633556393d60f1f837d95e7bf0a9d6a222821b",
-  "convertedAt": "2026-09-05T18:57:19.063Z",
+  "contentHash": "afc5fd74921d0cefcd0d9b44811fd12d3d0e17c640562924078d97987f60d705",
+  "convertedAt": "2026-09-06T12:49:31.888Z",
   "source": {
     "repository": "Book791381",
     "sourceFile": "F03.html"
@@ -600,19 +600,36 @@
         "familyKey": "LIB-F03-Q11",
         "hasCLI": false,
         "requiresCalculation": false,
-        "presentationType": "open",
+        "presentationType": "multipleChoice",
         "marks": 4,
         "locked": false,
         "text": "البروتوكول الذي يُترجم أسماء المجال (Domain names) إلى عناوين IP يُسمّى ____________.",
         "textHtml": "",
-        "options": [],
+        "options": [
+          {
+            "value": "0",
+            "text": "DNS"
+          },
+          {
+            "value": "1",
+            "text": "DHCP"
+          },
+          {
+            "value": "2",
+            "text": "HTTP"
+          },
+          {
+            "value": "3",
+            "text": "ARP"
+          }
+        ],
         "fields": [],
         "parts": [],
         "answer": {
-          "text": "dns"
+          "correctOptionIndex": 0
         },
         "hint": "",
-        "teacherNote": "",
+        "teacherNote": "خيارات مُؤلَّفة آليًا بموافقة المعلم — راجِعها.",
         "aiInstruction": "",
         "wasModified": false,
         "image": {
@@ -968,19 +985,36 @@
         "familyKey": "LIB-F03-Q18",
         "hasCLI": false,
         "requiresCalculation": false,
-        "presentationType": "open",
+        "presentationType": "multipleChoice",
         "marks": 4,
         "locked": false,
         "text": "أكمل الجملة التالية: بروتوكول ____________________ يُمكِّن من التحكُّم بالراوتر عن بُعد بشكل آمن.",
         "textHtml": "",
-        "options": [],
+        "options": [
+          {
+            "value": "0",
+            "text": "SSH"
+          },
+          {
+            "value": "1",
+            "text": "Telnet"
+          },
+          {
+            "value": "2",
+            "text": "FTP"
+          },
+          {
+            "value": "3",
+            "text": "HTTP"
+          }
+        ],
         "fields": [],
         "parts": [],
         "answer": {
-          "text": "ssh"
+          "correctOptionIndex": 0
         },
         "hint": "",
-        "teacherNote": "",
+        "teacherNote": "خيارات مُؤلَّفة آليًا بموافقة المعلم — راجِعها.",
         "aiInstruction": "",
         "wasModified": false,
         "image": {
@@ -1592,19 +1626,36 @@
         "familyKey": "LIB-F03-Q29",
         "hasCLI": false,
         "requiresCalculation": false,
-        "presentationType": "open",
+        "presentationType": "multipleChoice",
         "marks": 4,
         "locked": false,
         "text": "حَدَّد مدير الشبكة في الراوتر التعريفات التالية ثم نفّذ الأمر enable وطُلب منه إدخال كلمة المرور. ما هي كلمة المرور التي عليه أن يدخلها؟Router&gt; enable Router# configure terminal Router(config)# enable password bagrut Router(config)# enable secret talmid Router(config)# exit Router# copy running-config startup-config [OK] Router# exit",
         "textHtml": "",
-        "options": [],
+        "options": [
+          {
+            "value": "0",
+            "text": "talmid"
+          },
+          {
+            "value": "1",
+            "text": "bagrut"
+          },
+          {
+            "value": "2",
+            "text": "enable"
+          },
+          {
+            "value": "3",
+            "text": "cisco"
+          }
+        ],
         "fields": [],
         "parts": [],
         "answer": {
-          "text": "talmid"
+          "correctOptionIndex": 0
         },
         "hint": "",
-        "teacherNote": "",
+        "teacherNote": "خيارات مُؤلَّفة آليًا بموافقة المعلم — راجِعها.",
         "aiInstruction": "",
         "wasModified": false,
         "image": {
@@ -2251,7 +2302,7 @@
     ],
     "totalMarks": 160,
     "status": "final",
-    "createdAt": "2026-09-05T18:57:19.095Z",
-    "updatedAt": "2026-09-05T18:57:19.095Z"
+    "createdAt": "2026-09-06T12:49:31.915Z",
+    "updatedAt": "2026-09-06T12:49:31.915Z"
   }
 }

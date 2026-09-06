@@ -12,14 +12,14 @@
   "totalMarks": 100,
   "pageRange": "",
   "parserFamily": "f-dom-qcard-v1",
-  "conversionStatus": "needs_review",
-  "publishable": false,
-  "autoGradableCount": 32,
-  "manualReviewCount": 8,
+  "conversionStatus": "ready",
+  "publishable": true,
+  "autoGradableCount": 38,
+  "manualReviewCount": 2,
   "libraryVersion": 1,
   "sourceSha": "f1c75498638df9d599378234c3914a640a415e1e671c6d0d94695d6097f6166c",
-  "contentHash": "4331e608b86b147cd4b66525aed098149ada465eae1aad723af84ba5c73a89fc",
-  "convertedAt": "2026-09-05T18:57:19.063Z",
+  "contentHash": "c311fd569513b9f705aed88e8a8288a911f660f6001bf6716257779caafb0aa3",
+  "convertedAt": "2026-09-06T12:49:31.888Z",
   "source": {
     "repository": "Book791381",
     "sourceFile": "F02.html"
@@ -585,17 +585,36 @@
         "familyKey": "LIB-F02-Q11",
         "hasCLI": false,
         "requiresCalculation": false,
-        "presentationType": "open",
+        "presentationType": "multipleChoice",
         "marks": 2.5,
         "locked": false,
         "text": "بروتوكول هو المسؤول عن تحويل أسماء المواقع إلى عناوين IP، بينما بروتوكول يُستخدم لتوزيع وإدارة عناوين IP للأجهزة بشكل تلقائي.",
         "textHtml": "",
-        "options": [],
+        "options": [
+          {
+            "value": "0",
+            "text": "DNS ثم DHCP"
+          },
+          {
+            "value": "1",
+            "text": "DHCP ثم DNS"
+          },
+          {
+            "value": "2",
+            "text": "DNS ثم HTTP"
+          },
+          {
+            "value": "3",
+            "text": "ARP ثم DHCP"
+          }
+        ],
         "fields": [],
         "parts": [],
-        "answer": {},
+        "answer": {
+          "correctOptionIndex": 0
+        },
         "hint": "",
-        "teacherNote": "شكل سؤال متعدد الأجزاء غير قابل للتحويل الحتمي — يحتاج مراجعة.",
+        "teacherNote": "خيارات مُؤلَّفة آليًا بموافقة المعلم — راجِعها.",
         "aiInstruction": "",
         "wasModified": false,
         "image": {
@@ -658,9 +677,11 @@
           }
         ],
         "parts": [],
-        "answer": {},
+        "answer": {
+          "text": "عنوان 10.255.255.255 يُعتبر عنوان بث (Broadcast) في شبكته.=صحيح؛ عنوان الشبكة 192.168.5.0/24 يتبع Class C.=صحيح"
+        },
         "hint": "",
-        "teacherNote": "بعض صفوف الجدول بلا مفتاح إجابة في المصدر.",
+        "teacherNote": "",
         "aiInstruction": "",
         "wasModified": false,
         "image": {
@@ -1389,9 +1410,11 @@
           }
         ],
         "parts": [],
-        "answer": {},
+        "answer": {
+          "text": "عند إرسال إطار بـ Destination MAC: FFFF.FFFF.FFFF ، هل يعتبر عنوان بث (Broadcast)؟=صحيح؛ عنوان IP المُعطى هو 172.17.0.0/16 . هل يمكن لهذه الشبكة استيعاب أكثر من 65,000 جهاز؟=صحيح؛ عنوان 169.254.1.1 يُستخدم عادةً عند فشل الحصول على عنوان IP عبر DHCP.=صحيح"
+        },
         "hint": "",
-        "teacherNote": "بعض صفوف الجدول بلا مفتاح إجابة في المصدر.",
+        "teacherNote": "",
         "aiInstruction": "",
         "wasModified": false,
         "image": {
@@ -1534,17 +1557,36 @@
         "familyKey": "LIB-F02-Q28",
         "hasCLI": false,
         "requiresCalculation": false,
-        "presentationType": "open",
+        "presentationType": "multipleChoice",
         "marks": 2.5,
         "locked": false,
         "text": "عند إرسال رسالة إلى جميع الأجهزة في الشبكة يُستخدم نمط الإرسال ، بينما عند إرسالها لجهاز واحد فقط يُستخدم .",
         "textHtml": "",
-        "options": [],
+        "options": [
+          {
+            "value": "0",
+            "text": "Broadcast ثم Unicast"
+          },
+          {
+            "value": "1",
+            "text": "Unicast ثم Broadcast"
+          },
+          {
+            "value": "2",
+            "text": "Multicast ثم Unicast"
+          },
+          {
+            "value": "3",
+            "text": "Broadcast ثم Multicast"
+          }
+        ],
         "fields": [],
         "parts": [],
-        "answer": {},
+        "answer": {
+          "correctOptionIndex": 0
+        },
         "hint": "",
-        "teacherNote": "شكل سؤال متعدد الأجزاء غير قابل للتحويل الحتمي — يحتاج مراجعة.",
+        "teacherNote": "خيارات مُؤلَّفة آليًا بموافقة المعلم — راجِعها.",
         "aiInstruction": "",
         "wasModified": false,
         "image": {
@@ -1570,17 +1612,36 @@
         "familyKey": "LIB-F02-Q29",
         "hasCLI": false,
         "requiresCalculation": false,
-        "presentationType": "open",
+        "presentationType": "multipleChoice",
         "marks": 2.5,
         "locked": false,
         "text": "بروتوكول يعمل في طبقة النقل ويضمن نقل البيانات بموثوقية، بينما بروتوكول يُستخدم في البث الحي والمكالمات الصوتية.",
         "textHtml": "",
-        "options": [],
+        "options": [
+          {
+            "value": "0",
+            "text": "TCP ثم UDP"
+          },
+          {
+            "value": "1",
+            "text": "UDP ثم TCP"
+          },
+          {
+            "value": "2",
+            "text": "TCP ثم IP"
+          },
+          {
+            "value": "3",
+            "text": "UDP ثم HTTP"
+          }
+        ],
         "fields": [],
         "parts": [],
-        "answer": {},
+        "answer": {
+          "correctOptionIndex": 0
+        },
         "hint": "",
-        "teacherNote": "شكل سؤال متعدد الأجزاء غير قابل للتحويل الحتمي — يحتاج مراجعة.",
+        "teacherNote": "خيارات مُؤلَّفة آليًا بموافقة المعلم — راجِعها.",
         "aiInstruction": "",
         "wasModified": false,
         "image": {
@@ -1616,7 +1677,7 @@
         "parts": [],
         "answer": {},
         "hint": "",
-        "teacherNote": "شكل سؤال متعدد الأجزاء غير قابل للتحويل الحتمي — يحتاج مراجعة.",
+        "teacherNote": "سؤال يُصحّح يدويًا (أمر/مقالي).",
         "aiInstruction": "",
         "wasModified": false,
         "image": {
@@ -1707,9 +1768,11 @@
           }
         ],
         "parts": [],
-        "answer": {},
+        "answer": {
+          "text": "يستخدم بروتوكول DHCP لتوزيع عناوين IP بشكل ديناميكي على الأجهزة في الشبكة.=صحيح؛ يستخدم بروتوكول DNS لتحويل أسماء النطاقات إلى عناوين IP.=صحيح؛ تصيد المعلومات (Phishing) هو نوع من الهجمات الإلكترونية التي تهدف إلى سرقة معلوماتك الشخصية.=صحيح؛ في تكوين VLAN، إذا كان المنفذ في وضع Access Mode لـ VLAN 10، هل يمكنه نقل بيانات من VLAN 20؟=غير صحيح"
+        },
         "hint": "",
-        "teacherNote": "بعض صفوف الجدول بلا مفتاح إجابة في المصدر.",
+        "teacherNote": "",
         "aiInstruction": "",
         "wasModified": false,
         "image": {
@@ -1855,7 +1918,7 @@
         "parts": [],
         "answer": {},
         "hint": "",
-        "teacherNote": "شكل سؤال متعدد الأجزاء غير قابل للتحويل الحتمي — يحتاج مراجعة.",
+        "teacherNote": "سؤال يُصحّح يدويًا (أمر/مقالي).",
         "aiInstruction": "",
         "wasModified": false,
         "image": {
@@ -2201,7 +2264,7 @@
     ],
     "totalMarks": 100,
     "status": "final",
-    "createdAt": "2026-09-05T18:57:19.086Z",
-    "updatedAt": "2026-09-05T18:57:19.086Z"
+    "createdAt": "2026-09-06T12:49:31.908Z",
+    "updatedAt": "2026-09-06T12:49:31.908Z"
   }
 }

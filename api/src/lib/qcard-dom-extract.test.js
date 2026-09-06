@@ -42,6 +42,21 @@ describe("extractQCards - the shared F-series q-card template", () => {
     expect(cards[0].field.rows[0].options).toEqual(["تحويل الأسماء", "نقل الملفات"]);
   });
 
+  it("recovers an F05-style true/false table whose selects have NO id (statement in td.statement)", () => {
+    const html = `<div class="q-card">
+      <div class="q-head"><div class="q-num">1</div><div class="q-text">حددوا صح/خطأ:</div><div class="mark">4</div></div>
+      <table class="tbl"><tr><th>العبارة</th><th>الإجابة</th></tr>
+        <tr><td class="statement">قائمة ARP تشمل عناوين MAC وIP.</td><td><select><option></option><option>صحيح</option><option>غير صحيح</option></select></td></tr>
+        <tr><td class="statement">عنوان MAC منطقي.</td><td><select><option></option><option>صحيح</option><option>غير صحيح</option></select></td></tr>
+      </table>
+    </div>`;
+    const cards = extractQCards(html);
+    expect(cards[0].field.kind).toBe("controlTable");
+    expect(cards[0].field.rows.map(r => r.label)).toEqual(["قائمة ARP تشمل عناوين MAC وIP.", "عنوان MAC منطقي."]);
+    expect(cards[0].field.rows[0].controlId).toBe("r0"); // synthetic id by row position (no source id)
+    expect(cards[0].field.rows[0].options).toEqual(["صحيح", "غير صحيح"]);
+  });
+
   it("handles F05's variant (bare q-card, .q-head, .mark, textarea = open)", () => {
     const html = `<div class="q-card">
       <div class="q-head"><div class="q-num">1</div><div class="q-text">اشرح:</div><div class="mark">4 درجات</div></div>

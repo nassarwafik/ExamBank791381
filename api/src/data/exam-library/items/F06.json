@@ -12,14 +12,14 @@
   "totalMarks": 154,
   "pageRange": "",
   "parserFamily": "f-json-sections-v1",
-  "conversionStatus": "needs_review",
-  "publishable": false,
-  "autoGradableCount": 36,
-  "manualReviewCount": 9,
+  "conversionStatus": "ready",
+  "publishable": true,
+  "autoGradableCount": 38,
+  "manualReviewCount": 7,
   "libraryVersion": 1,
   "sourceSha": "2da394df99c1398a5d1e08a92d310f9c295cbe07ab5b3f771f3aba5673de1b82",
-  "contentHash": "0b6c253dd98cf158d904b35e89bba30267ee0831d2b926a80a2273b8376820e7",
-  "convertedAt": "2026-09-05T18:57:19.063Z",
+  "contentHash": "f10a15569c767b3be0ac95850fa2dd700dea83401e8d43492da84e1a2f319921",
+  "convertedAt": "2026-09-06T12:49:31.888Z",
   "source": {
     "repository": "Book791381",
     "sourceFile": "F06.html"
@@ -96,19 +96,36 @@
         "familyKey": "LIB-F06-Q02",
         "hasCLI": false,
         "requiresCalculation": false,
-        "presentationType": "open",
+        "presentationType": "multipleChoice",
         "marks": 3,
         "locked": false,
         "text": "ما هي أعلى قيمة ثنائية تمثلها 8 bits؟",
         "textHtml": "",
-        "options": [],
+        "options": [
+          {
+            "value": "0",
+            "text": "11111111"
+          },
+          {
+            "value": "1",
+            "text": "11111110"
+          },
+          {
+            "value": "2",
+            "text": "10000000"
+          },
+          {
+            "value": "3",
+            "text": "100000000"
+          }
+        ],
         "fields": [],
         "parts": [],
         "answer": {
-          "text": "11111111"
+          "correctOptionIndex": 0
         },
         "hint": "",
-        "teacherNote": "المصدر يقبل عدة إجابات نصية؛ التصحيح الآلي الحالي يقارن إجابة واحدة فقط.",
+        "teacherNote": "خيارات مُؤلَّفة آليًا بموافقة المعلم — راجِعها.",
         "aiInstruction": "",
         "wasModified": false,
         "image": {
@@ -828,19 +845,36 @@
         "familyKey": "LIB-F06-Q15",
         "hasCLI": false,
         "requiresCalculation": false,
-        "presentationType": "open",
+        "presentationType": "multipleChoice",
         "marks": 3,
         "locked": false,
         "text": "كم bit يحتوي العنوان الفيزيائي MAC؟",
         "textHtml": "",
-        "options": [],
+        "options": [
+          {
+            "value": "0",
+            "text": "48"
+          },
+          {
+            "value": "1",
+            "text": "32"
+          },
+          {
+            "value": "2",
+            "text": "64"
+          },
+          {
+            "value": "3",
+            "text": "24"
+          }
+        ],
         "fields": [],
         "parts": [],
         "answer": {
-          "text": "48"
+          "correctOptionIndex": 0
         },
         "hint": "",
-        "teacherNote": "",
+        "teacherNote": "خيارات مُؤلَّفة آليًا بموافقة المعلم — راجِعها.",
         "aiInstruction": "",
         "wasModified": false,
         "image": {
@@ -866,19 +900,36 @@
         "familyKey": "LIB-F06-Q16",
         "hasCLI": false,
         "requiresCalculation": false,
-        "presentationType": "open",
+        "presentationType": "multipleChoice",
         "marks": 3,
         "locked": false,
         "text": "اعتمادًا على الرسم، إلى أي Net ID ينتمي الحاسوب؟",
         "textHtml": "",
-        "options": [],
+        "options": [
+          {
+            "value": "0",
+            "text": "15.0.0.0"
+          },
+          {
+            "value": "1",
+            "text": "15.15.0.0"
+          },
+          {
+            "value": "2",
+            "text": "10.0.0.0"
+          },
+          {
+            "value": "3",
+            "text": "192.15.0.0"
+          }
+        ],
         "fields": [],
         "parts": [],
         "answer": {
-          "text": "15.0.0.0"
+          "correctOptionIndex": 0
         },
         "hint": "",
-        "teacherNote": "",
+        "teacherNote": "خيارات مُؤلَّفة آليًا بموافقة المعلم — راجِعها.",
         "aiInstruction": "",
         "wasModified": false,
         "image": {
@@ -921,7 +972,7 @@
         "parts": [],
         "answer": {},
         "hint": "",
-        "teacherNote": "لا يوجد مفتاح إجابة في المصدر.",
+        "teacherNote": "سؤال يُصحّح يدويًا (أمر/مقالي).",
         "aiInstruction": "",
         "wasModified": false,
         "image": {
@@ -1064,19 +1115,36 @@
         "familyKey": "LIB-F06-Q20",
         "hasCLI": false,
         "requiresCalculation": false,
-        "presentationType": "open",
+        "presentationType": "multipleChoice",
         "marks": 3,
         "locked": false,
         "text": "ما هو قناع الشبكة الافتراضي المناسب للعنوان 205.4.5.0؟",
         "textHtml": "",
-        "options": [],
+        "options": [
+          {
+            "value": "0",
+            "text": "255.255.255.0"
+          },
+          {
+            "value": "1",
+            "text": "255.255.0.0"
+          },
+          {
+            "value": "2",
+            "text": "255.0.0.0"
+          },
+          {
+            "value": "3",
+            "text": "255.255.255.255"
+          }
+        ],
         "fields": [],
         "parts": [],
         "answer": {
-          "text": "255.255.255.0"
+          "correctOptionIndex": 0
         },
         "hint": "",
-        "teacherNote": "",
+        "teacherNote": "خيارات مُؤلَّفة آليًا بموافقة المعلم — راجِعها.",
         "aiInstruction": "",
         "wasModified": false,
         "image": {
@@ -1333,19 +1401,36 @@
         "familyKey": "LIB-F06-Q24",
         "hasCLI": false,
         "requiresCalculation": false,
-        "presentationType": "open",
+        "presentationType": "multipleChoice",
         "marks": 4,
         "locked": false,
         "text": "أي بروتوكول يمكّننا من الارتباط براوتر عن بُعد من أجل تعريفه؟",
         "textHtml": "",
-        "options": [],
+        "options": [
+          {
+            "value": "0",
+            "text": "Telnet"
+          },
+          {
+            "value": "1",
+            "text": "HTTP"
+          },
+          {
+            "value": "2",
+            "text": "DNS"
+          },
+          {
+            "value": "3",
+            "text": "SMTP"
+          }
+        ],
         "fields": [],
         "parts": [],
         "answer": {
-          "text": "telnet"
+          "correctOptionIndex": 0
         },
         "hint": "",
-        "teacherNote": "المصدر يقبل عدة إجابات نصية؛ التصحيح الآلي الحالي يقارن إجابة واحدة فقط.",
+        "teacherNote": "خيارات مُؤلَّفة آليًا بموافقة المعلم — راجِعها.",
         "aiInstruction": "",
         "wasModified": false,
         "image": {
@@ -1605,7 +1690,7 @@
         "familyKey": "LIB-F06-Q29",
         "hasCLI": false,
         "requiresCalculation": false,
-        "presentationType": "matching",
+        "presentationType": "open",
         "marks": 4,
         "locked": false,
         "text": "أكملوا سطري ACL لمنع PC2 من إرسال معطيات إلى Router0 والسماح للباقي.\n\n| البند | الإجابة |\n| --- | --- |\n| السطر الأول | |\n| السطر الثاني | |",
@@ -1630,7 +1715,7 @@
         "parts": [],
         "answer": {},
         "hint": "",
-        "teacherNote": "بعض بنود السؤال بلا مفتاح إجابة في المصدر.",
+        "teacherNote": "سؤال يُصحّح يدويًا (أمر/مقالي).",
         "aiInstruction": "",
         "wasModified": false,
         "image": {
@@ -1666,7 +1751,7 @@
         "parts": [],
         "answer": {},
         "hint": "",
-        "teacherNote": "سؤال متعدد الأجزاء مختلط (radio+text+select) لا يُمثَّل بوحدة تصحيح واحدة — يحتاج مراجعة.",
+        "teacherNote": "سؤال يُصحّح يدويًا (أمر/مقالي).",
         "aiInstruction": "",
         "wasModified": false,
         "image": {
@@ -1702,7 +1787,7 @@
         "parts": [],
         "answer": {},
         "hint": "",
-        "teacherNote": "سؤال متعدد الأجزاء مختلط (radio+text+select) لا يُمثَّل بوحدة تصحيح واحدة — يحتاج مراجعة.",
+        "teacherNote": "سؤال يُصحّح يدويًا (أمر/مقالي).",
         "aiInstruction": "",
         "wasModified": false,
         "image": {
@@ -1745,7 +1830,7 @@
         "parts": [],
         "answer": {},
         "hint": "",
-        "teacherNote": "لا يوجد مفتاح إجابة في المصدر.",
+        "teacherNote": "سؤال يُصحّح يدويًا (أمر/مقالي).",
         "aiInstruction": "",
         "wasModified": false,
         "image": {
@@ -1850,7 +1935,7 @@
         "parts": [],
         "answer": {},
         "hint": "",
-        "teacherNote": "سؤال متعدد الأجزاء مختلط (radio+text+select) لا يُمثَّل بوحدة تصحيح واحدة — يحتاج مراجعة.",
+        "teacherNote": "سؤال يُصحّح يدويًا (أمر/مقالي).",
         "aiInstruction": "",
         "wasModified": false,
         "image": {
@@ -2198,19 +2283,36 @@
         "familyKey": "LIB-F06-Q40",
         "hasCLI": false,
         "requiresCalculation": false,
-        "presentationType": "open",
+        "presentationType": "multipleChoice",
         "marks": 4,
         "locked": false,
         "text": "ما رقم الأداة المستخدمة في Pathfinder لتنفيذ التغيير؟",
         "textHtml": "",
-        "options": [],
+        "options": [
+          {
+            "value": "0",
+            "text": "2"
+          },
+          {
+            "value": "1",
+            "text": "1"
+          },
+          {
+            "value": "2",
+            "text": "3"
+          },
+          {
+            "value": "3",
+            "text": "4"
+          }
+        ],
         "fields": [],
         "parts": [],
         "answer": {
-          "text": "2"
+          "correctOptionIndex": 0
         },
         "hint": "",
-        "teacherNote": "",
+        "teacherNote": "خيارات مُؤلَّفة آليًا بموافقة المعلم — راجِعها.",
         "aiInstruction": "",
         "wasModified": false,
         "image": {
@@ -2391,19 +2493,36 @@
         "familyKey": "LIB-F06-Q43",
         "hasCLI": false,
         "requiresCalculation": false,
-        "presentationType": "open",
+        "presentationType": "multipleChoice",
         "marks": 4,
         "locked": false,
         "text": "ما رقم الأداة الملائمة لتحريك مكان نقطة على المسار؟",
         "textHtml": "",
-        "options": [],
+        "options": [
+          {
+            "value": "0",
+            "text": "2"
+          },
+          {
+            "value": "1",
+            "text": "3"
+          },
+          {
+            "value": "2",
+            "text": "1"
+          },
+          {
+            "value": "3",
+            "text": "4"
+          }
+        ],
         "fields": [],
         "parts": [],
         "answer": {
-          "text": "2"
+          "correctOptionIndex": 0
         },
         "hint": "",
-        "teacherNote": "",
+        "teacherNote": "خيارات مُؤلَّفة آليًا بموافقة المعلم — راجِعها.",
         "aiInstruction": "",
         "wasModified": false,
         "image": {
@@ -2508,7 +2627,7 @@
         "parts": [],
         "answer": {},
         "hint": "",
-        "teacherNote": "سؤال فحص يدوي في المصدر (mark=يدوي).",
+        "teacherNote": "سؤال يُصحّح يدويًا (أمر/مقالي).",
         "aiInstruction": "",
         "wasModified": false,
         "image": {
@@ -2537,7 +2656,7 @@
     ],
     "totalMarks": 154,
     "status": "final",
-    "createdAt": "2026-09-05T18:57:20.148Z",
-    "updatedAt": "2026-09-05T18:57:20.148Z"
+    "createdAt": "2026-09-06T12:49:32.795Z",
+    "updatedAt": "2026-09-06T12:49:32.795Z"
   }
 }

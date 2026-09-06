@@ -1,0 +1,12 @@
+{
+  "provenance": "AI-derived and teacher-authorized (session 01RaUviSgdQWPmnCbV2aWP1J). NOT an official ministry key. Open questions are converted to multiple-choice via toChoice; the correct answer is the derived/known one and the DISTRACTORS are AI-authored (review them). Multi-line command / topology-completion questions are kept manual.",
+  "answers": {
+    "q3":   { "toChoice": { "options": ["202", "210", "206", "198"], "correct": 0 } },
+    "q4":   { "toChoice": { "options": ["32", "64", "16", "48"], "correct": 0 } },
+    "q11":  { "manual": true },
+    "q13":  { "toChoice": { "options": ["APIPA", "DHCP", "DNS", "NAT"], "correct": 0 } },
+    "q24":  { "toChoice": { "options": ["1000", "1", "1002", "10"], "correct": 0 } },
+    "s2q8": { "manual": true },
+    "s2q9": { "toChoice": { "options": ["6", "4", "5", "3"], "correct": 0 } }
+  }
+}

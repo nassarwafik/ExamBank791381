@@ -1,0 +1,19 @@
+{
+  "provenance": "AI-derived and teacher-authorized (session 01RaUviSgdQWPmnCbV2aWP1J). NOT an official ministry key. Short-answer open questions converted to multiple-choice via toChoice (correct answer known; DISTRACTORS AI-authored, review them). Multi-line Cisco command / static-route / ACL / topology-essay and explicitly-manual items are kept manual.",
+  "answers": {
+    "b2":  { "toChoice": { "options": ["11111111", "11111110", "10000000", "100000000"], "correct": 0 } },
+    "b15": { "toChoice": { "options": ["48", "32", "64", "24"], "correct": 0 } },
+    "b16": { "toChoice": { "options": ["15.0.0.0", "15.15.0.0", "10.0.0.0", "192.15.0.0"], "correct": 0 } },
+    "b17": { "manual": true },
+    "b20": { "toChoice": { "options": ["255.255.255.0", "255.255.0.0", "255.0.0.0", "255.255.255.255"], "correct": 0 } },
+    "i2":  { "toChoice": { "options": ["Telnet", "HTTP", "DNS", "SMTP"], "correct": 0 } },
+    "i7":  { "manual": true },
+    "i8":  { "manual": true },
+    "i9":  { "manual": true },
+    "i10": { "manual": true },
+    "i12": { "manual": true },
+    "g6":  { "toChoice": { "options": ["2", "1", "3", "4"], "correct": 0 } },
+    "g9":  { "toChoice": { "options": ["2", "3", "1", "4"], "correct": 0 } },
+    "g11": { "manual": true }
+  }
+}

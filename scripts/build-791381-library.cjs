@@ -129,6 +129,68 @@ function buildFSnapshot(code, examId, title, html) {
   return { snapshot: buildFDomSnapshot(examId, title, html), parserFamily: "f-dom-qcard-v1" };
 }
 
+// Optional per-exam answer-key overlay (scripts/answer-keys/<CODE>.json). The Book791381 source has
+// no answer key for the F exams, so these keys are supplied out-of-band and applied here. Each key
+// entry, addressed by the question's sourceQuestionId, is one of:
+//   { "choice": N }            -> multipleChoice, correctOptionIndex N
+//   { "text": "..." }          -> open, exact-text answer
+//   { "table": ["..", ".."] }  -> matching/table, one answer per row in row order
+//   { "manual": true }         -> intentionally teacher-graded (Cisco commands, essays): not a
+//                                 defect, graded by hand at runtime, does not block "ready".
+// A key file MUST declare its provenance so it's never mistaken for an official source of truth.
+function loadAnswerKey(code) {
+  const file = path.join(__dirname, "answer-keys", code + ".json");
+  if (!fs.existsSync(file)) return null;
+  return JSON.parse(fs.readFileSync(file, "utf8"));
+}
+
+function applyAnswerKey(snapshot, key) {
+  if (!key || !key.answers) return;
+  for (const q of snapshot.questions) {
+    const entry = key.answers[q.sourceQuestionId];
+    if (!entry) continue;
+    if (entry.manual === true) {
+      q.answer = {};
+      q.presentationType = "open";
+      q.requiresManualReview = false;
+      q.teacherNote = entry.note || "سؤال يُصحّح يدويًا (أمر/مقالي).";
+      continue;
+    }
+    // toChoice converts an open question into an auto-graded multiple-choice one. The DISTRACTORS are
+    // authored (not from the source), so the question is flagged with clear provenance for review;
+    // the correct answer itself is still the derived/known one. options[correct] is the right answer.
+    if (entry.toChoice && Array.isArray(entry.toChoice.options)) {
+      const opts = entry.toChoice.options;
+      const correct = entry.toChoice.correct;
+      if (opts.length < 2 || !Number.isInteger(correct) || correct < 0 || correct >= opts.length) {
+        throw new Error(snapshot.examId + "/" + q.sourceQuestionId + ": invalid toChoice (need >=2 options and an in-range correct index)");
+      }
+      q.presentationType = "multipleChoice";
+      q.options = opts.map((text, i) => ({ value: String(i), text: String(text) }));
+      q.fields = [];
+      q.answer = { correctOptionIndex: correct };
+      q.requiresManualReview = false;
+      q.teacherNote = "خيارات مُؤلَّفة آليًا بموافقة المعلم — راجِعها.";
+      continue;
+    }
+    if (Number.isInteger(entry.choice)) {
+      q.answer = { correctOptionIndex: entry.choice };
+    }
+    else if (typeof entry.text === "string") {
+      q.answer = { text: entry.text };
+    }
+    else if (Array.isArray(entry.table)) {
+      const labels = (q.fields || []).map(f => f.label);
+      q.answer = { text: labels.map((label, i) => label + "=" + (entry.table[i] ?? "")).join("؛ ") };
+    }
+    else {
+      continue;
+    }
+    q.requiresManualReview = false;
+    q.teacherNote = "";
+  }
+}
+
 function classifyStatus(snapshot) {
   const total = snapshot.questions.length;
   if (!total) return "unsupported";
@@ -206,6 +268,7 @@ function buildLibrary(sourceDir, dataDir, assetsDir) {
         const built = buildFSnapshot(code, examId, title, sourceHtml);
         snapshot = built.snapshot;
         parserFamily = built.parserFamily;
+        applyAnswerKey(snapshot, loadAnswerKey(code));
         status = classifyStatus(snapshot);
       }
     }
@@ -219,7 +282,14 @@ function buildLibrary(sourceDir, dataDir, assetsDir) {
       continue;
     }
 
+    // Unresolved = a question still flagged for review (an auto-type question with no key). Ready
+    // requires zero of these. Manual-graded questions (Cisco commands / essays intentionally keyed
+    // { manual:true }) are resolved, so they don't block ready - but they are NOT auto-gradable, so
+    // the counts below measure auto vs manual by whether the question actually has an answer, not by
+    // the review flag.
     const reviewQuestions = snapshot.questions.filter(q => q.requiresManualReview);
+    const hasAnswer = q => q.answer && Object.keys(q.answer).length > 0;
+    const autoGradableCount = snapshot.questions.filter(hasAnswer).length;
     // Strip the build-only requiresManualReview flag out of the stored ExamQuestion (it isn't part
     // of the ExamQuestion type); its intent is preserved in each question's teacherNote and
     // surfaced in aggregate in the quality report.
@@ -250,8 +320,8 @@ function buildLibrary(sourceDir, dataDir, assetsDir) {
       parserFamily,
       conversionStatus: status,
       publishable,
-      autoGradableCount: cleanQuestions.length - reviewQuestions.length,
-      manualReviewCount: reviewQuestions.length,
+      autoGradableCount,
+      manualReviewCount: cleanQuestions.length - autoGradableCount,
       libraryVersion: 1,
       sourceSha: sha256(sourceHtml),
       contentHash,
@@ -266,15 +336,20 @@ function buildLibrary(sourceDir, dataDir, assetsDir) {
     );
 
     catalog.push(catalogItem);
+    // Questions still needing attention in the report: the unresolved (auto-type, no key) plus the
+    // intentionally-manual ones (no answer but deliberately teacher-graded) - i.e. everything not
+    // auto-gradable, each with its teacherNote reason.
+    const nonAuto = cleanQuestions.filter(q => !hasAnswer(q));
     report.push({
       file,
       libraryItemId: code,
       conversionStatus: status,
       publishable,
       questionCount: cleanQuestions.length,
-      autoGradableCount: cleanQuestions.length - reviewQuestions.length,
-      manualReviewCount: reviewQuestions.length,
-      manualReviewReasons: [...new Set(reviewQuestions.map(q => q.teacherNote))]
+      autoGradableCount,
+      manualReviewCount: cleanQuestions.length - autoGradableCount,
+      unresolvedCount: reviewQuestions.length,
+      manualReviewReasons: [...new Set(nonAuto.map(q => q.teacherNote).filter(Boolean))]
     });
   }
 
