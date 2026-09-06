@@ -1,0 +1,12 @@
+{
+  "provenance": "AI-derived and teacher-authorized (session 01RaUviSgdQWPmnCbV2aWP1J). NOT an official ministry key. Only the questions F06's own accept/correct fields did not already key are listed here; all of them are Cisco command / static-route / ACL / explanatory or explicitly-manual items, which are left for manual grading rather than auto-keyed.",
+  "answers": {
+    "b17": { "manual": true },
+    "i7":  { "manual": true },
+    "i8":  { "manual": true },
+    "i9":  { "manual": true },
+    "i10": { "manual": true },
+    "i12": { "manual": true },
+    "g11": { "manual": true }
+  }
+}

@@ -1,0 +1,10 @@
+{
+  "provenance": "AI-derived and teacher-authorized (session 01RaUviSgdQWPmnCbV2aWP1J). NOT an official ministry key. Only the questions the source's own AK object did not already key are listed here; q14/q23 are deterministic decimal→binary conversions; q29's source binary value was not captured during extraction, and q4/q5 are figure/prompt shells, so those are left for manual grading.",
+  "answers": {
+    "q4":  { "manual": true },
+    "q5":  { "manual": true },
+    "q14": { "text": "11100101" },
+    "q23": { "text": "1110111" },
+    "q29": { "manual": true }
+  }
+}

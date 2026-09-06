@@ -2,27 +2,27 @@
   {
     "file": "F01.html",
     "libraryItemId": "F01",
-    "conversionStatus": "needs_review",
-    "publishable": false,
+    "conversionStatus": "ready",
+    "publishable": true,
     "questionCount": 34,
-    "autoGradableCount": 30,
-    "manualReviewCount": 4,
+    "autoGradableCount": 32,
+    "manualReviewCount": 2,
+    "unresolvedCount": 0,
     "manualReviewReasons": [
-      "شكل سؤال متعدد الأجزاء غير قابل للتحويل الحتمي — يحتاج مراجعة.",
-      "لا يوجد مفتاح إجابة لهذا السؤال في المصدر."
+      "سؤال يُصحّح يدويًا (أمر/مقالي)."
     ]
   },
   {
     "file": "F02.html",
     "libraryItemId": "F02",
-    "conversionStatus": "needs_review",
-    "publishable": false,
+    "conversionStatus": "ready",
+    "publishable": true,
     "questionCount": 40,
-    "autoGradableCount": 32,
-    "manualReviewCount": 8,
+    "autoGradableCount": 35,
+    "manualReviewCount": 5,
+    "unresolvedCount": 0,
     "manualReviewReasons": [
-      "شكل سؤال متعدد الأجزاء غير قابل للتحويل الحتمي — يحتاج مراجعة.",
-      "بعض صفوف الجدول بلا مفتاح إجابة في المصدر."
+      "سؤال يُصحّح يدويًا (أمر/مقالي)."
     ]
   },
   {
@@ -33,50 +33,46 @@
     "questionCount": 40,
     "autoGradableCount": 40,
     "manualReviewCount": 0,
+    "unresolvedCount": 0,
     "manualReviewReasons": []
   },
   {
     "file": "F04.html",
     "libraryItemId": "F04",
-    "conversionStatus": "needs_review",
-    "publishable": false,
+    "conversionStatus": "ready",
+    "publishable": true,
     "questionCount": 42,
-    "autoGradableCount": 37,
-    "manualReviewCount": 5,
+    "autoGradableCount": 39,
+    "manualReviewCount": 3,
+    "unresolvedCount": 0,
     "manualReviewReasons": [
-      "شكل سؤال متعدد الأجزاء غير قابل للتحويل الحتمي — يحتاج مراجعة.",
-      "بعض صفوف الجدول بلا مفتاح إجابة في المصدر.",
-      "لا يوجد مفتاح إجابة لهذا السؤال في المصدر."
+      "سؤال يُصحّح يدويًا (أمر/مقالي)."
     ]
   },
   {
     "file": "F05.html",
     "libraryItemId": "F05",
-    "conversionStatus": "needs_review",
-    "publishable": false,
+    "conversionStatus": "ready",
+    "publishable": true,
     "questionCount": 41,
-    "autoGradableCount": 0,
-    "manualReviewCount": 41,
+    "autoGradableCount": 36,
+    "manualReviewCount": 5,
+    "unresolvedCount": 0,
     "manualReviewReasons": [
-      "سؤال مفتوح بلا مفتاح إجابة في المصدر.",
-      "لا يوجد مفتاح إجابة لهذا السؤال في المصدر.",
-      "شكل سؤال متعدد الأجزاء غير قابل للتحويل الحتمي — يحتاج مراجعة."
+      "سؤال يُصحّح يدويًا (أمر/مقالي)."
     ]
   },
   {
     "file": "F06.html",
     "libraryItemId": "F06",
-    "conversionStatus": "needs_review",
-    "publishable": false,
+    "conversionStatus": "ready",
+    "publishable": true,
     "questionCount": 45,
-    "autoGradableCount": 36,
-    "manualReviewCount": 9,
+    "autoGradableCount": 38,
+    "manualReviewCount": 7,
+    "unresolvedCount": 2,
     "manualReviewReasons": [
-      "المصدر يقبل عدة إجابات نصية؛ التصحيح الآلي الحالي يقارن إجابة واحدة فقط.",
-      "لا يوجد مفتاح إجابة في المصدر.",
-      "بعض بنود السؤال بلا مفتاح إجابة في المصدر.",
-      "سؤال متعدد الأجزاء مختلط (radio+text+select) لا يُمثَّل بوحدة تصحيح واحدة — يحتاج مراجعة.",
-      "سؤال فحص يدوي في المصدر (mark=يدوي)."
+      "سؤال يُصحّح يدويًا (أمر/مقالي)."
     ]
   },
   {
@@ -87,6 +83,7 @@
     "questionCount": 10,
     "autoGradableCount": 10,
     "manualReviewCount": 0,
+    "unresolvedCount": 0,
     "manualReviewReasons": []
   },
   {
@@ -97,6 +94,7 @@
     "questionCount": 10,
     "autoGradableCount": 10,
     "manualReviewCount": 0,
+    "unresolvedCount": 0,
     "manualReviewReasons": []
   },
   {
@@ -107,6 +105,7 @@
     "questionCount": 10,
     "autoGradableCount": 10,
     "manualReviewCount": 0,
+    "unresolvedCount": 0,
     "manualReviewReasons": []
   },
   {
@@ -117,6 +116,7 @@
     "questionCount": 10,
     "autoGradableCount": 10,
     "manualReviewCount": 0,
+    "unresolvedCount": 0,
     "manualReviewReasons": []
   },
   {
@@ -127,6 +127,7 @@
     "questionCount": 10,
     "autoGradableCount": 10,
     "manualReviewCount": 0,
+    "unresolvedCount": 0,
     "manualReviewReasons": []
   },
   {
@@ -137,6 +138,7 @@
     "questionCount": 10,
     "autoGradableCount": 10,
     "manualReviewCount": 0,
+    "unresolvedCount": 0,
     "manualReviewReasons": []
   },
   {
@@ -147,6 +149,7 @@
     "questionCount": 10,
     "autoGradableCount": 10,
     "manualReviewCount": 0,
+    "unresolvedCount": 0,
     "manualReviewReasons": []
   },
   {
@@ -157,6 +160,7 @@
     "questionCount": 10,
     "autoGradableCount": 10,
     "manualReviewCount": 0,
+    "unresolvedCount": 0,
     "manualReviewReasons": []
   },
   {
@@ -167,6 +171,7 @@
     "questionCount": 10,
     "autoGradableCount": 10,
     "manualReviewCount": 0,
+    "unresolvedCount": 0,
     "manualReviewReasons": []
   },
   {
@@ -177,6 +182,7 @@
     "questionCount": 10,
     "autoGradableCount": 10,
     "manualReviewCount": 0,
+    "unresolvedCount": 0,
     "manualReviewReasons": []
   },
   {
@@ -187,6 +193,7 @@
     "questionCount": 10,
     "autoGradableCount": 10,
     "manualReviewCount": 0,
+    "unresolvedCount": 0,
     "manualReviewReasons": []
   },
   {
@@ -197,6 +204,7 @@
     "questionCount": 10,
     "autoGradableCount": 10,
     "manualReviewCount": 0,
+    "unresolvedCount": 0,
     "manualReviewReasons": []
   },
   {
@@ -207,6 +215,7 @@
     "questionCount": 10,
     "autoGradableCount": 10,
     "manualReviewCount": 0,
+    "unresolvedCount": 0,
     "manualReviewReasons": []
   },
   {
@@ -217,6 +226,7 @@
     "questionCount": 10,
     "autoGradableCount": 10,
     "manualReviewCount": 0,
+    "unresolvedCount": 0,
     "manualReviewReasons": []
   },
   {
@@ -227,6 +237,7 @@
     "questionCount": 10,
     "autoGradableCount": 10,
     "manualReviewCount": 0,
+    "unresolvedCount": 0,
     "manualReviewReasons": []
   },
   {
@@ -237,6 +248,7 @@
     "questionCount": 10,
     "autoGradableCount": 10,
     "manualReviewCount": 0,
+    "unresolvedCount": 0,
     "manualReviewReasons": []
   },
   {
@@ -247,6 +259,7 @@
     "questionCount": 10,
     "autoGradableCount": 10,
     "manualReviewCount": 0,
+    "unresolvedCount": 0,
     "manualReviewReasons": []
   },
   {
@@ -257,6 +270,7 @@
     "questionCount": 10,
     "autoGradableCount": 10,
     "manualReviewCount": 0,
+    "unresolvedCount": 0,
     "manualReviewReasons": []
   },
   {
@@ -267,6 +281,7 @@
     "questionCount": 10,
     "autoGradableCount": 10,
     "manualReviewCount": 0,
+    "unresolvedCount": 0,
     "manualReviewReasons": []
   },
   {
@@ -277,6 +292,7 @@
     "questionCount": 10,
     "autoGradableCount": 10,
     "manualReviewCount": 0,
+    "unresolvedCount": 0,
     "manualReviewReasons": []
   },
   {
@@ -287,6 +303,7 @@
     "questionCount": 15,
     "autoGradableCount": 15,
     "manualReviewCount": 0,
+    "unresolvedCount": 0,
     "manualReviewReasons": []
   },
   {
@@ -297,6 +314,7 @@
     "questionCount": 10,
     "autoGradableCount": 10,
     "manualReviewCount": 0,
+    "unresolvedCount": 0,
     "manualReviewReasons": []
   },
   {
@@ -307,6 +325,7 @@
     "questionCount": 10,
     "autoGradableCount": 10,
     "manualReviewCount": 0,
+    "unresolvedCount": 0,
     "manualReviewReasons": []
   },
   {
@@ -317,6 +336,7 @@
     "questionCount": 10,
     "autoGradableCount": 10,
     "manualReviewCount": 0,
+    "unresolvedCount": 0,
     "manualReviewReasons": []
   },
   {
@@ -327,6 +347,7 @@
     "questionCount": 20,
     "autoGradableCount": 20,
     "manualReviewCount": 0,
+    "unresolvedCount": 0,
     "manualReviewReasons": []
   },
   {
@@ -337,6 +358,7 @@
     "questionCount": 20,
     "autoGradableCount": 20,
     "manualReviewCount": 0,
+    "unresolvedCount": 0,
     "manualReviewReasons": []
   },
   {
@@ -347,6 +369,7 @@
     "questionCount": 20,
     "autoGradableCount": 20,
     "manualReviewCount": 0,
+    "unresolvedCount": 0,
     "manualReviewReasons": []
   },
   {
@@ -357,6 +380,7 @@
     "questionCount": 20,
     "autoGradableCount": 20,
     "manualReviewCount": 0,
+    "unresolvedCount": 0,
     "manualReviewReasons": []
   },
   {
@@ -367,6 +391,7 @@
     "questionCount": 20,
     "autoGradableCount": 20,
     "manualReviewCount": 0,
+    "unresolvedCount": 0,
     "manualReviewReasons": []
   },
   {
@@ -377,6 +402,7 @@
     "questionCount": 20,
     "autoGradableCount": 20,
     "manualReviewCount": 0,
+    "unresolvedCount": 0,
     "manualReviewReasons": []
   }
 ]

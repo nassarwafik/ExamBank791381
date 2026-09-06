@@ -105,11 +105,14 @@ function extractSingleTextInput(inner) {
   return { fieldId: idMatch ? idMatch[1] : "" };
 }
 
-// A table of per-row answer controls (selects or text inputs), used for matching / multi-part
-// questions. Returns {rows:[{label, controlId, kind:"select"|"text", options?:[...]}]}.
+// A table of per-row answer controls (selects or text inputs), used for matching / true-false /
+// multi-part questions. Returns {rows:[{label, controlId, kind:"select"|"text", options?:[...]}]}.
+// Handles both F01/F04-style selects that carry an id and F05-style true/false tables whose
+// <select>s have no id at all (the row's synthetic controlId is then its position, "r<n>", which is
+// stable because rows are read in source order).
 function extractControlTable(inner) {
   if (!/<table/i.test(inner)) return null;
-  const rowRegex = /<tr>([\s\S]*?)<\/tr>/g;
+  const rowRegex = /<tr[^>]*>([\s\S]*?)<\/tr>/g;
   const rows = [];
   let match;
   while ((match = rowRegex.exec(inner)) !== null) {
@@ -119,20 +122,23 @@ function extractControlTable(inner) {
     if (cells.length < 2) continue;
 
     const label = stripTags(cells[0]);
+    if (!label) continue;
     const answerCell = cells[cells.length - 1];
+    const rowKey = "r" + rows.length;
 
-    const selectMatch = /<select[^>]*\bid="([^"]*)"[^>]*>([\s\S]*?)<\/select>/.exec(answerCell);
+    const selectMatch = /<select([^>]*)>([\s\S]*?)<\/select>/.exec(answerCell);
     if (selectMatch) {
+      const idMatch = /\bid="([^"]*)"/.exec(selectMatch[1]);
       const optionValues = Array.from(selectMatch[2].matchAll(/<option[^>]*>([\s\S]*?)<\/option>/g))
         .map(o => stripTags(o[1]))
         .filter(v => v && !/^--/.test(v) && v !== "اختر");
-      rows.push({ label, controlId: selectMatch[1], kind: "select", options: optionValues });
+      rows.push({ label, controlId: idMatch ? idMatch[1] : rowKey, kind: "select", options: optionValues });
       continue;
     }
 
-    const textMatch = /<input[^>]*type="text"[^>]*\bid="([^"]*)"[^>]*>/.exec(answerCell) || /<input[^>]*\bid="([^"]*)"[^>]*type="text"[^>]*>/.exec(answerCell);
-    if (textMatch) {
-      rows.push({ label, controlId: textMatch[1], kind: "text" });
+    if (/<input\b[^>]*>/i.test(answerCell)) {
+      const idMatch = /<input[^>]*\bid="([^"]*)"/.exec(answerCell);
+      rows.push({ label, controlId: idMatch ? idMatch[1] : rowKey, kind: "text" });
     }
   }
   return rows.length ? { rows } : null;

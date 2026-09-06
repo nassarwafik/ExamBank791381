@@ -12,14 +12,14 @@
   "totalMarks": 100,
   "pageRange": "",
   "parserFamily": "f-dom-qcard-v1",
-  "conversionStatus": "needs_review",
-  "publishable": false,
-  "autoGradableCount": 32,
-  "manualReviewCount": 8,
+  "conversionStatus": "ready",
+  "publishable": true,
+  "autoGradableCount": 35,
+  "manualReviewCount": 5,
   "libraryVersion": 1,
   "sourceSha": "f1c75498638df9d599378234c3914a640a415e1e671c6d0d94695d6097f6166c",
-  "contentHash": "4331e608b86b147cd4b66525aed098149ada465eae1aad723af84ba5c73a89fc",
-  "convertedAt": "2026-09-05T18:57:19.063Z",
+  "contentHash": "9a25c1ab12c5b2320b77c73d46908644cdf08d63bb1bdcec574786f7d73454a9",
+  "convertedAt": "2026-09-06T12:20:04.674Z",
   "source": {
     "repository": "Book791381",
     "sourceFile": "F02.html"
@@ -595,7 +595,7 @@
         "parts": [],
         "answer": {},
         "hint": "",
-        "teacherNote": "شكل سؤال متعدد الأجزاء غير قابل للتحويل الحتمي — يحتاج مراجعة.",
+        "teacherNote": "سؤال يُصحّح يدويًا (أمر/مقالي).",
         "aiInstruction": "",
         "wasModified": false,
         "image": {
@@ -658,9 +658,11 @@
           }
         ],
         "parts": [],
-        "answer": {},
+        "answer": {
+          "text": "عنوان 10.255.255.255 يُعتبر عنوان بث (Broadcast) في شبكته.=صحيح؛ عنوان الشبكة 192.168.5.0/24 يتبع Class C.=صحيح"
+        },
         "hint": "",
-        "teacherNote": "بعض صفوف الجدول بلا مفتاح إجابة في المصدر.",
+        "teacherNote": "",
         "aiInstruction": "",
         "wasModified": false,
         "image": {
@@ -1389,9 +1391,11 @@
           }
         ],
         "parts": [],
-        "answer": {},
+        "answer": {
+          "text": "عند إرسال إطار بـ Destination MAC: FFFF.FFFF.FFFF ، هل يعتبر عنوان بث (Broadcast)؟=صحيح؛ عنوان IP المُعطى هو 172.17.0.0/16 . هل يمكن لهذه الشبكة استيعاب أكثر من 65,000 جهاز؟=صحيح؛ عنوان 169.254.1.1 يُستخدم عادةً عند فشل الحصول على عنوان IP عبر DHCP.=صحيح"
+        },
         "hint": "",
-        "teacherNote": "بعض صفوف الجدول بلا مفتاح إجابة في المصدر.",
+        "teacherNote": "",
         "aiInstruction": "",
         "wasModified": false,
         "image": {
@@ -1544,7 +1548,7 @@
         "parts": [],
         "answer": {},
         "hint": "",
-        "teacherNote": "شكل سؤال متعدد الأجزاء غير قابل للتحويل الحتمي — يحتاج مراجعة.",
+        "teacherNote": "سؤال يُصحّح يدويًا (أمر/مقالي).",
         "aiInstruction": "",
         "wasModified": false,
         "image": {
@@ -1580,7 +1584,7 @@
         "parts": [],
         "answer": {},
         "hint": "",
-        "teacherNote": "شكل سؤال متعدد الأجزاء غير قابل للتحويل الحتمي — يحتاج مراجعة.",
+        "teacherNote": "سؤال يُصحّح يدويًا (أمر/مقالي).",
         "aiInstruction": "",
         "wasModified": false,
         "image": {
@@ -1616,7 +1620,7 @@
         "parts": [],
         "answer": {},
         "hint": "",
-        "teacherNote": "شكل سؤال متعدد الأجزاء غير قابل للتحويل الحتمي — يحتاج مراجعة.",
+        "teacherNote": "سؤال يُصحّح يدويًا (أمر/مقالي).",
         "aiInstruction": "",
         "wasModified": false,
         "image": {
@@ -1707,9 +1711,11 @@
           }
         ],
         "parts": [],
-        "answer": {},
+        "answer": {
+          "text": "يستخدم بروتوكول DHCP لتوزيع عناوين IP بشكل ديناميكي على الأجهزة في الشبكة.=صحيح؛ يستخدم بروتوكول DNS لتحويل أسماء النطاقات إلى عناوين IP.=صحيح؛ تصيد المعلومات (Phishing) هو نوع من الهجمات الإلكترونية التي تهدف إلى سرقة معلوماتك الشخصية.=صحيح؛ في تكوين VLAN، إذا كان المنفذ في وضع Access Mode لـ VLAN 10، هل يمكنه نقل بيانات من VLAN 20؟=غير صحيح"
+        },
         "hint": "",
-        "teacherNote": "بعض صفوف الجدول بلا مفتاح إجابة في المصدر.",
+        "teacherNote": "",
         "aiInstruction": "",
         "wasModified": false,
         "image": {
@@ -1855,7 +1861,7 @@
         "parts": [],
         "answer": {},
         "hint": "",
-        "teacherNote": "شكل سؤال متعدد الأجزاء غير قابل للتحويل الحتمي — يحتاج مراجعة.",
+        "teacherNote": "سؤال يُصحّح يدويًا (أمر/مقالي).",
         "aiInstruction": "",
         "wasModified": false,
         "image": {
@@ -2201,7 +2207,7 @@
     ],
     "totalMarks": 100,
     "status": "final",
-    "createdAt": "2026-09-05T18:57:19.086Z",
-    "updatedAt": "2026-09-05T18:57:19.086Z"
+    "createdAt": "2026-09-06T12:20:04.706Z",
+    "updatedAt": "2026-09-06T12:20:04.706Z"
   }
 }
