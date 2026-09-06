@@ -213,6 +213,12 @@ async function listClasses(
           ""
         ),
 
+      programCode:
+        String(
+          document.programCode ||
+          ""
+        ),
+
       active:
         document.active !==
         false,
@@ -270,10 +276,10 @@ async function listClasses(
 }
 
 function buildNewClassroomDocument(
-  { name, grade, schoolYear },
+  { name, grade, schoolYear, programCode },
   now
 ) {
-  return {
+  const doc = {
     schemaVersion: 1,
     classId: crypto.randomUUID(),
     name,
@@ -284,6 +290,11 @@ function buildNewClassroomDocument(
     createdAt: now,
     updatedAt: now
   };
+  // Optional program/model code (e.g. "794589"). Omitted entirely for classes with no program, so
+  // legacy classrooms and non-program classes stay byte-identical to before.
+  const code = String(programCode || "").trim();
+  if (code) doc.programCode = code;
+  return doc;
 }
 
 app.http(
@@ -373,6 +384,12 @@ app.http(
                 ""
               ).trim();
 
+            const programCode =
+              String(
+                body?.programCode ||
+                ""
+              ).trim();
+
             if (!name) {
               return {
                 status: 400,
@@ -391,7 +408,7 @@ app.http(
 
             const classroom =
               buildNewClassroomDocument(
-                { name, grade, schoolYear },
+                { name, grade, schoolYear, programCode },
                 now
               );
 
@@ -417,6 +434,8 @@ app.http(
                   name,
                   grade,
                   schoolYear,
+                  programCode:
+                    classroom.programCode || "",
                   active: true,
                   studentCount:
                     0,
@@ -425,6 +444,59 @@ app.http(
                 }
               }
             };
+          }
+
+          if (
+            action ===
+            "setprogram"
+          ) {
+            const classId =
+              String(
+                body?.classId || ""
+              ).trim();
+            const programCode =
+              String(
+                body?.programCode || ""
+              ).trim();
+
+            if (!classId) {
+              return {
+                status: 400,
+                jsonBody: { ok: false, error: "classId is required." }
+              };
+            }
+
+            try {
+              const updated =
+                await mutateJsonWithRetry(
+                  container,
+                  CLASS_PREFIX + classId + ".json",
+                  current => {
+                    if (!current) {
+                      const notFound = new Error("الصف غير موجود.");
+                      notFound.httpStatus = 404;
+                      throw notFound;
+                    }
+                    if (programCode) current.programCode = programCode;
+                    else delete current.programCode;
+                    current.updatedAt = new Date().toISOString();
+                    return current;
+                  }
+                );
+              return {
+                status: 200,
+                jsonBody: { ok: true, programCode: updated.programCode || "" }
+              };
+            }
+            catch (mutateError) {
+              if (mutateError instanceof StorageConflictError) {
+                return { status: 503, jsonBody: { ok: false, error: CONFLICT_MESSAGE } };
+              }
+              if (mutateError?.httpStatus) {
+                return { status: mutateError.httpStatus, jsonBody: { ok: false, error: mutateError.message } };
+              }
+              throw mutateError;
+            }
           }
 
           if (

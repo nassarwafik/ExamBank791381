@@ -1,0 +1,1395 @@
+{
+  "programCode": "794589",
+  "templateVersion": 1,
+  "trackWeights": {
+    "book": 50,
+    "packetTracer": 50
+  },
+  "config": {
+    "staleDays": 7,
+    "lateThreshold": 40,
+    "balanceWarningThreshold": 25
+  },
+  "groups": [
+    {
+      "groupId": "book_intro",
+      "track": "book",
+      "title": "بداية المشروع والبحث",
+      "order": 1
+    },
+    {
+      "groupId": "book_planning",
+      "track": "book",
+      "title": "تخطيط الشبكة",
+      "order": 2
+    },
+    {
+      "groupId": "book_implementation",
+      "track": "book",
+      "title": "شرح التنفيذ",
+      "order": 3
+    },
+    {
+      "groupId": "book_testing",
+      "track": "book",
+      "title": "التوثيق والاختبارات",
+      "order": 4
+    },
+    {
+      "groupId": "book_delivery",
+      "track": "book",
+      "title": "توثيق العمل والتسليم",
+      "order": 5
+    },
+    {
+      "groupId": "pt_environment",
+      "track": "packetTracer",
+      "title": "بناء البيئة",
+      "order": 6
+    },
+    {
+      "groupId": "pt_switching",
+      "track": "packetTracer",
+      "title": "Switching",
+      "order": 7
+    },
+    {
+      "groupId": "pt_intervlan",
+      "track": "packetTracer",
+      "title": "Inter-VLAN وAddressing",
+      "order": 8
+    },
+    {
+      "groupId": "pt_dhcp",
+      "track": "packetTracer",
+      "title": "DHCP",
+      "order": 9
+    },
+    {
+      "groupId": "pt_services",
+      "track": "packetTracer",
+      "title": "Services",
+      "order": 10
+    },
+    {
+      "groupId": "pt_wan",
+      "track": "packetTracer",
+      "title": "ربط الفروع",
+      "order": 11
+    },
+    {
+      "groupId": "pt_internet",
+      "track": "packetTracer",
+      "title": "Internet",
+      "order": 12
+    },
+    {
+      "groupId": "pt_wireless",
+      "track": "packetTracer",
+      "title": "Wireless وIoT",
+      "order": 13
+    },
+    {
+      "groupId": "pt_security",
+      "track": "packetTracer",
+      "title": "Security",
+      "order": 14
+    },
+    {
+      "groupId": "pt_final",
+      "track": "packetTracer",
+      "title": "Final Tests",
+      "order": 15
+    }
+  ],
+  "stages": [
+    {
+      "stageId": "B01",
+      "track": "book",
+      "groupId": "book_intro",
+      "title": "بيانات المشروع",
+      "description": "",
+      "order": 1,
+      "weight": 1,
+      "required": true,
+      "active": true
+    },
+    {
+      "stageId": "B02",
+      "track": "book",
+      "groupId": "book_intro",
+      "title": "المقدمة",
+      "description": "",
+      "order": 2,
+      "weight": 1,
+      "required": true,
+      "active": true
+    },
+    {
+      "stageId": "B03",
+      "track": "book",
+      "groupId": "book_intro",
+      "title": "فكرة المشروع",
+      "description": "",
+      "order": 3,
+      "weight": 1,
+      "required": true,
+      "active": true
+    },
+    {
+      "stageId": "B04",
+      "track": "book",
+      "groupId": "book_intro",
+      "title": "أهداف المشروع",
+      "description": "",
+      "order": 4,
+      "weight": 1,
+      "required": true,
+      "active": true
+    },
+    {
+      "stageId": "B05",
+      "track": "book",
+      "groupId": "book_intro",
+      "title": "وصف المؤسسة",
+      "description": "",
+      "order": 5,
+      "weight": 1,
+      "required": true,
+      "active": true
+    },
+    {
+      "stageId": "B06",
+      "track": "book",
+      "groupId": "book_intro",
+      "title": "الفروع والأقسام",
+      "description": "",
+      "order": 6,
+      "weight": 1,
+      "required": true,
+      "active": true
+    },
+    {
+      "stageId": "B07",
+      "track": "book",
+      "groupId": "book_intro",
+      "title": "المستخدمون",
+      "description": "",
+      "order": 7,
+      "weight": 1,
+      "required": true,
+      "active": true
+    },
+    {
+      "stageId": "B08",
+      "track": "book",
+      "groupId": "book_intro",
+      "title": "تحليل الاحتياجات",
+      "description": "",
+      "order": 8,
+      "weight": 1,
+      "required": true,
+      "active": true
+    },
+    {
+      "stageId": "B09",
+      "track": "book",
+      "groupId": "book_intro",
+      "title": "المتطلبات التقنية",
+      "description": "",
+      "order": 9,
+      "weight": 1,
+      "required": true,
+      "active": true
+    },
+    {
+      "stageId": "B10",
+      "track": "book",
+      "groupId": "book_planning",
+      "title": "تصميم الفروع الثلاثة",
+      "description": "",
+      "order": 10,
+      "weight": 1,
+      "required": true,
+      "active": true
+    },
+    {
+      "stageId": "B11",
+      "track": "book",
+      "groupId": "book_planning",
+      "title": "المخطط الفيزيائي",
+      "description": "",
+      "order": 11,
+      "weight": 1,
+      "required": true,
+      "active": true
+    },
+    {
+      "stageId": "B12",
+      "track": "book",
+      "groupId": "book_planning",
+      "title": "المخطط المنطقي",
+      "description": "",
+      "order": 12,
+      "weight": 1,
+      "required": true,
+      "active": true
+    },
+    {
+      "stageId": "B13",
+      "track": "book",
+      "groupId": "book_planning",
+      "title": "جدول الأجهزة",
+      "description": "",
+      "order": 13,
+      "weight": 1,
+      "required": true,
+      "active": true
+    },
+    {
+      "stageId": "B14",
+      "track": "book",
+      "groupId": "book_planning",
+      "title": "خطة IP Addressing",
+      "description": "",
+      "order": 14,
+      "weight": 1,
+      "required": true,
+      "active": true
+    },
+    {
+      "stageId": "B15",
+      "track": "book",
+      "groupId": "book_planning",
+      "title": "جدول VLANs",
+      "description": "",
+      "order": 15,
+      "weight": 1,
+      "required": true,
+      "active": true
+    },
+    {
+      "stageId": "B16",
+      "track": "book",
+      "groupId": "book_planning",
+      "title": "Gateway / Subnets",
+      "description": "",
+      "order": 16,
+      "weight": 1,
+      "required": true,
+      "active": true
+    },
+    {
+      "stageId": "B17",
+      "track": "book",
+      "groupId": "book_planning",
+      "title": "خطة الربط بين الفروع",
+      "description": "",
+      "order": 17,
+      "weight": 1,
+      "required": true,
+      "active": true
+    },
+    {
+      "stageId": "B18",
+      "track": "book",
+      "groupId": "book_implementation",
+      "title": "شرح Switches وVLAN",
+      "description": "",
+      "order": 18,
+      "weight": 1,
+      "required": true,
+      "active": true,
+      "relatedStageIds": [
+        "P11",
+        "P12"
+      ]
+    },
+    {
+      "stageId": "B19",
+      "track": "book",
+      "groupId": "book_implementation",
+      "title": "شرح Trunk / Native VLAN / VTP حسب المشروع",
+      "description": "",
+      "order": 19,
+      "weight": 1,
+      "required": true,
+      "active": true,
+      "relatedStageIds": [
+        "P13",
+        "P14",
+        "P15"
+      ]
+    },
+    {
+      "stageId": "B20",
+      "track": "book",
+      "groupId": "book_implementation",
+      "title": "شرح Router-on-a-Stick / SVI",
+      "description": "",
+      "order": 20,
+      "weight": 1,
+      "required": true,
+      "active": true,
+      "relatedStageIds": [
+        "P17",
+        "P18"
+      ]
+    },
+    {
+      "stageId": "B21",
+      "track": "book",
+      "groupId": "book_implementation",
+      "title": "شرح DHCP",
+      "description": "",
+      "order": 21,
+      "weight": 1,
+      "required": true,
+      "active": true,
+      "relatedStageIds": [
+        "P22",
+        "P23",
+        "P24",
+        "P25"
+      ]
+    },
+    {
+      "stageId": "B22",
+      "track": "book",
+      "groupId": "book_implementation",
+      "title": "شرح DNS",
+      "description": "",
+      "order": 22,
+      "weight": 1,
+      "required": true,
+      "active": true,
+      "relatedStageIds": [
+        "P27"
+      ]
+    },
+    {
+      "stageId": "B23",
+      "track": "book",
+      "groupId": "book_implementation",
+      "title": "شرح HTTP",
+      "description": "",
+      "order": 23,
+      "weight": 1,
+      "required": true,
+      "active": true,
+      "relatedStageIds": [
+        "P28"
+      ]
+    },
+    {
+      "stageId": "B24",
+      "track": "book",
+      "groupId": "book_implementation",
+      "title": "شرح FTP",
+      "description": "",
+      "order": 24,
+      "weight": 1,
+      "required": true,
+      "active": true,
+      "relatedStageIds": [
+        "P29"
+      ]
+    },
+    {
+      "stageId": "B25",
+      "track": "book",
+      "groupId": "book_implementation",
+      "title": "شرح Email",
+      "description": "",
+      "order": 25,
+      "weight": 1,
+      "required": true,
+      "active": true,
+      "relatedStageIds": [
+        "P30"
+      ]
+    },
+    {
+      "stageId": "B26",
+      "track": "book",
+      "groupId": "book_implementation",
+      "title": "شرح Metro / WAN",
+      "description": "",
+      "order": 26,
+      "weight": 1,
+      "required": true,
+      "active": true,
+      "relatedStageIds": [
+        "P32"
+      ]
+    },
+    {
+      "stageId": "B27",
+      "track": "book",
+      "groupId": "book_implementation",
+      "title": "شرح OSPF",
+      "description": "",
+      "order": 27,
+      "weight": 1,
+      "required": true,
+      "active": true,
+      "relatedStageIds": [
+        "P33",
+        "P34"
+      ]
+    },
+    {
+      "stageId": "B28",
+      "track": "book",
+      "groupId": "book_implementation",
+      "title": "شرح NAT والإنترنت",
+      "description": "",
+      "order": 28,
+      "weight": 1,
+      "required": true,
+      "active": true,
+      "relatedStageIds": [
+        "P39"
+      ]
+    },
+    {
+      "stageId": "B29",
+      "track": "book",
+      "groupId": "book_implementation",
+      "title": "شرح Wireless",
+      "description": "",
+      "order": 29,
+      "weight": 1,
+      "required": true,
+      "active": true,
+      "relatedStageIds": [
+        "P42"
+      ]
+    },
+    {
+      "stageId": "B30",
+      "track": "book",
+      "groupId": "book_implementation",
+      "title": "شرح IoT",
+      "description": "",
+      "order": 30,
+      "weight": 1,
+      "required": true,
+      "active": true,
+      "relatedStageIds": [
+        "P44"
+      ]
+    },
+    {
+      "stageId": "B31",
+      "track": "book",
+      "groupId": "book_implementation",
+      "title": "شرح ACL",
+      "description": "",
+      "order": 31,
+      "weight": 1,
+      "required": true,
+      "active": true,
+      "relatedStageIds": [
+        "P46"
+      ]
+    },
+    {
+      "stageId": "B32",
+      "track": "book",
+      "groupId": "book_implementation",
+      "title": "شرح Port-Security",
+      "description": "",
+      "order": 32,
+      "weight": 1,
+      "required": true,
+      "active": true,
+      "relatedStageIds": [
+        "P49"
+      ]
+    },
+    {
+      "stageId": "B33",
+      "track": "book",
+      "groupId": "book_implementation",
+      "title": "شرح SSH / حماية الأجهزة",
+      "description": "",
+      "order": 33,
+      "weight": 1,
+      "required": true,
+      "active": true,
+      "relatedStageIds": [
+        "P50"
+      ]
+    },
+    {
+      "stageId": "B34",
+      "track": "book",
+      "groupId": "book_testing",
+      "title": "أوامر CLI المستخدمة",
+      "description": "",
+      "order": 34,
+      "weight": 1,
+      "required": true,
+      "active": true
+    },
+    {
+      "stageId": "B35",
+      "track": "book",
+      "groupId": "book_testing",
+      "title": "Screenshots التنفيذ",
+      "description": "",
+      "order": 35,
+      "weight": 1,
+      "required": true,
+      "active": true
+    },
+    {
+      "stageId": "B36",
+      "track": "book",
+      "groupId": "book_testing",
+      "title": "اختبارات الاتصال داخل الشبكات",
+      "description": "",
+      "order": 36,
+      "weight": 1,
+      "required": true,
+      "active": true
+    },
+    {
+      "stageId": "B37",
+      "track": "book",
+      "groupId": "book_testing",
+      "title": "اختبارات الاتصال بين الفروع",
+      "description": "",
+      "order": 37,
+      "weight": 1,
+      "required": true,
+      "active": true
+    },
+    {
+      "stageId": "B38",
+      "track": "book",
+      "groupId": "book_testing",
+      "title": "اختبار DHCP",
+      "description": "",
+      "order": 38,
+      "weight": 1,
+      "required": true,
+      "active": true
+    },
+    {
+      "stageId": "B39",
+      "track": "book",
+      "groupId": "book_testing",
+      "title": "اختبار DNS",
+      "description": "",
+      "order": 39,
+      "weight": 1,
+      "required": true,
+      "active": true
+    },
+    {
+      "stageId": "B40",
+      "track": "book",
+      "groupId": "book_testing",
+      "title": "اختبار Web / FTP / Email",
+      "description": "",
+      "order": 40,
+      "weight": 1,
+      "required": true,
+      "active": true
+    },
+    {
+      "stageId": "B41",
+      "track": "book",
+      "groupId": "book_testing",
+      "title": "اختبار NAT والإنترنت",
+      "description": "",
+      "order": 41,
+      "weight": 1,
+      "required": true,
+      "active": true
+    },
+    {
+      "stageId": "B42",
+      "track": "book",
+      "groupId": "book_testing",
+      "title": "اختبار ACL",
+      "description": "",
+      "order": 42,
+      "weight": 1,
+      "required": true,
+      "active": true
+    },
+    {
+      "stageId": "B43",
+      "track": "book",
+      "groupId": "book_testing",
+      "title": "Troubleshooting والمشاكل والحلول",
+      "description": "",
+      "order": 43,
+      "weight": 1,
+      "required": true,
+      "active": true
+    },
+    {
+      "stageId": "B44",
+      "track": "book",
+      "groupId": "book_delivery",
+      "title": "توثيق عملية تطوير المشروع",
+      "description": "",
+      "order": 44,
+      "weight": 1,
+      "required": true,
+      "active": true
+    },
+    {
+      "stageId": "B45",
+      "track": "book",
+      "groupId": "book_delivery",
+      "title": "توثيق استخدام أدوات AI",
+      "description": "",
+      "order": 45,
+      "weight": 1,
+      "required": true,
+      "active": true
+    },
+    {
+      "stageId": "B46",
+      "track": "book",
+      "groupId": "book_delivery",
+      "title": "Reflection / التأمل الشخصي",
+      "description": "",
+      "order": 46,
+      "weight": 1,
+      "required": true,
+      "active": true
+    },
+    {
+      "stageId": "B47",
+      "track": "book",
+      "groupId": "book_delivery",
+      "title": "الاستنتاجات",
+      "description": "",
+      "order": 47,
+      "weight": 1,
+      "required": true,
+      "active": true
+    },
+    {
+      "stageId": "B48",
+      "track": "book",
+      "groupId": "book_delivery",
+      "title": "المصادر والمراجع",
+      "description": "",
+      "order": 48,
+      "weight": 1,
+      "required": true,
+      "active": true
+    },
+    {
+      "stageId": "B49",
+      "track": "book",
+      "groupId": "book_delivery",
+      "title": "مراجعة الكتاب",
+      "description": "",
+      "order": 49,
+      "weight": 1,
+      "required": true,
+      "active": true
+    },
+    {
+      "stageId": "B50",
+      "track": "book",
+      "groupId": "book_delivery",
+      "title": "تسليم النسخة النهائية من الكتاب",
+      "description": "",
+      "order": 50,
+      "weight": 1,
+      "required": true,
+      "active": true
+    },
+    {
+      "stageId": "P01",
+      "track": "packetTracer",
+      "groupId": "pt_environment",
+      "title": "إنشاء ملف Packet Tracer",
+      "description": "",
+      "order": 1,
+      "weight": 1,
+      "required": true,
+      "active": true
+    },
+    {
+      "stageId": "P02",
+      "track": "packetTracer",
+      "groupId": "pt_environment",
+      "title": "بناء BR1",
+      "description": "",
+      "order": 2,
+      "weight": 1,
+      "required": true,
+      "active": true
+    },
+    {
+      "stageId": "P03",
+      "track": "packetTracer",
+      "groupId": "pt_environment",
+      "title": "بناء BR2",
+      "description": "",
+      "order": 3,
+      "weight": 1,
+      "required": true,
+      "active": true
+    },
+    {
+      "stageId": "P04",
+      "track": "packetTracer",
+      "groupId": "pt_environment",
+      "title": "بناء BR3",
+      "description": "",
+      "order": 4,
+      "weight": 1,
+      "required": true,
+      "active": true
+    },
+    {
+      "stageId": "P05",
+      "track": "packetTracer",
+      "groupId": "pt_environment",
+      "title": "إضافة Routers",
+      "description": "",
+      "order": 5,
+      "weight": 1,
+      "required": true,
+      "active": true
+    },
+    {
+      "stageId": "P06",
+      "track": "packetTracer",
+      "groupId": "pt_environment",
+      "title": "إضافة Switches",
+      "description": "",
+      "order": 6,
+      "weight": 1,
+      "required": true,
+      "active": true
+    },
+    {
+      "stageId": "P07",
+      "track": "packetTracer",
+      "groupId": "pt_environment",
+      "title": "إضافة Servers",
+      "description": "",
+      "order": 7,
+      "weight": 1,
+      "required": true,
+      "active": true
+    },
+    {
+      "stageId": "P08",
+      "track": "packetTracer",
+      "groupId": "pt_environment",
+      "title": "إضافة End Devices",
+      "description": "",
+      "order": 8,
+      "weight": 1,
+      "required": true,
+      "active": true
+    },
+    {
+      "stageId": "P09",
+      "track": "packetTracer",
+      "groupId": "pt_environment",
+      "title": "تسمية الأجهزة",
+      "description": "",
+      "order": 9,
+      "weight": 1,
+      "required": true,
+      "active": true
+    },
+    {
+      "stageId": "P10",
+      "track": "packetTracer",
+      "groupId": "pt_environment",
+      "title": "التوصيلات والكابلات",
+      "description": "",
+      "order": 10,
+      "weight": 1,
+      "required": true,
+      "active": true
+    },
+    {
+      "stageId": "P11",
+      "track": "packetTracer",
+      "groupId": "pt_switching",
+      "title": "إنشاء VLANs",
+      "description": "",
+      "order": 11,
+      "weight": 1,
+      "required": true,
+      "active": true
+    },
+    {
+      "stageId": "P12",
+      "track": "packetTracer",
+      "groupId": "pt_switching",
+      "title": "توزيع المنافذ على VLANs",
+      "description": "",
+      "order": 12,
+      "weight": 1,
+      "required": true,
+      "active": true
+    },
+    {
+      "stageId": "P13",
+      "track": "packetTracer",
+      "groupId": "pt_switching",
+      "title": "VTP حسب التصميم",
+      "description": "",
+      "order": 13,
+      "weight": 1,
+      "required": true,
+      "active": true
+    },
+    {
+      "stageId": "P14",
+      "track": "packetTracer",
+      "groupId": "pt_switching",
+      "title": "Trunk Links",
+      "description": "",
+      "order": 14,
+      "weight": 1,
+      "required": true,
+      "active": true
+    },
+    {
+      "stageId": "P15",
+      "track": "packetTracer",
+      "groupId": "pt_switching",
+      "title": "Native VLAN",
+      "description": "",
+      "order": 15,
+      "weight": 1,
+      "required": true,
+      "active": true
+    },
+    {
+      "stageId": "P16",
+      "track": "packetTracer",
+      "groupId": "pt_switching",
+      "title": "فحص VLAN / Trunk",
+      "description": "",
+      "order": 16,
+      "weight": 1,
+      "required": true,
+      "active": true
+    },
+    {
+      "stageId": "P17",
+      "track": "packetTracer",
+      "groupId": "pt_intervlan",
+      "title": "Router-on-a-Stick في الفروع المطلوبة",
+      "description": "",
+      "order": 17,
+      "weight": 1,
+      "required": true,
+      "active": true
+    },
+    {
+      "stageId": "P18",
+      "track": "packetTracer",
+      "groupId": "pt_intervlan",
+      "title": "SVI / Multilayer Switching حسب التصميم",
+      "description": "",
+      "order": 18,
+      "weight": 1,
+      "required": true,
+      "active": true
+    },
+    {
+      "stageId": "P19",
+      "track": "packetTracer",
+      "groupId": "pt_intervlan",
+      "title": "IP Addressing",
+      "description": "",
+      "order": 19,
+      "weight": 1,
+      "required": true,
+      "active": true
+    },
+    {
+      "stageId": "P20",
+      "track": "packetTracer",
+      "groupId": "pt_intervlan",
+      "title": "Default Gateways",
+      "description": "",
+      "order": 20,
+      "weight": 1,
+      "required": true,
+      "active": true
+    },
+    {
+      "stageId": "P21",
+      "track": "packetTracer",
+      "groupId": "pt_intervlan",
+      "title": "فحص Inter-VLAN Routing",
+      "description": "",
+      "order": 21,
+      "weight": 1,
+      "required": true,
+      "active": true
+    },
+    {
+      "stageId": "P22",
+      "track": "packetTracer",
+      "groupId": "pt_dhcp",
+      "title": "DHCP في BR1 عبر Server",
+      "description": "",
+      "order": 22,
+      "weight": 1,
+      "required": true,
+      "active": true
+    },
+    {
+      "stageId": "P23",
+      "track": "packetTracer",
+      "groupId": "pt_dhcp",
+      "title": "ip helper-address في BR1",
+      "description": "",
+      "order": 23,
+      "weight": 1,
+      "required": true,
+      "active": true
+    },
+    {
+      "stageId": "P24",
+      "track": "packetTracer",
+      "groupId": "pt_dhcp",
+      "title": "DHCP في BR2 عبر Router",
+      "description": "",
+      "order": 24,
+      "weight": 1,
+      "required": true,
+      "active": true
+    },
+    {
+      "stageId": "P25",
+      "track": "packetTracer",
+      "groupId": "pt_dhcp",
+      "title": "Static addressing في BR3",
+      "description": "",
+      "order": 25,
+      "weight": 1,
+      "required": true,
+      "active": true
+    },
+    {
+      "stageId": "P26",
+      "track": "packetTracer",
+      "groupId": "pt_dhcp",
+      "title": "فحص DHCP",
+      "description": "",
+      "order": 26,
+      "weight": 1,
+      "required": true,
+      "active": true
+    },
+    {
+      "stageId": "P27",
+      "track": "packetTracer",
+      "groupId": "pt_services",
+      "title": "DNS",
+      "description": "",
+      "order": 27,
+      "weight": 1,
+      "required": true,
+      "active": true
+    },
+    {
+      "stageId": "P28",
+      "track": "packetTracer",
+      "groupId": "pt_services",
+      "title": "HTTP",
+      "description": "",
+      "order": 28,
+      "weight": 1,
+      "required": true,
+      "active": true
+    },
+    {
+      "stageId": "P29",
+      "track": "packetTracer",
+      "groupId": "pt_services",
+      "title": "FTP",
+      "description": "",
+      "order": 29,
+      "weight": 1,
+      "required": true,
+      "active": true
+    },
+    {
+      "stageId": "P30",
+      "track": "packetTracer",
+      "groupId": "pt_services",
+      "title": "Email",
+      "description": "",
+      "order": 30,
+      "weight": 1,
+      "required": true,
+      "active": true
+    },
+    {
+      "stageId": "P31",
+      "track": "packetTracer",
+      "groupId": "pt_services",
+      "title": "اختبار الخدمات",
+      "description": "",
+      "order": 31,
+      "weight": 1,
+      "required": true,
+      "active": true
+    },
+    {
+      "stageId": "P32",
+      "track": "packetTracer",
+      "groupId": "pt_wan",
+      "title": "Metro / WAN Connections",
+      "description": "",
+      "order": 32,
+      "weight": 1,
+      "required": true,
+      "active": true
+    },
+    {
+      "stageId": "P33",
+      "track": "packetTracer",
+      "groupId": "pt_wan",
+      "title": "OSPF Area 0",
+      "description": "",
+      "order": 33,
+      "weight": 1,
+      "required": true,
+      "active": true
+    },
+    {
+      "stageId": "P34",
+      "track": "packetTracer",
+      "groupId": "pt_wan",
+      "title": "إعلان الشبكات في OSPF",
+      "description": "",
+      "order": 34,
+      "weight": 1,
+      "required": true,
+      "active": true
+    },
+    {
+      "stageId": "P35",
+      "track": "packetTracer",
+      "groupId": "pt_wan",
+      "title": "فحص Neighbors",
+      "description": "",
+      "order": 35,
+      "weight": 1,
+      "required": true,
+      "active": true
+    },
+    {
+      "stageId": "P36",
+      "track": "packetTracer",
+      "groupId": "pt_wan",
+      "title": "فحص Routing Table",
+      "description": "",
+      "order": 36,
+      "weight": 1,
+      "required": true,
+      "active": true
+    },
+    {
+      "stageId": "P37",
+      "track": "packetTracer",
+      "groupId": "pt_wan",
+      "title": "Ping بين الفروع",
+      "description": "",
+      "order": 37,
+      "weight": 1,
+      "required": true,
+      "active": true
+    },
+    {
+      "stageId": "P38",
+      "track": "packetTracer",
+      "groupId": "pt_internet",
+      "title": "Internet / External Router",
+      "description": "",
+      "order": 38,
+      "weight": 1,
+      "required": true,
+      "active": true
+    },
+    {
+      "stageId": "P39",
+      "track": "packetTracer",
+      "groupId": "pt_internet",
+      "title": "NAT",
+      "description": "",
+      "order": 39,
+      "weight": 1,
+      "required": true,
+      "active": true
+    },
+    {
+      "stageId": "P40",
+      "track": "packetTracer",
+      "groupId": "pt_internet",
+      "title": "External Server / Internet Services",
+      "description": "",
+      "order": 40,
+      "weight": 1,
+      "required": true,
+      "active": true
+    },
+    {
+      "stageId": "P41",
+      "track": "packetTracer",
+      "groupId": "pt_internet",
+      "title": "فحص الاتصال الخارجي",
+      "description": "",
+      "order": 41,
+      "weight": 1,
+      "required": true,
+      "active": true
+    },
+    {
+      "stageId": "P42",
+      "track": "packetTracer",
+      "groupId": "pt_wireless",
+      "title": "Wireless Network",
+      "description": "",
+      "order": 42,
+      "weight": 1,
+      "required": true,
+      "active": true
+    },
+    {
+      "stageId": "P43",
+      "track": "packetTracer",
+      "groupId": "pt_wireless",
+      "title": "Guest Network",
+      "description": "",
+      "order": 43,
+      "weight": 1,
+      "required": true,
+      "active": true
+    },
+    {
+      "stageId": "P44",
+      "track": "packetTracer",
+      "groupId": "pt_wireless",
+      "title": "IoT",
+      "description": "",
+      "order": 44,
+      "weight": 1,
+      "required": true,
+      "active": true
+    },
+    {
+      "stageId": "P45",
+      "track": "packetTracer",
+      "groupId": "pt_wireless",
+      "title": "اختبار Wireless / IoT",
+      "description": "",
+      "order": 45,
+      "weight": 1,
+      "required": true,
+      "active": true
+    },
+    {
+      "stageId": "P46",
+      "track": "packetTracer",
+      "groupId": "pt_security",
+      "title": "ACL",
+      "description": "",
+      "order": 46,
+      "weight": 1,
+      "required": true,
+      "active": true
+    },
+    {
+      "stageId": "P47",
+      "track": "packetTracer",
+      "groupId": "pt_security",
+      "title": "اختبار ACL Allow",
+      "description": "",
+      "order": 47,
+      "weight": 1,
+      "required": true,
+      "active": true
+    },
+    {
+      "stageId": "P48",
+      "track": "packetTracer",
+      "groupId": "pt_security",
+      "title": "اختبار ACL Deny",
+      "description": "",
+      "order": 48,
+      "weight": 1,
+      "required": true,
+      "active": true
+    },
+    {
+      "stageId": "P49",
+      "track": "packetTracer",
+      "groupId": "pt_security",
+      "title": "Port-Security",
+      "description": "",
+      "order": 49,
+      "weight": 1,
+      "required": true,
+      "active": true
+    },
+    {
+      "stageId": "P50",
+      "track": "packetTracer",
+      "groupId": "pt_security",
+      "title": "SSH",
+      "description": "",
+      "order": 50,
+      "weight": 1,
+      "required": true,
+      "active": true
+    },
+    {
+      "stageId": "P51",
+      "track": "packetTracer",
+      "groupId": "pt_security",
+      "title": "Device Password Protection",
+      "description": "",
+      "order": 51,
+      "weight": 1,
+      "required": true,
+      "active": true
+    },
+    {
+      "stageId": "P52",
+      "track": "packetTracer",
+      "groupId": "pt_final",
+      "title": "اختبار داخل VLAN",
+      "description": "",
+      "order": 52,
+      "weight": 1,
+      "required": true,
+      "active": true
+    },
+    {
+      "stageId": "P53",
+      "track": "packetTracer",
+      "groupId": "pt_final",
+      "title": "اختبار بين VLANs",
+      "description": "",
+      "order": 53,
+      "weight": 1,
+      "required": true,
+      "active": true
+    },
+    {
+      "stageId": "P54",
+      "track": "packetTracer",
+      "groupId": "pt_final",
+      "title": "اختبار بين الفروع",
+      "description": "",
+      "order": 54,
+      "weight": 1,
+      "required": true,
+      "active": true
+    },
+    {
+      "stageId": "P55",
+      "track": "packetTracer",
+      "groupId": "pt_final",
+      "title": "اختبار DHCP",
+      "description": "",
+      "order": 55,
+      "weight": 1,
+      "required": true,
+      "active": true
+    },
+    {
+      "stageId": "P56",
+      "track": "packetTracer",
+      "groupId": "pt_final",
+      "title": "اختبار DNS",
+      "description": "",
+      "order": 56,
+      "weight": 1,
+      "required": true,
+      "active": true
+    },
+    {
+      "stageId": "P57",
+      "track": "packetTracer",
+      "groupId": "pt_final",
+      "title": "اختبار HTTP / FTP / Email",
+      "description": "",
+      "order": 57,
+      "weight": 1,
+      "required": true,
+      "active": true
+    },
+    {
+      "stageId": "P58",
+      "track": "packetTracer",
+      "groupId": "pt_final",
+      "title": "اختبار NAT",
+      "description": "",
+      "order": 58,
+      "weight": 1,
+      "required": true,
+      "active": true
+    },
+    {
+      "stageId": "P59",
+      "track": "packetTracer",
+      "groupId": "pt_final",
+      "title": "Troubleshooting",
+      "description": "",
+      "order": 59,
+      "weight": 1,
+      "required": true,
+      "active": true
+    },
+    {
+      "stageId": "P60",
+      "track": "packetTracer",
+      "groupId": "pt_final",
+      "title": "تنظيف وترتيب المخطط",
+      "description": "",
+      "order": 60,
+      "weight": 1,
+      "required": true,
+      "active": true
+    },
+    {
+      "stageId": "P61",
+      "track": "packetTracer",
+      "groupId": "pt_final",
+      "title": "الفحص النهائي الكامل",
+      "description": "",
+      "order": 61,
+      "weight": 1,
+      "required": true,
+      "active": true
+    },
+    {
+      "stageId": "P62",
+      "track": "packetTracer",
+      "groupId": "pt_final",
+      "title": "تسليم ملف .pkt النهائي",
+      "description": "",
+      "order": 62,
+      "weight": 1,
+      "required": true,
+      "active": true
+    }
+  ]
+}

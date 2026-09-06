@@ -11,3 +11,19 @@ describe("buildNewClassroomDocument - creating a class with a name already used 
     expect(second.active).toBe(true);
   });
 });
+
+describe("buildNewClassroomDocument - optional programCode (backward compatible)", () => {
+  const now = "2027-08-01T00:00:00.000Z";
+  it("omits programCode entirely when none is given (legacy shape unchanged)", () => {
+    const doc = buildNewClassroomDocument({ name: "الثاني عشر 8", grade: "12", schoolYear: "2026-2027" }, now);
+    expect("programCode" in doc).toBe(false);
+  });
+  it("stores programCode when provided", () => {
+    const doc = buildNewClassroomDocument({ name: "الثاني عشر 8", grade: "12", schoolYear: "2026-2027", programCode: "794589" }, now);
+    expect(doc.programCode).toBe("794589");
+  });
+  it("treats an empty/whitespace programCode as none", () => {
+    const doc = buildNewClassroomDocument({ name: "x", grade: "12", schoolYear: "2026-2027", programCode: "  " }, now);
+    expect("programCode" in doc).toBe(false);
+  });
+});

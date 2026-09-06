@@ -1,6 +1,8 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { FormEvent } from "react";
 import StudentPortal from "./StudentPortal";
+import Project794589 from "./project794589/Project794589";
+import "./project794589.css";
 import TeacherPlatform from "./TeacherPlatform";
 import ImportQuestionsPanel, { createEmptyImportSession } from "./ImportQuestionsPanel";
 import type { ImportSessionState } from "./ImportQuestionsPanel";
@@ -522,7 +524,8 @@ function App() {
     useState<
       "builder" |
       "platform" |
-      "import"
+      "import" |
+      "project"
     >(
       "builder"
     );
@@ -533,6 +536,30 @@ function App() {
     setTeacherView("platform");
     setWorkspaceTab(tab);
   }
+
+  // Project 794589 tracker navigation. projectClassId is lifted here so it survives navigating away
+  // and back, and so the sidebar can badge the selected class. projectNavOpen toggles the sidebar's
+  // collapsible group.
+  const [projectTab, setProjectTab] = useState<"dashboard" | "students" | "analytics" | "settings">("dashboard");
+  const [projectClassId, setProjectClassId] = useState("");
+  const [projectNavOpen, setProjectNavOpen] = useState(false);
+
+  function goToProject(tab: "dashboard" | "students" | "analytics" | "settings") {
+    setTeacherView("project");
+    setProjectTab(tab);
+    setProjectNavOpen(true);
+  }
+
+  // Sidebar badge: number of stages waiting for the teacher's review in the selected project class.
+  const [projectReadyBadge, setProjectReadyBadge] = useState(0);
+  useEffect(() => {
+    if (!token || !projectClassId) { setProjectReadyBadge(0); return; }
+    let cancelled = false;
+    apiRequest<{ summary?: { totalReadyStages?: number } }>("/api/project-794589?resource=summary&classId=" + encodeURIComponent(projectClassId))
+      .then(r => { if (!cancelled) setProjectReadyBadge(Number(r.summary?.totalReadyStages) || 0); })
+      .catch(() => { if (!cancelled) setProjectReadyBadge(0); });
+    return () => { cancelled = true; };
+  }, [token, projectClassId, teacherView, projectTab]);
 
   const [userCode, setUserCode] = useState("");
   const [password, setPassword] = useState("");
@@ -5269,6 +5296,27 @@ function App() {
             <IconUpload size={20} />
             <span>استيراد من ملف</span>
           </button>
+
+          <div className={"app-sidebar-group " + (projectNavOpen ? "open" : "")}>
+            <button
+              className={"app-sidebar-link app-sidebar-group-head " + (teacherView === "project" ? "active" : "")}
+              aria-expanded={projectNavOpen}
+              onClick={() => setProjectNavOpen(v => !v)}
+            >
+              <span className="app-sidebar-group-emoji" aria-hidden="true">📡</span>
+              <span>مشروع 794589</span>
+              {projectReadyBadge > 0 && <span className="app-sidebar-badge">{projectReadyBadge}</span>}
+              <span className="app-sidebar-group-chevron" aria-hidden="true">{projectNavOpen ? "▾" : "▸"}</span>
+            </button>
+            {projectNavOpen && (
+              <div className="app-sidebar-subnav">
+                <button className={"app-sidebar-sublink " + (teacherView === "project" && projectTab === "dashboard" ? "active" : "")} onClick={() => goToProject("dashboard")}>🏠 لوحة المشروع</button>
+                <button className={"app-sidebar-sublink " + (teacherView === "project" && projectTab === "students" ? "active" : "")} onClick={() => goToProject("students")}>👨‍🎓 تقدّم الطلاب</button>
+                <button className={"app-sidebar-sublink " + (teacherView === "project" && projectTab === "analytics" ? "active" : "")} onClick={() => goToProject("analytics")}>📊 الإحصائيات</button>
+                <button className={"app-sidebar-sublink " + (teacherView === "project" && projectTab === "settings" ? "active" : "")} onClick={() => goToProject("settings")}>⚙️ إعداد المراحل</button>
+              </div>
+            )}
+          </div>
         </nav>
 
         <div className="app-sidebar-user">
@@ -5313,6 +5361,15 @@ function App() {
           onSessionChange={setImportSession}
           onBuildNewExam={handleBuildExamFromImportedQuestions}
           onAppendToExam={handleAppendImportedQuestions}
+        />
+      )}
+
+      {teacherView === "project" && (
+        <Project794589
+          token={token}
+          tab={projectTab}
+          classId={projectClassId}
+          onClassChange={setProjectClassId}
         />
       )}
 
