@@ -13,9 +13,8 @@ type ProjectData = {
 
 // Read-only "my project 794589" section for the student portal. Uses the student token; shows the
 // student's own progress only (the endpoint enforces ownership). Mobile-friendly.
-export default function StudentProjectSection({ token, onUnauthorized }: { token: string; onUnauthorized: () => void }) {
+export default function StudentProjectSection({ token }: { token: string }) {
   const [data, setData] = useState<ProjectData | null>(null);
-  const [error, setError] = useState("");
   const [track, setTrack] = useState<Track>("book");
 
   useEffect(() => {
@@ -23,11 +22,12 @@ export default function StudentProjectSection({ token, onUnauthorized }: { token
     (async () => {
       try {
         const r = await fetch("/api/student-project", { headers: { "x-student-token": token, Authorization: "Bearer " + token } });
+        // This is an OPTIONAL secondary panel: it must NEVER log the student out or block the
+        // portal. On any failure (401/404/network/parse) it simply doesn't render its section.
+        if (!r.ok) return;
         const j = await r.json();
-        if (r.status === 401) { onUnauthorized(); return; }
-        if (!r.ok || !j.ok) throw new Error(j.error || "تعذر تحميل المشروع.");
-        if (!cancelled) setData(j);
-      } catch (e) { if (!cancelled) setError(e instanceof Error ? e.message : "تعذر تحميل المشروع."); }
+        if (j && j.ok && !cancelled) setData(j);
+      } catch { /* ignore - section just won't show */ }
     })();
     return () => { cancelled = true; };
   }, [token]);
@@ -35,9 +35,8 @@ export default function StudentProjectSection({ token, onUnauthorized }: { token
   const groups = useMemo(() => data?.groups ? data.groups.filter(g => g.track === track).sort((a, b) => a.order - b.order) : [], [data, track]);
   const byGroup = useMemo(() => data?.stages ? stagesByGroup(data.stages.filter(s => s.active !== false), track) : new Map(), [data, track]);
 
-  // Nothing to show for non-794589 students, or on error/not-loaded.
-  if (!data && !error) return null;
-  if (error) return <section className="student-panel"><div className="platform-error">{error}</div></section>;
+  // Nothing to show for non-794589 students, or on any error/not-loaded state.
+  // This is an optional panel: it silently renders nothing rather than disrupting the portal.
   if (!data || !data.enrolled || !data.summary) return null;
 
   const s = data.summary;
