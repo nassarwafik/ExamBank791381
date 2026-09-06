@@ -11,7 +11,9 @@ type WorkspaceTab="dashboard"|"students"|"assignments";
 // here (App owns the real ExamDraft type) to avoid a value/type import coupling to App.tsx.
 type TeacherPlatformProps={token:string;currentExam:unknown|null;workspaceTab:WorkspaceTab;onCopyLibraryExamToBuilder?:(examSnapshot:any,title:string)=>void};
 type ClassArchiveView="active"|"archived";
-type Classroom={classId:string;name:string;grade:string;schoolYear:string;active:boolean;status?:string;archivedAt?:string;archivedBy?:string;archiveReason?:string;graduationYear?:string;studentCount:number;createdAt:string};
+type Classroom={classId:string;name:string;grade:string;schoolYear:string;programCode?:string;active:boolean;status?:string;archivedAt?:string;archivedBy?:string;archiveReason?:string;graduationYear?:string;studentCount:number;createdAt:string};
+
+const PROGRAM_794589="794589";
 type Student={userId:string;code:string;identityNumber:string;firstName:string;familyName:string;displayName:string;classId:string;active:boolean;archived:boolean;createdAt:string;updatedAt:string;lastLoginAt:string;submittedAssignmentsCount:number;likesCount:number};
 type Credential={userId?:string;firstName?:string;familyName?:string;displayName?:string;code:string;identityNumber?:string;password:string};
 type BulkStudent={firstName:string;familyName:string;identityNumber:string};
@@ -229,6 +231,21 @@ function TeacherPlatform({token,currentExam,workspaceTab,onCopyLibraryExamToBuil
    setSelectedClassId(result.classroom.classId);
    setNotice("✓ تم إنشاء الصف.");
   }catch(e){setError(e instanceof Error?e.message:"تعذر إنشاء الصف.")}
+  finally{setActionBusy(false)}
+ }
+
+ async function toggleProgram794589(classroom:Classroom){
+  const enrolled=classroom.programCode===PROGRAM_794589;
+  const message=enrolled
+   ?"إزالة الصف "+classroom.name+" من مشروع 794589؟\n\nلن يُحذف تقدّم الطلاب، لكن لن يظهر الصف ضمن المشروع."
+   :"إضافة الصف "+classroom.name+" إلى مشروع 794589؟";
+  if(actionBusy||!window.confirm(message))return;
+  setActionBusy(true);setError("");setNotice("");
+  try{
+   await teacherApi("/api/classrooms",{method:"POST",body:JSON.stringify({action:"setProgram",classId:classroom.classId,programCode:enrolled?"":PROGRAM_794589})});
+   await loadClasses();
+   setNotice(enrolled?"✓ تمت إزالة الصف من مشروع 794589.":"✓ تمت إضافة الصف إلى مشروع 794589. افتح 📡 مشروع 794589 من القائمة.");
+  }catch(e){setError(e instanceof Error?e.message:"تعذر تعديل برنامج الصف.")}
   finally{setActionBusy(false)}
  }
 
@@ -605,9 +622,10 @@ function TeacherPlatform({token,currentExam,workspaceTab,onCopyLibraryExamToBuil
     </nav>
     <div className="class-list">
      {visibleClasses.map(classroom=><article key={classroom.classId} className={"class-row "+(classroom.classId===selectedClassId?"selected ":"")+(classroom.active?"":"archived")}>
-      <button className="class-select" onClick={()=>setSelectedClassId(classroom.classId)}><strong>{classroom.name}</strong><span>{classroom.grade||"—"} · {classroom.studentCount} طالب</span><small>{classroom.schoolYear||""}</small>
+      <button className="class-select" onClick={()=>setSelectedClassId(classroom.classId)}><strong>{classroom.name}{classroom.programCode===PROGRAM_794589?<span className="class-program-tag">📡 794589</span>:null}</strong><span>{classroom.grade||"—"} · {classroom.studentCount} طالب</span><small>{classroom.schoolYear||""}</small>
        {classArchiveView==="archived"&&<small>{classroom.archiveReason==="graduated"?"مُخرَّج":"مؤرشف"}{classroom.archivedAt?" · "+fmtDate(classroom.archivedAt):""}{classroom.graduationYear?" · دفعة "+classroom.graduationYear:""}</small>}
       </button>
+      {classArchiveView==="active"&&<button className="class-archive" onClick={()=>toggleProgram794589(classroom)} disabled={actionBusy}>{classroom.programCode===PROGRAM_794589?"إزالة من 794589":"📡 إضافة إلى 794589"}</button>}
       {classArchiveView==="active"&&isGraduationEligible(classroom)&&<button className="class-archive" onClick={()=>graduateAndArchiveClass(classroom)} disabled={actionBusy}>🎓 تخريج وأرشفة الصف</button>}
       <button className="class-archive" onClick={()=>toggleClassArchive(classroom)} disabled={actionBusy}>{classroom.active?"أرشفة الصف":"تفعيل"}</button>
      </article>)}

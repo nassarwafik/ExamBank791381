@@ -166,3 +166,6 @@
 @media (max-width: 560px) {
   .p794-card-grid { grid-template-columns: 1fr; }
 }
+
+/* Program tag on a class row in the teacher's class list */
+.class-program-tag { margin-inline-start: 8px; font-size: 10.5px; font-weight: 800; background: var(--eb-primary-050, #eef4ff); color: var(--eb-primary-strong, #1d4ed8); padding: 2px 8px; border-radius: 999px; vertical-align: middle; }
