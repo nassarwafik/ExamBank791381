@@ -1,9 +1,10 @@
 import { useEffect, useMemo, useState } from "react";
 import { Chart as ChartJS, CategoryScale, LinearScale, PointElement, LineElement, BarElement, ArcElement, Tooltip, Legend, Filler, type ChartOptions } from "chart.js";
-import { Bar, Line } from "react-chartjs-2";
+import { Bar, Line, Doughnut } from "react-chartjs-2";
 import { projectApi } from "./api";
 import ProjectHeatmap from "./ProjectHeatmap";
-import type { ProjectAnalytics as AnalyticsData, Track } from "./types";
+import { STATUS_META } from "./helpers";
+import type { ProjectAnalytics as AnalyticsData, Track, StageStatus } from "./types";
 
 ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, BarElement, ArcElement, Tooltip, Legend, Filler);
 
@@ -60,12 +61,26 @@ export default function ProjectAnalytics({ token, classId }: { token: string; cl
     datasets: [{ label: "متوسط تقدّم الصف", data: data.weeklyTrend.map(w => w.avgOverall), borderColor: "#2563eb", backgroundColor: "rgba(37,99,235,.14)", fill: true, tension: .3 }]
   }), [data]);
 
+  // Class-wide distribution of every student×stage cell's status (derived from the heatmap payload).
+  const statusDist = useMemo(() => {
+    if (!data) return null;
+    const order: StageStatus[] = ["approved", "ready_for_review", "in_progress", "not_started"];
+    const counts: Record<StageStatus, number> = { approved: 0, ready_for_review: 0, in_progress: 0, not_started: 0 };
+    for (const row of data.heatmap.statuses) for (const key of Object.keys(row)) counts[row[key]] += 1;
+    return {
+      labels: order.map(s => STATUS_META[s].label),
+      datasets: [{ data: order.map(s => counts[s]), backgroundColor: ["#22c55e", "#60a5fa", "#fde047", "#e2e8f0"], borderWidth: 0 }]
+    };
+  }, [data]);
+  const doughnutOptions: ChartOptions<"doughnut"> = { responsive: true, maintainAspectRatio: false, cutout: "62%", plugins: { legend: { position: "bottom", rtl: true }, tooltip: { rtl: true } } };
+
   if (loading && !data) return <div className="platform-loading">⏳ جارٍ التحميل...</div>;
   if (error) return <div className="platform-error">{error} <button onClick={() => void load()}>إعادة المحاولة</button></div>;
   if (!data) return null;
   if (!data.perStudent.length) return <div className="platform-empty">لا توجد بيانات كافية للرسوم البيانية.</div>;
 
   return (
+    <>
     <div className="p794-analytics">
       <section className="platform-card"><h3>تقدّم كل طالب</h3><div className="p794-chart">{perStudentData && <Bar data={perStudentData} options={barOptions} />}</div></section>
       <section className="platform-card"><h3>📘 الكتاب مقابل 🖧 Packet Tracer</h3><div className="p794-chart">{bookVsPtData && <Bar data={bookVsPtData} options={barOptions} />}</div></section>
@@ -79,7 +94,9 @@ export default function ProjectAnalytics({ token, classId }: { token: string; cl
       </section>
       <section className="platform-card"><h3>توزيع الطلاب حسب التقدم</h3><div className="p794-chart">{bucketData && <Bar data={bucketData} options={{ ...barOptions, scales: { ...barOptions.scales, y: { beginAtZero: true, ticks: { precision: 0 } } } }} />}</div></section>
       <section className="platform-card"><h3>تطوّر متوسط تقدّم الصف</h3><div className="p794-chart">{data.weeklyTrend.length ? (trendData && <Line data={trendData} options={barOptions as unknown as ChartOptions<"line">} />) : <div className="platform-empty">لا توجد بيانات زمنية كافية بعد.</div>}</div></section>
-      <section className="platform-card"><h3>الخريطة الحرارية للمراحل</h3><ProjectHeatmap heatmap={data.heatmap} /></section>
+      <section className="platform-card"><h3>توزيع حالات المراحل في الصف</h3><div className="p794-chart">{statusDist && <Doughnut data={statusDist} options={doughnutOptions} />}</div></section>
     </div>
+    <section className="platform-card p794-heatmap-card"><h3>الخريطة الحرارية للمراحل</h3><ProjectHeatmap heatmap={data.heatmap} /></section>
+    </>
   );
 }
