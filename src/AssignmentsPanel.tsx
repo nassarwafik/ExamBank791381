@@ -1,6 +1,9 @@
 import {useEffect,useMemo,useState,Fragment} from "react";
 import AssignmentReview from "./AssignmentReview";
+import ExamThemePreview,{type PreviewSourceQuestion} from "./ExamThemePreview";
+import {normalizeExamTheme,type ExamTheme} from "./examTheme";
 import {IconPlus,IconChevronDown} from "./icons";
+import {filterLibraryCatalog,catalogCategories,categoryLabel,type LibraryCatalogItem} from "./examLibrary";
 
 type Classroom={classId:string;name:string;grade:string;active:boolean};
 type Item={assignmentId:string;classId:string;className:string;title:string;instructions:string;status:"draft"|"published"|"archived";openAt:string;dueAt:string;questionCount:number;totalMarks:number;maxAttempts:number};
@@ -23,8 +26,11 @@ export default function AssignmentsPanel({token,classes,currentExam}:Props){
  const [deadlineFor,setDeadlineFor]=useState<string|null>(null),[deadlineValue,setDeadlineValue]=useState("");
  const [analysis,setAnalysis]=useState<ItemAnalysis|null>(null),[analysisBusy,setAnalysisBusy]=useState(false),[analysisSort,setAnalysisSort]=useState<"number"|"hardest"|"easiest">("number");
  const [savedExams,setSavedExams]=useState<SavedExam[]>([]),[examSource,setExamSource]=useState(current?"current":""),[savedExam,setSavedExam]=useState<Exam|null>(null),[examLoading,setExamLoading]=useState(false);
+ const [sourceMode,setSourceMode]=useState<"mine"|"library">("mine");
+ const [libraryCatalog,setLibraryCatalog]=useState<LibraryCatalogItem[]>([]),[libraryLoading,setLibraryLoading]=useState(false),[librarySearch,setLibrarySearch]=useState(""),[libraryCategory,setLibraryCategory]=useState(""),[librarySelectedId,setLibrarySelectedId]=useState(""),[libraryExam,setLibraryExam]=useState<Exam|null>(null);
+ const [preview,setPreview]=useState<{title:string;questions:PreviewSourceQuestion[];theme:ExamTheme}|null>(null),[previewBusyId,setPreviewBusyId]=useState("");
  const active=useMemo(()=>classes.filter(x=>x.active),[classes]);
- const sourceExam=examSource==="current"?current:savedExam;
+ const sourceExam=sourceMode==="library"?libraryExam:(examSource==="current"?current:savedExam);
  useEffect(()=>{if(!classId&&active[0])setClassId(active[0].classId)},[active,classId]);
  useEffect(()=>{if(current&&examSource===""&&Array.isArray(current.questions)&&current.questions.length)setExamSource("current")},[current,examSource]);
 
@@ -52,6 +58,39 @@ export default function AssignmentsPanel({token,classes,currentExam}:Props){
    setSavedExam(r.exam||null);setTitle(String(r.exam?.title||meta?.title||""));setNotice("✓ تم اختيار الامتحان المحفوظ.");
   }catch(e){setExamSource("");setError(e instanceof Error?e.message:"تعذر فتح الامتحان المحفوظ.")}finally{setExamLoading(false)}
  }
+
+ async function switchSourceMode(mode:"mine"|"library"){
+  setSourceMode(mode);setError("");setNotice("");
+  if(mode==="library"&&!libraryCatalog.length&&!libraryLoading){
+   setLibraryLoading(true);
+   try{const r=await api<{catalog:LibraryCatalogItem[]}>("/api/exam-library");setLibraryCatalog(r.catalog||[])}
+   catch(e){setError(e instanceof Error?e.message:"تعذر تحميل مكتبة 791381.")}
+   finally{setLibraryLoading(false)}
+  }
+ }
+ async function chooseLibraryItem(it:LibraryCatalogItem){
+  if(!it.publishable||examLoading)return;
+  setLibrarySelectedId(it.libraryItemId);setLibraryExam(null);setError("");setNotice("");
+  setExamLoading(true);
+  try{
+   const r=await api<{item:{examSnapshot:Exam}}>("/api/exam-library/"+encodeURIComponent(it.libraryItemId));
+   setLibraryExam(r.item?.examSnapshot||null);setTitle(String(r.item?.examSnapshot?.title||it.title||""));setNotice("✓ تم اختيار «"+it.title+"» من مكتبة 791381.");
+  }catch(e){setLibrarySelectedId("");setError(e instanceof Error?e.message:"تعذر فتح عنصر المكتبة.")}finally{setExamLoading(false)}
+ }
+ // Preview reuses ExamThemePreview, whose toPreviewQuestion() is the single enforcement point that
+ // never copies the correct answer - so previewing any item (including needs_review ones) is safe
+ // and never reveals answers.
+ async function openPreview(it:LibraryCatalogItem){
+  if(previewBusyId)return;
+  setPreviewBusyId(it.libraryItemId);setError("");
+  try{
+   const r=await api<{item:{examSnapshot:{questions?:PreviewSourceQuestion[];presentationTheme?:string}}}>("/api/exam-library/"+encodeURIComponent(it.libraryItemId));
+   const snap=r.item?.examSnapshot;
+   setPreview({title:it.title,questions:Array.isArray(snap?.questions)?snap.questions:[],theme:normalizeExamTheme(snap?.presentationTheme)});
+  }catch(e){setError(e instanceof Error?e.message:"تعذر فتح المعاينة.")}finally{setPreviewBusyId("")}
+ }
+ const libraryFiltered=useMemo(()=>filterLibraryCatalog(libraryCatalog,{search:librarySearch,category:libraryCategory}),[libraryCatalog,librarySearch,libraryCategory]);
+ const libraryCats=useMemo(()=>catalogCategories(libraryCatalog),[libraryCatalog]);
 
  async function create(){
   if(busy||!classId||!title.trim()||!sourceExam||!Array.isArray(sourceExam.questions)||!sourceExam.questions.length)return;
@@ -96,15 +135,43 @@ export default function AssignmentsPanel({token,classes,currentExam}:Props){
   <details className="assignment-zone assignment-create-zone" open={items.length===0}>
    <summary><IconPlus size={16}/><span>إنشاء واجب جديد</span><IconChevronDown size={14} className="details-chevron"/></summary>
    <div className="assignment-zone-body">
+    <nav className="analytics-view-tabs" role="tablist" aria-label="مصدر محتوى الواجب">
+     <button type="button" className={"analytics-view-tab "+(sourceMode==="mine"?"active":"")} onClick={()=>void switchSourceMode("mine")}>🧠 امتحاناتي</button>
+     <button type="button" className={"analytics-view-tab "+(sourceMode==="library"?"active":"")} onClick={()=>void switchSourceMode("library")}>📚 مكتبة 791381</button>
+    </nav>
     <div className="assignment-source-card">
-     <div style={{flex:1}}><span>مصدر الواجب</span><strong>{sourceExam?.title||"لم يتم اختيار امتحان"}</strong><small>{sourceCount?sourceCount+" سؤال":"اختر امتحانًا من القائمة"}</small></div>
-     <div style={{minWidth:"min(100%, 390px)"}}><label>اختيار الامتحان<select value={examSource} onChange={e=>void chooseExam(e.target.value)} disabled={examLoading}>
+     <div style={{flex:1}}><span>مصدر الواجب</span><strong>{sourceExam?.title||"لم يتم اختيار محتوى"}</strong><small>{sourceCount?sourceCount+" سؤال":"اختر محتوى الواجب"}</small></div>
+     {sourceMode==="mine"&&<div style={{minWidth:"min(100%, 390px)"}}><label>اختيار الامتحان<select value={examSource} onChange={e=>void chooseExam(e.target.value)} disabled={examLoading}>
       <option value="">اختر امتحانًا محفوظًا</option>
       {current&&Array.isArray(current.questions)&&current.questions.length>0&&<option value="current">الامتحان المفتوح حاليًا · {current.title||"بدون عنوان"}</option>}
       {savedExams.map(x=><option key={x.blobName} value={x.blobName}>{x.title} · {x.questionCount} سؤال · {x.totalMarks} علامة</option>)}
-     </select></label>{examLoading&&<small>⏳ جارٍ فتح الامتحان...</small>}</div>
+     </select></label>{examLoading&&<small>⏳ جارٍ فتح الامتحان...</small>}</div>}
      <div className="assignment-source-marks">{sourceExam?.totalMarks?sourceExam.totalMarks+" علامة":"—"}</div>
     </div>
+    {sourceMode==="library"&&<div className="library-picker">
+     {libraryLoading?<div className="platform-loading">⏳ جارٍ تحميل مكتبة 791381...</div>:<>
+      <div className="library-picker-controls">
+       <input className="library-search" value={librarySearch} onChange={e=>setLibrarySearch(e.target.value)} placeholder="ابحث: VLAN، DHCP، Subnet، CIDR..."/>
+       <div className="library-cat-chips">
+        <button type="button" className={"library-cat-chip "+(libraryCategory===""?"active":"")} onClick={()=>setLibraryCategory("")}>الكل</button>
+        {libraryCats.map(code=><button key={code} type="button" className={"library-cat-chip "+(libraryCategory===code?"active":"")} onClick={()=>setLibraryCategory(code)}>{categoryLabel(code)}</button>)}
+       </div>
+      </div>
+      <div className="library-item-list">
+       {libraryFiltered.map(it=>{const selected=librarySelectedId===it.libraryItemId;const disabled=!it.publishable;return (
+        <div key={it.libraryItemId} className={"library-item"+(selected?" selected":"")+(disabled?" disabled":"")}>
+         <button type="button" className="library-item-select" onClick={()=>void chooseLibraryItem(it)} disabled={disabled||examLoading} aria-disabled={disabled}>
+          <span className="library-item-code">{it.libraryItemId}</span>
+          <span className="library-item-main"><strong>{it.title}</strong><small>{it.questionCount} سؤال · {it.totalMarks} علامة · {categoryLabel(it.category)}</small></span>
+          {disabled&&<span className="library-item-badge">يحتاج مراجعة</span>}
+         </button>
+         <button type="button" className="library-item-preview" onClick={()=>void openPreview(it)} disabled={!!previewBusyId} title="معاينة" aria-label={"معاينة "+it.title}>{previewBusyId===it.libraryItemId?"⏳":"👁"}</button>
+        </div>
+       )})}
+       {!libraryFiltered.length&&<div className="platform-empty">لا توجد عناصر مطابقة.</div>}
+      </div>
+     </>}
+    </div>}
     <div className="assignment-create-grid">
      <label>الصف<select value={classId} onChange={e=>setClassId(e.target.value)}><option value="">اختر الصف</option>{active.map(c=><option value={c.classId} key={c.classId}>{c.name}{c.grade?" · "+c.grade:""}</option>)}</select></label>
      <label>عنوان الواجب<input value={title} onChange={e=>setTitle(e.target.value)}/></label>
@@ -133,5 +200,6 @@ export default function AssignmentsPanel({token,classes,currentExam}:Props){
   {analysisBusy&&<div className="platform-loading">⏳ جارٍ تحليل الأسئلة...</div>}
   {analysis&&<section className="assignment-zone assignment-item-analysis-zone"><div className="assignments-heading"><div><span className="platform-eyebrow">Item Analysis</span><h3>تحليل الأسئلة: {analysis.title}</h3></div><button onClick={()=>setAnalysis(null)}>إغلاق</button></div><div className="gradebook-stats"><article><strong>{analysis.studentsSubmitted}/{analysis.studentsInClass}</strong><span>طلاب في التحليل</span></article><article><strong>{analysisSummary?.overallAverage===null||analysisSummary?.overallAverage===undefined?"—":analysisSummary.overallAverage+"%"}</strong><span>متوسط عام</span></article><article><strong>{analysisSummary?.hardest?"س"+analysisSummary.hardest.number:"—"}</strong><span>أصعب سؤال</span></article><article><strong>{analysisSummary?.easiest?"س"+analysisSummary.easiest.number:"—"}</strong><span>أسهل سؤال</span></article></div><div className="item-analysis-sort"><span>ترتيب حسب:</span><button className={analysisSort==="number"?"active":""} onClick={()=>setAnalysisSort("number")}>رقم السؤال</button><button className={analysisSort==="hardest"?"active":""} onClick={()=>setAnalysisSort("hardest")}>الأصعب أولًا</button><button className={analysisSort==="easiest"?"active":""} onClick={()=>setAnalysisSort("easiest")}>الأسهل أولًا</button></div><div className="students-table-wrap"><table className="students-table item-analysis-table"><thead><tr><th>#</th><th>نص السؤال</th><th>عدد الطلاب</th><th>نسبة الصحيح</th><th>متوسط العلامة</th><th>متوسط %</th><th>الصعوبة</th><th>مراجعة يدوية</th></tr></thead><tbody>{sortedQuestions.map(q=><tr key={q.questionId}><td>{q.number}</td><td className="item-analysis-text">{q.text&&q.text.length>60?q.text.slice(0,60)+"…":q.text||"—"}</td><td>{q.studentsAnalyzed}</td><td>{q.correctRate===null?"—":q.correctRate+"%"}</td><td>{q.averageScore===null?"—":q.averageScore+"/"+q.maxMarks}</td><td>{q.averagePercentage===null?"—":q.averagePercentage+"%"}</td><td>{q.difficulty?<span className={"difficulty-badge "+q.difficulty}>{q.difficulty==="easy"?"سهل":q.difficulty==="medium"?"متوسط":"صعب"}</span>:"—"}</td><td>{q.manualReviewCount>0?q.manualReviewCount:"—"}</td></tr>)}{!sortedQuestions.length&&<tr><td colSpan={8}>لا توجد أسئلة لتحليلها.</td></tr>}</tbody></table></div></section>}
   {review&&resultsFor&&<AssignmentReview token={token} assignmentId={resultsFor.assignmentId} studentId={review.studentId} initialAttempt={review.attemptNumber} onClose={()=>setReview(null)} onSaved={()=>void loadResults(resultsFor)}/>}
+  {preview&&<ExamThemePreview questions={preview.questions} theme={preview.theme} onClose={()=>setPreview(null)}/>}
  </section>;
 }
