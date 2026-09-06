@@ -1,0 +1,8 @@
+{
+  "provenance": "AI-derived and teacher-authorized (session 01RaUviSgdQWPmnCbV2aWP1J). NOT an official ministry key. F03's multiple-choice and true/false items already carry the source's own answers; only its three fill-in (open) questions are converted to multiple-choice here via toChoice (correct answer from the source; DISTRACTORS AI-authored, review them).",
+  "answers": {
+    "s1q11": { "toChoice": { "options": ["DNS", "DHCP", "HTTP", "ARP"], "correct": 0 } },
+    "s1q18": { "toChoice": { "options": ["SSH", "Telnet", "FTP", "HTTP"], "correct": 0 } },
+    "s2q4":  { "toChoice": { "options": ["talmid", "bagrut", "enable", "cisco"], "correct": 0 } }
+  }
+}

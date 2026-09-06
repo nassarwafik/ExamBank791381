@@ -18,8 +18,8 @@
     "conversionStatus": "ready",
     "publishable": true,
     "questionCount": 40,
-    "autoGradableCount": 35,
-    "manualReviewCount": 5,
+    "autoGradableCount": 38,
+    "manualReviewCount": 2,
     "unresolvedCount": 0,
     "manualReviewReasons": [
       "سؤال يُصحّح يدويًا (أمر/مقالي)."
@@ -55,8 +55,8 @@
     "conversionStatus": "ready",
     "publishable": true,
     "questionCount": 41,
-    "autoGradableCount": 36,
-    "manualReviewCount": 5,
+    "autoGradableCount": 38,
+    "manualReviewCount": 3,
     "unresolvedCount": 0,
     "manualReviewReasons": [
       "سؤال يُصحّح يدويًا (أمر/مقالي)."
@@ -70,7 +70,7 @@
     "questionCount": 45,
     "autoGradableCount": 38,
     "manualReviewCount": 7,
-    "unresolvedCount": 2,
+    "unresolvedCount": 0,
     "manualReviewReasons": [
       "سؤال يُصحّح يدويًا (أمر/مقالي)."
     ]

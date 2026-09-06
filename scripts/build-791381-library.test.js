@@ -47,8 +47,28 @@ describe("buildLibrary - end to end against real Book791381 files", () => {
     const f05 = readItem("F05").examSnapshot.questions;
     const q2 = f05.find(q => q.sourceQuestionId === "q2");   // MC, keyed { choice: 1 }
     expect(q2.answer).toEqual({ correctOptionIndex: 1 });
-    const q5 = f05.find(q => q.sourceQuestionId === "q5");   // Cisco command, keyed { manual: true }
-    expect(Object.keys(q5.answer)).toHaveLength(0);
+    const q36 = f05.find(q => q.sourceQuestionId === "q36"); // multi-line OSPF config, kept { manual: true }
+    expect(Object.keys(q36.answer)).toHaveLength(0);
+  });
+
+  it("toChoice converts an open question into an auto-graded multiple-choice one with flagged provenance", () => {
+    const q1 = readItem("F05").examSnapshot.questions.find(q => q.sourceQuestionId === "q1"); // was open, keyed toChoice
+    expect(q1.presentationType).toBe("multipleChoice");
+    expect(q1.options.length).toBeGreaterThanOrEqual(2);
+    expect(q1.answer).toEqual({ correctOptionIndex: 0 });
+    expect(q1.options[0].text).toBe("11000001");
+    expect(q1.teacherNote).toContain("مُؤلَّفة"); // options are AI-authored - flagged for review
+  });
+
+  it("leaves no un-keyed open question stranded: remaining open questions are only the intentionally-manual ones", () => {
+    // Every F item is ready, so any remaining open question must be a deliberate { manual: true },
+    // never an auto-type question missing a key.
+    for (const item of catalog.filter(c => c.libraryItemId.startsWith("F"))) {
+      const opens = readItem(item.libraryItemId).examSnapshot.questions.filter(q => q.presentationType === "open");
+      for (const q of opens) {
+        expect(Object.keys(q.answer)).toHaveLength(0); // open + empty answer = manual, graded by teacher
+      }
+    }
   });
 
   it("externalizes images: no item JSON contains a base64 data: URI, and asset files exist", () => {

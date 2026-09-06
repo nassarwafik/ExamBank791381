@@ -156,6 +156,23 @@ function applyAnswerKey(snapshot, key) {
       q.teacherNote = entry.note || "سؤال يُصحّح يدويًا (أمر/مقالي).";
       continue;
     }
+    // toChoice converts an open question into an auto-graded multiple-choice one. The DISTRACTORS are
+    // authored (not from the source), so the question is flagged with clear provenance for review;
+    // the correct answer itself is still the derived/known one. options[correct] is the right answer.
+    if (entry.toChoice && Array.isArray(entry.toChoice.options)) {
+      const opts = entry.toChoice.options;
+      const correct = entry.toChoice.correct;
+      if (opts.length < 2 || !Number.isInteger(correct) || correct < 0 || correct >= opts.length) {
+        throw new Error(snapshot.examId + "/" + q.sourceQuestionId + ": invalid toChoice (need >=2 options and an in-range correct index)");
+      }
+      q.presentationType = "multipleChoice";
+      q.options = opts.map((text, i) => ({ value: String(i), text: String(text) }));
+      q.fields = [];
+      q.answer = { correctOptionIndex: correct };
+      q.requiresManualReview = false;
+      q.teacherNote = "خيارات مُؤلَّفة آليًا بموافقة المعلم — راجِعها.";
+      continue;
+    }
     if (Number.isInteger(entry.choice)) {
       q.answer = { correctOptionIndex: entry.choice };
     }

@@ -14,13 +14,13 @@ type StudentResult={studentId:string;studentName:string;studentCode:string;attem
 type Stats={students:number;submitted:number;pendingReview:number;average:number|null;highest:number|null;lowest:number|null};
 type QuestionStat={questionId:string;number:number;text:string;type:string;maxMarks:number;studentsAnalyzed:number;correctCount:number;correctRate:number|null;averageScore:number|null;averagePercentage:number|null;manualReviewCount:number;difficulty:"easy"|"medium"|"hard"|null};
 type ItemAnalysis={assignmentId:string;title:string;studentsInClass:number;studentsSubmitted:number;attemptsAnalyzed:number;questions:QuestionStat[]};
-type Props={token:string;classes:Classroom[];currentExam:unknown|null};
+type Props={token:string;classes:Classroom[];currentExam:unknown|null;onCopyLibraryExamToBuilder?:(examSnapshot:Exam,title:string)=>void};
 
 const localDate=(h:number)=>{const d=new Date(Date.now()+h*3600000);return new Date(d.getTime()-d.getTimezoneOffset()*60000).toISOString().slice(0,16)};
 const toLocalInput=(iso:string)=>{if(!iso)return "";const d=new Date(iso);return new Date(d.getTime()-d.getTimezoneOffset()*60000).toISOString().slice(0,16)};
 const fmt=(v:string)=>v?new Date(v).toLocaleString("ar"):"بدون موعد";
 
-export default function AssignmentsPanel({token,classes,currentExam}:Props){
+export default function AssignmentsPanel({token,classes,currentExam,onCopyLibraryExamToBuilder}:Props){
  const current=currentExam&&typeof currentExam==="object"?currentExam as Exam:null;
  const [items,setItems]=useState<Item[]>([]),[classId,setClassId]=useState(""),[title,setTitle]=useState(""),[instructions,setInstructions]=useState("أجب عن جميع الأسئلة واقرأ التعليمات جيدًا قبل البدء."),[openAt,setOpenAt]=useState(localDate(0)),[dueAt,setDueAt]=useState(localDate(72)),[maxAttempts,setMaxAttempts]=useState(1),[publish,setPublish]=useState(true),[busy,setBusy]=useState(false),[loading,setLoading]=useState(false),[error,setError]=useState(""),[notice,setNotice]=useState(""),[resultsFor,setResultsFor]=useState<Item|null>(null),[results,setResults]=useState<StudentResult[]>([]),[stats,setStats]=useState<Stats|null>(null),[review,setReview]=useState<{studentId:string;attemptNumber:number}|null>(null);
  const [deadlineFor,setDeadlineFor]=useState<string|null>(null),[deadlineValue,setDeadlineValue]=useState("");
@@ -28,7 +28,7 @@ export default function AssignmentsPanel({token,classes,currentExam}:Props){
  const [savedExams,setSavedExams]=useState<SavedExam[]>([]),[examSource,setExamSource]=useState(current?"current":""),[savedExam,setSavedExam]=useState<Exam|null>(null),[examLoading,setExamLoading]=useState(false);
  const [sourceMode,setSourceMode]=useState<"mine"|"library">("mine");
  const [libraryCatalog,setLibraryCatalog]=useState<LibraryCatalogItem[]>([]),[libraryLoading,setLibraryLoading]=useState(false),[librarySearch,setLibrarySearch]=useState(""),[libraryCategory,setLibraryCategory]=useState(""),[librarySelectedId,setLibrarySelectedId]=useState(""),[libraryExam,setLibraryExam]=useState<Exam|null>(null);
- const [preview,setPreview]=useState<{title:string;questions:PreviewSourceQuestion[];theme:ExamTheme}|null>(null),[previewBusyId,setPreviewBusyId]=useState("");
+ const [preview,setPreview]=useState<{title:string;questions:PreviewSourceQuestion[];theme:ExamTheme}|null>(null),[previewBusyId,setPreviewBusyId]=useState(""),[copyBusyId,setCopyBusyId]=useState("");
  const active=useMemo(()=>classes.filter(x=>x.active),[classes]);
  const sourceExam=sourceMode==="library"?libraryExam:(examSource==="current"?current:savedExam);
  useEffect(()=>{if(!classId&&active[0])setClassId(active[0].classId)},[active,classId]);
@@ -88,6 +88,14 @@ export default function AssignmentsPanel({token,classes,currentExam}:Props){
    const snap=r.item?.examSnapshot;
    setPreview({title:it.title,questions:Array.isArray(snap?.questions)?snap.questions:[],theme:normalizeExamTheme(snap?.presentationTheme)});
   }catch(e){setError(e instanceof Error?e.message:"تعذر فتح المعاينة.")}finally{setPreviewBusyId("")}
+ }
+ async function copyLibraryItem(it:LibraryCatalogItem){
+  if(!onCopyLibraryExamToBuilder||copyBusyId)return;
+  setCopyBusyId(it.libraryItemId);setError("");setNotice("");
+  try{
+   const r=await api<{item:{examSnapshot:Exam}}>("/api/exam-library/"+encodeURIComponent(it.libraryItemId));
+   if(r.item?.examSnapshot)onCopyLibraryExamToBuilder(r.item.examSnapshot,it.title);
+  }catch(e){setError(e instanceof Error?e.message:"تعذر نسخ العنصر إلى الباني.")}finally{setCopyBusyId("")}
  }
  const libraryFiltered=useMemo(()=>filterLibraryCatalog(libraryCatalog,{search:librarySearch,category:libraryCategory}),[libraryCatalog,librarySearch,libraryCategory]);
  const libraryCats=useMemo(()=>catalogCategories(libraryCatalog),[libraryCatalog]);
@@ -166,6 +174,7 @@ export default function AssignmentsPanel({token,classes,currentExam}:Props){
           {disabled&&<span className="library-item-badge">يحتاج مراجعة</span>}
          </button>
          <button type="button" className="library-item-preview" onClick={()=>void openPreview(it)} disabled={!!previewBusyId} title="معاينة" aria-label={"معاينة "+it.title}>{previewBusyId===it.libraryItemId?"⏳":"👁"}</button>
+         {onCopyLibraryExamToBuilder&&<button type="button" className="library-item-preview" onClick={()=>void copyLibraryItem(it)} disabled={!!copyBusyId} title="نسخ إلى باني الامتحانات" aria-label={"نسخ "+it.title+" إلى الباني"}>{copyBusyId===it.libraryItemId?"⏳":"📝"}</button>}
         </div>
        )})}
        {!libraryFiltered.length&&<div className="platform-empty">لا توجد عناصر مطابقة.</div>}

@@ -14,12 +14,12 @@
   "parserFamily": "f-dom-qcard-v1",
   "conversionStatus": "ready",
   "publishable": true,
-  "autoGradableCount": 36,
-  "manualReviewCount": 5,
+  "autoGradableCount": 38,
+  "manualReviewCount": 3,
   "libraryVersion": 1,
   "sourceSha": "1f81a85ce8a8dcb0844f4121f0ab25a32a2515c59c770a09285a9bb2992be1f9",
-  "contentHash": "6f38048801ddf2184cbd21a60a7170e1a2d269ade170aaf41d134aaf01c7d098",
-  "convertedAt": "2026-09-06T12:20:04.674Z",
+  "contentHash": "aca020dca84141280624dbbcc773412ecfa40a00a894d83167c22396c22646e2",
+  "convertedAt": "2026-09-06T12:49:31.888Z",
   "source": {
     "repository": "Book791381",
     "sourceFile": "F05.html"
@@ -43,19 +43,36 @@
         "familyKey": "LIB-F05-Q01",
         "hasCLI": false,
         "requiresCalculation": false,
-        "presentationType": "open",
+        "presentationType": "multipleChoice",
         "marks": 4,
         "locked": false,
         "text": "ما هي القيمة الثنائية للعدد العشري 193؟",
         "textHtml": "",
-        "options": [],
+        "options": [
+          {
+            "value": "0",
+            "text": "11000001"
+          },
+          {
+            "value": "1",
+            "text": "11000010"
+          },
+          {
+            "value": "2",
+            "text": "10000001"
+          },
+          {
+            "value": "3",
+            "text": "11000011"
+          }
+        ],
         "fields": [],
         "parts": [],
         "answer": {
-          "text": "11000001"
+          "correctOptionIndex": 0
         },
         "hint": "",
-        "teacherNote": "",
+        "teacherNote": "خيارات مُؤلَّفة آليًا بموافقة المعلم — راجِعها.",
         "aiInstruction": "",
         "wasModified": false,
         "image": {
@@ -286,17 +303,36 @@
         "familyKey": "LIB-F05-Q05",
         "hasCLI": false,
         "requiresCalculation": false,
-        "presentationType": "open",
+        "presentationType": "multipleChoice",
         "marks": 4,
         "locked": false,
         "text": "أكملوا الأمر التالي لتعريف اسم الراوتر EXAM.",
         "textHtml": "",
-        "options": [],
+        "options": [
+          {
+            "value": "0",
+            "text": "hostname EXAM"
+          },
+          {
+            "value": "1",
+            "text": "name EXAM"
+          },
+          {
+            "value": "2",
+            "text": "set hostname EXAM"
+          },
+          {
+            "value": "3",
+            "text": "router-name EXAM"
+          }
+        ],
         "fields": [],
         "parts": [],
-        "answer": {},
+        "answer": {
+          "correctOptionIndex": 0
+        },
         "hint": "",
-        "teacherNote": "سؤال يُصحّح يدويًا (أمر/مقالي).",
+        "teacherNote": "خيارات مُؤلَّفة آليًا بموافقة المعلم — راجِعها.",
         "aiInstruction": "",
         "wasModified": false,
         "image": {
@@ -322,17 +358,36 @@
         "familyKey": "LIB-F05-Q06",
         "hasCLI": false,
         "requiresCalculation": false,
-        "presentationType": "open",
+        "presentationType": "multipleChoice",
         "marks": 4,
         "locked": false,
         "text": "اكتبوا الأمر الذي يمكن فحص الاتصال السليم بين حاسوب التلميذ 1 وبين حاسوب التلميذ 2:",
         "textHtml": "",
-        "options": [],
+        "options": [
+          {
+            "value": "0",
+            "text": "ping"
+          },
+          {
+            "value": "1",
+            "text": "ipconfig"
+          },
+          {
+            "value": "2",
+            "text": "arp -a"
+          },
+          {
+            "value": "3",
+            "text": "show cdp"
+          }
+        ],
         "fields": [],
         "parts": [],
-        "answer": {},
+        "answer": {
+          "correctOptionIndex": 0
+        },
         "hint": "",
-        "teacherNote": "سؤال يُصحّح يدويًا (أمر/مقالي).",
+        "teacherNote": "خيارات مُؤلَّفة آليًا بموافقة المعلم — راجِعها.",
         "aiInstruction": "",
         "wasModified": false,
         "image": {
@@ -365,19 +420,36 @@
         "familyKey": "LIB-F05-Q07",
         "hasCLI": false,
         "requiresCalculation": false,
-        "presentationType": "open",
+        "presentationType": "multipleChoice",
         "marks": 4,
         "locked": false,
         "text": "ما هي القيمة العشرية (أساس 10) للرقم الثنائي 101111؟",
         "textHtml": "",
-        "options": [],
+        "options": [
+          {
+            "value": "0",
+            "text": "47"
+          },
+          {
+            "value": "1",
+            "text": "46"
+          },
+          {
+            "value": "2",
+            "text": "43"
+          },
+          {
+            "value": "3",
+            "text": "45"
+          }
+        ],
         "fields": [],
         "parts": [],
         "answer": {
-          "text": "47"
+          "correctOptionIndex": 0
         },
         "hint": "",
-        "teacherNote": "",
+        "teacherNote": "خيارات مُؤلَّفة آليًا بموافقة المعلم — راجِعها.",
         "aiInstruction": "",
         "wasModified": false,
         "image": {
@@ -1005,19 +1077,36 @@
         "familyKey": "LIB-F05-Q18",
         "hasCLI": false,
         "requiresCalculation": false,
-        "presentationType": "open",
+        "presentationType": "multipleChoice",
         "marks": 4,
         "locked": false,
         "text": "معطى عنوان الـ IP التالي: 10.10.10.10/8 . ما هو معرف الشبكة (Network ID) لهذا العنوان؟",
         "textHtml": "",
-        "options": [],
+        "options": [
+          {
+            "value": "0",
+            "text": "10.0.0.0"
+          },
+          {
+            "value": "1",
+            "text": "10.10.0.0"
+          },
+          {
+            "value": "2",
+            "text": "10.10.10.0"
+          },
+          {
+            "value": "3",
+            "text": "10.255.255.255"
+          }
+        ],
         "fields": [],
         "parts": [],
         "answer": {
-          "text": "10.0.0.0"
+          "correctOptionIndex": 0
         },
         "hint": "",
-        "teacherNote": "",
+        "teacherNote": "خيارات مُؤلَّفة آليًا بموافقة المعلم — راجِعها.",
         "aiInstruction": "",
         "wasModified": false,
         "image": {
@@ -1208,19 +1297,36 @@
         "familyKey": "LIB-F05-Q22",
         "hasCLI": false,
         "requiresCalculation": false,
-        "presentationType": "open",
+        "presentationType": "multipleChoice",
         "marks": 4,
         "locked": false,
         "text": "ما هي القيمة القصوى لعدد المستضيفات التي يمكن تعريفها في شبكة Class C؟",
         "textHtml": "",
-        "options": [],
+        "options": [
+          {
+            "value": "0",
+            "text": "254"
+          },
+          {
+            "value": "1",
+            "text": "255"
+          },
+          {
+            "value": "2",
+            "text": "256"
+          },
+          {
+            "value": "3",
+            "text": "253"
+          }
+        ],
         "fields": [],
         "parts": [],
         "answer": {
-          "text": "254"
+          "correctOptionIndex": 0
         },
         "hint": "",
-        "teacherNote": "",
+        "teacherNote": "خيارات مُؤلَّفة آليًا بموافقة المعلم — راجِعها.",
         "aiInstruction": "",
         "wasModified": false,
         "image": {
@@ -1759,19 +1865,36 @@
         "familyKey": "LIB-F05-Q31",
         "hasCLI": false,
         "requiresCalculation": false,
-        "presentationType": "open",
+        "presentationType": "multipleChoice",
         "marks": 4,
         "locked": false,
         "text": "أكملوا: راوتر BAGRUT موجود في فرع مدرسة في إيلات. للارتباط بهذا الراوتر من القدس، يجب إدخال كلمة المرور:",
         "textHtml": "",
-        "options": [],
+        "options": [
+          {
+            "value": "0",
+            "text": "tikshuv5"
+          },
+          {
+            "value": "1",
+            "text": "good"
+          },
+          {
+            "value": "2",
+            "text": "tal"
+          },
+          {
+            "value": "3",
+            "text": "123!"
+          }
+        ],
         "fields": [],
         "parts": [],
         "answer": {
-          "text": "tikshuv5"
+          "correctOptionIndex": 0
         },
         "hint": "",
-        "teacherNote": "",
+        "teacherNote": "خيارات مُؤلَّفة آليًا بموافقة المعلم — راجِعها.",
         "aiInstruction": "",
         "wasModified": false,
         "image": {
@@ -2424,7 +2547,7 @@
     ],
     "totalMarks": 164,
     "status": "final",
-    "createdAt": "2026-09-06T12:20:04.759Z",
-    "updatedAt": "2026-09-06T12:20:04.759Z"
+    "createdAt": "2026-09-06T12:49:31.938Z",
+    "updatedAt": "2026-09-06T12:49:31.938Z"
   }
 }

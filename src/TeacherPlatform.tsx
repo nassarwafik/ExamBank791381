@@ -7,7 +7,9 @@ import {MEDAL_COLORS,MEDAL_LABELS,medalTier} from "./medals";
 import {normalizeClassStatus} from "./classLifecycle";
 
 type WorkspaceTab="dashboard"|"students"|"assignments";
-type TeacherPlatformProps={token:string;currentExam:unknown|null;workspaceTab:WorkspaceTab};
+// onCopyLibraryExamToBuilder: forwarded straight to AssignmentsPanel; the snapshot is typed loosely
+// here (App owns the real ExamDraft type) to avoid a value/type import coupling to App.tsx.
+type TeacherPlatformProps={token:string;currentExam:unknown|null;workspaceTab:WorkspaceTab;onCopyLibraryExamToBuilder?:(examSnapshot:any,title:string)=>void};
 type ClassArchiveView="active"|"archived";
 type Classroom={classId:string;name:string;grade:string;schoolYear:string;active:boolean;status?:string;archivedAt?:string;archivedBy?:string;archiveReason?:string;graduationYear?:string;studentCount:number;createdAt:string};
 type Student={userId:string;code:string;identityNumber:string;firstName:string;familyName:string;displayName:string;classId:string;active:boolean;archived:boolean;createdAt:string;updatedAt:string;lastLoginAt:string;submittedAssignmentsCount:number;likesCount:number};
@@ -56,7 +58,7 @@ function csvCell(value:unknown){
  return `"${text.replace(/"/g,'""')}"`;
 }
 
-function TeacherPlatform({token,currentExam,workspaceTab}:TeacherPlatformProps){
+function TeacherPlatform({token,currentExam,workspaceTab,onCopyLibraryExamToBuilder}:TeacherPlatformProps){
  const [classes,setClasses]=useState<Classroom[]>([]);
  const [classArchiveView,setClassArchiveView]=useState<ClassArchiveView>("active");
  const [students,setStudents]=useState<Student[]>([]);
@@ -559,7 +561,7 @@ function TeacherPlatform({token,currentExam,workspaceTab}:TeacherPlatformProps){
  }
 
  if(workspaceTab==="dashboard")return <section className="teacher-platform" dir="rtl"><div className="teacher-platform-inner"><TeacherDashboard token={token}/></div></section>;
- if(workspaceTab==="assignments")return <section className="teacher-platform" dir="rtl"><div className="teacher-platform-inner"><section className="teacher-assignment-heading"><span className="platform-eyebrow">Assignments</span><h2>الواجبات والاختبارات المرسلة</h2><p>إنشاء الواجبات، متابعة التسليمات، التصحيح والنتائج.</p></section><AssignmentsPanel token={token} classes={classes} currentExam={currentExam}/></div></section>;
+ if(workspaceTab==="assignments")return <section className="teacher-platform" dir="rtl"><div className="teacher-platform-inner"><section className="teacher-assignment-heading"><span className="platform-eyebrow">Assignments</span><h2>الواجبات والاختبارات المرسلة</h2><p>إنشاء الواجبات، متابعة التسليمات، التصحيح والنتائج.</p></section><AssignmentsPanel token={token} classes={classes} currentExam={currentExam} onCopyLibraryExamToBuilder={onCopyLibraryExamToBuilder}/></div></section>;
 
  const selectedCount=selectedIds.length;
  const previewValid=importPreview.filter(x=>x.status==="valid").length;

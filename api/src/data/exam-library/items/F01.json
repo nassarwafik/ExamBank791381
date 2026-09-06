@@ -18,8 +18,8 @@
   "manualReviewCount": 2,
   "libraryVersion": 1,
   "sourceSha": "1ee220d9c7192a42897c00090ee801c624b7b8c274356ebd07fc9ae90fc8eaa5",
-  "contentHash": "ef77cdf6096fb2b6d822e6093ae0d270b97544dc0a789795f0f969966c1d0959",
-  "convertedAt": "2026-09-06T12:20:04.674Z",
+  "contentHash": "9f48c2630a3e2335725826abe7235fbfe95a741b0c5a13b6fdf487a7a33eb4c5",
+  "convertedAt": "2026-09-06T12:49:31.888Z",
   "source": {
     "repository": "Book791381",
     "sourceFile": "F01.html"
@@ -153,19 +153,36 @@
         "familyKey": "LIB-F01-Q03",
         "hasCLI": false,
         "requiresCalculation": false,
-        "presentationType": "open",
+        "presentationType": "multipleChoice",
         "marks": 2,
         "locked": false,
         "text": "حوّل العدد الثنائي 11001010 إلى النظام العشري:",
         "textHtml": "",
-        "options": [],
+        "options": [
+          {
+            "value": "0",
+            "text": "202"
+          },
+          {
+            "value": "1",
+            "text": "210"
+          },
+          {
+            "value": "2",
+            "text": "206"
+          },
+          {
+            "value": "3",
+            "text": "198"
+          }
+        ],
         "fields": [],
         "parts": [],
         "answer": {
-          "text": "202"
+          "correctOptionIndex": 0
         },
         "hint": "",
-        "teacherNote": "",
+        "teacherNote": "خيارات مُؤلَّفة آليًا بموافقة المعلم — راجِعها.",
         "aiInstruction": "",
         "wasModified": false,
         "image": {
@@ -191,19 +208,36 @@
         "familyKey": "LIB-F01-Q04",
         "hasCLI": false,
         "requiresCalculation": false,
-        "presentationType": "open",
+        "presentationType": "multipleChoice",
         "marks": 2,
         "locked": false,
         "text": "عنوان IP يتكون من بت في الإصدار الرابع (IPv4)",
         "textHtml": "",
-        "options": [],
+        "options": [
+          {
+            "value": "0",
+            "text": "32"
+          },
+          {
+            "value": "1",
+            "text": "64"
+          },
+          {
+            "value": "2",
+            "text": "16"
+          },
+          {
+            "value": "3",
+            "text": "48"
+          }
+        ],
         "fields": [],
         "parts": [],
         "answer": {
-          "text": "32"
+          "correctOptionIndex": 0
         },
         "hint": "",
-        "teacherNote": "",
+        "teacherNote": "خيارات مُؤلَّفة آليًا بموافقة المعلم — راجِعها.",
         "aiInstruction": "",
         "wasModified": false,
         "image": {
@@ -905,19 +939,36 @@
         "familyKey": "LIB-F01-Q13",
         "hasCLI": false,
         "requiresCalculation": false,
-        "presentationType": "open",
+        "presentationType": "multipleChoice",
         "marks": 2,
         "locked": false,
         "text": "يتلقى الحاسوب عنواناً من نوع ________ عندما تكون خدمة الـ DHCP غير متوفرة",
         "textHtml": "",
-        "options": [],
+        "options": [
+          {
+            "value": "0",
+            "text": "APIPA"
+          },
+          {
+            "value": "1",
+            "text": "DHCP"
+          },
+          {
+            "value": "2",
+            "text": "DNS"
+          },
+          {
+            "value": "3",
+            "text": "NAT"
+          }
+        ],
         "fields": [],
         "parts": [],
         "answer": {
-          "text": "apipa"
+          "correctOptionIndex": 0
         },
         "hint": "",
-        "teacherNote": "",
+        "teacherNote": "خيارات مُؤلَّفة آليًا بموافقة المعلم — راجِعها.",
         "aiInstruction": "",
         "wasModified": false,
         "image": {
@@ -1570,19 +1621,36 @@
         "familyKey": "LIB-F01-Q24",
         "hasCLI": false,
         "requiresCalculation": false,
-        "presentationType": "open",
+        "presentationType": "multipleChoice",
         "marks": 2,
         "locked": false,
         "text": "تمعن في المخرج (OUTPUT) التالي: بناءً على المخرج ما هو رقم الـ VLAN الذي أنشأه مدير الشبكة؟",
         "textHtml": "",
-        "options": [],
+        "options": [
+          {
+            "value": "0",
+            "text": "1000"
+          },
+          {
+            "value": "1",
+            "text": "1"
+          },
+          {
+            "value": "2",
+            "text": "1002"
+          },
+          {
+            "value": "3",
+            "text": "10"
+          }
+        ],
         "fields": [],
         "parts": [],
         "answer": {
-          "text": "1000"
+          "correctOptionIndex": 0
         },
         "hint": "",
-        "teacherNote": "",
+        "teacherNote": "خيارات مُؤلَّفة آليًا بموافقة المعلم — راجِعها.",
         "aiInstruction": "",
         "wasModified": false,
         "image": {
@@ -2058,19 +2126,36 @@
         "familyKey": "LIB-F01-Q33",
         "hasCLI": false,
         "requiresCalculation": false,
-        "presentationType": "open",
+        "presentationType": "multipleChoice",
         "marks": 4,
         "locked": false,
         "text": "ما هو عدد مناطق التصادم (Collision Domains) في الطوبولوجيا الظاهرة في الصورة؟",
         "textHtml": "",
-        "options": [],
+        "options": [
+          {
+            "value": "0",
+            "text": "6"
+          },
+          {
+            "value": "1",
+            "text": "4"
+          },
+          {
+            "value": "2",
+            "text": "5"
+          },
+          {
+            "value": "3",
+            "text": "3"
+          }
+        ],
         "fields": [],
         "parts": [],
         "answer": {
-          "text": "6"
+          "correctOptionIndex": 0
         },
         "hint": "",
-        "teacherNote": "",
+        "teacherNote": "خيارات مُؤلَّفة آليًا بموافقة المعلم — راجِعها.",
         "aiInstruction": "",
         "wasModified": false,
         "image": {
@@ -2155,7 +2240,7 @@
     ],
     "totalMarks": 100,
     "status": "final",
-    "createdAt": "2026-09-06T12:20:04.685Z",
-    "updatedAt": "2026-09-06T12:20:04.685Z"
+    "createdAt": "2026-09-06T12:49:31.896Z",
+    "updatedAt": "2026-09-06T12:49:31.896Z"
   }
 }

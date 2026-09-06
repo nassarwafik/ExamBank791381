@@ -1175,6 +1175,27 @@ function App() {
     }, 80);
   }
 
+  // Opens a copy of a library exam in the builder as a fresh, editable draft (new id + title), so
+  // the teacher can adjust it and save it as their own via Saved Exams - the library item itself
+  // stays read-only. Reuses the same load-into-builder path as the import flow above.
+  function handleCopyLibraryExamToBuilder(examSnapshot: ExamDraft, title: string) {
+    const copy: ExamDraft = {
+      ...examSnapshot,
+      examId: "COPY-" + Math.random().toString(16).slice(2, 10),
+      title: (title || examSnapshot.title || "امتحان") + " (نسخة قابلة للتعديل)",
+      status: "draft"
+    };
+    setPlan(examSnapshot.plan || null);
+    setExamPrompt("");
+    setExam(copy);
+    setHasUnsavedChanges(true);
+    setTeacherView("builder");
+
+    window.setTimeout(() => {
+      document.getElementById("generated-exam")?.scrollIntoView({ behavior: "smooth", block: "start" });
+    }, 80);
+  }
+
   function handleAppendImportedQuestions(questions: ExamQuestion[]) {
     setExam(previous => {
       if (!previous) {
@@ -5277,6 +5298,7 @@ function App() {
           token={token}
           currentExam={exam}
           workspaceTab={workspaceTab}
+          onCopyLibraryExamToBuilder={handleCopyLibraryExamToBuilder}
         />
       )}
 
