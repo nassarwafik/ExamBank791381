@@ -3,9 +3,22 @@ import { projectApi } from "./api";
 import { STATUS_META, TRACK_META, statusLabel, fmtDate, stagesByGroup } from "./helpers";
 import ProjectProgressBar from "./ProjectProgressBar";
 import StageStatusBadge from "./StageStatusBadge";
-import type { StudentDetail, Track, StageStatus, ProjectStage } from "./types";
+import type { StudentDetail, Track, StageStatus, ProjectStage, StudentCard, StageProgressEntry, HistoryEvent } from "./types";
 
 type Props = { token: string; classId: string; studentId: string; onBack: () => void };
+
+// Response of a progress.update POST — carries every derived field the detail view shows, so the
+// UI can update in place without a second, expensive full-student refetch.
+type UpdateResponse = {
+  ok: true;
+  noChange?: boolean;
+  summary: StudentCard;
+  stage: StageProgressEntry & { stageId: string };
+  nextBookStage: ProjectStage | null;
+  nextPacketTracerStage: ProjectStage | null;
+  balance: { leadingTrack: Track; diff: number } | null;
+  history: HistoryEvent[];
+};
 
 const STATUS_ACTIONS: { status: StageStatus; label: string }[] = [
   { status: "not_started", label: "لم يبدأ" },
@@ -41,11 +54,24 @@ export default function ProjectStudentDetail({ token, classId, studentId, onBack
     if (!detail || detail.readOnly || busy) return;
     setBusy(true); setError("");
     try {
-      await projectApi(token, "/api/project-794589", {
+      const res = await projectApi<UpdateResponse>(token, "/api/project-794589", {
         method: "POST",
         body: JSON.stringify({ action: "progress.update", classId, studentId, stageId: stage.stageId, ...patch })
       });
-      await load();
+      // Merge the server's derived result in place — no full refetch (which would re-scan every
+      // platform user just to resolve one name and took 3–5s per click).
+      if (!res.noChange) {
+        const { stageId: sid, ...entry } = res.stage;
+        setDetail(prev => prev ? {
+          ...prev,
+          summary: res.summary,
+          progress: { ...prev.progress, [sid]: entry },
+          nextBookStage: res.nextBookStage,
+          nextPacketTracerStage: res.nextPacketTracerStage,
+          balance: res.balance,
+          history: res.history
+        } : prev);
+      }
     } catch (e) { setError(e instanceof Error ? e.message : "تعذر حفظ التغيير."); }
     finally { setBusy(false); }
   }

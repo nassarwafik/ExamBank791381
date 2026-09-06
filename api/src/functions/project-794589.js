@@ -89,6 +89,37 @@ app.http("project794589", {
           return { status: 200, jsonBody: { ok: true, template: config, readOnly } };
         }
 
+        // A single student's file: load just that one user blob directly (addressed by id) instead
+        // of scanning every platform user — the old full scan made opening a student file slow.
+        if (resource === "student") {
+          const studentId = String(url.searchParams.get("studentId") || "").trim();
+          if (!studentId) return { status: 400, jsonBody: { ok: false, error: "studentId مطلوب." } };
+          const u = await downloadJsonOrNull(container, USER_PREFIX + studentId + ".json");
+          const belongs = u && u.role === "student" && String(u.classId || "") === String(classId);
+          const student = belongs
+            ? { studentId: u.userId, displayName: u.displayName || (u.firstName + " " + u.familyName).trim(), code: u.code }
+            : { studentId, displayName: "", code: "" };
+          const progress = await downloadJsonOrNull(container, progressName(classId, studentId));
+          const summary = core.buildStudentSummary(config, progress, now);
+          return {
+            status: 200,
+            jsonBody: {
+              ok: true, readOnly,
+              student,
+              summary,
+              stages: config.stages,
+              groups: config.groups,
+              trackWeights: config.trackWeights,
+              config: config.config,
+              progress: progress ? progress.stages : {},
+              history: progress ? (progress.history || []) : [],
+              nextBookStage: core.getNextStage(config.stages, progress, "book"),
+              nextPacketTracerStage: core.getNextStage(config.stages, progress, "packetTracer"),
+              balance: core.getBalanceInsight(summary.bookProgress, summary.packetTracerProgress, config.config && config.config.balanceWarningThreshold)
+            }
+          };
+        }
+
         const students = await listClassStudents(container, classId);
 
         if (resource === "summary") {
@@ -109,31 +140,6 @@ app.http("project794589", {
         if (resource === "analytics") {
           const entries = await loadProgressEntries(container, classId, students);
           return { status: 200, jsonBody: { ok: true, analytics: analytics.buildAnalytics(config, entries, now), readOnly } };
-        }
-
-        if (resource === "student") {
-          const studentId = String(url.searchParams.get("studentId") || "").trim();
-          if (!studentId) return { status: 400, jsonBody: { ok: false, error: "studentId مطلوب." } };
-          const student = students.find(s => String(s.studentId) === studentId);
-          const progress = await downloadJsonOrNull(container, progressName(classId, studentId));
-          const summary = core.buildStudentSummary(config, progress, now);
-          return {
-            status: 200,
-            jsonBody: {
-              ok: true, readOnly,
-              student: student || { studentId, displayName: "", code: "" },
-              summary,
-              stages: config.stages,
-              groups: config.groups,
-              trackWeights: config.trackWeights,
-              config: config.config,
-              progress: progress ? progress.stages : {},
-              history: progress ? (progress.history || []) : [],
-              nextBookStage: core.getNextStage(config.stages, progress, "book"),
-              nextPacketTracerStage: core.getNextStage(config.stages, progress, "packetTracer"),
-              balance: core.getBalanceInsight(summary.bookProgress, summary.packetTracerProgress, config.config && config.config.balanceWarningThreshold)
-            }
-          };
         }
 
         return { status: 400, jsonBody: { ok: false, error: "resource غير معروف." } };
@@ -189,7 +195,20 @@ app.http("project794589", {
               targetType: "project-stage", targetId: classId + "/" + studentId + "/" + stageId, targetLabel: stage.title
             });
           }
-          return { status: 200, jsonBody: { ok: true, summary, stage: { stageId, ...written.stages[stageId] } } };
+          // Return the full set of derived fields the detail view shows, so the client can update
+          // in place WITHOUT a second (expensive) resource=student round-trip.
+          return {
+            status: 200,
+            jsonBody: {
+              ok: true,
+              summary,
+              stage: { stageId, ...written.stages[stageId] },
+              nextBookStage: core.getNextStage(config.stages, written, "book"),
+              nextPacketTracerStage: core.getNextStage(config.stages, written, "packetTracer"),
+              balance: core.getBalanceInsight(summary.bookProgress, summary.packetTracerProgress, config.config && config.config.balanceWarningThreshold),
+              history: (written.history || []).slice(-20)
+            }
+          };
         } catch (e) {
           if (e && e.code === "NO_CHANGE") return { status: 200, jsonBody: { ok: true, noChange: true } };
           if (e instanceof StorageConflictError) return { status: 503, jsonBody: { ok: false, error: CONFLICT_MESSAGE } };
