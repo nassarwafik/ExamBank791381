@@ -625,9 +625,11 @@ function TeacherPlatform({token,currentExam,workspaceTab,onCopyLibraryExamToBuil
       <button className="class-select" onClick={()=>setSelectedClassId(classroom.classId)}><strong>{classroom.name}{classroom.programCode===PROGRAM_794589?<span className="class-program-tag">📡 794589</span>:null}</strong><span>{classroom.grade||"—"} · {classroom.studentCount} طالب</span><small>{classroom.schoolYear||""}</small>
        {classArchiveView==="archived"&&<small>{classroom.archiveReason==="graduated"?"مُخرَّج":"مؤرشف"}{classroom.archivedAt?" · "+fmtDate(classroom.archivedAt):""}{classroom.graduationYear?" · دفعة "+classroom.graduationYear:""}</small>}
       </button>
-      {classArchiveView==="active"&&<button className="class-archive" onClick={()=>toggleProgram794589(classroom)} disabled={actionBusy}>{classroom.programCode===PROGRAM_794589?"إزالة من 794589":"📡 إضافة إلى 794589"}</button>}
-      {classArchiveView==="active"&&isGraduationEligible(classroom)&&<button className="class-archive" onClick={()=>graduateAndArchiveClass(classroom)} disabled={actionBusy}>🎓 تخريج وأرشفة الصف</button>}
-      <button className="class-archive" onClick={()=>toggleClassArchive(classroom)} disabled={actionBusy}>{classroom.active?"أرشفة الصف":"تفعيل"}</button>
+      <div className="class-row-actions">
+       {classArchiveView==="active"&&<button className="class-archive" onClick={()=>toggleProgram794589(classroom)} disabled={actionBusy}>{classroom.programCode===PROGRAM_794589?"إزالة من 794589":"📡 إضافة إلى 794589"}</button>}
+       {classArchiveView==="active"&&isGraduationEligible(classroom)&&<button className="class-archive" onClick={()=>graduateAndArchiveClass(classroom)} disabled={actionBusy}>🎓 تخريج وأرشفة الصف</button>}
+       <button className="class-archive" onClick={()=>toggleClassArchive(classroom)} disabled={actionBusy}>{classroom.active?"أرشفة الصف":"تفعيل"}</button>
+      </div>
      </article>)}
      {!loading&&visibleClasses.length===0&&<div className="platform-empty">{classArchiveView==="active"?"لا توجد صفوف نشطة بعد.":"لا توجد صفوف مؤرشفة."}</div>}
     </div>

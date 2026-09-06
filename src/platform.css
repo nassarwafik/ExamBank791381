@@ -178,6 +178,7 @@
   border-radius: 12px;
   overflow: hidden;
   display: flex;
+  flex-direction: column;
   background: #fff;
 }
 
@@ -210,13 +211,32 @@
   color: #64748b;
 }
 
+/* Actions sit in a horizontal wrapping row beneath the class info, so each button keeps its full
+   label on one line instead of being squeezed into a narrow vertical strip. */
+.class-row-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding: 0 12px 12px;
+}
+
 .class-archive {
-  border: 0;
-  border-right: 1px solid #e9edf4;
+  flex: 1 1 auto;
+  border: 1px solid #e2e8f0;
+  border-radius: 9px;
   background: #f5f7fa;
   color: #475569;
-  padding: 8px 10px;
+  padding: 8px 12px;
+  font-weight: 700;
+  font-size: 12.5px;
+  white-space: nowrap;
   cursor: pointer;
+  transition: background .16s, border-color .16s;
+}
+
+.class-archive:hover:not(:disabled) {
+  border-color: #2563eb;
+  color: #1d4ed8;
 }
 
 .selected-class-strip {
