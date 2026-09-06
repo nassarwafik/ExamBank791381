@@ -1,0 +1,13 @@
+{
+  "provenance": "AI-derived and teacher-authorized (session 01RaUviSgdQWPmnCbV2aWP1J). NOT an official ministry key. Only the questions the source's own g() grader calls did not already key are listed here; true/false tables derived from the statements; fill-in and command items left for manual grading.",
+  "answers": {
+    "s2q1":  { "manual": true },
+    "s2q2":  { "table": ["صحيح", "صحيح"] },
+    "s3q5":  { "table": ["صحيح", "صحيح", "صحيح"] },
+    "s3q8":  { "manual": true },
+    "s3q9":  { "manual": true },
+    "s3q10": { "manual": true },
+    "s4q1":  { "table": ["صحيح", "صحيح", "صحيح", "غير صحيح"] },
+    "s4q4":  { "manual": true }
+  }
+}

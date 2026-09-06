@@ -12,14 +12,14 @@
   "totalMarks": 164,
   "pageRange": "",
   "parserFamily": "f-dom-qcard-v1",
-  "conversionStatus": "needs_review",
-  "publishable": false,
-  "autoGradableCount": 0,
-  "manualReviewCount": 41,
+  "conversionStatus": "ready",
+  "publishable": true,
+  "autoGradableCount": 36,
+  "manualReviewCount": 5,
   "libraryVersion": 1,
   "sourceSha": "1f81a85ce8a8dcb0844f4121f0ab25a32a2515c59c770a09285a9bb2992be1f9",
-  "contentHash": "ab8b5ed293b19cf19c079cafcce6c288931a11ed5eae5d529174e474cd1a1a6c",
-  "convertedAt": "2026-09-05T18:57:19.063Z",
+  "contentHash": "6f38048801ddf2184cbd21a60a7170e1a2d269ade170aaf41d134aaf01c7d098",
+  "convertedAt": "2026-09-06T12:20:04.674Z",
   "source": {
     "repository": "Book791381",
     "sourceFile": "F05.html"
@@ -51,9 +51,11 @@
         "options": [],
         "fields": [],
         "parts": [],
-        "answer": {},
+        "answer": {
+          "text": "11000001"
+        },
         "hint": "",
-        "teacherNote": "سؤال مفتوح بلا مفتاح إجابة في المصدر.",
+        "teacherNote": "",
         "aiInstruction": "",
         "wasModified": false,
         "image": {
@@ -104,9 +106,11 @@
         ],
         "fields": [],
         "parts": [],
-        "answer": {},
+        "answer": {
+          "correctOptionIndex": 1
+        },
         "hint": "",
-        "teacherNote": "لا يوجد مفتاح إجابة لهذا السؤال في المصدر.",
+        "teacherNote": "",
         "aiInstruction": "",
         "wasModified": false,
         "image": {
@@ -132,17 +136,76 @@
         "familyKey": "LIB-F05-Q03",
         "hasCLI": false,
         "requiresCalculation": false,
-        "presentationType": "open",
+        "presentationType": "matching",
         "marks": 4,
         "locked": false,
-        "text": "أمامكم أقوال تتطرق إلى عنوان الـ IP التالي: 192.15.3.0/24",
+        "text": "أمامكم أقوال تتطرق إلى عنوان الـ IP التالي: 192.15.3.0/24\n\n| البند | الإجابة |\n| --- | --- |\n| هذا العنوان هو عنوان شبكة. | |\n| هذا العنوان تابع لـ Class B. | |\n| قناع الشبكة لهذا العنوان هو 255.255.0.0. | |\n| هذا العنوان هو عنوان عمومي. | |",
         "textHtml": "",
         "options": [],
-        "fields": [],
+        "fields": [
+          {
+            "id": "r0",
+            "label": "هذا العنوان هو عنوان شبكة.",
+            "order": 0,
+            "kind": "select",
+            "options": [
+              {
+                "value": "صحيح"
+              },
+              {
+                "value": "غير صحيح"
+              }
+            ]
+          },
+          {
+            "id": "r1",
+            "label": "هذا العنوان تابع لـ Class B.",
+            "order": 1,
+            "kind": "select",
+            "options": [
+              {
+                "value": "صحيح"
+              },
+              {
+                "value": "غير صحيح"
+              }
+            ]
+          },
+          {
+            "id": "r2",
+            "label": "قناع الشبكة لهذا العنوان هو 255.255.0.0.",
+            "order": 2,
+            "kind": "select",
+            "options": [
+              {
+                "value": "صحيح"
+              },
+              {
+                "value": "غير صحيح"
+              }
+            ]
+          },
+          {
+            "id": "r3",
+            "label": "هذا العنوان هو عنوان عمومي.",
+            "order": 3,
+            "kind": "select",
+            "options": [
+              {
+                "value": "صحيح"
+              },
+              {
+                "value": "غير صحيح"
+              }
+            ]
+          }
+        ],
         "parts": [],
-        "answer": {},
+        "answer": {
+          "text": "هذا العنوان هو عنوان شبكة.=صحيح؛ هذا العنوان تابع لـ Class B.=غير صحيح؛ قناع الشبكة لهذا العنوان هو 255.255.0.0.=غير صحيح؛ هذا العنوان هو عنوان عمومي.=صحيح"
+        },
         "hint": "",
-        "teacherNote": "شكل سؤال متعدد الأجزاء غير قابل للتحويل الحتمي — يحتاج مراجعة.",
+        "teacherNote": "",
         "aiInstruction": "",
         "wasModified": false,
         "image": {
@@ -193,9 +256,11 @@
         ],
         "fields": [],
         "parts": [],
-        "answer": {},
+        "answer": {
+          "correctOptionIndex": 2
+        },
         "hint": "",
-        "teacherNote": "لا يوجد مفتاح إجابة لهذا السؤال في المصدر.",
+        "teacherNote": "",
         "aiInstruction": "",
         "wasModified": false,
         "image": {
@@ -231,7 +296,7 @@
         "parts": [],
         "answer": {},
         "hint": "",
-        "teacherNote": "شكل سؤال متعدد الأجزاء غير قابل للتحويل الحتمي — يحتاج مراجعة.",
+        "teacherNote": "سؤال يُصحّح يدويًا (أمر/مقالي).",
         "aiInstruction": "",
         "wasModified": false,
         "image": {
@@ -267,7 +332,7 @@
         "parts": [],
         "answer": {},
         "hint": "",
-        "teacherNote": "سؤال مفتوح بلا مفتاح إجابة في المصدر.",
+        "teacherNote": "سؤال يُصحّح يدويًا (أمر/مقالي).",
         "aiInstruction": "",
         "wasModified": false,
         "image": {
@@ -308,9 +373,11 @@
         "options": [],
         "fields": [],
         "parts": [],
-        "answer": {},
+        "answer": {
+          "text": "47"
+        },
         "hint": "",
-        "teacherNote": "سؤال مفتوح بلا مفتاح إجابة في المصدر.",
+        "teacherNote": "",
         "aiInstruction": "",
         "wasModified": false,
         "image": {
@@ -361,9 +428,11 @@
         ],
         "fields": [],
         "parts": [],
-        "answer": {},
+        "answer": {
+          "correctOptionIndex": 2
+        },
         "hint": "",
-        "teacherNote": "لا يوجد مفتاح إجابة لهذا السؤال في المصدر.",
+        "teacherNote": "",
         "aiInstruction": "",
         "wasModified": false,
         "image": {
@@ -389,17 +458,48 @@
         "familyKey": "LIB-F05-Q09",
         "hasCLI": false,
         "requiresCalculation": false,
-        "presentationType": "open",
+        "presentationType": "matching",
         "marks": 4,
         "locked": false,
-        "text": "أمامكم أقوال تتطرق إلى عنوان الـ IP التالي: 172.16.3.0/16",
+        "text": "أمامكم أقوال تتطرق إلى عنوان الـ IP التالي: 172.16.3.0/16\n\n| البند | الإجابة |\n| --- | --- |\n| بحسب هذا العنوان يمكن تعريف 512 حاسوبًا فقط. | |\n| قناع الشبكة لهذا العنوان هو 255.255.255.0. | |",
         "textHtml": "",
         "options": [],
-        "fields": [],
+        "fields": [
+          {
+            "id": "r0",
+            "label": "بحسب هذا العنوان يمكن تعريف 512 حاسوبًا فقط.",
+            "order": 0,
+            "kind": "select",
+            "options": [
+              {
+                "value": "صحيح"
+              },
+              {
+                "value": "غير صحيح"
+              }
+            ]
+          },
+          {
+            "id": "r1",
+            "label": "قناع الشبكة لهذا العنوان هو 255.255.255.0.",
+            "order": 1,
+            "kind": "select",
+            "options": [
+              {
+                "value": "صحيح"
+              },
+              {
+                "value": "غير صحيح"
+              }
+            ]
+          }
+        ],
         "parts": [],
-        "answer": {},
+        "answer": {
+          "text": "بحسب هذا العنوان يمكن تعريف 512 حاسوبًا فقط.=غير صحيح؛ قناع الشبكة لهذا العنوان هو 255.255.255.0.=غير صحيح"
+        },
         "hint": "",
-        "teacherNote": "شكل سؤال متعدد الأجزاء غير قابل للتحويل الحتمي — يحتاج مراجعة.",
+        "teacherNote": "",
         "aiInstruction": "",
         "wasModified": false,
         "image": {
@@ -450,9 +550,11 @@
         ],
         "fields": [],
         "parts": [],
-        "answer": {},
+        "answer": {
+          "correctOptionIndex": 1
+        },
         "hint": "",
-        "teacherNote": "لا يوجد مفتاح إجابة لهذا السؤال في المصدر.",
+        "teacherNote": "",
         "aiInstruction": "",
         "wasModified": false,
         "image": {
@@ -503,9 +605,11 @@
         ],
         "fields": [],
         "parts": [],
-        "answer": {},
+        "answer": {
+          "correctOptionIndex": 0
+        },
         "hint": "",
-        "teacherNote": "لا يوجد مفتاح إجابة لهذا السؤال في المصدر.",
+        "teacherNote": "",
         "aiInstruction": "",
         "wasModified": false,
         "image": {
@@ -556,9 +660,11 @@
         ],
         "fields": [],
         "parts": [],
-        "answer": {},
+        "answer": {
+          "correctOptionIndex": 2
+        },
         "hint": "",
-        "teacherNote": "لا يوجد مفتاح إجابة لهذا السؤال في المصدر.",
+        "teacherNote": "",
         "aiInstruction": "",
         "wasModified": false,
         "image": {
@@ -609,9 +715,11 @@
         ],
         "fields": [],
         "parts": [],
-        "answer": {},
+        "answer": {
+          "correctOptionIndex": 2
+        },
         "hint": "",
-        "teacherNote": "لا يوجد مفتاح إجابة لهذا السؤال في المصدر.",
+        "teacherNote": "",
         "aiInstruction": "",
         "wasModified": false,
         "image": {
@@ -662,9 +770,11 @@
         ],
         "fields": [],
         "parts": [],
-        "answer": {},
+        "answer": {
+          "correctOptionIndex": 0
+        },
         "hint": "",
-        "teacherNote": "لا يوجد مفتاح إجابة لهذا السؤال في المصدر.",
+        "teacherNote": "",
         "aiInstruction": "",
         "wasModified": false,
         "image": {
@@ -715,9 +825,11 @@
         ],
         "fields": [],
         "parts": [],
-        "answer": {},
+        "answer": {
+          "correctOptionIndex": 0
+        },
         "hint": "",
-        "teacherNote": "لا يوجد مفتاح إجابة لهذا السؤال في المصدر.",
+        "teacherNote": "",
         "aiInstruction": "",
         "wasModified": false,
         "image": {
@@ -768,9 +880,11 @@
         ],
         "fields": [],
         "parts": [],
-        "answer": {},
+        "answer": {
+          "correctOptionIndex": 2
+        },
         "hint": "",
-        "teacherNote": "لا يوجد مفتاح إجابة لهذا السؤال في المصدر.",
+        "teacherNote": "",
         "aiInstruction": "",
         "wasModified": false,
         "image": {
@@ -796,17 +910,76 @@
         "familyKey": "LIB-F05-Q17",
         "hasCLI": false,
         "requiresCalculation": false,
-        "presentationType": "open",
+        "presentationType": "matching",
         "marks": 4,
         "locked": false,
-        "text": "أمامكم أقوال تتطرق إلى البروتوكول DHCP.",
+        "text": "أمامكم أقوال تتطرق إلى البروتوكول DHCP.\n\n| البند | الإجابة |\n| --- | --- |\n| لا يمكن تعريف هذا البروتوكول في الراوتر. | |\n| البروتوكول يوزع عناوين IP للأجهزة في الشبكة بحسب الطلب. | |\n| البروتوكول يمكن توزيع عناوين عمومية فقط. | |\n| البروتوكول يعرض مسحًا لعناوين MAC مقابل عناوين IP. | |",
         "textHtml": "",
         "options": [],
-        "fields": [],
+        "fields": [
+          {
+            "id": "r0",
+            "label": "لا يمكن تعريف هذا البروتوكول في الراوتر.",
+            "order": 0,
+            "kind": "select",
+            "options": [
+              {
+                "value": "صحيح"
+              },
+              {
+                "value": "غير صحيح"
+              }
+            ]
+          },
+          {
+            "id": "r1",
+            "label": "البروتوكول يوزع عناوين IP للأجهزة في الشبكة بحسب الطلب.",
+            "order": 1,
+            "kind": "select",
+            "options": [
+              {
+                "value": "صحيح"
+              },
+              {
+                "value": "غير صحيح"
+              }
+            ]
+          },
+          {
+            "id": "r2",
+            "label": "البروتوكول يمكن توزيع عناوين عمومية فقط.",
+            "order": 2,
+            "kind": "select",
+            "options": [
+              {
+                "value": "صحيح"
+              },
+              {
+                "value": "غير صحيح"
+              }
+            ]
+          },
+          {
+            "id": "r3",
+            "label": "البروتوكول يعرض مسحًا لعناوين MAC مقابل عناوين IP.",
+            "order": 3,
+            "kind": "select",
+            "options": [
+              {
+                "value": "صحيح"
+              },
+              {
+                "value": "غير صحيح"
+              }
+            ]
+          }
+        ],
         "parts": [],
-        "answer": {},
+        "answer": {
+          "text": "لا يمكن تعريف هذا البروتوكول في الراوتر.=غير صحيح؛ البروتوكول يوزع عناوين IP للأجهزة في الشبكة بحسب الطلب.=صحيح؛ البروتوكول يمكن توزيع عناوين عمومية فقط.=غير صحيح؛ البروتوكول يعرض مسحًا لعناوين MAC مقابل عناوين IP.=غير صحيح"
+        },
         "hint": "",
-        "teacherNote": "شكل سؤال متعدد الأجزاء غير قابل للتحويل الحتمي — يحتاج مراجعة.",
+        "teacherNote": "",
         "aiInstruction": "",
         "wasModified": false,
         "image": {
@@ -840,9 +1013,11 @@
         "options": [],
         "fields": [],
         "parts": [],
-        "answer": {},
+        "answer": {
+          "text": "10.0.0.0"
+        },
         "hint": "",
-        "teacherNote": "سؤال مفتوح بلا مفتاح إجابة في المصدر.",
+        "teacherNote": "",
         "aiInstruction": "",
         "wasModified": false,
         "image": {
@@ -893,9 +1068,11 @@
         ],
         "fields": [],
         "parts": [],
-        "answer": {},
+        "answer": {
+          "correctOptionIndex": 2
+        },
         "hint": "",
-        "teacherNote": "لا يوجد مفتاح إجابة لهذا السؤال في المصدر.",
+        "teacherNote": "",
         "aiInstruction": "",
         "wasModified": false,
         "image": {
@@ -946,9 +1123,11 @@
         ],
         "fields": [],
         "parts": [],
-        "answer": {},
+        "answer": {
+          "correctOptionIndex": 3
+        },
         "hint": "",
-        "teacherNote": "لا يوجد مفتاح إجابة لهذا السؤال في المصدر.",
+        "teacherNote": "",
         "aiInstruction": "",
         "wasModified": false,
         "image": {
@@ -999,9 +1178,11 @@
         ],
         "fields": [],
         "parts": [],
-        "answer": {},
+        "answer": {
+          "correctOptionIndex": 1
+        },
         "hint": "",
-        "teacherNote": "لا يوجد مفتاح إجابة لهذا السؤال في المصدر.",
+        "teacherNote": "",
         "aiInstruction": "",
         "wasModified": false,
         "image": {
@@ -1035,9 +1216,11 @@
         "options": [],
         "fields": [],
         "parts": [],
-        "answer": {},
+        "answer": {
+          "text": "254"
+        },
         "hint": "",
-        "teacherNote": "سؤال مفتوح بلا مفتاح إجابة في المصدر.",
+        "teacherNote": "",
         "aiInstruction": "",
         "wasModified": false,
         "image": {
@@ -1063,17 +1246,62 @@
         "familyKey": "LIB-F05-Q23",
         "hasCLI": false,
         "requiresCalculation": false,
-        "presentationType": "open",
+        "presentationType": "matching",
         "marks": 4,
         "locked": false,
-        "text": "أمامكم أقوال تتطرق إلى تعليمات الأمان في المختبر.",
+        "text": "أمامكم أقوال تتطرق إلى تعليمات الأمان في المختبر.\n\n| البند | الإجابة |\n| --- | --- |\n| إذا تعطلت شاشة الحاسوب، يسمح للطالب أن يحاول إصلاحها بنفسه. | |\n| يجب معرفة طريق هروب مسبقًا لحالات نشوب حريق في المختبر. | |\n| يجب استعمال مسطح أمان على طاولة العمل فقط إذا ألزم العطل في الحاسوب ذلك. | |",
         "textHtml": "",
         "options": [],
-        "fields": [],
+        "fields": [
+          {
+            "id": "r0",
+            "label": "إذا تعطلت شاشة الحاسوب، يسمح للطالب أن يحاول إصلاحها بنفسه.",
+            "order": 0,
+            "kind": "select",
+            "options": [
+              {
+                "value": "صحيح"
+              },
+              {
+                "value": "غير صحيح"
+              }
+            ]
+          },
+          {
+            "id": "r1",
+            "label": "يجب معرفة طريق هروب مسبقًا لحالات نشوب حريق في المختبر.",
+            "order": 1,
+            "kind": "select",
+            "options": [
+              {
+                "value": "صحيح"
+              },
+              {
+                "value": "غير صحيح"
+              }
+            ]
+          },
+          {
+            "id": "r2",
+            "label": "يجب استعمال مسطح أمان على طاولة العمل فقط إذا ألزم العطل في الحاسوب ذلك.",
+            "order": 2,
+            "kind": "select",
+            "options": [
+              {
+                "value": "صحيح"
+              },
+              {
+                "value": "غير صحيح"
+              }
+            ]
+          }
+        ],
         "parts": [],
-        "answer": {},
+        "answer": {
+          "text": "إذا تعطلت شاشة الحاسوب، يسمح للطالب أن يحاول إصلاحها بنفسه.=غير صحيح؛ يجب معرفة طريق هروب مسبقًا لحالات نشوب حريق في المختبر.=صحيح؛ يجب استعمال مسطح أمان على طاولة العمل فقط إذا ألزم العطل في الحاسوب ذلك.=غير صحيح"
+        },
         "hint": "",
-        "teacherNote": "شكل سؤال متعدد الأجزاء غير قابل للتحويل الحتمي — يحتاج مراجعة.",
+        "teacherNote": "",
         "aiInstruction": "",
         "wasModified": false,
         "image": {
@@ -1124,9 +1352,11 @@
         ],
         "fields": [],
         "parts": [],
-        "answer": {},
+        "answer": {
+          "correctOptionIndex": 1
+        },
         "hint": "",
-        "teacherNote": "لا يوجد مفتاح إجابة لهذا السؤال في المصدر.",
+        "teacherNote": "",
         "aiInstruction": "",
         "wasModified": false,
         "image": {
@@ -1177,9 +1407,11 @@
         ],
         "fields": [],
         "parts": [],
-        "answer": {},
+        "answer": {
+          "correctOptionIndex": 3
+        },
         "hint": "",
-        "teacherNote": "لا يوجد مفتاح إجابة لهذا السؤال في المصدر.",
+        "teacherNote": "",
         "aiInstruction": "",
         "wasModified": false,
         "image": {
@@ -1230,9 +1462,11 @@
         ],
         "fields": [],
         "parts": [],
-        "answer": {},
+        "answer": {
+          "correctOptionIndex": 2
+        },
         "hint": "",
-        "teacherNote": "لا يوجد مفتاح إجابة لهذا السؤال في المصدر.",
+        "teacherNote": "",
         "aiInstruction": "",
         "wasModified": false,
         "image": {
@@ -1283,9 +1517,11 @@
         ],
         "fields": [],
         "parts": [],
-        "answer": {},
+        "answer": {
+          "correctOptionIndex": 3
+        },
         "hint": "",
-        "teacherNote": "لا يوجد مفتاح إجابة لهذا السؤال في المصدر.",
+        "teacherNote": "",
         "aiInstruction": "",
         "wasModified": false,
         "image": {
@@ -1311,17 +1547,76 @@
         "familyKey": "LIB-F05-Q28",
         "hasCLI": false,
         "requiresCalculation": false,
-        "presentationType": "open",
+        "presentationType": "matching",
         "marks": 4,
         "locked": false,
-        "text": "حددوا بالنسبة لكل قول من الأقوال التالية هل هو صحيح أو غير صحيح.",
+        "text": "حددوا بالنسبة لكل قول من الأقوال التالية هل هو صحيح أو غير صحيح.\n\n| البند | الإجابة |\n| --- | --- |\n| قائمة ARP تشمل قائمة عناوين MAC وعناوين IP. | |\n| عنوان الـ MAC لحاسوب هو عنوان منطقي، وعنوان الـ IP هو عنوان فيزيائي. | |\n| إذا لم يعرف الحاسوب ما هو عنوان الـ MAC للهدف، فسيرسل Request ARP. | |\n| رزمة Request ARP تشمل عنوان الـ IP للحاسوب الهدف. | |",
         "textHtml": "",
         "options": [],
-        "fields": [],
+        "fields": [
+          {
+            "id": "r0",
+            "label": "قائمة ARP تشمل قائمة عناوين MAC وعناوين IP.",
+            "order": 0,
+            "kind": "select",
+            "options": [
+              {
+                "value": "صحيح"
+              },
+              {
+                "value": "غير صحيح"
+              }
+            ]
+          },
+          {
+            "id": "r1",
+            "label": "عنوان الـ MAC لحاسوب هو عنوان منطقي، وعنوان الـ IP هو عنوان فيزيائي.",
+            "order": 1,
+            "kind": "select",
+            "options": [
+              {
+                "value": "صحيح"
+              },
+              {
+                "value": "غير صحيح"
+              }
+            ]
+          },
+          {
+            "id": "r2",
+            "label": "إذا لم يعرف الحاسوب ما هو عنوان الـ MAC للهدف، فسيرسل Request ARP.",
+            "order": 2,
+            "kind": "select",
+            "options": [
+              {
+                "value": "صحيح"
+              },
+              {
+                "value": "غير صحيح"
+              }
+            ]
+          },
+          {
+            "id": "r3",
+            "label": "رزمة Request ARP تشمل عنوان الـ IP للحاسوب الهدف.",
+            "order": 3,
+            "kind": "select",
+            "options": [
+              {
+                "value": "صحيح"
+              },
+              {
+                "value": "غير صحيح"
+              }
+            ]
+          }
+        ],
         "parts": [],
-        "answer": {},
+        "answer": {
+          "text": "قائمة ARP تشمل قائمة عناوين MAC وعناوين IP.=صحيح؛ عنوان الـ MAC لحاسوب هو عنوان منطقي، وعنوان الـ IP هو عنوان فيزيائي.=غير صحيح؛ إذا لم يعرف الحاسوب ما هو عنوان الـ MAC للهدف، فسيرسل Request ARP.=صحيح؛ رزمة Request ARP تشمل عنوان الـ IP للحاسوب الهدف.=صحيح"
+        },
         "hint": "",
-        "teacherNote": "شكل سؤال متعدد الأجزاء غير قابل للتحويل الحتمي — يحتاج مراجعة.",
+        "teacherNote": "",
         "aiInstruction": "",
         "wasModified": false,
         "image": {
@@ -1372,9 +1667,11 @@
         ],
         "fields": [],
         "parts": [],
-        "answer": {},
+        "answer": {
+          "correctOptionIndex": 2
+        },
         "hint": "",
-        "teacherNote": "لا يوجد مفتاح إجابة لهذا السؤال في المصدر.",
+        "teacherNote": "",
         "aiInstruction": "",
         "wasModified": false,
         "image": {
@@ -1425,9 +1722,11 @@
         ],
         "fields": [],
         "parts": [],
-        "answer": {},
+        "answer": {
+          "correctOptionIndex": 0
+        },
         "hint": "",
-        "teacherNote": "لا يوجد مفتاح إجابة لهذا السؤال في المصدر.",
+        "teacherNote": "",
         "aiInstruction": "",
         "wasModified": false,
         "image": {
@@ -1468,9 +1767,11 @@
         "options": [],
         "fields": [],
         "parts": [],
-        "answer": {},
+        "answer": {
+          "text": "tikshuv5"
+        },
         "hint": "",
-        "teacherNote": "لا يوجد مفتاح إجابة لهذا السؤال في المصدر.",
+        "teacherNote": "",
         "aiInstruction": "",
         "wasModified": false,
         "image": {
@@ -1503,17 +1804,48 @@
         "familyKey": "LIB-F05-Q32",
         "hasCLI": false,
         "requiresCalculation": false,
-        "presentationType": "open",
+        "presentationType": "matching",
         "marks": 4,
         "locked": false,
-        "text": "حددوا بالنسبة لكل قول هل هو صحيح أو غير صحيح.",
+        "text": "حددوا بالنسبة لكل قول هل هو صحيح أو غير صحيح.\n\n| البند | الإجابة |\n| --- | --- |\n| البروتوكول HTTP يُستعمل لتخصيص عناوين IP لحواسيب في الشبكة المحلية. | |\n| البروتوكول SSH يمكن الارتباط بالراوتر من بعيد بشكل آمن من أجل تعريفه. | |",
         "textHtml": "",
         "options": [],
-        "fields": [],
+        "fields": [
+          {
+            "id": "r0",
+            "label": "البروتوكول HTTP يُستعمل لتخصيص عناوين IP لحواسيب في الشبكة المحلية.",
+            "order": 0,
+            "kind": "select",
+            "options": [
+              {
+                "value": "صحيح"
+              },
+              {
+                "value": "غير صحيح"
+              }
+            ]
+          },
+          {
+            "id": "r1",
+            "label": "البروتوكول SSH يمكن الارتباط بالراوتر من بعيد بشكل آمن من أجل تعريفه.",
+            "order": 1,
+            "kind": "select",
+            "options": [
+              {
+                "value": "صحيح"
+              },
+              {
+                "value": "غير صحيح"
+              }
+            ]
+          }
+        ],
         "parts": [],
-        "answer": {},
+        "answer": {
+          "text": "البروتوكول HTTP يُستعمل لتخصيص عناوين IP لحواسيب في الشبكة المحلية.=غير صحيح؛ البروتوكول SSH يمكن الارتباط بالراوتر من بعيد بشكل آمن من أجل تعريفه.=صحيح"
+        },
         "hint": "",
-        "teacherNote": "شكل سؤال متعدد الأجزاء غير قابل للتحويل الحتمي — يحتاج مراجعة.",
+        "teacherNote": "",
         "aiInstruction": "",
         "wasModified": false,
         "image": {
@@ -1539,17 +1871,48 @@
         "familyKey": "LIB-F05-Q33",
         "hasCLI": false,
         "requiresCalculation": false,
-        "presentationType": "open",
+        "presentationType": "matching",
         "marks": 4,
         "locked": false,
-        "text": "حددوا بالنسبة لكل قول هل هو صحيح أو غير صحيح.",
+        "text": "حددوا بالنسبة لكل قول هل هو صحيح أو غير صحيح.\n\n| البند | الإجابة |\n| --- | --- |\n| خادم DHCP يمكن عملية التعريف في الحواسيب التي تطلب عنوان IP وأيضًا عنوان خادم DNS وعنوان بوابة الخروج Default Gateway. | |\n| بروتوكول DNS يجري مسحًا بين عناوين منطقية IP وبين عناوين فيزيائية MAC. | |",
         "textHtml": "",
         "options": [],
-        "fields": [],
+        "fields": [
+          {
+            "id": "r0",
+            "label": "خادم DHCP يمكن عملية التعريف في الحواسيب التي تطلب عنوان IP وأيضًا عنوان خادم DNS وعنوان بوابة الخروج Default Gateway.",
+            "order": 0,
+            "kind": "select",
+            "options": [
+              {
+                "value": "صحيح"
+              },
+              {
+                "value": "غير صحيح"
+              }
+            ]
+          },
+          {
+            "id": "r1",
+            "label": "بروتوكول DNS يجري مسحًا بين عناوين منطقية IP وبين عناوين فيزيائية MAC.",
+            "order": 1,
+            "kind": "select",
+            "options": [
+              {
+                "value": "صحيح"
+              },
+              {
+                "value": "غير صحيح"
+              }
+            ]
+          }
+        ],
         "parts": [],
-        "answer": {},
+        "answer": {
+          "text": "خادم DHCP يمكن عملية التعريف في الحواسيب التي تطلب عنوان IP وأيضًا عنوان خادم DNS وعنوان بوابة الخروج Default Gateway.=صحيح؛ بروتوكول DNS يجري مسحًا بين عناوين منطقية IP وبين عناوين فيزيائية MAC.=غير صحيح"
+        },
         "hint": "",
-        "teacherNote": "شكل سؤال متعدد الأجزاء غير قابل للتحويل الحتمي — يحتاج مراجعة.",
+        "teacherNote": "",
         "aiInstruction": "",
         "wasModified": false,
         "image": {
@@ -1600,9 +1963,11 @@
         ],
         "fields": [],
         "parts": [],
-        "answer": {},
+        "answer": {
+          "correctOptionIndex": 3
+        },
         "hint": "",
-        "teacherNote": "لا يوجد مفتاح إجابة لهذا السؤال في المصدر.",
+        "teacherNote": "",
         "aiInstruction": "",
         "wasModified": false,
         "image": {
@@ -1653,9 +2018,11 @@
         ],
         "fields": [],
         "parts": [],
-        "answer": {},
+        "answer": {
+          "correctOptionIndex": 1
+        },
         "hint": "",
-        "teacherNote": "لا يوجد مفتاح إجابة لهذا السؤال في المصدر.",
+        "teacherNote": "",
         "aiInstruction": "",
         "wasModified": false,
         "image": {
@@ -1704,7 +2071,7 @@
         "parts": [],
         "answer": {},
         "hint": "",
-        "teacherNote": "شكل سؤال متعدد الأجزاء غير قابل للتحويل الحتمي — يحتاج مراجعة.",
+        "teacherNote": "سؤال يُصحّح يدويًا (أمر/مقالي).",
         "aiInstruction": "",
         "wasModified": false,
         "image": {
@@ -1762,9 +2129,11 @@
         ],
         "fields": [],
         "parts": [],
-        "answer": {},
+        "answer": {
+          "correctOptionIndex": 2
+        },
         "hint": "",
-        "teacherNote": "لا يوجد مفتاح إجابة لهذا السؤال في المصدر.",
+        "teacherNote": "",
         "aiInstruction": "",
         "wasModified": false,
         "image": {
@@ -1807,7 +2176,7 @@
         "parts": [],
         "answer": {},
         "hint": "",
-        "teacherNote": "شكل سؤال متعدد الأجزاء غير قابل للتحويل الحتمي — يحتاج مراجعة.",
+        "teacherNote": "سؤال يُصحّح يدويًا (أمر/مقالي).",
         "aiInstruction": "",
         "wasModified": false,
         "image": {
@@ -1850,7 +2219,7 @@
         "parts": [],
         "answer": {},
         "hint": "",
-        "teacherNote": "شكل سؤال متعدد الأجزاء غير قابل للتحويل الحتمي — يحتاج مراجعة.",
+        "teacherNote": "سؤال يُصحّح يدويًا (أمر/مقالي).",
         "aiInstruction": "",
         "wasModified": false,
         "image": {
@@ -1883,17 +2252,48 @@
         "familyKey": "LIB-F05-Q40",
         "hasCLI": false,
         "requiresCalculation": false,
-        "presentationType": "open",
+        "presentationType": "matching",
         "marks": 4,
         "locked": false,
-        "text": "معطاة رزمة معطيات وصلت إلى المفتاح Main-Switch. حددوا بالنسبة لكل قول هل هو صحيح أو غير صحيح.",
+        "text": "معطاة رزمة معطيات وصلت إلى المفتاح Main-Switch. حددوا بالنسبة لكل قول هل هو صحيح أو غير صحيح.\n\n| البند | الإجابة |\n| --- | --- |\n| المفتاح سيضيف إلى قائمة عناوين الـ MAC المحفوظة في ذاكرته العنوان 000b.a024.c505. | |\n| المفتاح سيضيف إلى قائمة عناوين الـ MAC المحفوظة في ذاكرته العنوان FFFF.FFFF.FFFF. | |",
         "textHtml": "",
         "options": [],
-        "fields": [],
+        "fields": [
+          {
+            "id": "r0",
+            "label": "المفتاح سيضيف إلى قائمة عناوين الـ MAC المحفوظة في ذاكرته العنوان 000b.a024.c505.",
+            "order": 0,
+            "kind": "select",
+            "options": [
+              {
+                "value": "صحيح"
+              },
+              {
+                "value": "غير صحيح"
+              }
+            ]
+          },
+          {
+            "id": "r1",
+            "label": "المفتاح سيضيف إلى قائمة عناوين الـ MAC المحفوظة في ذاكرته العنوان FFFF.FFFF.FFFF.",
+            "order": 1,
+            "kind": "select",
+            "options": [
+              {
+                "value": "صحيح"
+              },
+              {
+                "value": "غير صحيح"
+              }
+            ]
+          }
+        ],
         "parts": [],
-        "answer": {},
+        "answer": {
+          "text": "المفتاح سيضيف إلى قائمة عناوين الـ MAC المحفوظة في ذاكرته العنوان 000b.a024.c505.=صحيح؛ المفتاح سيضيف إلى قائمة عناوين الـ MAC المحفوظة في ذاكرته العنوان FFFF.FFFF.FFFF.=غير صحيح"
+        },
         "hint": "",
-        "teacherNote": "شكل سؤال متعدد الأجزاء غير قابل للتحويل الحتمي — يحتاج مراجعة.",
+        "teacherNote": "",
         "aiInstruction": "",
         "wasModified": false,
         "image": {
@@ -1926,17 +2326,76 @@
         "familyKey": "LIB-F05-Q41",
         "hasCLI": false,
         "requiresCalculation": false,
-        "presentationType": "open",
+        "presentationType": "matching",
         "marks": 4,
         "locked": false,
-        "text": "أمامكم طوبولوجيا وتم تعريف كل الأجهزة فيها. حددوا بالنسبة لكل قول هل هو صحيح أو غير صحيح.",
+        "text": "أمامكم طوبولوجيا وتم تعريف كل الأجهزة فيها. حددوا بالنسبة لكل قول هل هو صحيح أو غير صحيح.\n\n| البند | الإجابة |\n| --- | --- |\n| يجب تعريف عنوان IP في الراوتر R1 في المخرج Gig0/0. | |\n| بدل GigabitEthernet0/0.15 يجب تعريف GigabitEthernet0/0.10. | |\n| المخرج Fa0/15 في المفتاح يجب أن يكون معرفًا إلى حالة Trunk. | |\n| بدل encapsulation dot1q 15 يجب تعريف encapsulation dot1q 10. | |",
         "textHtml": "",
         "options": [],
-        "fields": [],
+        "fields": [
+          {
+            "id": "r0",
+            "label": "يجب تعريف عنوان IP في الراوتر R1 في المخرج Gig0/0.",
+            "order": 0,
+            "kind": "select",
+            "options": [
+              {
+                "value": "صحيح"
+              },
+              {
+                "value": "غير صحيح"
+              }
+            ]
+          },
+          {
+            "id": "r1",
+            "label": "بدل GigabitEthernet0/0.15 يجب تعريف GigabitEthernet0/0.10.",
+            "order": 1,
+            "kind": "select",
+            "options": [
+              {
+                "value": "صحيح"
+              },
+              {
+                "value": "غير صحيح"
+              }
+            ]
+          },
+          {
+            "id": "r2",
+            "label": "المخرج Fa0/15 في المفتاح يجب أن يكون معرفًا إلى حالة Trunk.",
+            "order": 2,
+            "kind": "select",
+            "options": [
+              {
+                "value": "صحيح"
+              },
+              {
+                "value": "غير صحيح"
+              }
+            ]
+          },
+          {
+            "id": "r3",
+            "label": "بدل encapsulation dot1q 15 يجب تعريف encapsulation dot1q 10.",
+            "order": 3,
+            "kind": "select",
+            "options": [
+              {
+                "value": "صحيح"
+              },
+              {
+                "value": "غير صحيح"
+              }
+            ]
+          }
+        ],
         "parts": [],
-        "answer": {},
+        "answer": {
+          "text": "يجب تعريف عنوان IP في الراوتر R1 في المخرج Gig0/0.=غير صحيح؛ بدل GigabitEthernet0/0.15 يجب تعريف GigabitEthernet0/0.10.=صحيح؛ المخرج Fa0/15 في المفتاح يجب أن يكون معرفًا إلى حالة Trunk.=غير صحيح؛ بدل encapsulation dot1q 15 يجب تعريف encapsulation dot1q 10.=صحيح"
+        },
         "hint": "",
-        "teacherNote": "شكل سؤال متعدد الأجزاء غير قابل للتحويل الحتمي — يحتاج مراجعة.",
+        "teacherNote": "",
         "aiInstruction": "",
         "wasModified": false,
         "image": {
@@ -1965,7 +2424,7 @@
     ],
     "totalMarks": 164,
     "status": "final",
-    "createdAt": "2026-09-05T18:57:19.123Z",
-    "updatedAt": "2026-09-05T18:57:19.123Z"
+    "createdAt": "2026-09-06T12:20:04.759Z",
+    "updatedAt": "2026-09-06T12:20:04.759Z"
   }
 }

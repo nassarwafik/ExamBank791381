@@ -29,21 +29,26 @@ describe("buildLibrary - end to end against real Book791381 files", () => {
     expect(report.filter(item => item.conversionStatus === "unsupported")).toHaveLength(0);
   });
 
-  it("separates conversion status from publishing status: only fully-auto items are publishable", () => {
-    for (const id of ["T01", "T15", "T30", "F03"]) {
-      expect(byId(id).conversionStatus).toBe("ready");
-      expect(byId(id).publishable).toBe(true);
-    }
-    for (const id of ["F01", "F02", "F04", "F05", "F06"]) {
-      expect(byId(id).conversionStatus).toBe("needs_review");
-      expect(byId(id).publishable).toBe(false);
+  it("with answer-key overlays applied, every item is ready and publishable", () => {
+    for (const item of catalog) {
+      expect(item.conversionStatus).toBe("ready");
+      expect(item.publishable).toBe(true);
     }
   });
 
-  it("F05 (no answer key in the source) has every question flagged for manual review with reasons", () => {
-    expect(byId("F05").autoGradableCount).toBe(0);
-    expect(byId("F05").manualReviewCount).toBe(byId("F05").questionCount);
-    expect(byId("F05").manualReviewReasons.length).toBeGreaterThan(0);
+  it("separates auto-gradable from manual: F05's key auto-grades most items and leaves commands/essays manual", () => {
+    const f05 = byId("F05");
+    expect(f05.autoGradableCount).toBeGreaterThan(0);
+    expect(f05.manualReviewCount).toBeGreaterThan(0); // Cisco command / essay questions stay manual
+    expect(f05.autoGradableCount + f05.manualReviewCount).toBe(f05.questionCount);
+  });
+
+  it("applies the F05 answer key: an auto-graded question carries a real answer, a manual one does not", () => {
+    const f05 = readItem("F05").examSnapshot.questions;
+    const q2 = f05.find(q => q.sourceQuestionId === "q2");   // MC, keyed { choice: 1 }
+    expect(q2.answer).toEqual({ correctOptionIndex: 1 });
+    const q5 = f05.find(q => q.sourceQuestionId === "q5");   // Cisco command, keyed { manual: true }
+    expect(Object.keys(q5.answer)).toHaveLength(0);
   });
 
   it("externalizes images: no item JSON contains a base64 data: URI, and asset files exist", () => {

@@ -12,14 +12,14 @@
   "totalMarks": 154,
   "pageRange": "",
   "parserFamily": "f-json-sections-v1",
-  "conversionStatus": "needs_review",
-  "publishable": false,
-  "autoGradableCount": 36,
-  "manualReviewCount": 9,
+  "conversionStatus": "ready",
+  "publishable": true,
+  "autoGradableCount": 38,
+  "manualReviewCount": 7,
   "libraryVersion": 1,
   "sourceSha": "2da394df99c1398a5d1e08a92d310f9c295cbe07ab5b3f771f3aba5673de1b82",
-  "contentHash": "0b6c253dd98cf158d904b35e89bba30267ee0831d2b926a80a2273b8376820e7",
-  "convertedAt": "2026-09-05T18:57:19.063Z",
+  "contentHash": "d45f9bf85130ad3234c41863c18073c23277adca3ac94772ddd00edc4590b8d4",
+  "convertedAt": "2026-09-06T12:20:04.674Z",
   "source": {
     "repository": "Book791381",
     "sourceFile": "F06.html"
@@ -921,7 +921,7 @@
         "parts": [],
         "answer": {},
         "hint": "",
-        "teacherNote": "لا يوجد مفتاح إجابة في المصدر.",
+        "teacherNote": "سؤال يُصحّح يدويًا (أمر/مقالي).",
         "aiInstruction": "",
         "wasModified": false,
         "image": {
@@ -1605,7 +1605,7 @@
         "familyKey": "LIB-F06-Q29",
         "hasCLI": false,
         "requiresCalculation": false,
-        "presentationType": "matching",
+        "presentationType": "open",
         "marks": 4,
         "locked": false,
         "text": "أكملوا سطري ACL لمنع PC2 من إرسال معطيات إلى Router0 والسماح للباقي.\n\n| البند | الإجابة |\n| --- | --- |\n| السطر الأول | |\n| السطر الثاني | |",
@@ -1630,7 +1630,7 @@
         "parts": [],
         "answer": {},
         "hint": "",
-        "teacherNote": "بعض بنود السؤال بلا مفتاح إجابة في المصدر.",
+        "teacherNote": "سؤال يُصحّح يدويًا (أمر/مقالي).",
         "aiInstruction": "",
         "wasModified": false,
         "image": {
@@ -1666,7 +1666,7 @@
         "parts": [],
         "answer": {},
         "hint": "",
-        "teacherNote": "سؤال متعدد الأجزاء مختلط (radio+text+select) لا يُمثَّل بوحدة تصحيح واحدة — يحتاج مراجعة.",
+        "teacherNote": "سؤال يُصحّح يدويًا (أمر/مقالي).",
         "aiInstruction": "",
         "wasModified": false,
         "image": {
@@ -1702,7 +1702,7 @@
         "parts": [],
         "answer": {},
         "hint": "",
-        "teacherNote": "سؤال متعدد الأجزاء مختلط (radio+text+select) لا يُمثَّل بوحدة تصحيح واحدة — يحتاج مراجعة.",
+        "teacherNote": "سؤال يُصحّح يدويًا (أمر/مقالي).",
         "aiInstruction": "",
         "wasModified": false,
         "image": {
@@ -1745,7 +1745,7 @@
         "parts": [],
         "answer": {},
         "hint": "",
-        "teacherNote": "لا يوجد مفتاح إجابة في المصدر.",
+        "teacherNote": "سؤال يُصحّح يدويًا (أمر/مقالي).",
         "aiInstruction": "",
         "wasModified": false,
         "image": {
@@ -1850,7 +1850,7 @@
         "parts": [],
         "answer": {},
         "hint": "",
-        "teacherNote": "سؤال متعدد الأجزاء مختلط (radio+text+select) لا يُمثَّل بوحدة تصحيح واحدة — يحتاج مراجعة.",
+        "teacherNote": "سؤال يُصحّح يدويًا (أمر/مقالي).",
         "aiInstruction": "",
         "wasModified": false,
         "image": {
@@ -2508,7 +2508,7 @@
         "parts": [],
         "answer": {},
         "hint": "",
-        "teacherNote": "سؤال فحص يدوي في المصدر (mark=يدوي).",
+        "teacherNote": "سؤال يُصحّح يدويًا (أمر/مقالي).",
         "aiInstruction": "",
         "wasModified": false,
         "image": {
@@ -2537,7 +2537,7 @@
     ],
     "totalMarks": 154,
     "status": "final",
-    "createdAt": "2026-09-05T18:57:20.148Z",
-    "updatedAt": "2026-09-05T18:57:20.148Z"
+    "createdAt": "2026-09-06T12:20:05.860Z",
+    "updatedAt": "2026-09-06T12:20:05.860Z"
   }
 }

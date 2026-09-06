@@ -12,14 +12,14 @@
   "totalMarks": 100,
   "pageRange": "",
   "parserFamily": "f-dom-qcard-v1",
-  "conversionStatus": "needs_review",
-  "publishable": false,
-  "autoGradableCount": 30,
-  "manualReviewCount": 4,
+  "conversionStatus": "ready",
+  "publishable": true,
+  "autoGradableCount": 32,
+  "manualReviewCount": 2,
   "libraryVersion": 1,
   "sourceSha": "1ee220d9c7192a42897c00090ee801c624b7b8c274356ebd07fc9ae90fc8eaa5",
-  "contentHash": "c6ce200bd497f9f758017d5d8cdd68c95fc43762b27200d5b1fa0558795fb82f",
-  "convertedAt": "2026-09-05T18:57:19.063Z",
+  "contentHash": "ef77cdf6096fb2b6d822e6093ae0d270b97544dc0a789795f0f969966c1d0959",
+  "convertedAt": "2026-09-06T12:20:04.674Z",
   "source": {
     "repository": "Book791381",
     "sourceFile": "F01.html"
@@ -763,7 +763,7 @@
         "parts": [],
         "answer": {},
         "hint": "",
-        "teacherNote": "شكل سؤال متعدد الأجزاء غير قابل للتحويل الحتمي — يحتاج مراجعة.",
+        "teacherNote": "سؤال يُصحّح يدويًا (أمر/مقالي).",
         "aiInstruction": "",
         "wasModified": false,
         "image": {
@@ -1578,9 +1578,11 @@
         "options": [],
         "fields": [],
         "parts": [],
-        "answer": {},
+        "answer": {
+          "text": "1000"
+        },
         "hint": "",
-        "teacherNote": "لا يوجد مفتاح إجابة لهذا السؤال في المصدر.",
+        "teacherNote": "",
         "aiInstruction": "",
         "wasModified": false,
         "image": {
@@ -2030,7 +2032,7 @@
         "parts": [],
         "answer": {},
         "hint": "",
-        "teacherNote": "شكل سؤال متعدد الأجزاء غير قابل للتحويل الحتمي — يحتاج مراجعة.",
+        "teacherNote": "سؤال يُصحّح يدويًا (أمر/مقالي).",
         "aiInstruction": "",
         "wasModified": false,
         "image": {
@@ -2064,9 +2066,11 @@
         "options": [],
         "fields": [],
         "parts": [],
-        "answer": {},
+        "answer": {
+          "text": "6"
+        },
         "hint": "",
-        "teacherNote": "لا يوجد مفتاح إجابة لهذا السؤال في المصدر.",
+        "teacherNote": "",
         "aiInstruction": "",
         "wasModified": false,
         "image": {
@@ -2151,7 +2155,7 @@
     ],
     "totalMarks": 100,
     "status": "final",
-    "createdAt": "2026-09-05T18:57:19.072Z",
-    "updatedAt": "2026-09-05T18:57:19.072Z"
+    "createdAt": "2026-09-06T12:20:04.685Z",
+    "updatedAt": "2026-09-06T12:20:04.685Z"
   }
 }

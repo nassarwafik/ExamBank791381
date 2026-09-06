@@ -12,14 +12,14 @@
   "totalMarks": 121,
   "pageRange": "",
   "parserFamily": "f-dom-qcard-v1",
-  "conversionStatus": "needs_review",
-  "publishable": false,
-  "autoGradableCount": 37,
-  "manualReviewCount": 5,
+  "conversionStatus": "ready",
+  "publishable": true,
+  "autoGradableCount": 39,
+  "manualReviewCount": 3,
   "libraryVersion": 1,
   "sourceSha": "804aedb6b4543d5dbaa0e2ad5e6559a36856f34a7b41024ed368c7605a993011",
-  "contentHash": "7f74a6f761f260cf57a862b2067f34a06750ab7998928b387bedd9a21d6706aa",
-  "convertedAt": "2026-09-05T18:57:19.063Z",
+  "contentHash": "66cbdabe3512708880ad8dc0f5a38183f53fb42832e98b761db6174db6fba6db",
+  "convertedAt": "2026-09-06T12:20:04.674Z",
   "source": {
     "repository": "Book791381",
     "sourceFile": "F04.html"
@@ -218,7 +218,7 @@
         "parts": [],
         "answer": {},
         "hint": "",
-        "teacherNote": "شكل سؤال متعدد الأجزاء غير قابل للتحويل الحتمي — يحتاج مراجعة.",
+        "teacherNote": "سؤال يُصحّح يدويًا (أمر/مقالي).",
         "aiInstruction": "",
         "wasModified": false,
         "image": {
@@ -254,7 +254,7 @@
         "parts": [],
         "answer": {},
         "hint": "",
-        "teacherNote": "شكل سؤال متعدد الأجزاء غير قابل للتحويل الحتمي — يحتاج مراجعة.",
+        "teacherNote": "سؤال يُصحّح يدويًا (أمر/مقالي).",
         "aiInstruction": "",
         "wasModified": false,
         "image": {
@@ -794,25 +794,19 @@
         "familyKey": "LIB-F04-Q14",
         "hasCLI": false,
         "requiresCalculation": false,
-        "presentationType": "matching",
+        "presentationType": "open",
         "marks": 2,
         "locked": false,
-        "text": "ترجم الرقم 229 من الميزان العشري للميزان الثنائي باستعمال الصناديق\n\n| البند | الإجابة |\n| --- | --- |\n|  | |",
+        "text": "ترجم الرقم 229 من الميزان العشري للميزان الثنائي باستعمال الصناديق",
         "textHtml": "",
         "options": [],
-        "fields": [
-          {
-            "id": "q14_7",
-            "label": "",
-            "order": 0,
-            "kind": "select",
-            "options": []
-          }
-        ],
+        "fields": [],
         "parts": [],
-        "answer": {},
+        "answer": {
+          "text": "11100101"
+        },
         "hint": "",
-        "teacherNote": "بعض صفوف الجدول بلا مفتاح إجابة في المصدر.",
+        "teacherNote": "",
         "aiInstruction": "",
         "wasModified": false,
         "image": {
@@ -1222,25 +1216,19 @@
         "familyKey": "LIB-F04-Q23",
         "hasCLI": false,
         "requiresCalculation": false,
-        "presentationType": "matching",
+        "presentationType": "open",
         "marks": 3,
         "locked": false,
-        "text": "ترجم الرقم 119 من الميزان العشري للميزان الثنائي باستعمال الصناديق\n\n| البند | الإجابة |\n| --- | --- |\n|  | |",
+        "text": "ترجم الرقم 119 من الميزان العشري للميزان الثنائي باستعمال الصناديق",
         "textHtml": "",
         "options": [],
-        "fields": [
-          {
-            "id": "q23_7",
-            "label": "",
-            "order": 0,
-            "kind": "select",
-            "options": []
-          }
-        ],
+        "fields": [],
         "parts": [],
-        "answer": {},
+        "answer": {
+          "text": "1110111"
+        },
         "hint": "",
-        "teacherNote": "بعض صفوف الجدول بلا مفتاح إجابة في المصدر.",
+        "teacherNote": "",
         "aiInstruction": "",
         "wasModified": false,
         "image": {
@@ -1544,7 +1532,7 @@
         "familyKey": "LIB-F04-Q29",
         "hasCLI": false,
         "requiresCalculation": false,
-        "presentationType": "multipleChoice",
+        "presentationType": "open",
         "marks": 3,
         "locked": false,
         "text": "ما هي الترجمة الصحيحة لعنوان الـ IP التالي المعطى في الميزان الثنائي إلى الميزان العشري ؟",
@@ -1571,7 +1559,7 @@
         "parts": [],
         "answer": {},
         "hint": "",
-        "teacherNote": "لا يوجد مفتاح إجابة لهذا السؤال في المصدر.",
+        "teacherNote": "سؤال يُصحّح يدويًا (أمر/مقالي).",
         "aiInstruction": "",
         "wasModified": false,
         "image": {
@@ -2275,7 +2263,7 @@
     ],
     "totalMarks": 121,
     "status": "final",
-    "createdAt": "2026-09-05T18:57:19.107Z",
-    "updatedAt": "2026-09-05T18:57:19.107Z"
+    "createdAt": "2026-09-06T12:20:04.740Z",
+    "updatedAt": "2026-09-06T12:20:04.740Z"
   }
 }

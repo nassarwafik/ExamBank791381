@@ -1,0 +1,9 @@
+{
+  "provenance": "AI-derived and teacher-authorized (session 01RaUviSgdQWPmnCbV2aWP1J). NOT an official ministry key. Only the questions the source's own AK object did not already key are listed here; q24/s2q9 derived by reading the exam's attached output/topology images; command/essay items left for manual grading.",
+  "answers": {
+    "q11":  { "manual": true },
+    "q24":  { "text": "1000" },
+    "s2q8": { "manual": true },
+    "s2q9": { "text": "6" }
+  }
+}
