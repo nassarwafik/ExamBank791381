@@ -72,7 +72,7 @@ async function ensureClassConfig(container, projectCode, classroom) {
 async function listClassStudents(container, classId) {
   const all = await listJson(container, USER_PREFIX);
   return all
-    .filter(u => u && u.role === "student" && String(u.classId || "") === String(classId) && u.archived !== true)
+    .filter(u => studentBelongsToClass(u, classId)) // single source of the class-membership policy
     .map(u => ({ studentId: u.userId, displayName: u.displayName || ((u.firstName || "") + " " + (u.familyName || "")).trim(), code: u.code }))
     .sort((a, b) => String(a.displayName).localeCompare(String(b.displayName), "ar"));
 }
@@ -81,19 +81,22 @@ async function loadStudentUser(container, studentId) {
   return downloadJsonOrNull(container, USER_PREFIX + studentId + ".json");
 }
 
-// Pure membership rule (exported for unit tests): a user is a valid target for a class's project
-// progress only if it exists, is a student, is active & not archived, and belongs to that exact class.
-function studentMembershipOk(user, classId) {
-  if (!user || user.role !== "student" || user.active === false || user.archived === true) return false;
+// Pure CLASS-MEMBERSHIP rule for the TEACHER's project tracker (exported for unit tests). A user is a
+// member of the class if it exists, is a student, is NOT archived, and belongs to that exact class.
+// NOTE: active===false (a login-disabled account) is still a class member — a disabled student appears
+// in the class roster and the teacher can view/approve their project. This is deliberately independent
+// of student LOGIN eligibility (which the student-auth path enforces separately with active===false).
+function studentBelongsToClass(user, classId) {
+  if (!user || user.role !== "student" || user.archived === true) return false;
   return String(user.classId || "") === String(classId);
 }
 
-// Verifies a studentId is a real, active student of the given class BEFORE any read/write of that
+// Verifies a studentId is a real student MEMBER of the given class BEFORE any read/write of that
 // student's project progress. Prevents cross-class access and "ghost" progress blobs for arbitrary
 // ids. Returns { ok:false } when membership fails; otherwise { ok:true, student }.
 async function requireStudentInClass(container, studentId, classId) {
   const u = await loadStudentUser(container, studentId);
-  if (!studentMembershipOk(u, classId)) return { ok: false };
+  if (!studentBelongsToClass(u, classId)) return { ok: false };
   return { ok: true, student: { studentId: u.userId, displayName: u.displayName || ((u.firstName || "") + " " + (u.familyName || "")).trim(), code: u.code } };
 }
 
@@ -107,5 +110,5 @@ async function loadProgressEntries(container, projectCode, classId, students) {
 module.exports = {
   CLASS_PREFIX, USER_PREFIX,
   buildClassSnapshot, workingDefinition, loadClassroom, ensureClassConfig,
-  listClassStudents, loadStudentUser, studentMembershipOk, requireStudentInClass, loadProgressEntries
+  listClassStudents, loadStudentUser, studentBelongsToClass, requireStudentInClass, loadProgressEntries
 };

@@ -28,6 +28,14 @@ const {
   require("../lib/class-lifecycle");
 
 const { recordAuditEvent } = require("../lib/audit-log");
+const { isSupportedProject } = require("../lib/project-tracker/registry");
+
+// A class's programCode is valid only when it is empty (no project) or a project the registry knows.
+// Pure + exported so the rule is unit-tested and enforced server-side (never trusting the UI).
+function programCodeAccepted(programCode) {
+  const code = String(programCode || "").trim();
+  return code === "" || isSupportedProject(code);
+}
 
 const CONFLICT_MESSAGE =
   "حدث تعارض مؤقت أثناء حفظ البيانات. حاول مرة أخرى.";
@@ -408,6 +416,10 @@ app.http(
               };
             }
 
+            if (!programCodeAccepted(programCode)) {
+              return { status: 400, jsonBody: { ok: false, error: "مشروع غير مدعوم." } };
+            }
+
             const now =
               new Date()
                 .toISOString();
@@ -470,6 +482,10 @@ app.http(
                 status: 400,
                 jsonBody: { ok: false, error: "classId is required." }
               };
+            }
+
+            if (!programCodeAccepted(programCode)) {
+              return { status: 400, jsonBody: { ok: false, error: "مشروع غير مدعوم." } };
             }
 
             try {
@@ -666,4 +682,4 @@ app.http(
   }
 );
 
-module.exports = { buildNewClassroomDocument, programChangeAllowed };
+module.exports = { buildNewClassroomDocument, programChangeAllowed, programCodeAccepted };

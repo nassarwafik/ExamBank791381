@@ -22,7 +22,9 @@ function classMeta(c) {
 }
 async function classStudents(container, classId) {
   const all = await listJson(container, USER_PREFIX);
-  return all.filter(u => u && u.role === "student" && String(u.classId || "") === String(classId) && u.active !== false)
+  // Same population predicate as the project tracker (single source), so class reports and project
+  // analytics always count the exact same students: exclude only archived; keep login-disabled.
+  return all.filter(u => svc.studentBelongsToClass(u, classId))
     .map(u => ({ studentId: u.userId, displayName: u.displayName || ((u.firstName || "") + " " + (u.familyName || "")).trim(), code: u.code }))
     .sort((a, b) => String(a.displayName).localeCompare(String(b.displayName), "ar"));
 }
