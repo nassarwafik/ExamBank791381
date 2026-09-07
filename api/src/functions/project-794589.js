@@ -3,7 +3,8 @@ const { requireBuilderAuth } = require("../lib/builder-auth");
 const { getContainer, downloadJsonOrNull, uploadJson, listJson, mutateJsonWithRetry, StorageConflictError } = require("../lib/platform-storage");
 const { recordAuditEvent } = require("../lib/audit-log");
 const { normalizeClassStatus } = require("../lib/class-lifecycle");
-const { PROGRAM_CODE, buildClassSnapshotFromDefault } = require("../lib/project-794589-template");
+const { PROGRAM_CODE, TEMPLATE_VERSION, buildClassSnapshotFromDefault, buildUpgradedSnapshot } = require("../lib/project-794589-template");
+const { classHasMeaningfulProgress } = require("../lib/project-794589-migration");
 const core = require("../lib/project-794589-core");
 const analytics = require("../lib/project-794589-analytics");
 const { applyProgressUpdate } = require("../lib/project-794589-progress");
@@ -27,14 +28,34 @@ async function loadClassroom(container, classId) {
 // without writing to an archived class.
 async function ensureClassConfig(container, classroom) {
   const classId = classroom.classId;
-  const existing = await downloadJsonOrNull(container, classConfigName(classId));
-  if (existing) return existing;
   const now = new Date().toISOString();
-  const snapshot = buildClassSnapshotFromDefault(classId, now);
-  if (normalizeClassStatus(classroom) === "active") {
-    await uploadJson(container, classConfigName(classId), snapshot);
+  const existing = await downloadJsonOrNull(container, classConfigName(classId));
+  const isActive = normalizeClassStatus(classroom) === "active";
+
+  if (!existing) {
+    const snapshot = buildClassSnapshotFromDefault(classId, now);
+    if (isActive) await uploadJson(container, classConfigName(classId), snapshot);
+    return snapshot;
   }
-  return snapshot;
+
+  // Version-aware, NON-DESTRUCTIVE upgrade. Only an ACTIVE class whose snapshot predates the current
+  // template AND that has NO meaningful student progress is auto-upgraded (safe — the spec allows a
+  // direct upgrade for a class that hasn't really started). A class with real progress is left
+  // exactly as-is and never silently reset; migrating its progress is a separate, explicit decision.
+  if (isActive && Number(existing.templateVersion || 1) < TEMPLATE_VERSION) {
+    const progressDocs = await listJson(container, progressPrefixFor(classId));
+    if (!classHasMeaningfulProgress(progressDocs)) {
+      const upgraded = buildUpgradedSnapshot(existing, classId, now);
+      await uploadJson(container, classConfigName(classId), upgraded);
+      await recordAuditEvent(container, {
+        actor: "system", action: "project.template.upgrade",
+        targetType: "project-template", targetId: classId, targetLabel: classroom.name || "",
+        details: { fromVersion: Number(existing.templateVersion || 1), toVersion: TEMPLATE_VERSION, reason: "no-meaningful-progress" }
+      });
+      return upgraded;
+    }
+  }
+  return existing;
 }
 
 async function listClassStudents(container, classId) {

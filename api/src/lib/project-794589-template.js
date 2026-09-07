@@ -6,6 +6,11 @@ const path = require("path");
 
 const PROGRAM_CODE = "794589";
 
+// The current default-template version. Bumped to 2 when the stage set/semantics changed (the old
+// 50-book/62-PT set was replaced by the approved 54-book/51-PT set). Class snapshots created before
+// this carry a lower templateVersion and are upgraded version-aware (see project-794589-migration).
+const TEMPLATE_VERSION = 2;
+
 const TEMPLATE_CANDIDATES = [
   path.join(process.cwd(), "src", "data", "project-794589", "default-template.json"),
   path.join(__dirname, "..", "data", "project-794589", "default-template.json")
@@ -42,4 +47,14 @@ function buildClassSnapshotFromDefault(classId, now) {
   };
 }
 
-module.exports = { PROGRAM_CODE, loadDefaultTemplate, buildClassSnapshotFromDefault, TEMPLATE_CANDIDATES };
+// Builds a fresh V2 snapshot to replace an outdated one, preserving the original createdAt so the
+// class keeps its activation date. Used only for the safe (progress-free) auto-upgrade path.
+function buildUpgradedSnapshot(existing, classId, now) {
+  const fresh = buildClassSnapshotFromDefault(classId, now);
+  fresh.createdAt = (existing && existing.createdAt) || now;
+  fresh.upgradedAt = now;
+  fresh.upgradedFromVersion = existing ? (Number(existing.templateVersion) || 1) : null;
+  return fresh;
+}
+
+module.exports = { PROGRAM_CODE, TEMPLATE_VERSION, loadDefaultTemplate, buildClassSnapshotFromDefault, buildUpgradedSnapshot, TEMPLATE_CANDIDATES };
