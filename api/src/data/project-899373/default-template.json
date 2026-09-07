@@ -1,0 +1,367 @@
+{
+  "projectCode": "899373",
+  "templateVersion": 1,
+  "trackWeights": {
+    "book": 50,
+    "access": 50
+  },
+  "config": {
+    "staleDays": 7,
+    "lateThreshold": 40,
+    "balanceWarningThreshold": 25
+  },
+  "groups": [
+    {
+      "groupId": "book_g1",
+      "track": "book",
+      "title": "بداية الكتاب",
+      "order": 1
+    },
+    {
+      "groupId": "book_g2",
+      "track": "book",
+      "title": "الجداول المستعملة",
+      "order": 2
+    },
+    {
+      "groupId": "book_g3",
+      "track": "book",
+      "title": "بيانات وقاعدة البيانات",
+      "order": 3
+    },
+    {
+      "groupId": "book_g4",
+      "track": "book",
+      "title": "الاستعلامات",
+      "order": 4
+    },
+    {
+      "groupId": "book_g5",
+      "track": "book",
+      "title": "نهاية الكتاب",
+      "order": 5
+    },
+    {
+      "groupId": "access_g1",
+      "track": "access",
+      "title": "الجداول",
+      "order": 1
+    },
+    {
+      "groupId": "access_g2",
+      "track": "access",
+      "title": "قاعدة البيانات",
+      "order": 2
+    }
+  ],
+  "stages": [
+    {
+      "stageId": "B01",
+      "track": "book",
+      "groupId": "book_g1",
+      "title": "صفحة الغلاف",
+      "description": "",
+      "order": 1,
+      "weight": 1,
+      "required": true,
+      "active": true
+    },
+    {
+      "stageId": "B02",
+      "track": "book",
+      "groupId": "book_g1",
+      "title": "الفهرست",
+      "description": "",
+      "order": 2,
+      "weight": 1,
+      "required": true,
+      "active": true
+    },
+    {
+      "stageId": "B03",
+      "track": "book",
+      "groupId": "book_g1",
+      "title": "المقدمة",
+      "description": "",
+      "order": 3,
+      "weight": 1,
+      "required": true,
+      "active": true
+    },
+    {
+      "stageId": "B04",
+      "track": "book",
+      "groupId": "book_g2",
+      "title": "الجدول الأول",
+      "description": "",
+      "order": 4,
+      "weight": 1,
+      "required": true,
+      "active": true
+    },
+    {
+      "stageId": "B05",
+      "track": "book",
+      "groupId": "book_g2",
+      "title": "الجدول الثاني",
+      "description": "",
+      "order": 5,
+      "weight": 1,
+      "required": true,
+      "active": true
+    },
+    {
+      "stageId": "B06",
+      "track": "book",
+      "groupId": "book_g2",
+      "title": "الجدول الثالث",
+      "description": "",
+      "order": 6,
+      "weight": 1,
+      "required": true,
+      "active": true
+    },
+    {
+      "stageId": "B07",
+      "track": "book",
+      "groupId": "book_g2",
+      "title": "الجدول الرابع",
+      "description": "",
+      "order": 7,
+      "weight": 1,
+      "required": true,
+      "active": true
+    },
+    {
+      "stageId": "B08",
+      "track": "book",
+      "groupId": "book_g3",
+      "title": "معطيات في الجداول",
+      "description": "",
+      "order": 8,
+      "weight": 1,
+      "required": true,
+      "active": true
+    },
+    {
+      "stageId": "B09",
+      "track": "book",
+      "groupId": "book_g3",
+      "title": "صور للجداول",
+      "description": "",
+      "order": 9,
+      "weight": 1,
+      "required": true,
+      "active": true
+    },
+    {
+      "stageId": "B10",
+      "track": "book",
+      "groupId": "book_g3",
+      "title": "SQL Server Code",
+      "description": "",
+      "order": 10,
+      "weight": 1,
+      "required": true,
+      "active": true
+    },
+    {
+      "stageId": "B11",
+      "track": "book",
+      "groupId": "book_g3",
+      "title": "العلاقات بين الجداول",
+      "description": "",
+      "order": 11,
+      "weight": 1,
+      "required": true,
+      "active": true
+    },
+    {
+      "stageId": "B12",
+      "track": "book",
+      "groupId": "book_g4",
+      "title": "استعلام إضافة",
+      "description": "",
+      "order": 12,
+      "weight": 1,
+      "required": true,
+      "active": true
+    },
+    {
+      "stageId": "B13",
+      "track": "book",
+      "groupId": "book_g4",
+      "title": "استعلام حذف",
+      "description": "",
+      "order": 13,
+      "weight": 1,
+      "required": true,
+      "active": true
+    },
+    {
+      "stageId": "B14",
+      "track": "book",
+      "groupId": "book_g4",
+      "title": "استعلام تعديل",
+      "description": "",
+      "order": 14,
+      "weight": 1,
+      "required": true,
+      "active": true
+    },
+    {
+      "stageId": "B15",
+      "track": "book",
+      "groupId": "book_g4",
+      "title": "استعلام بحث",
+      "description": "",
+      "order": 15,
+      "weight": 1,
+      "required": true,
+      "active": true
+    },
+    {
+      "stageId": "B16",
+      "track": "book",
+      "groupId": "book_g4",
+      "title": "استعلام حسابي",
+      "description": "",
+      "order": 16,
+      "weight": 1,
+      "required": true,
+      "active": true
+    },
+    {
+      "stageId": "B17",
+      "track": "book",
+      "groupId": "book_g4",
+      "title": "استعلام مع بارامتر",
+      "description": "",
+      "order": 17,
+      "weight": 1,
+      "required": true,
+      "active": true
+    },
+    {
+      "stageId": "B18",
+      "track": "book",
+      "groupId": "book_g5",
+      "title": "تقارير",
+      "description": "",
+      "order": 18,
+      "weight": 1,
+      "required": true,
+      "active": true
+    },
+    {
+      "stageId": "B19",
+      "track": "book",
+      "groupId": "book_g5",
+      "title": "مردود",
+      "description": "",
+      "order": 19,
+      "weight": 1,
+      "required": true,
+      "active": true
+    },
+    {
+      "stageId": "B20",
+      "track": "book",
+      "groupId": "book_g5",
+      "title": "مصادر",
+      "description": "",
+      "order": 20,
+      "weight": 1,
+      "required": true,
+      "active": true
+    },
+    {
+      "stageId": "A01",
+      "track": "access",
+      "groupId": "access_g1",
+      "title": "الجدول الأول",
+      "description": "",
+      "order": 1,
+      "weight": 1,
+      "required": true,
+      "active": true
+    },
+    {
+      "stageId": "A02",
+      "track": "access",
+      "groupId": "access_g1",
+      "title": "الجدول الثاني",
+      "description": "",
+      "order": 2,
+      "weight": 1,
+      "required": true,
+      "active": true
+    },
+    {
+      "stageId": "A03",
+      "track": "access",
+      "groupId": "access_g1",
+      "title": "الجدول الثالث",
+      "description": "",
+      "order": 3,
+      "weight": 1,
+      "required": true,
+      "active": true
+    },
+    {
+      "stageId": "A04",
+      "track": "access",
+      "groupId": "access_g1",
+      "title": "الجدول الرابع",
+      "description": "",
+      "order": 4,
+      "weight": 1,
+      "required": true,
+      "active": true
+    },
+    {
+      "stageId": "A05",
+      "track": "access",
+      "groupId": "access_g2",
+      "title": "العلاقات بين الجداول",
+      "description": "",
+      "order": 5,
+      "weight": 1,
+      "required": true,
+      "active": true
+    },
+    {
+      "stageId": "A06",
+      "track": "access",
+      "groupId": "access_g2",
+      "title": "معطيات",
+      "description": "",
+      "order": 6,
+      "weight": 1,
+      "required": true,
+      "active": true
+    },
+    {
+      "stageId": "A07",
+      "track": "access",
+      "groupId": "access_g2",
+      "title": "استعلامات",
+      "description": "",
+      "order": 7,
+      "weight": 1,
+      "required": true,
+      "active": true
+    },
+    {
+      "stageId": "A08",
+      "track": "access",
+      "groupId": "access_g2",
+      "title": "تقارير",
+      "description": "",
+      "order": 8,
+      "weight": 1,
+      "required": true,
+      "active": true
+    }
+  ]
+}
