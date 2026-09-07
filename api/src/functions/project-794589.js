@@ -1,6 +1,6 @@
 const { app } = require("@azure/functions");
 const { requireBuilderAuth } = require("../lib/builder-auth");
-const { getContainer, downloadJsonOrNull, uploadJson, listJson, mutateJsonWithRetry, StorageConflictError } = require("../lib/platform-storage");
+const { getContainer, downloadJsonOrNull, uploadJson, listJson, listBlobNames, deleteBlob, mutateJsonWithRetry, StorageConflictError } = require("../lib/platform-storage");
 const { recordAuditEvent } = require("../lib/audit-log");
 const { normalizeClassStatus } = require("../lib/class-lifecycle");
 const { PROGRAM_CODE, TEMPLATE_VERSION, buildClassSnapshotFromDefault, buildUpgradedSnapshot } = require("../lib/project-794589-template");
@@ -178,6 +178,21 @@ app.http("project794589", {
       // Every write is blocked on an archived class (read-only history).
       if (normalizeClassStatus(classroom) === "archived") {
         return { status: 403, jsonBody: { ok: false, error: "الصف مؤرشف — المتابعة للقراءة فقط." } };
+      }
+
+      if (action === "project.reset") {
+        // Wipes ONLY this class's Project-794589 data: its snapshot + every student progress blob.
+        // The classroom and the student accounts are NOT touched. Next open re-seeds a fresh V2
+        // snapshot with all stages not_started. Blocked on archived classes by the check above.
+        const progressBlobs = await listBlobNames(container, progressPrefixFor(classId));
+        for (const name of progressBlobs) await deleteBlob(container, name);
+        await deleteBlob(container, classConfigName(classId));
+        await recordAuditEvent(container, {
+          actor: auth.user?.sub, action: "project.reset",
+          targetType: "project-tracker", targetId: classId, targetLabel: classroom.name || "",
+          details: { deletedProgressCount: progressBlobs.length }
+        });
+        return { status: 200, jsonBody: { ok: true, deletedProgressCount: progressBlobs.length } };
       }
 
       if (action === "program.activate") {

@@ -14,6 +14,7 @@ export default function ProjectStageSettings({ token, classId, readOnly }: { tok
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
   const [busy, setBusy] = useState(false);
+  const [confirmReset, setConfirmReset] = useState(false);
 
   async function load() {
     setLoading(true); setError("");
@@ -53,6 +54,20 @@ export default function ProjectStageSettings({ token, classId, readOnly }: { tok
     finally { setBusy(false); }
   }
 
+  // Wipes ONLY the project data for this class (snapshot + all student progress) and re-seeds a fresh
+  // template. The class and its students are NOT deleted. Two-step confirm; blocked when archived.
+  async function resetProject() {
+    if (readOnly || busy) return;
+    setBusy(true); setError(""); setNotice("");
+    try {
+      const r = await projectApi<{ deletedProgressCount: number }>(token, "/api/project-794589", { method: "POST", body: JSON.stringify({ action: "project.reset", classId }) });
+      setConfirmReset(false);
+      setNotice("✓ تم تصفير المشروع لهذا الصف (حُذف تقدّم " + r.deletedProgressCount + " طالبًا). المراحل الآن نسخة جديدة والطلاب كما هم.");
+      await load();
+    } catch (e) { setError(e instanceof Error ? e.message : "تعذر تصفير المشروع."); }
+    finally { setBusy(false); }
+  }
+
   if (loading && !tpl) return <div className="platform-loading">⏳ جارٍ التحميل...</div>;
   if (!tpl) return <div className="platform-error">{error || "تعذر التحميل."}</div>;
 
@@ -86,6 +101,22 @@ export default function ProjectStageSettings({ token, classId, readOnly }: { tok
           </div>
         </section>
       ))}
+
+      {!readOnly && (
+        <section className="platform-card p794-danger-zone">
+          <div className="platform-card-heading"><div><span className="platform-eyebrow">منطقة خطرة</span><h3>تصفير المشروع للصف</h3></div></div>
+          <p className="p794-muted">يحذف كل تقدّم الطلاب وملاحظاتهم في مشروع 794589 لهذا الصف ويعيد المراحل إلى النسخة الجديدة. <strong>الصف وحسابات الطلاب لا تُحذف.</strong> لا يمكن التراجع.</p>
+          {!confirmReset ? (
+            <button type="button" className="p794-danger-btn" disabled={busy} onClick={() => setConfirmReset(true)}>تصفير المشروع…</button>
+          ) : (
+            <div className="p794-danger-confirm">
+              <span>متأكد؟ سيُحذف كل التقدّم نهائيًا.</span>
+              <button type="button" className="p794-danger-btn" disabled={busy} onClick={() => void resetProject()}>{busy ? "جارٍ التصفير…" : "نعم، صفّر المشروع"}</button>
+              <button type="button" disabled={busy} onClick={() => setConfirmReset(false)}>إلغاء</button>
+            </div>
+          )}
+        </section>
+      )}
     </div>
   );
 }

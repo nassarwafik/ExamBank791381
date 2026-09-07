@@ -6,6 +6,11 @@ function getContainer(){const cs=process.env.AZURE_STORAGE_CONNECTION_STRING;if(
 async function downloadJsonOrNull(container,name){try{const r=await container.getBlobClient(name).download();if(!r.readableStreamBody)return null;return JSON.parse((await streamToBuffer(r.readableStreamBody)).toString("utf8"))}catch(e){if(e?.statusCode===404||e?.code==="BlobNotFound")return null;throw e}}
 async function uploadJson(container,name,value){const body=JSON.stringify(value,null,2);await container.getBlockBlobClient(name).upload(body,Buffer.byteLength(body),{overwrite:true,blobHTTPHeaders:{blobContentType:"application/json; charset=utf-8"}})}
 async function listJson(container,prefix){const out=[];for await(const blob of container.listBlobsFlat({prefix})){if(!blob.name.endsWith(".json"))continue;const value=await downloadJsonOrNull(container,blob.name);if(value)out.push(value)}return out}
+// Returns the names of the .json blobs under a prefix (no download) — for callers that need to act on
+// blobs by name, e.g. deleting a whole prefix.
+async function listBlobNames(container,prefix){const out=[];for await(const blob of container.listBlobsFlat({prefix})){if(blob.name.endsWith(".json"))out.push(blob.name)}return out}
+// Deletes a single blob if it exists (no error when it's already gone).
+async function deleteBlob(container,name){await container.getBlobClient(name).deleteIfExists()}
 
 // --- Optimistic concurrency helpers (opt-in; existing callers keep using uploadJson unchanged) ---
 
@@ -70,4 +75,4 @@ async function mutateJsonWithRetry(container,name,mutateFn){
  throw new StorageConflictError("Optimistic concurrency conflict after "+MAX_MUTATE_ATTEMPTS+" attempts.");
 }
 
-module.exports={getContainer,downloadJsonOrNull,uploadJson,listJson,downloadJsonWithEtagOrNull,uploadJsonConditional,mutateJsonWithRetry,StorageConflictError,isConcurrencyConflict};
+module.exports={getContainer,downloadJsonOrNull,uploadJson,listJson,listBlobNames,deleteBlob,downloadJsonWithEtagOrNull,uploadJsonConditional,mutateJsonWithRetry,StorageConflictError,isConcurrencyConflict};

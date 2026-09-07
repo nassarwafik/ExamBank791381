@@ -173,3 +173,14 @@
 /* Heatmap gets its own full-width row below the analytics grid so more stage columns are visible */
 .p794-heatmap-card { margin-top: 14px; }
 .p794-heatmap-card h3 { margin: 0 0 10px; color: var(--eb-navy); font-size: 15px; }
+
+/* Stage-settings danger zone: reset a class's project data (keeps class + students) */
+.p794-danger-zone { border: 1px solid var(--eb-danger-200, #fecaca); background: var(--eb-danger-050, #fef2f2); }
+.p794-danger-zone h3 { color: var(--eb-danger-strong, #b91c1c); margin: 0; font-size: 15px; }
+.p794-danger-zone .platform-eyebrow { color: var(--eb-danger, #dc2626); }
+.p794-danger-btn { background: var(--eb-danger, #dc2626); color: #fff; border: none; border-radius: 8px; padding: 8px 14px; font-weight: 800; cursor: pointer; }
+.p794-danger-btn:hover:not(:disabled) { background: var(--eb-danger-strong, #b91c1c); }
+.p794-danger-btn:disabled { opacity: .6; cursor: default; }
+.p794-danger-confirm { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; }
+.p794-danger-confirm > span { font-weight: 700; color: var(--eb-danger-strong, #b91c1c); }
+.p794-danger-confirm > button:last-child { background: transparent; border: 1px solid var(--eb-border, #d7dee8); border-radius: 8px; padding: 8px 12px; cursor: pointer; }
