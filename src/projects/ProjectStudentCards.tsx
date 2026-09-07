@@ -1,10 +1,10 @@
 import { useEffect, useMemo, useState } from "react";
-import { projectApi } from "./api";
+import { trackerGet } from "./api";
 import { filterStudentCards, fmtDate } from "./helpers";
-import ProjectProgressBar from "./ProjectProgressBar";
-import type { StudentCard, StudentFilter } from "./types";
+import ProjectProgressBar, { toneForTrackIndex } from "./ProjectProgressBar";
+import type { StudentCard, StudentFilter, TrackMeta } from "./types";
 
-type Props = { token: string; classId: string; lateThreshold: number; onOpenStudent: (studentId: string) => void };
+type Props = { token: string; projectCode: string; classId: string; tracks: TrackMeta[]; onOpenStudent: (studentId: string) => void };
 
 const FILTERS: { key: StudentFilter; label: string }[] = [
   { key: "all", label: "الكل" },
@@ -14,9 +14,11 @@ const FILTERS: { key: StudentFilter; label: string }[] = [
   { key: "complete", label: "مكتملون" },
   { key: "stale", label: "بلا تحديث" }
 ];
+const DEFAULT_LATE_THRESHOLD = 40;
 
-export default function ProjectStudents({ token, classId, lateThreshold, onOpenStudent }: Props) {
+export default function ProjectStudentCards({ token, projectCode, classId, tracks, onOpenStudent }: Props) {
   const [cards, setCards] = useState<StudentCard[]>([]);
+  const [lateThreshold, setLateThreshold] = useState(DEFAULT_LATE_THRESHOLD);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [search, setSearch] = useState("");
@@ -25,12 +27,14 @@ export default function ProjectStudents({ token, classId, lateThreshold, onOpenS
   async function load() {
     setLoading(true); setError("");
     try {
-      const r = await projectApi<{ students: StudentCard[] }>(token, "/api/project-794589?resource=students&classId=" + encodeURIComponent(classId));
+      // The students response carries the class config so the "late" threshold is never hard-coded.
+      const r = await trackerGet<{ students: StudentCard[]; config?: { lateThreshold?: number } }>(token, projectCode, "students", { classId });
       setCards(r.students || []);
+      if (r.config && Number.isFinite(Number(r.config.lateThreshold))) setLateThreshold(Number(r.config.lateThreshold));
     } catch (e) { setError(e instanceof Error ? e.message : "تعذر تحميل الطلاب."); }
     finally { setLoading(false); }
   }
-  useEffect(() => { void load(); }, [classId]);
+  useEffect(() => { void load(); }, [classId, projectCode]);
 
   const visible = useMemo(() => filterStudentCards(cards, filter, search, lateThreshold), [cards, filter, search, lateThreshold]);
 
@@ -56,8 +60,9 @@ export default function ProjectStudents({ token, classId, lateThreshold, onOpenS
               {c.complete ? <span className="p794-chip-tag done">مكتمل</span> : c.stale ? <span className="p794-chip-tag warn">بلا تحديث</span> : null}
             </div>
             <ProjectProgressBar label="التقدم العام" value={c.overallProgress} tone="overall" />
-            <ProjectProgressBar label="📘 الكتاب" value={c.bookProgress} tone="book" />
-            <ProjectProgressBar label="🖧 Packet Tracer" value={c.packetTracerProgress} tone="pt" />
+            {tracks.map((t, i) => (
+              <ProjectProgressBar key={t.trackId} label={(t.icon ? t.icon + " " : "") + t.title} value={c.trackProgress[t.trackId] || 0} tone={toneForTrackIndex(i)} />
+            ))}
             <div className="p794-student-card-counts">
               <span>✅ {c.counts.approved}</span>
               <span>🔵 {c.readyForReviewCount}</span>

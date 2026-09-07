@@ -1,8 +1,6 @@
-// Presentational helpers + the few pure transforms the UI needs. Progress math itself is computed
-// on the backend (api/src/lib/project-794589-core.js) and returned ready-made; these helpers only
-// label statuses and filter/search the already-computed student cards, so there is no risk of the
-// percentage formula diverging between client and server.
-import type { StageStatus, Track, StudentCard, StudentFilter } from "./types";
+// Presentational helpers for the generic Project Tracker. All progress math is computed on the backend
+// and returned ready-made; these only label statuses and filter/search already-computed cards.
+import type { StageStatus, StudentCard, StudentFilter } from "./types";
 
 export const STATUS_META: Record<StageStatus, { label: string; icon: string; className: string }> = {
   not_started: { label: "لم يبدأ", icon: "⬜", className: "status-not-started" },
@@ -11,28 +9,18 @@ export const STATUS_META: Record<StageStatus, { label: string; icon: string; cla
   approved: { label: "تم الاعتماد", icon: "✅", className: "status-approved" }
 };
 
-export const TRACK_META: Record<Track, { label: string; icon: string }> = {
-  book: { label: "كتاب المشروع", icon: "📘" },
-  packetTracer: { label: "Packet Tracer", icon: "🖧" }
-};
-
 export function statusLabel(status: StageStatus): string {
   return (STATUS_META[status] || STATUS_META.not_started).label;
 }
 
-// Filters the student cards for the students grid. `lateThreshold` (percent) and the "stale" flag
-// come from config/backend, never hard-coded here.
-export function filterStudentCards(
-  cards: StudentCard[],
-  filter: StudentFilter,
-  search: string,
-  lateThreshold: number
-): StudentCard[] {
+export function trackIcon(icon?: string): string {
+  return icon || "📁";
+}
+
+export function filterStudentCards(cards: StudentCard[], filter: StudentFilter, search: string, lateThreshold: number): StudentCard[] {
   const term = search.trim().toLowerCase();
   return cards.filter(card => {
-    if (term && !(card.displayName.toLowerCase().includes(term) || String(card.code || "").toLowerCase().includes(term))) {
-      return false;
-    }
+    if (term && !(card.displayName.toLowerCase().includes(term) || String(card.code || "").toLowerCase().includes(term))) return false;
     switch (filter) {
       case "ready": return card.readyForReviewCount > 0;
       case "late": return !card.complete && card.overallProgress < lateThreshold;
@@ -49,7 +37,7 @@ export function fmtDate(iso: string): string {
 }
 
 // Groups a track's stages by group, preserving order, for the accordion in student detail.
-export function stagesByGroup<T extends { groupId: string; order: number; track: Track }>(stages: T[], track: Track): Map<string, T[]> {
+export function stagesByGroup<T extends { groupId: string; order: number; track: string }>(stages: T[], track: string): Map<string, T[]> {
   const map = new Map<string, T[]>();
   for (const s of stages.filter(x => x.track === track).sort((a, b) => a.order - b.order)) {
     if (!map.has(s.groupId)) map.set(s.groupId, []);

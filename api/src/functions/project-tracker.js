@@ -121,7 +121,7 @@ app.http("projectTracker", {
         }
         if (resource === "analytics") {
           const entries = await svc.loadProgressEntries(container, projectCode, classId, students);
-          return { status: 200, jsonBody: { ok: true, projectCode, analytics: analytics.buildAnalytics(workDef, entries, now), tracks: definition.tracks, readOnly } };
+          return { status: 200, jsonBody: { ok: true, projectCode, analytics: analytics.buildAnalytics(workDef, entries, now), tracks: definition.tracks, groups: config.groups, readOnly } };
         }
         return { status: 400, jsonBody: { ok: false, error: "resource غير معروف." } };
       }

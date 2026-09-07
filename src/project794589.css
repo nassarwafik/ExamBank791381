@@ -184,3 +184,12 @@
 .p794-danger-confirm { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; }
 .p794-danger-confirm > span { font-weight: 700; color: var(--eb-danger-strong, #b91c1c); }
 .p794-danger-confirm > button:last-child { background: transparent; border: 1px solid var(--eb-border, #d7dee8); border-radius: 8px; padding: 8px 12px; cursor: pointer; }
+
+/* Generic projects: hub cards + in-page tab bar */
+.p794-hub-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 14px; }
+.p794-hub-card { display: flex; flex-direction: column; gap: 10px; }
+.p794-hub-card h3 { margin: 0; color: var(--eb-navy); font-size: 17px; }
+.p794-hub-code { font-size: 12px; font-weight: 800; color: var(--eb-primary-strong, #1d4ed8); }
+.p794-hub-tracks { display: flex; flex-wrap: wrap; gap: 6px; }
+.p794-hub-card .platform-primary { margin-top: auto; }
+.p794-tab-bar { margin: 12px 0; flex-wrap: wrap; }
