@@ -546,6 +546,8 @@ function App() {
   const [projectCode, setProjectCode] = useState("");
   const [projectNavOpen, setProjectNavOpen] = useState(false);
   const [projectList, setProjectList] = useState<{ projectCode: string; title: string }[]>([]);
+  // Global teacher "ready for review" queue (all projects, active classes) — one aggregated request.
+  const [projectReady, setProjectReady] = useState<{ total: number; byProject: Record<string, number> }>({ total: 0, byProject: {} });
 
   function goToProjects(code: string) {
     setTeacherView("project");
@@ -562,6 +564,17 @@ function App() {
       .catch(() => { if (!cancelled) setProjectList([]); });
     return () => { cancelled = true; };
   }, [token]);
+
+  // Ready-for-review badge (global, not tied to the selected class). Re-checked when returning to the
+  // projects view so approving a stage there refreshes the count.
+  useEffect(() => {
+    if (!token) { setProjectReady({ total: 0, byProject: {} }); return; }
+    let cancelled = false;
+    apiRequest<{ totalReadyForReview?: number; byProject?: Record<string, number> }>("/api/project-tracker?resource=projects-summary")
+      .then(r => { if (!cancelled) setProjectReady({ total: Number(r.totalReadyForReview) || 0, byProject: r.byProject || {} }); })
+      .catch(() => { if (!cancelled) setProjectReady({ total: 0, byProject: {} }); });
+    return () => { cancelled = true; };
+  }, [token, teacherView]);
 
   const [userCode, setUserCode] = useState("");
   const [password, setPassword] = useState("");
@@ -5315,13 +5328,14 @@ function App() {
             >
               <span className="app-sidebar-group-emoji" aria-hidden="true">📡</span>
               <span>المشاريع</span>
+              {projectReady.total > 0 && <span className="app-sidebar-badge" title="مراحل بانتظار الفحص">{projectReady.total}</span>}
               <span className="app-sidebar-group-chevron" aria-hidden="true">{projectNavOpen ? "▾" : "▸"}</span>
             </button>
             {projectNavOpen && (
               <div className="app-sidebar-subnav">
                 <button className={"app-sidebar-sublink " + (teacherView === "project" && !projectCode ? "active" : "")} onClick={() => goToProjects("")}>🗂️ كل المشاريع</button>
                 {projectList.map(p => (
-                  <button key={p.projectCode} className={"app-sidebar-sublink " + (teacherView === "project" && projectCode === p.projectCode ? "active" : "")} onClick={() => goToProjects(p.projectCode)}>📡 {p.title}</button>
+                  <button key={p.projectCode} className={"app-sidebar-sublink " + (teacherView === "project" && projectCode === p.projectCode ? "active" : "")} onClick={() => goToProjects(p.projectCode)}>📡 {p.title}{projectReady.byProject[p.projectCode] > 0 ? <span className="app-sidebar-badge">{projectReady.byProject[p.projectCode]}</span> : null}</button>
                 ))}
               </div>
             )}

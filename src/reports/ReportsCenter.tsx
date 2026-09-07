@@ -1,6 +1,6 @@
 import { Suspense, lazy, useEffect, useMemo, useState } from "react";
 import { reportGet } from "./api";
-import { LoadingState } from "./ui";
+import { LoadingState, ErrorState } from "./ui";
 import type { ReportType, Filters } from "./ReportViews";
 import "../reports.css";
 
@@ -12,6 +12,13 @@ type ProjectOpt = { projectCode: string; title: string };
 type FiltersResp = { schoolYears: string[]; classes: ClassOpt[]; projects: ProjectOpt[] };
 
 type Category = "all" | "students" | "assessments" | "projects";
+type Period = "all" | "7" | "30" | "year" | "custom";
+const PERIODS: { key: Period; label: string }[] = [
+  { key: "all", label: "كل الفترة" }, { key: "7", label: "آخر 7 أيام" }, { key: "30", label: "آخر 30 يومًا" },
+  { key: "year", label: "هذه السنة الدراسية" }, { key: "custom", label: "مخصص" }
+];
+// Reports whose data has a time dimension (assessments/timeline). Others (project snapshot) ignore the range.
+const TIME_AWARE: ReportType[] = ["class", "student", "assignments", "timeline"];
 type Card = { type: ReportType; emoji: string; title: string; desc: string; category: Category; needs: ("class" | "student" | "project")[] };
 
 const CARDS: Card[] = [
@@ -34,14 +41,39 @@ export default function ReportsCenter({ token }: { token: string }) {
   const [opts, setOpts] = useState<FiltersResp | null>(null);
   const [active, setActive] = useState<ReportType | null>(null);
   const [category, setCategory] = useState<Category>("all");
-  const [filters, setFilters] = useState<Filters>({ schoolYear: "", classId: "", studentId: "", projectCode: "", track: "" });
+  const [filters, setFilters] = useState<Filters>({ schoolYear: "", classId: "", studentId: "", projectCode: "", track: "", from: "", to: "" });
+  const [period, setPeriod] = useState<Period>("all");
   const [students, setStudents] = useState<{ studentId: string; displayName: string }[]>([]);
+  const [optsLoading, setOptsLoading] = useState(false);
+  const [optsError, setOptsError] = useState("");
+  const [optsNonce, setOptsNonce] = useState(0);
 
   useEffect(() => {
     let cancelled = false;
-    reportGet<FiltersResp>(token, { type: "filters" }).then(r => { if (!cancelled) setOpts(r); }).catch(() => {});
+    setOptsLoading(true); setOptsError("");
+    reportGet<FiltersResp>(token, { type: "filters" })
+      .then(r => { if (!cancelled) setOpts(r); })
+      .catch(e => { if (!cancelled) setOptsError(e instanceof Error ? e.message : "تعذر تحميل بيانات التقارير."); })
+      .finally(() => { if (!cancelled) setOptsLoading(false); });
     return () => { cancelled = true; };
-  }, [token]);
+  }, [token, optsNonce]);
+
+  // Period -> concrete from/to (YYYY-MM-DD). "all" and "year" carry no date bound: reports are already
+  // class-scoped and a class maps to exactly one schoolYear, so "this school year" == the class's own
+  // assessments (schoolYear strings are NOT converted to invented date boundaries). "custom" keeps the
+  // user-entered dates.
+  function applyPeriod(p: Period) {
+    setPeriod(p);
+    if (p === "custom") return;
+    if (p === "7" || p === "30") {
+      const to = new Date();
+      const from = new Date();
+      from.setDate(from.getDate() - (p === "7" ? 7 : 30));
+      setFilters(f => ({ ...f, from: from.toISOString().slice(0, 10), to: to.toISOString().slice(0, 10) }));
+    } else {
+      setFilters(f => ({ ...f, from: "", to: "" }));
+    }
+  }
 
   // Load students when a class is chosen (for student/timeline reports).
   useEffect(() => {
@@ -78,6 +110,8 @@ export default function ReportsCenter({ token }: { token: string }) {
                 <button key={c.key} type="button" className={"p794-chip " + (category === c.key ? "active" : "")} onClick={() => setCategory(c.key)}>{c.label}</button>
               ))}
             </div>
+            {optsError && <ErrorState text={optsError} onRetry={() => setOptsNonce(n => n + 1)} />}
+            {optsLoading && !opts && <LoadingState />}
             <div className="report-home-grid">
               {visibleCards.map(c => (
                 <button key={c.type} className="report-home-card" onClick={() => setActive(c.type)}>
@@ -100,7 +134,7 @@ export default function ReportsCenter({ token }: { token: string }) {
               </label>
               {needs("project") && (
                 <label>المشروع
-                  <select value={filters.projectCode} onChange={e => setFilters(f => ({ ...f, projectCode: e.target.value, classId: "" }))}>
+                  <select value={filters.projectCode} onChange={e => setFilters(f => ({ ...f, projectCode: e.target.value, classId: "", studentId: "" }))}>
                     <option value="">اختر مشروعًا</option>
                     {opts?.projects.map(p => <option key={p.projectCode} value={p.projectCode}>{p.title}</option>)}
                   </select>
@@ -129,6 +163,21 @@ export default function ReportsCenter({ token }: { token: string }) {
                     {students.map(s => <option key={s.studentId} value={s.studentId}>{s.displayName}</option>)}
                   </select>
                 </label>
+              )}
+              {TIME_AWARE.includes(active) && (
+                <>
+                  <label>الفترة الزمنية
+                    <select value={period} onChange={e => applyPeriod(e.target.value as Period)}>
+                      {PERIODS.map(p => <option key={p.key} value={p.key}>{p.label}</option>)}
+                    </select>
+                  </label>
+                  {period === "custom" && (
+                    <>
+                      <label>من<input type="date" value={filters.from} onChange={e => setFilters(f => ({ ...f, from: e.target.value }))} /></label>
+                      <label>إلى<input type="date" value={filters.to} onChange={e => setFilters(f => ({ ...f, to: e.target.value }))} /></label>
+                    </>
+                  )}
+                </>
               )}
             </div>
             <Suspense fallback={<LoadingState />}>

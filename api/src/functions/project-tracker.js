@@ -60,6 +60,28 @@ app.http("projectTracker", {
         return { status: 200, jsonBody: { ok: true, projects: getSupportedProjects().map(getProjectMeta) } };
       }
 
+      // Global teacher "ready for review" queue across ALL projects, ACTIVE classes only. Aggregated
+      // fully server-side in a single request (the frontend never fans out project×class×student).
+      // Counts ready_for_review stages straight from progress blobs (no config load, no summary math).
+      if (request.method === "GET" && String(new URL(request.url).searchParams.get("resource") || "") === "projects-summary") {
+        const classrooms = (await listJson(container, CLASS_PREFIX)).filter(Boolean);
+        const byProject = {};
+        let total = 0;
+        for (const code of getSupportedProjects()) {
+          byProject[code] = 0;
+          const ns = getStorageNamespace(code);
+          const active = classrooms.filter(c => String(c.programCode || "") === code && normalizeClassStatus(c) === "active");
+          for (const c of active) {
+            const docs = await listJson(container, ns.progressPrefix(c.classId));
+            for (const doc of docs) {
+              const stages = (doc && doc.stages) || {};
+              for (const k of Object.keys(stages)) if (stages[k] && stages[k].status === "ready_for_review") { byProject[code] += 1; total += 1; }
+            }
+          }
+        }
+        return { status: 200, jsonBody: { ok: true, totalReadyForReview: total, byProject } };
+      }
+
       if (!projectCode) return { status: 400, jsonBody: { ok: false, error: "projectCode مطلوب." } };
       if (!isSupportedProject(projectCode)) return { status: 400, jsonBody: { ok: false, error: "مشروع غير مدعوم." } };
       const definition = getProjectDefinition(projectCode);

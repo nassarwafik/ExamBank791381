@@ -12,22 +12,31 @@ import type { TrackMeta } from "../projects/types";
 ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, BarElement, Tooltip, Legend, Filler);
 
 export type ReportType = "class" | "student" | "assignments" | "project" | "track" | "ready" | "delayed" | "timeline";
-export type Filters = { schoolYear: string; classId: string; studentId: string; projectCode: string; track: string };
+export type Filters = { schoolYear: string; classId: string; studentId: string; projectCode: string; track: string; from: string; to: string };
 
-// Small data hook: fetches a report whenever its params change.
+// Adds date-range params (from/to) to a report request when present.
+function withRange(params: Record<string, string>, f: Filters): Record<string, string> {
+  const out = { ...params };
+  if (f.from) out.from = f.from;
+  if (f.to) out.to = f.to;
+  return out;
+}
+
+// Small data hook: fetches a report whenever its params change; exposes a retry (reload).
 function useReport<T>(token: string, params: Record<string, string> | null) {
   const [data, setData] = useState<T | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [nonce, setNonce] = useState(0);
   const key = params ? JSON.stringify(params) : "";
   useEffect(() => {
-    if (!params) { setData(null); return; }
+    if (!params) { setData(null); setError(""); return; }
     let cancelled = false;
     setLoading(true); setError("");
-    reportGet<T>(token, params).then(r => { if (!cancelled) setData(r); }).catch(e => { if (!cancelled) setError(e instanceof Error ? e.message : "خطأ"); }).finally(() => { if (!cancelled) setLoading(false); });
+    reportGet<T>(token, params).then(r => { if (!cancelled) setData(r); }).catch(e => { if (!cancelled) setError(e instanceof Error ? e.message : "تعذر تجهيز التقرير."); }).finally(() => { if (!cancelled) setLoading(false); });
     return () => { cancelled = true; };
-  }, [token, key]); // eslint-disable-line react-hooks/exhaustive-deps
-  return { data, loading, error };
+  }, [token, key, nonce]); // eslint-disable-line react-hooks/exhaustive-deps
+  return { data, loading, error, reload: () => setNonce(n => n + 1) };
 }
 
 const barOptions: ChartOptions<"bar"> = { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: true, labels: { font: { family: "inherit" } } }, tooltip: { rtl: true } }, scales: { y: { beginAtZero: true, ticks: { precision: 0 } }, x: { grid: { display: false } } } };
@@ -36,10 +45,10 @@ const barOptions: ChartOptions<"bar"> = { responsive: true, maintainAspectRatio:
 
 function ClassReport({ token, filters }: { token: string; filters: Filters }) {
   type Resp = { class: { name: string; schoolYear: string; status: string; studentCount: number }; kpis: { assignments: number; averageScore: number | null; submissionRate: number }; project: { tracks: TrackMeta[]; avgOverall: number; trackAverages: Record<string, number>; completedCount: number } | null };
-  const { data, loading, error } = useReport<Resp>(token, filters.classId ? { type: "class", classId: filters.classId } : null);
+  const { data, loading, error, reload } = useReport<Resp>(token, filters.classId ? withRange({ type: "class", classId: filters.classId }, filters) : null);
   if (!filters.classId) return <EmptyState text="اختر صفًا لعرض تقريره." />;
   if (loading && !data) return <LoadingState />;
-  if (error) return <ErrorState text={error} />;
+  if (error) return <ErrorState text={error} onRetry={reload} />;
   if (!data) return null;
   const kpis: { label: string; value: ReactNode; hint?: string }[] = [
     { label: "الحالة", value: data.class.status === "archived" ? "مؤرشف" : "نشط" },
@@ -56,16 +65,17 @@ function ClassReport({ token, filters }: { token: string; filters: Filters }) {
     <ReportShell title={"تقرير الصف — " + data.class.name} subtitle={data.class.schoolYear}
       onExportCsv={() => downloadCsv("class-" + data.class.name, [["المؤشر", "القيمة"], ...kpis.map(k => [k.label, String(k.value)])])}>
       <ReportKpiGrid items={kpis} />
+      {data.project && <p className="report-hint">بيانات التقييمات حسب الفترة المختارة؛ بيانات المشروع تمثل الوضع الحالي.</p>}
     </ReportShell>
   );
 }
 
 function StudentReport({ token, filters }: { token: string; filters: Filters }) {
   type Resp = { student: { displayName: string; className: string; schoolYear: string }; academic: { average: number | null; submittedCount: number; assessmentCount: number; submissionRate: number }; project: { tracks: TrackMeta[]; summary: { overallProgress: number; trackProgress: Record<string, number>; counts: Record<string, number>; complete: boolean }; lastActivity: string; balance: { leadingTrackTitle: string; laggingTrackTitle: string; diff: number } | null } | null };
-  const { data, loading, error } = useReport<Resp>(token, filters.studentId ? { type: "student", studentId: filters.studentId } : null);
+  const { data, loading, error, reload } = useReport<Resp>(token, filters.studentId ? withRange({ type: "student", studentId: filters.studentId }, filters) : null);
   if (!filters.studentId) return <EmptyState text="اختر طالبًا لعرض تقريره." />;
   if (loading && !data) return <LoadingState />;
-  if (error) return <ErrorState text={error} />;
+  if (error) return <ErrorState text={error} onRetry={reload} />;
   if (!data) return null;
   const kpis: { label: string; value: ReactNode; hint?: string }[] = [
     { label: "الصف", value: data.student.className || "—" },
@@ -83,6 +93,7 @@ function StudentReport({ token, filters }: { token: string; filters: Filters }) 
     <ReportShell title={"تقرير الطالب — " + data.student.displayName} subtitle={data.student.className + " · " + data.student.schoolYear}
       onExportCsv={() => downloadCsv("student-" + data.student.displayName, [["المؤشر", "القيمة"], ...kpis.map(k => [k.label, String(k.value)])])}>
       <ReportKpiGrid items={kpis} />
+      {data.project && <p className="report-hint">متوسط التقييمات حسب الفترة المختارة؛ بيانات المشروع تمثل الوضع الحالي.</p>}
       {data.project && data.project.balance && <div className="platform-warning">⚠ {data.project.balance.leadingTrackTitle} متقدّم على {data.project.balance.laggingTrackTitle} بـ {data.project.balance.diff}%</div>}
     </ReportShell>
   );
@@ -92,11 +103,11 @@ function AssignmentsReport({ token, filters }: { token: string; filters: Filters
   type Row = { assignmentId: string; title: string; students: number; submitted: number; missing: number; zeroScores: number; submissionRate: number; average: number | null; avgAttempts: number };
   type Cell = { studentId: string; state: string; percentage: number | null };
   type Resp = { class: { name: string }; students: { studentId: string; displayName: string }[]; overall: { assessmentCount: number; participants: number; average: number | null; submissionRate: number; distribution: Record<string, number> }; perAssignment: Row[]; matrix: { assignmentId: string; title: string; cells: Cell[] }[] };
-  const { data, loading, error } = useReport<Resp>(token, filters.classId ? { type: "assignments", classId: filters.classId } : null);
+  const { data, loading, error, reload } = useReport<Resp>(token, filters.classId ? withRange({ type: "assignments", classId: filters.classId }, filters) : null);
   const dist = useMemo(() => data && ({ labels: Object.keys(data.overall.distribution), datasets: [{ label: "عدد التسليمات", data: Object.values(data.overall.distribution), backgroundColor: "rgba(37,99,235,.82)", borderRadius: 6 }] }), [data]);
   if (!filters.classId) return <EmptyState text="اختر صفًا." />;
   if (loading && !data) return <LoadingState />;
-  if (error) return <ErrorState text={error} />;
+  if (error) return <ErrorState text={error} onRetry={reload} />;
   if (!data) return null;
   return (
     <ReportShell title={"التقييمات والواجبات — " + data.class.name}
@@ -144,10 +155,10 @@ function AssignmentsReport({ token, filters }: { token: string; filters: Filters
 function ProjectReport({ token, filters }: { token: string; filters: Filters }) {
   type Resp = { tracks: TrackMeta[]; class: { name: string }; summary: { avgOverall: number; trackAverages: Record<string, number>; completedCount: number; studentsReadyForReview: number; staleCount: number; studentCount: number } };
   const params = filters.projectCode && filters.classId ? { type: "project", projectCode: filters.projectCode, classId: filters.classId } : null;
-  const { data, loading, error } = useReport<Resp>(token, params);
+  const { data, loading, error, reload } = useReport<Resp>(token, params);
   if (!params) return <EmptyState text="اختر مشروعًا وصفًا." />;
   if (loading && !data) return <LoadingState />;
-  if (error) return <ErrorState text={error} />;
+  if (error) return <ErrorState text={error} onRetry={reload} />;
   if (!data) return null;
   const kpis: { label: string; value: ReactNode; hint?: string }[] = [
     { label: "عدد الطلاب", value: data.summary.studentCount },
@@ -172,11 +183,11 @@ function TrackReport({ token, filters }: { token: string; filters: Filters }) {
   const [track, setTrack] = useState(filters.track || "");
   const [groupId, setGroupId] = useState("");
   const params = filters.projectCode && filters.classId ? { type: "track", projectCode: filters.projectCode, classId: filters.classId, ...(track ? { track } : {}), ...(groupId ? { groupId } : {}) } : null;
-  const { data, loading, error } = useReport<Resp>(token, params);
+  const { data, loading, error, reload } = useReport<Resp>(token, params);
   useEffect(() => { if (data && !track) setTrack(data.track); }, [data, track]);
   if (!params) return <EmptyState text="اختر مشروعًا وصفًا." />;
   if (loading && !data) return <LoadingState />;
-  if (error) return <ErrorState text={error} />;
+  if (error) return <ErrorState text={error} onRetry={reload} />;
   if (!data) return null;
   return (
     <ReportShell title={"تقرير المسار — " + data.class.name}
@@ -198,13 +209,13 @@ function TrackReport({ token, filters }: { token: string; filters: Filters }) {
 function ReadyReport({ token, filters }: { token: string; filters: Filters }) {
   type Resp = { tracks: TrackMeta[]; class: { name: string }; students: { studentId: string; displayName: string; stages: { stageId: string; title: string; track: string }[] }[]; totalReady: number };
   const params = filters.projectCode && filters.classId ? { type: "ready", projectCode: filters.projectCode, classId: filters.classId } : null;
-  const { data, loading, error } = useReport<Resp>(token, params);
+  const { data, loading, error, reload } = useReport<Resp>(token, params);
   const [local, setLocal] = useState<Resp | null>(null);
   const [busy, setBusy] = useState("");
   useEffect(() => { setLocal(data); }, [data]);
   if (!params) return <EmptyState text="اختر مشروعًا وصفًا." />;
   if (loading && !local) return <LoadingState />;
-  if (error) return <ErrorState text={error} />;
+  if (error) return <ErrorState text={error} onRetry={reload} />;
   if (!local) return null;
 
   async function approve(studentId: string, stageId: string) {
@@ -237,10 +248,10 @@ function DelayedReport({ token, filters }: { token: string; filters: Filters }) 
   type Row = { studentId: string; displayName: string; overall: number; trackProgress: Record<string, number>; updatedAt: string; reasons: string[] };
   type Resp = { tracks: TrackMeta[]; lateThreshold: number; class: { name: string }; students: Row[] };
   const params = filters.projectCode && filters.classId ? { type: "delayed", projectCode: filters.projectCode, classId: filters.classId } : null;
-  const { data, loading, error } = useReport<Resp>(token, params);
+  const { data, loading, error, reload } = useReport<Resp>(token, params);
   if (!params) return <EmptyState text="اختر مشروعًا وصفًا." />;
   if (loading && !data) return <LoadingState />;
-  if (error) return <ErrorState text={error} />;
+  if (error) return <ErrorState text={error} onRetry={reload} />;
   if (!data) return null;
   const cols = [
     { key: "displayName", label: "الطالب" },
@@ -259,12 +270,12 @@ function DelayedReport({ token, filters }: { token: string; filters: Filters }) 
 
 function TimelineReport({ token, filters }: { token: string; filters: Filters }) {
   type Resp = { class: { name: string }; scope: string; trend: { weekStart: string; avgOverall: number }[] };
-  const params = filters.projectCode && filters.classId ? { type: "timeline", projectCode: filters.projectCode, classId: filters.classId, ...(filters.studentId ? { studentId: filters.studentId } : {}) } : null;
-  const { data, loading, error } = useReport<Resp>(token, params);
+  const params = filters.projectCode && filters.classId ? withRange({ type: "timeline", projectCode: filters.projectCode, classId: filters.classId, ...(filters.studentId ? { studentId: filters.studentId } : {}) }, filters) : null;
+  const { data, loading, error, reload } = useReport<Resp>(token, params);
   const chart = useMemo(() => data && ({ labels: data.trend.map(t => t.weekStart), datasets: [{ label: "متوسط التقدّم", data: data.trend.map(t => t.avgOverall), borderColor: "#2563eb", backgroundColor: "rgba(37,99,235,.14)", fill: true, tension: .3 }] }), [data]);
   if (!params) return <EmptyState text="اختر مشروعًا وصفًا." />;
   if (loading && !data) return <LoadingState />;
-  if (error) return <ErrorState text={error} />;
+  if (error) return <ErrorState text={error} onRetry={reload} />;
   if (!data) return null;
   return (
     <ReportShell title={"التقدم الزمني — " + data.class.name} subtitle={data.scope === "student" ? "طالب محدد" : "الصف كامل"}

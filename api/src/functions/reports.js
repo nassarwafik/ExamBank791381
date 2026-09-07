@@ -10,6 +10,7 @@ const svc = require("../lib/project-tracker/service");
 const core = require("../lib/project-tracker/core");
 const analytics = require("../lib/project-tracker/analytics");
 const agg = require("../lib/reports/aggregate");
+const { parseDateRange, inRange } = require("../lib/reports/date-range");
 
 const CLASS_PREFIX = "platform/classes/";
 const USER_PREFIX = "platform/users/";
@@ -66,6 +67,11 @@ app.http("reports", {
       const projectCode = String(url.searchParams.get("projectCode") || "").trim();
       const track = String(url.searchParams.get("track") || "").trim();
       const groupId = String(url.searchParams.get("groupId") || "").trim();
+      // Date range applies ONLY to time-meaningful data (assessments by createdAt, timeline by week).
+      // It never touches current project progress snapshots.
+      let range;
+      try { range = parseDateRange(url.searchParams.get("from"), url.searchParams.get("to")); }
+      catch (e) { return { status: e.httpStatus || 400, jsonBody: { ok: false, error: e.message } }; }
 
       // Filter options for the global filter bar (school years incl. archived, classes, projects).
       if (type === "filters") {
@@ -88,7 +94,7 @@ app.http("reports", {
         const c = await loadClass(container, classId);
         if (!c) return { status: 404, jsonBody: { ok: false, error: "الصف غير موجود." } };
         const students = await classStudents(container, classId);
-        const assignments = await classAssignments(container, classId);
+        const assignments = (await classAssignments(container, classId)).filter(a => inRange(a.createdAt, range));
         const allPcts = [];
         let submittedCells = 0;
         for (const a of assignments) {
@@ -119,7 +125,7 @@ app.http("reports", {
         if (!u || u.role !== "student") return { status: 404, jsonBody: { ok: false, error: "الطالب غير موجود." } };
         const sClassId = String(u.classId || "");
         const c = sClassId ? await loadClass(container, sClassId) : null;
-        const assignments = c ? await classAssignments(container, sClassId) : [];
+        const assignments = c ? (await classAssignments(container, sClassId)).filter(a => inRange(a.createdAt, range)) : [];
         const mySubs = [];
         let submittedCount = 0;
         for (const a of assignments) {
@@ -157,7 +163,7 @@ app.http("reports", {
         const c = await loadClass(container, classId);
         if (!c) return { status: 404, jsonBody: { ok: false, error: "الصف غير موجود." } };
         const students = await classStudents(container, classId);
-        const assignments = await classAssignments(container, classId);
+        const assignments = (await classAssignments(container, classId)).filter(a => inRange(a.createdAt, range));
         const perAssignment = [];
         const pooledPcts = [];
         const matrix = [];
@@ -223,13 +229,15 @@ app.http("reports", {
           return { status: 200, jsonBody: { ok: true, type, projectCode, tracks, lateThreshold, class: classMeta(c), students: rows } };
         }
         if (type === "timeline") {
+          // Clip the real weekly points to the range (never invents points outside recorded history).
+          const clip = points => points.filter(p => inRange(p.weekStart, range));
           if (studentId) {
             const ns = getStorageNamespace(projectCode);
             const progress = await downloadJsonOrNull(container, ns.progressName(classId, studentId));
-            const trend = analytics.buildWeeklyTrend(workDef, [{ studentId, displayName: "", progress }], now);
+            const trend = clip(analytics.buildWeeklyTrend(workDef, [{ studentId, displayName: "", progress }], now));
             return { status: 200, jsonBody: { ok: true, type, projectCode, tracks, class: classMeta(c), scope: "student", studentId, trend } };
           }
-          return { status: 200, jsonBody: { ok: true, type, projectCode, tracks, class: classMeta(c), scope: "class", trend: analytics.buildWeeklyTrend(workDef, entries, now) } };
+          return { status: 200, jsonBody: { ok: true, type, projectCode, tracks, class: classMeta(c), scope: "class", trend: clip(analytics.buildWeeklyTrend(workDef, entries, now)) } };
         }
       }
 
