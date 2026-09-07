@@ -275,6 +275,12 @@ async function listClasses(
   return classes;
 }
 
+// A class's project link may be changed only while the class is active (an archived class is
+// read-only for the project tracker). Pure + exported so the rule is unit-tested.
+function programChangeAllowed(classroom) {
+  return normalizeClassStatus(classroom) !== "archived";
+}
+
 function buildNewClassroomDocument(
   { name, grade, schoolYear, programCode },
   now
@@ -477,6 +483,11 @@ app.http(
                       notFound.httpStatus = 404;
                       throw notFound;
                     }
+                    if (!programChangeAllowed(current)) {
+                      const blocked = new Error("الصف مؤرشف — لا يمكن تغيير المشروع.");
+                      blocked.httpStatus = 403;
+                      throw blocked;
+                    }
                     if (programCode) current.programCode = programCode;
                     else delete current.programCode;
                     current.updatedAt = new Date().toISOString();
@@ -655,4 +666,4 @@ app.http(
   }
 );
 
-module.exports = { buildNewClassroomDocument };
+module.exports = { buildNewClassroomDocument, programChangeAllowed };

@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { studentOutcome, average, gradeDistribution, examStats, assignmentStats, studentAcademicAverage, csvCell, toCsv } from "./aggregate.js";
+import { studentOutcome, average, gradeDistribution, assignmentStats, studentAcademicAverage, csvCell, toCsv } from "./aggregate.js";
 
 const sub = (attempts) => ({ attempts });
 
@@ -17,24 +17,6 @@ describe("studentOutcome distinguishes missing from a real zero", () => {
     const o = studentOutcome(sub([{ percentage: 40 }, { percentage: 90 }]));
     expect(o.percentage).toBe(90);
     expect(o.attempts).toBe(2);
-  });
-});
-
-describe("examStats", () => {
-  it("averages only submitted, computes pass rate and distribution", () => {
-    const entries = [
-      { studentId: "a", submission: sub([{ score: 5, percentage: 90 }]) },
-      { studentId: "b", submission: sub([{ score: 0, percentage: 40 }]) },
-      { studentId: "c", submission: null } // missing — excluded from average
-    ];
-    const st = examStats(entries);
-    expect(st.participants).toBe(2);
-    expect(st.average).toBe(65);
-    expect(st.highest).toBe(90);
-    expect(st.lowest).toBe(40);
-    expect(st.passRate).toBe(50);
-    expect(st.distribution["90-100"]).toBe(1);
-    expect(st.distribution["0-49"]).toBe(1);
   });
 });
 

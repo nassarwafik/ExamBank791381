@@ -97,14 +97,12 @@ app.http("projectTracker", {
         if (resource === "student") {
           const studentId = String(url.searchParams.get("studentId") || "").trim();
           if (!studentId) return { status: 400, jsonBody: { ok: false, error: "studentId مطلوب." } };
-          const u = await svc.loadStudentUser(container, studentId);
-          const belongs = u && u.role === "student" && String(u.classId || "") === String(classId);
-          const student = belongs
-            ? { studentId: u.userId, displayName: u.displayName || ((u.firstName || "") + " " + (u.familyName || "")).trim(), code: u.code }
-            : { studentId, displayName: "", code: "" };
+          // Membership check BEFORE reading any progress — no cross-class reads.
+          const membership = await svc.requireStudentInClass(container, studentId, classId);
+          if (!membership.ok) return { status: 404, jsonBody: { ok: false, error: "الطالب غير موجود في هذا الصف." } };
           const ns = getStorageNamespace(projectCode);
           const progress = await downloadJsonOrNull(container, ns.progressName(classId, studentId));
-          return { status: 200, jsonBody: studentDetailBody(projectCode, workDef, config, readOnly, student, progress, now) };
+          return { status: 200, jsonBody: studentDetailBody(projectCode, workDef, config, readOnly, membership.student, progress, now) };
         }
 
         const students = await svc.listClassStudents(container, classId);
@@ -164,6 +162,10 @@ app.http("projectTracker", {
         const studentId = String(body.studentId || "").trim();
         const stageId = String(body.stageId || "").trim();
         if (!studentId || !stageId) return { status: 400, jsonBody: { ok: false, error: "studentId وstageId مطلوبان." } };
+        // Membership check BEFORE any mutate — an arbitrary/foreign studentId can never create a
+        // ghost progress blob.
+        const membership = await svc.requireStudentInClass(container, studentId, classId);
+        if (!membership.ok) return { status: 404, jsonBody: { ok: false, error: "الطالب غير موجود في هذا الصف." } };
         const config = await svc.ensureClassConfig(container, projectCode, classroom);
         const workDef = svc.workingDefinition(projectCode, config);
         const stage = (config.stages || []).find(s => s.stageId === stageId && s.active === true);

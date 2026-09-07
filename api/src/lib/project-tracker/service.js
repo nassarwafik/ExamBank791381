@@ -81,6 +81,22 @@ async function loadStudentUser(container, studentId) {
   return downloadJsonOrNull(container, USER_PREFIX + studentId + ".json");
 }
 
+// Pure membership rule (exported for unit tests): a user is a valid target for a class's project
+// progress only if it exists, is a student, is active & not archived, and belongs to that exact class.
+function studentMembershipOk(user, classId) {
+  if (!user || user.role !== "student" || user.active === false || user.archived === true) return false;
+  return String(user.classId || "") === String(classId);
+}
+
+// Verifies a studentId is a real, active student of the given class BEFORE any read/write of that
+// student's project progress. Prevents cross-class access and "ghost" progress blobs for arbitrary
+// ids. Returns { ok:false } when membership fails; otherwise { ok:true, student }.
+async function requireStudentInClass(container, studentId, classId) {
+  const u = await loadStudentUser(container, studentId);
+  if (!studentMembershipOk(u, classId)) return { ok: false };
+  return { ok: true, student: { studentId: u.userId, displayName: u.displayName || ((u.firstName || "") + " " + (u.familyName || "")).trim(), code: u.code } };
+}
+
 async function loadProgressEntries(container, projectCode, classId, students) {
   const ns = getStorageNamespace(projectCode);
   const blobs = await listJson(container, ns.progressPrefix(classId));
@@ -91,5 +107,5 @@ async function loadProgressEntries(container, projectCode, classId, students) {
 module.exports = {
   CLASS_PREFIX, USER_PREFIX,
   buildClassSnapshot, workingDefinition, loadClassroom, ensureClassConfig,
-  listClassStudents, loadStudentUser, loadProgressEntries
+  listClassStudents, loadStudentUser, studentMembershipOk, requireStudentInClass, loadProgressEntries
 };

@@ -13,7 +13,7 @@ type TeacherPlatformProps={token:string;currentExam:unknown|null;workspaceTab:Wo
 type ClassArchiveView="active"|"archived";
 type Classroom={classId:string;name:string;grade:string;schoolYear:string;programCode?:string;active:boolean;status?:string;archivedAt?:string;archivedBy?:string;archiveReason?:string;graduationYear?:string;studentCount:number;createdAt:string};
 
-const PROGRAM_794589="794589";
+type ProjectOption={projectCode:string;title:string};
 type Student={userId:string;code:string;identityNumber:string;firstName:string;familyName:string;displayName:string;classId:string;active:boolean;archived:boolean;createdAt:string;updatedAt:string;lastLoginAt:string;submittedAssignmentsCount:number;likesCount:number};
 type Credential={userId?:string;firstName?:string;familyName?:string;displayName?:string;code:string;identityNumber?:string;password:string};
 type BulkStudent={firstName:string;familyName:string;identityNumber:string};
@@ -62,6 +62,7 @@ function csvCell(value:unknown){
 
 function TeacherPlatform({token,currentExam,workspaceTab,onCopyLibraryExamToBuilder}:TeacherPlatformProps){
  const [classes,setClasses]=useState<Classroom[]>([]);
+ const [projects,setProjects]=useState<ProjectOption[]>([]);
  const [classArchiveView,setClassArchiveView]=useState<ClassArchiveView>("active");
  const [students,setStudents]=useState<Student[]>([]);
  const [selectedClassId,setSelectedClassId]=useState("");
@@ -190,6 +191,8 @@ function TeacherPlatform({token,currentExam,workspaceTab,onCopyLibraryExamToBuil
  }
 
  useEffect(()=>{void loadClasses(false)},[]);
+ // Registry-driven list of projects for the per-class project selector (no hard-coded codes).
+ useEffect(()=>{teacherApi<{projects?:ProjectOption[]}>("/api/project-tracker?resource=projects").then(r=>setProjects(r.projects||[])).catch(()=>setProjects([]));},[]);// eslint-disable-line react-hooks/exhaustive-deps
  useEffect(()=>{
   setSelectedIds([]);setProfile(null);setEditingStudent(null);setHistory(null);setReviewTarget(null);clearPasswordReveal();
   if(selectedClassId)void loadStudents(selectedClassId);else setStudents([]);
@@ -234,18 +237,24 @@ function TeacherPlatform({token,currentExam,workspaceTab,onCopyLibraryExamToBuil
   finally{setActionBusy(false)}
  }
 
- async function toggleProgram794589(classroom:Classroom){
-  const enrolled=classroom.programCode===PROGRAM_794589;
-  const message=enrolled
-   ?"إزالة الصف "+classroom.name+" من مشروع 794589؟\n\nلن يُحذف تقدّم الطلاب، لكن لن يظهر الصف ضمن المشروع."
-   :"إضافة الصف "+classroom.name+" إلى مشروع 794589؟";
-  if(actionBusy||!window.confirm(message))return;
+ function projectTitle(code:string){return projects.find(p=>p.projectCode===code)?.title||("مشروع "+code);}
+ // Generic: link/unlink/switch a class's project. Never deletes any project data automatically; a
+ // switch only re-points programCode, so the previous project's snapshot/progress stay untouched.
+ async function setClassProgram(classroom:Classroom,newCode:string){
+  if(actionBusy)return;
+  const current=classroom.programCode||"";
+  if(current===newCode)return;
+  let message="";
+  if(!current&&newCode)message="ربط الصف \""+classroom.name+"\" بـ"+projectTitle(newCode)+"؟";
+  else if(current&&!newCode)message="إزالة الصف \""+classroom.name+"\" من "+projectTitle(current)+"؟\n\nلن تُحذف بيانات المشروع، لكنه لن يظهر للصف.";
+  else message="سيتم تغيير مشروع الصف من "+projectTitle(current)+" إلى "+projectTitle(newCode)+".\n\n• سيتغيّر ارتباط الصف.\n• لن يتم حذف بيانات المشروع السابق.\n• لن يظهر المشروع السابق للصف ما دام مرتبطًا بالمشروع الجديد.";
+  if(!window.confirm(message))return;
   setActionBusy(true);setError("");setNotice("");
   try{
-   await teacherApi("/api/classrooms",{method:"POST",body:JSON.stringify({action:"setProgram",classId:classroom.classId,programCode:enrolled?"":PROGRAM_794589})});
+   await teacherApi("/api/classrooms",{method:"POST",body:JSON.stringify({action:"setProgram",classId:classroom.classId,programCode:newCode})});
    await loadClasses();
-   setNotice(enrolled?"✓ تمت إزالة الصف من مشروع 794589.":"✓ تمت إضافة الصف إلى مشروع 794589. افتح 📡 مشروع 794589 من القائمة.");
-  }catch(e){setError(e instanceof Error?e.message:"تعذر تعديل برنامج الصف.")}
+   setNotice(newCode?("✓ تم ربط الصف بـ"+projectTitle(newCode)+". افتحه من 📡 المشاريع."):"✓ تمت إزالة الصف من المشروع.");
+  }catch(e){setError(e instanceof Error?e.message:"تعذر تعديل مشروع الصف.")}
   finally{setActionBusy(false)}
  }
 
@@ -622,11 +631,11 @@ function TeacherPlatform({token,currentExam,workspaceTab,onCopyLibraryExamToBuil
     </nav>
     <div className="class-list">
      {visibleClasses.map(classroom=><article key={classroom.classId} className={"class-row "+(classroom.classId===selectedClassId?"selected ":"")+(classroom.active?"":"archived")}>
-      <button className="class-select" onClick={()=>setSelectedClassId(classroom.classId)}><strong>{classroom.name}{classroom.programCode===PROGRAM_794589?<span className="class-program-tag">📡 794589</span>:null}</strong><span>{classroom.grade||"—"} · {classroom.studentCount} طالب</span><small>{classroom.schoolYear||""}</small>
+      <button className="class-select" onClick={()=>setSelectedClassId(classroom.classId)}><strong>{classroom.name}{classroom.programCode?<span className="class-program-tag">📡 {classroom.programCode}</span>:null}</strong><span>{classroom.grade||"—"} · {classroom.studentCount} طالب</span><small>{classroom.schoolYear||""}</small>
        {classArchiveView==="archived"&&<small>{classroom.archiveReason==="graduated"?"مُخرَّج":"مؤرشف"}{classroom.archivedAt?" · "+fmtDate(classroom.archivedAt):""}{classroom.graduationYear?" · دفعة "+classroom.graduationYear:""}</small>}
       </button>
       <div className="class-row-actions">
-       {classArchiveView==="active"&&<button className="class-archive" onClick={()=>toggleProgram794589(classroom)} disabled={actionBusy}>{classroom.programCode===PROGRAM_794589?"إزالة من 794589":"📡 إضافة إلى 794589"}</button>}
+       {classArchiveView==="active"&&<label className="class-program-select"><span>📡 المشروع:</span><select value={classroom.programCode||""} disabled={actionBusy} onChange={e=>void setClassProgram(classroom,e.target.value)}><option value="">بدون مشروع</option>{projects.map(p=><option key={p.projectCode} value={p.projectCode}>{p.projectCode} — {p.title}</option>)}</select></label>}
        {classArchiveView==="active"&&isGraduationEligible(classroom)&&<button className="class-archive" onClick={()=>graduateAndArchiveClass(classroom)} disabled={actionBusy}>🎓 تخريج وأرشفة الصف</button>}
        <button className="class-archive" onClick={()=>toggleClassArchive(classroom)} disabled={actionBusy}>{classroom.active?"أرشفة الصف":"تفعيل"}</button>
       </div>

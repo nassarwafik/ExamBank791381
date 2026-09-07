@@ -143,11 +143,14 @@ app.http("reports", {
         }
         return { status: 200, jsonBody: { ok: true, type,
           student: { studentId, displayName: u.displayName || "", classId: sClassId, className: c ? c.name : "", schoolYear: c ? c.schoolYear : "" },
-          academic: { examAverage: acad.average, assignmentAverage: acad.average, submittedCount, assignmentCount: assignments.length, submissionRate: assignments.length ? Math.round((submittedCount / assignments.length) * 100) : 0 },
+          // Single assessments average — the schema has no exam/assignment distinction, so no duplicate metrics.
+          academic: { average: acad.average, submittedCount, assessmentCount: assignments.length, submissionRate: assignments.length ? Math.round((submittedCount / assignments.length) * 100) : 0 },
           project } };
       }
 
-      if (type === "exams" || type === "assignments") {
+      // Unified assessments report. The schema has no field distinguishing exam vs assignment, so a
+      // single report covers every published assessment (no duplicate exam/assignment reports).
+      if (type === "assignments") {
         if (!classId) return { status: 400, jsonBody: { ok: false, error: "classId مطلوب." } };
         const c = await loadClass(container, classId);
         if (!c) return { status: 404, jsonBody: { ok: false, error: "الصف غير موجود." } };
@@ -156,26 +159,20 @@ app.http("reports", {
         const perAssignment = [];
         const pooledPcts = [];
         const matrix = [];
+        let submittedCells = 0;
         for (const a of assignments) {
           const subs = await submissionsFor(container, a.assignmentId);
           const entries = students.map(s => ({ studentId: s.studentId, submission: subs.get(String(s.studentId)) }));
-          if (type === "exams") {
-            const st = agg.examStats(entries);
-            perAssignment.push({ assignmentId: a.assignmentId, title: a.title, participants: st.participants, average: st.average, highest: st.highest, lowest: st.lowest, passRate: st.passRate });
-            for (const e of entries) { const o = agg.studentOutcome(e.submission); if (o.state === "submitted") pooledPcts.push(o.percentage); }
-          } else {
-            const st = agg.assignmentStats(entries);
-            perAssignment.push({ assignmentId: a.assignmentId, title: a.title, ...st });
-            matrix.push({ assignmentId: a.assignmentId, title: a.title, cells: entries.map(e => { const o = agg.studentOutcome(e.submission); return { studentId: e.studentId, state: o.state, percentage: o.percentage }; }) });
-          }
+          const st = agg.assignmentStats(entries);
+          perAssignment.push({ assignmentId: a.assignmentId, title: a.title, ...st });
+          matrix.push({ assignmentId: a.assignmentId, title: a.title, cells: entries.map(e => { const o = agg.studentOutcome(e.submission); return { studentId: e.studentId, state: o.state, percentage: o.percentage }; }) });
+          for (const e of entries) { const o = agg.studentOutcome(e.submission); if (o.state === "submitted") { pooledPcts.push(o.percentage); submittedCells += 1; } }
         }
-        if (type === "exams") {
-          return { status: 200, jsonBody: { ok: true, type, class: classMeta(c), examCount: assignments.length,
-            overall: { participants: pooledPcts.length, average: agg.average(pooledPcts), highest: pooledPcts.length ? Math.max(...pooledPcts) : null, lowest: pooledPcts.length ? Math.min(...pooledPcts) : null,
-              passRate: pooledPcts.length ? Math.round((pooledPcts.filter(p => p >= 50).length / pooledPcts.length) * 100) : null, distribution: agg.gradeDistribution(pooledPcts) },
-            perExam: perAssignment } };
-        }
-        return { status: 200, jsonBody: { ok: true, type, class: classMeta(c), students: students.map(s => ({ studentId: s.studentId, displayName: s.displayName })), perAssignment, matrix } };
+        const totalCells = students.length * assignments.length;
+        return { status: 200, jsonBody: { ok: true, type, class: classMeta(c),
+          students: students.map(s => ({ studentId: s.studentId, displayName: s.displayName })),
+          overall: { assessmentCount: assignments.length, participants: pooledPcts.length, average: agg.average(pooledPcts), submissionRate: totalCells ? Math.round((submittedCells / totalCells) * 100) : 0, distribution: agg.gradeDistribution(pooledPcts) },
+          perAssignment, matrix } };
       }
 
       // ---------- Project reports (generic) ----------

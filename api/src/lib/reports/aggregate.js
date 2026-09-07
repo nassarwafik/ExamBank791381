@@ -41,25 +41,8 @@ function gradeDistribution(percentages) {
   return b;
 }
 
-// Exam-style stats over the latest submissions of one assignment (or a pooled set).
-// entries: [{ studentId, submission }]
-function examStats(entries) {
-  const pcts = [];
-  let submitted = 0;
-  for (const e of entries) {
-    const o = studentOutcome(e.submission);
-    if (o.state === "submitted") { submitted += 1; pcts.push(o.percentage); }
-  }
-  const passing = pcts.filter(p => p >= 50).length;
-  return {
-    participants: submitted,
-    average: average(pcts),
-    highest: pcts.length ? Math.max(...pcts) : null,
-    lowest: pcts.length ? Math.min(...pcts) : null,
-    passRate: pcts.length ? Math.round((passing / pcts.length) * 100) : null,
-    distribution: gradeDistribution(pcts)
-  };
-}
+// NOTE: no "pass rate" is computed anywhere. The assignment/exam schema has no reliable pass-mark
+// field (only totalMarks), so a success threshold would be an invented assumption — intentionally omitted.
 
 // Assignment-style stats: submission rate, non-submitters, average attempts, avg score, missing vs zero.
 // entries: [{ studentId, submission }] across the class for ONE assignment.
@@ -110,5 +93,5 @@ function toCsv(rows) {
 
 module.exports = {
   latestAttempt, studentOutcome, average, round1, gradeDistribution,
-  examStats, assignmentStats, studentAcademicAverage, csvCell, toCsv
+  assignmentStats, studentAcademicAverage, csvCell, toCsv
 };

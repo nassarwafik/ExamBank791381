@@ -11,14 +11,13 @@ type ClassOpt = { classId: string; name: string; schoolYear: string; status: str
 type ProjectOpt = { projectCode: string; title: string };
 type FiltersResp = { schoolYears: string[]; classes: ClassOpt[]; projects: ProjectOpt[] };
 
-type Category = "all" | "students" | "exams" | "assignments" | "projects";
+type Category = "all" | "students" | "assessments" | "projects";
 type Card = { type: ReportType; emoji: string; title: string; desc: string; category: Category; needs: ("class" | "student" | "project")[] };
 
 const CARDS: Card[] = [
-  { type: "class", emoji: "👥", title: "تقرير الصف", desc: "ملخّص الصف: الواجبات والتسليم والمشروع.", category: "students", needs: ["class"] },
+  { type: "class", emoji: "👥", title: "تقرير الصف", desc: "ملخّص الصف: التقييمات والتسليم والمشروع.", category: "students", needs: ["class"] },
   { type: "student", emoji: "👤", title: "تقرير الطالب", desc: "أداء الطالب الأكاديمي والمشروع.", category: "students", needs: ["student"] },
-  { type: "exams", emoji: "📝", title: "الامتحانات", desc: "المتوسطات وتوزيع الدرجات ونسبة النجاح.", category: "exams", needs: ["class"] },
-  { type: "assignments", emoji: "📋", title: "الواجبات", desc: "نِسب التسليم ومصفوفة الطالب × الواجب.", category: "assignments", needs: ["class"] },
+  { type: "assignments", emoji: "📊", title: "التقييمات والواجبات", desc: "المتوسطات ونِسب التسليم ومصفوفة الطالب × التقييم.", category: "assessments", needs: ["class"] },
   { type: "project", emoji: "📡", title: "تقرير المشروع", desc: "تقدّم الصف في المشروع وإحصائياته.", category: "projects", needs: ["project", "class"] },
   { type: "track", emoji: "🧭", title: "تقرير المسار", desc: "حالة كل مرحلة داخل مسار.", category: "projects", needs: ["project", "class"] },
   { type: "ready", emoji: "🔵", title: "جاهز للفحص", desc: "المراحل بانتظار الاعتماد، مجمّعة بالطالب.", category: "projects", needs: ["project", "class"] },
@@ -28,7 +27,7 @@ const CARDS: Card[] = [
 
 const CATEGORIES: { key: Category; label: string }[] = [
   { key: "all", label: "الكل" }, { key: "students", label: "الطلاب" },
-  { key: "exams", label: "الامتحانات" }, { key: "assignments", label: "الواجبات" }, { key: "projects", label: "المشاريع" }
+  { key: "assessments", label: "التقييمات والواجبات" }, { key: "projects", label: "المشاريع" }
 ];
 
 export default function ReportsCenter({ token }: { token: string }) {

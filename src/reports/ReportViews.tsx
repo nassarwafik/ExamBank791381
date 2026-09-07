@@ -11,7 +11,7 @@ import type { TrackMeta } from "../projects/types";
 
 ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, BarElement, Tooltip, Legend, Filler);
 
-export type ReportType = "class" | "student" | "exams" | "assignments" | "project" | "track" | "ready" | "delayed" | "timeline";
+export type ReportType = "class" | "student" | "assignments" | "project" | "track" | "ready" | "delayed" | "timeline";
 export type Filters = { schoolYear: string; classId: string; studentId: string; projectCode: string; track: string };
 
 // Small data hook: fetches a report whenever its params change.
@@ -61,7 +61,7 @@ function ClassReport({ token, filters }: { token: string; filters: Filters }) {
 }
 
 function StudentReport({ token, filters }: { token: string; filters: Filters }) {
-  type Resp = { student: { displayName: string; className: string; schoolYear: string }; academic: { examAverage: number | null; submittedCount: number; assignmentCount: number; submissionRate: number }; project: { tracks: TrackMeta[]; summary: { overallProgress: number; trackProgress: Record<string, number>; counts: Record<string, number>; complete: boolean }; lastActivity: string; balance: { leadingTrackTitle: string; laggingTrackTitle: string; diff: number } | null } | null };
+  type Resp = { student: { displayName: string; className: string; schoolYear: string }; academic: { average: number | null; submittedCount: number; assessmentCount: number; submissionRate: number }; project: { tracks: TrackMeta[]; summary: { overallProgress: number; trackProgress: Record<string, number>; counts: Record<string, number>; complete: boolean }; lastActivity: string; balance: { leadingTrackTitle: string; laggingTrackTitle: string; diff: number } | null } | null };
   const { data, loading, error } = useReport<Resp>(token, filters.studentId ? { type: "student", studentId: filters.studentId } : null);
   if (!filters.studentId) return <EmptyState text="اختر طالبًا لعرض تقريره." />;
   if (loading && !data) return <LoadingState />;
@@ -69,8 +69,8 @@ function StudentReport({ token, filters }: { token: string; filters: Filters }) 
   if (!data) return null;
   const kpis: { label: string; value: ReactNode; hint?: string }[] = [
     { label: "الصف", value: data.student.className || "—" },
-    { label: "متوسط الواجبات", value: pct(data.academic.examAverage) },
-    { label: "المسلَّمة", value: data.academic.submittedCount + " / " + data.academic.assignmentCount },
+    { label: "متوسط التقييمات", value: pct(data.academic.average) },
+    { label: "المسلَّمة", value: data.academic.submittedCount + " / " + data.academic.assessmentCount },
     { label: "نسبة التسليم", value: pct(data.academic.submissionRate) }
   ];
   if (data.project) {
@@ -88,48 +88,26 @@ function StudentReport({ token, filters }: { token: string; filters: Filters }) 
   );
 }
 
-function ExamsReport({ token, filters }: { token: string; filters: Filters }) {
-  type Row = { assignmentId: string; title: string; participants: number; average: number | null; highest: number | null; lowest: number | null; passRate: number | null };
-  type Resp = { class: { name: string }; examCount: number; overall: { participants: number; average: number | null; highest: number | null; lowest: number | null; passRate: number | null; distribution: Record<string, number> }; perExam: Row[] };
-  const { data, loading, error } = useReport<Resp>(token, filters.classId ? { type: "exams", classId: filters.classId } : null);
-  const dist = useMemo(() => data && ({ labels: Object.keys(data.overall.distribution), datasets: [{ label: "عدد الطلاب", data: Object.values(data.overall.distribution), backgroundColor: "rgba(37,99,235,.82)", borderRadius: 6 }] }), [data]);
-  if (!filters.classId) return <EmptyState text="اختر صفًا." />;
-  if (loading && !data) return <LoadingState />;
-  if (error) return <ErrorState text={error} />;
-  if (!data) return null;
-  return (
-    <ReportShell title={"تقرير الامتحانات — " + data.class.name}
-      onExportCsv={() => downloadCsv("exams-" + data.class.name, [["الامتحان", "المشاركون", "المتوسط", "الأعلى", "الأدنى", "نسبة النجاح"], ...data.perExam.map(r => [r.title, r.participants, r.average ?? "", r.highest ?? "", r.lowest ?? "", r.passRate ?? ""])])}>
-      <ReportKpiGrid items={[
-        { label: "عدد الامتحانات", value: data.examCount },
-        { label: "المشاركات", value: data.overall.participants },
-        { label: "المتوسط", value: pct(data.overall.average) },
-        { label: "الأعلى", value: pct(data.overall.highest) },
-        { label: "الأدنى", value: pct(data.overall.lowest) },
-        { label: "نسبة النجاح", value: pct(data.overall.passRate) }
-      ]} />
-      <section className="platform-card"><h3>توزيع الدرجات</h3><div className="report-chart">{dist && <Bar data={dist} options={barOptions} />}</div></section>
-      <ReportTable columns={[
-        { key: "title", label: "الامتحان" }, { key: "participants", label: "المشاركون" },
-        { key: "average", label: "المتوسط", render: r => pct(r.average) }, { key: "highest", label: "الأعلى", render: r => pct(r.highest) },
-        { key: "lowest", label: "الأدنى", render: r => pct(r.lowest) }, { key: "passRate", label: "النجاح", render: r => pct(r.passRate) }
-      ]} rows={data.perExam} empty="لا توجد امتحانات منشورة." />
-    </ReportShell>
-  );
-}
-
 function AssignmentsReport({ token, filters }: { token: string; filters: Filters }) {
   type Row = { assignmentId: string; title: string; students: number; submitted: number; missing: number; zeroScores: number; submissionRate: number; average: number | null; avgAttempts: number };
   type Cell = { studentId: string; state: string; percentage: number | null };
-  type Resp = { class: { name: string }; students: { studentId: string; displayName: string }[]; perAssignment: Row[]; matrix: { assignmentId: string; title: string; cells: Cell[] }[] };
+  type Resp = { class: { name: string }; students: { studentId: string; displayName: string }[]; overall: { assessmentCount: number; participants: number; average: number | null; submissionRate: number; distribution: Record<string, number> }; perAssignment: Row[]; matrix: { assignmentId: string; title: string; cells: Cell[] }[] };
   const { data, loading, error } = useReport<Resp>(token, filters.classId ? { type: "assignments", classId: filters.classId } : null);
+  const dist = useMemo(() => data && ({ labels: Object.keys(data.overall.distribution), datasets: [{ label: "عدد التسليمات", data: Object.values(data.overall.distribution), backgroundColor: "rgba(37,99,235,.82)", borderRadius: 6 }] }), [data]);
   if (!filters.classId) return <EmptyState text="اختر صفًا." />;
   if (loading && !data) return <LoadingState />;
   if (error) return <ErrorState text={error} />;
   if (!data) return null;
   return (
-    <ReportShell title={"تقرير الواجبات — " + data.class.name}
-      onExportCsv={() => downloadCsv("assignments-" + data.class.name, [["الواجب", "الطلاب", "مُسلَّم", "غير مسلَّم", "صفر", "نسبة التسليم", "المتوسط", "متوسط المحاولات"], ...data.perAssignment.map(r => [r.title, r.students, r.submitted, r.missing, r.zeroScores, r.submissionRate, r.average ?? "", r.avgAttempts])])}>
+    <ReportShell title={"التقييمات والواجبات — " + data.class.name}
+      onExportCsv={() => downloadCsv("assessments-" + data.class.name, [["التقييم", "الطلاب", "مُسلَّم", "غير مسلَّم", "صفر", "نسبة التسليم", "المتوسط", "متوسط المحاولات"], ...data.perAssignment.map(r => [r.title, r.students, r.submitted, r.missing, r.zeroScores, r.submissionRate, r.average ?? "", r.avgAttempts])])}>
+      <ReportKpiGrid items={[
+        { label: "عدد التقييمات", value: data.overall.assessmentCount },
+        { label: "التسليمات", value: data.overall.participants },
+        { label: "متوسط العلامات", value: pct(data.overall.average) },
+        { label: "نسبة التسليم", value: pct(data.overall.submissionRate) }
+      ]} />
+      <section className="platform-card"><h3>توزيع الدرجات</h3><div className="report-chart">{dist && <Bar data={dist} options={barOptions} />}</div></section>
       <ReportTable columns={[
         { key: "title", label: "الواجب" }, { key: "submissionRate", label: "نسبة التسليم", render: r => pct(r.submissionRate) },
         { key: "submitted", label: "مُسلَّم" }, { key: "missing", label: "غير مسلَّم" }, { key: "zeroScores", label: "صفر (مُسلَّم)" },
@@ -300,7 +278,6 @@ export default function ReportView({ type, token, filters }: { type: ReportType;
   switch (type) {
     case "class": return <ClassReport token={token} filters={filters} />;
     case "student": return <StudentReport token={token} filters={filters} />;
-    case "exams": return <ExamsReport token={token} filters={filters} />;
     case "assignments": return <AssignmentsReport token={token} filters={filters} />;
     case "project": return <ProjectReport token={token} filters={filters} />;
     case "track": return <TrackReport token={token} filters={filters} />;
