@@ -12,6 +12,7 @@ const { isSupportedProject, getProjectDefinition, getStorageNamespace, getProjec
 const svc = require("../lib/project-tracker/service");
 const core = require("../lib/project-tracker/core");
 const analytics = require("../lib/project-tracker/analytics");
+const { countReadyStages } = require("../lib/project-tracker/ready-count");
 
 const CLASS_PREFIX = "platform/classes/";
 const CONFLICT_MESSAGE = "حدث تعارض مؤقت أثناء حفظ البيانات. حاول مرة أخرى.";
@@ -62,9 +63,12 @@ app.http("projectTracker", {
 
       // Global teacher "ready for review" queue across ALL projects, ACTIVE classes only. Aggregated
       // fully server-side in a single request (the frontend never fans out project×class×student).
-      // Counts ready_for_review stages straight from progress blobs (no config load, no summary math).
+      // Uses the SAME exactness as the ready report: only current class members (non-archived) and
+      // only stages that exist & are active in the class snapshot are counted.
       if (request.method === "GET" && String(new URL(request.url).searchParams.get("resource") || "") === "projects-summary") {
         const classrooms = (await listJson(container, CLASS_PREFIX)).filter(Boolean);
+        const allUsers = await listJson(container, svc.USER_PREFIX);
+        const usersById = new Map(allUsers.filter(u => u && u.role === "student").map(u => [String(u.userId), u]));
         const byProject = {};
         let total = 0;
         for (const code of getSupportedProjects()) {
@@ -72,11 +76,12 @@ app.http("projectTracker", {
           const ns = getStorageNamespace(code);
           const active = classrooms.filter(c => String(c.programCode || "") === code && normalizeClassStatus(c) === "active");
           for (const c of active) {
+            const snapshot = (await downloadJsonOrNull(container, ns.configName(c.classId))) || svc.buildClassSnapshot(getProjectDefinition(code), c.classId, now);
+            const activeStageIds = new Set((snapshot.stages || []).filter(s => s.active === true).map(s => s.stageId));
             const docs = await listJson(container, ns.progressPrefix(c.classId));
-            for (const doc of docs) {
-              const stages = (doc && doc.stages) || {};
-              for (const k of Object.keys(stages)) if (stages[k] && stages[k].status === "ready_for_review") { byProject[code] += 1; total += 1; }
-            }
+            const n = countReadyStages(docs, activeStageIds, sid => svc.studentBelongsToClass(usersById.get(String(sid)), c.classId));
+            byProject[code] += n;
+            total += n;
           }
         }
         return { status: 200, jsonBody: { ok: true, totalReadyForReview: total, byProject } };

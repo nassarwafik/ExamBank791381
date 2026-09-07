@@ -3,8 +3,18 @@
 // parameterized by projectCode via the registry's storage namespace (so 794589 hits its legacy paths
 // and every other project hits its own isolated namespace).
 const { downloadJsonOrNull, uploadJson, listJson } = require("../platform-storage");
-const { getProjectDefinition, getStorageNamespace } = require("./registry");
+const { getProjectDefinition, getStorageNamespace, getSnapshotUpgradePolicy } = require("./registry");
 const { normalizeClassStatus } = require("../class-lifecycle");
+const { classHasMeaningfulProgress } = require("../project-794589-migration");
+const { recordAuditEvent } = require("../audit-log");
+
+// Pure decision: should an existing snapshot be auto-upgraded? Only an ACTIVE class on an older
+// template version with NO meaningful student progress. Exported for unit tests.
+function shouldUpgradeSnapshot(existing, isActive, currentVersion, hasMeaningfulProgress) {
+  if (!existing || !isActive) return false;
+  if (Number(existing.templateVersion || 1) >= currentVersion) return false;
+  return !hasMeaningfulProgress;
+}
 
 const CLASS_PREFIX = "platform/classes/";
 const USER_PREFIX = "platform/users/";
@@ -59,14 +69,34 @@ async function loadClassroom(container, classId) {
 async function ensureClassConfig(container, projectCode, classroom) {
   const ns = getStorageNamespace(projectCode);
   const classId = classroom.classId;
-  const existing = await downloadJsonOrNull(container, ns.configName(classId));
-  if (existing) return existing;
   const now = new Date().toISOString();
-  const snapshot = buildClassSnapshot(getProjectDefinition(projectCode), classId, now);
-  if (normalizeClassStatus(classroom) === "active") {
-    await uploadJson(container, ns.configName(classId), snapshot);
+  const existing = await downloadJsonOrNull(container, ns.configName(classId));
+  const isActive = normalizeClassStatus(classroom) === "active";
+
+  if (!existing) {
+    const snapshot = buildClassSnapshot(getProjectDefinition(projectCode), classId, now);
+    if (isActive) await uploadJson(container, ns.configName(classId), snapshot);
+    return snapshot;
   }
-  return snapshot;
+
+  // Version-aware upgrade — only for a project that declares a policy (794589). NON-DESTRUCTIVE: an
+  // active class with no meaningful progress is upgraded to the current template version and audited;
+  // a class with real progress (or archived) is returned exactly as-is. Storage paths never change.
+  const policy = getSnapshotUpgradePolicy(projectCode);
+  if (policy && isActive && Number(existing.templateVersion || 1) < policy.currentVersion) {
+    const progressDocs = await listJson(container, ns.progressPrefix(classId));
+    if (shouldUpgradeSnapshot(existing, isActive, policy.currentVersion, classHasMeaningfulProgress(progressDocs))) {
+      const upgraded = policy.buildUpgraded(existing, classId, now);
+      await uploadJson(container, ns.configName(classId), upgraded);
+      await recordAuditEvent(container, {
+        actor: "system", action: "project.template.upgrade",
+        targetType: "project-template", targetId: classId, targetLabel: classroom.name || "",
+        details: { fromVersion: Number(existing.templateVersion || 1), toVersion: policy.currentVersion, reason: "no-meaningful-progress" }
+      });
+      return upgraded;
+    }
+  }
+  return existing;
 }
 
 async function listClassStudents(container, classId) {
@@ -110,5 +140,6 @@ async function loadProgressEntries(container, projectCode, classId, students) {
 module.exports = {
   CLASS_PREFIX, USER_PREFIX,
   buildClassSnapshot, workingDefinition, loadClassroom, ensureClassConfig,
-  listClassStudents, loadStudentUser, studentBelongsToClass, requireStudentInClass, loadProgressEntries
+  listClassStudents, loadStudentUser, studentBelongsToClass, requireStudentInClass, loadProgressEntries,
+  shouldUpgradeSnapshot
 };

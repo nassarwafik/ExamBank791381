@@ -2,6 +2,7 @@ import { Suspense, lazy, useEffect, useMemo, useState } from "react";
 import { reportGet } from "./api";
 import { LoadingState, ErrorState } from "./ui";
 import type { ReportType, Filters } from "./ReportViews";
+import { rangeForPeriod, type Period } from "./period";
 import "../reports.css";
 
 // The report views (with Chart.js) are code-split so the charts only load when a report is opened.
@@ -12,7 +13,6 @@ type ProjectOpt = { projectCode: string; title: string };
 type FiltersResp = { schoolYears: string[]; classes: ClassOpt[]; projects: ProjectOpt[] };
 
 type Category = "all" | "students" | "assessments" | "projects";
-type Period = "all" | "7" | "30" | "year" | "custom";
 const PERIODS: { key: Period; label: string }[] = [
   { key: "all", label: "كل الفترة" }, { key: "7", label: "آخر 7 أيام" }, { key: "30", label: "آخر 30 يومًا" },
   { key: "year", label: "هذه السنة الدراسية" }, { key: "custom", label: "مخصص" }
@@ -64,15 +64,9 @@ export default function ReportsCenter({ token }: { token: string }) {
   // user-entered dates.
   function applyPeriod(p: Period) {
     setPeriod(p);
-    if (p === "custom") return;
-    if (p === "7" || p === "30") {
-      const to = new Date();
-      const from = new Date();
-      from.setDate(from.getDate() - (p === "7" ? 7 : 30));
-      setFilters(f => ({ ...f, from: from.toISOString().slice(0, 10), to: to.toISOString().slice(0, 10) }));
-    } else {
-      setFilters(f => ({ ...f, from: "", to: "" }));
-    }
+    if (p === "custom") return; // keep the user-entered from/to
+    const { from, to } = rangeForPeriod(p);
+    setFilters(f => ({ ...f, from, to }));
   }
 
   // Load students when a class is chosen (for student/timeline reports).

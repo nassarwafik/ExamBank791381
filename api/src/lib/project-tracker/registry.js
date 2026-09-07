@@ -8,7 +8,7 @@
 // isolated namespaces, so data can never collide or leak between projects.
 const fs = require("fs");
 const path = require("path");
-const { loadDefaultTemplate: load794589Template } = require("../project-794589-template");
+const { loadDefaultTemplate: load794589Template, TEMPLATE_VERSION: V794589, buildUpgradedSnapshot: buildUpgraded794589 } = require("../project-794589-template");
 
 // Track metadata is owned here (the source of truth for track ids/titles/icons), independent of any
 // class snapshot, so the UI and reports can label tracks without hard-coding "book"/"packetTracer".
@@ -21,7 +21,11 @@ const DEFINITIONS = {
       { trackId: "packetTracer", title: "Packet Tracer", icon: "🖧" }
     ],
     legacyStorage: true,
-    loadTemplate: () => load794589Template()
+    loadTemplate: () => load794589Template(),
+    // 794589 keeps its original version-aware snapshot upgrade (a progress-free active class on an
+    // older template is upgraded to the current version, audited, never reset). New projects declare
+    // no policy (no migration needed).
+    snapshotUpgrade: { currentVersion: V794589, buildUpgraded: buildUpgraded794589 }
   },
   "899373": {
     projectCode: "899373",
@@ -93,6 +97,12 @@ function getProjectMeta(projectCode) {
   return { projectCode: def.projectCode, title: def.title, tracks: def.tracks };
 }
 
+// The snapshot-upgrade policy for a project, or null when the project needs no version migration.
+function getSnapshotUpgradePolicy(projectCode) {
+  const def = DEFINITIONS[String(projectCode || "")];
+  return def && def.snapshotUpgrade ? def.snapshotUpgrade : null;
+}
+
 // Storage namespace. 794589 => exact legacy paths (production data preserved). Others => isolated,
 // project-scoped paths so no two projects ever touch the same blob.
 function getStorageNamespace(projectCode) {
@@ -119,5 +129,6 @@ module.exports = {
   isSupportedProject,
   getProjectDefinition,
   getProjectMeta,
+  getSnapshotUpgradePolicy,
   getStorageNamespace
 };

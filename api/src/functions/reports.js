@@ -11,6 +11,7 @@ const core = require("../lib/project-tracker/core");
 const analytics = require("../lib/project-tracker/analytics");
 const agg = require("../lib/reports/aggregate");
 const { parseDateRange, inRange } = require("../lib/reports/date-range");
+const { buildHistoryTimeline } = require("../lib/reports/timeline");
 
 const CLASS_PREFIX = "platform/classes/";
 const USER_PREFIX = "platform/users/";
@@ -229,15 +230,17 @@ app.http("reports", {
           return { status: 200, jsonBody: { ok: true, type, projectCode, tracks, lateThreshold, class: classMeta(c), students: rows } };
         }
         if (type === "timeline") {
-          // Clip the real weekly points to the range (never invents points outside recorded history).
-          const clip = points => points.filter(p => inRange(p.weekStart, range));
+          // Built from REAL recorded status history (handles later un-approvals); range-clipped; no
+          // invented points when there is no history.
           if (studentId) {
+            const membership = await svc.requireStudentInClass(container, studentId, classId);
+            if (!membership.ok) return { status: 404, jsonBody: { ok: false, error: "الطالب غير موجود في هذا الصف." } };
             const ns = getStorageNamespace(projectCode);
             const progress = await downloadJsonOrNull(container, ns.progressName(classId, studentId));
-            const trend = clip(analytics.buildWeeklyTrend(workDef, [{ studentId, displayName: "", progress }], now));
+            const trend = buildHistoryTimeline(workDef, [{ studentId, progress }], range, now);
             return { status: 200, jsonBody: { ok: true, type, projectCode, tracks, class: classMeta(c), scope: "student", studentId, trend } };
           }
-          return { status: 200, jsonBody: { ok: true, type, projectCode, tracks, class: classMeta(c), scope: "class", trend: clip(analytics.buildWeeklyTrend(workDef, entries, now)) } };
+          return { status: 200, jsonBody: { ok: true, type, projectCode, tracks, class: classMeta(c), scope: "class", trend: buildHistoryTimeline(workDef, entries, range, now) } };
         }
       }
 

@@ -5,6 +5,7 @@ import { Bar, Line } from "react-chartjs-2";
 import { reportGet } from "./api";
 import { ReportShell, ReportKpiGrid, ReportTable, LoadingState, ErrorState, EmptyState, pct } from "./ui";
 import { downloadCsv } from "./csv";
+import { resolveTrack } from "./trackState";
 import ProjectAnalytics from "../projects/ProjectAnalytics";
 import { trackerPost } from "../projects/api";
 import type { TrackMeta } from "../projects/types";
@@ -180,11 +181,17 @@ function ProjectReport({ token, filters }: { token: string; filters: Filters }) 
 function TrackReport({ token, filters }: { token: string; filters: Filters }) {
   type Row = { stageId: string; title: string; approved: number; ready_for_review: number; in_progress: number; not_started: number; approvedPct: number };
   type Resp = { tracks: TrackMeta[]; track: string; groups: { groupId: string; title: string }[]; class: { name: string }; rows: Row[] };
-  const [track, setTrack] = useState(filters.track || "");
+  const [track, setTrack] = useState("");
   const [groupId, setGroupId] = useState("");
+  // Reset the track/group when the project or class changes, so a stale track from another project
+  // (e.g. "access") never carries over to a project that doesn't have it.
+  useEffect(() => { setTrack(""); setGroupId(""); }, [filters.projectCode, filters.classId]);
   const params = filters.projectCode && filters.classId ? { type: "track", projectCode: filters.projectCode, classId: filters.classId, ...(track ? { track } : {}), ...(groupId ? { groupId } : {}) } : null;
   const { data, loading, error, reload } = useReport<Resp>(token, params);
-  useEffect(() => { if (data && !track) setTrack(data.track); }, [data, track]);
+  // Keep the current track only if it exists in the data; otherwise fall back to the server default.
+  useEffect(() => {
+    if (data) { const valid = resolveTrack(track, data.tracks.map(t => t.trackId), data.track); if (valid !== track) setTrack(valid); }
+  }, [data, track]);
   if (!params) return <EmptyState text="اختر مشروعًا وصفًا." />;
   if (loading && !data) return <LoadingState />;
   if (error) return <ErrorState text={error} onRetry={reload} />;
@@ -207,36 +214,45 @@ function TrackReport({ token, filters }: { token: string; filters: Filters }) {
 }
 
 function ReadyReport({ token, filters }: { token: string; filters: Filters }) {
-  type Resp = { tracks: TrackMeta[]; class: { name: string }; students: { studentId: string; displayName: string; stages: { stageId: string; title: string; track: string }[] }[]; totalReady: number };
+  type Resp = { tracks: TrackMeta[]; class: { name: string; status: string }; students: { studentId: string; displayName: string; stages: { stageId: string; title: string; track: string }[] }[]; totalReady: number };
   const params = filters.projectCode && filters.classId ? { type: "ready", projectCode: filters.projectCode, classId: filters.classId } : null;
   const { data, loading, error, reload } = useReport<Resp>(token, params);
   const [local, setLocal] = useState<Resp | null>(null);
   const [busy, setBusy] = useState("");
-  useEffect(() => { setLocal(data); }, [data]);
+  const [actionError, setActionError] = useState("");
+  useEffect(() => { setLocal(data); setActionError(""); }, [data]);
   if (!params) return <EmptyState text="اختر مشروعًا وصفًا." />;
   if (loading && !local) return <LoadingState />;
   if (error) return <ErrorState text={error} onRetry={reload} />;
   if (!local) return null;
 
+  const readOnly = local.class.status === "archived";
+
   async function approve(studentId: string, stageId: string) {
-    setBusy(studentId + stageId);
+    setBusy(studentId + stageId); setActionError("");
     try {
       // Reuses the existing progress.update/approve API — no second approval path.
       await trackerPost(token, filters.projectCode, { action: "progress.update", classId: filters.classId, studentId, stageId, status: "approved" });
-      setLocal(prev => prev ? { ...prev, students: prev.students.map(s => s.studentId === studentId ? { ...s, stages: s.stages.filter(st => st.stageId !== stageId) } : s).filter(s => s.stages.length) } : prev);
-    } catch { /* leave as-is on error */ }
+      setLocal(prev => prev ? {
+        ...prev,
+        totalReady: Math.max(0, prev.totalReady - 1),
+        students: prev.students.map(s => s.studentId === studentId ? { ...s, stages: s.stages.filter(st => st.stageId !== stageId) } : s).filter(s => s.stages.length)
+      } : prev);
+    } catch (e) { setActionError(e instanceof Error ? e.message : "تعذر اعتماد المرحلة."); }
     finally { setBusy(""); }
   }
 
   return (
     <ReportShell title={"جاهز للفحص — " + local.class.name} subtitle={local.totalReady + " مرحلة بانتظار الفحص"}
       onExportCsv={() => downloadCsv("ready-" + filters.projectCode + "-" + local.class.name, [["الطالب", "المرحلة", "العنوان"], ...local.students.flatMap(s => s.stages.map(st => [s.displayName, st.stageId, st.title]))])}>
+      {readOnly && <div className="platform-warning">🔒 الصف مؤرشف — التقرير للقراءة فقط.</div>}
+      {actionError && <div className="platform-error">{actionError}</div>}
       {!local.students.length ? <EmptyState text="لا توجد مراحل بانتظار الفحص." /> : local.students.map(s => (
         <section key={s.studentId} className="platform-card">
           <h3>{s.displayName}</h3>
           <ReportTable columns={[
             { key: "stageId", label: "المرحلة" }, { key: "title", label: "العنوان" },
-            { key: "act", label: "", render: (r: { stageId: string }) => <button className="platform-primary report-noprint" disabled={busy === s.studentId + r.stageId} onClick={() => void approve(s.studentId, r.stageId)}>✅ اعتماد</button> }
+            ...(readOnly ? [] : [{ key: "act", label: "", render: (r: { stageId: string }) => <button className="platform-primary report-noprint" disabled={busy === s.studentId + r.stageId} onClick={() => void approve(s.studentId, r.stageId)}>✅ اعتماد</button> }])
           ]} rows={s.stages} />
         </section>
       ))}
