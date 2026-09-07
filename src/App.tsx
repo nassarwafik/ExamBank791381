@@ -1,8 +1,10 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState, lazy, Suspense } from "react";
 import type { FormEvent } from "react";
 import StudentPortal from "./StudentPortal";
-import ProjectTracker from "./projects/ProjectTracker";
-import ProjectHub from "./projects/ProjectHub";
+// Heavy, chart-bearing modules are code-split so they load only when opened (keeps the main bundle down).
+const ProjectTracker = lazy(() => import("./projects/ProjectTracker"));
+const ProjectHub = lazy(() => import("./projects/ProjectHub"));
+const ReportsCenter = lazy(() => import("./reports/ReportsCenter"));
 import "./project794589.css";
 import TeacherPlatform from "./TeacherPlatform";
 import ImportQuestionsPanel, { createEmptyImportSession } from "./ImportQuestionsPanel";
@@ -526,7 +528,8 @@ function App() {
       "builder" |
       "platform" |
       "import" |
-      "project"
+      "project" |
+      "reports"
     >(
       "builder"
     );
@@ -5289,6 +5292,14 @@ function App() {
           </button>
 
           <button
+            className={"app-sidebar-link " + (teacherView === "reports" ? "active" : "")}
+            onClick={() => setTeacherView("reports")}
+          >
+            <span className="app-sidebar-group-emoji" aria-hidden="true">📑</span>
+            <span>التقارير</span>
+          </button>
+
+          <button
             className={"app-sidebar-link " + (teacherView === "import" ? "active" : "")}
             onClick={() => setTeacherView("import")}
           >
@@ -5362,9 +5373,18 @@ function App() {
         />
       )}
 
-      {teacherView === "project" && (projectCode
-        ? <ProjectTracker token={token} projectCode={projectCode} />
-        : <ProjectHub token={token} onOpenProject={goToProjects} />
+      {teacherView === "project" && (
+        <Suspense fallback={<div className="platform-loading">⏳ جارٍ التحميل...</div>}>
+          {projectCode
+            ? <ProjectTracker token={token} projectCode={projectCode} />
+            : <ProjectHub token={token} onOpenProject={goToProjects} />}
+        </Suspense>
+      )}
+
+      {teacherView === "reports" && (
+        <Suspense fallback={<div className="platform-loading">⏳ جارٍ التحميل...</div>}>
+          <ReportsCenter token={token} />
+        </Suspense>
       )}
 
       {teacherView ===
