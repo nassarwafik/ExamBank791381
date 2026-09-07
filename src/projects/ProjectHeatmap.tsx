@@ -1,21 +1,30 @@
 import { useMemo, useState } from "react";
-import { STATUS_META, TRACK_META } from "./helpers";
-import type { ProjectAnalytics, Track, StageStatus } from "./types";
+import { STATUS_META, trackIcon } from "./helpers";
+import type { ProjectAnalytics, ProjectGroup, StageStatus, TrackMeta } from "./types";
 
 // Students (rows) x stages (columns) status grid. Horizontal scroll is contained inside this
-// component only (never the page). Track + group selectors keep 100+ stages usable.
-export default function ProjectHeatmap({ heatmap }: { heatmap: ProjectAnalytics["heatmap"] }) {
-  const [track, setTrack] = useState<Track>("book");
+// component only (never the page). Track + group selectors keep 100+ stages usable. Group titles come
+// from the snapshot groups (never the stage title).
+type Props = { heatmap: ProjectAnalytics["heatmap"]; tracks: TrackMeta[]; groups: ProjectGroup[] };
+
+export default function ProjectHeatmap({ heatmap, tracks, groups }: Props) {
+  const [track, setTrack] = useState<string>(tracks[0]?.trackId || "");
   const [groupId, setGroupId] = useState("");
 
-  const groups = useMemo(() => {
+  const groupTitle = useMemo(() => {
+    const m = new Map<string, string>();
+    for (const g of groups) m.set(g.groupId, g.title);
+    return m;
+  }, [groups]);
+
+  const trackGroups = useMemo(() => {
     const seen: { groupId: string; title: string }[] = [];
     const ids = new Set<string>();
     for (const s of heatmap.stages) {
-      if (s.track === track && !ids.has(s.groupId)) { ids.add(s.groupId); seen.push({ groupId: s.groupId, title: s.title }); }
+      if (s.track === track && !ids.has(s.groupId)) { ids.add(s.groupId); seen.push({ groupId: s.groupId, title: groupTitle.get(s.groupId) || s.groupId }); }
     }
     return seen;
-  }, [heatmap, track]);
+  }, [heatmap, track, groupTitle]);
 
   const columns = useMemo(
     () => heatmap.stages.filter(s => s.track === track && (!groupId || s.groupId === groupId)),
@@ -28,13 +37,13 @@ export default function ProjectHeatmap({ heatmap }: { heatmap: ProjectAnalytics[
     <div className="p794-heatmap-wrap">
       <div className="p794-heatmap-controls">
         <div className="analytics-view-tabs" role="tablist">
-          {(["book", "packetTracer"] as Track[]).map(t => (
-            <button key={t} type="button" className={"analytics-view-tab " + (track === t ? "active" : "")} onClick={() => { setTrack(t); setGroupId(""); }}>{TRACK_META[t].icon} {TRACK_META[t].label}</button>
+          {tracks.map(t => (
+            <button key={t.trackId} type="button" className={"analytics-view-tab " + (track === t.trackId ? "active" : "")} onClick={() => { setTrack(t.trackId); setGroupId(""); }}>{trackIcon(t.icon)} {t.title}</button>
           ))}
         </div>
         <select value={groupId} onChange={e => setGroupId(e.target.value)}>
           <option value="">كل المجموعات</option>
-          {groups.map(g => <option key={g.groupId} value={g.groupId}>{g.title}</option>)}
+          {trackGroups.map(g => <option key={g.groupId} value={g.groupId}>{g.title}</option>)}
         </select>
         <div className="p794-heatmap-legend">
           {(Object.keys(STATUS_META) as StageStatus[]).map(k => <span key={k}>{STATUS_META[k].icon} {STATUS_META[k].label}</span>)}

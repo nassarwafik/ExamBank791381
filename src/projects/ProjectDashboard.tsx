@@ -1,11 +1,11 @@
 import { useEffect, useState } from "react";
-import { projectApi } from "./api";
-import ProjectProgressBar from "./ProjectProgressBar";
-import type { ClassSummary } from "./types";
+import { trackerGet } from "./api";
+import ProjectProgressBar, { toneForTrackIndex } from "./ProjectProgressBar";
+import type { ClassSummary, TrackMeta } from "./types";
 
-type Props = { token: string; classId: string };
+type Props = { token: string; projectCode: string; classId: string; tracks: TrackMeta[] };
 
-export default function ProjectDashboard({ token, classId }: Props) {
+export default function ProjectDashboard({ token, projectCode, classId, tracks }: Props) {
   const [summary, setSummary] = useState<ClassSummary | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -13,12 +13,12 @@ export default function ProjectDashboard({ token, classId }: Props) {
   async function load() {
     setLoading(true); setError("");
     try {
-      const r = await projectApi<{ summary: ClassSummary }>(token, "/api/project-794589?resource=summary&classId=" + encodeURIComponent(classId));
+      const r = await trackerGet<{ summary: ClassSummary }>(token, projectCode, "summary", { classId });
       setSummary(r.summary);
     } catch (e) { setError(e instanceof Error ? e.message : "تعذر تحميل لوحة المشروع."); }
     finally { setLoading(false); }
   }
-  useEffect(() => { void load(); }, [classId]);
+  useEffect(() => { void load(); }, [classId, projectCode]);
 
   if (loading && !summary) return <div className="platform-loading">⏳ جارٍ التحميل...</div>;
   if (error) return <div className="platform-error">{error} <button onClick={() => void load()}>إعادة المحاولة</button></div>;
@@ -32,8 +32,12 @@ export default function ProjectDashboard({ token, classId }: Props) {
           <span className="p794-kpi-label">التقدم العام للصف</span>
           <ProjectProgressBar value={summary.avgOverall} tone="overall" />
         </article>
-        <article className="p794-kpi"><span className="p794-kpi-label">📘 متوسط الكتاب</span><ProjectProgressBar value={summary.avgBook} tone="book" /></article>
-        <article className="p794-kpi"><span className="p794-kpi-label">🖧 متوسط Packet Tracer</span><ProjectProgressBar value={summary.avgPacketTracer} tone="pt" /></article>
+        {tracks.map((t, i) => (
+          <article key={t.trackId} className="p794-kpi">
+            <span className="p794-kpi-label">{(t.icon ? t.icon + " " : "") + "متوسط " + t.title}</span>
+            <ProjectProgressBar value={summary.trackAverages[t.trackId] || 0} tone={toneForTrackIndex(i)} />
+          </article>
+        ))}
       </div>
       <div className="p794-kpi-grid">
         <article className="p794-kpi p794-kpi-stat"><strong>{summary.studentCount}</strong><span>عدد الطلاب</span></article>

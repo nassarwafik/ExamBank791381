@@ -1,24 +1,11 @@
 import { useEffect, useMemo, useState } from "react";
-import { projectApi } from "./api";
-import { STATUS_META, TRACK_META, statusLabel, fmtDate, stagesByGroup } from "./helpers";
-import ProjectProgressBar from "./ProjectProgressBar";
+import { trackerGet, trackerPost } from "./api";
+import { STATUS_META, statusLabel, fmtDate, stagesByGroup, trackIcon } from "./helpers";
+import ProjectProgressBar, { toneForTrackIndex } from "./ProjectProgressBar";
 import StageStatusBadge from "./StageStatusBadge";
-import type { StudentDetail, Track, StageStatus, ProjectStage, StudentCard, StageProgressEntry, HistoryEvent } from "./types";
+import type { StudentDetail, StageStatus, ProjectStage, StudentCard, StageProgressEntry, HistoryEvent, BalanceInsight, TrackMeta } from "./types";
 
-type Props = { token: string; classId: string; studentId: string; onBack: () => void };
-
-// Response of a progress.update POST — carries every derived field the detail view shows, so the
-// UI can update in place without a second, expensive full-student refetch.
-type UpdateResponse = {
-  ok: true;
-  noChange?: boolean;
-  summary: StudentCard;
-  stage: StageProgressEntry & { stageId: string };
-  nextBookStage: ProjectStage | null;
-  nextPacketTracerStage: ProjectStage | null;
-  balance: { leadingTrack: Track; diff: number } | null;
-  history: HistoryEvent[];
-};
+type Props = { token: string; projectCode: string; classId: string; studentId: string; tracks: TrackMeta[]; onBack: () => void };
 
 const STATUS_ACTIONS: { status: StageStatus; label: string }[] = [
   { status: "not_started", label: "لم يبدأ" },
@@ -27,11 +14,20 @@ const STATUS_ACTIONS: { status: StageStatus; label: string }[] = [
   { status: "approved", label: "✅ اعتماد المرحلة" }
 ];
 
-export default function ProjectStudentDetail({ token, classId, studentId, onBack }: Props) {
+type UpdateResponse = {
+  ok: true; noChange?: boolean;
+  summary: StudentCard;
+  stage: StageProgressEntry & { stageId: string };
+  nextStages: Record<string, ProjectStage | null>;
+  balance: BalanceInsight;
+  history: HistoryEvent[];
+};
+
+export default function ProjectStudentDetail({ token, projectCode, classId, studentId, tracks, onBack }: Props) {
   const [detail, setDetail] = useState<StudentDetail | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
-  const [track, setTrack] = useState<Track>("book");
+  const [track, setTrack] = useState<string>(tracks[0]?.trackId || "");
   const [openStageId, setOpenStageId] = useState("");
   const [openGroups, setOpenGroups] = useState<Record<string, boolean>>({});
   const [noteDraft, setNoteDraft] = useState("");
@@ -40,12 +36,12 @@ export default function ProjectStudentDetail({ token, classId, studentId, onBack
   async function load() {
     setLoading(true); setError("");
     try {
-      const r = await projectApi<StudentDetail>(token, "/api/project-794589?resource=student&classId=" + encodeURIComponent(classId) + "&studentId=" + encodeURIComponent(studentId));
+      const r = await trackerGet<StudentDetail>(token, projectCode, "student", { classId, studentId });
       setDetail(r);
     } catch (e) { setError(e instanceof Error ? e.message : "تعذر تحميل ملف الطالب."); }
     finally { setLoading(false); }
   }
-  useEffect(() => { void load(); }, [classId, studentId]);
+  useEffect(() => { void load(); }, [classId, studentId, projectCode]);
 
   const groups = useMemo(() => detail ? (detail.groups || []).filter(g => g.track === track).sort((a, b) => a.order - b.order) : [], [detail, track]);
   const byGroup = useMemo(() => detail ? stagesByGroup(detail.stages.filter(s => s.active !== false), track) : new Map(), [detail, track]);
@@ -54,23 +50,10 @@ export default function ProjectStudentDetail({ token, classId, studentId, onBack
     if (!detail || detail.readOnly || busy) return;
     setBusy(true); setError("");
     try {
-      const res = await projectApi<UpdateResponse>(token, "/api/project-794589", {
-        method: "POST",
-        body: JSON.stringify({ action: "progress.update", classId, studentId, stageId: stage.stageId, ...patch })
-      });
-      // Merge the server's derived result in place — no full refetch (which would re-scan every
-      // platform user just to resolve one name and took 3–5s per click).
+      const res = await trackerPost<UpdateResponse>(token, projectCode, { action: "progress.update", classId, studentId, stageId: stage.stageId, ...patch });
       if (!res.noChange) {
         const { stageId: sid, ...entry } = res.stage;
-        setDetail(prev => prev ? {
-          ...prev,
-          summary: res.summary,
-          progress: { ...prev.progress, [sid]: entry },
-          nextBookStage: res.nextBookStage,
-          nextPacketTracerStage: res.nextPacketTracerStage,
-          balance: res.balance,
-          history: res.history
-        } : prev);
+        setDetail(prev => prev ? { ...prev, summary: res.summary, progress: { ...prev.progress, [sid]: entry }, nextStages: res.nextStages, balance: res.balance, history: res.history } : prev);
       }
     } catch (e) { setError(e instanceof Error ? e.message : "تعذر حفظ التغيير."); }
     finally { setBusy(false); }
@@ -99,26 +82,27 @@ export default function ProjectStudentDetail({ token, classId, studentId, onBack
         </div>
         <ProjectProgressBar label="التقدم العام" value={s.overallProgress} tone="overall" />
         <div className="p794-detail-tracks">
-          <ProjectProgressBar label="📘 الكتاب" value={s.bookProgress} tone="book" />
-          <ProjectProgressBar label="🖧 Packet Tracer" value={s.packetTracerProgress} tone="pt" />
+          {tracks.map((t, i) => <ProjectProgressBar key={t.trackId} label={(t.icon ? t.icon + " " : "") + t.title} value={s.trackProgress[t.trackId] || 0} tone={toneForTrackIndex(i)} />)}
         </div>
         {detail.balance && (
-          <div className="platform-warning p794-balance">
-            ⚠ {detail.balance.leadingTrack === "book" ? "الكتاب متقدّم على التنفيذ العملي" : "التنفيذ العملي متقدّم على التوثيق"} بـ {detail.balance.diff}%
-          </div>
+          <div className="platform-warning p794-balance">⚠ {detail.balance.leadingTrackTitle} متقدّم على {detail.balance.laggingTrackTitle} بـ {detail.balance.diff}%</div>
         )}
         <div className="p794-next">
           <span>الخطوة التالية:</span>
-          {detail.nextBookStage ? <span className="p794-next-chip">📘 {detail.nextBookStage.stageId} — {detail.nextBookStage.title}</span> : <span className="p794-next-chip done">📘 مكتمل</span>}
-          {detail.nextPacketTracerStage ? <span className="p794-next-chip">🖧 {detail.nextPacketTracerStage.stageId} — {detail.nextPacketTracerStage.title}</span> : <span className="p794-next-chip done">🖧 مكتمل</span>}
+          {tracks.map(t => {
+            const n = detail.nextStages[t.trackId];
+            return n
+              ? <span key={t.trackId} className="p794-next-chip">{trackIcon(t.icon)} {n.stageId} — {n.title}</span>
+              : <span key={t.trackId} className="p794-next-chip done">{trackIcon(t.icon)} مكتمل</span>;
+          })}
         </div>
         <small className="p794-muted">آخر تحديث: {fmtDate(s.updatedAt)}</small>
       </section>
 
       <nav className="analytics-view-tabs" role="tablist" aria-label="مسارات المشروع">
-        {(["book", "packetTracer"] as Track[]).map(t => (
-          <button key={t} type="button" className={"analytics-view-tab " + (track === t ? "active" : "")} onClick={() => { setTrack(t); setOpenStageId(""); }}>
-            {TRACK_META[t].icon} {TRACK_META[t].label}
+        {tracks.map(t => (
+          <button key={t.trackId} type="button" className={"analytics-view-tab " + (track === t.trackId ? "active" : "")} onClick={() => { setTrack(t.trackId); setOpenStageId(""); }}>
+            {trackIcon(t.icon)} {t.title}
           </button>
         ))}
       </nav>
@@ -126,7 +110,7 @@ export default function ProjectStudentDetail({ token, classId, studentId, onBack
       <section className="platform-card">
         {groups.map(g => {
           const stages = (byGroup.get(g.groupId) || []) as ProjectStage[];
-          const groupOpen = openGroups[g.groupId] !== false; // default open
+          const groupOpen = openGroups[g.groupId] !== false;
           const approvedInGroup = stages.filter(st => (detail.progress[st.stageId]?.status || "not_started") === "approved").length;
           return (
             <div key={g.groupId} className="p794-group">
@@ -166,7 +150,7 @@ export default function ProjectStudentDetail({ token, classId, studentId, onBack
                                 </div>
                                 <label className="p794-note-edit">
                                   <span>ملاحظة المعلم</span>
-                                  <textarea value={noteDraft} onChange={e => setNoteDraft(e.target.value)} placeholder="مثال: راجع إعداد OSPF..." />
+                                  <textarea value={noteDraft} onChange={e => setNoteDraft(e.target.value)} placeholder="اكتب ملاحظة للطالب..." />
                                   <button className="platform-primary" disabled={busy || noteDraft === (entry?.note || "")} onClick={() => void updateStage(stage, { note: noteDraft })}>حفظ الملاحظة</button>
                                 </label>
                               </>

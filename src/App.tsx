@@ -1,7 +1,10 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState, lazy, Suspense } from "react";
 import type { FormEvent } from "react";
 import StudentPortal from "./StudentPortal";
-import Project794589 from "./project794589/Project794589";
+// Heavy, chart-bearing modules are code-split so they load only when opened (keeps the main bundle down).
+const ProjectTracker = lazy(() => import("./projects/ProjectTracker"));
+const ProjectHub = lazy(() => import("./projects/ProjectHub"));
+const ReportsCenter = lazy(() => import("./reports/ReportsCenter"));
 import "./project794589.css";
 import TeacherPlatform from "./TeacherPlatform";
 import ImportQuestionsPanel, { createEmptyImportSession } from "./ImportQuestionsPanel";
@@ -525,7 +528,8 @@ function App() {
       "builder" |
       "platform" |
       "import" |
-      "project"
+      "project" |
+      "reports"
     >(
       "builder"
     );
@@ -537,29 +541,40 @@ function App() {
     setWorkspaceTab(tab);
   }
 
-  // Project 794589 tracker navigation. projectClassId is lifted here so it survives navigating away
-  // and back, and so the sidebar can badge the selected class. projectNavOpen toggles the sidebar's
-  // collapsible group.
-  const [projectTab, setProjectTab] = useState<"dashboard" | "students" | "analytics" | "settings">("dashboard");
-  const [projectClassId, setProjectClassId] = useState("");
+  // Projects navigation. projectCode "" => the projects hub; a specific code => that project's tracker
+  // (tabs + class selector live inside ProjectTracker). projectNavOpen toggles the sidebar group.
+  const [projectCode, setProjectCode] = useState("");
   const [projectNavOpen, setProjectNavOpen] = useState(false);
+  const [projectList, setProjectList] = useState<{ projectCode: string; title: string }[]>([]);
+  // Global teacher "ready for review" queue (all projects, active classes) — one aggregated request.
+  const [projectReady, setProjectReady] = useState<{ total: number; byProject: Record<string, number> }>({ total: 0, byProject: {} });
 
-  function goToProject(tab: "dashboard" | "students" | "analytics" | "settings") {
+  function goToProjects(code: string) {
     setTeacherView("project");
-    setProjectTab(tab);
+    setProjectCode(code);
     setProjectNavOpen(true);
   }
 
-  // Sidebar badge: number of stages waiting for the teacher's review in the selected project class.
-  const [projectReadyBadge, setProjectReadyBadge] = useState(0);
+  // Registry-driven sidebar list (so a new project appears automatically once added to the backend).
   useEffect(() => {
-    if (!token || !projectClassId) { setProjectReadyBadge(0); return; }
+    if (!token) { setProjectList([]); return; }
     let cancelled = false;
-    apiRequest<{ summary?: { totalReadyStages?: number } }>("/api/project-794589?resource=summary&classId=" + encodeURIComponent(projectClassId))
-      .then(r => { if (!cancelled) setProjectReadyBadge(Number(r.summary?.totalReadyStages) || 0); })
-      .catch(() => { if (!cancelled) setProjectReadyBadge(0); });
+    apiRequest<{ projects?: { projectCode: string; title: string }[] }>("/api/project-tracker?resource=projects")
+      .then(r => { if (!cancelled) setProjectList(r.projects || []); })
+      .catch(() => { if (!cancelled) setProjectList([]); });
     return () => { cancelled = true; };
-  }, [token, projectClassId, teacherView, projectTab]);
+  }, [token]);
+
+  // Ready-for-review badge (global, not tied to the selected class). Re-checked when returning to the
+  // projects view so approving a stage there refreshes the count.
+  useEffect(() => {
+    if (!token) { setProjectReady({ total: 0, byProject: {} }); return; }
+    let cancelled = false;
+    apiRequest<{ totalReadyForReview?: number; byProject?: Record<string, number> }>("/api/project-tracker?resource=projects-summary")
+      .then(r => { if (!cancelled) setProjectReady({ total: Number(r.totalReadyForReview) || 0, byProject: r.byProject || {} }); })
+      .catch(() => { if (!cancelled) setProjectReady({ total: 0, byProject: {} }); });
+    return () => { cancelled = true; };
+  }, [token, teacherView]);
 
   const [userCode, setUserCode] = useState("");
   const [password, setPassword] = useState("");
@@ -5290,6 +5305,14 @@ function App() {
           </button>
 
           <button
+            className={"app-sidebar-link " + (teacherView === "reports" ? "active" : "")}
+            onClick={() => setTeacherView("reports")}
+          >
+            <span className="app-sidebar-group-emoji" aria-hidden="true">📑</span>
+            <span>التقارير</span>
+          </button>
+
+          <button
             className={"app-sidebar-link " + (teacherView === "import" ? "active" : "")}
             onClick={() => setTeacherView("import")}
           >
@@ -5304,16 +5327,16 @@ function App() {
               onClick={() => setProjectNavOpen(v => !v)}
             >
               <span className="app-sidebar-group-emoji" aria-hidden="true">📡</span>
-              <span>مشروع 794589</span>
-              {projectReadyBadge > 0 && <span className="app-sidebar-badge">{projectReadyBadge}</span>}
+              <span>المشاريع</span>
+              {projectReady.total > 0 && <span className="app-sidebar-badge" title="مراحل بانتظار الفحص">{projectReady.total}</span>}
               <span className="app-sidebar-group-chevron" aria-hidden="true">{projectNavOpen ? "▾" : "▸"}</span>
             </button>
             {projectNavOpen && (
               <div className="app-sidebar-subnav">
-                <button className={"app-sidebar-sublink " + (teacherView === "project" && projectTab === "dashboard" ? "active" : "")} onClick={() => goToProject("dashboard")}>🏠 لوحة المشروع</button>
-                <button className={"app-sidebar-sublink " + (teacherView === "project" && projectTab === "students" ? "active" : "")} onClick={() => goToProject("students")}>👨‍🎓 تقدّم الطلاب</button>
-                <button className={"app-sidebar-sublink " + (teacherView === "project" && projectTab === "analytics" ? "active" : "")} onClick={() => goToProject("analytics")}>📊 الإحصائيات</button>
-                <button className={"app-sidebar-sublink " + (teacherView === "project" && projectTab === "settings" ? "active" : "")} onClick={() => goToProject("settings")}>⚙️ إعداد المراحل</button>
+                <button className={"app-sidebar-sublink " + (teacherView === "project" && !projectCode ? "active" : "")} onClick={() => goToProjects("")}>🗂️ كل المشاريع</button>
+                {projectList.map(p => (
+                  <button key={p.projectCode} className={"app-sidebar-sublink " + (teacherView === "project" && projectCode === p.projectCode ? "active" : "")} onClick={() => goToProjects(p.projectCode)}>📡 {p.title}{projectReady.byProject[p.projectCode] > 0 ? <span className="app-sidebar-badge">{projectReady.byProject[p.projectCode]}</span> : null}</button>
+                ))}
               </div>
             )}
           </div>
@@ -5365,12 +5388,17 @@ function App() {
       )}
 
       {teacherView === "project" && (
-        <Project794589
-          token={token}
-          tab={projectTab}
-          classId={projectClassId}
-          onClassChange={setProjectClassId}
-        />
+        <Suspense fallback={<div className="platform-loading">⏳ جارٍ التحميل...</div>}>
+          {projectCode
+            ? <ProjectTracker token={token} projectCode={projectCode} />
+            : <ProjectHub token={token} onOpenProject={goToProjects} />}
+        </Suspense>
+      )}
+
+      {teacherView === "reports" && (
+        <Suspense fallback={<div className="platform-loading">⏳ جارٍ التحميل...</div>}>
+          <ReportsCenter token={token} />
+        </Suspense>
       )}
 
       {teacherView ===

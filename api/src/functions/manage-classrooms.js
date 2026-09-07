@@ -28,6 +28,14 @@ const {
   require("../lib/class-lifecycle");
 
 const { recordAuditEvent } = require("../lib/audit-log");
+const { isSupportedProject } = require("../lib/project-tracker/registry");
+
+// A class's programCode is valid only when it is empty (no project) or a project the registry knows.
+// Pure + exported so the rule is unit-tested and enforced server-side (never trusting the UI).
+function programCodeAccepted(programCode) {
+  const code = String(programCode || "").trim();
+  return code === "" || isSupportedProject(code);
+}
 
 const CONFLICT_MESSAGE =
   "حدث تعارض مؤقت أثناء حفظ البيانات. حاول مرة أخرى.";
@@ -275,6 +283,12 @@ async function listClasses(
   return classes;
 }
 
+// A class's project link may be changed only while the class is active (an archived class is
+// read-only for the project tracker). Pure + exported so the rule is unit-tested.
+function programChangeAllowed(classroom) {
+  return normalizeClassStatus(classroom) !== "archived";
+}
+
 function buildNewClassroomDocument(
   { name, grade, schoolYear, programCode },
   now
@@ -402,6 +416,10 @@ app.http(
               };
             }
 
+            if (!programCodeAccepted(programCode)) {
+              return { status: 400, jsonBody: { ok: false, error: "مشروع غير مدعوم." } };
+            }
+
             const now =
               new Date()
                 .toISOString();
@@ -466,6 +484,10 @@ app.http(
               };
             }
 
+            if (!programCodeAccepted(programCode)) {
+              return { status: 400, jsonBody: { ok: false, error: "مشروع غير مدعوم." } };
+            }
+
             try {
               const updated =
                 await mutateJsonWithRetry(
@@ -476,6 +498,11 @@ app.http(
                       const notFound = new Error("الصف غير موجود.");
                       notFound.httpStatus = 404;
                       throw notFound;
+                    }
+                    if (!programChangeAllowed(current)) {
+                      const blocked = new Error("الصف مؤرشف — لا يمكن تغيير المشروع.");
+                      blocked.httpStatus = 403;
+                      throw blocked;
                     }
                     if (programCode) current.programCode = programCode;
                     else delete current.programCode;
@@ -655,4 +682,4 @@ app.http(
   }
 );
 
-module.exports = { buildNewClassroomDocument };
+module.exports = { buildNewClassroomDocument, programChangeAllowed, programCodeAccepted };
