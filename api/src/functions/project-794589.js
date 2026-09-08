@@ -8,6 +8,7 @@ const { classHasMeaningfulProgress } = require("../lib/project-794589-migration"
 const core = require("../lib/project-794589-core");
 const analytics = require("../lib/project-794589-analytics");
 const { applyProgressUpdate } = require("../lib/project-794589-progress");
+const { classHasProject } = require("../lib/project-tracker/class-programs");
 
 const CLASS_PREFIX = "platform/classes/";
 const USER_PREFIX = "platform/users/";
@@ -91,7 +92,7 @@ app.http("project794589", {
         // Catalog of 794589 classes for the class selector (no classId needed).
         if (resource === "classes") {
           const classes = (await listJson(container, CLASS_PREFIX))
-            .filter(c => c && c.programCode === PROGRAM_CODE)
+            .filter(c => c && classHasProject(c, PROGRAM_CODE))
             .map(c => ({
               classId: c.classId, name: c.name, grade: c.grade, schoolYear: c.schoolYear,
               status: normalizeClassStatus(c), archivedAt: c.archivedAt || "", studentCount: Array.isArray(c.studentIds) ? c.studentIds.length : 0
@@ -103,6 +104,12 @@ app.http("project794589", {
         if (!classId) return { status: 400, jsonBody: { ok: false, error: "classId مطلوب." } };
         const classroom = await loadClassroom(container, classId);
         if (!classroom) return { status: 404, jsonBody: { ok: false, error: "الصف غير موجود." } };
+        // Multi-project enrollment gate: this legacy route only serves a class enrolled in 794589
+        // (via modern programCodes[] or the legacy programCode). A class whose 794589 link was
+        // removed (or that never had it) has no project section here.
+        if (!classHasProject(classroom, PROGRAM_CODE)) {
+          return { status: 403, jsonBody: { ok: false, error: "الصف غير مسجَّل في مشروع 794589." } };
+        }
         const readOnly = normalizeClassStatus(classroom) === "archived";
         const config = await ensureClassConfig(container, classroom);
 
@@ -174,6 +181,13 @@ app.http("project794589", {
       if (!classId) return { status: 400, jsonBody: { ok: false, error: "classId مطلوب." } };
       const classroom = await loadClassroom(container, classId);
       if (!classroom) return { status: 404, jsonBody: { ok: false, error: "الصف غير موجود." } };
+
+      // Multi-project enrollment gate: every write here (project.reset included) requires the class
+      // to be enrolled in 794589. Removing the 794589 link blocks these routes without touching the
+      // class's stored 794589 snapshot/progress.
+      if (!classHasProject(classroom, PROGRAM_CODE)) {
+        return { status: 403, jsonBody: { ok: false, error: "الصف غير مسجَّل في مشروع 794589." } };
+      }
 
       // Every write is blocked on an archived class (read-only history).
       if (normalizeClassStatus(classroom) === "archived") {
