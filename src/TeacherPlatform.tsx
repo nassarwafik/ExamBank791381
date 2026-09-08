@@ -5,13 +5,14 @@ import TeacherDashboard from "./TeacherDashboard";
 import {IconSearch,IconDownload,IconUpload,IconPlus,IconChevronDown,IconMore,IconUser,IconEdit,IconCopy,IconKey,IconTrash,IconClose,IconMedal} from "./icons";
 import {MEDAL_COLORS,MEDAL_LABELS,medalTier} from "./medals";
 import {normalizeClassStatus} from "./classLifecycle";
+import {getClassProjectCodes} from "./projects/classProjects";
 
 type WorkspaceTab="dashboard"|"students"|"assignments";
 // onCopyLibraryExamToBuilder: forwarded straight to AssignmentsPanel; the snapshot is typed loosely
 // here (App owns the real ExamDraft type) to avoid a value/type import coupling to App.tsx.
 type TeacherPlatformProps={token:string;currentExam:unknown|null;workspaceTab:WorkspaceTab;onCopyLibraryExamToBuilder?:(examSnapshot:any,title:string)=>void};
 type ClassArchiveView="active"|"archived";
-type Classroom={classId:string;name:string;grade:string;schoolYear:string;programCode?:string;active:boolean;status?:string;archivedAt?:string;archivedBy?:string;archiveReason?:string;graduationYear?:string;studentCount:number;createdAt:string};
+type Classroom={classId:string;name:string;grade:string;schoolYear:string;programCode?:string;projectCodes?:string[];active:boolean;status?:string;archivedAt?:string;archivedBy?:string;archiveReason?:string;graduationYear?:string;studentCount:number;createdAt:string};
 
 type ProjectOption={projectCode:string;title:string};
 type Student={userId:string;code:string;identityNumber:string;firstName:string;familyName:string;displayName:string;classId:string;active:boolean;archived:boolean;createdAt:string;updatedAt:string;lastLoginAt:string;submittedAssignmentsCount:number;likesCount:number};
@@ -238,23 +239,24 @@ function TeacherPlatform({token,currentExam,workspaceTab,onCopyLibraryExamToBuil
  }
 
  function projectTitle(code:string){return projects.find(p=>p.projectCode===code)?.title||("مشروع "+code);}
- // Generic: link/unlink/switch a class's project. Never deletes any project data automatically; a
- // switch only re-points programCode, so the previous project's snapshot/progress stay untouched.
- async function setClassProgram(classroom:Classroom,newCode:string){
+ // Toggle ONE project on/off for a class (add or remove) via the modern projectCodes[] set. A class can
+ // hold any number of projects; toggling one never touches the others' snapshots/progress.
+ async function toggleClassProject(classroom:Classroom,code:string,enable:boolean){
   if(actionBusy)return;
-  const current=classroom.programCode||"";
-  if(current===newCode)return;
-  let message="";
-  if(!current&&newCode)message="ربط الصف \""+classroom.name+"\" بـ"+projectTitle(newCode)+"؟";
-  else if(current&&!newCode)message="إزالة الصف \""+classroom.name+"\" من "+projectTitle(current)+"؟\n\nلن تُحذف بيانات المشروع، لكنه لن يظهر للصف.";
-  else message="سيتم تغيير مشروع الصف من "+projectTitle(current)+" إلى "+projectTitle(newCode)+".\n\n• سيتغيّر ارتباط الصف.\n• لن يتم حذف بيانات المشروع السابق.\n• لن يظهر المشروع السابق للصف ما دام مرتبطًا بالمشروع الجديد.";
-  if(!window.confirm(message))return;
+  const current=getClassProjectCodes(classroom);
+  const next=enable?[...current,code]:current.filter(c=>c!==code);
+  if(enable){
+   // Adding is low-friction — a light confirm only.
+   if(!window.confirm("إضافة "+projectTitle(code)+" للصف \""+classroom.name+"\"؟\nلن تتأثر بيانات المشاريع الأخرى."))return;
+  }else{
+   if(!window.confirm("سيتم إخفاء "+projectTitle(code)+" عن هذا الصف.\nلن تُحذف بيانات التقدم أو إعدادات المشروع، ويمكن إعادته لاحقًا."))return;
+  }
   setActionBusy(true);setError("");setNotice("");
   try{
-   await teacherApi("/api/classrooms",{method:"POST",body:JSON.stringify({action:"setProgram",classId:classroom.classId,programCode:newCode})});
+   await teacherApi("/api/classrooms",{method:"POST",body:JSON.stringify({action:"setProjects",classId:classroom.classId,projectCodes:next})});
    await loadClasses();
-   setNotice(newCode?("✓ تم ربط الصف بـ"+projectTitle(newCode)+". افتحه من 📡 المشاريع."):"✓ تمت إزالة الصف من المشروع.");
-  }catch(e){setError(e instanceof Error?e.message:"تعذر تعديل مشروع الصف.")}
+   setNotice(enable?("✓ تمت إضافة "+projectTitle(code)+" للصف. افتحه من 📡 المشاريع."):("✓ تمت إزالة "+projectTitle(code)+" من الصف (البيانات محفوظة)."));
+  }catch(e){setError(e instanceof Error?e.message:"تعذر تعديل مشاريع الصف.")}
   finally{setActionBusy(false)}
  }
 
@@ -631,11 +633,11 @@ function TeacherPlatform({token,currentExam,workspaceTab,onCopyLibraryExamToBuil
     </nav>
     <div className="class-list">
      {visibleClasses.map(classroom=><article key={classroom.classId} className={"class-row "+(classroom.classId===selectedClassId?"selected ":"")+(classroom.active?"":"archived")}>
-      <button className="class-select" onClick={()=>setSelectedClassId(classroom.classId)}><strong>{classroom.name}{classroom.programCode?<span className="class-program-tag">📡 {classroom.programCode}</span>:null}</strong><span>{classroom.grade||"—"} · {classroom.studentCount} طالب</span><small>{classroom.schoolYear||""}</small>
+      <button className="class-select" onClick={()=>setSelectedClassId(classroom.classId)}><strong>{classroom.name}{getClassProjectCodes(classroom).length?getClassProjectCodes(classroom).map(code=><span key={code} className="class-program-tag">📡 {code}</span>):<span className="class-program-tag class-program-none">بدون مشروع</span>}</strong><span>{classroom.grade||"—"} · {classroom.studentCount} طالب</span><small>{classroom.schoolYear||""}</small>
        {classArchiveView==="archived"&&<small>{classroom.archiveReason==="graduated"?"مُخرَّج":"مؤرشف"}{classroom.archivedAt?" · "+fmtDate(classroom.archivedAt):""}{classroom.graduationYear?" · دفعة "+classroom.graduationYear:""}</small>}
       </button>
       <div className="class-row-actions">
-       {classArchiveView==="active"&&<label className="class-program-select"><span>📡 المشروع:</span><select value={classroom.programCode||""} disabled={actionBusy} onChange={e=>void setClassProgram(classroom,e.target.value)}><option value="">بدون مشروع</option>{projects.map(p=><option key={p.projectCode} value={p.projectCode}>{p.projectCode} — {p.title}</option>)}</select></label>}
+       {classArchiveView==="active"&&<div className="class-project-picker"><span className="class-project-picker-label">📡 المشاريع:</span>{projects.map(p=>{const on=getClassProjectCodes(classroom).includes(p.projectCode);return <label key={p.projectCode} className={"class-project-check"+(on?" on":"")}><input type="checkbox" checked={on} disabled={actionBusy} onChange={e=>void toggleClassProject(classroom,p.projectCode,e.target.checked)}/>{p.title}</label>;})}</div>}
        {classArchiveView==="active"&&isGraduationEligible(classroom)&&<button className="class-archive" onClick={()=>graduateAndArchiveClass(classroom)} disabled={actionBusy}>🎓 تخريج وأرشفة الصف</button>}
        <button className="class-archive" onClick={()=>toggleClassArchive(classroom)} disabled={actionBusy}>{classroom.active?"أرشفة الصف":"تفعيل"}</button>
       </div>

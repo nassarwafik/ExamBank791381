@@ -3,12 +3,13 @@ import { reportGet } from "./api";
 import { LoadingState, ErrorState } from "./ui";
 import type { ReportType, Filters } from "./ReportViews";
 import { rangeForPeriod, type Period } from "./period";
+import { getClassProjectCodes } from "../projects/classProjects";
 import "../reports.css";
 
 // The report views (with Chart.js) are code-split so the charts only load when a report is opened.
 const ReportView = lazy(() => import("./ReportViews"));
 
-type ClassOpt = { classId: string; name: string; schoolYear: string; status: string; programCode: string };
+type ClassOpt = { classId: string; name: string; schoolYear: string; status: string; projectCodes: string[] };
 type ProjectOpt = { projectCode: string; title: string };
 type FiltersResp = { schoolYears: string[]; classes: ClassOpt[]; projects: ProjectOpt[] };
 
@@ -138,7 +139,7 @@ export default function ReportsCenter({ token }: { token: string }) {
                 <select value={filters.classId} onChange={e => setFilters(f => ({ ...f, classId: e.target.value, studentId: "" }))}>
                   <option value="">اختر صفًا</option>
                   {classesForYear
-                    .filter(c => !needs("project") || !filters.projectCode || c.programCode === filters.projectCode)
+                    .filter(c => !needs("project") || !filters.projectCode || getClassProjectCodes(c).includes(filters.projectCode))
                     .map(c => <option key={c.classId} value={c.classId}>{c.name} — {c.schoolYear}{c.status === "archived" ? " (مؤرشف)" : ""}</option>)}
                 </select>
               </label>
