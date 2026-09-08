@@ -2,6 +2,7 @@ const { app } = require("@azure/functions");
 const { requireStudentAuth } = require("../lib/student-auth");
 const { getContainer, downloadJsonOrNull } = require("../lib/platform-storage");
 const { buildClassSnapshotFromDefault, PROGRAM_CODE } = require("../lib/project-794589-template");
+const { classHasProject } = require("../lib/project-tracker/class-programs");
 const core = require("../lib/project-794589-core");
 
 const CLASS_PREFIX = "platform/classes/";
@@ -30,8 +31,10 @@ app.http("studentProject", {
       }
       const classId = student.classId;
       const classroom = classId ? await downloadJsonOrNull(container, CLASS_PREFIX + classId + ".json") : null;
-      if (!classroom || classroom.programCode !== PROGRAM_CODE) {
-        // Not a 794589 student - tell the portal there's no project section to show.
+      if (!classroom || !classHasProject(classroom, PROGRAM_CODE)) {
+        // Not a 794589 student (class never had the link, or it was removed) - tell the portal
+        // there's no project section to show. Membership honours modern programCodes[] and the
+        // legacy programCode fallback.
         return { status: 200, jsonBody: { ok: true, enrolled: false } };
       }
 

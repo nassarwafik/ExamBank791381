@@ -44,8 +44,10 @@ const barOptions: ChartOptions<"bar"> = { responsive: true, maintainAspectRatio:
 
 /* ---------------- Academic ---------------- */
 
+type ClassProjectSection = { projectCode: string; title: string; tracks: TrackMeta[]; avgOverall: number; trackAverages: Record<string, number>; completedCount: number };
+
 function ClassReport({ token, filters }: { token: string; filters: Filters }) {
-  type Resp = { class: { name: string; schoolYear: string; status: string; studentCount: number }; kpis: { assignments: number; averageScore: number | null; submissionRate: number }; project: { tracks: TrackMeta[]; avgOverall: number; trackAverages: Record<string, number>; completedCount: number } | null };
+  type Resp = { class: { name: string; schoolYear: string; status: string; studentCount: number }; kpis: { assignments: number; averageScore: number | null; submissionRate: number }; projects: ClassProjectSection[] };
   const { data, loading, error, reload } = useReport<Resp>(token, filters.classId ? withRange({ type: "class", classId: filters.classId }, filters) : null);
   if (!filters.classId) return <EmptyState text="اختر صفًا لعرض تقريره." />;
   if (loading && !data) return <LoadingState />;
@@ -58,21 +60,36 @@ function ClassReport({ token, filters }: { token: string; filters: Filters }) {
     { label: "متوسط العلامات", value: pct(data.kpis.averageScore) },
     { label: "نسبة التسليم", value: pct(data.kpis.submissionRate) }
   ];
-  if (data.project) {
-    kpis.push({ label: "تقدّم المشروع العام", value: pct(data.project.avgOverall) });
-    for (const t of data.project.tracks) kpis.push({ label: "مشروع · " + t.title, value: pct(data.project.trackAverages[t.trackId] || 0) });
+  const csv: (string | number)[][] = [["القسم", "المؤشر", "القيمة"], ...kpis.map(k => ["أكاديمي", k.label, String(k.value)])];
+  for (const p of data.projects) {
+    csv.push([p.title, "التقدم العام", String(p.avgOverall)]);
+    for (const t of p.tracks) csv.push([p.title, t.title, String(p.trackAverages[t.trackId] || 0)]);
+    csv.push([p.title, "مكتملون", String(p.completedCount)]);
   }
   return (
     <ReportShell title={"تقرير الصف — " + data.class.name} subtitle={data.class.schoolYear}
-      onExportCsv={() => downloadCsv("class-" + data.class.name, [["المؤشر", "القيمة"], ...kpis.map(k => [k.label, String(k.value)])])}>
+      onExportCsv={() => downloadCsv("class-" + data.class.name, csv)}>
       <ReportKpiGrid items={kpis} />
-      {data.project && <p className="report-hint">بيانات التقييمات حسب الفترة المختارة؛ بيانات المشروع تمثل الوضع الحالي.</p>}
+      {/* Each project reported independently — never combine two projects into one % */}
+      {data.projects.map(p => (
+        <section key={p.projectCode} className="platform-card">
+          <h3>📡 {p.title}</h3>
+          <ReportKpiGrid items={[
+            { label: "التقدم العام", value: pct(p.avgOverall) },
+            ...p.tracks.map(t => ({ label: t.title, value: pct(p.trackAverages[t.trackId] || 0) })),
+            { label: "✅ مكتملون", value: p.completedCount }
+          ]} />
+        </section>
+      ))}
+      {data.projects.length > 0 && <p className="report-hint">بيانات التقييمات حسب الفترة المختارة؛ بيانات المشاريع تمثل الوضع الحالي.</p>}
     </ReportShell>
   );
 }
 
+type StudentProjectSection = { projectCode: string; title: string; tracks: TrackMeta[]; summary: { overallProgress: number; trackProgress: Record<string, number>; counts: Record<string, number>; complete: boolean }; lastActivity: string; balance: { leadingTrackTitle: string; laggingTrackTitle: string; diff: number } | null };
+
 function StudentReport({ token, filters }: { token: string; filters: Filters }) {
-  type Resp = { student: { displayName: string; className: string; schoolYear: string }; academic: { average: number | null; submittedCount: number; assessmentCount: number; submissionRate: number }; project: { tracks: TrackMeta[]; summary: { overallProgress: number; trackProgress: Record<string, number>; counts: Record<string, number>; complete: boolean }; lastActivity: string; balance: { leadingTrackTitle: string; laggingTrackTitle: string; diff: number } | null } | null };
+  type Resp = { student: { displayName: string; className: string; schoolYear: string }; academic: { average: number | null; submittedCount: number; assessmentCount: number; submissionRate: number }; projects: StudentProjectSection[] };
   const { data, loading, error, reload } = useReport<Resp>(token, filters.studentId ? withRange({ type: "student", studentId: filters.studentId }, filters) : null);
   if (!filters.studentId) return <EmptyState text="اختر طالبًا لعرض تقريره." />;
   if (loading && !data) return <LoadingState />;
@@ -84,18 +101,29 @@ function StudentReport({ token, filters }: { token: string; filters: Filters }) 
     { label: "المسلَّمة", value: data.academic.submittedCount + " / " + data.academic.assessmentCount },
     { label: "نسبة التسليم", value: pct(data.academic.submissionRate) }
   ];
-  if (data.project) {
-    kpis.push({ label: "تقدّم المشروع", value: pct(data.project.summary.overallProgress) });
-    for (const t of data.project.tracks) kpis.push({ label: t.title, value: pct(data.project.summary.trackProgress[t.trackId] || 0) });
-    kpis.push({ label: "✅ معتمدة", value: data.project.summary.counts.approved });
-    kpis.push({ label: "🔵 جاهزة للفحص", value: data.project.summary.counts.ready_for_review });
+  const csv: (string | number)[][] = [["القسم", "المؤشر", "القيمة"], ...kpis.map(k => ["أكاديمي", k.label, String(k.value)])];
+  for (const p of data.projects) {
+    csv.push([p.title, "التقدم العام", String(p.summary.overallProgress)]);
+    for (const t of p.tracks) csv.push([p.title, t.title, String(p.summary.trackProgress[t.trackId] || 0)]);
   }
   return (
     <ReportShell title={"تقرير الطالب — " + data.student.displayName} subtitle={data.student.className + " · " + data.student.schoolYear}
-      onExportCsv={() => downloadCsv("student-" + data.student.displayName, [["المؤشر", "القيمة"], ...kpis.map(k => [k.label, String(k.value)])])}>
+      onExportCsv={() => downloadCsv("student-" + data.student.displayName, csv)}>
       <ReportKpiGrid items={kpis} />
-      {data.project && <p className="report-hint">متوسط التقييمات حسب الفترة المختارة؛ بيانات المشروع تمثل الوضع الحالي.</p>}
-      {data.project && data.project.balance && <div className="platform-warning">⚠ {data.project.balance.leadingTrackTitle} متقدّم على {data.project.balance.laggingTrackTitle} بـ {data.project.balance.diff}%</div>}
+      {/* Each project of the class reported independently */}
+      {data.projects.map(p => (
+        <section key={p.projectCode} className="platform-card">
+          <h3>📡 {p.title}</h3>
+          <ReportKpiGrid items={[
+            { label: "تقدّم المشروع", value: pct(p.summary.overallProgress) },
+            ...p.tracks.map(t => ({ label: t.title, value: pct(p.summary.trackProgress[t.trackId] || 0) })),
+            { label: "✅ معتمدة", value: p.summary.counts.approved },
+            { label: "🔵 جاهزة للفحص", value: p.summary.counts.ready_for_review }
+          ]} />
+          {p.balance && <div className="platform-warning">⚠ {p.balance.leadingTrackTitle} متقدّم على {p.balance.laggingTrackTitle} بـ {p.balance.diff}%</div>}
+        </section>
+      ))}
+      {data.projects.length > 0 && <p className="report-hint">متوسط التقييمات حسب الفترة المختارة؛ بيانات المشاريع تمثل الوضع الحالي.</p>}
     </ReportShell>
   );
 }

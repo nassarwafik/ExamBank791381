@@ -13,6 +13,7 @@ const svc = require("../lib/project-tracker/service");
 const core = require("../lib/project-tracker/core");
 const analytics = require("../lib/project-tracker/analytics");
 const { countReadyStages } = require("../lib/project-tracker/ready-count");
+const { classHasProject } = require("../lib/project-tracker/class-programs");
 
 const CLASS_PREFIX = "platform/classes/";
 const CONFLICT_MESSAGE = "حدث تعارض مؤقت أثناء حفظ البيانات. حاول مرة أخرى.";
@@ -74,7 +75,7 @@ app.http("projectTracker", {
         for (const code of getSupportedProjects()) {
           byProject[code] = 0;
           const ns = getStorageNamespace(code);
-          const active = classrooms.filter(c => String(c.programCode || "") === code && normalizeClassStatus(c) === "active");
+          const active = classrooms.filter(c => classHasProject(c, code) && normalizeClassStatus(c) === "active");
           for (const c of active) {
             const snapshot = (await downloadJsonOrNull(container, ns.configName(c.classId))) || svc.buildClassSnapshot(getProjectDefinition(code), c.classId, now);
             const activeStageIds = new Set((snapshot.stages || []).filter(s => s.active === true).map(s => s.stageId));
@@ -99,7 +100,7 @@ app.http("projectTracker", {
         // Classes enrolled in THIS project (for the class selector). No classId needed.
         if (resource === "classes") {
           const classes = (await listJson(container, CLASS_PREFIX))
-            .filter(c => c && String(c.programCode || "") === projectCode)
+            .filter(c => c && classHasProject(c, projectCode))
             .map(c => ({
               classId: c.classId, name: c.name, grade: c.grade, schoolYear: c.schoolYear,
               status: normalizeClassStatus(c), archivedAt: c.archivedAt || "", studentCount: Array.isArray(c.studentIds) ? c.studentIds.length : 0
@@ -111,7 +112,7 @@ app.http("projectTracker", {
         if (!classId) return { status: 400, jsonBody: { ok: false, error: "classId مطلوب." } };
         const classroom = await svc.loadClassroom(container, classId);
         if (!classroom) return { status: 404, jsonBody: { ok: false, error: "الصف غير موجود." } };
-        if (String(classroom.programCode || "") !== projectCode) return { status: 400, jsonBody: { ok: false, error: "الصف غير مسجَّل في هذا المشروع." } };
+        if (!classHasProject(classroom, projectCode)) return { status: 400, jsonBody: { ok: false, error: "الصف غير مسجَّل في هذا المشروع." } };
         const readOnly = normalizeClassStatus(classroom) === "archived";
         const config = await svc.ensureClassConfig(container, projectCode, classroom);
         const workDef = svc.workingDefinition(projectCode, config);
@@ -157,7 +158,7 @@ app.http("projectTracker", {
       if (!classId) return { status: 400, jsonBody: { ok: false, error: "classId مطلوب." } };
       const classroom = await svc.loadClassroom(container, classId);
       if (!classroom) return { status: 404, jsonBody: { ok: false, error: "الصف غير موجود." } };
-      if (String(classroom.programCode || "") !== projectCode) return { status: 400, jsonBody: { ok: false, error: "الصف غير مسجَّل في هذا المشروع." } };
+      if (!classHasProject(classroom, projectCode)) return { status: 400, jsonBody: { ok: false, error: "الصف غير مسجَّل في هذا المشروع." } };
 
       // Every write is blocked on an archived class (read-only history preserved).
       if (normalizeClassStatus(classroom) === "archived") {
