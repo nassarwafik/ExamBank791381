@@ -29,6 +29,7 @@ const {
 
 const { recordAuditEvent } = require("../lib/audit-log");
 const { isSupportedProject } = require("../lib/project-tracker/registry");
+const { getClassProgramCodes, validateProgramCodes } = require("../lib/project-tracker/class-programs");
 
 // A class's programCode is valid only when it is empty (no project) or a project the registry knows.
 // Pure + exported so the rule is unit-tested and enforced server-side (never trusting the UI).
@@ -226,6 +227,9 @@ async function listClasses(
           document.programCode ||
           ""
         ),
+
+      programCodes:
+        getClassProgramCodes(document),
 
       active:
         document.active !==
@@ -464,28 +468,21 @@ app.http(
             };
           }
 
-          if (
-            action ===
-            "setprogram"
-          ) {
-            const classId =
-              String(
-                body?.classId || ""
-              ).trim();
-            const programCode =
-              String(
-                body?.programCode || ""
-              ).trim();
-
+          // Modern multi-project action, and the legacy single-project setProgram kept as a thin
+          // wrapper (setProgram("899373") -> ["899373"]; setProgram("") -> []). Both write the modern
+          // programCodes[] canonical field and drop the legacy programCode so no stale logic depends on it.
+          if (action === "setprograms" || action === "setprogram") {
+            const classId = String(body?.classId || "").trim();
             if (!classId) {
-              return {
-                status: 400,
-                jsonBody: { ok: false, error: "classId is required." }
-              };
+              return { status: 400, jsonBody: { ok: false, error: "classId is required." } };
             }
-
-            if (!programCodeAccepted(programCode)) {
-              return { status: 400, jsonBody: { ok: false, error: "مشروع غير مدعوم." } };
+            let nextCodes;
+            try {
+              nextCodes = action === "setprogram"
+                ? validateProgramCodes([String(body?.programCode || "").trim()].filter(Boolean))
+                : validateProgramCodes(body?.programCodes);
+            } catch (e) {
+              return { status: e.httpStatus || 400, jsonBody: { ok: false, error: e.message } };
             }
 
             try {
@@ -500,19 +497,19 @@ app.http(
                       throw notFound;
                     }
                     if (!programChangeAllowed(current)) {
-                      const blocked = new Error("الصف مؤرشف — لا يمكن تغيير المشروع.");
+                      const blocked = new Error("الصف مؤرشف — لا يمكن تعديل مشاريعه.");
                       blocked.httpStatus = 403;
                       throw blocked;
                     }
-                    if (programCode) current.programCode = programCode;
-                    else delete current.programCode;
+                    current.programCodes = nextCodes; // canonical modern field
+                    delete current.programCode;       // stop relying on the legacy field once migrated
                     current.updatedAt = new Date().toISOString();
                     return current;
                   }
                 );
               return {
                 status: 200,
-                jsonBody: { ok: true, programCode: updated.programCode || "" }
+                jsonBody: { ok: true, programCodes: getClassProgramCodes(updated) }
               };
             }
             catch (mutateError) {

@@ -12,6 +12,7 @@ const analytics = require("../lib/project-tracker/analytics");
 const agg = require("../lib/reports/aggregate");
 const { parseDateRange, inRange } = require("../lib/reports/date-range");
 const { buildHistoryTimeline } = require("../lib/reports/timeline");
+const { getClassProgramCodes, getSupportedClassProgramCodes, classHasProject } = require("../lib/project-tracker/class-programs");
 
 const CLASS_PREFIX = "platform/classes/";
 const USER_PREFIX = "platform/users/";
@@ -20,7 +21,7 @@ const SUB_PREFIX = "platform/submissions/";
 
 async function loadClass(container, classId) { return downloadJsonOrNull(container, CLASS_PREFIX + classId + ".json"); }
 function classMeta(c) {
-  return { classId: c.classId, name: c.name, grade: c.grade || "", schoolYear: c.schoolYear || "", status: normalizeClassStatus(c), programCode: String(c.programCode || ""), studentCount: Array.isArray(c.studentIds) ? c.studentIds.length : 0 };
+  return { classId: c.classId, name: c.name, grade: c.grade || "", schoolYear: c.schoolYear || "", status: normalizeClassStatus(c), programCodes: getClassProgramCodes(c), studentCount: Array.isArray(c.studentIds) ? c.studentIds.length : 0 };
 }
 async function classStudents(container, classId) {
   const all = await listJson(container, USER_PREFIX);
@@ -107,17 +108,18 @@ app.http("reports", {
         }
         const totalCells = students.length * assignments.length;
         const meta = classMeta(c);
-        let project = null;
-        if (isSupportedProject(meta.programCode)) {
-          const ctx = await projectContext(container, meta.programCode, c);
+        // A class may be in several projects — report each independently (never combine their %).
+        const projects = [];
+        for (const pCode of getSupportedClassProgramCodes(c)) {
+          const ctx = await projectContext(container, pCode, c);
           const sum = analytics.buildClassSummary(ctx.workDef, ctx.entries, now);
-          project = { projectCode: meta.programCode, tracks: getProjectDefinition(meta.programCode).tracks, avgOverall: sum.avgOverall, trackAverages: sum.trackAverages, completedCount: sum.completedCount };
+          projects.push({ projectCode: pCode, title: getProjectDefinition(pCode).title, tracks: getProjectDefinition(pCode).tracks, avgOverall: sum.avgOverall, trackAverages: sum.trackAverages, completedCount: sum.completedCount });
         }
         return { status: 200, jsonBody: { ok: true, type, class: meta, kpis: {
           assignments: assignments.length,
           averageScore: agg.average(allPcts),
           submissionRate: totalCells ? Math.round((submittedCells / totalCells) * 100) : 0
-        }, project } };
+        }, projects } };
       }
 
       if (type === "student") {
@@ -135,26 +137,26 @@ app.http("reports", {
           if (agg.studentOutcome(s).state === "submitted") submittedCount += 1;
         }
         const acad = agg.studentAcademicAverage(mySubs);
-        let project = null;
-        if (c && isSupportedProject(String(c.programCode || ""))) {
-          const pCode = String(c.programCode);
+        // One entry per project of the student's class — each independent.
+        const projects = [];
+        if (c) for (const pCode of getSupportedClassProgramCodes(c)) {
           const ns = getStorageNamespace(pCode);
           const config = await svc.ensureClassConfig(container, pCode, c);
           const workDef = svc.workingDefinition(pCode, config);
           const progress = await downloadJsonOrNull(container, ns.progressName(sClassId, studentId));
           const summary = core.buildStudentSummary(workDef, progress, now);
-          project = {
-            projectCode: pCode, tracks: getProjectDefinition(pCode).tracks,
+          projects.push({
+            projectCode: pCode, title: getProjectDefinition(pCode).title, tracks: getProjectDefinition(pCode).tracks,
             summary, nextStages: core.getNextStages(workDef, progress),
             balance: core.getBalanceInsight(summary.trackProgress, workDef),
             lastActivity: progress ? (progress.updatedAt || "") : ""
-          };
+          });
         }
         return { status: 200, jsonBody: { ok: true, type,
           student: { studentId, displayName: u.displayName || "", classId: sClassId, className: c ? c.name : "", schoolYear: c ? c.schoolYear : "" },
           // Single assessments average — the schema has no exam/assignment distinction, so no duplicate metrics.
           academic: { average: acad.average, submittedCount, assessmentCount: assignments.length, submissionRate: assignments.length ? Math.round((submittedCount / assignments.length) * 100) : 0 },
-          project } };
+          projects } };
       }
 
       // Unified assessments report. The schema has no field distinguishing exam vs assignment, so a
@@ -190,7 +192,7 @@ app.http("reports", {
         if (!classId) return { status: 400, jsonBody: { ok: false, error: "classId مطلوب." } };
         const c = await loadClass(container, classId);
         if (!c) return { status: 404, jsonBody: { ok: false, error: "الصف غير موجود." } };
-        if (String(c.programCode || "") !== projectCode) return { status: 400, jsonBody: { ok: false, error: "الصف غير مسجَّل في هذا المشروع." } };
+        if (!classHasProject(c, projectCode)) return { status: 400, jsonBody: { ok: false, error: "الصف غير مسجَّل في هذا المشروع." } };
         const { config, workDef, entries } = await projectContext(container, projectCode, c);
         const tracks = getProjectDefinition(projectCode).tracks;
 
