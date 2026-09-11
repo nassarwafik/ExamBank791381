@@ -10,6 +10,10 @@ import { answered } from "./StudentQuestionCard";
 export type GradingPolicy = "all" | "capScore" | "firstNAnswered";
 export type AnswerUnit = "question" | "part";
 
+// Lightweight shared stimulus (a topology image, a command output, a passage) rendered ONCE before
+// the questions that reference it via groupId. Not a page builder — just common material + questions.
+export type Stimulus = { title?: string; text?: string; image?: { dataUrl?: string } };
+
 export type ExamSection = {
   id?: string;
   title?: string;
@@ -18,6 +22,7 @@ export type ExamSection = {
   gradingPolicy?: GradingPolicy;
   requiredAnswers?: number | null;
   answerUnit?: AnswerUnit;
+  stimuli?: Record<string, Stimulus> | null;
   questions: Question[];
 };
 
@@ -29,6 +34,7 @@ export type NormalizedSection = {
   gradingPolicy: GradingPolicy;
   requiredAnswers: number | null;
   answerUnit: AnswerUnit;
+  stimuli: Record<string, Stimulus> | null;
   questions: Question[];
 };
 
@@ -40,9 +46,23 @@ const POLICIES: GradingPolicy[] = ["all", "capScore", "firstNAnswered"];
 
 export const questionId = (q: Question, i: number): string =>
   String(q?.examQuestionId ?? q?.id ?? q?.number ?? i + 1);
+// Section-scoped identity — mirror of the backend sectionQuestionId. Explicit ids win; otherwise a
+// real structured section (not the "__default__" legacy wrapper) yields "sectionId::qN" so question
+// number 1 of two different sections never share the answer key "1".
+export const sectionQuestionId = (section: { id?: string }, q: Question, i: number): string => {
+  if (q && q.examQuestionId != null && q.examQuestionId !== "") return String(q.examQuestionId);
+  if (q && q.id != null && q.id !== "") return String(q.id);
+  if (section && section.id && section.id !== "__default__") return section.id + "::q" + (i + 1);
+  return String((q && q.number) || i + 1);
+};
 export const partId = (p: QuestionPart, i: number): string => String(p?.id ?? i + 1);
 export const fieldId = (f: { id?: string; number?: number }, i: number): string =>
   String(f?.id ?? f?.number ?? i + 1);
+
+// Arabic ordinal labels for compound parts (أ، ب، ج …); explicit part.label wins, number past the end.
+const ARABIC_ORDINALS = ["أ", "ب", "ج", "د", "هـ", "و", "ز", "ح", "ط", "ي", "ك", "ل", "م", "ن", "س", "ع", "ف", "ص", "ق", "ر", "ش", "ت", "ث", "خ", "ذ", "ض", "ظ", "غ"];
+export const partLabel = (part: QuestionPart, i: number): string =>
+  part && part.label != null && String(part.label).trim() !== "" ? String(part.label) : (ARABIC_ORDINALS[i] || String(i + 1));
 
 const num = (v: unknown, fallback = 0): number => {
   const n = Number(v);
@@ -85,6 +105,7 @@ function normalizeSection(s: ExamSection, si: number): NormalizedSection {
     gradingPolicy: policy,
     requiredAnswers: s?.requiredAnswers == null ? null : Math.max(0, Math.floor(num(s.requiredAnswers))),
     answerUnit: s?.answerUnit === "part" ? "part" : "question",
+    stimuli: s && s.stimuli && typeof s.stimuli === "object" ? s.stimuli : null,
     questions: Array.isArray(s?.questions) ? s.questions : []
   };
 }
@@ -108,6 +129,7 @@ export function normalizeExamStructure(exam: StructuredExam | null | undefined):
         gradingPolicy: "all",
         requiredAnswers: null,
         answerUnit: "question",
+        stimuli: null,
         questions: Array.isArray(ex.questions) ? ex.questions : []
       }
     ]
@@ -122,7 +144,7 @@ export const unitKey = (u: { questionId: string; partId: string | null }): strin
 export function getAnswerUnits(section: NormalizedSection, answers: Record<string, Answer>): AnswerUnitInfo[] {
   const units: AnswerUnitInfo[] = [];
   section.questions.forEach((q, qi) => {
-    const qid = questionId(q, qi);
+    const qid = sectionQuestionId(section, q, qi);
     const resp = answers ? answers[qid] : undefined;
     if (section.answerUnit === "part" && isCompound(q)) {
       questionParts(q).forEach((p, pi) => {

@@ -4,7 +4,7 @@ const {requireBuilderAuth}=require("../lib/builder-auth");
 const {getContainer,downloadJsonOrNull,mutateJsonWithRetry,StorageConflictError}=require("../lib/platform-storage");
 const {recordAuditEvent}=require("../lib/audit-log");
 const {recordAchievementIfEligible}=require("../lib/achievement-feed");
-const {flattenQuestions,sectionCappedScore}=require("../lib/exam-structure");
+const {flattenQuestions,sectionCappedScore,effectiveMaxMarks}=require("../lib/exam-structure");
 const AP="platform/assignments/",SP="platform/submissions/",UP="platform/users/";
 const CONFLICT_MESSAGE="حدث تعارض مؤقت أثناء حفظ البيانات. حاول مرة أخرى.";
 function round(n){return Number(Number(n||0).toFixed(2))}
@@ -23,7 +23,10 @@ function historicalSubmissionProvesOwnership(submission,assignmentId,studentId,a
 }
 function rebuildAttempt(attempt){
  const grades=Array.isArray(attempt.questionGrades)?attempt.questionGrades:[],overrides=attempt.manualOverrides&&typeof attempt.manualOverrides==="object"?attempt.manualOverrides:{};let remaining=0;const scoreById=new Map();
- attempt.questionGrades=grades.map(g=>{const id=String(g.questionId||""),o=overrides[id];if(o&&o.score!==undefined&&o.score!==null){const s=clamp(o.score,0,Number(g.maxMarks||0));scoreById.set(id,s);return {...g,score:round(s),manualScore:round(s),manualReview:false,reviewed:true,teacherComment:String(o.comment||"")}}const s=Number(g.score||0);scoreById.set(id,s);if(g.manualReview)remaining+=Number(g.maxMarks||0);return {...g,reviewed:!g.manualReview}});
+ // Manual overrides are clamped to the EFFECTIVE (counted) max, so a firstN-excluded answer
+ // (countedMaxMarks 0) can never be awarded marks, and a partially-counted compound is limited to
+ // its counted parts' marks — not the full question max.
+ attempt.questionGrades=grades.map(g=>{const id=String(g.questionId||""),o=overrides[id],cap=effectiveMaxMarks(g);if(o&&o.score!==undefined&&o.score!==null){const s=clamp(o.score,0,cap);scoreById.set(id,s);return {...g,score:round(s),manualScore:round(s),manualReview:false,reviewed:true,teacherComment:String(o.comment||"")}}const s=Number(g.score||0);scoreById.set(id,s);if(g.manualReview)remaining+=cap;return {...g,reviewed:!g.manualReview}});
  // Section-cap-aware total when the attempt was graded structured (attempt.sections present). A
  // capScore / firstNAnswered section's total is capped at its maxMarks even after manual overrides.
  // Legacy attempts (no attempt.sections) fall back to the exact original flat sum.
@@ -67,7 +70,7 @@ app.http("assignmentReview",{methods:["GET","POST"],authLevel:"anonymous",route:
     const attempt=attempts[index];
     attempt.manualOverrides=attempt.manualOverrides&&typeof attempt.manualOverrides==="object"?attempt.manualOverrides:{};
     appliedCount=0;
-    for(const [questionId,value] of Object.entries(incoming)){if(!value||typeof value!=="object")continue;const grade=(attempt.questionGrades||[]).find(g=>String(g.questionId)===String(questionId));if(!grade)continue;attempt.manualOverrides[String(questionId)]={score:round(clamp(value.score,0,Number(grade.maxMarks||0))),comment:String(value.comment||"").trim(),reviewedAt};appliedCount++}
+    for(const [questionId,value] of Object.entries(incoming)){if(!value||typeof value!=="object")continue;const grade=(attempt.questionGrades||[]).find(g=>String(g.questionId)===String(questionId));if(!grade)continue;attempt.manualOverrides[String(questionId)]={score:round(clamp(value.score,0,effectiveMaxMarks(grade))),comment:String(value.comment||"").trim(),reviewedAt};appliedCount++}
     attempt.teacherFeedback=teacherFeedback;attempt.reviewedAt=reviewedAt;rebuildAttempt(attempt);
     attempts[index]=attempt;current.attempts=attempts;current.updatedAt=reviewedAt;
     resultOut={attemptNumber:attempt.attemptNumber,score:attempt.score,totalMarks:attempt.totalMarks,percentage:attempt.percentage,manualReviewMarks:attempt.manualReviewMarks,finalized:attempt.finalized,teacherFeedback:attempt.teacherFeedback};

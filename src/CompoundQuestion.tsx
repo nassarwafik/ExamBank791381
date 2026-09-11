@@ -2,9 +2,9 @@
 import {IconCheck} from "./icons";
 import QuestionField from "./QuestionField";
 import {promptText} from "./questionContent";
-import {answered} from "./StudentQuestionCard";
+import {answered,optionsFor} from "./StudentQuestionCard";
 import type {Question,QuestionPart,Answer,FieldValue} from "./StudentQuestionCard";
-import {distributePartMarks,partId} from "./examStructure";
+import {distributePartMarks,partId,partLabel} from "./examStructure";
 
 // Renders ONE displayed question that is composed of several independent subparts. The shared prompt
 // / stimulus is drawn once, then each part renders its own answer control — parts may use DIFFERENT
@@ -41,9 +41,9 @@ export default function CompoundQuestion({q,index,id,answer,onPart,disabled,exce
    const isField=fieldPartTypes.has(t)||((p.fields?.length||0)>0&&!isChoice(t)&&t!=="shortanswer"&&t!=="open");
    const excess=excessPartIds?.has(pid);
    return <div className={"iex-part "+(answered(pAns)?"done":"")} key={pid}>
-    <div className="iex-part-head"><b className="iex-part-label">{p.label||String.fromCharCode(0x0623)/*أ fallback*/}</b><span className="iex-part-marks">{marks[pi]} علامة</span></div>
+    <div className="iex-part-head"><b className="iex-part-label">{partLabel(p,pi)}</b><span className="iex-part-marks">{marks[pi]} علامة</span></div>
     {p.text&&<p className="iex-part-text">{p.text}</p>}
-    {isChoice(t)&&<div className="iex-options">{(p.options||[]).map((o,n)=><label className={"iex-option "+(pAns?.kind==="choice"&&pAns.index===n?"selected":"")} key={n}><input type="radio" name={id+"-"+pid} checked={pAns?.kind==="choice"&&pAns.index===n} onChange={()=>setChoice(pid,n)} disabled={disabled}/><span className="iex-pick">{pAns?.kind==="choice"&&pAns.index===n&&<IconCheck size={14}/>}</span><b>{o.text||o.label||o.value||""}</b></label>)}</div>}
+    {isChoice(t)&&<div className="iex-options">{optionsFor(p).map((o,n)=><label className={"iex-option "+(pAns?.kind==="choice"&&pAns.index===n?"selected":"")} key={n}><input type="radio" name={id+"-"+pid} checked={pAns?.kind==="choice"&&pAns.index===n} onChange={()=>setChoice(pid,n)} disabled={disabled}/><span className="iex-pick">{pAns?.kind==="choice"&&pAns.index===n&&<IconCheck size={14}/>}</span><b>{o.text||o.label||o.value||""}</b></label>)}</div>}
     {isField&&<QuestionField q={p} idBase={id+"-"+pid} values={pAns?.kind==="fields"?pAns.values:{}} onField={(fid,v)=>setField(pid,fid,v)} disabled={disabled}/>}
     {!isChoice(t)&&!isField&&<textarea className="iex-open" value={pAns?.kind==="text"?pAns.value:""} onChange={e=>setText(pid,e.target.value)} placeholder="اكتب إجابتك هنا..." disabled={disabled}/>}
     {excess&&<div className="iex-extra-hint">إجابة إضافية — لن تدخل في التصحيح</div>}

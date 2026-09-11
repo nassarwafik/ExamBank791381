@@ -7,7 +7,10 @@ import {
   selectGradedUnits,
   calculateSectionProgress,
   flattenQuestions,
-  sectionCappedScore
+  sectionCappedScore,
+  sectionQuestionId,
+  partLabel,
+  effectiveMaxMarks
 } from "./exam-structure.js";
 
 describe("normalizeExamStructure", () => {
@@ -104,6 +107,52 @@ describe("calculateSectionProgress", () => {
       q3: { kind: "text", value: "c" }
     });
     expect(p).toMatchObject({ total: 3, answered: 3, required: 2, counted: 2, excess: 1 });
+  });
+});
+
+describe("sectionQuestionId (section-scoped identity)", () => {
+  it("scopes an unlabeled question to its structured section so two sections' number-1 questions differ", () => {
+    const core = normalizeExamStructure({ sections: [{ id: "core", questions: [{ number: 1, text: "" }] }] }).sections[0];
+    const spec = normalizeExamStructure({ sections: [{ id: "specialization", questions: [{ number: 1, text: "" }] }] }).sections[0];
+    expect(sectionQuestionId(core, core.questions[0], 0)).toBe("core::q1");
+    expect(sectionQuestionId(spec, spec.questions[0], 0)).toBe("specialization::q1");
+    expect(sectionQuestionId(core, core.questions[0], 0)).not.toBe(sectionQuestionId(spec, spec.questions[0], 0));
+  });
+  it("preserves an explicit examQuestionId/id verbatim even inside a structured section", () => {
+    const s = normalizeExamStructure({ sections: [{ id: "core", questions: [{ examQuestionId: "core-q7", text: "" }] }] }).sections[0];
+    expect(sectionQuestionId(s, s.questions[0], 0)).toBe("core-q7");
+  });
+  it("keeps the legacy flat-exam fallback (number, then 1-based index) unchanged", () => {
+    const legacy = normalizeExamStructure({ questions: [{ number: 4, text: "" }, { text: "" }] }).sections[0];
+    expect(legacy.id).toBe("__default__");
+    expect(sectionQuestionId(legacy, legacy.questions[0], 0)).toBe("4");
+    expect(sectionQuestionId(legacy, legacy.questions[1], 1)).toBe("2");
+  });
+});
+
+describe("partLabel", () => {
+  it("generates Arabic ordinals by order and preserves explicit labels", () => {
+    expect([0, 1, 2, 3, 4].map(i => partLabel({}, i))).toEqual(["أ", "ب", "ج", "د", "هـ"]);
+    expect(partLabel({ label: "س1" }, 0)).toBe("س1");
+    expect(partLabel({}, 99)).toBe("100");
+  });
+});
+
+describe("effectiveMaxMarks", () => {
+  it("uses countedMaxMarks when present (0 for an ignored excess answer)", () => {
+    expect(effectiveMaxMarks({ maxMarks: 4, countedMaxMarks: 0 })).toBe(0);
+    expect(effectiveMaxMarks({ maxMarks: 20, countedMaxMarks: 10 })).toBe(10);
+  });
+  it("falls back to maxMarks for legacy grades with no countedMaxMarks", () => {
+    expect(effectiveMaxMarks({ maxMarks: 5 })).toBe(5);
+  });
+});
+
+describe("normalizeExamStructure - stimuli passthrough", () => {
+  it("carries a section's shared-stimulus lookup through normalization", () => {
+    const norm = normalizeExamStructure({ sections: [{ id: "s", stimuli: { g1: { title: "الطوبولوجيا", text: "..." } }, questions: [] }] });
+    expect(norm.sections[0].stimuli).toEqual({ g1: { title: "الطوبولوجيا", text: "..." } });
+    expect(normalizeExamStructure({ questions: [] }).sections[0].stimuli).toBe(null);
   });
 });
 

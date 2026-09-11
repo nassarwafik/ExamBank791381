@@ -388,3 +388,67 @@ describe("gradeExam - compound question whose parts use different answer types",
     expect(result.finalized).toBe(false);
   });
 });
+
+// ---------------------------------------------------------------------------
+// Review-fix regressions: section-scoped ids, trueFalse defaults, firstN
+// countedMaxMarks, manual-override safety.
+// ---------------------------------------------------------------------------
+
+describe("gradeExam - section-scoped ids prevent cross-section answer-key collisions", () => {
+  it("grades two sections that both contain displayed question number 1 independently", () => {
+    const exam = {
+      sections: [
+        { id: "core", gradingPolicy: "all", questions: [{ number: 1, marks: 3, presentationType: "multipleChoice", options: [{ text: "A" }, { text: "B" }], answer: { correctOptionIndex: 0 } }] },
+        { id: "specialization", gradingPolicy: "all", questions: [{ number: 1, marks: 4, presentationType: "multipleChoice", options: [{ text: "A" }, { text: "B" }], answer: { correctOptionIndex: 1 } }] }
+      ]
+    };
+    // Answer core's q1 correctly and specialization's q1 wrongly, keyed by the section-scoped ids.
+    const result = gradeExam(exam, { "core::q1": { kind: "choice", index: 0 }, "specialization::q1": { kind: "choice", index: 0 } });
+    const core = result.questions.find(q => q.questionId === "core::q1");
+    const spec = result.questions.find(q => q.questionId === "specialization::q1");
+    expect(core.score).toBe(3);
+    expect(spec.score).toBe(0); // independent — the shared display number "1" did NOT merge them
+    expect(result.score).toBe(3);
+    expect(result.totalMarks).toBe(7);
+  });
+});
+
+describe("gradeExam - trueFalse without stored options", () => {
+  it("grades a standalone trueFalse using a boolean answer.correct (no options stored)", () => {
+    const exam = { questions: [{ examQuestionId: "q1", marks: 2, presentationType: "trueFalse", answer: { correct: true } }] };
+    expect(gradeExam(exam, { q1: { kind: "choice", index: 0 } }).questions[0].correct).toBe(true); // صحيح
+    expect(gradeExam(exam, { q1: { kind: "choice", index: 1 } }).questions[0].correct).toBe(false); // غير صحيح
+  });
+  it("grades a trueFalse using correctOptionIndex when no options are stored", () => {
+    const exam = { questions: [{ examQuestionId: "q1", marks: 2, presentationType: "trueFalse", answer: { correctOptionIndex: 1 } }] };
+    expect(gradeExam(exam, { q1: { kind: "choice", index: 1 } }).questions[0].score).toBe(2);
+    expect(gradeExam(exam, { q1: { kind: "choice", index: 0 } }).questions[0].score).toBe(0);
+  });
+  it("grades a trueFalse part inside a compound question with no options stored", () => {
+    const exam = { questions: [{ examQuestionId: "q9", marks: 2, parts: [{ id: "a", type: "trueFalse", marks: 2, answer: { correct: false } }] }] };
+    const result = gradeExam(exam, { q9: { kind: "compound", parts: { a: { kind: "choice", index: 1 } } } });
+    expect(result.questions[0].score).toBe(2);
+  });
+});
+
+describe("gradeExam - firstN exposes countedMaxMarks for manual-override safety", () => {
+  it("question-level: an ignored excess answer reports countedMaxMarks 0", () => {
+    const questions = "ABCDEFGHI".split("").map(c => ({ examQuestionId: c, marks: 4, presentationType: "multipleChoice", options: [{ text: "A" }, { text: "B" }], answer: { correctOptionIndex: 0 } }));
+    const exam = { sections: [{ id: "net", maxMarks: 40, gradingPolicy: "firstNAnswered", requiredAnswers: 8, answerUnit: "question", questions }] };
+    const answers = {};
+    "ABCDEFGHI".split("").forEach(c => (answers[c] = { kind: "choice", index: 0 }));
+    const result = gradeExam(exam, answers);
+    const ignored = result.questions.find(q => q.questionId === "I");
+    expect(ignored.ignored).toBe(true);
+    expect(ignored.countedMaxMarks).toBe(0); // teacher override will clamp to 0
+  });
+  it("part-level: a compound with only two 5-mark parts counted reports countedMaxMarks 10 (not full 60)", () => {
+    const parts = Array.from({ length: 12 }, (_, i) => ({ id: "p" + i, type: "multipleChoice", marks: 5, options: [{ text: "A" }, { text: "B" }], answer: { correctOptionIndex: 0 } }));
+    const exam = { sections: [{ id: "net", maxMarks: 40, gradingPolicy: "firstNAnswered", requiredAnswers: 2, answerUnit: "part", questions: [{ examQuestionId: "q25", marks: 60, parts }] }] };
+    const partAnswers = {};
+    for (let i = 0; i < 5; i++) partAnswers["p" + i] = { kind: "choice", index: 0 }; // answer 5, only first 2 counted
+    const result = gradeExam(exam, { q25: { kind: "compound", parts: partAnswers } });
+    expect(result.questions[0].countedMaxMarks).toBe(10);
+    expect(result.questions[0].maxMarks).toBe(60);
+  });
+});

@@ -1,14 +1,16 @@
 
 const {
   normalizeExamStructure,
-  questionId: unitQuestionId,
+  sectionQuestionId,
   partId,
+  partLabel,
   fieldId,
   questionParts,
   isCompound,
   distributePartMarks,
   isResponseAnswered,
-  selectGradedUnits
+  selectGradedUnits,
+  defaultTrueFalseOptions
 } = require("./exam-structure");
 
 function clean(v){
@@ -145,7 +147,7 @@ function gradeCompound(question,response){
     score+=r.score;maxM+=r.maxMarks;
     const mr=r.manualReviewMarks!=null?r.manualReviewMarks:(r.manualReview?r.maxMarks:0);
     manualMarks+=mr;
-    return {partId:pid,label:String(p?.label||""),score:round(r.score),maxMarks:round(r.maxMarks),correct:r.correct,manualReview:r.manualReview};
+    return {partId:pid,label:partLabel(p,i),score:round(r.score),maxMarks:round(r.maxMarks),correct:r.correct,manualReview:r.manualReview};
   });
   return {score,maxMarks:maxM,correct:maxM>0&&score>=maxM-1e-9,manualReview:manualMarks>0,manualReviewMarks:manualMarks,parts:partResults};
 }
@@ -164,7 +166,14 @@ function gradeQuestion(question,response){
     return {...r,maxMarks:max,correct:r.score>=max-1e-9&&!r.manualReview};
   }
   if(type==="multiplechoice"||type==="truefalse"||response?.kind==="choice"){
-    const correct=gradeChoice(question,response,answer);
+    // trueFalse is first-class even without stored options: default to صحيح/غير صحيح, and accept a
+    // boolean answer.correct (true->index 0, false->index 1) as a stable, gradeable representation.
+    let gq=question,ans=answer;
+    if(type==="truefalse"){
+      if(!Array.isArray(question.options)||!question.options.length)gq={...question,options:defaultTrueFalseOptions()};
+      if(!Number.isInteger(Number(answer?.correctOptionIndex))&&typeof answer?.correct==="boolean")ans={...answer,correctOptionIndex:answer.correct?0:1};
+    }
+    const correct=gradeChoice(gq,response,ans);
     return {score:correct?max:0,maxMarks:max,correct,manualReview:false};
   }
   if(answer?.mode==="exactSequence"||answer?.mode==="sequence"||response?.kind==="sequence"){
@@ -188,7 +197,7 @@ function gradeQuestion(question,response){
 // (first-N at part level). For a question-unit section the whole question counts only if selected.
 // Returns display-facing per-question data plus the "counted" contribution used for section totals.
 function gradeQuestionForSection(q,i,section,answers,countedKeys){
-  const id=unitQuestionId(q,i);
+  const id=sectionQuestionId(section,q,i);
   const resp=answers?.[id];
   if(section.answerUnit==="part"&&isCompound(q)){
     const parts=questionParts(q),pmarks=distributePartMarks(q);
@@ -202,7 +211,7 @@ function gradeQuestionForSection(q,i,section,answers,countedKeys){
       const counted=countedKeys.has(key);
       const mr=r.manualReviewMarks!=null?r.manualReviewMarks:(r.manualReview?r.maxMarks:0);
       if(counted){countedScore+=r.score;countedMax+=r.maxMarks;countedManual+=mr}
-      return {partId:pid,label:String(p?.label||""),score:round(r.score),maxMarks:round(r.maxMarks),correct:r.correct,manualReview:r.manualReview,counted,ignored:!counted&&isResponseAnswered(presp[pid])};
+      return {partId:pid,label:partLabel(p,pi),score:round(r.score),maxMarks:round(r.maxMarks),correct:r.correct,manualReview:r.manualReview,counted,ignored:!counted&&isResponseAnswered(presp[pid])};
     });
     return {id,score:countedScore,maxMarks:fullMax,countedMaxMarks:countedMax,manualReviewMarks:countedManual,correct:countedMax>0&&countedScore>=countedMax-1e-9,manualReview:countedManual>0,ignored:countedMax===0&&isResponseAnswered(resp),parts:partOut};
   }

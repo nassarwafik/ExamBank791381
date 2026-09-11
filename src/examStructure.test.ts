@@ -4,9 +4,42 @@ import {
   distributePartMarks,
   selectGradedUnits,
   calculateSectionProgress,
-  getAnswerUnits
+  getAnswerUnits,
+  sectionQuestionId,
+  partLabel
 } from "./examStructure";
+import { optionsFor } from "./StudentQuestionCard";
 import type { Answer } from "./StudentQuestionCard";
+
+describe("sectionQuestionId (frontend mirror)", () => {
+  it("scopes unlabeled questions per structured section and keeps two number-1 questions distinct", () => {
+    const core = normalizeExamStructure({ sections: [{ id: "core", questions: [{ number: 1, text: "", marks: 3 }] }] }).sections[0];
+    const spec = normalizeExamStructure({ sections: [{ id: "specialization", questions: [{ number: 1, text: "", marks: 3 }] }] }).sections[0];
+    expect(sectionQuestionId(core, core.questions[0], 0)).toBe("core::q1");
+    expect(sectionQuestionId(spec, spec.questions[0], 0)).toBe("specialization::q1");
+  });
+  it("preserves explicit ids and legacy flat fallback", () => {
+    const s = normalizeExamStructure({ sections: [{ id: "core", questions: [{ examQuestionId: "x1", text: "", marks: 1 }] }] }).sections[0];
+    expect(sectionQuestionId(s, s.questions[0], 0)).toBe("x1");
+    const legacy = normalizeExamStructure({ questions: [{ text: "", marks: 1 }] }).sections[0];
+    expect(sectionQuestionId(legacy, legacy.questions[0], 0)).toBe("1");
+  });
+});
+
+describe("partLabel (frontend mirror)", () => {
+  it("orders أ ب ج … and preserves explicit labels", () => {
+    expect([0, 1, 2].map(i => partLabel({ id: "p", type: "x" }, i))).toEqual(["أ", "ب", "ج"]);
+    expect(partLabel({ id: "p", type: "x", label: "خاص" }, 5)).toBe("خاص");
+  });
+});
+
+describe("optionsFor (trueFalse default options)", () => {
+  it("returns صحيح/غير صحيح for a trueFalse with no options and passes stored options through", () => {
+    expect(optionsFor({ presentationType: "trueFalse" }).map(o => o.text)).toEqual(["صحيح", "غير صحيح"]);
+    expect(optionsFor({ presentationType: "trueFalse", options: [{ text: "نعم" }] }).map(o => o.text)).toEqual(["نعم"]);
+    expect(optionsFor({ presentationType: "multipleChoice", options: [{ text: "A" }] }).map(o => o.text)).toEqual(["A"]);
+  });
+});
 
 // Front-end mirror of api/src/lib/exam-structure.test.js. Both must agree so the live progress and
 // the official server score never diverge.

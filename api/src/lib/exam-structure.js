@@ -19,11 +19,46 @@ const GRADING_POLICIES = ["all", "capScore", "firstNAnswered"];
 function questionId(q, i) {
   return String(q?.examQuestionId ?? q?.id ?? q?.number ?? i + 1);
 }
+// Section-scoped identity for STRUCTURED exams. An explicit examQuestionId/id always wins (so any
+// authored id is preserved verbatim). Only when both are absent AND the section is a real structured
+// section (not the "__default__" wrapper a legacy flat exam normalizes into) do we build a
+// section-scoped positional fallback like "core::q1" — this is what stops question number 1 of the
+// core section and question number 1 of the specialization section from colliding on the answer key
+// "1". Legacy flat exams keep the exact old fallback (number, then 1-based index), unchanged.
+function sectionQuestionId(section, q, i) {
+  if (q && q.examQuestionId != null && q.examQuestionId !== "") return String(q.examQuestionId);
+  if (q && q.id != null && q.id !== "") return String(q.id);
+  if (section && section.id && section.id !== "__default__") return section.id + "::q" + (i + 1);
+  return String((q && q.number) || i + 1);
+}
 function partId(p, i) {
   return String(p?.id ?? i + 1);
 }
 function fieldId(f, i) {
   return String(f?.id ?? f?.number ?? i + 1);
+}
+
+// Arabic ordinal labels for compound-question parts (أ، ب، ج …). Falls back to a plain number past
+// the alphabet. An explicit part.label is always preserved.
+const ARABIC_ORDINALS = ["أ", "ب", "ج", "د", "هـ", "و", "ز", "ح", "ط", "ي", "ك", "ل", "م", "ن", "س", "ع", "ف", "ص", "ق", "ر", "ش", "ت", "ث", "خ", "ذ", "ض", "ظ", "غ"];
+function partLabel(part, i) {
+  if (part && part.label != null && String(part.label).trim() !== "") return String(part.label);
+  return ARABIC_ORDINALS[i] || String(i + 1);
+}
+
+// The max marks a manual grader may award to one question grade. For a firstNAnswered/compound grade
+// this is the COUNTED max (0 for an ignored excess answer; the sum of counted part marks for a
+// partially-counted compound), never the full maxMarks — so an override can't resurrect marks that
+// first-N excluded. Old stored grades without countedMaxMarks fall back to maxMarks (legacy-safe).
+function effectiveMaxMarks(grade) {
+  const c = grade ? grade.countedMaxMarks : undefined;
+  return c == null ? num(grade && grade.maxMarks) : num(c);
+}
+
+// صحيح / غير صحيح — the implicit options a trueFalse question is graded/rendered with when it stores
+// none. Index 0 = صحيح (true), index 1 = غير صحيح (false).
+function defaultTrueFalseOptions() {
+  return [{ text: "صحيح" }, { text: "غير صحيح" }];
 }
 
 function num(v, fallback = 0) {
@@ -91,6 +126,9 @@ function normalizeSection(s, si) {
     gradingPolicy: policy,
     requiredAnswers: req,
     answerUnit: s?.answerUnit === "part" ? "part" : "question",
+    // Optional shared-stimulus lookup: { [groupId]: { title?, text?, image? } }. Rendered once before
+    // the first question of each group. Passed through untouched (grading ignores it).
+    stimuli: s && s.stimuli && typeof s.stimuli === "object" ? s.stimuli : null,
     questions: Array.isArray(s?.questions) ? s.questions : []
   };
 }
@@ -114,6 +152,7 @@ function normalizeExamStructure(exam) {
         gradingPolicy: "all",
         requiredAnswers: null,
         answerUnit: "question",
+        stimuli: null,
         questions: Array.isArray(ex.questions) ? ex.questions : []
       }
     ]
@@ -128,7 +167,7 @@ function flattenQuestions(exam) {
   let n = 0;
   norm.sections.forEach(section => {
     section.questions.forEach((q, i) => {
-      out.push({ question: q, questionId: questionId(q, i), sectionId: section.id, displayNumber: ++n });
+      out.push({ question: q, questionId: sectionQuestionId(section, q, i), sectionId: section.id, displayNumber: ++n });
     });
   });
   return out;
@@ -144,7 +183,7 @@ function unitKey(u) {
 function getAnswerUnits(section, answers) {
   const units = [];
   (section.questions || []).forEach((q, qi) => {
-    const qid = questionId(q, qi);
+    const qid = sectionQuestionId(section, q, qi);
     const resp = answers ? answers[qid] : undefined;
     if (section.answerUnit === "part" && isCompound(q)) {
       questionParts(q).forEach((p, pi) => {
@@ -218,8 +257,12 @@ module.exports = {
   GRADING_POLICIES,
   sectionCappedScore,
   questionId,
+  sectionQuestionId,
   partId,
+  partLabel,
   fieldId,
+  effectiveMaxMarks,
+  defaultTrueFalseOptions,
   questionParts,
   isCompound,
   distributePartMarks,

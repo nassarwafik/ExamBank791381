@@ -163,3 +163,7 @@
 /* "extra answer — not graded" hint */
 .iex-extra-hint{display:inline-flex;align-items:center;gap:6px;color:#b45309;background:#fff7ed;border:1px solid #fed7aa;border-radius:var(--pill);padding:4px 12px;font-size:12px;font-weight:700;margin:6px 0}
 .iex-extra-hint-block{margin-bottom:-6px}
+/* shared stimulus (common material rendered once before its questions) */
+.iex-stimulus{border:1px solid var(--line);border-inline-start:4px solid var(--primary);border-radius:12px;background:var(--surface2);padding:14px 16px;margin-bottom:14px}
+.iex-stimulus-title{display:block;color:var(--navy);font-weight:800;margin-bottom:6px}
+.iex-stimulus-text{margin:0;line-height:1.9;color:var(--text);white-space:pre-wrap}

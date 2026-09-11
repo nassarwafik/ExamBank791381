@@ -1,17 +1,27 @@
 
+import type {ReactNode} from "react";
 import StudentQuestionCard,{answered} from "./StudentQuestionCard";
 import type {Answer,FieldValue,Question} from "./StudentQuestionCard";
 import CompoundQuestion from "./CompoundQuestion";
 import {IconCheck} from "./icons";
 import {
  type NormalizedSection,
- questionId,
+ type Stimulus,
+ sectionQuestionId,
  partId,
  questionParts,
  isCompound,
  selectGradedUnits,
  calculateSectionProgress
 } from "./examStructure";
+
+// Shared stimulus (topology / command output / passage) rendered ONCE before the questions that
+// reference it via groupId. Content comes from section.stimuli[groupId], falling back to a per-question
+// stimulus object. Reuses the existing image support; no page builder, no redesign.
+function StimulusBlock({stimulus}:{stimulus:Stimulus}){
+ if(!stimulus||(!stimulus.title&&!stimulus.text&&!stimulus.image?.dataUrl))return null;
+ return <div className="iex-stimulus">{stimulus.title&&<strong className="iex-stimulus-title">{stimulus.title}</strong>}{stimulus.text&&<p className="iex-stimulus-text">{stimulus.text}</p>}{stimulus.image?.dataUrl&&<img className="iex-image" src={stimulus.image.dataUrl} alt={stimulus.title||"مادة مشتركة"}/>}</div>;
+}
 
 // Renders one exam SECTION: its header (title, instructions, grading rule, live progress) and its
 // questions. Simple questions go through the existing StudentQuestionCard; compound questions go
@@ -60,8 +70,12 @@ export default function StructuredExamSection(props:Props){
      :<strong>أجبت عن {progress.answered} من {progress.total}</strong>}
    </div>
   </header>
-  <div className="iex-flow">{section.questions.map((q:Question,i)=>{
-   const id=questionId(q,i),globalIndex=startIndex+i;
+  <div className="iex-flow">{(()=>{const stimuli=section.stimuli||{};const rendered=new Set<string>();return section.questions.map((q:Question,i)=>{
+   const id=sectionQuestionId(section,q,i),globalIndex=startIndex+i;
+   // Render this question's shared stimulus once, on first appearance of its groupId.
+   let stimulusNode=null;
+   if(q.groupId&&!rendered.has(q.groupId)){rendered.add(q.groupId);const stim=stimuli[q.groupId]||q.stimulus;if(stim)stimulusNode=<StimulusBlock stimulus={stim}/>;}
+   const wrap=(content:ReactNode)=><div key={id}>{stimulusNode}{content}</div>;
    if(isCompound(q)){
     // Part-level firstN: mark each answered-but-excess part. Question-level: mark whole question.
     let excessPartIds:Set<string>|undefined;
@@ -70,10 +84,10 @@ export default function StructuredExamSection(props:Props){
      questionParts(q).forEach((p,pi)=>{const pid=partId(p,pi),resp=answers[id];const pAns=resp?.kind==="compound"?resp.parts?.[pid]:undefined;if(answered(pAns)&&!countedKeys.has(id+"::"+pid))excessPartIds!.add(pid);});
     }
     const wholeExcess=section.answerUnit==="question"&&answered(answers[id])&&!countedKeys.has(id);
-    return <div key={id}>{wholeExcess&&<div className="iex-extra-hint iex-extra-hint-block"><IconCheck size={11}/>إجابة إضافية — لن تدخل في التصحيح</div>}<CompoundQuestion q={q} index={globalIndex} id={id} answer={answers[id]} onPart={(pid,ans)=>onPart(id,pid,ans)} disabled={disabled} excessPartIds={excessPartIds}/></div>;
+    return wrap(<>{wholeExcess&&<div className="iex-extra-hint iex-extra-hint-block"><IconCheck size={11}/>إجابة إضافية — لن تدخل في التصحيح</div>}<CompoundQuestion q={q} index={globalIndex} id={id} answer={answers[id]} onPart={(pid,ans)=>onPart(id,pid,ans)} disabled={disabled} excessPartIds={excessPartIds}/></>);
    }
    const excess=answered(answers[id])&&!countedKeys.has(id);
-   return <div key={id}>{excess&&<div className="iex-extra-hint iex-extra-hint-block"><IconCheck size={11}/>إجابة إضافية — لن تدخل في التصحيح</div>}<StudentQuestionCard q={q} index={globalIndex} id={id} answer={answers[id]} onChoice={n=>onChoice(id,n)} onSeq={(n,v)=>onSeq(id,n,v)} onTable={(n,v)=>onTable(id,n,v)} onText={v=>onText(id,v)} onField={(fid,v)=>onField(id,fid,v)} disabled={disabled}/></div>;
-  })}</div>
+   return wrap(<>{excess&&<div className="iex-extra-hint iex-extra-hint-block"><IconCheck size={11}/>إجابة إضافية — لن تدخل في التصحيح</div>}<StudentQuestionCard q={q} index={globalIndex} id={id} answer={answers[id]} onChoice={n=>onChoice(id,n)} onSeq={(n,v)=>onSeq(id,n,v)} onTable={(n,v)=>onTable(id,n,v)} onText={v=>onText(id,v)} onField={(fid,v)=>onField(id,fid,v)} disabled={disabled}/></>);
+  });})()}</div>
  </section>;
 }
