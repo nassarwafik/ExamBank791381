@@ -245,7 +245,10 @@ function gradeExam(exam,answers){
     }else if(section.gradingPolicy==="firstNAnswered"){
       secMax=section.maxMarks!=null?section.maxMarks:graded.reduce((s,g)=>s+g.countedMaxMarks,0);
     }else{
-      secMax=section.maxMarks!=null?section.maxMarks:graded.reduce((s,g)=>s+g.maxMarks,0);
+      // "all" is NEVER capped: section max is the sum of question marks, regardless of any (stale)
+      // section.maxMarks. This guarantees an "all" section can never produce score > total even if a
+      // leftover cap survived a policy switch in older data.
+      secMax=graded.reduce((s,g)=>s+g.maxMarks,0);
     }
     score+=rawSum;total+=secMax;manualMarks+=secManual;
     graded.forEach(g=>{

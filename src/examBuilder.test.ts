@@ -28,7 +28,8 @@ import {
   moveMcqOption,
   deleteMcqOption,
   buildMatchingPatch,
-  updateQuestion
+  updateQuestion,
+  changeSectionPolicy
 } from "./examBuilderState";
 import { validateStructuredExam, hasBlockingErrors } from "./examQuality";
 
@@ -476,5 +477,88 @@ describe("REVIEW 8 (compound): fillBlank part with empty wordBank grades", () =>
     const compound = newQuestion("compound", { examQuestionId: "qf", text: "أكمل", marks: 2, parts: [part] });
     const result = gradeExam(exam([newSection({ questions: [compound] })]), { qf: { kind: "compound", parts: { fp: { kind: "fields", values: { b1: "APIPA", b2: "169.254" } } } } });
     expect(result.questions[0].score).toBe(2);
+  });
+});
+
+// ─────────────────────────────────────────────────────────────────────────
+// Review-fix regressions (PR #52 round 3)
+// ─────────────────────────────────────────────────────────────────────────
+
+// Fix 1 — grading-policy state transitions clear stale settings; validation requires a positive cap;
+// an "all" section can never score above its total.
+describe("REVIEW 1: grading-policy transitions & maxMarks validation", () => {
+  it("capScore 60 → all clears maxMarks (and first-N fields)", () => {
+    const cap = { gradingPolicy: "capScore" as const, maxMarks: 60, requiredAnswers: null, answerUnit: "question" as const };
+    expect(changeSectionPolicy(cap, "all")).toEqual({ gradingPolicy: "all", maxMarks: null, requiredAnswers: null, answerUnit: "question" });
+  });
+  it("firstN 40 → all clears maxMarks and requiredAnswers", () => {
+    const fn = { gradingPolicy: "firstNAnswered" as const, maxMarks: 40, requiredAnswers: 8, answerUnit: "part" as const };
+    expect(changeSectionPolicy(fn, "all")).toEqual({ gradingPolicy: "all", maxMarks: null, requiredAnswers: null, answerUnit: "question" });
+  });
+  it("all → capScore keeps a null cap the teacher must fill (and validation blocks a missing cap)", () => {
+    const patch = changeSectionPolicy({ gradingPolicy: "all", maxMarks: null, requiredAnswers: null, answerUnit: "question" }, "capScore");
+    expect(patch).toMatchObject({ gradingPolicy: "capScore", requiredAnswers: null, answerUnit: "question", maxMarks: null });
+    const section = newSection({ ...patch, questions: [newQuestion("multipleChoice", { text: "س", marks: 3, options: [{ text: "A" }, { text: "B" }], answer: { correctOptionIndex: 0 } })] });
+    expect(validateStructuredExam(exam([section])).some(i => i.code === "MAXMARKS_REQUIRED" && i.severity === "error")).toBe(true);
+  });
+  it("an 'all' section that carries a stale maxMarks is flagged, and grading never exceeds the total", () => {
+    // 24×3 = 72 questions; policy 'all' must total 72 and never cap at a leftover 60.
+    const qs = Array.from({ length: 24 }, (_, i) => newQuestion("multipleChoice", { examQuestionId: "a" + i, marks: 3, options: [{ text: "A" }, { text: "B" }], answer: { correctOptionIndex: 0 } }));
+    // simulate stale data: 'all' with a leftover cap
+    const stale = exam([newSection({ gradingPolicy: "all", maxMarks: 60, questions: qs })]);
+    expect(validateStructuredExam(stale).some(i => i.code === "ALL_HAS_MAXMARKS" && i.severity === "error")).toBe(true);
+    const answers: Record<string, { kind: "choice"; index: number }> = {};
+    qs.forEach(q => (answers[q.examQuestionId] = { kind: "choice", index: 0 }));
+    const g = gradeExam(stale, answers);
+    expect(g.totalMarks).toBe(72); // NOT 60
+    expect(g.score).toBe(72);
+    expect(g.score).toBeLessThanOrEqual(g.totalMarks);
+    expect(computeTotalMarks(stale)).toBe(72);
+  });
+  it("the 2025/2026 presets still produce valid sections", () => {
+    const withQ = (over: Partial<BuilderSection>) => newSection({ ...over, questions: [newQuestion("compound", { text: "م", marks: 5, parts: [newPart("multipleChoice", { marks: 5, options: [{ text: "A" }, { text: "B" }], answer: { correctOptionIndex: 0 } })] })] });
+    let s = addSection([], newSection()); s = applyPreset(s, s[0].id, "core-2026");
+    expect(validateStructuredExam(exam([{ ...s[0], questions: [newQuestion("multipleChoice", { text: "س", marks: 3, options: [{ text: "A" }, { text: "B" }], answer: { correctOptionIndex: 0 } })] }])).some(i => i.code === "MAXMARKS_REQUIRED")).toBe(false);
+    let f = addSection([], newSection()); f = applyPreset(f, f[0].id, "infra-2026");
+    expect(validateStructuredExam(exam([withQ({ ...f[0] })])).some(i => i.code === "MAXMARKS_REQUIRED" || i.code === "FIRSTN_NO_REQUIRED")).toBe(false);
+  });
+});
+
+// Fix 2 — auto-graded structured types with missing/incomplete keys block FINAL but allow DRAFT.
+describe("REVIEW 2: auto-graded types require answer keys for finalization", () => {
+  const wrap = (q: BuilderQuestion) => exam([newSection({ gradingPolicy: "all", questions: [q] })]);
+  const codes = (q: BuilderQuestion) => validateStructuredExam(wrap(q)).filter(i => i.severity === "error").map(i => i.code);
+
+  it("incomplete fillBlank → blocking error (draft still allowed conceptually)", () => {
+    const q = newQuestion("fillBlank", { text: "أكمل", marks: 2, wordBank: [], fields: [newField({ id: "b1", correct: "" }), newField({ id: "b2", correct: "x" })], answer: { mode: "exactSequence", values: ["", "x"] } });
+    expect(codes(q)).toContain("FIELD_NO_CORRECT");
+    expect(hasBlockingErrors(validateStructuredExam(wrap(q)))).toBe(true);
+  });
+  it("incomplete wordBank (correct not reachable) → blocking error", () => {
+    const q = newQuestion("wordBank", { text: "أكمل", marks: 2, wordBank: ["OSPF", "RIP"], fields: [newField({ id: "b1", kind: "select", correct: "GHOST" })], answer: { mode: "exactSequence", values: ["GHOST"] } });
+    expect(codes(q)).toContain("CORRECT_NOT_IN_CHOICES");
+  });
+  it("incomplete ordering (answer.values count mismatch) → blocking error", () => {
+    const q = newQuestion("ordering", { text: "رتّب", marks: 3, wordBank: ["1", "2", "3"], fields: [newField({ id: "a", correct: "1" }), newField({ id: "b", correct: "2" }), newField({ id: "c", correct: "3" })], answer: { mode: "exactSequence", values: ["1"] } });
+    expect(codes(q)).toContain("ANSWER_SEQUENCE_MISMATCH");
+  });
+  it("matching with one incomplete pair → blocking error", () => {
+    const q = newQuestion("matching", { text: "طابق", marks: 4, ...buildMatchingPatch([{ left: "HTTP", right: "تطبيقات" }, { left: "IP", right: "" }]) });
+    expect(codes(q)).toContain("MATCH_INCOMPLETE_PAIR");
+  });
+  it("complete versions finalize cleanly", () => {
+    const fill = newQuestion("fillBlank", { text: "أكمل", marks: 2, wordBank: [], fields: [newField({ id: "b1", correct: "APIPA" }), newField({ id: "b2", correct: "169.254" })], answer: { mode: "exactSequence", values: ["APIPA", "169.254"] } });
+    expect(hasBlockingErrors(validateStructuredExam(wrap(fill)))).toBe(false);
+    const match = newQuestion("matching", { text: "طابق", marks: 4, ...buildMatchingPatch([{ left: "HTTP", right: "تطبيقات" }, { left: "IP", right: "شبكة" }]) });
+    expect(hasBlockingErrors(validateStructuredExam(wrap(match)))).toBe(false);
+  });
+  it("shortAnswer with NO model answer still finalizes (manual review is allowed)", () => {
+    const q = newQuestion("shortAnswer", { text: "اشرح", marks: 5, answer: {} });
+    expect(hasBlockingErrors(validateStructuredExam(wrap(q)))).toBe(false);
+  });
+  it("the same key rules apply to a compound PART (fillBlank part missing a key blocks final)", () => {
+    const part = newPart("fillBlank", { id: "fp", marks: 2, wordBank: [], fields: [newField({ id: "b1", correct: "" })], answer: { mode: "exactSequence", values: [""] } });
+    const compound = newQuestion("compound", { examQuestionId: "qc", text: "م", marks: 2, parts: [part] });
+    expect(hasBlockingErrors(validateStructuredExam(exam([newSection({ questions: [compound] })])))).toBe(true);
   });
 });

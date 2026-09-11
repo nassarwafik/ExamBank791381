@@ -1,7 +1,7 @@
 
 import type { BuilderSection, GradingPolicy, AnswerUnit } from "./examTypes";
 import { GRADING_POLICY_LABELS } from "./examTypes";
-import { SECTION_PRESETS, gradingRuleExplanation, newQuestion } from "./examBuilderState";
+import { SECTION_PRESETS, gradingRuleExplanation, newQuestion, changeSectionPolicy } from "./examBuilderState";
 import StructuredQuestionEditor from "./StructuredQuestionEditor";
 import StimulusEditor from "./StimulusEditor";
 import type { BuilderQuestion } from "./examTypes";
@@ -56,7 +56,7 @@ export default function ExamSectionEditor(props: Props) {
           <div className="sb-policy-choices">
             {(Object.keys(GRADING_POLICY_LABELS) as GradingPolicy[]).map(p => (
               <label key={p} className={"sb-chip " + (section.gradingPolicy === p ? "sb-chip-active" : "")}>
-                <input type="radio" name={"policy-" + section.id} checked={section.gradingPolicy === p} onChange={() => patch({ gradingPolicy: p })} disabled={disabled} />
+                <input type="radio" name={"policy-" + section.id} checked={section.gradingPolicy === p} onChange={() => patch(changeSectionPolicy(section, p))} disabled={disabled} />
                 {GRADING_POLICY_LABELS[p]}
               </label>
             ))}

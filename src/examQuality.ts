@@ -73,7 +73,17 @@ export function validateStructuredExam(exam: StructuredExam): StructuredIssue[] 
 }
 
 function validateSection(section: BuilderSection, label: string, add: Add): void {
-  if (section.maxMarks != null && (!Number.isFinite(num(section.maxMarks)) || num(section.maxMarks) <= 0)) {
+  // capScore and firstNAnswered both require an explicit positive section maximum — the real 791381
+  // sections always state one, and a missing cap would let "all"-style raw totals leak past the
+  // intended maximum. "all" must have NO cap. A present-but-invalid value is always an error.
+  if (section.gradingPolicy === "all") {
+    // "all" never uses a cap; changeSectionPolicy clears it, but guard a hand-edited/loaded exam too.
+    if (section.maxMarks != null) {
+      add("error", "ALL_HAS_MAXMARKS", "قسم «" + label + "» بقاعدة «تصحيح جميع الأسئلة» لا يجوز أن يحمل حدًّا أقصى للعلامة.", { sectionId: section.id });
+    }
+  } else if (section.maxMarks == null) {
+    add("error", "MAXMARKS_REQUIRED", "قسم «" + label + "» يحتاج علامة قصوى موجبة للقسم.", { sectionId: section.id });
+  } else if (!Number.isFinite(num(section.maxMarks)) || num(section.maxMarks) <= 0) {
     add("error", "INVALID_MAXMARKS", "العلامة القصوى للقسم «" + label + "» غير صالحة.", { sectionId: section.id });
   }
   if (section.gradingPolicy === "firstNAnswered") {
@@ -145,23 +155,45 @@ function validateBody(node: QuestionBody, type: BuilderQuestionType | BuilderPar
     case "fillBlank":
     case "wordBank":
     case "ordering": {
+      // Auto-graded: every blank needs a reachable correct value, and the canonical answer.values must
+      // line up with the fields. Missing keys are BLOCKING errors (draft still allowed), NOT warnings —
+      // an auto-gradeable type must never silently fall into manual review at final status.
       const fields = node.fields || [];
-      if (!fields.length) add("error", "MISSING_FIELDS", "«" + label + "» يحتاج حقول إجابة.", where);
+      const bank = Array.isArray(node.wordBank) ? node.wordBank.filter(w => String(w ?? "").trim() !== "") : [];
+      if (!fields.length) { add("error", "MISSING_FIELDS", "«" + label + "» يحتاج حقول إجابة.", where); break; }
+      fields.forEach((f, i) => {
+        const correct = String(f.correct ?? "").trim();
+        if (correct === "") { add("error", "FIELD_NO_CORRECT", "الفراغ " + (i + 1) + " في «" + label + "» بلا إجابة صحيحة.", where); return; }
+        // reachability: a word-bank / select correct value must be one of the offered choices
+        const choices = f.kind === "select" && Array.isArray(f.options) && f.options.length ? f.options.map(o => String(o.text ?? o.value ?? o.label ?? "").trim()) : bank;
+        if (choices.length && !choices.map(c => c).includes(correct)) {
+          add("error", "CORRECT_NOT_IN_CHOICES", "الإجابة الصحيحة للفراغ " + (i + 1) + " في «" + label + "» غير موجودة ضمن الخيارات المتاحة.", where);
+        }
+      });
       const values = (node.answer as { values?: unknown })?.values;
-      if (!Array.isArray(values) || values.length === 0 || (values as unknown[]).every(v => String(v ?? "").trim() === "")) {
-        add("warning", "MISSING_ANSWER", "«" + label + "» بلا قيم صحيحة محددة — سيذهب للمراجعة اليدوية.", where);
-      } else if (Array.isArray(values) && (values as unknown[]).some(v => String(v ?? "").trim() === "")) {
-        add("warning", "FIELD_NO_CORRECT", "«" + label + "» بعض الفراغات بلا إجابة صحيحة.", where);
+      if (!Array.isArray(values) || values.length !== fields.length) {
+        add("error", "ANSWER_SEQUENCE_MISMATCH", "قيم الإجابة في «" + label + "» لا تطابق عدد الفراغات.", where);
       }
       break;
     }
     case "matching": {
+      // Auto-graded: at least one pair, every pair fully filled, each correct reachable from options.
+      const fields = node.fields || [];
+      if (!fields.length) { add("error", "MISSING_FIELDS", "«" + label + "» مطابقة بلا أزواج.", where); break; }
+      fields.forEach((f, i) => {
+        const left = String(f.label ?? "").trim();
+        const right = String(f.correct ?? "").trim();
+        if (left === "" || right === "") { add("error", "MATCH_INCOMPLETE_PAIR", "الزوج " + (i + 1) + " في «" + label + "» غير مكتمل (يلزم عنصر وإجابته).", where); return; }
+        const opts = Array.isArray(f.options) ? f.options.map(o => String(o.text ?? o.value ?? o.label ?? "").trim()) : [];
+        if (opts.length && !opts.includes(right)) add("error", "CORRECT_NOT_IN_CHOICES", "الإجابة الصحيحة للزوج " + (i + 1) + " في «" + label + "» غير موجودة ضمن الخيارات.", where);
+      });
       const text = (node.answer as { text?: unknown })?.text;
-      if (typeof text !== "string" || !text.includes("=")) add("warning", "MISSING_ANSWER", "«" + label + "» مطابقة بلا مفتاح إجابة — سيذهب للمراجعة اليدوية.", where);
+      if (typeof text !== "string" || !text.includes("=")) add("error", "MISSING_ANSWER", "«" + label + "» مطابقة بلا مفتاح إجابة صالح.", where);
       break;
     }
     case "shortAnswer":
       // open question: a model answer is optional; without it the engine sends it to manual review.
+      // This is the ONLY structured type where a missing key is allowed at final status.
       break;
     default:
       break;

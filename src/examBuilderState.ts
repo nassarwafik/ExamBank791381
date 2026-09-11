@@ -139,6 +139,24 @@ export function moveInArray<T>(arr: T[], from: number, delta: number): T[] {
   return copy;
 }
 
+// Switching a section's grading policy must clear settings that the new policy does not use, so no
+// hidden stale value (e.g. a leftover maxMarks=60 after switching to "all") can affect grading. This
+// returns the patch to apply.
+//  - all:            no cap, no first-N — maxMarks/requiredAnswers/answerUnit reset.
+//  - capScore:       a section cap, graded as one unit — requiredAnswers/answerUnit reset, maxMarks kept
+//                    (teacher must set a positive value before finalization).
+//  - firstNAnswered: keeps/uses requiredAnswers, answerUnit and maxMarks (configurable).
+export function changeSectionPolicy(section: Pick<BuilderSection, "gradingPolicy" | "maxMarks" | "requiredAnswers" | "answerUnit">, next: GradingPolicy): Partial<BuilderSection> {
+  if (next === "all") {
+    return { gradingPolicy: "all", maxMarks: null, requiredAnswers: null, answerUnit: "question" };
+  }
+  if (next === "capScore") {
+    return { gradingPolicy: "capScore", requiredAnswers: null, answerUnit: "question", maxMarks: section.maxMarks ?? null };
+  }
+  // firstNAnswered — keep the existing count/unit/max (all configurable).
+  return { gradingPolicy: "firstNAnswered", requiredAnswers: section.requiredAnswers ?? null, answerUnit: section.answerUnit ?? "question", maxMarks: section.maxMarks ?? null };
+}
+
 // ── Section-level operations (all return a new sections array) ────────────
 export const addSection = (sections: BuilderSection[], section = newSection()): BuilderSection[] => [...sections, section];
 export const deleteSection = (sections: BuilderSection[], id: string): BuilderSection[] => sections.filter(s => s.id !== id);
@@ -345,7 +363,10 @@ export function legacyToStructured(exam: Record<string, unknown>): StructuredExa
 export function computeTotalMarks(exam: StructuredExam): number {
   return (exam.sections || []).reduce((total, s) => {
     const sum = (s.questions || []).reduce((a, q) => a + (Number(q.marks) || 0), 0);
-    return total + (s.maxMarks != null ? Number(s.maxMarks) || 0 : sum);
+    // "all" sections are never capped (mirrors the backend grader); only capScore / firstNAnswered
+    // use an explicit section maximum.
+    const capped = s.gradingPolicy !== "all" && s.maxMarks != null;
+    return total + (capped ? Number(s.maxMarks) || 0 : sum);
   }, 0);
 }
 export function countQuestions(exam: StructuredExam): number {

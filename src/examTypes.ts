@@ -147,8 +147,10 @@ export type StructuredExam = {
   createdAt?: string;
   updatedAt?: string;
   sections: BuilderSection[];
-  // legacy `questions` may still be present on an object that also gained sections; it is never
-  // canonical for a structured exam (sections are) but is preserved so nothing is lost.
+  // Canonical question tree is sections[].questions[] — a structured exam carries NO top-level
+  // questions[] (legacyToStructured / toSavedStructuredExam / the save-exam-artifact cleaner all
+  // strip it, so there is no competing/stale copy). The optional field remains only so an incoming
+  // (e.g. legacy) object is assignable before conversion; it is never persisted on a structured exam.
   questions?: unknown[];
   [key: string]: unknown;
 };
