@@ -52,7 +52,7 @@ function cleanQuestion(
 function cleanExam(
   exam
 ) {
-  return {
+  const cleaned = {
     ...exam,
 
     updatedAt:
@@ -68,6 +68,33 @@ function cleanExam(
           )
         : []
   };
+
+  // Structured exams keep their questions inside sections[]. Clean those too so a saved structured
+  // exam never carries builder undo/redo history. Legacy flat exams (no sections) are unaffected.
+  if (
+    Array.isArray(
+      exam.sections
+    )
+  ) {
+    cleaned.sections =
+      exam.sections.map(
+        section => ({
+          ...section,
+
+          questions:
+            Array.isArray(
+              section &&
+              section.questions
+            )
+              ? section.questions.map(
+                  cleanQuestion
+                )
+              : []
+        })
+      );
+  }
+
+  return cleaned;
 }
 
 function buildTemplateDocument(

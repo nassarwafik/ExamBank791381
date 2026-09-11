@@ -3301,3 +3301,10 @@ button {
 
 /* ---------- Exam table ---------- */
 .exam-table-wrap { border-radius: var(--eb-r-lg); border: 1px solid var(--eb-line); overflow: hidden; }
+
+/* Structured Exam Builder overlay + entry button (Phase 2). Full styling lives in
+   structured-builder.css which loads with the lazy builder; these two rules are here because the
+   overlay shell and the convert button in the legacy builder render before that chunk loads. */
+.structured-builder-overlay{position:fixed;inset:0;z-index:900;background:var(--surface,#f5f7fa);overflow:auto;padding:16px}
+.convert-structured-btn{margin-top:10px;width:100%;border:1px dashed #2563eb;background:#eff4ff;color:#1d4ed8;border-radius:10px;padding:9px 14px;font:inherit;font-weight:800;cursor:pointer}
+.convert-structured-btn:hover{background:#e0eaff}
