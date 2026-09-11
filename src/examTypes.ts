@@ -157,3 +157,17 @@ export type StructuredExam = {
 // only) returns false and keeps its existing editor.
 export const isStructuredExam = (exam: unknown): exam is StructuredExam =>
   !!exam && typeof exam === "object" && Array.isArray((exam as { sections?: unknown }).sections);
+
+// Question count that works for BOTH exam shapes (used wherever the UI previously read
+// exam.questions.length — assignment source guard, source count display, etc.). Structured exams count
+// sections[].questions[]; legacy exams count questions[]. Never reads a stale questions[] on a
+// structured exam.
+export function examQuestionCount(exam: unknown): number {
+  if (!exam || typeof exam !== "object") return 0;
+  const e = exam as { sections?: unknown; questions?: unknown };
+  if (Array.isArray(e.sections)) {
+    return e.sections.reduce((n: number, s: unknown) => n + (Array.isArray((s as { questions?: unknown }).questions) ? (s as { questions: unknown[] }).questions.length : 0), 0);
+  }
+  return Array.isArray(e.questions) ? e.questions.length : 0;
+}
+export const examHasQuestions = (exam: unknown): boolean => examQuestionCount(exam) > 0;

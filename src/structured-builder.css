@@ -116,3 +116,5 @@
   .sb-input-sm,.sb-input-xs{min-width:0;width:100%}
   .sb-q-head{gap:4px}
 }
+
+.sb-stat-final{background:#ecfdf5;border-color:#a7f3d0;color:#047857}

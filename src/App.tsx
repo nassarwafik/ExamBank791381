@@ -593,6 +593,9 @@ function App() {
   // Structured Exam Builder (Phase 2). When non-null the structured builder overlay is shown; the
   // legacy flat-exam editor is never disturbed and legacy exams are only converted on explicit request.
   const [structuredExam, setStructuredExam] = useState<StructuredExam | null>(null);
+  // Builder VISIBILITY is separate from exam IDENTITY: closing the builder ("رجوع") keeps the
+  // structured exam active (so it stays the assignment source); only opening a legacy exam clears it.
+  const [structuredBuilderOpen, setStructuredBuilderOpen] = useState(false);
   const [structuredSaving, setStructuredSaving] = useState(false);
   const [structuredNotice, setStructuredNotice] = useState("");
   const [structuredError, setStructuredError] = useState("");
@@ -1105,6 +1108,9 @@ function App() {
     setGenerateBusy(true);
     setBuilderError("");
     setExam(null);
+    // A freshly generated legacy exam becomes the active exam — clear any active structured exam.
+    setStructuredExam(null);
+    setStructuredBuilderOpen(false);
 
     try {
       const excludedTopics = selectedTopics.length
@@ -1219,6 +1225,8 @@ function App() {
 
   function handleBuildExamFromImportedQuestions(questions: ExamQuestion[]) {
     setPlan(null);
+    setStructuredExam(null);
+    setStructuredBuilderOpen(false);
     setExam(buildDraftFromImportedQuestions(questions, "امتحان من أسئلة مستوردة"));
     setHasUnsavedChanges(true);
     setTeacherView("builder");
@@ -1241,6 +1249,8 @@ function App() {
     const draftTitle = (title || examSnapshot?.title || "امتحان") + " (نسخة قابلة للتعديل)";
     setPlan(null);
     setExamPrompt("");
+    setStructuredExam(null);
+    setStructuredBuilderOpen(false);
     setExam(buildDraftFromImportedQuestions(questions, draftTitle));
     setHasUnsavedChanges(true);
     setTeacherView("builder");
@@ -3605,6 +3615,7 @@ function App() {
     setStructuredError("");
     setStructuredNotice("");
     setStructuredExam(legacyToStructured(exam as unknown as Record<string, unknown>));
+    setStructuredBuilderOpen(true);
   }
   function openNewStructuredExam() {
     setStructuredError("");
@@ -3615,19 +3626,22 @@ function App() {
       status: "draft",
       sections: [newSection({ title: "القسم الأول", questions: [newQuestion("multipleChoice")] })]
     });
+    setStructuredBuilderOpen(true);
   }
   // Structured exams save through the SAME saved-exam artifact endpoint as legacy exams; the backend
-  // stores the object (sections canonical) untouched. No second saved-exam system.
-  async function saveStructuredExam() {
+  // stores the object (sections canonical) untouched. No second saved-exam system. Draft saves always
+  // succeed; a "final" save is only reached when the builder's validation has no blocking errors, and
+  // stamps status accordingly (a draft save demotes a previously-final exam back to draft).
+  async function saveStructuredExam(mode: "draft" | "final") {
     if (!structuredExam) return;
     setStructuredSaving(true);
     setStructuredError("");
     setStructuredNotice("");
     try {
-      const payload = toSavedStructuredExam(structuredExam);
+      const payload = { ...toSavedStructuredExam(structuredExam), status: mode };
       await apiRequest<{ ok: true }>("/api/save-exam-artifact", { method: "POST", body: JSON.stringify({ kind: "exam", exam: payload }) });
       setStructuredExam(payload);
-      setStructuredNotice("✓ تم حفظ الامتحان المنظّم في الامتحانات المحفوظة.");
+      setStructuredNotice(mode === "final" ? "✓ تم اعتماد الامتحان المنظّم نهائيًا وحفظه." : "✓ تم حفظ مسودة الامتحان المنظّم.");
       await loadSavedExams();
     }
     catch (error) {
@@ -3682,6 +3696,7 @@ function App() {
       // exam continues to open in the existing editor exactly as before.
       if (isStructuredExam(loadedExam)) {
         setStructuredExam(loadedExam as unknown as StructuredExam);
+        setStructuredBuilderOpen(true);
         setStructuredError("");
         setStructuredNotice("");
         setSavedExamsOpen(false);
@@ -3689,6 +3704,9 @@ function App() {
         return;
       }
 
+      // Opening a legacy exam clears any active structured exam so the active source is the legacy one.
+      setStructuredExam(null);
+      setStructuredBuilderOpen(false);
       setExam(
         loadedExam
       );
@@ -5431,7 +5449,7 @@ function App() {
         "platform" && (
         <TeacherPlatform
           token={token}
-          currentExam={exam}
+          currentExam={structuredExam ?? exam}
           workspaceTab={workspaceTab}
           onCopyLibraryExamToBuilder={handleCopyLibraryExamToBuilder}
         />
@@ -5761,6 +5779,12 @@ function App() {
           <button onClick={openNewStructuredExam}>
             🧱 امتحان منظّم جديد
           </button>
+
+          {structuredExam && !structuredBuilderOpen && (
+            <button onClick={() => setStructuredBuilderOpen(true)}>
+              🧱 متابعة تحرير الامتحان المنظّم
+            </button>
+          )}
 
           <span>
             افتح امتحانًا محفوظًا أو استخدم قالبًا لبناء امتحان جديد من نفس الصفحة.
@@ -7408,14 +7432,14 @@ function App() {
       )}
       </div>
 
-      {structuredExam && (
+      {structuredBuilderOpen && structuredExam && (
         <div className="structured-builder-overlay" dir="rtl">
           <Suspense fallback={<div className="platform-loading">⏳ جارٍ تحميل مبنى الامتحان…</div>}>
             <StructuredExamBuilder
               exam={structuredExam}
               onChange={setStructuredExam}
               onSave={saveStructuredExam}
-              onExit={() => { setStructuredExam(null); setStructuredNotice(""); setStructuredError(""); }}
+              onExit={() => { setStructuredBuilderOpen(false); }}
               saving={structuredSaving}
               notice={structuredNotice}
               error={structuredError}

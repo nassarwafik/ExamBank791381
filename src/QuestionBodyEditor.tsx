@@ -1,6 +1,7 @@
 
+import { useId } from "react";
 import type { QuestionBody, BuilderOption, BuilderQuestionType, BuilderPartType } from "./examTypes";
-import { moveInArray, buildMatchingPatch, matchingPairs, type MatchPair } from "./examBuilderState";
+import { buildMatchingPatch, matchingPairs, moveMcqOption, deleteMcqOption, type MatchPair } from "./examBuilderState";
 import QuestionFieldEditor from "./QuestionFieldEditor";
 import TableFillEditor from "./TableFillEditor";
 import CliFillEditor from "./CliFillEditor";
@@ -15,33 +16,37 @@ type Props = { node: QuestionBody; type: BuilderQuestionType | BuilderPartType; 
 const optText = (o: BuilderOption) => o.text ?? o.label ?? o.value ?? "";
 
 export default function QuestionBodyEditor({ node, type, onChange, disabled }: Props) {
+  // Unique per-editor-instance radio group name, so MCQ/trueFalse pickers on several questions/parts
+  // rendered on the same page never share a radio group. This UI id is never stored in exam data.
+  const groupId = useId();
   if (type === "multipleChoice") {
     const options = node.options || [];
     const correct = Number((node.answer as { correctOptionIndex?: unknown })?.correctOptionIndex);
+    const hasCorrect = Number.isInteger(correct) && correct >= 0 && correct < options.length;
     const setOption = (i: number, text: string) => onChange({ options: options.map((o, k) => (k === i ? { ...o, text } : o)) });
-    const move = (i: number, d: number) => onChange({ options: moveInArray(options, i, d) });
     return (
       <div className="sb-options">
         {options.map((o, i) => (
           <div className="sb-option-row" key={i}>
-            <label className="sb-radio"><input type="radio" name={"correct"} checked={correct === i} onChange={() => onChange({ answer: { correctOptionIndex: i } })} disabled={disabled} /> الصحيح</label>
+            <label className="sb-radio"><input type="radio" name={"mcq-" + groupId} checked={correct === i} onChange={() => onChange({ answer: { correctOptionIndex: i } })} disabled={disabled} /> الصحيح</label>
             <input className="sb-input" value={optText(o)} placeholder={"الخيار " + (i + 1)} onChange={e => setOption(i, e.target.value)} disabled={disabled} />
-            <button type="button" className="sb-icon-btn" title="أعلى" onClick={() => move(i, -1)} disabled={disabled}>↑</button>
-            <button type="button" className="sb-icon-btn" title="أسفل" onClick={() => move(i, 1)} disabled={disabled}>↓</button>
-            {options.length > 2 && <button type="button" className="sb-icon-btn sb-danger" title="حذف" onClick={() => onChange({ options: options.filter((_, k) => k !== i), answer: { correctOptionIndex: Math.min(correct, options.length - 2) } })} disabled={disabled}>×</button>}
+            <button type="button" className="sb-icon-btn" title="أعلى" onClick={() => onChange(moveMcqOption(node, i, -1))} disabled={disabled}>↑</button>
+            <button type="button" className="sb-icon-btn" title="أسفل" onClick={() => onChange(moveMcqOption(node, i, 1))} disabled={disabled}>↓</button>
+            {options.length > 2 && <button type="button" className="sb-icon-btn sb-danger" title="حذف" onClick={() => onChange(deleteMcqOption(node, i))} disabled={disabled}>×</button>}
           </div>
         ))}
+        {!hasCorrect && <p className="sb-hint sb-warn-text">حدّد الإجابة الصحيحة.</p>}
         <button type="button" className="sb-mini-btn" onClick={() => onChange({ options: [...options, { text: "" }] })} disabled={disabled}>+ إضافة خيار</button>
       </div>
     );
   }
 
   if (type === "trueFalse") {
-    const correct = (node.answer as { correct?: boolean })?.correct === true;
+    const correct = (node.answer as { correct?: boolean })?.correct;
     return (
       <div className="sb-truefalse">
-        <label className="sb-radio"><input type="radio" name="tf" checked={correct} onChange={() => onChange({ answer: { correct: true } })} disabled={disabled} /> صحيح</label>
-        <label className="sb-radio"><input type="radio" name="tf" checked={(node.answer as { correct?: boolean })?.correct === false} onChange={() => onChange({ answer: { correct: false } })} disabled={disabled} /> غير صحيح</label>
+        <label className="sb-radio"><input type="radio" name={"tf-" + groupId} checked={correct === true} onChange={() => onChange({ answer: { correct: true } })} disabled={disabled} /> صحيح</label>
+        <label className="sb-radio"><input type="radio" name={"tf-" + groupId} checked={correct === false} onChange={() => onChange({ answer: { correct: false } })} disabled={disabled} /> غير صحيح</label>
       </div>
     );
   }

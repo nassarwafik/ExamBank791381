@@ -31,10 +31,11 @@ import "./structured-builder.css";
 // UI, validation summary, and student preview (full exam and single question) rendered through the
 // SAME components students use, fed a scrubbed copy so no answer key is shown.
 
+export type SaveMode = "draft" | "final";
 type Props = {
   exam: StructuredExam;
   onChange: (exam: StructuredExam) => void;
-  onSave?: () => void;
+  onSave?: (mode: SaveMode) => void;
   onExit?: () => void;
   saving?: boolean;
   notice?: string;
@@ -63,8 +64,10 @@ export default function StructuredExamBuilder({ exam, onChange, onSave, onExit, 
           <span className="sb-stat">{totalMarks} علامة</span>
         </div>
         <div className="sb-toolbar-actions">
+          {exam.status === "final" && <span className="sb-stat sb-stat-final">معتمد نهائيًا</span>}
           <button type="button" className="sb-btn" onClick={() => setPreview(exam)}>👁 معاينة الامتحان</button>
-          {onSave && <button type="button" className="sb-btn sb-btn-primary" onClick={onSave} disabled={saving || hasBlockingErrors(errors)}>{saving ? "⏳ جارٍ الحفظ…" : "💾 حفظ"}</button>}
+          {onSave && <button type="button" className="sb-btn" onClick={() => onSave("draft")} disabled={saving}>{saving ? "⏳ جارٍ الحفظ…" : "💾 حفظ مسودة"}</button>}
+          {onSave && <button type="button" className="sb-btn sb-btn-primary" onClick={() => onSave("final")} disabled={saving || hasBlockingErrors(errors)} title={hasBlockingErrors(errors) ? "يجب إصلاح الأخطاء قبل الاعتماد النهائي" : "اعتماد الامتحان نهائيًا"}>✓ اعتماد نهائي</button>}
         </div>
       </header>
 

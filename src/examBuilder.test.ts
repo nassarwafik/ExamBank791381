@@ -1,7 +1,7 @@
 import { describe, it, expect } from "vitest";
 import { gradeExam } from "../api/src/lib/assignment-grading.js";
 import { sanitizeExamForStudent } from "../api/src/lib/student-exam-sanitize.js";
-import { isStructuredExam } from "./examTypes";
+import { isStructuredExam, examHasQuestions, examQuestionCount } from "./examTypes";
 import type { BuilderQuestion, BuilderSection, StructuredExam } from "./examTypes";
 import {
   newSection,
@@ -24,7 +24,11 @@ import {
   toSavedStructuredExam,
   computeTotalMarks,
   countQuestions,
-  ordinalLabel
+  ordinalLabel,
+  moveMcqOption,
+  deleteMcqOption,
+  buildMatchingPatch,
+  updateQuestion
 } from "./examBuilderState";
 import { validateStructuredExam, hasBlockingErrors } from "./examQuality";
 
@@ -349,5 +353,128 @@ describe("SMOKE: full structured exam builds, reopens, grades and sanitizes end-
     const safe = JSON.stringify(sanitizeExamForStudent(reopened));
     expect(safe).not.toContain("correctOptionIndex");
     expect(safe.includes("\"correct\":")).toBe(false);
+  });
+});
+
+// ─────────────────────────────────────────────────────────────────────────
+// Review-fix regressions (PR #52 round 2)
+// ─────────────────────────────────────────────────────────────────────────
+
+// Fix 1/2/11 — active exam & assignment source work for a NATIVE structured exam with no questions[].
+describe("REVIEW 1/2: native structured exam is assignment-ready with no top-level questions[]", () => {
+  it("examHasQuestions/examQuestionCount count sections, and legacyToStructured drops questions[]", () => {
+    const native = exam([
+      newSection({ questions: [newQuestion("shortAnswer", { text: "a", marks: 1 }), newQuestion("shortAnswer", { text: "b", marks: 1 }), newQuestion("shortAnswer", { text: "c", marks: 1 })] }),
+      newSection({ questions: [newQuestion("shortAnswer", { text: "d", marks: 1 }), newQuestion("shortAnswer", { text: "e", marks: 1 }), newQuestion("shortAnswer", { text: "f", marks: 1 }), newQuestion("shortAnswer", { text: "g", marks: 1 }), newQuestion("shortAnswer", { text: "h", marks: 1 })] })
+    ]);
+    expect("questions" in native).toBe(false);
+    expect(examQuestionCount(native)).toBe(8); // 3 + 5
+    expect(examHasQuestions(native)).toBe(true);
+    expect(examQuestionCount({ examId: "x", questions: [{}, {}] })).toBe(2); // legacy still works
+  });
+
+  it("legacyToStructured removes the top-level questions[] (no stale duplicate) but keeps the data in the section", () => {
+    const legacy = { examId: "L", title: "قديم", questions: [{ examQuestionId: "q1", text: "س", marks: 3, answer: { correctOptionIndex: 1 }, image: { assets: [{ dataUrl: "d" }] } }] };
+    const structured = legacyToStructured(legacy);
+    expect("questions" in structured).toBe(false);
+    expect(structured.sections[0].questions[0].examQuestionId).toBe("q1");
+    expect((structured.sections[0].questions[0].answer as { correctOptionIndex: number }).correctOptionIndex).toBe(1);
+    // editing the structured question does not resurrect a second copy
+    const edited = { ...structured, sections: updateQuestion(structured.sections, structured.sections[0].id, "q1", { text: "معدّل" }) };
+    expect("questions" in toSavedStructuredExam(edited)).toBe(false);
+    expect(edited.sections[0].questions[0].text).toBe("معدّل");
+  });
+});
+
+// Fix 6 — MCQ option move/delete keep correctOptionIndex pointing at the SAME option.
+describe("REVIEW 6: MCQ reorder/delete preserve the correct answer", () => {
+  const q = () => newQuestion("multipleChoice", { options: [{ text: "A" }, { text: "B" }, { text: "C" }], answer: { correctOptionIndex: 1 } }); // B correct
+  it("moving the correct option follows it", () => {
+    expect((moveMcqOption(q(), 1, -1).answer as { correctOptionIndex: number }).correctOptionIndex).toBe(0);
+  });
+  it("moving a non-correct option across the correct one shifts the index", () => {
+    // move C (index 2) up past B (index 1): B goes from 1 -> 2
+    expect((moveMcqOption(q(), 2, -1).answer as { correctOptionIndex: number }).correctOptionIndex).toBe(2);
+    // move A (index 0) down past B: B goes from 1 -> 0
+    expect((moveMcqOption(q(), 0, 1).answer as { correctOptionIndex: number }).correctOptionIndex).toBe(0);
+  });
+  it("deleting before the correct option decrements the index; after it leaves it", () => {
+    expect((deleteMcqOption(q(), 0).answer as { correctOptionIndex: number }).correctOptionIndex).toBe(0);
+    expect((deleteMcqOption(q(), 2).answer as { correctOptionIndex: number }).correctOptionIndex).toBe(1);
+  });
+  it("deleting the correct option UNSETS the answer (never silently picks another)", () => {
+    expect(deleteMcqOption(q(), 1).answer).toEqual({});
+  });
+});
+
+// Fix 5 — compound parts run type-specific validation; firstN exceeding units is a blocking error.
+describe("REVIEW 5: type-aware compound validation + firstN-exceeds error", () => {
+  it("a malformed cliFill PART is a blocking error, not just a generic warning", () => {
+    const compound = newQuestion("compound", { examQuestionId: "qc", text: "م", marks: 10, parts: [
+      newPart("cliFill", { id: "a", marks: 5, cli: "ip address [[ip]]", fields: [] }) // [[ip]] has no field
+    ] });
+    const issues = validateStructuredExam(exam([newSection({ questions: [compound] })]));
+    expect(issues.some(i => i.code === "CLI_PLACEHOLDER_NO_FIELD" && i.severity === "error")).toBe(true);
+    expect(hasBlockingErrors(issues)).toBe(true);
+  });
+  it("firstNAnswered requiredAnswers greater than available units is now a blocking error", () => {
+    const section = newSection({ gradingPolicy: "firstNAnswered", answerUnit: "question", requiredAnswers: 5, questions: [newQuestion("shortAnswer", { text: "a", marks: 1 }), newQuestion("shortAnswer", { text: "b", marks: 1 })] });
+    const issues = validateStructuredExam(exam([section]));
+    expect(issues.some(i => i.code === "FIRSTN_EXCEEDS" && i.severity === "error")).toBe(true);
+  });
+});
+
+// Fix 10 — an unset multiTrueFalse correct answer is flagged until explicitly chosen.
+describe("REVIEW 10: multiTrueFalse unset correct is flagged", () => {
+  it("a field with undefined correct is a blocking error; a boolean correct is fine", () => {
+    const bad = newQuestion("multiTrueFalse", { text: "س", marks: 2, fields: [newField({ id: "s1", statement: "1", kind: "boolean" })] });
+    expect(validateStructuredExam(exam([newSection({ questions: [bad] })])).some(i => i.code === "FIELD_NO_CORRECT" && i.severity === "error")).toBe(true);
+    const good = newQuestion("multiTrueFalse", { text: "س", marks: 2, fields: [newField({ id: "s1", statement: "1", kind: "boolean", correct: false })] });
+    expect(validateStructuredExam(exam([newSection({ questions: [good] })])).some(i => i.code === "FIELD_NO_CORRECT")).toBe(false);
+  });
+});
+
+// Fix 8 — standalone fillBlank with NO word bank grades via free-text exactSequence values.
+describe("REVIEW 8: fillBlank with empty wordBank is answerable + gradeable", () => {
+  it("grades free-text sequence values (the shape the text inputs produce)", () => {
+    const q = newQuestion("fillBlank", { examQuestionId: "fb", text: "أكمل", marks: 2, wordBank: [], fields: [newField({ id: "b1", correct: "APIPA" }), newField({ id: "b2", correct: "169.254" })], answer: { mode: "exactSequence", values: ["APIPA", "169.254"] } });
+    const result = gradeExam(exam([newSection({ questions: [q] })]), { fb: { kind: "sequence", values: ["APIPA", "wrong"] } });
+    expect(result.questions[0].score).toBe(1); // one of two blanks correct
+  });
+});
+
+// Fix 9 — a compound matching part carries per-field options and grades correctly.
+describe("REVIEW 9: compound matching part has selectable options and grades", () => {
+  it("buildMatchingPatch stores rights on field.options and the part grades via the engine", () => {
+    const patch = buildMatchingPatch([{ left: "HTTP", right: "تطبيقات" }, { left: "IP", right: "شبكة" }]);
+    expect(patch.fields!.every(f => f.kind === "select" && (f.options || []).length === 2)).toBe(true);
+    const part = newPart("matching", { id: "mp", marks: 4, ...patch });
+    const compound = newQuestion("compound", { examQuestionId: "qm", text: "طابق", marks: 4, parts: [part] });
+    const result = gradeExam(exam([newSection({ questions: [compound] })]), { qm: { kind: "compound", parts: { mp: { kind: "table", values: ["تطبيقات", "شبكة"] } } } });
+    expect(result.questions[0].score).toBe(4);
+  });
+});
+
+// Fix 4 — draft may save with errors; final blocked by errors; status survives round-trip.
+describe("REVIEW 4: draft vs final", () => {
+  it("an invalid exam has blocking errors (final blocked) yet a draft payload round-trips its status", () => {
+    const invalid = exam([newSection({ gradingPolicy: "firstNAnswered", requiredAnswers: null, questions: [newQuestion("shortAnswer", { text: "س", marks: 1 })] })]);
+    expect(hasBlockingErrors(validateStructuredExam(invalid))).toBe(true); // final would be blocked
+    const draft = { ...toSavedStructuredExam(invalid), status: "draft" as const };
+    const reloaded = JSON.parse(JSON.stringify(draft)) as StructuredExam;
+    expect(reloaded.status).toBe("draft"); // draft saved despite errors
+    const valid = exam([newSection({ gradingPolicy: "all", questions: [newQuestion("multipleChoice", { text: "س", marks: 3, options: [{ text: "A" }, { text: "B" }], answer: { correctOptionIndex: 0 } })] })]);
+    expect(hasBlockingErrors(validateStructuredExam(valid))).toBe(false);
+    expect((JSON.parse(JSON.stringify({ ...toSavedStructuredExam(valid), status: "final" as const })) as StructuredExam).status).toBe("final");
+  });
+});
+
+// Fix 8 (compound) — a fillBlank PART with empty wordBank grades via field.correct (fields answer).
+describe("REVIEW 8 (compound): fillBlank part with empty wordBank grades", () => {
+  it("grades a compound fillBlank part through the engine using field.correct", () => {
+    const part = newPart("fillBlank", { id: "fp", marks: 2, wordBank: [], fields: [newField({ id: "b1", correct: "APIPA" }), newField({ id: "b2", correct: "169.254" })] });
+    const compound = newQuestion("compound", { examQuestionId: "qf", text: "أكمل", marks: 2, parts: [part] });
+    const result = gradeExam(exam([newSection({ questions: [compound] })]), { qf: { kind: "compound", parts: { fp: { kind: "fields", values: { b1: "APIPA", b2: "169.254" } } } } });
+    expect(result.questions[0].score).toBe(2);
   });
 });

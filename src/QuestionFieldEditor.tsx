@@ -24,7 +24,7 @@ export default function QuestionFieldEditor({ node, type, onChange, disabled }: 
           <div className="sb-field-row" key={f.id}>
             <span className="sb-field-index">{i + 1}</span>
             <input className="sb-input" value={f.statement || ""} placeholder="نص العبارة" onChange={e => patchField(f.id, { statement: e.target.value })} disabled={disabled} />
-            <select className="sb-input sb-input-sm" value={f.correct === true ? "true" : f.correct === false ? "false" : ""} onChange={e => patchField(f.id, { correct: e.target.value === "true" })} disabled={disabled}>
+            <select className="sb-input sb-input-sm" value={f.correct === true ? "true" : f.correct === false ? "false" : ""} onChange={e => patchField(f.id, { correct: e.target.value === "" ? undefined : e.target.value === "true" })} disabled={disabled}>
               <option value="">— الإجابة —</option>
               <option value="true">صحيح</option>
               <option value="false">غير صحيح</option>

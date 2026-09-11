@@ -55,6 +55,14 @@ describe("cleanExam - structured exams (sections) also get cleaned and preserved
     // teacher-side answer key is retained in the SAVED exam (only the student payload is sanitized)
     expect(cleaned.sections[0].questions[0].answer).toEqual({ correctOptionIndex: 0 });
     expect(cleaned.presentationTheme).toBe("modern");
+    // structured exams must NOT carry a top-level questions[] (no empty [], no stale copy)
+    expect(cleaned).not.toHaveProperty("questions");
+  });
+  it("drops a stale top-level questions[] copy on a structured exam", () => {
+    const exam = { examId: "EXAM-STALE", questions: [{ examQuestionId: "old", text: "قديم" }], sections: [{ id: "s", questions: [{ examQuestionId: "new", text: "جديد" }] }] };
+    const cleaned = cleanExam(exam);
+    expect(cleaned).not.toHaveProperty("questions");
+    expect(cleaned.sections[0].questions[0].examQuestionId).toBe("new");
   });
   it("leaves a legacy flat exam (no sections) without adding a sections field", () => {
     const cleaned = cleanExam({ examId: "EXAM-L", questions: [{ examQuestionId: "q1" }] });

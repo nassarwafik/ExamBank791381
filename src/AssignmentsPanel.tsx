@@ -4,10 +4,11 @@ import ExamThemePreview,{type PreviewSourceQuestion} from "./ExamThemePreview";
 import {normalizeExamTheme,type ExamTheme} from "./examTheme";
 import {IconPlus,IconChevronDown} from "./icons";
 import {filterLibraryCatalog,catalogCategories,categoryLabel,type LibraryCatalogItem} from "./examLibrary";
+import {examHasQuestions,examQuestionCount} from "./examTypes";
 
 type Classroom={classId:string;name:string;grade:string;active:boolean};
 type Item={assignmentId:string;classId:string;className:string;title:string;instructions:string;status:"draft"|"published"|"archived";openAt:string;dueAt:string;questionCount:number;totalMarks:number;maxAttempts:number};
-type Exam={examId?:string;title?:string;totalMarks?:number;questions?:unknown[]};
+type Exam={examId?:string;title?:string;totalMarks?:number;questions?:unknown[];sections?:unknown[]};
 type SavedExam={blobName:string;examId:string;title:string;savedAt:string;questionCount:number;totalMarks:number};
 type Attempt={attemptNumber:number;score:number;totalMarks:number;percentage:number;submittedAt:string;finalized:boolean;manualReviewMarks:number};
 type StudentResult={studentId:string;studentName:string;studentCode:string;attemptsUsed:number;allowedAttempts:number;dueAtOverride:string|null;attempts:Attempt[];latestResult:Attempt|null};
@@ -32,7 +33,7 @@ export default function AssignmentsPanel({token,classes,currentExam,onCopyLibrar
  const active=useMemo(()=>classes.filter(x=>x.active),[classes]);
  const sourceExam=sourceMode==="library"?libraryExam:(examSource==="current"?current:savedExam);
  useEffect(()=>{if(!classId&&active[0])setClassId(active[0].classId)},[active,classId]);
- useEffect(()=>{if(current&&examSource===""&&Array.isArray(current.questions)&&current.questions.length)setExamSource("current")},[current,examSource]);
+ useEffect(()=>{if(current&&examSource===""&&examHasQuestions(current))setExamSource("current")},[current,examSource]);
 
  async function api<T>(url:string,options:RequestInit={}):Promise<T>{
   const h=new Headers(options.headers||{});h.set("Content-Type","application/json");h.set("x-builder-token",token);h.set("Authorization","Bearer "+token);
@@ -101,7 +102,7 @@ export default function AssignmentsPanel({token,classes,currentExam,onCopyLibrar
  const libraryCats=useMemo(()=>catalogCategories(libraryCatalog),[libraryCatalog]);
 
  async function create(){
-  if(busy||!classId||!title.trim()||!sourceExam||!Array.isArray(sourceExam.questions)||!sourceExam.questions.length)return;
+  if(busy||!classId||!title.trim()||!sourceExam||!examHasQuestions(sourceExam))return;
   setBusy(true);setError("");setNotice("");
   try{
    const r=await api<{assignment:Item}>("/api/assignments",{method:"POST",body:JSON.stringify({action:"create",classId,title:title.trim(),instructions:instructions.trim(),openAt:openAt?new Date(openAt).toISOString():"",dueAt:dueAt?new Date(dueAt).toISOString():"",maxAttempts,publish,examSnapshot:sourceExam})});
@@ -117,7 +118,7 @@ export default function AssignmentsPanel({token,classes,currentExam,onCopyLibrar
  async function saveDeadline(s:StudentResult){if(!resultsFor||!deadlineValue)return;setBusy(true);setError("");try{const r=await api<{dueAtOverride:string|null}>("/api/assignment-results",{method:"POST",body:JSON.stringify({action:"setDueAtOverride",assignmentId:resultsFor.assignmentId,studentId:s.studentId,dueAtOverride:new Date(deadlineValue).toISOString()})});setResults(x=>x.map(y=>y.studentId===s.studentId?{...y,dueAtOverride:r.dueAtOverride}:y));setDeadlineFor(null);setNotice("✓ تم تمديد الموعد للطالب "+s.studentName)}catch(e){setError(e instanceof Error?e.message:"تعذر حفظ التمديد.")}finally{setBusy(false)}}
  async function clearDeadline(s:StudentResult){if(!resultsFor)return;setBusy(true);setError("");try{const r=await api<{dueAtOverride:string|null}>("/api/assignment-results",{method:"POST",body:JSON.stringify({action:"setDueAtOverride",assignmentId:resultsFor.assignmentId,studentId:s.studentId,dueAtOverride:null})});setResults(x=>x.map(y=>y.studentId===s.studentId?{...y,dueAtOverride:r.dueAtOverride}:y));setDeadlineFor(null);setNotice("✓ تم إلغاء تمديد الطالب "+s.studentName)}catch(e){setError(e instanceof Error?e.message:"تعذر إلغاء التمديد.")}finally{setBusy(false)}}
  const visible=classId?items.filter(x=>x.classId===classId):items;
- const sourceCount=Array.isArray(sourceExam?.questions)?sourceExam.questions.length:0;
+ const sourceCount=examQuestionCount(sourceExam);
  const sortedQuestions=useMemo(()=>{
   if(!analysis)return [];
   if(analysisSort==="number")return [...analysis.questions].sort((a,b)=>a.number-b.number);
@@ -151,7 +152,7 @@ export default function AssignmentsPanel({token,classes,currentExam,onCopyLibrar
      <div style={{flex:1}}><span>مصدر الواجب</span><strong>{sourceExam?.title||"لم يتم اختيار محتوى"}</strong><small>{sourceCount?sourceCount+" سؤال":"اختر محتوى الواجب"}</small></div>
      {sourceMode==="mine"&&<div style={{minWidth:"min(100%, 390px)"}}><label>اختيار الامتحان<select value={examSource} onChange={e=>void chooseExam(e.target.value)} disabled={examLoading}>
       <option value="">اختر امتحانًا محفوظًا</option>
-      {current&&Array.isArray(current.questions)&&current.questions.length>0&&<option value="current">الامتحان المفتوح حاليًا · {current.title||"بدون عنوان"}</option>}
+      {current&&examHasQuestions(current)&&<option value="current">الامتحان المفتوح حاليًا · {current.title||"بدون عنوان"}</option>}
       {savedExams.map(x=><option key={x.blobName} value={x.blobName}>{x.title} · {x.questionCount} سؤال · {x.totalMarks} علامة</option>)}
      </select></label>{examLoading&&<small>⏳ جارٍ فتح الامتحان...</small>}</div>}
      <div className="assignment-source-marks">{sourceExam?.totalMarks?sourceExam.totalMarks+" علامة":"—"}</div>

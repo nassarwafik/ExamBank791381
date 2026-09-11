@@ -73,7 +73,9 @@ function applyTypeDefaults<T extends { presentationType?: BuilderQuestionType; t
       ensure("answer", { correct: true });
       break;
     case "multiTrueFalse":
-      ensure("fields", [newField({ statement: "", kind: "boolean", correct: true })]);
+      // correct starts UNSET (undefined) so validation flags it until the teacher explicitly picks
+      // صحيح / غير صحيح — an empty selection must never silently mean "false".
+      ensure("fields", [newField({ statement: "", kind: "boolean" })]);
       break;
     case "tableFill":
       ensure("tableHeaders", ["", ""]);
@@ -330,7 +332,11 @@ export function legacyToStructured(exam: Record<string, unknown>): StructuredExa
     questions: legacyQuestions
   };
   const out: StructuredExam = { ...(clone as StructuredExam), sections: [section] };
-  // sections are canonical now; keep the original questions field intact but the builder ignores it.
+  // sections[].questions[] is the ONLY canonical question tree now — remove the top-level questions[]
+  // so there is no stale duplicate copy to accidentally assign/grade after the teacher edits the
+  // structured questions. Everything else (metadata, theme, unknown fields, ids/answers/marks/images
+  // inside the questions) is preserved.
+  delete (out as { questions?: unknown }).questions;
   return out;
 }
 
@@ -350,7 +356,10 @@ export function countQuestions(exam: StructuredExam): number {
 // fields. The saved object keeps `sections` canonical.
 export function toSavedStructuredExam(exam: StructuredExam): StructuredExam {
   const now = new Date().toISOString();
-  return { ...exam, sections: exam.sections, totalMarks: computeTotalMarks(exam), updatedAt: now, createdAt: exam.createdAt || now };
+  const out: StructuredExam = { ...exam, sections: exam.sections, totalMarks: computeTotalMarks(exam), updatedAt: now, createdAt: exam.createdAt || now };
+  // Never persist a stale top-level questions[] alongside canonical sections[].
+  delete (out as { questions?: unknown }).questions;
+  return out;
 }
 
 // A copy for the "duplicate exam" flow: new examId, fresh question/part/field ids, preserved section
@@ -366,6 +375,38 @@ export function structuredExamCopy(exam: StructuredExam): StructuredExam {
     updatedAt: now,
     sections: (clone.sections || []).map(s => ({ ...s, questions: (s.questions || []).map(cloneQuestionWithNewIds) }))
   };
+}
+
+// ── MCQ option operations that keep the correct answer pointing at the SAME option ──
+// answer.correctOptionIndex is a positional pointer, so moving/deleting options must move the pointer
+// with the option it refers to — otherwise the official answer silently changes.
+function currentCorrectIndex(node: QuestionBody): number {
+  const v = Number((node.answer as { correctOptionIndex?: unknown })?.correctOptionIndex);
+  return Number.isInteger(v) ? v : -1;
+}
+export function moveMcqOption(node: QuestionBody, from: number, delta: number): Partial<QuestionBody> {
+  const options = node.options || [];
+  const to = from + delta;
+  if (from < 0 || from >= options.length || to < 0 || to >= options.length) return {};
+  const nextOptions = moveInArray(options, from, delta);
+  const correct = currentCorrectIndex(node);
+  let nextCorrect = correct;
+  if (correct === from) nextCorrect = to; // the correct option itself moved
+  else if (from < correct && to >= correct) nextCorrect = correct - 1; // an option jumped past it downward
+  else if (from > correct && to <= correct) nextCorrect = correct + 1; // an option jumped past it upward
+  return { options: nextOptions, answer: nextCorrect >= 0 ? { correctOptionIndex: nextCorrect } : {} };
+}
+export function deleteMcqOption(node: QuestionBody, index: number): Partial<QuestionBody> {
+  const options = node.options || [];
+  if (index < 0 || index >= options.length) return {};
+  const nextOptions = options.filter((_, i) => i !== index);
+  const correct = currentCorrectIndex(node);
+  let answer: Record<string, unknown>;
+  if (correct === index) answer = {}; // deleting the correct option UNSETS the answer (never silently pick another)
+  else if (correct > index) answer = { correctOptionIndex: correct - 1 };
+  else if (correct >= 0) answer = { correctOptionIndex: correct };
+  else answer = {};
+  return { options: nextOptions, answer };
 }
 
 // ── Answer synchronisation for the sequence / matching grade paths ────────

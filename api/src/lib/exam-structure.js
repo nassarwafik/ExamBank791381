@@ -173,6 +173,16 @@ function flattenQuestions(exam) {
   return out;
 }
 
+// Total question count across BOTH exam shapes (structured sections vs legacy flat). Used by the
+// saved-exams list and assignment stats so a structured exam never reports 0 questions.
+function countExamQuestions(exam) {
+  const ex = exam || {};
+  if (Array.isArray(ex.sections)) {
+    return ex.sections.reduce((n, s) => n + (Array.isArray(s && s.questions) ? s.questions.length : 0), 0);
+  }
+  return Array.isArray(ex.questions) ? ex.questions.length : 0;
+}
+
 function unitKey(u) {
   return u.partId ? u.questionId + "::" + u.partId : u.questionId;
 }
@@ -258,6 +268,7 @@ module.exports = {
   sectionCappedScore,
   questionId,
   sectionQuestionId,
+  countExamQuestions,
   partId,
   partLabel,
   fieldId,

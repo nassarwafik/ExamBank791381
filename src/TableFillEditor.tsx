@@ -51,7 +51,7 @@ export default function TableFillEditor({ question, onChange, disabled }: Props)
                             <button type="button" className="sb-icon-btn" title="إلغاء كخلية جواب" onClick={() => onChange(toggleTableCell(question, r, c))} disabled={disabled}>↩</button>
                           </div>
                           {field.kind === "boolean" ? (
-                            <select className="sb-input sb-input-sm" value={String(field.correct === true ? "true" : field.correct === false ? "false" : "")} onChange={e => patchField(field.id, { correct: e.target.value === "true" })} disabled={disabled}>
+                            <select className="sb-input sb-input-sm" value={String(field.correct === true ? "true" : field.correct === false ? "false" : "")} onChange={e => patchField(field.id, { correct: e.target.value === "" ? undefined : e.target.value === "true" })} disabled={disabled}>
                               <option value="">— الإجابة —</option>
                               <option value="true">صحيح</option>
                               <option value="false">غير صحيح</option>

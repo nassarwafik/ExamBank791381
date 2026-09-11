@@ -3,8 +3,12 @@
 // draft may still be saved). It never silently fixes content — it only tells the teacher what is
 // wrong and where. Legacy flat exams keep App.tsx's existing buildQualityIssues(); this module covers
 // the structured format the builder produces.
+//
+// A single reusable validateBody() runs the type-specific structural rules, so a COMPOUND PART is
+// validated exactly like a standalone question of the same type (a malformed CLI/tableFill/etc. part
+// can no longer slip through to final status).
 
-import type { BuilderPart, BuilderQuestion, BuilderSection, StructuredExam } from "./examTypes";
+import type { BuilderQuestion, BuilderSection, QuestionBody, StructuredExam, BuilderPartType, BuilderQuestionType } from "./examTypes";
 import { cliPlaceholders, partMarksInfo } from "./examBuilderState";
 
 export type Severity = "error" | "warning";
@@ -17,24 +21,18 @@ export type StructuredIssue = {
   questionId?: string;
 };
 
+type Add = (severity: Severity, code: string, message: string, extra?: { sectionId?: string; questionId?: string }) => void;
+type Where = { sectionId?: string; questionId?: string };
+
 const num = (v: unknown): number => {
   const n = Number(v);
   return Number.isFinite(n) ? n : NaN;
 };
 
-function partHasAnswerKey(p: BuilderPart): boolean {
-  if (p.type === "shortAnswer") return true; // model answer optional → manual review is legitimate
-  if (p.type === "multipleChoice" || p.type === "trueFalse") return !!p.answer && (p.answer.correctOptionIndex != null || p.answer.correct != null);
-  if (p.type === "multiTrueFalse" || p.type === "tableFill" || p.type === "cliFill") return (p.fields || []).some(f => f.correct !== undefined && f.correct !== "");
-  if (p.type === "fillBlank" || p.type === "wordBank" || p.type === "ordering") return !!p.answer && Array.isArray(p.answer.values) && (p.answer.values as unknown[]).length > 0;
-  if (p.type === "matching") return !!p.answer && typeof p.answer.text === "string" && (p.answer.text as string).includes("=");
-  return false;
-}
-
 export function validateStructuredExam(exam: StructuredExam): StructuredIssue[] {
   const issues: StructuredIssue[] = [];
   let n = 0;
-  const add = (severity: Severity, code: string, message: string, extra: { sectionId?: string; questionId?: string } = {}) => {
+  const add: Add = (severity, code, message, extra = {}) => {
     n += 1;
     issues.push({ id: "sq-" + n, severity, code, message, ...extra });
   };
@@ -51,7 +49,6 @@ export function validateStructuredExam(exam: StructuredExam): StructuredIssue[] 
     const label = section.title || "القسم " + (si + 1);
     validateSection(section, label, add);
 
-    // stimulus references
     const stimuli = section.stimuli || {};
     section.questions.forEach(q => {
       if (q.groupId && !stimuli[q.groupId]) {
@@ -75,7 +72,7 @@ export function validateStructuredExam(exam: StructuredExam): StructuredIssue[] 
   return issues;
 }
 
-function validateSection(section: BuilderSection, label: string, add: (s: Severity, c: string, m: string, e?: { sectionId?: string; questionId?: string }) => void): void {
+function validateSection(section: BuilderSection, label: string, add: Add): void {
   if (section.maxMarks != null && (!Number.isFinite(num(section.maxMarks)) || num(section.maxMarks) <= 0)) {
     add("error", "INVALID_MAXMARKS", "العلامة القصوى للقسم «" + label + "» غير صالحة.", { sectionId: section.id });
   }
@@ -90,101 +87,128 @@ function validateSection(section: BuilderSection, label: string, add: (s: Severi
         ? section.questions.reduce((c, q) => c + ((q.parts && q.parts.length) ? q.parts.length : 1), 0)
         : section.questions.length;
       if (num(req) > available) {
-        add("warning", "FIRSTN_EXCEEDS", "عدد الإجابات المطلوبة (" + req + ") في «" + label + "» يتجاوز عدد " + (section.answerUnit === "part" ? "البنود" : "الأسئلة") + " المتاحة (" + available + ").", { sectionId: section.id });
+        // Blocking: a section that requires more answers than it has units can never be graded as
+        // intended. It can still be saved as a DRAFT (draft saves skip validation).
+        add("error", "FIRSTN_EXCEEDS", "عدد الإجابات المطلوبة (" + req + ") في «" + label + "» يتجاوز عدد " + (section.answerUnit === "part" ? "البنود" : "الأسئلة") + " المتاحة (" + available + ").", { sectionId: section.id });
       }
     }
   }
 }
 
-function validateQuestion(q: BuilderQuestion, sectionLabel: string, section: BuilderSection, add: (s: Severity, c: string, m: string, e?: { sectionId?: string; questionId?: string }) => void): void {
-  const where = { sectionId: section.id, questionId: q.examQuestionId };
+function validateQuestion(q: BuilderQuestion, sectionLabel: string, section: BuilderSection, add: Add): void {
+  const where: Where = { sectionId: section.id, questionId: q.examQuestionId };
   const disp = q.displayNumber ? "«" + q.displayNumber + "»" : "";
-  if (!q.text || !q.text.trim()) {
-    if (q.presentationType !== "compound") add("error", "EMPTY_TEXT", "سؤال " + disp + " في «" + sectionLabel + "» بلا نص.", where);
+  if ((!q.text || !q.text.trim()) && q.presentationType !== "compound") {
+    add("error", "EMPTY_TEXT", "سؤال " + disp + " في «" + sectionLabel + "» بلا نص.", where);
   }
   if (!Number.isFinite(num(q.marks)) || num(q.marks) <= 0) {
     add("error", "MARKS_PROBLEM", "سؤال " + disp + " في «" + sectionLabel + "» علامته غير صالحة.", where);
   }
+  if (q.presentationType === "compound") {
+    validateCompound(q, disp, sectionLabel, where, add);
+  } else {
+    validateBody(q, q.presentationType, disp, where, add);
+  }
+}
 
-  switch (q.presentationType) {
+// Type-specific structural validation for ONE answer body — used for both a top-level question and a
+// compound part. `label` is a human hint (question display number, or part label) for messages.
+function validateBody(node: QuestionBody, type: BuilderQuestionType | BuilderPartType, label: string, where: Where, add: Add): void {
+  switch (type) {
     case "multipleChoice": {
-      const opts = q.options || [];
-      if (opts.length < 2) add("error", "MISSING_OPTIONS", "سؤال " + disp + " اختيار من متعدد بأقل من خيارين.", where);
-      const ci = num((q.answer as { correctOptionIndex?: unknown })?.correctOptionIndex);
-      if (!Number.isInteger(ci) || ci < 0 || ci >= opts.length) add("error", "MISSING_ANSWER", "سؤال " + disp + " اختيار من متعدد بلا إجابة صحيحة محددة.", where);
+      const opts = node.options || [];
+      if (opts.length < 2) add("error", "MISSING_OPTIONS", "«" + label + "» اختيار من متعدد بأقل من خيارين.", where);
+      const ci = num((node.answer as { correctOptionIndex?: unknown })?.correctOptionIndex);
+      if (!Number.isInteger(ci) || ci < 0 || ci >= opts.length) add("error", "MISSING_ANSWER", "«" + label + "» اختيار من متعدد بلا إجابة صحيحة محددة.", where);
       break;
     }
-    case "trueFalse":
-      if (!q.answer || (q.answer.correct == null && q.answer.correctOptionIndex == null)) add("error", "MISSING_ANSWER", "سؤال " + disp + " صح/خطأ بلا إجابة صحيحة.", where);
+    case "trueFalse": {
+      const a = node.answer as { correct?: unknown; correctOptionIndex?: unknown } | undefined;
+      const ok = a && (typeof a.correct === "boolean" || a.correctOptionIndex === 0 || a.correctOptionIndex === 1);
+      if (!ok) add("error", "MISSING_ANSWER", "«" + label + "» صح/خطأ بلا إجابة صحيحة.", where);
       break;
-    case "multiTrueFalse":
-      if (!(q.fields || []).length) add("error", "MISSING_FIELDS", "سؤال " + disp + " صح/خطأ متعدد بلا بنود.", where);
-      (q.fields || []).forEach((f, i) => { if (f.correct === undefined) add("error", "FIELD_NO_CORRECT", "البند " + (i + 1) + " في سؤال " + disp + " بلا إجابة صحيحة.", where); });
+    }
+    case "multiTrueFalse": {
+      const fields = node.fields || [];
+      if (!fields.length) add("error", "MISSING_FIELDS", "«" + label + "» صح/خطأ متعدد بلا بنود.", where);
+      fields.forEach((f, i) => {
+        if (typeof f.correct !== "boolean") add("error", "FIELD_NO_CORRECT", "البند " + (i + 1) + " في «" + label + "» بلا إجابة صحيحة محددة.", where);
+      });
       break;
+    }
     case "tableFill":
-      validateTableFill(q, disp, add, where);
+      validateTableFill(node, label, where, add);
       break;
     case "cliFill":
-      validateCliFill(q, disp, add, where);
+      validateCliFill(node, label, where, add);
       break;
     case "fillBlank":
     case "wordBank":
-    case "ordering":
-      if (!(q.fields || []).length) add("error", "MISSING_FIELDS", "سؤال " + disp + " يحتاج حقول إجابة.", where);
-      if (!q.answer || !Array.isArray(q.answer.values) || (q.answer.values as unknown[]).length === 0) add("warning", "MISSING_ANSWER", "سؤال " + disp + " بلا ترتيب/قيم صحيحة محددة — سيذهب للمراجعة اليدوية.", where);
+    case "ordering": {
+      const fields = node.fields || [];
+      if (!fields.length) add("error", "MISSING_FIELDS", "«" + label + "» يحتاج حقول إجابة.", where);
+      const values = (node.answer as { values?: unknown })?.values;
+      if (!Array.isArray(values) || values.length === 0 || (values as unknown[]).every(v => String(v ?? "").trim() === "")) {
+        add("warning", "MISSING_ANSWER", "«" + label + "» بلا قيم صحيحة محددة — سيذهب للمراجعة اليدوية.", where);
+      } else if (Array.isArray(values) && (values as unknown[]).some(v => String(v ?? "").trim() === "")) {
+        add("warning", "FIELD_NO_CORRECT", "«" + label + "» بعض الفراغات بلا إجابة صحيحة.", where);
+      }
       break;
-    case "matching":
-      if (!q.answer || typeof q.answer.text !== "string" || !(q.answer.text as string).includes("=")) add("warning", "MISSING_ANSWER", "سؤال " + disp + " مطابقة بلا مفتاح إجابة — سيذهب للمراجعة اليدوية.", where);
+    }
+    case "matching": {
+      const text = (node.answer as { text?: unknown })?.text;
+      if (typeof text !== "string" || !text.includes("=")) add("warning", "MISSING_ANSWER", "«" + label + "» مطابقة بلا مفتاح إجابة — سيذهب للمراجعة اليدوية.", where);
       break;
+    }
     case "shortAnswer":
       // open question: a model answer is optional; without it the engine sends it to manual review.
-      break;
-    case "compound":
-      validateCompound(q, disp, sectionLabel, add, where);
       break;
     default:
       break;
   }
 }
 
-function validateTableFill(q: BuilderQuestion, disp: string, add: (s: Severity, c: string, m: string, e?: { sectionId?: string; questionId?: string }) => void, where: { sectionId?: string; questionId?: string }): void {
-  const rows = q.tableRows || [];
-  const cols = (q.tableHeaders || []).length || Math.max(0, ...rows.map(r => r.length));
-  const fields = q.fields || [];
-  if (!fields.length) { add("error", "MISSING_FIELDS", "سؤال " + disp + " جدول بلا أي خلية قابلة للإجابة.", where); return; }
+function validateTableFill(node: QuestionBody, label: string, where: Where, add: Add): void {
+  const rows = node.tableRows || [];
+  const cols = (node.tableHeaders || []).length || Math.max(0, ...rows.map(r => r.length));
+  const fields = node.fields || [];
+  if (!fields.length) { add("error", "MISSING_FIELDS", "«" + label + "» جدول بلا أي خلية قابلة للإجابة.", where); return; }
   const seenCells = new Set<string>();
   fields.forEach((f, i) => {
     const r = Number(f.row), c = Number(f.column);
     if (!Number.isInteger(r) || !Number.isInteger(c) || r < 0 || c < 0 || r >= rows.length || c >= cols) {
-      add("error", "TABLE_BAD_CELL", "خلية جواب رقم " + (i + 1) + " في سؤال " + disp + " تشير إلى موقع غير صالح.", where);
+      add("error", "TABLE_BAD_CELL", "خلية جواب رقم " + (i + 1) + " في «" + label + "» تشير إلى موقع غير صالح.", where);
       return;
     }
     const key = r + ":" + c;
-    if (seenCells.has(key)) add("error", "TABLE_DUP_CELL", "خليتان قابلتان للإجابة تشيران إلى الموقع نفسه في سؤال " + disp + ".", where);
+    if (seenCells.has(key)) add("error", "TABLE_DUP_CELL", "خليتان قابلتان للإجابة تشيران إلى الموقع نفسه في «" + label + "».", where);
     seenCells.add(key);
-    if (f.correct === undefined || f.correct === "") add("error", "FIELD_NO_CORRECT", "خلية جواب في سؤال " + disp + " بلا إجابة صحيحة.", where);
+    if (f.correct === undefined || f.correct === "") add("error", "FIELD_NO_CORRECT", "خلية جواب في «" + label + "» بلا إجابة صحيحة.", where);
+    if (f.kind === "select" && !(Array.isArray(f.options) && f.options.length)) add("error", "TABLE_SELECT_NO_OPTIONS", "خلية قائمة في «" + label + "» بلا خيارات.", where);
   });
 }
 
-function validateCliFill(q: BuilderQuestion, disp: string, add: (s: Severity, c: string, m: string, e?: { sectionId?: string; questionId?: string }) => void, where: { sectionId?: string; questionId?: string }): void {
-  const placeholders = cliPlaceholders(q.cli || "");
-  const fieldIds = new Set((q.fields || []).map(f => f.id));
-  if (!(q.cli || "").trim()) { add("error", "CLI_EMPTY", "سؤال " + disp + " أوامر CLI بلا نص.", where); return; }
-  placeholders.forEach(ph => { if (!fieldIds.has(ph)) add("error", "CLI_PLACEHOLDER_NO_FIELD", "الفراغ [[" + ph + "]] في سؤال " + disp + " لا يقابله حقل معرّف.", where); });
-  (q.fields || []).forEach(f => {
-    if (!placeholders.includes(f.id)) add("warning", "CLI_FIELD_UNUSED", "الحقل «" + (f.label || f.id) + "» في سؤال " + disp + " غير مستخدم داخل نص الأوامر.", where);
-    if (f.correct === undefined || f.correct === "") add("error", "FIELD_NO_CORRECT", "حقل CLI في سؤال " + disp + " بلا إجابة صحيحة.", where);
+function validateCliFill(node: QuestionBody, label: string, where: Where, add: Add): void {
+  const placeholders = cliPlaceholders(node.cli || "");
+  const fieldIds = new Set((node.fields || []).map(f => f.id));
+  if (!(node.cli || "").trim()) { add("error", "CLI_EMPTY", "«" + label + "» أوامر CLI بلا نص.", where); return; }
+  placeholders.forEach(ph => { if (!fieldIds.has(ph)) add("error", "CLI_PLACEHOLDER_NO_FIELD", "الفراغ [[" + ph + "]] في «" + label + "» لا يقابله حقل معرّف.", where); });
+  (node.fields || []).forEach(f => {
+    if (!placeholders.includes(f.id)) add("warning", "CLI_FIELD_UNUSED", "الحقل «" + (f.label || f.id) + "» في «" + label + "» غير مستخدم داخل نص الأوامر.", where);
+    if (f.correct === undefined || f.correct === "") add("error", "FIELD_NO_CORRECT", "حقل CLI في «" + label + "» بلا إجابة صحيحة.", where);
   });
 }
 
-function validateCompound(q: BuilderQuestion, disp: string, sectionLabel: string, add: (s: Severity, c: string, m: string, e?: { sectionId?: string; questionId?: string }) => void, where: { sectionId?: string; questionId?: string }): void {
+function validateCompound(q: BuilderQuestion, disp: string, sectionLabel: string, where: Where, add: Add): void {
   const parts = q.parts || [];
   if (!parts.length) { add("error", "COMPOUND_NO_PARTS", "السؤال المركّب " + disp + " في «" + sectionLabel + "» بلا بنود.", where); return; }
   const seen = new Set<string>();
   parts.forEach((p, i) => {
     if (seen.has(p.id)) add("error", "COMPOUND_DUP_PART", "معرّف بند مكرّر في السؤال المركّب " + disp + ".", where);
     seen.add(p.id);
-    if (!partHasAnswerKey(p)) add("warning", "PART_NO_ANSWER", "البند " + (p.label || i + 1) + " في السؤال المركّب " + disp + " بلا مفتاح إجابة موثوق.", where);
+    // Each part runs the SAME type-specific structural validation a standalone question of that type
+    // would, so a malformed compound part is caught before finalization.
+    validateBody(p, p.type, "البند " + (p.label || i + 1) + " من " + disp, where, add);
   });
   const info = partMarksInfo(q);
   if (info.mismatch) {
