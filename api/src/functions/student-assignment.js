@@ -3,8 +3,12 @@ const {app}=require("@azure/functions");
 const {requireStudentAuth}=require("../lib/student-auth");
 const {getContainer,downloadJsonOrNull}=require("../lib/platform-storage");
 const {normalizeClassStatus}=require("../lib/class-lifecycle");
+const {sanitizeExamForStudent}=require("../lib/student-exam-sanitize");
 const PREFIX="platform/assignments/",SUB_PREFIX="platform/submissions/";
-function studentExam(v){const x=JSON.parse(JSON.stringify(v||{}));x.revisionHistory=[];if(Array.isArray(x.questions))x.questions=x.questions.map(q=>({...q,answer:{},hint:"",teacherNote:"",aiInstruction:"",history:[],redoStack:[]}));return x}
+// Delegates to the single recursive student-safe sanitizer so BOTH legacy exam.questions and
+// structured exam.sections[].questions (with compound parts and generalized fields) have every
+// answer key / teacher-side field stripped before the exam is sent to the student's browser.
+function studentExam(v){return sanitizeExamForStudent(v)}
 app.http("studentAssignment",{methods:["GET"],authLevel:"anonymous",route:"student-assignment/{assignmentId}",handler:async request=>{
  try{
   const auth=requireStudentAuth(request);if(!auth.ok)return auth.response;const id=String(request.params?.assignmentId||"");if(!id)return {status:400,jsonBody:{ok:false,error:"assignmentId is required."}};

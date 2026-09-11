@@ -32,7 +32,7 @@ export default function CompoundQuestion({q,index,id,answer,onPart,disabled,exce
  const setChoice=(pid:string,idx:number)=>onPart(pid,{kind:"choice",index:idx});
  const setText=(pid:string,value:string)=>onPart(pid,{kind:"text",value});
  const setField=(pid:string,fieldId:string,value:FieldValue)=>{const prev=partAnswers[pid]?.kind==="fields"?partAnswers[pid].values:{};onPart(pid,{kind:"fields",values:{...prev,[fieldId]:value}});};
- return <article className={"iex-q iex-compound "+(answered(answer)?"done":"")}><div className="iex-node">{index+1}</div><div className="iex-card">
+ return <article className={"iex-q iex-compound "+(answered(answer)?"done":"")}><div className="iex-node">{q.displayNumber??(index+1)}</div><div className="iex-card">
   <div className="iex-qhead"><span>سؤال مركّب — {parts.length} فروع</span><strong>{q.marks} علامة</strong></div>
   <p className="iex-qtext">{promptText(q.text)}</p>
   {(q.image?.exists&&q.image.visible?q.image.assets:q.images||[])?.map((im,n)=>im?.dataUrl?<img className="iex-image" src={im.dataUrl} alt={"صورة السؤال "+(index+1)} key={n}/>:null)}
