@@ -127,3 +127,43 @@
 .exam-theme-preview-head{position:sticky;top:0;z-index:1;display:flex;align-items:center;justify-content:space-between;gap:12px;background:var(--navy);color:#fff;padding:14px 20px}
 .exam-theme-preview-head button{border:1px solid rgba(255,255,255,.4);background:transparent;color:#fff;border-radius:var(--r);padding:8px 16px;font-weight:700;cursor:pointer}
 .exam-theme-preview-note{background:var(--primary050);border:1px solid #d7e3fb;color:var(--primary2);border-radius:var(--r);padding:10px 14px;font-size:12.5px;font-weight:700}
+
+/* ── Structured exam engine (sections / compound / new field types) ─────────────
+   Minimal functional styling only — reuses existing tokens and iex- primitives so
+   the look matches the current exam page. No redesign of the page. */
+.iex-section{margin-block:22px}
+.iex-section+.iex-section{border-top:1px dashed var(--line2);padding-top:22px}
+.iex-section-head{margin-bottom:14px}
+.iex-section-eyebrow{font-size:11px;font-weight:800;color:var(--primary2);letter-spacing:.04em}
+.iex-section-title h2{margin:2px 0 0;font-size:20px;color:var(--navy)}
+.iex-section-instructions{margin:8px 0 0;color:var(--text);line-height:1.8;font-size:14px}
+.iex-section-meta{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}
+.iex-section-rule,.iex-section-mark{background:var(--primary050);border:1px solid #d7e3fb;color:var(--primary2);border-radius:var(--pill);padding:5px 12px;font-size:12px;font-weight:700}
+.iex-section-progress{display:flex;flex-wrap:wrap;align-items:center;gap:10px;margin-top:10px;font-size:13px;color:var(--muted)}
+.iex-section-progress strong{color:var(--navy)}
+.iex-section-excess{font-style:normal;color:#b45309;background:#fff7ed;border:1px solid #fed7aa;border-radius:var(--pill);padding:3px 10px;font-size:12px;font-weight:700}
+/* compound question parts */
+.iex-parts{display:flex;flex-direction:column;gap:16px;margin-top:6px}
+.iex-part{border:1px solid var(--line2);border-radius:var(--r);padding:14px 16px;background:var(--surface)}
+.iex-part.done{border-color:var(--primary);background:var(--primary050)}
+.iex-part-head{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:8px}
+.iex-part-label{width:26px;height:26px;display:flex;align-items:center;justify-content:center;border:1px solid var(--line);border-radius:50%;font-weight:800;color:var(--navy);background:var(--surface2)}
+.iex-part-marks{font-size:12px;font-weight:700;color:var(--muted)}
+.iex-part-text{margin:0 0 10px;line-height:1.8;color:var(--navy);font-weight:600}
+/* multiTrueFalse rows */
+.iex-mtf{display:flex;flex-direction:column;gap:10px}
+.iex-mtf-row{display:flex;justify-content:space-between;align-items:center;gap:12px;border:1px solid var(--line2);border-radius:10px;padding:10px 14px;background:#fff}
+.iex-mtf-text{line-height:1.7;color:var(--text)}
+.iex-tf-select{min-width:120px}
+/* CLI fill — fixed command text is not editable, only the blanks are */
+.iex-cli{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;background:#0f172a;color:#e2e8f0;border-radius:12px;padding:16px 18px;line-height:2.1;white-space:pre-wrap;word-break:break-word;direction:ltr;text-align:left;overflow-x:auto;font-size:13.5px}
+.iex-cli-input{font-family:inherit;font-size:inherit;background:#1e293b;color:#fde68a;border:1px solid #475569;border-radius:6px;padding:1px 6px;margin:0 3px;min-width:90px}
+.iex-cli-input:focus{outline:2px solid var(--primary);border-color:var(--primary)}
+.iex-fields{margin-top:8px}
+/* "extra answer — not graded" hint */
+.iex-extra-hint{display:inline-flex;align-items:center;gap:6px;color:#b45309;background:#fff7ed;border:1px solid #fed7aa;border-radius:var(--pill);padding:4px 12px;font-size:12px;font-weight:700;margin:6px 0}
+.iex-extra-hint-block{margin-bottom:-6px}
+/* shared stimulus (common material rendered once before its questions) */
+.iex-stimulus{border:1px solid var(--line);border-inline-start:4px solid var(--primary);border-radius:12px;background:var(--surface2);padding:14px 16px;margin-bottom:14px}
+.iex-stimulus-title{display:block;color:var(--navy);font-weight:800;margin-bottom:6px}
+.iex-stimulus-text{margin:0;line-height:1.9;color:var(--text);white-space:pre-wrap}

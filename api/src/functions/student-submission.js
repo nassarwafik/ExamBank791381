@@ -45,7 +45,7 @@ app.http("studentSubmission",{methods:["GET","POST"],authLevel:"anonymous",route
      const st=state(a,doc);
      if(!st.canAttempt){const err=new Error(st.dueClosed?"انتهى موعد التسليم.":"لا توجد محاولة إضافية متاحة.");err.httpStatus=409;throw err}
      const attemptNumber=(doc.attempts?.length||0)+1;
-     const attempt={attemptNumber,submittedAt:now,score:g.score,totalMarks:g.totalMarks,percentage:g.percentage,manualReviewMarks:g.manualReviewMarks,finalized:g.finalized,questionGrades:g.questions,answers,manualOverrides:{},teacherFeedback:""};
+     const attempt={attemptNumber,submittedAt:now,score:g.score,totalMarks:g.totalMarks,percentage:g.percentage,manualReviewMarks:g.manualReviewMarks,finalized:g.finalized,questionGrades:g.questions,sections:g.sections,answers,manualOverrides:{},teacherFeedback:""};
      doc.attempts=Array.isArray(doc.attempts)?doc.attempts:[];doc.attempts.push(attempt);
      doc.draftAnswers={};doc.draftSavedAt="";doc.updatedAt=now;
      resultAttempt=attempt;finalState=state(a,doc);
