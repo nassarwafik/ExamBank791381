@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { qid, typeOf, answered, tableCheckbox, getWordBank } from "./StudentQuestionCard";
+import { qid, typeOf, answered, tableCheckbox, getWordBank, isFieldType } from "./StudentQuestionCard";
 import type { Question, Answer } from "./StudentQuestionCard";
 
 // Regression guard for the mechanical extraction out of StudentExamPage.tsx - these helpers must
@@ -53,6 +53,29 @@ describe("answered", () => {
   it("sequence: at least one non-empty value counts as answered", () => {
     expect(answered({ kind: "sequence", values: ["", "x"] } as Answer)).toBe(true);
     expect(answered({ kind: "sequence", values: ["", ""] } as Answer)).toBe(false);
+  });
+  it("fields: answered when any value is non-empty (booleans and arrays supported)", () => {
+    expect(answered({ kind: "fields", values: { a: "", b: "x" } } as Answer)).toBe(true);
+    expect(answered({ kind: "fields", values: { a: "", b: false } } as Answer)).toBe(false);
+    expect(answered({ kind: "fields", values: { a: true } } as Answer)).toBe(true);
+    expect(answered({ kind: "fields", values: { a: ["", "z"] } } as Answer)).toBe(true);
+  });
+  it("compound: answered when at least one part is answered", () => {
+    expect(answered({ kind: "compound", parts: { a: { kind: "choice", index: 0 } } } as Answer)).toBe(true);
+    expect(answered({ kind: "compound", parts: { a: { kind: "text", value: " " } } } as Answer)).toBe(false);
+  });
+});
+
+describe("isFieldType", () => {
+  it("routes the new field-based types to the fields renderer", () => {
+    expect(isFieldType(question({ presentationType: "multiTrueFalse" }))).toBe(true);
+    expect(isFieldType(question({ presentationType: "cliFill" }))).toBe(true);
+    expect(isFieldType(question({ presentationType: "tableFill", tableHeaders: ["a"] }))).toBe(true);
+  });
+  it("does NOT route legacy types (or a bare tableFill with no grid) to the fields renderer", () => {
+    expect(isFieldType(question({ presentationType: "wordBank" }))).toBe(false);
+    expect(isFieldType(question({ presentationType: "multipleChoice" }))).toBe(false);
+    expect(isFieldType(question({ presentationType: "tableFill" }))).toBe(false);
   });
 });
 
