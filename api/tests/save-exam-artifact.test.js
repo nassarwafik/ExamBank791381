@@ -36,3 +36,36 @@ describe("buildTemplateDocument - the one write path that used to silently drop 
     expect(Object.keys(doc).sort()).toEqual(["metadata", "kind", "originalRequest", "plan", "presentationTheme", "savedAt", "schemaVersion", "templateId", "title", "totalMarks"].sort());
   });
 });
+
+describe("cleanExam - structured exams (sections) also get cleaned and preserved", () => {
+  it("preserves sections and clears history/redoStack inside section questions", () => {
+    const exam = {
+      examId: "EXAM-STR",
+      presentationTheme: "modern",
+      sections: [
+        { id: "core", title: "أساس", gradingPolicy: "capScore", maxMarks: 60, questions: [{ examQuestionId: "q1", marks: 3, history: ["h"], redoStack: ["r"], answer: { correctOptionIndex: 0 } }] }
+      ]
+    };
+    const cleaned = cleanExam(exam);
+    expect(cleaned.sections).toHaveLength(1);
+    expect(cleaned.sections[0].title).toBe("أساس");
+    expect(cleaned.sections[0].gradingPolicy).toBe("capScore");
+    expect(cleaned.sections[0].questions[0].history).toEqual([]);
+    expect(cleaned.sections[0].questions[0].redoStack).toEqual([]);
+    // teacher-side answer key is retained in the SAVED exam (only the student payload is sanitized)
+    expect(cleaned.sections[0].questions[0].answer).toEqual({ correctOptionIndex: 0 });
+    expect(cleaned.presentationTheme).toBe("modern");
+    // structured exams must NOT carry a top-level questions[] (no empty [], no stale copy)
+    expect(cleaned).not.toHaveProperty("questions");
+  });
+  it("drops a stale top-level questions[] copy on a structured exam", () => {
+    const exam = { examId: "EXAM-STALE", questions: [{ examQuestionId: "old", text: "قديم" }], sections: [{ id: "s", questions: [{ examQuestionId: "new", text: "جديد" }] }] };
+    const cleaned = cleanExam(exam);
+    expect(cleaned).not.toHaveProperty("questions");
+    expect(cleaned.sections[0].questions[0].examQuestionId).toBe("new");
+  });
+  it("leaves a legacy flat exam (no sections) without adding a sections field", () => {
+    const cleaned = cleanExam({ examId: "EXAM-L", questions: [{ examQuestionId: "q1" }] });
+    expect(cleaned).not.toHaveProperty("sections");
+  });
+});

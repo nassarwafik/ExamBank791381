@@ -80,8 +80,15 @@ export default function QuestionField({q,idBase,values,onField,disabled}:Props){
   })}</tr>)}</tbody></table></div>;
  }
 
- // Generic fields: labeled blanks. When a wordBank exists every blank is a dropdown from it
- // (wordBank / matching); otherwise plain text inputs (multi-blank fillBlank / shortAnswer set).
+ // Generic fields: labeled blanks. Per field, options come from (1) the field's own select options
+ // (e.g. a matching part, whose choices buildMatchingPatch stores on field.options), else (2) the
+ // shared wordBank, else (3) a plain text input. This keeps fillBlank/wordBank/ordering/multiTrueFalse/
+ // tableFill/CLI unchanged while making compound matching (per-field options) selectable.
  const bank=q.wordBank||[];
- return <div className="iex-seq iex-fields">{fields.map((f,i)=>{const fid=fieldId(f,i);return <label key={fid}><span>{f.label||f.statement||("الحقل "+(i+1))}</span>{bank.length?<select value={get(fid)} onChange={e=>onField(fid,e.target.value)} disabled={disabled}><option value="">— اختر —</option>{bank.map((w,k)=><option key={k} value={w}>{w}</option>)}</select>:<input className="iex-cell" value={get(fid)} onChange={e=>onField(fid,e.target.value)} placeholder="اكتب الإجابة" disabled={disabled}/>}</label>;})}</div>;
+ return <div className="iex-seq iex-fields">{fields.map((f,i)=>{
+  const fid=fieldId(f,i);
+  const fieldOpts=String(f.kind||"").toLowerCase()==="select"&&Array.isArray(f.options)&&f.options.length?f.options.map(optText).filter(Boolean):[];
+  const opts=fieldOpts.length?fieldOpts:bank;
+  return <label key={fid}><span>{f.label||f.statement||("الحقل "+(i+1))}</span>{opts.length?<select value={get(fid)} onChange={e=>onField(fid,e.target.value)} disabled={disabled}><option value="">— اختر —</option>{opts.map((w,k)=><option key={k} value={w}>{w}</option>)}</select>:<input className="iex-cell" value={get(fid)} onChange={e=>onField(fid,e.target.value)} placeholder="اكتب الإجابة" disabled={disabled}/>}</label>;
+ })}</div>;
 }

@@ -52,6 +52,45 @@ function cleanQuestion(
 function cleanExam(
   exam
 ) {
+  // Structured exams: sections[].questions[] is the ONLY canonical question tree. Clean those and do
+  // NOT emit a top-level questions[] (neither a stale copy nor an empty []), so nothing competes with
+  // the sections as the canonical source.
+  if (
+    Array.isArray(
+      exam.sections
+    )
+  ) {
+    const structured = {
+      ...exam,
+
+      updatedAt:
+        new Date()
+          .toISOString(),
+
+      sections:
+        exam.sections.map(
+          section => ({
+            ...section,
+
+            questions:
+              Array.isArray(
+                section &&
+                section.questions
+              )
+                ? section.questions.map(
+                    cleanQuestion
+                  )
+                : []
+          })
+        )
+    };
+
+    delete structured.questions;
+
+    return structured;
+  }
+
+  // Legacy flat exams: unchanged behaviour.
   return {
     ...exam,
 

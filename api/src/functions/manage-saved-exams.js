@@ -9,6 +9,10 @@ const {
   requireBuilderAuth
 } = require("../lib/builder-auth");
 
+const {
+  countExamQuestions
+} = require("../lib/exam-structure");
+
 const BANK_CONTAINER =
   "bank";
 
@@ -184,11 +188,9 @@ async function listSavedExams(
           ),
 
         questionCount:
-          Array.isArray(
-            exam.questions
-          )
-            ? exam.questions.length
-            : 0,
+          countExamQuestions(
+            exam
+          ),
 
         totalMarks:
           Number(

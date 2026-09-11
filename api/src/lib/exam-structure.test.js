@@ -10,8 +10,18 @@ import {
   sectionCappedScore,
   sectionQuestionId,
   partLabel,
-  effectiveMaxMarks
+  effectiveMaxMarks,
+  countExamQuestions
 } from "./exam-structure.js";
+
+describe("countExamQuestions (saved-exams list count for both shapes)", () => {
+  it("sums section questions for a structured exam and counts questions[] for a legacy exam", () => {
+    expect(countExamQuestions({ sections: [{ questions: [{}, {}, {}] }, { questions: [{}, {}, {}, {}, {}] }] })).toBe(8); // 3 + 5
+    expect(countExamQuestions({ questions: [{}, {}] })).toBe(2);
+    expect(countExamQuestions({})).toBe(0);
+    expect(countExamQuestions(null)).toBe(0);
+  });
+});
 
 describe("normalizeExamStructure", () => {
   it("wraps a legacy flat exam in a single implicit 'all' section", () => {
