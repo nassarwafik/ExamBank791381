@@ -6,6 +6,7 @@ import {IconSearch,IconDownload,IconUpload,IconPlus,IconChevronDown,IconMore,Ico
 import {MEDAL_COLORS,MEDAL_LABELS,medalTier} from "./medals";
 import {normalizeClassStatus} from "./classLifecycle";
 import {getClassProgramCodes} from "./projects/classPrograms";
+import {type CredentialBatch,openCredentialBatch,toggleCredentialBatchCollapsed,credentialBatchVisible,buildCredentialsDownload} from "./credentialBatch";
 
 type WorkspaceTab="dashboard"|"students"|"assignments";
 // onCopyLibraryExamToBuilder: forwarded straight to AssignmentsPanel; the snapshot is typed loosely
@@ -82,7 +83,8 @@ function TeacherPlatform({token,currentExam,workspaceTab,onCopyLibraryExamToBuil
  const [newStudentPassword,setNewStudentPassword]=useState("");
 
  const [credentialBox,setCredentialBox]=useState<{name:string;identityNumber:string;password:string}|null>(null);
- const [bulkCredentials,setBulkCredentials]=useState<Credential[]>([]);
+ // Class-scoped, in-memory-only batch of generated plaintext credentials (see credentialBatch.ts).
+ const [credentialBatch,setCredentialBatch]=useState<CredentialBatch|null>(null);
  const [bulkErrors,setBulkErrors]=useState<BulkError[]>([]);
 
  const [,setBulkStudents]=useState<BulkStudent[]>([]);
@@ -196,6 +198,10 @@ function TeacherPlatform({token,currentExam,workspaceTab,onCopyLibraryExamToBuil
  useEffect(()=>{teacherApi<{projects?:ProjectOption[]}>("/api/project-tracker?resource=projects").then(r=>setPrograms(r.projects||[])).catch(()=>setPrograms([]));},[]);// eslint-disable-line react-hooks/exhaustive-deps
  useEffect(()=>{
   setSelectedIds([]);setProfile(null);setEditingStudent(null);setHistory(null);setReviewTarget(null);clearPasswordReveal();
+  // Single-student credential box + bulk errors are cleared so a plaintext password / error never shows
+  // under a different class. The bulk credentialBatch is NOT cleared here — it stays in memory and is
+  // simply HIDDEN unless its owning class is selected again (avoids accidental loss on a stray click).
+  setCredentialBox(null);setBulkErrors([]);
   if(selectedClassId)void loadStudents(selectedClassId);else setStudents([]);
  },[selectedClassId]);
  useEffect(()=>()=>{if(passwordRevealTimer.current)window.clearInterval(passwordRevealTimer.current)},[]);
@@ -389,7 +395,7 @@ function TeacherPlatform({token,currentExam,workspaceTab,onCopyLibraryExamToBuil
  }
 
  async function readBulkFile(file:File|null){
-  setBulkStudents([]);setBulkCredentials([]);setBulkErrors([]);setImportPreview([]);setBulkFileName(file?.name||"");setError("");setNotice("");
+  setBulkStudents([]);setBulkErrors([]);setImportPreview([]);setBulkFileName(file?.name||"");setError("");setNotice("");
   if(!file)return;
   try{
    const json=JSON.parse(await file.text());
@@ -424,13 +430,14 @@ function TeacherPlatform({token,currentExam,workspaceTab,onCopyLibraryExamToBuil
  async function importBulkStudents(){
   const validRows=importPreview.filter(x=>x.status==="valid");
   if(!selectedClassId||!validRows.length||actionBusy)return;
-  setActionBusy(true);setError("");setNotice("");setBulkCredentials([]);setBulkErrors([]);
+  if(!confirmReplaceCredentialBatch())return;
+  setActionBusy(true);setError("");setNotice("");setBulkErrors([]);
   try{
    const payload=validRows.map(x=>({firstName:x.firstName,familyName:x.familyName,identityNumber:x.identityNumber}));
    const result=await teacherApi<{ok:true;imported:number;failed:number;credentials:Credential[];errors:BulkError[]}>("/api/students",{
     method:"POST",body:JSON.stringify({action:"bulkImport",classId:selectedClassId,students:payload})
    });
-   setBulkCredentials(result.credentials||[]);
+   if((result.credentials||[]).length)showCredentialBatch(result.credentials||[]);
    setBulkErrors(result.errors||[]);
    await Promise.all([loadStudents(selectedClassId),loadClasses()]);
    setNotice("✓ تم استيراد "+result.imported+" طالبًا"+(result.failed?"، وتعذر استيراد "+result.failed+".":"."));
@@ -439,24 +446,31 @@ function TeacherPlatform({token,currentExam,workspaceTab,onCopyLibraryExamToBuil
   finally{setActionBusy(false)}
  }
 
+ // Open a new credential batch, capturing the class AT GENERATION TIME (never derived later). Warns
+ // before replacing an existing, not-yet-closed batch so the teacher can download it first.
+ function confirmReplaceCredentialBatch(){
+  if(credentialBatch&&credentialBatch.credentials.length){
+   return window.confirm("يوجد لديك قائمة كلمات مرور لم تُغلق بعد للصف «"+(credentialBatch.className||"")+"». إنشاء قائمة جديدة سيستبدلها.");
+  }
+  return true;
+ }
+ function showCredentialBatch(credentials:Credential[]){
+  setCredentialBatch(openCredentialBatch(selectedClassId,selectedClass?.name||"",credentials));
+ }
+ // Explicit close: discards ONLY the temporary UI batch (no students/passwords/backend changes).
+ function discardCredentialBatch(){
+  if(!window.confirm("بعد إغلاق هذه القائمة لن تتمكن من عرض كلمات المرور الحالية كنص واضح مرة أخرى. هل تريد المتابعة؟"))return;
+  setCredentialBatch(null);
+ }
+
  function downloadCredentials(){
-  if(!bulkCredentials.length)return;
-  const payload={
-   classId:selectedClassId,
-   className:selectedClass?.name||"",
-   generatedAt:new Date().toISOString(),
-   students:bulkCredentials.map(x=>({
-    firstName:x.firstName||"",
-    familyName:x.familyName||"",
-    displayName:x.displayName||"",
-    identityNumber:x.identityNumber||x.code,
-    password:x.password
-   }))
-  };
+  if(!credentialBatch||!credentialBatch.credentials.length)return;
+  // Uses the batch's ORIGINAL class metadata + generation time — never the currently-selected class.
+  const payload=buildCredentialsDownload(credentialBatch);
   const blob=new Blob([JSON.stringify(payload,null,2)],{type:"application/json;charset=utf-8"});
   const url=URL.createObjectURL(blob);
   const a=document.createElement("a");
-  a.href=url;a.download=(selectedClass?.name||"class")+"-student-credentials.json";a.click();
+  a.href=url;a.download=(credentialBatch.className||"class")+"-student-credentials.json";a.click();
   URL.revokeObjectURL(url);
  }
 
@@ -566,6 +580,7 @@ function TeacherPlatform({token,currentExam,workspaceTab,onCopyLibraryExamToBuil
   else if(operation==="resetpasswords")question="إنشاء كلمات مرور جديدة لـ "+count+" طالب؟ ستظهر الكلمات الجديدة مرة واحدة بعد العملية.";
   else if(operation==="move")question="نقل "+count+" طالب إلى الصف المختار؟";
   if(question&&!window.confirm(question))return;
+  if(operation==="resetpasswords"&&!confirmReplaceCredentialBatch())return;
 
   setActionBusy(true);setError("");setNotice("");setBulkErrors([]);
   try{
@@ -573,7 +588,7 @@ function TeacherPlatform({token,currentExam,workspaceTab,onCopyLibraryExamToBuil
     method:"POST",
     body:JSON.stringify({action:"bulkAction",operation,userIds:selectedIds,targetClassId:bulkTargetClassId})
    });
-   if(result.credentials?.length)setBulkCredentials(result.credentials);
+   if(result.credentials?.length)showCredentialBatch(result.credentials);
    if(result.errors?.length)setBulkErrors(result.errors);
    await Promise.all([loadStudents(selectedClassId),loadClasses()]);
    setSelectedIds([]);
@@ -726,18 +741,27 @@ function TeacherPlatform({token,currentExam,workspaceTab,onCopyLibraryExamToBuil
       </div>
      </section>}
 
-     {bulkCredentials.length>0&&<section className="credential-box" style={{marginTop:16}}>
-      <div className="platform-card-heading"><div><span className="platform-eyebrow">Generated credentials</span><h3>بيانات الدخول الجديدة</h3></div><button onClick={downloadCredentials}>⬇ تنزيل JSON</button></div>
-      <p>احفظ هذه البيانات الآن؛ كلمات المرور لا تُعرض لاحقًا كنص واضح.</p>
-      <div className="students-table-wrap"><table className="students-table">
-       <thead><tr><th>الاسم</th><th>العائلة</th><th>رقم الهوية</th><th>كلمة المرور</th><th></th></tr></thead>
-       <tbody>{bulkCredentials.map((c,i)=>{
-        const fullName=(c.firstName||"")+" "+(c.familyName||"");
-        const identity=c.identityNumber||c.code;
-        return <tr key={(c.userId||c.code)+i}><td>{c.firstName}</td><td>{c.familyName}</td><td dir="ltr">{identity}</td><td dir="ltr"><strong>{c.password}</strong></td>
-         <td><button onClick={()=>void copyText(credentialText(fullName.trim(),identity,c.password),"✓ تم نسخ بيانات دخول الطالب.")}>📋 نسخ</button></td></tr>
-       })}</tbody>
-      </table></div>
+     {credentialBatch&&credentialBatchVisible(credentialBatch,selectedClassId)&&<section className="credential-box" style={{marginTop:16}}>
+      <div className="platform-card-heading">
+       <div><span className="platform-eyebrow">Generated credentials</span><h3>بيانات الدخول الجديدة</h3><span className="platform-eyebrow">{credentialBatch.credentials.length} طالبًا</span></div>
+       <div className="student-row-actions">
+        <button onClick={()=>setCredentialBatch(b=>b?toggleCredentialBatchCollapsed(b):b)}><IconChevronDown size={14}/>{credentialBatch.collapsed?"إظهار":"طي"}</button>
+        <button onClick={downloadCredentials}><IconDownload size={14}/>تنزيل JSON</button>
+        <button onClick={discardCredentialBatch}><IconClose size={14}/>إغلاق</button>
+       </div>
+      </div>
+      {!credentialBatch.collapsed&&<>
+       <p>احفظ هذه البيانات الآن؛ كلمات المرور لا تُعرض لاحقًا كنص واضح.</p>
+       <div className="students-table-wrap"><table className="students-table">
+        <thead><tr><th>الاسم</th><th>العائلة</th><th>رقم الهوية</th><th>كلمة المرور</th><th></th></tr></thead>
+        <tbody>{credentialBatch.credentials.map((c,i)=>{
+         const fullName=(c.firstName||"")+" "+(c.familyName||"");
+         const identity=c.identityNumber||c.code;
+         return <tr key={(c.userId||c.code)+i}><td>{c.firstName}</td><td>{c.familyName}</td><td dir="ltr">{identity}</td><td dir="ltr"><strong>{c.password}</strong></td>
+          <td><button onClick={()=>void copyText(credentialText(fullName.trim(),identity,c.password),"✓ تم نسخ بيانات دخول الطالب.")}>📋 نسخ</button></td></tr>
+        })}</tbody>
+       </table></div>
+      </>}
      </section>}
 
      {bulkErrors.length>0&&<div className="platform-warning"><strong>عمليات لم تكتمل:</strong>{bulkErrors.map((x,i)=><div key={x.userId||i}>{x.displayName||x.userId||"السطر "+((x.index??i)+1)}: {x.error}</div>)}</div>}
