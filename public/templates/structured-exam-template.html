@@ -1,0 +1,143 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="utf-8">
+  <title>امتحان 791381 (قالب استيراد HTML)</title>
+  <style>
+    body{font-family:system-ui,"Segoe UI",Tahoma,sans-serif;max-width:820px;margin:24px auto;padding:0 16px;line-height:1.8;color:#1e293b}
+    [data-section]{border:1px solid #e5e9f0;border-radius:12px;padding:16px;margin:16px 0}
+    [data-question],[data-part]{border-top:1px dashed #cdd5e0;padding-top:12px;margin-top:12px}
+    pre{background:#0f172a;color:#e2e8f0;padding:12px;border-radius:8px;direction:ltr;text-align:left;overflow:auto}
+    table{border-collapse:collapse;width:100%}th,td{border:1px solid #e5e9f0;padding:6px}
+  </style>
+</head>
+<body>
+
+<!--
+  ExamBank 791381 — canonical ANNOTATED HTML import schema (Mode B).
+  Convert a Word/PDF exam into this structure, then upload it via "استيراد امتحان منظّم".
+  Only the data-* attributes and element text are read; visual styling is ignored and NO scripts run.
+  (Alternatively, embed the exact JSON once in a
+   <script type="application/json" id="exambank-structured-exam"> … </script> — Mode A, highest reliability.)
+-->
+
+<article data-exambank="structured-exam" data-title="امتحان 791381 (قالب استيراد HTML)" data-theme="default">
+
+  <!-- ── Section 1: capScore 60 ────────────────────────────────────────── -->
+  <section data-section data-section-id="core" data-title="القسم الأول — الأساس"
+           data-grading-policy="capScore" data-max-marks="60" data-answer-unit="question">
+    <p data-section-instructions>أجب عن جميع الأسئلة. تُحتسب العلامات حتى الحد الأقصى للقسم.</p>
+
+    <!-- shared stimulus, referenced by questions via data-group-id -->
+    <div data-stimulus data-group-id="topology-1" data-title="المخطط المرجعي">
+      <p data-stimulus-text>اعتمد على المخطط التالي للإجابة عن الأسئلة المرتبطة به.</p>
+      <img data-stimulus-image src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP4//8/AwAJ/gL/wF/wAAAAABJRU5ErkJggg==" alt="topology">
+    </div>
+
+    <!-- multipleChoice: mark the correct <li> with data-correct="true" -->
+    <article data-question data-id="q1" data-display-number="1" data-type="multipleChoice" data-marks="3" data-group-id="topology-1">
+      <p data-question-text>أي عنوان مما يلي هو عنوان خاص (Private)؟</p>
+      <ul data-options>
+        <li data-option>8.8.8.8</li>
+        <li data-option data-correct="true">172.16.5.10</li>
+        <li data-option>200.1.1.1</li>
+      </ul>
+    </article>
+
+    <!-- multiTrueFalse: one boolean field per statement -->
+    <article data-question data-id="q2" data-display-number="2" data-type="multiTrueFalse" data-marks="3">
+      <p data-question-text>حدّد صحّة كل عبارة:</p>
+      <div data-fields>
+        <div data-field data-id="q2f1" data-kind="boolean" data-correct="true">DNS يحوّل الأسماء إلى عناوين IP</div>
+        <div data-field data-id="q2f2" data-kind="boolean" data-correct="false">يستخدم FTP المنفذ 53</div>
+        <div data-field data-id="q2f3" data-kind="boolean" data-correct="true">عنوان APIPA يبدأ بـ 169.254</div>
+      </div>
+    </article>
+
+    <!-- tableFill: mark answerable cells with data-answer-cell (multiple per row allowed) -->
+    <article data-question data-id="q3" data-display-number="3" data-type="tableFill" data-marks="2">
+      <p data-question-text>أكمل الجدول التالي:</p>
+      <table data-table-fill>
+        <thead><tr><th>العنوان/القناع</th><th>جزء الشبكة</th><th>جزء المضيف</th></tr></thead>
+        <tbody>
+          <tr>
+            <td>192.168.10.5 / 24</td>
+            <td data-answer-cell data-field-id="q3-net" data-kind="text" data-correct="192.168.10.0"></td>
+            <td data-answer-cell data-field-id="q3-host" data-kind="text" data-correct="0.0.0.5"></td>
+          </tr>
+        </tbody>
+      </table>
+    </article>
+
+    <!-- cliFill: fixed text in <pre data-cli>, blanks as [[fieldId]], answers in data-cli-fields -->
+    <article data-question data-id="q4" data-display-number="4" data-type="cliFill" data-marks="5">
+      <p data-question-text>أكمل أوامر تهيئة الـ sub-interface:</p>
+      <pre data-cli>R1(config)# interface GigabitEthernet0/0.20
+R1(config-subif)# encapsulation dot1Q [[vlan]]
+R1(config-subif)# ip address [[ip]] 255.255.255.0</pre>
+      <div data-cli-fields>
+        <span data-field data-id="vlan" data-label="رقم VLAN" data-correct="20"></span>
+        <span data-field data-id="ip" data-label="عنوان البوابة" data-correct="192.168.20.1"></span>
+      </div>
+    </article>
+  </section>
+
+  <!-- ── Section 2: firstNAnswered, answer 8 parts, 40 marks ───────────── -->
+  <section data-section data-section-id="infra" data-title="القسم الثاني — البنى التحتية للاتصالات"
+           data-grading-policy="firstNAnswered" data-max-marks="40" data-required-answers="8" data-answer-unit="part">
+    <p data-section-instructions>أجب عن 8 بنود فقط. سيُصحَّح أول 8 بنود مجاب عنها.</p>
+
+    <!-- compound: each <section data-part> is a mini-question with its own data-type -->
+    <article data-question data-id="q25" data-display-number="25" data-type="compound" data-marks="40">
+      <p data-question-text>أجب عن البنود التالية (كل بند 5 علامات):</p>
+
+      <section data-part data-id="q25-a" data-label="أ" data-type="multipleChoice" data-marks="5">
+        <p data-part-text>أي بروتوكول توجيه هو Link-State؟</p>
+        <ul data-options>
+          <li data-option>RIP</li>
+          <li data-option data-correct="true">OSPF</li>
+          <li data-option>EIGRP</li>
+        </ul>
+      </section>
+
+      <section data-part data-id="q25-b" data-label="ب" data-type="trueFalse" data-marks="5" data-correct="true">
+        <p data-part-text>الـ Trunk ينقل أكثر من VLAN.</p>
+      </section>
+
+      <section data-part data-id="q25-c" data-label="ج" data-type="cliFill" data-marks="5">
+        <p data-part-text>أكمل الأمر:</p>
+        <pre data-cli>Switch(config)# vlan [[vid]]
+Switch(config-vlan)# name [[vname]]</pre>
+        <div data-cli-fields>
+          <span data-field data-id="vid" data-label="معرّف VLAN" data-correct="30"></span>
+          <span data-field data-id="vname" data-label="اسم VLAN" data-correct="SALES"></span>
+        </div>
+      </section>
+
+      <section data-part data-id="q25-d" data-label="د" data-type="shortAnswer" data-marks="5">
+        <p data-part-text>اذكر وظيفة بروتوكول ARP. (تصحيح يدوي)</p>
+      </section>
+
+      <section data-part data-id="q25-e" data-label="هـ" data-type="multipleChoice" data-marks="5">
+        <p data-part-text>المنفذ الافتراضي لبروتوكول HTTPS هو:</p>
+        <ul data-options><li data-option>80</li><li data-option data-correct="true">443</li><li data-option>22</li></ul>
+      </section>
+
+      <section data-part data-id="q25-f" data-label="و" data-type="trueFalse" data-marks="5" data-correct="true">
+        <p data-part-text>يعمل بروتوكول DHCP على المنفذين 67 و68.</p>
+      </section>
+
+      <section data-part data-id="q25-g" data-label="ز" data-type="multipleChoice" data-marks="5">
+        <p data-part-text>أي طبقة في نموذج OSI مسؤولة عن التوجيه؟</p>
+        <ul data-options><li data-option>الطبقة الثانية</li><li data-option data-correct="true">الطبقة الثالثة</li><li data-option>الطبقة السابعة</li></ul>
+      </section>
+
+      <section data-part data-id="q25-h" data-label="ح" data-type="multipleChoice" data-marks="5">
+        <p data-part-text>أي مما يلي عنوان بث (Broadcast) للشبكة 192.168.1.0/24؟</p>
+        <ul data-options><li data-option>192.168.1.0</li><li data-option data-correct="true">192.168.1.255</li><li data-option>192.168.1.1</li></ul>
+      </section>
+    </article>
+  </section>
+</article>
+</body>
+</html>
