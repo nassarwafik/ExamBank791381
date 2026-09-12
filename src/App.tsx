@@ -562,25 +562,28 @@ function App() {
   }
 
   // Registry-driven sidebar list (so a new project appears automatically once added to the backend).
+  // TEACHER-ONLY: /api/project-tracker requires builder auth, so this must NEVER run for a student
+  // session — a student token would get 401 and the generic apiRequest would log the student out.
   useEffect(() => {
-    if (!token) { setProjectList([]); return; }
+    if (!token || sessionRole !== "teacher") { setProjectList([]); return; }
     let cancelled = false;
     apiRequest<{ projects?: { projectCode: string; title: string }[] }>("/api/project-tracker?resource=projects")
       .then(r => { if (!cancelled) setProjectList(r.projects || []); })
       .catch(() => { if (!cancelled) setProjectList([]); });
     return () => { cancelled = true; };
-  }, [token]);
+  }, [token, sessionRole]);
 
   // Ready-for-review badge (global, not tied to the selected class). Re-checked when returning to the
-  // projects view so approving a stage there refreshes the count.
+  // projects view so approving a stage there refreshes the count. TEACHER-ONLY (builder-auth endpoint):
+  // gated by sessionRole so a student session never calls it (which would 401 → logout).
   useEffect(() => {
-    if (!token) { setProjectReady({ total: 0, byProject: {} }); return; }
+    if (!token || sessionRole !== "teacher") { setProjectReady({ total: 0, byProject: {} }); return; }
     let cancelled = false;
     apiRequest<{ totalReadyForReview?: number; byProject?: Record<string, number> }>("/api/project-tracker?resource=projects-summary")
       .then(r => { if (!cancelled) setProjectReady({ total: Number(r.totalReadyForReview) || 0, byProject: r.byProject || {} }); })
       .catch(() => { if (!cancelled) setProjectReady({ total: 0, byProject: {} }); });
     return () => { cancelled = true; };
-  }, [token, teacherView]);
+  }, [token, sessionRole, teacherView]);
 
   const [userCode, setUserCode] = useState("");
   const [password, setPassword] = useState("");
@@ -806,7 +809,11 @@ function App() {
     const data = (await response.json()) as T & ApiError;
 
     if (!response.ok) {
-      if (response.status === 401) {
+      // apiRequest is the TEACHER (builder-auth) helper: it sends x-builder-token. Only a confirmed
+      // TEACHER session may be logged out by its 401 — never a student session (StudentPortal owns and
+      // validates the student session via /api/student-dashboard). Defense-in-depth: the teacher-only
+      // effects above are already gated by sessionRole, so this should not fire for a student at all.
+      if (response.status === 401 && sessionRole === "teacher") {
         handleLogout();
       }
 
