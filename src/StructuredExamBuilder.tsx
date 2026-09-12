@@ -21,6 +21,7 @@ import {
 import { validateStructuredExam, hasBlockingErrors, type StructuredIssue } from "./examQuality";
 import ExamSectionEditor from "./ExamSectionEditor";
 import StructuredExamSection from "./StructuredExamSection";
+import type { Answer, FieldValue } from "./StudentQuestionCard";
 import { normalizeExamStructure, type StructuredExam as StudentStructuredExam } from "./examStructure";
 import { normalizeExamTheme } from "./examTheme";
 import "./structured-builder.css";
@@ -125,13 +126,38 @@ function singleQuestionExam(exam: StructuredExam, section: BuilderSection, q: Bu
   return { ...exam, sections: [{ ...section, questions: [q] }] };
 }
 
-// Read-only student preview using the exact student rendering components, fed a scrubbed exam so no
-// answer key is present. Inputs are disabled — this never records or reveals answers.
-function ExamPreview({ exam, onClose }: { exam: StructuredExam; onClose: () => void }) {
+// Interactive student SIMULATION using the exact student rendering components, fed a SCRUBBED exam so
+// no answer key is present (stripAnswersForPreview → normalizeExamStructure → student renderer — the
+// same pipeline, never the raw teacher exam). The teacher can answer exactly like a student, but the
+// answers are EPHEMERAL: they live only in this component's local state, so closing the preview (which
+// unmounts ExamPreview) destroys them. Nothing is saved, no API/storage is touched, and the exam object
+// is never mutated. Handlers mirror the real StudentExamPage answer shapes byte-for-byte.
+export function ExamPreview({ exam, onClose }: { exam: StructuredExam; onClose: () => void }) {
   const scrubbed = useMemo(() => stripAnswersForPreview(exam), [exam]);
   const norm = useMemo(() => normalizeExamStructure(scrubbed as unknown as StudentStructuredExam), [scrubbed]);
   const theme = normalizeExamTheme(exam.presentationTheme);
-  const noop = () => {};
+  // Ephemeral, preview-only answers. Owned here (not lifted to the builder), so unmounting resets them.
+  const [answers, setAnswers] = useState<Record<string, Answer>>({});
+  const onChoice = (id: string, index: number) => setAnswers(a => ({ ...a, [id]: { kind: "choice", index } }));
+  const onSeq = (id: string, index: number, value: string) => setAnswers(a => {
+    const prev = a[id]?.kind === "sequence" ? (a[id] as { kind: "sequence"; values: string[] }).values : [];
+    const values = [...prev]; values[index] = value;
+    return { ...a, [id]: { kind: "sequence", values } };
+  });
+  const onTable = (id: string, index: number, value: string | boolean) => setAnswers(a => {
+    const prev = a[id]?.kind === "table" ? (a[id] as { kind: "table"; values: (string | boolean)[] }).values : [];
+    const values = [...prev]; values[index] = value;
+    return { ...a, [id]: { kind: "table", values } };
+  });
+  const onText = (id: string, value: string) => setAnswers(a => ({ ...a, [id]: { kind: "text", value } }));
+  const onField = (id: string, fieldId: string, value: FieldValue) => setAnswers(a => {
+    const prev = a[id]?.kind === "fields" ? (a[id] as { kind: "fields"; values: Record<string, FieldValue> }).values : {};
+    return { ...a, [id]: { kind: "fields", values: { ...prev, [fieldId]: value } } };
+  });
+  const onPart = (id: string, partId: string, answer: Answer) => setAnswers(a => {
+    const prev = a[id]?.kind === "compound" ? (a[id] as { kind: "compound"; parts: Record<string, Answer> }).parts : {};
+    return { ...a, [id]: { kind: "compound", parts: { ...prev, [partId]: answer } } };
+  });
   let offset = 0;
   return (
     <div className="sb-preview-overlay" role="dialog" aria-modal="true">
@@ -141,7 +167,7 @@ function ExamPreview({ exam, onClose }: { exam: StructuredExam; onClose: () => v
       </header>
       <main className={"interactive-exam-page exam-theme-" + theme} dir="rtl">
         <div className="iex-wrap">
-          <p className="sb-preview-note">هذه معاينة فقط — لا تُحفظ أي إجابة، ولا تظهر مفاتيح الإجابة.</p>
+          <p className="sb-preview-note">هذه معاينة تفاعلية للطالب — يمكنك تجربة الإجابة، لكن لا تُحفظ أي إجابة ولا تظهر مفاتيح الإجابة.</p>
           {norm.sections.map((section, si) => {
             const startIndex = offset;
             offset += section.questions.length;
@@ -151,14 +177,13 @@ function ExamPreview({ exam, onClose }: { exam: StructuredExam; onClose: () => v
                 section={section}
                 sectionNumber={si + 1}
                 startIndex={startIndex}
-                answers={{}}
-                onChoice={noop}
-                onSeq={noop}
-                onTable={noop}
-                onText={noop}
-                onField={noop}
-                onPart={noop}
-                disabled
+                answers={answers}
+                onChoice={onChoice}
+                onSeq={onSeq}
+                onTable={onTable}
+                onText={onText}
+                onField={onField}
+                onPart={onPart}
               />
             );
           })}
