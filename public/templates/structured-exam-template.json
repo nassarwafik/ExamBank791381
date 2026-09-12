@@ -1,0 +1,170 @@
+{
+  "examId": "791381-sample-2026",
+  "title": "امتحان 791381 (قالب استيراد)",
+  "status": "draft",
+  "presentationTheme": "default",
+  "sections": [
+    {
+      "id": "core",
+      "title": "القسم الأول — الأساس",
+      "instructions": "أجب عن جميع الأسئلة. تُحتسب العلامات حتى الحد الأقصى للقسم.",
+      "gradingPolicy": "capScore",
+      "maxMarks": 60,
+      "requiredAnswers": null,
+      "answerUnit": "question",
+      "stimuli": {
+        "topology-1": {
+          "title": "المخطط المرجعي",
+          "text": "اعتمد على المخطط التالي للإجابة عن الأسئلة المرتبطة به.",
+          "image": { "dataUrl": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42m\/\/\/\/\/\/AwAJ\/gL\/wF\/wAAAAABJRU5ErkJggg==" }
+        }
+      },
+      "questions": [
+        {
+          "examQuestionId": "q1",
+          "displayNumber": "1",
+          "groupId": "topology-1",
+          "presentationType": "multipleChoice",
+          "text": "أي عنوان مما يلي هو عنوان خاص (Private)؟",
+          "marks": 3,
+          "options": [
+            { "text": "8.8.8.8" },
+            { "text": "172.16.5.10" },
+            { "text": "200.1.1.1" }
+          ],
+          "answer": { "correctOptionIndex": 1 }
+        },
+        {
+          "examQuestionId": "q2",
+          "displayNumber": "2",
+          "presentationType": "multiTrueFalse",
+          "text": "حدّد صحّة كل عبارة:",
+          "marks": 3,
+          "fields": [
+            { "id": "q2f1", "statement": "بروتوكول DNS يحوّل الأسماء إلى عناوين IP", "kind": "boolean", "correct": true },
+            { "id": "q2f2", "statement": "يستخدم FTP المنفذ 53", "kind": "boolean", "correct": false },
+            { "id": "q2f3", "statement": "عنوان APIPA يبدأ بـ 169.254", "kind": "boolean", "correct": true }
+          ]
+        },
+        {
+          "examQuestionId": "q3",
+          "displayNumber": "3",
+          "presentationType": "tableFill",
+          "text": "أكمل الجدول التالي:",
+          "marks": 2,
+          "tableHeaders": ["العنوان/القناع", "جزء الشبكة", "جزء المضيف"],
+          "tableRows": [["192.168.10.5 / 24", "", ""]],
+          "fields": [
+            { "id": "q3-net", "row": 0, "column": 1, "kind": "text", "correct": "192.168.10.0" },
+            { "id": "q3-host", "row": 0, "column": 2, "kind": "text", "correct": "0.0.0.5" }
+          ]
+        },
+        {
+          "examQuestionId": "q4",
+          "displayNumber": "4",
+          "presentationType": "cliFill",
+          "text": "أكمل أوامر تهيئة الـ sub-interface:",
+          "marks": 5,
+          "cli": "R1(config)# interface GigabitEthernet0/0.20\nR1(config-subif)# encapsulation dot1Q [[vlan]]\nR1(config-subif)# ip address [[ip]] 255.255.255.0",
+          "fields": [
+            { "id": "vlan", "label": "رقم VLAN", "correct": "20" },
+            { "id": "ip", "label": "عنوان البوابة", "correct": "192.168.20.1" }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "infra",
+      "title": "القسم الثاني — البنى التحتية للاتصالات",
+      "instructions": "أجب عن 8 بنود فقط. سيُصحَّح أول 8 بنود مجاب عنها.",
+      "gradingPolicy": "firstNAnswered",
+      "maxMarks": 40,
+      "requiredAnswers": 8,
+      "answerUnit": "part",
+      "stimuli": {},
+      "questions": [
+        {
+          "examQuestionId": "q25",
+          "displayNumber": "25",
+          "presentationType": "compound",
+          "text": "أجب عن البنود التالية (كل بند 5 علامات):",
+          "marks": 40,
+          "parts": [
+            {
+              "id": "q25-a",
+              "label": "أ",
+              "type": "multipleChoice",
+              "text": "أي بروتوكول توجيه هو Link-State؟",
+              "marks": 5,
+              "options": [{ "text": "RIP" }, { "text": "OSPF" }, { "text": "EIGRP" }],
+              "answer": { "correctOptionIndex": 1 }
+            },
+            {
+              "id": "q25-b",
+              "label": "ب",
+              "type": "trueFalse",
+              "text": "الـ Trunk ينقل أكثر من VLAN.",
+              "marks": 5,
+              "answer": { "correct": true }
+            },
+            {
+              "id": "q25-c",
+              "label": "ج",
+              "type": "cliFill",
+              "text": "أكمل الأمر:",
+              "marks": 5,
+              "cli": "Switch(config)# vlan [[vid]]\nSwitch(config-vlan)# name [[vname]]",
+              "fields": [
+                { "id": "vid", "label": "معرّف VLAN", "correct": "30" },
+                { "id": "vname", "label": "اسم VLAN", "correct": "SALES" }
+              ]
+            },
+            {
+              "id": "q25-d",
+              "label": "د",
+              "type": "shortAnswer",
+              "text": "اذكر وظيفة بروتوكول ARP.",
+              "marks": 5,
+              "answer": {}
+            },
+            {
+              "id": "q25-e",
+              "label": "هـ",
+              "type": "multipleChoice",
+              "text": "المنفذ الافتراضي لبروتوكول HTTPS هو:",
+              "marks": 5,
+              "options": [{ "text": "80" }, { "text": "443" }, { "text": "22" }],
+              "answer": { "correctOptionIndex": 1 }
+            },
+            {
+              "id": "q25-f",
+              "label": "و",
+              "type": "trueFalse",
+              "text": "يعمل بروتوكول DHCP على المنفذين 67 و68.",
+              "marks": 5,
+              "answer": { "correct": true }
+            },
+            {
+              "id": "q25-g",
+              "label": "ز",
+              "type": "multipleChoice",
+              "text": "أي طبقة في نموذج OSI مسؤولة عن التوجيه؟",
+              "marks": 5,
+              "options": [{ "text": "الطبقة الثانية" }, { "text": "الطبقة الثالثة" }, { "text": "الطبقة السابعة" }],
+              "answer": { "correctOptionIndex": 1 }
+            },
+            {
+              "id": "q25-h",
+              "label": "ح",
+              "type": "multipleChoice",
+              "text": "أي مما يلي عنوان بث (Broadcast) للشبكة 192.168.1.0/24؟",
+              "marks": 5,
+              "options": [{ "text": "192.168.1.0" }, { "text": "192.168.1.255" }, { "text": "192.168.1.1" }],
+              "answer": { "correctOptionIndex": 1 }
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

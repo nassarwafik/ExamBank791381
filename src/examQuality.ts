@@ -73,6 +73,22 @@ export function validateStructuredExam(exam: StructuredExam): StructuredIssue[] 
 }
 
 function validateSection(section: BuilderSection, label: string, add: Add): void {
+  // Grading policy and answer unit are NEVER guessed (e.g. on import) — a wrong default would silently
+  // change the exam's academic meaning. Both must be explicitly one of the known values. `as` widening
+  // is intentional: the static type is a closed union, but a loaded/imported section may carry anything.
+  const unit = section.answerUnit as string | null | undefined;
+  if (unit != null && unit !== "question" && unit !== "part") {
+    add("error", "ANSWER_UNIT_INVALID", "وحدة الإجابة في القسم «" + label + "» غير صالحة (يجب أن تكون «سؤال» أو «بند»).", { sectionId: section.id });
+  }
+  const policy = section.gradingPolicy as string | null | undefined;
+  if (policy == null || policy === "") {
+    add("error", "GRADING_POLICY_REQUIRED", "القسم «" + label + "» بلا قاعدة تصحيح — اختر «تصحيح جميع الأسئلة» أو «سقف للعلامة» أو «أول عدد محدد».", { sectionId: section.id });
+    return; // policy-dependent checks below are meaningless without a valid policy
+  }
+  if (policy !== "all" && policy !== "capScore" && policy !== "firstNAnswered") {
+    add("error", "GRADING_POLICY_INVALID", "قاعدة تصحيح غير معروفة «" + policy + "» في القسم «" + label + "» — اختر قاعدة صالحة.", { sectionId: section.id });
+    return;
+  }
   // capScore and firstNAnswered both require an explicit positive section maximum — the real 791381
   // sections always state one, and a missing cap would let "all"-style raw totals leak past the
   // intended maximum. "all" must have NO cap. A present-but-invalid value is always an error.
@@ -87,12 +103,22 @@ function validateSection(section: BuilderSection, label: string, add: Add): void
     add("error", "INVALID_MAXMARKS", "العلامة القصوى للقسم «" + label + "» غير صالحة.", { sectionId: section.id });
   }
   if (section.gradingPolicy === "firstNAnswered") {
+    // firstNAnswered grades a specific NUMBER of answered UNITS, so the unit (question vs part) is
+    // academically load-bearing and must be stated explicitly — never inferred. A missing unit blocks
+    // finalization (so selectGradedUnits is never run on an ambiguous firstN exam) but still opens as a
+    // draft. (An invalid value is caught by ANSWER_UNIT_INVALID above.)
+    const unitResolved = unit === "question" || unit === "part";
+    if (unit == null) {
+      add("error", "ANSWER_UNIT_REQUIRED", "القسم «" + label + "» يستخدم «تصحيح أول عدد محدد» دون تحديد وحدة الإجابة (سؤال أو بند).", { sectionId: section.id });
+    }
     const req = section.requiredAnswers;
     if (req == null) {
       add("error", "FIRSTN_NO_REQUIRED", "القسم «" + label + "» يستخدم «تصحيح أول عدد محدد» دون تحديد عدد الإجابات المطلوبة.", { sectionId: section.id });
     } else if (!Number.isInteger(num(req)) || num(req) <= 0) {
       add("error", "FIRSTN_BAD_REQUIRED", "عدد الإجابات المطلوبة في «" + label + "» يجب أن يكون أكبر من صفر.", { sectionId: section.id });
-    } else {
+    } else if (unitResolved) {
+      // Only compare against available units when the unit is unambiguous — otherwise ANSWER_UNIT_*
+      // already flags it and the count would be a guess.
       const available = section.answerUnit === "part"
         ? section.questions.reduce((c, q) => c + ((q.parts && q.parts.length) ? q.parts.length : 1), 0)
         : section.questions.length;

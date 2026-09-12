@@ -7,6 +7,7 @@ const ProjectHub = lazy(() => import("./projects/ProjectHub"));
 const ReportsCenter = lazy(() => import("./reports/ReportsCenter"));
 // Structured Exam Builder (Phase 2) — code-split so it only loads when a teacher opens it.
 const StructuredExamBuilder = lazy(() => import("./StructuredExamBuilder"));
+const StructuredExamImportDialog = lazy(() => import("./StructuredExamImportDialog"));
 import { isStructuredExam } from "./examTypes";
 import type { StructuredExam } from "./examTypes";
 import { legacyToStructured, toSavedStructuredExam, newSection, newQuestion } from "./examBuilderState";
@@ -596,6 +597,7 @@ function App() {
   // Builder VISIBILITY is separate from exam IDENTITY: closing the builder ("رجوع") keeps the
   // structured exam active (so it stays the assignment source); only opening a legacy exam clears it.
   const [structuredBuilderOpen, setStructuredBuilderOpen] = useState(false);
+  const [structuredImportOpen, setStructuredImportOpen] = useState(false);
   const [structuredSaving, setStructuredSaving] = useState(false);
   const [structuredNotice, setStructuredNotice] = useState("");
   const [structuredError, setStructuredError] = useState("");
@@ -3628,6 +3630,14 @@ function App() {
     });
     setStructuredBuilderOpen(true);
   }
+  // Imported exam (JSON/HTML) becomes the ACTIVE structured exam in memory only — never auto-saved.
+  function openImportedStructuredExam(imported: StructuredExam) {
+    setStructuredError("");
+    setStructuredNotice("✓ تم استيراد الامتحان — راجعه ثم احفظه كمسودة أو اعتمده نهائيًا.");
+    setStructuredExam(imported);
+    setStructuredBuilderOpen(true);
+    setStructuredImportOpen(false);
+  }
   // Structured exams save through the SAME saved-exam artifact endpoint as legacy exams; the backend
   // stores the object (sections canonical) untouched. No second saved-exam system. Draft saves always
   // succeed; a "final" save is only reached when the builder's validation has no blocking errors, and
@@ -5780,6 +5790,10 @@ function App() {
             🧱 امتحان منظّم جديد
           </button>
 
+          <button onClick={() => setStructuredImportOpen(true)}>
+            📥 استيراد امتحان منظّم
+          </button>
+
           {structuredExam && !structuredBuilderOpen && (
             <button onClick={() => setStructuredBuilderOpen(true)}>
               🧱 متابعة تحرير الامتحان المنظّم
@@ -7431,6 +7445,15 @@ function App() {
       </section>
       )}
       </div>
+
+      {structuredImportOpen && (
+        <Suspense fallback={<div className="platform-loading">⏳ جارٍ فتح أداة الاستيراد…</div>}>
+          <StructuredExamImportDialog
+            onClose={() => setStructuredImportOpen(false)}
+            onOpenInBuilder={openImportedStructuredExam}
+          />
+        </Suspense>
+      )}
 
       {structuredBuilderOpen && structuredExam && (
         <div className="structured-builder-overlay" dir="rtl">
