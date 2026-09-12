@@ -8,8 +8,10 @@ import {normalizeExamTheme,previousFocusIndex,nextFocusIndex,focusProgressPercen
 import type {FieldValue} from "./StudentQuestionCard";
 import {normalizeExamStructure,calculateSectionProgress} from "./examStructure";
 import StructuredExamSection from "./StructuredExamSection";
+import StructuredExamCover from "./StructuredExamCover";
+import {normalizeCoverPage,examMarksDistribution,type ExamCoverPage} from "./examCover";
 
-type Assignment={assignmentId:string;title:string;instructions:string;openAt:string;dueAt:string;effectiveDueAt?:string;maxAttempts:number;questionCount:number;totalMarks:number;exam:{title?:string;metadata?:{school?:string;subject?:string;grade?:string;className?:string;generalInstructions?:string};presentationTheme?:string;questions?:Question[];sections?:ExamSection[]}};
+type Assignment={assignmentId:string;title:string;instructions:string;openAt:string;dueAt:string;effectiveDueAt?:string;maxAttempts:number;questionCount:number;totalMarks:number;exam:{title?:string;metadata?:{school?:string;subject?:string;grade?:string;className?:string;generalInstructions?:string};presentationTheme?:string;coverPage?:ExamCoverPage;questions?:Question[];sections?:ExamSection[]}};
 type Answers=Record<string,Answer>;
 type Result={attemptNumber:number;submittedAt:string;score:number;totalMarks:number;percentage:number;manualReviewMarks:number;finalized:boolean;teacherFeedback?:string;questionGrades?:Array<{questionId:string;score:number;maxMarks:number;correct:boolean;manualReview:boolean}>};
 type State={attemptsUsed:number;allowedAttempts:number;canAttempt:boolean;dueClosed:boolean;draftAnswers:Answers;draftSavedAt:string;latestResult:Result|null;attempts:Array<Result>};
@@ -23,7 +25,7 @@ class ApiError extends Error{
 const fmt=(v:string)=>v?new Date(v).toLocaleString("ar"):"بدون موعد";
 
 export default function StudentExamPage({token,assignment,studentName,className,onBack,onLogout}:Props){
- const qs=assignment.exam.questions||[],theme=normalizeExamTheme(assignment.exam.presentationTheme),[answers,setAnswers]=useState<Answers>({}),[state,setState]=useState<State|null>(null),[loading,setLoading]=useState(true),[saving,setSaving]=useState(false),[retrying,setRetrying]=useState(false),[saveFailed,setSaveFailed]=useState(false),[dirty,setDirty]=useState(false),[submitBusy,setSubmitBusy]=useState(false),[error,setError]=useState(""),[result,setResult]=useState<Result|null>(null),[started,setStarted]=useState(true),[focusIndex,setFocusIndex]=useState(0);
+ const qs=assignment.exam.questions||[],theme=normalizeExamTheme(assignment.exam.presentationTheme),[answers,setAnswers]=useState<Answers>({}),[state,setState]=useState<State|null>(null),[loading,setLoading]=useState(true),[saving,setSaving]=useState(false),[retrying,setRetrying]=useState(false),[saveFailed,setSaveFailed]=useState(false),[dirty,setDirty]=useState(false),[submitBusy,setSubmitBusy]=useState(false),[error,setError]=useState(""),[result,setResult]=useState<Result|null>(null),[started,setStarted]=useState(true),[coverStarted,setCoverStarted]=useState(false),[focusIndex,setFocusIndex]=useState(0);
  const loaded=useRef(false),timer=useRef<number|null>(null),revision=useRef(0),savedRevision=useRef(0),saveQueue=useRef<Promise<void>>(Promise.resolve()),submittingRef=useRef(false),initialAnswersSynced=useRef(false),mountedRef=useRef(true),latestTargetRevision=useRef(0);
  async function api<T>(options:RequestInit={}):Promise<T>{const h=new Headers(options.headers||{});h.set("Content-Type","application/json");h.set("x-student-token",token);h.set("Authorization","Bearer "+token);const r=await fetch("/api/student-submission/"+encodeURIComponent(assignment.assignmentId),{...options,headers:h}),j=await r.json() as T&{error?:string};if(r.status===401){onLogout();throw new ApiError(401,"انتهت الجلسة.")}if(!r.ok)throw new ApiError(r.status,j.error||"حدث خطأ.");return j}
  async function saveDraftSnapshot(snapshot:Answers,myRevision:number){
@@ -61,6 +63,11 @@ export default function StudentExamPage({token,assignment,studentName,className,
  // structured===false and we keep the original flat/focus rendering path below untouched.
  const norm=useMemo(()=>normalizeExamStructure(assignment.exam),[assignment.exam]);
  const structured=norm.structured;
+ // Optional cover/start page (structured exams only). Presentation-only: it gates what is RENDERED and
+ // never touches the attempt/timer/due-date logic (there is no client countdown — timing is the server
+ // dueAt, and an attempt is created on first draft-save/submit, i.e. only after the student answers).
+ const cover=useMemo<ExamCoverPage|undefined>(()=>normalizeCoverPage(assignment.exam.coverPage),[assignment.exam.coverPage]);
+ const coverDistribution=useMemo(()=>examMarksDistribution(norm),[norm]);
  const questionTotal=useMemo(()=>structured?norm.sections.reduce((n,s)=>n+s.questions.length,0):qs.length,[structured,norm,qs]);
  // Section-aware progress. For a legacy exam this reduces to the original done/qs.length behaviour
  // (single "all" section whose units are exactly the flat questions).
@@ -86,10 +93,22 @@ export default function StudentExamPage({token,assignment,studentName,className,
   return window.confirm("سيتم إرسال الحل للتصحيح. هل تريد المتابعة؟");
  }
  async function submit(){if(!state?.canAttempt||submitBusy)return;if(!confirmSubmit())return;submittingRef.current=true;setSubmitBusy(true);setError("");if(timer.current)window.clearTimeout(timer.current);const submitSnapshot=answers,submitRevision=revision.current;if(submitRevision>savedRevision.current){saveQueue.current=saveQueue.current.catch(()=>{}).then(()=>saveDraftSnapshot(submitSnapshot,submitRevision))}try{await saveQueue.current;if(savedRevision.current<submitRevision){setError("تعذر حفظ إجاباتك بسبب مشكلة في الاتصال. تحقق من الإنترنت وحاول التسليم مرة أخرى.");return}const r=await api<{result:Result;state:State}>({method:"POST",body:JSON.stringify({action:"submit",answers:submitSnapshot})});setResult(r.result);setState(r.state);setStarted(false);setAnswers({});savedRevision.current=revision.current;window.scrollTo({top:0,behavior:"smooth"})}catch(e){setError(e instanceof Error?e.message:"تعذر تسليم الواجب.")}finally{setSubmitBusy(false);submittingRef.current=false}}
- function startNext(){if(!state?.canAttempt)return;setAnswers({});setResult(state.latestResult);setStarted(true);window.scrollTo({top:0,behavior:"smooth"})}
+ function startNext(){if(!state?.canAttempt)return;setAnswers({});setResult(state.latestResult);setStarted(true);setCoverStarted(false);window.scrollTo({top:0,behavior:"smooth"})}
  function backWithoutSubmit(){if(revision.current>savedRevision.current&&!window.confirm("توجد إجابات لم تُحفظ بعد. هل تريد المغادرة على أي حال؟"))return;onBack()}
  if(loading)return <main className="student-portal" dir="rtl"><div className="platform-loading">⏳ جارٍ تجهيز صفحة الامتحان...</div></main>;
  if(!started&&result)return <main className={"interactive-exam-page exam-theme-"+theme} dir="rtl"><div className="iex-wrap"><section className="iex-result-card"><span className="platform-eyebrow">RESULT</span><h1>تم تسليم المحاولة {result.attemptNumber}</h1><div className="iex-score">{result.score}<small> / {result.totalMarks}</small></div><strong>{result.percentage}%</strong>{result.manualReviewMarks>0&&<p>العلامة الحالية مؤقتة، وهناك {result.manualReviewMarks} علامة تحتاج مراجعة المعلم.</p>}{result.finalized&&<p className="iex-finalized">✓ تم اعتماد العلامة النهائية.</p>}{result.teacherFeedback&&<div className="iex-teacher-feedback"><strong>ملاحظة المعلم</strong><span>{result.teacherFeedback}</span></div>}<p>تم الحفظ في حسابك بتاريخ {fmt(result.submittedAt)}</p><div className="iex-result-actions"><button onClick={onBack}>العودة إلى المهام</button>{state?.canAttempt&&<button className="primary" onClick={startNext}>بدء محاولة جديدة ({state.attemptsUsed+1} من {state.allowedAttempts})</button>}</div>{!state?.canAttempt&&<div className="iex-no-retry">لا توجد محاولة إضافية متاحة. يستطيع المعلم السماح بمحاولة أخرى من صفحة النتائج.</div>}</section></div></main>;
+ // Optional cover shows FIRST (structured exams only), in taking-exam mode, before any question UI.
+ // Presentation-only gate: pressing "ابدأ" reveals the existing question interface unchanged; it starts
+ // no timer and creates no attempt (autosave/attempt begin only when the student answers, as before).
+ if(structured&&cover?.enabled&&!coverStarted){
+  const rawDate=assignment.openAt||assignment.effectiveDueAt||assignment.dueAt;
+  const examDate=rawDate?new Date(rawDate).toLocaleDateString("ar"):"";
+  return <main className={"interactive-exam-page exam-theme-"+theme} dir="rtl"><div className="iex-wrap">
+   <StructuredExamCover cover={cover} title={assignment.title||assignment.exam.title||"امتحان"} distribution={coverDistribution}
+    runtime={{studentName,className:className||assignment.exam.metadata?.className||"",examDate}}
+    onStart={()=>{setCoverStarted(true);window.scrollTo({top:0,behavior:"smooth"})}}/>
+  </div></main>;
+ }
  return <main className={"interactive-exam-page exam-theme-"+theme} dir="rtl"><div className="iex-wrap">
   <header className="iex-head"><div><span className="iex-school">{assignment.exam.metadata?.school||"ExamBank 791381"}</span><h1>{assignment.title}</h1><p>{assignment.instructions}</p><div className="iex-badges"><span>{className||assignment.exam.metadata?.className||"الصف"}</span><span>{questionTotal} أسئلة</span><span>{assignment.totalMarks} علامة</span><span>المحاولة {(state?.attemptsUsed||0)+1} / {state?.allowedAttempts||assignment.maxAttempts}</span></div></div><div className="iex-student"><strong>{studentName}</strong><span>آخر موعد: {fmt(assignment.effectiveDueAt||assignment.dueAt)}</span></div></header>
   {error&&<div className="platform-error iex-error">{error}</div>}

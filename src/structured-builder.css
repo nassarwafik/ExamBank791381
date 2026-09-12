@@ -131,3 +131,14 @@
 .sb-import-stats li{background:#ecfdf5;border:1px solid #a7f3d0;color:#047857;border-radius:var(--pill,999px);padding:4px 12px;font-size:12.5px;font-weight:700}
 .sb-details{border-top:1px dashed var(--line2,#cdd5e0);padding-top:8px}
 .sb-import-actions{display:flex;justify-content:flex-end;gap:8px;flex-wrap:wrap}
+
+/* ── Cover / instructions panel (builder) ─────────────────────────────────── */
+.sb-cover-panel{border:1px solid #e5e9f0;border-radius:12px;padding:16px;margin:16px 0;background:#fbfdff;display:flex;flex-direction:column;gap:10px}
+.sb-cover-fields{display:flex;flex-direction:column;gap:14px;margin-top:4px}
+.sb-field{display:flex;flex-direction:column;gap:6px}
+.sb-check{display:inline-flex;align-items:center;gap:6px;cursor:pointer;color:#1e293b}
+.sb-check input{width:16px;height:16px}
+.sb-cover-flags{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:8px}
+.sb-cover-banner-row{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.sb-cover-banner-thumb{max-width:220px;max-height:70px;object-fit:contain;border:1px solid #e5e9f0;border-radius:8px;background:#fff}
+.sb-cover-instructions-input{min-height:120px;font-family:inherit;line-height:1.8}

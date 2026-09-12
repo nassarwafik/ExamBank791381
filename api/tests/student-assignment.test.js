@@ -174,3 +174,44 @@ describe("studentExam - legacy top-level question.answer never reaches the stude
     expect(studentExam(legacy).questions[0].answer).toEqual({});
   });
 });
+
+describe("studentExam - optional cover page reaches students safely (Q)", () => {
+  const PNG = "data:image/png;base64,iVBORw0KGgoAAAA";
+  it("keeps a safe cover (banner/instructions/flags) while still stripping answer keys", () => {
+    const snapshot = {
+      coverPage: { enabled: true, activityType: "exam", banner: { dataUrl: PNG }, instructions: "أجب عن جميع الأسئلة.", allowedMaterials: "آلة حاسبة", showStudentName: true },
+      sections: [{ id: "s", gradingPolicy: "all", questions: [
+        { examQuestionId: "q1", presentationType: "multipleChoice", text: "?", marks: 3, options: [{ text: "A" }, { text: "B" }], answer: { correctOptionIndex: 1 } },
+        { examQuestionId: "wb", presentationType: "wordBank", text: "?", marks: 2, wordBank: ["A"], fields: [{ id: "f1", correct: "A" }] }
+      ] }]
+    };
+    const out = studentExam(snapshot);
+    // cover survives
+    expect(out.coverPage.enabled).toBe(true);
+    expect(out.coverPage.banner.dataUrl).toBe(PNG);
+    expect(out.coverPage.instructions).toBe("أجب عن جميع الأسئلة.");
+    // answers still stripped
+    const json = JSON.stringify(out);
+    expect(json).not.toContain("correctOptionIndex");
+    expect(out.sections[0].questions[0].answer).toEqual({});
+    expect(out.sections[0].questions[1].fields[0].correct).toBeUndefined();
+  });
+
+  it("drops an unsafe/external banner and any teacher-only cover key", () => {
+    const out = studentExam({ coverPage: { enabled: true, banner: { dataUrl: "https://tracker.example/a.png" }, teacherSecret: "NOPE" }, sections: [] });
+    expect(out.coverPage.banner).toBeUndefined();
+    expect(out.coverPage.teacherSecret).toBeUndefined();
+    expect(JSON.stringify(out)).not.toContain("tracker.example");
+  });
+
+  it("no coverPage → student payload has no coverPage (unchanged)", () => {
+    const out = studentExam({ sections: [{ id: "s", gradingPolicy: "all", questions: [] }] });
+    expect("coverPage" in out).toBe(false);
+  });
+
+  it("still strips teacher-only metadata.import alongside a cover", () => {
+    const out = studentExam({ coverPage: { enabled: true }, metadata: { import: { originalExamId: "X" }, school: "المدرسة" }, sections: [] });
+    expect(out.metadata.import).toBeUndefined();
+    expect(out.metadata.school).toBe("المدرسة");
+  });
+});
