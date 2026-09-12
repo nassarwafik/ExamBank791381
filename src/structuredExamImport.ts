@@ -133,7 +133,9 @@ function normalizeField(raw: unknown, ctx: Ctx): Record<string, unknown> {
 // <img src={dataUrl}>. So ONLY a safe embedded raster data: URL may be kept there. Anything else — an
 // external http(s) URL (a network request / SSRF on preview or for a student), blob:/file:/javascript:,
 // an SVG (which can carry script), or another data: MIME such as data:text/html — is stripped from the
-// renderable field and moved to a NON-rendered `externalUrl` for the teacher's reference only.
+// exam entirely (only a parse warning remains). The unsafe source is NOT persisted anywhere on the
+// StructuredExam, so no teacher-only URL can ever reach the student payload (defense-in-depth: the
+// student sanitizer also drops any stray import-only keys).
 const SAFE_IMAGE_DATA_URL = /^data:image\/(png|jpe?g|webp|gif)\b/i;
 
 function classifyImageSrc(url: string): "safe" | "external" | "unsafe" {
@@ -154,14 +156,14 @@ function imageSourceIsSafe(url: string, ctx: Ctx | null, path: string): boolean 
   return false;
 }
 
-// Strips an unsafe/external renderable source from a {dataUrl|src|url} asset, keeping the original only
-// under `externalUrl` (never rendered, never fetched). Returns the (possibly replaced) asset.
+// Strips an unsafe/external renderable source from a {dataUrl|src|url} asset. The unsafe URL is NOT kept
+// anywhere on the exam (only a parse warning is raised), so it can never leak to a student. Returns the
+// (possibly replaced) asset.
 function sanitizeAsset(asset: Record<string, unknown>, ctx: Ctx | null, path: string): Record<string, unknown> {
   const url = toStr(asset.dataUrl || asset.src || asset.url);
   if (!url || imageSourceIsSafe(url, ctx, path)) return asset;
   const cleaned: Record<string, unknown> = { ...asset };
   delete cleaned.dataUrl; delete cleaned.src; delete cleaned.url;
-  cleaned.externalUrl = url;
   return cleaned;
 }
 
@@ -176,7 +178,8 @@ function sanitizeNodeImages(node: Record<string, unknown>, ctx: Ctx, path: strin
   }
 }
 
-// Sanitizes a section stimulus's single image ({ dataUrl } shape).
+// Sanitizes a section stimulus's single image ({ dataUrl } shape). An unsafe/external source is removed
+// (the image becomes sourceless) and never persisted — only a parse warning remains.
 function sanitizeStimulusImage(stimulus: Record<string, unknown>, ctx: Ctx, path: string): void {
   const img = stimulus.image;
   if (!isObj(img)) return;
@@ -184,7 +187,6 @@ function sanitizeStimulusImage(stimulus: Record<string, unknown>, ctx: Ctx, path
   if (!url || imageSourceIsSafe(url, ctx, path)) return;
   const cleaned: Record<string, unknown> = { ...img };
   delete cleaned.dataUrl; delete cleaned.src; delete cleaned.url;
-  cleaned.externalUrl = url;
   stimulus.image = cleaned;
 }
 

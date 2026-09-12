@@ -1,5 +1,7 @@
-// @vitest-environment happy-dom
-import { describe, it, expect } from "vitest";
+// NOTE: no `@vitest-environment` directive — these tests run in the DEFAULT node environment, with NO
+// browser DOM. The HTML parser uses parse5 (a pure data parser), so it needs no DOMParser/document and
+// cannot issue network requests; the suite passing in plain node is itself proof of that.
+import { describe, it, expect, vi } from "vitest";
 import { gradeExam } from "../api/src/lib/assignment-grading.js";
 import { sanitizeExamForStudent } from "../api/src/lib/student-exam-sanitize.js";
 import { parseStructuredExamHtml, importStructuredExam } from "./structuredExamHtmlParser";
@@ -29,7 +31,7 @@ describe("HTML embedded JSON (Mode A)", () => {
     expect(r.sourceKind).toBe("html-embedded-json");
     expect(r.format).toBe("html");
     expect(findQ(r.exam!, "q1")!.text).toBe("س");
-    // DOMParser never executes scripts:
+    // parse5 never executes scripts (by construction — it builds plain data nodes, not live scripts):
     expect((globalThis as { __pwned?: boolean }).__pwned).toBeUndefined();
   });
 
@@ -300,15 +302,52 @@ describe("HTML MCQ without a single correct option is repairable, not fatal (#2)
 
 // #3 — an external stimulus image URL in annotated HTML must never survive as a renderable dataUrl.
 describe("HTML external stimulus image is not renderable (#3)", () => {
-  it("G(HTML): external src is stripped to externalUrl with a warning; base64 survives", () => {
+  it("G(HTML): external src is stripped entirely (not persisted) with a warning; base64 survives", () => {
     const ext = parseStructuredExamHtml(`<article data-exambank="structured-exam"><section data-section data-grading-policy="all"><div data-stimulus data-group-id="g"><img data-stimulus-image src="https://example.com/a.png"></div><article data-question data-id="q" data-type="shortAnswer" data-marks="1" data-group-id="g"><p data-question-text>س</p></article></section></article>`);
     const img = ext.exam!.sections[0].stimuli!.g.image as { dataUrl?: string; externalUrl?: string };
     expect(img.dataUrl).toBeUndefined();
-    expect(img.externalUrl).toBe("https://example.com/a.png");
+    expect(img.externalUrl).toBeUndefined();
+    expect(JSON.stringify(ext.exam)).not.toContain("https://example.com/a.png");
     expect(ext.parseWarnings.some(w => w.code === "EXTERNAL_IMAGE_NOT_EMBEDDED")).toBe(true);
 
     const safe = parseStructuredExamHtml(`<article data-exambank="structured-exam"><section data-section data-grading-policy="all"><div data-stimulus data-group-id="g"><img data-stimulus-image src="data:image/png;base64,AAA"></div><article data-question data-id="q" data-type="shortAnswer" data-marks="1" data-group-id="g"><p data-question-text>س</p></article></section></article>`);
     expect((safe.exam!.sections[0].stimuli!.g.image as { dataUrl?: string }).dataUrl).toBe("data:image/png;base64,AAA");
+  });
+});
+
+// #1 — the parser is network-incapable by construction (parse5, no browser DOM). Prove it extracts the
+// key data structures with NO DOM present and that parsing an image/iframe issues NO network request.
+describe("parse5 HTML parser is network-incapable and DOM-free (#1)", () => {
+  it("parses an <img> src as inert data and calls no network API (fetch/XHR) during import", () => {
+    const fetchSpy = vi.fn();
+    const origFetch = (globalThis as Record<string, unknown>).fetch;
+    const origXHR = (globalThis as Record<string, unknown>).XMLHttpRequest;
+    const origImage = (globalThis as Record<string, unknown>).Image;
+    (globalThis as Record<string, unknown>).fetch = fetchSpy;
+    class XHRSpy { open() { fetchSpy(); } send() { fetchSpy(); } setRequestHeader() {} }
+    (globalThis as Record<string, unknown>).XMLHttpRequest = XHRSpy;
+    (globalThis as Record<string, unknown>).Image = function ImageSpy() { fetchSpy(); } as unknown;
+    try {
+      const r = parseStructuredExamHtml(`<article data-exambank="structured-exam"><section data-section data-grading-policy="all"><div data-stimulus data-group-id="g"><img data-stimulus-image src="https://tracker.example/pixel?leak=1"><iframe src="https://tracker.example/frame"></iframe></div><article data-question data-id="q" data-type="shortAnswer" data-marks="1"><p data-question-text>س</p></article></section></article>`);
+      // The src was READ as data (then stripped as external) — proving the parser saw it without fetching.
+      expect(r.parseWarnings.some(w => w.code === "EXTERNAL_IMAGE_NOT_EMBEDDED")).toBe(true);
+      expect(fetchSpy).not.toHaveBeenCalled(); // no request issued while parsing
+    } finally {
+      (globalThis as Record<string, unknown>).fetch = origFetch;
+      (globalThis as Record<string, unknown>).XMLHttpRequest = origXHR;
+      (globalThis as Record<string, unknown>).Image = origImage;
+    }
+  });
+
+  it("extracts stimulus img src, table, CLI and compound parts without a browser DOM", () => {
+    // (No happy-dom here: if this relied on document/DOMParser it would throw in node.)
+    const r = parseStructuredExamHtml(ANNOTATED);
+    expect(r.exam!.sections[0].stimuli!.topo.image!.dataUrl).toBe("data:image/png;base64,AAA"); // img src read
+    const tbl = findQ(r.exam!, "tbl1")!;
+    expect(tbl.tableHeaders).toEqual(["VLAN", "Network", "Gateway"]);            // table read
+    expect(tbl.fields!.filter(f => f.row === 0)).toHaveLength(2);
+    expect(findQ(r.exam!, "cli1")!.cli).toContain("[[vlan]]");                    // CLI read
+    expect(findQ(r.exam!, "q25")!.parts).toHaveLength(2);                         // compound parts read
   });
 });
 

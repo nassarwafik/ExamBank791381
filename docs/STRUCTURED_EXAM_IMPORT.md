@@ -36,16 +36,26 @@ Ready-to-copy templates ship in `public/templates/`:
 - **Grading policy and answer unit are never guessed.** A missing/invalid `gradingPolicy` or
   `answerUnit` is preserved as-is and flagged (`GRADING_POLICY_REQUIRED` / `GRADING_POLICY_INVALID` /
   `ANSWER_UNIT_INVALID`) so you choose it explicitly — import never silently turns a section into
-  “grade everything”.
+  “grade everything”. A `firstNAnswered` section additionally **requires** an explicit `answerUnit`
+  (`question` or `part`): a missing unit is `ANSWER_UNIT_REQUIRED` (blocks finalization, opens as a draft),
+  because the number of graded units is academically load-bearing and must not be inferred.
+- **Import provenance is teacher-only.** `metadata.import` (source file name, original examId, format,
+  timestamp) is kept on the teacher's exam but **stripped from the student payload** by
+  `student-exam-sanitize.js`, alongside answer keys.
 - Size limit ≈ **10 MB**, measured in real UTF‑8 **bytes** (large enough for a few embedded base64 images).
 - Nothing is auto‑saved. You choose **حفظ مسودة** or **اعتماد نهائي** in the builder.
 
 ## Security
 
-Imported files are **data, not UI**. HTML is parsed with `DOMParser("text/html")`, which builds an
-inert tree and **never** runs `<script>`, inline handlers, or network/resource loads. Imported HTML is
-never mounted and never passed to `innerHTML`/`dangerouslySetInnerHTML`. For the embedded‑JSON mode only
-the `textContent` of the single `application/json` script is read; all other scripts are ignored.
+Imported files are **data, not UI**, and the HTML parser is **network‑incapable by construction**. HTML
+is parsed with **parse5** (a pure, spec‑compliant tokenizer/tree‑builder that produces plain JS objects),
+**not** the browser's `DOMParser`. parse5 never constructs a live `<img>`/`<iframe>`/`<link>`/`<script>`,
+so **parsing itself cannot fetch any `src`/`href`/`srcset`/`style` resource**, cannot run scripts or
+inline handlers, and nothing is ever mounted or passed to `innerHTML`/`dangerouslySetInnerHTML`. (An
+inert `DOMParser` document disables scripts but can still trigger resource downloads for `<img>`/`<iframe>`
+while parsing — which is why a pure parser is used instead.) For the embedded‑JSON mode only the text of
+the single `application/json` script is read; all other scripts are ignored. parse5 loads only inside the
+lazily‑code‑split import dialog, so it never enters the main app bundle.
 
 **Images.** A renderable image source (`stimulus.image.dataUrl`, question `image.assets[].dataUrl`,
 `images[]`) is rendered verbatim as `<img src=…>`, so only a **safe embedded raster data URL** is kept

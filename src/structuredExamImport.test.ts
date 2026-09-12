@@ -2,6 +2,7 @@ import { describe, it, expect } from "vitest";
 import { gradeExam } from "../api/src/lib/assignment-grading.js";
 import { sanitizeExamForStudent } from "../api/src/lib/student-exam-sanitize.js";
 import { parseStructuredExamJson } from "./structuredExamImport";
+import { hasBlockingErrors } from "./examQuality";
 import { toSavedStructuredExam } from "./examBuilderState";
 import type { StructuredExam } from "./examTypes";
 
@@ -192,6 +193,35 @@ describe("grading policy / answer unit are never guessed (JSON)", () => {
     expect(r.validationErrors.some(i => i.code === "ANSWER_UNIT_INVALID")).toBe(true);
     expect(r.canOpen).toBe(true);
   });
+
+  // firstNAnswered grades a number of answered UNITS, so the unit is required (never guessed).
+  const firstN = (extra: Record<string, unknown>) => JSON.stringify({
+    sections: [{ id: "s", gradingPolicy: "firstNAnswered", maxMarks: 40, requiredAnswers: 2, ...extra,
+      questions: [{ examQuestionId: "a", presentationType: "shortAnswer", text: "أ", marks: 1 }, { examQuestionId: "b", presentationType: "shortAnswer", text: "ب", marks: 1 }] }]
+  });
+
+  it("firstN + MISSING answerUnit → ANSWER_UNIT_REQUIRED (blocks final) but opens as a draft", () => {
+    const r = parseStructuredExamJson(firstN({}));
+    expect(r.exam!.sections[0].answerUnit).toBeUndefined(); // never guessed to "question"
+    expect(r.validationErrors.some(i => i.code === "ANSWER_UNIT_REQUIRED")).toBe(true);
+    expect(hasBlockingErrors(r.validationErrors)).toBe(true); // finalization blocked
+    expect(r.parseErrors).toEqual([]);
+    expect(r.canOpen).toBe(true);                            // draft opens
+  });
+
+  it("firstN + INVALID answerUnit → ANSWER_UNIT_INVALID", () => {
+    const r = parseStructuredExamJson(firstN({ answerUnit: "chapter" }));
+    expect(r.exam!.sections[0].answerUnit).toBe("chapter");
+    expect(r.validationErrors.some(i => i.code === "ANSWER_UNIT_INVALID")).toBe(true);
+    expect(r.canOpen).toBe(true);
+  });
+
+  it("firstN + \"question\" and firstN + \"part\" are both valid units (no unit error)", () => {
+    for (const u of ["question", "part"]) {
+      const r = parseStructuredExamJson(firstN({ answerUnit: u }));
+      expect(r.validationErrors.some(i => i.code === "ANSWER_UNIT_REQUIRED" || i.code === "ANSWER_UNIT_INVALID")).toBe(false);
+    }
+  });
 });
 
 // External/unsafe image sources must never become a renderable dataUrl (no request/SSRF on preview or
@@ -208,11 +238,12 @@ describe("image-source hardening (JSON)", () => {
     expect(r.parseWarnings.some(w => w.code === "EXTERNAL_IMAGE_NOT_EMBEDDED" || w.code === "UNSAFE_IMAGE_SOURCE")).toBe(false);
   });
 
-  it("G: an external https stimulus URL is stripped (no dataUrl) with a warning; original kept only as externalUrl", () => {
+  it("G: an external https stimulus URL is stripped entirely (not persisted anywhere) with a warning", () => {
     const r = parseStructuredExamJson(withStimImage("https://example.com/a.png"));
     const img = r.exam!.sections[0].stimuli!.g.image as { dataUrl?: string; externalUrl?: string };
     expect(img.dataUrl).toBeUndefined();          // renderer can never issue a request
-    expect(img.externalUrl).toBe("https://example.com/a.png");
+    expect(img.externalUrl).toBeUndefined();      // Option A: the URL is not kept teacher-side either
+    expect(JSON.stringify(r.exam)).not.toContain("https://example.com/a.png"); // nowhere on the exam
     expect(r.parseWarnings.some(w => w.code === "EXTERNAL_IMAGE_NOT_EMBEDDED")).toBe(true);
     expect(r.stats.images).toBe(0);
   });
@@ -230,16 +261,46 @@ describe("image-source hardening (JSON)", () => {
     expect(r.parseWarnings.some(w => w.code === "UNSAFE_IMAGE_SOURCE")).toBe(true);
   });
 
-  it("H: an external question-image URL is stripped from the renderable asset with a warning", () => {
+  it("H: an external question-image URL is stripped from the asset (not persisted) with a warning", () => {
     const r = parseStructuredExamJson(JSON.stringify({
       sections: [{ id: "s", gradingPolicy: "all", questions: [{ examQuestionId: "q", presentationType: "shortAnswer", text: "س", marks: 1, image: { exists: true, visible: true, assets: [{ dataUrl: "https://evil.example/x.png" }] } }] }]
     }));
     const asset = (r.exam!.sections[0].questions[0].image as { assets: { dataUrl?: string; externalUrl?: string }[] }).assets[0];
     expect(asset.dataUrl).toBeUndefined();
-    expect(asset.externalUrl).toBe("https://evil.example/x.png");
+    expect(asset.externalUrl).toBeUndefined();
     expect(r.parseWarnings.some(w => w.code === "EXTERNAL_IMAGE_NOT_EMBEDDED")).toBe(true);
-    // Security: no external URL survives anywhere a renderer reads (dataUrl), even after save+sanitize.
+    // Security: the external URL survives nowhere — not on the imported exam, not in the student payload.
+    expect(JSON.stringify(r.exam)).not.toContain("https://evil.example/x.png");
     const safe = JSON.stringify(sanitizeExamForStudent(toSavedStructuredExam(r.exam!)));
-    expect(safe).not.toContain('"dataUrl":"https://evil.example/x.png"');
+    expect(safe).not.toContain("https://evil.example/x.png");
+  });
+});
+
+// #3(3) — teacher-only import provenance (metadata.import) must never reach the student payload.
+describe("import metadata does not reach students", () => {
+  const imported = () => parseStructuredExamJson(JSON.stringify(twoSection)).exam!;
+
+  it("the imported (teacher) exam carries metadata.import, but the student payload does not", () => {
+    const exam = imported();
+    expect((exam.metadata as { import?: unknown }).import).toBeTruthy(); // provenance kept teacher-side
+    const student = sanitizeExamForStudent(toSavedStructuredExam(exam)) as { metadata?: { import?: unknown } };
+    expect(student.metadata && "import" in student.metadata).toBe(false);
+    expect(JSON.stringify(student)).not.toContain("originalExamId");
+    expect(JSON.stringify(student)).not.toContain("sourceFileName");
+  });
+
+  it("legitimate non-import metadata is preserved for students", () => {
+    const exam = imported();
+    (exam.metadata as Record<string, unknown>).presentationNote = "يُعرض للطالب";
+    const student = sanitizeExamForStudent(exam) as { metadata?: Record<string, unknown> };
+    expect(student.metadata!.presentationNote).toBe("يُعرض للطالب");
+    expect("import" in student.metadata!).toBe(false);
+  });
+
+  it("a stray externalUrl on an image is stripped by the student sanitizer (defense in depth)", () => {
+    const teacher = { sections: [{ id: "s", gradingPolicy: "all", stimuli: { g: { image: { externalUrl: "https://leak.example/x.png" } } }, questions: [{ examQuestionId: "q", presentationType: "shortAnswer", text: "س", marks: 1, image: { assets: [{ externalUrl: "https://leak.example/y.png" }] }, parts: [] }] }] };
+    const student = JSON.stringify(sanitizeExamForStudent(teacher));
+    expect(student).not.toContain("externalUrl");
+    expect(student).not.toContain("leak.example");
   });
 });

@@ -17,9 +17,29 @@
 const FLAG_SECRET_KEYS = ["correct", "isCorrect", "correctText", "correctOptionIndex", "correctOptionValue", "correctOptionLabel", "solution", "expectedAnswer", "answerKey"];
 // Teacher-side / secret keys that may appear on a question or a compound part.
 const NODE_SECRET_KEYS = ["teacherNote", "aiInstruction", "hint", "history", "redoStack", "explanation", "rationale", ...FLAG_SECRET_KEYS];
+// Import-only, teacher-review keys that must never reach a student (e.g. the original URL of an external
+// image the importer refused to embed). Stripped from every image object/asset (defense in depth — the
+// importer already avoids persisting these on the exam).
+const IMPORT_ONLY_IMAGE_KEYS = ["externalUrl"];
 
 function stripKeys(obj, keys) {
   for (const k of keys) if (k in obj) delete obj[k];
+}
+
+// Removes import-only keys from an image object ({ dataUrl, assets: [...] }) and its assets.
+function sanitizeImageForStudent(image) {
+  if (!image || typeof image !== "object") return image;
+  if (Array.isArray(image)) return image.map(sanitizeImageAssetForStudent);
+  const out = { ...image };
+  stripKeys(out, IMPORT_ONLY_IMAGE_KEYS);
+  if (Array.isArray(out.assets)) out.assets = out.assets.map(sanitizeImageAssetForStudent);
+  return out;
+}
+function sanitizeImageAssetForStudent(asset) {
+  if (!asset || typeof asset !== "object") return asset;
+  const out = { ...asset };
+  stripKeys(out, IMPORT_ONLY_IMAGE_KEYS);
+  return out;
 }
 
 function sanitizeOptionForStudent(option) {
@@ -42,6 +62,8 @@ function sanitizePartForStudent(part) {
   const out = { ...part }; // keeps id / label / text / textHtml / marks / type / wordBank / cli / tableHeaders / tableRows / image(s) / groupId
   delete out.answer; // remove part.answer (grading key)
   stripKeys(out, NODE_SECRET_KEYS);
+  if (out.image) out.image = sanitizeImageForStudent(out.image);
+  if (Array.isArray(out.images)) out.images = out.images.map(sanitizeImageAssetForStudent);
   if (Array.isArray(out.options)) out.options = out.options.map(sanitizeOptionForStudent);
   if (Array.isArray(out.fields)) out.fields = out.fields.map(sanitizeFieldForStudent);
   if (Array.isArray(out.parts)) out.parts = out.parts.map(sanitizePartForStudent); // defensive: nested parts
@@ -54,6 +76,8 @@ function sanitizeQuestionForStudent(question) {
   // then strip any additional secret flags and recurse into the new structured children.
   const out = { ...question, answer: {}, hint: "", teacherNote: "", aiInstruction: "", history: [], redoStack: [] };
   stripKeys(out, ["explanation", "rationale", ...FLAG_SECRET_KEYS]);
+  if (out.image) out.image = sanitizeImageForStudent(out.image);
+  if (Array.isArray(out.images)) out.images = out.images.map(sanitizeImageAssetForStudent);
   if (Array.isArray(out.options)) out.options = out.options.map(sanitizeOptionForStudent);
   if (Array.isArray(out.fields)) out.fields = out.fields.map(sanitizeFieldForStudent);
   if (Array.isArray(out.parts)) out.parts = out.parts.map(sanitizePartForStudent);
@@ -64,15 +88,24 @@ function sanitizeSectionForStudent(section) {
   if (!section || typeof section !== "object") return section;
   const out = { ...section }; // keeps id / title / instructions / gradingPolicy / maxMarks / requiredAnswers / answerUnit / stimuli
   if (Array.isArray(out.questions)) out.questions = out.questions.map(sanitizeQuestionForStudent);
+  if (out.stimuli && typeof out.stimuli === "object" && !Array.isArray(out.stimuli)) {
+    const stimuli = {};
+    for (const [key, stim] of Object.entries(out.stimuli)) {
+      stimuli[key] = stim && typeof stim === "object" ? { ...stim, ...(stim.image ? { image: sanitizeImageForStudent(stim.image) } : {}) } : stim;
+    }
+    out.stimuli = stimuli;
+  }
   return out;
 }
 
 // The one entry point. Deep-copies, drops revisionHistory, and sanitizes both legacy questions[] and
 // structured sections[].questions[]. Top-level presentation fields (presentationTheme, metadata, …)
-// pass through unchanged.
+// pass through unchanged EXCEPT teacher/import-only provenance (metadata.import), which is removed so
+// import details (source file name, original examId, …) never reach a student.
 function sanitizeExamForStudent(exam) {
   const x = JSON.parse(JSON.stringify(exam || {}));
   x.revisionHistory = [];
+  if (x.metadata && typeof x.metadata === "object" && "import" in x.metadata) delete x.metadata.import;
   if (Array.isArray(x.questions)) x.questions = x.questions.map(sanitizeQuestionForStudent);
   if (Array.isArray(x.sections)) x.sections = x.sections.map(sanitizeSectionForStudent);
   return x;
