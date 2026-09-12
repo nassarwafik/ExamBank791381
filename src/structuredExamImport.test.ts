@@ -103,11 +103,11 @@ describe("JSON import", () => {
     expect(r.stats.images).toBe(1);
   });
 
-  it("JSON 11: an unknown question type is a parse error (never silently shortAnswer)", () => {
+  it("JSON 11: an unknown question type is a FATAL parse error (never silently shortAnswer, blocks opening)", () => {
     const r = parseStructuredExamJson(JSON.stringify({ sections: [{ id: "s", questions: [{ examQuestionId: "q", presentationType: "somethingElse", text: "س", marks: 1 }] }] }));
     expect(r.parseErrors.some(e => e.code === "UNSUPPORTED_QUESTION_TYPE")).toBe(true);
     expect(r.exam!.sections[0].questions[0].presentationType).toBe("somethingElse"); // kept, not guessed
-    expect(r.canOpen).toBe(true); // still openable as a draft to fix
+    expect(r.canOpen).toBe(false); // a type we cannot interpret safely blocks opening
   });
 
   it("JSON 12: malformed JSON returns a clean error, no crash", () => {
@@ -145,5 +145,101 @@ describe("JSON import", () => {
     expect(g.score).toBeGreaterThan(0);
     const safe = JSON.stringify(sanitizeExamForStudent(reopened));
     expect(safe).not.toContain("correctOptionIndex");
+  });
+});
+
+// Contract: FATAL parse errors block opening; repairable content problems open as a draft. (#1/#2)
+describe("canOpen contract (JSON)", () => {
+  it("A: malformed JSON → fatal parse error → canOpen false", () => {
+    const r = parseStructuredExamJson("{ nope ");
+    expect(r.parseErrors.some(e => e.code === "INVALID_JSON")).toBe(true);
+    expect(r.canOpen).toBe(false);
+  });
+
+  it("B: unknown question type → fatal parse error → canOpen false", () => {
+    const r = parseStructuredExamJson(JSON.stringify({ sections: [{ id: "s", gradingPolicy: "all", questions: [{ presentationType: "wat", text: "س", marks: 1 }] }] }));
+    expect(r.parseErrors.some(e => e.code === "UNSUPPORTED_QUESTION_TYPE")).toBe(true);
+    expect(r.canOpen).toBe(false);
+  });
+
+  it("compound-inside-a-part → fatal parse error → canOpen false", () => {
+    const r = parseStructuredExamJson(JSON.stringify({ sections: [{ id: "s", gradingPolicy: "all", questions: [{ presentationType: "compound", text: "س", marks: 2, parts: [{ type: "compound", text: "ب", marks: 1 }] }] }] }));
+    expect(r.parseErrors.some(e => e.code === "PART_CANNOT_BE_COMPOUND")).toBe(true);
+    expect(r.canOpen).toBe(false);
+  });
+});
+
+// Grading rules are never guessed on import; they surface as validation problems the teacher fixes. (#5)
+describe("grading policy / answer unit are never guessed (JSON)", () => {
+  it("K: a MISSING grading policy never becomes \"all\" — it is a repairable validation error, still openable", () => {
+    const r = parseStructuredExamJson(JSON.stringify({ sections: [{ id: "s", maxMarks: 10, questions: [{ presentationType: "shortAnswer", text: "س", marks: 1 }] }] }));
+    expect(r.exam!.sections[0].gradingPolicy).toBeUndefined(); // NOT silently "all"
+    expect(r.validationErrors.some(i => i.code === "GRADING_POLICY_REQUIRED")).toBe(true);
+    expect(r.parseErrors).toEqual([]);
+    expect(r.canOpen).toBe(true);
+  });
+
+  it("K2: an INVALID grading policy is preserved (not coerced to \"all\") and flagged", () => {
+    const r = parseStructuredExamJson(JSON.stringify({ sections: [{ id: "s", gradingPolicy: "bestGuess", questions: [{ presentationType: "shortAnswer", text: "س", marks: 1 }] }] }));
+    expect(r.exam!.sections[0].gradingPolicy).toBe("bestGuess"); // NOT "all"
+    expect(r.validationErrors.some(i => i.code === "GRADING_POLICY_INVALID")).toBe(true);
+    expect(r.canOpen).toBe(true);
+  });
+
+  it("L: an INVALID answerUnit is preserved (not coerced to \"question\") and flagged", () => {
+    const r = parseStructuredExamJson(JSON.stringify({ sections: [{ id: "s", gradingPolicy: "capScore", maxMarks: 10, answerUnit: "sentence", questions: [{ presentationType: "shortAnswer", text: "س", marks: 1 }] }] }));
+    expect(r.exam!.sections[0].answerUnit).toBe("sentence"); // NOT "question"
+    expect(r.validationErrors.some(i => i.code === "ANSWER_UNIT_INVALID")).toBe(true);
+    expect(r.canOpen).toBe(true);
+  });
+});
+
+// External/unsafe image sources must never become a renderable dataUrl (no request/SSRF on preview or
+// for a student, no SVG script). Applies to JSON stimuli and question images alike. (#3)
+describe("image-source hardening (JSON)", () => {
+  const withStimImage = (dataUrl: string) => JSON.stringify({
+    sections: [{ id: "s", gradingPolicy: "all", stimuli: { g: { title: "t", image: { dataUrl } } }, questions: [{ examQuestionId: "q", groupId: "g", presentationType: "shortAnswer", text: "س", marks: 1 }] }]
+  });
+
+  it("I: a safe base64 PNG stimulus survives as a renderable dataUrl", () => {
+    const r = parseStructuredExamJson(withStimImage("data:image/png;base64,AAAA"));
+    expect((r.exam!.sections[0].stimuli!.g.image as { dataUrl?: string }).dataUrl).toBe("data:image/png;base64,AAAA");
+    expect(r.stats.images).toBe(1);
+    expect(r.parseWarnings.some(w => w.code === "EXTERNAL_IMAGE_NOT_EMBEDDED" || w.code === "UNSAFE_IMAGE_SOURCE")).toBe(false);
+  });
+
+  it("G: an external https stimulus URL is stripped (no dataUrl) with a warning; original kept only as externalUrl", () => {
+    const r = parseStructuredExamJson(withStimImage("https://example.com/a.png"));
+    const img = r.exam!.sections[0].stimuli!.g.image as { dataUrl?: string; externalUrl?: string };
+    expect(img.dataUrl).toBeUndefined();          // renderer can never issue a request
+    expect(img.externalUrl).toBe("https://example.com/a.png");
+    expect(r.parseWarnings.some(w => w.code === "EXTERNAL_IMAGE_NOT_EMBEDDED")).toBe(true);
+    expect(r.stats.images).toBe(0);
+  });
+
+  it("J: an unsafe data:image/svg+xml stimulus is stripped with a warning", () => {
+    const r = parseStructuredExamJson(withStimImage("data:image/svg+xml,<svg onload=alert(1)></svg>"));
+    const img = r.exam!.sections[0].stimuli!.g.image as { dataUrl?: string };
+    expect(img.dataUrl).toBeUndefined();
+    expect(r.parseWarnings.some(w => w.code === "UNSAFE_IMAGE_SOURCE")).toBe(true);
+  });
+
+  it("J2: an unsafe data:text/html stimulus is stripped with a warning", () => {
+    const r = parseStructuredExamJson(withStimImage("data:text/html,<script>alert(1)</script>"));
+    expect((r.exam!.sections[0].stimuli!.g.image as { dataUrl?: string }).dataUrl).toBeUndefined();
+    expect(r.parseWarnings.some(w => w.code === "UNSAFE_IMAGE_SOURCE")).toBe(true);
+  });
+
+  it("H: an external question-image URL is stripped from the renderable asset with a warning", () => {
+    const r = parseStructuredExamJson(JSON.stringify({
+      sections: [{ id: "s", gradingPolicy: "all", questions: [{ examQuestionId: "q", presentationType: "shortAnswer", text: "س", marks: 1, image: { exists: true, visible: true, assets: [{ dataUrl: "https://evil.example/x.png" }] } }] }]
+    }));
+    const asset = (r.exam!.sections[0].questions[0].image as { assets: { dataUrl?: string; externalUrl?: string }[] }).assets[0];
+    expect(asset.dataUrl).toBeUndefined();
+    expect(asset.externalUrl).toBe("https://evil.example/x.png");
+    expect(r.parseWarnings.some(w => w.code === "EXTERNAL_IMAGE_NOT_EMBEDDED")).toBe(true);
+    // Security: no external URL survives anywhere a renderer reads (dataUrl), even after save+sanitize.
+    const safe = JSON.stringify(sanitizeExamForStudent(toSavedStructuredExam(r.exam!)));
+    expect(safe).not.toContain('"dataUrl":"https://evil.example/x.png"');
   });
 });

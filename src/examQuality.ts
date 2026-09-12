@@ -73,6 +73,22 @@ export function validateStructuredExam(exam: StructuredExam): StructuredIssue[] 
 }
 
 function validateSection(section: BuilderSection, label: string, add: Add): void {
+  // Grading policy and answer unit are NEVER guessed (e.g. on import) — a wrong default would silently
+  // change the exam's academic meaning. Both must be explicitly one of the known values. `as` widening
+  // is intentional: the static type is a closed union, but a loaded/imported section may carry anything.
+  const unit = section.answerUnit as string | null | undefined;
+  if (unit != null && unit !== "question" && unit !== "part") {
+    add("error", "ANSWER_UNIT_INVALID", "وحدة الإجابة في القسم «" + label + "» غير صالحة (يجب أن تكون «سؤال» أو «بند»).", { sectionId: section.id });
+  }
+  const policy = section.gradingPolicy as string | null | undefined;
+  if (policy == null || policy === "") {
+    add("error", "GRADING_POLICY_REQUIRED", "القسم «" + label + "» بلا قاعدة تصحيح — اختر «تصحيح جميع الأسئلة» أو «سقف للعلامة» أو «أول عدد محدد».", { sectionId: section.id });
+    return; // policy-dependent checks below are meaningless without a valid policy
+  }
+  if (policy !== "all" && policy !== "capScore" && policy !== "firstNAnswered") {
+    add("error", "GRADING_POLICY_INVALID", "قاعدة تصحيح غير معروفة «" + policy + "» في القسم «" + label + "» — اختر قاعدة صالحة.", { sectionId: section.id });
+    return;
+  }
   // capScore and firstNAnswered both require an explicit positive section maximum — the real 791381
   // sections always state one, and a missing cap would let "all"-style raw totals leak past the
   // intended maximum. "all" must have NO cap. A present-but-invalid value is always an error.

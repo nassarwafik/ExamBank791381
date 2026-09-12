@@ -15,6 +15,8 @@ import {
   normalizeImportedExam,
   finalizeResult,
   coerceBool,
+  canonicalizeType,
+  typeAliasMessage,
   parseStructuredExamJson,
   MAX_IMPORT_BYTES,
   type StructuredImportResult,
@@ -53,8 +55,11 @@ function parseBody(el: Element, type: string, ctx: Ctx, path: string): Record<st
       const correctIdx = optEls.findIndex(o => coerceBool(o.getAttribute("data-correct")) === true);
       const correctCount = optEls.filter(o => coerceBool(o.getAttribute("data-correct")) === true).length;
       body.options = options;
-      if (correctCount === 0) ctx.errors.push({ code: "MCQ_NO_CORRECT", message: "سؤال اختيار من متعدد بلا خيار صحيح في " + path + ".", path });
-      else if (correctCount > 1) ctx.errors.push({ code: "MCQ_MULTIPLE_CORRECT", message: "سؤال اختيار من متعدد بأكثر من خيار صحيح في " + path + ".", path });
+      // Zero / multiple data-correct is a READABLE structure, not a parse failure: keep the options, do
+      // NOT guess an answer (leave it unset), and warn. validateStructuredExam then emits its normal
+      // blocking MISSING_ANSWER validation error, so the teacher opens as a draft and picks the answer.
+      if (correctCount === 0) ctx.warnings.push({ code: "MCQ_NO_CORRECT", message: "سؤال اختيار من متعدد بلا خيار صحيح — تُترك الإجابة ليحددها المعلّم في " + path + ".", path });
+      else if (correctCount > 1) ctx.warnings.push({ code: "MCQ_MULTIPLE_CORRECT", message: "سؤال اختيار من متعدد بأكثر من خيار صحيح — لم تُحدَّد إجابة في " + path + ".", path });
       else body.answer = { correctOptionIndex: correctIdx };
       break;
     }
@@ -142,8 +147,20 @@ function parseBody(el: Element, type: string, ctx: Ctx, path: string): Record<st
 function readType(el: Element): string { return attr(el, "data-type"); }
 function questionText(el: Element): string { return childText(el, "[data-question-text]") || childText(el, "[data-text]"); }
 
+// Resolve the CANONICAL type from a possibly-aliased data-type BEFORE the body is parsed, so an alias
+// like data-type="mcq" is parsed as multipleChoice (options + answer) instead of falling through to an
+// empty body. The alias warning is emitted here exactly once; the canonical type is what gets stored,
+// so downstream normalizeImportedExam sees a canonical type and does not warn again. An unsupported type
+// is returned verbatim (no warning here) and reported once as a fatal error during normalization.
+function resolveType(el: Element, ctx: Ctx, path: string): string {
+  const rawType = readType(el);
+  const { type, isAlias } = canonicalizeType(rawType);
+  if (isAlias) ctx.warnings.push({ code: "TYPE_ALIAS_NORMALIZED", message: typeAliasMessage(rawType, type), path });
+  return type;
+}
+
 function parseQuestionEl(el: Element, ctx: Ctx, path: string): Record<string, unknown> {
-  const type = readType(el);
+  const type = resolveType(el, ctx, path);
   const q: Record<string, unknown> = {
     examQuestionId: attr(el, "data-id") || undefined,
     presentationType: type,
@@ -159,7 +176,7 @@ function parseQuestionEl(el: Element, ctx: Ctx, path: string): Record<string, un
 }
 
 function parsePartEl(el: Element, ctx: Ctx, path: string): Record<string, unknown> {
-  const type = readType(el);
+  const type = resolveType(el, ctx, path);
   const p: Record<string, unknown> = {
     id: attr(el, "data-id") || undefined,
     label: attr(el, "data-label") || undefined,
@@ -176,8 +193,9 @@ function parseStimulus(el: Element): { groupId: string; stimulus: Record<string,
   const imgEl = el.querySelector("[data-stimulus-image], img");
   const src = imgEl ? (imgEl.getAttribute("src") || "") : "";
   const stimulus: Record<string, unknown> = { title: attr(el, "data-title") || undefined, text: childText(el, "[data-stimulus-text]") || undefined };
-  if (src && /^data:/i.test(src)) stimulus.image = { dataUrl: src };
-  else if (src) stimulus.image = { dataUrl: src }; // preserved as-is; import warns on external URLs
+  // Store the raw src; normalizeSection → sanitizeStimulusImage keeps it only if it is a safe embedded
+  // image and otherwise strips it to a non-rendered externalUrl (external/SVG/data:text-html are unsafe).
+  if (src) stimulus.image = { dataUrl: src };
   return { groupId, stimulus };
 }
 
@@ -246,11 +264,12 @@ export function parseStructuredExamHtml(text: string, fileName = "exam.html"): S
 }
 
 // ── Format dispatcher ──────────────────────────────────────────────────────
-// Picks JSON vs HTML by extension, falling back to a light content sniff. Enforces the size guard
-// (imported text is measured in UTF-16 code units — good enough for the ~10 MB limit).
+// Picks JSON vs HTML by extension, falling back to a light content sniff. Enforces the size guard on the
+// real UTF-8 BYTE length (String.length counts UTF-16 code units, which under-counts Arabic/non-ASCII
+// content and would let an oversized file slip through — matches the dialog's File.size byte check).
 export function importStructuredExam(fileName: string, text: string): StructuredImportResult {
   const lower = (fileName || "").toLowerCase();
-  if (text.length > MAX_IMPORT_BYTES) {
+  if (new TextEncoder().encode(text).byteLength > MAX_IMPORT_BYTES) {
     return finalizeResult(null, /\.html?$/.test(lower) ? "html" : "json", null, fileName, {
       errors: [{ code: "FILE_TOO_LARGE", message: "الملف كبير جدًّا (الحد الأقصى ~10 ميغابايت)." }],
       warnings: [],

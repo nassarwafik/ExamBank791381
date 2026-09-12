@@ -24,10 +24,20 @@ Ready-to-copy templates ship in `public/templates/`:
 - Missing ids (section / question / part / field) are **generated**; supplied ids are preserved.
   `displayNumber` is preserved but is **never** used as identity.
 - A structured exam never keeps a top‑level `questions[]` (only `sections[].questions[]`).
-- **Parse errors** (bad JSON, no `sections`, unsupported type, …) are separate from **validation
-  errors** from `examQuality` (missing answer keys, firstN without `requiredAnswers`, …). Serious parse
-  errors block opening; validation errors do **not** — you open as a draft and fix them in the builder.
-- Size limit ≈ **10 MB** (large enough for a few embedded base64 images).
+- **Fatal parse errors** — the file cannot be interpreted safely: bad/embedded JSON, no top‑level
+  object, no `sections`, an unsupported question type, or a compound nested inside a part — **block
+  opening** (`canOpen = false`; the “فتح في محرر الامتحان المنظّم” button is disabled).
+- Everything the teacher can repair opens as a **draft**: a readable-but-incomplete structure is
+  reported as a **validation error** from `examQuality` (missing answer keys, a missing/invalid grading
+  policy, firstN without `requiredAnswers`, …) or a **parse warning** (an MCQ with no single correct
+  option, an external image, a normalized type alias). These never block opening — you fix them in the
+  builder before finalizing. The principle: *parse errors = structure cannot be interpreted; validation
+  errors = structure understood, content must be fixed.*
+- **Grading policy and answer unit are never guessed.** A missing/invalid `gradingPolicy` or
+  `answerUnit` is preserved as-is and flagged (`GRADING_POLICY_REQUIRED` / `GRADING_POLICY_INVALID` /
+  `ANSWER_UNIT_INVALID`) so you choose it explicitly — import never silently turns a section into
+  “grade everything”.
+- Size limit ≈ **10 MB**, measured in real UTF‑8 **bytes** (large enough for a few embedded base64 images).
 - Nothing is auto‑saved. You choose **حفظ مسودة** or **اعتماد نهائي** in the builder.
 
 ## Security
@@ -36,9 +46,20 @@ Imported files are **data, not UI**. HTML is parsed with `DOMParser("text/html")
 inert tree and **never** runs `<script>`, inline handlers, or network/resource loads. Imported HTML is
 never mounted and never passed to `innerHTML`/`dangerouslySetInnerHTML`. For the embedded‑JSON mode only
 the `textContent` of the single `application/json` script is read; all other scripts are ignored.
-External (`http(s)`) image URLs are preserved as metadata but **never fetched** (a warning is shown);
-prefer `data:` URLs. Teacher answer keys stay in the saved exam and are stripped from the student payload
-by the unchanged `student-exam-sanitize.js`.
+
+**Images.** A renderable image source (`stimulus.image.dataUrl`, question `image.assets[].dataUrl`,
+`images[]`) is rendered verbatim as `<img src=…>`, so only a **safe embedded raster data URL** is kept
+there: `data:image/png|jpeg|jpg|webp|gif`. Everything else is stripped from the renderable field so
+neither the teacher preview nor a student’s browser can be made to issue a request or execute anything:
+- external `http(s)`/`blob:`/`file:` URLs → removed (never fetched — no SSRF), warning
+  `EXTERNAL_IMAGE_NOT_EMBEDDED`;
+- **SVG** (`data:image/svg+xml`, which can carry script) and other `data:` MIME types such as
+  `data:text/html` → removed, warning `UNSAFE_IMAGE_SOURCE`.
+The original URL is preserved only in a non‑rendered `externalUrl` field for your reference. Prefer
+embedded base64 raster images. This applies to JSON, embedded‑JSON HTML, and annotated HTML alike.
+
+Teacher answer keys stay in the saved exam and are stripped from the student payload by the unchanged
+`student-exam-sanitize.js`.
 
 ---
 
@@ -153,7 +174,9 @@ Root: `<article data-exambank="structured-exam" data-title="…" data-theme="def
   <li data-option data-correct="true">OSPF</li>
 </ul>
 ```
-(Zero or more than one `data-correct` → import error; no guessing.)
+(Zero or more than one `data-correct` → the options are kept, the answer is **left unset** — never
+guessed — with a parse warning; `examQuality` then raises its normal blocking “missing answer” validation
+error, so you pick the answer in the builder. This does **not** block opening.)
 
 **trueFalse** — on the question: `data-correct="true|false"` (also accepts `صحيح`/`غير صحيح`).
 
@@ -254,4 +277,5 @@ warnings, which do not block opening). Then **فتح في محرر الامتح�
 
 - No Word/PDF/OCR/AI extraction, no Word→HTML/PDF→HTML conversion, no automatic content repair.
 - Arbitrary visual HTML is **not** heuristically understood — use embedded JSON or the annotated schema.
-- External image URLs are preserved but not embedded (a warning is shown). Prefer `data:` URLs.
+- External image URLs (and SVG / non‑raster `data:` sources) are stripped from the renderable image and
+  kept only as a non‑rendered `externalUrl` (a warning is shown). Embed raster `data:` images instead.

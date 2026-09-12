@@ -38,8 +38,9 @@ export type StructuredImportResult = {
   validationWarnings: StructuredIssue[];
   stats: ImportStats;
   generatedIds: number;
-  // Serious parse errors (exam could not be built) block opening. Semantic validation errors do NOT —
-  // the teacher opens the imported exam as a DRAFT and fixes them in the builder.
+  // canOpen === (exam built AND no fatal parse errors). Fatal parse errors (unreadable JSON, no object,
+  // no sections, unsupported type, compound-in-a-part) block opening; semantic validation errors and
+  // repairable parse warnings do NOT — the teacher opens the exam as a DRAFT and fixes them in the builder.
   canOpen: boolean;
 };
 
@@ -71,24 +72,39 @@ const TYPE_ALIASES: Record<string, string> = {
   clifill: "cliFill", cli: "cliFill",
   compound: "compound"
 };
-const GRADING_POLICIES = ["all", "capScore", "firstNAnswered"];
 
 type Ctx = { errors: ImportMessage[]; warnings: ImportMessage[]; generated: number };
 
-function normalizeType(raw: unknown, ctx: Ctx, path: string, allowCompound: boolean): { type: string; ok: boolean } {
+// Canonicalizes a raw type string to a supported type. PURE — no ctx side effects. Exported so the HTML
+// annotated parser can resolve the canonical type BEFORE parsing the (type-specific) body: parsing a
+// body against a raw alias (e.g. data-type="mcq") would silently drop its options/answer.
+export function canonicalizeType(raw: unknown): { type: string; isAlias: boolean; known: boolean } {
   const s = toStr(raw).trim();
-  if ((CANONICAL_TYPES as readonly string[]).includes(s)) {
-    if (s === "compound" && !allowCompound) { ctx.errors.push({ code: "PART_CANNOT_BE_COMPOUND", message: "لا يمكن أن يكون البند سؤالًا مركّبًا.", path }); return { type: s, ok: false }; }
-    return { type: s, ok: true };
-  }
+  if ((CANONICAL_TYPES as readonly string[]).includes(s)) return { type: s, isAlias: false, known: true };
   const alias = TYPE_ALIASES[s.toLowerCase()];
-  if (alias) {
-    if (alias === "compound" && !allowCompound) { ctx.errors.push({ code: "PART_CANNOT_BE_COMPOUND", message: "لا يمكن أن يكون البند سؤالًا مركّبًا.", path }); return { type: alias, ok: false }; }
-    ctx.warnings.push({ code: "TYPE_ALIAS_NORMALIZED", message: "نوع «" + s + "» طُبِّع إلى «" + alias + "».", path });
-    return { type: alias, ok: true };
+  if (alias) return { type: alias, isAlias: true, known: true };
+  return { type: s, isAlias: false, known: false };
+}
+
+// Single-sourced alias-normalization message so JSON and HTML report it identically.
+export function typeAliasMessage(raw: unknown, canonical: string): string {
+  return "نوع «" + toStr(raw).trim() + "» طُبِّع إلى «" + canonical + "».";
+}
+
+function normalizeType(raw: unknown, ctx: Ctx, path: string, allowCompound: boolean): { type: string; ok: boolean } {
+  const { type, isAlias, known } = canonicalizeType(raw);
+  if (!known) {
+    ctx.errors.push({ code: "UNSUPPORTED_QUESTION_TYPE", message: "نوع غير مدعوم: «" + toStr(raw).trim() + "» في " + path + ".", path });
+    return { type, ok: false };
   }
-  ctx.errors.push({ code: "UNSUPPORTED_QUESTION_TYPE", message: "نوع غير مدعوم: «" + s + "» في " + path + ".", path });
-  return { type: s, ok: false };
+  if (type === "compound" && !allowCompound) {
+    ctx.errors.push({ code: "PART_CANNOT_BE_COMPOUND", message: "لا يمكن أن يكون البند سؤالًا مركّبًا.", path });
+    return { type, ok: false };
+  }
+  // Alias warnings are emitted where the type is first resolved: JSON here; HTML in resolveType() (which
+  // stores the canonical type, so this call sees a canonical type and stays silent — one warning total).
+  if (isAlias) ctx.warnings.push({ code: "TYPE_ALIAS_NORMALIZED", message: typeAliasMessage(raw, type), path });
+  return { type, ok: true };
 }
 
 // ── boolean coercion for imported correct values (true/false, "true"/"false", صحيح/غير صحيح) ──
@@ -111,20 +127,74 @@ function normalizeField(raw: unknown, ctx: Ctx): Record<string, unknown> {
   return f;
 }
 
-function countImagesIn(node: Record<string, unknown>, ctx: Ctx | null, path: string): number {
-  let n = 0;
-  const scan = (asset: unknown) => {
-    if (!isObj(asset)) return;
-    const url = toStr(asset.dataUrl || asset.src || asset.url);
-    if (!url) return;
-    n++;
-    if (ctx && !/^data:/i.test(url) && /^https?:\/\//i.test(url)) {
-      ctx.warnings.push({ code: "EXTERNAL_IMAGE_NOT_EMBEDDED", message: "صورة خارجية لم تُضمّن (تم الاحتفاظ برابطها فقط) في " + path + ".", path });
-    }
-  };
+// ── Image-source safety ─────────────────────────────────────────────────────
+// A renderable image source (stimulus.image.dataUrl, question image.assets[].dataUrl, images[].dataUrl)
+// is rendered verbatim by StructuredExamSection / StudentQuestionCard / CompoundQuestion as
+// <img src={dataUrl}>. So ONLY a safe embedded raster data: URL may be kept there. Anything else — an
+// external http(s) URL (a network request / SSRF on preview or for a student), blob:/file:/javascript:,
+// an SVG (which can carry script), or another data: MIME such as data:text/html — is stripped from the
+// renderable field and moved to a NON-rendered `externalUrl` for the teacher's reference only.
+const SAFE_IMAGE_DATA_URL = /^data:image\/(png|jpe?g|webp|gif)\b/i;
+
+function classifyImageSrc(url: string): "safe" | "external" | "unsafe" {
+  if (SAFE_IMAGE_DATA_URL.test(url)) return "safe";
+  if (/^https?:\/\//i.test(url)) return "external";
+  return "unsafe";
+}
+
+// Returns true when `url` is a safe embedded image to keep as a renderable source; otherwise pushes the
+// appropriate warning (external vs unsafe) and returns false.
+function imageSourceIsSafe(url: string, ctx: Ctx | null, path: string): boolean {
+  const verdict = classifyImageSrc(url);
+  if (verdict === "safe") return true;
+  if (ctx) {
+    if (verdict === "external") ctx.warnings.push({ code: "EXTERNAL_IMAGE_NOT_EMBEDDED", message: "صورة خارجية لم تُضمَّن ولن تُطلَب من الشبكة (احتُفِظ برابطها للمراجعة فقط) عند " + path + ".", path });
+    else ctx.warnings.push({ code: "UNSAFE_IMAGE_SOURCE", message: "مصدر صورة غير آمن أُزيل (SVG أو data: غير مدعوم) عند " + path + ".", path });
+  }
+  return false;
+}
+
+// Strips an unsafe/external renderable source from a {dataUrl|src|url} asset, keeping the original only
+// under `externalUrl` (never rendered, never fetched). Returns the (possibly replaced) asset.
+function sanitizeAsset(asset: Record<string, unknown>, ctx: Ctx | null, path: string): Record<string, unknown> {
+  const url = toStr(asset.dataUrl || asset.src || asset.url);
+  if (!url || imageSourceIsSafe(url, ctx, path)) return asset;
+  const cleaned: Record<string, unknown> = { ...asset };
+  delete cleaned.dataUrl; delete cleaned.src; delete cleaned.url;
+  cleaned.externalUrl = url;
+  return cleaned;
+}
+
+// Sanitizes every renderable image asset on a question/part node (image.assets[] and images[]).
+function sanitizeNodeImages(node: Record<string, unknown>, ctx: Ctx, path: string): void {
   const img = node.image as Record<string, unknown> | undefined;
-  if (isObj(img) && Array.isArray(img.assets)) img.assets.forEach(scan);
-  if (Array.isArray(node.images)) (node.images as unknown[]).forEach(scan);
+  if (isObj(img) && Array.isArray(img.assets)) {
+    img.assets = img.assets.map((a, i) => (isObj(a) ? sanitizeAsset({ ...a }, ctx, path + ".image[" + i + "]") : a));
+  }
+  if (Array.isArray(node.images)) {
+    node.images = (node.images as unknown[]).map((a, i) => (isObj(a) ? sanitizeAsset({ ...a }, ctx, path + ".images[" + i + "]") : a));
+  }
+}
+
+// Sanitizes a section stimulus's single image ({ dataUrl } shape).
+function sanitizeStimulusImage(stimulus: Record<string, unknown>, ctx: Ctx, path: string): void {
+  const img = stimulus.image;
+  if (!isObj(img)) return;
+  const url = toStr(img.dataUrl || img.src || img.url);
+  if (!url || imageSourceIsSafe(url, ctx, path)) return;
+  const cleaned: Record<string, unknown> = { ...img };
+  delete cleaned.dataUrl; delete cleaned.src; delete cleaned.url;
+  cleaned.externalUrl = url;
+  stimulus.image = cleaned;
+}
+
+// Counts renderable (safe, still-present dataUrl) images for the import stats — after sanitization only
+// safe embedded images retain a dataUrl.
+function countSafeAssets(node: Record<string, unknown>): number {
+  let n = 0;
+  const img = node.image as Record<string, unknown> | undefined;
+  if (isObj(img) && Array.isArray(img.assets)) for (const a of img.assets) if (isObj(a) && toStr(a.dataUrl)) n++;
+  if (Array.isArray(node.images)) for (const a of node.images as unknown[]) if (isObj(a) && toStr((a as Record<string, unknown>).dataUrl)) n++;
   return n;
 }
 
@@ -150,7 +220,7 @@ function normalizeQuestionOrPart(raw: unknown, ctx: Ctx, path: string, isPart: b
   if (!isPart && type === "compound" && Array.isArray(q.parts)) {
     q.parts = q.parts.map((p, i) => normalizeQuestionOrPart(p, ctx, path + ".parts[" + i + "]", true));
   }
-  countImagesIn(q, ctx, path);
+  sanitizeNodeImages(q, ctx, path);
   return q;
 }
 
@@ -159,21 +229,23 @@ function normalizeSection(raw: unknown, ctx: Ctx, index: number): Record<string,
   if (!toStr(s.id).trim()) { s.id = genId("sec"); ctx.generated++; }
   s.title = toStr(s.title);
   s.instructions = toStr(s.instructions ?? "");
-  // grading policy: coerce to a valid value (missing → "all" with a warning; invalid → error + "all").
-  const rawPolicy = s.gradingPolicy;
-  if (rawPolicy == null || rawPolicy === "") {
-    ctx.warnings.push({ code: "MISSING_POLICY_DEFAULTED", message: "قسم «" + (s.title || s.id) + "» بلا قاعدة تصحيح — اعتُمد «تصحيح جميع الأسئلة» مبدئيًا.", path: "section:" + s.id });
-    s.gradingPolicy = "all";
-  } else if (!GRADING_POLICIES.includes(toStr(rawPolicy))) {
-    ctx.errors.push({ code: "UNKNOWN_GRADING_POLICY", message: "قاعدة تصحيح غير معروفة «" + toStr(rawPolicy) + "» في قسم «" + (s.title || s.id) + "».", path: "section:" + s.id });
-    s.gradingPolicy = "all";
-  }
+  // Grading policy and answer unit are NEVER guessed on import — a wrong guess would silently change the
+  // exam's academic meaning (e.g. turning a capped section into "grade everything"). Present values are
+  // normalized to a string and preserved as-is (valid or not); missing values are left unset. Missing or
+  // invalid values are reported by validateStructuredExam (GRADING_POLICY_REQUIRED /
+  // GRADING_POLICY_INVALID / ANSWER_UNIT_INVALID), so the teacher chooses explicitly before finalizing.
+  if (s.gradingPolicy != null && s.gradingPolicy !== "") s.gradingPolicy = toStr(s.gradingPolicy);
+  else delete s.gradingPolicy;
+  if (s.answerUnit != null && s.answerUnit !== "") s.answerUnit = toStr(s.answerUnit);
+  else delete s.answerUnit;
   const max = toNumOrUndef(s.maxMarks);
-  s.maxMarks = max === undefined ? (s.gradingPolicy === "all" ? null : (s.maxMarks == null ? null : s.maxMarks)) : max;
+  s.maxMarks = max !== undefined ? max : (s.maxMarks == null ? null : s.maxMarks);
   const req = toNumOrUndef(s.requiredAnswers);
-  s.requiredAnswers = req === undefined ? (s.requiredAnswers == null ? null : s.requiredAnswers) : req;
-  s.answerUnit = s.answerUnit === "part" ? "part" : "question";
+  s.requiredAnswers = req !== undefined ? req : (s.requiredAnswers == null ? null : s.requiredAnswers);
   s.stimuli = isObj(s.stimuli) ? s.stimuli : {};
+  for (const [gid, st] of Object.entries(s.stimuli as Record<string, unknown>)) {
+    if (isObj(st)) sanitizeStimulusImage(st, ctx, "section[" + index + "].stimulus:" + gid);
+  }
   s.questions = Array.isArray(s.questions) ? s.questions.map((q, i) => normalizeQuestionOrPart(q, ctx, "section[" + index + "].q[" + i + "]", false)) : [];
   return s;
 }
@@ -215,9 +287,9 @@ export function computeStats(exam: StructuredExam | null): ImportStats {
       stats.questions++;
       const t = String((q as { presentationType?: string }).presentationType || "unknown");
       stats.byType[t] = (stats.byType[t] || 0) + 1;
-      stats.images += countImagesIn(q as unknown as Record<string, unknown>, null, "");
+      stats.images += countSafeAssets(q as unknown as Record<string, unknown>);
       const parts = (q as { parts?: unknown[] }).parts;
-      if (Array.isArray(parts)) { stats.parts += parts.length; for (const p of parts) stats.images += countImagesIn(p as Record<string, unknown>, null, ""); }
+      if (Array.isArray(parts)) { stats.parts += parts.length; for (const p of parts) stats.images += countSafeAssets(p as Record<string, unknown>); }
     }
   }
   return stats;
@@ -252,7 +324,11 @@ export function finalizeResult(
     validationWarnings: issues.filter(i => i.severity === "warning"),
     stats: computeStats(exam),
     generatedIds: ctx.generated,
-    canOpen: exam !== null
+    // Fatal parse errors block opening. After parsing, ctx.errors holds ONLY fatal (cannot-interpret)
+    // problems — invalid/embedded JSON, no object, no sections, unsupported type, compound-in-a-part.
+    // Repairable content problems (a missing MCQ key, a missing/invalid grading policy) are surfaced as
+    // parse WARNINGS or examQuality validation errors, so the teacher opens as a DRAFT and fixes them.
+    canOpen: exam !== null && ctx.errors.length === 0
   };
 }
 

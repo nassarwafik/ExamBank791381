@@ -221,9 +221,10 @@ describe("HTML annotated DOM (Mode B)", () => {
     expect(r2.generatedIds).toBeGreaterThanOrEqual(2);
   });
 
-  it("HTML 14: an unsupported type is a parse error", () => {
+  it("HTML 14: an unsupported type is a FATAL parse error (blocks opening)", () => {
     const r2 = parseStructuredExamHtml(`<article data-exambank="structured-exam"><section data-section data-grading-policy="all"><article data-question data-id="x" data-type="mystery" data-marks="1"><p data-question-text>س</p></article></section></article>`);
     expect(r2.parseErrors.some(e => e.code === "UNSUPPORTED_QUESTION_TYPE")).toBe(true);
+    expect(r2.canOpen).toBe(false);
   });
 
   it("grades and sanitizes cleanly end-to-end", () => {
@@ -234,12 +235,98 @@ describe("HTML annotated DOM (Mode B)", () => {
   });
 });
 
+// #4 — annotated-HTML type aliases must be canonicalized BEFORE the body is parsed, so the body content
+// (options/answer, CLI/fields, table, model answer) survives instead of being lost to an empty body.
+describe("HTML annotated type aliases preserve body content (#4)", () => {
+  const wrap = (inner: string) => `<article data-exambank="structured-exam"><section data-section data-grading-policy="all">${inner}</section></article>`;
+
+  it("E: alias mcq → multipleChoice with options + correctOptionIndex preserved", () => {
+    const r = parseStructuredExamHtml(wrap(`<article data-question data-id="a" data-type="mcq" data-marks="2"><p data-question-text>س</p><ul data-options><li data-option>RIP</li><li data-option data-correct="true">OSPF</li></ul></article>`));
+    const q = findQ(r.exam!, "a")!;
+    expect(q.presentationType).toBe("multipleChoice");
+    expect(q.options).toHaveLength(2);
+    expect((q.answer as { correctOptionIndex: number }).correctOptionIndex).toBe(1);
+    expect(r.parseWarnings.filter(w => w.code === "TYPE_ALIAS_NORMALIZED")).toHaveLength(1); // warned exactly once
+  });
+
+  it("F: alias cli → cliFill with CLI template + fields preserved", () => {
+    const r = parseStructuredExamHtml(wrap(`<article data-question data-id="c" data-type="cli" data-marks="3"><p data-question-text>س</p><pre data-cli>vlan [[vid]]</pre><div data-cli-fields><span data-field data-id="vid" data-correct="30"></span></div></article>`));
+    const q = findQ(r.exam!, "c")!;
+    expect(q.presentationType).toBe("cliFill");
+    expect(q.cli).toContain("[[vid]]");
+    expect(q.fields!.map(f => f.id)).toEqual(["vid"]);
+    expect(q.fields![0].correct).toBe("30");
+  });
+
+  it("alias table → tableFill with headers/rows/fields preserved", () => {
+    const r = parseStructuredExamHtml(wrap(`<article data-question data-id="t" data-type="table" data-marks="2"><p data-question-text>س</p><table data-table-fill><thead><tr><th>A</th><th>B</th></tr></thead><tbody><tr><td>x</td><td data-answer-cell data-field-id="b" data-kind="text" data-correct="y"></td></tr></tbody></table></article>`));
+    const q = findQ(r.exam!, "t")!;
+    expect(q.presentationType).toBe("tableFill");
+    expect(q.tableHeaders).toEqual(["A", "B"]);
+    expect(q.fields!.filter(f => f.row === 0)).toHaveLength(1);
+    expect(q.fields![0].correct).toBe("y");
+  });
+
+  it("alias open → shortAnswer with the model answer preserved", () => {
+    const r = parseStructuredExamHtml(wrap(`<article data-question data-id="o" data-type="open" data-marks="2"><p data-question-text>عرّف ARP</p><p data-model-answer>تحويل IP إلى MAC</p></article>`));
+    const q = findQ(r.exam!, "o")!;
+    expect(q.presentationType).toBe("shortAnswer");
+    expect((q.answer as { text?: string }).text).toBe("تحويل IP إلى MAC");
+  });
+});
+
+// #2 — an MCQ with zero / multiple data-correct is READABLE structure, not a parse failure: warn, leave
+// the answer unset, and let validateStructuredExam raise the normal (blocking) MISSING_ANSWER. canOpen true.
+describe("HTML MCQ without a single correct option is repairable, not fatal (#2)", () => {
+  const wrap = (inner: string) => `<article data-exambank="structured-exam"><section data-section data-grading-policy="all">${inner}</section></article>`;
+
+  it("C: zero correct → parse warning + validation MISSING_ANSWER, canOpen true, answer unset", () => {
+    const r = parseStructuredExamHtml(wrap(`<article data-question data-id="z" data-type="multipleChoice" data-marks="2"><p data-question-text>س</p><ul data-options><li data-option>A</li><li data-option>B</li></ul></article>`));
+    expect(r.parseWarnings.some(w => w.code === "MCQ_NO_CORRECT")).toBe(true);
+    expect(r.parseErrors).toEqual([]);
+    expect(findQ(r.exam!, "z")!.answer).toBeUndefined();
+    expect(r.validationErrors.some(i => i.code === "MISSING_ANSWER")).toBe(true);
+    expect(r.canOpen).toBe(true);
+  });
+
+  it("D: multiple correct → parse warning + validation MISSING_ANSWER, canOpen true, answer unset (no guess)", () => {
+    const r = parseStructuredExamHtml(wrap(`<article data-question data-id="m" data-type="multipleChoice" data-marks="2"><p data-question-text>س</p><ul data-options><li data-option data-correct="true">A</li><li data-option data-correct="true">B</li></ul></article>`));
+    expect(r.parseWarnings.some(w => w.code === "MCQ_MULTIPLE_CORRECT")).toBe(true);
+    expect(findQ(r.exam!, "m")!.answer).toBeUndefined();
+    expect(r.validationErrors.some(i => i.code === "MISSING_ANSWER")).toBe(true);
+    expect(r.canOpen).toBe(true);
+  });
+});
+
+// #3 — an external stimulus image URL in annotated HTML must never survive as a renderable dataUrl.
+describe("HTML external stimulus image is not renderable (#3)", () => {
+  it("G(HTML): external src is stripped to externalUrl with a warning; base64 survives", () => {
+    const ext = parseStructuredExamHtml(`<article data-exambank="structured-exam"><section data-section data-grading-policy="all"><div data-stimulus data-group-id="g"><img data-stimulus-image src="https://example.com/a.png"></div><article data-question data-id="q" data-type="shortAnswer" data-marks="1" data-group-id="g"><p data-question-text>س</p></article></section></article>`);
+    const img = ext.exam!.sections[0].stimuli!.g.image as { dataUrl?: string; externalUrl?: string };
+    expect(img.dataUrl).toBeUndefined();
+    expect(img.externalUrl).toBe("https://example.com/a.png");
+    expect(ext.parseWarnings.some(w => w.code === "EXTERNAL_IMAGE_NOT_EMBEDDED")).toBe(true);
+
+    const safe = parseStructuredExamHtml(`<article data-exambank="structured-exam"><section data-section data-grading-policy="all"><div data-stimulus data-group-id="g"><img data-stimulus-image src="data:image/png;base64,AAA"></div><article data-question data-id="q" data-type="shortAnswer" data-marks="1" data-group-id="g"><p data-question-text>س</p></article></section></article>`);
+    expect((safe.exam!.sections[0].stimuli!.g.image as { dataUrl?: string }).dataUrl).toBe("data:image/png;base64,AAA");
+  });
+});
+
 describe("importStructuredExam dispatcher + size guard", () => {
   it("dispatches by extension and enforces the size limit", () => {
     expect(importStructuredExam("x.json", JSON.stringify(EMBEDDED_EXAM)).sourceKind).toBe("json");
     expect(importStructuredExam("x.html", ANNOTATED).sourceKind).toBe("html-annotated");
     const big = importStructuredExam("x.json", "{".padEnd(11 * 1024 * 1024, " "));
     expect(big.parseErrors.some(e => e.code === "FILE_TOO_LARGE")).toBe(true);
+  });
+
+  it("#6: the size guard counts UTF-8 BYTES, not UTF-16 code units (multi-byte Arabic)", () => {
+    // Each Arabic letter is 2 UTF-16 units but 2 UTF-8 bytes here; build a string whose byte length
+    // exceeds the limit while confirming the check is byte-based (a JSON payload, so it routes to JSON).
+    const arabicBlock = "ا".repeat(6 * 1024 * 1024); // ~12 MB in UTF-8
+    const r = importStructuredExam("x.json", arabicBlock);
+    expect(new TextEncoder().encode(arabicBlock).byteLength).toBeGreaterThan(10 * 1024 * 1024);
+    expect(r.parseErrors.some(e => e.code === "FILE_TOO_LARGE")).toBe(true);
   });
 });
 
