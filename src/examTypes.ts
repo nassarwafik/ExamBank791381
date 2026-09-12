@@ -12,6 +12,9 @@
 // No React import — pure types + tiny constants, safe to import anywhere without cycles.
 
 import type { ExamTheme } from "./examTheme";
+import type { ExamCoverPage } from "./examCover";
+
+export type { ExamCoverPage } from "./examCover";
 
 export type GradingPolicy = "all" | "capScore" | "firstNAnswered";
 export type AnswerUnit = "question" | "part";
@@ -146,6 +149,8 @@ export type StructuredExam = {
   status?: "draft" | "final";
   createdAt?: string;
   updatedAt?: string;
+  // OPTIONAL cover/start page, configured post-import. Absent on existing exams (they behave as before).
+  coverPage?: ExamCoverPage;
   sections: BuilderSection[];
   // Canonical question tree is sections[].questions[] — a structured exam carries NO top-level
   // questions[] (legacyToStructured / toSavedStructuredExam / the save-exam-artifact cleaner all

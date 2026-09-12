@@ -20,9 +20,12 @@ import {
 } from "./examBuilderState";
 import { validateStructuredExam, hasBlockingErrors, type StructuredIssue } from "./examQuality";
 import ExamSectionEditor from "./ExamSectionEditor";
+import ExamCoverEditor from "./ExamCoverEditor";
 import StructuredExamSection from "./StructuredExamSection";
+import StructuredExamCover from "./StructuredExamCover";
 import type { Answer, FieldValue } from "./StudentQuestionCard";
 import { normalizeExamStructure, type StructuredExam as StudentStructuredExam } from "./examStructure";
+import { normalizeCoverPage, examMarksDistribution, type ExamCoverPage } from "./examCover";
 import { normalizeExamTheme } from "./examTheme";
 import "./structured-builder.css";
 
@@ -91,6 +94,13 @@ export default function StructuredExamBuilder({ exam, onChange, onSave, onExit, 
         </div>
       )}
 
+      <ExamCoverEditor
+        cover={exam.coverPage}
+        onChange={cover => onChange({ ...exam, coverPage: cover })}
+        onPreviewCover={() => setPreview(exam)}
+        disabled={saving}
+      />
+
       <div className="sb-sections">
         {(exam.sections || []).map((section, index) => (
           <ExamSectionEditor
@@ -136,6 +146,11 @@ export function ExamPreview({ exam, onClose }: { exam: StructuredExam; onClose: 
   const scrubbed = useMemo(() => stripAnswersForPreview(exam), [exam]);
   const norm = useMemo(() => normalizeExamStructure(scrubbed as unknown as StudentStructuredExam), [scrubbed]);
   const theme = normalizeExamTheme(exam.presentationTheme);
+  // Optional cover: shown FIRST (with placeholder identity) when enabled, then the interactive preview.
+  const cover: ExamCoverPage | undefined = useMemo(() => normalizeCoverPage(exam.coverPage), [exam.coverPage]);
+  const distribution = useMemo(() => examMarksDistribution(norm), [norm]);
+  const [coverStarted, setCoverStarted] = useState(false);
+  const showCover = !!cover?.enabled && !coverStarted;
   // Ephemeral, preview-only answers. Owned here (not lifted to the builder), so unmounting resets them.
   const [answers, setAnswers] = useState<Record<string, Answer>>({});
   const onChoice = (id: string, index: number) => setAnswers(a => ({ ...a, [id]: { kind: "choice", index } }));
@@ -166,6 +181,11 @@ export function ExamPreview({ exam, onClose }: { exam: StructuredExam; onClose: 
         <button type="button" className="sb-btn" onClick={onClose}>← إغلاق المعاينة</button>
       </header>
       <main className={"interactive-exam-page exam-theme-" + theme} dir="rtl">
+        {showCover ? (
+          <div className="iex-wrap">
+            <StructuredExamCover cover={cover!} title={exam.title || ""} distribution={distribution} preview onStart={() => setCoverStarted(true)} />
+          </div>
+        ) : (
         <div className="iex-wrap">
           <p className="sb-preview-note">هذه معاينة تفاعلية للطالب — يمكنك تجربة الإجابة، لكن لا تُحفظ أي إجابة ولا تظهر مفاتيح الإجابة.</p>
           {norm.sections.map((section, si) => {
@@ -188,6 +208,7 @@ export function ExamPreview({ exam, onClose }: { exam: StructuredExam; onClose: 
             );
           })}
         </div>
+        )}
       </main>
     </div>
   );

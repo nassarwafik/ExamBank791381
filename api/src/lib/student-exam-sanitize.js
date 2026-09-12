@@ -26,6 +26,33 @@ function stripKeys(obj, keys) {
   for (const k of keys) if (k in obj) delete obj[k];
 }
 
+// Optional cover/start page: keep ONLY known, safe display fields for the student, and only a banner
+// that is a safe embedded raster data URL (no external URL / SVG / HTML). The cover never contains
+// student identity or answer keys; this drops any teacher-only or foreign keys defensively. Returns
+// undefined when there is no cover, so exams without one are unchanged.
+const SAFE_BANNER_DATA_URL = /^data:image\/(png|jpe?g|webp|gif)\b/i;
+function sanitizeCoverForStudent(cover) {
+  if (!cover || typeof cover !== "object") return undefined;
+  const bool = (v, d) => (typeof v === "boolean" ? v : d);
+  const str = v => (typeof v === "string" ? v : undefined);
+  const bannerUrl = cover.banner && typeof cover.banner === "object" ? cover.banner.dataUrl : undefined;
+  const out = {
+    enabled: bool(cover.enabled, false),
+    activityType: cover.activityType === "training" ? "training" : cover.activityType === "exam" ? "exam" : undefined,
+    subtitle: str(cover.subtitle),
+    instructions: str(cover.instructions),
+    allowedMaterials: str(cover.allowedMaterials),
+    showStudentName: bool(cover.showStudentName, true),
+    showClassName: bool(cover.showClassName, true),
+    showExamDate: bool(cover.showExamDate, true),
+    showDuration: bool(cover.showDuration, false),
+    showTotalMarks: bool(cover.showTotalMarks, true),
+    showMarksDistribution: bool(cover.showMarksDistribution, true)
+  };
+  if (typeof bannerUrl === "string" && SAFE_BANNER_DATA_URL.test(bannerUrl)) out.banner = { dataUrl: bannerUrl };
+  return out;
+}
+
 // Removes import-only keys from an image object ({ dataUrl, assets: [...] }) and its assets.
 function sanitizeImageForStudent(image) {
   if (!image || typeof image !== "object") return image;
@@ -106,6 +133,7 @@ function sanitizeExamForStudent(exam) {
   const x = JSON.parse(JSON.stringify(exam || {}));
   x.revisionHistory = [];
   if (x.metadata && typeof x.metadata === "object" && "import" in x.metadata) delete x.metadata.import;
+  if ("coverPage" in x) x.coverPage = sanitizeCoverForStudent(x.coverPage);
   if (Array.isArray(x.questions)) x.questions = x.questions.map(sanitizeQuestionForStudent);
   if (Array.isArray(x.sections)) x.sections = x.sections.map(sanitizeSectionForStudent);
   return x;
@@ -113,6 +141,7 @@ function sanitizeExamForStudent(exam) {
 
 module.exports = {
   sanitizeExamForStudent,
+  sanitizeCoverForStudent,
   sanitizeSectionForStudent,
   sanitizeQuestionForStudent,
   sanitizePartForStudent,
