@@ -11,6 +11,7 @@
 // text, split into clean lines for safe bullet rendering (never HTML / dangerouslySetInnerHTML).
 
 import type { NormalizedExam, NormalizedSection } from "./examStructure";
+import { questionMaxMarks } from "./examStructure";
 
 export type SafeImageAsset = { dataUrl?: string };
 export type ActivityType = "exam" | "training";
@@ -97,7 +98,9 @@ export function defaultCoverPage(activityType: ActivityType = "exam"): ExamCover
 // ── marks (computed, never hand-entered) ─────────────────────────────────────
 // Displayed maximum for ONE section — identical rule to computeTotalMarks / the backend grader.
 export function sectionMaxMarks(s: NormalizedSection): number {
-  const sum = (s.questions || []).reduce((a, q) => a + (Number((q as { marks?: unknown }).marks) || 0), 0);
+  // Compound-aware per-question maximum (mirrors the grader) so the cover total can never differ
+  // from the graded total for a compound question whose part marks don't sum to its own marks.
+  const sum = (s.questions || []).reduce((a, q) => a + questionMaxMarks(q), 0);
   const capped = s.gradingPolicy !== "all" && s.maxMarks != null;
   return capped ? Number(s.maxMarks) || 0 : sum;
 }

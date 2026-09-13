@@ -358,11 +358,40 @@ export function legacyToStructured(exam: Record<string, unknown>): StructuredExa
   return out;
 }
 
+// Marks per part, in part order — byte-for-byte the same distribution the backend distributePartMarks()
+// and src/examStructure.ts use: all explicit → verbatim; none explicit → equal split of the question
+// marks; mixed → honour the explicit ones and split the (non-negative) remainder equally among the
+// rest. NOTE: partMarksInfo() is display-only and is NOT equivalent here (it collapses every non
+// all-explicit case to the question's own marks), so total-marks must go through this, not partMarksInfo.
+function distributePartMarks(q: BuilderQuestion): number[] {
+  const parts = q.parts || [];
+  if (!parts.length) return [];
+  const total = Number(q.marks) || 0;
+  const hasMark = parts.map(p => p && p.marks != null && Number.isFinite(Number(p.marks)));
+  if (hasMark.every(Boolean)) return parts.map(p => Number(p.marks) || 0);
+  if (!hasMark.some(Boolean)) return parts.map(() => total / parts.length);
+  const known = parts.reduce((s, p, i) => s + (hasMark[i] ? (Number(p.marks) || 0) : 0), 0);
+  const restCount = hasMark.filter(x => !x).length;
+  const each = restCount ? Math.max(0, total - known) / restCount : 0;
+  return parts.map((p, i) => (hasMark[i] ? (Number(p.marks) || 0) : each));
+}
+
+// Official grading maximum for ONE builder question — mirror of the backend questionMaxMarks / grader.
+// Compound: distribute part marks (explicit / none / mixed) then clamp EACH part at 0 and sum, so a
+// mixed overflow (12 + unset, marks 10 → [12, 0] = 12) and a negative explicit part (-5 + 15 → 15)
+// both agree with the backend / grader / cover. Non-compound: max(0, marks).
+export function questionMaxMarks(q: BuilderQuestion): number {
+  const parts = q.parts || [];
+  if (parts.length) return distributePartMarks(q).reduce((s, m) => s + Math.max(0, Number(m) || 0), 0);
+  return Math.max(0, Number(q.marks) || 0);
+}
+
 // Compute total marks across all sections (each section's maxMarks cap when set, else the sum of its
-// question marks). Mirrors the backend examStats() so the saved totalMarks is consistent.
+// question max marks). Mirrors the backend examOfficialStats()/grader so the saved totalMarks is
+// consistent — including compound questions with explicit part marks.
 export function computeTotalMarks(exam: StructuredExam): number {
   return (exam.sections || []).reduce((total, s) => {
-    const sum = (s.questions || []).reduce((a, q) => a + (Number(q.marks) || 0), 0);
+    const sum = (s.questions || []).reduce((a, q) => a + questionMaxMarks(q), 0);
     // "all" sections are never capped (mirrors the backend grader); only capScore / firstNAnswered
     // use an explicit section maximum.
     const capped = s.gradingPolicy !== "all" && s.maxMarks != null;

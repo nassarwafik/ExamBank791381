@@ -90,6 +90,19 @@ describe("examCover — marks distribution (computed, single source of truth)", 
     expect(examMarksDistribution(normalizeExamStructure(exam as never)).total).toBe(computeTotalMarks(exam));
   });
 
+  it("COMPOUND explicit parts (3+3+2=8): cover uses the part-sum, not the stale question marks (10)", () => {
+    // A compound question whose parts sum to 8 while its own marks say 10. The cover total and
+    // computeTotalMarks must both report 8 (matching the backend grader), never 10.
+    const exam = {
+      examId: "E", title: "امتحان", status: "draft",
+      sections: [{ id: "s1", title: "القسم", gradingPolicy: "all", maxMarks: null, requiredAnswers: null, answerUnit: "question", stimuli: {},
+        questions: [{ examQuestionId: "q1", presentationType: "compound", text: "س", marks: 10,
+          parts: [{ id: "p1", type: "shortAnswer", text: "أ", marks: 3 }, { id: "p2", type: "shortAnswer", text: "ب", marks: 3 }, { id: "p3", type: "shortAnswer", text: "ج", marks: 2 }] }] }]
+    } as unknown as StructuredExam;
+    expect(examMarksDistribution(normalizeExamStructure(exam as never)).total).toBe(8);
+    expect(computeTotalMarks(exam)).toBe(8);
+  });
+
   it("N: changing a section's marks changes the distribution automatically", () => {
     const exam = exam100();
     exam.sections[0].questions.forEach(q => { (q as { marks: number }).marks = 3; }); // 10×3 = 30

@@ -183,6 +183,62 @@ function countExamQuestions(exam) {
   return Array.isArray(ex.questions) ? ex.questions.length : 0;
 }
 
+// ── Authoritative structural marks (single source of truth) ──────────────────
+// These derive question count / official total marks / per-section official max marks DIRECTLY from
+// the current exam STRUCTURE, matching gradeExam() exactly, so an assignment can never trust a stale
+// top-level exam.totalMarks. Pure: no storage, no answers, no mutation.
+
+function round2(n) {
+  return Number(Number(n || 0).toFixed(2));
+}
+
+// Official grading maximum for ONE question — byte-for-byte the same maximum gradeExam() derives:
+//  - non-compound: max(0, marks ?? points)  (mirrors the grader's marks()).
+//  - compound: sum of distributePartMarks() (each part clamped at 0), so a compound whose parts are
+//    ALL explicitly marked is worth the SUM of the part marks even when that differs from the
+//    question's own top-level marks (e.g. parts 3+3+2 = 8 while question.marks = 10 → official 8).
+function questionMaxMarks(q) {
+  if (isCompound(q)) {
+    const pmarks = distributePartMarks(q);
+    return pmarks.reduce((s, m) => s + Math.max(0, num(m, 0)), 0);
+  }
+  return Math.max(0, num(q && (q.marks != null ? q.marks : q.points), 0));
+}
+
+// Official max for ONE section — identical rule to gradeExam()'s secMax:
+//  - "all"            : sum of question max marks; a (stale) section.maxMarks is IGNORED, never a cap.
+//  - "capScore"       : section.maxMarks when present, else the sum of question max marks.
+//  - "firstNAnswered" : section.maxMarks when present (builder quality-validation REQUIRES it), else
+//                       the sum of question max marks as a structural fallback. NOTE: for a legacy
+//                       firstN section that omits maxMarks, gradeExam() instead uses the sum of the
+//                       COUNTED units' max, which is answer-dependent — no answer-independent
+//                       structural total can match it. This fallback is only reachable by such
+//                       non-quality-valid data; see examOfficialStats doc.
+function sectionOfficialMaxMarks(section) {
+  const s = normalizeSection(section, 0);
+  const sum = (s.questions || []).reduce((a, q) => a + questionMaxMarks(q), 0);
+  if (s.gradingPolicy === "all") return sum;
+  if (s.maxMarks != null) return s.maxMarks;
+  return sum;
+}
+
+// The authoritative structural stats for an exam (legacy flat OR structured). Returns
+// { questionCount, totalMarks, sections:[{ sectionId, questionCount, totalMarks }] }. For every
+// quality-valid exam this equals gradeExam(exam, anyAnswers).totalMarks; the only exception is a
+// non-valid legacy firstNAnswered section missing its required maxMarks (see sectionOfficialMaxMarks).
+function examOfficialStats(exam) {
+  const norm = normalizeExamStructure(exam);
+  let questionCount = 0, totalMarks = 0;
+  const sections = norm.sections.map(s => {
+    const qc = (s.questions || []).length;
+    const tm = sectionOfficialMaxMarks(s);
+    questionCount += qc;
+    totalMarks += tm;
+    return { sectionId: s.id, questionCount: qc, totalMarks: round2(tm) };
+  });
+  return { questionCount, totalMarks: round2(totalMarks), sections };
+}
+
 function unitKey(u) {
   return u.partId ? u.questionId + "::" + u.partId : u.questionId;
 }
@@ -269,6 +325,9 @@ module.exports = {
   questionId,
   sectionQuestionId,
   countExamQuestions,
+  questionMaxMarks,
+  sectionOfficialMaxMarks,
+  examOfficialStats,
   partId,
   partLabel,
   fieldId,
