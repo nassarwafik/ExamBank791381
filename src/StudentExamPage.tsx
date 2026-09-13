@@ -52,8 +52,18 @@ export default function StudentExamPage({token,assignment,studentName,className,
   const sn=st.serverNow?Date.parse(st.serverNow):Date.now();
   if(end){effEndMs.current=end;serverAnchorMs.current=sn;perfAnchor.current=(typeof performance!=="undefined"?performance.now():0);setRemainingMs(Math.max(0,end-sn))}
  },[]);
- async function fetchExamBody():Promise<ExamBody|null>{
-  try{const h=new Headers();h.set("x-student-token",token);h.set("Authorization","Bearer "+token);const r=await fetch("/api/student-assignment/"+encodeURIComponent(assignment.assignmentId),{headers:h});const j=await r.json() as {assignment?:{exam?:ExamBody}};if(r.ok&&j.assignment?.exam)return j.assignment.exam;return null}catch{return null}
+ // Loads the FULL student-sanitized exam body (only available after startAttempt). Never swallows a
+ // failure into "empty exam": a non-2xx throws, a 401 runs the normal logout, and a still-pre-start
+ // payload (requiresStart / no exam body) is treated as a retryable failure. The caller reveals the
+ // questions ONLY when this resolves.
+ async function fetchExamBody():Promise<ExamBody>{
+  const h=new Headers();h.set("x-student-token",token);h.set("Authorization","Bearer "+token);
+  const r=await fetch("/api/student-assignment/"+encodeURIComponent(assignment.assignmentId),{headers:h});
+  let j:{assignment?:{exam?:ExamBody;requiresStart?:boolean};error?:string}={};try{j=await r.json()}catch{}
+  if(r.status===401){onLogout();throw new ApiError(401,"انتهت الجلسة.")}
+  if(!r.ok)throw new ApiError(r.status,j.error||"تعذر تحميل الأسئلة.");
+  if(j.assignment?.requiresStart||!j.assignment?.exam||(!j.assignment.exam.questions&&!j.assignment.exam.sections))throw new ApiError(409,"تعذر تحميل الأسئلة بعد بدء المحاولة. حاول مرة أخرى.");
+  return j.assignment.exam;
  }
  async function saveDraftSnapshot(snapshot:Answers,myRevision:number){
   if(myRevision<latestTargetRevision.current)return;
@@ -105,11 +115,20 @@ export default function StudentExamPage({token,assignment,studentName,className,
  async function startTimedAttempt(){
   if(startingRef.current)return;startingRef.current=true;setStarting(true);setError("");
   try{
+   // 1) Start on the server (the timer is now running). startAttempt is IDEMPOTENT, so a retry after a
+   //    failed exam fetch returns the SAME startedAt/endsAt and never restarts the timer.
    const r=await api<{state:State}>({method:"POST",body:JSON.stringify({action:"startAttempt"})});
-   const body=await fetchExamBody();if(body)setExam(body);
-   setState(r.state);setAnswers(r.state.draftAnswers||{});anchorClock(r.state);setExpired(false);finalizingRef.current=false;setStarted(true);setCoverStarted(true);
+   // 2) Load the full exam BEFORE revealing anything. If this throws we keep the start gate visible and
+   //    surface the error — we never reveal an empty exam or drop the student into a blank timed screen.
+   const body=await fetchExamBody();
+   // 3) Only now, with questions in hand, reveal the exam and anchor the countdown to the server window.
+   setExam(body);setState(r.state);setAnswers(r.state.draftAnswers||{});anchorClock(r.state);setExpired(false);finalizingRef.current=false;setStarted(true);setCoverStarted(true);
    window.scrollTo({top:0,behavior:"smooth"});
-  }catch(e){setError(e instanceof Error?e.message:"تعذر بدء المحاولة.")}finally{setStarting(false);startingRef.current=false}
+  }catch(e){
+   // Gate stays (we did NOT setStarted/setCoverStarted and did NOT replace exam). Pressing the button
+   // again re-runs startAttempt (same timer) then retries the exam fetch.
+   setError(e instanceof Error?e.message:"تعذر بدء المحاولة.");
+  }finally{setStarting(false);startingRef.current=false}
  }
  async function triggerTimeout(){
   if(finalizingRef.current)return;finalizingRef.current=true;setExpired(true);submittingRef.current=true;
@@ -162,7 +181,9 @@ export default function StudentExamPage({token,assignment,studentName,className,
   const rawDate=assignment.openAt||assignment.effectiveDueAt||assignment.dueAt;
   const examDate=rawDate?new Date(rawDate).toLocaleDateString("ar"):"";
   const dur=durationLabel(assignment.durationMinutes||state?.durationMinutes);
-  if(structured&&cover?.enabled){
+  // Pre-start, the server deliberately omits sections/questions, so `structured` is false here. Cover
+  // selection must therefore depend only on the (safe) coverPage config, never on the hidden structure.
+  if(cover?.enabled){
    return <main className={"interactive-exam-page exam-theme-"+theme} dir="rtl"><div className="iex-wrap">
     {error&&<div className="platform-error iex-error">{error}</div>}
     <StructuredExamCover cover={cover} title={assignment.title||exam.title||"امتحان"} distribution={coverDistribution}
