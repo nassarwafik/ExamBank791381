@@ -84,10 +84,43 @@ function normalizeDurationMinutes(value) {
 function isTimedAssignment(assignment) {
   return normalizeDurationMinutes(assignment && assignment.durationMinutes) > 0;
 }
-// The persisted activeAttempt, only if well-formed (has startedAt + endsAt). Legacy/missing => null.
+// ── B2A: unified attempt lifecycle ───────────────────────────────────────────
+// New assignments carry attemptModelVersion:2 (see manage-assignments). Version >= 2 means the server
+// requires an EXPLICIT startAttempt even for UNTIMED assignments (opening != starting). Assignments
+// missing the flag are LEGACY (version 0) and keep the exact historical untimed behavior — there is NO
+// bulk migration and old documents must load unchanged.
+function attemptModelVersion(assignment) {
+  const n = Number(assignment && assignment.attemptModelVersion);
+  return Number.isFinite(n) && n > 0 ? Math.floor(n) : 0;
+}
+// Whether this assignment requires a server-authoritative startAttempt before questions/writes.
+// TIMED (any version) always requires start (B1). UNTIMED requires start only for version >= 2.
+function requiresServerStart(assignment) {
+  return isTimedAssignment(assignment) || attemptModelVersion(assignment) >= 2;
+}
+// The persisted activeAttempt, only if well-formed (has startedAt). B1 timed attempts always carry a
+// truthy endsAt; a B2A UNTIMED v2 attempt has endsAt "" (no deadline), so endsAt is NOT required here.
+// Legacy/missing/malformed => null.
 function activeAttemptOf(submission) {
   const aa = submission && submission.activeAttempt;
-  return aa && aa.startedAt && aa.endsAt ? aa : null;
+  return aa && aa.startedAt ? aa : null;
+}
+// Normalize a completed attempt's end reason. New attempts persist endReason explicitly; a legacy
+// attempt missing it maps timedOut===true => "timedOut", otherwise "submitted". PURE — never mutates.
+function normalizeEndReason(attempt) {
+  if (attempt && (attempt.endReason === "submitted" || attempt.endReason === "timedOut")) return attempt.endReason;
+  return attempt && attempt.timedOut === true ? "timedOut" : "submitted";
+}
+// Derived lifecycle status: "notStarted" | "started" | "draft" | "submitted" | "timedOut".
+// An ACTIVE attempt ALWAYS wins over a historical completed result (B1 rule #15: attempt 2 active while
+// attempt 1 completed => "started"/"draft"). This is a DISPLAY value only — canStartAttempt / canWrite /
+// attemptExpired remain the authoritative authorization gates (it must never be the sole gate).
+function deriveAttemptStatus(submission) {
+  const active = activeAttemptOf(submission);
+  if (active) return active.status === "draft" ? "draft" : "started";
+  const attempts = Array.isArray(submission && submission.attempts) ? submission.attempts : [];
+  if (!attempts.length) return "notStarted";
+  return normalizeEndReason(attempts[attempts.length - 1]) === "timedOut" ? "timedOut" : "submitted";
 }
 
 // Full timer + attempt state for one student at nowMs. Extends attemptState() with timer fields.
@@ -100,24 +133,41 @@ function timerState(assignment, submission, nowMs = Date.now()) {
   const base = attemptState(assignment, submission, nowMs);
   const durationMinutes = normalizeDurationMinutes(assignment && assignment.durationMinutes);
   const timed = durationMinutes > 0;
+  const modelVersion = attemptModelVersion(assignment);
+  const requiresStart = timed || modelVersion >= 2;   // UNTIMED v2 also needs an explicit start
   const active = activeAttemptOf(submission);
-  const endsMs = active ? toMs(active.endsAt) : 0;
+  const endsMs = active ? toMs(active.endsAt) : 0;     // UNTIMED active has endsAt "" => 0 (no deadline)
   const dueMs = base.dueMs;
   // Effective attempt end = min(duration deadline, current effective due date). If the due date is
-  // absent (0), the duration deadline stands alone.
+  // absent (0), the duration deadline stands alone. Only a TIMED attempt has a duration deadline.
   const effEndsMs = timed && active ? (dueMs ? Math.min(endsMs, dueMs) : endsMs) : 0;
   // Boundary: now === effEndsMs is STILL valid; strictly after is expired (mirrors dueAt semantics).
+  // UNTIMED attempts (timed false) NEVER expire by time.
   const attemptExpired = timed && !!active ? (!!effEndsMs && effEndsMs < nowMs) : false;
-  const canStartAttempt = timed && base.published && base.availability === "open"
+  // May begin a NEW attempt: requiresStart AND open AND attempts remain AND none currently active.
+  const canStartAttempt = requiresStart && base.published && base.availability === "open"
     && base.attemptsUsed < base.allowedAttempts && !active;
+  // May saveDraft/submit NOW. TIMED: live, non-expired active. UNTIMED v2: an active attempt is
+  // required (opening != starting). UNTIMED legacy: exact historical canAttempt (no start needed).
   const canWrite = timed
     ? (base.published && base.availability === "open" && !!active && !attemptExpired)
-    : base.canAttempt;
+    : (modelVersion >= 2
+        ? (base.published && base.availability === "open" && !!active && base.attemptsUsed < base.allowedAttempts)
+        : base.canAttempt);
   return {
     ...base,
     durationMinutes,
     timed,
-    activeAttempt: active ? { attemptNumber: active.attemptNumber, startedAt: String(active.startedAt), endsAt: String(active.endsAt) } : null,
+    attemptModelVersion: modelVersion,
+    requiresStart,
+    activeAttempt: active ? {
+      attemptNumber: active.attemptNumber,
+      startedAt: String(active.startedAt),
+      endsAt: String(active.endsAt || ""),
+      status: active.status === "draft" ? "draft" : "started",
+      lastSavedAt: String(active.lastSavedAt || "")
+    } : null,
+    attemptStatus: deriveAttemptStatus(submission),
     effectiveAttemptEndsAt: effEndsMs ? new Date(effEndsMs).toISOString() : "",
     attemptExpired,
     canStartAttempt,
@@ -129,7 +179,9 @@ function timerState(assignment, submission, nowMs = Date.now()) {
 // already exists) returns null — the handler returns the SAME startedAt/endsAt without restarting.
 function startRejection(assignment, submission, nowMs = Date.now()) {
   const st = timerState(assignment, submission, nowMs);
-  if (!st.timed) return { status: 400, error: "لا يتطلب هذا الواجب بدء محاولة مؤقتة." };
+  // Only TIMED (any version) or UNTIMED v2 assignments have a server startAttempt. Legacy untimed
+  // assignments never require a start, so an explicit startAttempt on them is a client error.
+  if (!st.requiresStart) return { status: 400, error: "لا يتطلب هذا الواجب بدء محاولة." };
   if (st.availability === "scheduled") return { status: 403, error: "الواجب لم يُفتح بعد." };
   if (st.availability === "closed") return { status: 409, error: "انتهى موعد التسليم." };
   if (!st.published) return { status: 403, error: "الواجب غير متاح." };
@@ -153,10 +205,20 @@ function writeRejection(assignment, submission, action, nowMs = Date.now()) {
     if (st.attemptExpired) return { status: 409, error: "انتهى وقت المحاولة." };
     return null;
   }
+  // UNTIMED v2: writes require a live active attempt (opening != starting) AND attempts remaining.
+  if (st.attemptModelVersion >= 2) {
+    if (st.attemptsUsed >= st.allowedAttempts) {
+      return { status: 409, error: action === "submit" ? "لا توجد محاولة إضافية متاحة." : "لا توجد محاولة متاحة للحفظ." };
+    }
+    if (!st.activeAttempt) return { status: 409, error: "ابدأ المحاولة أولاً." };
+    return null;
+  }
+  // UNTIMED legacy: exact historical behavior — no server start needed.
   return actionRejection(assignment, submission, action, nowMs);
 }
 
 module.exports = {
   toMs, effectiveDueAt, getAssignmentAvailability, attemptState, actionRejection,
-  normalizeDurationMinutes, isTimedAssignment, activeAttemptOf, timerState, startRejection, writeRejection
+  normalizeDurationMinutes, isTimedAssignment, activeAttemptOf, timerState, startRejection, writeRejection,
+  attemptModelVersion, requiresServerStart, normalizeEndReason, deriveAttemptStatus
 };

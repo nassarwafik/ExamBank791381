@@ -70,8 +70,8 @@ describe("timerState — effective end, boundary, expiry", () => {
 
 describe("startRejection", () => {
   const openFar = { dueAt: iso(NOW + 10 * 60 * MIN) };
-  it("untimed => 400 (start not applicable)", () => {
-    expect(startRejection({ status: "published", maxAttempts: 1, ...openFar }, null, NOW)).toEqual({ status: 400, error: "لا يتطلب هذا الواجب بدء محاولة مؤقتة." });
+  it("untimed LEGACY (no attemptModelVersion) => 400 (start not applicable)", () => {
+    expect(startRejection({ status: "published", maxAttempts: 1, ...openFar }, null, NOW)).toEqual({ status: 400, error: "لا يتطلب هذا الواجب بدء محاولة." });
   });
   it("timed, open, attempts remain, no active => null (allowed)", () => {
     expect(startRejection(timed(openFar), { attempts: [] }, NOW)).toBeNull();
