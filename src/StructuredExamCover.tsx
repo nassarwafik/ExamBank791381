@@ -29,6 +29,7 @@ type Props = {
   distribution: MarksDistribution;
   runtime?: CoverRuntime;
   preview?: boolean;
+  starting?: boolean;
   onStart: () => void;
 };
 
@@ -40,7 +41,7 @@ function InfoRow({ label, value }: { label: string; value: string }) {
   return <div className="iex-cover-info-row"><span className="iex-cover-info-label">{label}</span><span className="iex-cover-info-value">{value}</span></div>;
 }
 
-export default function StructuredExamCover({ cover, title, distribution, runtime, preview, onStart }: Props) {
+export default function StructuredExamCover({ cover, title, distribution, runtime, preview, starting, onStart }: Props) {
   const bannerUrl = cover.banner?.dataUrl;
   const showBanner = isSafeBannerDataUrl(bannerUrl);
   const lines = instructionLines(cover.instructions);
@@ -101,7 +102,7 @@ export default function StructuredExamCover({ cover, title, distribution, runtim
           </div>
         )}
 
-        <button type="button" className="iex-cover-start" onClick={onStart}>{startLabel}</button>
+        <button type="button" className="iex-cover-start" onClick={onStart} disabled={starting}>{starting ? "⏳ جارٍ البدء..." : startLabel}</button>
         {preview && <p className="iex-cover-preview-note">هذه معاينة للغلاف — بيانات الطالب والتاريخ تظهر تلقائيًا للطالب الحقيقي.</p>}
       </div>
     </div>

@@ -7,7 +7,7 @@ import {filterLibraryCatalog,catalogCategories,categoryLabel,type LibraryCatalog
 import {examHasQuestions,examQuestionCount} from "./examTypes";
 
 type Classroom={classId:string;name:string;grade:string;active:boolean};
-type Item={assignmentId:string;classId:string;className:string;title:string;instructions:string;status:"draft"|"published"|"archived";openAt:string;dueAt:string;questionCount:number;totalMarks:number;maxAttempts:number};
+type Item={assignmentId:string;classId:string;className:string;title:string;instructions:string;status:"draft"|"published"|"archived";openAt:string;dueAt:string;questionCount:number;totalMarks:number;maxAttempts:number;durationMinutes?:number};
 type Exam={examId?:string;title?:string;totalMarks?:number;questions?:unknown[];sections?:unknown[]};
 type SavedExam={blobName:string;examId:string;title:string;savedAt:string;questionCount:number;totalMarks:number};
 type Attempt={attemptNumber:number;score:number;totalMarks:number;percentage:number;submittedAt:string;finalized:boolean;manualReviewMarks:number};
@@ -23,7 +23,7 @@ const fmt=(v:string)=>v?new Date(v).toLocaleString("ar"):"بدون موعد";
 
 export default function AssignmentsPanel({token,classes,currentExam,onCopyLibraryExamToBuilder}:Props){
  const current=currentExam&&typeof currentExam==="object"?currentExam as Exam:null;
- const [items,setItems]=useState<Item[]>([]),[classId,setClassId]=useState(""),[title,setTitle]=useState(""),[instructions,setInstructions]=useState("أجب عن جميع الأسئلة واقرأ التعليمات جيدًا قبل البدء."),[openAt,setOpenAt]=useState(localDate(0)),[dueAt,setDueAt]=useState(localDate(72)),[maxAttempts,setMaxAttempts]=useState(1),[publish,setPublish]=useState(true),[busy,setBusy]=useState(false),[loading,setLoading]=useState(false),[error,setError]=useState(""),[notice,setNotice]=useState(""),[resultsFor,setResultsFor]=useState<Item|null>(null),[results,setResults]=useState<StudentResult[]>([]),[stats,setStats]=useState<Stats|null>(null),[review,setReview]=useState<{studentId:string;attemptNumber:number}|null>(null);
+ const [items,setItems]=useState<Item[]>([]),[classId,setClassId]=useState(""),[title,setTitle]=useState(""),[instructions,setInstructions]=useState("أجب عن جميع الأسئلة واقرأ التعليمات جيدًا قبل البدء."),[openAt,setOpenAt]=useState(localDate(0)),[dueAt,setDueAt]=useState(localDate(72)),[maxAttempts,setMaxAttempts]=useState(1),[durationMinutes,setDurationMinutes]=useState(0),[publish,setPublish]=useState(true),[busy,setBusy]=useState(false),[loading,setLoading]=useState(false),[error,setError]=useState(""),[notice,setNotice]=useState(""),[resultsFor,setResultsFor]=useState<Item|null>(null),[results,setResults]=useState<StudentResult[]>([]),[stats,setStats]=useState<Stats|null>(null),[review,setReview]=useState<{studentId:string;attemptNumber:number}|null>(null);
  const [deadlineFor,setDeadlineFor]=useState<string|null>(null),[deadlineValue,setDeadlineValue]=useState("");
  const [analysis,setAnalysis]=useState<ItemAnalysis|null>(null),[analysisBusy,setAnalysisBusy]=useState(false),[analysisSort,setAnalysisSort]=useState<"number"|"hardest"|"easiest">("number");
  const [savedExams,setSavedExams]=useState<SavedExam[]>([]),[examSource,setExamSource]=useState(current?"current":""),[savedExam,setSavedExam]=useState<Exam|null>(null),[examLoading,setExamLoading]=useState(false);
@@ -105,7 +105,7 @@ export default function AssignmentsPanel({token,classes,currentExam,onCopyLibrar
   if(busy||!classId||!title.trim()||!sourceExam||!examHasQuestions(sourceExam))return;
   setBusy(true);setError("");setNotice("");
   try{
-   const r=await api<{assignment:Item}>("/api/assignments",{method:"POST",body:JSON.stringify({action:"create",classId,title:title.trim(),instructions:instructions.trim(),openAt:openAt?new Date(openAt).toISOString():"",dueAt:dueAt?new Date(dueAt).toISOString():"",maxAttempts,publish,examSnapshot:sourceExam})});
+   const r=await api<{assignment:Item}>("/api/assignments",{method:"POST",body:JSON.stringify({action:"create",classId,title:title.trim(),instructions:instructions.trim(),openAt:openAt?new Date(openAt).toISOString():"",dueAt:dueAt?new Date(dueAt).toISOString():"",maxAttempts,durationMinutes,publish,examSnapshot:sourceExam})});
    setItems(x=>[r.assignment,...x]);setNotice("✓ تم إنشاء الواجب من الامتحان المختار.");
   }catch(e){setError(e instanceof Error?e.message:"تعذر إنشاء الواجب.")}finally{setBusy(false)}
  }
@@ -189,6 +189,7 @@ export default function AssignmentsPanel({token,classes,currentExam,onCopyLibrar
      <label>يفتح في<input type="datetime-local" value={openAt} onChange={e=>setOpenAt(e.target.value)}/></label>
      <label>آخر موعد<input type="datetime-local" value={dueAt} onChange={e=>setDueAt(e.target.value)}/></label>
      <label>عدد المحاولات<select value={maxAttempts} onChange={e=>setMaxAttempts(Number(e.target.value))}>{[1,2,3,4,5].map(n=><option key={n} value={n}>{n}</option>)}</select></label>
+     <label>مدة المحاولة (بالدقائق)<select value={durationMinutes} onChange={e=>setDurationMinutes(Number(e.target.value))}><option value={0}>بدون مؤقت</option>{[15,30,45,60,90,120,180].map(n=><option key={n} value={n}>{n} دقيقة</option>)}</select></label>
      <label className="assignment-publish-toggle"><input type="checkbox" checked={publish} onChange={e=>setPublish(e.target.checked)}/><span>نشر مباشرة</span></label>
     </div>
     <div className="assignment-create-cta-row">
@@ -200,7 +201,7 @@ export default function AssignmentsPanel({token,classes,currentExam,onCopyLibrar
   {/* Zone 2: Current Assignments */}
   <section className="assignment-zone assignment-list-zone">
    <div className="assignment-zone-heading"><h4>الواجبات الحالية</h4><span className="assignment-zone-count">{visible.length}</span></div>
-   <div className="assignment-list">{visible.map(item=><article className="assignment-row" key={item.assignmentId}><div className="assignment-row-main"><div className="assignment-row-title-line"><strong>{item.title}</strong><span className={"assignment-status "+item.status}>{item.status==="published"?"منشور":item.status==="archived"?"مؤرشف":"مسودة"}</span></div><span>{item.className}{item.className?" · ":""}{item.questionCount} سؤال · {item.totalMarks} علامة · {item.maxAttempts||1} محاولة</span><small>التسليم: {fmt(item.dueAt)}</small></div><div className="assignment-row-actions"><button onClick={()=>void loadResults(item)}>📊 سجل العلامات</button>{item.status!=="published"?<button onClick={()=>action(item,{action:"setStatus",status:"published"})}>نشر</button>:<button onClick={()=>action(item,{action:"setStatus",status:"draft"})}>إيقاف النشر</button>}<select value={item.maxAttempts||1} onChange={e=>action(item,{action:"setMaxAttempts",maxAttempts:Number(e.target.value)})}>{[1,2,3,4,5].map(n=><option key={n} value={n}>{n} محاولات</option>)}</select><button className="assignment-delete-button" onClick={()=>remove(item)}>حذف</button></div></article>)}
+   <div className="assignment-list">{visible.map(item=><article className="assignment-row" key={item.assignmentId}><div className="assignment-row-main"><div className="assignment-row-title-line"><strong>{item.title}</strong><span className={"assignment-status "+item.status}>{item.status==="published"?"منشور":item.status==="archived"?"مؤرشف":"مسودة"}</span></div><span>{item.className}{item.className?" · ":""}{item.questionCount} سؤال · {item.totalMarks} علامة · {item.maxAttempts||1} محاولة · {item.durationMinutes?item.durationMinutes+" دقيقة":"بدون مؤقت"}</span><small>التسليم: {fmt(item.dueAt)}</small></div><div className="assignment-row-actions"><button onClick={()=>void loadResults(item)}>📊 سجل العلامات</button>{item.status!=="published"?<button onClick={()=>action(item,{action:"setStatus",status:"published"})}>نشر</button>:<button onClick={()=>action(item,{action:"setStatus",status:"draft"})}>إيقاف النشر</button>}<select value={item.maxAttempts||1} onChange={e=>action(item,{action:"setMaxAttempts",maxAttempts:Number(e.target.value)})}>{[1,2,3,4,5].map(n=><option key={n} value={n}>{n} محاولات</option>)}</select><button className="assignment-delete-button" onClick={()=>remove(item)}>حذف</button></div></article>)}
    {!visible.length&&<div className="platform-empty">لا توجد واجبات بعد.</div>}
    </div>
   </section>

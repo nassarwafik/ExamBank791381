@@ -1,5 +1,5 @@
 
-import {useEffect,useMemo,useRef,useState} from "react";
+import {useEffect,useMemo,useRef,useState,useCallback} from "react";
 import {IconCheck} from "./icons";
 import StudentQuestionCard,{qid,answered} from "./StudentQuestionCard";
 import type {Question,Answer} from "./StudentQuestionCard";
@@ -9,12 +9,15 @@ import type {FieldValue} from "./StudentQuestionCard";
 import {normalizeExamStructure,calculateSectionProgress} from "./examStructure";
 import StructuredExamSection from "./StructuredExamSection";
 import StructuredExamCover from "./StructuredExamCover";
-import {normalizeCoverPage,examMarksDistribution,type ExamCoverPage} from "./examCover";
+import {normalizeCoverPage,examMarksDistribution,type ExamCoverPage,type MarksDistribution} from "./examCover";
+import {formatCountdown,countdownTone} from "./examTimer";
 
-type Assignment={assignmentId:string;title:string;instructions:string;openAt:string;dueAt:string;effectiveDueAt?:string;maxAttempts:number;questionCount:number;totalMarks:number;exam:{title?:string;metadata?:{school?:string;subject?:string;grade?:string;className?:string;generalInstructions?:string};presentationTheme?:string;coverPage?:ExamCoverPage;questions?:Question[];sections?:ExamSection[]}};
+type ExamBody={title?:string;metadata?:{school?:string;subject?:string;grade?:string;className?:string;generalInstructions?:string};presentationTheme?:string;coverPage?:ExamCoverPage;questions?:Question[];sections?:ExamSection[]};
+type Assignment={assignmentId:string;title:string;instructions:string;openAt:string;dueAt:string;effectiveDueAt?:string;maxAttempts:number;questionCount:number;totalMarks:number;durationMinutes?:number;requiresStart?:boolean;timed?:boolean;marksDistribution?:MarksDistribution;exam:ExamBody};
 type Answers=Record<string,Answer>;
-type Result={attemptNumber:number;submittedAt:string;score:number;totalMarks:number;percentage:number;manualReviewMarks:number;finalized:boolean;teacherFeedback?:string;questionGrades?:Array<{questionId:string;score:number;maxMarks:number;correct:boolean;manualReview:boolean}>};
-type State={attemptsUsed:number;allowedAttempts:number;canAttempt:boolean;dueClosed:boolean;draftAnswers:Answers;draftSavedAt:string;latestResult:Result|null;attempts:Array<Result>};
+type Result={attemptNumber:number;submittedAt:string;score:number;totalMarks:number;percentage:number;manualReviewMarks:number;finalized:boolean;teacherFeedback?:string;timedOut?:boolean;questionGrades?:Array<{questionId:string;score:number;maxMarks:number;correct:boolean;manualReview:boolean}>};
+type ActiveAttempt={attemptNumber:number;startedAt:string;endsAt:string};
+type State={attemptsUsed:number;allowedAttempts:number;canAttempt:boolean;dueClosed:boolean;draftAnswers:Answers;draftSavedAt:string;latestResult:Result|null;attempts:Array<Result>;durationMinutes?:number;timed?:boolean;serverNow?:string;activeAttempt?:ActiveAttempt|null;effectiveAttemptEndsAt?:string;attemptExpired?:boolean;canStartAttempt?:boolean;canWrite?:boolean};
 type Props={token:string;assignment:Assignment;studentName:string;className:string;onBack:()=>void;onLogout:()=>void};
 
 class ApiError extends Error{
@@ -23,11 +26,35 @@ class ApiError extends Error{
 }
 
 const fmt=(v:string)=>v?new Date(v).toLocaleString("ar"):"بدون موعد";
+const durationLabel=(m:number|undefined)=>m&&m>0?m+" دقيقة":"بدون مؤقت";
 
 export default function StudentExamPage({token,assignment,studentName,className,onBack,onLogout}:Props){
- const qs=assignment.exam.questions||[],theme=normalizeExamTheme(assignment.exam.presentationTheme),[answers,setAnswers]=useState<Answers>({}),[state,setState]=useState<State|null>(null),[loading,setLoading]=useState(true),[saving,setSaving]=useState(false),[retrying,setRetrying]=useState(false),[saveFailed,setSaveFailed]=useState(false),[dirty,setDirty]=useState(false),[submitBusy,setSubmitBusy]=useState(false),[error,setError]=useState(""),[result,setResult]=useState<Result|null>(null),[started,setStarted]=useState(true),[coverStarted,setCoverStarted]=useState(false),[focusIndex,setFocusIndex]=useState(0);
+ const theme=normalizeExamTheme(assignment.exam.presentationTheme);
+ const [exam,setExam]=useState<ExamBody>(assignment.exam);
+ const qs=exam.questions||[];
+ const [answers,setAnswers]=useState<Answers>({}),[state,setState]=useState<State|null>(null),[loading,setLoading]=useState(true),[saving,setSaving]=useState(false),[retrying,setRetrying]=useState(false),[saveFailed,setSaveFailed]=useState(false),[dirty,setDirty]=useState(false),[submitBusy,setSubmitBusy]=useState(false),[error,setError]=useState(""),[result,setResult]=useState<Result|null>(null),[started,setStarted]=useState(true),[coverStarted,setCoverStarted]=useState(false),[focusIndex,setFocusIndex]=useState(0);
+ const [starting,setStarting]=useState(false),[expired,setExpired]=useState(false),[remainingMs,setRemainingMs]=useState<number|null>(null);
  const loaded=useRef(false),timer=useRef<number|null>(null),revision=useRef(0),savedRevision=useRef(0),saveQueue=useRef<Promise<void>>(Promise.resolve()),submittingRef=useRef(false),initialAnswersSynced=useRef(false),mountedRef=useRef(true),latestTargetRevision=useRef(0);
- async function api<T>(options:RequestInit={}):Promise<T>{const h=new Headers(options.headers||{});h.set("Content-Type","application/json");h.set("x-student-token",token);h.set("Authorization","Bearer "+token);const r=await fetch("/api/student-submission/"+encodeURIComponent(assignment.assignmentId),{...options,headers:h}),j=await r.json() as T&{error?:string};if(r.status===401){onLogout();throw new ApiError(401,"انتهت الجلسة.")}if(!r.ok)throw new ApiError(r.status,j.error||"حدث خطأ.");return j}
+ const startingRef=useRef(false),finalizingRef=useRef(false);
+ // Server-anchored clock: we never trust the device wall clock. On each server response we store the
+ // server's effective-end and a performance.now() anchor; the countdown is (effEnd - (serverNow + (perf-anchor))).
+ const effEndMs=useRef(0),serverAnchorMs=useRef(0),perfAnchor=useRef(0);
+ const timed=!!(state?.timed)|| (assignment.durationMinutes||0)>0;
+ const hasActive=!!state?.activeAttempt;
+ const needsStart=timed&&!hasActive&&!result;
+ const writable=!!state?.canWrite&&!expired;
+
+ async function subApi<T>(options:RequestInit={}):Promise<T>{const h=new Headers(options.headers||{});h.set("Content-Type","application/json");h.set("x-student-token",token);h.set("Authorization","Bearer "+token);const r=await fetch("/api/student-submission/"+encodeURIComponent(assignment.assignmentId),{...options,headers:h}),j=await r.json() as T&{error?:string};if(r.status===401){onLogout();throw new ApiError(401,"انتهت الجلسة.")}if(!r.ok)throw new ApiError(r.status,j.error||"حدث خطأ.");return j}
+ const api=subApi;
+ // Re-anchor the local countdown clock to a fresh server state (serverNow + effectiveAttemptEndsAt).
+ const anchorClock=useCallback((st:State)=>{
+  const end=st.effectiveAttemptEndsAt?Date.parse(st.effectiveAttemptEndsAt):0;
+  const sn=st.serverNow?Date.parse(st.serverNow):Date.now();
+  if(end){effEndMs.current=end;serverAnchorMs.current=sn;perfAnchor.current=(typeof performance!=="undefined"?performance.now():0);setRemainingMs(Math.max(0,end-sn))}
+ },[]);
+ async function fetchExamBody():Promise<ExamBody|null>{
+  try{const h=new Headers();h.set("x-student-token",token);h.set("Authorization","Bearer "+token);const r=await fetch("/api/student-assignment/"+encodeURIComponent(assignment.assignmentId),{headers:h});const j=await r.json() as {assignment?:{exam?:ExamBody}};if(r.ok&&j.assignment?.exam)return j.assignment.exam;return null}catch{return null}
+ }
  async function saveDraftSnapshot(snapshot:Answers,myRevision:number){
   if(myRevision<latestTargetRevision.current)return;
   if(mountedRef.current){setSaving(true);setSaveFailed(false)}
@@ -41,6 +68,8 @@ export default function StudentExamPage({token,assignment,studentName,className,
      return;
     }catch(e){
      if(myRevision<latestTargetRevision.current)return;
+     // A save that lands after the server deadline is rejected — recover into the timeout flow.
+     if(e instanceof ApiError&&e.status===409&&e.message.indexOf("انتهى وقت")===0){if(mountedRef.current){setSaving(false);setRetrying(false)}void triggerTimeout();return}
      const retryable=!(e instanceof ApiError)||e.status>=500;
      if(!retryable||attempt===3){
       if(mountedRef.current){setError(e instanceof Error?e.message:"تعذر الحفظ التلقائي.");setSaveFailed(true)}
@@ -55,22 +84,50 @@ export default function StudentExamPage({token,assignment,studentName,className,
   }
  }
  useEffect(()=>{mountedRef.current=true;return()=>{mountedRef.current=false}},[]);
- useEffect(()=>{let cancelled=false;(async()=>{setLoading(true);try{const r=await api<{state:State}>();if(cancelled)return;setState(r.state);setAnswers(r.state.draftAnswers||{});setResult(r.state.latestResult);setStarted(r.state.attemptsUsed===0||Object.keys(r.state.draftAnswers||{}).length>0);loaded.current=true}catch(e){if(!cancelled)setError(e instanceof Error?e.message:"تعذر تحميل المحاولة.")}finally{if(!cancelled)setLoading(false)}})();return()=>{cancelled=true;if(timer.current)window.clearTimeout(timer.current)}},[assignment.assignmentId,token]);
- useEffect(()=>{if(!loaded.current||!started||!state?.canAttempt||submittingRef.current)return;if(!initialAnswersSynced.current){initialAnswersSynced.current=true;return}revision.current+=1;latestTargetRevision.current=revision.current;setDirty(true);const myRevision=revision.current,snapshot=answers;if(timer.current)window.clearTimeout(timer.current);timer.current=window.setTimeout(()=>{if(submittingRef.current)return;saveQueue.current=saveQueue.current.catch(()=>{}).then(()=>saveDraftSnapshot(snapshot,myRevision))},800);return()=>{if(timer.current)window.clearTimeout(timer.current)}},[answers,started,state?.canAttempt]);
+ useEffect(()=>{let cancelled=false;(async()=>{setLoading(true);try{const r=await api<{state:State}>();if(cancelled)return;setState(r.state);setAnswers(r.state.draftAnswers||{});setResult(r.state.latestResult);anchorClock(r.state);
+  const isTimed=!!r.state.timed;
+  if(isTimed){setStarted(!!r.state.activeAttempt);if(r.state.attemptExpired&&r.state.activeAttempt){void triggerTimeout()}}
+  else{setStarted(r.state.attemptsUsed===0||Object.keys(r.state.draftAnswers||{}).length>0)}
+  loaded.current=true}catch(e){if(!cancelled)setError(e instanceof Error?e.message:"تعذر تحميل المحاولة.")}finally{if(!cancelled)setLoading(false)}})();return()=>{cancelled=true;if(timer.current)window.clearTimeout(timer.current)}},[assignment.assignmentId,token]);
+ useEffect(()=>{if(!loaded.current||!started||!writable||submittingRef.current)return;if(!initialAnswersSynced.current){initialAnswersSynced.current=true;return}revision.current+=1;latestTargetRevision.current=revision.current;setDirty(true);const myRevision=revision.current,snapshot=answers;if(timer.current)window.clearTimeout(timer.current);timer.current=window.setTimeout(()=>{if(submittingRef.current)return;saveQueue.current=saveQueue.current.catch(()=>{}).then(()=>saveDraftSnapshot(snapshot,myRevision))},800);return()=>{if(timer.current)window.clearTimeout(timer.current)}},[answers,started,writable]);
  useEffect(()=>{const handler=(e:BeforeUnloadEvent)=>{if(revision.current<=savedRevision.current)return;e.preventDefault();e.returnValue=""};window.addEventListener("beforeunload",handler);return()=>window.removeEventListener("beforeunload",handler)},[]);
- useEffect(()=>{const handleOnline=()=>{if(submittingRef.current||!started||!state?.canAttempt)return;if(revision.current>savedRevision.current){const myRevision=revision.current,snapshot=answers;saveQueue.current=saveQueue.current.catch(()=>{}).then(()=>saveDraftSnapshot(snapshot,myRevision))}};window.addEventListener("online",handleOnline);return()=>window.removeEventListener("online",handleOnline)},[answers,started,state?.canAttempt]);
- // Backward-compatible normalization: a legacy exam (exam.questions, no exam.sections) yields
- // structured===false and we keep the original flat/focus rendering path below untouched.
- const norm=useMemo(()=>normalizeExamStructure(assignment.exam),[assignment.exam]);
+ // Resync the server-authoritative timer on reconnect and when returning to the tab; never a per-second poll.
+ const resync=useCallback(async()=>{if(!mountedRef.current||submittingRef.current||result)return;try{const r=await api<{state:State}>();if(!mountedRef.current)return;setState(r.state);anchorClock(r.state);if(r.state.attemptExpired&&r.state.activeAttempt&&!result)void triggerTimeout()}catch{/* ignore transient resync failure */}},[result]);
+ useEffect(()=>{const handleOnline=()=>{if(expired&&!finalizingRef.current){void triggerTimeout();return}if(submittingRef.current||!started||!writable)return;if(revision.current>savedRevision.current){const myRevision=revision.current,snapshot=answers;saveQueue.current=saveQueue.current.catch(()=>{}).then(()=>saveDraftSnapshot(snapshot,myRevision))}void resync()};window.addEventListener("online",handleOnline);const onVis=()=>{if(document.visibilityState==="visible")void resync()};document.addEventListener("visibilitychange",onVis);return()=>{window.removeEventListener("online",handleOnline);document.removeEventListener("visibilitychange",onVis)}},[answers,started,writable,expired,resync]);
+ // Local 1s countdown between server syncs, anchored to performance.now() (device wall-clock changes
+ // cannot reset it). Fires timeout finalization exactly once when it reaches zero.
+ useEffect(()=>{
+  if(!timed||!hasActive||result||!state?.effectiveAttemptEndsAt)return;
+  const tick=()=>{const elapsed=(typeof performance!=="undefined"?performance.now():0)-perfAnchor.current;const est=serverAnchorMs.current+elapsed;const rem=effEndMs.current-est;setRemainingMs(Math.max(0,rem));if(rem<=0){void triggerTimeout()}};
+  tick();const idv=window.setInterval(tick,1000);return()=>window.clearInterval(idv);
+ },[timed,hasActive,result,state?.effectiveAttemptEndsAt]);
+
+ async function startTimedAttempt(){
+  if(startingRef.current)return;startingRef.current=true;setStarting(true);setError("");
+  try{
+   const r=await api<{state:State}>({method:"POST",body:JSON.stringify({action:"startAttempt"})});
+   const body=await fetchExamBody();if(body)setExam(body);
+   setState(r.state);setAnswers(r.state.draftAnswers||{});anchorClock(r.state);setExpired(false);finalizingRef.current=false;setStarted(true);setCoverStarted(true);
+   window.scrollTo({top:0,behavior:"smooth"});
+  }catch(e){setError(e instanceof Error?e.message:"تعذر بدء المحاولة.")}finally{setStarting(false);startingRef.current=false}
+ }
+ async function triggerTimeout(){
+  if(finalizingRef.current)return;finalizingRef.current=true;setExpired(true);submittingRef.current=true;
+  try{
+   await saveQueue.current.catch(()=>{});
+   const r=await api<{result:Result;state:State}>({method:"POST",body:JSON.stringify({action:"finalizeTimedOutAttempt"})});
+   if(mountedRef.current){if(r.result)setResult(r.result);setState(r.state);setStarted(false);setAnswers({});window.scrollTo({top:0,behavior:"smooth"})}
+  }catch(e){
+   // Offline / transient — keep answers locked (time is over) and retry when connectivity returns.
+   finalizingRef.current=false;
+   if(mountedRef.current)setError(e instanceof Error&&(e as ApiError).status>=500||!(e instanceof ApiError)?"انتهى الوقت. سيتم إنهاء المحاولة تلقائيًا عند عودة الاتصال.":(e as Error).message);
+  }finally{submittingRef.current=false}
+ }
+ const norm=useMemo(()=>normalizeExamStructure(exam),[exam]);
  const structured=norm.structured;
- // Optional cover/start page (structured exams only). Presentation-only: it gates what is RENDERED and
- // never touches the attempt/timer/due-date logic (there is no client countdown — timing is the server
- // dueAt, and an attempt is created on first draft-save/submit, i.e. only after the student answers).
- const cover=useMemo<ExamCoverPage|undefined>(()=>normalizeCoverPage(assignment.exam.coverPage),[assignment.exam.coverPage]);
- const coverDistribution=useMemo(()=>examMarksDistribution(norm),[norm]);
+ const cover=useMemo<ExamCoverPage|undefined>(()=>normalizeCoverPage(exam.coverPage),[exam.coverPage]);
+ const coverDistribution=useMemo(()=>assignment.marksDistribution&&assignment.marksDistribution.rows.length?assignment.marksDistribution:examMarksDistribution(norm),[assignment.marksDistribution,norm]);
  const questionTotal=useMemo(()=>structured?norm.sections.reduce((n,s)=>n+s.questions.length,0):qs.length,[structured,norm,qs]);
- // Section-aware progress. For a legacy exam this reduces to the original done/qs.length behaviour
- // (single "all" section whose units are exactly the flat questions).
  const {done,total,pct}=useMemo(()=>{
   if(structured){let a=0,t=0;norm.sections.forEach(s=>{const p=calculateSectionProgress(s,answers);a+=p.answered;t+=p.total});return {done:a,total:t,pct:t?Math.round(a/t*100):0}}
   const d=qs.reduce((n,q,i)=>n+(answered(answers[qid(q,i)])?1:0),0);return {done:d,total:qs.length,pct:qs.length?Math.round(d/qs.length*100):0};
@@ -78,11 +135,8 @@ export default function StudentExamPage({token,assignment,studentName,className,
  const setChoice=(id:string,index:number)=>setAnswers(a=>({...a,[id]:{kind:"choice",index}}));
  const setSeq=(id:string,index:number,value:string)=>setAnswers(a=>{const prev=a[id]?.kind==="sequence"?(a[id] as {kind:"sequence";values:string[]}).values:[];const values=[...prev];values[index]=value;return {...a,[id]:{kind:"sequence",values}}});
  const setTable=(id:string,index:number,value:string|boolean)=>setAnswers(a=>{const prev=a[id]?.kind==="table"?(a[id] as {kind:"table";values:(string|boolean)[]}).values:[];const values=[...prev];values[index]=value;return {...a,[id]:{kind:"table",values}}});
- // New answer shapes: a single flat field map per question, and a per-part map for compound questions.
  const setField=(id:string,fieldId:string,value:FieldValue)=>setAnswers(a=>{const prev=a[id]?.kind==="fields"?(a[id] as {kind:"fields";values:Record<string,FieldValue>}).values:{};return {...a,[id]:{kind:"fields",values:{...prev,[fieldId]:value}}}});
  const setPart=(id:string,partId:string,ans:Answer)=>setAnswers(a=>{const prev=a[id]?.kind==="compound"?(a[id] as {kind:"compound";parts:Record<string,Answer>}).parts:{};return {...a,[id]:{kind:"compound",parts:{...prev,[partId]:ans}}}});
- // Section-aware submission confirmation. capScore sections never block on unanswered questions;
- // firstNAnswered sections warn (but do not block) when fewer than the required answers are given.
  function confirmSubmit(){
   if(structured){
    const short=norm.sections.filter(s=>s.gradingPolicy==="firstNAnswered"&&s.requiredAnswers!=null).map(s=>({s,p:calculateSectionProgress(s,answers)})).find(x=>x.p.required!=null&&x.p.answered<x.p.required);
@@ -92,31 +146,60 @@ export default function StudentExamPage({token,assignment,studentName,className,
   if(done<qs.length)return window.confirm("لم تُجب عن جميع الأسئلة. هل تريد التسليم الآن؟");
   return window.confirm("سيتم إرسال الحل للتصحيح. هل تريد المتابعة؟");
  }
- async function submit(){if(!state?.canAttempt||submitBusy)return;if(!confirmSubmit())return;submittingRef.current=true;setSubmitBusy(true);setError("");if(timer.current)window.clearTimeout(timer.current);const submitSnapshot=answers,submitRevision=revision.current;if(submitRevision>savedRevision.current){saveQueue.current=saveQueue.current.catch(()=>{}).then(()=>saveDraftSnapshot(submitSnapshot,submitRevision))}try{await saveQueue.current;if(savedRevision.current<submitRevision){setError("تعذر حفظ إجاباتك بسبب مشكلة في الاتصال. تحقق من الإنترنت وحاول التسليم مرة أخرى.");return}const r=await api<{result:Result;state:State}>({method:"POST",body:JSON.stringify({action:"submit",answers:submitSnapshot})});setResult(r.result);setState(r.state);setStarted(false);setAnswers({});savedRevision.current=revision.current;window.scrollTo({top:0,behavior:"smooth"})}catch(e){setError(e instanceof Error?e.message:"تعذر تسليم الواجب.")}finally{setSubmitBusy(false);submittingRef.current=false}}
- function startNext(){if(!state?.canAttempt)return;setAnswers({});setResult(state.latestResult);setStarted(true);setCoverStarted(false);window.scrollTo({top:0,behavior:"smooth"})}
+ async function submit(){if(!writable||submitBusy)return;if(!confirmSubmit())return;submittingRef.current=true;setSubmitBusy(true);setError("");if(timer.current)window.clearTimeout(timer.current);const submitSnapshot=answers,submitRevision=revision.current;if(submitRevision>savedRevision.current){saveQueue.current=saveQueue.current.catch(()=>{}).then(()=>saveDraftSnapshot(submitSnapshot,submitRevision))}try{await saveQueue.current;if(savedRevision.current<submitRevision){setError("تعذر حفظ إجاباتك بسبب مشكلة في الاتصال. تحقق من الإنترنت وحاول التسليم مرة أخرى.");return}const r=await api<{result:Result;state:State}>({method:"POST",body:JSON.stringify({action:"submit",answers:submitSnapshot})});setResult(r.result);setState(r.state);setStarted(false);setAnswers({});savedRevision.current=revision.current;window.scrollTo({top:0,behavior:"smooth"})}catch(e){
+  // Race at the deadline: server says time is over — recover cleanly into the timeout flow.
+  if(e instanceof ApiError&&e.status===409&&e.message.indexOf("انتهى وقت")===0){submittingRef.current=false;void triggerTimeout()}
+  else setError(e instanceof Error?e.message:"تعذر تسليم الواجب.")
+ }finally{setSubmitBusy(false);if(!finalizingRef.current)submittingRef.current=false}}
+ function startNext(){if(timed){if(!state?.canStartAttempt)return;void startTimedAttempt();setResult(null);return}if(!state?.canAttempt)return;setAnswers({});setResult(state.latestResult);setStarted(true);setCoverStarted(false);window.scrollTo({top:0,behavior:"smooth"})}
  function backWithoutSubmit(){if(revision.current>savedRevision.current&&!window.confirm("توجد إجابات لم تُحفظ بعد. هل تريد المغادرة على أي حال؟"))return;onBack()}
  if(loading)return <main className="student-portal" dir="rtl"><div className="platform-loading">⏳ جارٍ تجهيز صفحة الامتحان...</div></main>;
- if(!started&&result)return <main className={"interactive-exam-page exam-theme-"+theme} dir="rtl"><div className="iex-wrap"><section className="iex-result-card"><span className="platform-eyebrow">RESULT</span><h1>تم تسليم المحاولة {result.attemptNumber}</h1><div className="iex-score">{result.score}<small> / {result.totalMarks}</small></div><strong>{result.percentage}%</strong>{result.manualReviewMarks>0&&<p>العلامة الحالية مؤقتة، وهناك {result.manualReviewMarks} علامة تحتاج مراجعة المعلم.</p>}{result.finalized&&<p className="iex-finalized">✓ تم اعتماد العلامة النهائية.</p>}{result.teacherFeedback&&<div className="iex-teacher-feedback"><strong>ملاحظة المعلم</strong><span>{result.teacherFeedback}</span></div>}<p>تم الحفظ في حسابك بتاريخ {fmt(result.submittedAt)}</p><div className="iex-result-actions"><button onClick={onBack}>العودة إلى المهام</button>{state?.canAttempt&&<button className="primary" onClick={startNext}>بدء محاولة جديدة ({state.attemptsUsed+1} من {state.allowedAttempts})</button>}</div>{!state?.canAttempt&&<div className="iex-no-retry">لا توجد محاولة إضافية متاحة. يستطيع المعلم السماح بمحاولة أخرى من صفحة النتائج.</div>}</section></div></main>;
- // Optional cover shows FIRST (structured exams only), in taking-exam mode, before any question UI.
- // Presentation-only gate: pressing "ابدأ" reveals the existing question interface unchanged; it starts
- // no timer and creates no attempt (autosave/attempt begin only when the student answers, as before).
- if(structured&&cover?.enabled&&!coverStarted){
+ if(!started&&result)return <main className={"interactive-exam-page exam-theme-"+theme} dir="rtl"><div className="iex-wrap"><section className="iex-result-card"><span className="platform-eyebrow">RESULT</span><h1>تم تسليم المحاولة {result.attemptNumber}{result.timedOut?" (انتهى الوقت)":""}</h1><div className="iex-score">{result.score}<small> / {result.totalMarks}</small></div><strong>{result.percentage}%</strong>{result.timedOut&&<p className="iex-timeout-note">⏱ تم إنهاء هذه المحاولة تلقائيًا عند انتهاء الوقت، وصُحّحت الإجابات المحفوظة.</p>}{result.manualReviewMarks>0&&<p>العلامة الحالية مؤقتة، وهناك {result.manualReviewMarks} علامة تحتاج مراجعة المعلم.</p>}{result.finalized&&<p className="iex-finalized">✓ تم اعتماد العلامة النهائية.</p>}{result.teacherFeedback&&<div className="iex-teacher-feedback"><strong>ملاحظة المعلم</strong><span>{result.teacherFeedback}</span></div>}<p>تم الحفظ في حسابك بتاريخ {fmt(result.submittedAt)}</p><div className="iex-result-actions"><button onClick={onBack}>العودة إلى المهام</button>{(timed?state?.canStartAttempt:state?.canAttempt)&&<button className="primary" onClick={startNext} disabled={starting}>{starting?"⏳ جارٍ البدء...":"بدء محاولة جديدة ("+((state?.attemptsUsed||0)+1)+" من "+(state?.allowedAttempts||assignment.maxAttempts)+")"}</button>}</div>{!(timed?state?.canStartAttempt:state?.canAttempt)&&<div className="iex-no-retry">لا توجد محاولة إضافية متاحة. يستطيع المعلم السماح بمحاولة أخرى من صفحة النتائج.</div>}</section></div></main>;
+ // TIMED START GATE — questions are NOT delivered by the server until startAttempt succeeds. Shows the
+ // structured cover (when enabled) or a compact start card; pressing start calls the server, receives the
+ // authoritative timer, refetches the exam and reveals the questions.
+ if(needsStart){
+  const rawDate=assignment.openAt||assignment.effectiveDueAt||assignment.dueAt;
+  const examDate=rawDate?new Date(rawDate).toLocaleDateString("ar"):"";
+  const dur=durationLabel(assignment.durationMinutes||state?.durationMinutes);
+  if(structured&&cover?.enabled){
+   return <main className={"interactive-exam-page exam-theme-"+theme} dir="rtl"><div className="iex-wrap">
+    {error&&<div className="platform-error iex-error">{error}</div>}
+    <StructuredExamCover cover={cover} title={assignment.title||exam.title||"امتحان"} distribution={coverDistribution}
+     runtime={{studentName,className:className||exam.metadata?.className||"",examDate,duration:dur}}
+     starting={starting} onStart={()=>{void startTimedAttempt()}}/>
+   </div></main>;
+  }
+  return <main className={"interactive-exam-page exam-theme-"+theme} dir="rtl"><div className="iex-wrap">
+   {error&&<div className="platform-error iex-error">{error}</div>}
+   <section className="iex-start-card"><span className="platform-eyebrow">Timed</span><h1>{assignment.title}</h1><p>{assignment.instructions}</p>
+    <div className="iex-start-meta"><span>مدة المحاولة: <strong>{dur}</strong></span><span>{assignment.questionCount} سؤال · {assignment.totalMarks} علامة</span><span>المحاولة {(state?.attemptsUsed||0)+1} / {state?.allowedAttempts||assignment.maxAttempts}</span></div>
+    <p className="iex-start-hint">لن تظهر الأسئلة إلا بعد بدء المحاولة، وسيبدأ العدّاد فور الضغط على الزر.</p>
+    <div className="iex-start-actions"><button onClick={onBack}>العودة</button><button className="primary" onClick={()=>{void startTimedAttempt()}} disabled={starting||!state?.canStartAttempt}>{starting?"⏳ جارٍ البدء...":"بدء المحاولة"}</button></div>
+    {!state?.canStartAttempt&&!starting&&<div className="iex-no-retry">لا يمكن بدء المحاولة الآن (قد يكون الموعد انتهى أو استُنفدت المحاولات).</div>}
+   </section>
+  </div></main>;
+ }
+ if(structured&&cover?.enabled&&!coverStarted&&!timed){
   const rawDate=assignment.openAt||assignment.effectiveDueAt||assignment.dueAt;
   const examDate=rawDate?new Date(rawDate).toLocaleDateString("ar"):"";
   return <main className={"interactive-exam-page exam-theme-"+theme} dir="rtl"><div className="iex-wrap">
-   <StructuredExamCover cover={cover} title={assignment.title||assignment.exam.title||"امتحان"} distribution={coverDistribution}
-    runtime={{studentName,className:className||assignment.exam.metadata?.className||"",examDate}}
+   <StructuredExamCover cover={cover} title={assignment.title||exam.title||"امتحان"} distribution={coverDistribution}
+    runtime={{studentName,className:className||exam.metadata?.className||"",examDate}}
     onStart={()=>{setCoverStarted(true);window.scrollTo({top:0,behavior:"smooth"})}}/>
   </div></main>;
  }
+ const inputsDisabled=submitBusy||expired;
  return <main className={"interactive-exam-page exam-theme-"+theme} dir="rtl"><div className="iex-wrap">
-  <header className="iex-head"><div><span className="iex-school">{assignment.exam.metadata?.school||"ExamBank 791381"}</span><h1>{assignment.title}</h1><p>{assignment.instructions}</p><div className="iex-badges"><span>{className||assignment.exam.metadata?.className||"الصف"}</span><span>{questionTotal} أسئلة</span><span>{assignment.totalMarks} علامة</span><span>المحاولة {(state?.attemptsUsed||0)+1} / {state?.allowedAttempts||assignment.maxAttempts}</span></div></div><div className="iex-student"><strong>{studentName}</strong><span>آخر موعد: {fmt(assignment.effectiveDueAt||assignment.dueAt)}</span></div></header>
+  <header className="iex-head"><div><span className="iex-school">{exam.metadata?.school||"ExamBank 791381"}</span><h1>{assignment.title}</h1><p>{assignment.instructions}</p><div className="iex-badges"><span>{className||exam.metadata?.className||"الصف"}</span><span>{questionTotal} أسئلة</span><span>{assignment.totalMarks} علامة</span><span>المحاولة {(state?.attemptsUsed||0)+1} / {state?.allowedAttempts||assignment.maxAttempts}</span></div></div><div className="iex-student"><strong>{studentName}</strong><span>آخر موعد: {fmt(assignment.effectiveDueAt||assignment.dueAt)}</span></div></header>
+  {timed&&hasActive&&remainingMs!==null&&<div className={"iex-countdown "+countdownTone(remainingMs)}><span className="iex-countdown-label">الوقت المتبقي</span><strong className="iex-countdown-clock">{formatCountdown(remainingMs)}</strong></div>}
   {error&&<div className="platform-error iex-error">{error}</div>}
+  {expired&&!result&&<div className="platform-notice iex-error">انتهى وقت المحاولة — لم يعد بالإمكان تعديل الإجابات، ويجري إنهاء المحاولة وتصحيح ما تم حفظه.</div>}
   <div className="iex-progress"><span>تقدّمك</span><div><i style={{width:pct+"%"}}/></div><strong>{done} / {total}</strong><small>{saveFailed?"غير محفوظ — تحقق من الاتصال":retrying?"تعذر الحفظ — إعادة المحاولة...":(saving||dirty)?"جارٍ الحفظ...":<><IconCheck size={11}/>تم الحفظ</>}</small></div>
-  {structured?(()=>{let offset=0;return <>{norm.sections.map((section,si)=>{const startIndex=offset;offset+=section.questions.length;return <StructuredExamSection key={section.id} section={section} sectionNumber={si+1} startIndex={startIndex} answers={answers} onChoice={setChoice} onSeq={setSeq} onTable={setTable} onText={(id,v)=>setAnswers(x=>({...x,[id]:{kind:"text",value:v}}))} onField={setField} onPart={setPart} disabled={submitBusy}/>})}</>})():
-  theme==="focus"&&qs.length>0?(()=>{const i=Math.min(focusIndex,qs.length-1),q=qs[i],id=qid(q,i);return <div className="iex-focus-mode"><div className="iex-focus-nav"><button onClick={()=>setFocusIndex(x=>previousFocusIndex(x,qs.length))} disabled={i===0}>◀ السابق</button><span>السؤال {i+1} من {qs.length}</span><button onClick={()=>setFocusIndex(x=>nextFocusIndex(x,qs.length))} disabled={i===qs.length-1}>التالي ▶</button></div><div className="iex-focus-progress"><i style={{width:focusProgressPercent(i,qs.length)+"%"}}/></div><StudentQuestionCard q={q} index={i} id={id} answer={answers[id]} onChoice={n=>setChoice(id,n)} onSeq={(n,v)=>setSeq(id,n,v)} onTable={(n,v)=>setTable(id,n,v)} onText={v=>setAnswers(x=>({...x,[id]:{kind:"text",value:v}}))} disabled={submitBusy}/></div>})():(
-  <section className="iex-flow">{qs.map((q,i)=>{const id=qid(q,i);return <StudentQuestionCard key={id} q={q} index={i} id={id} answer={answers[id]} onChoice={n=>setChoice(id,n)} onSeq={(n,v)=>setSeq(id,n,v)} onTable={(n,v)=>setTable(id,n,v)} onText={v=>setAnswers(x=>({...x,[id]:{kind:"text",value:v}}))} disabled={submitBusy}/>})}</section>
+  {structured?(()=>{let offset=0;return <>{norm.sections.map((section,si)=>{const startIndex=offset;offset+=section.questions.length;return <StructuredExamSection key={section.id} section={section} sectionNumber={si+1} startIndex={startIndex} answers={answers} onChoice={setChoice} onSeq={setSeq} onTable={setTable} onText={(id,v)=>setAnswers(x=>({...x,[id]:{kind:"text",value:v}}))} onField={setField} onPart={setPart} disabled={inputsDisabled}/>})}</>})():
+  theme==="focus"&&qs.length>0?(()=>{const i=Math.min(focusIndex,qs.length-1),q=qs[i],id=qid(q,i);return <div className="iex-focus-mode"><div className="iex-focus-nav"><button onClick={()=>setFocusIndex(x=>previousFocusIndex(x,qs.length))} disabled={i===0}>◀ السابق</button><span>السؤال {i+1} من {qs.length}</span><button onClick={()=>setFocusIndex(x=>nextFocusIndex(x,qs.length))} disabled={i===qs.length-1}>التالي ▶</button></div><div className="iex-focus-progress"><i style={{width:focusProgressPercent(i,qs.length)+"%"}}/></div><StudentQuestionCard q={q} index={i} id={id} answer={answers[id]} onChoice={n=>setChoice(id,n)} onSeq={(n,v)=>setSeq(id,n,v)} onTable={(n,v)=>setTable(id,n,v)} onText={v=>setAnswers(x=>({...x,[id]:{kind:"text",value:v}}))} disabled={inputsDisabled}/></div>})():(
+  <section className="iex-flow">{qs.map((q,i)=>{const id=qid(q,i);return <StudentQuestionCard key={id} q={q} index={i} id={id} answer={answers[id]} onChoice={n=>setChoice(id,n)} onSeq={(n,v)=>setSeq(id,n,v)} onTable={(n,v)=>setTable(id,n,v)} onText={v=>setAnswers(x=>({...x,[id]:{kind:"text",value:v}}))} disabled={inputsDisabled}/>})}</section>
   )}
-  <footer className="iex-foot"><div><strong>أجبت عن {done} من {total}</strong><span>{saving?"جارٍ حفظ الإجابات...":"يتم حفظ إجاباتك تلقائيًا أثناء الحل."}</span></div><div><button onClick={backWithoutSubmit}>العودة بدون تسليم</button><button className="primary" onClick={submit} disabled={submitBusy||!state?.canAttempt}>{submitBusy?"⏳ جارٍ التصحيح...":<><IconCheck size={15}/>تسليم وتصحيح الامتحان</>}</button></div></footer>
+  <footer className="iex-foot"><div><strong>أجبت عن {done} من {total}</strong><span>{saving?"جارٍ حفظ الإجابات...":"يتم حفظ إجاباتك تلقائيًا أثناء الحل."}</span></div><div><button onClick={backWithoutSubmit}>العودة بدون تسليم</button><button className="primary" onClick={submit} disabled={submitBusy||!writable}>{submitBusy?"⏳ جارٍ التصحيح...":<><IconCheck size={15}/>تسليم وتصحيح الامتحان</>}</button></div></footer>
  </div></main>
 }
