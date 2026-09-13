@@ -3,8 +3,8 @@ const {app}=require("@azure/functions");
 const {requireStudentAuth}=require("../lib/student-auth");
 const {getContainer,downloadJsonOrNull,listJson}=require("../lib/platform-storage");
 const {normalizeClassStatus}=require("../lib/class-lifecycle");
+const {attemptState}=require("../lib/assignment-availability");
 const AP="platform/assignments/",SP="platform/submissions/";
-function availability(a,dueMs){const now=Date.now(),o=a.openAt?new Date(a.openAt).getTime():0;if(o&&o>now)return "scheduled";if(dueMs&&dueMs<now)return "closed";return "open"}
 app.http("studentDashboard",{methods:["GET"],authLevel:"anonymous",route:"student-dashboard",handler:async request=>{
  try{
   const auth=requireStudentAuth(request);if(!auth.ok)return auth.response;const c=getContainer(),student=await downloadJsonOrNull(c,"platform/users/"+auth.user.sub+".json");if(!student||student.active===false)return {status:401,jsonBody:{ok:false,error:"الحساب غير فعّال."}};
@@ -12,7 +12,7 @@ app.http("studentDashboard",{methods:["GET"],authLevel:"anonymous",route:"studen
   if(classroom&&normalizeClassStatus(classroom)==="archived")return {status:403,jsonBody:{ok:false,error:"هذا الصف مؤرشف وانتهت السنة الدراسية."}};
   const raw=await listJson(c,AP),assignments=[];let completed=0,sum=0;
   for(const a of raw.filter(x=>x.status==="published"&&String(x.classId||"")===String(student.classId||""))){
-   const s=await downloadJsonOrNull(c,SP+a.assignmentId+"/"+student.userId+".json"),attempts=Array.isArray(s?.attempts)?s.attempts:[],latest=attempts.length?attempts[attempts.length-1]:null,base=Math.max(1,Number(a.maxAttempts||1)),allowed=Math.max(base,Number(s?.allowedAttempts||0)),effectiveDueAt=(s&&s.dueAtOverride)?s.dueAtOverride:(a.dueAt||""),dueMs=effectiveDueAt?new Date(effectiveDueAt).getTime():0,avail=availability(a,dueMs),canAttempt=avail==="open"&&attempts.length<allowed;
+   const s=await downloadJsonOrNull(c,SP+a.assignmentId+"/"+student.userId+".json"),attempts=Array.isArray(s?.attempts)?s.attempts:[],latest=attempts.length?attempts[attempts.length-1]:null,st=attemptState(a,s),allowed=st.allowedAttempts,effectiveDueAt=st.effectiveDueAt,avail=st.availability,canAttempt=st.canAttempt;
    if(latest){completed++;sum+=Number(latest.percentage||0)}
    assignments.push({assignmentId:String(a.assignmentId||""),title:String(a.title||""),instructions:String(a.instructions||""),openAt:String(a.openAt||""),dueAt:String(a.dueAt||""),effectiveDueAt:String(effectiveDueAt||""),sourceExamTitle:String(a.sourceExamTitle||""),questionCount:Number(a.questionCount||0),totalMarks:Number(a.totalMarks||0),availability:avail,attemptsUsed:attempts.length,allowedAttempts:allowed,canAttempt,latestScore:latest?Number(latest.score||0):null,latestPercentage:latest?Number(latest.percentage||0):null,createdAt:String(a.createdAt||"")})
   }
