@@ -358,11 +358,21 @@ export function legacyToStructured(exam: Record<string, unknown>): StructuredExa
   return out;
 }
 
+// Official grading maximum for ONE builder question — mirror of the backend questionMaxMarks / grader.
+// A compound question whose parts ALL carry explicit marks is worth the SUM of those part marks (which
+// may legitimately differ from its own top-level marks); otherwise the question's own marks. Reuses
+// partMarksInfo so the distribution rule lives in exactly one place.
+export function questionMaxMarks(q: BuilderQuestion): number {
+  const info = partMarksInfo(q);
+  return Math.max(0, info.mode === "explicit" ? info.total : (Number(q.marks) || 0));
+}
+
 // Compute total marks across all sections (each section's maxMarks cap when set, else the sum of its
-// question marks). Mirrors the backend examStats() so the saved totalMarks is consistent.
+// question max marks). Mirrors the backend examOfficialStats()/grader so the saved totalMarks is
+// consistent — including compound questions with explicit part marks.
 export function computeTotalMarks(exam: StructuredExam): number {
   return (exam.sections || []).reduce((total, s) => {
-    const sum = (s.questions || []).reduce((a, q) => a + (Number(q.marks) || 0), 0);
+    const sum = (s.questions || []).reduce((a, q) => a + questionMaxMarks(q), 0);
     // "all" sections are never capped (mirrors the backend grader); only capScore / firstNAnswered
     // use an explicit section maximum.
     const capped = s.gradingPolicy !== "all" && s.maxMarks != null;
