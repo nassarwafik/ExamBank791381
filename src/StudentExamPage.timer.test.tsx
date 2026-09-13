@@ -33,20 +33,32 @@ const preStartAssignment = {
 const fullExam = { title: "امتحان مؤقت", metadata: {}, presentationTheme: "classic", coverPage: { enabled: true, showDuration: true },
   sections: [{ id: "s1", title: "القسم الأول", gradingPolicy: "all", questions: [{ examQuestionId: "q1", presentationType: "shortAnswer", text: "سؤال الاختبار السري", marks: 100 }] }] };
 
+// A prior completed attempt (result screen) with another attempt still available (maxAttempts 2).
+const priorResult = { attemptNumber: 1, submittedAt: "2026-01-01T09:00:00.000Z", score: 80, totalMarks: 100, percentage: 80, manualReviewMarks: 0, finalized: true, timedOut: false };
+const completedState = { ...preStartState, attemptsUsed: 1, allowedAttempts: 2, canStartAttempt: true, activeAttempt: null, latestResult: priorResult, attempts: [priorResult] };
+// An expired active attempt (server-confirmed) — recovery must finalize this, not restart.
+const expiredActiveState = { ...startedState, attemptExpired: true, canWrite: false, canStartAttempt: false, serverNow: "2026-01-01T11:05:00.000Z", effectiveAttemptEndsAt: END };
+const timedOutResult = { attemptNumber: 1, submittedAt: "2026-01-01T11:05:00.000Z", score: 0, totalMarks: 100, percentage: 0, manualReviewMarks: 0, finalized: true, timedOut: true };
+const finalizedState = { ...startedState, activeAttempt: null, attemptExpired: false, canWrite: false, canStartAttempt: false, latestResult: timedOutResult, attempts: [timedOutResult] };
+// A fresh SECOND attempt window (12:00 -> 13:00).
+const startedState2 = { ...startedState, activeAttempt: { attemptNumber: 2, startedAt: "2026-01-01T12:00:00.000Z", endsAt: "2026-01-01T13:00:00.000Z" }, effectiveAttemptEndsAt: "2026-01-01T13:00:00.000Z", serverNow: "2026-01-01T12:00:00.000Z", attemptsUsed: 1, allowedAttempts: 2 };
+
 const json = (status: number, body: unknown) => Promise.resolve({ ok: status >= 200 && status < 300, status, json: async () => body } as Response);
 
-let startCalls = 0, examCalls = 0, onLogout: ReturnType<typeof vi.fn>, examHandler: () => Promise<Response>;
+let startCalls = 0, examCalls = 0, finalizeCalls = 0, subGetCalls = 0, onLogout: ReturnType<typeof vi.fn>;
+let examHandler: (n: number) => Promise<Response>, startHandler: (n: number) => Promise<Response>, finalizeHandler: (n: number) => Promise<Response>, subGetHandler: (n: number) => Promise<Response>;
 function installFetch() {
-  startCalls = 0; examCalls = 0;
+  startCalls = 0; examCalls = 0; finalizeCalls = 0; subGetCalls = 0;
   (globalThis as { fetch?: unknown }).fetch = vi.fn((url: string, init?: RequestInit) => {
     const method = (init && init.method) || "GET";
     if (url.includes("/api/student-submission/")) {
-      if (method === "GET") return json(200, { ok: true, state: preStartState });
+      if (method === "GET") { subGetCalls++; return subGetHandler(subGetCalls); }
       const b = init && init.body ? JSON.parse(String(init.body)) : {};
-      if (b.action === "startAttempt") { startCalls++; return json(200, { ok: true, state: startedState }); }
+      if (b.action === "startAttempt") { startCalls++; return startHandler(startCalls); }
+      if (b.action === "finalizeTimedOutAttempt") { finalizeCalls++; return finalizeHandler(finalizeCalls); }
       return json(200, { ok: true, state: startedState });
     }
-    if (url.includes("/api/student-assignment/")) { examCalls++; return examHandler(); }
+    if (url.includes("/api/student-assignment/")) { examCalls++; return examHandler(examCalls); }
     return json(404, { ok: false, error: "not found" });
   }) as unknown as typeof fetch;
 }
@@ -55,7 +67,14 @@ function mount() {
   return render(<StudentExamPage token="t" assignment={preStartAssignment as never} studentName="أحمد" className="الحادي عشر" onBack={() => {}} onLogout={onLogout as unknown as () => void} />);
 }
 
-beforeEach(() => { (window as unknown as { scrollTo: () => void }).scrollTo = () => {}; installFetch(); examHandler = () => json(200, { ok: true, assignment: { ...preStartAssignment, requiresStart: false, exam: fullExam } }); });
+beforeEach(() => {
+  (window as unknown as { scrollTo: () => void }).scrollTo = () => {};
+  installFetch();
+  subGetHandler = () => json(200, { ok: true, state: preStartState });
+  startHandler = () => json(200, { ok: true, state: startedState });
+  finalizeHandler = () => json(200, { ok: true, result: timedOutResult, state: finalizedState });
+  examHandler = () => json(200, { ok: true, assignment: { ...preStartAssignment, requiresStart: false, exam: fullExam } });
+});
 afterEach(() => { cleanup(); vi.restoreAllMocks(); });
 
 describe("BLOCKER 1 — structured cover renders pre-start even though questions are hidden", () => {
@@ -106,5 +125,68 @@ describe("BLOCKER 2 — reveal only after the exam body loads; retry reuses the 
     fireEvent.click(await r.findByText("ابدأ الامتحان"));
     await waitFor(() => expect(onLogout).toHaveBeenCalled());
     expect(r.container.textContent).not.toContain("سؤال الاختبار السري");
+  });
+});
+
+describe("EDGE 1 — start OK, body fetch fails, timer expires before retry => auto-finalize", () => {
+  it("retry after expiry finalizes via server state (no reveal, no restart, exactly one finalize)", async () => {
+    examHandler = () => json(500, { ok: false, error: "تعذر تحميل الأسئلة." });
+    startHandler = n => (n === 1 ? json(200, { ok: true, state: startedState }) : json(409, { ok: false, error: "انتهى وقت المحاولة." }));
+    // GET student-submission: mount => pre-start; after the 409 recovery => server-confirmed expired active attempt.
+    subGetHandler = n => (n === 1 ? json(200, { ok: true, state: preStartState }) : json(200, { ok: true, state: expiredActiveState }));
+    const r = mount();
+    fireEvent.click(await r.findByText("ابدأ الامتحان"));
+    await waitFor(() => expect(examCalls).toBe(1)); // first body fetch failed; gate remains
+    expect(r.container.querySelector(".iex-cover")).toBeTruthy();
+
+    // Retry after expiry: startAttempt 409 -> confirm via server state -> finalize the expired attempt.
+    fireEvent.click(await r.findByText("ابدأ الامتحان"));
+    await waitFor(() => expect(finalizeCalls).toBe(1));
+    const h = await r.findByText(/تم تسليم المحاولة/);
+    expect(h.textContent).toContain("انتهى الوقت"); // result.timedOut === true
+    expect(r.container.textContent).not.toContain("سؤال الاختبار السري"); // never revealed
+    expect(startCalls).toBe(2);      // idempotent re-start attempt; no third
+    expect(finalizeCalls).toBe(1);   // finalized exactly once
+  });
+
+  it("a non-expired 409 (e.g. attempts exhausted / not expired) does NOT finalize", async () => {
+    examHandler = () => json(200, { ok: true, assignment: { ...preStartAssignment, requiresStart: false, exam: fullExam } });
+    startHandler = () => json(409, { ok: false, error: "لا توجد محاولة إضافية متاحة." });
+    subGetHandler = () => json(200, { ok: true, state: preStartState }); // no active attempt => not expired
+    const r = mount();
+    fireEvent.click(await r.findByText("ابدأ الامتحان"));
+    await waitFor(() => expect(startCalls).toBe(1));
+    await waitFor(() => expect(r.container.querySelector(".iex-error")?.textContent || "").toContain("لا توجد محاولة"));
+    expect(finalizeCalls).toBe(0);   // did NOT blindly finalize a 409
+    expect(r.container.querySelector(".iex-cover")).toBeTruthy();
+  });
+});
+
+describe("EDGE 2 — next-attempt start preserves the previous result on failure", () => {
+  it("failed next-attempt start keeps the previous result visible with an error, reveals nothing", async () => {
+    subGetHandler = () => json(200, { ok: true, state: completedState });
+    startHandler = () => json(409, { ok: false, error: "انتهى موعد التسليم." });
+    const r = mount();
+    await r.findByText(/تم تسليم المحاولة/);           // result screen (attempt 1)
+    expect(r.container.textContent).toContain("80");   // previous score visible
+    fireEvent.click(await r.findByText(/بدء محاولة جديدة/));
+    await waitFor(() => expect(startCalls).toBe(1));
+    await waitFor(() => expect(r.container.querySelector(".iex-error")?.textContent || "").toContain("انتهى موعد التسليم."));
+    expect(r.container.querySelector(".iex-result-card")).toBeTruthy(); // result preserved
+    expect(r.container.textContent).toContain("80");
+    expect(r.container.textContent).not.toContain("سؤال الاختبار السري");
+    expect(examCalls).toBe(0);
+  });
+
+  it("successful next-attempt start clears the previous result and reveals the new attempt + timer", async () => {
+    subGetHandler = () => json(200, { ok: true, state: completedState });
+    startHandler = () => json(200, { ok: true, state: startedState2 });
+    examHandler = () => json(200, { ok: true, assignment: { ...preStartAssignment, requiresStart: false, exam: fullExam } });
+    const r = mount();
+    await r.findByText(/تم تسليم المحاولة/);
+    fireEvent.click(await r.findByText(/بدء محاولة جديدة/));
+    await r.findByText("سؤال الاختبار السري");         // new attempt's questions revealed
+    expect(r.container.querySelector(".iex-result-card")).toBeNull(); // previous result cleared
+    expect(r.container.querySelector(".iex-countdown")).toBeTruthy(); // new active timer shown
   });
 });

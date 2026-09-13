@@ -122,11 +122,24 @@ export default function StudentExamPage({token,assignment,studentName,className,
    //    surface the error — we never reveal an empty exam or drop the student into a blank timed screen.
    const body=await fetchExamBody();
    // 3) Only now, with questions in hand, reveal the exam and anchor the countdown to the server window.
-   setExam(body);setState(r.state);setAnswers(r.state.draftAnswers||{});anchorClock(r.state);setExpired(false);finalizingRef.current=false;setStarted(true);setCoverStarted(true);
+   //    Clearing result here (not in startNext) means a FAILED next-attempt start never wipes the
+   //    previous result — the old result stays until a new attempt has actually begun.
+   setExam(body);setState(r.state);setAnswers(r.state.draftAnswers||{});anchorClock(r.state);setExpired(false);finalizingRef.current=false;setResult(null);setStarted(true);setCoverStarted(true);
    window.scrollTo({top:0,behavior:"smooth"});
   }catch(e){
-   // Gate stays (we did NOT setStarted/setCoverStarted and did NOT replace exam). Pressing the button
-   // again re-runs startAttempt (same timer) then retries the exam fetch.
+   // A 409 on start can mean the PRIOR server start (e.g. a failed body-fetch retry, or a next attempt)
+   // expired before this click — the server-side activeAttempt is now past its effective deadline
+   // (duration OR due date). Confirm with AUTHORITATIVE server state (never the device clock / message
+   // text) and, only if an expired active attempt truly exists, finalize it through the normal timeout
+   // flow instead of stranding the student on the gate. No new attempt, no timer restart, no reveal.
+   if(e instanceof ApiError&&e.status===409){
+    try{
+     const st=await api<{state:State}>();
+     if(st.state.timed&&st.state.activeAttempt&&st.state.attemptExpired){setStarting(false);startingRef.current=false;await triggerTimeout();return}
+    }catch{/* fall through to plain error display */}
+   }
+   // Gate/result stays (we did NOT setStarted/setCoverStarted, did NOT replace exam, did NOT clear
+   // result). Pressing start again re-runs startAttempt (same timer) then retries the exam fetch.
    setError(e instanceof Error?e.message:"تعذر بدء المحاولة.");
   }finally{setStarting(false);startingRef.current=false}
  }
@@ -170,10 +183,12 @@ export default function StudentExamPage({token,assignment,studentName,className,
   if(e instanceof ApiError&&e.status===409&&e.message.indexOf("انتهى وقت")===0){submittingRef.current=false;void triggerTimeout()}
   else setError(e instanceof Error?e.message:"تعذر تسليم الواجب.")
  }finally{setSubmitBusy(false);if(!finalizingRef.current)submittingRef.current=false}}
- function startNext(){if(timed){if(!state?.canStartAttempt)return;void startTimedAttempt();setResult(null);return}if(!state?.canAttempt)return;setAnswers({});setResult(state.latestResult);setStarted(true);setCoverStarted(false);window.scrollTo({top:0,behavior:"smooth"})}
+ // Timed next-attempt: DON'T clear the previous result here — startTimedAttempt clears it only after the
+ // new attempt has actually started AND its exam body loaded, so a failed start keeps the result visible.
+ function startNext(){if(timed){if(!state?.canStartAttempt)return;setError("");void startTimedAttempt();return}if(!state?.canAttempt)return;setAnswers({});setResult(state.latestResult);setStarted(true);setCoverStarted(false);window.scrollTo({top:0,behavior:"smooth"})}
  function backWithoutSubmit(){if(revision.current>savedRevision.current&&!window.confirm("توجد إجابات لم تُحفظ بعد. هل تريد المغادرة على أي حال؟"))return;onBack()}
  if(loading)return <main className="student-portal" dir="rtl"><div className="platform-loading">⏳ جارٍ تجهيز صفحة الامتحان...</div></main>;
- if(!started&&result)return <main className={"interactive-exam-page exam-theme-"+theme} dir="rtl"><div className="iex-wrap"><section className="iex-result-card"><span className="platform-eyebrow">RESULT</span><h1>تم تسليم المحاولة {result.attemptNumber}{result.timedOut?" (انتهى الوقت)":""}</h1><div className="iex-score">{result.score}<small> / {result.totalMarks}</small></div><strong>{result.percentage}%</strong>{result.timedOut&&<p className="iex-timeout-note">⏱ تم إنهاء هذه المحاولة تلقائيًا عند انتهاء الوقت، وصُحّحت الإجابات المحفوظة.</p>}{result.manualReviewMarks>0&&<p>العلامة الحالية مؤقتة، وهناك {result.manualReviewMarks} علامة تحتاج مراجعة المعلم.</p>}{result.finalized&&<p className="iex-finalized">✓ تم اعتماد العلامة النهائية.</p>}{result.teacherFeedback&&<div className="iex-teacher-feedback"><strong>ملاحظة المعلم</strong><span>{result.teacherFeedback}</span></div>}<p>تم الحفظ في حسابك بتاريخ {fmt(result.submittedAt)}</p><div className="iex-result-actions"><button onClick={onBack}>العودة إلى المهام</button>{(timed?state?.canStartAttempt:state?.canAttempt)&&<button className="primary" onClick={startNext} disabled={starting}>{starting?"⏳ جارٍ البدء...":"بدء محاولة جديدة ("+((state?.attemptsUsed||0)+1)+" من "+(state?.allowedAttempts||assignment.maxAttempts)+")"}</button>}</div>{!(timed?state?.canStartAttempt:state?.canAttempt)&&<div className="iex-no-retry">لا توجد محاولة إضافية متاحة. يستطيع المعلم السماح بمحاولة أخرى من صفحة النتائج.</div>}</section></div></main>;
+ if(!started&&result)return <main className={"interactive-exam-page exam-theme-"+theme} dir="rtl"><div className="iex-wrap"><section className="iex-result-card"><span className="platform-eyebrow">RESULT</span><h1>تم تسليم المحاولة {result.attemptNumber}{result.timedOut?" (انتهى الوقت)":""}</h1>{error&&<div className="platform-error iex-error">{error}</div>}<div className="iex-score">{result.score}<small> / {result.totalMarks}</small></div><strong>{result.percentage}%</strong>{result.timedOut&&<p className="iex-timeout-note">⏱ تم إنهاء هذه المحاولة تلقائيًا عند انتهاء الوقت، وصُحّحت الإجابات المحفوظة.</p>}{result.manualReviewMarks>0&&<p>العلامة الحالية مؤقتة، وهناك {result.manualReviewMarks} علامة تحتاج مراجعة المعلم.</p>}{result.finalized&&<p className="iex-finalized">✓ تم اعتماد العلامة النهائية.</p>}{result.teacherFeedback&&<div className="iex-teacher-feedback"><strong>ملاحظة المعلم</strong><span>{result.teacherFeedback}</span></div>}<p>تم الحفظ في حسابك بتاريخ {fmt(result.submittedAt)}</p><div className="iex-result-actions"><button onClick={onBack}>العودة إلى المهام</button>{(timed?state?.canStartAttempt:state?.canAttempt)&&<button className="primary" onClick={startNext} disabled={starting}>{starting?"⏳ جارٍ البدء...":"بدء محاولة جديدة ("+((state?.attemptsUsed||0)+1)+" من "+(state?.allowedAttempts||assignment.maxAttempts)+")"}</button>}</div>{!(timed?state?.canStartAttempt:state?.canAttempt)&&<div className="iex-no-retry">لا توجد محاولة إضافية متاحة. يستطيع المعلم السماح بمحاولة أخرى من صفحة النتائج.</div>}</section></div></main>;
  // TIMED START GATE — questions are NOT delivered by the server until startAttempt succeeds. Shows the
  // structured cover (when enabled) or a compact start card; pressing start calls the server, receives the
  // authoritative timer, refetches the exam and reveals the questions.
