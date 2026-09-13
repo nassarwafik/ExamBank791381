@@ -87,8 +87,15 @@ export default function StudentExamPage({token,assignment,studentName,className,
      return;
     }catch(e){
      if(myRevision<latestTargetRevision.current)return;
-     // A save that lands after the server deadline is rejected — recover into the timeout flow.
-     if(e instanceof ApiError&&e.status===409&&e.message.indexOf("انتهى وقت")===0){if(mountedRef.current){setSaving(false);setRetrying(false)}void triggerTimeout();return}
+     // A 409 on a timed save can be an expired deadline (duration OR due-clipped) OR a transient
+     // availability state. Decide from AUTHORITATIVE server state, not the Arabic message text.
+     if(timed&&e instanceof ApiError&&e.status===409){
+      if(mountedRef.current){setSaving(false);setRetrying(false)}
+      const res=await reconcileTimed409();
+      if(res!=="other")return;                 // finalized or resumed => handled
+      if(mountedRef.current){setError(e.message);setSaveFailed(true)}
+      return;
+     }
      const retryable=!(e instanceof ApiError)||e.status>=500;
      if(!retryable||attempt===3){
       if(mountedRef.current){setError(e instanceof Error?e.message:"تعذر الحفظ التلقائي.");setSaveFailed(true)}
@@ -103,15 +110,24 @@ export default function StudentExamPage({token,assignment,studentName,className,
   }
  }
  useEffect(()=>{mountedRef.current=true;return()=>{mountedRef.current=false}},[]);
- useEffect(()=>{let cancelled=false;(async()=>{setLoading(true);try{const r=await api<{state:State}>();if(cancelled)return;setState(r.state);setAnswers(r.state.draftAnswers||{});setResult(r.state.latestResult);anchorClock(r.state);
-  const isTimed=!!r.state.timed;
-  if(isTimed){setStarted(!!r.state.activeAttempt);if(r.state.attemptExpired&&r.state.activeAttempt){void triggerTimeout()}}
-  else{setStarted(r.state.attemptsUsed===0||Object.keys(r.state.draftAnswers||{}).length>0)}
+ useEffect(()=>{let cancelled=false;(async()=>{setLoading(true);try{const r=await api<{state:State}>();if(cancelled)return;const st=r.state;setState(st);setAnswers(st.draftAnswers||{});anchorClock(st);
+  if(st.timed){
+   if(st.activeAttempt){
+    // AUTHORITATIVE: a live/active attempt ALWAYS takes precedence over a historical latestResult (e.g.
+    // attempt 2 active while attempt 1 already has a result). Otherwise the stale result would silently
+    // suppress the countdown, timeout firing and resync during the active attempt.
+    setResult(null);setStarted(true);
+    if(st.attemptExpired){void triggerTimeout()}else{setExpired(false)}
+   }else{setResult(st.latestResult);setStarted(false)}
+  }else{setResult(st.latestResult);setStarted(st.attemptsUsed===0||Object.keys(st.draftAnswers||{}).length>0)}
   loaded.current=true}catch(e){if(!cancelled)setError(e instanceof Error?e.message:"تعذر تحميل المحاولة.")}finally{if(!cancelled)setLoading(false)}})();return()=>{cancelled=true;if(timer.current)window.clearTimeout(timer.current)}},[assignment.assignmentId,token]);
  useEffect(()=>{if(!loaded.current||!started||!writable||!examBodyLoaded||submittingRef.current)return;if(!initialAnswersSynced.current){initialAnswersSynced.current=true;return}revision.current+=1;latestTargetRevision.current=revision.current;setDirty(true);const myRevision=revision.current,snapshot=answers;if(timer.current)window.clearTimeout(timer.current);timer.current=window.setTimeout(()=>{if(submittingRef.current)return;saveQueue.current=saveQueue.current.catch(()=>{}).then(()=>saveDraftSnapshot(snapshot,myRevision))},800);return()=>{if(timer.current)window.clearTimeout(timer.current)}},[answers,started,writable]);
  useEffect(()=>{const handler=(e:BeforeUnloadEvent)=>{if(revision.current<=savedRevision.current)return;e.preventDefault();e.returnValue=""};window.addEventListener("beforeunload",handler);return()=>window.removeEventListener("beforeunload",handler)},[]);
  // Resync the server-authoritative timer on reconnect and when returning to the tab; never a per-second poll.
- const resync=useCallback(async()=>{if(!mountedRef.current||submittingRef.current||result)return;try{const r=await api<{state:State}>();if(!mountedRef.current)return;setState(r.state);anchorClock(r.state);if(r.state.attemptExpired&&r.state.activeAttempt&&!result)void triggerTimeout()}catch{/* ignore transient resync failure */}},[result]);
+ // Resync from AUTHORITATIVE server state. Not gated on `result` (a stale completed result must never
+ // block resyncing a live active attempt). A live attempt takes precedence over latestResult and clears
+ // any stale local `expired` (supports a freshly applied dueAtOverride reviving the attempt).
+ const resync=useCallback(async()=>{if(!mountedRef.current||submittingRef.current||finalizingRef.current)return;try{const st=(await api<{state:State}>()).state;if(!mountedRef.current)return;setState(st);anchorClock(st);if(st.timed&&st.activeAttempt){setResult(null);setStarted(true);if(st.attemptExpired){void triggerTimeout()}else{setExpired(false)}}else{setResult(st.latestResult)}}catch{/* ignore transient resync failure */}},[]);
  useEffect(()=>{const handleOnline=()=>{if(expired&&!finalizingRef.current){void triggerTimeout();return}if(submittingRef.current||!started||!writable)return;if(revision.current>savedRevision.current){const myRevision=revision.current,snapshot=answers;saveQueue.current=saveQueue.current.catch(()=>{}).then(()=>saveDraftSnapshot(snapshot,myRevision))}void resync()};window.addEventListener("online",handleOnline);const onVis=()=>{if(document.visibilityState==="visible")void resync()};document.addEventListener("visibilitychange",onVis);return()=>{window.removeEventListener("online",handleOnline);document.removeEventListener("visibilitychange",onVis)}},[answers,started,writable,expired,resync]);
  // Local 1s countdown between server syncs, anchored to performance.now() (device wall-clock changes
  // cannot reset it). Fires timeout finalization exactly once when it reaches zero.
@@ -152,6 +168,18 @@ export default function StudentExamPage({token,assignment,studentName,className,
    setError(e instanceof Error?e.message:"تعذر بدء المحاولة.");
   }finally{setStarting(false);startingRef.current=false}
  }
+ // Reconcile a 409 on a timed write/start against AUTHORITATIVE server state (never the device clock or
+ // the Arabic message). Finalizes a genuinely-expired attempt; RESUMES a still-live one (e.g. a freshly
+ // applied dueAtOverride revived it) by clearing the stale local expired/error state. Returns what it did.
+ async function reconcileTimed409():Promise<"finalized"|"resumed"|"other">{
+  try{
+   const st=(await api<{state:State}>()).state;
+   if(!mountedRef.current)return "other";
+   if(st.timed&&st.activeAttempt&&st.attemptExpired){setState(st);anchorClock(st);setResult(null);setStarted(true);void triggerTimeout();return "finalized"}
+   if(st.timed&&st.activeAttempt&&!st.attemptExpired){setState(st);anchorClock(st);setResult(null);setStarted(true);setExpired(false);finalizingRef.current=false;submittingRef.current=false;setError("");return "resumed"}
+  }catch{/* ignore */}
+  return "other";
+ }
  async function triggerTimeout(){
   if(finalizingRef.current)return;finalizingRef.current=true;setExpired(true);submittingRef.current=true;
   try{
@@ -159,8 +187,16 @@ export default function StudentExamPage({token,assignment,studentName,className,
    const r=await api<{result:Result;state:State}>({method:"POST",body:JSON.stringify({action:"finalizeTimedOutAttempt"})});
    if(mountedRef.current){if(r.result)setResult(r.result);setState(r.state);setStarted(false);setAnswers({});window.scrollTo({top:0,behavior:"smooth"})}
   }catch(e){
-   // Offline / transient — keep answers locked (time is over) and retry when connectivity returns.
    finalizingRef.current=false;
+   // A 409 here can mean the attempt is NOT actually expired anymore (a dueAtOverride extended the
+   // effective deadline). Confirm via server state and RESUME the live attempt instead of staying stuck.
+   if(e instanceof ApiError&&e.status===409){
+    try{
+     const st=(await api<{state:State}>()).state;
+     if(mountedRef.current&&st.timed&&st.activeAttempt&&!st.attemptExpired){setState(st);anchorClock(st);setResult(null);setStarted(true);setExpired(false);setError("");submittingRef.current=false;return}
+    }catch{/* ignore */}
+   }
+   // Offline / transient — keep answers locked (time is over) and retry when connectivity returns.
    if(mountedRef.current)setError(e instanceof Error&&(e as ApiError).status>=500||!(e instanceof ApiError)?"انتهى الوقت. سيتم إنهاء المحاولة تلقائيًا عند عودة الاتصال.":(e as Error).message);
   }finally{submittingRef.current=false}
  }
@@ -188,8 +224,9 @@ export default function StudentExamPage({token,assignment,studentName,className,
   return window.confirm("سيتم إرسال الحل للتصحيح. هل تريد المتابعة؟");
  }
  async function submit(){if(!writable||submitBusy)return;if(!confirmSubmit())return;submittingRef.current=true;setSubmitBusy(true);setError("");if(timer.current)window.clearTimeout(timer.current);const submitSnapshot=answers,submitRevision=revision.current;if(submitRevision>savedRevision.current){saveQueue.current=saveQueue.current.catch(()=>{}).then(()=>saveDraftSnapshot(submitSnapshot,submitRevision))}try{await saveQueue.current;if(savedRevision.current<submitRevision){setError("تعذر حفظ إجاباتك بسبب مشكلة في الاتصال. تحقق من الإنترنت وحاول التسليم مرة أخرى.");return}const r=await api<{result:Result;state:State}>({method:"POST",body:JSON.stringify({action:"submit",answers:submitSnapshot})});setResult(r.result);setState(r.state);setStarted(false);setAnswers({});savedRevision.current=revision.current;window.scrollTo({top:0,behavior:"smooth"})}catch(e){
-  // Race at the deadline: server says time is over — recover cleanly into the timeout flow.
-  if(e instanceof ApiError&&e.status===409&&e.message.indexOf("انتهى وقت")===0){submittingRef.current=false;void triggerTimeout()}
+  // Race at the deadline: a 409 may be an expired attempt (duration OR due-clipped => finalize) or a
+  // still-live one (=> resume). Decide from AUTHORITATIVE server state, not the Arabic message text.
+  if(timed&&e instanceof ApiError&&e.status===409){submittingRef.current=false;const res=await reconcileTimed409();if(res==="other")setError(e.message)}
   else setError(e instanceof Error?e.message:"تعذر تسليم الواجب.")
  }finally{setSubmitBusy(false);if(!finalizingRef.current)submittingRef.current=false}}
  // Timed next-attempt: DON'T clear the previous result here — startTimedAttempt clears it only after the

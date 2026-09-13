@@ -44,13 +44,23 @@ const timedOutResult = { attemptNumber: 1, submittedAt: "2026-01-01T11:05:00.000
 const finalizedState = { ...startedState, activeAttempt: null, attemptExpired: false, canWrite: false, canStartAttempt: false, latestResult: timedOutResult, attempts: [timedOutResult] };
 // A fresh SECOND attempt window (12:00 -> 13:00).
 const startedState2 = { ...startedState, activeAttempt: { attemptNumber: 2, startedAt: "2026-01-01T12:00:00.000Z", endsAt: "2026-01-01T13:00:00.000Z" }, effectiveAttemptEndsAt: "2026-01-01T13:00:00.000Z", serverNow: "2026-01-01T12:00:00.000Z", attemptsUsed: 1, allowedAttempts: 2 };
+// Attempt 2 ACTIVE while attempt 1 already has a result (the refresh-during-attempt-2 case).
+const activeAttempt2State = { ...startedState, attemptsUsed: 1, allowedAttempts: 2, canStartAttempt: false, canWrite: true, attemptExpired: false, latestResult: priorResult, attempts: [priorResult], activeAttempt: { attemptNumber: 2, startedAt: "2026-01-01T12:00:00.000Z", endsAt: "2026-01-01T13:00:00.000Z" }, effectiveAttemptEndsAt: "2026-01-01T13:00:00.000Z", serverNow: "2026-01-01T12:00:00.000Z" };
+// An attempt that looks expired at mount (effective end already reached), then is REVIVED by a
+// dueAtOverride: server later reports it live again with a later effective end.
+const expiredMountState = { ...startedState, attemptExpired: true, canWrite: false, effectiveAttemptEndsAt: "2026-01-01T10:30:00.000Z", serverNow: "2026-01-01T10:30:00.000Z" };
+const revivedLiveState = { ...startedState, attemptExpired: false, canWrite: true, effectiveAttemptEndsAt: "2026-01-01T11:00:00.000Z", serverNow: "2026-01-01T10:31:00.000Z" };
+// Server state that confirms a submit-race 409 is a genuinely-expired attempt.
+const expiredForSubmitState = { ...startedState, attemptExpired: true, canWrite: false, effectiveAttemptEndsAt: END, serverNow: "2026-01-01T11:01:00.000Z" };
+// A full-body assignment (mid-attempt refresh path — Portal passes the full exam when active).
+const fullAssignment = { ...preStartAssignment, requiresStart: false, exam: fullExam };
 
 const json = (status: number, body: unknown) => Promise.resolve({ ok: status >= 200 && status < 300, status, json: async () => body } as Response);
 
-let startCalls = 0, examCalls = 0, finalizeCalls = 0, subGetCalls = 0, onLogout: ReturnType<typeof vi.fn>;
-let examHandler: (n: number) => Promise<Response>, startHandler: (n: number) => Promise<Response>, finalizeHandler: (n: number) => Promise<Response>, subGetHandler: (n: number) => Promise<Response>;
+let startCalls = 0, examCalls = 0, finalizeCalls = 0, subGetCalls = 0, submitCalls = 0, saveCalls = 0, onLogout: ReturnType<typeof vi.fn>;
+let examHandler: (n: number) => Promise<Response>, startHandler: (n: number) => Promise<Response>, finalizeHandler: (n: number) => Promise<Response>, subGetHandler: (n: number) => Promise<Response>, submitHandler: (n: number) => Promise<Response>, saveHandler: (n: number) => Promise<Response>;
 function installFetch() {
-  startCalls = 0; examCalls = 0; finalizeCalls = 0; subGetCalls = 0;
+  startCalls = 0; examCalls = 0; finalizeCalls = 0; subGetCalls = 0; submitCalls = 0; saveCalls = 0;
   (globalThis as { fetch?: unknown }).fetch = vi.fn((url: string, init?: RequestInit) => {
     const method = (init && init.method) || "GET";
     if (url.includes("/api/student-submission/")) {
@@ -58,6 +68,8 @@ function installFetch() {
       const b = init && init.body ? JSON.parse(String(init.body)) : {};
       if (b.action === "startAttempt") { startCalls++; return startHandler(startCalls); }
       if (b.action === "finalizeTimedOutAttempt") { finalizeCalls++; return finalizeHandler(finalizeCalls); }
+      if (b.action === "submit") { submitCalls++; return submitHandler(submitCalls); }
+      if (b.action === "saveDraft") { saveCalls++; return saveHandler(saveCalls); }
       return json(200, { ok: true, state: startedState });
     }
     if (url.includes("/api/student-assignment/")) { examCalls++; return examHandler(examCalls); }
@@ -71,10 +83,13 @@ function mount(assignment: unknown = preStartAssignment) {
 
 beforeEach(() => {
   (window as unknown as { scrollTo: () => void }).scrollTo = () => {};
+  (window as unknown as { confirm: () => boolean }).confirm = () => true;
   installFetch();
   subGetHandler = () => json(200, { ok: true, state: preStartState });
   startHandler = () => json(200, { ok: true, state: startedState });
   finalizeHandler = () => json(200, { ok: true, result: timedOutResult, state: finalizedState });
+  submitHandler = () => json(200, { ok: true, result: priorResult, state: finalizedState });
+  saveHandler = () => json(200, { ok: true, savedAt: "2026-01-01T10:31:00.000Z", serverNow: "2026-01-01T10:31:00.000Z", effectiveAttemptEndsAt: END });
   examHandler = () => json(200, { ok: true, assignment: { ...preStartAssignment, requiresStart: false, exam: fullExam } });
 });
 afterEach(() => { cleanup(); vi.restoreAllMocks(); });
@@ -244,5 +259,71 @@ describe("EDGE 3 — visibility resync must never reveal a body-less timed exam"
     fireEvent.click(resumeBtn);
     await r.findByText("سؤال الاختبار السري"); // body loads on the original attempt
     expect(startCalls).toBe(2);
+  });
+});
+
+describe("EDGE 4 — refresh during attempt 2+ (active attempt beats stale latestResult)", () => {
+  it("renders the active attempt (not the previous result); countdown active; resync not blocked by result", async () => {
+    subGetHandler = () => json(200, { ok: true, state: activeAttempt2State });
+    const r = mount(fullAssignment);
+    await r.findByText("سؤال الاختبار السري");                 // active attempt-2 questions render
+    expect(r.container.querySelector(".iex-result-card")).toBeNull(); // attempt-1 result does NOT show
+    const clock = r.container.querySelector(".iex-countdown-clock");
+    expect(clock?.textContent || "").toMatch(/^(1:00:00|59:5\d)$/); // attempt-2 window 12:00->13:00
+    // visibilitychange must still resync even though a historical latestResult exists.
+    try { Object.defineProperty(document, "visibilityState", { value: "visible", configurable: true }); } catch { /* default visible */ }
+    const before = subGetCalls;
+    document.dispatchEvent(new Event("visibilitychange"));
+    await waitFor(() => expect(subGetCalls).toBeGreaterThan(before));
+    expect(r.container.querySelector(".iex-result-card")).toBeNull();
+    expect(r.container.querySelector(".iex-countdown")).toBeTruthy();
+  });
+});
+
+describe("EDGE 5 — dueAtOverride revives a live attempt during timeout finalization", () => {
+  it("finalize 409 + server says live => expired cleared, controls re-enabled, countdown reanchors, no timed-out attempt", async () => {
+    subGetHandler = n => (n === 1 ? json(200, { ok: true, state: expiredMountState }) : json(200, { ok: true, state: revivedLiveState }));
+    finalizeHandler = () => json(409, { ok: false, error: "لم تنتهِ مدة المحاولة بعد." });
+    const r = mount(fullAssignment);
+    await waitFor(() => expect(finalizeCalls).toBe(1));       // mount saw expired => tried to finalize once
+    await r.findByText("سؤال الاختبار السري");                 // attempt is live again, questions shown
+    expect(r.container.querySelector(".iex-result-card")).toBeNull();
+    expect(r.container.textContent).not.toContain("انتهى الوقت"); // no timed-out result created
+    const clock = r.container.querySelector(".iex-countdown-clock");
+    expect(clock?.textContent || "").toMatch(/^(29:00|28:5\d)$/); // reanchored to 11:00 (serverNow 10:31)
+    const submitBtn = r.container.querySelector(".iex-foot .primary") as HTMLButtonElement;
+    expect(submitBtn.disabled).toBe(false);                    // writable restored (expired cleared)
+    expect(finalizeCalls).toBe(1);                             // NOT finalized again
+  });
+});
+
+describe("EDGE 6 — save/submit 409 recovery uses authoritative server state, not Arabic text", () => {
+  it("3A due-clipped submit 409 (انتهى موعد التسليم) + expired server state => finalize once, timedOut result", async () => {
+    subGetHandler = n => (n === 1 ? json(200, { ok: true, state: startedState }) : json(200, { ok: true, state: expiredForSubmitState }));
+    submitHandler = () => json(409, { ok: false, error: "انتهى موعد التسليم." }); // DUE message, not the timer message
+    finalizeHandler = () => json(200, { ok: true, result: timedOutResult, state: finalizedState });
+    const r = mount(fullAssignment);
+    await r.findByText("سؤال الاختبار السري");
+    fireEvent.click(r.container.querySelector(".iex-foot .primary") as HTMLButtonElement);
+    await waitFor(() => expect(finalizeCalls).toBe(1));
+    const h = await r.findByText(/تم تسليم المحاولة/);
+    expect(h.textContent).toContain("انتهى الوقت"); // timedOut result
+    expect(submitCalls).toBe(1);
+    expect(finalizeCalls).toBe(1);
+  });
+
+  it("3B non-expired 409 => reconcile & resume, NO finalize, attempt stays live", async () => {
+    subGetHandler = n => (n === 1 ? json(200, { ok: true, state: startedState }) : json(200, { ok: true, state: revivedLiveState }));
+    submitHandler = () => json(409, { ok: false, error: "حدث تعارض مؤقت أثناء حفظ البيانات. حاول مرة أخرى." });
+    const r = mount(fullAssignment);
+    await r.findByText("سؤال الاختبار السري");
+    const before = subGetCalls;
+    fireEvent.click(r.container.querySelector(".iex-foot .primary") as HTMLButtonElement);
+    await waitFor(() => expect(submitCalls).toBe(1));
+    await waitFor(() => expect(subGetCalls).toBeGreaterThan(before)); // reconcile GET happened
+    expect(finalizeCalls).toBe(0);                                     // did NOT finalize a live attempt
+    expect(r.container.querySelector(".iex-result-card")).toBeNull();
+    expect(r.container.querySelector(".iex-countdown")).toBeTruthy();
+    expect((r.container.querySelector(".iex-foot .primary") as HTMLButtonElement).disabled).toBe(false); // still writable
   });
 });
