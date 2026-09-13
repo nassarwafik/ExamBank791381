@@ -75,4 +75,24 @@ describe("StructuredExamCover", () => {
     const { container } = render(<StructuredExamCover cover={baseCover({ showMarksDistribution: false })} title="امتحان" distribution={dist} onStart={() => {}} />);
     expect(container.querySelector(".iex-cover-marks")).toBeNull();
   });
+
+  it("REQUIRED (#39) shows the runtime duration when showDuration is on", () => {
+    const { container } = render(<StructuredExamCover cover={baseCover({ showDuration: true })} title="امتحان" distribution={dist} runtime={{ duration: "90 دقيقة" }} onStart={() => {}} />);
+    const info = container.querySelector(".iex-cover-info")!;
+    expect(info.textContent).toContain("المدة");
+    expect(info.textContent).toContain("90 دقيقة");
+  });
+
+  it("does not show duration when showDuration is off", () => {
+    const { container } = render(<StructuredExamCover cover={baseCover({ showDuration: false })} title="امتحان" distribution={dist} runtime={{ duration: "90 دقيقة" }} onStart={() => {}} />);
+    expect((container.querySelector(".iex-cover-info")?.textContent || "")).not.toContain("المدة");
+  });
+
+  it("start button is disabled and shows a starting label while starting", () => {
+    const onStart = vi.fn();
+    const { container } = render(<StructuredExamCover cover={baseCover()} title="ت" distribution={dist} starting onStart={onStart} />);
+    const btn = container.querySelector(".iex-cover-start") as HTMLButtonElement;
+    expect(btn.disabled).toBe(true);
+    expect(btn.textContent).toContain("جارٍ البدء");
+  });
 });

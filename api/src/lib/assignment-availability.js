@@ -67,4 +67,96 @@ function actionRejection(assignment, submission, action, nowMs = Date.now()) {
   return null;
 }
 
-module.exports = { toMs, effectiveDueAt, getAssignmentAvailability, attemptState, actionRejection };
+// ── Server-authoritative per-attempt timer (B1) ──────────────────────────────
+// A TIMED assignment carries a positive durationMinutes. When a student starts, the server stamps an
+// activeAttempt { attemptNumber, startedAt, endsAt } where endsAt = startedAt + durationMinutes (server
+// time only). The EFFECTIVE deadline is min(endsAt, current effectiveDueAt) — so a per-student
+// dueAtOverride can extend a student up to (but never beyond) the original duration deadline, and can
+// clip it shorter, exactly like the existing dueAt semantics. Everything here is pure and takes nowMs.
+
+// Runtime normalizer (lenient): null/0/invalid/<1 => 0 (untimed). Creation-time VALIDATION (1..1440,
+// reject invalid) lives in manage-assignments — this only decides how a stored assignment behaves.
+function normalizeDurationMinutes(value) {
+  const n = Number(value);
+  if (!Number.isFinite(n) || n < 1) return 0;
+  return Math.floor(n);
+}
+function isTimedAssignment(assignment) {
+  return normalizeDurationMinutes(assignment && assignment.durationMinutes) > 0;
+}
+// The persisted activeAttempt, only if well-formed (has startedAt + endsAt). Legacy/missing => null.
+function activeAttemptOf(submission) {
+  const aa = submission && submission.activeAttempt;
+  return aa && aa.startedAt && aa.endsAt ? aa : null;
+}
+
+// Full timer + attempt state for one student at nowMs. Extends attemptState() with timer fields.
+//  - canAttempt   : UNCHANGED historical meaning (published && open && completed attempts < allowed).
+//  - canStartAttempt : timed only — may begin a NEW attempt (open, attempts remain, no active attempt).
+//  - canWrite     : may saveDraft/submit NOW (timed: active && not expired && open; untimed: canAttempt).
+// canWrite and canStartAttempt are deliberately separate so "can start" and "can save" are never one
+// ambiguous boolean.
+function timerState(assignment, submission, nowMs = Date.now()) {
+  const base = attemptState(assignment, submission, nowMs);
+  const durationMinutes = normalizeDurationMinutes(assignment && assignment.durationMinutes);
+  const timed = durationMinutes > 0;
+  const active = activeAttemptOf(submission);
+  const endsMs = active ? toMs(active.endsAt) : 0;
+  const dueMs = base.dueMs;
+  // Effective attempt end = min(duration deadline, current effective due date). If the due date is
+  // absent (0), the duration deadline stands alone.
+  const effEndsMs = timed && active ? (dueMs ? Math.min(endsMs, dueMs) : endsMs) : 0;
+  // Boundary: now === effEndsMs is STILL valid; strictly after is expired (mirrors dueAt semantics).
+  const attemptExpired = timed && !!active ? (!!effEndsMs && effEndsMs < nowMs) : false;
+  const canStartAttempt = timed && base.published && base.availability === "open"
+    && base.attemptsUsed < base.allowedAttempts && !active;
+  const canWrite = timed
+    ? (base.published && base.availability === "open" && !!active && !attemptExpired)
+    : base.canAttempt;
+  return {
+    ...base,
+    durationMinutes,
+    timed,
+    activeAttempt: active ? { attemptNumber: active.attemptNumber, startedAt: String(active.startedAt), endsAt: String(active.endsAt) } : null,
+    effectiveAttemptEndsAt: effEndsMs ? new Date(effEndsMs).toISOString() : "",
+    attemptExpired,
+    canStartAttempt,
+    canWrite
+  };
+}
+
+// Rejection (or null) for a startAttempt action. Idempotent case (an active, non-expired attempt
+// already exists) returns null — the handler returns the SAME startedAt/endsAt without restarting.
+function startRejection(assignment, submission, nowMs = Date.now()) {
+  const st = timerState(assignment, submission, nowMs);
+  if (!st.timed) return { status: 400, error: "لا يتطلب هذا الواجب بدء محاولة مؤقتة." };
+  if (st.availability === "scheduled") return { status: 403, error: "الواجب لم يُفتح بعد." };
+  if (st.availability === "closed") return { status: 409, error: "انتهى موعد التسليم." };
+  if (!st.published) return { status: 403, error: "الواجب غير متاح." };
+  if (st.activeAttempt) {
+    // An expired active attempt must be finalized first; a live one is idempotently returned.
+    return st.attemptExpired ? { status: 409, error: "انتهى وقت المحاولة." } : null;
+  }
+  if (st.attemptsUsed >= st.allowedAttempts) return { status: 409, error: "لا توجد محاولة إضافية متاحة." };
+  return null;
+}
+
+// Rejection (or null) for a write action (saveDraft/submit). Timed assignments require a live active
+// attempt; untimed assignments keep the exact previous actionRejection behavior.
+function writeRejection(assignment, submission, action, nowMs = Date.now()) {
+  const st = timerState(assignment, submission, nowMs);
+  if (st.availability === "scheduled") return { status: 403, error: "الواجب لم يُفتح بعد." };
+  if (st.availability === "closed") return { status: 409, error: "انتهى موعد التسليم." };
+  if (!st.published) return { status: 403, error: "الواجب غير متاح." };
+  if (st.timed) {
+    if (!st.activeAttempt) return { status: 409, error: "ابدأ المحاولة أولاً." };
+    if (st.attemptExpired) return { status: 409, error: "انتهى وقت المحاولة." };
+    return null;
+  }
+  return actionRejection(assignment, submission, action, nowMs);
+}
+
+module.exports = {
+  toMs, effectiveDueAt, getAssignmentAvailability, attemptState, actionRejection,
+  normalizeDurationMinutes, isTimedAssignment, activeAttemptOf, timerState, startRejection, writeRejection
+};
