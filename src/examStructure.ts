@@ -89,6 +89,19 @@ export function distributePartMarks(q: Question): number[] {
   return parts.map((p, i) => (hasMark[i] ? num(p.marks) : each));
 }
 
+// Official grading maximum for ONE question — mirror of the backend questionMaxMarks / grader:
+// a compound question is worth the SUM of its distributed part marks (which, when every part is
+// explicitly marked, may differ from its own top-level marks, e.g. 3+3+2 = 8 vs marks 10); a
+// non-compound question is worth max(0, marks). Keeps the cover / builder total in lock-step with
+// the grader for compound questions.
+export function questionMaxMarks(q: Question): number {
+  if (isCompound(q)) {
+    return distributePartMarks(q).reduce((s, m) => s + Math.max(0, num(m, 0)), 0);
+  }
+  const raw = (q as { marks?: unknown; points?: unknown });
+  return Math.max(0, num(raw.marks != null ? raw.marks : raw.points, 0));
+}
+
 // Reuses the exact StudentQuestionCard.answered() so "answered" means the same thing in the progress
 // bar, the graded-unit selection, and each question card.
 export const isAnswerUnitAnswered = (a: Answer | undefined): boolean => answered(a);

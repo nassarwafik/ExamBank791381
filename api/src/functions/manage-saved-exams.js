@@ -10,7 +10,8 @@ const {
 } = require("../lib/builder-auth");
 
 const {
-  countExamQuestions
+  countExamQuestions,
+  examOfficialStats
 } = require("../lib/exam-structure");
 
 const BANK_CONTAINER =
@@ -192,11 +193,12 @@ async function listSavedExams(
             exam
           ),
 
+        // Display the AUTHORITATIVE structural total (matches the grader), not a possibly-stale
+        // top-level exam.totalMarks. Persistence is left untouched — this is a read-time summary only.
         totalMarks:
-          Number(
-            exam.totalMarks ||
-            0
-          )
+          examOfficialStats(
+            exam
+          ).totalMarks
       });
     }
     catch {
