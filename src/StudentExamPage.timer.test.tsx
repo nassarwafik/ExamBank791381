@@ -32,6 +32,8 @@ const preStartAssignment = {
 // The FULL exam returned by student-assignment AFTER a successful start.
 const fullExam = { title: "امتحان مؤقت", metadata: {}, presentationTheme: "classic", coverPage: { enabled: true, showDuration: true },
   sections: [{ id: "s1", title: "القسم الأول", gradingPolicy: "all", questions: [{ examQuestionId: "q1", presentationType: "shortAnswer", text: "سؤال الاختبار السري", marks: 100 }] }] };
+// Same, but with NO structured cover (compact start/resume card path).
+const preStartAssignmentNoCover = { ...preStartAssignment, exam: { ...preStartAssignment.exam, coverPage: { enabled: false } } };
 
 // A prior completed attempt (result screen) with another attempt still available (maxAttempts 2).
 const priorResult = { attemptNumber: 1, submittedAt: "2026-01-01T09:00:00.000Z", score: 80, totalMarks: 100, percentage: 80, manualReviewMarks: 0, finalized: true, timedOut: false };
@@ -62,9 +64,9 @@ function installFetch() {
     return json(404, { ok: false, error: "not found" });
   }) as unknown as typeof fetch;
 }
-function mount() {
+function mount(assignment: unknown = preStartAssignment) {
   onLogout = vi.fn();
-  return render(<StudentExamPage token="t" assignment={preStartAssignment as never} studentName="أحمد" className="الحادي عشر" onBack={() => {}} onLogout={onLogout as unknown as () => void} />);
+  return render(<StudentExamPage token="t" assignment={assignment as never} studentName="أحمد" className="الحادي عشر" onBack={() => {}} onLogout={onLogout as unknown as () => void} />);
 }
 
 beforeEach(() => {
@@ -188,5 +190,59 @@ describe("EDGE 2 — next-attempt start preserves the previous result on failure
     await r.findByText("سؤال الاختبار السري");         // new attempt's questions revealed
     expect(r.container.querySelector(".iex-result-card")).toBeNull(); // previous result cleared
     expect(r.container.querySelector(".iex-countdown")).toBeTruthy(); // new active timer shown
+  });
+});
+
+describe("EDGE 3 — visibility resync must never reveal a body-less timed exam", () => {
+  function fireVisible() {
+    try { Object.defineProperty(document, "visibilityState", { value: "visible", configurable: true }); } catch { /* default is already visible */ }
+    document.dispatchEvent(new Event("visibilitychange"));
+  }
+
+  it("cover path: resync flips activeAttempt true but body isn't loaded => gate stays, no questions; resume reveals on the ORIGINAL timer", async () => {
+    examHandler = n => (n === 1 ? json(500, { ok: false, error: "تعذر تحميل الأسئلة." }) : json(200, { ok: true, assignment: { ...preStartAssignment, requiresStart: false, exam: fullExam } }));
+    startHandler = () => json(200, { ok: true, state: startedState }); // idempotent 10:00 -> 11:00
+    subGetHandler = n => (n === 1 ? json(200, { ok: true, state: preStartState }) : json(200, { ok: true, state: startedState }));
+    const r = mount();
+    fireEvent.click(await r.findByText("ابدأ الامتحان"));
+    await waitFor(() => expect(examCalls).toBe(1)); // body fetch failed; gate remains
+    expect(r.container.querySelector(".iex-cover")).toBeTruthy();
+
+    // Tab hidden -> visible: resync returns a LIVE activeAttempt, but the body still isn't loaded.
+    fireVisible();
+    await waitFor(() => expect(subGetCalls).toBeGreaterThanOrEqual(2));
+    // INVARIANT: gate still shown, no exam UI, no secret question text, no blank exam.
+    expect(r.container.querySelector(".iex-cover")).toBeTruthy();
+    expect(r.container.querySelector(".iex-countdown")).toBeNull();
+    expect(r.container.textContent).not.toContain("سؤال الاختبار السري");
+
+    // Resume via the cover button: idempotent start + successful body fetch => questions on original window.
+    fireEvent.click(await r.findByText("ابدأ الامتحان"));
+    await r.findByText("سؤال الاختبار السري");
+    const clock = r.container.querySelector(".iex-countdown-clock");
+    expect(clock?.textContent || "").toMatch(/^(30:00|29:5\d|29:4\d)$/);       // original 10:00->11:00 window
+    expect(clock?.textContent || "").not.toMatch(/\d+:\d\d:\d\d/);             // never a 90-min reset
+    expect(startCalls).toBe(2); // idempotent; no extra attempt
+  });
+
+  it("no-cover path: after resync the compact button becomes an ENABLED resume (not disabled by canStartAttempt=false)", async () => {
+    examHandler = n => (n === 1 ? json(500, { ok: false, error: "تعذر تحميل الأسئلة." }) : json(200, { ok: true, assignment: { ...preStartAssignmentNoCover, requiresStart: false, exam: fullExam } }));
+    startHandler = () => json(200, { ok: true, state: startedState });
+    subGetHandler = n => (n === 1 ? json(200, { ok: true, state: preStartState }) : json(200, { ok: true, state: startedState }));
+    const r = mount(preStartAssignmentNoCover);
+    fireEvent.click(await r.findByText("بدء المحاولة")); // compact card
+    await waitFor(() => expect(examCalls).toBe(1));
+    expect(r.container.querySelector(".iex-start-card")).toBeTruthy();
+
+    fireVisible();
+    await waitFor(() => expect(subGetCalls).toBeGreaterThanOrEqual(2));
+    // canStartAttempt is now false (attempt exists) but the button must stay usable as "متابعة المحاولة".
+    const resumeBtn = await r.findByText("متابعة المحاولة") as HTMLButtonElement;
+    expect(resumeBtn.disabled).toBe(false);
+    expect(r.container.textContent).not.toContain("سؤال الاختبار السري"); // still no body
+
+    fireEvent.click(resumeBtn);
+    await r.findByText("سؤال الاختبار السري"); // body loads on the original attempt
+    expect(startCalls).toBe(2);
   });
 });

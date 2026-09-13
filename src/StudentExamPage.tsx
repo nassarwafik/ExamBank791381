@@ -41,7 +41,16 @@ export default function StudentExamPage({token,assignment,studentName,className,
  const effEndMs=useRef(0),serverAnchorMs=useRef(0),perfAnchor=useRef(0);
  const timed=!!(state?.timed)|| (assignment.durationMinutes||0)>0;
  const hasActive=!!state?.activeAttempt;
- const needsStart=timed&&!hasActive&&!result;
+ // INVARIANT: for a timed exam the question UI must NEVER render until the full exam body has actually
+ // loaded. A server activeAttempt alone is NOT enough — the body fetch may have failed. examBodyLoaded is
+ // derived from the presence of real questions/sections in the current local exam (pre-start metadata has
+ // neither), so a resync that flips activeAttempt true can never reveal a body-less exam.
+ const examBodyLoaded=(exam.questions?.length||0)>0||(exam.sections||[]).some(s=>((s as {questions?:unknown[]}).questions?.length||0)>0);
+ const needsStart=timed&&!examBodyLoaded&&!result;
+ // Can begin OR resume/retry loading: a fresh start (canStartAttempt) OR an existing server attempt whose
+ // body has not loaded (so the compact button is never permanently disabled just because canStartAttempt
+ // is false once an activeAttempt exists).
+ const canStartOrResume=!!(state?.canStartAttempt||state?.activeAttempt);
  const writable=!!state?.canWrite&&!expired;
 
  async function subApi<T>(options:RequestInit={}):Promise<T>{const h=new Headers(options.headers||{});h.set("Content-Type","application/json");h.set("x-student-token",token);h.set("Authorization","Bearer "+token);const r=await fetch("/api/student-submission/"+encodeURIComponent(assignment.assignmentId),{...options,headers:h}),j=await r.json() as T&{error?:string};if(r.status===401){onLogout();throw new ApiError(401,"انتهت الجلسة.")}if(!r.ok)throw new ApiError(r.status,j.error||"حدث خطأ.");return j}
@@ -99,7 +108,7 @@ export default function StudentExamPage({token,assignment,studentName,className,
   if(isTimed){setStarted(!!r.state.activeAttempt);if(r.state.attemptExpired&&r.state.activeAttempt){void triggerTimeout()}}
   else{setStarted(r.state.attemptsUsed===0||Object.keys(r.state.draftAnswers||{}).length>0)}
   loaded.current=true}catch(e){if(!cancelled)setError(e instanceof Error?e.message:"تعذر تحميل المحاولة.")}finally{if(!cancelled)setLoading(false)}})();return()=>{cancelled=true;if(timer.current)window.clearTimeout(timer.current)}},[assignment.assignmentId,token]);
- useEffect(()=>{if(!loaded.current||!started||!writable||submittingRef.current)return;if(!initialAnswersSynced.current){initialAnswersSynced.current=true;return}revision.current+=1;latestTargetRevision.current=revision.current;setDirty(true);const myRevision=revision.current,snapshot=answers;if(timer.current)window.clearTimeout(timer.current);timer.current=window.setTimeout(()=>{if(submittingRef.current)return;saveQueue.current=saveQueue.current.catch(()=>{}).then(()=>saveDraftSnapshot(snapshot,myRevision))},800);return()=>{if(timer.current)window.clearTimeout(timer.current)}},[answers,started,writable]);
+ useEffect(()=>{if(!loaded.current||!started||!writable||!examBodyLoaded||submittingRef.current)return;if(!initialAnswersSynced.current){initialAnswersSynced.current=true;return}revision.current+=1;latestTargetRevision.current=revision.current;setDirty(true);const myRevision=revision.current,snapshot=answers;if(timer.current)window.clearTimeout(timer.current);timer.current=window.setTimeout(()=>{if(submittingRef.current)return;saveQueue.current=saveQueue.current.catch(()=>{}).then(()=>saveDraftSnapshot(snapshot,myRevision))},800);return()=>{if(timer.current)window.clearTimeout(timer.current)}},[answers,started,writable]);
  useEffect(()=>{const handler=(e:BeforeUnloadEvent)=>{if(revision.current<=savedRevision.current)return;e.preventDefault();e.returnValue=""};window.addEventListener("beforeunload",handler);return()=>window.removeEventListener("beforeunload",handler)},[]);
  // Resync the server-authoritative timer on reconnect and when returning to the tab; never a per-second poll.
  const resync=useCallback(async()=>{if(!mountedRef.current||submittingRef.current||result)return;try{const r=await api<{state:State}>();if(!mountedRef.current)return;setState(r.state);anchorClock(r.state);if(r.state.attemptExpired&&r.state.activeAttempt&&!result)void triggerTimeout()}catch{/* ignore transient resync failure */}},[result]);
@@ -196,6 +205,10 @@ export default function StudentExamPage({token,assignment,studentName,className,
   const rawDate=assignment.openAt||assignment.effectiveDueAt||assignment.dueAt;
   const examDate=rawDate?new Date(rawDate).toLocaleDateString("ar"):"";
   const dur=durationLabel(assignment.durationMinutes||state?.durationMinutes);
+  // "متابعة المحاولة" when a server attempt already exists but its body hasn't loaded (e.g. start
+  // succeeded then the exam fetch failed); "بدء المحاولة" for a fresh start.
+  const resumeMode=!!state?.activeAttempt;
+  const startLabel=starting?"⏳ جارٍ البدء...":(resumeMode?"متابعة المحاولة":"بدء المحاولة");
   // Pre-start, the server deliberately omits sections/questions, so `structured` is false here. Cover
   // selection must therefore depend only on the (safe) coverPage config, never on the hidden structure.
   if(cover?.enabled){
@@ -210,9 +223,9 @@ export default function StudentExamPage({token,assignment,studentName,className,
    {error&&<div className="platform-error iex-error">{error}</div>}
    <section className="iex-start-card"><span className="platform-eyebrow">Timed</span><h1>{assignment.title}</h1><p>{assignment.instructions}</p>
     <div className="iex-start-meta"><span>مدة المحاولة: <strong>{dur}</strong></span><span>{assignment.questionCount} سؤال · {assignment.totalMarks} علامة</span><span>المحاولة {(state?.attemptsUsed||0)+1} / {state?.allowedAttempts||assignment.maxAttempts}</span></div>
-    <p className="iex-start-hint">لن تظهر الأسئلة إلا بعد بدء المحاولة، وسيبدأ العدّاد فور الضغط على الزر.</p>
-    <div className="iex-start-actions"><button onClick={onBack}>العودة</button><button className="primary" onClick={()=>{void startTimedAttempt()}} disabled={starting||!state?.canStartAttempt}>{starting?"⏳ جارٍ البدء...":"بدء المحاولة"}</button></div>
-    {!state?.canStartAttempt&&!starting&&<div className="iex-no-retry">لا يمكن بدء المحاولة الآن (قد يكون الموعد انتهى أو استُنفدت المحاولات).</div>}
+    <p className="iex-start-hint">{resumeMode?"محاولتك جارية على الخادم — اضغط لمتابعة تحميل الأسئلة. لن يُعاد ضبط العدّاد.":"لن تظهر الأسئلة إلا بعد بدء المحاولة، وسيبدأ العدّاد فور الضغط على الزر."}</p>
+    <div className="iex-start-actions"><button onClick={onBack}>العودة</button><button className="primary" onClick={()=>{void startTimedAttempt()}} disabled={starting||!canStartOrResume}>{startLabel}</button></div>
+    {!canStartOrResume&&!starting&&<div className="iex-no-retry">لا يمكن بدء المحاولة الآن (قد يكون الموعد انتهى أو استُنفدت المحاولات).</div>}
    </section>
   </div></main>;
  }
