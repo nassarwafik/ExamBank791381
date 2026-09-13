@@ -10,7 +10,40 @@ on:
       - main
 
 jobs:
+  # Hard quality gate: the full Vitest suite and the production build must both
+  # pass before any Azure deployment is attempted. This job never receives the
+  # Azure deployment secret. Runs on push to main and on PR
+  # opened/synchronize/reopened, but NOT on PR closed (nothing to test when we
+  # are only tearing down a preview environment).
+  quality_gate:
+    if: github.event_name == 'push' || (github.event_name == 'pull_request' && github.event.action != 'closed')
+    runs-on: ubuntu-latest
+    name: Quality Gate — Tests & Build
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: true
+          lfs: false
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: |
+            package-lock.json
+            api/package-lock.json
+      - name: Install app dependencies
+        run: npm ci
+      - name: Install API dependencies
+        run: npm ci --prefix api
+      - name: Run tests
+        run: npm test
+      - name: Build application
+        run: npm run build
+
   build_and_deploy_job:
+    # Only deploy after the quality gate passes; keep the original event guard.
+    needs: quality_gate
     if: github.event_name == 'push' || (github.event_name == 'pull_request' && github.event.action != 'closed')
     runs-on: ubuntu-latest
     name: Build and Deploy Job
@@ -33,6 +66,8 @@ jobs:
           output_location: "dist" # Built app content directory - optional
           ###### End of Repository/Build Configurations ######
 
+  # Independent of the quality gate: when a PR closes, Azure still needs to
+  # remove its preview environment even if code would not build/test.
   close_pull_request_job:
     if: github.event_name == 'pull_request' && github.event.action == 'closed'
     runs-on: ubuntu-latest
