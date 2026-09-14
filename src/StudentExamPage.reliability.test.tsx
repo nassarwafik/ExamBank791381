@@ -18,6 +18,9 @@ const legacyState = {
 const attempt2State = { ...legacyState, activeAttempt: { attemptNumber: 2, startedAt: "2026-01-01T12:00:00.000Z", endsAt: "", status: "started" }, draftAnswers: { q1: { kind: "text", value: "ATTEMPT2_SERVER_DRAFT" } }, draftSavedAt: "2026-01-01T12:01:00.000Z" };
 // SAME attempt-1 identity, but a NEWER server draft (another tab saved it) — used for clean-vs-dirty resync.
 const sameAttemptNewDraft = { ...legacyState, draftAnswers: { q1: { kind: "text", value: "NEWER_FROM_OTHER_TAB" } }, draftSavedAt: "2026-01-01T10:45:00.000Z" };
+// LEGACY untimed context (attemptModelVersion 1, no server start, no attempt identity) — used for legacy
+// clean/dirty resync parity.
+const legacyUntimed = { ...legacyState, attemptModelVersion: 1, timed: false, requiresStart: false, activeAttempt: null, canWrite: true, draftAnswers: {}, draftSavedAt: "" };
 const timedExpiredState = {
   ...legacyState, durationMinutes: 60, timed: true,
   activeAttempt: { attemptNumber: 1, startedAt: START, endsAt: "2026-01-01T10:05:00.000Z" },
@@ -297,6 +300,98 @@ describe("R10/R11 reliability", () => {
     const be = new Event("beforeunload", { cancelable: true }) as BeforeUnloadEvent;
     window.dispatchEvent(be);
     expect(be.defaultPrevented).toBe(false);
+  });
+
+  it("A (epoch): a stale attempt-1 200 arriving after adopting attempt 2 never marks attempt 2 saved; attempt-2 edit needs its own confirmation", async () => {
+    let resolve1: (v: Response) => void = () => {}, resolve2: (v: Response) => void = () => {};
+    saveHandler = (n) => {
+      if (n === 1) return new Promise<Response>(res => { resolve1 = res; });
+      if (n === 2) return new Promise<Response>(res => { resolve2 = res; });
+      return json(200, { ok: true, savedAt: "2026-01-01T13:30:00.000Z" });
+    };
+    subGetHandler = (n) => n === 1 ? json(200, { ok: true, state: legacyState }) : json(200, { ok: true, state: attempt2State });
+    Object.defineProperty(document, "visibilityState", { configurable: true, value: "visible" });
+    const r = mount();
+    const ta = await r.findByPlaceholderText("اكتب إجابتك هنا...");
+    fireEvent.change(ta, { target: { value: "ATTEMPT1_LOCAL" } });
+    await waitFor(() => expect(saveCalls).toBe(1), { timeout: 2000 });   // attempt-1 save in flight (held)
+    document.dispatchEvent(new Event("visibilitychange"));               // another tab → attempt 2 authoritative
+    await waitFor(() => expect((r.container.querySelector(".iex-open") as HTMLTextAreaElement).value).toBe("ATTEMPT2_SERVER_DRAFT"), { timeout: 2000 });
+    resolve1(await json(200, { ok: true, savedAt: "2026-01-01T10:31:00.000Z" })); // stale attempt-1 200 (must be dropped)
+    await new Promise(res => setTimeout(res, 80));
+    expect(saveState(r)).toContain("تم الحفظ");                          // attempt 2 clean from its OWN server state
+    // Edit attempt 2 → must not read saved until its own save confirms (proves savedRevision wasn't contaminated).
+    fireEvent.change(r.container.querySelector(".iex-open") as HTMLTextAreaElement, { target: { value: "attempt2 edit" } });
+    await waitFor(() => expect(saveCalls).toBe(2), { timeout: 2000 });   // attempt-2 save in flight (held)
+    expect(saveState(r)).not.toContain("تم الحفظ");                      // pending/saving, NOT saved
+    const be = new Event("beforeunload", { cancelable: true }) as BeforeUnloadEvent;
+    window.dispatchEvent(be);
+    expect(be.defaultPrevented).toBe(true);                              // unsaved attempt-2 edit → warns
+    expect(lastSaveBody && lastSaveBody.expectedAttemptNumber).toBe(2);  // attempt-2 identity
+    expect(lastSaveBody && lastSaveBody.expectedStartedAt).toBe("2026-01-01T12:00:00.000Z");
+    resolve2(await json(200, { ok: true, savedAt: "2026-01-01T12:30:00.000Z" }));
+    await waitFor(() => expect(saveState(r)).toContain("تم الحفظ"), { timeout: 2000 }); // now genuinely saved
+  });
+
+  it("B (epoch): a stale attempt-1 failure after adopting attempt 2 triggers no error/retry/reconcile on attempt 2", async () => {
+    let reject1: (v: Response) => void = () => {};
+    saveHandler = (n) => n === 1 ? new Promise<Response>(res => { reject1 = res; }) : json(200, { ok: true, savedAt: "x" });
+    subGetHandler = (n) => n === 1 ? json(200, { ok: true, state: legacyState }) : json(200, { ok: true, state: attempt2State });
+    Object.defineProperty(document, "visibilityState", { configurable: true, value: "visible" });
+    const r = mount();
+    const ta = await r.findByPlaceholderText("اكتب إجابتك هنا...");
+    fireEvent.change(ta, { target: { value: "ATTEMPT1_LOCAL" } });
+    await waitFor(() => expect(saveCalls).toBe(1), { timeout: 2000 });
+    document.dispatchEvent(new Event("visibilitychange"));
+    await waitFor(() => expect((r.container.querySelector(".iex-open") as HTMLTextAreaElement).value).toBe("ATTEMPT2_SERVER_DRAFT"), { timeout: 2000 });
+    const getsBefore = subGetCalls;
+    reject1(await json(500, { ok: false, error: "خطأ_قديم_بالخادم" }));  // stale attempt-1 5xx
+    await new Promise(res => setTimeout(res, 120));
+    expect(r.container.textContent).not.toContain("خطأ_قديم_بالخادم");   // no stale error surfaced
+    expect(r.container.textContent).not.toContain("رمز التتبع");         // no stale tracking code
+    expect(saveState(r)).toContain("تم الحفظ");                          // attempt 2 stays clean
+    expect(subGetCalls).toBe(getsBefore);                               // no reconcile/resync from stale failure
+    expect(saveCalls).toBe(1);                                          // no retry of the stale request
+  });
+
+  it("C (epoch): a pending autosave debounce is cancelled when an authoritative resync adopts a new context", async () => {
+    subGetHandler = (n) => n === 1 ? json(200, { ok: true, state: legacyState }) : json(200, { ok: true, state: attempt2State });
+    Object.defineProperty(document, "visibilityState", { configurable: true, value: "visible" });
+    const r = mount();
+    const ta = await r.findByPlaceholderText("اكتب إجابتك هنا...");
+    fireEvent.change(ta, { target: { value: "PENDING_EDIT" } });        // schedules the 800ms debounce
+    expect(saveCalls).toBe(0);                                          // not fired yet
+    document.dispatchEvent(new Event("visibilitychange"));              // resync adopts attempt 2 mid-debounce
+    await waitFor(() => expect((r.container.querySelector(".iex-open") as HTMLTextAreaElement).value).toBe("ATTEMPT2_SERVER_DRAFT"), { timeout: 2000 });
+    await new Promise(res => setTimeout(res, 900));                     // well past the original debounce window
+    expect(saveCalls).toBe(0);                                          // the obsolete snapshot was never sent
+  });
+
+  it("D (legacy): a CLEAN legacy untimed tab adopts the newer server draft on resync (server wins), no autosave", async () => {
+    const legacyNewDraft = { ...legacyUntimed, draftAnswers: { q1: { kind: "text", value: "NEW_SERVER_DRAFT" } }, draftSavedAt: "2026-01-01T10:50:00.000Z" };
+    subGetHandler = (n) => n === 1 ? json(200, { ok: true, state: legacyUntimed }) : json(200, { ok: true, state: legacyNewDraft });
+    Object.defineProperty(document, "visibilityState", { configurable: true, value: "visible" });
+    const r = mount();
+    await r.findByPlaceholderText("اكتب إجابتك هنا...");                 // clean legacy tab
+    const saveBaseline = saveCalls;
+    document.dispatchEvent(new Event("visibilitychange"));
+    await waitFor(() => expect((r.container.querySelector(".iex-open") as HTMLTextAreaElement).value).toBe("NEW_SERVER_DRAFT"), { timeout: 2000 });
+    await waitFor(() => expect(saveState(r)).toContain("آخر حفظ:"), { timeout: 2000 }); // server saved-time shown
+    await new Promise(res => setTimeout(res, 900));
+    expect(saveCalls).toBe(saveBaseline);                              // hydration scheduled no save
+  });
+
+  it("E (legacy): a legacy untimed tab with unsaved edits keeps them on resync (no overwrite)", async () => {
+    subGetHandler = () => json(200, { ok: true, state: { ...legacyUntimed, draftAnswers: { q1: { kind: "text", value: "SERVER_OTHER_DRAFT" } }, draftSavedAt: "2026-01-01T10:55:00.000Z" } });
+    saveHandler = () => new Promise<Response>(() => {});               // hold the save so the edit stays unsaved (dirty)
+    Object.defineProperty(document, "visibilityState", { configurable: true, value: "visible" });
+    const r = mount();
+    const ta = await r.findByPlaceholderText("اكتب إجابتك هنا...");
+    fireEvent.change(ta, { target: { value: "LOCAL_LEGACY_UNSAVED" } });
+    await waitFor(() => expect(saveCalls).toBe(1), { timeout: 2000 });  // dirty (save in flight, unacked)
+    document.dispatchEvent(new Event("visibilitychange"));             // authoritative resync (same legacy context)
+    await new Promise(res => setTimeout(res, 100));
+    expect((r.container.querySelector(".iex-open") as HTMLTextAreaElement).value).toBe("LOCAL_LEGACY_UNSAVED"); // preserved
   });
 
   it("J: a stale revision-N ack never shows saved while revision N+1 is still unsaved", async () => {

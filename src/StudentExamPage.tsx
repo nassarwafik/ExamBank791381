@@ -59,6 +59,12 @@ export default function StudentExamPage({token,assignment,studentName,className,
  // is never mistaken for a user edit (a user edit always produces a brand-new object).
  const hydrationRef=useRef<Answers|null>(null);
  const loaded=useRef(false),timer=useRef<number|null>(null),revision=useRef(0),savedRevision=useRef(0),saveQueue=useRef<Promise<void>>(Promise.resolve()),submittingRef=useRef(false),mountedRef=useRef(true),latestTargetRevision=useRef(0);
+ // Roadmap #10/#11 — a monotonically-increasing "save context" generation. Every AUTHORITATIVE server
+ // hydration that resets attempt/save bookkeeping (applyServerAttemptState) bumps it. An in-flight save (or
+ // its retry/error/reconcile side effects) captures the epoch when scheduled and is DROPPED SILENTLY if the
+ // epoch has since changed, so a stale attempt-1 response can never contaminate attempt 2 (savedRevision /
+ // lastSavedAt / dirty / error / retry). The server-side stale-attempt guard remains the final write backstop.
+ const saveEpoch=useRef(0);
  const startingRef=useRef(false),finalizingRef=useRef(false);
  // Server-anchored clock: we never trust the device wall clock. On each server response we store the
  // server's effective-end and a performance.now() anchor; the countdown is (effEnd - (serverNow + (perf-anchor))).
@@ -103,8 +109,9 @@ export default function StudentExamPage({token,assignment,studentName,className,
   if(j.assignment?.requiresStart||!j.assignment?.exam||(!j.assignment.exam.questions&&!j.assignment.exam.sections))throw new ApiError(409,"تعذر تحميل الأسئلة بعد بدء المحاولة. حاول مرة أخرى.");
   return j.assignment.exam;
  }
- async function saveDraftSnapshot(snapshot:Answers,myRevision:number,attemptCtx:AttemptCtx){
+ async function saveDraftSnapshot(snapshot:Answers,myRevision:number,attemptCtx:AttemptCtx,epoch:number){
   if(myRevision<latestTargetRevision.current)return;
+  if(epoch!==saveEpoch.current)return; // an authoritative hydration replaced the context before we started
   // Offline before we even start: don't fire a doomed request; leave the revision dirty for reconnect (#7).
   if(!onlineRef.current){if(mountedRef.current){setSaving(false);setRetrying(false)}return}
   if(mountedRef.current)setSaveError(false);
@@ -114,22 +121,31 @@ export default function StudentExamPage({token,assignment,studentName,className,
   try{
    for(let attempt=0;attempt<=3;attempt++){
     if(myRevision<latestTargetRevision.current)return;
+    if(epoch!==saveEpoch.current)return; // authoritative hydration replaced the context → drop silently
     if(!onlineRef.current){if(mountedRef.current){setSaving(false);setRetrying(false)}return}
     if(mountedRef.current){setSaving(true);setRetrying(false)} // B1: SAVING = a request is actually in flight
     try{
      const resp=await api<{savedAt?:string}>({method:"POST",body:JSON.stringify({action:"saveDraft",answers:snapshot,...identity})});
+     // STALE-SUCCESS GUARD: if the context changed while this request was in flight (another tab started a new
+     // attempt / this one closed), this 200 belongs to the OLD attempt — never advance savedRevision or claim
+     // a saved time for the new context. The server-side guard already refused any real cross-attempt write.
+     if(epoch!==saveEpoch.current)return;
      savedRevision.current=Math.max(savedRevision.current,myRevision);
      // SERVER-authoritative saved time (#3): use response.savedAt, never Date.now().
      if(mountedRef.current){if(resp&&resp.savedAt)setLastSavedAt(String(resp.savedAt));setSaveFailed(false);setSaveError(false);setRetrying(false);setError("");setDirty(revision.current>savedRevision.current)}
      return;
     }catch(e){
      if(myRevision<latestTargetRevision.current)return;
+     // STALE-ERROR GUARD: a failure of a superseded context must not reconcile, show an error/tracking code,
+     // or retry for the new attempt.
+     if(epoch!==saveEpoch.current)return;
      // A 409 (start-gated expiry, a stale autosave after another tab finalized/started a new attempt, or a
      // stale-attempt guard rejection) is NEVER blindly retried: reconcile against AUTHORITATIVE server state.
      if(e instanceof ApiError&&e.status===409){
       if(mountedRef.current){setSaving(false);setRetrying(false)}
       if(requiresStart){const res=await reconcileTimed409();if(res!=="other")return}
       else{void resync()}
+      if(epoch!==saveEpoch.current)return; // reconcile adopted a new context → don't stamp the old 409 message on it
       if(mountedRef.current){setError(e.message);setSaveFailed(true)} // expected 409 → message only, no tracking suffix
       return;
      }
@@ -144,11 +160,14 @@ export default function StudentExamPage({token,assignment,studentName,className,
      // B1: during backoff we are NOT in flight → RETRYING (never masked by SAVING).
      if(mountedRef.current){setSaving(false);setRetrying(true)}
      await new Promise(resolve=>window.setTimeout(resolve,[1000,2000,4000][attempt]));
+     if(epoch!==saveEpoch.current)return; // context replaced during backoff → abandon silently
      if(!onlineRef.current){if(mountedRef.current){setSaving(false);setRetrying(false)}return} // went offline mid-backoff
     }
    }
   }finally{
-   if(mountedRef.current){setSaving(false);setRetrying(false)}
+   // Only clear the in-flight indicators if THIS context still owns them (a stale save must not reset the
+   // new attempt's saving/retrying state).
+   if(mountedRef.current&&epoch===saveEpoch.current){setSaving(false);setRetrying(false)}
   }
  }
  useEffect(()=>{mountedRef.current=true;return()=>{mountedRef.current=false}},[]);
@@ -168,7 +187,7 @@ export default function StudentExamPage({token,assignment,studentName,className,
    }else{setResult(st.latestResult);setStarted(false)}
   }else{setResult(st.latestResult);setStarted(st.attemptsUsed===0||Object.keys(st.draftAnswers||{}).length>0)}
   loaded.current=true}catch(e){if(!cancelled)setError(e instanceof Error?e.message:"تعذر تحميل المحاولة.")}finally{if(!cancelled)setLoading(false)}})();return()=>{cancelled=true;if(timer.current)window.clearTimeout(timer.current)}},[assignment.assignmentId,token]);
- useEffect(()=>{if(!loaded.current||!started||!writable||!examBodyLoaded||submittingRef.current)return;if(answers===hydrationRef.current)return;/* server hydration, not a user edit */revision.current+=1;latestTargetRevision.current=revision.current;setDirty(true);const myRevision=revision.current,snapshot=answers,ctx=attemptId(stateRef.current);dirtyAttemptRef.current=ctx;if(timer.current)window.clearTimeout(timer.current);timer.current=window.setTimeout(()=>{if(submittingRef.current)return;saveQueue.current=saveQueue.current.catch(()=>{}).then(()=>saveDraftSnapshot(snapshot,myRevision,ctx))},800);return()=>{if(timer.current)window.clearTimeout(timer.current)}},[answers,started,writable]);
+ useEffect(()=>{if(!loaded.current||!started||!writable||!examBodyLoaded||submittingRef.current)return;if(answers===hydrationRef.current)return;/* server hydration, not a user edit */revision.current+=1;latestTargetRevision.current=revision.current;setDirty(true);const myRevision=revision.current,snapshot=answers,ctx=attemptId(stateRef.current),epoch=saveEpoch.current;dirtyAttemptRef.current=ctx;if(timer.current)window.clearTimeout(timer.current);timer.current=window.setTimeout(()=>{if(submittingRef.current)return;if(epoch!==saveEpoch.current)return;/* context replaced before debounce fired */saveQueue.current=saveQueue.current.catch(()=>{}).then(()=>saveDraftSnapshot(snapshot,myRevision,ctx,epoch))},800);return()=>{if(timer.current)window.clearTimeout(timer.current)}},[answers,started,writable]);
  useEffect(()=>{const handler=(e:BeforeUnloadEvent)=>{if(!shouldWarnBeforeUnload(revision.current,savedRevision.current))return;e.preventDefault();e.returnValue=""};window.addEventListener("beforeunload",handler);return()=>window.removeEventListener("beforeunload",handler)},[]);
  // Resync the server-authoritative timer on reconnect and when returning to the tab; never a per-second poll.
  // Resync from AUTHORITATIVE server state. Not gated on `result` (a stale completed result must never
@@ -184,6 +203,10 @@ export default function StudentExamPage({token,assignment,studentName,className,
  // savedRevision, lastSavedAt, save flags) so a new attempt never inherits the previous attempt's state.
  const applyServerAttemptState=useCallback((st:State)=>{
   const draft=st.draftAnswers||{};
+  // Bump the save epoch FIRST: any in-flight save (and its pending retry/error/reconcile) is now stale and
+  // will be dropped silently, and cancel any queued autosave debounce so an obsolete snapshot is not even sent.
+  saveEpoch.current+=1;
+  if(timer.current){window.clearTimeout(timer.current);timer.current=null}
   stateRef.current=st;setState(st);
   answersRef.current=draft;hydrationRef.current=draft;setAnswers(draft);
   revision.current=0;savedRevision.current=0;latestTargetRevision.current=0;
@@ -204,7 +227,14 @@ export default function StudentExamPage({token,assignment,studentName,className,
  // Resync AUTHORITATIVE server state. Returns the fresh State on success, or null on failure (so callers
  // never act on stale state). SAME active attempt → update timer/state only, PRESERVING legitimate unsaved
  // local answers. DIFFERENT attempt → adopt it via applyServerAttemptState (never keep a cross-attempt snapshot).
- const resync=useCallback(async():Promise<State|null>=>{if(!mountedRef.current||submittingRef.current||finalizingRef.current)return null;try{const st=(await api<{state:State}>()).state;if(!mountedRef.current)return st;const rs=!!st.timed||Number(st.attemptModelVersion||0)>=2||!!st.requiresStart;if(rs){if(st.activeAttempt){adoptOrKeepActive(st);anchorClock(st);setResult(null);setStarted(true);if(st.timed&&st.attemptExpired){void triggerTimeout()}else{setExpired(false)}}else{applyServerAttemptState(st);anchorClock(st);setResult(st.latestResult);setStarted(false);setExpired(false)}}else{stateRef.current=st;setState(st);anchorClock(st);setResult(st.latestResult)}return st}catch{return null/* transient resync failure — caller must not act on stale state */}},[applyServerAttemptState,adoptOrKeepActive]);
+ const resync=useCallback(async():Promise<State|null>=>{if(!mountedRef.current||submittingRef.current||finalizingRef.current)return null;try{const st=(await api<{state:State}>()).state;if(!mountedRef.current)return st;const rs=!!st.timed||Number(st.attemptModelVersion||0)>=2||!!st.requiresStart;if(rs){if(st.activeAttempt){adoptOrKeepActive(st);anchorClock(st);setResult(null);setStarted(true);if(st.timed&&st.attemptExpired){void triggerTimeout()}else{setExpired(false)}}else{applyServerAttemptState(st);anchorClock(st);setResult(st.latestResult);setStarted(false);setExpired(false)}}else{
+  // LEGACY untimed clean-vs-dirty parity (no attempt-identity enforcement): a CLEAN tab adopts the server
+  // draft (server wins → shared applyServerAttemptState, fresh draftAnswers/draftSavedAt, no autosave from
+  // hydration); a tab with genuine unsaved edits keeps them (state/result refresh only). This only stops a
+  // clean legacy tab from later overwriting a newer server draft — legacy server compatibility is unchanged.
+  if(revision.current>savedRevision.current){stateRef.current=st;setState(st);anchorClock(st);setResult(st.latestResult)}
+  else{applyServerAttemptState(st);anchorClock(st);setResult(st.latestResult)}
+ }return st}catch{return null/* transient resync failure — caller must not act on stale state */}},[applyServerAttemptState,adoptOrKeepActive]);
  // Reconnect recovery (#8): server authority FIRST (resync — which also finalizes an expired attempt and
  // adopts a changed one), THEN save the latest dirty snapshot ONLY if the server still reports the SAME
  // attempt writable. A failed resync does nothing (never save/finalize on stale state).
@@ -213,8 +243,8 @@ export default function StudentExamPage({token,assignment,studentName,className,
   const st=await resync();
   if(!st)return;                                   // resync failed → never act on stale state
   if(st.canWrite&&!st.attemptExpired&&st.activeAttempt&&sameAttempt(attemptId(st),dirtyAttemptRef.current)&&revision.current>savedRevision.current){
-   const myRevision=revision.current,snapshot=answersRef.current,ctx=attemptId(st);
-   saveQueue.current=saveQueue.current.catch(()=>{}).then(()=>saveDraftSnapshot(snapshot,myRevision,ctx));
+   const myRevision=revision.current,snapshot=answersRef.current,ctx=attemptId(st),epoch=saveEpoch.current;
+   saveQueue.current=saveQueue.current.catch(()=>{}).then(()=>saveDraftSnapshot(snapshot,myRevision,ctx,epoch));
   }
  },[resync]);
  useEffect(()=>{
@@ -350,7 +380,7 @@ export default function StudentExamPage({token,assignment,studentName,className,
  async function submit(){if(!writable||submitBusy)return;
   // Offline submit guard (#11): never send a final submit while offline — the latest answers may be unsaved.
   if(!onlineRef.current){setError("لا يمكن تسليم الامتحان قبل حفظ التغييرات. تحقق من الاتصال بالإنترنت.");return}
-  if(!confirmSubmit())return;submittingRef.current=true;setSubmitBusy(true);setError("");if(timer.current)window.clearTimeout(timer.current);const submitSnapshot=answers,submitRevision=revision.current,submitCtx=attemptId(stateRef.current);if(submitRevision>savedRevision.current){saveQueue.current=saveQueue.current.catch(()=>{}).then(()=>saveDraftSnapshot(submitSnapshot,submitRevision,submitCtx))}try{await saveQueue.current;if(savedRevision.current<submitRevision){setError("تعذر حفظ إجاباتك بسبب مشكلة في الاتصال. تحقق من الإنترنت وحاول التسليم مرة أخرى.");return}const identity=submitCtx?{expectedAttemptNumber:submitCtx.attemptNumber,expectedStartedAt:submitCtx.startedAt}:{};const r=await api<{result:Result;state:State}>({method:"POST",body:JSON.stringify({action:"submit",answers:submitSnapshot,...identity})});setResult(r.result);setState(r.state);setStarted(false);setAnswers({});savedRevision.current=revision.current;window.scrollTo({top:0,behavior:"smooth"})}catch(e){
+  if(!confirmSubmit())return;submittingRef.current=true;setSubmitBusy(true);setError("");if(timer.current)window.clearTimeout(timer.current);const submitSnapshot=answers,submitRevision=revision.current,submitCtx=attemptId(stateRef.current),submitEpoch=saveEpoch.current;if(submitRevision>savedRevision.current){saveQueue.current=saveQueue.current.catch(()=>{}).then(()=>saveDraftSnapshot(submitSnapshot,submitRevision,submitCtx,submitEpoch))}try{await saveQueue.current;if(savedRevision.current<submitRevision){setError("تعذر حفظ إجاباتك بسبب مشكلة في الاتصال. تحقق من الإنترنت وحاول التسليم مرة أخرى.");return}const identity=submitCtx?{expectedAttemptNumber:submitCtx.attemptNumber,expectedStartedAt:submitCtx.startedAt}:{};const r=await api<{result:Result;state:State}>({method:"POST",body:JSON.stringify({action:"submit",answers:submitSnapshot,...identity})});setResult(r.result);setState(r.state);setStarted(false);setAnswers({});savedRevision.current=revision.current;window.scrollTo({top:0,behavior:"smooth"})}catch(e){
   // Race at the deadline: a 409 may be an expired attempt (duration OR due-clipped => finalize) or a
   // still-live one (=> resume). Decide from AUTHORITATIVE server state, not the Arabic message text.
   if(requiresStart&&e instanceof ApiError&&e.status===409){submittingRef.current=false;const res=await reconcileTimed409();if(res==="other")setError(e.message)}
