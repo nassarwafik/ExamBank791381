@@ -38,10 +38,10 @@ const assignment = { assignmentId: "asg1", title: "واجب", instructions: "ت"
 
 const json = (status: number, body: unknown) => Promise.resolve({ ok: status >= 200 && status < 300, status, json: async () => body } as Response);
 const rej = () => Promise.reject(new TypeError("network down"));
-let subGetCalls = 0, saveCalls = 0, finalizeCalls = 0, startCalls = 0, calls: string[] = [], lastSaveBody: Record<string, unknown> | null = null, onLogout: ReturnType<typeof vi.fn>;
-let subGetHandler: (n: number) => Promise<Response>, saveHandler: (n: number) => Promise<Response>, finalizeHandler: (n: number) => Promise<Response>, startHandler: (n: number) => Promise<Response>, examHandler: () => Promise<Response>;
+let subGetCalls = 0, saveCalls = 0, finalizeCalls = 0, startCalls = 0, submitCalls = 0, calls: string[] = [], lastSaveBody: Record<string, unknown> | null = null, onLogout: ReturnType<typeof vi.fn>;
+let subGetHandler: (n: number) => Promise<Response>, saveHandler: (n: number) => Promise<Response>, finalizeHandler: (n: number) => Promise<Response>, startHandler: (n: number) => Promise<Response>, examHandler: () => Promise<Response>, submitHandler: (n: number) => Promise<Response>;
 function installFetch() {
-  subGetCalls = 0; saveCalls = 0; finalizeCalls = 0; startCalls = 0; calls = []; lastSaveBody = null;
+  subGetCalls = 0; saveCalls = 0; finalizeCalls = 0; startCalls = 0; submitCalls = 0; calls = []; lastSaveBody = null;
   (globalThis as { fetch?: unknown }).fetch = vi.fn((url: string, init?: RequestInit) => {
     const method = (init && init.method) || "GET";
     if (url.includes("/api/student-assignment/")) { calls.push("exam"); return examHandler(); }
@@ -51,6 +51,7 @@ function installFetch() {
       if (b.action === "startAttempt") { startCalls++; calls.push("start"); return startHandler(startCalls); }
       if (b.action === "saveDraft") { saveCalls++; lastSaveBody = b; calls.push("save:" + JSON.stringify(b.answers)); return saveHandler(saveCalls); }
       if (b.action === "finalizeTimedOutAttempt") { finalizeCalls++; calls.push("finalize"); return finalizeHandler(finalizeCalls); }
+      if (b.action === "submit") { submitCalls++; calls.push("submit"); return submitHandler(submitCalls); }
       return json(200, { ok: true, state: legacyState });
     }
     return json(404, { ok: false, error: "nf" });
@@ -75,6 +76,7 @@ beforeEach(() => {
   finalizeHandler = () => json(200, { ok: true, result: timedOutResult, state: { ...timedExpiredState, activeAttempt: null, latestResult: timedOutResult } });
   startHandler = () => json(200, { ok: true, state: startedState2 });
   examHandler = () => json(200, { ok: true, assignment: { ...assignment, requiresStart: false, exam: fullExam } });
+  submitHandler = () => json(200, { ok: true, result: timedOutResult, state: completedState });
 });
 afterEach(() => { cleanup(); vi.restoreAllMocks(); vi.useRealTimers(); setOnline(true); });
 
@@ -392,6 +394,82 @@ describe("R10/R11 reliability", () => {
     document.dispatchEvent(new Event("visibilitychange"));             // authoritative resync (same legacy context)
     await new Promise(res => setTimeout(res, 100));
     expect((r.container.querySelector(".iex-open") as HTMLTextAreaElement).value).toBe("LOCAL_LEGACY_UNSAVED"); // preserved
+  });
+
+  it("A (legacy gen): a fresh legacy untimed tab (activeAttempt=null) saves its offline-first edit on reconnect, GET first, no modern identity", async () => {
+    subGetHandler = () => json(200, { ok: true, state: legacyUntimed });
+    saveHandler = () => json(200, { ok: true, savedAt: "2026-01-01T10:40:00.000Z" });
+    const r = mount();
+    const ta = await r.findByPlaceholderText("اكتب إجابتك هنا...");
+    goOffline();
+    fireEvent.change(ta, { target: { value: "LEGACY_OFFLINE_ANSWER" } });
+    await new Promise(res => setTimeout(res, 30));
+    expect(saveCalls).toBe(0);                                        // offline: nothing sent
+    const before = calls.length;
+    goOnline();
+    await waitFor(() => expect(calls.slice(before).some(c => c.startsWith("save"))).toBe(true), { timeout: 2000 });
+    const seg = calls.slice(before);
+    expect(seg.indexOf("get")).toBeGreaterThanOrEqual(0);
+    expect(seg.indexOf("get")).toBeLessThan(seg.findIndex(c => c.startsWith("save"))); // authoritative GET before save
+    expect(saveCalls).toBe(1);                                        // exactly one save
+    expect((lastSaveBody!.answers as Record<string, { value?: string }>).q1.value).toBe("LEGACY_OFFLINE_ANSWER");
+    expect("expectedAttemptNumber" in lastSaveBody!).toBe(false);     // legacy: no fake modern identity
+    expect("expectedStartedAt" in lastSaveBody!).toBe(false);
+    await waitFor(() => expect(saveState(r)).toContain("تم الحفظ"), { timeout: 2000 });
+  });
+
+  it("B (legacy gen): a generation change (another tab submitted) discards the old local snapshot — no upload, result adopted, no warn", async () => {
+    const legacyDone = { ...legacyUntimed, attemptsUsed: 1, canWrite: false, canAttempt: true, latestResult: priorResult, attempts: [priorResult] };
+    subGetHandler = (n) => n === 1 ? json(200, { ok: true, state: legacyUntimed }) : json(200, { ok: true, state: legacyDone });
+    const r = mount();
+    const ta = await r.findByPlaceholderText("اكتب إجابتك هنا...");
+    goOffline();
+    fireEvent.change(ta, { target: { value: "OLD_GEN_ANSWER" } });
+    await new Promise(res => setTimeout(res, 30));
+    const before = calls.length;
+    goOnline();
+    await r.findByText(/تم تسليم المحاولة/);                          // authoritative result adopted
+    const seg = calls.slice(before);
+    expect(seg.some(c => c.startsWith("save"))).toBe(false);          // old-generation answers NEVER uploaded
+    await new Promise(res => setTimeout(res, 80));
+    expect(saveCalls).toBe(0);
+    const be = new Event("beforeunload", { cancelable: true }) as BeforeUnloadEvent;
+    window.dispatchEvent(be);
+    expect(be.defaultPrevented).toBe(false);                         // obsolete attempt → no warning
+  });
+
+  it("C (legacy gen): startNext begins a clean local attempt (no save, no inherited saved-time, no warn); first edit saves at the new generation", async () => {
+    const legacyDone = { ...legacyUntimed, attemptsUsed: 1, canWrite: true, canAttempt: true, latestResult: priorResult, attempts: [priorResult], draftSavedAt: "2026-01-01T09:30:00.000Z" };
+    subGetHandler = () => json(200, { ok: true, state: legacyDone });
+    saveHandler = () => json(200, { ok: true, savedAt: "2026-01-01T11:00:00.000Z" });
+    const r = mount();
+    await r.findByText(/تم تسليم المحاولة/);                          // result screen
+    fireEvent.click(await r.findByText(/بدء محاولة جديدة/));
+    await r.findByText("سؤال الاختبار السري");                        // attempt 2 revealed locally
+    const saveBaseline = saveCalls;
+    await new Promise(res => setTimeout(res, 900));                   // past debounce
+    expect(saveCalls).toBe(saveBaseline);                            // Start Next itself schedules no save
+    expect(saveState(r)).not.toContain("آخر حفظ:");                   // no inherited attempt-1 saved-time
+    const be = new Event("beforeunload", { cancelable: true }) as BeforeUnloadEvent;
+    window.dispatchEvent(be);
+    expect(be.defaultPrevented).toBe(false);                         // clean → no warn
+    fireEvent.change(r.container.querySelector(".iex-open") as HTMLTextAreaElement, { target: { value: "attempt2 legacy answer" } });
+    await waitFor(() => expect(saveCalls).toBe(saveBaseline + 1), { timeout: 2000 });
+    expect("expectedAttemptNumber" in lastSaveBody!).toBe(false);     // legacy generation → no modern identity
+  });
+
+  it("D (submit epoch): a pre-submit 409 that reconciles to a new attempt cancels the submit and leaves the reconciled UI (no stale error)", async () => {
+    subGetHandler = (n) => n === 1 ? json(200, { ok: true, state: legacyState }) : json(200, { ok: true, state: attempt2State });
+    saveHandler = () => json(409, { ok: false, error: "تم بدء محاولة جديدة لهذا الواجب." });
+    const r = mount();
+    const ta = await r.findByPlaceholderText("اكتب إجابتك هنا...");
+    fireEvent.change(ta, { target: { value: "ATTEMPT1_DIRTY" } });
+    fireEvent.click(r.container.querySelector(".iex-foot .primary") as HTMLButtonElement); // submit → pre-save 409 → reconcile
+    await waitFor(() => expect((r.container.querySelector(".iex-open") as HTMLTextAreaElement).value).toBe("ATTEMPT2_SERVER_DRAFT"), { timeout: 2000 });
+    await new Promise(res => setTimeout(res, 80));
+    expect(submitCalls).toBe(0);                                      // attempt 1 was NEVER submitted
+    expect(r.container.textContent).not.toContain("تعذر حفظ إجاباتك");// no stale generic save error on attempt 2
+    expect(r.container.textContent).not.toContain("رمز التتبع");
   });
 
   it("J: a stale revision-N ack never shows saved while revision N+1 is still unsaved", async () => {
