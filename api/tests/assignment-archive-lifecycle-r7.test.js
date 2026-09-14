@@ -31,6 +31,7 @@ function manageDeps(extra = {}) {
     mutateJsonWithRetry: async (_c, k, fn) => { const cur = store.has(k) ? structuredClone(store.get(k)) : null; const next = await fn(cur); store.set(k, structuredClone(next)); return next; },
     StorageConflictError,
     recordAuditEvent: async (_c, ev) => { audits.push(ev); },
+    withAssignmentLock: async (_c, _id, fn) => fn(), // logic tests: lock is a pass-through (serialization is proven in the concurrency suite)
     ...extra
   };
 }
@@ -232,37 +233,27 @@ describe("R7 purge", () => {
 });
 function postWithRacing(body, deps) { return manageHandler({ method: "POST", url: "http://x/assignments", params: {}, json: async () => body }, deps); }
 
-describe("R7 archive active-attempt race (authoritative in-mutation re-check)", () => {
-  it("AK: an active attempt that appears AFTER the UX pre-check but before the commit forces 409 (assignment stays published, attempt untouched)", async () => {
+describe("R7 archive active-attempt impact (authoritative scan under the lifecycle lock)", () => {
+  it("AK: the impact scan reads the LIVE submission set — an active attempt blocks a no-confirm archive (409, stays published, untouched)", async () => {
     seedAssignment({ status: "published" });
-    // A live active attempt already exists in storage, but the fast UX pre-check listing is made to
-    // report ZERO first (as if the attempt started a moment later). The authoritative re-list INSIDE the
-    // archive mutation must still see it and refuse to archive without confirmActiveAttempts.
+    // The archive impact scan runs inside the per-assignment lock (here a pass-through), reading live
+    // storage. A serialized student write either lands before this scan (observed here) or after the
+    // committed archived state (blocked) — the concurrency suite proves the interleaving; this asserts the
+    // scan itself is authoritative against the live submission set.
     const active = { assignmentId: AID, studentId: "s2", classId: "c1", attempts: [], activeAttempt: { attemptNumber: 1, startedAt: "2026-01-01T10:00:00.000Z", endsAt: "2026-01-01T11:00:00.000Z", status: "started" } };
     store.set(SUB + "s2.json", structuredClone(active));
-    let lsCalls = 0, lbnCalls = 0;
-    const racing = manageDeps({
-      // First call (UX pre-check) hides the attempt; every later call (in-mutation) reads live storage.
-      listJson: async (_c, prefix) => { lsCalls++; if (lsCalls === 1) return []; return [...store.entries()].filter(([k]) => k.startsWith(prefix) && k.endsWith(".json")).map(([, v]) => structuredClone(v)); },
-      listBlobNames: async (_c, prefix) => { lbnCalls++; if (lbnCalls === 1) return []; return [...store.keys()].filter(k => k.startsWith(prefix) && k.endsWith(".json")); }
-    });
-    const r = await postWithRacing({ action: "archive", assignmentId: AID }, racing);
+    const r = await post({ action: "archive", assignmentId: AID });
     expect(r.status).toBe(409);
     expect(r.jsonBody.requiresConfirmation).toBe(true);
     expect(r.jsonBody.impact.activeAttempts).toBe(1);
     expect(store.get(AP).status).toBe("published");        // never archived without confirmation
     expect(store.get(SUB + "s2.json")).toEqual(active);    // active attempt untouched
   });
-  it("AL: with confirmActiveAttempts the same race archives (still never touching the attempt)", async () => {
+  it("AL: with confirmActiveAttempts the archive commits (still never touching the attempt)", async () => {
     seedAssignment({ status: "published" });
     const active = { assignmentId: AID, studentId: "s2", classId: "c1", attempts: [], activeAttempt: { attemptNumber: 1, startedAt: "2026-01-01T10:00:00.000Z", endsAt: "2026-01-01T11:00:00.000Z", status: "started" } };
     store.set(SUB + "s2.json", structuredClone(active));
-    let lsCalls = 0, lbnCalls = 0;
-    const racing = manageDeps({
-      listJson: async (_c, prefix) => { lsCalls++; if (lsCalls === 1) return []; return [...store.entries()].filter(([k]) => k.startsWith(prefix) && k.endsWith(".json")).map(([, v]) => structuredClone(v)); },
-      listBlobNames: async (_c, prefix) => { lbnCalls++; if (lbnCalls === 1) return []; return [...store.keys()].filter(k => k.startsWith(prefix) && k.endsWith(".json")); }
-    });
-    const r = await postWithRacing({ action: "archive", assignmentId: AID, confirmActiveAttempts: true }, racing);
+    const r = await post({ action: "archive", assignmentId: AID, confirmActiveAttempts: true });
     expect(r.status).toBe(200);
     expect(store.get(AP).status).toBe("archived");
     expect(store.get(SUB + "s2.json")).toEqual(active);
@@ -280,7 +271,8 @@ function subDeps() {
     getContainer: () => ({}),
     downloadJsonOrNull: async (_c, k) => (s.has(k) ? structuredClone(s.get(k)) : null),
     mutateJsonWithRetry: async (_c, k, fn) => { const cur = s.has(k) ? structuredClone(s.get(k)) : null; const next = await fn(cur); s.set(k, next); return next; },
-    StorageConflictError, gradeExam: () => ({ score: 0, totalMarks: 10, percentage: 0, manualReviewMarks: 0, finalized: true, questions: [], sections: [] }), recordAchievementIfEligible: async () => {}
+    StorageConflictError, gradeExam: () => ({ score: 0, totalMarks: 10, percentage: 0, manualReviewMarks: 0, finalized: true, questions: [], sections: [] }), recordAchievementIfEligible: async () => {},
+    withAssignmentLock: async (_c, _id, fn) => fn() // logic tests: lock is a pass-through (serialization is proven in the concurrency suite)
   } };
 }
 const sCall = (deps, action) => submissionHandler({ method: "POST", params: { assignmentId: AID }, json: async () => ({ action }) }, deps);

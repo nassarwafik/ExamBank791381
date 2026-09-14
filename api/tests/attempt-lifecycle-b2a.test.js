@@ -162,7 +162,8 @@ function makeDeps() {
     mutateJsonWithRetry: async (_c, key, fn) => { const cur = store.has(key) ? structuredClone(store.get(key)) : null; const next = await fn(cur); store.set(key, next); writes.push(key); return next; },
     StorageConflictError,
     gradeExam: (_exam, answers) => { counts.grade++; gradedAnswers.push(answers); const ok = answers && answers.q1 && answers.q1.value === "A"; return { score: ok ? 10 : 0, totalMarks: 10, percentage: ok ? 100 : 0, manualReviewMarks: 0, finalized: true, questions: [], sections: [] }; },
-    recordAchievementIfEligible: async () => { counts.achievement++; }
+    recordAchievementIfEligible: async () => { counts.achievement++; },
+    withAssignmentLock: async (_c, _id, fn) => fn()
   };
 }
 function seed({ durationMinutes = 0, attemptModelVersion = 2, maxAttempts = 1, dueAt = iso(BASE + 10 * 60 * MIN), status = "published" } = {}) {

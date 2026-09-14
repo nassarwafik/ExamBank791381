@@ -6,6 +6,7 @@ const {gradeExam}=require("../lib/assignment-grading");
 const {recordAchievementIfEligible}=require("../lib/achievement-feed");
 const {normalizeClassStatus}=require("../lib/class-lifecycle");
 const {timerState,startRejection,writeRejection,normalizeDurationMinutes,activeAttemptOf,normalizeEndReason}=require("../lib/assignment-availability");
+const {withAssignmentLock,AssignmentLockBusyError}=require("../lib/assignment-lock");
 const AP="platform/assignments/",SP="platform/submissions/";
 const CONFLICT_MESSAGE="حدث تعارض مؤقت أثناء حفظ البيانات. حاول مرة أخرى.";
 // A completed attempt's public shape. timedOut/startedAt/endsAt/endedAt/endReason are additive audit
@@ -26,7 +27,7 @@ function defaultSubmission(id,student){return {schemaVersion:1,assignmentId:id,s
 // `deps` is an optional dependency-injection seam for unit tests (production passes nothing, so the real
 // implementations are used). It does not change runtime behavior.
 async function handler(request,deps={}){
- const authFn=deps.requireStudentAuth||requireStudentAuth,getC=deps.getContainer||getContainer,dl=deps.downloadJsonOrNull||downloadJsonOrNull,mut=deps.mutateJsonWithRetry||mutateJsonWithRetry,gradeFn=deps.gradeExam||gradeExam,recFn=deps.recordAchievementIfEligible||recordAchievementIfEligible;
+ const authFn=deps.requireStudentAuth||requireStudentAuth,getC=deps.getContainer||getContainer,dl=deps.downloadJsonOrNull||downloadJsonOrNull,mut=deps.mutateJsonWithRetry||mutateJsonWithRetry,gradeFn=deps.gradeExam||gradeExam,recFn=deps.recordAchievementIfEligible||recordAchievementIfEligible,wl=deps.withAssignmentLock||withAssignmentLock;
  try{const auth=authFn(request);if(!auth.ok)return auth.response;const id=String(request.params?.assignmentId||"");if(!id)return {status:400,jsonBody:{ok:false,error:"assignmentId is required."}};const c=getC(),student=await dl(c,"platform/users/"+auth.user.sub+".json");if(!student||student.active===false)return {status:401,jsonBody:{ok:false,error:"الحساب غير فعّال."}};
   const classroom=student.classId?await dl(c,"platform/classes/"+student.classId+".json"):null;
   if(classroom&&normalizeClassStatus(classroom)==="archived")return {status:403,jsonBody:{ok:false,error:"هذا الصف مؤرشف وانتهت السنة الدراسية."}};
@@ -38,6 +39,19 @@ async function handler(request,deps={}){
   // The GET above stays readable so a student can still review a historical submission of an archived task.
   if(a.status!=="published")return {status:403,jsonBody:{ok:false,error:"الواجب غير متاح حاليًا."}};
   let b={};try{b=await request.json()}catch{}const action=String(b.action||"saveDraft");
+  // Concurrency (Roadmap #7): a student write that could CREATE new submission state — start a new active
+  // attempt, create the FIRST submission document, or lazily create an active attempt (legacy untimed
+  // saveDraft/submit) — must be serialized against assignment archive/purge via the per-assignment
+  // lifecycle lock. startAttempt always creates an attempt; the other actions create state only when there
+  // is no submission document yet OR no live active attempt (decided from the request-start load `s`; a
+  // stale "has active attempt" only skips the lock, and the in-mutation writeRejection re-check still
+  // guards that path). An ORDINARY write on an already-live attempt (autosave / submit / finalize of an
+  // existing attempt) is intentionally lock-free: that attempt was itself created under the lock, so any
+  // archive necessarily observes it, and its own in-mutation "published" re-read already blocks a write to
+  // an archived assignment — it can neither create an orphan nor hide a new attempt from the impact scan.
+  const stateCreating=!s||!activeAttemptOf(s);
+  const needLock=action==="startAttempt"||stateCreating;
+  const maybeLock=fn=>needLock?wl(c,id,fn):fn();
 
   // ── startAttempt — server stamps startedAt (+ endsAt for TIMED). Works for TIMED and UNTIMED v2
   // assignments (startRejection gates which). IDEMPOTENT: a live active attempt is returned unchanged
@@ -48,7 +62,7 @@ async function handler(request,deps={}){
    const durMinutes=normalizeDurationMinutes(a.durationMinutes),timed=durMinutes>0,durationMs=durMinutes*60000;
    let resultState=null;
    try{
-    await mut(c,name,async current=>{
+    await maybeLock(()=>mut(c,name,async current=>{
      // Roadmap #7 race guard: re-read the assignment from storage inside the mutation and require
      // "published" before committing ANY write, in case it was archived after this request loaded it.
      const fa=await dl(c,AP+id+".json");if(!fa||fa.status!=="published"){const err=new Error("الواجب غير متاح حاليًا.");err.httpStatus=403;throw err}
@@ -63,8 +77,9 @@ async function handler(request,deps={}){
      doc.updatedAt=new Date(startMs).toISOString();
      resultState=state(a,doc,startMs);
      return doc;
-    });
+    }));
    }catch(e){
+    if(e instanceof AssignmentLockBusyError)return {status:503,jsonBody:{ok:false,error:CONFLICT_MESSAGE}};
     if(e instanceof StorageConflictError)return {status:503,jsonBody:{ok:false,error:CONFLICT_MESSAGE}};
     if(e?.httpStatus)return {status:e.httpStatus,jsonBody:{ok:false,error:e.message}};
     throw e;
@@ -78,7 +93,7 @@ async function handler(request,deps={}){
    const answers=b.answers&&typeof b.answers==="object"?b.answers:{};
    let savedAt="",finalState=null;
    try{
-    await mut(c,name,async current=>{
+    await maybeLock(()=>mut(c,name,async current=>{
      // Roadmap #7 race guard: re-read the assignment from storage inside the mutation and require
      // "published" before committing ANY write, in case it was archived after this request loaded it.
      const fa=await dl(c,AP+id+".json");if(!fa||fa.status!=="published"){const err=new Error("الواجب غير متاح حاليًا.");err.httpStatus=403;throw err}
@@ -98,8 +113,9 @@ async function handler(request,deps={}){
      }
      finalState=state(a,doc,Date.now());
      return doc;
-    });
+    }));
    }catch(e){
+    if(e instanceof AssignmentLockBusyError)return {status:503,jsonBody:{ok:false,error:CONFLICT_MESSAGE}};
     if(e instanceof StorageConflictError)return {status:503,jsonBody:{ok:false,error:CONFLICT_MESSAGE}};
     if(e?.httpStatus)return {status:e.httpStatus,jsonBody:{ok:false,error:e.message}};
     throw e;
@@ -113,7 +129,7 @@ async function handler(request,deps={}){
    const answers=b.answers&&typeof b.answers==="object"?b.answers:{},g=gradeFn(a.examSnapshot,answers),now=new Date().toISOString();
    let resultAttempt=null,finalState=null;
    try{
-    await mut(c,name,async current=>{
+    await maybeLock(()=>mut(c,name,async current=>{
      // Roadmap #7 race guard: re-read the assignment from storage inside the mutation and require
      // "published" before committing ANY write, in case it was archived after this request loaded it.
      const fa=await dl(c,AP+id+".json");if(!fa||fa.status!=="published"){const err=new Error("الواجب غير متاح حاليًا.");err.httpStatus=403;throw err}
@@ -128,8 +144,9 @@ async function handler(request,deps={}){
      doc.draftAnswers={};doc.draftSavedAt="";doc.activeAttempt=null;doc.updatedAt=now;
      resultAttempt=attempt;finalState=state(a,doc,Date.now());
      return doc;
-    });
+    }));
    }catch(e){
+    if(e instanceof AssignmentLockBusyError)return {status:503,jsonBody:{ok:false,error:CONFLICT_MESSAGE}};
     if(e instanceof StorageConflictError)return {status:503,jsonBody:{ok:false,error:CONFLICT_MESSAGE}};
     if(e?.httpStatus)return {status:e.httpStatus,jsonBody:{ok:false,error:e.message}};
     throw e;
@@ -146,7 +163,7 @@ async function handler(request,deps={}){
   if(action==="finalizeTimedOutAttempt"){
    let resultAttempt=null,finalState=null,already=false;
    try{
-    await mut(c,name,async current=>{
+    await maybeLock(()=>mut(c,name,async current=>{
      // Roadmap #7 race guard: re-read the assignment from storage inside the mutation and require
      // "published" before committing ANY write, in case it was archived after this request loaded it.
      const fa=await dl(c,AP+id+".json");if(!fa||fa.status!=="published"){const err=new Error("الواجب غير متاح حاليًا.");err.httpStatus=403;throw err}
@@ -167,8 +184,9 @@ async function handler(request,deps={}){
      doc.draftAnswers={};doc.draftSavedAt="";doc.activeAttempt=null;doc.updatedAt=now;
      resultAttempt=attempt;finalState=state(a,doc,Date.now());
      return doc;
-    });
+    }));
    }catch(e){
+    if(e instanceof AssignmentLockBusyError)return {status:503,jsonBody:{ok:false,error:CONFLICT_MESSAGE}};
     if(e instanceof StorageConflictError)return {status:503,jsonBody:{ok:false,error:CONFLICT_MESSAGE}};
     if(e?.httpStatus)return {status:e.httpStatus,jsonBody:{ok:false,error:e.message}};
     throw e;

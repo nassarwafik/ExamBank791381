@@ -36,7 +36,8 @@ function makeDeps() {
         counts.grade++;
         return { score: 10, totalMarks: 10, percentage: 100, manualReviewMarks: 0, finalized: true, questions: [], sections: [] };
       },
-      recordAchievementIfEligible: async () => { counts.achievement++; }
+      recordAchievementIfEligible: async () => { counts.achievement++; },
+      withAssignmentLock: async (_c, _id, fn) => fn()
     }
   };
 }

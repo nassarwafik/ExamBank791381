@@ -265,7 +265,8 @@ describe("B2B extension + timeout audit (student-submission handler)", () => {
       mutateJsonWithRetry: async (_c, k, fn) => { const cur = subStore.has(k) ? structuredClone(subStore.get(k)) : null; const next = await fn(cur); subStore.set(k, next); return next; },
       StorageConflictError,
       gradeExam: () => ({ score: 0, totalMarks: 10, percentage: 0, manualReviewMarks: 0, finalized: true, questions: [], sections: [] }),
-      recordAchievementIfEligible: async () => {}
+      recordAchievementIfEligible: async () => {},
+      withAssignmentLock: async (_c, _id, fn) => fn()
     };
   }
   const sub = (action) => submissionHandler({ method: "POST", params: { assignmentId: "asg1" }, json: async () => ({ action }) }, subDeps);
