@@ -13,7 +13,7 @@ const {
 } = await import("../src/lib/builder-auth.js");
 const {
   createStudentToken, verifyStudentToken, requireStudentAuth,
-  requireActiveStudentSession, normalizeAuthVersion, hashPassword
+  requireActiveStudentSession, normalizeAuthVersion, hashPassword, verifyPassword
 } = await import("../src/lib/student-auth.js");
 const throttle = await import("../src/lib/login-throttle.js");
 const { handler: loginHandler } = await import("../src/functions/platform-login.js");
@@ -612,5 +612,147 @@ describe("R8 §3 — auth-doc version, fail-closed reset, login race", () => {
     };
     const r = await loginHandler({ json: async () => ({ userCode: "S-9", password: "pw123456" }) }, deps);
     expect(r.status).toBe(401);                                             // old-password → no fresh post-reset session
+  });
+});
+
+// ── PR#67 §A — throttle recovery / truthful Retry-After state machine ─────────
+describe("R8 §A — throttle recovery state machine", () => {
+  const bucketState = (c, id, ip) => { const b = c._blobs.get(throttle.throttleName(id, ip)); return b ? JSON.parse(b.body) : null; };
+  it("A/B: exhaust the free band, then the next request is denied with a truthful Retry-After", async () => {
+    const c = makeBlobContainer(); let clock = 1_000_000_000_000; const deps = { now: () => clock };
+    for (let i = 0; i < throttle.PER_IP_FREE_ATTEMPTS; i++) {
+      expect((await throttle.reserveBucket(c, throttle.throttleName("u", "ip"), throttle.PER_IP_FREE_ATTEMPTS, deps)).allowed).toBe(true);
+    }
+    const denied = await throttle.reserveBucket(c, throttle.throttleName("u", "ip"), throttle.PER_IP_FREE_ATTEMPTS, deps);
+    expect(denied.allowed).toBe(false); expect(denied.retryAfterSeconds).toBe(throttle.BASE_COOLDOWN_SECONDS);
+  });
+  it("H: requests during an active cooldown do NOT extend blockedUntil or count", async () => {
+    const c = makeBlobContainer(); let clock = 2_000_000_000_000; const deps = { now: () => clock };
+    const name = throttle.throttleName("u", "ip");
+    for (let i = 0; i < throttle.PER_IP_FREE_ATTEMPTS + 1; i++) await throttle.reserveBucket(c, name, throttle.PER_IP_FREE_ATTEMPTS, deps);
+    const blockedAt = bucketState(c, "u", "ip").blockedUntil;
+    clock += 1000;                                                        // 1s into the 5s cooldown
+    const r = await throttle.reserveBucket(c, name, throttle.PER_IP_FREE_ATTEMPTS, deps);
+    expect(r.allowed).toBe(false);
+    expect(bucketState(c, "u", "ip").blockedUntil).toBe(blockedAt);       // NOT extended
+  });
+  it("C/F: after the cooldown expires exactly one probe is admitted; a wrong probe escalates the next cooldown", async () => {
+    const c = makeBlobContainer(); let clock = 3_000_000_000_000; const deps = { now: () => clock };
+    const name = throttle.throttleName("u", "ip");
+    for (let i = 0; i < throttle.PER_IP_FREE_ATTEMPTS + 1; i++) await throttle.reserveBucket(c, name, throttle.PER_IP_FREE_ATTEMPTS, deps);
+    clock += throttle.BASE_COOLDOWN_SECONDS * 1000 + 1;                   // past the 5s cooldown
+    const probe = await throttle.reserveBucket(c, name, throttle.PER_IP_FREE_ATTEMPTS, deps);
+    expect(probe.allowed).toBe(true);                                     // the ONE probe reaches verify
+    const nextWrong = await throttle.reserveBucket(c, name, throttle.PER_IP_FREE_ATTEMPTS, deps);
+    expect(nextWrong.allowed).toBe(false); expect(nextWrong.retryAfterSeconds).toBe(throttle.BASE_COOLDOWN_SECONDS * 2); // escalated to 10s
+  });
+  it("G: many concurrent requests exactly at cooldown expiry → only ONE reaches verify", async () => {
+    const c = makeBlobContainer(); let clock = 4_000_000_000_000; const deps = { now: () => clock };
+    const name = throttle.throttleName("u", "ip");
+    for (let i = 0; i < throttle.PER_IP_FREE_ATTEMPTS + 1; i++) await throttle.reserveBucket(c, name, throttle.PER_IP_FREE_ATTEMPTS, deps);
+    clock += throttle.BASE_COOLDOWN_SECONDS * 1000 + 1;
+    const results = await Promise.allSettled(Array.from({ length: 15 }, () => throttle.reserveBucket(c, name, throttle.PER_IP_FREE_ATTEMPTS, deps)));
+    const allowed = results.filter(r => r.status === "fulfilled" && r.value.allowed).length;
+    expect(allowed).toBe(1);
+  });
+  it("I: a request already rejected by the per-IP bucket does NOT consume the global budget", async () => {
+    const c = makeBlobContainer(); let clock = 5_000_000_000_000; const deps = { now: () => clock };
+    // exhaust the per-IP bucket (free band + 1 to arm cooldown)
+    for (let i = 0; i < throttle.PER_IP_FREE_ATTEMPTS + 1; i++) await throttle.reserveLoginAttempt(c, "vic", "ip", deps);
+    const globalBefore = bucketState(c, "vic", "__global__");
+    // more attempts while per-IP is in cooldown: reserveLoginAttempt must reject WITHOUT touching global
+    for (let i = 0; i < 5; i++) { const r = await throttle.reserveLoginAttempt(c, "vic", "ip", deps); expect(r.allowed).toBe(false); }
+    const globalAfter = bucketState(c, "vic", "__global__");
+    expect(globalAfter.attempts).toBe(globalBefore.attempts);            // global budget untouched
+  });
+  it("D/E (end-to-end): after the cooldown, a CORRECT password reaches verify → 200 and clears both buckets", async () => {
+    const c = makeBlobContainer(); let clock = 6_000_000_000_000;
+    const { salt, passwordHash } = hashPassword("correctpw1");
+    c._blobs.set("platform/auth/" + createdCodeHash("S-D") + ".json", { body: JSON.stringify({ userId: "ud", active: true, salt, passwordHash, authVersion: 1 }), etag: '"a"' });
+    c._blobs.set("platform/users/ud.json", { body: JSON.stringify({ userId: "ud", role: "student", active: true, authVersion: 1, code: "S-D", displayName: "A", classId: "c1" }), etag: '"u"' });
+    const deps = { getContainer: () => c, downloadJsonOrNull: async (_x, k) => { const b = c._blobs.get(k); return b ? JSON.parse(b.body) : null; }, clientIdFromRequest: () => "198.51.100.7", validateBuilderCredentials: () => false, now: () => clock };
+    // exhaust the free band with wrong guesses → the next is 429
+    for (let i = 0; i < throttle.PER_IP_FREE_ATTEMPTS; i++) {
+      const r = await loginHandler({ json: async () => ({ userCode: "S-D", password: "wrong" }) }, deps);
+      expect(r.status).toBe(401);
+    }
+    const blocked = await loginHandler({ json: async () => ({ userCode: "S-D", password: "wrong" }) }, deps);
+    expect(blocked.status).toBe(429); expect(blocked.headers["Retry-After"]).toBeTruthy();     // B
+    clock += throttle.BASE_COOLDOWN_SECONDS * 1000 + 1;                                          // C
+    const ok = await loginHandler({ json: async () => ({ userCode: "S-D", password: "correctpw1" }) }, deps);
+    expect(ok.status).toBe(200);                                                                 // D
+    expect(c._blobs.has(throttle.throttleName("S-D", "198.51.100.7"))).toBe(false);              // E: per-IP cleared
+    expect(c._blobs.has(throttle.throttleName("S-D", "__global__"))).toBe(false);                // E: global cleared
+  });
+});
+
+// ── PR#67 §B — a stale concurrent reset cannot restore an older password ──────
+describe("R8 §B — version-conditional credential write", () => {
+  const authName = createdCodeHash("S-1");
+  function seed(c) {
+    const { salt, passwordHash } = hashPassword("origpass1");
+    c._blobs.set("platform/auth/" + authName + ".json", { body: JSON.stringify({ userId: "u1", active: true, salt, passwordHash, authVersion: 1 }), etag: '"a0"' });
+    c._blobs.set("platform/users/u1.json", { body: JSON.stringify({ userId: "u1", role: "student", active: true, authVersion: 1, code: "S-1", displayName: "A", classId: "c1" }), etag: '"u0"' });
+  }
+  const authDoc = c => JSON.parse(c._blobs.get("platform/auth/" + authName + ".json").body);
+  const studentDoc = c => JSON.parse(c._blobs.get("platform/users/u1.json").body);
+  const pwWorks = (c, pw) => { const a = authDoc(c); return verifyPassword(pw, a.salt, a.passwordHash); };
+
+  it("forced interleaving: B (v3) writes first, then stale A (v2) — only passwordB survives, A reports failure", async () => {
+    const c = makeBlobContainer(); seed(c);
+    // Pause the FIRST auth-doc download (A's step-2) until we release it; B's later download runs unpaused.
+    let firstAuth = true; let release; const barrier = new Promise(r => { release = r; });
+    const origGetBlob = c.getBlobClient.bind(c);
+    c.getBlobClient = name => {
+      const client = origGetBlob(name);
+      if (name === "platform/auth/" + authName + ".json") {
+        return { download: async () => { if (firstAuth) { firstAuth = false; await barrier; } return client.download(); }, deleteIfExists: client.deleteIfExists.bind(client) };
+      }
+      return client;
+    };
+    const pA = resetStudentPassword(c, studentDoc(c), "passwordA");        // step1 → v2, then pauses at auth download
+    await new Promise(r => setTimeout(r, 15));                             // ensure A reached the pause
+    await resetStudentPassword(c, studentDoc(c), "passwordB");             // B runs fully → student v3, auth v3 + passwordB
+    release();                                                            // resume A's auth write (now stale)
+    await expect(pA).rejects.toBeTruthy();                                 // stale A does NOT report success
+    expect(studentDoc(c).authVersion).toBe(3);
+    expect(authDoc(c).authVersion).toBe(3);
+    expect(pwWorks(c, "passwordB")).toBe(true);                            // only the newest password authenticates
+    expect(pwWorks(c, "passwordA")).toBe(false);
+    expect(pwWorks(c, "origpass1")).toBe(false);
+  });
+
+  it("simultaneous resets converge consistently with no version downgrade", async () => {
+    const c = makeBlobContainer(); seed(c);
+    await Promise.allSettled([resetStudentPassword(c, studentDoc(c), "passwordA"), resetStudentPassword(c, studentDoc(c), "passwordB")]);
+    expect(authDoc(c).authVersion).toBe(studentDoc(c).authVersion);       // consistent
+    expect(authDoc(c).authVersion).toBeGreaterThanOrEqual(2);             // no downgrade; both increments applied
+    // exactly one of the two new passwords authenticates (the one owning the newest version), never the old.
+    expect(pwWorks(c, "origpass1")).toBe(false);
+    expect([pwWorks(c, "passwordA"), pwWorks(c, "passwordB")].filter(Boolean).length).toBe(1);
+  });
+});
+
+// ── PR#67 §C — BUILDER_SESSION_VERSION revokes legacy teacher tokens ──────────
+describe("R8 §C — builder session version revokes legacy tokens", () => {
+  const legacyIat = () => Math.floor(Date.now() / 1000) - 100;
+  const legacyExp = () => Math.floor(Date.now() / 1000) + 3600;
+  it("1: a legacy builder token is accepted while BUILDER_SESSION_VERSION is 1", () => {
+    delete process.env.BUILDER_SESSION_VERSION;
+    const t = legacyBuilder({ sub: "t1", iat: legacyIat(), exp: legacyExp() });
+    expect(verifyBuilderToken(t)).toBeTruthy();
+  });
+  it("2/3: bumping BUILDER_SESSION_VERSION to 2 rejects the SAME legacy token", () => {
+    const t = legacyBuilder({ sub: "t1", iat: legacyIat(), exp: legacyExp() });
+    process.env.BUILDER_SESSION_VERSION = "1"; expect(verifyBuilderToken(t)).toBeTruthy();
+    process.env.BUILDER_SESSION_VERSION = "2"; expect(verifyBuilderToken(t)).toBeNull();
+  });
+  it("4/5: an old v2/version-1 token is rejected at version 2; a fresh v2/version-2 token is accepted", () => {
+    process.env.BUILDER_SESSION_VERSION = "1";
+    const oldV2 = createBuilderToken("t1");                               // sv "1"
+    process.env.BUILDER_SESSION_VERSION = "2";
+    expect(verifyBuilderToken(oldV2)).toBeNull();                         // stale v2
+    const freshV2 = createBuilderToken("t1");                             // sv "2"
+    expect(verifyBuilderToken(freshV2)).toBeTruthy();
   });
 });

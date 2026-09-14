@@ -382,17 +382,23 @@ async function resetStudentPassword(container, student, requestedPassword = "") 
     current.updatedAt = now;
     return current;
   });
-  // Step 2: apply the new password hash AND the matching authVersion together (never downgrading). If this
-  // write fails, the student is already bumped, so login stays fail-closed (versions mismatch) until retried
-  // — the old password never silently keeps working while sessions are revoked.
+  // Step 2: apply the new password hash AND matching authVersion — but ONLY if this operation still owns the
+  // newest version (PR#67 review §B). A version-conditional (CAS) rule, NOT Math.max: if a NEWER reset has
+  // already written a higher auth.authVersion, this stale operation must NOT overwrite the (newer) hash and
+  // must NOT report success — otherwise an older password could replace a newer one while looking
+  // version-consistent. If this write fails outright, the student is already bumped, so login stays
+  // fail-closed (versions mismatch) until retried — the old password never silently keeps working.
+  let applied = true;
   await mutateJsonWithRetry(container, authBlobName, current => {
     if (!current) throw new Error("ملف دخول الطالب غير موجود.");
+    if (normalizeAuthVersion(current.authVersion) > newVersion) { applied = false; return current; } // stale
     current.salt = salt;
     current.passwordHash = passwordHash;
-    current.authVersion = Math.max(normalizeAuthVersion(current.authVersion), newVersion);
+    current.authVersion = newVersion;
     current.updatedAt = now;
     return current;
   });
+  if (!applied) throw new Error("تم تغيير كلمة المرور من عملية أحدث. أعد المحاولة."); // stale op never reports success
   return temporaryPassword;
 }
 
@@ -853,14 +859,15 @@ app.http("manageStudents", {
           return current;
         });
 
+        const newPwHash = newPassword ? hashPassword(newPassword) : null;
         if (newAuthName === oldAuthName) {
           await mutateJsonWithRetry(container, oldAuthName, current => {
             if (!current) throw new Error("ملف دخول الطالب غير موجود.");
-            if (newPassword) {
-              const { salt, passwordHash } = hashPassword(newPassword);
-              current.salt = salt;
-              current.passwordHash = passwordHash;
-              current.authVersion = Math.max(normalizeAuthVersion(current.authVersion), updatedStudentVersion);
+            // §B version-conditional: only overwrite the credential if this op owns the newest authVersion.
+            if (newPwHash && normalizeAuthVersion(current.authVersion) <= updatedStudentVersion) {
+              current.salt = newPwHash.salt;
+              current.passwordHash = newPwHash.passwordHash;
+              current.authVersion = updatedStudentVersion;
             }
             current.schemaVersion = 3;
             current.codeHash = studentCodeHash(newCode);
@@ -883,10 +890,9 @@ app.http("manageStudents", {
             authVersion: Math.max(normalizeAuthVersion(oldAuth && oldAuth.authVersion), normalizeAuthVersion(updatedStudentVersion)),
             updatedAt: new Date().toISOString()
           };
-          if (newPassword) {
-            const { salt, passwordHash } = hashPassword(newPassword);
-            newAuthDoc.salt = salt;
-            newAuthDoc.passwordHash = passwordHash;
+          if (newPwHash) {
+            newAuthDoc.salt = newPwHash.salt;
+            newAuthDoc.passwordHash = newPwHash.passwordHash;
           }
           try {
             await uploadJsonConditional(container, newAuthName, newAuthDoc, null);

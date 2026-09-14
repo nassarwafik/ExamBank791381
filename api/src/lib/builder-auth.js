@@ -153,10 +153,13 @@ function verifyBuilderToken(token) {
     return payload;
   }
 
-  // Legacy (pre-R8) builder token: no `ver`, signed with the raw secret, payload {sub,iat,exp}. Accepted
-  // only within its ORIGINAL lifetime and only by THIS (builder) verifier — never cross-role. It carries
-  // no session version, so a BUILDER_SESSION_VERSION bump does not revoke it; it expires naturally (≤8h).
+  // Legacy (pre-R8) builder token: no `ver`, signed with the raw secret, payload {sub,iat,exp}. Bounded
+  // migration ONLY while the deployment is still at the default session version "1": bumping
+  // BUILDER_SESSION_VERSION away from "1" revokes ALL legacy teacher tokens (PR#67 review §C), honoring the
+  // contract that a version bump invalidates every existing teacher session. Otherwise legacy tokens are
+  // accepted within their ORIGINAL lifetime, only by THIS (builder) verifier — never cross-role.
   if (payload.ver === undefined) {
+    if (getBuilderSessionVersion() !== "1") return null;
     const expectedLegacy = signPayload(encodedPayload, secret);
     if (!timingSafeEqualText(suppliedSignature, expectedLegacy)) return null;
     if (payload.role !== undefined && payload.role !== "teacher") return null; // never accept a student payload
