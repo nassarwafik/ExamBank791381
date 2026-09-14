@@ -12,7 +12,7 @@ const CONFLICT_MESSAGE="حدث تعارض مؤقت أثناء حفظ البيا�
 // fields; they are "" / false / normalized for legacy/untimed attempts (backward compatible). endReason
 // is normalized from a legacy attempt's timedOut flag when the explicit field is absent (never mutates
 // stored data — normalization is read-time only).
-function pub(x){return {attemptNumber:x.attemptNumber,submittedAt:x.submittedAt,score:x.score,totalMarks:x.totalMarks,percentage:x.percentage,manualReviewMarks:x.manualReviewMarks,finalized:x.finalized,teacherFeedback:String(x.teacherFeedback||""),timedOut:!!x.timedOut,startedAt:String(x.startedAt||""),endsAt:String(x.endsAt||""),endedAt:String(x.endedAt||""),endReason:normalizeEndReason(x)}}
+function pub(x){return {attemptNumber:x.attemptNumber,submittedAt:x.submittedAt,score:x.score,totalMarks:x.totalMarks,percentage:x.percentage,manualReviewMarks:x.manualReviewMarks,finalized:x.finalized,teacherFeedback:String(x.teacherFeedback||""),timedOut:!!x.timedOut,startedAt:String(x.startedAt||""),endsAt:String(x.endsAt||""),extendedEndsAt:String(x.extendedEndsAt||""),endedAt:String(x.endedAt||""),endReason:normalizeEndReason(x)}}
 // Unified state from the shared timer/availability helper, so this endpoint agrees with the
 // dashboard/assignment endpoints. `canAttempt` keeps its historical (untimed) meaning; `canWrite`
 // (save/submit gate) and `canStartAttempt` (timed start gate) are explicit and separate. serverNow +
@@ -108,8 +108,9 @@ async function handler(request,deps={}){
      const ts=timerState(a,doc,Date.now());
      if(!ts.canWrite){const err=new Error(ts.timed?(ts.attemptExpired?"انتهى وقت المحاولة.":"ابدأ المحاولة أولاً."):(ts.isClosed?"انتهى موعد التسليم.":"لا توجد محاولة إضافية متاحة."));err.httpStatus=409;throw err}
      const active=activeAttemptOf(doc),attemptNumber=active?active.attemptNumber:(doc.attempts?.length||0)+1;
-     // Audit (B2A #12): a normal submit records endReason "submitted" and endedAt = server submission time.
-     const attempt={attemptNumber,submittedAt:now,score:g.score,totalMarks:g.totalMarks,percentage:g.percentage,manualReviewMarks:g.manualReviewMarks,finalized:g.finalized,questionGrades:g.questions,sections:g.sections,answers,manualOverrides:{},teacherFeedback:"",timedOut:false,startedAt:active?active.startedAt:"",endsAt:active?active.endsAt||"":"",endedAt:now,endReason:"submitted"};
+     // Audit (B2A #12 / B2B #16): a normal submit records endReason "submitted", endedAt = server
+     // submission time, and preserves any teacher timer extension (extendedEndsAt) on the completed attempt.
+     const attempt={attemptNumber,submittedAt:now,score:g.score,totalMarks:g.totalMarks,percentage:g.percentage,manualReviewMarks:g.manualReviewMarks,finalized:g.finalized,questionGrades:g.questions,sections:g.sections,answers,manualOverrides:{},teacherFeedback:"",timedOut:false,startedAt:active?active.startedAt:"",endsAt:active?active.endsAt||"":"",extendedEndsAt:active&&active.extendedEndsAt?String(active.extendedEndsAt):"",endedAt:now,endReason:"submitted"};
      doc.attempts=Array.isArray(doc.attempts)?doc.attempts:[];doc.attempts.push(attempt);
      doc.draftAnswers={};doc.draftSavedAt="";doc.activeAttempt=null;doc.updatedAt=now;
      resultAttempt=attempt;finalState=state(a,doc,Date.now());
@@ -140,11 +141,12 @@ async function handler(request,deps={}){
      if(!ts.attemptExpired){const err=new Error("لم تنتهِ مدة المحاولة بعد.");err.httpStatus=409;throw err}
      const serverAnswers=doc.draftAnswers&&typeof doc.draftAnswers==="object"?doc.draftAnswers:{};
      const g=gradeFn(a.examSnapshot,serverAnswers),now=new Date().toISOString();
-     // Audit (B2A #12): endReason "timedOut"; endedAt = the AUTHORITATIVE effective deadline (duration OR
-     // due-clipped), NOT this offline finalization moment. submittedAt stays the real server finalization
-     // timestamp. Falls back to the raw attempt end / now only if no effective deadline is computable.
+     // Audit (B2A #12 / B2B #17): endReason "timedOut"; endedAt = the AUTHORITATIVE effective deadline
+     // (teacher-extended duration OR due-clipped — ts.effectiveAttemptEndsAt already accounts for
+     // extendedEndsAt), NOT this offline finalization moment. submittedAt stays the real server
+     // finalization timestamp. The teacher extension is preserved on the completed attempt (extendedEndsAt).
      const endedAt=ts.effectiveAttemptEndsAt||active.endsAt||now;
-     const attempt={attemptNumber:active.attemptNumber,submittedAt:now,score:g.score,totalMarks:g.totalMarks,percentage:g.percentage,manualReviewMarks:g.manualReviewMarks,finalized:g.finalized,questionGrades:g.questions,sections:g.sections,answers:serverAnswers,manualOverrides:{},teacherFeedback:"",timedOut:true,startedAt:active.startedAt,endsAt:active.endsAt,endedAt,endReason:"timedOut"};
+     const attempt={attemptNumber:active.attemptNumber,submittedAt:now,score:g.score,totalMarks:g.totalMarks,percentage:g.percentage,manualReviewMarks:g.manualReviewMarks,finalized:g.finalized,questionGrades:g.questions,sections:g.sections,answers:serverAnswers,manualOverrides:{},teacherFeedback:"",timedOut:true,startedAt:active.startedAt,endsAt:active.endsAt,extendedEndsAt:active.extendedEndsAt?String(active.extendedEndsAt):"",endedAt,endReason:"timedOut"};
      doc.attempts=Array.isArray(doc.attempts)?doc.attempts:[];doc.attempts.push(attempt);
      doc.draftAnswers={};doc.draftSavedAt="";doc.activeAttempt=null;doc.updatedAt=now;
      resultAttempt=attempt;finalState=state(a,doc,Date.now());
