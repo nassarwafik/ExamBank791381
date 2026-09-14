@@ -46,12 +46,13 @@ app.http("importUpload", {
   methods: ["POST"],
   authLevel: "anonymous",
   route: "import-upload",
-  handler: withObservability("import-upload", async request => {
+  handler: withObservability("import-upload", async (request, _ctx, obs) => {
     try {
       const auth = requireBuilderAuth(request);
       if (!auth.ok) {
         return auth.response;
       }
+      obs?.logInfo("import.started", { operation: "upload" });
 
       const fileName = decodeFileNameHeader(request.headers.get("x-file-name"));
       const declaredType = String(request.headers.get("x-file-type") || "").trim();
@@ -107,11 +108,13 @@ app.http("importUpload", {
 
       await uploadJson(container, blobPrefix + "manifest.json", manifest);
 
+      obs?.logInfo("import.completed", { operation: "upload", kind: validation.kind, sizeBytes: buffer.length });
       return {
         status: 200,
         jsonBody: { ok: true, importJobId, fileName, sizeBytes: buffer.length, detectedKind: validation.kind }
       };
-    } catch {
+    } catch (e) {
+      obs?.logError("import.failed", e, { operation: "upload" });
       return { status: 500, jsonBody: { ok: false, error: "تعذر رفع الملف حاليًا." } };
     }
   })

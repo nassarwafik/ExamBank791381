@@ -11,6 +11,7 @@ import StructuredExamSection from "./StructuredExamSection";
 import StructuredExamCover from "./StructuredExamCover";
 import {normalizeCoverPage,examMarksDistribution,type ExamCoverPage,type MarksDistribution} from "./examCover";
 import {formatCountdown,countdownTone} from "./examTimer";
+import {isUnexpectedStatus,trackingSuffix} from "./lib/requestTrace";
 
 type ExamBody={title?:string;metadata?:{school?:string;subject?:string;grade?:string;className?:string;generalInstructions?:string};presentationTheme?:string;coverPage?:ExamCoverPage;questions?:Question[];sections?:ExamSection[]};
 type Assignment={assignmentId:string;title:string;instructions:string;openAt:string;dueAt:string;effectiveDueAt?:string;maxAttempts:number;questionCount:number;totalMarks:number;durationMinutes?:number;requiresStart?:boolean;timed?:boolean;marksDistribution?:MarksDistribution;exam:ExamBody};
@@ -22,7 +23,15 @@ type Props={token:string;assignment:Assignment;studentName:string;className:stri
 
 class ApiError extends Error{
  status:number;
- constructor(status:number,message:string){super(message);this.status=status}
+ requestId:string;
+ constructor(status:number,message:string,requestId=""){super(message);this.status=status;this.requestId=requestId}
+}
+// Roadmap #9: keep the Arabic message; append a subtle "(رمز التتبع: …)" ONLY for an unexpected server error
+// (5xx / network) that carries a correlation id — never for an expected 401/409 etc.
+function errText(e:unknown,fallback:string):string{
+ const base=e instanceof Error?e.message:fallback;
+ if(e instanceof ApiError&&isUnexpectedStatus(e.status)&&e.requestId)return base+trackingSuffix(e.requestId);
+ return base;
 }
 
 const fmt=(v:string)=>v?new Date(v).toLocaleString("ar"):"بدون موعد";
@@ -58,7 +67,7 @@ export default function StudentExamPage({token,assignment,studentName,className,
  const canStartOrResume=!!(state?.canStartAttempt||state?.activeAttempt);
  const writable=!!state?.canWrite&&!expired;
 
- async function subApi<T>(options:RequestInit={}):Promise<T>{const h=new Headers(options.headers||{});h.set("Content-Type","application/json");h.set("x-student-token",token);h.set("Authorization","Bearer "+token);const r=await fetch("/api/student-submission/"+encodeURIComponent(assignment.assignmentId),{...options,headers:h}),j=await r.json() as T&{error?:string};if(r.status===401){onLogout();throw new ApiError(401,"انتهت الجلسة.")}if(!r.ok)throw new ApiError(r.status,j.error||"حدث خطأ.");return j}
+ async function subApi<T>(options:RequestInit={}):Promise<T>{const h=new Headers(options.headers||{});h.set("Content-Type","application/json");h.set("x-student-token",token);h.set("Authorization","Bearer "+token);const r=await fetch("/api/student-submission/"+encodeURIComponent(assignment.assignmentId),{...options,headers:h}),j=await r.json() as T&{error?:string};if(r.status===401){onLogout();throw new ApiError(401,"انتهت الجلسة.")}if(!r.ok)throw new ApiError(r.status,j.error||"حدث خطأ.",r.headers?.get?.("x-request-id")||"");return j}
  const api=subApi;
  // Re-anchor the local countdown clock to a fresh server state (serverNow + effectiveAttemptEndsAt).
  const anchorClock=useCallback((st:State)=>{
@@ -75,7 +84,7 @@ export default function StudentExamPage({token,assignment,studentName,className,
   const r=await fetch("/api/student-assignment/"+encodeURIComponent(assignment.assignmentId),{headers:h});
   let j:{assignment?:{exam?:ExamBody;requiresStart?:boolean};error?:string}={};try{j=await r.json()}catch{}
   if(r.status===401){onLogout();throw new ApiError(401,"انتهت الجلسة.")}
-  if(!r.ok)throw new ApiError(r.status,j.error||"تعذر تحميل الأسئلة.");
+  if(!r.ok)throw new ApiError(r.status,j.error||"تعذر تحميل الأسئلة.",r.headers?.get?.("x-request-id")||"");
   if(j.assignment?.requiresStart||!j.assignment?.exam||(!j.assignment.exam.questions&&!j.assignment.exam.sections))throw new ApiError(409,"تعذر تحميل الأسئلة بعد بدء المحاولة. حاول مرة أخرى.");
   return j.assignment.exam;
  }
@@ -104,7 +113,7 @@ export default function StudentExamPage({token,assignment,studentName,className,
      }
      const retryable=!(e instanceof ApiError)||e.status>=500;
      if(!retryable||attempt===3){
-      if(mountedRef.current){setError(e instanceof Error?e.message:"تعذر الحفظ التلقائي.");setSaveFailed(true)}
+      if(mountedRef.current){setError(errText(e,"تعذر الحفظ التلقائي."));setSaveFailed(true)}
       return;
      }
      if(mountedRef.current)setRetrying(true);
@@ -175,7 +184,7 @@ export default function StudentExamPage({token,assignment,studentName,className,
    }
    // Gate/result stays (we did NOT setStarted/setCoverStarted, did NOT replace exam, did NOT clear
    // result). Pressing start again re-runs startAttempt (same timer) then retries the exam fetch.
-   setError(e instanceof Error?e.message:"تعذر بدء المحاولة.");
+   setError(errText(e,"تعذر بدء المحاولة."));
   }finally{setStarting(false);startingRef.current=false}
  }
  // Reconcile a 409 on a start-gated write/start against AUTHORITATIVE server state (never the device clock
@@ -240,7 +249,7 @@ export default function StudentExamPage({token,assignment,studentName,className,
   // Race at the deadline: a 409 may be an expired attempt (duration OR due-clipped => finalize) or a
   // still-live one (=> resume). Decide from AUTHORITATIVE server state, not the Arabic message text.
   if(requiresStart&&e instanceof ApiError&&e.status===409){submittingRef.current=false;const res=await reconcileTimed409();if(res==="other")setError(e.message)}
-  else setError(e instanceof Error?e.message:"تعذر تسليم الواجب.")
+  else setError(errText(e,"تعذر تسليم الواجب."))
  }finally{setSubmitBusy(false);if(!finalizingRef.current)submittingRef.current=false}}
  // Start-gated next-attempt (TIMED or UNTIMED v2): DON'T clear the previous result here —
  // startTimedAttempt clears it only after the new attempt has actually started AND its exam body loaded,

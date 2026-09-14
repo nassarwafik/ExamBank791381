@@ -11,6 +11,10 @@ const obs = await import("../src/lib/observability.js");
 const storage = await import("../src/lib/platform-storage.js");
 const { handler: healthHandler, safeVersion } = await import("../src/functions/health.js");
 const { handler: loginHandler } = await import("../src/functions/platform-login.js");
+const { handler: submissionHandler } = await import("../src/functions/student-submission.js");
+const { handler: manageAssignmentsHandler } = await import("../src/functions/manage-assignments.js");
+const { inner: importAnalyzeInner } = await import("../src/functions/import-analyze.js");
+const { createBuilderToken } = await import("../src/lib/builder-auth.js");
 
 // Capture every emitted log record.
 let records = [];
@@ -261,5 +265,131 @@ describe("R9 health endpoint", () => {
     process.env.APP_VERSION = "evil value with spaces; rm -rf";
     expect(safeVersion()).toBe("");
     delete process.env.APP_VERSION;
+  });
+});
+
+// ── Review fix #1 — an Error nested under a normal key cannot bypass redaction ──
+describe("R9 fix#1 — Error objects never bypass redaction", () => {
+  it("an Error under a non-sensitive key ('detail') leaks no message content", () => {
+    const ctx = obs.createRequestContext(reqWith(), { route: "t" });
+    ctx.logWarn("x", { detail: new Error("password=SECRET_SENTINEL identityNumber=123456789") });
+    const s = serialized();
+    expect(s).not.toContain("SECRET_SENTINEL");
+    expect(s).not.toContain("123456789");
+    // still useful for diagnostics
+    expect(s).toContain("errorName");
+  });
+  it("an Error nested deep in objects/arrays leaks nothing", () => {
+    const ctx = obs.createRequestContext(reqWith(), { route: "t" });
+    ctx.logError("x", new Error("outer"), { a: { b: [{ c: new Error("token=DEEP_SENTINEL answer=علي") }] } });
+    const s = serialized();
+    expect(s).not.toContain("DEEP_SENTINEL");
+    expect(s).not.toContain("علي");
+  });
+  it("safeError carries no message/stack", () => {
+    const e = new Error("student answer = leak"); e.stack = "at /secret.js:1";
+    const safe = obs.safeError(e);
+    expect(safe.errorMessage).toBeUndefined();
+    expect(JSON.stringify(safe)).not.toContain("leak");
+    expect(JSON.stringify(safe)).not.toContain("secret.js");
+    expect(safe.errorName).toBe("Error");
+  });
+});
+
+// ── Review fix #2 — core telemetry fields are authoritative; header is canonical ──
+describe("R9 fix#2 — request-id / core-field invariant", () => {
+  it("caller-supplied extras cannot overwrite the six core fields", () => {
+    const ctx = obs.createRequestContext(reqWith({ "x-request-id": "known-123" }), { route: "realroute" });
+    ctx.logInfo("real.event", { requestId: "fake", route: "fake", event: "fake", method: "DELETE", level: "fake", timestamp: "fake", keep: "ok" });
+    const rec = records[records.length - 1];
+    expect(rec.requestId).toBe("known-123");
+    expect(rec.route).toBe("realroute");
+    expect(rec.event).toBe("real.event");
+    expect(rec.method).toBe(ctx.method);
+    expect(rec.level).toBe("info");
+    expect(rec.keep).toBe("ok"); // non-core extras still pass through
+  });
+  it("a handler-provided X-Request-ID is overwritten by the canonical id; other headers preserved", async () => {
+    const wrapped = obs.withObservability("t", async () => ({ status: 200, headers: { "X-Request-ID": "wrong-id", "Cache-Control": "no-store", "Retry-After": "5" }, jsonBody: { ok: true } }));
+    const res = await wrapped(reqWith({ "x-request-id": "known-777" }));
+    expect(res.headers["X-Request-ID"]).toBe("known-777");
+    expect(Object.keys(res.headers).filter(k => k.toLowerCase() === "x-request-id").length).toBe(1);
+    expect(res.headers["Cache-Control"]).toBe("no-store");
+    expect(res.headers["Retry-After"]).toBe("5");
+    // and the response id equals the id used in the log line
+    const done = records.find(r => r.event === "http.request.completed");
+    expect(done.requestId).toBe("known-777");
+  });
+});
+
+// ── Review fix #3/#4 — REAL handler domain events (with DI), safe ─────────────
+describe("R9 fix#3 — real endpoint domain events are emitted and safe", () => {
+  const legacyAssignment = { assignmentId: "as1", classId: "c1", status: "published", durationMinutes: 0, maxAttempts: 1, dueAt: "", title: "T", examSnapshot: { questions: [] } };
+  const subReq = body => ({ method: "POST", params: { assignmentId: "as1" }, headers: { get: () => null }, json: async () => body });
+  const subDeps = extra => ({
+    requireActiveStudentSession: async () => ({ ok: true, container: {}, student: { userId: "u1", classId: "c1", code: "S1", displayName: "Ali" } }),
+    downloadJsonOrNull: async (_c, name) => name === "platform/assignments/as1.json" ? legacyAssignment : (name === "platform/classes/c1.json" ? { classId: "c1", active: true } : null),
+    mutateJsonWithRetry: async (_c, _n, fn) => fn(null),
+    withAssignmentLock: async (_c, _id, fn) => fn(),
+    ...extra
+  });
+
+  it("A: a real student-submission failure emits student.submission.failed + a request failure, with NO answers leaked", async () => {
+    // A storage write failure inside the saveDraft mutation → per-action catch logs the safe failure event,
+    // then the outer catch returns 500 (the wrapper records the request failure).
+    const deps = subDeps({ mutateJsonWithRetry: async () => { throw new Error("storage boom"); } });
+    const wrapped = obs.withObservability("student-submission", submissionHandler);
+    const res = await wrapped(subReq({ action: "saveDraft", answers: { q1: "LEAKED_ANSWER_SENTINEL" } }), deps);
+    expect(res.status).toBe(500);
+    const failed = records.find(r => r.event === "student.submission.failed");
+    expect(failed).toBeTruthy(); expect(failed.action).toBe("saveDraft");
+    expect(records.some(r => r.event === "http.request.failed")).toBe(true);
+    expect(serialized()).not.toContain("LEAKED_ANSWER_SENTINEL");
+    expect(serialized()).not.toContain("storage boom"); // raw error message never logged
+  });
+
+  it("D: a routine saveDraft SUCCESS does not emit an INFO domain-event flood", async () => {
+    const wrapped = obs.withObservability("student-submission", submissionHandler);
+    const res = await wrapped(subReq({ action: "saveDraft", answers: { q1: "x" } }), subDeps());
+    expect(res.status).toBe(200);
+    // no per-save domain INFO event, and exactly ONE terminal request event
+    expect(records.some(r => r.event === "student.submission.completed" && r.action === "saveDraft")).toBe(false);
+    expect(records.filter(r => r.event === "http.request.completed" || r.event === "http.request.failed").length).toBe(1);
+  });
+
+  it("B: a real assignment archive conflict emits assignment.lifecycle.conflict with assignmentId and NO submission content", async () => {
+    const deps = {
+      requireBuilderAuth: () => ({ ok: true, user: { sub: "t1" } }),
+      getContainer: () => ({}),
+      withAssignmentLock: async (_c, _id, fn) => fn(),
+      downloadJsonOrNull: async (_c, name) => name === "platform/assignments/as1.json" ? { assignmentId: "as1", classId: "c1", status: "published", title: "T" } : null,
+      listBlobNames: async () => ["platform/submissions/as1/u1.json"],
+      listJson: async () => [{ attempts: [], activeAttempt: { attemptNumber: 1, startedAt: new Date().toISOString(), status: "started" }, draftAnswers: { q1: "SUBMISSION_SENTINEL" } }],
+      recordAuditEvent: async () => {}
+    };
+    const req = { method: "POST", url: "http://x/assignments", headers: { get: () => null }, json: async () => ({ action: "archive", assignmentId: "as1" }) };
+    const wrapped = obs.withObservability("assignments", manageAssignmentsHandler);
+    const res = await wrapped(req, deps);
+    expect(res.status).toBe(409);
+    expect(res.jsonBody.requiresConfirmation).toBe(true);
+    const ev = records.find(r => r.event === "assignment.lifecycle.conflict");
+    expect(ev).toBeTruthy(); expect(ev.assignmentId).toBe("as1");
+    expect(serialized()).not.toContain("SUBMISSION_SENTINEL");
+  });
+
+  it("C: a real import-analyze failure emits import.started + import.failed, leaking no request body content", async () => {
+    const prev = process.env.AZURE_STORAGE_CONNECTION_STRING;
+    delete process.env.AZURE_STORAGE_CONNECTION_STRING; // getRawContainer() will throw → import.failed
+    const token = createBuilderToken("t1");
+    const req = { method: "POST", headers: { get: k => (String(k).toLowerCase() === "authorization" ? "Bearer " + token : null) }, json: async () => ({ importJobId: "imp-abc-123", password: "IMPORT_BODY_SENTINEL" }) };
+    // Wrap the inner with the TEST's observability instance so its logs reach our sink (vitest gives ESM
+    // import and the module's own require() separate instances).
+    const res = await obs.withObservability("import-analyze", importAnalyzeInner)(req);
+    expect(res.status).toBe(500);
+    expect(res.headers["X-Request-ID"]).toBeTruthy();
+    expect(records.some(r => r.event === "import.started")).toBe(true);
+    expect(records.some(r => r.event === "import.failed")).toBe(true);
+    expect(serialized()).not.toContain("IMPORT_BODY_SENTINEL");
+    if (prev !== undefined) process.env.AZURE_STORAGE_CONNECTION_STRING = prev;
   });
 });

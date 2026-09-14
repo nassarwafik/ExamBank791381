@@ -27,7 +27,7 @@ function state(a,s,nowMs=Date.now()){
 function defaultSubmission(id,student){return {schemaVersion:1,assignmentId:id,studentId:student.userId,classId:student.classId,studentCode:student.code,studentName:student.displayName,allowedAttempts:null,draftAnswers:{},attempts:[],activeAttempt:null,createdAt:new Date().toISOString(),updatedAt:new Date().toISOString()}}
 // `deps` is an optional dependency-injection seam for unit tests (production passes nothing, so the real
 // implementations are used). It does not change runtime behavior.
-async function handler(request,deps={}){
+async function handler(request,deps={},obs=null){
  const ras=deps.requireActiveStudentSession||requireActiveStudentSession,dl=deps.downloadJsonOrNull||downloadJsonOrNull,mut=deps.mutateJsonWithRetry||mutateJsonWithRetry,gradeFn=deps.gradeExam||gradeExam,recFn=deps.recordAchievementIfEligible||recordAchievementIfEligible,wl=deps.withAssignmentLock||withAssignmentLock;
  try{const id=String(request.params?.assignmentId||"");if(!id)return {status:400,jsonBody:{ok:false,error:"assignmentId is required."}};const sess=await ras(request,deps);if(!sess.ok)return sess.response;const c=sess.container,student=sess.student;
   const classroom=student.classId?await dl(c,"platform/classes/"+student.classId+".json"):null;
@@ -88,11 +88,14 @@ async function handler(request,deps={}){
      return doc;
     }));
    }catch(e){
+    // Safe technical failure event: action + assignmentId + retryability only — NEVER answers/identity/content.
+    obs?.logWarn("student.submission.failed",{action,assignmentId:id,retryable:(e instanceof AssignmentLockBusyError||e instanceof StorageConflictError),errorClass:(e instanceof AssignmentLockBusyError||e instanceof StorageConflictError)?"conflict":(e?.httpStatus?undefined:"internal_error")});
     if(e instanceof AssignmentLockBusyError)return {status:503,jsonBody:{ok:false,error:CONFLICT_MESSAGE}};
     if(e instanceof StorageConflictError)return {status:503,jsonBody:{ok:false,error:CONFLICT_MESSAGE}};
     if(e?.httpStatus)return {status:e.httpStatus,jsonBody:{ok:false,error:e.message}};
     throw e;
    }
+   obs?.logInfo("student.submission.completed",{action:"startAttempt",assignmentId:id});
    return {status:200,jsonBody:{ok:true,state:resultState}};
   }
 
@@ -124,6 +127,8 @@ async function handler(request,deps={}){
      return doc;
     }));
    }catch(e){
+    // Safe technical failure event: action + assignmentId + retryability only — NEVER answers/identity/content.
+    obs?.logWarn("student.submission.failed",{action,assignmentId:id,retryable:(e instanceof AssignmentLockBusyError||e instanceof StorageConflictError),errorClass:(e instanceof AssignmentLockBusyError||e instanceof StorageConflictError)?"conflict":(e?.httpStatus?undefined:"internal_error")});
     if(e instanceof AssignmentLockBusyError)return {status:503,jsonBody:{ok:false,error:CONFLICT_MESSAGE}};
     if(e instanceof StorageConflictError)return {status:503,jsonBody:{ok:false,error:CONFLICT_MESSAGE}};
     if(e?.httpStatus)return {status:e.httpStatus,jsonBody:{ok:false,error:e.message}};
@@ -155,6 +160,8 @@ async function handler(request,deps={}){
      return doc;
     }));
    }catch(e){
+    // Safe technical failure event: action + assignmentId + retryability only — NEVER answers/identity/content.
+    obs?.logWarn("student.submission.failed",{action,assignmentId:id,retryable:(e instanceof AssignmentLockBusyError||e instanceof StorageConflictError),errorClass:(e instanceof AssignmentLockBusyError||e instanceof StorageConflictError)?"conflict":(e?.httpStatus?undefined:"internal_error")});
     if(e instanceof AssignmentLockBusyError)return {status:503,jsonBody:{ok:false,error:CONFLICT_MESSAGE}};
     if(e instanceof StorageConflictError)return {status:503,jsonBody:{ok:false,error:CONFLICT_MESSAGE}};
     if(e?.httpStatus)return {status:e.httpStatus,jsonBody:{ok:false,error:e.message}};
@@ -163,6 +170,7 @@ async function handler(request,deps={}){
    if(resultAttempt.finalized){
     await recFn(c,{classId:student.classId,studentId:student.userId,studentDisplayName:student.displayName,assignmentId:id,assignmentTitle:a.title,percentage:resultAttempt.percentage,shareAchievements:student.shareAchievements});
    }
+   obs?.logInfo("student.submission.completed",{action:"submit",assignmentId:id,finalized:!!resultAttempt.finalized});
    return {status:200,jsonBody:{ok:true,result:pub(resultAttempt),state:finalState}};
   }
 
@@ -195,6 +203,8 @@ async function handler(request,deps={}){
      return doc;
     }));
    }catch(e){
+    // Safe technical failure event: action + assignmentId + retryability only — NEVER answers/identity/content.
+    obs?.logWarn("student.submission.failed",{action,assignmentId:id,retryable:(e instanceof AssignmentLockBusyError||e instanceof StorageConflictError),errorClass:(e instanceof AssignmentLockBusyError||e instanceof StorageConflictError)?"conflict":(e?.httpStatus?undefined:"internal_error")});
     if(e instanceof AssignmentLockBusyError)return {status:503,jsonBody:{ok:false,error:CONFLICT_MESSAGE}};
     if(e instanceof StorageConflictError)return {status:503,jsonBody:{ok:false,error:CONFLICT_MESSAGE}};
     if(e?.httpStatus)return {status:e.httpStatus,jsonBody:{ok:false,error:e.message}};
@@ -203,11 +213,12 @@ async function handler(request,deps={}){
    if(!already&&resultAttempt&&resultAttempt.finalized){
     await recFn(c,{classId:student.classId,studentId:student.userId,studentDisplayName:student.displayName,assignmentId:id,assignmentTitle:a.title,percentage:resultAttempt.percentage,shareAchievements:student.shareAchievements});
    }
+   if(!already)obs?.logInfo("student.submission.completed",{action:"finalizeTimedOutAttempt",assignmentId:id,timedOut:true});
    return {status:200,jsonBody:{ok:true,result:resultAttempt?pub(resultAttempt):(finalState?finalState.latestResult:null),state:finalState,alreadyFinalized:already}};
   }
 
   return {status:400,jsonBody:{ok:false,error:"Unsupported submission action."}};
- }catch{return {status:500,jsonBody:{ok:false,error:"تعذر تنفيذ عملية التسليم حاليًا."}}}
+ }catch(e){obs?.logError("student.submission.error",e);return {status:500,jsonBody:{ok:false,error:"تعذر تنفيذ عملية التسليم حاليًا."}}}
 }
 app.http("studentSubmission",{methods:["GET","POST"],authLevel:"anonymous",route:"student-submission/{assignmentId}",handler:withObservability("student-submission",handler)});
 module.exports={handler,state};

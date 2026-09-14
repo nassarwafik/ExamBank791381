@@ -60,7 +60,9 @@ function redact(value, depth = 0) {
   if (type === "number" || type === "boolean") return value;
   if (type === "bigint") return String(value);
   if (type === "function" || type === "symbol") return undefined;
-  if (value instanceof Error) return safeError(value);
+  // An Error nested under ANY key (even a non-sensitive one like `detail`) is reduced to safe properties AND
+  // re-run through redaction, so a crafted error can never smuggle a secret into a log line.
+  if (value instanceof Error) return redact(safeError(value), depth + 1);
   if (depth >= MAX_DEPTH) return "[truncated]";
   if (Array.isArray(value)) {
     const out = [];
@@ -105,13 +107,13 @@ function classifyError(error) {
   return "internal_error";
 }
 
-// Reduce any thrown value to a small set of SAFE properties. Never includes a stack trace, request body,
-// or arbitrary nested payload. The message is kept (our domain errors are safe Arabic/technical strings) but
-// length-capped; if a message somehow embedded a marker it is still key-safe because it is a plain string
-// under the "message"/"errorMessage" key which callers never place secrets into.
+// Reduce any thrown value to a small set of SAFE, diagnostic-only properties: errorName, errorClass,
+// errorCode, errorStatus. It DELIBERATELY does NOT retain error.message or the stack — an arbitrary message
+// can embed user input (a password, identity number, answer, token), so it is never placed in loggable
+// output. When a specific technical reason is needed, callers log an explicit safe errorCode/operation.
 function safeError(error) {
   if (!error) return { errorName: "UnknownError", errorClass: "internal_error" };
-  if (typeof error === "string") return { errorName: "Error", errorMessage: error.slice(0, MAX_STRING), errorClass: "internal_error" };
+  if (typeof error === "string") return { errorName: "Error", errorClass: "internal_error" };
   const out = {
     errorName: String(error.name || "Error").slice(0, 120),
     errorClass: classifyError(error)
@@ -120,7 +122,6 @@ function safeError(error) {
   if (code) out.errorCode = String(code).slice(0, 120);
   const status = Number(error.httpStatus ?? error.statusCode ?? error.status ?? 0);
   if (status) out.errorStatus = status;
-  if (error.message) out.errorMessage = String(error.message).slice(0, MAX_STRING);
   return out;
 }
 
@@ -164,18 +165,26 @@ let currentSink = defaultSink;
 function setSink(fn) { currentSink = typeof fn === "function" ? fn : defaultSink; }
 function resetSink() { currentSink = defaultSink; }
 
+// The six core telemetry fields are AUTHORITATIVE — caller-supplied extras can never overwrite them (a
+// crafted `requestId`/`event`/`route`/`method`/`level`/`timestamp` field is dropped from the extras and the
+// canonical value is written last).
+const RESERVED_CORE_KEYS = new Set(["timestamp", "level", "event", "requestId", "route", "method"]);
 function emit(ctx, level, event, fields) {
   try {
-    const record = {
-      timestamp: new Date().toISOString(),
-      level,
-      event: String(event || "log.event"),
-      requestId: ctx ? ctx.requestId : undefined,
-      route: ctx ? ctx.route : undefined,
-      method: ctx ? ctx.method : undefined
-    };
+    const record = {};
     const safe = fields ? redact(fields) : null;
-    if (safe && typeof safe === "object") Object.assign(record, safe);
+    if (safe && typeof safe === "object" && !Array.isArray(safe)) {
+      for (const key of Object.keys(safe)) {
+        if (RESERVED_CORE_KEYS.has(key)) continue; // never let an extra shadow a core field
+        record[key] = safe[key];
+      }
+    }
+    record.timestamp = new Date().toISOString();
+    record.level = level;
+    record.event = String(event || "log.event");
+    record.requestId = ctx ? ctx.requestId : undefined;
+    record.route = ctx ? ctx.route : undefined;
+    record.method = ctx ? ctx.method : undefined;
     try { currentSink(record); } catch { /* logging must never break the caller */ }
     return record;
   } catch {
@@ -235,11 +244,17 @@ function storageObserver(ctx, fields = {}) {
   };
 }
 
-// Merge X-Request-ID into a handler response's headers WITHOUT overwriting anything the handler set.
+// Set the AUTHORITATIVE X-Request-ID on a handler response, preserving every OTHER header. Any handler-
+// provided x-request-id (in any casing) is normalized to ctx.requestId so the response id ALWAYS equals the
+// id in every log line for this request.
 function withRequestIdHeader(response, ctx) {
   const res = response && typeof response === "object" ? response : { status: 200 };
-  const headers = { ...(res.headers || {}) };
-  if (!("X-Request-ID" in headers) && !("x-request-id" in headers)) headers["X-Request-ID"] = ctx.requestId;
+  const headers = {};
+  for (const [k, v] of Object.entries(res.headers || {})) {
+    if (String(k).toLowerCase() === "x-request-id") continue; // drop any handler variant; canonical set below
+    headers[k] = v;
+  }
+  headers["X-Request-ID"] = ctx.requestId;
   return { ...res, headers };
 }
 
