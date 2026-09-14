@@ -1,6 +1,6 @@
 const crypto = require("crypto");
 const net = require("net");
-const { downloadJsonOrNull, mutateJsonWithRetry, deleteBlob } = require("./platform-storage");
+const { downloadJsonOrNull, uploadJson, uploadJsonConditional, mutateJsonWithRetry, deleteBlob } = require("./platform-storage");
 
 // Roadmap #8 §10 + PR#67 reviews — cross-instance login throttling with a correct recovery state machine.
 //
@@ -42,54 +42,102 @@ function cooldownForLevel(level) {
   return Math.min(MAX_COOLDOWN_SECONDS, Math.round(BASE_COOLDOWN_SECONDS * Math.pow(2, level - 1)));
 }
 
-// Atomically decide whether ONE attempt may proceed to verification, updating the bucket state machine.
-// Returns { allowed, retryAfterSeconds }. State fields: attempts (in the current window), blockedUntil
-// (cooldown end, ms), level (escalation counter), lastAt (for decay).
+// PURE decision for one bucket given its current state. Returns { allowed, retryAfterSeconds, nextState }.
+// The caller decides whether to COMMIT nextState (this separation is what lets the composed reservation
+// avoid consuming one dimension's probe when the OTHER dimension is the one that rejects — §2).
+function evaluateBucket(current, nowMs, freeAttempts) {
+  const decayed = !current || !Number(current.lastAt) || nowMs - Number(current.lastAt) > DECAY_SECONDS * 1000;
+  const state = decayed
+    ? { attempts: 0, blockedUntil: 0, level: 0, lastAt: nowMs }
+    : { attempts: Number(current.attempts || 0), blockedUntil: Number(current.blockedUntil || 0), level: Number(current.level || 0), lastAt: Number(current.lastAt || 0) };
+
+  // (1) Active cooldown: deny WITHOUT extending it or counting (§A: no counter/cooldown bump).
+  if (state.blockedUntil > nowMs) {
+    return { allowed: false, retryAfterSeconds: Math.max(1, Math.ceil((state.blockedUntil - nowMs) / 1000)), nextState: state };
+  }
+  // (2) Cooldown just expired: open a fresh probe window (reset attempts; keep the escalation level so the
+  // NEXT cooldown is longer). Exactly one probe is admitted per post-cooldown window because the effective
+  // free band drops to 1 once any cooldown has occurred (level > 0).
+  if (state.blockedUntil > 0) { state.attempts = 0; state.blockedUntil = 0; }
+
+  const band = state.level === 0 ? freeAttempts : 1;
+  state.attempts += 1;
+  state.lastAt = nowMs;
+  if (state.attempts > band) {
+    state.level += 1;
+    const cd = cooldownForLevel(state.level);
+    state.blockedUntil = nowMs + cd * 1000;
+    return { allowed: false, retryAfterSeconds: cd, nextState: state };
+  }
+  return { allowed: true, retryAfterSeconds: 0, nextState: state };
+}
+
+// Single-bucket reserve (read-modify-write under optimistic concurrency). Retained for direct use/tests.
 async function reserveBucket(container, bucketName, freeAttempts, deps = {}) {
   const mut = deps.mutateJsonWithRetry || mutateJsonWithRetry;
   const nowMs = deps.now ? deps.now() : Date.now();
   let decision = { allowed: true, retryAfterSeconds: 0 };
   await mut(container, bucketName, current => {
-    const decayed = !current || !Number(current.lastAt) || nowMs - Number(current.lastAt) > DECAY_SECONDS * 1000;
-    const state = decayed
-      ? { attempts: 0, blockedUntil: 0, level: 0, lastAt: nowMs }
-      : { attempts: Number(current.attempts || 0), blockedUntil: Number(current.blockedUntil || 0), level: Number(current.level || 0), lastAt: Number(current.lastAt || 0) };
-
-    // (1) Active cooldown: deny WITHOUT extending it or counting the attempt (§A: no counter/cooldown bump).
-    if (state.blockedUntil > nowMs) {
-      decision = { allowed: false, retryAfterSeconds: Math.max(1, Math.ceil((state.blockedUntil - nowMs) / 1000)) };
-      return state;
-    }
-    // (2) Cooldown just expired: open a fresh probe window (reset the attempt counter; keep the escalation
-    // level so the NEXT cooldown is longer). Exactly one probe is admitted per post-cooldown window because
-    // the effective free band drops to 1 once any cooldown has occurred (level > 0).
-    if (state.blockedUntil > 0) { state.attempts = 0; state.blockedUntil = 0; }
-
-    const band = state.level === 0 ? freeAttempts : 1;
-    state.attempts += 1;
-    state.lastAt = nowMs;
-
-    if (state.attempts > band) {
-      state.level += 1;
-      const cd = cooldownForLevel(state.level);
-      state.blockedUntil = nowMs + cd * 1000;
-      decision = { allowed: false, retryAfterSeconds: cd };
-      return state;
-    }
-    decision = { allowed: true, retryAfterSeconds: 0 };
-    return state;
+    const r = evaluateBucket(current, nowMs, freeAttempts);
+    decision = { allowed: r.allowed, retryAfterSeconds: r.retryAfterSeconds };
+    return r.nextState;
   });
   return decision;
 }
 
-// Reserve the identifier+client bucket first; only if it allows do we also consult (and consume) the
-// identifier-only global bucket (§A: a request already rejected per-IP must not spend the global budget).
+const LOGIN_LOCK_PREFIX = "platform/locks/login-";
+const LEASE_SECONDS = 15;
+const ACQUIRE_ATTEMPTS = 8;
+const BASE_LEASE_DELAY_MS = 40;
+function loginLockName(identifier) {
+  return LOGIN_LOCK_PREFIX + crypto.createHash("sha256").update(normId(identifier)).digest("hex") + ".lock";
+}
+const sleep = ms => new Promise(r => setTimeout(r, ms));
+function isLeaseContention(e) {
+  const status = Number(e?.statusCode ?? e?.response?.status ?? 0);
+  return status === 409;
+}
+// Per-IDENTIFIER Azure Blob lease around the composed reservation (§2). Cross-instance safe (enforced by
+// the storage service, not any process), finite/auto-expiring (a crash never strands the account), released
+// in finally, and per identifier (unrelated identifiers never serialize). Login only — never on
+// authenticated APIs. On persistent contention it throws, which the caller treats as fail-closed (429).
+async function withLoginLease(container, identifier, fn, deps = {}) {
+  const name = loginLockName(identifier);
+  try { await uploadJsonConditional(container, name, { lock: true }, null); }
+  catch (e) { const s = Number(e?.statusCode ?? 0); const code = String(e?.code || e?.details?.errorCode || ""); if (!(s === 409 || s === 412 || code === "BlobAlreadyExists" || code === "ConditionNotMet")) throw e; }
+  const leaseClient = container.getBlobClient(name).getBlobLeaseClient();
+  let acquired = false;
+  for (let i = 0; i < ACQUIRE_ATTEMPTS && !acquired; i++) {
+    try { await leaseClient.acquireLease(LEASE_SECONDS); acquired = true; }
+    catch (e) { if (!isLeaseContention(e)) throw e; if (i === ACQUIRE_ATTEMPTS - 1) { const busy = new Error("login lock busy"); busy.httpStatus = 429; throw busy; } await sleep(BASE_LEASE_DELAY_MS * (2 ** i) + Math.floor(Math.random() * BASE_LEASE_DELAY_MS)); }
+  }
+  try { return await fn(); }
+  finally { try { await leaseClient.releaseLease(); } catch { /* lease may have expired */ } }
+}
+
+// Composed reservation across the identifier+client bucket AND the identifier-only global bucket, made
+// transactional by the per-identifier lease (§2). Both dimensions are inspected first; a dimension's state
+// is COMMITTED only when it is NOT "allowing but wasted" — i.e. a request rejected by EITHER dimension
+// never consumes the OTHER dimension's one-time post-cooldown probe. ALLOWED ⇒ both committed one attempt
+// for the SAME verification; REJECTED ⇒ the non-blocking dimension keeps its probe.
 async function reserveLoginAttempt(container, identifier, clientId, deps = {}) {
-  const perIp = await reserveBucket(container, throttleName(identifier, clientId), PER_IP_FREE_ATTEMPTS, deps);
-  if (!perIp.allowed) return { allowed: false, retryAfterSeconds: perIp.retryAfterSeconds };
-  const global = await reserveBucket(container, throttleName(identifier, "__global__"), GLOBAL_FREE_ATTEMPTS, deps);
-  if (!global.allowed) return { allowed: false, retryAfterSeconds: global.retryAfterSeconds };
-  return { allowed: true, retryAfterSeconds: 0 };
+  const lease = deps.withLoginLease || withLoginLease;
+  const dl = deps.downloadJsonOrNull || downloadJsonOrNull;
+  const up = deps.uploadJson || uploadJson;
+  const nowMs = deps.now ? deps.now() : Date.now();
+  const perIpName = throttleName(identifier, clientId);
+  const globalName = throttleName(identifier, "__global__");
+  return lease(container, identifier, async () => {
+    const p = evaluateBucket(await dl(container, perIpName), nowMs, PER_IP_FREE_ATTEMPTS);
+    const g = evaluateBucket(await dl(container, globalName), nowMs, GLOBAL_FREE_ATTEMPTS);
+    const bothAllow = p.allowed && g.allowed;
+    // Commit a dimension unless it would allow while the OTHER blocks (that would waste its probe).
+    if (bothAllow || !p.allowed) await up(container, perIpName, p.nextState);
+    if (bothAllow || !g.allowed) await up(container, globalName, g.nextState);
+    if (bothAllow) return { allowed: true, retryAfterSeconds: 0 };
+    const retry = Math.max(p.allowed ? 0 : p.retryAfterSeconds, g.allowed ? 0 : g.retryAfterSeconds);
+    return { allowed: false, retryAfterSeconds: retry || 1 };
+  }, deps);
 }
 
 // Non-mutating peek across both buckets.
@@ -134,8 +182,11 @@ module.exports = {
   DECAY_SECONDS,
   isValidIp,
   throttleName,
+  loginLockName,
   cooldownForLevel,
+  evaluateBucket,
   reserveBucket,
+  withLoginLease,
   reserveLoginAttempt,
   checkLoginThrottle,
   clearLoginThrottle,

@@ -21,7 +21,7 @@ const { handler: builderLoginHandler } = await import("../src/functions/builder-
 const { handler: sessionHandler } = await import("../src/functions/platform-session.js");
 const { handler: dashboardHandler } = await import("../src/functions/student-dashboard.js");
 const { handler: submissionHandler } = await import("../src/functions/student-submission.js");
-const { createStudentRecord, resetStudentPassword } = await import("../src/functions/manage-students.js");
+const { createStudentRecord, resetStudentPassword, handler: manageStudentsHandler } = await import("../src/functions/manage-students.js");
 
 const SECRET = process.env.BANK_SETUP_KEY;
 const TEACHER_CTX = "ExamBank791381:teacher-session:v2";
@@ -232,10 +232,12 @@ function memThrottleDeps() {
   return {
     _store: store,
     downloadJsonOrNull: async (_c, k) => (store.has(k) ? JSON.parse(JSON.stringify(store.get(k))) : null),
-    // real optimistic read-modify-write semantics are exercised by the fake-blob test (Z); this simple
-    // seam is enough for the sequential W/X/Y assertions.
+    uploadJson: async (_c, k, v) => { store.set(k, JSON.parse(JSON.stringify(v))); },
     mutateJsonWithRetry: async (_c, k, fn) => { const cur = store.has(k) ? JSON.parse(JSON.stringify(store.get(k))) : null; const next = await fn(cur); store.set(k, next); return next; },
-    deleteBlob: async (_c, k) => { store.delete(k); }
+    deleteBlob: async (_c, k) => { store.delete(k); },
+    // pass-through lease for the sequential W/Y assertions (real lease semantics are covered by the
+    // fake-blob concurrency tests).
+    withLoginLease: async (_c, _id, fn) => fn()
   };
 }
 describe("R8 login throttling (reserve-before-verify)", () => {
@@ -268,9 +270,10 @@ describe("R8 login throttling (reserve-before-verify)", () => {
   it("Y: a successful login clears BOTH throttle buckets", async () => {
     const mem = memThrottleDeps();
     await throttle.reserveLoginAttempt({}, "s@x", "ip1", mem);
-    expect(mem._store.size).toBe(2);                                      // per-ip + global buckets
+    const perIp = throttle.throttleName("s@x", "ip1"), global = throttle.throttleName("s@x", "__global__");
+    expect(mem._store.has(perIp)).toBe(true); expect(mem._store.has(global)).toBe(true);
     await throttle.clearLoginThrottle({}, "s@x", "ip1", mem);
-    expect(mem._store.size).toBe(0);
+    expect(mem._store.has(perIp)).toBe(false); expect(mem._store.has(global)).toBe(false);
   });
   it("Z: concurrent reserves cannot bypass the free band (real optimistic concurrency)", async () => {
     const c = makeBlobContainer();
@@ -324,9 +327,10 @@ describe("R8 login throttling (reserve-before-verify)", () => {
   });
 });
 
-// ── Fake Azure blob container (supports the platform-storage etag/CAS surface) ─
+// ── Fake Azure blob container (supports the platform-storage etag/CAS surface + a queuing blob lease) ─
 function makeBlobContainer() {
   const blobs = new Map();
+  const leaseTails = new Map();   // per-blob promise chain modelling exclusive lease acquisition
   let seq = 0;
   const notFound = () => { const e = new Error("not found"); e.statusCode = 404; e.code = "BlobNotFound"; throw e; };
   return {
@@ -334,7 +338,16 @@ function makeBlobContainer() {
     getBlobClient(name) {
       return {
         async download() { const b = blobs.get(name); if (!b) notFound(); return { readableStreamBody: [Buffer.from(b.body, "utf8")], etag: b.etag }; },
-        async deleteIfExists() { blobs.delete(name); }
+        async deleteIfExists() { blobs.delete(name); },
+        // In-process queuing lease: acquireLease waits for the previous holder (models Azure mutual
+        // exclusion deterministically), releaseLease frees the next waiter.
+        getBlobLeaseClient() {
+          let release;
+          return {
+            async acquireLease() { const prev = leaseTails.get(name) || Promise.resolve(); const gate = new Promise(r => { release = r; }); leaseTails.set(name, prev.then(() => gate)); await prev; },
+            async releaseLease() { if (release) release(); }
+          };
+        }
       };
     },
     getBlockBlobClient(name) {
@@ -754,5 +767,98 @@ describe("R8 §C — builder session version revokes legacy tokens", () => {
     expect(verifyBuilderToken(oldV2)).toBeNull();                         // stale v2
     const freshV2 = createBuilderToken("t1");                             // sv "2"
     expect(verifyBuilderToken(freshV2)).toBeTruthy();
+  });
+});
+
+// ── FINAL §1 — profile/update-with-password: a stale op must NOT report success ──
+describe("R8 FINAL §1 — update-with-password stale operation is a deterministic conflict", () => {
+  const authName = c => "platform/auth/" + createdCodeHash("123456789") + ".json";
+  const userDoc = c => { for (const [k, v] of c._blobs) if (k.startsWith("platform/users/")) { const d = JSON.parse(v.body); if (d.role === "student") return { key: k, doc: d }; } return null; };
+  async function seedStudent(c) {
+    c._blobs.set("platform/classes/c1.json", { body: JSON.stringify({ classId: "c1", name: "الصف", active: true, studentIds: [] }), etag: '"c"' });
+    const { student } = await createStudentRecord(c, { classId: "c1", name: "الصف", active: true, studentIds: [] }, { firstName: "أ", familyName: "ب", identityNumber: "123456789", password: "origpass1" }, {});
+    return student;
+  }
+  const updateReq = (userId, password) => ({ method: "POST", url: "http://x/students", json: async () => ({ action: "update", userId, firstName: "أ", familyName: "ب", identityNumber: "123456789", classId: "c1", password }) });
+  const depsFor = (c, audits) => ({ requireBuilderAuth: () => ({ ok: true, user: { sub: "t1" } }), container: c, recordAuditEvent: async (_c, ev) => { audits.push(ev); } });
+
+  it("normal (non-racing) update-with-password returns success and the new password authenticates", async () => {
+    const c = makeBlobContainer(); const audits = []; const student = await seedStudent(c);
+    const r = await manageStudentsHandler(updateReq(student.userId, "brandnew1"), depsFor(c, audits));
+    expect(r.status).toBe(200); expect(r.jsonBody.passwordChanged).toBe(true);
+    const a = JSON.parse(c._blobs.get(authName(c)).body);
+    expect(verifyPassword("brandnew1", a.salt, a.passwordHash)).toBe(true);
+    expect(audits.some(e => e.action === "student.resetPassword")).toBe(true);
+  });
+
+  it("forced interleaving: reset B (v3) lands first, then stale update A (v2) → A returns 409, no success, no audit; only passwordB authenticates", async () => {
+    const c = makeBlobContainer(); const audits = []; const student = await seedStudent(c);
+    const aName = authName(c);
+    // Pause A's auth-MUTATE download (the one that runs AFTER A has bumped the student to v2). Detected by
+    // the student doc already being at authVersion >= 2; the earlier oldAuth pre-read (student still v1)
+    // runs unpaused.
+    let paused = false; let release; const barrier = new Promise(r => { release = r; });
+    const origGetBlob = c.getBlobClient.bind(c);
+    c.getBlobClient = name => {
+      const client = origGetBlob(name);
+      if (name === aName) {
+        return {
+          download: async () => { const s = c._blobs.get(student.key || "platform/users/" + student.userId + ".json"); const sv = s ? JSON.parse(s.body).authVersion : 0; if (sv >= 2 && !paused) { paused = true; await barrier; } return client.download(); },
+          deleteIfExists: client.deleteIfExists.bind(client),
+          getBlobLeaseClient: client.getBlobLeaseClient.bind(client)
+        };
+      }
+      return client;
+    };
+    const pA = manageStudentsHandler(updateReq(student.userId, "passwordA"), depsFor(c, audits)); // pauses at auth-mutate
+    await new Promise(r => setTimeout(r, 20));
+    await resetStudentPassword(c, JSON.parse(c._blobs.get("platform/users/" + student.userId + ".json").body), "passwordB"); // B → student v3, auth v3
+    release();
+    const rA = await pA;
+    expect(rA.status).toBe(409);                                          // deterministic conflict
+    expect(rA.jsonBody.passwordChanged).toBeUndefined();                 // no false success
+    expect(audits.some(e => e.action === "student.resetPassword")).toBe(false); // no success audit for A
+    const a = JSON.parse(c._blobs.get(aName).body);
+    expect(a.authVersion).toBe(3); expect(JSON.parse(c._blobs.get("platform/users/" + student.userId + ".json").body).authVersion).toBe(3);
+    expect(verifyPassword("passwordB", a.salt, a.passwordHash)).toBe(true);
+    expect(verifyPassword("passwordA", a.salt, a.passwordHash)).toBe(false);
+    expect(verifyPassword("origpass1", a.salt, a.passwordHash)).toBe(false);
+  });
+});
+
+// ── FINAL §2 — composed per-IP + global reservation is transactional ──────────
+describe("R8 FINAL §2 — out-of-phase buckets do not waste the other dimension's probe", () => {
+  function seedOutOfPhase(c, id, ip, now) {
+    // per-IP: cooldown just expired → ready for exactly one probe. global: still 5s of active cooldown.
+    c._blobs.set(throttle.throttleName(id, ip), { body: JSON.stringify({ attempts: 1, blockedUntil: now - 1000, level: 1, lastAt: now - 1000 }), etag: '"p"' });
+    c._blobs.set(throttle.throttleName(id, "__global__"), { body: JSON.stringify({ attempts: 25, blockedUntil: now + 5000, level: 2, lastAt: now }), etag: '"g"' });
+  }
+  it("global still blocked → 429 from global; the per-IP probe is NOT consumed; after Retry-After the same login reaches verify → 200 and clears both", async () => {
+    const c = makeBlobContainer(); let clock = 7_000_000_000_000;
+    const { salt, passwordHash } = hashPassword("correctpw1");
+    c._blobs.set("platform/auth/" + createdCodeHash("S-2") + ".json", { body: JSON.stringify({ userId: "u2", active: true, salt, passwordHash, authVersion: 1 }), etag: '"a"' });
+    c._blobs.set("platform/users/u2.json", { body: JSON.stringify({ userId: "u2", role: "student", active: true, authVersion: 1, code: "S-2", displayName: "A", classId: "c1" }), etag: '"u"' });
+    seedOutOfPhase(c, "S-2", "203.0.113.5", clock);
+    const perIpName = throttle.throttleName("S-2", "203.0.113.5");
+    const perIpBefore = c._blobs.get(perIpName).body;
+    const deps = { getContainer: () => c, downloadJsonOrNull: async (_x, k) => { const b = c._blobs.get(k); return b ? JSON.parse(b.body) : null; }, clientIdFromRequest: () => "203.0.113.5", validateBuilderCredentials: () => false, now: () => clock };
+    const blocked = await loginHandler({ json: async () => ({ userCode: "S-2", password: "correctpw1" }) }, deps);
+    expect(blocked.status).toBe(429);                                     // rejected by the GLOBAL dimension
+    expect(c._blobs.get(perIpName).body).toBe(perIpBefore);              // per-IP probe NOT consumed
+    clock += Number(blocked.headers["Retry-After"]) * 1000 + 1;          // advance exactly the Retry-After
+    const ok = await loginHandler({ json: async () => ({ userCode: "S-2", password: "correctpw1" }) }, deps);
+    expect(ok.status).toBe(200);                                         // now reaches verify immediately
+    expect(c._blobs.has(perIpName)).toBe(false);                        // both cleared on success
+    expect(c._blobs.has(throttle.throttleName("S-2", "__global__"))).toBe(false);
+  });
+  it("concurrent requests exactly at shared expiry admit only ONE (no burst-bypass reopened)", async () => {
+    const c = makeBlobContainer(); const clock = 8_000_000_000_000;
+    // Both buckets expired and each ready for one probe.
+    c._blobs.set(throttle.throttleName("cc", "ip"), { body: JSON.stringify({ attempts: 1, blockedUntil: clock - 1000, level: 1, lastAt: clock - 1000 }), etag: '"p"' });
+    c._blobs.set(throttle.throttleName("cc", "__global__"), { body: JSON.stringify({ attempts: 1, blockedUntil: clock - 1000, level: 1, lastAt: clock - 1000 }), etag: '"g"' });
+    const deps = { now: () => clock };
+    const results = await Promise.allSettled(Array.from({ length: 12 }, () => throttle.reserveLoginAttempt(c, "cc", "ip", deps)));
+    const allowed = results.filter(r => r.status === "fulfilled" && r.value.allowed).length;
+    expect(allowed).toBe(1);
   });
 });

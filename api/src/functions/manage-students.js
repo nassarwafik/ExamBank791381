@@ -657,15 +657,14 @@ async function buildStudentProfile(container, userId) {
   };
 }
 
-app.http("manageStudents", {
-  methods: ["GET", "POST"],
-  authLevel: "anonymous",
-  route: "students",
-  handler: async request => {
+// `deps` is an optional dependency-injection seam for unit tests (production passes nothing → real
+// implementations). It does not change runtime behavior.
+async function manageStudentsHandler(request, deps = {}) {
+    const rec = deps.recordAuditEvent || recordAuditEvent;
     try {
-      const auth = requireBuilderAuth(request);
+      const auth = (deps.requireBuilderAuth || requireBuilderAuth)(request);
       if (!auth.ok) return auth.response;
-      const container = getContainer();
+      const container = deps.container || (deps.getContainer || getContainer)();
 
       if (request.method === "GET") {
         const url = new URL(request.url);
@@ -860,14 +859,24 @@ app.http("manageStudents", {
         });
 
         const newPwHash = newPassword ? hashPassword(newPassword) : null;
+        // §1 (PR#67 review): a password-changing update must report success ONLY if this operation owns the
+        // authoritative version. `credentialApplied` starts false for a password change and is set true only
+        // when the version-conditional write actually applies; a stale op returns a deterministic 409 below
+        // (no overwrite, no success audit, no passwordChanged:true).
+        let credentialApplied = !newPassword;
         if (newAuthName === oldAuthName) {
           await mutateJsonWithRetry(container, oldAuthName, current => {
             if (!current) throw new Error("ملف دخول الطالب غير موجود.");
             // §B version-conditional: only overwrite the credential if this op owns the newest authVersion.
-            if (newPwHash && normalizeAuthVersion(current.authVersion) <= updatedStudentVersion) {
-              current.salt = newPwHash.salt;
-              current.passwordHash = newPwHash.passwordHash;
-              current.authVersion = updatedStudentVersion;
+            if (newPwHash) {
+              if (normalizeAuthVersion(current.authVersion) <= updatedStudentVersion) {
+                current.salt = newPwHash.salt;
+                current.passwordHash = newPwHash.passwordHash;
+                current.authVersion = updatedStudentVersion;
+                credentialApplied = true;
+              } else {
+                credentialApplied = false; // a newer reset already won → this op is stale
+              }
             }
             current.schemaVersion = 3;
             current.codeHash = studentCodeHash(newCode);
@@ -903,6 +912,9 @@ app.http("manageStudents", {
             throw e;
           }
           await container.getBlobClient(oldAuthName).deleteIfExists();
+          // The rename creates a fresh authoritative auth document at the new code path (create-only, so a
+          // collision already returned 409 above); the password it carries is authoritative for that code.
+          if (newPwHash) credentialApplied = true;
         }
 
         if (oldClassId !== newClassId) {
@@ -917,9 +929,15 @@ app.http("manageStudents", {
           }
         }
 
+        // §1: a stale password change (a newer reset already owns the version) must NOT report success —
+        // no overwrite happened, so return a deterministic 409 with a generic retry message and emit no
+        // reset-password audit and no passwordChanged:true.
+        if (newPassword && !credentialApplied) {
+          return { status: 409, headers: { "Cache-Control": "no-store" }, jsonBody: { ok: false, error: "تعذّر تغيير كلمة المرور بسبب تعارض مع عملية أحدث. أعد المحاولة." } };
+        }
         const updatedStudent = await downloadJsonOrNull(container, studentBlobName);
         if (newPassword) {
-          await recordAuditEvent(container, {
+          await rec(container, {
             actor: auth.user?.sub,
             action: "student.resetPassword",
             targetType: "student",
@@ -943,7 +961,7 @@ app.http("manageStudents", {
 
         if (action === "resetpassword") {
           const temporaryPassword = await resetStudentPassword(container, student, body?.password);
-          await recordAuditEvent(container, {
+          await rec(container, {
             actor: auth.user?.sub,
             action: "student.resetPassword",
             targetType: "student",
@@ -971,7 +989,7 @@ app.http("manageStudents", {
         }
 
         await deleteStudent(container, student);
-        await recordAuditEvent(container, {
+        await rec(container, {
           actor: auth.user?.sub,
           action: "student.delete",
           targetType: "student",
@@ -1029,7 +1047,7 @@ app.http("manageStudents", {
                 code: publicValue.code,
                 password
               });
-              await recordAuditEvent(container, {
+              await rec(container, {
                 actor: auth.user?.sub,
                 action: "student.resetPassword",
                 targetType: "student",
@@ -1039,7 +1057,7 @@ app.http("manageStudents", {
               });
             } else if (operation === "delete") {
               await deleteStudent(container, student);
-              await recordAuditEvent(container, {
+              await rec(container, {
                 actor: auth.user?.sub,
                 action: "student.delete",
                 targetType: "student",
@@ -1084,9 +1102,8 @@ app.http("manageStudents", {
         }
       };
     }
-  }
-});
+}
+app.http("manageStudents", { methods: ["GET", "POST"], authLevel: "anonymous", route: "students", handler: manageStudentsHandler });
 
-// Roadmap #8 — exported for unit tests (authVersion on create / password reset). Additive; the Azure
-// Functions handler registration above is unaffected.
-module.exports = { createStudentRecord, resetStudentPassword };
+// Roadmap #8 — exported for unit tests (authVersion on create / password reset / update). Additive.
+module.exports = { createStudentRecord, resetStudentPassword, handler: manageStudentsHandler };
