@@ -150,9 +150,17 @@ function timerState(assignment, submission, nowMs = Date.now()) {
     if (startMs) endsMs = startMs + durationMinutes * 60000;   // derived duration deadline (no restart)
     else timedDeadlineUnresolvable = true;                     // corrupt timed attempt => fail closed
   }
-  // Effective attempt end = min(duration deadline, current effective due date). If the due date is
-  // absent (0), the duration deadline stands alone. Only a TIMED attempt has a duration deadline.
-  const effEndsMs = timed && active && endsMs ? (dueMs ? Math.min(endsMs, dueMs) : endsMs) : 0;
+  // B2B: a teacher may EXTEND an active timed attempt. activeAttempt.extendedEndsAt, when a valid,
+  // strictly-LATER timestamp, replaces the duration deadline; the original endsAt is preserved untouched
+  // for audit and is never shortened. The extension only applies to a resolvable timed deadline.
+  let durationEndMs = endsMs;
+  if (timed && active && !timedDeadlineUnresolvable) {
+    const extendedMs = toMs(active.extendedEndsAt);
+    if (extendedMs && extendedMs > durationEndMs) durationEndMs = extendedMs;
+  }
+  // Effective attempt end = min(teacher duration deadline, current effective due date). If the due date
+  // is absent (0), the duration deadline stands alone. Only a TIMED attempt has a duration deadline.
+  const effEndsMs = timed && active && durationEndMs ? (dueMs ? Math.min(durationEndMs, dueMs) : durationEndMs) : 0;
   // Boundary: now === effEndsMs is STILL valid; strictly after is expired (mirrors dueAt semantics).
   // A TIMED attempt with an unresolvable deadline is expired (fail closed). UNTIMED attempts (timed
   // false) NEVER expire by time.
@@ -181,16 +189,39 @@ function timerState(assignment, submission, nowMs = Date.now()) {
     activeAttempt: active ? {
       attemptNumber: active.attemptNumber,
       startedAt: String(active.startedAt),
-      endsAt: String(active.endsAt || ""),
+      endsAt: String(active.endsAt || ""),                     // ORIGINAL duration end (never overwritten)
+      extendedEndsAt: String(active.extendedEndsAt || ""),     // B2B teacher extension (or "")
       status: active.status === "draft" ? "draft" : "started",
       lastSavedAt: String(active.lastSavedAt || "")
     } : null,
     attemptStatus: deriveAttemptStatus(submission),
+    // The authoritative (unclipped) timed duration deadline in effect: extendedEndsAt when later than the
+    // original/derived end, else the original. "" when there is no timed active attempt. This is what a
+    // teacher extension must strictly exceed, and what the UI shows as the current attempt end.
+    attemptDurationEndsAt: (timed && active && durationEndMs) ? new Date(durationEndMs).toISOString() : "",
     effectiveAttemptEndsAt: effEndsMs ? new Date(effEndsMs).toISOString() : "",
     attemptExpired,
     canStartAttempt,
     canWrite
   };
+}
+
+// Rejection (or null) for a teacher extendActiveAttempt action. PURE — validates that this is a TIMED
+// assignment with a live-or-expired-but-not-finalized active attempt, and that newEndsAt is a valid
+// timestamp STRICTLY LATER than the current authoritative duration deadline (extension can never shorten
+// the student's timer). Does NOT block on availability/expiry: reviving an expired-but-not-finalized
+// attempt is intentional (B2B #11). Returns { status, error } or null when allowed.
+function extendRejection(assignment, submission, newEndsAt, nowMs = Date.now()) {
+  const st = timerState(assignment, submission, nowMs);
+  if (!st.timed) return { status: 400, error: "لا يمكن تمديد وقت محاولة في واجب غير مؤقت." };
+  if (!st.activeAttempt) return { status: 409, error: "لا توجد محاولة نشطة قابلة للتمديد." };
+  const newMs = toMs(newEndsAt);
+  if (!newMs) return { status: 400, error: "وقت الانتهاء الجديد غير صالح." };
+  const currentEndMs = toMs(st.attemptDurationEndsAt);
+  if (currentEndMs && newMs <= currentEndMs) {
+    return { status: 400, error: "يجب أن يكون وقت الانتهاء الجديد بعد النهاية الحالية للمحاولة." };
+  }
+  return null;
 }
 
 // Rejection (or null) for a startAttempt action. Idempotent case (an active, non-expired attempt
@@ -240,5 +271,5 @@ function writeRejection(assignment, submission, action, nowMs = Date.now()) {
 module.exports = {
   toMs, effectiveDueAt, getAssignmentAvailability, attemptState, actionRejection,
   normalizeDurationMinutes, isTimedAssignment, activeAttemptOf, timerState, startRejection, writeRejection,
-  attemptModelVersion, requiresServerStart, normalizeEndReason, deriveAttemptStatus
+  attemptModelVersion, requiresServerStart, normalizeEndReason, deriveAttemptStatus, extendRejection
 };

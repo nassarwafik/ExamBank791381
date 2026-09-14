@@ -8,8 +8,8 @@ const {flattenQuestions,sectionCappedScore,effectiveMaxMarks}=require("../lib/ex
 const {normalizeEndReason}=require("../lib/assignment-availability");
 const AP="platform/assignments/",SP="platform/submissions/",UP="platform/users/";
 const CONFLICT_MESSAGE="حدث تعارض مؤقت أثناء حفظ البيانات. حاول مرة أخرى.";
-// Additive lifecycle audit view for a completed attempt (B2A #21). Read-time normalization only.
-function attemptAudit(x){return {startedAt:String(x.startedAt||""),endedAt:String(x.endedAt||""),endReason:normalizeEndReason(x),timedOut:!!x.timedOut}}
+// Additive lifecycle audit view for a completed attempt (B2A #21 / B2B #16). Read-time normalization only.
+function attemptAudit(x){return {startedAt:String(x.startedAt||""),endsAt:String(x.endsAt||""),extendedEndsAt:String(x.extendedEndsAt||""),endedAt:String(x.endedAt||""),endReason:normalizeEndReason(x),timedOut:!!x.timedOut}}
 function round(n){return Number(Number(n||0).toFixed(2))}
 function clamp(v,min,max){return Math.min(max,Math.max(min,Number(v)||0))}
 // A student who has since moved classes must still be reviewable for a submission they
