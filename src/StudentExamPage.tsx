@@ -12,6 +12,7 @@ import StructuredExamCover from "./StructuredExamCover";
 import {normalizeCoverPage,examMarksDistribution,type ExamCoverPage,type MarksDistribution} from "./examCover";
 import {formatCountdown,countdownTone} from "./examTimer";
 import {isUnexpectedStatus,trackingSuffix} from "./lib/requestTrace";
+import {deriveSaveState,saveStateLabel,saveStateHint,canManualRetry,formatLastSaved,shouldWarnBeforeUnload} from "./studentSaveState";
 
 type ExamBody={title?:string;metadata?:{school?:string;subject?:string;grade?:string;className?:string;generalInstructions?:string};presentationTheme?:string;coverPage?:ExamCoverPage;questions?:Question[];sections?:ExamSection[]};
 type Assignment={assignmentId:string;title:string;instructions:string;openAt:string;dueAt:string;effectiveDueAt?:string;maxAttempts:number;questionCount:number;totalMarks:number;durationMinutes?:number;requiresStart?:boolean;timed?:boolean;marksDistribution?:MarksDistribution;exam:ExamBody};
@@ -41,8 +42,13 @@ export default function StudentExamPage({token,assignment,studentName,className,
  const theme=normalizeExamTheme(assignment.exam.presentationTheme);
  const [exam,setExam]=useState<ExamBody>(assignment.exam);
  const qs=exam.questions||[];
- const [answers,setAnswers]=useState<Answers>({}),[state,setState]=useState<State|null>(null),[loading,setLoading]=useState(true),[saving,setSaving]=useState(false),[retrying,setRetrying]=useState(false),[saveFailed,setSaveFailed]=useState(false),[dirty,setDirty]=useState(false),[submitBusy,setSubmitBusy]=useState(false),[error,setError]=useState(""),[result,setResult]=useState<Result|null>(null),[started,setStarted]=useState(true),[coverStarted,setCoverStarted]=useState(false),[focusIndex,setFocusIndex]=useState(0);
+ const [answers,setAnswers]=useState<Answers>({}),[state,setState]=useState<State|null>(null),[loading,setLoading]=useState(true),[saving,setSaving]=useState(false),[retrying,setRetrying]=useState(false),[,setSaveFailed]=useState(false),[,setDirty]=useState(false),[submitBusy,setSubmitBusy]=useState(false),[error,setError]=useState(""),[result,setResult]=useState<Result|null>(null),[started,setStarted]=useState(true),[coverStarted,setCoverStarted]=useState(false),[focusIndex,setFocusIndex]=useState(0);
  const [starting,setStarting]=useState(false),[expired,setExpired]=useState(false),[remainingMs,setRemainingMs]=useState<number|null>(null);
+ // Roadmap #10/#11 — connectivity is a HINT (navigator.onLine + online/offline events); it never means the
+ // API is reachable. lastSavedAt is SERVER-authoritative only (state.draftSavedAt initially, response.savedAt
+ // after each confirmed save). saveError = the bounded retry policy gave up.
+ const [online,setOnline]=useState(typeof navigator==="undefined"||navigator.onLine!==false),[lastSavedAt,setLastSavedAt]=useState(""),[saveError,setSaveError]=useState(false);
+ const onlineRef=useRef(online),stateRef=useRef<State|null>(null),answersRef=useRef<Answers>({});
  const loaded=useRef(false),timer=useRef<number|null>(null),revision=useRef(0),savedRevision=useRef(0),saveQueue=useRef<Promise<void>>(Promise.resolve()),submittingRef=useRef(false),initialAnswersSynced=useRef(false),mountedRef=useRef(true),latestTargetRevision=useRef(0);
  const startingRef=useRef(false),finalizingRef=useRef(false);
  // Server-anchored clock: we never trust the device wall clock. On each server response we store the
@@ -90,14 +96,17 @@ export default function StudentExamPage({token,assignment,studentName,className,
  }
  async function saveDraftSnapshot(snapshot:Answers,myRevision:number){
   if(myRevision<latestTargetRevision.current)return;
-  if(mountedRef.current){setSaving(true);setSaveFailed(false)}
+  // Offline before we even start: don't fire a doomed request; leave the revision dirty for reconnect (#7).
+  if(!onlineRef.current){if(mountedRef.current){setSaving(false);setRetrying(false)}return}
+  if(mountedRef.current){setSaving(true);setSaveFailed(false);setSaveError(false)}
   try{
    for(let attempt=0;attempt<=3;attempt++){
     if(myRevision<latestTargetRevision.current)return;
     try{
-     await api({method:"POST",body:JSON.stringify({action:"saveDraft",answers:snapshot})});
+     const resp=await api<{savedAt?:string}>({method:"POST",body:JSON.stringify({action:"saveDraft",answers:snapshot})});
      savedRevision.current=Math.max(savedRevision.current,myRevision);
-     if(mountedRef.current){setSaveFailed(false);setError("");setDirty(revision.current>savedRevision.current)}
+     // SERVER-authoritative saved time (#3): use response.savedAt, never Date.now().
+     if(mountedRef.current){if(resp&&resp.savedAt)setLastSavedAt(String(resp.savedAt));setSaveFailed(false);setSaveError(false);setRetrying(false);setError("");setDirty(revision.current>savedRevision.current)}
      return;
     }catch(e){
      if(myRevision<latestTargetRevision.current)return;
@@ -111,13 +120,17 @@ export default function StudentExamPage({token,assignment,studentName,className,
       if(mountedRef.current){setError(e.message);setSaveFailed(true)}
       return;
      }
+     // A network TypeError while the browser has since gone offline → pause here; the reconnect flow
+     // (online event) resyncs then re-saves the LATEST snapshot. No endless retry storm while offline (#9).
+     if(!onlineRef.current){if(mountedRef.current){setSaving(false);setRetrying(false)}return}
      const retryable=!(e instanceof ApiError)||e.status>=500;
      if(!retryable||attempt===3){
-      if(mountedRef.current){setError(errText(e,"تعذر الحفظ التلقائي."));setSaveFailed(true)}
+      if(mountedRef.current){setError(errText(e,"تعذر الحفظ التلقائي."));setSaveFailed(true);setSaveError(true)}
       return;
      }
      if(mountedRef.current)setRetrying(true);
      await new Promise(resolve=>window.setTimeout(resolve,[1000,2000,4000][attempt]));
+     if(!onlineRef.current){if(mountedRef.current){setSaving(false);setRetrying(false)}return} // went offline mid-backoff
     }
    }
   }finally{
@@ -125,7 +138,11 @@ export default function StudentExamPage({token,assignment,studentName,className,
   }
  }
  useEffect(()=>{mountedRef.current=true;return()=>{mountedRef.current=false}},[]);
- useEffect(()=>{let cancelled=false;(async()=>{setLoading(true);try{const r=await api<{state:State}>();if(cancelled)return;const st=r.state;setState(st);setAnswers(st.draftAnswers||{});anchorClock(st);
+ // Keep refs current for use inside window event handlers / async loops without re-subscribing.
+ useEffect(()=>{onlineRef.current=online},[online]);
+ useEffect(()=>{stateRef.current=state},[state]);
+ useEffect(()=>{answersRef.current=answers},[answers]);
+ useEffect(()=>{let cancelled=false;(async()=>{setLoading(true);try{const r=await api<{state:State}>();if(cancelled)return;const st=r.state;setState(st);setAnswers(st.draftAnswers||{});setLastSavedAt(String(st.draftSavedAt||""));anchorClock(st);
   const rs=!!st.timed||Number(st.attemptModelVersion||0)>=2||!!st.requiresStart;
   if(rs){
    if(st.activeAttempt){
@@ -138,7 +155,7 @@ export default function StudentExamPage({token,assignment,studentName,className,
   }else{setResult(st.latestResult);setStarted(st.attemptsUsed===0||Object.keys(st.draftAnswers||{}).length>0)}
   loaded.current=true}catch(e){if(!cancelled)setError(e instanceof Error?e.message:"تعذر تحميل المحاولة.")}finally{if(!cancelled)setLoading(false)}})();return()=>{cancelled=true;if(timer.current)window.clearTimeout(timer.current)}},[assignment.assignmentId,token]);
  useEffect(()=>{if(!loaded.current||!started||!writable||!examBodyLoaded||submittingRef.current)return;if(!initialAnswersSynced.current){initialAnswersSynced.current=true;return}revision.current+=1;latestTargetRevision.current=revision.current;setDirty(true);const myRevision=revision.current,snapshot=answers;if(timer.current)window.clearTimeout(timer.current);timer.current=window.setTimeout(()=>{if(submittingRef.current)return;saveQueue.current=saveQueue.current.catch(()=>{}).then(()=>saveDraftSnapshot(snapshot,myRevision))},800);return()=>{if(timer.current)window.clearTimeout(timer.current)}},[answers,started,writable]);
- useEffect(()=>{const handler=(e:BeforeUnloadEvent)=>{if(revision.current<=savedRevision.current)return;e.preventDefault();e.returnValue=""};window.addEventListener("beforeunload",handler);return()=>window.removeEventListener("beforeunload",handler)},[]);
+ useEffect(()=>{const handler=(e:BeforeUnloadEvent)=>{if(!shouldWarnBeforeUnload(revision.current,savedRevision.current))return;e.preventDefault();e.returnValue=""};window.addEventListener("beforeunload",handler);return()=>window.removeEventListener("beforeunload",handler)},[]);
  // Resync the server-authoritative timer on reconnect and when returning to the tab; never a per-second poll.
  // Resync from AUTHORITATIVE server state. Not gated on `result` (a stale completed result must never
  // block resyncing a live active attempt). A live attempt takes precedence over latestResult and clears
@@ -146,8 +163,31 @@ export default function StudentExamPage({token,assignment,studentName,className,
  // B2A #16: follow AUTHORITATIVE server state across tabs. When a start-gated attempt is active, take it
  // (active beats a stale result). When it is gone on the server (another tab submitted / it timed out),
  // stop the writable UI and show the latest result. Legacy untimed keeps its historical result-only sync.
- const resync=useCallback(async()=>{if(!mountedRef.current||submittingRef.current||finalizingRef.current)return;try{const st=(await api<{state:State}>()).state;if(!mountedRef.current)return;setState(st);anchorClock(st);const rs=!!st.timed||Number(st.attemptModelVersion||0)>=2||!!st.requiresStart;if(rs){if(st.activeAttempt){setResult(null);setStarted(true);if(st.timed&&st.attemptExpired){void triggerTimeout()}else{setExpired(false)}}else{setResult(st.latestResult);setStarted(false);setExpired(false)}}else{setResult(st.latestResult)}}catch{/* ignore transient resync failure */}},[]);
- useEffect(()=>{const handleOnline=()=>{if(expired&&!finalizingRef.current){void triggerTimeout();return}if(submittingRef.current||!started||!writable)return;if(revision.current>savedRevision.current){const myRevision=revision.current,snapshot=answers;saveQueue.current=saveQueue.current.catch(()=>{}).then(()=>saveDraftSnapshot(snapshot,myRevision))}void resync()};window.addEventListener("online",handleOnline);const onVis=()=>{if(document.visibilityState==="visible")void resync()};document.addEventListener("visibilitychange",onVis);return()=>{window.removeEventListener("online",handleOnline);document.removeEventListener("visibilitychange",onVis)}},[answers,started,writable,expired,resync]);
+ const resync=useCallback(async()=>{if(!mountedRef.current||submittingRef.current||finalizingRef.current)return;try{const st=(await api<{state:State}>()).state;if(!mountedRef.current)return;stateRef.current=st;setState(st);anchorClock(st);const rs=!!st.timed||Number(st.attemptModelVersion||0)>=2||!!st.requiresStart;if(rs){if(st.activeAttempt){setResult(null);setStarted(true);if(st.timed&&st.attemptExpired){void triggerTimeout()}else{setExpired(false)}}else{setResult(st.latestResult);setStarted(false);setExpired(false)}}else{setResult(st.latestResult)}}catch{/* ignore transient resync failure */}},[]);
+ // Reconnect recovery (#8): server authority FIRST (resync), THEN save the latest dirty snapshot — but ONLY
+ // if the server still reports the attempt writable. An expired timed attempt finalizes via the normal flow;
+ // local answers never bypass the authoritative deadline. A dedicated manualSave() (used by the retry button)
+ // shares this "resync then save-if-writable" ordering.
+ const recoverAndSave=useCallback(async()=>{
+  if(!mountedRef.current||submittingRef.current)return;
+  if(expired&&!finalizingRef.current){void triggerTimeout();return}
+  await resync();
+  const st=stateRef.current;
+  if(st&&st.canWrite&&!st.attemptExpired&&started&&revision.current>savedRevision.current){
+   const myRevision=revision.current,snapshot=answersRef.current;
+   saveQueue.current=saveQueue.current.catch(()=>{}).then(()=>saveDraftSnapshot(snapshot,myRevision));
+  }
+ },[expired,started,resync]);
+ useEffect(()=>{
+  // Update the ref synchronously (event handlers/submit read it immediately, before the state re-render commits).
+  const handleOnline=()=>{onlineRef.current=true;if(mountedRef.current)setOnline(true);void recoverAndSave()};
+  const handleOffline=()=>{onlineRef.current=false;if(mountedRef.current)setOnline(false)};
+  window.addEventListener("online",handleOnline);
+  window.addEventListener("offline",handleOffline);
+  const onVis=()=>{if(document.visibilityState==="visible")void resync()};
+  document.addEventListener("visibilitychange",onVis);
+  return()=>{window.removeEventListener("online",handleOnline);window.removeEventListener("offline",handleOffline);document.removeEventListener("visibilitychange",onVis)};
+ },[recoverAndSave,resync]);
  // Local 1s countdown between server syncs, anchored to performance.now() (device wall-clock changes
  // cannot reset it). Fires timeout finalization exactly once when it reaches zero.
  useEffect(()=>{
@@ -252,7 +292,13 @@ export default function StudentExamPage({token,assignment,studentName,className,
   if(done<qs.length)return window.confirm("لم تُجب عن جميع الأسئلة. هل تريد التسليم الآن؟");
   return window.confirm("سيتم إرسال الحل للتصحيح. هل تريد المتابعة؟");
  }
- async function submit(){if(!writable||submitBusy)return;if(!confirmSubmit())return;submittingRef.current=true;setSubmitBusy(true);setError("");if(timer.current)window.clearTimeout(timer.current);const submitSnapshot=answers,submitRevision=revision.current;if(submitRevision>savedRevision.current){saveQueue.current=saveQueue.current.catch(()=>{}).then(()=>saveDraftSnapshot(submitSnapshot,submitRevision))}try{await saveQueue.current;if(savedRevision.current<submitRevision){setError("تعذر حفظ إجاباتك بسبب مشكلة في الاتصال. تحقق من الإنترنت وحاول التسليم مرة أخرى.");return}const r=await api<{result:Result;state:State}>({method:"POST",body:JSON.stringify({action:"submit",answers:submitSnapshot})});setResult(r.result);setState(r.state);setStarted(false);setAnswers({});savedRevision.current=revision.current;window.scrollTo({top:0,behavior:"smooth"})}catch(e){
+ // A manual "retry save" (#12): resync authoritative state first, then save the LATEST snapshot if the server
+ // still allows writing — never creating a new revision merely by retrying.
+ async function manualSave(){setError("");setSaveError(false);await recoverAndSave()}
+ async function submit(){if(!writable||submitBusy)return;
+  // Offline submit guard (#11): never send a final submit while offline — the latest answers may be unsaved.
+  if(!onlineRef.current){setError("لا يمكن تسليم الامتحان قبل حفظ التغييرات. تحقق من الاتصال بالإنترنت.");return}
+  if(!confirmSubmit())return;submittingRef.current=true;setSubmitBusy(true);setError("");if(timer.current)window.clearTimeout(timer.current);const submitSnapshot=answers,submitRevision=revision.current;if(submitRevision>savedRevision.current){saveQueue.current=saveQueue.current.catch(()=>{}).then(()=>saveDraftSnapshot(submitSnapshot,submitRevision))}try{await saveQueue.current;if(savedRevision.current<submitRevision){setError("تعذر حفظ إجاباتك بسبب مشكلة في الاتصال. تحقق من الإنترنت وحاول التسليم مرة أخرى.");return}const r=await api<{result:Result;state:State}>({method:"POST",body:JSON.stringify({action:"submit",answers:submitSnapshot})});setResult(r.result);setState(r.state);setStarted(false);setAnswers({});savedRevision.current=revision.current;window.scrollTo({top:0,behavior:"smooth"})}catch(e){
   // Race at the deadline: a 409 may be an expired attempt (duration OR due-clipped => finalize) or a
   // still-live one (=> resume). Decide from AUTHORITATIVE server state, not the Arabic message text.
   if(requiresStart&&e instanceof ApiError&&e.status===409){submittingRef.current=false;const res=await reconcileTimed409();if(res==="other")setError(e.message)}
@@ -309,16 +355,19 @@ export default function StudentExamPage({token,assignment,studentName,className,
   </div></main>;
  }
  const inputsDisabled=submitBusy||expired;
+ // Roadmap #10/#11 — ONE authoritative derived save state for rendering; server-confirmed lastSavedAt only.
+ const saveKind=deriveSaveState({localRevision:revision.current,savedRevision:savedRevision.current,saving,retrying,errorExhausted:saveError,online});
+ const savedTime=formatLastSaved(lastSavedAt),saveHint=saveStateHint(saveKind),showRetry=canManualRetry(saveKind);
  return <main className={"interactive-exam-page exam-theme-"+theme} dir="rtl"><div className="iex-wrap">
   <header className="iex-head"><div><span className="iex-school">{exam.metadata?.school||"ExamBank 791381"}</span><h1>{assignment.title}</h1><p>{assignment.instructions}</p><div className="iex-badges"><span>{className||exam.metadata?.className||"الصف"}</span><span>{questionTotal} أسئلة</span><span>{assignment.totalMarks} علامة</span><span>المحاولة {(state?.attemptsUsed||0)+1} / {state?.allowedAttempts||assignment.maxAttempts}</span></div></div><div className="iex-student"><strong>{studentName}</strong><span>آخر موعد: {fmt(assignment.effectiveDueAt||assignment.dueAt)}</span></div></header>
   {timed&&hasActive&&remainingMs!==null&&<div className={"iex-countdown "+countdownTone(remainingMs)}><span className="iex-countdown-label">الوقت المتبقي</span><strong className="iex-countdown-clock">{formatCountdown(remainingMs)}</strong></div>}
   {error&&<div className="platform-error iex-error">{error}</div>}
   {expired&&!result&&<div className="platform-notice iex-error">انتهى وقت المحاولة — لم يعد بالإمكان تعديل الإجابات، ويجري إنهاء المحاولة وتصحيح ما تم حفظه.</div>}
-  <div className="iex-progress"><span>تقدّمك</span><div><i style={{width:pct+"%"}}/></div><strong>{done} / {total}</strong><small>{saveFailed?"غير محفوظ — تحقق من الاتصال":retrying?"تعذر الحفظ — إعادة المحاولة...":(saving||dirty)?"جارٍ الحفظ...":<><IconCheck size={11}/>تم الحفظ</>}</small></div>
+  <div className="iex-progress"><span>تقدّمك</span><div><i style={{width:pct+"%"}}/></div><strong>{done} / {total}</strong><small className={"iex-save-state iex-save-"+saveKind} role="status" aria-live="polite">{saveKind==="saved"?<><IconCheck size={11}/>{saveStateLabel(saveKind)}</>:saveStateLabel(saveKind)}{savedTime&&(saveKind==="saved"||saveKind==="pending")?" · آخر حفظ: "+savedTime:""}</small></div>
   {structured?(()=>{let offset=0;return <>{norm.sections.map((section,si)=>{const startIndex=offset;offset+=section.questions.length;return <StructuredExamSection key={section.id} section={section} sectionNumber={si+1} startIndex={startIndex} answers={answers} onChoice={setChoice} onSeq={setSeq} onTable={setTable} onText={(id,v)=>setAnswers(x=>({...x,[id]:{kind:"text",value:v}}))} onField={setField} onPart={setPart} disabled={inputsDisabled}/>})}</>})():
   theme==="focus"&&qs.length>0?(()=>{const i=Math.min(focusIndex,qs.length-1),q=qs[i],id=qid(q,i);return <div className="iex-focus-mode"><div className="iex-focus-nav"><button onClick={()=>setFocusIndex(x=>previousFocusIndex(x,qs.length))} disabled={i===0}>◀ السابق</button><span>السؤال {i+1} من {qs.length}</span><button onClick={()=>setFocusIndex(x=>nextFocusIndex(x,qs.length))} disabled={i===qs.length-1}>التالي ▶</button></div><div className="iex-focus-progress"><i style={{width:focusProgressPercent(i,qs.length)+"%"}}/></div><StudentQuestionCard q={q} index={i} id={id} answer={answers[id]} onChoice={n=>setChoice(id,n)} onSeq={(n,v)=>setSeq(id,n,v)} onTable={(n,v)=>setTable(id,n,v)} onText={v=>setAnswers(x=>({...x,[id]:{kind:"text",value:v}}))} disabled={inputsDisabled}/></div>})():(
   <section className="iex-flow">{qs.map((q,i)=>{const id=qid(q,i);return <StudentQuestionCard key={id} q={q} index={i} id={id} answer={answers[id]} onChoice={n=>setChoice(id,n)} onSeq={(n,v)=>setSeq(id,n,v)} onTable={(n,v)=>setTable(id,n,v)} onText={v=>setAnswers(x=>({...x,[id]:{kind:"text",value:v}}))} disabled={inputsDisabled}/>})}</section>
   )}
-  <footer className="iex-foot"><div><strong>أجبت عن {done} من {total}</strong><span>{saving?"جارٍ حفظ الإجابات...":"يتم حفظ إجاباتك تلقائيًا أثناء الحل."}</span></div><div><button onClick={backWithoutSubmit}>العودة بدون تسليم</button><button className="primary" onClick={submit} disabled={submitBusy||!writable}>{submitBusy?"⏳ جارٍ التصحيح...":<><IconCheck size={15}/>تسليم وتصحيح الامتحان</>}</button></div></footer>
+  <footer className="iex-foot"><div><strong>أجبت عن {done} من {total}</strong><span className={"iex-save-state iex-save-"+saveKind} role="status" aria-live="polite">{saveStateLabel(saveKind)}{savedTime&&(saveKind==="saved"||saveKind==="pending")?" · آخر حفظ: "+savedTime:""}</span>{saveHint&&<em className="iex-save-hint">{saveHint}</em>}{showRetry&&<button type="button" className="iex-retry-save" onClick={()=>{void manualSave()}}>إعادة محاولة الحفظ</button>}</div><div><button onClick={backWithoutSubmit}>العودة بدون تسليم</button><button className="primary" onClick={submit} disabled={submitBusy||!writable}>{submitBusy?"⏳ جارٍ التصحيح...":<><IconCheck size={15}/>تسليم وتصحيح الامتحان</>}</button></div></footer>
  </div></main>
 }
