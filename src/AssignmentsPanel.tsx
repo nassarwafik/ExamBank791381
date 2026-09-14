@@ -1,4 +1,5 @@
 import {useEffect,useMemo,useState,Fragment} from "react";
+import {withTrackingCode} from "./lib/requestTrace";
 import AssignmentReview from "./AssignmentReview";
 import ExamThemePreview,{type PreviewSourceQuestion} from "./ExamThemePreview";
 import {normalizeExamTheme,type ExamTheme} from "./examTheme";
@@ -47,7 +48,7 @@ export default function AssignmentsPanel({token,classes,currentExam,onCopyLibrar
 
  async function api<T>(url:string,options:RequestInit={}):Promise<T>{
   const h=new Headers(options.headers||{});h.set("Content-Type","application/json");h.set("x-builder-token",token);h.set("Authorization","Bearer "+token);
-  const r=await fetch(url,{...options,headers:h}),j=await r.json() as T&{error?:string};if(!r.ok)throw new Error(j.error||"حدث خطأ.");return j;
+  const r=await fetch(url,{...options,headers:h}),j=await r.json() as T&{error?:string};if(!r.ok)throw new Error(withTrackingCode(j.error||"حدث خطأ.",r.status,r));return j;
  }
  async function load(){setLoading(true);try{const r=await api<{assignments:Item[]}>("/api/assignments");setItems(r.assignments||[])}catch(e){setError(e instanceof Error?e.message:"تعذر تحميل الواجبات.")}finally{setLoading(false)}}
  async function loadSavedExams(){

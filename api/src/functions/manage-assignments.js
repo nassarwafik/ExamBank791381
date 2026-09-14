@@ -1,5 +1,6 @@
 
 const {app}=require("@azure/functions"),crypto=require("crypto");
+const {withObservability}=require("../lib/observability");
 const {requireBuilderAuth}=require("../lib/builder-auth");
 const {getContainer,downloadJsonOrNull,uploadJson,listJson,listBlobNames,deleteBlob,mutateJsonWithRetry,StorageConflictError}=require("../lib/platform-storage");
 const {recordAuditEvent}=require("../lib/audit-log");
@@ -39,7 +40,7 @@ function parseDurationMinutes(v){
 function summary(a){return {assignmentId:a.assignmentId,classId:a.classId,className:a.className,title:a.title,instructions:a.instructions,status:a.status,openAt:a.openAt||"",dueAt:a.dueAt||"",sourceExamId:a.sourceExamId||"",sourceExamTitle:a.sourceExamTitle||"",questionCount:Number(a.questionCount||0),totalMarks:Number(a.totalMarks||0),maxAttempts:Math.max(1,Number(a.maxAttempts||1)),durationMinutes:Number(a.durationMinutes||0),attemptModelVersion:Number(a.attemptModelVersion||0),archivedAt:String(a.archivedAt||""),archivedBy:String(a.archivedBy||""),archivedFromStatus:String(a.archivedFromStatus||""),archiveReason:String(a.archiveReason||""),createdAt:a.createdAt||"",updatedAt:a.updatedAt||""}}
 // `deps` is an optional dependency-injection seam for unit tests (production passes nothing, so the
 // real implementations are used). It does not change runtime behavior.
-async function handler(request,deps={}){
+async function handler(request,deps={},obs=null){
  const authFn=deps.requireBuilderAuth||requireBuilderAuth,getC=deps.getContainer||getContainer,dl=deps.downloadJsonOrNull||downloadJsonOrNull,up=deps.uploadJson||uploadJson,ls=deps.listJson||listJson,lbn=deps.listBlobNames||listBlobNames,db=deps.deleteBlob||deleteBlob,mut=deps.mutateJsonWithRetry||mutateJsonWithRetry,rec=deps.recordAuditEvent||recordAuditEvent,wl=deps.withAssignmentLock||withAssignmentLock;
  try{
   const auth=authFn(request);if(!auth.ok)return auth.response;const c=getC();
@@ -140,8 +141,13 @@ async function handler(request,deps={}){
      return {status:200,jsonBody:{ok:true,archived:true,...(legacyDelete?{legacyDeleteRedirected:true}:{}),assignment:summary(updated)}};
     });
     if(auditImpact){await rec(c,{actor:auth.user?.sub,action:"assignment.archive",targetType:"assignment",targetId:id,targetLabel:auditTitle,details:{previousStatus:auditImpact.status,activeAttempts:auditImpact.activeAttempts,submissionDocuments:auditImpact.submissionDocuments,requestedAction:action}});}
+    // Safe technical lifecycle outcome: action + assignmentId + status only — never submission content.
+    if(out&&out.status>=400)obs?.logWarn((out.status===409||out.status===503)?"assignment.lifecycle.conflict":"assignment.lifecycle.failed",{action,assignmentId:id,status:out.status,retryable:out.status===503});
+    else obs?.logInfo("assignment.lifecycle.completed",{action,assignmentId:id});
     return out;
    }catch(e){
+    if(e instanceof AssignmentLockBusyError||e instanceof StorageConflictError)obs?.logWarn("assignment.lifecycle.conflict",{action,assignmentId:id,retryable:true});
+    else obs?.logWarn("assignment.lifecycle.failed",{action,assignmentId:id,errorClass:e?.httpStatus?undefined:"internal_error"});
     if(e instanceof AssignmentLockBusyError)return {status:503,jsonBody:{ok:false,error:CONFLICT_MESSAGE}};
     if(e instanceof StorageConflictError)return {status:503,jsonBody:{ok:false,error:CONFLICT_MESSAGE}};
     if(e?.httpStatus)return {status:e.httpStatus,jsonBody:{ok:false,error:e.message}};
@@ -168,8 +174,13 @@ async function handler(request,deps={}){
      return {status:200,jsonBody:{ok:true,restored:true,assignment:summary(updated)}};
     });
     if(restoredStatus)await rec(c,{actor:auth.user?.sub,action:"assignment.restore",targetType:"assignment",targetId:id,targetLabel:auditTitle,details:{restoredStatus}});
+    // Safe technical lifecycle outcome: action + assignmentId + status only — never submission content.
+    if(out&&out.status>=400)obs?.logWarn((out.status===409||out.status===503)?"assignment.lifecycle.conflict":"assignment.lifecycle.failed",{action,assignmentId:id,status:out.status,retryable:out.status===503});
+    else obs?.logInfo("assignment.lifecycle.completed",{action,assignmentId:id});
     return out;
    }catch(e){
+    if(e instanceof AssignmentLockBusyError||e instanceof StorageConflictError)obs?.logWarn("assignment.lifecycle.conflict",{action,assignmentId:id,retryable:true});
+    else obs?.logWarn("assignment.lifecycle.failed",{action,assignmentId:id,errorClass:e?.httpStatus?undefined:"internal_error"});
     if(e instanceof AssignmentLockBusyError)return {status:503,jsonBody:{ok:false,error:CONFLICT_MESSAGE}};
     if(e instanceof StorageConflictError)return {status:503,jsonBody:{ok:false,error:CONFLICT_MESSAGE}};
     if(e?.httpStatus)return {status:e.httpStatus,jsonBody:{ok:false,error:e.message}};
@@ -208,8 +219,13 @@ async function handler(request,deps={}){
      return {status:200,jsonBody:{ok:true,purged:true,assignmentId:id}};
     });
     if(purgedTitle!==null)await rec(c,{actor:auth.user?.sub,action:"assignment.purge",targetType:"assignment",targetId:id,targetLabel:purgedTitle,details:{submissionDocuments:0,previousStatus:"archived"}});
+    // Safe technical lifecycle outcome: action + assignmentId + status only — never submission content.
+    if(out&&out.status>=400)obs?.logWarn((out.status===409||out.status===503)?"assignment.lifecycle.conflict":"assignment.lifecycle.failed",{action,assignmentId:id,status:out.status,retryable:out.status===503});
+    else obs?.logInfo("assignment.lifecycle.completed",{action,assignmentId:id});
     return out;
    }catch(e){
+    if(e instanceof AssignmentLockBusyError||e instanceof StorageConflictError)obs?.logWarn("assignment.lifecycle.conflict",{action,assignmentId:id,retryable:true});
+    else obs?.logWarn("assignment.lifecycle.failed",{action,assignmentId:id,errorClass:e?.httpStatus?undefined:"internal_error"});
     if(e instanceof AssignmentLockBusyError)return {status:503,jsonBody:{ok:false,error:CONFLICT_MESSAGE}};
     if(e instanceof StorageConflictError)return {status:503,jsonBody:{ok:false,error:CONFLICT_MESSAGE}};
     if(e?.httpStatus)return {status:e.httpStatus,jsonBody:{ok:false,error:e.message}};
@@ -218,7 +234,7 @@ async function handler(request,deps={}){
   }
 
   return {status:400,jsonBody:{ok:false,error:"Unsupported assignment action."}};
- }catch{return {status:500,jsonBody:{ok:false,error:"تعذر تنفيذ إجراء الواجب حاليًا."}}}
+ }catch(e){obs?.logError("assignment.manage.error",e);return {status:500,jsonBody:{ok:false,error:"تعذر تنفيذ إجراء الواجب حاليًا."}}}
 }
-app.http("manageAssignments",{methods:["GET","POST"],authLevel:"anonymous",route:"assignments",handler});
+app.http("manageAssignments",{methods:["GET","POST"],authLevel:"anonymous",route:"assignments",handler:withObservability("assignments",handler)});
 module.exports={handler,summary};

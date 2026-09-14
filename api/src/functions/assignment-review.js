@@ -1,5 +1,6 @@
 
 const {app}=require("@azure/functions");
+const {withObservability}=require("../lib/observability");
 const {requireBuilderAuth}=require("../lib/builder-auth");
 const {getContainer,downloadJsonOrNull,mutateJsonWithRetry,StorageConflictError}=require("../lib/platform-storage");
 const {recordAuditEvent}=require("../lib/audit-log");
@@ -40,7 +41,7 @@ function rebuildAttempt(attempt){
 }
 // `deps` is an optional dependency-injection seam for unit tests (production passes nothing, so the real
 // implementations are used). It does not change runtime behavior or the grading logic.
-async function handler(request,deps={}){
+async function handler(request,deps={},obs=null){
  const authFn=deps.requireBuilderAuth||requireBuilderAuth,getC=deps.getContainer||getContainer,dl=deps.downloadJsonOrNull||downloadJsonOrNull,mut=deps.mutateJsonWithRetry||mutateJsonWithRetry,rec=deps.recordAuditEvent||recordAuditEvent,ach=deps.recordAchievementIfEligible||recordAchievementIfEligible;
  try{const auth=authFn(request);if(!auth.ok)return auth.response;const c=getC();
   if(request.method==="GET"){
@@ -83,6 +84,7 @@ async function handler(request,deps={}){
     return current;
    });
   }catch(e){
+   obs?.logWarn("assignment.review.failed",{action:"saveReview",assignmentId:String(b.assignmentId||""),retryable:(e instanceof StorageConflictError),errorClass:(e instanceof StorageConflictError)?"conflict":(e?.httpStatus?undefined:"internal_error")});
    if(e instanceof StorageConflictError)return {status:503,jsonBody:{ok:false,error:CONFLICT_MESSAGE}};
    if(e?.httpStatus)return {status:e.httpStatus,jsonBody:{ok:false,error:e.message}};
    throw e;
@@ -93,8 +95,9 @@ async function handler(request,deps={}){
   if(resultOut?.finalized){
    await ach(c,{classId:reviewAssignment.classId,studentId,studentDisplayName:reviewStudent.displayName,assignmentId,assignmentTitle:reviewAssignment.title,percentage:resultOut.percentage,shareAchievements:reviewStudent.shareAchievements});
   }
+  obs?.logInfo("assignment.review.completed",{action:"saveReview",assignmentId:String(b.assignmentId||""),applied:appliedCount});
   return {status:200,jsonBody:{ok:true,result:resultOut}};
- }catch{return {status:500,jsonBody:{ok:false,error:"تعذر تنفيذ عملية التصحيح حاليًا."}}}
+ }catch(e){obs?.logError("assignment.review.error",e);return {status:500,jsonBody:{ok:false,error:"تعذر تنفيذ عملية التصحيح حاليًا."}}}
 }
-app.http("assignmentReview",{methods:["GET","POST"],authLevel:"anonymous",route:"assignment-review",handler});
+app.http("assignmentReview",{methods:["GET","POST"],authLevel:"anonymous",route:"assignment-review",handler:withObservability("assignment-review",handler)});
 module.exports={handler,historicalSubmissionProvesOwnership};

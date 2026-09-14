@@ -1,4 +1,5 @@
 const { app } = require("@azure/functions");
+const { withObservability } = require("../lib/observability");
 const { BlobServiceClient } = require("@azure/storage-blob");
 const { requireBuilderAuth } = require("../lib/builder-auth");
 const { chunkPages } = require("../lib/import-chunking");
@@ -222,11 +223,7 @@ async function runRemainingChunks(state, {
   return { lastChunkError };
 }
 
-app.http("importAnalyze", {
-  methods: ["POST"],
-  authLevel: "anonymous",
-  route: "import-analyze",
-  handler: async request => {
+async function importAnalyzeInner(request, _ctx, obs) {
     // Captured before ANY work (auth, download, extraction) so the deadline covers the whole
     // request's real wall-clock time, not just chunk-processing - a slow extraction step eating
     // into the budget is exactly as dangerous to the gateway timeout as a slow AI call.
@@ -237,6 +234,7 @@ app.http("importAnalyze", {
       if (!auth.ok) {
         return auth.response;
       }
+      obs?.logInfo("import.started", { operation: "analyze" });
 
       let body = {};
       try {
@@ -329,6 +327,8 @@ app.http("importAnalyze", {
 
       const status = state.processedChunks >= state.totalChunks ? "done" : "partial";
 
+      // Safe counts/categories only — never question text, warnings, or AI error content.
+      obs?.logInfo(status === "done" ? "import.completed" : "import.progress", { operation: "analyze", provider, outcome: status, processedChunks: state.processedChunks, totalChunks: state.totalChunks, hadChunkError: !!lastChunkError });
       return {
         status: 200,
         jsonBody: {
@@ -347,13 +347,15 @@ app.http("importAnalyze", {
           warnings
         }
       };
-    } catch {
+    } catch (e) {
+      obs?.logError("import.failed", e, { operation: "analyze" });
       return { status: 500, jsonBody: { ok: false, error: "تعذر تحليل الملف حاليًا." } };
     }
-  }
-});
+}
+const importAnalyzeHandler = withObservability("import-analyze", importAnalyzeInner);
+app.http("importAnalyze", { methods: ["POST"], authLevel: "anonymous", route: "import-analyze", handler: importAnalyzeHandler });
 
 // Exported only for unit testing the Buffer<->base64 state-persistence boundary, the
 // already-done-job-never-recalls-AI guarantee, and the OpenAI-by-default provider resolution
 // (app.http's own route registration above is unaffected).
-module.exports = { serializeStateForStorage, deserializeStateFromStorage, runRemainingChunks, resolveImportProvider, extractorForKind };
+module.exports = { serializeStateForStorage, deserializeStateFromStorage, runRemainingChunks, resolveImportProvider, extractorForKind, handler: importAnalyzeHandler, inner: importAnalyzeInner };

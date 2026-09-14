@@ -1,5 +1,6 @@
 
 const {app}=require("@azure/functions");
+const {withObservability}=require("../lib/observability");
 const {requireActiveStudentSession}=require("../lib/student-auth");
 const {getContainer,downloadJsonOrNull}=require("../lib/platform-storage");
 const {normalizeClassStatus}=require("../lib/class-lifecycle");
@@ -33,7 +34,7 @@ function preStartAssignment(a,timed){
   exam:{title:snap.title||a.title,metadata:snap.metadata||{},presentationTheme:snap.presentationTheme||"",coverPage:snap.coverPage||null}};
 }
 // `deps` is an optional dependency-injection seam for unit tests (production passes nothing).
-async function handler(request,deps={}){
+async function handler(request,deps={},obs=null){
  const ras=deps.requireActiveStudentSession||requireActiveStudentSession,dl=deps.downloadJsonOrNull||downloadJsonOrNull;
  try{
   const id=String(request.params?.assignmentId||"");if(!id)return {status:400,jsonBody:{ok:false,error:"assignmentId is required."}};
@@ -54,7 +55,7 @@ async function handler(request,deps={}){
   if(ts.requiresStart&&!ts.activeAttempt){return {status:200,jsonBody:{ok:true,assignment:preStartAssignment(a,ts.timed)}}}
   const effectiveDueAt=av.effectiveDueAt;
   return {status:200,jsonBody:{ok:true,assignment:{assignmentId:a.assignmentId,title:a.title,instructions:a.instructions,openAt:a.openAt||"",dueAt:a.dueAt||"",effectiveDueAt,maxAttempts:Math.max(1,Number(a.maxAttempts||1)),durationMinutes:Number(a.durationMinutes||0),sourceExamTitle:a.sourceExamTitle||"",questionCount:Number(a.questionCount||0),totalMarks:Number(a.totalMarks||0),exam:studentExam(a.examSnapshot)}}};
- }catch{return {status:500,jsonBody:{ok:false,error:"تعذر فتح الواجب حاليًا."}}}
+ }catch(e){obs?.logError("student.assignment.error",e);return {status:500,jsonBody:{ok:false,error:"تعذر فتح الواجب حاليًا."}}}
 }
-app.http("studentAssignment",{methods:["GET"],authLevel:"anonymous",route:"student-assignment/{assignmentId}",handler});
+app.http("studentAssignment",{methods:["GET"],authLevel:"anonymous",route:"student-assignment/{assignmentId}",handler:withObservability("student-assignment",handler)});
 module.exports={studentExam,handler};

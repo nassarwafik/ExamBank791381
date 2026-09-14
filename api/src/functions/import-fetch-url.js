@@ -1,4 +1,5 @@
 const { app } = require("@azure/functions");
+const { withObservability } = require("../lib/observability");
 const crypto = require("crypto");
 const { BlobServiceClient } = require("@azure/storage-blob");
 const { requireBuilderAuth } = require("../lib/builder-auth");
@@ -48,12 +49,13 @@ app.http("importFetchUrl", {
   methods: ["POST"],
   authLevel: "anonymous",
   route: "import-fetch-url",
-  handler: async request => {
+  handler: withObservability("import-fetch-url", async (request, _ctx, obs) => {
     try {
       const auth = requireBuilderAuth(request);
       if (!auth.ok) {
         return auth.response;
       }
+      obs?.logInfo("import.started", { operation: "fetch-url" });
 
       let body = {};
       try {
@@ -78,6 +80,8 @@ app.http("importFetchUrl", {
         });
       }
       catch (error) {
+        // NEVER log the URL or fetched content — only a safe reason category.
+        obs?.logWarn("import.failed", { operation: "fetch-url", reason: error instanceof UnsafeUrlError ? "unsafe_url" : "fetch_error" });
         const message = error instanceof UnsafeUrlError ? error.message : "تعذر جلب هذا الرابط.";
         return { status: 400, jsonBody: { ok: false, error: message } };
       }
@@ -118,15 +122,17 @@ app.http("importFetchUrl", {
 
       await uploadJson(container, blobPrefix + "manifest.json", manifest);
 
+      obs?.logInfo("import.completed", { operation: "fetch-url", kind: detectedKind, sizeBytes: buffer.length });
       return {
         status: 200,
         jsonBody: { ok: true, importJobId, fileName, sizeBytes: buffer.length, detectedKind }
       };
     }
-    catch {
+    catch (e) {
+      obs?.logError("import.failed", e, { operation: "fetch-url" });
       return { status: 500, jsonBody: { ok: false, error: "تعذر استيراد هذا الرابط حاليًا." } };
     }
-  }
+  })
 });
 
 module.exports = { deriveFileName, GOOGLE_FORM_HOSTS };

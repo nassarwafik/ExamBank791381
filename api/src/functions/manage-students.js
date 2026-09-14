@@ -1,4 +1,5 @@
 const { app } = require("@azure/functions");
+const { withObservability } = require("../lib/observability");
 const { BlobServiceClient } = require("@azure/storage-blob");
 const crypto = require("crypto");
 const { requireBuilderAuth } = require("../lib/builder-auth");
@@ -660,7 +661,7 @@ async function buildStudentProfile(container, userId) {
 
 // `deps` is an optional dependency-injection seam for unit tests (production passes nothing → real
 // implementations). It does not change runtime behavior.
-async function manageStudentsHandler(request, deps = {}) {
+async function manageStudentsHandler(request, deps = {}, obs = null) {
     const rec = deps.recordAuditEvent || recordAuditEvent;
     try {
       const auth = (deps.requireBuilderAuth || requireBuilderAuth)(request);
@@ -1092,8 +1093,10 @@ async function manageStudentsHandler(request, deps = {}) {
     } catch (e) {
       // A busy per-student credential lock is a transient conflict, not a server error.
       if (e instanceof CredentialLockBusyError) {
+        obs?.logWarn("student.credential.lock_contention", { retryable: true });
         return { status: 409, headers: { "Cache-Control": "no-store" }, jsonBody: { ok: false, error: "عملية أخرى على بيانات الطالب قيد التنفيذ. أعد المحاولة." } };
       }
+      obs?.logError("student.manage.error", e);
       return {
         status: 500,
         jsonBody: {
@@ -1103,7 +1106,7 @@ async function manageStudentsHandler(request, deps = {}) {
       };
     }
 }
-app.http("manageStudents", { methods: ["GET", "POST"], authLevel: "anonymous", route: "students", handler: manageStudentsHandler });
+app.http("manageStudents", { methods: ["GET", "POST"], authLevel: "anonymous", route: "students", handler: withObservability("students", manageStudentsHandler) });
 
 // Roadmap #8 — exported for unit tests (authVersion on create / password reset / update). Additive.
 module.exports = { createStudentRecord, resetStudentPassword, handler: manageStudentsHandler };

@@ -8,6 +8,7 @@ const ReportsCenter = lazy(() => import("./reports/ReportsCenter"));
 // Structured Exam Builder (Phase 2) — code-split so it only loads when a teacher opens it.
 const StructuredExamBuilder = lazy(() => import("./StructuredExamBuilder"));
 const StructuredExamImportDialog = lazy(() => import("./StructuredExamImportDialog"));
+import { withTrackingCode } from "./lib/requestTrace";
 import { isStructuredExam } from "./examTypes";
 import type { StructuredExam } from "./examTypes";
 import { legacyToStructured, toSavedStructuredExam, newSection, newQuestion } from "./examBuilderState";
@@ -902,8 +903,10 @@ function App() {
       };
 
       if (!response.ok || !data.token) {
+        // Roadmap #9: keep the existing Arabic message; append a subtle tracking code ONLY for an
+        // unexpected server error (5xx) so the user can quote it — never for a 400/401 bad-credentials reply.
         throw new Error(
-          data.error || "تعذر تسجيل الدخول."
+          withTrackingCode(data.error || "تعذر تسجيل الدخول.", response.status, response)
         );
       }
 

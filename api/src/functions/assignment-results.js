@@ -1,5 +1,6 @@
 
 const {app}=require("@azure/functions");
+const {withObservability}=require("../lib/observability");
 const {requireBuilderAuth}=require("../lib/builder-auth");
 const {getContainer,downloadJsonOrNull,listJson,mutateJsonWithRetry,StorageConflictError}=require("../lib/platform-storage");
 const {recordAuditEvent}=require("../lib/audit-log");
@@ -33,7 +34,7 @@ async function loadTarget(dl,c,id,studentId){
  return {a,student,name:SP+id+"/"+studentId+".json"};
 }
 // `deps` is an optional dependency-injection seam for unit tests (production passes nothing).
-async function handler(request,deps={}){
+async function handler(request,deps={},obs=null){
  const authFn=deps.requireBuilderAuth||requireBuilderAuth,getC=deps.getContainer||getContainer,dl=deps.downloadJsonOrNull||downloadJsonOrNull,ls=deps.listJson||listJson,mut=deps.mutateJsonWithRetry||mutateJsonWithRetry,rec=deps.recordAuditEvent||recordAuditEvent;
  try{const auth=authFn(request);if(!auth.ok)return auth.response;const c=getC();
   if(request.method==="GET"){
@@ -61,8 +62,9 @@ async function handler(request,deps={}){
      finalAllowed=doc.allowedAttempts;snap=lifecycle(a,doc);
      return doc;
     });
-   }catch(e){if(e instanceof StorageConflictError)return {status:503,jsonBody:{ok:false,error:CONFLICT_MESSAGE}};throw e}
+   }catch(e){if(e instanceof StorageConflictError){obs?.logWarn("assignment.lifecycle.conflict",{action:resultAction,assignmentId:String(b.assignmentId||""),retryable:true});return {status:503,jsonBody:{ok:false,error:CONFLICT_MESSAGE}}}obs?.logWarn("assignment.lifecycle.failed",{action:resultAction,assignmentId:String(b.assignmentId||"")});throw e}
    await rec(c,{actor:auth.user?.sub,action:"assignment.allowRetry",targetType:"student",targetId:student.userId,targetLabel:String(student.displayName||student.code||""),details:{assignmentId:a.assignmentId,allowedAttempts:finalAllowed}});
+   obs?.logInfo("assignment.lifecycle.completed",{action:resultAction,assignmentId:a.assignmentId});
    return {status:200,jsonBody:{ok:true,allowedAttempts:finalAllowed,...snap}};
   }
 
@@ -90,8 +92,9 @@ async function handler(request,deps={}){
      doc.dueAtOverride=nextOverride;doc.updatedAt=new Date().toISOString();snap=lifecycle(a,doc);
      return doc;
     });
-   }catch(e){if(e instanceof StorageConflictError)return {status:503,jsonBody:{ok:false,error:CONFLICT_MESSAGE}};throw e}
+   }catch(e){if(e instanceof StorageConflictError){obs?.logWarn("assignment.lifecycle.conflict",{action:resultAction,assignmentId:String(b.assignmentId||""),retryable:true});return {status:503,jsonBody:{ok:false,error:CONFLICT_MESSAGE}}}obs?.logWarn("assignment.lifecycle.failed",{action:resultAction,assignmentId:String(b.assignmentId||"")});throw e}
    await rec(c,{actor:auth.user?.sub,action:"assignment.setDueAtOverride",targetType:"student",targetId:student.userId,targetLabel:String(student.displayName||student.code||""),details:{assignmentId:a.assignmentId,dueAtOverride:nextOverride}});
+   obs?.logInfo("assignment.lifecycle.completed",{action:resultAction,assignmentId:a.assignmentId});
    return {status:200,jsonBody:{ok:true,dueAtOverride:nextOverride,...snap}};
   }
 
@@ -125,8 +128,9 @@ async function handler(request,deps={}){
      finalAllowed=doc.allowedAttempts;snap=lifecycle(a,doc);
      return doc;
     });
-   }catch(e){if(e instanceof StorageConflictError)return {status:503,jsonBody:{ok:false,error:CONFLICT_MESSAGE}};if(e?.httpStatus)return {status:e.httpStatus,jsonBody:{ok:false,error:e.message}};throw e}
+   }catch(e){if(e instanceof StorageConflictError){obs?.logWarn("assignment.lifecycle.conflict",{action:resultAction,assignmentId:String(b.assignmentId||""),retryable:true});return {status:503,jsonBody:{ok:false,error:CONFLICT_MESSAGE}}}if(e?.httpStatus){obs?.logWarn(e.httpStatus===409?"assignment.lifecycle.conflict":"assignment.lifecycle.failed",{action:resultAction,assignmentId:String(b.assignmentId||""),status:e.httpStatus});return {status:e.httpStatus,jsonBody:{ok:false,error:e.message}}}obs?.logWarn("assignment.lifecycle.failed",{action:resultAction,assignmentId:String(b.assignmentId||"")});throw e}
    await rec(c,{actor:auth.user?.sub,action:"assignment.reopenStudent",targetType:"student",targetId:student.userId,targetLabel:String(student.displayName||student.code||""),details:{assignmentId:a.assignmentId,allowedAttempts:finalAllowed,dueAtOverride:nextOverride}});
+   obs?.logInfo("assignment.lifecycle.completed",{action:resultAction,assignmentId:a.assignmentId});
    return {status:200,jsonBody:{ok:true,allowedAttempts:finalAllowed,dueAtOverride:nextOverride,...snap}};
   }
 
@@ -152,13 +156,14 @@ async function handler(request,deps={}){
      auditDetails={assignmentId:a.assignmentId,oldOriginalEndsAt:oldOriginal,oldExtendedEndsAt:oldExtended,newExtendedEndsAt:active.extendedEndsAt,effectiveAttemptEndsAt:ts.effectiveAttemptEndsAt};
      return doc;
     });
-   }catch(e){if(e instanceof StorageConflictError)return {status:503,jsonBody:{ok:false,error:CONFLICT_MESSAGE}};if(e?.httpStatus)return {status:e.httpStatus,jsonBody:{ok:false,error:e.message}};throw e}
+   }catch(e){if(e instanceof StorageConflictError){obs?.logWarn("assignment.lifecycle.conflict",{action:resultAction,assignmentId:String(b.assignmentId||""),retryable:true});return {status:503,jsonBody:{ok:false,error:CONFLICT_MESSAGE}}}if(e?.httpStatus){obs?.logWarn(e.httpStatus===409?"assignment.lifecycle.conflict":"assignment.lifecycle.failed",{action:resultAction,assignmentId:String(b.assignmentId||""),status:e.httpStatus});return {status:e.httpStatus,jsonBody:{ok:false,error:e.message}}}obs?.logWarn("assignment.lifecycle.failed",{action:resultAction,assignmentId:String(b.assignmentId||"")});throw e}
    await rec(c,{actor:auth.user?.sub,action:"assignment.extendActiveAttempt",targetType:"student",targetId:student.userId,targetLabel:String(student.displayName||student.code||""),details:auditDetails});
+   obs?.logInfo("assignment.lifecycle.completed",{action:resultAction,assignmentId:a.assignmentId});
    return {status:200,jsonBody:{ok:true,...snap}};
   }
 
   return {status:400,jsonBody:{ok:false,error:"Unsupported result action."}};
- }catch{return {status:500,jsonBody:{ok:false,error:"تعذر تنفيذ عملية النتائج حاليًا."}}}
+ }catch(e){obs?.logError("assignment.results.error",e);return {status:500,jsonBody:{ok:false,error:"تعذر تنفيذ عملية النتائج حاليًا."}}}
 }
-app.http("assignmentResults",{methods:["GET","POST"],authLevel:"anonymous",route:"assignment-results",handler});
+app.http("assignmentResults",{methods:["GET","POST"],authLevel:"anonymous",route:"assignment-results",handler:withObservability("assignment-results",handler)});
 module.exports={handler};
