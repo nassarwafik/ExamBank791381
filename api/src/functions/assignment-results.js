@@ -49,7 +49,10 @@ async function handler(request,deps={}){
     await mut(c,name,current=>{
      const doc=current||defaultSub(a.assignmentId,student.userId,a,student);
      const used=Array.isArray(doc.attempts)?doc.attempts.length:0,base=Math.max(1,Number(a.maxAttempts||1));
-     doc.allowedAttempts=Math.max(base,Number(doc.allowedAttempts||0),used+1);
+     // An active attempt already occupies the next slot (it is not yet in attempts.length), so to grant a
+     // genuinely FUTURE unused attempt we must reserve one BEYOND it (B2B blocker-1). No active => used+1.
+     const hasActive=!!activeAttemptOf(doc);
+     doc.allowedAttempts=Math.max(base,Number(doc.allowedAttempts||0),used+(hasActive?2:1));
      doc.updatedAt=new Date().toISOString();
      finalAllowed=doc.allowedAttempts;snap=lifecycle(a,doc);
      return doc;

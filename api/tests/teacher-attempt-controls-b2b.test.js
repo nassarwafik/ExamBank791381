@@ -69,6 +69,47 @@ describe("B2B allowRetry", () => {
   });
 });
 
+describe("B2B blocker 1 — allowRetry must grant a FUTURE attempt beyond an active one", () => {
+  const activeSub = (allowedAttempts) => ({ assignmentId: "asg1", studentId: "stu-1", classId: "c1", allowedAttempts, attempts: [completed1], activeAttempt: { attemptNumber: 2, startedAt: iso(BASE), endsAt: iso(BASE + 60 * MIN), extendedEndsAt: "", status: "started" } });
+  it("1A: completed 1 + active 2, allowed 2 => allowRetry raises allowedAttempts to 3; active attempt untouched", async () => {
+    seed({ durationMinutes: 60, maxAttempts: 2, submission: activeSub(2) });
+    const r = await post({ action: "allowRetry", assignmentId: "asg1", studentId: "stu-1" });
+    expect(r.status).toBe(200);
+    expect(r.jsonBody.allowedAttempts).toBe(3);          // used(1) + 2 (active occupies attempt 2)
+    const aa = store.get(SP).activeAttempt;
+    expect(aa.attemptNumber).toBe(2);
+    expect(aa.startedAt).toBe(iso(BASE));                 // untouched
+    expect(aa.endsAt).toBe(iso(BASE + 60 * MIN));
+    expect(aa.extendedEndsAt).toBe("");
+    expect(store.get(SP).attempts).toHaveLength(1);       // history intact
+    // ...and after attempt 2 submits, attempt 3 is startable (attemptsUsed 2 < allowedAttempts 3)
+    const st = timerState(store.get(AP), { ...store.get(SP), attempts: [completed1, { attemptNumber: 2 }], activeAttempt: null }, BASE);
+    expect(st.attemptsUsed).toBe(2); expect(st.allowedAttempts).toBe(3);
+  });
+  it("1B: existing future capacity (allowed 4) => allowRetry stays 4 (no-op)", async () => {
+    seed({ durationMinutes: 60, maxAttempts: 2, submission: activeSub(4) });
+    const r = await post({ action: "allowRetry", assignmentId: "asg1", studentId: "stu-1" });
+    expect(r.jsonBody.allowedAttempts).toBe(4);
+  });
+});
+
+describe("B2B blocker 2 — extension of an UNRESOLVABLE timed attempt fails closed", () => {
+  it("2A: startedAt invalid + endsAt \"\" => extend rejected, nothing stored, attempt stays fail-closed", async () => {
+    seed({ durationMinutes: 60, submission: { assignmentId: "asg1", studentId: "stu-1", classId: "c1", attempts: [], activeAttempt: { attemptNumber: 1, startedAt: "invalid", endsAt: "", status: "started" } } });
+    const r = await post({ action: "extendActiveAttempt", assignmentId: "asg1", studentId: "stu-1", newEndsAt: iso(BASE + 120 * MIN) });
+    expect(r.status).toBe(409);
+    expect(store.get(SP).activeAttempt.extendedEndsAt === undefined || store.get(SP).activeAttempt.extendedEndsAt === "").toBe(true);
+    expect(timerState(store.get(AP), store.get(SP), BASE).canWrite).toBe(false); // still fail-closed
+  });
+  it("2B: endsAt \"\" but startedAt valid => derived deadline, a later extension is still allowed (B2A recovery)", async () => {
+    seed({ durationMinutes: 60, submission: { assignmentId: "asg1", studentId: "stu-1", classId: "c1", attempts: [], activeAttempt: { attemptNumber: 1, startedAt: iso(BASE), endsAt: "", status: "started" } } });
+    // derived deadline = BASE+60; extend to BASE+120 must succeed
+    const r = await post({ action: "extendActiveAttempt", assignmentId: "asg1", studentId: "stu-1", newEndsAt: iso(BASE + 120 * MIN) });
+    expect(r.status).toBe(200);
+    expect(store.get(SP).activeAttempt.extendedEndsAt).toBe(iso(BASE + 120 * MIN));
+  });
+});
+
 describe("B2B reopenStudent", () => {
   it("C: reopen a closed student sets a future dueAtOverride and grants a next attempt", async () => {
     seed({ maxAttempts: 1, dueAt: iso(BASE - 10 * MIN), submission: { assignmentId: "asg1", studentId: "stu-1", classId: "c1", attempts: [completed1], activeAttempt: null } });

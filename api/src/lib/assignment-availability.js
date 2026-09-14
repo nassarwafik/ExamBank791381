@@ -215,6 +215,10 @@ function extendRejection(assignment, submission, newEndsAt, nowMs = Date.now()) 
   const st = timerState(assignment, submission, nowMs);
   if (!st.timed) return { status: 400, error: "لا يمكن تمديد وقت محاولة في واجب غير مؤقت." };
   if (!st.activeAttempt) return { status: 409, error: "لا توجد محاولة نشطة قابلة للتمديد." };
+  // Fail closed (B2B blocker-2): if the timed attempt has no resolvable authoritative duration deadline
+  // (corrupt startedAt AND missing/invalid endsAt — timerState reports "" here and ignores extendedEndsAt),
+  // an extension would report success but establish no usable timer. Reject instead of pretending.
+  if (!st.attemptDurationEndsAt) return { status: 409, error: "لا يمكن تمديد المحاولة لأن وقتها الأصلي غير قابل للتحقق." };
   const newMs = toMs(newEndsAt);
   if (!newMs) return { status: 400, error: "وقت الانتهاء الجديد غير صالح." };
   const currentEndMs = toMs(st.attemptDurationEndsAt);
