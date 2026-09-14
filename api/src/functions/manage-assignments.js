@@ -117,23 +117,32 @@ async function handler(request,deps={}){
    if(normalizeAssignmentStatus(a)==="archived"){
     return {status:200,jsonBody:{ok:true,archived:true,alreadyArchived:true,...(legacyDelete?{legacyDeleteRedirected:true}:{}),assignment:summary(a)}};
    }
-   const names=await lbn(c,SUB_PREFIX+id+"/"),subs=await ls(c,SUB_PREFIX+id+"/"),impact=computeImpact(a,names.length,subs);
-   if(impact.activeAttempts>0&&b.confirmActiveAttempts!==true){
-    return {status:409,jsonBody:{ok:false,requiresConfirmation:true,impact,error:"يوجد طلاب في محاولات نشطة. تأكيد الأرشفة سيمنعهم من المتابعة حتى تتم الاستعادة، ولن تُحذف إجاباتهم أو محاولاتهم."}};
+   // Fast UX pre-check (advisory only). The AUTHORITATIVE active-attempt check runs inside the mutation
+   // below, re-listing submissions as close as possible to commit so a late-starting attempt still blocks.
+   const preNames=await lbn(c,SUB_PREFIX+id+"/"),preSubs=await ls(c,SUB_PREFIX+id+"/"),preImpact=computeImpact(a,preNames.length,preSubs);
+   if(preImpact.activeAttempts>0&&b.confirmActiveAttempts!==true){
+    return {status:409,jsonBody:{ok:false,requiresConfirmation:true,impact:preImpact,error:"يوجد طلاب في محاولات نشطة. تأكيد الأرشفة سيمنعهم من المتابعة حتى تتم الاستعادة، ولن تُحذف إجاباتهم أو محاولاتهم."}};
    }
-   let updated=null;
+   let updated=null,auditImpact=null;
    try{
-    updated=await mut(c,PREFIX+id+".json",current=>{
+    updated=await mut(c,PREFIX+id+".json",async current=>{
      if(!current){const err=new Error("الواجب غير موجود.");err.httpStatus=404;throw err}
      if(normalizeAssignmentStatus(current)==="archived")return current; // idempotent under the lock
+     // Authoritative re-check (Roadmap #7 fix): fresh submission impact immediately before committing the
+     // archived state. An active attempt that appeared after the UX pre-check still forces confirmation.
+     const nm=await lbn(c,SUB_PREFIX+id+"/"),sb=await ls(c,SUB_PREFIX+id+"/"),im=computeImpact(current,nm.length,sb);
+     if(im.activeAttempts>0&&b.confirmActiveAttempts!==true){const err=new Error("يوجد طلاب في محاولات نشطة. تأكيد الأرشفة سيمنعهم من المتابعة حتى تتم الاستعادة، ولن تُحذف إجاباتهم أو محاولاتهم.");err.httpStatus=409;err.requiresConfirmation=true;err.impact=im;throw err}
+     auditImpact=im;
      return applyAssignmentArchive(current,{actor:auth.user?.sub,now:new Date().toISOString(),reason:"manual"});
     });
    }catch(e){
     if(e instanceof StorageConflictError)return {status:503,jsonBody:{ok:false,error:CONFLICT_MESSAGE}};
+    if(e?.requiresConfirmation)return {status:409,jsonBody:{ok:false,requiresConfirmation:true,impact:e.impact,error:e.message}};
     if(e?.httpStatus)return {status:e.httpStatus,jsonBody:{ok:false,error:e.message}};
     throw e;
    }
-   await rec(c,{actor:auth.user?.sub,action:"assignment.archive",targetType:"assignment",targetId:id,targetLabel:a.title||"",details:{previousStatus:impact.status,activeAttempts:impact.activeAttempts,submissionDocuments:impact.submissionDocuments,requestedAction:action}});
+   const ai=auditImpact||preImpact;
+   await rec(c,{actor:auth.user?.sub,action:"assignment.archive",targetType:"assignment",targetId:id,targetLabel:a.title||"",details:{previousStatus:ai.status,activeAttempts:ai.activeAttempts,submissionDocuments:ai.submissionDocuments,requestedAction:action}});
    return {status:200,jsonBody:{ok:true,archived:true,...(legacyDelete?{legacyDeleteRedirected:true}:{}),assignment:summary(updated)}};
   }
 
@@ -164,18 +173,19 @@ async function handler(request,deps={}){
   // delete so a submission created after the impact check aborts it. NO cascade — history always wins. ──
   if(action==="purge"){
    const id=String(b.assignmentId||"");if(!id)return {status:400,jsonBody:{ok:false,error:"assignmentId is required."}};
+   // Ordering (Roadmap #7 fix): (1) FRESH-read assignment, (2) verify archived, (3) verify confirmation
+   // against the FRESH doc, (4) FINAL submission list, (5) delete. Nothing reads between the final list and
+   // the delete, so a submission created just before deletion still aborts the purge.
    const a=await dl(c,PREFIX+id+".json");if(!a)return {status:404,jsonBody:{ok:false,error:"الواجب غير موجود."}};
    if(normalizeAssignmentStatus(a)!=="archived")return {status:409,jsonBody:{ok:false,error:"لا يمكن الحذف النهائي إلا لواجب مؤرشف. أرشفه أولًا."}};
    if(String(b.confirmAssignmentId||"")!==String(a.assignmentId||"")||String(b.confirmTitle||"")!==String(a.title||"")){
     return {status:400,jsonBody:{ok:false,error:"تأكيد الحذف النهائي غير مطابق."}};
    }
-   const names=await lbn(c,SUB_PREFIX+id+"/");
+   const names=await lbn(c,SUB_PREFIX+id+"/");   // FINAL check — closest operation to the physical delete
    if(names.length>0){
     const subs=await ls(c,SUB_PREFIX+id+"/");
     return {status:409,jsonBody:{ok:false,blockedByHistory:true,impact:computeImpact(a,names.length,subs),error:"لا يمكن حذف الواجب نهائيًا لأن له بيانات طلاب محفوظة. اتركه مؤرشفًا للحفاظ على السجل."}};
    }
-   const fresh=await dl(c,PREFIX+id+".json");
-   if(!fresh||normalizeAssignmentStatus(fresh)!=="archived")return {status:409,jsonBody:{ok:false,error:"تعذّر الحذف النهائي: تغيّرت حالة الواجب. حدّث الصفحة وحاول مجددًا."}};
    await db(c,PREFIX+id+".json");
    await rec(c,{actor:auth.user?.sub,action:"assignment.purge",targetType:"assignment",targetId:id,targetLabel:a.title||"",details:{submissionDocuments:0,previousStatus:"archived"}});
    return {status:200,jsonBody:{ok:true,purged:true,assignmentId:id}};

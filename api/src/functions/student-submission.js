@@ -48,7 +48,10 @@ async function handler(request,deps={}){
    const durMinutes=normalizeDurationMinutes(a.durationMinutes),timed=durMinutes>0,durationMs=durMinutes*60000;
    let resultState=null;
    try{
-    await mut(c,name,current=>{
+    await mut(c,name,async current=>{
+     // Roadmap #7 race guard: re-read the assignment from storage inside the mutation and require
+     // "published" before committing ANY write, in case it was archived after this request loaded it.
+     const fa=await dl(c,AP+id+".json");if(!fa||fa.status!=="published"){const err=new Error("الواجب غير متاح حاليًا.");err.httpStatus=403;throw err}
      const doc=current||defaultSubmission(id,student);
      const rj=startRejection(a,doc,Date.now()); // re-check under the lock (race backstop)
      if(rj){const err=new Error(rj.error);err.httpStatus=rj.status;throw err}
@@ -75,7 +78,10 @@ async function handler(request,deps={}){
    const answers=b.answers&&typeof b.answers==="object"?b.answers:{};
    let savedAt="",finalState=null;
    try{
-    await mut(c,name,current=>{
+    await mut(c,name,async current=>{
+     // Roadmap #7 race guard: re-read the assignment from storage inside the mutation and require
+     // "published" before committing ANY write, in case it was archived after this request loaded it.
+     const fa=await dl(c,AP+id+".json");if(!fa||fa.status!=="published"){const err=new Error("الواجب غير متاح حاليًا.");err.httpStatus=403;throw err}
      const doc=current||defaultSubmission(id,student);
      const ts=timerState(a,doc,Date.now());
      if(!ts.canWrite){const err=new Error(ts.timed?(ts.attemptExpired?"انتهى وقت المحاولة.":"ابدأ المحاولة أولاً."):(ts.attemptModelVersion>=2&&!ts.activeAttempt?"ابدأ المحاولة أولاً.":"لا توجد محاولة متاحة للحفظ."));err.httpStatus=409;throw err}
@@ -107,7 +113,10 @@ async function handler(request,deps={}){
    const answers=b.answers&&typeof b.answers==="object"?b.answers:{},g=gradeFn(a.examSnapshot,answers),now=new Date().toISOString();
    let resultAttempt=null,finalState=null;
    try{
-    await mut(c,name,current=>{
+    await mut(c,name,async current=>{
+     // Roadmap #7 race guard: re-read the assignment from storage inside the mutation and require
+     // "published" before committing ANY write, in case it was archived after this request loaded it.
+     const fa=await dl(c,AP+id+".json");if(!fa||fa.status!=="published"){const err=new Error("الواجب غير متاح حاليًا.");err.httpStatus=403;throw err}
      const doc=current||defaultSubmission(id,student);
      const ts=timerState(a,doc,Date.now());
      if(!ts.canWrite){const err=new Error(ts.timed?(ts.attemptExpired?"انتهى وقت المحاولة.":"ابدأ المحاولة أولاً."):(ts.isClosed?"انتهى موعد التسليم.":"لا توجد محاولة إضافية متاحة."));err.httpStatus=409;throw err}
@@ -137,7 +146,10 @@ async function handler(request,deps={}){
   if(action==="finalizeTimedOutAttempt"){
    let resultAttempt=null,finalState=null,already=false;
    try{
-    await mut(c,name,current=>{
+    await mut(c,name,async current=>{
+     // Roadmap #7 race guard: re-read the assignment from storage inside the mutation and require
+     // "published" before committing ANY write, in case it was archived after this request loaded it.
+     const fa=await dl(c,AP+id+".json");if(!fa||fa.status!=="published"){const err=new Error("الواجب غير متاح حاليًا.");err.httpStatus=403;throw err}
      const doc=current||defaultSubmission(id,student);
      const active=activeAttemptOf(doc);
      if(!active){already=true;finalState=state(a,doc,Date.now());return doc} // already finalized — no-op

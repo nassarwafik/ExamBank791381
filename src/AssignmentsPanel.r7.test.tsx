@@ -22,6 +22,7 @@ function installFetch() {
     if (url.includes("/api/assignments") && method !== "POST") return json({ ok: true, assignments: [PUBLISHED, ARCHIVED] });
     if (url.includes("/api/saved-exams") && method !== "POST") return json({ ok: true, exams: [] });
     if (url.includes("/api/saved-exams")) return json({ ok: true, exam: null });
+    if (url.includes("/api/assignment-results") && method !== "POST") return json({ ok: true, students: [{ studentId: "s1", studentName: "طالب", studentCode: "S1", attemptsUsed: 1, allowedAttempts: 1, attemptStatus: "submitted", activeAttempt: null, timed: false, effectiveAttemptEndsAt: "", dueAtOverride: null, latestResult: { attemptNumber: 1, score: 5, totalMarks: 10, percentage: 50, finalized: true, manualReviewMarks: 0 } }], stats: { students: 1, submitted: 1, pendingReview: 0, average: 50, highest: 50, lowest: 50 } });
     if (url.includes("/api/assignments")) {
       const body = JSON.parse(String(init!.body)) as Body; posts.push(body);
       if (body.action === "deleteImpact") return json({ ok: true, impact: impactResponse });
@@ -126,5 +127,42 @@ describe("R7 AssignmentsPanel — archive-first UI", () => {
     expect(purge.confirmTitle).toBe("واجب مؤرشف"); expect(purge.confirmAssignmentId).toBe("a2");
     await waitFor(() => expect(r.queryByText("واجب مؤرشف")).toBeNull());
     noDeleteEmitted();
+  });
+
+  // ── Archived gradebook: review/manual grading stays; B2B participation controls hide ──
+  it("A: an archived assignment's gradebook keeps the review control but hides the B2B participation controls", async () => {
+    const r = await mount();
+    fireEvent.click(r.getByText(/المؤرشفة/));
+    const row = (await r.findByText("واجب مؤرشف")).closest(".assignment-row") as HTMLElement;
+    fireEvent.click(within(row).getByText(/سجل العلامات/));
+    await r.findByText(/سجل علامات:/);          // gradebook opened
+    await r.findByText("طالب");                   // student row rendered
+    expect(r.getByText(/تصحيح \/ تفاصيل/)).toBeTruthy();   // manual grading / review kept
+    expect(r.queryByText(/منح محاولة إضافية/)).toBeNull();
+    expect(r.queryByText("إعادة فتح للطالب")).toBeNull();
+    expect(r.queryByText(/تمديد الموعد/)).toBeNull();
+  });
+
+  it("B: archiving an assignment whose gradebook is open hides the B2B controls immediately (review stays)", async () => {
+    const r = await mount();
+    fireEvent.click(within(rowOf(r, "واجب منشور")).getByText(/سجل العلامات/));
+    await r.findByText("طالب");
+    expect(r.getByText(/منح محاولة إضافية/)).toBeTruthy();   // published: controls present
+    fireEvent.click(within(rowOf(r, "واجب منشور")).getByText("أرشفة"));
+    await waitFor(() => expect(posts.some(p => p.action === "archive")).toBe(true));
+    await waitFor(() => expect(r.queryByText(/منح محاولة إضافية/)).toBeNull()); // controls gone
+    expect(r.getByText(/تصحيح \/ تفاصيل/)).toBeTruthy();      // review still available
+  });
+
+  it("C: restoring an assignment whose archived gradebook is open brings the B2B controls back", async () => {
+    const r = await mount();
+    fireEvent.click(r.getByText(/المؤرشفة/));
+    const row = (await r.findByText("واجب مؤرشف")).closest(".assignment-row") as HTMLElement;
+    fireEvent.click(within(row).getByText(/سجل العلامات/));
+    await r.findByText("طالب");
+    expect(r.queryByText(/منح محاولة إضافية/)).toBeNull();    // archived: hidden
+    fireEvent.click(within(rowOf(r, "واجب مؤرشف")).getByText("استعادة"));
+    await waitFor(() => expect(posts.some(p => p.action === "restore")).toBe(true));
+    await waitFor(() => expect(r.queryByText(/منح محاولة إضافية/)).not.toBeNull()); // controls back
   });
 });

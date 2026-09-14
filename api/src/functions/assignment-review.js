@@ -38,14 +38,17 @@ function rebuildAttempt(attempt){
  else{score=0;for(const s of scoreById.values())score+=s;}
  attempt.score=round(score);attempt.manualReviewMarks=round(remaining);attempt.totalMarks=round(attempt.totalMarks);attempt.percentage=attempt.totalMarks?round(attempt.score/attempt.totalMarks*100):0;attempt.finalized=remaining===0;return attempt;
 }
-app.http("assignmentReview",{methods:["GET","POST"],authLevel:"anonymous",route:"assignment-review",handler:async request=>{
- try{const auth=requireBuilderAuth(request);if(!auth.ok)return auth.response;const c=getContainer();
+// `deps` is an optional dependency-injection seam for unit tests (production passes nothing, so the real
+// implementations are used). It does not change runtime behavior or the grading logic.
+async function handler(request,deps={}){
+ const authFn=deps.requireBuilderAuth||requireBuilderAuth,getC=deps.getContainer||getContainer,dl=deps.downloadJsonOrNull||downloadJsonOrNull,mut=deps.mutateJsonWithRetry||mutateJsonWithRetry,rec=deps.recordAuditEvent||recordAuditEvent,ach=deps.recordAchievementIfEligible||recordAchievementIfEligible;
+ try{const auth=authFn(request);if(!auth.ok)return auth.response;const c=getC();
   if(request.method==="GET"){
    const u=new URL(request.url),assignmentId=String(u.searchParams.get("assignmentId")||""),studentId=String(u.searchParams.get("studentId")||""),attemptNumber=Math.max(1,Number(u.searchParams.get("attemptNumber")||1));
    if(!assignmentId||!studentId)return {status:400,jsonBody:{ok:false,error:"assignmentId and studentId are required."}};
-   const assignment=await downloadJsonOrNull(c,AP+assignmentId+".json"),student=await downloadJsonOrNull(c,UP+studentId+".json");
+   const assignment=await dl(c,AP+assignmentId+".json"),student=await dl(c,UP+studentId+".json");
    if(!assignment||!student)return {status:404,jsonBody:{ok:false,error:"لم يتم العثور على بيانات المحاولة."}};
-   const submission=await downloadJsonOrNull(c,SP+assignmentId+"/"+studentId+".json");
+   const submission=await dl(c,SP+assignmentId+"/"+studentId+".json");
    if(!submission)return {status:404,jsonBody:{ok:false,error:"لم يتم العثور على بيانات المحاولة."}};
    const sameClass=String(student.classId||"")===String(assignment.classId||"");
    if(!sameClass&&!historicalSubmissionProvesOwnership(submission,assignmentId,studentId,String(assignment.classId||"")))return {status:403,jsonBody:{ok:false,error:"الطالب لا ينتمي إلى صف هذا الواجب."}};
@@ -56,17 +59,17 @@ app.http("assignmentReview",{methods:["GET","POST"],authLevel:"anonymous",route:
   }
   let b={};try{b=await request.json()}catch{}if(String(b.action)!=="saveReview")return {status:400,jsonBody:{ok:false,error:"Unsupported review action."}};
   const assignmentId=String(b.assignmentId||""),studentId=String(b.studentId||""),attemptNumber=Math.max(1,Number(b.attemptNumber||1));if(!assignmentId||!studentId)return {status:400,jsonBody:{ok:false,error:"assignmentId and studentId are required."}};
-  const reviewAssignment=await downloadJsonOrNull(c,AP+assignmentId+".json");if(!reviewAssignment)return {status:404,jsonBody:{ok:false,error:"الواجب غير موجود."}};
-  const reviewStudent=await downloadJsonOrNull(c,UP+studentId+".json");if(!reviewStudent)return {status:404,jsonBody:{ok:false,error:"الطالب غير موجود."}};
+  const reviewAssignment=await dl(c,AP+assignmentId+".json");if(!reviewAssignment)return {status:404,jsonBody:{ok:false,error:"الواجب غير موجود."}};
+  const reviewStudent=await dl(c,UP+studentId+".json");if(!reviewStudent)return {status:404,jsonBody:{ok:false,error:"الطالب غير موجود."}};
   const name=SP+assignmentId+"/"+studentId+".json";
-  const existingSubmission=await downloadJsonOrNull(c,name);
+  const existingSubmission=await dl(c,name);
   if(!existingSubmission)return {status:404,jsonBody:{ok:false,error:"التسليم غير موجود."}};
   const reviewSameClass=String(reviewStudent.classId||"")===String(reviewAssignment.classId||"");
   if(!reviewSameClass&&!historicalSubmissionProvesOwnership(existingSubmission,assignmentId,studentId,String(reviewAssignment.classId||"")))return {status:403,jsonBody:{ok:false,error:"الطالب لا ينتمي إلى صف هذا الواجب."}};
   const incoming=b.overrides&&typeof b.overrides==="object"?b.overrides:{},teacherFeedback=String(b.teacherFeedback||"").trim(),reviewedAt=new Date().toISOString();
   let resultOut=null,appliedCount=0;
   try{
-   await mutateJsonWithRetry(c,name,current=>{
+   await mut(c,name,current=>{
     if(!current){const err=new Error("التسليم غير موجود.");err.httpStatus=404;throw err}
     const attempts=Array.isArray(current.attempts)?current.attempts:[],index=attempts.findIndex(x=>Number(x.attemptNumber)===attemptNumber);
     if(index<0){const err=new Error("المحاولة غير موجودة.");err.httpStatus=404;throw err}
@@ -85,11 +88,13 @@ app.http("assignmentReview",{methods:["GET","POST"],authLevel:"anonymous",route:
    throw e;
   }
   if(appliedCount>0){
-   await recordAuditEvent(c,{actor:auth.user?.sub,action:"assignment.manualGradeOverride",targetType:"student",targetId:studentId,targetLabel:String(reviewStudent.displayName||reviewStudent.code||""),details:{assignmentId,attemptNumber,overriddenQuestions:appliedCount,newScore:resultOut?.score}});
+   await rec(c,{actor:auth.user?.sub,action:"assignment.manualGradeOverride",targetType:"student",targetId:studentId,targetLabel:String(reviewStudent.displayName||reviewStudent.code||""),details:{assignmentId,attemptNumber,overriddenQuestions:appliedCount,newScore:resultOut?.score}});
   }
   if(resultOut?.finalized){
-   await recordAchievementIfEligible(c,{classId:reviewAssignment.classId,studentId,studentDisplayName:reviewStudent.displayName,assignmentId,assignmentTitle:reviewAssignment.title,percentage:resultOut.percentage,shareAchievements:reviewStudent.shareAchievements});
+   await ach(c,{classId:reviewAssignment.classId,studentId,studentDisplayName:reviewStudent.displayName,assignmentId,assignmentTitle:reviewAssignment.title,percentage:resultOut.percentage,shareAchievements:reviewStudent.shareAchievements});
   }
   return {status:200,jsonBody:{ok:true,result:resultOut}};
  }catch{return {status:500,jsonBody:{ok:false,error:"تعذر تنفيذ عملية التصحيح حاليًا."}}}
-}});
+}
+app.http("assignmentReview",{methods:["GET","POST"],authLevel:"anonymous",route:"assignment-review",handler});
+module.exports={handler,historicalSubmissionProvesOwnership};

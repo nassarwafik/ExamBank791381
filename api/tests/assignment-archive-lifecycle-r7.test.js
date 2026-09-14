@@ -3,6 +3,8 @@ import { handler as manageHandler } from "../src/functions/manage-assignments.js
 import { handler as submissionHandler } from "../src/functions/student-submission.js";
 import { handler as assignmentHandler } from "../src/functions/student-assignment.js";
 import { handler as resultsHandler } from "../src/functions/assignment-results.js";
+import { handler as dashboardHandler } from "../src/functions/student-dashboard.js";
+import { handler as reviewHandler } from "../src/functions/assignment-review.js";
 import { normalizeAssignmentStatus, applyAssignmentArchive, applyAssignmentRestore } from "../src/lib/assignment-lifecycle.js";
 
 // Roadmap #7 — assignment archive/restore/purge lifecycle. Deterministic tests over an in-memory blob
@@ -230,6 +232,43 @@ describe("R7 purge", () => {
 });
 function postWithRacing(body, deps) { return manageHandler({ method: "POST", url: "http://x/assignments", params: {}, json: async () => body }, deps); }
 
+describe("R7 archive active-attempt race (authoritative in-mutation re-check)", () => {
+  it("AK: an active attempt that appears AFTER the UX pre-check but before the commit forces 409 (assignment stays published, attempt untouched)", async () => {
+    seedAssignment({ status: "published" });
+    // A live active attempt already exists in storage, but the fast UX pre-check listing is made to
+    // report ZERO first (as if the attempt started a moment later). The authoritative re-list INSIDE the
+    // archive mutation must still see it and refuse to archive without confirmActiveAttempts.
+    const active = { assignmentId: AID, studentId: "s2", classId: "c1", attempts: [], activeAttempt: { attemptNumber: 1, startedAt: "2026-01-01T10:00:00.000Z", endsAt: "2026-01-01T11:00:00.000Z", status: "started" } };
+    store.set(SUB + "s2.json", structuredClone(active));
+    let lsCalls = 0, lbnCalls = 0;
+    const racing = manageDeps({
+      // First call (UX pre-check) hides the attempt; every later call (in-mutation) reads live storage.
+      listJson: async (_c, prefix) => { lsCalls++; if (lsCalls === 1) return []; return [...store.entries()].filter(([k]) => k.startsWith(prefix) && k.endsWith(".json")).map(([, v]) => structuredClone(v)); },
+      listBlobNames: async (_c, prefix) => { lbnCalls++; if (lbnCalls === 1) return []; return [...store.keys()].filter(k => k.startsWith(prefix) && k.endsWith(".json")); }
+    });
+    const r = await postWithRacing({ action: "archive", assignmentId: AID }, racing);
+    expect(r.status).toBe(409);
+    expect(r.jsonBody.requiresConfirmation).toBe(true);
+    expect(r.jsonBody.impact.activeAttempts).toBe(1);
+    expect(store.get(AP).status).toBe("published");        // never archived without confirmation
+    expect(store.get(SUB + "s2.json")).toEqual(active);    // active attempt untouched
+  });
+  it("AL: with confirmActiveAttempts the same race archives (still never touching the attempt)", async () => {
+    seedAssignment({ status: "published" });
+    const active = { assignmentId: AID, studentId: "s2", classId: "c1", attempts: [], activeAttempt: { attemptNumber: 1, startedAt: "2026-01-01T10:00:00.000Z", endsAt: "2026-01-01T11:00:00.000Z", status: "started" } };
+    store.set(SUB + "s2.json", structuredClone(active));
+    let lsCalls = 0, lbnCalls = 0;
+    const racing = manageDeps({
+      listJson: async (_c, prefix) => { lsCalls++; if (lsCalls === 1) return []; return [...store.entries()].filter(([k]) => k.startsWith(prefix) && k.endsWith(".json")).map(([, v]) => structuredClone(v)); },
+      listBlobNames: async (_c, prefix) => { lbnCalls++; if (lbnCalls === 1) return []; return [...store.keys()].filter(k => k.startsWith(prefix) && k.endsWith(".json")); }
+    });
+    const r = await postWithRacing({ action: "archive", assignmentId: AID, confirmActiveAttempts: true }, racing);
+    expect(r.status).toBe(200);
+    expect(store.get(AP).status).toBe("archived");
+    expect(store.get(SUB + "s2.json")).toEqual(active);
+  });
+});
+
 // ── student-submission — archived/draft blocks writes; GET stays readable ────
 const SP = "platform/submissions/" + AID + "/stu-1.json";
 function subDeps() {
@@ -262,6 +301,22 @@ describe("R7 student-submission archived gate", () => {
       expect(r.status).toBe(403); expect(r.jsonBody.error).toBe("الواجب غير متاح حاليًا.");
     });
   }
+  it("O2: student-write race — assignment is published at request load but ARCHIVED before the mutation commit => 403, nothing written", async () => {
+    const { s, deps } = subDeps();
+    // Published when the request loads it (passes the request-start gate), but the authoritative re-read
+    // INSIDE the mutation must see the freshly-archived state and refuse to write.
+    s.set(AP, { assignmentId: AID, classId: "c1", status: "published", openAt: "", dueAt: "", maxAttempts: 1, durationMinutes: 60, attemptModelVersion: 2, examSnapshot: {} });
+    let apReads = 0;
+    const raceDeps = { ...deps, downloadJsonOrNull: async (_c, k) => {
+      if (k === AP) { apReads++; return apReads === 1 ? structuredClone(s.get(AP)) : { ...structuredClone(s.get(AP)), status: "archived" }; }
+      return s.has(k) ? structuredClone(s.get(k)) : null;
+    } };
+    const r = await sCall(raceDeps, "startAttempt");
+    expect(r.status).toBe(403);
+    expect(r.jsonBody.error).toBe("الواجب غير متاح حاليًا.");
+    expect(s.has(SP)).toBe(false);           // no submission blob was written
+    expect(apReads).toBeGreaterThanOrEqual(2); // request-start read + in-mutation re-read
+  });
 });
 
 describe("R7 student-assignment archived body gate", () => {
@@ -307,4 +362,67 @@ describe("R7 assignment-results archived block", () => {
       expect(r.jsonBody.error).toContain("مؤرشف");
     });
   }
+});
+
+// ── student-dashboard — archived assignments are excluded from the student's list ────
+describe("R7 student-dashboard excludes archived", () => {
+  function dashDeps() {
+    const s = new Map();
+    s.set("platform/users/stu-1.json", { userId: "stu-1", active: true, classId: "c1", displayName: "أحمد", code: "S1" });
+    s.set("platform/classes/c1.json", { classId: "c1", status: "active", name: "الحادي عشر", grade: "11" });
+    s.set("platform/assignments/pub1.json", { assignmentId: "pub1", classId: "c1", status: "published", title: "منشور", openAt: "", dueAt: "", maxAttempts: 1, durationMinutes: 0, attemptModelVersion: 2, questionCount: 1, totalMarks: 10 });
+    s.set("platform/assignments/arc1.json", { assignmentId: "arc1", classId: "c1", status: "archived", archivedFromStatus: "published", title: "مؤرشف", openAt: "", dueAt: "", maxAttempts: 1, durationMinutes: 0, attemptModelVersion: 2, questionCount: 1, totalMarks: 10 });
+    return { s, deps: {
+      requireStudentAuth: () => ({ ok: true, user: { sub: "stu-1" } }), getContainer: () => ({}),
+      downloadJsonOrNull: async (_c, k) => (s.has(k) ? structuredClone(s.get(k)) : null),
+      listJson: async (_c, prefix) => [...s.entries()].filter(([k]) => k.startsWith(prefix) && k.endsWith(".json")).map(([, v]) => structuredClone(v))
+    } };
+  }
+  it("AM: the dashboard lists only the published assignment, never the archived one", async () => {
+    const { deps } = dashDeps();
+    const r = await dashboardHandler({ method: "GET", url: "http://x/student-dashboard", json: async () => ({}) }, deps);
+    expect(r.status).toBe(200);
+    const ids = r.jsonBody.assignments.map(a => a.assignmentId);
+    expect(ids).toContain("pub1");
+    expect(ids).not.toContain("arc1");
+    expect(r.jsonBody.stats.assigned).toBe(1);
+  });
+});
+
+// ── assignment-review — teacher review/manual grading stays fully available while archived ────
+describe("R7 assignment-review works while archived", () => {
+  const RAID = "asg1";
+  const RAP = "platform/assignments/" + RAID + ".json";
+  const RSP = "platform/submissions/" + RAID + "/stu-1.json";
+  function revDeps(extra = {}) {
+    const s = new Map();
+    s.set(RAP, { assignmentId: RAID, classId: "c1", status: "archived", archivedFromStatus: "published", title: "واجب", totalMarks: 10, examSnapshot: { title: "امتحان", sections: [{ id: "sec1", title: "", questions: [{ text: "Q1", presentationType: "shortAnswer", marks: 10, answer: { text: "A" } }] }] } });
+    s.set("platform/users/stu-1.json", { userId: "stu-1", active: true, classId: "c1", displayName: "أحمد", code: "S1" });
+    s.set(RSP, { assignmentId: RAID, studentId: "stu-1", classId: "c1", attempts: [{ attemptNumber: 1, submittedAt: "T", score: 0, totalMarks: 10, percentage: 0, manualReviewMarks: 10, finalized: false, questionGrades: [{ questionId: "q1", maxMarks: 10, score: 0, manualReview: true }], answers: { q1: { kind: "text", value: "student text" } }, manualOverrides: {} }], activeAttempt: null });
+    const audits = [];
+    return { s, audits, deps: {
+      requireBuilderAuth: () => ({ ok: true, user: { sub: "t1" } }), getContainer: () => ({}),
+      downloadJsonOrNull: async (_c, k) => (s.has(k) ? structuredClone(s.get(k)) : null),
+      mutateJsonWithRetry: async (_c, k, fn) => { const cur = s.has(k) ? structuredClone(s.get(k)) : null; const next = await fn(cur); s.set(k, next); return next; },
+      StorageConflictError, recordAuditEvent: async (_c, ev) => { audits.push(ev); }, recordAchievementIfEligible: async () => {},
+      ...extra
+    } };
+  }
+  it("AN: GET review of an archived assignment still returns the attempt and its questions", async () => {
+    const { deps } = revDeps();
+    const r = await reviewHandler({ method: "GET", url: "http://x/assignment-review?assignmentId=" + RAID + "&studentId=stu-1&attemptNumber=1", json: async () => ({}) }, deps);
+    expect(r.status).toBe(200);
+    expect(r.jsonBody.attempt.attemptNumber).toBe(1);
+    expect(r.jsonBody.questions.length).toBe(1);
+  });
+  it("AO: POST manual grading (saveReview) on an archived assignment applies the override and finalizes", async () => {
+    const { s, audits, deps } = revDeps();
+    const r = await reviewHandler({ method: "POST", url: "http://x/assignment-review", json: async () => ({ action: "saveReview", assignmentId: RAID, studentId: "stu-1", attemptNumber: 1, overrides: { q1: { score: 8, comment: "جيد" } } }) }, deps);
+    expect(r.status).toBe(200);
+    expect(r.jsonBody.result.score).toBe(8);
+    expect(r.jsonBody.result.finalized).toBe(true);
+    // The persisted attempt carries the manual override — grading is unaffected by archive status.
+    expect(s.get(RSP).attempts[0].score).toBe(8);
+    expect(audits.some(e => e.action === "assignment.manualGradeOverride")).toBe(true);
+  });
 });
