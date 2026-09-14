@@ -15,6 +15,7 @@ const {
   isConcurrencyConflict
 } = require("../lib/platform-storage");
 const { recordAuditEvent } = require("../lib/audit-log");
+const { deriveGradingStatus } = require("../lib/grading-status");
 const { FEED_PREFIX, REACTIONS } = require("../lib/achievement-feed");
 const { withCredentialLock, CredentialLockBusyError } = require("../lib/student-credential-lock");
 
@@ -608,7 +609,11 @@ async function buildStudentProfile(container, userId) {
         latestScore: latest ? Number(latest.score || 0) : null,
         latestPercentage: latest ? Number(latest.percentage || 0) : null,
         submittedAt: latest ? String(latest.submittedAt || "") : "",
-        finalized: latest ? latest.finalized === true : false
+        // Canonical, read-time grading authority (never derived from score/percentage by the UI). `finalized`
+        // is echoed as the historical RAW value and omitted when the stored attempt never had it — never
+        // fabricated to false, which would contradict a legacy result whose gradingStatus normalizes to final.
+        gradingStatus: deriveGradingStatus(latest),
+        ...(latest && latest.finalized !== undefined ? { finalized: latest.finalized } : {})
       });
     }
 
@@ -627,7 +632,9 @@ async function buildStudentProfile(container, userId) {
         score: Number(latest.score || 0),
         totalMarks: Number(latest.totalMarks || 0),
         percentage: Number(latest.percentage || 0),
-        finalized: latest.finalized === true,
+        // Same canonical grading authority; `finalized` echoed raw (omitted when the legacy attempt lacked it).
+        gradingStatus: deriveGradingStatus(latest),
+        ...(latest.finalized !== undefined ? { finalized: latest.finalized } : {}),
         isCurrentClassAssignment: String(assignment.classId || "") === currentClassId,
         dueAt: String(assignment.dueAt || ""),
         dueAtOverride: submission?.dueAtOverride ? String(submission.dueAtOverride) : null,
@@ -1109,4 +1116,4 @@ async function manageStudentsHandler(request, deps = {}, obs = null) {
 app.http("manageStudents", { methods: ["GET", "POST"], authLevel: "anonymous", route: "students", handler: withObservability("students", manageStudentsHandler) });
 
 // Roadmap #8 — exported for unit tests (authVersion on create / password reset / update). Additive.
-module.exports = { createStudentRecord, resetStudentPassword, handler: manageStudentsHandler };
+module.exports = { createStudentRecord, resetStudentPassword, buildStudentProfile, handler: manageStudentsHandler };

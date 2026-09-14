@@ -6,6 +6,7 @@ import {IconSearch,IconDownload,IconUpload,IconPlus,IconChevronDown,IconMore,Ico
 import {MEDAL_COLORS,MEDAL_LABELS,medalTier} from "./medals";
 import {normalizeClassStatus} from "./classLifecycle";
 import {getClassProgramCodes} from "./projects/classPrograms";
+import {resolveGradingStatus,type GradingStatus} from "./gradingStatus";
 import {type CredentialBatch,openCredentialBatch,toggleCredentialBatchCollapsed,credentialBatchVisible,buildCredentialsDownload} from "./credentialBatch";
 
 type WorkspaceTab="dashboard"|"students"|"assignments";
@@ -21,12 +22,12 @@ type Credential={userId?:string;firstName?:string;familyName?:string;displayName
 type BulkStudent={firstName:string;familyName:string;identityNumber:string};
 type BulkError={index?:number;firstName?:string;familyName?:string;identityNumber?:string;displayName?:string;code?:string;error:string;userId?:string};
 type ImportPreviewRow={index:number;firstName:string;familyName:string;identityNumber:string;status:"valid"|"duplicate"|"invalid";error:string;existingStudent?:{userId:string;displayName:string;classId:string;className:string;active:boolean;archived:boolean}|null};
-type SubmittedAssignment={assignmentId:string;title:string;submittedAt:string;latestAttemptNumber:number;attemptsUsed:number;allowedAttempts:number;score:number;totalMarks:number;percentage:number;finalized:boolean;isCurrentClassAssignment:boolean;dueAt:string;dueAtOverride:string|null;effectiveDueAt:string};
+type SubmittedAssignment={assignmentId:string;title:string;submittedAt:string;latestAttemptNumber:number;attemptsUsed:number;allowedAttempts:number;score:number;totalMarks:number;percentage:number;gradingStatus?:GradingStatus;finalized?:boolean;isCurrentClassAssignment:boolean;dueAt:string;dueAtOverride:string|null;effectiveDueAt:string};
 type StudentProfile={
  student:Student;
  classroom:{classId:string;name:string;grade:string;schoolYear:string}|null;
  stats:{assigned:number;completed:number;pending:number;average:number|null;lastLoginAt:string};
- assignments:Array<{assignmentId:string;title:string;status:string;dueAt:string;totalMarks:number;attemptsUsed:number;latestScore:number|null;latestPercentage:number|null;submittedAt:string;finalized:boolean}>;
+ assignments:Array<{assignmentId:string;title:string;status:string;dueAt:string;totalMarks:number;attemptsUsed:number;latestScore:number|null;latestPercentage:number|null;submittedAt:string;gradingStatus?:GradingStatus;finalized?:boolean}>;
  submittedAssignmentsCount:number;
  submittedAssignments:SubmittedAssignment[];
 };
@@ -809,7 +810,7 @@ function TeacherPlatform({token,currentExam,workspaceTab,onCopyLibraryExamToBuil
       <div className="students-table-wrap"><table className="students-table">
        <thead><tr><th>الواجب</th><th>الحالة</th><th>المحاولات</th><th>العلامة</th><th>النسبة</th><th>آخر تسليم</th></tr></thead>
        <tbody>{profile.assignments.map(a=><tr key={a.assignmentId}>
-        <td>{a.title}</td><td>{a.latestScore===null?"لم يُحل":a.finalized?"مصحح":"بانتظار المراجعة"}</td><td>{a.attemptsUsed}</td>
+        <td>{a.title}</td><td>{a.latestScore===null?"لم يُحل":resolveGradingStatus(a)==="final"?"مصحح":"بانتظار المراجعة"}</td><td>{a.attemptsUsed}</td>
         <td>{a.latestScore===null?"—":a.latestScore+"/"+a.totalMarks}</td><td>{a.latestPercentage===null?"—":a.latestPercentage+"%"}</td><td>{a.submittedAt?fmtDate(a.submittedAt):"—"}</td>
        </tr>)}{!profile.assignments.length&&<tr><td colSpan={6}>لا توجد واجبات لهذا الصف.</td></tr>}</tbody>
       </table></div>
@@ -829,7 +830,7 @@ function TeacherPlatform({token,currentExam,workspaceTab,onCopyLibraryExamToBuil
          <td>{item.submittedAt?fmtDate(item.submittedAt):"—"}</td>
          <td>{item.score+"/"+item.totalMarks+" - "+item.percentage+"%"}</td>
          <td>{item.attemptsUsed>1?"المحاولات: "+item.attemptsUsed:item.attemptsUsed}</td>
-         <td>{item.finalized?"تم التسليم":"بانتظار المراجعة"}</td>
+         <td>{resolveGradingStatus(item)==="final"?"تم التسليم":"بانتظار المراجعة"}</td>
          <td><div className="student-row-actions">
           <button onClick={()=>setReviewTarget({assignmentId:item.assignmentId,studentId:history.student.userId,attemptNumber:item.latestAttemptNumber})}>👁 فحص الوظيفة</button>
           {item.isCurrentClassAssignment?<>
