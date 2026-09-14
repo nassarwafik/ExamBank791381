@@ -33,6 +33,10 @@ async function handler(request,deps={}){
   const a=await dl(c,AP+id+".json");if(!a||String(a.classId)!==String(student.classId))return {status:404,jsonBody:{ok:false,error:"الواجب غير متاح."}};const name=SP+id+"/"+student.userId+".json";
   const s=await dl(c,name);
   if(request.method==="GET"){return {status:200,jsonBody:{ok:true,state:state(a,s||defaultSubmission(id,student))}}}
+  // Roadmap #7: ALL student write mutations (startAttempt/saveDraft/submit/finalizeTimedOutAttempt) require
+  // a PUBLISHED assignment. A draft or archived assignment blocks every mutation BEFORE any grading/write.
+  // The GET above stays readable so a student can still review a historical submission of an archived task.
+  if(a.status!=="published")return {status:403,jsonBody:{ok:false,error:"الواجب غير متاح حاليًا."}};
   let b={};try{b=await request.json()}catch{}const action=String(b.action||"saveDraft");
 
   // ── startAttempt — server stamps startedAt (+ endsAt for TIMED). Works for TIMED and UNTIMED v2

@@ -4,6 +4,7 @@ const {requireBuilderAuth}=require("../lib/builder-auth");
 const {getContainer,downloadJsonOrNull,listJson,mutateJsonWithRetry,StorageConflictError}=require("../lib/platform-storage");
 const {recordAuditEvent}=require("../lib/audit-log");
 const {timerState,normalizeEndReason,extendRejection,activeAttemptOf,toMs}=require("../lib/assignment-availability");
+const {normalizeAssignmentStatus}=require("../lib/assignment-lifecycle");
 const AP="platform/assignments/",SP="platform/submissions/",UP="platform/users/";
 const CONFLICT_MESSAGE="حدث تعارض مؤقت أثناء حفظ البيانات. حاول مرة أخرى.";
 // Additive audit view of a completed attempt for the teacher gradebook (B2A #20 / B2B #16). startedAt/
@@ -26,6 +27,9 @@ async function loadTarget(dl,c,id,studentId){
  const a=await dl(c,AP+id+".json");if(!a)return {error:{status:404,error:"الواجب غير موجود."}};
  const student=await dl(c,UP+studentId+".json");if(!student)return {error:{status:404,error:"الطالب غير موجود."}};
  if(String(student.classId||"")!==String(a.classId||""))return {error:{status:403,error:"الطالب لا ينتمي إلى صف هذا الواجب."}};
+ // Roadmap #7: an archived assignment's attempt controls (allowRetry/setDueAtOverride/reopenStudent/
+ // extendActiveAttempt) are blocked — restore it first. Read paths (GET results/review) stay available.
+ if(normalizeAssignmentStatus(a)==="archived")return {error:{status:409,error:"الواجب مؤرشف. استعد الواجب أولًا قبل تعديل محاولات الطلاب."}};
  return {a,student,name:SP+id+"/"+studentId+".json"};
 }
 // `deps` is an optional dependency-injection seam for unit tests (production passes nothing).
