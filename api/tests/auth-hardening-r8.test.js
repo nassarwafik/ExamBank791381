@@ -905,6 +905,95 @@ describe("R8 FINAL §rename — credential lock serializes rename vs reset per u
   });
 });
 
+// ── FINAL §stale-gate — a pre-lock classification cannot smuggle an unlocked auth-path move ──
+// Every action:"update" now runs under the per-userId credential lock, and INSIDE the lock the current
+// authoritative code is compared with the code this request read BEFORE the lock (`oldCode`). If a concurrent
+// op changed the code while we waited, the request is stale and returns a deterministic 409 — it never moves
+// the auth path from outdated state. These force the actual interleaving with a barrier that pauses request A
+// at its lease acquisition (BEFORE it holds the lock) so request B can take the lock, complete, and release;
+// A then acquires the same lock and must detect the stale code.
+describe("R8 FINAL §stale-gate — stale update classified against an outdated code is refused", () => {
+  const OLD = "111111111", NEW1 = "222222222", NEW2 = "333333333";
+  const authNameFor = code => "platform/auth/" + createdCodeHash(code) + ".json";
+  const credLockName = userId => "platform/locks/credential-" + userId + ".lock";
+  async function seedStudent(c, identity) {
+    c._blobs.set("platform/classes/c1.json", { body: JSON.stringify({ classId: "c1", name: "الصف", active: true, studentIds: [] }), etag: '"c"' });
+    const { student } = await createStudentRecord(c, { classId: "c1", name: "الصف", active: true, studentIds: [] }, { firstName: "أ", familyName: "ب", identityNumber: identity, password: "origpass1" }, {});
+    return student;
+  }
+  const updateReq = (userId, fields) => ({ method: "POST", url: "http://x/students", json: async () => ({ action: "update", userId, firstName: "أ", familyName: "ب", classId: "c1", ...fields }) });
+  const deps = (c, audits = []) => ({ requireBuilderAuth: () => ({ ok: true, user: { sub: "t1" } }), container: c, recordAuditEvent: async (_c, ev) => audits.push(ev) });
+  const studentOf = (c, userId) => JSON.parse(c._blobs.get("platform/users/" + userId + ".json").body);
+  const authAt = (c, code) => { const b = c._blobs.get(authNameFor(code)); return b ? JSON.parse(b.body) : null; };
+  // Pause the FIRST credential-lease acquisition (request A) until released, so B can take the lock meanwhile.
+  function armLeaseBarrier(c, userId) {
+    let first = true; let release; const barrier = new Promise(r => { release = r; });
+    const origGetBlob = c.getBlobClient.bind(c);
+    c.getBlobClient = name => {
+      const client = origGetBlob(name);
+      if (name === credLockName(userId)) {
+        return {
+          download: client.download.bind(client),
+          deleteIfExists: client.deleteIfExists.bind(client),
+          getBlobLeaseClient: () => {
+            const lease = client.getBlobLeaseClient();
+            return { acquireLease: async s => { if (first) { first = false; await barrier; } return lease.acquireLease(s); }, releaseLease: () => lease.releaseLease() };
+          }
+        };
+      }
+      return client;
+    };
+    return () => release();
+  }
+
+  it("TEST A — a stale PURE name/class update, after a concurrent rename, returns 409 and does NOT recreate the OLD auth", async () => {
+    const c = makeBlobContainer(); const audits = []; const student = await seedStudent(c, OLD);
+    const release = armLeaseBarrier(c, student.userId);
+    const pA = manageStudentsHandler(updateReq(student.userId, { firstName: "ج", identityNumber: OLD }), deps(c, audits)); // pure edit, code stays OLD; pauses at lease
+    await new Promise(r => setTimeout(r, 20));                                    // A has snapshotted OLD and is waiting for the lock
+    const rB = await manageStudentsHandler(updateReq(student.userId, { identityNumber: NEW1 }), deps(c)); // B renames OLD → NEW1 under the lock
+    expect(rB.status).toBe(200);
+    release();                                                                    // A now acquires the (freed) lock
+    const rA = await pA;
+    expect(rA.status).toBe(409);                                                  // stale: current code NEW1 ≠ snapshot OLD
+    expect(rA.jsonBody.passwordChanged).toBeUndefined();
+    const s = studentOf(c, student.userId);
+    expect(s.code).toBe(NEW1);                                                    // B's rename stands
+    expect(authAt(c, NEW1)).toBeTruthy();
+    expect(authAt(c, OLD)).toBeNull();                                            // OLD auth NOT recreated by stale A
+    expect(s.authVersion).toBe(authAt(c, NEW1).authVersion);                      // consistent
+  });
+
+  it("TEST B — a stale rename (based on OLD) after a newer rename returns 409 and leaves the newer state untouched", async () => {
+    const c = makeBlobContainer(); const student = await seedStudent(c, OLD);
+    const release = armLeaseBarrier(c, student.userId);
+    const pA = manageStudentsHandler(updateReq(student.userId, { identityNumber: NEW1 }), deps(c)); // A intends OLD → NEW1; pauses at lease
+    await new Promise(r => setTimeout(r, 20));
+    const rB = await manageStudentsHandler(updateReq(student.userId, { identityNumber: NEW2 }), deps(c)); // B renames OLD → NEW2 first
+    expect(rB.status).toBe(200);
+    release();
+    const rA = await pA;
+    expect(rA.status).toBe(409);                                                  // stale rename refused
+    const s = studentOf(c, student.userId);
+    expect(s.code).toBe(NEW2);                                                    // B's newer rename intact
+    expect(authAt(c, NEW2)).toBeTruthy();
+    expect(authAt(c, NEW1)).toBeNull();                                           // A's target never created
+    expect(authAt(c, OLD)).toBeNull();                                            // OLD not resurrected
+    expect(s.authVersion).toBe(authAt(c, NEW2).authVersion);
+  });
+
+  it("TEST C — an ordinary name/class update with no concurrent code change still succeeds normally", async () => {
+    const c = makeBlobContainer(); const student = await seedStudent(c, OLD);
+    const r = await manageStudentsHandler(updateReq(student.userId, { firstName: "ج", identityNumber: OLD }), deps(c));
+    expect(r.status).toBe(200);
+    const s = studentOf(c, student.userId);
+    expect(s.firstName).toBe("ج");                                               // name applied
+    expect(s.code).toBe(OLD);                                                    // code unchanged
+    expect(authAt(c, OLD)).toBeTruthy();                                         // auth still at the OLD path
+    expect(verifyPassword("origpass1", authAt(c, OLD).salt, authAt(c, OLD).passwordHash)).toBe(true);
+  });
+});
+
 // ── FINAL §2 — composed per-IP + global reservation is transactional ──────────
 describe("R8 FINAL §2 — out-of-phase buckets do not waste the other dimension's probe", () => {
   function seedOutOfPhase(c, id, ip, now) {

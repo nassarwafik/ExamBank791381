@@ -829,10 +829,13 @@ async function manageStudentsHandler(request, deps = {}) {
         const oldClassId = String(student.classId || "");
         const newPwHash = newPassword ? hashPassword(newPassword) : null;
 
-        // PR#67 final: the credential-affecting mutations (student authVersion bump + auth-doc write, and
-        // especially the RENAME which MOVES the auth blob path) run under the per-student credential lock so
-        // a concurrent reset can never delete a newer credential or resurrect an older password across the
-        // move. The auth path is derived from the CURRENT student RE-READ INSIDE the lock — never from the
+        // PR#67 final: the ENTIRE update mutation (student rewrite + auth-doc write, and especially the
+        // RENAME which MOVES the auth blob path) runs under the per-student credential lock so a concurrent
+        // reset/rename can never delete a newer credential or resurrect an older password across the move.
+        // ALL updates take the lock — not only those a pre-lock snapshot classified as credential-changing:
+        // that classification (newCode vs the snapshot `oldCode`) is itself stale, so a request that looked
+        // like a pure name/class edit can silently become an auth-path move after another request renames the
+        // code. The auth path is derived from the CURRENT student RE-READ INSIDE the lock — never from the
         // pre-lock `student` snapshot. `credentialApplied` reports whether a password change actually became
         // authoritative (a stale op → 409 below, no success/audit).
         let updatedStudentVersion = null;
@@ -841,6 +844,14 @@ async function manageStudentsHandler(request, deps = {}) {
           const cur = await downloadJsonOrNull(container, studentBlobName);
           if (!cur || cur.role !== "student") return { status: 404, jsonBody: { ok: false, error: "الطالب غير موجود." } };
           const curCode = String(cur.code || cur.identityNumber || "");
+          // Stale-snapshot gate: this request classified `newCode` against the code it read BEFORE acquiring
+          // the lock (`oldCode`). If a concurrent op changed the authoritative code while we waited for the
+          // lock, that classification is stale — refuse deterministically rather than move the auth path from
+          // outdated state (which could recreate a deleted auth blob or clobber a newer rename). Login stays
+          // consistent; the caller re-reads and retries.
+          if (studentCodeHash(curCode) !== studentCodeHash(oldCode)) {
+            return { status: 409, headers: { "Cache-Control": "no-store" }, jsonBody: { ok: false, error: "تم تعديل بيانات دخول الطالب في عملية أخرى. حدّث البيانات وأعد المحاولة." } };
+          }
           const curAuthName = AUTH_PREFIX + studentCodeHash(curCode) + ".json";
           const curAuth = await downloadJsonOrNull(container, curAuthName);
           if (!curAuth) return { status: 404, jsonBody: { ok: false, error: "ملف دخول الطالب غير موجود." } };
@@ -896,12 +907,10 @@ async function manageStudentsHandler(request, deps = {}) {
           }
           return null;
         };
-        // A pure name/class edit (no password, no code move) doesn't need the credential lock; anything that
-        // changes the password or moves the auth path does.
-        const credentialChanging = !!newPassword || (studentCodeHash(newCode) !== studentCodeHash(oldCode));
-        const credResult = credentialChanging
-          ? await withCredentialLock(container, userId, runCredentialMutation)
-          : await runCredentialMutation();
+        // Every update runs under the per-student credential lock (see the note above): a pre-lock
+        // classification of "not credential-changing" is unreliable because a concurrent rename can move the
+        // auth path out from under it. Teacher profile updates are infrequent, so the lock cost is negligible.
+        const credResult = await withCredentialLock(container, userId, runCredentialMutation);
         if (credResult && credResult.status) return credResult;
 
         if (oldClassId !== newClassId) {
