@@ -72,6 +72,30 @@ describe("R10/R11 server stale-attempt guard", () => {
     expect(store.doc.draftAnswers.q1).toBe("FRESH");
   });
 
+  it("E: strict identity — boolean/string/float/zero/negative attemptNumber and non-string/empty startedAt all fail closed (409); valid integer+string saves", async () => {
+    const a = modernAssignment(); const startedAt = "2026-01-01T12:00:00.000Z";
+    const bad = [
+      { expectedAttemptNumber: true, expectedStartedAt: startedAt },   // boolean (true→1 must NOT be accepted)
+      { expectedAttemptNumber: "1", expectedStartedAt: startedAt },    // string
+      { expectedAttemptNumber: 1.5, expectedStartedAt: startedAt },    // non-integer
+      { expectedAttemptNumber: 0, expectedStartedAt: startedAt },      // zero
+      { expectedAttemptNumber: -1, expectedStartedAt: startedAt },     // negative
+      { expectedAttemptNumber: 2, expectedStartedAt: 20260101 },       // non-string startedAt
+      { expectedAttemptNumber: 2, expectedStartedAt: "" }              // empty startedAt
+    ];
+    for (const id of bad) {
+      const { store, deps } = makeDeps(a, submissionAttempt2());
+      const res = await handler(req({ action: "saveDraft", answers: { q1: "X" }, ...id }), deps);
+      expect(res.status).toBe(409);
+      expect(store.doc.draftAnswers.q1).toBe("KEEP_ATTEMPT2_DRAFT");   // nothing written
+    }
+    // valid strict identity (integer attemptNumber + exact string startedAt) saves normally
+    const { store, deps } = makeDeps(a, submissionAttempt2());
+    const ok = await handler(req({ action: "saveDraft", answers: { q1: "STRICT_OK" }, expectedAttemptNumber: 2, expectedStartedAt: startedAt }), deps);
+    expect(ok.status).toBe(200);
+    expect(store.doc.draftAnswers.q1).toBe("STRICT_OK");
+  });
+
   it("legacy untimed without asserted identity is unaffected (200)", async () => {
     const a = legacyAssignment();
     // legacy, no active attempt yet → lazy creation; no expected identity sent

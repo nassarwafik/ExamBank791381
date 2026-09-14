@@ -190,10 +190,21 @@ export default function StudentExamPage({token,assignment,studentName,className,
   dirtyAttemptRef.current=attemptId(st);
   setLastSavedAt(String(st.draftSavedAt||""));setSaveError(false);setRetrying(false);setSaving(false);setDirty(false);
  },[]);
+ // For an authoritative resync/reconcile that returns a LIVE active attempt, decide clean-vs-dirty. The SERVER
+ // wins whenever this tab has no unsaved work: a DIFFERENT attempt, OR the SAME attempt while this tab is clean
+ // (revision<=savedRevision) — another tab saved a newer draft, so adopt it via applyServerAttemptState (fresh
+ // draftAnswers/draftSavedAt, reset bookkeeping, no autosave from hydration). ONLY when the SAME attempt has
+ // genuine local unsaved edits do we preserve them and refresh timer/state alone (no cross-tab merge — a clean
+ // stale tab must never overwrite the newer server draft, but real unsaved work is never discarded).
+ const adoptOrKeepActive=useCallback((st:State)=>{
+  const differentAttempt=!sameAttempt(attemptId(st),dirtyAttemptRef.current);
+  const hasLocalUnsaved=revision.current>savedRevision.current;
+  if(differentAttempt||!hasLocalUnsaved){applyServerAttemptState(st)}else{stateRef.current=st;setState(st)}
+ },[applyServerAttemptState]);
  // Resync AUTHORITATIVE server state. Returns the fresh State on success, or null on failure (so callers
  // never act on stale state). SAME active attempt → update timer/state only, PRESERVING legitimate unsaved
  // local answers. DIFFERENT attempt → adopt it via applyServerAttemptState (never keep a cross-attempt snapshot).
- const resync=useCallback(async():Promise<State|null>=>{if(!mountedRef.current||submittingRef.current||finalizingRef.current)return null;try{const st=(await api<{state:State}>()).state;if(!mountedRef.current)return st;const rs=!!st.timed||Number(st.attemptModelVersion||0)>=2||!!st.requiresStart;if(rs){if(st.activeAttempt){if(!sameAttempt(attemptId(st),dirtyAttemptRef.current)){applyServerAttemptState(st)}else{stateRef.current=st;setState(st)}anchorClock(st);setResult(null);setStarted(true);if(st.timed&&st.attemptExpired){void triggerTimeout()}else{setExpired(false)}}else{stateRef.current=st;setState(st);anchorClock(st);setResult(st.latestResult);setStarted(false);setExpired(false)}}else{stateRef.current=st;setState(st);anchorClock(st);setResult(st.latestResult)}return st}catch{return null/* transient resync failure — caller must not act on stale state */}},[applyServerAttemptState]);
+ const resync=useCallback(async():Promise<State|null>=>{if(!mountedRef.current||submittingRef.current||finalizingRef.current)return null;try{const st=(await api<{state:State}>()).state;if(!mountedRef.current)return st;const rs=!!st.timed||Number(st.attemptModelVersion||0)>=2||!!st.requiresStart;if(rs){if(st.activeAttempt){adoptOrKeepActive(st);anchorClock(st);setResult(null);setStarted(true);if(st.timed&&st.attemptExpired){void triggerTimeout()}else{setExpired(false)}}else{applyServerAttemptState(st);anchorClock(st);setResult(st.latestResult);setStarted(false);setExpired(false)}}else{stateRef.current=st;setState(st);anchorClock(st);setResult(st.latestResult)}return st}catch{return null/* transient resync failure — caller must not act on stale state */}},[applyServerAttemptState,adoptOrKeepActive]);
  // Reconnect recovery (#8): server authority FIRST (resync — which also finalizes an expired attempt and
  // adopts a changed one), THEN save the latest dirty snapshot ONLY if the server still reports the SAME
  // attempt writable. A failed resync does nothing (never save/finalize on stale state).
@@ -267,13 +278,14 @@ export default function StudentExamPage({token,assignment,studentName,className,
    const st=(await api<{state:State}>()).state;
    if(!mountedRef.current)return "other";
    const rs=!!st.timed||Number(st.attemptModelVersion||0)>=2||!!st.requiresStart;
-   // SAME attempt → keep legitimate unsaved local answers (update state only). DIFFERENT attempt → adopt the
-   // new attempt's server draft (never keep a cross-attempt snapshot). Shares applyServerAttemptState with
-   // the reconnect/resync and new-attempt paths (one authoritative transition helper).
-   const changed=!sameAttempt(attemptId(st),dirtyAttemptRef.current);
-   if(rs&&st.activeAttempt&&st.timed&&st.attemptExpired){if(changed){applyServerAttemptState(st)}else{stateRef.current=st;setState(st)}anchorClock(st);setResult(null);setStarted(true);void triggerTimeout();return "finalized"}
-   if(rs&&st.activeAttempt){if(changed){applyServerAttemptState(st)}else{stateRef.current=st;setState(st)}anchorClock(st);setResult(null);setStarted(true);setExpired(false);finalizingRef.current=false;submittingRef.current=false;setError("");return "resumed"}
-   if(rs&&!st.activeAttempt){stateRef.current=st;setState(st);setResult(st.latestResult);setStarted(false);setExpired(false);setError("");return "stopped"}
+   // LIVE attempt → adoptOrKeepActive: DIFFERENT attempt or a CLEAN same attempt adopts the server draft;
+   // only a SAME attempt with genuine local unsaved edits keeps them (update timer/state alone). No active
+   // attempt (another tab submitted / it timed out) → full authoritative closed-state adoption via
+   // applyServerAttemptState: obsolete local answers discarded, revision/savedRevision/dirtyAttempt reset,
+   // lastSavedAt from server, no delayed save, beforeunload no longer warns. Then show the latest result.
+   if(rs&&st.activeAttempt&&st.timed&&st.attemptExpired){adoptOrKeepActive(st);anchorClock(st);setResult(null);setStarted(true);void triggerTimeout();return "finalized"}
+   if(rs&&st.activeAttempt){adoptOrKeepActive(st);anchorClock(st);setResult(null);setStarted(true);setExpired(false);finalizingRef.current=false;submittingRef.current=false;setError("");return "resumed"}
+   if(rs&&!st.activeAttempt){applyServerAttemptState(st);setResult(st.latestResult);setStarted(false);setExpired(false);setError("");return "stopped"}
   }catch{/* ignore */}
   return "other";
  }

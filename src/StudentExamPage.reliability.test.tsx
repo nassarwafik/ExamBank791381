@@ -16,6 +16,8 @@ const legacyState = {
 };
 // Attempt 2 (a DIFFERENT identity) — used for cross-attempt safety.
 const attempt2State = { ...legacyState, activeAttempt: { attemptNumber: 2, startedAt: "2026-01-01T12:00:00.000Z", endsAt: "", status: "started" }, draftAnswers: { q1: { kind: "text", value: "ATTEMPT2_SERVER_DRAFT" } }, draftSavedAt: "2026-01-01T12:01:00.000Z" };
+// SAME attempt-1 identity, but a NEWER server draft (another tab saved it) — used for clean-vs-dirty resync.
+const sameAttemptNewDraft = { ...legacyState, draftAnswers: { q1: { kind: "text", value: "NEWER_FROM_OTHER_TAB" } }, draftSavedAt: "2026-01-01T10:45:00.000Z" };
 const timedExpiredState = {
   ...legacyState, durationMinutes: 60, timed: true,
   activeAttempt: { attemptNumber: 1, startedAt: START, endsAt: "2026-01-01T10:05:00.000Z" },
@@ -234,6 +236,67 @@ describe("R10/R11 reliability", () => {
     await waitFor(() => expect(saveCalls).toBe(1), { timeout: 2000 });        // save → 409 → reconcile (same attempt)
     await new Promise(res => setTimeout(res, 80));
     expect((r.container.querySelector(".iex-open") as HTMLTextAreaElement).value).toBe("LOCAL_UNSAVED_EDIT"); // preserved
+  });
+
+  it("A: same-attempt resync on a CLEAN tab adopts the newer server draft (server wins); no autosave; a later edit builds on it with attempt-1 identity", async () => {
+    Object.defineProperty(document, "visibilityState", { configurable: true, value: "visible" });
+    const r = mount();                                 // attempt 1, empty server draft → clean
+    await r.findByPlaceholderText("اكتب إجابتك هنا...");
+    const saveBaseline = saveCalls;                     // 0
+    // Another tab saved a NEWER draft under the SAME attempt; an authoritative resync arrives.
+    subGetHandler = () => json(200, { ok: true, state: sameAttemptNewDraft });
+    document.dispatchEvent(new Event("visibilitychange"));
+    // Server wins for a clean tab: the newer draft is adopted…
+    await waitFor(() => expect((r.container.querySelector(".iex-open") as HTMLTextAreaElement).value).toBe("NEWER_FROM_OTHER_TAB"), { timeout: 2000 });
+    await waitFor(() => expect(saveState(r)).toContain("آخر حفظ:"), { timeout: 2000 }); // displays the server draftSavedAt
+    await new Promise(res => setTimeout(res, 900));     // past the autosave debounce
+    expect(saveCalls).toBe(saveBaseline);              // hydration scheduled ZERO saves
+    const be = new Event("beforeunload", { cancelable: true }) as BeforeUnloadEvent;
+    window.dispatchEvent(be);
+    expect(be.defaultPrevented).toBe(false);           // clean → no warning
+    // A real edit now → exactly one save, built on the hydrated draft, carrying attempt-1 identity.
+    fireEvent.change(r.container.querySelector(".iex-open") as HTMLTextAreaElement, { target: { value: "NEWER_FROM_OTHER_TAB +edit" } });
+    await waitFor(() => expect(saveCalls).toBe(saveBaseline + 1), { timeout: 2000 });
+    expect(lastSaveBody && lastSaveBody.expectedAttemptNumber).toBe(1);
+    expect(lastSaveBody && lastSaveBody.expectedStartedAt).toBe(START);
+    const saved = lastSaveBody && (lastSaveBody.answers as Record<string, { value?: string }>);
+    expect(saved && saved.q1 && saved.q1.value).toBe("NEWER_FROM_OTHER_TAB +edit"); // started from the hydrated draft
+  });
+
+  it("C: another tab submitted — reconnect resync adopts the closed state, clears local answers, sends no stale save, stops warning", async () => {
+    const r = mount();
+    const ta = await r.findByPlaceholderText("اكتب إجابتك هنا...");
+    goOffline();
+    fireEvent.change(ta, { target: { value: "DIRTY_LOCAL_ANSWER" } });
+    await new Promise(res => setTimeout(res, 30));
+    expect(saveCalls).toBe(0);                          // offline: dirty, nothing sent yet
+    subGetHandler = () => json(200, { ok: true, state: completedState }); // another tab submitted → no active attempt
+    const before = calls.length;
+    goOnline();
+    await r.findByText(/تم تسليم المحاولة/);             // authoritative closed state → result screen
+    const seg = calls.slice(before);
+    expect(seg.some(c => c.startsWith("save"))).toBe(false); // obsolete dirty snapshot NEVER uploaded
+    await new Promise(res => setTimeout(res, 80));
+    expect(saveCalls).toBe(0);
+    const be = new Event("beforeunload", { cancelable: true }) as BeforeUnloadEvent;
+    window.dispatchEvent(be);
+    expect(be.defaultPrevented).toBe(false);           // closed attempt → no stale-answer warning
+  });
+
+  it("D: reconcileTimed409 stopped path (attempt gone) adopts the closed state, uploads no stale answers, stops warning", async () => {
+    saveHandler = () => json(409, { ok: false, error: "تم بدء محاولة جديدة لهذا الواجب." });
+    subGetHandler = (n) => n === 1 ? json(200, { ok: true, state: legacyState }) : json(200, { ok: true, state: completedState });
+    const r = mount();
+    const ta = await r.findByPlaceholderText("اكتب إجابتك هنا...");
+    fireEvent.change(ta, { target: { value: "DIRTY_BEFORE_STOP" } });
+    await waitFor(() => expect(saveCalls).toBe(1), { timeout: 2000 });  // save → 409 → reconcile
+    await r.findByText(/تم تسليم المحاولة/);                            // stopped → result screen
+    const baseline = saveCalls;
+    await new Promise(res => setTimeout(res, 120));
+    expect(saveCalls).toBe(baseline);                                   // no stale save after closure
+    const be = new Event("beforeunload", { cancelable: true }) as BeforeUnloadEvent;
+    window.dispatchEvent(be);
+    expect(be.defaultPrevented).toBe(false);
   });
 
   it("J: a stale revision-N ack never shows saved while revision N+1 is still unsaved", async () => {

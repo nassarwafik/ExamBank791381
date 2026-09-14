@@ -35,11 +35,14 @@ function defaultSubmission(id,student){return {schemaVersion:1,assignmentId:id,s
 function isModernAttempt(a){return normalizeDurationMinutes(a&&a.durationMinutes)>0||attemptModelVersion(a)>=2}
 function attemptIdentityOk(doc,b){
  const en=b&&b.expectedAttemptNumber,es=b&&b.expectedStartedAt;
- if(en===undefined||en===null||es===undefined||es===null||es==="")return false; // missing → fail closed for modern
- if(!Number.isFinite(Number(en)))return false;                                   // malformed
+ // STRICT (fail closed): expectedAttemptNumber must be a real integer >= 1 (reject boolean like true→1, the
+ // string "1", 1.5, 0, negatives, null, missing) and expectedStartedAt must be a non-empty string. The real
+ // client always sends a numeric attemptNumber and a string startedAt, so valid traffic is unaffected.
+ if(typeof en!=="number"||!Number.isInteger(en)||en<1)return false;
+ if(typeof es!=="string"||es==="")return false;
  const act=doc&&doc.activeAttempt;
  if(!act)return false;                                                           // asserted attempt no longer exists
- return Number(act.attemptNumber)===Number(en)&&String(act.startedAt||"")===String(es);
+ return Number(act.attemptNumber)===en&&String(act.startedAt||"")===es;
 }
 // `deps` is an optional dependency-injection seam for unit tests (production passes nothing, so the real
 // implementations are used). It does not change runtime behavior.
