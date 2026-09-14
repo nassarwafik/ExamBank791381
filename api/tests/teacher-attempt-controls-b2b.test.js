@@ -218,6 +218,38 @@ describe("B2B extendActiveAttempt", () => {
   });
 });
 
+describe("B2B setDueAtOverride on an assignment with NO global dueAt", () => {
+  it("end-to-end: reopen (no global due) → start → extend timer → then extend the student due to lift the clip", async () => {
+    seed({ durationMinutes: 60, dueAt: "", submission: { assignmentId: "asg1", studentId: "stu-1", classId: "c1", attempts: [completed1], activeAttempt: null } });
+    // 1) reopen with a per-student deadline (no global dueAt)
+    const reopen = await post({ action: "reopenStudent", assignmentId: "asg1", studentId: "stu-1", reopenUntil: iso(BASE + 60 * MIN) });
+    expect(reopen.status).toBe(200);
+    expect(reopen.jsonBody.dueAtOverride).toBe(iso(BASE + 60 * MIN));
+    // 2) the student starts a timed attempt (simulated on the stored doc)
+    const doc = store.get(SP); doc.activeAttempt = { attemptNumber: 2, startedAt: iso(BASE), endsAt: iso(BASE + 60 * MIN), status: "started" }; store.set(SP, doc);
+    // 3) teacher extends the timer to BASE+90; effective end stays clipped by the reopen due (BASE+60)
+    const ext = await post({ action: "extendActiveAttempt", assignmentId: "asg1", studentId: "stu-1", newEndsAt: iso(BASE + 90 * MIN) });
+    expect(ext.status).toBe(200);
+    expect(ext.jsonBody.effectiveAttemptEndsAt).toBe(iso(BASE + 60 * MIN)); // due-clipped
+    // 4) teacher extends the student's due to BASE+105 — must be ALLOWED despite no global dueAt
+    const due = await post({ action: "setDueAtOverride", assignmentId: "asg1", studentId: "stu-1", dueAtOverride: iso(BASE + 105 * MIN) });
+    expect(due.status).toBe(200);
+    expect(due.jsonBody.dueAtOverride).toBe(iso(BASE + 105 * MIN));
+    expect(due.jsonBody.effectiveAttemptEndsAt).toBe(iso(BASE + 90 * MIN)); // now the full extension applies
+    expect(due.jsonBody.attemptExpired).toBe(false);
+    expect(due.jsonBody.canWrite).toBe(true);
+  });
+  it("validation (no global dueAt): invalid=>400, past=>400, future=>200, null=>clears", async () => {
+    seed({ durationMinutes: 60, dueAt: "", submission: { assignmentId: "asg1", studentId: "stu-1", classId: "c1", attempts: [], activeAttempt: null } });
+    expect((await post({ action: "setDueAtOverride", assignmentId: "asg1", studentId: "stu-1", dueAtOverride: "not-a-date" })).status).toBe(400);
+    expect((await post({ action: "setDueAtOverride", assignmentId: "asg1", studentId: "stu-1", dueAtOverride: iso(BASE - 10 * MIN) })).status).toBe(400);
+    const ok = await post({ action: "setDueAtOverride", assignmentId: "asg1", studentId: "stu-1", dueAtOverride: iso(BASE + 120 * MIN) });
+    expect(ok.status).toBe(200); expect(ok.jsonBody.dueAtOverride).toBe(iso(BASE + 120 * MIN));
+    const cleared = await post({ action: "setDueAtOverride", assignmentId: "asg1", studentId: "stu-1", dueAtOverride: null });
+    expect(cleared.status).toBe(200); expect(cleared.jsonBody.dueAtOverride).toBeNull();
+  });
+});
+
 // ── P: a timed timeout AFTER a teacher extension stores extendedEndsAt and the correct endedAt ────────
 describe("B2B extension + timeout audit (student-submission handler)", () => {
   let subStore, subAudits, subDeps;

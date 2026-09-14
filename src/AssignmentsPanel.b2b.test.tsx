@@ -119,6 +119,13 @@ describe("AssignmentsPanel — B2B gradebook lifecycle controls", () => {
     await waitFor(() => expect(within(after).queryByText(/تمديد حتى:/)).toBeNull()); // badge gone (snapshot merged)
   });
 
+  it("openReopen defaults to a BLANK input when the student has no existing override (not the original due)", async () => {
+    const r = await openGradebook();
+    fireEvent.click(within(rowOf(r, "طالب مسلّم")).getByText("إعادة فتح للطالب"));
+    const input = r.container.querySelector(".reopen-edit-row input[type=datetime-local]") as HTMLInputElement;
+    expect(input.value).toBe(""); // NOT prefilled to the assignment's original dueAt (would fail > dueAt)
+  });
+
   it("reopen opens an inline control and posts reopenStudent", async () => {
     const r = await openGradebook();
     fireEvent.click(within(rowOf(r, "طالب مسلّم")).getByText("إعادة فتح للطالب"));

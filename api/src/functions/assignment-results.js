@@ -68,9 +68,15 @@ async function handler(request,deps={}){
    const {a,student,name}=t;const raw=b.dueAtOverride;let nextOverride;
    if(raw===null||raw===undefined||raw===""){nextOverride=null}
    else{
-    if(!a.dueAt)return {status:400,jsonBody:{ok:false,error:"الواجب لا يملك موعد تسليم أصلي لتمديده."}};
     const ms=new Date(raw).getTime();if(!Number.isFinite(ms))return {status:400,jsonBody:{ok:false,error:"تاريخ غير صالح."}};
-    if(ms<=new Date(a.dueAt).getTime())return {status:400,jsonBody:{ok:false,error:"يجب أن يكون الموعد الجديد بعد الموعد الأصلي للواجب."}};
+    // With a global dueAt: the per-student override must EXTEND it (be later). Without a global dueAt
+    // (B2B: a reopen/timer flow on an undated assignment), a per-student override is still allowed — it
+    // just has to be a valid FUTURE timestamp (effectiveDueAt = dueAtOverride || dueAt handles the rest).
+    if(a.dueAt){
+     if(ms<=new Date(a.dueAt).getTime())return {status:400,jsonBody:{ok:false,error:"يجب أن يكون الموعد الجديد بعد الموعد الأصلي للواجب."}};
+    }else if(ms<=Date.now()){
+     return {status:400,jsonBody:{ok:false,error:"يجب أن يكون الموعد الجديد في المستقبل."}};
+    }
     nextOverride=new Date(ms).toISOString();
    }
    let snap=null;

@@ -129,7 +129,10 @@ export default function AssignmentsPanel({token,classes,currentExam,onCopyLibrar
   setBusy(true);setError("");
   try{const r=await api<LifecycleSnap>("/api/assignment-results",{method:"POST",body:JSON.stringify({action:"allowRetry",assignmentId:resultsFor.assignmentId,studentId:s.studentId})});mergeSnap(s.studentId,r);setNotice("✓ تم منح محاولة إضافية للطالب "+s.studentName)}catch(e){setError(e instanceof Error?e.message:"تعذر منح المحاولة.")}finally{setBusy(false)}
  }
- function openReopen(s:StudentResult){setError("");setExtendFor(null);setDeadlineFor(null);setReopenFor(s.studentId);setReopenValue(s.dueAtOverride?toLocalInput(s.dueAtOverride):(resultsFor?.dueAt?toLocalInput(resultsFor.dueAt):""))}
+ // Prefill only from an EXISTING per-student override; never from the original dueAt (that value equals
+// the global due and would fail the "must be after the original due" rule if submitted as-is). While the
+// assignment is still open reopenUntil is optional, so a blank default is safe.
+ function openReopen(s:StudentResult){setError("");setExtendFor(null);setDeadlineFor(null);setReopenFor(s.studentId);setReopenValue(s.dueAtOverride?toLocalInput(s.dueAtOverride):"")}
  async function saveReopen(s:StudentResult){
   if(!resultsFor)return;
   if(!window.confirm("إعادة فتح الواجب لهذا الطالب: تُتاح له محاولة واحدة إذا لزم دون حذف نتيجته السابقة، ولن تبدأ المحاولة تلقائيًا."))return;
