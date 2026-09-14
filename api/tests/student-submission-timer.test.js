@@ -32,7 +32,10 @@ function seed({ durationMinutes = 60, maxAttempts = 1, dueAt = new Date(BASE + 1
   store.set("platform/classes/c1.json", { classId: "c1", status: "active" });
   store.set(ASG, { assignmentId: "asg1", classId: "c1", status: "published", maxAttempts, durationMinutes, title: "واجب", dueAt, examSnapshot: { questions: [{ examQuestionId: "q1", presentationType: "shortAnswer", marks: 10 }] } });
 }
-const req = (method, action, answers) => ({ method, params: { assignmentId: "asg1" }, json: async () => ({ action, ...(answers !== undefined ? { answers } : {}) }) });
+// Roadmap #10/#11: a modern write must carry the current attempt identity (the real client sends it). Auto-
+// attach it from the live active attempt so these tests exercise the true request shape.
+const attemptIdentity = () => { const s = store.get(SUB); const act = s && s.activeAttempt; return act ? { expectedAttemptNumber: act.attemptNumber, expectedStartedAt: act.startedAt } : {}; };
+const req = (method, action, answers) => ({ method, params: { assignmentId: "asg1" }, json: async () => ({ action, ...(answers !== undefined ? { answers } : {}), ...((action === "saveDraft" || action === "submit") ? attemptIdentity() : {}) }) });
 const call = (method, action, answers) => handler(req(method, action, answers), deps);
 
 beforeEach(() => { vi.useFakeTimers(); vi.setSystemTime(BASE); makeDeps(); });

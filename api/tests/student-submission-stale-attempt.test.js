@@ -1,4 +1,4 @@
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, vi } from "vitest";
 
 // Roadmap #10/#11 — server-side stale-attempt guard. A modern (timed / attemptModelVersion>=2) saveDraft or
 // submit that carries the identity of an OLD attempt must be rejected with 409 and write nothing, even when
@@ -15,14 +15,15 @@ function submissionAttempt2() {
 function makeDeps(a, sub) {
   const store = { doc: sub };
   const student = { userId: "u1", classId: "c1", code: "S1", displayName: "Ali" };
+  const gradeExam = vi.fn(() => ({ score: 0, totalMarks: 0, percentage: 0, manualReviewMarks: 0, finalized: true, questions: [], sections: [] }));
   return {
-    store,
+    store, gradeExam,
     deps: {
       requireActiveStudentSession: async () => ({ ok: true, container: {}, student }),
       downloadJsonOrNull: async (_c, name) => name === AP + "as1.json" ? a : (name === "platform/classes/c1.json" ? { classId: "c1", active: true } : (name.startsWith(SP) ? store.doc : null)),
       mutateJsonWithRetry: async (_c, _n, fn) => { const next = await fn(store.doc ? JSON.parse(JSON.stringify(store.doc)) : null); store.doc = next; return next; },
       withAssignmentLock: async (_c, _id, fn) => fn(),
-      gradeExam: () => ({ score: 0, totalMarks: 0, percentage: 0, manualReviewMarks: 0, finalized: true, questions: [], sections: [] }),
+      gradeExam,
       recordAchievementIfEligible: async () => {}
     }
   };
@@ -38,13 +39,30 @@ describe("R10/R11 server stale-attempt guard", () => {
     expect(store.doc.activeAttempt.attemptNumber).toBe(2);
   });
 
-  it("7: a modern submit carrying attempt-1 identity is rejected 409 when attempt 2 is live; no new attempt graded", async () => {
-    const a = modernAssignment(); const { store, deps } = makeDeps(a, submissionAttempt2());
+  it("7/C: a modern submit carrying attempt-1 identity is rejected 409; nothing graded, gradeExam NOT called", async () => {
+    const a = modernAssignment(); const { store, deps, gradeExam } = makeDeps(a, submissionAttempt2());
     const before = store.doc.attempts.length;
     const res = await handler(req({ action: "submit", answers: { q1: "x" }, expectedAttemptNumber: 1, expectedStartedAt: "2026-01-01T10:00:00.000Z" }), deps);
     expect(res.status).toBe(409);
     expect(store.doc.attempts.length).toBe(before);                        // nothing graded/pushed
     expect(store.doc.activeAttempt.attemptNumber).toBe(2);                 // active attempt intact
+    expect(gradeExam).not.toHaveBeenCalled();                             // grading never ran for a stale submit
+  });
+
+  it("A: a modern saveDraft WITHOUT any expected identity fails closed (409); draft unchanged", async () => {
+    const a = modernAssignment(); const { store, deps } = makeDeps(a, submissionAttempt2());
+    const res = await handler(req({ action: "saveDraft", answers: { q1: "NO_IDENTITY" } }), deps); // no expected* fields
+    expect(res.status).toBe(409);
+    expect(store.doc.draftAnswers.q1).toBe("KEEP_ATTEMPT2_DRAFT");
+  });
+
+  it("B: a modern submit WITHOUT any expected identity fails closed (409); gradeExam NOT called, attempts unchanged", async () => {
+    const a = modernAssignment(); const { store, deps, gradeExam } = makeDeps(a, submissionAttempt2());
+    const before = store.doc.attempts.length;
+    const res = await handler(req({ action: "submit", answers: { q1: "x" } }), deps); // no expected* fields
+    expect(res.status).toBe(409);
+    expect(gradeExam).not.toHaveBeenCalled();
+    expect(store.doc.attempts.length).toBe(before);
   });
 
   it("matching identity saves normally (200)", async () => {

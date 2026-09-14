@@ -26,17 +26,20 @@ function state(a,s,nowMs=Date.now()){
   draftAnswers:s?.draftAnswers||{},draftSavedAt:s?.draftSavedAt||"",latestResult:latest?pub(latest):null,attempts:attempts.map(pub)}}
 function defaultSubmission(id,student){return {schemaVersion:1,assignmentId:id,studentId:student.userId,classId:student.classId,studentCode:student.code,studentName:student.displayName,allowedAttempts:null,draftAnswers:{},attempts:[],activeAttempt:null,createdAt:new Date().toISOString(),updatedAt:new Date().toISOString()}}
 // Roadmap #10/#11 stale-attempt guard. For a MODERN attempt (timed OR attemptModelVersion>=2) a write MUST
-// carry the identity (attemptNumber + startedAt) of the attempt it was composed under; if the live active
-// attempt differs — another tab started attempt N+1, or the old one finished — reject with 409 and write
-// NOTHING (draftAnswers/attempt untouched, no grading). Legacy untimed attempts lazily create the active
-// attempt and do not assert identity, so the guard is skipped for them (documented compatibility limit).
+// carry the identity (attemptNumber + startedAt) of the attempt it was composed under — this FAILS CLOSED:
+// missing/empty/malformed identity, or identity that does not match the AUTHORITATIVE live active attempt
+// (another tab started attempt N+1, or the old one finished), is rejected with 409 and writes NOTHING
+// (draftAnswers/attempt untouched, NO grading). Legacy untimed attempts lazily create the active attempt and
+// do not assert identity, so the guard is skipped for them (documented compatibility limit). startAttempt is
+// exempt (a new attempt has no prior identity to assert).
 function isModernAttempt(a){return normalizeDurationMinutes(a&&a.durationMinutes)>0||attemptModelVersion(a)>=2}
-function isStaleAttemptWrite(doc,b){
+function attemptIdentityOk(doc,b){
  const en=b&&b.expectedAttemptNumber,es=b&&b.expectedStartedAt;
- if(en===undefined||en===null||es===undefined||es===null||es==="")return false; // client asserted no identity
+ if(en===undefined||en===null||es===undefined||es===null||es==="")return false; // missing → fail closed for modern
+ if(!Number.isFinite(Number(en)))return false;                                   // malformed
  const act=doc&&doc.activeAttempt;
- if(!act)return true; // client expected a specific active attempt, but none is live
- return Number(act.attemptNumber)!==Number(en)||String(act.startedAt||"")!==String(es);
+ if(!act)return false;                                                           // asserted attempt no longer exists
+ return Number(act.attemptNumber)===Number(en)&&String(act.startedAt||"")===String(es);
 }
 // `deps` is an optional dependency-injection seam for unit tests (production passes nothing, so the real
 // implementations are used). It does not change runtime behavior.
@@ -123,7 +126,7 @@ async function handler(request,deps={},obs=null){
      // "published" before committing ANY write, in case it was archived after this request loaded it.
      const fa=await dl(c,AP+id+".json");if(!fa||fa.status!=="published"){const err=new Error("الواجب غير متاح حاليًا.");err.httpStatus=403;throw err}
      const doc=current||defaultSubmission(id,student);
-     if(isModernAttempt(a)&&isStaleAttemptWrite(doc,b)){const err=new Error("تم بدء محاولة جديدة لهذا الواجب. حدّث الصفحة.");err.httpStatus=409;throw err}
+     if(isModernAttempt(a)&&!attemptIdentityOk(doc,b)){const err=new Error("تم بدء محاولة جديدة لهذا الواجب. حدّث الصفحة.");err.httpStatus=409;throw err}
      const ts=timerState(a,doc,Date.now());
      if(!ts.canWrite){const err=new Error(ts.timed?(ts.attemptExpired?"انتهى وقت المحاولة.":"ابدأ المحاولة أولاً."):(ts.attemptModelVersion>=2&&!ts.activeAttempt?"ابدأ المحاولة أولاً.":"لا توجد محاولة متاحة للحفظ."));err.httpStatus=409;throw err}
      savedAt=new Date().toISOString();
@@ -154,7 +157,7 @@ async function handler(request,deps={},obs=null){
   if(action==="submit"){
    const rej=writeRejection(a,s,"submit",Date.now());
    if(rej)return {status:rej.status,jsonBody:{ok:false,error:rej.error}};
-   const answers=b.answers&&typeof b.answers==="object"?b.answers:{},g=gradeFn(a.examSnapshot,answers),now=new Date().toISOString();
+   const answers=b.answers&&typeof b.answers==="object"?b.answers:{},now=new Date().toISOString();
    let resultAttempt=null,finalState=null;
    try{
     await maybeLock(()=>mut(c,name,async current=>{
@@ -162,9 +165,12 @@ async function handler(request,deps={},obs=null){
      // "published" before committing ANY write, in case it was archived after this request loaded it.
      const fa=await dl(c,AP+id+".json");if(!fa||fa.status!=="published"){const err=new Error("الواجب غير متاح حاليًا.");err.httpStatus=403;throw err}
      const doc=current||defaultSubmission(id,student);
-     if(isModernAttempt(a)&&isStaleAttemptWrite(doc,b)){const err=new Error("تم بدء محاولة جديدة لهذا الواجب. حدّث الصفحة.");err.httpStatus=409;throw err}
+     if(isModernAttempt(a)&&!attemptIdentityOk(doc,b)){const err=new Error("تم بدء محاولة جديدة لهذا الواجب. حدّث الصفحة.");err.httpStatus=409;throw err}
      const ts=timerState(a,doc,Date.now());
      if(!ts.canWrite){const err=new Error(ts.timed?(ts.attemptExpired?"انتهى وقت المحاولة.":"ابدأ المحاولة أولاً."):(ts.isClosed?"انتهى موعد التسليم.":"لا توجد محاولة إضافية متاحة."));err.httpStatus=409;throw err}
+     // Grade ONLY after the published/identity/canWrite guards pass, so a stale or missing-identity submit
+     // (409 above) never calls gradeExam or mutates anything.
+     const g=gradeFn(a.examSnapshot,answers);
      const active=activeAttemptOf(doc),attemptNumber=active?active.attemptNumber:(doc.attempts?.length||0)+1;
      // Audit (B2A #12 / B2B #16): a normal submit records endReason "submitted", endedAt = server
      // submission time, and preserves any teacher timer extension (extendedEndsAt) on the completed attempt.

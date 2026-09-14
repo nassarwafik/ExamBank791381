@@ -321,8 +321,9 @@ describe("TEST A/B — legacy untimed saveDraft/submit stale-snapshot race", () 
   const clearedSub = { schemaVersion: 1, assignmentId: AID, studentId: "stu-1", classId: "c1", attempts: [completed1], activeAttempt: null, draftAnswers: {} };
   // the STALE request-start snapshot the racing write loaded: attempt #1 still active
   const staleActiveSub = { schemaVersion: 1, assignmentId: AID, studentId: "stu-1", classId: "c1", attempts: [], activeAttempt: { attemptNumber: 1, startedAt: "2026-01-01T08:30:00.000Z", status: "draft" }, draftAnswers: {} };
-  const saveDraftReq = () => ({ method: "POST", params: { assignmentId: AID }, json: async () => ({ action: "saveDraft", answers: { q1: { kind: "text", value: "x" } } }) });
-  const submitReq = () => ({ method: "POST", params: { assignmentId: AID }, json: async () => ({ action: "submit", answers: { q1: { kind: "text", value: "x" } } }) });
+  // `extra` lets a MODERN test attach the attempt identity the guard now requires (legacy tests omit it).
+  const saveDraftReq = (extra = {}) => ({ method: "POST", params: { assignmentId: AID }, json: async () => ({ action: "saveDraft", answers: { q1: { kind: "text", value: "x" } }, ...extra }) });
+  const submitReq = (extra = {}) => ({ method: "POST", params: { assignmentId: AID }, json: async () => ({ action: "submit", answers: { q1: { kind: "text", value: "x" } }, ...extra }) });
   // student deps whose FIRST submission read returns the stale (active #1) snapshot and every later read
   // returns the live store (cleared) — reproducing "loaded active #1, but it was completed before commit".
   function staleStudentDeps(world) {
@@ -410,7 +411,7 @@ describe("TEST A/B — legacy untimed saveDraft/submit stale-snapshot race", () 
     // v2 untimed assignment; the submission already has a live active attempt (created earlier under the lock).
     world.store.set(AP, { schemaVersion: 2, attemptModelVersion: 2, assignmentId: AID, classId: "c1", className: "ص", title: "واجب", status: "published", openAt: "", dueAt: "", maxAttempts: 2, durationMinutes: 0, questionCount: 1, totalMarks: 10, examSnapshot: { title: "ا", sections: [{ id: "s", questions: [{ examQuestionId: "q1", presentationType: "shortAnswer", marks: 10 }] }] } });
     world.store.set(SP, { schemaVersion: 1, assignmentId: AID, studentId: "stu-1", classId: "c1", attempts: [], activeAttempt: { attemptNumber: 1, startedAt: "2026-01-01T08:30:00.000Z", status: "draft" }, draftAnswers: {} });
-    const pSave = submissionHandler(saveDraftReq(), world.studentDeps);     // ordinary autosave: needLock=false => does NOT take the lock; pauses before its write
+    const pSave = submissionHandler(saveDraftReq({ expectedAttemptNumber: 1, expectedStartedAt: "2026-01-01T08:30:00.000Z" }), world.studentDeps); // modern write carries attempt identity; ordinary autosave: needLock=false => lock-free; pauses before its write
     await reached.promise;
     let archiveDone = false;
     // Because the autosave holds NO lock, a concurrent archive (with confirm) acquires immediately and finishes.
