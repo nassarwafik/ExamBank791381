@@ -31,6 +31,13 @@ const timedLiveState = {
   activeAttempt: { attemptNumber: 1, startedAt: START, endsAt: "2026-01-01T11:00:00.000Z" },
   effectiveAttemptEndsAt: "2026-01-01T11:00:00.000Z", serverNow: "2026-01-01T10:30:00.000Z", attemptExpired: false, canWrite: true
 };
+// Timed LIVE attempt whose countdown expires ~1.5s after mount (effectiveEnd = serverNow + 1500ms) so the
+// countdown tick fires triggerTimeout deterministically AFTER a user edit (used for the timeout-adoption tests).
+const timedSoonState = {
+  ...legacyState, durationMinutes: 60, timed: true,
+  activeAttempt: { attemptNumber: 1, startedAt: START, endsAt: "2026-01-01T10:30:01.500Z" },
+  effectiveAttemptEndsAt: "2026-01-01T10:30:01.500Z", serverNow: "2026-01-01T10:30:00.000Z", attemptExpired: false, canWrite: true
+};
 const timedOutResult = { attemptNumber: 1, submittedAt: "2026-01-01T10:31:00.000Z", score: 0, totalMarks: 100, percentage: 0, manualReviewMarks: 0, finalized: true, timedOut: true };
 const fullExam = { title: "امتحان", metadata: {}, presentationTheme: "classic",
   sections: [{ id: "s1", title: "القسم", gradingPolicy: "all", questions: [{ examQuestionId: "q1", presentationType: "shortAnswer", text: "سؤال الاختبار السري", marks: 100 }] }] };
@@ -470,6 +477,73 @@ describe("R10/R11 reliability", () => {
     expect(submitCalls).toBe(0);                                      // attempt 1 was NEVER submitted
     expect(r.container.textContent).not.toContain("تعذر حفظ إجاباتك");// no stale generic save error on attempt 2
     expect(r.container.textContent).not.toContain("رمز التتبع");
+  });
+
+  it("A (timeout): a successful timeout finalize adopts the closed state — result shown, no post-deadline save, no beforeunload warn", async () => {
+    subGetHandler = () => json(200, { ok: true, state: timedSoonState });
+    saveHandler = () => json(403, { ok: false, error: "الحفظ ممنوع مؤقتًا" });   // keep the edit unsaved (dirty) at timeout
+    finalizeHandler = () => json(200, { ok: true, result: timedOutResult, state: { ...timedSoonState, activeAttempt: null, canWrite: false, attemptExpired: true, draftAnswers: {}, draftSavedAt: "", latestResult: timedOutResult, attempts: [timedOutResult] } });
+    const r = mount();
+    const ta = await r.findByPlaceholderText("اكتب إجابتك هنا...");
+    await new Promise(res => setTimeout(res, 800));                       // edit before the ~2s countdown timeout
+    fireEvent.change(ta, { target: { value: "DIRTY_BEFORE_TIMEOUT" } });
+    await waitFor(() => expect(finalizeCalls).toBe(1), { timeout: 4000 });// countdown → finalize success
+    await r.findByText(/تم تسليم المحاولة/);                              // result screen
+    const baseline = saveCalls;
+    await new Promise(res => setTimeout(res, 900));                       // well past any pending debounce
+    expect(saveCalls).toBe(baseline);                                    // no post-deadline / post-result save
+    const be = new Event("beforeunload", { cancelable: true }) as BeforeUnloadEvent;
+    window.dispatchEvent(be);
+    expect(be.defaultPrevented).toBe(false);                             // obsolete dirty context cleared → no warn
+  });
+
+  it("B (timeout): finalize 409 with the SAME attempt live (extension) preserves local unsaved answers, resumes, no stale error", async () => {
+    subGetHandler = (n) => n === 1 ? json(200, { ok: true, state: timedSoonState }) : json(200, { ok: true, state: timedLiveState });
+    saveHandler = () => json(403, { ok: false, error: "الحفظ ممنوع مؤقتًا" });
+    finalizeHandler = () => json(409, { ok: false, error: "انتهى وقت المحاولة." });
+    const r = mount();
+    const ta = await r.findByPlaceholderText("اكتب إجابتك هنا...");
+    await new Promise(res => setTimeout(res, 800));
+    fireEvent.change(ta, { target: { value: "LOCAL_UNSAVED_TIMEOUT" } });
+    await waitFor(() => expect(finalizeCalls).toBe(1), { timeout: 4000 });// timeout → finalize 409 → GET same live
+    await waitFor(() => expect((r.container.querySelector(".iex-open") as HTMLTextAreaElement)?.value).toBe("LOCAL_UNSAVED_TIMEOUT"), { timeout: 2000 }); // resumed, local preserved
+    expect(r.container.textContent).not.toContain("انتهى الوقت");         // no stale timeout error
+  });
+
+  it("C (timeout): finalize 409 with a DIFFERENT live attempt adopts attempt 2 (discards attempt-1 answers); later edit uses attempt-2 identity", async () => {
+    subGetHandler = (n) => n === 1 ? json(200, { ok: true, state: timedSoonState }) : json(200, { ok: true, state: attempt2State });
+    saveHandler = () => json(403, { ok: false, error: "الحفظ ممنوع مؤقتًا" });
+    finalizeHandler = () => json(409, { ok: false, error: "انتهى وقت المحاولة." });
+    const r = mount();
+    const ta = await r.findByPlaceholderText("اكتب إجابتك هنا...");
+    await new Promise(res => setTimeout(res, 800));
+    fireEvent.change(ta, { target: { value: "ATTEMPT1_LOCAL" } });
+    await waitFor(() => expect(finalizeCalls).toBe(1), { timeout: 4000 });
+    await waitFor(() => expect((r.container.querySelector(".iex-open") as HTMLTextAreaElement)?.value).toBe("ATTEMPT2_SERVER_DRAFT"), { timeout: 2000 }); // attempt 2 adopted
+    const saveBaseline = saveCalls;
+    await new Promise(res => setTimeout(res, 300));
+    expect(saveCalls).toBe(saveBaseline);                                // no autosave merely from hydration
+    fireEvent.change(r.container.querySelector(".iex-open") as HTMLTextAreaElement, { target: { value: "attempt2 edit" } });
+    await waitFor(() => expect(saveCalls).toBe(saveBaseline + 1), { timeout: 2000 });
+    expect(lastSaveBody && lastSaveBody.expectedAttemptNumber).toBe(2);   // attempt-2 identity
+  });
+
+  it("D (timeout): finalize 409 with no active attempt (already closed) shows the result, no retry, no warn, no stale error", async () => {
+    subGetHandler = (n) => n === 1 ? json(200, { ok: true, state: timedSoonState }) : json(200, { ok: true, state: completedState });
+    saveHandler = () => json(403, { ok: false, error: "الحفظ ممنوع مؤقتًا" });
+    finalizeHandler = () => json(409, { ok: false, error: "انتهى وقت المحاولة." });
+    const r = mount();
+    const ta = await r.findByPlaceholderText("اكتب إجابتك هنا...");
+    await new Promise(res => setTimeout(res, 800));
+    fireEvent.change(ta, { target: { value: "ATTEMPT1_LOCAL" } });
+    await waitFor(() => expect(finalizeCalls).toBe(1), { timeout: 4000 });
+    await r.findByText(/تم تسليم المحاولة/);                              // authoritative result adopted
+    expect(r.container.textContent).not.toContain("انتهى الوقت");         // no stale timeout error
+    const be = new Event("beforeunload", { cancelable: true }) as BeforeUnloadEvent;
+    window.dispatchEvent(be);
+    expect(be.defaultPrevented).toBe(false);
+    await new Promise(res => setTimeout(res, 300));
+    expect(finalizeCalls).toBe(1);                                       // no finalize retry
   });
 
   it("J: a stale revision-N ack never shows saved while revision N+1 is still unsaved", async () => {

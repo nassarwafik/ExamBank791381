@@ -344,16 +344,33 @@ export default function StudentExamPage({token,assignment,studentName,className,
   try{
    await saveQueue.current.catch(()=>{});
    const r=await api<{result:Result;state:State}>({method:"POST",body:JSON.stringify({action:"finalizeTimedOutAttempt"})});
-   if(mountedRef.current){if(r.result)setResult(r.result);setState(r.state);setStarted(false);setAnswers({});window.scrollTo({top:0,behavior:"smooth"})}
+   // Adopt the authoritative CLOSED/finalized state through the SHARED hydration path: invalidate the save
+   // context (epoch bump), cancel any pending autosave debounce, reset revision/savedRevision/dirtyAttempt/
+   // dirtyGeneration and save flags, and take the server's finalized draft (NEVER upload post-deadline local
+   // answers). Then show the result. `expired` stays true (a timed-out result); beforeunload no longer warns.
+   if(mountedRef.current){applyServerAttemptState(r.state);setResult(r.result||r.state.latestResult);setStarted(false);setError("");window.scrollTo({top:0,behavior:"smooth"})}
   }catch(e){
    finalizingRef.current=false;
-   // A 409 here can mean the attempt is NOT actually expired anymore (a dueAtOverride extended the
-   // effective deadline). Confirm via server state and RESUME the live attempt instead of staying stuck.
+   // A 409 here can mean the attempt is NOT actually expired anymore (a dueAtOverride extended the effective
+   // deadline), or another tab already submitted/started a new attempt. Decide from AUTHORITATIVE server state
+   // through the SAME attempt-context logic (adoptOrKeepActive) — never resume a new attempt with stale answers.
    if(e instanceof ApiError&&e.status===409){
     try{
      const st=(await api<{state:State}>()).state;
-     if(mountedRef.current&&st.timed&&st.activeAttempt&&!st.attemptExpired){setState(st);anchorClock(st);setResult(null);setStarted(true);setExpired(false);setError("");submittingRef.current=false;return}
-    }catch{/* ignore */}
+     if(mountedRef.current){
+      const rs=!!st.timed||Number(st.attemptModelVersion||0)>=2||!!st.requiresStart;
+      if(rs&&st.activeAttempt&&!st.attemptExpired){
+       // LIVE again: SAME attempt + local unsaved edits keeps them; SAME clean or DIFFERENT adopts the server
+       // draft (discarding obsolete old-attempt answers). No autosave is caused merely by hydration.
+       adoptOrKeepActive(st);anchorClock(st);setResult(null);setStarted(true);setExpired(false);finalizingRef.current=false;submittingRef.current=false;setError("");return;
+      }
+      if(rs&&!st.activeAttempt){
+       // Already closed elsewhere → authoritative closed-state adoption: show the result, clear obsolete local
+       // answers/context, no finalize retry, no stale timeout error, beforeunload no longer warns.
+       applyServerAttemptState(st);setResult(st.latestResult);setStarted(false);setExpired(false);setError("");submittingRef.current=false;return;
+      }
+     }
+    }catch{/* ignore — fall through to the timeout-locked messaging */}
    }
    // Offline / transient — keep answers locked (time is over) and retry when connectivity returns.
    // Roadmap #9: for an UNEXPECTED 5xx finalize failure that carries a correlation id, keep the timeout/
