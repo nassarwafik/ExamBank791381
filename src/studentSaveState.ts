@@ -46,9 +46,11 @@ export function saveStateHint(kind: SaveStateKind): string {
   return "";
 }
 
-// A manual "retry save" affordance is offered only when automatic recovery is not currently making progress.
+// A manual "retry save" affordance is offered ONLY for the online ERROR state (retries exhausted). While the
+// browser is definitely OFFLINE no button is shown — clicking could only generate a doomed request; the
+// offline hint ("أبقِ الصفحة مفتوحة حتى يعود الاتصال.") is shown instead and recovery is automatic on reconnect.
 export function canManualRetry(kind: SaveStateKind): boolean {
-  return kind === "error" || kind === "offline";
+  return kind === "error";
 }
 
 // Format a SERVER-provided ISO timestamp as HH:mm:ss (24h, ASCII digits so it is stable across locales).

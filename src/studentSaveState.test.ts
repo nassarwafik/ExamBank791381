@@ -39,10 +39,9 @@ describe("labels / hints / manual-retry", () => {
     expect(saveStateLabel("saved")).toContain("تم الحفظ");
     expect(saveStateLabel("offline")).toContain("غير متصل");
   });
-  it("offers a manual retry only for error/offline", () => {
+  it("offers a manual retry ONLY for the online error state (never while offline)", () => {
     expect(canManualRetry("error")).toBe(true);
-    expect(canManualRetry("offline")).toBe(true);
-    for (const k of ["saved", "pending", "saving", "retrying"] as const) expect(canManualRetry(k)).toBe(false);
+    for (const k of ["saved", "pending", "saving", "retrying", "offline"] as const) expect(canManualRetry(k)).toBe(false);
   });
   it("shows a keep-page-open hint only for offline/error", () => {
     expect(saveStateHint("offline")).toContain("أبقِ الصفحة مفتوحة");
