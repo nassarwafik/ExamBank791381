@@ -1,6 +1,6 @@
 
 const {app}=require("@azure/functions");
-const {requireStudentAuth}=require("../lib/student-auth");
+const {requireActiveStudentSession}=require("../lib/student-auth");
 const {getContainer,downloadJsonOrNull,listJson}=require("../lib/platform-storage");
 const {normalizeClassStatus}=require("../lib/class-lifecycle");
 const {attemptState,deriveAttemptStatus,attemptModelVersion,activeAttemptOf}=require("../lib/assignment-availability");
@@ -8,9 +8,11 @@ const AP="platform/assignments/",SP="platform/submissions/";
 // `deps` is an optional dependency-injection seam for unit tests (production passes nothing, so the real
 // implementations are used). It does not change runtime behavior.
 async function handler(request,deps={}){
- const authFn=deps.requireStudentAuth||requireStudentAuth,getC=deps.getContainer||getContainer,dl=deps.downloadJsonOrNull||downloadJsonOrNull,ls=deps.listJson||listJson;
+ const ras=deps.requireActiveStudentSession||requireActiveStudentSession,dl=deps.downloadJsonOrNull||downloadJsonOrNull,ls=deps.listJson||listJson;
  try{
-  const auth=authFn(request);if(!auth.ok)return auth.response;const c=getC(),student=await dl(c,"platform/users/"+auth.user.sub+".json");if(!student||student.active===false)return {status:401,jsonBody:{ok:false,error:"الحساب غير فعّال."}};
+  // Hardened, server-authoritative session (§7): loads + validates the current student (active/archived/
+  // authVersion) and returns the loaded document + container so there is no duplicate user read.
+  const sess=await ras(request,deps);if(!sess.ok)return sess.response;const c=sess.container,student=sess.student;
   const classroom=student.classId?await dl(c,"platform/classes/"+student.classId+".json"):null;
   if(classroom&&normalizeClassStatus(classroom)==="archived")return {status:403,jsonBody:{ok:false,error:"هذا الصف مؤرشف وانتهت السنة الدراسية."}};
   const raw=await ls(c,AP),assignments=[];let completed=0,sum=0;

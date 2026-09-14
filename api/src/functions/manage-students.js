@@ -5,7 +5,8 @@ const { requireBuilderAuth } = require("../lib/builder-auth");
 const {
   studentCodeHash,
   hashPassword,
-  generateTemporaryPassword
+  generateTemporaryPassword,
+  normalizeAuthVersion
 } = require("../lib/student-auth");
 const {
   mutateJsonWithRetry,
@@ -319,6 +320,9 @@ async function createStudentRecord(container, classroom, input, options = {}) {
     classId: classroom.classId,
     active: true,
     archived: false,
+    // Server-authoritative student session version (Roadmap #8). Starts at 1 and is incremented on every
+    // password reset/change so previously issued session tokens are revoked immediately.
+    authVersion: 1,
     createdAt: now,
     updatedAt: now,
     lastLoginAt: ""
@@ -365,6 +369,15 @@ async function resetStudentPassword(container, student, requestedPassword = "") 
     if (!current) throw new Error("ملف دخول الطالب غير موجود.");
     current.salt = salt;
     current.passwordHash = passwordHash;
+    current.updatedAt = new Date().toISOString();
+    return current;
+  });
+  // Roadmap #8: bump the student's authVersion atomically so every previously issued session token
+  // (including legacy pre-R8 tokens, whose sv normalizes to 1) is revoked immediately after a reset.
+  // Optimistic concurrency guarantees simultaneous resets cannot lose an increment.
+  await mutateJsonWithRetry(container, USER_PREFIX + student.userId + ".json", current => {
+    if (!current) return current;
+    current.authVersion = normalizeAuthVersion(current.authVersion) + 1;
     current.updatedAt = new Date().toISOString();
     return current;
   });
@@ -818,6 +831,8 @@ app.http("manageStudents", {
           current.identityNumber = identityNumber;
           current.code = newCode;
           current.classId = newClassId;
+          // Roadmap #8: a password change here revokes existing sessions by bumping authVersion.
+          if (newPassword) current.authVersion = normalizeAuthVersion(current.authVersion) + 1;
           current.updatedAt = new Date().toISOString();
           return current;
         });
@@ -1046,3 +1061,7 @@ app.http("manageStudents", {
     }
   }
 });
+
+// Roadmap #8 — exported for unit tests (authVersion on create / password reset). Additive; the Azure
+// Functions handler registration above is unaffected.
+module.exports = { createStudentRecord, resetStudentPassword };

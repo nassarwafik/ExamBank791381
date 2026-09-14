@@ -27,6 +27,7 @@ app.http("builderLogin", {
       if (!userCode || !password) {
         return {
           status: 400,
+          headers: { "Cache-Control": "no-store", "Pragma": "no-cache" },
           jsonBody: {
             ok: false,
             error: "كود المستخدم وكلمة المرور مطلوبان."
@@ -37,6 +38,7 @@ app.http("builderLogin", {
       if (userCode.length > 128 || password.length > 512) {
         return {
           status: 400,
+          headers: { "Cache-Control": "no-store", "Pragma": "no-cache" },
           jsonBody: {
             ok: false,
             error: "بيانات الدخول غير صالحة."
@@ -47,6 +49,7 @@ app.http("builderLogin", {
       if (!validateBuilderCredentials(userCode, password)) {
         return {
           status: 401,
+          headers: { "Cache-Control": "no-store", "Pragma": "no-cache" },
           jsonBody: {
             ok: false,
             error: "بيانات الدخول غير صحيحة."
@@ -58,6 +61,7 @@ app.http("builderLogin", {
 
       return {
         status: 200,
+        headers: { "Cache-Control": "no-store", "Pragma": "no-cache" },
         jsonBody: {
           ok: true,
           token,
@@ -69,6 +73,7 @@ app.http("builderLogin", {
     catch {
       return {
         status: 500,
+        headers: { "Cache-Control": "no-store", "Pragma": "no-cache" },
         jsonBody: {
           ok: false,
           error: "تعذر تسجيل الدخول حاليًا."

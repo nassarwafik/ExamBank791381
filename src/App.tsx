@@ -526,6 +526,12 @@ function App() {
       getStoredDisplayName
     );
 
+  // Roadmap #8 §13 — validate a stored session against the server BEFORE rendering an authenticated app,
+  // so a stale/expired/revoked token in sessionStorage never briefly renders the teacher/student UI. Only
+  // starts in the "checking" state when a token is already stored (a fresh visitor sees the login form
+  // immediately). sessionStorage remains the token store — nothing moves to localStorage.
+  const [sessionChecking, setSessionChecking] = useState(() => Boolean(getStoredToken()));
+
   const [
     teacherView,
     setTeacherView
@@ -562,6 +568,39 @@ function App() {
   }
 
   // Registry-driven sidebar list (so a new project appears automatically once added to the backend).
+  // Roadmap #8 §13/§14 — one-time startup session validation. If a token is stored, validate it against
+  // the authoritative /api/platform-session (using the role-appropriate header) before trusting the stale
+  // sessionStorage metadata. A definitive negative answer (HTTP error or ok:false) clears the session; a
+  // network error leaves it intact (ordinary API calls handle any later 401 per role). This does NOT
+  // reintroduce the PR #56/#57 global-logout bug: only THIS authoritative check clears a session at boot.
+  useEffect(() => {
+    const storedToken = getStoredToken();
+    if (!storedToken) { setSessionChecking(false); return; }
+    const storedRole = getStoredRole();
+    let cancelled = false;
+    const headers: Record<string, string> = { "Content-Type": "application/json", Authorization: `Bearer ${storedToken}` };
+    if (storedRole === "student") headers["x-student-token"] = storedToken;
+    else headers["x-builder-token"] = storedToken;
+    fetch("/api/platform-session", { headers })
+      .then(async response => {
+        if (cancelled) return;
+        if (!response.ok) { handleLogout(); return; }
+        const data = (await response.json()) as { ok?: boolean; role?: "teacher" | "student"; displayName?: string };
+        if (!data.ok || !data.role) { handleLogout(); return; }
+        // Valid — refresh the role + display name from the SERVER (authoritative), never stale metadata.
+        setSessionRole(data.role);
+        setSessionDisplayName(data.displayName || "");
+        try {
+          sessionStorage.setItem("examBankSessionRole", data.role);
+          sessionStorage.setItem("examBankSessionDisplayName", data.displayName || "");
+        } catch { /* storage may be unavailable */ }
+      })
+      .catch(() => { /* network error: keep the stored session (not proven invalid) */ })
+      .finally(() => { if (!cancelled) setSessionChecking(false); });
+    return () => { cancelled = true; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   // TEACHER-ONLY: /api/project-tracker requires builder auth, so this must NEVER run for a student
   // session — a student token would get 401 and the generic apiRequest would log the student out.
   useEffect(() => {
@@ -5230,6 +5269,21 @@ function App() {
       <pre className="answer-box">
         {JSON.stringify(answer, null, 2)}
       </pre>
+    );
+  }
+
+  // §13 — while a stored session is being validated, show a small existing-style loading state instead of
+  // rendering an authenticated (teacher or student) app from stale sessionStorage metadata.
+  if (sessionChecking && loggedIn) {
+    return (
+      <main className="auth" dir="rtl">
+        <div className="auth-form-wrap">
+          <section className="auth-card login-card" style={{ margin: "auto", textAlign: "center" }}>
+            <h1 className="auth-welcome">ExamBank 791381</h1>
+            <p className="auth-sub subtitle">جارٍ التحقق من الجلسة…</p>
+          </section>
+        </div>
+      </main>
     );
   }
 
