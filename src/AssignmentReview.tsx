@@ -2,10 +2,10 @@
 import {useEffect,useMemo,useState} from "react";
 import {IconClose,IconCheck} from "./icons";
 import {QuestionTextBlock} from "./questionContent";
-import {gradingClass,type GradingStatus} from "./gradingStatus";
+import {gradingClass,resolveGradingStatus,type GradingStatus} from "./gradingStatus";
 type A={attemptNumber:number;submittedAt:string;score:number;totalMarks:number;percentage:number;manualReviewMarks:number;finalized:boolean;gradingStatus?:GradingStatus;startedAt?:string;endedAt?:string;endReason?:string;timedOut?:boolean};
-// Server-authoritative gradingStatus; fall back to the SAME inputs the server uses (never from percentage).
-const gsOf=(a:{gradingStatus?:GradingStatus;manualReviewMarks:number;finalized:boolean}):GradingStatus=>a.gradingStatus?a.gradingStatus:(Number(a.manualReviewMarks||0)>0||a.finalized===false?"pendingReview":"final");
+// Server-authoritative gradingStatus via the SHARED resolver (never from score/percentage). No local copy.
+const gsOf=(a:{gradingStatus?:GradingStatus;manualReviewMarks:number;finalized:boolean}):GradingStatus=>resolveGradingStatus(a);
 const endReasonLabel=(r?:string)=>r==="timedOut"?"انتهى الوقت":r==="submitted"?"تسليم":"—";
 type Q={questionId:string;questionNumber:number;text:string;marks:number;studentAnswer:any;expectedAnswer:any;autoGrade:{score?:number;manualReview?:boolean}|null;manualScore:number|null;teacherComment:string};
 type Data={assignment:{assignmentId:string;title:string;totalMarks:number};student:{studentId:string;studentName:string;studentCode:string};attempt:A&{teacherFeedback:string};attempts:A[];questions:Q[]};

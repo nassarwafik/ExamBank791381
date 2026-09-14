@@ -42,7 +42,7 @@ describe("StudentPortal — resume label for a live active attempt (B2B #24)", (
     expect(btn.disabled).toBe(false);
   });
   it("no active attempt (submitted, canAttempt) keeps the normal wording, not the resume label", async () => {
-    mount({ ...baseAssignment, attemptStatus: "submitted", hasActiveAttempt: false, canAttempt: true, allowedAttempts: 2, latestScore: 8, latestPercentage: 80 });
+    mount({ ...baseAssignment, attemptStatus: "submitted", hasActiveAttempt: false, canAttempt: true, allowedAttempts: 2, dashboardState: "completed", gradingStatus: "final", latestScore: 8, latestPercentage: 80, latestResult: { attemptNumber: 1, score: 8, totalMarks: 10, percentage: 80, submittedAt: "2026-03-01T10:00:00.000Z", manualReviewMarks: 0, finalized: true, gradingStatus: "final", teacherFeedback: "" } });
     expect(await screen.findByText("النتيجة / محاولة جديدة")).toBeTruthy();
     expect(screen.queryByText("متابعة المحاولة")).toBeNull();
   });

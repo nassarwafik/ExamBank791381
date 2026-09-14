@@ -6,7 +6,7 @@ import {normalizeExamTheme,type ExamTheme} from "./examTheme";
 import {IconPlus,IconChevronDown} from "./icons";
 import {filterLibraryCatalog,catalogCategories,categoryLabel,type LibraryCatalogItem} from "./examLibrary";
 import {examHasQuestions,examQuestionCount} from "./examTypes";
-import {gradingClass,type GradingStatus} from "./gradingStatus";
+import {gradingClass,resolveGradingStatus,type GradingStatus} from "./gradingStatus";
 
 type Classroom={classId:string;name:string;grade:string;active:boolean};
 type Item={assignmentId:string;classId:string;className:string;title:string;instructions:string;status:"draft"|"published"|"archived";openAt:string;dueAt:string;questionCount:number;totalMarks:number;maxAttempts:number;durationMinutes?:number;archivedAt?:string;archivedBy?:string;archivedFromStatus?:string;archiveReason?:string};
@@ -19,7 +19,9 @@ type ActiveAttempt={attemptNumber:number;startedAt:string;endsAt:string;extended
 type StudentResult={studentId:string;studentName:string;studentCode:string;attemptsUsed:number;allowedAttempts:number;dueAtOverride:string|null;attemptStatus?:string;gradingStatus?:GradingStatus;activeAttempt?:ActiveAttempt|null;effectiveAttemptEndsAt?:string;attemptDurationEndsAt?:string;attemptExpired?:boolean;canStartAttempt?:boolean;canWrite?:boolean;timed?:boolean;durationMinutes?:number;attempts:Attempt[];latestResult:Attempt|null};
 // Server-authoritative grading status for a student's LATEST result; fall back to the same inputs the
 // server uses (never inferred from percentage). "notSubmitted" when there is no completed attempt.
-const rowGrading=(s:StudentResult):GradingStatus=>s.gradingStatus?s.gradingStatus:(s.latestResult?(Number(s.latestResult.manualReviewMarks||0)>0||s.latestResult.finalized===false?"pendingReview":"final"):"notSubmitted");
+// Row-level server gradingStatus wins; otherwise the SHARED resolver derives it from the latest result's
+// manualReviewMarks/finalized (never from score). No local copy of the rule.
+const rowGrading=(s:StudentResult):GradingStatus=>s.gradingStatus?s.gradingStatus:resolveGradingStatus(s.latestResult);
 // The authoritative lifecycle snapshot every mutating teacher action returns (B2B #18) — merged into the row.
 type LifecycleSnap=Partial<StudentResult>;
 // Lightweight lifecycle labels for the gradebook (B2A #22): لم يبدأ / قيد المحاولة / مسودة / تم التسليم / انتهى الوقت.

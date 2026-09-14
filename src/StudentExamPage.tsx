@@ -13,15 +13,15 @@ import {normalizeCoverPage,examMarksDistribution,type ExamCoverPage,type MarksDi
 import {formatCountdown,countdownTone} from "./examTimer";
 import {isUnexpectedStatus,trackingSuffix} from "./lib/requestTrace";
 import {deriveSaveState,saveStateLabel,saveStateHint,canManualRetry,formatLastSaved,shouldWarnBeforeUnload} from "./studentSaveState";
-import {scoreLabel,gradingClass,type GradingStatus} from "./gradingStatus";
+import {scoreLabel,gradingClass,resolveGradingStatus,type GradingStatus} from "./gradingStatus";
 
 type ExamBody={title?:string;metadata?:{school?:string;subject?:string;grade?:string;className?:string;generalInstructions?:string};presentationTheme?:string;coverPage?:ExamCoverPage;questions?:Question[];sections?:ExamSection[]};
 type Assignment={assignmentId:string;title:string;instructions:string;openAt:string;dueAt:string;effectiveDueAt?:string;maxAttempts:number;questionCount:number;totalMarks:number;durationMinutes?:number;requiresStart?:boolean;timed?:boolean;marksDistribution?:MarksDistribution;exam:ExamBody};
 type Answers=Record<string,Answer>;
 type Result={attemptNumber:number;submittedAt:string;score:number;totalMarks:number;percentage:number;manualReviewMarks:number;finalized:boolean;gradingStatus?:GradingStatus;teacherFeedback?:string;timedOut?:boolean;startedAt?:string;endedAt?:string;endReason?:string;questionGrades?:Array<{questionId:string;score:number;maxMarks:number;correct:boolean;manualReview:boolean}>};
-// Grading status is server-authoritative (result.gradingStatus). Fall back to the SAME inputs the server
-// uses (manualReviewMarks / finalized) for an older cached result — never inferred from score/percentage.
-const resultGradingStatus=(r:Result):GradingStatus=>r.gradingStatus?r.gradingStatus:(Number(r.manualReviewMarks||0)>0||r.finalized===false?"pendingReview":"final");
+// Grading status is server-authoritative (result.gradingStatus). For an older cached result the SHARED
+// resolver derives it from manualReviewMarks/finalized — never from score/percentage. No local copy.
+const resultGradingStatus=(r:Result):GradingStatus=>resolveGradingStatus(r);
 type ActiveAttempt={attemptNumber:number;startedAt:string;endsAt:string;status?:string;lastSavedAt?:string};
 type State={attemptsUsed:number;allowedAttempts:number;canAttempt:boolean;dueClosed:boolean;draftAnswers:Answers;draftSavedAt:string;latestResult:Result|null;attempts:Array<Result>;durationMinutes?:number;timed?:boolean;attemptModelVersion?:number;requiresStart?:boolean;attemptStatus?:string;serverNow?:string;activeAttempt?:ActiveAttempt|null;effectiveAttemptEndsAt?:string;attemptExpired?:boolean;canStartAttempt?:boolean;canWrite?:boolean};
 type Props={token:string;assignment:Assignment;studentName:string;className:string;onBack:()=>void;onLogout:()=>void};

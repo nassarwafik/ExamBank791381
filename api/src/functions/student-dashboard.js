@@ -50,7 +50,10 @@ async function handler(request,deps={}){
    // averageFinalized: latest percentage ONLY for assignments whose latest grading status is final
    // (never includes a provisional/pending grade).
    if(gradingStatus==="final"&&latest){finalSum+=Number(latest.percentage||0);finalCount++}
-   const latestResult=latest?{attemptNumber:Number(latest.attemptNumber||0),score:Number(latest.score||0),totalMarks:Number(latest.totalMarks||0),percentage:Number(latest.percentage||0),submittedAt:String(latest.submittedAt||""),manualReviewMarks:Number(latest.manualReviewMarks||0),finalized:latest.finalized===true,gradingStatus,teacherFeedback:String(latest.teacherFeedback||"")}:null;
+   // gradingStatus is the normalized authoritative field. `finalized` is echoed as the historical RAW value
+   // and OMITTED entirely when the stored result never had it (legacy) — never fabricated to false, which
+   // would contradict a legacy result whose gradingStatus normalizes to "final".
+   const latestResult=latest?{attemptNumber:Number(latest.attemptNumber||0),score:Number(latest.score||0),totalMarks:Number(latest.totalMarks||0),percentage:Number(latest.percentage||0),submittedAt:String(latest.submittedAt||""),manualReviewMarks:Number(latest.manualReviewMarks||0),gradingStatus,teacherFeedback:String(latest.teacherFeedback||""),...(latest.finalized===undefined?{}:{finalized:latest.finalized})}:null;
    assignments.push({assignmentId:String(a.assignmentId||""),title:String(a.title||""),instructions:String(a.instructions||""),openAt:String(a.openAt||""),dueAt:String(a.dueAt||""),effectiveDueAt:String(effectiveDueAt||""),sourceExamTitle:String(a.sourceExamTitle||""),questionCount:Number(a.questionCount||0),totalMarks:Number(a.totalMarks||0),durationMinutes:Number(a.durationMinutes||0),attemptModelVersion:attemptModelVersion(a),attemptStatus:deriveAttemptStatus(s),hasActiveAttempt:!!activeAttemptOf(s),availability:avail,dashboardState,gradingStatus,attemptsUsed:attempts.length,allowedAttempts:allowed,canAttempt,latestScore:latest?Number(latest.score||0):null,latestPercentage:latest?Number(latest.percentage||0):null,latestResult,createdAt:String(a.createdAt||"")})
   }
   assignments.sort((a,b)=>(a.dueAt?new Date(a.dueAt).getTime():Number.MAX_SAFE_INTEGER)-(b.dueAt?new Date(b.dueAt).getTime():Number.MAX_SAFE_INTEGER));
