@@ -1,4 +1,5 @@
 const { app } = require("@azure/functions");
+const { withObservability } = require("../lib/observability");
 const crypto = require("crypto");
 const { BlobServiceClient } = require("@azure/storage-blob");
 const { requireBuilderAuth } = require("../lib/builder-auth");
@@ -45,7 +46,7 @@ app.http("importUpload", {
   methods: ["POST"],
   authLevel: "anonymous",
   route: "import-upload",
-  handler: async request => {
+  handler: withObservability("import-upload", async request => {
     try {
       const auth = requireBuilderAuth(request);
       if (!auth.ok) {
@@ -113,7 +114,7 @@ app.http("importUpload", {
     } catch {
       return { status: 500, jsonBody: { ok: false, error: "تعذر رفع الملف حاليًا." } };
     }
-  }
+  })
 });
 
 // Exported only for unit testing the header decode helper (app.http's own route registration

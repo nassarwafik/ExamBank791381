@@ -1,4 +1,5 @@
 const { app } = require("@azure/functions");
+const { withObservability } = require("../lib/observability");
 const crypto = require("crypto");
 const { BlobServiceClient } = require("@azure/storage-blob");
 const { requireBuilderAuth } = require("../lib/builder-auth");
@@ -48,7 +49,7 @@ app.http("importFetchUrl", {
   methods: ["POST"],
   authLevel: "anonymous",
   route: "import-fetch-url",
-  handler: async request => {
+  handler: withObservability("import-fetch-url", async request => {
     try {
       const auth = requireBuilderAuth(request);
       if (!auth.ok) {
@@ -126,7 +127,7 @@ app.http("importFetchUrl", {
     catch {
       return { status: 500, jsonBody: { ok: false, error: "تعذر استيراد هذا الرابط حاليًا." } };
     }
-  }
+  })
 });
 
 module.exports = { deriveFileName, GOOGLE_FORM_HOSTS };

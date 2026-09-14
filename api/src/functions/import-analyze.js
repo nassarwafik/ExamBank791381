@@ -1,4 +1,5 @@
 const { app } = require("@azure/functions");
+const { withObservability } = require("../lib/observability");
 const { BlobServiceClient } = require("@azure/storage-blob");
 const { requireBuilderAuth } = require("../lib/builder-auth");
 const { chunkPages } = require("../lib/import-chunking");
@@ -226,7 +227,7 @@ app.http("importAnalyze", {
   methods: ["POST"],
   authLevel: "anonymous",
   route: "import-analyze",
-  handler: async request => {
+  handler: withObservability("import-analyze", async request => {
     // Captured before ANY work (auth, download, extraction) so the deadline covers the whole
     // request's real wall-clock time, not just chunk-processing - a slow extraction step eating
     // into the budget is exactly as dangerous to the gateway timeout as a slow AI call.
@@ -350,7 +351,7 @@ app.http("importAnalyze", {
     } catch {
       return { status: 500, jsonBody: { ok: false, error: "تعذر تحليل الملف حاليًا." } };
     }
-  }
+  })
 });
 
 // Exported only for unit testing the Buffer<->base64 state-persistence boundary, the

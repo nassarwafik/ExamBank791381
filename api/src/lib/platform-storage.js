@@ -57,11 +57,20 @@ async function uploadJsonConditional(container,name,value,etag){
  return r.etag||null;
 }
 
+// Roadmap #9 — optional observability hook. `observer` (when supplied) may implement onConflict/onRetry/
+// onExhausted; each is invoked inside try/catch so an observer failure can never affect the write. This is an
+// OPTIONAL 4th argument — every existing 3-arg call site is unaffected, and CAS correctness/retry timing are
+// unchanged (the observer only WATCHES the same events). It never receives document contents, only an attempt
+// counter, so nothing sensitive can be logged through it.
+function safeObserve(observer,method,info){
+ try{ if(observer&&typeof observer[method]==="function") observer[method](info);}catch{ /* observing must never break the write */ }
+}
+
 // Read-modify-write with automatic retry on optimistic-concurrency conflicts only.
 // mutateFn(current) receives the freshest document (or null if it doesn't exist yet) on every
 // attempt — including retries — and must return the full new document to write, or throw for any
 // domain/validation failure (which is never retried and propagates immediately).
-async function mutateJsonWithRetry(container,name,mutateFn){
+async function mutateJsonWithRetry(container,name,mutateFn,observer){
  for(let attempt=0;attempt<MAX_MUTATE_ATTEMPTS;attempt++){
   const {value,etag}=await downloadJsonWithEtagOrNull(container,name);
   const next=await mutateFn(value);
@@ -70,8 +79,11 @@ async function mutateJsonWithRetry(container,name,mutateFn){
    return next;
   }catch(e){
    if(!isConcurrencyConflict(e))throw e;
+   safeObserve(observer,"onConflict",{attempt:attempt+1});
+   if(attempt+1<MAX_MUTATE_ATTEMPTS) safeObserve(observer,"onRetry",{attempt:attempt+1});
   }
  }
+ safeObserve(observer,"onExhausted",{attempts:MAX_MUTATE_ATTEMPTS});
  throw new StorageConflictError("Optimistic concurrency conflict after "+MAX_MUTATE_ATTEMPTS+" attempts.");
 }
 

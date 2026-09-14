@@ -1,5 +1,6 @@
 
 const {app}=require("@azure/functions");
+const {withObservability}=require("../lib/observability");
 const {requireBuilderAuth}=require("../lib/builder-auth");
 const {getContainer,downloadJsonOrNull,listJson,mutateJsonWithRetry,StorageConflictError}=require("../lib/platform-storage");
 const {recordAuditEvent}=require("../lib/audit-log");
@@ -160,5 +161,5 @@ async function handler(request,deps={}){
   return {status:400,jsonBody:{ok:false,error:"Unsupported result action."}};
  }catch{return {status:500,jsonBody:{ok:false,error:"تعذر تنفيذ عملية النتائج حاليًا."}}}
 }
-app.http("assignmentResults",{methods:["GET","POST"],authLevel:"anonymous",route:"assignment-results",handler});
+app.http("assignmentResults",{methods:["GET","POST"],authLevel:"anonymous",route:"assignment-results",handler:withObservability("assignment-results",handler)});
 module.exports={handler};

@@ -1,4 +1,5 @@
 const { app } = require("@azure/functions");
+const { withObservability, storageObserver } = require("../lib/observability");
 const {
   TOKEN_TTL_SECONDS,
   createBuilderToken,
@@ -26,8 +27,9 @@ const {
 const NO_STORE = { "Cache-Control": "no-store", "Pragma": "no-cache" };
 const GENERIC_AUTH_ERROR = "بيانات الدخول غير صحيحة.";
 
-// DI seam for tests (production passes nothing → real implementations).
-async function handler(request, deps = {}) {
+// DI seam for tests (production passes nothing → real implementations). `obs` is an optional observability
+// context injected by the withObservability wrapper (absent when a test calls the bare handler).
+async function handler(request, deps = {}, obs = null) {
   const getC = deps.getContainer || getContainer;
   const dl = deps.downloadJsonOrNull || downloadJsonOrNull;
   const mut = deps.mutateJsonWithRetry || mutateJsonWithRetry;
@@ -62,9 +64,11 @@ async function handler(request, deps = {}) {
     try {
       gate = await reserve(container, userCode, clientId, deps);
     } catch {
+      obs?.logWarn("auth.login.throttled", { reason: "reserve_conflict", retryable: true });
       return { status: 429, headers: { ...NO_STORE, "Retry-After": "5" }, jsonBody: { ok: false, error: "محاولات كثيرة. حاول مرة أخرى بعد قليل." } };
     }
     if (!gate.allowed) {
+      obs?.logWarn("auth.login.throttled", { reason: "rate_limited", retryable: true });
       return { status: 429, headers: { ...NO_STORE, "Retry-After": String(gate.retryAfterSeconds || 5) }, jsonBody: { ok: false, error: "محاولات كثيرة. حاول مرة أخرى بعد قليل." } };
     }
 
@@ -74,6 +78,7 @@ async function handler(request, deps = {}) {
     if (isTeacher) {
       await throttleClear(container, userCode, clientId, deps);
       const token = mkBuilderToken(userCode);
+      obs?.logInfo("auth.login.succeeded", { role: "teacher" });
       return { status: 200, headers: NO_STORE, jsonBody: { ok: true, role: "teacher", token, userCode, displayName: "المعلم", expiresInSeconds: TOKEN_TTL_SECONDS } };
     }
 
@@ -99,6 +104,7 @@ async function handler(request, deps = {}) {
 
     if (!credentialsOk) {
       // The attempt was already counted at reserve; just return the single generic error (no enumeration).
+      obs?.logWarn("auth.login.failed", { reason: "invalid_credentials" });
       return { status: 401, headers: NO_STORE, jsonBody: { ok: false, error: GENERIC_AUTH_ERROR } };
     }
 
@@ -112,18 +118,20 @@ async function handler(request, deps = {}) {
       base.lastLoginAt = new Date().toISOString();
       base.updatedAt = base.lastLoginAt;
       return base;
-    });
+    }, storageObserver(obs, { operation: "login.lastLogin" }));
     if (!stillValid) {
       return { status: 401, headers: NO_STORE, jsonBody: { ok: false, error: GENERIC_AUTH_ERROR } };
     }
 
     await throttleClear(container, userCode, clientId, deps);
     const token = mkStudentToken(fresh);            // sv = fresh.authVersion === boundVersion (verified)
+    obs?.logInfo("auth.login.succeeded", { role: "student" });
     return { status: 200, headers: NO_STORE, jsonBody: { ok: true, role: "student", token, userCode: fresh.code, displayName: fresh.displayName, expiresInSeconds: STUDENT_TOKEN_TTL_SECONDS } };
-  } catch {
+  } catch (e) {
+    obs?.logError("auth.login.error", e);
     return { status: 500, headers: NO_STORE, jsonBody: { ok: false, error: "تعذر تسجيل الدخول حاليًا." } };
   }
 }
 
-app.http("platformLogin", { methods: ["POST"], authLevel: "anonymous", route: "platform-login", handler });
+app.http("platformLogin", { methods: ["POST"], authLevel: "anonymous", route: "platform-login", handler: withObservability("platform-login", handler) });
 module.exports = { handler };

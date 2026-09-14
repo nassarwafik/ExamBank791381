@@ -1,6 +1,7 @@
 
 const { app } =
   require("@azure/functions");
+const { withObservability } = require("../lib/observability");
 
 const {
   BlobServiceClient
@@ -330,7 +331,7 @@ app.http(
       "classrooms",
 
     handler:
-      async request => {
+      withObservability("classrooms", async request => {
         try {
           const auth =
             requireBuilderAuth(
@@ -675,7 +676,7 @@ app.http(
             }
           };
         }
-      }
+      })
   }
 );
 

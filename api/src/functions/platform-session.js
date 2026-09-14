@@ -1,4 +1,5 @@
 const { app } = require("@azure/functions");
+const { withObservability } = require("../lib/observability");
 const { verifyBuilderToken } = require("../lib/builder-auth");
 const { requireActiveStudentSession } = require("../lib/student-auth");
 const { getContainer, downloadJsonOrNull } = require("../lib/platform-storage");
@@ -21,7 +22,7 @@ function bearer(request) {
   return m ? m[1].trim() : "";
 }
 
-async function handler(request, deps = {}) {
+async function handler(request, deps = {}, obs = null) {
   const verifyBuilder = deps.verifyBuilderToken || verifyBuilderToken;
   const requireStudent = deps.requireActiveStudentSession || requireActiveStudentSession;
   const studentDeps = { getContainer: deps.getContainer || getContainer, downloadJsonOrNull: deps.downloadJsonOrNull || downloadJsonOrNull, container: deps.container };
@@ -42,11 +43,15 @@ async function handler(request, deps = {}) {
     // student, before returning 401.
     if (builderHeader) {
       const payload = verifyBuilder(builderHeader);
-      return payload ? teacherResult(payload) : UNAUTH;
+      if (payload) return teacherResult(payload);
+      obs?.logWarn("auth.session.rejected", { reason: "invalid_teacher_token" });
+      return UNAUTH;
     }
     if (studentHeader) {
       const sess = await requireStudent(request, studentDeps);
-      return sess.ok ? studentResult(sess) : UNAUTH;
+      if (sess.ok) return studentResult(sess);
+      obs?.logWarn("auth.session.rejected", { reason: "invalid_student_session" });
+      return UNAUTH;
     }
     if (authBearer) {
       const teacher = verifyBuilder(authBearer);
@@ -54,11 +59,13 @@ async function handler(request, deps = {}) {
       const sess = await requireStudent(request, studentDeps);
       if (sess.ok) return studentResult(sess);
     }
+    obs?.logWarn("auth.session.rejected", { reason: "no_valid_credentials" });
     return UNAUTH;
-  } catch {
+  } catch (e) {
+    obs?.logError("auth.session.error", e);
     return UNAUTH;
   }
 }
 
-app.http("platformSession", { methods: ["GET"], authLevel: "anonymous", route: "platform-session", handler });
+app.http("platformSession", { methods: ["GET"], authLevel: "anonymous", route: "platform-session", handler: withObservability("platform-session", handler) });
 module.exports = { handler };

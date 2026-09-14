@@ -1,5 +1,6 @@
 
 const {app}=require("@azure/functions");
+const {withObservability}=require("../lib/observability");
 const {requireBuilderAuth}=require("../lib/builder-auth");
 const {getContainer,downloadJsonOrNull,mutateJsonWithRetry,StorageConflictError}=require("../lib/platform-storage");
 const {recordAuditEvent}=require("../lib/audit-log");
@@ -96,5 +97,5 @@ async function handler(request,deps={}){
   return {status:200,jsonBody:{ok:true,result:resultOut}};
  }catch{return {status:500,jsonBody:{ok:false,error:"تعذر تنفيذ عملية التصحيح حاليًا."}}}
 }
-app.http("assignmentReview",{methods:["GET","POST"],authLevel:"anonymous",route:"assignment-review",handler});
+app.http("assignmentReview",{methods:["GET","POST"],authLevel:"anonymous",route:"assignment-review",handler:withObservability("assignment-review",handler)});
 module.exports={handler,historicalSubmissionProvesOwnership};

@@ -1,5 +1,6 @@
 
 const {app}=require("@azure/functions"),crypto=require("crypto");
+const {withObservability}=require("../lib/observability");
 const {requireBuilderAuth}=require("../lib/builder-auth");
 const {getContainer,downloadJsonOrNull,uploadJson,listJson,listBlobNames,deleteBlob,mutateJsonWithRetry,StorageConflictError}=require("../lib/platform-storage");
 const {recordAuditEvent}=require("../lib/audit-log");
@@ -220,5 +221,5 @@ async function handler(request,deps={}){
   return {status:400,jsonBody:{ok:false,error:"Unsupported assignment action."}};
  }catch{return {status:500,jsonBody:{ok:false,error:"تعذر تنفيذ إجراء الواجب حاليًا."}}}
 }
-app.http("manageAssignments",{methods:["GET","POST"],authLevel:"anonymous",route:"assignments",handler});
+app.http("manageAssignments",{methods:["GET","POST"],authLevel:"anonymous",route:"assignments",handler:withObservability("assignments",handler)});
 module.exports={handler,summary};

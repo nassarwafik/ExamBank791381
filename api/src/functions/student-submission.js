@@ -1,5 +1,6 @@
 
 const {app}=require("@azure/functions");
+const {withObservability}=require("../lib/observability");
 const {requireActiveStudentSession}=require("../lib/student-auth");
 const {getContainer,downloadJsonOrNull,mutateJsonWithRetry,StorageConflictError}=require("../lib/platform-storage");
 const {gradeExam}=require("../lib/assignment-grading");
@@ -208,5 +209,5 @@ async function handler(request,deps={}){
   return {status:400,jsonBody:{ok:false,error:"Unsupported submission action."}};
  }catch{return {status:500,jsonBody:{ok:false,error:"تعذر تنفيذ عملية التسليم حاليًا."}}}
 }
-app.http("studentSubmission",{methods:["GET","POST"],authLevel:"anonymous",route:"student-submission/{assignmentId}",handler});
+app.http("studentSubmission",{methods:["GET","POST"],authLevel:"anonymous",route:"student-submission/{assignmentId}",handler:withObservability("student-submission",handler)});
 module.exports={handler,state};

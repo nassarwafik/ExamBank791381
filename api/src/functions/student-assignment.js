@@ -1,5 +1,6 @@
 
 const {app}=require("@azure/functions");
+const {withObservability}=require("../lib/observability");
 const {requireActiveStudentSession}=require("../lib/student-auth");
 const {getContainer,downloadJsonOrNull}=require("../lib/platform-storage");
 const {normalizeClassStatus}=require("../lib/class-lifecycle");
@@ -56,5 +57,5 @@ async function handler(request,deps={}){
   return {status:200,jsonBody:{ok:true,assignment:{assignmentId:a.assignmentId,title:a.title,instructions:a.instructions,openAt:a.openAt||"",dueAt:a.dueAt||"",effectiveDueAt,maxAttempts:Math.max(1,Number(a.maxAttempts||1)),durationMinutes:Number(a.durationMinutes||0),sourceExamTitle:a.sourceExamTitle||"",questionCount:Number(a.questionCount||0),totalMarks:Number(a.totalMarks||0),exam:studentExam(a.examSnapshot)}}};
  }catch{return {status:500,jsonBody:{ok:false,error:"تعذر فتح الواجب حاليًا."}}}
 }
-app.http("studentAssignment",{methods:["GET"],authLevel:"anonymous",route:"student-assignment/{assignmentId}",handler});
+app.http("studentAssignment",{methods:["GET"],authLevel:"anonymous",route:"student-assignment/{assignmentId}",handler:withObservability("student-assignment",handler)});
 module.exports={studentExam,handler};
