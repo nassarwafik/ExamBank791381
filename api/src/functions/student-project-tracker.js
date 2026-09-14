@@ -4,7 +4,7 @@
 // params, so a student can only ever see their own class's projects and can never point this at
 // another project/class/student. Returns projects:[] (one entry per supported project of the class).
 const { app } = require("@azure/functions");
-const { requireStudentAuth } = require("../lib/student-auth");
+const { requireActiveStudentSession } = require("../lib/student-auth");
 const { getContainer, downloadJsonOrNull } = require("../lib/platform-storage");
 const { getProjectDefinition, getStorageNamespace } = require("../lib/project-tracker/registry");
 const { workingDefinition, buildClassSnapshot } = require("../lib/project-tracker/service");
@@ -20,16 +20,14 @@ app.http("studentProjectTracker", {
   route: "student-project-tracker",
   handler: async request => {
     try {
-      const auth = requireStudentAuth(request);
-      if (!auth.ok) return auth.response;
-      const container = getContainer();
+      // Hardened session (§7): active/archived/authVersion validated; loaded student reused (no extra read).
+      const sess = await requireActiveStudentSession(request);
+      if (!sess.ok) return sess.response;
+      const container = sess.container;
       const now = new Date().toISOString();
 
-      const studentId = auth.user.sub;
-      const student = await downloadJsonOrNull(container, USER_PREFIX + studentId + ".json");
-      if (!student || student.active === false) {
-        return { status: 401, jsonBody: { ok: false, error: "الحساب غير فعّال." } };
-      }
+      const studentId = sess.user.sub;
+      const student = sess.student;
       const classId = student.classId;
       const classroom = classId ? await downloadJsonOrNull(container, CLASS_PREFIX + classId + ".json") : null;
       const codes = classroom ? getSupportedClassProgramCodes(classroom) : [];

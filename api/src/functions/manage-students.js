@@ -5,7 +5,8 @@ const { requireBuilderAuth } = require("../lib/builder-auth");
 const {
   studentCodeHash,
   hashPassword,
-  generateTemporaryPassword
+  generateTemporaryPassword,
+  normalizeAuthVersion
 } = require("../lib/student-auth");
 const {
   mutateJsonWithRetry,
@@ -14,6 +15,7 @@ const {
 } = require("../lib/platform-storage");
 const { recordAuditEvent } = require("../lib/audit-log");
 const { FEED_PREFIX, REACTIONS } = require("../lib/achievement-feed");
+const { withCredentialLock, CredentialLockBusyError } = require("../lib/student-credential-lock");
 
 // Thrown from inside a mutateJsonWithRetry callback to mean "nothing to do" (target document is
 // missing, or already in the desired state) — caught at each call site and treated as a silent
@@ -319,6 +321,9 @@ async function createStudentRecord(container, classroom, input, options = {}) {
     classId: classroom.classId,
     active: true,
     archived: false,
+    // Server-authoritative student session version (Roadmap #8). Starts at 1 and is incremented on every
+    // password reset/change so previously issued session tokens are revoked immediately.
+    authVersion: 1,
     createdAt: now,
     updatedAt: now,
     lastLoginAt: ""
@@ -331,6 +336,10 @@ async function createStudentRecord(container, classroom, input, options = {}) {
     salt,
     passwordHash,
     active: true,
+    // Roadmap #8 (PR#67 review §3): the auth document carries its own authVersion, kept consistent with the
+    // student document's authVersion. Login requires the two to match, so a half-applied credential change
+    // fails closed rather than issuing a session.
+    authVersion: 1,
     createdAt: now,
     updatedAt: now
   };
@@ -357,16 +366,39 @@ async function createStudentRecord(container, classroom, input, options = {}) {
 async function resetStudentPassword(container, student, requestedPassword = "") {
   const temporaryPassword = String(requestedPassword || "") || generateTemporaryPassword();
   if (temporaryPassword.length < 6) throw new Error("كلمة المرور يجب أن تحتوي على 6 محارف على الأقل.");
-
-  const code = String(student.code || student.identityNumber || "");
-  const authBlobName = AUTH_PREFIX + studentCodeHash(code) + ".json";
   const { salt, passwordHash } = hashPassword(temporaryPassword);
-  await mutateJsonWithRetry(container, authBlobName, current => {
-    if (!current) throw new Error("ملف دخول الطالب غير موجود.");
-    current.salt = salt;
-    current.passwordHash = passwordHash;
-    current.updatedAt = new Date().toISOString();
-    return current;
+
+  // PR#67 final: run under the per-student credential lock so a reset can never race a rename that moves the
+  // auth blob path. The CURRENT student is re-read INSIDE the lock and the auth path is derived from its
+  // current code (never from the possibly-stale `student` argument loaded before the lock was acquired).
+  await withCredentialLock(container, student.userId, async () => {
+    const current = await downloadJsonOrNull(container, USER_PREFIX + student.userId + ".json");
+    if (!current || current.role !== "student") throw new Error("الطالب غير موجود.");
+    const code = String(current.code || current.identityNumber || "");
+    const authBlobName = AUTH_PREFIX + studentCodeHash(code) + ".json";
+    const now = new Date().toISOString();
+    // Fail-closed ordering (§3): bump the STUDENT authVersion FIRST (revokes sessions; login stays
+    // fail-closed until the auth doc catches up), then write the auth hash + matching version.
+    let newVersion = 1;
+    await mutateJsonWithRetry(container, USER_PREFIX + student.userId + ".json", cur => {
+      if (!cur) throw new Error("الطالب غير موجود.");
+      newVersion = normalizeAuthVersion(cur.authVersion) + 1;
+      cur.authVersion = newVersion;
+      cur.updatedAt = now;
+      return cur;
+    });
+    // Version-conditional (§B): overwrite the credential only if this op owns the newest version.
+    let applied = true;
+    await mutateJsonWithRetry(container, authBlobName, cur => {
+      if (!cur) throw new Error("ملف دخول الطالب غير موجود.");
+      if (normalizeAuthVersion(cur.authVersion) > newVersion) { applied = false; return cur; } // stale
+      cur.salt = salt;
+      cur.passwordHash = passwordHash;
+      cur.authVersion = newVersion;
+      cur.updatedAt = now;
+      return cur;
+    });
+    if (!applied) throw new Error("تم تغيير كلمة المرور من عملية أحدث. أعد المحاولة.");
   });
   return temporaryPassword;
 }
@@ -626,15 +658,14 @@ async function buildStudentProfile(container, userId) {
   };
 }
 
-app.http("manageStudents", {
-  methods: ["GET", "POST"],
-  authLevel: "anonymous",
-  route: "students",
-  handler: async request => {
+// `deps` is an optional dependency-injection seam for unit tests (production passes nothing → real
+// implementations). It does not change runtime behavior.
+async function manageStudentsHandler(request, deps = {}) {
+    const rec = deps.recordAuditEvent || recordAuditEvent;
     try {
-      const auth = requireBuilderAuth(request);
+      const auth = (deps.requireBuilderAuth || requireBuilderAuth)(request);
       if (!auth.ok) return auth.response;
-      const container = getContainer();
+      const container = deps.container || (deps.getContainer || getContainer)();
 
       if (request.method === "GET") {
         const url = new URL(request.url);
@@ -795,75 +826,92 @@ app.http("manageStudents", {
             return { status: 409, jsonBody: { ok: false, error: "رقم الهوية مستخدم مسبقًا." } };
           }
         }
-
         const oldClassId = String(student.classId || "");
-        const oldAuthName = AUTH_PREFIX + studentCodeHash(oldCode) + ".json";
-        const oldAuth = await downloadJsonOrNull(container, oldAuthName);
-        if (!oldAuth) {
-          return { status: 404, jsonBody: { ok: false, error: "ملف دخول الطالب غير موجود." } };
-        }
+        const newPwHash = newPassword ? hashPassword(newPassword) : null;
 
-        // student.active/.archived aren't touched by this action, so reading them off the
-        // already-loaded `student` (rather than a fresh re-read) to compute the auth doc's
-        // `active` flag below matches this code's own pre-existing behavior/risk level.
-        const authActive = student.active !== false && student.archived !== true;
-        const newAuthName = AUTH_PREFIX + studentCodeHash(newCode) + ".json";
+        // PR#67 final: the ENTIRE update mutation (student rewrite + auth-doc write, and especially the
+        // RENAME which MOVES the auth blob path) runs under the per-student credential lock so a concurrent
+        // reset/rename can never delete a newer credential or resurrect an older password across the move.
+        // ALL updates take the lock — not only those a pre-lock snapshot classified as credential-changing:
+        // that classification (newCode vs the snapshot `oldCode`) is itself stale, so a request that looked
+        // like a pure name/class edit can silently become an auth-path move after another request renames the
+        // code. The auth path is derived from the CURRENT student RE-READ INSIDE the lock — never from the
+        // pre-lock `student` snapshot. `credentialApplied` reports whether a password change actually became
+        // authoritative (a stale op → 409 below, no success/audit).
+        let updatedStudentVersion = null;
+        let credentialApplied = !newPassword;
+        const runCredentialMutation = async () => {
+          const cur = await downloadJsonOrNull(container, studentBlobName);
+          if (!cur || cur.role !== "student") return { status: 404, jsonBody: { ok: false, error: "الطالب غير موجود." } };
+          const curCode = String(cur.code || cur.identityNumber || "");
+          // Stale-snapshot gate: this request classified `newCode` against the code it read BEFORE acquiring
+          // the lock (`oldCode`). If a concurrent op changed the authoritative code while we waited for the
+          // lock, that classification is stale — refuse deterministically rather than move the auth path from
+          // outdated state (which could recreate a deleted auth blob or clobber a newer rename). Login stays
+          // consistent; the caller re-reads and retries.
+          if (studentCodeHash(curCode) !== studentCodeHash(oldCode)) {
+            return { status: 409, headers: { "Cache-Control": "no-store" }, jsonBody: { ok: false, error: "تم تعديل بيانات دخول الطالب في عملية أخرى. حدّث البيانات وأعد المحاولة." } };
+          }
+          const curAuthName = AUTH_PREFIX + studentCodeHash(curCode) + ".json";
+          const curAuth = await downloadJsonOrNull(container, curAuthName);
+          if (!curAuth) return { status: 404, jsonBody: { ok: false, error: "ملف دخول الطالب غير موجود." } };
+          const authActive = cur.active !== false && cur.archived !== true;
+          const targetAuthName = AUTH_PREFIX + studentCodeHash(newCode) + ".json";
 
-        await mutateJsonWithRetry(container, studentBlobName, current => {
-          if (!current || current.role !== "student") throw new Error("الطالب غير موجود.");
-          current.schemaVersion = 3;
-          current.firstName = firstName;
-          current.familyName = familyName;
-          current.displayName = firstName + " " + familyName;
-          current.identityNumber = identityNumber;
-          current.code = newCode;
-          current.classId = newClassId;
-          current.updatedAt = new Date().toISOString();
-          return current;
-        });
-
-        if (newAuthName === oldAuthName) {
-          await mutateJsonWithRetry(container, oldAuthName, current => {
-            if (!current) throw new Error("ملف دخول الطالب غير موجود.");
-            if (newPassword) {
-              const { salt, passwordHash } = hashPassword(newPassword);
-              current.salt = salt;
-              current.passwordHash = passwordHash;
-            }
-            current.schemaVersion = 3;
-            current.codeHash = studentCodeHash(newCode);
-            current.active = authActive;
-            current.updatedAt = new Date().toISOString();
-            return current;
+          await mutateJsonWithRetry(container, studentBlobName, c => {
+            if (!c || c.role !== "student") throw new Error("الطالب غير موجود.");
+            c.schemaVersion = 3;
+            c.firstName = firstName;
+            c.familyName = familyName;
+            c.displayName = firstName + " " + familyName;
+            c.identityNumber = identityNumber;
+            c.code = newCode;
+            c.classId = newClassId;
+            if (newPassword) c.authVersion = normalizeAuthVersion(c.authVersion) + 1;
+            updatedStudentVersion = normalizeAuthVersion(c.authVersion);
+            c.updatedAt = new Date().toISOString();
+            return c;
           });
-        } else {
-          // Identity-number change (rename): a narrow, infrequent, deliberate admin action.
-          // Still protect the new auth path with a create-only conditional write, so this can
-          // never silently clobber an unrelated student who independently claimed the exact same
-          // identity number in the interim (the findStudentByIdentity check above already covers
-          // the common case; this is the retry-safe backstop for the remaining TOCTOU window).
-          const newAuthDoc = {
-            ...oldAuth,
-            schemaVersion: 3,
-            codeHash: studentCodeHash(newCode),
-            active: authActive,
-            updatedAt: new Date().toISOString()
-          };
-          if (newPassword) {
-            const { salt, passwordHash } = hashPassword(newPassword);
-            newAuthDoc.salt = salt;
-            newAuthDoc.passwordHash = passwordHash;
-          }
-          try {
-            await uploadJsonConditional(container, newAuthName, newAuthDoc, null);
-          } catch (e) {
-            if (isConcurrencyConflict(e)) {
-              return { status: 409, jsonBody: { ok: false, error: "رقم الهوية مستخدم مسبقًا." } };
+
+          if (targetAuthName === curAuthName) {
+            await mutateJsonWithRetry(container, curAuthName, c => {
+              if (!c) throw new Error("ملف دخول الطالب غير موجود.");
+              if (newPwHash) {
+                if (normalizeAuthVersion(c.authVersion) <= updatedStudentVersion) {
+                  c.salt = newPwHash.salt; c.passwordHash = newPwHash.passwordHash; c.authVersion = updatedStudentVersion; credentialApplied = true;
+                } else { credentialApplied = false; } // a newer reset already won → stale
+              }
+              c.schemaVersion = 3; c.codeHash = studentCodeHash(newCode); c.active = authActive; c.updatedAt = new Date().toISOString();
+              return c;
+            });
+          } else {
+            // RENAME: build the new auth doc from the CURRENT auth (re-read inside the lock, so it carries
+            // any newer reset's hash/version), create-only at the new path, then delete the old path.
+            const newAuthDoc = {
+              ...curAuth,
+              schemaVersion: 3,
+              codeHash: studentCodeHash(newCode),
+              active: authActive,
+              authVersion: Math.max(normalizeAuthVersion(curAuth.authVersion), normalizeAuthVersion(updatedStudentVersion)),
+              updatedAt: new Date().toISOString()
+            };
+            if (newPwHash) { newAuthDoc.salt = newPwHash.salt; newAuthDoc.passwordHash = newPwHash.passwordHash; }
+            try {
+              await uploadJsonConditional(container, targetAuthName, newAuthDoc, null);
+            } catch (e) {
+              if (isConcurrencyConflict(e)) return { status: 409, jsonBody: { ok: false, error: "رقم الهوية مستخدم مسبقًا." } };
+              throw e;
             }
-            throw e;
+            await container.getBlobClient(curAuthName).deleteIfExists();
+            if (newPwHash) credentialApplied = true;
           }
-          await container.getBlobClient(oldAuthName).deleteIfExists();
-        }
+          return null;
+        };
+        // Every update runs under the per-student credential lock (see the note above): a pre-lock
+        // classification of "not credential-changing" is unreliable because a concurrent rename can move the
+        // auth path out from under it. Teacher profile updates are infrequent, so the lock cost is negligible.
+        const credResult = await withCredentialLock(container, userId, runCredentialMutation);
+        if (credResult && credResult.status) return credResult;
 
         if (oldClassId !== newClassId) {
           await mutateClassroomStudentIds(container, oldClassId, classroom => {
@@ -877,9 +925,15 @@ app.http("manageStudents", {
           }
         }
 
+        // §1: a stale password change (a newer reset already owns the version) must NOT report success —
+        // no overwrite happened, so return a deterministic 409 with a generic retry message and emit no
+        // reset-password audit and no passwordChanged:true.
+        if (newPassword && !credentialApplied) {
+          return { status: 409, headers: { "Cache-Control": "no-store" }, jsonBody: { ok: false, error: "تعذّر تغيير كلمة المرور بسبب تعارض مع عملية أحدث. أعد المحاولة." } };
+        }
         const updatedStudent = await downloadJsonOrNull(container, studentBlobName);
         if (newPassword) {
-          await recordAuditEvent(container, {
+          await rec(container, {
             actor: auth.user?.sub,
             action: "student.resetPassword",
             targetType: "student",
@@ -903,7 +957,7 @@ app.http("manageStudents", {
 
         if (action === "resetpassword") {
           const temporaryPassword = await resetStudentPassword(container, student, body?.password);
-          await recordAuditEvent(container, {
+          await rec(container, {
             actor: auth.user?.sub,
             action: "student.resetPassword",
             targetType: "student",
@@ -931,7 +985,7 @@ app.http("manageStudents", {
         }
 
         await deleteStudent(container, student);
-        await recordAuditEvent(container, {
+        await rec(container, {
           actor: auth.user?.sub,
           action: "student.delete",
           targetType: "student",
@@ -989,7 +1043,7 @@ app.http("manageStudents", {
                 code: publicValue.code,
                 password
               });
-              await recordAuditEvent(container, {
+              await rec(container, {
                 actor: auth.user?.sub,
                 action: "student.resetPassword",
                 targetType: "student",
@@ -999,7 +1053,7 @@ app.http("manageStudents", {
               });
             } else if (operation === "delete") {
               await deleteStudent(container, student);
-              await recordAuditEvent(container, {
+              await rec(container, {
                 actor: auth.user?.sub,
                 action: "student.delete",
                 targetType: "student",
@@ -1035,7 +1089,11 @@ app.http("manageStudents", {
         status: 400,
         jsonBody: { ok: false, error: "Unsupported student action." }
       };
-    } catch {
+    } catch (e) {
+      // A busy per-student credential lock is a transient conflict, not a server error.
+      if (e instanceof CredentialLockBusyError) {
+        return { status: 409, headers: { "Cache-Control": "no-store" }, jsonBody: { ok: false, error: "عملية أخرى على بيانات الطالب قيد التنفيذ. أعد المحاولة." } };
+      }
       return {
         status: 500,
         jsonBody: {
@@ -1044,5 +1102,8 @@ app.http("manageStudents", {
         }
       };
     }
-  }
-});
+}
+app.http("manageStudents", { methods: ["GET", "POST"], authLevel: "anonymous", route: "students", handler: manageStudentsHandler });
+
+// Roadmap #8 — exported for unit tests (authVersion on create / password reset / update). Additive.
+module.exports = { createStudentRecord, resetStudentPassword, handler: manageStudentsHandler };

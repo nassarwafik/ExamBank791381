@@ -1,6 +1,6 @@
 const { app } = require("@azure/functions");
-const { requireStudentAuth } = require("../lib/student-auth");
-const { getContainer, downloadJsonOrNull, listJson, mutateJsonWithRetry, StorageConflictError } = require("../lib/platform-storage");
+const { requireActiveStudentSession } = require("../lib/student-auth");
+const { listJson, mutateJsonWithRetry, StorageConflictError } = require("../lib/platform-storage");
 const { FEED_PREFIX, REACTIONS, feedBlobName } = require("../lib/achievement-feed");
 
 const UP = "platform/users/";
@@ -26,11 +26,11 @@ app.http("achievementFeed", {
   route: "achievement-feed",
   handler: async request => {
     try {
-      const auth = requireStudentAuth(request);
-      if (!auth.ok) return auth.response;
-      const container = getContainer();
-      const student = await downloadJsonOrNull(container, UP + auth.user.sub + ".json");
-      if (!student || student.active === false) return { status: 401, jsonBody: { ok: false, error: "الحساب غير فعّال." } };
+      // Hardened session (§7): active/archived/authVersion validated; loaded student reused (no extra read).
+      const sess = await requireActiveStudentSession(request);
+      if (!sess.ok) return sess.response;
+      const container = sess.container;
+      const student = sess.student;
       const classId = String(student.classId || "");
 
       if (request.method === "GET") {

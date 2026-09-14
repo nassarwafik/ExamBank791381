@@ -526,6 +526,12 @@ function App() {
       getStoredDisplayName
     );
 
+  // Roadmap #8 §13 — validate a stored session against the server BEFORE rendering an authenticated app,
+  // so a stale/expired/revoked token in sessionStorage never briefly renders the teacher/student UI. Only
+  // starts in the "checking" state when a token is already stored (a fresh visitor sees the login form
+  // immediately). sessionStorage remains the token store — nothing moves to localStorage.
+  const [sessionChecking, setSessionChecking] = useState(() => Boolean(getStoredToken()));
+
   const [
     teacherView,
     setTeacherView
@@ -562,28 +568,65 @@ function App() {
   }
 
   // Registry-driven sidebar list (so a new project appears automatically once added to the backend).
+  // Roadmap #8 §13/§14 — one-time startup session validation. If a token is stored, validate it against
+  // the authoritative /api/platform-session (using the role-appropriate header) before trusting the stale
+  // sessionStorage metadata. A definitive negative answer (HTTP error or ok:false) clears the session; a
+  // network error leaves it intact (ordinary API calls handle any later 401 per role). This does NOT
+  // reintroduce the PR #56/#57 global-logout bug: only THIS authoritative check clears a session at boot.
+  useEffect(() => {
+    const storedToken = getStoredToken();
+    if (!storedToken) { setSessionChecking(false); return; }
+    let cancelled = false;
+    // PR#67 review §6 — probe with the Bearer token ONLY (no role-specific header) so platform-session can
+    // recover the AUTHORITATIVE role even when the stored role is stale or missing (valid student + stale
+    // "teacher", valid teacher + stale "student", or token with no stored role). We then trust the server's
+    // role, never the stale sessionStorage metadata.
+    const headers: Record<string, string> = { "Content-Type": "application/json", Authorization: `Bearer ${storedToken}` };
+    fetch("/api/platform-session", { headers })
+      .then(async response => {
+        if (cancelled) return;
+        if (!response.ok) { handleLogout(); return; }
+        const data = (await response.json()) as { ok?: boolean; role?: "teacher" | "student"; displayName?: string };
+        if (!data.ok || !data.role) { handleLogout(); return; }
+        // Valid — refresh the role + display name from the SERVER (authoritative), never stale metadata.
+        setSessionRole(data.role);
+        setSessionDisplayName(data.displayName || "");
+        try {
+          sessionStorage.setItem("examBankSessionRole", data.role);
+          sessionStorage.setItem("examBankSessionDisplayName", data.displayName || "");
+        } catch { /* storage may be unavailable */ }
+      })
+      .catch(() => { /* network error: keep the stored session (not proven invalid) */ })
+      .finally(() => { if (!cancelled) setSessionChecking(false); });
+    return () => { cancelled = true; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   // TEACHER-ONLY: /api/project-tracker requires builder auth, so this must NEVER run for a student
   // session — a student token would get 401 and the generic apiRequest would log the student out.
   useEffect(() => {
-    if (!token || sessionRole !== "teacher") { setProjectList([]); return; }
+    // §6 — never fire teacher-only startup requests until session validation has completed AND the
+    // authoritative role is teacher (prevents a wrong-role/stale-role auxiliary request during boot).
+    if (sessionChecking || !token || sessionRole !== "teacher") { setProjectList([]); return; }
     let cancelled = false;
     apiRequest<{ projects?: { projectCode: string; title: string }[] }>("/api/project-tracker?resource=projects")
       .then(r => { if (!cancelled) setProjectList(r.projects || []); })
       .catch(() => { if (!cancelled) setProjectList([]); });
     return () => { cancelled = true; };
-  }, [token, sessionRole]);
+  }, [token, sessionRole, sessionChecking]);
 
   // Ready-for-review badge (global, not tied to the selected class). Re-checked when returning to the
   // projects view so approving a stage there refreshes the count. TEACHER-ONLY (builder-auth endpoint):
   // gated by sessionRole so a student session never calls it (which would 401 → logout).
   useEffect(() => {
-    if (!token || sessionRole !== "teacher") { setProjectReady({ total: 0, byProject: {} }); return; }
+    // §6 — also gated on session validation completing (no teacher request during boot).
+    if (sessionChecking || !token || sessionRole !== "teacher") { setProjectReady({ total: 0, byProject: {} }); return; }
     let cancelled = false;
     apiRequest<{ totalReadyForReview?: number; byProject?: Record<string, number> }>("/api/project-tracker?resource=projects-summary")
       .then(r => { if (!cancelled) setProjectReady({ total: Number(r.totalReadyForReview) || 0, byProject: r.byProject || {} }); })
       .catch(() => { if (!cancelled) setProjectReady({ total: 0, byProject: {} }); });
     return () => { cancelled = true; };
-  }, [token, sessionRole, teacherView]);
+  }, [token, sessionRole, teacherView, sessionChecking]);
 
   const [userCode, setUserCode] = useState("");
   const [password, setPassword] = useState("");
@@ -5230,6 +5273,21 @@ function App() {
       <pre className="answer-box">
         {JSON.stringify(answer, null, 2)}
       </pre>
+    );
+  }
+
+  // §13 — while a stored session is being validated, show a small existing-style loading state instead of
+  // rendering an authenticated (teacher or student) app from stale sessionStorage metadata.
+  if (sessionChecking && loggedIn) {
+    return (
+      <main className="auth" dir="rtl">
+        <div className="auth-form-wrap">
+          <section className="auth-card login-card" style={{ margin: "auto", textAlign: "center" }}>
+            <h1 className="auth-welcome">ExamBank 791381</h1>
+            <p className="auth-sub subtitle">جارٍ التحقق من الجلسة…</p>
+          </section>
+        </div>
+      </main>
     );
   }
 

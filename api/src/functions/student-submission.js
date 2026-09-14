@@ -1,6 +1,6 @@
 
 const {app}=require("@azure/functions");
-const {requireStudentAuth}=require("../lib/student-auth");
+const {requireActiveStudentSession}=require("../lib/student-auth");
 const {getContainer,downloadJsonOrNull,mutateJsonWithRetry,StorageConflictError}=require("../lib/platform-storage");
 const {gradeExam}=require("../lib/assignment-grading");
 const {recordAchievementIfEligible}=require("../lib/achievement-feed");
@@ -27,8 +27,8 @@ function defaultSubmission(id,student){return {schemaVersion:1,assignmentId:id,s
 // `deps` is an optional dependency-injection seam for unit tests (production passes nothing, so the real
 // implementations are used). It does not change runtime behavior.
 async function handler(request,deps={}){
- const authFn=deps.requireStudentAuth||requireStudentAuth,getC=deps.getContainer||getContainer,dl=deps.downloadJsonOrNull||downloadJsonOrNull,mut=deps.mutateJsonWithRetry||mutateJsonWithRetry,gradeFn=deps.gradeExam||gradeExam,recFn=deps.recordAchievementIfEligible||recordAchievementIfEligible,wl=deps.withAssignmentLock||withAssignmentLock;
- try{const auth=authFn(request);if(!auth.ok)return auth.response;const id=String(request.params?.assignmentId||"");if(!id)return {status:400,jsonBody:{ok:false,error:"assignmentId is required."}};const c=getC(),student=await dl(c,"platform/users/"+auth.user.sub+".json");if(!student||student.active===false)return {status:401,jsonBody:{ok:false,error:"الحساب غير فعّال."}};
+ const ras=deps.requireActiveStudentSession||requireActiveStudentSession,dl=deps.downloadJsonOrNull||downloadJsonOrNull,mut=deps.mutateJsonWithRetry||mutateJsonWithRetry,gradeFn=deps.gradeExam||gradeExam,recFn=deps.recordAchievementIfEligible||recordAchievementIfEligible,wl=deps.withAssignmentLock||withAssignmentLock;
+ try{const id=String(request.params?.assignmentId||"");if(!id)return {status:400,jsonBody:{ok:false,error:"assignmentId is required."}};const sess=await ras(request,deps);if(!sess.ok)return sess.response;const c=sess.container,student=sess.student;
   const classroom=student.classId?await dl(c,"platform/classes/"+student.classId+".json"):null;
   if(classroom&&normalizeClassStatus(classroom)==="archived")return {status:403,jsonBody:{ok:false,error:"هذا الصف مؤرشف وانتهت السنة الدراسية."}};
   const a=await dl(c,AP+id+".json");if(!a||String(a.classId)!==String(student.classId))return {status:404,jsonBody:{ok:false,error:"الواجب غير متاح."}};const name=SP+id+"/"+student.userId+".json";
