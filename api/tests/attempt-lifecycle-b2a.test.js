@@ -173,7 +173,9 @@ function seed({ durationMinutes = 0, attemptModelVersion = 2, maxAttempts = 1, d
   if (attemptModelVersion) a.attemptModelVersion = attemptModelVersion;
   store.set(ASG, a);
 }
-const sReq = (method, action, answers) => ({ method, params: { assignmentId: "asg1" }, json: async () => ({ action, ...(answers !== undefined ? { answers } : {}) }) });
+// Roadmap #10/#11: modern writes carry the live attempt identity (the real client sends it); auto-attach it.
+const attemptIdentity = () => { const s = store.get(SUB); const act = s && s.activeAttempt; return act ? { expectedAttemptNumber: act.attemptNumber, expectedStartedAt: act.startedAt } : {}; };
+const sReq = (method, action, answers) => ({ method, params: { assignmentId: "asg1" }, json: async () => ({ action, ...(answers !== undefined ? { answers } : {}), ...((action === "saveDraft" || action === "submit") ? attemptIdentity() : {}) }) });
 const sCall = (method, action, answers) => submissionHandler(sReq(method, action, answers), deps);
 
 describe("B2A student-submission — untimed v2 lifecycle", () => {
