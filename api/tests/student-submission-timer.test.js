@@ -23,7 +23,8 @@ function makeDeps() {
     StorageConflictError,
     // Correct answer is "A". Records the answers it was handed so tests can prove WHICH answers were graded.
     gradeExam: (_exam, answers) => { counts.grade++; gradedAnswers.push(answers); const ok = answers && answers.q1 && answers.q1.value === "A"; return { score: ok ? 10 : 0, totalMarks: 10, percentage: ok ? 100 : 0, manualReviewMarks: 0, finalized: true, questions: [], sections: [] }; },
-    recordAchievementIfEligible: async () => { counts.achievement++; }
+    recordAchievementIfEligible: async () => { counts.achievement++; },
+    withAssignmentLock: async (_c, _id, fn) => fn()
   };
 }
 function seed({ durationMinutes = 60, maxAttempts = 1, dueAt = new Date(BASE + 10 * 60 * MIN).toISOString() } = {}) {

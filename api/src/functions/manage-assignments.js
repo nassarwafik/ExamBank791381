@@ -1,11 +1,28 @@
 
 const {app}=require("@azure/functions"),crypto=require("crypto");
 const {requireBuilderAuth}=require("../lib/builder-auth");
-const {getContainer,downloadJsonOrNull,uploadJson,listJson,mutateJsonWithRetry,StorageConflictError}=require("../lib/platform-storage");
+const {getContainer,downloadJsonOrNull,uploadJson,listJson,listBlobNames,deleteBlob,mutateJsonWithRetry,StorageConflictError}=require("../lib/platform-storage");
 const {recordAuditEvent}=require("../lib/audit-log");
 const {examOfficialStats}=require("../lib/exam-structure");
-const PREFIX="platform/assignments/",CLASS_PREFIX="platform/classes/";
+const {normalizeAssignmentStatus,applyAssignmentArchive,applyAssignmentRestore}=require("../lib/assignment-lifecycle");
+const {activeAttemptOf}=require("../lib/assignment-availability");
+const {withAssignmentLock,AssignmentLockBusyError}=require("../lib/assignment-lock");
+const PREFIX="platform/assignments/",CLASS_PREFIX="platform/classes/",SUB_PREFIX="platform/submissions/";
 const CONFLICT_MESSAGE="حدث تعارض مؤقت أثناء حفظ البيانات. حاول مرة أخرى.";
+// Read-only impact of deleting/archiving an assignment (Roadmap #7). submissionDocuments is the count of
+// stored submission blobs (authoritative for purge-blocking); the rest are derived from the parsed docs.
+function computeImpact(a,submissionDocuments,subs){
+ let completedAttempts=0,studentsWithCompletedAttempts=0,activeAttempts=0,draftDocuments=0;
+ for(const s of (Array.isArray(subs)?subs:[])){
+  const attempts=Array.isArray(s&&s.attempts)?s.attempts:[];
+  completedAttempts+=attempts.length;if(attempts.length>0)studentsWithCompletedAttempts++;
+  if(activeAttemptOf(s))activeAttempts++;
+  const da=s&&s.draftAnswers&&typeof s.draftAnswers==="object"?s.draftAnswers:{};
+  if((s&&s.draftSavedAt)||Object.keys(da).length>0)draftDocuments++;
+ }
+ const status=normalizeAssignmentStatus(a);
+ return {assignmentId:a.assignmentId,status,submissionDocuments,studentsWithCompletedAttempts,completedAttempts,activeAttempts,draftDocuments,canPurge:status==="archived"&&submissionDocuments===0};
+}
 const iso=v=>{const s=String(v||"").trim();if(!s)return "";const d=new Date(s);if(Number.isNaN(d.getTime()))throw new Error("صيغة التاريخ غير صحيحة.");return d.toISOString()};
 function cleanExam(v){const x=JSON.parse(JSON.stringify(v||{}));if(Array.isArray(x.questions))x.questions=x.questions.map(q=>({...q,history:[],redoStack:[]}));x.revisionHistory=[];return x}
 // Validate the optional per-attempt duration. null / undefined / "" / 0 => untimed (0). A positive
@@ -19,11 +36,11 @@ function parseDurationMinutes(v){
  if(n<1||n>1440)return {ok:false};
  return {ok:true,value:n};
 }
-function summary(a){return {assignmentId:a.assignmentId,classId:a.classId,className:a.className,title:a.title,instructions:a.instructions,status:a.status,openAt:a.openAt||"",dueAt:a.dueAt||"",sourceExamId:a.sourceExamId||"",sourceExamTitle:a.sourceExamTitle||"",questionCount:Number(a.questionCount||0),totalMarks:Number(a.totalMarks||0),maxAttempts:Math.max(1,Number(a.maxAttempts||1)),durationMinutes:Number(a.durationMinutes||0),attemptModelVersion:Number(a.attemptModelVersion||0),createdAt:a.createdAt||"",updatedAt:a.updatedAt||""}}
+function summary(a){return {assignmentId:a.assignmentId,classId:a.classId,className:a.className,title:a.title,instructions:a.instructions,status:a.status,openAt:a.openAt||"",dueAt:a.dueAt||"",sourceExamId:a.sourceExamId||"",sourceExamTitle:a.sourceExamTitle||"",questionCount:Number(a.questionCount||0),totalMarks:Number(a.totalMarks||0),maxAttempts:Math.max(1,Number(a.maxAttempts||1)),durationMinutes:Number(a.durationMinutes||0),attemptModelVersion:Number(a.attemptModelVersion||0),archivedAt:String(a.archivedAt||""),archivedBy:String(a.archivedBy||""),archivedFromStatus:String(a.archivedFromStatus||""),archiveReason:String(a.archiveReason||""),createdAt:a.createdAt||"",updatedAt:a.updatedAt||""}}
 // `deps` is an optional dependency-injection seam for unit tests (production passes nothing, so the
 // real implementations are used). It does not change runtime behavior.
 async function handler(request,deps={}){
- const authFn=deps.requireBuilderAuth||requireBuilderAuth,getC=deps.getContainer||getContainer,dl=deps.downloadJsonOrNull||downloadJsonOrNull,up=deps.uploadJson||uploadJson,ls=deps.listJson||listJson,mut=deps.mutateJsonWithRetry||mutateJsonWithRetry,rec=deps.recordAuditEvent||recordAuditEvent;
+ const authFn=deps.requireBuilderAuth||requireBuilderAuth,getC=deps.getContainer||getContainer,dl=deps.downloadJsonOrNull||downloadJsonOrNull,up=deps.uploadJson||uploadJson,ls=deps.listJson||listJson,lbn=deps.listBlobNames||listBlobNames,db=deps.deleteBlob||deleteBlob,mut=deps.mutateJsonWithRetry||mutateJsonWithRetry,rec=deps.recordAuditEvent||recordAuditEvent,wl=deps.withAssignmentLock||withAssignmentLock;
  try{
   const auth=authFn(request);if(!auth.ok)return auth.response;const c=getC();
   if(request.method==="GET"){const u=new URL(request.url),classId=String(u.searchParams.get("classId")||"");let list=(await ls(c,PREFIX)).map(summary);if(classId)list=list.filter(x=>x.classId===classId);list.sort((a,b)=>String(b.createdAt).localeCompare(String(a.createdAt)));return {status:200,jsonBody:{ok:true,assignments:list}}}
@@ -60,7 +77,8 @@ async function handler(request,deps={}){
    let nextStatus=null,nextMaxAttempts=null;
    if(action==="setstatus"){
     nextStatus=String(b.status||"").toLowerCase();
-    if(!["draft","published","archived"].includes(nextStatus))return {status:400,jsonBody:{ok:false,error:"حالة الواجب غير صحيحة."}};
+    // Archiving/restoring are dedicated actions now (Roadmap #7); setstatus handles ONLY draft/published.
+    if(!["draft","published"].includes(nextStatus))return {status:400,jsonBody:{ok:false,error:"حالة الواجب غير صحيحة."}};
    }else{
     nextMaxAttempts=Math.min(10,Math.max(1,Number(b.maxAttempts||1)));
    }
@@ -68,6 +86,8 @@ async function handler(request,deps={}){
    try{
     updated=await mut(c,name,current=>{
      if(!current){const err=new Error("الواجب غير موجود.");err.httpStatus=404;throw err}
+     // An archived assignment must be restored before any status/attempt change (never bypass restore).
+     if(normalizeAssignmentStatus(current)==="archived"){const err=new Error(action==="setstatus"?"الواجب مؤرشف. استعد الواجب أولًا.":"الواجب مؤرشف. استعده أولًا قبل تعديل عدد المحاولات.");err.httpStatus=409;throw err}
      if(action==="setstatus")current.status=nextStatus;else current.maxAttempts=nextMaxAttempts;
      current.updatedAt=new Date().toISOString();
      return current;
@@ -79,7 +99,124 @@ async function handler(request,deps={}){
    }
    return {status:200,jsonBody:{ok:true,assignment:summary(updated)}};
   }
-  if(action==="delete"){const id=String(b.assignmentId||"");if(!id)return {status:400,jsonBody:{ok:false,error:"assignmentId is required."}};const existing=await dl(c,PREFIX+id+".json");await c.getBlobClient(PREFIX+id+".json").deleteIfExists();await rec(c,{actor:auth.user?.sub,action:"assignment.delete",targetType:"assignment",targetId:id,targetLabel:existing?.title||""});return {status:200,jsonBody:{ok:true,deleted:true}}}
+
+  // ── deleteImpact — read-only impact report used by the teacher UI before archive/purge (Roadmap #7). ──
+  if(action==="deleteimpact"){
+   const id=String(b.assignmentId||"");if(!id)return {status:400,jsonBody:{ok:false,error:"assignmentId is required."}};
+   const a=await dl(c,PREFIX+id+".json");if(!a)return {status:404,jsonBody:{ok:false,error:"الواجب غير موجود."}};
+   const names=await lbn(c,SUB_PREFIX+id+"/"),subs=await ls(c,SUB_PREFIX+id+"/");
+   return {status:200,jsonBody:{ok:true,impact:computeImpact(a,names.length,subs)}};
+  }
+
+  // ── archive (default deletion) + legacy "delete" alias — archive-first, NEVER physical deletion.
+  // Preserves examSnapshot/timing/submissions/attempts/drafts/results. Idempotent. When students have live
+  // active attempts, requires an explicit confirmActiveAttempts. The ENTIRE impact scan + commit runs under
+  // the per-assignment lifecycle lock, so no student state-write (startAttempt / first submission / lazy
+  // active attempt) can interleave between the scan and the commit: a newly-started attempt is either
+  // observed here (=> 409 requiresConfirmation) or is blocked by the committed archived state. ──
+  if(action==="archive"||action==="delete"){
+   const id=String(b.assignmentId||"");if(!id)return {status:400,jsonBody:{ok:false,error:"assignmentId is required."}};
+   const legacyDelete=action==="delete";
+   let auditImpact=null,auditTitle="";
+   try{
+    const out=await wl(c,id,async()=>{
+     const a=await dl(c,PREFIX+id+".json");if(!a)return {status:404,jsonBody:{ok:false,error:"الواجب غير موجود."}};
+     auditTitle=a.title||"";
+     if(normalizeAssignmentStatus(a)==="archived")return {status:200,jsonBody:{ok:true,archived:true,alreadyArchived:true,...(legacyDelete?{legacyDeleteRedirected:true}:{}),assignment:summary(a)}};
+     // Authoritative impact scan, serialized by the lock (no student write can appear between here and the
+     // commit below). computeImpact reads the live submission set.
+     const names=await lbn(c,SUB_PREFIX+id+"/"),subs=await ls(c,SUB_PREFIX+id+"/"),impact=computeImpact(a,names.length,subs);
+     if(impact.activeAttempts>0&&b.confirmActiveAttempts!==true){
+      return {status:409,jsonBody:{ok:false,requiresConfirmation:true,impact,error:"يوجد طلاب في محاولات نشطة. تأكيد الأرشفة سيمنعهم من المتابعة حتى تتم الاستعادة، ولن تُحذف إجاباتهم أو محاولاتهم."}};
+     }
+     // ETag CAS on the assignment blob keeps this correct against the lock-free setstatus/setmaxattempts
+     // (which mutate the same blob without the lifecycle lock).
+     const updated=await mut(c,PREFIX+id+".json",current=>{
+      if(!current){const err=new Error("الواجب غير موجود.");err.httpStatus=404;throw err}
+      if(normalizeAssignmentStatus(current)==="archived")return current;
+      return applyAssignmentArchive(current,{actor:auth.user?.sub,now:new Date().toISOString(),reason:"manual"});
+     });
+     auditImpact=impact;
+     return {status:200,jsonBody:{ok:true,archived:true,...(legacyDelete?{legacyDeleteRedirected:true}:{}),assignment:summary(updated)}};
+    });
+    if(auditImpact){await rec(c,{actor:auth.user?.sub,action:"assignment.archive",targetType:"assignment",targetId:id,targetLabel:auditTitle,details:{previousStatus:auditImpact.status,activeAttempts:auditImpact.activeAttempts,submissionDocuments:auditImpact.submissionDocuments,requestedAction:action}});}
+    return out;
+   }catch(e){
+    if(e instanceof AssignmentLockBusyError)return {status:503,jsonBody:{ok:false,error:CONFLICT_MESSAGE}};
+    if(e instanceof StorageConflictError)return {status:503,jsonBody:{ok:false,error:CONFLICT_MESSAGE}};
+    if(e?.httpStatus)return {status:e.httpStatus,jsonBody:{ok:false,error:e.message}};
+    throw e;
+   }
+  }
+
+  // ── restore — bring an archived assignment back to its prior draft/published state (legacy => draft).
+  // Preserves all submissions/results/active attempts; never restarts a timer (timerState re-derives). ──
+  if(action==="restore"){
+   const id=String(b.assignmentId||"");if(!id)return {status:400,jsonBody:{ok:false,error:"assignmentId is required."}};
+   // Under the lifecycle lock so restore is serialized against archive/purge on the same assignment.
+   let restoredStatus=null,auditTitle="";
+   try{
+    const out=await wl(c,id,async()=>{
+     const a=await dl(c,PREFIX+id+".json");if(!a)return {status:404,jsonBody:{ok:false,error:"الواجب غير موجود."}};
+     auditTitle=a.title||"";
+     if(normalizeAssignmentStatus(a)!=="archived")return {status:409,jsonBody:{ok:false,error:"الواجب غير مؤرشف."}};
+     const updated=await mut(c,PREFIX+id+".json",current=>{
+      if(!current){const err=new Error("الواجب غير موجود.");err.httpStatus=404;throw err}
+      if(normalizeAssignmentStatus(current)!=="archived"){const err=new Error("الواجب غير مؤرشف.");err.httpStatus=409;throw err}
+      const next=applyAssignmentRestore(current,{now:new Date().toISOString()});restoredStatus=next.status;return next;
+     });
+     return {status:200,jsonBody:{ok:true,restored:true,assignment:summary(updated)}};
+    });
+    if(restoredStatus)await rec(c,{actor:auth.user?.sub,action:"assignment.restore",targetType:"assignment",targetId:id,targetLabel:auditTitle,details:{restoredStatus}});
+    return out;
+   }catch(e){
+    if(e instanceof AssignmentLockBusyError)return {status:503,jsonBody:{ok:false,error:CONFLICT_MESSAGE}};
+    if(e instanceof StorageConflictError)return {status:503,jsonBody:{ok:false,error:CONFLICT_MESSAGE}};
+    if(e?.httpStatus)return {status:e.httpStatus,jsonBody:{ok:false,error:e.message}};
+    throw e;
+   }
+  }
+
+  // ── purge — the ONLY physical deletion path (Roadmap #7). Allowed ONLY for an archived assignment with
+  // ZERO submission history and an exact id+title confirmation; re-checks history immediately before the
+  // delete so a submission created after the impact check aborts it. NO cascade — history always wins. ──
+  if(action==="purge"){
+   const id=String(b.assignmentId||"");if(!id)return {status:400,jsonBody:{ok:false,error:"assignmentId is required."}};
+   // The ENTIRE verify → final-list → delete sequence runs under the per-assignment lifecycle lock. Because
+   // a state-CREATING student write also takes this lock (and re-reads the assignment under it), it is
+   // impossible for an in-flight first submission to commit inside this window: either it created its blob
+   // BEFORE the purge acquired the lock (=> the final list sees it => 409 blockedByHistory, nothing deleted)
+   // or it runs AFTER the delete (=> its under-lock assignment re-read is gone/archived => 403, no orphan).
+   // Ordering inside the lock: (1) fresh-read assignment, (2) verify archived, (3) verify confirmation
+   // against the FRESH doc, (4) FINAL submission list, (5) delete. Nothing reads between the final list and
+   // the delete.
+   let purgedTitle=null;
+   try{
+    const out=await wl(c,id,async()=>{
+     const a=await dl(c,PREFIX+id+".json");if(!a)return {status:404,jsonBody:{ok:false,error:"الواجب غير موجود."}};
+     if(normalizeAssignmentStatus(a)!=="archived")return {status:409,jsonBody:{ok:false,error:"لا يمكن الحذف النهائي إلا لواجب مؤرشف. أرشفه أولًا."}};
+     if(String(b.confirmAssignmentId||"")!==String(a.assignmentId||"")||String(b.confirmTitle||"")!==String(a.title||"")){
+      return {status:400,jsonBody:{ok:false,error:"تأكيد الحذف النهائي غير مطابق."}};
+     }
+     const names=await lbn(c,SUB_PREFIX+id+"/");   // FINAL check — closest operation to the physical delete
+     if(names.length>0){
+      const subs=await ls(c,SUB_PREFIX+id+"/");
+      return {status:409,jsonBody:{ok:false,blockedByHistory:true,impact:computeImpact(a,names.length,subs),error:"لا يمكن حذف الواجب نهائيًا لأن له بيانات طلاب محفوظة. اتركه مؤرشفًا للحفاظ على السجل."}};
+     }
+     await db(c,PREFIX+id+".json");
+     purgedTitle=a.title||"";
+     return {status:200,jsonBody:{ok:true,purged:true,assignmentId:id}};
+    });
+    if(purgedTitle!==null)await rec(c,{actor:auth.user?.sub,action:"assignment.purge",targetType:"assignment",targetId:id,targetLabel:purgedTitle,details:{submissionDocuments:0,previousStatus:"archived"}});
+    return out;
+   }catch(e){
+    if(e instanceof AssignmentLockBusyError)return {status:503,jsonBody:{ok:false,error:CONFLICT_MESSAGE}};
+    if(e instanceof StorageConflictError)return {status:503,jsonBody:{ok:false,error:CONFLICT_MESSAGE}};
+    if(e?.httpStatus)return {status:e.httpStatus,jsonBody:{ok:false,error:e.message}};
+    throw e;
+   }
+  }
+
   return {status:400,jsonBody:{ok:false,error:"Unsupported assignment action."}};
  }catch{return {status:500,jsonBody:{ok:false,error:"تعذر تنفيذ إجراء الواجب حاليًا."}}}
 }
