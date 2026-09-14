@@ -26,40 +26,34 @@ async function handler(request, deps = {}) {
   const requireStudent = deps.requireActiveStudentSession || requireActiveStudentSession;
   const studentDeps = { getContainer: deps.getContainer || getContainer, downloadJsonOrNull: deps.downloadJsonOrNull || downloadJsonOrNull, container: deps.container };
 
+  const teacherResult = payload => ({ status: 200, headers: NO_STORE, jsonBody: { ok: true, role: "teacher", displayName: "المعلم", expiresAt: isoFromExp(payload.exp) } });
+  const studentResult = sess => ({
+    status: 200, headers: NO_STORE,
+    jsonBody: { ok: true, role: "student", displayName: String(sess.student.displayName || ""), userCode: String(sess.student.code || ""), classId: String(sess.student.classId || ""), expiresAt: isoFromExp(sess.user.exp) }
+  });
+
   try {
     const builderHeader = readHeader(request, "x-builder-token");
     const studentHeader = readHeader(request, "x-student-token") || readHeader(request, "x-platform-token");
     const authBearer = bearer(request);
 
-    // Teacher path: explicit builder header, or a Bearer token that verifies as a teacher.
-    if (builderHeader || (authBearer && !studentHeader)) {
-      const payload = verifyBuilder(builderHeader || authBearer);
-      if (payload) {
-        return { status: 200, headers: NO_STORE, jsonBody: { ok: true, role: "teacher", displayName: "المعلم", expiresAt: isoFromExp(payload.exp) } };
-      }
-      // Not a valid teacher token — if there is no student header either, fail; otherwise fall through.
-      if (!studentHeader) return UNAUTH;
+    // PR#67 review §5 — an EXPLICIT role header is honored for that role ONLY (no cross-role fallthrough).
+    // A Bearer-only token (used by the frontend boot probe for role recovery) tries teacher, then hardened
+    // student, before returning 401.
+    if (builderHeader) {
+      const payload = verifyBuilder(builderHeader);
+      return payload ? teacherResult(payload) : UNAUTH;
     }
-
-    // Student path: hardened, server-authoritative (active/archived/authVersion checked; current doc wins).
-    if (studentHeader || authBearer) {
+    if (studentHeader) {
       const sess = await requireStudent(request, studentDeps);
-      if (sess.ok) {
-        return {
-          status: 200,
-          headers: NO_STORE,
-          jsonBody: {
-            ok: true,
-            role: "student",
-            displayName: String(sess.student.displayName || ""),
-            userCode: String(sess.student.code || ""),
-            classId: String(sess.student.classId || ""),
-            expiresAt: isoFromExp(sess.user.exp)
-          }
-        };
-      }
+      return sess.ok ? studentResult(sess) : UNAUTH;
     }
-
+    if (authBearer) {
+      const teacher = verifyBuilder(authBearer);
+      if (teacher) return teacherResult(teacher);
+      const sess = await requireStudent(request, studentDeps);
+      if (sess.ok) return studentResult(sess);
+    }
     return UNAUTH;
   } catch {
     return UNAUTH;

@@ -576,11 +576,12 @@ function App() {
   useEffect(() => {
     const storedToken = getStoredToken();
     if (!storedToken) { setSessionChecking(false); return; }
-    const storedRole = getStoredRole();
     let cancelled = false;
+    // PR#67 review §6 — probe with the Bearer token ONLY (no role-specific header) so platform-session can
+    // recover the AUTHORITATIVE role even when the stored role is stale or missing (valid student + stale
+    // "teacher", valid teacher + stale "student", or token with no stored role). We then trust the server's
+    // role, never the stale sessionStorage metadata.
     const headers: Record<string, string> = { "Content-Type": "application/json", Authorization: `Bearer ${storedToken}` };
-    if (storedRole === "student") headers["x-student-token"] = storedToken;
-    else headers["x-builder-token"] = storedToken;
     fetch("/api/platform-session", { headers })
       .then(async response => {
         if (cancelled) return;
@@ -604,25 +605,28 @@ function App() {
   // TEACHER-ONLY: /api/project-tracker requires builder auth, so this must NEVER run for a student
   // session — a student token would get 401 and the generic apiRequest would log the student out.
   useEffect(() => {
-    if (!token || sessionRole !== "teacher") { setProjectList([]); return; }
+    // §6 — never fire teacher-only startup requests until session validation has completed AND the
+    // authoritative role is teacher (prevents a wrong-role/stale-role auxiliary request during boot).
+    if (sessionChecking || !token || sessionRole !== "teacher") { setProjectList([]); return; }
     let cancelled = false;
     apiRequest<{ projects?: { projectCode: string; title: string }[] }>("/api/project-tracker?resource=projects")
       .then(r => { if (!cancelled) setProjectList(r.projects || []); })
       .catch(() => { if (!cancelled) setProjectList([]); });
     return () => { cancelled = true; };
-  }, [token, sessionRole]);
+  }, [token, sessionRole, sessionChecking]);
 
   // Ready-for-review badge (global, not tied to the selected class). Re-checked when returning to the
   // projects view so approving a stage there refreshes the count. TEACHER-ONLY (builder-auth endpoint):
   // gated by sessionRole so a student session never calls it (which would 401 → logout).
   useEffect(() => {
-    if (!token || sessionRole !== "teacher") { setProjectReady({ total: 0, byProject: {} }); return; }
+    // §6 — also gated on session validation completing (no teacher request during boot).
+    if (sessionChecking || !token || sessionRole !== "teacher") { setProjectReady({ total: 0, byProject: {} }); return; }
     let cancelled = false;
     apiRequest<{ totalReadyForReview?: number; byProject?: Record<string, number> }>("/api/project-tracker?resource=projects-summary")
       .then(r => { if (!cancelled) setProjectReady({ total: Number(r.totalReadyForReview) || 0, byProject: r.byProject || {} }); })
       .catch(() => { if (!cancelled) setProjectReady({ total: 0, byProject: {} }); });
     return () => { cancelled = true; };
-  }, [token, sessionRole, teacherView]);
+  }, [token, sessionRole, teacherView, sessionChecking]);
 
   const [userCode, setUserCode] = useState("");
   const [password, setPassword] = useState("");

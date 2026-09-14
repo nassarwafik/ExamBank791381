@@ -335,6 +335,10 @@ async function createStudentRecord(container, classroom, input, options = {}) {
     salt,
     passwordHash,
     active: true,
+    // Roadmap #8 (PR#67 review §3): the auth document carries its own authVersion, kept consistent with the
+    // student document's authVersion. Login requires the two to match, so a half-applied credential change
+    // fails closed rather than issuing a session.
+    authVersion: 1,
     createdAt: now,
     updatedAt: now
   };
@@ -365,20 +369,28 @@ async function resetStudentPassword(container, student, requestedPassword = "") 
   const code = String(student.code || student.identityNumber || "");
   const authBlobName = AUTH_PREFIX + studentCodeHash(code) + ".json";
   const { salt, passwordHash } = hashPassword(temporaryPassword);
+  const now = new Date().toISOString();
+  // Fail-closed ordering (PR#67 review §3): bump the STUDENT authVersion FIRST — this immediately revokes
+  // every existing session (login requires auth.authVersion === student.authVersion, so until step 2 also
+  // lands the OLD password can't mint a session either). Optimistic concurrency makes simultaneous resets
+  // each apply their own increment; a monotonic max on the auth side prevents any downgrade.
+  let newVersion = 1;
+  await mutateJsonWithRetry(container, USER_PREFIX + student.userId + ".json", current => {
+    if (!current) throw new Error("الطالب غير موجود.");
+    newVersion = normalizeAuthVersion(current.authVersion) + 1;
+    current.authVersion = newVersion;
+    current.updatedAt = now;
+    return current;
+  });
+  // Step 2: apply the new password hash AND the matching authVersion together (never downgrading). If this
+  // write fails, the student is already bumped, so login stays fail-closed (versions mismatch) until retried
+  // — the old password never silently keeps working while sessions are revoked.
   await mutateJsonWithRetry(container, authBlobName, current => {
     if (!current) throw new Error("ملف دخول الطالب غير موجود.");
     current.salt = salt;
     current.passwordHash = passwordHash;
-    current.updatedAt = new Date().toISOString();
-    return current;
-  });
-  // Roadmap #8: bump the student's authVersion atomically so every previously issued session token
-  // (including legacy pre-R8 tokens, whose sv normalizes to 1) is revoked immediately after a reset.
-  // Optimistic concurrency guarantees simultaneous resets cannot lose an increment.
-  await mutateJsonWithRetry(container, USER_PREFIX + student.userId + ".json", current => {
-    if (!current) return current;
-    current.authVersion = normalizeAuthVersion(current.authVersion) + 1;
-    current.updatedAt = new Date().toISOString();
+    current.authVersion = Math.max(normalizeAuthVersion(current.authVersion), newVersion);
+    current.updatedAt = now;
     return current;
   });
   return temporaryPassword;
@@ -822,6 +834,10 @@ app.http("manageStudents", {
         const authActive = student.active !== false && student.archived !== true;
         const newAuthName = AUTH_PREFIX + studentCodeHash(newCode) + ".json";
 
+        // Roadmap #8 (PR#67 review §3): on a password change, bump the STUDENT authVersion FIRST (revokes
+        // sessions; login stays fail-closed until the auth doc catches up), then write the auth doc with the
+        // SAME version (monotonic max, never downgraded).
+        let updatedStudentVersion = null;
         await mutateJsonWithRetry(container, studentBlobName, current => {
           if (!current || current.role !== "student") throw new Error("الطالب غير موجود.");
           current.schemaVersion = 3;
@@ -831,8 +847,8 @@ app.http("manageStudents", {
           current.identityNumber = identityNumber;
           current.code = newCode;
           current.classId = newClassId;
-          // Roadmap #8: a password change here revokes existing sessions by bumping authVersion.
           if (newPassword) current.authVersion = normalizeAuthVersion(current.authVersion) + 1;
+          updatedStudentVersion = normalizeAuthVersion(current.authVersion);
           current.updatedAt = new Date().toISOString();
           return current;
         });
@@ -844,6 +860,7 @@ app.http("manageStudents", {
               const { salt, passwordHash } = hashPassword(newPassword);
               current.salt = salt;
               current.passwordHash = passwordHash;
+              current.authVersion = Math.max(normalizeAuthVersion(current.authVersion), updatedStudentVersion);
             }
             current.schemaVersion = 3;
             current.codeHash = studentCodeHash(newCode);
@@ -862,6 +879,8 @@ app.http("manageStudents", {
             schemaVersion: 3,
             codeHash: studentCodeHash(newCode),
             active: authActive,
+            // Keep the auth doc's version consistent with the (possibly bumped) student version.
+            authVersion: Math.max(normalizeAuthVersion(oldAuth && oldAuth.authVersion), normalizeAuthVersion(updatedStudentVersion)),
             updatedAt: new Date().toISOString()
           };
           if (newPassword) {

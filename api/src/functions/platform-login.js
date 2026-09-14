@@ -9,7 +9,8 @@ const {
   normalizeStudentCode,
   studentCodeHash,
   verifyPassword,
-  createStudentToken
+  createStudentToken,
+  normalizeAuthVersion
 } = require("../lib/student-auth");
 const {
   getContainer,
@@ -17,16 +18,12 @@ const {
   mutateJsonWithRetry
 } = require("../lib/platform-storage");
 const {
-  checkLoginThrottle,
-  recordLoginFailure,
+  reserveLoginAttempt,
   clearLoginThrottle,
   clientIdFromRequest
 } = require("../lib/login-throttle");
 
-// Auth responses must never be cached (§15).
 const NO_STORE = { "Cache-Control": "no-store", "Pragma": "no-cache" };
-// One generic authentication error for EVERY failure mode (§16): wrong password, unknown code, inactive,
-// archived, teacher-vs-student — all indistinguishable to the caller (no enumeration).
 const GENERIC_AUTH_ERROR = "بيانات الدخول غير صحيحة.";
 
 // DI seam for tests (production passes nothing → real implementations).
@@ -38,8 +35,7 @@ async function handler(request, deps = {}) {
   const mkBuilderToken = deps.createBuilderToken || createBuilderToken;
   const mkStudentToken = deps.createStudentToken || createStudentToken;
   const verifyPw = deps.verifyPassword || verifyPassword;
-  const throttleCheck = deps.checkLoginThrottle || checkLoginThrottle;
-  const throttleFail = deps.recordLoginFailure || recordLoginFailure;
+  const reserve = deps.reserveLoginAttempt || reserveLoginAttempt;
   const throttleClear = deps.clearLoginThrottle || clearLoginThrottle;
   const clientId = (deps.clientIdFromRequest || clientIdFromRequest)(request);
 
@@ -58,15 +54,18 @@ async function handler(request, deps = {}) {
 
     const container = getC();
 
-    // Throttle gate BEFORE any credential work (§10). Identifier is combined with the client address inside
-    // the throttle key so one actor cannot lock a victim's account globally.
-    const gate = await throttleCheck(container, userCode, clientId, deps);
+    // Reserve-before-verify (§2): COUNT this attempt atomically BEFORE any password work. A burst of
+    // simultaneous guesses is serialized by optimistic concurrency; once the free band is exhausted (or the
+    // identifier-only global bucket trips), further attempts are rejected here and never reach verify. A CAS
+    // conflict under heavy contention is treated as fail-closed (throttled), never as a free pass.
+    let gate;
+    try {
+      gate = await reserve(container, userCode, clientId, deps);
+    } catch {
+      return { status: 429, headers: { ...NO_STORE, "Retry-After": "5" }, jsonBody: { ok: false, error: "محاولات كثيرة. حاول مرة أخرى بعد قليل." } };
+    }
     if (!gate.allowed) {
-      return {
-        status: 429,
-        headers: { ...NO_STORE, "Retry-After": String(gate.retryAfterSeconds) },
-        jsonBody: { ok: false, error: "محاولات كثيرة. حاول مرة أخرى بعد قليل." }
-      };
+      return { status: 429, headers: { ...NO_STORE, "Retry-After": String(gate.retryAfterSeconds || 5) }, jsonBody: { ok: false, error: "محاولات كثيرة. حاول مرة أخرى بعد قليل." } };
     }
 
     // Teacher credentials.
@@ -75,18 +74,15 @@ async function handler(request, deps = {}) {
     if (isTeacher) {
       await throttleClear(container, userCode, clientId, deps);
       const token = mkBuilderToken(userCode);
-      return {
-        status: 200,
-        headers: NO_STORE,
-        jsonBody: { ok: true, role: "teacher", token, userCode, displayName: "المعلم", expiresInSeconds: TOKEN_TTL_SECONDS }
-      };
+      return { status: 200, headers: NO_STORE, jsonBody: { ok: true, role: "teacher", token, userCode, displayName: "المعلم", expiresInSeconds: TOKEN_TTL_SECONDS } };
     }
 
-    // Student credentials.
+    // Student credentials — bind password verification to the credential version (§3).
     const normalizedCode = normalizeStudentCode(userCode);
     const authDocument = await dl(container, "platform/auth/" + studentCodeHash(normalizedCode) + ".json");
     const studentBlobName = authDocument ? "platform/users/" + authDocument.userId + ".json" : "";
     const student = studentBlobName ? await dl(container, studentBlobName) : null;
+    const boundVersion = normalizeAuthVersion(authDocument && authDocument.authVersion);
 
     const credentialsOk = !!(
       authDocument &&
@@ -94,33 +90,36 @@ async function handler(request, deps = {}) {
       verifyPw(password, authDocument.salt, authDocument.passwordHash) &&
       student &&
       student.active !== false &&
-      student.archived !== true
+      student.archived !== true &&
+      // Fail-closed consistency: the auth document and the student document must agree on the credential
+      // version. During a reset window (student bumped, auth not yet, or vice-versa) they disagree and login
+      // is refused rather than issuing a session against a half-applied credential change.
+      boundVersion === normalizeAuthVersion(student.authVersion)
     );
 
     if (!credentialsOk) {
-      const failed = await throttleFail(container, userCode, clientId, deps);
-      const headers = { ...NO_STORE };
-      if (failed && failed.retryAfterSeconds > 0) headers["Retry-After"] = String(failed.retryAfterSeconds);
-      return { status: 401, headers, jsonBody: { ok: false, error: GENERIC_AUTH_ERROR } };
+      // The attempt was already counted at reserve; just return the single generic error (no enumeration).
+      return { status: 401, headers: NO_STORE, jsonBody: { ok: false, error: GENERIC_AUTH_ERROR } };
     }
 
-    // Optimistic read-modify-write of lastLogin so a login can never clobber a concurrent teacher/user
-    // edit (§11). Only lastLoginAt/updatedAt are merged; every other field is preserved from the fresh doc.
-    // The returned fresh doc (with current authVersion) is what the session token is minted from.
+    // Optimistic read-modify-write of lastLogin (§11) that ALSO re-validates the credential version under
+    // the lock (§3): if a concurrent reset bumped the student's authVersion since we verified the password,
+    // do not stamp the login and fail closed — the old password must not yield a fresh post-reset session.
+    let stillValid = true;
     const fresh = await mut(container, studentBlobName, current => {
       const base = current || student;
+      if (normalizeAuthVersion(base.authVersion) !== boundVersion) { stillValid = false; return base; }
       base.lastLoginAt = new Date().toISOString();
       base.updatedAt = base.lastLoginAt;
       return base;
     });
+    if (!stillValid) {
+      return { status: 401, headers: NO_STORE, jsonBody: { ok: false, error: GENERIC_AUTH_ERROR } };
+    }
 
     await throttleClear(container, userCode, clientId, deps);
-    const token = mkStudentToken(fresh);
-    return {
-      status: 200,
-      headers: NO_STORE,
-      jsonBody: { ok: true, role: "student", token, userCode: fresh.code, displayName: fresh.displayName, expiresInSeconds: STUDENT_TOKEN_TTL_SECONDS }
-    };
+    const token = mkStudentToken(fresh);            // sv = fresh.authVersion === boundVersion (verified)
+    return { status: 200, headers: NO_STORE, jsonBody: { ok: true, role: "student", token, userCode: fresh.code, displayName: fresh.displayName, expiresInSeconds: STUDENT_TOKEN_TTL_SECONDS } };
   } catch {
     return { status: 500, headers: NO_STORE, jsonBody: { ok: false, error: "تعذر تسجيل الدخول حاليًا." } };
   }

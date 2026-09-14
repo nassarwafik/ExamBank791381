@@ -149,6 +149,10 @@ function verifyStudentToken(token) {
     if (!timingSafeEqualText(suppliedSignature, expected)) return null;
     if (payload.role !== "student") return null;
     if (!validateTemporalClaims(payload, STUDENT_TOKEN_TTL_SECONDS)) return null;
+    // PR#67 review §4 — a v2 token MUST carry an explicit integer sv >= 1. A missing / null / 0 / negative /
+    // float / string sv is rejected outright (never silently normalized to 1); only LEGACY tokens with no
+    // sv are allowed to normalize to 1 downstream.
+    if (!Number.isInteger(payload.sv) || payload.sv < 1) return null;
     return payload;
   }
 

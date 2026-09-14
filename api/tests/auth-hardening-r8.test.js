@@ -17,6 +17,7 @@ const {
 } = await import("../src/lib/student-auth.js");
 const throttle = await import("../src/lib/login-throttle.js");
 const { handler: loginHandler } = await import("../src/functions/platform-login.js");
+const { handler: builderLoginHandler } = await import("../src/functions/builder-login.js");
 const { handler: sessionHandler } = await import("../src/functions/platform-session.js");
 const { handler: dashboardHandler } = await import("../src/functions/student-dashboard.js");
 const { handler: submissionHandler } = await import("../src/functions/student-submission.js");
@@ -237,53 +238,89 @@ function memThrottleDeps() {
     deleteBlob: async (_c, k) => { store.delete(k); }
   };
 }
-describe("R8 login throttling", () => {
-  it("W: repeated failures escalate into a cooldown after the free band", async () => {
+describe("R8 login throttling (reserve-before-verify)", () => {
+  it("W: reserve counts every attempt; the free band passes, then a cooldown blocks", async () => {
     const deps = { ...memThrottleDeps(), now: () => 1_000_000 };
-    for (let i = 0; i < throttle.FREE_ATTEMPTS; i++) {
-      const r = await throttle.recordLoginFailure({}, "user@x", "ip1", deps);
-      expect(r.retryAfterSeconds).toBe(0);                                // still free
+    for (let i = 0; i < throttle.PER_IP_FREE_ATTEMPTS; i++) {
+      const r = await throttle.reserveLoginAttempt({}, "user@x", "ip1", deps);
+      expect(r.allowed).toBe(true);                                       // still free
     }
-    const over = await throttle.recordLoginFailure({}, "user@x", "ip1", deps);
-    expect(over.retryAfterSeconds).toBeGreaterThan(0);                    // now throttled
-    const gate = await throttle.checkLoginThrottle({}, "user@x", "ip1", deps);
-    expect(gate.allowed).toBe(false); expect(gate.retryAfterSeconds).toBeGreaterThan(0);
+    const over = await throttle.reserveLoginAttempt({}, "user@x", "ip1", deps);
+    expect(over.allowed).toBe(false); expect(over.retryAfterSeconds).toBeGreaterThan(0);
+    const again = await throttle.reserveLoginAttempt({}, "user@x", "ip1", deps);
+    expect(again.allowed).toBe(false);                                    // stays blocked during cooldown
   });
-  it("X: a throttled login returns 429 + Retry-After from the platform-login handler", async () => {
-    const store = new Map();
-    // Pre-seed a blocked throttle doc for this identifier+client.
-    const name = throttle.throttleName("blocked@x", "ip1");
-    store.set(name, { fails: 99, lastFailAt: Date.now(), blockedUntil: Date.now() + 60000 });
+  it("X: a throttled login returns 429 + Retry-After (no-store) without reaching verify", async () => {
+    let verified = 0;
     const deps = {
-      getContainer: () => ({}),
-      downloadJsonOrNull: async (_c, k) => (store.has(k) ? JSON.parse(JSON.stringify(store.get(k))) : null),
-      mutateJsonWithRetry: async () => {}, deleteBlob: async () => {},
-      clientIdFromRequest: () => "ip1",
-      validateBuilderCredentials: () => false
+      getContainer: () => ({}), downloadJsonOrNull: async () => null,
+      mutateJsonWithRetry: async () => {}, clientIdFromRequest: () => "ip1",
+      validateBuilderCredentials: () => false, verifyPassword: () => { verified++; return true; },
+      reserveLoginAttempt: async () => ({ allowed: false, retryAfterSeconds: 42 }),
+      clearLoginThrottle: async () => {}
     };
     const r = await loginHandler({ json: async () => ({ userCode: "blocked@x", password: "whatever" }) }, deps);
     expect(r.status).toBe(429);
-    expect(r.headers["Retry-After"]).toBeTruthy();
+    expect(r.headers["Retry-After"]).toBe("42");
     expect(r.headers["Cache-Control"]).toBe("no-store");
+    expect(verified).toBe(0);                                             // never reached password verification
   });
-  it("Y: a successful login clears the throttle state", async () => {
+  it("Y: a successful login clears BOTH throttle buckets", async () => {
     const mem = memThrottleDeps();
-    await throttle.recordLoginFailure({}, "s@x", "ip1", mem);
-    expect(mem._store.size).toBe(1);
+    await throttle.reserveLoginAttempt({}, "s@x", "ip1", mem);
+    expect(mem._store.size).toBe(2);                                      // per-ip + global buckets
     await throttle.clearLoginThrottle({}, "s@x", "ip1", mem);
     expect(mem._store.size).toBe(0);
   });
-  it("Z: concurrent failures cannot bypass the counter (real optimistic concurrency)", async () => {
+  it("Z: concurrent reserves cannot bypass the free band (real optimistic concurrency)", async () => {
     const c = makeBlobContainer();
     const deps = { now: () => 2_000_000 };                               // real mutateJsonWithRetry over the fake blob
-    // Fire simultaneous failures. Under extreme same-key contention the ETag-CAS retry budget may reject
-    // some (they surface as retryable conflicts to the caller) — but the invariant is that the persisted
-    // counter equals EXACTLY the number that committed: no lost increments, no double counting, no bypass.
-    const results = await Promise.allSettled(Array.from({ length: 5 }, () => throttle.recordLoginFailure(c, "race@x", "ip1", deps)));
-    const committed = results.filter(r => r.status === "fulfilled").length;
-    const state = JSON.parse(c._blobs.get(throttle.throttleName("race@x", "ip1")).body);
-    expect(committed).toBeGreaterThan(0);
-    expect(state.fails).toBe(committed);
+    // 20 simultaneous attempts for one identity+client: at most PER_IP_FREE_ATTEMPTS may be allowed; the
+    // rest are blocked or rejected by CAS conflict (fail-closed). None can bypass the limit.
+    const results = await Promise.allSettled(Array.from({ length: 20 }, () => throttle.reserveLoginAttempt(c, "race@x", "ip1", deps)));
+    const allowed = results.filter(r => r.status === "fulfilled" && r.value.allowed).length;
+    expect(allowed).toBeGreaterThan(0);
+    expect(allowed).toBeLessThanOrEqual(throttle.PER_IP_FREE_ATTEMPTS);
+  });
+  it("Z2 (§2 end-to-end): a burst of 20 wrong platform-logins reaches verify at most free-band times", async () => {
+    const c = makeBlobContainer();
+    const { salt, passwordHash } = hashPassword("realpw123");
+    c._blobs.set("platform/auth/" + createdCodeHash("BURST") + ".json", { body: JSON.stringify({ userId: "u1", active: true, salt, passwordHash, authVersion: 1 }), etag: '"a"' });
+    c._blobs.set("platform/users/u1.json", { body: JSON.stringify({ userId: "u1", role: "student", active: true, authVersion: 1, code: "BURST", displayName: "A", classId: "c1" }), etag: '"u"' });
+    let verifyCalls = 0;
+    const deps = {
+      getContainer: () => c,
+      downloadJsonOrNull: async (_c, k) => { const b = c._blobs.get(k); return b ? JSON.parse(b.body) : null; },
+      // real mutateJsonWithRetry (default) over the fake blob for reserve; verify is a counting spy that
+      // always fails, so every reach-to-verify is a real guess.
+      verifyPassword: () => { verifyCalls++; return false; },
+      validateBuilderCredentials: () => false, clientIdFromRequest: () => "203.0.113.9"
+    };
+    await Promise.allSettled(Array.from({ length: 20 }, () => loginHandler({ json: async () => ({ userCode: "BURST", password: "guess" }) }, deps)));
+    expect(verifyCalls).toBeGreaterThan(0);
+    expect(verifyCalls).toBeLessThanOrEqual(throttle.PER_IP_FREE_ATTEMPTS);
+  });
+  it("§7: rotating the client IP cannot buy unlimited guesses (identifier-only global bucket)", async () => {
+    const c = makeBlobContainer();
+    const deps = { now: () => 3_000_000 };
+    let allowed = 0;
+    // Each attempt uses a DIFFERENT client IP (per-ip bucket never trips) but the SAME identifier — the
+    // global bucket must still cap total guesses.
+    for (let i = 0; i < throttle.GLOBAL_FREE_ATTEMPTS + 10; i++) {
+      const r = await throttle.reserveLoginAttempt(c, "victim@x", "10.0.0." + i, deps);
+      if (r.allowed) allowed++;
+    }
+    expect(allowed).toBeLessThanOrEqual(throttle.GLOBAL_FREE_ATTEMPTS);
+  });
+  it("§7: only a syntactically valid IP is trusted as the client id", () => {
+    expect(throttle.isValidIp("203.0.113.9")).toBe(true);
+    expect(throttle.isValidIp("::1")).toBe(true);
+    expect(throttle.isValidIp("999.1.1.1")).toBe(false);
+    expect(throttle.isValidIp("01.2.3.4")).toBe(false);         // leading zero
+    expect(throttle.isValidIp("not-an-ip")).toBe(false);
+    expect(throttle.isValidIp("")).toBe(false);
+    expect(throttle.clientIdFromRequest(reqWith({ "x-forwarded-for": "attacker-junk" }))).toBe("noip");
+    expect(throttle.clientIdFromRequest(reqWith({ "x-forwarded-for": "203.0.113.9, 10.0.0.1" }))).toBe("203.0.113.9");
   });
 });
 
@@ -354,7 +391,7 @@ describe("R8 platform-login storage safety", () => {
       },
       deleteBlob: async () => {}, clientIdFromRequest: () => "ip1",
       validateBuilderCredentials: () => false,
-      checkLoginThrottle: async () => ({ allowed: true }), recordLoginFailure: async () => ({ retryAfterSeconds: 0 }), clearLoginThrottle: async () => {}
+      reserveLoginAttempt: async () => ({ allowed: true }), clearLoginThrottle: async () => {}
     };
     const r = await loginHandler({ json: async () => ({ userCode: "S-1", password: "pw123456" }) }, deps);
     expect(r.status).toBe(200);
@@ -372,7 +409,7 @@ describe("R8 platform-login storage safety", () => {
       getContainer: () => ({}), downloadJsonOrNull: async (_c, k) => (store.has(k) ? JSON.parse(JSON.stringify(store.get(k))) : null),
       mutateJsonWithRetry: async (_c, k, fn) => { const cur = store.has(k) ? JSON.parse(JSON.stringify(store.get(k))) : null; const next = await fn(cur); store.set(k, next); return next; },
       deleteBlob: async () => {}, clientIdFromRequest: () => "ip1", validateBuilderCredentials: () => false,
-      checkLoginThrottle: async () => ({ allowed: true }), recordLoginFailure: async () => ({ retryAfterSeconds: 0 }), clearLoginThrottle: async () => {}
+      reserveLoginAttempt: async () => ({ allowed: true }), clearLoginThrottle: async () => {}
     };
     const r = await loginHandler({ json: async () => ({ userCode: "S-2", password: "pw123456" }) }, deps);
     expect(r.status).toBe(200); expect(r.headers["Cache-Control"]).toBe("no-store");
@@ -382,7 +419,7 @@ describe("R8 platform-login storage safety", () => {
       getContainer: () => ({}), downloadJsonOrNull: async () => null,
       mutateJsonWithRetry: async () => {}, deleteBlob: async () => {}, clientIdFromRequest: () => "ip1",
       validateBuilderCredentials: () => false,
-      checkLoginThrottle: async () => ({ allowed: true }), recordLoginFailure: async () => ({ retryAfterSeconds: 0 }), clearLoginThrottle: async () => {}
+      reserveLoginAttempt: async () => ({ allowed: true }), clearLoginThrottle: async () => {}
     };
     const r = await loginHandler({ json: async () => ({ userCode: "ghost", password: "nope123" }) }, deps);
     expect(r.status).toBe(401); expect(r.jsonBody.error).toBe("بيانات الدخول غير صحيحة.");
@@ -420,5 +457,160 @@ describe("R8 platform-session", () => {
   it("no credentials → generic 401 no-store", async () => {
     const r = await sessionHandler(reqWith({}), {});
     expect(r.status).toBe(401); expect(r.headers["Cache-Control"]).toBe("no-store");
+  });
+});
+
+// ── §4: strict v2 sv validation ──────────────────────────────────────────────
+describe("R8 §4 — v2 student token requires an explicit integer sv >= 1", () => {
+  const iat = () => Math.floor(Date.now() / 1000);
+  it("rejects missing / null / 0 / negative / float / string sv on a v2 token", () => {
+    for (const sv of [undefined, null, 0, -1, 1.5, "1", "abc"]) {
+      const t = studentV2({ ver: 2, role: "student", sub: "u1", iat: iat(), exp: iat() + 3600, sv });
+      expect(verifyStudentToken(t)).toBeNull();
+    }
+  });
+  it("accepts a v2 token with a valid integer sv", () => {
+    const t = studentV2({ ver: 2, role: "student", sub: "u1", iat: iat(), exp: iat() + 3600, sv: 4 });
+    expect(verifyStudentToken(t).sv).toBe(4);
+  });
+  it("legacy (no ver) token with no sv is still accepted (normalizes to 1 downstream)", () => {
+    const t = legacyStudent({ role: "student", sub: "u1", iat: iat() - 10, exp: iat() + 3600 });
+    const p = verifyStudentToken(t);
+    expect(p).toBeTruthy(); expect(p.legacy).toBe(true); expect(p.sv).toBeUndefined();
+  });
+});
+
+// ── §5: platform-session Bearer fall-through ─────────────────────────────────
+describe("R8 §5 — platform-session Bearer-only tries teacher then student", () => {
+  it("teacher Bearer-only → teacher", async () => {
+    const r = await sessionHandler(reqWith({ authorization: "Bearer " + createBuilderToken("t1") }), {});
+    expect(r.status).toBe(200); expect(r.jsonBody.role).toBe("teacher");
+  });
+  it("student Bearer-only → student (falls through past the teacher check)", async () => {
+    const token = createStudentToken({ userId: "u1", authVersion: 1, displayName: "A", code: "S1", classId: "c1" });
+    const deps = studentSessionDeps({ userId: "u1", role: "student", active: true, authVersion: 1, displayName: "A", code: "S1", classId: "c1" });
+    const r = await sessionHandler(reqWith({ authorization: "Bearer " + token }), deps);
+    expect(r.status).toBe(200); expect(r.jsonBody.role).toBe("student");
+  });
+  it("explicit x-builder-token with a STUDENT token → 401 (no cross-role)", async () => {
+    const token = createStudentToken({ userId: "u1", authVersion: 1 });
+    const r = await sessionHandler(reqWith({ "x-builder-token": token }), studentSessionDeps({ userId: "u1", active: true, authVersion: 1 }));
+    expect(r.status).toBe(401);
+  });
+  it("explicit x-student-token with a TEACHER token → 401 (no cross-role)", async () => {
+    const r = await sessionHandler(reqWith({ "x-student-token": createBuilderToken("t1") }), studentSessionDeps(null));
+    expect(r.status).toBe(401);
+  });
+});
+
+// ── §1: builder-login is throttled + credential-checked ──────────────────────
+describe("R8 §1 — builder-login throttling & credentials", () => {
+  const baseDeps = extra => ({
+    getContainer: () => ({}), clientIdFromRequest: () => "203.0.113.1",
+    validateBuilderCredentials: (uc, pw) => uc === "ADMIN" && pw === "correct-pw",
+    createBuilderToken: () => "builder-token-xyz",
+    reserveLoginAttempt: async () => ({ allowed: true }), clearLoginThrottle: async () => {},
+    ...extra
+  });
+  it("a throttled builder-login returns 429 + Retry-After without verifying", async () => {
+    let verified = 0;
+    const deps = baseDeps({ reserveLoginAttempt: async () => ({ allowed: false, retryAfterSeconds: 30 }), validateBuilderCredentials: () => { verified++; return true; } });
+    const r = await builderLoginHandler({ json: async () => ({ userCode: "ADMIN", password: "x" }) }, deps);
+    expect(r.status).toBe(429); expect(r.headers["Retry-After"]).toBe("30"); expect(r.headers["Cache-Control"]).toBe("no-store");
+    expect(verified).toBe(0);
+  });
+  it("valid builder credentials succeed (no-store) and clear the throttle", async () => {
+    let cleared = 0;
+    const deps = baseDeps({ clearLoginThrottle: async () => { cleared++; } });
+    const r = await builderLoginHandler({ json: async () => ({ userCode: "ADMIN", password: "correct-pw" }) }, deps);
+    expect(r.status).toBe(200); expect(r.jsonBody.token).toBe("builder-token-xyz"); expect(r.headers["Cache-Control"]).toBe("no-store");
+    expect(cleared).toBe(1);
+  });
+  it("wrong builder credentials → generic 401 (attempt already counted at reserve)", async () => {
+    const r = await builderLoginHandler({ json: async () => ({ userCode: "ADMIN", password: "wrong" }) }, baseDeps({}));
+    expect(r.status).toBe(401); expect(r.jsonBody.error).toBe("بيانات الدخول غير صحيحة.");
+  });
+});
+
+// ── §3: password-reset / login race + fail-closed reset ──────────────────────
+describe("R8 §3 — auth-doc version, fail-closed reset, login race", () => {
+  function seedStudent(c, { authVersion = 1 } = {}) {
+    const code = "S-1", codeHash = createdCodeHash(code);
+    const { salt, passwordHash } = hashPassword("oldpass1");
+    c._blobs.set("platform/auth/" + codeHash + ".json", { body: JSON.stringify({ userId: "u1", active: true, salt, passwordHash, authVersion }), etag: '"a0"' });
+    c._blobs.set("platform/users/u1.json", { body: JSON.stringify({ userId: "u1", role: "student", active: true, authVersion, code, displayName: "A", classId: "c1" }), etag: '"u0"' });
+    return { code, codeHash };
+  }
+  const readJson = (c, k) => JSON.parse(c._blobs.get(k).body);
+
+  it("reset bumps student FIRST then auth to the same version (consistent, hash changed)", async () => {
+    const c = makeBlobContainer(); seedStudent(c);
+    const student = readJson(c, "platform/users/u1.json");
+    const authBefore = readJson(c, "platform/auth/" + createdCodeHash("S-1") + ".json");
+    await resetStudentPassword(c, student, "newpass1");
+    const s2 = readJson(c, "platform/users/u1.json");
+    const a2 = readJson(c, "platform/auth/" + createdCodeHash("S-1") + ".json");
+    expect(s2.authVersion).toBe(2); expect(a2.authVersion).toBe(2);          // consistent
+    expect(a2.passwordHash).not.toBe(authBefore.passwordHash);
+  });
+
+  it("old password cannot log in AFTER a reset (version mismatch is fail-closed)", async () => {
+    const c = makeBlobContainer(); seedStudent(c);
+    await resetStudentPassword(c, readJson(c, "platform/users/u1.json"), "newpass1");
+    // Now student+auth are both v2 with the NEW hash. The OLD password must fail.
+    const deps = { getContainer: () => c, downloadJsonOrNull: async (_x, k) => { const b = c._blobs.get(k); return b ? JSON.parse(b.body) : null; },
+      reserveLoginAttempt: async () => ({ allowed: true }), clearLoginThrottle: async () => {}, clientIdFromRequest: () => "203.0.113.1", validateBuilderCredentials: () => false };
+    const r = await loginHandler({ json: async () => ({ userCode: "S-1", password: "oldpass1" }) }, deps);
+    expect(r.status).toBe(401);
+  });
+
+  it("storage failure between the two reset writes leaves login fail-closed + old sessions revoked", async () => {
+    const c = makeBlobContainer(); seedStudent(c);
+    const authName = "platform/auth/" + createdCodeHash("S-1") + ".json";
+    // Make the SECOND write (auth doc) fail: student bump (write 1) succeeds, auth hash+version (write 2) throws.
+    const origGetBlock = c.getBlockBlobClient.bind(c);
+    c.getBlockBlobClient = name => name === authName
+      ? { async upload() { const e = new Error("storage down"); e.statusCode = 500; throw e; } }
+      : origGetBlock(name);
+    await expect(resetStudentPassword(c, readJson(c, "platform/users/u1.json"), "newpass1")).rejects.toBeTruthy();
+    // Student was bumped to 2; auth doc still at 1 → inconsistent → login (even OLD password) fails closed.
+    expect(readJson(c, "platform/users/u1.json").authVersion).toBe(2);
+    expect(readJson(c, authName).authVersion).toBe(1);
+    const deps = { getContainer: () => c, downloadJsonOrNull: async (_x, k) => { const b = c._blobs.get(k); return b ? JSON.parse(b.body) : null; },
+      reserveLoginAttempt: async () => ({ allowed: true }), clearLoginThrottle: async () => {}, clientIdFromRequest: () => "1.2.3.4", validateBuilderCredentials: () => false };
+    const r = await loginHandler({ json: async () => ({ userCode: "S-1", password: "oldpass1" }) }, deps);
+    expect(r.status).toBe(401);                                             // fail-closed
+    // An OLD session token (sv=1) is revoked because the student is now at v2.
+    const oldToken = createStudentToken({ userId: "u1", authVersion: 1 });
+    const sess = await requireActiveStudentSession(reqWith({ "x-student-token": oldToken }), { container: {}, downloadJsonOrNull: async (_x, k) => { const b = c._blobs.get(k); return b ? JSON.parse(b.body) : null; } });
+    expect(sess.ok).toBe(false);
+  });
+
+  it("simultaneous resets both apply (monotonic, no downgrade) and stay consistent", async () => {
+    const c = makeBlobContainer(); seedStudent(c);
+    const student = readJson(c, "platform/users/u1.json");
+    await Promise.allSettled([
+      resetStudentPassword(c, student, "newA123"),
+      resetStudentPassword(c, student, "newB123")
+    ]);
+    const s = readJson(c, "platform/users/u1.json");
+    const a = readJson(c, "platform/auth/" + createdCodeHash("S-1") + ".json");
+    expect(s.authVersion).toBeGreaterThanOrEqual(2);                        // both increments applied where possible
+    expect(a.authVersion).toBe(s.authVersion);                             // consistent, no downgrade
+  });
+
+  it("login mints sv bound to the verified credential version; a concurrent reset makes it fail-closed", async () => {
+    const store = new Map();
+    store.set("platform/auth/" + createdCodeHash("S-9") + ".json", { userId: "u9", active: true, authVersion: 1, ...hashPassword("pw123456") });
+    store.set("platform/users/u9.json", { userId: "u9", role: "student", active: true, authVersion: 1, code: "S-9", displayName: "A", classId: "c1" });
+    const deps = {
+      getContainer: () => ({}),
+      downloadJsonOrNull: async (_c, k) => (store.has(k) ? JSON.parse(JSON.stringify(store.get(k))) : null),
+      // The lastLogin mutate observes a concurrent reset that bumped the student to v2 → fail-closed.
+      mutateJsonWithRetry: async (_c, k, fn) => { const cur = JSON.parse(JSON.stringify(store.get(k))); cur.authVersion = 2; const next = await fn(cur); store.set(k, next); return next; },
+      reserveLoginAttempt: async () => ({ allowed: true }), clearLoginThrottle: async () => {}, clientIdFromRequest: () => "1.2.3.4", validateBuilderCredentials: () => false
+    };
+    const r = await loginHandler({ json: async () => ({ userCode: "S-9", password: "pw123456" }) }, deps);
+    expect(r.status).toBe(401);                                             // old-password → no fresh post-reset session
   });
 });

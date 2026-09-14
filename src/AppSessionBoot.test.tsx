@@ -93,10 +93,35 @@ describe("R8 App — startup session validation", () => {
     render(<App />);
     await screen.findByText(/مرحبًا أحمد محمد/);
     expect(calls.filter(c => c.url.includes("/api/project-tracker"))).toHaveLength(0);
-    // and the session probe used the student header, never a builder header
+    // §5/§6 — the boot probe carries the Bearer token ONLY (role recovery), never a role-specific header.
     const probe = calls.find(c => c.url.includes("/api/platform-session"));
-    expect(probe?.headers.get("x-student-token")).toBe("student-token");
+    expect(probe?.headers.get("authorization")).toBe("Bearer student-token");
     expect(probe?.headers.get("x-builder-token")).toBeNull();
+    expect(probe?.headers.get("x-student-token")).toBeNull();
+  });
+
+  it("§6: a valid STUDENT token with a STALE stored role 'teacher' is recovered to student — no teacher request fires", async () => {
+    // Stored role wrongly says teacher, but platform-session authoritatively returns student.
+    seedSession("teacher", "student-token", "STALE");
+    const calls = installFetch({ session: () => res(200, { ok: true, role: "student", displayName: "أحمد محمد" }) });
+    render(<App />);
+    expect(await screen.findByText(/مرحبًا أحمد محمد/)).toBeTruthy();   // rendered as STUDENT
+    expect(calls.filter(c => c.url.includes("/api/project-tracker"))).toHaveLength(0); // never a wrong-role teacher call
+  });
+
+  it("§6: no teacher-only request fires before session validation completes", async () => {
+    // Hold platform-session open; assert project-tracker is NOT called during the pending window.
+    let resolveSession: (r: Response) => void = () => {};
+    const gate = new Promise<Response>(r => { resolveSession = r; });
+    seedSession("teacher");
+    const calls = installFetch({ session: () => gate, projectTracker: 200 });
+    render(<App />);
+    // While validation is pending, the teacher-only effect must be gated off.
+    await waitFor(() => expect(document.querySelector(".auth-sub")?.textContent).toMatch(/جارٍ التحقق/));
+    expect(calls.filter(c => c.url.includes("/api/project-tracker"))).toHaveLength(0);
+    resolveSession(await res(200, { ok: true, role: "teacher", displayName: "المعلم" }));
+    // After validation completes, the teacher effect is now allowed to run.
+    await waitFor(() => expect(calls.some(c => c.url.includes("/api/project-tracker"))).toBe(true));
   });
 
   it("AO: logout clears all session metadata", async () => {
