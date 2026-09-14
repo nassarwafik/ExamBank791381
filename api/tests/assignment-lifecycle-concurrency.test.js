@@ -307,3 +307,125 @@ describe("TEST 5 — withAssignmentLock primitive (blob lease semantics)", () =>
     expect(lockName("a1")).toBe("platform/locks/assignment-a1.lock");
   });
 });
+
+// ── TEST A/B — LEGACY UNTIMED stale-snapshot race: saveDraft/submit may lazily create the next attempt ──
+// A legacy untimed assignment (attemptModelVersion < 2, durationMinutes 0) lets saveDraft/submit run
+// without an explicit startAttempt and LAZILY establish the next attempt. The request-start snapshot `s`
+// can show active attempt #1, so `stateCreating` is false and the modern rule would skip the lock — but a
+// concurrent submit can complete #1 and clear it, and this write then lazily creates a NEW attempt with no
+// lifecycle serialization. The fix forces legacy untimed saveDraft/submit to always take the lock.
+describe("TEST A/B — legacy untimed saveDraft/submit stale-snapshot race", () => {
+  const LEGACY = { schemaVersion: 1, assignmentId: AID, classId: "c1", className: "ص", title: "واجب", instructions: "", status: "published", openAt: "", dueAt: "", maxAttempts: 2, durationMinutes: 0, sourceExamId: "", sourceExamTitle: "ا", questionCount: 1, totalMarks: 10, examSnapshot: { title: "ا", sections: [{ id: "s", questions: [{ examQuestionId: "q1", presentationType: "shortAnswer", marks: 10 }] }] } }; // NO attemptModelVersion => legacy
+  const completed1 = { attemptNumber: 1, submittedAt: "2026-01-01T09:00:00.000Z", score: 5, totalMarks: 10, percentage: 50, finalized: true, questionGrades: [], sections: [] };
+  // store state AFTER a concurrent submit completed attempt #1 (no active attempt, one attempt remains)
+  const clearedSub = { schemaVersion: 1, assignmentId: AID, studentId: "stu-1", classId: "c1", attempts: [completed1], activeAttempt: null, draftAnswers: {} };
+  // the STALE request-start snapshot the racing write loaded: attempt #1 still active
+  const staleActiveSub = { schemaVersion: 1, assignmentId: AID, studentId: "stu-1", classId: "c1", attempts: [], activeAttempt: { attemptNumber: 1, startedAt: "2026-01-01T08:30:00.000Z", status: "draft" }, draftAnswers: {} };
+  const saveDraftReq = () => ({ method: "POST", params: { assignmentId: AID }, json: async () => ({ action: "saveDraft", answers: { q1: { kind: "text", value: "x" } } }) });
+  const submitReq = () => ({ method: "POST", params: { assignmentId: AID }, json: async () => ({ action: "submit", answers: { q1: { kind: "text", value: "x" } } }) });
+  // student deps whose FIRST submission read returns the stale (active #1) snapshot and every later read
+  // returns the live store (cleared) — reproducing "loaded active #1, but it was completed before commit".
+  function staleStudentDeps(world) {
+    let spReads = 0;
+    return { ...world.studentDeps, downloadJsonOrNull: async (_c, k) => {
+      if (k === SP) { spReads++; return spReads === 1 ? clone(staleActiveSub) : (world.store.has(SP) ? clone(world.store.get(SP)) : null); }
+      return world.store.has(k) ? clone(world.store.get(k)) : null;
+    } };
+  }
+
+  it("A NO-OP lock: legacy saveDraft lazily creates active #2 AFTER archive scanned 0 active and committed (the race)", async () => {
+    const before = deferred(), reached = deferred();
+    const world = makeWorld({ withLock: NOOP_LOCK, hooks: { beforeSubmissionWrite: async () => { reached.resolve(); await before.promise; } } });
+    world.store.set(AP, clone(LEGACY)); world.store.set(SP, clone(clearedSub));
+    const pSave = submissionHandler(saveDraftReq(), staleStudentDeps(world)); // builds active #2, pauses before writing it
+    await reached.promise;
+    const rArchive = await manageHandler(archiveReq(), world.manageDeps);     // scans the LIVE store: 0 active => archives with no confirm
+    before.resolve();
+    const rSave = await pSave;
+    expect(rArchive.status).toBe(200);
+    expect(world.store.get(AP).status).toBe("archived");
+    expect(rSave.status).toBe(200);
+    expect(world.store.get(SP).activeAttempt).not.toBeNull();               // BAD: a new active attempt appeared after archive committed
+    expect(world.store.get(SP).activeAttempt.attemptNumber).toBe(2);
+  });
+
+  it("A MUTEX: legacy saveDraft takes the lifecycle lock (despite the stale active snapshot); archive is serialized and observes attempt #2 (409)", async () => {
+    const before = deferred(), reached = deferred();
+    const mutex = makeKeyedMutex();
+    const world = makeWorld({ withLock: mutex.withLock, hooks: { beforeSubmissionWrite: async () => { reached.resolve(); await before.promise; } } });
+    world.store.set(AP, clone(LEGACY)); world.store.set(SP, clone(clearedSub));
+    const pSave = submissionHandler(saveDraftReq(), staleStudentDeps(world)); // holds the lock (legacy untimed rule), pauses before writing #2
+    await reached.promise;
+    let archiveDone = false;
+    const pArchive = manageHandler(archiveReq(), world.manageDeps).then(r => { archiveDone = true; return r; });
+    await settle();
+    expect(archiveDone).toBe(false);                                        // archive is blocked on the lock the saveDraft holds
+    before.resolve();
+    const [rSave, rArchive] = await Promise.all([pSave, pArchive]);
+    expect(rSave.status).toBe(200);
+    expect(world.store.get(SP).activeAttempt.attemptNumber).toBe(2);        // #2 created inside the serialized section
+    expect(rArchive.status).toBe(409);                                      // archive ran AFTER => observed #2 => requires confirmation
+    expect(rArchive.jsonBody.requiresConfirmation).toBe(true);
+    expect(world.store.get(AP).status).toBe("published");                   // never silently archived over the new attempt
+    expect(mutex.maxConcurrent).toBe(1);
+  });
+
+  it("B NO-OP lock: legacy submit records a new completed attempt AFTER archive committed (the race)", async () => {
+    const before = deferred(), reached = deferred();
+    const world = makeWorld({ withLock: NOOP_LOCK, hooks: { beforeSubmissionWrite: async () => { reached.resolve(); await before.promise; } } });
+    world.store.set(AP, clone(LEGACY)); world.store.set(SP, clone(clearedSub));
+    const pSubmit = submissionHandler(submitReq(), staleStudentDeps(world)); // builds completed #2, pauses before writing
+    await reached.promise;
+    const rArchive = await manageHandler(archiveReq(), world.manageDeps);
+    before.resolve();
+    const rSubmit = await pSubmit;
+    expect(rArchive.status).toBe(200);
+    expect(world.store.get(AP).status).toBe("archived");
+    expect(rSubmit.status).toBe(200);
+    expect(world.store.get(SP).attempts.length).toBe(2);                    // BAD: a second completed attempt appeared after archive
+  });
+
+  it("B MUTEX: legacy submit is serialized (archive-first) — after archive wins, the submit is blocked (403), no second completed attempt", async () => {
+    const before = deferred(), reached = deferred();
+    const mutex = makeKeyedMutex();
+    const world = makeWorld({ withLock: mutex.withLock, hooks: { beforeAssignmentWrite: async () => { reached.resolve(); await before.promise; } } });
+    world.store.set(AP, clone(LEGACY)); world.store.set(SP, clone(clearedSub));
+    const pArchive = manageHandler(archiveReq(), world.manageDeps);         // 0 active => holds lock, pauses just before committing archived
+    await reached.promise;
+    const pSubmit = submissionHandler(submitReq(), staleStudentDeps(world)); // request-start reads published (archive not committed yet), then blocks on the lock
+    await settle();
+    before.resolve();
+    const [rArchive, rSubmit] = await Promise.all([pArchive, pSubmit]);
+    expect(rArchive.status).toBe(200);
+    expect(world.store.get(AP).status).toBe("archived");
+    expect(rSubmit.status).toBe(403);                                       // submit re-read archived under the lock => blocked
+    expect(world.store.get(SP).attempts.length).toBe(1);                    // no second completed attempt created after archive won
+    expect(mutex.maxConcurrent).toBe(1);
+  });
+
+  it("REGRESSION: a modern v2 untimed ORDINARY autosave (existing active attempt) stays LOCK-FREE (hot path preserved)", async () => {
+    const before = deferred(), reached = deferred();
+    const mutex = makeKeyedMutex();
+    const world = makeWorld({ withLock: mutex.withLock, hooks: { beforeSubmissionWrite: async () => { reached.resolve(); await before.promise; } } });
+    // v2 untimed assignment; the submission already has a live active attempt (created earlier under the lock).
+    world.store.set(AP, { schemaVersion: 2, attemptModelVersion: 2, assignmentId: AID, classId: "c1", className: "ص", title: "واجب", status: "published", openAt: "", dueAt: "", maxAttempts: 2, durationMinutes: 0, questionCount: 1, totalMarks: 10, examSnapshot: { title: "ا", sections: [{ id: "s", questions: [{ examQuestionId: "q1", presentationType: "shortAnswer", marks: 10 }] }] } });
+    world.store.set(SP, { schemaVersion: 1, assignmentId: AID, studentId: "stu-1", classId: "c1", attempts: [], activeAttempt: { attemptNumber: 1, startedAt: "2026-01-01T08:30:00.000Z", status: "draft" }, draftAnswers: {} });
+    const pSave = submissionHandler(saveDraftReq(), world.studentDeps);     // ordinary autosave: needLock=false => does NOT take the lock; pauses before its write
+    await reached.promise;
+    let archiveDone = false;
+    // Because the autosave holds NO lock, a concurrent archive (with confirm) acquires immediately and finishes.
+    const rArchive = await manageHandler(archiveReq({ confirmActiveAttempts: true }), world.manageDeps).then(r => { archiveDone = true; return r; });
+    expect(archiveDone).toBe(true);                                         // proof: archive completed while the autosave was paused => autosave is lock-free
+    expect(rArchive.status).toBe(200);
+    before.resolve();
+    const rSave = await pSave;                                              // autosave resumes and commits (its published check ran before archive committed)
+    // The trailing write is BENIGN and is exactly why the v2 hot path is safe to leave lock-free: it only
+    // updates draft content of an ALREADY-live, already-counted attempt — it creates NO new attempt and no
+    // orphan, so it can never hide an attempt from an archive scan or outlive its assignment.
+    expect(rSave.status).toBe(200);
+    expect(world.store.get(SP).activeAttempt.attemptNumber).toBe(1);        // still attempt #1 — no NEW attempt was created
+    expect(world.store.get(SP).attempts.length).toBe(0);                    // no new completed attempt
+    expect(world.store.get(SP).draftAnswers).toEqual({ q1: { kind: "text", value: "x" } }); // just a draft-content update
+    expect(mutex.maxConcurrent).toBe(1);
+  });
+});

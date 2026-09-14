@@ -5,7 +5,7 @@ const {getContainer,downloadJsonOrNull,mutateJsonWithRetry,StorageConflictError}
 const {gradeExam}=require("../lib/assignment-grading");
 const {recordAchievementIfEligible}=require("../lib/achievement-feed");
 const {normalizeClassStatus}=require("../lib/class-lifecycle");
-const {timerState,startRejection,writeRejection,normalizeDurationMinutes,activeAttemptOf,normalizeEndReason}=require("../lib/assignment-availability");
+const {timerState,startRejection,writeRejection,normalizeDurationMinutes,activeAttemptOf,normalizeEndReason,attemptModelVersion}=require("../lib/assignment-availability");
 const {withAssignmentLock,AssignmentLockBusyError}=require("../lib/assignment-lock");
 const AP="platform/assignments/",SP="platform/submissions/";
 const CONFLICT_MESSAGE="حدث تعارض مؤقت أثناء حفظ البيانات. حاول مرة أخرى.";
@@ -40,17 +40,25 @@ async function handler(request,deps={}){
   if(a.status!=="published")return {status:403,jsonBody:{ok:false,error:"الواجب غير متاح حاليًا."}};
   let b={};try{b=await request.json()}catch{}const action=String(b.action||"saveDraft");
   // Concurrency (Roadmap #7): a student write that could CREATE new submission state — start a new active
-  // attempt, create the FIRST submission document, or lazily create an active attempt (legacy untimed
-  // saveDraft/submit) — must be serialized against assignment archive/purge via the per-assignment
-  // lifecycle lock. startAttempt always creates an attempt; the other actions create state only when there
-  // is no submission document yet OR no live active attempt (decided from the request-start load `s`; a
-  // stale "has active attempt" only skips the lock, and the in-mutation writeRejection re-check still
-  // guards that path). An ORDINARY write on an already-live attempt (autosave / submit / finalize of an
-  // existing attempt) is intentionally lock-free: that attempt was itself created under the lock, so any
-  // archive necessarily observes it, and its own in-mutation "published" re-read already blocks a write to
-  // an archived assignment — it can neither create an orphan nor hide a new attempt from the impact scan.
+  // attempt, create the FIRST submission document, or lazily create an active attempt — must be serialized
+  // against assignment archive/purge via the per-assignment lifecycle lock. startAttempt always creates an
+  // attempt. `stateCreating` catches the writes that are ALREADY state-creating at request-start (no
+  // submission document yet, or no live active attempt).
+  //
+  // LEGACY UNTIMED (attemptModelVersion < 2, durationMinutes 0) needs MORE: saveDraft/submit may legally
+  // run without an explicit startAttempt and LAZILY establish the next active attempt. The request-start
+  // snapshot `s` can show active attempt #1, so stateCreating is false and the lock would be skipped — but
+  // a concurrent submit can finish #1 and clear it, and this write then lazily creates attempt #2 with no
+  // lifecycle serialization (an archive could scan zero active attempts in between). So for legacy untimed
+  // assignments, saveDraft and submit ALWAYS take the lock regardless of the stale snapshot.
+  //
+  // Modern v2 (timed or untimed) keeps the hot path: an ORDINARY write on an already-live active attempt
+  // stays lock-free — that attempt was itself created under the lock (v2 requires an explicit startAttempt),
+  // so any archive necessarily observes it, and the write's own in-mutation "published" re-read already
+  // blocks a write to an archived assignment. It can neither create an orphan nor hide a new attempt.
   const stateCreating=!s||!activeAttemptOf(s);
-  const needLock=action==="startAttempt"||stateCreating;
+  const legacyUntimed=normalizeDurationMinutes(a.durationMinutes)===0&&attemptModelVersion(a)<2;
+  const needLock=action==="startAttempt"||stateCreating||(legacyUntimed&&(action==="saveDraft"||action==="submit"));
   const maybeLock=fn=>needLock?wl(c,id,fn):fn();
 
   // ── startAttempt — server stamps startedAt (+ endsAt for TIMED). Works for TIMED and UNTIMED v2
