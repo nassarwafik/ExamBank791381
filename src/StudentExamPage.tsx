@@ -219,7 +219,14 @@ export default function StudentExamPage({token,assignment,studentName,className,
     }catch{/* ignore */}
    }
    // Offline / transient — keep answers locked (time is over) and retry when connectivity returns.
-   if(mountedRef.current)setError(e instanceof Error&&(e as ApiError).status>=500||!(e instanceof ApiError)?"انتهى الوقت. سيتم إنهاء المحاولة تلقائيًا عند عودة الاتصال.":(e as Error).message);
+   // Roadmap #9: for an UNEXPECTED 5xx finalize failure that carries a correlation id, keep the timeout/
+   // offline wording and append the subtle tracking code so the student can quote it. A network failure
+   // (no ApiError) keeps the message with no fake id; an expected domain error uses its own message.
+   if(mountedRef.current){
+    const is5xx=e instanceof ApiError&&e.status>=500;
+    const base=(is5xx||!(e instanceof ApiError))?"انتهى الوقت. سيتم إنهاء المحاولة تلقائيًا عند عودة الاتصال.":(e as Error).message;
+    setError(is5xx?base+trackingSuffix((e as ApiError).requestId):base);
+   }
   }finally{submittingRef.current=false}
  }
  const norm=useMemo(()=>normalizeExamStructure(exam),[exam]);
