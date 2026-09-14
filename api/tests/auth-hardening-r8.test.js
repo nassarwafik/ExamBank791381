@@ -22,6 +22,7 @@ const { handler: sessionHandler } = await import("../src/functions/platform-sess
 const { handler: dashboardHandler } = await import("../src/functions/student-dashboard.js");
 const { handler: submissionHandler } = await import("../src/functions/student-submission.js");
 const { createStudentRecord, resetStudentPassword, handler: manageStudentsHandler } = await import("../src/functions/manage-students.js");
+const { withCredentialLock, CredentialLockBusyError } = await import("../src/lib/student-credential-lock.js");
 
 const SECRET = process.env.BANK_SETUP_KEY;
 const TEACHER_CTX = "ExamBank791381:teacher-session:v2";
@@ -711,25 +712,18 @@ describe("R8 §B — version-conditional credential write", () => {
   const studentDoc = c => JSON.parse(c._blobs.get("platform/users/u1.json").body);
   const pwWorks = (c, pw) => { const a = authDoc(c); return verifyPassword(pw, a.salt, a.passwordHash); };
 
-  it("forced interleaving: B (v3) writes first, then stale A (v2) — only passwordB survives, A reports failure", async () => {
+  it("sequential resets under the credential lock converge; only the latest password survives, no downgrade", async () => {
+    // The per-student credential lock SERIALIZES concurrent resets, so the pre-lock "forced interleaving"
+    // (a stale v2 write landing after a newer v3) can no longer occur — A runs fully before B starts. This
+    // asserts the resulting invariant deterministically: consistent versions, only the newest password.
     const c = makeBlobContainer(); seed(c);
-    // Pause the FIRST auth-doc download (A's step-2) until we release it; B's later download runs unpaused.
-    let firstAuth = true; let release; const barrier = new Promise(r => { release = r; });
-    const origGetBlob = c.getBlobClient.bind(c);
-    c.getBlobClient = name => {
-      const client = origGetBlob(name);
-      if (name === "platform/auth/" + authName + ".json") {
-        return { download: async () => { if (firstAuth) { firstAuth = false; await barrier; } return client.download(); }, deleteIfExists: client.deleteIfExists.bind(client) };
-      }
-      return client;
-    };
-    const pA = resetStudentPassword(c, studentDoc(c), "passwordA");        // step1 → v2, then pauses at auth download
-    await new Promise(r => setTimeout(r, 15));                             // ensure A reached the pause
-    await resetStudentPassword(c, studentDoc(c), "passwordB");             // B runs fully → student v3, auth v3 + passwordB
-    release();                                                            // resume A's auth write (now stale)
-    await expect(pA).rejects.toBeTruthy();                                 // stale A does NOT report success
+    await resetStudentPassword(c, studentDoc(c), "passwordA");             // A fully: student v2, auth v2 + passwordA
+    expect(studentDoc(c).authVersion).toBe(2);
+    expect(pwWorks(c, "passwordA")).toBe(true);
+    await resetStudentPassword(c, studentDoc(c), "passwordB");             // B fully: student v3, auth v3 + passwordB
     expect(studentDoc(c).authVersion).toBe(3);
     expect(authDoc(c).authVersion).toBe(3);
+    expect(studentDoc(c).authVersion).toBe(authDoc(c).authVersion);        // student.authVersion === auth.authVersion
     expect(pwWorks(c, "passwordB")).toBe(true);                            // only the newest password authenticates
     expect(pwWorks(c, "passwordA")).toBe(false);
     expect(pwWorks(c, "origpass1")).toBe(false);
@@ -791,38 +785,123 @@ describe("R8 FINAL §1 — update-with-password stale operation is a determinist
     expect(audits.some(e => e.action === "student.resetPassword")).toBe(true);
   });
 
-  it("forced interleaving: reset B (v3) lands first, then stale update A (v2) → A returns 409, no success, no audit; only passwordB authenticates", async () => {
+  it("sequential update-with-password ops each succeed; the last password is authoritative and consistent", async () => {
+    // With the per-student credential lock serializing credential mutations, two update-with-password ops on
+    // the same userId can no longer interleave into a stale write; they run one after the other. Each reports
+    // success and the final state is consistent with the newest password authoritative.
     const c = makeBlobContainer(); const audits = []; const student = await seedStudent(c);
-    const aName = authName(c);
-    // Pause A's auth-MUTATE download (the one that runs AFTER A has bumped the student to v2). Detected by
-    // the student doc already being at authVersion >= 2; the earlier oldAuth pre-read (student still v1)
-    // runs unpaused.
-    let paused = false; let release; const barrier = new Promise(r => { release = r; });
-    const origGetBlob = c.getBlobClient.bind(c);
-    c.getBlobClient = name => {
-      const client = origGetBlob(name);
-      if (name === aName) {
-        return {
-          download: async () => { const s = c._blobs.get(student.key || "platform/users/" + student.userId + ".json"); const sv = s ? JSON.parse(s.body).authVersion : 0; if (sv >= 2 && !paused) { paused = true; await barrier; } return client.download(); },
-          deleteIfExists: client.deleteIfExists.bind(client),
-          getBlobLeaseClient: client.getBlobLeaseClient.bind(client)
-        };
-      }
-      return client;
-    };
-    const pA = manageStudentsHandler(updateReq(student.userId, "passwordA"), depsFor(c, audits)); // pauses at auth-mutate
-    await new Promise(r => setTimeout(r, 20));
-    await resetStudentPassword(c, JSON.parse(c._blobs.get("platform/users/" + student.userId + ".json").body), "passwordB"); // B → student v3, auth v3
-    release();
-    const rA = await pA;
-    expect(rA.status).toBe(409);                                          // deterministic conflict
-    expect(rA.jsonBody.passwordChanged).toBeUndefined();                 // no false success
-    expect(audits.some(e => e.action === "student.resetPassword")).toBe(false); // no success audit for A
-    const a = JSON.parse(c._blobs.get(aName).body);
-    expect(a.authVersion).toBe(3); expect(JSON.parse(c._blobs.get("platform/users/" + student.userId + ".json").body).authVersion).toBe(3);
+    const rA = await manageStudentsHandler(updateReq(student.userId, "passwordA"), depsFor(c, audits));
+    expect(rA.status).toBe(200); expect(rA.jsonBody.passwordChanged).toBe(true);
+    const rB = await manageStudentsHandler(updateReq(student.userId, "passwordB"), depsFor(c, audits));
+    expect(rB.status).toBe(200); expect(rB.jsonBody.passwordChanged).toBe(true);
+    const a = JSON.parse(c._blobs.get(authName(c)).body);
+    const sv = JSON.parse(c._blobs.get("platform/users/" + student.userId + ".json").body).authVersion;
+    expect(a.authVersion).toBe(sv);                                       // student.authVersion === auth.authVersion
     expect(verifyPassword("passwordB", a.salt, a.passwordHash)).toBe(true);
     expect(verifyPassword("passwordA", a.salt, a.passwordHash)).toBe(false);
     expect(verifyPassword("origpass1", a.salt, a.passwordHash)).toBe(false);
+    expect(audits.filter(e => e.action === "student.resetPassword").length).toBe(2);
+  });
+});
+
+// ── FINAL §rename — the credential lock serializes RENAME vs RESET per userId ──
+// A code/identity RENAME MOVES the auth blob path (create NEW, delete OLD). Before the lock, a rename built
+// from a pre-read oldAuth could delete a newer reset's credential across the move, or resurrect an older
+// password — leaving student.authVersion and auth.authVersion inconsistent so login failed closed while both
+// ops "succeeded". The per-userId credential lock serializes these, and reset re-reads the CURRENT student
+// (deriving the auth path from its current code) INSIDE the lock. These assert the resulting invariants in
+// both orders; the interleaving the review described is no longer reachable, so they run deterministically.
+describe("R8 FINAL §rename — credential lock serializes rename vs reset per userId", () => {
+  const oldId = "111111111", newId = "222222222";
+  const authNameFor = code => "platform/auth/" + createdCodeHash(code) + ".json";
+  async function seedStudent(c, identity) {
+    c._blobs.set("platform/classes/c1.json", { body: JSON.stringify({ classId: "c1", name: "الصف", active: true, studentIds: [] }), etag: '"c"' });
+    const { student } = await createStudentRecord(c, { classId: "c1", name: "الصف", active: true, studentIds: [] }, { firstName: "أ", familyName: "ب", identityNumber: identity, password: "origpass1" }, {});
+    return student;
+  }
+  const renameReq = (userId, newIdentity, password) => ({ method: "POST", url: "http://x/students", json: async () => ({ action: "update", userId, firstName: "أ", familyName: "ب", identityNumber: newIdentity, classId: "c1", ...(password ? { password } : {}) }) });
+  const deps = (c, audits = []) => ({ requireBuilderAuth: () => ({ ok: true, user: { sub: "t1" } }), container: c, recordAuditEvent: async (_c, ev) => audits.push(ev) });
+  const studentOf = (c, userId) => JSON.parse(c._blobs.get("platform/users/" + userId + ".json").body);
+  const authAt = (c, code) => { const b = c._blobs.get(authNameFor(code)); return b ? JSON.parse(b.body) : null; };
+
+  it("TEST1 rename-with-password A, then reset B → student NEW/v3, NEW auth v3/passwordB only; OLD auth gone", async () => {
+    const c = makeBlobContainer(); const student = await seedStudent(c, oldId);
+    const rA = await manageStudentsHandler(renameReq(student.userId, newId, "passwordA"), deps(c));
+    expect(rA.status).toBe(200);
+    expect(studentOf(c, student.userId).code).toBe(newId);
+    expect(studentOf(c, student.userId).authVersion).toBe(2);            // A: student v2 at NEW path
+    expect(authAt(c, oldId)).toBeNull();                                 // OLD auth removed by the move
+    // B reset re-reads the CURRENT student (code NEW) inside the lock → writes the NEW auth path, v3.
+    await resetStudentPassword(c, studentOf(c, student.userId), "passwordB");
+    const s = studentOf(c, student.userId), a = authAt(c, newId);
+    expect(s.authVersion).toBe(3); expect(a.authVersion).toBe(3);
+    expect(s.authVersion).toBe(a.authVersion);                           // consistent → login not fail-closed
+    expect(verifyPassword("passwordB", a.salt, a.passwordHash)).toBe(true);
+    expect(verifyPassword("passwordA", a.salt, a.passwordHash)).toBe(false);
+    expect(authAt(c, oldId)).toBeNull();
+  });
+
+  it("TEST2 reset B, then rename-with-password A → student NEW/v3, NEW auth v3/passwordA; OLD auth gone", async () => {
+    const c = makeBlobContainer(); const student = await seedStudent(c, oldId);
+    await resetStudentPassword(c, studentOf(c, student.userId), "passwordB");  // OLD auth v2/passwordB, student v2
+    expect(studentOf(c, student.userId).authVersion).toBe(2);
+    const rA = await manageStudentsHandler(renameReq(student.userId, newId, "passwordA"), deps(c));
+    expect(rA.status).toBe(200);
+    const s = studentOf(c, student.userId), a = authAt(c, newId);
+    expect(s.code).toBe(newId);
+    expect(s.authVersion).toBe(3); expect(a.authVersion).toBe(3);        // password change bumps to 3
+    expect(s.authVersion).toBe(a.authVersion);
+    expect(verifyPassword("passwordA", a.salt, a.passwordHash)).toBe(true);
+    expect(verifyPassword("passwordB", a.salt, a.passwordHash)).toBe(false);
+    expect(authAt(c, oldId)).toBeNull();
+  });
+
+  it("TEST3 reset B, then rename WITHOUT password A → passwordB hash migrates to NEW auth, no newer reset lost", async () => {
+    const c = makeBlobContainer(); const student = await seedStudent(c, oldId);
+    await resetStudentPassword(c, studentOf(c, student.userId), "passwordB");  // OLD auth v2/passwordB, student v2
+    const rA = await manageStudentsHandler(renameReq(student.userId, newId, ""), deps(c)); // rename, NO password
+    expect(rA.status).toBe(200); expect(rA.jsonBody.passwordChanged).toBe(false);
+    const s = studentOf(c, student.userId), a = authAt(c, newId);
+    expect(s.code).toBe(newId);
+    expect(s.authVersion).toBe(2); expect(a.authVersion).toBe(2);        // no password change → version unchanged
+    expect(s.authVersion).toBe(a.authVersion);
+    expect(verifyPassword("passwordB", a.salt, a.passwordHash)).toBe(true);  // newer reset's hash migrated, not lost
+    expect(verifyPassword("origpass1", a.salt, a.passwordHash)).toBe(false);
+    expect(authAt(c, oldId)).toBeNull();
+  });
+
+  it("TEST4 credential ops on two DIFFERENT students run in parallel (no cross-student serialization)", async () => {
+    const c = makeBlobContainer();
+    const s1 = await seedStudent(c, oldId);
+    const s2 = await seedStudent(c, newId);                              // different identity → different auth path & lock
+    await Promise.all([
+      resetStudentPassword(c, studentOf(c, s1.userId), "passwordX"),
+      resetStudentPassword(c, studentOf(c, s2.userId), "passwordY")
+    ]);                                                                  // both resolve → no deadlock across students
+    const a1 = authAt(c, oldId), a2 = authAt(c, newId);
+    expect(verifyPassword("passwordX", a1.salt, a1.passwordHash)).toBe(true);
+    expect(verifyPassword("passwordY", a2.salt, a2.passwordHash)).toBe(true);
+    expect(studentOf(c, s1.userId).authVersion).toBe(a1.authVersion);
+    expect(studentOf(c, s2.userId).authVersion).toBe(a2.authVersion);
+  });
+
+  it("TEST5 withCredentialLock releases on success and on thrown error; persistent contention → CredentialLockBusyError, fn not run", async () => {
+    const c = makeBlobContainer();
+    // Released on success: a second acquisition on the SAME userId proceeds.
+    let ran1 = false; await withCredentialLock(c, "uX", async () => { ran1 = true; }); expect(ran1).toBe(true);
+    let ran2 = false; await withCredentialLock(c, "uX", async () => { ran2 = true; }); expect(ran2).toBe(true);
+    // Released on a thrown domain error (finally): the next acquisition still proceeds.
+    await expect(withCredentialLock(c, "uX", async () => { throw new Error("boom"); })).rejects.toThrow("boom");
+    let ran3 = false; await withCredentialLock(c, "uX", async () => { ran3 = true; }); expect(ran3).toBe(true);
+    // Persistent contention (lease always 409): finite attempts → CredentialLockBusyError, fn NEVER runs.
+    const busy = {
+      _blobs: new Map(),
+      getBlobClient: () => ({ getBlobLeaseClient: () => ({ acquireLease: async () => { const e = new Error("leased"); e.statusCode = 409; throw e; }, releaseLease: async () => {} }) }),
+      getBlockBlobClient: () => ({ upload: async () => ({ etag: '"x"' }) })
+    };
+    let fnRan = false;
+    await expect(withCredentialLock(busy, "uBusy", async () => { fnRan = true; }, { attempts: 3, baseDelayMs: 1 })).rejects.toBeInstanceOf(CredentialLockBusyError);
+    expect(fnRan).toBe(false);
   });
 });
 

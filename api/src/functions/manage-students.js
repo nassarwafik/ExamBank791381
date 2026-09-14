@@ -15,6 +15,7 @@ const {
 } = require("../lib/platform-storage");
 const { recordAuditEvent } = require("../lib/audit-log");
 const { FEED_PREFIX, REACTIONS } = require("../lib/achievement-feed");
+const { withCredentialLock, CredentialLockBusyError } = require("../lib/student-credential-lock");
 
 // Thrown from inside a mutateJsonWithRetry callback to mean "nothing to do" (target document is
 // missing, or already in the desired state) — caught at each call site and treated as a silent
@@ -365,40 +366,40 @@ async function createStudentRecord(container, classroom, input, options = {}) {
 async function resetStudentPassword(container, student, requestedPassword = "") {
   const temporaryPassword = String(requestedPassword || "") || generateTemporaryPassword();
   if (temporaryPassword.length < 6) throw new Error("كلمة المرور يجب أن تحتوي على 6 محارف على الأقل.");
-
-  const code = String(student.code || student.identityNumber || "");
-  const authBlobName = AUTH_PREFIX + studentCodeHash(code) + ".json";
   const { salt, passwordHash } = hashPassword(temporaryPassword);
-  const now = new Date().toISOString();
-  // Fail-closed ordering (PR#67 review §3): bump the STUDENT authVersion FIRST — this immediately revokes
-  // every existing session (login requires auth.authVersion === student.authVersion, so until step 2 also
-  // lands the OLD password can't mint a session either). Optimistic concurrency makes simultaneous resets
-  // each apply their own increment; a monotonic max on the auth side prevents any downgrade.
-  let newVersion = 1;
-  await mutateJsonWithRetry(container, USER_PREFIX + student.userId + ".json", current => {
-    if (!current) throw new Error("الطالب غير موجود.");
-    newVersion = normalizeAuthVersion(current.authVersion) + 1;
-    current.authVersion = newVersion;
-    current.updatedAt = now;
-    return current;
+
+  // PR#67 final: run under the per-student credential lock so a reset can never race a rename that moves the
+  // auth blob path. The CURRENT student is re-read INSIDE the lock and the auth path is derived from its
+  // current code (never from the possibly-stale `student` argument loaded before the lock was acquired).
+  await withCredentialLock(container, student.userId, async () => {
+    const current = await downloadJsonOrNull(container, USER_PREFIX + student.userId + ".json");
+    if (!current || current.role !== "student") throw new Error("الطالب غير موجود.");
+    const code = String(current.code || current.identityNumber || "");
+    const authBlobName = AUTH_PREFIX + studentCodeHash(code) + ".json";
+    const now = new Date().toISOString();
+    // Fail-closed ordering (§3): bump the STUDENT authVersion FIRST (revokes sessions; login stays
+    // fail-closed until the auth doc catches up), then write the auth hash + matching version.
+    let newVersion = 1;
+    await mutateJsonWithRetry(container, USER_PREFIX + student.userId + ".json", cur => {
+      if (!cur) throw new Error("الطالب غير موجود.");
+      newVersion = normalizeAuthVersion(cur.authVersion) + 1;
+      cur.authVersion = newVersion;
+      cur.updatedAt = now;
+      return cur;
+    });
+    // Version-conditional (§B): overwrite the credential only if this op owns the newest version.
+    let applied = true;
+    await mutateJsonWithRetry(container, authBlobName, cur => {
+      if (!cur) throw new Error("ملف دخول الطالب غير موجود.");
+      if (normalizeAuthVersion(cur.authVersion) > newVersion) { applied = false; return cur; } // stale
+      cur.salt = salt;
+      cur.passwordHash = passwordHash;
+      cur.authVersion = newVersion;
+      cur.updatedAt = now;
+      return cur;
+    });
+    if (!applied) throw new Error("تم تغيير كلمة المرور من عملية أحدث. أعد المحاولة.");
   });
-  // Step 2: apply the new password hash AND matching authVersion — but ONLY if this operation still owns the
-  // newest version (PR#67 review §B). A version-conditional (CAS) rule, NOT Math.max: if a NEWER reset has
-  // already written a higher auth.authVersion, this stale operation must NOT overwrite the (newer) hash and
-  // must NOT report success — otherwise an older password could replace a newer one while looking
-  // version-consistent. If this write fails outright, the student is already bumped, so login stays
-  // fail-closed (versions mismatch) until retried — the old password never silently keeps working.
-  let applied = true;
-  await mutateJsonWithRetry(container, authBlobName, current => {
-    if (!current) throw new Error("ملف دخول الطالب غير موجود.");
-    if (normalizeAuthVersion(current.authVersion) > newVersion) { applied = false; return current; } // stale
-    current.salt = salt;
-    current.passwordHash = passwordHash;
-    current.authVersion = newVersion;
-    current.updatedAt = now;
-    return current;
-  });
-  if (!applied) throw new Error("تم تغيير كلمة المرور من عملية أحدث. أعد المحاولة."); // stale op never reports success
   return temporaryPassword;
 }
 
@@ -825,97 +826,83 @@ async function manageStudentsHandler(request, deps = {}) {
             return { status: 409, jsonBody: { ok: false, error: "رقم الهوية مستخدم مسبقًا." } };
           }
         }
-
         const oldClassId = String(student.classId || "");
-        const oldAuthName = AUTH_PREFIX + studentCodeHash(oldCode) + ".json";
-        const oldAuth = await downloadJsonOrNull(container, oldAuthName);
-        if (!oldAuth) {
-          return { status: 404, jsonBody: { ok: false, error: "ملف دخول الطالب غير موجود." } };
-        }
-
-        // student.active/.archived aren't touched by this action, so reading them off the
-        // already-loaded `student` (rather than a fresh re-read) to compute the auth doc's
-        // `active` flag below matches this code's own pre-existing behavior/risk level.
-        const authActive = student.active !== false && student.archived !== true;
-        const newAuthName = AUTH_PREFIX + studentCodeHash(newCode) + ".json";
-
-        // Roadmap #8 (PR#67 review §3): on a password change, bump the STUDENT authVersion FIRST (revokes
-        // sessions; login stays fail-closed until the auth doc catches up), then write the auth doc with the
-        // SAME version (monotonic max, never downgraded).
-        let updatedStudentVersion = null;
-        await mutateJsonWithRetry(container, studentBlobName, current => {
-          if (!current || current.role !== "student") throw new Error("الطالب غير موجود.");
-          current.schemaVersion = 3;
-          current.firstName = firstName;
-          current.familyName = familyName;
-          current.displayName = firstName + " " + familyName;
-          current.identityNumber = identityNumber;
-          current.code = newCode;
-          current.classId = newClassId;
-          if (newPassword) current.authVersion = normalizeAuthVersion(current.authVersion) + 1;
-          updatedStudentVersion = normalizeAuthVersion(current.authVersion);
-          current.updatedAt = new Date().toISOString();
-          return current;
-        });
-
         const newPwHash = newPassword ? hashPassword(newPassword) : null;
-        // §1 (PR#67 review): a password-changing update must report success ONLY if this operation owns the
-        // authoritative version. `credentialApplied` starts false for a password change and is set true only
-        // when the version-conditional write actually applies; a stale op returns a deterministic 409 below
-        // (no overwrite, no success audit, no passwordChanged:true).
+
+        // PR#67 final: the credential-affecting mutations (student authVersion bump + auth-doc write, and
+        // especially the RENAME which MOVES the auth blob path) run under the per-student credential lock so
+        // a concurrent reset can never delete a newer credential or resurrect an older password across the
+        // move. The auth path is derived from the CURRENT student RE-READ INSIDE the lock — never from the
+        // pre-lock `student` snapshot. `credentialApplied` reports whether a password change actually became
+        // authoritative (a stale op → 409 below, no success/audit).
+        let updatedStudentVersion = null;
         let credentialApplied = !newPassword;
-        if (newAuthName === oldAuthName) {
-          await mutateJsonWithRetry(container, oldAuthName, current => {
-            if (!current) throw new Error("ملف دخول الطالب غير موجود.");
-            // §B version-conditional: only overwrite the credential if this op owns the newest authVersion.
-            if (newPwHash) {
-              if (normalizeAuthVersion(current.authVersion) <= updatedStudentVersion) {
-                current.salt = newPwHash.salt;
-                current.passwordHash = newPwHash.passwordHash;
-                current.authVersion = updatedStudentVersion;
-                credentialApplied = true;
-              } else {
-                credentialApplied = false; // a newer reset already won → this op is stale
-              }
-            }
-            current.schemaVersion = 3;
-            current.codeHash = studentCodeHash(newCode);
-            current.active = authActive;
-            current.updatedAt = new Date().toISOString();
-            return current;
+        const runCredentialMutation = async () => {
+          const cur = await downloadJsonOrNull(container, studentBlobName);
+          if (!cur || cur.role !== "student") return { status: 404, jsonBody: { ok: false, error: "الطالب غير موجود." } };
+          const curCode = String(cur.code || cur.identityNumber || "");
+          const curAuthName = AUTH_PREFIX + studentCodeHash(curCode) + ".json";
+          const curAuth = await downloadJsonOrNull(container, curAuthName);
+          if (!curAuth) return { status: 404, jsonBody: { ok: false, error: "ملف دخول الطالب غير موجود." } };
+          const authActive = cur.active !== false && cur.archived !== true;
+          const targetAuthName = AUTH_PREFIX + studentCodeHash(newCode) + ".json";
+
+          await mutateJsonWithRetry(container, studentBlobName, c => {
+            if (!c || c.role !== "student") throw new Error("الطالب غير موجود.");
+            c.schemaVersion = 3;
+            c.firstName = firstName;
+            c.familyName = familyName;
+            c.displayName = firstName + " " + familyName;
+            c.identityNumber = identityNumber;
+            c.code = newCode;
+            c.classId = newClassId;
+            if (newPassword) c.authVersion = normalizeAuthVersion(c.authVersion) + 1;
+            updatedStudentVersion = normalizeAuthVersion(c.authVersion);
+            c.updatedAt = new Date().toISOString();
+            return c;
           });
-        } else {
-          // Identity-number change (rename): a narrow, infrequent, deliberate admin action.
-          // Still protect the new auth path with a create-only conditional write, so this can
-          // never silently clobber an unrelated student who independently claimed the exact same
-          // identity number in the interim (the findStudentByIdentity check above already covers
-          // the common case; this is the retry-safe backstop for the remaining TOCTOU window).
-          const newAuthDoc = {
-            ...oldAuth,
-            schemaVersion: 3,
-            codeHash: studentCodeHash(newCode),
-            active: authActive,
-            // Keep the auth doc's version consistent with the (possibly bumped) student version.
-            authVersion: Math.max(normalizeAuthVersion(oldAuth && oldAuth.authVersion), normalizeAuthVersion(updatedStudentVersion)),
-            updatedAt: new Date().toISOString()
-          };
-          if (newPwHash) {
-            newAuthDoc.salt = newPwHash.salt;
-            newAuthDoc.passwordHash = newPwHash.passwordHash;
-          }
-          try {
-            await uploadJsonConditional(container, newAuthName, newAuthDoc, null);
-          } catch (e) {
-            if (isConcurrencyConflict(e)) {
-              return { status: 409, jsonBody: { ok: false, error: "رقم الهوية مستخدم مسبقًا." } };
+
+          if (targetAuthName === curAuthName) {
+            await mutateJsonWithRetry(container, curAuthName, c => {
+              if (!c) throw new Error("ملف دخول الطالب غير موجود.");
+              if (newPwHash) {
+                if (normalizeAuthVersion(c.authVersion) <= updatedStudentVersion) {
+                  c.salt = newPwHash.salt; c.passwordHash = newPwHash.passwordHash; c.authVersion = updatedStudentVersion; credentialApplied = true;
+                } else { credentialApplied = false; } // a newer reset already won → stale
+              }
+              c.schemaVersion = 3; c.codeHash = studentCodeHash(newCode); c.active = authActive; c.updatedAt = new Date().toISOString();
+              return c;
+            });
+          } else {
+            // RENAME: build the new auth doc from the CURRENT auth (re-read inside the lock, so it carries
+            // any newer reset's hash/version), create-only at the new path, then delete the old path.
+            const newAuthDoc = {
+              ...curAuth,
+              schemaVersion: 3,
+              codeHash: studentCodeHash(newCode),
+              active: authActive,
+              authVersion: Math.max(normalizeAuthVersion(curAuth.authVersion), normalizeAuthVersion(updatedStudentVersion)),
+              updatedAt: new Date().toISOString()
+            };
+            if (newPwHash) { newAuthDoc.salt = newPwHash.salt; newAuthDoc.passwordHash = newPwHash.passwordHash; }
+            try {
+              await uploadJsonConditional(container, targetAuthName, newAuthDoc, null);
+            } catch (e) {
+              if (isConcurrencyConflict(e)) return { status: 409, jsonBody: { ok: false, error: "رقم الهوية مستخدم مسبقًا." } };
+              throw e;
             }
-            throw e;
+            await container.getBlobClient(curAuthName).deleteIfExists();
+            if (newPwHash) credentialApplied = true;
           }
-          await container.getBlobClient(oldAuthName).deleteIfExists();
-          // The rename creates a fresh authoritative auth document at the new code path (create-only, so a
-          // collision already returned 409 above); the password it carries is authoritative for that code.
-          if (newPwHash) credentialApplied = true;
-        }
+          return null;
+        };
+        // A pure name/class edit (no password, no code move) doesn't need the credential lock; anything that
+        // changes the password or moves the auth path does.
+        const credentialChanging = !!newPassword || (studentCodeHash(newCode) !== studentCodeHash(oldCode));
+        const credResult = credentialChanging
+          ? await withCredentialLock(container, userId, runCredentialMutation)
+          : await runCredentialMutation();
+        if (credResult && credResult.status) return credResult;
 
         if (oldClassId !== newClassId) {
           await mutateClassroomStudentIds(container, oldClassId, classroom => {
@@ -1093,7 +1080,11 @@ async function manageStudentsHandler(request, deps = {}) {
         status: 400,
         jsonBody: { ok: false, error: "Unsupported student action." }
       };
-    } catch {
+    } catch (e) {
+      // A busy per-student credential lock is a transient conflict, not a server error.
+      if (e instanceof CredentialLockBusyError) {
+        return { status: 409, headers: { "Cache-Control": "no-store" }, jsonBody: { ok: false, error: "عملية أخرى على بيانات الطالب قيد التنفيذ. أعد المحاولة." } };
+      }
       return {
         status: 500,
         jsonBody: {
