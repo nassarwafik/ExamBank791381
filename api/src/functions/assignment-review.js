@@ -7,6 +7,7 @@ const {recordAuditEvent}=require("../lib/audit-log");
 const {recordAchievementIfEligible}=require("../lib/achievement-feed");
 const {flattenQuestions,sectionCappedScore,effectiveMaxMarks}=require("../lib/exam-structure");
 const {normalizeEndReason}=require("../lib/assignment-availability");
+const {deriveGradingStatus}=require("../lib/grading-status");
 const AP="platform/assignments/",SP="platform/submissions/",UP="platform/users/";
 const CONFLICT_MESSAGE="حدث تعارض مؤقت أثناء حفظ البيانات. حاول مرة أخرى.";
 // Additive lifecycle audit view for a completed attempt (B2A #21 / B2B #16). Read-time normalization only.
@@ -56,7 +57,7 @@ async function handler(request,deps={},obs=null){
    const attempts=Array.isArray(submission.attempts)?submission.attempts:[],attempt=attempts.find(x=>Number(x.attemptNumber)===attemptNumber);if(!attempt)return {status:404,jsonBody:{ok:false,error:"المحاولة غير موجودة."}};
    const flat=flattenQuestions(assignment.examSnapshot),gradeMap=new Map((attempt.questionGrades||[]).map(x=>[String(x.questionId),x]));
    const questions=flat.map(({question:q,questionId:id,sectionId,displayNumber})=>{const grade=gradeMap.get(id)||null,o=attempt.manualOverrides?.[id]??null;return {questionId:id,questionNumber:displayNumber,sectionId,text:String(q.text||""),textHtml:String(q.textHtml||""),marks:Number(q.marks||q.points||0),type:String(q.presentationType||q.type||""),options:Array.isArray(q.options)?q.options:[],fields:Array.isArray(q.fields)?q.fields:[],wordBank:Array.isArray(q.wordBank)?q.wordBank:[],parts:Array.isArray(q.parts)?q.parts:null,studentAnswer:attempt.answers?.[id]??null,expectedAnswer:q.answer??null,autoGrade:grade,manualScore:o?.score??null,teacherComment:String(o?.comment||"")}});
-   return {status:200,jsonBody:{ok:true,assignment:{assignmentId:assignment.assignmentId,title:assignment.title,totalMarks:assignment.totalMarks},student:{studentId:student.userId,studentName:student.displayName,studentCode:student.code},attempt:{attemptNumber:attempt.attemptNumber,submittedAt:attempt.submittedAt,score:attempt.score,totalMarks:attempt.totalMarks,percentage:attempt.percentage,manualReviewMarks:attempt.manualReviewMarks,finalized:attempt.finalized,teacherFeedback:String(attempt.teacherFeedback||""),...attemptAudit(attempt)},attempts:attempts.map(x=>({attemptNumber:x.attemptNumber,submittedAt:x.submittedAt,score:x.score,totalMarks:x.totalMarks,percentage:x.percentage,manualReviewMarks:x.manualReviewMarks,finalized:x.finalized,...attemptAudit(x)})),questions}};
+   return {status:200,jsonBody:{ok:true,assignment:{assignmentId:assignment.assignmentId,title:assignment.title,totalMarks:assignment.totalMarks},student:{studentId:student.userId,studentName:student.displayName,studentCode:student.code},attempt:{attemptNumber:attempt.attemptNumber,submittedAt:attempt.submittedAt,score:attempt.score,totalMarks:attempt.totalMarks,percentage:attempt.percentage,manualReviewMarks:attempt.manualReviewMarks,finalized:attempt.finalized,gradingStatus:deriveGradingStatus(attempt),teacherFeedback:String(attempt.teacherFeedback||""),...attemptAudit(attempt)},attempts:attempts.map(x=>({attemptNumber:x.attemptNumber,submittedAt:x.submittedAt,score:x.score,totalMarks:x.totalMarks,percentage:x.percentage,manualReviewMarks:x.manualReviewMarks,finalized:x.finalized,gradingStatus:deriveGradingStatus(x),...attemptAudit(x)})),questions}};
   }
   let b={};try{b=await request.json()}catch{}if(String(b.action)!=="saveReview")return {status:400,jsonBody:{ok:false,error:"Unsupported review action."}};
   const assignmentId=String(b.assignmentId||""),studentId=String(b.studentId||""),attemptNumber=Math.max(1,Number(b.attemptNumber||1));if(!assignmentId||!studentId)return {status:400,jsonBody:{ok:false,error:"assignmentId and studentId are required."}};
@@ -80,7 +81,7 @@ async function handler(request,deps={},obs=null){
     for(const [questionId,value] of Object.entries(incoming)){if(!value||typeof value!=="object")continue;const grade=(attempt.questionGrades||[]).find(g=>String(g.questionId)===String(questionId));if(!grade)continue;attempt.manualOverrides[String(questionId)]={score:round(clamp(value.score,0,effectiveMaxMarks(grade))),comment:String(value.comment||"").trim(),reviewedAt};appliedCount++}
     attempt.teacherFeedback=teacherFeedback;attempt.reviewedAt=reviewedAt;rebuildAttempt(attempt);
     attempts[index]=attempt;current.attempts=attempts;current.updatedAt=reviewedAt;
-    resultOut={attemptNumber:attempt.attemptNumber,score:attempt.score,totalMarks:attempt.totalMarks,percentage:attempt.percentage,manualReviewMarks:attempt.manualReviewMarks,finalized:attempt.finalized,teacherFeedback:attempt.teacherFeedback};
+    resultOut={attemptNumber:attempt.attemptNumber,score:attempt.score,totalMarks:attempt.totalMarks,percentage:attempt.percentage,manualReviewMarks:attempt.manualReviewMarks,finalized:attempt.finalized,gradingStatus:deriveGradingStatus(attempt),teacherFeedback:attempt.teacherFeedback};
     return current;
    });
   }catch(e){

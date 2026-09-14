@@ -6,6 +6,7 @@ const {getContainer,downloadJsonOrNull,listJson,mutateJsonWithRetry,StorageConfl
 const {recordAuditEvent}=require("../lib/audit-log");
 const {timerState,normalizeEndReason,extendRejection,activeAttemptOf,toMs}=require("../lib/assignment-availability");
 const {normalizeAssignmentStatus}=require("../lib/assignment-lifecycle");
+const {deriveGradingStatus}=require("../lib/grading-status");
 const AP="platform/assignments/",SP="platform/submissions/",UP="platform/users/";
 const CONFLICT_MESSAGE="حدث تعارض مؤقت أثناء حفظ البيانات. حاول مرة أخرى.";
 // Additive audit view of a completed attempt for the teacher gradebook (B2A #20 / B2B #16). startedAt/
@@ -39,9 +40,16 @@ async function handler(request,deps={},obs=null){
  try{const auth=authFn(request);if(!auth.ok)return auth.response;const c=getC();
   if(request.method==="GET"){
    const u=new URL(request.url),id=String(u.searchParams.get("assignmentId")||"");if(!id)return {status:400,jsonBody:{ok:false,error:"assignmentId is required."}};const a=await dl(c,AP+id+".json");if(!a)return {status:404,jsonBody:{ok:false,error:"الواجب غير موجود."}};
-   const users=(await ls(c,UP)).filter(x=>String(x.classId||"")===String(a.classId||"")&&x.active!==false),out=[];let submitted=0,pending=0,sum=0,highest=null,lowest=null;
-   for(const student of users){const s=await dl(c,SP+id+"/"+student.userId+".json"),attempts=Array.isArray(s?.attempts)?s.attempts:[],latest=attempts.length?attempts[attempts.length-1]:null;if(latest){submitted++;sum+=Number(latest.percentage||0);highest=highest===null?Number(latest.percentage||0):Math.max(highest,Number(latest.percentage||0));lowest=lowest===null?Number(latest.percentage||0):Math.min(lowest,Number(latest.percentage||0));if(!latest.finalized)pending++}out.push({studentId:student.userId,studentName:student.displayName,studentCode:student.code,...lifecycle(a,s),attempts:attempts.map(x=>({attemptNumber:x.attemptNumber,score:x.score,totalMarks:x.totalMarks,percentage:x.percentage,submittedAt:x.submittedAt,finalized:x.finalized,manualReviewMarks:x.manualReviewMarks,...attemptAudit(x)})),latestResult:latest?{attemptNumber:latest.attemptNumber,score:latest.score,totalMarks:latest.totalMarks,percentage:latest.percentage,submittedAt:latest.submittedAt,finalized:latest.finalized,manualReviewMarks:latest.manualReviewMarks,teacherFeedback:String(latest.teacherFeedback||""),...attemptAudit(latest)}:null})}
-   out.sort((x,y)=>String(x.studentName).localeCompare(String(y.studentName),"ar"));return {status:200,jsonBody:{ok:true,assignment:{assignmentId:a.assignmentId,title:a.title,dueAt:String(a.dueAt||""),durationMinutes:Number(a.durationMinutes||0),maxAttempts:Math.max(1,Number(a.maxAttempts||1)),totalMarks:Number(a.totalMarks||0)},stats:{students:users.length,submitted,pendingReview:pending,average:submitted?Number((sum/submitted).toFixed(1)):null,highest,lowest},students:out}};
+   const users=(await ls(c,UP)).filter(x=>String(x.classId||"")===String(a.classId||"")&&x.active!==false),out=[];
+   let submitted=0,pending=0,finalizedCount=0,notSubmitted=0,active=0,sum=0,highest=null,lowest=null;
+   for(const student of users){
+    const s=await dl(c,SP+id+"/"+student.userId+".json"),attempts=Array.isArray(s?.attempts)?s.attempts:[],latest=attempts.length?attempts[attempts.length-1]:null;
+    const latestGrading=deriveGradingStatus(latest);                        // notSubmitted | pendingReview | final
+    if(latest){submitted++;sum+=Number(latest.percentage||0);highest=highest===null?Number(latest.percentage||0):Math.max(highest,Number(latest.percentage||0));lowest=lowest===null?Number(latest.percentage||0):Math.min(lowest,Number(latest.percentage||0));if(latestGrading==="pendingReview")pending++;else if(latestGrading==="final")finalizedCount++}
+    else notSubmitted++;
+    if(activeAttemptOf(s))active++;                                         // active attempt is INDEPENDENT of grading status
+    out.push({studentId:student.userId,studentName:student.displayName,studentCode:student.code,...lifecycle(a,s),gradingStatus:latestGrading,attempts:attempts.map(x=>({attemptNumber:x.attemptNumber,score:x.score,totalMarks:x.totalMarks,percentage:x.percentage,submittedAt:x.submittedAt,finalized:x.finalized,manualReviewMarks:x.manualReviewMarks,gradingStatus:deriveGradingStatus(x),...attemptAudit(x)})),latestResult:latest?{attemptNumber:latest.attemptNumber,score:latest.score,totalMarks:latest.totalMarks,percentage:latest.percentage,submittedAt:latest.submittedAt,finalized:latest.finalized,manualReviewMarks:latest.manualReviewMarks,gradingStatus:latestGrading,teacherFeedback:String(latest.teacherFeedback||""),...attemptAudit(latest)}:null})}
+   out.sort((x,y)=>String(x.studentName).localeCompare(String(y.studentName),"ar"));return {status:200,jsonBody:{ok:true,assignment:{assignmentId:a.assignmentId,title:a.title,dueAt:String(a.dueAt||""),durationMinutes:Number(a.durationMinutes||0),maxAttempts:Math.max(1,Number(a.maxAttempts||1)),totalMarks:Number(a.totalMarks||0)},stats:{students:users.length,submitted,pendingReview:pending,finalized:finalizedCount,notSubmitted,active,average:submitted?Number((sum/submitted).toFixed(1)):null,highest,lowest},students:out}};
   }
   let b={};try{b=await request.json()}catch{}const resultAction=String(b.action||"");
 

@@ -137,7 +137,7 @@ describe("R7 AssignmentsPanel — archive-first UI", () => {
     fireEvent.click(within(row).getByText(/سجل العلامات/));
     await r.findByText(/سجل علامات:/);          // gradebook opened
     await r.findByText("طالب");                   // student row rendered
-    expect(r.getByText(/تصحيح \/ تفاصيل/)).toBeTruthy();   // manual grading / review kept
+    expect(r.getByText(/عرض \/ تعديل التصحيح/)).toBeTruthy();   // manual grading / review kept
     expect(r.queryByText(/منح محاولة إضافية/)).toBeNull();
     expect(r.queryByText("إعادة فتح للطالب")).toBeNull();
     expect(r.queryByText(/تمديد الموعد/)).toBeNull();
@@ -151,7 +151,7 @@ describe("R7 AssignmentsPanel — archive-first UI", () => {
     fireEvent.click(within(rowOf(r, "واجب منشور")).getByText("أرشفة"));
     await waitFor(() => expect(posts.some(p => p.action === "archive")).toBe(true));
     await waitFor(() => expect(r.queryByText(/منح محاولة إضافية/)).toBeNull()); // controls gone
-    expect(r.getByText(/تصحيح \/ تفاصيل/)).toBeTruthy();      // review still available
+    expect(r.getByText(/عرض \/ تعديل التصحيح/)).toBeTruthy();      // review still available
   });
 
   it("C: restoring an assignment whose archived gradebook is open brings the B2B controls back", async () => {
