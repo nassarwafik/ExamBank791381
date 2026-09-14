@@ -79,6 +79,75 @@ describe("B2A lib helpers", () => {
   });
 });
 
+// ── BLOCKER 1 — a TIMED active attempt must never become deadline-less ───────
+describe("B2A blocker 1 — timed active attempt with a missing/invalid endsAt", () => {
+  const timedAsg = { status: "published", maxAttempts: 1, durationMinutes: 60, attemptModelVersion: 2 };
+  it("1A: malformed endsAt \"\" derives the deadline from startedAt + duration (10:00 -> 11:00), still live at 10:30", () => {
+    const sub = { attempts: [], activeAttempt: { attemptNumber: 1, startedAt: iso(BASE), endsAt: "" } };
+    const ts = timerState(timedAsg, sub, BASE + 30 * MIN);
+    expect(ts.timed).toBe(true);
+    expect(ts.effectiveAttemptEndsAt).toBe(iso(BASE + 60 * MIN));   // derived, NOT ""
+    expect(ts.attemptExpired).toBe(false);
+    expect(ts.canWrite).toBe(true);
+    // never deadline-less:
+    expect(ts.effectiveAttemptEndsAt).not.toBe("");
+  });
+  it("1A(due-clip): derived deadline is still min(duration end, effectiveDueAt)", () => {
+    const clipped = { ...timedAsg, dueAt: iso(BASE + 40 * MIN) };
+    const sub = { attempts: [], activeAttempt: { attemptNumber: 1, startedAt: iso(BASE), endsAt: "" } };
+    const ts = timerState(clipped, sub, BASE + 30 * MIN);
+    expect(ts.effectiveAttemptEndsAt).toBe(iso(BASE + 40 * MIN));   // due-clipped, exactly like B1
+  });
+  it("1B: the same malformed timed attempt is EXPIRED and not writable at 11:01 (no restart)", () => {
+    const sub = { attempts: [], activeAttempt: { attemptNumber: 1, startedAt: iso(BASE), endsAt: "" } };
+    const ts = timerState(timedAsg, sub, BASE + 61 * MIN);
+    expect(ts.attemptExpired).toBe(true);
+    expect(ts.canWrite).toBe(false);
+    expect(ts.effectiveAttemptEndsAt).toBe(iso(BASE + 60 * MIN));   // original window, not restarted
+  });
+  it("1B(fail-closed): a timed attempt whose startedAt is ALSO unparseable is expired / not writable (never deadline-less+writable)", () => {
+    const sub = { attempts: [], activeAttempt: { attemptNumber: 1, startedAt: "not-a-date", endsAt: "" } };
+    const ts = timerState(timedAsg, sub, BASE + 30 * MIN);
+    expect(ts.attemptExpired).toBe(true);
+    expect(ts.canWrite).toBe(false);
+    // the forbidden combination must NEVER occur:
+    expect(ts.effectiveAttemptEndsAt === "" && ts.attemptExpired === false && ts.canWrite === true).toBe(false);
+  });
+  it("1C: an UNTIMED v2 active attempt with endsAt \"\" stays valid and writable (no false deadline)", () => {
+    const untimed = { status: "published", maxAttempts: 1, durationMinutes: 0, attemptModelVersion: 2 };
+    const sub = { attempts: [], activeAttempt: { attemptNumber: 1, startedAt: iso(BASE), endsAt: "", status: "started" } };
+    const ts = timerState(untimed, sub, BASE + 999 * MIN);
+    expect(ts.timed).toBe(false);
+    expect(ts.effectiveAttemptEndsAt).toBe("");   // untimed => genuinely no deadline
+    expect(ts.attemptExpired).toBe(false);
+    expect(ts.canWrite).toBe(true);
+  });
+});
+
+// ── BLOCKER 2 — an admitted untimed attempt survives a maxAttempts reduction ──
+describe("B2A blocker 2 — attempt-limit reduction must not cancel an already-started untimed attempt", () => {
+  const completed1 = { attemptNumber: 1, submittedAt: iso(BASE), endReason: "submitted" };
+  it("2A: maxAttempts reduced to 1 with attempt 2 ACTIVE => canWrite true, writeRejection null", () => {
+    const asg = { status: "published", maxAttempts: 1, durationMinutes: 0, attemptModelVersion: 2 };  // reduced
+    const sub = { attempts: [completed1], activeAttempt: { attemptNumber: 2, startedAt: iso(BASE + 5 * MIN), endsAt: "", status: "started" } };
+    const ts = timerState(asg, sub, BASE + 10 * MIN);
+    expect(ts.canWrite).toBe(true);                                  // admitted attempt may finish
+    expect(writeRejection(asg, sub, "saveDraft", BASE + 10 * MIN)).toBeNull();
+    expect(writeRejection(asg, sub, "submit", BASE + 10 * MIN)).toBeNull();
+    // ...but no NEW attempt may start:
+    expect(ts.canStartAttempt).toBe(false);
+  });
+  it("2B: same reduced limit but NO active attempt => start blocked (exhausted), write says start-or-none", () => {
+    const asg = { status: "published", maxAttempts: 1, durationMinutes: 0, attemptModelVersion: 2 };
+    const sub = { attempts: [completed1], activeAttempt: null };
+    const ts = timerState(asg, sub, BASE + 10 * MIN);
+    expect(ts.canWrite).toBe(false);
+    expect(ts.canStartAttempt).toBe(false);
+    expect(startRejection(asg, sub, BASE + 10 * MIN)).toEqual({ status: 409, error: "لا توجد محاولة إضافية متاحة." });
+    expect(writeRejection(asg, sub, "submit", BASE + 10 * MIN)).toEqual({ status: 409, error: "لا توجد محاولة إضافية متاحة." });
+  });
+});
+
 // ── student-submission handler (untimed v2 + legacy + audit) ─────────────────
 const ASG = "platform/assignments/asg1.json";
 const SUB = "platform/submissions/asg1/stu-1.json";
@@ -205,6 +274,21 @@ describe("B2A student-submission — untimed v2 lifecycle", () => {
     const r = await sCall("POST", "startAttempt");
     expect(r.status).toBe(409);
     expect(store.get(SUB).attempts).toHaveLength(1);
+  });
+
+  it("P2 (blocker 2 end-to-end): maxAttempts reduced to 1 after attempt 2 started => submit still succeeds", async () => {
+    seed({ maxAttempts: 1 });   // limit is now 1...
+    // ...but the student already legitimately started attempt 2 (attempt 1 completed, attempt 2 active).
+    store.set(SUB, { schemaVersion: 1, assignmentId: "asg1", studentId: "stu-1", classId: "c1", draftAnswers: {},
+      attempts: [{ attemptNumber: 1, submittedAt: iso(BASE - 60 * MIN), score: 5, totalMarks: 10, percentage: 50, finalized: true, endReason: "submitted" }],
+      activeAttempt: { attemptNumber: 2, startedAt: iso(BASE), endsAt: "", status: "started" } });
+    const rSave = await sCall("POST", "saveDraft", { q1: { kind: "text", value: "A" } });
+    expect(rSave.status).toBe(200);                       // admitted attempt can still save
+    const r = await sCall("POST", "submit", { q1: { kind: "text", value: "A" } });
+    expect(r.status).toBe(200);                           // ...and submit
+    expect(r.jsonBody.result.attemptNumber).toBe(2);
+    expect(store.get(SUB).attempts).toHaveLength(2);
+    expect(store.get(SUB).activeAttempt).toBeNull();
   });
 });
 

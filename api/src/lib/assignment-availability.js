@@ -136,23 +136,41 @@ function timerState(assignment, submission, nowMs = Date.now()) {
   const modelVersion = attemptModelVersion(assignment);
   const requiresStart = timed || modelVersion >= 2;   // UNTIMED v2 also needs an explicit start
   const active = activeAttemptOf(submission);
-  const endsMs = active ? toMs(active.endsAt) : 0;     // UNTIMED active has endsAt "" => 0 (no deadline)
   const dueMs = base.dueMs;
+  // Resolve the authoritative TIMED deadline. Prefer the stored endsAt; if it is missing/invalid on a
+  // TIMED attempt, DERIVE it from the server-stamped startedAt + durationMinutes (B2A: a timed attempt
+  // must NEVER become deadline-less just because endsAt got lost — this preserves the original start
+  // instant and never restarts the timer). If even startedAt is unparseable, the deadline is
+  // unresolvable and the timed attempt fails closed (treated as expired, never writable).
+  // UNTIMED attempts carry endsAt "" by design (no deadline) and are unaffected by all of this.
+  let endsMs = active ? toMs(active.endsAt) : 0;
+  let timedDeadlineUnresolvable = false;
+  if (timed && active && !endsMs) {
+    const startMs = toMs(active.startedAt);
+    if (startMs) endsMs = startMs + durationMinutes * 60000;   // derived duration deadline (no restart)
+    else timedDeadlineUnresolvable = true;                     // corrupt timed attempt => fail closed
+  }
   // Effective attempt end = min(duration deadline, current effective due date). If the due date is
   // absent (0), the duration deadline stands alone. Only a TIMED attempt has a duration deadline.
-  const effEndsMs = timed && active ? (dueMs ? Math.min(endsMs, dueMs) : endsMs) : 0;
+  const effEndsMs = timed && active && endsMs ? (dueMs ? Math.min(endsMs, dueMs) : endsMs) : 0;
   // Boundary: now === effEndsMs is STILL valid; strictly after is expired (mirrors dueAt semantics).
-  // UNTIMED attempts (timed false) NEVER expire by time.
-  const attemptExpired = timed && !!active ? (!!effEndsMs && effEndsMs < nowMs) : false;
+  // A TIMED attempt with an unresolvable deadline is expired (fail closed). UNTIMED attempts (timed
+  // false) NEVER expire by time.
+  const attemptExpired = timed && !!active
+    ? (timedDeadlineUnresolvable || (!!effEndsMs && effEndsMs < nowMs))
+    : false;
   // May begin a NEW attempt: requiresStart AND open AND attempts remain AND none currently active.
+  // The attempt-limit check belongs HERE (admitting a new attempt), not on an already-started one.
   const canStartAttempt = requiresStart && base.published && base.availability === "open"
     && base.attemptsUsed < base.allowedAttempts && !active;
   // May saveDraft/submit NOW. TIMED: live, non-expired active. UNTIMED v2: an active attempt is
-  // required (opening != starting). UNTIMED legacy: exact historical canAttempt (no start needed).
+  // required (opening != starting) — but once it exists it is ALREADY ADMITTED, so a later
+  // maxAttempts reduction must NOT retroactively cancel it (the limit was enforced at start time).
+  // UNTIMED legacy: exact historical canAttempt (no start needed).
   const canWrite = timed
     ? (base.published && base.availability === "open" && !!active && !attemptExpired)
     : (modelVersion >= 2
-        ? (base.published && base.availability === "open" && !!active && base.attemptsUsed < base.allowedAttempts)
+        ? (base.published && base.availability === "open" && !!active)
         : base.canAttempt);
   return {
     ...base,
@@ -205,13 +223,15 @@ function writeRejection(assignment, submission, action, nowMs = Date.now()) {
     if (st.attemptExpired) return { status: 409, error: "انتهى وقت المحاولة." };
     return null;
   }
-  // UNTIMED v2: writes require a live active attempt (opening != starting) AND attempts remaining.
+  // UNTIMED v2: an ALREADY-STARTED active attempt is admitted — it may finish (saveDraft/submit) even if
+  // maxAttempts was later reduced below its number (the limit is enforced only when STARTING). With no
+  // active attempt, the student must start first — unless no attempts remain at all.
   if (st.attemptModelVersion >= 2) {
+    if (st.activeAttempt) return null;
     if (st.attemptsUsed >= st.allowedAttempts) {
       return { status: 409, error: action === "submit" ? "لا توجد محاولة إضافية متاحة." : "لا توجد محاولة متاحة للحفظ." };
     }
-    if (!st.activeAttempt) return { status: 409, error: "ابدأ المحاولة أولاً." };
-    return null;
+    return { status: 409, error: "ابدأ المحاولة أولاً." };
   }
   // UNTIMED legacy: exact historical behavior — no server start needed.
   return actionRejection(assignment, submission, action, nowMs);
