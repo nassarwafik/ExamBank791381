@@ -16,6 +16,7 @@ const {
   StorageConflictError
 } = require("../lib/platform-storage");
 const { recordAuditEvent } = require("../lib/audit-log");
+const { normalizeClassStatus } = require("../lib/class-lifecycle");
 const { deriveGradingStatus } = require("../lib/grading-status");
 const { FEED_PREFIX, REACTIONS } = require("../lib/achievement-feed");
 const { withCredentialLock, CredentialLockBusyError } = require("../lib/student-credential-lock");
@@ -452,7 +453,7 @@ async function archiveStudent(container, student) {
 async function unarchiveStudent(container, student) {
   const classId = String(student.classId || "");
   const classroom = await getClassroom(container, classId);
-  if (!classroom || classroom.active === false) throw new Error("فعّل الصف قبل استعادة الطالب.");
+  if (!classroom || normalizeClassStatus(classroom) === "archived") throw new Error("فعّل الصف قبل استعادة الطالب.");
 
   try {
     await mutateJsonWithRetry(container, USER_PREFIX + student.userId + ".json", current => {
@@ -476,7 +477,7 @@ async function unarchiveStudent(container, student) {
 
 async function moveStudent(container, student, targetClassId) {
   const target = await getClassroom(container, targetClassId);
-  if (!target || target.active === false) throw new Error("الصف الهدف غير موجود أو مؤرشف.");
+  if (!target || normalizeClassStatus(target) === "archived") throw new Error("الصف الهدف غير موجود أو مؤرشف.");
 
   const oldClassId = String(student.classId || "");
   if (oldClassId === targetClassId) return;
@@ -718,7 +719,7 @@ async function manageStudentsHandler(request, deps = {}, obs = null) {
       if (action === "create") {
         const classId = String(body?.classId || "").trim();
         const classroom = await getClassroom(container, classId);
-        if (!classroom || classroom.active === false) {
+        if (!classroom || normalizeClassStatus(classroom) === "archived") {
           return { status: 400, jsonBody: { ok: false, error: "الصف غير موجود أو مؤرشف." } };
         }
 
@@ -763,7 +764,7 @@ async function manageStudentsHandler(request, deps = {}, obs = null) {
       if (action === "bulkimport") {
         const classId = String(body?.classId || "").trim();
         const classroom = await getClassroom(container, classId);
-        if (!classroom || classroom.active === false) {
+        if (!classroom || normalizeClassStatus(classroom) === "archived") {
           return { status: 400, jsonBody: { ok: false, error: "الصف غير موجود أو مؤرشف." } };
         }
 
@@ -899,7 +900,7 @@ async function manageStudentsHandler(request, deps = {}, obs = null) {
         }
 
         const newClassroom = await getClassroom(container, newClassId);
-        if (!newClassroom || newClassroom.active === false) {
+        if (!newClassroom || normalizeClassStatus(newClassroom) === "archived") {
           return { status: 400, jsonBody: { ok: false, error: "الصف الجديد غير موجود أو مؤرشف." } };
         }
 
