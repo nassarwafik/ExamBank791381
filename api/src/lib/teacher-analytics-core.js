@@ -1,4 +1,9 @@
 const { listJson } = require("./platform-storage");
+// Roadmap #23 — teacher analytics must interpret grading state through the ONE canonical R14 helper
+// (deriveGradingStatus), never a raw `finalized === false` check, so its pending-review counts agree with
+// the gradebook (assignment-results), assignment-review and the student dashboard. The canonical rule also
+// treats `manualReviewMarks > 0` as pending and handles legacy results whose `finalized` field is absent.
+const { deriveGradingStatus } = require("./grading-status");
 
 const CLASS_PREFIX = "platform/classes/";
 const USER_PREFIX = "platform/users/";
@@ -84,7 +89,7 @@ function classAggregate(classId, assignments, students, submissionMap) {
       if (!attempt) continue;
       submitted += 1;
       percentages.push(number(attempt.percentage));
-      if (attempt.finalized === false) pendingReview += 1;
+      if (deriveGradingStatus(attempt) === "pendingReview") pendingReview += 1;
     }
   }
 
@@ -183,7 +188,7 @@ async function computeTeacherAnalytics(container, { classId: requestedClassId = 
   const expected = records.length;
   const submitted = submittedRecords.length;
   const missing = Math.max(0, expected - submitted);
-  const pendingReview = submittedRecords.filter(record => record.attempt.finalized === false).length;
+  const pendingReview = submittedRecords.filter(record => deriveGradingStatus(record.attempt) === "pendingReview").length;
   const late = submittedRecords.filter(record => {
     const due = timestamp(record.submission?.dueAtOverride || record.assignment.dueAt);
     return due && timestamp(record.attempt.submittedAt) > due;
@@ -294,7 +299,7 @@ async function computeTeacherAnalytics(container, { classId: requestedClassId = 
         students: assignmentRecords.length,
         submitted: assignmentSubmitted.length,
         missing: Math.max(0, assignmentRecords.length - assignmentSubmitted.length),
-        pendingReview: assignmentSubmitted.filter(record => record.attempt.finalized === false).length,
+        pendingReview: assignmentSubmitted.filter(record => deriveGradingStatus(record.attempt) === "pendingReview").length,
         completionRate: assignmentRecords.length ? round(assignmentSubmitted.length / assignmentRecords.length * 100, 1) : 0,
         average: average(assignmentPercentages),
         highest: assignmentPercentages.length ? round(Math.max(...assignmentPercentages), 1) : null,
