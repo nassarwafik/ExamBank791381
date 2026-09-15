@@ -83,6 +83,13 @@ describe("StructuredExamCover", () => {
     expect(info.textContent).toContain("90 دقيقة");
   });
 
+  it("REQUIRED preview: showDuration on + no runtime duration => duration row with a neutral placeholder", () => {
+    const { container } = render(<StructuredExamCover cover={baseCover({ showDuration: true })} title="امتحان" distribution={dist} preview onStart={() => {}} />);
+    const info = container.querySelector(".iex-cover-info")!;
+    expect(info.textContent).toContain("المدة");
+    expect(info.textContent).toContain("—");
+  });
+
   it("does not show duration when showDuration is off", () => {
     const { container } = render(<StructuredExamCover cover={baseCover({ showDuration: false })} title="امتحان" distribution={dist} runtime={{ duration: "90 دقيقة" }} onStart={() => {}} />);
     expect((container.querySelector(".iex-cover-info")?.textContent || "")).not.toContain("المدة");

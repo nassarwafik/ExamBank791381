@@ -2,6 +2,7 @@
 import type { BuilderSection, GradingPolicy, AnswerUnit } from "./examTypes";
 import { GRADING_POLICY_LABELS } from "./examTypes";
 import { SECTION_PRESETS, gradingRuleExplanation, newQuestion, changeSectionPolicy } from "./examBuilderState";
+import { SECTION_INSTRUCTION_TEMPLATES, findSectionInstructionTemplate } from "./instructionTemplates";
 import StructuredQuestionEditor from "./StructuredQuestionEditor";
 import StimulusEditor from "./StimulusEditor";
 import type { BuilderQuestion } from "./examTypes";
@@ -49,6 +50,20 @@ export default function ExamSectionEditor(props: Props) {
         </div>
 
         <input className="sb-input sb-title-input" value={section.title} placeholder="عنوان القسم" onChange={e => patch({ title: e.target.value })} disabled={disabled} />
+        <div className="sb-template-controls">
+          <select className="sb-input sb-input-sm" value="" aria-label="قوالب تعليمات القسم" disabled={disabled} onChange={e => {
+            // Roadmap #17 — section instruction template = plain TEXT only. It sets section.instructions and
+            // NEVER touches gradingPolicy / requiredAnswers / maxMarks / answerUnit (grading stays structured).
+            const t = findSectionInstructionTemplate(e.target.value);
+            e.target.value = "";
+            if (!t) return;
+            if ((section.instructions ?? "").trim() && !window.confirm("سيستبدل هذا القالب تعليمات القسم الحالية. هل تريد المتابعة؟")) return;
+            patch({ instructions: t.text });
+          }}>
+            <option value="">قوالب تعليمات القسم…</option>
+            {SECTION_INSTRUCTION_TEMPLATES.map(t => <option key={t.id} value={t.id}>{t.label}</option>)}
+          </select>
+        </div>
         <textarea className="sb-input sb-textarea" value={section.instructions ?? ""} placeholder="تعليمات القسم" onChange={e => patch({ instructions: e.target.value })} disabled={disabled} />
 
         <div className="sb-policy">

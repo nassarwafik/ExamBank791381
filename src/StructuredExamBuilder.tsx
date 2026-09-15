@@ -15,19 +15,17 @@ import {
   moveQuestionToSection as movQTo,
   newSection,
   computeTotalMarks,
-  countQuestions,
-  stripAnswersForPreview
+  countQuestions
 } from "./examBuilderState";
 import { validateStructuredExam, hasBlockingErrors, type StructuredIssue } from "./examQuality";
 import ExamSectionEditor from "./ExamSectionEditor";
 import ExamCoverEditor from "./ExamCoverEditor";
-import StructuredExamSection from "./StructuredExamSection";
-import StructuredExamCover from "./StructuredExamCover";
-import type { Answer, FieldValue } from "./StudentQuestionCard";
-import { normalizeExamStructure, type StructuredExam as StudentStructuredExam } from "./examStructure";
-import { normalizeCoverPage, examMarksDistribution, type ExamCoverPage } from "./examCover";
-import { normalizeExamTheme } from "./examTheme";
+import ExamPreview from "./ExamPreview";
 import "./structured-builder.css";
+
+// The faithful teacher preview now lives in one shared module (Roadmap #15). Re-exported here so existing
+// callers/tests that import { ExamPreview } from "./StructuredExamBuilder" keep working unchanged.
+export { default as ExamPreview } from "./ExamPreview";
 
 // Top-level Structured Exam Builder. It is a CONTROLLED component: the exam lives in the parent
 // (App.tsx) and every edit flows back through onChange, applying the pure examBuilderState helpers.
@@ -136,80 +134,3 @@ function singleQuestionExam(exam: StructuredExam, section: BuilderSection, q: Bu
   return { ...exam, sections: [{ ...section, questions: [q] }] };
 }
 
-// Interactive student SIMULATION using the exact student rendering components, fed a SCRUBBED exam so
-// no answer key is present (stripAnswersForPreview → normalizeExamStructure → student renderer — the
-// same pipeline, never the raw teacher exam). The teacher can answer exactly like a student, but the
-// answers are EPHEMERAL: they live only in this component's local state, so closing the preview (which
-// unmounts ExamPreview) destroys them. Nothing is saved, no API/storage is touched, and the exam object
-// is never mutated. Handlers mirror the real StudentExamPage answer shapes byte-for-byte.
-export function ExamPreview({ exam, onClose }: { exam: StructuredExam; onClose: () => void }) {
-  const scrubbed = useMemo(() => stripAnswersForPreview(exam), [exam]);
-  const norm = useMemo(() => normalizeExamStructure(scrubbed as unknown as StudentStructuredExam), [scrubbed]);
-  const theme = normalizeExamTheme(exam.presentationTheme);
-  // Optional cover: shown FIRST (with placeholder identity) when enabled, then the interactive preview.
-  const cover: ExamCoverPage | undefined = useMemo(() => normalizeCoverPage(exam.coverPage), [exam.coverPage]);
-  const distribution = useMemo(() => examMarksDistribution(norm), [norm]);
-  const [coverStarted, setCoverStarted] = useState(false);
-  const showCover = !!cover?.enabled && !coverStarted;
-  // Ephemeral, preview-only answers. Owned here (not lifted to the builder), so unmounting resets them.
-  const [answers, setAnswers] = useState<Record<string, Answer>>({});
-  const onChoice = (id: string, index: number) => setAnswers(a => ({ ...a, [id]: { kind: "choice", index } }));
-  const onSeq = (id: string, index: number, value: string) => setAnswers(a => {
-    const prev = a[id]?.kind === "sequence" ? (a[id] as { kind: "sequence"; values: string[] }).values : [];
-    const values = [...prev]; values[index] = value;
-    return { ...a, [id]: { kind: "sequence", values } };
-  });
-  const onTable = (id: string, index: number, value: string | boolean) => setAnswers(a => {
-    const prev = a[id]?.kind === "table" ? (a[id] as { kind: "table"; values: (string | boolean)[] }).values : [];
-    const values = [...prev]; values[index] = value;
-    return { ...a, [id]: { kind: "table", values } };
-  });
-  const onText = (id: string, value: string) => setAnswers(a => ({ ...a, [id]: { kind: "text", value } }));
-  const onField = (id: string, fieldId: string, value: FieldValue) => setAnswers(a => {
-    const prev = a[id]?.kind === "fields" ? (a[id] as { kind: "fields"; values: Record<string, FieldValue> }).values : {};
-    return { ...a, [id]: { kind: "fields", values: { ...prev, [fieldId]: value } } };
-  });
-  const onPart = (id: string, partId: string, answer: Answer) => setAnswers(a => {
-    const prev = a[id]?.kind === "compound" ? (a[id] as { kind: "compound"; parts: Record<string, Answer> }).parts : {};
-    return { ...a, [id]: { kind: "compound", parts: { ...prev, [partId]: answer } } };
-  });
-  let offset = 0;
-  return (
-    <div className="sb-preview-overlay" role="dialog" aria-modal="true">
-      <header className="sb-preview-head">
-        <strong>👁 معاينة الطالب — {exam.title || "امتحان"}</strong>
-        <button type="button" className="sb-btn" onClick={onClose}>← إغلاق المعاينة</button>
-      </header>
-      <main className={"interactive-exam-page exam-theme-" + theme} dir="rtl">
-        {showCover ? (
-          <div className="iex-wrap">
-            <StructuredExamCover cover={cover!} title={exam.title || ""} distribution={distribution} preview onStart={() => setCoverStarted(true)} />
-          </div>
-        ) : (
-        <div className="iex-wrap">
-          <p className="sb-preview-note">هذه معاينة تفاعلية للطالب — يمكنك تجربة الإجابة، لكن لا تُحفظ أي إجابة ولا تظهر مفاتيح الإجابة.</p>
-          {norm.sections.map((section, si) => {
-            const startIndex = offset;
-            offset += section.questions.length;
-            return (
-              <StructuredExamSection
-                key={section.id}
-                section={section}
-                sectionNumber={si + 1}
-                startIndex={startIndex}
-                answers={answers}
-                onChoice={onChoice}
-                onSeq={onSeq}
-                onTable={onTable}
-                onText={onText}
-                onField={onField}
-                onPart={onPart}
-              />
-            );
-          })}
-        </div>
-        )}
-      </main>
-    </div>
-  );
-}

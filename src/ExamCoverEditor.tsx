@@ -1,6 +1,8 @@
 import { useState } from "react";
 import type { ExamCoverPage, ActivityType } from "./examCover";
 import { defaultCoverPage, validateBannerDataUrl, MAX_BANNER_BYTES } from "./examCover";
+import { COVER_TEMPLATES, findCoverTemplate, applyCoverTemplate } from "./coverTemplates";
+import { GENERAL_INSTRUCTION_TEMPLATES, findGeneralInstructionTemplate } from "./instructionTemplates";
 
 // Builder panel "الغلاف والتعليمات" — configure the OPTIONAL cover/start page AFTER import or manual
 // creation. Controlled: edits flow up via onChange({...cover}). The banner reuses the app's established
@@ -18,10 +20,31 @@ const SAFE_ACCEPT = "image/png,image/jpeg,image/webp,image/gif";
 
 export default function ExamCoverEditor({ cover, onChange, onPreviewCover, disabled }: Props) {
   const [bannerError, setBannerError] = useState("");
+  const [coverTplId, setCoverTplId] = useState("");
+  const [insTplId, setInsTplId] = useState("");
   const enabled = !!cover?.enabled;
   const c = cover;
 
   const patch = (p: Partial<ExamCoverPage>) => onChange({ ...(c ?? defaultCoverPage()), ...p });
+
+  // Roadmap #16 — apply a built-in cover template EXPLICITLY. Preserves the teacher's safe banner; when the
+  // cover already has edited text, a clear confirm is required so nothing is silently overwritten. Never
+  // touches exam questions/sections/marks/grading (only the cover object).
+  const applyTpl = () => {
+    const t = findCoverTemplate(coverTplId);
+    if (!t) return;
+    const hasText = !!((c?.subtitle || "").trim() || (c?.instructions || "").trim() || (c?.allowedMaterials || "").trim());
+    if (hasText && !window.confirm("سيستبدل هذا القالب حقول الغلاف الحالية (مع الإبقاء على البانر). هل تريد المتابعة؟")) return;
+    onChange(applyCoverTemplate(c, t));
+  };
+  // Roadmap #17 — apply a built-in instruction template to the COVER instructions field (plain text; a
+  // starting point the teacher can then edit freely). Confirms before replacing existing text.
+  const applyInsTpl = () => {
+    const t = findGeneralInstructionTemplate(insTplId);
+    if (!t) return;
+    if ((c?.instructions || "").trim() && !window.confirm("سيستبدل هذا القالب نص التعليمات الحالي. هل تريد المتابعة؟")) return;
+    patch({ instructions: t.text });
+  };
 
   const toggleEnabled = (on: boolean) => {
     setBannerError("");
@@ -68,6 +91,18 @@ export default function ExamCoverEditor({ cover, onChange, onPreviewCover, disab
 
       {enabled && (
         <div className="sb-cover-fields">
+          <div className="sb-field sb-template-row">
+            <span className="sb-field-label">قوالب الغلاف</span>
+            <div className="sb-template-controls">
+              <select className="sb-input" value={coverTplId} onChange={e => setCoverTplId(e.target.value)} disabled={disabled} aria-label="قوالب الغلاف">
+                <option value="">اختر قالبًا…</option>
+                {COVER_TEMPLATES.map(t => <option key={t.id} value={t.id}>{t.label}</option>)}
+              </select>
+              <button type="button" className="sb-mini-btn" onClick={applyTpl} disabled={disabled || !coverTplId}>تطبيق القالب</button>
+            </div>
+            <p className="sb-hint">يملأ حقول الغلاف بقيم جاهزة يمكنك تعديلها. يُبقي البانر ولا يغيّر الأسئلة أو العلامات.</p>
+          </div>
+
           <label className="sb-field">
             <span className="sb-field-label">نوع النشاط</span>
             <select className="sb-input" value={c?.activityType || "exam"} onChange={e => patch({ activityType: e.target.value as ActivityType })} disabled={disabled}>
@@ -99,8 +134,15 @@ export default function ExamCoverEditor({ cover, onChange, onPreviewCover, disab
 
           <label className="sb-field">
             <span className="sb-field-label">تعليمات الامتحان / التدريب</span>
+            <div className="sb-template-controls">
+              <select className="sb-input" value={insTplId} onChange={e => setInsTplId(e.target.value)} disabled={disabled} aria-label="قوالب التعليمات">
+                <option value="">قوالب التعليمات…</option>
+                {GENERAL_INSTRUCTION_TEMPLATES.map(t => <option key={t.id} value={t.id}>{t.label}</option>)}
+              </select>
+              <button type="button" className="sb-mini-btn" onClick={applyInsTpl} disabled={disabled || !insTplId}>تطبيق التعليمات</button>
+            </div>
             <textarea className="sb-input sb-textarea sb-cover-instructions-input" value={c?.instructions ?? ""} placeholder={"الصق التعليمات هنا (كل سطر يظهر كبند):\nأجب عن جميع الأسئلة.\nاقرأ السؤال جيدًا قبل الإجابة.\nتأكد من إجاباتك قبل التسليم."} onChange={e => patch({ instructions: e.target.value })} disabled={disabled} rows={5} />
-            <p className="sb-hint">نص عادي فقط — يُعرض بأمان دون أي وسوم HTML.</p>
+            <p className="sb-hint">نص عادي فقط — يُعرض بأمان دون أي وسوم HTML. القالب نقطة بداية يمكنك تعديلها.</p>
           </label>
 
           <div className="sb-field">

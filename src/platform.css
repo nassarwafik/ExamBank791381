@@ -1766,3 +1766,8 @@
 .gradebook-chip.active,.gradebook-sort button.active{background:#0f2b46;color:#fff;border-color:#0f2b46}
 .review-grade-status.iex-grade-pending{color:#9a6700}
 .review-grade-status.iex-grade-final{color:#0f7a3d}
+
+/* Roadmap #15 — exam-level general instructions block in the faithful teacher preview (display-only). */
+.iex-general-instructions{margin:0 0 16px;border:1px solid #cfe0f8;background:#eef4ff;border-radius:14px;padding:13px 16px}
+.iex-general-instructions ul{margin:8px 0 0;padding-inline-start:20px;line-height:1.9}
+.iex-general-instructions li{color:#1e3a8a}
