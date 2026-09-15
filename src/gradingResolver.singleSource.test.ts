@@ -5,7 +5,7 @@ import { describe, it, expect } from "vitest";
 // rather than re-deriving the rule, and none of them may infer grading from a score/percentage.
 // Sources are read as raw text via Vite's import.meta.glob (no node:fs — keeps the app tsconfig clean).
 const RAW = import.meta.glob(
-  "./{StudentPortal,AssignmentsPanel,AssignmentReview,StudentExamPage,gradingStatus}.{ts,tsx}",
+  "./{StudentPortal,AssignmentsPanel,AssignmentReview,StudentExamPage,TeacherPlatform,TeacherDashboard,gradingStatus}.{ts,tsx}",
   { query: "?raw", import: "default", eager: true }
 ) as Record<string, string>;
 const read = (key: string): string => {
@@ -14,6 +14,9 @@ const read = (key: string): string => {
   return src;
 };
 const COMPONENTS = ["./StudentPortal.tsx", "./AssignmentsPanel.tsx", "./AssignmentReview.tsx", "./StudentExamPage.tsx"];
+// Teacher result surfaces that display a grading label — they must resolve it through the shared authority,
+// never from a raw `finalized` boolean (which mislabels legacy attempts whose stored finalized is absent).
+const TEACHER_RESULT_SURFACES = ["./TeacherPlatform.tsx", "./TeacherDashboard.tsx"];
 
 describe("F: single shared grading resolver across the frontend", () => {
   for (const file of COMPONENTS) {
@@ -29,6 +32,15 @@ describe("F: single shared grading resolver across the frontend", () => {
     });
     it(`${file} never infers grading from a score/percentage`, () => {
       expect(read(file)).not.toMatch(/latestScore\s*!=\s*null\s*\?\s*"final"/);
+    });
+  }
+
+  for (const file of TEACHER_RESULT_SURFACES) {
+    it(`${file} resolves grade labels through resolveGradingStatus, not raw finalized`, () => {
+      const src = read(file);
+      expect(src).toMatch(/resolveGradingStatus/);
+      // No grade label chosen directly from a raw `finalized` boolean (e.g. `x.finalized?"مصحح":...`).
+      expect(src).not.toMatch(/finalized\s*\?\s*"(مصحح|مصححة|نهائي|العلامة النهائية)/);
     });
   }
 
