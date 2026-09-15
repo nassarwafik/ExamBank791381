@@ -549,9 +549,9 @@ function App() {
       "builder"
     );
 
-  const [workspaceTab, setWorkspaceTab] = useState<"dashboard" | "students" | "assignments">("dashboard");
+  const [workspaceTab, setWorkspaceTab] = useState<"dashboard" | "students" | "assignments" | "audit">("dashboard");
 
-  function goToWorkspace(tab: "dashboard" | "students" | "assignments") {
+  function goToWorkspace(tab: "dashboard" | "students" | "assignments" | "audit") {
     setTeacherView("platform");
     setWorkspaceTab(tab);
   }
@@ -5463,6 +5463,14 @@ function App() {
           >
             <IconAssignments size={20} />
             <span>الواجبات</span>
+          </button>
+
+          <button
+            className={"app-sidebar-link " + (teacherView === "platform" && workspaceTab === "audit" ? "active" : "")}
+            onClick={() => goToWorkspace("audit")}
+          >
+            <span aria-hidden="true" style={{ fontSize: 18, width: 20, textAlign: "center" }}>📜</span>
+            <span>سجل النشاط</span>
           </button>
 
           <button

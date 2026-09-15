@@ -25,6 +25,10 @@ const { withCredentialLock, CredentialLockBusyError } = require("../lib/student-
 class SkipMutation extends Error {}
 
 const BANK_CONTAINER = "bank";
+// Bounded server-side import size (Roadmap #18). The client limit is NOT authoritative — the server
+// rejects an oversized preview/import cleanly. Conservative for the current one-blob-per-student
+// architecture; generalized batching/pagination is explicitly out of scope for this package.
+const MAX_IMPORT_ROWS = 250;
 const USER_PREFIX = "platform/users/";
 const AUTH_PREFIX = "platform/auth/";
 const CLASS_PREFIX = "platform/classes/";
@@ -293,11 +297,15 @@ async function createStudentRecord(container, classroom, input, options = {}) {
   const existing = await findStudentByIdentity(container, identityNumber);
   if (existing) {
     const existingClass = await getClassroom(container, String(existing.classId || ""));
-    throw new Error(
+    // Roadmap #18: tag identity collisions as `duplicate` so the bulk-import loop can report an
+    // accurate duplicate vs. hard-failure breakdown (aggregate audit + UI counts) without string-matching.
+    const dup = new Error(
       "رقم الهوية مستخدم مسبقًا للطالب " +
       String(existing.displayName || identityNumber) +
       (existingClass?.name ? " في الصف " + existingClass.name : "")
     );
+    dup.code = "duplicate";
+    throw dup;
   }
 
   const password = options.forceGeneratedPassword
@@ -355,7 +363,9 @@ async function createStudentRecord(container, classroom, input, options = {}) {
   try {
     await uploadJsonConditional(container, AUTH_PREFIX + studentCodeHash(code) + ".json", authDocument, null);
   } catch (e) {
-    if (isConcurrencyConflict(e)) throw new Error("رقم الهوية مستخدم مسبقًا لطالب آخر. أعد المحاولة.");
+    // The create-only conditional write is the real uniqueness guard: a lost race (another concurrent
+    // create for the same identity won the write) becomes an explicit duplicate, never a silent overwrite.
+    if (isConcurrencyConflict(e)) { const dup = new Error("رقم الهوية مستخدم مسبقًا لطالب آخر. أعد المحاولة."); dup.code = "duplicate"; throw dup; }
     throw e;
   }
   await uploadJson(container, USER_PREFIX + userId + ".json", student);
@@ -512,6 +522,7 @@ async function deleteStudent(container, student) {
 
 async function buildImportPreview(container, items) {
   const classCache = new Map();
+  const seenInBatch = new Set();     // identity numbers already seen earlier in THIS upload
   const rows = [];
 
   for (const item of items) {
@@ -525,7 +536,14 @@ async function buildImportPreview(container, items) {
     } else if (!isValidIdentityNumber(item.identityNumber)) {
       status = "invalid";
       error = "رقم الهوية يجب أن يتكوّن من 9 أرقام.";
+    } else if (seenInBatch.has(item.identityNumber)) {
+      // In-batch duplicate: the SAME identity appears more than once in the uploaded file. The first
+      // occurrence is validated normally; every later one is flagged so the teacher sees it before import
+      // (and the create-only commit would reject it anyway).
+      status = "duplicate";
+      error = "رقم الهوية مكرر داخل الملف.";
     } else {
+      seenInBatch.add(item.identityNumber);
       const existing = await findStudentByIdentity(container, item.identityNumber);
       if (existing) {
         status = "duplicate";
@@ -669,7 +687,11 @@ async function buildStudentProfile(container, userId) {
 // `deps` is an optional dependency-injection seam for unit tests (production passes nothing → real
 // implementations). It does not change runtime behavior.
 async function manageStudentsHandler(request, deps = {}, obs = null) {
-    const rec = deps.recordAuditEvent || recordAuditEvent;
+    // Audit recording is a SECONDARY concern: a failure to record must never fail the business action.
+    // The real recordAuditEvent already swallows errors; wrapping here guarantees the contract even for an
+    // injected/alternate recorder that throws (Roadmap #19).
+    const rawRec = deps.recordAuditEvent || recordAuditEvent;
+    const rec = async (c, ev) => { try { await rawRec(c, ev); } catch { /* audit is secondary */ } };
     try {
       const auth = (deps.requireBuilderAuth || requireBuilderAuth)(request);
       if (!auth.ok) return auth.response;
@@ -709,6 +731,15 @@ async function manageStudentsHandler(request, deps = {}, obs = null) {
           const ids = ensureStudentIds(freshClassroom);
           if (!ids.includes(result.student.userId)) ids.push(result.student.userId);
         });
+        // Roadmap #19: safe audit — never the generated plaintext password (returned in-memory only).
+        await rec(container, {
+          actor: auth.user?.sub,
+          action: "student.create",
+          targetType: "student",
+          targetId: result.student.userId,
+          targetLabel: result.student.displayName || result.student.code,
+          details: { classId }
+        });
         return { status: 200, jsonBody: { ok: true, ...result } };
       }
 
@@ -717,8 +748,8 @@ async function manageStudentsHandler(request, deps = {}, obs = null) {
         if (!students.length) {
           return { status: 400, jsonBody: { ok: false, error: "ملف JSON لا يحتوي بيانات طلاب صالحة." } };
         }
-        if (students.length > 250) {
-          return { status: 400, jsonBody: { ok: false, error: "يمكن فحص 250 طالبًا كحد أقصى في العملية الواحدة." } };
+        if (students.length > MAX_IMPORT_ROWS) {
+          return { status: 400, jsonBody: { ok: false, error: "يمكن فحص " + MAX_IMPORT_ROWS + " طالبًا كحد أقصى في العملية الواحدة." } };
         }
         const preview = await buildImportPreview(container, students);
         return {
@@ -744,13 +775,18 @@ async function manageStudentsHandler(request, deps = {}, obs = null) {
         if (!students.length) {
           return { status: 400, jsonBody: { ok: false, error: "ملف JSON لا يحتوي بيانات طلاب صالحة." } };
         }
-        if (students.length > 250) {
-          return { status: 400, jsonBody: { ok: false, error: "يمكن استيراد 250 طالبًا كحد أقصى في العملية الواحدة." } };
+        if (students.length > MAX_IMPORT_ROWS) {
+          return { status: 400, jsonBody: { ok: false, error: "يمكن استيراد " + MAX_IMPORT_ROWS + " طالبًا كحد أقصى في العملية الواحدة." } };
         }
 
         const credentials = [];
         const errors = [];
+        let duplicates = 0;
 
+        // CREATE-only, per-row. Each row is revalidated server-side by createStudentRecord (name/identity/
+        // existing-identity), and the conditional auth write is the final race guard — a row that loses a
+        // race, or duplicates an existing identity, fails EXPLICITLY as a duplicate and never overwrites
+        // another account. A partial result is reported explicitly (created + failed), never as full success.
         for (const item of students) {
           try {
             const result = await createStudentRecord(container, classroom, item, { forceGeneratedPassword: true });
@@ -764,6 +800,7 @@ async function manageStudentsHandler(request, deps = {}, obs = null) {
               password: result.temporaryPassword
             });
           } catch (error) {
+            if (error && error.code === "duplicate") duplicates += 1;
             errors.push({
               index: item.index,
               firstName: item.firstName,
@@ -771,18 +808,30 @@ async function manageStudentsHandler(request, deps = {}, obs = null) {
               identityNumber: item.identityNumber,
               displayName: [item.firstName, item.familyName].filter(Boolean).join(" "),
               code: item.identityNumber || "",
+              duplicate: !!(error && error.code === "duplicate"),
               error: error instanceof Error ? error.message : "تعذر إنشاء الطالب."
             });
           }
         }
 
         await saveClassroom(container, classroom);
+        // Roadmap #19: record ONE aggregate audit event — safe counts only, NEVER student names, identity
+        // numbers, or any generated plaintext credential (those exist only in the in-memory response).
+        await rec(container, {
+          actor: auth.user?.sub,
+          action: "student.bulkImport",
+          targetType: "class",
+          targetId: classId,
+          targetLabel: String(classroom.name || ""),
+          details: { classId, createdCount: credentials.length, duplicateCount: duplicates, failedCount: errors.length }
+        });
         return {
           status: 200,
           jsonBody: {
             ok: true,
             imported: credentials.length,
             failed: errors.length,
+            duplicates,
             credentials,
             errors
           }
@@ -931,6 +980,7 @@ async function manageStudentsHandler(request, deps = {}, obs = null) {
               if (!ids.includes(userId)) ids.push(userId);
             });
           }
+          await rec(container, { actor: auth.user?.sub, action: "student.move", targetType: "student", targetId: userId, targetLabel: (firstName + " " + familyName).trim(), details: { fromClassId: oldClassId, toClassId: newClassId, viaProfileUpdate: true } });
         }
 
         // §1: a stale password change (a newer reset already owns the version) must NOT report success —
@@ -985,10 +1035,12 @@ async function manageStudentsHandler(request, deps = {}, obs = null) {
         }
         if (action === "archive") {
           await archiveStudent(container, student);
+          await rec(container, { actor: auth.user?.sub, action: "student.archive", targetType: "student", targetId: student.userId, targetLabel: student.displayName || student.code, details: { classId: String(student.classId || "") } });
           return { status: 200, jsonBody: { ok: true, archived: true } };
         }
         if (action === "unarchive") {
           await unarchiveStudent(container, student);
+          await rec(container, { actor: auth.user?.sub, action: "student.unarchive", targetType: "student", targetId: student.userId, targetLabel: student.displayName || student.code, details: { classId: String(student.classId || "") } });
           return { status: 200, jsonBody: { ok: true, archived: false, active: true } };
         }
 
@@ -1036,9 +1088,9 @@ async function manageStudentsHandler(request, deps = {}, obs = null) {
 
             if (operation === "activate") await changeStudentActive(container, student, true);
             else if (operation === "deactivate") await changeStudentActive(container, student, false);
-            else if (operation === "archive") await archiveStudent(container, student);
-            else if (operation === "unarchive") await unarchiveStudent(container, student);
-            else if (operation === "move") await moveStudent(container, student, targetClassId);
+            else if (operation === "archive") { await archiveStudent(container, student); await rec(container, { actor: auth.user?.sub, action: "student.archive", targetType: "student", targetId: userId, targetLabel: student.displayName || student.code, details: { bulk: true, classId: String(student.classId || "") } }); }
+            else if (operation === "unarchive") { await unarchiveStudent(container, student); await rec(container, { actor: auth.user?.sub, action: "student.unarchive", targetType: "student", targetId: userId, targetLabel: student.displayName || student.code, details: { bulk: true, classId: String(student.classId || "") } }); }
+            else if (operation === "move") { await moveStudent(container, student, targetClassId); await rec(container, { actor: auth.user?.sub, action: "student.move", targetType: "student", targetId: userId, targetLabel: student.displayName || student.code, details: { bulk: true, fromClassId: String(student.classId || ""), toClassId: targetClassId } }); }
             else if (operation === "resetpasswords") {
               const password = await resetStudentPassword(container, student);
               const publicValue = publicStudent(student);
@@ -1116,4 +1168,10 @@ async function manageStudentsHandler(request, deps = {}, obs = null) {
 app.http("manageStudents", { methods: ["GET", "POST"], authLevel: "anonymous", route: "students", handler: withObservability("students", manageStudentsHandler) });
 
 // Roadmap #8 — exported for unit tests (authVersion on create / password reset / update). Additive.
-module.exports = { createStudentRecord, resetStudentPassword, buildStudentProfile, handler: manageStudentsHandler };
+// Roadmap #18 — pure roster-import helpers exported so normalization/validation are unit-tested directly
+// (no storage), plus buildImportPreview + MAX_IMPORT_ROWS for the preview/limit tests.
+module.exports = {
+  createStudentRecord, resetStudentPassword, buildStudentProfile, handler: manageStudentsHandler,
+  normalizeBulkStudents, namesFromInput, identityFromInput, normalizeIdentityNumber, isValidIdentityNumber,
+  buildImportPreview, MAX_IMPORT_ROWS
+};

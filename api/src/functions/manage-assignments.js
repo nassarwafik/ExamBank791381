@@ -6,6 +6,7 @@ const {getContainer,downloadJsonOrNull,uploadJson,listJson,listBlobNames,deleteB
 const {recordAuditEvent}=require("../lib/audit-log");
 const {examOfficialStats}=require("../lib/exam-structure");
 const {normalizeAssignmentStatus,applyAssignmentArchive,applyAssignmentRestore}=require("../lib/assignment-lifecycle");
+const {normalizeClassStatus}=require("../lib/class-lifecycle");
 const {activeAttemptOf}=require("../lib/assignment-availability");
 const {withAssignmentLock,AssignmentLockBusyError}=require("../lib/assignment-lock");
 const PREFIX="platform/assignments/",CLASS_PREFIX="platform/classes/",SUB_PREFIX="platform/submissions/";
@@ -85,10 +86,17 @@ async function handler(request,deps={},obs=null){
    }
    let updated=null;
    try{
-    updated=await mut(c,name,current=>{
+    updated=await mut(c,name,async current=>{
      if(!current){const err=new Error("الواجب غير موجود.");err.httpStatus=404;throw err}
      // An archived assignment must be restored before any status/attempt change (never bypass restore).
      if(normalizeAssignmentStatus(current)==="archived"){const err=new Error(action==="setstatus"?"الواجب مؤرشف. استعد الواجب أولًا.":"الواجب مؤرشف. استعده أولًا قبل تعديل عدد المحاولات.");err.httpStatus=409;throw err}
+     // Roadmap #20 class-lifecycle gate: PUBLISHING is new active school work, so it must target an ACTIVE
+     // class. Re-read the class inside the mutation (authoritative) and reject if archived. Unpublishing
+     // (published->draft) and maxAttempts are historical/administrative and are NOT class-gated here.
+     if(action==="setstatus"&&nextStatus==="published"){
+      const cls=await dl(c,CLASS_PREFIX+String(current.classId||"")+".json");
+      if(!cls||normalizeClassStatus(cls)==="archived"){const err=new Error("صف الواجب مؤرشف — لا يمكن نشر واجب جديد له. فعّل الصف أولًا.");err.httpStatus=409;throw err}
+     }
      if(action==="setstatus")current.status=nextStatus;else current.maxAttempts=nextMaxAttempts;
      current.updatedAt=new Date().toISOString();
      return current;
