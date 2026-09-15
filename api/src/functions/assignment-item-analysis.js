@@ -2,24 +2,30 @@
 const {app}=require("@azure/functions");
 const {requireBuilderAuth}=require("../lib/builder-auth");
 const {getContainer,downloadJsonOrNull,listJson}=require("../lib/platform-storage");
+const {isStudentClassMember}=require("../lib/class-membership");
 const AP="platform/assignments/",SP="platform/submissions/",UP="platform/users/";
 function qid(q,i){return String(q?.examQuestionId||q?.id||q?.number||i+1)}
 function round1(n){return Math.round(n*10)/10}
 function round2(n){return Math.round(n*100)/100}
 function difficultyFor(pct){if(pct===null)return null;if(pct>=75)return "easy";if(pct>=50)return "medium";return "hard"}
-app.http("assignmentItemAnalysis",{methods:["GET"],authLevel:"anonymous",route:"assignment-item-analysis",handler:async request=>{
+// `deps` is an optional dependency-injection seam for unit tests (production passes nothing, so the real
+// implementations are used). It does not change runtime behavior.
+async function handler(request,deps={}){
+ const authFn=deps.requireBuilderAuth||requireBuilderAuth,getC=deps.getContainer||getContainer,dl=deps.downloadJsonOrNull||downloadJsonOrNull,ls=deps.listJson||listJson;
  try{
-  const auth=requireBuilderAuth(request);if(!auth.ok)return auth.response;
-  const c=getContainer(),u=new URL(request.url),id=String(u.searchParams.get("assignmentId")||"");
+  const auth=authFn(request);if(!auth.ok)return auth.response;
+  const c=getC(),u=new URL(request.url),id=String(u.searchParams.get("assignmentId")||"");
   if(!id)return {status:400,jsonBody:{ok:false,error:"assignmentId is required."}};
-  const a=await downloadJsonOrNull(c,AP+id+".json");if(!a)return {status:404,jsonBody:{ok:false,error:"الواجب غير موجود."}};
+  const a=await dl(c,AP+id+".json");if(!a)return {status:404,jsonBody:{ok:false,error:"الواجب غير موجود."}};
   const questions=Array.isArray(a.examSnapshot?.questions)?a.examSnapshot.questions:[];
-  const users=(await listJson(c,UP)).filter(x=>String(x.classId||"")===String(a.classId||"")&&x.active!==false);
+  // Roadmap #24: analyzed population is CLASS MEMBERSHIP (canonical predicate) — a login-disabled student's
+  // historical submission stays part of the teacher's item analysis; archived students stay excluded.
+  const users=(await ls(c,UP)).filter(x=>isStudentClassMember(x,a.classId));
   // Only the latest submitted attempt per student is analyzed — a student with several attempts
   // must not outweigh a student with a single attempt (see Phase 13 spec).
   const latestAttempts=[];
   for(const student of users){
-   const s=await downloadJsonOrNull(c,SP+id+"/"+student.userId+".json");
+   const s=await dl(c,SP+id+"/"+student.userId+".json");
    const attempts=Array.isArray(s?.attempts)?s.attempts:[];
    if(!attempts.length)continue;
    latestAttempts.push(attempts[attempts.length-1]);
@@ -61,4 +67,6 @@ app.http("assignmentItemAnalysis",{methods:["GET"],authLevel:"anonymous",route:"
   });
   return {status:200,jsonBody:{ok:true,assignmentId:a.assignmentId,title:String(a.title||""),studentsInClass:users.length,studentsSubmitted:latestAttempts.length,attemptsAnalyzed:latestAttempts.length,questions:questionStats}};
  }catch{return {status:500,jsonBody:{ok:false,error:"تعذر تحليل أسئلة الواجب حاليًا."}}}
-}});
+}
+app.http("assignmentItemAnalysis",{methods:["GET"],authLevel:"anonymous",route:"assignment-item-analysis",handler});
+module.exports={handler};

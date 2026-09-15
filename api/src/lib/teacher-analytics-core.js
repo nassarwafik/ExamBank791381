@@ -4,6 +4,9 @@ const { listJson } = require("./platform-storage");
 // the gradebook (assignment-results), assignment-review and the student dashboard. The canonical rule also
 // treats `manualReviewMarks > 0` as pending and handles legacy results whose `finalized` field is absent.
 const { deriveGradingStatus } = require("./grading-status");
+// Roadmap #24 — the student POPULATION is class MEMBERSHIP (role student, not archived, in class) through the ONE
+// canonical helper; `active:false` is login eligibility only and must not drop a student from analytics.
+const { isStudentClassMember } = require("./class-membership");
 
 const CLASS_PREFIX = "platform/classes/";
 const USER_PREFIX = "platform/users/";
@@ -76,7 +79,7 @@ function qid(question, index) {
 }
 
 function classAggregate(classId, assignments, students, submissionMap) {
-  const classStudents = students.filter(student => String(student.classId || "") === classId && student.active !== false && student.archived !== true);
+  const classStudents = students.filter(student => isStudentClassMember(student, classId));
   const classAssignments = assignments.filter(assignment => String(assignment.classId || "") === classId);
   let submitted = 0;
   let pendingReview = 0;
@@ -160,7 +163,8 @@ async function computeTeacherAnalytics(container, { classId: requestedClassId = 
 
   const classMap = new Map(classes.map(item => [item.classId, item]));
   const students = usersRaw.filter(item => item?.role === "student");
-  const activeStudents = students.filter(item => item.active !== false && item.archived !== true);
+  // Members of their own class (canonical predicate: role student, not archived). Login-disabled students stay in.
+  const activeStudents = students.filter(item => isStudentClassMember(item, item.classId));
   const publishedAll = assignmentsRaw.filter(item => item?.assignmentId && item.status === "published");
   const scopedByDate = publishedAll.filter(item => inRange(assignmentDate(item), fromMs, toMs));
   const scopedAssignments = scopedByDate.filter(item => !requestedClassId || String(item.classId || "") === requestedClassId);

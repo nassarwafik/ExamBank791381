@@ -3,6 +3,7 @@ const { requireBuilderAuth } = require("../lib/builder-auth");
 const { getContainer, downloadJsonOrNull, uploadJson, listJson, listBlobNames, deleteBlob, mutateJsonWithRetry, StorageConflictError } = require("../lib/platform-storage");
 const { recordAuditEvent } = require("../lib/audit-log");
 const { normalizeClassStatus } = require("../lib/class-lifecycle");
+const { isStudentClassMember } = require("../lib/class-membership");
 const { PROGRAM_CODE, TEMPLATE_VERSION, buildClassSnapshotFromDefault, buildUpgradedSnapshot } = require("../lib/project-794589-template");
 const { classHasMeaningfulProgress } = require("../lib/project-794589-migration");
 const core = require("../lib/project-794589-core");
@@ -62,7 +63,7 @@ async function ensureClassConfig(container, classroom) {
 async function listClassStudents(container, classId) {
   const all = await listJson(container, USER_PREFIX);
   return all
-    .filter(u => u && u.role === "student" && String(u.classId || "") === String(classId) && u.archived !== true)
+    .filter(u => isStudentClassMember(u, classId)) // Roadmap #24: canonical read-side membership (disabled ≠ removed)
     .map(u => ({ studentId: u.userId, displayName: u.displayName || (u.firstName + " " + u.familyName).trim(), code: u.code }))
     .sort((a, b) => String(a.displayName).localeCompare(String(b.displayName), "ar"));
 }
