@@ -3,7 +3,10 @@ const { withObservability } = require("../lib/observability");
 const { BlobServiceClient } = require("@azure/storage-blob");
 const crypto = require("crypto");
 const { requireBuilderAuth } = require("../lib/builder-auth");
-const { mutateJsonWithRetry, StorageConflictError } = require("../lib/platform-storage");
+const { mutateJsonWithRetry, StorageConflictError, listJson } = require("../lib/platform-storage");
+// Roadmap #25 — explicit, teacher-triggered roster-index repair (the only O(all-users) path in this function;
+// the normal class list stays O(classes) and reads the cheap studentIds count).
+const { canonicalMemberIds, reconcileRosterIndex } = require("../lib/class-roster-index");
 const { normalizeClassStatus, applyClassLifecycleAction } = require("../lib/class-lifecycle");
 const { recordAuditEvent } = require("../lib/audit-log");
 const { isSupportedProject } = require("../lib/project-tracker/registry");
@@ -19,6 +22,7 @@ function programCodeAccepted(programCode) {
 const CONFLICT_MESSAGE = "حدث تعارض مؤقت أثناء حفظ البيانات. حاول مرة أخرى.";
 const BANK_CONTAINER = "bank";
 const CLASS_PREFIX = "platform/classes/";
+const USER_PREFIX = "platform/users/";
 
 async function streamToBuffer(stream) {
   const chunks = [];
@@ -109,6 +113,7 @@ async function handler(request, deps = {}, obs = null) {
   const dl = deps.downloadJsonOrNull || downloadJsonOrNull;
   const up = deps.uploadJson || uploadJson;
   const mut = deps.mutateJsonWithRetry || mutateJsonWithRetry;
+  const ls = deps.listJson || listJson;
   // Audit is secondary — a recorder failure must never fail the class mutation (Roadmap #19). The real
   // recordAuditEvent already swallows; this wrapper extends the guarantee to any injected recorder.
   const rawRec = deps.recordAuditEvent || recordAuditEvent;
@@ -180,6 +185,27 @@ async function handler(request, deps = {}, obs = null) {
         if (mutateError?.httpStatus) return { status: mutateError.httpStatus, jsonBody: { ok: false, error: mutateError.message } };
         throw mutateError;
       }
+    }
+
+    // Roadmap #25 — reconcileRoster: rebuild ONE class's denormalized studentIds index from the authoritative
+    // user documents. Explicit and rare (repair-only), so a full users scan is acceptable here; it is never part
+    // of the class listing. Returns counts only — no student data.
+    if (action === "reconcileroster") {
+      const classId = String(body?.classId || "").trim();
+      if (!classId) return { status: 400, jsonBody: { ok: false, error: "classId is required." } };
+      const classroom = await dl(container, CLASS_PREFIX + classId + ".json");
+      if (!classroom) return { status: 404, jsonBody: { ok: false, error: "الصف غير موجود." } };
+      const scanStartedAt = Date.now();
+      const memberIds = canonicalMemberIds(await ls(container, USER_PREFIX), classId);
+      const result = await reconcileRosterIndex(container, classId, memberIds, { scanStartedAt, obs, operation: "reconcileRoster" });
+      if (!result.synced) return { status: 503, jsonBody: { ok: false, error: CONFLICT_MESSAGE } };
+      if (result.changed) {
+        await rec(container, { actor: auth.user?.sub, action: "class.reconcileRoster", targetType: "class", targetId: classId, targetLabel: String(classroom.name || ""), details: { beforeCount: result.beforeCount, authoritativeCount: result.authoritativeCount, repairedCount: result.repairedCount } });
+      }
+      return {
+        status: 200,
+        jsonBody: { ok: true, classId, beforeCount: result.beforeCount, authoritativeCount: result.authoritativeCount, repairedCount: result.repairedCount, changed: result.changed, skipped: result.skipped, rosterSynced: result.synced }
+      };
     }
 
     if (action === "archive" || action === "unarchive" || action === "graduateandarchive") {

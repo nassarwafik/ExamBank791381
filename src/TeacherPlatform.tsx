@@ -56,6 +56,12 @@ function statusLabel(student:Student){
  if(student.archived)return "مؤرشف";
  return student.active?"فعّال":"معطّل";
 }
+// Roadmap #25: a membership change may finish with the class COUNT index sync deferred (rosterSynced:false).
+// The operation itself succeeded; the count self-heals on the next roster load — tell the teacher, non-fatally.
+const ROSTER_SYNC_NOTE=" تم تنفيذ العملية، وسيتم تحديث عداد الصف تلقائيًا.";
+function withRosterNote(result:{rosterSynced?:boolean}|null|undefined,message:string):string{
+ return result&&result.rosterSynced===false?message+ROSTER_SYNC_NOTE:message;
+}
 function csvCell(value:unknown){
  const text=String(value??"");
  return `"${text.replace(/"/g,'""')}"`;
@@ -296,13 +302,13 @@ function TeacherPlatform({token,currentExam,workspaceTab,onCopyLibraryExamToBuil
   if(!selectedClassId||!newFirstName.trim()||!newFamilyName.trim()||!validIdentity(newIdentityNumber)||actionBusy)return;
   setActionBusy(true);setError("");setNotice("");setCredentialBox(null);
   try{
-   const result=await teacherApi<{ok:true;student:Student;temporaryPassword:string}>("/api/students",{method:"POST",body:JSON.stringify({
+   const result=await teacherApi<{ok:true;student:Student;temporaryPassword:string;rosterSynced?:boolean}>("/api/students",{method:"POST",body:JSON.stringify({
     action:"create",classId:selectedClassId,firstName:newFirstName.trim(),familyName:newFamilyName.trim(),identityNumber:newIdentityNumber,password:newStudentPassword
    })});
    setCredentialBox({name:result.student.displayName,identityNumber:result.student.identityNumber,password:result.temporaryPassword});
    setNewFirstName("");setNewFamilyName("");setNewIdentityNumber("");setNewStudentPassword("");
    await Promise.all([loadStudents(selectedClassId),loadClasses()]);
-   setNotice("✓ تم إنشاء حساب الطالب. سيستخدم رقم الهوية لتسجيل الدخول.");
+   setNotice(withRosterNote(result,"✓ تم إنشاء حساب الطالب. سيستخدم رقم الهوية لتسجيل الدخول."));
   }catch(e){setError(e instanceof Error?e.message:"تعذر إنشاء الطالب.")}
   finally{setActionBusy(false)}
  }
@@ -339,9 +345,9 @@ function TeacherPlatform({token,currentExam,workspaceTab,onCopyLibraryExamToBuil
   if(actionBusy||!window.confirm(message))return;
   setActionBusy(true);setError("");setNotice("");
   try{
-   await teacherApi("/api/students",{method:"POST",body:JSON.stringify({action,userId:student.userId})});
+   const result=await teacherApi<{ok:true;rosterSynced?:boolean}>("/api/students",{method:"POST",body:JSON.stringify({action,userId:student.userId})});
    await Promise.all([loadStudents(selectedClassId),loadClasses()]);
-   setNotice(student.archived?"✓ تمت استعادة الطالب.":"✓ تمت أرشفة الطالب مع الاحتفاظ ببياناته.");
+   setNotice(withRosterNote(result,student.archived?"✓ تمت استعادة الطالب.":"✓ تمت أرشفة الطالب مع الاحتفاظ ببياناته."));
   }catch(e){setError(e instanceof Error?e.message:"تعذر تغيير حالة الأرشفة.")}
   finally{setActionBusy(false)}
  }
@@ -358,11 +364,11 @@ function TeacherPlatform({token,currentExam,workspaceTab,onCopyLibraryExamToBuil
   if(actionBusy||!confirmed)return;
   setActionBusy(true);setError("");setNotice("");
   try{
-   await teacherApi("/api/students",{method:"POST",body:JSON.stringify({action:"delete",userId:student.userId})});
+   const result=await teacherApi<{ok:true;rosterSynced?:boolean}>("/api/students",{method:"POST",body:JSON.stringify({action:"delete",userId:student.userId})});
    if(profile?.student.userId===student.userId)setProfile(null);
    if(editingStudent?.userId===student.userId)setEditingStudent(null);
    await Promise.all([loadStudents(selectedClassId),loadClasses()]);
-   setNotice("✓ تم حذف الطالب نهائيًا.");
+   setNotice(withRosterNote(result,"✓ تم حذف الطالب نهائيًا."));
   }catch(e){setError(e instanceof Error?e.message:"تعذر حذف الطالب.")}
   finally{setActionBusy(false)}
  }
@@ -382,13 +388,13 @@ function TeacherPlatform({token,currentExam,workspaceTab,onCopyLibraryExamToBuil
   if(!editingStudent||!editFirstName.trim()||!editFamilyName.trim()||!validIdentity(editIdentityNumber)||!editClassId||actionBusy)return;
   setActionBusy(true);setError("");setNotice("");
   try{
-   await teacherApi<{ok:true;student:Student;passwordChanged:boolean}>("/api/students",{method:"POST",body:JSON.stringify({
+   const result=await teacherApi<{ok:true;student:Student;passwordChanged:boolean;rosterSynced?:boolean}>("/api/students",{method:"POST",body:JSON.stringify({
     action:"update",userId:editingStudent.userId,firstName:editFirstName.trim(),familyName:editFamilyName.trim(),identityNumber:editIdentityNumber,classId:editClassId,password:editPassword
    })});
    const moved=editClassId!==selectedClassId;
    setEditingStudent(null);setEditPassword("");
    await Promise.all([loadStudents(selectedClassId),loadClasses()]);
-   setNotice(moved?"✓ تم تعديل الطالب ونقله إلى الصف المختار.":"✓ تم حفظ تعديلات الطالب.");
+   setNotice(withRosterNote(result,moved?"✓ تم تعديل الطالب ونقله إلى الصف المختار.":"✓ تم حفظ تعديلات الطالب."));
   }catch(e){setError(e instanceof Error?e.message:"تعذر حفظ تعديلات الطالب.")}
   finally{setActionBusy(false)}
  }
@@ -422,13 +428,13 @@ function TeacherPlatform({token,currentExam,workspaceTab,onCopyLibraryExamToBuil
   setActionBusy(true);setError("");setNotice("");setBulkErrors([]);
   try{
    const payload=validRows.map(x=>({firstName:x.firstName,familyName:x.familyName,identityNumber:x.identityNumber}));
-   const result=await teacherApi<{ok:true;imported:number;failed:number;credentials:Credential[];errors:BulkError[]}>("/api/students",{
+   const result=await teacherApi<{ok:true;imported:number;failed:number;credentials:Credential[];errors:BulkError[];rosterSynced?:boolean}>("/api/students",{
     method:"POST",body:JSON.stringify({action:"bulkImport",classId:selectedClassId,students:payload})
    });
    if((result.credentials||[]).length)showCredentialBatch(result.credentials||[]);
    setBulkErrors(result.errors||[]);
    await Promise.all([loadStudents(selectedClassId),loadClasses()]);
-   setNotice("✓ تم استيراد "+result.imported+" طالبًا"+(result.failed?"، وتعذر استيراد "+result.failed+".":"."));
+   setNotice(withRosterNote(result,"✓ تم استيراد "+result.imported+" طالبًا"+(result.failed?"، وتعذر استيراد "+result.failed+".":".")));
    setBulkStudents([]);setBulkFileName("");setImportPreview([]);
   }catch(e){setError(e instanceof Error?e.message:"تعذر استيراد الطلاب.")}
   finally{setActionBusy(false)}
@@ -572,7 +578,7 @@ function TeacherPlatform({token,currentExam,workspaceTab,onCopyLibraryExamToBuil
 
   setActionBusy(true);setError("");setNotice("");setBulkErrors([]);
   try{
-   const result=await teacherApi<{ok:true;processed:number;failed:number;credentials:Credential[];errors:BulkError[]}>("/api/students",{
+   const result=await teacherApi<{ok:true;processed:number;failed:number;credentials:Credential[];errors:BulkError[];rosterSynced?:boolean}>("/api/students",{
     method:"POST",
     body:JSON.stringify({action:"bulkAction",operation,userIds:selectedIds,targetClassId:bulkTargetClassId})
    });
@@ -580,7 +586,7 @@ function TeacherPlatform({token,currentExam,workspaceTab,onCopyLibraryExamToBuil
    if(result.errors?.length)setBulkErrors(result.errors);
    await Promise.all([loadStudents(selectedClassId),loadClasses()]);
    setSelectedIds([]);
-   setNotice("✓ نُفذت العملية على "+result.processed+" طالب"+(result.failed?"، وفشلت لدى "+result.failed+".":"."));
+   setNotice(withRosterNote(result,"✓ نُفذت العملية على "+result.processed+" طالب"+(result.failed?"، وفشلت لدى "+result.failed+".":".")));
   }catch(e){setError(e instanceof Error?e.message:"تعذر تنفيذ العملية الجماعية.")}
   finally{setActionBusy(false)}
  }

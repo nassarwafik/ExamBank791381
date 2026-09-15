@@ -12,14 +12,17 @@ const {
 const {
   mutateJsonWithRetry,
   uploadJsonConditional,
-  isConcurrencyConflict,
-  StorageConflictError
+  isConcurrencyConflict
 } = require("../lib/platform-storage");
 const { recordAuditEvent } = require("../lib/audit-log");
 const { normalizeClassStatus } = require("../lib/class-lifecycle");
 const { deriveGradingStatus } = require("../lib/grading-status");
 const { FEED_PREFIX, REACTIONS } = require("../lib/achievement-feed");
 const { withCredentialLock, CredentialLockBusyError } = require("../lib/student-credential-lock");
+// Roadmap #25 — classroom.studentIds is a denormalized, repairable roster INDEX (never authoritative). All
+// index writes go through lib/class-roster-index (CAS + retry, idempotent, sync status instead of failure).
+const { addToRosterIndex, removeFromRosterIndex, reconcileRosterIndex } = require("../lib/class-roster-index");
+const { isStudentClassMember } = require("../lib/class-membership");
 
 // Thrown from inside a mutateJsonWithRetry callback to mean "nothing to do" (target document is
 // missing, or already in the desired state) — caught at each call site and treated as a silent
@@ -127,35 +130,17 @@ async function getClassroom(container, classId) {
   return downloadJsonOrNull(container, CLASS_PREFIX + classId + ".json");
 }
 
-function ensureStudentIds(classroom) {
-  classroom.studentIds = Array.isArray(classroom.studentIds) ? classroom.studentIds : [];
-  return classroom.studentIds;
-}
-
-// Re-reads the classroom fresh on every attempt (via mutateJsonWithRetry) instead of trusting a
-// possibly-stale in-memory copy, so concurrent roster changes (archive/unarchive/move/delete/create
-// racing each other) never silently drop one another's studentIds update. Silently does nothing if
-// the classroom no longer exists, matching the previous `if (classroom) {...}` call sites.
-async function mutateClassroomStudentIds(container, classId, applyMutation) {
-  if (!classId) return;
-  try {
-    await mutateJsonWithRetry(container, CLASS_PREFIX + classId + ".json", current => {
-      if (!current) throw new SkipMutation();
-      applyMutation(current);
-      current.updatedAt = new Date().toISOString();
-      return current;
-    });
-  } catch (e) {
-    if (!(e instanceof SkipMutation)) throw e;
-  }
-}
-
-async function listStudents(container, classId, includeArchived = false) {
+async function listStudents(container, classId, includeArchived = false, obs = null) {
   const result = [];
+  // Roadmap #25: this scan already yields the AUTHORITATIVE member set of the class, so the roster index is
+  // reconciled here for free (zero extra list operations / downloads; at most one class write when drifted).
+  const scanStartedAt = Date.now();
+  const memberIds = [];
   for await (const blob of container.listBlobsFlat({ prefix: USER_PREFIX })) {
     if (!blob.name.endsWith(".json")) continue;
     const student = await downloadJsonOrNull(container, blob.name);
     if (!student || student.role !== "student") continue;
+    if (classId && isStudentClassMember(student, classId)) memberIds.push(String(student.userId || ""));
     if (classId && String(student.classId || "") !== classId) continue;
     if (!includeArchived && student.archived === true) continue;
     result.push(publicStudent(student));
@@ -164,6 +149,11 @@ async function listStudents(container, classId, includeArchived = false) {
     const family = String(a.familyName).localeCompare(String(b.familyName), "ar");
     return family || String(a.firstName).localeCompare(String(b.firstName), "ar");
   });
+  if (classId) {
+    // Best-effort self-healing of the denormalized count index; must never fail or slow the roster read.
+    try { await reconcileRosterIndex(container, classId, memberIds, { scanStartedAt, obs, operation: "listStudents" }); }
+    catch { obs?.logWarn("class.rosterIndex.reconcile_failed", { classId, operation: "listStudents", retryable: true }); }
+  }
 
   // Table-row badge only needs a count, not full history — and it must not hide a student's
   // historical submissions from a class they no longer belong to, so this is not scoped to
@@ -366,9 +356,7 @@ async function createStudentRecord(container, classroom, input, options = {}) {
     throw e;
   }
   await uploadJson(container, USER_PREFIX + userId + ".json", student);
-  const ids = ensureStudentIds(classroom);
-  if (!ids.includes(userId)) ids.push(userId);
-
+  // Roadmap #25: the roster index is updated by the caller AFTER this authoritative write (never here).
   return { student: publicStudent(student), temporaryPassword: password };
 }
 
@@ -429,7 +417,7 @@ async function changeStudentActive(container, student, active) {
   await setAuthActive(container, student, !!active);
 }
 
-async function archiveStudent(container, student) {
+async function archiveStudent(container, student, obs = null) {
   try {
     await mutateJsonWithRetry(container, USER_PREFIX + student.userId + ".json", current => {
       if (!current || current.archived === true) throw new SkipMutation();
@@ -441,16 +429,15 @@ async function archiveStudent(container, student) {
       return current;
     });
   } catch (e) {
-    if (e instanceof SkipMutation) return;
+    if (e instanceof SkipMutation) return { synced: true };
     throw e;
   }
   await setAuthActive(container, student, false);
-  await mutateClassroomStudentIds(container, String(student.classId || ""), classroom => {
-    classroom.studentIds = ensureStudentIds(classroom).filter(id => id !== student.userId);
-  });
+  // Authoritative state (user + auth) is final above; the index removal is best-effort (sync status returned).
+  return removeFromRosterIndex(container, String(student.classId || ""), [student.userId], { obs, operation: "archive" });
 }
 
-async function unarchiveStudent(container, student) {
+async function unarchiveStudent(container, student, obs = null) {
   const classId = String(student.classId || "");
   const classroom = await getClassroom(container, classId);
   if (!classroom || normalizeClassStatus(classroom) === "archived") throw new Error("فعّل الصف قبل استعادة الطالب.");
@@ -465,27 +452,23 @@ async function unarchiveStudent(container, student) {
       return current;
     });
   } catch (e) {
-    if (e instanceof SkipMutation) return;
+    if (e instanceof SkipMutation) return { synced: true };
     throw e;
   }
   await setAuthActive(container, student, true);
-  await mutateClassroomStudentIds(container, classId, freshClassroom => {
-    const ids = ensureStudentIds(freshClassroom);
-    if (!ids.includes(student.userId)) ids.push(student.userId);
-  });
+  return addToRosterIndex(container, classId, [student.userId], { obs, operation: "unarchive" });
 }
 
-async function moveStudent(container, student, targetClassId) {
+async function moveStudent(container, student, targetClassId, obs = null) {
   const target = await getClassroom(container, targetClassId);
   if (!target || normalizeClassStatus(target) === "archived") throw new Error("الصف الهدف غير موجود أو مؤرشف.");
 
   const oldClassId = String(student.classId || "");
-  if (oldClassId === targetClassId) return;
+  if (oldClassId === targetClassId) return { synced: true };
 
-  await mutateClassroomStudentIds(container, oldClassId, classroom => {
-    classroom.studentIds = ensureStudentIds(classroom).filter(id => id !== student.userId);
-  });
-
+  // Roadmap #25 ordering: the AUTHORITATIVE membership (user.classId) changes first; both index updates follow
+  // best-effort. (Previously the old-class index was edited before the user write, which could leave a member
+  // missing from its own class index if the user write failed.)
   try {
     await mutateJsonWithRetry(container, USER_PREFIX + student.userId + ".json", current => {
       if (!current) throw new SkipMutation();
@@ -495,26 +478,24 @@ async function moveStudent(container, student, targetClassId) {
     });
   } catch (e) {
     if (!(e instanceof SkipMutation)) throw e;
+    return { synced: true };
   }
 
-  if (student.archived !== true) {
-    await mutateClassroomStudentIds(container, targetClassId, classroom => {
-      const ids = ensureStudentIds(classroom);
-      if (!ids.includes(student.userId)) ids.push(student.userId);
-    });
-  }
+  const removed = await removeFromRosterIndex(container, oldClassId, [student.userId], { obs, operation: "move" });
+  const added = student.archived !== true
+    ? await addToRosterIndex(container, targetClassId, [student.userId], { obs, operation: "move" })
+    : { synced: true };
+  return { synced: removed.synced && added.synced };
 }
 
-async function deleteStudent(container, student) {
-  await mutateClassroomStudentIds(container, String(student.classId || ""), classroom => {
-    classroom.studentIds = ensureStudentIds(classroom).filter(id => id !== student.userId);
-  });
-
+async function deleteStudent(container, student, obs = null) {
+  // Roadmap #25 ordering: authoritative deletes first (auth, then user), index removal last and best-effort.
   const code = String(student.code || student.identityNumber || "");
   if (code) {
     await container.getBlobClient(AUTH_PREFIX + studentCodeHash(code) + ".json").deleteIfExists();
   }
   await container.getBlobClient(USER_PREFIX + student.userId + ".json").deleteIfExists();
+  return removeFromRosterIndex(container, String(student.classId || ""), [student.userId], { obs, operation: "delete" });
 }
 
 async function buildImportPreview(container, items) {
@@ -708,7 +689,7 @@ async function manageStudentsHandler(request, deps = {}, obs = null) {
         const includeArchived = url.searchParams.get("includeArchived") === "1";
         return {
           status: 200,
-          jsonBody: { ok: true, students: await listStudents(container, classId, includeArchived) }
+          jsonBody: { ok: true, students: await listStudents(container, classId, includeArchived, obs) }
         };
       }
 
@@ -724,10 +705,10 @@ async function manageStudentsHandler(request, deps = {}, obs = null) {
         }
 
         const result = await createStudentRecord(container, classroom, body, { forceGeneratedPassword: false });
-        await mutateClassroomStudentIds(container, classId, freshClassroom => {
-          const ids = ensureStudentIds(freshClassroom);
-          if (!ids.includes(result.student.userId)) ids.push(result.student.userId);
-        });
+        // Roadmap #25: the student now EXISTS (authoritative user + auth documents). A roster-index conflict must
+        // not turn that into a 500 (which made the teacher retry and hit "duplicate identity"); it is reported
+        // as rosterSynced:false and self-heals on the next roster read.
+        const sync = await addToRosterIndex(container, classId, [result.student.userId], { obs, operation: "create" });
         // Roadmap #19: safe audit — never the generated plaintext password (returned in-memory only).
         await rec(container, {
           actor: auth.user?.sub,
@@ -737,7 +718,7 @@ async function manageStudentsHandler(request, deps = {}, obs = null) {
           targetLabel: result.student.displayName || result.student.code,
           details: { classId }
         });
-        return { status: 200, jsonBody: { ok: true, ...result } };
+        return { status: 200, jsonBody: { ok: true, ...result, rosterSynced: sync.synced } };
       }
 
       if (action === "previewimport") {
@@ -816,32 +797,17 @@ async function manageStudentsHandler(request, deps = {}, obs = null) {
         }
 
         // Roadmap #21 — add the successfully-created students to the classroom roster through the ONE
-        // canonical concurrency-safe membership authority (mutateClassroomStudentIds → mutateJsonWithRetry
+        // canonical concurrency-safe roster-index writer (class-roster-index → mutateJsonWithRetry
         // + conditional ETag write), NEVER a stale whole-blob overwrite. This re-reads the classroom fresh
         // on every attempt, so concurrent legitimate additions/removals and unrelated field changes are
         // preserved; it dedups by id (idempotent — a repeat import adds nothing); and it only appends here
         // (never removes). It runs OUTSIDE the per-row loop so ordinary conflicts are resolved by one
         // retry-safe mutation rather than N racy writes.
-        let rosterSynced = true;
-        if (createdIds.length) {
-          try {
-            await mutateClassroomStudentIds(container, classId, freshClassroom => {
-              const ids = ensureStudentIds(freshClassroom);
-              for (const uid of createdIds) if (!ids.includes(uid)) ids.push(uid);
-            });
-          } catch (e) {
-            // Bounded recovery (documented): the students' AUTHORITATIVE membership is their own user.classId,
-            // already written by createStudentRecord and used by listStudents/dashboard — so they ARE imported
-            // and functional even here. Only the denormalized studentIds index (used for the class count) may
-            // lag if the retry budget is exhausted under sustained concurrent writes. We therefore keep the
-            // import result (credentials must not be lost) but surface the deferral explicitly (rosterSynced)
-            // instead of silently swallowing it or dishonestly claiming a coherent roster. StorageConflictError
-            // is the only tolerated case; any other error propagates to the outer handler.
-            if (!(e instanceof StorageConflictError)) throw e;
-            rosterSynced = false;
-            obs?.logWarn("student.bulkImport.roster_sync_deferred", { classId, createdCount: createdIds.length, retryable: true });
-          }
-        }
+        // Roadmap #25: one idempotent CAS append through the shared roster-index module. Exhausted retries are
+        // reported as rosterSynced:false (structured warning emitted by the module) — the import itself succeeded.
+        const rosterSynced = createdIds.length
+          ? (await addToRosterIndex(container, classId, createdIds, { obs, operation: "bulkImport" })).synced
+          : true;
         // Roadmap #19: record ONE aggregate audit event — safe counts only, NEVER student names, identity
         // numbers, or any generated plaintext credential (those exist only in the in-memory response).
         await rec(container, {
@@ -998,16 +964,14 @@ async function manageStudentsHandler(request, deps = {}, obs = null) {
         const credResult = await withCredentialLock(container, userId, runCredentialMutation);
         if (credResult && credResult.status) return credResult;
 
+        let rosterSynced = true;
         if (oldClassId !== newClassId) {
-          await mutateClassroomStudentIds(container, oldClassId, classroom => {
-            classroom.studentIds = ensureStudentIds(classroom).filter(id => id !== userId);
-          });
-          if (student.archived !== true) {
-            await mutateClassroomStudentIds(container, newClassId, classroom => {
-              const ids = ensureStudentIds(classroom);
-              if (!ids.includes(userId)) ids.push(userId);
-            });
-          }
+          // Authoritative user.classId was written above (under the credential lock); index updates are best-effort.
+          const removed = await removeFromRosterIndex(container, oldClassId, [userId], { obs, operation: "update-move" });
+          const added = student.archived !== true
+            ? await addToRosterIndex(container, newClassId, [userId], { obs, operation: "update-move" })
+            : { synced: true };
+          rosterSynced = removed.synced && added.synced;
           await rec(container, { actor: auth.user?.sub, action: "student.move", targetType: "student", targetId: userId, targetLabel: (firstName + " " + familyName).trim(), details: { fromClassId: oldClassId, toClassId: newClassId, viaProfileUpdate: true } });
         }
 
@@ -1030,7 +994,7 @@ async function manageStudentsHandler(request, deps = {}, obs = null) {
         }
         return {
           status: 200,
-          jsonBody: { ok: true, student: publicStudent(updatedStudent || student), passwordChanged: !!newPassword }
+          jsonBody: { ok: true, student: publicStudent(updatedStudent || student), passwordChanged: !!newPassword, rosterSynced }
         };
       }
 
@@ -1062,17 +1026,17 @@ async function manageStudentsHandler(request, deps = {}, obs = null) {
           return { status: 200, jsonBody: { ok: true, active } };
         }
         if (action === "archive") {
-          await archiveStudent(container, student);
+          const sync = await archiveStudent(container, student, obs);
           await rec(container, { actor: auth.user?.sub, action: "student.archive", targetType: "student", targetId: student.userId, targetLabel: student.displayName || student.code, details: { classId: String(student.classId || "") } });
-          return { status: 200, jsonBody: { ok: true, archived: true } };
+          return { status: 200, jsonBody: { ok: true, archived: true, rosterSynced: sync.synced } };
         }
         if (action === "unarchive") {
-          await unarchiveStudent(container, student);
+          const sync = await unarchiveStudent(container, student, obs);
           await rec(container, { actor: auth.user?.sub, action: "student.unarchive", targetType: "student", targetId: student.userId, targetLabel: student.displayName || student.code, details: { classId: String(student.classId || "") } });
-          return { status: 200, jsonBody: { ok: true, archived: false, active: true } };
+          return { status: 200, jsonBody: { ok: true, archived: false, active: true, rosterSynced: sync.synced } };
         }
 
-        await deleteStudent(container, student);
+        const deleteSync = await deleteStudent(container, student, obs);
         await rec(container, {
           actor: auth.user?.sub,
           action: "student.delete",
@@ -1080,7 +1044,7 @@ async function manageStudentsHandler(request, deps = {}, obs = null) {
           targetId: student.userId,
           targetLabel: student.displayName || student.code
         });
-        return { status: 200, jsonBody: { ok: true, deleted: true } };
+        return { status: 200, jsonBody: { ok: true, deleted: true, rosterSynced: deleteSync.synced } };
       }
 
       if (action === "bulkaction") {
@@ -1108,6 +1072,8 @@ async function manageStudentsHandler(request, deps = {}, obs = null) {
         const results = [];
         const errors = [];
         const credentials = [];
+        let rosterSynced = true;                      // Roadmap #25: aggregate index sync status of the batch
+        const note = sync => { if (sync && sync.synced === false) rosterSynced = false; };
 
         for (const userId of userIds) {
           try {
@@ -1116,9 +1082,9 @@ async function manageStudentsHandler(request, deps = {}, obs = null) {
 
             if (operation === "activate") await changeStudentActive(container, student, true);
             else if (operation === "deactivate") await changeStudentActive(container, student, false);
-            else if (operation === "archive") { await archiveStudent(container, student); await rec(container, { actor: auth.user?.sub, action: "student.archive", targetType: "student", targetId: userId, targetLabel: student.displayName || student.code, details: { bulk: true, classId: String(student.classId || "") } }); }
-            else if (operation === "unarchive") { await unarchiveStudent(container, student); await rec(container, { actor: auth.user?.sub, action: "student.unarchive", targetType: "student", targetId: userId, targetLabel: student.displayName || student.code, details: { bulk: true, classId: String(student.classId || "") } }); }
-            else if (operation === "move") { await moveStudent(container, student, targetClassId); await rec(container, { actor: auth.user?.sub, action: "student.move", targetType: "student", targetId: userId, targetLabel: student.displayName || student.code, details: { bulk: true, fromClassId: String(student.classId || ""), toClassId: targetClassId } }); }
+            else if (operation === "archive") { note(await archiveStudent(container, student, obs)); await rec(container, { actor: auth.user?.sub, action: "student.archive", targetType: "student", targetId: userId, targetLabel: student.displayName || student.code, details: { bulk: true, classId: String(student.classId || "") } }); }
+            else if (operation === "unarchive") { note(await unarchiveStudent(container, student, obs)); await rec(container, { actor: auth.user?.sub, action: "student.unarchive", targetType: "student", targetId: userId, targetLabel: student.displayName || student.code, details: { bulk: true, classId: String(student.classId || "") } }); }
+            else if (operation === "move") { note(await moveStudent(container, student, targetClassId, obs)); await rec(container, { actor: auth.user?.sub, action: "student.move", targetType: "student", targetId: userId, targetLabel: student.displayName || student.code, details: { bulk: true, fromClassId: String(student.classId || ""), toClassId: targetClassId } }); }
             else if (operation === "resetpasswords") {
               const password = await resetStudentPassword(container, student);
               const publicValue = publicStudent(student);
@@ -1140,7 +1106,7 @@ async function manageStudentsHandler(request, deps = {}, obs = null) {
                 details: { bulk: true }
               });
             } else if (operation === "delete") {
-              await deleteStudent(container, student);
+              note(await deleteStudent(container, student, obs));
               await rec(container, {
                 actor: auth.user?.sub,
                 action: "student.delete",
@@ -1168,7 +1134,8 @@ async function manageStudentsHandler(request, deps = {}, obs = null) {
             failed: errors.length,
             results,
             errors,
-            credentials
+            credentials,
+            rosterSynced
           }
         };
       }
