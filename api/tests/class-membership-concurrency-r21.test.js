@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach } from "vitest";
+import { describe, it, expect } from "vitest";
 import { handler } from "../src/functions/manage-students.js";
 import { createMemoryContainer } from "./fixtures/memory-container.js";
 
@@ -135,5 +135,24 @@ describe("R21 retry EXHAUSTION — bounded recovery keeps authoritative membersh
     const user = ctx.getJson("platform/users/" + uB + ".json");
     expect(user.classId).toBe("c1");                   // authoritative membership is coherent
     expect(ctx.names("platform/users/")).toHaveLength(1); // no duplicate user documents
+  });
+
+  it("FUNCTIONAL COHERENCE: even with rosterSynced:false (stale studentIds), the teacher listing shows the student", async () => {
+    // The whole retry-exhaustion approval rests on studentIds being a denormalized COUNT index while the
+    // authoritative membership is user.classId (which listStudents filters on). This locks that invariant:
+    // a student imported under an exhausted roster sync is still returned by GET /api/students?classId=.
+    const ctx = createMemoryContainer(activeClass([]), {
+      beforeConditionalUpload: (name, api) => { if (name !== CLASS) return; const cls = api.getJson(name); api.setJson(name, cls); }
+    });
+    const imp = await handler(req("bulkImport", { classId: "c1", students: [row()] }), deps(ctx));
+    expect(imp.jsonBody.rosterSynced).toBe(false);
+    const [uB] = createdUserIds(imp);
+    expect(ctx.getJson(CLASS).studentIds).not.toContain(uB);   // roster index is indeed stale here
+
+    const list = await handler({ method: "GET", url: "https://x/api/students?classId=c1", json: async () => ({}) }, deps(ctx));
+    expect(list.status).toBe(200);
+    const ids = (list.jsonBody.students || []).map(s => s.userId);
+    expect(ids).toContain(uB);                                  // teacher STILL sees the student (by user.classId)
+    expect(list.jsonBody.students.find(s => s.userId === uB).identityNumber).toBe("123456789");
   });
 });
