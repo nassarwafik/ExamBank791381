@@ -34,6 +34,8 @@ export const PREVIEW_SECRET_KEYS: readonly string[] = [
   "externalUrl", "importMeta", "revisionHistory"
 ];
 
+import { sanitizeCoverForStudent } from "./examCover";
+
 const SECRET = new Set(PREVIEW_SECRET_KEYS);
 
 // Recursively delete every secret key and descend into every remaining object/array value. Small
@@ -70,6 +72,12 @@ export function toSafePreviewExam<T extends PreviewExamInput>(exam: T): T {
     delete (clone.metadata as Record<string, unknown>).import;
   }
   scrub(clone);
+  // Cover parity with the real student sanitizer: the recursive denylist above only removes KNOWN secret
+  // keys, so unknown teacher/foreign cover fields and an unsafe banner could otherwise survive. Replace the
+  // whole coverPage with the existing cover authority's allowlist result (known display fields only; banner
+  // kept only when it is a safe embedded raster data URL) so the safe preview model is safe BY ITSELF —
+  // never dependent on a second sanitizer at render time. `undefined` (no/invalid cover) drops the key.
+  if ("coverPage" in clone) clone.coverPage = sanitizeCoverForStudent(clone.coverPage);
   return clone;
 }
 

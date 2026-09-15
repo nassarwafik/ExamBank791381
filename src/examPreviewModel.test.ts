@@ -99,6 +99,51 @@ describe("toSafePreviewExam — recursive answer-key stripping", () => {
     expect((exam.metadata as Record<string, unknown>).import).toBeDefined();
   });
 
+  it("cover parity A/B/C/D/E: allowlists cover fields, drops unknown/unsafe, keeps safe banner, no mutation", () => {
+    const SAFE_PNG = "data:image/png;base64,AAAABBBB";
+    const src = {
+      title: "t",
+      coverPage: {
+        enabled: true, activityType: "training", subtitle: "sub", instructions: "line1\nline2",
+        allowedMaterials: "calc", showStudentName: true, showClassName: false, showExamDate: true,
+        showDuration: true, showTotalMarks: false, showMarksDistribution: true,
+        // foreign / secret cover fields that must NOT survive
+        teacherPrivateValue: "SECRET_COVER", foreignMetadata: { hidden: "SECRET_META" },
+        banner: { dataUrl: "https://evil.example/banner.svg", otherSecret: "SECRET_BANNER" }
+      },
+      sections: [{ id: "s", title: "", questions: [{ examQuestionId: "q", text: "x", marks: 1 }] }]
+    };
+    const safe = toSafePreviewExam(src);
+    const s = JSON.stringify(safe);
+    // A: unknown cover keys gone
+    expect(s).not.toContain("SECRET_COVER");
+    expect(s).not.toContain("SECRET_META");
+    expect(s).not.toContain("teacherPrivateValue");
+    expect(s).not.toContain("foreignMetadata");
+    // B: unsafe/external/SVG banner produces no renderable banner
+    expect(s).not.toContain("evil.example");
+    expect(s).not.toContain("SECRET_BANNER");
+    expect((safe.coverPage as { banner?: unknown }).banner).toBeUndefined();
+    // D: known display fields survive with correct values
+    const cover = safe.coverPage as Record<string, unknown>;
+    expect(cover.enabled).toBe(true);
+    expect(cover.activityType).toBe("training");
+    expect(cover.subtitle).toBe("sub");
+    expect(cover.instructions).toBe("line1\nline2");
+    expect(cover.allowedMaterials).toBe("calc");
+    for (const [k, v] of [["showStudentName", true], ["showClassName", false], ["showExamDate", true],
+                          ["showDuration", true], ["showTotalMarks", false], ["showMarksDistribution", true]] as [string, boolean][]) {
+      expect(cover[k]).toBe(v);
+    }
+    // E: source object never mutated
+    expect((src.coverPage as Record<string, unknown>).teacherPrivateValue).toBe("SECRET_COVER");
+    expect((src.coverPage.banner as Record<string, unknown>).dataUrl).toBe("https://evil.example/banner.svg");
+
+    // C: a SAFE embedded raster banner survives.
+    const safe2 = toSafePreviewExam({ coverPage: { enabled: true, banner: { dataUrl: SAFE_PNG } } });
+    expect((safe2.coverPage as { banner?: { dataUrl?: string } }).banner?.dataUrl).toBe(SAFE_PNG);
+  });
+
   it("generalInstructionLines splits plain text into trimmed non-empty bullet lines", () => {
     expect(generalInstructionLines({ metadata: { generalInstructions: "أولاً\n\n  ثانياً  \nثالثاً" } }))
       .toEqual(["أولاً", "ثانياً", "ثالثاً"]);
