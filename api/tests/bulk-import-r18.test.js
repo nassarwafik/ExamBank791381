@@ -164,6 +164,24 @@ describe("R18 N/O/P/Q: race safety, explicit partial result, idempotent repeat, 
     expect(r.status).toBe(400);
     expect(ctx.names("platform/users/")).toHaveLength(0);
   });
+
+  it("R(server): previewImport creates NO user/auth documents (validation only)", async () => {
+    const r = await handler(req("previewImport", { classId: "c1", students: [row(), row({ identityNumber: "222222222", firstName: "منى" })] }), deps(ctx));
+    expect(r.status).toBe(200);
+    expect(r.jsonBody.valid).toBe(2);
+    expect(ctx.names("platform/users/")).toHaveLength(0);   // nothing written
+    expect(ctx.names("platform/auth/")).toHaveLength(0);
+  });
+
+  it("P2: a repeat import NEVER resets an existing student's credentials (auth document byte-identical)", async () => {
+    await handler(req("bulkImport", { classId: "c1", students: [row()] }), deps(ctx));
+    const authName = ctx.names("platform/auth/")[0];
+    const before = JSON.stringify(ctx.getJson(authName));
+    const r = await handler(req("bulkImport", { classId: "c1", students: [row({ firstName: "مختلف" })] }), deps(ctx));  // same identity
+    expect(r.jsonBody.imported).toBe(0);
+    expect(r.jsonBody.duplicates).toBe(1);
+    expect(JSON.stringify(ctx.getJson(authName))).toBe(before);   // salt/passwordHash/authVersion untouched
+  });
 });
 
 describe("R18 audit: bulkImport records an aggregate-only event (no names/identities/passwords)", () => {

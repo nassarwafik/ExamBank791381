@@ -73,12 +73,13 @@ describe("R20 AQ/AR/AS: archived class blocks the student runtime", () => {
     const r = await studentAssignmentHandler({ method: "GET", url: "https://x/api/student-assignment/a1", params: { assignmentId: "a1" } }, studentSession(ctx, student));
     expect(r.status).toBe(403);
   });
-  it("AS: save/submit => 403 (no write)", async () => {
-    const save = await submissionHandler({ method: "POST", url: "https://x/api/student-submission/a1", params: { assignmentId: "a1" }, json: async () => ({ action: "saveDraft", answers: {} }) }, studentSession(ctx, student));
-    expect(save.status).toBe(403);
-    const submit = await submissionHandler({ method: "POST", url: "https://x/api/student-submission/a1", params: { assignmentId: "a1" }, json: async () => ({ action: "submit", answers: {} }) }, studentSession(ctx, student));
-    expect(submit.status).toBe(403);
-    expect(ctx.has("platform/submissions/a1/s1.json")).toBe(false);   // nothing written
+  it("AS: EVERY student write path (start/save/submit/finalize) => 403 (no write)", async () => {
+    const post = action => submissionHandler({ method: "POST", url: "https://x/api/student-submission/a1", params: { assignmentId: "a1" }, json: async () => ({ action, answers: {} }) }, studentSession(ctx, student));
+    for (const action of ["startAttempt", "saveDraft", "submit", "finalizeTimedOutAttempt"]) {
+      const r = await post(action);
+      expect(r.status).toBe(403);
+    }
+    expect(ctx.has("platform/submissions/a1/s1.json")).toBe(false);   // nothing written by any path
   });
 });
 

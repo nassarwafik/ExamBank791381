@@ -69,6 +69,26 @@ describe("R19 AD/AE: redaction of secrets + survival of safe details", () => {
     expect(out.classId).toBe("c1");
     expect(out.createdCount).toBe(3);
   });
+
+  it("AD2: KEY-NAME VARIANTS (not exact canonical names) are still redacted by containment, at any depth", () => {
+    // A future call site could use a non-canonical name; the guard must catch it anyway.
+    const out = redactAuditDetails({
+      studentPassword: "L1", passwordSalt: "L2", sessionAuthToken: "L3", xBearerToken: "L4",
+      correctAnswers: ["L5"], expectedAnswer: "L6", myApiKey: "L7",
+      nested: { myPasswordHash: "L8", list: [{ userCredentials: "L9" }] }
+    });
+    const s = JSON.stringify(out);
+    expect(s).toContain("[redacted]");   // redaction happened
+    expect(s.match(/L\d/g)).toBeNull();  // NO leaked value survives, at any depth / inside arrays
+  });
+
+  it("AD3: safe aggregate detail keys are never over-redacted", () => {
+    const details = { classId: "c1", createdCount: 2, duplicateCount: 1, failedCount: 0, grade: "11",
+      graduationYear: "2027", programCodes: ["a"], fromClassId: "x", toClassId: "y", allowedAttempts: 2,
+      dueAtOverride: "z", attemptNumber: 1, overriddenQuestions: 2, newScore: 9, effectiveAttemptEndsAt: "d" };
+    const out = redactAuditDetails(details);
+    for (const k of Object.keys(details)) expect(out[k]).not.toBe("[redacted]");
+  });
   it("AE: the reader returns redacted details while keeping safe fields", async () => {
     const ctx = createMemoryContainer();
     seedEvent(ctx, "2026-02-01T00:00:00.000Z", {
