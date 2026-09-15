@@ -20,7 +20,9 @@ import { IconUser, IconLock, IconWarning, IconBuilder, IconDashboard, IconStuden
 import { QuestionTextBlock, parseTable } from "./questionContent";
 import { normalizeExamTheme, EXAM_THEMES, THEME_LABELS } from "./examTheme";
 import type { ExamTheme } from "./examTheme";
-import ExamThemePreview from "./ExamThemePreview";
+import { createPortal } from "react-dom";
+import ExamPreview from "./ExamPreview";
+import { GENERAL_INSTRUCTION_TEMPLATES, findGeneralInstructionTemplate } from "./instructionTemplates";
 import ThemeMiniPreview from "./ThemeMiniPreview";
 import "./App.css";
 import "./platform.css";
@@ -6479,6 +6481,31 @@ function App() {
 
                 <label className="metadata-full">
                   تعليمات عامة للطلاب
+                  <div className="sb-template-controls">
+                    <select
+                      className="sb-input sb-input-sm"
+                      value=""
+                      aria-label="قوالب التعليمات العامة"
+                      onChange={event => {
+                        // Roadmap #17 — general instruction template = plain TEXT starting point. Sets only
+                        // metadata.generalInstructions; never affects grading rules. Confirms before replace.
+                        const t = findGeneralInstructionTemplate(event.target.value);
+                        event.target.value = "";
+                        if (!t) return;
+                        if (
+                          (exam.metadata?.generalInstructions || "").trim() &&
+                          !window.confirm("سيستبدل هذا القالب نص التعليمات العامة الحالي. هل تريد المتابعة؟")
+                        )
+                          return;
+                        updateExamMetadata("generalInstructions", t.text);
+                      }}
+                    >
+                      <option value="">قوالب التعليمات العامة…</option>
+                      {GENERAL_INSTRUCTION_TEMPLATES.map(t => (
+                        <option key={t.id} value={t.id}>{t.label}</option>
+                      ))}
+                    </select>
+                  </div>
                   <textarea
                     value={
                       exam.metadata
@@ -7410,13 +7437,11 @@ function App() {
               </section>
             )}
 
-            {themePreviewOpen && previewMode === "edit" && exam && (
-              <ExamThemePreview
-                questions={exam.questions}
-                theme={normalizeExamTheme(exam.presentationTheme)}
-                onClose={() => setThemePreviewOpen(false)}
-              />
-            )}
+            {themePreviewOpen && previewMode === "edit" && exam &&
+              createPortal(
+                <ExamPreview exam={exam} onClose={() => setThemePreviewOpen(false)} />,
+                document.body
+              )}
 
             <div className="bottom-actions-card">
               <button

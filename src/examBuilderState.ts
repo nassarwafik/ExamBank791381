@@ -15,6 +15,7 @@ import type {
   Stimulus,
   StructuredExam
 } from "./examTypes";
+import { toSafePreviewExam, type PreviewExamInput } from "./examPreviewModel";
 
 // ── Identity ────────────────────────────────────────────────────────────────
 // Stable unique ids. crypto.randomUUID when available (browser / modern Node), else a random string.
@@ -488,19 +489,11 @@ export function matchingPairs(q: QuestionBody): MatchPair[] {
 // student-preview components never even hold them. This is a convenience for the in-builder preview on
 // the teacher's own screen — the AUTHORITATIVE student payload is still stripped server-side by
 // api/src/lib/student-exam-sanitize.js, which this does not touch or replace.
+// Delegates to the ONE canonical preview scrubber (Roadmap #15, src/examPreviewModel.ts) so there is a
+// single answer-stripping implementation. That deep-scrub covers sections AND legacy flat questions[],
+// every nesting level (option → field → part → body), and an expanded secret-key denylist.
 export function stripAnswersForPreview(exam: StructuredExam): StructuredExam {
-  const clone = JSON.parse(JSON.stringify(exam)) as StructuredExam;
-  const scrubOption = (o: Record<string, unknown>) => { delete o.correct; delete o.isCorrect; };
-  const scrubField = (f: Record<string, unknown>) => { delete f.correct; delete f.isCorrect; if (Array.isArray(f.options)) (f.options as Record<string, unknown>[]).forEach(scrubOption); };
-  const scrubNode = (n: Record<string, unknown> | null | undefined) => {
-    if (!n || typeof n !== "object") return;
-    delete n.answer; delete n.teacherNote; delete n.aiInstruction; delete n.hint;
-    if (Array.isArray(n.fields)) (n.fields as Record<string, unknown>[]).forEach(scrubField);
-    if (Array.isArray(n.options)) (n.options as Record<string, unknown>[]).forEach(scrubOption);
-    if (Array.isArray(n.parts)) (n.parts as Record<string, unknown>[]).forEach(scrubNode);
-  };
-  (clone.sections || []).forEach(s => (s.questions || []).forEach(q => scrubNode(q as unknown as Record<string, unknown>)));
-  return clone;
+  return toSafePreviewExam(exam as unknown as PreviewExamInput) as unknown as StructuredExam;
 }
 
 // Convenience re-exports so callers import ids/labels from one place.

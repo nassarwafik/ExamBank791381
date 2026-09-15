@@ -142,3 +142,8 @@
 .sb-cover-banner-row{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
 .sb-cover-banner-thumb{max-width:220px;max-height:70px;object-fit:contain;border:1px solid #e5e9f0;border-radius:8px;background:#fff}
 .sb-cover-instructions-input{min-height:120px;font-family:inherit;line-height:1.8}
+
+/* Roadmap #16/#17 — compact template controls (cover templates, instruction templates). */
+.sb-template-controls{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin:4px 0}
+.sb-template-controls .sb-input{max-width:260px}
+.sb-template-row{border:1px dashed #cfe0f8;background:#f7faff;border-radius:12px;padding:10px 12px}

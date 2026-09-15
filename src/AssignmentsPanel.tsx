@@ -1,8 +1,8 @@
 import {useEffect,useMemo,useState,Fragment} from "react";
 import {withTrackingCode} from "./lib/requestTrace";
 import AssignmentReview from "./AssignmentReview";
-import ExamThemePreview,{type PreviewSourceQuestion} from "./ExamThemePreview";
-import {normalizeExamTheme,type ExamTheme} from "./examTheme";
+import {createPortal} from "react-dom";
+import ExamPreview from "./ExamPreview";
 import {IconPlus,IconChevronDown} from "./icons";
 import {filterLibraryCatalog,catalogCategories,categoryLabel,type LibraryCatalogItem} from "./examLibrary";
 import {examHasQuestions,examQuestionCount} from "./examTypes";
@@ -50,7 +50,7 @@ export default function AssignmentsPanel({token,classes,currentExam,onCopyLibrar
  const [savedExams,setSavedExams]=useState<SavedExam[]>([]),[examSource,setExamSource]=useState(current?"current":""),[savedExam,setSavedExam]=useState<Exam|null>(null),[examLoading,setExamLoading]=useState(false);
  const [sourceMode,setSourceMode]=useState<"mine"|"library">("mine");
  const [libraryCatalog,setLibraryCatalog]=useState<LibraryCatalogItem[]>([]),[libraryLoading,setLibraryLoading]=useState(false),[librarySearch,setLibrarySearch]=useState(""),[libraryCategory,setLibraryCategory]=useState(""),[librarySelectedId,setLibrarySelectedId]=useState(""),[libraryExam,setLibraryExam]=useState<Exam|null>(null);
- const [preview,setPreview]=useState<{title:string;questions:PreviewSourceQuestion[];theme:ExamTheme}|null>(null),[previewBusyId,setPreviewBusyId]=useState(""),[copyBusyId,setCopyBusyId]=useState("");
+ const [preview,setPreview]=useState<{title:string;exam:Exam}|null>(null),[previewBusyId,setPreviewBusyId]=useState(""),[copyBusyId,setCopyBusyId]=useState("");
  const active=useMemo(()=>classes.filter(x=>x.active),[classes]);
  const sourceExam=sourceMode==="library"?libraryExam:(examSource==="current"?current:savedExam);
  useEffect(()=>{if(!classId&&active[0])setClassId(active[0].classId)},[active,classId]);
@@ -99,16 +99,16 @@ export default function AssignmentsPanel({token,classes,currentExam,onCopyLibrar
    setLibraryExam(r.item?.examSnapshot||null);setTitle(String(r.item?.examSnapshot?.title||it.title||""));setNotice("✓ تم اختيار «"+it.title+"» من مكتبة 791381.");
   }catch(e){setLibrarySelectedId("");setError(e instanceof Error?e.message:"تعذر فتح عنصر المكتبة.")}finally{setExamLoading(false)}
  }
- // Preview reuses ExamThemePreview, whose toPreviewQuestion() is the single enforcement point that
- // never copies the correct answer - so previewing any item (including needs_review ones) is safe
- // and never reveals answers.
+ // Preview reuses the ONE faithful renderer (ExamPreview), whose toSafePreviewExam() deep-scrubs every
+ // grading secret from the whole exam (sections/cover/parts/fields/options) — so previewing any item
+ // (including needs_review ones) is safe and never reveals answers, and structured exams keep their
+ // sections/cover instead of being flattened.
  async function openPreview(it:LibraryCatalogItem){
   if(previewBusyId)return;
   setPreviewBusyId(it.libraryItemId);setError("");
   try{
-   const r=await api<{item:{examSnapshot:{questions?:PreviewSourceQuestion[];presentationTheme?:string}}}>("/api/exam-library/"+encodeURIComponent(it.libraryItemId));
-   const snap=r.item?.examSnapshot;
-   setPreview({title:it.title,questions:Array.isArray(snap?.questions)?snap.questions:[],theme:normalizeExamTheme(snap?.presentationTheme)});
+   const r=await api<{item:{examSnapshot:Exam}}>("/api/exam-library/"+encodeURIComponent(it.libraryItemId));
+   setPreview({title:it.title,exam:(r.item?.examSnapshot||{}) as Exam});
   }catch(e){setError(e instanceof Error?e.message:"تعذر فتح المعاينة.")}finally{setPreviewBusyId("")}
  }
  async function copyLibraryItem(it:LibraryCatalogItem){
@@ -301,7 +301,7 @@ export default function AssignmentsPanel({token,classes,currentExam,onCopyLibrar
   {analysisBusy&&<div className="platform-loading">⏳ جارٍ تحليل الأسئلة...</div>}
   {analysis&&<section className="assignment-zone assignment-item-analysis-zone"><div className="assignments-heading"><div><span className="platform-eyebrow">Item Analysis</span><h3>تحليل الأسئلة: {analysis.title}</h3></div><button onClick={()=>setAnalysis(null)}>إغلاق</button></div><div className="gradebook-stats"><article><strong>{analysis.studentsSubmitted}/{analysis.studentsInClass}</strong><span>طلاب في التحليل</span></article><article><strong>{analysisSummary?.overallAverage===null||analysisSummary?.overallAverage===undefined?"—":analysisSummary.overallAverage+"%"}</strong><span>متوسط عام</span></article><article><strong>{analysisSummary?.hardest?"س"+analysisSummary.hardest.number:"—"}</strong><span>أصعب سؤال</span></article><article><strong>{analysisSummary?.easiest?"س"+analysisSummary.easiest.number:"—"}</strong><span>أسهل سؤال</span></article></div><div className="item-analysis-sort"><span>ترتيب حسب:</span><button className={analysisSort==="number"?"active":""} onClick={()=>setAnalysisSort("number")}>رقم السؤال</button><button className={analysisSort==="hardest"?"active":""} onClick={()=>setAnalysisSort("hardest")}>الأصعب أولًا</button><button className={analysisSort==="easiest"?"active":""} onClick={()=>setAnalysisSort("easiest")}>الأسهل أولًا</button></div><div className="students-table-wrap"><table className="students-table item-analysis-table"><thead><tr><th>#</th><th>نص السؤال</th><th>عدد الطلاب</th><th>نسبة الصحيح</th><th>متوسط العلامة</th><th>متوسط %</th><th>الصعوبة</th><th>مراجعة يدوية</th></tr></thead><tbody>{sortedQuestions.map(q=><tr key={q.questionId}><td>{q.number}</td><td className="item-analysis-text">{q.text&&q.text.length>60?q.text.slice(0,60)+"…":q.text||"—"}</td><td>{q.studentsAnalyzed}</td><td>{q.correctRate===null?"—":q.correctRate+"%"}</td><td>{q.averageScore===null?"—":q.averageScore+"/"+q.maxMarks}</td><td>{q.averagePercentage===null?"—":q.averagePercentage+"%"}</td><td>{q.difficulty?<span className={"difficulty-badge "+q.difficulty}>{q.difficulty==="easy"?"سهل":q.difficulty==="medium"?"متوسط":"صعب"}</span>:"—"}</td><td>{q.manualReviewCount>0?q.manualReviewCount:"—"}</td></tr>)}{!sortedQuestions.length&&<tr><td colSpan={8}>لا توجد أسئلة لتحليلها.</td></tr>}</tbody></table></div></section>}
   {review&&resultsFor&&<AssignmentReview token={token} assignmentId={resultsFor.assignmentId} studentId={review.studentId} initialAttempt={review.attemptNumber} onClose={()=>setReview(null)} onSaved={()=>void loadResults(resultsFor)}/>}
-  {preview&&<ExamThemePreview questions={preview.questions} theme={preview.theme} onClose={()=>setPreview(null)}/>}
+  {preview&&createPortal(<ExamPreview exam={preview.exam} onClose={()=>setPreview(null)}/>,document.body)}
   {purgeFor&&<div className="review-overlay" dir="rtl" onClick={()=>!busy&&setPurgeFor(null)}><div className="review-modal purge-modal" onClick={e=>e.stopPropagation()}><div className="review-top"><div><span className="platform-eyebrow">Permanent delete</span><h2>حذف نهائي</h2></div></div><div className="platform-error">هذا حذف نهائي ولا يمكن التراجع عنه.</div><p>لتأكيد حذف الواجب «{purgeFor.title}» نهائيًا، اكتب عنوان الواجب بالضبط:</p><input className="purge-title-input" value={purgeTitle} onChange={e=>setPurgeTitle(e.target.value)} placeholder={purgeFor.title}/><div className="review-footer"><button onClick={()=>setPurgeFor(null)} disabled={busy}>إلغاء</button><button className="assignment-delete-button" onClick={()=>void confirmPurge()} disabled={busy||purgeTitle!==purgeFor.title}>حذف نهائي</button></div></div></div>}
  </section>;
 }
