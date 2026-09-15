@@ -5,7 +5,27 @@ async function streamToBuffer(stream){const parts=[];for await(const chunk of st
 function getContainer(){const cs=process.env.AZURE_STORAGE_CONNECTION_STRING;if(!cs)throw new Error("AZURE_STORAGE_CONNECTION_STRING is not configured.");return BlobServiceClient.fromConnectionString(cs).getContainerClient(CONTAINER)}
 async function downloadJsonOrNull(container,name){try{const r=await container.getBlobClient(name).download();if(!r.readableStreamBody)return null;return JSON.parse((await streamToBuffer(r.readableStreamBody)).toString("utf8"))}catch(e){if(e?.statusCode===404||e?.code==="BlobNotFound")return null;throw e}}
 async function uploadJson(container,name,value){const body=JSON.stringify(value,null,2);await container.getBlockBlobClient(name).upload(body,Buffer.byteLength(body),{overwrite:true,blobHTTPHeaders:{blobContentType:"application/json; charset=utf-8"}})}
-async function listJson(container,prefix){const out=[];for await(const blob of container.listBlobsFlat({prefix})){if(!blob.name.endsWith(".json"))continue;const value=await downloadJsonOrNull(container,blob.name);if(value)out.push(value)}return out}
+// Roadmap #27 — bounded-concurrency reads. Every teacher workflow used to download blobs strictly one
+// after another (max 1 in flight), so wall time was (blob count × storage latency). Reads that are
+// independent of each other now run up to READ_CONCURRENCY at a time. Semantics are unchanged: results
+// keep the listing/input ORDER, missing blobs are still null/skipped, and the first non-404 error still
+// rejects the whole operation (like Promise.all) — nothing is swallowed or reordered.
+let READ_CONCURRENCY=8;
+function setReadConcurrency(n){const v=Number(n);READ_CONCURRENCY=Number.isFinite(v)&&v>=1?Math.floor(v):8;return READ_CONCURRENCY}
+function getReadConcurrency(){return READ_CONCURRENCY}
+// Order-preserving concurrent map with a fixed number of workers. Stops scheduling new items after the
+// first failure and rethrows that failure once the in-flight workers have settled (no unhandled rejections).
+async function mapConcurrent(items,limit,fn){
+ const list=Array.isArray(items)?items:[];const out=new Array(list.length);const workers=Math.max(1,Math.min(Math.floor(Number(limit)||1),list.length||1));
+ let next=0,failure=null;
+ async function worker(){while(!failure){const i=next++;if(i>=list.length)return;try{out[i]=await fn(list[i],i)}catch(e){if(!failure)failure=e;return}}}
+ await Promise.all(Array.from({length:workers},worker));
+ if(failure)throw failure;
+ return out;
+}
+// Downloads many blobs by name (bounded concurrency); the result is aligned with `names` (null for missing).
+async function downloadManyJson(container,names,limit){return mapConcurrent(names,limit||READ_CONCURRENCY,name=>downloadJsonOrNull(container,name))}
+async function listJson(container,prefix){const names=await listBlobNames(container,prefix);const docs=await downloadManyJson(container,names);const out=[];for(const value of docs)if(value)out.push(value);return out}
 // Returns the names of the .json blobs under a prefix (no download) — for callers that need to act on
 // blobs by name, e.g. deleting a whole prefix.
 async function listBlobNames(container,prefix){const out=[];for await(const blob of container.listBlobsFlat({prefix})){if(blob.name.endsWith(".json"))out.push(blob.name)}return out}
@@ -87,4 +107,4 @@ async function mutateJsonWithRetry(container,name,mutateFn,observer){
  throw new StorageConflictError("Optimistic concurrency conflict after "+MAX_MUTATE_ATTEMPTS+" attempts.");
 }
 
-module.exports={getContainer,downloadJsonOrNull,uploadJson,listJson,listBlobNames,deleteBlob,downloadJsonWithEtagOrNull,uploadJsonConditional,mutateJsonWithRetry,StorageConflictError,isConcurrencyConflict};
+module.exports={getContainer,downloadJsonOrNull,uploadJson,listJson,listBlobNames,deleteBlob,downloadJsonWithEtagOrNull,uploadJsonConditional,mutateJsonWithRetry,StorageConflictError,isConcurrencyConflict,mapConcurrent,downloadManyJson,setReadConcurrency,getReadConcurrency};

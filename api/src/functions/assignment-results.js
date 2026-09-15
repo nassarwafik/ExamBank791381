@@ -2,7 +2,7 @@
 const {app}=require("@azure/functions");
 const {withObservability}=require("../lib/observability");
 const {requireBuilderAuth}=require("../lib/builder-auth");
-const {getContainer,downloadJsonOrNull,listJson,mutateJsonWithRetry,StorageConflictError}=require("../lib/platform-storage");
+const {getContainer,downloadJsonOrNull,listJson,mutateJsonWithRetry,StorageConflictError,mapConcurrent,getReadConcurrency}=require("../lib/platform-storage");
 const {recordAuditEvent}=require("../lib/audit-log");
 const {timerState,normalizeEndReason,extendRejection,activeAttemptOf,toMs}=require("../lib/assignment-availability");
 const {normalizeAssignmentStatus}=require("../lib/assignment-lifecycle");
@@ -45,8 +45,11 @@ async function handler(request,deps={},obs=null){
    // (active:false, non-archived) student keeps their row, results and pending-review visibility.
    const users=(await ls(c,UP)).filter(x=>isStudentClassMember(x,a.classId)),out=[];
    let submitted=0,pending=0,finalizedCount=0,notSubmitted=0,active=0,sum=0,highest=null,lowest=null;
-   for(const student of users){
-    const s=await dl(c,SP+id+"/"+student.userId+".json"),attempts=Array.isArray(s?.attempts)?s.attempts:[],latest=attempts.length?attempts[attempts.length-1]:null;
+   // Roadmap #27: fetch every member's submission with bounded concurrency (aligned with `users`), then aggregate in order.
+   const submissionsByIndex=await mapConcurrent(users,getReadConcurrency(),student=>dl(c,SP+id+"/"+student.userId+".json"));
+   for(let index=0;index<users.length;index++){
+    const student=users[index];
+    const s=submissionsByIndex[index],attempts=Array.isArray(s?.attempts)?s.attempts:[],latest=attempts.length?attempts[attempts.length-1]:null;
     const latestGrading=deriveGradingStatus(latest);                        // notSubmitted | pendingReview | final
     if(latest){submitted++;sum+=Number(latest.percentage||0);highest=highest===null?Number(latest.percentage||0):Math.max(highest,Number(latest.percentage||0));lowest=lowest===null?Number(latest.percentage||0):Math.min(lowest,Number(latest.percentage||0));if(latestGrading==="pendingReview")pending++;else if(latestGrading==="final")finalizedCount++}
     else notSubmitted++;

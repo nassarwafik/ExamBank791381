@@ -1,7 +1,7 @@
 
 const {app}=require("@azure/functions");
 const {requireBuilderAuth}=require("../lib/builder-auth");
-const {getContainer,downloadJsonOrNull,listJson}=require("../lib/platform-storage");
+const {getContainer,downloadJsonOrNull,listJson,mapConcurrent,getReadConcurrency}=require("../lib/platform-storage");
 const {isStudentClassMember}=require("../lib/class-membership");
 const AP="platform/assignments/",SP="platform/submissions/",UP="platform/users/";
 function qid(q,i){return String(q?.examQuestionId||q?.id||q?.number||i+1)}
@@ -24,8 +24,9 @@ async function handler(request,deps={}){
   // Only the latest submitted attempt per student is analyzed — a student with several attempts
   // must not outweigh a student with a single attempt (see Phase 13 spec).
   const latestAttempts=[];
-  for(const student of users){
-   const s=await dl(c,SP+id+"/"+student.userId+".json");
+  // Roadmap #27: member submissions are fetched with bounded concurrency (order preserved), then analyzed.
+  const submissions=await mapConcurrent(users,getReadConcurrency(),student=>dl(c,SP+id+"/"+student.userId+".json"));
+  for(const s of submissions){
    const attempts=Array.isArray(s?.attempts)?s.attempts:[];
    if(!attempts.length)continue;
    latestAttempts.push(attempts[attempts.length-1]);

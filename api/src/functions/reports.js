@@ -3,7 +3,7 @@
 // every registered project and any future one. Never leaks answer keys, passwords, codes or tokens.
 const { app } = require("@azure/functions");
 const { requireBuilderAuth } = require("../lib/builder-auth");
-const { getContainer, downloadJsonOrNull, listJson } = require("../lib/platform-storage");
+const { getContainer, downloadJsonOrNull, listJson, mapConcurrent, getReadConcurrency } = require("../lib/platform-storage");
 const { normalizeClassStatus } = require("../lib/class-lifecycle");
 const { isReportableAssessment } = require("../lib/assignment-lifecycle");
 const { isSupportedProject, getProjectDefinition, getStorageNamespace, getProjectMeta, getSupportedProjects } = require("../lib/project-tracker/registry");
@@ -44,6 +44,12 @@ async function classAssignments(container, classId) {
 async function submissionsFor(container, assignmentId) {
   const blobs = await listJson(container, SUB_PREFIX + assignmentId + "/");
   return new Map(blobs.filter(Boolean).map(s => [String(s.studentId), s]));
+}
+// Roadmap #27: the per-assignment submission scans are independent, so run a few at a time (each scan already
+// downloads its blobs concurrently). Results stay aligned with `assignments` so every aggregation is unchanged.
+const ASSIGNMENT_SCAN_CONCURRENCY = 4;
+async function submissionsForAll(container, assignments) {
+  return mapConcurrent(assignments, Math.min(ASSIGNMENT_SCAN_CONCURRENCY, getReadConcurrency()), a => submissionsFor(container, a.assignmentId));
 }
 
 // Project working definition + progress entries for a class (reused by every project report).
@@ -100,8 +106,9 @@ async function handler(request, deps = {}) {
         const assignments = (await classAssignments(container, classId)).filter(a => inRange(a.createdAt, range));
         const allPcts = [];
         let submittedCells = 0;
-        for (const a of assignments) {
-          const subs = await submissionsFor(container, a.assignmentId);
+        const subsByAssignment = await submissionsForAll(container, assignments);
+        for (let i = 0; i < assignments.length; i++) {
+          const subs = subsByAssignment[i];
           for (const s of students) {
             const o = agg.studentOutcome(subs.get(String(s.studentId)));
             if (o.state === "submitted") { submittedCells += 1; allPcts.push(o.percentage); }
@@ -130,13 +137,10 @@ async function handler(request, deps = {}) {
         const sClassId = String(u.classId || "");
         const c = sClassId ? await loadClass(container, sClassId) : null;
         const assignments = c ? (await classAssignments(container, sClassId)).filter(a => inRange(a.createdAt, range)) : [];
-        const mySubs = [];
+        // Roadmap #27: the student's per-assignment submissions are independent reads → bounded concurrency, aligned.
+        const mySubs = await mapConcurrent(assignments, getReadConcurrency(), a => downloadJsonOrNull(container, SUB_PREFIX + a.assignmentId + "/" + studentId + ".json"));
         let submittedCount = 0;
-        for (const a of assignments) {
-          const s = await downloadJsonOrNull(container, SUB_PREFIX + a.assignmentId + "/" + studentId + ".json");
-          mySubs.push(s);
-          if (agg.studentOutcome(s).state === "submitted") submittedCount += 1;
-        }
+        for (const s of mySubs) if (agg.studentOutcome(s).state === "submitted") submittedCount += 1;
         const acad = agg.studentAcademicAverage(mySubs);
         // One entry per project of the student's class — each independent.
         const projects = [];
@@ -172,8 +176,10 @@ async function handler(request, deps = {}) {
         const pooledPcts = [];
         const matrix = [];
         let submittedCells = 0;
-        for (const a of assignments) {
-          const subs = await submissionsFor(container, a.assignmentId);
+        const subsByAssignment = await submissionsForAll(container, assignments);
+        for (let i = 0; i < assignments.length; i++) {
+          const a = assignments[i];
+          const subs = subsByAssignment[i];
           const entries = students.map(s => ({ studentId: s.studentId, submission: subs.get(String(s.studentId)) }));
           const st = agg.assignmentStats(entries);
           perAssignment.push({ assignmentId: a.assignmentId, title: a.title, ...st });

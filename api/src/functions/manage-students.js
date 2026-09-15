@@ -12,7 +12,13 @@ const {
 const {
   mutateJsonWithRetry,
   uploadJsonConditional,
-  isConcurrencyConflict
+  isConcurrencyConflict,
+  // Roadmap #27 — shared bounded-concurrency reads (order-preserving; identical null/error semantics).
+  listJson,
+  listBlobNames,
+  downloadManyJson,
+  mapConcurrent,
+  getReadConcurrency
 } = require("../lib/platform-storage");
 const { recordAuditEvent } = require("../lib/audit-log");
 const { normalizeClassStatus } = require("../lib/class-lifecycle");
@@ -72,16 +78,6 @@ async function uploadJson(container, blobName, document) {
   });
 }
 
-async function listJson(container, prefix) {
-  const result = [];
-  for await (const blob of container.listBlobsFlat({ prefix })) {
-    if (!blob.name.endsWith(".json")) continue;
-    const value = await downloadJsonOrNull(container, blob.name);
-    if (value) result.push(value);
-  }
-  return result;
-}
-
 function normalizeIdentityNumber(value) {
   const digits = String(value ?? "").replace(/\D/g, "");
   if (!digits) return "";
@@ -137,9 +133,9 @@ async function listStudents(container, classId, includeArchived = false, obs = n
   // reconciled here for free (zero extra list operations / downloads; at most one class write when drifted).
   const scanStartedAt = Date.now();
   const memberIds = [];
-  for await (const blob of container.listBlobsFlat({ prefix: USER_PREFIX })) {
-    if (!blob.name.endsWith(".json")) continue;
-    const student = await downloadJsonOrNull(container, blob.name);
+  // Roadmap #27: list names first, then download with bounded concurrency (listing order preserved).
+  const userDocs = await downloadManyJson(container, await listBlobNames(container, USER_PREFIX));
+  for (const student of userDocs) {
     if (!student || student.role !== "student") continue;
     if (classId && isStudentClassMember(student, classId)) memberIds.push(String(student.userId || ""));
     if (classId && String(student.classId || "") !== classId) continue;
@@ -165,21 +161,25 @@ async function listStudents(container, classId, includeArchived = false, obs = n
   const idSet = new Set(result.map(s => s.userId));
   const submittedSets = new Map(); // studentId -> Set<assignmentId>
   if (idSet.size) {
-    for await (const blob of container.listBlobsFlat({ prefix: SUBMISSION_PREFIX })) {
-      if (!blob.name.endsWith(".json")) continue;
-      const rest = blob.name.slice(SUBMISSION_PREFIX.length); // "{assignmentId}/{studentId}.json"
+    // Roadmap #27: select the roster students' submission blobs by NAME, then download them concurrently.
+    const candidates = [];
+    for (const name of await listBlobNames(container, SUBMISSION_PREFIX)) {
+      const rest = name.slice(SUBMISSION_PREFIX.length); // "{assignmentId}/{studentId}.json"
       const slashIndex = rest.indexOf("/");
       if (slashIndex < 0) continue;
       const assignmentId = rest.slice(0, slashIndex);
       const studentId = rest.slice(slashIndex + 1, -".json".length);
       if (!assignmentId || !studentId) continue;
       if (!idSet.has(studentId)) continue;
-      const submission = await downloadJsonOrNull(container, blob.name);
-      const attempts = Array.isArray(submission?.attempts) ? submission.attempts : [];
-      if (!attempts.length) continue;
-      if (!submittedSets.has(studentId)) submittedSets.set(studentId, new Set());
-      submittedSets.get(studentId).add(assignmentId);
+      candidates.push({ name, assignmentId, studentId });
     }
+    const submissions = await downloadManyJson(container, candidates.map(x => x.name));
+    candidates.forEach((cand, i) => {
+      const attempts = Array.isArray(submissions[i]?.attempts) ? submissions[i].attempts : [];
+      if (!attempts.length) return;
+      if (!submittedSets.has(cand.studentId)) submittedSets.set(cand.studentId, new Set());
+      submittedSets.get(cand.studentId).add(cand.assignmentId);
+    });
   }
 
   // Same single-pass pattern as the submissions count above: one listing pass under FEED_PREFIX
@@ -188,9 +188,18 @@ async function listStudents(container, classId, includeArchived = false, obs = n
   // that belongs to this student.
   const likesByStudent = new Map(); // studentId -> total like count
   if (idSet.size) {
-    for await (const blob of container.listBlobsFlat({ prefix: FEED_PREFIX })) {
-      if (!blob.name.endsWith(".json")) continue;
-      const post = await downloadJsonOrNull(container, blob.name);
+    // Roadmap #27: a post blob is named "{classId}/{assignmentId}_{studentId}.json" (achievement-feed
+    // feedBlobName), so the roster students' posts can be selected by NAME before downloading — the previous
+    // scan downloaded EVERY post in the system. A post is a candidate when its name ends with "_{id}" for ANY
+    // roster id (so ids that themselves contain "_" are still matched — never parsed by "last underscore");
+    // a name without the "_" pattern is still downloaded (never silently skipped). Over-inclusion is harmless:
+    // the aggregation below keeps using the post's own studentId as the authority.
+    const rosterSuffixes = [...idSet].map(id => "_" + id + ".json");
+    const feedNames = (await listBlobNames(container, FEED_PREFIX)).filter(name => {
+      const postId = name.slice(name.lastIndexOf("/") + 1);
+      return postId.indexOf("_") < 0 || rosterSuffixes.some(suffix => postId.endsWith(suffix));
+    });
+    for (const post of await downloadManyJson(container, feedNames)) {
       if (!post) continue;
       const studentId = String(post.studentId || "");
       if (!idSet.has(studentId)) continue;
@@ -577,16 +586,21 @@ async function buildStudentProfile(container, userId) {
   let completed = 0;
   let percentageSum = 0;
 
-  for (const assignment of allAssignments) {
+  // Roadmap #27: one submission read per assignment as before, but fetched with bounded concurrency
+  // (aligned with allAssignments, so the sequential aggregation below is unchanged).
+  const submissionsByIndex = await mapConcurrent(allAssignments, getReadConcurrency(), assignment => {
+    const assignmentId = String(assignment.assignmentId || "");
+    return assignmentId ? downloadJsonOrNull(container, SUBMISSION_PREFIX + assignmentId + "/" + student.userId + ".json") : null;
+  });
+
+  for (let index = 0; index < allAssignments.length; index++) {
+    const assignment = allAssignments[index];
     const assignmentId = String(assignment.assignmentId || "");
     if (!assignmentId) continue;
 
     // One submission read per assignment, reused for both the existing (current-class-only)
     // "assignments" list and the new cross-class "submittedAssignments" history below.
-    const submission = await downloadJsonOrNull(
-      container,
-      SUBMISSION_PREFIX + assignmentId + "/" + student.userId + ".json"
-    );
+    const submission = submissionsByIndex[index];
     const attempts = Array.isArray(submission?.attempts) ? submission.attempts : [];
     const latest = attempts.length ? attempts[attempts.length - 1] : null;
 
