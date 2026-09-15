@@ -16,6 +16,7 @@ const {
 } = require("../lib/platform-storage");
 const { recordAuditEvent } = require("../lib/audit-log");
 const { normalizeClassStatus } = require("../lib/class-lifecycle");
+const { isReportableAssessment } = require("../lib/assignment-lifecycle");
 const { deriveGradingStatus } = require("../lib/grading-status");
 const { FEED_PREFIX, REACTIONS } = require("../lib/achievement-feed");
 const { withCredentialLock, CredentialLockBusyError } = require("../lib/student-credential-lock");
@@ -589,7 +590,10 @@ async function buildStudentProfile(container, userId) {
     const attempts = Array.isArray(submission?.attempts) ? submission.attempts : [];
     const latest = attempts.length ? attempts[attempts.length - 1] : null;
 
-    if (String(assignment.classId || "") === currentClassId) {
+    // Roadmap #26: the profile's "assigned / completed / pending" record counts only REPORTABLE assessments
+    // (canonical predicate): drafts and archived-from-draft drafts were never assigned to the student and must
+    // not show as "لم تُحل"; archived-after-published assessments stay in the history.
+    if (String(assignment.classId || "") === currentClassId && isReportableAssessment(assignment)) {
       if (latest) {
         completed += 1;
         percentageSum += Number(latest.percentage || 0);

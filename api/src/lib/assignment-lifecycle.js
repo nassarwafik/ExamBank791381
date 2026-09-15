@@ -43,4 +43,19 @@ function applyAssignmentRestore(current, { now } = {}) {
   return next;
 }
 
-module.exports = { normalizeAssignmentStatus, applyAssignmentArchive, applyAssignmentRestore };
+// Roadmap #26 — the ONE "reportable assessment" predicate for teacher HISTORY/REPORT surfaces (reports center,
+// student profile). An assessment belongs to a class's academic record when students could actually have taken
+// it: it is PUBLISHED, or it is ARCHIVED after having been published. A draft, and a draft that was archived
+// ("deleted" — archive-first deletion since Roadmap #7), was never takeable and must never count as a
+// missing/unsubmitted assessment. A legacy archived document with NO archivedFromStatus metadata is kept
+// (unknown prior state; excluding it could hide real historical results — unchanged from prior behavior).
+// Student-facing availability and the "current" teacher analytics intentionally use the narrower
+// normalizeAssignmentStatus(a) === "published" (takeable NOW); this predicate is about the historical record.
+function isReportableAssessment(assignment) {
+  const status = normalizeAssignmentStatus(assignment);
+  if (status === "published") return true;
+  if (status === "archived") return assignment.archivedFromStatus !== "draft";
+  return false;
+}
+
+module.exports = { normalizeAssignmentStatus, applyAssignmentArchive, applyAssignmentRestore, isReportableAssessment };

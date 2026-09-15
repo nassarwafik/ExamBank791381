@@ -5,6 +5,7 @@ const { app } = require("@azure/functions");
 const { requireBuilderAuth } = require("../lib/builder-auth");
 const { getContainer, downloadJsonOrNull, listJson } = require("../lib/platform-storage");
 const { normalizeClassStatus } = require("../lib/class-lifecycle");
+const { isReportableAssessment } = require("../lib/assignment-lifecycle");
 const { isSupportedProject, getProjectDefinition, getStorageNamespace, getProjectMeta, getSupportedProjects } = require("../lib/project-tracker/registry");
 const svc = require("../lib/project-tracker/service");
 const core = require("../lib/project-tracker/core");
@@ -31,10 +32,12 @@ async function classStudents(container, classId) {
     .map(u => ({ studentId: u.userId, displayName: u.displayName || ((u.firstName || "") + " " + (u.familyName || "")).trim(), code: u.code }))
     .sort((a, b) => String(a.displayName).localeCompare(String(b.displayName), "ar"));
 }
-// Non-draft assignments for a class (things students could actually take).
+// Roadmap #26: the class's REPORTABLE assessments — published, or archived after being published — through the
+// ONE canonical predicate. Drafts and archived-from-draft ("deleted") drafts were never takeable and must not
+// count as unsubmitted assessments (they inflated the assessment count and deflated the submission rate).
 async function classAssignments(container, classId) {
   return (await listJson(container, ASSIGN_PREFIX))
-    .filter(a => a && String(a.classId || "") === String(classId) && a.status !== "draft")
+    .filter(a => a && String(a.classId || "") === String(classId) && isReportableAssessment(a))
     .sort((a, b) => String(a.createdAt).localeCompare(String(b.createdAt)));
 }
 // One prefix scan per assignment -> Map studentId -> submission.
@@ -52,15 +55,13 @@ async function projectContext(container, projectCode, classroom) {
   return { config, workDef, students, entries };
 }
 
-app.http("reports", {
-  methods: ["GET"],
-  authLevel: "anonymous",
-  route: "reports",
-  handler: async request => {
+// `deps` is an optional dependency-injection seam for unit tests (production passes nothing, so the real
+// implementations are used). It does not change runtime behavior.
+async function handler(request, deps = {}) {
     try {
-      const auth = requireBuilderAuth(request);
+      const auth = (deps.requireBuilderAuth || requireBuilderAuth)(request);
       if (!auth.ok) return auth.response;
-      const container = getContainer();
+      const container = deps.container || (deps.getContainer || getContainer)();
       const now = new Date().toISOString();
       const url = new URL(request.url);
       const type = String(url.searchParams.get("type") || "").trim();
@@ -250,5 +251,7 @@ app.http("reports", {
     } catch {
       return { status: 500, jsonBody: { ok: false, error: "تعذر تجهيز التقرير حاليًا." } };
     }
-  }
-});
+}
+
+app.http("reports", { methods: ["GET"], authLevel: "anonymous", route: "reports", handler });
+module.exports = { handler };
