@@ -175,14 +175,26 @@ function topicBreakdown(records) {
 async function computeTeacherAnalytics(container, { classId: requestedClassId = "", studentId: requestedStudentId = "", fromMs = 0, toMs = 0 } = {}, deps = {}) {
   const selectNames = deps.selectSubmissionNames || selectSubmissionNames;
   // Roadmap #28: the submissions prefix is LISTED once (as before) but downloaded only after the candidate
-  // assignment population is known. Classes/users/assignments are still read in full (users remain the sole
-  // membership authority; the roster index is never consulted).
-  const [classesRaw, usersRaw, assignmentsRaw, submissionNames] = await Promise.all([
-    listJson(container, CLASS_PREFIX),
-    listJson(container, USER_PREFIX),
+  // assignment population is known, so the assignment documents are read first (with the submission listing),
+  // and the selected submission downloads then overlap the classes/users reads. Classes/users/assignments are
+  // still read in full (users remain the sole membership authority; the roster index is never consulted).
+  const [assignmentsRaw, submissionNames] = await Promise.all([
     listJson(container, ASSIGNMENT_PREFIX),
     listBlobNames(container, SUBMISSION_PREFIX)
   ]);
+  const publishedAll = assignmentsRaw.filter(item => item?.assignmentId && item.status === "published");
+  const scopedByDate = publishedAll.filter(item => inRange(assignmentDate(item), fromMs, toMs));
+  // The submission map below is only ever queried for assignments in `scopedByDate` (records use its class-scoped
+  // subset; classComparison uses all of it), so those ids are the candidate folders. Listing order is preserved
+  // (a subsequence of the single listing), so last-write-wins for duplicate keys is unchanged, and the same
+  // null/404 and error semantics as listJson apply (first failure rejects; nothing partial is returned).
+  const candidateAssignmentIds = new Set(scopedByDate.map(item => String(item.assignmentId)));
+  const [classesRaw, usersRaw, submissionDocs] = await Promise.all([
+    listJson(container, CLASS_PREFIX),
+    listJson(container, USER_PREFIX),
+    downloadManyJson(container, selectNames(submissionNames, candidateAssignmentIds))
+  ]);
+  const submissionsRaw = submissionDocs.filter(Boolean);
 
   const classes = classesRaw
     .filter(item => item?.classId)
@@ -199,17 +211,8 @@ async function computeTeacherAnalytics(container, { classId: requestedClassId = 
   const students = usersRaw.filter(item => item?.role === "student");
   // Members of their own class (canonical predicate: role student, not archived). Login-disabled students stay in.
   const activeStudents = students.filter(item => isStudentClassMember(item, item.classId));
-  const publishedAll = assignmentsRaw.filter(item => item?.assignmentId && item.status === "published");
-  const scopedByDate = publishedAll.filter(item => inRange(assignmentDate(item), fromMs, toMs));
   const scopedAssignments = scopedByDate.filter(item => !requestedClassId || String(item.classId || "") === requestedClassId);
   const scopedStudents = activeStudents.filter(item => !requestedClassId || String(item.classId || "") === requestedClassId);
-
-  // Roadmap #28: the map below is only ever queried for assignments in `scopedByDate` (records use the class-
-  // scoped subset of it; classComparison uses all of it), so those ids are the candidate folders. Listing order
-  // is preserved (a subsequence of the single listing), so last-write-wins for duplicate keys is unchanged, and
-  // the same null/404 and error semantics as listJson apply (first failure rejects; nothing partial is returned).
-  const candidateAssignmentIds = new Set(scopedByDate.map(item => String(item.assignmentId)));
-  const submissionsRaw = (await downloadManyJson(container, selectNames(submissionNames, candidateAssignmentIds))).filter(Boolean);
 
   const submissionMap = new Map();
   for (const submission of submissionsRaw) {
