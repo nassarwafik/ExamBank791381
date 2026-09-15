@@ -7,6 +7,7 @@ const { getProjectDefinition, getStorageNamespace, getSnapshotUpgradePolicy } = 
 const { normalizeClassStatus } = require("../class-lifecycle");
 const { classHasMeaningfulProgress } = require("../project-794589-migration");
 const { recordAuditEvent } = require("../audit-log");
+const { isStudentClassMember } = require("../class-membership");
 
 // Pure decision: should an existing snapshot be auto-upgraded? Only an ACTIVE class on an older
 // template version with NO meaningful student progress. Exported for unit tests.
@@ -116,9 +117,10 @@ async function loadStudentUser(container, studentId) {
 // NOTE: active===false (a login-disabled account) is still a class member — a disabled student appears
 // in the class roster and the teacher can view/approve their project. This is deliberately independent
 // of student LOGIN eligibility (which the student-auth path enforces separately with active===false).
+// Roadmap #24: delegates to the ONE canonical read-side membership predicate (lib/class-membership) so the
+// project tracker, reports, the gradebook, item analysis and teacher analytics all share exactly one rule.
 function studentBelongsToClass(user, classId) {
-  if (!user || user.role !== "student" || user.archived === true) return false;
-  return String(user.classId || "") === String(classId);
+  return isStudentClassMember(user, classId);
 }
 
 // Verifies a studentId is a real student MEMBER of the given class BEFORE any read/write of that

@@ -264,7 +264,7 @@ describe("R7 archive active-attempt impact (authoritative scan under the lifecyc
 const SP = "platform/submissions/" + AID + "/stu-1.json";
 function subDeps() {
   const s = new Map();
-  s.set("platform/users/stu-1.json", { userId: "stu-1", active: true, classId: "c1", displayName: "أحمد", code: "S1" });
+  s.set("platform/users/stu-1.json", { userId: "stu-1", role: "student", active: true, classId: "c1", displayName: "أحمد", code: "S1" });
   s.set("platform/classes/c1.json", { classId: "c1", status: "active" });
   return { s, deps: {
     requireStudentAuth: () => ({ ok: true, user: { sub: "stu-1" } }),
@@ -314,7 +314,7 @@ describe("R7 student-submission archived gate", () => {
 describe("R7 student-assignment archived body gate", () => {
   it("J: an archived assignment returns 404 and never exposes the exam body", async () => {
     const s = new Map();
-    s.set("platform/users/stu-1.json", { userId: "stu-1", active: true, classId: "c1", displayName: "أحمد", code: "S1" });
+    s.set("platform/users/stu-1.json", { userId: "stu-1", role: "student", active: true, classId: "c1", displayName: "أحمد", code: "S1" });
     s.set("platform/classes/c1.json", { classId: "c1", status: "active" });
     s.set(AP, { assignmentId: AID, classId: "c1", status: "archived", durationMinutes: 60, attemptModelVersion: 2, examSnapshot: { sections: [{ id: "s", questions: [{ text: "SECRET-BODY" }] }] } });
     const deps = { requireStudentAuth: () => ({ ok: true, user: { sub: "stu-1" } }), getContainer: () => ({}), downloadJsonOrNull: async (_c, k) => (s.has(k) ? structuredClone(s.get(k)) : null) };
@@ -328,7 +328,7 @@ describe("R7 student-assignment archived body gate", () => {
 function resDeps() {
   const s = new Map();
   s.set(AP, { assignmentId: AID, classId: "c1", status: "archived", archivedFromStatus: "published", maxAttempts: 1, durationMinutes: 60, dueAt: "", title: "واجب", totalMarks: 10 });
-  s.set("platform/users/stu-1.json", { userId: "stu-1", active: true, classId: "c1", displayName: "أحمد", code: "S1" });
+  s.set("platform/users/stu-1.json", { userId: "stu-1", role: "student", active: true, classId: "c1", displayName: "أحمد", code: "S1" });
   s.set("platform/submissions/" + AID + "/stu-1.json", { assignmentId: AID, studentId: "stu-1", classId: "c1", attempts: [{ attemptNumber: 1, submittedAt: "T", score: 5, totalMarks: 10, percentage: 50, finalized: true }], activeAttempt: null });
   return { s, deps: {
     requireBuilderAuth: () => ({ ok: true, user: { sub: "t1" } }), getContainer: () => ({}),
@@ -360,7 +360,7 @@ describe("R7 assignment-results archived block", () => {
 describe("R7 student-dashboard excludes archived", () => {
   function dashDeps() {
     const s = new Map();
-    s.set("platform/users/stu-1.json", { userId: "stu-1", active: true, classId: "c1", displayName: "أحمد", code: "S1" });
+    s.set("platform/users/stu-1.json", { userId: "stu-1", role: "student", active: true, classId: "c1", displayName: "أحمد", code: "S1" });
     s.set("platform/classes/c1.json", { classId: "c1", status: "active", name: "الحادي عشر", grade: "11" });
     s.set("platform/assignments/pub1.json", { assignmentId: "pub1", classId: "c1", status: "published", title: "منشور", openAt: "", dueAt: "", maxAttempts: 1, durationMinutes: 0, attemptModelVersion: 2, questionCount: 1, totalMarks: 10 });
     s.set("platform/assignments/arc1.json", { assignmentId: "arc1", classId: "c1", status: "archived", archivedFromStatus: "published", title: "مؤرشف", openAt: "", dueAt: "", maxAttempts: 1, durationMinutes: 0, attemptModelVersion: 2, questionCount: 1, totalMarks: 10 });
@@ -389,7 +389,7 @@ describe("R7 assignment-review works while archived", () => {
   function revDeps(extra = {}) {
     const s = new Map();
     s.set(RAP, { assignmentId: RAID, classId: "c1", status: "archived", archivedFromStatus: "published", title: "واجب", totalMarks: 10, examSnapshot: { title: "امتحان", sections: [{ id: "sec1", title: "", questions: [{ text: "Q1", presentationType: "shortAnswer", marks: 10, answer: { text: "A" } }] }] } });
-    s.set("platform/users/stu-1.json", { userId: "stu-1", active: true, classId: "c1", displayName: "أحمد", code: "S1" });
+    s.set("platform/users/stu-1.json", { userId: "stu-1", role: "student", active: true, classId: "c1", displayName: "أحمد", code: "S1" });
     s.set(RSP, { assignmentId: RAID, studentId: "stu-1", classId: "c1", attempts: [{ attemptNumber: 1, submittedAt: "T", score: 0, totalMarks: 10, percentage: 0, manualReviewMarks: 10, finalized: false, questionGrades: [{ questionId: "q1", maxMarks: 10, score: 0, manualReview: true }], answers: { q1: { kind: "text", value: "student text" } }, manualOverrides: {} }], activeAttempt: null });
     const audits = [];
     return { s, audits, deps: {

@@ -18,10 +18,10 @@ const final1 = { attemptNumber: 1, submittedAt: iso(NOW), score: 84, totalMarks:
 function seed({ status = "published" } = {}) {
   const store = new Map();
   store.set(AP + "a1.json", { assignmentId: "a1", classId: "c1", status, title: "واجب", dueAt: "", durationMinutes: 0, maxAttempts: 3, totalMarks: 100, attemptModelVersion: 2 });
-  store.set(UP + "s1.json", { userId: "s1", classId: "c1", active: true, displayName: "أ", code: "S1" });
-  store.set(UP + "s2.json", { userId: "s2", classId: "c1", active: true, displayName: "ب", code: "S2" });
-  store.set(UP + "s3.json", { userId: "s3", classId: "c1", active: true, displayName: "ج", code: "S3" });
-  store.set(UP + "s4.json", { userId: "s4", classId: "c1", active: true, displayName: "د", code: "S4" });
+  store.set(UP + "s1.json", { userId: "s1", role: "student", classId: "c1", active: true, displayName: "أ", code: "S1" });
+  store.set(UP + "s2.json", { userId: "s2", role: "student", classId: "c1", active: true, displayName: "ب", code: "S2" });
+  store.set(UP + "s3.json", { userId: "s3", role: "student", classId: "c1", active: true, displayName: "ج", code: "S3" });
+  store.set(UP + "s4.json", { userId: "s4", role: "student", classId: "c1", active: true, displayName: "د", code: "S4" });
   store.set(SP + "a1/s1.json", { assignmentId: "a1", studentId: "s1", classId: "c1", attempts: [pending], activeAttempt: null });
   store.set(SP + "a1/s2.json", { assignmentId: "a1", studentId: "s2", classId: "c1", attempts: [final1], activeAttempt: null });
   // s3 has NO submission (notSubmitted). s4 has a final previous attempt AND a live active attempt.
