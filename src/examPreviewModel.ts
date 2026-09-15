@@ -13,18 +13,25 @@
 // secret nested inside an option, a field option, a compound part, or an imported foreign key can never
 // slip through into a preview.
 
-// Grading/teacher-only secret keys that must NEVER reach a preview. Superset of the documented builder
-// schema secrets plus defensive extras for foreign / imported exam shapes.
+// Grading/teacher-only secret keys that must NEVER reach a preview. This is a STRICT SUPERSET of the real
+// student sanitizer (api/src/lib/student-exam-sanitize.js): every key that sanitizer treats as
+// secret/import-only is included here, plus defensive extras for foreign / imported exam shapes. The
+// preview sanitizer may be stricter than the student one, never weaker.
 export const PREVIEW_SECRET_KEYS: readonly string[] = [
+  // answer keys / grading flags (student sanitizer FLAG_SECRET_KEYS + node answer keys)
   "answer", "answers",
-  "correct", "isCorrect",
+  "correct", "isCorrect", "correctText",
   "correctAnswer", "correctAnswers",
-  "correctOption", "correctOptions", "correctOptionIndex",
+  "correctOption", "correctOptions", "correctOptionIndex", "correctOptionValue", "correctOptionLabel",
   "expectedAnswer", "expected",
   "answerKey", "answerKeys",
   "solution", "modelAnswer", "rubric",
   "gradingKey", "grading", "manualGrade",
-  "teacherNote", "teacherOnly", "aiInstruction", "hint", "importMeta"
+  // teacher-side / edit-history / rationale (student sanitizer NODE_SECRET_KEYS)
+  "teacherNote", "teacherOnly", "aiInstruction", "hint",
+  "history", "redoStack", "explanation", "rationale",
+  // import-only provenance (student sanitizer IMPORT_ONLY_IMAGE_KEYS + top-level revisionHistory)
+  "externalUrl", "importMeta", "revisionHistory"
 ];
 
 const SECRET = new Set(PREVIEW_SECRET_KEYS);
@@ -54,9 +61,14 @@ export type PreviewExamInput = {
   questions?: unknown[];
 } & Record<string, unknown>;
 
-// Deep-clone + deep-scrub. Returns a safe, display-only copy; the input is never mutated.
+// Deep-clone + deep-scrub. Returns a safe, display-only copy; the input is never mutated. Mirrors the real
+// student sanitizer's top-level protections: `revisionHistory` (via the denylist) and `metadata.import`
+// (import provenance — removed explicitly, since "import" is too generic to denylist globally).
 export function toSafePreviewExam<T extends PreviewExamInput>(exam: T): T {
   const clone = JSON.parse(JSON.stringify(exam ?? {})) as T;
+  if (clone.metadata && typeof clone.metadata === "object" && "import" in (clone.metadata as Record<string, unknown>)) {
+    delete (clone.metadata as Record<string, unknown>).import;
+  }
   scrub(clone);
   return clone;
 }

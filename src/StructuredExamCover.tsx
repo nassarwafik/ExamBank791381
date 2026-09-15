@@ -51,13 +51,16 @@ export default function StructuredExamCover({ cover, title, distribution, runtim
   const studentName = preview ? PLACEHOLDER_NAME : (runtime?.studentName || "");
   const className = preview ? PLACEHOLDER_CLASS : (runtime?.className || "");
   const examDate = preview ? "—" : (runtime?.examDate || "");
+  // Duration: a real student only sees the row when an authoritative duration is supplied. In PREVIEW,
+  // showDuration=true always renders the row — the supplied preview duration if trustworthy, otherwise a
+  // neutral "—" placeholder — so a teacher applying a showDuration template sees where it will appear.
   const duration = runtime?.duration || "";
 
   const infoRows: { label: string; value: string }[] = [];
   if (cover.showStudentName) infoRows.push({ label: "الطالب", value: studentName || (preview ? PLACEHOLDER_NAME : "__________") });
   if (cover.showClassName && (className || preview)) infoRows.push({ label: "الصف", value: className || PLACEHOLDER_CLASS });
   if (cover.showExamDate && examDate) infoRows.push({ label: "التاريخ", value: examDate });
-  if (cover.showDuration && duration) infoRows.push({ label: "المدة", value: duration });
+  if (cover.showDuration && (duration || preview)) infoRows.push({ label: "المدة", value: duration || "—" });
   if (cover.showTotalMarks) infoRows.push({ label: "المجموع", value: distribution.total + " علامة" });
 
   return (

@@ -6,7 +6,8 @@ import StructuredExamCover from "./StructuredExamCover";
 import { normalizeExamStructure, type StructuredExam as StudentStructuredExam } from "./examStructure";
 import { normalizeCoverPage, examMarksDistribution, type ExamCoverPage } from "./examCover";
 import { normalizeExamTheme, previousFocusIndex, nextFocusIndex, focusProgressPercent } from "./examTheme";
-import { toSafePreviewExam, generalInstructionLines, type PreviewExamInput } from "./examPreviewModel";
+import { toSafePreviewExam, type PreviewExamInput } from "./examPreviewModel";
+import ExamGeneralInstructions from "./ExamGeneralInstructions";
 
 // Roadmap #15 — the ONE faithful teacher preview renderer, shared by the structured builder, the legacy
 // flat-exam theme preview (App), and the exam-library preview (AssignmentsPanel). It reproduces the REAL
@@ -27,7 +28,7 @@ export default function ExamPreview({ exam, onClose }: Props) {
   const theme = normalizeExamTheme(exam.presentationTheme);
   const cover = useMemo<ExamCoverPage | undefined>(() => normalizeCoverPage(exam.coverPage), [exam.coverPage]);
   const distribution = useMemo(() => examMarksDistribution(norm), [norm]);
-  const generalLines = useMemo(() => generalInstructionLines(safe), [safe]);
+  const generalInstructions = (safe.metadata && typeof safe.metadata === "object" ? (safe.metadata as Record<string, unknown>).generalInstructions : "") as string | undefined;
   // A legacy flat exam (no sections) reproduces the student flat/focus body; a structured exam always
   // renders its sections (matching StudentExamPage, where focus mode applies only to non-structured exams).
   const flatQs = norm.structured ? [] : (norm.sections[0]?.questions ?? []);
@@ -75,12 +76,7 @@ export default function ExamPreview({ exam, onClose }: Props) {
         ) : (
           <div className="iex-wrap">
             <p className="sb-preview-note">هذه معاينة تفاعلية للطالب — يمكنك تجربة الإجابة، لكن لا تُحفظ أي إجابة ولا تظهر مفاتيح الإجابة.</p>
-            {generalLines.length > 0 && (
-              <div className="iex-general-instructions">
-                <strong className="iex-cover-section-title">التعليمات العامة</strong>
-                <ul>{generalLines.map((l, i) => <li key={i}>{l}</li>)}</ul>
-              </div>
-            )}
+            <ExamGeneralInstructions text={generalInstructions} />
             {norm.structured ? (
               norm.sections.map((section, si) => {
                 const startIndex = offset;

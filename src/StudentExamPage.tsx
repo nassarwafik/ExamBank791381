@@ -9,6 +9,7 @@ import type {FieldValue} from "./StudentQuestionCard";
 import {normalizeExamStructure,calculateSectionProgress} from "./examStructure";
 import StructuredExamSection from "./StructuredExamSection";
 import StructuredExamCover from "./StructuredExamCover";
+import ExamGeneralInstructions from "./ExamGeneralInstructions";
 import {normalizeCoverPage,examMarksDistribution,type ExamCoverPage,type MarksDistribution} from "./examCover";
 import {formatCountdown,countdownTone} from "./examTimer";
 import {isUnexpectedStatus,trackingSuffix} from "./lib/requestTrace";
@@ -498,6 +499,8 @@ export default function StudentExamPage({token,assignment,studentName,className,
   {expired&&!result&&<div className="platform-notice iex-error">انتهى وقت المحاولة — لم يعد بالإمكان تعديل الإجابات، ويجري إنهاء المحاولة وتصحيح ما تم حفظه.</div>}
   {/* Visual-only save label (no aria-live here — the footer is the SINGLE live region, see below). */}
   <div className="iex-progress"><span>تقدّمك</span><div><i style={{width:pct+"%"}}/></div><strong>{done} / {total}</strong><small className={"iex-save-state iex-save-"+saveKind} aria-hidden="true">{saveKind==="saved"?<><IconCheck size={11}/>{saveStateLabel(saveKind)}</>:saveStateLabel(saveKind)}{savedTime&&(saveKind==="saved"||saveKind==="pending")?" · آخر حفظ: "+savedTime:""}</small></div>
+  {/* Roadmap #17/#15 — exam-level general instructions (presentation only), shared with the teacher preview. */}
+  <ExamGeneralInstructions text={exam.metadata?.generalInstructions}/>
   {structured?(()=>{let offset=0;return <>{norm.sections.map((section,si)=>{const startIndex=offset;offset+=section.questions.length;return <StructuredExamSection key={section.id} section={section} sectionNumber={si+1} startIndex={startIndex} answers={answers} onChoice={setChoice} onSeq={setSeq} onTable={setTable} onText={(id,v)=>setAnswers(x=>({...x,[id]:{kind:"text",value:v}}))} onField={setField} onPart={setPart} disabled={inputsDisabled}/>})}</>})():
   theme==="focus"&&qs.length>0?(()=>{const i=Math.min(focusIndex,qs.length-1),q=qs[i],id=qid(q,i);return <div className="iex-focus-mode"><div className="iex-focus-nav"><button onClick={()=>setFocusIndex(x=>previousFocusIndex(x,qs.length))} disabled={i===0}>◀ السابق</button><span>السؤال {i+1} من {qs.length}</span><button onClick={()=>setFocusIndex(x=>nextFocusIndex(x,qs.length))} disabled={i===qs.length-1}>التالي ▶</button></div><div className="iex-focus-progress"><i style={{width:focusProgressPercent(i,qs.length)+"%"}}/></div><StudentQuestionCard q={q} index={i} id={id} answer={answers[id]} onChoice={n=>setChoice(id,n)} onSeq={(n,v)=>setSeq(id,n,v)} onTable={(n,v)=>setTable(id,n,v)} onText={v=>setAnswers(x=>({...x,[id]:{kind:"text",value:v}}))} disabled={inputsDisabled}/></div>})():(
   <section className="iex-flow">{qs.map((q,i)=>{const id=qid(q,i);return <StudentQuestionCard key={id} q={q} index={i} id={id} answer={answers[id]} onChoice={n=>setChoice(id,n)} onSeq={(n,v)=>setSeq(id,n,v)} onTable={(n,v)=>setTable(id,n,v)} onText={v=>setAnswers(x=>({...x,[id]:{kind:"text",value:v}}))} disabled={inputsDisabled}/>})}</section>

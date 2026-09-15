@@ -62,6 +62,43 @@ describe("toSafePreviewExam — recursive answer-key stripping", () => {
     for (const k of ["teacherNote", "aiInstruction", "hint", "solution", "rubric"]) expect(jsonHas(safe, k)).toBe(false);
   });
 
+  it("security parity: strips EVERY key the real student sanitizer removes, nested everywhere", () => {
+    // Fixture places each secret key at question / option / field / part / image-asset / stimulus-image
+    // level, plus top-level revisionHistory and metadata.import.
+    const secret = {
+      correctText: "S", correctOptionValue: "S", correctOptionLabel: "S", history: ["S"], redoStack: ["S"],
+      explanation: "S", rationale: "S", externalUrl: "http://evil/x.png"
+    };
+    const exam = {
+      title: "t", presentationTheme: "classic",
+      metadata: { generalInstructions: "keep", import: { sourceFile: "SECRET_IMPORT", examId: "old" } },
+      revisionHistory: [{ at: "SECRET_REV" }],
+      sections: [{
+        id: "s", title: "ق", stimuli: { g1: { title: "stim", image: { dataUrl: "data:image/png;base64,AAAA", ...secret } } },
+        questions: [{
+          examQuestionId: "q1", text: "keepQ", marks: 5, ...secret,
+          image: { dataUrl: "data:image/png;base64,AAAA", assets: [{ dataUrl: "data:image/png;base64,BBBB", ...secret }], ...secret },
+          options: [{ text: "keepOpt", ...secret }],
+          fields: [{ id: "f", label: "keepField", options: [{ value: "v", ...secret }], ...secret }],
+          parts: [{ id: "p", text: "keepPart", ...secret, options: [{ text: "o", ...secret }], fields: [{ id: "pf", ...secret }] }]
+        }]
+      }]
+    };
+    const safe = toSafePreviewExam(exam);
+    const s = JSON.stringify(safe);
+    for (const k of ["correctText", "correctOptionValue", "correctOptionLabel", "history", "redoStack",
+                     "explanation", "rationale", "externalUrl", "revisionHistory"]) {
+      expect(s.includes("\"" + k + "\"")).toBe(false);
+    }
+    expect(s).not.toContain("SECRET_IMPORT");   // metadata.import removed
+    expect(s).not.toContain("SECRET_REV");      // revisionHistory removed
+    expect(safe.metadata && (safe.metadata as Record<string, unknown>).import).toBeUndefined();
+    // Display data survives.
+    for (const keep of ["keepQ", "keepOpt", "keepField", "keepPart", "keep"]) expect(s).toContain(keep);
+    // Source not mutated.
+    expect((exam.metadata as Record<string, unknown>).import).toBeDefined();
+  });
+
   it("generalInstructionLines splits plain text into trimmed non-empty bullet lines", () => {
     expect(generalInstructionLines({ metadata: { generalInstructions: "أولاً\n\n  ثانياً  \nثالثاً" } }))
       .toEqual(["أولاً", "ثانياً", "ثالثاً"]);

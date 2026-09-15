@@ -79,11 +79,34 @@ describe("R15 ExamPreview — faithful, safe, isolated", () => {
     expect(container.innerHTML).not.toContain("correctOptionIndex");
   });
 
-  it("exam-level general instructions render as a labeled bullet block", () => {
+  it("B(general): exam-level general instructions render as a labeled bullet block for a structured exam", () => {
     const { container } = R(structured({ metadata: { generalInstructions: "اقرأ جيدًا\nراجع إجاباتك" } }));
     expect(container.textContent).toContain("التعليمات العامة");
     expect(container.textContent).toContain("اقرأ جيدًا");
     expect(container.textContent).toContain("راجع إجاباتك");
+  });
+
+  it("C(general): general instructions render for a legacy flat exam", () => {
+    const { container } = R(flat({ metadata: { generalInstructions: "تعليمات عامة للطالب" } }));
+    expect(container.textContent).toContain("التعليمات العامة");
+    expect(container.textContent).toContain("تعليمات عامة للطالب");
+  });
+
+  it("D(general): general and section instructions are separate coexisting layers", () => {
+    const { container } = R(structured({ metadata: { generalInstructions: "تعليمات عامة" } }));
+    const t = container.textContent || "";
+    expect(t).toContain("التعليمات العامة"); expect(t).toContain("تعليمات عامة");   // exam-level
+    expect(t).toContain("تعليمات القسم الأول"); expect(t).toContain("تعليمات القسم الثاني"); // section-level
+    // exam-level general instructions appear before the first section instruction
+    expect(t.indexOf("تعليمات عامة")).toBeLessThan(t.indexOf("تعليمات القسم الأول"));
+  });
+
+  it("E(general): HTML-like general-instruction text renders as text, not HTML", () => {
+    const { container } = R(structured({ metadata: { generalInstructions: "<b>خطر</b>" } }));
+    const block = container.querySelector(".iex-general-instructions") as HTMLElement;
+    expect(block).toBeTruthy();
+    expect(block.querySelector("b")).toBeNull();                 // not parsed as HTML
+    expect(block.textContent).toContain("<b>خطر</b>");           // shown literally
   });
 
   it("I+M: changing the source exam (legacy flat) shows only the new exam, no stale question", () => {
