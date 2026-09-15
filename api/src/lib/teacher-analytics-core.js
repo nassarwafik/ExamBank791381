@@ -1,4 +1,4 @@
-const { listJson } = require("./platform-storage");
+const { listJson, listBlobNames, downloadManyJson } = require("./platform-storage");
 // Roadmap #23 — teacher analytics must interpret grading state through the ONE canonical R14 helper
 // (deriveGradingStatus), never a raw `finalized === false` check, so its pending-review counts agree with
 // the gradebook (assignment-results), assignment-review and the student dashboard. The canonical rule also
@@ -12,6 +12,34 @@ const CLASS_PREFIX = "platform/classes/";
 const USER_PREFIX = "platform/users/";
 const ASSIGNMENT_PREFIX = "platform/assignments/";
 const SUBMISSION_PREFIX = "platform/submissions/";
+
+// Roadmap #28 — scope-aware submission reads. Every submission writer (student-submission, assignment-review)
+// stores exactly ONE document per (assignment, student) at "platform/submissions/{assignmentId}/{studentId}.json"
+// (UUID ids; the only format ever used). Analytics only ever consults the submission map for assignments in
+// its own already-canonical population (published + inside the date range — see computeTeacherAnalytics), so
+// the blob NAME is used as a PERFORMANCE PREFILTER: only blobs under a candidate assignment folder are
+// downloaded. The name is never academic authority — after download the document's own assignmentId/
+// studentId key the map exactly as before. Conservative rules (over-inclusion is harmless, exclusion is not):
+//   • a name whose first path segment is a candidate assignment id → downloaded (any depth / suffix);
+//   • a name with no "/" folder segment, or not under the prefix at all (unparseable) → downloaded;
+//   • only a name whose folder segment is a NON-candidate assignment id is skipped.
+// Documented boundary: a hand-edited blob stored under a non-candidate folder whose JSON claims a candidate
+// assignment is not downloaded (handling it would require downloading every historical submission).
+function submissionPathAssignmentId(name) {
+  if (typeof name !== "string" || !name.startsWith(SUBMISSION_PREFIX)) return null;
+  const rest = name.slice(SUBMISSION_PREFIX.length);
+  const slash = rest.indexOf("/");
+  return slash > 0 ? rest.slice(0, slash) : null;
+}
+
+function selectSubmissionNames(names, candidateAssignmentIds) {
+  const out = [];
+  for (const name of Array.isArray(names) ? names : []) {
+    const pathId = submissionPathAssignmentId(name);
+    if (pathId === null || candidateAssignmentIds.has(pathId)) out.push(name);
+  }
+  return out;
+}
 
 function number(value) {
   const n = Number(value);
@@ -142,12 +170,18 @@ function topicBreakdown(records) {
 // endpoint and the new AI-insight endpoint compute numbers exactly one way — the AI's advice
 // must always be describing the same figures the teacher sees on screen, never a second,
 // independently-computed set that could quietly drift out of sync.
-async function computeTeacherAnalytics(container, { classId: requestedClassId = "", studentId: requestedStudentId = "", fromMs = 0, toMs = 0 } = {}) {
-  const [classesRaw, usersRaw, assignmentsRaw, submissionsRaw] = await Promise.all([
+// `deps` is an optional test seam (production passes nothing): `selectSubmissionNames` lets the equivalence tests
+// run the exact same pipeline with the prefilter disabled (download every listed submission = the pre-R28 scan).
+async function computeTeacherAnalytics(container, { classId: requestedClassId = "", studentId: requestedStudentId = "", fromMs = 0, toMs = 0 } = {}, deps = {}) {
+  const selectNames = deps.selectSubmissionNames || selectSubmissionNames;
+  // Roadmap #28: the submissions prefix is LISTED once (as before) but downloaded only after the candidate
+  // assignment population is known. Classes/users/assignments are still read in full (users remain the sole
+  // membership authority; the roster index is never consulted).
+  const [classesRaw, usersRaw, assignmentsRaw, submissionNames] = await Promise.all([
     listJson(container, CLASS_PREFIX),
     listJson(container, USER_PREFIX),
     listJson(container, ASSIGNMENT_PREFIX),
-    listJson(container, SUBMISSION_PREFIX)
+    listBlobNames(container, SUBMISSION_PREFIX)
   ]);
 
   const classes = classesRaw
@@ -169,6 +203,13 @@ async function computeTeacherAnalytics(container, { classId: requestedClassId = 
   const scopedByDate = publishedAll.filter(item => inRange(assignmentDate(item), fromMs, toMs));
   const scopedAssignments = scopedByDate.filter(item => !requestedClassId || String(item.classId || "") === requestedClassId);
   const scopedStudents = activeStudents.filter(item => !requestedClassId || String(item.classId || "") === requestedClassId);
+
+  // Roadmap #28: the map below is only ever queried for assignments in `scopedByDate` (records use the class-
+  // scoped subset of it; classComparison uses all of it), so those ids are the candidate folders. Listing order
+  // is preserved (a subsequence of the single listing), so last-write-wins for duplicate keys is unchanged, and
+  // the same null/404 and error semantics as listJson apply (first failure rejects; nothing partial is returned).
+  const candidateAssignmentIds = new Set(scopedByDate.map(item => String(item.assignmentId)));
+  const submissionsRaw = (await downloadManyJson(container, selectNames(submissionNames, candidateAssignmentIds))).filter(Boolean);
 
   const submissionMap = new Map();
   for (const submission of submissionsRaw) {
@@ -447,4 +488,4 @@ async function computeTeacherAnalytics(container, { classId: requestedClassId = 
   };
 }
 
-module.exports = { computeTeacherAnalytics, round, average, trendDelta, trendLabel };
+module.exports = { computeTeacherAnalytics, selectSubmissionNames, submissionPathAssignmentId, round, average, trendDelta, trendLabel };
