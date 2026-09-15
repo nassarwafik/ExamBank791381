@@ -12,7 +12,8 @@ const {
 const {
   mutateJsonWithRetry,
   uploadJsonConditional,
-  isConcurrencyConflict
+  isConcurrencyConflict,
+  StorageConflictError
 } = require("../lib/platform-storage");
 const { recordAuditEvent } = require("../lib/audit-log");
 const { deriveGradingStatus } = require("../lib/grading-status");
@@ -123,11 +124,6 @@ function publicStudent(document) {
 async function getClassroom(container, classId) {
   if (!classId) return null;
   return downloadJsonOrNull(container, CLASS_PREFIX + classId + ".json");
-}
-
-async function saveClassroom(container, classroom) {
-  classroom.updatedAt = new Date().toISOString();
-  await uploadJson(container, CLASS_PREFIX + classroom.classId + ".json", classroom);
 }
 
 function ensureStudentIds(classroom) {
@@ -781,12 +777,15 @@ async function manageStudentsHandler(request, deps = {}, obs = null) {
 
         const credentials = [];
         const errors = [];
+        const createdIds = [];
         let duplicates = 0;
 
         // CREATE-only, per-row. Each row is revalidated server-side by createStudentRecord (name/identity/
         // existing-identity), and the conditional auth write is the final race guard — a row that loses a
         // race, or duplicates an existing identity, fails EXPLICITLY as a duplicate and never overwrites
         // another account. A partial result is reported explicitly (created + failed), never as full success.
+        // createStudentRecord already writes each new student's AUTHORITATIVE membership (user.classId) — the
+        // classroom.studentIds list it also touches in-memory is a denormalized index we DO NOT persist here.
         for (const item of students) {
           try {
             const result = await createStudentRecord(container, classroom, item, { forceGeneratedPassword: true });
@@ -799,6 +798,7 @@ async function manageStudentsHandler(request, deps = {}, obs = null) {
               code: result.student.code,
               password: result.temporaryPassword
             });
+            createdIds.push(result.student.userId);
           } catch (error) {
             if (error && error.code === "duplicate") duplicates += 1;
             errors.push({
@@ -814,7 +814,33 @@ async function manageStudentsHandler(request, deps = {}, obs = null) {
           }
         }
 
-        await saveClassroom(container, classroom);
+        // Roadmap #21 — add the successfully-created students to the classroom roster through the ONE
+        // canonical concurrency-safe membership authority (mutateClassroomStudentIds → mutateJsonWithRetry
+        // + conditional ETag write), NEVER a stale whole-blob overwrite. This re-reads the classroom fresh
+        // on every attempt, so concurrent legitimate additions/removals and unrelated field changes are
+        // preserved; it dedups by id (idempotent — a repeat import adds nothing); and it only appends here
+        // (never removes). It runs OUTSIDE the per-row loop so ordinary conflicts are resolved by one
+        // retry-safe mutation rather than N racy writes.
+        let rosterSynced = true;
+        if (createdIds.length) {
+          try {
+            await mutateClassroomStudentIds(container, classId, freshClassroom => {
+              const ids = ensureStudentIds(freshClassroom);
+              for (const uid of createdIds) if (!ids.includes(uid)) ids.push(uid);
+            });
+          } catch (e) {
+            // Bounded recovery (documented): the students' AUTHORITATIVE membership is their own user.classId,
+            // already written by createStudentRecord and used by listStudents/dashboard — so they ARE imported
+            // and functional even here. Only the denormalized studentIds index (used for the class count) may
+            // lag if the retry budget is exhausted under sustained concurrent writes. We therefore keep the
+            // import result (credentials must not be lost) but surface the deferral explicitly (rosterSynced)
+            // instead of silently swallowing it or dishonestly claiming a coherent roster. StorageConflictError
+            // is the only tolerated case; any other error propagates to the outer handler.
+            if (!(e instanceof StorageConflictError)) throw e;
+            rosterSynced = false;
+            obs?.logWarn("student.bulkImport.roster_sync_deferred", { classId, createdCount: createdIds.length, retryable: true });
+          }
+        }
         // Roadmap #19: record ONE aggregate audit event — safe counts only, NEVER student names, identity
         // numbers, or any generated plaintext credential (those exist only in the in-memory response).
         await rec(container, {
@@ -832,6 +858,7 @@ async function manageStudentsHandler(request, deps = {}, obs = null) {
             imported: credentials.length,
             failed: errors.length,
             duplicates,
+            rosterSynced,
             credentials,
             errors
           }
