@@ -190,12 +190,14 @@ async function listStudents(container, classId, includeArchived = false, obs = n
   if (idSet.size) {
     // Roadmap #27: a post blob is named "{classId}/{assignmentId}_{studentId}.json" (achievement-feed
     // feedBlobName), so the roster students' posts can be selected by NAME before downloading — the previous
-    // scan downloaded EVERY post in the system. A name that does not follow the pattern is still downloaded
-    // (never silently skipped); the aggregation below keeps using the post's own studentId as the authority.
+    // scan downloaded EVERY post in the system. A post is a candidate when its name ends with "_{id}" for ANY
+    // roster id (so ids that themselves contain "_" are still matched — never parsed by "last underscore");
+    // a name without the "_" pattern is still downloaded (never silently skipped). Over-inclusion is harmless:
+    // the aggregation below keeps using the post's own studentId as the authority.
+    const rosterSuffixes = [...idSet].map(id => "_" + id + ".json");
     const feedNames = (await listBlobNames(container, FEED_PREFIX)).filter(name => {
-      const postId = name.slice(name.lastIndexOf("/") + 1, -".json".length);
-      const sep = postId.lastIndexOf("_");
-      return sep < 0 || idSet.has(postId.slice(sep + 1));
+      const postId = name.slice(name.lastIndexOf("/") + 1);
+      return postId.indexOf("_") < 0 || rosterSuffixes.some(suffix => postId.endsWith(suffix));
     });
     for (const post of await downloadManyJson(container, feedNames)) {
       if (!post) continue;

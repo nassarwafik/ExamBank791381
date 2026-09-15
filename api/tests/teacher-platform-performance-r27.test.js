@@ -98,6 +98,16 @@ describe("R27 A — bounded-concurrency read primitive", () => {
     expect(st.dups()).toBe(0);
     expect(await downloadManyJson(ctx.container, ["platform/things/t01.json", "platform/things/missing.json"])).toEqual([{ i: 1 }, null]);
   });
+  it("A5 invalid concurrency values are sanitized (never 0 / negative / NaN / Infinity workers); the seam resets", () => {
+    expect(setReadConcurrency(0)).toBe(8); expect(setReadConcurrency(-3)).toBe(8); expect(setReadConcurrency(NaN)).toBe(8);
+    expect(setReadConcurrency(Infinity)).toBe(8); expect(setReadConcurrency(2.9)).toBe(2); expect(setReadConcurrency("4")).toBe(4);
+    expect(setReadConcurrency(8)).toBe(8); expect(getReadConcurrency()).toBe(8);
+  });
+  it("A6 several workers failing at once: exactly one failure is surfaced, all workers settle, no unhandled rejection", async () => {
+    let settled = 0;
+    await expect(mapConcurrent([1, 2, 3, 4, 5, 6], 3, async v => { await new Promise(r => setTimeout(r, 2)); settled++; throw new Error("fail " + v); })).rejects.toThrow(/fail [1-3]/);
+    expect(settled).toBe(3);                                   // the first wave failed; nothing new was scheduled
+  });
   it("A4 a non-404 storage error inside listJson still rejects (no silent degradation)", async () => {
     const ctx = createMemoryContainer({ "platform/things/a.json": { a: 1 }, "platform/things/b.json": { b: 1 } });
     const og = ctx.container.getBlobClient.bind(ctx.container);
@@ -133,6 +143,23 @@ describe("R27 B — roster load (GET /api/students?classId=)", () => {
     const r = await roster(ctx);
     expect(st.downloads).toContain("platform/feed/c1/legacy-post.json");
     expect(r.jsonBody.students.find(s => s.userId === "s2").likesCount).toBe(6 * 3 + 1);
+  });
+  it("B5 feed posts of students/assignments whose ids contain '_' are still counted (prefilter must never lose a valid post)", async () => {
+    // Real ids are UUIDs (no '_'), but the prefilter must not DEPEND on that: any roster id may appear as the
+    // "_{studentId}" suffix of a post name even when the assignment id or the student id itself contains '_'.
+    const ctx = createMemoryContainer({
+      "platform/classes/c1.json": { classId: "c1", name: "c", active: true, studentIds: [] },
+      "platform/users/stu_7.json": { userId: "stu_7", role: "student", active: true, archived: false, classId: "c1", displayName: "u", code: "1", identityNumber: "1" },
+      "platform/users/s9.json": { userId: "s9", role: "student", active: true, archived: false, classId: "c1", displayName: "v", code: "2", identityNumber: "2" },
+      "platform/feed/c1/a_1_stu_7.json": { postId: "a_1_stu_7", classId: "c1", studentId: "stu_7", reactions: { heart: ["a"] } },
+      "platform/feed/c1/a2_s9.json": { postId: "a2_s9", classId: "c1", studentId: "s9", reactions: { heart: ["a", "b"] } },
+      "platform/feed/c1/other_zz.json": { postId: "other_zz", classId: "c1", studentId: "zz", reactions: { heart: ["a"] } }
+    });
+    const st = instrument(ctx);
+    const r = await roster(ctx);
+    const likes = Object.fromEntries(r.jsonBody.students.map(s => [s.userId, s.likesCount]));
+    expect(likes).toEqual({ stu_7: 1, s9: 2 });
+    expect(st.downloads).not.toContain("platform/feed/c1/other_zz.json");   // clearly-foreign post still skipped
   });
   it("B4 scalability: downloads are exactly users + roster submissions + roster posts (+1 class read for the R25 index) — no O(N²)", async () => {
     const ctx = createMemoryContainer(seed(LARGE));
