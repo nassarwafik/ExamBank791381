@@ -64,7 +64,7 @@ async function handler(request,deps={},obs=null){
    // Optional server-authoritative per-attempt timer (B1). 0 => untimed (unchanged behavior).
    const dur=parseDurationMinutes(b.durationMinutes);
    if(!dur.ok)return {status:400,jsonBody:{ok:false,error:"مدة المحاولة يجب أن تكون رقمًا صحيحًا بين 1 و1440 دقيقة، أو بدون مؤقت."}};
-   const classroom=await dl(c,CLASS_PREFIX+classId+".json");if(!classroom||classroom.active===false)return {status:400,jsonBody:{ok:false,error:"الصف غير موجود أو مؤرشف."}};
+   const classroom=await dl(c,CLASS_PREFIX+classId+".json");if(!classroom||normalizeClassStatus(classroom)==="archived")return {status:400,jsonBody:{ok:false,error:"الصف غير موجود أو مؤرشف."}};
    const openAt=iso(b.openAt),dueAt=iso(b.dueAt);if(openAt&&dueAt&&new Date(dueAt)<new Date(openAt))return {status:400,jsonBody:{ok:false,error:"موعد التسليم يجب أن يكون بعد موعد الفتح."}};
    const now=new Date().toISOString(),assignmentId=crypto.randomUUID(),maxAttempts=Math.min(10,Math.max(1,Number(b.maxAttempts||1)));
    // attemptModelVersion:2 (B2A) marks this assignment as using the UNIFIED attempt lifecycle: even an
