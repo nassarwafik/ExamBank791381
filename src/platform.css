@@ -1736,3 +1736,33 @@
 .class-project-check.on{border-color:var(--eb-primary,#2563eb);background:var(--eb-primary-050,#eef4ff);color:var(--eb-primary-strong,#1d4ed8)}
 .class-project-check input{margin:0}
 .class-program-none{background:var(--eb-surface-2,#f1f5f9);color:var(--eb-muted,#64748b)}
+
+/* Roadmap #12/#13/#14 — grading-status vocabulary (additive; reuses existing tokens/spacing). */
+.iex-grade-badge{display:inline-block;margin-inline-start:8px;padding:2px 10px;border-radius:999px;font-size:12px;font-weight:700}
+.iex-grade-final,.review-state.final,.student-latest-score.iex-grade-final{color:#0f7a3d;background:rgba(16,163,74,.12)}
+.iex-grade-pending,.review-state.pending,.student-latest-score.iex-grade-pending{color:#9a6700;background:rgba(212,167,44,.16)}
+.iex-grade-none,.review-state.none{color:#64748b;background:rgba(100,116,139,.12)}
+.iex-provisional{color:#9a6700;font-weight:600}
+.review-attempt-tabs .iex-grade-pending{box-shadow:inset 0 -2px 0 #d4a72c}
+.review-attempt-tabs .iex-grade-final{box-shadow:inset 0 -2px 0 #10a34a}
+/* Student portal — filter chips + card status/grading. */
+.student-filter-row{display:flex;flex-wrap:wrap;gap:8px;margin:0 0 12px}
+.student-filter-chip{border:1px solid var(--line,#d9e0ea);background:#fff;color:#334155;border-radius:999px;padding:6px 14px;font-size:13px;font-weight:600;cursor:pointer}
+.student-filter-chip.active{background:#0f2b46;color:#fff;border-color:#0f2b46}
+.student-status-badge{display:inline-block;padding:2px 10px;border-radius:999px;font-size:12px;font-weight:700;background:rgba(100,116,139,.12);color:#475569}
+.student-status-badge.dash-inProgress{background:rgba(37,99,235,.14);color:#1d4ed8}
+.student-status-badge.dash-awaitingReview{background:rgba(212,167,44,.18);color:#9a6700}
+.student-status-badge.dash-completed{background:rgba(16,163,74,.14);color:#0f7a3d}
+.student-status-badge.dash-scheduled{background:rgba(100,116,139,.12);color:#64748b}
+.student-status-badge.dash-closedUnsubmitted{background:rgba(220,38,38,.12);color:#b91c1c}
+.student-pending-note{color:#9a6700}
+.student-teacher-feedback{color:#334155;font-style:italic}
+/* Teacher gradebook — search/filter/sort controls. */
+.gradebook-controls{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin:10px 0}
+.gradebook-search{flex:1 1 220px;min-width:180px;border:1px solid var(--line,#d9e0ea);border-radius:8px;padding:7px 12px;font-size:13px}
+.gradebook-filter-row,.gradebook-sort{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+.gradebook-sort>span{font-size:12px;color:#64748b}
+.gradebook-chip,.gradebook-sort button{border:1px solid var(--line,#d9e0ea);background:#fff;color:#334155;border-radius:999px;padding:5px 12px;font-size:12px;font-weight:600;cursor:pointer}
+.gradebook-chip.active,.gradebook-sort button.active{background:#0f2b46;color:#fff;border-color:#0f2b46}
+.review-grade-status.iex-grade-pending{color:#9a6700}
+.review-grade-status.iex-grade-final{color:#0f7a3d}

@@ -7,6 +7,7 @@ const {gradeExam}=require("../lib/assignment-grading");
 const {recordAchievementIfEligible}=require("../lib/achievement-feed");
 const {normalizeClassStatus}=require("../lib/class-lifecycle");
 const {timerState,startRejection,writeRejection,normalizeDurationMinutes,activeAttemptOf,normalizeEndReason,attemptModelVersion}=require("../lib/assignment-availability");
+const {deriveGradingStatus}=require("../lib/grading-status");
 const {withAssignmentLock,AssignmentLockBusyError}=require("../lib/assignment-lock");
 const AP="platform/assignments/",SP="platform/submissions/";
 const CONFLICT_MESSAGE="حدث تعارض مؤقت أثناء حفظ البيانات. حاول مرة أخرى.";
@@ -14,7 +15,7 @@ const CONFLICT_MESSAGE="حدث تعارض مؤقت أثناء حفظ البيا�
 // fields; they are "" / false / normalized for legacy/untimed attempts (backward compatible). endReason
 // is normalized from a legacy attempt's timedOut flag when the explicit field is absent (never mutates
 // stored data — normalization is read-time only).
-function pub(x){return {attemptNumber:x.attemptNumber,submittedAt:x.submittedAt,score:x.score,totalMarks:x.totalMarks,percentage:x.percentage,manualReviewMarks:x.manualReviewMarks,finalized:x.finalized,teacherFeedback:String(x.teacherFeedback||""),timedOut:!!x.timedOut,startedAt:String(x.startedAt||""),endsAt:String(x.endsAt||""),extendedEndsAt:String(x.extendedEndsAt||""),endedAt:String(x.endedAt||""),endReason:normalizeEndReason(x)}}
+function pub(x){return {attemptNumber:x.attemptNumber,submittedAt:x.submittedAt,score:x.score,totalMarks:x.totalMarks,percentage:x.percentage,manualReviewMarks:x.manualReviewMarks,finalized:x.finalized,gradingStatus:deriveGradingStatus(x),teacherFeedback:String(x.teacherFeedback||""),timedOut:!!x.timedOut,startedAt:String(x.startedAt||""),endsAt:String(x.endsAt||""),extendedEndsAt:String(x.extendedEndsAt||""),endedAt:String(x.endedAt||""),endReason:normalizeEndReason(x)}}
 // Unified state from the shared timer/availability helper, so this endpoint agrees with the
 // dashboard/assignment endpoints. `canAttempt` keeps its historical (untimed) meaning; `canWrite`
 // (save/submit gate) and `canStartAttempt` (timed start gate) are explicit and separate. serverNow +
