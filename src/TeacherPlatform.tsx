@@ -2,6 +2,8 @@ import {useEffect,useMemo,useRef,useState,Fragment} from "react";
 import AssignmentsPanel from "./AssignmentsPanel";
 import AssignmentReview from "./AssignmentReview";
 import TeacherDashboard from "./TeacherDashboard";
+import AuditHistoryPanel from "./AuditHistoryPanel";
+import {parseBulkStudents} from "./bulkStudentsParse";
 import {IconSearch,IconDownload,IconUpload,IconPlus,IconChevronDown,IconMore,IconUser,IconEdit,IconCopy,IconKey,IconTrash,IconClose,IconMedal} from "./icons";
 import {MEDAL_COLORS,MEDAL_LABELS,medalTier} from "./medals";
 import {normalizeClassStatus} from "./classLifecycle";
@@ -9,7 +11,7 @@ import {getClassProgramCodes} from "./projects/classPrograms";
 import {resolveGradingStatus,type GradingStatus} from "./gradingStatus";
 import {type CredentialBatch,openCredentialBatch,toggleCredentialBatchCollapsed,credentialBatchVisible,buildCredentialsDownload} from "./credentialBatch";
 
-type WorkspaceTab="dashboard"|"students"|"assignments";
+type WorkspaceTab="dashboard"|"students"|"assignments"|"audit";
 // onCopyLibraryExamToBuilder: forwarded straight to AssignmentsPanel; the snapshot is typed loosely
 // here (App owns the real ExamDraft type) to avoid a value/type import coupling to App.tsx.
 type TeacherPlatformProps={token:string;currentExam:unknown|null;workspaceTab:WorkspaceTab;onCopyLibraryExamToBuilder?:(examSnapshot:any,title:string)=>void};
@@ -46,10 +48,6 @@ function medalItemsFor(assignments:StudentProfile["assignments"]){
   .filter((item):item is {assignmentId:string;title:string;submittedAt:string;tier:"gold"|"silver"|"bronze"}=>item.tier!==null);
 }
 
-function normalizeImportedIdentity(value:unknown){
- const digits=String(value??"").replace(/\D/g,"");
- return digits&&digits.length<=9?digits.padStart(9,"0"):digits;
-}
 function splitName(value:unknown){
  const parts=String(value??"").trim().split(/\s+/).filter(Boolean);
  return {firstName:parts.shift()||"",familyName:parts.join(" ")};
@@ -395,26 +393,15 @@ function TeacherPlatform({token,currentExam,workspaceTab,onCopyLibraryExamToBuil
   finally{setActionBusy(false)}
  }
 
+ // Stage 1: parse + normalize the picked file LOCALLY (JSON or CSV) — no account is created here.
+ // Stage 2: send the normalized rows for a server-authoritative PREVIEW (validation only). Selecting a
+ // file NEVER creates students; creation happens only in importBulkStudents after explicit confirmation.
  async function readBulkFile(file:File|null){
   setBulkStudents([]);setBulkErrors([]);setImportPreview([]);setBulkFileName(file?.name||"");setError("");setNotice("");
   if(!file)return;
   try{
-   const json=JSON.parse(await file.text());
-   const raw=Array.isArray(json)?json:Array.isArray(json?.students)?json.students:[];
-   const normalized:BulkStudent[]=raw.map((item:unknown)=>{
-    if(typeof item==="string"){
-     const names=splitName(item);
-     return {firstName:names.firstName,familyName:names.familyName,identityNumber:""};
-    }
-    const x=item as Record<string,unknown>;
-    const directFirst=String(x?.firstName??x?.givenName??"").trim();
-    const directFamily=String(x?.familyName??x?.lastName??x?.surname??"").trim();
-    const names=(directFirst||directFamily)?{firstName:directFirst,familyName:directFamily}:splitName(x?.displayName??x?.name??x?.studentName??"");
-    const identityNumber=normalizeImportedIdentity(x?.identityNumber??x?.idNumber??x?.studentId??x?.identity??x?.id??x?.code??x?.studentCode??"");
-    return {firstName:names.firstName,familyName:names.familyName,identityNumber};
-   }).filter((x:BulkStudent)=>x.firstName||x.familyName||x.identityNumber);
-
-   if(!normalized.length)throw new Error("لم أجد بيانات طلاب في ملف JSON.");
+   const {students:normalized}=parseBulkStudents(await file.text(),file.name);
+   if(!normalized.length)throw new Error("لم أجد بيانات طلاب في الملف.");
    setBulkStudents(normalized);
    setPreviewBusy(true);
    const result=await teacherApi<{ok:true;preview:ImportPreviewRow[];valid:number;duplicates:number;invalid:number}>("/api/students",{
@@ -423,7 +410,7 @@ function TeacherPlatform({token,currentExam,workspaceTab,onCopyLibraryExamToBuil
    setImportPreview(result.preview||[]);
    setNotice("✓ تمت معاينة الملف: "+result.valid+" صالح، "+result.duplicates+" مكرر، "+result.invalid+" غير صالح. لن يتم الحفظ قبل الضغط على زر الاستيراد.");
   }catch(e){
-   setError(e instanceof Error?e.message:"ملف JSON غير صالح.");
+   setError(e instanceof Error?e.message:"الملف غير صالح.");
    setBulkFileName("");
   }finally{setPreviewBusy(false)}
  }
@@ -605,6 +592,7 @@ function TeacherPlatform({token,currentExam,workspaceTab,onCopyLibraryExamToBuil
  }
 
  if(workspaceTab==="dashboard")return <section className="teacher-platform" dir="rtl"><div className="teacher-platform-inner"><TeacherDashboard token={token}/></div></section>;
+ if(workspaceTab==="audit")return <AuditHistoryPanel token={token}/>;
  if(workspaceTab==="assignments")return <section className="teacher-platform" dir="rtl"><div className="teacher-platform-inner"><section className="teacher-assignment-heading"><span className="platform-eyebrow">Assignments</span><h2>الواجبات والاختبارات المرسلة</h2><p>إنشاء الواجبات، متابعة التسليمات، التصحيح والنتائج.</p></section><AssignmentsPanel token={token} classes={classes} currentExam={currentExam} onCopyLibraryExamToBuilder={onCopyLibraryExamToBuilder}/></div></section>;
 
  const selectedCount=selectedIds.length;
@@ -702,9 +690,9 @@ function TeacherPlatform({token,currentExam,workspaceTab,onCopyLibraryExamToBuil
       </details>
 
       <details className="student-admin-details student-quick-panel">
-       <summary><IconUpload size={16}/><span>استيراد من JSON مع معاينة قبل الحفظ</span><IconChevronDown size={14} className="details-chevron"/></summary>
+       <summary><IconUpload size={16}/><span>استيراد من ملف (JSON أو CSV) مع معاينة قبل الحفظ</span><IconChevronDown size={14} className="details-chevron"/></summary>
        <div className="student-create-grid">
-        <label>ملف الطلاب<input type="file" accept=".json,application/json" onChange={e=>void readBulkFile(e.target.files?.[0]||null)}/></label>
+        <label>ملف الطلاب<input type="file" accept=".json,.csv,application/json,text/csv" disabled={!selectedClass.active} onChange={e=>void readBulkFile(e.target.files?.[0]||null)}/></label>
         <div><span>الملف</span><strong>{bulkFileName||"لم يتم اختيار ملف"}</strong><small>{previewBusy?" جارٍ فحص البيانات...":importPreview.length?` ${previewValid} صالح · ${previewDuplicates} مكرر · ${previewInvalid} غير صالح`:""}</small></div>
         <button className="platform-primary" onClick={importBulkStudents} disabled={actionBusy||previewBusy||!selectedClass.active||!previewValid}>✓ استيراد {previewValid||""} طالب صالح</button>
        </div>
