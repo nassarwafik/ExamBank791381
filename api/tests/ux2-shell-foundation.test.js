@@ -97,6 +97,29 @@ describe("UX-2 focus foundation", () => {
     expect(read("structured-builder.css")).toMatch(/\.sb-preview-overlay\{[^}]*z-index:1000/);
     expect(read("studentexam-pro.css")).toMatch(/\.exam-theme-preview-overlay\{[^}]*z-index:1000/);
   });
+  it("closed mobile drawer is removed from keyboard/accessibility interaction; open restores it; desktop sidebar never hidden", () => {
+    const css = read("shell.css").replace(/\/\*[\s\S]*?\*\//g, "");
+    // isolate the mobile block (brace-balanced) and the rest
+    const start = css.indexOf("@media (max-width: 1023px)");
+    expect(start).toBeGreaterThan(-1);
+    let depth = 0, i = css.indexOf("{", start), end = -1;
+    for (; i < css.length; i++) { if (css[i] === "{") depth++; else if (css[i] === "}") { depth--; if (depth === 0) { end = i; break; } } }
+    const mobile = css.slice(start, end + 1);
+    const outsideMobile = css.slice(0, start) + css.slice(end + 1);
+    const rule = sel => { const m = new RegExp(sel.replace(/[.*+?^${}()|[\]\\]/g, "\\$&") + "\\s*\\{([^}]*)\\}").exec(mobile); return m ? m[1] : ""; };
+    const closed = rule(".eb-sidebar");
+    expect(closed).toMatch(/visibility\s*:\s*hidden/);
+    expect(closed).toMatch(/pointer-events\s*:\s*none/);
+    expect(closed).toMatch(/transform\s*:\s*translateX\(100%\)/);   // slide direction kept
+    const open = rule(".eb-shell.is-drawer-open .eb-sidebar");
+    expect(open).toMatch(/transform\s*:\s*none/);
+    expect(open).toMatch(/visibility\s*:\s*visible/);
+    expect(open).toMatch(/pointer-events\s*:\s*auto/);
+    // the persistent desktop / rail sidebar is never hidden and never aria-hidden
+    expect(outsideMobile).not.toMatch(/\.eb-sidebar[^{]*\{[^}]*visibility\s*:\s*hidden/);
+    expect(read("shell/TeacherAppShell.tsx")).not.toMatch(/aria-hidden[^>]*\n?\s*className="eb-sidebar/);
+    expect(/<aside[^>]*aria-hidden/.test(read("shell/TeacherAppShell.tsx"))).toBe(false);
+  });
   it("the teacher shell has no emoji and no phone bottom bar; App.tsx no longer owns projectNavOpen", () => {
     const shell = read("shell/TeacherAppShell.tsx");
     expect(/[\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}▸▾]/u.test(shell)).toBe(false);

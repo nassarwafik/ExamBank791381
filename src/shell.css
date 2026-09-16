@@ -140,15 +140,26 @@
 /* ---------- Responsive: drawer below the shell breakpoint (no teacher bottom bar) ---------- */
 @media (max-width: 1023px) {
   .eb-shell { flex-direction: column; }
+  /* CLOSED drawer: off-screen AND removed from keyboard / accessibility interaction (visibility:hidden takes its
+     controls out of the tab order and the accessibility tree; pointer-events:none guards the slide gap). The
+     visibility switch is delayed by the slide duration on close and immediate on open, so the animation is kept. */
   .eb-sidebar {
     position: fixed; inset-block: 0; inset-inline-start: 0;
     width: min(var(--eb-sidebar-w), 86vw); height: 100vh;
     transform: translateX(100%);
+    visibility: hidden;
+    pointer-events: none;
     z-index: var(--eb-z-drawer);
     box-shadow: var(--eb-sh-lg);
+    transition: transform var(--eb-dur) var(--eb-ease), visibility 0s linear var(--eb-dur);
   }
   [dir="ltr"] .eb-sidebar { transform: translateX(-100%); }
-  .eb-shell.is-drawer-open .eb-sidebar { transform: none; }
+  .eb-shell.is-drawer-open .eb-sidebar {
+    transform: none;
+    visibility: visible;
+    pointer-events: auto;
+    transition: transform var(--eb-dur) var(--eb-ease), visibility 0s;
+  }
   .eb-drawer-backdrop { position: fixed; inset: 0; background: var(--eb-backdrop); z-index: var(--eb-z-nav); }
   .eb-drawer-toggle { display: inline-flex; }
   .eb-drawer-close { display: inline-flex; }
