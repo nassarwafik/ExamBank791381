@@ -22,7 +22,6 @@ const OUTLINE_NONE_ALLOW_LIST = {
   ".model-picker select": "App.css `.model-picker select:focus` re-adds border-color + box-shadow ring",
   ".login-card input:focus, .builder-card > textarea:focus, .marks-field input:focus, .model-picker select:focus": "same rule sets border-color + box-shadow ring",
   ".library-search:focus": "same rule sets border-color + box-shadow ring",
-  ".analytics-filter-bar select:focus, .analytics-filter-bar input:focus": "same rule sets border-color + box-shadow ring",
   ".auth-input input:focus": "same rule sets border-color + box-shadow ring",
   ".platform-form-grid input:focus,.platform-form-grid select:focus,.student-create-grid input:focus,.student-create-grid select:focus,.student-admin-toolbar input:focus,.student-admin-toolbar select:focus": "same rule sets border-color + box-shadow ring",
   ".student-search-field input": "wrapper `.student-search-field:focus-within` draws the ring around the field"
@@ -77,6 +76,15 @@ describe("UX-2 focus foundation", () => {
       expect(found.some(e => e.endsWith("→ " + sel)), sel + " must keep the canonical ring").toBe(false);
     }
     expect(found.length).toBe(allowed.length);
+  });
+  it("UX-3 dashboard-pro.css is token-only (--eb-*) outside its shared view-tabs block and never sets outline:none", () => {
+    const css = read("dashboard-pro.css");
+    const own = css.split("Shared segmented tabs")[0].replace(/\/\*[\s\S]*?\*\//g, "");
+    expect(own, "dashboard-pro.css raw hex").not.toMatch(/#[0-9a-fA-F]{3,8}\b/);
+    expect(own, "dashboard-pro.css raw rgb").not.toMatch(/\brgba?\(/);
+    for (const m of own.matchAll(/var\((--[a-zA-Z0-9-]+)/g)) expect(m[1], "dashboard-pro.css uses non-canonical token " + m[1]).toMatch(/^--eb-/);
+    expect(css).not.toMatch(/outline\s*:\s*(none|0)/);
+    expect(css, "shared .analytics-view-tabs block must stay for TeacherPlatform / projects screens").toMatch(/\.analytics-view-tabs\{/);
   });
   it("new UX-2 stylesheets are token-only (--eb-*) with no raw colours", () => {
     for (const f of ["ui/ui.css", "shell.css"]) {

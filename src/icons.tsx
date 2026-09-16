@@ -372,3 +372,32 @@ export function IconSidebar(props: IconProps) {
     </svg>
   );
 }
+
+/* ---- UX-3 additions (teacher dashboard toolbar / insights) ---- */
+export function IconRefresh(props: IconProps) {
+  return (
+    <svg {...base(props)}>
+      <path d="M16.5 10a6.5 6.5 0 1 1-1.9-4.6" />
+      <path d="M16.5 3.5v4h-4" />
+    </svg>
+  );
+}
+
+export function IconPrint(props: IconProps) {
+  return (
+    <svg {...base(props)}>
+      <path d="M6 7.5V3h8v4.5" />
+      <rect x="3" y="7.5" width="14" height="7" rx="1.6" />
+      <path d="M6 12h8v5H6z" />
+    </svg>
+  );
+}
+
+export function IconInfo(props: IconProps) {
+  return (
+    <svg {...base(props)}>
+      <circle cx="10" cy="10" r="7.5" />
+      <path d="M10 9v5M10 6.2v.2" />
+    </svg>
+  );
+}
