@@ -18,10 +18,12 @@
 .eb-sp-identity-text p{ margin:0; font-size:var(--eb-fs-13); }
 .eb-sp-code{ flex:0 0 auto; }
 .eb-sp-avatar-frame{ display:inline-flex; flex:0 0 auto; padding:3px; border:3px solid var(--eb-line-2); border-radius:50%; }
-.eb-sp-avatar-frame.is-rank-gold{ border-color:var(--eb-medal-gold); }
-.eb-sp-avatar-frame.is-rank-silver{ border-color:var(--eb-medal-silver); }
+.eb-sp-avatar-frame.is-rank-beginner{ border-color:var(--eb-faint); }
 .eb-sp-avatar-frame.is-rank-bronze{ border-color:var(--eb-medal-bronze); }
-.eb-sp-avatar-frame.is-rank-starter{ border-color:var(--eb-primary); }
+.eb-sp-avatar-frame.is-rank-silver{ border-color:var(--eb-medal-silver); }
+.eb-sp-avatar-frame.is-rank-gold{ border-color:var(--eb-medal-gold); }
+.eb-sp-avatar-frame.is-rank-diamond{ border-color:var(--eb-info); }
+.eb-sp-avatar-frame.is-rank-legendary{ border-color:var(--eb-navy); box-shadow:0 0 0 2px var(--eb-medal-gold); }
 .student-avatar-circle{
   display:inline-flex; align-items:center; justify-content:center; flex:none; padding:0; line-height:1; font:inherit;
   border:2px solid var(--eb-surface); border-radius:50%; cursor:pointer; transition:box-shadow var(--eb-dur) var(--eb-ease);

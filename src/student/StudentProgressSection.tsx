@@ -12,7 +12,8 @@ import type { Stats } from "./types";
 
 /**
  * "تقدّمي" (UX-7a): the server's own counts as StatCards, the finalized-only average as a ring (always with a
- * textual equivalent), medals (finalized-only) and the personal rank badge — or the progression towards it.
+ * textual equivalent), medals (finalized-only) and the personal rank badge with the progress to the next tier — or,
+ * before the rank unlocks, the progression towards it.
  * Presentation only: every value arrives already derived from the authoritative dashboard stats.
  */
 type Props = { stats: Stats; medals: MedalTier[]; rank: StudentRank | null; progress: RankProgress; averageFinalized: number | null };
@@ -48,7 +49,17 @@ export default function StudentProgressSection({ stats, medals, rank, progress, 
             <p className="eb-sp-rank-hint">لا ميداليات بعد — 70% فأكثر في واجب نهائي تمنحك ميدالية.</p>
           )}
           {rank ? (
-            <p className="eb-sp-rank"><StatusBadge tone="info" className="eb-sp-rank-badge"><IconMedal size={14} aria-hidden="true" />الرتبة: {rank.label}</StatusBadge><span className="eb-sp-rank-hint">من {rank.finalized} واجبات نهائية</span></p>
+            <div className="eb-sp-rank-progress">
+              <p className="eb-sp-rank"><StatusBadge tone="info" className="eb-sp-rank-badge"><IconMedal size={14} aria-hidden="true" />الرتبة: {rank.label}</StatusBadge><span className="eb-sp-rank-hint">من {rank.finalized} واجبات نهائية</span></p>
+              {rank.next ? (
+                <>
+                  <ProgressBar size="sm" label={"نحو رتبة " + rank.next.label} value={rank.next.percent} tone="series-2" />
+                  <p className="eb-sp-rank-hint">الرتبة التالية عند معدل نهائي {rank.next.threshold}%</p>
+                </>
+              ) : (
+                <p className="eb-sp-rank-hint">بلغت أعلى رتبة</p>
+              )}
+            </div>
           ) : (
             <div className="eb-sp-rank-progress">
               <ProgressBar size="sm" label="الطريق إلى رتبتك" value={progress.percent} showValue={false} tone="series-2" />

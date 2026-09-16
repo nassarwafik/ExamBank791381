@@ -275,23 +275,52 @@ describe("UX-7a StudentPortal — identity, medals, average ring and personal ra
   });
 
   it("no rank before 10 finalized assignments: shows the progression instead (pending results never count)", async () => {
-    mount({ student, classroom, assignments: [], stats: { ...baseStats, assigned: 20, finalized: 9, pendingReview: 6, averageFinalized: 95 } });
+    mount({ student, classroom, assignments: [], stats: { ...baseStats, assigned: 20, finalized: 9, pendingReview: 6, averageFinalized: 99 } });
     await screen.findByText(/مرحبًا أحمد/);
     expect(screen.queryByText(/الرتبة:/)).toBeNull();
+    expect(screen.queryByRole("progressbar", { name: /نحو رتبة/ })).toBeNull();
     const bar = screen.getByRole("progressbar", { name: "الطريق إلى رتبتك" });
     expect(bar.getAttribute("aria-valuenow")).toBe("90");
     expect(screen.getByText("9 من 10 واجبات نهائية لفتح الرتبة")).toBeTruthy();
     expect(document.querySelector(".eb-sp-avatar-frame")?.className).not.toMatch(/is-rank-/);
   });
 
-  it("at 10+ finalized the personal rank badge and avatar frame appear, from the finalized average only; nothing compares students", async () => {
-    mount({ student, classroom, assignments: [], stats: { ...baseStats, assigned: 14, finalized: 10, pendingReview: 4, average: 40, averageFinalized: 91.2 } });
+  it("at 10+ finalized the six-tier personal rank badge, avatar frame and next-rank progress appear, from the finalized average only; nothing compares students", async () => {
+    mount({ student, classroom, assignments: [], stats: { ...baseStats, assigned: 14, finalized: 10, pendingReview: 4, average: 40, averageFinalized: 93 } });
     await screen.findByText(/مرحبًا أحمد/);
-    expect(screen.getByText(/الرتبة: متفوّق/).className).toContain("eb-badge");
-    expect(document.querySelector(".eb-sp-avatar-frame.is-rank-gold")).toBeTruthy();
+    expect(screen.getByText(/الرتبة: ألماسي/).className).toContain("eb-badge");
+    expect(document.querySelector(".eb-sp-avatar-frame.is-rank-diamond")).toBeTruthy();
     expect(screen.queryByRole("progressbar", { name: "الطريق إلى رتبتك" })).toBeNull();
-    expect(screen.getByRole("progressbar", { name: "المعدل النهائي" }).getAttribute("aria-valuenow")).toBe("91");
+    const next = screen.getByRole("progressbar", { name: "نحو رتبة أسطوري" });
+    expect(next.getAttribute("aria-valuenow")).toBe("50");                                          // (93 − 90) / (96 − 90)
+    expect(screen.getByText("الرتبة التالية عند معدل نهائي 96%")).toBeTruthy();
+    expect(screen.getByRole("progressbar", { name: "المعدل النهائي" }).getAttribute("aria-valuenow")).toBe("93");
     expect(document.body.textContent).not.toMatch(/ترتيب|المركز|leaderboard/i);
+  });
+
+  it("rank tiers at exactly 10 finalized follow the locked boundaries (59.9 مبتدئ · 60 برونزي · 70 فضي · 80 ذهبي · 90 ألماسي · 96 أسطوري) with matching frames", async () => {
+    const cases: [number, string, string][] = [[59.9, "مبتدئ", "beginner"], [60, "برونزي", "bronze"], [79.9, "فضي", "silver"], [89.9, "ذهبي", "gold"], [95.9, "ألماسي", "diamond"], [100, "أسطوري", "legendary"]];
+    for (const [avg, label, tier] of cases) {
+      const { unmount } = mount({ student, classroom, assignments: [], stats: { ...baseStats, assigned: 10, finalized: 10, averageFinalized: avg } });
+      await screen.findByText(/مرحبًا أحمد/);
+      expect(screen.getByText("الرتبة: " + label, { exact: false }).textContent, String(avg)).toContain(label);
+      expect(document.querySelector(".eb-sp-avatar-frame.is-rank-" + tier), String(avg)).toBeTruthy();
+      unmount();
+    }
+  });
+
+  it("legendary shows no next-rank progress bar, only 'بلغت أعلى رتبة'; a beginner progresses toward bronze", async () => {
+    const { unmount } = mount({ student, classroom, assignments: [], stats: { ...baseStats, assigned: 12, finalized: 12, averageFinalized: 97.5 } });
+    await screen.findByText(/مرحبًا أحمد/);
+    expect(screen.getByText(/الرتبة: أسطوري/)).toBeTruthy();
+    expect(screen.queryByRole("progressbar", { name: /نحو رتبة/ })).toBeNull();
+    expect(screen.getByText("بلغت أعلى رتبة")).toBeTruthy();
+    unmount();
+    mount({ student, classroom, assignments: [], stats: { ...baseStats, assigned: 12, finalized: 12, averageFinalized: 30 } });
+    await screen.findByText(/مرحبًا أحمد/);
+    expect(screen.getByText(/الرتبة: مبتدئ/)).toBeTruthy();
+    expect(screen.getByRole("progressbar", { name: "نحو رتبة برونزي" }).getAttribute("aria-valuenow")).toBe("50");
+    expect(document.querySelector(".eb-sp-avatar-frame.is-rank-beginner")).toBeTruthy();
   });
 
   it("the avatar opens the shared Dialog; picking posts setAvatar once, closes and updates the avatar; Escape / إغلاق cost no request", async () => {
@@ -409,6 +438,9 @@ describe("UX-7a source guards", () => {
     expect(pres).not.toMatch(/medalTier\(\s*(item|a)\.latestPercentage/);
     expect(pres).toMatch(/gradingOf\(item\) !== "final"\) continue/);
     expect(rank).toContain("RANK_MIN_FINALIZED = 10");
+    expect(rank).toContain('["beginner", "bronze", "silver", "gold", "diamond", "legendary"]');
+    expect(rank).toMatch(/beginner: 0, bronze: 60, silver: 70, gold: 80, diamond: 90, legendary: 96/);
+    expect(rank).not.toMatch(/Math\.round\(averageFinalized|toFixed/);                                   // tier chosen on the unrounded average
     expect(rank).not.toMatch(/pendingReview|latestPercentage|score|assignments/);
     expect(rank).not.toMatch(/sort\(|leaderboard|classmates/i);
     for (const src of Object.values(sources)) expect(src).not.toMatch(/latestScore\s*[>!=<]/);
