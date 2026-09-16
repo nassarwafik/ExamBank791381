@@ -53,6 +53,10 @@ function splitName(value:unknown){
  const parts=String(value??"").trim().split(/\s+/).filter(Boolean);
  return {firstName:parts.shift()||"",familyName:parts.join(" ")};
 }
+// Roadmap #34: the ONE class-lifecycle predicate for this screen — a class is active only through the canonical helper
+// (status "archived" OR active:false ⇒ archived). Never the raw `active` flag, which is a compatibility field of
+// /api/classrooms. Unrelated to Student.active (login eligibility).
+const isActiveClass=(c:Classroom)=>normalizeClassStatus(c)==="active";
 function statusLabel(student:Student){
  if(student.archived)return "مؤرشف";
  return student.active?"فعّال":"معطّل";
@@ -185,7 +189,7 @@ function TeacherPlatform({token,currentExam,workspaceTab,onCopyLibraryExamToBuil
    const loaded=result.classes||[];
    setClasses(loaded);
    if(!preserveSelection||!selectedClassId||!loaded.some(c=>c.classId===selectedClassId)){
-    const first=loaded.find(c=>c.active)||loaded[0];
+    const first=loaded.find(isActiveClass)||loaded[0];
     setSelectedClassId(first?.classId||"");
    }
   }catch(e){setError(e instanceof Error?e.message:"تعذر تحميل الصفوف.")}
@@ -681,7 +685,7 @@ function TeacherPlatform({token,currentExam,workspaceTab,onCopyLibraryExamToBuil
  return <section className="teacher-platform" dir="rtl"><div className="teacher-platform-inner">
   <section className="platform-hero">
    <div><span className="platform-eyebrow">ExamBank 2.0I</span><h2>إدارة الطلاب المتقدمة</h2><p>بحث وفرز، عمليات جماعية، معاينة استيراد، أرشفة، ملف طالب، علامات وتصدير.</p></div>
-   <div className="platform-hero-stat"><strong>{classes.filter(c=>c.active).length}</strong><span>صفوف فعّالة</span></div>
+   <div className="platform-hero-stat"><strong>{classes.filter(isActiveClass).length}</strong><span>صفوف فعّالة</span></div>
   </section>
 
   {error&&<div className="platform-error">{error}</div>}
@@ -714,14 +718,14 @@ function TeacherPlatform({token,currentExam,workspaceTab,onCopyLibraryExamToBuil
      <button type="button" className={"analytics-view-tab "+(classArchiveView==="archived"?"active":"")} onClick={()=>setClassArchiveView("archived")}>الأرشيف<span className="analytics-view-tab-badge">{archivedClasses.length}</span></button>
     </nav>
     <div className="class-list">
-     {visibleClasses.map(classroom=><article key={classroom.classId} className={"class-row "+(classroom.classId===selectedClassId?"selected ":"")+(classroom.active?"":"archived")}>
+     {visibleClasses.map(classroom=><article key={classroom.classId} className={"class-row "+(classroom.classId===selectedClassId?"selected ":"")+(isActiveClass(classroom)?"":"archived")}>
       <button className="class-select" onClick={()=>setSelectedClassId(classroom.classId)}><strong>{classroom.name}{getClassProgramCodes(classroom).length?getClassProgramCodes(classroom).map(code=><span key={code} className="class-program-tag">📡 {code}</span>):<span className="class-program-tag class-program-none">بدون مشروع</span>}</strong><span>{classroom.grade||"—"} · {classroom.studentCount} طالب</span><small>{classroom.schoolYear||""}</small>
        {classArchiveView==="archived"&&<small>{classroom.archiveReason==="graduated"?"مُخرَّج":"مؤرشف"}{classroom.archivedAt?" · "+fmtDate(classroom.archivedAt):""}{classroom.graduationYear?" · دفعة "+classroom.graduationYear:""}</small>}
       </button>
       <div className="class-row-actions">
        {classArchiveView==="active"&&<div className="class-project-picker"><span className="class-project-picker-label">📡 المشاريع:</span>{projects.map(p=>{const on=getClassProgramCodes(classroom).includes(p.projectCode);return <label key={p.projectCode} className={"class-project-check"+(on?" on":"")}><input type="checkbox" checked={on} disabled={actionBusy} onChange={e=>void toggleClassProject(classroom,p.projectCode,e.target.checked)}/>{p.title}</label>;})}</div>}
        {classArchiveView==="active"&&isGraduationEligible(classroom)&&<button className="class-archive" onClick={()=>graduateAndArchiveClass(classroom)} disabled={actionBusy}>🎓 تخريج وأرشفة الصف</button>}
-       <button className="class-archive" onClick={()=>toggleClassArchive(classroom)} disabled={actionBusy}>{classroom.active?"أرشفة الصف":"تفعيل"}</button>
+       <button className="class-archive" onClick={()=>toggleClassArchive(classroom)} disabled={actionBusy}>{isActiveClass(classroom)?"أرشفة الصف":"تفعيل"}</button>
       </div>
      </article>)}
      {!loading&&visibleClasses.length===0&&<div className="platform-empty">{classArchiveView==="active"?"لا توجد صفوف نشطة بعد.":"لا توجد صفوف مؤرشفة."}</div>}
@@ -763,16 +767,16 @@ function TeacherPlatform({token,currentExam,workspaceTab,onCopyLibraryExamToBuil
         <label>اسم العائلة<input value={newFamilyName} onChange={e=>setNewFamilyName(e.target.value)} placeholder="اسم العائلة"/></label>
         <label>رقم الهوية<input value={newIdentityNumber} onChange={e=>setNewIdentityNumber(onlyDigits(e.target.value))} inputMode="numeric" maxLength={9} dir="ltr" placeholder="9 أرقام"/></label>
         <label>كلمة مرور اختيارية<input type="password" value={newStudentPassword} onChange={e=>setNewStudentPassword(e.target.value)} placeholder="اتركها فارغة للتوليد التلقائي"/></label>
-        <button className="platform-primary" onClick={createStudent} disabled={actionBusy||!selectedClass.active||!newFirstName.trim()||!newFamilyName.trim()||!validIdentity(newIdentityNumber)}>+ إنشاء حساب طالب</button>
+        <button className="platform-primary" onClick={createStudent} disabled={actionBusy||!isActiveClass(selectedClass)||!newFirstName.trim()||!newFamilyName.trim()||!validIdentity(newIdentityNumber)}>+ إنشاء حساب طالب</button>
        </div>
       </details>
 
       <details className="student-admin-details student-quick-panel">
        <summary><IconUpload size={16}/><span>استيراد من ملف (JSON أو CSV) مع معاينة قبل الحفظ</span><IconChevronDown size={14} className="details-chevron"/></summary>
        <div className="student-create-grid">
-        <label>ملف الطلاب<input type="file" accept=".json,.csv,application/json,text/csv" disabled={!selectedClass.active} onChange={e=>void readBulkFile(e.target.files?.[0]||null)}/></label>
+        <label>ملف الطلاب<input type="file" accept=".json,.csv,application/json,text/csv" disabled={!isActiveClass(selectedClass)} onChange={e=>void readBulkFile(e.target.files?.[0]||null)}/></label>
         <div><span>الملف</span><strong>{bulkFileName||"لم يتم اختيار ملف"}</strong><small>{previewBusy?" جارٍ فحص البيانات...":importPreview.length?` ${previewValid} صالح · ${previewDuplicates} مكرر · ${previewInvalid} غير صالح`:""}</small></div>
-        <button className="platform-primary" onClick={importBulkStudents} disabled={actionBusy||previewBusy||!selectedClass.active||!previewValid}>✓ استيراد {previewValid||""} طالب صالح</button>
+        <button className="platform-primary" onClick={importBulkStudents} disabled={actionBusy||previewBusy||!isActiveClass(selectedClass)||!previewValid}>✓ استيراد {previewValid||""} طالب صالح</button>
        </div>
 
        {importPreview.length>0&&<div className="students-table-wrap import-preview-wrap"><table className="students-table">
@@ -786,7 +790,7 @@ function TeacherPlatform({token,currentExam,workspaceTab,onCopyLibraryExamToBuil
       </details>
      </div>
 
-     {!selectedClass.active&&<div className="platform-warning">الصف مؤرشف؛ فعّله قبل إضافة أو استعادة الطلاب.</div>}
+     {!isActiveClass(selectedClass)&&<div className="platform-warning">الصف مؤرشف؛ فعّله قبل إضافة أو استعادة الطلاب.</div>}
 
      {selectedCount>0&&<section className="student-bulk-bar">
       <strong>{selectedCount} طالب محدد</strong>
@@ -798,7 +802,7 @@ function TeacherPlatform({token,currentExam,workspaceTab,onCopyLibraryExamToBuil
        <button onClick={()=>void runBulkAction("resetpasswords")} disabled={actionBusy}><IconKey size={14}/>كلمات مرور جديدة</button>
        <select value={bulkTargetClassId} onChange={e=>setBulkTargetClassId(e.target.value)}>
         <option value="">اختر صفًا للنقل</option>
-        {classes.filter(c=>c.active&&c.classId!==selectedClassId).map(c=><option key={c.classId} value={c.classId}>{c.name}</option>)}
+        {classes.filter(c=>isActiveClass(c)&&c.classId!==selectedClassId).map(c=><option key={c.classId} value={c.classId}>{c.name}</option>)}
        </select>
        <button onClick={()=>void runBulkAction("move")} disabled={actionBusy||!bulkTargetClassId}>نقل</button>
        <button onClick={()=>setSelectedIds([])}>إلغاء التحديد</button>
@@ -841,7 +845,7 @@ function TeacherPlatform({token,currentExam,workspaceTab,onCopyLibraryExamToBuil
        <label>الاسم<input value={editFirstName} onChange={e=>setEditFirstName(e.target.value)}/></label>
        <label>اسم العائلة<input value={editFamilyName} onChange={e=>setEditFamilyName(e.target.value)}/></label>
        <label>رقم الهوية<input value={editIdentityNumber} onChange={e=>setEditIdentityNumber(onlyDigits(e.target.value))} inputMode="numeric" maxLength={9} dir="ltr"/></label>
-       <label>الصف<select value={editClassId} onChange={e=>setEditClassId(e.target.value)}>{classes.filter(c=>c.active||c.classId===(editingStudent?.classId||"")).map(c=><option key={c.classId} value={c.classId}>{c.name} · {c.grade}</option>)}</select></label>
+       <label>الصف<select value={editClassId} onChange={e=>setEditClassId(e.target.value)}>{classes.filter(c=>isActiveClass(c)||c.classId===(editingStudent?.classId||"")).map(c=><option key={c.classId} value={c.classId}>{c.name} · {c.grade}</option>)}</select></label>
        <label>كلمة مرور جديدة<input type="password" value={editPassword} onChange={e=>setEditPassword(e.target.value)} placeholder="اتركها فارغة للإبقاء على الحالية"/></label>
        <button className="platform-primary" onClick={saveStudentEdit} disabled={actionBusy||!editFirstName.trim()||!editFamilyName.trim()||!validIdentity(editIdentityNumber)||!editClassId}>💾 حفظ التعديلات</button>
       </div>

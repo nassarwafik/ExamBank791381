@@ -7,8 +7,9 @@ import {IconPlus,IconChevronDown} from "./icons";
 import {filterLibraryCatalog,catalogCategories,categoryLabel,type LibraryCatalogItem} from "./examLibrary";
 import {examHasQuestions,examQuestionCount} from "./examTypes";
 import {gradingClass,resolveGradingStatus,type GradingStatus} from "./gradingStatus";
+import {normalizeClassStatus} from "./classLifecycle";
 
-type Classroom={classId:string;name:string;grade:string;active:boolean};
+type Classroom={classId:string;name:string;grade:string;active:boolean;status?:string};
 type Item={assignmentId:string;classId:string;className:string;title:string;instructions:string;status:"draft"|"published"|"archived";openAt:string;dueAt:string;questionCount:number;totalMarks:number;maxAttempts:number;durationMinutes?:number;archivedAt?:string;archivedBy?:string;archivedFromStatus?:string;archiveReason?:string};
 // Read-only deletion impact (Roadmap #7) returned by action:"deleteImpact".
 type Impact={assignmentId:string;status:string;submissionDocuments:number;studentsWithCompletedAttempts:number;completedAttempts:number;activeAttempts:number;draftDocuments:number;canPurge:boolean};
@@ -51,7 +52,9 @@ export default function AssignmentsPanel({token,classes,currentExam,onCopyLibrar
  const [sourceMode,setSourceMode]=useState<"mine"|"library">("mine");
  const [libraryCatalog,setLibraryCatalog]=useState<LibraryCatalogItem[]>([]),[libraryLoading,setLibraryLoading]=useState(false),[librarySearch,setLibrarySearch]=useState(""),[libraryCategory,setLibraryCategory]=useState(""),[librarySelectedId,setLibrarySelectedId]=useState(""),[libraryExam,setLibraryExam]=useState<Exam|null>(null);
  const [preview,setPreview]=useState<{title:string;exam:Exam}|null>(null),[previewBusyId,setPreviewBusyId]=useState(""),[copyBusyId,setCopyBusyId]=useState("");
- const active=useMemo(()=>classes.filter(x=>x.active),[classes]);
+ // Roadmap #34: a class is offered as an assignment target only through the canonical lifecycle helper (status
+ // "archived" OR active:false ⇒ archived), never the raw compatibility `active` flag.
+ const active=useMemo(()=>classes.filter(x=>normalizeClassStatus(x)==="active"),[classes]);
  const sourceExam=sourceMode==="library"?libraryExam:(examSource==="current"?current:savedExam);
  useEffect(()=>{if(!classId&&active[0])setClassId(active[0].classId)},[active,classId]);
  useEffect(()=>{if(current&&examSource===""&&examHasQuestions(current))setExamSource("current")},[current,examSource]);

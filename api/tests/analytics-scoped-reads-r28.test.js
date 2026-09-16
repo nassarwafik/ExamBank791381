@@ -147,11 +147,12 @@ describe("B. semantic equivalence — R28 output deep-equals the full-scan pipel
     it("B " + label + " scope", async () => {
       const { ref, out } = await compare(school({ history: 3 }), scope);
       expect(out).toEqual(ref);
-      // the population under test is non-trivial: members only, pending review counted through deriveGradingStatus
-      if (label === "global") { expect(out.kpis.activeStudents).toBe(7); expect(out.kpis.publishedAssignments).toBe(5); expect(out.kpis.pendingReview).toBe(3); }
+      // the population under test is non-trivial: members only, pending review counted through deriveGradingStatus.
+      // Roadmap #34 (C1): the GLOBAL scope is current/operational — the archived class c3 (s21, P4) no longer counts.
+      if (label === "global") { expect(out.kpis.activeStudents).toBe(6); expect(out.kpis.publishedAssignments).toBe(4); expect(out.kpis.pendingReview).toBe(3); }
       if (label === "class") { expect(out.kpis.activeStudents).toBe(4); expect(out.kpis.publishedAssignments).toBe(3); expect(out.kpis.submissions).toBe(7); }
       if (label === "student") { expect(out.studentDetail?.userId).toBe("s02"); expect(out.studentDetail.completed).toBe(2); }
-      if (label === "range") { expect(out.kpis.publishedAssignments).toBe(4); expect(out.classComparison.map(c => c.classId)).toEqual(expect.arrayContaining(["c1", "c2"])); }
+      if (label === "range") { expect(out.kpis.publishedAssignments).toBe(3); expect(out.classComparison.map(c => c.classId)).toEqual(expect.arrayContaining(["c1", "c2"])); }
     });
   }
   it("B7 population invariants hold in the R28 output (archived/inactive/other-class/draft/archived assignments, legacy submissions)", async () => {
