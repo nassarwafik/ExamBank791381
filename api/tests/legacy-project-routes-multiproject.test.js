@@ -18,6 +18,7 @@ import { PROGRAM_CODE } from "../src/lib/project-794589-template.js";
 const read = rel => readFileSync(fileURLToPath(new URL(rel, import.meta.url)), "utf8");
 const teacherRoute = read("../src/functions/project-794589.js");
 const studentRoute = read("../src/functions/student-project.js");
+const serviceSource = read("../src/lib/project-tracker/service.js");
 
 describe("legacy 794589 routes — source wired to the multi-project enrollment gate", () => {
   it("both routes import classHasProject", () => {
@@ -25,10 +26,14 @@ describe("legacy 794589 routes — source wired to the multi-project enrollment 
     expect(studentRoute).toContain('require("../lib/project-tracker/class-programs")');
   });
   it("project-794589 gates the catalog + every GET/POST (reset) via classHasProject, not raw equality", () => {
-    expect(teacherRoute).toContain("classHasProject(c, PROGRAM_CODE)");        // classes catalog filter
+    // Roadmap #33: the classes catalogue is the SHARED service function (one implementation for the legacy and the
+    // generic route); the route must call it with PROGRAM_CODE and the service must filter with classHasProject.
+    expect(teacherRoute).toContain("svc.listProjectClasses(container, PROGRAM_CODE)"); // classes catalog (shared)
+    expect(serviceSource).toContain("classHasProject(c, projectCode)");                // ... which gates via classHasProject
     expect(teacherRoute).toContain("!classHasProject(classroom, PROGRAM_CODE)"); // GET + POST enrollment gate
     expect(teacherRoute).not.toContain("c.programCode === PROGRAM_CODE");
     expect(teacherRoute).not.toContain("classroom.programCode === PROGRAM_CODE");
+    expect(serviceSource).not.toContain("programCode === ");
   });
   it("student-project gates enrolled via classHasProject, not raw inequality", () => {
     expect(studentRoute).toContain("!classHasProject(classroom, PROGRAM_CODE)");

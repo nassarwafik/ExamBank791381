@@ -3,10 +3,13 @@
 // summary / students / student / analytics / template (GET) and program.activate / progress.update /
 // project.reset / template.update (POST). Storage is namespaced per project (794589 => legacy paths),
 // so a write to one project can never touch another. The dedicated project-794589 route stays as-is.
+// Roadmap #33: the write operations and the class catalogue are shared with the legacy route through
+// lib/project-tracker/service.js (domain results only); this handler owns every status code, message, body
+// shape and audit record, all unchanged.
 const { app } = require("@azure/functions");
 const { withObservability } = require("../lib/observability");
 const { requireBuilderAuth } = require("../lib/builder-auth");
-const { getContainer, downloadJsonOrNull, uploadJson, listJson, listBlobNames, deleteBlob, mutateJsonWithRetry, StorageConflictError } = require("../lib/platform-storage");
+const { getContainer, downloadJsonOrNull, listJson, StorageConflictError } = require("../lib/platform-storage");
 const { recordAuditEvent } = require("../lib/audit-log");
 const { normalizeClassStatus } = require("../lib/class-lifecycle");
 const { isSupportedProject, getProjectDefinition, getStorageNamespace, getProjectMeta, getSupportedProjects } = require("../lib/project-tracker/registry");
@@ -99,13 +102,7 @@ async function handler(request, deps = {}, obs = null) {
 
         // Classes enrolled in THIS project (for the class selector). No classId needed.
         if (resource === "classes") {
-          const classes = (await listJson(container, CLASS_PREFIX))
-            .filter(c => c && classHasProject(c, projectCode))
-            .map(c => ({
-              classId: c.classId, name: c.name, grade: c.grade, schoolYear: c.schoolYear,
-              status: normalizeClassStatus(c), archivedAt: c.archivedAt || "", studentCount: Array.isArray(c.studentIds) ? c.studentIds.length : 0
-            }))
-            .sort((a, b) => String(b.schoolYear).localeCompare(String(a.schoolYear)));
+          const classes = await svc.listProjectClasses(container, projectCode);
           return { status: 200, jsonBody: { ok: true, projectCode, title: definition.title, tracks: definition.tracks, classes } };
         }
 
@@ -128,8 +125,7 @@ async function handler(request, deps = {}, obs = null) {
           // Membership check BEFORE reading any progress — no cross-class reads.
           const membership = await svc.requireStudentInClass(container, studentId, classId);
           if (!membership.ok) return { status: 404, jsonBody: { ok: false, error: "الطالب غير موجود في هذا الصف." } };
-          const ns = getStorageNamespace(projectCode);
-          const progress = await downloadJsonOrNull(container, ns.progressName(classId, studentId));
+          const progress = await svc.loadStudentProgress(container, projectCode, classId, studentId);
           return { status: 200, jsonBody: studentDetailBody(projectCode, workDef, config, readOnly, membership.student, progress, now) };
         }
 
@@ -165,8 +161,6 @@ async function handler(request, deps = {}, obs = null) {
         return { status: 403, jsonBody: { ok: false, error: "الصف مؤرشف — المتابعة للقراءة فقط." } };
       }
 
-      const ns = getStorageNamespace(projectCode);
-
       if (action === "program.activate") {
         const config = await svc.ensureClassConfig(container, projectCode, classroom);
         return { status: 200, jsonBody: { ok: true, projectCode, template: config } };
@@ -175,38 +169,28 @@ async function handler(request, deps = {}, obs = null) {
       if (action === "project.reset") {
         // Wipes ONLY this project's data for this class (snapshot + all student progress under this
         // project's namespace). Class, students, assignments, exams and OTHER projects are untouched.
-        const progressBlobs = await listBlobNames(container, ns.progressPrefix(classId));
-        for (const name of progressBlobs) await deleteBlob(container, name);
-        await deleteBlob(container, ns.configName(classId));
+        const { deletedProgressCount } = await svc.resetProject(container, projectCode, classId);
         await rec(container, {
           actor: auth.user?.sub, action: "project.reset",
           targetType: "project-tracker", targetId: projectCode + "/" + classId, targetLabel: classroom.name || "",
-          details: { projectCode, deletedProgressCount: progressBlobs.length }
+          details: { projectCode, deletedProgressCount }
         });
-        return { status: 200, jsonBody: { ok: true, projectCode, deletedProgressCount: progressBlobs.length } };
+        return { status: 200, jsonBody: { ok: true, projectCode, deletedProgressCount } };
       }
 
       if (action === "progress.update") {
         const studentId = String(body.studentId || "").trim();
         const stageId = String(body.stageId || "").trim();
         if (!studentId || !stageId) return { status: 400, jsonBody: { ok: false, error: "studentId وstageId مطلوبان." } };
-        // Membership check BEFORE any mutate — an arbitrary/foreign studentId can never create a
-        // ghost progress blob.
-        const membership = await svc.requireStudentInClass(container, studentId, classId);
-        if (!membership.ok) return { status: 404, jsonBody: { ok: false, error: "الطالب غير موجود في هذا الصف." } };
-        const config = await svc.ensureClassConfig(container, projectCode, classroom);
-        const workDef = svc.workingDefinition(projectCode, config);
-        const stage = (config.stages || []).find(s => s.stageId === stageId && s.active === true);
-        if (!stage) return { status: 400, jsonBody: { ok: false, error: "المرحلة غير موجودة أو غير مفعّلة." } };
-
-        let outcome = null;
         try {
-          const written = await mutateJsonWithRetry(container, ns.progressName(classId, studentId), current =>
-            (outcome = core.applyProgressUpdate(current, {
-              stageId, status: body.status, note: body.note, actor: auth.user?.sub, now,
-              programCode: projectCode, classId, studentId
-            })).doc
-          );
+          // Membership check BEFORE any mutate — an arbitrary/foreign studentId can never create a
+          // ghost progress blob (shared pipeline: membership → snapshot → active stage → CAS mutation).
+          const result = await svc.updateStudentProgress(container, projectCode, classroom, {
+            studentId, stageId, status: body.status, note: body.note, actor: auth.user?.sub, now
+          });
+          if (!result.ok && result.reason === "not_member") return { status: 404, jsonBody: { ok: false, error: "الطالب غير موجود في هذا الصف." } };
+          if (!result.ok) return { status: 400, jsonBody: { ok: false, error: "المرحلة غير موجودة أو غير مفعّلة." } };
+          const { workDef, stage, written, outcome } = result;
           const summary = core.buildStudentSummary(workDef, written, now);
           if (outcome.statusChanged) {
             await rec(container, {
@@ -244,15 +228,7 @@ async function handler(request, deps = {}, obs = null) {
       if (action === "template.update") {
         const patch = body.template && typeof body.template === "object" ? body.template : {};
         try {
-          const written = await mutateJsonWithRetry(container, ns.configName(classId), current => {
-            const config = current || svc.buildClassSnapshot(getProjectDefinition(projectCode), classId, now);
-            if (Array.isArray(patch.stages)) config.stages = patch.stages;
-            if (Array.isArray(patch.groups)) config.groups = patch.groups;
-            if (patch.trackWeights && typeof patch.trackWeights === "object") config.trackWeights = patch.trackWeights;
-            if (patch.config && typeof patch.config === "object") config.config = { ...config.config, ...patch.config };
-            config.updatedAt = now;
-            return config;
-          });
+          const written = await svc.updateTemplate(container, projectCode, classId, patch, now);
           await rec(container, {
             actor: auth.user?.sub, action: "project.template.update",
             targetType: "project-template", targetId: projectCode + "/" + classId, targetLabel: classroom.name || "", details: { projectCode }
