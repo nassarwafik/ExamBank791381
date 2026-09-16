@@ -9,7 +9,11 @@ import { IconPlus } from "../icons";
 import type { ProjectStage, ProjectGroup, TrackMeta } from "./types";
 
 type Template = { stages: ProjectStage[]; groups: ProjectGroup[]; trackWeights: Record<string, number>; config: Record<string, number> };
-type Props = { token: string; projectCode: string; classId: string; tracks: TrackMeta[]; readOnly: boolean };
+type Props = {
+  token: string; projectCode: string; classId: string; tracks: TrackMeta[]; readOnly: boolean;
+  /** Called after a successful template.update or project.reset (both can change which stages count as ready). */
+  onReadyChanged?: () => void;
+};
 
 // Derives the stage-id prefix for a track from its existing stages (B/P/A/V…), falling back to the
 // first letter of the trackId — so "Add stage" never borrows another track's numbering.
@@ -26,7 +30,7 @@ const RESET_WARNING = "متأكد؟ سيُحذف كل التقدّم نهائي�
  * config}) and same `project.reset` body as before. The inline two-step reset became the shared danger
  * ConfirmDialog with the identical warning text; cancelling sends nothing. Archived classes are read-only.
  */
-export default function ProjectStageSettings({ token, projectCode, classId, tracks, readOnly }: Props) {
+export default function ProjectStageSettings({ token, projectCode, classId, tracks, readOnly, onReadyChanged }: Props) {
   const [tpl, setTpl] = useState<Template | null>(null);
   const [track, setTrack] = useState<string>(tracks[0]?.trackId || "");
   const [groupFilter, setGroupFilter] = useState("");
@@ -73,6 +77,7 @@ export default function ProjectStageSettings({ token, projectCode, classId, trac
     try {
       await trackerPost(token, projectCode, { action: "template.update", classId, template: { stages: tpl.stages, trackWeights: tpl.trackWeights, config: tpl.config } });
       setNotice("✓ تم حفظ إعداد المراحل.");
+      onReadyChanged?.();
       await load();
     } catch (e) { setError(e instanceof Error ? e.message : "تعذر حفظ الإعداد."); }
     finally { setBusy(false); }
@@ -86,6 +91,7 @@ export default function ProjectStageSettings({ token, projectCode, classId, trac
     try {
       const r = await trackerPost<{ deletedProgressCount: number }>(token, projectCode, { action: "project.reset", classId });
       setNotice("✓ تم تصفير المشروع لهذا الصف (حُذف تقدّم " + r.deletedProgressCount + " طالبًا). المراحل الآن نسخة جديدة والطلاب كما هم.");
+      onReadyChanged?.();
       await load();
     } catch (e) { setError(e instanceof Error ? e.message : "تعذر تصفير المشروع."); }
     finally { setBusy(false); }

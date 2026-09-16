@@ -60,6 +60,8 @@ const TEMPLATE = { stages: STAGES, groups: GROUPS, trackWeights: { book: 1, pack
 type Call = { method: string; url: string; body?: Record<string, unknown> };
 let calls: Call[] = [];
 let failStudents = false;
+let failProgress = false;
+let noChangeProgress = false;
 const json = (body: unknown, status = 200) => Promise.resolve({ ok: status < 400, status, json: async () => body } as Response);
 
 function route(url: string, init?: RequestInit): Promise<Response> {
@@ -80,6 +82,8 @@ function route(url: string, init?: RequestInit): Promise<Response> {
   }
   const action = body?.action;
   if (action === "progress.update") {
+    if (failProgress) return json({ ok: false, error: "تعارض مؤقت." }, 503);
+    if (noChangeProgress) return json({ ok: true, noChange: true });
     const st = (body?.status as string) || "ready_for_review";
     return json({ ok: true, projectCode: "794589", summary: { ...STUDENTS[0], overallProgress: 50 }, stage: { stageId: body?.stageId, status: st, note: (body?.note as string) ?? "راجع القسم 2", updatedAt: "2026-03-05T10:00:00.000Z" }, nextStages: { book: STAGES[1], packetTracer: null }, balance: null, history: [{ eventId: "e3", stageId: body?.stageId, type: body?.note !== undefined ? "note" : "status", toStatus: st, actor: "t", createdAt: "2026-03-05T10:00:00.000Z" }] });
   }
@@ -89,7 +93,7 @@ function route(url: string, init?: RequestInit): Promise<Response> {
 }
 
 beforeEach(() => {
-  calls = []; failStudents = false;
+  calls = []; failStudents = false; failProgress = false; noChangeProgress = false;
   window.matchMedia = ((q: string) => ({ matches: false, media: q, addEventListener() {}, removeEventListener() {}, onchange: null, addListener() {}, removeListener() {}, dispatchEvent: () => false })) as unknown as typeof window.matchMedia;
   globalThis.fetch = vi.fn((input: RequestInfo | URL, init?: RequestInit) => route(String(input), init)) as unknown as typeof fetch;
 });
@@ -505,5 +509,70 @@ describe("UX-6a source guards", () => {
     expect(read("projects/helpers.ts")).toMatch(/icon: "⬜"/);                                          // shared icons untouched
     expect(read("projects-pro.css")).not.toMatch(/outline\s*:\s*(none|0)/);
     expect(read("ui/ui.css")).not.toMatch(/outline\s*:\s*(none|0)/);
+  });
+});
+
+describe("UX-6a review — global ready-summary invalidation contract (onReadyChanged)", () => {
+  async function mountWithSpy() {
+    const onReadyChanged = vi.fn();
+    render(<ProjectTracker token="t" projectCode="794589" onReadyChanged={onReadyChanged} />);
+    await screen.findByRole("heading", { level: 2, name: "لوحة المشروع" });
+    return onReadyChanged;
+  }
+  async function openStagePanel() {
+    await openStudents();
+    const { profile } = await openStudent();
+    const stage = within(profile).getByRole("button", { name: /^B01\b/ });
+    fireEvent.click(stage);
+    return document.getElementById(stage.getAttribute("aria-controls") || "") as HTMLElement;
+  }
+  it("a successful STATUS mutation fires it exactly once; a note-only update never does", async () => {
+    const spy = await mountWithSpy();
+    const panel = await openStagePanel();
+    expect(spy).toHaveBeenCalledTimes(0);
+    fireEvent.click(within(panel).getByRole("button", { name: "اعتماد المرحلة" }));
+    await waitFor(() => expect(posts()).toHaveLength(1));
+    await screen.findByText("تم تحديث حالة المرحلة.");
+    expect(spy).toHaveBeenCalledTimes(1);
+    fireEvent.change(within(panel).getByLabelText("ملاحظة المعلم"), { target: { value: "ملاحظة جديدة" } });
+    fireEvent.click(within(panel).getByRole("button", { name: "حفظ الملاحظة" }));
+    await waitFor(() => expect(posts()).toHaveLength(2));
+    await screen.findByText("تم حفظ الملاحظة.");
+    expect(posts()[1]).toEqual({ projectCode: "794589", action: "progress.update", classId: "c1", studentId: "s1", stageId: "B01", note: "ملاحظة جديدة" });
+    expect(spy).toHaveBeenCalledTimes(1);                                                             // note-only → no global refresh
+  });
+  it("a failed or noChange status mutation never fires it", async () => {
+    failProgress = true;
+    const spy = await mountWithSpy();
+    const panel = await openStagePanel();
+    fireEvent.click(within(panel).getByRole("button", { name: "اعتماد المرحلة" }));
+    await screen.findByText(/تعارض مؤقت/);
+    expect(posts()).toHaveLength(1);
+    expect(spy).toHaveBeenCalledTimes(0);
+    failProgress = false; noChangeProgress = true;
+    fireEvent.click(within(panel).getByRole("button", { name: "اعتماد المرحلة" }));
+    await waitFor(() => expect(posts()).toHaveLength(2));
+    await screen.findByText("تم تحديث حالة المرحلة.");
+    expect(spy).toHaveBeenCalledTimes(0);
+  });
+  it("a successful template.update fires it once; reset cancel never does; a confirmed project.reset fires it once", async () => {
+    const spy = await mountWithSpy();
+    fireEvent.click(view("إعداد المراحل"));
+    const bar = await screen.findByRole("region", { name: "أدوات إعداد المراحل" });
+    fireEvent.click(within(bar).getByRole("button", { name: "حفظ التغييرات" }));
+    await screen.findByText("✓ تم حفظ إعداد المراحل.");
+    expect(spy).toHaveBeenCalledTimes(1);
+    fireEvent.click(screen.getByRole("button", { name: "تصفير المشروع…" }));
+    let dialog = await screen.findByRole("dialog", { name: "تصفير المشروع للصف" });
+    fireEvent.click(within(dialog).getByRole("button", { name: "إلغاء" }));
+    await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+    expect(posts().filter(b => b?.action === "project.reset")).toHaveLength(0);
+    expect(spy).toHaveBeenCalledTimes(1);
+    fireEvent.click(screen.getByRole("button", { name: "تصفير المشروع…" }));
+    dialog = await screen.findByRole("dialog", { name: "تصفير المشروع للصف" });
+    fireEvent.click(within(dialog).getByRole("button", { name: "نعم، صفّر المشروع" }));
+    await screen.findByText(/تم تصفير المشروع لهذا الصف/);
+    expect(posts().filter(b => b?.action === "project.reset")).toEqual([{ projectCode: "794589", action: "project.reset", classId: "c1" }]);
+    expect(spy).toHaveBeenCalledTimes(2);
   });
 });

@@ -569,6 +569,11 @@ function App() {
   const [projectCatalogNonce, setProjectCatalogNonce] = useState(0);
   // Global teacher "ready for review" queue (all projects, active classes) — one aggregated request.
   const [projectReady, setProjectReady] = useState<{ total: number; byProject: Record<string, number> }>({ total: 0, byProject: {} });
+  // UX-6a review: App stays the ONE owner of the global ready summary. A successful project mutation that can
+  // change ready-stage counts (status change, template update, project reset) bumps this nonce, which re-issues
+  // exactly one aggregated projects-summary read; the hub cards and the sidebar badge then re-render from it.
+  const [projectReadyNonce, setProjectReadyNonce] = useState(0);
+  function refreshProjectReady() { setProjectReadyNonce(n => n + 1); }
 
   function goToProjects(code: string) {
     setTeacherView("project");
@@ -645,7 +650,7 @@ function App() {
       .then(r => { if (!cancelled) setProjectReady({ total: Number(r.totalReadyForReview) || 0, byProject: r.byProject || {} }); })
       .catch(() => { if (!cancelled) setProjectReady({ total: 0, byProject: {} }); });
     return () => { cancelled = true; };
-  }, [token, sessionRole, teacherView, sessionChecking]);
+  }, [token, sessionRole, teacherView, sessionChecking, projectReadyNonce]);
 
   const [userCode, setUserCode] = useState("");
   const [password, setPassword] = useState("");
@@ -5471,9 +5476,9 @@ function App() {
       )}
 
       {teacherView === "project" && (
-        <Suspense fallback={<div className="platform-loading">⏳ جارٍ التحميل...</div>}>
+        <Suspense fallback={<p className="eb-muted" role="status">جارٍ التحميل...</p>}>
           {projectCode
-            ? <ProjectTracker token={token} projectCode={projectCode} />
+            ? <ProjectTracker token={token} projectCode={projectCode} onReadyChanged={refreshProjectReady} />
             : <ProjectHub projects={projectList} status={projectCatalogStatus} readyByProject={projectReady.byProject} onRetry={() => setProjectCatalogNonce(n => n + 1)} onOpenProject={goToProjects} />}
         </Suspense>
       )}

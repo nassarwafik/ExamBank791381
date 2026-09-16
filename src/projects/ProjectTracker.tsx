@@ -13,7 +13,12 @@ import type { ProjectClass, TrackMeta } from "./types";
 import "../projects-pro.css";
 
 export type ProjectView = "dashboard" | "students" | "analytics" | "settings";
-type Props = { token: string; projectCode: string };
+type Props = {
+  token: string; projectCode: string;
+  /** Called after a successful mutation that can change global ready-for-review counts (status change, template
+   * update, project reset) so App re-reads its aggregated projects-summary. Never for note-only updates. */
+  onReadyChanged?: () => void;
+};
 
 const VIEWS: { key: ProjectView; label: string; icon: (size: number) => React.ReactNode }[] = [
   { key: "dashboard", label: "لوحة المشروع", icon: s => <IconDashboard size={s} /> },
@@ -29,7 +34,7 @@ const VIEWS: { key: ProjectView; label: string; icon: (size: number) => React.Re
  * per project, then the resource of the current view for the selected class; the student list stays mounted
  * (hidden) while a student profile is open, so returning re-reads it only after a mutation.
  */
-export default function ProjectTracker({ token, projectCode }: Props) {
+export default function ProjectTracker({ token, projectCode, onReadyChanged }: Props) {
   const [classes, setClasses] = useState<ProjectClass[]>([]);
   const [classId, setClassId] = useState("");
   const [view, setView] = useState<ProjectView>("dashboard");
@@ -141,12 +146,12 @@ export default function ProjectTracker({ token, projectCode }: Props) {
               </div>
               {openStudentId && (
                 <ProjectStudentDetail token={token} projectCode={projectCode} classId={classId} studentId={openStudentId} tracks={tracks}
-                  onBack={closeStudent} onChanged={() => { studentsDirty.current = true; }} />
+                  onBack={closeStudent} onChanged={() => { studentsDirty.current = true; }} onReadyChanged={onReadyChanged} />
               )}
             </>
           )}
           {view === "analytics" && <ProjectAnalytics token={token} projectCode={projectCode} classId={classId} tracks={tracks} />}
-          {view === "settings" && <ProjectStageSettings token={token} projectCode={projectCode} classId={classId} tracks={tracks} readOnly={!!readOnly} />}
+          {view === "settings" && <ProjectStageSettings token={token} projectCode={projectCode} classId={classId} tracks={tracks} readOnly={!!readOnly} onReadyChanged={onReadyChanged} />}
         </div>
       ) : null}
     </section>

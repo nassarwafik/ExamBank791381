@@ -15,6 +15,9 @@ type Props = {
   onBack: () => void;
   /** Called after any successful progress mutation so the (still mounted) student list can refresh on return. */
   onChanged?: () => void;
+  /** Called only after a successful STATUS mutation (never note-only, noChange, cancel or failure): a status
+   * change can alter the global ready-for-review counts App owns. */
+  onReadyChanged?: () => void;
 };
 
 type UpdateResponse = {
@@ -32,7 +35,7 @@ type UpdateResponse = {
  * opener on back. Editable classes get ONE primary action per stage (اعتماد المرحلة) with the other
  * statuses in an ActionMenu; archived classes expose no mutation controls at all.
  */
-export default function ProjectStudentDetail({ token, projectCode, classId, studentId, tracks, onBack, onChanged }: Props) {
+export default function ProjectStudentDetail({ token, projectCode, classId, studentId, tracks, onBack, onChanged, onReadyChanged }: Props) {
   const [detail, setDetail] = useState<StudentDetail | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -68,6 +71,7 @@ export default function ProjectStudentDetail({ token, projectCode, classId, stud
         const { stageId: sid, ...entry } = res.stage;
         setDetail(prev => prev ? { ...prev, summary: res.summary, progress: { ...prev.progress, [sid]: entry }, nextStages: res.nextStages, balance: res.balance, history: res.history } : prev);
         onChanged?.();
+        if (patch.status !== undefined) onReadyChanged?.();
       }
       setNotice(patch.note !== undefined ? "تم حفظ الملاحظة." : "تم تحديث حالة المرحلة.");
     } catch (e) { setError(e instanceof Error ? e.message : "تعذر حفظ التغيير."); }
