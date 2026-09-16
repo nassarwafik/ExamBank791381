@@ -1,4 +1,5 @@
 const { app } = require("@azure/functions");
+const { withObservability } = require("../lib/observability");
 const { requireBuilderAuth } = require("../lib/builder-auth");
 const { getContainer } = require("../lib/platform-storage");
 const { computeTeacherAnalytics } = require("../lib/teacher-analytics-core");
@@ -9,13 +10,12 @@ function timestamp(value) {
   return Number.isFinite(t) ? t : 0;
 }
 
-app.http("teacherAnalytics", {
-  methods: ["GET"],
-  authLevel: "anonymous",
-  route: "teacher-analytics",
-  handler: async request => {
+// `deps` is an optional dependency-injection seam for unit tests (production passes nothing, so the real
+// implementations are used); `obs` is the request context withObservability passes as the third argument.
+// Neither changes runtime behavior.
+async function handler(request, deps = {}, obs = null) {
     try {
-      const auth = requireBuilderAuth(request);
+      const auth = (deps.requireBuilderAuth || requireBuilderAuth)(request);
       if (!auth.ok) return auth.response;
 
       const url = new URL(request.url);
@@ -24,7 +24,7 @@ app.http("teacherAnalytics", {
       const fromMs = timestamp(url.searchParams.get("from"));
       const toMs = timestamp(url.searchParams.get("to"));
 
-      const container = getContainer();
+      const container = deps.container || (deps.getContainer || getContainer)();
       const result = await computeTeacherAnalytics(container, {
         classId: requestedClassId,
         studentId: requestedStudentId,
@@ -36,7 +36,8 @@ app.http("teacherAnalytics", {
         status: 200,
         jsonBody: { ok: true, ...result }
       };
-    } catch {
+    } catch (e) {
+      obs?.logError("teacher.analytics.error", e);
       return {
         status: 500,
         jsonBody: {
@@ -45,5 +46,7 @@ app.http("teacherAnalytics", {
         }
       };
     }
-  }
-});
+}
+
+app.http("teacherAnalytics", { methods: ["GET"], authLevel: "anonymous", route: "teacher-analytics", handler: withObservability("teacher-analytics", handler) });
+module.exports = { handler };

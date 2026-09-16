@@ -2,6 +2,7 @@
 // data (never raw blobs). Project reports reuse the generic Project Tracker engine, so they work for
 // every registered project and any future one. Never leaks answer keys, passwords, codes or tokens.
 const { app } = require("@azure/functions");
+const { withObservability } = require("../lib/observability");
 const { requireBuilderAuth } = require("../lib/builder-auth");
 const { getContainer, downloadJsonOrNull, listJson, mapConcurrent, getReadConcurrency } = require("../lib/platform-storage");
 const { normalizeClassStatus } = require("../lib/class-lifecycle");
@@ -63,7 +64,7 @@ async function projectContext(container, projectCode, classroom) {
 
 // `deps` is an optional dependency-injection seam for unit tests (production passes nothing, so the real
 // implementations are used). It does not change runtime behavior.
-async function handler(request, deps = {}) {
+async function handler(request, deps = {}, obs = null) {
     try {
       const auth = (deps.requireBuilderAuth || requireBuilderAuth)(request);
       if (!auth.ok) return auth.response;
@@ -254,10 +255,11 @@ async function handler(request, deps = {}) {
       }
 
       return { status: 400, jsonBody: { ok: false, error: "نوع تقرير غير معروف." } };
-    } catch {
+    } catch (e) {
+      obs?.logError("reports.error", e);
       return { status: 500, jsonBody: { ok: false, error: "تعذر تجهيز التقرير حاليًا." } };
     }
 }
 
-app.http("reports", { methods: ["GET"], authLevel: "anonymous", route: "reports", handler });
+app.http("reports", { methods: ["GET"], authLevel: "anonymous", route: "reports", handler: withObservability("reports", handler) });
 module.exports = { handler };

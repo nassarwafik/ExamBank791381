@@ -1,4 +1,5 @@
 const { app } = require("@azure/functions");
+const { withObservability } = require("../lib/observability");
 const { requireActiveStudentSession } = require("../lib/student-auth");
 const { listJson, mutateJsonWithRetry, StorageConflictError } = require("../lib/platform-storage");
 const { FEED_PREFIX, REACTIONS, feedBlobName } = require("../lib/achievement-feed");
@@ -20,14 +21,13 @@ function myReaction(reactions, studentId) {
   return null;
 }
 
-app.http("achievementFeed", {
-  methods: ["GET", "POST"],
-  authLevel: "anonymous",
-  route: "achievement-feed",
-  handler: async request => {
+// `deps` is an optional dependency-injection seam for unit tests (production passes nothing, so the real
+// implementations are used); `obs` is the request context withObservability passes as the third argument.
+// Neither changes runtime behavior.
+async function handler(request, deps = {}, obs = null) {
     try {
       // Hardened session (§7): active/archived/authVersion validated; loaded student reused (no extra read).
-      const sess = await requireActiveStudentSession(request);
+      const sess = await (deps.requireActiveStudentSession || requireActiveStudentSession)(request, deps);
       if (!sess.ok) return sess.response;
       const container = sess.container;
       const student = sess.student;
@@ -82,8 +82,11 @@ app.http("achievementFeed", {
         throw e;
       }
       return { status: 200, jsonBody: { ok: true, reactionCounts: reactionCounts(updatedReactions), myReaction: myReaction(updatedReactions, studentId) } };
-    } catch {
+    } catch (e) {
+      obs?.logError("student.feed.error", e);
       return { status: 500, jsonBody: { ok: false, error: "تعذر تحميل إنجازات الصف حاليًا." } };
     }
-  }
-});
+}
+
+app.http("achievementFeed", { methods: ["GET", "POST"], authLevel: "anonymous", route: "achievement-feed", handler: withObservability("achievement-feed", handler) });
+module.exports = { handler };

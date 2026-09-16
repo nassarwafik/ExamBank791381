@@ -4,6 +4,7 @@
 // params, so a student can only ever see their own class's projects and can never point this at
 // another project/class/student. Returns projects:[] (one entry per supported project of the class).
 const { app } = require("@azure/functions");
+const { withObservability } = require("../lib/observability");
 const { requireActiveStudentSession } = require("../lib/student-auth");
 const { getContainer, downloadJsonOrNull } = require("../lib/platform-storage");
 const { getProjectDefinition, getStorageNamespace } = require("../lib/project-tracker/registry");
@@ -16,7 +17,7 @@ const USER_PREFIX = "platform/users/";
 
 // `deps` is an optional dependency-injection seam for unit tests (production passes nothing, so the real
 // implementations are used). It does not change runtime behavior.
-async function handler(request, deps = {}) {
+async function handler(request, deps = {}, obs = null) {
     try {
       // Hardened session (§7): active/archived/authVersion validated; loaded student reused (no extra read).
       const sess = await (deps.requireActiveStudentSession || requireActiveStudentSession)(request, deps);
@@ -57,10 +58,11 @@ async function handler(request, deps = {}) {
       }
 
       return { status: 200, jsonBody: { ok: true, enrolled: true, className: classroom.name, projects } };
-    } catch {
+    } catch (e) {
+      obs?.logError("student.projectTracker.error", e);
       return { status: 500, jsonBody: { ok: false, error: "تعذر تحميل مشروع الطالب حاليًا." } };
     }
 }
 
-app.http("studentProjectTracker", { methods: ["GET"], authLevel: "anonymous", route: "student-project-tracker", handler });
+app.http("studentProjectTracker", { methods: ["GET"], authLevel: "anonymous", route: "student-project-tracker", handler: withObservability("student-project-tracker", handler) });
 module.exports = { handler };

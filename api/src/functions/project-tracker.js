@@ -4,6 +4,7 @@
 // project.reset / template.update (POST). Storage is namespaced per project (794589 => legacy paths),
 // so a write to one project can never touch another. The dedicated project-794589 route stays as-is.
 const { app } = require("@azure/functions");
+const { withObservability } = require("../lib/observability");
 const { requireBuilderAuth } = require("../lib/builder-auth");
 const { getContainer, downloadJsonOrNull, uploadJson, listJson, listBlobNames, deleteBlob, mutateJsonWithRetry, StorageConflictError } = require("../lib/platform-storage");
 const { recordAuditEvent } = require("../lib/audit-log");
@@ -38,7 +39,7 @@ function studentDetailBody(projectCode, workDef, config, readOnly, student, prog
 
 // `deps` is an optional dependency-injection seam for unit tests (production passes nothing, so the real
 // implementations are used). It does not change runtime behavior.
-async function handler(request, deps = {}) {
+async function handler(request, deps = {}, obs = null) {
     const rec = deps.recordAuditEvent || recordAuditEvent;
     try {
       const auth = (deps.requireBuilderAuth || requireBuilderAuth)(request);
@@ -264,10 +265,11 @@ async function handler(request, deps = {}) {
       }
 
       return { status: 400, jsonBody: { ok: false, error: "إجراء غير معروف." } };
-    } catch {
+    } catch (e) {
+      obs?.logError("project.tracker.error", e);
       return { status: 500, jsonBody: { ok: false, error: "تعذر تنفيذ عملية متابعة المشروع حاليًا." } };
     }
 }
 
-app.http("projectTracker", { methods: ["GET", "POST"], authLevel: "anonymous", route: "project-tracker", handler });
+app.http("projectTracker", { methods: ["GET", "POST"], authLevel: "anonymous", route: "project-tracker", handler: withObservability("project-tracker", handler) });
 module.exports = { handler };

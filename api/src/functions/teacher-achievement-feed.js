@@ -1,4 +1,5 @@
 const { app } = require("@azure/functions");
+const { withObservability } = require("../lib/observability");
 const { requireBuilderAuth } = require("../lib/builder-auth");
 const { getContainer, listJson, mutateJsonWithRetry, StorageConflictError } = require("../lib/platform-storage");
 const { FEED_PREFIX, REACTIONS, feedBlobName } = require("../lib/achievement-feed");
@@ -14,15 +15,14 @@ function reactionCounts(reactions) {
   return out;
 }
 
-app.http("teacherAchievementFeed", {
-  methods: ["GET", "POST"],
-  authLevel: "anonymous",
-  route: "teacher-achievement-feed",
-  handler: async request => {
+// `deps` is an optional dependency-injection seam for unit tests (production passes nothing, so the real
+// implementations are used); `obs` is the request context withObservability passes as the third argument.
+// Neither changes runtime behavior.
+async function handler(request, deps = {}, obs = null) {
     try {
-      const auth = requireBuilderAuth(request);
+      const auth = (deps.requireBuilderAuth || requireBuilderAuth)(request);
       if (!auth.ok) return auth.response;
-      const container = getContainer();
+      const container = deps.container || (deps.getContainer || getContainer)();
 
       if (request.method === "GET") {
         const [posts, classes] = await Promise.all([
@@ -91,8 +91,11 @@ app.http("teacherAchievementFeed", {
       }
 
       return { status: 400, jsonBody: { ok: false, error: "Unsupported feed action." } };
-    } catch {
+    } catch (e) {
+      obs?.logError("teacher.feed.error", e);
       return { status: 500, jsonBody: { ok: false, error: "تعذر تنفيذ عملية الإشعارات حاليًا." } };
     }
-  }
-});
+}
+
+app.http("teacherAchievementFeed", { methods: ["GET", "POST"], authLevel: "anonymous", route: "teacher-achievement-feed", handler: withObservability("teacher-achievement-feed", handler) });
+module.exports = { handler };
