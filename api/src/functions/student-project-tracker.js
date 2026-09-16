@@ -14,14 +14,12 @@ const core = require("../lib/project-tracker/core");
 const CLASS_PREFIX = "platform/classes/";
 const USER_PREFIX = "platform/users/";
 
-app.http("studentProjectTracker", {
-  methods: ["GET"],
-  authLevel: "anonymous",
-  route: "student-project-tracker",
-  handler: async request => {
+// `deps` is an optional dependency-injection seam for unit tests (production passes nothing, so the real
+// implementations are used). It does not change runtime behavior.
+async function handler(request, deps = {}) {
     try {
       // Hardened session (§7): active/archived/authVersion validated; loaded student reused (no extra read).
-      const sess = await requireActiveStudentSession(request);
+      const sess = await (deps.requireActiveStudentSession || requireActiveStudentSession)(request, deps);
       if (!sess.ok) return sess.response;
       const container = sess.container;
       const now = new Date().toISOString();
@@ -62,5 +60,7 @@ app.http("studentProjectTracker", {
     } catch {
       return { status: 500, jsonBody: { ok: false, error: "تعذر تحميل مشروع الطالب حاليًا." } };
     }
-  }
-});
+}
+
+app.http("studentProjectTracker", { methods: ["GET"], authLevel: "anonymous", route: "student-project-tracker", handler });
+module.exports = { handler };

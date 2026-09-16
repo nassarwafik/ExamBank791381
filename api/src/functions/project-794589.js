@@ -74,15 +74,14 @@ async function loadProgressEntries(container, classId, students) {
   return students.map(s => ({ studentId: s.studentId, displayName: s.displayName, code: s.code, progress: byId.get(String(s.studentId)) || null }));
 }
 
-app.http("project794589", {
-  methods: ["GET", "POST"],
-  authLevel: "anonymous",
-  route: "project-794589",
-  handler: async request => {
+// `deps` is an optional dependency-injection seam for unit tests (production passes nothing, so the real
+// implementations are used). It does not change runtime behavior.
+async function handler(request, deps = {}) {
+    const rec = deps.recordAuditEvent || recordAuditEvent;
     try {
-      const auth = requireBuilderAuth(request);
+      const auth = (deps.requireBuilderAuth || requireBuilderAuth)(request);
       if (!auth.ok) return auth.response;
-      const container = getContainer();
+      const container = deps.container || (deps.getContainer || getContainer)();
       const now = new Date().toISOString();
 
       if (request.method === "GET") {
@@ -124,7 +123,9 @@ app.http("project794589", {
           const studentId = String(url.searchParams.get("studentId") || "").trim();
           if (!studentId) return { status: 400, jsonBody: { ok: false, error: "studentId مطلوب." } };
           const u = await downloadJsonOrNull(container, USER_PREFIX + studentId + ".json");
-          const belongs = u && u.role === "student" && String(u.classId || "") === String(classId);
+          // Canonical read-side membership (Roadmap #24): role student, NOT archived, in this class.
+          // A login-disabled student is still a member; an archived one is not (parity with project-tracker).
+          const belongs = isStudentClassMember(u, classId);
           const student = belongs
             ? { studentId: u.userId, displayName: u.displayName || (u.firstName + " " + u.familyName).trim(), code: u.code }
             : { studentId, displayName: "", code: "" };
@@ -202,7 +203,7 @@ app.http("project794589", {
         const progressBlobs = await listBlobNames(container, progressPrefixFor(classId));
         for (const name of progressBlobs) await deleteBlob(container, name);
         await deleteBlob(container, classConfigName(classId));
-        await recordAuditEvent(container, {
+        await rec(container, {
           actor: auth.user?.sub, action: "project.reset",
           targetType: "project-tracker", targetId: classId, targetLabel: classroom.name || "",
           details: { deletedProgressCount: progressBlobs.length }
@@ -219,6 +220,10 @@ app.http("project794589", {
         const studentId = String(body.studentId || "").trim();
         const stageId = String(body.stageId || "").trim();
         if (!studentId || !stageId) return { status: 400, jsonBody: { ok: false, error: "studentId وstageId مطلوبان." } };
+        // Membership check BEFORE any mutate (parity with the generic project-tracker route): an
+        // arbitrary/foreign/archived studentId can never create a ghost progress blob under this class.
+        const member = await downloadJsonOrNull(container, USER_PREFIX + studentId + ".json");
+        if (!isStudentClassMember(member, classId)) return { status: 404, jsonBody: { ok: false, error: "الطالب غير موجود في هذا الصف." } };
         const config = await ensureClassConfig(container, classroom);
         const stage = (config.stages || []).find(s => s.stageId === stageId && s.active === true);
         if (!stage) return { status: 400, jsonBody: { ok: false, error: "المرحلة غير موجودة أو غير مفعّلة." } };
@@ -233,7 +238,7 @@ app.http("project794589", {
           );
           const summary = core.buildStudentSummary(config, written, now);
           if (outcome.statusChanged) {
-            await recordAuditEvent(container, {
+            await rec(container, {
               actor: auth.user?.sub,
               action: outcome.toStatus === "approved" ? "project.stage.approve" : "project.stage.status_change",
               targetType: "project-stage", targetId: classId + "/" + studentId + "/" + stageId,
@@ -241,7 +246,7 @@ app.http("project794589", {
             });
           }
           if (outcome.noteChanged) {
-            await recordAuditEvent(container, {
+            await rec(container, {
               actor: auth.user?.sub, action: "project.stage.note",
               targetType: "project-stage", targetId: classId + "/" + studentId + "/" + stageId, targetLabel: stage.title
             });
@@ -280,7 +285,7 @@ app.http("project794589", {
             config.updatedAt = now;
             return config;
           });
-          await recordAuditEvent(container, {
+          await rec(container, {
             actor: auth.user?.sub, action: "project.template.update",
             targetType: "project-template", targetId: classId, targetLabel: classroom.name || ""
           });
@@ -295,5 +300,7 @@ app.http("project794589", {
     } catch {
       return { status: 500, jsonBody: { ok: false, error: "تعذر تنفيذ عملية متابعة المشروع حاليًا." } };
     }
-  }
-});
+}
+
+app.http("project794589", { methods: ["GET", "POST"], authLevel: "anonymous", route: "project-794589", handler });
+module.exports = { handler };

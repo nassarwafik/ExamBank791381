@@ -12,23 +12,26 @@ describe("buildNewClassroomDocument - creating a class with a name already used 
   });
 });
 
-describe("buildNewClassroomDocument - optional programCode (backward compatible)", () => {
+describe("buildNewClassroomDocument - optional programCode (canonical programCodes[] shape)", () => {
   const now = "2027-08-01T00:00:00.000Z";
-  it("omits programCode entirely when none is given (legacy shape unchanged)", () => {
+  it("never writes the legacy scalar; no project => canonical empty programCodes []", () => {
     const doc = buildNewClassroomDocument({ name: "الثاني عشر 8", grade: "12", schoolYear: "2026-2027" }, now);
     expect("programCode" in doc).toBe(false);
+    expect(doc.programCodes).toEqual([]);
   });
-  it("stores programCode when provided", () => {
+  it("stores a provided programCode as canonical programCodes [code]", () => {
     const doc = buildNewClassroomDocument({ name: "الثاني عشر 8", grade: "12", schoolYear: "2026-2027", programCode: "794589" }, now);
-    expect(doc.programCode).toBe("794589");
+    expect(doc.programCodes).toEqual(["794589"]);
+    expect("programCode" in doc).toBe(false);
   });
   it("stores each supported project code (899373, 883589) as given", () => {
-    expect(buildNewClassroomDocument({ name: "x", grade: "12", schoolYear: "2026-2027", programCode: "899373" }, now).programCode).toBe("899373");
-    expect(buildNewClassroomDocument({ name: "y", grade: "12", schoolYear: "2026-2027", programCode: "883589" }, now).programCode).toBe("883589");
+    expect(buildNewClassroomDocument({ name: "x", grade: "12", schoolYear: "2026-2027", programCode: "899373" }, now).programCodes).toEqual(["899373"]);
+    expect(buildNewClassroomDocument({ name: "y", grade: "12", schoolYear: "2026-2027", programCode: "883589" }, now).programCodes).toEqual(["883589"]);
   });
   it("treats an empty/whitespace programCode as none", () => {
     const doc = buildNewClassroomDocument({ name: "x", grade: "12", schoolYear: "2026-2027", programCode: "  " }, now);
     expect("programCode" in doc).toBe(false);
+    expect(doc.programCodes).toEqual([]);
   });
 });
 
