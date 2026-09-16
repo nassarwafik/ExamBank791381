@@ -1,14 +1,17 @@
-import {useEffect,useMemo,useRef,useState,Fragment} from "react";
+import {useEffect,useMemo,useRef,useState} from "react";
 import AssignmentsPanel from "./AssignmentsPanel";
 import AssignmentReview from "./AssignmentReview";
 import TeacherDashboard from "./TeacherDashboard";
 import AuditHistoryPanel from "./AuditHistoryPanel";
 import {parseBulkStudents} from "./bulkStudentsParse";
-import {IconSearch,IconDownload,IconUpload,IconPlus,IconChevronDown,IconMore,IconUser,IconEdit,IconCopy,IconKey,IconTrash,IconClose,IconMedal} from "./icons";
-import {MEDAL_COLORS,MEDAL_LABELS,medalTier} from "./medals";
 import {normalizeClassStatus} from "./classLifecycle";
 import {getClassProgramCodes} from "./projects/classPrograms";
-import {resolveGradingStatus,type GradingStatus} from "./gradingStatus";
+import {useConfirm} from "./ui/useConfirm";
+import ClassesPane from "./students/ClassesPane";
+import RosterPane from "./students/RosterPane";
+import StudentDialog from "./students/StudentDialog";
+import {CreateClassDialog,AddStudentDialog,ImportStudentsDialog,EditStudentDialog} from "./students/StudentForms";
+import type {ClassArchiveView,Classroom,ProjectOption,Student,Credential,BulkStudent,BulkError,ImportPreviewRow,SubmittedAssignment,StudentProfile,SortKey,StatusFilter,ProfileSection} from "./students/types";
 import {type CredentialBatch,openCredentialBatch,toggleCredentialBatchCollapsed,credentialBatchVisible,buildCredentialsDownload} from "./credentialBatch";
 import {appendStudentRow,mergeStudentRow,removeStudentRow,pruneSelectedIds,needsAuthoritativeReload} from "./rosterPatch";
 
@@ -16,39 +19,13 @@ type WorkspaceTab="dashboard"|"students"|"assignments"|"audit";
 // onCopyLibraryExamToBuilder: forwarded straight to AssignmentsPanel; the snapshot is typed loosely
 // here (App owns the real ExamDraft type) to avoid a value/type import coupling to App.tsx.
 type TeacherPlatformProps={token:string;currentExam:unknown|null;workspaceTab:WorkspaceTab;onCopyLibraryExamToBuilder?:(examSnapshot:any,title:string)=>void};
-type ClassArchiveView="active"|"archived";
-type Classroom={classId:string;name:string;grade:string;schoolYear:string;programCode?:string;programCodes?:string[];active:boolean;status?:string;archivedAt?:string;archivedBy?:string;archiveReason?:string;graduationYear?:string;studentCount:number;createdAt:string};
-
-type ProjectOption={projectCode:string;title:string};
-type Student={userId:string;code:string;identityNumber:string;firstName:string;familyName:string;displayName:string;classId:string;active:boolean;archived:boolean;createdAt:string;updatedAt:string;lastLoginAt:string;submittedAssignmentsCount:number;likesCount:number};
-type Credential={userId?:string;firstName?:string;familyName?:string;displayName?:string;code:string;identityNumber?:string;password:string};
-type BulkStudent={firstName:string;familyName:string;identityNumber:string};
-type BulkError={index?:number;firstName?:string;familyName?:string;identityNumber?:string;displayName?:string;code?:string;error:string;userId?:string};
-type ImportPreviewRow={index:number;firstName:string;familyName:string;identityNumber:string;status:"valid"|"duplicate"|"invalid";error:string;existingStudent?:{userId:string;displayName:string;classId:string;className:string;active:boolean;archived:boolean}|null};
-type SubmittedAssignment={assignmentId:string;title:string;submittedAt:string;latestAttemptNumber:number;attemptsUsed:number;allowedAttempts:number;score:number;totalMarks:number;percentage:number;gradingStatus?:GradingStatus;finalized?:boolean;isCurrentClassAssignment:boolean;dueAt:string;dueAtOverride:string|null;effectiveDueAt:string};
-type StudentProfile={
- student:Student;
- classroom:{classId:string;name:string;grade:string;schoolYear:string}|null;
- stats:{assigned:number;completed:number;pending:number;average:number|null;lastLoginAt:string};
- assignments:Array<{assignmentId:string;title:string;status:string;dueAt:string;totalMarks:number;attemptsUsed:number;latestScore:number|null;latestPercentage:number|null;submittedAt:string;gradingStatus?:GradingStatus;finalized?:boolean}>;
- submittedAssignmentsCount:number;
- submittedAssignments:SubmittedAssignment[];
-};
 type ApiError={ok?:boolean;error?:string};
-type SortKey="firstName"|"familyName"|"identityNumber"|"status";
-type StatusFilter="all"|"active"|"disabled"|"archived";
+type WorkspaceDialog="none"|"createClass"|"addStudent"|"import";
 
 const onlyDigits=(value:string)=>value.replace(/\D/g,"").slice(0,9);
 const validIdentity=(value:string)=>/^\d{9}$/.test(value);
 const fmtDate=(value:string)=>value?new Date(value).toLocaleString("ar"):"—";
 const toLocalInput=(iso:string)=>{if(!iso)return "";const d=new Date(iso);return new Date(d.getTime()-d.getTimezoneOffset()*60000).toISOString().slice(0,16)};
-function medalItemsFor(assignments:StudentProfile["assignments"]){
- return assignments
-  .filter(a=>a.latestPercentage!==null)
-  .map(a=>({assignmentId:a.assignmentId,title:a.title,submittedAt:a.submittedAt,tier:medalTier(a.latestPercentage as number)}))
-  .filter((item):item is {assignmentId:string;title:string;submittedAt:string;tier:"gold"|"silver"|"bronze"}=>item.tier!==null);
-}
-
 function splitName(value:unknown){
  const parts=String(value??"").trim().split(/\s+/).filter(Boolean);
  return {firstName:parts.shift()||"",familyName:parts.join(" ")};
@@ -125,8 +102,10 @@ function TeacherPlatform({token,currentExam,workspaceTab,onCopyLibraryExamToBuil
  const [passwordReveal,setPasswordReveal]=useState<{password:string;secondsLeft:number}|null>(null);
  const passwordRevealTimer=useRef<number|null>(null);
 
- const [history,setHistory]=useState<StudentProfile|null>(null);
- const [historyBusy,setHistoryBusy]=useState(false);
+ const [profileSection,setProfileSection]=useState<ProfileSection>("summary");
+ const [dialog,setDialog]=useState<WorkspaceDialog>("none");
+ // UX-4: accessible confirm dialog with the awaited adapter — same messages and gating order as the old synchronous browser confirm.
+ const {confirm,cancelPending,confirmDialog}=useConfirm();
  const [reviewTarget,setReviewTarget]=useState<{assignmentId:string;studentId:string;attemptNumber:number}|null>(null);
  const [historyDeadlineFor,setHistoryDeadlineFor]=useState<string|null>(null);
  const [historyDeadlineValue,setHistoryDeadlineValue]=useState("");
@@ -212,7 +191,7 @@ function TeacherPlatform({token,currentExam,workspaceTab,onCopyLibraryExamToBuil
  }
 
  // Roadmap #32: the authoritative fallback after a single-row mutation whose response cannot be patched locally
- // (rosterSynced:false, incomplete/unexpected body), and the manual ↻ refresh. ORDER MATTERS and is sequential:
+ // (rosterSynced:false, incomplete/unexpected body), and the manual refresh. ORDER MATTERS and is sequential:
  // the roster read first (it repairs the class count index on the server), THEN the classes read, so the
  // repaired studentCount is what the class cards show. Never Promise.all here.
  async function reloadAuthoritative(classId:string){
@@ -237,7 +216,7 @@ function TeacherPlatform({token,currentExam,workspaceTab,onCopyLibraryExamToBuil
  useEffect(()=>{teacherApi<{projects?:ProjectOption[]}>("/api/project-tracker?resource=projects").then(r=>setPrograms(r.projects||[])).catch(()=>setPrograms([]));},[]);// eslint-disable-line react-hooks/exhaustive-deps
  useEffect(()=>{
   selectedClassRef.current=selectedClassId;
-  setSelectedIds([]);setProfile(null);setEditingStudent(null);setHistory(null);setReviewTarget(null);clearPasswordReveal();
+  setSelectedIds([]);setProfile(null);setEditingStudent(null);setReviewTarget(null);setHistoryDeadlineFor(null);setDialog("none");cancelPending();clearPasswordReveal();
   // Single-student credential box + bulk errors are cleared so a plaintext password / error never shows
   // under a different class. The bulk credentialBatch is NOT cleared here — it stays in memory and is
   // simply HIDDEN unless its owning class is selected again (avoids accidental loss on a stray click).
@@ -245,12 +224,6 @@ function TeacherPlatform({token,currentExam,workspaceTab,onCopyLibraryExamToBuil
   if(selectedClassId)void loadStudents(selectedClassId);else setStudents([]);
  },[selectedClassId]);
  useEffect(()=>()=>{if(passwordRevealTimer.current)window.clearInterval(passwordRevealTimer.current)},[]);
- useEffect(()=>{
-  if(!(profile||editingStudent||history))return;
-  function onKey(e:KeyboardEvent){if(e.key==="Escape"){setProfile(null);setEditingStudent(null);setHistory(null);setHistoryDeadlineFor(null)}}
-  window.addEventListener("keydown",onKey);
-  return()=>window.removeEventListener("keydown",onKey);
- },[profile,editingStudent,history]);
 
  function clearPasswordReveal(){
   if(passwordRevealTimer.current){window.clearInterval(passwordRevealTimer.current);passwordRevealTimer.current=null}
@@ -276,7 +249,7 @@ function TeacherPlatform({token,currentExam,workspaceTab,onCopyLibraryExamToBuil
   setActionBusy(true);setError("");setNotice("");
   try{
    const result=await teacherApi<{ok:true;classroom:Classroom}>("/api/classrooms",{method:"POST",body:JSON.stringify({action:"create",name:newClassName.trim(),grade:newClassGrade.trim(),schoolYear:newSchoolYear.trim()})});
-   setNewClassName("");setNewClassGrade("");
+   setNewClassName("");setNewClassGrade("");setDialog("none");
    await loadClasses(false);
    setSelectedClassId(result.classroom.classId);
    setNotice("✓ تم إنشاء الصف.");
@@ -293,15 +266,15 @@ function TeacherPlatform({token,currentExam,workspaceTab,onCopyLibraryExamToBuil
   const next=enable?[...current,code]:current.filter(c=>c!==code);
   if(enable){
    // Adding is low-friction — a light confirm only.
-   if(!window.confirm("إضافة "+projectTitle(code)+" للصف \""+classroom.name+"\"؟\nلن تتأثر بيانات المشاريع الأخرى."))return;
+   if(!(await confirm({message:"إضافة "+projectTitle(code)+" للصف \""+classroom.name+"\"؟\nلن تتأثر بيانات المشاريع الأخرى.",confirmLabel:"إضافة"})))return;
   }else{
-   if(!window.confirm("سيتم إخفاء "+projectTitle(code)+" عن هذا الصف.\nلن تُحذف بيانات التقدم أو إعدادات المشروع، ويمكن إعادته لاحقًا."))return;
+   if(!(await confirm({message:"سيتم إخفاء "+projectTitle(code)+" عن هذا الصف.\nلن تُحذف بيانات التقدم أو إعدادات المشروع، ويمكن إعادته لاحقًا.",confirmLabel:"إزالة"})))return;
   }
   setActionBusy(true);setError("");setNotice("");
   try{
    await teacherApi("/api/classrooms",{method:"POST",body:JSON.stringify({action:"setPrograms",classId:classroom.classId,programCodes:next})});
    await loadClasses();
-   setNotice(enable?("✓ تمت إضافة "+projectTitle(code)+" للصف. افتحه من 📡 المشاريع."):("✓ تمت إزالة "+projectTitle(code)+" من الصف (البيانات محفوظة)."));
+   setNotice(enable?("✓ تمت إضافة "+projectTitle(code)+" للصف. افتحه من قسم المشاريع."):("✓ تمت إزالة "+projectTitle(code)+" من الصف (البيانات محفوظة)."));
   }catch(e){setError(e instanceof Error?e.message:"تعذر تعديل مشاريع الصف.")}
   finally{setActionBusy(false)}
  }
@@ -311,7 +284,8 @@ function TeacherPlatform({token,currentExam,workspaceTab,onCopyLibraryExamToBuil
   const message=archiving
    ?"أرشفة الصف "+classroom.name+"؟\n\nسيُنقل إلى الأرشيف مع الاحتفاظ بجميع الطلاب والواجبات والنتائج. لن يتم حذف أي بيانات."
    :"إعادة تفعيل الصف "+classroom.name+"؟";
-  if(actionBusy||!window.confirm(message))return;
+  if(actionBusy)return;
+  if(!(await confirm({message,confirmLabel:archiving?"أرشفة":"تفعيل"})))return;
   setActionBusy(true);setError("");setNotice("");
   try{
    await teacherApi("/api/classrooms",{method:"POST",body:JSON.stringify({action:archiving?"archive":"unarchive",classId:classroom.classId})});
@@ -323,7 +297,8 @@ function TeacherPlatform({token,currentExam,workspaceTab,onCopyLibraryExamToBuil
 
  async function graduateAndArchiveClass(classroom:Classroom){
   const message="سيتم نقل الصف إلى الأرشيف مع الاحتفاظ بجميع الطلاب والواجبات والنتائج. لن يتم حذف أي بيانات.";
-  if(actionBusy||!window.confirm(message))return;
+  if(actionBusy)return;
+  if(!(await confirm({message,title:"تخريج وأرشفة الصف",confirmLabel:"تخريج وأرشفة"})))return;
   setActionBusy(true);setError("");setNotice("");
   try{
    await teacherApi("/api/classrooms",{method:"POST",body:JSON.stringify({action:"graduateAndArchive",classId:classroom.classId})});
@@ -342,7 +317,7 @@ function TeacherPlatform({token,currentExam,workspaceTab,onCopyLibraryExamToBuil
     action:"create",classId:sourceClassId,firstName:newFirstName.trim(),familyName:newFamilyName.trim(),identityNumber:newIdentityNumber,password:newStudentPassword
    })});
    setCredentialBox({name:result.student?.displayName||"",identityNumber:result.student?.identityNumber||newIdentityNumber,password:result.temporaryPassword});
-   setNewFirstName("");setNewFamilyName("");setNewIdentityNumber("");setNewStudentPassword("");
+   setNewFirstName("");setNewFamilyName("");setNewIdentityNumber("");setNewStudentPassword("");setDialog("none");
    // Roadmap #32: append the server-returned student locally (counters start at 0); the class count changed, so
    // the classes list is refreshed. Anything ambiguous takes the authoritative reload instead.
    if(needsAuthoritativeReload("create",result,sourceClassId)||!result.student)await reloadAuthoritative(sourceClassId);
@@ -388,7 +363,8 @@ function TeacherPlatform({token,currentExam,workspaceTab,onCopyLibraryExamToBuil
   const message=student.archived
    ?"استعادة الطالب "+student.displayName+" إلى الصف وتفعيل حسابه؟"
    :"أرشفة الطالب "+student.displayName+"؟\n\nسيُزال من عدد طلاب الصف الفعّالين ويُمنع من تسجيل الدخول، مع الاحتفاظ ببياناته ونتائجه.";
-  if(actionBusy||!window.confirm(message))return;
+  if(actionBusy)return;
+  if(!(await confirm({message,confirmLabel:student.archived?"استعادة":"أرشفة"})))return;
   setActionBusy(true);setError("");setNotice("");
   try{
    const sourceClassId=selectedClassId;
@@ -407,13 +383,12 @@ function TeacherPlatform({token,currentExam,workspaceTab,onCopyLibraryExamToBuil
 
  async function deleteStudent(student:Student){
   const identity=student.identityNumber||student.code;
-  const confirmed=window.confirm(
-   "⚠️ حذف نهائي\n\n"+
+  const confirmed=await confirm({tone:"danger",title:"حذف نهائي",confirmLabel:"حذف نهائي",message:
    "الطالب: "+student.displayName+"\n"+
    "رقم الهوية: "+identity+"\n\n"+
    "سيتم حذف حساب الطالب وبياناته الأساسية نهائيًا وإزالته من الصف. "+
    "استخدم الأرشفة بدل الحذف إذا أردت الاحتفاظ بالحساب.\n\nهل أنت متأكد؟"
-  );
+  });
   if(actionBusy||!confirmed)return;
   setActionBusy(true);setError("");setNotice("");
   try{
@@ -441,6 +416,7 @@ function TeacherPlatform({token,currentExam,workspaceTab,onCopyLibraryExamToBuil
   setEditClassId(student.classId);
   setEditPassword("");
   setCredentialBox(null);setError("");setNotice("");
+  setProfile(null);setDialog("none");
  }
 
  async function saveStudentEdit(){
@@ -500,7 +476,7 @@ function TeacherPlatform({token,currentExam,workspaceTab,onCopyLibraryExamToBuil
  async function importBulkStudents(){
   const validRows=importPreview.filter(x=>x.status==="valid");
   if(!selectedClassId||!validRows.length||actionBusy)return;
-  if(!confirmReplaceCredentialBatch())return;
+  if(!(await confirmReplaceCredentialBatch()))return;
   setActionBusy(true);setError("");setNotice("");setBulkErrors([]);
   try{
    const payload=validRows.map(x=>({firstName:x.firstName,familyName:x.familyName,identityNumber:x.identityNumber}));
@@ -511,16 +487,16 @@ function TeacherPlatform({token,currentExam,workspaceTab,onCopyLibraryExamToBuil
    setBulkErrors(result.errors||[]);
    await Promise.all([loadStudents(selectedClassId),loadClasses()]);
    setNotice(withRosterNote(result,"✓ تم استيراد "+result.imported+" طالبًا"+(result.failed?"، وتعذر استيراد "+result.failed+".":".")));
-   setBulkStudents([]);setBulkFileName("");setImportPreview([]);
+   setBulkStudents([]);setBulkFileName("");setImportPreview([]);setDialog("none");
   }catch(e){setError(e instanceof Error?e.message:"تعذر استيراد الطلاب.")}
   finally{setActionBusy(false)}
  }
 
  // Open a new credential batch, capturing the class AT GENERATION TIME (never derived later). Warns
  // before replacing an existing, not-yet-closed batch so the teacher can download it first.
- function confirmReplaceCredentialBatch(){
+ async function confirmReplaceCredentialBatch():Promise<boolean>{
   if(credentialBatch&&credentialBatch.credentials.length){
-   return window.confirm("يوجد لديك قائمة كلمات مرور لم تُغلق بعد للصف «"+(credentialBatch.className||"")+"». إنشاء قائمة جديدة سيستبدلها.");
+   return confirm({message:"يوجد لديك قائمة كلمات مرور لم تُغلق بعد للصف «"+(credentialBatch.className||"")+"». إنشاء قائمة جديدة سيستبدلها.",confirmLabel:"استبدال القائمة"});
   }
   return true;
  }
@@ -528,8 +504,8 @@ function TeacherPlatform({token,currentExam,workspaceTab,onCopyLibraryExamToBuil
   setCredentialBatch(openCredentialBatch(selectedClassId,selectedClass?.name||"",credentials));
  }
  // Explicit close: discards ONLY the temporary UI batch (no students/passwords/backend changes).
- function discardCredentialBatch(){
-  if(!window.confirm("بعد إغلاق هذه القائمة لن تتمكن من عرض كلمات المرور الحالية كنص واضح مرة أخرى. هل تريد المتابعة؟"))return;
+ async function discardCredentialBatch(){
+  if(!(await confirm({message:"بعد إغلاق هذه القائمة لن تتمكن من عرض كلمات المرور الحالية كنص واضح مرة أخرى. هل تريد المتابعة؟",confirmLabel:"إغلاق القائمة"})))return;
   setCredentialBatch(null);
  }
 
@@ -558,7 +534,7 @@ function TeacherPlatform({token,currentExam,workspaceTab,onCopyLibraryExamToBuil
  }
 
  async function openProfile(student:Student){
-  clearPasswordReveal();
+  clearPasswordReveal();setProfileSection("summary");setEditingStudent(null);setDialog("none");
   setProfileBusy(true);setError("");
   try{
    const result=await teacherApi<{ok:true;profile:StudentProfile}>("/api/students?profileUserId="+encodeURIComponent(student.userId));
@@ -569,7 +545,7 @@ function TeacherPlatform({token,currentExam,workspaceTab,onCopyLibraryExamToBuil
 
  async function resetProfilePassword(){
   if(!profile||actionBusy)return;
-  if(!window.confirm("سيتم إنشاء كلمة مرور جديدة للطالب، ولن تعمل كلمة المرور القديمة. هل تريد المتابعة؟"))return;
+  if(!(await confirm({message:"سيتم إنشاء كلمة مرور جديدة للطالب، ولن تعمل كلمة المرور القديمة. هل تريد المتابعة؟",confirmLabel:"إنشاء كلمة مرور"})))return;
   setActionBusy(true);setError("");
   try{
    const result=await teacherApi<{ok:true;temporaryPassword:string}>("/api/students",{method:"POST",body:JSON.stringify({action:"resetPassword",userId:profile.student.userId})});
@@ -579,20 +555,21 @@ function TeacherPlatform({token,currentExam,workspaceTab,onCopyLibraryExamToBuil
  }
 
  async function openHistory(userId:string){
-  setHistoryBusy(true);setError("");
+  clearPasswordReveal();setProfileSection("history");setEditingStudent(null);setDialog("none");
+  setProfileBusy(true);setError("");
   try{
    const result=await teacherApi<{ok:true;profile:StudentProfile}>("/api/students?profileUserId="+encodeURIComponent(userId));
-   setHistory(result.profile);
+   setProfile(result.profile);
   }catch(e){setError(e instanceof Error?e.message:"تعذر تحميل سجل الوظائف.")}
-  finally{setHistoryBusy(false)}
+  finally{setProfileBusy(false)}
  }
 
  async function historyAllowRetry(item:SubmittedAssignment){
-  if(!history||actionBusy)return;
+  if(!profile||actionBusy)return;
   setActionBusy(true);setError("");
   try{
-   const result=await teacherApi<{ok:true;allowedAttempts:number}>("/api/assignment-results",{method:"POST",body:JSON.stringify({action:"allowRetry",assignmentId:item.assignmentId,studentId:history.student.userId})});
-   setHistory(h=>h?{...h,submittedAssignments:h.submittedAssignments.map(x=>x.assignmentId===item.assignmentId?{...x,allowedAttempts:result.allowedAttempts}:x)}:h);
+   const result=await teacherApi<{ok:true;allowedAttempts:number}>("/api/assignment-results",{method:"POST",body:JSON.stringify({action:"allowRetry",assignmentId:item.assignmentId,studentId:profile.student.userId})});
+   setProfile(h=>h?{...h,submittedAssignments:h.submittedAssignments.map(x=>x.assignmentId===item.assignmentId?{...x,allowedAttempts:result.allowedAttempts}:x)}:h);
    setNotice("✓ تم السماح بمحاولة إضافية.");
   }catch(e){setError(e instanceof Error?e.message:"تعذر السماح بالمحاولة.")}
   finally{setActionBusy(false)}
@@ -603,11 +580,11 @@ function TeacherPlatform({token,currentExam,workspaceTab,onCopyLibraryExamToBuil
  }
 
  async function saveHistoryDeadline(item:SubmittedAssignment){
-  if(!history||!historyDeadlineValue||actionBusy)return;
+  if(!profile||!historyDeadlineValue||actionBusy)return;
   setActionBusy(true);setError("");
   try{
-   const result=await teacherApi<{ok:true;dueAtOverride:string|null}>("/api/assignment-results",{method:"POST",body:JSON.stringify({action:"setDueAtOverride",assignmentId:item.assignmentId,studentId:history.student.userId,dueAtOverride:new Date(historyDeadlineValue).toISOString()})});
-   setHistory(h=>h?{...h,submittedAssignments:h.submittedAssignments.map(x=>x.assignmentId===item.assignmentId?{...x,dueAtOverride:result.dueAtOverride,effectiveDueAt:result.dueAtOverride||x.dueAt}:x)}:h);
+   const result=await teacherApi<{ok:true;dueAtOverride:string|null}>("/api/assignment-results",{method:"POST",body:JSON.stringify({action:"setDueAtOverride",assignmentId:item.assignmentId,studentId:profile.student.userId,dueAtOverride:new Date(historyDeadlineValue).toISOString()})});
+   setProfile(h=>h?{...h,submittedAssignments:h.submittedAssignments.map(x=>x.assignmentId===item.assignmentId?{...x,dueAtOverride:result.dueAtOverride,effectiveDueAt:result.dueAtOverride||x.dueAt}:x)}:h);
    setHistoryDeadlineFor(null);
    setNotice("✓ تم تمديد الموعد.");
   }catch(e){setError(e instanceof Error?e.message:"تعذر حفظ التمديد.")}
@@ -615,11 +592,11 @@ function TeacherPlatform({token,currentExam,workspaceTab,onCopyLibraryExamToBuil
  }
 
  async function clearHistoryDeadline(item:SubmittedAssignment){
-  if(!history||actionBusy)return;
+  if(!profile||actionBusy)return;
   setActionBusy(true);setError("");
   try{
-   const result=await teacherApi<{ok:true;dueAtOverride:string|null}>("/api/assignment-results",{method:"POST",body:JSON.stringify({action:"setDueAtOverride",assignmentId:item.assignmentId,studentId:history.student.userId,dueAtOverride:null})});
-   setHistory(h=>h?{...h,submittedAssignments:h.submittedAssignments.map(x=>x.assignmentId===item.assignmentId?{...x,dueAtOverride:result.dueAtOverride,effectiveDueAt:x.dueAt}:x)}:h);
+   const result=await teacherApi<{ok:true;dueAtOverride:string|null}>("/api/assignment-results",{method:"POST",body:JSON.stringify({action:"setDueAtOverride",assignmentId:item.assignmentId,studentId:profile.student.userId,dueAtOverride:null})});
+   setProfile(h=>h?{...h,submittedAssignments:h.submittedAssignments.map(x=>x.assignmentId===item.assignmentId?{...x,dueAtOverride:result.dueAtOverride,effectiveDueAt:x.dueAt}:x)}:h);
    setHistoryDeadlineFor(null);
    setNotice("✓ تم إلغاء التمديد.");
   }catch(e){setError(e instanceof Error?e.message:"تعذر إلغاء التمديد.")}
@@ -644,13 +621,13 @@ function TeacherPlatform({token,currentExam,workspaceTab,onCopyLibraryExamToBuil
   if(operation==="move"&&!bulkTargetClassId){setError("اختر الصف الهدف أولًا.");return}
 
   let question="";
-  if(operation==="delete")question="⚠️ حذف نهائي لـ "+count+" طالب؟\n\nالأرشفة أكثر أمانًا إذا كنت تريد الاحتفاظ بالبيانات.";
+  if(operation==="delete")question="حذف نهائي لـ "+count+" طالب؟\n\nالأرشفة أكثر أمانًا إذا كنت تريد الاحتفاظ بالبيانات.";
   else if(operation==="archive")question="أرشفة "+count+" طالب مع منع تسجيل الدخول والاحتفاظ بالبيانات؟";
   else if(operation==="unarchive")question="استعادة "+count+" طالب من الأرشيف وتفعيل حساباتهم؟";
   else if(operation==="resetpasswords")question="إنشاء كلمات مرور جديدة لـ "+count+" طالب؟ ستظهر الكلمات الجديدة مرة واحدة بعد العملية.";
   else if(operation==="move")question="نقل "+count+" طالب إلى الصف المختار؟";
-  if(question&&!window.confirm(question))return;
-  if(operation==="resetpasswords"&&!confirmReplaceCredentialBatch())return;
+  if(question&&!(await confirm({message:question,tone:operation==="delete"?"danger":"default",confirmLabel:operation==="delete"?"حذف نهائي":"تأكيد"})))return;
+  if(operation==="resetpasswords"&&!(await confirmReplaceCredentialBatch()))return;
 
   setActionBusy(true);setError("");setNotice("");setBulkErrors([]);
   try{
@@ -667,297 +644,78 @@ function TeacherPlatform({token,currentExam,workspaceTab,onCopyLibraryExamToBuil
   finally{setActionBusy(false)}
  }
 
- function sortButton(key:SortKey,label:string){
-  return <button className="student-sort-button" onClick={()=>{if(sortKey===key)setSortAsc(x=>!x);else{setSortKey(key);setSortAsc(true)}}}>
-   {label} {sortKey===key?(sortAsc?"↑":"↓"):"↕"}
-  </button>;
- }
+ function toggleSort(key:SortKey){if(sortKey===key)setSortAsc(x=>!x);else{setSortKey(key);setSortAsc(true)}}
+ function openImportDialog(){setBulkStudents([]);setBulkErrors([]);setImportPreview([]);setBulkFileName("");setDialog("import")}
 
  if(workspaceTab==="dashboard")return <section className="teacher-platform" dir="rtl"><div className="teacher-platform-inner"><TeacherDashboard token={token}/></div></section>;
  if(workspaceTab==="audit")return <AuditHistoryPanel token={token}/>;
  if(workspaceTab==="assignments")return <section className="teacher-platform" dir="rtl"><div className="teacher-platform-inner"><section className="teacher-assignment-heading"><span className="platform-eyebrow">Assignments</span><h2>الواجبات والاختبارات المرسلة</h2><p>إنشاء الواجبات، متابعة التسليمات، التصحيح والنتائج.</p></section><AssignmentsPanel token={token} classes={classes} currentExam={currentExam} onCopyLibraryExamToBuilder={onCopyLibraryExamToBuilder}/></div></section>;
 
- const selectedCount=selectedIds.length;
- const previewValid=importPreview.filter(x=>x.status==="valid").length;
- const previewDuplicates=importPreview.filter(x=>x.status==="duplicate").length;
- const previewInvalid=importPreview.filter(x=>x.status==="invalid").length;
+ const classActive=selectedClass?isActiveClass(selectedClass):false;
+ const canCreateStudent=Boolean(newFirstName.trim()&&newFamilyName.trim()&&validIdentity(newIdentityNumber));
+ const canSaveEdit=Boolean(editFirstName.trim()&&editFamilyName.trim()&&validIdentity(editIdentityNumber)&&editClassId);
+ const visibleBatch=credentialBatch&&credentialBatchVisible(credentialBatch,selectedClassId)?credentialBatch:null;
 
- return <section className="teacher-platform" dir="rtl"><div className="teacher-platform-inner">
-  <section className="platform-hero">
-   <div><span className="platform-eyebrow">ExamBank 2.0I</span><h2>إدارة الطلاب المتقدمة</h2><p>بحث وفرز، عمليات جماعية، معاينة استيراد، أرشفة، ملف طالب، علامات وتصدير.</p></div>
-   <div className="platform-hero-stat"><strong>{classes.filter(isActiveClass).length}</strong><span>صفوف فعّالة</span></div>
-  </section>
+ return <section className="teacher-platform eb-students-workspace" dir="rtl"><div className="teacher-platform-inner">
+  {error&&<div className="platform-error" role="alert">{error}</div>}
+  {notice&&<div className="platform-notice" role="status" aria-live="polite">{notice}</div>}
 
-  {error&&<div className="platform-error">{error}</div>}
-  {notice&&<div className="platform-notice">{notice}</div>}
+  <div className="eb-students-layout">
+   <ClassesPane
+    classes={visibleClasses} view={classArchiveView} onViewChange={setClassArchiveView}
+    activeCount={activeClasses.length} archivedCount={archivedClasses.length}
+    selectedClassId={selectedClassId} onSelect={setSelectedClassId}
+    projects={projects} projectTitle={projectTitle} isGraduationEligible={isGraduationEligible}
+    onToggleProject={(classroom,code,enable)=>void toggleClassProject(classroom,code,enable)}
+    onToggleArchive={classroom=>void toggleClassArchive(classroom)} onGraduate={classroom=>void graduateAndArchiveClass(classroom)}
+    onCreate={()=>setDialog("createClass")} onRefresh={()=>void reloadAuthoritative(selectedClassId)}
+    loading={loading} busy={actionBusy} fmtDate={fmtDate}/>
 
-  {credentialBox&&<section className="credential-box">
-   <div><span className="platform-eyebrow">بيانات دخول جديدة</span><h3>{credentialBox.name}</h3></div>
-   <div className="credential-values">
-    <div><span>رقم الهوية / الدخول</span><strong>{credentialBox.identityNumber}</strong></div>
-    <div><span>كلمة المرور</span><strong>{credentialBox.password}</strong></div>
-   </div>
-   <div className="student-row-actions">
-    <button onClick={()=>void copyText(credentialText(credentialBox.name,credentialBox.identityNumber,credentialBox.password),"✓ تم نسخ بيانات الدخول.")}>📋 نسخ بيانات الدخول</button>
-    <button onClick={()=>setCredentialBox(null)}>إخفاء</button>
-   </div>
-  </section>}
-
-  <div className="platform-grid">
-   <section className="platform-card">
-    <div className="platform-card-heading"><div><span className="platform-eyebrow">Classes</span><h3>الصفوف</h3></div><button onClick={()=>void reloadAuthoritative(selectedClassId)} disabled={loading}>↻ تحديث</button></div>
-    <div className="platform-form-grid">
-     <label>اسم الصف<input value={newClassName} onChange={e=>setNewClassName(e.target.value)} placeholder="مثال: الثاني عشر 8"/></label>
-     <label>المرحلة / الصف<input value={newClassGrade} onChange={e=>setNewClassGrade(e.target.value)} placeholder="مثال: الثاني عشر"/></label>
-     <label>السنة الدراسية<input value={newSchoolYear} onChange={e=>setNewSchoolYear(e.target.value)}/></label>
-     <button className="platform-primary" onClick={createClass} disabled={actionBusy||!newClassName.trim()}>+ إنشاء صف</button>
-    </div>
-    {loading&&classes.length===0&&<div className="platform-loading">⏳ جارٍ التحميل...</div>}
-    <nav className="analytics-view-tabs" role="tablist" aria-label="أقسام الصفوف">
-     <button type="button" className={"analytics-view-tab "+(classArchiveView==="active"?"active":"")} onClick={()=>setClassArchiveView("active")}>الصفوف النشطة<span className="analytics-view-tab-badge">{activeClasses.length}</span></button>
-     <button type="button" className={"analytics-view-tab "+(classArchiveView==="archived"?"active":"")} onClick={()=>setClassArchiveView("archived")}>الأرشيف<span className="analytics-view-tab-badge">{archivedClasses.length}</span></button>
-    </nav>
-    <div className="class-list">
-     {visibleClasses.map(classroom=><article key={classroom.classId} className={"class-row "+(classroom.classId===selectedClassId?"selected ":"")+(isActiveClass(classroom)?"":"archived")}>
-      <button className="class-select" onClick={()=>setSelectedClassId(classroom.classId)}><strong>{classroom.name}{getClassProgramCodes(classroom).length?getClassProgramCodes(classroom).map(code=><span key={code} className="class-program-tag">📡 {code}</span>):<span className="class-program-tag class-program-none">بدون مشروع</span>}</strong><span>{classroom.grade||"—"} · {classroom.studentCount} طالب</span><small>{classroom.schoolYear||""}</small>
-       {classArchiveView==="archived"&&<small>{classroom.archiveReason==="graduated"?"مُخرَّج":"مؤرشف"}{classroom.archivedAt?" · "+fmtDate(classroom.archivedAt):""}{classroom.graduationYear?" · دفعة "+classroom.graduationYear:""}</small>}
-      </button>
-      <div className="class-row-actions">
-       {classArchiveView==="active"&&<div className="class-project-picker"><span className="class-project-picker-label">📡 المشاريع:</span>{projects.map(p=>{const on=getClassProgramCodes(classroom).includes(p.projectCode);return <label key={p.projectCode} className={"class-project-check"+(on?" on":"")}><input type="checkbox" checked={on} disabled={actionBusy} onChange={e=>void toggleClassProject(classroom,p.projectCode,e.target.checked)}/>{p.title}</label>;})}</div>}
-       {classArchiveView==="active"&&isGraduationEligible(classroom)&&<button className="class-archive" onClick={()=>graduateAndArchiveClass(classroom)} disabled={actionBusy}>🎓 تخريج وأرشفة الصف</button>}
-       <button className="class-archive" onClick={()=>toggleClassArchive(classroom)} disabled={actionBusy}>{isActiveClass(classroom)?"أرشفة الصف":"تفعيل"}</button>
-      </div>
-     </article>)}
-     {!loading&&visibleClasses.length===0&&<div className="platform-empty">{classArchiveView==="active"?"لا توجد صفوف نشطة بعد.":"لا توجد صفوف مؤرشفة."}</div>}
-    </div>
-   </section>
-
-   <section className="platform-card student-admin-card">
-    <div className="platform-card-heading"><div><span className="platform-eyebrow">Students</span><h3>الطلاب</h3></div><span className="student-count-badge">{students.length}</span></div>
-    {!selectedClass?<div className="platform-empty">أنشئ صفًا أو اختر صفًا لإدارة الطلاب.</div>:<>
-     <div className="selected-class-strip"><strong>{selectedClass.name}</strong><span>{selectedClass.grade||""}</span></div>
-
-     <div className="student-admin-stats">
-      <article><strong>{stats.total}</strong><span>إجمالي</span></article>
-      <article><strong>{stats.active}</strong><span>فعّال</span></article>
-      <article><strong>{stats.disabled}</strong><span>معطّل</span></article>
-      <article><strong>{stats.archived}</strong><span>مؤرشف</span></article>
-      <article><strong>{stats.neverLogged}</strong><span>لم يدخلوا بعد</span></article>
-     </div>
-
-     <div className="student-toolbar-pro">
-      <div className="student-search-field">
-       <IconSearch size={16} aria-hidden="true"/>
-       <input value={searchText} onChange={e=>setSearchText(e.target.value)} placeholder="ابحث بالاسم، العائلة أو رقم الهوية" aria-label="ابحث بالاسم، العائلة أو رقم الهوية"/>
-      </div>
-      <select className="student-status-select" value={statusFilter} onChange={e=>setStatusFilter(e.target.value as StatusFilter)}>
-       <option value="all">كل الحالات</option><option value="active">فعّال</option><option value="disabled">معطّل</option><option value="archived">مؤرشف</option>
-      </select>
-      <div className="student-sort-row">
-       <span>الفرز:</span>{sortButton("firstName","الاسم")}{sortButton("familyName","العائلة")}{sortButton("identityNumber","الهوية")}{sortButton("status","الحالة")}
-      </div>
-      <button className="student-toolbar-export" onClick={exportCsv}><IconDownload size={16}/>تصدير CSV</button>
-     </div>
-
-     <div className="student-quick-actions">
-      <details className="student-admin-details student-quick-panel">
-       <summary><IconPlus size={16}/><span>إضافة طالب جديد</span><IconChevronDown size={14} className="details-chevron"/></summary>
-       <div className="student-create-grid">
-        <label>الاسم<input value={newFirstName} onChange={e=>setNewFirstName(e.target.value)} placeholder="الاسم الشخصي"/></label>
-        <label>اسم العائلة<input value={newFamilyName} onChange={e=>setNewFamilyName(e.target.value)} placeholder="اسم العائلة"/></label>
-        <label>رقم الهوية<input value={newIdentityNumber} onChange={e=>setNewIdentityNumber(onlyDigits(e.target.value))} inputMode="numeric" maxLength={9} dir="ltr" placeholder="9 أرقام"/></label>
-        <label>كلمة مرور اختيارية<input type="password" value={newStudentPassword} onChange={e=>setNewStudentPassword(e.target.value)} placeholder="اتركها فارغة للتوليد التلقائي"/></label>
-        <button className="platform-primary" onClick={createStudent} disabled={actionBusy||!isActiveClass(selectedClass)||!newFirstName.trim()||!newFamilyName.trim()||!validIdentity(newIdentityNumber)}>+ إنشاء حساب طالب</button>
-       </div>
-      </details>
-
-      <details className="student-admin-details student-quick-panel">
-       <summary><IconUpload size={16}/><span>استيراد من ملف (JSON أو CSV) مع معاينة قبل الحفظ</span><IconChevronDown size={14} className="details-chevron"/></summary>
-       <div className="student-create-grid">
-        <label>ملف الطلاب<input type="file" accept=".json,.csv,application/json,text/csv" disabled={!isActiveClass(selectedClass)} onChange={e=>void readBulkFile(e.target.files?.[0]||null)}/></label>
-        <div><span>الملف</span><strong>{bulkFileName||"لم يتم اختيار ملف"}</strong><small>{previewBusy?" جارٍ فحص البيانات...":importPreview.length?` ${previewValid} صالح · ${previewDuplicates} مكرر · ${previewInvalid} غير صالح`:""}</small></div>
-        <button className="platform-primary" onClick={importBulkStudents} disabled={actionBusy||previewBusy||!isActiveClass(selectedClass)||!previewValid}>✓ استيراد {previewValid||""} طالب صالح</button>
-       </div>
-
-       {importPreview.length>0&&<div className="students-table-wrap import-preview-wrap"><table className="students-table">
-        <thead><tr><th>الحالة</th><th>الاسم</th><th>العائلة</th><th>رقم الهوية</th><th>ملاحظة</th></tr></thead>
-        <tbody>{importPreview.map(row=><tr key={row.index} className={"import-row-"+row.status}>
-         <td><span className={"import-badge "+row.status}>{row.status==="valid"?"✓ صالح":row.status==="duplicate"?"⚠ مكرر":"✕ خطأ"}</span></td>
-         <td>{row.firstName||"—"}</td><td>{row.familyName||"—"}</td><td dir="ltr">{row.identityNumber||"—"}</td>
-         <td>{row.error||"جاهز للاستيراد"}</td>
-        </tr>)}</tbody>
-       </table></div>}
-      </details>
-     </div>
-
-     {!isActiveClass(selectedClass)&&<div className="platform-warning">الصف مؤرشف؛ فعّله قبل إضافة أو استعادة الطلاب.</div>}
-
-     {selectedCount>0&&<section className="student-bulk-bar">
-      <strong>{selectedCount} طالب محدد</strong>
-      <div className="student-bulk-safe">
-       <button onClick={()=>void runBulkAction("activate")} disabled={actionBusy}>تفعيل</button>
-       <button onClick={()=>void runBulkAction("deactivate")} disabled={actionBusy}>تعطيل</button>
-       <button onClick={()=>void runBulkAction("archive")} disabled={actionBusy}>أرشفة</button>
-       <button onClick={()=>void runBulkAction("unarchive")} disabled={actionBusy}>استعادة</button>
-       <button onClick={()=>void runBulkAction("resetpasswords")} disabled={actionBusy}><IconKey size={14}/>كلمات مرور جديدة</button>
-       <select value={bulkTargetClassId} onChange={e=>setBulkTargetClassId(e.target.value)}>
-        <option value="">اختر صفًا للنقل</option>
-        {classes.filter(c=>isActiveClass(c)&&c.classId!==selectedClassId).map(c=><option key={c.classId} value={c.classId}>{c.name}</option>)}
-       </select>
-       <button onClick={()=>void runBulkAction("move")} disabled={actionBusy||!bulkTargetClassId}>نقل</button>
-       <button onClick={()=>setSelectedIds([])}>إلغاء التحديد</button>
-      </div>
-      <div className="student-bulk-danger">
-       <button className="danger-button" onClick={()=>void runBulkAction("delete")} disabled={actionBusy}><IconTrash size={14}/>حذف نهائي</button>
-      </div>
-     </section>}
-
-     {credentialBatch&&credentialBatchVisible(credentialBatch,selectedClassId)&&<section className="credential-box" style={{marginTop:16}}>
-      <div className="platform-card-heading">
-       <div><span className="platform-eyebrow">Generated credentials</span><h3>بيانات الدخول الجديدة</h3><span className="platform-eyebrow">{credentialBatch.credentials.length} طالبًا</span></div>
-       <div className="student-row-actions">
-        <button onClick={()=>setCredentialBatch(b=>b?toggleCredentialBatchCollapsed(b):b)}><IconChevronDown size={14}/>{credentialBatch.collapsed?"إظهار":"طي"}</button>
-        <button onClick={downloadCredentials}><IconDownload size={14}/>تنزيل JSON</button>
-        <button onClick={discardCredentialBatch}><IconClose size={14}/>إغلاق</button>
-       </div>
-      </div>
-      {!credentialBatch.collapsed&&<>
-       <p>احفظ هذه البيانات الآن؛ كلمات المرور لا تُعرض لاحقًا كنص واضح.</p>
-       <div className="students-table-wrap"><table className="students-table">
-        <thead><tr><th>الاسم</th><th>العائلة</th><th>رقم الهوية</th><th>كلمة المرور</th><th></th></tr></thead>
-        <tbody>{credentialBatch.credentials.map((c,i)=>{
-         const fullName=(c.firstName||"")+" "+(c.familyName||"");
-         const identity=c.identityNumber||c.code;
-         return <tr key={(c.userId||c.code)+i}><td>{c.firstName}</td><td>{c.familyName}</td><td dir="ltr">{identity}</td><td dir="ltr"><strong>{c.password}</strong></td>
-          <td><button onClick={()=>void copyText(credentialText(fullName.trim(),identity,c.password),"✓ تم نسخ بيانات دخول الطالب.")}>📋 نسخ</button></td></tr>
-        })}</tbody>
-       </table></div>
-      </>}
-     </section>}
-
-     {bulkErrors.length>0&&<div className="platform-warning"><strong>عمليات لم تكتمل:</strong>{bulkErrors.map((x,i)=><div key={x.userId||i}>{x.displayName||x.userId||"السطر "+((x.index??i)+1)}: {x.error}</div>)}</div>}
-
-     {(profile||editingStudent||history)&&<div className="slide-over-backdrop" onClick={()=>{setProfile(null);setEditingStudent(null);setHistory(null);setHistoryDeadlineFor(null)}}/>}
-
-     {editingStudent&&<section className="credential-box centered-modal-panel">
-      <div className="platform-card-heading"><div><span className="platform-eyebrow">Edit Student</span><h3>تعديل تفاصيل الطالب</h3></div><button onClick={()=>setEditingStudent(null)}>إلغاء</button></div>
-      <div className="student-create-grid">
-       <label>الاسم<input value={editFirstName} onChange={e=>setEditFirstName(e.target.value)}/></label>
-       <label>اسم العائلة<input value={editFamilyName} onChange={e=>setEditFamilyName(e.target.value)}/></label>
-       <label>رقم الهوية<input value={editIdentityNumber} onChange={e=>setEditIdentityNumber(onlyDigits(e.target.value))} inputMode="numeric" maxLength={9} dir="ltr"/></label>
-       <label>الصف<select value={editClassId} onChange={e=>setEditClassId(e.target.value)}>{classes.filter(c=>isActiveClass(c)||c.classId===(editingStudent?.classId||"")).map(c=><option key={c.classId} value={c.classId}>{c.name} · {c.grade}</option>)}</select></label>
-       <label>كلمة مرور جديدة<input type="password" value={editPassword} onChange={e=>setEditPassword(e.target.value)} placeholder="اتركها فارغة للإبقاء على الحالية"/></label>
-       <button className="platform-primary" onClick={saveStudentEdit} disabled={actionBusy||!editFirstName.trim()||!editFamilyName.trim()||!validIdentity(editIdentityNumber)||!editClassId}>💾 حفظ التعديلات</button>
-      </div>
-     </section>}
-
-     {profileBusy&&<div className="platform-loading">⏳ جارٍ تحميل ملف الطالب...</div>}
-     {profile&&<section className="student-profile-card centered-modal-panel">
-      <div className="platform-card-heading">
-       <div><span className="platform-eyebrow">Student Profile</span><h3>{profile.student.displayName}</h3><small>{profile.classroom?.name||"—"} · {profile.student.identityNumber}</small></div>
-       <div className="student-row-actions">
-        <button onClick={resetProfilePassword} disabled={actionBusy}><IconKey size={14}/>كلمة المرور</button>
-        <button onClick={()=>{clearPasswordReveal();setProfile(null)}}><IconClose size={14}/>إغلاق</button>
-       </div>
-      </div>
-      {passwordReveal&&<div className="credential-box">
-       <div><span className="platform-eyebrow">كلمة مرور جديدة</span></div>
-       <div className="credential-values"><div><span>كلمة المرور الجديدة</span><strong>{passwordReveal.password}</strong></div></div>
-       <div className="student-row-actions"><button onClick={()=>void copyText(passwordReveal.password,"✓ تم نسخ كلمة المرور.")}><IconCopy size={14}/>نسخ</button></div>
-       <p>ستختفي كلمة المرور بعد {passwordReveal.secondsLeft} ثوانٍ</p>
-      </div>}
-      <div className="student-profile-stats">
-       <article><strong>{profile.stats.assigned}</strong><span>واجبات</span></article>
-       <article><strong>{profile.stats.completed}</strong><span>مكتملة</span></article>
-       <article><strong>{profile.stats.pending}</strong><span>لم تُحل</span></article>
-       <article><strong>{profile.stats.average===null?"—":profile.stats.average+"%"}</strong><span>المعدل</span></article>
-      </div>
-      <p><b>آخر دخول:</b> {profile.stats.lastLoginAt?fmtDate(profile.stats.lastLoginAt):"لم يسجل الدخول بعد"} · <b>إنشاء الحساب:</b> {fmtDate(profile.student.createdAt)}</p>
-      <div className="student-medals-section">
-       <h4>الميداليات والإنجازات</h4>
-       {(()=>{const medals=medalItemsFor(profile.assignments);return medals.length?<div className="medal-badge-grid">{medals.map(item=><div key={item.assignmentId} className="medal-badge"><IconMedal size={22} style={{color:MEDAL_COLORS[item.tier]}}/><div><strong>ميدالية {MEDAL_LABELS[item.tier]}</strong><span>{item.title}</span>{item.submittedAt&&<small>{fmtDate(item.submittedAt)}</small>}</div></div>)}</div>:<p className="medal-badge-empty">لم يحصل الطالب على ميداليات بعد.</p>})()}
-      </div>
-      <div className="students-table-wrap"><table className="students-table">
-       <thead><tr><th>الواجب</th><th>الحالة</th><th>المحاولات</th><th>العلامة</th><th>النسبة</th><th>آخر تسليم</th></tr></thead>
-       <tbody>{profile.assignments.map(a=><tr key={a.assignmentId}>
-        <td>{a.title}</td><td>{a.latestScore===null?"لم يُحل":resolveGradingStatus(a)==="final"?"مصحح":"بانتظار المراجعة"}</td><td>{a.attemptsUsed}</td>
-        <td>{a.latestScore===null?"—":a.latestScore+"/"+a.totalMarks}</td><td>{a.latestPercentage===null?"—":a.latestPercentage+"%"}</td><td>{a.submittedAt?fmtDate(a.submittedAt):"—"}</td>
-       </tr>)}{!profile.assignments.length&&<tr><td colSpan={6}>لا توجد واجبات لهذا الصف.</td></tr>}</tbody>
-      </table></div>
-     </section>}
-
-     {historyBusy&&<div className="platform-loading">⏳ جارٍ تحميل سجل الوظائف...</div>}
-     {history&&<section className="student-profile-card centered-modal-panel">
-      <div className="platform-card-heading">
-       <div><span className="platform-eyebrow">Assignment History</span><h3>{history.student.displayName}</h3><small>{history.classroom?.name||"—"} · {history.student.identityNumber}</small></div>
-       <button onClick={()=>{setHistory(null);setHistoryDeadlineFor(null)}}><IconClose size={14}/>إغلاق</button>
-      </div>
-      <div className="students-table-wrap"><table className="students-table">
-       <thead><tr><th>اسم الوظيفة</th><th>تاريخ آخر تسليم</th><th>العلامة</th><th>عدد المحاولات</th><th>الحالة</th><th>إجراءات</th></tr></thead>
-       <tbody>{history.submittedAssignments.map(item=><Fragment key={item.assignmentId}>
-        <tr>
-         <td>{item.title||"—"}</td>
-         <td>{item.submittedAt?fmtDate(item.submittedAt):"—"}</td>
-         <td>{item.score+"/"+item.totalMarks+" - "+item.percentage+"%"}</td>
-         <td>{item.attemptsUsed>1?"المحاولات: "+item.attemptsUsed:item.attemptsUsed}</td>
-         <td>{resolveGradingStatus(item)==="final"?"تم التسليم":"بانتظار المراجعة"}</td>
-         <td><div className="student-row-actions">
-          <button onClick={()=>setReviewTarget({assignmentId:item.assignmentId,studentId:history.student.userId,attemptNumber:item.latestAttemptNumber})}>👁 فحص الوظيفة</button>
-          {item.isCurrentClassAssignment?<>
-           <button onClick={()=>void historyAllowRetry(item)} disabled={actionBusy}>🔄 محاولة إضافية</button>
-           <button onClick={()=>historyDeadlineFor===item.assignmentId?setHistoryDeadlineFor(null):openHistoryDeadline(item)} disabled={actionBusy}>⏰ تمديد الموعد</button>
-          </>:<small className="result-code">سجل سابق</small>}
-         </div></td>
-        </tr>
-        {historyDeadlineFor===item.assignmentId&&<tr className="deadline-edit-row"><td colSpan={6}><div className="deadline-edit-inline">
-         <span>الموعد الأصلي: {fmtDate(item.dueAt)}</span>
-         {item.dueAtOverride&&<span>التمديد الحالي: {fmtDate(item.dueAtOverride)}</span>}
-         <input type="datetime-local" value={historyDeadlineValue} onChange={e=>setHistoryDeadlineValue(e.target.value)}/>
-         <button onClick={()=>void saveHistoryDeadline(item)} disabled={actionBusy||!historyDeadlineValue}>حفظ التمديد</button>
-         {item.dueAtOverride&&<button onClick={()=>void clearHistoryDeadline(item)} disabled={actionBusy}>إلغاء التمديد</button>}
-         <button onClick={()=>setHistoryDeadlineFor(null)}>إغلاق</button>
-        </div></td></tr>}
-       </Fragment>)}
-       {!history.submittedAssignments.length&&<tr><td colSpan={6}>لا توجد وظائف مسلّمة.</td></tr>}</tbody>
-      </table></div>
-     </section>}
-     {reviewTarget&&<AssignmentReview token={token} assignmentId={reviewTarget.assignmentId} studentId={reviewTarget.studentId} initialAttempt={reviewTarget.attemptNumber} onClose={()=>setReviewTarget(null)} onSaved={()=>{if(history)void openHistory(history.student.userId)}}/>}
-
-     <div className="students-table-wrap"><table className="students-table students-table-pro">
-      <thead><tr>
-       <th><input type="checkbox" checked={visibleStudents.length>0&&visibleStudents.every(s=>selectedIds.includes(s.userId))} onChange={toggleSelectVisible} aria-label="تحديد الكل"/></th>
-       <th>الاسم</th><th>اسم العائلة</th><th>رقم الهوية</th><th>الحالة</th><th>آخر دخول</th><th>إجراءات</th>
-      </tr></thead>
-      <tbody>{visibleStudents.map(student=><tr key={student.userId} className={student.archived?"student-row-archived":""}>
-       <td><input type="checkbox" checked={selectedIds.includes(student.userId)} onChange={()=>toggleSelected(student.userId)} aria-label={"تحديد "+student.displayName}/></td>
-       <td><strong>{student.firstName||splitName(student.displayName).firstName}</strong>{student.likesCount>0&&<span className="student-likes-badge" title={student.likesCount+" ردّ فعل على إنجازاته"}>❤️ {student.likesCount}</span>}</td>
-       <td>{student.familyName||splitName(student.displayName).familyName||"—"}</td>
-       <td dir="ltr">{student.identityNumber||student.code||"يحتاج تحديث"}</td>
-       <td><span className={student.archived?"status-archived":student.active?"status-active":"status-disabled"}>{statusLabel(student)}</span></td>
-       <td>{student.lastLoginAt?fmtDate(student.lastLoginAt):<span className="never-login">لم يدخل بعد</span>}</td>
-       <td><div className="student-row-actions">
-        <button className="student-row-primary" onClick={()=>void openProfile(student)} disabled={actionBusy}><IconUser size={14}/>التفاصيل</button>
-        {student.submittedAssignmentsCount>0&&<button onClick={()=>void openHistory(student.userId)} disabled={actionBusy}>📚 الوظائف ({student.submittedAssignmentsCount})</button>}
-        <details className="row-menu" name="student-row-menu">
-         <summary aria-label="مزيد من الإجراءات"><IconMore size={16}/></summary>
-         <div className="row-menu-panel">
-          <button onClick={()=>startEdit(student)} disabled={actionBusy}><IconEdit size={14}/>تعديل</button>
-          <button onClick={()=>void copyText(student.identityNumber||student.code,"✓ تم نسخ رقم الهوية.")}><IconCopy size={14}/>نسخ رقم الهوية</button>
-          {!student.archived&&<button onClick={()=>toggleStudent(student)} disabled={actionBusy}>{student.active?"تعطيل الحساب":"تفعيل الحساب"}</button>}
-          <button onClick={()=>archiveStudent(student)} disabled={actionBusy}>{student.archived?"↩ استعادة":"📦 أرشفة"}</button>
-          <hr className="row-menu-sep"/>
-          <button className="danger-button" onClick={()=>deleteStudent(student)} disabled={actionBusy}><IconTrash size={14}/>حذف نهائي</button>
-         </div>
-        </details>
-       </div></td>
-      </tr>)}</tbody>
-     </table>
-     {!loading&&visibleStudents.length===0&&<div className="platform-empty">لا توجد نتائج مطابقة.</div>}
-     </div>
-    </>}
-   </section>
+   <RosterPane
+    classroom={selectedClass} classActive={classActive} students={students} visibleStudents={visibleStudents} stats={stats}
+    loading={loading} busy={actionBusy}
+    searchText={searchText} onSearch={setSearchText} statusFilter={statusFilter} onStatusFilter={setStatusFilter}
+    sortKey={sortKey} sortAsc={sortAsc} onSort={toggleSort}
+    selectedIds={selectedIds} onToggleSelected={toggleSelected} onToggleSelectVisible={toggleSelectVisible} onClearSelection={()=>setSelectedIds([])}
+    onAddStudent={()=>setDialog("addStudent")} onImport={openImportDialog} onRefresh={()=>void reloadAuthoritative(selectedClassId)} onExportCsv={exportCsv}
+    onOpenProfile={student=>void openProfile(student)} onOpenHistory={student=>void openHistory(student.userId)} onEdit={startEdit}
+    onCopyIdentity={student=>void copyText(student.identityNumber||student.code,"✓ تم نسخ رقم الهوية.")}
+    onToggleActive={student=>void toggleStudent(student)} onArchive={student=>void archiveStudent(student)} onDelete={student=>void deleteStudent(student)}
+    bulk={{targetClasses:classes.filter(c=>isActiveClass(c)&&c.classId!==selectedClassId),targetClassId:bulkTargetClassId,onTargetChange:setBulkTargetClassId,onAction:operation=>void runBulkAction(operation)}}
+    credentialBox={credentialBox}
+    onCopyCredentialBox={()=>{if(credentialBox)void copyText(credentialText(credentialBox.name,credentialBox.identityNumber,credentialBox.password),"✓ تم نسخ بيانات الدخول.")}}
+    onHideCredentialBox={()=>setCredentialBox(null)}
+    credentialBatch={visibleBatch}
+    onToggleBatch={()=>setCredentialBatch(b=>b?toggleCredentialBatchCollapsed(b):b)} onDownloadBatch={downloadCredentials} onDiscardBatch={()=>void discardCredentialBatch()}
+    onCopyCredential={c=>void copyText(credentialText(((c.firstName||"")+" "+(c.familyName||"")).trim(),c.identityNumber||c.code,c.password),"✓ تم نسخ بيانات دخول الطالب.")}
+    bulkErrors={bulkErrors} statusLabel={statusLabel} fmtDate={fmtDate} splitName={splitName}/>
   </div>
 
+  <CreateClassDialog open={dialog==="createClass"} onClose={()=>setDialog("none")} name={newClassName} grade={newClassGrade} schoolYear={newSchoolYear}
+   onName={setNewClassName} onGrade={setNewClassGrade} onSchoolYear={setNewSchoolYear} onSubmit={()=>void createClass()} busy={actionBusy}/>
+  <AddStudentDialog open={dialog==="addStudent"} onClose={()=>setDialog("none")} classroom={selectedClass} classActive={classActive}
+   firstName={newFirstName} familyName={newFamilyName} identityNumber={newIdentityNumber} password={newStudentPassword}
+   onFirstName={setNewFirstName} onFamilyName={setNewFamilyName} onIdentityNumber={v=>setNewIdentityNumber(onlyDigits(v))} onPassword={setNewStudentPassword}
+   canSubmit={canCreateStudent} onSubmit={()=>void createStudent()} busy={actionBusy}/>
+  <ImportStudentsDialog open={dialog==="import"} onClose={()=>setDialog("none")} classroom={selectedClass} classActive={classActive}
+   fileName={bulkFileName} previewBusy={previewBusy} preview={importPreview} onFile={file=>void readBulkFile(file)} onImport={()=>void importBulkStudents()} busy={actionBusy}/>
+  <EditStudentDialog open={editingStudent!==null} onClose={()=>setEditingStudent(null)}
+   classes={classes.filter(c=>isActiveClass(c)||c.classId===(editingStudent?.classId||""))}
+   firstName={editFirstName} familyName={editFamilyName} identityNumber={editIdentityNumber} classId={editClassId} password={editPassword}
+   onFirstName={setEditFirstName} onFamilyName={setEditFamilyName} onIdentityNumber={v=>setEditIdentityNumber(onlyDigits(v))} onClassId={setEditClassId} onPassword={setEditPassword}
+   canSubmit={canSaveEdit} onSubmit={()=>void saveStudentEdit()} busy={actionBusy}/>
+
+  {profileBusy&&<div className="platform-loading" role="status">جارٍ تحميل ملف الطالب...</div>}
+  {profile&&<StudentDialog profile={profile} section={profileSection} onClose={()=>{clearPasswordReveal();setProfile(null);setHistoryDeadlineFor(null)}}
+   busy={actionBusy} suspended={reviewTarget!==null}
+   passwordReveal={passwordReveal} onResetPassword={()=>void resetProfilePassword()} onCopyPassword={password=>void copyText(password,"✓ تم نسخ كلمة المرور.")}
+   onReview={item=>setReviewTarget({assignmentId:item.assignmentId,studentId:profile.student.userId,attemptNumber:item.latestAttemptNumber})}
+   onAllowRetry={item=>void historyAllowRetry(item)}
+   deadlineFor={historyDeadlineFor} deadlineValue={historyDeadlineValue} onDeadlineValue={setHistoryDeadlineValue}
+   onOpenDeadline={openHistoryDeadline} onCloseDeadline={()=>setHistoryDeadlineFor(null)} onSaveDeadline={item=>void saveHistoryDeadline(item)} onClearDeadline={item=>void clearHistoryDeadline(item)}
+   fmtDate={fmtDate}/>}
+  {reviewTarget&&<AssignmentReview token={token} assignmentId={reviewTarget.assignmentId} studentId={reviewTarget.studentId} initialAttempt={reviewTarget.attemptNumber} onClose={()=>setReviewTarget(null)} onSaved={()=>{if(profile)void openHistory(profile.student.userId)}}/>}
+  {confirmDialog}
  </div></section>;
 }
 

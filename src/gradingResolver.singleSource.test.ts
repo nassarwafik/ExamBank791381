@@ -5,7 +5,7 @@ import { describe, it, expect } from "vitest";
 // rather than re-deriving the rule, and none of them may infer grading from a score/percentage.
 // Sources are read as raw text via Vite's import.meta.glob (no node:fs — keeps the app tsconfig clean).
 const RAW = import.meta.glob(
-  "./{StudentPortal,AssignmentsPanel,AssignmentReview,StudentExamPage,TeacherPlatform,TeacherDashboard,gradingStatus}.{ts,tsx}",
+  "./{StudentPortal,AssignmentsPanel,AssignmentReview,StudentExamPage,TeacherPlatform,TeacherDashboard,gradingStatus,students/StudentDialog}.{ts,tsx}",
   { query: "?raw", import: "default", eager: true }
 ) as Record<string, string>;
 const read = (key: string): string => {
@@ -16,7 +16,10 @@ const read = (key: string): string => {
 const COMPONENTS = ["./StudentPortal.tsx", "./AssignmentsPanel.tsx", "./AssignmentReview.tsx", "./StudentExamPage.tsx"];
 // Teacher result surfaces that display a grading label — they must resolve it through the shared authority,
 // never from a raw `finalized` boolean (which mislabels legacy attempts whose stored finalized is absent).
-const TEACHER_RESULT_SURFACES = ["./TeacherPlatform.tsx", "./TeacherDashboard.tsx"];
+// UX-4 moved the student profile / history labels from TeacherPlatform into students/StudentDialog.
+const TEACHER_RESULT_SURFACES = ["./students/StudentDialog.tsx", "./TeacherDashboard.tsx"];
+// Surfaces that no longer render a grade label themselves must not have grown a raw-finalized shortcut either.
+const NO_LABEL_SURFACES = ["./TeacherPlatform.tsx"];
 
 describe("F: single shared grading resolver across the frontend", () => {
   for (const file of COMPONENTS) {
@@ -41,6 +44,14 @@ describe("F: single shared grading resolver across the frontend", () => {
       expect(src).toMatch(/resolveGradingStatus/);
       // No grade label chosen directly from a raw `finalized` boolean (e.g. `x.finalized?"مصحح":...`).
       expect(src).not.toMatch(/finalized\s*\?\s*"(مصحح|مصححة|نهائي|العلامة النهائية)/);
+    });
+  }
+
+  for (const file of NO_LABEL_SURFACES) {
+    it(`${file} renders no grade label of its own (moved to a surface that uses the resolver) and never reads raw finalized for one`, () => {
+      const src = read(file);
+      expect(src).not.toMatch(/finalized\s*\?\s*"(مصحح|مصححة|نهائي|العلامة النهائية)/);
+      expect(src).not.toMatch(/"(مصحح|بانتظار المراجعة|مصححة بالكامل)"/);
     });
   }
 

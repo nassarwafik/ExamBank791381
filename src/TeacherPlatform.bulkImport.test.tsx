@@ -43,21 +43,24 @@ function routedFetch(input: RequestInfo | URL, init?: RequestInit) {
   return json({ ok: true });
 }
 
-beforeEach(() => { calls = []; globalThis.fetch = vi.fn(routedFetch) as unknown as typeof fetch; (window as unknown as { confirm: () => boolean }).confirm = () => true; });
+beforeEach(() => { calls = []; globalThis.fetch = vi.fn(routedFetch) as unknown as typeof fetch; });
 afterEach(() => { cleanup(); vi.restoreAllMocks(); });
 
 const jsonFile = () => new File([JSON.stringify([{ firstName: "علي", familyName: "حسن", identityNumber: "123456789" }])], "roster.json", { type: "application/json" });
 async function mountStudents() {
   const utils = render(<TeacherPlatform token="t" currentExam={null} workspaceTab="students" />);
-  await screen.findByText("إضافة طالب جديد");             // students panel for the default class is up
+  await screen.findByRole("heading", { level: 2, name: "صف أول" }); // roster pane for the default class is up
   return utils;
 }
-function fileInput(container: HTMLElement) { return container.querySelector('input[type="file"]') as HTMLInputElement; }
-function importButton() { return screen.getByRole("button", { name: /استيراد/ }); }
+// UX-4: the import flow lives in its own dialog (file → preview → confirm import); the file input is inside it.
+async function openImport() { fireEvent.click(screen.getByRole("button", { name: "استيراد" })); await screen.findByRole("dialog", { name: "استيراد طلاب من ملف" }); }
+function fileInput(_container: HTMLElement) { return document.querySelector('input[type="file"]') as HTMLInputElement; }
+function importButton() { return screen.getByRole("button", { name: /استيراد الطلاب الصالحين/ }); }
 
 describe("R18 bulk-import UX", () => {
   it("R+S+T: selecting a file only PREVIEWS (no create); counts shown; import enabled only after preview", async () => {
     const { container } = await mountStudents();
+    await openImport();
     // T (before): the import button is disabled with no preview yet.
     expect((importButton() as HTMLButtonElement).disabled).toBe(true);
 
@@ -68,15 +71,16 @@ describe("R18 bulk-import UX", () => {
     // S: counts are surfaced.
     await screen.findByText(/1 صالح · 1 مكرر · 1 غير صالح/);
     // preview table shows the three row statuses.
-    expect(screen.getByText("✓ صالح")).toBeTruthy();
-    expect(screen.getByText("⚠ مكرر")).toBeTruthy();
-    expect(screen.getByText("✕ خطأ")).toBeTruthy();
+    expect(screen.getByText("صالح")).toBeTruthy();
+    expect(screen.getByText("مكرر")).toBeTruthy();
+    expect(screen.getByText("غير صالح")).toBeTruthy();
     // T (after): import is now enabled.
     await waitFor(() => expect((importButton() as HTMLButtonElement).disabled).toBe(false));
   });
 
   it("U+V: importing shows per-row failures and a credential batch with ONLY newly-created credentials", async () => {
     const { container } = await mountStudents();
+    await openImport();
     fireEvent.change(fileInput(container), { target: { files: [jsonFile()] } });
     await waitFor(() => expect((importButton() as HTMLButtonElement).disabled).toBe(false));
 
@@ -93,6 +97,7 @@ describe("R18 bulk-import UX", () => {
 
   it("Y: the credential batch is class-scoped — switching class hides the plaintext passwords", async () => {
     await mountStudents();
+    await openImport();
     fireEvent.change(fileInput(document.body), { target: { files: [jsonFile()] } });
     await waitFor(() => expect((importButton() as HTMLButtonElement).disabled).toBe(false));
     fireEvent.click(importButton());
@@ -109,7 +114,8 @@ describe("R18 bulk-import UX", () => {
     fireEvent.click(screen.getByRole("button", { name: /الأرشيف/ }));
     fireEvent.click(await screen.findByText("صف مؤرشف"));
     await screen.findByText(/الصف مؤرشف/);                 // archived warning shown in the students panel
-    expect(fileInput(container).disabled).toBe(true);
-    expect((importButton() as HTMLButtonElement).disabled).toBe(true);
+    expect(container).toBeTruthy();
+    expect((screen.getByRole("button", { name: "استيراد" }) as HTMLButtonElement).disabled).toBe(true);
+    expect((screen.getByRole("button", { name: "إضافة طالب" }) as HTMLButtonElement).disabled).toBe(true);
   });
 });

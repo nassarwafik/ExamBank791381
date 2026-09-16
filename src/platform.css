@@ -61,32 +61,6 @@
   opacity: 0.76;
 }
 
-.platform-hero-stat {
-  min-width: 118px;
-  padding: 15px 18px;
-  border-radius: 18px;
-  background: rgba(255,255,255,0.12);
-  text-align: center;
-}
-
-.platform-hero-stat strong {
-  display: block;
-  font-size: 30px;
-}
-
-.platform-hero-stat span {
-  font-size: 12px;
-}
-
-.platform-grid {
-  display: grid;
-  grid-template-columns:
-    minmax(300px, 0.8fr)
-    minmax(480px, 2.2fr);
-  gap: 18px;
-  margin-top: 18px;
-}
-
 .platform-card,
 .student-panel {
   background: white;
@@ -119,36 +93,6 @@
   border-radius: 10px;
   padding: 7px 10px;
   cursor: pointer;
-}
-
-.platform-form-grid,
-.student-create-grid {
-  display: grid;
-  grid-template-columns: 1fr;
-  gap: 9px;
-  padding: 14px;
-  background: #f5f7fa;
-  border: 1px solid #e9edf4;
-  border-radius: 16px;
-}
-
-.platform-form-grid label,
-.student-create-grid label {
-  display: flex;
-  flex-direction: column;
-  gap: 5px;
-  color: #475569;
-  font-size: 12px;
-  font-weight: 800;
-}
-
-.platform-form-grid input,
-.student-create-grid input {
-  border: 1px solid #dce2ec;
-  border-radius: 10px;
-  padding: 10px 11px;
-  font: inherit;
-  background: white;
 }
 
 .platform-primary {
@@ -193,62 +137,8 @@
   opacity: 0.62;
 }
 
-.class-select {
-  flex: 1;
-  border: 0;
-  background: transparent;
-  text-align: right;
-  padding: 12px;
-  cursor: pointer;
-  display: flex;
-  flex-direction: column;
-  gap: 3px;
-  color: #0f172a;
-}
-
-.class-select span,
-.class-select small {
-  color: #64748b;
-}
-
 /* Actions sit in a horizontal wrapping row beneath the class info, so each button keeps its full
    label on one line instead of being squeezed into a narrow vertical strip. */
-.class-row-actions {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-  padding: 0 12px 12px;
-}
-
-.class-archive {
-  flex: 1 1 auto;
-  border: 1px solid #e2e8f0;
-  border-radius: 9px;
-  background: #f5f7fa;
-  color: #475569;
-  padding: 8px 12px;
-  font-weight: 700;
-  font-size: 12.5px;
-  white-space: nowrap;
-  cursor: pointer;
-  transition: background .16s, border-color .16s;
-}
-
-.class-archive:hover:not(:disabled) {
-  border-color: #2563eb;
-  color: #1d4ed8;
-}
-
-.selected-class-strip {
-  display: flex;
-  justify-content: space-between;
-  gap: 12px;
-  padding: 10px 12px;
-  margin-bottom: 10px;
-  border-radius: 12px;
-  background: #eef4ff;
-  color: #1d4ed8;
-}
 
 .student-count-badge,
 .phase-chip {
@@ -289,23 +179,7 @@
   background: #f5f7fa;
 }
 
-.student-row-actions {
-  display: flex;
-  gap: 6px;
-  flex-wrap: wrap;
-}
-
-.student-row-actions button {
-  border: 1px solid #dce2ec;
-  border-radius: 10px;
-  background: white;
-  padding: 6px 8px;
-  cursor: pointer;
-  font-size: 11px;
-}
-
-.status-active,
-.status-disabled {
+.status-active {
   display: inline-flex;
   border-radius: 20px;
   padding: 4px 8px;
@@ -316,11 +190,6 @@
 .status-active {
   background: #dcfce7;
   color: #166534;
-}
-
-.status-disabled {
-  background: #fee2e2;
-  color: #991b1b;
 }
 
 .platform-empty,
@@ -667,7 +536,6 @@
 }
 
 @media (max-width: 980px) {
-  .platform-grid,
   .student-main-grid {
     grid-template-columns:
       1fr;
@@ -680,10 +548,6 @@
   .student-topbar {
     align-items: stretch;
     flex-direction: column;
-  }
-
-  .platform-hero-stat {
-    width: auto;
   }
 
   .credential-values,
@@ -732,10 +596,6 @@
    ExamBank 2.0H - Advanced student administration
    ============================================================ */
 
-.student-admin-card {
-  min-width: 0;
-}
-
 .student-admin-stats,
 .student-profile-stats {
   display: grid;
@@ -769,8 +629,6 @@
   font-weight: 800;
 }
 
-.student-admin-toolbar,
-.student-sort-row,
 .student-bulk-bar {
   display: flex;
   align-items: center;
@@ -778,26 +636,7 @@
   flex-wrap: wrap;
 }
 
-.student-admin-toolbar {
-  margin: 10px 0;
-  padding: 10px;
-  border: 1px solid #e9edf4;
-  border-radius: 12px;
-  background: #fff;
-}
-
-.student-admin-toolbar input {
-  flex: 1 1 260px;
-  min-width: 180px;
-  border: 1px solid #dce2ec;
-  border-radius: 10px;
-  padding: 9px 10px;
-  font: inherit;
-}
-
-.student-admin-toolbar select,
-.student-bulk-bar select,
-.student-create-grid select {
+.student-bulk-bar select {
   border: 1px solid #dce2ec;
   border-radius: 10px;
   padding: 9px 10px;
@@ -805,11 +644,7 @@
   font: inherit;
 }
 
-.student-admin-toolbar button,
-.student-sort-row button,
-.student-bulk-bar button,
-.student-profile-card button,
-.import-preview-wrap button {
+.student-bulk-bar button, .import-preview-wrap button {
   border: 1px solid #dce2ec;
   border-radius: 10px;
   background: #fff;
@@ -817,31 +652,6 @@
   cursor: pointer;
   font-size: 11px;
   font-weight: 800;
-}
-
-.student-admin-details {
-  margin-top: 10px;
-  border: 1px solid #e9edf4;
-  border-radius: 12px;
-  background: #fff;
-  overflow: hidden;
-}
-
-.student-admin-details summary {
-  padding: 11px 13px;
-  cursor: pointer;
-  font-weight: 900;
-  color: #334155;
-  background: #f5f7fa;
-}
-
-.student-admin-details[open] summary {
-  border-bottom: 1px solid #e9edf4;
-}
-
-.student-admin-details .student-create-grid {
-  border: 0;
-  border-radius: 0;
 }
 
 .student-bulk-bar {
@@ -861,22 +671,6 @@
   margin-left: 4px;
 }
 
-.danger-button {
-  color: #b42318 !important;
-  border-color: #fecaca !important;
-  background: #fff7f7 !important;
-}
-
-.status-archived {
-  display: inline-flex;
-  border-radius: 20px;
-  padding: 4px 8px;
-  font-size: 10px;
-  font-weight: 900;
-  background: #f1f4f9;
-  color: #475569;
-}
-
 .student-row-archived {
   opacity: .72;
   background: #f7f9fc;
@@ -887,44 +681,10 @@
   font-weight: 800;
 }
 
-.student-sort-row {
-  margin-top: 12px;
-  color: #64748b;
-  font-size: 12px;
-  font-weight: 800;
-}
-
-.student-sort-button {
-  min-width: 72px;
-}
-
 .import-preview-wrap {
   max-height: 320px;
   overflow: auto;
   margin: 0 12px 12px;
-}
-
-.import-badge {
-  display: inline-flex;
-  padding: 4px 7px;
-  border-radius: 20px;
-  font-size: 10px;
-  font-weight: 900;
-}
-
-.import-badge.valid {
-  background: #dcfce7;
-  color: #166534;
-}
-
-.import-badge.duplicate {
-  background: #fef3c7;
-  color: #92400e;
-}
-
-.import-badge.invalid {
-  background: #fee2e2;
-  color: #991b1b;
 }
 
 .import-row-duplicate {
@@ -935,25 +695,8 @@
   background: #fff7f7;
 }
 
-.student-profile-card {
-  margin-top: 14px;
-  border: 1px solid #cfe0f8;
-  background: #f7f9fd;
-  border-radius: 16px;
-  padding: 14px;
-}
-
-.student-profile-card p {
-  color: #475569;
-  font-size: 12px;
-}
-
 .student-profile-stats {
   grid-template-columns: repeat(4, minmax(90px, 1fr));
-}
-
-.credential-box .student-row-actions {
-  margin-top: 10px;
 }
 
 @media (max-width: 980px) {
@@ -1387,7 +1130,7 @@
 }
 
 @media print {
-  .teacher-workspace-nav, .student-row-actions { display: none !important; }
+  .teacher-workspace-nav { display: none !important; }
   .teacher-platform { background: #fff !important; padding: 0 !important; }
   .teacher-platform-inner { width: 100% !important; }
   .analytics-card { box-shadow: none !important; break-inside: avoid; }
@@ -1411,7 +1154,7 @@
 .teacher-platform-inner { animation: ebFadeIn .35s var(--eb-ease) both; }
 
 /* ---------- Surfaces / cards ---------- */
-.platform-card, .student-panel, .student-admin-card, .student-profile-card, .analytics-card, .assignment-source-card, .student-assignment-card {
+.platform-card, .student-panel, .analytics-card, .assignment-source-card, .student-assignment-card {
   border: 1px solid var(--eb-line);
   box-shadow: var(--eb-sh-md);
 }
@@ -1425,12 +1168,6 @@
   box-shadow: 0 22px 50px -28px rgba(11,18,32,.5);
 }
 .platform-hero p, .student-welcome-card p { color: #d6e2f7; }
-.platform-hero-stat {
-  border-radius: var(--eb-r-lg);
-  background: rgba(255,255,255,.10);
-  border: 1px solid rgba(255,255,255,.14);
-  backdrop-filter: blur(4px);
-}
 
 /* ---------- Workspace nav (segmented, sticky) ---------- */
 .teacher-workspace-nav {
@@ -1463,12 +1200,7 @@
 .students-table tbody tr:hover, .analytics-table tbody tr:hover { background: var(--eb-primary-050); }
 
 /* ---------- Toolbars ---------- */
-.student-admin-toolbar {
-  background: var(--eb-surface);
-  border: 1px solid var(--eb-line);
-  border-radius: var(--eb-r-lg);
-  padding: 12px 14px;
-}
+
 .student-bulk-bar {
   background: var(--eb-primary-050);
   border: 1px solid #cfe0f8;
@@ -1484,15 +1216,9 @@
 }
 .platform-primary:hover:not(:disabled) { background: var(--eb-primary-strong); transform: translateY(-1px); }
 .platform-primary:disabled { opacity: .55; cursor: not-allowed; box-shadow: none; transform: none; }
-.danger-button {
-  border: 1px solid #f3d0d0; background: var(--eb-surface); color: var(--eb-danger);
-  border-radius: var(--eb-r-sm); font-weight: 700; transition: var(--eb-dur) var(--eb-ease);
-}
-.danger-button:hover { background: var(--eb-danger-bg); border-color: #f0b4b4; }
 
 /* ---------- Status badges ---------- */
 .status-active { background: var(--eb-success-bg); color: var(--eb-success-tx); }
-.status-disabled, .status-archived { background: #f1f4f9; color: var(--eb-muted); }
 
 /* ---------- Student assignment cards ---------- */
 .student-assignment-card { border-radius: var(--eb-r-lg); transition: box-shadow var(--eb-dur) var(--eb-ease), transform var(--eb-dur) var(--eb-ease); }
@@ -1510,12 +1236,6 @@
 .class-program-select select{flex:1 1 auto;min-width:120px;padding:6px 8px;border:1px solid var(--eb-border,#d7dee8);border-radius:8px;background:var(--eb-surface,#fff);font-size:12.5px}
 
 /* Multi-project picker (checkboxes) on the class row + project chips */
-.class-project-picker{display:flex;align-items:center;flex-wrap:wrap;gap:8px;flex:1 1 auto}
-.class-project-picker-label{font-size:12.5px;font-weight:800;color:var(--eb-muted,#64748b)}
-.class-project-check{display:inline-flex;align-items:center;gap:5px;font-size:12.5px;font-weight:700;color:var(--eb-navy,#0f172a);border:1px solid var(--eb-border,#d7dee8);border-radius:999px;padding:4px 10px;cursor:pointer;background:var(--eb-surface,#fff)}
-.class-project-check.on{border-color:var(--eb-primary,#2563eb);background:var(--eb-primary-050,#eef4ff);color:var(--eb-primary-strong,#1d4ed8)}
-.class-project-check input{margin:0}
-.class-program-none{background:var(--eb-surface-2,#f1f5f9);color:var(--eb-muted,#64748b)}
 
 /* Roadmap #12/#13/#14 — grading-status vocabulary (additive; reuses existing tokens/spacing). */
 .iex-grade-badge{display:inline-block;margin-inline-start:8px;padding:2px 10px;border-radius:999px;font-size:12px;font-weight:700}

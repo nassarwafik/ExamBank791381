@@ -401,3 +401,51 @@ export function IconInfo(props: IconProps) {
     </svg>
   );
 }
+
+/* ---- UX-4 additions (classes & students workspace) ---- */
+export function IconArchive(props: IconProps) {
+  return (
+    <svg {...base(props)}>
+      <rect x="2.5" y="4" width="15" height="4" rx="1.2" />
+      <path d="M4 8v7.5a1.5 1.5 0 0 0 1.5 1.5h9a1.5 1.5 0 0 0 1.5-1.5V8" />
+      <path d="M8 11.5h4" />
+    </svg>
+  );
+}
+
+export function IconRestore(props: IconProps) {
+  return (
+    <svg {...base(props)}>
+      <path d="M3.5 10a6.5 6.5 0 1 0 1.9-4.6" />
+      <path d="M3.5 3.5v4h4" />
+      <path d="M10 6.5V10l2.5 1.5" />
+    </svg>
+  );
+}
+
+export function IconHistory(props: IconProps) {
+  return (
+    <svg {...base(props)}>
+      <path d="M5 3.5h10a1 1 0 0 1 1 1v11a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1v-11a1 1 0 0 1 1-1Z" />
+      <path d="M7 7.5h6M7 10.5h6M7 13.5h4" />
+    </svg>
+  );
+}
+
+export function IconGraduation(props: IconProps) {
+  return (
+    <svg {...base(props)}>
+      <path d="m2.5 7.5 7.5-3.5 7.5 3.5-7.5 3.5Z" />
+      <path d="M5.5 9v4c0 1.2 2 2.5 4.5 2.5s4.5-1.3 4.5-2.5V9" />
+      <path d="M17.5 7.5v4" />
+    </svg>
+  );
+}
+
+export function IconHeart(props: IconProps) {
+  return (
+    <svg {...base(props)}>
+      <path d="M10 16.5s-6.5-4-6.5-8.3A3.4 3.4 0 0 1 10 6.3a3.4 3.4 0 0 1 6.5 1.9c0 4.3-6.5 8.3-6.5 8.3Z" />
+    </svg>
+  );
+}

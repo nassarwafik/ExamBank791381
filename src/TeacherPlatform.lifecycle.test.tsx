@@ -22,25 +22,27 @@ async function routedFetch(input: RequestInfo | URL, init?: RequestInit): Promis
   if (url.includes("/api/students") && method === "GET") { const classId = new URL(url, "http://x").searchParams.get("classId") || ""; return json({ ok: true, students: ROSTERS[classId] || [] }); }
   return json({ ok: true });
 }
-beforeEach(() => { globalThis.fetch = vi.fn(routedFetch) as unknown as typeof fetch; (window as unknown as { confirm: () => boolean }).confirm = () => true; });
+beforeEach(() => { globalThis.fetch = vi.fn(routedFetch) as unknown as typeof fetch; });
 afterEach(() => { cleanup(); vi.restoreAllMocks(); });
 
 async function mount() {
   const utils = render(<TeacherPlatform token="t" currentExam={null} workspaceTab="students" />);
-  await screen.findByText("إضافة طالب جديد");
+  await screen.findByRole("button", { name: "إضافة طالب" });
   // The default selection is the good class; wait for ITS roster (g1) so assertions never race the initial
   // students fetch when this file runs alongside other suites under load.
   await screen.findByText("g1");
   return utils;
 }
-const heroActiveCount = () => (document.querySelector(".platform-hero-stat strong") as HTMLElement).textContent;
+const classesSummary = () => (screen.getByRole("heading", { level: 2, name: "الصفوف" }).parentElement as HTMLElement).textContent; // "N نشطة · M في الأرشيف"
+// UX-4: class management lives in a labelled disclosure per row.
+async function classMenu(row: HTMLElement) { fireEvent.click(within(row).getByRole("button", { name: /^إجراءات الصف/ })); return await screen.findByRole("group", { name: /^إجراءات الصف/ }); }
 const tabBadge = (label: RegExp) => within(screen.getByRole("button", { name: label })).getByText(/^\d+$/).textContent;
 const classRow = (name: string) => within(document.querySelector(".class-list") as HTMLElement).getByText(name).closest(".class-row") as HTMLElement;
 
 describe("R34 — TeacherPlatform class lifecycle is canonical (normalizeClassStatus), never the raw active flag", () => {
-  it("hero count and tabs: only the good class is active; the inconsistent class is classified under the archive tab", async () => {
+  it("pane summary and view counts: only the good class is active; the inconsistent class is classified under the archive view", async () => {
     await mount();
-    expect(heroActiveCount()).toBe("1");
+    expect(classesSummary()).toContain("1 نشطة · 1 في الأرشيف");
     expect(tabBadge(/الصفوف النشطة/)).toBe("1");
     expect(tabBadge(/الأرشيف/)).toBe("1");
     expect(screen.queryByText("صف متناقض")).toBeNull();                        // not in the active list
@@ -52,8 +54,7 @@ describe("R34 — TeacherPlatform class lifecycle is canonical (normalizeClassSt
     await mount();
     expect(screen.getByText("g1")).toBeTruthy();                                // good class roster loaded (family-name cell)
     expect(screen.queryByText("i1")).toBeNull();
-    const strip = document.querySelector(".selected-class-strip strong") as HTMLElement;
-    expect(strip.textContent).toBe("صف جيد");
+    expect(screen.getByRole("heading", { level: 2, name: "صف جيد" })).toBeTruthy();   // roster pane is headed by the selected class
   });
 
   it("archive tab: the inconsistent class renders with the archived row style and offers 'تفعيل', not 'أرشفة الصف'", async () => {
@@ -62,12 +63,16 @@ describe("R34 — TeacherPlatform class lifecycle is canonical (normalizeClassSt
     await screen.findByText("صف متناقض");
     const row = classRow("صف متناقض");
     expect(row.className).toContain("archived");
-    expect(within(row).getByText("تفعيل")).toBeTruthy();
-    expect(within(row).queryByText("أرشفة الصف")).toBeNull();
+    const menu = await classMenu(row);
+    expect(within(menu).getByRole("button", { name: "تفعيل" })).toBeTruthy();
+    expect(within(menu).queryByRole("button", { name: "أرشفة الصف" })).toBeNull();
+    fireEvent.keyDown(document, { key: "Escape" });
     fireEvent.click(screen.getByRole("button", { name: /الصفوف النشطة/ }));
     const good = classRow("صف جيد");
     expect(good.className).not.toContain("archived");
-    expect(within(good).getByText("أرشفة الصف")).toBeTruthy();
+    const goodMenu = await classMenu(good);
+    expect(within(goodMenu).getByRole("button", { name: "أرشفة الصف" })).toBeTruthy();
+    fireEvent.keyDown(document, { key: "Escape" });
   });
 
   it("selecting the inconsistent class disables create-student, import and shows the archived warning", async () => {
@@ -75,9 +80,8 @@ describe("R34 — TeacherPlatform class lifecycle is canonical (normalizeClassSt
     fireEvent.click(screen.getByRole("button", { name: /الأرشيف/ }));
     fireEvent.click(await screen.findByText("صف متناقض"));
     await screen.findByText(/الصف مؤرشف؛ فعّله قبل إضافة أو استعادة الطلاب/);
-    expect((screen.getByText("+ إنشاء حساب طالب") as HTMLButtonElement).disabled).toBe(true);
-    expect((document.querySelector('input[type="file"]') as HTMLInputElement).disabled).toBe(true);
-    expect((screen.getByRole("button", { name: /استيراد/ }) as HTMLButtonElement).disabled).toBe(true);
+    expect((screen.getByRole("button", { name: "إضافة طالب" }) as HTMLButtonElement).disabled).toBe(true);
+    expect((screen.getByRole("button", { name: "استيراد" }) as HTMLButtonElement).disabled).toBe(true);
   });
 
   it("the inconsistent class is never a move target (bulk move list) nor an edit/move option for a good-class student", async () => {
@@ -86,9 +90,9 @@ describe("R34 — TeacherPlatform class lifecycle is canonical (normalizeClassSt
     await screen.findByText("1 طالب محدد");
     const bulkSelect = screen.getByText("اختر صفًا للنقل").closest("select") as HTMLSelectElement;
     expect(Array.from(bulkSelect.options).map(o => o.value)).toEqual([""]);      // good is the current class; inconsistent excluded
-    fireEvent.click(within(screen.getByText("طالب").closest("tr") as HTMLElement).getByText("تعديل"));
-    await screen.findByText("تعديل تفاصيل الطالب");
-    const modal = screen.getByText("تعديل تفاصيل الطالب").closest("section") as HTMLElement;
+    fireEvent.click(within(screen.getByText("طالب").closest("tr") as HTMLElement).getByRole("button", { name: /^إجراءات / }));
+    fireEvent.click(within(await screen.findByRole("group", { name: /^إجراءات / })).getByRole("button", { name: "تعديل" }));
+    const modal = await screen.findByRole("dialog", { name: "تعديل تفاصيل الطالب" });
     const editSelect = within(modal).getByLabelText("الصف") as HTMLSelectElement;
     expect(Array.from(editSelect.options).map(o => o.value)).toEqual(["good"]);
   });
