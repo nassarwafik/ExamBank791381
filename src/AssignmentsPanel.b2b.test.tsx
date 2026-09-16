@@ -40,7 +40,6 @@ function installFetch() {
 }
 
 beforeEach(() => {
-  (window as unknown as { confirm: (m?: string) => boolean }).confirm = () => true;
   (window as unknown as { scrollTo: () => void }).scrollTo = () => {};
   installFetch();
 });
@@ -48,11 +47,17 @@ afterEach(() => { cleanup(); vi.restoreAllMocks(); });
 
 async function openGradebook() {
   const r = render(<AssignmentsPanel token="t" classes={CLASSES as never} currentExam={null} />);
-  fireEvent.click(await r.findByText("📊 سجل العلامات"));
+  fireEvent.click(await r.findByRole("button", { name: "فتح" }));
   await r.findByText("طالب نشط");
   return r;
 }
 const rowOf = (r: ReturnType<typeof render>, name: string) => (r.getByText(name).closest("tr") as HTMLElement);
+// UX-5: lifecycle actions live in the row's labelled disclosure; editors are small Dialogs; confirms are the shared ConfirmDialog.
+async function openRowMenu(r: ReturnType<typeof render>, name: string) { fireEvent.click(within(rowOf(r, name)).getByRole("button", { name: /^إجراءات / })); return await r.findByRole("group", { name: /^إجراءات / }); }
+async function rowAction(r: ReturnType<typeof render>, name: string, label: string) { fireEvent.click(within(await openRowMenu(r, name)).getByRole("button", { name: label })); }
+const confirmEl = () => waitFor(() => { const el = document.querySelector('.eb-confirm[role="dialog"]') as HTMLElement | null; if (!el) throw new Error("no confirm yet"); return el; });
+async function confirmDialog() { const d = await confirmEl(); fireEvent.click(d.querySelector(".eb-dialog-foot .is-primary, .eb-dialog-foot .is-danger") as HTMLElement); }
+const dialogByName = (r: ReturnType<typeof render>, name: string) => r.findByRole("dialog", { name });
 
 describe("AssignmentsPanel — B2B gradebook lifecycle controls", () => {
   it("shows lifecycle info + the three controls for an active timed student", async () => {
@@ -60,34 +65,39 @@ describe("AssignmentsPanel — B2B gradebook lifecycle controls", () => {
     const row = rowOf(r, "طالب نشط");
     expect(within(row).getByText("قيد المحاولة")).toBeTruthy();      // lifecycle badge
     expect(within(row).getByText(/ينتهي فعليًا:/)).toBeTruthy();     // effective end shown
-    expect(within(row).getByText("+ منح محاولة إضافية")).toBeTruthy();
-    expect(within(row).getByText("إعادة فتح للطالب")).toBeTruthy();
-    expect(within(row).getByText("⏱ تمديد وقت المحاولة")).toBeTruthy();
+    const menu = await openRowMenu(r, "طالب نشط");
+    expect(within(menu).getByText("منح محاولة إضافية")).toBeTruthy();
+    expect(within(menu).getByText("إعادة فتح للطالب")).toBeTruthy();
+    expect(within(menu).getByText("تمديد وقت المحاولة")).toBeTruthy();
+    fireEvent.keyDown(document, { key: "Escape" });
   });
 
   it("no extend button for a student without an active attempt", async () => {
     const r = await openGradebook();
-    const row = rowOf(r, "طالب مسلّم");
-    expect(within(row).queryByText("⏱ تمديد وقت المحاولة")).toBeNull();
+    const menu = await openRowMenu(r, "طالب مسلّم");
+    expect(within(menu).queryByText("تمديد وقت المحاولة")).toBeNull();
+    fireEvent.keyDown(document, { key: "Escape" });
   });
 
   it("grant extra attempt requires confirmation and posts allowRetry", async () => {
-    const confirmSpy = vi.spyOn(window, "confirm").mockReturnValue(true);
     const r = await openGradebook();
-    fireEvent.click(within(rowOf(r, "طالب نشط")).getByText("+ منح محاولة إضافية"));
+    await rowAction(r, "طالب نشط", "منح محاولة إضافية");
+    expect((await confirmEl()).textContent).toContain("سيتم السماح للطالب بمحاولة إضافية دون حذف المحاولات السابقة.");
+    expect(lastPost).toBeNull();                                          // nothing sent before the confirmation
+    await confirmDialog();
     await waitFor(() => expect(lastPost?.body.action).toBe("allowRetry"));
-    expect(confirmSpy).toHaveBeenCalled();
   });
 
-  it("extend shows the timer fields, a due-clip warning for a late time, and posts extendActiveAttempt", async () => {
+  it("extend dialog shows the timer fields, a due-clip warning for a late time, and posts extendActiveAttempt after confirmation", async () => {
     const r = await openGradebook();
-    fireEvent.click(within(rowOf(r, "طالب نشط")).getByText("⏱ تمديد وقت المحاولة"));
-    expect(await r.findByText(/النهاية الأصلية:/)).toBeTruthy();
+    await rowAction(r, "طالب نشط", "تمديد وقت المحاولة");
+    const dialog = await dialogByName(r, "تمديد وقت المحاولة");
+    expect(within(dialog).getByText(/النهاية الأصلية/)).toBeTruthy();
     // a new end far past the student's effective due date must surface the clip warning (#23)
-    const input = r.container.querySelector(".extend-inline input[type=datetime-local]") as HTMLInputElement;
-    fireEvent.change(input, { target: { value: "2026-01-02T05:00" } });
+    fireEvent.change(within(dialog).getByLabelText("النهاية الجديدة"), { target: { value: "2026-01-02T05:00" } });
     expect(await r.findByText(/موعد تسليم الطالب الحالي سيوقف المحاولة قبل هذا الوقت/)).toBeTruthy();
-    fireEvent.click(r.getByText("حفظ التمديد"));
+    fireEvent.click(within(dialog).getByText("حفظ التمديد"));
+    await confirmDialog();
     await waitFor(() => expect(lastPost?.body.action).toBe("extendActiveAttempt"));
     expect(String(lastPost?.body.newEndsAt || "")).not.toBe("");
   });
@@ -96,10 +106,10 @@ describe("AssignmentsPanel — B2B gradebook lifecycle controls", () => {
     const r = await openGradebook();
     const row = rowOf(r, "طالب نشط");
     const before = within(row).getByText(/ينتهي فعليًا:/).textContent || "";
-    fireEvent.click(within(row).getByText("⏰ تمديد الموعد"));
-    const input = r.container.querySelector(".deadline-edit-row input[type=datetime-local]") as HTMLInputElement;
-    fireEvent.change(input, { target: { value: "2026-01-01T11:45" } });
-    fireEvent.click(r.getByText("حفظ التمديد"));
+    await rowAction(r, "طالب نشط", "تمديد الموعد");
+    const dialog = await dialogByName(r, "تمديد الموعد");
+    fireEvent.change(within(dialog).getByLabelText("الموعد الجديد"), { target: { value: "2026-01-01T11:45" } });
+    fireEvent.click(within(dialog).getByText("حفظ التمديد"));
     await waitFor(() => expect(lastPost?.body.action).toBe("setDueAtOverride"));
     // the row now reflects the server snapshot: a "تمديد حتى" badge appears AND the effective end changed
     const after = rowOf(r, "طالب نشط");
@@ -111,8 +121,8 @@ describe("AssignmentsPanel — B2B gradebook lifecycle controls", () => {
     const r = await openGradebook();
     const row = rowOf(r, "طالب ممدد");
     expect(within(row).queryByText(/تمديد حتى:/)).toBeTruthy();       // starts extended
-    fireEvent.click(within(row).getByText("⏰ تمديد الموعد"));
-    fireEvent.click(r.getByText("إلغاء التمديد"));
+    await rowAction(r, "طالب ممدد", "تمديد الموعد");
+    fireEvent.click(within(await dialogByName(r, "تمديد الموعد")).getByText("إلغاء التمديد"));
     await waitFor(() => expect(lastPost?.body.action).toBe("setDueAtOverride"));
     expect(lastPost?.body.dueAtOverride).toBeNull();
     const after = rowOf(r, "طالب ممدد");
@@ -121,17 +131,18 @@ describe("AssignmentsPanel — B2B gradebook lifecycle controls", () => {
 
   it("openReopen defaults to a BLANK input when the student has no existing override (not the original due)", async () => {
     const r = await openGradebook();
-    fireEvent.click(within(rowOf(r, "طالب مسلّم")).getByText("إعادة فتح للطالب"));
-    const input = r.container.querySelector(".reopen-edit-row input[type=datetime-local]") as HTMLInputElement;
+    await rowAction(r, "طالب مسلّم", "إعادة فتح للطالب");
+    const input = within(await dialogByName(r, "إعادة فتح للطالب")).getByLabelText(/إعادة الفتح حتى/) as HTMLInputElement;
     expect(input.value).toBe(""); // NOT prefilled to the assignment's original dueAt (would fail > dueAt)
   });
 
-  it("reopen opens an inline control and posts reopenStudent", async () => {
+  it("reopen opens its dialog, requires confirmation and posts reopenStudent", async () => {
     const r = await openGradebook();
-    fireEvent.click(within(rowOf(r, "طالب مسلّم")).getByText("إعادة فتح للطالب"));
-    const input = r.container.querySelector(".reopen-edit-row input[type=datetime-local]") as HTMLInputElement;
-    fireEvent.change(input, { target: { value: "2026-01-03T09:00" } });
-    fireEvent.click(r.getByText("حفظ إعادة الفتح"));
+    await rowAction(r, "طالب مسلّم", "إعادة فتح للطالب");
+    const dialog = await dialogByName(r, "إعادة فتح للطالب");
+    fireEvent.change(within(dialog).getByLabelText(/إعادة الفتح حتى/), { target: { value: "2026-01-03T09:00" } });
+    fireEvent.click(within(dialog).getByText("حفظ إعادة الفتح"));
+    await confirmDialog();
     await waitFor(() => expect(lastPost?.body.action).toBe("reopenStudent"));
     expect(String(lastPost?.body.reopenUntil || "")).not.toBe("");
   });

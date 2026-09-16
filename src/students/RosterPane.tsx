@@ -4,7 +4,7 @@ import StatCard from "../ui/StatCard";
 import StatusBadge from "../ui/StatusBadge";
 import EmptyState from "../ui/EmptyState";
 import VisuallyHidden from "../ui/VisuallyHidden";
-import ActionMenu from "./ActionMenu";
+import ActionMenu from "../ui/ActionMenu";
 import BulkActionBar from "./BulkActionBar";
 import { IconSearch, IconDownload, IconUpload, IconPlus, IconRefresh, IconUser, IconEdit, IconCopy, IconTrash, IconArchive, IconRestore, IconHistory, IconHeart, IconSort, IconChevronDown, IconClose, IconChevronUp } from "../icons";
 import { type CredentialBatch } from "../credentialBatch";

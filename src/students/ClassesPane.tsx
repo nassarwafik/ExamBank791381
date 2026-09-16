@@ -2,7 +2,7 @@ import SectionHeader from "../ui/SectionHeader";
 import IconButton from "../ui/IconButton";
 import EmptyState from "../ui/EmptyState";
 import StatusBadge from "../ui/StatusBadge";
-import ActionMenu from "./ActionMenu";
+import ActionMenu from "../ui/ActionMenu";
 import { IconPlus, IconRefresh, IconArchive, IconRestore, IconGraduation } from "../icons";
 import { normalizeClassStatus } from "../classLifecycle";
 import { getClassProgramCodes } from "../projects/classPrograms";

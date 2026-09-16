@@ -1,6 +1,6 @@
 // @vitest-environment happy-dom
 import { describe, it, expect, afterEach, beforeEach, vi } from "vitest";
-import { render, cleanup, within } from "@testing-library/react";
+import { render, cleanup, within, fireEvent } from "@testing-library/react";
 import AssignmentsPanel from "./AssignmentsPanel";
 
 // Roadmap #34 — Analytics Lifecycle Authority (frontend). The assignment creation form offers a class as a target ONLY
@@ -28,6 +28,7 @@ afterEach(() => { cleanup(); vi.restoreAllMocks(); });
 describe("R34 — AssignmentsPanel offers only canonical-active classes as assignment targets", () => {
   it("the class select lists good + legacy-active only; the inconsistent and the canonical archived classes are absent", async () => {
     const r = render(<AssignmentsPanel token="t" classes={[INCONSISTENT, GOOD, LEGACY_ACTIVE, CANONICAL_ARCHIVED] as never} currentExam={null} />);
+    fireEvent.click(await r.findByRole("button", { name: "إنشاء واجب" }));   // UX-5: the composer opens on demand
     const select = (await r.findByText("اختر الصف")).closest("select") as HTMLSelectElement;
     const values = Array.from(select.options).map(o => o.value).filter(Boolean);
     expect(values).toEqual(["good", "leg"]);

@@ -21,7 +21,6 @@ const OUTLINE_NONE_ALLOW_LIST = {
   ".login-card input": "App.css `.login-card input:focus` re-adds border-color + box-shadow ring",
   ".model-picker select": "App.css `.model-picker select:focus` re-adds border-color + box-shadow ring",
   ".login-card input:focus, .builder-card > textarea:focus, .marks-field input:focus, .model-picker select:focus": "same rule sets border-color + box-shadow ring",
-  ".library-search:focus": "same rule sets border-color + box-shadow ring",
   ".auth-input input:focus": "same rule sets border-color + box-shadow ring"
 };
 const norm = s => s.replace(/\s+/g, " ").trim();
@@ -94,6 +93,13 @@ describe("UX-2 focus foundation", () => {
     for (const m of own.matchAll(/var\((--[a-zA-Z0-9-]+)/g)) expect(m[1], "page-parts.css UX-4 uses non-canonical token " + m[1]).toMatch(/^--eb-/);
     expect(own).not.toMatch(/outline\s*:\s*(none|0)/);
     for (const f of ["ui/ui.css"]) expect(read(f)).not.toMatch(/outline\s*:\s*(none|0)/);
+  });
+  it("UX-5 assignments-pro.css is token-only (--eb-*) and never sets outline:none", () => {
+    const css = read("assignments-pro.css").replace(/\/\*[\s\S]*?\*\//g, "");
+    expect(css, "assignments-pro.css raw hex").not.toMatch(/#[0-9a-fA-F]{3,8}\b/);
+    expect(css, "assignments-pro.css raw rgb").not.toMatch(/\brgba?\(/);
+    for (const m of css.matchAll(/var\((--[a-zA-Z0-9-]+)/g)) expect(m[1], "assignments-pro.css uses non-canonical token " + m[1]).toMatch(/^--eb-/);
+    expect(css).not.toMatch(/outline\s*:\s*(none|0)/);
   });
   it("new UX-2 stylesheets are token-only (--eb-*) with no raw colours", () => {
     for (const f of ["ui/ui.css", "shell.css"]) {

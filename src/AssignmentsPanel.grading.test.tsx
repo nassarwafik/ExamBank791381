@@ -24,13 +24,13 @@ function installFetch(status = "published") {
     return json({ ok: true });
   }) as unknown as typeof fetch;
 }
-beforeEach(() => { (window as unknown as { confirm: () => boolean }).confirm = () => true; (window as unknown as { scrollTo: () => void }).scrollTo = () => {}; installFetch(); });
+beforeEach(() => { (window as unknown as { scrollTo: () => void }).scrollTo = () => {}; installFetch(); });
 afterEach(() => { cleanup(); vi.restoreAllMocks(); });
 
 async function openGradebook(archived = false) {
   const r = render(<AssignmentsPanel token="t" classes={CLASSES as never} currentExam={null} />);
   if (archived) fireEvent.click(await r.findByText(/المؤرشفة/));
-  fireEvent.click(await r.findByText("📊 سجل العلامات"));
+  fireEvent.click(await r.findByRole("button", { name: "فتح" }));
   await r.findByText("زيد");
   return r;
 }
@@ -45,7 +45,7 @@ describe("R13 gradebook search / filter / sort / badges", () => {
   it("AH: not-submitted filter", async () => { const r = await openGradebook(); fireEvent.click(r.getByText("لم يسلّم", { selector: ".gradebook-chip" })); expect(names(r)).toEqual(["سعد"]); });
   it("AI: active filter", async () => { const r = await openGradebook(); fireEvent.click(r.getByText("قيد المحاولة", { selector: ".gradebook-chip" })); expect(names(r)).toEqual(["عمر"]); });
   it("AJ: pending review button is 'تصحيح الآن'", async () => { const r = await openGradebook(); expect(within(rowOf(r, "زيد")).getByText(/تصحيح الآن/)).toBeTruthy(); });
-  it("AK: final result button is 'عرض / تعديل التصحيح'", async () => { const r = await openGradebook(); expect(within(rowOf(r, "خالد")).getByText(/عرض \/ تعديل التصحيح/)).toBeTruthy(); });
+  it("AK: final result button is 'عرض التصحيح'", async () => { const r = await openGradebook(); expect(within(rowOf(r, "خالد")).getByText("عرض التصحيح")).toBeTruthy(); });
   it("AL: lifecycle badge and grading badge coexist on a row", async () => { const r = await openGradebook(); const row = rowOf(r, "زيد"); expect(row.querySelector(".lifecycle-badge")).toBeTruthy(); expect(row.querySelector(".review-state.pending")).toBeTruthy(); });
 });
 
@@ -54,7 +54,7 @@ describe("R13 gradebook archived", () => {
   it("AM: archived results readable; grading badge shown; lifecycle-mutation controls hidden", async () => {
     const r = await openGradebook(true);
     const row = rowOf(r, "خالد");
-    expect(within(row).getByText(/عرض \/ تعديل التصحيح/)).toBeTruthy();          // review still available
+    expect(within(row).getByText("عرض التصحيح")).toBeTruthy();                   // review still available
     expect(row.querySelector(".review-state.final")).toBeTruthy();
     expect(within(row).queryByText(/منح محاولة إضافية/)).toBeNull();             // B2B mutation controls hidden
     expect(within(row).queryByText(/إعادة فتح للطالب/)).toBeNull();
