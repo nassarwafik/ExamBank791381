@@ -5,7 +5,7 @@ import { describe, it, expect } from "vitest";
 // rather than re-deriving the rule, and none of them may infer grading from a score/percentage.
 // Sources are read as raw text via Vite's import.meta.glob (no node:fs — keeps the app tsconfig clean).
 const RAW = import.meta.glob(
-  "./{StudentPortal,AssignmentsPanel,AssignmentReview,StudentExamPage,TeacherPlatform,TeacherDashboard,gradingStatus,students/StudentDialog}.{ts,tsx}",
+  "./{StudentPortal,AssignmentsPanel,AssignmentReview,StudentExamPage,TeacherPlatform,TeacherDashboard,gradingStatus,students/StudentDialog,student/portalPresentation,student/StudentAssignmentCard,student/StudentIdentityCard}.{ts,tsx}",
   { query: "?raw", import: "default", eager: true }
 ) as Record<string, string>;
 const read = (key: string): string => {
@@ -13,7 +13,12 @@ const read = (key: string): string => {
   if (typeof src !== "string") throw new Error("could not read source: " + key + " (have: " + Object.keys(RAW).join(", ") + ")");
   return src;
 };
-const COMPONENTS = ["./StudentPortal.tsx", "./AssignmentsPanel.tsx", "./AssignmentReview.tsx", "./StudentExamPage.tsx"];
+// UX-7a split the student portal's grading-aware code out of StudentPortal.tsx: the presentation rules
+// (student/portalPresentation.ts) and the task card (student/StudentAssignmentCard.tsx) are the files that
+// resolve a grading status now, so they are the ones that must delegate to the shared resolver.
+const COMPONENTS = ["./student/portalPresentation.ts", "./student/StudentAssignmentCard.tsx", "./AssignmentsPanel.tsx", "./AssignmentReview.tsx", "./StudentExamPage.tsx"];
+// Files that render student results without resolving grading themselves: they may not grow a local rule either.
+const NO_LOCAL_RULE_SURFACES = ["./StudentPortal.tsx", "./student/StudentIdentityCard.tsx"];
 // Teacher result surfaces that display a grading label — they must resolve it through the shared authority,
 // never from a raw `finalized` boolean (which mislabels legacy attempts whose stored finalized is absent).
 // UX-4 moved the student profile / history labels from TeacherPlatform into students/StudentDialog.
@@ -35,6 +40,16 @@ describe("F: single shared grading resolver across the frontend", () => {
     });
     it(`${file} never infers grading from a score/percentage`, () => {
       expect(read(file)).not.toMatch(/latestScore\s*!=\s*null\s*\?\s*"final"/);
+    });
+  }
+
+  for (const file of NO_LOCAL_RULE_SURFACES) {
+    it(`${file} contains NO local copy of the pending/final derivation and never infers grading from a score`, () => {
+      const src = read(file);
+      expect(src).not.toMatch(/\?\s*"pendingReview"\s*:\s*"final"/);
+      expect(src).not.toMatch(/manualReviewMarks\s*\|\|\s*0\s*\)\s*>\s*0\s*\|\|/);
+      expect(src).not.toMatch(/latestScore\s*!=\s*null\s*\?\s*"final"/);
+      expect(src).not.toMatch(/manualReviewMarks|finalized\s*===/);          // no grading input is even read here
     });
   }
 

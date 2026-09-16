@@ -56,7 +56,7 @@ describe("R12 StudentPortal grading display", () => {
     expect(within(card).getByRole("button").textContent).toContain("متابعة المحاولة");
   });
 
-  it("AA: filters تحتاج إجراء / قيد الحل / بانتظار التصحيح / مكتملة show the right assignments", async () => {
+  it("AA: filters تحتاج إجراء / قيد الحل / بانتظار التصحيح / مكتملة show the right assignments (UX-7: aria-pressed chips in one labelled group)", async () => {
     mount({ student, classroom, assignments: [
       asg("AV", { dashboardState: "available", gradingStatus: "notSubmitted", attemptStatus: "notStarted", latestResult: null }),
       asg("IP", { dashboardState: "inProgress", gradingStatus: "notSubmitted", hasActiveAttempt: true, attemptStatus: "started", latestResult: null }),
@@ -64,16 +64,16 @@ describe("R12 StudentPortal grading display", () => {
       asg("CO", { dashboardState: "completed", gradingStatus: "final", latestResult: finalLR })
     ], stats: { assigned: 4, completed: 2, average: 73, pendingReview: 1, finalized: 1, inProgress: 1, averageFinalized: 84 } });
     await screen.findByText("AV");
-    fireEvent.click(screen.getByRole("tab", { name: "تحتاج إجراء" }));
+    fireEvent.click(screen.getByRole("button", { name: "تحتاج إجراء" }));
     expect(screen.queryByText("AV")).toBeTruthy(); expect(screen.queryByText("IP")).toBeTruthy();
     expect(screen.queryByText("AR")).toBeNull(); expect(screen.queryByText("CO")).toBeNull();
-    fireEvent.click(screen.getByRole("tab", { name: "قيد الحل" }));
+    fireEvent.click(screen.getByRole("button", { name: "قيد الحل" }));
     expect(screen.queryByText("IP")).toBeTruthy(); expect(screen.queryByText("AV")).toBeNull();
-    fireEvent.click(screen.getByRole("tab", { name: "بانتظار التصحيح" }));
+    fireEvent.click(screen.getByRole("button", { name: "بانتظار التصحيح" }));
     expect(screen.queryByText("AR")).toBeTruthy(); expect(screen.queryByText("CO")).toBeNull();
-    fireEvent.click(screen.getByRole("tab", { name: "مكتملة" }));
+    fireEvent.click(screen.getByRole("button", { name: "مكتملة" }));
     expect(screen.queryByText("CO")).toBeTruthy(); expect(screen.queryByText("AR")).toBeNull();
-    fireEvent.click(screen.getByRole("tab", { name: "الكل" }));
+    fireEvent.click(screen.getByRole("button", { name: "الكل" }));
     expect(screen.queryByText("AV")).toBeTruthy(); expect(screen.queryByText("CO")).toBeTruthy();
   });
 

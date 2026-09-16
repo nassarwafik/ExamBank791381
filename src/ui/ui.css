@@ -229,3 +229,16 @@ h3.eb-section-title { font-size: var(--eb-fs-16); }
   .eb-chart-card-table[hidden] { display: block; }
   .eb-chart-card-foot { display: none; }
 }
+
+/* ProgressRing (UX-7) — circular percentage meter. Fill motion is CSS-only and disabled under reduced motion. */
+.eb-ring { display: inline-flex; flex-direction: column; align-items: center; gap: var(--eb-space-1); }
+.eb-ring-figure { position: relative; display: inline-grid; place-items: center; }
+.eb-ring-figure svg { display: block; grid-area: 1 / 1; transform: rotate(-90deg); }
+.eb-ring-track { fill: none; stroke: var(--eb-line); }
+.eb-ring-fill { fill: none; stroke: var(--eb-primary); stroke-linecap: round; transition: stroke-dashoffset var(--eb-dur) var(--eb-ease); }
+.eb-ring.tone-success .eb-ring-fill { stroke: var(--eb-success); }
+.eb-ring.is-empty .eb-ring-fill { stroke: transparent; }
+.eb-ring-value { grid-area: 1 / 1; color: var(--eb-text-heading); font-size: var(--eb-fs-20); font-weight: var(--eb-fw-bold); font-variant-numeric: tabular-nums; line-height: 1; }
+.eb-ring.is-empty .eb-ring-value { color: var(--eb-muted); }
+.eb-ring-label { color: var(--eb-muted); font-size: var(--eb-fs-12); font-weight: var(--eb-fw-medium); }
+@media (prefers-reduced-motion: reduce) { .eb-ring-fill { transition: none; } }
