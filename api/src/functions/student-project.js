@@ -1,19 +1,27 @@
+// LEGACY read-only Project-794589 view for the logged-in student (/api/student-project). Kept for compatibility:
+// GET only, same session check, 794589-only enrollment gate (enrolled:false otherwise), the same FLAT legacy body
+// (programCode, className, summary with bookProgress / packetTracerProgress, stages, groups, progress, nextBookStage,
+// nextPacketTracerStage), the same 500 message and the same observability event.
+//
+// Roadmap #33 — Legacy 794589 Convergence: reads go through the generic registry namespace (the historical 794589
+// blob paths) and the generic engine; the legacy shape comes from lib/project-794589-legacy-shape.js. A student read
+// NEVER writes: when the class has no snapshot yet, the legacy in-memory default (buildClassSnapshotFromDefault) is
+// used exactly as before and nothing is persisted.
 const { app } = require("@azure/functions");
 const { withObservability } = require("../lib/observability");
 const { requireActiveStudentSession } = require("../lib/student-auth");
-const { getContainer, downloadJsonOrNull } = require("../lib/platform-storage");
+const { downloadJsonOrNull } = require("../lib/platform-storage");
 const { buildClassSnapshotFromDefault, PROGRAM_CODE } = require("../lib/project-794589-template");
 const { classHasProject } = require("../lib/project-tracker/class-programs");
-const core = require("../lib/project-794589-core");
+const { getStorageNamespace } = require("../lib/project-tracker/registry");
+const { workingDefinition } = require("../lib/project-tracker/service");
+const core = require("../lib/project-tracker/core");
+const shape = require("../lib/project-794589-legacy-shape");
 
 const CLASS_PREFIX = "platform/classes/";
-const USER_PREFIX = "platform/users/";
-const CONFIG_PREFIX = "platform/project-trackers/classes/";
-const PROGRESS_PREFIX = "platform/project-progress/";
 
-// Read-only project view for the logged-in student. Ownership comes ONLY from the verified token
-// (auth.user.sub / auth.user.classId) - never from a query parameter - so a student can only ever
-// see their own progress. No write path exists here at all.
+// Ownership comes ONLY from the verified token (auth.user.sub / the student's own classId) - never from a query
+// parameter - so a student can only ever see their own progress. No write path exists here at all.
 // `deps` is an optional dependency-injection seam for unit tests (production passes nothing, so the real
 // implementations are used); `obs` is the request context withObservability passes as the third argument.
 // Neither changes runtime behavior.
@@ -37,10 +45,12 @@ async function handler(request, deps = {}, obs = null) {
         return { status: 200, jsonBody: { ok: true, enrolled: false } };
       }
 
-      const config = (await downloadJsonOrNull(container, CONFIG_PREFIX + classId + ".json"))
+      const ns = getStorageNamespace(PROGRAM_CODE);
+      const config = (await downloadJsonOrNull(container, ns.configName(classId)))
         || buildClassSnapshotFromDefault(classId, now);
-      const progress = await downloadJsonOrNull(container, PROGRESS_PREFIX + classId + "/" + studentId + ".json");
-      const summary = core.buildStudentSummary(config, progress, now);
+      const workDef = workingDefinition(PROGRAM_CODE, config);
+      const progress = await downloadJsonOrNull(container, ns.progressName(classId, studentId));
+      const summary = core.buildStudentSummary(workDef, progress, now);
 
       return {
         status: 200,
@@ -49,12 +59,11 @@ async function handler(request, deps = {}, obs = null) {
           enrolled: true,
           programCode: PROGRAM_CODE,
           className: classroom.name,
-          summary,
+          summary: shape.legacyStudentSummary(summary),
           stages: config.stages,
           groups: config.groups,
           progress: progress ? progress.stages : {},
-          nextBookStage: core.getNextStage(config.stages, progress, "book"),
-          nextPacketTracerStage: core.getNextStage(config.stages, progress, "packetTracer")
+          ...shape.legacyNextStages(core.getNextStages(workDef, progress))
         }
       };
     } catch (e) {

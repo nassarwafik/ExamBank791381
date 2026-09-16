@@ -1,78 +1,48 @@
+// LEGACY teacher route for Project 794589 (/api/project-794589). Kept for compatibility: its URL, status codes,
+// Arabic messages, response field names (bookProgress / packetTracerProgress / nextBookStage / nextPacketTracerStage /
+// legacy balance), audit targetIds/details and observability event are the pre-Roadmap-#33 contract, unchanged.
+//
+// Roadmap #33 — Legacy 794589 Convergence: the BUSINESS LOGIC (snapshot lazy-create + version-aware upgrade,
+// class catalogue, student listing, progress loading, progress mutation, reset, template patch) lives ONCE in
+// lib/project-tracker/service.js and the generic engine (lib/project-tracker/core + analytics), parameterized by
+// projectCode "794589" whose registry namespace is the historical, un-namespaced blob paths. The legacy shapes are
+// produced by the pure formatters in lib/project-794589-legacy-shape.js. Two legacy-only semantics stay in THIS
+// handler on purpose: (1) an un-enrolled class is refused with 403 + the 794589 message, (2) resource=student for a
+// non-member id (foreign/archived/unknown) answers 200 with a blank student — a known legacy limitation recorded for
+// the Final Architecture Audit, deliberately not "fixed" here (the generic route keeps its 404).
 const { app } = require("@azure/functions");
 const { withObservability } = require("../lib/observability");
 const { requireBuilderAuth } = require("../lib/builder-auth");
-const { getContainer, downloadJsonOrNull, uploadJson, listJson, listBlobNames, deleteBlob, mutateJsonWithRetry, StorageConflictError } = require("../lib/platform-storage");
+const { getContainer, StorageConflictError } = require("../lib/platform-storage");
 const { recordAuditEvent } = require("../lib/audit-log");
 const { normalizeClassStatus } = require("../lib/class-lifecycle");
 const { isStudentClassMember } = require("../lib/class-membership");
-const { PROGRAM_CODE, TEMPLATE_VERSION, buildClassSnapshotFromDefault, buildUpgradedSnapshot } = require("../lib/project-794589-template");
-const { classHasMeaningfulProgress } = require("../lib/project-794589-migration");
-const core = require("../lib/project-794589-core");
-const analytics = require("../lib/project-794589-analytics");
-const { applyProgressUpdate } = require("../lib/project-794589-progress");
+const { PROGRAM_CODE, buildClassSnapshotFromDefault } = require("../lib/project-794589-template");
 const { classHasProject } = require("../lib/project-tracker/class-programs");
+const svc = require("../lib/project-tracker/service");
+const core = require("../lib/project-tracker/core");
+const analytics = require("../lib/project-tracker/analytics");
+const shape = require("../lib/project-794589-legacy-shape");
 
-const CLASS_PREFIX = "platform/classes/";
-const USER_PREFIX = "platform/users/";
-const CONFIG_PREFIX = "platform/project-trackers/classes/";
-const PROGRESS_PREFIX = "platform/project-progress/";
 const CONFLICT_MESSAGE = "حدث تعارض مؤقت أثناء حفظ البيانات. حاول مرة أخرى.";
+// First-create snapshots on this route keep the HISTORICAL legacy document shape (programCode, no tracks).
+const LEGACY_SNAPSHOT = { createSnapshot: buildClassSnapshotFromDefault };
 
-const classConfigName = classId => CONFIG_PREFIX + classId + ".json";
-const progressName = (classId, studentId) => PROGRESS_PREFIX + classId + "/" + studentId + ".json";
-const progressPrefixFor = classId => PROGRESS_PREFIX + classId + "/";
-
-async function loadClassroom(container, classId) {
-  return downloadJsonOrNull(container, CLASS_PREFIX + classId + ".json");
-}
-
-// Returns the class snapshot, creating+persisting it on first access for an ACTIVE 794589 class.
-// For an archived class with no snapshot yet, returns an in-memory default so history still renders
-// without writing to an archived class.
-async function ensureClassConfig(container, classroom) {
-  const classId = classroom.classId;
-  const now = new Date().toISOString();
-  const existing = await downloadJsonOrNull(container, classConfigName(classId));
-  const isActive = normalizeClassStatus(classroom) === "active";
-
-  if (!existing) {
-    const snapshot = buildClassSnapshotFromDefault(classId, now);
-    if (isActive) await uploadJson(container, classConfigName(classId), snapshot);
-    return snapshot;
-  }
-
-  // Version-aware, NON-DESTRUCTIVE upgrade. Only an ACTIVE class whose snapshot predates the current
-  // template AND that has NO meaningful student progress is auto-upgraded (safe — the spec allows a
-  // direct upgrade for a class that hasn't really started). A class with real progress is left
-  // exactly as-is and never silently reset; migrating its progress is a separate, explicit decision.
-  if (isActive && Number(existing.templateVersion || 1) < TEMPLATE_VERSION) {
-    const progressDocs = await listJson(container, progressPrefixFor(classId));
-    if (!classHasMeaningfulProgress(progressDocs)) {
-      const upgraded = buildUpgradedSnapshot(existing, classId, now);
-      await uploadJson(container, classConfigName(classId), upgraded);
-      await recordAuditEvent(container, {
-        actor: "system", action: "project.template.upgrade",
-        targetType: "project-template", targetId: classId, targetLabel: classroom.name || "",
-        details: { fromVersion: Number(existing.templateVersion || 1), toVersion: TEMPLATE_VERSION, reason: "no-meaningful-progress" }
-      });
-      return upgraded;
-    }
-  }
-  return existing;
-}
-
-async function listClassStudents(container, classId) {
-  const all = await listJson(container, USER_PREFIX);
-  return all
-    .filter(u => isStudentClassMember(u, classId)) // Roadmap #24: canonical read-side membership (disabled ≠ removed)
-    .map(u => ({ studentId: u.userId, displayName: u.displayName || (u.firstName + " " + u.familyName).trim(), code: u.code }))
-    .sort((a, b) => String(a.displayName).localeCompare(String(b.displayName), "ar"));
-}
-
-async function loadProgressEntries(container, classId, students) {
-  const blobs = await listJson(container, progressPrefixFor(classId));
-  const byId = new Map(blobs.filter(Boolean).map(p => [String(p.studentId), p]));
-  return students.map(s => ({ studentId: s.studentId, displayName: s.displayName, code: s.code, progress: byId.get(String(s.studentId)) || null }));
+function legacyStudentDetail(workDef, config, readOnly, student, progress, now) {
+  const summary = core.buildStudentSummary(workDef, progress, now);
+  return {
+    ok: true, readOnly,
+    student,
+    summary: shape.legacyStudentSummary(summary),
+    stages: config.stages,
+    groups: config.groups,
+    trackWeights: config.trackWeights,
+    config: config.config,
+    progress: progress ? progress.stages : {},
+    history: progress ? (progress.history || []) : [],
+    ...shape.legacyNextStages(core.getNextStages(workDef, progress)),
+    balance: shape.legacyBalance(core.getBalanceInsight(summary.trackProgress, workDef))
+  };
 }
 
 // `deps` is an optional dependency-injection seam for unit tests (production passes nothing, so the real
@@ -90,20 +60,15 @@ async function handler(request, deps = {}, obs = null) {
         const resource = String(url.searchParams.get("resource") || "").trim();
         const classId = String(url.searchParams.get("classId") || "").trim();
 
-        // Catalog of 794589 classes for the class selector (no classId needed).
+        // Catalog of 794589 classes for the class selector (no classId needed). The shared catalogue applies the
+        // canonical enrollment predicate (modern programCodes[] or the legacy programCode) — never raw equality.
         if (resource === "classes") {
-          const classes = (await listJson(container, CLASS_PREFIX))
-            .filter(c => c && classHasProject(c, PROGRAM_CODE))
-            .map(c => ({
-              classId: c.classId, name: c.name, grade: c.grade, schoolYear: c.schoolYear,
-              status: normalizeClassStatus(c), archivedAt: c.archivedAt || "", studentCount: Array.isArray(c.studentIds) ? c.studentIds.length : 0
-            }))
-            .sort((a, b) => String(b.schoolYear).localeCompare(String(a.schoolYear)));
+          const classes = await svc.listProjectClasses(container, PROGRAM_CODE);
           return { status: 200, jsonBody: { ok: true, classes } };
         }
 
         if (!classId) return { status: 400, jsonBody: { ok: false, error: "classId مطلوب." } };
-        const classroom = await loadClassroom(container, classId);
+        const classroom = await svc.loadClassroom(container, classId);
         if (!classroom) return { status: 404, jsonBody: { ok: false, error: "الصف غير موجود." } };
         // Multi-project enrollment gate: this legacy route only serves a class enrolled in 794589
         // (via modern programCodes[] or the legacy programCode). A class whose 794589 link was
@@ -112,7 +77,8 @@ async function handler(request, deps = {}, obs = null) {
           return { status: 403, jsonBody: { ok: false, error: "الصف غير مسجَّل في مشروع 794589." } };
         }
         const readOnly = normalizeClassStatus(classroom) === "archived";
-        const config = await ensureClassConfig(container, classroom);
+        const config = await svc.ensureClassConfig(container, PROGRAM_CODE, classroom, LEGACY_SNAPSHOT);
+        const workDef = svc.workingDefinition(PROGRAM_CODE, config);
 
         if (resource === "template") {
           return { status: 200, jsonBody: { ok: true, template: config, readOnly } };
@@ -123,54 +89,38 @@ async function handler(request, deps = {}, obs = null) {
         if (resource === "student") {
           const studentId = String(url.searchParams.get("studentId") || "").trim();
           if (!studentId) return { status: 400, jsonBody: { ok: false, error: "studentId مطلوب." } };
-          const u = await downloadJsonOrNull(container, USER_PREFIX + studentId + ".json");
+          const u = await svc.loadStudentUser(container, studentId);
           // Canonical read-side membership (Roadmap #24): role student, NOT archived, in this class.
           // A login-disabled student is still a member; an archived one is not (parity with project-tracker).
+          // LEGACY LIMITATION (kept, see header): a non-member id still answers 200 with a blank student.
           const belongs = isStudentClassMember(u, classId);
           const student = belongs
             ? { studentId: u.userId, displayName: u.displayName || (u.firstName + " " + u.familyName).trim(), code: u.code }
             : { studentId, displayName: "", code: "" };
-          const progress = await downloadJsonOrNull(container, progressName(classId, studentId));
-          const summary = core.buildStudentSummary(config, progress, now);
-          return {
-            status: 200,
-            jsonBody: {
-              ok: true, readOnly,
-              student,
-              summary,
-              stages: config.stages,
-              groups: config.groups,
-              trackWeights: config.trackWeights,
-              config: config.config,
-              progress: progress ? progress.stages : {},
-              history: progress ? (progress.history || []) : [],
-              nextBookStage: core.getNextStage(config.stages, progress, "book"),
-              nextPacketTracerStage: core.getNextStage(config.stages, progress, "packetTracer"),
-              balance: core.getBalanceInsight(summary.bookProgress, summary.packetTracerProgress, config.config && config.config.balanceWarningThreshold)
-            }
-          };
+          const progress = await svc.loadStudentProgress(container, PROGRAM_CODE, classId, studentId);
+          return { status: 200, jsonBody: legacyStudentDetail(workDef, config, readOnly, student, progress, now) };
         }
 
-        const students = await listClassStudents(container, classId);
+        const students = await svc.listClassStudents(container, classId);
 
         if (resource === "summary") {
-          const entries = await loadProgressEntries(container, classId, students);
-          const summary = analytics.buildClassSummary(config, entries, now);
+          const entries = await svc.loadProgressEntries(container, PROGRAM_CODE, classId, students);
+          const summary = shape.legacyClassSummary(analytics.buildClassSummary(workDef, entries, now));
           return { status: 200, jsonBody: { ok: true, summary, readOnly, className: classroom.name, schoolYear: classroom.schoolYear } };
         }
 
         if (resource === "students") {
-          const entries = await loadProgressEntries(container, classId, students);
+          const entries = await svc.loadProgressEntries(container, PROGRAM_CODE, classId, students);
           const cards = entries.map(e => ({
             studentId: e.studentId, displayName: e.displayName, code: e.code,
-            ...core.buildStudentSummary(config, e.progress, now)
+            ...shape.legacyStudentSummary(core.buildStudentSummary(workDef, e.progress, now))
           }));
           return { status: 200, jsonBody: { ok: true, students: cards, readOnly } };
         }
 
         if (resource === "analytics") {
-          const entries = await loadProgressEntries(container, classId, students);
-          return { status: 200, jsonBody: { ok: true, analytics: analytics.buildAnalytics(config, entries, now), readOnly } };
+          const entries = await svc.loadProgressEntries(container, PROGRAM_CODE, classId, students);
+          return { status: 200, jsonBody: { ok: true, analytics: shape.legacyAnalytics(analytics.buildAnalytics(workDef, entries, now)), readOnly } };
         }
 
         return { status: 400, jsonBody: { ok: false, error: "resource غير معروف." } };
@@ -182,7 +132,7 @@ async function handler(request, deps = {}, obs = null) {
       const action = String(body.action || "").trim().toLowerCase();
       const classId = String(body.classId || "").trim();
       if (!classId) return { status: 400, jsonBody: { ok: false, error: "classId مطلوب." } };
-      const classroom = await loadClassroom(container, classId);
+      const classroom = await svc.loadClassroom(container, classId);
       if (!classroom) return { status: 404, jsonBody: { ok: false, error: "الصف غير موجود." } };
 
       // Multi-project enrollment gate: every write here (project.reset included) requires the class
@@ -201,19 +151,17 @@ async function handler(request, deps = {}, obs = null) {
         // Wipes ONLY this class's Project-794589 data: its snapshot + every student progress blob.
         // The classroom and the student accounts are NOT touched. Next open re-seeds a fresh V2
         // snapshot with all stages not_started. Blocked on archived classes by the check above.
-        const progressBlobs = await listBlobNames(container, progressPrefixFor(classId));
-        for (const name of progressBlobs) await deleteBlob(container, name);
-        await deleteBlob(container, classConfigName(classId));
+        const { deletedProgressCount } = await svc.resetProject(container, PROGRAM_CODE, classId);
         await rec(container, {
           actor: auth.user?.sub, action: "project.reset",
           targetType: "project-tracker", targetId: classId, targetLabel: classroom.name || "",
-          details: { deletedProgressCount: progressBlobs.length }
+          details: { deletedProgressCount }
         });
-        return { status: 200, jsonBody: { ok: true, deletedProgressCount: progressBlobs.length } };
+        return { status: 200, jsonBody: { ok: true, deletedProgressCount } };
       }
 
       if (action === "program.activate") {
-        const config = await ensureClassConfig(container, classroom);
+        const config = await svc.ensureClassConfig(container, PROGRAM_CODE, classroom, LEGACY_SNAPSHOT);
         return { status: 200, jsonBody: { ok: true, template: config } };
       }
 
@@ -221,23 +169,16 @@ async function handler(request, deps = {}, obs = null) {
         const studentId = String(body.studentId || "").trim();
         const stageId = String(body.stageId || "").trim();
         if (!studentId || !stageId) return { status: 400, jsonBody: { ok: false, error: "studentId وstageId مطلوبان." } };
-        // Membership check BEFORE any mutate (parity with the generic project-tracker route): an
-        // arbitrary/foreign/archived studentId can never create a ghost progress blob under this class.
-        const member = await downloadJsonOrNull(container, USER_PREFIX + studentId + ".json");
-        if (!isStudentClassMember(member, classId)) return { status: 404, jsonBody: { ok: false, error: "الطالب غير موجود في هذا الصف." } };
-        const config = await ensureClassConfig(container, classroom);
-        const stage = (config.stages || []).find(s => s.stageId === stageId && s.active === true);
-        if (!stage) return { status: 400, jsonBody: { ok: false, error: "المرحلة غير موجودة أو غير مفعّلة." } };
-
-        let outcome = null;
         try {
-          const written = await mutateJsonWithRetry(container, progressName(classId, studentId), current =>
-            (outcome = applyProgressUpdate(current, {
-              stageId, status: body.status, note: body.note, actor: auth.user?.sub, now,
-              programCode: PROGRAM_CODE, classId, studentId
-            })).doc
-          );
-          const summary = core.buildStudentSummary(config, written, now);
+          // Membership check BEFORE any mutate (parity with the generic project-tracker route): an
+          // arbitrary/foreign/archived studentId can never create a ghost progress blob under this class.
+          const result = await svc.updateStudentProgress(container, PROGRAM_CODE, classroom, {
+            studentId, stageId, status: body.status, note: body.note, actor: auth.user?.sub, now
+          }, LEGACY_SNAPSHOT);
+          if (!result.ok && result.reason === "not_member") return { status: 404, jsonBody: { ok: false, error: "الطالب غير موجود في هذا الصف." } };
+          if (!result.ok) return { status: 400, jsonBody: { ok: false, error: "المرحلة غير موجودة أو غير مفعّلة." } };
+          const { workDef, stage, written, outcome } = result;
+          const summary = core.buildStudentSummary(workDef, written, now);
           if (outcome.statusChanged) {
             await rec(container, {
               actor: auth.user?.sub,
@@ -258,11 +199,10 @@ async function handler(request, deps = {}, obs = null) {
             status: 200,
             jsonBody: {
               ok: true,
-              summary,
+              summary: shape.legacyStudentSummary(summary),
               stage: { stageId, ...written.stages[stageId] },
-              nextBookStage: core.getNextStage(config.stages, written, "book"),
-              nextPacketTracerStage: core.getNextStage(config.stages, written, "packetTracer"),
-              balance: core.getBalanceInsight(summary.bookProgress, summary.packetTracerProgress, config.config && config.config.balanceWarningThreshold),
+              ...shape.legacyNextStages(core.getNextStages(workDef, written)),
+              balance: shape.legacyBalance(core.getBalanceInsight(summary.trackProgress, workDef)),
               history: (written.history || []).slice(-20)
             }
           };
@@ -277,15 +217,7 @@ async function handler(request, deps = {}, obs = null) {
       if (action === "template.update") {
         const patch = body.template && typeof body.template === "object" ? body.template : {};
         try {
-          const written = await mutateJsonWithRetry(container, classConfigName(classId), current => {
-            const config = current || buildClassSnapshotFromDefault(classId, now);
-            if (Array.isArray(patch.stages)) config.stages = patch.stages;
-            if (Array.isArray(patch.groups)) config.groups = patch.groups;
-            if (patch.trackWeights && typeof patch.trackWeights === "object") config.trackWeights = patch.trackWeights;
-            if (patch.config && typeof patch.config === "object") config.config = { ...config.config, ...patch.config };
-            config.updatedAt = now;
-            return config;
-          });
+          const written = await svc.updateTemplate(container, PROGRAM_CODE, classId, patch, now, LEGACY_SNAPSHOT);
           await rec(container, {
             actor: auth.user?.sub, action: "project.template.update",
             targetType: "project-template", targetId: classId, targetLabel: classroom.name || ""
