@@ -6,16 +6,24 @@ function focusables(root: HTMLElement): HTMLElement[] {
   return Array.from(root.querySelectorAll<HTMLElement>(FOCUSABLE)).filter(el => !el.hasAttribute("aria-hidden"));
 }
 
-// While `active`: moves focus into the container, keeps Tab / Shift+Tab inside it, calls onEscape on Escape, and
-// restores focus to the previously focused element when deactivated. Used by the shell navigation drawer.
-export default function useFocusTrap(ref: RefObject<HTMLElement | null>, active: boolean, onEscape?: () => void) {
+export type FocusTrapOptions = {
+  /** Restore focus to the element focused at activation when the trap deactivates (default true — shell drawer). */
+  restoreFocus?: boolean;
+};
+
+// While `active`: moves focus into the container (unless focus is already inside it), keeps Tab / Shift+Tab inside,
+// calls onEscape on Escape, and — by default — restores focus to the previously focused element when deactivated.
+// Used by the shell navigation drawer; the Dialog primitive passes { restoreFocus: false } because a stacked dialog
+// deactivates its trap while it is merely covered, and owns focus return itself when it genuinely closes.
+export default function useFocusTrap(ref: RefObject<HTMLElement | null>, active: boolean, onEscape?: () => void, options?: FocusTrapOptions) {
+  const restoreFocus = options?.restoreFocus !== false;
   useEffect(() => {
     if (!active) return;
     const root = ref.current;
     if (!root) return;
     const previous = document.activeElement instanceof HTMLElement ? document.activeElement : null;
     const first = focusables(root)[0];
-    if (first) first.focus();
+    if (first && !root.contains(document.activeElement)) first.focus();
     function onKeyDown(event: KeyboardEvent) {
       if (event.key === "Escape") { event.preventDefault(); onEscape?.(); return; }
       if (event.key !== "Tab" || !root) return;
@@ -29,7 +37,7 @@ export default function useFocusTrap(ref: RefObject<HTMLElement | null>, active:
     document.addEventListener("keydown", onKeyDown);
     return () => {
       document.removeEventListener("keydown", onKeyDown);
-      if (previous && document.contains(previous)) previous.focus();
+      if (restoreFocus && previous && document.contains(previous)) previous.focus();
     };
-  }, [ref, active, onEscape]);
+  }, [ref, active, onEscape, restoreFocus]);
 }

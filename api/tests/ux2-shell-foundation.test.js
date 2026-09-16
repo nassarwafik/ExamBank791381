@@ -22,9 +22,7 @@ const OUTLINE_NONE_ALLOW_LIST = {
   ".model-picker select": "App.css `.model-picker select:focus` re-adds border-color + box-shadow ring",
   ".login-card input:focus, .builder-card > textarea:focus, .marks-field input:focus, .model-picker select:focus": "same rule sets border-color + box-shadow ring",
   ".library-search:focus": "same rule sets border-color + box-shadow ring",
-  ".auth-input input:focus": "same rule sets border-color + box-shadow ring",
-  ".platform-form-grid input:focus,.platform-form-grid select:focus,.student-create-grid input:focus,.student-create-grid select:focus,.student-admin-toolbar input:focus,.student-admin-toolbar select:focus": "same rule sets border-color + box-shadow ring",
-  ".student-search-field input": "wrapper `.student-search-field:focus-within` draws the ring around the field"
+  ".auth-input input:focus": "same rule sets border-color + box-shadow ring"
 };
 const norm = s => s.replace(/\s+/g, " ").trim();
 
@@ -86,6 +84,17 @@ describe("UX-2 focus foundation", () => {
     expect(css).not.toMatch(/outline\s*:\s*(none|0)/);
     expect(css, "shared .analytics-view-tabs block must stay for TeacherPlatform / projects screens").toMatch(/\.analytics-view-tabs\{/);
   });
+  it("UX-4 classes & students styles (page-parts.css UX-4 block) are token-only (--eb-*) and never set outline:none", () => {
+    const css = read("page-parts.css");
+    const marker = "UX-4 — Classes & Students workspace";
+    expect(css.includes(marker), "UX-4 block present").toBe(true);
+    const own = css.slice(css.indexOf(marker)).replace(/\/\*[\s\S]*?\*\//g, "");
+    expect(own, "page-parts.css UX-4 raw hex").not.toMatch(/#[0-9a-fA-F]{3,8}\b/);
+    expect(own, "page-parts.css UX-4 raw rgb").not.toMatch(/\brgba?\(/);
+    for (const m of own.matchAll(/var\((--[a-zA-Z0-9-]+)/g)) expect(m[1], "page-parts.css UX-4 uses non-canonical token " + m[1]).toMatch(/^--eb-/);
+    expect(own).not.toMatch(/outline\s*:\s*(none|0)/);
+    for (const f of ["ui/ui.css"]) expect(read(f)).not.toMatch(/outline\s*:\s*(none|0)/);
+  });
   it("new UX-2 stylesheets are token-only (--eb-*) with no raw colours", () => {
     for (const f of ["ui/ui.css", "shell.css"]) {
       const css = read(f).replace(/\/\*[\s\S]*?\*\//g, "");
@@ -136,3 +145,30 @@ describe("UX-2 focus foundation", () => {
     expect(read("App.tsx")).toMatch(/<TeacherAppShell/);
   });
 });
+
+describe("UX-4 membership authority guards", () => {
+  const API = join(SRC, "..", "api", "src");
+  it("the canonical class-membership predicate is untouched (USER document is membership truth; studentIds is never consulted)", () => {
+    const src = readFileSync(join(API, "lib", "class-membership.js"), "utf8");
+    expect(src).toContain("function isStudentClassMember(student, classId) {");
+    expect(src).toContain('if (student.role !== "student") return false;');
+    expect(src).toContain("if (student.archived === true) return false;");
+    expect(src).toContain('return String(student.classId || "") === String(classId ?? "");');
+    expect(src).not.toMatch(/studentIds/);
+    expect(src).not.toMatch(/\.active\b/);
+  });
+  it("the Classes & Students UI never reads classroom.studentIds and keeps class lifecycle on normalizeClassStatus", () => {
+    const files = ["TeacherPlatform.tsx", "students/ClassesPane.tsx", "students/RosterPane.tsx", "students/StudentDialog.tsx", "students/BulkActionBar.tsx", "students/StudentForms.tsx", "students/ActionMenu.tsx", "students/types.ts"];
+    for (const f of files) {
+      const src = read(f);
+      expect(src, f + " must not read studentIds").not.toMatch(/studentIds/);
+      expect(src, f + " must not call window.confirm").not.toMatch(/window\.confirm/);
+      expect(src, f + " must not use role=tablist").not.toMatch(/role="tablist"/);
+    }
+    const platform = read("TeacherPlatform.tsx");
+    expect(platform).toMatch(/const isActiveClass=\(c:Classroom\)=>normalizeClassStatus\(c\)==="active";/);
+    expect(platform).toMatch(/needsAuthoritativeReload\(/);
+    expect(platform).toMatch(/selectedClassRef\.current!==classId\)return;/);
+  });
+});
+

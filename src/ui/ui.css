@@ -101,3 +101,80 @@ h3.eb-section-title { font-size: var(--eb-fs-16); }
 }
 .eb-section-description { margin: var(--eb-space-1) 0 0; color: var(--eb-muted); font-size: var(--eb-fs-13); line-height: var(--eb-lh-body); }
 .eb-section-actions { display: flex; flex-wrap: wrap; gap: var(--eb-space-2); flex: 0 0 auto; }
+
+/* ---------- UX-4: buttons (plain classes, no component API) ---------- */
+.eb-button {
+  display: inline-flex; align-items: center; justify-content: center; gap: var(--eb-space-2);
+  min-height: 40px; padding: 0 var(--eb-space-4);
+  border: 1px solid var(--eb-border-strong); border-radius: var(--eb-r-sm);
+  background: var(--eb-surface); color: var(--eb-text);
+  font: inherit; font-size: var(--eb-fs-14); font-weight: var(--eb-fw-semibold); cursor: pointer;
+  transition: background var(--eb-dur) var(--eb-ease), border-color var(--eb-dur) var(--eb-ease), color var(--eb-dur) var(--eb-ease);
+}
+.eb-button:hover { background: var(--eb-primary-050); border-color: var(--eb-primary); color: var(--eb-primary-strong); }
+.eb-button:disabled { opacity: .55; cursor: default; }
+.eb-button.is-primary { background: var(--eb-primary); border-color: var(--eb-primary); color: var(--eb-surface); }
+.eb-button.is-primary:hover { background: var(--eb-primary-strong); border-color: var(--eb-primary-strong); color: var(--eb-surface); }
+.eb-button.is-danger { background: var(--eb-danger); border-color: var(--eb-danger); color: var(--eb-surface); }
+.eb-button.is-danger:hover { background: var(--eb-danger-tx); border-color: var(--eb-danger-tx); color: var(--eb-surface); }
+.eb-button.is-quiet { border-color: transparent; background: transparent; color: var(--eb-primary-strong); }
+.eb-button.is-quiet:hover { background: var(--eb-primary-050); }
+.eb-button.is-small { min-height: 34px; padding: 0 var(--eb-space-3); font-size: var(--eb-fs-13); }
+.eb-link-button {
+  display: inline-flex; align-items: center; gap: var(--eb-space-1);
+  border: 0; background: transparent; padding: 0; color: var(--eb-primary-strong);
+  font: inherit; font-weight: var(--eb-fw-semibold); cursor: pointer;
+}
+.eb-link-button:hover { text-decoration: underline; }
+.eb-link-button:disabled { opacity: .55; cursor: default; }
+
+/* ---------- UX-4: Dialog ---------- */
+.eb-dialog-root { position: fixed; inset: 0; z-index: var(--eb-z-modal); display: flex; align-items: center; justify-content: center; padding: var(--eb-space-4); }
+.eb-dialog-backdrop { position: absolute; inset: 0; background: var(--eb-backdrop); }
+.eb-dialog {
+  position: relative; display: flex; flex-direction: column; min-width: 0;
+  width: min(640px, 100%); max-height: min(90vh, 960px);
+  background: var(--eb-surface); border: 1px solid var(--eb-line); border-radius: var(--eb-r-lg); box-shadow: var(--eb-sh-lg);
+  color: var(--eb-text);
+}
+.eb-dialog.size-sm { width: min(440px, 100%); }
+.eb-dialog.size-lg { width: min(880px, 100%); }
+.eb-dialog.tone-danger { border-block-start: 4px solid var(--eb-danger); }
+.eb-dialog-head { display: flex; align-items: flex-start; justify-content: space-between; gap: var(--eb-space-3); padding: var(--eb-space-4) var(--eb-space-5) 0; }
+.eb-dialog-title { margin: 0; color: var(--eb-text-heading); font-size: var(--eb-fs-20); font-weight: var(--eb-fw-semibold); line-height: var(--eb-lh-tight); overflow-wrap: anywhere; }
+.eb-dialog-close { flex: 0 0 auto; margin-inline-start: auto; }
+.eb-dialog-body { flex: 1 1 auto; min-height: 0; overflow: auto; padding: var(--eb-space-4) var(--eb-space-5); display: flex; flex-direction: column; gap: var(--eb-space-4); }
+.eb-dialog-foot { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: var(--eb-space-2); padding: 0 var(--eb-space-5) var(--eb-space-4); }
+.eb-dialog-root.is-suspended { visibility: hidden; }
+.eb-confirm-message { margin: 0; white-space: pre-line; line-height: var(--eb-lh-body); color: var(--eb-text); }
+@media (max-width: 767px) {
+  .eb-dialog-root { padding: var(--eb-space-2); align-items: flex-end; }
+  .eb-dialog, .eb-dialog.size-sm, .eb-dialog.size-lg { width: 100%; max-height: 94vh; }
+}
+@media (prefers-reduced-motion: no-preference) {
+  .eb-dialog { animation: ebFadeIn var(--eb-dur) var(--eb-ease) both; }
+}
+
+/* ---------- UX-4: StatusBadge ---------- */
+.eb-badge {
+  display: inline-flex; align-items: center; gap: 4px; min-height: 24px; padding: 0 var(--eb-space-2);
+  border-radius: var(--eb-pill); font-size: var(--eb-fs-12); font-weight: var(--eb-fw-semibold); white-space: nowrap; line-height: 1;
+}
+.eb-badge.tone-success { background: var(--eb-success-bg); color: var(--eb-success-tx); }
+.eb-badge.tone-neutral { background: var(--eb-surface-2); color: var(--eb-text-secondary); }
+.eb-badge.tone-warn { background: var(--eb-warn-bg); color: var(--eb-warn-tx); }
+.eb-badge.tone-danger { background: var(--eb-danger-bg); color: var(--eb-danger-tx); }
+.eb-badge.tone-info { background: var(--eb-info-bg); color: var(--eb-info-tx); }
+
+/* ---------- UX-4: EmptyState ---------- */
+.eb-empty {
+  display: flex; flex-direction: column; align-items: center; gap: var(--eb-space-2); text-align: center;
+  padding: var(--eb-space-6) var(--eb-space-4); border: 1px dashed var(--eb-line-2); border-radius: var(--eb-r-lg); background: var(--eb-surface-2);
+}
+.eb-empty.is-compact { padding: var(--eb-space-4); }
+.eb-empty-title { margin: 0; color: var(--eb-text-heading); font-size: var(--eb-fs-14); font-weight: var(--eb-fw-semibold); }
+.eb-empty-description { margin: 0; color: var(--eb-muted); font-size: var(--eb-fs-13); line-height: var(--eb-lh-body); max-width: 48ch; }
+.eb-empty-action { margin-top: var(--eb-space-1); }
+/* A covered dialog (another dialog stacked above) stays mounted but is inert and visually receded. */
+.eb-dialog-root.is-covered .eb-dialog { pointer-events: none; filter: saturate(.85); }
+.eb-dialog-root.is-covered .eb-dialog-backdrop { pointer-events: none; }

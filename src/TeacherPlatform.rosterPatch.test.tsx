@@ -7,7 +7,7 @@ import TeacherPlatform from "./TeacherPlatform";
 // a successful single-row mutation patches ONLY the affected row from server-returned values and never re-downloads
 // the roster; the classes list is refreshed only when a class count can change; every ambiguous response
 // (rosterSynced:false, incomplete body) falls back to the authoritative reload in the order students → classes;
-// bulk operations and class switching keep their authoritative full loads; the manual ↻ refreshes students then
+// bulk operations and class switching keep their authoritative full loads; the manual refresh loads students then
 // classes; and a response for class A can never patch the roster of class B selected meanwhile.
 
 type Student = { userId: string; code: string; identityNumber: string; firstName: string; familyName: string; displayName: string; classId: string; active: boolean; archived: boolean; createdAt: string; updatedAt: string; lastLoginAt: string; submittedAssignmentsCount: number; likesCount: number };
@@ -64,7 +64,7 @@ const firstIndex = (pred: (c: Call) => boolean) => calls.findIndex(pred);
 const isStudentsGet = (c: Call) => c.method === "GET" && c.url.includes("/api/students?") && c.url.includes("classId=");
 const isClassesGet = (c: Call) => c.method === "GET" && c.url.includes("/api/classrooms");
 
-beforeEach(() => { calls = []; gate = null; ROSTERS = seedRosters(); postHandler = () => ({ ok: true }); globalThis.fetch = vi.fn(routedFetch) as unknown as typeof fetch; (window as unknown as { confirm: () => boolean }).confirm = () => true; });
+beforeEach(() => { calls = []; gate = null; ROSTERS = seedRosters(); postHandler = () => ({ ok: true }); globalThis.fetch = vi.fn(routedFetch) as unknown as typeof fetch; });
 afterEach(() => { cleanup(); vi.restoreAllMocks(); });
 
 async function mount() {
@@ -74,11 +74,22 @@ async function mount() {
   return utils;
 }
 const rowOf = (firstName: string) => screen.getByText(firstName).closest("tr") as HTMLElement;
+// UX-4: row actions live in a labelled disclosure ("إجراءات <name>"); confirmations are an accessible dialog.
+async function openRowMenu(firstName: string) {
+  fireEvent.click(within(rowOf(firstName)).getByRole("button", { name: /^إجراءات / }));
+  return await screen.findByRole("group", { name: /^إجراءات / });
+}
+async function rowAction(firstName: string, label: string) { const menu = await openRowMenu(firstName); fireEvent.click(within(menu).getByRole("button", { name: label })); }
+async function confirmDialog() {
+  const dialog = await screen.findByRole("dialog");
+  fireEvent.click(dialog.querySelector(".eb-dialog-foot .is-primary, .eb-dialog-foot .is-danger") as HTMLButtonElement);
+}
+function likes(firstName: string) { return within(rowOf(firstName)).getByTitle(/ردّ فعل على إنجازاته/).textContent?.trim().split(/\s/)[0]; }
 const badge = () => (document.querySelector(".student-count-badge") as HTMLElement).textContent;
 const stats = () => Array.from(document.querySelectorAll(".student-admin-stats strong")).map(x => x.textContent); // [total, active, disabled, archived, neverLogged]
 const statusOf = (firstName: string) => within(rowOf(firstName)).getByText(/^(فعّال|معطّل|مؤرشف)$/).textContent;
-function editModal() { return screen.getByText("تعديل تفاصيل الطالب").closest("section") as HTMLElement; }
-async function openEdit(firstName: string) { fireEvent.click(within(rowOf(firstName)).getByText("تعديل")); await screen.findByText("تعديل تفاصيل الطالب"); return editModal(); }
+function editModal() { return screen.getByRole("dialog", { name: "تعديل تفاصيل الطالب" }) as HTMLElement; }
+async function openEdit(firstName: string) { await rowAction(firstName, "تعديل"); await screen.findByRole("dialog", { name: "تعديل تفاصيل الطالب" }); return editModal(); }
 function expectNoReloads() { expect(studentsGets()).toBe(0); expect(classesGets()).toBe(0); }
 
 describe("R32 — create", () => {
@@ -86,10 +97,11 @@ describe("R32 — create", () => {
     postHandler = () => ({ ok: true, student: { userId: "s9", code: "999999999", identityNumber: "999999999", firstName: "جديد", familyName: "طالب", displayName: "جديد طالب", classId: "c1", active: true, archived: false, createdAt: "2026-03-01T00:00:00.000Z", updatedAt: "2026-03-01T00:00:00.000Z", lastLoginAt: "" }, temporaryPassword: "Pw-secret-1", rosterSynced: true });
     await mount();
     expect(badge()).toBe("3");
-    fireEvent.change(screen.getByPlaceholderText("الاسم الشخصي"), { target: { value: "جديد" } });
+    fireEvent.click(screen.getByRole("button", { name: "إضافة طالب" }));
+    fireEvent.change(await screen.findByPlaceholderText("الاسم الشخصي"), { target: { value: "جديد" } });
     fireEvent.change(screen.getByPlaceholderText("اسم العائلة"), { target: { value: "طالب" } });
     fireEvent.change(screen.getByPlaceholderText("9 أرقام"), { target: { value: "999999999" } });
-    fireEvent.click(screen.getByText("+ إنشاء حساب طالب"));
+    fireEvent.click(screen.getByRole("button", { name: "إنشاء حساب طالب" }));
     await screen.findByText("✓ تم إنشاء حساب الطالب. سيستخدم رقم الهوية لتسجيل الدخول.");
     expect(screen.getByText("جديد")).toBeTruthy();
     expect(badge()).toBe("4");
@@ -103,10 +115,11 @@ describe("R32 — create", () => {
     postHandler = () => ({ ok: true, student: { ...S1, userId: "s9", firstName: "جديد", familyName: "طالب", displayName: "جديد طالب" }, temporaryPassword: "Pw", rosterSynced: false });
     await mount();
     const g = defer<void>(); gate = g.promise;               // armed AFTER the initial roster load
-    fireEvent.change(screen.getByPlaceholderText("الاسم الشخصي"), { target: { value: "جديد" } });
+    fireEvent.click(screen.getByRole("button", { name: "إضافة طالب" }));
+    fireEvent.change(await screen.findByPlaceholderText("الاسم الشخصي"), { target: { value: "جديد" } });
     fireEvent.change(screen.getByPlaceholderText("اسم العائلة"), { target: { value: "طالب" } });
     fireEvent.change(screen.getByPlaceholderText("9 أرقام"), { target: { value: "999999999" } });
-    fireEvent.click(screen.getByText("+ إنشاء حساب طالب"));
+    fireEvent.click(screen.getByRole("button", { name: "إنشاء حساب طالب" }));
     await waitFor(() => expect(studentsGets("c1")).toBe(1));
     expect(classesGets()).toBe(0);                               // classes read waits for the roster/self-heal read
     g.resolve();
@@ -122,18 +135,18 @@ describe("R32 — toggle active", () => {
     await mount();
     expect(stats()).toEqual(["3", "1", "1", "1", "1"]);
     expect(statusOf("علي")).toBe("فعّال");
-    fireEvent.click(within(rowOf("علي")).getByText("تعطيل الحساب"));
+    await rowAction("علي", "تعطيل الحساب");
     await screen.findByText("✓ تم تعطيل حساب الطالب.");
     expect(statusOf("علي")).toBe("معطّل");
     expect(stats()).toEqual(["3", "0", "2", "1", "1"]);
-    expect(within(rowOf("علي")).getByText("❤️ 2")).toBeTruthy(); // computed counters untouched
+    expect(likes("علي")).toBe("2"); // computed counters untouched
     expectNoReloads();
   });
 
   it("non-boolean response.active → authoritative fallback (students then classes)", async () => {
     postHandler = () => ({ ok: true });
     await mount();
-    fireEvent.click(within(rowOf("علي")).getByText("تعطيل الحساب"));
+    await rowAction("علي", "تعطيل الحساب");
     await waitFor(() => expect(classesGets()).toBe(1));
     expect(studentsGets("c1")).toBe(1);
     expect(firstIndex(isStudentsGet)).toBeLessThan(firstIndex(isClassesGet));
@@ -142,7 +155,7 @@ describe("R32 — toggle active", () => {
   it("4xx mutation error → no local change, error shown, no fallback reload", async () => {
     postHandler = () => json({ ok: false, error: "استعد الطالب من الأرشيف أولًا." }, 409);
     await mount();
-    fireEvent.click(within(rowOf("علي")).getByText("تعطيل الحساب"));
+    await rowAction("علي", "تعطيل الحساب");
     await screen.findByText("استعد الطالب من الأرشيف أولًا.");
     expect(statusOf("علي")).toBe("فعّال");
     expect(stats()).toEqual(["3", "1", "1", "1", "1"]);
@@ -154,11 +167,12 @@ describe("R32 — archive / unarchive", () => {
   it("archive: archived=true + active=false locally, no GET students, one GET classes", async () => {
     postHandler = () => ({ ok: true, archived: true, rosterSynced: true });
     await mount();
-    fireEvent.click(within(rowOf("علي")).getByText("📦 أرشفة"));
+    await rowAction("علي", "أرشفة"); await confirmDialog();
     await screen.findByText("✓ تمت أرشفة الطالب مع الاحتفاظ ببياناته.");
     expect(statusOf("علي")).toBe("مؤرشف");
     expect(stats()).toEqual(["3", "0", "1", "2", "1"]);
-    expect(within(rowOf("علي")).getByText("↩ استعادة")).toBeTruthy();
+    expect(within(await openRowMenu("علي")).getByRole("button", { name: "استعادة" })).toBeTruthy();
+    fireEvent.keyDown(document, { key: "Escape" });
     expect(studentsGets()).toBe(0);
     expect(classesGets()).toBe(1);
   });
@@ -167,7 +181,7 @@ describe("R32 — archive / unarchive", () => {
     postHandler = () => ({ ok: true, archived: false, active: true, rosterSynced: true });
     await mount();
     expect(statusOf("خالد")).toBe("مؤرشف");
-    fireEvent.click(within(rowOf("خالد")).getByText("↩ استعادة"));
+    await rowAction("خالد", "استعادة"); await confirmDialog();
     await screen.findByText("✓ تمت استعادة الطالب.");
     expect(statusOf("خالد")).toBe("فعّال");
     expect(stats()).toEqual(["3", "2", "1", "0", "2"]);
@@ -178,7 +192,7 @@ describe("R32 — archive / unarchive", () => {
   it("archive with archived!==true (incomplete) → authoritative fallback, row untouched until then", async () => {
     postHandler = () => ({ ok: true, rosterSynced: true });
     await mount();
-    fireEvent.click(within(rowOf("علي")).getByText("📦 أرشفة"));
+    await rowAction("علي", "أرشفة"); await confirmDialog();
     await waitFor(() => expect(classesGets()).toBe(1));
     expect(studentsGets("c1")).toBe(1);
     expect(firstIndex(isStudentsGet)).toBeLessThan(firstIndex(isClassesGet));
@@ -191,7 +205,7 @@ describe("R32 — delete", () => {
     await mount();
     fireEvent.click(screen.getByLabelText("تحديد علي حسن"));
     await screen.findByText("1 طالب محدد");
-    fireEvent.click(within(rowOf("علي")).getByText("حذف نهائي"));
+    await rowAction("علي", "حذف نهائي"); await confirmDialog();
     await screen.findByText("✓ تم حذف الطالب نهائيًا.");
     expect(screen.queryByText("علي")).toBeNull();
     expect(screen.queryByText("1 طالب محدد")).toBeNull();     // selectedIds pruned → bulk bar gone
@@ -203,7 +217,7 @@ describe("R32 — delete", () => {
   it("deleted!==true → authoritative fallback", async () => {
     postHandler = () => ({ ok: true, rosterSynced: true });
     await mount();
-    fireEvent.click(within(rowOf("علي")).getByText("حذف نهائي"));
+    await rowAction("علي", "حذف نهائي"); await confirmDialog();
     await waitFor(() => expect(classesGets()).toBe(1));
     expect(studentsGets("c1")).toBe(1);
     expect(screen.getByText("علي")).toBeTruthy();              // authoritative roster (mock) still has s1
@@ -217,12 +231,12 @@ describe("R32 — edit", () => {
     const modal = await openEdit("علي");
     fireEvent.change(within(modal).getByLabelText("الاسم"), { target: { value: "عليّ" } });
     fireEvent.change(within(modal).getByLabelText("رقم الهوية"), { target: { value: "555555555" } });
-    fireEvent.click(within(modal).getByText("💾 حفظ التعديلات"));
+    fireEvent.click(within(modal).getByRole("button", { name: "حفظ التعديلات" }));
     await screen.findByText("✓ تم حفظ تعديلات الطالب.");
     const row = rowOf("عليّ");
     expect(within(row).getByText("555555555")).toBeTruthy();
-    expect(within(row).getByText("❤️ 2")).toBeTruthy();
-    expect(within(row).getByText("📚 الوظائف (3)")).toBeTruthy();
+    expect(likes("عليّ")).toBe("2");
+    expect(within(row).getByText("الوظائف (3)")).toBeTruthy();
     expect(badge()).toBe("3");
     expectNoReloads();
   });
@@ -233,7 +247,7 @@ describe("R32 — edit", () => {
     fireEvent.click(screen.getByLabelText("تحديد علي حسن"));
     const modal = await openEdit("علي");
     fireEvent.change(within(modal).getByLabelText("الصف"), { target: { value: "c2" } });
-    fireEvent.click(within(modal).getByText("💾 حفظ التعديلات"));
+    fireEvent.click(within(modal).getByRole("button", { name: "حفظ التعديلات" }));
     await screen.findByText("✓ تم تعديل الطالب ونقله إلى الصف المختار.");
     expect(screen.queryByText("علي")).toBeNull();
     expect(screen.queryByText(/طالب محدد/)).toBeNull();
@@ -246,7 +260,7 @@ describe("R32 — edit", () => {
     postHandler = () => ({ ok: true, passwordChanged: false, rosterSynced: true });
     await mount();
     const modal = await openEdit("علي");
-    fireEvent.click(within(modal).getByText("💾 حفظ التعديلات"));
+    fireEvent.click(within(modal).getByRole("button", { name: "حفظ التعديلات" }));
     await waitFor(() => expect(classesGets()).toBe(1));
     expect(studentsGets("c1")).toBe(1);
     expect(firstIndex(isStudentsGet)).toBeLessThan(firstIndex(isClassesGet));
@@ -256,7 +270,7 @@ describe("R32 — edit", () => {
     postHandler = () => ({ ok: true, student: { ...S1, firstName: "غريب", classId: "c2" }, passwordChanged: false, rosterSynced: true });
     await mount();
     const modal = await openEdit("علي");                       // class select stays c1
-    fireEvent.click(within(modal).getByText("💾 حفظ التعديلات"));
+    fireEvent.click(within(modal).getByRole("button", { name: "حفظ التعديلات" }));
     await waitFor(() => expect(classesGets()).toBe(1));
     expect(studentsGets("c1")).toBe(1);
     expect(screen.queryByText("غريب")).toBeNull();
@@ -269,7 +283,7 @@ describe("R32 — bulk paths, class switch and manual refresh stay authoritative
     await mount();
     fireEvent.click(screen.getByLabelText("تحديد علي حسن"));
     await screen.findByText("1 طالب محدد");
-    fireEvent.click(screen.getByRole("button", { name: "أرشفة" }));
+    fireEvent.click(screen.getByRole("button", { name: "أرشفة" })); await confirmDialog();
     await screen.findByText(/نُفذت العملية على 1 طالب/);
     expect(calls.some(c => c.action === "bulkAction")).toBe(true);
     expect(studentsGets("c1")).toBe(1);
@@ -280,10 +294,12 @@ describe("R32 — bulk paths, class switch and manual refresh stay authoritative
     postHandler = action => action === "previewImport"
       ? { ok: true, valid: 1, duplicates: 0, invalid: 0, preview: [{ index: 0, firstName: "ع", familyName: "ح", identityNumber: "123456789", status: "valid", error: "" }] }
       : { ok: true, imported: 1, failed: 0, duplicates: 0, rosterSynced: true, credentials: [{ userId: "u1", firstName: "ع", familyName: "ح", displayName: "ع ح", identityNumber: "123456789", code: "123456789", password: "Pw123456" }], errors: [] };
-    const { container } = await mount();
+    await mount();
+    fireEvent.click(screen.getByRole("button", { name: "استيراد" }));
+    await screen.findByRole("dialog", { name: "استيراد طلاب من ملف" });
     const file = new File([JSON.stringify([{ firstName: "ع", familyName: "ح", identityNumber: "123456789" }])], "r.json", { type: "application/json" });
-    fireEvent.change(container.querySelector('input[type="file"]') as HTMLInputElement, { target: { files: [file] } });
-    const importButton = () => screen.getByRole("button", { name: /استيراد/ }) as HTMLButtonElement;
+    fireEvent.change(document.querySelector('input[type="file"]') as HTMLInputElement, { target: { files: [file] } });
+    const importButton = () => screen.getByRole("button", { name: /استيراد الطلاب الصالحين/ }) as HTMLButtonElement;
     await waitFor(() => expect(importButton().disabled).toBe(false));
     fireEvent.click(importButton());
     await screen.findByText("Pw123456");
@@ -299,10 +315,10 @@ describe("R32 — bulk paths, class switch and manual refresh stay authoritative
     expect(studentsGets("c2")).toBe(1);
   });
 
-  it("manual ↻ refreshes the selected roster FIRST and the classes list SECOND", async () => {
+  it("manual refresh loads the selected roster FIRST and the classes list SECOND", async () => {
     await mount();
     const g = defer<void>(); gate = g.promise;
-    fireEvent.click(screen.getByRole("button", { name: "↻ تحديث" }));
+    fireEvent.click(screen.getByRole("button", { name: "تحديث" }));
     await waitFor(() => expect(studentsGets("c1")).toBe(1));
     expect(classesGets()).toBe(0);
     g.resolve();
@@ -316,7 +332,7 @@ describe("R32 — class-switch race during an in-flight single-row mutation", ()
     const d = defer<unknown>();
     postHandler = action => action === "toggleActive" ? d.promise : { ok: true };
     await mount();
-    fireEvent.click(within(rowOf("علي")).getByText("تعطيل الحساب"));
+    await rowAction("علي", "تعطيل الحساب");
     await waitFor(() => expect(calls.some(c => c.action === "toggleActive")).toBe(true));
     fireEvent.click(screen.getByText("صف ثاني"));               // switch while the mutation is in flight
     await screen.findByText("نور");
@@ -335,7 +351,7 @@ describe("R32 — class-switch race during an in-flight single-row mutation", ()
     const d = defer<unknown>();
     postHandler = action => action === "archive" ? d.promise : { ok: true };
     await mount();
-    fireEvent.click(within(rowOf("علي")).getByText("📦 أرشفة"));
+    await rowAction("علي", "أرشفة"); await confirmDialog();
     await waitFor(() => expect(calls.some(c => c.action === "archive")).toBe(true));
     fireEvent.click(screen.getByText("صف ثاني"));
     await screen.findByText("نور");
@@ -355,7 +371,7 @@ describe("R32 — class-switch race during an in-flight single-row mutation", ()
     const d = defer<unknown>();
     postHandler = action => action === "delete" ? d.promise : { ok: true };
     await mount();
-    fireEvent.click(within(rowOf("علي")).getByText("حذف نهائي"));
+    await rowAction("علي", "حذف نهائي"); await confirmDialog();
     await waitFor(() => expect(calls.some(c => c.action === "delete")).toBe(true));
     fireEvent.click(screen.getByText("صف ثاني"));
     await screen.findByText("نور");
@@ -374,7 +390,7 @@ describe("R32 review fix — MOVE is a TWO-class operation (source index + targe
   async function startMove() {
     const modal = await openEdit("علي");
     fireEvent.change(within(modal).getByLabelText("الصف"), { target: { value: "c2" } });
-    fireEvent.click(within(modal).getByText("💾 حفظ التعديلات"));
+    fireEvent.click(within(modal).getByRole("button", { name: "حفظ التعديلات" }));
   }
   const idx = (classId: string) => firstIndex(c => isStudentsGet(c) && c.url.includes("classId=" + classId));
 

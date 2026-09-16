@@ -72,7 +72,7 @@ describe("UX-2 App + TeacherAppShell integration", () => {
     render(<App />); await login();
     await waitFor(() => expect(document.querySelector(".app-sidebar-logout")).toBeTruthy());
     fireEvent.click(nav("الصفوف والطلاب"));
-    expect(h1()).toBe("الصفوف والطلاب"); expect(await screen.findByText("إدارة الطلاب المتقدمة")).toBeTruthy();
+    expect(h1()).toBe("الصفوف والطلاب"); expect(await screen.findByRole("heading", { level: 2, name: "الصفوف" })).toBeTruthy();
     fireEvent.click(nav("الواجبات"));
     expect(h1()).toBe("الواجبات"); expect(await screen.findByText("الواجبات والاختبارات المرسلة")).toBeTruthy();
     fireEvent.click(nav("سجل النشاط"));
