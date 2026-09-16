@@ -124,6 +124,33 @@ describe("UX-3 Needs Attention — four locked categories", () => {
     expect(card(section, "لم يسجّلوا الدخول").textContent).toContain("جميع الطلاب سجّلوا الدخول");
     for (const c of Array.from(section.querySelectorAll(".eb-attention-card"))) expect(c.querySelector(".eb-attention-count")?.textContent).toBe("0");
   });
+  it("REGRESSION: neverLogged=2 while the 20-row followUp cut contains only logged-in high-priority students → count 2, NO zero-state message, no fabricated buttons, partial-details note", async () => {
+    const { section } = await mount(() => {
+      const f = base();
+      f.kpis = { ...f.kpis, neverLogged: 2, followUpStudents: 22 };
+      // real backend boundary: followUp = needsFollowUp rows sorted by priority and sliced to 20 — all 20 have logged in
+      f.followUp = Array.from({ length: 20 }, (_, i) => student("h" + i, "طالب " + i, "high", "2026-09-0" + ((i % 9) + 1) + "T00:00:00.000Z"));
+      return f;
+    });
+    const c = card(section, "لم يسجّلوا الدخول");
+    expect(count(c)).toBe("2");
+    expect(c.textContent).not.toContain("جميع الطلاب سجّلوا الدخول");
+    expect(within(c).queryAllByRole("button")).toHaveLength(0);
+    expect(items(c)).toEqual([]);
+    expect(c.textContent).toContain("توجد 2 حالات ضمن النطاق الحالي، لكن تفاصيلها ليست ضمن قائمة المتابعة المختصرة.");
+    // the other cards are unaffected by the rule: urgent lists the 5-row preview, the zero-count cards keep their locked strings
+    expect(items(card(section, "طلاب في حالة عاجلة"))).toHaveLength(5);
+    expect(card(section, "بانتظار التصحيح").textContent).toContain("لا توجد تسليمات بانتظار التصحيح");
+    expect(card(section, "تسليمات ناقصة").textContent).toContain("لا توجد تسليمات ناقصة");
+  });
+  it("the same rule holds for every category: a positive KPI count with no payload rows never shows the zero-state string", async () => {
+    const { section } = await mount(() => { const f = base(); f.kpis = { ...f.kpis, pendingReview: 3, missingSubmissions: 1 }; return f; });
+    expect(card(section, "بانتظار التصحيح").textContent).toContain("توجد 3 حالات");
+    expect(card(section, "بانتظار التصحيح").textContent).not.toContain("لا توجد تسليمات بانتظار التصحيح");
+    expect(card(section, "تسليمات ناقصة").textContent).toContain("توجد 1 حالات");
+    expect(card(section, "تسليمات ناقصة").textContent).not.toContain("لا توجد تسليمات ناقصة");
+    expect(card(section, "لم يسجّلوا الدخول").textContent).toContain("جميع الطلاب سجّلوا الدخول"); // count 0 → locked empty string
+  });
   it("previews at most five items per card and states how many more exist", async () => {
     const { section } = await mount(() => { const f = attentionFixture(); f.assignmentTrend = Array.from({ length: 7 }, (_, i) => assignment("p" + i, "واجب " + i, 1, 0)); return f; });
     const c = card(section, "بانتظار التصحيح");

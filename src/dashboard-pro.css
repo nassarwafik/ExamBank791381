@@ -87,6 +87,7 @@
 .eb-attention-item-meta{ color:var(--eb-muted); font-size:var(--eb-fs-12); }
 .eb-attention-empty{ margin:0; padding:var(--eb-space-3); color:var(--eb-success-tx); background:var(--eb-success-bg); border-radius:var(--eb-r-sm); font-size:var(--eb-fs-13); }
 .eb-attention-more{ margin:0; color:var(--eb-faint); font-size:var(--eb-fs-12); }
+.eb-attention-partial{ margin:0; padding:var(--eb-space-3); color:var(--eb-text-secondary); background:var(--eb-surface-2); border-radius:var(--eb-r-sm); font-size:var(--eb-fs-13); line-height:var(--eb-lh-body); }
 
 /* ---------- Cards / charts ---------- */
 .eb-chart-grid,.eb-followup-grid{ display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:var(--eb-space-3); align-items:start; }

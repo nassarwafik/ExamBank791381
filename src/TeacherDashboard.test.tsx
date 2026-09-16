@@ -118,7 +118,8 @@ describe("UX-3 dashboard — request contract", () => {
     await waitFor(() => expect(analyticsCalls(calls).at(-1)?.url).toMatch(/^\/api\/teacher-analytics\?classId=c1&studentId=u1&from=.+&to=.+$/));
     const params = new URL("http://x" + analyticsCalls(calls).at(-1)!.url).searchParams;
     const from = Date.parse(params.get("from")!), to = Date.parse(params.get("to")!);
-    expect(to - from).toBe(30 * 24 * 60 * 60 * 1000); expect(to).toBeGreaterThanOrEqual(before);
+    const DAY = 24 * 60 * 60 * 1000; // `from` and `to` come from two separate Date reads, so allow sub-second drift
+    expect(to - from).toBeGreaterThanOrEqual(30 * DAY); expect(to - from).toBeLessThan(30 * DAY + 5000); expect(to).toBeGreaterThanOrEqual(before);
     expect(screen.getByRole("button", { name: "30 يومًا" }).getAttribute("aria-pressed")).toBe("true");
     const n = analyticsCalls(calls).length;
     fireEvent.click(screen.getByRole("button", { name: "تحديث" }));

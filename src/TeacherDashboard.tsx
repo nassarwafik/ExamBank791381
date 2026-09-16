@@ -159,12 +159,21 @@ function DashboardDrillPanel({kind,title,subtitle,onClose,children}:{kind:DrillK
  </aside>;
 }
 
+/* The `count` is the authoritative KPI value for the category; `items` are the
+   rows the payload happens to carry for it (followUp is sorted and cut to 20 by
+   the backend, so a category can have a positive count with no listed rows).
+   The locked empty string is therefore shown only when the count is zero;
+   a positive count without rows renders a truthful partial-details note. */
 function AttentionCard({id,title,count,tone,items,empty}:{id:string;title:string;count:number;tone:"danger"|"attention"|"info";items:Array<{key:string;label:string;meta:string;onOpen:()=>void}>;empty:string}){
  const shown=items.slice(0,ATTENTION_PREVIEW);
  const rest=items.length-shown.length;
+ let body:ReactNode;
+ if(shown.length)body=<ul className="eb-attention-list">{shown.map(item=><li key={item.key}><button type="button" className="eb-attention-item" onClick={item.onOpen}><span className="eb-attention-item-label">{item.label}</span><span className="eb-attention-item-meta">{item.meta}</span></button></li>)}</ul>;
+ else if(count===0)body=<p className="eb-attention-empty">{empty}</p>;
+ else body=<p className="eb-attention-partial">توجد {count} حالات ضمن النطاق الحالي، لكن تفاصيلها ليست ضمن قائمة المتابعة المختصرة.</p>;
  return <article className={"eb-attention-card tone-"+tone} aria-labelledby={id}>
   <h3 id={id} className="eb-attention-title"><span>{title}</span><span className="eb-attention-count">{count}</span></h3>
-  {shown.length?<ul className="eb-attention-list">{shown.map(item=><li key={item.key}><button type="button" className="eb-attention-item" onClick={item.onOpen}><span className="eb-attention-item-label">{item.label}</span><span className="eb-attention-item-meta">{item.meta}</span></button></li>)}</ul>:<p className="eb-attention-empty">{empty}</p>}
+  {body}
   {rest>0&&<p className="eb-attention-more">و{rest} أخرى ضمن النطاق الحالي</p>}
  </article>;
 }
