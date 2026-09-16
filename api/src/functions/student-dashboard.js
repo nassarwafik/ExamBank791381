@@ -2,7 +2,7 @@
 const {app}=require("@azure/functions");
 const {withObservability}=require("../lib/observability");
 const {requireActiveStudentSession}=require("../lib/student-auth");
-const {getContainer,downloadJsonOrNull,listJson}=require("../lib/platform-storage");
+const {getContainer,downloadJsonOrNull,listJson,mapConcurrent,getReadConcurrency}=require("../lib/platform-storage");
 const {normalizeClassStatus}=require("../lib/class-lifecycle");
 const {attemptState,deriveAttemptStatus,attemptModelVersion,activeAttemptOf}=require("../lib/assignment-availability");
 const {deriveGradingStatus}=require("../lib/grading-status");
@@ -21,9 +21,10 @@ function deriveDashboardState(submission,availability,gradingStatus){
  return "available";
 }
 // `deps` is an optional dependency-injection seam for unit tests (production passes nothing, so the real
-// implementations are used). It does not change runtime behavior.
+// implementations are used). It does not change runtime behavior. Roadmap #30 adds `mapConcurrent` and
+// `getReadConcurrency` seams so concurrency tests stay isolated (never by changing the global read concurrency).
 async function handler(request,deps={}){
- const ras=deps.requireActiveStudentSession||requireActiveStudentSession,dl=deps.downloadJsonOrNull||downloadJsonOrNull,ls=deps.listJson||listJson;
+ const ras=deps.requireActiveStudentSession||requireActiveStudentSession,dl=deps.downloadJsonOrNull||downloadJsonOrNull,ls=deps.listJson||listJson,mc=deps.mapConcurrent||mapConcurrent,readConcurrency=deps.getReadConcurrency||getReadConcurrency;
  try{
   // Hardened, server-authoritative session (§7): loads + validates the current student (active/archived/
   // authVersion) and returns the loaded document + container so there is no duplicate user read.
@@ -34,9 +35,15 @@ async function handler(request,deps={}){
   // Legacy stats (kept for backward compatibility) + Roadmap #12 additive authoritative stats.
   let completed=0,sum=0;                                                     // legacy: any completed latest result
   let submitted=0,inProgress=0,pendingReview=0,finalized=0,scheduled=0,available=0,closedUnsubmitted=0,finalSum=0,finalCount=0;
-  for(const a of raw.filter(x=>x.status==="published"&&String(x.classId||"")===String(student.classId||""))){
+  // Roadmap #30: the selected assignments (published, this student's class) are fixed FIRST, then their
+  // submissions are read with BOUNDED concurrency through the R27 primitive (order-preserving, index-aligned,
+  // the first non-404 failure rejects — nothing partial). Still exactly ONE submission read per selected
+  // assignment and zero for drafts/archived/other classes; the derivation below runs in the same order as before.
+  const selected=raw.filter(x=>x.status==="published"&&String(x.classId||"")===String(student.classId||""));
+  const submissions=await mc(selected,readConcurrency(),a=>dl(c,SP+a.assignmentId+"/"+student.userId+".json"));
+  for(let i=0;i<selected.length;i++){const a=selected[i];
    // ONE submission read per assignment (unchanged) — every new field is derived from this same object.
-   const s=await dl(c,SP+a.assignmentId+"/"+student.userId+".json"),attempts=Array.isArray(s?.attempts)?s.attempts:[],latest=attempts.length?attempts[attempts.length-1]:null,st=attemptState(a,s),allowed=st.allowedAttempts,effectiveDueAt=st.effectiveDueAt,avail=st.availability,canAttempt=st.canAttempt;
+   const s=submissions[i],attempts=Array.isArray(s?.attempts)?s.attempts:[],latest=attempts.length?attempts[attempts.length-1]:null,st=attemptState(a,s),allowed=st.allowedAttempts,effectiveDueAt=st.effectiveDueAt,avail=st.availability,canAttempt=st.canAttempt;
    const gradingStatus=deriveGradingStatus(latest);                          // notSubmitted | pendingReview | final
    const dashboardState=deriveDashboardState(s,avail,gradingStatus);
    if(latest){completed++;sum+=Number(latest.percentage||0)}
