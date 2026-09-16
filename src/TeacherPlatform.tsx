@@ -10,6 +10,7 @@ import {normalizeClassStatus} from "./classLifecycle";
 import {getClassProgramCodes} from "./projects/classPrograms";
 import {resolveGradingStatus,type GradingStatus} from "./gradingStatus";
 import {type CredentialBatch,openCredentialBatch,toggleCredentialBatchCollapsed,credentialBatchVisible,buildCredentialsDownload} from "./credentialBatch";
+import {appendStudentRow,mergeStudentRow,removeStudentRow,pruneSelectedIds,needsAuthoritativeReload} from "./rosterPatch";
 
 type WorkspaceTab="dashboard"|"students"|"assignments"|"audit";
 // onCopyLibraryExamToBuilder: forwarded straight to AssignmentsPanel; the snapshot is typed loosely
@@ -73,6 +74,10 @@ function TeacherPlatform({token,currentExam,workspaceTab,onCopyLibraryExamToBuil
  const [classArchiveView,setClassArchiveView]=useState<ClassArchiveView>("active");
  const [students,setStudents]=useState<Student[]>([]);
  const [selectedClassId,setSelectedClassId]=useState("");
+ // Roadmap #32: the class that is CURRENTLY selected, readable after an await. A response that belongs to a
+ // class the teacher has since left is never committed into the visible roster (see loadStudents and the
+ // single-row actions below).
+ const selectedClassRef=useRef("");
  const [loading,setLoading]=useState(false);
  const [actionBusy,setActionBusy]=useState(false);
  const [error,setError]=useState("");
@@ -187,21 +192,37 @@ function TeacherPlatform({token,currentExam,workspaceTab,onCopyLibraryExamToBuil
   finally{setLoading(false)}
  }
 
+ // Authoritative roster read. GET /api/students is ALSO the server-side roster-index self-heal path, so it is
+ // always issued when asked for (even for a class that is no longer selected — the reconcile still runs); its
+ // result is committed to the visible roster ONLY while `classId` is still the selected class (Roadmap #32).
  async function loadStudents(classId:string){
   if(!classId){setStudents([]);return}
   setLoading(true);setError("");
   try{
    const result=await teacherApi<{ok:true;students:Student[]}>("/api/students?classId="+encodeURIComponent(classId)+"&includeArchived=1");
+   if(selectedClassRef.current!==classId)return;
    setStudents(result.students||[]);
    setSelectedIds(prev=>prev.filter(id=>(result.students||[]).some(s=>s.userId===id)));
   }catch(e){setError(e instanceof Error?e.message:"تعذر تحميل الطلاب.")}
   finally{setLoading(false)}
  }
 
+ // Roadmap #32: the authoritative fallback after a single-row mutation whose response cannot be patched locally
+ // (rosterSynced:false, incomplete/unexpected body), and the manual ↻ refresh. ORDER MATTERS and is sequential:
+ // the roster read first (it repairs the class count index on the server), THEN the classes read, so the
+ // repaired studentCount is what the class cards show. Never Promise.all here.
+ async function reloadAuthoritative(classId:string){
+  await loadStudents(classId);
+  await loadClasses();
+ }
+ // A patch is applied to the visible roster only if the action's source class is still the selected one.
+ function stillSelected(classId:string){return selectedClassRef.current===classId}
+
  useEffect(()=>{void loadClasses(false)},[]);
  // Registry-driven list of projects for the per-class project selector (no hard-coded codes).
  useEffect(()=>{teacherApi<{projects?:ProjectOption[]}>("/api/project-tracker?resource=projects").then(r=>setPrograms(r.projects||[])).catch(()=>setPrograms([]));},[]);// eslint-disable-line react-hooks/exhaustive-deps
  useEffect(()=>{
+  selectedClassRef.current=selectedClassId;
   setSelectedIds([]);setProfile(null);setEditingStudent(null);setHistory(null);setReviewTarget(null);clearPasswordReveal();
   // Single-student credential box + bulk errors are cleared so a plaintext password / error never shows
   // under a different class. The bulk credentialBatch is NOT cleared here — it stays in memory and is
@@ -302,12 +323,20 @@ function TeacherPlatform({token,currentExam,workspaceTab,onCopyLibraryExamToBuil
   if(!selectedClassId||!newFirstName.trim()||!newFamilyName.trim()||!validIdentity(newIdentityNumber)||actionBusy)return;
   setActionBusy(true);setError("");setNotice("");setCredentialBox(null);
   try{
-   const result=await teacherApi<{ok:true;student:Student;temporaryPassword:string;rosterSynced?:boolean}>("/api/students",{method:"POST",body:JSON.stringify({
-    action:"create",classId:selectedClassId,firstName:newFirstName.trim(),familyName:newFamilyName.trim(),identityNumber:newIdentityNumber,password:newStudentPassword
+   const sourceClassId=selectedClassId;
+   const result=await teacherApi<{ok:true;student?:Student;temporaryPassword:string;rosterSynced?:boolean}>("/api/students",{method:"POST",body:JSON.stringify({
+    action:"create",classId:sourceClassId,firstName:newFirstName.trim(),familyName:newFamilyName.trim(),identityNumber:newIdentityNumber,password:newStudentPassword
    })});
-   setCredentialBox({name:result.student.displayName,identityNumber:result.student.identityNumber,password:result.temporaryPassword});
+   setCredentialBox({name:result.student?.displayName||"",identityNumber:result.student?.identityNumber||newIdentityNumber,password:result.temporaryPassword});
    setNewFirstName("");setNewFamilyName("");setNewIdentityNumber("");setNewStudentPassword("");
-   await Promise.all([loadStudents(selectedClassId),loadClasses()]);
+   // Roadmap #32: append the server-returned student locally (counters start at 0); the class count changed, so
+   // the classes list is refreshed. Anything ambiguous takes the authoritative reload instead.
+   if(needsAuthoritativeReload("create",result,sourceClassId)||!result.student)await reloadAuthoritative(sourceClassId);
+   else{
+    const created=result.student;
+    if(stillSelected(sourceClassId))setStudents(prev=>appendStudentRow(prev,created));
+    await loadClasses();
+   }
    setNotice(withRosterNote(result,"✓ تم إنشاء حساب الطالب. سيستخدم رقم الهوية لتسجيل الدخول."));
   }catch(e){setError(e instanceof Error?e.message:"تعذر إنشاء الطالب.")}
   finally{setActionBusy(false)}
@@ -330,8 +359,11 @@ function TeacherPlatform({token,currentExam,workspaceTab,onCopyLibraryExamToBuil
   if(actionBusy||student.archived)return;
   setActionBusy(true);setError("");setNotice("");
   try{
-   await teacherApi("/api/students",{method:"POST",body:JSON.stringify({action:"toggleActive",userId:student.userId})});
-   await loadStudents(selectedClassId);
+   const sourceClassId=selectedClassId;
+   const result=await teacherApi<{ok:true;active?:unknown}>("/api/students",{method:"POST",body:JSON.stringify({action:"toggleActive",userId:student.userId})});
+   // Roadmap #32: login eligibility never touches the class count index — patch `active` only, no reloads.
+   if(needsAuthoritativeReload("toggleActive",result))await reloadAuthoritative(sourceClassId);
+   else if(stillSelected(sourceClassId))setStudents(prev=>mergeStudentRow(prev,{userId:student.userId,active:result.active===true}));
    setNotice(student.active?"✓ تم تعطيل حساب الطالب.":"✓ تم تفعيل حساب الطالب.");
   }catch(e){setError(e instanceof Error?e.message:"تعذر تعديل الحساب.")}
   finally{setActionBusy(false)}
@@ -345,8 +377,15 @@ function TeacherPlatform({token,currentExam,workspaceTab,onCopyLibraryExamToBuil
   if(actionBusy||!window.confirm(message))return;
   setActionBusy(true);setError("");setNotice("");
   try{
-   const result=await teacherApi<{ok:true;rosterSynced?:boolean}>("/api/students",{method:"POST",body:JSON.stringify({action,userId:student.userId})});
-   await Promise.all([loadStudents(selectedClassId),loadClasses()]);
+   const sourceClassId=selectedClassId;
+   const result=await teacherApi<{ok:true;archived?:unknown;rosterSynced?:boolean}>("/api/students",{method:"POST",body:JSON.stringify({action,userId:student.userId})});
+   // Roadmap #32: archive ⇒ archived:true + active:false, unarchive ⇒ archived:false + active:true (server
+   // invariants confirmed by the returned flag). Membership changed, so the classes list is refreshed.
+   if(needsAuthoritativeReload(action,result))await reloadAuthoritative(sourceClassId);
+   else{
+    if(stillSelected(sourceClassId))setStudents(prev=>mergeStudentRow(prev,{userId:student.userId,archived:action==="archive",active:action!=="archive"}));
+    await loadClasses();
+   }
    setNotice(withRosterNote(result,student.archived?"✓ تمت استعادة الطالب.":"✓ تمت أرشفة الطالب مع الاحتفاظ ببياناته."));
   }catch(e){setError(e instanceof Error?e.message:"تعذر تغيير حالة الأرشفة.")}
   finally{setActionBusy(false)}
@@ -364,10 +403,16 @@ function TeacherPlatform({token,currentExam,workspaceTab,onCopyLibraryExamToBuil
   if(actionBusy||!confirmed)return;
   setActionBusy(true);setError("");setNotice("");
   try{
-   const result=await teacherApi<{ok:true;rosterSynced?:boolean}>("/api/students",{method:"POST",body:JSON.stringify({action:"delete",userId:student.userId})});
+   const sourceClassId=selectedClassId;
+   const result=await teacherApi<{ok:true;deleted?:unknown;rosterSynced?:boolean}>("/api/students",{method:"POST",body:JSON.stringify({action:"delete",userId:student.userId})});
    if(profile?.student.userId===student.userId)setProfile(null);
    if(editingStudent?.userId===student.userId)setEditingStudent(null);
-   await Promise.all([loadStudents(selectedClassId),loadClasses()]);
+   // Roadmap #32: the row is removed ONLY after the server confirmed the delete; selection is pruned too.
+   if(needsAuthoritativeReload("delete",result))await reloadAuthoritative(sourceClassId);
+   else{
+    if(stillSelected(sourceClassId)){setStudents(prev=>removeStudentRow(prev,student.userId));setSelectedIds(prev=>pruneSelectedIds(prev,student.userId));}
+    await loadClasses();
+   }
    setNotice(withRosterNote(result,"✓ تم حذف الطالب نهائيًا."));
   }catch(e){setError(e instanceof Error?e.message:"تعذر حذف الطالب.")}
   finally{setActionBusy(false)}
@@ -388,12 +433,24 @@ function TeacherPlatform({token,currentExam,workspaceTab,onCopyLibraryExamToBuil
   if(!editingStudent||!editFirstName.trim()||!editFamilyName.trim()||!validIdentity(editIdentityNumber)||!editClassId||actionBusy)return;
   setActionBusy(true);setError("");setNotice("");
   try{
-   const result=await teacherApi<{ok:true;student:Student;passwordChanged:boolean;rosterSynced?:boolean}>("/api/students",{method:"POST",body:JSON.stringify({
-    action:"update",userId:editingStudent.userId,firstName:editFirstName.trim(),familyName:editFamilyName.trim(),identityNumber:editIdentityNumber,classId:editClassId,password:editPassword
+   const sourceClassId=selectedClassId;
+   const targetClassId=editClassId;
+   const userId=editingStudent.userId;
+   const result=await teacherApi<{ok:true;student?:Student;passwordChanged:boolean;rosterSynced?:boolean}>("/api/students",{method:"POST",body:JSON.stringify({
+    action:"update",userId,firstName:editFirstName.trim(),familyName:editFamilyName.trim(),identityNumber:editIdentityNumber,classId:targetClassId,password:editPassword
    })});
-   const moved=editClassId!==selectedClassId;
+   const moved=targetClassId!==sourceClassId;
    setEditingStudent(null);setEditPassword("");
-   await Promise.all([loadStudents(selectedClassId),loadClasses()]);
+   // Roadmap #32: same-class edit → merge the server-returned document into the row (computed counters kept), no
+   // reloads; move → drop the row from the source roster and refresh the classes list (two counts changed).
+   if(needsAuthoritativeReload("update",result,targetClassId)||!result.student)await reloadAuthoritative(sourceClassId);
+   else if(moved){
+    if(stillSelected(sourceClassId)){setStudents(prev=>removeStudentRow(prev,userId));setSelectedIds(prev=>pruneSelectedIds(prev,userId));}
+    await loadClasses();
+   }else{
+    const updated=result.student;
+    if(stillSelected(sourceClassId))setStudents(prev=>mergeStudentRow(prev,updated));
+   }
    setNotice(withRosterNote(result,moved?"✓ تم تعديل الطالب ونقله إلى الصف المختار.":"✓ تم حفظ تعديلات الطالب."));
   }catch(e){setError(e instanceof Error?e.message:"تعذر حفظ تعديلات الطالب.")}
   finally{setActionBusy(false)}
@@ -629,7 +686,7 @@ function TeacherPlatform({token,currentExam,workspaceTab,onCopyLibraryExamToBuil
 
   <div className="platform-grid">
    <section className="platform-card">
-    <div className="platform-card-heading"><div><span className="platform-eyebrow">Classes</span><h3>الصفوف</h3></div><button onClick={()=>loadClasses()} disabled={loading}>↻ تحديث</button></div>
+    <div className="platform-card-heading"><div><span className="platform-eyebrow">Classes</span><h3>الصفوف</h3></div><button onClick={()=>void reloadAuthoritative(selectedClassId)} disabled={loading}>↻ تحديث</button></div>
     <div className="platform-form-grid">
      <label>اسم الصف<input value={newClassName} onChange={e=>setNewClassName(e.target.value)} placeholder="مثال: الثاني عشر 8"/></label>
      <label>المرحلة / الصف<input value={newClassGrade} onChange={e=>setNewClassGrade(e.target.value)} placeholder="مثال: الثاني عشر"/></label>
