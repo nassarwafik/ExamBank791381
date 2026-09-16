@@ -1,6 +1,6 @@
-// TEACHER-ONLY presentation mapping for stage statuses. `helpers.ts` (STATUS_META with its emoji icons)
-// is shared with the student portal panel and stays untouched; teacher components read labels through
-// `statusLabel` and take tones/abbreviations from here, so student rendering cannot change by accident.
+// Shared presentation mapping for stage statuses (teacher workspace since UX-6a, student project panel since
+// UX-7a). `helpers.ts` (STATUS_META with its emoji icons) stays untouched as the legacy label source; components
+// read labels through `statusLabel` and take tones/abbreviations from here.
 import type { BadgeTone } from "../ui/StatusBadge";
 import type { ProgressTone } from "../ui/ProgressBar";
 import type { StageStatus } from "./types";

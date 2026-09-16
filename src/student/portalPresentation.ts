@@ -59,6 +59,14 @@ export function sortTaskFirst(items: Summary[]): Summary[] {
     .map(x => x.item);
 }
 
+// "What should I do now?": only states the dashboard already declares actionable (a live attempt, an open
+// assignment). Scheduled work is listed as upcoming with its opening time — never with a fake start action.
+export const isActionable = (item: Summary): boolean => { const st = stateOf(item); return st === "inProgress" || st === "available"; };
+export function nowItems(items: Summary[]): { actionable: Summary[]; upcoming: Summary[] } {
+  const ordered = sortTaskFirst(items);
+  return { actionable: ordered.filter(isActionable), upcoming: ordered.filter(item => stateOf(item) === "scheduled") };
+}
+
 export const STATE_TONE: Record<DashboardState, BadgeTone> = { scheduled: "neutral", available: "info", inProgress: "info", awaitingReview: "warn", completed: "success", closedUnsubmitted: "danger" };
 
 // Medals: ONLY assignments whose latest result is final, read from the result's own percentage — never from a

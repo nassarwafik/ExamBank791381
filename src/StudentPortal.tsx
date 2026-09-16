@@ -3,25 +3,27 @@ import StudentExamPage from "./StudentExamPage";
 import StudentShell from "./shell/StudentShell";
 import StudentProjectPanel from "./projects/StudentProjectPanel";
 import type { FeedPost, ReactionId } from "./achievements";
-import StatCard from "./ui/StatCard";
 import SectionHeader from "./ui/SectionHeader";
 import EmptyState from "./ui/EmptyState";
 import StudentIdentityCard from "./student/StudentIdentityCard";
+import NowSection from "./student/NowSection";
+import StudentProgressSection from "./student/StudentProgressSection";
 import StudentAssignmentCard from "./student/StudentAssignmentCard";
 import AchievementFeed from "./student/AchievementFeed";
 import AvatarPickerDialog from "./student/AvatarPickerDialog";
-import { FILTERS, matchesFilter, medalsFor, sortTaskFirst, type PortalFilter } from "./student/portalPresentation";
+import { FILTERS, matchesFilter, medalsFor, nowItems, sortTaskFirst, type PortalFilter } from "./student/portalPresentation";
 import { rankFor, rankProgress } from "./studentRank";
 import type { Dashboard, Detail, Summary } from "./student/types";
 
 type Props = { token: string; displayName: string; onLogout: () => void };
 
 /**
- * Student Portal (UX-7a — mobile-first, task-first). Data and session rules are unchanged: exactly one
- * /api/student-dashboard read (the ONLY session authority: its 401 logs out), one optional achievement-feed read
- * and the optional project panel's own read; a POST happens only for an explicit action (avatar, share toggle,
- * reaction). Everything shown (grading, dashboard state, finalized-only average, medals, personal rank) is
- * derived from the server payload — never from a raw score.
+ * Student Portal (UX-7a — mobile-first, actionable-first). Hierarchy: who am I → what should I do now →
+ * how am I progressing → all assignments/results → my projects → achievements. Data and session rules are
+ * unchanged: exactly one /api/student-dashboard read (the ONLY session authority: its 401 logs out), one
+ * optional achievement-feed read and the optional project panel's own read; a POST happens only for an
+ * explicit action (avatar, share toggle, reaction). Everything shown (grading, dashboard state, finalized-only
+ * average, medals, personal rank) is derived from the server payload — never from a raw score.
  */
 export default function StudentPortal({ token, displayName, onLogout }: Props) {
   const [data, setData] = useState<Dashboard | null>(null), [loading, setLoading] = useState(true), [error, setError] = useState(""), [detail, setDetail] = useState<Detail | null>(null), [busy, setBusy] = useState(false);
@@ -112,6 +114,7 @@ export default function StudentPortal({ token, displayName, onLogout }: Props) {
   const averageFinalized = stats && stats.averageFinalized !== null && stats.averageFinalized !== undefined ? Number(stats.averageFinalized) : null;
   const ordered = data ? sortTaskFirst(data.assignments) : [];
   const visible = ordered.filter(item => matchesFilter(item, filter));
+  const now_ = data ? nowItems(data.assignments) : { actionable: [], upcoming: [] };
   const now = Date.now();
 
   return (
@@ -122,16 +125,12 @@ export default function StudentPortal({ token, displayName, onLogout }: Props) {
         {error && <div className="platform-error" role="alert">{error}</div>}
         {!loading && data && stats && (
           <>
-            <StudentIdentityCard student={data.student} classroom={data.classroom} displayName={displayName} medals={medals} rank={rank} progress={progress} averageFinalized={averageFinalized} onChangeAvatar={() => setAvatarPickerOpen(true)} />
+            <StudentIdentityCard student={data.student} classroom={data.classroom} displayName={displayName} rank={rank} onChangeAvatar={() => setAvatarPickerOpen(true)} />
             <AvatarPickerDialog open={avatarPickerOpen} current={data.student.avatarId} saving={avatarSaving} onPick={pickAvatar} onClose={() => setAvatarPickerOpen(false)} />
-            <section className="eb-sp-stats" aria-label="ملخص المهام">
-              <StatCard label="المهام" value={stats.assigned} />
-              <StatCard label="قيد الحل" value={stats.inProgress ?? 0} tone="info" />
-              <StatCard label="بانتظار التصحيح" value={stats.pendingReview ?? 0} tone={(stats.pendingReview ?? 0) > 0 ? "attention" : "neutral"} />
-              <StatCard label="مكتملة" value={stats.finalized ?? 0} tone="success" />
-            </section>
+            <NowSection actionable={now_.actionable} upcoming={now_.upcoming} busy={busy} onOpen={open} />
+            <StudentProgressSection stats={stats} medals={medals} rank={rank} progress={progress} averageFinalized={averageFinalized} />
             <section className="eb-sp-panel" aria-labelledby="eb-sp-tasks-title">
-              <SectionHeader level={2} id="eb-sp-tasks-title" title="المهام والواجبات" count={visible.length} description="ما يحتاج إجراءً منك يظهر أولًا." />
+              <SectionHeader level={2} id="eb-sp-tasks-title" title="المهام والواجبات" count={visible.length} description="كل واجباتك ونتائجك؛ ما يحتاج إجراءً يظهر أولًا." />
               <div className="eb-sp-filters" role="group" aria-label="تصفية المهام">
                 {FILTERS.map(f => <button key={f.key} type="button" className="eb-chip-button" aria-pressed={filter === f.key} onClick={() => setFilter(f.key)}>{f.label}</button>)}
               </div>

@@ -28,7 +28,8 @@ const classroom = { classId: "c1", name: "الصف", grade: "11", schoolYear: "2
 describe("StudentPortal grading authority — never infer final from a score", () => {
   it("A: an old payload with only latestScore/latestPercentage (no grading metadata) is NOT labeled final", async () => {
     mount({ student, classroom, assignments: [asg("A1", { latestScore: 62, latestPercentage: 62 })], stats: { assigned: 1, completed: 1, average: 62 } });
-    const card = (await screen.findByText("A1")).closest(".student-assignment-card") as HTMLElement;
+    // UX-7a: an available assignment is also offered in the primary section — scope to the assignments list.
+    const card = within(await screen.findByRole("region", { name: /المهام والواجبات/ })).getByText("A1").closest(".student-assignment-card") as HTMLElement;
     // A numeric score must not make the card "final".
     expect(within(card).queryByText(/العلامة النهائية/)).toBeNull();
     expect(within(card).queryByText(/علامة مؤقتة/)).toBeNull();          // no fabricated grade at all

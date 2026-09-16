@@ -1,5 +1,5 @@
 /* ============================================================
-   ExamBank — Student Portal (UX-7a)
+   ExamBank — Student Portal & Dashboard (UX-7a)
    Mobile-first: the base rules are the phone layout; min-width
    768 / 1024 only enhance. Token-only (--eb-*), RTL-first through
    logical properties, no logic. The shell (platform.css / shell.css)
@@ -8,17 +8,15 @@
 .eb-sp{ display:flex; flex-direction:column; gap:var(--eb-space-4); width:min(var(--eb-container-student),100%); margin-inline:auto; min-width:0; }
 .eb-sp-status{ margin:0; }
 
-/* ---------- Identity ---------- */
+/* ---------- Identity (compact) ---------- */
 .eb-sp-identity{
-  display:flex; flex-direction:column; gap:var(--eb-space-4); min-width:0;
-  padding:var(--eb-space-4); background:var(--eb-surface); border:1px solid var(--eb-line); border-radius:var(--eb-r-lg); box-shadow:var(--eb-sh-xs);
+  display:flex; align-items:center; flex-wrap:wrap; gap:var(--eb-space-3); min-width:0;
+  padding:var(--eb-space-3) var(--eb-space-4); background:var(--eb-surface); border:1px solid var(--eb-line); border-radius:var(--eb-r-lg); box-shadow:var(--eb-sh-xs);
 }
-.eb-sp-identity-main{ display:flex; align-items:center; gap:var(--eb-space-3); min-width:0; }
-.eb-sp-identity-text{ display:flex; flex-direction:column; gap:var(--eb-space-1); min-width:0; }
+.eb-sp-identity-text{ display:flex; flex-direction:column; gap:2px; min-width:0; flex:1 1 160px; }
 .eb-sp-identity-text h2{ margin:0; color:var(--eb-text-heading); font-size:var(--eb-fs-20); font-weight:var(--eb-fw-bold); line-height:var(--eb-lh-tight); overflow-wrap:anywhere; }
 .eb-sp-identity-text p{ margin:0; font-size:var(--eb-fs-13); }
-.eb-sp-identity-chips{ display:flex; flex-wrap:wrap; align-items:center; gap:var(--eb-space-2); }
-.eb-sp-rank-badge{ gap:var(--eb-space-1); }
+.eb-sp-code{ flex:0 0 auto; }
 .eb-sp-avatar-frame{ display:inline-flex; flex:0 0 auto; padding:3px; border:3px solid var(--eb-line-2); border-radius:50%; }
 .eb-sp-avatar-frame.is-rank-gold{ border-color:var(--eb-medal-gold); }
 .eb-sp-avatar-frame.is-rank-silver{ border-color:var(--eb-medal-silver); }
@@ -29,10 +27,25 @@
   border:2px solid var(--eb-surface); border-radius:50%; cursor:pointer; transition:box-shadow var(--eb-dur) var(--eb-ease);
 }
 .student-avatar-circle:hover{ box-shadow:var(--eb-sh-sm); }
-.eb-sp-identity-side{
-  display:grid; grid-template-columns:auto minmax(0,1fr); align-items:center; gap:var(--eb-space-4);
-  padding-block-start:var(--eb-space-4); border-block-start:1px solid var(--eb-line);
+
+/* ---------- What should I do now ---------- */
+.eb-sp-now-list{ list-style:none; margin:0; padding:0; display:flex; flex-direction:column; gap:var(--eb-space-2); }
+.eb-sp-now-item{
+  display:flex; flex-direction:column; gap:var(--eb-space-2); min-width:0;
+  padding:var(--eb-space-3); background:var(--eb-primary-050); border:1px solid var(--eb-line); border-inline-start:4px solid var(--eb-primary); border-radius:var(--eb-r);
 }
+.eb-sp-now-item.dash-inProgress{ background:var(--eb-warn-bg); border-inline-start-color:var(--eb-warn); }
+.eb-sp-now-text{ display:flex; flex-direction:column; gap:var(--eb-space-1); min-width:0; }
+.eb-sp-now-title{ margin:0; color:var(--eb-text-heading); font-size:var(--eb-fs-16); font-weight:var(--eb-fw-semibold); line-height:var(--eb-lh-tight); overflow-wrap:anywhere; }
+.eb-sp-now-meta{ margin:0; display:flex; flex-wrap:wrap; align-items:center; gap:var(--eb-space-2); color:var(--eb-muted); font-size:var(--eb-fs-12); font-variant-numeric:tabular-nums; }
+.eb-sp-now-action{ width:100%; min-height:44px; }
+.eb-sp-upcoming{ display:flex; flex-direction:column; gap:var(--eb-space-2); padding-block-start:var(--eb-space-3); border-block-start:1px solid var(--eb-line); }
+.eb-sp-upcoming ul{ list-style:none; margin:0; padding:0; display:flex; flex-direction:column; gap:var(--eb-space-1); }
+.eb-sp-upcoming li{ display:flex; flex-wrap:wrap; justify-content:space-between; gap:var(--eb-space-2); font-size:var(--eb-fs-13); font-variant-numeric:tabular-nums; }
+.eb-sp-upcoming-title{ color:var(--eb-text-heading); font-weight:var(--eb-fw-semibold); }
+
+/* ---------- My progress ---------- */
+.eb-sp-progress-row{ display:grid; grid-template-columns:auto minmax(0,1fr); align-items:center; gap:var(--eb-space-4); }
 .eb-sp-average{ display:flex; flex-direction:column; align-items:center; gap:var(--eb-space-1); margin:0; }
 .eb-sp-average-hint{ margin:0; color:var(--eb-muted); font-size:var(--eb-fs-12); text-align:center; }
 .eb-sp-progression{ display:flex; flex-direction:column; gap:var(--eb-space-2); min-width:0; }
@@ -44,6 +57,8 @@
 .eb-sp-medal.is-gold{ color:var(--eb-medal-gold); }
 .eb-sp-medal.is-silver{ color:var(--eb-medal-silver); }
 .eb-sp-medal.is-bronze{ color:var(--eb-medal-bronze); }
+.eb-sp-rank{ margin:0; display:flex; flex-wrap:wrap; align-items:center; gap:var(--eb-space-2); }
+.eb-sp-rank-badge{ gap:var(--eb-space-1); }
 .eb-sp-rank-progress{ display:flex; flex-direction:column; gap:var(--eb-space-1); }
 .eb-sp-rank-hint{ margin:0; color:var(--eb-muted); font-size:var(--eb-fs-12); line-height:var(--eb-lh-body); }
 
@@ -101,6 +116,21 @@
 .eb-sp-reaction-count{ font-variant-numeric:tabular-nums; }
 .eb-sp-feed-note{ margin:0; padding:var(--eb-space-2) var(--eb-space-3); background:var(--eb-surface); border:1px solid var(--eb-line); border-radius:var(--eb-r-sm); color:var(--eb-text); font-size:var(--eb-fs-13); line-height:var(--eb-lh-body); }
 
+/* ---------- My projects (read-only) ---------- */
+.eb-sp-project{ display:flex; flex-direction:column; gap:var(--eb-space-3); min-width:0; }
+.eb-sp-project-tracks{ list-style:none; margin:0; padding:0; display:grid; gap:var(--eb-space-2); }
+.eb-sp-project-next{ margin:0; color:var(--eb-text); font-size:var(--eb-fs-13); line-height:var(--eb-lh-body); }
+.eb-sp-project-group{ display:flex; flex-direction:column; gap:var(--eb-space-2); }
+.eb-sp-stage-list{ list-style:none; margin:0; padding:0; display:flex; flex-direction:column; gap:var(--eb-space-1); }
+.eb-sp-stage{ display:flex; flex-direction:column; gap:var(--eb-space-1); padding:var(--eb-space-2) var(--eb-space-3); background:var(--eb-surface); border:1px solid var(--eb-line); border-radius:var(--eb-r-sm); }
+.eb-sp-stage.is-in-progress{ background:var(--eb-warn-bg); }
+.eb-sp-stage.is-ready{ background:var(--eb-info-bg); }
+.eb-sp-stage.is-approved{ background:var(--eb-success-bg); }
+.eb-sp-stage-main{ display:flex; flex-wrap:wrap; align-items:center; gap:var(--eb-space-2); font-size:var(--eb-fs-13); }
+.eb-sp-stage-code{ color:var(--eb-muted); font-weight:var(--eb-fw-semibold); font-variant-numeric:tabular-nums; }
+.eb-sp-stage-title{ color:var(--eb-text-heading); font-weight:var(--eb-fw-medium); }
+.eb-sp-stage-note{ margin:0; color:var(--eb-info-tx); font-size:var(--eb-fs-12); line-height:var(--eb-lh-body); }
+
 /* ---------- Avatar picker (inside the shared Dialog) ---------- */
 .eb-sp-avatar-grid{ display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:var(--eb-space-2); }
 .eb-sp-avatar-option{
@@ -113,10 +143,10 @@
 /* ---------- Tablet and up ---------- */
 @media (min-width: 768px){
   .eb-sp-stats{ grid-template-columns:repeat(4,minmax(0,1fr)); }
-  .eb-sp-identity{ flex-direction:row; align-items:center; justify-content:space-between; gap:var(--eb-space-5); }
-  .eb-sp-identity-main{ flex:1 1 auto; }
-  .eb-sp-identity-side{ padding-block-start:0; border-block-start:0; padding-inline-start:var(--eb-space-5); border-inline-start:1px solid var(--eb-line); }
+  .eb-sp-now-item{ flex-direction:row; align-items:center; justify-content:space-between; }
+  .eb-sp-now-action{ width:auto; min-height:38px; }
   .eb-sp-task-action{ width:auto; min-height:38px; align-self:flex-start; }
+  .eb-sp-project-tracks{ grid-template-columns:repeat(2,minmax(0,1fr)); }
 }
 @media (min-width: 1024px){
   .eb-sp{ gap:var(--eb-space-5); }

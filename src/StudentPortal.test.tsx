@@ -67,7 +67,7 @@ describe("StudentPortal — optional panels must not end the session (login-boun
     expect(await screen.findByText(/مرحبًا أحمد/)).toBeTruthy();
     await waitFor(() => expect(screen.queryByText(/جارٍ تحميل حسابك/)).toBeNull());
     expect(onLogout).not.toHaveBeenCalled();
-    expect(screen.queryByText(/📡 مشاريعي/)).toBeNull(); // optional project panel silently absent
+    expect(screen.queryByRole("region", { name: "مشاريعي" })).toBeNull(); // optional project panel silently absent
   });
 
   it("all optional panels OK → dashboard renders and no logout", async () => {
