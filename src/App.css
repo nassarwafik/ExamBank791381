@@ -13,12 +13,6 @@ body {
   text-rendering: optimizeLegibility;
 }
 
-/* Unified, calm focus ring (keyboard only) */
-:focus-visible {
-  outline: none;
-  box-shadow: var(--eb-focus);
-}
-
 /* Selection + custom scrollbars */
 ::selection { background: rgba(37,99,235,.16); }
 * { scrollbar-width: thin; scrollbar-color: #cdd6e4 transparent; }
@@ -279,7 +273,6 @@ button {
   color: #0f172a;
   font-family: inherit;
   line-height: 1.9;
-  outline: none;
 }
 
 .builder-card > textarea {
@@ -775,7 +768,6 @@ button {
   min-width: 0;
   flex: 1;
   border: 0;
-  outline: none;
   background: transparent;
   color: #0f172a;
   cursor: pointer;
@@ -3000,7 +2992,6 @@ button {
   background: #fff;
   color: #0f172a;
   font: inherit;
-  outline: none;
 }
 
 .exam-metadata-grid input:focus,

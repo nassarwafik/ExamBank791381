@@ -1,0 +1,66 @@
+// UX-2 — PRESENTATION metadata for the teacher shell, derived from the EXISTING navigation state in App.tsx
+// (teacherView / workspaceTab / projectCode / projectList). This module never owns state: it maps the current
+// values to the active destination, the page title and the breadcrumb, and names the destinations the shell can
+// ask App to navigate to (App maps each id back onto its existing setters).
+
+export type TeacherView = "builder" | "platform" | "import" | "project" | "reports";
+export type WorkspaceTab = "dashboard" | "students" | "assignments" | "audit";
+export type TeacherNavId = "dashboard" | "students" | "assignments" | "projects" | "reports" | "builder" | "import" | "audit";
+
+export interface TeacherNavState {
+  teacherView: TeacherView;
+  workspaceTab: WorkspaceTab;
+  projectCode: string;
+  projectList: { projectCode: string; title: string }[];
+}
+
+export const NAV_LABELS: Record<TeacherNavId, string> = {
+  dashboard: "لوحة المتابعة",
+  students: "الصفوف والطلاب",
+  assignments: "الواجبات",
+  projects: "المشاريع",
+  reports: "التقارير",
+  builder: "باني الامتحان",
+  import: "استيراد من ملف",
+  audit: "سجل النشاط"
+};
+export const EXAM_BANK_GROUP_LABEL = "بنك الامتحانات";
+
+/** Primary destinations in sidebar order; the Exam Bank group holds builder + import; audit is footer/secondary. */
+export const PRIMARY_NAV: TeacherNavId[] = ["dashboard", "students", "assignments", "projects", "reports"];
+export const EXAM_BANK_NAV: TeacherNavId[] = ["builder", "import"];
+export const FOOTER_NAV: TeacherNavId[] = ["audit"];
+
+export function activeNavId(state: TeacherNavState): TeacherNavId {
+  switch (state.teacherView) {
+    case "platform": return state.workspaceTab;
+    case "project": return "projects";
+    case "reports": return "reports";
+    case "import": return "import";
+    default: return "builder";
+  }
+}
+
+export function projectTitle(state: TeacherNavState): string {
+  const found = state.projectList.find(p => p.projectCode === state.projectCode);
+  return found ? found.title : "مشروع " + state.projectCode;
+}
+
+export type CrumbModel = { label: string; navId?: TeacherNavId };
+
+/** Breadcrumb model: ancestors carry the destination id they lead to; the last crumb is the current page. */
+export function breadcrumbFor(state: TeacherNavState): CrumbModel[] {
+  const active = activeNavId(state);
+  if (active === "projects") {
+    return state.projectCode
+      ? [{ label: NAV_LABELS.projects, navId: "projects" }, { label: projectTitle(state) }]
+      : [{ label: NAV_LABELS.projects }];
+  }
+  if (active === "builder" || active === "import") return [{ label: EXAM_BANK_GROUP_LABEL }, { label: NAV_LABELS[active] }];
+  return [{ label: NAV_LABELS[active] }];
+}
+
+export function pageTitleFor(state: TeacherNavState): string {
+  const crumbs = breadcrumbFor(state);
+  return crumbs[crumbs.length - 1].label;
+}

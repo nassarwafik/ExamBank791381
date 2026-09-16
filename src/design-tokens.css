@@ -50,3 +50,52 @@
   --eb-dur: .18s;
   --eb-focus: 0 0 0 4px rgba(37,99,235,.16);
 }
+
+/* ============================================================
+   UX-2 — Canonical foundation additions (Design System v1).
+   One namespace (--eb-*). Existing values above are unchanged;
+   these tokens extend them. New UX-2 CSS uses ONLY --eb-* tokens.
+   Breakpoints (not expressible as custom properties inside @media):
+   640 phone · 768 tablet · 1024 shell drawer/rail switch · 1280 expanded sidebar.
+   ============================================================ */
+:root {
+  /* Semantic colour aliases */
+  --eb-border: var(--eb-line);
+  --eb-border-strong: #cbd5e1;
+  --eb-text-heading: var(--eb-navy);
+  --eb-text-secondary: var(--eb-text);
+  --eb-info: #0284c7; --eb-info-bg: #e0f2fe; --eb-info-tx: #075985;
+  --eb-nav-bg: #0f172a;
+  --eb-nav-text: #e6ecfb;
+  --eb-nav-text-muted: #93a5cc;
+  --eb-nav-hover: rgba(255, 255, 255, 0.08);
+  --eb-nav-border: rgba(255, 255, 255, 0.1);
+  --eb-backdrop: rgba(15, 23, 42, 0.45);
+
+  /* Typography scale (12–28) and weights (400–700) */
+  --eb-fs-12: 12px; --eb-fs-13: 13px; --eb-fs-14: 14px; --eb-fs-16: 16px;
+  --eb-fs-17: 17px; --eb-fs-20: 20px; --eb-fs-24: 24px; --eb-fs-28: 28px;
+  --eb-lh-tight: 1.3; --eb-lh-body: 1.65;
+  --eb-fw-regular: 400; --eb-fw-medium: 500; --eb-fw-semibold: 600; --eb-fw-bold: 700;
+
+  /* Spacing scale */
+  --eb-space-1: 4px; --eb-space-2: 8px; --eb-space-3: 12px; --eb-space-4: 16px;
+  --eb-space-5: 24px; --eb-space-6: 32px; --eb-space-7: 48px;
+
+  /* Radius additions (existing --eb-r-sm/--eb-r/--eb-r-lg/--eb-pill kept) */
+  --eb-r-xs: 6px;
+
+  /* Focus — canonical visible ring (outline-based; never clipped by box-shadow overrides) */
+  --eb-focus-ring: 2px solid var(--eb-primary);
+  --eb-focus-ring-inverse: 2px solid #ffffff;
+  --eb-focus-offset: 2px;
+
+  /* Layers — shell layers stay below the legacy full-screen overlays (900 / 1000) */
+  --eb-z-sticky: 10; --eb-z-dropdown: 20; --eb-z-nav: 30; --eb-z-drawer: 40; --eb-z-toast: 50; --eb-z-modal: 70;
+
+  /* Containers */
+  --eb-container: 1280px; --eb-container-wide: 1440px; --eb-container-reading: 720px; --eb-container-student: 960px;
+
+  /* Shell dimensions */
+  --eb-sidebar-w: 236px; --eb-sidebar-w-compact: 72px;
+}

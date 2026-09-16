@@ -1,8 +1,8 @@
 :root {
   font-family: var(--eb-font, "IBM Plex Sans Arabic", "Segoe UI", Tahoma, Arial, sans-serif);
 
-  color: #0f172a;
-  background: #f8fafc;
+  color: var(--eb-navy);
+  background: var(--eb-bg);
 
   font-synthesis: none;
   text-rendering: optimizeLegibility;
@@ -28,4 +28,15 @@ button,
 input,
 textarea {
   font: inherit;
+}
+
+/* UX-2 — the ONE canonical keyboard focus indicator. Outline-based so no component box-shadow can hide it;
+   offset so it never merges with borders. Dark surfaces (sidebar) switch to the inverse ring. */
+:focus-visible {
+  outline: var(--eb-focus-ring);
+  outline-offset: var(--eb-focus-offset);
+}
+.eb-on-dark :focus-visible,
+.eb-on-dark:focus-visible {
+  outline: var(--eb-focus-ring-inverse);
 }

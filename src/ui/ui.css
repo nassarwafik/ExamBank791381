@@ -1,0 +1,58 @@
+/* ============================================================
+   UX-2 — shared UI primitives. Token-only (--eb-*), RTL-first.
+   ============================================================ */
+
+.eb-visually-hidden {
+  position: absolute !important;
+  width: 1px; height: 1px;
+  padding: 0; margin: -1px;
+  overflow: hidden; clip: rect(0 0 0 0); clip-path: inset(50%);
+  white-space: nowrap; border: 0;
+}
+
+/* Directional glyphs drawn for LTR flip under RTL. */
+[dir="rtl"] .eb-flip-rtl { transform: scaleX(-1); }
+
+.eb-icon-button {
+  display: inline-flex; align-items: center; justify-content: center;
+  min-width: 40px; min-height: 40px;
+  padding: 0; border: 1px solid transparent; border-radius: var(--eb-r-sm);
+  background: transparent; color: var(--eb-text);
+  cursor: pointer;
+  transition: background var(--eb-dur) var(--eb-ease), color var(--eb-dur) var(--eb-ease);
+}
+.eb-icon-button:hover { background: var(--eb-primary-050); color: var(--eb-navy); }
+.eb-icon-button.eb-on-dark { color: var(--eb-nav-text); }
+.eb-icon-button.eb-on-dark:hover { background: var(--eb-nav-hover); color: var(--eb-surface); }
+
+.eb-page-header {
+  display: flex; align-items: flex-start; gap: var(--eb-space-3);
+  padding: var(--eb-space-5) var(--eb-space-5) var(--eb-space-2);
+  color: var(--eb-text-heading);
+}
+.eb-page-header-text { min-width: 0; flex: 1 1 auto; }
+.eb-page-header h1 {
+  margin: 0;
+  font-size: var(--eb-fs-24);
+  font-weight: var(--eb-fw-semibold);
+  line-height: var(--eb-lh-tight);
+}
+
+.eb-breadcrumb ol {
+  display: flex; flex-wrap: wrap; align-items: center; gap: var(--eb-space-1);
+  list-style: none; margin: 0 0 var(--eb-space-1); padding: 0;
+  font-size: var(--eb-fs-13); color: var(--eb-muted);
+}
+.eb-breadcrumb li { display: inline-flex; align-items: center; gap: var(--eb-space-1); }
+.eb-breadcrumb [aria-current="page"] { color: var(--eb-text); font-weight: var(--eb-fw-medium); }
+.eb-breadcrumb-link {
+  border: 0; background: transparent; padding: 2px var(--eb-space-1); margin: 0;
+  color: var(--eb-primary); font: inherit; cursor: pointer; border-radius: var(--eb-r-xs);
+}
+.eb-breadcrumb-link:hover { text-decoration: underline; }
+.eb-breadcrumb-sep { color: var(--eb-faint); flex: 0 0 auto; }
+
+@media (max-width: 767px) {
+  .eb-page-header { padding: var(--eb-space-4) var(--eb-space-4) var(--eb-space-2); }
+  .eb-page-header h1 { font-size: var(--eb-fs-20); }
+}

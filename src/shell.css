@@ -1,265 +1,180 @@
 /* ============================================================
-   ExamBank — App Shell + Sidebar Navigation (teacher workspace)
-   CSS + wrapper markup only. No logic/handlers touched.
+   UX-2 — App Shell (teacher sidebar + page column, student top bar identity).
+   Token-only (--eb-*). RTL-first (logical properties).
+   Layers: sidebar/backdrop use --eb-z-nav / --eb-z-drawer (30/40) and stay
+   BELOW the legacy full-screen builder overlays (900 / 1000).
+   Breakpoints: ≥1280 expanded · 1024–1279 compact rail · <1024 drawer.
    ============================================================ */
 
-.app-shell {
+.eb-shell {
   display: flex;
   align-items: stretch;
   min-height: 100vh;
   background: var(--eb-bg);
 }
 
+/* Skip link: visually hidden until focused. */
+.eb-skip-link {
+  position: absolute;
+  inset-block-start: var(--eb-space-2);
+  inset-inline-start: var(--eb-space-2);
+  z-index: var(--eb-z-drawer);
+  padding: var(--eb-space-2) var(--eb-space-3);
+  background: var(--eb-surface);
+  color: var(--eb-primary);
+  border-radius: var(--eb-r-sm);
+  box-shadow: var(--eb-sh-md);
+  font-weight: var(--eb-fw-semibold);
+  transform: translateY(-200%);
+}
+.eb-skip-link:focus { transform: none; }
+
 /* ---------- Sidebar ---------- */
-.app-sidebar {
+.eb-sidebar {
   flex: 0 0 auto;
-  width: 232px;
+  width: var(--eb-sidebar-w);
   position: sticky;
   inset-block-start: 0;
   height: 100vh;
   display: flex;
   flex-direction: column;
-  gap: 10px;
-  padding: 18px 14px;
-  background: linear-gradient(180deg, #0b1220 0%, #0f172a 60%, #12223f 100%);
-  color: #e6ecfb;
-  box-shadow: var(--eb-sh-lg);
-  z-index: 20;
+  gap: var(--eb-space-2);
+  padding: var(--eb-space-4) var(--eb-space-3);
+  background: var(--eb-nav-bg);
+  color: var(--eb-nav-text);
+  z-index: var(--eb-z-nav);
+  transition: width var(--eb-dur) var(--eb-ease), transform var(--eb-dur) var(--eb-ease);
 }
+.eb-sidebar-top { display: flex; align-items: center; justify-content: space-between; gap: var(--eb-space-2); padding-block-end: var(--eb-space-3); border-block-end: 1px solid var(--eb-nav-border); }
+.eb-brand { display: flex; align-items: center; gap: var(--eb-space-2); min-width: 0; }
+.eb-brand-mark {
+  flex: 0 0 auto; width: 36px; height: 36px; border-radius: var(--eb-r-sm);
+  display: inline-flex; align-items: center; justify-content: center;
+  background: var(--eb-primary); color: var(--eb-surface);
+  font-weight: var(--eb-fw-bold); font-size: var(--eb-fs-14);
+}
+.eb-brand-text { display: flex; flex-direction: column; font-weight: var(--eb-fw-semibold); font-size: var(--eb-fs-14); line-height: var(--eb-lh-tight); white-space: nowrap; }
+.eb-brand-text small { color: var(--eb-nav-text-muted); font-weight: var(--eb-fw-medium); font-size: var(--eb-fs-12); }
 
-.app-sidebar-brand {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 6px 6px 14px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-  margin-bottom: 6px;
-}
-.app-sidebar-logo {
-  flex: 0 0 auto;
-  width: 38px;
-  height: 38px;
-  border-radius: 12px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-weight: 800;
-  font-size: 15px;
-  color: #fff;
-  background: linear-gradient(135deg, var(--eb-primary), var(--eb-primary-strong));
-  box-shadow: 0 10px 22px -12px rgba(37, 99, 235, 0.7);
-}
-.app-sidebar-brand-text {
-  display: flex;
-  flex-direction: column;
-  font-weight: 800;
-  font-size: 14.5px;
-  letter-spacing: 0.2px;
-  line-height: 1.3;
-}
-.app-sidebar-brand-text small {
-  color: #93a5cc;
-  font-weight: 600;
-  font-size: 11.5px;
-}
+.eb-nav { display: flex; flex-direction: column; gap: var(--eb-space-1); }
+.eb-nav:not(.eb-nav-footer) { flex: 1 1 auto; overflow-y: auto; }
+.eb-nav-footer { padding-block-start: var(--eb-space-3); border-block-start: 1px solid var(--eb-nav-border); }
 
-.app-sidebar-nav {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  flex: 1 1 auto;
-  overflow-y: auto;
-}
-
-.app-sidebar-link {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  width: 100%;
-  border: 0;
-  background: transparent;
-  color: #b9c4de;
-  padding: 11px 12px;
-  border-radius: 11px;
-  font-weight: 700;
-  font-size: 13.5px;
-  cursor: pointer;
-  text-align: start;
+.eb-nav-link {
+  display: flex; align-items: center; gap: var(--eb-space-3);
+  width: 100%; min-height: 40px;
+  border: 0; background: transparent; color: var(--eb-nav-text-muted);
+  padding: var(--eb-space-2) var(--eb-space-3);
+  border-radius: var(--eb-r-sm);
+  font-size: var(--eb-fs-14); font-weight: var(--eb-fw-medium);
+  text-align: start; cursor: pointer;
   transition: background var(--eb-dur) var(--eb-ease), color var(--eb-dur) var(--eb-ease);
 }
-.app-sidebar-link svg {
-  flex: 0 0 auto;
-  opacity: 0.9;
+.eb-nav-link svg { flex: 0 0 auto; }
+.eb-nav-link:hover { background: var(--eb-nav-hover); color: var(--eb-nav-text); }
+.eb-nav-link.is-active { background: var(--eb-primary); color: var(--eb-surface); font-weight: var(--eb-fw-semibold); }
+.eb-nav-label { flex: 1 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.eb-nav-badge {
+  flex: 0 0 auto; min-width: 22px; padding: 0 var(--eb-space-2); border-radius: var(--eb-pill);
+  background: var(--eb-warn); color: var(--eb-navy);
+  font-size: var(--eb-fs-12); font-weight: var(--eb-fw-bold); line-height: 22px; text-align: center;
 }
-.app-sidebar-link:hover {
-  background: rgba(255, 255, 255, 0.08);
-  color: #fff;
+.eb-nav-group { display: flex; flex-direction: column; gap: var(--eb-space-1); margin-block-start: var(--eb-space-2); }
+.eb-nav-group-label {
+  display: flex; align-items: center; gap: var(--eb-space-2);
+  padding: var(--eb-space-2) var(--eb-space-3) var(--eb-space-1);
+  color: var(--eb-nav-text-muted); font-size: var(--eb-fs-12); font-weight: var(--eb-fw-semibold);
 }
-.app-sidebar-link.active {
-  background: var(--eb-primary);
-  color: #fff;
-  box-shadow: 0 10px 22px -12px rgba(37, 99, 235, 0.65);
+.eb-user {
+  display: flex; align-items: center; gap: var(--eb-space-2);
+  padding: var(--eb-space-1) var(--eb-space-3);
+  color: var(--eb-nav-text-muted); font-size: var(--eb-fs-13); overflow: hidden; white-space: nowrap;
 }
-.app-sidebar-link.active svg {
-  opacity: 1;
+.eb-logout { border: 1px solid var(--eb-nav-border); }
+.eb-logout:hover { background: var(--eb-danger); color: var(--eb-surface); }
+.eb-drawer-toggle { display: none; }
+.eb-drawer-close { display: none; }
+
+/* Compact rail: labels stay in the accessibility tree (visually hidden), icons centred, tooltips via title. */
+.eb-shell.is-compact .eb-sidebar { width: var(--eb-sidebar-w-compact); padding-inline: var(--eb-space-2); }
+.eb-shell.is-compact .eb-brand-text,
+.eb-shell.is-compact .eb-nav-label,
+.eb-shell.is-compact .eb-user .eb-nav-label {
+  position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px;
+  overflow: hidden; clip: rect(0 0 0 0); clip-path: inset(50%); white-space: nowrap; border: 0;
+}
+.eb-shell.is-compact .eb-sidebar-top { justify-content: center; flex-direction: column; }
+.eb-shell.is-compact .eb-nav-link,
+.eb-shell.is-compact .eb-nav-group-label,
+.eb-shell.is-compact .eb-user { justify-content: center; padding-inline: 0; }
+.eb-shell.is-compact .eb-nav-badge { position: absolute; inset-block-start: 2px; inset-inline-end: 2px; min-width: 18px; line-height: 18px; font-size: 11px; }
+.eb-shell.is-compact .eb-nav-link { position: relative; }
+
+/* ---------- Page column ---------- */
+.eb-shell-main { flex: 1 1 auto; min-width: 0; min-height: 100vh; display: flex; flex-direction: column; }
+.eb-shell-content { flex: 1 1 auto; min-width: 0; }
+
+/* ---------- Student shell identity ---------- */
+.eb-student-identity {
+  display: flex; flex-direction: column; align-items: flex-end; gap: 2px;
+  margin-inline-start: auto; margin-inline-end: var(--eb-space-3);
+  color: var(--eb-nav-text); font-size: var(--eb-fs-13); line-height: var(--eb-lh-tight);
+}
+.eb-student-identity strong { font-weight: var(--eb-fw-semibold); }
+.eb-student-identity span { color: var(--eb-nav-text-muted); font-size: var(--eb-fs-12); }
+
+/* ---------- Responsive: automatic compact rail on small laptops / tablets ---------- */
+@media (min-width: 1024px) and (max-width: 1279px) {
+  .eb-sidebar { width: var(--eb-sidebar-w-compact); padding-inline: var(--eb-space-2); }
+  .eb-brand-text, .eb-nav-label {
+    position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px;
+    overflow: hidden; clip: rect(0 0 0 0); clip-path: inset(50%); white-space: nowrap; border: 0;
+  }
+  .eb-sidebar-top { justify-content: center; flex-direction: column; }
+  .eb-nav-link, .eb-nav-group-label, .eb-user { justify-content: center; padding-inline: 0; }
+  .eb-nav-link { position: relative; }
+  .eb-nav-badge { position: absolute; inset-block-start: 2px; inset-inline-end: 2px; min-width: 18px; line-height: 18px; font-size: 11px; }
+  .eb-compact-toggle { display: none; }
 }
 
-.app-sidebar-user {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  padding-block-start: 12px;
-  border-top: 1px solid rgba(255, 255, 255, 0.1);
-}
-.app-sidebar-user-name {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  color: #93a5cc;
-  font-size: 12.5px;
-  font-weight: 700;
-  padding: 0 6px;
-  overflow: hidden;
-  white-space: nowrap;
-  text-overflow: ellipsis;
-}
-.app-sidebar-logout {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  border: 1px solid rgba(255, 255, 255, 0.14);
-  background: rgba(255, 255, 255, 0.05);
-  color: #e6ecfb;
-  border-radius: 10px;
-  padding: 10px 12px;
-  font-weight: 700;
-  font-size: 13px;
-  cursor: pointer;
-  transition: background var(--eb-dur) var(--eb-ease);
-}
-.app-sidebar-logout:hover {
-  background: rgba(239, 68, 68, 0.18);
-  border-color: rgba(239, 68, 68, 0.4);
-}
-
-/* ---------- Main content area ---------- */
-.app-shell-main {
-  flex: 1 1 auto;
-  min-width: 0;
-  min-height: 100vh;
-}
-.app-content-header {
-  padding: 22px 26px 4px;
-  background: transparent;
-  color: var(--eb-navy);
-}
-.app-content-header h1 {
-  margin: 0 0 4px;
-  font-size: 19px;
-}
-.app-content-header p {
-  margin: 0;
-  color: var(--eb-muted);
-  font-size: 13px;
+/* ---------- Responsive: drawer below the shell breakpoint (no teacher bottom bar) ---------- */
+@media (max-width: 1023px) {
+  .eb-shell { flex-direction: column; }
+  /* CLOSED drawer: off-screen AND removed from keyboard / accessibility interaction (visibility:hidden takes its
+     controls out of the tab order and the accessibility tree; pointer-events:none guards the slide gap). The
+     visibility switch is delayed by the slide duration on close and immediate on open, so the animation is kept. */
+  .eb-sidebar {
+    position: fixed; inset-block: 0; inset-inline-start: 0;
+    width: min(var(--eb-sidebar-w), 86vw); height: 100vh;
+    transform: translateX(100%);
+    visibility: hidden;
+    pointer-events: none;
+    z-index: var(--eb-z-drawer);
+    box-shadow: var(--eb-sh-lg);
+    transition: transform var(--eb-dur) var(--eb-ease), visibility 0s linear var(--eb-dur);
+  }
+  [dir="ltr"] .eb-sidebar { transform: translateX(-100%); }
+  .eb-shell.is-drawer-open .eb-sidebar {
+    transform: none;
+    visibility: visible;
+    pointer-events: auto;
+    transition: transform var(--eb-dur) var(--eb-ease), visibility 0s;
+  }
+  .eb-drawer-backdrop { position: fixed; inset: 0; background: var(--eb-backdrop); z-index: var(--eb-z-nav); }
+  .eb-drawer-toggle { display: inline-flex; }
+  .eb-drawer-close { display: inline-flex; }
+  .eb-compact-toggle { display: none; }
+  /* The manual compact state is meaningless inside the drawer: always show labels there. */
+  .eb-shell.is-compact .eb-sidebar { width: min(var(--eb-sidebar-w), 86vw); padding-inline: var(--eb-space-3); }
+  .eb-shell.is-compact .eb-brand-text, .eb-shell.is-compact .eb-nav-label {
+    position: static; width: auto; height: auto; margin: 0; overflow: visible; clip: auto; clip-path: none; white-space: nowrap;
+  }
+  .eb-shell.is-compact .eb-sidebar-top { flex-direction: row; justify-content: space-between; }
+  .eb-shell.is-compact .eb-nav-link, .eb-shell.is-compact .eb-nav-group-label, .eb-shell.is-compact .eb-user { justify-content: flex-start; padding-inline: var(--eb-space-3); }
+  .eb-shell.is-compact .eb-nav-badge { position: static; min-width: 22px; line-height: 22px; font-size: var(--eb-fs-12); }
+  .eb-student-identity { display: none; }
 }
 
-/* ---------- Tablet: icon-only sidebar ---------- */
-@media (max-width: 1100px) {
-  .app-sidebar {
-    width: 76px;
-    padding: 16px 10px;
-    align-items: center;
-  }
-  .app-sidebar-brand {
-    justify-content: center;
-    padding-inline: 0;
-  }
-  .app-sidebar-brand-text {
-    display: none;
-  }
-  .app-sidebar-link {
-    justify-content: center;
-    padding: 12px;
-  }
-  .app-sidebar-link span:last-child {
-    display: none;
-  }
-  .app-sidebar-user {
-    align-items: center;
-  }
-  .app-sidebar-user-name span:last-child {
-    display: none;
-  }
-  .app-sidebar-logout {
-    justify-content: center;
-    padding: 10px;
-  }
-  .app-sidebar-logout span:last-child {
-    display: none;
-  }
-}
-
-/* ---------- Mobile: fixed bottom navigation bar ---------- */
-@media (max-width: 760px) {
-  .app-shell {
-    flex-direction: column;
-  }
-  .app-sidebar {
-    position: fixed;
-    inset-inline: 0;
-    inset-block-end: 0;
-    inset-block-start: auto;
-    width: 100%;
-    height: auto;
-    flex-direction: row;
-    align-items: center;
-    gap: 0;
-    padding: 6px 8px;
-    box-shadow: 0 -8px 24px -16px rgba(0, 0, 0, 0.5);
-  }
-  .app-sidebar-brand {
-    display: none;
-  }
-  .app-sidebar-nav {
-    flex-direction: row;
-    justify-content: space-around;
-    overflow: visible;
-    flex: 1 1 auto;
-  }
-  .app-sidebar-link {
-    flex-direction: column;
-    gap: 3px;
-    padding: 6px 4px;
-    font-size: 10.5px;
-    border-radius: 10px;
-  }
-  .app-sidebar-link span:last-child {
-    display: block;
-  }
-  .app-sidebar-user {
-    flex-direction: row;
-    border-top: 0;
-    padding: 0;
-    flex: 0 0 auto;
-  }
-  .app-sidebar-user-name {
-    display: none;
-  }
-  .app-sidebar-logout {
-    flex-direction: column;
-    gap: 3px;
-    padding: 6px 8px;
-    font-size: 10.5px;
-    border: 0;
-    background: transparent;
-  }
-  .app-sidebar-logout span:last-child {
-    display: block;
-  }
-  .app-shell-main {
-    padding-bottom: 74px;
-  }
-  .app-content-header {
-    padding: 16px 16px 2px;
-  }
+@media (prefers-reduced-motion: reduce) {
+  .eb-sidebar, .eb-nav-link, .eb-icon-button { transition: none; }
 }
