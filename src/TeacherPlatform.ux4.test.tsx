@@ -193,6 +193,7 @@ describe("UX-4 request parity — students", () => {
     await screen.findByText("✓ تمت استعادة الطالب.");
     await rowAction("علي", "حذف نهائي");
     const d = await confirmEl();
+    expect(within(d).getByText(/حذف نهائي/, { selector: "p" }).textContent?.startsWith("⚠️ حذف نهائي\n\nالطالب: علي حسن")).toBe(true);
     expect(d.textContent).toContain("الطالب: علي حسن");
     expect(d.textContent).toContain("استخدم الأرشفة بدل الحذف إذا أردت الاحتفاظ بالحساب.");
     await confirmDialog("cancel");
@@ -201,15 +202,39 @@ describe("UX-4 request parity — students", () => {
     await screen.findByText("✓ تم حذف الطالب نهائيًا.");
     expect(posts("/api/students")).toEqual([{ action: "toggleActive", userId: "s1" }, { action: "archive", userId: "s2" }, { action: "unarchive", userId: "s3" }, { action: "delete", userId: "s1" }]);
   });
-  it("resetPassword from the Student Dialog → confirm → {action:resetPassword,userId}; the reveal is a status region", async () => {
+  it("REGRESSION nested confirm: StudentDialog → كلمة مرور جديدة → ConfirmDialog: only the confirm is exposed; cancel → no request, focus back on the trigger, StudentDialog active again; confirm → exact resetPassword request", async () => {
     await mount();
-    fireEvent.click(within(rowOf("علي")).getByRole("button", { name: "التفاصيل" }));
+    const opener = within(rowOf("علي")).getByRole("button", { name: "التفاصيل" }); opener.focus();
+    fireEvent.click(opener);
     const d = await screen.findByRole("dialog", { name: "علي حسن" });
-    fireEvent.click(within(d).getByRole("button", { name: "كلمة مرور جديدة" }));
+    const trigger = within(d).getByRole("button", { name: "كلمة مرور جديدة" }); trigger.focus();
+    fireEvent.click(trigger);
+    const c = await confirmEl();
+    expect(document.querySelectorAll('[role="dialog"]')).toHaveLength(2);                // both mounted …
+    expect(screen.getAllByRole("dialog")).toHaveLength(1);                                // … one exposed
+    expect(screen.getByRole("dialog").className).toContain("eb-confirm");
+    expect(d.getAttribute("aria-hidden")).toBe("true"); expect(d.hasAttribute("inert")).toBe(true);
+    expect(c.contains(document.activeElement)).toBe(true);
+    fireEvent.click(within(c).getByRole("button", { name: "إلغاء" }));
+    await waitFor(() => expect(document.querySelectorAll('[role="dialog"]')).toHaveLength(1));
+    expect(posts("/api/students")).toEqual([]);
+    expect(document.activeElement).toBe(trigger);                                          // focus returned INSIDE the student dialog
+    expect(screen.getByRole("dialog", { name: "علي حسن" })).toBe(d);                       // exposed again
+    expect(d.getAttribute("aria-hidden")).toBeNull(); expect(d.hasAttribute("inert")).toBe(false);
+    expect(document.body.style.overflow).toBe("hidden");
+    fireEvent.keyDown(document, { key: "Escape" });                                        // Escape now targets the student dialog
+    await waitFor(() => expect(document.querySelectorAll('[role="dialog"]')).toHaveLength(0));
+    expect(document.activeElement).toBe(opener);
+    expect(document.body.style.overflow).toBe("");
+    // confirm path: the exact existing request
+    fireEvent.click(opener);
+    const d2 = await screen.findByRole("dialog", { name: "علي حسن" });
+    fireEvent.click(within(d2).getByRole("button", { name: "كلمة مرور جديدة" }));
     await confirmDialog();
-    await within(d).findByText("Reset-Pw-9");
+    await within(d2).findByText("Reset-Pw-9");
     expect(posts("/api/students")).toEqual([{ action: "resetPassword", userId: "s1" }]);
-    expect(within(d).getByRole("status").textContent).toContain("Reset-Pw-9");
+    expect(within(d2).getByRole("status").textContent).toContain("Reset-Pw-9");
+    expect(screen.getAllByRole("dialog")).toHaveLength(1);
   });
   it("import (dialog): file → previewImport {classId, students} → import → bulkImport {classId, students(valid only)} → credential batch", async () => {
     await mount();
@@ -250,6 +275,7 @@ describe("UX-4 request parity — students", () => {
     await run("نقل", true);
     fireEvent.click(within(screen.getByRole("region", { name: "إجراءات جماعية" })).getByRole("button", { name: "حذف نهائي" }));
     expect((await confirmEl()).className).toContain("tone-danger");
+    expect((await confirmEl()).textContent).toContain("⚠️ حذف نهائي لـ 2 طالب؟");
     await confirmDialog();
     await screen.findByText(/نُفذت العملية على 1 طالب/);
     const ops = posts("/api/students").filter(b => b.action === "bulkAction");
@@ -420,13 +446,16 @@ describe("UX-4 accessibility source guards", () => {
       expect(src, file).not.toMatch(/window\.confirm/);
       expect(src, file).not.toMatch(/role="(tablist|tab|menu|menuitem)"/);
       expect(src, file).not.toMatch(/studentIds/);
-      // control emoji that used to label actions: 📡 🎓 📋 💾 📚 📦 👁 🔄 ⏰ ⏳ ↻ ⚠ (code-point escapes keep the class unambiguous)
-      expect(src, file).not.toMatch(/[\u{1F4E1}\u{1F393}\u{1F4CB}\u{1F4BE}\u{1F4DA}\u{1F4E6}\u{1F441}\u{1F504}\u{23F0}\u{23F3}\u{21BB}\u{26A0}]/u);
+      // control emoji that used to label actions: 📡 🎓 📋 💾 📚 📦 👁 🔄 ⏰ ⏳ ↻ (code-point escapes keep the class unambiguous).
+      // The ⚠️ prefix of the two locked delete confirmation MESSAGES is content, not a control, and is asserted below.
+      expect(src, file).not.toMatch(/[\u{1F4E1}\u{1F393}\u{1F4CB}\u{1F4BE}\u{1F4DA}\u{1F4E6}\u{1F441}\u{1F504}\u{23F0}\u{23F3}\u{21BB}]/u);
       expect(src, file).not.toMatch(/<details|<summary/);
     }
     expect(RAW["./students/RosterPane.tsx"]).toMatch(/IconHeart/);
     expect(RAW["./students/StudentDialog.tsx"]).toMatch(/IconMedal/);
     expect(RAW["./TeacherPlatform.tsx"]).toMatch(/useConfirm\(\)/);
+    expect(RAW["./TeacherPlatform.tsx"]).toContain('"⚠️ حذف نهائي\\n\\n"+');                              // single delete: exact original prefix
+    expect(RAW["./TeacherPlatform.tsx"]).toContain('question="⚠️ حذف نهائي لـ "+count+" طالب؟');            // bulk delete: exact original prefix
     expect(RAW["./TeacherPlatform.tsx"]).toMatch(/await loadStudents\(classId\);\n  await loadClasses\(\);/);            // sequential single-row fallback
     expect(RAW["./TeacherPlatform.tsx"]).toMatch(/await loadStudents\(sourceClassId\);\n  if\(targetClassId!==sourceClassId\)await loadStudents\(targetClassId\);\n  await loadClasses\(\);/);
   });

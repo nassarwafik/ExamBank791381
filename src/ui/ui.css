@@ -175,3 +175,6 @@ h3.eb-section-title { font-size: var(--eb-fs-16); }
 .eb-empty-title { margin: 0; color: var(--eb-text-heading); font-size: var(--eb-fs-14); font-weight: var(--eb-fw-semibold); }
 .eb-empty-description { margin: 0; color: var(--eb-muted); font-size: var(--eb-fs-13); line-height: var(--eb-lh-body); max-width: 48ch; }
 .eb-empty-action { margin-top: var(--eb-space-1); }
+/* A covered dialog (another dialog stacked above) stays mounted but is inert and visually receded. */
+.eb-dialog-root.is-covered .eb-dialog { pointer-events: none; filter: saturate(.85); }
+.eb-dialog-root.is-covered .eb-dialog-backdrop { pointer-events: none; }

@@ -55,15 +55,56 @@ describe("Dialog", () => {
     fireEvent.keyDown(document, { key: "Tab", shiftKey: true });
     expect(document.activeElement).toBe(focusables[focusables.length - 1]);
   });
-  it("Escape closes only the TOP dialog; backdrop click closes the current one", () => {
+  it("stacked dialogs: only the TOP dialog is exposed / active; the covered one is aria-hidden + inert; child close returns focus to the child opener inside the parent; parent close returns to the external opener; Escape hits only the top; body stays locked between the closes", () => {
+    render(<Host two />);
+    const openerA = screen.getByText("open-a"); openerA.focus();
+    fireEvent.click(openerA);
+    const a = dialog("حوار أ");
+    expect(a.contains(document.activeElement)).toBe(true);
+    const openerB = within(a).getByText("open-b"); openerB.focus();
+    fireEvent.click(openerB);
+    // DOM holds both layers, the accessibility tree sees only B
+    expect(document.querySelectorAll('[role="dialog"]')).toHaveLength(2);
+    expect(screen.getAllByRole("dialog")).toHaveLength(1);
+    expect(screen.getByRole("dialog", { name: "حوار ب" })).toBeTruthy();
+    const aPanel = document.querySelector('[aria-labelledby$="-title"][aria-hidden="true"]') as HTMLElement;
+    expect(aPanel).toBe(a);
+    expect(a.getAttribute("aria-hidden")).toBe("true");
+    expect(a.hasAttribute("inert")).toBe(true);
+    expect(a.closest(".eb-dialog-root")?.className).toContain("is-covered");
+    expect(screen.getByRole("dialog", { name: "حوار ب" }).contains(document.activeElement)).toBe(true);
+    expect(document.body.style.overflow).toBe("hidden");
+    // Escape closes only B; focus returns to opener-B INSIDE A (not to the external opener); A is exposed again
+    fireEvent.keyDown(document, { key: "Escape" });
+    expect(screen.queryByRole("dialog", { name: "حوار ب" })).toBeNull();
+    expect(document.querySelectorAll('[role="dialog"]')).toHaveLength(1);
+    expect(screen.getByRole("dialog", { name: "حوار أ" })).toBe(a);
+    expect(a.getAttribute("aria-hidden")).toBeNull();
+    expect(a.hasAttribute("inert")).toBe(false);
+    expect(document.activeElement).toBe(openerB);
+    expect(document.activeElement).not.toBe(openerA);
+    expect(document.body.style.overflow).toBe("hidden");                       // still locked: A is open
+    // Tab still trapped inside A after regaining top status
+    const items = Array.from(a.querySelectorAll<HTMLElement>("button, input"));
+    items[items.length - 1].focus();
+    fireEvent.keyDown(document, { key: "Tab" });
+    expect(document.activeElement).toBe(items[0]);
+    // close A → external opener, scroll unlocked
+    fireEvent.click(within(a).getByRole("button", { name: "إلغاء" }));
+    expect(screen.queryByRole("dialog")).toBeNull();
+    expect(document.activeElement).toBe(openerA);
+    expect(document.body.style.overflow).toBe("");
+  });
+  it("backdrop click closes the current (top) dialog only", () => {
     render(<Host two />);
     fireEvent.click(screen.getByText("open-a"));
     fireEvent.click(screen.getByText("open-b"));
-    expect(screen.getAllByRole("dialog")).toHaveLength(2);
-    fireEvent.keyDown(document, { key: "Escape" });
-    expect(screen.queryByRole("dialog", { name: "حوار ب" })).toBeNull();
-    expect(dialog("حوار أ")).toBeTruthy();                           // the lower dialog survived the Escape
-    expect(document.body.style.overflow).toBe("hidden");             // still locked while one dialog is open
+    const backdrops = screen.getAllByTestId("eb-dialog-backdrop");
+    fireEvent.click(backdrops[0]);                                              // A's backdrop is covered/inert: no effect
+    expect(document.querySelectorAll('[role="dialog"]')).toHaveLength(2);
+    fireEvent.click(backdrops[1]);
+    expect(document.querySelectorAll('[role="dialog"]')).toHaveLength(1);
+    expect(screen.getByRole("dialog", { name: "حوار أ" })).toBeTruthy();
     fireEvent.click(screen.getAllByTestId("eb-dialog-backdrop")[0]);
     expect(screen.queryByRole("dialog")).toBeNull();
     expect(document.body.style.overflow).toBe("");

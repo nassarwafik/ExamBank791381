@@ -9,9 +9,12 @@ import { IconClose } from "../icons";
  * labelled by its title, traps keyboard focus with the UX-2 `useFocusTrap`, closes on Escape and on
  * backdrop click, returns focus to the opening control, and locks body scroll while any dialog is open.
  *
- * Dialogs stack: only the TOP dialog owns the focus trap and the Escape key (a confirm above a form
- * never closes both). `suspended` hands the page over to a legacy overlay layered above (AssignmentReview)
- * without unmounting the dialog's content.
+ * Dialogs stack. Only the TOP, non-suspended dialog is active: it owns the focus trap and the Escape key,
+ * and it is the only layer exposed to assistive technology — a covered (lower) dialog stays mounted but is
+ * `aria-hidden` + `inert`. Focus return is owned by the dialog itself: the opener is captured once, when
+ * the dialog genuinely opens, and focused again only when it genuinely closes — never because it was
+ * temporarily covered (e.g. a ConfirmDialog above a form). `suspended` hands the page over to a legacy
+ * overlay layered above (AssignmentReview) without unmounting the dialog's content.
  */
 const stack: symbol[] = [];
 const listeners = new Set<() => void>();
@@ -44,19 +47,55 @@ export default function Dialog({ open, title, onClose, children, footer, size = 
   const token = useRef<symbol | null>(null);
   if (token.current === null) token.current = Symbol("dialog");
   const panelRef = useRef<HTMLDivElement>(null);
+  const openerRef = useRef<HTMLElement | null>(null);
+  const initialFocusDone = useRef(false);
 
+  // Genuine open / close: register in the stack, capture the opener once, and return focus to it on close.
   useLayoutEffect(() => {
     if (!open) return;
     const t = token.current as symbol;
+    openerRef.current = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+    initialFocusDone.current = false;
     push(t);
-    return () => remove(t);
+    return () => {
+      remove(t);
+      const opener = openerRef.current;
+      openerRef.current = null;
+      if (opener && opener.isConnected && typeof opener.focus === "function") opener.focus();
+    };
   }, [open]);
   const isTop = useSyncExternalStore(subscribe, () => topToken() === token.current, () => false);
+  const covered = open && !isTop;
   const trapActive = open && isTop && !suspended;
 
-  useFocusTrap(panelRef, trapActive, onClose);
+  // Resume point: the last control focused inside this dialog. While covered the panel is inert, so a child
+  // dialog's own focus return cannot land here; when this dialog regains top status it refocuses that control
+  // itself, in the same commit that removes `inert` — the child's opener inside the parent, never the
+  // parent's external opener.
+  const lastFocusedInside = useRef<HTMLElement | null>(null);
   useEffect(() => {
-    if (!trapActive) return;
+    if (!open) return;
+    const panel = panelRef.current;
+    if (!panel) return;
+    const remember = (e: FocusEvent) => { if (e.target instanceof HTMLElement && panel.contains(e.target)) lastFocusedInside.current = e.target; };
+    panel.addEventListener("focusin", remember);
+    panel.addEventListener("focus", remember, true);
+    return () => { panel.removeEventListener("focusin", remember); panel.removeEventListener("focus", remember, true); lastFocusedInside.current = null; };
+  }, [open]);
+  const wasCovered = useRef(false);
+  useLayoutEffect(() => {
+    if (wasCovered.current && open && !covered) {
+      const el = lastFocusedInside.current;
+      if (el && el.isConnected && panelRef.current?.contains(el) && typeof el.focus === "function") el.focus();
+    }
+    wasCovered.current = covered;
+  }, [covered, open]);
+
+  // The trap never restores focus on its own: losing top status is not closing.
+  useFocusTrap(panelRef, trapActive, onClose, { restoreFocus: false });
+  useEffect(() => {
+    if (!trapActive || initialFocusDone.current) return;
+    initialFocusDone.current = true;
     const el = initialFocusRef?.current;
     if (el && typeof el.focus === "function") el.focus();
   }, [trapActive, initialFocusRef]);
@@ -69,11 +108,12 @@ export default function Dialog({ open, title, onClose, children, footer, size = 
   }, [open]);
 
   if (!open || typeof document === "undefined") return null;
+  const hidden = covered || suspended;
   const cls = ["eb-dialog", "size-" + size, "tone-" + tone, className || ""].filter(Boolean).join(" ");
   return createPortal(
-    <div className={"eb-dialog-root" + (suspended ? " is-suspended" : "")} dir="rtl">
-      <div className="eb-dialog-backdrop" onClick={onClose} aria-hidden="true" data-testid="eb-dialog-backdrop" />
-      <div ref={panelRef} className={cls} role="dialog" aria-modal="true" aria-labelledby={titleId} aria-describedby={describedBy} aria-hidden={suspended ? true : undefined}>
+    <div className={"eb-dialog-root" + (suspended ? " is-suspended" : "") + (covered ? " is-covered" : "")} dir="rtl">
+      <div className="eb-dialog-backdrop" onClick={hidden ? undefined : onClose} aria-hidden="true" data-testid="eb-dialog-backdrop" />
+      <div ref={panelRef} className={cls} role="dialog" aria-modal="true" aria-labelledby={titleId} aria-describedby={describedBy} aria-hidden={hidden ? true : undefined} inert={hidden ? true : undefined}>
         <div className="eb-dialog-head">
           <h2 id={titleId} className="eb-dialog-title">{title}</h2>
           {!hideClose && <IconButton label="إغلاق" icon={<IconClose size={18} />} onClick={onClose} className="eb-dialog-close" />}

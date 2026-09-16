@@ -384,6 +384,7 @@ function TeacherPlatform({token,currentExam,workspaceTab,onCopyLibraryExamToBuil
  async function deleteStudent(student:Student){
   const identity=student.identityNumber||student.code;
   const confirmed=await confirm({tone:"danger",title:"حذف نهائي",confirmLabel:"حذف نهائي",message:
+   "⚠️ حذف نهائي\n\n"+
    "الطالب: "+student.displayName+"\n"+
    "رقم الهوية: "+identity+"\n\n"+
    "سيتم حذف حساب الطالب وبياناته الأساسية نهائيًا وإزالته من الصف. "+
@@ -621,7 +622,7 @@ function TeacherPlatform({token,currentExam,workspaceTab,onCopyLibraryExamToBuil
   if(operation==="move"&&!bulkTargetClassId){setError("اختر الصف الهدف أولًا.");return}
 
   let question="";
-  if(operation==="delete")question="حذف نهائي لـ "+count+" طالب؟\n\nالأرشفة أكثر أمانًا إذا كنت تريد الاحتفاظ بالبيانات.";
+  if(operation==="delete")question="⚠️ حذف نهائي لـ "+count+" طالب؟\n\nالأرشفة أكثر أمانًا إذا كنت تريد الاحتفاظ بالبيانات.";
   else if(operation==="archive")question="أرشفة "+count+" طالب مع منع تسجيل الدخول والاحتفاظ بالبيانات؟";
   else if(operation==="unarchive")question="استعادة "+count+" طالب من الأرشيف وتفعيل حساباتهم؟";
   else if(operation==="resetpasswords")question="إنشاء كلمات مرور جديدة لـ "+count+" طالب؟ ستظهر الكلمات الجديدة مرة واحدة بعد العملية.";
