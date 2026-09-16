@@ -224,3 +224,8 @@ h3.eb-section-title { font-size: var(--eb-fs-16); }
 [dir="rtl"] .eb-disclosure-chevron { transform: rotate(90deg); }
 .eb-disclosure-chevron.is-open, [dir="rtl"] .eb-disclosure-chevron.is-open { transform: rotate(0deg); }
 @media (prefers-reduced-motion: reduce) { .eb-chip-button, .eb-disclosure-chevron { transition: none; } }
+/* Print: a chart's tabular equivalent is the printed form of the figure. */
+@media print {
+  .eb-chart-card-table[hidden] { display: block; }
+  .eb-chart-card-foot { display: none; }
+}

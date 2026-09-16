@@ -80,7 +80,7 @@ describe("UX-2 App + TeacherAppShell integration", () => {
     fireEvent.click(nav("لوحة المتابعة"));
     expect(h1()).toBe("لوحة المتابعة"); expect(document.querySelector(".analytics-loading, .analytics-dashboard, .platform-error")).toBeTruthy();
     fireEvent.click(nav("التقارير"));
-    expect(h1()).toBe("التقارير"); expect(await screen.findByText(/مركز التقارير/)).toBeTruthy();
+    expect(h1()).toBe("التقارير"); expect(await screen.findByRole("group", { name: "تصنيف التقارير" })).toBeTruthy(); // ReportsCenter hub (no hero)
     fireEvent.click(nav("استيراد من ملف"));
     expect(h1()).toBe("استيراد من ملف"); expect(await screen.findByText("استيراد أسئلة من ملف")).toBeTruthy();
     fireEvent.click(nav("باني الامتحان"));

@@ -47,8 +47,9 @@ export default function ChartCard({ title, description, ariaLabel, table, tableL
       <div className="eb-chart-card-foot">
         <button type="button" className="eb-button is-quiet is-small" aria-expanded={open} aria-controls={tableId} onClick={() => setOpen(o => !o)}>{tableLabel}</button>
       </div>
-      {open && (
-        <div id={tableId} className="eb-chart-card-table">
+      {/* The table is always in the DOM (hidden while collapsed) so print can show it; hidden content is not
+          exposed to assistive tech, so the disclosure semantics are unchanged. */}
+      <div id={tableId} className="eb-chart-card-table" hidden={!open}>
           <table className="eb-chart-table">
             <caption className="eb-visually-hidden">{table.caption || title}</caption>
             <thead><tr>{table.columns.map((c, i) => <th key={i} scope="col">{c}</th>)}</tr></thead>
@@ -58,8 +59,7 @@ export default function ChartCard({ title, description, ariaLabel, table, tableL
               )) : <tr><td colSpan={Math.max(1, table.columns.length)}>لا توجد بيانات.</td></tr>}
             </tbody>
           </table>
-        </div>
-      )}
+      </div>
     </section>
   );
 }
