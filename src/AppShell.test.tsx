@@ -74,7 +74,7 @@ describe("UX-2 App + TeacherAppShell integration", () => {
     fireEvent.click(nav("الصفوف والطلاب"));
     expect(h1()).toBe("الصفوف والطلاب"); expect(await screen.findByRole("heading", { level: 2, name: "الصفوف" })).toBeTruthy();
     fireEvent.click(nav("الواجبات"));
-    expect(h1()).toBe("الواجبات"); expect(await screen.findByText("الواجبات والاختبارات المرسلة")).toBeTruthy();
+    expect(h1()).toBe("الواجبات"); expect(await screen.findByRole("button", { name: "إنشاء واجب" })).toBeTruthy();
     fireEvent.click(nav("سجل النشاط"));
     expect(h1()).toBe("سجل النشاط"); expect(await screen.findByRole("heading", { level: 2, name: "سجل النشاط" })).toBeTruthy();
     fireEvent.click(nav("لوحة المتابعة"));

@@ -35,7 +35,6 @@ function installFetch() {
   }) as unknown as typeof fetch;
 }
 beforeEach(() => {
-  (window as unknown as { confirm: () => boolean }).confirm = () => true;
   (window as unknown as { scrollTo: () => void }).scrollTo = () => {};
   installFetch();
 });
@@ -46,53 +45,63 @@ async function mount() {
   await r.findByText("واجب منشور");
   return r;
 }
-const rowOf = (r: ReturnType<typeof render>, name: string) => r.getByText(name).closest(".assignment-row") as HTMLElement;
+const rowOf = (_r: ReturnType<typeof render>, name: string) => within(document.querySelector(".eb-assign-rows") as HTMLElement).getByText(name).closest(".assignment-row") as HTMLElement; // list-scoped: the detail heading repeats the title
+// UX-5: assignment actions live in the row's labelled disclosure; confirms are the shared ConfirmDialog; purge is the danger Dialog.
+async function assignmentMenu(r: ReturnType<typeof render>, name: string) { fireEvent.click(within(rowOf(r, name)).getByRole("button", { name: "إجراءات الواجب " + name })); return await r.findByRole("group", { name: "إجراءات الواجب " + name }); }
+async function assignmentAction(r: ReturnType<typeof render>, name: string, label: string) { fireEvent.click(within(await assignmentMenu(r, name)).getByRole("button", { name: label })); }
+const confirmEl = () => waitFor(() => { const el = document.querySelector('.eb-confirm[role="dialog"]') as HTMLElement | null; if (!el) throw new Error("no confirm yet"); return el; });
+async function confirmDialog() { const d = await confirmEl(); fireEvent.click(d.querySelector(".eb-dialog-foot .is-primary, .eb-dialog-foot .is-danger") as HTMLElement); }
+const openDetail = (r: ReturnType<typeof render>, name: string) => fireEvent.click(within(rowOf(r, name)).getByRole("button", { name: "فتح" }));
+const studentMenu = (r: ReturnType<typeof render>) => r.queryByRole("button", { name: "إجراءات طالب" });
 const noDeleteEmitted = () => expect(posts.some(p => p.action === "delete")).toBe(false);
 
 describe("R7 AssignmentsPanel — archive-first UI", () => {
   it("a normal (non-archived) assignment shows 'أرشفة' and no direct hard-delete button", async () => {
     const r = await mount();
-    const row = rowOf(r, "واجب منشور");
-    expect(within(row).getByText("أرشفة")).toBeTruthy();
-    expect(within(row).queryByText("حذف")).toBeNull();
-    expect(within(row).queryByText("حذف نهائي")).toBeNull();
+    const menu = await assignmentMenu(r, "واجب منشور");
+    expect(within(menu).getByText("أرشفة")).toBeTruthy();
+    expect(within(menu).queryByText("حذف")).toBeNull();
+    expect(within(menu).queryByText("حذف نهائي")).toBeNull();
+    fireEvent.keyDown(document, { key: "Escape" });
   });
 
   it("clicking 'أرشفة' checks impact then POSTs action:'archive' (never action:'delete')", async () => {
-    const confirmSpy = vi.spyOn(window, "confirm").mockReturnValue(true);
     const r = await mount();
-    fireEvent.click(within(rowOf(r, "واجب منشور")).getByText("أرشفة"));
+    await assignmentAction(r, "واجب منشور", "أرشفة");
+    await waitFor(() => expect(posts.some(p => p.action === "deleteImpact")).toBe(true));   // impact BEFORE the confirmation
+    expect((await confirmEl()).textContent).toContain("سيتم إخفاء الواجب عن الطلاب مع الاحتفاظ بجميع التسليمات والنتائج.");
+    expect(posts.some(p => p.action === "archive")).toBe(false);
+    await confirmDialog();
     await waitFor(() => expect(posts.some(p => p.action === "archive")).toBe(true));
-    expect(posts.some(p => p.action === "deleteImpact")).toBe(true);
     noDeleteEmitted();
-    expect(confirmSpy).toHaveBeenCalled();
   });
 
   it("active-attempt archive shows a warning and sends confirmActiveAttempts:true", async () => {
     impactResponse = { ...impactResponse, activeAttempts: 2, submissionDocuments: 2 };
-    const confirmSpy = vi.spyOn(window, "confirm").mockReturnValue(true);
     const r = await mount();
-    fireEvent.click(within(rowOf(r, "واجب منشور")).getByText("أرشفة"));
+    await assignmentAction(r, "واجب منشور", "أرشفة");
+    expect((await confirmEl()).textContent).toContain("يوجد 2 طلاب في محاولات نشطة.");
+    await confirmDialog();
     await waitFor(() => expect(posts.some(p => p.action === "archive")).toBe(true));
     expect(posts.find(p => p.action === "archive")!.confirmActiveAttempts).toBe(true);
-    expect(confirmSpy.mock.calls.some(c => String(c[0]).includes("محاولات نشطة"))).toBe(true);
   });
 
   it("archived assignments appear under 'المؤرشفة' with 'استعادة' and 'حذف نهائي'", async () => {
     const r = await mount();
     expect(r.queryByText("واجب مؤرشف")).toBeNull();
     fireEvent.click(r.getByText(/المؤرشفة/));
-    const row = (await r.findByText("واجب مؤرشف")).closest(".assignment-row") as HTMLElement;
-    expect(within(row).getByText("استعادة")).toBeTruthy();
-    expect(within(row).getByText("حذف نهائي")).toBeTruthy();
+    await r.findByText("واجب مؤرشف");
+    const menu = await assignmentMenu(r, "واجب مؤرشف");
+    expect(within(menu).getByText("استعادة")).toBeTruthy();
+    expect(within(menu).getByText("حذف نهائي")).toBeTruthy();
+    fireEvent.keyDown(document, { key: "Escape" });
   });
 
   it("restore POSTs action:'restore' and updates the list", async () => {
     const r = await mount();
     fireEvent.click(r.getByText(/المؤرشفة/));
     await r.findByText("واجب مؤرشف");
-    const row = (r.getByText("واجب مؤرشف").closest(".assignment-row")) as HTMLElement;
-    fireEvent.click(within(row).getByText("استعادة"));
+    await assignmentAction(r, "واجب مؤرشف", "استعادة");
     await waitFor(() => expect(posts.some(p => p.action === "restore")).toBe(true));
     noDeleteEmitted();
   });
@@ -102,11 +111,10 @@ describe("R7 AssignmentsPanel — archive-first UI", () => {
     const r = await mount();
     fireEvent.click(r.getByText(/المؤرشفة/));
     await r.findByText("واجب مؤرشف");
-    const row = (r.getByText("واجب مؤرشف").closest(".assignment-row")) as HTMLElement;
-    fireEvent.click(within(row).getByText("حذف نهائي"));
+    await assignmentAction(r, "واجب مؤرشف", "حذف نهائي");
     await waitFor(() => expect(posts.some(p => p.action === "deleteImpact")).toBe(true));
     expect(await r.findByText(/لا يمكن الحذف النهائي لأن للواجب بيانات طلاب محفوظة/)).toBeTruthy();
-    expect(r.container.querySelector(".purge-modal")).toBeNull();
+    expect(document.querySelector(".purge-modal")).toBeNull();
     expect(posts.some(p => p.action === "purge")).toBe(false);
   });
 
@@ -114,9 +122,8 @@ describe("R7 AssignmentsPanel — archive-first UI", () => {
     const r = await mount();
     fireEvent.click(r.getByText(/المؤرشفة/));
     await r.findByText("واجب مؤرشف");
-    const row = (r.getByText("واجب مؤرشف").closest(".assignment-row")) as HTMLElement;
-    fireEvent.click(within(row).getByText("حذف نهائي"));
-    const modal = await waitFor(() => { const m = r.container.querySelector(".purge-modal"); if (!m) throw new Error("no modal"); return m as HTMLElement; });
+    await assignmentAction(r, "واجب مؤرشف", "حذف نهائي");
+    const modal = await waitFor(() => { const m = document.querySelector('.purge-modal[role="dialog"]'); if (!m) throw new Error("no modal"); return m as HTMLElement; });
     const confirmBtn = modal.querySelector(".assignment-delete-button") as HTMLButtonElement;
     expect(confirmBtn.disabled).toBe(true);
     fireEvent.change(modal.querySelector("input") as HTMLInputElement, { target: { value: "واجب مؤرشف" } });
@@ -133,36 +140,44 @@ describe("R7 AssignmentsPanel — archive-first UI", () => {
   it("A: an archived assignment's gradebook keeps the review control but hides the B2B participation controls", async () => {
     const r = await mount();
     fireEvent.click(r.getByText(/المؤرشفة/));
-    const row = (await r.findByText("واجب مؤرشف")).closest(".assignment-row") as HTMLElement;
-    fireEvent.click(within(row).getByText(/سجل العلامات/));
-    await r.findByText(/سجل علامات:/);          // gradebook opened
+    await r.findByText("واجب مؤرشف");
+    openDetail(r, "واجب مؤرشف");
+    await r.findByText("سجل العلامات");           // gradebook opened inside the detail
     await r.findByText("طالب");                   // student row rendered
-    expect(r.getByText(/عرض \/ تعديل التصحيح/)).toBeTruthy();   // manual grading / review kept
+    expect(r.getByText("عرض التصحيح")).toBeTruthy();   // manual grading / review kept
+    expect(studentMenu(r)).toBeNull();                 // no lifecycle disclosure at all on an archived assignment
     expect(r.queryByText(/منح محاولة إضافية/)).toBeNull();
     expect(r.queryByText("إعادة فتح للطالب")).toBeNull();
     expect(r.queryByText(/تمديد الموعد/)).toBeNull();
   });
 
-  it("B: archiving an assignment whose gradebook is open hides the B2B controls immediately (review stays)", async () => {
+  it("B: archiving an assignment whose gradebook is open (current view) removes the row AND its detail — no B2B controls linger", async () => {
     const r = await mount();
-    fireEvent.click(within(rowOf(r, "واجب منشور")).getByText(/سجل العلامات/));
+    openDetail(r, "واجب منشور");
     await r.findByText("طالب");
-    expect(r.getByText(/منح محاولة إضافية/)).toBeTruthy();   // published: controls present
-    fireEvent.click(within(rowOf(r, "واجب منشور")).getByText("أرشفة"));
+    expect(studentMenu(r)).toBeTruthy();                       // published: lifecycle disclosure present
+    await assignmentAction(r, "واجب منشور", "أرشفة");
+    await confirmDialog();
     await waitFor(() => expect(posts.some(p => p.action === "archive")).toBe(true));
-    await waitFor(() => expect(r.queryByText(/منح محاولة إضافية/)).toBeNull()); // controls gone
-    expect(r.getByText(/عرض \/ تعديل التصحيح/)).toBeTruthy();      // review still available
+    await waitFor(() => expect(studentMenu(r)).toBeNull());     // controls gone
+    // UX-5 master-scope invariant: the archived assignment left the current list, so its detail leaves with it.
+    await waitFor(() => expect(r.queryByRole("region", { name: "واجب منشور" })).toBeNull());
+    expect(r.queryByText("عرض التصحيح")).toBeNull();
+    expect(r.queryByText("واجب منشور")).toBeNull();             // row no longer in the current list
   });
 
-  it("C: restoring an assignment whose archived gradebook is open brings the B2B controls back", async () => {
+  it("C: restoring an assignment whose archived gradebook is open removes it from the archived list together with its detail", async () => {
     const r = await mount();
     fireEvent.click(r.getByText(/المؤرشفة/));
-    const row = (await r.findByText("واجب مؤرشف")).closest(".assignment-row") as HTMLElement;
-    fireEvent.click(within(row).getByText(/سجل العلامات/));
+    await r.findByText("واجب مؤرشف");
+    openDetail(r, "واجب مؤرشف");
     await r.findByText("طالب");
-    expect(r.queryByText(/منح محاولة إضافية/)).toBeNull();    // archived: hidden
-    fireEvent.click(within(rowOf(r, "واجب مؤرشف")).getByText("استعادة"));
+    expect(studentMenu(r)).toBeNull();                          // archived: hidden
+    await assignmentAction(r, "واجب مؤرشف", "استعادة");
     await waitFor(() => expect(posts.some(p => p.action === "restore")).toBe(true));
-    await waitFor(() => expect(r.queryByText(/منح محاولة إضافية/)).not.toBeNull()); // controls back
+    // UX-5 master-scope invariant: the restored assignment left the archived list, so its detail leaves with it.
+    await waitFor(() => expect(r.queryByRole("region", { name: "واجب مؤرشف" })).toBeNull());
+    expect(studentMenu(r)).toBeNull();
+    expect(r.queryByText("واجب مؤرشف")).toBeNull();
   });
 });

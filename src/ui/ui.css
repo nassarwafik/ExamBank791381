@@ -178,3 +178,4 @@ h3.eb-section-title { font-size: var(--eb-fs-16); }
 /* A covered dialog (another dialog stacked above) stays mounted but is inert and visually receded. */
 .eb-dialog-root.is-covered .eb-dialog { pointer-events: none; filter: saturate(.85); }
 .eb-dialog-root.is-covered .eb-dialog-backdrop { pointer-events: none; }
+.eb-dialog-foot-inline { padding: 0; margin-top: var(--eb-space-2); }
