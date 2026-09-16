@@ -503,3 +503,125 @@ describe("UX-5 accessibility source guards", () => {
     expect(panel).toMatch(/if\(impact\.submissionDocuments>0\)\{setError\("لا يمكن الحذف النهائي/);
   });
 });
+
+describe("UX-5 master-scope invariant — a visible AssignmentDetail always belongs to the current list scope", () => {
+  const toolbar = () => screen.getByRole("region", { name: "أدوات الواجبات" });
+  const detailGone = (title = "اختبار الكسور") => expect(screen.queryByRole("region", { name: title })).toBeNull();
+  const noGradebook = () => {
+    expect(document.querySelector(".eb-gradebook-table")).toBeNull();
+    expect(screen.queryByRole("button", { name: "تصحيح الآن" })).toBeNull();
+    expect(screen.queryByRole("button", { name: /^إجراءات (زيد|خالد|سعد|عمر)$/ })).toBeNull();
+  };
+
+  it("class mismatch: switching the class filter to c2 drops the c1 detail + gradebook, keeps the select focused, no results request", async () => {
+    await mount();
+    const { detail } = await openDetail();
+    expect(gets("/api/assignment-results")).toHaveLength(1);
+    expect(within(detail).getByRole("button", { name: "إجراءات زيد" })).toBeTruthy();
+    const select = within(toolbar()).getByLabelText("الصف") as HTMLSelectElement;
+    select.focus();
+    fireEvent.change(select, { target: { value: "c2" } });
+    detailGone(); noGradebook();
+    expect(rowTitles()).toEqual(["اختبار الهندسة"]);
+    expect(document.activeElement).toBe(select);
+    expect(select.value).toBe("c2");
+    expect(gets("/api/assignment-results")).toHaveLength(1);
+  });
+
+  it("archive-view mismatch: pressing المؤرشفة drops the current detail and every lifecycle control; the switch keeps focus; no results request", async () => {
+    await mount();
+    const { detail } = await openDetail();
+    fireEvent.click(within(detail).getByRole("button", { name: "الكل" }));
+    expect(within(detail).getByRole("button", { name: "إجراءات عمر" })).toBeTruthy();
+    const archived = within(toolbar()).getByRole("button", { name: /^المؤرشفة/ });
+    archived.focus();
+    fireEvent.click(archived);
+    detailGone(); noGradebook();
+    expect(screen.queryByRole("button", { name: /^(منح محاولة إضافية|إعادة فتح للطالب|تمديد وقت المحاولة|تمديد الموعد)$/ })).toBeNull();
+    expect(rowTitles()).toEqual(["واجب قديم"]);
+    expect(document.activeElement).toBe(archived);
+    expect(archived.getAttribute("aria-pressed")).toBe("true");
+    expect(gets("/api/assignment-results")).toHaveLength(1);
+  });
+
+  it("search mismatch: typing a query that excludes the open assignment drops the detail while the search input keeps focus; no results request", async () => {
+    await mount();
+    await openDetail();
+    const input = within(toolbar()).getByLabelText("بحث") as HTMLInputElement;
+    input.focus();
+    fireEvent.change(input, { target: { value: "الجبر" } });
+    detailGone(); noGradebook();
+    expect(rowTitles()).toEqual(["واجب الجبر"]);
+    expect(document.activeElement).toBe(input);
+    expect(input.value).toBe("الجبر");
+    fireEvent.change(input, { target: { value: "" } });                                              // clearing never re-opens or re-fetches
+    expect(rowTitles()).toEqual(["اختبار الكسور", "واجب الجبر"]);
+    detailGone();
+    expect(document.activeElement).toBe(input);
+    expect(gets("/api/assignment-results")).toHaveLength(1);
+  });
+
+  it("keeps a still-visible detail: class c1 → all classes and a search that still matches preserve the detail with zero requests", async () => {
+    await mount();
+    await openDetail();
+    const select = within(toolbar()).getByLabelText("الصف") as HTMLSelectElement;
+    fireEvent.change(select, { target: { value: "" } });
+    expect(rowTitles()).toEqual(["اختبار الكسور", "واجب الجبر", "اختبار الهندسة"]);
+    expect(screen.getByRole("region", { name: "اختبار الكسور" })).toBeTruthy();
+    fireEvent.change(within(toolbar()).getByLabelText("بحث"), { target: { value: "الكسور" } });
+    expect(rowTitles()).toEqual(["اختبار الكسور"]);
+    expect(screen.getByRole("region", { name: "اختبار الكسور" })).toBeTruthy();
+    expect(gets("/api/assignment-results")).toHaveLength(1);
+  });
+
+  it("master-scope changes never close the non-modal composer", async () => {
+    await mount();
+    fireEvent.click(screen.getByRole("button", { name: "إنشاء واجب" }));
+    await screen.findByRole("region", { name: "إنشاء واجب جديد" });
+    fireEvent.change(within(toolbar()).getByLabelText("الصف"), { target: { value: "c2" } });
+    fireEvent.click(within(toolbar()).getByRole("button", { name: /^المؤرشفة/ }));
+    fireEvent.change(within(toolbar()).getByLabelText("بحث"), { target: { value: "zzz" } });
+    expect(screen.getByRole("region", { name: "إنشاء واجب جديد" })).toBeTruthy();
+    expect((within(screen.getByRole("region", { name: "إنشاء واجب جديد" })).getByLabelText("الصف") as HTMLSelectElement).value).toBe("c1"); // composer target untouched
+  });
+
+  it("authoritative mutation: archiving the selected current assignment removes its row AND its detail; no detached opener is focused; no results request", async () => {
+    await mount();
+    const { detail } = await openDetail();
+    expect(within(detail).getByRole("button", { name: "إجراءات زيد" })).toBeTruthy();
+    await assignmentAction("اختبار الكسور", "أرشفة");
+    await confirmDialog();
+    await waitFor(() => expect(posts("/api/assignments").filter(b => b.action === "archive")).toHaveLength(1));
+    await waitFor(() => detailGone());
+    noGradebook();
+    expect(rowTitles()).toEqual(["واجب الجبر"]);
+    expect(within(toolbar()).getByRole("button", { name: /^المؤرشفة/ }).textContent).toBe("المؤرشفة (2)");
+    const ae = document.activeElement as HTMLElement;
+    expect(ae && ae !== document.body && ae.isConnected).toBe(true);                              // focus landed on a live workspace element
+    expect(gets("/api/assignment-results")).toHaveLength(1);
+  });
+
+  it("authoritative mutation: restoring the selected archived assignment (archived view) removes its row and detail", async () => {
+    await mount();
+    fireEvent.click(within(toolbar()).getByRole("button", { name: /^المؤرشفة/ }));
+    await openDetail("واجب قديم");
+    await assignmentAction("واجب قديم", "استعادة");
+    await waitFor(() => expect(posts("/api/assignments").filter(b => b.action === "restore")).toHaveLength(1));
+    await waitFor(() => detailGone("واجب قديم"));
+    expect(rowTitles()).toEqual([]);
+    expect(screen.getByText("لا توجد واجبات مؤرشفة.")).toBeTruthy();
+    const ae = document.activeElement as HTMLElement;
+    expect(ae && ae !== document.body && ae.isConnected).toBe(true);
+    expect(gets("/api/assignment-results")).toHaveLength(1);
+  });
+
+  it("explicit close still returns focus to the original فتح opener (unchanged contract)", async () => {
+    await mount();
+    const { detail, trigger } = await openDetail();
+    fireEvent.click(within(detail).getByRole("button", { name: "إغلاق التفاصيل" }));
+    detailGone();
+    expect(document.activeElement).toBe(trigger);
+    expect(trigger.isConnected).toBe(true);
+    expect(gets("/api/assignment-results")).toHaveLength(1);
+  });
+});

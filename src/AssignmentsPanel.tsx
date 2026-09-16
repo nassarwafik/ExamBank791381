@@ -28,6 +28,18 @@ const localDate=(h:number)=>{const d=new Date(Date.now()+h*3600000);return new D
 const toLocalInput=(iso:string)=>{if(!iso)return "";const d=new Date(iso);return new Date(d.getTime()-d.getTimezoneOffset()*60000).toISOString().slice(0,16)};
 const fmt=(v:string)=>v?new Date(v).toLocaleString("ar"):"بدون موعد";
 
+// Master-list scope (class filter · current/archived view · search). The SAME predicate drives the displayed list
+// and the UX-5 invariant "a visible AssignmentDetail belongs to the current master-list scope", so the two can
+// never disagree. Pure; `q` is already trimmed + lowercased.
+type MasterScope={classId:string;showArchived:boolean;q:string};
+function matchesMasterScope(x:Item,s:MasterScope):boolean{
+ if(s.classId&&x.classId!==s.classId)return false;
+ if(s.showArchived?x.status!=="archived":x.status==="archived")return false;
+ if(s.q&&![x.title,x.className].join(" ").toLocaleLowerCase("ar").includes(s.q))return false;
+ return true;
+}
+const normalizeQuery=(v:string)=>v.trim().toLocaleLowerCase("ar");
+
 export default function AssignmentsPanel({token,classes,currentExam,onCopyLibraryExamToBuilder}:Props){
  const current=currentExam&&typeof currentExam==="object"?currentExam as Exam:null;
  const [items,setItems]=useState<Item[]>([]),[classId,setClassId]=useState(""),[title,setTitle]=useState(""),[instructions,setInstructions]=useState("أجب عن جميع الأسئلة واقرأ التعليمات جيدًا قبل البدء."),[openAt,setOpenAt]=useState(localDate(0)),[dueAt,setDueAt]=useState(localDate(72)),[maxAttempts,setMaxAttempts]=useState(1),[durationMinutes,setDurationMinutes]=useState(0),[publish,setPublish]=useState(true),[busy,setBusy]=useState(false),[loading,setLoading]=useState(false),[error,setError]=useState(""),[notice,setNotice]=useState(""),[resultsFor,setResultsFor]=useState<Item|null>(null),[results,setResults]=useState<StudentResult[]>([]),[stats,setStats]=useState<Stats|null>(null),[review,setReview]=useState<{studentId:string;attemptNumber:number}|null>(null);
@@ -45,7 +57,8 @@ export default function AssignmentsPanel({token,classes,currentExam,onCopyLibrar
  // UX-5 workspace state: list filter (separate from the composer's target class), search, mode, explicit attempts editor.
  const [filterClassId,setFilterClassId]=useState<string|null>(null),[search,setSearch]=useState(""),[mode,setMode]=useState<WorkspaceMode>("list"),[attemptsFor,setAttemptsFor]=useState<Item|null>(null);
  const detailHeadingRef=useRef<HTMLHeadingElement>(null),composerHeadingRef=useRef<HTMLHeadingElement>(null);
- const detailOpenerRef=useRef<HTMLElement|null>(null),composerOpenerRef=useRef<HTMLElement|null>(null),focusDetailPending=useRef(false),focusComposerOpenerPending=useRef(false);
+ const detailOpenerRef=useRef<HTMLElement|null>(null),composerOpenerRef=useRef<HTMLElement|null>(null),focusDetailPending=useRef(false),focusComposerOpenerPending=useRef(false),focusWorkspacePending=useRef(false);
+ const toolbarRef=useRef<HTMLDivElement|null>(null),scopeRef=useRef<MasterScope>({classId:"",showArchived:false,q:""});
  const {confirm,cancelPending,confirmDialog}=useConfirm();
  // Roadmap #34: a class is offered as an assignment target only through the canonical lifecycle helper (status
  // "archived" OR active:false ⇒ archived), never the raw compatibility `active` flag.
@@ -152,7 +165,7 @@ export default function AssignmentsPanel({token,classes,currentExam,onCopyLibrar
    closeComposer();
   }catch(e){setError(e instanceof Error?e.message:"تعذر إنشاء الواجب.")}finally{setBusy(false)}
  }
- async function action(item:Item,body:any){setBusy(true);try{const r=await api<{assignment:Item}>("/api/assignments",{method:"POST",body:JSON.stringify({assignmentId:item.assignmentId,...body})});setItems(x=>x.map(y=>y.assignmentId===item.assignmentId?r.assignment:y));setResultsFor(prev=>prev&&prev.assignmentId===item.assignmentId?r.assignment:prev)}catch(e){setError(e instanceof Error?e.message:"تعذر تنفيذ العملية.")}finally{setBusy(false)}}
+ async function action(item:Item,body:any){setBusy(true);try{const r=await api<{assignment:Item}>("/api/assignments",{method:"POST",body:JSON.stringify({assignmentId:item.assignmentId,...body})});reconcileMutated(r.assignment)}catch(e){setError(e instanceof Error?e.message:"تعذر تنفيذ العملية.")}finally{setBusy(false)}}
  async function saveMaxAttempts(item:Item,value:number){await action(item,{action:"setMaxAttempts",maxAttempts:value});setAttemptsFor(null)}
  // Roadmap #7 — archive-first deletion. The normal destructive action ARCHIVES (never physically deletes)
  // and always checks authoritative impact first so an active-attempt archive is confirmed explicitly.
@@ -167,25 +180,55 @@ export default function AssignmentsPanel({token,classes,currentExam,onCopyLibrar
     confirmActive=true;
    }else if(!(await confirm({message:"سيتم إخفاء الواجب عن الطلاب مع الاحتفاظ بجميع التسليمات والنتائج. يمكنك استعادته لاحقًا.",title:"أرشفة الواجب",confirmLabel:"أرشفة"})))return;
    const r=await api<{assignment:Item}>("/api/assignments",{method:"POST",body:JSON.stringify({action:"archive",assignmentId:item.assignmentId,...(confirmActive?{confirmActiveAttempts:true}:{})})});
-   setItems(x=>x.map(y=>y.assignmentId===item.assignmentId?r.assignment:y));
-   // If this assignment's gradebook is open, refresh its authoritative status so B2B controls hide at once.
-   setResultsFor(prev=>prev&&prev.assignmentId===item.assignmentId?r.assignment:prev);
+   // If this assignment's gradebook is open: refresh its authoritative status so B2B controls hide at once, or
+   // drop the detail entirely when the archived assignment leaves the current master scope.
+   reconcileMutated(r.assignment);
    if(resultsFor?.assignmentId===item.assignmentId){setDeadlineFor(null);setReopenFor(null);setExtendFor(null)}
    setNotice("✓ تم أرشفة الواجب «"+item.title+"».");
   }catch(e){setError(e instanceof Error?e.message:"تعذر أرشفة الواجب.")}finally{setBusy(false)}
  }
- async function restoreItem(item:Item){setBusy(true);setError("");setNotice("");try{const r=await api<{assignment:Item}>("/api/assignments",{method:"POST",body:JSON.stringify({action:"restore",assignmentId:item.assignmentId})});setItems(x=>x.map(y=>y.assignmentId===item.assignmentId?r.assignment:y));setResultsFor(prev=>prev&&prev.assignmentId===item.assignmentId?r.assignment:prev);setNotice("✓ تم استعادة الواجب «"+item.title+"».")}catch(e){setError(e instanceof Error?e.message:"تعذر استعادة الواجب.")}finally{setBusy(false)}}
+ async function restoreItem(item:Item){setBusy(true);setError("");setNotice("");try{const r=await api<{assignment:Item}>("/api/assignments",{method:"POST",body:JSON.stringify({action:"restore",assignmentId:item.assignmentId})});reconcileMutated(r.assignment);setNotice("✓ تم استعادة الواجب «"+item.title+"».")}catch(e){setError(e instanceof Error?e.message:"تعذر استعادة الواجب.")}finally{setBusy(false)}}
  // Permanent purge — impact-gated. History present => never even offer purge; zero history => danger dialog
  // that requires typing the exact title before POSTing action:"purge".
  async function openPurge(item:Item){setError("");setNotice("");setBusy(true);try{const impact=await fetchImpact(item);if(!impact)return;if(impact.submissionDocuments>0){setError("لا يمكن الحذف النهائي لأن للواجب بيانات طلاب محفوظة. اترك الواجب في الأرشيف للحفاظ على السجل.");return}setPurgeFor(item);setPurgeTitle("")}finally{setBusy(false)}}
- async function confirmPurge(){if(!purgeFor)return;const item=purgeFor;setBusy(true);setError("");try{const r=await api<{purged?:boolean}>("/api/assignments",{method:"POST",body:JSON.stringify({action:"purge",assignmentId:item.assignmentId,confirmAssignmentId:item.assignmentId,confirmTitle:purgeTitle})});if(r.purged){setItems(x=>x.filter(y=>y.assignmentId!==item.assignmentId));if(resultsFor?.assignmentId===item.assignmentId){setResultsFor(null);setResults([]);setStats(null)}setPurgeFor(null);setNotice("✓ تم حذف الواجب نهائيًا.")}}catch(e){setError(e instanceof Error?e.message:"تعذر الحذف النهائي.")}finally{setBusy(false)}}
+ async function confirmPurge(){if(!purgeFor)return;const item=purgeFor;setBusy(true);setError("");try{const r=await api<{purged?:boolean}>("/api/assignments",{method:"POST",body:JSON.stringify({action:"purge",assignmentId:item.assignmentId,confirmAssignmentId:item.assignmentId,confirmTitle:purgeTitle})});if(r.purged){setItems(x=>x.filter(y=>y.assignmentId!==item.assignmentId));if(resultsFor?.assignmentId===item.assignmentId)clearDetail({restoreFocus:false});focusWorkspacePending.current=true;setPurgeFor(null);setNotice("✓ تم حذف الواجب نهائيًا.")}}catch(e){setError(e instanceof Error?e.message:"تعذر الحذف النهائي.")}finally{setBusy(false)}}
  // Opening an assignment = exactly one authoritative results read; the composer yields to the detail area.
- async function loadResults(item=resultsFor,trigger?:HTMLElement|null){if(!item)return;if(trigger!==undefined){detailOpenerRef.current=trigger;focusDetailPending.current=true;setMode("list")}setBusy(true);setDeadlineFor(null);setReopenFor(null);setExtendFor(null);setAnalysis(null);try{const r=await api<{students:StudentResult[];stats:Stats}>("/api/assignment-results?assignmentId="+encodeURIComponent(item.assignmentId));setResultsFor(item);setResults(r.students||[]);setStats(r.stats||null)}catch(e){setError(e instanceof Error?e.message:"تعذر تحميل النتائج.")}finally{setBusy(false)}}
- function closeDetail(){
+ async function loadResults(item=resultsFor,trigger?:HTMLElement|null){if(!item)return;if(trigger!==undefined){detailOpenerRef.current=trigger;focusDetailPending.current=true;setMode("list")}setBusy(true);setDeadlineFor(null);setReopenFor(null);setExtendFor(null);setAnalysis(null);try{const r=await api<{students:StudentResult[];stats:Stats}>("/api/assignment-results?assignmentId="+encodeURIComponent(item.assignmentId));if(!matchesMasterScope(item,scopeRef.current))return;setResultsFor(item);setResults(r.students||[]);setStats(r.stats||null)}catch(e){setError(e instanceof Error?e.message:"تعذر تحميل النتائج.")}finally{setBusy(false)}}
+ // Clears every piece of detail state (results, stats, analysis, gradebook controls, row editors, opener ref).
+ // restoreFocus:true = the explicit close button (focus returns to the original "فتح"); restoreFocus:false = the
+ // detail left the master scope while the teacher operates a master control or after an authoritative mutation,
+ // so the control they are using keeps focus and no detached opener is ever focused.
+ function clearDetail({restoreFocus}:{restoreFocus:boolean}){
   setResultsFor(null);setResults([]);setStats(null);setDeadlineFor(null);setReopenFor(null);setExtendFor(null);setAnalysis(null);setGbSearch("");setGbFilter("all");setGbSort("name");
   const el=detailOpenerRef.current;detailOpenerRef.current=null;
-  if(el&&el.isConnected)el.focus();
+  if(restoreFocus&&el&&el.isConnected)el.focus();
  }
+ function closeDetail(){clearDetail({restoreFocus:true})}
+ // Master controls: apply the change, then enforce the invariant against the resulting scope. The composer is
+ // never closed here (its target class is intentionally independent of the list filter).
+ function changeScope(patch:{filterClassId?:string;showArchived?:boolean;search?:string}){
+  const next:MasterScope={classId:patch.filterClassId!==undefined?patch.filterClassId:effectiveFilter,showArchived:patch.showArchived!==undefined?patch.showArchived:showArchived,q:normalizeQuery(patch.search!==undefined?patch.search:search)};
+  scopeRef.current=next;
+  if(patch.filterClassId!==undefined)setFilterClassId(patch.filterClassId);
+  if(patch.showArchived!==undefined)setShowArchived(patch.showArchived);
+  if(patch.search!==undefined)setSearch(patch.search);
+  if(resultsFor&&!matchesMasterScope(resultsFor,next))clearDetail({restoreFocus:false});
+ }
+ // Authoritative assignment mutation (setStatus / setMaxAttempts / archive / restore): replace the row, and if the
+ // returned assignment no longer belongs to the master scope, drop a detail that pointed at it (never focusing a
+ // detached opener; a stable workspace target is focused only if focus was actually lost with the row).
+ function reconcileMutated(updated:Item){
+  setItems(x=>x.map(y=>y.assignmentId===updated.assignmentId?updated:y));
+  if(matchesMasterScope(updated,scopeRef.current)){setResultsFor(prev=>prev&&prev.assignmentId===updated.assignmentId?updated:prev);return}
+  if(resultsFor?.assignmentId===updated.assignmentId)clearDetail({restoreFocus:false});
+  focusWorkspacePending.current=true;
+ }
+ useEffect(()=>{
+  if(!focusWorkspacePending.current)return;
+  focusWorkspacePending.current=false;
+  const el=document.activeElement;
+  if(!el||el===document.body||!el.isConnected)toolbarRef.current?.focus();
+ });
  async function loadItemAnalysis(item=resultsFor){if(!item)return;setAnalysisBusy(true);setError("");try{const r=await api<ItemAnalysis>("/api/assignment-item-analysis?assignmentId="+encodeURIComponent(item.assignmentId));setAnalysis(r)}catch(e){setError(e instanceof Error?e.message:"تعذر تحميل تحليل الأسئلة.")}finally{setAnalysisBusy(false)}}
  // Merge an authoritative lifecycle snapshot (returned by every mutating action) into the student's row
  // so the UI never guesses (B2B #2/#20). Only defined fields are applied.
@@ -219,11 +262,11 @@ export default function AssignmentsPanel({token,classes,currentExam,onCopyLibrar
  // Review opens above the NON-MODAL detail; row-editor dialogs and the pending confirm never stay open beneath it.
  function openReview(s:StudentResult){if(!s.latestResult)return;setDeadlineFor(null);setReopenFor(null);setExtendFor(null);setAttemptsFor(null);setPurgeFor(null);cancelPending();setReview({studentId:s.studentId,attemptNumber:s.latestResult.attemptNumber})}
 
- const inScope=effectiveFilter?items.filter(x=>x.classId===effectiveFilter):items;
- const archivedCount=inScope.filter(x=>x.status==="archived").length;
- const scoped=inScope.filter(x=>showArchived?x.status==="archived":x.status!=="archived");
- const q=search.trim().toLocaleLowerCase("ar");
- const visible=q?scoped.filter(x=>[x.title,x.className].join(" ").toLocaleLowerCase("ar").includes(q)):scoped;
+ const masterScope:MasterScope={classId:effectiveFilter,showArchived,q:normalizeQuery(search)};
+ useEffect(()=>{scopeRef.current=masterScope});
+ const archivedCount=items.filter(x=>matchesMasterScope(x,{classId:effectiveFilter,showArchived:true,q:""})).length;
+ const scoped=items.filter(x=>matchesMasterScope(x,{...masterScope,q:""}));
+ const visible=items.filter(x=>matchesMasterScope(x,masterScope));
  const sourceCount=examQuestionCount(sourceExam);
  const sortedQuestions=useMemo(()=>{
   if(!analysis)return [];
@@ -265,14 +308,14 @@ export default function AssignmentsPanel({token,classes,currentExam,onCopyLibrar
  const showDetailArea=mode==="composer"||resultsFor!==null;
 
  return <section className="assignments-panel eb-assignments">
-  <div className="eb-assign-toolbar" role="region" aria-label="أدوات الواجبات">
+  <div className="eb-assign-toolbar" role="region" aria-label="أدوات الواجبات" ref={toolbarRef} tabIndex={-1}>
    <div className="eb-assign-filters">
-    <label className="eb-field-inline">الصف<select value={effectiveFilter} onChange={e=>setFilterClassId(e.target.value)}><option value="">كل الصفوف</option>{active.map(c=><option value={c.classId} key={c.classId}>{c.name}{c.grade?" · "+c.grade:""}</option>)}</select></label>
+    <label className="eb-field-inline">الصف<select value={effectiveFilter} onChange={e=>changeScope({filterClassId:e.target.value})}><option value="">كل الصفوف</option>{active.map(c=><option value={c.classId} key={c.classId}>{c.name}{c.grade?" · "+c.grade:""}</option>)}</select></label>
     <div className="eb-segmented" role="group" aria-label="عرض الواجبات">
-     <button type="button" aria-pressed={!showArchived} onClick={()=>setShowArchived(false)}>الواجبات الحالية</button>
-     <button type="button" aria-pressed={showArchived} onClick={()=>setShowArchived(true)}>المؤرشفة{archivedCount?" ("+archivedCount+")":""}</button>
+     <button type="button" aria-pressed={!showArchived} onClick={()=>changeScope({showArchived:false})}>الواجبات الحالية</button>
+     <button type="button" aria-pressed={showArchived} onClick={()=>changeScope({showArchived:true})}>المؤرشفة{archivedCount?" ("+archivedCount+")":""}</button>
     </div>
-    <label className="eb-field-inline eb-assign-search">بحث<input type="search" value={search} onChange={e=>setSearch(e.target.value)} placeholder="بحث بعنوان الواجب أو الصف"/></label>
+    <label className="eb-field-inline eb-assign-search">بحث<input type="search" value={search} onChange={e=>changeScope({search:e.target.value})} placeholder="بحث بعنوان الواجب أو الصف"/></label>
    </div>
    <div className="eb-assign-actions">
     <button type="button" className="eb-button is-primary" onClick={openComposer} disabled={mode==="composer"}><IconPlus size={16}/>إنشاء واجب</button>

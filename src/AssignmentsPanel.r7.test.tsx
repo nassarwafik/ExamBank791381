@@ -151,7 +151,7 @@ describe("R7 AssignmentsPanel — archive-first UI", () => {
     expect(r.queryByText(/تمديد الموعد/)).toBeNull();
   });
 
-  it("B: archiving an assignment whose gradebook is open hides the B2B controls immediately (review stays)", async () => {
+  it("B: archiving an assignment whose gradebook is open (current view) removes the row AND its detail — no B2B controls linger", async () => {
     const r = await mount();
     openDetail(r, "واجب منشور");
     await r.findByText("طالب");
@@ -160,10 +160,13 @@ describe("R7 AssignmentsPanel — archive-first UI", () => {
     await confirmDialog();
     await waitFor(() => expect(posts.some(p => p.action === "archive")).toBe(true));
     await waitFor(() => expect(studentMenu(r)).toBeNull());     // controls gone
-    expect(r.getByText("عرض التصحيح")).toBeTruthy();            // review still available
+    // UX-5 master-scope invariant: the archived assignment left the current list, so its detail leaves with it.
+    await waitFor(() => expect(r.queryByRole("region", { name: "واجب منشور" })).toBeNull());
+    expect(r.queryByText("عرض التصحيح")).toBeNull();
+    expect(r.queryByText("واجب منشور")).toBeNull();             // row no longer in the current list
   });
 
-  it("C: restoring an assignment whose archived gradebook is open brings the B2B controls back", async () => {
+  it("C: restoring an assignment whose archived gradebook is open removes it from the archived list together with its detail", async () => {
     const r = await mount();
     fireEvent.click(r.getByText(/المؤرشفة/));
     await r.findByText("واجب مؤرشف");
@@ -172,6 +175,9 @@ describe("R7 AssignmentsPanel — archive-first UI", () => {
     expect(studentMenu(r)).toBeNull();                          // archived: hidden
     await assignmentAction(r, "واجب مؤرشف", "استعادة");
     await waitFor(() => expect(posts.some(p => p.action === "restore")).toBe(true));
-    await waitFor(() => expect(studentMenu(r)).not.toBeNull()); // controls back
+    // UX-5 master-scope invariant: the restored assignment left the archived list, so its detail leaves with it.
+    await waitFor(() => expect(r.queryByRole("region", { name: "واجب مؤرشف" })).toBeNull());
+    expect(studentMenu(r)).toBeNull();
+    expect(r.queryByText("واجب مؤرشف")).toBeNull();
   });
 });
