@@ -1,10 +1,9 @@
 /* Project 794589 — LEGACY selectors kept ONLY for consumers outside the teacher Projects workspace:
      • the student portal panel (src/projects/StudentProjectPanel.tsx) and the two components it still
        renders (ProjectProgressBar.tsx → .p794-bar*, StageStatusBadge.tsx → .p794-status-badge.status-*);
-     • the Reports Center (ReportsCenter.tsx → .p794-chip, ReportViews.tsx → .p794-muted) until UX-6b.
-   Every teacher-project selector moved to src/projects-pro.css (UX-6a); unused sidebar-group and
-   class-program-tag rules were removed (no consumer in any non-test .tsx). Declarations below are the
-   original ones, unchanged, so the student appearance is byte-for-byte the same. */
+   Every teacher-project selector moved to src/projects-pro.css (UX-6a); the Reports Center stopped using
+   .p794-chip / .p794-muted in UX-6b (src/reports-pro.css), so those residuals are gone too. Declarations
+   below are the original ones, unchanged, so the student appearance is byte-for-byte the same. */
 
 /* ===== Progress bar (student panel) ===== */
 .p794-bar { display: flex; flex-direction: column; gap: 5px; margin: 6px 0; }
@@ -15,14 +14,6 @@
 .p794-bar-overall { background: linear-gradient(90deg, var(--eb-primary), var(--eb-primary-strong)); }
 .p794-bar-book { background: #2563eb; }
 .p794-bar-pt { background: #0d9488; }
-
-/* ===== Filter chip (Reports Center categories until UX-6b) ===== */
-.p794-chip { border: 1px solid var(--eb-line-2); background: var(--eb-surface); color: var(--eb-muted); font: inherit; font-size: 12.5px; font-weight: 700; padding: 6px 13px; border-radius: 999px; cursor: pointer; }
-.p794-chip:hover { border-color: var(--eb-primary); color: var(--eb-navy); }
-.p794-chip.active { background: var(--eb-primary); border-color: var(--eb-primary); color: #fff; }
-
-/* ===== Muted text (Reports until UX-6b) ===== */
-.p794-muted { color: var(--eb-muted); }
 
 /* ===== Groups + stage rows (student panel) ===== */
 .p794-group { border-bottom: 1px solid var(--eb-line); }

@@ -116,7 +116,21 @@ describe("UX-2 focus foundation", () => {
     for (const forbidden of [".p794-hub", ".p794-kpi", ".p794-class-selector", ".p794-student-card", ".p794-heatmap", ".p794-settings", ".p794-danger", ".p794-analytics", ".p794-tab-bar", ".app-sidebar-group", ".class-program-tag", ".p794-stage-action", ".p794-timeline"]) {
       expect(css, forbidden + " must not remain").not.toContain(forbidden);
     }
-    for (const kept of [".p794-bar", ".p794-status-badge", ".p794-stage-row", ".p794-portal-tracks", ".p794-chip", ".p794-muted"]) expect(css, kept + " must stay").toContain(kept);
+    for (const kept of [".p794-bar", ".p794-status-badge", ".p794-stage-row", ".p794-portal-tracks"]) expect(css, kept + " must stay").toContain(kept);
+  });
+  it("UX-6b reports-pro.css is token-only (--eb-*), never sets outline:none and uses only the 768/1024/1280 breakpoints; the legacy reports.css and the residual .p794-chip/.p794-muted are gone", () => {
+    const css = read("reports-pro.css").replace(/\/\*[\s\S]*?\*\//g, "");
+    expect(css, "reports-pro.css raw hex").not.toMatch(/#[0-9a-fA-F]{3,8}\b/);
+    expect(css, "reports-pro.css raw rgb").not.toMatch(/\brgba?\(/);
+    for (const m of css.matchAll(/var\((--[a-zA-Z0-9-]+)/g)) expect(m[1], "reports-pro.css uses non-canonical token " + m[1]).toMatch(/^--eb-/);
+    expect(css).not.toMatch(/outline\s*:\s*(none|0)/);
+    const widths = [...css.matchAll(/@media[^{]*max-width\s*:\s*(\d+)px/g)].map(m => Number(m[1]));
+    expect(widths.length).toBeGreaterThan(0);
+    for (const w of widths) expect([767, 1023, 1279], "unexpected breakpoint " + w).toContain(w);
+    expect(CSS_FILES).not.toContain("reports.css");
+    const legacy = read("project794589.css").replace(/\/\*[\s\S]*?\*\//g, "");
+    expect(legacy).not.toContain(".p794-chip"); expect(legacy).not.toContain(".p794-muted");
+    for (const kept of [".p794-bar", ".p794-status-badge", ".p794-stage-row", ".p794-portal-tracks"]) expect(legacy, kept + " must stay").toContain(kept);
   });
   it("new UX-2 stylesheets are token-only (--eb-*) with no raw colours", () => {
     for (const f of ["ui/ui.css", "shell.css"]) {

@@ -3,17 +3,31 @@ import type { ReactNode } from "react";
 import { Chart as ChartJS, CategoryScale, LinearScale, PointElement, LineElement, BarElement, Tooltip, Legend, Filler, type ChartOptions } from "chart.js";
 import { Bar, Line } from "react-chartjs-2";
 import { reportGet } from "./api";
-import { ReportShell, ReportKpiGrid, ReportTable, LoadingState, ErrorState, EmptyState, pct } from "./ui";
+import { ReportHeader, ReportNote, ReportTable, LoadingState, ErrorState, EmptyState } from "./ui";
+import { pct, isoDay } from "./format";
 import { downloadCsv } from "./csv";
 import { resolveTrack } from "./trackState";
-import ProjectAnalytics from "../projects/ProjectAnalytics";
-import { trackerPost } from "../projects/api";
-import type { TrackMeta } from "../projects/types";
+import * as csvRows from "./reportCsv";
+import ProjectAnalyticsCharts from "../projects/ProjectAnalyticsCharts";
+import { chartPalette } from "../projects/chartPalette";
+import ChartCard from "../ui/ChartCard";
+import StatCard from "../ui/StatCard";
+import StatusBadge from "../ui/StatusBadge";
+import ProgressBar from "../ui/ProgressBar";
+import VisuallyHidden from "../ui/VisuallyHidden";
+import { toneForTrack } from "../projects/teacherPresentation";
+import type { ProjectAnalytics as AnalyticsData, TrackMeta } from "../projects/types";
 
 ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, BarElement, Tooltip, Legend, Filler);
 
 export type ReportType = "class" | "student" | "assignments" | "project" | "track" | "ready" | "delayed" | "timeline";
 export type Filters = { schoolYear: string; classId: string; studentId: string; projectCode: string; track: string; from: string; to: string };
+
+/** Truthful meaning of every assessment number the Reports API returns (latest submitted attempt, not a final grade). */
+export const LATEST_ATTEMPT_LABEL = "نتيجة آخر محاولة مسلّمة";
+export const LATEST_ATTEMPT_NOTE = "الأرقام هنا هي نتيجة آخر محاولة مسلّمة لكل طالب كما يعيدها نظام التقارير، وقد تشمل تسليمات ما زالت بانتظار مراجعة المعلم؛ فهي ليست درجات نهائية معتمدة.";
+export const AVERAGE_NOTE = "المتوسطات ونسب التوزيع مبنية على نتيجة آخر محاولة مسلّمة لكل طالب في كل تقييم (ضمن الفترة المختارة)، وليست على الدرجات النهائية المعتمدة فقط.";
+const MISSING_LABEL = "لم يسلّم";
 
 // Adds date-range params (from/to) to a report request when present.
 function withRange(params: Record<string, string>, f: Filters): Record<string, string> {
@@ -23,173 +37,215 @@ function withRange(params: Record<string, string>, f: Filters): Record<string, s
   return out;
 }
 
-// Small data hook: fetches a report whenever its params change; exposes a retry (reload).
+/**
+ * Report fetch hook with stale-response protection: data is stored WITH the params key it was fetched for, so
+ * the moment the params change the exposed `data` is null (old rows never show against new filters), and a
+ * late response for an older key is discarded (cancelled on cleanup and key-checked on arrival).
+ */
 function useReport<T>(token: string, params: Record<string, string> | null) {
-  const [data, setData] = useState<T | null>(null);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState("");
-  const [nonce, setNonce] = useState(0);
   const key = params ? JSON.stringify(params) : "";
+  const [stored, setStored] = useState<{ key: string; data: T | null; error: string }>({ key: "", data: null, error: "" });
+  const [loading, setLoading] = useState(false);
+  const [nonce, setNonce] = useState(0);
   useEffect(() => {
-    if (!params) { setData(null); setError(""); return; }
+    if (!params) return;
     let cancelled = false;
-    setLoading(true); setError("");
-    reportGet<T>(token, params).then(r => { if (!cancelled) setData(r); }).catch(e => { if (!cancelled) setError(e instanceof Error ? e.message : "تعذر تجهيز التقرير."); }).finally(() => { if (!cancelled) setLoading(false); });
+    setLoading(true);
+    reportGet<T>(token, params)
+      .then(r => { if (!cancelled) setStored({ key, data: r, error: "" }); })
+      .catch(e => { if (!cancelled) setStored({ key, data: null, error: e instanceof Error ? e.message : "تعذر تجهيز التقرير." }); })
+      .finally(() => { if (!cancelled) setLoading(false); });
     return () => { cancelled = true; };
   }, [token, key, nonce]); // eslint-disable-line react-hooks/exhaustive-deps
-  return { data, loading, error, reload: () => setNonce(n => n + 1) };
+  const current = stored.key === key && key !== "";
+  return { data: current ? stored.data : null, error: current ? stored.error : "", loading: !!params && (loading || !current), reload: () => setNonce(n => n + 1) };
 }
 
-const barOptions: ChartOptions<"bar"> = { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: true, labels: { font: { family: "inherit" } } }, tooltip: { rtl: true } }, scales: { y: { beginAtZero: true, ticks: { precision: 0 } }, x: { grid: { display: false } } } };
+function usePalette() { return useMemo(() => chartPalette(), []); }
+const motion = (reduced: boolean) => (reduced ? { animation: false as const } : {});
 
 /* ---------------- Academic ---------------- */
 
 type ClassProjectSection = { projectCode: string; title: string; tracks: TrackMeta[]; avgOverall: number; trackAverages: Record<string, number>; completedCount: number };
 
+function ProjectSummaryCard({ title, tracks, overall, trackValues, footer, level = 4 }: { title: string; tracks: TrackMeta[]; overall: number; trackValues: Record<string, number>; footer?: ReactNode; level?: 3 | 4 }) {
+  const H = level === 3 ? "h3" : "h4";
+  return (
+    <section className="eb-report-project" aria-label={title}>
+      <H className="eb-subheading">{title}</H>
+      <ProgressBar label="التقدم العام" value={overall} tone="primary" />
+      <div className="eb-report-track-bars">
+        {tracks.map((t, i) => <ProgressBar key={t.trackId} label={t.title} value={trackValues[t.trackId] || 0} tone={toneForTrack(i)} size="sm" />)}
+      </div>
+      {footer && <p className="eb-report-project-foot">{footer}</p>}
+    </section>
+  );
+}
+
 function ClassReport({ token, filters }: { token: string; filters: Filters }) {
   type Resp = { class: { name: string; schoolYear: string; status: string; studentCount: number }; kpis: { assignments: number; averageScore: number | null; submissionRate: number }; projects: ClassProjectSection[] };
   const { data, loading, error, reload } = useReport<Resp>(token, filters.classId ? withRange({ type: "class", classId: filters.classId }, filters) : null);
   if (!filters.classId) return <EmptyState text="اختر صفًا لعرض تقريره." />;
-  if (loading && !data) return <LoadingState />;
   if (error) return <ErrorState text={error} onRetry={reload} />;
-  if (!data) return null;
-  const kpis: { label: string; value: ReactNode; hint?: string }[] = [
-    { label: "الحالة", value: data.class.status === "archived" ? "مؤرشف" : "نشط" },
+  if (loading || !data) return <LoadingState />;
+  const archived = data.class.status === "archived";
+  // CSV parity: the exact legacy KPI labels/values (unchanged since the first Reports release).
+  const csvKpis: csvRows.Kpi[] = [
+    { label: "الحالة", value: archived ? "مؤرشف" : "نشط" },
     { label: "عدد الطلاب", value: data.class.studentCount },
     { label: "عدد الواجبات", value: data.kpis.assignments },
     { label: "متوسط العلامات", value: pct(data.kpis.averageScore) },
     { label: "نسبة التسليم", value: pct(data.kpis.submissionRate) }
   ];
-  const csv: (string | number)[][] = [["القسم", "المؤشر", "القيمة"], ...kpis.map(k => ["أكاديمي", k.label, String(k.value)])];
-  for (const p of data.projects) {
-    csv.push([p.title, "التقدم العام", String(p.avgOverall)]);
-    for (const t of p.tracks) csv.push([p.title, t.title, String(p.trackAverages[t.trackId] || 0)]);
-    csv.push([p.title, "مكتملون", String(p.completedCount)]);
-  }
   return (
-    <ReportShell title={"تقرير الصف — " + data.class.name} subtitle={data.class.schoolYear}
-      onExportCsv={() => downloadCsv("class-" + data.class.name, csv)}>
-      <ReportKpiGrid items={kpis} />
-      {/* Each project reported independently — never combine two projects into one % */}
-      {data.projects.map(p => (
-        <section key={p.projectCode} className="platform-card">
-          <h3>📡 {p.title}</h3>
-          <ReportKpiGrid items={[
-            { label: "التقدم العام", value: pct(p.avgOverall) },
-            ...p.tracks.map(t => ({ label: t.title, value: pct(p.trackAverages[t.trackId] || 0) })),
-            { label: "✅ مكتملون", value: p.completedCount }
-          ]} />
+    <div className="eb-report-result">
+      <ReportHeader title={<>{data.class.name} <StatusBadge tone={archived ? "neutral" : "success"}>{archived ? "مؤرشف" : "نشط"}</StatusBadge></>} description={data.class.schoolYear}
+        onExportCsv={() => downloadCsv(csvRows.classReportFilename(data), csvRows.classReportRows(csvKpis, data))} />
+      <div className="eb-stat-grid is-primary eb-report-stats">
+        <StatCard primary label="الطلاب" value={data.class.studentCount} />
+        <StatCard primary label="التقييمات" value={data.kpis.assignments} hint="ضمن الفترة المختارة" />
+        <StatCard primary label="متوسط النتائج" value={pct(data.kpis.averageScore)} hint={LATEST_ATTEMPT_LABEL} />
+        <StatCard primary label="نسبة التسليم" value={pct(data.kpis.submissionRate)} tone="info" />
+      </div>
+      <ReportNote>{AVERAGE_NOTE}</ReportNote>
+      {data.projects.length > 0 && (
+        <section className="eb-report-projects" aria-labelledby="eb-report-class-projects">
+          <h3 id="eb-report-class-projects" className="eb-subheading">مشاريع الصف</h3>
+          {/* Each project reported independently — never combine two projects into one % */}
+          <div className="eb-report-project-grid">
+            {data.projects.map(p => <ProjectSummaryCard key={p.projectCode} title={p.title} tracks={p.tracks} overall={p.avgOverall} trackValues={p.trackAverages} footer={<StatusBadge tone="success">مكتملون {p.completedCount}</StatusBadge>} />)}
+          </div>
+          <ReportNote>بيانات التقييمات حسب الفترة المختارة؛ بيانات المشاريع تمثل الوضع الحالي.</ReportNote>
         </section>
-      ))}
-      {data.projects.length > 0 && <p className="report-hint">بيانات التقييمات حسب الفترة المختارة؛ بيانات المشاريع تمثل الوضع الحالي.</p>}
-    </ReportShell>
+      )}
+    </div>
   );
 }
 
-type StudentProjectSection = { projectCode: string; title: string; tracks: TrackMeta[]; summary: { overallProgress: number; trackProgress: Record<string, number>; counts: Record<string, number>; complete: boolean }; lastActivity: string; balance: { leadingTrackTitle: string; laggingTrackTitle: string; diff: number } | null };
+type StudentProjectSection = { projectCode: string; title: string; tracks: TrackMeta[]; summary: { overallProgress: number; trackProgress: Record<string, number>; counts: Record<string, number>; complete: boolean }; nextStages?: Record<string, { stageId: string; title: string } | null>; lastActivity: string; balance: { leadingTrackTitle: string; laggingTrackTitle: string; diff: number } | null };
 
 function StudentReport({ token, filters }: { token: string; filters: Filters }) {
   type Resp = { student: { displayName: string; className: string; schoolYear: string }; academic: { average: number | null; submittedCount: number; assessmentCount: number; submissionRate: number }; projects: StudentProjectSection[] };
   const { data, loading, error, reload } = useReport<Resp>(token, filters.studentId ? withRange({ type: "student", studentId: filters.studentId }, filters) : null);
   if (!filters.studentId) return <EmptyState text="اختر طالبًا لعرض تقريره." />;
-  if (loading && !data) return <LoadingState />;
   if (error) return <ErrorState text={error} onRetry={reload} />;
-  if (!data) return null;
-  const kpis: { label: string; value: ReactNode; hint?: string }[] = [
+  if (loading || !data) return <LoadingState />;
+  const csvKpis: csvRows.Kpi[] = [
     { label: "الصف", value: data.student.className || "—" },
     { label: "متوسط التقييمات", value: pct(data.academic.average) },
     { label: "المسلَّمة", value: data.academic.submittedCount + " / " + data.academic.assessmentCount },
     { label: "نسبة التسليم", value: pct(data.academic.submissionRate) }
   ];
-  const csv: (string | number)[][] = [["القسم", "المؤشر", "القيمة"], ...kpis.map(k => ["أكاديمي", k.label, String(k.value)])];
-  for (const p of data.projects) {
-    csv.push([p.title, "التقدم العام", String(p.summary.overallProgress)]);
-    for (const t of p.tracks) csv.push([p.title, t.title, String(p.summary.trackProgress[t.trackId] || 0)]);
-  }
   return (
-    <ReportShell title={"تقرير الطالب — " + data.student.displayName} subtitle={data.student.className + " · " + data.student.schoolYear}
-      onExportCsv={() => downloadCsv("student-" + data.student.displayName, csv)}>
-      <ReportKpiGrid items={kpis} />
-      {/* Each project of the class reported independently */}
-      {data.projects.map(p => (
-        <section key={p.projectCode} className="platform-card">
-          <h3>📡 {p.title}</h3>
-          <ReportKpiGrid items={[
-            { label: "تقدّم المشروع", value: pct(p.summary.overallProgress) },
-            ...p.tracks.map(t => ({ label: t.title, value: pct(p.summary.trackProgress[t.trackId] || 0) })),
-            { label: "✅ معتمدة", value: p.summary.counts.approved },
-            { label: "🔵 جاهزة للفحص", value: p.summary.counts.ready_for_review }
-          ]} />
-          {p.balance && <div className="platform-warning">⚠ {p.balance.leadingTrackTitle} متقدّم على {p.balance.laggingTrackTitle} بـ {p.balance.diff}%</div>}
+    <div className="eb-report-result">
+      <ReportHeader title={data.student.displayName} description={(data.student.className || "—") + " · " + data.student.schoolYear}
+        onExportCsv={() => downloadCsv(csvRows.studentReportFilename(data), csvRows.studentReportRows(csvKpis, data))} />
+      <div className="eb-stat-grid is-primary eb-report-stats">
+        <StatCard primary label="متوسط التقييمات" value={pct(data.academic.average)} hint={LATEST_ATTEMPT_LABEL} />
+        <StatCard primary label="المسلَّمة" value={data.academic.submittedCount + " / " + data.academic.assessmentCount} hint="من تقييمات الفترة المختارة" />
+        <StatCard primary label="نسبة التسليم" value={pct(data.academic.submissionRate)} tone="info" />
+        <StatCard primary label="مشاريع الصف" value={data.projects.length} />
+      </div>
+      <ReportNote>{AVERAGE_NOTE}</ReportNote>
+      {data.projects.length > 0 && (
+        <section className="eb-report-projects" aria-labelledby="eb-report-student-projects">
+          <h3 id="eb-report-student-projects" className="eb-subheading">المشاريع</h3>
+          <div className="eb-report-project-grid">
+            {data.projects.map(p => (
+              <ProjectSummaryCard key={p.projectCode} title={p.title} tracks={p.tracks} overall={p.summary.overallProgress} trackValues={p.summary.trackProgress}
+                footer={<>
+                  <StatusBadge tone="success">معتمدة {p.summary.counts.approved}</StatusBadge>{" "}
+                  <StatusBadge tone="info">جاهزة للفحص {p.summary.counts.ready_for_review}</StatusBadge>
+                  {p.summary.complete && <> <StatusBadge tone="success">مكتمل</StatusBadge></>}
+                  {p.lastActivity ? <span className="eb-muted"> · آخر نشاط {isoDay(p.lastActivity)}</span> : null}
+                  {p.nextStages && p.tracks.map(t => { const n = p.nextStages?.[t.trackId]; return n ? <span key={t.trackId} className="eb-muted"> · التالي في {t.title}: {n.stageId} — {n.title}</span> : null; })}
+                  {p.balance && <span className="eb-report-balance" role="status"> · {p.balance.leadingTrackTitle} متقدّم على {p.balance.laggingTrackTitle} بـ {p.balance.diff}%</span>}
+                </>} />
+            ))}
+          </div>
+          <ReportNote>متوسط التقييمات حسب الفترة المختارة؛ بيانات المشاريع تمثل الوضع الحالي.</ReportNote>
         </section>
-      ))}
-      {data.projects.length > 0 && <p className="report-hint">متوسط التقييمات حسب الفترة المختارة؛ بيانات المشاريع تمثل الوضع الحالي.</p>}
-    </ReportShell>
+      )}
+    </div>
   );
 }
 
 function AssignmentsReport({ token, filters }: { token: string; filters: Filters }) {
-  type Row = { assignmentId: string; title: string; students: number; submitted: number; missing: number; zeroScores: number; submissionRate: number; average: number | null; avgAttempts: number };
+  type Row = csvRows.AssignmentRow & { assignmentId: string };
   type Cell = { studentId: string; state: string; percentage: number | null };
   type Resp = { class: { name: string }; students: { studentId: string; displayName: string }[]; overall: { assessmentCount: number; participants: number; average: number | null; submissionRate: number; distribution: Record<string, number> }; perAssignment: Row[]; matrix: { assignmentId: string; title: string; cells: Cell[] }[] };
   const { data, loading, error, reload } = useReport<Resp>(token, filters.classId ? withRange({ type: "assignments", classId: filters.classId }, filters) : null);
-  const dist = useMemo(() => data && ({ labels: Object.keys(data.overall.distribution), datasets: [{ label: "عدد التسليمات", data: Object.values(data.overall.distribution), backgroundColor: "rgba(37,99,235,.82)", borderRadius: 6 }] }), [data]);
+  const palette = usePalette();
+  const distLabels = useMemo(() => data ? Object.keys(data.overall.distribution) : [], [data]);
+  const dist = useMemo(() => data && ({ labels: distLabels, datasets: [{ label: "عدد التسليمات", data: distLabels.map(k => data.overall.distribution[k]), backgroundColor: palette.series[0], borderRadius: 6 }] }), [data, distLabels, palette]);
+  const barOptions = useMemo<ChartOptions<"bar">>(() => ({ responsive: true, maintainAspectRatio: false, plugins: { legend: { display: true }, tooltip: { rtl: true } }, scales: { y: { beginAtZero: true, ticks: { precision: 0 }, grid: { color: palette.grid } }, x: { grid: { display: false } } } }), [palette]);
   if (!filters.classId) return <EmptyState text="اختر صفًا." />;
-  if (loading && !data) return <LoadingState />;
   if (error) return <ErrorState text={error} onRetry={reload} />;
-  if (!data) return null;
+  if (loading || !data) return <LoadingState />;
   return (
-    <ReportShell title={"التقييمات والواجبات — " + data.class.name}
-      onExportCsv={() => downloadCsv("assessments-" + data.class.name, [["التقييم", "الطلاب", "مُسلَّم", "غير مسلَّم", "صفر", "نسبة التسليم", "المتوسط", "متوسط المحاولات"], ...data.perAssignment.map(r => [r.title, r.students, r.submitted, r.missing, r.zeroScores, r.submissionRate, r.average ?? "", r.avgAttempts])])}>
-      <ReportKpiGrid items={[
-        { label: "عدد التقييمات", value: data.overall.assessmentCount },
-        { label: "التسليمات", value: data.overall.participants },
-        { label: "متوسط العلامات", value: pct(data.overall.average) },
-        { label: "نسبة التسليم", value: pct(data.overall.submissionRate) }
-      ]} />
-      <section className="platform-card"><h3>توزيع الدرجات</h3><div className="report-chart">{dist && <Bar data={dist} options={barOptions} />}</div></section>
-      <ReportTable columns={[
-        { key: "title", label: "الواجب" }, { key: "submissionRate", label: "نسبة التسليم", render: r => pct(r.submissionRate) },
-        { key: "submitted", label: "مُسلَّم" }, { key: "missing", label: "غير مسلَّم" }, { key: "zeroScores", label: "صفر (مُسلَّم)" },
-        { key: "average", label: "المتوسط", render: r => pct(r.average) }, { key: "avgAttempts", label: "متوسط المحاولات" }
-      ]} rows={data.perAssignment} empty="لا توجد واجبات." />
+    <div className="eb-report-result">
+      <ReportHeader title={data.class.name} description={"تقييمات الصف ضمن الفترة المختارة — " + LATEST_ATTEMPT_LABEL}
+        onExportCsv={() => downloadCsv(csvRows.assignmentsReportFilename(data.class.name), csvRows.assignmentsReportRows(data.perAssignment))} />
+      <div className="eb-stat-grid is-primary eb-report-stats">
+        <StatCard primary label="التقييمات" value={data.overall.assessmentCount} />
+        <StatCard primary label="التسليمات" value={data.overall.participants} hint="طالب × تقييم" />
+        <StatCard primary label="متوسط النتائج" value={pct(data.overall.average)} hint={LATEST_ATTEMPT_LABEL} />
+        <StatCard primary label="نسبة التسليم" value={pct(data.overall.submissionRate)} tone="info" />
+      </div>
+      <ReportNote>{LATEST_ATTEMPT_NOTE}</ReportNote>
+      <ChartCard level={3} title="توزيع النتائج" description={"عدد التسليمات في كل نطاق (%) — " + LATEST_ATTEMPT_LABEL} table={{ columns: ["النطاق %", "عدد التسليمات"], rows: distLabels.map(k => [k, data.overall.distribution[k]]) }}>
+        {({ reducedMotion }) => dist && <div className="eb-chart-canvas"><Bar data={dist} options={{ ...barOptions, ...motion(reducedMotion) }} /></div>}
+      </ChartCard>
+      <section aria-labelledby="eb-report-per-assignment">
+        <h3 id="eb-report-per-assignment" className="eb-subheading">ملخص كل تقييم</h3>
+        <ReportTable caption="ملخص كل تقييم: نسبة التسليم والمتوسط وعدد المسلِّمين" columns={[
+          { key: "title", label: "التقييم" },
+          { key: "submissionRate", label: "نسبة التسليم", render: r => pct(r.submissionRate), numeric: true },
+          { key: "submitted", label: "مُسلَّم", numeric: true }, { key: "missing", label: MISSING_LABEL, numeric: true }, { key: "zeroScores", label: "سلّم بعلامة صفر", numeric: true },
+          { key: "average", label: "المتوسط (" + LATEST_ATTEMPT_LABEL + ")", render: r => pct(r.average), numeric: true }, { key: "avgAttempts", label: "متوسط المحاولات", numeric: true }
+        ]} rows={data.perAssignment} empty="لا توجد تقييمات ضمن الفترة المختارة." />
+      </section>
       {data.matrix.length > 0 && (
-        <section className="platform-card">
-          <h3>مصفوفة الطالب × الواجب</h3>
-          <div className="report-table-scroll">
-            <table className="report-table"><thead><tr><th>الطالب</th>{data.matrix.map(m => <th key={m.assignmentId} title={m.title}>{m.title}</th>)}</tr></thead>
+        <section aria-labelledby="eb-report-matrix-title">
+          <h3 id="eb-report-matrix-title" className="eb-subheading">مصفوفة الطالب × التقييم</h3>
+          <p className="eb-muted eb-report-legend">القيمة = {LATEST_ATTEMPT_LABEL} (%) · 0 = سلّم بعلامة صفر · «{MISSING_LABEL}» = لا توجد محاولة مسلّمة</p>
+          <div className="eb-report-table-scroll">
+            <table className="eb-report-table eb-report-matrix">
+              <caption className="eb-visually-hidden">مصفوفة الطالب × التقييم — {LATEST_ATTEMPT_LABEL} بالنسبة المئوية لكل طالب في كل تقييم؛ «{MISSING_LABEL}» تعني عدم وجود محاولة مسلّمة</caption>
+              <thead><tr><th scope="col">الطالب</th>{data.matrix.map(m => <th key={m.assignmentId} scope="col" title={m.title}>{m.title}</th>)}</tr></thead>
               <tbody>
                 {data.students.map(stu => (
-                  <tr key={stu.studentId}><th>{stu.displayName}</th>
+                  <tr key={stu.studentId}><th scope="row">{stu.displayName}</th>
                     {data.matrix.map(m => {
                       const cell = m.cells.find(c => c.studentId === stu.studentId);
-                      if (!cell || cell.state === "missing") return <td key={m.assignmentId}><span className="report-matrix-cell report-matrix-missing" title="لم يسلّم">—</span></td>;
+                      if (!cell || cell.state === "missing") return <td key={m.assignmentId} className="is-missing"><span className="eb-report-matrix-cell is-missing">{MISSING_LABEL}</span></td>;
+                      const value = Math.round(cell.percentage || 0);
                       const zero = cell.percentage === 0;
-                      return <td key={m.assignmentId}><span className={"report-matrix-cell " + (zero ? "report-matrix-zero" : "report-matrix-ok")}>{Math.round(cell.percentage || 0)}</span></td>;
+                      return <td key={m.assignmentId} className={zero ? "is-zero" : "is-submitted"}><span className={"eb-report-matrix-cell " + (zero ? "is-zero" : "is-submitted")}>{value}<VisuallyHidden>{zero ? " سلّم بعلامة صفر" : "% " + LATEST_ATTEMPT_LABEL}</VisuallyHidden></span></td>;
                     })}
                   </tr>
                 ))}
               </tbody>
             </table>
           </div>
-          <small className="p794-muted">🟥 لم يسلّم (مفقود) · 🟨 سلّم بعلامة صفر · 🟩 سلّم</small>
         </section>
       )}
-    </ReportShell>
+    </div>
   );
 }
 
 /* ---------------- Project (generic) ---------------- */
 
-function ProjectReport({ token, filters }: { token: string; filters: Filters }) {
-  type Resp = { tracks: TrackMeta[]; class: { name: string }; summary: { avgOverall: number; trackAverages: Record<string, number>; completedCount: number; studentsReadyForReview: number; staleCount: number; studentCount: number } };
+function ProjectReport({ token, filters, onOpenProject }: { token: string; filters: Filters; onOpenProject?: (projectCode: string) => void }) {
+  type Resp = { tracks: TrackMeta[]; class: { name: string }; summary: { avgOverall: number; trackAverages: Record<string, number>; completedCount: number; studentsReadyForReview: number; staleCount: number; studentCount: number }; analytics?: AnalyticsData };
   const params = filters.projectCode && filters.classId ? { type: "project", projectCode: filters.projectCode, classId: filters.classId } : null;
   const { data, loading, error, reload } = useReport<Resp>(token, params);
+  const [stageTrack, setStageTrack] = useState("");
   if (!params) return <EmptyState text="اختر مشروعًا وصفًا." />;
-  if (loading && !data) return <LoadingState />;
   if (error) return <ErrorState text={error} onRetry={reload} />;
-  if (!data) return null;
-  const kpis: { label: string; value: ReactNode; hint?: string }[] = [
+  if (loading || !data) return <LoadingState />;
+  // CSV parity: exact legacy KPI labels/values.
+  const csvKpis: csvRows.Kpi[] = [
     { label: "عدد الطلاب", value: data.summary.studentCount },
     { label: "التقدم العام", value: pct(data.summary.avgOverall) },
     ...data.tracks.map(t => ({ label: t.title, value: pct(data.summary.trackAverages[t.trackId] || 0) })),
@@ -197,18 +253,30 @@ function ProjectReport({ token, filters }: { token: string; filters: Filters }) 
     { label: "🔵 ينتظرون الفحص", value: data.summary.studentsReadyForReview },
     { label: "⚠ متأخرون", value: data.summary.staleCount }
   ];
+  const track = resolveTrack(stageTrack, data.tracks.map(t => t.trackId), data.tracks[0]?.trackId || "");
   return (
-    <ReportShell title={"تقرير المشروع — " + data.class.name} subtitle={"مشروع " + filters.projectCode}
-      onExportCsv={() => downloadCsv("project-" + filters.projectCode + "-" + data.class.name, [["المؤشر", "القيمة"], ...kpis.map(k => [k.label, String(k.value)])])}>
-      <ReportKpiGrid items={kpis} />
-      <ProjectAnalytics token={token} projectCode={filters.projectCode} classId={filters.classId} tracks={data.tracks} />
-    </ReportShell>
+    <div className="eb-report-result">
+      <ReportHeader title={data.class.name} description={"مشروع " + filters.projectCode + " — الوضع الحالي"}
+        onExportCsv={() => downloadCsv(csvRows.projectReportFilename(filters.projectCode, data.class.name), csvRows.projectReportRows(csvKpis))}>
+        {onOpenProject && <button type="button" className="eb-button is-quiet is-small" onClick={() => onOpenProject(filters.projectCode)}>فتح في مساحة المشاريع</button>}
+      </ReportHeader>
+      <div className="eb-stat-grid is-primary eb-report-stats">
+        <StatCard primary label="الطلاب" value={data.summary.studentCount} />
+        <StatCard primary label="مكتملون" value={data.summary.completedCount} tone="success" />
+        <StatCard primary label="ينتظرون الفحص" value={data.summary.studentsReadyForReview} tone={data.summary.studentsReadyForReview > 0 ? "attention" : "neutral"} />
+        <StatCard primary label="بلا تحديث" value={data.summary.staleCount} tone={data.summary.staleCount > 0 ? "danger" : "neutral"} hint="متأخرون حسب إعداد الصف" />
+      </div>
+      <ProjectSummaryCard level={3} title="التقدم العام والمسارات" tracks={data.tracks} overall={data.summary.avgOverall} trackValues={data.summary.trackAverages} />
+      {/* The `type=project` response already carries `analytics`; it is rendered directly (no second analytics GET). */}
+      {data.analytics
+        ? <section className="eb-report-analytics" aria-labelledby="eb-report-analytics-title"><h3 id="eb-report-analytics-title" className="eb-subheading">الإحصائيات</h3><ProjectAnalyticsCharts level={3} analytics={data.analytics} tracks={data.tracks} stageTrack={track} onStageTrack={setStageTrack} /></section>
+        : <EmptyState text="لا توجد إحصائيات لهذا المشروع بعد." />}
+    </div>
   );
 }
 
 function TrackReport({ token, filters }: { token: string; filters: Filters }) {
-  type Row = { stageId: string; title: string; approved: number; ready_for_review: number; in_progress: number; not_started: number; approvedPct: number };
-  type Resp = { tracks: TrackMeta[]; track: string; groups: { groupId: string; title: string }[]; class: { name: string }; rows: Row[] };
+  type Resp = { tracks: TrackMeta[]; track: string; groups: { groupId: string; title: string }[]; class: { name: string }; rows: csvRows.TrackRow[] };
   const [track, setTrack] = useState("");
   const [groupId, setGroupId] = useState("");
   // Reset the track/group when the project or class changes, so a stale track from another project
@@ -216,99 +284,82 @@ function TrackReport({ token, filters }: { token: string; filters: Filters }) {
   useEffect(() => { setTrack(""); setGroupId(""); }, [filters.projectCode, filters.classId]);
   const params = filters.projectCode && filters.classId ? { type: "track", projectCode: filters.projectCode, classId: filters.classId, ...(track ? { track } : {}), ...(groupId ? { groupId } : {}) } : null;
   const { data, loading, error, reload } = useReport<Resp>(token, params);
-  // Keep the current track only if it exists in the data; otherwise fall back to the server default.
+  // An explicitly chosen track that no longer exists (project/class changed) falls back to the server default;
+  // an empty selection simply means "the server's default track" and costs no extra request.
   useEffect(() => {
-    if (data) { const valid = resolveTrack(track, data.tracks.map(t => t.trackId), data.track); if (valid !== track) setTrack(valid); }
+    if (data && track && !data.tracks.some(t => t.trackId === track)) setTrack(resolveTrack(track, data.tracks.map(t => t.trackId), data.track));
   }, [data, track]);
   if (!params) return <EmptyState text="اختر مشروعًا وصفًا." />;
-  if (loading && !data) return <LoadingState />;
   if (error) return <ErrorState text={error} onRetry={reload} />;
-  if (!data) return null;
+  if (loading || !data) return <LoadingState />;
+  const trackTitle = data.tracks.find(t => t.trackId === data.track)?.title || data.track;
   return (
-    <ReportShell title={"تقرير المسار — " + data.class.name}
-      onExportCsv={() => downloadCsv("track-" + data.track + "-" + data.class.name, [["المرحلة", "العنوان", "معتمد", "جاهز", "قيد التنفيذ", "لم يبدأ", "نسبة الاعتماد"], ...data.rows.map(r => [r.stageId, r.title, r.approved, r.ready_for_review, r.in_progress, r.not_started, r.approvedPct])])}>
-      <div className="report-filters report-noprint">
-        <label>المسار<select value={track} onChange={e => { setTrack(e.target.value); setGroupId(""); }}>{data.tracks.map(t => <option key={t.trackId} value={t.trackId}>{t.title}</option>)}</select></label>
-        <label>المجموعة<select value={groupId} onChange={e => setGroupId(e.target.value)}><option value="">الكل</option>{data.groups.map(g => <option key={g.groupId} value={g.groupId}>{g.title}</option>)}</select></label>
+    <div className="eb-report-result">
+      <ReportHeader title={data.class.name} description={"مسار " + trackTitle + " — حالة كل مرحلة عبر طلاب الصف"}
+        onExportCsv={() => downloadCsv(csvRows.trackReportFilename(data.track, data.class.name), csvRows.trackReportRows(data.rows))} />
+      <div className="eb-report-subfilters eb-report-noprint" role="region" aria-label="خيارات تقرير المسار">
+        <div className="eb-segmented" role="group" aria-label="المسار">
+          {data.tracks.map(t => <button key={t.trackId} type="button" aria-pressed={data.track === t.trackId} onClick={() => { setTrack(t.trackId); setGroupId(""); }}>{t.title}</button>)}
+        </div>
+        <label className="eb-field-inline">المجموعة<select value={groupId} onChange={e => setGroupId(e.target.value)}><option value="">الكل</option>{data.groups.map(g => <option key={g.groupId} value={g.groupId}>{g.title}</option>)}</select></label>
       </div>
-      <ReportTable columns={[
+      <ReportTable caption={"حالة مراحل مسار " + trackTitle + ": عدد الطلاب في كل حالة ونسبة الاعتماد"} columns={[
         { key: "stageId", label: "المرحلة" }, { key: "title", label: "العنوان" },
-        { key: "approved", label: "✅ معتمد" }, { key: "ready_for_review", label: "🔵 جاهز" },
-        { key: "in_progress", label: "🟡 قيد التنفيذ" }, { key: "not_started", label: "⬜ لم يبدأ" },
-        { key: "approvedPct", label: "نسبة الاعتماد", render: r => pct(r.approvedPct) }
+        { key: "approved", label: "معتمد", numeric: true }, { key: "ready_for_review", label: "جاهز للفحص", numeric: true },
+        { key: "in_progress", label: "قيد التنفيذ", numeric: true }, { key: "not_started", label: "لم يبدأ", numeric: true },
+        { key: "approvedPct", label: "نسبة الاعتماد", render: r => <ProgressBar ariaLabel={"نسبة اعتماد " + r.stageId} value={r.approvedPct} size="sm" tone="success" />, numeric: true }
       ]} rows={data.rows} empty="لا توجد مراحل." />
-    </ReportShell>
+    </div>
   );
 }
 
-function ReadyReport({ token, filters }: { token: string; filters: Filters }) {
+function ReadyReport({ token, filters, onOpenProject }: { token: string; filters: Filters; onOpenProject?: (projectCode: string) => void }) {
   type Resp = { tracks: TrackMeta[]; class: { name: string; status: string }; students: { studentId: string; displayName: string; stages: { stageId: string; title: string; track: string }[] }[]; totalReady: number };
   const params = filters.projectCode && filters.classId ? { type: "ready", projectCode: filters.projectCode, classId: filters.classId } : null;
   const { data, loading, error, reload } = useReport<Resp>(token, params);
-  const [local, setLocal] = useState<Resp | null>(null);
-  const [busy, setBusy] = useState("");
-  const [actionError, setActionError] = useState("");
-  useEffect(() => { setLocal(data); setActionError(""); }, [data]);
   if (!params) return <EmptyState text="اختر مشروعًا وصفًا." />;
-  if (loading && !local) return <LoadingState />;
   if (error) return <ErrorState text={error} onRetry={reload} />;
-  if (!local) return null;
-
-  const readOnly = local.class.status === "archived";
-
-  async function approve(studentId: string, stageId: string) {
-    setBusy(studentId + stageId); setActionError("");
-    try {
-      // Reuses the existing progress.update/approve API — no second approval path.
-      await trackerPost(token, filters.projectCode, { action: "progress.update", classId: filters.classId, studentId, stageId, status: "approved" });
-      setLocal(prev => prev ? {
-        ...prev,
-        totalReady: Math.max(0, prev.totalReady - 1),
-        students: prev.students.map(s => s.studentId === studentId ? { ...s, stages: s.stages.filter(st => st.stageId !== stageId) } : s).filter(s => s.stages.length)
-      } : prev);
-    } catch (e) { setActionError(e instanceof Error ? e.message : "تعذر اعتماد المرحلة."); }
-    finally { setBusy(""); }
-  }
-
+  if (loading || !data) return <LoadingState />;
+  const trackTitle = (id: string) => data.tracks.find(t => t.trackId === id)?.title || id;
   return (
-    <ReportShell title={"جاهز للفحص — " + local.class.name} subtitle={local.totalReady + " مرحلة بانتظار الفحص"}
-      onExportCsv={() => downloadCsv("ready-" + filters.projectCode + "-" + local.class.name, [["الطالب", "المرحلة", "العنوان"], ...local.students.flatMap(s => s.stages.map(st => [s.displayName, st.stageId, st.title]))])}>
-      {readOnly && <div className="platform-warning">🔒 الصف مؤرشف — التقرير للقراءة فقط.</div>}
-      {actionError && <div className="platform-error">{actionError}</div>}
-      {!local.students.length ? <EmptyState text="لا توجد مراحل بانتظار الفحص." /> : local.students.map(s => (
-        <section key={s.studentId} className="platform-card">
-          <h3>{s.displayName}</h3>
-          <ReportTable columns={[
-            { key: "stageId", label: "المرحلة" }, { key: "title", label: "العنوان" },
-            ...(readOnly ? [] : [{ key: "act", label: "", render: (r: { stageId: string }) => <button className="platform-primary report-noprint" disabled={busy === s.studentId + r.stageId} onClick={() => void approve(s.studentId, r.stageId)}>✅ اعتماد</button> }])
+    <div className="eb-report-result">
+      <ReportHeader title={<>{data.class.name} <StatusBadge tone={data.totalReady > 0 ? "info" : "neutral"}>{data.totalReady} مرحلة بانتظار الفحص</StatusBadge></>}
+        description={data.class.status === "archived" ? "الصف مؤرشف — عرض للقراءة فقط." : "المراحل التي علّمها الطلاب جاهزة للفحص؛ الاعتماد يتم من مساحة المشاريع."}
+        onExportCsv={() => downloadCsv(csvRows.readyReportFilename(filters.projectCode, data.class.name), csvRows.readyReportRows(data.students))}>
+        {onOpenProject && data.class.status !== "archived" && <button type="button" className="eb-button is-quiet is-small" onClick={() => onOpenProject(filters.projectCode)}>فتح في مساحة المشاريع</button>}
+      </ReportHeader>
+      {!data.students.length ? <EmptyState text="لا توجد مراحل بانتظار الفحص." /> : data.students.map(s => (
+        <section key={s.studentId} className="eb-report-block" aria-label={s.displayName}>
+          <h3 className="eb-subheading">{s.displayName} <StatusBadge tone="info">{s.stages.length}</StatusBadge></h3>
+          <ReportTable caption={"المراحل الجاهزة للفحص للطالب " + s.displayName} columns={[
+            { key: "stageId", label: "المرحلة" }, { key: "title", label: "العنوان" }, { key: "track", label: "المسار", render: r => trackTitle(String(r.track)) }
           ]} rows={s.stages} />
         </section>
       ))}
-    </ReportShell>
+    </div>
   );
 }
 
 function DelayedReport({ token, filters }: { token: string; filters: Filters }) {
-  type Row = { studentId: string; displayName: string; overall: number; trackProgress: Record<string, number>; updatedAt: string; reasons: string[] };
+  type Row = csvRows.DelayedRow & { studentId: string };
   type Resp = { tracks: TrackMeta[]; lateThreshold: number; class: { name: string }; students: Row[] };
   const params = filters.projectCode && filters.classId ? { type: "delayed", projectCode: filters.projectCode, classId: filters.classId } : null;
   const { data, loading, error, reload } = useReport<Resp>(token, params);
   if (!params) return <EmptyState text="اختر مشروعًا وصفًا." />;
-  if (loading && !data) return <LoadingState />;
   if (error) return <ErrorState text={error} onRetry={reload} />;
-  if (!data) return null;
-  const cols = [
-    { key: "displayName", label: "الطالب" },
-    { key: "overall", label: "التقدم العام", render: (r: Row) => pct(r.overall) },
-    ...data.tracks.map(t => ({ key: t.trackId, label: t.title, render: (r: Row) => pct(r.trackProgress[t.trackId] || 0) })),
-    { key: "updatedAt", label: "آخر تحديث", render: (r: Row) => r.updatedAt ? new Date(r.updatedAt).toLocaleDateString("ar") : "—" },
-    { key: "reasons", label: "السبب", render: (r: Row) => r.reasons.join("، ") }
-  ];
+  if (loading || !data) return <LoadingState />;
   return (
-    <ReportShell title={"المتأخرون — " + data.class.name} subtitle={"عتبة التأخّر: " + data.lateThreshold + "%"}
-      onExportCsv={() => downloadCsv("delayed-" + filters.projectCode + "-" + data.class.name, [["الطالب", "التقدم العام", ...data.tracks.map(t => t.title), "آخر تحديث", "السبب"], ...data.students.map(r => [r.displayName, r.overall, ...data.tracks.map(t => r.trackProgress[t.trackId] || 0), r.updatedAt, r.reasons.join("؛ ")])])}>
-      <ReportTable columns={cols} rows={data.students} empty="لا يوجد طلاب متأخرون." />
-    </ReportShell>
+    <div className="eb-report-result">
+      <ReportHeader title={<>{data.class.name} <StatusBadge tone={data.students.length ? "warn" : "neutral"}>{data.students.length} متأخرون</StatusBadge></>} description={"عتبة التأخّر حسب إعداد الصف: " + data.lateThreshold + "%"}
+        onExportCsv={() => downloadCsv(csvRows.delayedReportFilename(filters.projectCode, data.class.name), csvRows.delayedReportRows(data.tracks, data.students))} />
+      <ReportTable caption="الطلاب المتأخرون: التقدم العام وتقدم كل مسار وآخر تحديث وسبب التأخر" columns={[
+        { key: "displayName", label: "الطالب" },
+        { key: "overall", label: "التقدم العام", render: (r: Row) => <ProgressBar ariaLabel={"التقدم العام " + r.displayName} value={r.overall} size="sm" />, numeric: true },
+        ...data.tracks.map(t => ({ key: t.trackId, label: t.title, render: (r: Row) => pct(r.trackProgress[t.trackId] || 0), numeric: true })),
+        { key: "updatedAt", label: "آخر تحديث", render: (r: Row) => isoDay(r.updatedAt) },
+        { key: "reasons", label: "السبب", render: (r: Row) => <span className="eb-report-reasons">{r.reasons.map((x, i) => <StatusBadge key={i} tone="warn">{x}</StatusBadge>)}</span> }
+      ]} rows={data.students} empty="لا يوجد طلاب متأخرون." />
+    </div>
   );
 }
 
@@ -316,27 +367,33 @@ function TimelineReport({ token, filters }: { token: string; filters: Filters })
   type Resp = { class: { name: string }; scope: string; trend: { weekStart: string; avgOverall: number }[] };
   const params = filters.projectCode && filters.classId ? withRange({ type: "timeline", projectCode: filters.projectCode, classId: filters.classId, ...(filters.studentId ? { studentId: filters.studentId } : {}) }, filters) : null;
   const { data, loading, error, reload } = useReport<Resp>(token, params);
-  const chart = useMemo(() => data && ({ labels: data.trend.map(t => t.weekStart), datasets: [{ label: "متوسط التقدّم", data: data.trend.map(t => t.avgOverall), borderColor: "#2563eb", backgroundColor: "rgba(37,99,235,.14)", fill: true, tension: .3 }] }), [data]);
+  const palette = usePalette();
+  const chart = useMemo(() => data && ({ labels: data.trend.map(t => t.weekStart), datasets: [{ label: "متوسط التقدّم", data: data.trend.map(t => t.avgOverall), borderColor: palette.primary, backgroundColor: palette.primarySoft, fill: true, tension: .3 }] }), [data, palette]);
+  const lineOptions = useMemo<ChartOptions<"line">>(() => ({ responsive: true, maintainAspectRatio: false, plugins: { legend: { display: true }, tooltip: { rtl: true } }, scales: { y: { beginAtZero: true, max: 100, grid: { color: palette.grid } }, x: { grid: { display: false } } } }), [palette]);
   if (!params) return <EmptyState text="اختر مشروعًا وصفًا." />;
-  if (loading && !data) return <LoadingState />;
   if (error) return <ErrorState text={error} onRetry={reload} />;
-  if (!data) return null;
+  if (loading || !data) return <LoadingState />;
   return (
-    <ReportShell title={"التقدم الزمني — " + data.class.name} subtitle={data.scope === "student" ? "طالب محدد" : "الصف كامل"}
-      onExportCsv={() => downloadCsv("timeline-" + filters.projectCode + "-" + data.class.name, [["الأسبوع", "متوسط التقدّم"], ...data.trend.map(t => [t.weekStart, t.avgOverall])])}>
-      {data.trend.length ? <section className="platform-card"><div className="report-chart">{chart && <Line data={chart} options={barOptions as unknown as ChartOptions<"line">} />}</div></section> : <EmptyState text="لا توجد بيانات زمنية كافية بعد." />}
-    </ReportShell>
+    <div className="eb-report-result">
+      <ReportHeader title={data.class.name} description={data.scope === "student" ? "طالب محدد — متوسط التقدّم الأسبوعي" : "الصف كامل — متوسط التقدّم الأسبوعي"}
+        onExportCsv={() => downloadCsv(csvRows.timelineReportFilename(filters.projectCode, data.class.name), csvRows.timelineReportRows(data.trend))} />
+      {data.trend.length
+        ? <ChartCard level={3} title="متوسط التقدّم الأسبوعي" description="متوسط التقدّم (%) في نهاية كل أسبوع" table={{ columns: ["الأسبوع", "متوسط التقدّم %"], rows: data.trend.map(t => [t.weekStart, t.avgOverall]) }}>
+            {({ reducedMotion }) => chart && <div className="eb-chart-canvas"><Line data={chart} options={{ ...lineOptions, ...motion(reducedMotion) }} /></div>}
+          </ChartCard>
+        : <EmptyState text="لا توجد بيانات زمنية كافية بعد." />}
+    </div>
   );
 }
 
-export default function ReportView({ type, token, filters }: { type: ReportType; token: string; filters: Filters }) {
+export default function ReportView({ type, token, filters, onOpenProject }: { type: ReportType; token: string; filters: Filters; onOpenProject?: (projectCode: string) => void }) {
   switch (type) {
     case "class": return <ClassReport token={token} filters={filters} />;
     case "student": return <StudentReport token={token} filters={filters} />;
     case "assignments": return <AssignmentsReport token={token} filters={filters} />;
-    case "project": return <ProjectReport token={token} filters={filters} />;
+    case "project": return <ProjectReport token={token} filters={filters} onOpenProject={onOpenProject} />;
     case "track": return <TrackReport token={token} filters={filters} />;
-    case "ready": return <ReadyReport token={token} filters={filters} />;
+    case "ready": return <ReadyReport token={token} filters={filters} onOpenProject={onOpenProject} />;
     case "delayed": return <DelayedReport token={token} filters={filters} />;
     case "timeline": return <TimelineReport token={token} filters={filters} />;
     default: return <EmptyState />;
