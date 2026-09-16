@@ -36,6 +36,20 @@ const { isStudentClassMember } = require("../lib/class-membership");
 // no-op, matching the equivalent early-returns the unprotected code used to have.
 class SkipMutation extends Error {}
 
+// Roadmap #29 — a teacher-action failure that is the caller's input or the current state, not a server fault:
+// missing/invalid input (400), a missing student/auth resource (404), or a duplicate/state conflict/stale reset
+// (409). Carries the EXISTING Arabic message unchanged and the optional existing `code` ("duplicate" is what the
+// bulk-import loop classifies on). The top-level catch maps it to its status; bulk loops keep catching per row.
+// Genuine storage/unknown failures stay plain errors → generic 500.
+class StudentActionError extends Error {
+  constructor(httpStatus, message, code) {
+    super(message);
+    this.name = "StudentActionError";
+    this.httpStatus = httpStatus;
+    if (code) this.code = code;
+  }
+}
+
 const BANK_CONTAINER = "bank";
 // Bounded server-side import size (Roadmap #18). The client limit is NOT authoritative — the server
 // rejects an oversized preview/import cleanly. Conservative for the current one-blob-per-student
@@ -288,15 +302,15 @@ async function createStudentRecord(container, classroom, input, options = {}) {
   const identityNumber = identityFromInput(input);
   const code = identityNumber;
 
-  if (!firstName || !familyName) throw new Error("يجب إدخال الاسم الشخصي واسم العائلة.");
-  if (!isValidIdentityNumber(identityNumber)) throw new Error("رقم الهوية يجب أن يتكوّن من 9 أرقام.");
+  if (!firstName || !familyName) throw new StudentActionError(400, "يجب إدخال الاسم الشخصي واسم العائلة.");
+  if (!isValidIdentityNumber(identityNumber)) throw new StudentActionError(400, "رقم الهوية يجب أن يتكوّن من 9 أرقام.");
 
   const existing = await findStudentByIdentity(container, identityNumber);
   if (existing) {
     const existingClass = await getClassroom(container, String(existing.classId || ""));
     // Roadmap #18: tag identity collisions as `duplicate` so the bulk-import loop can report an
     // accurate duplicate vs. hard-failure breakdown (aggregate audit + UI counts) without string-matching.
-    const dup = new Error(
+    const dup = new StudentActionError(409,
       "رقم الهوية مستخدم مسبقًا للطالب " +
       String(existing.displayName || identityNumber) +
       (existingClass?.name ? " في الصف " + existingClass.name : "")
@@ -309,7 +323,7 @@ async function createStudentRecord(container, classroom, input, options = {}) {
     ? generateTemporaryPassword()
     : String(input?.password || "") || generateTemporaryPassword();
 
-  if (password.length < 6) throw new Error("كلمة المرور يجب أن تحتوي على 6 محارف على الأقل.");
+  if (password.length < 6) throw new StudentActionError(400, "كلمة المرور يجب أن تحتوي على 6 محارف على الأقل.");
 
   const { salt, passwordHash } = hashPassword(password);
   const userId = crypto.randomUUID();
@@ -362,7 +376,7 @@ async function createStudentRecord(container, classroom, input, options = {}) {
   } catch (e) {
     // The create-only conditional write is the real uniqueness guard: a lost race (another concurrent
     // create for the same identity won the write) becomes an explicit duplicate, never a silent overwrite.
-    if (isConcurrencyConflict(e)) { const dup = new Error("رقم الهوية مستخدم مسبقًا لطالب آخر. أعد المحاولة."); dup.code = "duplicate"; throw dup; }
+    if (isConcurrencyConflict(e)) { const dup = new StudentActionError(409, "رقم الهوية مستخدم مسبقًا لطالب آخر. أعد المحاولة."); dup.code = "duplicate"; throw dup; }
     throw e;
   }
   await uploadJson(container, USER_PREFIX + userId + ".json", student);
@@ -372,7 +386,7 @@ async function createStudentRecord(container, classroom, input, options = {}) {
 
 async function resetStudentPassword(container, student, requestedPassword = "") {
   const temporaryPassword = String(requestedPassword || "") || generateTemporaryPassword();
-  if (temporaryPassword.length < 6) throw new Error("كلمة المرور يجب أن تحتوي على 6 محارف على الأقل.");
+  if (temporaryPassword.length < 6) throw new StudentActionError(400, "كلمة المرور يجب أن تحتوي على 6 محارف على الأقل.");
   const { salt, passwordHash } = hashPassword(temporaryPassword);
 
   // PR#67 final: run under the per-student credential lock so a reset can never race a rename that moves the
@@ -380,7 +394,7 @@ async function resetStudentPassword(container, student, requestedPassword = "") 
   // current code (never from the possibly-stale `student` argument loaded before the lock was acquired).
   await withCredentialLock(container, student.userId, async () => {
     const current = await downloadJsonOrNull(container, USER_PREFIX + student.userId + ".json");
-    if (!current || current.role !== "student") throw new Error("الطالب غير موجود.");
+    if (!current || current.role !== "student") throw new StudentActionError(404, "الطالب غير موجود.");
     const code = String(current.code || current.identityNumber || "");
     const authBlobName = AUTH_PREFIX + studentCodeHash(code) + ".json";
     const now = new Date().toISOString();
@@ -388,7 +402,7 @@ async function resetStudentPassword(container, student, requestedPassword = "") 
     // fail-closed until the auth doc catches up), then write the auth hash + matching version.
     let newVersion = 1;
     await mutateJsonWithRetry(container, USER_PREFIX + student.userId + ".json", cur => {
-      if (!cur) throw new Error("الطالب غير موجود.");
+      if (!cur) throw new StudentActionError(404, "الطالب غير موجود.");
       newVersion = normalizeAuthVersion(cur.authVersion) + 1;
       cur.authVersion = newVersion;
       cur.updatedAt = now;
@@ -397,7 +411,7 @@ async function resetStudentPassword(container, student, requestedPassword = "") 
     // Version-conditional (§B): overwrite the credential only if this op owns the newest version.
     let applied = true;
     await mutateJsonWithRetry(container, authBlobName, cur => {
-      if (!cur) throw new Error("ملف دخول الطالب غير موجود.");
+      if (!cur) throw new StudentActionError(404, "ملف دخول الطالب غير موجود.");
       if (normalizeAuthVersion(cur.authVersion) > newVersion) { applied = false; return cur; } // stale
       cur.salt = salt;
       cur.passwordHash = passwordHash;
@@ -405,7 +419,7 @@ async function resetStudentPassword(container, student, requestedPassword = "") 
       cur.updatedAt = now;
       return cur;
     });
-    if (!applied) throw new Error("تم تغيير كلمة المرور من عملية أحدث. أعد المحاولة.");
+    if (!applied) throw new StudentActionError(409, "تم تغيير كلمة المرور من عملية أحدث. أعد المحاولة.");
   });
   return temporaryPassword;
 }
@@ -418,8 +432,8 @@ async function resetStudentPassword(container, student, requestedPassword = "") 
 
 async function changeStudentActive(container, student, active) {
   await mutateJsonWithRetry(container, USER_PREFIX + student.userId + ".json", current => {
-    if (!current) throw new Error("الطالب غير موجود.");
-    if (current.archived === true && active) throw new Error("استعد الطالب من الأرشيف أولًا.");
+    if (!current) throw new StudentActionError(404, "الطالب غير موجود.");
+    if (current.archived === true && active) throw new StudentActionError(409, "استعد الطالب من الأرشيف أولًا.");
     current.active = !!active;
     current.updatedAt = new Date().toISOString();
     return current;
@@ -450,7 +464,7 @@ async function archiveStudent(container, student, obs = null) {
 async function unarchiveStudent(container, student, obs = null) {
   const classId = String(student.classId || "");
   const classroom = await getClassroom(container, classId);
-  if (!classroom || normalizeClassStatus(classroom) === "archived") throw new Error("فعّل الصف قبل استعادة الطالب.");
+  if (!classroom || normalizeClassStatus(classroom) === "archived") throw new StudentActionError(400, "فعّل الصف قبل استعادة الطالب.");
 
   try {
     await mutateJsonWithRetry(container, USER_PREFIX + student.userId + ".json", current => {
@@ -471,7 +485,7 @@ async function unarchiveStudent(container, student, obs = null) {
 
 async function moveStudent(container, student, targetClassId, obs = null) {
   const target = await getClassroom(container, targetClassId);
-  if (!target || normalizeClassStatus(target) === "archived") throw new Error("الصف الهدف غير موجود أو مؤرشف.");
+  if (!target || normalizeClassStatus(target) === "archived") throw new StudentActionError(400, "الصف الهدف غير موجود أو مؤرشف.");
 
   const oldClassId = String(student.classId || "");
   if (oldClassId === targetClassId) return { synced: true };
@@ -688,6 +702,7 @@ async function manageStudentsHandler(request, deps = {}, obs = null) {
     // injected/alternate recorder that throws (Roadmap #19).
     const rawRec = deps.recordAuditEvent || recordAuditEvent;
     const rec = async (c, ev) => { try { await rawRec(c, ev); } catch { /* audit is secondary */ } };
+    let action = "";                                  // Roadmap #29: visible to the catch below (safe log metadata)
     try {
       const auth = (deps.requireBuilderAuth || requireBuilderAuth)(request);
       if (!auth.ok) return auth.response;
@@ -713,7 +728,7 @@ async function manageStudentsHandler(request, deps = {}, obs = null) {
 
       let body = {};
       try { body = await request.json(); } catch { body = {}; }
-      const action = String(body?.action || "create").trim().toLowerCase();
+      action = String(body?.action || "create").trim().toLowerCase();
 
       if (action === "create") {
         const classId = String(body?.classId || "").trim();
@@ -1168,6 +1183,12 @@ async function manageStudentsHandler(request, deps = {}, obs = null) {
         obs?.logWarn("student.credential.lock_contention", { retryable: true });
         return { status: 409, headers: { "Cache-Control": "no-store" }, jsonBody: { ok: false, error: "عملية أخرى على بيانات الطالب قيد التنفيذ. أعد المحاولة." } };
       }
+      // Roadmap #29: the teacher's input or the current state was rejected — a 4xx with the specific Arabic
+      // message, logged as a warning with SAFE metadata only (never the message: it can name a student).
+      if (e instanceof StudentActionError) {
+        obs?.logWarn("student.manage.rejected", { action, httpStatus: e.httpStatus, errorCode: e.code || "validation" });
+        return { status: e.httpStatus, headers: { "Cache-Control": "no-store" }, jsonBody: { ok: false, error: e.message } };
+      }
       obs?.logError("student.manage.error", e);
       return {
         status: 500,
@@ -1184,7 +1205,7 @@ app.http("manageStudents", { methods: ["GET", "POST"], authLevel: "anonymous", r
 // Roadmap #18 — pure roster-import helpers exported so normalization/validation are unit-tested directly
 // (no storage), plus buildImportPreview + MAX_IMPORT_ROWS for the preview/limit tests.
 module.exports = {
-  createStudentRecord, resetStudentPassword, buildStudentProfile, handler: manageStudentsHandler,
+  createStudentRecord, resetStudentPassword, buildStudentProfile, handler: manageStudentsHandler, StudentActionError,
   normalizeBulkStudents, namesFromInput, identityFromInput, normalizeIdentityNumber, isValidIdentityNumber,
   buildImportPreview, MAX_IMPORT_ROWS
 };
