@@ -1,18 +1,24 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { trackerGet, trackerPost } from "./api";
-import { STATUS_META, statusLabel, fmtDate, stagesByGroup, trackIcon } from "./helpers";
-import ProjectProgressBar, { toneForTrackIndex } from "./ProjectProgressBar";
-import StageStatusBadge from "./StageStatusBadge";
+import { fmtDate, stagesByGroup } from "./helpers";
+import { STAGE_STATUS_ORDER, STAGE_STATUS_TONE, STAGE_STATUS_CLASS, stageStatusLabel, normalizeStageStatus, toneForTrack } from "./teacherPresentation";
+import ProgressBar from "../ui/ProgressBar";
+import StatusBadge from "../ui/StatusBadge";
+import ActionMenu from "../ui/ActionMenu";
+import IconButton from "../ui/IconButton";
+import EmptyState from "../ui/EmptyState";
+import { IconChevronBack, IconChevronDown, IconCheck } from "../icons";
 import type { StudentDetail, StageStatus, ProjectStage, StudentCard, StageProgressEntry, HistoryEvent, BalanceInsight, TrackMeta } from "./types";
 
-type Props = { token: string; projectCode: string; classId: string; studentId: string; tracks: TrackMeta[]; onBack: () => void };
-
-const STATUS_ACTIONS: { status: StageStatus; label: string }[] = [
-  { status: "not_started", label: "لم يبدأ" },
-  { status: "in_progress", label: "قيد التنفيذ" },
-  { status: "ready_for_review", label: "جاهز للفحص" },
-  { status: "approved", label: "✅ اعتماد المرحلة" }
-];
+type Props = {
+  token: string; projectCode: string; classId: string; studentId: string; tracks: TrackMeta[];
+  onBack: () => void;
+  /** Called after any successful progress mutation so the (still mounted) student list can refresh on return. */
+  onChanged?: () => void;
+  /** Called only after a successful STATUS mutation (never note-only, noChange, cancel or failure): a status
+   * change can alter the global ready-for-review counts App owns. */
+  onReadyChanged?: () => void;
+};
 
 type UpdateResponse = {
   ok: true; noChange?: boolean;
@@ -23,15 +29,23 @@ type UpdateResponse = {
   history: HistoryEvent[];
 };
 
-export default function ProjectStudentDetail({ token, projectCode, classId, studentId, tracks, onBack }: Props) {
+/**
+ * Non-modal student profile for one project. Same single `student` read and the same `progress.update`
+ * POST (status or note) as before; focus moves to the heading on open and the workspace returns it to the
+ * opener on back. Editable classes get ONE primary action per stage (اعتماد المرحلة) with the other
+ * statuses in an ActionMenu; archived classes expose no mutation controls at all.
+ */
+export default function ProjectStudentDetail({ token, projectCode, classId, studentId, tracks, onBack, onChanged, onReadyChanged }: Props) {
   const [detail, setDetail] = useState<StudentDetail | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [notice, setNotice] = useState("");
   const [track, setTrack] = useState<string>(tracks[0]?.trackId || "");
   const [openStageId, setOpenStageId] = useState("");
   const [openGroups, setOpenGroups] = useState<Record<string, boolean>>({});
   const [noteDraft, setNoteDraft] = useState("");
   const [busy, setBusy] = useState(false);
+  const headingRef = useRef<HTMLHeadingElement | null>(null);
 
   async function load() {
     setLoading(true); setError("");
@@ -41,145 +55,164 @@ export default function ProjectStudentDetail({ token, projectCode, classId, stud
     } catch (e) { setError(e instanceof Error ? e.message : "تعذر تحميل ملف الطالب."); }
     finally { setLoading(false); }
   }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => { void load(); }, [classId, studentId, projectCode]);
+  useEffect(() => { headingRef.current?.focus(); }, [studentId]);
 
   const groups = useMemo(() => detail ? (detail.groups || []).filter(g => g.track === track).sort((a, b) => a.order - b.order) : [], [detail, track]);
   const byGroup = useMemo(() => detail ? stagesByGroup(detail.stages.filter(s => s.active !== false), track) : new Map(), [detail, track]);
 
   async function updateStage(stage: ProjectStage, patch: { status?: StageStatus; note?: string }) {
     if (!detail || detail.readOnly || busy) return;
-    setBusy(true); setError("");
+    setBusy(true); setError(""); setNotice("");
     try {
       const res = await trackerPost<UpdateResponse>(token, projectCode, { action: "progress.update", classId, studentId, stageId: stage.stageId, ...patch });
       if (!res.noChange) {
         const { stageId: sid, ...entry } = res.stage;
         setDetail(prev => prev ? { ...prev, summary: res.summary, progress: { ...prev.progress, [sid]: entry }, nextStages: res.nextStages, balance: res.balance, history: res.history } : prev);
+        onChanged?.();
+        if (patch.status !== undefined) onReadyChanged?.();
       }
+      setNotice(patch.note !== undefined ? "تم حفظ الملاحظة." : "تم تحديث حالة المرحلة.");
     } catch (e) { setError(e instanceof Error ? e.message : "تعذر حفظ التغيير."); }
     finally { setBusy(false); }
   }
 
-  if (loading && !detail) return <div className="platform-loading">⏳ جارٍ التحميل...</div>;
-  if (error && !detail) return <div className="platform-error">{error} <button onClick={() => void load()}>إعادة المحاولة</button></div>;
-  if (!detail) return null;
+  const name = detail?.student.displayName || studentId;
+  const backButton = <IconButton label="عودة إلى تقدّم الطلاب" icon={<IconChevronBack size={18} className="eb-flip-rtl" />} onClick={onBack} />;
+  // ONE stable head (back + h2) across loading / error / loaded states so the focused heading never remounts.
+  const head = (
+    <div className="eb-student-profile-head">
+      {backButton}
+      <div className="eb-student-profile-heading">
+        <h2 id="eb-student-profile-title" className="eb-subheading" ref={headingRef} tabIndex={-1}>{detail ? "ملف المشروع: " + name : "ملف المشروع"}</h2>
+        {detail && <p className="eb-muted">{detail.student.code ? "الكود " + detail.student.code + " · " : ""}آخر تحديث: {fmtDate(detail.summary.updatedAt)}</p>}
+      </div>
+      {detail?.readOnly && <StatusBadge tone="warn">مؤرشف — للقراءة فقط</StatusBadge>}
+    </div>
+  );
+
+  if (!detail) {
+    return <section className="eb-student-profile" aria-labelledby="eb-student-profile-title">
+      {head}
+      {loading && <p className="eb-muted" role="status">جارٍ تحميل ملف الطالب...</p>}
+      {!loading && error && <div className="platform-error assignment-inline-message" role="alert">{error} <button type="button" className="eb-button is-small" onClick={() => void load()}>إعادة المحاولة</button></div>}
+    </section>;
+  }
 
   const s = detail.summary;
   const timeline = [...detail.history].reverse().slice(0, 20);
+  const readOnly = detail.readOnly;
 
   return (
-    <div className="p794-student-detail">
-      <button className="p794-back" onClick={onBack}>→ عودة لتقدّم الطلاب</button>
-      {detail.readOnly && <div className="platform-warning">الصف مؤرشف — عرض للقراءة فقط.</div>}
-      {error && <div className="platform-error">{error}</div>}
+    <section className="eb-student-profile" aria-labelledby="eb-student-profile-title">
+      {head}
+      {error && <div className="platform-error assignment-inline-message" role="alert">{error}</div>}
+      {notice && <div className="platform-notice assignment-inline-message" role="status" aria-live="polite">{notice}</div>}
 
-      <section className="platform-card">
-        <div className="p794-detail-head">
-          <div><span className="platform-eyebrow">ملف المشروع</span><h3>{detail.student.displayName || studentId}</h3></div>
-          <div className="p794-detail-counts">
-            <span>✅ {s.counts.approved}</span><span>🔵 {s.counts.ready_for_review}</span>
-            <span>🟡 {s.counts.in_progress}</span><span>⬜ {s.counts.not_started}</span>
-          </div>
+      <div className="eb-student-profile-summary">
+        <ProgressBar label="التقدم العام" value={s.overallProgress} tone="primary" />
+        <div className="eb-project-track-bars">
+          {tracks.map((t, i) => <ProgressBar key={t.trackId} label={t.title} value={s.trackProgress[t.trackId] || 0} tone={toneForTrack(i)} size="sm" />)}
         </div>
-        <ProjectProgressBar label="التقدم العام" value={s.overallProgress} tone="overall" />
-        <div className="p794-detail-tracks">
-          {tracks.map((t, i) => <ProjectProgressBar key={t.trackId} label={(t.icon ? t.icon + " " : "") + t.title} value={s.trackProgress[t.trackId] || 0} tone={toneForTrackIndex(i)} />)}
-        </div>
+        <p className="eb-student-profile-counts">
+          {STAGE_STATUS_ORDER.slice().reverse().map(st => <StatusBadge key={st} tone={STAGE_STATUS_TONE[st]}>{stageStatusLabel(st)} {s.counts[st]}</StatusBadge>)}
+        </p>
         {detail.balance && (
-          <div className="platform-warning p794-balance">⚠ {detail.balance.leadingTrackTitle} متقدّم على {detail.balance.laggingTrackTitle} بـ {detail.balance.diff}%</div>
+          <p className="platform-warning assignment-inline-message" role="status">{detail.balance.leadingTrackTitle} متقدّم على {detail.balance.laggingTrackTitle} بـ {detail.balance.diff}%</p>
         )}
-        <div className="p794-next">
-          <span>الخطوة التالية:</span>
+        <p className="eb-student-profile-next">
+          <span className="eb-muted">الخطوة التالية:</span>
           {tracks.map(t => {
             const n = detail.nextStages[t.trackId];
-            return n
-              ? <span key={t.trackId} className="p794-next-chip">{trackIcon(t.icon)} {n.stageId} — {n.title}</span>
-              : <span key={t.trackId} className="p794-next-chip done">{trackIcon(t.icon)} مكتمل</span>;
+            return <StatusBadge key={t.trackId} tone={n ? "info" : "success"}>{t.title}: {n ? n.stageId + " — " + n.title : "مكتمل"}</StatusBadge>;
           })}
-        </div>
-        <small className="p794-muted">آخر تحديث: {fmtDate(s.updatedAt)}</small>
-      </section>
+        </p>
+      </div>
 
-      <nav className="analytics-view-tabs" role="tablist" aria-label="مسارات المشروع">
-        {tracks.map(t => (
-          <button key={t.trackId} type="button" className={"analytics-view-tab " + (track === t.trackId ? "active" : "")} onClick={() => { setTrack(t.trackId); setOpenStageId(""); }}>
-            {trackIcon(t.icon)} {t.title}
-          </button>
-        ))}
-      </nav>
+      <div className="eb-segmented eb-student-profile-tracks" role="group" aria-label="مسارات المشروع">
+        {tracks.map(t => <button key={t.trackId} type="button" aria-pressed={track === t.trackId} onClick={() => { setTrack(t.trackId); setOpenStageId(""); }}>{t.title}</button>)}
+      </div>
 
-      <section className="platform-card">
+      <div className="eb-stage-groups">
+        {!groups.length && <EmptyState compact title="لا توجد مراحل في هذا المسار." />}
         {groups.map(g => {
           const stages = (byGroup.get(g.groupId) || []) as ProjectStage[];
           const groupOpen = openGroups[g.groupId] !== false;
-          const approvedInGroup = stages.filter(st => (detail.progress[st.stageId]?.status || "not_started") === "approved").length;
+          const panelId = "eb-group-" + g.groupId;
+          const approvedInGroup = stages.filter(st => normalizeStageStatus(detail.progress[st.stageId]?.status) === "approved").length;
           return (
-            <div key={g.groupId} className="p794-group">
-              <button className="p794-group-head" onClick={() => setOpenGroups(prev => ({ ...prev, [g.groupId]: !groupOpen }))}>
-                <span>{groupOpen ? "▼" : "▶"} {g.title}</span>
-                <small>{approvedInGroup}/{stages.length} ✅</small>
+            <div key={g.groupId} className="eb-stage-group">
+              <button type="button" className="eb-stage-group-head" aria-expanded={groupOpen} aria-controls={panelId} onClick={() => setOpenGroups(prev => ({ ...prev, [g.groupId]: !groupOpen }))}>
+                <IconChevronDown size={16} className={"eb-disclosure-chevron" + (groupOpen ? " is-open" : "")} aria-hidden="true" />
+                <span className="eb-stage-group-title">{g.title}</span>
+                <small className="eb-muted">{approvedInGroup}/{stages.length} معتمدة</small>
               </button>
               {groupOpen && (
-                <div className="p794-stage-list">
+                <ul id={panelId} className="eb-stage-list">
                   {stages.map(stage => {
                     const entry = detail.progress[stage.stageId];
-                    const status = (entry?.status || "not_started") as StageStatus;
+                    const status = normalizeStageStatus(entry?.status);
                     const isOpen = openStageId === stage.stageId;
+                    const stagePanelId = "eb-stage-" + stage.stageId;
                     return (
-                      <div key={stage.stageId} className={"p794-stage-row " + STATUS_META[status].className}>
-                        <button className="p794-stage-row-main" onClick={() => { setOpenStageId(isOpen ? "" : stage.stageId); setNoteDraft(entry?.note || ""); }}>
-                          <StageStatusBadge status={status} showLabel={false} />
-                          <span className="p794-stage-code">{stage.stageId}</span>
-                          <span className="p794-stage-title">{stage.title}{stage.required === false ? <em className="p794-optional"> (اختياري)</em> : null}</span>
-                          {entry?.note ? <span className="p794-note-dot" title="توجد ملاحظة">📝</span> : null}
-                          <small>{fmtDate(entry?.updatedAt || "")}</small>
+                      <li key={stage.stageId} className={"eb-stage-row " + STAGE_STATUS_CLASS[status]}>
+                        <button type="button" className="eb-stage-row-main" aria-expanded={isOpen} aria-controls={stagePanelId} onClick={() => { setOpenStageId(isOpen ? "" : stage.stageId); setNoteDraft(entry?.note || ""); }}>
+                          <IconChevronDown size={16} className={"eb-disclosure-chevron" + (isOpen ? " is-open" : "")} aria-hidden="true" />
+                          <span className="eb-stage-code">{stage.stageId}</span>
+                          <span className="eb-stage-title">{stage.title}{stage.required === false ? <em className="eb-stage-optional"> (اختياري)</em> : null}</span>
+                          <StatusBadge tone={STAGE_STATUS_TONE[status]}>{stageStatusLabel(status)}</StatusBadge>
+                          {entry?.note ? <small className="eb-muted">ملاحظة</small> : null}
+                          <small className="eb-muted eb-stage-date">{fmtDate(entry?.updatedAt || "")}</small>
                         </button>
                         {isOpen && (
-                          <div className="p794-stage-detail">
-                            {stage.description ? <p className="p794-muted">{stage.description}</p> : null}
-                            <div className="p794-stage-status-line">الحالة الحالية: <StageStatusBadge status={status} /></div>
-                            {detail.readOnly ? (
-                              entry?.note ? <div className="p794-note-view">📝 {entry.note}</div> : <small className="p794-muted">لا توجد ملاحظة.</small>
+                          <div id={stagePanelId} className="eb-stage-detail">
+                            {stage.description ? <p className="eb-muted">{stage.description}</p> : null}
+                            {readOnly ? (
+                              entry?.note ? <p className="eb-stage-note-view">ملاحظة المعلم: {entry.note}</p> : <small className="eb-muted">لا توجد ملاحظة.</small>
                             ) : (
                               <>
-                                <div className="p794-stage-actions">
-                                  {STATUS_ACTIONS.map(a => (
-                                    <button key={a.status} disabled={busy || status === a.status}
-                                      className={"p794-stage-action" + (a.status === "approved" ? " approve" : "") + (status === a.status ? " current" : "")}
-                                      onClick={() => void updateStage(stage, { status: a.status })}>{a.label}</button>
-                                  ))}
+                                <div className="eb-stage-actions">
+                                  <button type="button" className="eb-button is-primary" disabled={busy || status === "approved"} onClick={() => void updateStage(stage, { status: "approved" })}><IconCheck size={16} />اعتماد المرحلة</button>
+                                  <ActionMenu label={"تغيير حالة المرحلة " + stage.stageId} text="تغيير الحالة" disabled={busy}>
+                                    {STAGE_STATUS_ORDER.filter(st => st !== "approved").map(st => (
+                                      <button key={st} type="button" className="eb-menu-item" disabled={busy || status === st} onClick={() => void updateStage(stage, { status: st })}>{stageStatusLabel(st)}</button>
+                                    ))}
+                                  </ActionMenu>
                                 </div>
-                                <label className="p794-note-edit">
-                                  <span>ملاحظة المعلم</span>
-                                  <textarea value={noteDraft} onChange={e => setNoteDraft(e.target.value)} placeholder="اكتب ملاحظة للطالب..." />
-                                  <button className="platform-primary" disabled={busy || noteDraft === (entry?.note || "")} onClick={() => void updateStage(stage, { note: noteDraft })}>حفظ الملاحظة</button>
+                                <label className="eb-field eb-stage-note-edit">ملاحظة المعلم
+                                  <textarea value={noteDraft} onChange={e => setNoteDraft(e.target.value)} placeholder="اكتب ملاحظة للطالب..." rows={3} />
                                 </label>
+                                <div className="eb-stage-note-actions">
+                                  <button type="button" className="eb-button is-small" disabled={busy || noteDraft === (entry?.note || "")} onClick={() => void updateStage(stage, { note: noteDraft })}>حفظ الملاحظة</button>
+                                </div>
                               </>
                             )}
                           </div>
                         )}
-                      </div>
+                      </li>
                     );
                   })}
-                </div>
+                </ul>
               )}
             </div>
           );
         })}
-      </section>
+      </div>
 
-      <section className="platform-card">
-        <div className="platform-card-heading"><div><span className="platform-eyebrow">Timeline</span><h3>أحدث الأحداث</h3></div></div>
+      <section className="eb-stage-timeline" aria-labelledby="eb-stage-timeline-title">
+        <h3 id="eb-stage-timeline-title" className="eb-subheading">أحدث الأحداث</h3>
         {timeline.length ? (
-          <ul className="p794-timeline">
+          <ol className="eb-timeline">
             {timeline.map(ev => (
               <li key={ev.eventId}>
-                <span className="p794-timeline-date">{fmtDate(ev.createdAt)}</span>
-                <span>{ev.type === "status" && ev.toStatus ? STATUS_META[ev.toStatus].icon + " " + statusLabel(ev.toStatus) + " — " + ev.stageId : "📝 ملاحظة — " + ev.stageId}</span>
+                <span className="eb-timeline-date">{fmtDate(ev.createdAt)}</span>
+                <span className="eb-timeline-text">{ev.type === "status" && ev.toStatus ? stageStatusLabel(ev.toStatus) + " — " + ev.stageId : "ملاحظة — " + ev.stageId}</span>
               </li>
             ))}
-          </ul>
-        ) : <div className="platform-empty">لا توجد أحداث بعد.</div>}
+          </ol>
+        ) : <EmptyState compact title="لا توجد أحداث بعد." />}
       </section>
-    </div>
+    </section>
   );
 }

@@ -1,53 +1,65 @@
-import { useEffect, useState } from "react";
-import { trackerGet } from "./api";
-import { trackIcon } from "./helpers";
+import EmptyState from "../ui/EmptyState";
+import StatusBadge from "../ui/StatusBadge";
+import { IconProjects } from "../icons";
 import type { ProjectMeta } from "./types";
+import "../projects-pro.css";
 
-type Props = { token: string; onOpenProject: (projectCode: string) => void };
+type Props = {
+  /** The registry catalog already loaded by App at teacher boot (one read); the hub never re-fetches it. */
+  projects: ProjectMeta[];
+  status: "loading" | "ready" | "error";
+  /** Ready-for-review counts per project from the existing global projects-summary read. */
+  readyByProject: Record<string, number>;
+  onRetry?: () => void;
+  onOpenProject: (projectCode: string) => void;
+};
 
-// Landing page for the "📡 المشاريع" group: a card per registered project. Reads the registry via the
-// generic API, so a new project appears here automatically once added to the backend registry.
-export default function ProjectHub({ token, onOpenProject }: Props) {
-  const [projects, setProjects] = useState<ProjectMeta[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState("");
-
-  useEffect(() => {
-    let cancelled = false;
-    (async () => {
-      setLoading(true); setError("");
-      try {
-        const r = await trackerGet<{ projects: ProjectMeta[] }>(token, "", "projects");
-        if (!cancelled) setProjects(r.projects || []);
-      } catch (e) { if (!cancelled) setError(e instanceof Error ? e.message : "تعذر تحميل المشاريع."); }
-      finally { if (!cancelled) setLoading(false); }
-    })();
-    return () => { cancelled = true; };
-  }, [token]);
-
-  return (
-    <section className="teacher-platform p794-root" dir="rtl">
-      <div className="teacher-platform-inner">
-        <section className="teacher-assignment-heading">
-          <span className="platform-eyebrow">Projects</span>
-          <h2>📡 المشاريع</h2>
-          <p>اختر مشروعًا لمتابعة تقدّم الطلاب فيه واعتماد المراحل ورؤية الإحصائيات.</p>
-        </section>
-        {error && <div className="platform-error">{error}</div>}
-        {loading && !projects.length && <div className="platform-loading">⏳ جارٍ التحميل...</div>}
-        <div className="p794-hub-grid">
-          {projects.map(p => (
-            <article key={p.projectCode} className="platform-card p794-hub-card">
-              <div className="p794-hub-code">📡 {p.projectCode}</div>
-              <h3>{p.title}</h3>
-              <div className="p794-hub-tracks">
-                {p.tracks.map(t => <span key={t.trackId} className="p794-chip-tag">{trackIcon(t.icon)} {t.title}</span>)}
-              </div>
-              <button className="platform-primary" onClick={() => onOpenProject(p.projectCode)}>فتح المشروع</button>
-            </article>
-          ))}
+// Landing page for "المشاريع": one card per registered project. The shell owns the page title, so the hub
+// starts directly with content (no hero / eyebrow).
+export default function ProjectHub({ projects, status, readyByProject, onRetry, onOpenProject }: Props) {
+  if (status === "error") {
+    return (
+      <section className="eb-projects-hub" aria-label="المشاريع">
+        <div className="platform-error assignment-inline-message" role="alert">
+          تعذر تحميل قائمة المشاريع.{" "}
+          {onRetry && <button type="button" className="eb-button is-small" onClick={onRetry}>إعادة المحاولة</button>}
         </div>
-      </div>
+      </section>
+    );
+  }
+  if (status === "loading" && !projects.length) {
+    return <section className="eb-projects-hub" aria-label="المشاريع"><p className="eb-muted" role="status">جارٍ تحميل المشاريع...</p></section>;
+  }
+  if (!projects.length) {
+    return <section className="eb-projects-hub" aria-label="المشاريع"><EmptyState title="لا توجد مشاريع مسجّلة." description="تظهر المشاريع هنا تلقائيًا عند إضافتها إلى سجل المشاريع." /></section>;
+  }
+  return (
+    <section className="eb-projects-hub" aria-label="المشاريع">
+      <ul className="eb-project-cards">
+        {projects.map(p => {
+          const ready = Number(readyByProject[p.projectCode]) || 0;
+          return (
+            <li key={p.projectCode} className="eb-project-card">
+              <div className="eb-project-card-head">
+                <span className="eb-project-card-icon" aria-hidden="true"><IconProjects size={20} /></span>
+                <div className="eb-project-card-text">
+                  <h2 className="eb-project-card-title">{p.title}</h2>
+                  <p className="eb-project-card-meta">الرمز {p.projectCode}</p>
+                </div>
+              </div>
+              <ul className="eb-project-card-tracks" aria-label={"مسارات " + p.title}>
+                {p.tracks.map(t => <li key={t.trackId}><StatusBadge tone="neutral">{t.title}</StatusBadge></li>)}
+              </ul>
+              <div className="eb-project-card-foot">
+                {ready > 0
+                  ? <StatusBadge tone="info">{ready} مراحل بانتظار الفحص</StatusBadge>
+                  : <span className="eb-muted eb-project-card-quiet">لا مراحل بانتظار الفحص</span>}
+                <button type="button" className="eb-button is-primary" onClick={() => onOpenProject(p.projectCode)}>فتح المشروع</button>
+              </div>
+            </li>
+          );
+        })}
+      </ul>
     </section>
   );
 }

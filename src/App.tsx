@@ -562,9 +562,18 @@ function App() {
   // (tabs + class selector live inside ProjectTracker). UX-2: the sidebar has no project sub-navigation
   // any more (the hub and the tracker's class selector already provide it).
   const [projectCode, setProjectCode] = useState("");
-  const [projectList, setProjectList] = useState<{ projectCode: string; title: string }[]>([]);
+  // UX-6a: the registry catalog is read ONCE here at teacher boot and passed down (shell breadcrumb, ProjectHub,
+  // TeacherPlatform's class-project selector) — no consumer re-fetches it. Status/nonce drive the hub's states.
+  const [projectList, setProjectList] = useState<{ projectCode: string; title: string; tracks: { trackId: string; title: string; icon?: string }[] }[]>([]);
+  const [projectCatalogStatus, setProjectCatalogStatus] = useState<"loading" | "ready" | "error">("loading");
+  const [projectCatalogNonce, setProjectCatalogNonce] = useState(0);
   // Global teacher "ready for review" queue (all projects, active classes) — one aggregated request.
   const [projectReady, setProjectReady] = useState<{ total: number; byProject: Record<string, number> }>({ total: 0, byProject: {} });
+  // UX-6a review: App stays the ONE owner of the global ready summary. A successful project mutation that can
+  // change ready-stage counts (status change, template update, project reset) bumps this nonce, which re-issues
+  // exactly one aggregated projects-summary read; the hub cards and the sidebar badge then re-render from it.
+  const [projectReadyNonce, setProjectReadyNonce] = useState(0);
+  function refreshProjectReady() { setProjectReadyNonce(n => n + 1); }
 
   function goToProjects(code: string) {
     setTeacherView("project");
@@ -621,13 +630,14 @@ function App() {
   useEffect(() => {
     // §6 — never fire teacher-only startup requests until session validation has completed AND the
     // authoritative role is teacher (prevents a wrong-role/stale-role auxiliary request during boot).
-    if (sessionChecking || !token || sessionRole !== "teacher") { setProjectList([]); return; }
+    if (sessionChecking || !token || sessionRole !== "teacher") { setProjectList([]); setProjectCatalogStatus("loading"); return; }
     let cancelled = false;
-    apiRequest<{ projects?: { projectCode: string; title: string }[] }>("/api/project-tracker?resource=projects")
-      .then(r => { if (!cancelled) setProjectList(r.projects || []); })
-      .catch(() => { if (!cancelled) setProjectList([]); });
+    setProjectCatalogStatus("loading");
+    apiRequest<{ projects?: { projectCode: string; title: string; tracks?: { trackId: string; title: string; icon?: string }[] }[] }>("/api/project-tracker?resource=projects")
+      .then(r => { if (!cancelled) { setProjectList((r.projects || []).map(p => ({ ...p, tracks: Array.isArray(p.tracks) ? p.tracks : [] }))); setProjectCatalogStatus("ready"); } })
+      .catch(() => { if (!cancelled) { setProjectList([]); setProjectCatalogStatus("error"); } });
     return () => { cancelled = true; };
-  }, [token, sessionRole, sessionChecking]);
+  }, [token, sessionRole, sessionChecking, projectCatalogNonce]);
 
   // Ready-for-review badge (global, not tied to the selected class). Re-checked when returning to the
   // projects view so approving a stage there refreshes the count. TEACHER-ONLY (builder-auth endpoint):
@@ -640,7 +650,7 @@ function App() {
       .then(r => { if (!cancelled) setProjectReady({ total: Number(r.totalReadyForReview) || 0, byProject: r.byProject || {} }); })
       .catch(() => { if (!cancelled) setProjectReady({ total: 0, byProject: {} }); });
     return () => { cancelled = true; };
-  }, [token, sessionRole, teacherView, sessionChecking]);
+  }, [token, sessionRole, teacherView, sessionChecking, projectReadyNonce]);
 
   const [userCode, setUserCode] = useState("");
   const [password, setPassword] = useState("");
@@ -5445,6 +5455,7 @@ function App() {
         "platform" && (
         <TeacherPlatform
           token={token}
+          projects={projectList}
           currentExam={structuredExam ?? exam}
           workspaceTab={workspaceTab}
           onCopyLibraryExamToBuilder={handleCopyLibraryExamToBuilder}
@@ -5465,10 +5476,10 @@ function App() {
       )}
 
       {teacherView === "project" && (
-        <Suspense fallback={<div className="platform-loading">⏳ جارٍ التحميل...</div>}>
+        <Suspense fallback={<p className="eb-muted" role="status">جارٍ التحميل...</p>}>
           {projectCode
-            ? <ProjectTracker token={token} projectCode={projectCode} />
-            : <ProjectHub token={token} onOpenProject={goToProjects} />}
+            ? <ProjectTracker token={token} projectCode={projectCode} onReadyChanged={refreshProjectReady} />
+            : <ProjectHub projects={projectList} status={projectCatalogStatus} readyByProject={projectReady.byProject} onRetry={() => setProjectCatalogNonce(n => n + 1)} onOpenProject={goToProjects} />}
         </Suspense>
       )}
 

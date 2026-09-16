@@ -1,10 +1,15 @@
 import { useEffect, useState } from "react";
 import { trackerGet } from "./api";
-import ProjectProgressBar, { toneForTrackIndex } from "./ProjectProgressBar";
+import ProgressBar from "../ui/ProgressBar";
+import { toneForTrack } from "./teacherPresentation";
+import StatCard from "../ui/StatCard";
+import EmptyState from "../ui/EmptyState";
 import type { ClassSummary, TrackMeta } from "./types";
 
 type Props = { token: string; projectCode: string; classId: string; tracks: TrackMeta[] };
 
+// Overview of one class in one project: exactly the existing `summary` payload, presented as the shared
+// StatCards (four primary operational counts + stale hint) and semantic progress bars. Nothing is recomputed.
 export default function ProjectDashboard({ token, projectCode, classId, tracks }: Props) {
   const [summary, setSummary] = useState<ClassSummary | null>(null);
   const [loading, setLoading] = useState(false);
@@ -18,34 +23,29 @@ export default function ProjectDashboard({ token, projectCode, classId, tracks }
     } catch (e) { setError(e instanceof Error ? e.message : "تعذر تحميل لوحة المشروع."); }
     finally { setLoading(false); }
   }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => { void load(); }, [classId, projectCode]);
 
-  if (loading && !summary) return <div className="platform-loading">⏳ جارٍ التحميل...</div>;
-  if (error) return <div className="platform-error">{error} <button onClick={() => void load()}>إعادة المحاولة</button></div>;
+  if (loading && !summary) return <p className="eb-muted" role="status">جارٍ تحميل لوحة المشروع...</p>;
+  if (error) return <div className="platform-error assignment-inline-message" role="alert">{error} <button type="button" className="eb-button is-small" onClick={() => void load()}>إعادة المحاولة</button></div>;
   if (!summary) return null;
-  if (!summary.studentCount) return <div className="platform-empty">لا يوجد طلاب في هذا الصف بعد.</div>;
+  if (!summary.studentCount) return <EmptyState title="لا يوجد طلاب في هذا الصف بعد." description="أضف طلابًا إلى الصف من صفحة «الصفوف والطلاب» ليظهر تقدّمهم هنا." />;
 
   return (
-    <div className="p794-dashboard">
-      <div className="p794-kpi-grid">
-        <article className="p794-kpi p794-kpi-primary">
-          <span className="p794-kpi-label">التقدم العام للصف</span>
-          <ProjectProgressBar value={summary.avgOverall} tone="overall" />
-        </article>
-        {tracks.map((t, i) => (
-          <article key={t.trackId} className="p794-kpi">
-            <span className="p794-kpi-label">{(t.icon ? t.icon + " " : "") + "متوسط " + t.title}</span>
-            <ProjectProgressBar value={summary.trackAverages[t.trackId] || 0} tone={toneForTrackIndex(i)} />
-          </article>
-        ))}
+    <section className="eb-project-overview" aria-labelledby="eb-project-overview-title">
+      <h2 id="eb-project-overview-title" className="eb-subheading">لوحة المشروع</h2>
+      <div className="eb-stat-grid is-primary eb-project-stats">
+        <StatCard primary label="الطلاب" value={summary.studentCount} />
+        <StatCard primary label="مكتملون" value={summary.completedCount} tone="success" />
+        <StatCard primary label="ينتظرون الفحص" value={summary.studentsReadyForReview} tone={summary.studentsReadyForReview > 0 ? "attention" : "neutral"} />
+        <StatCard primary label="مراحل جاهزة للفحص" value={summary.totalReadyStages} tone="info" hint={"بلا تحديث " + summary.staleDays + "+ أيام: " + summary.staleCount} />
       </div>
-      <div className="p794-kpi-grid">
-        <article className="p794-kpi p794-kpi-stat"><strong>{summary.studentCount}</strong><span>عدد الطلاب</span></article>
-        <article className="p794-kpi p794-kpi-stat"><strong>{summary.completedCount}</strong><span>✅ مكتملون</span></article>
-        <article className="p794-kpi p794-kpi-stat"><strong>{summary.studentsReadyForReview}</strong><span>🔵 ينتظرون الفحص</span></article>
-        <article className="p794-kpi p794-kpi-stat"><strong>{summary.totalReadyStages}</strong><span>مراحل جاهزة للفحص</span></article>
-        <article className="p794-kpi p794-kpi-stat"><strong>{summary.staleCount}</strong><span>⚠ بلا تحديث {summary.staleDays}+ أيام</span></article>
+      <div className="eb-project-progress-card">
+        <ProgressBar label="التقدم العام للصف" value={summary.avgOverall} tone="primary" />
+        <div className="eb-project-track-bars">
+          {tracks.map((t, i) => <ProgressBar key={t.trackId} label={"متوسط " + t.title} value={summary.trackAverages[t.trackId] || 0} tone={toneForTrack(i)} size="sm" />)}
+        </div>
       </div>
-    </div>
+    </section>
   );
 }

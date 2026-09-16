@@ -98,12 +98,28 @@ describe("UX-2 App + TeacherAppShell integration", () => {
     expect(h1()).toBe("المشاريع");
     fireEvent.click(await screen.findByRole("button", { name: "فتح المشروع" }));
     await waitFor(() => expect(h1()).toBe("مشروع 899373"));
-    expect(await screen.findByText(/Project 899373/)).toBeTruthy();                      // ProjectTracker rendered
+    expect(await screen.findByRole("region", { name: "مساحة عمل المشروع" })).toBeTruthy(); // ProjectTracker workspace rendered
     const crumbs = screen.getByRole("navigation", { name: "مسار الصفحة" });
     expect(crumbs.textContent).toContain("المشاريع");
     fireEvent.click(within(crumbs).getByRole("button", { name: "المشاريع" }));
     await waitFor(() => expect(h1()).toBe("المشاريع"));
     expect(await screen.findByRole("button", { name: "فتح المشروع" })).toBeTruthy();  // hub again
+  });
+  it("UX-6a: the project catalog is read exactly once at teacher boot — opening the hub and the Classes & Students workspace add no catalog request", async () => {
+    const calls = installFetch("teacher");
+    render(<App />); await login();
+    await waitFor(() => expect(document.querySelector(".app-sidebar-logout")).toBeTruthy());
+    await waitFor(() => expect(calls.some(u => u.includes("resource=projects-summary"))).toBe(true));
+    const catalogReads = () => calls.map(pathOf).filter(u => u === "/api/project-tracker?resource=projects").length;
+    expect(catalogReads()).toBe(1);
+    fireEvent.click(nav("المشاريع"));
+    expect(await screen.findByRole("button", { name: "فتح المشروع" })).toBeTruthy();             // hub renders from App's catalog
+    expect(screen.getByText("الرمز 899373")).toBeTruthy();
+    expect(catalogReads()).toBe(1);
+    fireEvent.click(nav("الصفوف والطلاب"));
+    await waitFor(() => expect(calls.some(u => u.includes("/api/classrooms"))).toBe(true));
+    expect(catalogReads()).toBe(1);                                                                // TeacherPlatform reuses the boot read
+    expect(document.querySelectorAll("h1").length).toBe(1);
   });
   it("logout still works through .app-sidebar-logout and returns to the login form", async () => {
     installFetch("teacher");

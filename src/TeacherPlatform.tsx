@@ -18,7 +18,9 @@ import {appendStudentRow,mergeStudentRow,removeStudentRow,pruneSelectedIds,needs
 type WorkspaceTab="dashboard"|"students"|"assignments"|"audit";
 // onCopyLibraryExamToBuilder: forwarded straight to AssignmentsPanel; the snapshot is typed loosely
 // here (App owns the real ExamDraft type) to avoid a value/type import coupling to App.tsx.
-type TeacherPlatformProps={token:string;currentExam:unknown|null;workspaceTab:WorkspaceTab;onCopyLibraryExamToBuilder?:(examSnapshot:any,title:string)=>void};
+type TeacherPlatformProps={token:string;currentExam:unknown|null;workspaceTab:WorkspaceTab;onCopyLibraryExamToBuilder?:(examSnapshot:any,title:string)=>void;
+ /** UX-6a: the project catalog App already loaded at boot. When provided, this panel issues NO catalog request of its own. */
+ projects?:ProjectOption[]};
 type ApiError={ok?:boolean;error?:string};
 type WorkspaceDialog="none"|"createClass"|"addStudent"|"import";
 
@@ -49,9 +51,11 @@ function csvCell(value:unknown){
  return `"${text.replace(/"/g,'""')}"`;
 }
 
-function TeacherPlatform({token,currentExam,workspaceTab,onCopyLibraryExamToBuilder}:TeacherPlatformProps){
+function TeacherPlatform(props:TeacherPlatformProps){
+ const {token,currentExam,workspaceTab,onCopyLibraryExamToBuilder}=props;
  const [classes,setClasses]=useState<Classroom[]>([]);
- const [projects,setPrograms]=useState<ProjectOption[]>([]);
+ const [fetchedProjects,setPrograms]=useState<ProjectOption[]>([]);
+ const projects=props.projects??fetchedProjects;
  const [classArchiveView,setClassArchiveView]=useState<ClassArchiveView>("active");
  const [students,setStudents]=useState<Student[]>([]);
  const [selectedClassId,setSelectedClassId]=useState("");
@@ -213,7 +217,8 @@ function TeacherPlatform({token,currentExam,workspaceTab,onCopyLibraryExamToBuil
 
  useEffect(()=>{void loadClasses(false)},[]);
  // Registry-driven list of projects for the per-class project selector (no hard-coded codes).
- useEffect(()=>{teacherApi<{projects?:ProjectOption[]}>("/api/project-tracker?resource=projects").then(r=>setPrograms(r.projects||[])).catch(()=>setPrograms([]));},[]);// eslint-disable-line react-hooks/exhaustive-deps
+ // Only a standalone mount (no catalog from App) reads the registry itself; inside the app the boot read is reused.
+ useEffect(()=>{if(props.projects!==undefined)return;teacherApi<{projects?:ProjectOption[]}>("/api/project-tracker?resource=projects").then(r=>setPrograms(r.projects||[])).catch(()=>setPrograms([]));},[]);// eslint-disable-line react-hooks/exhaustive-deps
  useEffect(()=>{
   selectedClassRef.current=selectedClassId;
   setSelectedIds([]);setProfile(null);setEditingStudent(null);setReviewTarget(null);setHistoryDeadlineFor(null);setDialog("none");cancelPending();clearPasswordReveal();

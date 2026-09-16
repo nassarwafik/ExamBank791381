@@ -179,3 +179,48 @@ h3.eb-section-title { font-size: var(--eb-fs-16); }
 .eb-dialog-root.is-covered .eb-dialog { pointer-events: none; filter: saturate(.85); }
 .eb-dialog-root.is-covered .eb-dialog-backdrop { pointer-events: none; }
 .eb-dialog-foot-inline { padding: 0; margin-top: var(--eb-space-2); }
+
+/* ---------- UX-6a: ProgressBar ---------- */
+.eb-progress { display: flex; flex-direction: column; gap: var(--eb-space-1); min-width: 0; }
+.eb-progress-head { display: flex; justify-content: space-between; align-items: baseline; gap: var(--eb-space-2); font-size: var(--eb-fs-13); color: var(--eb-muted); font-weight: var(--eb-fw-semibold); }
+.eb-progress-value { color: var(--eb-text-heading); font-variant-numeric: tabular-nums; }
+.eb-progress-track { height: 10px; border-radius: var(--eb-pill); background: var(--eb-line); overflow: hidden; }
+.eb-progress.size-sm .eb-progress-track { height: 7px; }
+.eb-progress.size-sm .eb-progress-head { font-size: var(--eb-fs-12); }
+.eb-progress-fill { display: block; height: 100%; border-radius: var(--eb-pill); background: var(--eb-primary); transition: width var(--eb-dur) var(--eb-ease); }
+.eb-progress-fill.tone-series-1 { background: var(--eb-primary); }
+.eb-progress-fill.tone-series-2 { background: var(--eb-info); }
+.eb-progress-fill.tone-series-3 { background: var(--eb-warn); }
+.eb-progress-fill.tone-series-4 { background: var(--eb-success); }
+.eb-progress-fill.tone-success { background: var(--eb-success); }
+@media (prefers-reduced-motion: reduce) { .eb-progress-fill { transition: none; } }
+
+/* ---------- UX-6a: ChartCard ---------- */
+.eb-chart-card { display: flex; flex-direction: column; gap: var(--eb-space-3); min-width: 0; padding: var(--eb-space-4); background: var(--eb-surface); border: 1px solid var(--eb-line); border-radius: var(--eb-r-lg); box-shadow: var(--eb-sh-xs); }
+.eb-chart-card-head { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: flex-start; gap: var(--eb-space-2); }
+.eb-chart-card-text { min-width: 0; flex: 1 1 auto; }
+.eb-chart-card-title { margin: 0; color: var(--eb-text-heading); font-size: var(--eb-fs-14); font-weight: var(--eb-fw-semibold); }
+.eb-chart-card-description { margin: var(--eb-space-1) 0 0; color: var(--eb-muted); font-size: var(--eb-fs-13); }
+.eb-chart-card-actions { display: flex; flex-wrap: wrap; gap: var(--eb-space-2); }
+.eb-chart-card-figure { position: relative; min-width: 0; }
+.eb-chart-card-foot { display: flex; justify-content: flex-start; }
+.eb-chart-card-table { overflow-x: auto; border: 1px solid var(--eb-line); border-radius: var(--eb-r); }
+.eb-chart-table { width: 100%; border-collapse: collapse; font-size: var(--eb-fs-13); }
+.eb-chart-table th, .eb-chart-table td { padding: var(--eb-space-2) var(--eb-space-3); text-align: start; border-bottom: 1px solid var(--eb-line); white-space: nowrap; }
+.eb-chart-table thead th { background: var(--eb-surface-2); color: var(--eb-text-heading); font-weight: var(--eb-fw-semibold); }
+.eb-chart-table tbody th { font-weight: var(--eb-fw-medium); color: var(--eb-text); }
+.eb-chart-table td { font-variant-numeric: tabular-nums; }
+
+/* ---------- UX-6a: chip toggle + disclosure chevron ---------- */
+.eb-chip-button {
+  display: inline-flex; align-items: center; gap: var(--eb-space-1); min-height: 34px; padding: 0 var(--eb-space-3);
+  border: 1px solid var(--eb-border-strong); border-radius: var(--eb-pill); background: var(--eb-surface); color: var(--eb-text-secondary);
+  font: inherit; font-size: var(--eb-fs-13); font-weight: var(--eb-fw-semibold); cursor: pointer;
+  transition: background var(--eb-dur) var(--eb-ease), color var(--eb-dur) var(--eb-ease), border-color var(--eb-dur) var(--eb-ease);
+}
+.eb-chip-button:hover { border-color: var(--eb-primary); color: var(--eb-text-heading); }
+.eb-chip-button[aria-pressed="true"] { background: var(--eb-primary); border-color: var(--eb-primary); color: var(--eb-surface); }
+.eb-disclosure-chevron { flex: 0 0 auto; transition: transform var(--eb-dur) var(--eb-ease); transform: rotate(-90deg); }
+[dir="rtl"] .eb-disclosure-chevron { transform: rotate(90deg); }
+.eb-disclosure-chevron.is-open, [dir="rtl"] .eb-disclosure-chevron.is-open { transform: rotate(0deg); }
+@media (prefers-reduced-motion: reduce) { .eb-chip-button, .eb-disclosure-chevron { transition: none; } }
