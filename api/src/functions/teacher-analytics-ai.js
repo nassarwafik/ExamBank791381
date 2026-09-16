@@ -1,4 +1,5 @@
 const { app } = require("@azure/functions");
+const { withObservability } = require("../lib/observability");
 const { requireBuilderAuth } = require("../lib/builder-auth");
 const { getContainer } = require("../lib/platform-storage");
 const { computeTeacherAnalytics } = require("../lib/teacher-analytics-core");
@@ -71,13 +72,12 @@ function buildStudentPrompt(detail) {
     "اكتب الرد كفقرات قصيرة واضحة بالعربية، بأسلوب مباشر وعملي، لا يتجاوز 150 كلمة.";
 }
 
-app.http("teacherAnalyticsAi", {
-  methods: ["POST"],
-  authLevel: "anonymous",
-  route: "teacher-analytics-ai",
-  handler: async request => {
+// `deps` is an optional dependency-injection seam for unit tests (production passes nothing, so the real
+// implementations are used); `obs` is the request context withObservability passes as the third argument.
+// Neither changes runtime behavior.
+async function handler(request, deps = {}, obs = null) {
     try {
-      const auth = requireBuilderAuth(request);
+      const auth = (deps.requireBuilderAuth || requireBuilderAuth)(request);
       if (!auth.ok) return auth.response;
 
       let body = {};
@@ -85,7 +85,7 @@ app.http("teacherAnalyticsAi", {
       const classId = String(body?.classId || "").trim();
       const studentId = String(body?.studentId || "").trim();
 
-      const container = getContainer();
+      const container = deps.container || (deps.getContainer || getContainer)();
       const data = await computeTeacherAnalytics(container, { classId, studentId });
 
       let prompt;
@@ -117,11 +117,14 @@ app.http("teacherAnalyticsAi", {
         status: 200,
         jsonBody: { ok: true, advice: String(advice).trim(), scope: studentId ? "student" : "class" }
       };
-    } catch {
+    } catch (e) {
+      obs?.logError("teacher.analyticsAi.error", e);
       return {
         status: 500,
         jsonBody: { ok: false, error: "تعذر إجراء التحليل الذكي حاليًا." }
       };
     }
-  }
-});
+}
+
+app.http("teacherAnalyticsAi", { methods: ["POST"], authLevel: "anonymous", route: "teacher-analytics-ai", handler: withObservability("teacher-analytics-ai", handler) });
+module.exports = { handler };

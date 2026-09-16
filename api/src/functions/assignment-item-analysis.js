@@ -1,5 +1,6 @@
 
 const {app}=require("@azure/functions");
+const {withObservability}=require("../lib/observability");
 const {requireBuilderAuth}=require("../lib/builder-auth");
 const {getContainer,downloadJsonOrNull,listJson,mapConcurrent,getReadConcurrency}=require("../lib/platform-storage");
 const {isStudentClassMember}=require("../lib/class-membership");
@@ -10,7 +11,7 @@ function round2(n){return Math.round(n*100)/100}
 function difficultyFor(pct){if(pct===null)return null;if(pct>=75)return "easy";if(pct>=50)return "medium";return "hard"}
 // `deps` is an optional dependency-injection seam for unit tests (production passes nothing, so the real
 // implementations are used). It does not change runtime behavior.
-async function handler(request,deps={}){
+async function handler(request,deps={},obs=null){
  const authFn=deps.requireBuilderAuth||requireBuilderAuth,getC=deps.getContainer||getContainer,dl=deps.downloadJsonOrNull||downloadJsonOrNull,ls=deps.listJson||listJson;
  try{
   const auth=authFn(request);if(!auth.ok)return auth.response;
@@ -67,7 +68,7 @@ async function handler(request,deps={}){
    };
   });
   return {status:200,jsonBody:{ok:true,assignmentId:a.assignmentId,title:String(a.title||""),studentsInClass:users.length,studentsSubmitted:latestAttempts.length,attemptsAnalyzed:latestAttempts.length,questions:questionStats}};
- }catch{return {status:500,jsonBody:{ok:false,error:"تعذر تحليل أسئلة الواجب حاليًا."}}}
+ }catch(e){obs?.logError("assignment.itemAnalysis.error",e);return {status:500,jsonBody:{ok:false,error:"تعذر تحليل أسئلة الواجب حاليًا."}}}
 }
-app.http("assignmentItemAnalysis",{methods:["GET"],authLevel:"anonymous",route:"assignment-item-analysis",handler});
+app.http("assignmentItemAnalysis",{methods:["GET"],authLevel:"anonymous",route:"assignment-item-analysis",handler:withObservability("assignment-item-analysis",handler)});
 module.exports={handler};

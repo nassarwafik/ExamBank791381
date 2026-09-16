@@ -1,4 +1,5 @@
 const { app } = require("@azure/functions");
+const { withObservability } = require("../lib/observability");
 const { requireActiveStudentSession } = require("../lib/student-auth");
 const { getContainer, downloadJsonOrNull } = require("../lib/platform-storage");
 const { buildClassSnapshotFromDefault, PROGRAM_CODE } = require("../lib/project-794589-template");
@@ -13,15 +14,14 @@ const PROGRESS_PREFIX = "platform/project-progress/";
 // Read-only project view for the logged-in student. Ownership comes ONLY from the verified token
 // (auth.user.sub / auth.user.classId) - never from a query parameter - so a student can only ever
 // see their own progress. No write path exists here at all.
-app.http("studentProject", {
-  methods: ["GET"],
-  authLevel: "anonymous",
-  route: "student-project",
-  handler: async request => {
+// `deps` is an optional dependency-injection seam for unit tests (production passes nothing, so the real
+// implementations are used); `obs` is the request context withObservability passes as the third argument.
+// Neither changes runtime behavior.
+async function handler(request, deps = {}, obs = null) {
     try {
       // Hardened session (§7): validates active/archived/authVersion and returns the loaded student +
       // container, so ownership still comes only from the verified token and there is no duplicate read.
-      const sess = await requireActiveStudentSession(request);
+      const sess = await (deps.requireActiveStudentSession || requireActiveStudentSession)(request, deps);
       if (!sess.ok) return sess.response;
       const container = sess.container;
       const now = new Date().toISOString();
@@ -57,8 +57,11 @@ app.http("studentProject", {
           nextPacketTracerStage: core.getNextStage(config.stages, progress, "packetTracer")
         }
       };
-    } catch {
+    } catch (e) {
+      obs?.logError("student.project.error", e);
       return { status: 500, jsonBody: { ok: false, error: "تعذر تحميل مشروع الطالب حاليًا." } };
     }
-  }
-});
+}
+
+app.http("studentProject", { methods: ["GET"], authLevel: "anonymous", route: "student-project", handler: withObservability("student-project", handler) });
+module.exports = { handler };

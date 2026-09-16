@@ -23,7 +23,7 @@ function deriveDashboardState(submission,availability,gradingStatus){
 // `deps` is an optional dependency-injection seam for unit tests (production passes nothing, so the real
 // implementations are used). It does not change runtime behavior. Roadmap #30 adds `mapConcurrent` and
 // `getReadConcurrency` seams so concurrency tests stay isolated (never by changing the global read concurrency).
-async function handler(request,deps={}){
+async function handler(request,deps={},obs=null){
  const ras=deps.requireActiveStudentSession||requireActiveStudentSession,dl=deps.downloadJsonOrNull||downloadJsonOrNull,ls=deps.listJson||listJson,mc=deps.mapConcurrent||mapConcurrent,readConcurrency=deps.getReadConcurrency||getReadConcurrency;
  try{
   // Hardened, server-authoritative session (§7): loads + validates the current student (active/archived/
@@ -65,7 +65,7 @@ async function handler(request,deps={}){
   }
   assignments.sort((a,b)=>(a.dueAt?new Date(a.dueAt).getTime():Number.MAX_SAFE_INTEGER)-(b.dueAt?new Date(b.dueAt).getTime():Number.MAX_SAFE_INTEGER));
   return {status:200,jsonBody:{ok:true,student:{userId:student.userId,code:student.code,displayName:student.displayName,classId:student.classId,avatarId:String(student.avatarId||""),shareAchievements:student.shareAchievements!==false},classroom:classroom?{classId:classroom.classId,name:classroom.name,grade:classroom.grade,schoolYear:classroom.schoolYear}:null,assignments,stats:{assigned:assignments.length,completed,average:completed?Number((sum/completed).toFixed(1)):null,submitted,inProgress,pendingReview,finalized,scheduled,available,closedUnsubmitted,averageFinalized:finalCount?Number((finalSum/finalCount).toFixed(1)):null},phase:"2.0C"}};
- }catch{return {status:500,jsonBody:{ok:false,error:"تعذر تحميل لوحة الطالب حاليًا."}}}
+ }catch(e){obs?.logError("student.dashboard.error",e);return {status:500,jsonBody:{ok:false,error:"تعذر تحميل لوحة الطالب حاليًا."}}}
 }
 app.http("studentDashboard",{methods:["GET"],authLevel:"anonymous",route:"student-dashboard",handler:withObservability("student-dashboard",handler)});
 module.exports={handler};
