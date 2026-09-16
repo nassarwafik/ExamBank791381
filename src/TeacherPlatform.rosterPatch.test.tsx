@@ -14,7 +14,8 @@ type Student = { userId: string; code: string; identityNumber: string; firstName
 
 const CLASSES = [
   { classId: "c1", name: "صف أول", grade: "11", schoolYear: "2026", active: true, status: "active", studentCount: 2, createdAt: "2026-01-03" },
-  { classId: "c2", name: "صف ثاني", grade: "11", schoolYear: "2026", active: true, status: "active", studentCount: 1, createdAt: "2026-01-02" }
+  { classId: "c2", name: "صف ثاني", grade: "11", schoolYear: "2026", active: true, status: "active", studentCount: 1, createdAt: "2026-01-02" },
+  { classId: "c3", name: "صف ثالث", grade: "11", schoolYear: "2026", active: true, status: "active", studentCount: 1, createdAt: "2026-01-01" }
 ];
 const stu = (userId: string, firstName: string, familyName: string, identity: string, classId: string, over: Partial<Student> = {}): Student => ({
   userId, code: identity, identityNumber: identity, firstName, familyName, displayName: firstName + " " + familyName, classId,
@@ -25,7 +26,9 @@ const S1 = stu("s1", "علي", "حسن", "111111111", "c1", { submittedAssignmen
 const S2 = stu("s2", "سارة", "محمود", "222222222", "c1", { active: false });
 const S3 = stu("s3", "خالد", "سعيد", "333333333", "c1", { active: false, archived: true });
 const T1 = stu("t1", "نور", "كريم", "444444444", "c2");
-const ROSTERS: Record<string, Student[]> = { c1: [S1, S2, S3], c2: [T1] };
+const R1 = stu("r1", "ريم", "صالح", "555555555", "c3");
+const seedRosters = (): Record<string, Student[]> => ({ c1: [S1, S2, S3], c2: [T1], c3: [R1] });
+let ROSTERS: Record<string, Student[]> = seedRosters();   // the mock's AUTHORITATIVE rosters (a test may advance them)
 
 type Call = { url: string; method: string; action: string; body: Record<string, unknown> };
 let calls: Call[] = [];
@@ -61,7 +64,7 @@ const firstIndex = (pred: (c: Call) => boolean) => calls.findIndex(pred);
 const isStudentsGet = (c: Call) => c.method === "GET" && c.url.includes("/api/students?") && c.url.includes("classId=");
 const isClassesGet = (c: Call) => c.method === "GET" && c.url.includes("/api/classrooms");
 
-beforeEach(() => { calls = []; gate = null; postHandler = () => ({ ok: true }); globalThis.fetch = vi.fn(routedFetch) as unknown as typeof fetch; (window as unknown as { confirm: () => boolean }).confirm = () => true; });
+beforeEach(() => { calls = []; gate = null; ROSTERS = seedRosters(); postHandler = () => ({ ok: true }); globalThis.fetch = vi.fn(routedFetch) as unknown as typeof fetch; (window as unknown as { confirm: () => boolean }).confirm = () => true; });
 afterEach(() => { cleanup(); vi.restoreAllMocks(); });
 
 async function mount() {
@@ -363,5 +366,95 @@ describe("R32 — class-switch race during an in-flight single-row mutation", ()
     expect(badge()).toBe("1");
     expect(studentsGets()).toBe(0);
     expect(classesGets()).toBe(1);                                // count-changing → classes may still refresh
+  });
+});
+
+describe("R32 review fix — MOVE is a TWO-class operation (source index + target index)", () => {
+  const moveResponse = (rosterSynced: boolean) => ({ ok: true, student: { ...S1, classId: "c2" }, passwordChanged: false, rosterSynced });
+  async function startMove() {
+    const modal = await openEdit("علي");
+    fireEvent.change(within(modal).getByLabelText("الصف"), { target: { value: "c2" } });
+    fireEvent.click(within(modal).getByText("💾 حفظ التعديلات"));
+  }
+  const idx = (classId: string) => firstIndex(c => isStudentsGet(c) && c.url.includes("classId=" + classId));
+
+  it("A. move + rosterSynced:false → GET students(source) once, GET students(target) once, BOTH before GET classrooms; no foreign roster committed", async () => {
+    postHandler = () => moveResponse(false);
+    await mount();
+    await startMove();
+    await waitFor(() => expect(classesGets()).toBe(1));
+    expect(studentsGets("c1")).toBe(1);
+    expect(studentsGets("c2")).toBe(1);
+    expect(idx("c1")).toBeLessThan(idx("c2"));
+    expect(idx("c2")).toBeLessThan(firstIndex(isClassesGet));
+    // c1 stays selected: its authoritative roster renders; the target's repair-only read never shows here.
+    expect(screen.getByText("سارة")).toBeTruthy();
+    expect(screen.queryByText("نور")).toBeNull();
+    await screen.findByText(/وسيتم تحديث عداد الصف تلقائيًا/);
+  });
+
+  it("B. move in flight, teacher switches to TARGET before the response → authoritative GET students(target) AFTER the move, no local injection, classes reloaded once", async () => {
+    const d = defer<unknown>();
+    postHandler = action => action === "update" ? d.promise : { ok: true };
+    await mount();
+    await startMove();
+    await waitFor(() => expect(calls.some(c => c.action === "update")).toBe(true));
+    fireEvent.click(screen.getByText("صف ثاني"));               // pre-move target roster renders (no علي yet)
+    await screen.findByText("نور");
+    expect(screen.queryByText("علي")).toBeNull();
+    calls = [];
+    ROSTERS.c2 = [T1, { ...S1, classId: "c2" }];                 // the move commits server-side …
+    d.resolve(moveResponse(true));                               // … and the response arrives
+    await screen.findByText("✓ تم تعديل الطالب ونقله إلى الصف المختار.");
+    await waitFor(() => expect(studentsGets("c2")).toBe(1));     // authoritative re-read of the TARGET after the move
+    expect(studentsGets("c1")).toBe(0);
+    await screen.findByText("علي");                              // now visible from the authoritative roster, not from the response
+    expect(screen.getByText("نور")).toBeTruthy();
+    expect(badge()).toBe("2");
+    expect(firstIndex(c => c.action === "update")).toBe(-1);     // (calls were reset after the POST was issued)
+    expect(idx("c2")).toBeLessThan(firstIndex(isClassesGet));
+    expect(classesGets()).toBe(1);
+  });
+
+  it("C1. move in flight, teacher switches to an UNRELATED class → success needs no roster GET; no source/target contamination; classes refreshed once", async () => {
+    const d = defer<unknown>();
+    postHandler = action => action === "update" ? d.promise : { ok: true };
+    await mount();
+    await startMove();
+    await waitFor(() => expect(calls.some(c => c.action === "update")).toBe(true));
+    fireEvent.click(screen.getByText("صف ثالث"));
+    await screen.findByText("ريم");
+    calls = [];
+    d.resolve(moveResponse(true));
+    await screen.findByText("✓ تم تعديل الطالب ونقله إلى الصف المختار.");
+    await waitFor(() => expect(classesGets()).toBe(1));
+    expect(studentsGets()).toBe(0);
+    expect(screen.getByText("ريم")).toBeTruthy();
+    expect(screen.queryByText("علي")).toBeNull();
+    expect(screen.queryByText("نور")).toBeNull();
+    expect(badge()).toBe("1");
+  });
+
+  it("C2. move in flight, switched to an UNRELATED class, rosterSynced:false → BOTH source and target are repaired (repair-only), visible roster untouched, then classes", async () => {
+    const d = defer<unknown>();
+    postHandler = action => action === "update" ? d.promise : { ok: true };
+    await mount();
+    await startMove();
+    await waitFor(() => expect(calls.some(c => c.action === "update")).toBe(true));
+    fireEvent.click(screen.getByText("صف ثالث"));
+    await screen.findByText("ريم");
+    calls = [];
+    d.resolve(moveResponse(false));
+    await waitFor(() => expect(classesGets()).toBe(1));
+    expect(studentsGets("c1")).toBe(1);
+    expect(studentsGets("c2")).toBe(1);
+    expect(studentsGets("c3")).toBe(0);
+    expect(idx("c1")).toBeLessThan(idx("c2"));
+    expect(idx("c2")).toBeLessThan(firstIndex(isClassesGet));
+    expect(screen.getByText("ريم")).toBeTruthy();                // c3 view never replaced by c1's or c2's roster
+    expect(screen.queryByText("علي")).toBeNull();
+    expect(screen.queryByText("سارة")).toBeNull();
+    expect(screen.queryByText("نور")).toBeNull();
+    expect(badge()).toBe("1");
   });
 });

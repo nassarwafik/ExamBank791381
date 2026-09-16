@@ -215,6 +215,16 @@ function TeacherPlatform({token,currentExam,workspaceTab,onCopyLibraryExamToBuil
   await loadStudents(classId);
   await loadClasses();
  }
+ // A MOVE touches TWO roster indexes (remove from the source class, add to the target class) and the server reports
+ // rosterSynced = removed.synced && added.synced, so an ambiguous move must reconcile BOTH classes — each GET students
+ // runs the server-side repair for its own class — source first, then target, and only then the classes read.
+ // loadStudents commits a roster only for the currently selected class, so at most one of the two reads renders;
+ // the other (or both, when a third class is selected) is repair-only.
+ async function reloadAuthoritativeMove(sourceClassId:string,targetClassId:string){
+  await loadStudents(sourceClassId);
+  if(targetClassId!==sourceClassId)await loadStudents(targetClassId);
+  await loadClasses();
+ }
  // A patch is applied to the visible roster only if the action's source class is still the selected one.
  function stillSelected(classId:string){return selectedClassRef.current===classId}
 
@@ -443,9 +453,14 @@ function TeacherPlatform({token,currentExam,workspaceTab,onCopyLibraryExamToBuil
    setEditingStudent(null);setEditPassword("");
    // Roadmap #32: same-class edit → merge the server-returned document into the row (computed counters kept), no
    // reloads; move → drop the row from the source roster and refresh the classes list (two counts changed).
-   if(needsAuthoritativeReload("update",result,targetClassId)||!result.student)await reloadAuthoritative(sourceClassId);
-   else if(moved){
+   if(needsAuthoritativeReload("update",result,targetClassId)||!result.student){
+    if(moved)await reloadAuthoritativeMove(sourceClassId,targetClassId);
+    else await reloadAuthoritative(sourceClassId);
+   }else if(moved){
     if(stillSelected(sourceClassId)){setStudents(prev=>removeStudentRow(prev,userId));setSelectedIds(prev=>pruneSelectedIds(prev,userId));}
+    // The teacher switched to the TARGET class while the move was in flight: its roster may have been loaded
+    // before the move committed, so it is re-read authoritatively (never patched from this response).
+    else if(stillSelected(targetClassId))await loadStudents(targetClassId);
     await loadClasses();
    }else{
     const updated=result.student;
