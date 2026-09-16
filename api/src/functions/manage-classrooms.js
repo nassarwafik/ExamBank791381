@@ -98,10 +98,11 @@ function buildNewClassroomDocument({ name, grade, schoolYear, programCode }, now
     createdAt: now,
     updatedAt: now
   };
-  // Optional program/model code (e.g. "794589"). Omitted entirely for classes with no program, so
-  // legacy classrooms and non-program classes stay byte-identical to before.
+  // Project membership is written in the CANONICAL multi-project shape (programCodes[]; [] = no project).
+  // The legacy scalar `programCode` is never written for new documents — it stays readable through
+  // class-programs.getClassProgramCodes for historical classrooms only (no migration).
   const code = String(programCode || "").trim();
-  if (code) doc.programCode = code;
+  doc.programCodes = code ? [code] : [];
   return doc;
 }
 
@@ -144,10 +145,12 @@ async function handler(request, deps = {}, obs = null) {
       const classId = classroom.classId;
       await up(container, CLASS_PREFIX + classId + ".json", classroom);
       // Roadmap #19: audit the class creation (high-value lifecycle mutation).
-      await rec(container, { actor: auth.user?.sub, action: "class.create", targetType: "class", targetId: classId, targetLabel: name, details: { grade, schoolYear, ...(classroom.programCode ? { programCode: classroom.programCode } : {}) } });
+      const programCodes = getClassProgramCodes(classroom);
+      await rec(container, { actor: auth.user?.sub, action: "class.create", targetType: "class", targetId: classId, targetLabel: name, details: { grade, schoolYear, ...(programCodes.length ? { programCodes } : {}) } });
       return {
         status: 200,
-        jsonBody: { ok: true, classroom: { classId, name, grade, schoolYear, programCode: classroom.programCode || "", active: true, studentCount: 0, createdAt: now } }
+        // programCodes is canonical; programCode is kept (first code or "") only for older clients of this response.
+        jsonBody: { ok: true, classroom: { classId, name, grade, schoolYear, programCodes, programCode: programCodes[0] || "", active: true, studentCount: 0, createdAt: now } }
       };
     }
 

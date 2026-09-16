@@ -36,15 +36,14 @@ function studentDetailBody(projectCode, workDef, config, readOnly, student, prog
   };
 }
 
-app.http("projectTracker", {
-  methods: ["GET", "POST"],
-  authLevel: "anonymous",
-  route: "project-tracker",
-  handler: async request => {
+// `deps` is an optional dependency-injection seam for unit tests (production passes nothing, so the real
+// implementations are used). It does not change runtime behavior.
+async function handler(request, deps = {}) {
+    const rec = deps.recordAuditEvent || recordAuditEvent;
     try {
-      const auth = requireBuilderAuth(request);
+      const auth = (deps.requireBuilderAuth || requireBuilderAuth)(request);
       if (!auth.ok) return auth.response;
-      const container = getContainer();
+      const container = deps.container || (deps.getContainer || getContainer)();
       const now = new Date().toISOString();
 
       // ---- resolve projectCode (from query for GET, body for POST) ----
@@ -178,7 +177,7 @@ app.http("projectTracker", {
         const progressBlobs = await listBlobNames(container, ns.progressPrefix(classId));
         for (const name of progressBlobs) await deleteBlob(container, name);
         await deleteBlob(container, ns.configName(classId));
-        await recordAuditEvent(container, {
+        await rec(container, {
           actor: auth.user?.sub, action: "project.reset",
           targetType: "project-tracker", targetId: projectCode + "/" + classId, targetLabel: classroom.name || "",
           details: { projectCode, deletedProgressCount: progressBlobs.length }
@@ -209,7 +208,7 @@ app.http("projectTracker", {
           );
           const summary = core.buildStudentSummary(workDef, written, now);
           if (outcome.statusChanged) {
-            await recordAuditEvent(container, {
+            await rec(container, {
               actor: auth.user?.sub,
               action: outcome.toStatus === "approved" ? "project.stage.approve" : "project.stage.status_change",
               targetType: "project-stage", targetId: projectCode + "/" + classId + "/" + studentId + "/" + stageId,
@@ -217,7 +216,7 @@ app.http("projectTracker", {
             });
           }
           if (outcome.noteChanged) {
-            await recordAuditEvent(container, {
+            await rec(container, {
               actor: auth.user?.sub, action: "project.stage.note",
               targetType: "project-stage", targetId: projectCode + "/" + classId + "/" + studentId + "/" + stageId, targetLabel: stage.title, details: { projectCode }
             });
@@ -253,7 +252,7 @@ app.http("projectTracker", {
             config.updatedAt = now;
             return config;
           });
-          await recordAuditEvent(container, {
+          await rec(container, {
             actor: auth.user?.sub, action: "project.template.update",
             targetType: "project-template", targetId: projectCode + "/" + classId, targetLabel: classroom.name || "", details: { projectCode }
           });
@@ -268,5 +267,7 @@ app.http("projectTracker", {
     } catch {
       return { status: 500, jsonBody: { ok: false, error: "تعذر تنفيذ عملية متابعة المشروع حاليًا." } };
     }
-  }
-});
+}
+
+app.http("projectTracker", { methods: ["GET", "POST"], authLevel: "anonymous", route: "project-tracker", handler });
+module.exports = { handler };

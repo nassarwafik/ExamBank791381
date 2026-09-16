@@ -18,9 +18,12 @@ function classHasProject(classroom, projectCode) {
   return getClassProgramCodes(classroom).includes(String(projectCode || ""));
 }
 
-// The class's project codes filtered to those the registry supports (for iterating real projects).
+// The class's project codes filtered to those the registry supports (for iterating real projects). Each
+// supported code is returned AT MOST ONCE, first occurrence first: a malformed or historical canonical
+// document such as ["899373","899373","883589"] must never make a consumer (student tracker, reports,
+// projects-summary) iterate — and render or count — the same project twice.
 function getSupportedClassProgramCodes(classroom) {
-  return getClassProgramCodes(classroom).filter(isSupportedProject);
+  return [...new Set(getClassProgramCodes(classroom).filter(isSupportedProject))];
 }
 
 // Normalizes an incoming programCodes array: trims, drops empties, de-duplicates. No validation, no
