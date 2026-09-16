@@ -134,7 +134,11 @@ describe("R26 D — 'takeable now' surfaces intentionally keep published-only (r
     const read = f => readFileSync(new URL("../src/functions/" + f, import.meta.url), "utf8");
     expect(read("student-dashboard.js")).toMatch(/status==="published"/);
     expect(read("student-assignment.js")).toMatch(/status!=="published"/);
-    expect(readFileSync(new URL("../src/lib/teacher-analytics-core.js", import.meta.url), "utf8")).toMatch(/item\.status === "published"/);
+    // Roadmap #34: teacher analytics states "published" through the canonical assignment-lifecycle helper (same
+    // takeable-now boundary, authority-aligned) — and still never through the history predicate.
+    const analyticsCore = readFileSync(new URL("../src/lib/teacher-analytics-core.js", import.meta.url), "utf8");
+    expect(analyticsCore).toMatch(/normalizeAssignmentStatus\(item\) === "published"/);
+    expect(analyticsCore).not.toMatch(/isReportableAssessment/);
     // reports + profile are the ONLY consumers of the history predicate; no second interpretation remains.
     expect(read("reports.js")).toMatch(/isReportableAssessment\(a\)/);
     expect(read("reports.js")).not.toMatch(/status !== "draft"/);

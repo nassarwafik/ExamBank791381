@@ -7,6 +7,13 @@ const { deriveGradingStatus } = require("./grading-status");
 // Roadmap #24 — the student POPULATION is class MEMBERSHIP (role student, not archived, in class) through the ONE
 // canonical helper; `active:false` is login eligibility only and must not drop a student from analytics.
 const { isStudentClassMember } = require("./class-membership");
+// Roadmap #34 — lifecycle AUTHORITY: a class is current only through the canonical class-lifecycle helper (status
+// "archived" OR active:false ⇒ archived; never the raw `active` flag), and an assignment is "takeable now" only
+// through the canonical assignment-lifecycle helper. Teacher analytics is CURRENT/operational analytics: with no
+// classId requested, canonical-archived classes contribute nothing (students, assignments, KPIs, trends, follow-up);
+// an explicitly requested class — archived or not — is a HISTORICAL view and is served unchanged.
+const { normalizeClassStatus } = require("./class-lifecycle");
+const { normalizeAssignmentStatus } = require("./assignment-lifecycle");
 
 const CLASS_PREFIX = "platform/classes/";
 const USER_PREFIX = "platform/users/";
@@ -182,7 +189,7 @@ async function computeTeacherAnalytics(container, { classId: requestedClassId = 
     listJson(container, ASSIGNMENT_PREFIX),
     listBlobNames(container, SUBMISSION_PREFIX)
   ]);
-  const publishedAll = assignmentsRaw.filter(item => item?.assignmentId && item.status === "published");
+  const publishedAll = assignmentsRaw.filter(item => item?.assignmentId && normalizeAssignmentStatus(item) === "published");
   const scopedByDate = publishedAll.filter(item => inRange(assignmentDate(item), fromMs, toMs));
   // The submission map below is only ever queried for assignments in `scopedByDate` (records use its class-scoped
   // subset; classComparison uses all of it), so those ids are the candidate folders. Listing order is preserved
@@ -203,7 +210,7 @@ async function computeTeacherAnalytics(container, { classId: requestedClassId = 
       name: String(item.name || ""),
       grade: String(item.grade || ""),
       schoolYear: String(item.schoolYear || ""),
-      active: item.active !== false
+      active: normalizeClassStatus(item) === "active"
     }))
     .sort((a, b) => a.name.localeCompare(b.name, "ar", { numeric: true }));
 
@@ -211,8 +218,12 @@ async function computeTeacherAnalytics(container, { classId: requestedClassId = 
   const students = usersRaw.filter(item => item?.role === "student");
   // Members of their own class (canonical predicate: role student, not archived). Login-disabled students stay in.
   const activeStudents = students.filter(item => isStudentClassMember(item, item.classId));
-  const scopedAssignments = scopedByDate.filter(item => !requestedClassId || String(item.classId || "") === requestedClassId);
-  const scopedStudents = activeStudents.filter(item => !requestedClassId || String(item.classId || "") === requestedClassId);
+  // Roadmap #34 (C1): the GLOBAL scope is current/operational — only canonical-active classes populate it. An explicit
+  // classId keeps the historical class-scoped behavior (an archived class requested on purpose is still served).
+  const activeClassIds = new Set(classes.filter(item => item.active).map(item => item.classId));
+  const inScope = classId => requestedClassId ? classId === requestedClassId : activeClassIds.has(classId);
+  const scopedAssignments = scopedByDate.filter(item => inScope(String(item.classId || "")));
+  const scopedStudents = activeStudents.filter(item => inScope(String(item.classId || "")));
 
   const submissionMap = new Map();
   for (const submission of submissionsRaw) {
