@@ -319,3 +319,56 @@ export function IconImage(props: IconProps) {
     </svg>
   );
 }
+
+/* UX-2 — shell navigation icons (replace the emoji previously used in the sidebar). */
+export function IconReports(props: IconProps) {
+  return (
+    <svg {...base(props)}>
+      <path d="M4 3.5h8.5L16 7v9.5a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1v-12a1 1 0 0 1 1-1Z" />
+      <path d="M12.5 3.5V7H16" />
+      <path d="M6.5 13.5v-3M10 13.5v-5M13 13.5v-2" />
+    </svg>
+  );
+}
+export function IconProjects(props: IconProps) {
+  return (
+    <svg {...base(props)}>
+      <circle cx="10" cy="10" r="2.2" />
+      <path d="M10 3v3M10 14v3M3 10h3M14 10h3" />
+      <path d="M5.2 5.2l2 2M12.8 12.8l2 2M14.8 5.2l-2 2M7.2 12.8l-2 2" />
+    </svg>
+  );
+}
+export function IconAudit(props: IconProps) {
+  return (
+    <svg {...base(props)}>
+      <path d="M5 3.5h10a1 1 0 0 1 1 1v11a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1v-11a1 1 0 0 1 1-1Z" />
+      <path d="M7 7.5h6M7 10.5h6M7 13.5h3.5" />
+    </svg>
+  );
+}
+export function IconBank(props: IconProps) {
+  return (
+    <svg {...base(props)}>
+      <path d="M3 7.5 10 3.5l7 4" />
+      <path d="M4.5 8v7M8.2 8v7M11.8 8v7M15.5 8v7" />
+      <path d="M3 15.5h14" />
+    </svg>
+  );
+}
+/* Points toward "back" in LTR; the shell flips it under dir="rtl" through the eb-flip-rtl class. */
+export function IconChevronBack(props: IconProps) {
+  return (
+    <svg {...base(props)}>
+      <path d="M12 4.5 6.5 10l5.5 5.5" />
+    </svg>
+  );
+}
+export function IconSidebar(props: IconProps) {
+  return (
+    <svg {...base(props)}>
+      <rect x="2.5" y="3.5" width="15" height="13" rx="2" />
+      <path d="M12.5 3.5v13" />
+    </svg>
+  );
+}

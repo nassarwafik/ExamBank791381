@@ -16,7 +16,9 @@ import "./project794589.css";
 import TeacherPlatform from "./TeacherPlatform";
 import ImportQuestionsPanel, { createEmptyImportSession } from "./ImportQuestionsPanel";
 import type { ImportSessionState } from "./ImportQuestionsPanel";
-import { IconUser, IconLock, IconWarning, IconBuilder, IconDashboard, IconStudents, IconAssignments, IconLogout, IconChevronDown, IconImage, IconSparkles, IconUpload } from "./icons";
+import { IconUser, IconLock, IconWarning, IconChevronDown, IconImage, IconSparkles } from "./icons";
+import TeacherAppShell from "./shell/TeacherAppShell";
+import type { TeacherNavId } from "./shell/teacherNav";
 import { QuestionTextBlock, parseTable } from "./questionContent";
 import { normalizeExamTheme, EXAM_THEMES, THEME_LABELS } from "./examTheme";
 import type { ExamTheme } from "./examTheme";
@@ -557,9 +559,9 @@ function App() {
   }
 
   // Projects navigation. projectCode "" => the projects hub; a specific code => that project's tracker
-  // (tabs + class selector live inside ProjectTracker). projectNavOpen toggles the sidebar group.
+  // (tabs + class selector live inside ProjectTracker). UX-2: the sidebar has no project sub-navigation
+  // any more (the hub and the tracker's class selector already provide it).
   const [projectCode, setProjectCode] = useState("");
-  const [projectNavOpen, setProjectNavOpen] = useState(false);
   const [projectList, setProjectList] = useState<{ projectCode: string; title: string }[]>([]);
   // Global teacher "ready for review" queue (all projects, active classes) — one aggregated request.
   const [projectReady, setProjectReady] = useState<{ total: number; byProject: Record<string, number> }>({ total: 0, byProject: {} });
@@ -567,7 +569,16 @@ function App() {
   function goToProjects(code: string) {
     setTeacherView("project");
     setProjectCode(code);
-    setProjectNavOpen(true);
+  }
+
+  // UX-2 — the shell asks for a destination by id; every id maps onto the EXISTING setters above
+  // (teacherView / workspaceTab / projectCode stay the only navigation authority).
+  function navigateTeacher(id: TeacherNavId) {
+    if (id === "dashboard" || id === "students" || id === "assignments" || id === "audit") { goToWorkspace(id); return; }
+    if (id === "projects") { goToProjects(""); return; }
+    if (id === "reports") { setTeacherView("reports"); return; }
+    if (id === "import") { setTeacherView("import"); return; }
+    setTeacherView("builder");
   }
 
   // Registry-driven sidebar list (so a new project appears automatically once added to the backend).
@@ -5422,116 +5433,13 @@ function App() {
   }
 
   return (
-    <main className="builder-page app-shell" dir="rtl">
-      <aside className="app-sidebar" aria-label="التنقل الرئيسي">
-        <div className="app-sidebar-brand">
-          <span className="app-sidebar-logo">EB</span>
-          <span className="app-sidebar-brand-text">
-            ExamBank
-            <small>791381</small>
-          </span>
-        </div>
-
-        <nav className="app-sidebar-nav">
-          <button
-            className={"app-sidebar-link " + (teacherView === "builder" ? "active" : "")}
-            onClick={() => setTeacherView("builder")}
-          >
-            <IconBuilder size={20} />
-            <span>باني الامتحان</span>
-          </button>
-
-          <button
-            className={"app-sidebar-link " + (teacherView === "platform" && workspaceTab === "dashboard" ? "active" : "")}
-            onClick={() => goToWorkspace("dashboard")}
-          >
-            <IconDashboard size={20} />
-            <span>لوحة المتابعة</span>
-          </button>
-
-          <button
-            className={"app-sidebar-link " + (teacherView === "platform" && workspaceTab === "students" ? "active" : "")}
-            onClick={() => goToWorkspace("students")}
-          >
-            <IconStudents size={20} />
-            <span>الصفوف والطلاب</span>
-          </button>
-
-          <button
-            className={"app-sidebar-link " + (teacherView === "platform" && workspaceTab === "assignments" ? "active" : "")}
-            onClick={() => goToWorkspace("assignments")}
-          >
-            <IconAssignments size={20} />
-            <span>الواجبات</span>
-          </button>
-
-          <button
-            className={"app-sidebar-link " + (teacherView === "platform" && workspaceTab === "audit" ? "active" : "")}
-            onClick={() => goToWorkspace("audit")}
-          >
-            <span aria-hidden="true" style={{ fontSize: 18, width: 20, textAlign: "center" }}>📜</span>
-            <span>سجل النشاط</span>
-          </button>
-
-          <button
-            className={"app-sidebar-link " + (teacherView === "reports" ? "active" : "")}
-            onClick={() => setTeacherView("reports")}
-          >
-            <span className="app-sidebar-group-emoji" aria-hidden="true">📑</span>
-            <span>التقارير</span>
-          </button>
-
-          <button
-            className={"app-sidebar-link " + (teacherView === "import" ? "active" : "")}
-            onClick={() => setTeacherView("import")}
-          >
-            <IconUpload size={20} />
-            <span>استيراد من ملف</span>
-          </button>
-
-          <div className={"app-sidebar-group " + (projectNavOpen ? "open" : "")}>
-            <button
-              className={"app-sidebar-link app-sidebar-group-head " + (teacherView === "project" ? "active" : "")}
-              aria-expanded={projectNavOpen}
-              onClick={() => setProjectNavOpen(v => !v)}
-            >
-              <span className="app-sidebar-group-emoji" aria-hidden="true">📡</span>
-              <span>المشاريع</span>
-              {projectReady.total > 0 && <span className="app-sidebar-badge" title="مراحل بانتظار الفحص">{projectReady.total}</span>}
-              <span className="app-sidebar-group-chevron" aria-hidden="true">{projectNavOpen ? "▾" : "▸"}</span>
-            </button>
-            {projectNavOpen && (
-              <div className="app-sidebar-subnav">
-                <button className={"app-sidebar-sublink " + (teacherView === "project" && !projectCode ? "active" : "")} onClick={() => goToProjects("")}>🗂️ كل المشاريع</button>
-                {projectList.map(p => (
-                  <button key={p.projectCode} className={"app-sidebar-sublink " + (teacherView === "project" && projectCode === p.projectCode ? "active" : "")} onClick={() => goToProjects(p.projectCode)}>📡 {p.title}{projectReady.byProject[p.projectCode] > 0 ? <span className="app-sidebar-badge">{projectReady.byProject[p.projectCode]}</span> : null}</button>
-                ))}
-              </div>
-            )}
-          </div>
-        </nav>
-
-        <div className="app-sidebar-user">
-          <span className="app-sidebar-user-name">
-            <IconUser size={16} />
-            <span>{sessionDisplayName || "المعلم"}</span>
-          </span>
-          <button className="app-sidebar-logout logout-button" onClick={handleLogout}>
-            <IconLogout size={18} />
-            <span>تسجيل الخروج</span>
-          </button>
-        </div>
-      </aside>
-
-      <div className="app-shell-main">
-      <header className="top-bar app-content-header">
-        <div>
-          <h1>ExamBank 791381</h1>
-          <p>
-            اكتب ما تريد، وسيبقى بناء الامتحان وتعديله كله في هذه الصفحة
-          </p>
-        </div>
-      </header>
+    <TeacherAppShell
+      nav={{ teacherView, workspaceTab, projectCode, projectList }}
+      projectReadyTotal={projectReady.total}
+      displayName={sessionDisplayName || "المعلم"}
+      onNavigate={navigateTeacher}
+      onLogout={handleLogout}
+    >
 
       {teacherView ===
         "platform" && (
@@ -7545,7 +7453,6 @@ function App() {
         )}
       </section>
       )}
-      </div>
 
       {structuredImportOpen && (
         <Suspense fallback={<div className="platform-loading">⏳ جارٍ فتح أداة الاستيراد…</div>}>
@@ -7571,7 +7478,7 @@ function App() {
           </Suspense>
         </div>
       )}
-    </main>
+    </TeacherAppShell>
   );
 }
 
