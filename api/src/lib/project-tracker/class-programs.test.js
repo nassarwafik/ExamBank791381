@@ -58,6 +58,10 @@ describe("validateProgramCodes — normalize + supported-project validation", ()
 });
 
 describe("getSupportedClassProgramCodes", () => {
+  it("returns duplicate supported codes ONCE, preserving first-occurrence order (malformed/historical document)", () => {
+    expect(getSupportedClassProgramCodes({ programCodes: ["899373", "899373", "883589", "899373"] })).toEqual(["899373", "883589"]);
+    expect(getSupportedClassProgramCodes({ programCodes: ["883589", "unknown", "883589", "794589"] })).toEqual(["883589", "794589"]);
+  });
   it("returns both supported projects of a multi-project class (student sees both)", () => {
     expect(getSupportedClassProgramCodes({ programCodes: ["899373", "883589"] })).toEqual(["899373", "883589"]);
   });

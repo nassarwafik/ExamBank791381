@@ -134,11 +134,11 @@ describe("B. student tracker — all and only enrolled projects", () => {
     expect(a.summary.overallProgress).toBeGreaterThan(0); expect(Object.keys(a.progress)).toHaveLength(2); expect(Object.keys(b.progress)).toHaveLength(1);
     expect(new Set(r.jsonBody.projects.map(p => p.projectCode)).size).toBe(2);
   });
-  it("B2 duplicate codes on disk do not produce duplicate projects", async () => {
+  it("B2 duplicate codes on disk do not produce duplicate projects (raw returned list, first-occurrence order)", async () => {
     const s = school(); s["platform/classes/c1.json"].programCodes = ["899373", "899373", "883589"];
     const r = await load(createMemoryContainer(s), "s1");
-    // the write path normalizes; the read path returns what the class has — never more than one entry per code
-    expect(r.jsonBody.projects.map(p => p.projectCode).filter((c, i, arr) => arr.indexOf(c) === i)).toEqual(["899373", "883589"]);
+    expect(r.jsonBody.projects.map(p => p.projectCode)).toEqual(["899373", "883589"]);
+    expect(r.jsonBody.projects).toHaveLength(2);
   });
   it("B3 legacy scalar class → one project; B4 programCodes [] with stale scalar → not enrolled", async () => {
     const s = school(); s["platform/classes/c1.json"] = room("c1", { programCode: "794589" });
