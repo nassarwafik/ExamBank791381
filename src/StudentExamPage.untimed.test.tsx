@@ -1,6 +1,6 @@
 // @vitest-environment happy-dom
 import { describe, it, expect, afterEach, beforeEach, vi } from "vitest";
-import { render, cleanup, fireEvent, waitFor } from "@testing-library/react";
+import { render, cleanup, fireEvent, waitFor, screen } from "@testing-library/react";
 import StudentExamPage from "./StudentExamPage";
 
 // B2A integration tests for the UNTIMED attemptModelVersion>=2 start lifecycle, driving the REAL
@@ -117,6 +117,7 @@ describe("B2A untimed v2 — write lifecycle", () => {
     await r.findByText("سؤال الاختبار السري");                   // active attempt => exam shown
     expect(r.container.querySelector(".iex-countdown")).toBeNull();
     fireEvent.click(r.container.querySelector(".iex-foot .primary") as HTMLButtonElement);
+    fireEvent.click(await screen.findByRole("button", { name: "تسليم الآن" }));                 // UX-7b-1: shared ConfirmDialog replaces window.confirm
     const h = await r.findByText(/تم تسليم المحاولة/);
     expect(h.textContent).not.toContain("انتهى الوقت");          // not a timeout
     expect(r.container.textContent).toContain("80");
@@ -155,6 +156,7 @@ describe("B2A untimed v2 — multi-tab reconciliation (#16 / #17)", () => {
     const r = mount(fullAssignmentU);
     await r.findByText("سؤال الاختبار السري");
     fireEvent.click(r.container.querySelector(".iex-foot .primary") as HTMLButtonElement);
+    fireEvent.click(await screen.findByRole("button", { name: "تسليم الآن" }));                 // UX-7b-1: shared ConfirmDialog replaces window.confirm
     await waitFor(() => expect(submitCalls).toBe(1));
     await r.findByText(/تم تسليم المحاولة/);                     // reconciled to the server result
     expect(r.container.querySelector(".iex-error")).toBeNull(); // no raw error surfaced

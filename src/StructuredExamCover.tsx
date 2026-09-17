@@ -105,7 +105,7 @@ export default function StructuredExamCover({ cover, title, distribution, runtim
           </div>
         )}
 
-        <button type="button" className="iex-cover-start" onClick={onStart} disabled={starting}>{starting ? "⏳ جارٍ البدء..." : startLabel}</button>
+        <button type="button" className="iex-cover-start" onClick={onStart} disabled={starting}>{starting ? "جارٍ البدء..." : startLabel}</button>
         {preview && <p className="iex-cover-preview-note">هذه معاينة للغلاف — بيانات الطالب والتاريخ تظهر تلقائيًا للطالب الحقيقي.</p>}
       </div>
     </div>

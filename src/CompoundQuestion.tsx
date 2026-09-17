@@ -34,18 +34,22 @@ export default function CompoundQuestion({q,index,id,answer,onPart,disabled,exce
  const setField=(pid:string,fieldId:string,value:FieldValue)=>{const prev=partAnswers[pid]?.kind==="fields"?partAnswers[pid].values:{};onPart(pid,{kind:"fields",values:{...prev,[fieldId]:value}});};
  return <article className={"iex-q iex-compound "+(answered(answer)?"done":"")}><div className="iex-node">{q.displayNumber??(index+1)}</div><div className="iex-card">
   <div className="iex-qhead"><span>سؤال مركّب — {parts.length} فروع</span><strong>{q.marks} علامة</strong></div>
-  <p className="iex-qtext">{promptText(q.text)}</p>
+  <p className="iex-qtext" id={"iex-qtext-"+String(id).replace(/[^a-zA-Z0-9_-]/g,"_")}>{promptText(q.text)}</p>
   {(q.image?.exists&&q.image.visible?q.image.assets:q.images||[])?.map((im,n)=>im?.dataUrl?<img className="iex-image" src={im.dataUrl} alt={"صورة السؤال "+(index+1)} key={n}/>:null)}
   <div className="iex-parts">{parts.map((p:QuestionPart,pi)=>{
    const pid=partId(p,pi),t=String(p.type||"").toLowerCase(),pAns=partAnswers[pid];
    const isField=fieldPartTypes.has(t)||((p.fields?.length||0)>0&&!isChoice(t)&&t!=="shortanswer"&&t!=="open");
    const excess=excessPartIds?.has(pid);
+   // UX-7b-1 accessibility (additive): each part's controls are named by the part text (or the part label when
+   // the part has no text) — same answer shapes and handlers as before.
+   const partTextId="iex-part-"+String(id+"-"+pid).replace(/[^a-zA-Z0-9_-]/g,"_");
+   const partName="السؤال "+(q.displayNumber??(index+1))+" — الجزء "+partLabel(p,pi);
    return <div className={"iex-part "+(answered(pAns)?"done":"")} key={pid}>
-    <div className="iex-part-head"><b className="iex-part-label">{partLabel(p,pi)}</b><span className="iex-part-marks">{marks[pi]} علامة</span></div>
-    {p.text&&<p className="iex-part-text">{p.text}</p>}
-    {isChoice(t)&&<div className="iex-options">{optionsFor(p).map((o,n)=><label className={"iex-option "+(pAns?.kind==="choice"&&pAns.index===n?"selected":"")} key={n}><input type="radio" name={id+"-"+pid} checked={pAns?.kind==="choice"&&pAns.index===n} onChange={()=>setChoice(pid,n)} disabled={disabled}/><span className="iex-pick">{pAns?.kind==="choice"&&pAns.index===n&&<IconCheck size={14}/>}</span><b>{o.text||o.label||o.value||""}</b></label>)}</div>}
-    {isField&&<QuestionField q={p} idBase={id+"-"+pid} values={pAns?.kind==="fields"?pAns.values:{}} onField={(fid,v)=>setField(pid,fid,v)} disabled={disabled}/>}
-    {!isChoice(t)&&!isField&&<textarea className="iex-open" value={pAns?.kind==="text"?pAns.value:""} onChange={e=>setText(pid,e.target.value)} placeholder="اكتب إجابتك هنا..." disabled={disabled}/>}
+    <div className="iex-part-head"><b className="iex-part-label" aria-hidden="true">{partLabel(p,pi)}</b><span className="iex-part-marks">{marks[pi]} علامة</span></div>
+    {p.text&&<p className="iex-part-text" id={partTextId}>{p.text}</p>}
+    {isChoice(t)&&<fieldset className="iex-options" {...(p.text?{"aria-labelledby":partTextId}:{"aria-label":partName})}>{optionsFor(p).map((o,n)=><label className={"iex-option "+(pAns?.kind==="choice"&&pAns.index===n?"selected":"")} key={n}><input type="radio" name={id+"-"+pid} checked={pAns?.kind==="choice"&&pAns.index===n} onChange={()=>setChoice(pid,n)} disabled={disabled}/><span className="iex-pick" aria-hidden="true">{pAns?.kind==="choice"&&pAns.index===n&&<IconCheck size={14}/>}</span><b>{o.text||o.label||o.value||""}</b></label>)}</fieldset>}
+    {isField&&<QuestionField q={p} idBase={id+"-"+pid} values={pAns?.kind==="fields"?pAns.values:{}} onField={(fid,v)=>setField(pid,fid,v)} disabled={disabled} labelPrefix={partName}/>}
+    {!isChoice(t)&&!isField&&<textarea className="iex-open" {...(p.text?{"aria-labelledby":partTextId}:{"aria-label":partName})} value={pAns?.kind==="text"?pAns.value:""} onChange={e=>setText(pid,e.target.value)} placeholder="اكتب إجابتك هنا..." disabled={disabled}/>}
     {excess&&<div className="iex-extra-hint">إجابة إضافية — لن تدخل في التصحيح</div>}
    </div>;
   })}</div>

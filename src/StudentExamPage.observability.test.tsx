@@ -1,6 +1,6 @@
 // @vitest-environment happy-dom
 import { describe, it, expect, afterEach, beforeEach, vi } from "vitest";
-import { render, cleanup, fireEvent, waitFor } from "@testing-library/react";
+import { render, cleanup, fireEvent, waitFor, screen } from "@testing-library/react";
 import StudentExamPage from "./StudentExamPage";
 
 // Roadmap #9 — frontend correlation integration tests. They drive the REAL StudentExamPage with a mocked
@@ -104,6 +104,7 @@ describe("R9 frontend correlation — StudentExamPage", () => {
     const r = mount(fullAssignment);
     await r.findByText("سؤال الاختبار السري");
     fireEvent.click(r.container.querySelector(".iex-foot .primary") as HTMLButtonElement);
+    fireEvent.click(await screen.findByRole("button", { name: "تسليم الآن" }));                 // UX-7b-1: shared ConfirmDialog replaces window.confirm
     await waitFor(() => expect(submitCalls).toBe(1));
     await waitFor(() => expect(r.container.querySelector(".iex-error")?.textContent || "").toContain("رمز التتبع: submit-500-id"));
   });
@@ -128,6 +129,7 @@ describe("R9 frontend correlation — StudentExamPage", () => {
     const r = mount(fullAssignment);
     await r.findByText("سؤال الاختبار السري");
     fireEvent.click(r.container.querySelector(".iex-foot .primary") as HTMLButtonElement);
+    fireEvent.click(await screen.findByRole("button", { name: "تسليم الآن" }));                 // UX-7b-1: shared ConfirmDialog replaces window.confirm
     await waitFor(() => expect(submitCalls).toBe(1));
     await waitFor(() => expect(subGetCalls).toBeGreaterThan(1));   // reconcile happened
     expect(r.container.textContent).not.toContain("رمز التتبع");   // no tracking code for an expected 409
@@ -140,6 +142,7 @@ describe("R9 frontend correlation — StudentExamPage", () => {
     const r = mount(fullAssignment);
     await r.findByText("سؤال الاختبار السري");
     fireEvent.click(r.container.querySelector(".iex-foot .primary") as HTMLButtonElement);
+    fireEvent.click(await screen.findByRole("button", { name: "تسليم الآن" }));                 // UX-7b-1: shared ConfirmDialog replaces window.confirm
     await waitFor(() => expect(onLogout).toHaveBeenCalled());
     expect(r.container.textContent).not.toContain("رمز التتبع");
   });
@@ -156,6 +159,7 @@ describe("R9 frontend correlation — StudentExamPage", () => {
     const r = mount(fullAssignment, "secret-token-XYZ");
     await r.findByText("سؤال الاختبار السري");
     fireEvent.click(r.container.querySelector(".iex-foot .primary") as HTMLButtonElement);
+    fireEvent.click(await screen.findByRole("button", { name: "تسليم الآن" }));                 // UX-7b-1: shared ConfirmDialog replaces window.confirm
     await waitFor(() => expect(submitCalls).toBe(1));
     const all = logs.join("\n");
     expect(all).not.toContain("secret-token-XYZ");

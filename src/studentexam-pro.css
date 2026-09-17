@@ -1,187 +1,253 @@
-:root{
-  --navy:var(--eb-navy);--primary:var(--eb-primary);--primary2:var(--eb-primary-strong);--primary050:var(--eb-primary-050);
-  --text:var(--eb-text);--muted:var(--eb-muted);--faint:var(--eb-faint);--line:var(--eb-line);--line2:var(--eb-line-2);
-  --surface:var(--eb-surface);--surface2:var(--eb-surface-2);--ok:var(--eb-success);--okbg:var(--eb-success-bg);--warn:var(--eb-warn);--warnbg:var(--eb-warn-bg);--danger:var(--eb-danger);--dangerbg:var(--eb-danger-bg);
-  --r:var(--eb-r);--rlg:var(--eb-r-lg);--rxl:var(--eb-r-xl);--pill:var(--eb-pill);--ease:var(--eb-ease);
+/* ============================================================
+   ExamBank — Student exam runtime (UX-7b-1 Mobile Exam Foundation)
+   Phone-first: the base rules ARE the 360–430 px layout; min-width
+   768 / 1024 only enhance. Token-only (--eb-*), logical properties,
+   never blanks the focus outline, reduced motion honoured. Owns every .iex-*
+   runtime selector (top bar, progress, questions, controls, footer,
+   gate, result); the structured cover keeps structured-cover.css and
+   the grade badges / general-instructions block stay in platform.css
+   (shared with AssignmentReview / ExamPreview).
+   ============================================================ */
+.interactive-exam-page{ min-height:100vh; padding:var(--eb-space-3) var(--eb-space-4) var(--eb-space-7); background:var(--eb-bg); color:var(--eb-text); }
+.iex-wrap{ width:min(var(--eb-container-student),100%); margin-inline:auto; display:flex; flex-direction:column; gap:var(--eb-space-3); min-width:0; }
+.iex-loading{ margin:0; color:var(--eb-muted); }
+.iex-eyebrow{ display:inline-block; color:var(--eb-primary-strong); font-size:var(--eb-fs-12); font-weight:var(--eb-fw-bold); letter-spacing:.04em; }
+
+/* ---------- Compact sticky top bar (the only floating element) ---------- */
+.iex-topbar{
+  position:sticky; inset-block-start:0; z-index:var(--eb-z-sticky);
+  display:flex; align-items:center; gap:var(--eb-space-2); min-height:56px; min-width:0;
+  margin-inline:calc(-1 * var(--eb-space-4)); padding:var(--eb-space-2) var(--eb-space-3);
+  background:var(--eb-surface); border-block-end:1px solid var(--eb-line); box-shadow:var(--eb-sh-xs);
+}
+.iex-topbar-back{ flex:0 0 auto; }
+.iex-topbar-text{ flex:1 1 auto; min-width:0; }
+.iex-topbar-title{
+  margin:0; color:var(--eb-text-heading); font-size:var(--eb-fs-16); font-weight:var(--eb-fw-bold); line-height:var(--eb-lh-tight);
+  overflow:hidden; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow-wrap:anywhere;
+}
+.iex-topbar-context{ margin:2px 0 0; color:var(--eb-muted); font-size:var(--eb-fs-12); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.iex-countdown{
+  flex:0 0 auto; display:inline-flex; align-items:center; gap:var(--eb-space-1); min-height:36px; padding:0 var(--eb-space-3);
+  border:1px solid var(--eb-line-2); border-radius:var(--eb-pill); background:var(--eb-surface-2); color:var(--eb-text-heading);
+}
+.iex-countdown-clock{ font-size:var(--eb-fs-16); font-weight:var(--eb-fw-bold); font-variant-numeric:tabular-nums; letter-spacing:.5px; }
+.iex-countdown.warn{ border-color:var(--eb-warn); background:var(--eb-warn-bg); color:var(--eb-warn-tx); }
+.iex-countdown.danger{ border-color:var(--eb-danger); background:var(--eb-danger-bg); color:var(--eb-danger-tx); animation:iex-pulse 1s ease-in-out infinite; }
+@keyframes iex-pulse{ 0%,100%{ box-shadow:0 0 0 0 var(--eb-danger-bg); } 50%{ box-shadow:0 0 0 6px var(--eb-danger-bg); } }
+
+/* ---------- Progress row + the single save-status live region ---------- */
+.iex-progress{
+  display:flex; flex-direction:column; gap:var(--eb-space-2);
+  padding:var(--eb-space-3) var(--eb-space-4); background:var(--eb-surface); border:1px solid var(--eb-line); border-radius:var(--eb-r-lg); box-shadow:var(--eb-sh-xs);
+}
+.iex-progress-bar{ display:flex; align-items:flex-end; gap:var(--eb-space-3); }
+.iex-progress-bar .eb-progress{ flex:1 1 auto; min-width:0; }
+.iex-progress-count{ flex:0 0 auto; color:var(--eb-text-heading); font-size:var(--eb-fs-13); font-variant-numeric:tabular-nums; }
+.iex-save{ display:flex; flex-wrap:wrap; align-items:center; gap:var(--eb-space-2); font-size:var(--eb-fs-12); }
+.iex-save-state{ display:inline-flex; align-items:center; gap:var(--eb-space-1); min-height:24px; padding:0 var(--eb-space-2); border-radius:var(--eb-pill); font-weight:var(--eb-fw-semibold); background:var(--eb-surface-2); color:var(--eb-text-secondary); }
+.iex-save-state.iex-save-saved{ background:var(--eb-success-bg); color:var(--eb-success-tx); }
+.iex-save-state.iex-save-saving, .iex-save-state.iex-save-retrying, .iex-save-state.iex-save-pending{ background:var(--eb-info-bg); color:var(--eb-info-tx); }
+.iex-save-state.iex-save-offline, .iex-save-state.iex-save-error{ background:var(--eb-danger-bg); color:var(--eb-danger-tx); }
+.iex-save-hint{ font-style:normal; color:var(--eb-muted); }
+
+/* ---------- Details disclosure ---------- */
+.iex-details{ background:var(--eb-surface); border:1px solid var(--eb-line); border-radius:var(--eb-r-lg); box-shadow:var(--eb-sh-xs); }
+.iex-details-toggle{
+  display:flex; align-items:center; gap:var(--eb-space-2); width:100%; min-height:44px; padding:var(--eb-space-2) var(--eb-space-4);
+  border:0; background:transparent; color:var(--eb-text-heading); font:inherit; font-size:var(--eb-fs-14); font-weight:var(--eb-fw-semibold); text-align:start; cursor:pointer; border-radius:var(--eb-r-lg);
+}
+.iex-details-label{ flex:0 1 auto; }
+.iex-details-summary{ flex:1 1 auto; min-width:0; color:var(--eb-muted); font-size:var(--eb-fs-12); font-weight:var(--eb-fw-regular); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.iex-details-panel{ display:flex; flex-direction:column; gap:var(--eb-space-3); padding:0 var(--eb-space-4) var(--eb-space-4); border-block-start:1px solid var(--eb-line); padding-block-start:var(--eb-space-3); }
+.iex-details-instructions{ margin:0; color:var(--eb-text); line-height:var(--eb-lh-body); overflow-wrap:anywhere; }
+.iex-details-list{ margin:0; display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:var(--eb-space-2) var(--eb-space-3); }
+.iex-details-list > div{ display:flex; flex-direction:column; gap:2px; min-width:0; }
+.iex-details-list dt{ color:var(--eb-muted); font-size:var(--eb-fs-12); }
+.iex-details-list dd{ margin:0; color:var(--eb-text-heading); font-size:var(--eb-fs-13); font-weight:var(--eb-fw-semibold); font-variant-numeric:tabular-nums; overflow-wrap:anywhere; }
+
+/* ---------- Notices ---------- */
+.iex-error{ margin:0; }
+
+/* ---------- Questions (long form, structured sections, focus theme — rendering model unchanged) ---------- */
+.iex-flow{ display:flex; flex-direction:column; gap:var(--eb-space-3); min-width:0; }
+.iex-q{ position:relative; display:grid; grid-template-columns:32px minmax(0,1fr); gap:var(--eb-space-2); align-items:start; }
+.iex-node{ display:grid; place-items:center; width:32px; height:32px; margin-block-start:var(--eb-space-3); border-radius:50%; background:var(--eb-surface-2); border:1px solid var(--eb-line-2); color:var(--eb-text-heading); font-size:var(--eb-fs-13); font-weight:var(--eb-fw-bold); font-variant-numeric:tabular-nums; }
+.iex-q.done .iex-node{ background:var(--eb-success-bg); border-color:var(--eb-success); color:var(--eb-success-tx); }
+.iex-card{ min-width:0; padding:var(--eb-space-4); background:var(--eb-surface); border:1px solid var(--eb-line); border-radius:var(--eb-r-lg); box-shadow:var(--eb-sh-xs); }
+.iex-qhead{ display:flex; justify-content:space-between; gap:var(--eb-space-2); margin-block-end:var(--eb-space-2); color:var(--eb-muted); font-size:var(--eb-fs-12); font-weight:var(--eb-fw-semibold); }
+.iex-qhead strong{ color:var(--eb-text-heading); white-space:nowrap; }
+.iex-qtext{ margin:0 0 var(--eb-space-3); color:var(--eb-text-heading); font-size:var(--eb-fs-17); font-weight:var(--eb-fw-semibold); line-height:var(--eb-lh-body); overflow-wrap:anywhere; white-space:pre-wrap; }
+.iex-image{ display:block; max-width:100%; height:auto; margin:var(--eb-space-3) auto; border:1px solid var(--eb-line); border-radius:var(--eb-r); }
+
+/* Multiple choice / true-false: native radios, whole row tappable, visible keyboard focus on the row. */
+.iex-options{ display:flex; flex-direction:column; gap:var(--eb-space-2); margin:0; padding:0; border:0; min-width:0; }
+.iex-option{
+  position:relative; display:flex; align-items:center; gap:var(--eb-space-3); min-height:48px; padding:var(--eb-space-2) var(--eb-space-3);
+  border:1px solid var(--eb-line-2); border-radius:var(--eb-r); background:var(--eb-surface); color:var(--eb-text); font-size:var(--eb-fs-14); line-height:var(--eb-lh-body); cursor:pointer;
+  transition:border-color var(--eb-dur) var(--eb-ease), background var(--eb-dur) var(--eb-ease);
+}
+.iex-option input[type="radio"]{ position:absolute; inset-inline-start:var(--eb-space-3); width:28px; height:28px; margin:0; opacity:0; }
+.iex-option:has(input:focus-visible), .iex-option:focus-within{ outline:var(--eb-focus-ring); outline-offset:var(--eb-focus-offset); }
+.iex-option.selected{ border-color:var(--eb-primary); background:var(--eb-primary-050); }
+.iex-pick{ display:inline-flex; align-items:center; justify-content:center; flex:0 0 auto; width:28px; height:28px; border:2px solid var(--eb-line-2); border-radius:50%; color:var(--eb-surface); }
+.iex-option.selected .iex-pick{ border-color:var(--eb-primary); background:var(--eb-primary); }
+.iex-option b{ min-width:0; overflow-wrap:anywhere; font-weight:var(--eb-fw-medium); }
+
+/* Text / select controls (44 px on phones) */
+.iex-open, .iex-cell, .iex-cell-select, .iex-seq select, .iex-seq input{
+  width:100%; min-height:44px; padding:var(--eb-space-2) var(--eb-space-3); box-sizing:border-box;
+  border:1px solid var(--eb-line-2); border-radius:var(--eb-r-sm); background:var(--eb-surface); color:var(--eb-text); font:inherit; font-size:var(--eb-fs-14);
+}
+.iex-open{ min-height:140px; resize:vertical; line-height:var(--eb-lh-body); }
+.iex-check{ width:28px; height:28px; margin:var(--eb-space-2); accent-color:var(--eb-primary); }
+
+/* Word bank + labelled blanks (fill-blank / word bank / matching / ordering): single column on phones */
+.iex-bank{ display:flex; flex-wrap:wrap; gap:var(--eb-space-1); margin:0 0 var(--eb-space-3); }
+.iex-bank span{ padding:2px var(--eb-space-2); border-radius:var(--eb-pill); background:var(--eb-primary-050); color:var(--eb-primary-strong); font-size:var(--eb-fs-12); font-weight:var(--eb-fw-semibold); overflow-wrap:anywhere; }
+.iex-seq{ display:grid; grid-template-columns:minmax(0,1fr); gap:var(--eb-space-2); }
+.iex-seq label{ display:flex; flex-direction:column; gap:var(--eb-space-1); min-width:0; color:var(--eb-text); font-size:var(--eb-fs-13); font-weight:var(--eb-fw-semibold); }
+.iex-order-list{ grid-template-columns:minmax(0,1fr); }
+
+/* Tables: contained horizontal scroll, never the page */
+.iex-table-wrap{ overflow-x:auto; max-width:100%; border:1px solid var(--eb-line); border-radius:var(--eb-r); -webkit-overflow-scrolling:touch; }
+.iex-table-wrap table{ width:100%; min-width:360px; border-collapse:collapse; }
+.iex-table-wrap th, .iex-table-wrap td{ padding:var(--eb-space-2) var(--eb-space-3); border-block-end:1px solid var(--eb-line); text-align:start; vertical-align:middle; }
+.iex-table-wrap thead th{ background:var(--eb-surface-2); color:var(--eb-muted); font-size:var(--eb-fs-12); }
+.iex-table-wrap tbody th{ color:var(--eb-text-heading); font-weight:var(--eb-fw-medium); font-size:var(--eb-fs-13); }
+.iex-table-wrap td .iex-cell, .iex-table-wrap td .iex-cell-select{ min-width:140px; }
+
+/* Generalized fields */
+.iex-mtf{ display:flex; flex-direction:column; gap:var(--eb-space-2); }
+.iex-mtf-row{ display:flex; flex-direction:column; gap:var(--eb-space-2); padding:var(--eb-space-2) var(--eb-space-3); border:1px solid var(--eb-line-2); border-radius:var(--eb-r-sm); background:var(--eb-surface); }
+.iex-mtf-text{ color:var(--eb-text); line-height:var(--eb-lh-body); overflow-wrap:anywhere; }
+.iex-tf-select{ min-width:120px; }
+.iex-cli{ margin:0; padding:var(--eb-space-3) var(--eb-space-4); border-radius:var(--eb-r); background:var(--eb-navy); color:var(--eb-nav-text); font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace; font-size:var(--eb-fs-13); line-height:2.1; direction:ltr; text-align:left; white-space:pre-wrap; word-break:break-word; overflow-x:auto; }
+.iex-cli-input{ min-width:90px; min-height:32px; margin:0 3px; padding:1px var(--eb-space-2); border:1px solid var(--eb-nav-text-muted); border-radius:var(--eb-r-xs); background:var(--eb-navy-2); color:var(--eb-medal-gold); font-family:inherit; font-size:inherit; }
+.iex-fields{ margin-block-start:var(--eb-space-2); }
+
+/* Structured sections */
+.iex-section{ display:flex; flex-direction:column; gap:var(--eb-space-3); }
+.iex-section + .iex-section{ padding-block-start:var(--eb-space-4); border-block-start:1px dashed var(--eb-line-2); }
+.iex-section-head{ display:flex; flex-direction:column; gap:var(--eb-space-2); }
+.iex-section-eyebrow{ color:var(--eb-primary-strong); font-size:var(--eb-fs-12); font-weight:var(--eb-fw-bold); letter-spacing:.04em; }
+.iex-section-title h2{ margin:2px 0 0; color:var(--eb-text-heading); font-size:var(--eb-fs-17); }
+.iex-section-instructions{ margin:0; color:var(--eb-text); font-size:var(--eb-fs-14); line-height:var(--eb-lh-body); overflow-wrap:anywhere; }
+.iex-section-meta{ display:flex; flex-wrap:wrap; gap:var(--eb-space-2); }
+.iex-section-rule, .iex-section-mark{ padding:2px var(--eb-space-3); border-radius:var(--eb-pill); background:var(--eb-primary-050); color:var(--eb-primary-strong); font-size:var(--eb-fs-12); font-weight:var(--eb-fw-semibold); }
+.iex-section-progress{ display:flex; flex-wrap:wrap; align-items:center; gap:var(--eb-space-2); color:var(--eb-muted); font-size:var(--eb-fs-13); }
+.iex-section-progress strong{ color:var(--eb-text-heading); }
+.iex-section-excess{ font-style:normal; padding:2px var(--eb-space-2); border-radius:var(--eb-pill); background:var(--eb-warn-bg); color:var(--eb-warn-tx); font-size:var(--eb-fs-12); font-weight:var(--eb-fw-semibold); }
+.iex-parts{ display:flex; flex-direction:column; gap:var(--eb-space-3); margin-block-start:var(--eb-space-2); }
+.iex-part{ padding:var(--eb-space-3); border:1px solid var(--eb-line-2); border-radius:var(--eb-r); background:var(--eb-surface); }
+.iex-part.done{ border-color:var(--eb-primary); background:var(--eb-primary-050); }
+.iex-part-head{ display:flex; justify-content:space-between; align-items:center; gap:var(--eb-space-2); margin-block-end:var(--eb-space-2); }
+.iex-part-label{ display:grid; place-items:center; width:26px; height:26px; border:1px solid var(--eb-line); border-radius:50%; background:var(--eb-surface-2); color:var(--eb-text-heading); font-weight:var(--eb-fw-bold); }
+.iex-part-marks{ color:var(--eb-muted); font-size:var(--eb-fs-12); font-weight:var(--eb-fw-semibold); }
+.iex-part-text{ margin:0 0 var(--eb-space-2); color:var(--eb-text-heading); font-weight:var(--eb-fw-semibold); line-height:var(--eb-lh-body); overflow-wrap:anywhere; }
+.iex-extra-hint{ display:inline-flex; align-items:center; gap:var(--eb-space-1); margin:var(--eb-space-1) 0; padding:2px var(--eb-space-3); border-radius:var(--eb-pill); background:var(--eb-warn-bg); color:var(--eb-warn-tx); font-size:var(--eb-fs-12); font-weight:var(--eb-fw-semibold); }
+.iex-extra-hint-block{ margin-block-end:calc(-1 * var(--eb-space-1)); }
+.iex-stimulus{ margin-block-end:var(--eb-space-3); padding:var(--eb-space-3) var(--eb-space-4); border:1px solid var(--eb-line); border-inline-start:4px solid var(--eb-primary); border-radius:var(--eb-r); background:var(--eb-surface-2); }
+.iex-stimulus-title{ display:block; margin-block-end:var(--eb-space-1); color:var(--eb-text-heading); font-weight:var(--eb-fw-bold); }
+.iex-stimulus-text{ margin:0; color:var(--eb-text); line-height:var(--eb-lh-body); white-space:pre-wrap; overflow-wrap:anywhere; }
+
+/* Focus theme (existing one-question-at-a-time semantics; navigation redesign is UX-7b-2) */
+.iex-focus-mode{ display:flex; flex-direction:column; gap:var(--eb-space-3); }
+.iex-focus-nav{ display:flex; align-items:center; justify-content:space-between; gap:var(--eb-space-2); padding:var(--eb-space-2) var(--eb-space-3); background:var(--eb-surface); border:1px solid var(--eb-line); border-radius:var(--eb-r-lg); color:var(--eb-text-heading); font-weight:var(--eb-fw-semibold); font-variant-numeric:tabular-nums; }
+.iex-focus-nav .eb-button{ min-height:44px; }
+.iex-focus-progress{ height:6px; border-radius:var(--eb-pill); background:var(--eb-line); overflow:hidden; }
+.iex-focus-progress > i{ display:block; height:100%; background:var(--eb-primary); transition:width var(--eb-dur) var(--eb-ease); }
+
+/* ---------- Footer: summary + back + the final, visually distinct submit ---------- */
+.iex-foot{
+  position:sticky; inset-block-end:0; z-index:var(--eb-z-sticky);
+  display:flex; flex-direction:column; gap:var(--eb-space-2);
+  margin-inline:calc(-1 * var(--eb-space-4)); padding:var(--eb-space-3) var(--eb-space-4) calc(var(--eb-space-3) + env(safe-area-inset-bottom,0px));
+  background:var(--eb-surface); border-block-start:1px solid var(--eb-line); box-shadow:var(--eb-sh-md);
+}
+.iex-foot-summary{ margin:0; color:var(--eb-muted); font-size:var(--eb-fs-13); font-variant-numeric:tabular-nums; }
+.iex-foot-actions{ display:flex; flex-direction:column-reverse; gap:var(--eb-space-2); }
+.iex-foot-actions .eb-button{ min-height:48px; }
+.iex-submit.eb-button{ background:var(--eb-navy); border-color:var(--eb-navy); color:var(--eb-surface); font-weight:var(--eb-fw-bold); }
+.iex-submit.eb-button:hover{ background:var(--eb-navy-2); border-color:var(--eb-navy-2); color:var(--eb-surface); }
+
+/* ---------- Start gate + result ---------- */
+.iex-start-card, .iex-result-card{ display:flex; flex-direction:column; gap:var(--eb-space-3); padding:var(--eb-space-4); background:var(--eb-surface); border:1px solid var(--eb-line); border-radius:var(--eb-r-lg); box-shadow:var(--eb-sh-sm); }
+.iex-start-card h1, .iex-result-card h1{ margin:0; color:var(--eb-text-heading); font-size:var(--eb-fs-20); line-height:var(--eb-lh-tight); overflow-wrap:anywhere; }
+.iex-start-card p{ margin:0; color:var(--eb-text); line-height:var(--eb-lh-body); overflow-wrap:anywhere; }
+.iex-start-meta{ display:flex; flex-wrap:wrap; gap:var(--eb-space-2); }
+.iex-start-meta span{ padding:var(--eb-space-1) var(--eb-space-3); border-radius:var(--eb-pill); background:var(--eb-surface-2); color:var(--eb-text-secondary); font-size:var(--eb-fs-13); font-weight:var(--eb-fw-semibold); font-variant-numeric:tabular-nums; }
+.iex-start-hint{ color:var(--eb-muted); font-size:var(--eb-fs-13); }
+.iex-start-actions, .iex-result-actions{ display:flex; flex-direction:column-reverse; gap:var(--eb-space-2); }
+.iex-start-actions .eb-button, .iex-result-actions .eb-button{ min-height:48px; }
+.iex-result-card{ text-align:center; align-items:center; }
+.iex-score{ margin:0; color:var(--eb-primary-strong); font-size:var(--eb-fs-28); font-weight:var(--eb-fw-bold); line-height:1; font-variant-numeric:tabular-nums; }
+.iex-score small{ color:var(--eb-muted); font-size:var(--eb-fs-16); }
+.iex-result-card > strong{ color:var(--eb-text-heading); font-size:var(--eb-fs-20); font-variant-numeric:tabular-nums; }
+.iex-result-card p{ margin:0; color:var(--eb-muted); }
+.iex-result-when{ font-variant-numeric:tabular-nums; }
+.iex-finalized{ display:inline-flex; align-items:center; gap:var(--eb-space-1); color:var(--eb-success-tx); font-weight:var(--eb-fw-semibold); }
+.iex-timeout-note{ color:var(--eb-warn-tx); font-weight:var(--eb-fw-semibold); }
+.iex-teacher-feedback{ display:flex; flex-direction:column; gap:var(--eb-space-1); width:100%; padding:var(--eb-space-3); border-radius:var(--eb-r); background:var(--eb-info-bg); color:var(--eb-info-tx); text-align:start; }
+.iex-no-retry{ width:100%; padding:var(--eb-space-3); border-radius:var(--eb-r-sm); background:var(--eb-surface-2); color:var(--eb-muted); font-size:var(--eb-fs-13); }
+
+/* ---------- Tablet and up ---------- */
+@media (min-width: 768px){
+  .interactive-exam-page{ padding:var(--eb-space-4) var(--eb-space-5) var(--eb-space-7); }
+  .iex-topbar, .iex-foot{ margin-inline:0; border-radius:var(--eb-r-lg); border:1px solid var(--eb-line); }
+  .iex-topbar{ inset-block-start:var(--eb-space-2); }
+  .iex-topbar-title{ font-size:var(--eb-fs-17); }
+  .iex-q{ grid-template-columns:40px minmax(0,1fr); gap:var(--eb-space-3); }
+  .iex-node{ width:40px; height:40px; }
+  .iex-card{ padding:var(--eb-space-5); }
+  .iex-qtext{ font-size:var(--eb-fs-20); }
+  .iex-seq{ grid-template-columns:repeat(2,minmax(0,1fr)); }
+  .iex-order-list{ grid-template-columns:minmax(0,1fr); }
+  .iex-mtf-row{ flex-direction:row; align-items:center; justify-content:space-between; }
+  .iex-details-list{ grid-template-columns:repeat(3,minmax(0,1fr)); }
+  .iex-foot-actions, .iex-start-actions, .iex-result-actions{ flex-direction:row; justify-content:flex-end; }
+  .iex-foot{ flex-direction:row; align-items:center; justify-content:space-between; }
+  .iex-foot-actions .eb-button, .iex-start-actions .eb-button, .iex-result-actions .eb-button{ min-height:44px; }
+}
+@media (min-width: 1024px){
+  .iex-wrap{ gap:var(--eb-space-4); }
+  .iex-seq{ grid-template-columns:repeat(3,minmax(0,1fr)); }
+  .iex-order-list{ grid-template-columns:minmax(0,1fr); }
 }
 
-.iex-wrap{max-width:760px;margin-inline:auto;display:flex;flex-direction:column;gap:16px}
-.iex-topline{display:flex;align-items:center;justify-content:space-between;gap:12px}
-.iex-student{font-weight:800;color:var(--navy)}
-.iex-school{color:var(--muted);font-size:12.5px}
-.iex-progress{height:9px;border-radius:var(--pill);background:var(--line);overflow:hidden}
-.iex-progress>span{display:block;height:100%;border-radius:inherit;background:linear-gradient(90deg,var(--primary),var(--primary2))}
-.iex-seq{color:var(--muted);font-size:13px;font-weight:700}
-.iex-card{background:var(--surface);border:1px solid var(--line);border-radius:var(--rxl);padding:28px;box-shadow:0 14px 40px -26px rgba(15,23,42,.28)}
-.iex-badges{display:flex;gap:6px;flex-wrap:wrap;margin-block-end:14px}
-.iex-badges span{padding:4px 10px;border-radius:var(--pill);background:var(--surface2);border:1px solid var(--line);color:var(--muted);font-size:11.5px;font-weight:700}
-.iex-qtext{font-size:18px;line-height:1.9;color:var(--navy);margin:0 0 18px;font-weight:600}
-.iex-options{display:flex;flex-direction:column;gap:11px}
-.iex-option{display:flex;align-items:center;gap:12px;border:1px solid var(--line2);border-radius:var(--r);padding:15px 16px;background:var(--surface);cursor:pointer;transition:.16s var(--ease);line-height:1.7;font-size:15px}
-.iex-option:hover{border-color:var(--primary);background:var(--primary050)}
-.iex-option.selected{border-color:var(--primary);background:var(--primary050);box-shadow:inset 0 0 0 1px var(--primary)}
-.iex-pick{width:28px;height:28px;border-radius:var(--pill);border:2px solid var(--line2);display:inline-flex;align-items:center;justify-content:center;font-weight:800;color:var(--muted);flex:0 0 auto}
-.iex-option.selected .iex-pick{border-color:var(--primary);background:var(--primary);color:#fff}
-.iex-foot{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;position:sticky;inset-block-end:0;background:#f5f7fa;padding:14px 0}
-.iex-btn{border:1px solid var(--line2);background:var(--surface);color:var(--text);border-radius:var(--r);padding:12px 20px;font-weight:800;cursor:pointer;transition:.16s var(--ease)}
-.iex-btn:hover{background:var(--surface2)}
-.iex-btn.primary{border:0;background:var(--primary);color:#fff;box-shadow:0 10px 22px -12px rgba(37,99,235,.6)}
-.iex-btn.primary:hover{background:var(--primary2)}
-.iex-btn.submit{border:0;background:linear-gradient(135deg,#16a34a,#15803d);color:#fff}
-
-
-/* === ExamBank actual JSX selector bridge === */
-.interactive-exam-page{background:#f5f7fa;min-height:100vh;padding:22px 16px 56px}
-.iex-wrap{max-width:900px}
-.iex-head{display:flex;align-items:flex-start;justify-content:space-between;gap:18px;flex-wrap:wrap;background:var(--surface);border:1px solid var(--line);border-radius:var(--rxl);padding:22px 24px;box-shadow:0 14px 38px -28px rgba(15,23,42,.28)}
-.iex-head h1{margin:5px 0;color:var(--navy);font-size:24px}.iex-head p{margin:0;color:var(--muted);line-height:1.7}
-.iex-student{display:flex;flex-direction:column;gap:4px;align-items:flex-start}.iex-student span{color:var(--muted);font-size:12px;font-weight:600}
-.iex-progress{height:auto;display:grid;grid-template-columns:auto 1fr auto auto;align-items:center;gap:10px;border-radius:var(--rlg);background:var(--surface);border:1px solid var(--line);padding:10px 14px;overflow:visible}
-.iex-progress>span{height:auto;background:none;color:var(--muted);font-size:12px;font-weight:800}
-.iex-progress>div{height:8px;border-radius:var(--pill);background:var(--line);overflow:hidden;min-width:120px}
-.iex-progress>div>i{display:block;height:100%;border-radius:inherit;background:linear-gradient(90deg,var(--primary),var(--primary2));transition:width .25s var(--ease)}
-.iex-progress>strong{color:var(--navy);font-size:12.5px}.iex-progress>small{color:var(--faint);font-size:11px;display:inline-flex;align-items:center;gap:4px}
-.iex-flow{display:flex;flex-direction:column;gap:16px}.iex-q{position:relative}.iex-node{box-shadow:0 0 0 5px #f5f7fa}
-.iex-qhead{display:flex;justify-content:space-between;gap:10px;color:var(--muted);font-size:12px;font-weight:800;margin-bottom:12px}.iex-qhead strong{color:var(--navy)}
-.iex-bank{display:flex;gap:7px;flex-wrap:wrap;margin:12px 0}.iex-bank span{background:var(--primary050);border:1px solid #d7e3fb;color:var(--primary2);border-radius:var(--pill);padding:5px 10px;font-size:12px;font-weight:700}
-.iex-seq{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:10px;color:var(--text)}.iex-seq label{display:flex;flex-direction:column;gap:6px}.iex-seq select,.iex-open,.iex-cell{border:1px solid var(--line2);border-radius:10px;background:#fff;padding:10px 12px;font:inherit;color:var(--text)}
-/* Ordering questions need single-column top-to-bottom reading order - the auto-fit grid above
-   reflows into multiple columns which makes an "arrange these into order" list confusing. */
-.iex-order-list{display:flex;flex-direction:column}
-.iex-open{width:100%;min-height:120px;resize:vertical}.iex-image{max-width:100%;height:auto;border-radius:14px;border:1px solid var(--line);display:block;margin:12px auto}
-.iex-table-wrap{overflow:auto;border:1px solid var(--line);border-radius:14px}.iex-table-wrap table{width:100%;border-collapse:collapse}.iex-table-wrap th,.iex-table-wrap td{padding:10px 12px;border-bottom:1px solid var(--line);text-align:start}.iex-table-wrap th{background:var(--surface2);color:var(--muted);font-size:12px}
-.iex-cell-select{border:1px solid var(--line2);border-radius:10px;background:#fff;padding:10px 12px;font:inherit;color:var(--text);width:100%}
-.iex-foot button,.iex-result-actions button{border:1px solid var(--line2);background:var(--surface);color:var(--text);border-radius:var(--r);padding:12px 20px;font-weight:800;cursor:pointer;transition:.16s var(--ease);display:inline-flex;align-items:center;justify-content:center;gap:8px}
-.iex-foot button:hover,.iex-result-actions button:hover{background:var(--surface2)}
-.iex-foot button.primary,.iex-result-actions button.primary{border:0;background:var(--primary);color:#fff;box-shadow:0 10px 22px -12px rgba(37,99,235,.6)}
-.iex-result-card{background:#fff;border:1px solid var(--line);border-radius:var(--rxl);padding:28px;box-shadow:0 18px 44px -28px rgba(15,23,42,.28)}
-@media(max-width:650px){
-  .iex-progress{grid-template-columns:auto 1fr auto}
-  .iex-progress>small{grid-column:1/-1}
-  .iex-card{padding:20px}
-  .iex-head{padding:18px}
-  .iex-foot{flex-direction:column;align-items:stretch;padding-block:12px calc(12px + env(safe-area-inset-bottom,0px))}
-  .iex-foot button,.iex-result-actions button{width:100%;padding:14px 18px;font-size:15px}
-  .interactive-exam-page{padding-block-end:24px}
+/* ---------- Reduced motion ---------- */
+@media (prefers-reduced-motion: reduce){
+  .iex-countdown.danger{ animation:none; }
+  .iex-option, .iex-focus-progress > i{ transition:none; }
 }
 
 /* ============================================================
-   Exam presentation themes (exam-themes-preview) — additive
-   only. Every .iex-* rule above is untouched; each theme below
-   either re-declares the same local custom properties (--r,
-   --rxl, etc. — already consumed by every .iex-* rule, so the
-   override cascades to descendants automatically) or adds a
-   handful of genuinely new, theme-scoped rules. .exam-theme-default
-   is intentionally empty so legacy exams render pixel-identical
-   to pre-theme behavior.
+   Exam presentation themes (exam-themes-preview) — additive skins
+   over the same markup. `default` is intentionally empty. The
+   `classic` paper tint and the `modern` translucent badges are the
+   two documented theme-contract colours outside the token set.
    ============================================================ */
-
 .exam-theme-default{}
+.exam-theme-cards .iex-flow{ gap:var(--eb-space-5); }
+.exam-theme-cards .iex-card{ border-radius:var(--eb-r-xl); box-shadow:var(--eb-sh-md); }
+.exam-theme-cards .iex-node{ background:var(--eb-primary); border-color:var(--eb-primary); color:var(--eb-surface); }
+.exam-theme-classic .iex-card{ border:1px solid var(--eb-navy); border-radius:var(--eb-r-xs); box-shadow:none; background:#fffdf7; }
+.exam-theme-classic .iex-qtext, .exam-theme-classic .iex-topbar-title, .exam-theme-classic .iex-qhead{ font-family:"Times New Roman",Georgia,serif; }
+.exam-theme-classic .iex-option{ border-radius:var(--eb-r-xs); transition:none; }
+.exam-theme-classic .iex-node{ border:1px solid var(--eb-navy); border-radius:0; background:none; color:var(--eb-navy); }
+.exam-theme-compact .iex-flow{ gap:var(--eb-space-2); }
+.exam-theme-compact .iex-card{ padding:var(--eb-space-3); border-radius:var(--eb-r); }
+.exam-theme-compact .iex-qtext{ font-size:var(--eb-fs-14); margin-block-end:var(--eb-space-2); }
+.exam-theme-compact .iex-option{ min-height:44px; font-size:var(--eb-fs-13); }
+.exam-theme-compact .iex-table-wrap th, .exam-theme-compact .iex-table-wrap td{ padding:var(--eb-space-1) var(--eb-space-2); font-size:var(--eb-fs-12); }
+.exam-theme-modern .iex-topbar{ background:linear-gradient(135deg,var(--eb-primary),var(--eb-primary-strong)); border-color:transparent; }
+.exam-theme-modern .iex-topbar-title, .exam-theme-modern .iex-topbar-context{ color:var(--eb-surface); }
+.exam-theme-modern .iex-topbar .eb-icon-button{ color:var(--eb-surface); }
+.exam-theme-modern .iex-card{ border:0; border-radius:var(--eb-r-xl); box-shadow:var(--eb-sh-md); }
+.exam-theme-modern .iex-option.selected{ box-shadow:0 0 0 2px var(--eb-primary); }
 
-/* ---------- cards: clear separation + shadow + numbered badge ----------
-   .iex-node was previously position:absolute to float it over the card's
-   corner, but that (the only position:absolute used by any theme) broke
-   the card's layout on the real builder/student page - some ancestor's
-   transform/stacking context interacts badly with it. Kept in normal flow
-   instead: still a clear, colored circular badge, just not overlapping. */
-.exam-theme-cards .iex-flow{gap:24px}
-.exam-theme-cards .iex-card{border-radius:20px;box-shadow:0 20px 46px -24px rgba(15,23,42,.35);border:1px solid var(--line)}
-.exam-theme-cards .iex-node{width:34px;height:34px;border-radius:50%;background:linear-gradient(135deg,var(--primary),var(--primary2));color:#fff;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:14px;box-shadow:0 8px 18px -8px rgba(37,99,235,.6);margin-block-end:8px}
-@media(max-width:650px){
-  .exam-theme-cards .iex-node{width:28px;height:28px;font-size:12px}
-}
-
-/* ---------- classic: paper-like, serif, no shadows/effects ---------- */
-.exam-theme-classic .iex-card{border:1px solid #000;border-radius:4px;box-shadow:none;background:#fffdf7}
-.exam-theme-classic .iex-qtext,.exam-theme-classic .iex-head h1,.exam-theme-classic .iex-qhead{font-family:"Times New Roman",Georgia,serif}
-.exam-theme-classic .iex-option{border-radius:2px;box-shadow:none;transition:none}
-.exam-theme-classic .iex-option:hover,.exam-theme-classic .iex-option.selected{background:#f3f1ea;box-shadow:none}
-.exam-theme-classic .iex-node{box-shadow:none;background:none;color:var(--navy);border:1px solid #000;border-radius:0}
-.exam-theme-classic .iex-head{border-radius:4px;box-shadow:none;border:1px solid #000}
-
-/* ---------- focus: single-question navigation + position progress ---------- */
-.iex-focus-mode{display:flex;flex-direction:column;gap:14px}
-.iex-focus-nav{display:flex;align-items:center;justify-content:space-between;gap:10px;background:var(--surface);border:1px solid var(--line);border-radius:var(--rlg);padding:10px 16px;font-weight:800;color:var(--navy)}
-.iex-focus-nav button{border:1px solid var(--line2);background:var(--surface2);color:var(--text);border-radius:var(--r);padding:8px 16px;font-weight:800;cursor:pointer}
-.iex-focus-nav button:disabled{opacity:.45;cursor:not-allowed}
-.iex-focus-progress{height:6px;border-radius:var(--pill);background:var(--line);overflow:hidden}
-.iex-focus-progress>i{display:block;height:100%;background:linear-gradient(90deg,var(--primary),var(--primary2));transition:width .25s var(--ease)}
-
-/* ---------- compact: tighter spacing, smaller tables ---------- */
-.exam-theme-compact .iex-flow{gap:10px}
-.exam-theme-compact .iex-card{padding:14px;border-radius:var(--r)}
-.exam-theme-compact .iex-qtext{font-size:15px;line-height:1.6;margin-bottom:10px}
-.exam-theme-compact .iex-option{padding:9px 12px;font-size:13.5px}
-.exam-theme-compact .iex-table-wrap th,.exam-theme-compact .iex-table-wrap td{padding:5px 8px;font-size:12.5px}
-.exam-theme-compact .iex-bank span{padding:3px 8px;font-size:11px}
-
-/* ---------- modern: gradient header, rounded cards, no animations ---------- */
-.exam-theme-modern .iex-head{background:linear-gradient(135deg,var(--primary),var(--primary2));border:none}
-.exam-theme-modern .iex-head h1,.exam-theme-modern .iex-head p,.exam-theme-modern .iex-school{color:#fff}
-.exam-theme-modern .iex-badges span{background:rgba(255,255,255,.18);border-color:rgba(255,255,255,.35);color:#fff}
-.exam-theme-modern .iex-card{border-radius:24px;border:none;box-shadow:0 24px 50px -28px rgba(37,99,235,.35)}
-.exam-theme-modern .iex-option.selected{box-shadow:0 0 0 2px var(--primary)}
-
-/* ---------- Theme preview overlay (Exam Builder "👁 معاينة هذا التنسيق") ---------- */
-.exam-theme-preview-overlay{position:fixed;inset:0;z-index:1000;background:#f5f7fa;overflow-y:auto}
-.exam-theme-preview-head{position:sticky;top:0;z-index:1;display:flex;align-items:center;justify-content:space-between;gap:12px;background:var(--navy);color:#fff;padding:14px 20px}
-.exam-theme-preview-head button{border:1px solid rgba(255,255,255,.4);background:transparent;color:#fff;border-radius:var(--r);padding:8px 16px;font-weight:700;cursor:pointer}
-.exam-theme-preview-note{background:var(--primary050);border:1px solid #d7e3fb;color:var(--primary2);border-radius:var(--r);padding:10px 14px;font-size:12.5px;font-weight:700}
-
-/* ── Structured exam engine (sections / compound / new field types) ─────────────
-   Minimal functional styling only — reuses existing tokens and iex- primitives so
-   the look matches the current exam page. No redesign of the page. */
-.iex-section{margin-block:22px}
-.iex-section+.iex-section{border-top:1px dashed var(--line2);padding-top:22px}
-.iex-section-head{margin-bottom:14px}
-.iex-section-eyebrow{font-size:11px;font-weight:800;color:var(--primary2);letter-spacing:.04em}
-.iex-section-title h2{margin:2px 0 0;font-size:20px;color:var(--navy)}
-.iex-section-instructions{margin:8px 0 0;color:var(--text);line-height:1.8;font-size:14px}
-.iex-section-meta{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}
-.iex-section-rule,.iex-section-mark{background:var(--primary050);border:1px solid #d7e3fb;color:var(--primary2);border-radius:var(--pill);padding:5px 12px;font-size:12px;font-weight:700}
-.iex-section-progress{display:flex;flex-wrap:wrap;align-items:center;gap:10px;margin-top:10px;font-size:13px;color:var(--muted)}
-.iex-section-progress strong{color:var(--navy)}
-.iex-section-excess{font-style:normal;color:#b45309;background:#fff7ed;border:1px solid #fed7aa;border-radius:var(--pill);padding:3px 10px;font-size:12px;font-weight:700}
-/* compound question parts */
-.iex-parts{display:flex;flex-direction:column;gap:16px;margin-top:6px}
-.iex-part{border:1px solid var(--line2);border-radius:var(--r);padding:14px 16px;background:var(--surface)}
-.iex-part.done{border-color:var(--primary);background:var(--primary050)}
-.iex-part-head{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:8px}
-.iex-part-label{width:26px;height:26px;display:flex;align-items:center;justify-content:center;border:1px solid var(--line);border-radius:50%;font-weight:800;color:var(--navy);background:var(--surface2)}
-.iex-part-marks{font-size:12px;font-weight:700;color:var(--muted)}
-.iex-part-text{margin:0 0 10px;line-height:1.8;color:var(--navy);font-weight:600}
-/* multiTrueFalse rows */
-.iex-mtf{display:flex;flex-direction:column;gap:10px}
-.iex-mtf-row{display:flex;justify-content:space-between;align-items:center;gap:12px;border:1px solid var(--line2);border-radius:10px;padding:10px 14px;background:#fff}
-.iex-mtf-text{line-height:1.7;color:var(--text)}
-.iex-tf-select{min-width:120px}
-/* CLI fill — fixed command text is not editable, only the blanks are */
-.iex-cli{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;background:#0f172a;color:#e2e8f0;border-radius:12px;padding:16px 18px;line-height:2.1;white-space:pre-wrap;word-break:break-word;direction:ltr;text-align:left;overflow-x:auto;font-size:13.5px}
-.iex-cli-input{font-family:inherit;font-size:inherit;background:#1e293b;color:#fde68a;border:1px solid #475569;border-radius:6px;padding:1px 6px;margin:0 3px;min-width:90px}
-.iex-cli-input:focus{outline:2px solid var(--primary);border-color:var(--primary)}
-.iex-fields{margin-top:8px}
-/* "extra answer — not graded" hint */
-.iex-extra-hint{display:inline-flex;align-items:center;gap:6px;color:#b45309;background:#fff7ed;border:1px solid #fed7aa;border-radius:var(--pill);padding:4px 12px;font-size:12px;font-weight:700;margin:6px 0}
-.iex-extra-hint-block{margin-bottom:-6px}
-/* shared stimulus (common material rendered once before its questions) */
-.iex-stimulus{border:1px solid var(--line);border-inline-start:4px solid var(--primary);border-radius:12px;background:var(--surface2);padding:14px 16px;margin-bottom:14px}
-.iex-stimulus-title{display:block;color:var(--navy);font-weight:800;margin-bottom:6px}
-.iex-stimulus-text{margin:0;line-height:1.9;color:var(--text);white-space:pre-wrap}
-
-/* ── B1: server-authoritative timed attempts ─────────────────────────────── */
-.iex-countdown{position:sticky;top:8px;z-index:5;display:flex;align-items:center;justify-content:center;gap:10px;background:#fff;border:1px solid var(--line);border-radius:var(--rxl);padding:10px 16px;box-shadow:0 10px 30px -22px rgba(15,23,42,.35)}
-.iex-countdown-label{font-size:12px;color:var(--muted,#64748b);font-weight:600}
-.iex-countdown-clock{font-size:22px;font-weight:800;letter-spacing:.5px;font-variant-numeric:tabular-nums}
-.iex-countdown.warn{border-color:#f59e0b;background:#fffbeb}
-.iex-countdown.warn .iex-countdown-clock{color:#b45309}
-.iex-countdown.danger{border-color:#ef4444;background:#fef2f2;animation:iex-pulse 1s ease-in-out infinite}
-.iex-countdown.danger .iex-countdown-clock{color:#b91c1c}
-@keyframes iex-pulse{0%,100%{box-shadow:0 0 0 0 rgba(239,68,68,.35)}50%{box-shadow:0 0 0 6px rgba(239,68,68,0)}}
-.iex-start-card{background:#fff;border:1px solid var(--line);border-radius:var(--rxl);padding:28px;box-shadow:0 18px 44px -28px rgba(15,23,42,.28);display:flex;flex-direction:column;gap:14px}
-.iex-start-card h1{margin:0;font-size:24px}
-.iex-start-meta{display:flex;flex-wrap:wrap;gap:10px}
-.iex-start-meta span{background:var(--surface,#f1f5f9);border-radius:999px;padding:6px 12px;font-size:13px;font-weight:600}
-.iex-start-hint{color:var(--muted,#64748b);font-size:13px;margin:0}
-.iex-start-actions{display:flex;gap:10px;flex-wrap:wrap}
-.iex-start-actions .primary{margin-inline-start:auto}
-.iex-timeout-note{color:#b45309;font-weight:600}
+/* ---------- Theme preview overlay (Exam Builder) — layer contract: stays above the shell (1000) ---------- */
+.exam-theme-preview-overlay{position:fixed;inset:0;z-index:1000;background:var(--eb-bg);overflow-y:auto}
+.exam-theme-preview-head{ position:sticky; inset-block-start:0; z-index:1; display:flex; align-items:center; justify-content:space-between; gap:var(--eb-space-3); padding:var(--eb-space-3) var(--eb-space-5); background:var(--eb-navy); color:var(--eb-nav-text); }
+.exam-theme-preview-head button{ min-height:40px; padding:0 var(--eb-space-4); border:1px solid var(--eb-nav-border); border-radius:var(--eb-r-sm); background:transparent; color:var(--eb-nav-text); font:inherit; font-weight:var(--eb-fw-semibold); cursor:pointer; }
+.exam-theme-preview-note{ padding:var(--eb-space-2) var(--eb-space-3); border-radius:var(--eb-r-sm); background:var(--eb-primary-050); border:1px solid var(--eb-primary-100); color:var(--eb-primary-strong); font-size:var(--eb-fs-13); font-weight:var(--eb-fw-semibold); }

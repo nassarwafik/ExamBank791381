@@ -1,6 +1,6 @@
 // @vitest-environment happy-dom
 import { describe, it, expect, afterEach, beforeEach, vi } from "vitest";
-import { render, cleanup, fireEvent, waitFor } from "@testing-library/react";
+import { render, cleanup, fireEvent, waitFor, screen } from "@testing-library/react";
 import StudentExamPage from "./StudentExamPage";
 
 // Roadmap #10 (Save Indicator) + #11 (Offline UX) — real StudentExamPage integration tests driving the true
@@ -171,6 +171,7 @@ describe("R10/R11 — save indicator + offline UX", () => {
     const r = mount();
     await typeAnswer(r, "answer-before-submit");
     fireEvent.click(r.container.querySelector(".iex-foot .primary") as HTMLButtonElement);
+    fireEvent.click(await screen.findByRole("button", { name: "تسليم الآن" }));                 // UX-7b-1: shared ConfirmDialog replaces window.confirm
     await waitFor(() => expect(submitCalls).toBe(1), { timeout: 2000 });
     expect(calls.indexOf("save")).toBeLessThan(calls.indexOf("submit"));
     expect(calls.indexOf("save")).toBeGreaterThanOrEqual(0);
@@ -182,6 +183,7 @@ describe("R10/R11 — save indicator + offline UX", () => {
     goOffline();
     fireEvent.click(r.container.querySelector(".iex-foot .primary") as HTMLButtonElement);
     await new Promise(res => setTimeout(res, 50));
+    expect(screen.queryByRole("dialog")).toBeNull();                                               // the offline guard fires BEFORE any confirmation (unchanged gating order)
     expect(submitCalls).toBe(0);
     expect(r.container.querySelector(".iex-error")?.textContent || "").toContain("لا يمكن تسليم الامتحان قبل حفظ التغييرات");
   });
@@ -191,6 +193,7 @@ describe("R10/R11 — save indicator + offline UX", () => {
     const r = mount();
     await typeAnswer(r, "answer");
     fireEvent.click(r.container.querySelector(".iex-foot .primary") as HTMLButtonElement);
+    fireEvent.click(await screen.findByRole("button", { name: "تسليم الآن" }));                 // UX-7b-1: shared ConfirmDialog replaces window.confirm
     await waitFor(() => expect(saveCalls).toBeGreaterThanOrEqual(1), { timeout: 2000 });
     await new Promise(res => setTimeout(res, 100));
     expect(submitCalls).toBe(0);
@@ -227,6 +230,7 @@ describe("R10/R11 — save indicator + offline UX", () => {
     await typeAnswer(r, "SECRET_ANSWER_XYZ");
     await waitFor(() => expect(saveCalls).toBe(1), { timeout: 2000 });
     fireEvent.click(r.container.querySelector(".iex-foot .primary") as HTMLButtonElement);
+    fireEvent.click(await screen.findByRole("button", { name: "تسليم الآن" }));                 // UX-7b-1: shared ConfirmDialog replaces window.confirm
     await waitFor(() => expect(submitCalls).toBe(1), { timeout: 2000 });
     for (const c of lsSet.mock.calls) expect(String(c[1])).not.toContain("SECRET_ANSWER_XYZ");
     const all = logs.join("\n");
