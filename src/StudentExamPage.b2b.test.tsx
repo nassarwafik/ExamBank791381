@@ -1,6 +1,6 @@
 // @vitest-environment happy-dom
 import { describe, it, expect, afterEach, beforeEach, vi } from "vitest";
-import { render, cleanup, waitFor } from "@testing-library/react";
+import { render, cleanup, waitFor, fireEvent } from "@testing-library/react";
 import StudentExamPage from "./StudentExamPage";
 
 // B2B #25 — a StudentExamPage resync (visibilitychange/online) must pick up a teacher timer extension
@@ -68,7 +68,8 @@ describe("StudentExamPage — resync picks up a teacher timer extension (B2B #25
     // new window 10:31 -> 11:30 => ~59:00 (definitely NOT the old ~30:00)
     await waitFor(() => { const c = r.container.querySelector(".iex-countdown-clock"); expect(c?.textContent || "").toMatch(/^(59:00|58:5\d)$/); });
     // controls remain live (writable) after the extension
-    const submitBtn = r.container.querySelector(".iex-foot .primary") as HTMLButtonElement;
+    fireEvent.click(await r.findByRole("button", { name: "مراجعة الإجابات" }));                 // UX-7b-2: submit lives on the review screen
+    const submitBtn = await r.findByRole("button", { name: "تسليم الامتحان" }) as HTMLButtonElement;
     expect(submitBtn.disabled).toBe(false);
     expect(r.container.querySelector(".iex-result-card")).toBeNull();
   });

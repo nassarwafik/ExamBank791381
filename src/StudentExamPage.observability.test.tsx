@@ -79,6 +79,8 @@ beforeEach(() => {
 });
 afterEach(() => { cleanup(); vi.restoreAllMocks(); });
 
+// UX-7b-2: the final submit lives on the review screen (last question → "مراجعة الإجابات" → "تسليم الامتحان"); the shared ConfirmDialog stays the gate.
+async function pressSubmit() { fireEvent.click(await screen.findByRole("button", { name: "مراجعة الإجابات" })); fireEvent.click(await screen.findByRole("button", { name: "تسليم الامتحان" })); }
 describe("R9 frontend correlation — StudentExamPage", () => {
   it("TEST A: a finalizeTimedOutAttempt 5xx keeps the timeout/offline wording AND appends the tracking code; attempt stays locked", async () => {
     // Reach finalize via the proven retry-after-expiry path, but finalize fails 500 with a request id.
@@ -103,7 +105,7 @@ describe("R9 frontend correlation — StudentExamPage", () => {
     submitHandler = () => jsonH(500, { ok: false, error: "تعذر تسليم الواجب." }, "submit-500-id");
     const r = mount(fullAssignment);
     await r.findByText("سؤال الاختبار السري");
-    fireEvent.click(r.container.querySelector(".iex-foot .primary") as HTMLButtonElement);
+    await pressSubmit();
     fireEvent.click(await screen.findByRole("button", { name: "تسليم الآن" }));                 // UX-7b-1: shared ConfirmDialog replaces window.confirm
     await waitFor(() => expect(submitCalls).toBe(1));
     await waitFor(() => expect(r.container.querySelector(".iex-error")?.textContent || "").toContain("رمز التتبع: submit-500-id"));
@@ -128,7 +130,7 @@ describe("R9 frontend correlation — StudentExamPage", () => {
     subGetHandler = n => (n === 1 ? json(200, { ok: true, state: startedState }) : json(200, { ok: true, state: startedState }));
     const r = mount(fullAssignment);
     await r.findByText("سؤال الاختبار السري");
-    fireEvent.click(r.container.querySelector(".iex-foot .primary") as HTMLButtonElement);
+    await pressSubmit();
     fireEvent.click(await screen.findByRole("button", { name: "تسليم الآن" }));                 // UX-7b-1: shared ConfirmDialog replaces window.confirm
     await waitFor(() => expect(submitCalls).toBe(1));
     await waitFor(() => expect(subGetCalls).toBeGreaterThan(1));   // reconcile happened
@@ -141,7 +143,7 @@ describe("R9 frontend correlation — StudentExamPage", () => {
     submitHandler = () => jsonH(401, { ok: false, error: "انتهت الجلسة." }, "unauth-401-id");
     const r = mount(fullAssignment);
     await r.findByText("سؤال الاختبار السري");
-    fireEvent.click(r.container.querySelector(".iex-foot .primary") as HTMLButtonElement);
+    await pressSubmit();
     fireEvent.click(await screen.findByRole("button", { name: "تسليم الآن" }));                 // UX-7b-1: shared ConfirmDialog replaces window.confirm
     await waitFor(() => expect(onLogout).toHaveBeenCalled());
     expect(r.container.textContent).not.toContain("رمز التتبع");
@@ -158,7 +160,7 @@ describe("R9 frontend correlation — StudentExamPage", () => {
     submitHandler = () => jsonH(500, { ok: false, error: "تعذر تسليم الواجب." }, "priv-500-id");
     const r = mount(fullAssignment, "secret-token-XYZ");
     await r.findByText("سؤال الاختبار السري");
-    fireEvent.click(r.container.querySelector(".iex-foot .primary") as HTMLButtonElement);
+    await pressSubmit();
     fireEvent.click(await screen.findByRole("button", { name: "تسليم الآن" }));                 // UX-7b-1: shared ConfirmDialog replaces window.confirm
     await waitFor(() => expect(submitCalls).toBe(1));
     const all = logs.join("\n");

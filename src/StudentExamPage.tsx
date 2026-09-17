@@ -1,6 +1,6 @@
 
 import {useEffect,useMemo,useRef,useState,useCallback} from "react";
-import {IconCheck,IconChevronBack} from "./icons";
+import {IconCheck,IconMenu} from "./icons";
 import {useConfirm} from "./ui/useConfirm";
 import {usePrefersReducedMotion} from "./ui/usePrefersReducedMotion";
 import ProgressBar from "./ui/ProgressBar";
@@ -11,10 +11,15 @@ import {formatDateLatn,formatDateTimeLatn} from "./student/exam/format";
 import StudentQuestionCard,{qid,answered} from "./StudentQuestionCard";
 import type {Question,Answer} from "./StudentQuestionCard";
 import type {ExamSection} from "./examStructure";
-import {normalizeExamTheme,previousFocusIndex,nextFocusIndex,focusProgressPercent} from "./examTheme";
+import {normalizeExamTheme} from "./examTheme";
 import type {FieldValue} from "./StudentQuestionCard";
-import {normalizeExamStructure,calculateSectionProgress} from "./examStructure";
-import StructuredExamSection from "./StructuredExamSection";
+import {normalizeExamStructure,calculateSectionProgress,selectGradedUnits} from "./examStructure";
+import {StructuredSectionQuestion} from "./StructuredExamSection";
+import {buildQuestionPages,clampPageIndex,countAnsweredPages} from "./student/exam/questionPager";
+import ExamBottomNavigation from "./student/exam/ExamBottomNavigation";
+import QuestionNavigatorDialog from "./student/exam/QuestionNavigatorDialog";
+import ExamSectionContext from "./student/exam/ExamSectionContext";
+import ExamReviewScreen from "./student/exam/ExamReviewScreen";
 import StructuredExamCover from "./StructuredExamCover";
 import ExamGeneralInstructions from "./ExamGeneralInstructions";
 import {normalizeCoverPage,examMarksDistribution,type ExamCoverPage,type MarksDistribution} from "./examCover";
@@ -59,7 +64,16 @@ export default function StudentExamPage({token,assignment,studentName,className,
  const theme=normalizeExamTheme(assignment.exam.presentationTheme);
  const [exam,setExam]=useState<ExamBody>(assignment.exam);
  const qs=exam.questions||[];
- const [answers,setAnswers]=useState<Answers>({}),[state,setState]=useState<State|null>(null),[loading,setLoading]=useState(true),[saving,setSaving]=useState(false),[retrying,setRetrying]=useState(false),[,setSaveFailed]=useState(false),[,setDirty]=useState(false),[submitBusy,setSubmitBusy]=useState(false),[error,setError]=useState(""),[result,setResult]=useState<Result|null>(null),[started,setStarted]=useState(true),[coverStarted,setCoverStarted]=useState(false),[focusIndex,setFocusIndex]=useState(0);
+ const [answers,setAnswers]=useState<Answers>({}),[state,setState]=useState<State|null>(null),[loading,setLoading]=useState(true),[saving,setSaving]=useState(false),[retrying,setRetrying]=useState(false),[,setSaveFailed]=useState(false),[,setDirty]=useState(false),[submitBusy,setSubmitBusy]=useState(false),[error,setError]=useState(""),[result,setResult]=useState<Result|null>(null),[started,setStarted]=useState(true),[coverStarted,setCoverStarted]=useState(false);
+ // UX-7b-2 — LOCAL presentation state only (never derived from network state): the displayed question, the
+ // answer/review view and the navigator dialog. Navigation is immediate and never waits for or triggers a save.
+ const [pageIndex,setPageIndex]=useState(0),[view,setView]=useState<"answer"|"review">("answer"),[navOpen,setNavOpen]=useState(false);
+ // Focus contract: set ONLY by an intentional navigation (Next / Previous / navigator jump / review enter-leave); the
+ // effect below moves focus to the new heading once, after render. Autosave, timer ticks and resyncs never set it.
+ const pendingFocusRef=useRef<"question"|"review"|null>(null),questionHeadingRef=useRef<HTMLHeadingElement|null>(null),reviewHeadingRef=useRef<HTMLHeadingElement|null>(null);
+ // Back to the first question in answer mode — ONLY when a genuinely different attempt/generation is adopted or a new
+ // attempt starts. A same-attempt resync (timer/state refresh, clean draft adoption) never moves the student.
+ const resetPager=useCallback(()=>{setPageIndex(0);setView("answer");setNavOpen(false)},[]);
  const [starting,setStarting]=useState(false),[expired,setExpired]=useState(false),[remainingMs,setRemainingMs]=useState<number|null>(null);
  // UX-7b-1 — shared confirmation (replaces window.confirm with identical texts/gating) and reduced-motion aware scrolling.
  const {confirm,confirmDialog}=useConfirm();
@@ -243,8 +257,8 @@ export default function StudentExamPage({token,assignment,studentName,className,
  const adoptOrKeepActive=useCallback((st:State)=>{
   const differentAttempt=!sameAttempt(attemptId(st),dirtyAttemptRef.current);
   const hasLocalUnsaved=revision.current>savedRevision.current;
-  if(differentAttempt||!hasLocalUnsaved){applyServerAttemptState(st)}else{stateRef.current=st;setState(st)}
- },[applyServerAttemptState]);
+  if(differentAttempt||!hasLocalUnsaved){applyServerAttemptState(st);if(differentAttempt)resetPager()}else{stateRef.current=st;setState(st)}
+ },[applyServerAttemptState,resetPager]);
  // Resync AUTHORITATIVE server state. Returns the fresh State on success, or null on failure (so callers
  // never act on stale state). SAME active attempt → update timer/state only, PRESERVING legitimate unsaved
  // local answers. DIFFERENT attempt → adopt it via applyServerAttemptState (never keep a cross-attempt snapshot).
@@ -256,8 +270,8 @@ export default function StudentExamPage({token,assignment,studentName,className,
   const genChanged=Number(st.attemptsUsed||0)!==dirtyGenerationRef.current;
   const hasLocalUnsaved=revision.current>savedRevision.current;
   if(!genChanged&&hasLocalUnsaved){stateRef.current=st;setState(st);anchorClock(st);setResult(st.latestResult)}
-  else{applyServerAttemptState(st);anchorClock(st);setResult(st.latestResult);setStarted(st.attemptsUsed===0||Object.keys(st.draftAnswers||{}).length>0)}
- }return st}catch{return null/* transient resync failure — caller must not act on stale state */}},[applyServerAttemptState,adoptOrKeepActive]);
+  else{applyServerAttemptState(st);if(genChanged)resetPager();anchorClock(st);setResult(st.latestResult);setStarted(st.attemptsUsed===0||Object.keys(st.draftAnswers||{}).length>0)}
+ }return st}catch{return null/* transient resync failure — caller must not act on stale state */}},[applyServerAttemptState,adoptOrKeepActive,resetPager]);
  // Reconnect recovery (#8): server authority FIRST (resync — which also finalizes an expired attempt and
  // adopts a changed one), THEN save the latest dirty snapshot ONLY if the server still reports the SAME
  // attempt writable. A failed resync does nothing (never save/finalize on stale state).
@@ -312,6 +326,7 @@ export default function StudentExamPage({token,assignment,studentName,className,
    // bookkeeping (revision/savedRevision/lastSavedAt/save flags) so attempt N+1 never inherits attempt N's
    // state, and no autosave is scheduled by the hydration (ref-marker).
    setExam(body);applyServerAttemptState(r.state);anchorClock(r.state);setExpired(false);finalizingRef.current=false;setResult(null);setStarted(true);setCoverStarted(true);
+   resetPager(); // new attempt → first question (presentation only)
    scrollTop();
   }catch(e){
    // A 409 on start can mean the PRIOR server start (e.g. a failed body-fetch retry, or a next attempt)
@@ -408,6 +423,32 @@ export default function StudentExamPage({token,assignment,studentName,className,
   if(structured){let a=0,t=0;norm.sections.forEach(s=>{const p=calculateSectionProgress(s,answers);a+=p.answered;t+=p.total});return {done:a,total:t,pct:t?Math.round(a/t*100):0}}
   const d=qs.reduce((n,q,i)=>n+(answered(answers[qid(q,i)])?1:0),0);return {done:d,total:qs.length,pct:qs.length?Math.round(d/qs.length*100):0};
  },[structured,norm,answers,qs]);
+ // UX-7b-2 — ordered presentation pages over the SAME exam/ids (no answer transformation); clamped for any exam size so a
+ // resumed attempt, an authoritative body change or an unexpected question-count change can never point past the end.
+ const pages=useMemo(()=>buildQuestionPages(norm,exam.questions||[]),[norm,exam.questions]);
+ const currentIndex=clampPageIndex(pageIndex,pages.length); // derived every render — the stored index is never trusted as-is
+ const currentPage=pages[currentIndex];
+ const answeredPages=useMemo(()=>countAnsweredPages(pages,answers),[pages,answers]);
+ // firstN "extra answer" hints for the CURRENT structured section only — the shared selectGradedUnits, never a second rule.
+ const currentCountedKeys=useMemo(()=>currentPage?.section?selectGradedUnits(currentPage.section,answers).countedKeys:new Set<string>(),[currentPage,answers]);
+ // Intentional navigation (local, immediate, zero requests). The save queue/debounce run independently.
+ const goTo=(index:number)=>{setNavOpen(false);setView("answer");setPageIndex(clampPageIndex(index,pages.length));pendingFocusRef.current="question"};
+ const goPrevious=()=>goTo(currentIndex-1);
+ const goNext=()=>goTo(currentIndex+1);
+ const openReview=()=>{setNavOpen(false);setView("review");pendingFocusRef.current="review"};
+ const backToAnswering=()=>{setView("answer");pendingFocusRef.current="question"};
+ // After an intentional navigation renders, focus the NEW heading (not the page top, not the navigator opener) and bring
+ // it into view with reduced-motion-aware scrolling. Runs only when the displayed question/view changes; a timer tick,
+ // an autosave or a same-question resync never re-runs it, and it does nothing unless navigation asked for focus.
+ useEffect(()=>{
+  const want=pendingFocusRef.current;if(!want)return;pendingFocusRef.current=null;
+  const el=want==="review"?reviewHeadingRef.current:questionHeadingRef.current;
+  if(!el)return;
+  const behavior:ScrollBehavior=reducedMotion?"auto":"smooth";
+  el.focus({preventScroll:true});
+  if(typeof el.scrollIntoView==="function")el.scrollIntoView({block:"start",behavior});
+  else window.scrollTo({top:0,behavior});
+ },[currentIndex,view,reducedMotion]);
  const setChoice=(id:string,index:number)=>setAnswers(a=>({...a,[id]:{kind:"choice",index}}));
  const setSeq=(id:string,index:number,value:string)=>setAnswers(a=>{const prev=a[id]?.kind==="sequence"?(a[id] as {kind:"sequence";values:string[]}).values:[];const values=[...prev];values[index]=value;return {...a,[id]:{kind:"sequence",values}}});
  const setTable=(id:string,index:number,value:string|boolean)=>setAnswers(a=>{const prev=a[id]?.kind==="table"?(a[id] as {kind:"table";values:(string|boolean)[]}).values:[];const values=[...prev];values[index]=value;return {...a,[id]:{kind:"table",values}}});
@@ -454,7 +495,7 @@ export default function StudentExamPage({token,assignment,studentName,className,
   revision.current=0;savedRevision.current=0;latestTargetRevision.current=0;
   dirtyAttemptRef.current=null;dirtyGenerationRef.current=Number(state.attemptsUsed||0);
   setLastSavedAt("");setSaveError(false);setRetrying(false);setSaving(false);setDirty(false);setError("");
-  setResult(state.latestResult);setStarted(true);setCoverStarted(false);scrollTop()}
+  setResult(state.latestResult);setStarted(true);setCoverStarted(false);resetPager();scrollTop()}
  async function backWithoutSubmit(){if(revision.current>savedRevision.current&&!(await confirm({title:"مغادرة بدون تسليم",message:"توجد إجابات لم تُحفظ بعد. هل تريد المغادرة على أي حال؟",confirmLabel:"المغادرة",cancelLabel:"البقاء",tone:"danger"})))return;onBack()}
  if(loading)return <main className="interactive-exam-page" dir="rtl"><div className="iex-wrap"><p className="iex-loading" role="status">جارٍ تجهيز صفحة الامتحان...</p></div></main>;
  if(!started&&result)return <main className={"interactive-exam-page exam-theme-"+theme} dir="rtl"><div className="iex-wrap"><section className="iex-result-card"><span className="iex-eyebrow">النتيجة</span><h1>تم تسليم المحاولة {result.attemptNumber}{result.timedOut?" (انتهى الوقت)":""}</h1>{error&&<div className="platform-error iex-error">{error}</div>}<div className="iex-score">{result.score}<small> / {result.totalMarks}</small></div><strong>{result.percentage}%</strong>{(()=>{const gs=resultGradingStatus(result);return <><span className={"iex-grade-badge iex-grade-"+gradingClass(gs)}>{scoreLabel(gs)}</span>{result.timedOut&&<p className="iex-timeout-note">تم إنهاء هذه المحاولة تلقائيًا عند انتهاء الوقت، وصُحّحت الإجابات المحفوظة.</p>}{gs==="pendingReview"?<p className="iex-provisional">العلامة مؤقتة — بانتظار مراجعة المعلم{result.manualReviewMarks>0?" ("+result.manualReviewMarks+" علامة قيد المراجعة)":""}.</p>:<p className="iex-finalized"><IconCheck size={14} aria-hidden="true"/>العلامة النهائية معتمدة.</p>}</>})()}{result.teacherFeedback&&<div className="iex-teacher-feedback"><strong>ملاحظة المعلم</strong><span>{result.teacherFeedback}</span></div>}<p className="iex-result-when">تم الحفظ في حسابك بتاريخ {formatDateTimeLatn(result.submittedAt)}</p><div className="iex-result-actions"><button type="button" className="eb-button" onClick={onBack}>العودة إلى المهام</button>{(requiresStart?state?.canStartAttempt:state?.canAttempt)&&<button type="button" className="eb-button is-primary primary" onClick={startNext} disabled={starting}>{starting?"جارٍ البدء...":"بدء محاولة جديدة ("+((state?.attemptsUsed||0)+1)+" من "+(state?.allowedAttempts||assignment.maxAttempts)+")"}</button>}</div>{!(requiresStart?state?.canStartAttempt:state?.canAttempt)&&<div className="iex-no-retry">لا توجد محاولة إضافية متاحة. يستطيع المعلم السماح بمحاولة أخرى من صفحة النتائج.</div>}</section></div></main>;
@@ -514,6 +555,13 @@ export default function StudentExamPage({token,assignment,studentName,className,
   {error&&<div className="platform-error iex-error" role="alert">{error}</div>}
   {expired&&!result&&<div className="platform-notice iex-error" role="status">انتهى وقت المحاولة — لم يعد بالإمكان تعديل الإجابات، ويجري إنهاء المحاولة وتصحيح ما تم حفظه.</div>}
   <div className="iex-progress">
+   <div className="iex-position">
+    <div className="iex-position-text">
+     <strong className="iex-position-main">{view==="review"?"مراجعة الإجابات":"السؤال "+(pages.length?currentIndex+1:0)+" / "+pages.length}</strong>
+     {view==="answer"&&currentPage?.section&&<span className="iex-position-sub">القسم {currentPage.sectionIndex+1} · السؤال {currentPage.positionInSection+1} / {currentPage.sectionSize}</span>}
+    </div>
+    <button type="button" className="eb-button is-small iex-nav-trigger" aria-haspopup="dialog" onClick={()=>setNavOpen(true)}><IconMenu size={16} aria-hidden="true"/>قائمة الأسئلة<span className="iex-nav-trigger-count">{answeredPages} / {pages.length} مجاب</span></button>
+   </div>
    <div className="iex-progress-bar"><ProgressBar label="تقدّمك" value={pct} showValue={false} size="sm"/><strong className="iex-progress-count">{done} / {total}</strong></div>
    <SaveStatus kind={saveKind} lastSavedAt={lastSavedAt} onRetry={()=>{void manualSave()}}/>
   </div>
@@ -532,11 +580,20 @@ export default function StudentExamPage({token,assignment,studentName,className,
    {/* Roadmap #17/#15 — exam-level general instructions (presentation only), shared with the teacher preview. */}
    <ExamGeneralInstructions text={exam.metadata?.generalInstructions}/>
   </ExamDetailsDisclosure>
-  {structured?(()=>{let offset=0;return <>{norm.sections.map((section,si)=>{const startIndex=offset;offset+=section.questions.length;return <StructuredExamSection key={section.id} section={section} sectionNumber={si+1} startIndex={startIndex} answers={answers} onChoice={setChoice} onSeq={setSeq} onTable={setTable} onText={(id,v)=>setAnswers(x=>({...x,[id]:{kind:"text",value:v}}))} onField={setField} onPart={setPart} disabled={inputsDisabled}/>})}</>})():
-  theme==="focus"&&qs.length>0?(()=>{const i=Math.min(focusIndex,qs.length-1),q=qs[i],id=qid(q,i);return <div className="iex-focus-mode"><div className="iex-focus-nav"><button type="button" className="eb-button" onClick={()=>setFocusIndex(x=>previousFocusIndex(x,qs.length))} disabled={i===0}><IconChevronBack size={16} className="eb-flip-rtl" aria-hidden="true"/>السابق</button><span>السؤال {i+1} من {qs.length}</span><button type="button" className="eb-button" onClick={()=>setFocusIndex(x=>nextFocusIndex(x,qs.length))} disabled={i===qs.length-1}>التالي<IconChevronBack size={16} aria-hidden="true"/></button></div><div className="iex-focus-progress"><i style={{width:focusProgressPercent(i,qs.length)+"%"}}/></div><StudentQuestionCard q={q} index={i} id={id} answer={answers[id]} onChoice={n=>setChoice(id,n)} onSeq={(n,v)=>setSeq(id,n,v)} onTable={(n,v)=>setTable(id,n,v)} onText={v=>setAnswers(x=>({...x,[id]:{kind:"text",value:v}}))} disabled={inputsDisabled}/></div>})():(
-  <section className="iex-flow">{qs.map((q,i)=>{const id=qid(q,i);return <StudentQuestionCard key={id} q={q} index={i} id={id} answer={answers[id]} onChoice={n=>setChoice(id,n)} onSeq={(n,v)=>setSeq(id,n,v)} onTable={(n,v)=>setTable(id,n,v)} onText={v=>setAnswers(x=>({...x,[id]:{kind:"text",value:v}}))} disabled={inputsDisabled}/>})}</section>
-  )}
-  <footer className="iex-foot"><p className="iex-foot-summary">أجبت عن {done} من {total}</p><div className="iex-foot-actions"><button type="button" className="eb-button is-quiet" onClick={()=>{void backWithoutSubmit()}}>العودة بدون تسليم</button><button type="button" className="eb-button primary iex-submit" onClick={()=>{void submit()}} disabled={submitBusy||!writable}>{submitBusy?"جارٍ التصحيح...":<><IconCheck size={16} aria-hidden="true"/>تسليم وتصحيح الامتحان</>}</button></div></footer>
+  {/* UX-7b-2 — ONE paged rendering model for every theme and width: one logical question mounted at a time (the theme
+      class stays purely visual). Structured questions render through the section renderer's per-question code with a
+      compact section context; flat questions through the same StudentQuestionCard as before. Keys are unchanged. */}
+  {view==="review"?(
+   <ExamReviewScreen title={assignment.title} pages={pages} answers={answers} sections={structured?norm.sections:[]} headingRef={reviewHeadingRef} onJump={goTo} onBackToAnswering={backToAnswering} onSubmit={()=>{void submit()}} submitBusy={submitBusy} submitDisabled={submitBusy||!writable}/>
+  ):currentPage?(()=>{const page=currentPage,id=page.id,q=page.question;return <section className="iex-page" aria-labelledby="iex-page-heading" key={id}>
+   <h2 id="iex-page-heading" className="iex-page-heading" tabIndex={-1} ref={questionHeadingRef}>السؤال {q.displayNumber??(currentIndex+1)} من {pages.length}</h2>
+   {page.section&&<ExamSectionContext section={page.section} sectionNumber={page.sectionIndex+1} positionInSection={page.positionInSection} sectionSize={page.sectionSize} firstInSection={page.firstInSection} answers={answers}/>}
+   {page.section
+    ?<StructuredSectionQuestion section={page.section} q={q} questionIndex={page.positionInSection} globalIndex={currentIndex} answers={answers} countedKeys={currentCountedKeys} showStimulus={!!q.groupId} disabled={inputsDisabled} onChoice={setChoice} onSeq={setSeq} onTable={setTable} onText={(qid2,v)=>setAnswers(x=>({...x,[qid2]:{kind:"text",value:v}}))} onField={setField} onPart={setPart}/>
+    :<StudentQuestionCard q={q} index={currentIndex} id={id} answer={answers[id]} onChoice={n=>setChoice(id,n)} onSeq={(n,v)=>setSeq(id,n,v)} onTable={(n,v)=>setTable(id,n,v)} onText={v=>setAnswers(x=>({...x,[id]:{kind:"text",value:v}}))} disabled={inputsDisabled}/>}
+  </section>})():<p className="iex-loading" role="status">لا توجد أسئلة في هذا الامتحان.</p>}
+  {view==="answer"&&<ExamBottomNavigation index={currentIndex} total={pages.length} onPrevious={goPrevious} onNext={goNext} onReview={openReview}/>}
+  <QuestionNavigatorDialog open={navOpen} onClose={()=>setNavOpen(false)} pages={pages} answers={answers} currentIndex={view==="answer"?currentIndex:-1} onJump={goTo} answeredCount={answeredPages}/>
   {confirmDialog}
  </div></main>
 }
