@@ -8,8 +8,15 @@ import { IconMore } from "../icons";
  * Contract: labelled trigger with aria-expanded/controls · Escape closes · outside click closes ·
  * focus returns to the trigger · the panel is portalled with fixed positioning, so it never clips
  * inside an overflow container (tables, panes) and flips upward near the viewport bottom.
- * Activating any control inside closes the menu first (focus back on the trigger) and then runs the
- * control's own handler, so a dialog opened from the menu returns focus to the trigger on close.
+ * Activating a control inside runs the control's OWN handler first (bubble phase, same React dispatch), then
+ * closes the menu and puts focus back on the trigger, so a dialog opened from the menu captures the trigger
+ * as its opener and returns focus to it on close.
+ *
+ * Final-acceptance fix: the close used to run from `onClickCapture`. In a real browser React flushes a
+ * discrete-event state update in a microtask right after its ROOT capture listener returns — before the
+ * native event reaches the item and bubbles back — so the portal unmounted mid-dispatch and the item's
+ * onClick never ran (menu opened, every action was dead). happy-dom dispatches synchronously and could not
+ * show it. Closing in the bubble phase keeps the item mounted until its handler has executed.
  */
 export default function ActionMenu({ label, children, icon, text, className, disabled }: { label: string; children: ReactNode; icon?: ReactNode; text?: string; className?: string; disabled?: boolean }) {
   const [open, setOpen] = useState(false);
@@ -72,10 +79,14 @@ export default function ActionMenu({ label, children, icon, text, className, dis
     };
   }, [open]);
 
-  // Any activated control closes the menu (focus back on the trigger) before its own handler runs.
-  function onPanelClickCapture(e: React.MouseEvent) {
+  // Bubble phase: the activated control's own onClick / onChange has already run (deeper in the same
+  // dispatch) by the time this fires; then the menu closes and focus returns to the trigger. A click that
+  // lands on a <label> is NOT a close: the browser follows it with the label's activation click on its
+  // input, and that input click is the one that toggles the checkbox and closes the menu — closing on the
+  // label click would unmount the input before its activation click, losing the toggle.
+  function onPanelClick(e: React.MouseEvent) {
     const el = e.target as HTMLElement;
-    if (el.closest("button, input[type='checkbox'], label")) close(true);
+    if (el.closest("button, input")) close(true);
   }
 
   return (
@@ -84,7 +95,7 @@ export default function ActionMenu({ label, children, icon, text, className, dis
         {icon ?? <IconMore size={16} />}{text && <span>{text}</span>}
       </button>
       {open && typeof document !== "undefined" && createPortal(
-        <div ref={panelRef} id={panelId} className="eb-menu-panel" role="group" aria-label={label} style={style} dir="rtl" onClickCapture={onPanelClickCapture}>
+        <div ref={panelRef} id={panelId} className="eb-menu-panel" role="group" aria-label={label} style={style} dir="rtl" onClick={onPanelClick}>
           {children}
         </div>,
         document.body
