@@ -156,3 +156,45 @@ describe("final stage keeps the exam a DRAFT", () => {
     expect(onOpen.mock.calls[0][0].status).toBe("draft");
   });
 });
+
+describe("compound parts — the AI request must carry a usable presentationType (regression)", () => {
+  const COMPOUND = {
+    title: "امتحان مركّب",
+    sections: [{
+      id: "s1", title: "القسم الأول", gradingPolicy: "all",
+      questions: [{
+        examQuestionId: "cq1", displayNumber: "1", presentationType: "compound", text: "أجب عن الأجزاء", marks: 6,
+        parts: [
+          { id: "p1", type: "multipleChoice", text: "أي بروتوكول موجّه؟", marks: 3, options: [{ text: "OSPF" }, { text: "STP" }], answer: {} },
+          { id: "p2", type: "shortAnswer", text: "اشرح", marks: 3, answer: {} }
+        ]
+      }]
+    }]
+  };
+  it("sends the part's presentationType (not undefined) so the endpoint can accept it, and applies the accepted proposal to the part only", async () => {
+    let seenType: unknown = "UNSEEN";
+    aiResponder = (body) => {
+      seenType = body.question.presentationType;
+      // A correct endpoint keys on presentationType; a request missing it would be rejected (400) upstream.
+      return body.question.presentationType === "multipleChoice" ? { proposal: { patch: { correctOptionIndex: 0 }, explanation: "" } } : { needsManualReview: true, reason: "نوع غير مدعوم" };
+    };
+    const { onOpen } = await openWith(JSON.stringify(COMPOUND), "compound.json");
+    clickBtn("الإصلاح الآمن التلقائي");
+    await screen.findByRole("region", { name: "الإصلاح الآمن" });
+    clickBtn(/اقتراح حلول بالذكاء الاصطناعي/);
+    clickBtn("اقتراح للكل");
+    await screen.findByRole("region", { name: "مراجعة المعلم" });
+    await waitFor(() => expect(calls.filter(c => c.url === "/api/structured-exam-ai-fix")).toHaveLength(1)); // only the MCQ part
+    expect(seenType).toBe("multipleChoice");
+    const partReq = calls.find(c => c.url === "/api/structured-exam-ai-fix")!.body as { partId: string; question: { presentationType: string } };
+    expect(partReq.partId).toBe("p1");
+    expect(partReq.question.presentationType).toBe("multipleChoice");
+    await waitFor(() => expect(screen.getAllByRole("button", { name: "✓ قبول" }).length).toBe(1));
+    fireEvent.click(screen.getByRole("button", { name: "✓ قبول" }));
+    clickBtn("المتابعة إلى الفحص النهائي");
+    clickBtn(/فتح/);
+    const parts = onOpen.mock.calls[0][0].sections[0].questions[0].parts;
+    expect(parts[0].answer).toEqual({ correctOptionIndex: 0 }); // p1 got the key
+    expect(parts[1].answer).toEqual({});                        // p2 (shortAnswer) untouched
+  });
+});

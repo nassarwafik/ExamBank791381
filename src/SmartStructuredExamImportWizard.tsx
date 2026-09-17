@@ -190,7 +190,7 @@ export default function SmartStructuredExamImportWizard({ token, onClose, onOpen
         const key = targetKey(t);
         try {
           const res = await api<{ proposal?: { patch: StructuredAiProposal["patch"]; explanation: string }; needsManualReview?: boolean; failed?: boolean; reason?: string }>(
-            "/api/structured-exam-ai-fix", { method: "POST", body: JSON.stringify({ question: { id: t.questionId, ...t.node }, issueCodes: t.issueCodes, fingerprint: t.fingerprint, questionId: t.questionId, partId: t.partId }) });
+            "/api/structured-exam-ai-fix", { method: "POST", body: JSON.stringify({ question: { id: t.questionId, presentationType: t.presentationType, ...t.node }, issueCodes: t.issueCodes, fingerprint: t.fingerprint, questionId: t.questionId, partId: t.partId }) });
           setProposals(prev => ({ ...prev, [key]: {
             proposalId: key, sectionId: t.sectionId, questionId: t.questionId, partId: t.partId, presentationType: t.presentationType,
             issueCodes: t.issueCodes, fingerprint: t.fingerprint,

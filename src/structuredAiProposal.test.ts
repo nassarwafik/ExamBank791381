@@ -123,3 +123,49 @@ describe("groupOfCode — categorises by CODE, not by message text", () => {
     expect(groupOfCode("EMPTY_SECTION")).toBe("manual");
   });
 });
+
+describe("adversarial — protected fields cannot be overwritten and stale is enforced at apply", () => {
+  const mcq = { examQuestionId: "q1", displayNumber: "7", presentationType: "multipleChoice", text: "س", marks: 4, groupId: "g", options: [{ text: "A" }, { text: "B" }, { text: "C" }], answer: {} };
+  it("a crafted patch carrying forbidden keys (marks/text/options/id) changes ONLY the answer", () => {
+    const e = exam([mcq]);
+    // simulate a manipulated proposal whose patch object smuggles protected fields
+    const evil = proposal({ fingerprint: questionFingerprint(mcq), patch: { correctOptionIndex: 1, marks: 999, text: "HACKED", options: [{ text: "X" }], examQuestionId: "evil" } as never });
+    const q = applyProposal(e, evil).exam.sections[0].questions[0] as Record<string, unknown>;
+    expect(q.answer).toEqual({ correctOptionIndex: 1 });
+    expect(q).toMatchObject({ examQuestionId: "q1", marks: 4, text: "س", displayNumber: "7", groupId: "g" });
+    expect((q.options as { text: string }[]).map(o => o.text)).toEqual(["A", "B", "C"]);
+  });
+  it("editing an OPTION after generation makes the proposal stale (cannot apply)", () => {
+    const p = proposal({ fingerprint: questionFingerprint(mcq), patch: { correctOptionIndex: 1 } });
+    const edited = exam([{ ...mcq, options: [{ text: "A" }, { text: "B" }, { text: "Z" }] }]);
+    expect(proposalIsFresh(edited, p)).toBe(false);
+    expect(applyProposal(edited, p).applied).toBe(false);
+  });
+  it("editing a COMPOUND PART after generation makes that part's proposal stale", () => {
+    const part = { id: "p1", type: "multipleChoice", text: "س", marks: 3, options: [{ text: "A" }, { text: "B" }], answer: {} };
+    const compound = { examQuestionId: "q1", presentationType: "compound", text: "أجب", marks: 6, parts: [part, { id: "p2", type: "shortAnswer", text: "س2", marks: 3, answer: {} }] };
+    const e = exam([compound]);
+    const p = proposal({ partId: "p1", presentationType: "multipleChoice", fingerprint: questionFingerprint({ ...part, id: "p1" }), patch: { correctOptionIndex: 1 } });
+    expect(proposalIsFresh(e, p)).toBe(true);
+    const editedPart = { ...part, options: [{ text: "A" }, { text: "CHANGED" }] };
+    const edited = exam([{ ...compound, parts: [editedPart, compound.parts[1]] }]);
+    expect(proposalIsFresh(edited, p)).toBe(false);
+    expect(applyProposal(edited, p).applied).toBe(false);
+  });
+  it("accepting a proposal for one question does NOT staleify another question's pending proposal (answer is outside the fingerprint)", () => {
+    const q2 = { examQuestionId: "q2", presentationType: "multipleChoice", text: "س2", marks: 2, options: [{ text: "A" }, { text: "B" }], answer: {} };
+    const e = exam([mcq, q2]);
+    const pForQ2 = proposal({ questionId: "q2", fingerprint: questionFingerprint(q2), patch: { correctOptionIndex: 1 } });
+    const afterAcceptQ1 = applyProposal(e, proposal({ fingerprint: questionFingerprint(mcq), patch: { correctOptionIndex: 0 } })).exam;
+    expect(proposalIsFresh(afterAcceptQ1, pForQ2)).toBe(true); // q2 proposal still applies
+  });
+  it("a compound part apply preserves the part's id/type/marks/label", () => {
+    const part = { id: "p1", label: "أ", type: "multipleChoice", text: "س", marks: 3, options: [{ text: "A" }, { text: "B" }], answer: {} };
+    const compound = { examQuestionId: "q1", presentationType: "compound", text: "أجب", marks: 6, parts: [part] };
+    const e = exam([compound]);
+    const p = proposal({ partId: "p1", presentationType: "multipleChoice", fingerprint: questionFingerprint({ ...part, id: "p1" }), patch: { correctOptionIndex: 1 } });
+    const outPart = (applyProposal(e, p).exam.sections[0].questions[0] as { parts: Record<string, unknown>[] }).parts[0];
+    expect(outPart).toMatchObject({ id: "p1", label: "أ", type: "multipleChoice", marks: 3, text: "س" });
+    expect(outPart.answer).toEqual({ correctOptionIndex: 1 });
+  });
+});
