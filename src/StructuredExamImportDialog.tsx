@@ -66,6 +66,9 @@ export default function StructuredExamImportDialog({ onClose, onOpenInBuilder }:
           >
             <input ref={inputRef} type="file" accept={ACCEPT} hidden onChange={e => void handleFile(e.target.files?.[0])} />
             <p className="sb-import-drop-title">اسحب ملف <b>JSON</b> أو <b>HTML</b> هنا، أو اضغط للاختيار</p>
+            {/* UX-8a — the complete keyboard path to the chooser: a native button (Tab / Enter / Space) that opens the same
+                hidden input; the drop zone keeps its drag/drop and click-anywhere behaviour for pointer users. */}
+            <button type="button" className="sb-btn sb-import-choose" onClick={e => { e.stopPropagation(); inputRef.current?.click(); }}>اختيار ملف</button>
             <p className="sb-hint">الصيغ المقبولة: .json · .html · .htm — لا يُدعم Word/PDF هنا (حوّلهما خارجيًا أولًا).</p>
             {busy && <p className="sb-hint">⏳ جارٍ التحليل…</p>}
             {fileError && <div className="sb-banner sb-banner-error">{fileError}</div>}

@@ -133,6 +133,26 @@ describe("UX-8a — AssignmentReview is a real modal in place", () => {
     expect(post.body).toEqual({ action: "saveReview", assignmentId: "a1", studentId: "s1", attemptNumber: 1, overrides: { q1: { score: 8, comment: "" } }, teacherFeedback: "" });
     expect(reviewCalls.filter(c => c.method === "GET").length).toBe(2);                                 // load + reload after save, as before
   });
+
+  it("initial-load error: the dialog keeps a meaningful accessible name, the error stays visible, close stays keyboard reachable, Escape closes and focus returns to the opener", async () => {
+    globalThis.fetch = vi.fn(() => Promise.resolve({ status: 500, ok: false, json: async () => ({ ok: false, error: "تعذر تحميل ورقة الطالب." }) } as Response)) as unknown as typeof fetch;
+    render(<Host label="مراجعة">{close => <AssignmentReview token="t" assignmentId="a1" studentId="s1" initialAttempt={1} onClose={close} onSaved={() => {}} />}</Host>);
+    const opener = screen.getByRole("button", { name: "مراجعة" });
+    opener.focus(); fireEvent.click(opener);
+    await screen.findByText("تعذر تحميل ورقة الطالب.");                                                 // loading ended in the error state
+    expect(screen.queryByRole("status")).toBeNull();
+    const dialog = screen.getByRole("dialog", { name: "مراجعة ورقة الطالب" });                           // non-empty name without data
+    expect(dialog.className).toContain("review-modal");
+    expect(within(dialog).getByRole("heading", { level: 2 }).textContent).toBe("مراجعة ورقة الطالب");
+    expect(within(dialog).getByText("تعذر تحميل ورقة الطالب.")).toBeTruthy();
+    const close = within(dialog).getAllByRole("button", { name: "إغلاق" })[0];
+    close.focus(); expect(document.activeElement).toBe(close);                                           // keyboard reachable
+    screen.getByRole("button", { name: "خلفية" }).focus(); tab();
+    expect(dialog.contains(document.activeElement)).toBe(true);
+    escape();
+    await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+    expect(document.activeElement).toBe(opener);
+  });
 });
 
 // ---------- ExamPreview ----------
@@ -208,6 +228,27 @@ describe("UX-8a — StructuredExamImportDialog overlay is a real modal in place"
     expect(onOpen.mock.calls[0][0].title).toBe("امتحان مستورد");
     expect(fetchSpy).not.toHaveBeenCalled();
     expect(dialog.contains(document.activeElement)).toBe(true);
+  });
+
+  it("the file chooser has a complete keyboard path: a native 'اختيار ملف' button is reachable by Tab and opens the hidden input; no request; drop zone unchanged", async () => {
+    const fetchSpy = vi.fn();
+    globalThis.fetch = fetchSpy as unknown as typeof fetch;
+    render(<StructuredExamImportDialog onClose={() => {}} onOpenInBuilder={() => {}} />);
+    const dialog = screen.getByRole("dialog", { name: /استيراد امتحان منظّم/ });
+    const input = dialog.querySelector('input[type="file"]') as HTMLInputElement;
+    const clickSpy = vi.spyOn(input, "click").mockImplementation(() => {});
+    const choose = within(dialog).getByRole("button", { name: "اختيار ملف" });
+    expect(choose.tagName).toBe("BUTTON"); expect(choose.getAttribute("type")).toBe("button");
+    // Tab from the header close button walks to the chooser (it sits in the natural tab order)
+    within(dialog).getByRole("button", { name: /إغلاق/ }).focus();
+    const order = focusables(dialog).filter(el => !(el as HTMLElement).hidden);                        // the hidden file input is not in the tab order
+    expect(order.indexOf(choose)).toBe(order.indexOf(within(dialog).getByRole("button", { name: /إغلاق/ })) + 1);
+    choose.focus(); expect(document.activeElement).toBe(choose);
+    fireEvent.click(choose);                                                                             // native button: Enter / Space dispatch click
+    expect(clickSpy).toHaveBeenCalledTimes(1);
+    expect(dialog.querySelector(".sb-import-drop")).toBeTruthy();                                        // drag/drop zone still present
+    expect(dialog.querySelector(".sb-import-drop")?.contains(choose)).toBe(true);
+    expect(fetchSpy).not.toHaveBeenCalled();
   });
 });
 
