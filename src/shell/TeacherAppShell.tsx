@@ -8,7 +8,7 @@ import {
   IconBank, IconLogout, IconUser, IconMenu, IconClose, IconSidebar
 } from "../icons";
 import {
-  NAV_LABELS, EXAM_BANK_GROUP_LABEL, PRIMARY_NAV, EXAM_BANK_NAV, FOOTER_NAV,
+  NAV_LABELS, EXAM_BANK_GROUP_LABEL, EXAM_BANK_HEAD, PRIMARY_NAV, EXAM_BANK_NAV, FOOTER_NAV,
   activeNavId, breadcrumbFor, pageTitleFor, type TeacherNavId, type TeacherNavState
 } from "./teacherNav";
 import "../ui/ui.css";
@@ -19,7 +19,7 @@ import "../shell.css";
 // with breadcrumb + <h1>, footer navigation (audit, user, logout). No data fetching, no routing authority.
 const ICONS: Record<TeacherNavId, (p: { size?: number }) => ReactNode> = {
   dashboard: IconDashboard, students: IconStudents, assignments: IconAssignments, projects: IconProjects,
-  reports: IconReports, builder: IconBuilder, import: IconUpload, audit: IconAudit
+  reports: IconReports, bank: IconBank, builder: IconBuilder, import: IconUpload, audit: IconAudit
 };
 const DESKTOP_QUERY = "(min-width: 1024px)";
 
@@ -60,7 +60,7 @@ export default function TeacherAppShell({ nav, projectReadyTotal, displayName, o
 
   function navigate(id: TeacherNavId) { onNavigate(id); setDrawerOpen(false); }
 
-  function navButton(id: TeacherNavId) {
+  function navButton(id: TeacherNavId, variant: "" | "group-head" | "child" = "") {
     const Icon = ICONS[id];
     const isActive = id === active;
     const badge = id === "projects" && projectReadyTotal > 0 ? projectReadyTotal : 0;
@@ -68,7 +68,7 @@ export default function TeacherAppShell({ nav, projectReadyTotal, displayName, o
       <button
         key={id}
         type="button"
-        className={"eb-nav-link" + (isActive ? " is-active" : "")}
+        className={"eb-nav-link" + (isActive ? " is-active" : "") + (variant === "group-head" ? " eb-nav-group-head" : variant === "child" ? " eb-nav-child" : "")}
         aria-current={isActive ? "page" : undefined}
         title={NAV_LABELS[id]}
         onClick={() => navigate(id)}
@@ -118,14 +118,15 @@ export default function TeacherAppShell({ nav, projectReadyTotal, displayName, o
           )}
         </div>
         <nav className="eb-nav" aria-label="الأقسام">
-          {PRIMARY_NAV.map(navButton)}
+          {PRIMARY_NAV.map(id => navButton(id))}
+          {/* UX-6c — the group head is a real destination (Exam Bank management); builder + import stay as its children. */}
           <div className="eb-nav-group" role="group" aria-label={EXAM_BANK_GROUP_LABEL}>
-            <div className="eb-nav-group-label" aria-hidden="true"><IconBank size={16} /><span className="eb-nav-label">{EXAM_BANK_GROUP_LABEL}</span></div>
-            {EXAM_BANK_NAV.map(navButton)}
+            {navButton(EXAM_BANK_HEAD, "group-head")}
+            {EXAM_BANK_NAV.map(id => navButton(id, "child"))}
           </div>
         </nav>
         <nav className="eb-nav eb-nav-footer" aria-label="إعدادات وحساب">
-          {FOOTER_NAV.map(navButton)}
+          {FOOTER_NAV.map(id => navButton(id))}
           <div className="eb-user" title={displayName}><IconUser size={16} /><span className="eb-nav-label">{displayName}</span></div>
           <button type="button" className="eb-nav-link eb-logout app-sidebar-logout" title="تسجيل الخروج" onClick={onLogout}>
             <IconLogout size={18} /><span className="eb-nav-label">تسجيل الخروج</span>

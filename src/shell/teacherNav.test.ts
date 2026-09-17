@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { activeNavId, breadcrumbFor, pageTitleFor, NAV_LABELS, PRIMARY_NAV, EXAM_BANK_NAV, FOOTER_NAV, type TeacherNavState } from "./teacherNav";
+import { activeNavId, breadcrumbFor, pageTitleFor, NAV_LABELS, PRIMARY_NAV, EXAM_BANK_HEAD, EXAM_BANK_NAV, FOOTER_NAV, type TeacherNavState } from "./teacherNav";
 
 // UX-2 — presentation mapping derived from the EXISTING App.tsx state (teacherView / workspaceTab / projectCode).
 const base = (over: Partial<TeacherNavState>): TeacherNavState => ({ teacherView: "builder", workspaceTab: "dashboard", projectCode: "", projectList: [{ projectCode: "899373", title: "مشروع 899373" }], ...over });
@@ -25,17 +25,22 @@ describe("UX-2 teacherNav mapping", () => {
       expect(breadcrumbFor(s).map(c => c.label)).toEqual(crumbs);
     });
   }
-  it("an open project's ancestor crumb leads back to the projects hub; other crumbs have no destination", () => {
+  it("an open project's ancestor crumb leads back to the projects hub; the builder/import ancestor leads to the Exam Bank page (UX-6c); the current crumb has no destination", () => {
     const crumbs = breadcrumbFor(base({ teacherView: "project", projectCode: "899373" }));
     expect(crumbs[0].navId).toBe("projects");
     expect(crumbs[1].navId).toBeUndefined();
-    expect(breadcrumbFor(base({ teacherView: "builder" }))[0].navId).toBeUndefined();
+    expect(breadcrumbFor(base({ teacherView: "builder" }))[0].navId).toBe("bank");
+    expect(breadcrumbFor(base({ teacherView: "builder" }))[1].navId).toBeUndefined();
+    expect(breadcrumbFor(base({ teacherView: "bank" }))).toEqual([{ label: "بنك الامتحانات" }]);
+    expect(activeNavId(base({ teacherView: "bank" }))).toBe("bank");
+    expect(pageTitleFor(base({ teacherView: "bank" }))).toBe("بنك الامتحانات");
   });
   it("every destination has a label and appears exactly once across the sidebar groups", () => {
-    const all = [...PRIMARY_NAV, ...EXAM_BANK_NAV, ...FOOTER_NAV];
+    const all = [...PRIMARY_NAV, EXAM_BANK_HEAD, ...EXAM_BANK_NAV, ...FOOTER_NAV];
     expect(new Set(all).size).toBe(all.length);
     expect(all.sort()).toEqual(Object.keys(NAV_LABELS).sort());
     expect(FOOTER_NAV).toEqual(["audit"]);
+    expect(EXAM_BANK_HEAD).toBe("bank");                                       // UX-6c — the group head is itself a destination
     expect(EXAM_BANK_NAV).toEqual(["builder", "import"]);
   });
 });

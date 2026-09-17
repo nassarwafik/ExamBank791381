@@ -5,6 +5,7 @@ import StudentPortal from "./StudentPortal";
 const ProjectTracker = lazy(() => import("./projects/ProjectTracker"));
 const ProjectHub = lazy(() => import("./projects/ProjectHub"));
 const ReportsCenter = lazy(() => import("./reports/ReportsCenter"));
+const ExamBankPage = lazy(() => import("./bank/ExamBankPage"));
 // Structured Exam Builder (Phase 2) — code-split so it only loads when a teacher opens it.
 const StructuredExamBuilder = lazy(() => import("./StructuredExamBuilder"));
 const StructuredExamImportDialog = lazy(() => import("./StructuredExamImportDialog"));
@@ -546,7 +547,8 @@ function App() {
       "platform" |
       "import" |
       "project" |
-      "reports"
+      "reports" |
+      "bank"
     >(
       "builder"
     );
@@ -587,6 +589,7 @@ function App() {
     if (id === "projects") { goToProjects(""); return; }
     if (id === "reports") { setTeacherView("reports"); return; }
     if (id === "import") { setTeacherView("import"); return; }
+    if (id === "bank") { setTeacherView("bank"); return; }          // UX-6c — Exam Bank management page
     setTeacherView("builder");
   }
 
@@ -5496,6 +5499,18 @@ function App() {
       {teacherView === "reports" && (
         <Suspense fallback={<p className="eb-muted" role="status">جارٍ التحميل...</p>}>
           <ReportsCenter token={token} onOpenProject={goToProjects} />
+        </Suspense>
+      )}
+
+      {teacherView === "bank" && (
+        <Suspense fallback={<p className="eb-muted" role="status">جارٍ التحميل...</p>}>
+          <ExamBankPage
+            token={token}
+            onOpenBuilder={() => setTeacherView("builder")}
+            onOpenImport={() => setTeacherView("import")}
+            onOpenSavedExam={async item => { await openSavedExam(item); setTeacherView("builder"); }}
+            onCopyLibraryExamToBuilder={(snapshot, title) => handleCopyLibraryExamToBuilder(snapshot as { questions?: ExamQuestion[]; title?: string } | null, title)}
+          />
         </Suspense>
       )}
 

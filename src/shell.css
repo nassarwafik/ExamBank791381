@@ -80,6 +80,10 @@
   font-size: var(--eb-fs-12); font-weight: var(--eb-fw-bold); line-height: 22px; text-align: center;
 }
 .eb-nav-group { display: flex; flex-direction: column; gap: var(--eb-space-1); margin-block-start: var(--eb-space-2); }
+/* UX-6c — the group head is a real destination; children are indented under it so the hierarchy stays visible. */
+.eb-nav-group-head { font-weight: var(--eb-fw-semibold); }
+.eb-nav-child { min-height: 36px; padding-inline-start: calc(var(--eb-space-3) + 20px + var(--eb-space-3)); font-size: var(--eb-fs-13); }
+.eb-nav-child svg { width: 16px; height: 16px; }
 .eb-nav-group-label {
   display: flex; align-items: center; gap: var(--eb-space-2);
   padding: var(--eb-space-2) var(--eb-space-3) var(--eb-space-1);
@@ -109,6 +113,7 @@
 .eb-shell.is-compact .eb-user { justify-content: center; padding-inline: 0; }
 .eb-shell.is-compact .eb-nav-badge { position: absolute; inset-block-start: 2px; inset-inline-end: 2px; min-width: 18px; line-height: 18px; font-size: 11px; }
 .eb-shell.is-compact .eb-nav-link { position: relative; }
+.eb-shell.is-compact .eb-nav-child { min-height: 40px; padding-inline-start: 0; }
 
 /* ---------- Page column ---------- */
 .eb-shell-main { flex: 1 1 auto; min-width: 0; min-height: 100vh; display: flex; flex-direction: column; }
