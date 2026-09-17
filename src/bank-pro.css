@@ -1,0 +1,67 @@
+/* ============================================================
+   ExamBank — Exam Bank Management (UX-6c)
+   Teacher-only. Token-only (--eb-*), RTL-first, no logic.
+   Breakpoints align with the shell: 768 / 1024 / 1280.
+   ============================================================ */
+.eb-bank{ display:flex; flex-direction:column; gap:var(--eb-space-5); min-width:0; }
+.eb-bank-intro{ margin:0; color:var(--eb-muted); font-size:var(--eb-fs-13); line-height:var(--eb-lh-body); }
+.eb-bank-actions{ display:flex; flex-wrap:wrap; gap:var(--eb-space-2); }
+.eb-bank-stats{ display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:var(--eb-space-3); }
+.eb-bank-dist{ display:grid; grid-template-columns:repeat(auto-fit,minmax(220px,1fr)); gap:var(--eb-space-3); }
+.eb-bank-dist-card{ padding:var(--eb-space-4); background:var(--eb-surface); border:1px solid var(--eb-line); border-radius:var(--eb-r-lg); min-width:0; }
+.eb-bank-dist-card h3{ margin:0 0 var(--eb-space-2); font-size:var(--eb-fs-13); font-weight:var(--eb-fw-semibold); color:var(--eb-text-heading); }
+.eb-bank-dl{ margin:0; display:grid; grid-template-columns:minmax(0,1fr) auto; gap:4px var(--eb-space-3); font-size:var(--eb-fs-13); }
+.eb-bank-dl dt{ color:var(--eb-text); overflow-wrap:anywhere; }
+.eb-bank-dl dd{ margin:0; color:var(--eb-text-heading); font-weight:var(--eb-fw-semibold); font-variant-numeric:tabular-nums; }
+
+.eb-bank-toolbar{ display:flex; flex-wrap:wrap; align-items:end; gap:var(--eb-space-3); }
+.eb-bank-toolbar .eb-search-field{ flex:1 1 220px; min-width:0; }
+.eb-bank-filter{ display:flex; flex-direction:column; gap:4px; font-size:var(--eb-fs-12); color:var(--eb-muted); min-width:0; }
+.eb-bank-filter select{ min-height:36px; font:inherit; font-size:var(--eb-fs-13); color:var(--eb-text); }
+.eb-bank-count{ margin:0; color:var(--eb-muted); font-size:var(--eb-fs-13); }
+
+.eb-bank-table-wrap{ border:1px solid var(--eb-line); border-radius:var(--eb-r-lg); overflow:auto; background:var(--eb-surface); }
+.eb-bank-table{ width:100%; border-collapse:collapse; min-width:720px; }
+.eb-bank-table th{ background:var(--eb-surface-2); color:var(--eb-muted); font-size:var(--eb-fs-12); font-weight:var(--eb-fw-semibold); text-align:start; padding:var(--eb-space-2) var(--eb-space-3); border-bottom:1px solid var(--eb-line); white-space:nowrap; }
+.eb-bank-table td{ padding:var(--eb-space-2) var(--eb-space-3); border-bottom:1px solid var(--eb-line); color:var(--eb-text); font-size:var(--eb-fs-13); vertical-align:top; }
+.eb-bank-table tbody tr:last-child td{ border-bottom:0; }
+.eb-bank-text{ display:block; max-width:420px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.eb-bank-id{ display:block; margin-top:2px; color:var(--eb-muted); font-size:var(--eb-fs-12); direction:ltr; unicode-bidi:plaintext; text-align:end; }
+.eb-bank-num{ font-variant-numeric:tabular-nums; }
+
+.eb-bank-preview{ display:flex; flex-direction:column; gap:var(--eb-space-3); }
+.eb-bank-preview-text{ margin:0; white-space:pre-wrap; line-height:var(--eb-lh-body); color:var(--eb-text-heading); }
+.eb-bank-options{ margin:0; padding-inline-start:var(--eb-space-5); display:flex; flex-direction:column; gap:4px; }
+.eb-bank-options li.is-correct{ color:var(--eb-success-tx); font-weight:var(--eb-fw-semibold); }
+.eb-bank-meta{ display:flex; flex-wrap:wrap; gap:var(--eb-space-2); }
+
+.eb-bank-form{ display:flex; flex-direction:column; gap:var(--eb-space-3); }
+.eb-bank-form-grid{ display:grid; grid-template-columns:repeat(auto-fit,minmax(160px,1fr)); gap:var(--eb-space-3); }
+.eb-bank-form label{ display:flex; flex-direction:column; gap:4px; font-size:var(--eb-fs-13); color:var(--eb-text); min-width:0; }
+.eb-bank-form input,.eb-bank-form select,.eb-bank-form textarea{ font:inherit; font-size:var(--eb-fs-14); min-height:40px; padding:var(--eb-space-2) var(--eb-space-3); border:1px solid var(--eb-border-strong); border-radius:var(--eb-r-sm); background:var(--eb-surface); color:var(--eb-text); min-width:0; }
+.eb-bank-form textarea{ min-height:96px; resize:vertical; }
+.eb-bank-option-row{ display:grid; grid-template-columns:auto minmax(0,1fr) auto; align-items:center; gap:var(--eb-space-2); }
+.eb-bank-option-row input[type="radio"]{ width:18px; height:18px; min-height:0; margin:0; }
+.eb-bank-field-row{ display:grid; grid-template-columns:minmax(0,1fr) minmax(0,1fr) auto; align-items:center; gap:var(--eb-space-2); }
+.eb-bank-form-errors{ margin:0; padding-inline-start:var(--eb-space-5); color:var(--eb-danger-tx); font-size:var(--eb-fs-13); }
+.eb-bank-hint{ margin:0; color:var(--eb-muted); font-size:var(--eb-fs-12); }
+
+.eb-bank-exam-list{ list-style:none; margin:0; padding:0; display:flex; flex-direction:column; gap:var(--eb-space-2); }
+.eb-bank-exam-row{ display:flex; flex-wrap:wrap; align-items:center; gap:var(--eb-space-3); padding:var(--eb-space-3) var(--eb-space-4); background:var(--eb-surface); border:1px solid var(--eb-line); border-radius:var(--eb-r-lg); min-width:0; }
+.eb-bank-exam-main{ flex:1 1 240px; min-width:0; display:flex; flex-direction:column; gap:2px; }
+.eb-bank-exam-title{ margin:0; font-size:var(--eb-fs-14); font-weight:var(--eb-fw-semibold); color:var(--eb-text-heading); overflow-wrap:anywhere; }
+.eb-bank-exam-meta{ margin:0; color:var(--eb-muted); font-size:var(--eb-fs-12); }
+.eb-bank-exam-actions{ display:flex; flex-wrap:wrap; gap:var(--eb-space-2); }
+
+@media (max-width:767px){
+  .eb-bank-toolbar{ align-items:stretch; }
+  .eb-bank-toolbar .eb-search-field{ flex-basis:100%; }
+  .eb-bank-filter select{ min-height:44px; }
+  .eb-bank-table .eb-button.is-small,.eb-bank-exam-actions .eb-button{ min-height:44px; }
+  .eb-bank-text{ max-width:220px; }
+  .eb-bank-field-row{ grid-template-columns:minmax(0,1fr) auto; }
+  .eb-bank-field-row input:nth-child(2){ grid-column:1; }
+}
+@media (prefers-reduced-motion: reduce){
+  .eb-bank *{ transition:none; animation:none; }
+}

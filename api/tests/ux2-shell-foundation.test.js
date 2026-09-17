@@ -459,3 +459,65 @@ describe("Final acceptance — class card hit area and ActionMenu ordering", () 
     ]);
   });
 });
+
+// UX-6c — Exam Bank Management guards: the bundled official exam-library stays a GET-only reader, the page never
+// writes to it, question CRUD goes only through /api/bank-questions on the existing bank store, and the page keeps
+// the shell's single h1 and the accessibility/motion rules.
+describe("UX-6c — Exam Bank Management", () => {
+  it("exam-library is read-only: GET only, disk-backed, no write API; the bank page never posts to it", () => {
+    const lib = readFileSync(join(ROOT, "api", "src", "functions", "exam-library.js"), "utf8");
+    expect(lib).toMatch(/methods: \["GET"\]/);
+    expect(lib).not.toMatch(/upload\(|BlobServiceClient|writeFileSync/);
+    const page = read("bank/ExamBankPage.tsx");
+    expect(page).not.toMatch(/exam-library[^\n]*method: "POST"/);
+    expect(page.match(/\/api\/exam-library/g)?.length).toBe(2);                        // catalog GET + item GET only
+  });
+  it("question CRUD uses only /api/bank-questions (create / update / delete) and saved exams only the existing /api/saved-exams contract", () => {
+    const page = read("bank/ExamBankPage.tsx");
+    expect(page).toMatch(/action: "create"/); expect(page).toMatch(/action: "update"/); expect(page).toMatch(/action: "delete", id: row\.id/);
+    expect(page).toMatch(/"\/api\/saved-exams", \{ method: "POST", body: JSON\.stringify\(\{ action: "delete", blobName: item\.blobName \}\)/);
+    expect(page).not.toMatch(/save-exam-artifact|question-bank-action|bank-summary/);   // no second saved-exam / bank system
+    const fn = readFileSync(join(ROOT, "api", "src", "functions", "bank-questions.js"), "utf8");
+    expect(fn).toMatch(/requireBuilderAuth/); expect(fn).toMatch(/mutateJsonWithRetry/); expect(fn).toMatch(/isOfficialSource\(sourceId\)\) return \{ error: bad\(403/);
+    expect(fn).toMatch(/INDEX_BLOB = "index\/questions-index\.json"/); expect(fn).toMatch(/SOURCES_PREFIX = "sources\/"/);
+  });
+  it("bank-questions classifies and the Builder converts through ONE shared helper (bank-question-exam.js); the page never sends a question with a stale structure and every create carries a requestKey", () => {
+    const fn = readFileSync(join(ROOT, "api", "src", "functions", "bank-questions.js"), "utf8");
+    const action = readFileSync(join(ROOT, "api", "src", "functions", "question-bank-action.js"), "utf8");
+    const shared = readFileSync(join(ROOT, "api", "src", "lib", "bank-question-exam.js"), "utf8");
+    expect(fn).toMatch(/require\("\.\.\/lib\/bank-question-exam"\)/);
+    expect(fn).toMatch(/const presentationTypeFromBankQuestion = presentationTypeFromFullQuestion;/);
+    expect(action).toMatch(/require\("\.\.\/lib\/bank-question-exam"\)/);
+    expect(action).not.toMatch(/^function presentationTypeFromFullQuestion|^function buildExamQuestion/m);   // no second copy
+    expect(shared).toMatch(/function presentationTypeFromFullQuestion/); expect(shared).toMatch(/function buildExamQuestion/);
+    expect(fn).toMatch(/mode: "exactSequence", values: fields\.map\(f => f\.correct\)/);                        // canonical sequence answer
+    expect(fn).toMatch(/kind: isBank \? "select" : "text"/);
+    expect(fn).toMatch(/fields: n\.fields, wordBank: n\.wordBank, answer: n\.answer/);                             // update rewrites the whole structure
+    expect(fn).toMatch(/const id = questionIdForRequestKey\(body\?\.requestKey\);\n\s+if \(!id\) return bad\(400/);   // mandatory key
+    expect(fn).not.toMatch(/newQuestionId|makeId|randomBytes|require\("crypto"\)/);                             // no fallback id generator at all
+    expect(action).toMatch(/function isBlobNotFound\(error\) \{\n\s+return error\?\.statusCode === 404 \|\| error\?\.code === "BlobNotFound";/);
+    expect(action).toMatch(/if \(!isBlobNotFound\(error\)\) \{\n\s+throw error;/);                          // only a missing blob is skipped
+    expect(action).not.toMatch(/\} catch \{\n\s+sourceDocument = \{ questions: \[\] \};/);
+    const page = read("bank/ExamBankPage.tsx");
+    expect(page).toMatch(/setInput\(prev => structureForType\(prev, presentationType\)\)/);
+    expect(page).toMatch(/action: "create", question: input, requestKey/);
+  });
+  it("the page adds no h1 (the shell owns it), uses role=status / role=alert, and its stylesheet has no outline:none and a reduced-motion rule", () => {
+    const page = read("bank/ExamBankPage.tsx");
+    expect(page).not.toMatch(/<h1/);
+    expect(page).toMatch(/role="status"/); expect(page).toMatch(/role="alert"/);
+    const css = read("bank-pro.css");
+    expect(css).not.toMatch(/outline\s*:\s*(none|0)/);
+    expect(css).toMatch(/prefers-reduced-motion: reduce/);
+    expect(css).toMatch(/max-width:767px/);
+  });
+  it("navigation: the Exam Bank group head is a real destination and the builder/import crumbs lead to it", () => {
+    const nav = read("shell/teacherNav.ts");
+    expect(nav).toMatch(/bank: "بنك الامتحانات"/);
+    expect(nav).toMatch(/case "bank": return "bank";/);
+    expect(nav).toMatch(/\{ label: EXAM_BANK_GROUP_LABEL, navId: "bank" \}/);
+    const shell = read("shell/TeacherAppShell.tsx");
+    expect(shell).toMatch(/navButton\(EXAM_BANK_HEAD, "group-head"\)/);
+    expect(shell).not.toMatch(/eb-nav-group-label" aria-hidden/);
+  });
+});

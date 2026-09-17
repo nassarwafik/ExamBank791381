@@ -8,8 +8,7 @@ const {
 const crypto = require("crypto");
 
 const {
-  requireBuilderAuth,
-  createSignedAssetParams
+  requireBuilderAuth
 } = require("../lib/builder-auth");
 
 const BANK_CONTAINER = "bank";
@@ -55,156 +54,6 @@ async function downloadJson(
   return JSON.parse(
     buffer.toString("utf8")
   );
-}
-
-function presentationTypeFromFullQuestion(
-  question
-) {
-  if (
-    question.type ===
-    "multipleChoice"
-  ) {
-    return "multipleChoice";
-  }
-
-  if (
-    question.type ===
-    "multiField"
-  ) {
-    const fields =
-      Array.isArray(
-        question.fields
-      )
-        ? question.fields
-        : [];
-
-    const hasSelect =
-      fields.some(field =>
-        String(
-          field.kind || ""
-        ).toLowerCase() ===
-          "select" ||
-        (
-          Array.isArray(
-            field.options
-          ) &&
-          field.options.length > 2
-        )
-      );
-
-    return hasSelect
-      ? "wordBank"
-      : "fillBlank";
-  }
-
-  return "open";
-}
-
-function broadlyMatchesType(
-  indexQuestion,
-  desiredType
-) {
-  if (!desiredType) {
-    return true;
-  }
-
-  if (
-    desiredType ===
-    "multipleChoice"
-  ) {
-    return (
-      indexQuestion.type ===
-      "multipleChoice"
-    );
-  }
-
-  if (
-    desiredType ===
-      "fillBlank" ||
-    desiredType ===
-      "wordBank"
-  ) {
-    return (
-      indexQuestion.type ===
-      "multiField"
-    );
-  }
-
-  return ![
-    "multipleChoice",
-    "multiField"
-  ].includes(
-    indexQuestion.type
-  );
-}
-
-function isOfficialLikeSource(
-  question
-) {
-  const sourceId =
-    String(
-      question.sourceId || ""
-    );
-
-  const examCode =
-    String(
-      question.examCode || ""
-    );
-
-  return (
-    /^791381-20\d{2}/.test(
-      sourceId
-    ) ||
-    /^791367-20\d{2}/.test(
-      sourceId
-    ) ||
-    examCode === "791381" ||
-    examCode === "791367"
-  );
-}
-
-function buildAssetData(asset) {
-  if (!asset?.blobName) {
-    return null;
-  }
-
-  const {
-    exp,
-    sig
-  } =
-    createSignedAssetParams(
-      asset.blobName,
-      8 * 60 * 60
-    );
-
-  return {
-    id:
-      asset.id ||
-      asset.key ||
-      asset.blobName,
-
-    origin: "bank",
-
-    blobName:
-      asset.blobName,
-
-    contentType:
-      asset.contentType ||
-      "image/png",
-
-    dataUrl:
-      "/api/question-image" +
-      "?blob=" +
-      encodeURIComponent(
-        asset.blobName
-      ) +
-      "&exp=" +
-      encodeURIComponent(
-        String(exp)
-      ) +
-      "&sig=" +
-      encodeURIComponent(sig)
-  };
 }
 
 function candidateScore(
@@ -311,599 +160,172 @@ function candidateScore(
   return score;
 }
 
-function buildExamQuestion(
-  fullQuestion,
-  indexQuestion,
-  currentQuestion
-) {
-  const renderedAssets =
-    (
-      Array.isArray(
-        fullQuestion.assets
-      )
-        ? fullQuestion.assets
-        : []
-    )
-      .map(
-        buildAssetData
-      )
-      .filter(Boolean);
 
-  const presentationType =
-    presentationTypeFromFullQuestion(
-      fullQuestion
-    );
+// The bank → exam-question conversion (presentation type, type matching, asset signing, buildExamQuestion) lives in
+// ../lib/bank-question-exam.js so the Exam Bank management endpoint converts questions through the SAME logic.
+const {
+  presentationTypeFromFullQuestion,
+  broadlyMatchesType,
+  isOfficialLikeSource,
+  buildExamQuestion
+} = require("../lib/bank-question-exam");
 
-  return {
-    examQuestionId:
-      currentQuestion
-        .examQuestionId,
-
-    origin: "bank",
-
-    bankQuestionId:
-      fullQuestion.id,
-
-    sourceId:
-      fullQuestion.sourceId,
-
-    sourceQuestionId:
-      fullQuestion
-        .sourceQuestionId,
-
-    questionNumber:
-      fullQuestion
-        .questionNumber,
-
-    section:
-      indexQuestion.section,
-
-    topic:
-      indexQuestion.topic,
-
-    secondaryTopics:
-      indexQuestion
-        .secondaryTopics ||
-      [],
-
-    difficulty:
-      Number(
-        indexQuestion
-          .difficulty
-      ),
-
-    difficultyLabel:
-      indexQuestion
-        .difficultyLabel ||
-      "",
-
-    familyKey:
-      indexQuestion
-        .familyKey ||
-      "",
-
-    hasCLI:
-      indexQuestion
-        .hasCLI === true,
-
-    requiresCalculation:
-      indexQuestion
-        .requiresCalculation ===
-      true,
-
-    presentationType,
-
-    bankType:
-      fullQuestion.type,
-
-    marks:
-      Number(
-        currentQuestion
-          .marks ||
-        0
-      ),
-
-    locked:
-      currentQuestion
-        .locked === true,
-
-    text:
-      fullQuestion.text ||
-      "",
-
-    textHtml:
-      fullQuestion.textHtml ||
-      "",
-
-    options:
-      fullQuestion.options ||
-      [],
-
-    fields:
-      fullQuestion.fields ||
-      [],
-
-    parts:
-      fullQuestion.parts ||
-      [],
-
-    answer:
-      fullQuestion.answer ||
-      {},
-
-    hint:
-      fullQuestion.hint ||
-      "",
-
-    teacherNote:
-      currentQuestion
-        .teacherNote ||
-      "",
-
-    aiInstruction: "",
-
-    wasModified: false,
-
-    image: {
-      exists:
-        renderedAssets.length >
-        0,
-
-      visible:
-        renderedAssets.length >
-        0,
-
-      origin:
-        renderedAssets.length >
-        0
-          ? "bank"
-          : null,
-
-      assets:
-        renderedAssets,
-
-      prompt: null
-    },
-
-    history: [],
-    redoStack: []
-  };
+// The repository's Azure convention for a blob that does not exist (platform-storage, manage-students, …). ONLY
+// this case is a "missing source"; every other read failure (timeout, auth, 5xx, malformed body) is a real error.
+function isBlobNotFound(error) {
+  return error?.statusCode === 404 || error?.code === "BlobNotFound";
 }
 
-app.http(
-  "questionBankAction",
-  {
-    methods: [
-      "POST"
-    ],
-
-    authLevel:
-      "anonymous",
-
-    route:
-      "question-bank-action",
-
-    handler:
-      async request => {
-        try {
-          const auth =
-            requireBuilderAuth(
-              request
-            );
-
-          if (!auth.ok) {
-            return auth.response;
-          }
-
-          let body = {};
-
-          try {
-            body =
-              await request.json();
-          }
-          catch {
-            body = {};
-          }
-
-          const currentQuestion =
-            body?.question;
-
-          if (
-            !currentQuestion
-              ?.examQuestionId
-          ) {
-            return {
-              status: 400,
-
-              jsonBody: {
-                ok: false,
-
-                error:
-                  "Current question is required."
-              }
-            };
-          }
-
-          const desiredDifficulty =
-            body?.difficulty ===
-              undefined ||
-            body?.difficulty ===
-              null
-              ? null
-              : Number(
-                  body.difficulty
-                );
-
-          const desiredType =
-            body
-              ?.presentationType
-              ? String(
-                  body
-                    .presentationType
-                )
-              : null;
-
-          const desiredTopic =
-            body?.topic
-              ? String(
-                  body.topic
-                ).trim()
-              : null;
-
-          if (
-            desiredDifficulty !==
-              null &&
-            ![
-              1,
-              2,
-              3,
-              4,
-              5
-            ].includes(
-              desiredDifficulty
-            )
-          ) {
-            return {
-              status: 400,
-
-              jsonBody: {
-                ok: false,
-                error:
-                  "Invalid difficulty."
-              }
-            };
-          }
-
-          if (
-            desiredType &&
-            ![
-              "multipleChoice",
-              "fillBlank",
-              "wordBank",
-              "open"
-            ].includes(
-              desiredType
-            )
-          ) {
-            return {
-              status: 400,
-
-              jsonBody: {
-                ok: false,
-
-                error:
-                  "Invalid presentation type."
-              }
-            };
-          }
-
-          const connectionString =
-            process.env
-              .AZURE_STORAGE_CONNECTION_STRING;
-
-          if (
-            !connectionString
-          ) {
-            throw new Error(
-              "AZURE_STORAGE_CONNECTION_STRING is not configured"
-            );
-          }
-
-          const blobServiceClient =
-            BlobServiceClient
-              .fromConnectionString(
-                connectionString
-              );
-
-          const bankContainer =
-            blobServiceClient
-              .getContainerClient(
-                BANK_CONTAINER
-              );
-
-          const index =
-            await downloadJson(
-              bankContainer,
-              INDEX_BLOB
-            );
-
-          const usedIds =
-            new Set(
-              Array.isArray(
-                body
-                  ?.usedBankQuestionIds
-              )
-                ? body
-                    .usedBankQuestionIds
-                    .map(String)
-                : []
-            );
-
-          if (
-            currentQuestion
-              .bankQuestionId
-          ) {
-            usedIds.add(
-              String(
-                currentQuestion
-                  .bankQuestionId
-              )
-            );
-          }
-
-          const usedFamilies =
-            new Set(
-              Array.isArray(
-                body
-                  ?.usedFamilyKeys
-              )
-                ? body
-                    .usedFamilyKeys
-                    .map(String)
-                    .filter(
-                      Boolean
-                    )
-                : []
-            );
-
-          const allQuestions =
-            Array.isArray(
-              index.questions
-            )
-              ? index.questions
-              : [];
-
-          let candidates =
-            allQuestions.filter(
-              candidate => {
-                if (
-                  !candidate?.id ||
-                  !candidate
-                    ?.sourceId
-                ) {
-                  return false;
-                }
-
-                if (
-                  usedIds.has(
-                    String(
-                      candidate.id
-                    )
-                  )
-                ) {
-                  return false;
-                }
-
-                if (
-                  ![
-                    "BASIC",
-                    "INFRASTRUCTURE"
-                  ].includes(
-                    candidate.section
-                  )
-                ) {
-                  return false;
-                }
-
-                if (
-                  !candidate.topic ||
-                  candidate.topic ===
-                    "UNKNOWN"
-                ) {
-                  return false;
-                }
-
-                if (
-                  candidate
-                    .needsReview ===
-                  true
-                ) {
-                  return false;
-                }
-
-                if (
-                  candidate
-                    .reviewStatus ===
-                  "needs-review"
-                ) {
-                  return false;
-                }
-
-                if (
-                  desiredDifficulty !==
-                    null &&
-                  Number(
-                    candidate
-                      .difficulty
-                  ) !==
-                    desiredDifficulty
-                ) {
-                  return false;
-                }
-
-                if (
-                  desiredTopic &&
-                  String(
-                    candidate.topic
-                  ) !==
-                    desiredTopic
-                ) {
-                  return false;
-                }
-
-                if (
-                  !broadlyMatchesType(
-                    candidate,
-                    desiredType
-                  )
-                ) {
-                  return false;
-                }
-
-                return true;
-              }
-            );
-
-          if (
-            candidates.length ===
-            0
-          ) {
-            throw new Error(
-              "No eligible replacement question was found."
-            );
-          }
-
-          candidates.sort(
-            (
-              a,
-              b
-            ) =>
-              candidateScore(
-                b,
-                currentQuestion,
-                desiredDifficulty,
-                desiredType,
-                usedFamilies
-              ) -
-              candidateScore(
-                a,
-                currentQuestion,
-                desiredDifficulty,
-                desiredType,
-                usedFamilies
-              )
-          );
-
-          const sourceCache =
-            new Map();
-
-          let chosen = null;
-
-          for (
-            const candidate
-            of candidates.slice(
-              0,
-              100
-            )
-          ) {
-            let sourceDocument =
-              sourceCache.get(
-                candidate.sourceId
-              );
-
-            if (
-              !sourceDocument
-            ) {
-              sourceDocument =
-                await downloadJson(
-                  bankContainer,
-                  "sources/" +
-                    candidate
-                      .sourceId +
-                    ".json"
-                );
-
-              sourceCache.set(
-                candidate
-                  .sourceId,
-                sourceDocument
-              );
-            }
-
-            const fullQuestion =
-              sourceDocument
-                ?.questions
-                ?.find(
-                  item =>
-                    item.id ===
-                    candidate.id
-                );
-
-            if (
-              !fullQuestion
-            ) {
-              continue;
-            }
-
-            const actualType =
-              presentationTypeFromFullQuestion(
-                fullQuestion
-              );
-
-            if (
-              desiredType &&
-              actualType !==
-                desiredType
-            ) {
-              continue;
-            }
-
-            chosen = {
-              indexQuestion:
-                candidate,
-
-              fullQuestion
-            };
-
-            break;
-          }
-
-          if (!chosen) {
-            throw new Error(
-              "No replacement question matched the requested controls."
-            );
-          }
-
-          return {
-            status: 200,
-
-            jsonBody: {
-              ok: true,
-
-              question:
-                buildExamQuestion(
-                  chosen
-                    .fullQuestion,
-
-                  chosen
-                    .indexQuestion,
-
-                  currentQuestion
-                )
-            }
-          };
-        }
-        catch {
-          return {
-            status: 500,
-
-            jsonBody: {
-              ok: false,
-
-              error: "تعذر تنفيذ إجراء بنك الأسئلة حاليًا."
-            }
-          };
-        }
-      }
+function getBankContainer() {
+  const connectionString = process.env.AZURE_STORAGE_CONNECTION_STRING;
+  if (!connectionString) {
+    throw new Error("AZURE_STORAGE_CONNECTION_STRING is not configured");
   }
-);
+  return BlobServiceClient.fromConnectionString(connectionString).getContainerClient(BANK_CONTAINER);
+}
+
+// Testable seam (same convention as the other functions): deps override auth / container / blob reads so the
+// selection can run against an in-memory index + source documents. Behaviour is unchanged for production callers.
+async function handler(request, deps = {}) {
+  const authFn = deps.requireBuilderAuth || requireBuilderAuth;
+  const getBank = deps.getBankContainer || getBankContainer;
+  const readJson = deps.downloadJson || downloadJson;
+  try {
+    const auth = authFn(request);
+    if (!auth.ok) {
+      return auth.response;
+    }
+
+    let body = {};
+    try {
+      body = await request.json();
+    } catch {
+      body = {};
+    }
+
+    const currentQuestion = body?.question;
+    if (!currentQuestion?.examQuestionId) {
+      return { status: 400, jsonBody: { ok: false, error: "Current question is required." } };
+    }
+
+    const desiredDifficulty = body?.difficulty === undefined || body?.difficulty === null ? null : Number(body.difficulty);
+    const desiredType = body?.presentationType ? String(body.presentationType) : null;
+    const desiredTopic = body?.topic ? String(body.topic).trim() : null;
+
+    if (desiredDifficulty !== null && ![1, 2, 3, 4, 5].includes(desiredDifficulty)) {
+      return { status: 400, jsonBody: { ok: false, error: "Invalid difficulty." } };
+    }
+    if (desiredType && !["multipleChoice", "fillBlank", "wordBank", "open"].includes(desiredType)) {
+      return { status: 400, jsonBody: { ok: false, error: "Invalid presentation type." } };
+    }
+
+    const bankContainer = getBank();
+    const index = await readJson(bankContainer, INDEX_BLOB);
+
+    const usedIds = new Set(Array.isArray(body?.usedBankQuestionIds) ? body.usedBankQuestionIds.map(String) : []);
+    if (currentQuestion.bankQuestionId) {
+      usedIds.add(String(currentQuestion.bankQuestionId));
+    }
+    const usedFamilies = new Set(Array.isArray(body?.usedFamilyKeys) ? body.usedFamilyKeys.map(String).filter(Boolean) : []);
+
+    const allQuestions = Array.isArray(index?.questions) ? index.questions : [];
+    const candidates = allQuestions.filter(candidate => {
+      if (!candidate?.id || !candidate?.sourceId) {
+        return false;
+      }
+      if (usedIds.has(String(candidate.id))) {
+        return false;
+      }
+      if (!["BASIC", "INFRASTRUCTURE"].includes(candidate.section)) {
+        return false;
+      }
+      if (!candidate.topic || candidate.topic === "UNKNOWN") {
+        return false;
+      }
+      if (candidate.needsReview === true) {
+        return false;
+      }
+      if (candidate.reviewStatus === "needs-review") {
+        return false;
+      }
+      if (desiredDifficulty !== null && Number(candidate.difficulty) !== desiredDifficulty) {
+        return false;
+      }
+      if (desiredTopic && String(candidate.topic) !== desiredTopic) {
+        return false;
+      }
+      if (!broadlyMatchesType(candidate, desiredType)) {
+        return false;
+      }
+      return true;
+    });
+
+    if (candidates.length === 0) {
+      throw new Error("No eligible replacement question was found.");
+    }
+
+    candidates.sort((a, b) =>
+      candidateScore(b, currentQuestion, desiredDifficulty, desiredType, usedFamilies) -
+      candidateScore(a, currentQuestion, desiredDifficulty, desiredType, usedFamilies));
+
+    const sourceCache = new Map();
+    let chosen = null;
+
+    for (const candidate of candidates.slice(0, 100)) {
+      let sourceDocument = sourceCache.get(candidate.sourceId);
+      if (!sourceDocument) {
+        // Defensive (stale index): an index entry whose source blob genuinely does not exist (404 / BlobNotFound)
+        // must never become a candidate nor fail the whole selection — it is skipped exactly like an entry whose
+        // question is gone. Any OTHER storage failure is rethrown and reaches the generic 500 below: a real outage
+        // must not silently make a valid source disappear and pick a different question.
+        try {
+          sourceDocument = await readJson(bankContainer, "sources/" + candidate.sourceId + ".json");
+        } catch (error) {
+          if (!isBlobNotFound(error)) {
+            throw error;
+          }
+          sourceDocument = { questions: [] };
+        }
+        if (!sourceDocument || typeof sourceDocument !== "object") {
+          sourceDocument = { questions: [] };
+        }
+        sourceCache.set(candidate.sourceId, sourceDocument);
+      }
+
+      // The SOURCE document is the authority: an index entry with no stored question (deleted, or an index write
+      // that outlived its source) is not a usable candidate.
+      const fullQuestion = Array.isArray(sourceDocument.questions) ? sourceDocument.questions.find(item => item.id === candidate.id) : null;
+      if (!fullQuestion) {
+        continue;
+      }
+
+      const actualType = presentationTypeFromFullQuestion(fullQuestion);
+      if (desiredType && actualType !== desiredType) {
+        continue;
+      }
+
+      chosen = { indexQuestion: candidate, fullQuestion };
+      break;
+    }
+
+    if (!chosen) {
+      throw new Error("No replacement question matched the requested controls.");
+    }
+
+    return {
+      status: 200,
+      jsonBody: { ok: true, question: buildExamQuestion(chosen.fullQuestion, chosen.indexQuestion, currentQuestion) }
+    };
+  } catch {
+    return { status: 500, jsonBody: { ok: false, error: "تعذر تنفيذ إجراء بنك الأسئلة حاليًا." } };
+  }
+}
+
+app.http("questionBankAction", {
+  methods: ["POST"],
+  authLevel: "anonymous",
+  route: "question-bank-action",
+  handler: request => handler(request)
+});
+
+module.exports = { handler, isBlobNotFound, presentationTypeFromFullQuestion, broadlyMatchesType, isOfficialLikeSource, buildExamQuestion };
