@@ -1,6 +1,6 @@
 // @vitest-environment happy-dom
 import { describe, it, expect, afterEach, beforeEach, vi } from "vitest";
-import { render, cleanup, screen, fireEvent, waitFor } from "@testing-library/react";
+import { render, cleanup, screen, fireEvent, waitFor, act } from "@testing-library/react";
 import TeacherPlatform from "./TeacherPlatform";
 
 // Roadmap #18 — teacher bulk-import UX (R–Y): selecting a file only PREVIEWS (never creates), preview shows
@@ -50,6 +50,14 @@ const jsonFile = () => new File([JSON.stringify([{ firstName: "علي", familyNa
 async function mountStudents() {
   const utils = render(<TeacherPlatform token="t" currentExam={null} workspaceTab="students" />);
   await screen.findByRole("heading", { level: 2, name: "صف أول" }); // roster pane for the default class is up
+  // The class-selection effect in TeacherPlatform (it resets the workspace dialog to "none", THEN issues the roster
+  // read) runs in a scheduler task AFTER the commit that shows this heading. A click on "استيراد" dispatched before
+  // that effect has run is lost: act() flushes the pending effect first, so its setDialog("none") is queued behind
+  // setDialog("import") and the dialog never opens (Quality Gate runs 356, 359 and 374 — the 15 s wait then expires
+  // with the button enabled and no dialog). Wait for the roster read that only the effect issues, then flush React's
+  // queue, so every test starts from the settled workspace. Assertions unchanged.
+  await waitFor(() => expect(calls.some(c => c.url.includes("/api/students"))).toBe(true));
+  await act(async () => {});
   return utils;
 }
 // UX-4: the import flow lives in its own dialog (file → preview → confirm import); the file input is inside it.
