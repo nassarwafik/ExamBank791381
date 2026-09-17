@@ -48,6 +48,7 @@
 /* ---------- Class rows ---------- */
 .eb-class-list{ list-style:none; margin:0; padding:0; display:flex; flex-direction:column; gap:var(--eb-space-2); }
 .eb-class-row{
+  position:relative; /* final-acceptance fix — containing block for the select button's stretched hit area */
   display:flex; align-items:flex-start; gap:var(--eb-space-1); min-width:0;
   border:1px solid var(--eb-line); border-radius:var(--eb-r); background:var(--eb-surface); padding:var(--eb-space-1);
   transition:border-color var(--eb-dur) var(--eb-ease), box-shadow var(--eb-dur) var(--eb-ease);
@@ -59,6 +60,12 @@
   flex:1 1 auto; min-width:0; display:flex; flex-direction:column; gap:3px; text-align:start;
   border:0; background:transparent; padding:var(--eb-space-2) var(--eb-space-3); border-radius:var(--eb-r-sm); color:var(--eb-text); font:inherit; cursor:pointer;
 }
+/* Final-acceptance fix — the WHOLE visible card is the selection hit area (the row's padding, the gap and the
+   column under the "⋯" trigger used to be dead): the native select button stretches an empty pseudo-element over
+   the row, so every pointer hit on the card targets the same <button> (same onSelect, same aria-pressed, same
+   keyboard path). The actions trigger is layered above it so the "⋯" control never selects the class. */
+.eb-class-select::before{ content:""; position:absolute; inset:0; border-radius:inherit; }
+.eb-class-menu{ position:relative; z-index:1; }
 .eb-class-name{ color:var(--eb-text-heading); font-size:var(--eb-fs-14); font-weight:var(--eb-fw-semibold); overflow-wrap:anywhere; }
 .eb-class-meta{ display:flex; flex-wrap:wrap; align-items:center; gap:var(--eb-space-1); color:var(--eb-muted); font-size:var(--eb-fs-12); }
 .eb-class-chips{ display:flex; flex-wrap:wrap; gap:4px; margin-top:2px; }

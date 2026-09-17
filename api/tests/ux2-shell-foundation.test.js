@@ -410,3 +410,27 @@ describe("UX-4 membership authority guards", () => {
   });
 });
 
+
+// Final Acceptance — manual-test blocker fixes (class card hit area + ActionMenu event ordering). happy-dom does no
+// pointer hit-testing, so the stretched hit area is proven here from the stylesheet; the ActionMenu contract is
+// proven from source (bubble-phase close, never a capture-phase close that unmounts the item mid-dispatch).
+describe("Final acceptance — class card hit area and ActionMenu ordering", () => {
+  const css = norm(read("page-parts.css"));
+  it("the native class select button stretches an empty pseudo-element over the whole row (li is the containing block)", () => {
+    expect(css).toMatch(/\.eb-class-row\{ position:relative;/);
+    expect(css).toMatch(/\.eb-class-select::before\{ content:""; position:absolute; inset:0; border-radius:inherit; \}/);
+  });
+  it("the ⋯ actions column is layered above the hit area so the trigger never selects the class", () => {
+    expect(css).toMatch(/\.eb-class-menu\{ position:relative; z-index:1; \}/);
+    const pane = read("students/ClassesPane.tsx");
+    expect(pane).toMatch(/<button type="button" className="eb-class-select" aria-pressed=\{selected\} onClick=\{\(\) => p\.onSelect\(classroom\.classId\)\}>/);
+    expect(pane).not.toMatch(/<li[^>]*onClick/);                       // never an event handler on the <li>
+    expect(pane).not.toMatch(/role="button"/);                          // never a fake button
+  });
+  it("ActionMenu closes in the bubble phase after the activated control's handler, never in the capture phase", () => {
+    const menu = read("ui/ActionMenu.tsx");
+    expect(menu).not.toMatch(/onClickCapture=\{/);                     // no capture-phase close prop (the comment may name the old one)
+    expect(menu).toMatch(/onClick=\{onPanelClick\}/);
+    expect(menu).toMatch(/if \(el\.closest\("button, input"\)\) close\(true\);/);
+  });
+});
