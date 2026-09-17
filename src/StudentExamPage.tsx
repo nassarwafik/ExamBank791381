@@ -1,6 +1,13 @@
 
 import {useEffect,useMemo,useRef,useState,useCallback} from "react";
-import {IconCheck} from "./icons";
+import {IconCheck,IconChevronBack} from "./icons";
+import {useConfirm} from "./ui/useConfirm";
+import {usePrefersReducedMotion} from "./ui/usePrefersReducedMotion";
+import ProgressBar from "./ui/ProgressBar";
+import SaveStatus from "./student/exam/SaveStatus";
+import ExamTopBar from "./student/exam/ExamTopBar";
+import ExamDetailsDisclosure from "./student/exam/ExamDetailsDisclosure";
+import {formatDateLatn,formatDateTimeLatn} from "./student/exam/format";
 import StudentQuestionCard,{qid,answered} from "./StudentQuestionCard";
 import type {Question,Answer} from "./StudentQuestionCard";
 import type {ExamSection} from "./examStructure";
@@ -11,9 +18,9 @@ import StructuredExamSection from "./StructuredExamSection";
 import StructuredExamCover from "./StructuredExamCover";
 import ExamGeneralInstructions from "./ExamGeneralInstructions";
 import {normalizeCoverPage,examMarksDistribution,type ExamCoverPage,type MarksDistribution} from "./examCover";
-import {formatCountdown,countdownTone} from "./examTimer";
+import {countdownTone} from "./examTimer";
 import {isUnexpectedStatus,trackingSuffix} from "./lib/requestTrace";
-import {deriveSaveState,saveStateLabel,saveStateHint,canManualRetry,formatLastSaved,shouldWarnBeforeUnload} from "./studentSaveState";
+import {deriveSaveState,shouldWarnBeforeUnload} from "./studentSaveState";
 import {scoreLabel,gradingClass,resolveGradingStatus,type GradingStatus} from "./gradingStatus";
 
 type ExamBody={title?:string;metadata?:{school?:string;subject?:string;grade?:string;className?:string;generalInstructions?:string};presentationTheme?:string;coverPage?:ExamCoverPage;questions?:Question[];sections?:ExamSection[]};
@@ -45,7 +52,7 @@ function errText(e:unknown,fallback:string):string{
  return base;
 }
 
-const fmt=(v:string)=>v?new Date(v).toLocaleString("ar"):"بدون موعد";
+// UX-7b-1: dates/times shown to students use Western digits (formatDateTimeLatn / formatDateLatn).
 const durationLabel=(m:number|undefined)=>m&&m>0?m+" دقيقة":"بدون مؤقت";
 
 export default function StudentExamPage({token,assignment,studentName,className,onBack,onLogout}:Props){
@@ -54,6 +61,10 @@ export default function StudentExamPage({token,assignment,studentName,className,
  const qs=exam.questions||[];
  const [answers,setAnswers]=useState<Answers>({}),[state,setState]=useState<State|null>(null),[loading,setLoading]=useState(true),[saving,setSaving]=useState(false),[retrying,setRetrying]=useState(false),[,setSaveFailed]=useState(false),[,setDirty]=useState(false),[submitBusy,setSubmitBusy]=useState(false),[error,setError]=useState(""),[result,setResult]=useState<Result|null>(null),[started,setStarted]=useState(true),[coverStarted,setCoverStarted]=useState(false),[focusIndex,setFocusIndex]=useState(0);
  const [starting,setStarting]=useState(false),[expired,setExpired]=useState(false),[remainingMs,setRemainingMs]=useState<number|null>(null);
+ // UX-7b-1 — shared confirmation (replaces window.confirm with identical texts/gating) and reduced-motion aware scrolling.
+ const {confirm,confirmDialog}=useConfirm();
+ const reducedMotion=usePrefersReducedMotion();
+ const scrollTop=()=>window.scrollTo({top:0,behavior:reducedMotion?"auto":"smooth"});
  // Roadmap #10/#11 — connectivity is a HINT (navigator.onLine + online/offline events); it never means the
  // API is reachable. lastSavedAt is SERVER-authoritative only (state.draftSavedAt initially, response.savedAt
  // after each confirmed save). saveError = the bounded retry policy gave up.
@@ -301,7 +312,7 @@ export default function StudentExamPage({token,assignment,studentName,className,
    // bookkeeping (revision/savedRevision/lastSavedAt/save flags) so attempt N+1 never inherits attempt N's
    // state, and no autosave is scheduled by the hydration (ref-marker).
    setExam(body);applyServerAttemptState(r.state);anchorClock(r.state);setExpired(false);finalizingRef.current=false;setResult(null);setStarted(true);setCoverStarted(true);
-   window.scrollTo({top:0,behavior:"smooth"});
+   scrollTop();
   }catch(e){
    // A 409 on start can mean the PRIOR server start (e.g. a failed body-fetch retry, or a next attempt)
    // expired before this click — the server-side activeAttempt is now past its effective deadline
@@ -353,7 +364,7 @@ export default function StudentExamPage({token,assignment,studentName,className,
    // context (epoch bump), cancel any pending autosave debounce, reset revision/savedRevision/dirtyAttempt/
    // dirtyGeneration and save flags, and take the server's finalized draft (NEVER upload post-deadline local
    // answers). Then show the result. `expired` stays true (a timed-out result); beforeunload no longer warns.
-   if(mountedRef.current){applyServerAttemptState(r.state);setResult(r.result||r.state.latestResult);setStarted(false);setError("");window.scrollTo({top:0,behavior:"smooth"})}
+   if(mountedRef.current){applyServerAttemptState(r.state);setResult(r.result||r.state.latestResult);setStarted(false);setError("");scrollTop()}
   }catch(e){
    finalizingRef.current=false;
    // A 409 here can mean the attempt is NOT actually expired anymore (a dueAtOverride extended the effective
@@ -402,14 +413,16 @@ export default function StudentExamPage({token,assignment,studentName,className,
  const setTable=(id:string,index:number,value:string|boolean)=>setAnswers(a=>{const prev=a[id]?.kind==="table"?(a[id] as {kind:"table";values:(string|boolean)[]}).values:[];const values=[...prev];values[index]=value;return {...a,[id]:{kind:"table",values}}});
  const setField=(id:string,fieldId:string,value:FieldValue)=>setAnswers(a=>{const prev=a[id]?.kind==="fields"?(a[id] as {kind:"fields";values:Record<string,FieldValue>}).values:{};return {...a,[id]:{kind:"fields",values:{...prev,[fieldId]:value}}}});
  const setPart=(id:string,partId:string,ans:Answer)=>setAnswers(a=>{const prev=a[id]?.kind==="compound"?(a[id] as {kind:"compound";parts:Record<string,Answer>}).parts:{};return {...a,[id]:{kind:"compound",parts:{...prev,[partId]:ans}}}});
- function confirmSubmit(){
+ // The exact former window.confirm messages, now through the shared ConfirmDialog (same gating order; cancel = no request).
+ const SUBMIT_CONFIRM={title:"تسليم الامتحان",confirmLabel:"تسليم الآن",cancelLabel:"متابعة الحل",tone:"danger" as const};
+ function confirmSubmit():Promise<boolean>{
   if(structured){
    const short=norm.sections.filter(s=>s.gradingPolicy==="firstNAnswered"&&s.requiredAnswers!=null).map(s=>({s,p:calculateSectionProgress(s,answers)})).find(x=>x.p.required!=null&&x.p.answered<x.p.required);
-   if(short)return window.confirm("أجبت عن "+short.p.answered+" من "+short.p.required+" بنود مطلوبة"+(short.s.title?" في «"+short.s.title+"»":"")+". هل تريد التسليم؟");
-   return window.confirm("سيتم إرسال الحل للتصحيح. هل تريد المتابعة؟");
+   if(short)return confirm({...SUBMIT_CONFIRM,message:"أجبت عن "+short.p.answered+" من "+short.p.required+" بنود مطلوبة"+(short.s.title?" في «"+short.s.title+"»":"")+". هل تريد التسليم؟"});
+   return confirm({...SUBMIT_CONFIRM,message:"سيتم إرسال الحل للتصحيح. هل تريد المتابعة؟"});
   }
-  if(done<qs.length)return window.confirm("لم تُجب عن جميع الأسئلة. هل تريد التسليم الآن؟");
-  return window.confirm("سيتم إرسال الحل للتصحيح. هل تريد المتابعة؟");
+  if(done<qs.length)return confirm({...SUBMIT_CONFIRM,message:"لم تُجب عن جميع الأسئلة. هل تريد التسليم الآن؟"});
+  return confirm({...SUBMIT_CONFIRM,message:"سيتم إرسال الحل للتصحيح. هل تريد المتابعة؟"});
  }
  // A manual "retry save" (#12): resync authoritative state first, then save the LATEST snapshot if the server
  // still allows writing — never creating a new revision merely by retrying.
@@ -417,12 +430,12 @@ export default function StudentExamPage({token,assignment,studentName,className,
  async function submit(){if(!writable||submitBusy)return;
   // Offline submit guard (#11): never send a final submit while offline — the latest answers may be unsaved.
   if(!onlineRef.current){setError("لا يمكن تسليم الامتحان قبل حفظ التغييرات. تحقق من الاتصال بالإنترنت.");return}
-  if(!confirmSubmit())return;submittingRef.current=true;setSubmitBusy(true);setError("");if(timer.current)window.clearTimeout(timer.current);const submitSnapshot=answers,submitRevision=revision.current,submitCtx=attemptId(stateRef.current),submitEpoch=saveEpoch.current;if(submitRevision>savedRevision.current){saveQueue.current=saveQueue.current.catch(()=>{}).then(()=>saveDraftSnapshot(submitSnapshot,submitRevision,submitCtx,submitEpoch))}try{await saveQueue.current;
+  if(!(await confirmSubmit()))return;submittingRef.current=true;setSubmitBusy(true);setError("");if(timer.current)window.clearTimeout(timer.current);const submitSnapshot=answers,submitRevision=revision.current,submitCtx=attemptId(stateRef.current),submitEpoch=saveEpoch.current;if(submitRevision>savedRevision.current){saveQueue.current=saveQueue.current.catch(()=>{}).then(()=>saveDraftSnapshot(submitSnapshot,submitRevision,submitCtx,submitEpoch))}try{await saveQueue.current;
   // If the pre-submit save hit a stale-attempt 409 and reconciliation adopted a DIFFERENT attempt / a closed
   // result, the epoch changed: leave that authoritative reconciled UI intact — do NOT submit attempt 1's
   // answers and do NOT stamp a stale "couldn't save" message onto the new context.
   if(submitEpoch!==saveEpoch.current)return;
-  if(savedRevision.current<submitRevision){setError("تعذر حفظ إجاباتك بسبب مشكلة في الاتصال. تحقق من الإنترنت وحاول التسليم مرة أخرى.");return}const identity=submitCtx?{expectedAttemptNumber:submitCtx.attemptNumber,expectedStartedAt:submitCtx.startedAt}:{};if(submitEpoch!==saveEpoch.current)return;const r=await api<{result:Result;state:State}>({method:"POST",body:JSON.stringify({action:"submit",answers:submitSnapshot,...identity})});setResult(r.result);setState(r.state);setStarted(false);setAnswers({});savedRevision.current=revision.current;window.scrollTo({top:0,behavior:"smooth"})}catch(e){
+  if(savedRevision.current<submitRevision){setError("تعذر حفظ إجاباتك بسبب مشكلة في الاتصال. تحقق من الإنترنت وحاول التسليم مرة أخرى.");return}const identity=submitCtx?{expectedAttemptNumber:submitCtx.attemptNumber,expectedStartedAt:submitCtx.startedAt}:{};if(submitEpoch!==saveEpoch.current)return;const r=await api<{result:Result;state:State}>({method:"POST",body:JSON.stringify({action:"submit",answers:submitSnapshot,...identity})});setResult(r.result);setState(r.state);setStarted(false);setAnswers({});savedRevision.current=revision.current;scrollTop()}catch(e){
   // Race at the deadline: a 409 may be an expired attempt (duration OR due-clipped => finalize) or a
   // still-live one (=> resume). Decide from AUTHORITATIVE server state, not the Arabic message text.
   if(requiresStart&&e instanceof ApiError&&e.status===409){submittingRef.current=false;const res=await reconcileTimed409();if(res==="other")setError(e.message)}
@@ -441,22 +454,22 @@ export default function StudentExamPage({token,assignment,studentName,className,
   revision.current=0;savedRevision.current=0;latestTargetRevision.current=0;
   dirtyAttemptRef.current=null;dirtyGenerationRef.current=Number(state.attemptsUsed||0);
   setLastSavedAt("");setSaveError(false);setRetrying(false);setSaving(false);setDirty(false);setError("");
-  setResult(state.latestResult);setStarted(true);setCoverStarted(false);window.scrollTo({top:0,behavior:"smooth"})}
- function backWithoutSubmit(){if(revision.current>savedRevision.current&&!window.confirm("توجد إجابات لم تُحفظ بعد. هل تريد المغادرة على أي حال؟"))return;onBack()}
- if(loading)return <main className="student-portal" dir="rtl"><div className="platform-loading">⏳ جارٍ تجهيز صفحة الامتحان...</div></main>;
- if(!started&&result)return <main className={"interactive-exam-page exam-theme-"+theme} dir="rtl"><div className="iex-wrap"><section className="iex-result-card"><span className="platform-eyebrow">RESULT</span><h1>تم تسليم المحاولة {result.attemptNumber}{result.timedOut?" (انتهى الوقت)":""}</h1>{error&&<div className="platform-error iex-error">{error}</div>}<div className="iex-score">{result.score}<small> / {result.totalMarks}</small></div><strong>{result.percentage}%</strong>{(()=>{const gs=resultGradingStatus(result);return <><span className={"iex-grade-badge iex-grade-"+gradingClass(gs)}>{scoreLabel(gs)}</span>{result.timedOut&&<p className="iex-timeout-note">⏱ تم إنهاء هذه المحاولة تلقائيًا عند انتهاء الوقت، وصُحّحت الإجابات المحفوظة.</p>}{gs==="pendingReview"?<p className="iex-provisional">العلامة مؤقتة — بانتظار مراجعة المعلم{result.manualReviewMarks>0?" ("+result.manualReviewMarks+" علامة قيد المراجعة)":""}.</p>:<p className="iex-finalized">✓ العلامة النهائية معتمدة.</p>}</>})()}{result.teacherFeedback&&<div className="iex-teacher-feedback"><strong>ملاحظة المعلم</strong><span>{result.teacherFeedback}</span></div>}<p>تم الحفظ في حسابك بتاريخ {fmt(result.submittedAt)}</p><div className="iex-result-actions"><button onClick={onBack}>العودة إلى المهام</button>{(requiresStart?state?.canStartAttempt:state?.canAttempt)&&<button className="primary" onClick={startNext} disabled={starting}>{starting?"⏳ جارٍ البدء...":"بدء محاولة جديدة ("+((state?.attemptsUsed||0)+1)+" من "+(state?.allowedAttempts||assignment.maxAttempts)+")"}</button>}</div>{!(requiresStart?state?.canStartAttempt:state?.canAttempt)&&<div className="iex-no-retry">لا توجد محاولة إضافية متاحة. يستطيع المعلم السماح بمحاولة أخرى من صفحة النتائج.</div>}</section></div></main>;
+  setResult(state.latestResult);setStarted(true);setCoverStarted(false);scrollTop()}
+ async function backWithoutSubmit(){if(revision.current>savedRevision.current&&!(await confirm({title:"مغادرة بدون تسليم",message:"توجد إجابات لم تُحفظ بعد. هل تريد المغادرة على أي حال؟",confirmLabel:"المغادرة",cancelLabel:"البقاء",tone:"danger"})))return;onBack()}
+ if(loading)return <main className="interactive-exam-page" dir="rtl"><div className="iex-wrap"><p className="iex-loading" role="status">جارٍ تجهيز صفحة الامتحان...</p></div></main>;
+ if(!started&&result)return <main className={"interactive-exam-page exam-theme-"+theme} dir="rtl"><div className="iex-wrap"><section className="iex-result-card"><span className="iex-eyebrow">النتيجة</span><h1>تم تسليم المحاولة {result.attemptNumber}{result.timedOut?" (انتهى الوقت)":""}</h1>{error&&<div className="platform-error iex-error">{error}</div>}<div className="iex-score">{result.score}<small> / {result.totalMarks}</small></div><strong>{result.percentage}%</strong>{(()=>{const gs=resultGradingStatus(result);return <><span className={"iex-grade-badge iex-grade-"+gradingClass(gs)}>{scoreLabel(gs)}</span>{result.timedOut&&<p className="iex-timeout-note">تم إنهاء هذه المحاولة تلقائيًا عند انتهاء الوقت، وصُحّحت الإجابات المحفوظة.</p>}{gs==="pendingReview"?<p className="iex-provisional">العلامة مؤقتة — بانتظار مراجعة المعلم{result.manualReviewMarks>0?" ("+result.manualReviewMarks+" علامة قيد المراجعة)":""}.</p>:<p className="iex-finalized"><IconCheck size={14} aria-hidden="true"/>العلامة النهائية معتمدة.</p>}</>})()}{result.teacherFeedback&&<div className="iex-teacher-feedback"><strong>ملاحظة المعلم</strong><span>{result.teacherFeedback}</span></div>}<p className="iex-result-when">تم الحفظ في حسابك بتاريخ {formatDateTimeLatn(result.submittedAt)}</p><div className="iex-result-actions"><button type="button" className="eb-button" onClick={onBack}>العودة إلى المهام</button>{(requiresStart?state?.canStartAttempt:state?.canAttempt)&&<button type="button" className="eb-button is-primary primary" onClick={startNext} disabled={starting}>{starting?"جارٍ البدء...":"بدء محاولة جديدة ("+((state?.attemptsUsed||0)+1)+" من "+(state?.allowedAttempts||assignment.maxAttempts)+")"}</button>}</div>{!(requiresStart?state?.canStartAttempt:state?.canAttempt)&&<div className="iex-no-retry">لا توجد محاولة إضافية متاحة. يستطيع المعلم السماح بمحاولة أخرى من صفحة النتائج.</div>}</section></div></main>;
  // START GATE (B2A) — questions are NOT delivered by the server until startAttempt succeeds, for TIMED
  // and UNTIMED v2 assignments alike. Shows the structured cover (when enabled) or a compact start card;
  // pressing start calls the server, refetches the exam and reveals the questions. TIMED also anchors the
  // countdown; UNTIMED never shows a countdown.
  if(needsStart){
   const rawDate=assignment.openAt||assignment.effectiveDueAt||assignment.dueAt;
-  const examDate=rawDate?new Date(rawDate).toLocaleDateString("ar"):"";
+  const examDate=formatDateLatn(rawDate);
   const dur=durationLabel(assignment.durationMinutes||state?.durationMinutes);
   // "متابعة المحاولة" when a server attempt already exists but its body hasn't loaded (e.g. start
   // succeeded then the exam fetch failed); "بدء المحاولة" for a fresh start.
   const resumeMode=!!state?.activeAttempt;
-  const startLabel=starting?"⏳ جارٍ البدء...":(resumeMode?"متابعة المحاولة":"بدء المحاولة");
+  const startLabel=starting?"جارٍ البدء...":(resumeMode?"متابعة المحاولة":"بدء المحاولة");
   // Pre-start, the server deliberately omits sections/questions, so `structured` is false here. Cover
   // selection must therefore depend only on the (safe) coverPage config, never on the hidden structure.
   if(cover?.enabled){
@@ -469,10 +482,10 @@ export default function StudentExamPage({token,assignment,studentName,className,
   }
   return <main className={"interactive-exam-page exam-theme-"+theme} dir="rtl"><div className="iex-wrap">
    {error&&<div className="platform-error iex-error">{error}</div>}
-   <section className="iex-start-card"><span className="platform-eyebrow">{timed?"Timed":"Attempt"}</span><h1>{assignment.title}</h1><p>{assignment.instructions}</p>
+   <section className="iex-start-card"><span className="iex-eyebrow">{timed?"محاولة مؤقتة":"محاولة"}</span><h1>{assignment.title}</h1><p>{assignment.instructions}</p>
     <div className="iex-start-meta">{timed&&<span>مدة المحاولة: <strong>{dur}</strong></span>}<span>{assignment.questionCount} سؤال · {assignment.totalMarks} علامة</span><span>المحاولة {(state?.attemptsUsed||0)+1} / {state?.allowedAttempts||assignment.maxAttempts}</span></div>
     <p className="iex-start-hint">{resumeMode?(timed?"محاولتك جارية على الخادم — اضغط لمتابعة تحميل الأسئلة. لن يُعاد ضبط العدّاد.":"محاولتك جارية على الخادم — اضغط لمتابعة تحميل الأسئلة."):(timed?"لن تظهر الأسئلة إلا بعد بدء المحاولة، وسيبدأ العدّاد فور الضغط على الزر.":"لن تظهر الأسئلة إلا بعد بدء المحاولة.")}</p>
-    <div className="iex-start-actions"><button onClick={onBack}>العودة</button><button className="primary" onClick={()=>{void startTimedAttempt()}} disabled={starting||!canStartOrResume}>{startLabel}</button></div>
+    <div className="iex-start-actions"><button type="button" className="eb-button" onClick={onBack}>العودة</button><button type="button" className="eb-button is-primary primary" onClick={()=>{void startTimedAttempt()}} disabled={starting||!canStartOrResume}>{startLabel}</button></div>
     {!canStartOrResume&&!starting&&<div className="iex-no-retry">لا يمكن بدء المحاولة الآن (قد يكون الموعد انتهى أو استُنفدت المحاولات).</div>}
    </section>
   </div></main>;
@@ -481,30 +494,49 @@ export default function StudentExamPage({token,assignment,studentName,className,
  // so this is gated on !requiresStart to keep the two flows separate.
  if(structured&&cover?.enabled&&!coverStarted&&!timed&&!requiresStart){
   const rawDate=assignment.openAt||assignment.effectiveDueAt||assignment.dueAt;
-  const examDate=rawDate?new Date(rawDate).toLocaleDateString("ar"):"";
+  const examDate=formatDateLatn(rawDate);
   return <main className={"interactive-exam-page exam-theme-"+theme} dir="rtl"><div className="iex-wrap">
    <StructuredExamCover cover={cover} title={assignment.title||exam.title||"امتحان"} distribution={coverDistribution}
     runtime={{studentName,className:className||exam.metadata?.className||"",examDate}}
-    onStart={()=>{setCoverStarted(true);window.scrollTo({top:0,behavior:"smooth"})}}/>
+    onStart={()=>{setCoverStarted(true);scrollTop()}}/>
   </div></main>;
  }
  const inputsDisabled=submitBusy||expired;
  // Roadmap #10/#11 — ONE authoritative derived save state for rendering; server-confirmed lastSavedAt only.
  const saveKind=deriveSaveState({localRevision:revision.current,savedRevision:savedRevision.current,saving,retrying,errorExhausted:saveError,online});
- const savedTime=formatLastSaved(lastSavedAt),saveHint=saveStateHint(saveKind),showRetry=canManualRetry(saveKind);
+ const attemptLine="المحاولة "+((state?.attemptsUsed||0)+1)+" / "+(state?.allowedAttempts||assignment.maxAttempts);
+ const classLine=className||exam.metadata?.className||"الصف";
+ const hasGeneralInstructions=!!String(exam.metadata?.generalInstructions||"").trim();
+ // UX-7b-1 — one compact sticky top region (back · title · context · timer chip), the metadata behind a disclosure,
+ // one progress row with the SINGLE live save-status region, then the unchanged question rendering.
  return <main className={"interactive-exam-page exam-theme-"+theme} dir="rtl"><div className="iex-wrap">
-  <header className="iex-head"><div><span className="iex-school">{exam.metadata?.school||"ExamBank 791381"}</span><h1>{assignment.title}</h1><p>{assignment.instructions}</p><div className="iex-badges"><span>{className||exam.metadata?.className||"الصف"}</span><span>{questionTotal} أسئلة</span><span>{assignment.totalMarks} علامة</span><span>المحاولة {(state?.attemptsUsed||0)+1} / {state?.allowedAttempts||assignment.maxAttempts}</span></div></div><div className="iex-student"><strong>{studentName}</strong><span>آخر موعد: {fmt(assignment.effectiveDueAt||assignment.dueAt)}</span></div></header>
-  {timed&&hasActive&&remainingMs!==null&&<div className={"iex-countdown "+countdownTone(remainingMs)}><span className="iex-countdown-label">الوقت المتبقي</span><strong className="iex-countdown-clock">{formatCountdown(remainingMs)}</strong></div>}
-  {error&&<div className="platform-error iex-error">{error}</div>}
-  {expired&&!result&&<div className="platform-notice iex-error">انتهى وقت المحاولة — لم يعد بالإمكان تعديل الإجابات، ويجري إنهاء المحاولة وتصحيح ما تم حفظه.</div>}
-  {/* Visual-only save label (no aria-live here — the footer is the SINGLE live region, see below). */}
-  <div className="iex-progress"><span>تقدّمك</span><div><i style={{width:pct+"%"}}/></div><strong>{done} / {total}</strong><small className={"iex-save-state iex-save-"+saveKind} aria-hidden="true">{saveKind==="saved"?<><IconCheck size={11}/>{saveStateLabel(saveKind)}</>:saveStateLabel(saveKind)}{savedTime&&(saveKind==="saved"||saveKind==="pending")?" · آخر حفظ: "+savedTime:""}</small></div>
-  {/* Roadmap #17/#15 — exam-level general instructions (presentation only), shared with the teacher preview. */}
-  <ExamGeneralInstructions text={exam.metadata?.generalInstructions}/>
+  <ExamTopBar title={assignment.title} context={classLine+" · "+attemptLine} onBack={()=>{void backWithoutSubmit()}} timer={timed&&hasActive&&remainingMs!==null?{remainingMs,tone:countdownTone(remainingMs)}:null}/>
+  {error&&<div className="platform-error iex-error" role="alert">{error}</div>}
+  {expired&&!result&&<div className="platform-notice iex-error" role="status">انتهى وقت المحاولة — لم يعد بالإمكان تعديل الإجابات، ويجري إنهاء المحاولة وتصحيح ما تم حفظه.</div>}
+  <div className="iex-progress">
+   <div className="iex-progress-bar"><ProgressBar label="تقدّمك" value={pct} showValue={false} size="sm"/><strong className="iex-progress-count">{done} / {total}</strong></div>
+   <SaveStatus kind={saveKind} lastSavedAt={lastSavedAt} onRetry={()=>{void manualSave()}}/>
+  </div>
+  <ExamDetailsDisclosure summary={questionTotal+" أسئلة · "+assignment.totalMarks+" علامة"} defaultOpen={hasGeneralInstructions}>
+   {assignment.instructions&&<p className="iex-details-instructions">{assignment.instructions}</p>}
+   <dl className="iex-details-list">
+    <div><dt>الطالب</dt><dd>{studentName}</dd></div>
+    <div><dt>الصف</dt><dd>{classLine}</dd></div>
+    <div><dt>الأسئلة</dt><dd>{questionTotal}</dd></div>
+    <div><dt>العلامات</dt><dd>{assignment.totalMarks}</dd></div>
+    {timed&&<div><dt>مدة المحاولة</dt><dd>{durationLabel(assignment.durationMinutes||state?.durationMinutes)}</dd></div>}
+    <div><dt>آخر موعد</dt><dd>{formatDateTimeLatn(assignment.effectiveDueAt||assignment.dueAt)}</dd></div>
+    <div><dt>المحاولة</dt><dd>{attemptLine}</dd></div>
+    {exam.metadata?.school&&<div><dt>المدرسة</dt><dd>{exam.metadata.school}</dd></div>}
+   </dl>
+   {/* Roadmap #17/#15 — exam-level general instructions (presentation only), shared with the teacher preview. */}
+   <ExamGeneralInstructions text={exam.metadata?.generalInstructions}/>
+  </ExamDetailsDisclosure>
   {structured?(()=>{let offset=0;return <>{norm.sections.map((section,si)=>{const startIndex=offset;offset+=section.questions.length;return <StructuredExamSection key={section.id} section={section} sectionNumber={si+1} startIndex={startIndex} answers={answers} onChoice={setChoice} onSeq={setSeq} onTable={setTable} onText={(id,v)=>setAnswers(x=>({...x,[id]:{kind:"text",value:v}}))} onField={setField} onPart={setPart} disabled={inputsDisabled}/>})}</>})():
-  theme==="focus"&&qs.length>0?(()=>{const i=Math.min(focusIndex,qs.length-1),q=qs[i],id=qid(q,i);return <div className="iex-focus-mode"><div className="iex-focus-nav"><button onClick={()=>setFocusIndex(x=>previousFocusIndex(x,qs.length))} disabled={i===0}>◀ السابق</button><span>السؤال {i+1} من {qs.length}</span><button onClick={()=>setFocusIndex(x=>nextFocusIndex(x,qs.length))} disabled={i===qs.length-1}>التالي ▶</button></div><div className="iex-focus-progress"><i style={{width:focusProgressPercent(i,qs.length)+"%"}}/></div><StudentQuestionCard q={q} index={i} id={id} answer={answers[id]} onChoice={n=>setChoice(id,n)} onSeq={(n,v)=>setSeq(id,n,v)} onTable={(n,v)=>setTable(id,n,v)} onText={v=>setAnswers(x=>({...x,[id]:{kind:"text",value:v}}))} disabled={inputsDisabled}/></div>})():(
+  theme==="focus"&&qs.length>0?(()=>{const i=Math.min(focusIndex,qs.length-1),q=qs[i],id=qid(q,i);return <div className="iex-focus-mode"><div className="iex-focus-nav"><button type="button" className="eb-button" onClick={()=>setFocusIndex(x=>previousFocusIndex(x,qs.length))} disabled={i===0}><IconChevronBack size={16} className="eb-flip-rtl" aria-hidden="true"/>السابق</button><span>السؤال {i+1} من {qs.length}</span><button type="button" className="eb-button" onClick={()=>setFocusIndex(x=>nextFocusIndex(x,qs.length))} disabled={i===qs.length-1}>التالي<IconChevronBack size={16} aria-hidden="true"/></button></div><div className="iex-focus-progress"><i style={{width:focusProgressPercent(i,qs.length)+"%"}}/></div><StudentQuestionCard q={q} index={i} id={id} answer={answers[id]} onChoice={n=>setChoice(id,n)} onSeq={(n,v)=>setSeq(id,n,v)} onTable={(n,v)=>setTable(id,n,v)} onText={v=>setAnswers(x=>({...x,[id]:{kind:"text",value:v}}))} disabled={inputsDisabled}/></div>})():(
   <section className="iex-flow">{qs.map((q,i)=>{const id=qid(q,i);return <StudentQuestionCard key={id} q={q} index={i} id={id} answer={answers[id]} onChoice={n=>setChoice(id,n)} onSeq={(n,v)=>setSeq(id,n,v)} onTable={(n,v)=>setTable(id,n,v)} onText={v=>setAnswers(x=>({...x,[id]:{kind:"text",value:v}}))} disabled={inputsDisabled}/>})}</section>
   )}
-  <footer className="iex-foot"><div><strong>أجبت عن {done} من {total}</strong><span className={"iex-save-state iex-save-"+saveKind} role="status" aria-live="polite">{saveStateLabel(saveKind)}{savedTime&&(saveKind==="saved"||saveKind==="pending")?" · آخر حفظ: "+savedTime:""}</span>{saveHint&&<em className="iex-save-hint">{saveHint}</em>}{showRetry&&<button type="button" className="iex-retry-save" onClick={()=>{void manualSave()}}>إعادة محاولة الحفظ</button>}</div><div><button onClick={backWithoutSubmit}>العودة بدون تسليم</button><button className="primary" onClick={submit} disabled={submitBusy||!writable}>{submitBusy?"⏳ جارٍ التصحيح...":<><IconCheck size={15}/>تسليم وتصحيح الامتحان</>}</button></div></footer>
+  <footer className="iex-foot"><p className="iex-foot-summary">أجبت عن {done} من {total}</p><div className="iex-foot-actions"><button type="button" className="eb-button is-quiet" onClick={()=>{void backWithoutSubmit()}}>العودة بدون تسليم</button><button type="button" className="eb-button primary iex-submit" onClick={()=>{void submit()}} disabled={submitBusy||!writable}>{submitBusy?"جارٍ التصحيح...":<><IconCheck size={16} aria-hidden="true"/>تسليم وتصحيح الامتحان</>}</button></div></footer>
+  {confirmDialog}
  </div></main>
 }

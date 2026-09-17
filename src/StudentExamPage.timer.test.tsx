@@ -1,6 +1,6 @@
 // @vitest-environment happy-dom
 import { describe, it, expect, afterEach, beforeEach, vi } from "vitest";
-import { render, cleanup, fireEvent, waitFor } from "@testing-library/react";
+import { render, cleanup, fireEvent, waitFor, screen } from "@testing-library/react";
 import StudentExamPage from "./StudentExamPage";
 
 // Integration tests for the two B1 cover/start-fetch integration defects, driving the REAL component
@@ -305,6 +305,7 @@ describe("EDGE 6 — save/submit 409 recovery uses authoritative server state, n
     const r = mount(fullAssignment);
     await r.findByText("سؤال الاختبار السري");
     fireEvent.click(r.container.querySelector(".iex-foot .primary") as HTMLButtonElement);
+    fireEvent.click(await screen.findByRole("button", { name: "تسليم الآن" }));                 // UX-7b-1: shared ConfirmDialog replaces window.confirm
     await waitFor(() => expect(finalizeCalls).toBe(1));
     const h = await r.findByText(/تم تسليم المحاولة/);
     expect(h.textContent).toContain("انتهى الوقت"); // timedOut result
@@ -319,6 +320,7 @@ describe("EDGE 6 — save/submit 409 recovery uses authoritative server state, n
     await r.findByText("سؤال الاختبار السري");
     const before = subGetCalls;
     fireEvent.click(r.container.querySelector(".iex-foot .primary") as HTMLButtonElement);
+    fireEvent.click(await screen.findByRole("button", { name: "تسليم الآن" }));                 // UX-7b-1: shared ConfirmDialog replaces window.confirm
     await waitFor(() => expect(submitCalls).toBe(1));
     await waitFor(() => expect(subGetCalls).toBeGreaterThan(before)); // reconcile GET happened
     expect(finalizeCalls).toBe(0);                                     // did NOT finalize a live attempt

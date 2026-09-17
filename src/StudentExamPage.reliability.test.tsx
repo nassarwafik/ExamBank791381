@@ -1,6 +1,6 @@
 // @vitest-environment happy-dom
 import { describe, it, expect, afterEach, beforeEach, vi } from "vitest";
-import { render, cleanup, fireEvent, waitFor } from "@testing-library/react";
+import { render, cleanup, fireEvent, waitFor, screen } from "@testing-library/react";
 import StudentExamPage from "./StudentExamPage";
 
 // Roadmap #10/#11 reliability fix pass — retrying visibility, offline-timeout (no finalize storm),
@@ -72,7 +72,6 @@ const goOffline = () => { setOnline(false); window.dispatchEvent(new Event("offl
 const goOnline = () => { setOnline(true); window.dispatchEvent(new Event("online")); };
 function mount(assignmentOverride: unknown = assignment) { onLogout = vi.fn(); return render(<StudentExamPage token="t" assignment={assignmentOverride as never} studentName="أ" className="ص" onBack={() => {}} onLogout={onLogout as unknown as () => void} />); }
 const saveState = (r: ReturnType<typeof mount>) => r.container.querySelector(".iex-progress .iex-save-state")?.textContent || "";
-const footText = (r: ReturnType<typeof mount>) => r.container.querySelector(".iex-foot")?.textContent || "";
 
 beforeEach(() => {
   (window as unknown as { scrollTo: () => void }).scrollTo = () => {};
@@ -190,7 +189,7 @@ describe("R10/R11 reliability", () => {
     fireEvent.change(ta, { target: { value: "x" } });
     await waitFor(() => expect(saveState(r)).toContain("غير متصل"), { timeout: 2000 });
     expect(r.container.querySelector(".iex-retry-save")).toBeNull();      // no doomed retry button offline
-    expect(footText(r)).toContain("أبقِ الصفحة مفتوحة حتى يعود الاتصال.");  // hint shown instead
+    expect(r.container.querySelector(".iex-progress .iex-save")?.textContent || "").toContain("أبقِ الصفحة مفتوحة حتى يعود الاتصال.");  // hint shown instead (UX-7b-1: next to the save status)
   });
 
   it("16: exactly ONE aria-live save-status region", async () => {
@@ -472,6 +471,7 @@ describe("R10/R11 reliability", () => {
     const ta = await r.findByPlaceholderText("اكتب إجابتك هنا...");
     fireEvent.change(ta, { target: { value: "ATTEMPT1_DIRTY" } });
     fireEvent.click(r.container.querySelector(".iex-foot .primary") as HTMLButtonElement); // submit → pre-save 409 → reconcile
+    fireEvent.click(await screen.findByRole("button", { name: "تسليم الآن" }));                 // UX-7b-1: shared ConfirmDialog replaces window.confirm
     await waitFor(() => expect((r.container.querySelector(".iex-open") as HTMLTextAreaElement).value).toBe("ATTEMPT2_SERVER_DRAFT"), { timeout: 2000 });
     await new Promise(res => setTimeout(res, 80));
     expect(submitCalls).toBe(0);                                      // attempt 1 was NEVER submitted

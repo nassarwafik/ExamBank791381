@@ -154,6 +154,41 @@ describe("UX-2 focus foundation", () => {
     }
     for (const kept of [".student-portal", ".student-topbar", ".student-panel", ".achievement-reaction", ".achievement-notify-card", ".student-assignment-header", ".platform-hero"]) expect(legacy, kept + " must stay").toContain(kept);
   });
+  it("UX-7b-1 studentexam-pro.css is phone-first (min-width 768/1024/1280 only, no max-width), token-only outside the documented theme section, never sets outline:none; the superseded exam-runtime rules left platform.css", () => {
+    const full = read("studentexam-pro.css");
+    const own = full.split("Exam presentation themes")[0].replace(/\/\*[\s\S]*?\*\//g, "");
+    expect(own, "studentexam-pro.css raw hex").not.toMatch(/#[0-9a-fA-F]{3,8}\b/);
+    expect(own, "studentexam-pro.css raw rgb").not.toMatch(/\brgba?\(/);
+    for (const m of own.matchAll(/var\((--[a-zA-Z0-9-]+)/g)) expect(m[1], "studentexam-pro.css uses non-canonical token " + m[1]).toMatch(/^--eb-/);
+    expect(full.replace(/\/\*[\s\S]*?\*\//g, "")).not.toMatch(/outline\s*:\s*(none|0)/);
+    expect(own).not.toMatch(/@media[^{]*max-width\s*:\s*\d+px/);
+    const widths = [...own.matchAll(/@media[^{]*min-width\s*:\s*(\d+)px/g)].map(m => Number(m[1]));
+    expect(widths.length).toBeGreaterThan(0);
+    for (const w of widths) expect([768, 1024, 1280], "unexpected breakpoint " + w).toContain(w);
+    expect(own).toMatch(/prefers-reduced-motion:\s*reduce/);
+    expect(own).toMatch(/\.iex-option:has\(input:focus-visible\)[^{]*\{[^}]*outline:var\(--eb-focus-ring\)/);   // visible keyboard focus on the option row
+    // phone ergonomics: ≥44 px controls, comfortable textarea, 48 px footer/gate actions, contained tables, wrapped prose, safe area
+    expect(own).toMatch(/\.iex-open, \.iex-cell, \.iex-cell-select, \.iex-seq select, \.iex-seq input\{[^}]*min-height:44px/);
+    expect(own).toMatch(/\.iex-option\{[^}]*min-height:48px/);
+    expect(own).toMatch(/\.iex-foot-actions \.eb-button\{ min-height:48px/);
+    expect(own).toMatch(/\.iex-details-toggle\{[^}]*min-height:44px/);
+    expect(own).toMatch(/\.iex-open\{ min-height:140px/);
+    expect(own).toMatch(/\.iex-table-wrap\{ overflow-x:auto; max-width:100%/);
+    expect(own).toMatch(/\.iex-qtext\{[^}]*overflow-wrap:anywhere/);
+    expect(own).toMatch(/\.iex-cli\{[^}]*direction:ltr[^}]*overflow-x:auto/);
+    expect(own).toMatch(/\.iex-foot\{[^}]*env\(safe-area-inset-bottom/);
+    expect(own).toMatch(/prefers-reduced-motion: reduce\)\{\s*\.iex-countdown\.danger\{ animation:none; \}/);
+    expect(own).not.toMatch(/(?<![a-z-])(margin|padding|border)-(left|right)\b/);                    // logical properties only
+    // the theme section may carry only the two documented contract colours (classic paper tint); everything else is tokens
+    const themes = full.split("Exam presentation themes")[1].replace(/\/\*[\s\S]*?\*\//g, "");
+    expect([...themes.matchAll(/#[0-9a-fA-F]{3,8}\b/g)].map(m => m[0])).toEqual(["#fffdf7"]);
+    expect(full).toMatch(/\.exam-theme-preview-overlay\{[^}]*z-index:1000/);                    // layer contract kept
+    const legacy = read("platform.css").replace(/\/\*[\s\S]*?\*\//g, "");
+    for (const gone of [".interactive-exam-page{", ".iex-head", ".iex-foot", ".iex-option", ".iex-countdown", ".iex-progress", ".iex-open", ".iex-start", ".iex-result-card", ".iex-card {", ".iex-node {"]) {
+      expect(legacy, gone + " must no longer be styled by platform.css").not.toContain(gone);
+    }
+    for (const kept of [".iex-grade-final", ".iex-grade-pending", ".iex-general-instructions", ".assignment-results-panel", ".review-state"]) expect(legacy, kept + " must stay").toContain(kept);
+  });
   it("new UX-2 stylesheets are token-only (--eb-*) with no raw colours", () => {
     for (const f of ["ui/ui.css", "shell.css"]) {
       const css = read(f).replace(/\/\*[\s\S]*?\*\//g, "");
