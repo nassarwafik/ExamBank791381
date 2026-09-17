@@ -218,6 +218,61 @@ describe("UX-2 focus foundation", () => {
     expect(own).not.toMatch(/position:\s*fixed/);                                                       // sticky, never viewport-fixed over inputs
     expect(own).not.toMatch(/visualViewport/);
   });
+  it("UX-8a: phone touch targets (≥ 44 px) only under max-width 767px with desktop sizes unchanged, dvh fallbacks after the vh lines, and bidi isolation on free-text exam cells", () => {
+    const strip = css => css.replace(/\/\*[\s\S]*?\*\//g, "");
+    const phoneBlock = (css, marker) => {
+      const i = css.indexOf(marker); expect(i, "phone block " + marker).toBeGreaterThan(-1);
+      let depth = 0, j = css.indexOf("{", i), end = -1;
+      for (; j < css.length; j++) { if (css[j] === "{") depth++; else if (css[j] === "}") { depth--; if (depth === 0) { end = j; break; } } }
+      return css.slice(i, end + 1);
+    };
+    // ui.css — the shared primitives: desktop values untouched, phone block raises them
+    const ui = strip(read("ui/ui.css"));
+    expect(ui).toMatch(/\.eb-icon-button \{[^}]*min-width: 40px; min-height: 40px;/);
+    expect(ui).toMatch(/\.eb-button\.is-small \{ min-height: 34px;/);
+    const uiPhone = ui.split("@media (max-width: 767px)").slice(1).join("\n");
+    expect(uiPhone).toMatch(/\.eb-icon-button \{ min-width: 44px; min-height: 44px; \}/);
+    expect(uiPhone).toMatch(/\.eb-button\.is-small \{ min-height: 44px; \}/);
+    expect(uiPhone).toMatch(/\.eb-chip-button \{ min-height: 44px; \}/);
+    // page-parts.css — segmented / menu / sortable headers
+    const pp = strip(read("page-parts.css"));
+    expect(pp).toMatch(/\.eb-segmented > button\{[^}]*min-height:34px/);
+    expect(pp).toMatch(/\.eb-menu-trigger\{[^}]*min-width:36px; min-height:36px/);
+    const ppPhone = phoneBlock(pp, "@media (max-width:767px)");
+    for (const rule of [".eb-segmented > button{ min-height:44px; }", ".eb-menu-trigger{ min-width:44px; min-height:44px; }", ".eb-menu-item{ min-height:44px; }", ".eb-th-sort{ min-height:44px;"]) expect(ppPhone, rule).toContain(rule);
+    // assignments-pro.css — gradebook chips
+    const ap = strip(read("assignments-pro.css"));
+    expect(ap).toMatch(/\.gradebook-chip,\.library-cat-chip\{[^}]*min-height:32px/);
+    expect(phoneBlock(ap, "@media (max-width:767px)")).toContain(".gradebook-chip,.library-cat-chip{ min-height:44px; }");
+    // dashboard-pro.css — toolbar + segmented
+    const dp = strip(read("dashboard-pro.css"));
+    expect(dp).toMatch(/\.eb-toolbar-button\{[^}]*min-height:40px/);
+    expect(phoneBlock(dp, "@media (max-width:767px)")).toContain(".eb-toolbar-button,.analytics-segmented button{ min-height:44px; }");
+    // studentportal-pro.css is phone-first (min-width only): 44 px base, 32 px from 768 px
+    const sp = strip(read("studentportal-pro.css"));
+    expect(sp).toMatch(/\.eb-sp-reaction\{ min-height:44px;/);
+    expect(phoneBlock(sp, "@media (min-width: 768px)")).toContain(".eb-sp-reaction{ min-height:32px; }");
+    expect(sp).not.toMatch(/@media[^{]*max-width/);
+    // no min-height below 44 px was introduced into any phone block of the teacher sheets
+    for (const [name, css] of [["page-parts.css", pp], ["assignments-pro.css", ap], ["dashboard-pro.css", dp]]) {
+      const block = phoneBlock(css, "@media (max-width:767px)");
+      for (const m of block.matchAll(/min-height:\s*(\d+)px/g)) expect(Number(m[1]), name + " phone block").toBeGreaterThanOrEqual(44);
+    }
+    // dvh fallbacks: the vh declaration stays and the dvh one follows it
+    const rp = strip(read("review-pro.css"));
+    expect(rp).toContain(".review-modal{ max-height:calc(100vh - 48px); max-height:calc(100dvh - 48px);");
+    expect(rp).toContain(".review-modal{ max-height:calc(100vh - 16px); max-height:calc(100dvh - 16px); }");
+    const sh = strip(read("shell.css"));
+    const drawer = phoneBlock(sh, "@media (max-width: 1023px)");
+    expect(drawer).toMatch(/height: 100vh;\s*height: 100dvh;/);
+    expect((sh.match(/100dvh/g) || []).length).toBe(1);                                                // drawer only, no mass rewrite
+    // bidi isolation on free-text answer cells; CLI stays LTR
+    const ex = strip(read("studentexam-pro.css"));
+    expect(ex).toContain(".iex-cell, .iex-seq input{ unicode-bidi:plaintext; }");
+    expect(ex).toMatch(/\.iex-cli\{[^}]*direction:ltr/);
+    expect(ex).not.toMatch(/\.iex-cli[^{]*\{[^}]*unicode-bidi/);
+    expect(ex).not.toMatch(/outline\s*:\s*(none|0)/);
+  });
   it("new UX-2 stylesheets are token-only (--eb-*) with no raw colours", () => {
     for (const f of ["ui/ui.css", "shell.css"]) {
       const css = read(f).replace(/\/\*[\s\S]*?\*\//g, "");

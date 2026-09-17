@@ -1,5 +1,7 @@
 
-import { useRef, useState } from "react";
+import { useCallback, useEffect, useId, useRef, useState } from "react";
+import useFocusTrap from "./ui/useFocusTrap";
+import useBodyScrollLock from "./ui/useBodyScrollLock";
 import type { StructuredExam } from "./examTypes";
 import { importStructuredExam } from "./structuredExamHtmlParser";
 import { MAX_IMPORT_BYTES, type StructuredImportResult } from "./structuredExamImport";
@@ -20,6 +22,14 @@ export default function StructuredExamImportDialog({ onClose, onOpenInBuilder }:
   const [fileError, setFileError] = useState("");
   const [showDetails, setShowDetails] = useState(false);
   const inputRef = useRef<HTMLInputElement | null>(null);
+  // UX-8a — real modal in place (same overlay, same import behaviour): shared focus trap + Escape + focus return, body
+  // scroll lock, and a dialog name. onClose is read through a ref so a parent re-render never re-arms the trap.
+  const overlayRef = useRef<HTMLDivElement>(null), onCloseRef = useRef(onClose);
+  useEffect(() => { onCloseRef.current = onClose; });
+  const escape = useCallback(() => onCloseRef.current(), []);
+  useFocusTrap(overlayRef, true, escape);
+  useBodyScrollLock(true);
+  const titleId = "sb-import-title-" + useId().replace(/[^a-zA-Z0-9_-]/g, "");
 
   async function handleFile(file: File | undefined | null) {
     if (!file) return;
@@ -40,9 +50,9 @@ export default function StructuredExamImportDialog({ onClose, onOpenInBuilder }:
   const stats = result?.stats;
 
   return (
-    <div className="sb-preview-overlay" role="dialog" aria-modal="true" dir="rtl">
+    <div ref={overlayRef} className="sb-preview-overlay" role="dialog" aria-modal="true" aria-labelledby={titleId} dir="rtl">
       <header className="sb-preview-head">
-        <strong>📥 استيراد امتحان منظّم</strong>
+        <strong id={titleId}>📥 استيراد امتحان منظّم</strong>
         <button type="button" className="sb-btn" onClick={onClose}>✕ إغلاق</button>
       </header>
 

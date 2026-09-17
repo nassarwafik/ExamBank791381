@@ -71,8 +71,8 @@
    Phase 6 — bounded workspace: modal scrolls internally, header
    and footer stay pinned instead of the whole page scrolling.
    ============================================================ */
-.review-modal{ max-height:calc(100vh - 48px); overflow-y:auto; }
+.review-modal{ max-height:calc(100vh - 48px); max-height:calc(100dvh - 48px); overflow-y:auto; } /* UX-8a — dvh after the vh fallback */
 .review-top{ position:sticky; inset-block-start:0; z-index:2; }
 .review-top>button{ display:inline-flex; align-items:center; gap:6px; }
 .review-footer button{ display:inline-flex; align-items:center; gap:8px; }
-@media(max-width:800px){ .review-modal{ max-height:calc(100vh - 16px); } }
+@media(max-width:800px){ .review-modal{ max-height:calc(100vh - 16px); max-height:calc(100dvh - 16px); } }

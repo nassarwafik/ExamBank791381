@@ -146,6 +146,7 @@
   .eb-sidebar {
     position: fixed; inset-block: 0; inset-inline-start: 0;
     width: min(var(--eb-sidebar-w), 86vw); height: 100vh;
+    height: 100dvh; /* UX-8a — dynamic viewport after the vh fallback (drawer only) */
     transform: translateX(100%);
     visibility: hidden;
     pointer-events: none;

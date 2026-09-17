@@ -228,6 +228,8 @@
   .eb-dash-scope{ flex-direction:row; flex-wrap:wrap; gap:var(--eb-space-2); align-items:baseline; }
 }
 @media (max-width:767px){
+  /* UX-8a — phone touch targets (≥ 44 px); desktop density unchanged */
+  .eb-toolbar-button,.analytics-segmented button{ min-height:44px; }
   .eb-stat-grid.is-primary,.eb-stat-grid.is-secondary,.eb-attention-grid,.eb-chart-grid{ grid-template-columns:minmax(0,1fr); }
   .eb-span-2{ grid-column:auto; }
   .eb-dash-field select{ max-width:none; width:100%; }

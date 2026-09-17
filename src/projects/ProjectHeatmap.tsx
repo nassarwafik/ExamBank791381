@@ -4,7 +4,8 @@ import EmptyState from "../ui/EmptyState";
 import type { ProjectAnalytics, ProjectGroup, TrackMeta } from "./types";
 
 // Students (rows) × stages (columns) status grid. Horizontal scroll stays inside this component. Every cell
-// carries a visible abbreviation AND the full "student · stage · status" text, so state is never colour-only.
+// carries a visible abbreviation AND the full "student · stage · status" text (as its accessible name too, UX-8a),
+// so state is never colour-only.
 type Props = { heatmap: ProjectAnalytics["heatmap"]; tracks: TrackMeta[]; groups: ProjectGroup[] };
 
 export default function ProjectHeatmap({ heatmap, tracks, groups }: Props) {
@@ -66,7 +67,7 @@ export default function ProjectHeatmap({ heatmap, tracks, groups }: Props) {
                   const status = normalizeStageStatus(heatmap.statuses[i]?.[c.stageId]);
                   const text = stu.name + " · " + c.stageId + " " + c.title + " · " + stageStatusLabel(status);
                   return (
-                    <td key={c.stageId} className={"eb-heatmap-cell " + STAGE_STATUS_CLASS[status]} title={text}>
+                    <td key={c.stageId} className={"eb-heatmap-cell " + STAGE_STATUS_CLASS[status]} title={text} aria-label={text}>
                       <span aria-hidden="true">{STAGE_STATUS_ABBR[status]}</span>
                       <span className="eb-visually-hidden">{text}</span>
                     </td>

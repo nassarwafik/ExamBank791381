@@ -1,4 +1,6 @@
-import { useMemo, useState } from "react";
+import { useCallback, useEffect, useId, useMemo, useRef, useState } from "react";
+import useFocusTrap from "./ui/useFocusTrap";
+import useBodyScrollLock from "./ui/useBodyScrollLock";
 import StudentQuestionCard, { qid } from "./StudentQuestionCard";
 import type { Answer, FieldValue } from "./StudentQuestionCard";
 import StructuredExamSection from "./StructuredExamSection";
@@ -35,6 +37,15 @@ export default function ExamPreview({ exam, onClose }: Props) {
 
   const [coverStarted, setCoverStarted] = useState(false);
   const [focusIndex, setFocusIndex] = useState(0);
+  // UX-8a — the overlay is a real modal in place (no Dialog migration, same layering): the shared useFocusTrap owns
+  // focus containment, Escape and focus return to the opener; useBodyScrollLock owns the body scroll lock. onClose is
+  // read through a ref so a parent re-render never re-arms the trap.
+  const overlayRef = useRef<HTMLDivElement>(null), onCloseRef = useRef(onClose);
+  useEffect(() => { onCloseRef.current = onClose; });
+  const escape = useCallback(() => onCloseRef.current(), []);
+  useFocusTrap(overlayRef, true, escape);
+  useBodyScrollLock(true);
+  const titleId = "sb-preview-title-" + useId().replace(/[^a-zA-Z0-9_-]/g, "");
   const [answers, setAnswers] = useState<Record<string, Answer>>({});
   const showCover = !!cover?.enabled && !coverStarted;
 
@@ -63,9 +74,9 @@ export default function ExamPreview({ exam, onClose }: Props) {
   // NOT self-portaling: each call site wraps this in createPortal(document.body) so the fixed overlay
   // escapes any transformed ancestor. Rendering plain here also lets tests query the returned container.
   return (
-    <div className="sb-preview-overlay" role="dialog" aria-modal="true">
+    <div ref={overlayRef} className="sb-preview-overlay" role="dialog" aria-modal="true" aria-labelledby={titleId}>
       <header className="sb-preview-head">
-        <strong>👁 معاينة الطالب — {exam.title || "امتحان"}</strong>
+        <strong id={titleId}>👁 معاينة الطالب — {exam.title || "امتحان"}</strong>
         <button type="button" className="sb-btn" onClick={onClose}>← إغلاق المعاينة</button>
       </header>
       <main className={"interactive-exam-page exam-theme-" + theme} dir="rtl">
