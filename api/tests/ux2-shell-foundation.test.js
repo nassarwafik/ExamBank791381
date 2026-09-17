@@ -521,3 +521,53 @@ describe("UX-6c — Exam Bank Management", () => {
     expect(shell).not.toMatch(/eb-nav-group-label" aria-hidden/);
   });
 });
+
+describe("UX-6d — Smart Structured Exam Import & Repair", () => {
+  const wizard = read("SmartStructuredExamImportWizard.tsx");
+  const safe = read("structuredSafeRepair.ts");
+  const proposal = read("structuredAiProposal.ts");
+  const endpoint = readFileSync(join(ROOT, "api", "src", "functions", "structured-exam-ai-fix.js"), "utf8");
+
+  it("JSON stays on the ONE canonical parser; PDF reuses the existing authenticated import pipeline; no second parser/upload path", () => {
+    expect(wizard).toMatch(/importStructuredExam/);                                   // canonical JSON/HTML parser
+    expect(wizard).toMatch(/detectedQuestionsToStructuredExam/);                      // the one PDF conversion layer
+    expect(wizard).toMatch(/"\/api\/import-upload"/); expect(wizard).toMatch(/"\/api\/import-analyze"/);
+    expect(wizard).not.toMatch(/parseStructuredExam(Json|Html)\s*\(/);                // never re-parses raw JSON/HTML itself
+    // scanned/no-text PDF is surfaced explicitly, never faked as success
+    expect(wizard).toMatch(/ممسوح ضوئيًا/); expect(wizard).toMatch(/OCR/);
+  });
+
+  it("safe repair is deterministic and NEVER touches semantic content or calls the network", () => {
+    expect(safe).not.toMatch(/fetch\(|\/api\//);                                       // pure, no requests
+    expect(safe).toMatch(/SEQUENCE_VALUES_REBUILT/); expect(safe).toMatch(/FIELD_CORRECT_FROM_SEQUENCE/); expect(safe).toMatch(/WORDBANK_OPTIONS_FROM_BANK/);
+    // the sequence-repair block only runs for the three sequence types (never MCQ/trueFalse/table/cli/matching)
+    expect(safe).toMatch(/SEQUENCE_TYPES = new Set\(\["fillBlank", "wordBank", "ordering"\]\)/);
+  });
+
+  it("the AI phase is proposals-only, one request per unresolved question, bounded and cancellable", () => {
+    expect(wizard).toMatch(/"\/api\/structured-exam-ai-fix"/);
+    expect(wizard).toMatch(/AI_CONCURRENCY = 2/);
+    expect(wizard).toMatch(/cancelRef/);
+    expect(wizard).not.toMatch(/تطبيق الكل تلقائيًا/);                                 // no unconditional auto-apply
+    // shortAnswer is excluded from AI targets (manual grading allowed)
+    expect(proposal).toMatch(/shortAnswer is deliberately excluded/);
+  });
+
+  it("the endpoint's schema is enforcement-by-omission and every proposal is re-validated server-side", () => {
+    expect(endpoint).toMatch(/additionalProperties: false/);
+    expect(endpoint).toMatch(/function validateProposal/);
+    expect(endpoint).toMatch(/needsManualReview/);
+    // no protected key can appear in any schema
+    for (const k of ["marks", "\"text\"", "\"options\"", "examQuestionId", "section", "displayNumber"]) {
+      expect(endpoint.match(new RegExp("properties:[\\s\\S]*?" + k + ":\\s*\\{"))).toBeNull();
+    }
+    // the legacy quality-fix endpoint contract is untouched (still its own file)
+    expect(readFileSync(join(ROOT, "api", "src", "functions", "exam-quality-fix.js"), "utf8")).toMatch(/route: "exam-quality-fix"/);
+  });
+
+  it("protected fields are reasserted when a proposal is applied (client) and the exam stays a draft", () => {
+    expect(proposal).toMatch(/PROTECTED_QUESTION_KEYS/);
+    expect(proposal).toMatch(/examQuestionId: q\.examQuestionId, presentationType: q\.presentationType, marks: q\.marks/);
+    expect(wizard).not.toMatch(/status:\s*"final"/);                                   // wizard never finalizes
+  });
+});

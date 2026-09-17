@@ -1,0 +1,43 @@
+/* UX-6d — Smart Structured Exam Import & Repair wizard. Token-only, RTL, no color-only status. */
+.smart-import .si-steps{list-style:none;display:flex;flex-wrap:wrap;gap:6px;margin:0;padding:10px 16px;border-bottom:1px solid var(--line,#e5e9f0)}
+.smart-import .si-step{font-size:12.5px;font-weight:700;color:var(--muted,#64748b);background:var(--surface2,#f1f5f9);border:1px solid var(--line,#e5e9f0);border-radius:999px;padding:3px 10px}
+.smart-import .si-step.is-active{color:#fff;background:var(--primary,#2563eb);border-color:var(--primary,#2563eb)}
+.smart-import .si-step.is-done{color:#047857;background:#ecfdf5;border-color:#a7f3d0}
+.smart-import .si-step.is-done::before{content:"✓ "}
+.smart-import .si-live{margin:0;padding:0 16px;min-height:1.2em;color:var(--muted,#64748b);font-size:13px}
+.si-body{max-width:900px;margin:0 auto;padding:16px;display:flex;flex-direction:column;gap:14px}
+.si-count{font-size:16px;margin:0}
+.si-count strong{font-variant-numeric:tabular-nums}
+.si-groups,.si-changes,.si-detected,.si-proposals{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:8px}
+.si-group{display:flex;align-items:center;gap:8px;font-weight:700;color:var(--navy,#1e293b)}
+.si-group-count{min-width:26px;text-align:center;background:#fef2f2;border:1px solid #fecaca;color:#b91c1c;border-radius:999px;padding:1px 8px;font-variant-numeric:tabular-nums}
+.si-changes li{color:#047857;font-size:13.5px}
+.si-detected-row{display:flex;gap:12px;align-items:flex-start;background:var(--surface,#fff);border:1px solid var(--line,#e5e9f0);border-radius:12px;padding:10px 12px}
+.si-detected-row.is-excluded{opacity:.55}
+.si-detected-main{min-width:0;display:flex;flex-direction:column;gap:4px}
+.si-detected-text{margin:0;font-weight:600;color:var(--navy,#1e293b);overflow-wrap:anywhere}
+.si-check{display:flex;gap:6px;align-items:center;font-size:13px;white-space:nowrap}
+.si-badge{display:inline-block;background:var(--surface2,#f1f5f9);border:1px solid var(--line,#e5e9f0);border-radius:999px;padding:1px 8px;font-size:12px;margin-inline-end:6px}
+.si-policy{background:#fffbeb;border:1px solid #fde68a;border-radius:12px;padding:10px 14px;display:flex;flex-direction:column;gap:8px}
+.si-policy-row{display:flex;flex-direction:column;gap:4px;font-size:13.5px}
+.si-policy-row select{min-height:38px;font:inherit}
+.si-summary{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin:0}
+.si-summary div{background:var(--surface,#fff);border:1px solid var(--line,#e5e9f0);border-radius:12px;padding:10px 12px}
+.si-summary dt{color:var(--muted,#64748b);font-size:12.5px;margin:0}
+.si-summary dd{margin:2px 0 0;font-size:20px;font-weight:800;font-variant-numeric:tabular-nums;color:var(--navy,#1e293b)}
+.si-proposal{background:var(--surface,#fff);border:1px solid var(--line,#e5e9f0);border-radius:14px;padding:12px 14px;display:flex;flex-direction:column;gap:6px}
+.si-proposal-head{display:flex;justify-content:space-between;align-items:center;gap:8px}
+.si-status-badge{font-size:12px;font-weight:800;border-radius:999px;padding:2px 10px;border:1px solid}
+.si-status-proposed .si-status-badge{background:#eff6ff;border-color:#bfdbfe;color:#1d4ed8}
+.si-status-accepted .si-status-badge{background:#ecfdf5;border-color:#a7f3d0;color:#047857}
+.si-status-rejected .si-status-badge{background:#f3f4f6;border-color:#e5e7eb;color:#4b5563}
+.si-status-needsManualReview .si-status-badge,.si-status-stale .si-status-badge{background:#fffbeb;border-color:#fde68a;color:#92400e}
+.si-status-failed .si-status-badge{background:#fef2f2;border-color:#fecaca;color:#b91c1c}
+.si-suggestion{margin:0;background:#f8fafc;border:1px solid var(--line,#e5e9f0);border-radius:10px;padding:8px 10px;font-size:13.5px}
+.si-proposal-actions{display:flex;gap:8px;flex-wrap:wrap}
+@media (max-width:480px){
+  .si-detected-row{flex-direction:column;gap:6px}
+  .si-body{padding:12px}
+  .sb-import-actions .sb-btn{min-height:44px}
+}
+@media (prefers-reduced-motion: reduce){ .smart-import *{transition:none;animation:none} }
