@@ -30,7 +30,7 @@ export default function AchievementFeed({ posts, error, shareOn, shareSaving, no
             return (
               <li key={post.postId}>
                 <article className={"eb-sp-feed-item" + (post.isOwnPost ? " is-own" : "")}>
-                  <span className={"eb-sp-medal-icon is-" + post.tier} aria-hidden="true"><IconMedal size={22} /></span>
+                  <span className={"eb-sp-medal-icon is-" + post.tier} aria-hidden="true"><IconMedal size={26} /></span>
                   <div className="eb-sp-feed-body">
                     <p className="eb-sp-feed-text"><strong>{post.studentDisplayName}</strong> حصل على ميدالية {MEDAL_LABELS[post.tier]} في <strong>{post.assignmentTitle}</strong></p>
                     {(isRecent(post.createdAt, now) || post.isOwnPost || teacher) && (

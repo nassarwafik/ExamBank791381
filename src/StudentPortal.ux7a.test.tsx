@@ -279,52 +279,56 @@ describe("UX-7a StudentPortal — identity, medals, average ring and personal ra
     expect(screen.getByText("من الواجبات النهائية فقط")).toBeTruthy();
   });
 
-  it("no rank before 10 finalized assignments: shows the progression instead (pending results never count)", async () => {
-    mount({ student, classroom, assignments: [], stats: { ...baseStats, assigned: 20, finalized: 9, pendingReview: 6, averageFinalized: 99 } });
+  it("no rank before 4 finalized exams: shows the four-exam progression instead (pending results never count)", async () => {
+    mount({ student, classroom, assignments: [], stats: { ...baseStats, assigned: 20, finalized: 3, pendingReview: 6, averageFinalized: 99 } });
     await screen.findByText(/مرحبًا أحمد/);
     expect(screen.queryByText(/الرتبة:/)).toBeNull();
     expect(screen.queryByRole("progressbar", { name: /نحو رتبة/ })).toBeNull();
     const bar = screen.getByRole("progressbar", { name: "الطريق إلى رتبتك" });
-    expect(bar.getAttribute("aria-valuenow")).toBe("90");
-    expect(screen.getByText("9 من 10 واجبات نهائية لفتح الرتبة")).toBeTruthy();
+    expect(bar.getAttribute("aria-valuenow")).toBe("75");
+    expect(screen.getByText("3 من 4 امتحانات نهائية لفتح رتبتك")).toBeTruthy();
+    expect(document.body.textContent).not.toMatch(/من 10 |لفتح الرتبة/);          // old 10-based copy is gone
     expect(document.querySelector(".eb-sp-avatar-frame")?.className).not.toMatch(/is-rank-/);
   });
 
-  it("at 10+ finalized the six-tier personal rank badge, avatar frame and next-rank progress appear, from the finalized average only; nothing compares students", async () => {
-    mount({ student, classroom, assignments: [], stats: { ...baseStats, assigned: 14, finalized: 10, pendingReview: 4, average: 40, averageFinalized: 93 } });
+  it("the six-tier personal rank badge, avatar frame and next-rank progress come from the finalized COUNT only (not the average); nothing compares students", async () => {
+    // finalized 22 → diamond (20–23); 2 into the block → 50% toward legendary; average is deliberately low to prove it is ignored.
+    mount({ student, classroom, assignments: [], stats: { ...baseStats, assigned: 30, finalized: 22, pendingReview: 4, average: 40, averageFinalized: 12 } });
     await screen.findByText(/مرحبًا أحمد/);
     expect(screen.getByText(/الرتبة: ألماسي/).className).toContain("eb-badge");
     expect(document.querySelector(".eb-sp-avatar-frame.is-rank-diamond")).toBeTruthy();
     expect(screen.queryByRole("progressbar", { name: "الطريق إلى رتبتك" })).toBeNull();
     const next = screen.getByRole("progressbar", { name: "نحو رتبة أسطوري" });
-    expect(next.getAttribute("aria-valuenow")).toBe("50");                                          // (93 − 90) / (96 − 90)
-    expect(screen.getByText("الرتبة التالية عند معدل نهائي 96%")).toBeTruthy();
-    expect(screen.getByRole("progressbar", { name: "المعدل النهائي" }).getAttribute("aria-valuenow")).toBe("93");
+    expect(next.getAttribute("aria-valuenow")).toBe("50");                                          // 2 of the next 4 exams
+    expect(screen.getByText("بقي امتحانان للوصول إلى رتبة أسطوري")).toBeTruthy();
+    expect(document.body.textContent).not.toMatch(/الرتبة التالية عند معدل نهائي/);                 // old average-based wording gone
+    expect(screen.getByRole("progressbar", { name: "المعدل النهائي" }).getAttribute("aria-valuenow")).toBe("12");   // average still shown unchanged
     expect(document.body.textContent).not.toMatch(/ترتيب|المركز|leaderboard/i);
   });
 
-  it("rank tiers at exactly 10 finalized follow the locked boundaries (59.9 مبتدئ · 60 برونزي · 70 فضي · 80 ذهبي · 90 ألماسي · 96 أسطوري) with matching frames", async () => {
-    const cases: [number, string, string][] = [[59.9, "مبتدئ", "beginner"], [60, "برونزي", "bronze"], [79.9, "فضي", "silver"], [89.9, "ذهبي", "gold"], [95.9, "ألماسي", "diamond"], [100, "أسطوري", "legendary"]];
-    for (const [avg, label, tier] of cases) {
-      const { unmount } = mount({ student, classroom, assignments: [], stats: { ...baseStats, assigned: 10, finalized: 10, averageFinalized: avg } });
+  it("rank tiers follow the four-exam count boundaries (4 مبتدئ · 8 برونزي · 12 فضي · 16 ذهبي · 20 ألماسي · 24 أسطوري) with matching frames — the average is fixed and irrelevant", async () => {
+    const cases: [number, string, string][] = [[4, "مبتدئ", "beginner"], [8, "برونزي", "bronze"], [12, "فضي", "silver"], [16, "ذهبي", "gold"], [20, "ألماسي", "diamond"], [24, "أسطوري", "legendary"]];
+    for (const [finalized, label, tier] of cases) {
+      const { unmount } = mount({ student, classroom, assignments: [], stats: { ...baseStats, assigned: 30, finalized, averageFinalized: 50 } });
       await screen.findByText(/مرحبًا أحمد/);
-      expect(screen.getByText("الرتبة: " + label, { exact: false }).textContent, String(avg)).toContain(label);
-      expect(document.querySelector(".eb-sp-avatar-frame.is-rank-" + tier), String(avg)).toBeTruthy();
+      expect(screen.getByText("الرتبة: " + label, { exact: false }).textContent, String(finalized)).toContain(label);
+      expect(document.querySelector(".eb-sp-avatar-frame.is-rank-" + tier), String(finalized)).toBeTruthy();
       unmount();
     }
   });
 
-  it("legendary shows no next-rank progress bar, only 'بلغت أعلى رتبة'; a beginner progresses toward bronze", async () => {
-    const { unmount } = mount({ student, classroom, assignments: [], stats: { ...baseStats, assigned: 12, finalized: 12, averageFinalized: 97.5 } });
+  it("legendary (24 finalized) shows no next-rank progress bar, only 'بلغت أعلى رتبة'; a beginner at 6 finalized progresses 50% toward bronze", async () => {
+    const { unmount } = mount({ student, classroom, assignments: [], stats: { ...baseStats, assigned: 30, finalized: 24, averageFinalized: 30 } });
     await screen.findByText(/مرحبًا أحمد/);
     expect(screen.getByText(/الرتبة: أسطوري/)).toBeTruthy();
     expect(screen.queryByRole("progressbar", { name: /نحو رتبة/ })).toBeNull();
     expect(screen.getByText("بلغت أعلى رتبة")).toBeTruthy();
     unmount();
-    mount({ student, classroom, assignments: [], stats: { ...baseStats, assigned: 12, finalized: 12, averageFinalized: 30 } });
+    mount({ student, classroom, assignments: [], stats: { ...baseStats, assigned: 12, finalized: 6, averageFinalized: 30 } });   // beginner (4–7), 2 into the block
     await screen.findByText(/مرحبًا أحمد/);
     expect(screen.getByText(/الرتبة: مبتدئ/)).toBeTruthy();
     expect(screen.getByRole("progressbar", { name: "نحو رتبة برونزي" }).getAttribute("aria-valuenow")).toBe("50");
+    expect(screen.getByText("بقي امتحانان للوصول إلى رتبة برونزي")).toBeTruthy();
     expect(document.querySelector(".eb-sp-avatar-frame.is-rank-beginner")).toBeTruthy();
   });
 
@@ -442,13 +446,25 @@ describe("UX-7a source guards", () => {
     expect(pres).toContain("resolveGradingStatus(item.latestResult || null)");
     expect(pres).not.toMatch(/medalTier\(\s*(item|a)\.latestPercentage/);
     expect(pres).toMatch(/gradingOf\(item\) !== "final"\) continue/);
-    expect(rank).toContain("RANK_MIN_FINALIZED = 10");
+    expect(rank).toContain("RANK_STEP_FINALIZED = 4");
     expect(rank).toContain('["beginner", "bronze", "silver", "gold", "diamond", "legendary"]');
-    expect(rank).toMatch(/beginner: 0, bronze: 60, silver: 70, gold: 80, diamond: 90, legendary: 96/);
-    expect(rank).not.toMatch(/Math\.round\(averageFinalized|toFixed/);                                   // tier chosen on the unrounded average
+    expect(rank).not.toMatch(/bronze: 60, silver: 70, gold: 80, diamond: 90, legendary: 96/);            // the old average-threshold table is gone
+    expect(rank).not.toMatch(/RANK_MIN_FINALIZED\s*=\s*10/);                                             // old 10-exam unlock removed
+    expect(rank).toMatch(/Math\.floor\(count \/ RANK_STEP_FINALIZED\)/);                                // tier from the finalized count only
     expect(rank).not.toMatch(/pendingReview|latestPercentage|score|assignments/);
     expect(rank).not.toMatch(/sort\(|leaderboard|classmates/i);
     for (const src of Object.values(sources)) expect(src).not.toMatch(/latestScore\s*[>!=<]/);
+  });
+
+  it("medal icons use the new (slightly larger) sizes and keep a wrapping, overflow-safe layout", () => {
+    const progress = sources["./student/StudentProgressSection.tsx"], feed = sources["./student/AchievementFeed.tsx"];
+    // grouped medals 16->20, rank badge 14->18, achievement feed 22->26; the old sizes must be gone from those spots.
+    expect(progress).toContain('size={20} className={"eb-sp-medal is-" + g.tier}');
+    expect(progress).toContain('eb-sp-rank-badge"><IconMedal size={18}');
+    expect(feed).toContain('<IconMedal size={26} />');
+    expect(progress).not.toContain("IconMedal size={16}");
+    expect(progress).not.toContain("IconMedal size={14}");
+    expect(feed).not.toContain("IconMedal size={22}");
   });
   it("the portal keeps the single session authority and reuses the shared primitives", () => {
     const portal = sources["./StudentPortal.tsx"];
