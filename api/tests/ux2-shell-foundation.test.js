@@ -493,7 +493,11 @@ describe("UX-6c — Exam Bank Management", () => {
     expect(fn).toMatch(/mode: "exactSequence", values: fields\.map\(f => f\.correct\)/);                        // canonical sequence answer
     expect(fn).toMatch(/kind: isBank \? "select" : "text"/);
     expect(fn).toMatch(/fields: n\.fields, wordBank: n\.wordBank, answer: n\.answer/);                             // update rewrites the whole structure
-    expect(fn).toMatch(/questionIdForRequestKey\(body\?\.requestKey\)/);
+    expect(fn).toMatch(/const id = questionIdForRequestKey\(body\?\.requestKey\);\n\s+if \(!id\) return bad\(400/);   // mandatory key
+    expect(fn).not.toMatch(/newQuestionId|makeId|randomBytes|require\("crypto"\)/);                             // no fallback id generator at all
+    expect(action).toMatch(/function isBlobNotFound\(error\) \{\n\s+return error\?\.statusCode === 404 \|\| error\?\.code === "BlobNotFound";/);
+    expect(action).toMatch(/if \(!isBlobNotFound\(error\)\) \{\n\s+throw error;/);                          // only a missing blob is skipped
+    expect(action).not.toMatch(/\} catch \{\n\s+sourceDocument = \{ questions: \[\] \};/);
     const page = read("bank/ExamBankPage.tsx");
     expect(page).toMatch(/setInput\(prev => structureForType\(prev, presentationType\)\)/);
     expect(page).toMatch(/action: "create", question: input, requestKey/);

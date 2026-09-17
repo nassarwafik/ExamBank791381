@@ -42,7 +42,7 @@ async function createAndSelect(store: Store, question: Record<string, unknown>, 
   const presentationType = String(question.presentationType);
   const selected = await bankAction({ json: async () => ({ question: { examQuestionId: "x1", marks: 4, section: question.section, topic: question.topic, difficulty: question.difficulty, presentationType }, presentationType, topic: question.topic }) }, {
     requireBuilderAuth: () => ({ ok: true, user: { sub: "t1" } }), getBankContainer: () => ({}),
-    downloadJson: async (_c: unknown, k: string) => { if (!store.has(k)) throw new Error("BlobNotFound"); return structuredClone(store.get(k)); }
+    downloadJson: async (_c: unknown, k: string) => { if (!store.has(k)) throw Object.assign(new Error("The specified blob does not exist."), { statusCode: 404, code: "BlobNotFound" }); return structuredClone(store.get(k)); }
   });
   expect(selected.status).toBe(200);
   return selected.jsonBody.question as Record<string, unknown> & { fields: unknown[]; presentationType: string; answer: Record<string, unknown> };

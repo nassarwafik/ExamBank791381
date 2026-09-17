@@ -170,6 +170,12 @@ const {
   buildExamQuestion
 } = require("../lib/bank-question-exam");
 
+// The repository's Azure convention for a blob that does not exist (platform-storage, manage-students, …). ONLY
+// this case is a "missing source"; every other read failure (timeout, auth, 5xx, malformed body) is a real error.
+function isBlobNotFound(error) {
+  return error?.statusCode === 404 || error?.code === "BlobNotFound";
+}
+
 function getBankContainer() {
   const connectionString = process.env.AZURE_STORAGE_CONNECTION_STRING;
   if (!connectionString) {
@@ -268,11 +274,16 @@ async function handler(request, deps = {}) {
     for (const candidate of candidates.slice(0, 100)) {
       let sourceDocument = sourceCache.get(candidate.sourceId);
       if (!sourceDocument) {
-        // Defensive (stale index): an index entry whose source document is missing must never become a candidate
-        // (nor fail the whole selection) — it is skipped exactly like an entry whose question is gone.
+        // Defensive (stale index): an index entry whose source blob genuinely does not exist (404 / BlobNotFound)
+        // must never become a candidate nor fail the whole selection — it is skipped exactly like an entry whose
+        // question is gone. Any OTHER storage failure is rethrown and reaches the generic 500 below: a real outage
+        // must not silently make a valid source disappear and pick a different question.
         try {
           sourceDocument = await readJson(bankContainer, "sources/" + candidate.sourceId + ".json");
-        } catch {
+        } catch (error) {
+          if (!isBlobNotFound(error)) {
+            throw error;
+          }
           sourceDocument = { questions: [] };
         }
         if (!sourceDocument || typeof sourceDocument !== "object") {
@@ -317,4 +328,4 @@ app.http("questionBankAction", {
   handler: request => handler(request)
 });
 
-module.exports = { handler, presentationTypeFromFullQuestion, broadlyMatchesType, isOfficialLikeSource, buildExamQuestion };
+module.exports = { handler, isBlobNotFound, presentationTypeFromFullQuestion, broadlyMatchesType, isOfficialLikeSource, buildExamQuestion };

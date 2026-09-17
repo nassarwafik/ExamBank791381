@@ -303,6 +303,33 @@ describe("CRUD", () => {
     expect(posts()[1].body.requestKey).toBe(posts()[0].body.requestKey);
     expect(rowCount()).toBe(4);
   });
+  it("closing the create dialog and opening a genuinely new one sends a DIFFERENT requestKey (one key per create form instance)", async () => {
+    await mount(); openTab("بنك الأسئلة");
+    const fill = async () => {
+      fireEvent.click(screen.getByRole("button", { name: "إضافة سؤال" }));
+      const dialog = await screen.findByRole("dialog", { name: "إضافة سؤال إلى البنك" });
+      fireEvent.change(within(dialog).getByLabelText("نص السؤال"), { target: { value: "س" } });
+      fireEvent.change(within(dialog).getByLabelText("الموضوع"), { target: { value: "T" } });
+      fireEvent.change(within(dialog).getByLabelText("نص الخيار 1"), { target: { value: "أ" } });
+      fireEvent.change(within(dialog).getByLabelText("نص الخيار 2"), { target: { value: "ب" } });
+      fireEvent.click(within(dialog).getByLabelText("الخيار 1 هو الإجابة الصحيحة"));
+      return dialog;
+    };
+    let dialog = await fill();
+    mutationFail = true;
+    fireEvent.click(within(dialog).getByRole("button", { name: "إضافة السؤال" }));
+    await within(dialog).findByRole("alert");
+    fireEvent.click(within(dialog).getByRole("button", { name: "إلغاء" }));                          // give up on this form
+    await waitFor(() => expect(screen.queryByRole("dialog", { name: "إضافة سؤال إلى البنك" })).toBeNull());
+    mutationFail = false;
+    dialog = await fill();                                                                            // a genuinely new create form
+    fireEvent.click(within(dialog).getByRole("button", { name: "إضافة السؤال" }));
+    await waitFor(() => expect(screen.queryByRole("dialog", { name: "إضافة سؤال إلى البنك" })).toBeNull());
+    expect(posts()).toHaveLength(2);
+    const [k1, k2] = posts().map(p => String(p.body.requestKey));
+    expect(k1).toMatch(/^[A-Za-z0-9][A-Za-z0-9_-]{7,63}$/); expect(k2).toMatch(/^[A-Za-z0-9][A-Za-z0-9_-]{7,63}$/);
+    expect(k2).not.toBe(k1);
+  });
   it("a failed update shows the server error inside the still-open dialog and leaves the list untouched; a failed delete keeps the row", async () => {
     await mount(); openTab("بنك الأسئلة");
     mutationFail = true;

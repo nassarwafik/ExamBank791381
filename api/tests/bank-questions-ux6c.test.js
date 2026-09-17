@@ -48,12 +48,14 @@ function deps(extra = {}) {
     isConcurrencyConflict: e => e instanceof StorageConflictError,
     recordAuditEvent: async (_c, ev) => { audits.push(ev); },
     now: () => "2026-09-17T12:00:00.000Z",
-    newQuestionId: () => "manual-fixed-1",
     ...extra
   };
 }
 const get = (d = deps()) => handler({ method: "GET", url: "http://x/bank-questions", params: {} }, d);
-const post = (body, d = deps()) => handler({ method: "POST", url: "http://x/bank-questions", params: {}, json: async () => body }, d);
+// A create ALWAYS needs a requestKey (operation-level idempotency); the helper adds the fixed one unless the test sets its own.
+const KEY1 = "fixed-00001";
+const post = (body, d = deps()) => handler({ method: "POST", url: "http://x/bank-questions", params: {}, json: async () => (body?.action === "create" && !("requestKey" in body) ? { ...body, requestKey: KEY1 } : body) }, d);
+const postRaw = (body, d = deps()) => handler({ method: "POST", url: "http://x/bank-questions", params: {}, json: async () => body }, d);
 const validMC = () => ({ section: "BASIC", topic: "NETWORK_BASICS", difficulty: 2, presentationType: "multipleChoice", text: "ما هو الراوتر؟", options: [{ value: "a", text: "جهاز توجيه" }, { value: "b", text: "كابل" }], answer: { correctOptionValue: "a" } });
 const validFill = () => ({ section: "INFRASTRUCTURE", topic: "SUBNETTING_MANUAL", difficulty: 3, presentationType: "fillBlank", text: "أكمل: قناع الفئة C هو ____ وعنوان البث ____", fields: [{ label: "القناع", correct: "255.255.255.0" }, { label: "عنوان البث", correct: "192.168.1.255" }] });
 const validWord = () => ({ section: "BASIC", topic: "ROUTING_MANUAL", difficulty: 2, presentationType: "wordBank", text: "اختر البروتوكول: ____ يعتمد الحالة، ____ يعتمد المسافة", fields: [{ label: "الأول", correct: "OSPF" }, { label: "الثاني", correct: "RIP" }], wordBank: ["OSPF", "RIP", "BGP", "EIGRP"] });
@@ -66,7 +68,7 @@ const storedManual = id => sourceQuestions(MANUAL_SOURCE_ID).find(q => q.id === 
 // when they pick a question of this type / topic in the Builder. Missing blobs throw exactly like a 404 download.
 const builderSelect = (presentationType, topic) => bankActionHandler({ json: async () => ({ question: { examQuestionId: "x1", marks: 2, section: "BASIC", topic, difficulty: 2, presentationType }, presentationType, topic }) }, {
   requireBuilderAuth: () => ({ ok: true, user: { sub: "t1" } }), getBankContainer: () => ({}),
-  downloadJson: async (_c, k) => { if (!store.has(k)) throw new Error("BlobNotFound"); return structuredClone(store.get(k)); }
+  downloadJson: async (_c, k) => { if (!store.has(k)) throw Object.assign(new Error("The specified blob does not exist."), { statusCode: 404, code: "BlobNotFound" }); return structuredClone(store.get(k)); }
 });
 
 beforeEach(() => { store = new Map(); audits = []; conflictsToInject = 0; failures = []; mutationCounts = new Map(); mutationLog = []; seed(); });
@@ -146,9 +148,10 @@ describe("pure helpers", () => {
   it("round-trip invariant: for every type, the normalized question classifies back to the SAME presentation type through the Builder's function", () => {
     for (const input of [validMC(), validFill(), validWord(), validOpen()]) expect(presentationTypeFromBankQuestion(normalizeInput(input))).toBe(input.presentationType);
   });
-  it("requestKey → deterministic manual id; malformed keys are ignored", () => {
+  it("requestKey → deterministic manual id; malformed keys yield no id (and the create path has no fallback id generator)", () => {
     expect(questionIdForRequestKey("mfy1abc-x9k2")).toBe("manual-mfy1abc-x9k2");
     expect(questionIdForRequestKey("short")).toBeNull(); expect(questionIdForRequestKey("../etc")).toBeNull(); expect(questionIdForRequestKey(undefined)).toBeNull();
+    expect(questionIdForRequestKey("a".repeat(65))).toBeNull(); expect(questionIdForRequestKey("has space1")).toBeNull(); expect(questionIdForRequestKey("-leading1")).toBeNull();
     expect(contentKey({ ...normalizeInput(validFill()), classification: { topic: "SUBNETTING_MANUAL", difficulty: 3 } })).toBe(contentKey({ ...normalizeInput(validFill()), classification: { topic: "SUBNETTING_MANUAL", difficulty: 3 } }));
   });
 });
@@ -187,22 +190,22 @@ describe("create", () => {
   it("writes the canonical question into sources/manual.json AND the index (both via mutate), stamps actor/time, returns the row", async () => {
     const r = await post({ action: "create", question: validMC() });
     expect(r.status).toBe(200);
-    expect(r.jsonBody.question).toMatchObject({ id: "manual-fixed-1", sourceId: "manual", sourceKind: "manual", official: false, section: "BASIC", topic: "NETWORK_BASICS", difficulty: 2, presentationType: "multipleChoice", text: "ما هو الراوتر؟", reviewStatus: "classified", createdAt: "2026-09-17T12:00:00.000Z" });
+    expect(r.jsonBody.question).toMatchObject({ id: "manual-fixed-00001", sourceId: "manual", sourceKind: "manual", official: false, section: "BASIC", topic: "NETWORK_BASICS", difficulty: 2, presentationType: "multipleChoice", text: "ما هو الراوتر؟", reviewStatus: "classified", createdAt: "2026-09-17T12:00:00.000Z" });
     const stored = sourceQuestions(MANUAL_SOURCE_ID);
     expect(stored).toHaveLength(1);
-    expect(stored[0]).toMatchObject({ id: "manual-fixed-1", sourceId: "manual", type: "multipleChoice", section: "BASIC", createdBy: "t1", reviewStatus: "classified", classification: { topic: "NETWORK_BASICS", difficulty: 2, status: "classified" }, flags: { hasImage: false, hasOptions: true, requiresManualReview: false } });
+    expect(stored[0]).toMatchObject({ id: "manual-fixed-00001", sourceId: "manual", type: "multipleChoice", section: "BASIC", createdBy: "t1", reviewStatus: "classified", classification: { topic: "NETWORK_BASICS", difficulty: 2, status: "classified" }, flags: { hasImage: false, hasOptions: true, requiresManualReview: false } });
     expect(stored[0].answer).toEqual({ mode: "singleChoice", correctOptionValue: "a", correctOptionIndex: 0, correctText: "جهاز توجيه", values: ["a"] });
-    const entry = indexEntry("manual-fixed-1");
+    const entry = indexEntry("manual-fixed-00001");
     expect(entry).toMatchObject({ sourceId: "manual", section: "BASIC", type: "multipleChoice", topic: "NETWORK_BASICS", difficulty: 2, reviewStatus: "classified", hasImage: false });
     expect(indexIds()).toHaveLength(4);
-    expect(audits).toEqual([{ actor: "t1", action: "bank.question.create", targetType: "bankQuestion", targetId: "manual-fixed-1", details: { sourceId: "manual", section: "BASIC" } }]);
+    expect(audits).toEqual([{ actor: "t1", action: "bank.question.create", targetType: "bankQuestion", targetId: "manual-fixed-00001", details: { sourceId: "manual", section: "BASIC" } }]);
     expect(mutationLog).toEqual([SOURCES_PREFIX + "manual.json", INDEX_BLOB]);                     // source first, then index
   });
   it("a second create appends (existing manual questions preserved) and never reuses an id", async () => {
     await post({ action: "create", question: validMC() });
-    const r = await post({ action: "create", question: { ...validMC(), text: "ثانٍ" } }, deps({ newQuestionId: () => "manual-fixed-2" }));
+    const r = await post({ action: "create", question: { ...validMC(), text: "ثانٍ" }, requestKey: "fixed-00002" });
     expect(r.status).toBe(200);
-    expect(sourceQuestions(MANUAL_SOURCE_ID).map(q => q.id)).toEqual(["manual-fixed-1", "manual-fixed-2"]);
+    expect(sourceQuestions(MANUAL_SOURCE_ID).map(q => q.id)).toEqual(["manual-fixed-00001", "manual-fixed-00002"]);
   });
   it("an id collision inside the manual source with DIFFERENT content is rejected as a conflict, never overwritten", async () => {
     await post({ action: "create", question: validMC() });
@@ -210,6 +213,26 @@ describe("create", () => {
     expect(r.status).toBe(409);
     expect(sourceQuestions(MANUAL_SOURCE_ID)).toHaveLength(1);
     expect(sourceQuestions(MANUAL_SOURCE_ID)[0].text).toBe("ما هو الراوتر؟");
+  });
+  it("create WITHOUT a requestKey → 400 with an Arabic message; nothing is written to the source or the index (no fallback id)", async () => {
+    const r = await postRaw({ action: "create", question: validMC() });
+    expect(r.status).toBe(400); expect(r.jsonBody.error).toContain("requestKey");
+    expect(store.has(SOURCES_PREFIX + MANUAL_SOURCE_ID + ".json")).toBe(false);
+    expect(indexIds()).toHaveLength(3); expect(mutationLog).toEqual([]); expect(audits).toEqual([]);
+  });
+  it("create with a MALFORMED requestKey (too short / bad characters / too long / non-string) → 400, nothing written", async () => {
+    for (const requestKey of ["short", "bad key!", "../../x", "a".repeat(65), 12345678, null, "", { key: "x" }]) {
+      const r = await postRaw({ action: "create", question: validMC(), requestKey });
+      expect(r.status, String(requestKey)).toBe(400); expect(r.jsonBody.error).toContain("requestKey");
+    }
+    expect(store.has(SOURCES_PREFIX + MANUAL_SOURCE_ID + ".json")).toBe(false);
+    expect(indexIds()).toHaveLength(3); expect(mutationLog).toEqual([]);
+  });
+  it("the id is ALWAYS manual-<requestKey>: no deps hook and no generator can substitute another id", async () => {
+    const r = await postRaw({ action: "create", question: validMC(), requestKey: "Key_9-abc" }, deps({ newQuestionId: () => "manual-other" }));
+    expect(r.status).toBe(200); expect(r.jsonBody.question.id).toBe("manual-Key_9-abc");
+    expect(sourceQuestions(MANUAL_SOURCE_ID).map(q => q.id)).toEqual(["manual-Key_9-abc"]);
+    expect(indexIds()).toContain("manual-Key_9-abc"); expect(indexIds()).not.toContain("manual-other");
   });
   it("a storage concurrency conflict surfaces as 409 with an Arabic retry message (no partial fake success)", async () => {
     conflictsToInject = 1;
@@ -224,28 +247,28 @@ describe("fill-blank and word-bank questions are usable end-to-end", () => {
   it("create fillBlank: stored source question carries real fields + exactSequence answer; index says multiField; GET row keeps presentationType fillBlank with editable fields", async () => {
     const r = await post({ action: "create", question: validFill() });
     expect(r.status).toBe(200);
-    const stored = storedManual("manual-fixed-1");
+    const stored = storedManual("manual-fixed-00001");
     expect(stored.type).toBe("multiField");
     expect(stored.fields).toHaveLength(2);
     expect(stored.fields[0]).toEqual({ id: "f1", label: "القناع", labelHtml: "", order: 1, kind: "text", correct: "255.255.255.0" });
     expect(stored.answer).toEqual({ mode: "exactSequence", values: ["255.255.255.0", "192.168.1.255"] });
     expect(stored.wordBank).toEqual([]); expect(stored.options).toEqual([]);
-    expect(indexEntry("manual-fixed-1")).toMatchObject({ sourceId: "manual", type: "multiField", section: "INFRASTRUCTURE", topic: "SUBNETTING_MANUAL", difficulty: 3, needsReview: false, reviewStatus: "classified" });
-    const row = (await get()).jsonBody.questions.find(x => x.id === "manual-fixed-1");
+    expect(indexEntry("manual-fixed-00001")).toMatchObject({ sourceId: "manual", type: "multiField", section: "INFRASTRUCTURE", topic: "SUBNETTING_MANUAL", difficulty: 3, needsReview: false, reviewStatus: "classified" });
+    const row = (await get()).jsonBody.questions.find(x => x.id === "manual-fixed-00001");
     expect(row).toMatchObject({ presentationType: "fillBlank", type: "multiField", fields: [{ id: "f1", label: "القناع", correct: "255.255.255.0" }, { id: "f2", label: "عنوان البث", correct: "192.168.1.255" }], wordBank: [] });
     expect(r.jsonBody.question).toEqual(row);
   });
   it("create wordBank: stored fields are select-kind with the choices, wordBank[] persisted, presentationType stays wordBank on GET (not reclassified as fillBlank)", async () => {
     const r = await post({ action: "create", question: validWord() });
     expect(r.status).toBe(200);
-    const stored = storedManual("manual-fixed-1");
+    const stored = storedManual("manual-fixed-00001");
     expect(stored.type).toBe("multiField");
     expect(stored.fields.map(f => f.kind)).toEqual(["select", "select"]);
     expect(stored.fields[0].options.map(o => o.text)).toEqual(["OSPF", "RIP", "BGP", "EIGRP"]);
     expect(stored.wordBank).toEqual(["OSPF", "RIP", "BGP", "EIGRP"]);
     expect(stored.answer).toEqual({ mode: "exactSequence", values: ["OSPF", "RIP"] });
     expect(presentationTypeFromBankQuestion(stored)).toBe("wordBank");
-    const row = (await get()).jsonBody.questions.find(x => x.id === "manual-fixed-1");
+    const row = (await get()).jsonBody.questions.find(x => x.id === "manual-fixed-00001");
     expect(row).toMatchObject({ presentationType: "wordBank", wordBank: ["OSPF", "RIP", "BGP", "EIGRP"], fields: [{ id: "f1", label: "الأول", correct: "OSPF" }, { id: "f2", label: "الثاني", correct: "RIP" }] });
   });
   it("the Builder's real replace handler selects the created fillBlank question and converts it with non-empty fields; the sequence answer grades full / partial marks; the student copy has no keys", async () => {
@@ -253,10 +276,10 @@ describe("fill-blank and word-bank questions are usable end-to-end", () => {
     const r = await builderSelect("fillBlank", "SUBNETTING_MANUAL");
     expect(r.status).toBe(200);
     const q = r.jsonBody.question;
-    expect(q).toMatchObject({ bankQuestionId: "manual-fixed-1", origin: "bank", presentationType: "fillBlank", bankType: "multiField", section: "INFRASTRUCTURE", topic: "SUBNETTING_MANUAL", difficulty: 3, marks: 2 });
+    expect(q).toMatchObject({ bankQuestionId: "manual-fixed-00001", origin: "bank", presentationType: "fillBlank", bankType: "multiField", section: "INFRASTRUCTURE", topic: "SUBNETTING_MANUAL", difficulty: 3, marks: 2 });
     expect(q.fields).toHaveLength(2); expect(q.fields[0].label).toBe("القناع"); expect(q.fields[0].kind).toBe("text");
     expect(q.wordBank).toBeUndefined();
-    expect(q).toEqual(buildExamQuestion(storedManual("manual-fixed-1"), indexEntry("manual-fixed-1"), { examQuestionId: "x1", marks: 2 }));   // the shared helper, byte for byte
+    expect(q).toEqual(buildExamQuestion(storedManual("manual-fixed-00001"), indexEntry("manual-fixed-00001"), { examQuestionId: "x1", marks: 2 }));   // the shared helper, byte for byte
     expect(gradeQuestion(q, { kind: "sequence", values: ["255.255.255.0", "192.168.1.255"] })).toMatchObject({ score: 2, maxMarks: 2, correct: true, manualReview: false });
     expect(gradeQuestion(q, { kind: "sequence", values: ["255.255.255.0", "x"] })).toMatchObject({ score: 1, correct: false, manualReview: false });
     const student = sanitizeQuestionForStudent(q);
@@ -269,7 +292,7 @@ describe("fill-blank and word-bank questions are usable end-to-end", () => {
     const r = await builderSelect("wordBank", "ROUTING_MANUAL");
     expect(r.status).toBe(200);
     const q = r.jsonBody.question;
-    expect(q).toMatchObject({ bankQuestionId: "manual-fixed-1", presentationType: "wordBank", wordBank: ["OSPF", "RIP", "BGP", "EIGRP"] });
+    expect(q).toMatchObject({ bankQuestionId: "manual-fixed-00001", presentationType: "wordBank", wordBank: ["OSPF", "RIP", "BGP", "EIGRP"] });
     expect(q.fields.map(f => f.kind)).toEqual(["select", "select"]);
     expect(q.fields[1].options.map(o => o.text)).toEqual(["OSPF", "RIP", "BGP", "EIGRP"]);
     expect(gradeQuestion(q, { kind: "sequence", values: ["OSPF", "RIP"] })).toMatchObject({ score: 2, correct: true });
@@ -298,8 +321,8 @@ describe("fill-blank and word-bank questions are usable end-to-end", () => {
     const transitions = [["multipleChoice", "fillBlank"], ["multipleChoice", "wordBank"], ["fillBlank", "wordBank"], ["wordBank", "fillBlank"], ["fillBlank", "multipleChoice"], ["wordBank", "multipleChoice"], ["multipleChoice", "open"], ["fillBlank", "open"], ["wordBank", "open"], ["open", "fillBlank"], ["open", "wordBank"], ["open", "multipleChoice"]];
     let n = 0;
     for (const [from, to] of transitions) {
-      const id = "manual-fixed-" + (++n);
-      expect((await post({ action: "create", question: inputs[from]() }, deps({ newQuestionId: () => id }))).status).toBe(200);
+      const key = "fixed-000" + String(++n).padStart(2, "0"), id = "manual-" + key;
+      expect((await post({ action: "create", question: inputs[from](), requestKey: key })).status).toBe(200);
       const r = await post({ action: "update", id, question: inputs[to]() });
       expect(r.status, from + "→" + to).toBe(200);
       const stored = storedManual(id);
@@ -371,7 +394,7 @@ describe("delete", () => {
     expect(r.status).toBe(200); expect(r.jsonBody).toEqual({ ok: true, deleted: true, id: IMPORT + "-1" });
     expect(sourceQuestions(IMPORT)).toEqual([]);
     expect(store.get(SOURCES_PREFIX + IMPORT + ".json").original).toBeTruthy();   // the source document itself is kept
-    expect(indexIds().sort()).toEqual([OFFICIAL + "-q1", OFFICIAL + "-q2", "manual-fixed-1"].sort());
+    expect(indexIds().sort()).toEqual([OFFICIAL + "-q1", OFFICIAL + "-q2", "manual-fixed-00001"].sort());
     expect(sourceQuestions(OFFICIAL)).toHaveLength(2);
     expect(audits.at(-1)).toMatchObject({ action: "bank.question.delete", targetId: IMPORT + "-1" });
   });

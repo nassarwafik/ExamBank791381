@@ -1,6 +1,5 @@
 const { app } = require("@azure/functions");
 const { BlobServiceClient } = require("@azure/storage-blob");
-const crypto = require("crypto");
 const { requireBuilderAuth } = require("../lib/builder-auth");
 const { VALID_SECTIONS } = require("../lib/section-resolver");
 const { downloadJsonOrNull, listJson, mutateJsonWithRetry, isConcurrencyConflict, getContainer: getPlatformContainer } = require("../lib/platform-storage");
@@ -30,9 +29,10 @@ const { presentationTypeFromFullQuestion } = require("../lib/bank-question-exam"
  * Write consistency (two blobs, no transaction): every operation is IDEMPOTENT RECONCILIATION. The source document
  * is written first and is the authority; the index is then reconciled FROM the stored question. If the second write
  * fails the client gets an error and the SAME request converges on retry:
- *   create  — the id is derived from the client's requestKey (manual-<requestKey>); a retry finds the identical
- *             question already stored, skips the source write and only reconciles the index (never a second copy).
- *             The same id with DIFFERENT content is a 409, never an overwrite.
+ *   create  — a valid requestKey is MANDATORY (400 otherwise) and the id is always manual-<requestKey>; there is no
+ *             server-generated fallback id, so a retried create can never mint a second id. A retry finds the
+ *             identical question already stored, skips the source write and only reconciles the index (never a
+ *             second copy). The same id with DIFFERENT content is a 409, never an overwrite.
  *   update  — re-applies the same content to the source and re-derives the index entry from what is stored.
  *   delete  — removes whichever half still exists (source and/or index); 404 only when neither has the question.
  * locate() also self-heals: an index entry whose source no longer holds the question is dropped from the index.
@@ -206,11 +206,9 @@ function contentKey(question) {
   const cls = question.classification || {};
   return JSON.stringify({ section: question.section, type: question.type, text: question.text, options: question.options || [], fields: question.fields || [], wordBank: question.wordBank || [], answer: question.answer || {}, topic: cls.topic ?? question.topic, difficulty: cls.difficulty ?? question.difficulty });
 }
-function newQuestionId() {
-  return MANUAL_SOURCE_ID + "-" + Date.now().toString(36) + "-" + crypto.randomBytes(3).toString("hex");
-}
 function questionIdForRequestKey(requestKey) {
-  const key = String(requestKey ?? "").trim();
+  if (typeof requestKey !== "string") return null;                                  // a key is a string, never coerced
+  const key = requestKey.trim();
   return REQUEST_KEY_PATTERN.test(key) ? MANUAL_SOURCE_ID + "-" + key : null;
 }
 function toIndexEntry(question, sourceId, previous) {
@@ -238,7 +236,6 @@ async function handler(request, deps = {}, obs = null) {
   const audit = deps.recordAuditEvent || recordAuditEvent;
   const getPlatform = deps.getPlatformContainer || getPlatformContainer;
   const now = deps.now || (() => new Date().toISOString());
-  const makeId = deps.newQuestionId || newQuestionId;
   let phase = "read";
   try {
     const auth = authFn(request);
@@ -321,8 +318,10 @@ async function handler(request, deps = {}, obs = null) {
       if (!check.ok) return bad(400, check.errors[0], { errors: check.errors });
       const n = normalizeInput(body.question);
       const stamp = now();
-      const id = questionIdForRequestKey(body?.requestKey) || makeId();
-      if (!ID_PATTERN.test(id)) return bad(400, "معرّف الطلب غير صالح.");
+      // Operation-level idempotency is not optional: without a stable client key a retried create would mint a new
+      // id and could store the question twice. The id is ALWAYS derived from the validated key.
+      const id = questionIdForRequestKey(body?.requestKey);
+      if (!id) return bad(400, "مفتاح الطلب (requestKey) مطلوب لإنشاء سؤال: نص من 8 إلى 64 حرفًا (أحرف لاتينية أو أرقام أو - أو _).");
       const fresh = {
         id, sourceId: MANUAL_SOURCE_ID, sourceQuestionId: id, questionNumber: "",
         section: n.section, type: n.type, text: n.text, textHtml: n.textHtml, options: n.options, fields: n.fields, wordBank: n.wordBank, parts: [], answer: n.answer, assets: [],
