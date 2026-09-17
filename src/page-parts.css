@@ -63,7 +63,7 @@
 .eb-class-meta{ display:flex; flex-wrap:wrap; align-items:center; gap:var(--eb-space-1); color:var(--eb-muted); font-size:var(--eb-fs-12); }
 .eb-class-chips{ display:flex; flex-wrap:wrap; gap:4px; margin-top:2px; }
 .eb-chip{ display:inline-flex; align-items:center; min-height:20px; padding:0 var(--eb-space-2); border-radius:var(--eb-pill); background:var(--eb-info-bg); color:var(--eb-info-tx); font-size:var(--eb-fs-12); font-weight:var(--eb-fw-medium); }
-.eb-chip.is-muted{ background:var(--eb-surface-2); color:var(--eb-faint); }
+.eb-chip.is-muted{ background:var(--eb-surface-2); color:var(--eb-muted); } /* UX-8b — real text: muted, not faint */
 .eb-class-menu{ flex:0 0 auto; margin-top:var(--eb-space-1); }
 
 /* ---------- Action menu (disclosure of plain controls) ---------- */
@@ -91,7 +91,7 @@
 .eb-menu-item.is-danger:hover{ background:var(--eb-danger-bg); }
 .eb-menu-sep{ border:0; border-top:1px solid var(--eb-line); margin:var(--eb-space-1) var(--eb-space-2); }
 .eb-menu-group{ display:flex; flex-direction:column; gap:2px; padding-bottom:var(--eb-space-1); border-bottom:1px solid var(--eb-line); margin-bottom:var(--eb-space-1); }
-.eb-menu-label{ padding:var(--eb-space-1) var(--eb-space-3); color:var(--eb-faint); font-size:var(--eb-fs-12); font-weight:var(--eb-fw-semibold); }
+.eb-menu-label{ padding:var(--eb-space-1) var(--eb-space-3); color:var(--eb-muted); font-size:var(--eb-fs-12); font-weight:var(--eb-fw-semibold); }
 .eb-menu-check{ display:flex; align-items:center; gap:var(--eb-space-2); padding:var(--eb-space-2) var(--eb-space-3); border-radius:var(--eb-r-xs); color:var(--eb-text); font-size:var(--eb-fs-13); cursor:pointer; }
 .eb-menu-check:hover{ background:var(--eb-surface-2); }
 .eb-menu-check.is-on{ color:var(--eb-primary-strong); font-weight:var(--eb-fw-semibold); }
@@ -136,6 +136,8 @@
 .eb-credential-box .students-table-wrap{ background:var(--eb-surface); }
 .eb-subheading{ margin:0; color:var(--eb-text-heading); font-size:var(--eb-fs-14); font-weight:var(--eb-fw-semibold); }
 .eb-muted{ margin:0; color:var(--eb-muted); font-size:var(--eb-fs-13); }
+/* UX-8b — status lines rendered directly on the page background (no card behind them): muted is 4.43:1 there, text-secondary passes */
+.eb-muted[role="status"]{ color:var(--eb-text-secondary); }
 .eb-inline-actions{ display:flex; flex-wrap:wrap; gap:var(--eb-space-2); }
 
 /* ---------- Roster table ---------- */
@@ -148,8 +150,8 @@
 .eb-col-actions{ width:1%; }
 .eb-row-actions{ display:flex; align-items:center; justify-content:flex-end; gap:var(--eb-space-1); }
 .student-likes-badge{ display:inline-flex; align-items:center; gap:2px; margin-inline-start:6px; padding:2px 7px; border-radius:var(--eb-pill); background:var(--eb-danger-bg); color:var(--eb-danger-tx); font-size:var(--eb-fs-12); font-weight:var(--eb-fw-semibold); }
-.student-row-archived td{ color:var(--eb-faint); }
-.never-login{ color:var(--eb-faint); }
+.student-row-archived td{ color:var(--eb-muted); } /* UX-8b — archived rows stay readable */
+.never-login{ color:var(--eb-muted); }
 
 /* ---------- Dialog content helpers ---------- */
 .eb-dialog-lead{ margin:0; color:var(--eb-text-secondary); font-size:var(--eb-fs-13); line-height:var(--eb-lh-body); }
@@ -176,7 +178,7 @@
 .medal-badge{ display:flex; align-items:flex-start; gap:var(--eb-space-2); border:1px solid var(--eb-line); background:var(--eb-surface-2); border-radius:var(--eb-r); padding:var(--eb-space-2) var(--eb-space-3); min-width:170px; max-width:260px; }
 .medal-badge strong{ display:block; font-size:var(--eb-fs-12); color:var(--eb-text); }
 .medal-badge span{ display:block; font-size:var(--eb-fs-12); color:var(--eb-muted); margin-top:2px; }
-.medal-badge small{ display:block; font-size:var(--eb-fs-12); color:var(--eb-faint); margin-top:2px; }
+.medal-badge small{ display:block; font-size:var(--eb-fs-12); color:var(--eb-muted); margin-top:2px; }
 .medal-badge-empty{ color:var(--eb-muted); font-size:var(--eb-fs-13); margin:0; }
 .deadline-edit-row td{ background:var(--eb-surface-2); }
 .deadline-edit-inline{ display:flex; flex-wrap:wrap; align-items:center; gap:var(--eb-space-2); font-size:var(--eb-fs-13); color:var(--eb-muted); }
@@ -206,6 +208,10 @@
   .eb-bulk-group{ border-inline-end:0; padding-inline-end:0; width:100%; }
   .eb-profile-stats,.eb-dl{ grid-template-columns:repeat(2,minmax(0,1fr)); }
   .eb-class-select{ padding:var(--eb-space-2); }
+}
+/* UX-8b — reduced motion */
+@media (prefers-reduced-motion: reduce){
+  .class-row,.eb-class-row,.eb-segmented > button,.eb-menu-trigger,.eb-search-field{ transition:none; }
 }
 @media print{
   .eb-classes-pane,.eb-roster-toolbar,.eb-bulk-bar,.eb-menu-trigger,.eb-section-actions,.eb-credential-box{ display:none !important; }

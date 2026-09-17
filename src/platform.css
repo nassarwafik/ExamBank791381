@@ -949,6 +949,11 @@
   .analytics-card { padding: 13px; }
 }
 
+/* UX-8b — reduced motion: no entrance fades, instant state transitions */
+@media (prefers-reduced-motion: reduce) {
+  .teacher-platform-inner, .analytics-card { animation: none; }
+  .teacher-workspace-nav button, .students-table tbody tr, .analytics-table tbody tr, .platform-primary { transition: none; }
+}
 @media print {
   .teacher-workspace-nav { display: none !important; }
   .teacher-platform { background: #fff !important; padding: 0 !important; }

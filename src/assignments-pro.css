@@ -40,7 +40,7 @@
 .eb-assign-row-title{ display:flex; flex-wrap:wrap; align-items:center; gap:var(--eb-space-2); }
 .eb-assign-row-title strong{ color:var(--eb-text-heading); font-size:var(--eb-fs-14); font-weight:var(--eb-fw-semibold); overflow-wrap:anywhere; }
 .eb-assign-row-meta{ color:var(--eb-muted); font-size:var(--eb-fs-12); }
-.eb-assign-row-due{ color:var(--eb-faint); font-size:var(--eb-fs-12); }
+.eb-assign-row-due{ color:var(--eb-muted); font-size:var(--eb-fs-12); }
 .eb-assign-row-actions{ display:flex; align-items:center; gap:var(--eb-space-1); flex:0 0 auto; }
 
 /* ---------- Detail / composer header ---------- */
@@ -71,7 +71,7 @@
 .eb-gradebook-table th,.eb-gradebook-table td{ padding:var(--eb-space-3); vertical-align:top; }
 .eb-gradebook-table th{ background:var(--eb-surface-2); color:var(--eb-muted); font-size:var(--eb-fs-12); font-weight:var(--eb-fw-semibold); white-space:nowrap; }
 .eb-gradebook-table td strong{ display:block; color:var(--eb-text-heading); }
-.eb-gradebook-table td .result-code{ display:block; color:var(--eb-faint); font-size:var(--eb-fs-12); }
+.eb-gradebook-table td .result-code{ display:block; color:var(--eb-muted); font-size:var(--eb-fs-12); }
 .eb-status-stack{ display:flex; flex-direction:column; align-items:flex-start; gap:4px; }
 .eb-status-stack small{ color:var(--eb-muted); font-size:var(--eb-fs-12); }
 .lifecycle-extended-badge,.deadline-extended-badge{ display:inline-block; padding:2px var(--eb-space-2); border-radius:var(--eb-pill); background:var(--eb-warn-bg); color:var(--eb-warn-tx); font-size:var(--eb-fs-12); font-weight:var(--eb-fw-semibold); }
@@ -86,7 +86,7 @@
 .eb-source-card-text{ display:flex; flex-direction:column; gap:2px; flex:1 1 220px; min-width:0; }
 .eb-source-card-text span{ color:var(--eb-muted); font-size:var(--eb-fs-12); }
 .eb-source-card-text strong{ color:var(--eb-text-heading); overflow-wrap:anywhere; }
-.eb-source-card-text small{ color:var(--eb-faint); font-size:var(--eb-fs-12); }
+.eb-source-card-text small{ color:var(--eb-muted); font-size:var(--eb-fs-12); }
 .eb-source-select{ display:flex; flex-direction:column; gap:var(--eb-space-1); flex:1 1 280px; min-width:0; color:var(--eb-muted); font-size:var(--eb-fs-13); font-weight:var(--eb-fw-semibold); }
 .eb-source-select select{ min-height:40px; padding:0 var(--eb-space-3); border:1px solid var(--eb-border-strong); border-radius:var(--eb-r-sm); background:var(--eb-surface); color:var(--eb-text); font:inherit; font-weight:var(--eb-fw-regular); min-width:0; }
 .eb-form-grid-2{ grid-template-columns:repeat(2,minmax(0,1fr)); }
@@ -133,6 +133,10 @@
   .eb-form-grid-2 .eb-span-2{ grid-column:auto; }
   .eb-assign-stats .eb-stat-grid.is-primary,.eb-stat-grid.is-secondary{ grid-template-columns:repeat(2,minmax(0,1fr)); }
   .eb-composer-foot .eb-button{ flex:1 1 auto; }
+}
+/* UX-8b — reduced motion */
+@media (prefers-reduced-motion: reduce){
+  .eb-assign-row,.gradebook-chip,.library-cat-chip,.library-item{ transition:none; }
 }
 @media print{
   .eb-assign-toolbar,.eb-assign-row-actions,.eb-assign-detail-actions,.eb-gradebook-controls,.eb-col-actions,.eb-assign-composer{ display:none !important; }

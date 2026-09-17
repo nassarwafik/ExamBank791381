@@ -3,6 +3,7 @@ import Dialog from "../ui/Dialog";
 import StatusBadge from "../ui/StatusBadge";
 import { IconPlus, IconUpload } from "../icons";
 import type { Classroom, ImportPreviewRow } from "./types";
+import { IDENTITY_ERROR, validIdentity } from "./identity";
 
 /* Form dialogs for the Classes & Students workspace. Field VALUES and handlers live in TeacherPlatform
    (it owns validation, the request bodies and the credential semantics); these components only lay the
@@ -10,6 +11,18 @@ import type { Classroom, ImportPreviewRow } from "./types";
 
 function submitHandler(onSubmit: () => void) {
   return (e: FormEvent) => { e.preventDefault(); onSubmit(); };
+}
+
+// UX-8b — the only FIELD-SPECIFIC validation these dialogs own: the identity number must be exactly 9 digits (the same
+// rule TeacherPlatform gates the submit on). A non-empty value that breaks it names the field as invalid and is described
+// by the visible message; an empty or valid value leaves no aria-invalid and no stale aria-describedby. Server rejections
+// stay form-level banners in TeacherPlatform and never mark a field.
+function identityFieldProps(identityNumber: string, errorId: string) {
+  const invalid = identityNumber.trim() !== "" && !validIdentity(identityNumber.trim());
+  return { invalid, inputProps: invalid ? { "aria-invalid": true as const, "aria-describedby": errorId } : {} };
+}
+function IdentityError({ id, show }: { id: string; show: boolean }) {
+  return show ? <p id={id} className="eb-field-error">{IDENTITY_ERROR}</p> : null;
 }
 
 export function CreateClassDialog({ open, onClose, name, grade, schoolYear, onName, onGrade, onSchoolYear, onSubmit, busy }: {
@@ -36,6 +49,7 @@ export function AddStudentDialog({ open, onClose, classroom, classActive, firstN
   canSubmit: boolean; onSubmit: () => void; busy: boolean;
 }) {
   const formId = "eb-add-student-form";
+  const identity = identityFieldProps(identityNumber, formId + "-identity-error");
   return (
     <Dialog open={open} title="إضافة طالب" onClose={onClose} size="sm"
       footer={<><button type="button" className="eb-button" onClick={onClose}>إلغاء</button><button type="submit" form={formId} className="eb-button is-primary" disabled={busy || !classActive || !canSubmit}><IconPlus size={16} />إنشاء حساب طالب</button></>}>
@@ -43,7 +57,7 @@ export function AddStudentDialog({ open, onClose, classroom, classActive, firstN
       <form id={formId} className="eb-form-grid" onSubmit={submitHandler(onSubmit)}>
         <label>الاسم<input value={firstName} onChange={e => onFirstName(e.target.value)} placeholder="الاسم الشخصي" autoComplete="off" /></label>
         <label>اسم العائلة<input value={familyName} onChange={e => onFamilyName(e.target.value)} placeholder="اسم العائلة" autoComplete="off" /></label>
-        <label>رقم الهوية<input value={identityNumber} onChange={e => onIdentityNumber(e.target.value)} inputMode="numeric" maxLength={9} dir="ltr" placeholder="9 أرقام" autoComplete="off" /></label>
+        <label>رقم الهوية<input value={identityNumber} onChange={e => onIdentityNumber(e.target.value)} inputMode="numeric" maxLength={9} dir="ltr" placeholder="9 أرقام" autoComplete="off" {...identity.inputProps} /><IdentityError id={formId + "-identity-error"} show={identity.invalid} /></label>
         <label>كلمة مرور اختيارية<input type="password" value={password} onChange={e => onPassword(e.target.value)} placeholder="اتركها فارغة للتوليد التلقائي" autoComplete="new-password" /></label>
       </form>
     </Dialog>
@@ -92,13 +106,14 @@ export function EditStudentDialog({ open, onClose, classes, firstName, familyNam
   canSubmit: boolean; onSubmit: () => void; busy: boolean;
 }) {
   const formId = "eb-edit-student-form";
+  const identity = identityFieldProps(identityNumber, formId + "-identity-error");
   return (
     <Dialog open={open} title="تعديل تفاصيل الطالب" onClose={onClose} size="sm"
       footer={<><button type="button" className="eb-button" onClick={onClose}>إلغاء</button><button type="submit" form={formId} className="eb-button is-primary" disabled={busy || !canSubmit}>حفظ التعديلات</button></>}>
       <form id={formId} className="eb-form-grid" onSubmit={submitHandler(onSubmit)}>
         <label>الاسم<input value={firstName} onChange={e => onFirstName(e.target.value)} autoComplete="off" /></label>
         <label>اسم العائلة<input value={familyName} onChange={e => onFamilyName(e.target.value)} autoComplete="off" /></label>
-        <label>رقم الهوية<input value={identityNumber} onChange={e => onIdentityNumber(e.target.value)} inputMode="numeric" maxLength={9} dir="ltr" autoComplete="off" /></label>
+        <label>رقم الهوية<input value={identityNumber} onChange={e => onIdentityNumber(e.target.value)} inputMode="numeric" maxLength={9} dir="ltr" autoComplete="off" {...identity.inputProps} /><IdentityError id={formId + "-identity-error"} show={identity.invalid} /></label>
         <label>الصف<select value={classId} onChange={e => onClassId(e.target.value)}>{classes.map(c => <option key={c.classId} value={c.classId}>{c.name} · {c.grade}</option>)}</select></label>
         <label>كلمة مرور جديدة<input type="password" value={password} onChange={e => onPassword(e.target.value)} placeholder="اتركها فارغة للإبقاء على الحالية" autoComplete="new-password" /></label>
       </form>

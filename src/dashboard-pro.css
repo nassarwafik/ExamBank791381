@@ -21,7 +21,7 @@
 }
 .eb-dash-scope{ display:flex; flex-direction:column; gap:2px; text-align:start; }
 .eb-dash-scope strong{ color:var(--eb-text-heading); font-size:var(--eb-fs-14); }
-.eb-dash-scope span{ color:var(--eb-faint); font-size:var(--eb-fs-12); }
+.eb-dash-scope span{ color:var(--eb-muted); font-size:var(--eb-fs-12); }
 .eb-dash-actions{ display:flex; flex-wrap:wrap; gap:var(--eb-space-2); }
 .eb-toolbar-button{
   display:inline-flex; align-items:center; gap:var(--eb-space-2); min-height:40px;
@@ -86,7 +86,7 @@
 .eb-attention-item-label{ font-weight:var(--eb-fw-semibold); color:var(--eb-text-heading); font-size:var(--eb-fs-13); }
 .eb-attention-item-meta{ color:var(--eb-muted); font-size:var(--eb-fs-12); }
 .eb-attention-empty{ margin:0; padding:var(--eb-space-3); color:var(--eb-success-tx); background:var(--eb-success-bg); border-radius:var(--eb-r-sm); font-size:var(--eb-fs-13); }
-.eb-attention-more{ margin:0; color:var(--eb-faint); font-size:var(--eb-fs-12); }
+.eb-attention-more{ margin:0; color:var(--eb-muted); font-size:var(--eb-fs-12); }
 .eb-attention-partial{ margin:0; padding:var(--eb-space-3); color:var(--eb-text-secondary); background:var(--eb-surface-2); border-radius:var(--eb-r-sm); font-size:var(--eb-fs-13); line-height:var(--eb-lh-body); }
 
 /* ---------- Cards / charts ---------- */
@@ -104,7 +104,7 @@
   border-radius:var(--eb-pill); background:var(--eb-primary-050); color:var(--eb-primary-strong); font-size:var(--eb-fs-12); font-weight:var(--eb-fw-semibold); white-space:nowrap;
 }
 .analytics-chip.warning{ background:var(--eb-warn-bg); color:var(--eb-warn-tx); }
-.analytics-empty-chart,.analytics-loading{ min-height:120px; display:flex; align-items:center; justify-content:center; text-align:center; padding:var(--eb-space-4); color:var(--eb-faint); font-size:var(--eb-fs-13); }
+.analytics-empty-chart,.analytics-loading{ min-height:120px; display:flex; align-items:center; justify-content:center; text-align:center; padding:var(--eb-space-4); color:var(--eb-muted); font-size:var(--eb-fs-13); }
 .analytics-legend{ display:flex; flex-direction:column; gap:var(--eb-space-2); color:var(--eb-text-secondary); font-size:var(--eb-fs-13); }
 .analytics-legend span{ display:flex; align-items:center; gap:var(--eb-space-2); }
 .analytics-legend b{ margin-inline-start:auto; color:var(--eb-text-heading); font-variant-numeric:tabular-nums; }
@@ -129,7 +129,7 @@
 .analytics-card .students-table-wrap,.eb-drill-panel .students-table-wrap{ border:1px solid var(--eb-line); border-radius:var(--eb-r); overflow:auto; background:var(--eb-surface); }
 .analytics-table{ width:100%; border-collapse:collapse; }
 .analytics-table th,.analytics-table td{ text-align:start; padding:var(--eb-space-3); font-size:var(--eb-fs-13); }
-.analytics-table td small{ display:block; margin-top:2px; color:var(--eb-faint); font-size:var(--eb-fs-12); }
+.analytics-table td small{ display:block; margin-top:2px; color:var(--eb-muted); font-size:var(--eb-fs-12); }
 .analytics-link{ border:0; background:transparent; color:var(--eb-primary-strong); font:inherit; font-weight:var(--eb-fw-semibold); padding:0; cursor:pointer; text-align:start; }
 .analytics-link:hover{ text-decoration:underline; }
 .analytics-trend-badge,.analytics-risk{ display:inline-flex; align-items:center; gap:4px; border-radius:var(--eb-pill); padding:3px var(--eb-space-2); font-size:var(--eb-fs-12); font-weight:var(--eb-fw-semibold); white-space:nowrap; }
@@ -148,7 +148,7 @@
 }
 .analytics-improvers > button:hover{ background:var(--eb-primary-050); border-color:var(--eb-primary); }
 .analytics-improvers strong{ display:block; color:var(--eb-text-heading); font-size:var(--eb-fs-13); }
-.analytics-improvers small{ color:var(--eb-faint); font-size:var(--eb-fs-12); }
+.analytics-improvers small{ color:var(--eb-muted); font-size:var(--eb-fs-12); }
 .analytics-improvers b{ color:var(--eb-success-tx); font-size:var(--eb-fs-13); font-variant-numeric:tabular-nums; }
 .analytics-rank{ width:28px; height:28px; border-radius:var(--eb-r-xs); display:grid; place-items:center; background:var(--eb-primary-050); color:var(--eb-primary-strong); font-weight:var(--eb-fw-bold); }
 
@@ -239,6 +239,10 @@
 }
 
 /* ---------- Print ---------- */
+/* UX-8b — reduced motion: the sheet's hover/state transitions become instant */
+@media (prefers-reduced-motion: reduce){
+  .eb-toolbar-button,.analytics-segmented button,.eb-attention-item,.eb-chart-picker-item,.analytics-view-tab{ transition:none; }
+}
 @media print{
   .eb-dash-toolbar,.eb-drill-dock,.eb-chart-picker,.analytics-ai-button{ display:none !important; }
   .eb-dash-layout.has-drill{ grid-template-columns:minmax(0,1fr); }

@@ -11,7 +11,7 @@
    ============================================================ */
 .interactive-exam-page{ min-height:100vh; padding:var(--eb-space-3) var(--eb-space-4) var(--eb-space-7); background:var(--eb-bg); color:var(--eb-text); }
 .iex-wrap{ width:min(var(--eb-container-student),100%); margin-inline:auto; display:flex; flex-direction:column; gap:var(--eb-space-3); min-width:0; }
-.iex-loading{ margin:0; color:var(--eb-muted); }
+.iex-loading{ margin:0; color:var(--eb-text-secondary); } /* UX-8b — loading text sits on --eb-bg */
 .iex-eyebrow{ display:inline-block; color:var(--eb-primary-strong); font-size:var(--eb-fs-12); font-weight:var(--eb-fw-bold); letter-spacing:.04em; }
 
 /* ---------- Compact sticky top bar (the only floating element) ---------- */
