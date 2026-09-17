@@ -5,6 +5,7 @@ import StudentProjectPanel from "./projects/StudentProjectPanel";
 import type { FeedPost, ReactionId } from "./achievements";
 import SectionHeader from "./ui/SectionHeader";
 import EmptyState from "./ui/EmptyState";
+import { usePrefersReducedMotion } from "./ui/usePrefersReducedMotion";
 import StudentIdentityCard from "./student/StudentIdentityCard";
 import NowSection from "./student/NowSection";
 import StudentProgressSection from "./student/StudentProgressSection";
@@ -27,6 +28,7 @@ type Props = { token: string; displayName: string; onLogout: () => void };
  */
 export default function StudentPortal({ token, displayName, onLogout }: Props) {
   const [data, setData] = useState<Dashboard | null>(null), [loading, setLoading] = useState(true), [error, setError] = useState(""), [detail, setDetail] = useState<Detail | null>(null), [busy, setBusy] = useState(false);
+  const reducedMotion = usePrefersReducedMotion();
   const [avatarPickerOpen, setAvatarPickerOpen] = useState(false), [avatarSaving, setAvatarSaving] = useState(false);
   const [feed, setFeed] = useState<FeedPost[]>([]), [feedError, setFeedError] = useState(""), [shareSaving, setShareSaving] = useState(false);
   const [filter, setFilter] = useState<PortalFilter>("all");
@@ -100,7 +102,7 @@ export default function StudentPortal({ token, displayName, onLogout }: Props) {
       if (r.status === 401) { onLogout(); return; }
       if (!r.ok || !j.assignment) throw new Error(j.error || "تعذر فتح الواجب.");
       setDetail(j.assignment);
-      window.scrollTo({ top: 0, behavior: "smooth" });
+      window.scrollTo({ top: 0, behavior: reducedMotion ? "auto" : "smooth" }); // UX-8b — reduced-motion aware
     } catch (e) { setError(e instanceof Error ? e.message : "تعذر فتح الواجب."); }
     finally { setBusy(false); }
   }

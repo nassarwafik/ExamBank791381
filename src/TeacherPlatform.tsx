@@ -1,4 +1,5 @@
 import {useEffect,useMemo,useRef,useState} from "react";
+import {validIdentity} from "./students/identity";
 import AssignmentsPanel from "./AssignmentsPanel";
 import AssignmentReview from "./AssignmentReview";
 import TeacherDashboard from "./TeacherDashboard";
@@ -25,7 +26,6 @@ type ApiError={ok?:boolean;error?:string};
 type WorkspaceDialog="none"|"createClass"|"addStudent"|"import";
 
 const onlyDigits=(value:string)=>value.replace(/\D/g,"").slice(0,9);
-const validIdentity=(value:string)=>/^\d{9}$/.test(value);
 const fmtDate=(value:string)=>value?new Date(value).toLocaleString("ar"):"—";
 const toLocalInput=(iso:string)=>{if(!iso)return "";const d=new Date(iso);return new Date(d.getTime()-d.getTimezoneOffset()*60000).toISOString().slice(0,16)};
 function splitName(value:unknown){

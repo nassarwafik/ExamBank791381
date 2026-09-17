@@ -97,7 +97,7 @@
 .eb-stage-row-main:hover{ background:var(--eb-surface-2); }
 .eb-stage-code{ font-family:monospace; font-weight:var(--eb-fw-semibold); color:var(--eb-muted); font-size:var(--eb-fs-12); }
 .eb-stage-title{ flex:1 1 200px; min-width:0; color:var(--eb-text); font-weight:var(--eb-fw-medium); font-size:var(--eb-fs-13); }
-.eb-stage-optional{ color:var(--eb-faint); font-style:normal; font-size:var(--eb-fs-12); }
+.eb-stage-optional{ color:var(--eb-muted); font-style:normal; font-size:var(--eb-fs-12); }
 .eb-stage-date{ font-size:var(--eb-fs-12); }
 .eb-stage-detail{ display:flex; flex-direction:column; gap:var(--eb-space-3); padding:var(--eb-space-3); border-top:1px solid var(--eb-line); background:var(--eb-surface-2); }
 .eb-stage-actions{ display:flex; flex-wrap:wrap; align-items:center; gap:var(--eb-space-2); }

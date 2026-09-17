@@ -16,7 +16,7 @@ import "./project794589.css";
 import TeacherPlatform from "./TeacherPlatform";
 import ImportQuestionsPanel, { createEmptyImportSession } from "./ImportQuestionsPanel";
 import type { ImportSessionState } from "./ImportQuestionsPanel";
-import { IconUser, IconLock, IconWarning, IconChevronDown, IconImage, IconSparkles } from "./icons";
+import { IconUser, IconLock, IconWarning, IconChevronDown, IconImage, IconSparkles, IconGraduation } from "./icons";
 import TeacherAppShell from "./shell/TeacherAppShell";
 import type { TeacherNavId } from "./shell/teacherNav";
 import { QuestionTextBlock, parseTable } from "./questionContent";
@@ -655,6 +655,8 @@ function App() {
   const [userCode, setUserCode] = useState("");
   const [password, setPassword] = useState("");
   const [loginError, setLoginError] = useState("");
+  // UX-8b — field-specific flags set ONLY by the local empty-field check; an authentication failure is form-level and never marks a field.
+  const [loginFieldErrors, setLoginFieldErrors] = useState<{ userCode: boolean; password: boolean }>({ userCode: false, password: false });
   const [loginBusy, setLoginBusy] = useState(false);
 
   const [examPrompt, setExamPrompt] = useState("");
@@ -896,10 +898,12 @@ function App() {
     event.preventDefault();
 
     if (!userCode.trim() || !password.trim()) {
+      setLoginFieldErrors({ userCode: !userCode.trim(), password: !password.trim() });
       setLoginError("أدخل كود المستخدم وكلمة المرور.");
       return;
     }
 
+    setLoginFieldErrors({ userCode: false, password: false });
     setLoginBusy(true);
     setLoginError("");
 
@@ -5351,11 +5355,11 @@ function App() {
 
           <div className="auth-features login-role-note">
             <span className="auth-feature">
-              👨‍🏫 معلم
+              <IconUser size={16} aria-hidden="true" /> معلم
             </span>
 
             <span className="auth-feature">
-              👨‍🎓 طالب
+              <IconGraduation size={16} aria-hidden="true" /> طالب
             </span>
           </div>
         </section>
@@ -5375,11 +5379,14 @@ function App() {
                   <input
                     type="text"
                     value={userCode}
-                    onChange={event =>
-                      setUserCode(event.target.value)
-                    }
+                    onChange={event => {
+                      setUserCode(event.target.value);
+                      if (loginFieldErrors.userCode) setLoginFieldErrors(f => ({ ...f, userCode: false }));
+                    }}
                     placeholder="أدخل كود المستخدم"
                     autoComplete="username"
+                    aria-invalid={loginFieldErrors.userCode && loginError ? true : undefined}
+                    aria-describedby={loginFieldErrors.userCode && loginError ? "auth-login-error" : undefined}
                   />
                 </div>
               </label>
@@ -5391,18 +5398,21 @@ function App() {
                   <input
                     type="password"
                     value={password}
-                    onChange={event =>
-                      setPassword(event.target.value)
-                    }
+                    onChange={event => {
+                      setPassword(event.target.value);
+                      if (loginFieldErrors.password) setLoginFieldErrors(f => ({ ...f, password: false }));
+                    }}
                     placeholder="أدخل كلمة المرور"
                     autoComplete="current-password"
+                    aria-invalid={loginFieldErrors.password && loginError ? true : undefined}
+                    aria-describedby={loginFieldErrors.password && loginError ? "auth-login-error" : undefined}
                   />
                 </div>
               </label>
 
               {loginError && (
-                <div className="auth-error error-message">
-                  <IconWarning size={16} />
+                <div id="auth-login-error" className="auth-error error-message" role="alert">
+                  <IconWarning size={16} aria-hidden="true" />
                   {loginError}
                 </div>
               )}

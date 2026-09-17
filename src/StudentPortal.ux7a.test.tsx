@@ -182,6 +182,11 @@ describe("UX-7a StudentPortal — hierarchy and the primary section", () => {
     const now = await nowSection();
     expect(now.getByText("لا يوجد ما يتطلب إجراءً الآن").className).toContain("eb-empty-title");
     expect(now.queryByRole("list")).toBeNull();
+    // The project panel issues its own GET from an effect that runs in a scheduler task AFTER the commit that shows
+    // the "now" section; on a loaded runner that task can land after this test resumes, so a count captured here
+    // would be one short and "+1" could never match (Quality Gate run 375: expected 4 to be 3). Settle the three
+    // mount GETs pinned above ("issues exactly one dashboard GET, one feed GET and the project panel's GET") first.
+    await waitFor(() => expect(gets(calls).length).toBe(3));
     const before = calls.length;
     fireEvent.click((await list()).getByRole("button", { name: "النتيجة / محاولة جديدة" }));
     await waitFor(() => expect(calls.length).toBe(before + 1));

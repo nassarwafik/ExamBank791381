@@ -273,6 +273,66 @@ describe("UX-2 focus foundation", () => {
     expect(ex).not.toMatch(/\.iex-cli[^{]*\{[^}]*unicode-bidi/);
     expect(ex).not.toMatch(/outline\s*:\s*(none|0)/);
   });
+  it("UX-8b contrast: --eb-faint is unchanged but no longer colours real text; the fixed text/background pairs meet 4.5:1 (dependency-free WCAG maths); focus ring keeps 3:1", () => {
+    const tokens = read("design-tokens.css");
+    const token = name => { const m = new RegExp(name + ":\\s*(#[0-9a-fA-F]{6})").exec(tokens); expect(m, name).toBeTruthy(); return m[1]; };
+    const lum = hex => { const c = [1, 3, 5].map(i => parseInt(hex.slice(i, i + 2), 16) / 255).map(v => (v <= 0.03928 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4)); return 0.2126 * c[0] + 0.7152 * c[1] + 0.0722 * c[2]; };
+    const ratio = (a, b) => { const la = lum(a), lb = lum(b); return (Math.max(la, lb) + 0.05) / (Math.min(la, lb) + 0.05); };
+    expect(token("--eb-faint")).toBe("#94a3b8");                                                    // owner decision: the token itself is NOT darkened
+    const faint = token("--eb-faint"), muted = token("--eb-muted"), text = token("--eb-text"), surface = token("--eb-surface"), surface2 = token("--eb-surface-2"), bg = token("--eb-bg"), primary = token("--eb-primary"), dangerTx = token("--eb-danger-tx");
+    expect(ratio(faint, surface)).toBeLessThan(4.5);                                                 // why faint may not colour normal text
+    expect(ratio(muted, surface)).toBeGreaterThanOrEqual(4.5);                                       // the replacement on cards
+    expect(ratio(muted, surface2)).toBeGreaterThanOrEqual(4.5);
+    expect(ratio(muted, bg)).toBeLessThan(4.5);                                                      // why status lines on the page background use text-secondary
+    expect(ratio(text, bg)).toBeGreaterThanOrEqual(4.5);                                             // --eb-text-secondary aliases --eb-text
+    expect(tokens).toMatch(/--eb-text-secondary:\s*var\(--eb-text\)/);
+    expect(ratio(dangerTx, surface)).toBeGreaterThanOrEqual(4.5);                                    // .eb-field-error
+    expect(ratio(primary, surface)).toBeGreaterThanOrEqual(3);                                       // focus ring (non-text)
+    // real-text selectors that used --eb-faint before UX-8b now use --eb-muted; decorative uses keep faint
+    const strip = css => css.replace(/\/\*[\s\S]*?\*\//g, "");
+    const rule = (css, selector) => { const i = css.indexOf(selector); expect(i, selector).toBeGreaterThan(-1); return css.slice(i, css.indexOf("}", i)); };
+    const ui = strip(read("ui/ui.css")), pp = strip(read("page-parts.css")), ap = strip(read("assignments-pro.css")), dp = strip(read("dashboard-pro.css")), pr = strip(read("projects-pro.css")), lg = strip(read("login-pro.css"));
+    for (const [css, sel] of [[ui, ".eb-stat-hint {"], [pp, ".eb-chip.is-muted{"], [pp, ".eb-menu-label{"], [pp, ".student-row-archived td{"], [pp, ".never-login{"], [pp, ".medal-badge small{"], [pr, ".eb-stage-optional{"], [ap, ".eb-assign-row-due{"], [ap, ".eb-gradebook-table td .result-code{"], [ap, ".eb-source-card-text small{"], [dp, ".eb-dash-scope span{"], [dp, ".eb-attention-more{"], [dp, ".analytics-empty-chart,.analytics-loading{"], [dp, ".analytics-table td small{"], [dp, ".analytics-improvers small{"]]) {
+      const r = rule(css, sel);
+      expect(r, sel).toContain("var(--eb-muted)");
+      expect(r, sel).not.toContain("var(--eb-faint)");
+    }
+    expect(rule(ui, ".eb-breadcrumb-sep {")).toContain("var(--eb-faint)");                          // decorative separator keeps faint
+    expect(rule(lg, ".auth-note{")).toContain("var(--lg-muted)");
+    expect(rule(lg, ".auth-input input::placeholder{")).toContain("var(--lg-muted)");
+    expect(rule(pp, '.eb-muted[role="status"]{')).toContain("var(--eb-text-secondary)");
+    expect(rule(strip(read("studentportal-pro.css")), ".eb-sp-status{")).toContain("var(--eb-text-secondary)");
+    expect(rule(strip(read("studentexam-pro.css")), ".iex-loading{")).toContain("var(--eb-text-secondary)");
+    expect(rule(ui, ".eb-field-error {")).toContain("var(--eb-danger-tx)");
+    // the medal colours colour icons only (aria-hidden svg), never text — left as they are
+    expect(rule(strip(read("studentportal-pro.css")), ".eb-sp-medal.is-gold{")).toContain("var(--eb-medal-gold)");
+  });
+  it("UX-8b reduced motion: dashboard-pro, assignments-pro, page-parts and platform sheets now switch their transitions/animations off under prefers-reduced-motion; review-pro has no motion; existing blocks untouched", () => {
+    const strip = css => css.replace(/\/\*[\s\S]*?\*\//g, "");
+    const block = css => { const i = css.indexOf("@media (prefers-reduced-motion: reduce)"); expect(i).toBeGreaterThan(-1); let d = 0, j = css.indexOf("{", i); for (; j < css.length; j++) { if (css[j] === "{") d++; else if (css[j] === "}") { d--; if (d === 0) break; } } return css.slice(i, j + 1); };
+    const dp = strip(read("dashboard-pro.css"));
+    expect(block(dp)).toContain(".eb-toolbar-button,.analytics-segmented button,.eb-attention-item,.eb-chart-picker-item,.analytics-view-tab{ transition:none; }");
+    const ap = strip(read("assignments-pro.css"));
+    expect(block(ap)).toContain(".eb-assign-row,.gradebook-chip,.library-cat-chip,.library-item{ transition:none; }");
+    const pp = strip(read("page-parts.css"));
+    expect(block(pp)).toContain(".class-row,.eb-class-row,.eb-segmented > button,.eb-menu-trigger,.eb-search-field{ transition:none; }");
+    const pl = strip(read("platform.css"));
+    expect(block(pl)).toMatch(/\.teacher-platform-inner, \.analytics-card \{ animation: none; \}/);
+    expect(block(pl)).toMatch(/\.teacher-workspace-nav button, \.students-table tbody tr, \.analytics-table tbody tr, \.platform-primary \{ transition: none; \}/);
+    // every transition/animation selector of these sheets is covered by their reduce block
+    for (const [name, css] of [["dashboard-pro.css", dp], ["assignments-pro.css", ap], ["page-parts.css", pp], ["platform.css", pl]]) {
+      const b = block(css);
+      const owners = [];
+      const re = /([^{}]+)\{([^}]*)\}/g; let m;
+      while ((m = re.exec(css))) if (/(^|;)\s*(transition|animation)\s*:/.test(m[2]) && !/animation\s*:\s*none/.test(m[2]) && !m[1].includes("@")) owners.push(m[1].trim().split(",").map(x => x.trim()));
+      for (const group of owners) for (const sel of group) expect(b, name + " must cover " + sel).toContain(sel);
+    }
+    expect(strip(read("review-pro.css"))).not.toMatch(/transition\s*:|animation\s*:/);            // nothing to cover
+    // the legacy builder scrolling in App.tsx is untouched by UX-8b
+    const app = read("App.tsx");
+    expect((app.match(/scrollIntoView\(/g) || []).length).toBe(8);
+    expect(app).not.toMatch(/scrollIntoView\([^)]*reducedMotion/);
+  });
   it("new UX-2 stylesheets are token-only (--eb-*) with no raw colours", () => {
     for (const f of ["ui/ui.css", "shell.css"]) {
       const css = read(f).replace(/\/\*[\s\S]*?\*\//g, "");
