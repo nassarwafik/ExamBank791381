@@ -1,8 +1,10 @@
 import { useEffect, useMemo, useState } from "react";
-import { STATUS_META, stagesByGroup, trackIcon } from "./helpers";
-import ProjectProgressBar, { toneForTrackIndex } from "./ProjectProgressBar";
-import StageStatusBadge from "./StageStatusBadge";
-import type { ProjectStage, ProjectGroup, StageStatus, StageProgressEntry, StudentCard, TrackMeta } from "./types";
+import { stagesByGroup, statusLabel } from "./helpers";
+import { STAGE_STATUS_CLASS, STAGE_STATUS_TONE, normalizeStageStatus, toneForTrack } from "./teacherPresentation";
+import ProgressBar from "../ui/ProgressBar";
+import SectionHeader from "../ui/SectionHeader";
+import StatusBadge from "../ui/StatusBadge";
+import type { ProjectStage, ProjectGroup, StageProgressEntry, StudentCard, TrackMeta } from "./types";
 
 type StudentProject = {
   projectCode: string;
@@ -16,7 +18,9 @@ type StudentProject = {
 };
 type ProjectData = { ok: true; enrolled: boolean; className?: string; projects?: StudentProject[] };
 
-// Read-only view of ONE project (track tabs + stage list).
+// Read-only view of ONE project (UX-7a presentation on the shared primitives: overall + per-track ProgressBars,
+// next stage, aria-pressed track switch, stage rows with tonal StatusBadges). The values are the server's
+// summary/progress exactly as delivered — nothing is recomputed and nothing is written from here.
 function OneProject({ project }: { project: StudentProject }) {
   const [track, setTrack] = useState<string>(project.tracks[0]?.trackId || "");
   const groups = useMemo(() => project.groups.filter(g => g.track === track).sort((a, b) => a.order - b.order), [project, track]);
@@ -26,45 +30,48 @@ function OneProject({ project }: { project: StudentProject }) {
   const trackMeta = project.tracks.find(t => t.trackId === track);
 
   return (
-    <div className="p794-portal-project">
-      <ProjectProgressBar label="التقدم العام" value={s.overallProgress} tone="overall" />
-      <div className="p794-portal-tracks">
-        {project.tracks.map((t, i) => <ProjectProgressBar key={t.trackId} label={(t.icon ? t.icon + " " : "") + t.title} value={s.trackProgress[t.trackId] || 0} tone={toneForTrackIndex(i)} />)}
-      </div>
-      {next && trackMeta && <p className="p794-portal-next">الخطوة التالية في {trackMeta.title}: <strong>{next.stageId} — {next.title}</strong></p>}
-      <nav className="analytics-view-tabs" role="tablist" aria-label="مسارات المشروع">
-        {project.tracks.map(t => (
-          <button key={t.trackId} type="button" className={"analytics-view-tab " + (track === t.trackId ? "active" : "")} onClick={() => setTrack(t.trackId)}>{trackIcon(t.icon)} {t.title}</button>
-        ))}
-      </nav>
-      {groups.map(g => (
-        <div key={g.groupId} className="p794-group">
-          <div className="p794-group-head" style={{ cursor: "default" }}><span>{g.title}</span></div>
-          <div className="p794-stage-list">
-            {((byGroup.get(g.groupId) || []) as ProjectStage[]).map(stage => {
-              const entry = project.progress ? project.progress[stage.stageId] : undefined;
-              const status = (entry?.status || "not_started") as StageStatus;
-              return (
-                <div key={stage.stageId} className={"p794-stage-row " + STATUS_META[status].className}>
-                  <div className="p794-stage-row-main" style={{ cursor: "default" }}>
-                    <StageStatusBadge status={status} showLabel={false} />
-                    <span className="p794-stage-code">{stage.stageId}</span>
-                    <span className="p794-stage-title">{stage.title}</span>
-                    {entry?.note ? <span className="p794-note-dot" title="ملاحظة من المعلم">📝</span> : null}
-                  </div>
-                  {entry?.note ? <div className="p794-note-view">📝 {entry.note}</div> : null}
-                </div>
-              );
-            })}
-          </div>
+    <div className="eb-sp-project">
+      <ProgressBar label="التقدم العام" value={s.overallProgress} />
+      <ul className="eb-sp-project-tracks" aria-label="تقدم المسارات">
+        {project.tracks.map((t, i) => <li key={t.trackId}><ProgressBar size="sm" label={t.title} value={s.trackProgress[t.trackId] || 0} tone={toneForTrack(i)} /></li>)}
+      </ul>
+      {next && trackMeta && <p className="eb-sp-project-next">الخطوة التالية في {trackMeta.title}: <strong>{next.stageId} — {next.title}</strong></p>}
+      {project.tracks.length > 1 && (
+        <div className="eb-sp-filters" role="group" aria-label="مسارات المشروع">
+          {project.tracks.map(t => <button key={t.trackId} type="button" className="eb-chip-button" aria-pressed={track === t.trackId} onClick={() => setTrack(t.trackId)}>{t.title}</button>)}
         </div>
-      ))}
+      )}
+      {groups.map(g => {
+        const gid = "eb-sp-group-" + project.projectCode + "-" + g.groupId;
+        return (
+          <section key={g.groupId} className="eb-sp-project-group" aria-labelledby={gid}>
+            <h3 id={gid} className="eb-subheading">{g.title}</h3>
+            <ul className="eb-sp-stage-list">
+              {((byGroup.get(g.groupId) || []) as ProjectStage[]).map(stage => {
+                const entry = project.progress ? project.progress[stage.stageId] : undefined;
+                const status = normalizeStageStatus(entry?.status);
+                return (
+                  <li key={stage.stageId} className={"eb-sp-stage " + STAGE_STATUS_CLASS[status]}>
+                    <div className="eb-sp-stage-main">
+                      <StatusBadge tone={STAGE_STATUS_TONE[status]}>{statusLabel(status)}</StatusBadge>
+                      <span className="eb-sp-stage-code">{stage.stageId}</span>
+                      <span className="eb-sp-stage-title">{stage.title}</span>
+                    </div>
+                    {entry?.note ? <p className="eb-sp-stage-note">ملاحظة من المعلم: {entry.note}</p> : null}
+                  </li>
+                );
+              })}
+            </ul>
+          </section>
+        );
+      })}
     </div>
   );
 }
 
-// Read-only view inside the student portal for ALL of the student's class's projects (one tab each).
-// OPTIONAL secondary panel: on any failure it renders nothing and NEVER logs the student out.
+// Read-only view inside the student portal for ALL of the student's class's projects (one switch each).
+// OPTIONAL secondary panel: ONE read; on any failure (or when the class runs no project) it renders nothing
+// and NEVER logs the student out. Data semantics unchanged since the legacy panel.
 export default function StudentProjectPanel({ token }: { token: string }) {
   const [data, setData] = useState<ProjectData | null>(null);
   const [activeCode, setActiveCode] = useState<string>("");
@@ -90,14 +97,12 @@ export default function StudentProjectPanel({ token }: { token: string }) {
   const active = projects.find(p => p.projectCode === activeCode) || projects[0];
 
   return (
-    <section className="student-panel">
-      <div className="student-panel-heading"><div><span className="platform-eyebrow">Projects</span><h3>📡 مشاريعي</h3></div></div>
+    <section className="eb-sp-panel eb-sp-projects" aria-labelledby="eb-sp-projects-title">
+      <SectionHeader level={2} id="eb-sp-projects-title" title="مشاريعي" count={projects.length > 1 ? projects.length : undefined} description="تقدّمك في مشاريع صفك، كما سجّله المعلم." />
       {projects.length > 1 && (
-        <nav className="analytics-view-tabs p794-portal-project-tabs" role="tablist" aria-label="مشاريعي">
-          {projects.map(p => (
-            <button key={p.projectCode} type="button" className={"analytics-view-tab " + (active.projectCode === p.projectCode ? "active" : "")} onClick={() => setActiveCode(p.projectCode)}>📡 {p.title}</button>
-          ))}
-        </nav>
+        <div className="eb-sp-filters" role="group" aria-label="المشاريع">
+          {projects.map(p => <button key={p.projectCode} type="button" className="eb-chip-button" aria-pressed={active.projectCode === p.projectCode} onClick={() => setActiveCode(p.projectCode)}>{p.title}</button>)}
+        </div>
       )}
       <OneProject key={active.projectCode} project={active} />
     </section>

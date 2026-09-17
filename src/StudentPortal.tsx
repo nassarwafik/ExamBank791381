@@ -1,78 +1,154 @@
-
-import {useEffect,useState} from "react";
+import { useEffect, useState } from "react";
 import StudentExamPage from "./StudentExamPage";
-import {IconAssignments,IconMedal} from "./icons";
 import StudentShell from "./shell/StudentShell";
-import {AVATAR_OPTIONS,AvatarCircle} from "./avatars";
-import {MEDAL_COLORS,MEDAL_LABELS,medalTier} from "./medals";
-import {REACTIONS,type FeedPost,type ReactionId} from "./achievements";
 import StudentProjectPanel from "./projects/StudentProjectPanel";
-import {dashboardStateLabel,scoreLabel,gradingClass,resolveGradingStatus,type DashboardState,type GradingStatus} from "./gradingStatus";
-type Props={token:string;displayName:string;onLogout:()=>void};
-type LatestResult={attemptNumber:number;score:number;totalMarks:number;percentage:number;submittedAt:string;manualReviewMarks:number;finalized?:boolean;gradingStatus?:GradingStatus;teacherFeedback:string};
-type Summary={assignmentId:string;title:string;instructions:string;openAt:string;dueAt:string;effectiveDueAt?:string;questionCount:number;totalMarks:number;durationMinutes?:number;availability:"scheduled"|"open"|"closed";dashboardState?:DashboardState;gradingStatus?:GradingStatus;attemptsUsed:number;allowedAttempts:number;canAttempt:boolean;attemptStatus?:string;hasActiveAttempt?:boolean;latestScore:number|null;latestPercentage:number|null;latestResult?:LatestResult|null;createdAt:string};
-// A live server attempt (started/draft) — the student must be able to RESUME it regardless of canAttempt,
-// which can be false once maxAttempts was reduced after the attempt started (B2B #24).
-const isResumable=(item:Summary)=>!!item.hasActiveAttempt||item.attemptStatus==="started"||item.attemptStatus==="draft";
-// The server sends dashboardState; fall back locally (older payloads) FAIL-SAFE. Grading status is only
-// ever taken from the server field or resolved from an actual result object's manualReviewMarks/finalized
-// (the shared resolver) — NEVER inferred from latestScore/latestPercentage. A payload that carries only a
-// score but no grading metadata resolves to notSubmitted here, so it falls through to lifecycle+availability
-// rather than being falsely labeled final.
-const stateOf=(item:Summary):DashboardState=>{
- if(item.dashboardState)return item.dashboardState;              // server-authoritative presentation state
- if(isResumable(item))return "inProgress";                       // a live/resumable attempt still wins (old payloads)
- const gs=item.gradingStatus||resolveGradingStatus(item.latestResult||null);
- if(gs==="pendingReview")return "awaitingReview";
- if(gs==="final")return "completed";
- if(item.availability==="scheduled")return "scheduled";
- if(item.availability==="closed")return "closedUnsubmitted";
- return "available";
-};
-// Truthful action-button label per presentation state (§10). Attempt eligibility (canAttempt) is unchanged.
-const actionLabel=(item:Summary):string=>{
- switch(stateOf(item)){
-  case "inProgress":return "متابعة المحاولة";
-  case "awaitingReview":return "عرض النتيجة المؤقتة";
-  case "completed":return item.canAttempt?"النتيجة / محاولة جديدة":"عرض النتيجة";
-  case "scheduled":return "لم يفتح بعد";
-  case "closedUnsubmitted":return "عرض الواجب";
-  default:return "ابدأ الحل";
- }
-};
-type PortalFilter="all"|"action"|"inProgress"|"awaitingReview"|"completed";
-const matchesFilter=(item:Summary,f:PortalFilter):boolean=>{
- const st=stateOf(item);
- if(f==="all")return true;
- if(f==="action")return st==="available"||st==="inProgress"; // تحتاج إجراء
- if(f==="inProgress")return st==="inProgress";
- if(f==="awaitingReview")return st==="awaitingReview";
- return st==="completed"; // completed
-};
-type Detail={assignmentId:string;title:string;instructions:string;openAt:string;dueAt:string;effectiveDueAt?:string;maxAttempts:number;questionCount:number;totalMarks:number;durationMinutes?:number;requiresStart?:boolean;timed?:boolean;marksDistribution?:{rows:{title:string;marks:number}[];total:number};exam:{title?:string;metadata?:{school?:string;subject?:string;grade?:string;className?:string;generalInstructions?:string};presentationTheme?:string;coverPage?:any;questions?:any[];sections?:any[]}};
-type Stats={assigned:number;completed:number;average:number|null;submitted?:number;inProgress?:number;pendingReview?:number;finalized?:number;scheduled?:number;available?:number;closedUnsubmitted?:number;averageFinalized?:number|null};
-type Dashboard={student:{userId:string;code:string;displayName:string;classId:string;avatarId?:string;shareAchievements?:boolean};classroom:{classId:string;name:string;grade:string;schoolYear:string}|null;assignments:Summary[];stats:Stats};
-const fmt=(v:string)=>v?new Date(v).toLocaleString("ar"):"بدون موعد";
-export default function StudentPortal({token,displayName,onLogout}:Props){
- const [data,setData]=useState<Dashboard|null>(null),[loading,setLoading]=useState(true),[error,setError]=useState(""),[detail,setDetail]=useState<Detail|null>(null),[busy,setBusy]=useState(false);
- const [avatarPickerOpen,setAvatarPickerOpen]=useState(false),[avatarSaving,setAvatarSaving]=useState(false);
- const [feed,setFeed]=useState<FeedPost[]>([]),[feedError,setFeedError]=useState(""),[shareSaving,setShareSaving]=useState(false);
- const [filter,setFilter]=useState<PortalFilter>("all");
- async function load(){setLoading(true);setError("");try{const r=await fetch("/api/student-dashboard",{headers:{"x-student-token":token,Authorization:"Bearer "+token}}),j=await r.json() as any;if(r.status===401){onLogout();return}if(!r.ok||!j.student||!j.stats)throw new Error(j.error||"تعذر تحميل صفحة الطالب.");setData({student:j.student,classroom:j.classroom||null,assignments:j.assignments||[],stats:j.stats})}catch(e){setError(e instanceof Error?e.message:"تعذر تحميل الصفحة.")}finally{setLoading(false)}}
- // OPTIONAL/auxiliary panel. Its failure — including a 401 — must NEVER end the authenticated session:
- // only the PRIMARY /api/student-dashboard request (load()) is the session authority and may call
- // onLogout. Any failure here degrades this panel locally (no feed) and leaves the portal intact. This
- // mirrors StudentProjectPanel (fix a3761c8) so a secondary widget can't bounce a valid student to login.
- async function loadFeed(){try{const r=await fetch("/api/achievement-feed",{headers:{"x-student-token":token,Authorization:"Bearer "+token}});if(!r.ok){setFeed([]);setFeedError(r.status===401?"":"تعذر تحميل إنجازات الصف.");console.warn("[student-portal] achievement feed unavailable ("+r.status+")");return}const j=await r.json() as any;if(!j.ok){setFeed([]);return}setFeed(j.posts||[]);setFeedError("")}catch{setFeed([]);console.warn("[student-portal] achievement feed request failed")}}
- useEffect(()=>{void load();void loadFeed()},[token]);
- useEffect(()=>{if(!avatarPickerOpen)return;function onKey(e:KeyboardEvent){if(e.key==="Escape"&&!avatarSaving)setAvatarPickerOpen(false)}window.addEventListener("keydown",onKey);return()=>window.removeEventListener("keydown",onKey)},[avatarPickerOpen,avatarSaving]);
- async function pickAvatar(avatarId:string){if(avatarSaving)return;setAvatarSaving(true);try{const r=await fetch("/api/student-profile",{method:"POST",headers:{"Content-Type":"application/json","x-student-token":token,Authorization:"Bearer "+token},body:JSON.stringify({action:"setAvatar",avatarId})}),j=await r.json() as any;if(r.status===401){onLogout();return}if(!r.ok||!j.ok)throw new Error(j.error||"تعذر تحديث الأيقونة.");setData(prev=>prev?{...prev,student:{...prev.student,avatarId:j.avatarId}}:prev);setAvatarPickerOpen(false)}catch(e){setError(e instanceof Error?e.message:"تعذر تحديث الأيقونة.")}finally{setAvatarSaving(false)}}
- async function toggleShareAchievements(){if(shareSaving||!data)return;const next=!(data.student.shareAchievements!==false);setShareSaving(true);try{const r=await fetch("/api/student-profile",{method:"POST",headers:{"Content-Type":"application/json","x-student-token":token,Authorization:"Bearer "+token},body:JSON.stringify({action:"setShareAchievements",share:next})}),j=await r.json() as any;if(r.status===401){onLogout();return}if(!r.ok||!j.ok)throw new Error(j.error||"تعذر تحديث الإعداد.");setData(prev=>prev?{...prev,student:{...prev.student,shareAchievements:j.shareAchievements}}:prev)}catch(e){setError(e instanceof Error?e.message:"تعذر تحديث الإعداد.")}finally{setShareSaving(false)}}
- // Reacting hits the SAME optional achievement-feed endpoint, so a 401 here also degrades locally
- // (feature unavailable) and never logs the student out — the primary dashboard governs the session.
- async function react(postId:string,reaction:ReactionId){try{const r=await fetch("/api/achievement-feed",{method:"POST",headers:{"Content-Type":"application/json","x-student-token":token,Authorization:"Bearer "+token},body:JSON.stringify({action:"react",postId,reaction})}),j=await r.json() as any;if(r.status===401){setFeedError("");return}if(!r.ok||!j.ok)throw new Error(j.error||"تعذر إرسال ردّ الفعل.");setFeed(prev=>prev.map(p=>p.postId===postId?{...p,reactionCounts:j.reactionCounts,myReaction:j.myReaction}:p))}catch(e){setFeedError(e instanceof Error?e.message:"تعذر إرسال ردّ الفعل.")}}
- async function open(item:Summary){if(item.availability==="scheduled")return;setBusy(true);setError("");try{const r=await fetch("/api/student-assignment/"+encodeURIComponent(item.assignmentId),{headers:{"x-student-token":token,Authorization:"Bearer "+token}}),j=await r.json() as any;if(r.status===401){onLogout();return}if(!r.ok||!j.assignment)throw new Error(j.error||"تعذر فتح الواجب.");setDetail(j.assignment);window.scrollTo({top:0,behavior:"smooth"})}catch(e){setError(e instanceof Error?e.message:"تعذر فتح الواجب.")}finally{setBusy(false)}}
- if(detail&&data)return <StudentExamPage token={token} assignment={detail} studentName={data.student.displayName||displayName} className={data.classroom?data.classroom.name+(data.classroom.grade?" · "+data.classroom.grade:""):""} onLogout={onLogout} onBack={()=>{setDetail(null);void load()}}/>;
- const medals=data?data.assignments.filter(a=>a.latestPercentage!==null).map(a=>medalTier(a.latestPercentage as number)).filter((t):t is "gold"|"silver"|"bronze"=>t!==null):[];
- return <StudentShell studentName={data?.student.displayName||displayName} className={data?.classroom?.name||""} onLogout={onLogout}>{loading&&<div className="platform-loading">⏳ جارٍ تحميل حسابك...</div>}{busy&&<div className="platform-loading">⏳ جارٍ فتح الواجب...</div>}{error&&<div className="platform-error">{error}</div>}{!loading&&data&&<><section className="student-welcome-card"><div className="student-welcome-identity"><AvatarCircle avatarId={data.student.avatarId} fallbackLetter={(data.student.displayName||displayName||"؟").charAt(0)} onClick={()=>setAvatarPickerOpen(true)}/><div><span className="platform-eyebrow">Student Portal</span><h2>مرحبًا {data.student.displayName||displayName}</h2>{medals.length>0&&<div className="student-medal-row" title={medals.length+" واجب بدرجة 70% أو أعلى"}>{medals.map((t,i)=><IconMedal key={i} size={18} style={{color:MEDAL_COLORS[t]}}/>)}</div>}<p>{data.classroom?data.classroom.name+(data.classroom.grade?" · "+data.classroom.grade:""):"لم يتم ربط حسابك بصف بعد."}</p></div></div><div className="student-code-chip">الكود: <strong>{data.student.code}</strong></div></section>{avatarPickerOpen&&<div className="avatar-picker-overlay" onClick={()=>!avatarSaving&&setAvatarPickerOpen(false)}><div className="avatar-picker-modal" onClick={e=>e.stopPropagation()}><h3>اختر أيقونتك</h3><div className="avatar-picker-grid">{AVATAR_OPTIONS.map(opt=><button key={opt.id} type="button" className={"avatar-picker-option"+(data.student.avatarId===opt.id?" active":"")} style={{background:opt.bg}} disabled={avatarSaving} onClick={()=>pickAvatar(opt.id)}>{opt.emoji}</button>)}</div><button type="button" className="avatar-picker-close" onClick={()=>setAvatarPickerOpen(false)} disabled={avatarSaving}>إغلاق</button></div></div>}<section className="student-stat-grid"><article><strong>{data.stats.assigned}</strong><span>المهام</span></article><article><strong>{data.stats.inProgress??0}</strong><span>قيد الحل</span></article><article className={(data.stats.pendingReview??0)?"warn":""}><strong>{data.stats.pendingReview??0}</strong><span>بانتظار التصحيح</span></article><article><strong>{data.stats.finalized??0}</strong><span>مكتملة</span></article><article><strong>{data.stats.averageFinalized===null||data.stats.averageFinalized===undefined?"—":data.stats.averageFinalized+"%"}</strong><span>المعدل النهائي</span></article></section><section className="student-main-grid"><article className="student-panel"><div className="student-panel-heading"><div><span className="platform-eyebrow">Assignments</span><h3>المهام والواجبات</h3></div></div><div className="student-filter-row" role="tablist">{([["all","الكل"],["action","تحتاج إجراء"],["inProgress","قيد الحل"],["awaitingReview","بانتظار التصحيح"],["completed","مكتملة"]] as [PortalFilter,string][]).map(([f,lbl])=><button key={f} type="button" role="tab" aria-selected={filter===f} className={"student-filter-chip"+(filter===f?" active":"")} onClick={()=>setFilter(f)}>{lbl}</button>)}</div><div className="student-assignment-list">{data.assignments.filter(item=>matchesFilter(item,filter)).map(item=>{const st=stateOf(item),lr=item.latestResult||null,lrGs=lr?resolveGradingStatus(lr):null;return <article className={"student-assignment-card "+item.availability+" dash-"+st} key={item.assignmentId}><div className="student-assignment-card-main"><div className="student-assignment-card-title"><strong>{item.title}</strong><span className={"student-status-badge dash-"+st}>{dashboardStateLabel(st)}</span></div><p>{item.instructions}</p><small>{item.questionCount} سؤال · {item.totalMarks} علامة{item.durationMinutes?" · ⏱ "+item.durationMinutes+" دقيقة":""}</small><small>التسليم: {fmt(item.effectiveDueAt||item.dueAt)} · المحاولات: {item.attemptsUsed}/{item.allowedAttempts}</small>{lr&&lrGs&&<strong className={"student-latest-score iex-grade-"+gradingClass(lrGs)}>{scoreLabel(lrGs)}: {lr.score}/{lr.totalMarks}{lrGs==="final"?" ("+lr.percentage+"%)":""}</strong>}{lr&&lrGs==="pendingReview"&&lr.manualReviewMarks>0&&<small className="student-pending-note">بانتظار مراجعة {lr.manualReviewMarks} علامة</small>}{lr&&lr.teacherFeedback&&<small className="student-teacher-feedback">ملاحظة المعلم: {lr.teacherFeedback}</small>}</div><button onClick={()=>open(item)} disabled={busy||item.availability==="scheduled"}>{actionLabel(item)}</button></article>})}{!data.assignments.length&&<div className="student-empty-state"><IconAssignments size={30}/><strong>لا توجد مهام منشورة الآن</strong><p>عندما يرسل المعلم واجبًا إلى صفك سيظهر هنا تلقائيًا.</p></div>}{!!data.assignments.length&&!data.assignments.some(item=>matchesFilter(item,filter))&&<div className="student-empty-state"><IconAssignments size={30}/><strong>لا توجد مهام في هذا التصنيف</strong><p>جرّب تصنيفًا آخر من الأعلى.</p></div>}</div></article><article className="student-panel student-next-panel"><span className="platform-eyebrow">ExamBank 2.0</span><h3>نظام الواجب التفاعلي</h3><ul><li>حل مباشر داخل الموقع</li><li>حفظ تلقائي للإجابات</li><li>تسليم وتصحيح آلي</li><li>تسجيل العلامة والمحاولات</li></ul></article></section><StudentProjectPanel token={token}/><section className="student-panel achievement-feed-panel"><div className="student-panel-heading"><div><span className="platform-eyebrow">Class Achievements</span><h3>إنجازات الصف</h3></div><label className="achievement-share-toggle"><input type="checkbox" checked={data.student.shareAchievements!==false} disabled={shareSaving} onChange={toggleShareAchievements}/>شارك إنجازاتي مع الصف</label></div>{feedError&&<div className="platform-error">{feedError}</div>}<div className="achievement-feed-list">{feed.map(post=><article key={post.postId} className="achievement-feed-item"><IconMedal size={26} style={{color:MEDAL_COLORS[post.tier]}}/><div className="achievement-feed-body"><p><strong>{post.studentDisplayName}</strong> حصل على ميدالية {MEDAL_LABELS[post.tier]} في <strong>{post.assignmentTitle}</strong></p><div className="achievement-reaction-row">{REACTIONS.map(r=><button key={r.id} type="button" className={"achievement-reaction"+(post.myReaction===r.id?" active":"")} disabled={post.isOwnPost} title={r.label} onClick={()=>void react(post.postId,r.id)}>{r.emoji} {post.reactionCounts[r.id]>0?post.reactionCounts[r.id]:""}</button>)}{post.teacherReaction&&<span className="achievement-teacher-badge" title="ردّ فعل المعلم">{REACTIONS.find(r=>r.id===post.teacherReaction)?.emoji} من المعلم</span>}</div>{post.teacherNote&&<p className="achievement-teacher-note">✍️ المعلم: {post.teacherNote}</p>}</div></article>)}{!feed.length&&<div className="student-empty-state"><IconMedal size={30}/><strong>لا توجد إنجازات بعد</strong><p>عندما يحصل أحد زملائك على ميدالية سيظهر هنا.</p></div>}</div></section></>}</StudentShell>
+import type { FeedPost, ReactionId } from "./achievements";
+import SectionHeader from "./ui/SectionHeader";
+import EmptyState from "./ui/EmptyState";
+import StudentIdentityCard from "./student/StudentIdentityCard";
+import NowSection from "./student/NowSection";
+import StudentProgressSection from "./student/StudentProgressSection";
+import StudentAssignmentCard from "./student/StudentAssignmentCard";
+import AchievementFeed from "./student/AchievementFeed";
+import AvatarPickerDialog from "./student/AvatarPickerDialog";
+import { FILTERS, matchesFilter, medalsFor, nowItems, sortTaskFirst, type PortalFilter } from "./student/portalPresentation";
+import { rankFor, rankProgress } from "./studentRank";
+import type { Dashboard, Detail, Summary } from "./student/types";
+
+type Props = { token: string; displayName: string; onLogout: () => void };
+
+/**
+ * Student Portal (UX-7a — mobile-first, actionable-first). Hierarchy: who am I → what should I do now →
+ * how am I progressing → all assignments/results → my projects → achievements. Data and session rules are
+ * unchanged: exactly one /api/student-dashboard read (the ONLY session authority: its 401 logs out), one
+ * optional achievement-feed read and the optional project panel's own read; a POST happens only for an
+ * explicit action (avatar, share toggle, reaction). Everything shown (grading, dashboard state, finalized-only
+ * average, medals, personal rank) is derived from the server payload — never from a raw score.
+ */
+export default function StudentPortal({ token, displayName, onLogout }: Props) {
+  const [data, setData] = useState<Dashboard | null>(null), [loading, setLoading] = useState(true), [error, setError] = useState(""), [detail, setDetail] = useState<Detail | null>(null), [busy, setBusy] = useState(false);
+  const [avatarPickerOpen, setAvatarPickerOpen] = useState(false), [avatarSaving, setAvatarSaving] = useState(false);
+  const [feed, setFeed] = useState<FeedPost[]>([]), [feedError, setFeedError] = useState(""), [shareSaving, setShareSaving] = useState(false);
+  const [filter, setFilter] = useState<PortalFilter>("all");
+  const headers = { "x-student-token": token, Authorization: "Bearer " + token };
+
+  async function load() {
+    setLoading(true); setError("");
+    try {
+      const r = await fetch("/api/student-dashboard", { headers }), j = await r.json() as any;
+      if (r.status === 401) { onLogout(); return; }
+      if (!r.ok || !j.student || !j.stats) throw new Error(j.error || "تعذر تحميل صفحة الطالب.");
+      setData({ student: j.student, classroom: j.classroom || null, assignments: j.assignments || [], stats: j.stats });
+    } catch (e) { setError(e instanceof Error ? e.message : "تعذر تحميل الصفحة."); }
+    finally { setLoading(false); }
+  }
+  // OPTIONAL/auxiliary panel. Its failure — including a 401 — must NEVER end the authenticated session:
+  // only the PRIMARY /api/student-dashboard request (load()) is the session authority and may call
+  // onLogout. Any failure here degrades this panel locally (no feed) and leaves the portal intact. This
+  // mirrors StudentProjectPanel (fix a3761c8) so a secondary widget can't bounce a valid student to login.
+  async function loadFeed() {
+    try {
+      const r = await fetch("/api/achievement-feed", { headers });
+      if (!r.ok) { setFeed([]); setFeedError(r.status === 401 ? "" : "تعذر تحميل إنجازات الصف."); console.warn("[student-portal] achievement feed unavailable (" + r.status + ")"); return; }
+      const j = await r.json() as any;
+      if (!j.ok) { setFeed([]); return; }
+      setFeed(j.posts || []); setFeedError("");
+    } catch { setFeed([]); console.warn("[student-portal] achievement feed request failed"); }
+  }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  useEffect(() => { void load(); void loadFeed(); }, [token]);
+
+  async function pickAvatar(avatarId: string) {
+    if (avatarSaving) return;
+    setAvatarSaving(true);
+    try {
+      const r = await fetch("/api/student-profile", { method: "POST", headers: { "Content-Type": "application/json", ...headers }, body: JSON.stringify({ action: "setAvatar", avatarId }) }), j = await r.json() as any;
+      if (r.status === 401) { onLogout(); return; }
+      if (!r.ok || !j.ok) throw new Error(j.error || "تعذر تحديث الأيقونة.");
+      setData(prev => prev ? { ...prev, student: { ...prev.student, avatarId: j.avatarId } } : prev);
+      setAvatarPickerOpen(false);
+    } catch (e) { setError(e instanceof Error ? e.message : "تعذر تحديث الأيقونة."); }
+    finally { setAvatarSaving(false); }
+  }
+  async function toggleShareAchievements() {
+    if (shareSaving || !data) return;
+    const next = !(data.student.shareAchievements !== false);
+    setShareSaving(true);
+    try {
+      const r = await fetch("/api/student-profile", { method: "POST", headers: { "Content-Type": "application/json", ...headers }, body: JSON.stringify({ action: "setShareAchievements", share: next }) }), j = await r.json() as any;
+      if (r.status === 401) { onLogout(); return; }
+      if (!r.ok || !j.ok) throw new Error(j.error || "تعذر تحديث الإعداد.");
+      setData(prev => prev ? { ...prev, student: { ...prev.student, shareAchievements: j.shareAchievements } } : prev);
+    } catch (e) { setError(e instanceof Error ? e.message : "تعذر تحديث الإعداد."); }
+    finally { setShareSaving(false); }
+  }
+  // Reacting hits the SAME optional achievement-feed endpoint, so a 401 here also degrades locally
+  // (feature unavailable) and never logs the student out — the primary dashboard governs the session.
+  async function react(postId: string, reaction: ReactionId) {
+    try {
+      const r = await fetch("/api/achievement-feed", { method: "POST", headers: { "Content-Type": "application/json", ...headers }, body: JSON.stringify({ action: "react", postId, reaction }) }), j = await r.json() as any;
+      if (r.status === 401) { setFeedError(""); return; }
+      if (!r.ok || !j.ok) throw new Error(j.error || "تعذر إرسال ردّ الفعل.");
+      setFeed(prev => prev.map(p => p.postId === postId ? { ...p, reactionCounts: j.reactionCounts, myReaction: j.myReaction } : p));
+    } catch (e) { setFeedError(e instanceof Error ? e.message : "تعذر إرسال ردّ الفعل."); }
+  }
+  async function open(item: Summary) {
+    if (item.availability === "scheduled") return;
+    setBusy(true); setError("");
+    try {
+      const r = await fetch("/api/student-assignment/" + encodeURIComponent(item.assignmentId), { headers }), j = await r.json() as any;
+      if (r.status === 401) { onLogout(); return; }
+      if (!r.ok || !j.assignment) throw new Error(j.error || "تعذر فتح الواجب.");
+      setDetail(j.assignment);
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    } catch (e) { setError(e instanceof Error ? e.message : "تعذر فتح الواجب."); }
+    finally { setBusy(false); }
+  }
+
+  if (detail && data) return <StudentExamPage token={token} assignment={detail} studentName={data.student.displayName || displayName} className={data.classroom ? data.classroom.name + (data.classroom.grade ? " · " + data.classroom.grade : "") : ""} onLogout={onLogout} onBack={() => { setDetail(null); void load(); }} />;
+
+  const stats = data?.stats;
+  const medals = data ? medalsFor(data.assignments) : [];
+  const rank = rankFor(stats);
+  const progress = rankProgress(stats);
+  const averageFinalized = stats && stats.averageFinalized !== null && stats.averageFinalized !== undefined ? Number(stats.averageFinalized) : null;
+  const ordered = data ? sortTaskFirst(data.assignments) : [];
+  const visible = ordered.filter(item => matchesFilter(item, filter));
+  const now_ = data ? nowItems(data.assignments) : { actionable: [], upcoming: [] };
+  const now = Date.now();
+
+  return (
+    <StudentShell studentName={data?.student.displayName || displayName} className={data?.classroom?.name || ""} onLogout={onLogout}>
+      <div className="eb-sp">
+        {loading && <p className="eb-muted eb-sp-status" role="status">جارٍ تحميل حسابك...</p>}
+        {busy && <p className="eb-muted eb-sp-status" role="status">جارٍ فتح الواجب...</p>}
+        {error && <div className="platform-error" role="alert">{error}</div>}
+        {!loading && data && stats && (
+          <>
+            <StudentIdentityCard student={data.student} classroom={data.classroom} displayName={displayName} rank={rank} onChangeAvatar={() => setAvatarPickerOpen(true)} />
+            <AvatarPickerDialog open={avatarPickerOpen} current={data.student.avatarId} saving={avatarSaving} onPick={pickAvatar} onClose={() => setAvatarPickerOpen(false)} />
+            <NowSection actionable={now_.actionable} upcoming={now_.upcoming} busy={busy} onOpen={open} />
+            <StudentProgressSection stats={stats} medals={medals} rank={rank} progress={progress} averageFinalized={averageFinalized} />
+            <section className="eb-sp-panel" aria-labelledby="eb-sp-tasks-title">
+              <SectionHeader level={2} id="eb-sp-tasks-title" title="المهام والواجبات" count={visible.length} description="كل واجباتك ونتائجك؛ ما يحتاج إجراءً يظهر أولًا." />
+              <div className="eb-sp-filters" role="group" aria-label="تصفية المهام">
+                {FILTERS.map(f => <button key={f.key} type="button" className="eb-chip-button" aria-pressed={filter === f.key} onClick={() => setFilter(f.key)}>{f.label}</button>)}
+              </div>
+              <div className="student-assignment-list">
+                {visible.length > 0 && (
+                  <ul className="eb-sp-tasks">
+                    {visible.map(item => <li key={item.assignmentId}><StudentAssignmentCard item={item} busy={busy} onOpen={open} /></li>)}
+                  </ul>
+                )}
+                {!data.assignments.length && <EmptyState title="لا توجد مهام منشورة الآن" description="عندما يرسل المعلم واجبًا إلى صفك سيظهر هنا تلقائيًا." />}
+                {!!data.assignments.length && !visible.length && <EmptyState compact title="لا توجد مهام في هذا التصنيف" description="جرّب تصنيفًا آخر." />}
+              </div>
+            </section>
+            <StudentProjectPanel token={token} />
+            <AchievementFeed posts={feed} error={feedError} shareOn={data.student.shareAchievements !== false} shareSaving={shareSaving} now={now} onToggleShare={toggleShareAchievements} onReact={(postId, reaction) => void react(postId, reaction)} />
+          </>
+        )}
+      </div>
+    </StudentShell>
+  );
 }

@@ -132,6 +132,28 @@ describe("UX-2 focus foundation", () => {
     expect(legacy).not.toContain(".p794-chip"); expect(legacy).not.toContain(".p794-muted");
     for (const kept of [".p794-bar", ".p794-status-badge", ".p794-stage-row", ".p794-portal-tracks"]) expect(legacy, kept + " must stay").toContain(kept);
   });
+  it("UX-7a studentportal-pro.css is mobile-first (min-width 768/1024/1280 only), token-only (--eb-*), never sets outline:none; ui.css carries the ProgressRing; the legacy portal rules left platform.css", () => {
+    const css = read("studentportal-pro.css").replace(/\/\*[\s\S]*?\*\//g, "");
+    expect(css, "studentportal-pro.css raw hex").not.toMatch(/#[0-9a-fA-F]{3,8}\b/);
+    expect(css, "studentportal-pro.css raw rgb").not.toMatch(/\brgba?\(/);
+    for (const m of css.matchAll(/var\((--[a-zA-Z0-9-]+)/g)) expect(m[1], "studentportal-pro.css uses non-canonical token " + m[1]).toMatch(/^--eb-/);
+    expect(css).not.toMatch(/outline\s*:\s*(none|0)/);
+    expect(css).not.toMatch(/max-width\s*:\s*\d+px/);                                   // mobile-first: base = phone, min-width enhances
+    const widths = [...css.matchAll(/@media[^{]*min-width\s*:\s*(\d+)px/g)].map(m => Number(m[1]));
+    expect(widths.length).toBeGreaterThan(0);
+    for (const w of widths) expect([768, 1024, 1280], "unexpected breakpoint " + w).toContain(w);
+    expect(css).toMatch(/prefers-reduced-motion:\s*reduce/);
+    expect(css).not.toMatch(/margin-(left|right)|padding-(left|right)|border-(left|right)\b/);   // logical properties only
+    expect(read("design-tokens.css")).toMatch(/--eb-medal-gold:\s*#eab308/);
+    const ui = read("ui/ui.css");
+    expect(ui).toMatch(/\.eb-ring-fill\s*\{[^}]*stroke-dashoffset/);
+    expect(ui).toMatch(/prefers-reduced-motion: reduce\)\s*\{\s*\.eb-ring-fill\s*\{\s*transition:\s*none/);
+    const legacy = read("platform.css").replace(/\/\*[\s\S]*?\*\//g, "");
+    for (const gone of [".avatar-picker-overlay", ".avatar-picker-modal", ".student-stat-grid", ".student-main-grid", ".student-empty-state", ".student-welcome-card", ".student-assignment-card", ".student-assignment-list", ".achievement-feed-item", ".achievement-share-toggle", ".achievement-teacher-note", ".student-latest-score", ".student-medal-row", ".student-code-chip", ".student-next-panel"]) {
+      expect(legacy, gone + " must no longer be styled by platform.css").not.toContain(gone);
+    }
+    for (const kept of [".student-portal", ".student-topbar", ".student-panel", ".achievement-reaction", ".achievement-notify-card", ".student-assignment-header", ".platform-hero"]) expect(legacy, kept + " must stay").toContain(kept);
+  });
   it("new UX-2 stylesheets are token-only (--eb-*) with no raw colours", () => {
     for (const f of ["ui/ui.css", "shell.css"]) {
       const css = read(f).replace(/\/\*[\s\S]*?\*\//g, "");

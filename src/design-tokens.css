@@ -98,4 +98,7 @@
 
   /* Shell dimensions */
   --eb-sidebar-w: 236px; --eb-sidebar-w-compact: 72px;
+
+  /* UX-7 — medal / personal-rank accents (same values as src/medals.ts MEDAL_COLORS) */
+  --eb-medal-gold: #eab308; --eb-medal-silver: #94a3b8; --eb-medal-bronze: #c2703d;
 }

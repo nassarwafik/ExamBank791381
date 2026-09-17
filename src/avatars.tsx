@@ -3,21 +3,21 @@
 // sync if this list ever changes.
 import type { CSSProperties } from "react";
 
-export type AvatarOption = { id: string; emoji: string; bg: string };
+export type AvatarOption = { id: string; emoji: string; bg: string; label: string };
 
 export const AVATAR_OPTIONS: AvatarOption[] = [
-  { id: "a1", emoji: "🦊", bg: "#fde68a" },
-  { id: "a2", emoji: "🐱", bg: "#fbcfe8" },
-  { id: "a3", emoji: "🐶", bg: "#bfdbfe" },
-  { id: "a4", emoji: "🦁", bg: "#fed7aa" },
-  { id: "a5", emoji: "🐼", bg: "#e5e7eb" },
-  { id: "a6", emoji: "🐨", bg: "#ddd6fe" },
-  { id: "a7", emoji: "🐸", bg: "#bbf7d0" },
-  { id: "a8", emoji: "🦉", bg: "#fef3c7" },
-  { id: "a9", emoji: "🐵", bg: "#fdba74" },
-  { id: "a10", emoji: "🐰", bg: "#f5d0fe" },
-  { id: "a11", emoji: "🐢", bg: "#a7f3d0" },
-  { id: "a12", emoji: "🦄", bg: "#c7d2fe" },
+  { id: "a1", emoji: "🦊", bg: "#fde68a", label: "ثعلب" },
+  { id: "a2", emoji: "🐱", bg: "#fbcfe8", label: "قطة" },
+  { id: "a3", emoji: "🐶", bg: "#bfdbfe", label: "كلب" },
+  { id: "a4", emoji: "🦁", bg: "#fed7aa", label: "أسد" },
+  { id: "a5", emoji: "🐼", bg: "#e5e7eb", label: "باندا" },
+  { id: "a6", emoji: "🐨", bg: "#ddd6fe", label: "كوالا" },
+  { id: "a7", emoji: "🐸", bg: "#bbf7d0", label: "ضفدع" },
+  { id: "a8", emoji: "🦉", bg: "#fef3c7", label: "بومة" },
+  { id: "a9", emoji: "🐵", bg: "#fdba74", label: "قرد" },
+  { id: "a10", emoji: "🐰", bg: "#f5d0fe", label: "أرنب" },
+  { id: "a11", emoji: "🐢", bg: "#a7f3d0", label: "سلحفاة" },
+  { id: "a12", emoji: "🦄", bg: "#c7d2fe", label: "يونيكورن" },
 ];
 
 const DEFAULT_BG = "#2563eb";
@@ -49,6 +49,7 @@ export function AvatarCircle({ avatarId, fallbackLetter, size = 52, onClick }: P
       style={style}
       onClick={onClick}
       title="تغيير الأيقونة"
+      aria-label={"تغيير الأيقونة" + (option ? " (الحالية: " + option.label + ")" : "")}
     >
       {option ? option.emoji : (fallbackLetter || "؟")}
     </button>

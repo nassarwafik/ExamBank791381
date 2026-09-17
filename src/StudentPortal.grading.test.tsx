@@ -25,6 +25,9 @@ function mount(dashboard: Record<string, unknown>) {
   }) as unknown as typeof fetch;
   return render(<StudentPortal token="t" displayName="أحمد" onLogout={vi.fn()} />);
 }
+// UX-7a: actionable assignments also appear in the primary "ماذا عليّ أن أفعل الآن؟" section, so the card
+// assertions are scoped to the assignments list region.
+const list = async () => within(await screen.findByRole("region", { name: /المهام والواجبات/ }));
 const student = { userId: "u1", code: "C1", displayName: "أحمد", classId: "c1", shareAchievements: true };
 const classroom = { classId: "c1", name: "الصف", grade: "11", schoolYear: "2026" };
 
@@ -51,30 +54,30 @@ describe("R12 StudentPortal grading display", () => {
 
   it("Z: an active new attempt over a prior final result shows قيد الحل", async () => {
     mount({ student, classroom, assignments: [asg("A1", { dashboardState: "inProgress", gradingStatus: "final", hasActiveAttempt: true, attemptStatus: "started", latestResult: finalLR })], stats: { assigned: 1, completed: 1, average: 84, pendingReview: 0, finalized: 0, inProgress: 1, averageFinalized: 84 } });
-    const card = (await screen.findByText("A1")).closest(".student-assignment-card") as HTMLElement;
+    const card = (await list()).getByText("A1").closest(".student-assignment-card") as HTMLElement;
     expect(within(card).getByText(/قيد الحل/)).toBeTruthy();
     expect(within(card).getByRole("button").textContent).toContain("متابعة المحاولة");
   });
 
-  it("AA: filters تحتاج إجراء / قيد الحل / بانتظار التصحيح / مكتملة show the right assignments", async () => {
+  it("AA: filters تحتاج إجراء / قيد الحل / بانتظار التصحيح / مكتملة show the right assignments (UX-7: aria-pressed chips in one labelled group)", async () => {
     mount({ student, classroom, assignments: [
       asg("AV", { dashboardState: "available", gradingStatus: "notSubmitted", attemptStatus: "notStarted", latestResult: null }),
       asg("IP", { dashboardState: "inProgress", gradingStatus: "notSubmitted", hasActiveAttempt: true, attemptStatus: "started", latestResult: null }),
       asg("AR", { dashboardState: "awaitingReview", gradingStatus: "pendingReview", latestResult: pendingLR }),
       asg("CO", { dashboardState: "completed", gradingStatus: "final", latestResult: finalLR })
     ], stats: { assigned: 4, completed: 2, average: 73, pendingReview: 1, finalized: 1, inProgress: 1, averageFinalized: 84 } });
-    await screen.findByText("AV");
-    fireEvent.click(screen.getByRole("tab", { name: "تحتاج إجراء" }));
-    expect(screen.queryByText("AV")).toBeTruthy(); expect(screen.queryByText("IP")).toBeTruthy();
-    expect(screen.queryByText("AR")).toBeNull(); expect(screen.queryByText("CO")).toBeNull();
-    fireEvent.click(screen.getByRole("tab", { name: "قيد الحل" }));
-    expect(screen.queryByText("IP")).toBeTruthy(); expect(screen.queryByText("AV")).toBeNull();
-    fireEvent.click(screen.getByRole("tab", { name: "بانتظار التصحيح" }));
-    expect(screen.queryByText("AR")).toBeTruthy(); expect(screen.queryByText("CO")).toBeNull();
-    fireEvent.click(screen.getByRole("tab", { name: "مكتملة" }));
-    expect(screen.queryByText("CO")).toBeTruthy(); expect(screen.queryByText("AR")).toBeNull();
-    fireEvent.click(screen.getByRole("tab", { name: "الكل" }));
-    expect(screen.queryByText("AV")).toBeTruthy(); expect(screen.queryByText("CO")).toBeTruthy();
+    const l = await list();
+    fireEvent.click(screen.getByRole("button", { name: "تحتاج إجراء" }));
+    expect(l.queryByText("AV")).toBeTruthy(); expect(l.queryByText("IP")).toBeTruthy();
+    expect(l.queryByText("AR")).toBeNull(); expect(l.queryByText("CO")).toBeNull();
+    fireEvent.click(screen.getByRole("button", { name: "قيد الحل" }));
+    expect(l.queryByText("IP")).toBeTruthy(); expect(l.queryByText("AV")).toBeNull();
+    fireEvent.click(screen.getByRole("button", { name: "بانتظار التصحيح" }));
+    expect(l.queryByText("AR")).toBeTruthy(); expect(l.queryByText("CO")).toBeNull();
+    fireEvent.click(screen.getByRole("button", { name: "مكتملة" }));
+    expect(l.queryByText("CO")).toBeTruthy(); expect(l.queryByText("AR")).toBeNull();
+    fireEvent.click(screen.getByRole("button", { name: "الكل" }));
+    expect(l.queryByText("AV")).toBeTruthy(); expect(l.queryByText("CO")).toBeTruthy();
   });
 
   it("AB: teacherFeedback shows only when present", async () => {

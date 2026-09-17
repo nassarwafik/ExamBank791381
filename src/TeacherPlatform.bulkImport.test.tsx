@@ -53,7 +53,9 @@ async function mountStudents() {
   return utils;
 }
 // UX-4: the import flow lives in its own dialog (file → preview → confirm import); the file input is inside it.
-async function openImport() { fireEvent.click(screen.getByRole("button", { name: "استيراد" })); await screen.findByRole("dialog", { name: "استيراد طلاب من ملف" }); }
+// The first test of this file pays the lazy transform/import cost of the students workspace + Dialog portal; on a
+// loaded CI runner that exceeded Testing Library's default 1s (UX-7a CI run 356), so the dialog lookup waits longer.
+async function openImport() { fireEvent.click(screen.getByRole("button", { name: "استيراد" })); await screen.findByRole("dialog", { name: "استيراد طلاب من ملف" }, { timeout: 5000 }); }
 function fileInput(_container: HTMLElement) { return document.querySelector('input[type="file"]') as HTMLInputElement; }
 function importButton() { return screen.getByRole("button", { name: /استيراد الطلاب الصالحين/ }); }
 

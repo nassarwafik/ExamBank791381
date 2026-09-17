@@ -498,14 +498,16 @@ describe("UX-6a source guards", () => {
     if (typeof src !== "string") throw new Error("source not loaded: " + rel);
     return src;
   };
-  it("teacher project components carry no emoji controls/labels, no tablist, no window.confirm, no p794 classes; StudentProjectPanel and its helpers are untouched consumers", () => {
+  it("teacher project components carry no emoji controls/labels, no tablist, no window.confirm, no p794 classes; the student panel (UX-7a) is on the shared primitives and the legacy helpers are untouched", () => {
     for (const f of ["projects/ProjectHub.tsx", "projects/ProjectTracker.tsx", "projects/ProjectDashboard.tsx", "projects/ProjectStudentCards.tsx", "projects/ProjectStudentDetail.tsx", "projects/ProjectAnalytics.tsx", "projects/ProjectHeatmap.tsx", "projects/ProjectStageSettings.tsx", "projects/teacherPresentation.ts"]) {
       const src = read(f);
       expect(EMOJI.test(src), f + " contains emoji").toBe(false);
       expect(src, f).not.toMatch(/role="tablist"|window\.confirm|"p794-|analytics-view-tab|STATUS_META\.|trackIcon\(/);
     }
     const student = read("projects/StudentProjectPanel.tsx");
-    expect(student).toMatch(/STATUS_META|StageStatusBadge|ProjectProgressBar/);                       // still the legacy consumers
+    expect(EMOJI.test(student), "StudentProjectPanel contains emoji").toBe(false);
+    expect(student).not.toMatch(/role="tablist"|"p794-|analytics-view-tab|STATUS_META\.|trackIcon\(|StageStatusBadge|ProjectProgressBar/);
+    expect(student).toMatch(/from "\.\.\/ui\/ProgressBar"/);                                          // UX-7a: shared primitives
     expect(read("projects/helpers.ts")).toMatch(/icon: "⬜"/);                                          // shared icons untouched
     expect(read("projects-pro.css")).not.toMatch(/outline\s*:\s*(none|0)/);
     expect(read("ui/ui.css")).not.toMatch(/outline\s*:\s*(none|0)/);

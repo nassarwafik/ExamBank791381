@@ -1,6 +1,6 @@
 // @vitest-environment happy-dom
 import { describe, it, expect, afterEach, vi } from "vitest";
-import { render, cleanup, screen } from "@testing-library/react";
+import { render, cleanup, screen, within } from "@testing-library/react";
 import StudentPortal from "./StudentPortal";
 
 // B2B #24 — the assignment card must offer "متابعة المحاولة" whenever the server reports a live active
@@ -25,20 +25,23 @@ function mount(assignment: Record<string, unknown>) {
   }) as unknown as typeof fetch;
   return render(<StudentPortal token="t" displayName="أحمد" onLogout={vi.fn()} />);
 }
+// UX-7a: a live attempt is also offered in the primary "ماذا عليّ أن أفعل الآن؟" section; the card assertions
+// below are scoped to the assignments list region.
+const list = async () => within(await screen.findByRole("region", { name: /المهام والواجبات/ }));
 const baseAssignment = { assignmentId: "a1", title: "واجب مؤقت", instructions: "x", openAt: "", dueAt: "", questionCount: 1, totalMarks: 10, availability: "open", attemptsUsed: 1, allowedAttempts: 1, canAttempt: false, latestScore: null, latestPercentage: null, createdAt: "" };
 
 describe("StudentPortal — resume label for a live active attempt (B2B #24)", () => {
   it("hasActiveAttempt + canAttempt false (maxAttempts reduced) => 'متابعة المحاولة'", async () => {
     mount({ ...baseAssignment, attemptStatus: "started", hasActiveAttempt: true });
-    expect(await screen.findByText("متابعة المحاولة")).toBeTruthy();
+    expect((await list()).getByText("متابعة المحاولة")).toBeTruthy();
   });
   it("attemptStatus 'draft' also resumes, regardless of canAttempt", async () => {
     mount({ ...baseAssignment, attemptStatus: "draft", hasActiveAttempt: true });
-    expect(await screen.findByText("متابعة المحاولة")).toBeTruthy();
+    expect((await list()).getByText("متابعة المحاولة")).toBeTruthy();
   });
   it("a closed assignment with a live active attempt is still resumable (button enabled)", async () => {
     mount({ ...baseAssignment, availability: "closed", attemptStatus: "started", hasActiveAttempt: true });
-    const btn = await screen.findByText("متابعة المحاولة") as HTMLButtonElement;
+    const btn = (await list()).getByText("متابعة المحاولة") as HTMLButtonElement;
     expect(btn.disabled).toBe(false);
   });
   it("no active attempt (submitted, canAttempt) keeps the normal wording, not the resume label", async () => {
