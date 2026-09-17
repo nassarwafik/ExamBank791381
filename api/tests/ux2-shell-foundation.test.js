@@ -571,3 +571,30 @@ describe("UX-6d — Smart Structured Exam Import & Repair", () => {
     expect(wizard).not.toMatch(/status:\s*"final"/);                                   // wizard never finalizes
   });
 });
+
+
+describe("Student Portal — rank cadence & medal sizing", () => {
+  const rank = readFileSync(join(ROOT, "src", "studentRank.ts"), "utf8");
+  const section = read("student/StudentProgressSection.tsx");
+  const css = readFileSync(join(ROOT, "src", "studentportal-pro.css"), "utf8");
+
+  it("rank advances every four finalized exams from ONE central constant (no scattered literal 4, no old 10-unlock / average table)", () => {
+    expect(rank).toMatch(/RANK_STEP_FINALIZED = 4/);
+    expect(rank).toMatch(/Math\.floor\(count \/ RANK_STEP_FINALIZED\)/);       // tier from the finalized count
+    expect(rank).not.toMatch(/RANK_MIN_FINALIZED\s*=\s*10/);                   // old unlock gone
+    expect(rank).not.toMatch(/bronze: 60, silver: 70, gold: 80, diamond: 90, legendary: 96/);  // old average-threshold table gone
+    // the component reads the denominator from the constant, never a hardcoded 4/10
+    expect(section).toMatch(/من \{RANK_STEP_FINALIZED\} امتحانات نهائية لفتح رتبتك/);
+    expect(section).not.toMatch(/الرتبة التالية عند معدل نهائي/);                 // old average-based next-rank wording gone
+    expect(section).toMatch(/remainingExamsPhrase\(rank\.next\.remaining\)/);   // count-based next-rank wording
+  });
+
+  it("medal icons use the enlarged sizes and the container stays overflow-safe (flex-wrap) on mobile", () => {
+    expect(section).toContain('size={20} className={"eb-sp-medal is-" + g.tier}');
+    expect(section).toContain('eb-sp-rank-badge"><IconMedal size={18}');
+    expect(read("student/AchievementFeed.tsx")).toContain('<IconMedal size={26} />');
+    expect(css).toMatch(/\.eb-sp-medal-icon\{[^}]*width:40px; height:40px/);
+    expect(css).toMatch(/\.eb-sp-medals\{[^}]*flex-wrap:wrap/);
+    expect(css).toMatch(/\.eb-sp-rank\{[^}]*flex-wrap:wrap/);
+  });
+});

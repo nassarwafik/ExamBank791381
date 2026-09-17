@@ -6,7 +6,7 @@ import SectionHeader from "../ui/SectionHeader";
 import StatCard from "../ui/StatCard";
 import StatusBadge from "../ui/StatusBadge";
 import VisuallyHidden from "../ui/VisuallyHidden";
-import { RANK_MIN_FINALIZED, type RankProgress, type StudentRank } from "../studentRank";
+import { RANK_STEP_FINALIZED, remainingExamsPhrase, type RankProgress, type StudentRank } from "../studentRank";
 import { countMedals } from "./portalPresentation";
 import type { Stats } from "./types";
 
@@ -39,7 +39,7 @@ export default function StudentProgressSection({ stats, medals, rank, progress, 
             <ul className="eb-sp-medals" aria-label="ميدالياتك">
               {grouped.map(g => (
                 <li key={g.tier}>
-                  <IconMedal size={16} className={"eb-sp-medal is-" + g.tier} aria-hidden="true" />
+                  <IconMedal size={20} className={"eb-sp-medal is-" + g.tier} aria-hidden="true" />
                   <span aria-hidden="true">×{g.count}</span>
                   <VisuallyHidden>{g.count} ميدالية {MEDAL_LABELS[g.tier]}</VisuallyHidden>
                 </li>
@@ -50,11 +50,11 @@ export default function StudentProgressSection({ stats, medals, rank, progress, 
           )}
           {rank ? (
             <div className="eb-sp-rank-progress">
-              <p className="eb-sp-rank"><StatusBadge tone="info" className="eb-sp-rank-badge"><IconMedal size={14} aria-hidden="true" />الرتبة: {rank.label}</StatusBadge><span className="eb-sp-rank-hint">من {rank.finalized} واجبات نهائية</span></p>
+              <p className="eb-sp-rank"><StatusBadge tone="info" className="eb-sp-rank-badge"><IconMedal size={18} aria-hidden="true" />الرتبة: {rank.label}</StatusBadge><span className="eb-sp-rank-hint">من {rank.finalized} واجبات نهائية</span></p>
               {rank.next ? (
                 <>
                   <ProgressBar size="sm" label={"نحو رتبة " + rank.next.label} value={rank.next.percent} tone="series-2" />
-                  <p className="eb-sp-rank-hint">الرتبة التالية عند معدل نهائي {rank.next.threshold}%</p>
+                  <p className="eb-sp-rank-hint">{remainingExamsPhrase(rank.next.remaining)} للوصول إلى رتبة {rank.next.label}</p>
                 </>
               ) : (
                 <p className="eb-sp-rank-hint">بلغت أعلى رتبة</p>
@@ -63,7 +63,7 @@ export default function StudentProgressSection({ stats, medals, rank, progress, 
           ) : (
             <div className="eb-sp-rank-progress">
               <ProgressBar size="sm" label="الطريق إلى رتبتك" value={progress.percent} showValue={false} tone="series-2" />
-              <p className="eb-sp-rank-hint">{progress.finalized} من {RANK_MIN_FINALIZED} واجبات نهائية لفتح الرتبة</p>
+              <p className="eb-sp-rank-hint">{progress.finalized} من {RANK_STEP_FINALIZED} امتحانات نهائية لفتح رتبتك</p>
             </div>
           )}
         </div>

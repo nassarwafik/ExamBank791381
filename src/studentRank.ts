@@ -1,59 +1,90 @@
 // UX-7 — the student's PERSONAL rank (progression only; there is no class leaderboard and nothing here ever
-// compares one student with another). The rank is derived from exactly two server-authoritative,
-// finalized-only stats of /api/student-dashboard: `finalized` (assignments whose latest grading status is
-// final) and `averageFinalized` (the average over those same assignments). Provisional / pendingReview
-// results are excluded by construction — they are not part of either input — and the module never looks at
-// a raw score, a percentage or a result object.
-export const RANK_MIN_FINALIZED = 10;
+// compares one student with another). The rank now advances by ONE tier every FOUR server-authoritative,
+// finalized-only exams — it is progression-by-completed-finalized-exams, NOT average-based.
+//
+// The ONLY input to the rank tier is `stats.finalized` (assignments whose latest grading status is final).
+// Provisional / pendingReview / submitted / assigned / in-progress results, raw scores and percentages are
+// excluded by construction — the module never reads them. `averageFinalized` is kept on the rank object for
+// the academic-average display elsewhere (the final-average ring), but it NO LONGER decides the tier. Medals
+// keep their own separate score thresholds (see medals.ts) — this file never touches those.
 
-// The locked six-tier system. Thresholds are applied to the UNROUNDED finalized average.
+/** The rank cadence: one tier is unlocked for every this-many finalized exams. The single source of truth —
+ *  never hardcode the 4 in a component or test. */
+export const RANK_STEP_FINALIZED = 4;
+
+// The six-tier system. Tier IDs, labels and the visual rank colors (avatar frame CSS) are preserved.
 export type RankTier = "beginner" | "bronze" | "silver" | "gold" | "diamond" | "legendary";
 export const RANK_ORDER: RankTier[] = ["beginner", "bronze", "silver", "gold", "diamond", "legendary"];
-export const RANK_MIN: Record<RankTier, number> = { beginner: 0, bronze: 60, silver: 70, gold: 80, diamond: 90, legendary: 96 };
 export const RANK_LABELS: Record<RankTier, string> = { beginner: "مبتدئ", bronze: "برونزي", silver: "فضي", gold: "ذهبي", diamond: "ألماسي", legendary: "أسطوري" };
 
-export type NextRank = { tier: RankTier; label: string; threshold: number; percent: number };
+export type NextRank = { tier: RankTier; label: string; remaining: number; percent: number };
 export type StudentRank = { tier: RankTier; label: string; averageFinalized: number; finalized: number; next: NextRank | null };
 export type RankInput = { finalized?: number | null; averageFinalized?: number | null } | null | undefined;
-export type RankProgress = { finalized: number; needed: number; remaining: number; percent: number };
+export type RankProgress = { finalized: number; withinBlock: number; needed: number; remaining: number; percent: number };
 
-/** Tier for an already-authoritative finalized average (unrounded): <60 beginner, 60 bronze, 70 silver, 80 gold, 90 diamond, 96 legendary. */
-export function rankTierFor(averageFinalized: number): RankTier {
-  if (averageFinalized >= 96) return "legendary";
-  if (averageFinalized >= 90) return "diamond";
-  if (averageFinalized >= 80) return "gold";
-  if (averageFinalized >= 70) return "silver";
-  if (averageFinalized >= 60) return "bronze";
-  return "beginner";
+/** A safe non-negative integer finalized count. NaN / negative / Infinity / malformed all collapse to 0. */
+function finalizedCount(value: unknown): number {
+  const n = Number(value);
+  if (!Number.isFinite(n) || n <= 0) return 0;
+  return Math.floor(n);
 }
 
-/** Progress from the current tier's floor towards the next tier's threshold; null for the top tier. */
-export function nextRankProgress(tier: RankTier, averageFinalized: number): NextRank | null {
+/**
+ * The rank tier for a finalized-exam COUNT — the heart of the progression:
+ *   0–3 → null (no rank yet) · 4–7 beginner · 8–11 bronze · 12–15 silver · 16–19 gold · 20–23 diamond · 24+ legendary.
+ * Deterministic and pure. Negative / NaN / Infinity behave as 0 (no rank).
+ */
+export function rankTierForFinalized(finalized: number | null | undefined): RankTier | null {
+  const count = finalizedCount(finalized);
+  if (count < RANK_STEP_FINALIZED) return null;
+  const index = Math.min(Math.floor(count / RANK_STEP_FINALIZED) - 1, RANK_ORDER.length - 1);
+  return RANK_ORDER[index];
+}
+
+/** The next tier and the progress THROUGH the current four-exam block towards it; null at legendary (top). */
+export function nextRankForFinalized(finalized: number | null | undefined): NextRank | null {
+  const count = finalizedCount(finalized);
+  const tier = rankTierForFinalized(count);
+  if (!tier) return null;
   const index = RANK_ORDER.indexOf(tier);
-  if (index < 0 || index === RANK_ORDER.length - 1) return null;
+  if (index >= RANK_ORDER.length - 1) return null; // legendary — no next rank
   const nextTier = RANK_ORDER[index + 1];
-  const min = RANK_MIN[tier], threshold = RANK_MIN[nextTier];
-  const raw = ((averageFinalized - min) / (threshold - min)) * 100;
-  const percent = Math.round(Math.max(0, Math.min(100, Number.isFinite(raw) ? raw : 0)));
-  return { tier: nextTier, label: RANK_LABELS[nextTier], threshold, percent };
+  const withinBlock = count % RANK_STEP_FINALIZED;              // 0..3 into the current block
+  const remaining = RANK_STEP_FINALIZED - withinBlock;         // 4,3,2,1 exams to the next tier
+  const percent = Math.round((withinBlock / RANK_STEP_FINALIZED) * 100);
+  return { tier: nextTier, label: RANK_LABELS[nextTier], remaining, percent };
 }
 
-/** null until at least RANK_MIN_FINALIZED assignments are final AND the server sent a finalized average. */
+/**
+ * The student's rank, derived from the finalized COUNT only. `averageFinalized` is carried through for the
+ * academic-average display but never influences the tier. null until at least RANK_STEP_FINALIZED finalized.
+ */
 export function rankFor(stats: RankInput): StudentRank | null {
-  const finalized = Number(stats?.finalized ?? 0);
-  if (!Number.isFinite(finalized) || finalized < RANK_MIN_FINALIZED) return null;
-  const avg = stats?.averageFinalized;
-  if (avg === null || avg === undefined) return null;
-  const averageFinalized = Number(avg);
-  if (!Number.isFinite(averageFinalized)) return null;
-  const tier = rankTierFor(averageFinalized);
-  return { tier, label: RANK_LABELS[tier], averageFinalized, finalized, next: nextRankProgress(tier, averageFinalized) };
+  const finalized = finalizedCount(stats?.finalized);
+  const tier = rankTierForFinalized(finalized);
+  if (!tier) return null;
+  const avgRaw = stats?.averageFinalized;
+  const avg = Number(avgRaw);
+  const averageFinalized = avgRaw !== null && avgRaw !== undefined && Number.isFinite(avg) ? avg : 0;
+  return { tier, label: RANK_LABELS[tier], averageFinalized, finalized, next: nextRankForFinalized(finalized) };
 }
 
-/** Progress towards unlocking the rank (finalized assignments only). */
+/** Progress within the current four-exam block (used before the first rank for "الطريق إلى رتبتك"). */
 export function rankProgress(stats: RankInput): RankProgress {
-  const raw = Number(stats?.finalized ?? 0);
-  const finalized = Number.isFinite(raw) && raw > 0 ? Math.floor(raw) : 0;
-  const capped = Math.min(finalized, RANK_MIN_FINALIZED);
-  return { finalized, needed: RANK_MIN_FINALIZED, remaining: RANK_MIN_FINALIZED - capped, percent: Math.round((capped / RANK_MIN_FINALIZED) * 100) };
+  const finalized = finalizedCount(stats?.finalized);
+  const withinBlock = finalized % RANK_STEP_FINALIZED;
+  const remaining = RANK_STEP_FINALIZED - withinBlock;
+  return { finalized, withinBlock, needed: RANK_STEP_FINALIZED, remaining, percent: Math.round((withinBlock / RANK_STEP_FINALIZED) * 100) };
+}
+
+/**
+ * Count-based Arabic phrase for the exams remaining to the next tier (natural singular/dual/plural):
+ *   1 → «بقي امتحان واحد» · 2 → «بقي امتحانان» · 3 → «بقي 3 امتحانات» · 4 → «بقي 4 امتحانات».
+ * The caller appends the destination (« للوصول إلى رتبة X»). Replaces the old average-threshold wording.
+ */
+export function remainingExamsPhrase(remaining: number): string {
+  const r = Math.max(1, Math.floor(Number(remaining) || 1));
+  if (r === 1) return "بقي امتحان واحد";
+  if (r === 2) return "بقي امتحانان";
+  return "بقي " + r + " امتحانات";
 }

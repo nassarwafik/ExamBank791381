@@ -105,7 +105,7 @@
 .eb-sp-feed-list{ list-style:none; margin:0; padding:0; display:flex; flex-direction:column; gap:var(--eb-space-3); }
 .eb-sp-feed-item{ display:flex; gap:var(--eb-space-3); min-width:0; padding:var(--eb-space-3); background:var(--eb-surface-2); border:1px solid var(--eb-line); border-radius:var(--eb-r); }
 .eb-sp-feed-item.is-own{ background:var(--eb-success-bg); border-color:var(--eb-success); }
-.eb-sp-medal-icon{ display:inline-flex; flex:0 0 auto; align-items:center; justify-content:center; width:36px; height:36px; border-radius:50%; background:var(--eb-surface); }
+.eb-sp-medal-icon{ display:inline-flex; flex:0 0 auto; align-items:center; justify-content:center; width:40px; height:40px; border-radius:50%; background:var(--eb-surface); }
 .eb-sp-medal-icon.is-gold{ color:var(--eb-medal-gold); }
 .eb-sp-medal-icon.is-silver{ color:var(--eb-medal-silver); }
 .eb-sp-medal-icon.is-bronze{ color:var(--eb-medal-bronze); }
