@@ -1,5 +1,7 @@
 
-import { useRef, useState } from "react";
+import { useCallback, useEffect, useId, useRef, useState } from "react";
+import useFocusTrap from "./ui/useFocusTrap";
+import useBodyScrollLock from "./ui/useBodyScrollLock";
 import type { StructuredExam } from "./examTypes";
 import { importStructuredExam } from "./structuredExamHtmlParser";
 import { MAX_IMPORT_BYTES, type StructuredImportResult } from "./structuredExamImport";
@@ -20,6 +22,14 @@ export default function StructuredExamImportDialog({ onClose, onOpenInBuilder }:
   const [fileError, setFileError] = useState("");
   const [showDetails, setShowDetails] = useState(false);
   const inputRef = useRef<HTMLInputElement | null>(null);
+  // UX-8a — real modal in place (same overlay, same import behaviour): shared focus trap + Escape + focus return, body
+  // scroll lock, and a dialog name. onClose is read through a ref so a parent re-render never re-arms the trap.
+  const overlayRef = useRef<HTMLDivElement>(null), onCloseRef = useRef(onClose);
+  useEffect(() => { onCloseRef.current = onClose; });
+  const escape = useCallback(() => onCloseRef.current(), []);
+  useFocusTrap(overlayRef, true, escape);
+  useBodyScrollLock(true);
+  const titleId = "sb-import-title-" + useId().replace(/[^a-zA-Z0-9_-]/g, "");
 
   async function handleFile(file: File | undefined | null) {
     if (!file) return;
@@ -40,9 +50,9 @@ export default function StructuredExamImportDialog({ onClose, onOpenInBuilder }:
   const stats = result?.stats;
 
   return (
-    <div className="sb-preview-overlay" role="dialog" aria-modal="true" dir="rtl">
+    <div ref={overlayRef} className="sb-preview-overlay" role="dialog" aria-modal="true" aria-labelledby={titleId} dir="rtl">
       <header className="sb-preview-head">
-        <strong>📥 استيراد امتحان منظّم</strong>
+        <strong id={titleId}>📥 استيراد امتحان منظّم</strong>
         <button type="button" className="sb-btn" onClick={onClose}>✕ إغلاق</button>
       </header>
 
@@ -56,6 +66,9 @@ export default function StructuredExamImportDialog({ onClose, onOpenInBuilder }:
           >
             <input ref={inputRef} type="file" accept={ACCEPT} hidden onChange={e => void handleFile(e.target.files?.[0])} />
             <p className="sb-import-drop-title">اسحب ملف <b>JSON</b> أو <b>HTML</b> هنا، أو اضغط للاختيار</p>
+            {/* UX-8a — the complete keyboard path to the chooser: a native button (Tab / Enter / Space) that opens the same
+                hidden input; the drop zone keeps its drag/drop and click-anywhere behaviour for pointer users. */}
+            <button type="button" className="sb-btn sb-import-choose" onClick={e => { e.stopPropagation(); inputRef.current?.click(); }}>اختيار ملف</button>
             <p className="sb-hint">الصيغ المقبولة: .json · .html · .htm — لا يُدعم Word/PDF هنا (حوّلهما خارجيًا أولًا).</p>
             {busy && <p className="sb-hint">⏳ جارٍ التحليل…</p>}
             {fileError && <div className="sb-banner sb-banner-error">{fileError}</div>}

@@ -151,6 +151,12 @@ h3.eb-section-title { font-size: var(--eb-fs-16); }
   .eb-dialog-root { padding: var(--eb-space-2); align-items: flex-end; }
   .eb-dialog, .eb-dialog.size-sm, .eb-dialog.size-lg { width: 100%; max-height: 94vh; }
 }
+/* UX-8a — phone touch targets (≥ 44 px) for the shared interactive primitives; desktop density is unchanged. */
+@media (max-width: 767px) {
+  .eb-icon-button { min-width: 44px; min-height: 44px; }
+  .eb-button.is-small { min-height: 44px; }
+  .eb-chip-button { min-height: 44px; }
+}
 @media (prefers-reduced-motion: no-preference) {
   .eb-dialog { animation: ebFadeIn var(--eb-dur) var(--eb-ease) both; }
 }

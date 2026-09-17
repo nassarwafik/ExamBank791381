@@ -107,6 +107,9 @@
   border:1px solid var(--eb-line-2); border-radius:var(--eb-r-sm); background:var(--eb-surface); color:var(--eb-text); font:inherit; font-size:var(--eb-fs-14);
 }
 .iex-open{ min-height:140px; resize:vertical; line-height:var(--eb-lh-body); }
+/* UX-8a — technical values (IPv4/IPv6, MAC, VLAN ids) typed into table/sequence cells keep their own direction instead of
+   being reordered by the surrounding Arabic; the stored value is untouched. CLI blanks stay LTR via .iex-cli. */
+.iex-cell, .iex-seq input{ unicode-bidi:plaintext; }
 .iex-check{ width:28px; height:28px; margin:var(--eb-space-2); accent-color:var(--eb-primary); }
 
 /* Word bank + labelled blanks (fill-blank / word bank / matching / ordering): single column on phones */

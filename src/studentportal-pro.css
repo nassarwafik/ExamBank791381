@@ -114,7 +114,7 @@
 .eb-sp-feed-tags{ display:flex; flex-wrap:wrap; gap:var(--eb-space-1); }
 .eb-sp-teacher-reaction{ gap:var(--eb-space-1); }
 .eb-sp-reactions{ display:flex; flex-wrap:wrap; gap:var(--eb-space-1); }
-.eb-sp-reaction{ min-height:32px; padding:0 var(--eb-space-2); }
+.eb-sp-reaction{ min-height:44px; padding:0 var(--eb-space-2); } /* UX-8a — 44 px on phones; 32 px from 768 px */
 .eb-sp-reaction-count{ font-variant-numeric:tabular-nums; }
 .eb-sp-feed-note{ margin:0; padding:var(--eb-space-2) var(--eb-space-3); background:var(--eb-surface); border:1px solid var(--eb-line); border-radius:var(--eb-r-sm); color:var(--eb-text); font-size:var(--eb-fs-13); line-height:var(--eb-lh-body); }
 
@@ -148,6 +148,7 @@
   .eb-sp-now-item{ flex-direction:row; align-items:center; justify-content:space-between; }
   .eb-sp-now-action{ width:auto; min-height:38px; }
   .eb-sp-task-action{ width:auto; min-height:38px; align-self:flex-start; }
+  .eb-sp-reaction{ min-height:32px; }
   .eb-sp-project-tracks{ grid-template-columns:repeat(2,minmax(0,1fr)); }
 }
 @media (min-width: 1024px){

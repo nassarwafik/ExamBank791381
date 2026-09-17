@@ -194,6 +194,11 @@
   .eb-bulk-danger{ margin-inline-start:0; }
 }
 @media (max-width:767px){
+  /* UX-8a — phone touch targets (≥ 44 px); desktop density unchanged */
+  .eb-segmented > button{ min-height:44px; }
+  .eb-menu-trigger{ min-width:44px; min-height:44px; }
+  .eb-menu-item{ min-height:44px; }
+  .eb-th-sort{ min-height:44px; padding-inline:var(--eb-space-1); }
   .eb-roster-stats{ grid-template-columns:repeat(2,minmax(0,1fr)); }
   .eb-roster-toolbar,.eb-field-inline{ flex-direction:column; align-items:stretch; }
   .eb-field-inline select{ width:100%; }
