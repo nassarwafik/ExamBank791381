@@ -8,7 +8,7 @@ const ReportsCenter = lazy(() => import("./reports/ReportsCenter"));
 const ExamBankPage = lazy(() => import("./bank/ExamBankPage"));
 // Structured Exam Builder (Phase 2) — code-split so it only loads when a teacher opens it.
 const StructuredExamBuilder = lazy(() => import("./StructuredExamBuilder"));
-const StructuredExamImportDialog = lazy(() => import("./StructuredExamImportDialog"));
+const SmartStructuredExamImportWizard = lazy(() => import("./SmartStructuredExamImportWizard"));
 import { withTrackingCode } from "./lib/requestTrace";
 import { isStructuredExam } from "./examTypes";
 import type { StructuredExam } from "./examTypes";
@@ -7492,7 +7492,8 @@ function App() {
 
       {structuredImportOpen && (
         <Suspense fallback={<div className="platform-loading">⏳ جارٍ فتح أداة الاستيراد…</div>}>
-          <StructuredExamImportDialog
+          <SmartStructuredExamImportWizard
+            token={token}
             onClose={() => setStructuredImportOpen(false)}
             onOpenInBuilder={openImportedStructuredExam}
           />
