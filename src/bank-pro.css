@@ -42,6 +42,7 @@
 .eb-bank-form textarea{ min-height:96px; resize:vertical; }
 .eb-bank-option-row{ display:grid; grid-template-columns:auto minmax(0,1fr) auto; align-items:center; gap:var(--eb-space-2); }
 .eb-bank-option-row input[type="radio"]{ width:18px; height:18px; min-height:0; margin:0; }
+.eb-bank-field-row{ display:grid; grid-template-columns:minmax(0,1fr) minmax(0,1fr) auto; align-items:center; gap:var(--eb-space-2); }
 .eb-bank-form-errors{ margin:0; padding-inline-start:var(--eb-space-5); color:var(--eb-danger-tx); font-size:var(--eb-fs-13); }
 .eb-bank-hint{ margin:0; color:var(--eb-muted); font-size:var(--eb-fs-12); }
 
@@ -58,6 +59,8 @@
   .eb-bank-filter select{ min-height:44px; }
   .eb-bank-table .eb-button.is-small,.eb-bank-exam-actions .eb-button{ min-height:44px; }
   .eb-bank-text{ max-width:220px; }
+  .eb-bank-field-row{ grid-template-columns:minmax(0,1fr) auto; }
+  .eb-bank-field-row input:nth-child(2){ grid-column:1; }
 }
 @media (prefers-reduced-motion: reduce){
   .eb-bank *{ transition:none; animation:none; }

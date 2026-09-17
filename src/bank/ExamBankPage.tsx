@@ -11,7 +11,8 @@ import { withTrackingCode } from "../lib/requestTrace";
 import {
   type BankQuestionRow, type BankQuestionInput, type BankFilters, type BankPresentationType, type BankSection,
   EMPTY_FILTERS, PRESENTATION_TYPES, SECTIONS, SECTION_LABELS, TYPE_LABELS, SOURCE_LABELS,
-  emptyInput, inputFromRow, validateInput, filterRows, summarize, distinctTopics, correctOptionText, sectionLabel, typeLabel, sourceLabel
+  emptyInput, inputFromRow, validateInput, filterRows, summarize, distinctTopics, correctOptionText, sectionLabel, typeLabel, sourceLabel,
+  structureForType, newField, newRequestKey, parseWordBank
 } from "./bankQuestionModel";
 import "../bank-pro.css";
 
@@ -124,13 +125,15 @@ export default function ExamBankPage({ token, onOpenBuilder, onOpenImport, onOpe
   const topics = useMemo(() => distinctTopics(list), [list]);
   const filtered = filters !== EMPTY_FILTERS && (filters.q || filters.section || filters.type || filters.difficulty || filters.source);
 
-  async function saveQuestion(input: BankQuestionInput) {
+  // create carries the form's requestKey: a retry after a failed save (whose first storage write may already have
+  // landed) reconciles on the server instead of storing a second copy of the question.
+  async function saveQuestion(input: BankQuestionInput, requestKey: string) {
     if (!editor) return;
     setBusy(true); setActionError(""); setNotice("");
     try {
       if (editor.mode === "create") {
-        const r = await api<{ question: BankQuestionRow }>("/api/bank-questions", { method: "POST", body: JSON.stringify({ action: "create", question: input }) });
-        setRows(prev => [r.question, ...(prev || [])]);
+        const r = await api<{ question: BankQuestionRow }>("/api/bank-questions", { method: "POST", body: JSON.stringify({ action: "create", question: input, requestKey }) });
+        setRows(prev => prev && prev.some(x => x.id === r.question.id) ? prev.map(x => (x.id === r.question.id ? r.question : x)) : [r.question, ...(prev || [])]);
         setNotice("✓ تمت إضافة السؤال إلى بنك الأسئلة.");
       } else {
         const id = editor.row.id;
@@ -339,7 +342,15 @@ export default function ExamBankPage({ token, onOpenBuilder, onOpenImport, onOpe
             {preview.presentationType === "multipleChoice" && preview.options.length > 0 && (
               <ol className="eb-bank-options">{preview.options.map(o => <li key={o.value} className={correctOptionText(preview) === o.text && o.text ? "is-correct" : ""}>{o.text}{correctOptionText(preview) === o.text && o.text ? " (الإجابة الصحيحة)" : ""}</li>)}</ol>
             )}
-            {preview.presentationType !== "multipleChoice" && (
+            {(preview.presentationType === "fillBlank" || preview.presentationType === "wordBank") && (
+              <>
+                {preview.fields.length > 0
+                  ? <ol className="eb-bank-options" aria-label="الفراغات">{preview.fields.map((f, i) => <li key={f.id || i}>{f.label || "الفراغ " + (i + 1)}: <b>{f.correct || (Array.isArray(preview.answer?.values) ? String((preview.answer.values as unknown[])[i] ?? "") : "") || "—"}</b></li>)}</ol>
+                  : <p className="eb-bank-hint">لا توجد فراغات محددة — عدّل السؤال لإضافة الفراغات قبل استخدامه في امتحان.</p>}
+                {preview.presentationType === "wordBank" && <p className="eb-bank-hint">بنك الكلمات: {preview.wordBank.length ? preview.wordBank.join(" · ") : "—"}</p>}
+              </>
+            )}
+            {preview.presentationType === "open" && (
               <p className="eb-bank-hint">{Array.isArray(preview.answer?.values) && (preview.answer.values as unknown[]).length > 0 ? "الإجابات المقبولة: " + (preview.answer.values as unknown[]).map(String).join(" · ") : "التصحيح يدوي (لا توجد إجابة نموذجية)."}</p>
             )}
             <p className="eb-bank-hint">الموضوع: {preview.topic || "—"} · المعرّف: <span dir="ltr">{preview.id}</span>{preview.hasImage ? " · يحتوي صورة" : ""}</p>
@@ -353,26 +364,36 @@ export default function ExamBankPage({ token, onOpenBuilder, onOpenImport, onOpe
   );
 }
 
-function QuestionEditorDialog({ mode, initial, topics, busy, serverError, onClose, onSave }: { mode: "create" | "edit"; initial: BankQuestionInput; topics: string[]; busy: boolean; serverError: string; onClose: () => void; onSave: (input: BankQuestionInput) => Promise<void> }) {
+function QuestionEditorDialog({ mode, initial, topics, busy, serverError, onClose, onSave }: { mode: "create" | "edit"; initial: BankQuestionInput; topics: string[]; busy: boolean; serverError: string; onClose: () => void; onSave: (input: BankQuestionInput, requestKey: string) => Promise<void> }) {
   const [input, setInput] = useState<BankQuestionInput>(initial);
   const [errors, setErrors] = useState<string[]>([]);
   const [valuesText, setValuesText] = useState((initial.answer.values || []).join("\n"));
+  const [wordBankText, setWordBankText] = useState(initial.wordBank.join("\n"));
+  const [requestKey] = useState(newRequestKey);                                     // one key per form: retries reconcile, never duplicate
   const formId = "eb-bank-question-form";
   const textRef = useRef<HTMLTextAreaElement | null>(null);
   const listId = useId();
   const set = (patch: Partial<BankQuestionInput>) => setInput(prev => ({ ...prev, ...patch }));
-  function changeType(presentationType: BankPresentationType) {
-    if (presentationType === "multipleChoice") set({ presentationType, options: input.options.length >= 2 ? input.options : [{ value: "a", text: "" }, { value: "b", text: "" }], answer: { correctOptionValue: input.answer.correctOptionValue || "" } });
-    else set({ presentationType, options: [], answer: { values: valuesText.split("\n").map(v => v.trim()).filter(Boolean) } });
+  // Switching type rebuilds the structure the new type owns (options / blanks / word bank / accepted answers); the
+  // incompatible structure of the previous type is dropped, never merged into the payload.
+  function changeType(presentationType: BankPresentationType) { setInput(prev => structureForType(prev, presentationType)); }
+  function assemble(): BankQuestionInput {
+    const t = input.presentationType;
+    if (t === "multipleChoice") return { ...input, fields: [], wordBank: [], answer: { correctOptionValue: input.answer.correctOptionValue || "" } };
+    if (t === "fillBlank") return { ...input, options: [], wordBank: [], answer: {} };
+    if (t === "wordBank") return { ...input, options: [], wordBank: parseWordBank(wordBankText), answer: {} };
+    return { ...input, options: [], fields: [], wordBank: [], answer: { values: valuesText.split("\n").map(v => v.trim()).filter(Boolean) } };
   }
   function submit(e: FormEvent) {
     e.preventDefault();
-    const next: BankQuestionInput = input.presentationType === "multipleChoice" ? input : { ...input, options: [], answer: { values: valuesText.split("\n").map(v => v.trim()).filter(Boolean) } };
+    const next = assemble();
     const found = validateInput(next);
     setErrors(found);
     if (found.length) return;
-    void onSave(next);
+    void onSave(next, requestKey);
   }
+  const blanks = input.presentationType === "fillBlank" || input.presentationType === "wordBank";
+  const patchField = (i: number, patch: Partial<{ label: string; correct: string }>) => set({ fields: input.fields.map((f, k) => (k === i ? { ...f, ...patch } : f)) });
   const errorId = formId + "-errors";
   return (
     <Dialog open title={mode === "create" ? "إضافة سؤال إلى البنك" : "تعديل السؤال"} onClose={onClose} size="lg" initialFocusRef={textRef} describedBy={errors.length ? errorId : undefined}
@@ -406,6 +427,23 @@ function QuestionEditorDialog({ mode, initial, topics, busy, serverError, onClos
               </div>
             ))}
             <div><button type="button" className="eb-button is-small" disabled={input.options.length >= 12} onClick={() => set({ options: [...input.options, { value: nextOptionValue(input.options), text: "" }] })}><IconPlus size={14} aria-hidden="true" />إضافة خيار</button></div>
+          </fieldset>
+        ) : blanks ? (
+          <fieldset className="eb-bank-form" style={{ border: 0, padding: 0, margin: 0 }}>
+            <legend className="eb-bank-hint">{input.presentationType === "wordBank" ? "الفراغات — لكل فراغ عنوان وإجابة صحيحة يختارها الطالب من بنك الكلمات" : "الفراغات — لكل فراغ عنوان وإجابة صحيحة يكتبها الطالب"}</legend>
+            {input.fields.map((f, i) => (
+              <div key={f.id} className="eb-bank-field-row">
+                <input value={f.label} aria-label={"عنوان الفراغ " + (i + 1)} placeholder={"الفراغ " + (i + 1)} onChange={e => patchField(i, { label: e.target.value })} dir="auto" />
+                <input value={f.correct} aria-label={"الإجابة الصحيحة للفراغ " + (i + 1)} placeholder="الإجابة الصحيحة" onChange={e => patchField(i, { correct: e.target.value })} dir="auto" aria-invalid={errors.includes("الفراغ " + (i + 1) + " بلا إجابة صحيحة.") ? true : undefined} />
+                <IconButton label={"حذف الفراغ " + (i + 1)} icon={<IconTrash size={16} />} disabled={input.fields.length <= 1} onClick={() => set({ fields: input.fields.filter((_, k) => k !== i) })} />
+              </div>
+            ))}
+            <div><button type="button" className="eb-button is-small" disabled={input.fields.length >= 20} onClick={() => set({ fields: [...input.fields, newField()] })}><IconPlus size={14} aria-hidden="true" />إضافة فراغ</button></div>
+            {input.presentationType === "wordBank" && (
+              <label>بنك الكلمات (كلمة في كل سطر — يجب أن يحتوي الإجابة الصحيحة لكل فراغ مع كلمات مشتِّتة)
+                <textarea value={wordBankText} onChange={e => setWordBankText(e.target.value)} dir="auto" aria-invalid={errors.some(x => x.includes("بنك الكلمات")) ? true : undefined} />
+              </label>
+            )}
           </fieldset>
         ) : (
           <label>الإجابات المقبولة (سطر لكل إجابة، اتركها فارغة للتصحيح اليدوي)

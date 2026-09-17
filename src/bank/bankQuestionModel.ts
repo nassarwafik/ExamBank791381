@@ -20,7 +20,8 @@ export type BankQuestionRow = {
   presentationType: BankPresentationType;
   text: string;
   options: { value: string; text: string }[];
-  fields: { id: string; label: string }[];
+  fields: BankField[];
+  wordBank: string[];
   answer: Record<string, unknown>;
   hasImage: boolean;
   reviewStatus: string;
@@ -28,6 +29,13 @@ export type BankQuestionRow = {
   updatedAt: string;
 };
 
+// A blank of a fill-blank / word-bank question: its label and its expected value (teacher-side; the server writes
+// the canonical field with kind "text" / "select" and the exactSequence answer from these).
+export type BankField = { id: string; label: string; correct: string };
+
+// The editable payload. Each presentation type owns ONE structure and switching type rebuilds it whole:
+//   multipleChoice → options + answer.correctOptionValue     fillBlank → fields
+//   wordBank       → fields + wordBank (the choices)          open      → answer.values (accepted answers)
 export type BankQuestionInput = {
   section: BankSection;
   topic: string;
@@ -35,6 +43,8 @@ export type BankQuestionInput = {
   presentationType: BankPresentationType;
   text: string;
   options: { value: string; text: string }[];
+  fields: BankField[];
+  wordBank: string[];
   answer: { correctOptionValue?: string; values?: string[] };
 };
 
@@ -49,24 +59,54 @@ export function typeLabel(type: string): string { return (TYPE_LABELS as Record<
 export function sourceLabel(kind: string): string { return (SOURCE_LABELS as Record<string, string>)[kind] || kind; }
 
 export function emptyInput(): BankQuestionInput {
-  return { section: "BASIC", topic: "", difficulty: 3, presentationType: "multipleChoice", text: "", options: [{ value: "a", text: "" }, { value: "b", text: "" }], answer: { correctOptionValue: "" } };
+  return { section: "BASIC", topic: "", difficulty: 3, presentationType: "multipleChoice", text: "", options: [{ value: "a", text: "" }, { value: "b", text: "" }], fields: [], wordBank: [], answer: { correctOptionValue: "" } };
+}
+
+let fieldSeq = 0;
+export function newField(): BankField { fieldSeq += 1; return { id: "f" + Date.now().toString(36) + fieldSeq.toString(36), label: "", correct: "" }; }
+
+/** The structure a type owns, rebuilt from whatever the previous type left (only the compatible part is carried). */
+export function structureForType(input: BankQuestionInput, presentationType: BankPresentationType): BankQuestionInput {
+  const blanks = input.fields.length ? input.fields.map(f => ({ ...f })) : [newField()];
+  switch (presentationType) {
+    case "multipleChoice":
+      return { ...input, presentationType, options: input.options.length >= 2 ? input.options : [{ value: "a", text: "" }, { value: "b", text: "" }], fields: [], wordBank: [], answer: { correctOptionValue: input.answer.correctOptionValue || "" } };
+    case "fillBlank":
+      return { ...input, presentationType, options: [], fields: blanks, wordBank: [], answer: {} };
+    case "wordBank":
+      return { ...input, presentationType, options: [], fields: blanks, wordBank: input.wordBank.slice(), answer: {} };
+    default:
+      return { ...input, presentationType, options: [], fields: [], wordBank: [], answer: { values: input.answer.values || [] } };
+  }
+}
+
+/** A per-form idempotency key: the server derives the manual question id from it, so a retried create (after a
+ *  failure whose first half already landed) reconciles instead of storing a second copy. */
+export function newRequestKey(): string {
+  return Date.now().toString(36) + "-" + Math.random().toString(36).slice(2, 10).padEnd(8, "0");
 }
 
 /** The editable projection of a stored row (what the edit form starts from). */
 export function inputFromRow(row: BankQuestionRow): BankQuestionInput {
   const values = Array.isArray(row.answer?.values) ? (row.answer.values as unknown[]).map(v => String(v)) : [];
+  const t = row.presentationType;
+  const blanks = t === "fillBlank" || t === "wordBank";
   return {
     section: row.section === "INFRASTRUCTURE" ? "INFRASTRUCTURE" : "BASIC",
     topic: row.topic,
     difficulty: row.difficulty && row.difficulty >= 1 && row.difficulty <= 5 ? row.difficulty : 3,
-    presentationType: row.presentationType,
+    presentationType: t,
     text: row.text,
-    options: row.presentationType === "multipleChoice"
+    options: t === "multipleChoice"
       ? (row.options.length >= 2 ? row.options.map(o => ({ value: o.value, text: o.text })) : [{ value: "a", text: "" }, { value: "b", text: "" }])
       : [],
-    answer: row.presentationType === "multipleChoice"
+    // a stored blank's expected value comes from the field; older multiField rows without one fall back to the
+    // answer sequence at the same position (still shown so the teacher can confirm it)
+    fields: blanks ? (row.fields || []).map((f, i) => ({ id: f.id || "f" + (i + 1), label: f.label || "", correct: f.correct || values[i] || "" })) : [],
+    wordBank: t === "wordBank" ? (row.wordBank || []).slice() : [],
+    answer: t === "multipleChoice"
       ? { correctOptionValue: String(row.answer?.correctOptionValue ?? values[0] ?? "") }
-      : { values }
+      : t === "open" ? { values } : {}
   };
 }
 
@@ -83,8 +123,24 @@ export function validateInput(input: BankQuestionInput): string[] {
     input.options.forEach((o, i) => { if (!o.text.trim()) errors.push("الخيار " + (i + 1) + " بلا نص."); });
     const correct = String(input.answer.correctOptionValue ?? "").trim();
     if (!correct || !input.options.some(o => o.value === correct)) errors.push("حدّد الإجابة الصحيحة من بين الخيارات.");
+  } else if (input.presentationType === "fillBlank" || input.presentationType === "wordBank") {
+    if (input.fields.length < 1) errors.push("أضف فراغًا واحدًا على الأقل.");
+    const words = input.presentationType === "wordBank" ? distinctWords(input.wordBank) : [];
+    input.fields.forEach((f, i) => {
+      const correct = f.correct.trim();
+      if (!correct) errors.push("الفراغ " + (i + 1) + " بلا إجابة صحيحة.");
+      else if (input.presentationType === "wordBank" && words.length && !words.includes(correct)) errors.push("الإجابة الصحيحة للفراغ " + (i + 1) + " غير موجودة في بنك الكلمات.");
+    });
+    if (input.presentationType === "wordBank" && words.length < 2) errors.push("بنك الكلمات يحتاج كلمتين مختلفتين على الأقل.");
   }
   return errors;
+}
+
+export function distinctWords(words: string[]): string[] {
+  return Array.from(new Set((words || []).map(w => String(w ?? "").trim()).filter(Boolean)));
+}
+export function parseWordBank(text: string): string[] {
+  return distinctWords(text.split(/\r?\n|\|/));
 }
 
 export type BankFilters = { q: string; section: string; type: string; difficulty: string; source: string };

@@ -2,7 +2,7 @@
 import { describe, it, expect, afterEach, beforeEach, vi } from "vitest";
 import { render, cleanup, screen, fireEvent, waitFor, within } from "@testing-library/react";
 import ExamBankPage from "./ExamBankPage";
-import { filterRows, summarize, validateInput, inputFromRow, emptyInput, type BankQuestionRow } from "./bankQuestionModel";
+import { filterRows, summarize, validateInput, inputFromRow, emptyInput, structureForType, newRequestKey, type BankQuestionRow } from "./bankQuestionModel";
 
 // UX-6c — Exam Bank Management page: request discipline (one bank load + one saved-exam load on entry, nothing for
 // tabs/search/filters/preview), the question bank list/search/filters, add/edit/delete with confirmation and
@@ -11,12 +11,13 @@ import { filterRows, summarize, validateInput, inputFromRow, emptyInput, type Ba
 
 const row = (id: string, over: Partial<BankQuestionRow> = {}): BankQuestionRow => ({
   id, sourceId: "import-quiz-20260301-abc123", sourceKind: "import", official: false, questionNumber: "1", section: "BASIC", topic: "NETWORK_BASICS", difficulty: 2, difficultyLabel: "",
-  type: "multipleChoice", presentationType: "multipleChoice", text: "ما هو الراوتر؟", options: [{ value: "a", text: "جهاز توجيه" }, { value: "b", text: "كابل" }], fields: [],
+  type: "multipleChoice", presentationType: "multipleChoice", text: "ما هو الراوتر؟", options: [{ value: "a", text: "جهاز توجيه" }, { value: "b", text: "كابل" }], fields: [], wordBank: [],
   answer: { mode: "singleChoice", correctOptionValue: "a", values: ["a"] }, hasImage: false, reviewStatus: "classified", createdAt: "2026-03-01T10:00:00.000Z", updatedAt: "2026-03-01T10:00:00.000Z", ...over
 });
 const OFFICIAL = row("791381-2025-exam-q1", { sourceId: "791381-2025-exam", sourceKind: "official", official: true, text: "ما هو IP؟", topic: "IP_ADDRESSING", difficulty: 1, options: [{ value: "A", text: "بروتوكول" }, { value: "B", text: "كابل" }], answer: { mode: "singleChoice", correctOptionValue: "A", values: ["A"] } });
 const IMPORTED = row("import-quiz-20260301-abc123-1", { text: "عرّف VLAN", topic: "SWITCHING", difficulty: 3, presentationType: "open", type: "shortAnswer", options: [], answer: { mode: "manual", values: [] }, reviewStatus: "pending-classification" });
-const MANUAL = row("manual-x1", { sourceId: "manual", sourceKind: "manual", text: "أكمل: قناع الشبكة الافتراضي للفئة C هو ____", section: "INFRASTRUCTURE", topic: "SUBNETTING", difficulty: null, presentationType: "fillBlank", type: "multiField", options: [], answer: { mode: "anyAccepted", values: ["255.255.255.0"] } });
+const MANUAL = row("manual-x1", { sourceId: "manual", sourceKind: "manual", text: "أكمل: قناع الشبكة الافتراضي للفئة C هو ____", section: "INFRASTRUCTURE", topic: "SUBNETTING", difficulty: null, presentationType: "fillBlank", type: "multiField", options: [], fields: [{ id: "f1", label: "القناع", correct: "255.255.255.0" }], answer: { mode: "exactSequence", values: ["255.255.255.0"] } });
+const WORD = row("manual-w1", { sourceId: "manual", sourceKind: "manual", text: "اختر البروتوكول: ____ يعتمد الحالة", section: "BASIC", topic: "ROUTING", difficulty: 2, presentationType: "wordBank", type: "multiField", options: [], fields: [{ id: "f1", label: "الأول", correct: "OSPF" }], wordBank: ["OSPF", "RIP", "BGP"], answer: { mode: "exactSequence", values: ["OSPF"] } });
 const ROWS = [OFFICIAL, IMPORTED, MANUAL];
 const EXAMS = [{ blobName: "exams/e1.json", examId: "e1", title: "امتحان الفصل الأول", savedAt: "2026-03-02T09:00:00.000Z", questionCount: 12, totalMarks: 100 }];
 const CATALOG = [{ libraryItemId: "L1", title: "شبكات VLAN", questionCount: 6, totalMarks: 60, publishable: true }, { libraryItemId: "L2", title: "DHCP متقدم", questionCount: 3, totalMarks: 30, publishable: false }];
@@ -34,7 +35,7 @@ function routed(input: RequestInfo | URL, init?: RequestInit): Promise<Response>
   if (url === "/api/bank-questions") {
     if (mutationFail) return json({ ok: false, error: "تعذر تنفيذ العملية على بنك الأسئلة حاليًا." }, 500);
     const q = body.question as Record<string, unknown> | undefined;
-    if (body.action === "create") return json({ ok: true, question: row("manual-new-1", { sourceId: "manual", sourceKind: "manual", text: String(q?.text), topic: String(q?.topic), section: q?.section as "BASIC", difficulty: Number(q?.difficulty), createdAt: "2026-09-17T12:00:00.000Z", updatedAt: "2026-09-17T12:00:00.000Z" }) });
+    if (body.action === "create") return json({ ok: true, question: row("manual-new-1", { sourceId: "manual", sourceKind: "manual", text: String(q?.text), topic: String(q?.topic), section: q?.section as "BASIC", difficulty: Number(q?.difficulty), presentationType: q?.presentationType as "fillBlank", fields: (q?.fields as BankQuestionRow["fields"]) || [], wordBank: (q?.wordBank as string[]) || [], createdAt: "2026-09-17T12:00:00.000Z", updatedAt: "2026-09-17T12:00:00.000Z" }) });
     if (body.action === "update") return json({ ok: true, question: row(String(body.id), { ...(ROWS.find(r => r.id === body.id) || {}), text: String(q?.text), topic: String(q?.topic), updatedAt: "2026-09-17T12:00:00.000Z" }) });
     if (body.action === "delete") return json({ ok: true, deleted: true, id: body.id });
   }
@@ -94,7 +95,25 @@ describe("pure model", () => {
     expect(validateInput(emptyInput())).toEqual(["نص السؤال مطلوب.", "الموضوع مطلوب.", "الخيار 1 بلا نص.", "الخيار 2 بلا نص.", "حدّد الإجابة الصحيحة من بين الخيارات."]);
     expect(validateInput(inputFromRow(OFFICIAL))).toEqual([]);
     expect(inputFromRow(OFFICIAL).answer).toEqual({ correctOptionValue: "A" });
-    expect(inputFromRow(MANUAL)).toMatchObject({ presentationType: "fillBlank", difficulty: 3, options: [], answer: { values: ["255.255.255.0"] } });
+    expect(inputFromRow(MANUAL)).toEqual({ section: "INFRASTRUCTURE", topic: "SUBNETTING", difficulty: 3, presentationType: "fillBlank", text: MANUAL.text, options: [], fields: [{ id: "f1", label: "القناع", correct: "255.255.255.0" }], wordBank: [], answer: {} });
+    expect(inputFromRow(WORD)).toMatchObject({ presentationType: "wordBank", fields: [{ id: "f1", label: "الأول", correct: "OSPF" }], wordBank: ["OSPF", "RIP", "BGP"], answer: {} });
+    expect(validateInput(inputFromRow(MANUAL))).toEqual([]); expect(validateInput(inputFromRow(WORD))).toEqual([]);
+    // an older multiField row without expected values on its fields shows the answer sequence at the same position
+    expect(inputFromRow({ ...MANUAL, fields: [{ id: "f1", label: "", correct: "" }] }).fields).toEqual([{ id: "f1", label: "", correct: "255.255.255.0" }]);
+    expect(validateInput({ ...inputFromRow(WORD), fields: [{ id: "f1", label: "", correct: "" }] })).toEqual(["الفراغ 1 بلا إجابة صحيحة."]);
+    expect(validateInput({ ...inputFromRow(WORD), wordBank: ["RIP", "BGP"] })).toEqual(["الإجابة الصحيحة للفراغ 1 غير موجودة في بنك الكلمات."]);
+    expect(validateInput({ ...inputFromRow(WORD), wordBank: ["OSPF"] })).toEqual(["بنك الكلمات يحتاج كلمتين مختلفتين على الأقل."]);
+    expect(validateInput({ ...inputFromRow(MANUAL), fields: [] })).toEqual(["أضف فراغًا واحدًا على الأقل."]);
+    // type switching rebuilds the structure: nothing from the previous type survives into the new payload
+    const mc = inputFromRow(OFFICIAL);
+    expect(structureForType(mc, "fillBlank")).toMatchObject({ presentationType: "fillBlank", options: [], wordBank: [], answer: {} });
+    expect(structureForType(mc, "fillBlank").fields).toHaveLength(1);
+    expect(structureForType(inputFromRow(WORD), "fillBlank")).toMatchObject({ presentationType: "fillBlank", fields: [{ id: "f1", label: "الأول", correct: "OSPF" }], wordBank: [], options: [] });   // blanks carry over, the bank does not
+    expect(structureForType(inputFromRow(MANUAL), "wordBank")).toMatchObject({ presentationType: "wordBank", fields: [{ id: "f1", label: "القناع", correct: "255.255.255.0" }], wordBank: [], options: [] });
+    expect(structureForType(inputFromRow(WORD), "multipleChoice")).toMatchObject({ presentationType: "multipleChoice", fields: [], wordBank: [], options: [{ value: "a", text: "" }, { value: "b", text: "" }], answer: { correctOptionValue: "" } });
+    expect(structureForType(inputFromRow(WORD), "open")).toMatchObject({ presentationType: "open", fields: [], wordBank: [], options: [], answer: { values: [] } });
+    expect(structureForType(inputFromRow(IMPORTED), "wordBank").fields).toHaveLength(1);
+    expect(newRequestKey()).toMatch(/^[A-Za-z0-9][A-Za-z0-9_-]{7,63}$/);
   });
 });
 
@@ -170,7 +189,8 @@ describe("CRUD", () => {
     fireEvent.click(within(dialog).getByRole("button", { name: "إضافة السؤال" }));
     await waitFor(() => expect(screen.queryByRole("dialog", { name: "إضافة سؤال إلى البنك" })).toBeNull());
     expect(posts()).toHaveLength(1);
-    expect(posts()[0].body).toMatchObject({ action: "create", question: { text: "ما هو السويتش؟", topic: "SWITCHING", section: "BASIC", difficulty: 3, presentationType: "multipleChoice", answer: { correctOptionValue: "a" } } });
+    expect(posts()[0].body).toMatchObject({ action: "create", question: { text: "ما هو السويتش؟", topic: "SWITCHING", section: "BASIC", difficulty: 3, presentationType: "multipleChoice", answer: { correctOptionValue: "a" }, fields: [], wordBank: [] } });
+    expect(String(posts()[0].body.requestKey)).toMatch(/^[A-Za-z0-9][A-Za-z0-9_-]{7,63}$/);
     expect(rowCount()).toBe(4);
     expect(table()?.querySelector("tbody tr")?.textContent).toContain("ما هو السويتش؟");
     expect(screen.getByRole("status").textContent).toContain("تمت إضافة السؤال");
@@ -207,6 +227,81 @@ describe("CRUD", () => {
     expect(screen.queryByText("عرّف VLAN")).toBeNull();
     expect(screen.getByRole("status").textContent).toContain("تم حذف السؤال");
     await waitFor(() => expect(document.activeElement).toBe(screen.getByRole("heading", { name: "قائمة الأسئلة" })));
+  });
+  it("add a word-bank question: switching type shows blanks + the word bank; the payload carries fields with expected values and the choices, no options; validation names the missing choice", async () => {
+    await mount(); openTab("بنك الأسئلة");
+    fireEvent.click(screen.getByRole("button", { name: "إضافة سؤال" }));
+    const dialog = await screen.findByRole("dialog", { name: "إضافة سؤال إلى البنك" });
+    fireEvent.change(within(dialog).getByLabelText("نوع السؤال"), { target: { value: "wordBank" } });
+    expect(within(dialog).queryByLabelText("نص الخيار 1")).toBeNull();                                  // MC structure gone
+    expect(within(dialog).getByLabelText("عنوان الفراغ 1")).toBeTruthy();
+    fireEvent.change(within(dialog).getByLabelText("نص السؤال"), { target: { value: "اختر: ____ يعتمد الحالة، ____ يعتمد المسافة" } });
+    fireEvent.change(within(dialog).getByLabelText("الموضوع"), { target: { value: "ROUTING" } });
+    fireEvent.change(within(dialog).getByLabelText("عنوان الفراغ 1"), { target: { value: "الأول" } });
+    fireEvent.change(within(dialog).getByLabelText("الإجابة الصحيحة للفراغ 1"), { target: { value: "OSPF" } });
+    fireEvent.click(within(dialog).getByRole("button", { name: "إضافة فراغ" }));
+    fireEvent.change(within(dialog).getByLabelText("الإجابة الصحيحة للفراغ 2"), { target: { value: "RIP" } });
+    fireEvent.change(within(dialog).getByLabelText(/بنك الكلمات/), { target: { value: "OSPF\nBGP\n" } });
+    fireEvent.click(within(dialog).getByRole("button", { name: "إضافة السؤال" }));
+    expect((await within(dialog).findByRole("alert")).textContent).toContain("الإجابة الصحيحة للفراغ 2 غير موجودة في بنك الكلمات.");
+    expect(posts()).toHaveLength(0);
+    fireEvent.change(within(dialog).getByLabelText(/بنك الكلمات/), { target: { value: "OSPF\nBGP\nRIP\nOSPF" } });
+    fireEvent.click(within(dialog).getByRole("button", { name: "إضافة السؤال" }));
+    await waitFor(() => expect(screen.queryByRole("dialog", { name: "إضافة سؤال إلى البنك" })).toBeNull());
+    expect(posts()).toHaveLength(1);
+    const q = posts()[0].body.question as Record<string, unknown>;
+    expect(q).toMatchObject({ presentationType: "wordBank", options: [], wordBank: ["OSPF", "BGP", "RIP"], answer: {} });
+    expect((q.fields as { label: string; correct: string }[]).map(f => [f.label, f.correct])).toEqual([["الأول", "OSPF"], ["", "RIP"]]);
+    expect(table()?.querySelector("tbody tr")?.textContent).toContain("بنك كلمات");
+    fireEvent.click(within(table()?.querySelector("tbody tr") as HTMLElement).getByRole("button", { name: "معاينة" }));
+    const preview = await screen.findByRole("dialog", { name: "معاينة السؤال" });
+    expect(within(preview).getByText("بنك الكلمات: OSPF · BGP · RIP")).toBeTruthy();
+    expect(within(preview).getByRole("list", { name: "الفراغات" }).textContent).toContain("الأول: OSPF");
+  });
+  it("edit a fill-blank question: the form starts from its blanks; switching to multiple choice drops them and the update carries only options", async () => {
+    await mount(); openTab("بنك الأسئلة");
+    fireEvent.click(within(rowOf(MANUAL.text)).getByRole("button", { name: "تعديل" }));
+    const dialog = await screen.findByRole("dialog", { name: "تعديل السؤال" });
+    expect((within(dialog).getByLabelText("نوع السؤال") as HTMLSelectElement).value).toBe("fillBlank");
+    expect((within(dialog).getByLabelText("عنوان الفراغ 1") as HTMLInputElement).value).toBe("القناع");
+    expect((within(dialog).getByLabelText("الإجابة الصحيحة للفراغ 1") as HTMLInputElement).value).toBe("255.255.255.0");
+    expect(within(dialog).queryByLabelText(/بنك الكلمات/)).toBeNull();                                  // fill-blank has no word bank
+    fireEvent.change(within(dialog).getByLabelText("الإجابة الصحيحة للفراغ 1"), { target: { value: "" } });
+    fireEvent.click(within(dialog).getByRole("button", { name: "حفظ التعديلات" }));
+    expect((await within(dialog).findByRole("alert")).textContent).toContain("الفراغ 1 بلا إجابة صحيحة.");
+    expect(posts()).toHaveLength(0);
+    fireEvent.change(within(dialog).getByLabelText("نوع السؤال"), { target: { value: "multipleChoice" } });
+    expect(within(dialog).queryByLabelText("عنوان الفراغ 1")).toBeNull();
+    fireEvent.change(within(dialog).getByLabelText("نص الخيار 1"), { target: { value: "255.255.255.0" } });
+    fireEvent.change(within(dialog).getByLabelText("نص الخيار 2"), { target: { value: "255.255.0.0" } });
+    fireEvent.click(within(dialog).getByLabelText("الخيار 1 هو الإجابة الصحيحة"));
+    fireEvent.click(within(dialog).getByRole("button", { name: "حفظ التعديلات" }));
+    await waitFor(() => expect(screen.queryByRole("dialog", { name: "تعديل السؤال" })).toBeNull());
+    expect(posts()).toHaveLength(1);
+    expect(posts()[0].body).toMatchObject({ action: "update", id: MANUAL.id, question: { presentationType: "multipleChoice", fields: [], wordBank: [], answer: { correctOptionValue: "a" } } });
+    expect((posts()[0].body.question as { options: unknown[] }).options).toHaveLength(2);
+    expect(posts()[0].body.requestKey).toBeUndefined();                                                   // only create carries a key
+  });
+  it("a create that fails and is retried from the same form sends the SAME requestKey (the server reconciles instead of storing a second copy)", async () => {
+    await mount(); openTab("بنك الأسئلة");
+    fireEvent.click(screen.getByRole("button", { name: "إضافة سؤال" }));
+    const dialog = await screen.findByRole("dialog", { name: "إضافة سؤال إلى البنك" });
+    fireEvent.change(within(dialog).getByLabelText("نص السؤال"), { target: { value: "ما هو السويتش؟" } });
+    fireEvent.change(within(dialog).getByLabelText("الموضوع"), { target: { value: "SWITCHING" } });
+    fireEvent.change(within(dialog).getByLabelText("نص الخيار 1"), { target: { value: "جهاز تبديل" } });
+    fireEvent.change(within(dialog).getByLabelText("نص الخيار 2"), { target: { value: "كابل" } });
+    fireEvent.click(within(dialog).getByLabelText("الخيار 1 هو الإجابة الصحيحة"));
+    mutationFail = true;
+    fireEvent.click(within(dialog).getByRole("button", { name: "إضافة السؤال" }));
+    await within(dialog).findByRole("alert");
+    expect(rowCount()).toBe(3);
+    mutationFail = false;
+    fireEvent.click(within(dialog).getByRole("button", { name: "إضافة السؤال" }));
+    await waitFor(() => expect(screen.queryByRole("dialog", { name: "إضافة سؤال إلى البنك" })).toBeNull());
+    expect(posts()).toHaveLength(2);
+    expect(posts()[0].body.requestKey).toBeTruthy();
+    expect(posts()[1].body.requestKey).toBe(posts()[0].body.requestKey);
+    expect(rowCount()).toBe(4);
   });
   it("a failed update shows the server error inside the still-open dialog and leaves the list untouched; a failed delete keeps the row", async () => {
     await mount(); openTab("بنك الأسئلة");

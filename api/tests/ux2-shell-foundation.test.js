@@ -481,6 +481,23 @@ describe("UX-6c — Exam Bank Management", () => {
     expect(fn).toMatch(/requireBuilderAuth/); expect(fn).toMatch(/mutateJsonWithRetry/); expect(fn).toMatch(/isOfficialSource\(sourceId\)\) return \{ error: bad\(403/);
     expect(fn).toMatch(/INDEX_BLOB = "index\/questions-index\.json"/); expect(fn).toMatch(/SOURCES_PREFIX = "sources\/"/);
   });
+  it("bank-questions classifies and the Builder converts through ONE shared helper (bank-question-exam.js); the page never sends a question with a stale structure and every create carries a requestKey", () => {
+    const fn = readFileSync(join(ROOT, "api", "src", "functions", "bank-questions.js"), "utf8");
+    const action = readFileSync(join(ROOT, "api", "src", "functions", "question-bank-action.js"), "utf8");
+    const shared = readFileSync(join(ROOT, "api", "src", "lib", "bank-question-exam.js"), "utf8");
+    expect(fn).toMatch(/require\("\.\.\/lib\/bank-question-exam"\)/);
+    expect(fn).toMatch(/const presentationTypeFromBankQuestion = presentationTypeFromFullQuestion;/);
+    expect(action).toMatch(/require\("\.\.\/lib\/bank-question-exam"\)/);
+    expect(action).not.toMatch(/^function presentationTypeFromFullQuestion|^function buildExamQuestion/m);   // no second copy
+    expect(shared).toMatch(/function presentationTypeFromFullQuestion/); expect(shared).toMatch(/function buildExamQuestion/);
+    expect(fn).toMatch(/mode: "exactSequence", values: fields\.map\(f => f\.correct\)/);                        // canonical sequence answer
+    expect(fn).toMatch(/kind: isBank \? "select" : "text"/);
+    expect(fn).toMatch(/fields: n\.fields, wordBank: n\.wordBank, answer: n\.answer/);                             // update rewrites the whole structure
+    expect(fn).toMatch(/questionIdForRequestKey\(body\?\.requestKey\)/);
+    const page = read("bank/ExamBankPage.tsx");
+    expect(page).toMatch(/setInput\(prev => structureForType\(prev, presentationType\)\)/);
+    expect(page).toMatch(/action: "create", question: input, requestKey/);
+  });
   it("the page adds no h1 (the shell owns it), uses role=status / role=alert, and its stylesheet has no outline:none and a reduced-motion rule", () => {
     const page = read("bank/ExamBankPage.tsx");
     expect(page).not.toMatch(/<h1/);
