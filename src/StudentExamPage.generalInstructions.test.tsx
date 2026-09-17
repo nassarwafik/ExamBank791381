@@ -40,8 +40,8 @@ describe("R17 general instructions — faithful in the student runtime", () => {
     expect(screen.getByText("التعليمات العامة")).toBeTruthy();
     expect(screen.getByText("تعليمات عامة موحّدة")).toBeTruthy();
     expect(screen.getByText("تعليمات القسم")).toBeTruthy();      // section instruction still separate
-    // Lifecycle intact (F): the submit footer still renders.
-    await waitFor(() => expect(screen.getByText(/تسليم وتصحيح/)).toBeTruthy());
+    // Lifecycle intact (F): the submit path still renders (UX-7b-2: review button on the last question → final submit).
+    await waitFor(() => expect(screen.getByRole("button", { name: "مراجعة الإجابات" })).toBeTruthy());
   });
 
   it("A(parity): the teacher preview renders the SAME general-instruction content from the same field", () => {

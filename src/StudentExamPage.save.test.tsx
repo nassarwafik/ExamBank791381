@@ -74,6 +74,8 @@ beforeEach(() => {
 });
 afterEach(() => { cleanup(); vi.restoreAllMocks(); setNavigatorOnline(true); });
 
+// UX-7b-2: the final submit lives on the review screen (last question → "مراجعة الإجابات" → "تسليم الامتحان"); the shared ConfirmDialog stays the gate.
+async function pressSubmit() { fireEvent.click(await screen.findByRole("button", { name: "مراجعة الإجابات" })); fireEvent.click(await screen.findByRole("button", { name: "تسليم الامتحان" })); }
 describe("R10/R11 — save indicator + offline UX", () => {
   it("A: initial server draftSavedAt shows saved + server time", async () => {
     subGetHandler = () => json(200, { ok: true, state: { ...legacyState, draftSavedAt: "2026-01-01T09:05:09.000Z" } });
@@ -170,7 +172,7 @@ describe("R10/R11 — save indicator + offline UX", () => {
   it("N: submit saves the latest snapshot FIRST, then submits (saveDraft before submit)", async () => {
     const r = mount();
     await typeAnswer(r, "answer-before-submit");
-    fireEvent.click(r.container.querySelector(".iex-foot .primary") as HTMLButtonElement);
+    await pressSubmit();
     fireEvent.click(await screen.findByRole("button", { name: "تسليم الآن" }));                 // UX-7b-1: shared ConfirmDialog replaces window.confirm
     await waitFor(() => expect(submitCalls).toBe(1), { timeout: 2000 });
     expect(calls.indexOf("save")).toBeLessThan(calls.indexOf("submit"));
@@ -181,7 +183,7 @@ describe("R10/R11 — save indicator + offline UX", () => {
     const r = mount();
     await r.findByPlaceholderText("اكتب إجابتك هنا...");
     goOffline();
-    fireEvent.click(r.container.querySelector(".iex-foot .primary") as HTMLButtonElement);
+    await pressSubmit();
     await new Promise(res => setTimeout(res, 50));
     expect(screen.queryByRole("dialog")).toBeNull();                                               // the offline guard fires BEFORE any confirmation (unchanged gating order)
     expect(submitCalls).toBe(0);
@@ -192,7 +194,7 @@ describe("R10/R11 — save indicator + offline UX", () => {
     saveHandler = () => json(403, { ok: false, error: "غير مسموح." }); // non-retryable → fails fast
     const r = mount();
     await typeAnswer(r, "answer");
-    fireEvent.click(r.container.querySelector(".iex-foot .primary") as HTMLButtonElement);
+    await pressSubmit();
     fireEvent.click(await screen.findByRole("button", { name: "تسليم الآن" }));                 // UX-7b-1: shared ConfirmDialog replaces window.confirm
     await waitFor(() => expect(saveCalls).toBeGreaterThanOrEqual(1), { timeout: 2000 });
     await new Promise(res => setTimeout(res, 100));
@@ -229,7 +231,7 @@ describe("R10/R11 — save indicator + offline UX", () => {
     const r = mount();
     await typeAnswer(r, "SECRET_ANSWER_XYZ");
     await waitFor(() => expect(saveCalls).toBe(1), { timeout: 2000 });
-    fireEvent.click(r.container.querySelector(".iex-foot .primary") as HTMLButtonElement);
+    await pressSubmit();
     fireEvent.click(await screen.findByRole("button", { name: "تسليم الآن" }));                 // UX-7b-1: shared ConfirmDialog replaces window.confirm
     await waitFor(() => expect(submitCalls).toBe(1), { timeout: 2000 });
     for (const c of lsSet.mock.calls) expect(String(c[1])).not.toContain("SECRET_ANSWER_XYZ");
@@ -243,6 +245,6 @@ describe("R10/R11 — save indicator + offline UX", () => {
   it("Z: the structured exam still renders its questions (no visual regression)", async () => {
     const r = mount();
     await r.findByText("سؤال الاختبار السري");
-    expect(r.container.querySelector(".iex-foot .primary")).toBeTruthy();
+    expect(await screen.findByRole("button", { name: "مراجعة الإجابات" })).toBeTruthy();          // UX-7b-2: the submit path starts at the review button
   });
 });

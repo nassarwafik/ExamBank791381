@@ -86,6 +86,8 @@ beforeEach(() => {
 });
 afterEach(() => { cleanup(); vi.restoreAllMocks(); vi.useRealTimers(); setOnline(true); });
 
+// UX-7b-2: the final submit lives on the review screen (last question → "مراجعة الإجابات" → "تسليم الامتحان"); the shared ConfirmDialog stays the gate.
+async function pressSubmit() { fireEvent.click(await screen.findByRole("button", { name: "مراجعة الإجابات" })); fireEvent.click(await screen.findByRole("button", { name: "تسليم الامتحان" })); }
 describe("R10/R11 reliability", () => {
   it("1: RETRYING is visible during backoff (not masked by SAVING), then converges to saved", async () => {
     // First save 500 → backoff (RETRYING) → retry 200. The RETRYING label must appear during the backoff
@@ -470,7 +472,7 @@ describe("R10/R11 reliability", () => {
     const r = mount();
     const ta = await r.findByPlaceholderText("اكتب إجابتك هنا...");
     fireEvent.change(ta, { target: { value: "ATTEMPT1_DIRTY" } });
-    fireEvent.click(r.container.querySelector(".iex-foot .primary") as HTMLButtonElement); // submit → pre-save 409 → reconcile
+    await pressSubmit(); // submit → pre-save 409 → reconcile
     fireEvent.click(await screen.findByRole("button", { name: "تسليم الآن" }));                 // UX-7b-1: shared ConfirmDialog replaces window.confirm
     await waitFor(() => expect((r.container.querySelector(".iex-open") as HTMLTextAreaElement).value).toBe("ATTEMPT2_SERVER_DRAFT"), { timeout: 2000 });
     await new Promise(res => setTimeout(res, 80));

@@ -69,6 +69,14 @@ function mount(assignment: unknown = legacyAssignment, onBack = vi.fn()) {
   return { ...r, onBack };
 }
 const saveText = () => document.querySelector(".iex-progress .iex-save-state")?.textContent || "";
+// UX-7b-2: one question is mounted at a time. `goNext` moves to the next page; `pressSubmit` walks to the last question,
+// opens the review screen ("مراجعة الإجابات") and presses the final "تسليم الامتحان" — the shared ConfirmDialog stays the gate.
+const goNext = () => fireEvent.click(screen.getByRole("button", { name: "التالي" }));
+async function pressSubmit() {
+  while (screen.queryByRole("button", { name: "التالي" })) goNext();
+  fireEvent.click(screen.getByRole("button", { name: "مراجعة الإجابات" }));
+  fireEvent.click(await screen.findByRole("button", { name: "تسليم الامتحان" }));
+}
 
 describe("UX-7b-1 — compact top bar, timer chip, details disclosure", () => {
   it("renders ONE compact top bar (back · h1 title · context) instead of the header card, with a single h1 and no old header", async () => {
@@ -159,6 +167,7 @@ describe("UX-7b-1 — SaveStatus over the derived save state", () => {
 
   it("on the page: an edit is pending (not saved) until the server confirms, then saved with the SERVER time; exactly one live region", async () => {
     mount();
+    await screen.findByText("ما هي عاصمة فلسطين؟"); goNext();
     const ta = await screen.findByRole("textbox", { name: "اشرح مفهوم الشبكة المحلية." });
     expect(saveText()).toContain("تم الحفظ");
     fireEvent.change(ta, { target: { value: "شبكة" } });
@@ -171,6 +180,7 @@ describe("UX-7b-1 — SaveStatus over the derived save state", () => {
 
   it("offline with a dirty answer shows the offline state and fires no save", async () => {
     mount();
+    await screen.findByText("ما هي عاصمة فلسطين؟"); goNext();
     const ta = await screen.findByRole("textbox", { name: "اشرح مفهوم الشبكة المحلية." });
     Object.defineProperty(navigator, "onLine", { configurable: true, value: false });
     window.dispatchEvent(new Event("offline"));
@@ -186,23 +196,26 @@ describe("UX-7b-1 — ConfirmDialog parity with the former window.confirm", () =
     mount(structuredAssignment);
     await screen.findByText("ما هي عاصمة فلسطين؟");
     // answer everything so the generic message applies
-    fireEvent.click(screen.getByRole("radio", { name: "القدس" }));
-    fireEvent.change(screen.getByRole("textbox", { name: "اشرح مفهوم الشبكة المحلية." }), { target: { value: "ج" } });
+    fireEvent.click(screen.getByRole("radio", { name: "القدس" })); goNext();
+    fireEvent.change(screen.getByRole("textbox", { name: "اشرح مفهوم الشبكة المحلية." }), { target: { value: "ج" } }); goNext();
     for (const box of screen.getAllByRole("textbox", { name: /— الطبقة$/ })) fireEvent.change(box, { target: { value: "2" } });
+    goNext();
     for (const sel of screen.getAllByRole("combobox", { name: /^السؤال 4 —/ })) fireEvent.change(sel, { target: { value: "true" } });
+    goNext();
     for (const box of screen.getAllByRole("textbox", { name: /الفراغ/ })) fireEvent.change(box, { target: { value: "x" } });
+    goNext();
     fireEvent.change(screen.getByRole("textbox", { name: "السؤال 6 — PC1 — العنوان" }), { target: { value: "10.0.0.1" } });
     fireEvent.change(screen.getByRole("combobox", { name: "السؤال 6 — PC1 — صالح؟" }), { target: { value: "true" } });
     await waitFor(() => expect(saveText()).toContain("تم الحفظ"), { timeout: 3000 });
     const before = calls.length;
-    fireEvent.click(document.querySelector(".iex-foot .primary") as HTMLButtonElement);
+    await pressSubmit();
     const dialog = await screen.findByRole("dialog", { name: "تسليم الامتحان" });
     expect(within(dialog).getByText("سيتم إرسال الحل للتصحيح. هل تريد المتابعة؟")).toBeTruthy();
     fireEvent.click(within(dialog).getByRole("button", { name: "متابعة الحل" }));
     await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
-    expect(calls.length).toBe(before);                                                                 // cancel = zero requests
+    expect(calls.length).toBe(before);                                                                 // review + cancel = zero requests
     expect(screen.queryByText(/تم تسليم المحاولة/)).toBeNull();
-    fireEvent.click(document.querySelector(".iex-foot .primary") as HTMLButtonElement);
+    fireEvent.click(screen.getByRole("button", { name: "تسليم الامتحان" }));                           // still on the review screen
     fireEvent.click(within(await screen.findByRole("dialog")).getByRole("button", { name: "تسليم الآن" }));
     await screen.findByText(/تم تسليم المحاولة 1/);
     const submit = posts().find(p => p.body.action === "submit");
@@ -216,7 +229,7 @@ describe("UX-7b-1 — ConfirmDialog parity with the former window.confirm", () =
   it("unanswered submit message parity", async () => {
     mount();
     await screen.findByText("ما هي عاصمة فلسطين؟");
-    fireEvent.click(document.querySelector(".iex-foot .primary") as HTMLButtonElement);
+    await pressSubmit();
     const dialog = await screen.findByRole("dialog", { name: "تسليم الامتحان" });
     expect(within(dialog).getByText("لم تُجب عن جميع الأسئلة. هل تريد التسليم الآن؟")).toBeTruthy();
     expect(dialog.className).toContain("tone-danger");
@@ -230,7 +243,7 @@ describe("UX-7b-1 — ConfirmDialog parity with the former window.confirm", () =
     mount(structured);
     await screen.findByText("س1");
     fireEvent.change(screen.getByRole("textbox", { name: "س1" }), { target: { value: "ج" } });
-    fireEvent.click(document.querySelector(".iex-foot .primary") as HTMLButtonElement);
+    await pressSubmit();
     const dialog = await screen.findByRole("dialog", { name: "تسليم الامتحان" });
     expect(within(dialog).getByText("أجبت عن 1 من 2 بنود مطلوبة في «القسم أ». هل تريد التسليم؟")).toBeTruthy();
   });
@@ -243,10 +256,11 @@ describe("UX-7b-1 — ConfirmDialog parity with the former window.confirm", () =
     expect(screen.queryByRole("dialog")).toBeNull();
     cleanup(); installFetch();
     const second = mount();
+    await screen.findByText("ما هي عاصمة فلسطين؟"); goNext();
     const ta = await screen.findByRole("textbox", { name: "اشرح مفهوم الشبكة المحلية." });
     fireEvent.change(ta, { target: { value: "شبكة" } });                                               // dirty (debounce not yet fired)
     const before = calls.length;
-    fireEvent.click(screen.getByRole("button", { name: "العودة بدون تسليم" }));
+    fireEvent.click(screen.getByRole("button", { name: "العودة إلى المهام" }));                        // UX-7b-2: the top-bar back is the one leave path
     const dialog = await screen.findByRole("dialog", { name: "مغادرة بدون تسليم" });
     expect(within(dialog).getByText("توجد إجابات لم تُحفظ بعد. هل تريد المغادرة على أي حال؟")).toBeTruthy();
     fireEvent.click(within(dialog).getByRole("button", { name: "البقاء" }));
@@ -277,25 +291,29 @@ describe("UX-7b-1 — question control accessibility (additive, same answer shap
 
   it("open answer, legacy table cells, multiTrueFalse, CLI blanks and generalized table cells all have accessible names", async () => {
     mount(structuredAssignment);
-    await screen.findByText("ما هي عاصمة فلسطين؟");
+    await screen.findByText("ما هي عاصمة فلسطين؟"); goNext();                                            // UX-7b-2: one question at a time
     expect(screen.getByRole("textbox", { name: "اشرح مفهوم الشبكة المحلية." }).getAttribute("placeholder")).toBe("اكتب إجابتك هنا...");
+    goNext();
     expect(screen.getByRole("textbox", { name: "Switch — الطبقة" })).toBeTruthy();
     expect(screen.getByRole("textbox", { name: "Router — الطبقة" })).toBeTruthy();
-    expect(screen.getByRole("combobox", { name: "السؤال 4 — IP في الطبقة الثالثة" })).toBeTruthy();
-    expect(screen.getByRole("combobox", { name: "السؤال 4 — TCP بلا اتصال" })).toBeTruthy();
-    expect(screen.getByRole("textbox", { name: "السؤال 5 — الفراغ h1" })).toBeTruthy();
-    expect(screen.getByRole("textbox", { name: "السؤال 5 — الفراغ s1" })).toBeTruthy();
-    expect(screen.getByRole("textbox", { name: "السؤال 6 — PC1 — العنوان" })).toBeTruthy();
-    expect(screen.getByRole("combobox", { name: "السؤال 6 — PC1 — صالح؟" })).toBeTruthy();
     // legacy table rows are row headers; column headers carry scope
     expect(screen.getByRole("rowheader", { name: "Switch" })).toBeTruthy();
     expect(screen.getAllByRole("columnheader").length).toBeGreaterThan(0);
+    goNext();
+    expect(screen.getByRole("combobox", { name: "السؤال 4 — IP في الطبقة الثالثة" })).toBeTruthy();
+    expect(screen.getByRole("combobox", { name: "السؤال 4 — TCP بلا اتصال" })).toBeTruthy();
+    goNext();
+    expect(screen.getByRole("textbox", { name: "السؤال 5 — الفراغ h1" })).toBeTruthy();
+    expect(screen.getByRole("textbox", { name: "السؤال 5 — الفراغ s1" })).toBeTruthy();
     // the CLI block stays LTR and its blanks are plain inputs (no answer transformation)
     const cli = document.querySelector(".iex-cli") as HTMLElement;
     expect(cli.tagName).toBe("PRE");
     fireEvent.change(screen.getByRole("textbox", { name: "السؤال 5 — الفراغ h1" }), { target: { value: "R1" } });
     await waitFor(() => expect(posts().some(p => p.body.action === "saveDraft")).toBe(true), { timeout: 3000 });
     expect(posts().find(p => p.body.action === "saveDraft")!.body.answers.q5).toEqual({ kind: "fields", values: { h1: "R1" } });
+    goNext();
+    expect(screen.getByRole("textbox", { name: "السؤال 6 — PC1 — العنوان" })).toBeTruthy();
+    expect(screen.getByRole("combobox", { name: "السؤال 6 — PC1 — صالح؟" })).toBeTruthy();
   });
 });
 
@@ -328,7 +346,7 @@ describe("UX-7b-1 — digits, reduced motion, views", () => {
     stubMatchMedia(true);
     mount();
     await screen.findByText("ما هي عاصمة فلسطين؟");
-    fireEvent.click(document.querySelector(".iex-foot .primary") as HTMLButtonElement);
+    await pressSubmit();
     fireEvent.click(within(await screen.findByRole("dialog")).getByRole("button", { name: "تسليم الآن" }));
     await screen.findByText(/تم تسليم المحاولة/);
     expect(scrollCalls.length).toBeGreaterThan(0);
@@ -336,8 +354,8 @@ describe("UX-7b-1 — digits, reduced motion, views", () => {
     cleanup(); installFetch(); stubMatchMedia(false);
     mount();
     await screen.findByText("ما هي عاصمة فلسطين؟");
+    await pressSubmit();
     scrollCalls = [];
-    fireEvent.click(document.querySelector(".iex-foot .primary") as HTMLButtonElement);
     fireEvent.click(within(await screen.findByRole("dialog")).getByRole("button", { name: "تسليم الآن" }));
     await screen.findByText(/تم تسليم المحاولة/);
     expect((scrollCalls[0] as { behavior: string }).behavior).toBe("smooth");
@@ -351,13 +369,13 @@ describe("UX-7b-1 — source guards", () => {
   const code = (src: string) => src.replace(/\/\*[\s\S]*?\*\//g, "").replace(/^\s*\/\/.*$/gm, "");
   const page = () => code(RAW["./StudentExamPage.tsx"]);
 
-  it("no paging / navigator / review screen in UX-7b-1; the existing rendering model and focus-theme semantics stay", () => {
+  it("UX-7b-2 superseded the UX-7b-1 no-paging lock: the page now owns ONE unified pager (no focus-theme index, no long-form container, still no mark-for-review)", () => {
     expect(Object.keys(RAW).length).toBe(9);
     const p = page();
-    expect(p).not.toMatch(/QuestionPager|QuestionNavigator|مراجعة والتسليم|role="navigation"|markedForReview/);
-    expect(p).toContain('theme==="focus"&&qs.length>0');                                              // focus theme kept as is
-    expect(p).toContain("previousFocusIndex(x,qs.length)"); expect(p).toContain("nextFocusIndex(x,qs.length)");
-    expect(p).toContain("<StructuredExamSection"); expect(p).toContain('<section className="iex-flow">');
+    expect(p).not.toMatch(/markedForReview|role="navigation"/);
+    expect(p).not.toMatch(/focusIndex|previousFocusIndex|nextFocusIndex|focusProgressPercent/);          // the competing focus-theme index is gone
+    expect(p).not.toContain("<StructuredExamSection"); expect(p).not.toContain('<section className="iex-flow">');
+    expect(p).toContain("buildQuestionPages(norm,exam.questions||[])"); expect(p).toContain("<ExamBottomNavigation"); expect(p).toContain("<QuestionNavigatorDialog"); expect(p).toContain("<ExamReviewScreen");
   });
   it("timer authority: the chip only consumes remainingMs + countdownTone; no second timer, no Date.now() for expiry, performance.now anchor kept", () => {
     const p = page(); const bar = code(RAW["./student/exam/ExamTopBar.tsx"]);

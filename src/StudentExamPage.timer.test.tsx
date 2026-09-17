@@ -94,6 +94,8 @@ beforeEach(() => {
 });
 afterEach(() => { cleanup(); vi.restoreAllMocks(); });
 
+// UX-7b-2: the final submit lives on the review screen (last question → "مراجعة الإجابات" → "تسليم الامتحان"); the shared ConfirmDialog stays the gate.
+async function pressSubmit() { fireEvent.click(await screen.findByRole("button", { name: "مراجعة الإجابات" })); fireEvent.click(await screen.findByRole("button", { name: "تسليم الامتحان" })); }
 describe("BLOCKER 1 — structured cover renders pre-start even though questions are hidden", () => {
   it("renders StructuredExamCover (not the compact card), shows 90 دقيقة, hides questions, Start calls startAttempt", async () => {
     const r = mount();
@@ -291,7 +293,8 @@ describe("EDGE 5 — dueAtOverride revives a live attempt during timeout finaliz
     expect(r.container.textContent).not.toContain("انتهى الوقت"); // no timed-out result created
     const clock = r.container.querySelector(".iex-countdown-clock");
     expect(clock?.textContent || "").toMatch(/^(29:00|28:5\d)$/); // reanchored to 11:00 (serverNow 10:31)
-    const submitBtn = r.container.querySelector(".iex-foot .primary") as HTMLButtonElement;
+    fireEvent.click(await screen.findByRole("button", { name: "مراجعة الإجابات" }));           // UX-7b-2: submit lives on the review screen
+    const submitBtn = await screen.findByRole("button", { name: "تسليم الامتحان" }) as HTMLButtonElement;
     expect(submitBtn.disabled).toBe(false);                    // writable restored (expired cleared)
     expect(finalizeCalls).toBe(1);                             // NOT finalized again
   });
@@ -304,7 +307,7 @@ describe("EDGE 6 — save/submit 409 recovery uses authoritative server state, n
     finalizeHandler = () => json(200, { ok: true, result: timedOutResult, state: finalizedState });
     const r = mount(fullAssignment);
     await r.findByText("سؤال الاختبار السري");
-    fireEvent.click(r.container.querySelector(".iex-foot .primary") as HTMLButtonElement);
+    await pressSubmit();
     fireEvent.click(await screen.findByRole("button", { name: "تسليم الآن" }));                 // UX-7b-1: shared ConfirmDialog replaces window.confirm
     await waitFor(() => expect(finalizeCalls).toBe(1));
     const h = await r.findByText(/تم تسليم المحاولة/);
@@ -319,13 +322,13 @@ describe("EDGE 6 — save/submit 409 recovery uses authoritative server state, n
     const r = mount(fullAssignment);
     await r.findByText("سؤال الاختبار السري");
     const before = subGetCalls;
-    fireEvent.click(r.container.querySelector(".iex-foot .primary") as HTMLButtonElement);
+    await pressSubmit();
     fireEvent.click(await screen.findByRole("button", { name: "تسليم الآن" }));                 // UX-7b-1: shared ConfirmDialog replaces window.confirm
     await waitFor(() => expect(submitCalls).toBe(1));
     await waitFor(() => expect(subGetCalls).toBeGreaterThan(before)); // reconcile GET happened
     expect(finalizeCalls).toBe(0);                                     // did NOT finalize a live attempt
     expect(r.container.querySelector(".iex-result-card")).toBeNull();
     expect(r.container.querySelector(".iex-countdown")).toBeTruthy();
-    expect((r.container.querySelector(".iex-foot .primary") as HTMLButtonElement).disabled).toBe(false); // still writable
+    expect((await screen.findByRole("button", { name: "تسليم الامتحان" }) as HTMLButtonElement).disabled).toBe(false); // still writable (review screen stays)
   });
 });

@@ -79,6 +79,8 @@ beforeEach(() => {
 });
 afterEach(() => { cleanup(); vi.restoreAllMocks(); });
 
+// UX-7b-2: the final submit lives on the review screen (last question → "مراجعة الإجابات" → "تسليم الامتحان"); the shared ConfirmDialog stays the gate.
+async function pressSubmit() { fireEvent.click(await screen.findByRole("button", { name: "مراجعة الإجابات" })); fireEvent.click(await screen.findByRole("button", { name: "تسليم الامتحان" })); }
 describe("B2A untimed v2 — start gate with a cover", () => {
   it("shows the cover pre-start with NO question body and NO countdown; Start calls startAttempt then reveals questions", async () => {
     const r = mount();
@@ -116,7 +118,7 @@ describe("B2A untimed v2 — write lifecycle", () => {
     const r = mount(fullAssignmentU);
     await r.findByText("سؤال الاختبار السري");                   // active attempt => exam shown
     expect(r.container.querySelector(".iex-countdown")).toBeNull();
-    fireEvent.click(r.container.querySelector(".iex-foot .primary") as HTMLButtonElement);
+    await pressSubmit();
     fireEvent.click(await screen.findByRole("button", { name: "تسليم الآن" }));                 // UX-7b-1: shared ConfirmDialog replaces window.confirm
     const h = await r.findByText(/تم تسليم المحاولة/);
     expect(h.textContent).not.toContain("انتهى الوقت");          // not a timeout
@@ -155,7 +157,7 @@ describe("B2A untimed v2 — multi-tab reconciliation (#16 / #17)", () => {
     submitHandler = () => json(409, { ok: false, error: "لا توجد محاولة إضافية متاحة." }); // stale — another tab won
     const r = mount(fullAssignmentU);
     await r.findByText("سؤال الاختبار السري");
-    fireEvent.click(r.container.querySelector(".iex-foot .primary") as HTMLButtonElement);
+    await pressSubmit();
     fireEvent.click(await screen.findByRole("button", { name: "تسليم الآن" }));                 // UX-7b-1: shared ConfirmDialog replaces window.confirm
     await waitFor(() => expect(submitCalls).toBe(1));
     await r.findByText(/تم تسليم المحاولة/);                     // reconciled to the server result

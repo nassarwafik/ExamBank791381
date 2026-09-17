@@ -189,6 +189,35 @@ describe("UX-2 focus foundation", () => {
     }
     for (const kept of [".iex-grade-final", ".iex-grade-pending", ".iex-general-instructions", ".assignment-results-panel", ".review-state"]) expect(legacy, kept + " must stay").toContain(kept);
   });
+  it("UX-7b-2 studentexam-pro.css: sticky bottom navigation with safe-area padding, 48 px Previous/Next and navigator controls, keyboard scroll margins, review/navigator states — token-only, phone-first, no max-width, no outline:none", () => {
+    const full = read("studentexam-pro.css");
+    const own = full.split("Exam presentation themes")[0].replace(/\/\*[\s\S]*?\*\//g, "");
+    expect(own).toMatch(/\.iex-bottom-nav\{[^}]*position:sticky;[^}]*inset-block-end:0;[^}]*z-index:var\(--eb-z-sticky\)/);
+    expect(own).toMatch(/\.iex-bottom-nav\{[^}]*env\(safe-area-inset-bottom/);
+    expect(own).toMatch(/\.iex-bottom-nav \.eb-button\{ min-height:48px; min-width:44px/);
+    expect(own).toMatch(/\.iex-nav-trigger\.eb-button\{[^}]*min-height:44px/);
+    expect(own).toMatch(/\.iex-nav-q\{[^}]*min-height:56px/);
+    expect(own).toMatch(/\.iex-nav-grid\{ display:grid; grid-template-columns:repeat\(auto-fill,minmax\(72px,1fr\)\)/);
+    expect(own).toMatch(/\.iex-review-actions \.eb-button\{ min-height:48px/);
+    // virtual keyboard safety: content padding above the bar + scroll margins on every answer control and the heading
+    expect(own).toMatch(/\.iex-page\{[^}]*padding-block-end:var\(--eb-space-6\)/);
+    expect(own).toMatch(/\.iex-page \.iex-open, \.iex-page \.iex-cell, \.iex-page \.iex-cell-select, \.iex-page \.iex-seq select, \.iex-page \.iex-seq input, \.iex-page \.iex-cli-input, \.iex-page \.iex-tf-select, \.iex-page \.iex-option\{ scroll-margin-block-end:96px; scroll-margin-block-start:72px; \}/);
+    expect(own).toMatch(/\.iex-page-heading\{[^}]*scroll-margin-block-start:72px/);
+    expect(own).toMatch(/\.iex-review-title\{[^}]*scroll-margin-block-start:72px/);
+    // states are visible text + border/background tokens, and keyboard focus is visible on nav buttons and headings
+    for (const st of [".iex-nav-q.is-answered{", ".iex-nav-q.is-unanswered{", ".iex-nav-q.is-current{", ".iex-nav-q:focus-visible{ outline:var(--eb-focus-ring)", ".iex-page-heading:focus-visible{ outline:var(--eb-focus-ring)", ".iex-review-title:focus-visible{ outline:var(--eb-focus-ring)", ".iex-section-context.is-first{", ".iex-review-stats > div.is-warn{"]) expect(own, st).toContain(st);
+    // the focus-theme helpers stay only for the teacher preview; the student runtime has no separate focus tree
+    expect(own).toContain(".iex-focus-nav{");
+    // phone-first invariants re-asserted on the extended sheet
+    expect(own, "raw hex").not.toMatch(/#[0-9a-fA-F]{3,8}\b/);
+    expect(own, "raw rgb").not.toMatch(/\brgba?\(/);
+    for (const m of own.matchAll(/var\((--[a-zA-Z0-9-]+)/g)) expect(m[1]).toMatch(/^--eb-/);
+    expect(own).not.toMatch(/@media[^{]*max-width\s*:\s*\d+px/);
+    expect(full.replace(/\/\*[\s\S]*?\*\//g, "")).not.toMatch(/outline\s*:\s*(none|0)/);
+    expect(own).not.toMatch(/(?<![a-z-])(margin|padding|border)-(left|right)\b/);
+    expect(own).not.toMatch(/position:\s*fixed/);                                                       // sticky, never viewport-fixed over inputs
+    expect(own).not.toMatch(/visualViewport/);
+  });
   it("new UX-2 stylesheets are token-only (--eb-*) with no raw colours", () => {
     for (const f of ["ui/ui.css", "shell.css"]) {
       const css = read(f).replace(/\/\*[\s\S]*?\*\//g, "");
