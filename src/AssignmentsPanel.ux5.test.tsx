@@ -188,12 +188,12 @@ describe("UX-5 composer — non-modal, both sources, exact create body", () => {
     await screen.findByText("✓ تم إنشاء الواجب من الامتحان المختار.");
     expect(posts("/api/assignments")).toEqual([{ action: "create", classId: "c1", title: "امتحان محفوظ", instructions: "أجب عن جميع الأسئلة واقرأ التعليمات جيدًا قبل البدء.", openAt: new Date("2026-04-01T08:00").toISOString(), dueAt: new Date("2026-04-05T10:00").toISOString(), maxAttempts: 2, durationMinutes: 45, publish: false, examSnapshot: SAVED_EXAM }]);
     expect(screen.queryByRole("region", { name: "إنشاء واجب جديد" })).toBeNull();                   // closed after create
-    expect(document.activeElement).toBe(opener);
+    await waitFor(() => expect(document.activeElement).toBe(opener));                                // focus returns in the post-flip effect
     expect(rowTitles()[0]).toBe("امتحان محفوظ");
     fireEvent.click(opener);
     fireEvent.click(within(await screen.findByRole("region", { name: "إنشاء واجب جديد" })).getByRole("button", { name: "إلغاء" }));
     expect(screen.queryByRole("region", { name: "إنشاء واجب جديد" })).toBeNull();
-    expect(document.activeElement).toBe(opener);
+    await waitFor(() => expect(document.activeElement).toBe(opener));
   });
   it("library source: one lazy catalog GET, search + category chips (aria-pressed), publishable gating, select / preview / copy GETs, ExamPreview overlay unchanged", async () => {
     const copy = vi.fn();

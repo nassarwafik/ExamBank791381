@@ -53,13 +53,14 @@ async function mountStudents() {
   return utils;
 }
 // UX-4: the import flow lives in its own dialog (file → preview → confirm import); the file input is inside it.
-// The first test of this file pays the lazy transform/import cost of the students workspace + Dialog portal; on a
-// loaded CI runner that exceeded Testing Library's default 1s (UX-7a CI run 356), so the dialog lookup waits longer.
-async function openImport() { fireEvent.click(screen.getByRole("button", { name: "استيراد" })); await screen.findByRole("dialog", { name: "استيراد طلاب من ملف" }, { timeout: 5000 }); }
+// The first test of this file pays the lazy transform/import cost of the students workspace + Dialog portal. On a
+// loaded CI runner that exceeded Testing Library's default 1 s (run 356) and then the 5 s test timeout itself
+// (run 359), so the describe carries a 30 s test timeout and the dialog lookup waits up to 15 s. Assertions unchanged.
+async function openImport() { fireEvent.click(screen.getByRole("button", { name: "استيراد" })); await screen.findByRole("dialog", { name: "استيراد طلاب من ملف" }, { timeout: 15000 }); }
 function fileInput(_container: HTMLElement) { return document.querySelector('input[type="file"]') as HTMLInputElement; }
 function importButton() { return screen.getByRole("button", { name: /استيراد الطلاب الصالحين/ }); }
 
-describe("R18 bulk-import UX", () => {
+describe("R18 bulk-import UX", { timeout: 30000 }, () => {
   it("R+S+T: selecting a file only PREVIEWS (no create); counts shown; import enabled only after preview", async () => {
     const { container } = await mountStudents();
     await openImport();
