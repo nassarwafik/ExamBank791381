@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { readFileSync, readdirSync } from "node:fs";
+import { readFileSync, readdirSync, statSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { join } from "node:path";
 
@@ -432,5 +432,30 @@ describe("Final acceptance — class card hit area and ActionMenu ordering", () 
     expect(menu).not.toMatch(/onClickCapture=\{/);                     // no capture-phase close prop (the comment may name the old one)
     expect(menu).toMatch(/onClick=\{onPanelClick\}/);
     expect(menu).toMatch(/if \(el\.closest\("button, input"\)\) close\(true\);/);
+  });
+  it("ActionMenu (global first click): the portal is fixed from its first frame, positioned before it is revealed, and the first control is focused with preventScroll", () => {
+    const menu = read("ui/ActionMenu.tsx");
+    expect(menu).toMatch(/createPortal\(/);                                                   // still portalled into document.body
+    expect(menu).toMatch(/document\.body\s*\)/);
+    expect(menu).toMatch(/const MEASURING: CSSProperties = \{ position: "fixed", top: 0, right: 0, visibility: "hidden", pointerEvents: "none" \};/);
+    expect(menu).toMatch(/placement \? \{ position: "fixed", top: placement\.top, right: placement\.right, maxHeight: placement\.maxHeight \} : MEASURING/);
+    expect(menu).not.toMatch(/useState<CSSProperties>\(\{\}\)/);                              // never an in-flow first frame
+    expect(menu).toMatch(/el\.focus\(\{ preventScroll: true \}\)/);
+    expect(menu).toMatch(/if \(!ready\) return;\n\s*const first = panelRef\.current\?\.querySelector/);   // focus only once positioned
+    expect(menu).toMatch(/window\.addEventListener\("scroll", onLayout, true\)/);                 // a genuine scroll after opening still closes
+    expect(menu).toMatch(/window\.addEventListener\("resize", onLayout\)/);
+    expect(menu).toMatch(/document\.addEventListener\("mousedown", onPointer\)/);
+  });
+  it("no feature-specific ActionMenu fork exists: every consumer imports the shared primitive", () => {
+    const walk = dir => readdirSync(dir).flatMap(f => { const p = join(dir, f); return statSync(p).isDirectory() ? walk(p) : [p]; });
+    const files = walk(SRC).filter(f => /\.tsx?$/.test(f) && !/\.test\.tsx?$/.test(f));
+    const importers = files.filter(f => /import ActionMenu from "[^"]*ActionMenu"/.test(readFileSync(f, "utf8")) || /export \{ default \} from "\.\.\/ui\/ActionMenu"/.test(readFileSync(f, "utf8")));
+    const definers = files.filter(f => /export default function ActionMenu\(/.test(readFileSync(f, "utf8")));
+    expect(definers.map(f => f.replace(SRC, "src"))).toEqual(["src/ui/ActionMenu.tsx"]);
+    expect(importers.map(f => f.replace(SRC, "src")).sort()).toEqual([
+      "src/AssignmentsPanel.tsx", "src/assignments/AssignmentList.tsx", "src/assignments/Gradebook.tsx",
+      "src/projects/ProjectStudentDetail.tsx", "src/projects/ProjectTracker.tsx",
+      "src/students/ActionMenu.tsx", "src/students/ClassesPane.tsx", "src/students/RosterPane.tsx"
+    ]);
   });
 });
