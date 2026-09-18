@@ -320,6 +320,42 @@ export function activityDescriptor(block: ActivityBlock): ActivityDescriptor {
   return { kind: block.type, key: activityKey(block), version: block.version, capabilities: block.capabilities };
 }
 
+// ────────────────────────────────────────────────────────────────────────────
+// Generic structured primitives introduced with the Phase-3B pilot. Both are course-agnostic (reusable by any
+// book) and carry NO presentation logic — the Reader decides how to render them.
+// ────────────────────────────────────────────────────────────────────────────
+
+/** One item of a `list` block: an optional bold `term` (label) + structured `text`, never raw HTML. */
+export interface ListItem { id: string; term?: string; text: RichText; note?: string }
+/**
+ * A generic labelled/feature LIST — a titled set of items each with an optional term + a short body. It replaces
+ * ad-hoc per-page card components (the book's "uses / benefits / management areas" grids all share this shape).
+ * `variant` is a presentation hint only.
+ */
+export interface ListBlock extends BlockBase {
+  type: "list";
+  variant?: "cards" | "checklist" | "plain";
+  title?: string;
+  items: ListItem[];
+}
+
+/**
+ * A generic UNIT-OPENER hero (any book's "الوحدة N" transition page): a large unit number/label + title + a short
+ * source subtitle + the book's stated goal. It is course-agnostic — no `if page === 7`, no 791381-named component.
+ * Pages that use it set `layout: "opener"` so the Reader renders the hero chrome instead of a normal lesson header.
+ */
+export interface UnitOpenerBlock extends BlockBase {
+  type: "unit-opener";
+  /** e.g. "الوحدة الأولى". */
+  unitLabel?: string;
+  /** e.g. "01" (a short visual marker; not a page number). */
+  unitNumber?: string;
+  title: string;
+  subtitle?: string;
+  /** The book's stated goal line (e.g. "الهدف: فكرة أساسية + مثال واضح + تدريب"). */
+  goal?: string;
+}
+
 /** The canonical, strongly-typed block union. */
 export type ContentBlock =
   | TextBlock
@@ -331,6 +367,8 @@ export type ContentBlock =
   | CodeBlock
   | DiagramBlock
   | PracticeBlock
+  | ListBlock
+  | UnitOpenerBlock
   | SimulationBlock
   | AnimationBlock
   | GuidedBlock
@@ -339,9 +377,10 @@ export type ContentBlock =
 export type BlockType = ContentBlock["type"];
 /** The closed set of supported block types (used by the validator; keep in sync with the union). */
 export const BLOCK_TYPES: readonly BlockType[] = [
-  "text", "heading", "image", "callout", "example", "table", "code", "diagram", "practice",
+  "text", "heading", "image", "callout", "example", "table", "code", "diagram", "practice", "list", "unit-opener",
   "simulation", "animation", "guided", "interactive-diagram",
 ];
+export const LIST_VARIANTS: readonly NonNullable<ListBlock["variant"]>[] = ["cards", "checklist", "plain"];
 export const CALLOUT_KINDS: readonly CalloutKind[] = ["remember", "important", "warning", "tip", "summary", "clarification"];
 export const CODE_LANGUAGES: readonly CodeLanguage[] = ["cli", "text", "config"];
 
@@ -367,7 +406,14 @@ export interface ContentPage {
   subtitle?: string;
   learningObjective?: string;
   keywords?: string[];
+  /**
+   * Presentation layout for the Reader. "standard" (default) is a normal lesson page; "opener" renders a unit-opener
+   * hero (used with a `unit-opener` block). Generic + course-agnostic — a hint, never behavior.
+   */
+  layout?: ContentPageLayout;
 }
+export type ContentPageLayout = "standard" | "opener";
+export const CONTENT_PAGE_LAYOUTS: readonly ContentPageLayout[] = ["standard", "opener"];
 
 /** The explicit provenance of a block. Returns the declared value; it never invents provenance. */
 export function blockOrigin(block: BlockBase): ContentOrigin {
@@ -402,6 +448,13 @@ export interface ContentModule {
   lessons: ContentLesson[];
   /** Modules may carry their own coarse source range. */
   source?: ContentSource;
+  /**
+   * PARTIAL conversion (Phase 3B): true when this loaded module body intentionally covers only SOME of the pages
+   * its manifest lists (the rest are authored in a later batch). The Reader then shows an unconverted page as the
+   * professional "قيد الإعداد" state rather than a "missing content" integrity error. Omitted/false ⇒ the body is
+   * expected to contain every manifest page of the module, so an absent page IS an integrity problem.
+   */
+  partial?: boolean;
 }
 
 export interface LearningCourseContent {

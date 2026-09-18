@@ -54,8 +54,8 @@ only, and `printedPage` (the number printed on the paper) differs from the PDF p
 
 ## Block families (union on `type`)
 
-`text` · `heading` · `image` · `callout` · `example` · `table` · `code` · `diagram` · `practice` · `simulation` ·
-`animation` · `guided` · `interactive-diagram`.
+`text` · `heading` · `image` · `callout` · `example` · `table` · `code` · `diagram` · `practice` · `list` ·
+`unit-opener` · `simulation` · `animation` · `guided` · `interactive-diagram`.
 
 - **text** — safe inline `spans` (`strong`/`em`/`term`/`code`, optional per-span `dir`). No raw HTML.
 - **callout** — `remember` · `important` · `warning` · `tip` · `summary` · `clarification` (maps to book boxes تذكّر / الخلاصة / الفكرة; `clarification` is the separable teacher note, always `origin:"teacher-enrichment"`).
@@ -112,7 +112,8 @@ never on the human message. Codes: `schema-version-mismatch`, `unknown-course`, 
 `invalid-origin`, `origin-policy-violation`, `invalid-example-mode`, `unsupported-block-type`, `image-missing-alt`,
 `invalid-direction`, `quiz-empty-options`, `quiz-mcq-answer-count`, `activity-missing-key`,
 `activity-invalid-version`, `activity-missing-title`, `activity-invalid-capabilities`, `guided-empty-steps`,
-`guided-invalid-step`, `guided-duplicate-step-id`, `invalid-table-row`.
+`guided-invalid-step`, `guided-duplicate-step-id`, `list-empty-items`, `list-invalid-item`,
+`unit-opener-missing-title`, `invalid-table-row`.
 
 Activity descriptors (Phase 3A) are validated centrally as pure data: `activity-missing-key` (empty registry key),
 `activity-invalid-version` (missing / non-positive-integer `version`), `activity-missing-title`,
@@ -385,6 +386,49 @@ Phase 3.
 class ↔ learning-material assignment. Synthetic activity fixtures + a showcase page are **test-only** and never
 wired into a production route or catalog.
 
+## Phase 3B — First Real Conversion Pilot (source PDF 7–14)
+
+The first REAL native conversion of Book 791381: source **PDF pages 7–14** (Unit-1 basics + the Unit-2 opener),
+authored as TypeScript content → React blocks → semantic HTML. It is a pilot to validate architecture, fidelity and
+mobile UX before the conversion expands; **nothing beyond PDF 14** is converted.
+
+- **Authoritative source.** The OWNER's 264-page teacher book `كتاب_791381_نسخة_المعلم_الملونة_الكاملة(2).pdf`
+  (delivered as `Book791381.zip` → `Book791381.pdf`, verified: **264 pages**). It is the educational book — never a
+  Bagrut/exam PDF (`791381-2026.pdf` etc.). Each page was verified against the **rendered** source (not only text
+  extraction, which scrambles Arabic/technical strings). The source PDF is **never** bundled into production.
+- **1:1 mapping.** Each source page → exactly one interactive page (`source.pdfPageStart` 7…14). No split/merge was
+  needed. `printedPage` is set only where visibly printed (PDF 8–13 → 6–11); the unit openers omit it.
+- **First real module bodies.** `src/learning/content/791381/modules/m01.ts` (complete) and `m02.ts` (partial),
+  registered as lazy `import()` chunks in the registry. The main bundle imports none of them eagerly.
+- **Partial module conversion.** A loaded module body may set `partial: true` when its manifest lists pages this
+  batch has not converted yet. The Reader then shows an unconverted page as the professional **"قيد الإعداد"**
+  state (`bodyForModule` → `unavailable`), distinct from a **"missing content"** integrity error (a non-partial
+  module unexpectedly missing a page). `m02` is partial: its opener (PDF 14) is ready; its later manifest pages
+  (PDF 16/18/20) stay "قيد الإعداد". Module-level lazy chunking, `pageId` authority, stale-load safety and the
+  session cache are unchanged.
+- **First production registry-backed activity.** `productionActivityRegistry` is no longer empty: it holds exactly
+  `interactive-diagram / network-scope / v1` (`NetworkScopeDiagram`, its own lazy chunk) for PDF 11's PAN → LAN →
+  WAN scope. There are still **zero** real simulation/animation renderers, and the exact allowlist is tested. The
+  generic `guided / reveal / v1` built-in (from Phase 3A) drives PDF 12's "حل مع المعلم" reveal.
+- **Two generic primitives** (course-agnostic, reusable by any book): a `list` block (labelled/feature list — the
+  book's uses/benefits/management grids) and a `unit-opener` block + page `layout: "opener"` hero (unit number/label
+  /title/subtitle/goal). No `if page === 7`, no 791381-named component.
+- **Book vs enrichment.** Every source-derived block is `origin:"book"` (definitions, the four uses, the five
+  benefits, the shared-printer **ExampleBlock**, the type/needs/management lists, the ping/ipconfig callout — with
+  `ping`/`ipconfig`/`TCP/IP`/`Wi-Fi`/PAN/LAN/WAN rendered LTR). The only enrichment blocks are the two interactive
+  activities (network-scope diagram, guided reveal); both carry a block-level book `source` ASSOCIATING them to
+  their page while remaining `teacher-enrichment` (source association ≠ provenance), and no enrichment surface ever
+  claims «من الكتاب».
+- **Native, not a PDF viewer.** No PDF embed, iframe, or full-page screenshot — native blocks only.
+- **Mobile-first acceptance.** Verified at 360/390/430 + tablet/desktop: no page-level horizontal scroll, ≥44px
+  touch targets (scope tabs, controls), responsive `auto-fit` grids that collapse to one column, `clamp()` opener
+  typography (no fixed desktop widths), LTR technical strings, reduced-motion, keyboard-operable controls.
+- **Lesson learned.** The engine/reader needed only two small, generic additions (the partial-module `unavailable`
+  vs `missing` distinction, and the `list`/`unit-opener` primitives) — no registry redesign. The activity registry,
+  built-in resolution, capability model and secrecy contracts carried the pilot unchanged.
+
+The rest of the book stays skeleton (manifest only); the next batch continues the number-system content from PDF 15.
+
 ## Phase boundaries
 
 | Phase | Scope | Status |
@@ -392,7 +436,7 @@ wired into a production route or catalog.
 | 2 | Content schema, validation, navigation, lazy registry, `791381` skeleton manifest | done |
 | 3 | Interactive **Reader** — TOC, previous/next, jump-to-page, page/block rendering, provenance display, lazy module loading, professional not-yet-converted state | done (reader shell) |
 | **3A (this)** | Interactive Learning **Engine foundation** — activity descriptors, trusted registry + lazy loader (EMPTY production), host shell + error boundary + fullscreen + reduced-motion, no-op event sink, validation, tests, docs | done (foundation) |
-| 3B | Pilot content conversion — a small contiguous range of real Book 791381 pages | next |
+| **3B (this)** | First real conversion pilot — Book 791381 source PDF **7–14** (native content, first real module bodies, first production activity) | done (pilot) |
 | 4 | Interactive Practice — answer checking + immediate feedback (inline) | deferred |
 | 5 | Simulations — real VLAN/subnet/CLI/… renderers registered behind the Phase-3A engine | deferred |
 | 6 | Student Progress — last page, completion, attempts (separate domain; attaches to the no-op event seam) | deferred |

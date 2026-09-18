@@ -220,11 +220,16 @@ export default function LearningReader({
   );
 }
 
-/** Resolve the selected page inside a loaded module body → a ready/missing reader body. Pure. */
+/**
+ * Resolve the selected page inside a loaded module body → a ready / unavailable / missing reader body. Pure.
+ * A page absent from the body is "قيد الإعداد" (unavailable) when the module is a PARTIAL conversion — its manifest
+ * lists pages this batch has not converted yet — and a "missing content" integrity problem otherwise (a module that
+ * claims complete content but is unexpectedly missing a page).
+ */
 function bodyForModule(module: ContentModule, pageId: string): ReaderPageBody {
   for (const lesson of module.lessons) {
     const page: ContentPage | undefined = lesson.pages.find(p => p.id === pageId);
     if (page) return { kind: "ready", page };
   }
-  return { kind: "missing" };
+  return module.partial ? { kind: "unavailable" } : { kind: "missing" };
 }

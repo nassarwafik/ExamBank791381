@@ -166,3 +166,35 @@
 @media (prefers-reduced-motion: reduce){
   .learning-reader-toc-caret{ transition:none; }
 }
+
+/* ── Phase 3B: generic list block (uses / benefits / management areas) ─────────────────────────────────────── */
+.learning-reader-list{ display:flex; flex-direction:column; gap:var(--eb-space-2); min-width:0; }
+.learning-reader-list-title{ margin:0; color:var(--eb-text-heading); font-weight:var(--eb-fw-semibold); font-size:var(--eb-fs-16); }
+.learning-reader-list-items{ list-style:none; margin:0; padding:0; display:grid; gap:var(--eb-space-2); min-width:0; }
+.learning-reader-list.variant-cards .learning-reader-list-items{ grid-template-columns:repeat(auto-fit, minmax(200px, 1fr)); }
+.learning-reader-list.variant-checklist .learning-reader-list-items,
+.learning-reader-list.variant-plain .learning-reader-list-items{ grid-template-columns:1fr; }
+.learning-reader-list-item{ display:flex; gap:var(--eb-space-2); align-items:flex-start; min-width:0; padding:var(--eb-space-2) var(--eb-space-3);
+  border:1px solid var(--eb-line); border-radius:var(--eb-r); background:var(--eb-surface); }
+.learning-reader-list.variant-cards .learning-reader-list-item{ flex-direction:column; gap:4px; }
+.learning-reader-list-itembody{ display:flex; flex-direction:column; gap:2px; min-width:0; }
+.learning-reader-list-check{ flex:0 0 auto; margin-top:2px; color:var(--eb-success); }
+.learning-reader-list-term{ color:var(--eb-text-heading); font-weight:var(--eb-fw-bold); font-size:var(--eb-fs-14); }
+.learning-reader-list-text{ color:var(--eb-text); font-size:var(--eb-fs-14); line-height:var(--eb-lh-body); overflow-wrap:anywhere; }
+.learning-reader-list-note{ align-self:flex-start; margin-top:4px; padding:1px var(--eb-space-2); border-radius:var(--eb-pill);
+  background:var(--eb-surface-2); color:var(--eb-muted); font-size:var(--eb-fs-12); font-weight:var(--eb-fw-medium); }
+
+/* ── Phase 3B: unit-opener hero ────────────────────────────────────────────────────────────────────────────── */
+.learning-reader-page.is-opener{ display:flex; flex-direction:column; gap:var(--eb-space-3); }
+.learning-reader-opener{ display:flex; align-items:center; gap:var(--eb-space-4); flex-wrap:wrap;
+  padding:var(--eb-space-4) 0; border-bottom:1px solid var(--eb-line); }
+.learning-reader-opener-number{ font-size:clamp(64px, 18vw, 120px); line-height:1; font-weight:var(--eb-fw-bold);
+  color:var(--eb-surface-2); letter-spacing:-2px; }
+.learning-reader-opener-body{ display:flex; flex-direction:column; gap:var(--eb-space-2); min-width:min(100%, 220px); flex:1 1 240px; }
+.learning-reader-opener-label{ margin:0; color:var(--eb-primary-strong); font-weight:var(--eb-fw-bold); font-size:var(--eb-fs-14); }
+.learning-reader-opener-title{ margin:0; color:var(--eb-text-heading); font-weight:var(--eb-fw-bold);
+  font-size:clamp(24px, 6vw, 34px); line-height:var(--eb-lh-tight); border-inline-start:4px solid var(--eb-primary); padding-inline-start:var(--eb-space-3); }
+.learning-reader-opener-title:focus{ outline:none; }
+.learning-reader-opener-subtitle{ margin:0; color:var(--eb-text-secondary); font-size:var(--eb-fs-16); line-height:var(--eb-lh-body); }
+.learning-reader-opener-goal{ align-self:flex-start; margin:0; padding:var(--eb-space-2) var(--eb-space-3);
+  border-radius:var(--eb-pill); background:var(--eb-primary-050); color:var(--eb-primary-strong); font-size:var(--eb-fs-14); font-weight:var(--eb-fw-medium); }

@@ -27,6 +27,15 @@ const manifest: LearningCourseManifest = {
       order: 1,
       lessons: [
         {
+          // Phase 3B: unit-opener lesson added BEFORE the existing intro lesson (existing ids below are unchanged).
+          id: "791381-m01-l00",
+          title: "افتتاحية الوحدة",
+          order: 0,
+          pages: [
+            { id: "791381-m01-l00-p01", title: "أساسيات الشبكات", order: 1, source: { kind: "book", sourceId: "791381", pdfPageStart: 7 }, keywords: ["مقدمة", "الوحدة الأولى"] },
+          ],
+        },
+        {
           id: "791381-m01-l01",
           title: "مقدمة إلى الشبكات",
           order: 1,
@@ -34,6 +43,17 @@ const manifest: LearningCourseManifest = {
             { id: "791381-m01-l01-p01", title: "ما هي الشبكة؟", order: 1, source: { kind: "book", sourceId: "791381", pdfPageStart: 8, printedPage: 6 }, keywords: ["شبكة", "network"] },
             { id: "791381-m01-l01-p02", title: "استخدامات الشبكة", order: 2, source: { kind: "book", sourceId: "791381", pdfPageStart: 9, printedPage: 7 } },
             { id: "791381-m01-l01-p03", title: "حسنات الشبكة", order: 3, source: { kind: "book", sourceId: "791381", pdfPageStart: 10, printedPage: 8 } },
+          ],
+        },
+        {
+          // Phase 3B: PDF 11–13 appended as a new lesson (additive; no existing id renumbered).
+          id: "791381-m01-l02",
+          title: "أنواع الشبكات وبناؤها وإدارتها",
+          order: 2,
+          pages: [
+            { id: "791381-m01-l02-p01", title: "أنواع الشبكات", order: 1, source: { kind: "book", sourceId: "791381", pdfPageStart: 11, printedPage: 9 }, keywords: ["PAN", "LAN", "WAN", "أنواع الشبكات"] },
+            { id: "791381-m01-l02-p02", title: "احتياجات بناء شبكة", order: 2, source: { kind: "book", sourceId: "791381", pdfPageStart: 12, printedPage: 10 }, keywords: ["IP", "TCP/IP", "بروتوكول", "بنية تحتية"] },
+            { id: "791381-m01-l02-p03", title: "إدارة الشبكة وصيانتها", order: 3, source: { kind: "book", sourceId: "791381", pdfPageStart: 13, printedPage: 11 }, keywords: ["ping", "ipconfig", "صيانة", "أمان"] },
           ],
         },
       ],
@@ -44,6 +64,16 @@ const manifest: LearningCourseManifest = {
       shortTitle: "الأعداد",
       order: 2,
       lessons: [
+        {
+          // Phase 3B: unit-opener lesson for Unit 2 (PDF 14). The existing m02-l01 pages (PDF 16/18/20) are
+          // deliberately NOT renumbered and remain UNCONVERTED — the m02 body is a PARTIAL conversion.
+          id: "791381-m02-l00",
+          title: "افتتاحية الوحدة",
+          order: 0,
+          pages: [
+            { id: "791381-m02-l00-p01", title: "الأعداد والموازين", order: 1, source: { kind: "book", sourceId: "791381", pdfPageStart: 14 }, keywords: ["مقدمة", "الوحدة الثانية"] },
+          ],
+        },
         {
           id: "791381-m02-l01",
           title: "أنظمة العد والتحويل",

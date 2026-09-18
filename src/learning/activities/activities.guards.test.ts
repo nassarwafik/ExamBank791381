@@ -19,10 +19,11 @@ const host = stripComments(read("./LearningActivityHost.tsx"));
 const boundary = stripComments(read("./LearningActivityBoundary.tsx"));
 const fallback = stripComments(read("./ActivityFallback.tsx"));
 const guided = stripComments(read("./GuidedActivity.tsx"));
+const scope = stripComments(read("./NetworkScopeDiagram.tsx"));
 const builtins = stripComments(read("./builtins.ts"));
 const css = read("./activities.css");
 
-const sources = { engine, host, boundary, fallback, guided, builtins };
+const sources = { engine, host, boundary, fallback, guided, builtins, scope };
 
 describe("Phase 3A — source files are plain text (ZERO U+0000 bytes)", () => {
   it("engine.ts and LearningActivityHost.tsx contain no NUL byte", () => {
@@ -55,8 +56,14 @@ describe("Phase 3A — no code execution from content", () => {
     }
   });
 
-  it("never builds a dynamic import() from a data/variable path (renderers load via static thunks only)", () => {
+  it("never builds a dynamic import() from a DATA/variable path (only static string-literal code-split thunks)", () => {
+    // A renderer is reached either through the registry\'s statically-authored `import("./Literal")` thunk or not at
+    // all. Forbid `import(<variable>)` everywhere (that would be a data path); additionally the host/boundary/
+    // fallback/guided reach renderers via the registry and hold NO import() at all.
     for (const [name, src] of Object.entries(sources)) {
+      expect(src, name).not.toMatch(/import\s*\((?!\s*["'`])/);
+    }
+    for (const [name, src] of Object.entries({ host, boundary, fallback, guided })) {
       expect(src, name).not.toMatch(/[^a-zA-Z]import\s*\(/);
     }
   });
@@ -81,10 +88,12 @@ describe("Phase 3A — no code execution from content", () => {
   });
 });
 
-describe("Phase 3A — production registry ships EMPTY", () => {
-  it("registers zero activities in production (every registry family renders the static fallback, no chunk loads)", () => {
-    expect(productionActivityRegistry.size).toBe(0);
-    expect(productionActivityRegistry.list()).toEqual([]);
+describe("Phase 3B — production registry is an exact allowlist", () => {
+  it("registers ONLY the exact allowlist and ZERO simulation/animation renderers (no chunk loads at import time)", () => {
+    expect(productionActivityRegistry.list()).toEqual([
+      { kind: "interactive-diagram", key: "network-scope", versions: [1] },
+    ]);
+    expect(productionActivityRegistry.list().some(e => e.kind === "simulation" || e.kind === "animation")).toBe(false);
   });
 });
 

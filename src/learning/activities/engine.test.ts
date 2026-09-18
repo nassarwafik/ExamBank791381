@@ -10,11 +10,18 @@ import { simBlock, animBlock, unsupportedVersionBlock, unregisteredBlock } from 
 const nullComponent: ActivityComponent = () => null;
 const noop = async () => ({ default: nullComponent });
 
-describe("Phase 3A — production activity registry is EMPTY", () => {
-  it("ships zero registered activities, so every descriptor resolves to nothing (static fallback path)", () => {
-    expect(productionActivityRegistry.size).toBe(0);
-    expect(productionActivityRegistry.list()).toEqual([]);
-    expect(productionActivityRegistry.resolve(simBlock)).toBeUndefined();
+describe("Phase 3B — production activity registry is an EXACT allowlist (no real simulation/animation)", () => {
+  it("registers ONLY interactive-diagram/network-scope/v1 (the pilot's first real activity)", () => {
+    expect(productionActivityRegistry.list()).toEqual([
+      { kind: "interactive-diagram", key: "network-scope", versions: [1] },
+    ]);
+    expect(productionActivityRegistry.size).toBe(1);
+    expect(productionActivityRegistry.has("interactive-diagram", "network-scope")).toBe(true);
+  });
+  it("registers ZERO real simulation and ZERO real animation renderers", () => {
+    expect(productionActivityRegistry.list().filter(e => e.kind === "simulation")).toEqual([]);
+    expect(productionActivityRegistry.list().filter(e => e.kind === "animation")).toEqual([]);
+    expect(productionActivityRegistry.resolve(simBlock)).toBeUndefined();   // no simulation renderer
     expect(productionActivityRegistry.has("simulation", "vlan")).toBe(false);
   });
 });

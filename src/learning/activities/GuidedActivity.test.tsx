@@ -18,8 +18,8 @@ describe("Phase 3A — built-in resolution is by EXACT {kind, key, version}, nev
     expect(GUIDED_REVEAL_IDENTITY).toEqual({ kind: "guided", key: "reveal", version: 1 });
     expect(builtinActivityRegistry.list()).toEqual([{ kind: "guided", key: "reveal", versions: [1] }]);
     expect(builtinActivityRegistry.resolve(guidedBlock)?.key).toBe("reveal");
-    expect(productionActivityRegistry.size).toBe(0);
-    expect(productionActivityRegistry.resolve(guidedBlock)).toBeUndefined();   // no registry entry needed for the built-in
+    expect(productionActivityRegistry.has("guided", "reveal")).toBe(false);   // guided is a BUILT-IN, not in the production registry
+    expect(productionActivityRegistry.resolve(guidedBlock)).toBeUndefined();   // no production registry entry needed for the built-in
   });
 
   it("guidedType:'reveal', version:1 → the live built-in presenter (with the default/empty registry)", () => {

@@ -1,7 +1,7 @@
 import type { ReactNode } from "react";
-import { IconWarning, IconBook, IconSparkles } from "../../icons";
+import { IconWarning, IconBook, IconSparkles, IconCheck } from "../../icons";
 import RichTextRenderer from "./RichTextRenderer";
-import { isActivityBlock, type ContentBlock, type ContentPage, type ContentSource, type CalloutKind, type PracticeQuestion } from "../content/types";
+import { isActivityBlock, type ContentBlock, type ContentPage, type ContentSource, type CalloutKind, type PracticeQuestion, type ListBlock, type UnitOpenerBlock } from "../content/types";
 import LearningActivityHost from "../activities/LearningActivityHost";
 import { ACTIVITY_ENRICHMENT_LABEL } from "../activities/labels";
 import type { LearningActivityRegistry, LearningActivityEventSink } from "../activities/engine";
@@ -47,6 +47,22 @@ export default function LearningPageRenderer({ header, body, activity }: {
   activity?: { registry?: LearningActivityRegistry; emit?: LearningActivityEventSink };
 }) {
   const ctx: ActivityRenderContext = { courseId: header.courseId, registry: activity?.registry, emit: activity?.emit };
+
+  // Unit-opener pages render an intentionally distinct hero instead of the normal lesson header. The hero owns the
+  // focus target (its <h2> carries the reader's title id/class); the source line is kept for traceability.
+  if (body.kind === "ready" && body.page.layout === "opener") {
+    const opener = body.page.blocks.find((b): b is UnitOpenerBlock => b.type === "unit-opener");
+    return (
+      <article className="learning-reader-page is-opener" aria-labelledby="learning-reader-page-title">
+        {opener
+          ? <UnitOpenerView block={opener} headed />
+          : <h2 id="learning-reader-page-title" className="learning-reader-opener-title" tabIndex={-1}>{header.pageTitle}</h2>}
+        {header.source && <SourceLine source={header.source} />}
+        {body.page.blocks.filter(b => b.type !== "unit-opener").map(b => <BlockView key={b.id} block={b} ctx={ctx} />)}
+      </article>
+    );
+  }
+
   return (
     <article className="learning-reader-page" aria-labelledby="learning-reader-page-title">
       <header className="learning-reader-pagehead">
@@ -148,6 +164,46 @@ const CALLOUT_LABELS: Record<CalloutKind, string> = {
   remember: "تذكّر", important: "مهم", warning: "تنبيه", tip: "نصيحة", summary: "الخلاصة", clarification: "توضيح المعلم",
 };
 
+/** Generic labelled/feature list. `cards` → a responsive grid (collapses on mobile); `checklist` → checked rows;
+ *  `plain` → a simple list. Semantic <ul>/<li>; term is a real <strong>; text is safe spans, never raw HTML. */
+function ListView({ block }: { block: ListBlock }) {
+  const variant = block.variant ?? "cards";
+  return (
+    <div className={"learning-reader-list variant-" + variant}>
+      {block.title && <p className="learning-reader-list-title">{block.title}</p>}
+      <ul className="learning-reader-list-items">
+        {block.items.map(it => (
+          <li key={it.id} className="learning-reader-list-item">
+            {variant === "checklist" && <IconCheck size={16} className="learning-reader-list-check" aria-hidden="true" />}
+            <div className="learning-reader-list-itembody">
+              {it.term && <span className="learning-reader-list-term">{it.term}</span>}
+              <span className="learning-reader-list-text" dir={block.dir}><RichTextRenderer spans={it.text} /></span>
+              {it.note && <span className="learning-reader-list-note">{it.note}</span>}
+            </div>
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+}
+
+/** Generic unit-opener hero content (unit label + number + title + subtitle + goal). Course-agnostic. The title
+ *  carries the reader's focus id/class so post-navigation focus lands here on opener pages too. */
+function UnitOpenerView({ block, headed = false }: { block: UnitOpenerBlock; headed?: boolean }) {
+  const titleProps = headed ? { id: "learning-reader-page-title", className: "learning-reader-opener-title", tabIndex: -1 as const } : { className: "learning-reader-opener-title" };
+  return (
+    <div className="learning-reader-opener">
+      {block.unitNumber && <span className="learning-reader-opener-number" aria-hidden="true">{block.unitNumber}</span>}
+      <div className="learning-reader-opener-body">
+        {block.unitLabel && <p className="learning-reader-opener-label">{block.unitLabel}</p>}
+        <h2 {...titleProps}>{block.title}</h2>
+        {block.subtitle && <p className="learning-reader-opener-subtitle">{block.subtitle}</p>}
+        {block.goal && <p className="learning-reader-opener-goal">{block.goal}</p>}
+      </div>
+    </div>
+  );
+}
+
 function renderBlock(block: ContentBlock, ctx: ActivityRenderContext): ReactNode {
   switch (block.type) {
     case "text":
@@ -202,6 +258,10 @@ function renderBlock(block: ContentBlock, ctx: ActivityRenderContext): ReactNode
             <span>الرسم التوضيحي قيد الإعداد</span>
           </div>
         );
+    case "list":
+      return <ListView block={block} />;
+    case "unit-opener":
+      return <UnitOpenerView block={block} />;
     case "practice":
       return <PracticeBlockView question={block.question} />;
     // Interactive activities are DELEGATED to the engine shell (never rendered inline here): it resolves the

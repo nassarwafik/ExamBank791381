@@ -221,3 +221,30 @@
   animation: none !important;
   transition: none !important;
 }
+
+/* ── Phase 3B: network-scope interactive diagram (PAN/LAN/WAN) ─────────────────────────────────────────────── */
+.learning-scope{ display:flex; flex-direction:column; gap:var(--eb-space-3); }
+.learning-scope-tabs{ display:grid; grid-template-columns:repeat(auto-fit, minmax(96px, 1fr)); gap:var(--eb-space-2); }
+.learning-scope-tab{ min-height:44px; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:2px;
+  padding:var(--eb-space-2); border:2px solid var(--eb-line); border-radius:var(--eb-r); background:var(--eb-surface);
+  color:var(--eb-text); cursor:pointer; transition:border-color var(--eb-dur) var(--eb-ease), background var(--eb-dur) var(--eb-ease); }
+.learning-scope-tab:hover{ border-color:var(--eb-primary); }
+.learning-scope-tab.is-active{ border-color:var(--eb-primary); background:var(--eb-primary-050); }
+.learning-scope-tab:focus-visible{ outline:2px solid var(--eb-primary); outline-offset:2px; }
+.learning-scope-tab-name{ font-weight:var(--eb-fw-bold); font-size:var(--eb-fs-16); color:var(--eb-text-heading); }
+.learning-scope-tab-dist{ font-size:var(--eb-fs-12); color:var(--eb-muted); }
+.learning-scope-visual{ width:100%; max-width:360px; height:auto; margin-inline:auto; }
+.learning-scope-ring{ fill:none; stroke:var(--eb-line); stroke-width:2; transition:stroke var(--eb-dur) var(--eb-ease); }
+.learning-scope-ring.is-on{ stroke:var(--eb-primary); }
+.learning-scope-core{ fill:var(--eb-primary); }
+.learning-scope-detail{ display:flex; flex-direction:column; gap:4px; }
+.learning-scope-title{ margin:0; display:flex; align-items:center; gap:var(--eb-space-2); color:var(--eb-text-heading); font-weight:var(--eb-fw-semibold); font-size:var(--eb-fs-16); }
+.learning-scope-badge{ padding:1px var(--eb-space-2); border-radius:var(--eb-pill); background:var(--eb-primary-050); color:var(--eb-primary-strong); font-size:var(--eb-fs-12); font-weight:var(--eb-fw-bold); }
+.learning-scope-example{ margin:0; color:var(--eb-text); font-size:var(--eb-fs-14); line-height:var(--eb-lh-body); }
+.learning-scope-note{ margin:0; color:var(--eb-muted); font-size:var(--eb-fs-12); }
+.learning-scope-empty{ margin:0; color:var(--eb-muted); font-size:var(--eb-fs-13); }
+@media (prefers-reduced-motion: reduce){
+  .learning-scope-tab, .learning-scope-ring{ transition:none; }
+}
+.learning-scope[data-reduced-motion="true"] .learning-scope-tab,
+.learning-scope[data-reduced-motion="true"] .learning-scope-ring{ transition:none; }
