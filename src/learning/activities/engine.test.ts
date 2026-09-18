@@ -1,7 +1,7 @@
 // Phase 3A — activity ENGINE: registry resolution + the no-op event sink. Pure logic, no DOM.
 import { describe, it, expect } from "vitest";
 import {
-  createActivityRegistry, productionActivityRegistry, noopActivityEventSink,
+  createActivityRegistry, productionActivityRegistry, noopActivityEventSink, ActivityRegistryError,
   type LearningActivityEvent, type ActivityComponent,
 } from "./engine";
 import type { SimulationBlock } from "../content/types";
@@ -58,6 +58,45 @@ describe("Phase 3A — createActivityRegistry resolution", () => {
       { kind: "simulation", key: "vlan", versions: [1, 2] },
       { kind: "animation", key: "packet-flow", versions: [1] },
     ]);
+  });
+});
+
+describe("Phase 3A — registry ownership of {kind, key, version} is unique (fail fast at construction)", () => {
+  const vlan = (versions: number[]) => ({ kind: "simulation" as const, key: "vlan", versions, load: noop });
+
+  it("rejects duplicate exact ownership", () => {
+    expect(() => createActivityRegistry([vlan([1]), vlan([1])])).toThrow(ActivityRegistryError);
+  });
+  it("rejects overlapping version sets ([1,2] + [2,3] → v2 ambiguous) and names the collision", () => {
+    let caught: unknown;
+    try { createActivityRegistry([vlan([1, 2]), vlan([2, 3])]); } catch (e) { caught = e; }
+    expect(caught).toBeInstanceOf(ActivityRegistryError);
+    const err = caught as ActivityRegistryError;
+    expect(err.kind).toBe("simulation");
+    expect(err.key).toBe("vlan");
+    expect(err.version).toBe(2);
+    expect(err.message).toContain('"vlan"');
+  });
+  it("accepts DISJOINT version sets for the same kind+key and resolves each version to its owner", () => {
+    const v12: ActivityComponent = () => null;
+    const v3: ActivityComponent = () => null;
+    const reg = createActivityRegistry([
+      { kind: "simulation", key: "vlan", versions: [1, 2], component: v12 },
+      { kind: "simulation", key: "vlan", versions: [3], component: v3 },
+    ]);
+    const block = (version: number): SimulationBlock => ({ id: "b", type: "simulation", origin: "teacher-enrichment", simulationType: "vlan", version, title: "t" });
+    expect(reg.resolve(block(1))?.component).toBe(v12);
+    expect(reg.resolve(block(2))?.component).toBe(v12);
+    expect(reg.resolve(block(3))?.component).toBe(v3);
+    expect(reg.resolve(block(4))).toBeUndefined();
+    expect(reg.size).toBe(2);
+  });
+  it("different keys and different families are unaffected by each other's versions", () => {
+    expect(() => createActivityRegistry([
+      vlan([1]),
+      { kind: "simulation", key: "subnet", versions: [1], load: noop },     // same family, other key
+      { kind: "animation", key: "vlan", versions: [1], load: noop },        // same key, other family
+    ])).not.toThrow();
   });
 });
 

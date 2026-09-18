@@ -5,11 +5,45 @@
 import { describe, it, expect, afterEach, vi } from "vitest";
 import { render, cleanup, screen, fireEvent, waitFor } from "@testing-library/react";
 import LearningActivityHost from "./LearningActivityHost";
-import { guidedBlock } from "./activityFixtures";
+import { guidedBlock, unknownGuidedBlock, futureVersionGuidedBlock, demoActivityRegistry } from "./activityFixtures";
+import { builtinActivityRegistry, GUIDED_REVEAL_IDENTITY } from "./builtins";
+import { productionActivityRegistry } from "./engine";
 
 afterEach(cleanup);
 
 const stepsShown = () => document.querySelectorAll(".learning-guided-step").length;
+
+describe("Phase 3A — built-in resolution is by EXACT {kind, key, version}, never by block type", () => {
+  it("the built-in registry owns exactly guided/reveal/v1, and the production registry stays empty", () => {
+    expect(GUIDED_REVEAL_IDENTITY).toEqual({ kind: "guided", key: "reveal", version: 1 });
+    expect(builtinActivityRegistry.list()).toEqual([{ kind: "guided", key: "reveal", versions: [1] }]);
+    expect(builtinActivityRegistry.resolve(guidedBlock)?.key).toBe("reveal");
+    expect(productionActivityRegistry.size).toBe(0);
+    expect(productionActivityRegistry.resolve(guidedBlock)).toBeUndefined();   // no registry entry needed for the built-in
+  });
+
+  it("guidedType:'reveal', version:1 → the live built-in presenter (with the default/empty registry)", () => {
+    const { container } = render(<LearningActivityHost block={guidedBlock} courseId="791381" />);
+    expect(container.querySelector(".learning-guided")).toBeTruthy();
+    expect(container.querySelector(".learning-activity-fallback")).toBeNull();
+  });
+
+  it("an UNKNOWN guided key → static fallback (does not silently render the reveal presenter), and does not crash", () => {
+    const { container } = render(<LearningActivityHost block={unknownGuidedBlock} courseId="791381" registry={demoActivityRegistry} />);
+    expect(container.querySelector(".learning-guided")).toBeNull();
+    expect(container.querySelector(".learning-activity-fallback")).toBeTruthy();
+    expect(screen.getByText("مسار متفرّع مستقبلي")).toBeTruthy();
+    expect(screen.queryByRole("button", { name: /اعرض الخطوة/ })).toBeNull();
+    expect(screen.getByText(/عرض بديل ثابت للنشاط التفاعلي/)).toBeTruthy();
+  });
+
+  it("guidedType:'reveal', version:99 (unsupported) → static fallback, not the v1 presenter", () => {
+    const { container } = render(<LearningActivityHost block={futureVersionGuidedBlock} courseId="791381" />);
+    expect(container.querySelector(".learning-guided")).toBeNull();
+    expect(container.querySelector(".learning-activity-fallback")).toBeTruthy();
+    expect(screen.getByText("كشف تدريجي إصدار 99")).toBeTruthy();
+  });
+});
 
 describe("Phase 3A — GuidedActivity progressive reveal", () => {
   it("renders through the host WITHOUT any registry entry (built-in), showing prompt + think-first and no steps yet", () => {

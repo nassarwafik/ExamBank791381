@@ -19,9 +19,10 @@ const host = stripComments(read("./LearningActivityHost.tsx"));
 const boundary = stripComments(read("./LearningActivityBoundary.tsx"));
 const fallback = stripComments(read("./ActivityFallback.tsx"));
 const guided = stripComments(read("./GuidedActivity.tsx"));
+const builtins = stripComments(read("./builtins.ts"));
 const css = read("./activities.css");
 
-const sources = { engine, host, boundary, fallback, guided };
+const sources = { engine, host, boundary, fallback, guided, builtins };
 
 describe("Phase 3A — source files are plain text (ZERO U+0000 bytes)", () => {
   it("engine.ts and LearningActivityHost.tsx contain no NUL byte", () => {
@@ -63,6 +64,16 @@ describe("Phase 3A — no code execution from content", () => {
   it("never resolves a component by a NAME taken from content (no global component table)", () => {
     expect(host).not.toMatch(/window\s*\[/);
     expect(host).not.toMatch(/globalThis\s*\[/);
+  });
+
+  it("never dispatches a built-in by block TYPE alone — built-ins go through the exact-identity registry", () => {
+    // no component table keyed by family (the only `[block.type]` lookups left are label maps, not components)
+    expect(host).not.toMatch(/\bBUILTIN\b/);
+    expect(host).not.toMatch(/Record<[^>]*ActivityBlock\["type"\][^>]*component/);
+    expect(host).not.toMatch(/component\s*:\s*GuidedActivity/);
+    expect(host).toContain("builtinActivityRegistry.resolve(block)");
+    expect(builtins).toContain("createActivityRegistry(");
+    expect(builtins).toMatch(/kind:\s*GUIDED_REVEAL_IDENTITY\.kind/);
   });
 
   it("never uses raw HTML injection", () => {

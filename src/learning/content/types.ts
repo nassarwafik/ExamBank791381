@@ -180,8 +180,9 @@ export interface PracticeBlock extends BlockBase { type: "practice"; question: P
 // (never faithful book content — enforced by the validator). They are pure DATA DESCRIPTORS: content supplies a
 // registry KEY (a plain string such as "vlan") and an opaque, engine-validated `config` — NEVER a component name,
 // a function, a module path, or any executable code. The trusted activity registry (src/learning/activities/) maps
-// {family,key,version} → a component authored in THIS repo. Production registries ship EMPTY; the descriptor still
-// renders a faithful static fallback, so a page is always usable even with no live activity. `version` lets a
+// {family,key,version} → a component authored in THIS repo. Phase 3A ships the registry-backed production registry
+// EMPTY (no real simulation/animation) plus one generic built-in presenter (guided/reveal/v1); any descriptor with
+// no trusted renderer for its exact identity renders a faithful static fallback, so a page is always usable. `version` lets a
 // renderer refuse a descriptor shape it does not understand (falling back) without a schema break.
 // ────────────────────────────────────────────────────────────────────────────
 

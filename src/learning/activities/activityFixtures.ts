@@ -57,6 +57,12 @@ export const guidedBlock: GuidedBlock = {
   result: [{ text: "00101100", dir: "ltr", style: "code" }],
   explanation: "اجمع القيم التي تحتها 1: 32 + 8 + 4 = 44.",
 };
+/** A guided key with NO trusted presenter (a future branching walkthrough) -> must fall back, never the reveal presenter. */
+export const unknownGuidedBlock: GuidedBlock = {
+  ...guidedBlock, id: "sb-guided-unknown", guidedType: "future-branching-walkthrough", title: "مسار متفرّع مستقبلي",
+};
+/** The reveal key at an UNSUPPORTED version -> must fall back. */
+export const futureVersionGuidedBlock: GuidedBlock = { ...guidedBlock, id: "sb-guided-v99", version: 99, title: "كشف تدريجي إصدار 99" };
 export const diagramBlock: InteractiveDiagramBlock = {
   id: "sb-diagram", type: "interactive-diagram", origin: "teacher-enrichment", interactionType: "switch-ports", version: 1,
   title: "منافذ السويتش", fallback: { text: "مخطط ثابت للمنافذ.", src: "/learning/791381/ports.png", alt: "مخطط المنافذ" },

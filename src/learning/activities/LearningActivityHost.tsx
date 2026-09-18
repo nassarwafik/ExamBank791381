@@ -7,30 +7,24 @@ import {
   type LearningActivityRegistry, type LearningActivityEventSink, type ActivityComponent, type ActivityCommandSignals,
 } from "./engine";
 import { ACTIVITY_KIND_LABEL } from "./labels";
+import { builtinActivityRegistry } from "./builtins";
 import ActivityFallback from "./ActivityFallback";
 import LearningActivityBoundary from "./LearningActivityBoundary";
-import GuidedActivity from "./GuidedActivity";
 import "./activities.css";
-
-/**
- * Built-in renderers that ship with the engine (generic, content-driven presenters — NOT bespoke simulations).
- * They need no registry entry, so the production ACTIVITY registry stays empty. Their declared capabilities are
- * the control authority for their family, exactly like a registry entry's.
- */
-const BUILTIN: Partial<Record<ActivityBlock["type"], { component: ActivityComponent; capabilities: ActivityCapabilities }>> = {
-  guided: { component: GuidedActivity, capabilities: { fullscreen: true, reset: true, interactive: true } },
-};
 
 /**
  * The single SHELL that presents one interactive-activity descriptor. It is the only place the reader touches the
  * activity engine, so `LearningPageRenderer` stays lean (delegation, not a monolith).
  *
  * Behaviour:
- *   - Resolve the block: a BUILT-IN presenter (guided) or the INJECTED registry (defaulting to the EMPTY production
- *     registry). No match / unsupported version -> the faithful static `ActivityFallback` (Phase 3A production path).
- *   - A registry match lazily loads the trusted component (its own chunk) into STATE (never read from a ref during
- *     render), shows a loading status until ready, and isolates it in `LearningActivityBoundary` so a throwing
- *     activity degrades to the fallback instead of crashing the page.
+ *   - Resolve the block by EXACT {kind, key, version} — first in the trusted BUILT-IN registry (generic presenters
+ *     shipped with the engine, e.g. guided/reveal/v1), then in the INJECTED registry (defaulting to the EMPTY
+ *     production registry). Never by block type alone: an unknown key or unsupported version of any family —
+ *     guided included — renders the faithful static `ActivityFallback`.
+ *   - A registry match with an eager `component` renders at once; one with a lazy `load` thunk is loaded (its own
+ *     chunk) into STATE (never read from a ref during render) behind a loading status. Either way the component is
+ *     isolated in `LearningActivityBoundary`, so a throwing activity degrades to the fallback instead of crashing
+ *     the page.
  *   - ONE LIVE INSTANCE, ALWAYS. The activity element is rendered exactly once at a fixed tree position; fullscreen
  *     only promotes the SAME host surface to a fixed overlay (CSS) and arms the shared `useFocusTrap` (Escape,
  *     Tab containment, focus return) + body scroll-lock. Nothing is duplicated, moved or remounted, so interaction
@@ -62,26 +56,27 @@ export default function LearningActivityHost({
   const mountedRef = useRef(true);
   useEffect(() => { mountedRef.current = true; return () => { mountedRef.current = false; }; }, []);
 
-  const builtin = BUILTIN[block.type];
-  const entry = builtin ? undefined : registry.resolve(block);
+  // Exact {kind, key, version} resolution: trusted built-ins first, then the injected registry.
+  const entry = builtinActivityRegistry.resolve(block) ?? registry.resolve(block);
+  const lazy = entry?.load;
   // A textual, collision-free identity (no delimiter logic; JSON escapes whatever the free-form key contains).
   const entryKey = entry ? JSON.stringify([entry.kind, entry.key, block.version]) : "";
 
   // Trigger the lazy component load exactly once per resolved identity. State is set ONLY from async callbacks, so
   // nothing is set synchronously inside the effect (no cascading-render warning); the body is derived below.
   useEffect(() => {
-    if (!entry) return;
+    if (!lazy) return;
     if (loadedByKey[entryKey] || erroredKeys.has(entryKey) || inflightRef.current.has(entryKey)) return;
     inflightRef.current.add(entryKey);
-    entry.load()
+    lazy()
       .then(mod => { inflightRef.current.delete(entryKey); if (mountedRef.current) setLoadedByKey(prev => ({ ...prev, [entryKey]: mod.default })); })
       .catch(() => { inflightRef.current.delete(entryKey); if (mountedRef.current) setErroredKeys(prev => new Set(prev).add(entryKey)); });
-  }, [entry, entryKey, loadedByKey, erroredKeys]);
+  }, [lazy, entryKey, loadedByKey, erroredKeys]);
 
-  const Comp: ActivityComponent | undefined = builtin ? builtin.component : entry ? loadedByKey[entryKey] : undefined;
-  const loadFailed = entry ? erroredKeys.has(entryKey) : false;
-  // Renderer capability AUTHORITY: the built-in's or the registry entry's declaration. Content never adds a control.
-  const caps: ActivityCapabilities = builtin ? builtin.capabilities : (entry?.capabilities ?? {});
+  const Comp: ActivityComponent | undefined = entry?.component ?? (lazy ? loadedByKey[entryKey] : undefined);
+  const loadFailed = lazy ? erroredKeys.has(entryKey) : false;
+  // Renderer capability AUTHORITY: the resolved entry's declaration (built-in or registry). Content never adds one.
+  const caps: ActivityCapabilities = entry?.capabilities ?? {};
 
   // Announce readiness once — the live component mounts exactly once (fullscreen never remounts it).
   useEffect(() => {
@@ -118,8 +113,9 @@ export default function LearningActivityHost({
     emit(cmd === "reset" ? { type: "reset", activityId: block.id } : { type: "replayed", activityId: block.id });
   };
 
-  // No live renderer (Phase 3A production for registry families, or unsupported version) -> static fallback.
-  if ((!entry && !builtin) || loadFailed) {
+  // No trusted renderer for this exact identity (unknown key, unsupported version, empty production registry) or a
+  // failed chunk load -> static fallback.
+  if (!entry || loadFailed) {
     return <ActivityFallback block={block} reason={loadFailed ? "error" : "pending"} />;
   }
   if (!Comp) {

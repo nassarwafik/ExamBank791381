@@ -42,6 +42,7 @@ export type ContentIssueCode =
   | "activity-invalid-capabilities"
   | "guided-empty-steps"
   | "guided-invalid-step"
+  | "guided-duplicate-step-id"
   | "invalid-table-row";
 
 /** A single structured validation finding. Location fields are filled in from the outermost known node. */
@@ -271,7 +272,9 @@ function checkActivity(block: ActivityBlock, add: (c: ContentIssueCode, m: strin
 
 /**
  * Guided (حل مع المعلم) structure: a NON-EMPTY ordered `steps` array whose every step has a non-empty id and
- * non-empty structured `text` spans (never raw HTML). Empty/malformed steps would render a hollow walkthrough.
+ * non-empty structured `text` spans (never raw HTML), and whose step ids are unique WITHIN this guided block
+ * (they are the React key and the future reveal/analytics identity; uniqueness across different guided blocks is
+ * not required). Empty/malformed/duplicated steps would render a hollow or ambiguous walkthrough.
  */
 function checkGuided(
   block: { steps?: unknown },
@@ -280,12 +283,19 @@ function checkGuided(
 ) {
   const steps = block.steps;
   if (!Array.isArray(steps) || steps.length === 0) { add("guided-empty-steps", "guided requires a non-empty steps array", loc); return; }
+  const seen = new Set<string>();
+  let dupReported = false;
   for (const s of steps as { id?: unknown; text?: unknown }[]) {
     const spans = Array.isArray(s?.text) ? (s.text as { text?: unknown }[]) : [];
     const hasText = spans.some(sp => isNonEmptyString(sp?.text));
     if (!isNonEmptyString(s?.id) || !hasText) {
       add("guided-invalid-step", "each guided step needs a non-empty id and non-empty text spans", loc);
       break;
+    }
+    if (seen.has(s.id)) {
+      if (!dupReported) { add("guided-duplicate-step-id", `duplicate guided step id "${s.id}" within one guided block`, loc); dupReported = true; }
+    } else {
+      seen.add(s.id);
     }
   }
 }

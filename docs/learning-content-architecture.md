@@ -67,9 +67,11 @@ only, and `printedPage` (the number printed on the paper) differs from the PDF p
 - **simulation / animation / guided / interactive-diagram** — the four interactive **activity** families (Phase 3A
   engine). Each is a pure DATA descriptor: a trusted registry **key** (`simulationType` / `animationType` /
   `guidedType` / `interactionType` — a plain string, never a component/function/path), a required positive-integer
-  `version`, a `title`, and optional `capabilities` / static `fallback` / opaque `config`. Detailed behavior is a
-  later phase; the engine renders a faithful static fallback until a trusted renderer is registered (see
-  *Interactive Learning Engine* below).
+  `version`, a `title`, and optional `capabilities` / static `fallback` / opaque `config`. A descriptor renders
+  live only when a trusted renderer owns its exact `{kind, key, version}`; otherwise the engine renders a faithful
+  static fallback. In Phase 3A the generic built-in `guided / reveal / v1` walkthrough presenter has real behavior;
+  real networking simulations / animations / interactive diagrams are later phases (see *Interactive Learning
+  Engine* below).
 
 Every block carries a **mandatory** `origin` and an optional block-level `source` (see *Book Fidelity* below).
 
@@ -110,14 +112,15 @@ never on the human message. Codes: `schema-version-mismatch`, `unknown-course`, 
 `invalid-origin`, `origin-policy-violation`, `invalid-example-mode`, `unsupported-block-type`, `image-missing-alt`,
 `invalid-direction`, `quiz-empty-options`, `quiz-mcq-answer-count`, `activity-missing-key`,
 `activity-invalid-version`, `activity-missing-title`, `activity-invalid-capabilities`, `guided-empty-steps`,
-`guided-invalid-step`, `invalid-table-row`.
+`guided-invalid-step`, `guided-duplicate-step-id`, `invalid-table-row`.
 
 Activity descriptors (Phase 3A) are validated centrally as pure data: `activity-missing-key` (empty registry key),
 `activity-invalid-version` (missing / non-positive-integer `version`), `activity-missing-title`,
 `activity-invalid-capabilities` (capabilities must be an object of optional **boolean** flags — `fullscreen: "yes"`,
 an unknown key, an array or `null` are rejected), a fallback image with no `alt` reuses `image-missing-alt`, and a
 `guided` block needs a non-empty `steps` array whose every step has a non-empty id and non-empty text spans
-(`guided-empty-steps` / `guided-invalid-step`). `config` stays opaque to the central validator (a registered
+(`guided-empty-steps` / `guided-invalid-step`), with step ids unique within that block
+(`guided-duplicate-step-id`; uniqueness across different guided blocks is not required). `config` stays opaque to the central validator (a registered
 renderer may validate its own config schema later). `simulationType` (and the other family keys) are **free-form
 registry keys, not an enum** — a new key is valid content; a missing renderer is a runtime fallback, not a
 validation error. All four families are enrichment-only (`origin-policy-violation` if marked `book`).
@@ -331,15 +334,23 @@ ordered `steps: GuidedStep[]` (`{ id, text: RichText, note? }`) → `result?` (s
 progressive-reveal presenter (`GuidedActivity`) renders it — prompt → «فكّر أولًا» → reveal one step at a time →
 result/explanation — with real keyboard-operable buttons (≥44px), restart through the shell's generic `reset`,
 reduced-motion honored, safe spans only (never raw HTML), and state in React memory only (no persistence). Because
-it is built in, guided needs no registry entry and the production activity registry stays empty.
+it is built in, guided needs no entry in `productionActivityRegistry` (which stays empty) — but it is still resolved
+by **exact identity**: the built-in registry (`builtins.ts`) owns precisely `guided / reveal / v1`. A guided block
+with an unknown `guidedType` (e.g. a future branching walkthrough) or an unsupported `version` falls back to the
+static surface until a trusted presenter for that exact identity is added there; dispatch is never by block type.
 
 **Trusted registry + lazy loader.** `createActivityRegistry([...])` maps `{kind, key, version}` → a
 `RegisteredActivity` whose component is loaded through a statically-authored `load` thunk (its own code-split
 chunk). Content supplies only the **key** — never a component name, function, module path, or any executable code.
 There is **no `eval`, no `new Function`, and no dynamic `import()` of a data path**. `productionActivityRegistry`
-ships **EMPTY** in Phase 3A, so every descriptor renders its faithful static `ActivityFallback` and no activity
-chunk ever loads in production. Registries are **injected** (the reader defaults to the empty production one; tests
-inject a synthetic one) — dependency injection, exactly like the reader's content API.
+ships **EMPTY** in Phase 3A: no registry-backed renderer (real simulation / animation / interactive diagram) is
+registered, so those descriptors render their faithful static `ActivityFallback` and no activity chunk ever loads
+in production. This does **not** mean every activity family falls back — the generic built-in `guided / reveal / v1`
+presenter (`builtinActivityRegistry`, eager component, same `{kind, key, version}` discipline) is intentionally
+available. Overlapping ownership of one `{kind, key, version}` by two registrations is rejected at registry
+construction (`ActivityRegistryError`); disjoint version sets are fine. Registries are **injected** (the reader
+defaults to the empty production one; tests inject a synthetic one) — dependency injection, exactly like the
+reader's content API.
 
 **Shell (`LearningActivityHost`).** The single place that touches the engine: it resolves a built-in presenter or
 the injected registry (no match / unsupported version → static fallback), lazily loads a trusted component (held in

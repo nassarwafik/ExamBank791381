@@ -269,6 +269,22 @@ describe("Phase 2 — content validator", () => {
     expect(codes(cloneCourse())).not.toContain("guided-invalid-step");
   });
 
+  it("rejects DUPLICATE step ids within one guided block (guided-duplicate-step-id) — not across different blocks", () => {
+    const guided = (c: LearningCourseContent) => c.modules[2].lessons[0].pages[4].blocks[1] as { steps: { id: string; text: { text: string }[] }[] };
+    const dup = cloneCourse();
+    guided(dup).steps = [{ id: "step-1", text: [{ text: "أ" }] }, { id: "step-1", text: [{ text: "ب" }] }];
+    has(dup, "guided-duplicate-step-id");
+    expect(codes(dup).filter(x => x === "guided-duplicate-step-id").length).toBe(1);   // reported once per block
+    // the same step id reused by a SECOND guided block on the page is fine (uniqueness is per owning block)
+    const twoBlocks = cloneCourse();
+    const page = twoBlocks.modules[2].lessons[0].pages[4];
+    const second = structuredClone(page.blocks[1]);
+    (second as { id: string }).id = "fg-b2-copy";
+    page.blocks.push(second);   // identical step ids "fg-b2-s1"/"fg-b2-s2" in two different guided blocks
+    expect(codes(twoBlocks)).not.toContain("guided-duplicate-step-id");
+    expect(codes(cloneCourse())).not.toContain("guided-duplicate-step-id");
+  });
+
   it("flags a table row that does not match the header count", () => {
     const c = cloneCourse();
     const table = c.modules[1].lessons[0].pages[0].blocks.find(b => b.type === "table")!;

@@ -6,8 +6,10 @@
 //   - Content supplies only a registry KEY (a plain string) + opaque `config` DATA — never a component name,
 //     function, module path, or executable code. There is no eval, no new Function, and no dynamic import of a
 //     string taken from content. A renderer is reached ONLY through a statically-authored `load` thunk.
-//   - The registry is TRUSTED code in this repo. Production ships it EMPTY (Phase 3A builds no live activities),
-//     so every descriptor renders its faithful static fallback and no activity code is ever loaded in production.
+//   - The registry is TRUSTED code in this repo. Production ships the registry-backed one EMPTY (Phase 3A builds
+//     no real simulation/animation), so those descriptors render their faithful static fallback and no activity
+//     chunk is ever loaded in production. Generic built-in presenters (builtins.ts) resolve with the same
+//     {kind, key, version} discipline — never by block type alone.
 //   - The engine performs ZERO persistence and ZERO network: the only sink shipped is a no-op (no progress, no
 //     grades, no rank, no /api). Progress is a separate later domain.
 //
@@ -68,19 +70,26 @@ export type ActivityComponent = ComponentType<LearningActivityProps>;
 /** A statically-analyzable code-split loader for a trusted repo component. NEVER a path taken from content. */
 export type ActivityComponentLoader = () => Promise<{ default: ActivityComponent }>;
 
+/**
+ * How a registered renderer's component is obtained: a LAZY `load` thunk (its own code-split chunk — the normal
+ * case for real simulations/animations) or an EAGER `component` (a generic built-in presenter that ships inside the
+ * engine chunk, e.g. the guided "reveal" walkthrough). Exactly one of the two.
+ */
+export type ActivityComponentSource =
+  | { load: ActivityComponentLoader; component?: undefined }
+  | { component: ActivityComponent; load?: undefined };
+
 /** One trusted, registered renderer. Authored in this repo and registered by data — never named by content. */
-export interface RegisteredActivity {
+export type RegisteredActivity = ActivityComponentSource & {
   /** The activity family this renderer serves (e.g. "simulation"). */
   kind: ActivityBlockType;
   /** The registry key it answers to (e.g. "vlan"), matched against `activityKey(block)`. */
   key: string;
   /** Content `version`s this renderer understands; a block with an unsupported version falls back gracefully. */
   versions: readonly number[];
-  /** Lazy component loader (its own chunk). Called only when a matching descriptor is actually rendered. */
-  load: ActivityComponentLoader;
   /** Capabilities the renderer declares — the AUTHORITY for which shell controls appear (content cannot add any). */
   capabilities?: ActivityCapabilities;
-}
+};
 
 // ── Registry ──────────────────────────────────────────────────────────────────────────────────────────────────
 export interface LearningActivityRegistry {
@@ -94,10 +103,27 @@ export interface LearningActivityRegistry {
   readonly size: number;
 }
 
+/** Thrown at registry CONSTRUCTION when two trusted entries claim the same {kind, key, version} (fail fast). */
+export class ActivityRegistryError extends Error {
+  readonly kind: ActivityBlockType;
+  readonly key: string;
+  readonly version: number;
+  constructor(kind: ActivityBlockType, key: string, version: number) {
+    super(`activity registry: {${kind}, ${JSON.stringify(key)}, v${version}} is owned by more than one renderer`);
+    this.name = "ActivityRegistryError";
+    this.kind = kind;
+    this.key = key;
+    this.version = version;
+  }
+}
+
 /**
  * Build an immutable activity registry from a fixed list of trusted entries. Indexed by NESTED MAPS
  * (kind -> key -> entries) — no delimiter, so a free-form key can never collide with a separator. Resolution is by
- * exact {kind, key} then a `version` match. Pure data structure — constructing it imports NO activity component.
+ * exact {kind, key} then a `version` match. Ownership of every {kind, key, version} must be UNIQUE: overlapping
+ * version sets for the same kind+key (which would let one registration silently shadow another) throw an
+ * `ActivityRegistryError` during construction; disjoint version sets (v1/v2 renderer + v3 renderer) are fine.
+ * Pure data structure — constructing it imports NO lazily-loaded activity component.
  */
 export function createActivityRegistry(entries: readonly RegisteredActivity[]): LearningActivityRegistry {
   const byKind = new Map<ActivityBlockType, Map<string, RegisteredActivity[]>>();
@@ -105,8 +131,12 @@ export function createActivityRegistry(entries: readonly RegisteredActivity[]): 
     let byKey = byKind.get(e.kind);
     if (!byKey) { byKey = new Map(); byKind.set(e.kind, byKey); }
     const arr = byKey.get(e.key);
-    if (arr) arr.push(e);
-    else byKey.set(e.key, [e]);
+    if (arr) {
+      for (const v of e.versions) if (arr.some(other => other.versions.includes(v))) throw new ActivityRegistryError(e.kind, e.key, v);
+      arr.push(e);
+    } else {
+      byKey.set(e.key, [e]);
+    }
   }
   return {
     resolve(block) {
@@ -120,8 +150,11 @@ export function createActivityRegistry(entries: readonly RegisteredActivity[]): 
 }
 
 /**
- * The PRODUCTION activity registry — deliberately EMPTY in Phase 3A. No live activity is shipped yet, so every
- * descriptor renders its faithful static fallback and no activity chunk is ever imported in production. Real
- * renderers are registered here (each behind a code-split `load` thunk) in later phases; the Reader never changes.
+ * The PRODUCTION activity registry for REGISTRY-BACKED renderers (real simulations / animations / interactive
+ * diagrams) — deliberately EMPTY in Phase 3A: none is shipped yet, so every registry-backed descriptor renders its
+ * faithful static fallback and no activity chunk is ever imported in production. The generic BUILT-IN presenters
+ * (see builtins.ts — currently only guided/reveal/v1) are resolved separately with the same identity discipline;
+ * an empty production registry therefore does NOT mean every activity family falls back. Real renderers are
+ * registered here (each behind a code-split `load` thunk) in later phases; the Reader never changes.
  */
 export const productionActivityRegistry: LearningActivityRegistry = createActivityRegistry([]);
