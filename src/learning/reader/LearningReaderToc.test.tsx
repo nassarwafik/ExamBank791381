@@ -1,6 +1,6 @@
 // @vitest-environment happy-dom
 import { describe, it, expect, afterEach, vi } from "vitest";
-import { render, cleanup, screen, fireEvent } from "@testing-library/react";
+import { render, cleanup, screen, fireEvent, within } from "@testing-library/react";
 import LearningReaderToc from "./LearningReaderToc";
 import { readerManifest } from "./readerFixtures";
 
@@ -8,7 +8,7 @@ afterEach(cleanup);
 
 function mount(selectedPageId = "p1") {
   const onSelectPage = vi.fn();
-  render(<LearningReaderToc manifest={readerManifest} selectedPageId={selectedPageId} activeModuleId="m1" onSelectPage={onSelectPage} />);
+  render(<LearningReaderToc manifest={readerManifest} selectedPageId={selectedPageId} activeModuleId="m1" onSelectPage={onSelectPage} idPrefix="desktop" />);
   return { onSelectPage };
 }
 
@@ -44,5 +44,38 @@ describe("Phase 3 — reader TOC (manifest-only)", () => {
     fireEvent.click(screen.getByRole("button", { name: "صفحة ٣" }));
     expect(onSelectPage).toHaveBeenCalledWith("p3");
     expect(fetchSpy).not.toHaveBeenCalled();
+  });
+});
+
+describe("Phase 3 — two TOC instances (desktop + mobile) coexist without id collisions", () => {
+  it("gives every DOM id a unique value, and each aria-controls resolves to a panel WITHIN its own instance", () => {
+    const onSelectPage = vi.fn();
+    const { container } = render(
+      <>
+        <div data-testid="desktop"><LearningReaderToc manifest={readerManifest} selectedPageId="p1" activeModuleId="m1" onSelectPage={onSelectPage} idPrefix="desktop" /></div>
+        <div data-testid="mobile"><LearningReaderToc manifest={readerManifest} selectedPageId="p1" activeModuleId="m1" onSelectPage={onSelectPage} idPrefix="mobile" /></div>
+      </>,
+    );
+    // 1) every id in the DOM is globally unique
+    const ids = Array.from(container.querySelectorAll("[id]")).map(el => el.id);
+    expect(ids.length).toBeGreaterThan(0);
+    expect(new Set(ids).size).toBe(ids.length);
+
+    // 2) each module button's aria-controls points to an EXISTING panel inside the SAME instance
+    for (const scope of ["desktop", "mobile"] as const) {
+      const root = screen.getByTestId(scope);
+      for (const btn of root.querySelectorAll<HTMLElement>(".learning-reader-toc-modbtn")) {
+        const target = btn.getAttribute("aria-controls")!;
+        expect(target).toContain("learning-reader-toc-" + scope + "-");
+        const panel = document.getElementById(target);
+        expect(panel).toBeTruthy();
+        expect(root.contains(panel)).toBe(true);           // resolves within its own instance, not the other
+      }
+    }
+
+    // 3) one navigation authority: a page button in EITHER instance calls the same onSelectPage
+    const mobile = screen.getByTestId("mobile");
+    fireEvent.click(within(mobile).getByRole("button", { name: "صفحة ٣" }));
+    expect(onSelectPage).toHaveBeenCalledWith("p3");
   });
 });

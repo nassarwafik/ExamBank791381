@@ -144,12 +144,15 @@ export default function LearningReader({
     source: located.page.source,
   } : null;
 
-  const toc = (
+  // Both TOC instances share the SAME page-selection authority (`selectPage`) but carry distinct `idPrefix`es so
+  // their DOM ids never collide while both exist (desktop sidebar + open mobile drawer).
+  const renderToc = (idPrefix: string) => (
     <LearningReaderToc
       manifest={manifest}
       selectedPageId={selectedPageId}
       activeModuleId={located?.module.id}
       onSelectPage={selectPage}
+      idPrefix={idPrefix}
     />
   );
 
@@ -168,7 +171,7 @@ export default function LearningReader({
       <p className="learning-reader-partial" role="note">يجري تجهيز محتوى الكتاب التفاعلي تدريجيًا.</p>
 
       <div className="learning-reader-layout">
-        <aside className="learning-reader-sidebar" aria-label="فهرس الكتاب (سطح المكتب)">{toc}</aside>
+        <aside className="learning-reader-sidebar" aria-label="فهرس الكتاب (سطح المكتب)">{renderToc("desktop")}</aside>
 
         <main className="learning-reader-main" ref={contentRef} tabIndex={-1}>
           <div className="learning-reader-jump">
@@ -209,7 +212,7 @@ export default function LearningReader({
                 <IconClose size={18} aria-hidden="true" />إغلاق
               </button>
             </div>
-            {toc}
+            {renderToc("mobile")}
           </div>
         </div>
       )}

@@ -45,9 +45,11 @@ export type LearningCourse = {
 };
 
 /**
- * The first course: the owner-provided networking book 791381. The six batches mirror the existing book
- * organization at a high level — they are overview labels only (Phase 1 does not open pages or transcribe the
- * 264-page source PDF; that source stays the authoritative content for future conversion).
+ * The first course: the owner-provided networking book 791381. Its eight high-level presentation sections
+ * (المقدمة · الأساسيات·الأعداد·IP · الأجهزة والرسائل · النماذج والبروتوكولات والأمان · برمجة السويتش و VLAN ·
+ * الأمان·Wi-Fi·IPv6·DHCP · ACL·التوجيه·WAN · التلخيص) mirror the source book's organization at a high level — they
+ * are overview labels only (not lessons/pages, and not a transcription of the 264-page source PDF, which stays the
+ * authoritative content for future conversion).
  */
 export const LEARNING_COURSES: LearningCourse[] = [
   {

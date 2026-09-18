@@ -10,12 +10,15 @@ import type { LearningCourseManifest } from "../content/types";
  * scrolled into view when it changes (e.g. when a mobile drawer is reopened).
  */
 export default function LearningReaderToc({
-  manifest, selectedPageId, activeModuleId, onSelectPage,
+  manifest, selectedPageId, activeModuleId, onSelectPage, idPrefix,
 }: {
   manifest: LearningCourseManifest;
   selectedPageId: string;
   activeModuleId: string | undefined;
   onSelectPage: (pageId: string) => void;
+  /** Unique per rendered TOC instance (e.g. "desktop" / "mobile") so the desktop sidebar and the mobile drawer
+   *  can both exist in the DOM without colliding ids; each button's aria-controls stays within its own instance. */
+  idPrefix: string;
 }) {
   const modules = orderedModules(manifest);
   // Manual expand/collapse state; the active module is always forced open on top of the user's choices.
@@ -34,7 +37,7 @@ export default function LearningReaderToc({
         {modules.map(m => {
           const isActiveModule = m.id === activeModuleId;
           const open = isActiveModule || !collapsed[m.id];
-          const panelId = "learning-reader-toc-" + m.id;
+          const panelId = "learning-reader-toc-" + idPrefix + "-" + m.id;
           return (
             <li key={m.id} className="learning-reader-toc-module">
               <button

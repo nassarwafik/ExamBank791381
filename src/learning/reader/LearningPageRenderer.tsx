@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import { IconWarning, IconBook, IconLock } from "../../icons";
+import { IconWarning, IconBook, IconSparkles } from "../../icons";
 import RichTextRenderer from "./RichTextRenderer";
 import type {
   ContentBlock, ContentPage, ContentSource, CalloutKind, PracticeQuestion,
@@ -113,7 +113,7 @@ function BlockView({ block }: { block: ContentBlock }) {
   const label = enrichmentLabel(block);
   return (
     <section className={"learning-reader-block is-enrichment kind-" + block.type} aria-label={label}>
-      <p className="learning-reader-enrichment-tag"><IconLock size={13} aria-hidden="true" />{label}</p>
+      <p className="learning-reader-enrichment-tag"><IconSparkles size={13} aria-hidden="true" />{label}</p>
       {renderBlock(block)}
     </section>
   );

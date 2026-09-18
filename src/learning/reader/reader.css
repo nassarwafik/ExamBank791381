@@ -141,7 +141,7 @@
 .learning-reader-toc-modtitle{ min-width:0; overflow-wrap:anywhere; }
 .learning-reader-toc-lessons{ padding-inline-start:var(--eb-space-2); padding-block-end:var(--eb-space-2); }
 .learning-reader-toc-lessontitle{ margin:var(--eb-space-1) 0; color:var(--eb-muted); font-size:var(--eb-fs-12); font-weight:var(--eb-fw-semibold); }
-.learning-reader-toc-page{ width:100%; min-height:40px; display:flex; align-items:center; padding:var(--eb-space-1) var(--eb-space-3); background:none; border:0; border-inline-start:2px solid transparent; cursor:pointer; color:var(--eb-text); font:inherit; font-size:var(--eb-fs-13); text-align:start; overflow-wrap:anywhere; }
+.learning-reader-toc-page{ width:100%; min-height:44px; display:flex; align-items:center; padding:var(--eb-space-1) var(--eb-space-3); background:none; border:0; border-inline-start:2px solid transparent; cursor:pointer; color:var(--eb-text); font:inherit; font-size:var(--eb-fs-13); text-align:start; overflow-wrap:anywhere; }
 .learning-reader-toc-page:hover{ background:var(--eb-surface-2); }
 .learning-reader-toc-page.is-active{ color:var(--eb-primary-strong); background:var(--eb-primary-050); border-inline-start-color:var(--eb-primary); font-weight:var(--eb-fw-semibold); }
 
