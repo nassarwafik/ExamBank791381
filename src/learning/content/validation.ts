@@ -27,7 +27,9 @@ export type ContentIssueCode =
   | "missing-source"
   | "invalid-source-page"
   | "source-id-mismatch"
+  | "missing-origin"
   | "invalid-origin"
+  | "origin-policy-violation"
   | "invalid-example-mode"
   | "unsupported-block-type"
   | "image-missing-alt"
@@ -173,9 +175,16 @@ function checkBlock(
     return;
   }
   if (block.dir !== undefined && !isDirection(block.dir)) add("invalid-direction", "block dir must be rtl|ltr", loc);
-  // Provenance (OWNER §1/§2): origin, when present, must be a known value; a block-level source is validated too.
-  if (block.origin !== undefined && !CONTENT_ORIGINS.includes(block.origin)) {
+  // Provenance (OWNER §1–§6): origin is MANDATORY and never defaulted — a missing or invalid origin is an error,
+  // so imported/generated content can never silently pass as the book.
+  const origin = (block as { origin?: unknown }).origin;
+  if (origin === undefined || origin === null) {
+    add("missing-origin", "block origin is required (book|teacher-enrichment)", loc);
+  } else if (!CONTENT_ORIGINS.includes(origin as (typeof CONTENT_ORIGINS)[number])) {
     add("invalid-origin", `block origin must be one of ${CONTENT_ORIGINS.join("|")}`, loc);
+  } else if (origin === "book" && isEnrichmentOnly(block)) {
+    // Clarification callouts, interactive practice and simulations are enrichment layers, never book content.
+    add("origin-policy-violation", `${enrichmentKindLabel(block)} must be origin "teacher-enrichment", not "book"`, loc);
   }
   if (block.source) checkSource(block.source, courseId, add, loc);
 
@@ -214,6 +223,14 @@ function checkBlock(
       }
       break;
   }
+}
+
+/** Block families that are, by policy, ALWAYS teacher enrichment (never faithful book content). */
+function isEnrichmentOnly(block: ContentBlock): boolean {
+  return block.type === "practice" || block.type === "simulation" || (block.type === "callout" && block.kind === "clarification");
+}
+function enrichmentKindLabel(block: ContentBlock): string {
+  return block.type === "callout" ? "a clarification callout" : `a ${block.type} block`;
 }
 
 function checkPractice(

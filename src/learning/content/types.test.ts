@@ -6,14 +6,14 @@ import { validCourse } from "./content.fixtures";
 const page: ContentPage = {
   id: "p", title: "p", order: 1, source: { kind: "book", sourceId: "791381", pdfPageStart: 10 }, blocks: [],
 };
-const bookBlock: ContentBlock = { id: "b1", type: "text", spans: [{ text: "x" }] };                       // origin omitted ⇒ book
+const bookBlock: ContentBlock = { id: "b1", type: "text", origin: "book", spans: [{ text: "x" }] };
 const enrichBlock: ContentBlock = { id: "b2", type: "text", origin: "teacher-enrichment", spans: [{ text: "y" }] };
 const ownSourceBlock: ContentBlock = {
   id: "b3", type: "text", origin: "teacher-enrichment", source: { kind: "book", sourceId: "791381", pdfPageStart: 12 }, spans: [{ text: "z" }],
 };
 
 describe("Phase 2 — provenance & source inheritance", () => {
-  it("treats a block with no explicit origin as faithful book content", () => {
+  it("blockOrigin returns the explicitly declared provenance (it never invents one)", () => {
     expect(blockOrigin(bookBlock)).toBe("book");
     expect(blockOrigin(enrichBlock)).toBe("teacher-enrichment");
   });

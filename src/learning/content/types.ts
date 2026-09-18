@@ -50,8 +50,6 @@ export type RichText = InlineSpan[];
 // ────────────────────────────────────────────────────────────────────────────
 export type ContentOrigin = "book" | "teacher-enrichment";
 export const CONTENT_ORIGINS: readonly ContentOrigin[] = ["book", "teacher-enrichment"];
-/** A block with no explicit origin is treated as faithful book content. */
-export const DEFAULT_ORIGIN: ContentOrigin = "book";
 
 // ────────────────────────────────────────────────────────────────────────────
 // Block families (§12/§13) — discriminated union on `type`; every block has an id.
@@ -61,10 +59,13 @@ export interface BlockBase {
   /** Optional per-block direction override (defaults to the lesson/course direction). */
   dir?: ContentDirection;
   /**
-   * Provenance (OWNER §1/§2). Omitted ⇒ "book" (faithful source content). "teacher-enrichment" marks added
-   * examples / practice / hints / simulations / clarifications so they never masquerade as the book.
+   * Provenance (OWNER §1/§2). MANDATORY and never defaulted: every block must consciously declare "book"
+   * (faithful source content) or "teacher-enrichment" (added examples / practice / hints / simulations /
+   * clarifications / added visuals). There is NO silent default — a block can never accidentally masquerade as
+   * the book. The validator additionally requires clarification callouts, practice and simulation to be
+   * teacher-enrichment (origin-policy-violation).
    */
-  origin?: ContentOrigin;
+  origin: ContentOrigin;
   /**
    * Optional BLOCK-level source (OWNER §2). Inheritance rule:
    *   • origin "book" → may omit `source` and INHERIT the page's source (see `effectiveBlockSource`).
@@ -215,18 +216,19 @@ export interface ContentPage {
   keywords?: string[];
 }
 
-/** The effective provenance of a block (missing ⇒ book). */
+/** The explicit provenance of a block. Returns the declared value; it never invents provenance. */
 export function blockOrigin(block: BlockBase): ContentOrigin {
-  return block.origin ?? DEFAULT_ORIGIN;
+  return block.origin;
 }
 
 /**
- * The effective source of a block (OWNER §2 inheritance rule): an explicit block `source` wins; otherwise a
- * book-origin block inherits its page's source, and a teacher-enrichment block without a source has none.
+ * The effective source of a block (OWNER §2 inheritance rule, unchanged): an explicit block `source` wins;
+ * otherwise a book-origin block inherits its page's source, and a teacher-enrichment block without a source has
+ * none. (A block missing/invalid `origin` is a validation error and does not inherit book provenance here.)
  */
 export function effectiveBlockSource(page: ContentPage, block: BlockBase): ContentSource | undefined {
   if (block.source) return block.source;
-  return blockOrigin(block) === "book" ? page.source : undefined;
+  return block.origin === "book" ? page.source : undefined;
 }
 
 export interface ContentLesson {

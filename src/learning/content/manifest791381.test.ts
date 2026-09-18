@@ -51,13 +51,15 @@ describe("Phase 2 — 791381 content manifest", () => {
     expect(pagePosition(manifest, flat[0].page.id)).toEqual({ index: 1, total: flat.length });
   });
 
-  it("maps the six Phase-1 batches to one-or-more real modules (batch → modules), matching catalog labels", () => {
+  it("preserves all six Phase-1 batch identities and validates every populated module mapping", () => {
     const course = findLearningCourse("791381")!;
     const batches = manifest.batches!;
     // same six batch ids + labels as the Phase-1 catalog overview (presentation stays in sync)
     expect(batches.map(b => b.id)).toEqual(course.overviewBatches.map(b => b.id));
     expect(batches.map(b => b.label)).toEqual(course.overviewBatches.map(b => b.label));
-    // every referenced module id exists; at least one batch maps to MULTIPLE modules (proves batch ≠ module)
+    // every referenced module id exists; at least one batch maps to MULTIPLE modules (proves batch ≠ module).
+    // Empty mappings are allowed: the manifest is a PARTIAL skeleton, so a batch whose book sections are not yet
+    // converted carries no module ids for now (not "the batch is empty in the book").
     const moduleIds = new Set(manifest.modules.map(m => m.id));
     for (const b of batches) for (const mid of b.moduleIds) expect(moduleIds.has(mid)).toBe(true);
     expect(batches.some(b => b.moduleIds.length > 1)).toBe(true);

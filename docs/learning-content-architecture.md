@@ -65,7 +65,7 @@ only, and `printedPage` (the number printed on the paper) differs from the PDF p
 - **practice** — lightweight interactive practice with immediate-feedback readiness. Question kinds `multipleChoice` / `trueFalse` / `shortInput` / `fillBlank`, plus a `feedback` object (`hint` / `correctFeedback` / `incorrectFeedback` / `explanation`). **Not** the ExamBank exam schema, not graded, not a rank/medal input. *Extension path:* richer kinds (matching, ordering, classify, binary-entry, IP/CIDR, CLI) are added as new union members (or expressed as `simulation`) without touching existing ones.
 - **simulation** — a typed placeholder descriptor (`simulationType` + `title` + `description`); detailed configs are Phase 5.
 
-Every block also carries two optional provenance fields (see *Book Fidelity* below): `origin` and a block-level `source`.
+Every block carries a **mandatory** `origin` and an optional block-level `source` (see *Book Fidelity* below).
 
 ## RTL / LTR
 
@@ -100,12 +100,14 @@ module **bodies** are authored during content conversion (a later phase) and eac
 (never throws for normal content errors, never mutates/normalizes). Callers branch on `issue.code` (a stable enum),
 never on the human message. Codes: `schema-version-mismatch`, `unknown-course`, `missing-id`, `duplicate-id`,
 `missing-title`, `empty-modules`, `empty-lessons`, `empty-pages`, `page-no-blocks`, `invalid-order`,
-`duplicate-order`, `missing-source`, `invalid-source-page`, `source-id-mismatch`, `invalid-origin`,
-`invalid-example-mode`, `unsupported-block-type`, `image-missing-alt`, `invalid-direction`, `quiz-empty-options`,
-`quiz-mcq-answer-count`, `unsupported-simulation-type`, `invalid-table-row`.
+`duplicate-order`, `missing-source`, `invalid-source-page`, `source-id-mismatch`, `missing-origin`,
+`invalid-origin`, `origin-policy-violation`, `invalid-example-mode`, `unsupported-block-type`, `image-missing-alt`,
+`invalid-direction`, `quiz-empty-options`, `quiz-mcq-answer-count`, `unsupported-simulation-type`, `invalid-table-row`.
 
 `source-id-mismatch` enforces that every `source.sourceId` (page, module, or block level) equals the course id —
-content can never reference another book by accident.
+content can never reference another book by accident. `missing-origin` / `invalid-origin` require every block to
+declare a valid provenance, and `origin-policy-violation` enforces that clarification callouts, practice and
+simulation blocks are `teacher-enrichment` (never `book`).
 
 **Normalization policy: none.** A validator validates. It never reorders content, invents ids/titles/source pages,
 generates answers, or rewrites Arabic. Any future normalization is a separate, explicit converter tool.
@@ -134,17 +136,35 @@ as `origin:"teacher-enrichment"`. The original book and any added enrichment mus
 
 ### Block provenance (origin)
 
-Every block declares its provenance; the model keeps book content and added enrichment visibly separate:
+Every block **must explicitly** declare its provenance — there is **no default**, so a block can never accidentally
+masquerade as book content (critical for the upcoming 264-page conversion, where thousands of blocks are authored):
 
 ```ts
-origin?: "book" | "teacher-enrichment"   // omitted ⇒ "book"
+origin: "book" | "teacher-enrichment"   // MANDATORY — never defaulted
 ```
 
-- `"book"` — content directly based on the source book.
-- `"teacher-enrichment"` — added to improve learning: extra solved/practice examples, hints, interactive practice,
-  immediate feedback, diagrams, simulations, explanatory notes, clarifications.
+- `"book"` — content faithfully represented from the PDF: original text, example, table, diagram, summary, or an
+  original exercise represented faithfully.
+- `"teacher-enrichment"` — additions: new solved/practice examples, hints, interactive practice, immediate
+  feedback, clarifications, added diagrams, simulations, supplementary explanation.
 
-AI-generated provenance is **not** introduced now (AI is Phase 8).
+A missing `origin` is a validation error (`missing-origin`); an unknown value is `invalid-origin`.
+`blockOrigin()` returns the declared value and never invents one. AI-generated provenance is **not** introduced now
+(AI is Phase 8).
+
+**Provenance is by conscious authorship, not inferred from block type.** An `example`, `image` or `diagram` may be
+`book` (reproduced from the source) or `teacher-enrichment` (added) — the author decides and declares it.
+
+**Enrichment-only policy (enforced, `origin-policy-violation`).** Three families are interactive/added layers that
+are, by definition, never faithful book content and therefore must be `teacher-enrichment`:
+
+- a `callout` of kind `clarification` (the separable teacher note),
+- a `practice` block (interactive answer-checking is an enrichment layer over the faithful source exercise),
+- a `simulation` block (native interactive functionality added by this product).
+
+A source book diagram stays `image`/`diagram` with `origin:"book"`; the added interactive simulation is separate
+enrichment. If the book contains an original question, its wording is preserved as faithful `book` blocks, and an
+interactive `practice` block (which may reference the same page via block-level `source`) is attached as enrichment.
 
 ### Block-level source + inheritance rule
 

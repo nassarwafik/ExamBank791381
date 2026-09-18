@@ -18,10 +18,10 @@ const src = (pdfPageStart: number): ContentPage["source"] => ({ kind: "book", so
 export const pageBasic: ContentPage = {
   id: "f-m01-l01-p01", title: "ما هي الشبكة؟", order: 1, source: src(8),
   blocks: [
-    { id: "fa-b1", type: "heading", text: "ما هي الشبكة؟", level: 2 },
-    { id: "fa-b2", type: "text", spans: [{ text: "الشبكة هي مجموعة أجهزة متصلة لتبادل " }, { text: "المعلومات", style: "term" }, { text: "." }] },
-    { id: "fa-b3", type: "callout", kind: "summary", title: "الخلاصة", spans: [{ text: "بدون شبكة لا تتواصل الأجهزة بسهولة." }] },
-    { id: "fa-b4", type: "image", src: "/learning/791381/network.png", alt: "رسم توضيحي لشبكة تربط عدة أجهزة" },
+    { id: "fa-b1", type: "heading", origin: "book", text: "ما هي الشبكة؟", level: 2 },
+    { id: "fa-b2", type: "text", origin: "book", spans: [{ text: "الشبكة هي مجموعة أجهزة متصلة لتبادل " }, { text: "المعلومات", style: "term" }, { text: "." }] },
+    { id: "fa-b3", type: "callout", origin: "book", kind: "summary", title: "الخلاصة", spans: [{ text: "بدون شبكة لا تتواصل الأجهزة بسهولة." }] },
+    { id: "fa-b4", type: "image", origin: "book", src: "/learning/791381/network.png", alt: "رسم توضيحي لشبكة تربط عدة أجهزة" },
   ],
 };
 
@@ -46,8 +46,8 @@ export const pageBinary: ContentPage = {
 export const pageCli: ContentPage = {
   id: "f-m03-l01-p01", title: "برمجة المنافذ من CLI", order: 1, source: src(124),
   blocks: [
-    { id: "fc-b1", type: "text", spans: [{ text: "نضبط المنفذ ثم نربطه بـ " }, { text: "VLAN", dir: "ltr", style: "code" }, { text: "." }] },
-    { id: "fc-b2", type: "code", language: "cli", dir: "ltr", code: "Switch(config)# interface f0/1\nSwitch(config-if)# switchport mode access\nSwitch(config-if)# switchport access vlan 10" },
+    { id: "fc-b1", type: "text", origin: "book", spans: [{ text: "نضبط المنفذ ثم نربطه بـ " }, { text: "VLAN", dir: "ltr", style: "code" }, { text: "." }] },
+    { id: "fc-b2", type: "code", origin: "book", language: "cli", dir: "ltr", code: "Switch(config)# interface f0/1\nSwitch(config-if)# switchport mode access\nSwitch(config-if)# switchport access vlan 10" },
   ],
 };
 
@@ -122,7 +122,7 @@ export function cloneCourse(course: LearningCourseContent = validCourse): Learni
 
 // ── Navigation fixture: 2 modules × 2 lessons × 2+ pages ─────────────────────────────────────────────────────
 function page(id: string, order: number, pdf: number): ContentPage {
-  return { id, title: id, order, source: src(pdf), blocks: [{ id: id + "-b1", type: "text", spans: [{ text: id }] }] };
+  return { id, title: id, order, source: src(pdf), blocks: [{ id: id + "-b1", type: "text", origin: "book", spans: [{ text: id }] }] };
 }
 export const navCourse: LearningCourseContent = {
   schemaVersion: 1, courseId: COURSE_ID, title: "تنقل", direction: "rtl",

@@ -77,6 +77,14 @@ describe("Phase 2 — content validator", () => {
     expect(codes(cloneCourse())).not.toContain("source-id-mismatch");
   });
 
+  it("REQUIRES an explicit origin — a runtime block with no origin is rejected (no silent book default)", () => {
+    const c = cloneCourse();
+    delete (c.modules[0].lessons[0].pages[0].blocks[0] as { origin?: unknown }).origin;
+    has(c, "missing-origin");
+    // a valid course never trips it (every fixture block declares origin explicitly)
+    expect(codes(cloneCourse())).not.toContain("missing-origin");
+  });
+
   it("flags an invalid block origin and an invalid example mode (provenance, OWNER §1/§6)", () => {
     const origin = cloneCourse();
     (origin.modules[0].lessons[0].pages[0].blocks[0] as { origin: string }).origin = "ai-generated";
@@ -87,11 +95,41 @@ describe("Phase 2 — content validator", () => {
     has(mode, "invalid-example-mode");
   });
 
-  it("accepts book vs teacher-enrichment blocks, a clarification callout, feedback fields and a block-level source", () => {
-    // the mixed page (pageMixed) exercises all of the new provenance/feedback fields and must be valid
+  it("ENFORCES enrichment-only policy: clarification, practice and simulation must be teacher-enrichment", () => {
+    // clarification callout wrongly marked as book
+    const clar = cloneCourse();
+    const c1 = clar.modules[2].lessons[0].pages[3].blocks.find(b => b.type === "callout")!;
+    (c1 as { origin: string }).origin = "book";
+    has(clar, "origin-policy-violation");
+    // practice wrongly marked as book
+    const prac = cloneCourse();
+    const p1 = prac.modules[2].lessons[0].pages[1].blocks[0];
+    (p1 as { origin: string }).origin = "book";
+    has(prac, "origin-policy-violation");
+    // simulation wrongly marked as book
+    const sim = cloneCourse();
+    const s1 = sim.modules[2].lessons[0].pages[2].blocks[0];
+    (s1 as { origin: string }).origin = "book";
+    has(sim, "origin-policy-violation");
+  });
+
+  it("accepts the enrichment blocks when correctly marked teacher-enrichment, and the whole valid course", () => {
+    // pageMixed/pageQuiz/pageSimulation already carry clarification/practice/simulation as teacher-enrichment
+    expect(codes(cloneCourse())).not.toContain("origin-policy-violation");
+    expect(codes(cloneCourse())).not.toContain("missing-origin");
     expect(codes(cloneCourse())).not.toContain("invalid-origin");
     expect(codes(cloneCourse())).not.toContain("invalid-example-mode");
     expect(codes(cloneCourse())).not.toContain("unsupported-block-type");
+  });
+
+  it("allows an example to be EITHER a book example OR a teacher-enrichment example (OWNER §7)", () => {
+    // the source solved example (pageBinary) is origin:"book" — valid as-is
+    expect(validateLearningCourseContent(cloneCourse())).toEqual([]);
+    // the same example re-marked as an extra enrichment example is ALSO valid
+    const enrich = cloneCourse();
+    const ex = enrich.modules[1].lessons[0].pages[0].blocks.find(b => b.type === "example")!;
+    (ex as { origin: string }).origin = "teacher-enrichment";
+    expect(validateLearningCourseContent(enrich)).toEqual([]);
   });
 
   it("flags a missing page source and an invalid source page number", () => {
