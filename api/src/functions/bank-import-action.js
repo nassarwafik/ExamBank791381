@@ -5,6 +5,9 @@ const { requireBuilderAuth } = require("../lib/builder-auth");
 const { getContainer, listJson, mutateJsonWithRetry } = require("../lib/platform-storage");
 const { computeDuplicateCandidates } = require("../lib/duplicate-detection");
 const { isValidBankSection } = require("../lib/section-resolver");
+// The canonical multiField builder (fields / wordBank / exactSequence answer) is the one the Exam Bank editor
+// writes with — reused here so an imported blank question is stored in exactly the shape a hand-edited one has.
+const { normalizeInput } = require("./bank-questions");
 
 const ASSETS_CONTAINER = "assets";
 const INDEX_BLOB = "index/questions-index.json";
@@ -42,10 +45,39 @@ async function loadAllBankQuestionTexts(bankContainer) {
   return flattened;
 }
 
+const BLANK_TYPES = ["fillBlank", "wordBank"];
+const optionText = option => String(option?.text ?? option?.label ?? option?.value ?? "").trim();
+
 function presentationTypeToBankType(presentationType) {
   if (presentationType === "multipleChoice") return "multipleChoice";
-  if (presentationType === "fillBlank" || presentationType === "wordBank") return "multiField";
+  if (BLANK_TYPES.includes(presentationType)) return "multiField";
   return "shortAnswer";
+}
+
+// Pure, unit-testable. Derives the canonical multiField structure for an imported fillBlank / wordBank question
+// from SOURCE-PRESENT data only, so the question lands in the Bank usable (one blank with its expected value)
+// instead of the previous `fields: []` that the editor rejects until a teacher rebuilds it by hand:
+//   - the visible answer (hasVisibleAnswer + answerText — the same value the import already stored as the
+//     accepted answer) becomes the expected value of ONE text blank;
+//   - for wordBank the detected options are the word bank and the blank is a select over them.
+// Nothing is invented: no visible answer → null; a word-bank answer that is not among the detected words (or
+// fewer than two distinct words) → null — exactly the cases the editor's validator would refuse. The caller
+// keeps such questions unchanged and flags them for teacher review. The structure itself comes from the
+// editor's normalizeInput, never from a second set of rules.
+function deriveImportedBlankStructure(importedQuestion) {
+  const presentationType = importedQuestion?.presentationType;
+  if (!BLANK_TYPES.includes(presentationType)) return null;
+  const answer = importedQuestion.hasVisibleAnswer === true ? String(importedQuestion.answerText || "").trim() : "";
+  if (!answer) return null;
+  const words = presentationType === "wordBank"
+    ? Array.from(new Set((Array.isArray(importedQuestion.options) ? importedQuestion.options : []).map(optionText).filter(Boolean)))
+    : [];
+  if (presentationType === "wordBank" && (words.length < 2 || !words.includes(answer))) return null;
+  const normalized = normalizeInput({
+    section: importedQuestion.section, presentationType, text: importedQuestion.text || "", topic: "", difficulty: 0,
+    options: [], fields: [{ id: "f1", label: "", correct: answer }], wordBank: words, answer: {}
+  });
+  return { fields: normalized.fields, wordBank: normalized.wordBank, answer: normalized.answer };
 }
 
 async function uploadImageAsset(assetsContainer, sourceId, ordinal, imageAsset) {
@@ -81,7 +113,11 @@ async function toBankQuestion(importedQuestion, sourceId, ordinal, assetsContain
     }
   }
 
-  const requiresManualReview = importedQuestion.requiresManualReview === true || assets.length === 0 && importedQuestion.hasImage;
+  // A blank-style question that could not be given a usable structure from the source stays as before but is
+  // flagged: the Bank already tells the teacher to add its blanks before use, so it genuinely needs review.
+  const blank = deriveImportedBlankStructure(importedQuestion);
+  const requiresManualReview = importedQuestion.requiresManualReview === true || assets.length === 0 && importedQuestion.hasImage
+    || (BLANK_TYPES.includes(importedQuestion.presentationType) && !blank);
 
   return {
     id: `${sourceId}-${ordinal}`,
@@ -92,22 +128,25 @@ async function toBankQuestion(importedQuestion, sourceId, ordinal, assetsContain
     type: presentationTypeToBankType(importedQuestion.presentationType),
     text: importedQuestion.text || "",
     textHtml: importedQuestion.textHtml || "",
-    options: (importedQuestion.options || []).map((option, index) => ({
+    // A derived blank question takes the editor's canonical shape whole (choices live on the fields / wordBank,
+    // options stay empty, answer is the exactSequence of expected values); everything else is unchanged.
+    options: blank ? [] : (importedQuestion.options || []).map((option, index) => ({
       value: option.value || String(index),
       label: option.text || "",
       text: option.text || "",
       textHtml: "",
       order: index
     })),
-    fields: [],
+    fields: blank ? blank.fields : [],
+    ...(blank ? { wordBank: blank.wordBank } : {}),
     parts: [],
-    answer: importedQuestion.hasVisibleAnswer && importedQuestion.answerText
+    answer: blank ? blank.answer : (importedQuestion.hasVisibleAnswer && importedQuestion.answerText
       ? { mode: "anyAccepted", values: [importedQuestion.answerText] }
-      : { mode: "manual", values: [] },
+      : { mode: "manual", values: [] }),
     assets,
     flags: {
       hasImage: assets.length > 0,
-      hasOptions: (importedQuestion.options || []).length > 0,
+      hasOptions: blank ? false : (importedQuestion.options || []).length > 0,
       isChild: false,
       requiresManualReview
     },
@@ -261,6 +300,6 @@ app.http("bankImportAction", {
   }
 });
 
-// Exported only for unit testing the section-validation gate (app.http's own route registration
-// above is unaffected).
-module.exports = { partitionQuestionsBySectionValidity };
+// Exported only for unit testing (the section-validation gate, the blank-structure derivation and the
+// pure question mapping); app.http's own route registration above is unaffected.
+module.exports = { partitionQuestionsBySectionValidity, deriveImportedBlankStructure, toBankQuestion };
