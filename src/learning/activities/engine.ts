@@ -157,4 +157,15 @@ export function createActivityRegistry(entries: readonly RegisteredActivity[]): 
  * an empty production registry therefore does NOT mean every activity family falls back. Real renderers are
  * registered here (each behind a code-split `load` thunk) in later phases; the Reader never changes.
  */
-export const productionActivityRegistry: LearningActivityRegistry = createActivityRegistry([]);
+export const productionActivityRegistry: LearningActivityRegistry = createActivityRegistry([
+  // Phase 3B — the FIRST real registry-backed production activity (the PAN/LAN/WAN scope diagram for PDF 11).
+  // Loaded lazily as its own chunk only when a matching descriptor renders. This is an interactive DIAGRAM, not a
+  // simulation/animation — there are still ZERO real simulation/animation renderers registered.
+  {
+    kind: "interactive-diagram",
+    key: "network-scope",
+    versions: [1],
+    load: () => import("./NetworkScopeDiagram"),
+    capabilities: { fullscreen: true, reset: true, interactive: true },
+  },
+]);

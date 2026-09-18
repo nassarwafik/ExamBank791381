@@ -43,6 +43,9 @@ export type ContentIssueCode =
   | "guided-empty-steps"
   | "guided-invalid-step"
   | "guided-duplicate-step-id"
+  | "list-empty-items"
+  | "list-invalid-item"
+  | "unit-opener-missing-title"
   | "invalid-table-row";
 
 /** A single structured validation finding. Location fields are filled in from the outermost known node. */
@@ -220,6 +223,12 @@ function checkBlock(
         }
       }
       break;
+    case "unit-opener":
+      if (!isNonEmptyString(block.title)) add("unit-opener-missing-title", "unit-opener requires a non-empty title", loc);
+      break;
+    case "list":
+      checkList(block, add, loc);
+      break;
     case "practice":
       checkPractice(block.question, add, loc);
       break;
@@ -268,6 +277,29 @@ function checkActivity(block: ActivityBlock, add: (c: ContentIssueCode, m: strin
     }
   }
   if (block.type === "guided") checkGuided(block, add, loc);
+}
+
+/**
+ * A generic `list` block needs a NON-EMPTY `items` array; every item needs a non-empty id and non-empty text spans
+ * (never raw HTML), and item ids must be unique within the block (they are React keys / analytics identities).
+ */
+function checkList(
+  block: { items?: unknown },
+  add: (c: ContentIssueCode, m: string, l?: Loc) => void,
+  loc: Loc,
+) {
+  const items = block.items;
+  if (!Array.isArray(items) || items.length === 0) { add("list-empty-items", "list requires a non-empty items array", loc); return; }
+  const seen = new Set<string>();
+  for (const it of items as { id?: unknown; text?: unknown }[]) {
+    const spans = Array.isArray(it?.text) ? (it.text as { text?: unknown }[]) : [];
+    const hasText = spans.some(sp => isNonEmptyString(sp?.text));
+    if (!isNonEmptyString(it?.id) || !hasText || seen.has(it.id)) {
+      add("list-invalid-item", "each list item needs a unique non-empty id and non-empty text spans", loc);
+      break;
+    }
+    seen.add(it.id);
+  }
 }
 
 /**

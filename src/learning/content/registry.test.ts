@@ -23,9 +23,27 @@ describe("Phase 2 — content registry (lazy, module-level chunking)", () => {
     expect(manifest.modules.length).toBeGreaterThan(0);
     // the manifest carries TOC identities but NO block bodies exist on it (proves manifest ≠ content bodies)
     expect((manifest.modules[0].lessons[0].pages[0] as { blocks?: unknown }).blocks).toBeUndefined();
-    // Phase 2 registers no module bodies yet: the TOC loads with zero body loaders invoked
-    for (const m of manifest.modules) expect(hasModuleContent("791381", m.id)).toBe(false);
+    // Phase 3B pilot: m01 and m02 now have real bodies; later skeleton modules do not.
+    expect(hasModuleContent("791381", "791381-m01")).toBe(true);
+    expect(hasModuleContent("791381", "791381-m02")).toBe(true);
+    for (const m of manifest.modules.filter(m => !["791381-m01", "791381-m02"].includes(m.id))) {
+      expect(hasModuleContent("791381", m.id), m.id).toBe(false);
+    }
+    // hasModuleContent is pure — it triggers no import and no network
     expect(fetchSpy).not.toHaveBeenCalled();
+  });
+
+  it("lazily loads a REAL Phase-3B module body (its own chunk) with pages + blocks; m02 is a partial conversion", async () => {
+    const fetchSpy = vi.spyOn(globalThis, "fetch");
+    const m01 = await loadModuleContent("791381", "791381-m01");
+    expect(m01.id).toBe("791381-m01");
+    expect(m01.partial).toBeFalsy();                                   // m01 is complete
+    const p1 = m01.lessons.flatMap(l => l.pages).find(p => p.id === "791381-m01-l01-p01");
+    expect(p1?.blocks.length).toBeGreaterThan(0);                      // real block bodies exist
+    expect(p1?.source.pdfPageStart).toBe(8);
+    const m02 = await loadModuleContent("791381", "791381-m02");
+    expect(m02.partial).toBe(true);                                    // m02 is partially converted
+    expect(fetchSpy).not.toHaveBeenCalled();                          // code-split import only, no network
   });
 
   it("rejects an unknown course safely (typed error, no throw-through of a raw import failure)", async () => {

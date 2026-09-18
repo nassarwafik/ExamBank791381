@@ -33,7 +33,12 @@ const COURSE_MANIFESTS: Record<string, ManifestLoader> = {
 // map is intentionally empty for 791381 — the wiring and types are proven; bodies arrive with content conversion
 // in a later phase, each as its own `import("./791381/modules/<id>")` chunk registered here.
 const COURSE_MODULE_LOADERS: Record<string, Record<string, ModuleLoader>> = {
-  "791381": {},
+  // Phase 3B pilot: the first REAL module bodies (source PDF 7–14), each its own lazy chunk. m01 is complete;
+  // m02 is a PARTIAL conversion (only the Unit-2 opener). The main bundle imports none of these eagerly.
+  "791381": {
+    "791381-m01": () => import("./791381/modules/m01"),
+    "791381-m02": () => import("./791381/modules/m02"),
+  },
 };
 
 /** Whether the registry knows a course's content (its manifest is registered). Pure, no import triggered. */
