@@ -3,9 +3,9 @@
 // values to the active destination, the page title and the breadcrumb, and names the destinations the shell can
 // ask App to navigate to (App maps each id back onto its existing setters).
 
-export type TeacherView = "builder" | "platform" | "import" | "project" | "reports" | "bank";
+export type TeacherView = "builder" | "platform" | "import" | "project" | "reports" | "bank" | "learning";
 export type WorkspaceTab = "dashboard" | "students" | "assignments" | "audit";
-export type TeacherNavId = "dashboard" | "students" | "assignments" | "projects" | "reports" | "bank" | "builder" | "import" | "audit";
+export type TeacherNavId = "dashboard" | "learning" | "students" | "assignments" | "projects" | "reports" | "bank" | "builder" | "import" | "audit";
 
 export interface TeacherNavState {
   teacherView: TeacherView;
@@ -16,6 +16,7 @@ export interface TeacherNavState {
 
 export const NAV_LABELS: Record<TeacherNavId, string> = {
   dashboard: "لوحة المتابعة",
+  learning: "المواد التعليمية",
   students: "الصفوف والطلاب",
   assignments: "الواجبات",
   projects: "المشاريع",
@@ -28,7 +29,7 @@ export const NAV_LABELS: Record<TeacherNavId, string> = {
 export const EXAM_BANK_GROUP_LABEL = "بنك الامتحانات";
 
 /** Primary destinations in sidebar order; the Exam Bank group is a real destination (UX-6c) whose children are builder + import; audit is footer/secondary. */
-export const PRIMARY_NAV: TeacherNavId[] = ["dashboard", "students", "assignments", "projects", "reports"];
+export const PRIMARY_NAV: TeacherNavId[] = ["dashboard", "learning", "students", "assignments", "projects", "reports"];
 export const EXAM_BANK_HEAD: TeacherNavId = "bank";
 export const EXAM_BANK_NAV: TeacherNavId[] = ["builder", "import"];
 export const FOOTER_NAV: TeacherNavId[] = ["audit"];
@@ -36,6 +37,7 @@ export const FOOTER_NAV: TeacherNavId[] = ["audit"];
 export function activeNavId(state: TeacherNavState): TeacherNavId {
   switch (state.teacherView) {
     case "platform": return state.workspaceTab;
+    case "learning": return "learning";
     case "project": return "projects";
     case "reports": return "reports";
     case "import": return "import";

@@ -356,6 +356,15 @@ export function IconBank(props: IconProps) {
     </svg>
   );
 }
+/* Learning Materials (المواد التعليمية) — an open book. */
+export function IconBook(props: IconProps) {
+  return (
+    <svg {...base(props)}>
+      <path d="M10 5.5C8.5 4.3 6.5 3.8 4 4v10c2.5-.2 4.5.3 6 1.5 1.5-1.2 3.5-1.7 6-1.5V4c-2.5-.2-4.5.3-6 1.5Z" />
+      <path d="M10 5.5v10" />
+    </svg>
+  );
+}
 /* Points toward "back" in LTR; the shell flips it under dir="rtl" through the eb-flip-rtl class. */
 export function IconChevronBack(props: IconProps) {
   return (

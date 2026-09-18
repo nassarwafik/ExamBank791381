@@ -5,7 +5,7 @@ import TeacherAppShell from "./TeacherAppShell";
 import type { TeacherNavState } from "./teacherNav";
 
 const EMOJI = /[\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}\u{2B00}-\u{2BFF}\u{1F000}-\u{1F2FF}▸▾]/u;
-const NAV = ["لوحة المتابعة", "الصفوف والطلاب", "الواجبات", "المشاريع", "التقارير", "باني الامتحان", "استيراد من ملف", "سجل النشاط"];
+const NAV = ["لوحة المتابعة", "المواد التعليمية", "الصفوف والطلاب", "الواجبات", "المشاريع", "التقارير", "باني الامتحان", "استيراد من ملف", "سجل النشاط"];
 const state = (over: Partial<TeacherNavState> = {}): TeacherNavState => ({ teacherView: "platform", workspaceTab: "dashboard", projectCode: "", projectList: [{ projectCode: "899373", title: "مشروع 899373" }], ...over });
 
 function mount(over: Partial<TeacherNavState> = {}, extra: { ready?: number } = {}) {
@@ -68,6 +68,24 @@ describe("UX-2 TeacherAppShell — navigation", () => {
     expect(onNavigate.mock.calls.map(c => c[0])).toEqual(["assignments", "import", "audit"]);
     fireEvent.click(within(sidebar()).getByRole("button", { name: "تسجيل الخروج" }));
     expect(onLogout).toHaveBeenCalledTimes(1);
+  });
+  it("Learning Materials is a top-level destination: second in the sidebar, navigates by id, and marks active when its view is current", () => {
+    const { onNavigate } = mount();
+    // second primary button (after لوحة المتابعة), above الصفوف والطلاب — a top-level item, not under Exam Bank
+    const labels = navButtons().map(b => b.textContent?.trim());
+    expect(labels.indexOf("المواد التعليمية")).toBe(1);
+    fireEvent.click(within(sidebar()).getByRole("button", { name: "المواد التعليمية" }));
+    expect(onNavigate).toHaveBeenCalledWith("learning");
+    // the Exam Bank group never contains it
+    const group = within(sidebar()).getByRole("group", { name: "بنك الامتحانات" });
+    expect(within(group).queryByRole("button", { name: "المواد التعليمية" })).toBeNull();
+  });
+  it("marks Learning Materials current when teacherView is 'learning'", () => {
+    const { onNavigate, onLogout } = mount({ teacherView: "learning" });
+    const current = navButtons().filter(b => b.getAttribute("aria-current") === "page").map(b => b.textContent?.trim());
+    expect(current).toEqual(["المواد التعليمية"]);
+    expect(navButtons().filter(b => b.classList.contains("is-active")).length).toBe(1);
+    void onNavigate; void onLogout;
   });
   it("project ready-for-review badge comes from the provided count and is part of the accessible name", () => {
     mount({}, { ready: 3 });
