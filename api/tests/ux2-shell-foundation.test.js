@@ -613,3 +613,77 @@ describe("Student Portal — rank cadence & medal sizing", () => {
     expect(covered).toContain(".eb-sp-rankring-fill");
   });
 });
+
+describe("Student Portal — circular rank badge artwork (owner-provided final assets)", () => {
+  const { createHash } = require("node:crypto");
+  const RANKS_DIR = join(ROOT, "src", "assets", "student-ranks");
+  // The owner's AAA set, byte-for-byte. The mapping is deliberately NOT numeric (A3 is bronze, A2 is silver,
+  // A6 is gold, A4 is legendary) — pinning the payload hash per tier is what proves the right badge is stored
+  // under each canonical filename and that nothing re-encoded, resized or optimised it.
+  const OWNER_ASSETS = {
+    beginner:  { source: "A1", sha256: "53d6213721f51dab4247567dc4924cec5e24d5e452528ecd6f86b7844f105ddd" },
+    bronze:    { source: "A3", sha256: "e2ddd9e01c8089f276014a964cefe98dc5ccaffdf056adfa6ef06e4570cacf18" },
+    silver:    { source: "A2", sha256: "f016e9c9a85067769e2669914b8d9c022316b46f726e2922046520335857fb19" },
+    gold:      { source: "A6", sha256: "1461a341100f7f9adaa2c9473553d60bd8eb61a7b86ddbae4e9fb5cecf256244" },
+    diamond:   { source: "A5", sha256: "2408b276a6b06deb0db499ad3a8264c0a890d109b16e8885ac053c2b733a6fd5" },
+    legendary: { source: "A4", sha256: "d519ac7764647639f1eee2817cc3b636ba151c7dd00e572ff9703eea7662b448" }
+  };
+  const css = readFileSync(join(ROOT, "src", "studentportal-pro.css"), "utf8").replace(/\/\*[\s\S]*?\*\//g, "");
+
+  it("each canonical rank file is the owner's badge, byte-identical (SHA-256), and the six payloads are distinct", () => {
+    const seen = new Set();
+    for (const [tier, { sha256 }] of Object.entries(OWNER_ASSETS)) {
+      const bytes = readFileSync(join(RANKS_DIR, "rank-" + tier + ".png"));
+      const actual = createHash("sha256").update(bytes).digest("hex");
+      expect(actual, tier).toBe(sha256);
+      expect(seen.has(actual), tier + " duplicates another tier's image").toBe(false);
+      seen.add(actual);
+    }
+    expect(readdirSync(RANKS_DIR).filter(f => !f.startsWith(".")).sort()).toEqual(Object.keys(OWNER_ASSETS).map(t => "rank-" + t + ".png").sort());
+  });
+
+  it("every badge is a 1254×1254 8-bit RGBA PNG (transparent canvas preserved, not flattened)", () => {
+    for (const tier of Object.keys(OWNER_ASSETS)) {
+      const b = readFileSync(join(RANKS_DIR, "rank-" + tier + ".png"));
+      expect(b.subarray(0, 8).toString("hex"), tier).toBe("89504e470d0a1a0a");     // PNG signature
+      expect(b.toString("ascii", 12, 16), tier).toBe("IHDR");
+      expect([b.readUInt32BE(16), b.readUInt32BE(20)], tier).toEqual([1254, 1254]);
+      expect([b[24], b[25]], tier + " bitDepth/colorType").toEqual([8, 6]);       // 8-bit, RGBA (6)
+    }
+  });
+
+  it("the central mapping still imports exactly the six canonical files (single rank-art authority)", () => {
+    const visuals = read("studentRankVisuals.ts");
+    for (const tier of Object.keys(OWNER_ASSETS)) expect(visuals, tier).toContain('from "./assets/student-ranks/rank-' + tier + '.png"');
+    expect(read("student/StudentProgressSection.tsx")).not.toMatch(/assets\/student-ranks/);   // consumers go through RANK_VISUALS
+  });
+
+  it("the badge sits inside the ring as one circle: art box 76–82% of the ring, object-fit contain, no framing that would fake or fight the circular art", () => {
+    const art = /\.eb-sp-rankring-art\{([^}]*)\}/.exec(css)?.[1] || "";
+    const size = Number(/inline-size:(\d+)%/.exec(art)?.[1]);
+    expect(size).toBeGreaterThanOrEqual(76);
+    expect(size).toBeLessThanOrEqual(82);
+    expect(art).toMatch(/block-size:(\d+)%/);
+    expect(/block-size:(\d+)%/.exec(art)[1]).toBe(String(size));                  // square box → aspect ratio kept
+    expect(art).toMatch(/object-fit:contain/);
+    for (const forbidden of [/border-radius/, /background/, /clip-path/, /overflow\s*:\s*hidden/, /padding/]) expect(art, "rankring-art must not carry " + forbidden).not.toMatch(forbidden);
+    const ring = /\.eb-sp-rankring\{([^}]*)\}/.exec(css)?.[1] || "";
+    for (const forbidden of [/background/, /border-radius/, /overflow\s*:\s*hidden/]) expect(ring, "rankring wrapper must not carry " + forbidden).not.toMatch(forbidden);
+    const next = /\.eb-sp-rank-next-art\{([^}]*)\}/.exec(css)?.[1] || "";
+    expect(next).toMatch(/object-fit:contain/);
+    for (const forbidden of [/border-radius/, /background/]) expect(next, "next-art must not carry " + forbidden).not.toMatch(forbidden);
+    // the ring stroke (r=45, width 6 → inner edge 42) leaves a gap to a 41-or-smaller art radius
+    expect(size / 2).toBeLessThan(42);
+  });
+
+  it("reduced motion still switches the ring fill transition off; no rank-specific horizontal bar returned", () => {
+    const i = css.indexOf("@media (prefers-reduced-motion: reduce)");
+    expect(i).toBeGreaterThan(-1);
+    let d = 0, j = css.indexOf("{", i);
+    for (; j < css.length; j++) { if (css[j] === "{") d++; else if (css[j] === "}") { d--; if (d === 0) break; } }
+    const block = css.slice(i, j + 1);
+    expect(block).toMatch(/\.eb-sp-rankring-fill/);
+    expect(block).toMatch(/transition:none/);
+    expect(read("student/StudentProgressSection.tsx")).not.toMatch(/<ProgressBar/);
+  });
+});
