@@ -180,5 +180,5 @@
   .eb-sp-identity, .eb-sp-panel{ padding:var(--eb-space-5); }
 }
 @media (prefers-reduced-motion: reduce){
-  .eb-sp-task, .student-avatar-circle, .eb-sp-avatar-option{ transition:none; }
+  .eb-sp-task, .student-avatar-circle, .eb-sp-avatar-option, .eb-sp-rankring-fill{ transition:none; }
 }
