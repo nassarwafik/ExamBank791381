@@ -64,9 +64,12 @@
 .eb-sp-rank-progress{ display:flex; flex-direction:column; gap:var(--eb-space-2); }
 .eb-sp-rank-hint{ margin:0; color:var(--eb-muted); font-size:var(--eb-fs-12); line-height:var(--eb-lh-body); }
 /* Custom rank artwork — the primary visual of the rank, centered inside a circular progress ring that fills
-   toward the next tier. The square author assets are shown untouched (object-fit:contain, never cropped): the
-   art sits at ~70% of the ring so its corners stay clear of the ring stroke — no overflow clipping. The ring
-   is CSS-sized so the artwork lands near the agreed scale (~88px phone / ~112px from 768px). */
+   toward the next tier. The author assets are CIRCULAR badges on a transparent canvas, shown untouched
+   (object-fit:contain, never cropped, no background, no border-radius clipping — the badge shape is the art
+   itself). The art box is 78% of the ring: the ring stroke (r=45, width 6 on a 100-unit viewBox) has its inner
+   edge at radius 42, so a 39-radius art box keeps a clear breathing gap to the stroke even where decorative
+   leaves / wings reach the canvas edge, and the badge disc reads as ONE coherent circle inside the ring. The
+   ring is CSS-sized (126px phone / 160px from 768px), so the badge lands at ~98px / ~125px. */
 .eb-sp-rank-hero{ display:flex; align-items:center; flex-wrap:wrap; gap:var(--eb-space-3); min-width:0; }
 .eb-sp-rank-hero-text{ display:flex; flex-direction:column; gap:var(--eb-space-1); min-width:0; }
 .eb-sp-rankring{ position:relative; flex:0 0 auto; inline-size:126px; block-size:126px; }
@@ -74,7 +77,7 @@
 .eb-sp-rankring-svg{ inline-size:100%; block-size:100%; display:block; }
 .eb-sp-rankring-track{ stroke:var(--eb-line-2); stroke-width:6; }
 .eb-sp-rankring-fill{ stroke:var(--eb-primary); stroke-width:6; transition:stroke-dashoffset var(--eb-dur) var(--eb-ease); }
-.eb-sp-rankring-art{ position:absolute; inset:0; margin:auto; inline-size:70%; block-size:70%; object-fit:contain; }
+.eb-sp-rankring-art{ position:absolute; inset:0; margin:auto; inline-size:78%; block-size:78%; object-fit:contain; }
 .eb-sp-rankring.is-locked .eb-sp-rankring-art{ opacity:.5; filter:grayscale(.4); }
 .eb-sp-rankring.is-locked .eb-sp-rankring-fill{ stroke:var(--eb-text-secondary); }
 .eb-sp-rank-title{ margin:0; color:var(--eb-text-heading); font-size:var(--eb-fs-16); font-weight:var(--eb-fw-bold); line-height:var(--eb-lh-tight); overflow-wrap:anywhere; }
@@ -83,7 +86,8 @@
 .eb-sp-rank-meta{ margin:0; display:flex; flex-wrap:wrap; align-items:baseline; gap:var(--eb-space-2); font-variant-numeric:tabular-nums; }
 .eb-sp-rank-level{ color:var(--eb-text-secondary); font-size:var(--eb-fs-13); font-weight:var(--eb-fw-semibold); }
 .eb-sp-rank-percent{ color:var(--eb-primary); font-size:var(--eb-fs-16); font-weight:var(--eb-fw-bold); }
-/* Next-rank preview — a small, deliberately less prominent thumbnail beside the "نحو رتبة X" hint. */
+/* Next-rank preview — a small, deliberately less prominent circular badge beside the "نحو رتبة X" hint (same
+   untouched circular art, object-fit:contain, no framing). */
 .eb-sp-rank-next{ display:flex; align-items:center; gap:var(--eb-space-2); }
 .eb-sp-rank-next-art{ flex:0 0 auto; inline-size:40px; block-size:40px; object-fit:contain; opacity:.85; }
 
