@@ -107,7 +107,17 @@ export const pageActivities: ContentPage = {
   id: "f-m03-l01-p05", title: "أنشطة تفاعلية", order: 5, source: src(127),
   blocks: [
     { id: "fg-b1", type: "animation", origin: "teacher-enrichment", animationType: "packet-flow", version: 1, title: "رحلة الحزمة عبر المنافذ", description: "ستتوفر لاحقًا." },
-    { id: "fg-b2", type: "guided", origin: "teacher-enrichment", guidedType: "build-subnet", version: 1, title: "ابنِ الشبكة الفرعية خطوة بخطوة", description: "نشاط موجّه.", capabilities: { fullscreen: true, interactive: true } },
+    {
+      id: "fg-b2", type: "guided", origin: "teacher-enrichment", guidedType: "reveal", version: 1,
+      title: "ابنِ الشبكة الفرعية خطوة بخطوة", description: "نشاط موجّه.", capabilities: { fullscreen: true, interactive: true },
+      prompt: [{ text: "المطلوب: تقسيم الشبكة إلى شبكتين فرعيتين." }],
+      steps: [
+        { id: "fg-b2-s1", text: [{ text: "حدّد عدد البتات المستعارة." }] },
+        { id: "fg-b2-s2", text: [{ text: "احسب قناع الشبكة الجديد." }], note: "/25" },
+      ],
+      result: [{ text: "255.255.255.128", dir: "ltr", style: "code" }],
+      explanation: "بت واحد مستعار يعطي شبكتين فرعيتين.",
+    },
     {
       id: "fg-b3", type: "interactive-diagram", origin: "teacher-enrichment", interactionType: "switch-ports", version: 1,
       title: "منافذ السويتش التفاعلية", capabilities: { animated: true },

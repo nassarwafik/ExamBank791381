@@ -235,6 +235,40 @@ describe("Phase 2 — content validator", () => {
     has(c, "image-missing-alt");
   });
 
+  it("rejects MALFORMED capabilities (non-boolean values, unknown keys, non-object) — activity-invalid-capabilities", () => {
+    const sim = (c: LearningCourseContent) => c.modules[2].lessons[0].pages[2].blocks[0] as { capabilities?: unknown };
+    const str = cloneCourse(); sim(str).capabilities = { fullscreen: "yes" };
+    has(str, "activity-invalid-capabilities");
+    const num = cloneCourse(); sim(num).capabilities = { reset: 1 };
+    has(num, "activity-invalid-capabilities");
+    const unknown = cloneCourse(); sim(unknown).capabilities = { teleport: true };
+    has(unknown, "activity-invalid-capabilities");
+    const arr = cloneCourse(); sim(arr).capabilities = ["fullscreen"];
+    has(arr, "activity-invalid-capabilities");
+    const nul = cloneCourse(); sim(nul).capabilities = null;
+    has(nul, "activity-invalid-capabilities");
+    // every well-formed flag (incl. reset/replay/pause/speed) is accepted
+    const ok = cloneCourse(); sim(ok).capabilities = { fullscreen: true, reset: false, replay: true, pause: true, speed: false, animated: true, interactive: true };
+    expect(validateLearningCourseContent(ok)).toEqual([]);
+  });
+
+  it("validates GUIDED structure centrally: empty steps and malformed steps are rejected", () => {
+    const guided = (c: LearningCourseContent) => c.modules[2].lessons[0].pages[4].blocks[1] as { steps: unknown };
+    const empty = cloneCourse(); guided(empty).steps = [];
+    has(empty, "guided-empty-steps");
+    const missing = cloneCourse(); delete (guided(missing) as { steps?: unknown }).steps;
+    has(missing, "guided-empty-steps");
+    const noId = cloneCourse(); guided(noId).steps = [{ id: "", text: [{ text: "x" }] }];
+    has(noId, "guided-invalid-step");
+    const noText = cloneCourse(); guided(noText).steps = [{ id: "s1", text: [] }];
+    has(noText, "guided-invalid-step");
+    const blankText = cloneCourse(); guided(blankText).steps = [{ id: "s1", text: [{ text: "   " }] }];
+    has(blankText, "guided-invalid-step");
+    // the fixture's structured guided block is valid as authored
+    expect(codes(cloneCourse())).not.toContain("guided-empty-steps");
+    expect(codes(cloneCourse())).not.toContain("guided-invalid-step");
+  });
+
   it("flags a table row that does not match the header count", () => {
     const c = cloneCourse();
     const table = c.modules[1].lessons[0].pages[0].blocks.find(b => b.type === "table")!;

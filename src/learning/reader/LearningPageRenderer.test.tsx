@@ -72,6 +72,8 @@ describe("Phase 3 — page renderer: answer-key secrecy (CRITICAL)", () => {
     expect(within(practice).getByText("Trunk")).toBeTruthy();
     const html = container.innerHTML;
     expect(html).not.toContain(ANSWER_KEY.hint);
+    for (const rung of ANSWER_KEY.hints) expect(html).not.toContain(rung);   // the ordered hint LADDER never leaks either
+    expect(html).not.toContain("SECRET_LADDER");
     expect(html).not.toContain(ANSWER_KEY.correctFeedback);
     expect(html).not.toContain(ANSWER_KEY.incorrectFeedback);
     expect(html).not.toContain(ANSWER_KEY.explanation);

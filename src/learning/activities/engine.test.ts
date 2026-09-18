@@ -40,6 +40,16 @@ describe("Phase 3A — createActivityRegistry resolution", () => {
     const crossed: SimulationBlock = { id: "x", type: "simulation", origin: "teacher-enrichment", simulationType: "packet-flow", version: 1, title: "t" };
     expect(reg.resolve(crossed)).toBeUndefined();
   });
+  it("free-form keys that contain spaces, quotes or JSON punctuation resolve exactly (no delimiter collision)", () => {
+    const weird = createActivityRegistry([
+      { kind: "simulation", key: 'a b"c]', versions: [1], load: noop },
+      { kind: "simulation", key: "a", versions: [1], load: noop },
+    ]);
+    const block: SimulationBlock = { id: "w", type: "simulation", origin: "teacher-enrichment", simulationType: 'a b"c]', version: 1, title: "t" };
+    expect(weird.resolve(block)?.key).toBe('a b"c]');
+    expect(weird.resolve({ ...block, simulationType: "a" })?.key).toBe("a");
+    expect(weird.resolve({ ...block, simulationType: "a b" })).toBeUndefined();
+  });
   it("exposes diagnostics (has / list / size) without importing any component", () => {
     expect(reg.size).toBe(2);
     expect(reg.has("simulation", "vlan")).toBe(true);
@@ -57,6 +67,8 @@ describe("Phase 3A — no-op event sink", () => {
       { type: "ready", activityId: "a", kind: "simulation", key: "vlan" },
       { type: "interaction", activityId: "a", name: "tick", detail: { n: 1 } },
       { type: "fullscreen", activityId: "a", open: true },
+      { type: "reset", activityId: "a" },
+      { type: "replayed", activityId: "a" },
       { type: "error", activityId: "a", message: "boom" },
     ];
     for (const e of events) expect(noopActivityEventSink(e)).toBeUndefined();

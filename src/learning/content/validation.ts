@@ -5,7 +5,7 @@
 // (a stable enum), never on the human Arabic-or-English `message`. An empty array means "no problems found".
 
 import {
-  BLOCK_TYPES, CALLOUT_KINDS, CODE_LANGUAGES, CONTENT_ORIGINS, EXAMPLE_MODES,
+  BLOCK_TYPES, CALLOUT_KINDS, CODE_LANGUAGES, CONTENT_ORIGINS, EXAMPLE_MODES, ACTIVITY_CAPABILITY_KEYS,
   LEARNING_CONTENT_SCHEMA_VERSION, isActivityBlock, activityKey,
   type LearningCourseContent, type ContentBlock, type ActivityBlock, type ContentSource, type ContentDirection,
 } from "./types";
@@ -39,6 +39,9 @@ export type ContentIssueCode =
   | "activity-missing-key"
   | "activity-invalid-version"
   | "activity-missing-title"
+  | "activity-invalid-capabilities"
+  | "guided-empty-steps"
+  | "guided-invalid-step"
   | "invalid-table-row";
 
 /** A single structured validation finding. Location fields are filled in from the outermost known node. */
@@ -245,6 +248,45 @@ function checkActivity(block: ActivityBlock, add: (c: ContentIssueCode, m: strin
   }
   if (block.fallback?.src && !isNonEmptyString(block.fallback.alt)) {
     add("image-missing-alt", "activity fallback image requires non-empty alt", loc);
+  }
+  // Capabilities are a plain object of optional BOOLEAN flags (fullscreen/reset/replay/pause/speed/animated/
+  // interactive). Anything else — a non-object, an unknown key, or a non-boolean value such as `"yes"` — is a
+  // malformed contract. (Even well-formed content capabilities never ENABLE a shell control: the renderer's
+  // declaration is the authority; this check only rejects malformed data.)
+  const caps = (block as { capabilities?: unknown }).capabilities;
+  if (caps !== undefined) {
+    if (caps === null || typeof caps !== "object" || Array.isArray(caps)) {
+      add("activity-invalid-capabilities", "capabilities must be an object of boolean flags", loc);
+    } else {
+      for (const [k, v] of Object.entries(caps as Record<string, unknown>)) {
+        if (!(ACTIVITY_CAPABILITY_KEYS as readonly string[]).includes(k) || (v !== undefined && typeof v !== "boolean")) {
+          add("activity-invalid-capabilities", `capabilities.${k} must be a boolean flag`, loc);
+          break;
+        }
+      }
+    }
+  }
+  if (block.type === "guided") checkGuided(block, add, loc);
+}
+
+/**
+ * Guided (حل مع المعلم) structure: a NON-EMPTY ordered `steps` array whose every step has a non-empty id and
+ * non-empty structured `text` spans (never raw HTML). Empty/malformed steps would render a hollow walkthrough.
+ */
+function checkGuided(
+  block: { steps?: unknown },
+  add: (c: ContentIssueCode, m: string, l?: Loc) => void,
+  loc: Loc,
+) {
+  const steps = block.steps;
+  if (!Array.isArray(steps) || steps.length === 0) { add("guided-empty-steps", "guided requires a non-empty steps array", loc); return; }
+  for (const s of steps as { id?: unknown; text?: unknown }[]) {
+    const spans = Array.isArray(s?.text) ? (s.text as { text?: unknown }[]) : [];
+    const hasText = spans.some(sp => isNonEmptyString(sp?.text));
+    if (!isNonEmptyString(s?.id) || !hasText) {
+      add("guided-invalid-step", "each guided step needs a non-empty id and non-empty text spans", loc);
+      break;
+    }
   }
 }
 

@@ -109,26 +109,33 @@ never on the human message. Codes: `schema-version-mismatch`, `unknown-course`, 
 `duplicate-order`, `missing-source`, `invalid-source-page`, `source-id-mismatch`, `missing-origin`,
 `invalid-origin`, `origin-policy-violation`, `invalid-example-mode`, `unsupported-block-type`, `image-missing-alt`,
 `invalid-direction`, `quiz-empty-options`, `quiz-mcq-answer-count`, `activity-missing-key`,
-`activity-invalid-version`, `activity-missing-title`, `invalid-table-row`.
+`activity-invalid-version`, `activity-missing-title`, `activity-invalid-capabilities`, `guided-empty-steps`,
+`guided-invalid-step`, `invalid-table-row`.
 
-Activity descriptors (Phase 3A) are validated as pure data: `activity-missing-key` (empty registry key),
-`activity-invalid-version` (missing / non-positive-integer `version`), `activity-missing-title`, and a fallback
-image with no `alt` reuses `image-missing-alt`. `simulationType` (and the other family keys) are **free-form
+Activity descriptors (Phase 3A) are validated centrally as pure data: `activity-missing-key` (empty registry key),
+`activity-invalid-version` (missing / non-positive-integer `version`), `activity-missing-title`,
+`activity-invalid-capabilities` (capabilities must be an object of optional **boolean** flags — `fullscreen: "yes"`,
+an unknown key, an array or `null` are rejected), a fallback image with no `alt` reuses `image-missing-alt`, and a
+`guided` block needs a non-empty `steps` array whose every step has a non-empty id and non-empty text spans
+(`guided-empty-steps` / `guided-invalid-step`). `config` stays opaque to the central validator (a registered
+renderer may validate its own config schema later). `simulationType` (and the other family keys) are **free-form
 registry keys, not an enum** — a new key is valid content; a missing renderer is a runtime fallback, not a
 validation error. All four families are enrichment-only (`origin-policy-violation` if marked `book`).
 
 `source-id-mismatch` enforces that every `source.sourceId` (page, module, or block level) equals the course id —
 content can never reference another book by accident. `missing-origin` / `invalid-origin` require every block to
-declare a valid provenance, and `origin-policy-violation` enforces that clarification callouts, practice and
-simulation blocks are `teacher-enrichment` (never `book`).
+declare a valid provenance, and `origin-policy-violation` enforces that clarification callouts, practice blocks and
+all four interactive-activity families (simulation / animation / guided / interactive-diagram) are
+`teacher-enrichment` (never `book`).
 
 **Normalization policy: none.** A validator validates. It never reorders content, invents ids/titles/source pages,
 generates answers, or rewrites Arabic. Any future normalization is a separate, explicit converter tool.
 
 ## Batches → modules
 
-The six Phase-1 overview "batches" are **presentation groupings**; each maps to one **or more** real modules
-(`manifest.batches[].moduleIds`). Batches are not part of the canonical Course→Module hierarchy and never distort it.
+The **eight** high-level presentation sections (المقدمة · b1 … b6 · التلخيص — the manifest's "batches") are
+**presentation groupings**; each maps to one **or more** real modules (`manifest.batches[].moduleIds`). Batches are
+not part of the canonical Course→Module hierarchy and never distort it.
 
 ## Security / content safety
 
@@ -168,12 +175,16 @@ A missing `origin` is a validation error (`missing-origin`); an unknown value is
 **Provenance is by conscious authorship, not inferred from block type.** An `example`, `image` or `diagram` may be
 `book` (reproduced from the source) or `teacher-enrichment` (added) — the author decides and declares it.
 
-**Enrichment-only policy (enforced, `origin-policy-violation`).** Three families are interactive/added layers that
+**Enrichment-only policy (enforced, `origin-policy-violation`).** These families are interactive/added layers that
 are, by definition, never faithful book content and therefore must be `teacher-enrichment`:
 
 - a `callout` of kind `clarification` (the separable teacher note),
 - a `practice` block (interactive answer-checking is an enrichment layer over the faithful source exercise),
-- a `simulation` block (native interactive functionality added by this product).
+- **all four interactive-activity families** — `simulation`, `animation`, `guided`, `interactive-diagram` (native
+  interactive functionality added by this product).
+
+A block-level book `source` on any of these only **associates** the enrichment with a book page; it never changes
+its `origin` (source association ≠ provenance), and no enrichment surface may present itself as «من الكتاب».
 
 A source book diagram stays `image`/`diagram` with `origin:"book"`; the added interactive simulation is separate
 enrichment. If the book contains an original question, its wording is preserved as faithful `book` blocks, and an
@@ -210,9 +221,11 @@ field is duplicated. The teacher can always answer: «هذه الصفحة الت
 
 ### Simulations
 
-First-class but used **only where interaction genuinely improves understanding** (not on every page). Ready types:
-`network-flow`, `binary-box`, `subnet`, `vlan`, `cli`. Phase 2 stores only a typed descriptor; behavior/config is
-Phase 5, resolved through a controlled registry (never by executing a name from data).
+First-class but used **only where interaction genuinely improves understanding** (not on every page). A simulation
+is a data descriptor whose `simulationType` is a **free-form trusted registry key** (there is no closed enum);
+behavior arrives in Phase 5 as renderers registered behind the Phase-3A engine, resolved through the controlled
+registry (never by executing a name from data). *Future example keys only:* `network-flow`, `binary-box`, `subnet`,
+`vlan`, `cli`.
 
 ### No invented curriculum
 
@@ -301,9 +314,24 @@ reached only through `LearningPageRenderer` delegation, so the renderer stays le
 
 **Activity descriptor (data only).** The four families — `simulation`, `animation`, `guided`,
 `interactive-diagram` — are enrichment blocks that carry a trusted registry **key** (a plain string), a positive
-`version`, a `title`, and optional `capabilities` (`fullscreen` / `animated` / `interactive`), a static `fallback`
-(text + an optional vetted image), and an opaque `config`. Uniform helpers: `isActivityBlock`, `activityKey`,
-`activityDescriptor`.
+`version`, a `title`, and optional `capabilities`, a static `fallback` (text + an optional vetted image), and an
+opaque `config`. Uniform helpers: `isActivityBlock`, `activityKey`, `activityDescriptor`.
+
+**Capability / command contract.** `ActivityCapabilities` = `fullscreen` · `reset` · `replay` · `pause` · `speed`
+(command capabilities) + `animated` · `interactive` (hints), all optional booleans. The **renderer's declaration is
+the authority** (a registry entry's `capabilities`, or a built-in's): the shell shows a control (توسيع / إعادة
+تعيين / إعادة التشغيل) **only** when the renderer declares it — untrusted content data can never enable a control the
+renderer does not honor, and an unsupported command never renders a fake button. Commands reach the renderer as
+monotonic signals (`commands.reset` / `commands.replay`, via `LearningActivityProps`) and emit `reset` /
+`replayed` events. `pause` / `speed` are declared so a renderer-specific control can honor them later without an
+engine redesign (no generic button yet).
+
+**Guided (حل مع المعلم) is a structured model, not an opaque key.** `GuidedBlock` carries `prompt?` (spans) →
+ordered `steps: GuidedStep[]` (`{ id, text: RichText, note? }`) → `result?` (spans) → `explanation?`. A **built-in**
+progressive-reveal presenter (`GuidedActivity`) renders it — prompt → «فكّر أولًا» → reveal one step at a time →
+result/explanation — with real keyboard-operable buttons (≥44px), restart through the shell's generic `reset`,
+reduced-motion honored, safe spans only (never raw HTML), and state in React memory only (no persistence). Because
+it is built in, guided needs no registry entry and the production activity registry stays empty.
 
 **Trusted registry + lazy loader.** `createActivityRegistry([...])` maps `{kind, key, version}` → a
 `RegisteredActivity` whose component is loaded through a statically-authored `load` thunk (its own code-split
@@ -313,16 +341,33 @@ ships **EMPTY** in Phase 3A, so every descriptor renders its faithful static `Ac
 chunk ever loads in production. Registries are **injected** (the reader defaults to the empty production one; tests
 inject a synthetic one) — dependency injection, exactly like the reader's content API.
 
-**Shell (`LearningActivityHost`).** The single place that touches the engine: it resolves the injected registry
-(no match / unsupported version → static fallback), lazily loads the trusted component (held in state, isolated by
-`LearningActivityBoundary` so a throwing activity degrades to the fallback instead of crashing the page), honors
-**reduced-motion** (prop + CSS), and — for a `fullscreen`-capable activity — opens it in the shared `Dialog`
-primitive (focus trap, Escape, scroll-lock, focus return; **no new modal library**). Styles are namespaced
-`learning-activity-*` with ≥44px touch targets.
+**Shell (`LearningActivityHost`).** The single place that touches the engine: it resolves a built-in presenter or
+the injected registry (no match / unsupported version → static fallback), lazily loads a trusted component (held in
+state, isolated by `LearningActivityBoundary` so a throwing activity degrades to the fallback instead of crashing
+the page), and honors **reduced-motion** (prop + CSS). **One live instance, always:** the activity element is
+rendered exactly once at a fixed tree position; fullscreen promotes the **same** host surface to a fixed overlay
+(CSS) and arms the shared `useFocusTrap` (Tab containment, Escape, focus return) plus body scroll-lock — nothing is
+duplicated, portalled or remounted, so interaction state stays authoritative across inline ↔ fullscreen (**no new
+modal library**). Styles are namespaced `learning-activity-*` with ≥44px touch targets. Registry indexing uses
+nested Maps (kind → key), so free-form keys never collide with a separator and the source carries no control bytes.
 
-**Events go nowhere yet.** Activities/shell emit through an **injected sink**; Phase 3A ships **only a no-op sink**
-(`noopActivityEventSink`). No persistence, no backend, no `/api`, and no progress / grades / rank / medals — the
-event seam is where a separate later Progress phase attaches without changing the engine.
+**Events go nowhere yet.** Activities/shell emit `ready` · `interaction` · `fullscreen` · `reset` · `replayed` ·
+`error` through an **injected sink**; Phase 3A ships **only a no-op sink** (`noopActivityEventSink`). No
+persistence, no backend, no `/api`, and no progress / grades / rank / medals — the event seam is where a separate
+later Progress phase attaches without changing the engine.
+
+**Question → Evaluator → Feedback foundation (`src/learning/practice/evaluator.ts`).** Established now so Phase 4
+needs no schema redesign: `LearningQuestionEvaluator` (pure, injectable, `evaluate(question, response) →
+EvaluationResult` with `correct | incorrect | partial | unknown`), `createEvaluatorRegistry` (resolve by question
+kind; a local, a server, or **no** evaluator share one contract), a reference pure `localEvaluator`, and
+`LearningFeedbackState` (submitted / result / `revealedHints` / `solutionRevealed`). Phase 3A ships **no server
+implementation, no network call, no grading, no student persistence**, and the Phase-3 static practice rendering is
+**unchanged** — the answer key never reaches the DOM.
+
+**Hint ladder.** `PracticeFeedback.hints?: string[]` is the ordered ladder (تلميح 1 → تلميح 2 → … → اعرض أول خطوة →
+اعرض الحل); the legacy single `hint` stays for backward compatibility and `hintLadder(feedback)` folds it in.
+`revealNextHint` / `revealedHints` are pure state transitions for Phase 4. Nothing from the ladder is rendered in
+Phase 3.
 
 **Not in Phase 3A:** real VLAN/subnet/ACL/etc. simulations, real animations, full answer-checking, real Book
 791381 PDF conversion (`src/learning/content/791381/modules/*` stays unauthored), student progress, and

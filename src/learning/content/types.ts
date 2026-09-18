@@ -139,11 +139,24 @@ export interface DiagramBlock extends BlockBase {
 // NOT the ExamBank exam schema, NOT graded, NOT a rank/medal input. Immediate-feedback fields are carried here so
 // Phase 4 can render check-answer / correct-incorrect / hint / retry without a schema redesign.
 export type PracticeFeedback = {
+  /** Legacy single hint (kept for backward compatibility). Prefer the ordered `hints` ladder below. */
   hint?: string;
+  /**
+   * Ordered HINT LADDER (تلميح 1 → تلميح 2 → …). Phase 4 reveals these one at a time on request; Phase 3 never
+   * renders them (answer-key secrecy). Backward-compatible: `hintLadder(feedback)` folds the legacy `hint` in.
+   */
+  hints?: string[];
   correctFeedback?: string;
   incorrectFeedback?: string;
   explanation?: string;
 };
+/** The ordered hint ladder for a feedback object, folding the legacy single `hint` in (BC). Pure; part of the
+ *  Phase-3A foundation so Phase 4 needs no schema redesign. It is answer-key material — never rendered in Phase 3. */
+export function hintLadder(feedback: PracticeFeedback | undefined): string[] {
+  if (!feedback) return [];
+  if (feedback.hints && feedback.hints.length > 0) return feedback.hints;
+  return feedback.hint ? [feedback.hint] : [];
+}
 export type PracticeOption = { id: string; text: string; correct?: boolean };
 /**
  * Base practice-question kinds modeled in Phase 2. EXTENSION PATH (OWNER §9): richer kinds — matching, ordering,
@@ -172,15 +185,38 @@ export interface PracticeBlock extends BlockBase { type: "practice"; question: P
 // renderer refuse a descriptor shape it does not understand (falling back) without a schema break.
 // ────────────────────────────────────────────────────────────────────────────
 
-/** Capability flags a descriptor may declare so the engine shell can adapt (they are hints, never executable). */
+/**
+ * Capabilities an activity RENDERER may declare. These are the authority for which shell controls appear: the
+ * shell exposes a control ONLY when the registered renderer (or a built-in one) declares it — never because
+ * untrusted content data asked for it, and never as a fake button the renderer cannot honor. `fullscreen`,
+ * `reset` and `replay` drive generic shell controls; `pause`/`speed` are declared here so the contract is
+ * future-safe (a renderer-specific control can honor them later) without an engine redesign; `animated` /
+ * `interactive` are informational hints.
+ */
 export interface ActivityCapabilities {
   /** The activity has a meaningful expanded/fullscreen mode (the shell offers a توسيع affordance). */
   fullscreen?: boolean;
+  /** The renderer can reset to its initial state (the shell offers an إعادة تعيين control → `reset` command). */
+  reset?: boolean;
+  /** The renderer can replay from the start (the shell offers an إعادة التشغيل control → `replay` command). */
+  replay?: boolean;
+  /** The renderer supports pause/resume (reserved; honored by a renderer-specific control, not a generic button). */
+  pause?: boolean;
+  /** The renderer supports variable speed (reserved; honored by a renderer-specific control). */
+  speed?: boolean;
   /** The activity animates and must honor reduced-motion (the shell enforces the contract regardless). */
   animated?: boolean;
   /** The activity accepts keyboard/pointer interaction (informational; shells stay keyboard-accessible anyway). */
   interactive?: boolean;
 }
+
+/** The generic shell COMMANDS an activity renderer can be asked to perform (gated by `ActivityCapabilities`). */
+export type ActivityCommand = "reset" | "replay";
+export const ACTIVITY_COMMANDS: readonly ActivityCommand[] = ["reset", "replay"];
+/** Every capability flag is a plain boolean; the validator rejects any non-boolean (see `activity-invalid-capabilities`). */
+export const ACTIVITY_CAPABILITY_KEYS: readonly (keyof ActivityCapabilities)[] = [
+  "fullscreen", "reset", "replay", "pause", "speed", "animated", "interactive",
+];
 
 /** A faithful STATIC fallback shown when no live renderer is available (EMPTY production registry, unsupported
  *  version, or a runtime error). It is book/enrichment-safe content only — never an answer key. */
@@ -217,10 +253,31 @@ export interface AnimationBlock extends ActivityBlockBase {
   type: "animation";
   animationType: string;
 }
-/** A guided walkthrough / step-by-step interaction (e.g. build-a-subnet). Registry key = `guidedType`. */
+/** One step of a guided walkthrough (حل مع المعلم). `text` is structured safe spans — never raw HTML. */
+export interface GuidedStep {
+  /** Stable id (progressive-reveal state and future analytics key off it). */
+  id: string;
+  text: RichText;
+  note?: string;
+}
+/**
+ * A guided walkthrough (حل مع المعلم): a prompt → "think first" → progressively revealed steps → result +
+ * explanation. It is a STRUCTURED learning model rendered by a built-in progressive-reveal presenter (not a bespoke
+ * simulation), so it needs no registered component; `guidedType` selects the presenter variant ("reveal" default)
+ * and keeps guided uniform with the other activity families (version, capabilities, origin enforcement).
+ */
 export interface GuidedBlock extends ActivityBlockBase {
   type: "guided";
+  /** Presenter variant key (default "reveal"); the built-in progressive-reveal presenter handles it. */
   guidedType: string;
+  /** Optional opening prompt shown before the student reveals any step. */
+  prompt?: RichText;
+  /** Ordered steps, revealed one at a time. Must be non-empty (validated). */
+  steps: GuidedStep[];
+  /** Optional final result, revealed after the last step. */
+  result?: RichText;
+  /** Optional closing explanation. */
+  explanation?: string;
 }
 /** A diagram the student can inspect/toggle (hotspots, layer toggles). Registry key = `interactionType`. */
 export interface InteractiveDiagramBlock extends ActivityBlockBase {

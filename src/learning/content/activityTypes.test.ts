@@ -25,7 +25,7 @@ describe("Phase 3A — activity block helpers", () => {
     if (!isActivityBlock(sim) || !isActivityBlock(anim) || !isActivityBlock(guided) || !isActivityBlock(diagram)) throw new Error("fixture not an activity");
     expect(activityKey(sim)).toBe("vlan");
     expect(activityKey(anim)).toBe("packet-flow");
-    expect(activityKey(guided)).toBe("build-subnet");
+    expect(activityKey(guided)).toBe("reveal");
     expect(activityKey(diagram)).toBe("switch-ports");
   });
 
@@ -34,8 +34,18 @@ describe("Phase 3A — activity block helpers", () => {
     if (!isActivityBlock(guided)) throw new Error("fixture");
     const d = activityDescriptor(guided);
     expect(d.kind).toBe("guided");
-    expect(d.key).toBe("build-subnet");
+    expect(d.key).toBe("reveal");
     expect(d.version).toBe(1);
     expect(d.capabilities?.fullscreen).toBe(true);
+  });
+
+  it("a guided block carries a STRUCTURED walkthrough (prompt / ordered steps with stable ids / result / explanation)", () => {
+    const guided = pageActivities.blocks[1];
+    if (guided.type !== "guided") throw new Error("fixture");
+    expect(guided.steps.map(s => s.id)).toEqual(["fg-b2-s1", "fg-b2-s2"]);
+    expect(guided.steps[0].text[0].text).toContain("حدّد");
+    expect(guided.prompt?.[0].text).toContain("المطلوب");
+    expect(guided.result?.[0].text).toBe("255.255.255.128");
+    expect(guided.explanation).toBeTruthy();
   });
 });
