@@ -10,6 +10,7 @@ describe("UX-2 teacherNav mapping", () => {
     [{ teacherView: "platform", workspaceTab: "students" }, "students", "الصفوف والطلاب", ["الصفوف والطلاب"]],
     [{ teacherView: "platform", workspaceTab: "assignments" }, "assignments", "الواجبات", ["الواجبات"]],
     [{ teacherView: "platform", workspaceTab: "audit" }, "audit", "سجل النشاط", ["سجل النشاط"]],
+    [{ teacherView: "learning" }, "learning", "المواد التعليمية", ["المواد التعليمية"]],
     [{ teacherView: "reports" }, "reports", "التقارير", ["التقارير"]],
     [{ teacherView: "project", projectCode: "" }, "projects", "المشاريع", ["المشاريع"]],
     [{ teacherView: "project", projectCode: "899373" }, "projects", "مشروع 899373", ["المشاريع", "مشروع 899373"]],
@@ -42,5 +43,12 @@ describe("UX-2 teacherNav mapping", () => {
     expect(FOOTER_NAV).toEqual(["audit"]);
     expect(EXAM_BANK_HEAD).toBe("bank");                                       // UX-6c — the group head is itself a destination
     expect(EXAM_BANK_NAV).toEqual(["builder", "import"]);
+  });
+  it("Learning Materials is a top-level destination in the exact primary order (Phase 1), not inside Exam Bank", () => {
+    expect(PRIMARY_NAV).toEqual(["dashboard", "learning", "students", "assignments", "projects", "reports"]);
+    expect(NAV_LABELS.learning).toBe("المواد التعليمية");
+    expect(EXAM_BANK_NAV).not.toContain("learning");                          // never a child of Exam Bank
+    expect(activeNavId(base({ teacherView: "learning" }))).toBe("learning");
+    expect(pageTitleFor(base({ teacherView: "learning" }))).toBe("المواد التعليمية");
   });
 });

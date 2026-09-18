@@ -1,0 +1,54 @@
+/* ============================================================
+   ExamBank — Learning Materials (المواد التعليمية), Phase 1
+   Mobile-first, token-only (--eb-*), RTL-first through logical
+   properties. Presentation only; matches the Teacher Platform
+   design system (surfaces, spacing, radius, buttons, badges).
+   ============================================================ */
+.eb-lm{ display:flex; flex-direction:column; gap:var(--eb-space-4); min-width:0; }
+
+/* ---------- Library grid ---------- */
+.eb-lm-grid{ list-style:none; margin:0; padding:0; display:grid; grid-template-columns:1fr; gap:var(--eb-space-4); min-width:0; }
+.eb-lm-card{
+  display:flex; flex-direction:column; gap:var(--eb-space-3); min-width:0;
+  padding:var(--eb-space-4); background:var(--eb-surface); border:1px solid var(--eb-line); border-radius:var(--eb-r-lg); box-shadow:var(--eb-sh-xs);
+}
+.eb-lm-cover{
+  display:flex; align-items:center; justify-content:center; flex:0 0 auto; inline-size:64px; block-size:64px;
+  color:var(--eb-primary-strong); background:var(--eb-primary-050); border:1px solid var(--eb-line); border-radius:var(--eb-r);
+}
+.eb-lm-card-body{ display:flex; flex-direction:column; gap:var(--eb-space-2); min-width:0; }
+.eb-lm-card-eyebrow{ margin:0; color:var(--eb-muted); font-size:var(--eb-fs-12); font-weight:var(--eb-fw-semibold); font-variant-numeric:tabular-nums; }
+.eb-lm-card-title{ margin:0; color:var(--eb-text-heading); font-size:var(--eb-fs-17); font-weight:var(--eb-fw-bold); line-height:var(--eb-lh-tight); overflow-wrap:anywhere; }
+.eb-lm-card-desc{ margin:0; color:var(--eb-text-secondary); font-size:var(--eb-fs-13); line-height:var(--eb-lh-body); overflow-wrap:anywhere; }
+.eb-lm-card-foot{ display:flex; flex-wrap:wrap; align-items:center; gap:var(--eb-space-3); margin-block-start:var(--eb-space-1); }
+.eb-lm-cta{ margin-inline-start:auto; }
+
+/* ---------- Metadata (definition list) ---------- */
+.eb-lm-meta{ margin:0; display:grid; grid-template-columns:1fr; gap:var(--eb-space-1) var(--eb-space-3); min-width:0; }
+.eb-lm-meta > div{ display:flex; flex-wrap:wrap; gap:var(--eb-space-1); min-width:0; }
+.eb-lm-meta dt{ margin:0; color:var(--eb-muted); font-size:var(--eb-fs-12); }
+.eb-lm-meta dt::after{ content:":"; }
+.eb-lm-meta dd{ margin:0; color:var(--eb-text); font-size:var(--eb-fs-13); font-weight:var(--eb-fw-medium); overflow-wrap:anywhere; }
+
+/* ---------- Course overview ---------- */
+.eb-lm-back{ align-self:flex-start; display:inline-flex; align-items:center; gap:var(--eb-space-1); }
+.eb-lm-batches{ display:flex; flex-direction:column; gap:var(--eb-space-3); }
+.eb-lm-batch-list{ list-style:none; margin:0; padding:0; display:grid; grid-template-columns:1fr; gap:var(--eb-space-2); min-width:0; }
+.eb-lm-batch{
+  display:flex; align-items:center; flex-wrap:wrap; gap:var(--eb-space-2) var(--eb-space-3); min-width:0;
+  padding:var(--eb-space-3); background:var(--eb-surface); border:1px solid var(--eb-line); border-radius:var(--eb-r);
+}
+.eb-lm-batch-index{
+  display:inline-flex; align-items:center; justify-content:center; flex:0 0 auto; inline-size:28px; block-size:28px;
+  color:var(--eb-primary-strong); background:var(--eb-primary-050); border-radius:50%; font-size:var(--eb-fs-13); font-weight:var(--eb-fw-bold); font-variant-numeric:tabular-nums;
+}
+.eb-lm-batch-label{ flex:1 1 auto; min-width:0; color:var(--eb-text-heading); font-size:var(--eb-fs-14); font-weight:var(--eb-fw-medium); overflow-wrap:anywhere; }
+.eb-lm-batch-status{ flex:0 0 auto; }
+
+/* ---------- Tablet and up ---------- */
+@media (min-width: 768px){
+  .eb-lm-grid{ grid-template-columns:repeat(auto-fill, minmax(320px, 1fr)); }
+  .eb-lm-card{ flex-direction:row; align-items:flex-start; }
+  .eb-lm-card-body{ flex:1 1 auto; }
+  .eb-lm-meta, .eb-lm-meta-wide{ grid-template-columns:repeat(2, minmax(0,1fr)); }
+}

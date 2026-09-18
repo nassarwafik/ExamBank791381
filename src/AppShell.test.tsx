@@ -83,6 +83,8 @@ describe("UX-2 App + TeacherAppShell integration", () => {
     expect(h1()).toBe("التقارير"); expect(await screen.findByRole("group", { name: "تصنيف التقارير" })).toBeTruthy(); // ReportsCenter hub (no hero)
     fireEvent.click(nav("استيراد من ملف"));
     expect(h1()).toBe("استيراد من ملف"); expect(await screen.findByText("استيراد أسئلة من ملف")).toBeTruthy();
+    fireEvent.click(nav("المواد التعليمية"));
+    expect(h1()).toBe("المواد التعليمية"); expect(await screen.findByRole("button", { name: "فتح الكتاب" })).toBeTruthy();
     fireEvent.click(nav("باني الامتحان"));
     expect(h1()).toBe("باني الامتحان"); expect(document.querySelector(".builder-content")).toBeTruthy();
     // no teacher bottom bar and no emoji in the shell navigation
