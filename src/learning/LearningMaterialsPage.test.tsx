@@ -30,7 +30,7 @@ describe("Learning Materials — Phase 1 library", () => {
     expect(fetchSpy).not.toHaveBeenCalled();                                    // no network on entry
   });
 
-  it("opening the book shows a Phase-1 course overview with identity + six batches marked قريبًا; back restores the library — all with zero requests", () => {
+  it("opening the book shows a course overview with identity + eight sections marked قريبًا; back restores the library — all with zero requests", () => {
     const fetchSpy = vi.spyOn(globalThis, "fetch");
     render(<LearningMaterialsPage />);
     fireEvent.click(screen.getByRole("button", { name: "فتح الكتاب" }));
@@ -41,8 +41,8 @@ describe("Learning Materials — Phase 1 library", () => {
     const batchList = screen.getByRole("list", { name: "أقسام محتوى الكتاب" });
     const items = within(batchList).getAllByRole("listitem");
     expect(items.map(li => li.textContent)).toEqual(course.overviewBatches.map((b, i) => (i + 1) + b.label + "قريبًا"));
-    expect(items.length).toBe(6);
-    expect(within(batchList).getAllByText("قريبًا").length).toBe(6);
+    expect(items.length).toBe(8);
+    expect(within(batchList).getAllByText("قريبًا").length).toBe(8);
     // back to the library
     fireEvent.click(screen.getByRole("button", { name: "العودة إلى المواد التعليمية" }));
     expect(screen.getByRole("heading", { level: 2, name: "المواد التعليمية" })).toBeTruthy();
@@ -59,7 +59,7 @@ describe("Learning Materials — Phase 1 library", () => {
 });
 
 describe("Learning Materials — Phase 1 catalog", () => {
-  it("exposes exactly the owner-provided 791381 identity and six overview batches", () => {
+  it("exposes exactly the owner-provided 791381 identity and eight overview sections", () => {
     expect(course).toMatchObject({
       id: "791381",
       title: "شبكات الاتصال",
@@ -71,12 +71,15 @@ describe("Learning Materials — Phase 1 catalog", () => {
       status: "available",
     });
     expect(course.overviewBatches.map(b => b.label)).toEqual([
+      "المقدمة",
       "الأساسيات · الأعداد · IP",
       "الأجهزة والرسائل",
       "النماذج والبروتوكولات والأمان",
       "برمجة السويتش و VLAN",
       "الأمان · Wi-Fi · IPv6 · DHCP",
       "ACL · التوجيه · WAN",
+      "التلخيص",
     ]);
+    expect(course.overviewBatches.map(b => b.id)).toEqual(["intro", "b1", "b2", "b3", "b4", "b5", "b6", "summary"]);
   });
 });

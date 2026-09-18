@@ -64,6 +64,17 @@ describe("Phase 2 — 791381 content manifest", () => {
     for (const b of batches) for (const mid of b.moduleIds) expect(moduleIds.has(mid)).toBe(true);
     expect(batches.some(b => b.moduleIds.length > 1)).toBe(true);
   });
+
+  it("declares the EIGHT Phase-3 sections in the exact owner order, with intro/summary not yet mapped", () => {
+    expect(manifest.batches!.map(b => b.id)).toEqual(["intro", "b1", "b2", "b3", "b4", "b5", "b6", "summary"]);
+    expect(manifest.batches!.map(b => b.label)).toEqual([
+      "المقدمة", "الأساسيات · الأعداد · IP", "الأجهزة والرسائل", "النماذج والبروتوكولات والأمان",
+      "برمجة السويتش و VLAN", "الأمان · Wi-Fi · IPv6 · DHCP", "ACL · التوجيه · WAN", "التلخيص",
+    ]);
+    const byId = Object.fromEntries(manifest.batches!.map(b => [b.id, b.moduleIds]));
+    expect(byId.intro).toEqual([]);   // not yet represented in interactive content (NOT empty in the book)
+    expect(byId.summary).toEqual([]);
+  });
 });
 
 function expectStrictlyOrdered(orders: number[]) {

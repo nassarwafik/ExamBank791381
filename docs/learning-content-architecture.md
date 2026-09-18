@@ -229,7 +229,42 @@ The student experience is native (text, cards, tables, diagrams, interactive con
 **not** a PDF embed. A source-page screenshot may serve later only as a teacher *verification* reference. Added
 visuals must not contradict the source.
 
-## Interactive Page Design Principles (Phase 3 rendering — not implemented here)
+## Reader & UX Principles (Phase 3 — permanent)
+
+> **Every learning page must be academically faithful, mobile-first, visually polished, and meaningfully
+> interactive. Interactivity must improve understanding rather than merely decorate the page.**
+>
+> **A learning page is not complete if it is faithful to the book but unusable on a phone.**
+
+These are permanent product invariants, alongside the retained ones: book vs teacher-enrichment separation
+(mandatory `origin`), source-first conversion, no silent corrections, mobile-friendly controlled page splitting,
+and the eight high-level course sections (المقدمة … التلخيص).
+
+The **Interactive Reader** (`src/learning/reader/`) is the presentation surface — it never owns content or
+navigation ordering:
+
+- **Composition:** `LearningReader` (orchestration + state), `LearningReaderToc` (manifest-only TOC),
+  `LearningPageRenderer` (page header + blocks), `RichTextRenderer` (safe inline spans — never
+  `dangerouslySetInnerHTML`). Styles are namespaced `learning-reader-*`.
+- **Navigation authority is the manifest + Phase-2 helpers** (`flattenPageRefs` / `previousPage` / `nextPage` /
+  `pagePosition` / `findPage`) — never array positions re-implemented in React. `pageId` is the selection key.
+- **Reader position (`صفحة N من M`) is content order — distinct from the source PDF page** shown quietly as
+  `المصدر: كتاب … · صفحة PDF …` (and the printed page when known).
+- **Lazy + cached:** the manifest drives the TOC without loading any body; only the selected page's module is
+  lazily loaded and cached for the session; late/out-of-order loads never render a stale page. Zero backend
+  requests (only code-split imports). The Reader is itself a lazy chunk.
+- **Provenance is visible:** book blocks are the dominant surface (a quiet page-level "من الكتاب"); each
+  teacher-enrichment block sits in a clearly-labelled, non-color-only enrichment surface (مثال إضافي / جرّب بنفسك /
+  توضيح المعلم / محاكاة).
+- **Answer keys never reach the DOM:** the static Phase-3 practice preview shows the question + option shapes only —
+  never `correct`, `answer(s)`, or feedback (no text, attribute, prop or label).
+- **Not-yet-converted is graceful:** with no module bodies authored yet, every real page shows a professional
+  "قيد الإعداد" state (title/module/lesson/source) — never an AI-generated explanation.
+- **Mobile-first:** single content column, a `الفهرس` drawer instead of a permanent sidebar, sticky safe-area-aware
+  bottom Previous/Next, ≥44px touch targets, tables/code scroll only inside their own container (never the page),
+  focus moves to the page title on navigation (never on first mount), and animations respect reduced motion.
+
+## Interactive Page Design Principles (rendering contract)
 
 Each converted page is one native **Interactive Learning Page** that can combine, in **authored block order**:
 header (title / lesson / page position) → core book content → visual explanation → example → try-it practice →
@@ -244,17 +279,20 @@ extra activities must never bury the original lesson. Preferred visual hierarchy
 (unless decorative), input labels, visible focus, feedback never by color alone, RTL Arabic with LTR technical
 values/commands (per-block/per-span `dir`), and mobile layouts.
 
-## Phase boundaries (not implemented here)
+## Phase boundaries
 
-| Phase | Scope |
-| --- | --- |
-| **2 (this)** | Content schema, validation, navigation, lazy registry, `791381` skeleton manifest |
-| 3 | Interactive Reader — TOC, previous/next, jump-to-page, page rendering |
-| 4 | Interactive Practice — quiz rendering + immediate feedback |
-| 5 | Simulations — binary-box, network-flow, subnet, VLAN, CLI |
-| 6 | Student Progress — last page, completion, attempts (separate domain) |
-| 7 | Teacher Content Management — editors, publish/unpublish |
-| 8 | AI Learning Assistant |
+| Phase | Scope | Status |
+| --- | --- | --- |
+| 2 | Content schema, validation, navigation, lazy registry, `791381` skeleton manifest | done |
+| **3 (this)** | Interactive **Reader** — TOC, previous/next, jump-to-page, page/block rendering, provenance display, lazy module loading, professional not-yet-converted state | done (reader shell) |
+| 3B | Pilot content conversion — a small contiguous range of real Book 791381 pages | next |
+| 4 | Interactive Practice — answer checking + immediate feedback (inline) | deferred |
+| 5 | Simulations — binary-box, network-flow, subnet, VLAN, CLI | deferred |
+| 6 | Student Progress — last page, completion, attempts (separate domain) | deferred |
+| 7 | Teacher Content Management — editors, publish/unpublish | deferred |
+| 8 | AI Learning Assistant | deferred |
 
-PDF → native content conversion happens only **after** the schema and Reader are approved. The source PDF remains
-the authoritative source and is never bundled into production.
+Phase 3 ships the Reader **shell only**: it renders synthetic/test content and the "قيد الإعداد" state for the real
+book. **PDF → native content conversion has not started** — it begins in Phase 3B, only after the Reader UX is
+approved, choosing a small contiguous page range first. The source PDF remains the authoritative source and is never
+bundled into production.

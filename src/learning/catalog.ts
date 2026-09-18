@@ -60,13 +60,18 @@ export const LEARNING_COURSES: LearningCourse[] = [
     year: "2026–2027",
     status: "available",
     description: "كتاب تفاعلي في شبكات الاتصال يغطي الأساسيات والأجهزة والبروتوكولات والأمان والتوجيه خطوة بخطوة.",
+    // Eight OWNER-approved high-level presentation sections in exact visible order (Phase 3). The middle six keep
+    // their stable Phase-1/2 ids (b1..b6); "intro" (المقدمة) and "summary" (التلخيص) frame them and are the real
+    // introductory / summary sections of the book (canonical modules for them are authored during conversion).
     overviewBatches: [
+      { id: "intro", label: "المقدمة" },
       { id: "b1", label: "الأساسيات · الأعداد · IP" },
       { id: "b2", label: "الأجهزة والرسائل" },
       { id: "b3", label: "النماذج والبروتوكولات والأمان" },
       { id: "b4", label: "برمجة السويتش و VLAN" },
       { id: "b5", label: "الأمان · Wi-Fi · IPv6 · DHCP" },
       { id: "b6", label: "ACL · التوجيه · WAN" },
+      { id: "summary", label: "التلخيص" },
     ],
   },
 ];

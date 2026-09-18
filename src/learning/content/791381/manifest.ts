@@ -123,17 +123,20 @@ const manifest: LearningCourseManifest = {
       ],
     },
   ],
-  // The six Phase-1 overview "batches" are PRESENTATION groupings that each map to one OR MORE real modules (§29).
-  // Every batch corresponds to real units in the source book; a batch whose modules are not yet in this PARTIAL
-  // skeleton carries an empty `moduleIds` list for now (pending conversion) — an empty list means "not yet
-  // represented in the skeleton", NOT that the batch has no content in the book.
+  // The EIGHT Phase-3 overview "batches" are PRESENTATION groupings that each map to one OR MORE real modules (§29);
+  // they are NOT themselves canonical modules. The order is the OWNER-approved visible order (intro … summary).
+  // A batch whose modules are not yet in this PARTIAL skeleton carries an empty `moduleIds` for now — this means
+  // "not yet represented in interactive content", NOT "empty in the book". Introduction and Summary are real book
+  // sections whose canonical modules are authored during conversion, so they are empty here for now.
   batches: [
+    { id: "intro", label: "المقدمة", moduleIds: [] },
     { id: "b1", label: "الأساسيات · الأعداد · IP", moduleIds: ["791381-m01", "791381-m02"] },
     { id: "b2", label: "الأجهزة والرسائل", moduleIds: [] },
     { id: "b3", label: "النماذج والبروتوكولات والأمان", moduleIds: [] },
     { id: "b4", label: "برمجة السويتش و VLAN", moduleIds: ["791381-m03", "791381-m04", "791381-m05"] },
     { id: "b5", label: "الأمان · Wi-Fi · IPv6 · DHCP", moduleIds: [] },
     { id: "b6", label: "ACL · التوجيه · WAN", moduleIds: ["791381-m06"] },
+    { id: "summary", label: "التلخيص", moduleIds: [] },
   ],
 };
 
