@@ -8,6 +8,8 @@ import { describe, it, expect, afterEach, vi } from "vitest";
 import { render, cleanup, screen, fireEvent, within, waitFor } from "@testing-library/react";
 import StudentPortal from "./StudentPortal";
 import type { FeedPost } from "./achievements";
+import { RANK_VISUALS } from "./studentRankVisuals";
+import type { RankTier } from "./studentRank";
 
 afterEach(() => { cleanup(); vi.restoreAllMocks(); });
 const res = (status: number, body: unknown) => Promise.resolve({ status, ok: status >= 200 && status < 300, json: async () => body } as Response);
@@ -289,6 +291,16 @@ describe("UX-7a StudentPortal — identity, medals, average ring and personal ra
     expect(screen.getByText("3 من 4 امتحانات نهائية لفتح رتبتك")).toBeTruthy();
     expect(document.body.textContent).not.toMatch(/من 10 |لفتح الرتبة/);          // old 10-based copy is gone
     expect(document.querySelector(".eb-sp-avatar-frame")?.className).not.toMatch(/is-rank-/);
+    // No EARNED rank image before finalized 4: image 1 appears only as a clearly-muted, decorative NEXT-rank
+    // preview (aria-hidden, empty alt) labelled "الرتبة القادمة" — never as an owned rank.
+    expect(screen.queryByRole("img", { name: /رتبة بذرة القوة/ })).toBeNull();     // not presented as earned
+    const preview = document.querySelector(".eb-sp-rank-art.is-locked") as HTMLImageElement;
+    expect(preview).toBeTruthy();
+    expect(preview.getAttribute("aria-hidden")).toBe("true");
+    expect(preview.getAttribute("alt")).toBe("");
+    expect(preview.getAttribute("src")).toBe(RANK_VISUALS.beginner.image);
+    expect(screen.getByText("الرتبة القادمة")).toBeTruthy();
+    expect(screen.getByText("بذرة القوة")).toBeTruthy();
   });
 
   it("the six-tier personal rank badge, avatar frame and next-rank progress come from the finalized COUNT only (not the average); nothing compares students", async () => {
@@ -313,6 +325,13 @@ describe("UX-7a StudentPortal — identity, medals, average ring and personal ra
       await screen.findByText(/مرحبًا أحمد/);
       expect(screen.getByText("الرتبة: " + label, { exact: false }).textContent, String(finalized)).toContain(label);
       expect(document.querySelector(".eb-sp-avatar-frame.is-rank-" + tier), String(finalized)).toBeTruthy();
+      // the custom rank artwork is now the primary visual: the right image (by module identity), its Arabic
+      // level title, and meaningful alt — the textual "الرتبة: X" label stays too (asserted above).
+      const v = RANK_VISUALS[tier as RankTier];
+      const art = screen.getByRole("img", { name: v.alt }) as HTMLImageElement;
+      expect(art.getAttribute("src"), String(finalized)).toBe(v.image);
+      expect(art.className, String(finalized)).toContain("eb-sp-rank-art");
+      expect(screen.getByText(v.title), String(finalized)).toBeTruthy();
       unmount();
     }
   });
@@ -323,6 +342,10 @@ describe("UX-7a StudentPortal — identity, medals, average ring and personal ra
     expect(screen.getByText(/الرتبة: أسطوري/)).toBeTruthy();
     expect(screen.queryByRole("progressbar", { name: /نحو رتبة/ })).toBeNull();
     expect(screen.getByText("بلغت أعلى رتبة")).toBeTruthy();
+    // legendary shows its own art (image 6) and title, and NO next-rank preview thumbnail (top of the ladder).
+    expect((screen.getByRole("img", { name: RANK_VISUALS.legendary.alt }) as HTMLImageElement).getAttribute("src")).toBe(RANK_VISUALS.legendary.image);
+    expect(screen.getByText("العنقاء الذهبية")).toBeTruthy();
+    expect(document.querySelector(".eb-sp-rank-next-art")).toBeNull();
     unmount();
     mount({ student, classroom, assignments: [], stats: { ...baseStats, assigned: 12, finalized: 6, averageFinalized: 30 } });   // beginner (4–7), 2 into the block
     await screen.findByText(/مرحبًا أحمد/);
@@ -330,6 +353,15 @@ describe("UX-7a StudentPortal — identity, medals, average ring and personal ra
     expect(screen.getByRole("progressbar", { name: "نحو رتبة برونزي" }).getAttribute("aria-valuenow")).toBe("50");
     expect(screen.getByText("بقي امتحانان للوصول إلى رتبة برونزي")).toBeTruthy();
     expect(document.querySelector(".eb-sp-avatar-frame.is-rank-beginner")).toBeTruthy();
+    // current rank = beginner art (image 1, meaningful alt); next-rank preview = bronze art (image 2), a small
+    // decorative thumbnail (aria-hidden, empty alt) that must NOT duplicate screen-reader text.
+    expect((screen.getByRole("img", { name: RANK_VISUALS.beginner.alt }) as HTMLImageElement).getAttribute("src")).toBe(RANK_VISUALS.beginner.image);
+    const nextArt = document.querySelector(".eb-sp-rank-next-art") as HTMLImageElement;
+    expect(nextArt).toBeTruthy();
+    expect(nextArt.getAttribute("src")).toBe(RANK_VISUALS.bronze.image);
+    expect(nextArt.getAttribute("aria-hidden")).toBe("true");
+    expect(nextArt.getAttribute("alt")).toBe("");
+    expect(screen.queryByRole("img", { name: /رتبة شعلة صغيرة/ })).toBeNull();     // preview is decorative, not a second labelled image
   });
 
   it("the avatar opens the shared Dialog; picking posts setAvatar once, closes and updates the avatar; Escape / إغلاق cost no request", async () => {

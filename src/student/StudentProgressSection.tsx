@@ -7,6 +7,7 @@ import StatCard from "../ui/StatCard";
 import StatusBadge from "../ui/StatusBadge";
 import VisuallyHidden from "../ui/VisuallyHidden";
 import { RANK_STEP_FINALIZED, remainingExamsPhrase, type RankProgress, type StudentRank } from "../studentRank";
+import { RANK_VISUALS } from "../studentRankVisuals";
 import { countMedals } from "./portalPresentation";
 import type { Stats } from "./types";
 
@@ -50,11 +51,20 @@ export default function StudentProgressSection({ stats, medals, rank, progress, 
           )}
           {rank ? (
             <div className="eb-sp-rank-progress">
-              <p className="eb-sp-rank"><StatusBadge tone="info" className="eb-sp-rank-badge"><IconMedal size={18} aria-hidden="true" />الرتبة: {rank.label}</StatusBadge><span className="eb-sp-rank-hint">من {rank.finalized} واجبات نهائية</span></p>
+              <div className="eb-sp-rank-hero">
+                <img className="eb-sp-rank-art" src={RANK_VISUALS[rank.tier].image} alt={RANK_VISUALS[rank.tier].alt} width={112} height={112} loading="lazy" decoding="async" />
+                <div className="eb-sp-rank-hero-text">
+                  <p className="eb-sp-rank-title">{RANK_VISUALS[rank.tier].title}</p>
+                  <p className="eb-sp-rank"><StatusBadge tone="info" className="eb-sp-rank-badge"><IconMedal size={18} aria-hidden="true" />الرتبة: {rank.label}</StatusBadge><span className="eb-sp-rank-hint">من {rank.finalized} واجبات نهائية</span></p>
+                </div>
+              </div>
               {rank.next ? (
                 <>
                   <ProgressBar size="sm" label={"نحو رتبة " + rank.next.label} value={rank.next.percent} tone="series-2" />
-                  <p className="eb-sp-rank-hint">{remainingExamsPhrase(rank.next.remaining)} للوصول إلى رتبة {rank.next.label}</p>
+                  <p className="eb-sp-rank-hint eb-sp-rank-next">
+                    <img className="eb-sp-rank-next-art" src={RANK_VISUALS[rank.next.tier].image} alt="" aria-hidden="true" width={40} height={40} loading="lazy" decoding="async" />
+                    <span>{remainingExamsPhrase(rank.next.remaining)} للوصول إلى رتبة {rank.next.label}</span>
+                  </p>
                 </>
               ) : (
                 <p className="eb-sp-rank-hint">بلغت أعلى رتبة</p>
@@ -62,6 +72,13 @@ export default function StudentProgressSection({ stats, medals, rank, progress, 
             </div>
           ) : (
             <div className="eb-sp-rank-progress">
+              <div className="eb-sp-rank-hero is-preview">
+                <img className="eb-sp-rank-art is-locked" src={RANK_VISUALS.beginner.image} alt="" aria-hidden="true" width={112} height={112} loading="lazy" decoding="async" />
+                <div className="eb-sp-rank-hero-text">
+                  <p className="eb-sp-rank-hint">الرتبة القادمة</p>
+                  <p className="eb-sp-rank-title is-muted">{RANK_VISUALS.beginner.title}</p>
+                </div>
+              </div>
               <ProgressBar size="sm" label="الطريق إلى رتبتك" value={progress.percent} showValue={false} tone="series-2" />
               <p className="eb-sp-rank-hint">{progress.finalized} من {RANK_STEP_FINALIZED} امتحانات نهائية لفتح رتبتك</p>
             </div>

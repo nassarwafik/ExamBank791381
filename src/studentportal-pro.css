@@ -61,8 +61,19 @@
 .eb-sp-medal.is-bronze{ color:var(--eb-medal-bronze); }
 .eb-sp-rank{ margin:0; display:flex; flex-wrap:wrap; align-items:center; gap:var(--eb-space-2); }
 .eb-sp-rank-badge{ gap:var(--eb-space-1); }
-.eb-sp-rank-progress{ display:flex; flex-direction:column; gap:var(--eb-space-1); }
+.eb-sp-rank-progress{ display:flex; flex-direction:column; gap:var(--eb-space-2); }
 .eb-sp-rank-hint{ margin:0; color:var(--eb-muted); font-size:var(--eb-fs-12); line-height:var(--eb-lh-body); }
+/* Custom rank artwork — the primary visual of the earned rank (square author assets, shown untouched via
+   object-fit:contain, never cropped). Size is CSS-owned: ~88px on phones, ~112px from 768 px. */
+.eb-sp-rank-hero{ display:flex; align-items:center; flex-wrap:wrap; gap:var(--eb-space-3); min-width:0; }
+.eb-sp-rank-hero-text{ display:flex; flex-direction:column; gap:var(--eb-space-1); min-width:0; }
+.eb-sp-rank-art{ flex:0 0 auto; inline-size:88px; block-size:88px; object-fit:contain; border-radius:var(--eb-r); }
+.eb-sp-rank-art.is-locked{ opacity:.5; filter:grayscale(.35); }
+.eb-sp-rank-title{ margin:0; color:var(--eb-text-heading); font-size:var(--eb-fs-16); font-weight:var(--eb-fw-bold); line-height:var(--eb-lh-tight); overflow-wrap:anywhere; }
+.eb-sp-rank-title.is-muted{ color:var(--eb-text-secondary); font-weight:var(--eb-fw-semibold); }
+/* Next-rank preview — a small, deliberately less prominent thumbnail beside the "نحو رتبة X" hint. */
+.eb-sp-rank-next{ display:flex; align-items:center; gap:var(--eb-space-2); }
+.eb-sp-rank-next-art{ flex:0 0 auto; inline-size:40px; block-size:40px; object-fit:contain; opacity:.85; }
 
 /* ---------- Stats ---------- */
 .eb-sp-stats{ display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:var(--eb-space-3); }
@@ -150,6 +161,7 @@
   .eb-sp-task-action{ width:auto; min-height:38px; align-self:flex-start; }
   .eb-sp-reaction{ min-height:32px; }
   .eb-sp-project-tracks{ grid-template-columns:repeat(2,minmax(0,1fr)); }
+  .eb-sp-rank-art{ inline-size:112px; block-size:112px; }
 }
 @media (min-width: 1024px){
   .eb-sp{ gap:var(--eb-space-5); }
