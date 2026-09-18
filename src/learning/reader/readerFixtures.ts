@@ -16,6 +16,7 @@ const src = (pdf: number, end?: number, printed?: number): ContentPage["source"]
 export const ANSWER_KEY = {
   correctText: "Access",
   hint: "SECRET_HINT_XYZ",
+  hints: ["SECRET_LADDER_1_XYZ", "SECRET_LADDER_2_XYZ"],
   correctFeedback: "SECRET_CORRECT_XYZ",
   incorrectFeedback: "SECRET_INCORRECT_XYZ",
   explanation: "SECRET_EXPLANATION_XYZ",
@@ -41,10 +42,10 @@ const richPage: ContentPage = {
       question: {
         kind: "multipleChoice", prompt: "أي وضع لجهاز واحد؟",
         options: [{ id: "o1", text: "Access", correct: true }, { id: "o2", text: "Trunk" }],
-        feedback: { hint: ANSWER_KEY.hint, correctFeedback: ANSWER_KEY.correctFeedback, incorrectFeedback: ANSWER_KEY.incorrectFeedback, explanation: ANSWER_KEY.explanation },
+        feedback: { hint: ANSWER_KEY.hint, hints: ANSWER_KEY.hints, correctFeedback: ANSWER_KEY.correctFeedback, incorrectFeedback: ANSWER_KEY.incorrectFeedback, explanation: ANSWER_KEY.explanation },
       },
     },
-    { id: "p1-sim", type: "simulation", origin: "teacher-enrichment", simulationType: "vlan", title: "محاكاة VLAN", description: "توزيع المنافذ." },
+    { id: "p1-sim", type: "simulation", origin: "teacher-enrichment", simulationType: "vlan", version: 1, title: "محاكاة VLAN", description: "توزيع المنافذ." },
   ],
 };
 

@@ -193,10 +193,96 @@ describe("Phase 2 — content validator", () => {
     expect(codes(c)).not.toContain("quiz-mcq-answer-count");
   });
 
-  it("flags an unsupported simulation type", () => {
+  it("treats simulationType as a free-form registry KEY (no enum) — a new key is valid, not an error", () => {
     const c = cloneCourse();
-    (c.modules[2].lessons[0].pages[2].blocks[0] as { simulationType: string }).simulationType = "teleport";
-    has(c, "unsupported-simulation-type");
+    (c.modules[2].lessons[0].pages[2].blocks[0] as { simulationType: string }).simulationType = "custom-lab";
+    expect(validateLearningCourseContent(c)).toEqual([]);
+  });
+
+  it("flags an activity descriptor missing its registry key, version, or title (Phase 3A engine)", () => {
+    const noKey = cloneCourse();
+    (noKey.modules[2].lessons[0].pages[2].blocks[0] as { simulationType: string }).simulationType = "";
+    has(noKey, "activity-missing-key");
+    const noVersion = cloneCourse();
+    delete (noVersion.modules[2].lessons[0].pages[2].blocks[0] as { version?: unknown }).version;
+    has(noVersion, "activity-invalid-version");
+    const badVersion = cloneCourse();
+    (badVersion.modules[2].lessons[0].pages[2].blocks[0] as { version: unknown }).version = 0;
+    has(badVersion, "activity-invalid-version");
+    const noTitle = cloneCourse();
+    (noTitle.modules[2].lessons[0].pages[2].blocks[0] as { title: string }).title = "";
+    has(noTitle, "activity-missing-title");
+  });
+
+  it("validates the new activity families (animation / guided / interactive-diagram) as ENRICHMENT descriptors", () => {
+    // the pageActivities fixture carries all three — a valid course has none of the activity issues
+    const ok = codes(cloneCourse());
+    expect(ok).not.toContain("activity-missing-key");
+    expect(ok).not.toContain("activity-invalid-version");
+    expect(ok).not.toContain("activity-missing-title");
+    // each family is enrichment-only: marking one as book is an origin-policy-violation
+    for (const idx of [0, 1, 2]) {
+      const c = cloneCourse();
+      (c.modules[2].lessons[0].pages[4].blocks[idx] as { origin: string }).origin = "book";
+      has(c, "origin-policy-violation");
+    }
+  });
+
+  it("flags an activity fallback image that has no alt text", () => {
+    const c = cloneCourse();
+    const diagram = c.modules[2].lessons[0].pages[4].blocks[2] as { fallback: { alt: string } };
+    diagram.fallback.alt = "";
+    has(c, "image-missing-alt");
+  });
+
+  it("rejects MALFORMED capabilities (non-boolean values, unknown keys, non-object) — activity-invalid-capabilities", () => {
+    const sim = (c: LearningCourseContent) => c.modules[2].lessons[0].pages[2].blocks[0] as { capabilities?: unknown };
+    const str = cloneCourse(); sim(str).capabilities = { fullscreen: "yes" };
+    has(str, "activity-invalid-capabilities");
+    const num = cloneCourse(); sim(num).capabilities = { reset: 1 };
+    has(num, "activity-invalid-capabilities");
+    const unknown = cloneCourse(); sim(unknown).capabilities = { teleport: true };
+    has(unknown, "activity-invalid-capabilities");
+    const arr = cloneCourse(); sim(arr).capabilities = ["fullscreen"];
+    has(arr, "activity-invalid-capabilities");
+    const nul = cloneCourse(); sim(nul).capabilities = null;
+    has(nul, "activity-invalid-capabilities");
+    // every well-formed flag (incl. reset/replay/pause/speed) is accepted
+    const ok = cloneCourse(); sim(ok).capabilities = { fullscreen: true, reset: false, replay: true, pause: true, speed: false, animated: true, interactive: true };
+    expect(validateLearningCourseContent(ok)).toEqual([]);
+  });
+
+  it("validates GUIDED structure centrally: empty steps and malformed steps are rejected", () => {
+    const guided = (c: LearningCourseContent) => c.modules[2].lessons[0].pages[4].blocks[1] as { steps: unknown };
+    const empty = cloneCourse(); guided(empty).steps = [];
+    has(empty, "guided-empty-steps");
+    const missing = cloneCourse(); delete (guided(missing) as { steps?: unknown }).steps;
+    has(missing, "guided-empty-steps");
+    const noId = cloneCourse(); guided(noId).steps = [{ id: "", text: [{ text: "x" }] }];
+    has(noId, "guided-invalid-step");
+    const noText = cloneCourse(); guided(noText).steps = [{ id: "s1", text: [] }];
+    has(noText, "guided-invalid-step");
+    const blankText = cloneCourse(); guided(blankText).steps = [{ id: "s1", text: [{ text: "   " }] }];
+    has(blankText, "guided-invalid-step");
+    // the fixture's structured guided block is valid as authored
+    expect(codes(cloneCourse())).not.toContain("guided-empty-steps");
+    expect(codes(cloneCourse())).not.toContain("guided-invalid-step");
+  });
+
+  it("rejects DUPLICATE step ids within one guided block (guided-duplicate-step-id) — not across different blocks", () => {
+    const guided = (c: LearningCourseContent) => c.modules[2].lessons[0].pages[4].blocks[1] as { steps: { id: string; text: { text: string }[] }[] };
+    const dup = cloneCourse();
+    guided(dup).steps = [{ id: "step-1", text: [{ text: "أ" }] }, { id: "step-1", text: [{ text: "ب" }] }];
+    has(dup, "guided-duplicate-step-id");
+    expect(codes(dup).filter(x => x === "guided-duplicate-step-id").length).toBe(1);   // reported once per block
+    // the same step id reused by a SECOND guided block on the page is fine (uniqueness is per owning block)
+    const twoBlocks = cloneCourse();
+    const page = twoBlocks.modules[2].lessons[0].pages[4];
+    const second = structuredClone(page.blocks[1]);
+    (second as { id: string }).id = "fg-b2-copy";
+    page.blocks.push(second);   // identical step ids "fg-b2-s1"/"fg-b2-s2" in two different guided blocks
+    expect(codes(twoBlocks)).not.toContain("guided-duplicate-step-id");
+    expect(codes(cloneCourse())).not.toContain("guided-duplicate-step-id");
   });
 
   it("flags a table row that does not match the header count", () => {

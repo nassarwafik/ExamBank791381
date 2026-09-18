@@ -1,9 +1,19 @@
 import type { ReactNode } from "react";
 import { IconWarning, IconBook, IconSparkles } from "../../icons";
 import RichTextRenderer from "./RichTextRenderer";
-import type {
-  ContentBlock, ContentPage, ContentSource, CalloutKind, PracticeQuestion,
-} from "../content/types";
+import { isActivityBlock, type ContentBlock, type ContentPage, type ContentSource, type CalloutKind, type PracticeQuestion } from "../content/types";
+import LearningActivityHost from "../activities/LearningActivityHost";
+import { ACTIVITY_ENRICHMENT_LABEL } from "../activities/labels";
+import type { LearningActivityRegistry, LearningActivityEventSink } from "../activities/engine";
+
+/** Injection seam for the interactive-activity engine. The reader passes nothing → the EMPTY production registry
+ *  and the no-op event sink are used, so activities render their faithful static fallback and nothing is
+ *  persisted. Tests inject a synthetic registry / sink to exercise the live path. */
+export type ActivityRenderContext = {
+  courseId: string;
+  registry?: LearningActivityRegistry;
+  emit?: LearningActivityEventSink;
+};
 
 // The page header is always derived from the MANIFEST, so title/context/position/source render immediately —
 // even while the module body is still loading, or when it is not yet converted.
@@ -30,7 +40,13 @@ export type ReaderPageBody =
  * are wrapped in a clearly-labelled (non-color-only) enrichment surface. Blocks render in EXACT authored order —
  * nothing is regrouped. No answer keys are ever emitted to the DOM (see PracticeBlockView).
  */
-export default function LearningPageRenderer({ header, body }: { header: ReaderPageHeader; body: ReaderPageBody }) {
+export default function LearningPageRenderer({ header, body, activity }: {
+  header: ReaderPageHeader;
+  body: ReaderPageBody;
+  /** Optional activity-engine injection. Omitted in production → EMPTY registry + no-op sink (static fallback). */
+  activity?: { registry?: LearningActivityRegistry; emit?: LearningActivityEventSink };
+}) {
+  const ctx: ActivityRenderContext = { courseId: header.courseId, registry: activity?.registry, emit: activity?.emit };
   return (
     <article className="learning-reader-page" aria-labelledby="learning-reader-page-title">
       <header className="learning-reader-pagehead">
@@ -44,7 +60,7 @@ export default function LearningPageRenderer({ header, body }: { header: ReaderP
         {header.source && <SourceLine source={header.source} />}
       </header>
       <div className="learning-reader-pagebody">
-        <ReaderBody header={header} body={body} />
+        <ReaderBody header={header} body={body} ctx={ctx} />
       </div>
     </article>
   );
@@ -62,7 +78,7 @@ function SourceLine({ source }: { source: ContentSource }) {
   );
 }
 
-function ReaderBody({ header, body }: { header: ReaderPageHeader; body: ReaderPageBody }) {
+function ReaderBody({ header, body, ctx }: { header: ReaderPageHeader; body: ReaderPageBody; ctx: ActivityRenderContext }) {
   switch (body.kind) {
     case "loading":
       return <p className="learning-reader-status" role="status">جارٍ تحميل الصفحة...</p>;
@@ -99,22 +115,22 @@ function ReaderBody({ header, body }: { header: ReaderPageHeader; body: ReaderPa
     case "ready":
       return (
         <div className="learning-reader-blocks">
-          {body.page.blocks.map(block => <BlockView key={block.id} block={block} />)}
+          {body.page.blocks.map(block => <BlockView key={block.id} block={block} ctx={ctx} />)}
         </div>
       );
   }
 }
 
 // ── provenance wrapper ──────────────────────────────────────────────────────────────────────────────────────
-function BlockView({ block }: { block: ContentBlock }) {
+function BlockView({ block, ctx }: { block: ContentBlock; ctx: ActivityRenderContext }) {
   if (block.origin !== "teacher-enrichment") {
-    return <div className="learning-reader-block is-book">{renderBlock(block)}</div>;
+    return <div className="learning-reader-block is-book">{renderBlock(block, ctx)}</div>;
   }
   const label = enrichmentLabel(block);
   return (
     <section className={"learning-reader-block is-enrichment kind-" + block.type} aria-label={label}>
       <p className="learning-reader-enrichment-tag"><IconSparkles size={13} aria-hidden="true" />{label}</p>
-      {renderBlock(block)}
+      {renderBlock(block, ctx)}
     </section>
   );
 }
@@ -122,7 +138,7 @@ function BlockView({ block }: { block: ContentBlock }) {
 function enrichmentLabel(block: ContentBlock): string {
   if (block.type === "callout" && block.kind === "clarification") return "توضيح المعلم";
   if (block.type === "practice") return "جرّب بنفسك";
-  if (block.type === "simulation") return "محاكاة";
+  if (isActivityBlock(block)) return ACTIVITY_ENRICHMENT_LABEL[block.type];
   if (block.type === "example") return "مثال إضافي";
   return "إثراء تعليمي";
 }
@@ -132,7 +148,7 @@ const CALLOUT_LABELS: Record<CalloutKind, string> = {
   remember: "تذكّر", important: "مهم", warning: "تنبيه", tip: "نصيحة", summary: "الخلاصة", clarification: "توضيح المعلم",
 };
 
-function renderBlock(block: ContentBlock): ReactNode {
+function renderBlock(block: ContentBlock, ctx: ActivityRenderContext): ReactNode {
   switch (block.type) {
     case "text":
       return <p className="learning-reader-text" dir={block.dir}><RichTextRenderer spans={block.spans} /></p>;
@@ -188,15 +204,14 @@ function renderBlock(block: ContentBlock): ReactNode {
         );
     case "practice":
       return <PracticeBlockView question={block.question} />;
+    // Interactive activities are DELEGATED to the engine shell (never rendered inline here): it resolves the
+    // trusted registry (EMPTY in production → faithful static fallback), isolates a live renderer, and owns
+    // fullscreen/reduced-motion. This keeps the renderer lean and the security boundary in one place.
     case "simulation":
-      return (
-        <div className="learning-reader-simulation">
-          <p className="learning-reader-simulation-kicker">محاكاة تفاعلية</p>
-          <p className="learning-reader-simulation-title">{block.title}</p>
-          {block.description && <p className="learning-reader-simulation-desc">{block.description}</p>}
-          <p className="learning-reader-simulation-note">ستتوفر المحاكاة التفاعلية في مرحلة لاحقة.</p>
-        </div>
-      );
+    case "animation":
+    case "guided":
+    case "interactive-diagram":
+      return <LearningActivityHost block={block} courseId={ctx.courseId} registry={ctx.registry} emit={ctx.emit} />;
   }
 }
 

@@ -1,0 +1,223 @@
+/* Learning Materials — Phase 3A: Interactive Learning ENGINE shell styles. Namespaced `learning-activity-*` so
+   they never collide with the reader (`learning-reader-*`) or the rest of the app. Mobile-first: the activity is a
+   single self-contained card whose interactive stage scrolls only inside itself, with ≥44px touch targets and a
+   reduced-motion contract. Colors/spacing come from the shared `--eb-*` design tokens. */
+
+.learning-activity,
+.learning-activity-fallback {
+  display: flex;
+  flex-direction: column;
+  gap: var(--eb-space-2);
+  margin-block: var(--eb-space-2);
+  padding: var(--eb-space-3);
+  border: 1px solid var(--eb-line);
+  border-radius: var(--eb-r-lg);
+  background: var(--eb-surface-2);
+}
+
+.learning-activity-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--eb-space-2);
+}
+
+.learning-activity-headtext { display: flex; flex-direction: column; gap: 2px; }
+
+.learning-activity-kicker {
+  margin: 0;
+  color: var(--eb-primary-strong);
+  font-size: var(--eb-fs-12);
+  font-weight: var(--eb-fw-bold);
+}
+
+.learning-activity-title {
+  margin: 0;
+  color: var(--eb-text-heading);
+  font-size: var(--eb-fs-16);
+  font-weight: var(--eb-fw-semibold);
+  line-height: var(--eb-lh-tight);
+}
+
+.learning-activity-desc,
+.learning-activity-fallback-text {
+  margin: 0;
+  color: var(--eb-text-secondary);
+  font-size: var(--eb-fs-14);
+  line-height: var(--eb-lh-body);
+}
+
+.learning-activity-status {
+  margin: 0;
+  color: var(--eb-muted);
+  font-size: var(--eb-fs-13);
+}
+
+/* The interactive stage: scroll is contained here (never the page). */
+.learning-activity-stage {
+  overflow: auto;
+  border-radius: var(--eb-r-sm);
+}
+
+.learning-activity-fullstage { min-height: 40vh; }
+
+/* Shell controls (إعادة تعيين / إعادة التشغيل / توسيع) — real ≥44px touch targets on mobile. They exist only
+   when the renderer declared the matching capability (never a fake button). */
+.learning-activity-controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--eb-space-1);
+  flex: 0 0 auto;
+}
+
+.learning-activity-ctl {
+  min-height: 44px;
+}
+
+.learning-activity-expand {
+  min-height: 44px;
+  flex: 0 0 auto;
+}
+
+/* FULLSCREEN = the SAME host surface promoted to a fixed modal overlay. The live activity instance is untouched
+   (no second copy, no remount); only layout changes. Safe-area aware; the stage scrolls inside itself. */
+.learning-activity.is-fullscreen {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  margin: 0;
+  border-radius: 0;
+  border: 0;
+  padding-block: calc(var(--eb-space-3) + env(safe-area-inset-top)) calc(var(--eb-space-3) + env(safe-area-inset-bottom));
+  padding-inline: calc(var(--eb-space-3) + env(safe-area-inset-right)) calc(var(--eb-space-3) + env(safe-area-inset-left));
+  background: var(--eb-surface);
+  overflow: hidden;
+}
+
+.learning-activity.is-fullscreen .learning-activity-stage {
+  flex: 1 1 auto;
+  min-height: 0;
+}
+
+/* Built-in GUIDED presenter (حل مع المعلم): progressive reveal, one step at a time. */
+.learning-guided {
+  display: flex;
+  flex-direction: column;
+  gap: var(--eb-space-2);
+}
+
+.learning-guided-prompt {
+  margin: 0;
+  color: var(--eb-text-heading);
+  font-weight: var(--eb-fw-semibold);
+  font-size: var(--eb-fs-16);
+  line-height: var(--eb-lh-body);
+}
+
+.learning-guided-think {
+  margin: 0;
+  padding: var(--eb-space-2);
+  border-radius: var(--eb-r-sm);
+  background: var(--eb-info-bg);
+  color: var(--eb-info);
+  font-size: var(--eb-fs-13);
+}
+
+.learning-guided-steps {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: var(--eb-space-2);
+}
+
+.learning-guided-step {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: var(--eb-space-2);
+  align-items: start;
+  padding: var(--eb-space-2);
+  border-inline-start: 3px solid var(--eb-primary);
+  border-radius: var(--eb-r-sm);
+  background: var(--eb-surface);
+  animation: learning-guided-in var(--eb-dur) var(--eb-ease);
+}
+
+.learning-guided-stepno {
+  display: inline-grid;
+  place-items: center;
+  min-width: 24px;
+  height: 24px;
+  border-radius: var(--eb-pill);
+  background: var(--eb-primary-050);
+  color: var(--eb-primary-strong);
+  font-size: var(--eb-fs-12);
+  font-weight: var(--eb-fw-bold);
+}
+
+.learning-guided-steptext { color: var(--eb-text); line-height: var(--eb-lh-body); }
+.learning-guided-stepnote { grid-column: 2; color: var(--eb-muted); font-size: var(--eb-fs-12); }
+
+.learning-guided-result,
+.learning-guided-explain,
+.learning-guided-progress {
+  margin: 0;
+  line-height: var(--eb-lh-body);
+}
+.learning-guided-result { color: var(--eb-text-heading); font-weight: var(--eb-fw-semibold); }
+.learning-guided-explain { color: var(--eb-text-secondary); font-size: var(--eb-fs-14); }
+.learning-guided-progress { color: var(--eb-muted); font-size: var(--eb-fs-12); }
+
+.learning-guided-tag {
+  display: inline-block;
+  margin-inline-end: var(--eb-space-1);
+  padding: 0 var(--eb-space-2);
+  border-radius: var(--eb-pill);
+  background: var(--eb-success-bg);
+  color: var(--eb-success);
+  font-size: var(--eb-fs-12);
+  font-weight: var(--eb-fw-bold);
+}
+
+.learning-guided-controls { display: flex; flex-wrap: wrap; gap: var(--eb-space-2); }
+.learning-guided-btn { min-height: 44px; }
+
+@keyframes learning-guided-in {
+  from { opacity: 0; transform: translateY(4px); }
+  to { opacity: 1; transform: none; }
+}
+
+.learning-guided[data-reduced-motion="true"] .learning-guided-step { animation: none; }
+
+.learning-activity-fallback-img {
+  max-width: 100%;
+  height: auto;
+  border-radius: var(--eb-r-sm);
+}
+
+.learning-activity-note {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0;
+  color: var(--eb-muted);
+  font-size: var(--eb-fs-12);
+}
+
+/* Reduced-motion contract: the shell suppresses its own transitions/animations, and a data hook lets a live
+   activity opt its CSS out too. The renderer also receives `reducedMotion` as a prop. */
+@media (prefers-reduced-motion: reduce) {
+  .learning-activity,
+  .learning-activity * {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+.learning-activity[data-reduced-motion="true"] .learning-activity-stage * {
+  animation: none !important;
+  transition: none !important;
+}

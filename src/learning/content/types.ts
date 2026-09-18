@@ -139,11 +139,24 @@ export interface DiagramBlock extends BlockBase {
 // NOT the ExamBank exam schema, NOT graded, NOT a rank/medal input. Immediate-feedback fields are carried here so
 // Phase 4 can render check-answer / correct-incorrect / hint / retry without a schema redesign.
 export type PracticeFeedback = {
+  /** Legacy single hint (kept for backward compatibility). Prefer the ordered `hints` ladder below. */
   hint?: string;
+  /**
+   * Ordered HINT LADDER (تلميح 1 → تلميح 2 → …). Phase 4 reveals these one at a time on request; Phase 3 never
+   * renders them (answer-key secrecy). Backward-compatible: `hintLadder(feedback)` folds the legacy `hint` in.
+   */
+  hints?: string[];
   correctFeedback?: string;
   incorrectFeedback?: string;
   explanation?: string;
 };
+/** The ordered hint ladder for a feedback object, folding the legacy single `hint` in (BC). Pure; part of the
+ *  Phase-3A foundation so Phase 4 needs no schema redesign. It is answer-key material — never rendered in Phase 3. */
+export function hintLadder(feedback: PracticeFeedback | undefined): string[] {
+  if (!feedback) return [];
+  if (feedback.hints && feedback.hints.length > 0) return feedback.hints;
+  return feedback.hint ? [feedback.hint] : [];
+}
 export type PracticeOption = { id: string; text: string; correct?: boolean };
 /**
  * Base practice-question kinds modeled in Phase 2. EXTENSION PATH (OWNER §9): richer kinds — matching, ordering,
@@ -160,14 +173,151 @@ export type PracticeQuestionKind = PracticeQuestion["kind"];
 export const PRACTICE_QUESTION_KINDS: readonly PracticeQuestionKind[] = ["multipleChoice", "trueFalse", "shortInput", "fillBlank"];
 export interface PracticeBlock extends BlockBase { type: "practice"; question: PracticeQuestion; }
 
-/** Supported simulation kinds (§13). A controlled registry maps these to components later (Phase 5). */
-export type SimulationType = "network-flow" | "binary-box" | "subnet" | "vlan" | "cli";
-/** Phase-2 placeholder contract only: a typed minimal descriptor — detailed configs are deferred to Phase 5. */
-export interface SimulationBlock extends BlockBase {
-  type: "simulation";
-  simulationType: SimulationType;
+// ────────────────────────────────────────────────────────────────────────────
+// Interactive Learning Engine (Phase 3A) — activity descriptor contract.
+//
+// The four interactive families (simulation / animation / guided / interactive-diagram) are ENRICHMENT layers
+// (never faithful book content — enforced by the validator). They are pure DATA DESCRIPTORS: content supplies a
+// registry KEY (a plain string such as "vlan") and an opaque, engine-validated `config` — NEVER a component name,
+// a function, a module path, or any executable code. The trusted activity registry (src/learning/activities/) maps
+// {family,key,version} → a component authored in THIS repo. Phase 3A ships the registry-backed production registry
+// EMPTY (no real simulation/animation) plus one generic built-in presenter (guided/reveal/v1); any descriptor with
+// no trusted renderer for its exact identity renders a faithful static fallback, so a page is always usable. `version` lets a
+// renderer refuse a descriptor shape it does not understand (falling back) without a schema break.
+// ────────────────────────────────────────────────────────────────────────────
+
+/**
+ * Capabilities an activity RENDERER may declare. These are the authority for which shell controls appear: the
+ * shell exposes a control ONLY when the registered renderer (or a built-in one) declares it — never because
+ * untrusted content data asked for it, and never as a fake button the renderer cannot honor. `fullscreen`,
+ * `reset` and `replay` drive generic shell controls; `pause`/`speed` are declared here so the contract is
+ * future-safe (a renderer-specific control can honor them later) without an engine redesign; `animated` /
+ * `interactive` are informational hints.
+ */
+export interface ActivityCapabilities {
+  /** The activity has a meaningful expanded/fullscreen mode (the shell offers a توسيع affordance). */
+  fullscreen?: boolean;
+  /** The renderer can reset to its initial state (the shell offers an إعادة تعيين control → `reset` command). */
+  reset?: boolean;
+  /** The renderer can replay from the start (the shell offers an إعادة التشغيل control → `replay` command). */
+  replay?: boolean;
+  /** The renderer supports pause/resume (reserved; honored by a renderer-specific control, not a generic button). */
+  pause?: boolean;
+  /** The renderer supports variable speed (reserved; honored by a renderer-specific control). */
+  speed?: boolean;
+  /** The activity animates and must honor reduced-motion (the shell enforces the contract regardless). */
+  animated?: boolean;
+  /** The activity accepts keyboard/pointer interaction (informational; shells stay keyboard-accessible anyway). */
+  interactive?: boolean;
+}
+
+/** The generic shell COMMANDS an activity renderer can be asked to perform (gated by `ActivityCapabilities`). */
+export type ActivityCommand = "reset" | "replay";
+export const ACTIVITY_COMMANDS: readonly ActivityCommand[] = ["reset", "replay"];
+/** Every capability flag is a plain boolean; the validator rejects any non-boolean (see `activity-invalid-capabilities`). */
+export const ACTIVITY_CAPABILITY_KEYS: readonly (keyof ActivityCapabilities)[] = [
+  "fullscreen", "reset", "replay", "pause", "speed", "animated", "interactive",
+];
+
+/** A faithful STATIC fallback shown when no live renderer is available (EMPTY production registry, unsupported
+ *  version, or a runtime error). It is book/enrichment-safe content only — never an answer key. */
+export interface ActivityFallback {
+  /** A short faithful description of what the activity would show. */
+  text?: string;
+  /** An optional already-vetted static image/diagram. */
+  src?: string;
+  /** Required (for the image) unless the fallback is text-only. */
+  alt?: string;
+}
+
+/** Fields shared by every interactive-activity block. `config` is opaque data handed to the (future) renderer and
+ *  engine-validated — it is NEVER executed and never carries a component/function/path. */
+interface ActivityBlockBase extends BlockBase {
+  /** Descriptor version — a positive integer the renderer matches against its supported versions. */
+  version: number;
   title: string;
   description?: string;
+  capabilities?: ActivityCapabilities;
+  fallback?: ActivityFallback;
+  /** Opaque, engine-validated configuration passed to the trusted renderer. Data only; never executed. */
+  config?: Record<string, unknown>;
+}
+
+/** Native interactive simulation (e.g. VLAN/subnet/CLI). `simulationType` is a trusted registry KEY, not a name. */
+export interface SimulationBlock extends ActivityBlockBase {
+  type: "simulation";
+  /** Trusted registry key (e.g. "vlan"). Resolved by the registry to a repo component — never executed as code. */
+  simulationType: string;
+}
+/** A guided, stepped animation of a concept (e.g. a packet traversing a path). Registry key = `animationType`. */
+export interface AnimationBlock extends ActivityBlockBase {
+  type: "animation";
+  animationType: string;
+}
+/** One step of a guided walkthrough (حل مع المعلم). `text` is structured safe spans — never raw HTML. */
+export interface GuidedStep {
+  /** Stable id (progressive-reveal state and future analytics key off it). */
+  id: string;
+  text: RichText;
+  note?: string;
+}
+/**
+ * A guided walkthrough (حل مع المعلم): a prompt → "think first" → progressively revealed steps → result +
+ * explanation. It is a STRUCTURED learning model rendered by a built-in progressive-reveal presenter (not a bespoke
+ * simulation), so it needs no registered component; `guidedType` selects the presenter variant ("reveal" default)
+ * and keeps guided uniform with the other activity families (version, capabilities, origin enforcement).
+ */
+export interface GuidedBlock extends ActivityBlockBase {
+  type: "guided";
+  /** Presenter variant key (default "reveal"); the built-in progressive-reveal presenter handles it. */
+  guidedType: string;
+  /** Optional opening prompt shown before the student reveals any step. */
+  prompt?: RichText;
+  /** Ordered steps, revealed one at a time. Must be non-empty (validated). */
+  steps: GuidedStep[];
+  /** Optional final result, revealed after the last step. */
+  result?: RichText;
+  /** Optional closing explanation. */
+  explanation?: string;
+}
+/** A diagram the student can inspect/toggle (hotspots, layer toggles). Registry key = `interactionType`. */
+export interface InteractiveDiagramBlock extends ActivityBlockBase {
+  type: "interactive-diagram";
+  interactionType: string;
+}
+
+/** The interactive-activity family. All are enrichment-only (validated). */
+export type ActivityBlock = SimulationBlock | AnimationBlock | GuidedBlock | InteractiveDiagramBlock;
+export type ActivityBlockType = ActivityBlock["type"];
+export const ACTIVITY_BLOCK_TYPES: readonly ActivityBlockType[] = ["simulation", "animation", "guided", "interactive-diagram"];
+
+/** True when a block is one of the interactive-activity families (narrows to `ActivityBlock`). */
+export function isActivityBlock(block: { type?: string }): block is ActivityBlock {
+  return typeof block?.type === "string" && (ACTIVITY_BLOCK_TYPES as readonly string[]).includes(block.type);
+}
+
+/** The trusted registry KEY an activity block declares (the plain string; never a component/function/path). The
+ *  key field differs per family (simulationType / animationType / guidedType / interactionType) so authoring stays
+ *  self-describing; this helper gives the engine one uniform accessor. */
+export function activityKey(block: ActivityBlock): string {
+  switch (block.type) {
+    case "simulation": return block.simulationType;
+    case "animation": return block.animationType;
+    case "guided": return block.guidedType;
+    case "interactive-diagram": return block.interactionType;
+  }
+}
+
+/** A uniform descriptor view of any activity block (family + key + version + capabilities), for the engine/registry. */
+export interface ActivityDescriptor {
+  kind: ActivityBlockType;
+  key: string;
+  version: number;
+  capabilities?: ActivityCapabilities;
+}
+/** Pure projection of an activity block to its descriptor. Never invents fields. */
+export function activityDescriptor(block: ActivityBlock): ActivityDescriptor {
+  return { kind: block.type, key: activityKey(block), version: block.version, capabilities: block.capabilities };
 }
 
 /** The canonical, strongly-typed block union. */
@@ -181,15 +331,18 @@ export type ContentBlock =
   | CodeBlock
   | DiagramBlock
   | PracticeBlock
-  | SimulationBlock;
+  | SimulationBlock
+  | AnimationBlock
+  | GuidedBlock
+  | InteractiveDiagramBlock;
 
 export type BlockType = ContentBlock["type"];
 /** The closed set of supported block types (used by the validator; keep in sync with the union). */
 export const BLOCK_TYPES: readonly BlockType[] = [
-  "text", "heading", "image", "callout", "example", "table", "code", "diagram", "practice", "simulation",
+  "text", "heading", "image", "callout", "example", "table", "code", "diagram", "practice",
+  "simulation", "animation", "guided", "interactive-diagram",
 ];
 export const CALLOUT_KINDS: readonly CalloutKind[] = ["remember", "important", "warning", "tip", "summary", "clarification"];
-export const SIMULATION_TYPES: readonly SimulationType[] = ["network-flow", "binary-box", "subnet", "vlan", "cli"];
 export const CODE_LANGUAGES: readonly CodeLanguage[] = ["cli", "text", "config"];
 
 // ────────────────────────────────────────────────────────────────────────────

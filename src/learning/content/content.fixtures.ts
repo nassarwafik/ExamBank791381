@@ -78,7 +78,7 @@ export const pageQuiz: ContentPage = {
 export const pageSimulation: ContentPage = {
   id: "f-m03-l01-p03", title: "محاكاة VLAN", order: 3, source: src(126),
   blocks: [
-    { id: "fe-b1", type: "simulation", origin: "teacher-enrichment", simulationType: "vlan", title: "محاكاة توزيع المنافذ على VLANs", description: "ستتوفر لاحقًا." },
+    { id: "fe-b1", type: "simulation", origin: "teacher-enrichment", simulationType: "vlan", version: 1, title: "محاكاة توزيع المنافذ على VLANs", description: "ستتوفر لاحقًا." },
   ],
 };
 
@@ -99,6 +99,33 @@ export const pageMixed: ContentPage = {
   ],
 };
 
+// ── Fixture G — interactive ENGINE descriptors: animation + guided + interactive-diagram (teacher enrichment) ──
+// Phase 3A adds three activity families alongside `simulation`. Each is a pure DATA descriptor: a registry key, a
+// version, a title (+ optional capabilities / static fallback). No behavior/config runs here — the engine renders
+// a faithful static fallback until a trusted renderer is registered (later phases).
+export const pageActivities: ContentPage = {
+  id: "f-m03-l01-p05", title: "أنشطة تفاعلية", order: 5, source: src(127),
+  blocks: [
+    { id: "fg-b1", type: "animation", origin: "teacher-enrichment", animationType: "packet-flow", version: 1, title: "رحلة الحزمة عبر المنافذ", description: "ستتوفر لاحقًا." },
+    {
+      id: "fg-b2", type: "guided", origin: "teacher-enrichment", guidedType: "reveal", version: 1,
+      title: "ابنِ الشبكة الفرعية خطوة بخطوة", description: "نشاط موجّه.", capabilities: { fullscreen: true, interactive: true },
+      prompt: [{ text: "المطلوب: تقسيم الشبكة إلى شبكتين فرعيتين." }],
+      steps: [
+        { id: "fg-b2-s1", text: [{ text: "حدّد عدد البتات المستعارة." }] },
+        { id: "fg-b2-s2", text: [{ text: "احسب قناع الشبكة الجديد." }], note: "/25" },
+      ],
+      result: [{ text: "255.255.255.128", dir: "ltr", style: "code" }],
+      explanation: "بت واحد مستعار يعطي شبكتين فرعيتين.",
+    },
+    {
+      id: "fg-b3", type: "interactive-diagram", origin: "teacher-enrichment", interactionType: "switch-ports", version: 1,
+      title: "منافذ السويتش التفاعلية", capabilities: { animated: true },
+      fallback: { text: "مخطط ثابت لمنافذ السويتش يوضّح Access و Trunk.", src: "/learning/791381/ports.png", alt: "مخطط منافذ السويتش" },
+    },
+  ],
+};
+
 /** A valid, multi-shape course — validation should return ZERO issues. */
 export const validCourse: LearningCourseContent = {
   schemaVersion: 1,
@@ -110,7 +137,7 @@ export const validCourse: LearningCourseContent = {
     { id: "f-m02", title: "الأعداد", order: 2, lessons: [{ id: "f-m02-l01", title: "التحويل", order: 1, pages: [pageBinary] }] },
     {
       id: "f-m03", title: "CLI و VLAN", order: 3,
-      lessons: [{ id: "f-m03-l01", title: "المنافذ", order: 1, pages: [pageCli, pageQuiz, pageSimulation, pageMixed] }],
+      lessons: [{ id: "f-m03-l01", title: "المنافذ", order: 1, pages: [pageCli, pageQuiz, pageSimulation, pageMixed, pageActivities] }],
     },
   ],
 };

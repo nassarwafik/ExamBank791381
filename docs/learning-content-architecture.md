@@ -54,7 +54,8 @@ only, and `printedPage` (the number printed on the paper) differs from the PDF p
 
 ## Block families (union on `type`)
 
-`text` · `heading` · `image` · `callout` · `example` · `table` · `code` · `diagram` · `practice` · `simulation`.
+`text` · `heading` · `image` · `callout` · `example` · `table` · `code` · `diagram` · `practice` · `simulation` ·
+`animation` · `guided` · `interactive-diagram`.
 
 - **text** — safe inline `spans` (`strong`/`em`/`term`/`code`, optional per-span `dir`). No raw HTML.
 - **callout** — `remember` · `important` · `warning` · `tip` · `summary` · `clarification` (maps to book boxes تذكّر / الخلاصة / الفكرة; `clarification` is the separable teacher note, always `origin:"teacher-enrichment"`).
@@ -63,7 +64,14 @@ only, and `printedPage` (the number printed on the paper) differs from the PDF p
 - **code** — `language: cli|text|config`, whitespace preserved, usually `dir:"ltr"`.
 - **image / diagram** — local `src`, `alt` **required unless `decorative`**; diagram is metadata + image only (no sim behavior).
 - **practice** — lightweight interactive practice with immediate-feedback readiness. Question kinds `multipleChoice` / `trueFalse` / `shortInput` / `fillBlank`, plus a `feedback` object (`hint` / `correctFeedback` / `incorrectFeedback` / `explanation`). **Not** the ExamBank exam schema, not graded, not a rank/medal input. *Extension path:* richer kinds (matching, ordering, classify, binary-entry, IP/CIDR, CLI) are added as new union members (or expressed as `simulation`) without touching existing ones.
-- **simulation** — a typed placeholder descriptor (`simulationType` + `title` + `description`); detailed configs are Phase 5.
+- **simulation / animation / guided / interactive-diagram** — the four interactive **activity** families (Phase 3A
+  engine). Each is a pure DATA descriptor: a trusted registry **key** (`simulationType` / `animationType` /
+  `guidedType` / `interactionType` — a plain string, never a component/function/path), a required positive-integer
+  `version`, a `title`, and optional `capabilities` / static `fallback` / opaque `config`. A descriptor renders
+  live only when a trusted renderer owns its exact `{kind, key, version}`; otherwise the engine renders a faithful
+  static fallback. In Phase 3A the generic built-in `guided / reveal / v1` walkthrough presenter has real behavior;
+  real networking simulations / animations / interactive diagrams are later phases (see *Interactive Learning
+  Engine* below).
 
 Every block carries a **mandatory** `origin` and an optional block-level `source` (see *Book Fidelity* below).
 
@@ -102,20 +110,35 @@ never on the human message. Codes: `schema-version-mismatch`, `unknown-course`, 
 `missing-title`, `empty-modules`, `empty-lessons`, `empty-pages`, `page-no-blocks`, `invalid-order`,
 `duplicate-order`, `missing-source`, `invalid-source-page`, `source-id-mismatch`, `missing-origin`,
 `invalid-origin`, `origin-policy-violation`, `invalid-example-mode`, `unsupported-block-type`, `image-missing-alt`,
-`invalid-direction`, `quiz-empty-options`, `quiz-mcq-answer-count`, `unsupported-simulation-type`, `invalid-table-row`.
+`invalid-direction`, `quiz-empty-options`, `quiz-mcq-answer-count`, `activity-missing-key`,
+`activity-invalid-version`, `activity-missing-title`, `activity-invalid-capabilities`, `guided-empty-steps`,
+`guided-invalid-step`, `guided-duplicate-step-id`, `invalid-table-row`.
+
+Activity descriptors (Phase 3A) are validated centrally as pure data: `activity-missing-key` (empty registry key),
+`activity-invalid-version` (missing / non-positive-integer `version`), `activity-missing-title`,
+`activity-invalid-capabilities` (capabilities must be an object of optional **boolean** flags — `fullscreen: "yes"`,
+an unknown key, an array or `null` are rejected), a fallback image with no `alt` reuses `image-missing-alt`, and a
+`guided` block needs a non-empty `steps` array whose every step has a non-empty id and non-empty text spans
+(`guided-empty-steps` / `guided-invalid-step`), with step ids unique within that block
+(`guided-duplicate-step-id`; uniqueness across different guided blocks is not required). `config` stays opaque to the central validator (a registered
+renderer may validate its own config schema later). `simulationType` (and the other family keys) are **free-form
+registry keys, not an enum** — a new key is valid content; a missing renderer is a runtime fallback, not a
+validation error. All four families are enrichment-only (`origin-policy-violation` if marked `book`).
 
 `source-id-mismatch` enforces that every `source.sourceId` (page, module, or block level) equals the course id —
 content can never reference another book by accident. `missing-origin` / `invalid-origin` require every block to
-declare a valid provenance, and `origin-policy-violation` enforces that clarification callouts, practice and
-simulation blocks are `teacher-enrichment` (never `book`).
+declare a valid provenance, and `origin-policy-violation` enforces that clarification callouts, practice blocks and
+all four interactive-activity families (simulation / animation / guided / interactive-diagram) are
+`teacher-enrichment` (never `book`).
 
 **Normalization policy: none.** A validator validates. It never reorders content, invents ids/titles/source pages,
 generates answers, or rewrites Arabic. Any future normalization is a separate, explicit converter tool.
 
 ## Batches → modules
 
-The six Phase-1 overview "batches" are **presentation groupings**; each maps to one **or more** real modules
-(`manifest.batches[].moduleIds`). Batches are not part of the canonical Course→Module hierarchy and never distort it.
+The **eight** high-level presentation sections (المقدمة · b1 … b6 · التلخيص — the manifest's "batches") are
+**presentation groupings**; each maps to one **or more** real modules (`manifest.batches[].moduleIds`). Batches are
+not part of the canonical Course→Module hierarchy and never distort it.
 
 ## Security / content safety
 
@@ -155,12 +178,16 @@ A missing `origin` is a validation error (`missing-origin`); an unknown value is
 **Provenance is by conscious authorship, not inferred from block type.** An `example`, `image` or `diagram` may be
 `book` (reproduced from the source) or `teacher-enrichment` (added) — the author decides and declares it.
 
-**Enrichment-only policy (enforced, `origin-policy-violation`).** Three families are interactive/added layers that
+**Enrichment-only policy (enforced, `origin-policy-violation`).** These families are interactive/added layers that
 are, by definition, never faithful book content and therefore must be `teacher-enrichment`:
 
 - a `callout` of kind `clarification` (the separable teacher note),
 - a `practice` block (interactive answer-checking is an enrichment layer over the faithful source exercise),
-- a `simulation` block (native interactive functionality added by this product).
+- **all four interactive-activity families** — `simulation`, `animation`, `guided`, `interactive-diagram` (native
+  interactive functionality added by this product).
+
+A block-level book `source` on any of these only **associates** the enrichment with a book page; it never changes
+its `origin` (source association ≠ provenance), and no enrichment surface may present itself as «من الكتاب».
 
 A source book diagram stays `image`/`diagram` with `origin:"book"`; the added interactive simulation is separate
 enrichment. If the book contains an original question, its wording is preserved as faithful `book` blocks, and an
@@ -197,9 +224,11 @@ field is duplicated. The teacher can always answer: «هذه الصفحة الت
 
 ### Simulations
 
-First-class but used **only where interaction genuinely improves understanding** (not on every page). Ready types:
-`network-flow`, `binary-box`, `subnet`, `vlan`, `cli`. Phase 2 stores only a typed descriptor; behavior/config is
-Phase 5, resolved through a controlled registry (never by executing a name from data).
+First-class but used **only where interaction genuinely improves understanding** (not on every page). A simulation
+is a data descriptor whose `simulationType` is a **free-form trusted registry key** (there is no closed enum);
+behavior arrives in Phase 5 as renderers registered behind the Phase-3A engine, resolved through the controlled
+registry (never by executing a name from data). *Future example keys only:* `network-flow`, `binary-box`, `subnet`,
+`vlan`, `cli`.
 
 ### No invented curriculum
 
@@ -279,16 +308,94 @@ extra activities must never bury the original lesson. Preferred visual hierarchy
 (unless decorative), input labels, visible focus, feedback never by color alone, RTL Arabic with LTR technical
 values/commands (per-block/per-span `dir`), and mobile layouts.
 
+## Interactive Learning Engine (Phase 3A — foundation)
+
+Phase 3A adds the **engine foundation** the later interactive phases (real simulations in Phase 5, richer practice
+in Phase 4) plug into — **architecture + types + a trusted registry + shells + validation + tests + docs, and no
+real simulations/animations/questions and no PDF conversion**. It lives under `src/learning/activities/` and is
+reached only through `LearningPageRenderer` delegation, so the renderer stays lean.
+
+**Activity descriptor (data only).** The four families — `simulation`, `animation`, `guided`,
+`interactive-diagram` — are enrichment blocks that carry a trusted registry **key** (a plain string), a positive
+`version`, a `title`, and optional `capabilities`, a static `fallback` (text + an optional vetted image), and an
+opaque `config`. Uniform helpers: `isActivityBlock`, `activityKey`, `activityDescriptor`.
+
+**Capability / command contract.** `ActivityCapabilities` = `fullscreen` · `reset` · `replay` · `pause` · `speed`
+(command capabilities) + `animated` · `interactive` (hints), all optional booleans. The **renderer's declaration is
+the authority** (a registry entry's `capabilities`, or a built-in's): the shell shows a control (توسيع / إعادة
+تعيين / إعادة التشغيل) **only** when the renderer declares it — untrusted content data can never enable a control the
+renderer does not honor, and an unsupported command never renders a fake button. Commands reach the renderer as
+monotonic signals (`commands.reset` / `commands.replay`, via `LearningActivityProps`) and emit `reset` /
+`replayed` events. `pause` / `speed` are declared so a renderer-specific control can honor them later without an
+engine redesign (no generic button yet).
+
+**Guided (حل مع المعلم) is a structured model, not an opaque key.** `GuidedBlock` carries `prompt?` (spans) →
+ordered `steps: GuidedStep[]` (`{ id, text: RichText, note? }`) → `result?` (spans) → `explanation?`. A **built-in**
+progressive-reveal presenter (`GuidedActivity`) renders it — prompt → «فكّر أولًا» → reveal one step at a time →
+result/explanation — with real keyboard-operable buttons (≥44px), restart through the shell's generic `reset`,
+reduced-motion honored, safe spans only (never raw HTML), and state in React memory only (no persistence). Because
+it is built in, guided needs no entry in `productionActivityRegistry` (which stays empty) — but it is still resolved
+by **exact identity**: the built-in registry (`builtins.ts`) owns precisely `guided / reveal / v1`. A guided block
+with an unknown `guidedType` (e.g. a future branching walkthrough) or an unsupported `version` falls back to the
+static surface until a trusted presenter for that exact identity is added there; dispatch is never by block type.
+
+**Trusted registry + lazy loader.** `createActivityRegistry([...])` maps `{kind, key, version}` → a
+`RegisteredActivity` whose component is loaded through a statically-authored `load` thunk (its own code-split
+chunk). Content supplies only the **key** — never a component name, function, module path, or any executable code.
+There is **no `eval`, no `new Function`, and no dynamic `import()` of a data path**. `productionActivityRegistry`
+ships **EMPTY** in Phase 3A: no registry-backed renderer (real simulation / animation / interactive diagram) is
+registered, so those descriptors render their faithful static `ActivityFallback` and no activity chunk ever loads
+in production. This does **not** mean every activity family falls back — the generic built-in `guided / reveal / v1`
+presenter (`builtinActivityRegistry`, eager component, same `{kind, key, version}` discipline) is intentionally
+available. Overlapping ownership of one `{kind, key, version}` by two registrations is rejected at registry
+construction (`ActivityRegistryError`); disjoint version sets are fine. Registries are **injected** (the reader
+defaults to the empty production one; tests inject a synthetic one) — dependency injection, exactly like the
+reader's content API.
+
+**Shell (`LearningActivityHost`).** The single place that touches the engine: it resolves a built-in presenter or
+the injected registry (no match / unsupported version → static fallback), lazily loads a trusted component (held in
+state, isolated by `LearningActivityBoundary` so a throwing activity degrades to the fallback instead of crashing
+the page), and honors **reduced-motion** (prop + CSS). **One live instance, always:** the activity element is
+rendered exactly once at a fixed tree position; fullscreen promotes the **same** host surface to a fixed overlay
+(CSS) and arms the shared `useFocusTrap` (Tab containment, Escape, focus return) plus body scroll-lock — nothing is
+duplicated, portalled or remounted, so interaction state stays authoritative across inline ↔ fullscreen (**no new
+modal library**). Styles are namespaced `learning-activity-*` with ≥44px touch targets. Registry indexing uses
+nested Maps (kind → key), so free-form keys never collide with a separator and the source carries no control bytes.
+
+**Events go nowhere yet.** Activities/shell emit `ready` · `interaction` · `fullscreen` · `reset` · `replayed` ·
+`error` through an **injected sink**; Phase 3A ships **only a no-op sink** (`noopActivityEventSink`). No
+persistence, no backend, no `/api`, and no progress / grades / rank / medals — the event seam is where a separate
+later Progress phase attaches without changing the engine.
+
+**Question → Evaluator → Feedback foundation (`src/learning/practice/evaluator.ts`).** Established now so Phase 4
+needs no schema redesign: `LearningQuestionEvaluator` (pure, injectable, `evaluate(question, response) →
+EvaluationResult` with `correct | incorrect | partial | unknown`), `createEvaluatorRegistry` (resolve by question
+kind; a local, a server, or **no** evaluator share one contract), a reference pure `localEvaluator`, and
+`LearningFeedbackState` (submitted / result / `revealedHints` / `solutionRevealed`). Phase 3A ships **no server
+implementation, no network call, no grading, no student persistence**, and the Phase-3 static practice rendering is
+**unchanged** — the answer key never reaches the DOM.
+
+**Hint ladder.** `PracticeFeedback.hints?: string[]` is the ordered ladder (تلميح 1 → تلميح 2 → … → اعرض أول خطوة →
+اعرض الحل); the legacy single `hint` stays for backward compatibility and `hintLadder(feedback)` folds it in.
+`revealNextHint` / `revealedHints` are pure state transitions for Phase 4. Nothing from the ladder is rendered in
+Phase 3.
+
+**Not in Phase 3A:** real VLAN/subnet/ACL/etc. simulations, real animations, full answer-checking, real Book
+791381 PDF conversion (`src/learning/content/791381/modules/*` stays unauthored), student progress, and
+class ↔ learning-material assignment. Synthetic activity fixtures + a showcase page are **test-only** and never
+wired into a production route or catalog.
+
 ## Phase boundaries
 
 | Phase | Scope | Status |
 | --- | --- | --- |
 | 2 | Content schema, validation, navigation, lazy registry, `791381` skeleton manifest | done |
-| **3 (this)** | Interactive **Reader** — TOC, previous/next, jump-to-page, page/block rendering, provenance display, lazy module loading, professional not-yet-converted state | done (reader shell) |
+| 3 | Interactive **Reader** — TOC, previous/next, jump-to-page, page/block rendering, provenance display, lazy module loading, professional not-yet-converted state | done (reader shell) |
+| **3A (this)** | Interactive Learning **Engine foundation** — activity descriptors, trusted registry + lazy loader (EMPTY production), host shell + error boundary + fullscreen + reduced-motion, no-op event sink, validation, tests, docs | done (foundation) |
 | 3B | Pilot content conversion — a small contiguous range of real Book 791381 pages | next |
 | 4 | Interactive Practice — answer checking + immediate feedback (inline) | deferred |
-| 5 | Simulations — binary-box, network-flow, subnet, VLAN, CLI | deferred |
-| 6 | Student Progress — last page, completion, attempts (separate domain) | deferred |
+| 5 | Simulations — real VLAN/subnet/CLI/… renderers registered behind the Phase-3A engine | deferred |
+| 6 | Student Progress — last page, completion, attempts (separate domain; attaches to the no-op event seam) | deferred |
 | 7 | Teacher Content Management — editors, publish/unpublish | deferred |
 | 8 | AI Learning Assistant | deferred |
 

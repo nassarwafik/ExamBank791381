@@ -5,9 +5,9 @@
 // (a stable enum), never on the human Arabic-or-English `message`. An empty array means "no problems found".
 
 import {
-  BLOCK_TYPES, CALLOUT_KINDS, SIMULATION_TYPES, CODE_LANGUAGES, CONTENT_ORIGINS, EXAMPLE_MODES,
-  LEARNING_CONTENT_SCHEMA_VERSION,
-  type LearningCourseContent, type ContentBlock, type ContentSource, type ContentDirection,
+  BLOCK_TYPES, CALLOUT_KINDS, CODE_LANGUAGES, CONTENT_ORIGINS, EXAMPLE_MODES, ACTIVITY_CAPABILITY_KEYS,
+  LEARNING_CONTENT_SCHEMA_VERSION, isActivityBlock, activityKey,
+  type LearningCourseContent, type ContentBlock, type ActivityBlock, type ContentSource, type ContentDirection,
 } from "./types";
 import { findLearningCourse } from "../catalog";
 
@@ -36,7 +36,13 @@ export type ContentIssueCode =
   | "invalid-direction"
   | "quiz-empty-options"
   | "quiz-mcq-answer-count"
-  | "unsupported-simulation-type"
+  | "activity-missing-key"
+  | "activity-invalid-version"
+  | "activity-missing-title"
+  | "activity-invalid-capabilities"
+  | "guided-empty-steps"
+  | "guided-invalid-step"
+  | "guided-duplicate-step-id"
   | "invalid-table-row";
 
 /** A single structured validation finding. Location fields are filled in from the outermost known node. */
@@ -218,16 +224,85 @@ function checkBlock(
       checkPractice(block.question, add, loc);
       break;
     case "simulation":
-      if (!SIMULATION_TYPES.includes(block.simulationType)) {
-        add("unsupported-simulation-type", `unsupported simulationType "${String(block.simulationType)}"`, loc);
-      }
+    case "animation":
+    case "guided":
+    case "interactive-diagram":
+      checkActivity(block, add, loc);
       break;
+  }
+}
+
+/**
+ * Validate an interactive-activity descriptor (simulation / animation / guided / interactive-diagram). The
+ * descriptor is pure data: a non-empty registry KEY, a positive-integer `version`, and a title. `config` is opaque
+ * (engine-validated by the renderer, never here) and is NEVER executed. A fallback image must carry alt text.
+ */
+function checkActivity(block: ActivityBlock, add: (c: ContentIssueCode, m: string, l?: Loc) => void, loc: Loc) {
+  if (!isNonEmptyString(activityKey(block))) {
+    add("activity-missing-key", `${block.type} requires a non-empty registry key`, loc);
+  }
+  if (!isPositiveInt((block as { version?: unknown }).version)) {
+    add("activity-invalid-version", `${block.type} requires a positive integer version`, loc);
+  }
+  if (!isNonEmptyString((block as { title?: unknown }).title)) {
+    add("activity-missing-title", `${block.type} requires a non-empty title`, loc);
+  }
+  if (block.fallback?.src && !isNonEmptyString(block.fallback.alt)) {
+    add("image-missing-alt", "activity fallback image requires non-empty alt", loc);
+  }
+  // Capabilities are a plain object of optional BOOLEAN flags (fullscreen/reset/replay/pause/speed/animated/
+  // interactive). Anything else — a non-object, an unknown key, or a non-boolean value such as `"yes"` — is a
+  // malformed contract. (Even well-formed content capabilities never ENABLE a shell control: the renderer's
+  // declaration is the authority; this check only rejects malformed data.)
+  const caps = (block as { capabilities?: unknown }).capabilities;
+  if (caps !== undefined) {
+    if (caps === null || typeof caps !== "object" || Array.isArray(caps)) {
+      add("activity-invalid-capabilities", "capabilities must be an object of boolean flags", loc);
+    } else {
+      for (const [k, v] of Object.entries(caps as Record<string, unknown>)) {
+        if (!(ACTIVITY_CAPABILITY_KEYS as readonly string[]).includes(k) || (v !== undefined && typeof v !== "boolean")) {
+          add("activity-invalid-capabilities", `capabilities.${k} must be a boolean flag`, loc);
+          break;
+        }
+      }
+    }
+  }
+  if (block.type === "guided") checkGuided(block, add, loc);
+}
+
+/**
+ * Guided (حل مع المعلم) structure: a NON-EMPTY ordered `steps` array whose every step has a non-empty id and
+ * non-empty structured `text` spans (never raw HTML), and whose step ids are unique WITHIN this guided block
+ * (they are the React key and the future reveal/analytics identity; uniqueness across different guided blocks is
+ * not required). Empty/malformed/duplicated steps would render a hollow or ambiguous walkthrough.
+ */
+function checkGuided(
+  block: { steps?: unknown },
+  add: (c: ContentIssueCode, m: string, l?: Loc) => void,
+  loc: Loc,
+) {
+  const steps = block.steps;
+  if (!Array.isArray(steps) || steps.length === 0) { add("guided-empty-steps", "guided requires a non-empty steps array", loc); return; }
+  const seen = new Set<string>();
+  let dupReported = false;
+  for (const s of steps as { id?: unknown; text?: unknown }[]) {
+    const spans = Array.isArray(s?.text) ? (s.text as { text?: unknown }[]) : [];
+    const hasText = spans.some(sp => isNonEmptyString(sp?.text));
+    if (!isNonEmptyString(s?.id) || !hasText) {
+      add("guided-invalid-step", "each guided step needs a non-empty id and non-empty text spans", loc);
+      break;
+    }
+    if (seen.has(s.id)) {
+      if (!dupReported) { add("guided-duplicate-step-id", `duplicate guided step id "${s.id}" within one guided block`, loc); dupReported = true; }
+    } else {
+      seen.add(s.id);
+    }
   }
 }
 
 /** Block families that are, by policy, ALWAYS teacher enrichment (never faithful book content). */
 function isEnrichmentOnly(block: ContentBlock): boolean {
-  return block.type === "practice" || block.type === "simulation" || (block.type === "callout" && block.kind === "clarification");
+  return block.type === "practice" || isActivityBlock(block) || (block.type === "callout" && block.kind === "clarification");
 }
 function enrichmentKindLabel(block: ContentBlock): string {
   return block.type === "callout" ? "a clarification callout" : `a ${block.type} block`;
