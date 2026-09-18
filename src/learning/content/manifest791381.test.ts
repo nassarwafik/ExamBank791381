@@ -34,10 +34,11 @@ describe("Phase 2 — 791381 content manifest", () => {
     }
   });
 
-  it("records a valid PDF source page for every skeleton page (traceability)", () => {
+  it("records a valid PDF source page for every skeleton page (traceability), all bound to this course id", () => {
     for (const { page } of flattenPageRefs(manifest)) {
       expect(page.source?.kind).toBe("book");
-      expect(page.source?.sourceId).toBe("791381");
+      // OWNER §20 — every source id must equal the manifest course id (no cross-book leakage in the skeleton)
+      expect(page.source?.sourceId).toBe(manifest.courseId);
       expect(Number.isInteger(page.source?.pdfPageStart) && (page.source?.pdfPageStart ?? 0) >= 1).toBe(true);
     }
   });

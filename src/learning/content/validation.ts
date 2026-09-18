@@ -5,7 +5,8 @@
 // (a stable enum), never on the human Arabic-or-English `message`. An empty array means "no problems found".
 
 import {
-  BLOCK_TYPES, CALLOUT_KINDS, SIMULATION_TYPES, CODE_LANGUAGES, LEARNING_CONTENT_SCHEMA_VERSION,
+  BLOCK_TYPES, CALLOUT_KINDS, SIMULATION_TYPES, CODE_LANGUAGES, CONTENT_ORIGINS, EXAMPLE_MODES,
+  LEARNING_CONTENT_SCHEMA_VERSION,
   type LearningCourseContent, type ContentBlock, type ContentSource, type ContentDirection,
 } from "./types";
 import { findLearningCourse } from "../catalog";
@@ -25,6 +26,9 @@ export type ContentIssueCode =
   | "duplicate-order"
   | "missing-source"
   | "invalid-source-page"
+  | "source-id-mismatch"
+  | "invalid-origin"
+  | "invalid-example-mode"
   | "unsupported-block-type"
   | "image-missing-alt"
   | "invalid-direction"
@@ -88,7 +92,7 @@ export function validateLearningCourseContent(content: LearningCourseContent): C
     noteId(m?.id, mLoc);
     if (!isNonEmptyString(m?.title)) add("missing-title", "module title is required", mLoc);
     if (!isValidOrder(m?.order)) add("invalid-order", "module order must be a non-negative integer", mLoc);
-    if (m?.source) checkSource(m.source, add, mLoc);
+    if (m?.source) checkSource(m.source, courseId, add, mLoc);
 
     const lessons = Array.isArray(m?.lessons) ? m.lessons : [];
     if (lessons.length === 0) add("empty-lessons", "module has no lessons", mLoc);
@@ -110,27 +114,31 @@ export function validateLearningCourseContent(content: LearningCourseContent): C
         if (!isNonEmptyString(p?.title)) add("missing-title", "page title is required", pLoc);
         if (!isValidOrder(p?.order)) add("invalid-order", "page order must be a non-negative integer", pLoc);
         if (!p?.source) add("missing-source", "page is missing its source reference", pLoc);
-        else checkSource(p.source, add, pLoc);
+        else checkSource(p.source, courseId, add, pLoc);
 
         const blocks = Array.isArray(p?.blocks) ? p.blocks : [];
         if (blocks.length === 0) add("page-no-blocks", "page has no blocks", pLoc);
-        for (const b of blocks) checkBlock(b, add, { ...pLoc, blockId: b?.id }, noteId);
+        for (const b of blocks) checkBlock(b, courseId, add, { ...pLoc, blockId: b?.id }, noteId);
       }
     }
   }
   return issues;
 }
 
-function checkSource(source: ContentSource, add: (c: ContentIssueCode, m: string, l?: Loc) => void, loc: Loc) {
+function checkSource(source: ContentSource, courseId: string, add: (c: ContentIssueCode, m: string, l?: Loc) => void, loc: Loc) {
   if (source.kind !== "book" || !isPositiveInt(source.pdfPageStart)) {
     add("invalid-source-page", "source.pdfPageStart must be a positive integer", loc);
-    return;
+  } else {
+    if (source.pdfPageEnd !== undefined && (!isPositiveInt(source.pdfPageEnd) || source.pdfPageEnd < source.pdfPageStart)) {
+      add("invalid-source-page", "source.pdfPageEnd must be a positive integer ≥ pdfPageStart", loc);
+    }
+    if (source.printedPage !== undefined && !isPositiveInt(source.printedPage)) {
+      add("invalid-source-page", "source.printedPage must be a positive integer", loc);
+    }
   }
-  if (source.pdfPageEnd !== undefined && (!isPositiveInt(source.pdfPageEnd) || source.pdfPageEnd < source.pdfPageStart)) {
-    add("invalid-source-page", "source.pdfPageEnd must be a positive integer ≥ pdfPageStart", loc);
-  }
-  if (source.printedPage !== undefined && !isPositiveInt(source.printedPage)) {
-    add("invalid-source-page", "source.printedPage must be a positive integer", loc);
+  // OWNER §20 blocker fix: a source must belong to THIS course/book — sourceId must equal the course id.
+  if (isNonEmptyString(courseId) && source.sourceId !== courseId) {
+    add("source-id-mismatch", `source.sourceId "${String(source.sourceId)}" does not match courseId "${courseId}"`, loc);
   }
 }
 
@@ -153,6 +161,7 @@ function checkSiblingOrders(
 
 function checkBlock(
   block: ContentBlock,
+  courseId: string,
   add: (c: ContentIssueCode, m: string, l?: Loc) => void,
   loc: Loc,
   noteId: (id: unknown, loc: Loc) => void,
@@ -164,6 +173,11 @@ function checkBlock(
     return;
   }
   if (block.dir !== undefined && !isDirection(block.dir)) add("invalid-direction", "block dir must be rtl|ltr", loc);
+  // Provenance (OWNER §1/§2): origin, when present, must be a known value; a block-level source is validated too.
+  if (block.origin !== undefined && !CONTENT_ORIGINS.includes(block.origin)) {
+    add("invalid-origin", `block origin must be one of ${CONTENT_ORIGINS.join("|")}`, loc);
+  }
+  if (block.source) checkSource(block.source, courseId, add, loc);
 
   switch (block.type) {
     case "image":
@@ -178,6 +192,11 @@ function checkBlock(
     case "callout":
       if (!CALLOUT_KINDS.includes(block.kind)) add("unsupported-block-type", `unsupported callout kind "${String(block.kind)}"`, loc);
       break;
+    case "example":
+      if (block.mode !== undefined && !EXAMPLE_MODES.includes(block.mode)) {
+        add("invalid-example-mode", `example mode must be one of ${EXAMPLE_MODES.join("|")}`, loc);
+      }
+      break;
     case "table":
       for (const row of block.rows || []) {
         if (!Array.isArray(row) || row.length !== (block.headers?.length ?? -1)) {
@@ -186,8 +205,8 @@ function checkBlock(
         }
       }
       break;
-    case "quiz":
-      checkQuiz(block.question, add, loc);
+    case "practice":
+      checkPractice(block.question, add, loc);
       break;
     case "simulation":
       if (!SIMULATION_TYPES.includes(block.simulationType)) {
@@ -197,14 +216,14 @@ function checkBlock(
   }
 }
 
-function checkQuiz(
+function checkPractice(
   question: { kind?: string; options?: { correct?: boolean }[] },
   add: (c: ContentIssueCode, m: string, l?: Loc) => void,
   loc: Loc,
 ) {
   if (question?.kind !== "multipleChoice") return;
   const options = Array.isArray(question.options) ? question.options : [];
-  if (options.length === 0) { add("quiz-empty-options", "multipleChoice quiz has no options", loc); return; }
+  if (options.length === 0) { add("quiz-empty-options", "multipleChoice practice has no options", loc); return; }
   // Only enforce the answer count when an answer is expressed at all (some content authors the key separately).
   const hasAnyAnswer = options.some(o => o?.correct !== undefined);
   if (hasAnyAnswer) {

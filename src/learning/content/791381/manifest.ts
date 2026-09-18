@@ -124,7 +124,9 @@ const manifest: LearningCourseManifest = {
     },
   ],
   // The six Phase-1 overview "batches" are PRESENTATION groupings that each map to one OR MORE real modules (§29).
-  // Batches without a skeleton module yet carry an empty list; they are filled as those modules are authored.
+  // Every batch corresponds to real units in the source book; a batch whose modules are not yet in this PARTIAL
+  // skeleton carries an empty `moduleIds` list for now (pending conversion) — an empty list means "not yet
+  // represented in the skeleton", NOT that the batch has no content in the book.
   batches: [
     { id: "b1", label: "الأساسيات · الأعداد · IP", moduleIds: ["791381-m01", "791381-m02"] },
     { id: "b2", label: "الأجهزة والرسائل", moduleIds: [] },

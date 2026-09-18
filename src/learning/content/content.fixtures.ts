@@ -25,16 +25,17 @@ export const pageBasic: ContentPage = {
   ],
 };
 
-// ── Fixture B — binary worked example: example + table ───────────────────────────────────────────────────────
+// ── Fixture B — binary worked example: solved example + table (book content) ─────────────────────────────────
 export const pageBinary: ContentPage = {
   id: "f-m02-l01-p01", title: "تحويل من الثنائي للعشري", order: 1, source: src(16),
   blocks: [
     {
-      id: "fb-b1", type: "example", title: "مثال", prompt: "حوّل 01111011 إلى العشري",
+      id: "fb-b1", type: "example", mode: "solved", origin: "book", title: "مثال محلول", prompt: "حوّل 01111011 إلى العشري",
       steps: [{ text: "ضع كل رقم تحت قيمته" }, { text: "اجمع القيم التي تحتها 1" }], result: "123",
+      explanation: "القيم المضيئة: 64 + 32 + 16 + 8 + 2 + 1 = 123.",
     },
     {
-      id: "fb-b2", type: "table", caption: "الصناديق",
+      id: "fb-b2", type: "table", origin: "book", caption: "الصناديق",
       headers: ["128", "64", "32", "16", "8", "4", "2", "1"],
       rows: [["0", "1", "1", "1", "1", "0", "1", "1"]],
     },
@@ -50,29 +51,51 @@ export const pageCli: ContentPage = {
   ],
 };
 
-// ── Fixture D — quiz page: multipleChoice practice question (one correct) ────────────────────────────────────
+// ── Fixture D — practice page: multipleChoice with immediate-feedback fields (teacher enrichment) ────────────
 export const pageQuiz: ContentPage = {
   id: "f-m03-l01-p02", title: "تدرّب: المنافذ", order: 2, source: src(125),
   blocks: [
     {
-      id: "fd-b1", type: "quiz",
+      id: "fd-b1", type: "practice", origin: "teacher-enrichment",
       question: {
         kind: "multipleChoice", prompt: "أي وضع يربط جهازًا نهائيًا واحدًا بالمنفذ؟",
         options: [
           { id: "fd-o1", text: "Access", correct: true },
           { id: "fd-o2", text: "Trunk" },
         ],
-        explanation: "Access لجهاز واحد، Trunk وصلة بين السويتشات.",
+        feedback: {
+          correctFeedback: "أحسنت — Access لجهاز واحد.",
+          incorrectFeedback: "Trunk وصلة بين السويتشات، وليست لجهاز نهائي.",
+          hint: "فكّر في عدد الأجهزة على المنفذ.",
+          explanation: "Access لجهاز واحد، Trunk وصلة بين السويتشات.",
+        },
       },
     },
   ],
 };
 
-// ── Fixture E — simulation placeholder: VLAN descriptor (no behavior/config) ─────────────────────────────────
+// ── Fixture E — simulation placeholder: VLAN descriptor (teacher enrichment; no behavior/config) ─────────────
 export const pageSimulation: ContentPage = {
   id: "f-m03-l01-p03", title: "محاكاة VLAN", order: 3, source: src(126),
   blocks: [
-    { id: "fe-b1", type: "simulation", simulationType: "vlan", title: "محاكاة توزيع المنافذ على VLANs", description: "ستتوفر لاحقًا." },
+    { id: "fe-b1", type: "simulation", origin: "teacher-enrichment", simulationType: "vlan", title: "محاكاة توزيع المنافذ على VLANs", description: "ستتوفر لاحقًا." },
+  ],
+};
+
+// ── Fixture F — a MIXED interactive page: faithful book blocks + clearly-separated teacher enrichment ────────
+// Proves origin book vs teacher-enrichment coexist on one page; a clarification callout replaces any silent
+// "correction"; a teacher-enrichment block may carry its own block-level source referencing the book page it builds on.
+export const pageMixed: ContentPage = {
+  id: "f-m03-l01-p04", title: "Access مقابل Trunk", order: 4, source: src(124), conversionNote: "صفحة كثيفة قُسّمت إلى صفحتين تفاعليتين.",
+  blocks: [
+    { id: "ff-b1", type: "heading", origin: "book", text: "Access مقابل Trunk", level: 2 },
+    { id: "ff-b2", type: "text", origin: "book", spans: [{ text: "منفذ " }, { text: "Access", dir: "ltr", style: "term" }, { text: " لجهاز واحد، ومنفذ " }, { text: "Trunk", dir: "ltr", style: "term" }, { text: " وصلة بين السويتشات." }] },
+    { id: "ff-b3", type: "callout", origin: "teacher-enrichment", kind: "clarification", title: "توضيح المعلم", spans: [{ text: "المصدر يكتب المصطلح بحروف كبيرة؛ أبقيناه كما هو وأضفنا هذا التوضيح." }] },
+    {
+      id: "ff-b4", type: "example", origin: "teacher-enrichment", mode: "practice", title: "مثال للحل",
+      source: { kind: "book", sourceId: "791381", pdfPageStart: 124 },
+      prompt: "صنّف المنفذ الذي يربط سويتشين: Access أم Trunk؟", steps: [{ text: "حدّد عدد الأجهزة على الوصلة" }],
+    },
   ],
 };
 
@@ -87,7 +110,7 @@ export const validCourse: LearningCourseContent = {
     { id: "f-m02", title: "الأعداد", order: 2, lessons: [{ id: "f-m02-l01", title: "التحويل", order: 1, pages: [pageBinary] }] },
     {
       id: "f-m03", title: "CLI و VLAN", order: 3,
-      lessons: [{ id: "f-m03-l01", title: "المنافذ", order: 1, pages: [pageCli, pageQuiz, pageSimulation] }],
+      lessons: [{ id: "f-m03-l01", title: "المنافذ", order: 1, pages: [pageCli, pageQuiz, pageSimulation, pageMixed] }],
     },
   ],
 };

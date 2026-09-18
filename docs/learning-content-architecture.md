@@ -54,16 +54,18 @@ only, and `printedPage` (the number printed on the paper) differs from the PDF p
 
 ## Block families (union on `type`)
 
-`text` · `heading` · `image` · `callout` · `example` · `table` · `code` · `diagram` · `quiz` · `simulation`.
+`text` · `heading` · `image` · `callout` · `example` · `table` · `code` · `diagram` · `practice` · `simulation`.
 
 - **text** — safe inline `spans` (`strong`/`em`/`term`/`code`, optional per-span `dir`). No raw HTML.
-- **callout** — `remember` · `important` · `warning` · `tip` · `summary` (maps to book boxes: تذكّر / الخلاصة / الفكرة).
-- **example** — `prompt` + structured `steps[]` + `result` (not one blob string).
+- **callout** — `remember` · `important` · `warning` · `tip` · `summary` · `clarification` (maps to book boxes تذكّر / الخلاصة / الفكرة; `clarification` is the separable teacher note, always `origin:"teacher-enrichment"`).
+- **example** — `mode: "solved" | "practice"` (default `solved`), `title?` + `prompt?` + structured `steps[]` + `result?` + `explanation?` (never one blob string). Solved = مثال محلول; practice = مثال للحل.
 - **table** — `headers[]` + `rows[][]` (not an HTML string).
 - **code** — `language: cli|text|config`, whitespace preserved, usually `dir:"ltr"`.
 - **image / diagram** — local `src`, `alt` **required unless `decorative`**; diagram is metadata + image only (no sim behavior).
-- **quiz** — lightweight practice (`multipleChoice` / `trueFalse` / `shortInput`). **Not** the ExamBank exam schema, not graded, not a rank/medal input.
+- **practice** — lightweight interactive practice with immediate-feedback readiness. Question kinds `multipleChoice` / `trueFalse` / `shortInput` / `fillBlank`, plus a `feedback` object (`hint` / `correctFeedback` / `incorrectFeedback` / `explanation`). **Not** the ExamBank exam schema, not graded, not a rank/medal input. *Extension path:* richer kinds (matching, ordering, classify, binary-entry, IP/CIDR, CLI) are added as new union members (or expressed as `simulation`) without touching existing ones.
 - **simulation** — a typed placeholder descriptor (`simulationType` + `title` + `description`); detailed configs are Phase 5.
+
+Every block also carries two optional provenance fields (see *Book Fidelity* below): `origin` and a block-level `source`.
 
 ## RTL / LTR
 
@@ -98,8 +100,12 @@ module **bodies** are authored during content conversion (a later phase) and eac
 (never throws for normal content errors, never mutates/normalizes). Callers branch on `issue.code` (a stable enum),
 never on the human message. Codes: `schema-version-mismatch`, `unknown-course`, `missing-id`, `duplicate-id`,
 `missing-title`, `empty-modules`, `empty-lessons`, `empty-pages`, `page-no-blocks`, `invalid-order`,
-`duplicate-order`, `missing-source`, `invalid-source-page`, `unsupported-block-type`, `image-missing-alt`,
-`invalid-direction`, `quiz-empty-options`, `quiz-mcq-answer-count`, `unsupported-simulation-type`, `invalid-table-row`.
+`duplicate-order`, `missing-source`, `invalid-source-page`, `source-id-mismatch`, `invalid-origin`,
+`invalid-example-mode`, `unsupported-block-type`, `image-missing-alt`, `invalid-direction`, `quiz-empty-options`,
+`quiz-mcq-answer-count`, `unsupported-simulation-type`, `invalid-table-row`.
+
+`source-id-mismatch` enforces that every `source.sourceId` (page, module, or block level) equals the course id —
+content can never reference another book by accident.
 
 **Normalization policy: none.** A validator validates. It never reorders content, invents ids/titles/source pages,
 generates answers, or rewrites Arabic. Any future normalization is a separate, explicit converter tool.
@@ -114,6 +120,109 @@ The six Phase-1 overview "batches" are **presentation groupings**; each maps to 
 Educational content is trusted repository data, but still: no raw/executable HTML, no `eval`, no executable code
 from content, no dynamic component names from data, no external script URLs. Simulation types resolve through a
 controlled registry (Phase 5), never by executing a name from data.
+
+## Book Fidelity and Educational Enrichment
+
+**The source book (791381) is the authoritative academic source.** Conversion must preserve the book's topic order,
+concepts, terminology, intended examples, academically-meaningful tables/diagrams, the relationship between
+neighboring pages, and the curriculum scope. It must **not** silently remove content, silently add curriculum facts
+as if they were the book's, or silently rewrite/"improve" the author's academic meaning.
+
+**No silent corrections.** If the source has an apparent typo, inconsistency or questionable wording, preserve the
+source meaning and, if needed, attach a clearly separate teacher note — a `callout` of kind `clarification` authored
+as `origin:"teacher-enrichment"`. The original book and any added enrichment must always remain distinguishable.
+
+### Block provenance (origin)
+
+Every block declares its provenance; the model keeps book content and added enrichment visibly separate:
+
+```ts
+origin?: "book" | "teacher-enrichment"   // omitted ⇒ "book"
+```
+
+- `"book"` — content directly based on the source book.
+- `"teacher-enrichment"` — added to improve learning: extra solved/practice examples, hints, interactive practice,
+  immediate feedback, diagrams, simulations, explanatory notes, clarifications.
+
+AI-generated provenance is **not** introduced now (AI is Phase 8).
+
+### Block-level source + inheritance rule
+
+Page-level `source` is always required. Blocks may **optionally** carry their own `source`, resolved by
+`effectiveBlockSource(page, block)`:
+
+- explicit block `source` wins;
+- otherwise an `origin:"book"` block **inherits the page's source** (no duplicate metadata needed);
+- an `origin:"teacher-enrichment"` block without a source simply has none (it is supplementary).
+
+Any `source` present — page, module or block — must have `sourceId === courseId` (`source-id-mismatch`).
+
+### Book page → interactive page mapping
+
+Default: **1 source book page → 1 interactive page** (preserves fidelity, easy teacher verification). Controlled
+exceptions are allowed only when presentation requires it: one dense page → two interactive pages, or two small
+adjacent pages → one interactive sequence. In every case the original order and the **exact** source page reference
+are preserved and never lost; a split/merge is recorded in the page's `source` range plus `conversionNote`. The
+page's `source` **is** its source mapping (`{sourceId, pdfPageStart, pdfPageEnd?}`) — no separate `sourceMapping`
+field is duplicated. The teacher can always answer: «هذه الصفحة التفاعلية مأخوذة من أي صفحة في الكتاب؟».
+
+### Solved vs practice examples, and immediate feedback
+
+- **Solved example** (مثال محلول) — `example` with `mode:"solved"`: structured `steps[]` + `result` + optional
+  `explanation`; the Reader may later reveal steps progressively.
+- **Practice example** (مثال للحل) — `example` with `mode:"practice"`: the problem for the student to attempt.
+- **Interactive practice** — the `practice` block carries answer(s) + a `feedback` object (`hint`,
+  `correctFeedback`, `incorrectFeedback`, `explanation`) so Phase 4 can check answers and respond immediately.
+  This feedback is **educational only** — never assignment grading, exam grade, medal or rank input.
+
+### Simulations
+
+First-class but used **only where interaction genuinely improves understanding** (not on every page). Ready types:
+`network-flow`, `binary-box`, `subnet`, `vlan`, `cli`. Phase 2 stores only a typed descriptor; behavior/config is
+Phase 5, resolved through a controlled registry (never by executing a name from data).
+
+### No invented curriculum
+
+Enrichment must build on the concept already taught on that page/unit. Do not introduce a new networking topic
+merely because it is related (a page teaching *Access vs Trunk* may demonstrate Access/Trunk — it must not suddenly
+teach OSPF unless the book has reached OSPF).
+
+### Source-first conversion policy (future)
+
+For every source page: **(1)** read the exact source page; **(2)** extract its objectives and original material;
+**(3)** create faithful native book blocks; **(4)** only then decide whether enrichment helps; **(5)** add a solved
+example if beneficial; **(6)** add a short practice activity if beneficial; **(7)** add a simulation only where the
+concept benefits from interaction; **(8)** validate the page against the source. A page is **not** "converted" merely
+because its topic was summarized.
+
+### Conversion acceptance criteria (future)
+
+A converted page passes only if — **Fidelity:** original concept present, terminology preserved, important
+examples and table/diagram information preserved, no source concept silently removed. **Traceability:** correct PDF
+page reference and course/source id. **Enrichment separation:** book blocks and teacher-added blocks are
+identifiable (via `origin`). **Educational quality:** any added example is correct and relevant, practice matches the
+lesson, answers/feedback are correct, and any simulation reinforces the exact concept.
+
+### Not a PDF viewer
+
+The student experience is native (text, cards, tables, diagrams, interactive controls) — **not** 264 screenshots and
+**not** a PDF embed. A source-page screenshot may serve later only as a teacher *verification* reference. Added
+visuals must not contradict the source.
+
+## Interactive Page Design Principles (Phase 3 rendering — not implemented here)
+
+Each converted page is one native **Interactive Learning Page** that can combine, in **authored block order**:
+header (title / lesson / page position) → core book content → visual explanation → example → try-it practice →
+simulation (only when useful) → summary/remember. Not every page needs every section — the blocks present decide
+what renders. The Reader must render blocks in authored order and must **not** hardcode this sequence in React.
+
+**Book content comes first.** The student must see the faithful book material clearly before optional enrichment;
+extra activities must never bury the original lesson. Preferred visual hierarchy:
+`المادة الأساسية ↓ مثال ↓ جرّب بنفسك ↓ محاكاة / نشاط ↓ الخلاصة`.
+
+**Accessibility (kept compatible by the Phase-2 types):** keyboard navigation, proper heading levels, required `alt`
+(unless decorative), input labels, visible focus, feedback never by color alone, RTL Arabic with LTR technical
+values/commands (per-block/per-span `dir`), and mobile layouts.
 
 ## Phase boundaries (not implemented here)
 

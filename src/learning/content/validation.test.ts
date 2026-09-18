@@ -64,6 +64,36 @@ describe("Phase 2 — content validator", () => {
     has(dup, "duplicate-order");
   });
 
+  it("flags a source-id that does not match the course id — at page, module and block level (OWNER §20)", () => {
+    const page = cloneCourse(); page.modules[0].lessons[0].pages[0].source.sourceId = "999999";
+    has(page, "source-id-mismatch");
+    const module = cloneCourse(); module.modules[0].source = { kind: "book", sourceId: "999999", pdfPageStart: 1 };
+    has(module, "source-id-mismatch");
+    const block = cloneCourse();
+    const b = block.modules[2].lessons[0].pages[3].blocks.find(x => x.id === "ff-b4")!;
+    (b as { source: { sourceId: string } }).source.sourceId = "999999";
+    has(block, "source-id-mismatch");
+    // sanity: the untouched course has no such issue
+    expect(codes(cloneCourse())).not.toContain("source-id-mismatch");
+  });
+
+  it("flags an invalid block origin and an invalid example mode (provenance, OWNER §1/§6)", () => {
+    const origin = cloneCourse();
+    (origin.modules[0].lessons[0].pages[0].blocks[0] as { origin: string }).origin = "ai-generated";
+    has(origin, "invalid-origin");
+    const mode = cloneCourse();
+    const ex = mode.modules[1].lessons[0].pages[0].blocks.find(x => x.type === "example")!;
+    (ex as { mode: string }).mode = "bogus";
+    has(mode, "invalid-example-mode");
+  });
+
+  it("accepts book vs teacher-enrichment blocks, a clarification callout, feedback fields and a block-level source", () => {
+    // the mixed page (pageMixed) exercises all of the new provenance/feedback fields and must be valid
+    expect(codes(cloneCourse())).not.toContain("invalid-origin");
+    expect(codes(cloneCourse())).not.toContain("invalid-example-mode");
+    expect(codes(cloneCourse())).not.toContain("unsupported-block-type");
+  });
+
   it("flags a missing page source and an invalid source page number", () => {
     const missing = cloneCourse();
     delete (missing.modules[0].lessons[0].pages[0] as { source?: unknown }).source;

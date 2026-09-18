@@ -44,12 +44,34 @@ export type InlineSpan = { text: string; style?: InlineStyle; dir?: ContentDirec
 export type RichText = InlineSpan[];
 
 // ────────────────────────────────────────────────────────────────────────────
+// Provenance (OWNER §1) — faithful book-derived content vs added educational enrichment.
+// This keeps the original book and any teacher-added material ALWAYS distinguishable. AI-generated provenance is
+// deliberately NOT introduced here (that is Phase 8).
+// ────────────────────────────────────────────────────────────────────────────
+export type ContentOrigin = "book" | "teacher-enrichment";
+export const CONTENT_ORIGINS: readonly ContentOrigin[] = ["book", "teacher-enrichment"];
+/** A block with no explicit origin is treated as faithful book content. */
+export const DEFAULT_ORIGIN: ContentOrigin = "book";
+
+// ────────────────────────────────────────────────────────────────────────────
 // Block families (§12/§13) — discriminated union on `type`; every block has an id.
 // ────────────────────────────────────────────────────────────────────────────
 export interface BlockBase {
   id: string;
   /** Optional per-block direction override (defaults to the lesson/course direction). */
   dir?: ContentDirection;
+  /**
+   * Provenance (OWNER §1/§2). Omitted ⇒ "book" (faithful source content). "teacher-enrichment" marks added
+   * examples / practice / hints / simulations / clarifications so they never masquerade as the book.
+   */
+  origin?: ContentOrigin;
+  /**
+   * Optional BLOCK-level source (OWNER §2). Inheritance rule:
+   *   • origin "book" → may omit `source` and INHERIT the page's source (see `effectiveBlockSource`).
+   *   • origin "teacher-enrichment" → `source` is optional because the block is explicitly supplementary.
+   * When present, `source.sourceId` must still equal the course id (validated).
+   */
+  source?: ContentSource;
 }
 
 export interface TextBlock extends BlockBase { type: "text"; spans: RichText; }
@@ -63,18 +85,29 @@ export interface ImageBlock extends BlockBase {
   decorative?: boolean;
 }
 
-export type CalloutKind = "remember" | "important" | "warning" | "tip" | "summary";
-/** Book "boxes" such as تذكّر / الخلاصة / الفكرة map here. */
+// "clarification" is the OWNER-required, clearly-separate teacher note used INSTEAD of silently "correcting" an
+// apparent source typo/inconsistency (OWNER Book-Fidelity rule). It is always authored as origin:"teacher-enrichment".
+export type CalloutKind = "remember" | "important" | "warning" | "tip" | "summary" | "clarification";
+/** Book "boxes" such as تذكّر / الخلاصة / الفكرة map here; "clarification" carries a separable teacher note. */
 export interface CalloutBlock extends BlockBase { type: "callout"; kind: CalloutKind; title?: string; spans: RichText; }
 
 /** One step of a worked example (structured, not a single blob string). */
 export type ExampleStep = { text: string; note?: string };
+/**
+ * `mode` (OWNER §6/§7): a "solved" example (مثال محلول) shows full steps + result + optional explanation; a
+ * "practice" example (مثال للحل) presents the problem for the student to attempt. Omitted ⇒ "solved". Interactive
+ * answer checking + immediate feedback lives on the PracticeBlock, not here.
+ */
+export type ExampleMode = "solved" | "practice";
+export const EXAMPLE_MODES: readonly ExampleMode[] = ["solved", "practice"];
 export interface ExampleBlock extends BlockBase {
   type: "example";
+  mode?: ExampleMode;
   title?: string;
   prompt?: string;
   steps: ExampleStep[];
   result?: string;
+  explanation?: string;
 }
 
 export interface TableBlock extends BlockBase {
@@ -101,13 +134,30 @@ export interface DiagramBlock extends BlockBase {
   caption?: string;
 }
 
-// Lightweight PRACTICE quiz (§13/§25) — NOT the ExamBank exam schema, NOT graded, NOT rank/medal input.
-export type QuizQuestion =
-  | { kind: "multipleChoice"; prompt: string; options: QuizOption[]; explanation?: string }
-  | { kind: "trueFalse"; prompt: string; answer?: boolean; explanation?: string }
-  | { kind: "shortInput"; prompt: string; answer?: string; explanation?: string };
-export type QuizOption = { id: string; text: string; correct?: boolean };
-export interface QuizBlock extends BlockBase { type: "quiz"; question: QuizQuestion; }
+// Lightweight interactive PRACTICE (OWNER §7/§8/§9, §25) — أمثلة للحل / تدريب. This is educational content only:
+// NOT the ExamBank exam schema, NOT graded, NOT a rank/medal input. Immediate-feedback fields are carried here so
+// Phase 4 can render check-answer / correct-incorrect / hint / retry without a schema redesign.
+export type PracticeFeedback = {
+  hint?: string;
+  correctFeedback?: string;
+  incorrectFeedback?: string;
+  explanation?: string;
+};
+export type PracticeOption = { id: string; text: string; correct?: boolean };
+/**
+ * Base practice-question kinds modeled in Phase 2. EXTENSION PATH (OWNER §9): richer kinds — matching, ordering,
+ * classify/categorize, binary-value entry, IP/CIDR calculation, CLI command entry — are added as NEW members of
+ * this union (their interactive forms may also be expressed as `simulation` blocks); nothing here needs to change
+ * and the ExamBank exam schema is never duplicated.
+ */
+export type PracticeQuestion =
+  | { kind: "multipleChoice"; prompt: string; options: PracticeOption[]; feedback?: PracticeFeedback }
+  | { kind: "trueFalse"; prompt: string; answer?: boolean; feedback?: PracticeFeedback }
+  | { kind: "shortInput"; prompt: string; answer?: string; feedback?: PracticeFeedback }
+  | { kind: "fillBlank"; prompt: string; answers?: string[]; feedback?: PracticeFeedback };
+export type PracticeQuestionKind = PracticeQuestion["kind"];
+export const PRACTICE_QUESTION_KINDS: readonly PracticeQuestionKind[] = ["multipleChoice", "trueFalse", "shortInput", "fillBlank"];
+export interface PracticeBlock extends BlockBase { type: "practice"; question: PracticeQuestion; }
 
 /** Supported simulation kinds (§13). A controlled registry maps these to components later (Phase 5). */
 export type SimulationType = "network-flow" | "binary-box" | "subnet" | "vlan" | "cli";
@@ -129,15 +179,15 @@ export type ContentBlock =
   | TableBlock
   | CodeBlock
   | DiagramBlock
-  | QuizBlock
+  | PracticeBlock
   | SimulationBlock;
 
 export type BlockType = ContentBlock["type"];
 /** The closed set of supported block types (used by the validator; keep in sync with the union). */
 export const BLOCK_TYPES: readonly BlockType[] = [
-  "text", "heading", "image", "callout", "example", "table", "code", "diagram", "quiz", "simulation",
+  "text", "heading", "image", "callout", "example", "table", "code", "diagram", "practice", "simulation",
 ];
-export const CALLOUT_KINDS: readonly CalloutKind[] = ["remember", "important", "warning", "tip", "summary"];
+export const CALLOUT_KINDS: readonly CalloutKind[] = ["remember", "important", "warning", "tip", "summary", "clarification"];
 export const SIMULATION_TYPES: readonly SimulationType[] = ["network-flow", "binary-box", "subnet", "vlan", "cli"];
 export const CODE_LANGUAGES: readonly CodeLanguage[] = ["cli", "text", "config"];
 
@@ -150,11 +200,33 @@ export interface ContentPage {
   /** Position within its lesson (authoritative; NOT the array index). */
   order: number;
   blocks: ContentBlock[];
-  /** REQUIRED for production pages: which original source page produced it (§11). */
+  /**
+   * REQUIRED for production pages: the source mapping — which original PDF page(s) produced this interactive page
+   * (§11, OWNER §4/§5). `source` IS the page's source mapping (`{sourceId, pdfPageStart, pdfPageEnd?}`), so no
+   * duplicate `sourceMapping` field is introduced. Default mapping is 1 book page → 1 interactive page; a
+   * controlled split (one dense page → two interactive pages) or merge (two small adjacent pages → one) is
+   * expressed by the page range + `conversionNote`, and never loses the exact source reference.
+   */
   source: ContentSource;
+  /** Optional human note explaining a controlled split/merge or other conversion decision (OWNER §5). */
+  conversionNote?: string;
   subtitle?: string;
   learningObjective?: string;
   keywords?: string[];
+}
+
+/** The effective provenance of a block (missing ⇒ book). */
+export function blockOrigin(block: BlockBase): ContentOrigin {
+  return block.origin ?? DEFAULT_ORIGIN;
+}
+
+/**
+ * The effective source of a block (OWNER §2 inheritance rule): an explicit block `source` wins; otherwise a
+ * book-origin block inherits its page's source, and a teacher-enrichment block without a source has none.
+ */
+export function effectiveBlockSource(page: ContentPage, block: BlockBase): ContentSource | undefined {
+  if (block.source) return block.source;
+  return blockOrigin(block) === "book" ? page.source : undefined;
 }
 
 export interface ContentLesson {
