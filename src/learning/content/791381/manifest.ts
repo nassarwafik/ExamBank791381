@@ -65,8 +65,9 @@ const manifest: LearningCourseManifest = {
       order: 2,
       lessons: [
         {
-          // Phase 3B: unit-opener lesson for Unit 2 (PDF 14). The existing m02-l01 pages (PDF 16/18/20) are
-          // deliberately NOT renumbered and remain UNCONVERTED — the m02 body is a PARTIAL conversion.
+          // Phase 3B/3C: unit-opener lesson for Unit 2 (PDF 14). The Unit-2 lesson (m02-l01) is now largely
+          // converted (PDF 15–22); m02 stays a PARTIAL conversion because PDF 23 (خلاصة التحويلات) is listed but
+          // not yet converted.
           id: "791381-m02-l00",
           title: "افتتاحية الوحدة",
           order: 0,
@@ -75,13 +76,23 @@ const manifest: LearningCourseManifest = {
           ],
         },
         {
+          // Phase 3C: the full number-systems sequence PDF 15–22 in reading order. The three Phase-2 skeleton pages
+          // (p01=PDF16, p02=PDF18, p03=PDF20) keep their STABLE IDs; only their `order` is adjusted to interleave the
+          // newly-added pages (p02's title is corrected to the authoritative rendered source). p09 (PDF 23) is a
+          // skeleton-only entry (no body yet) — it keeps m02 partial and shows as "قيد الإعداد".
           id: "791381-m02-l01",
           title: "أنظمة العد والتحويل",
           order: 1,
           pages: [
-            { id: "791381-m02-l01-p01", title: "تحويل من الثنائي للعشري", order: 1, source: { kind: "book", sourceId: "791381", pdfPageStart: 16, printedPage: 14 }, keywords: ["binary", "decimal", "ثنائي", "عشري"] },
-            { id: "791381-m02-l01-p02", title: "الميزان السادس عشر (Hex)", order: 2, source: { kind: "book", sourceId: "791381", pdfPageStart: 18, printedPage: 16 }, keywords: ["hex", "سادس عشر"] },
-            { id: "791381-m02-l01-p03", title: "من السادس عشر إلى الثنائي", order: 3, source: { kind: "book", sourceId: "791381", pdfPageStart: 20, printedPage: 18 } },
+            { id: "791381-m02-l01-p04", title: "العشري والثنائي", order: 1, source: { kind: "book", sourceId: "791381", pdfPageStart: 15, printedPage: 13 }, keywords: ["decimal", "binary", "عشري", "ثنائي"] },
+            { id: "791381-m02-l01-p01", title: "تحويل من الثنائي للعشري", order: 2, source: { kind: "book", sourceId: "791381", pdfPageStart: 16, printedPage: 14 }, keywords: ["binary", "decimal", "ثنائي", "عشري"] },
+            { id: "791381-m02-l01-p05", title: "تحويل من العشري للثنائي", order: 3, source: { kind: "book", sourceId: "791381", pdfPageStart: 17, printedPage: 15 }, keywords: ["decimal", "binary", "تحويل"] },
+            { id: "791381-m02-l01-p02", title: "النظام السادس عشري (Hex)", order: 4, source: { kind: "book", sourceId: "791381", pdfPageStart: 18, printedPage: 16 }, keywords: ["hex", "سادس عشر"] },
+            { id: "791381-m02-l01-p06", title: "جدول السادس عشر والثنائي", order: 5, source: { kind: "book", sourceId: "791381", pdfPageStart: 19, printedPage: 17 }, keywords: ["hex", "binary", "جدول"] },
+            { id: "791381-m02-l01-p03", title: "من السادس عشر إلى الثنائي", order: 6, source: { kind: "book", sourceId: "791381", pdfPageStart: 20, printedPage: 18 } },
+            { id: "791381-m02-l01-p07", title: "من الثنائي إلى السادس عشر", order: 7, source: { kind: "book", sourceId: "791381", pdfPageStart: 21, printedPage: 19 }, keywords: ["binary", "hex", "تحويل"] },
+            { id: "791381-m02-l01-p08", title: "تدريبات قصيرة", order: 8, source: { kind: "book", sourceId: "791381", pdfPageStart: 22, printedPage: 20 }, keywords: ["تدريب", "exercises"] },
+            { id: "791381-m02-l01-p09", title: "خلاصة التحويلات", order: 9, source: { kind: "book", sourceId: "791381", pdfPageStart: 23, printedPage: 21 }, keywords: ["خلاصة", "تحويلات"] },
           ],
         },
       ],

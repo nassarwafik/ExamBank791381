@@ -334,7 +334,7 @@ export interface ListItem { id: string; term?: string; text: RichText; note?: st
  */
 export interface ListBlock extends BlockBase {
   type: "list";
-  variant?: "cards" | "checklist" | "plain";
+  variant?: "cards" | "checklist" | "plain" | "ordered";
   title?: string;
   items: ListItem[];
 }
@@ -380,7 +380,7 @@ export const BLOCK_TYPES: readonly BlockType[] = [
   "text", "heading", "image", "callout", "example", "table", "code", "diagram", "practice", "list", "unit-opener",
   "simulation", "animation", "guided", "interactive-diagram",
 ];
-export const LIST_VARIANTS: readonly NonNullable<ListBlock["variant"]>[] = ["cards", "checklist", "plain"];
+export const LIST_VARIANTS: readonly NonNullable<ListBlock["variant"]>[] = ["cards", "checklist", "plain", "ordered"];
 export const CALLOUT_KINDS: readonly CalloutKind[] = ["remember", "important", "warning", "tip", "summary", "clarification"];
 export const CODE_LANGUAGES: readonly CodeLanguage[] = ["cli", "text", "config"];
 

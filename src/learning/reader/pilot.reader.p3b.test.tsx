@@ -66,7 +66,7 @@ describe("Phase 3B — Reader over real pilot content", () => {
     await screen.findByRole("heading", { level: 2, name: "أساسيات الشبكات" });
     goTo("791381-m02-l00-p01");                                        // converted opener → ready
     expect(await screen.findByRole("heading", { level: 2, name: "الأعداد والموازين" })).toBeTruthy();
-    goTo("791381-m02-l01-p01");                                        // PDF 16, NOT converted (partial module)
+    goTo("791381-m02-l01-p09");                                        // PDF 23 (خلاصة التحويلات), NOT converted (partial module)
     await waitFor(() => expect(screen.getByText("المحتوى التفاعلي لهذه الصفحة قيد الإعداد")).toBeTruthy());
     // it is the professional "under preparation" state, NOT the "missing content" integrity message
     expect(screen.queryByText(/لم يتم العثور على محتوى هذه الصفحة/)).toBeNull();

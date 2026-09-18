@@ -429,6 +429,36 @@ mobile UX before the conversion expands; **nothing beyond PDF 14** is converted.
 
 The rest of the book stays skeleton (manifest only); the next batch continues the number-system content from PDF 15.
 
+## Phase 3C — Number-Systems Batch (source PDF 15–22)
+
+The second real conversion batch: Book 791381 Unit-2 **PDF 15–22** (العشري/الثنائي, binary↔decimal box method,
+النظام السادس عشري (Hex), the hex↔binary table, hex↔binary conversions, and the short exercises). Same standards as
+3A/3B: source-faithful, additive, lazy, accessible, mobile-first, RTL-correct, answer-key safe. **Nothing beyond
+PDF 22.**
+
+- **Fills the existing skeleton + interleaves.** The Phase-2 skeleton already mapped PDF 16/18/20 to
+  `m02-l01-p01/p02/p03`; those **stable IDs are unchanged** — only their `order` is adjusted to interleave the newly
+  added PDF 15/17/19/21/22 pages into the exact source reading sequence 15 → 22. `p02`'s title is corrected to the
+  authoritative rendered source «النظام السادس عشري (Hex)» (the skeleton's «الميزان السادس عشر» came from a hidden,
+  inaccurate text layer). A regression test asserts every pre-existing id is preserved and the reading order is
+  15 → 23.
+- **m02 stays PARTIAL.** Unit 2 continues to **PDF 23** («خلاصة التحويلات»), which this batch does not convert. PDF 23
+  is added to the manifest as a **skeleton-only** entry (no body), so `m02.partial` remains `true` and the reader
+  shows PDF 23 as «قيد الإعداد» — the module becomes complete only when every manifest page has a body.
+- **Numeric fidelity under RTL.** Every binary/decimal/hex value, place-value row and equation is authored as an
+  **LTR** span/table so RTL never reverses digit order (e.g. `9A2C5 = 1001 1010 0010 1100 0101`, not the visually
+  reversed source grouping). Focused tests lock each numeric example. The PDF-19 hex↔binary table reproduces the
+  source **exactly**, including the source's own omission of `7` and `F` (never silently "completed").
+- **Two small generic renderer additions** (existing primitives, reusable by any book): a `list` **`ordered`**
+  variant (a real `<ol>` for numbered procedures) and **`dir` support on `table`** (numeric place-value tables opt
+  into `dir:"ltr"` so columns read MSB→LSB left-to-right; they still scroll inside their own container on mobile).
+- **Conservative activities.** No new simulation/animation; `productionActivityRegistry` is unchanged. The only
+  enrichment is a single `clarification` note on the exercises page (the printed QR codes are not shown in the
+  reader). The exercises are a faithful list — **no practice blocks, no answers, no external link/image, no
+  evaluator wiring.** Answer-key secrecy is untouched.
+
+The next batch continues from **PDF 23** (خلاصة التحويلات) into Unit 3.
+
 ## Phase boundaries
 
 | Phase | Scope | Status |
@@ -436,7 +466,8 @@ The rest of the book stays skeleton (manifest only); the next batch continues th
 | 2 | Content schema, validation, navigation, lazy registry, `791381` skeleton manifest | done |
 | 3 | Interactive **Reader** — TOC, previous/next, jump-to-page, page/block rendering, provenance display, lazy module loading, professional not-yet-converted state | done (reader shell) |
 | **3A (this)** | Interactive Learning **Engine foundation** — activity descriptors, trusted registry + lazy loader (EMPTY production), host shell + error boundary + fullscreen + reduced-motion, no-op event sink, validation, tests, docs | done (foundation) |
-| **3B (this)** | First real conversion pilot — Book 791381 source PDF **7–14** (native content, first real module bodies, first production activity) | done (pilot) |
+| 3B | First real conversion pilot — Book 791381 source PDF **7–14** | done |
+| **3C (this)** | Number-systems batch — Book 791381 source PDF **15–22** (decimal/binary/hex conversions) | done |
 | 4 | Interactive Practice — answer checking + immediate feedback (inline) | deferred |
 | 5 | Simulations — real VLAN/subnet/CLI/… renderers registered behind the Phase-3A engine | deferred |
 | 6 | Student Progress — last page, completion, attempts (separate domain; attaches to the no-op event seam) | deferred |
