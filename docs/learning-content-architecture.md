@@ -54,7 +54,8 @@ only, and `printedPage` (the number printed on the paper) differs from the PDF p
 
 ## Block families (union on `type`)
 
-`text` · `heading` · `image` · `callout` · `example` · `table` · `code` · `diagram` · `practice` · `simulation`.
+`text` · `heading` · `image` · `callout` · `example` · `table` · `code` · `diagram` · `practice` · `simulation` ·
+`animation` · `guided` · `interactive-diagram`.
 
 - **text** — safe inline `spans` (`strong`/`em`/`term`/`code`, optional per-span `dir`). No raw HTML.
 - **callout** — `remember` · `important` · `warning` · `tip` · `summary` · `clarification` (maps to book boxes تذكّر / الخلاصة / الفكرة; `clarification` is the separable teacher note, always `origin:"teacher-enrichment"`).
@@ -63,7 +64,12 @@ only, and `printedPage` (the number printed on the paper) differs from the PDF p
 - **code** — `language: cli|text|config`, whitespace preserved, usually `dir:"ltr"`.
 - **image / diagram** — local `src`, `alt` **required unless `decorative`**; diagram is metadata + image only (no sim behavior).
 - **practice** — lightweight interactive practice with immediate-feedback readiness. Question kinds `multipleChoice` / `trueFalse` / `shortInput` / `fillBlank`, plus a `feedback` object (`hint` / `correctFeedback` / `incorrectFeedback` / `explanation`). **Not** the ExamBank exam schema, not graded, not a rank/medal input. *Extension path:* richer kinds (matching, ordering, classify, binary-entry, IP/CIDR, CLI) are added as new union members (or expressed as `simulation`) without touching existing ones.
-- **simulation** — a typed placeholder descriptor (`simulationType` + `title` + `description`); detailed configs are Phase 5.
+- **simulation / animation / guided / interactive-diagram** — the four interactive **activity** families (Phase 3A
+  engine). Each is a pure DATA descriptor: a trusted registry **key** (`simulationType` / `animationType` /
+  `guidedType` / `interactionType` — a plain string, never a component/function/path), a required positive-integer
+  `version`, a `title`, and optional `capabilities` / static `fallback` / opaque `config`. Detailed behavior is a
+  later phase; the engine renders a faithful static fallback until a trusted renderer is registered (see
+  *Interactive Learning Engine* below).
 
 Every block carries a **mandatory** `origin` and an optional block-level `source` (see *Book Fidelity* below).
 
@@ -102,7 +108,14 @@ never on the human message. Codes: `schema-version-mismatch`, `unknown-course`, 
 `missing-title`, `empty-modules`, `empty-lessons`, `empty-pages`, `page-no-blocks`, `invalid-order`,
 `duplicate-order`, `missing-source`, `invalid-source-page`, `source-id-mismatch`, `missing-origin`,
 `invalid-origin`, `origin-policy-violation`, `invalid-example-mode`, `unsupported-block-type`, `image-missing-alt`,
-`invalid-direction`, `quiz-empty-options`, `quiz-mcq-answer-count`, `unsupported-simulation-type`, `invalid-table-row`.
+`invalid-direction`, `quiz-empty-options`, `quiz-mcq-answer-count`, `activity-missing-key`,
+`activity-invalid-version`, `activity-missing-title`, `invalid-table-row`.
+
+Activity descriptors (Phase 3A) are validated as pure data: `activity-missing-key` (empty registry key),
+`activity-invalid-version` (missing / non-positive-integer `version`), `activity-missing-title`, and a fallback
+image with no `alt` reuses `image-missing-alt`. `simulationType` (and the other family keys) are **free-form
+registry keys, not an enum** — a new key is valid content; a missing renderer is a runtime fallback, not a
+validation error. All four families are enrichment-only (`origin-policy-violation` if marked `book`).
 
 `source-id-mismatch` enforces that every `source.sourceId` (page, module, or block level) equals the course id —
 content can never reference another book by accident. `missing-origin` / `invalid-origin` require every block to
@@ -279,16 +292,54 @@ extra activities must never bury the original lesson. Preferred visual hierarchy
 (unless decorative), input labels, visible focus, feedback never by color alone, RTL Arabic with LTR technical
 values/commands (per-block/per-span `dir`), and mobile layouts.
 
+## Interactive Learning Engine (Phase 3A — foundation)
+
+Phase 3A adds the **engine foundation** the later interactive phases (real simulations in Phase 5, richer practice
+in Phase 4) plug into — **architecture + types + a trusted registry + shells + validation + tests + docs, and no
+real simulations/animations/questions and no PDF conversion**. It lives under `src/learning/activities/` and is
+reached only through `LearningPageRenderer` delegation, so the renderer stays lean.
+
+**Activity descriptor (data only).** The four families — `simulation`, `animation`, `guided`,
+`interactive-diagram` — are enrichment blocks that carry a trusted registry **key** (a plain string), a positive
+`version`, a `title`, and optional `capabilities` (`fullscreen` / `animated` / `interactive`), a static `fallback`
+(text + an optional vetted image), and an opaque `config`. Uniform helpers: `isActivityBlock`, `activityKey`,
+`activityDescriptor`.
+
+**Trusted registry + lazy loader.** `createActivityRegistry([...])` maps `{kind, key, version}` → a
+`RegisteredActivity` whose component is loaded through a statically-authored `load` thunk (its own code-split
+chunk). Content supplies only the **key** — never a component name, function, module path, or any executable code.
+There is **no `eval`, no `new Function`, and no dynamic `import()` of a data path**. `productionActivityRegistry`
+ships **EMPTY** in Phase 3A, so every descriptor renders its faithful static `ActivityFallback` and no activity
+chunk ever loads in production. Registries are **injected** (the reader defaults to the empty production one; tests
+inject a synthetic one) — dependency injection, exactly like the reader's content API.
+
+**Shell (`LearningActivityHost`).** The single place that touches the engine: it resolves the injected registry
+(no match / unsupported version → static fallback), lazily loads the trusted component (held in state, isolated by
+`LearningActivityBoundary` so a throwing activity degrades to the fallback instead of crashing the page), honors
+**reduced-motion** (prop + CSS), and — for a `fullscreen`-capable activity — opens it in the shared `Dialog`
+primitive (focus trap, Escape, scroll-lock, focus return; **no new modal library**). Styles are namespaced
+`learning-activity-*` with ≥44px touch targets.
+
+**Events go nowhere yet.** Activities/shell emit through an **injected sink**; Phase 3A ships **only a no-op sink**
+(`noopActivityEventSink`). No persistence, no backend, no `/api`, and no progress / grades / rank / medals — the
+event seam is where a separate later Progress phase attaches without changing the engine.
+
+**Not in Phase 3A:** real VLAN/subnet/ACL/etc. simulations, real animations, full answer-checking, real Book
+791381 PDF conversion (`src/learning/content/791381/modules/*` stays unauthored), student progress, and
+class ↔ learning-material assignment. Synthetic activity fixtures + a showcase page are **test-only** and never
+wired into a production route or catalog.
+
 ## Phase boundaries
 
 | Phase | Scope | Status |
 | --- | --- | --- |
 | 2 | Content schema, validation, navigation, lazy registry, `791381` skeleton manifest | done |
-| **3 (this)** | Interactive **Reader** — TOC, previous/next, jump-to-page, page/block rendering, provenance display, lazy module loading, professional not-yet-converted state | done (reader shell) |
+| 3 | Interactive **Reader** — TOC, previous/next, jump-to-page, page/block rendering, provenance display, lazy module loading, professional not-yet-converted state | done (reader shell) |
+| **3A (this)** | Interactive Learning **Engine foundation** — activity descriptors, trusted registry + lazy loader (EMPTY production), host shell + error boundary + fullscreen + reduced-motion, no-op event sink, validation, tests, docs | done (foundation) |
 | 3B | Pilot content conversion — a small contiguous range of real Book 791381 pages | next |
 | 4 | Interactive Practice — answer checking + immediate feedback (inline) | deferred |
-| 5 | Simulations — binary-box, network-flow, subnet, VLAN, CLI | deferred |
-| 6 | Student Progress — last page, completion, attempts (separate domain) | deferred |
+| 5 | Simulations — real VLAN/subnet/CLI/… renderers registered behind the Phase-3A engine | deferred |
+| 6 | Student Progress — last page, completion, attempts (separate domain; attaches to the no-op event seam) | deferred |
 | 7 | Teacher Content Management — editors, publish/unpublish | deferred |
 | 8 | AI Learning Assistant | deferred |
 

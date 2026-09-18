@@ -1,0 +1,100 @@
+/* Learning Materials — Phase 3A: Interactive Learning ENGINE shell styles. Namespaced `learning-activity-*` so
+   they never collide with the reader (`learning-reader-*`) or the rest of the app. Mobile-first: the activity is a
+   single self-contained card whose interactive stage scrolls only inside itself, with ≥44px touch targets and a
+   reduced-motion contract. Colors/spacing come from the shared `--eb-*` design tokens. */
+
+.learning-activity,
+.learning-activity-fallback {
+  display: flex;
+  flex-direction: column;
+  gap: var(--eb-space-2);
+  margin-block: var(--eb-space-2);
+  padding: var(--eb-space-3);
+  border: 1px solid var(--eb-line);
+  border-radius: var(--eb-r-lg);
+  background: var(--eb-surface-2);
+}
+
+.learning-activity-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--eb-space-2);
+}
+
+.learning-activity-headtext { display: flex; flex-direction: column; gap: 2px; }
+
+.learning-activity-kicker {
+  margin: 0;
+  color: var(--eb-primary-strong);
+  font-size: var(--eb-fs-12);
+  font-weight: var(--eb-fw-bold);
+}
+
+.learning-activity-title {
+  margin: 0;
+  color: var(--eb-text-heading);
+  font-size: var(--eb-fs-16);
+  font-weight: var(--eb-fw-semibold);
+  line-height: var(--eb-lh-tight);
+}
+
+.learning-activity-desc,
+.learning-activity-fallback-text {
+  margin: 0;
+  color: var(--eb-text-secondary);
+  font-size: var(--eb-fs-14);
+  line-height: var(--eb-lh-body);
+}
+
+.learning-activity-status {
+  margin: 0;
+  color: var(--eb-muted);
+  font-size: var(--eb-fs-13);
+}
+
+/* The interactive stage: scroll is contained here (never the page). */
+.learning-activity-stage {
+  overflow: auto;
+  border-radius: var(--eb-r-sm);
+}
+
+.learning-activity-fullstage { min-height: 40vh; }
+
+/* توسيع / fullscreen affordance — a real ≥44px touch target on mobile. */
+.learning-activity-expand {
+  min-height: 44px;
+  flex: 0 0 auto;
+}
+
+.learning-activity-fallback-img {
+  max-width: 100%;
+  height: auto;
+  border-radius: var(--eb-r-sm);
+}
+
+.learning-activity-note {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0;
+  color: var(--eb-muted);
+  font-size: var(--eb-fs-12);
+}
+
+/* Reduced-motion contract: the shell suppresses its own transitions/animations, and a data hook lets a live
+   activity opt its CSS out too. The renderer also receives `reducedMotion` as a prop. */
+@media (prefers-reduced-motion: reduce) {
+  .learning-activity,
+  .learning-activity * {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+.learning-activity[data-reduced-motion="true"] .learning-activity-stage * {
+  animation: none !important;
+  transition: none !important;
+}

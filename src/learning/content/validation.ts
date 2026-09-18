@@ -5,9 +5,9 @@
 // (a stable enum), never on the human Arabic-or-English `message`. An empty array means "no problems found".
 
 import {
-  BLOCK_TYPES, CALLOUT_KINDS, SIMULATION_TYPES, CODE_LANGUAGES, CONTENT_ORIGINS, EXAMPLE_MODES,
-  LEARNING_CONTENT_SCHEMA_VERSION,
-  type LearningCourseContent, type ContentBlock, type ContentSource, type ContentDirection,
+  BLOCK_TYPES, CALLOUT_KINDS, CODE_LANGUAGES, CONTENT_ORIGINS, EXAMPLE_MODES,
+  LEARNING_CONTENT_SCHEMA_VERSION, isActivityBlock, activityKey,
+  type LearningCourseContent, type ContentBlock, type ActivityBlock, type ContentSource, type ContentDirection,
 } from "./types";
 import { findLearningCourse } from "../catalog";
 
@@ -36,7 +36,9 @@ export type ContentIssueCode =
   | "invalid-direction"
   | "quiz-empty-options"
   | "quiz-mcq-answer-count"
-  | "unsupported-simulation-type"
+  | "activity-missing-key"
+  | "activity-invalid-version"
+  | "activity-missing-title"
   | "invalid-table-row";
 
 /** A single structured validation finding. Location fields are filled in from the outermost known node. */
@@ -218,16 +220,37 @@ function checkBlock(
       checkPractice(block.question, add, loc);
       break;
     case "simulation":
-      if (!SIMULATION_TYPES.includes(block.simulationType)) {
-        add("unsupported-simulation-type", `unsupported simulationType "${String(block.simulationType)}"`, loc);
-      }
+    case "animation":
+    case "guided":
+    case "interactive-diagram":
+      checkActivity(block, add, loc);
       break;
+  }
+}
+
+/**
+ * Validate an interactive-activity descriptor (simulation / animation / guided / interactive-diagram). The
+ * descriptor is pure data: a non-empty registry KEY, a positive-integer `version`, and a title. `config` is opaque
+ * (engine-validated by the renderer, never here) and is NEVER executed. A fallback image must carry alt text.
+ */
+function checkActivity(block: ActivityBlock, add: (c: ContentIssueCode, m: string, l?: Loc) => void, loc: Loc) {
+  if (!isNonEmptyString(activityKey(block))) {
+    add("activity-missing-key", `${block.type} requires a non-empty registry key`, loc);
+  }
+  if (!isPositiveInt((block as { version?: unknown }).version)) {
+    add("activity-invalid-version", `${block.type} requires a positive integer version`, loc);
+  }
+  if (!isNonEmptyString((block as { title?: unknown }).title)) {
+    add("activity-missing-title", `${block.type} requires a non-empty title`, loc);
+  }
+  if (block.fallback?.src && !isNonEmptyString(block.fallback.alt)) {
+    add("image-missing-alt", "activity fallback image requires non-empty alt", loc);
   }
 }
 
 /** Block families that are, by policy, ALWAYS teacher enrichment (never faithful book content). */
 function isEnrichmentOnly(block: ContentBlock): boolean {
-  return block.type === "practice" || block.type === "simulation" || (block.type === "callout" && block.kind === "clarification");
+  return block.type === "practice" || isActivityBlock(block) || (block.type === "callout" && block.kind === "clarification");
 }
 function enrichmentKindLabel(block: ContentBlock): string {
   return block.type === "callout" ? "a clarification callout" : `a ${block.type} block`;

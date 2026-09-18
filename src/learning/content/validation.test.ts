@@ -193,10 +193,46 @@ describe("Phase 2 — content validator", () => {
     expect(codes(c)).not.toContain("quiz-mcq-answer-count");
   });
 
-  it("flags an unsupported simulation type", () => {
+  it("treats simulationType as a free-form registry KEY (no enum) — a new key is valid, not an error", () => {
     const c = cloneCourse();
-    (c.modules[2].lessons[0].pages[2].blocks[0] as { simulationType: string }).simulationType = "teleport";
-    has(c, "unsupported-simulation-type");
+    (c.modules[2].lessons[0].pages[2].blocks[0] as { simulationType: string }).simulationType = "custom-lab";
+    expect(validateLearningCourseContent(c)).toEqual([]);
+  });
+
+  it("flags an activity descriptor missing its registry key, version, or title (Phase 3A engine)", () => {
+    const noKey = cloneCourse();
+    (noKey.modules[2].lessons[0].pages[2].blocks[0] as { simulationType: string }).simulationType = "";
+    has(noKey, "activity-missing-key");
+    const noVersion = cloneCourse();
+    delete (noVersion.modules[2].lessons[0].pages[2].blocks[0] as { version?: unknown }).version;
+    has(noVersion, "activity-invalid-version");
+    const badVersion = cloneCourse();
+    (badVersion.modules[2].lessons[0].pages[2].blocks[0] as { version: unknown }).version = 0;
+    has(badVersion, "activity-invalid-version");
+    const noTitle = cloneCourse();
+    (noTitle.modules[2].lessons[0].pages[2].blocks[0] as { title: string }).title = "";
+    has(noTitle, "activity-missing-title");
+  });
+
+  it("validates the new activity families (animation / guided / interactive-diagram) as ENRICHMENT descriptors", () => {
+    // the pageActivities fixture carries all three — a valid course has none of the activity issues
+    const ok = codes(cloneCourse());
+    expect(ok).not.toContain("activity-missing-key");
+    expect(ok).not.toContain("activity-invalid-version");
+    expect(ok).not.toContain("activity-missing-title");
+    // each family is enrichment-only: marking one as book is an origin-policy-violation
+    for (const idx of [0, 1, 2]) {
+      const c = cloneCourse();
+      (c.modules[2].lessons[0].pages[4].blocks[idx] as { origin: string }).origin = "book";
+      has(c, "origin-policy-violation");
+    }
+  });
+
+  it("flags an activity fallback image that has no alt text", () => {
+    const c = cloneCourse();
+    const diagram = c.modules[2].lessons[0].pages[4].blocks[2] as { fallback: { alt: string } };
+    diagram.fallback.alt = "";
+    has(c, "image-missing-alt");
   });
 
   it("flags a table row that does not match the header count", () => {

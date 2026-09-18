@@ -44,7 +44,7 @@ const richPage: ContentPage = {
         feedback: { hint: ANSWER_KEY.hint, correctFeedback: ANSWER_KEY.correctFeedback, incorrectFeedback: ANSWER_KEY.incorrectFeedback, explanation: ANSWER_KEY.explanation },
       },
     },
-    { id: "p1-sim", type: "simulation", origin: "teacher-enrichment", simulationType: "vlan", title: "محاكاة VLAN", description: "توزيع المنافذ." },
+    { id: "p1-sim", type: "simulation", origin: "teacher-enrichment", simulationType: "vlan", version: 1, title: "محاكاة VLAN", description: "توزيع المنافذ." },
   ],
 };
 
