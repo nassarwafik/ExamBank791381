@@ -597,4 +597,19 @@ describe("Student Portal — rank cadence & medal sizing", () => {
     expect(css).toMatch(/\.eb-sp-medals\{[^}]*flex-wrap:wrap/);
     expect(css).toMatch(/\.eb-sp-rank\{[^}]*flex-wrap:wrap/);
   });
+
+  it("the rank-ring fill animates normally but is switched off under prefers-reduced-motion", () => {
+    const stripped = css.replace(/\/\*[\s\S]*?\*\//g, "");
+    // normal mode keeps the stroke-dashoffset transition
+    expect(stripped).toMatch(/\.eb-sp-rankring-fill\{[^}]*transition:stroke-dashoffset var\(--eb-dur\) var\(--eb-ease\)/);
+    // the reduce block covers .eb-sp-rankring-fill with transition:none
+    const i = stripped.indexOf("@media (prefers-reduced-motion: reduce)");
+    expect(i).toBeGreaterThan(-1);
+    let d = 0, j = stripped.indexOf("{", i);
+    for (; j < stripped.length; j++) { if (stripped[j] === "{") d++; else if (stripped[j] === "}") { d--; if (d === 0) break; } }
+    const block = stripped.slice(i, j + 1);
+    const rule = /([^{}]+)\{\s*transition:none;?\s*\}/g; let m; const covered = [];
+    while ((m = rule.exec(block))) covered.push(...m[1].split(",").map(s => s.trim()));
+    expect(covered).toContain(".eb-sp-rankring-fill");
+  });
 });
