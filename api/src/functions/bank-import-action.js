@@ -5,6 +5,9 @@ const { requireBuilderAuth } = require("../lib/builder-auth");
 const { getContainer, listJson, mutateJsonWithRetry } = require("../lib/platform-storage");
 const { computeDuplicateCandidates } = require("../lib/duplicate-detection");
 const { isValidBankSection } = require("../lib/section-resolver");
+// The canonical multiField builder (fields / wordBank / exactSequence answer) is the one the Exam Bank editor
+// writes with — reused here so an imported blank question is stored in exactly the shape a hand-edited one has.
+const { validateQuestionInput, normalizeInput } = require("./bank-questions");
 
 const ASSETS_CONTAINER = "assets";
 const INDEX_BLOB = "index/questions-index.json";
@@ -42,10 +45,86 @@ async function loadAllBankQuestionTexts(bankContainer) {
   return flattened;
 }
 
+const BLANK_TYPES = ["fillBlank", "wordBank"];
+const optionText = option => String(option?.text ?? option?.label ?? option?.value ?? "").trim();
+
 function presentationTypeToBankType(presentationType) {
   if (presentationType === "multipleChoice") return "multipleChoice";
-  if (presentationType === "fillBlank" || presentationType === "wordBank") return "multiField";
+  if (BLANK_TYPES.includes(presentationType)) return "multiField";
   return "shortAnswer";
+}
+
+// ---- Explicit blank targets in the SOURCE text --------------------------------------------------------------
+// The import contract gives one `answerText` string and nothing about how many blanks the question has, so a
+// structure may only be derived when the source text itself shows exactly ONE blank target. These rules mirror
+// the frontend's proven table handling (src/questionContent.tsx parseTable + ImportQuestionsPanel.tsx
+// isBlankPlaceholderCell, which builds ONE field PER table row) rather than inventing new heuristics:
+//   - a markdown table is the run of lines shaped "| … |" (≥ 2 lines: header + rows); its separator rows
+//     ("| --- | --- |": every cell ^:?-{3,}:?$) are layout, never blanks; a data-row cell made only of
+//     underscores / dashes / tatweel (or empty) is one blank target;
+//   - outside the table, a prose run of two or more underscores / tatweel ("____", "ــــ") is one blank target.
+// Anything else (dotted blanks, a lone "_" inside an identifier, a row with several blank cells) is not
+// recognised — a conservative false negative is acceptable, a silent wrong conversion is not.
+const TABLE_SEPARATOR_CELL = /^:?-{3,}:?$/;
+const PROSE_BLANK = /[_ـ]{2,}/g;
+const isBlankPlaceholderCell = cell => cell.trim() === "" || /^[_\-ـ\s]*$/.test(cell.trim());
+
+// Pure, unit-testable. Returns the number of explicit blank targets in the source text, or null when the shape is
+// ambiguous (a table row carrying more than one blank cell — which blank the answer belongs to is undecidable).
+function countExplicitBlanks(text) {
+  const lines = String(text || "").split(/\r?\n/).map(line => line.trim());
+  const tableLines = lines.filter(line => line.startsWith("|") && line.endsWith("|"));
+  const isTable = tableLines.length >= 2;
+  let count = 0;
+  if (isTable) {
+    const cells = line => line.slice(1, -1).split("|").map(cell => cell.trim());
+    const rows = tableLines.slice(1).map(cells).filter(row => !row.every(cell => TABLE_SEPARATOR_CELL.test(cell.replace(/\s/g, ""))));
+    for (const row of rows) {
+      const blanks = row.filter(isBlankPlaceholderCell).length;
+      if (blanks > 1) return null;
+      count += blanks;
+    }
+  }
+  const prose = (isTable ? lines.filter(line => !(line.startsWith("|") && line.endsWith("|"))) : lines).join("\n");
+  count += (prose.match(PROSE_BLANK) || []).length;
+  return count;
+}
+
+// Transient classification values used ONLY so the canonical validator can exercise the blank structure of a
+// candidate (it also checks topic/difficulty). They are NEVER persisted: toBankQuestion stores the imported
+// classification exactly as before (see `classification` below).
+const TRANSIENT_VALIDATION_TOPIC = "import";
+const TRANSIENT_VALIDATION_DIFFICULTY = 3;
+
+// Pure, unit-testable. Derives the canonical multiField structure for an imported fillBlank / wordBank question
+// from SOURCE-PRESENT data only, so the question lands in the Bank usable instead of the previous `fields: []`
+// that the editor rejects until a teacher rebuilds it by hand:
+//   - only when the source text shows exactly ONE explicit blank target (countExplicitBlanks === 1) — a
+//     multi-blank or ambiguous question is never collapsed into one field;
+//   - the visible answer (hasVisibleAnswer + answerText — the same value the import already stored as the
+//     accepted answer) becomes that blank's expected value; for wordBank the detected options are the word
+//     bank and the blank is a select over them.
+// The candidate is gated by the Exam Bank's canonical validateQuestionInput (answer length, word-bank size and
+// membership, text length, every other blank rule — nothing re-implemented here) and only then built by its
+// normalizeInput, so a derived question is exactly what a hand-edited one would be. Any refusal → null; the
+// caller keeps the question unchanged and flags it for teacher review.
+function deriveImportedBlankStructure(importedQuestion) {
+  const presentationType = importedQuestion?.presentationType;
+  if (!BLANK_TYPES.includes(presentationType)) return null;
+  const answer = importedQuestion.hasVisibleAnswer === true ? String(importedQuestion.answerText || "").trim() : "";
+  if (!answer) return null;
+  if (countExplicitBlanks(importedQuestion.text) !== 1) return null;
+  const words = presentationType === "wordBank"
+    ? Array.from(new Set((Array.isArray(importedQuestion.options) ? importedQuestion.options : []).map(optionText).filter(Boolean)))
+    : [];
+  const candidate = {
+    section: importedQuestion.section, presentationType, text: String(importedQuestion.text || ""),
+    topic: TRANSIENT_VALIDATION_TOPIC, difficulty: TRANSIENT_VALIDATION_DIFFICULTY,
+    options: [], fields: [{ id: "f1", label: "", correct: answer }], wordBank: words, answer: {}
+  };
+  if (!validateQuestionInput(candidate).ok) return null;
+  const normalized = normalizeInput(candidate);
+  return { fields: normalized.fields, wordBank: normalized.wordBank, answer: normalized.answer };
 }
 
 async function uploadImageAsset(assetsContainer, sourceId, ordinal, imageAsset) {
@@ -81,7 +160,11 @@ async function toBankQuestion(importedQuestion, sourceId, ordinal, assetsContain
     }
   }
 
-  const requiresManualReview = importedQuestion.requiresManualReview === true || assets.length === 0 && importedQuestion.hasImage;
+  // A blank-style question that could not be given a usable structure from the source stays as before but is
+  // flagged: the Bank already tells the teacher to add its blanks before use, so it genuinely needs review.
+  const blank = deriveImportedBlankStructure(importedQuestion);
+  const requiresManualReview = importedQuestion.requiresManualReview === true || assets.length === 0 && importedQuestion.hasImage
+    || (BLANK_TYPES.includes(importedQuestion.presentationType) && !blank);
 
   return {
     id: `${sourceId}-${ordinal}`,
@@ -92,22 +175,25 @@ async function toBankQuestion(importedQuestion, sourceId, ordinal, assetsContain
     type: presentationTypeToBankType(importedQuestion.presentationType),
     text: importedQuestion.text || "",
     textHtml: importedQuestion.textHtml || "",
-    options: (importedQuestion.options || []).map((option, index) => ({
+    // A derived blank question takes the editor's canonical shape whole (choices live on the fields / wordBank,
+    // options stay empty, answer is the exactSequence of expected values); everything else is unchanged.
+    options: blank ? [] : (importedQuestion.options || []).map((option, index) => ({
       value: option.value || String(index),
       label: option.text || "",
       text: option.text || "",
       textHtml: "",
       order: index
     })),
-    fields: [],
+    fields: blank ? blank.fields : [],
+    ...(blank ? { wordBank: blank.wordBank } : {}),
     parts: [],
-    answer: importedQuestion.hasVisibleAnswer && importedQuestion.answerText
+    answer: blank ? blank.answer : (importedQuestion.hasVisibleAnswer && importedQuestion.answerText
       ? { mode: "anyAccepted", values: [importedQuestion.answerText] }
-      : { mode: "manual", values: [] },
+      : { mode: "manual", values: [] }),
     assets,
     flags: {
       hasImage: assets.length > 0,
-      hasOptions: (importedQuestion.options || []).length > 0,
+      hasOptions: blank ? false : (importedQuestion.options || []).length > 0,
       isChild: false,
       requiresManualReview
     },
@@ -261,6 +347,6 @@ app.http("bankImportAction", {
   }
 });
 
-// Exported only for unit testing the section-validation gate (app.http's own route registration
-// above is unaffected).
-module.exports = { partitionQuestionsBySectionValidity };
+// Exported only for unit testing (the section-validation gate, the blank-structure derivation and the
+// pure question mapping); app.http's own route registration above is unaffected.
+module.exports = { partitionQuestionsBySectionValidity, countExplicitBlanks, deriveImportedBlankStructure, toBankQuestion };
