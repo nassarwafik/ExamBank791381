@@ -46,7 +46,7 @@ const m02: ContentModule = {
       ],
     },
 
-    // ── l01 — number systems & conversion (PDF 15–22 converted; PDF 23 skeleton only) ───────────────────────────
+    // ── l01 — number systems & conversion (PDF 15–23, all converted; PDF 23 filled in Phase 3D) ──────────────────
     // Reading order is the exact source sequence 15 → 22. The three Phase-2 skeleton pages (p01=PDF16, p02=PDF18,
     // p03=PDF20) keep their stable IDs; only their `order` is adjusted to interleave the newly-added pages.
     {

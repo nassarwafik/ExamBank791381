@@ -117,6 +117,12 @@ export interface TableBlock extends BlockBase {
   headers: string[];
   /** Row-major cells; every row should match `headers.length` (validated). */
   rows: string[][];
+  /**
+   * Optional per-COLUMN direction for the BODY cells (index-aligned with `headers`). A mixed table in an RTL page —
+   * Arabic headers in RTL column order but LTR technical values (IP addresses, ranges, class names) — marks those
+   * columns "ltr" so their digits/dots never reverse while the column order stays RTL. Generic; presentation only.
+   */
+  columnDirs?: ContentDirection[];
 }
 
 export type CodeLanguage = "cli" | "text" | "config";

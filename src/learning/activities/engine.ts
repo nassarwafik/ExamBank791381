@@ -168,4 +168,14 @@ export const productionActivityRegistry: LearningActivityRegistry = createActivi
     load: () => import("./NetworkScopeDiagram"),
     capabilities: { fullscreen: true, reset: true, interactive: true },
   },
+  // Phase 3E — the SECOND registry-backed production activity: the four-octet IPv4 structure diagram for PDF 27.
+  // Also an interactive DIAGRAM (select one of four parts; no validity rules, no CIDR/subnet/class, no input, no
+  // scoring). Its own lazy chunk. Still ZERO simulation/animation/CLI renderers.
+  {
+    kind: "interactive-diagram",
+    key: "ipv4-octets",
+    versions: [1],
+    load: () => import("./IPv4OctetsDiagram"),
+    capabilities: { fullscreen: true, reset: true, interactive: true },
+  },
 ]);

@@ -10,13 +10,15 @@ import { simBlock, animBlock, unsupportedVersionBlock, unregisteredBlock } from 
 const nullComponent: ActivityComponent = () => null;
 const noop = async () => ({ default: nullComponent });
 
-describe("Phase 3B — production activity registry is an EXACT allowlist (no real simulation/animation)", () => {
-  it("registers ONLY interactive-diagram/network-scope/v1 (the pilot's first real activity)", () => {
+describe("Phase 3B/3E — production activity registry is an EXACT allowlist (no real simulation/animation)", () => {
+  it("registers ONLY interactive-diagram/network-scope/v1 (3B) and interactive-diagram/ipv4-octets/v1 (3E)", () => {
     expect(productionActivityRegistry.list()).toEqual([
       { kind: "interactive-diagram", key: "network-scope", versions: [1] },
+      { kind: "interactive-diagram", key: "ipv4-octets", versions: [1] },
     ]);
-    expect(productionActivityRegistry.size).toBe(1);
+    expect(productionActivityRegistry.size).toBe(2);
     expect(productionActivityRegistry.has("interactive-diagram", "network-scope")).toBe(true);
+    expect(productionActivityRegistry.has("interactive-diagram", "ipv4-octets")).toBe(true);
   });
   it("registers ZERO real simulation and ZERO real animation renderers", () => {
     expect(productionActivityRegistry.list().filter(e => e.kind === "simulation")).toEqual([]);

@@ -236,7 +236,8 @@ function renderBlock(block: ContentBlock, ctx: ActivityRenderContext): ReactNode
           <table className="learning-reader-table" dir={block.dir}>
             {block.caption && <caption>{block.caption}</caption>}
             <thead><tr>{block.headers.map((h, i) => <th key={i} scope="col">{h}</th>)}</tr></thead>
-            <tbody>{block.rows.map((row, r) => <tr key={r}>{row.map((cell, c) => <td key={c}>{cell}</td>)}</tr>)}</tbody>
+            {/* Optional per-COLUMN direction (generic): LTR technical cells inside an RTL table keep their digit order. */}
+            <tbody>{block.rows.map((row, r) => <tr key={r}>{row.map((cell, c) => <td key={c} dir={block.columnDirs?.[c]}>{cell}</td>)}</tr>)}</tbody>
           </table>
         </div>
       );

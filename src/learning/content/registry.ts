@@ -33,11 +33,16 @@ const COURSE_MANIFESTS: Record<string, ManifestLoader> = {
 // map is intentionally empty for 791381 — the wiring and types are proven; bodies arrive with content conversion
 // in a later phase, each as its own `import("./791381/modules/<id>")` chunk registered here.
 const COURSE_MODULE_LOADERS: Record<string, Record<string, ModuleLoader>> = {
-  // Phase 3B pilot: the first REAL module bodies (source PDF 7–14), each its own lazy chunk. m01 is complete;
-  // m02 is a PARTIAL conversion (only the Unit-2 opener). The main bundle imports none of these eagerly.
+  // REAL module bodies, each its own lazy chunk; the main bundle imports none of these eagerly.
+  //   m01 — Unit 1 (PDF 7–13), complete (Phase 3B)
+  //   m02 — Unit 2 (PDF 14–23), complete (Phase 3B–3D)
+  //   m07 — Unit 3 «عناوين IP» (PDF 24–33), complete (Phase 3E). It is `m07` (the next free stable module id), NOT
+  //         `m03`: the historical m03 skeleton (CLI/VLAN, PDF 123+) keeps its id; reading position comes from `order`.
+  // The remaining skeleton modules (m03–m06) have no body yet, so the Reader shows them as «قيد الإعداد».
   "791381": {
     "791381-m01": () => import("./791381/modules/m01"),
     "791381-m02": () => import("./791381/modules/m02"),
+    "791381-m07": () => import("./791381/modules/m07"),
   },
 };
 

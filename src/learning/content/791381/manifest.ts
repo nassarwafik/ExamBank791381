@@ -11,6 +11,13 @@
 //
 // ID policy: `791381` · `791381-mNN` · `791381-mNN-lNN` · `791381-mNN-lNN-pNN` — stable, human-debuggable, and
 // independent of array position (never regenerated at runtime).
+//
+// STABLE MODULE IDS ARE IMMUTABLE IDENTIFIERS — they are NOT guaranteed to equal the source book's unit numbers or
+// the module's current reading position. The explicit `order` field is the ONLY sequencing authority (the Reader,
+// TOC and navigation sort by it). Example: the book's Unit 3 «عناوين IP» is module `791381-m07` (the next free id
+// when it was converted in Phase 3E) with `order: 3`, while the historical Phase-2 skeleton `791381-m03` (switch
+// CLI/VLAN, PDF 123+) keeps its id and simply moves to `order: 4`. Future real units continue with m08, m09, …
+// and are placed by `order`. Never renumber or repurpose an existing id.
 
 import { LEARNING_CONTENT_SCHEMA_VERSION, type LearningCourseManifest } from "../types";
 
@@ -97,10 +104,54 @@ const manifest: LearningCourseManifest = {
       ],
     },
     {
+      // Phase 3E: the book's REAL Unit 3 «عناوين IP» (PDF 24–33), complete. New stable id m07 (the next free id —
+      // the historical m03 skeleton below is NOT reused); placed third by explicit `order`. Page ids are authored
+      // once and immutable from here on.
+      id: "791381-m07",
+      title: "عناوين IP",
+      shortTitle: "عناوين IP",
+      order: 3,
+      lessons: [
+        {
+          id: "791381-m07-l00",
+          title: "افتتاحية الوحدة",
+          order: 0,
+          pages: [
+            { id: "791381-m07-l00-p01", title: "عناوين IP", order: 1, source: { kind: "book", sourceId: "791381", pdfPageStart: 24 }, keywords: ["مقدمة", "الوحدة الثالثة", "IP"] },
+          ],
+        },
+        {
+          id: "791381-m07-l01",
+          title: "عنوان IP وبنية IPv4",
+          order: 1,
+          pages: [
+            { id: "791381-m07-l01-p01", title: "ما هو عنوان IP؟", order: 1, source: { kind: "book", sourceId: "791381", pdfPageStart: 25, printedPage: 23 }, keywords: ["IP", "عنوان"] },
+            { id: "791381-m07-l01-p02", title: "IPv4 و IPv6", order: 2, source: { kind: "book", sourceId: "791381", pdfPageStart: 26, printedPage: 24 }, keywords: ["IPv4", "IPv6"] },
+            { id: "791381-m07-l01-p03", title: "مبنى عنوان IPv4", order: 3, source: { kind: "book", sourceId: "791381", pdfPageStart: 27, printedPage: 25 }, keywords: ["IPv4", "octet", "أقسام"] },
+            { id: "791381-m07-l01-p04", title: "متى يكون عنوان IP غير صالح؟", order: 4, source: { kind: "book", sourceId: "791381", pdfPageStart: 28, printedPage: 26 }, keywords: ["صالح", "غير صالح", "Localhost", "APIPA"] },
+            { id: "791381-m07-l01-p05", title: "تدريب: صالح أو غير صالح؟", order: 5, source: { kind: "book", sourceId: "791381", pdfPageStart: 29, printedPage: 27 }, keywords: ["تدريب", "صالح"] },
+          ],
+        },
+        {
+          id: "791381-m07-l02",
+          title: "العناوين العامة والخاصة",
+          order: 2,
+          pages: [
+            { id: "791381-m07-l02-p01", title: "عنوان خاص وعنوان عام", order: 1, source: { kind: "book", sourceId: "791381", pdfPageStart: 30, printedPage: 28 }, keywords: ["Public IP", "Private IP", "خاص", "عام"] },
+            { id: "791381-m07-l02-p02", title: "مجالات العناوين الخاصة", order: 2, source: { kind: "book", sourceId: "791381", pdfPageStart: 31, printedPage: 29 }, keywords: ["Class A", "Class B", "Class C", "خاص"] },
+            { id: "791381-m07-l02-p03", title: "تدريب: خاص أم عام؟", order: 3, source: { kind: "book", sourceId: "791381", pdfPageStart: 32, printedPage: 30 }, keywords: ["تدريب", "خاص", "عام"] },
+            { id: "791381-m07-l02-p04", title: "Static IP و Dynamic IP", order: 4, source: { kind: "book", sourceId: "791381", pdfPageStart: 33, printedPage: 31 }, keywords: ["Static IP", "Dynamic IP", "ثابت", "متغير"] },
+          ],
+        },
+      ],
+    },
+    {
+      // Historical Phase-2 skeleton (PDF 123+). Its ID and source mappings are immutable; only its reading `order`
+      // shifted (3 → 4) when the book's real Unit 3 (m07, order 3) was converted in Phase 3E.
       id: "791381-m03",
       title: "برمجة السويتش CLI و VLAN",
       shortTitle: "CLI و VLAN",
-      order: 3,
+      order: 4,
       lessons: [
         {
           id: "791381-m03-l01",
@@ -117,7 +168,7 @@ const manifest: LearningCourseManifest = {
       id: "791381-m04",
       title: "Trunk و Router on a Stick",
       shortTitle: "Trunk",
-      order: 4,
+      order: 5,
       lessons: [
         {
           id: "791381-m04-l01",
@@ -133,7 +184,7 @@ const manifest: LearningCourseManifest = {
       id: "791381-m05",
       title: "مرجع أوامر Cisco",
       shortTitle: "أوامر Cisco",
-      order: 5,
+      order: 6,
       lessons: [
         {
           id: "791381-m05-l01",
@@ -150,7 +201,7 @@ const manifest: LearningCourseManifest = {
       id: "791381-m06",
       title: "قوائم التحكم ACL",
       shortTitle: "ACL",
-      order: 6,
+      order: 7,
       lessons: [
         {
           id: "791381-m06-l01",
@@ -170,7 +221,7 @@ const manifest: LearningCourseManifest = {
   // sections whose canonical modules are authored during conversion, so they are empty here for now.
   batches: [
     { id: "intro", label: "المقدمة", moduleIds: [] },
-    { id: "b1", label: "الأساسيات · الأعداد · IP", moduleIds: ["791381-m01", "791381-m02"] },
+    { id: "b1", label: "الأساسيات · الأعداد · IP", moduleIds: ["791381-m01", "791381-m02", "791381-m07"] },
     { id: "b2", label: "الأجهزة والرسائل", moduleIds: [] },
     { id: "b3", label: "النماذج والبروتوكولات والأمان", moduleIds: [] },
     { id: "b4", label: "برمجة السويتش و VLAN", moduleIds: ["791381-m03", "791381-m04", "791381-m05"] },
