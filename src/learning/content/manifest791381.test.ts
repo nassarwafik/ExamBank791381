@@ -80,16 +80,23 @@ describe("Phase 2 — 791381 content manifest", () => {
 describe("Phase 3E — historical module ids, titles and source mappings are IMMUTABLE; `order` is the sequencing authority", () => {
   const byId = Object.fromEntries(manifest.modules.map(m => [m.id, m]));
 
-  it("keeps every pre-existing module id (m01–m07) and adds the real Units 4–6 as the next free ids m08–m10 — nothing renamed/repurposed", () => {
+  it("keeps every pre-existing module id and adds the real Units 4–8 as the next free ids m08–m12 — nothing renamed/repurposed", () => {
     expect(manifest.modules.map(m => m.id)).toEqual([
-      "791381-m01", "791381-m02", "791381-m07", "791381-m08", "791381-m09", "791381-m10", "791381-m03", "791381-m04", "791381-m05", "791381-m06",
+      "791381-m01", "791381-m02", "791381-m07", "791381-m08", "791381-m09", "791381-m10", "791381-m11", "791381-m12", "791381-m03", "791381-m04", "791381-m05", "791381-m06",
     ]);
-    expect(manifest.modules.map(m => m.order)).toEqual([1, 2, 3, 4, 5, 6, 7, 8, 9, 10]);
+    expect(manifest.modules.map(m => m.order)).toEqual([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]);
     expect(byId["791381-m07"].order).toBe(3);          // the book's Unit 3 reads third …
     expect(byId["791381-m08"].order).toBe(4);          // … Unit 4 fourth, Unit 5 fifth …
     expect(byId["791381-m09"].order).toBe(5);
     expect(byId["791381-m10"].order).toBe(6);
-    expect(byId["791381-m03"].order).toBe(7);          // … and the historical m03 skeleton merely shifts after the real units
+    expect(byId["791381-m11"].order).toBe(7);          // Units 7–8 phase: Unit 7 seventh, Unit 8 eighth …
+    expect(byId["791381-m12"].order).toBe(8);
+    expect(byId["791381-m03"].order).toBe(9);          // … and the historical skeletons merely shift after the real units
+    expect(byId["791381-m04"].order).toBe(10);
+    expect(byId["791381-m05"].order).toBe(11);
+    expect(byId["791381-m06"].order).toBe(12);
+    // the skeletons keep their ids, titles, lesson/page ids and PDF mappings (pinned below) — ONLY `order` moved
+    for (const id of ["791381-m03", "791381-m04", "791381-m05", "791381-m06"]) expect(Object.keys(byId[id]).sort(), id).toEqual(["id", "lessons", "order", "shortTitle", "title"].filter(k => k in byId[id]).sort());
   });
 
   it("pins the historical m03–m06 skeleton titles and PDF source mappings exactly (id ≠ unit number ≠ position)", () => {
@@ -119,6 +126,21 @@ describe("Phase 3E — historical module ids, titles and source mappings are IMM
     expect(batches.b1.moduleIds).toEqual(["791381-m01", "791381-m02", "791381-m07", "791381-m08"]);
     expect(batches.b4.moduleIds).toEqual(["791381-m03", "791381-m04", "791381-m05"]);   // CLI/VLAN NOT moved into b1
     expect(batches.b6.moduleIds).toEqual(["791381-m06"]);
+  });
+
+  it("Units 7–8: b2 «الأجهزة والرسائل» lists m09, m10, m11, m12 in that exact order; b3 stays EMPTY (PDF 76+ opens it later); other batches unchanged", () => {
+    const batches = Object.fromEntries(manifest.batches!.map(b => [b.id, b]));
+    expect(batches.b2.label).toBe("الأجهزة والرسائل");
+    expect(batches.b2.moduleIds).toEqual(["791381-m09", "791381-m10", "791381-m11", "791381-m12"]);
+    expect(batches.b3.label).toBe("النماذج والبروتوكولات والأمان");
+    expect(batches.b3.moduleIds).toEqual([]);
+    expect(batches.b5.moduleIds).toEqual([]);
+    expect(batches.intro.moduleIds).toEqual([]);
+    expect(batches.summary.moduleIds).toEqual([]);
+    // every module id appears in at most one batch, and the two new modules appear only in b2
+    const all = manifest.batches!.flatMap(b => b.moduleIds);
+    expect(new Set(all).size).toBe(all.length);
+    expect(manifest.batches!.filter(b => b.moduleIds.includes("791381-m11") || b.moduleIds.includes("791381-m12")).map(b => b.id)).toEqual(["b2"]);
   });
 });
 
