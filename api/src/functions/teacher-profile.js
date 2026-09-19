@@ -2,8 +2,9 @@
 //   GET  /api/teacher-profile                → { ok, profile }
 //   POST /api/teacher-profile { action: "setAvatar" | "uploadPhoto" | "removePhoto" | "setDisplayName", ... }
 //   GET  /api/teacher-profile-photo?v=<n>    → the teacher's OWN photo (image/webp)
-// A student token and anonymous callers are denied (403 / 401). The photo uses the SAME safe image pipeline and
-// storage helpers as the teacher-managed student photo (no weaker path); the profile document keeps metadata only.
+// A student token and anonymous callers are denied (403 / 401). The photo uses the SAME safe image pipeline and the
+// SAME publication authority (profile-photo-store: immutable revision → CAS metadata commit → cleanup) as the
+// teacher-managed student photo — no weaker path; the profile document keeps metadata only (blobKey stays internal).
 const { app } = require("@azure/functions");
 const { withObservability } = require("../lib/observability");
 const { requireBuilderAuth } = require("../lib/builder-auth");
@@ -11,8 +12,8 @@ const { requireStudentAuth } = require("../lib/student-auth");
 const { getContainer, downloadJsonOrNull, mutateJsonWithRetry, StorageConflictError } = require("../lib/platform-storage");
 const { recordAuditEvent } = require("../lib/audit-log");
 const { ProfileImageError } = require("../lib/profile-image");
-const { photoMeta, storeProfilePhoto, removeProfilePhoto, photoResponse } = require("../lib/profile-photo-store");
-const { VALID_AVATARS, MAX_NAME_LENGTH, teacherKey, profileDocName, teacherPhotoBlobName, normalizeDisplayName, publicTeacherProfile } = require("../lib/teacher-profile");
+const { photoRecord, publishProfilePhoto, removeProfilePhoto, photoResponse } = require("../lib/profile-photo-store");
+const { VALID_AVATARS, MAX_NAME_LENGTH, teacherKey, profileDocName, teacherPhotoPrefix, normalizeDisplayName, publicTeacherProfile } = require("../lib/teacher-profile");
 
 const CONFLICT_MESSAGE = "حدث تعارض مؤقت أثناء حفظ البيانات. حاول مرة أخرى.";
 const STUDENT_DENIED = { status: 403, jsonBody: { ok: false, error: "هذه الخدمة للمعلم فقط." } };
@@ -25,15 +26,18 @@ function resolveTeacher(request, deps) {
   return { kind: "denied" };
 }
 
+/** The profile document to commit (created on first write) — shared by every mutation, including the photo store. */
+const prepareProfileDoc = (sub, now) => current => {
+  const doc = current && typeof current === "object" ? current : { schemaVersion: 1, teacherId: sub, createdAt: now };
+  doc.updatedAt = now;
+  return doc;
+};
+
 async function mutateProfile(container, sub, deps, mutate) {
   const mut = deps.mutateJsonWithRetry || mutateJsonWithRetry;
   const now = new Date().toISOString();
-  return mut(container, profileDocName(sub), current => {
-    const doc = current && typeof current === "object" ? current : { schemaVersion: 1, teacherId: sub, createdAt: now };
-    mutate(doc);
-    doc.updatedAt = now;
-    return doc;
-  });
+  const prepare = prepareProfileDoc(sub, now);
+  return mut(container, profileDocName(sub), current => { const doc = prepare(current); mutate(doc); return doc; });
 }
 
 async function handler(request, deps = {}, obs = null) {
@@ -50,7 +54,7 @@ async function handler(request, deps = {}, obs = null) {
 
     if (request.method === "GET") {
       const doc = await dl(container, profileDocName(sub));
-      if (isPhotoRoute) return photoResponse(container, teacherPhotoBlobName(sub), photoMeta(doc), deps);
+      if (isPhotoRoute) return photoResponse(container, photoRecord(doc), teacherPhotoPrefix(sub), deps, obs);   // the committed record selects the blob; `?v=` is cache context only
       return { status: 200, jsonBody: { ok: true, profile: publicTeacherProfile(sub, doc) } };
     }
     if (isPhotoRoute) return { status: 405, jsonBody: { ok: false, error: "Method not allowed." } };
@@ -75,18 +79,19 @@ async function handler(request, deps = {}, obs = null) {
         return { status: 200, jsonBody: { ok: true, profile: publicTeacherProfile(sub, updated) } };
       }
       if (action === "uploadPhoto") {
-        let normalized;
-        try { normalized = await storeProfilePhoto(container, teacherPhotoBlobName(sub), body?.dataUrl, deps); }
-        catch (e) { if (e instanceof ProfileImageError) return { status: e.httpStatus || 400, jsonBody: { ok: false, error: e.message, code: e.code } }; throw e; }
-        const updated = await mutateProfile(container, sub, deps, doc => { const prev = photoMeta(doc); doc.profilePhoto = { version: (prev ? prev.version : 0) + 1, updatedAt: new Date().toISOString() }; });
-        await rec(container, { actor: sub, action: "teacher.profile.photo.upload", targetType: "teacher", targetId: sub, details: { version: photoMeta(updated).version, bytes: normalized.buffer.length, width: normalized.width, height: normalized.height } });
+        // new immutable revision → CAS commit of the profile document → cleanup of the previous revision (store order).
+        let published;
+        try { published = await publishProfilePhoto(container, { ownerPrefix: teacherPhotoPrefix(sub), docName: profileDocName(sub), dataUrl: body?.dataUrl, prepareDoc: prepareProfileDoc(sub, new Date().toISOString()) }, deps, obs); }
+        catch (e) { if (e instanceof ProfileImageError) return { status: e.httpStatus || 400, jsonBody: { ok: false, error: e.message, code: e.code } }; throw e; }   // conflicts → the 503 below; previous photo untouched
+        const { doc: updated, meta, normalized } = published;
+        await rec(container, { actor: sub, action: "teacher.profile.photo.upload", targetType: "teacher", targetId: sub, details: { version: meta.version, bytes: normalized.buffer.length, width: normalized.width, height: normalized.height, previousCleaned: published.cleanedPrevious } });
         return { status: 200, jsonBody: { ok: true, profile: publicTeacherProfile(sub, updated) } };
       }
       if (action === "removePhoto") {
-        await removeProfilePhoto(container, teacherPhotoBlobName(sub), deps);
-        const updated = await mutateProfile(container, sub, deps, doc => { doc.profilePhoto = null; });   // avatarId preserved
-        await rec(container, { actor: sub, action: "teacher.profile.photo.remove", targetType: "teacher", targetId: sub });
-        return { status: 200, jsonBody: { ok: true, profile: publicTeacherProfile(sub, updated) } };
+        // CAS-clear the metadata first; the previously referenced revision is deleted only after that succeeds.
+        const removed = await removeProfilePhoto(container, { ownerPrefix: teacherPhotoPrefix(sub), docName: profileDocName(sub), prepareDoc: prepareProfileDoc(sub, new Date().toISOString()) }, deps, obs);   // avatarId preserved
+        await rec(container, { actor: sub, action: "teacher.profile.photo.remove", targetType: "teacher", targetId: sub, details: { previousCleaned: removed.cleanedPrevious } });
+        return { status: 200, jsonBody: { ok: true, profile: publicTeacherProfile(sub, removed.doc) } };
       }
     } catch (e) {
       if (e instanceof StorageConflictError) return { status: 503, jsonBody: { ok: false, error: CONFLICT_MESSAGE } };

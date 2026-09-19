@@ -23,6 +23,7 @@ function createMemoryContainer(seed = {}, hooks = {}) {
   const store = new Map();           // name -> { content: string, etag: string }
   let counter = 0;
   const nextEtag = () => "etag-" + (++counter);
+  const leaseTails = new Map();      // blob name -> promise chain of lease holders
 
   // Content is kept as a Buffer so binary blobs (profile images) round-trip byte-exact; JSON helpers decode UTF-8.
   function writeRaw(name, content, contentType) { store.set(name, { content: Buffer.isBuffer(content) ? Buffer.from(content) : Buffer.from(String(content), "utf8"), etag: nextEtag(), contentType: contentType || "" }); }
@@ -45,7 +46,16 @@ function createMemoryContainer(seed = {}, hooks = {}) {
           if (!entry) throw conflict(404, "BlobNotFound");
           return { readableStreamBody: [Buffer.from(entry.content)], etag: entry.etag, contentType: entry.contentType || undefined };
         },
-        async deleteIfExists() { const had = store.delete(name); return { succeeded: had }; }
+        async deleteIfExists() { const had = store.delete(name); return { succeeded: had }; },
+        // In-process queuing lease (credential / assignment locks): acquireLease waits for the previous holder of the
+        // same blob (models Azure mutual exclusion deterministically), releaseLease frees the next waiter.
+        getBlobLeaseClient() {
+          let release;
+          return {
+            async acquireLease() { const prev = leaseTails.get(name) || Promise.resolve(); const gate = new Promise(r => { release = r; }); leaseTails.set(name, prev.then(() => gate)); await prev; },
+            async releaseLease() { if (release) release(); }
+          };
+        }
       };
     },
     getBlockBlobClient(name) {

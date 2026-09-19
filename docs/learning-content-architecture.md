@@ -810,10 +810,12 @@ project grade                       ┘
 - **Reactions** — unchanged types (heart / clap / cheer / fire), one active per student, toggle / replace, CAS-safe,
   on every event type; the teacher reacts / notes through the generalized teacher feed. Reactions and events never
   alter Strength, project Strength, grade, progress or medals (recognition only).
-- **Recognition summary** — `aggregateRecognition` (name-selected posts across every class, never a full scan) is
-  the ONE aggregation behind the roster `likesCount` and the dashboard `recognition`: reactions RECEIVED (by type +
-  total, never sent), non-medal achievements (by type), medal counts from the finalized authority. Lifetime, not the
-  visible 30 posts.
+- **Recognition summary** — `aggregateRecognition` is the ONE aggregation behind the roster `likesCount` and the
+  dashboard `recognition`: it lists blob NAMES under the global `platform/feed/` prefix (every class), keeps only the
+  names whose post id ends in `_<studentId>.json` for the requested students (plus legacy ids without a suffix), and
+  downloads only those posts — a name listing across the whole feed, never a full download. Counts: reactions
+  RECEIVED (by type + total, never sent), non-medal achievements (by type), medal counts from the finalized
+  authority. Lifetime, not the visible 30 posts.
 - **Feed wording** (`achievements.feedEventParts`, shared by the student feed and the teacher dashboard):
   «حصلت ليان على ميدالية ذهبية في …», «تقدّم كريم إلى تنين النار — المستوى 5», «تقدّمت هاجر في مشروع AquaSense إلى
   نمر البرق», «أكمل أحمد مشروع SecureBank». Section: «أحدث الإنجازات والتقدّم في صفك»; empty: «عندما يحقق أحد طلاب
@@ -835,14 +837,37 @@ concise line-up (rank + Strength, the three counts, per-project progress) from t
   exists); the teacher photo endpoint refuses a student token (403).
 - **Teacher entry point**: الصفوف والطلاب → ⋯ → تعديل → «صورة الطالب» (circular preview, اختيار / استبدال / إزالة,
   preview / loading / error / success, no reload). `POST /api/student-profile-photo` (upload / remove, builder only,
-  audited `student.photo.upload` / `student.photo.remove`); `GET` serves the bytes to the teacher (any student) or the
-  student (OWN only), cache-busted by `version`. Remove clears the metadata and blob and keeps `avatarId`.
+  audited `student.photo.upload` / `student.photo.remove`). **Lifecycle policy**: the same as «تعديل تفاصيل الطالب» —
+  the teacher may edit an ARCHIVED student's identity (only account activation is blocked while archived), so photo
+  upload / remove are allowed for archived students too (pinned by test).
+- **Retrieval authority**: `GET` serves the bytes to the teacher (any student) or to the student for their OWN photo
+  only, through the HARDENED student session (`requireActiveStudentSession`: signed token → CURRENT persisted
+  document → `active !== false` → `archived !== true` → token `sv` === `authVersion`); a revoked / inactive / archived
+  token is 401 like the rest of the portal, naming another id is 403. `?v=` is cache-busting context only — the
+  committed metadata selects the blob.
 - **ONE safe image service** (`api/src/lib/profile-image.js`, sharp): ≤ 3 MB, JPEG / PNG / WebP by REAL bytes (SVG,
   GIF, PDF, HTML, text, arbitrary binary, URLs rejected), decoded (a fake signature fails), EXIF-orientation-aware
-  resize to a ≤ 512 square, WebP re-encode with EXIF / ICC / XMP stripped. Storage
-  `platform/student-profile-images/<studentId>/current.webp`; user document `profilePhoto: { version, updatedAt }`
-  only (never Base64, never a public URL). Roster / dashboard carry metadata only (no N+1: bytes load in the edit
-  dialog and for the student's own identity). Permanent delete cleans the blob as a secondary step.
+  resize to a ≤ 512 square, WebP re-encode with EXIF / ICC / XMP stripped.
+- **ONE publication authority** (`api/src/lib/profile-photo-store.js`, shared with the teacher photo). The active photo
+  is exactly the IMMUTABLE blob the committed metadata references; blobs are never overwritten in place:
+  - storage `platform/student-profile-images/<studentId>/<time36>-<24 hex>.webp` (one immutable revision per
+    publication); persisted `profilePhoto: { version, updatedAt, blobKey }` + `profilePhotoSeq` (monotonic counter,
+    kept across removals so a re-published photo never reuses a cache version); PUBLIC shape everywhere (route
+    responses, roster, dashboard, teacher profile) is `{ version, updatedAt }` only — no blob key, no URL, no SAS;
+  - **publish** = normalize → upload a NEW revision (unreferenced) → CAS-commit the metadata to that exact key → only
+    then best-effort delete the previously referenced revision. Success ⇔ the metadata points at the new derivative;
+    a metadata CAS failure ⇒ 503, the previously published metadata AND bytes stay the active photo, the orphan is
+    deleted best-effort;
+  - **remove** = CAS-clear the metadata FIRST → only after success best-effort delete the revision it referenced. A
+    CAS failure ⇒ old metadata + old photo remain usable; the active blob is never deleted before its authority is
+    cleared;
+  - **cleanup is secondary**: a leftover / orphan revision is never served (the metadata decides) and a failed cleanup
+    never alters the authoritative metadata; permanent student delete purges the current revision and every other blob
+    under the student's photo prefix, best-effort, never blocking the core delete;
+  - concurrency: two overlapping replacements both commit through the real CAS retry (one exact final key, GET serves
+    it, no unreferenced revision left); upload vs remove ends either with metadata → existing blob or with no metadata
+    and nothing served — never a dangling reference, never hidden byte changes (pinned by tests).
+  Roster / dashboard carry metadata only (no N+1: bytes load in the edit dialog and for the student's own identity).
 
 ### Teacher identity (name · preset avatar · own photo)
 
@@ -853,8 +878,10 @@ concise line-up (rank + Strength, the three counts, per-project progress) from t
   `TEACHER_DISPLAY_NAME` → «المعلم», reported by `platform-login` / `platform-session` (storage failure → fallback).
 - `GET/POST /api/teacher-profile` (setAvatar — the same preset allow-list as students, setDisplayName 1–60,
   uploadPhoto, removePhoto) + `GET /api/teacher-profile-photo` (own photo): builder only, student 403, anonymous
-  401, audited. The photo uses the SAME image service and `profile-photo-store` as the student photo;
-  `platform/teacher-profile-images/<sub>/current.webp`.
+  401, audited. The photo uses the SAME image service and the SAME `profile-photo-store` publication / removal
+  authority as the student photo (immutable revisions under `platform/teacher-profile-images/<sub>/`, CAS-committed
+  `profilePhoto: { version, updatedAt, blobKey }` in the profile document, public `{ version, updatedAt }` only,
+  identical success / failure semantics, monotonic versions, best-effort cleanup).
 - Sidebar: identity block under the brand (ExamBank / 791381 kept): photo → preset → initial as the button
   «تعديل صورة وملف المعلم» + the name; compact rail / tablet keep the avatar only; drawer readable. «ملف المعلم»
   dialog (shared Dialog: focus trap, Escape, focus return): preset grid, upload / replace / remove, optional name.

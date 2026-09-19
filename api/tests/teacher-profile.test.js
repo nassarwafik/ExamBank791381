@@ -2,7 +2,7 @@ import { describe, it, expect } from "vitest";
 import sharp from "sharp";
 import { handler as teacherProfile } from "../src/functions/teacher-profile.js";
 import { handler as session } from "../src/functions/platform-session.js";
-import { profileDocName, teacherPhotoBlobName, publicTeacherProfile, normalizeDisplayName, resolveTeacherDisplayName } from "../src/lib/teacher-profile.js";
+import { profileDocName, teacherPhotoPrefix, publicTeacherProfile, normalizeDisplayName, resolveTeacherDisplayName } from "../src/lib/teacher-profile.js";
 import { createMemoryContainer } from "./fixtures/memory-container.js";
 
 // Teacher identity: the audited model has ONE builder identity (token sub = configured user code) and no editable
@@ -58,18 +58,24 @@ describe("116/117/81/74. preset avatar, own photo, fallback precedence", () => {
     expect(bad.status).toBe(400);
     const r1 = await post(teacher(ctx), { action: "uploadPhoto", dataUrl: dataUrl(await png(), "image/png") });
     expect(r1.status).toBe(200); expect(r1.jsonBody.profile).toMatchObject({ avatarId: "a2", profilePhoto: { version: 1 } });
-    const stored = ctx.getBinary(teacherPhotoBlobName("builder-1"));
+    const rec1 = ctx.getJson(profileDocName("builder-1")).profilePhoto;                       // internal: { version, updatedAt, blobKey }
+    expect(rec1.blobKey.startsWith(teacherPhotoPrefix("builder-1"))).toBe(true); expect(ctx.names(teacherPhotoPrefix("builder-1"))).toEqual([rec1.blobKey]);
+    expect(r1.jsonBody.profile.profilePhoto).toEqual({ version: 1, updatedAt: expect.any(String) });   // public: never the key
+    const stored = ctx.getBinary(rec1.blobKey);
     expect(stored.contentType).toBe("image/webp"); const meta = await sharp(stored.buffer).metadata(); expect(meta.format).toBe("webp"); expect(meta.width).toBeLessThanOrEqual(512); expect(meta.exif).toBeUndefined();
     expect(JSON.stringify(ctx.getJson(profileDocName("builder-1")))).not.toContain("base64");
     const r2 = await post(teacher(ctx), { action: "uploadPhoto", dataUrl: dataUrl(await png(), "image/png") });
     expect(r2.jsonBody.profile.profilePhoto.version).toBe(2);
+    const rec2 = ctx.getJson(profileDocName("builder-1")).profilePhoto;
+    expect(rec2.blobKey).not.toBe(rec1.blobKey); expect(ctx.names(teacherPhotoPrefix("builder-1"))).toEqual([rec2.blobKey]);   // new revision, old one cleaned
     const photo = await get(teacher(ctx), "teacher-profile-photo", "?v=2");
     expect(photo.status).toBe(200); expect(photo.headers["content-type"]).toBe("image/webp"); expect(photo.headers["cache-control"]).toContain("private");
+    expect(Buffer.compare(photo.body, ctx.getBinary(rec2.blobKey).buffer)).toBe(0);                 // exactly the referenced blob
     // another builder identity never sees this photo (its own document is separate)
     expect((await get(teacher(ctx, "other-builder"), "teacher-profile-photo")).status).toBe(404);
     const r3 = await post(teacher(ctx), { action: "removePhoto" });
     expect(r3.jsonBody.profile).toMatchObject({ avatarId: "a2", profilePhoto: null });
-    expect(ctx.has(teacherPhotoBlobName("builder-1"))).toBe(false);
+    expect(ctx.names(teacherPhotoPrefix("builder-1"))).toEqual([]);
     expect((await get(teacher(ctx), "teacher-profile-photo")).status).toBe(404);
     expect(audits.map(a => a.action)).toEqual(["teacher.profile.setAvatar", "teacher.profile.photo.upload", "teacher.profile.photo.upload", "teacher.profile.photo.remove"]);
   });

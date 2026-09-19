@@ -20,7 +20,8 @@ function teacherKey(sub) {
   return encodeURIComponent(s).replace(/%/g, "_");
 }
 const profileDocName = sub => PROFILE_PREFIX + teacherKey(sub) + ".json";
-const teacherPhotoBlobName = sub => PHOTO_PREFIX + teacherKey(sub) + "/current.webp";
+/** The teacher's photo namespace — every immutable revision lives under it; the profile document selects the active one. */
+const teacherPhotoPrefix = sub => PHOTO_PREFIX + teacherKey(sub) + "/";
 
 function fallbackDisplayName() {
   const configured = String(process.env.TEACHER_DISPLAY_NAME || "").trim();
@@ -61,4 +62,4 @@ async function resolveTeacherDisplayName(containerOrGetter, sub, deps = {}) {
   }
 }
 
-module.exports = { PROFILE_PREFIX, PHOTO_PREFIX, VALID_AVATARS, MAX_NAME_LENGTH, DEFAULT_DISPLAY_NAME, teacherKey, profileDocName, teacherPhotoBlobName, fallbackDisplayName, normalizeDisplayName, publicTeacherProfile, resolveTeacherDisplayName };
+module.exports = { PROFILE_PREFIX, PHOTO_PREFIX, VALID_AVATARS, MAX_NAME_LENGTH, DEFAULT_DISPLAY_NAME, teacherKey, profileDocName, teacherPhotoPrefix, fallbackDisplayName, normalizeDisplayName, publicTeacherProfile, resolveTeacherDisplayName };
