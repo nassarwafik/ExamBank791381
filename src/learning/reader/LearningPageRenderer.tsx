@@ -4,6 +4,7 @@ import RichTextRenderer from "./RichTextRenderer";
 import { isActivityBlock, type ContentBlock, type ContentPage, type ContentSource, type CalloutKind, type PracticeQuestion, type ListBlock, type UnitOpenerBlock, type LibraryTrainingBlock } from "../content/types";
 import type { LibraryTrainingHost } from "../training/types";
 import LearningActivityHost from "../activities/LearningActivityHost";
+import PracticeTableView from "./PracticeTableView";
 import { ACTIVITY_ENRICHMENT_LABEL } from "../activities/labels";
 import type { LearningActivityRegistry, LearningActivityEventSink } from "../activities/engine";
 
@@ -274,6 +275,8 @@ function renderBlock(block: ContentBlock, ctx: ActivityRenderContext): ReactNode
       return <UnitOpenerView block={block} />;
     case "practice":
       return <PracticeBlockView question={block.question} />;
+    case "practice-table":
+      return <PracticeTableView block={block} />;
     case "library-training":
       return <LibraryTrainingView block={block} host={ctx.training} />;
     // Interactive activities are DELEGATED to the engine shell (never rendered inline here): it resolves the

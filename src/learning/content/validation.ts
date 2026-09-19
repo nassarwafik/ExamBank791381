@@ -47,7 +47,8 @@ export type ContentIssueCode =
   | "list-invalid-item"
   | "unit-opener-missing-title"
   | "invalid-table-row"
-  | "library-training-invalid";
+  | "library-training-invalid"
+  | "invalid-practice-table";
 
 /** A single structured validation finding. Location fields are filled in from the outermost known node. */
 export interface ContentValidationIssue {
@@ -233,6 +234,9 @@ function checkBlock(
     case "practice":
       checkPractice(block.question, add, loc);
       break;
+    case "practice-table":
+      checkPracticeTable(block, add, loc);
+      break;
     case "library-training":
       // Metadata only: a training id, a printed label and the gating module id. Anything content-like (questions,
       // options, answers, titles) does NOT belong in the book — it is served by the learning-training API.
@@ -342,6 +346,39 @@ function checkGuided(
       seen.add(s.id);
     }
   }
+}
+
+/**
+ * A `practice-table` is a `table` whose answerable cells are small closed choices: every row matches the header
+ * count; every select cell has ≥ 2 unique non-empty options and an expected choice that IS one of them; and at
+ * least one cell is a select cell (a table with none is just a `table`). Cells are plain strings or select objects —
+ * never raw HTML, never a free-text field.
+ */
+function checkPracticeTable(
+  block: { headers?: unknown; rows?: unknown },
+  add: (c: ContentIssueCode, m: string, l?: Loc) => void,
+  loc: Loc,
+) {
+  const headers = Array.isArray(block.headers) ? block.headers : [];
+  if (headers.length === 0 || !headers.every(isNonEmptyString)) { add("invalid-practice-table", "practice-table requires non-empty headers", loc); return; }
+  const rows = Array.isArray(block.rows) ? block.rows : [];
+  if (rows.length === 0) { add("invalid-practice-table", "practice-table requires at least one row", loc); return; }
+  let selects = 0;
+  for (const row of rows) {
+    if (!Array.isArray(row) || row.length !== headers.length) { add("invalid-table-row", "each practice-table row must match the header count", loc); return; }
+    for (const cell of row as unknown[]) {
+      if (typeof cell === "string") continue;
+      const sel = cell as { kind?: unknown; options?: unknown; key?: unknown } | null;
+      const options = Array.isArray(sel?.options) ? (sel!.options as unknown[]) : [];
+      const unique = new Set(options);
+      if (!sel || sel.kind !== "select" || options.length < 2 || !options.every(isNonEmptyString) || unique.size !== options.length || !isNonEmptyString(sel.key) || !options.includes(sel.key)) {
+        add("invalid-practice-table", "each practice-table select cell needs ≥ 2 unique non-empty options and a key that is one of them", loc);
+        return;
+      }
+      selects += 1;
+    }
+  }
+  if (selects === 0) add("invalid-practice-table", "practice-table requires at least one select cell (otherwise author a table)", loc);
 }
 
 /** Block families that are, by policy, ALWAYS teacher enrichment (never faithful book content). */

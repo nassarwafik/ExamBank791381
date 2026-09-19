@@ -9,7 +9,7 @@ import m02 from "./modules/m02";
 import m07 from "./modules/m07";
 import manifest from "./manifest";
 import { validateLearningCourseContent } from "../validation";
-import { LEARNING_CONTENT_SCHEMA_VERSION, type LearningCourseContent, type ContentBlock, type ContentPage } from "../types";
+import { LEARNING_CONTENT_SCHEMA_VERSION, type LearningCourseContent, type ContentBlock, type ContentPage, type PracticeTableSelectCell } from "../types";
 
 const course: LearningCourseContent = {
   schemaVersion: LEARNING_CONTENT_SCHEMA_VERSION, courseId: "791381", title: "شبكات الاتصال", direction: "rtl",
@@ -31,8 +31,8 @@ const ltrText = (p: ContentPage): string[] => {
     }
   };
   walk(p.blocks);
-  for (const b of p.blocks) if (b.type === "table" && b.columnDirs) {
-    b.rows.forEach(row => row.forEach((cell, c) => { if (b.columnDirs![c] === "ltr" && cell) out.push(cell); }));
+  for (const b of p.blocks) if ((b.type === "table" || b.type === "practice-table") && b.columnDirs) {
+    b.rows.forEach(row => row.forEach((cell, c) => { if (b.columnDirs![c] === "ltr" && typeof cell === "string" && cell) out.push(cell); }));
   }
   return out;
 };
@@ -194,16 +194,23 @@ describe("Phase 3E — key source facts, page by page (rendered book is authorit
     expect(json).not.toMatch(/correct|feedback|score/i);
   });
 
-  it("PDF 29: the blank worksheet — all five source addresses, empty صالح/غير صالح + السبب cells, address column LTR, no answers", () => {
+  it("PDF 29: the worksheet — all five source addresses (LTR), the صالح/غير صالح column as the book's own two-word choice checked in place, السبب blank", () => {
     const p = pageBy("791381-m07-l01-p05");
     const t = blockBy(p, "m07-l01-p05-table");
-    if (t.type !== "table") throw new Error("no table");
+    if (t.type !== "practice-table") throw new Error("no practice table");
     expect(t.headers).toEqual(["العنوان", "صالح / غير صالح", "السبب"]);
-    expect(t.columnDirs?.[0]).toBe("ltr");
+    expect(t.columnDirs).toEqual(["ltr", "rtl", "rtl"]);
     expect(t.rows.map(r => r[0])).toEqual(["192.168.10.1", "192.255.10.10", "127.11.10.1", "169.169.10.10", "169.254.10.234"]);
-    for (const r of t.rows) { expect(r[1]).toBe(""); expect(r[2]).toBe(""); }   // unfilled, as in the book
+    const choice = (r: (typeof t.rows)[number]) => r[1] as PracticeTableSelectCell;
+    for (const r of t.rows) {
+      expect(choice(r).kind).toBe("select");
+      expect(choice(r).options).toEqual(["صالح", "غير صالح"]);   // the printed column's vocabulary, nothing else
+      expect(r[2]).toBe("");                                        // the reason column stays the learner's (blank, as printed)
+    }
+    // the expected choices follow the book's OWN PDF-28 rules (127 = Localhost, 169.254 = APIPA; 255 only forbidden as the FIRST number)
+    expect(t.rows.map(r => choice(r).key)).toEqual(["صالح", "صالح", "غير صالح", "صالح", "غير صالح"]);
     expect(plain(p)).toContain("حلّ الجدول بنفسك أولًا، ثم راجع القواعد في الشريحة السابقة للتأكد.");
-    expect(p.blocks.some(b => b.type === "practice")).toBe(false);
+    expect(p.blocks.some(b => b.type === "practice")).toBe(false);   // no quiz block — the worksheet itself is the exercise
   });
 
   it("PDF 30: Public/Private with the exact examples (8.8.8.8 / 192.168.1.5) and the book's important note", () => {
@@ -235,16 +242,19 @@ describe("Phase 3E — key source facts, page by page (rendered book is authorit
     expect(plain(p)).not.toMatch(/\/8|\/12|\/16|CIDR/);   // no CIDR notation — the page has none
   });
 
-  it("PDF 32: the exact five PC/address rows with an empty خاص/عام column + the 192.167 ≠ 192.168 warning; no answers", () => {
+  it("PDF 32: the exact five PC/address rows with خاص/عام as the book's own two-word choice checked in place + the 192.167 ≠ 192.168 warning", () => {
     const p = pageBy("791381-m07-l02-p03");
     const t = blockBy(p, "m07-l02-p03-table");
-    if (t.type !== "table") throw new Error("no table");
+    if (t.type !== "practice-table") throw new Error("no practice table");
     expect(t.headers).toEqual(["الجهاز", "العنوان", "خاص / عام"]);
-    expect(t.rows).toEqual([
-      ["PC1", "192.167.100.2", ""], ["PC2", "10.100.10.10", ""], ["PC3", "172.16.32.30", ""],
-      ["PC4", "220.100.100.100", ""], ["PC5", "9.10.11.12", ""],
+    expect(t.rows.map(r => [r[0], r[1]])).toEqual([
+      ["PC1", "192.167.100.2"], ["PC2", "10.100.10.10"], ["PC3", "172.16.32.30"], ["PC4", "220.100.100.100"], ["PC5", "9.10.11.12"],
     ]);
-    expect(t.columnDirs?.[1]).toBe("ltr");
+    const choice = (r: (typeof t.rows)[number]) => r[2] as PracticeTableSelectCell;
+    for (const r of t.rows) expect(choice(r).options).toEqual(["خاص", "عام"]);
+    // expected choices per the PDF-31 private ranges (10.x / 172.16–31 / 192.168.x) — 192.167 is NOT 192.168
+    expect(t.rows.map(r => choice(r).key)).toEqual(["عام", "خاص", "خاص", "عام", "عام"]);
+    expect(t.columnDirs).toEqual(["ltr", "ltr", "rtl"]);
     expect(ltrText(p)).toContain("192.167");
     expect(ltrText(p)).toContain("192.168");
     expect(plain(p)).toContain("افحص الأرقام بدقة قبل الحكم.");

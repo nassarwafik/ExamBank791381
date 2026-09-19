@@ -379,6 +379,34 @@ export interface LibraryTrainingBlock extends BlockBase {
   requiredModuleId: string;
 }
 
+/**
+ * One answerable cell of a `practice-table`: a small closed choice list (the printed worksheet's own vocabulary,
+ * e.g. «صالح / غير صالح») plus the expected choice (`key`). The Reader checks the choice LOCALLY the moment the
+ * learner picks it (immediate, non-persistent feedback); nothing is stored, sent or scored. The key never reaches
+ * the DOM before a choice is made and never appears as text/attributes.
+ */
+export interface PracticeTableSelectCell {
+  kind: "select";
+  /** The dropdown choices, in authored order (≥ 2, unique, non-empty). */
+  options: string[];
+  /** The expected choice — MUST be one of `options`. */
+  key: string;
+}
+export type PracticeTableCell = string | PracticeTableSelectCell;
+/**
+ * A generic INTERACTIVE worksheet table — the same shape as `table` (headers / row-major cells / optional per-column
+ * direction) where some cells are answerable dropdowns. It is course-agnostic and carries no page or domain logic:
+ * any book's "fill the column" exercise is authored as data (the values, the choices and the expected choice), and
+ * the Reader renders the checking UI. At least one cell must be a select cell (otherwise author a `table`).
+ */
+export interface PracticeTableBlock extends BlockBase {
+  type: "practice-table";
+  caption?: string;
+  headers: string[];
+  rows: PracticeTableCell[][];
+  columnDirs?: ContentDirection[];
+}
+
 /** The canonical, strongly-typed block union. */
 export type ContentBlock =
   | TextBlock
@@ -396,13 +424,14 @@ export type ContentBlock =
   | AnimationBlock
   | GuidedBlock
   | InteractiveDiagramBlock
-  | LibraryTrainingBlock;
+  | LibraryTrainingBlock
+  | PracticeTableBlock;
 
 export type BlockType = ContentBlock["type"];
 /** The closed set of supported block types (used by the validator; keep in sync with the union). */
 export const BLOCK_TYPES: readonly BlockType[] = [
   "text", "heading", "image", "callout", "example", "table", "code", "diagram", "practice", "list", "unit-opener",
-  "simulation", "animation", "guided", "interactive-diagram", "library-training",
+  "simulation", "animation", "guided", "interactive-diagram", "library-training", "practice-table",
 ];
 export const LIST_VARIANTS: readonly NonNullable<ListBlock["variant"]>[] = ["cards", "checklist", "plain", "ordered"];
 export const CALLOUT_KINDS: readonly CalloutKind[] = ["remember", "important", "warning", "tip", "summary", "clarification"];

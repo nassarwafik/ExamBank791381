@@ -215,6 +215,21 @@
    inside an RTL table keep their digit/dot order and isolate their bidi run, while the Arabic column order stays RTL. */
 .learning-reader-table td[dir="ltr"]{ direction:ltr; unicode-bidi:isolate; text-align:start; font-variant-numeric:tabular-nums; }
 
+/* ---------- Interactive worksheet (practice-table) ----------
+   Same table skeleton as a static table; answerable cells hold a native select (44px target) and, once chosen, an
+   inline verdict that is never colour-only (icon + word). Nothing persists. */
+.learning-reader-practice-table{ display:flex; flex-direction:column; gap:var(--eb-space-2); min-width:0; }
+.learning-reader-practice-cell{ vertical-align:top; }
+.learning-reader-practice-select{ min-height:44px; min-width:9em; padding:var(--eb-space-1) var(--eb-space-2); border:1px solid var(--eb-line-2); border-radius:var(--eb-r); background:var(--eb-surface); color:var(--eb-text); font:inherit; }
+.learning-reader-practice-select:focus-visible{ outline:2px solid var(--eb-primary); outline-offset:2px; }
+.learning-reader-practice-select.is-right{ border-color:var(--eb-success); }
+.learning-reader-practice-select.is-wrong{ border-color:var(--eb-danger); }
+.learning-reader-practice-feedback{ display:flex; align-items:center; gap:4px; margin-block-start:var(--eb-space-1); font-size:var(--eb-fs-12); font-weight:var(--eb-fw-bold); white-space:normal; }
+.learning-reader-practice-feedback.is-right{ color:var(--eb-success-tx); }
+.learning-reader-practice-feedback.is-wrong{ color:var(--eb-danger-tx); }
+.learning-reader-practice-foot{ display:flex; flex-wrap:wrap; align-items:center; justify-content:space-between; gap:var(--eb-space-2); }
+.learning-reader-practice-hint{ margin:0; color:var(--eb-muted); font-size:var(--eb-fs-12); line-height:var(--eb-lh-body); }
+
 /* ---------- Tablet / desktop: sidebar + WIDE SLIDE CANVAS ----------
    Phone layout above is the protected baseline and is untouched. From 1024px the Reader is a two-column grid:
    a BOUNDED TOC sidebar and a FLEXIBLE main track. The lesson page is a wide educational slide/canvas that takes
