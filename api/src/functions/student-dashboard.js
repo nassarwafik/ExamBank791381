@@ -11,6 +11,8 @@ const {deriveGradingStatus}=require("../lib/grading-status");
 // progress comes from the SAME loader as /api/student-project-tracker (never re-derived here).
 const {buildStrengthSummary}=require("../lib/student-strength");
 const {loadStudentProjects}=require("../lib/project-tracker/student-projects");
+const {aggregateRecognition,medalTierFromPercentage,emptyRecognition}=require("../lib/achievement-feed");
+const {recordGlobalRankMilestone}=require("../lib/achievement-milestones");
 const AP="platform/assignments/",SP="platform/submissions/",LP="platform/learning-practice/";
 // Roadmap #12 — a single server-derived presentation state for a dashboard assignment card. It COMBINES
 // availability + attempt lifecycle + grading status into one value the UI renders directly, but never
@@ -75,7 +77,17 @@ async function handler(request,deps={},obs=null){
   const practiceDoc=await dl(c,LP+student.userId+".json");
   const projects=classroom?await loadStudentProjects(c,classroom,String(student.classId||""),student.userId,now,{...deps,downloadJsonOrNull:dl,mapConcurrent:mc,getReadConcurrency:readConcurrency}):[];
   const strength=buildStrengthSummary({finalizedCount:finalized,trainings:practiceDoc&&practiceDoc.trainings,projects:projects.map(p=>({projectCode:p.projectCode,overallProgress:p.summary.overallProgress}))});
-  return {status:200,jsonBody:{ok:true,student:{userId:student.userId,code:student.code,displayName:student.displayName,classId:student.classId,avatarId:String(student.avatarId||""),shareAchievements:student.shareAchievements!==false},classroom:classroom?{classId:classroom.classId,name:classroom.name,grade:classroom.grade,schoolYear:classroom.schoolYear}:null,assignments,stats:{assigned:assignments.length,completed,average:completed?Number((sum/completed).toFixed(1)):null,submitted,inProgress,pendingReview,finalized,scheduled,available,closedUnsubmitted,averageFinalized:finalCount?Number((finalSum/finalCount).toFixed(1)):null},strength,phase:"2.0C"}};
+  // Recognition (never Strength): the global rank-up milestone is observed HERE — the one place the total Strength is
+  // built — against the persisted last-seen tier (create-only event ids, baseline on first sight); the summary counts
+  // medals (the same finalized-only authority as the portal), reactions RECEIVED and non-medal achievements lifetime.
+  const recMilestone=deps.recordGlobalRankMilestone||recordGlobalRankMilestone,recAgg=deps.aggregateRecognition||aggregateRecognition;
+  await recMilestone(c,{student,classId:String(student.classId||""),strength,now},deps);
+  const medals={total:0,gold:0,silver:0,bronze:0};
+  for(const a of assignments){if(a.gradingStatus!=="final"||!a.latestResult)continue;const t=medalTierFromPercentage(Number(a.latestResult.percentage));if(t){medals.total++;medals[t]++}}
+  let rec=emptyRecognition();
+  try{rec=(await recAgg(c,[student.userId],deps)).get(student.userId)||rec}catch(e){obs?.logError("student.dashboard.recognition",e)}   // secondary: never fails the dashboard
+  const recognition={medals,reactionsReceived:{total:rec.receivedReactionCount,byType:rec.receivedReactionByType},achievements:{total:rec.achievementCount,byType:rec.achievementByType}};
+  return {status:200,jsonBody:{ok:true,student:{userId:student.userId,code:student.code,displayName:student.displayName,classId:student.classId,avatarId:String(student.avatarId||""),shareAchievements:student.shareAchievements!==false},classroom:classroom?{classId:classroom.classId,name:classroom.name,grade:classroom.grade,schoolYear:classroom.schoolYear}:null,assignments,stats:{assigned:assignments.length,completed,average:completed?Number((sum/completed).toFixed(1)):null,submitted,inProgress,pendingReview,finalized,scheduled,available,closedUnsubmitted,averageFinalized:finalCount?Number((finalSum/finalCount).toFixed(1)):null},strength,recognition,phase:"2.0C"}};
  }catch(e){obs?.logError("student.dashboard.error",e);return {status:500,jsonBody:{ok:false,error:"تعذر تحميل لوحة الطالب حاليًا."}}}
 }
 app.http("studentDashboard",{methods:["GET"],authLevel:"anonymous",route:"student-dashboard",handler:withObservability("student-dashboard",handler)});

@@ -12,6 +12,7 @@
 // the Final Architecture Audit, deliberately not "fixed" here (the generic route keeps its 404).
 const { app } = require("@azure/functions");
 const { withObservability } = require("../lib/observability");
+const { recordProjectMilestones } = require("../lib/achievement-milestones");
 const { requireBuilderAuth } = require("../lib/builder-auth");
 const { getContainer, StorageConflictError } = require("../lib/platform-storage");
 const { recordAuditEvent } = require("../lib/audit-log");
@@ -177,8 +178,10 @@ async function handler(request, deps = {}, obs = null) {
           }, LEGACY_SNAPSHOT);
           if (!result.ok && result.reason === "not_member") return { status: 404, jsonBody: { ok: false, error: "الطالب غير موجود في هذا الصف." } };
           if (!result.ok) return { status: 400, jsonBody: { ok: false, error: "المرحلة غير موجودة أو غير مفعّلة." } };
-          const { workDef, stage, written, outcome } = result;
+          const { workDef, stage, written, previous, outcome } = result;
           const summary = core.buildStudentSummary(workDef, written, now);
+          // Project milestones (project rank-up / completion) from the SAME before/after docs of this write — best-effort.
+          await (deps.recordProjectMilestones || recordProjectMilestones)(container, { classId, student: { ...result.student, shareAchievements: result.shareAchievements }, projectCode: PROGRAM_CODE, projectTitle: "مشروع 794589", workDef, before: previous, after: written, now });
           if (outcome.statusChanged) {
             await rec(container, {
               actor: auth.user?.sub,

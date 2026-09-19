@@ -2,18 +2,12 @@ const { app } = require("@azure/functions");
 const { withObservability } = require("../lib/observability");
 const { requireBuilderAuth } = require("../lib/builder-auth");
 const { getContainer, listJson, mutateJsonWithRetry, StorageConflictError } = require("../lib/platform-storage");
-const { FEED_PREFIX, REACTIONS, feedBlobName } = require("../lib/achievement-feed");
+const { FEED_PREFIX, REACTIONS, feedBlobName, publicPost } = require("../lib/achievement-feed");
 
 const CLASS_PREFIX = "platform/classes/";
 const CONFLICT_MESSAGE = "حدث تعارض مؤقت أثناء حفظ البيانات. حاول مرة أخرى.";
 const MAX_POSTS = 50;
 const MAX_NOTE_LENGTH = 200;
-
-function reactionCounts(reactions) {
-  const out = {};
-  for (const key of REACTIONS) out[key] = Array.isArray(reactions?.[key]) ? reactions[key].length : 0;
-  return out;
-}
 
 // `deps` is an optional dependency-injection seam for unit tests (production passes nothing, so the real
 // implementations are used); `obs` is the request context withObservability passes as the third argument.
@@ -33,17 +27,11 @@ async function handler(request, deps = {}, obs = null) {
         const sorted = posts
           .sort((a, b) => String(b.createdAt || "").localeCompare(String(a.createdAt || "")))
           .slice(0, MAX_POSTS)
+          // The teacher sees every educational achievement event of managed students (shared or not).
           .map(post => ({
-            postId: String(post.postId || ""),
+            ...publicPost(post),
             classId: String(post.classId || ""),
-            className: classNameById.get(String(post.classId || "")) || "",
-            studentDisplayName: String(post.studentDisplayName || ""),
-            assignmentTitle: String(post.assignmentTitle || ""),
-            tier: post.tier,
-            createdAt: String(post.createdAt || ""),
-            reactionCounts: reactionCounts(post.reactions),
-            teacherReaction: REACTIONS.includes(post.teacherReaction) ? post.teacherReaction : null,
-            teacherNote: String(post.teacherNote || "")
+            className: classNameById.get(String(post.classId || "")) || ""
           }));
         return { status: 200, jsonBody: { ok: true, posts: sorted } };
       }

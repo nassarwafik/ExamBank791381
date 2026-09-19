@@ -8,6 +8,7 @@
 // shape and audit record, all unchanged.
 const { app } = require("@azure/functions");
 const { withObservability } = require("../lib/observability");
+const { recordProjectMilestones } = require("../lib/achievement-milestones");
 const { requireBuilderAuth } = require("../lib/builder-auth");
 const { getContainer, downloadJsonOrNull, listJson, StorageConflictError } = require("../lib/platform-storage");
 const { recordAuditEvent } = require("../lib/audit-log");
@@ -197,8 +198,10 @@ async function handler(request, deps = {}, obs = null) {
           });
           if (!result.ok && result.reason === "not_member") return { status: 404, jsonBody: { ok: false, error: "الطالب غير موجود في هذا الصف." } };
           if (!result.ok) return { status: 400, jsonBody: { ok: false, error: "المرحلة غير موجودة أو غير مفعّلة." } };
-          const { workDef, stage, written, outcome } = result;
+          const { workDef, stage, written, previous, outcome } = result;
           const summary = core.buildStudentSummary(workDef, written, now);
+          // Project milestones (project rank-up / completion) from the SAME before/after docs of this write — best-effort.
+          await (deps.recordProjectMilestones || recordProjectMilestones)(container, { classId, student: { ...result.student, shareAchievements: result.shareAchievements }, projectCode: projectCode, projectTitle: definition.title, workDef, before: previous, after: written, now });
           if (outcome.statusChanged) {
             await rec(container, {
               actor: auth.user?.sub,

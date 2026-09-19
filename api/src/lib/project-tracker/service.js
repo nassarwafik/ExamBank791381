@@ -160,7 +160,7 @@ function studentBelongsToClass(user, classId) {
 async function requireStudentInClass(container, studentId, classId) {
   const u = await loadStudentUser(container, studentId);
   if (!studentBelongsToClass(u, classId)) return { ok: false };
-  return { ok: true, student: { studentId: u.userId, displayName: u.displayName || ((u.firstName || "") + " " + (u.familyName || "")).trim(), code: u.code } };
+  return { ok: true, student: { studentId: u.userId, displayName: u.displayName || ((u.firstName || "") + " " + (u.familyName || "")).trim(), code: u.code }, shareAchievements: u.shareAchievements !== false };
 }
 
 async function loadProgressEntries(container, projectCode, classId, students) {
@@ -193,11 +193,12 @@ async function updateStudentProgress(container, projectCode, classroom, update, 
   const stage = (config.stages || []).find(s => s.stageId === stageId && s.active === true);
   if (!stage) return { ok: false, reason: "stage_inactive", config };
   const ns = getStorageNamespace(projectCode);
-  let outcome = null;
-  const written = await mutateJsonWithRetry(container, ns.progressName(classId, studentId), current =>
-    (outcome = applyProgressUpdate(current, { stageId, status, note, score, actor, now, programCode: projectCode, classId, studentId })).doc
-  );
-  return { ok: true, config, workDef: workingDefinition(projectCode, config), stage, student: membership.student, written, outcome };
+  let outcome = null, previous = null;
+  const written = await mutateJsonWithRetry(container, ns.progressName(classId, studentId), current => {
+    previous = current || null;   // the authoritative BEFORE state of the same CAS round (milestone comparison)
+    return (outcome = applyProgressUpdate(current, { stageId, status, note, score, actor, now, programCode: projectCode, classId, studentId })).doc;
+  });
+  return { ok: true, config, workDef: workingDefinition(projectCode, config), stage, student: membership.student, shareAchievements: membership.shareAchievements, written, previous, outcome };
 }
 
 // Roadmap #33 — wipes ONLY this project's data for this class (every student progress blob under the project's

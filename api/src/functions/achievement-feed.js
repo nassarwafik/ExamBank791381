@@ -2,17 +2,11 @@ const { app } = require("@azure/functions");
 const { withObservability } = require("../lib/observability");
 const { requireActiveStudentSession } = require("../lib/student-auth");
 const { listJson, mutateJsonWithRetry, StorageConflictError } = require("../lib/platform-storage");
-const { FEED_PREFIX, REACTIONS, feedBlobName } = require("../lib/achievement-feed");
+const { FEED_PREFIX, REACTIONS, feedBlobName, publicPost, isVisibleToStudent, reactionCounts } = require("../lib/achievement-feed");
 
 const UP = "platform/users/";
 const CONFLICT_MESSAGE = "حدث تعارض مؤقت أثناء حفظ البيانات. حاول مرة أخرى.";
 const MAX_POSTS = 30;
-
-function reactionCounts(reactions) {
-  const out = {};
-  for (const key of REACTIONS) out[key] = Array.isArray(reactions?.[key]) ? reactions[key].length : 0;
-  return out;
-}
 
 function myReaction(reactions, studentId) {
   for (const key of REACTIONS) {
@@ -35,20 +29,15 @@ async function handler(request, deps = {}, obs = null) {
 
       if (request.method === "GET") {
         if (!classId) return { status: 200, jsonBody: { ok: true, posts: [] } };
+        // Privacy: a classmate's event is listed only when shared with the class; the student's own events always.
         const posts = (await listJson(container, FEED_PREFIX + classId + "/"))
+          .filter(post => isVisibleToStudent(post, student.userId))
           .sort((a, b) => String(b.createdAt || "").localeCompare(String(a.createdAt || "")))
           .slice(0, MAX_POSTS)
           .map(post => ({
-            postId: String(post.postId || ""),
-            studentDisplayName: String(post.studentDisplayName || ""),
-            assignmentTitle: String(post.assignmentTitle || ""),
-            tier: post.tier,
-            createdAt: String(post.createdAt || ""),
+            ...publicPost(post),
             isOwnPost: String(post.studentId || "") === String(student.userId),
-            reactionCounts: reactionCounts(post.reactions),
-            myReaction: myReaction(post.reactions, String(student.userId)),
-            teacherReaction: REACTIONS.includes(post.teacherReaction) ? post.teacherReaction : null,
-            teacherNote: String(post.teacherNote || "")
+            myReaction: myReaction(post.reactions, String(student.userId))
           }));
         return { status: 200, jsonBody: { ok: true, posts } };
       }
@@ -67,6 +56,9 @@ async function handler(request, deps = {}, obs = null) {
       try {
         await mutateJsonWithRetry(container, feedBlobName(classId, postId), current => {
           if (!current) { const err = new Error("المنشور غير موجود."); err.httpStatus = 404; throw err; }
+          // A student reacts to a VISIBLE classmate's event only — never their own, never an unshared one.
+          if (String(current.studentId || "") === studentId) { const err = new Error("لا يمكنك التفاعل مع إنجازك."); err.httpStatus = 403; throw err; }
+          if (!isVisibleToStudent(current, studentId)) { const err = new Error("المنشور غير موجود."); err.httpStatus = 404; throw err; }
           const hadThisReaction = Array.isArray(current.reactions?.[reaction]) && current.reactions[reaction].includes(studentId);
           current.reactions = current.reactions && typeof current.reactions === "object" ? current.reactions : {};
           for (const key of REACTIONS) {

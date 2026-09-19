@@ -24,7 +24,7 @@ const { recordAuditEvent } = require("../lib/audit-log");
 const { normalizeClassStatus } = require("../lib/class-lifecycle");
 const { isReportableAssessment } = require("../lib/assignment-lifecycle");
 const { deriveGradingStatus } = require("../lib/grading-status");
-const { FEED_PREFIX, REACTIONS } = require("../lib/achievement-feed");
+const { aggregateRecognition } = require("../lib/achievement-feed");
 const { withCredentialLock, CredentialLockBusyError } = require("../lib/student-credential-lock");
 // Roadmap #25 — classroom.studentIds is a denormalized, repairable roster INDEX (never authoritative). All
 // index writes go through lib/class-roster-index (CAS + retry, idempotent, sync status instead of failure).
@@ -196,40 +196,15 @@ async function listStudents(container, classId, includeArchived = false, obs = n
     });
   }
 
-  // Same single-pass pattern as the submissions count above: one listing pass under FEED_PREFIX
-  // (not scoped to classId, since a student's achievement history should still count after they
-  // move classes), summing every reaction — classmates' plus the teacher's — across every post
-  // that belongs to this student.
-  const likesByStudent = new Map(); // studentId -> total like count
-  if (idSet.size) {
-    // Roadmap #27: a post blob is named "{classId}/{assignmentId}_{studentId}.json" (achievement-feed
-    // feedBlobName), so the roster students' posts can be selected by NAME before downloading — the previous
-    // scan downloaded EVERY post in the system. A post is a candidate when its name ends with "_{id}" for ANY
-    // roster id (so ids that themselves contain "_" are still matched — never parsed by "last underscore");
-    // a name without the "_" pattern is still downloaded (never silently skipped). Over-inclusion is harmless:
-    // the aggregation below keeps using the post's own studentId as the authority.
-    const rosterSuffixes = [...idSet].map(id => "_" + id + ".json");
-    const feedNames = (await listBlobNames(container, FEED_PREFIX)).filter(name => {
-      const postId = name.slice(name.lastIndexOf("/") + 1);
-      return postId.indexOf("_") < 0 || rosterSuffixes.some(suffix => postId.endsWith(suffix));
-    });
-    for (const post of await downloadManyJson(container, feedNames)) {
-      if (!post) continue;
-      const studentId = String(post.studentId || "");
-      if (!idSet.has(studentId)) continue;
-      let total = 0;
-      for (const key of REACTIONS) {
-        if (Array.isArray(post.reactions?.[key])) total += post.reactions[key].length;
-      }
-      if (post.teacherReaction) total += 1;
-      likesByStudent.set(studentId, (likesByStudent.get(studentId) || 0) + total);
-    }
-  }
+  // likesCount = reactions RECEIVED on the student's achievement events (classmates' + the teacher's, every event
+  // type, across every class — a history still counts after a class move). ONE shared aggregation (achievement-feed
+  // aggregateRecognition, name-selected posts, never a full scan) also feeds the student dashboard's recognition.
+  const recognition = idSet.size ? await aggregateRecognition(container, [...idSet]) : new Map();
 
   return result.map(student => ({
     ...student,
     submittedAssignmentsCount: submittedSets.get(student.userId)?.size || 0,
-    likesCount: likesByStudent.get(student.userId) || 0
+    likesCount: recognition.get(student.userId)?.receivedReactionCount || 0
   }));
 }
 
