@@ -11,7 +11,15 @@ export type Summary = {
 export type Stats = { assigned: number; completed: number; average: number | null; submitted?: number; inProgress?: number; pendingReview?: number; finalized?: number; scheduled?: number; available?: number; closedUnsubmitted?: number; averageFinalized?: number | null };
 export type StudentInfo = { userId: string; code: string; displayName: string; classId: string; avatarId?: string; shareAchievements?: boolean };
 export type Classroom = { classId: string; name: string; grade: string; schoolYear: string };
-export type Dashboard = { student: StudentInfo; classroom: Classroom | null; assignments: Summary[]; stats: Stats };
+/** One enrolled project's Strength contribution as the server derived it (round(overallProgress × 4), ≤ 400). */
+export type ProjectStrength = { projectCode: string; overallProgress: number; strengthPoints: number };
+/** The server-authoritative unified Strength summary (نقاط القوة): exams × 100 + practice best + projects. */
+export type StudentStrength = {
+  totalPoints: number; examPoints: number; practicePoints: number; projectPoints: number;
+  levelBlockSize: number; withinLevelPoints: number; nextLevelRemaining: number; percent: number;
+  projects: ProjectStrength[];
+};
+export type Dashboard = { student: StudentInfo; classroom: Classroom | null; assignments: Summary[]; stats: Stats; strength: StudentStrength | null };
 export type Detail = {
   assignmentId: string; title: string; instructions: string; openAt: string; dueAt: string; effectiveDueAt?: string; maxAttempts: number; questionCount: number; totalMarks: number; durationMinutes?: number; requiresStart?: boolean; timed?: boolean;
   marksDistribution?: { rows: { title: string; marks: number }[]; total: number };

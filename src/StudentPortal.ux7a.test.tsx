@@ -283,14 +283,14 @@ describe("UX-7a StudentPortal — identity, medals, average ring and personal ra
     expect(screen.getByText("من الواجبات النهائية فقط")).toBeTruthy();
   });
 
-  it("no rank before 4 finalized exams: shows the four-exam progression instead (pending results never count)", async () => {
+  it("no rank before 400 Strength Points (4 finalized exams): shows the points progression instead (pending results never count)", async () => {
     mount({ student, classroom, assignments: [], stats: { ...baseStats, assigned: 20, finalized: 3, pendingReview: 6, averageFinalized: 99 } });
     await screen.findByText(/مرحبًا أحمد/);
     expect(screen.queryByText(/الرتبة:/)).toBeNull();
     expect(screen.queryByRole("progressbar", { name: /نحو رتبة/ })).toBeNull();
     const bar = screen.getByRole("progressbar", { name: "الطريق إلى رتبتك" });
     expect(bar.getAttribute("aria-valuenow")).toBe("75");
-    expect(screen.getByText("3 من 4 امتحانات نهائية لفتح رتبتك")).toBeTruthy();
+    expect(screen.getByText("300 من 400 نقطة قوة لفتح رتبتك")).toBeTruthy();   // compatibility: 3 finalized × 100
     expect(document.body.textContent).not.toMatch(/من 10 |لفتح الرتبة/);          // old 10-based copy is gone
     expect(document.querySelector(".eb-sp-avatar-frame")?.className).not.toMatch(/is-rank-/);
     // No EARNED rank image before finalized 4: image 1 appears only as a clearly-muted, decorative preview
@@ -318,7 +318,7 @@ describe("UX-7a StudentPortal — identity, medals, average ring and personal ra
     expect(screen.queryByRole("progressbar", { name: "الطريق إلى رتبتك" })).toBeNull();
     const next = screen.getByRole("progressbar", { name: "التقدم نحو رتبة أسطوري" });
     expect(next.getAttribute("aria-valuenow")).toBe("50");                                          // 2 of the next 4 exams
-    expect(screen.getByText("بقي امتحانان للوصول إلى رتبة أسطوري")).toBeTruthy();
+    expect(screen.getByText("بقي 200 نقطة قوة للوصول إلى رتبة أسطوري")).toBeTruthy();   // 22 × 100 = 2200 → 200 into the diamond block
     expect(document.body.textContent).not.toMatch(/الرتبة التالية عند معدل نهائي/);                 // old average-based wording gone
     expect(screen.getByRole("progressbar", { name: "المعدل النهائي" }).getAttribute("aria-valuenow")).toBe("12");   // average still shown unchanged
     expect(document.body.textContent).not.toMatch(/ترتيب|المركز|leaderboard/i);
@@ -363,7 +363,7 @@ describe("UX-7a StudentPortal — identity, medals, average ring and personal ra
     await screen.findByText(/مرحبًا أحمد/);
     expect(screen.getByText(/الرتبة: مبتدئ/)).toBeTruthy();
     expect(screen.getByRole("progressbar", { name: "التقدم نحو رتبة برونزي" }).getAttribute("aria-valuenow")).toBe("50");
-    expect(screen.getByText("بقي امتحانان للوصول إلى رتبة برونزي")).toBeTruthy();
+    expect(screen.getByText("بقي 200 نقطة قوة للوصول إلى رتبة برونزي")).toBeTruthy();   // 6 × 100 = 600
     expect(document.querySelector(".eb-sp-avatar-frame.is-rank-beginner")).toBeTruthy();
     // current rank = beginner art (image 1, meaningful alt); next-rank preview = bronze art (image 2), a small
     // decorative thumbnail (aria-hidden, empty alt) that must NOT duplicate screen-reader text.

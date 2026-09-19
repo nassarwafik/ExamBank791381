@@ -5,6 +5,7 @@ import ProgressBar from "../ui/ProgressBar";
 import SectionHeader from "../ui/SectionHeader";
 import StatusBadge from "../ui/StatusBadge";
 import type { ProjectStage, ProjectGroup, StageProgressEntry, StudentCard, TrackMeta } from "./types";
+import type { ProjectStrength } from "../student/types";
 
 type StudentProject = {
   projectCode: string;
@@ -21,7 +22,7 @@ type ProjectData = { ok: true; enrolled: boolean; className?: string; projects?:
 // Read-only view of ONE project (UX-7a presentation on the shared primitives: overall + per-track ProgressBars,
 // next stage, aria-pressed track switch, stage rows with tonal StatusBadges). The values are the server's
 // summary/progress exactly as delivered — nothing is recomputed and nothing is written from here.
-function OneProject({ project }: { project: StudentProject }) {
+function OneProject({ project, contribution }: { project: StudentProject; contribution: ProjectStrength | null }) {
   const [track, setTrack] = useState<string>(project.tracks[0]?.trackId || "");
   const groups = useMemo(() => project.groups.filter(g => g.track === track).sort((a, b) => a.order - b.order), [project, track]);
   const byGroup = useMemo(() => stagesByGroup(project.stages.filter(s => s.active !== false), track), [project, track]);
@@ -32,6 +33,11 @@ function OneProject({ project }: { project: StudentProject }) {
   return (
     <div className="eb-sp-project">
       <ProgressBar label="التقدم العام" value={s.overallProgress} />
+      {/* The project's Strength contribution as the SERVER derived it (round(overallProgress × 4), ≤ 400): rendered,
+          never computed here. ONE power ring lives in «تقدّمي»; this line only explains this project's share. */}
+      {contribution && (
+        <p className="eb-sp-project-strength">تقدم المشروع: <strong>{contribution.overallProgress}%</strong> · نقاط القوة من المشروع: <strong>{contribution.strengthPoints} / {PROJECT_MAX_STRENGTH_POINTS}</strong></p>
+      )}
       <ul className="eb-sp-project-tracks" aria-label="تقدم المسارات">
         {project.tracks.map((t, i) => <li key={t.trackId}><ProgressBar size="sm" label={t.title} value={s.trackProgress[t.trackId] || 0} tone={toneForTrack(i)} /></li>)}
       </ul>
@@ -72,7 +78,10 @@ function OneProject({ project }: { project: StudentProject }) {
 // Read-only view inside the student portal for ALL of the student's class's projects (one switch each).
 // OPTIONAL secondary panel: ONE read; on any failure (or when the class runs no project) it renders nothing
 // and NEVER logs the student out. Data semantics unchanged since the legacy panel.
-export default function StudentProjectPanel({ token }: { token: string }) {
+/** The per-project Strength ceiling (display only; the policy lives on the server). */
+const PROJECT_MAX_STRENGTH_POINTS = 400;
+
+export default function StudentProjectPanel({ token, contributions = [] }: { token: string; contributions?: ProjectStrength[] }) {
   const [data, setData] = useState<ProjectData | null>(null);
   const [activeCode, setActiveCode] = useState<string>("");
 
@@ -104,7 +113,7 @@ export default function StudentProjectPanel({ token }: { token: string }) {
           {projects.map(p => <button key={p.projectCode} type="button" className="eb-chip-button" aria-pressed={active.projectCode === p.projectCode} onClick={() => setActiveCode(p.projectCode)}>{p.title}</button>)}
         </div>
       )}
-      <OneProject key={active.projectCode} project={active} />
+      <OneProject key={active.projectCode} project={active} contribution={contributions.find(c => c.projectCode === active.projectCode) ?? null} />
     </section>
   );
 }
