@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { lazy, Suspense, useEffect, useState } from "react";
 import StudentExamPage from "./StudentExamPage";
 import StudentShell from "./shell/StudentShell";
 import StudentProjectPanel from "./projects/StudentProjectPanel";
@@ -9,6 +9,7 @@ import { usePrefersReducedMotion } from "./ui/usePrefersReducedMotion";
 import StudentIdentityCard from "./student/StudentIdentityCard";
 import NowSection from "./student/NowSection";
 import StudentProgressSection from "./student/StudentProgressSection";
+import StudentLearningMaterials, { type StudentLearningCourse } from "./student/StudentLearningMaterials";
 import StudentAssignmentCard from "./student/StudentAssignmentCard";
 import AchievementFeed from "./student/AchievementFeed";
 import AvatarPickerDialog from "./student/AvatarPickerDialog";
@@ -17,6 +18,10 @@ import { rankFor, rankProgress } from "./studentRank";
 import type { Dashboard, Detail, Summary } from "./student/types";
 
 type Props = { token: string; displayName: string; onLogout: () => void };
+
+// Class Learning Materials: the student's Reader (the shared LearningReader behind a restricted content API) is
+// code-split so opening the portal never loads the Reader or any book body — only «فتح المادة» does.
+const StudentReader = lazy(() => import("./student/StudentReader"));
 
 /**
  * Student Portal (UX-7a — mobile-first, actionable-first). Hierarchy: who am I → what should I do now →
@@ -32,6 +37,8 @@ export default function StudentPortal({ token, displayName, onLogout }: Props) {
   const [avatarPickerOpen, setAvatarPickerOpen] = useState(false), [avatarSaving, setAvatarSaving] = useState(false);
   const [feed, setFeed] = useState<FeedPost[]>([]), [feedError, setFeedError] = useState(""), [shareSaving, setShareSaving] = useState(false);
   const [filter, setFilter] = useState<PortalFilter>("all");
+  // The learning course currently open in the Reader (its published module ids as re-validated at open time).
+  const [readerCourse, setReaderCourse] = useState<StudentLearningCourse | null>(null);
   const headers = { "x-student-token": token, Authorization: "Bearer " + token };
 
   async function load() {
@@ -107,6 +114,14 @@ export default function StudentPortal({ token, displayName, onLogout }: Props) {
     finally { setBusy(false); }
   }
 
+  // Full-screen Reader over the portal (same swap pattern as the exam page); back returns to the portal.
+  if (readerCourse && data) {
+    return (
+      <Suspense fallback={<p className="eb-muted eb-sp-status" role="status">جارٍ فتح المادة التعليمية...</p>}>
+        <StudentReader courseId={readerCourse.courseId} allowedModuleIds={readerCourse.modules.map(m => m.moduleId)} onExit={() => { setReaderCourse(null); window.scrollTo({ top: 0, behavior: reducedMotion ? "auto" : "smooth" }); }} />
+      </Suspense>
+    );
+  }
   if (detail && data) return <StudentExamPage token={token} assignment={detail} studentName={data.student.displayName || displayName} className={data.classroom ? data.classroom.name + (data.classroom.grade ? " · " + data.classroom.grade : "") : ""} onLogout={onLogout} onBack={() => { setDetail(null); void load(); }} />;
 
   const stats = data?.stats;
@@ -130,6 +145,7 @@ export default function StudentPortal({ token, displayName, onLogout }: Props) {
             <StudentIdentityCard student={data.student} classroom={data.classroom} displayName={displayName} rank={rank} onChangeAvatar={() => setAvatarPickerOpen(true)} />
             <AvatarPickerDialog open={avatarPickerOpen} current={data.student.avatarId} saving={avatarSaving} onPick={pickAvatar} onClose={() => setAvatarPickerOpen(false)} />
             <NowSection actionable={now_.actionable} upcoming={now_.upcoming} busy={busy} onOpen={open} />
+            <StudentLearningMaterials token={token} onOpen={course => { setReaderCourse(course); window.scrollTo({ top: 0, behavior: reducedMotion ? "auto" : "smooth" }); }} />
             <StudentProgressSection stats={stats} medals={medals} rank={rank} progress={progress} averageFinalized={averageFinalized} />
             <section className="eb-sp-panel" aria-labelledby="eb-sp-tasks-title">
               <SectionHeader level={2} id="eb-sp-tasks-title" title="المهام والواجبات" count={visible.length} description="كل واجباتك ونتائجك؛ ما يحتاج إجراءً يظهر أولًا." />

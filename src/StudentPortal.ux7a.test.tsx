@@ -39,6 +39,7 @@ function mount(dashboard: Record<string, unknown>, opts: { posts?: FeedPost[]; p
     if (url.includes("/api/achievement-feed") && method === "POST") return res(200, opts.react ? opts.react(body) : { ok: true, reactionCounts: { heart: 1, clap: 0, cheer: 0, fire: 0 }, myReaction: body.reaction });
     if (url.includes("/api/student-profile")) return res(200, opts.profile ? opts.profile(body) : (body.action === "setAvatar" ? { ok: true, avatarId: body.avatarId } : { ok: true, shareAchievements: body.share }));
     if (url.includes("/api/student-project-tracker")) return res(200, opts.tracker || { ok: true, enrolled: false });
+    if (url.includes("/api/student-learning-materials")) return res(200, { ok: true, materials: [] });   // Class Learning Materials: optional panel, one GET
     return res(404, { ok: false });
   }) as unknown as typeof fetch;
   const onLogout = vi.fn();
@@ -120,11 +121,11 @@ describe("UX-7a StudentPortal — task-first home", () => {
     expect(calls.length).toBe(before);
   });
 
-  it("issues exactly one dashboard GET, one feed GET and the project panel's GET on mount — and no POST", async () => {
+  it("issues exactly one dashboard GET, one feed GET, the project panel's GET and the learning-materials GET on mount — and no POST", async () => {
     const { calls, onLogout } = mount({ student, classroom, assignments: [], stats: baseStats });
     await screen.findByText(/مرحبًا أحمد/);
-    await waitFor(() => expect(gets(calls).length).toBe(3));
-    expect(gets(calls).sort()).toEqual(["/api/achievement-feed", "/api/student-dashboard", "/api/student-project-tracker"]);
+    await waitFor(() => expect(gets(calls).length).toBe(4));
+    expect(gets(calls).sort()).toEqual(["/api/achievement-feed", "/api/student-dashboard", "/api/student-learning-materials", "/api/student-project-tracker"]);
     expect(posts(calls)).toEqual([]);
     expect(onLogout).not.toHaveBeenCalled();
     // the empty state keeps the list container (shell contract) and uses the shared EmptyState
@@ -143,13 +144,13 @@ describe("UX-7a StudentPortal — task-first home", () => {
 });
 
 describe("UX-7a StudentPortal — hierarchy and the primary section", () => {
-  it("renders exactly the six sections in order under the shell's single h1: identity → now → progress → assignments → projects → achievements", async () => {
+  it("renders exactly the seven sections in order under the shell's single h1: identity → now → learning materials → progress → assignments → projects → achievements", async () => {
     mount({ student, classroom, assignments: [asg("AV", { dashboardState: "available" })], stats: { ...baseStats, assigned: 1 } }, { tracker: PROJECT, posts: [post({})] });
     await screen.findByRole("region", { name: "مشاريعي" });
     expect(document.querySelectorAll("h1").length).toBe(1);                                         // the shell's brand title only
     expect(document.querySelector(".eb-sp h1")).toBeNull();
     const h2s = Array.from(document.querySelectorAll(".eb-sp h2")).map(h => h.textContent?.replace(/\d+$/, "").trim());
-    expect(h2s).toEqual(["مرحبًا أحمد", "ماذا عليّ أن أفعل الآن؟", "تقدّمي", "المهام والواجبات", "مشاريعي", "إنجازات الصف"]);
+    expect(h2s).toEqual(["مرحبًا أحمد", "ماذا عليّ أن أفعل الآن؟", "موادي التعليمية", "تقدّمي", "المهام والواجبات", "مشاريعي", "إنجازات الصف"]);
     expect(screen.getByLabelText(/مرحبًا أحمد/).textContent).toContain("الصف · 11 · 2026");          // identity: class · grade · school year
     expect(screen.getByLabelText(/مرحبًا أحمد/).textContent).toContain("C1");
     expect(document.querySelector(".platform-hero, .student-next-panel")).toBeNull();                 // no hero, no marketing card
@@ -187,8 +188,9 @@ describe("UX-7a StudentPortal — hierarchy and the primary section", () => {
     // The project panel issues its own GET from an effect that runs in a scheduler task AFTER the commit that shows
     // the "now" section; on a loaded runner that task can land after this test resumes, so a count captured here
     // would be one short and "+1" could never match (Quality Gate run 375: expected 4 to be 3). Settle the three
-    // mount GETs pinned above ("issues exactly one dashboard GET, one feed GET and the project panel's GET") first.
-    await waitFor(() => expect(gets(calls).length).toBe(3));
+    // mount GETs pinned above ("issues exactly one dashboard GET, one feed GET, the project panel's GET and the
+    // learning-materials GET") first.
+    await waitFor(() => expect(gets(calls).length).toBe(4));
     const before = calls.length;
     fireEvent.click((await list()).getByRole("button", { name: "النتيجة / محاولة جديدة" }));
     await waitFor(() => expect(calls.length).toBe(before + 1));
@@ -448,7 +450,7 @@ describe("UX-7a StudentPortal — identity, medals, average ring and personal ra
     await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
     expect(posts(calls)).toEqual([{ url: "/api/student-profile", method: "POST", body: { action: "setAvatar", avatarId: "a2" } }]);
     expect(screen.getByRole("button", { name: "تغيير الأيقونة (الحالية: قطة)" })).toBeTruthy();
-    expect(gets(calls).length).toBe(3);                                                // no re-read after the write
+    expect(gets(calls).length).toBe(4);                                                // no re-read after the write
   });
 
   it("the share toggle is a real checkbox that posts setShareAchievements once per change", async () => {
