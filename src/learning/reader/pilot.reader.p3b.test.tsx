@@ -61,14 +61,17 @@ describe("Phase 3B — Reader over real pilot content", () => {
     await waitFor(() => expect(api.loads).toEqual(["791381-m01", "791381-m02"]));
   });
 
-  it("shows a converted page (PDF 14) as ready but a LATER unconverted page in the same partial module as قيد الإعداد", async () => {
+  it("shows every page of the now-COMPLETE m02, including its last page (PDF 23), as ready — no قيد الإعداد", async () => {
+    // Phase 3D completed m02 (PDF 23 converted), so m02 no longer has an unconverted page. The professional
+    // "قيد الإعداد" (unavailable) contract for a partial module is still covered by the synthetic-fixture reader
+    // tests (LearningReader.test.tsx / LearningPageRenderer.test.tsx, where a module body is intentionally not served).
     mount();
     await screen.findByRole("heading", { level: 2, name: "أساسيات الشبكات" });
     goTo("791381-m02-l00-p01");                                        // converted opener → ready
     expect(await screen.findByRole("heading", { level: 2, name: "الأعداد والموازين" })).toBeTruthy();
-    goTo("791381-m02-l01-p09");                                        // PDF 23 (خلاصة التحويلات), NOT converted (partial module)
-    await waitFor(() => expect(screen.getByText("المحتوى التفاعلي لهذه الصفحة قيد الإعداد")).toBeTruthy());
-    // it is the professional "under preparation" state, NOT the "missing content" integrity message
-    expect(screen.queryByText(/لم يتم العثور على محتوى هذه الصفحة/)).toBeNull();
+    goTo("791381-m02-l01-p09");                                        // PDF 23 (خلاصة التحويلات) → now converted (ready)
+    expect(await screen.findByRole("heading", { level: 2, name: "خلاصة التحويلات" })).toBeTruthy();
+    expect(screen.queryByText("المحتوى التفاعلي لهذه الصفحة قيد الإعداد")).toBeNull();
+    expect(screen.queryByText(/لم يتم العثور على محتوى هذه الصفحة/)).toBeNull();  // and NOT the integrity message
   });
 });

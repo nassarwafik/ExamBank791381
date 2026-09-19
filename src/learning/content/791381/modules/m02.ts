@@ -1,13 +1,15 @@
-// Learning Materials — Phase 3C: REAL converted body for Book 791381, module m02 (الأعداد والموازين).
+// Learning Materials — Book 791381, module m02 (الأعداد والموازين). REAL converted body.
 //
-// Faithful native conversion of source PDF pages 14 (unit opener, Phase 3B) + 15–22 (number systems, Phase 3C),
-// 1 source page → 1 interactive page. Book-derived blocks are origin:"book"; the only teacher-enrichment block is a
-// clarification note on the exercises page (the printed QR codes are not shown in the reader). Wording is kept
-// faithful to the source (verified against the RENDERED pages). ALL numeric/technical strings (binary/decimal/hex,
-// place values, equations) render LTR so RTL never reverses their digit order. NOTHING here goes beyond PDF 22.
+// Faithful native conversion of source PDF pages 14 (unit opener, Phase 3B) + 15–22 (number systems, Phase 3C) +
+// 23 (conversions summary — the Unit-2 closing page, Phase 3D), 1 source page → 1 interactive page. Book-derived
+// blocks are origin:"book"; the only teacher-enrichment block is a clarification note on the exercises page (the
+// printed QR codes are not shown in the reader). Wording is kept faithful to the source (verified against the
+// RENDERED pages). ALL numeric/technical strings (binary/decimal/hex, place values, equations) render LTR so RTL
+// never reverses their digit order.
 //
-// This module stays PARTIAL: its manifest also lists PDF 23 (خلاصة التحويلات — the Unit-2 conversions summary),
-// which this batch does NOT convert, so the reader shows PDF 23 as the professional "قيد الإعداد" state.
+// This module is now COMPLETE: PDF 23 (خلاصة التحويلات) is the last page of Unit 2 (PDF 24 opens Unit 3, عناوين IP),
+// and every page the manifest lists for m02 (PDF 14, 15–22, 23) now has a real body — so `partial` is dropped and an
+// unexpectedly-absent page would again be a genuine integrity error rather than a "قيد الإعداد" state.
 
 import type { ContentModule, ContentSource } from "../../types";
 
@@ -18,8 +20,7 @@ const m02: ContentModule = {
   title: "الأعداد والموازين",
   shortTitle: "الأعداد",
   order: 2,
-  // Still partial: PDF 23 (خلاصة التحويلات) is listed in the manifest but not converted in this batch.
-  partial: true,
+  // Complete: every manifest page of m02 (PDF 14, 15–22, 23) is converted, so no `partial` flag.
   lessons: [
     // ── l00 — unit opener (PDF 14, from Phase 3B) ─────────────────────────────────────────────────────────────
     {
@@ -251,6 +252,37 @@ const m02: ContentModule = {
               id: "m02-l01-p08-qrnote", type: "callout", origin: "teacher-enrichment", kind: "clarification", title: "توضيح المعلم",
               source: src(22, 20),
               spans: [{ text: "رموز التدريبات (QR) موجودة في الكتاب المطبوع وتُفتح بكاميرا الهاتف لحلّها إلكترونيًا؛ تعرض نسخة القراءة قائمة التدريبات فقط." }],
+            },
+          ],
+        },
+        // PDF 23 — خلاصة التحويلات (fills the existing p09 skeleton; the LAST page of Unit 2 — PDF 24 opens Unit 3).
+        // The source's four badge labels use a compact "A ← B" arrow whose direction is bidi-ambiguous under RTL; the
+        // conversion is preserved faithfully using the book's own directional phrasing ("من X إلى Y") so no
+        // technical label can render reversed. The four method bodies and the closing callout are verbatim.
+        {
+          id: "791381-m02-l01-p09",
+          title: "خلاصة التحويلات",
+          order: 9,
+          source: src(23, 21),
+          blocks: [
+            {
+              id: "m02-l01-p09-summary", type: "list", origin: "book", variant: "cards", title: "الطرق الأربع",
+              items: [
+                { id: "m02-l01-p09-b2d", term: "من الثنائي إلى العشري", text: [{ text: "استعمل الصناديق ثم اجمع القيم التي تحتها 1." }] },
+                { id: "m02-l01-p09-d2b", term: "من العشري إلى الثنائي", text: [{ text: "ابنِ العدد من قيم الصناديق ثم اكتب 1 أو 0." }] },
+                { id: "m02-l01-p09-h2b", term: "من Hex إلى الثنائي", text: [{ text: "كل رمز Hex يتحوّل إلى 4 بتات." }] },
+                { id: "m02-l01-p09-b2h", term: "من الثنائي إلى Hex", text: [{ text: "قسّم إلى مجموعات من 4 ثم استعمل الجدول." }] },
+              ],
+            },
+            {
+              id: "m02-l01-p09-why", type: "callout", origin: "book", kind: "important", title: "لماذا هذا مهم؟",
+              spans: [
+                { text: "هذه المهارات أساسية جدًا في أسئلة العناوين " },
+                { text: "IPv4", dir: "ltr", style: "code" },
+                { text: " و " },
+                { text: "IPv6", dir: "ltr", style: "code" },
+                { text: " وقناع الشبكة لاحقًا." },
+              ],
             },
           ],
         },

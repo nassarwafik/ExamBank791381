@@ -33,7 +33,7 @@ describe("Phase 2 — content registry (lazy, module-level chunking)", () => {
     expect(fetchSpy).not.toHaveBeenCalled();
   });
 
-  it("lazily loads a REAL Phase-3B module body (its own chunk) with pages + blocks; m02 is a partial conversion", async () => {
+  it("lazily loads a REAL module body (its own chunk) with pages + blocks; m01 and m02 are both complete", async () => {
     const fetchSpy = vi.spyOn(globalThis, "fetch");
     const m01 = await loadModuleContent("791381", "791381-m01");
     expect(m01.id).toBe("791381-m01");
@@ -42,7 +42,7 @@ describe("Phase 2 — content registry (lazy, module-level chunking)", () => {
     expect(p1?.blocks.length).toBeGreaterThan(0);                      // real block bodies exist
     expect(p1?.source.pdfPageStart).toBe(8);
     const m02 = await loadModuleContent("791381", "791381-m02");
-    expect(m02.partial).toBe(true);                                    // m02 is partially converted
+    expect(m02.partial).toBeFalsy();                                   // m02 completed in Phase 3D (PDF 23 converted)
     expect(fetchSpy).not.toHaveBeenCalled();                          // code-split import only, no network
   });
 

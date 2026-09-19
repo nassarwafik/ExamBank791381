@@ -29,7 +29,7 @@ const flatSpanText = (p: ContentPage): string => {
 };
 
 describe("Phase 3B — pilot passes central validation and is scoped to PDF 7–14", () => {
-  it("the real converted bodies (m01 complete + m02 partial) produce ZERO validation issues", () => {
+  it("the real converted bodies (m01 + m02, both now complete) produce ZERO validation issues", () => {
     expect(validateLearningCourseContent(pilotCourse)).toEqual([]);
   });
 
