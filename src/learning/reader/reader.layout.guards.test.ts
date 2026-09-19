@@ -102,3 +102,72 @@ describe("Reader desktop layout — tables and activities keep their contracts",
     expect(activitiesCss).not.toMatch(/@media \(min-width/);
   });
 });
+
+// ── Source-order contract ──────────────────────────────────────────────────────────────────────────────────────
+// Several desktop declarations target the SAME selectors (same specificity) as base rules written later in the
+// file's history (Phase 3B list / opener, 3C, 3E). CSS resolves such ties by SOURCE ORDER, so a desktop block that
+// sits BEFORE those base rules is silently overridden at ≥1024px (found by the independent review of PR #116).
+// This is not a cascade engine — it protects the one known contract: the desktop media block is the LAST rule set,
+// and every order-sensitive base declaration it overrides appears before it and never after it.
+const DESKTOP_START = css.indexOf("@media (min-width: 1024px)");
+const DESKTOP_OPEN = css.indexOf("{", DESKTOP_START);                 // `desktop` = css.slice(DESKTOP_OPEN + 1, closingBrace)
+const DESKTOP_END = DESKTOP_OPEN + 1 + desktop.length + 1;          // offset just past the block's closing brace
+const esc = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+/** Start offsets of every rule whose selector list is EXACTLY `selector` (a line-leading `selector{`). */
+const rulePositions = (selector: string): number[] =>
+  [...css.matchAll(new RegExp("(?:^|\\n)[ \\t]*" + esc(selector) + "\\s*\\{", "g"))].map(m => m.index + m[0].indexOf(selector));
+const basePositions = (selector: string) => rulePositions(selector).filter(p => p < DESKTOP_START || p > DESKTOP_END);
+const desktopPositions = (selector: string) => rulePositions(selector).filter(p => p > DESKTOP_START && p < DESKTOP_END);
+
+/** Order-sensitive desktop overrides: [selector, property, desktop value, base value it must beat]. */
+const ORDER_SENSITIVE: Array<[string, string, string, string]> = [
+  [".learning-reader-list.variant-cards .learning-reader-list-items", "grid-template-columns", "repeat(auto-fit,minmax(240px,1fr))", "repeat(auto-fit,minmax(200px,1fr))"],
+  [".learning-reader-opener", "gap", "var(--eb-space-6)", "var(--eb-space-4)"],
+  [".learning-reader-opener", "padding", "var(--eb-space-6)var(--eb-space-4)", "var(--eb-space-4)0"],
+  [".learning-reader-opener-number", "font-size", "clamp(96px,10vw,144px)", "clamp(64px,18vw,120px)"],
+  [".learning-reader-opener-title", "font-size", "clamp(32px,3vw,44px)", "clamp(24px,6vw,34px)"],
+  [".learning-reader-opener-subtitle", "font-size", "var(--eb-fs-20)", "var(--eb-fs-16)"],
+  [".learning-reader-main", "max-inline-size", "none", ""],
+  [".learning-reader-page", "padding", "var(--eb-space-6)", "var(--eb-space-4)"],
+  [".learning-reader-page", "min-block-size", "60vh", ""],
+  [".learning-reader-page-title", "font-size", "var(--eb-fs-28)", "var(--eb-fs-20)"],
+];
+const declared = (body: string, prop: string): string | undefined => body.match(new RegExp("(?:^|;)" + esc(prop) + ":([^;]*)"))?.[1];
+
+describe("Reader desktop layout — source order lets the desktop block WIN its same-specificity overrides", () => {
+  it("the desktop media block is the LAST rule set in reader.css (only whitespace/comments may follow it)", () => {
+    expect(DESKTOP_START).toBeGreaterThan(0);
+    expect(css[DESKTOP_END - 1]).toBe("}");
+    expect(css.slice(DESKTOP_END).replace(/\/\*[\s\S]*?\*\//g, "").trim()).toBe("");
+    // it also sits after every base section it overrides: Phase 3B list + opener, 3C ordered list, 3E table direction
+    for (const marker of ["Phase 3B: generic list block", "Phase 3B: unit-opener hero", "Phase 3C: ordered", '.learning-reader-table td[dir="ltr"]', "@media (prefers-reduced-motion: reduce)"]) {
+      expect(css.lastIndexOf(marker), marker).toBeLessThan(DESKTOP_START);
+    }
+  });
+
+  it.each(ORDER_SENSITIVE)("%s { %s } — the desktop declaration comes AFTER the last base declaration and differs from it", (selector, prop, desktopValue, baseValue) => {
+    const base = basePositions(selector);
+    const inDesktop = desktopPositions(selector);
+    expect(base.length, `base rule for ${selector}`).toBeGreaterThan(0);
+    expect(inDesktop.length, `desktop rule for ${selector}`).toBe(1);
+    // ORDER: every base occurrence precedes the desktop override; none follows the media block
+    expect(Math.max(...base)).toBeLessThan(inDesktop[0]);
+    expect(base.some(p => p > DESKTOP_END)).toBe(false);
+    // VALUE: the desktop declaration is the intended one, and the base declares a different value (or none) —
+    // so with correct source order the desktop value is the effective one at ≥1024px
+    expect(declared(rule(desktop, selector), prop)).toBe(desktopValue);
+    const baseBodies = base.map(p => noSpaces(css.slice(css.indexOf("{", p) + 1, css.indexOf("}", p))));
+    const baseDeclared = baseBodies.map(b => declared(b, prop)).filter((v): v is string => v !== undefined);
+    expect(baseDeclared.at(-1) ?? "").toBe(baseValue);
+    expect(baseDeclared).not.toContain(desktopValue);
+  });
+
+  it("the phone baseline is untouched by the move: every base rule still exists exactly once outside the desktop block", () => {
+    for (const [selector] of ORDER_SENSITIVE) {
+      expect(basePositions(selector).length, selector).toBe(1);
+    }
+    expect(mobile).not.toContain("clamp(96px");
+    expect(mobile).not.toContain("minmax(240px, 1fr)");
+    expect(mobile).not.toContain("--eb-fs-28");
+  });
+});
