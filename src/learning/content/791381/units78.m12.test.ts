@@ -89,7 +89,7 @@ describe("m12 — validation, mapping PDF 66–75, completeness, HARD STOP befor
 });
 
 describe("m12 — key source facts in BOOK ORDER (PDF 66–74)", () => {
-  it("PDF 66 opener; PDF 67 three cards + «الفرق الأساسي»; the delivery simulation sits on PDF 67 after all three kinds", () => {
+  it("PDF 66 opener; PDF 67 three cards + «الفرق الأساسي» and the receiver-count rule ONLY — no simulation, no Router-boundary knowledge", () => {
     const o = blockBy(pageBy("791381-m12-l00-p01"), "m12-l00-p01-opener");
     expect(o.type === "unit-opener" && [o.unitLabel, o.unitNumber, o.title, o.subtitle]).toEqual(["الوحدة الثامنة", "08", "أنواع الرسائل", "ما الفرق بين رسالة لجهاز واحد، لمجموعة، أو للجميع؟"]);
     const p = pageBy("791381-m12-l01-p01");
@@ -98,12 +98,23 @@ describe("m12 — key source facts in BOOK ORDER (PDF 66–74)", () => {
       ["Unicast", "رسالة من جهاز واحد إلى جهاز واحد محدّد.", "جهاز واحد فقط يستقبل"], ["Multicast", "رسالة من جهاز واحد إلى مجموعة محدّدة.", "مجموعة محدّدة تستقبل"], ["Broadcast", "رسالة من جهاز واحد إلى جميع الأجهزة.", "الجميع يستقبلون"],
     ]);
     expect(plain(p)).toContain("الفرق هو عدد الأجهزة التي تستقبل الرسالة: واحد، مجموعة، أو الجميع.");
+    // SOURCE ORDER: PDF 67 teaches the receiver-count distinction only. No activity block and no Router-boundary /
+    // "does not cross the router" knowledge (that is PDF 69) may appear here.
+    expect(p.blocks.some(b => ["simulation", "animation", "guided", "interactive-diagram"].includes(b.type))).toBe(false);
+    expect(plain(p)).not.toMatch(/يتوقّف هنا|الراوتر|Router|لا يعبر|لا يمرّر/);
+  });
+  it("PDF 69: the Broadcast source facts, the Router «يتوقّف هنا» boundary and the broadcast MAC come FIRST, THEN exactly one message-delivery/v1 simulation with source PDF 69", () => {
+    const p = pageBy("791381-m12-l01-p03");
+    const sims = p.blocks.filter(b => b.type === "simulation");
+    expect(sims.map(b => b.id)).toEqual(["m12-l01-p03-sim"]);
+    const a = sims[0];
+    expect(a.type === "simulation" && [a.simulationType, a.version, a.origin, a.source?.pdfPageStart, a.source?.printedPage]).toEqual(["message-delivery", 1, "teacher-enrichment", 69, 69]);
     const idx = p.blocks.map(b => b.id);
-    expect(idx.indexOf("m12-l01-p01-sim")).toBeGreaterThan(idx.indexOf("m12-l01-p01-diff"));
-    const a = blockBy(p, "m12-l01-p01-sim");
-    expect(a.type === "simulation" && [a.simulationType, a.version, a.origin, a.source?.pdfPageStart]).toEqual(["message-delivery", 1, "teacher-enrichment", 67]);
+    for (const before of ["m12-l01-p03-def", "m12-l01-p03-facts", "m12-l01-p03-figure", "m12-l01-p03-addr", "m12-l01-p03-remember"]) expect(idx.indexOf(before), before).toBeLessThan(idx.indexOf("m12-l01-p03-sim"));
     const cfg = (a as { config?: { sender: string; receivers: string[]; unicast: { target: string }; multicast: { group: string[] }; broadcast: { router: { stopLabel: string } } } }).config!;
     expect([cfg.sender, cfg.receivers, cfg.unicast.target, cfg.multicast.group, cfg.broadcast.router.stopLabel]).toEqual(["PC1", ["PC2", "PC3", "PC4"], "PC3", ["PC2", "PC4"], "يتوقّف هنا"]);
+    // the simulator exists exactly once in the whole module
+    expect(pages.flatMap(x => x.blocks.filter(b => b.type === "simulation")).length).toBe(1);
   });
   it("PDF 68 examples (browsing / video to subscribers) in prose «من مصدر واحد إلى …» (no arrow glyph) + the Multicast warning", () => {
     const p = pageBy("791381-m12-l01-p02");
@@ -196,7 +207,7 @@ describe("m12 — pedagogy + provenance + LTR + safety", () => {
     for (const id of ["m12-l01-p01-cards", "m12-l01-p01-diff", "m12-l01-p02-cards", "m12-l01-p02-warn", "m12-l01-p03-def", "m12-l01-p03-facts", "m12-l01-p03-addr", "m12-l01-p03-remember", "m12-l02-p01-table", "m12-l02-p01-rule", "m12-l02-p02-table", "m12-l02-p02-remember", "m12-l03-p01-def", "m12-l03-p01-table", "m12-l03-p01-note", "m12-l03-p02-idea", "m12-l03-p02-fields", "m12-l03-p02-unicast", "m12-l03-p03-def", "m12-l03-p03-facts", "m12-l03-p03-mac", "m12-l04-p01-cards", "m12-l04-p01-next"]) {
       expect(pages.flatMap(p => p.blocks).find(b => b.id === id)!.origin, id).toBe("book");
     }
-    for (const id of ["m12-l01-p01-sim", "m12-l02-p01-builder", "m12-l01-p02-clar", "m12-l02-p01-clar", "m12-l02-p02-clar", "m12-l03-p03-clar", "m12-l04-p01-clar", "m12-l03-p02-table", "m12-l03-p03-compare", "m12-l03-p01-ladder"]) {
+    for (const id of ["m12-l01-p03-sim", "m12-l02-p01-builder", "m12-l01-p02-clar", "m12-l02-p01-clar", "m12-l02-p02-clar", "m12-l03-p03-clar", "m12-l04-p01-clar", "m12-l03-p02-table", "m12-l03-p03-compare", "m12-l03-p01-ladder"]) {
       expect(pages.flatMap(p => p.blocks).find(b => b.id === id)!.origin, id).toBe("teacher-enrichment");
     }
     const spans: { text: string; dir?: string }[] = [];

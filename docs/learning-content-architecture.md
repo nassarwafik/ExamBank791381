@@ -1016,7 +1016,10 @@ body has `pdfPageStart >= 76` and a test asserts it.
 - **Transparent normalization (documented, not silent):** PDF 68 prints «مصدر واحد ← هدف واحد» / «مصدر واحد ← مجموعة
   محدّدة» with an arrow glyph; the page renders the same meaning as prose «من مصدر واحد إلى هدف واحد» under the
   permanent «من X إلى Y» rule. PDF 64's facts mention «الطبقة الثانية من نموذج OSI» and PDF 75 names the next batch;
-  both are kept as printed, and nothing from PDF 76+ is taught.
+  both are kept as printed, and nothing from PDF 76+ is taught. **Source order inside the phase is sacred too:** the
+  broadcast MAC on PDF 64 is named exactly as the book names it (m11 never says who receives a broadcast — that is
+  Unit 8), and the message-delivery simulation sits on PDF 69, after the Broadcast / Router-boundary facts, not on
+  PDF 67 where only the receiver-count distinction is taught.
 - **Book level preserved:** no OUI/vendor or bit-level MAC structure; no cable categories, speeds or distances;
   broadcast addresses at whole-octet **/8 /16 /24 only**; storage units by the book's **1024** convention (never 1000);
   RIP v1 = Broadcast / RIP v2 = Multicast exactly as printed.
@@ -1045,7 +1048,7 @@ to **check** («افحص …») and every question carries a hint ladder. Keyed 
 | --- | --- | --- | --- |
 | A — cable comparison / chooser | `interactive-diagram / cable-comparison / 1` | PDF 63 (`m11-l01-p02-chooser`) | `CableComparisonDiagram` — four cable tabs with the book's traits (text list + schematic cross-section), then teacher-enrichment scenarios (classroom / noisy workshop / long fast link / cable TV) with an immediate verdict and «افحص صفات …» on a wrong pick |
 | B — MAC address anatomy | `interactive-diagram / mac-address-anatomy / 1` | PDF 64 (`m11-l02-p01-anatomy`) | `MacAddressAnatomy` — `A0:02:AF:2D:10:22` as six LTR two-digit groups (12 hex digits stated in words), group press names its digits, the broadcast toggle shows `FF:FF:FF:FF:FF:FF` = «للجميع», a "which string has the MAC shape?" task |
-| C — message delivery | `simulation / message-delivery / 1` | PDF 67 (`m12-l01-p01-sim`) | `MessageDeliverySimulation` — Unicast (exactly one receiver), Multicast (the selected group), Broadcast (every local device) from PC1 via Switch; receiver count line; the **Router boundary marked «يتوقّف هنا» in words** — a normal Broadcast never crosses |
+| C — message delivery | `simulation / message-delivery / 1` | PDF 69 (`m12-l01-p03-sim`), after the book's Broadcast + Router-boundary facts | `MessageDeliverySimulation` — Unicast (exactly one receiver), Multicast (the selected group), Broadcast (every local device) from PC1 via Switch; receiver count line; the **Router boundary marked «يتوقّف هنا» in words** — a normal Broadcast never crosses |
 | D — broadcast address builder | `interactive-diagram / broadcast-address / 1` | PDF 70 (`m12-l02-p01-builder`) | `BroadcastAddressBuilder` — the book's five rows as examples (network/host text badges, the resulting address), then guided attempts: toggle host octets to 255 → «تحقّق»; feedback names the octet to check; «أظهر الحل»; /8 /16 /24 only |
 
 Shared contract (tested per renderer): trusted registry key + positive version, statically-authored `import()`

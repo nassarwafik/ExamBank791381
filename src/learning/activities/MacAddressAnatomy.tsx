@@ -8,7 +8,8 @@ import type { LearningActivityProps } from "./engine";
  * The book's example MAC (A0:02:AF:2D:10:22) is shown as an LTR row of SIX two-digit groups. Pressing a group
  * highlights it and names its two hexadecimal digits in a text line (never colour-only); a running count states
  * «6 مجموعات × 2 = 12 منزلة». A toggle swaps the row for the BROADCAST MAC (FF:FF:FF:FF:FF:FF) with its meaning
- * («للجميع»). The book facts (physical / network card / OSI layer 2 / Switch) are listed as text. A small task asks
+ * named exactly as the book names it — no delivery semantics: WHO receives a Broadcast is Unit 8 (PDF 67–69). The
+ * book facts (physical / network card / OSI layer 2 / Switch) are listed as text. A small task asks
  * which of several strings has the MAC SHAPE — twelve hex digits in six colon-separated groups — with an immediate
  * verdict (icon + word) and the authored «why». Strictly the book's level: no OUI/vendor structure, no bit rules.
  * Real <button>s (keyboard + touch, ≥44px, aria-pressed / radio semantics), shell reset (epoch stamp), no timers,
@@ -87,7 +88,7 @@ export default function MacAddressAnatomy({ block, reducedMotion, commands, emit
         <p className="learning-mac-count">{groups.length} مجموعات × 2 = {digits} منزلة سداسية عشرية</p>
         {live.group >= 0 && <p className="learning-mac-line">المجموعة {live.group + 1}: <code dir="ltr">{groups[live.group]}</code> — المنزلتان <code dir="ltr">{groups[live.group][0]}</code> و <code dir="ltr">{groups[live.group][1]}</code></p>}
         {live.broadcast
-          ? <p className="learning-mac-line is-broadcast"><code dir="ltr">{cfg.broadcast}</code>: كل المنازل F — {cfg.broadcastLabel}: الرسالة للجميع داخل الشبكة.</p>
+          ? <p className="learning-mac-line is-broadcast"><code dir="ltr">{cfg.broadcast}</code>: كل المنازل F — هذا هو {cfg.broadcastLabel} في MAC كما يظهر في الكتاب.</p>
           : <p className="learning-mac-line"><code dir="ltr">{cfg.example}</code>: {cfg.normalLabel} واحد.</p>}
       </div>
 

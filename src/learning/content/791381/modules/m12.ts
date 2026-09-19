@@ -89,24 +89,6 @@ const m12: ContentModule = {
               spans: [T("الفرق هو عدد الأجهزة التي تستقبل الرسالة: واحد، مجموعة، أو الجميع.")],
             },
             {
-              // ENRICHMENT — simulation / message-delivery / v1: the page's three figures brought to life. The
-              // Broadcast mode also shows the Router boundary («يتوقّف هنا») that PDF 69 states.
-              id: "m12-l01-p01-sim", type: "simulation", origin: "teacher-enrichment",
-              simulationType: "message-delivery", version: 1,
-              title: "جرّب: من يستقبل الرسالة؟",
-              description: "اختر نوع الرسالة ثم اضغط «أرسل الرسالة» وعدّ الأجهزة التي تستقبلها.",
-              source: src(67, 67),
-              capabilities: { fullscreen: true, reset: true, replay: true, animated: true, interactive: true },
-              fallback: { text: "Unicast: رسالة من جهاز واحد إلى جهاز واحد محدّد، فيستقبلها جهاز واحد فقط. Multicast: رسالة من جهاز واحد إلى مجموعة محدّدة، فتستقبلها المجموعة فقط لا الجميع. Broadcast: رسالة من جهاز واحد إلى جميع الأجهزة داخل الشبكة، والراوتر لا يمرّرها إلى شبكة أخرى. الفرق هو عدد الأجهزة التي تستقبل الرسالة." },
-              config: {
-                sender: "PC1", receivers: ["PC2", "PC3", "PC4"], switchLabel: "Switch",
-                unicast: { target: "PC3", caption: "Unicast: جهاز واحد فقط يستقبل الرسالة." },
-                multicast: { group: ["PC2", "PC4"], caption: "Multicast: المجموعة المحدّدة فقط تستقبل، ولا تصل الرسالة للجميع." },
-                broadcast: { caption: "Broadcast: جميع الأجهزة داخل الشبكة تستقبل الرسالة، والراوتر لا يمرّرها إلى شبكة أخرى.", router: { label: "Router", stopLabel: "يتوقّف هنا", outside: "شبكة أخرى" } },
-                receivesLabel: "يستقبل", notLabel: "لا يستقبل", localLabel: "الشبكة نفسها",
-              },
-            },
-            {
               id: "m12-l01-p01-q1", type: "practice", origin: "teacher-enrichment",
               question: {
                 kind: "multipleChoice", prompt: "رسالة من جهاز واحد إلى جميع الأجهزة. ما نوعها؟",
@@ -229,6 +211,26 @@ const m12: ContentModule = {
             {
               id: "m12-l01-p03-remember", type: "callout", origin: "book", kind: "remember", title: "تذكّر",
               spans: [T("الراوتر لا يمرّر "), L("Broadcast"), T(" عادةً بين الشبكات المختلفة، بل يبقى داخل الشبكة نفسها.")],
+            },
+            {
+              // ENRICHMENT — simulation / message-delivery / v1, placed on PDF 69 (not PDF 67) because its Broadcast mode
+              // shows the Router boundary («يتوقّف هنا») that only THIS page states: the student first learns one /
+              // group / everyone (67), sees the Unicast / Multicast examples (68) and the Broadcast boundary (69), THEN runs
+              // all three modes. Book order is sacred; the simulator exists once.
+              id: "m12-l01-p03-sim", type: "simulation", origin: "teacher-enrichment",
+              simulationType: "message-delivery", version: 1,
+              title: "جرّب: من يستقبل الرسالة؟",
+              description: "اختر نوع الرسالة ثم اضغط «أرسل الرسالة» وعدّ الأجهزة التي تستقبلها.",
+              source: src(69, 69),
+              capabilities: { fullscreen: true, reset: true, replay: true, animated: true, interactive: true },
+              fallback: { text: "Unicast: رسالة من جهاز واحد إلى جهاز واحد محدّد، فيستقبلها جهاز واحد فقط. Multicast: رسالة من جهاز واحد إلى مجموعة محدّدة، فتستقبلها المجموعة فقط لا الجميع. Broadcast: رسالة من جهاز واحد إلى جميع الأجهزة داخل الشبكة، والراوتر لا يمرّرها إلى شبكة أخرى. الفرق هو عدد الأجهزة التي تستقبل الرسالة." },
+              config: {
+                sender: "PC1", receivers: ["PC2", "PC3", "PC4"], switchLabel: "Switch",
+                unicast: { target: "PC3", caption: "Unicast: جهاز واحد فقط يستقبل الرسالة." },
+                multicast: { group: ["PC2", "PC4"], caption: "Multicast: المجموعة المحدّدة فقط تستقبل، ولا تصل الرسالة للجميع." },
+                broadcast: { caption: "Broadcast: جميع الأجهزة داخل الشبكة تستقبل الرسالة، والراوتر لا يمرّرها إلى شبكة أخرى.", router: { label: "Router", stopLabel: "يتوقّف هنا", outside: "شبكة أخرى" } },
+                receivesLabel: "يستقبل", notLabel: "لا يستقبل", localLabel: "الشبكة نفسها",
+              },
             },
             {
               id: "m12-l01-p03-ex1", type: "example", origin: "teacher-enrichment", mode: "solved",

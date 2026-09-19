@@ -114,6 +114,34 @@ describe("m11 — key source facts (rendered PDF 61–65)", () => {
   });
 });
 
+describe("m11 — SOURCE ORDER: PDF 64 names the broadcast MAC, it does NOT teach who receives a broadcast (that is Unit 8, PDF 67–69)", () => {
+  const p64 = pageBy("791381-m11-l02-p01");
+  const p65 = pageBy("791381-m11-l02-p02");
+  const FUTURE = /الرسالة للجميع|لجميع الأجهزة|جميع الأجهزة داخل الشبكة|تصل ل|يستقبل|المجموعة المحدّدة|يتوقّف هنا|Unicast|Multicast/;
+  it("m11 MAY contain «Broadcast» and FF:FF:FF:FF:FF:FF because PDF 64 prints them", () => {
+    expect(plain(p64)).toContain("Broadcast");
+    expect(plain(p64)).toContain(BCAST);
+  });
+  it("the PDF 64 broadcast callout, the MAC anatomy config/fallback and the FF… true/false feedback name the address only — no Unit-8 delivery semantics", () => {
+    for (const id of ["m11-l02-p01-bcast", "m11-l02-p01-anatomy", "m11-l02-p01-q3", "m11-l02-p01-clar", "m11-l02-p01-ex1"]) {
+      expect(JSON.stringify(blockBy(p64, id)), id).not.toMatch(FUTURE);
+    }
+    const q3 = blockBy(p64, "m11-l02-p01-q3");
+    expect(q3.type === "practice" && q3.question.feedback?.correctFeedback).toBe("صحيح — هذا هو عنوان Broadcast في MAC كما يظهر في الكتاب.");
+    const a = blockBy(p64, "m11-l02-p01-anatomy") as { config?: { broadcastLabel?: string }; fallback?: { text?: string } };
+    expect(a.config?.broadcastLabel).toBe("عنوان البث Broadcast");
+    expect(a.fallback?.text).toContain(`عنوان البث Broadcast في MAC هو ${BCAST}.`);
+  });
+  it("the Unit-7 closing review asks WHICH address is the broadcast MAC (source level), never who receives it", () => {
+    const r3 = blockBy(p65, "m11-l02-p02-r3");
+    expect(r3.type === "practice" && r3.question.kind === "multipleChoice" && r3.question.prompt).toBe("سؤال بأسلوب الامتحان: أي من العناوين التالية هو عنوان Broadcast في MAC؟");
+    expect(r3.type === "practice" && r3.question.kind === "multipleChoice" && r3.question.options.map(o => [o.text, Boolean(o.correct)])).toEqual([["A0:02:AF:2D:10:22", false], [BCAST, true], ["192.168.1.255", false]]);
+    for (const id of ["m11-l02-p02-r1", "m11-l02-p02-r2", "m11-l02-p02-r3", "m11-l02-p02-q1", "m11-l02-p02-q2", "m11-l02-p02-ex1"]) expect(JSON.stringify(blockBy(p65, id)), id).not.toMatch(FUTURE);
+    // nowhere in m11 is the Unit-8 claim made
+    expect(JSON.stringify(m11)).not.toMatch(/الرسالة للجميع داخل الشبكة|تصل لجميع الأجهزة داخل الشبكة|إلى من ستصل/);
+  });
+});
+
 describe("m11 — pedagogy + provenance + LTR + safety", () => {
   it("3 solved examples, 1 cable matching worksheet, 13 inline practices (incl. a 3-question closing review) with «افحص» feedback + hints; every enrichment block is marked", () => {
     const ex = pages.flatMap(p => p.blocks.filter(b => b.type === "example"));

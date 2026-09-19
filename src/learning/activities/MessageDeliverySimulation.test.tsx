@@ -13,7 +13,7 @@ afterEach(() => { cleanup(); vi.useRealTimers(); });
 
 const block: SimulationBlock = {
   id: "msg1", type: "simulation", origin: "teacher-enrichment", simulationType: "message-delivery", version: 1,
-  title: "جرّب: من يستقبل الرسالة؟", source: { kind: "book", sourceId: "791381", pdfPageStart: 67 },
+  title: "جرّب: من يستقبل الرسالة؟", source: { kind: "book", sourceId: "791381", pdfPageStart: 69 },   // PDF 69: where the Router boundary is taught
   capabilities: { fullscreen: true, reset: true, replay: true, animated: true },
   fallback: { text: "Unicast: جهاز واحد. Multicast: مجموعة محدّدة. Broadcast: جميع الأجهزة داخل الشبكة، والراوتر لا يمرّرها." },
   config: {

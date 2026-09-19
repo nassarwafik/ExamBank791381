@@ -6,11 +6,10 @@
 //   - Content supplies only a registry KEY (a plain string) + opaque `config` DATA — never a component name,
 //     function, module path, or executable code. There is no eval, no new Function, and no dynamic import of a
 //     string taken from content. A renderer is reached ONLY through a statically-authored `load` thunk.
-//   - The registry is TRUSTED code in this repo. The production registry is an EXACT six-entry allowlist
-//     (interactive-diagram: network-scope/v1, ipv4-octets/v1, cidr-network-host/v1, network-topologies/v1;
-//     animation: gateway-flow/v1; simulation: hub-switch-router-flow/v1); any descriptor without a trusted renderer
-//     for its exact identity renders its faithful static fallback, and an activity chunk is loaded only when a
-//     matching descriptor renders. Generic built-in presenters (builtins.ts)
+//   - The registry is TRUSTED code in this repo. The production registry is an EXACT allowlist — every entry is
+//     enumerated in `productionActivityRegistry` below and pinned by engine.test.ts / activities.guards.test.ts
+//     (ten entries at the Units 7–8 phase); any descriptor without a trusted renderer for its exact identity
+//     renders its faithful static fallback, and an activity chunk is loaded only when a matching descriptor renders. Generic built-in presenters (builtins.ts)
 //     resolve with the same {kind, key, version} discipline — never by block type alone.
 //   - The engine performs ZERO persistence and ZERO network: the only sink shipped is a no-op (no progress, no
 //     grades, no rank, no /api). Progress is a separate later domain.
@@ -101,7 +100,7 @@ export interface LearningActivityRegistry {
   has(kind: ActivityBlockType, key: string): boolean;
   /** All registered {kind, key, versions} for diagnostics/tests. Pure; triggers no component import. */
   list(): { kind: ActivityBlockType; key: string; versions: readonly number[] }[];
-  /** Number of registered entries (production is 0). */
+  /** Number of registered entries (the production allowlist is pinned by tests; 0 for an empty test registry). */
   readonly size: number;
 }
 
@@ -153,9 +152,10 @@ export function createActivityRegistry(entries: readonly RegisteredActivity[]): 
 
 /**
  * The PRODUCTION activity registry for REGISTRY-BACKED renderers (real simulations / animations / interactive
- * diagrams). It is an EXACT six-entry allowlist: interactive-diagram/network-scope/v1 (Phase 3B),
- * interactive-diagram/ipv4-octets/v1 (Phase 3E), interactive-diagram/cidr-network-host/v1, animation/gateway-flow/v1,
- * simulation/hub-switch-router-flow/v1 and interactive-diagram/network-topologies/v1 (Units 4–6) — each behind a
+ * diagrams). It is an EXACT allowlist of the entries below — ten at the Units 7–8 phase: interactive-diagram
+ * network-scope/v1 (Phase 3B), ipv4-octets/v1 (Phase 3E), cidr-network-host/v1 and network-topologies/v1 (Units 4–6),
+ * cable-comparison/v1, mac-address-anatomy/v1 and broadcast-address/v1 (Units 7–8); animation gateway-flow/v1
+ * (Units 4–6); simulation hub-switch-router-flow/v1 (Units 4–6) and message-delivery/v1 (Units 7–8) — each behind a
  * code-split `load` thunk, so a chunk is imported only when a matching descriptor renders. Any other descriptor
  * renders its faithful static fallback. The generic BUILT-IN presenters (see builtins.ts — currently only
  * guided/reveal/v1) are resolved separately with the same identity discipline. New renderers are registered here;
@@ -163,8 +163,8 @@ export function createActivityRegistry(entries: readonly RegisteredActivity[]): 
  */
 export const productionActivityRegistry: LearningActivityRegistry = createActivityRegistry([
   // Phase 3B — the FIRST real registry-backed production activity (the PAN/LAN/WAN scope diagram for PDF 11).
-  // Loaded lazily as its own chunk only when a matching descriptor renders. This is an interactive DIAGRAM, not a
-  // simulation/animation — there are still ZERO real simulation/animation renderers registered.
+  // Loaded lazily as its own chunk only when a matching descriptor renders. An interactive DIAGRAM (the first
+  // simulation / animation renderers arrived later, in the Units 4–6 phase).
   {
     kind: "interactive-diagram",
     key: "network-scope",
@@ -174,7 +174,7 @@ export const productionActivityRegistry: LearningActivityRegistry = createActivi
   },
   // Phase 3E — the SECOND registry-backed production activity: the four-octet IPv4 structure diagram for PDF 27.
   // Also an interactive DIAGRAM (select one of four parts; no validity rules, no CIDR/subnet/class, no input, no
-  // scoring). Its own lazy chunk. Still ZERO simulation/animation/CLI renderers.
+  // scoring). Its own lazy chunk. No CLI renderer exists in any phase.
   {
     kind: "interactive-diagram",
     key: "ipv4-octets",

@@ -66,14 +66,16 @@ describe("behaviour", () => {
     expect(fetchSpy).not.toHaveBeenCalled();
   });
 
-  it("the broadcast toggle shows FF:FF:FF:FF:FF:FF (LTR) with its meaning «للجميع»; switching back restores the example", async () => {
+  it("the broadcast toggle shows FF:FF:FF:FF:FF:FF (LTR) named as the book names it — NO Unit-8 delivery semantics; switching back restores the example", async () => {
     const { container } = await mount();
     fireEvent.click(screen.getByRole("radio", { name: "عنوان البث Broadcast" }));
     expect(groups(container)).toEqual(["FF", "FF", "FF", "FF", "FF", "FF"]);
     expect(container.querySelector(".learning-mac-row")!.getAttribute("aria-label")).toBe(BCAST);
     const line = container.querySelector(".learning-mac-line.is-broadcast")!;
     expect(line.textContent).toContain("كل المنازل F");
-    expect(line.textContent).toContain("الرسالة للجميع داخل الشبكة");
+    expect(line.textContent).toContain("هذا هو عنوان البث Broadcast في MAC كما يظهر في الكتاب.");
+    // source order: PDF 64 names the broadcast MAC; WHO receives a broadcast is taught in Unit 8 (PDF 67–69)
+    expect(container.textContent).not.toMatch(/للجميع|جميع الأجهزة|تصل ل/);
     expect(line.querySelector("code")!.getAttribute("dir")).toBe("ltr");
     expect(container.querySelector(".learning-mac")!.getAttribute("data-broadcast")).toBe("true");
     fireEvent.click(screen.getByRole("radio", { name: "عنوان جهاز" }));

@@ -86,7 +86,7 @@ const m11: ContentModule = {
             },
             {
               id: "m11-l01-p01-clar", type: "callout", origin: "teacher-enrichment", kind: "clarification", title: "توضيح",
-              spans: [T("«زوج ملتوي» يعني أسلاكًا نحاسية ملفوفة معًا داخل الكابل. الفرق الوحيد بين "), L("UTP"), T(" و "), L("STP"), T(" هو طبقة الحماية المعدنية: بدونها الكابل أرخص، ومعها يصدّ التشويش الخارجي أفضل.")],
+              spans: [T("«زوج ملتوي» يعني أسلاكًا نحاسية ملفوفة معًا داخل الكابل. في مستوى هذه الوحدة، الفرق الذي نركّز عليه بين "), L("UTP"), T(" و "), L("STP"), T(" هو وجود طبقة الحماية المعدنية: بدونها الكابل أرخص، ومعها يصدّ التشويش الخارجي أفضل.")],
             },
             {
               id: "m11-l01-p01-ex1", type: "example", origin: "teacher-enrichment", mode: "solved",
@@ -329,7 +329,7 @@ const m11: ContentModule = {
                 answer: true,
                 feedback: {
                   hints: ["افحص صندوق «عنوان البث» في الصفحة.", "كل المنازل F."],
-                  correctFeedback: "صحيح — FF:FF:FF:FF:FF:FF يعني: الرسالة للجميع.",
+                  correctFeedback: "صحيح — هذا هو عنوان Broadcast في MAC كما يظهر في الكتاب.",
                   incorrectFeedback: "افحص صندوق «عنوان البث»: ما العنوان المكتوب فيه؟",
                   explanation: "عنوان Broadcast في MAC هو FF:FF:FF:FF:FF:FF.",
                 },
@@ -343,7 +343,7 @@ const m11: ContentModule = {
                 feedback: {
                   hints: ["افحص آخر سطر في قائمة الصفحة.", "الجهاز الذي يرسل للمقصود فقط."],
                   correctFeedback: "أحسنت — Switch يستخدم MAC لمعرفة الجهاز المقصود.",
-                  incorrectFeedback: "افحص القائمة: «يستخدمه … لمعرفة الجهاز المقصود» — الجهاز الذي لا يرسل للجميع.",
+                  incorrectFeedback: "افحص القائمة: «يستخدمه … لمعرفة الجهاز المقصود» — الجهاز الذي تعلّمت في الوحدة الخامسة أنه يعرف الجهاز المقصود.",
                   explanation: "Switch يعرف الجهاز المقصود من عنوان MAC، لذلك يرسل له وحده.",
                 },
               },
@@ -443,13 +443,13 @@ const m11: ContentModule = {
             {
               id: "m11-l02-p02-r3", type: "practice", origin: "teacher-enrichment",
               question: {
-                kind: "multipleChoice", prompt: "سؤال بأسلوب الامتحان: رسالة وُضع في حقل MAC الهدف فيها FF:FF:FF:FF:FF:FF. إلى من ستصل داخل الشبكة؟",
-                options: [opt("m11-l02-p02-r3-a", "إلى جهاز واحد محدّد"), opt("m11-l02-p02-r3-b", "إلى جميع الأجهزة داخل الشبكة", true), opt("m11-l02-p02-r3-c", "إلى الراوتر فقط")],
+                kind: "multipleChoice", prompt: "سؤال بأسلوب الامتحان: أي من العناوين التالية هو عنوان Broadcast في MAC؟",
+                options: [opt("m11-l02-p02-r3-a", "A0:02:AF:2D:10:22"), opt("m11-l02-p02-r3-b", "FF:FF:FF:FF:FF:FF", true), opt("m11-l02-p02-r3-c", "192.168.1.255")],
                 feedback: {
-                  hints: ["ما اسم هذا العنوان في صفحة MAC؟", "البث = للجميع."],
-                  correctFeedback: "أحسنت — FF:FF:FF:FF:FF:FF هو عنوان البث، فتصل الرسالة لجميع الأجهزة داخل الشبكة.",
-                  incorrectFeedback: "افحص صندوق «عنوان البث»: كلمة «بث» تعني الإرسال للجميع لا لجهاز واحد.",
-                  explanation: "عنوان Broadcast في MAC = الرسالة لجميع الأجهزة داخل الشبكة.",
+                  hints: ["افحص صندوق «عنوان البث» في صفحة MAC.", "عنوان MAC يتكوّن من 12 منزلة سداسية عشرية، وعنوان البث كل منازله F."],
+                  correctFeedback: "أحسنت — FF:FF:FF:FF:FF:FF هو عنوان Broadcast في MAC كما في الكتاب.",
+                  incorrectFeedback: "افحص الشكل أولًا: 192.168.1.255 عنوان بصيغة IP لا MAC، و A0:02:AF:2D:10:22 هو مثال الكتاب لعنوان جهاز عادي.",
+                  explanation: "عنوان Broadcast في MAC هو FF:FF:FF:FF:FF:FF (صفحة MAC Address).",
                 },
               },
             },

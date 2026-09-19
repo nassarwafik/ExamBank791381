@@ -2,7 +2,8 @@ import { useEffect, useMemo, useState } from "react";
 import type { LearningActivityProps } from "./engine";
 
 /**
- * Units 7–8 phase — `simulation / message-delivery / v1` (Book 791381 PDF 67–69): the Unit-8 simulation.
+ * Units 7–8 phase — `simulation / message-delivery / v1` (Book 791381, placed on PDF 69 after the Broadcast /
+ * Router-boundary facts; it exercises the concepts of PDF 67–69): the Unit-8 simulation.
  *
  * The student picks a message kind (Unicast / Multicast / Broadcast) and presses «أرسل الرسالة». The message
  * travels from the sender to the Switch and then to the receivers the kind allows, and the diagram shows WHO
