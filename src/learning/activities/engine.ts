@@ -198,4 +198,14 @@ export const productionActivityRegistry: LearningActivityRegistry = createActivi
     load: () => import("./GatewayFlowAnimation"),
     capabilities: { fullscreen: true, reset: true, replay: true, animated: true, interactive: true },
   },
+  // Units 4–6 phase — Unit 5 (PDF 49): the FIRST simulation renderer — Hub broadcasts to every attached device,
+  // Switch delivers to the intended device only, Router carries traffic between two networks (and out). Stepped,
+  // text-mirrored, reduced-motion aware, conceptual only. Its own lazy chunk.
+  {
+    kind: "simulation",
+    key: "hub-switch-router-flow",
+    versions: [1],
+    load: () => import("./HubSwitchRouterFlow"),
+    capabilities: { fullscreen: true, reset: true, replay: true, animated: true, interactive: true },
+  },
 ]);

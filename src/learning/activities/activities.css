@@ -341,3 +341,34 @@
 .learning-gateway-caption{ margin:0; padding:var(--eb-space-2) var(--eb-space-3); border-radius:var(--eb-r); background:var(--eb-primary-050); color:var(--eb-text-heading); font-size:var(--eb-fs-14); line-height:var(--eb-lh-body); }
 .learning-gateway-hint, .learning-gateway-empty{ margin:0; color:var(--eb-muted); font-size:var(--eb-fs-12); }
 .learning-gateway[data-reduced-motion="true"] .learning-gateway-edge, .learning-gateway[data-reduced-motion="true"] .learning-gateway-packet{ transition:none; }
+
+/* ── Units 4–6: hub-switch-router-flow simulation ───────────────────────────────────────────────────────────── */
+.learning-devices{ display:flex; flex-direction:column; gap:var(--eb-space-3); }
+.learning-devices-controls{ display:flex; flex-wrap:wrap; align-items:center; gap:var(--eb-space-2); }
+.learning-devices-modes{ display:flex; flex-wrap:wrap; gap:var(--eb-space-1); flex:1 1 auto; }
+.learning-devices-mode{ min-height:44px; min-width:80px; padding:var(--eb-space-1) var(--eb-space-3); border:1px solid var(--eb-line-2); border-radius:var(--eb-r); background:var(--eb-surface); font:inherit; font-weight:var(--eb-fw-bold); color:var(--eb-text-heading); cursor:pointer; }
+.learning-devices-mode.is-active{ border-color:var(--eb-primary); background:var(--eb-primary-050); }
+.learning-devices-mode:focus-visible, .learning-devices-send:focus-visible{ outline:2px solid var(--eb-primary); outline-offset:2px; }
+.learning-devices-send{ min-height:44px; }
+.learning-devices-stage{ width:100%; max-width:480px; height:auto; margin-inline:auto; direction:ltr; }
+.learning-devices-lan{ fill:var(--eb-primary-050); stroke:var(--eb-primary); stroke-width:1.5; stroke-dasharray:5 4; }
+.learning-devices-lanlabel{ font-size:9px; fill:var(--eb-primary-strong); font-weight:700; }
+.learning-devices-edge{ stroke:var(--eb-line-2); stroke-width:2; transition:stroke var(--eb-dur) var(--eb-ease), stroke-width var(--eb-dur) var(--eb-ease); }
+.learning-devices-edge.is-on{ stroke:var(--eb-primary); stroke-width:4; }
+.learning-devices-center{ fill:var(--eb-primary-050); stroke:var(--eb-primary); stroke-width:2; }
+.learning-devices-shape{ fill:var(--eb-surface); stroke:var(--eb-text-heading); stroke-width:1.5; }
+.learning-devices-node.is-reached .learning-devices-shape{ stroke:var(--eb-primary); stroke-width:3; }
+.learning-devices-node.is-target .learning-devices-shape{ stroke-dasharray:3 2; }
+.learning-devices-label{ font-size:9px; fill:var(--eb-text-heading); font-weight:700; }
+.learning-devices-outcome{ font-size:8px; fill:var(--eb-text-secondary); font-weight:700; }
+.learning-devices-packet{ fill:var(--eb-primary); stroke:var(--eb-surface); stroke-width:2; transition:cx var(--eb-dur) var(--eb-ease), cy var(--eb-dur) var(--eb-ease); }
+.learning-devices-steps{ margin:0; padding:0; list-style:none; display:flex; flex-direction:column; gap:4px; }
+.learning-devices-step{ display:flex; align-items:center; gap:var(--eb-space-2); color:var(--eb-muted); font-size:var(--eb-fs-14); }
+.learning-devices-step.is-done{ color:var(--eb-text-heading); font-weight:var(--eb-fw-semibold); }
+.learning-devices-stepno{ width:22px; height:22px; display:inline-flex; align-items:center; justify-content:center; border-radius:50%; background:var(--eb-surface-2); color:var(--eb-text-secondary); font-size:var(--eb-fs-12); font-weight:var(--eb-fw-bold); }
+.learning-devices-step.is-done .learning-devices-stepno{ background:var(--eb-primary); color:#fff; }
+.learning-devices-result{ display:flex; flex-direction:column; gap:var(--eb-space-2); padding:var(--eb-space-2) var(--eb-space-3); border-radius:var(--eb-r); background:var(--eb-primary-050); }
+.learning-devices-outcomes{ margin:0; padding:0; list-style:none; display:flex; flex-wrap:wrap; gap:var(--eb-space-2); color:var(--eb-text-heading); font-size:var(--eb-fs-14); font-weight:var(--eb-fw-semibold); }
+.learning-devices-caption{ margin:0; color:var(--eb-text); font-size:var(--eb-fs-14); line-height:var(--eb-lh-body); }
+.learning-devices-hint, .learning-devices-empty{ margin:0; color:var(--eb-muted); font-size:var(--eb-fs-12); }
+.learning-devices[data-reduced-motion="true"] .learning-devices-edge, .learning-devices[data-reduced-motion="true"] .learning-devices-packet{ transition:none; }

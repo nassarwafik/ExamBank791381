@@ -197,6 +197,53 @@ const manifest: LearningCourseManifest = {
       ],
     },
     {
+      // Units 4–6 phase: the book's REAL Unit 5 «أجهزة الشبكات» (PDF 48–56), complete. PDF 47 (the batch-2 divider) is
+      // structural — represented on the module body's source range, never as a learner page. Stable id m09, order 5.
+      id: "791381-m09",
+      title: "أجهزة الشبكات",
+      shortTitle: "أجهزة الشبكات",
+      order: 5,
+      lessons: [
+        {
+          id: "791381-m09-l00",
+          title: "افتتاحية الوحدة",
+          order: 0,
+          pages: [
+            { id: "791381-m09-l00-p01", title: "أجهزة الشبكات", order: 1, source: { kind: "book", sourceId: "791381", pdfPageStart: 48 }, keywords: ["مقدمة", "الوحدة الخامسة", "Hub", "Switch", "Router"] },
+          ],
+        },
+        {
+          id: "791381-m09-l01",
+          title: "Hub و Switch",
+          order: 1,
+          pages: [
+            { id: "791381-m09-l01-p01", title: "الأجهزة المستعملة في الشبكات", order: 1, source: { kind: "book", sourceId: "791381", pdfPageStart: 49, printedPage: 49 }, keywords: ["Hub", "Switch", "Router"] },
+            { id: "791381-m09-l01-p02", title: "جهاز Hub", order: 2, source: { kind: "book", sourceId: "791381", pdfPageStart: 50, printedPage: 50 }, keywords: ["Hub", "ازدحام"] },
+            { id: "791381-m09-l01-p03", title: "لماذا استُبدل Hub بـ Switch؟", order: 3, source: { kind: "book", sourceId: "791381", pdfPageStart: 51, printedPage: 51 }, keywords: ["Hub", "Switch", "مقارنة"] },
+            { id: "791381-m09-l01-p04", title: "جهاز Switch", order: 4, source: { kind: "book", sourceId: "791381", pdfPageStart: 52, printedPage: 52 }, keywords: ["Switch", "MAC", "LAN"] },
+            { id: "791381-m09-l01-p05", title: "مميزات Switch", order: 5, source: { kind: "book", sourceId: "791381", pdfPageStart: 53, printedPage: 53 }, keywords: ["Switch", "مميزات"] },
+          ],
+        },
+        {
+          id: "791381-m09-l02",
+          title: "Router",
+          order: 2,
+          pages: [
+            { id: "791381-m09-l02-p01", title: "جهاز Router", order: 1, source: { kind: "book", sourceId: "791381", pdfPageStart: 54, printedPage: 54 }, keywords: ["Router", "الإنترنت", "DHCP"] },
+            { id: "791381-m09-l02-p02", title: "أهم خصائص Router", order: 2, source: { kind: "book", sourceId: "791381", pdfPageStart: 55, printedPage: 55 }, keywords: ["Router", "NAT", "DHCP", "توجيه"] },
+          ],
+        },
+        {
+          id: "791381-m09-l03",
+          title: "خلاصة الأجهزة",
+          order: 3,
+          pages: [
+            { id: "791381-m09-l03-p01", title: "خلاصة الأجهزة", order: 1, source: { kind: "book", sourceId: "791381", pdfPageStart: 56, printedPage: 56 }, keywords: ["خلاصة", "Hub", "Switch", "Router"] },
+          ],
+        },
+      ],
+    },
+    {
       // Historical Phase-2 skeleton (PDF 123+). Its ID and source mappings are immutable; only its reading `order`
       // shifts as real units are converted (3 → 4 in Phase 3E; 4 → 7 when Units 4–6 became m08–m10).
       id: "791381-m03",
@@ -273,7 +320,7 @@ const manifest: LearningCourseManifest = {
   batches: [
     { id: "intro", label: "المقدمة", moduleIds: [] },
     { id: "b1", label: "الأساسيات · الأعداد · IP", moduleIds: ["791381-m01", "791381-m02", "791381-m07", "791381-m08"] },
-    { id: "b2", label: "الأجهزة والرسائل", moduleIds: [] },
+    { id: "b2", label: "الأجهزة والرسائل", moduleIds: ["791381-m09"] },
     { id: "b3", label: "النماذج والبروتوكولات والأمان", moduleIds: [] },
     { id: "b4", label: "برمجة السويتش و VLAN", moduleIds: ["791381-m03", "791381-m04", "791381-m05"] },
     { id: "b5", label: "الأمان · Wi-Fi · IPv6 · DHCP", moduleIds: [] },

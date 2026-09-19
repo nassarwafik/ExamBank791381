@@ -11,19 +11,20 @@ const nullComponent: ActivityComponent = () => null;
 const noop = async () => ({ default: nullComponent });
 
 describe("production activity registry is an EXACT allowlist (3B, 3E and the Units 4–6 renderers)", () => {
-  it("registers ONLY network-scope/v1, ipv4-octets/v1, cidr-network-host/v1 and gateway-flow/v1", () => {
+  it("registers ONLY network-scope/v1, ipv4-octets/v1, cidr-network-host/v1, gateway-flow/v1 and hub-switch-router-flow/v1", () => {
     expect(productionActivityRegistry.list()).toEqual([
       { kind: "interactive-diagram", key: "network-scope", versions: [1] },
       { kind: "interactive-diagram", key: "ipv4-octets", versions: [1] },
       { kind: "interactive-diagram", key: "cidr-network-host", versions: [1] },
       { kind: "animation", key: "gateway-flow", versions: [1] },
+      { kind: "simulation", key: "hub-switch-router-flow", versions: [1] },
     ]);
-    expect(productionActivityRegistry.size).toBe(4);
+    expect(productionActivityRegistry.size).toBe(5);
     expect(productionActivityRegistry.has("interactive-diagram", "network-scope")).toBe(true);
     expect(productionActivityRegistry.has("interactive-diagram", "ipv4-octets")).toBe(true);
   });
-  it("registers ZERO simulation renderers and exactly ONE animation (gateway-flow); no CLI/VLAN/subnet renderer", () => {
-    expect(productionActivityRegistry.list().filter(e => e.kind === "simulation")).toEqual([]);
+  it("registers exactly ONE simulation (hub-switch-router-flow) and ONE animation (gateway-flow); no CLI/VLAN/subnet renderer", () => {
+    expect(productionActivityRegistry.list().filter(e => e.kind === "simulation").map(e => e.key)).toEqual(["hub-switch-router-flow"]);
     expect(productionActivityRegistry.list().filter(e => e.kind === "animation").map(e => e.key)).toEqual(["gateway-flow"]);
     expect(productionActivityRegistry.resolve(simBlock)).toBeUndefined();   // no simulation renderer
     expect(productionActivityRegistry.has("simulation", "vlan")).toBe(false);
