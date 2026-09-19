@@ -26,6 +26,10 @@ export type StudentCard = {
   studentId: string;
   displayName: string;
   code: string;
+  /** Project performance (additive): grade /100, project Strength /600 and its tier — absent on older payloads. */
+  grade?: number;
+  projectStrength?: number;
+  projectTier?: ProjectRankTier;
   overallProgress: number;
   trackProgress: Record<string, number>;
   counts: StatusCounts;
@@ -57,9 +61,26 @@ export type ClassSummary = {
   staleDays: number;
 };
 
-export type StageProgressEntry = { status: StageStatus; note?: string; updatedAt?: string; approvedAt?: string; approvedBy?: string };
+/** `score` (teacher-only quality mark 0–100) is additive/optional; status (workflow) and score (quality) are separate. */
+export type StageProgressEntry = { status: StageStatus; note?: string; score?: number | null; updatedAt?: string; approvedAt?: string; approvedBy?: string };
 
-export type HistoryEvent = { eventId: string; stageId: string; type: "status" | "note"; fromStatus?: StageStatus; toStatus?: StageStatus; actor: string; createdAt: string };
+export type HistoryEvent = { eventId: string; stageId: string; type: "status" | "note" | "score"; fromStatus?: StageStatus; toStatus?: StageStatus; fromScore?: number | null; toScore?: number | null; actor: string; createdAt: string };
+
+/** One stage's project value as the server computed it (only stages that carry project value are listed). */
+export type StageValue = { stageId: string; track: string; status: StageStatus; score: number | null; maxContribution: number; contribution: number; counted: boolean };
+/**
+ * Project performance for ONE student in ONE project — the server's `performance` (api/src/lib/project-tracker/
+ * performance.js): grade /100 (approved stages' weighted scores), progress (canonical summary), project-specific
+ * Strength /600 with its six-band tier. Display-only on the client; nothing here is recomputed.
+ */
+export type ProjectPerformance = {
+  overallProgress: number; grade: number; gradePrecise: number;
+  projectStrength: number; maxStrength: number;
+  tier: ProjectRankTier; level: number; nextTier: ProjectRankTier | null;
+  complete: boolean;
+  stageValues: Record<string, StageValue>;
+};
+export type ProjectRankTier = "beginner" | "bronze" | "silver" | "gold" | "diamond" | "legendary";
 
 export type BalanceInsight = { leadingTrackId: string; leadingTrackTitle: string; laggingTrackId: string; laggingTrackTitle: string; diff: number } | null;
 
@@ -78,6 +99,8 @@ export type StudentDetail = {
   history: HistoryEvent[];
   nextStages: Record<string, ProjectStage | null>;
   balance: BalanceInsight;
+  /** Additive: absent on older payloads. */
+  performance?: ProjectPerformance;
 };
 
 export type ProjectAnalytics = {

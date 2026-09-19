@@ -785,7 +785,8 @@ function TeacherPlatform(props:TeacherPlatformProps){
    classes={classes.filter(c=>isActiveClass(c)||c.classId===(editingStudent?.classId||""))}
    firstName={editFirstName} familyName={editFamilyName} identityNumber={editIdentityNumber} classId={editClassId} password={editPassword}
    onFirstName={setEditFirstName} onFamilyName={setEditFamilyName} onIdentityNumber={v=>setEditIdentityNumber(onlyDigits(v))} onClassId={setEditClassId} onPassword={setEditPassword}
-   canSubmit={canSaveEdit} onSubmit={()=>void saveStudentEdit()} busy={actionBusy}/>
+   canSubmit={canSaveEdit} onSubmit={()=>void saveStudentEdit()} busy={actionBusy}
+   photo={editingStudent?{token,student:editingStudent,onChange:meta=>{const userId=editingStudent.userId;setEditingStudent(prev=>prev&&prev.userId===userId?{...prev,profilePhoto:meta}:prev);setStudents(prev=>mergeStudentRow(prev,{userId,profilePhoto:meta}));}}:undefined}/>
 
   {profileBusy&&<div className="platform-loading" role="status">جارٍ تحميل ملف الطالب...</div>}
   {profile&&<StudentDialog profile={profile} section={profileSection} onClose={()=>{clearPasswordReveal();setProfile(null);setHistoryDeadlineFor(null)}}

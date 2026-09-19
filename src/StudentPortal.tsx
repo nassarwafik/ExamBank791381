@@ -15,6 +15,7 @@ import AchievementFeed from "./student/AchievementFeed";
 import AvatarPickerDialog from "./student/AvatarPickerDialog";
 import { FILTERS, matchesFilter, medalsFor, nowItems, sortTaskFirst, type PortalFilter } from "./student/portalPresentation";
 import { normalizeStrength, progressPresentationFromStrength, rankPresentationFromStrength } from "./student/strengthPresentation";
+import { normalizeRecognition } from "./student/recognitionPresentation";
 import type { Dashboard, Detail, Summary } from "./student/types";
 
 type Props = { token: string; displayName: string; onLogout: () => void };
@@ -48,7 +49,7 @@ export default function StudentPortal({ token, displayName, onLogout }: Props) {
       const r = await fetch("/api/student-dashboard", { headers }), j = await r.json() as any;
       if (r.status === 401) { onLogout(); return; }
       if (!r.ok || !j.student || !j.stats) throw new Error(j.error || "تعذر تحميل صفحة الطالب.");
-      setData({ student: j.student, classroom: j.classroom || null, assignments: j.assignments || [], stats: j.stats, strength: normalizeStrength(j.strength, j.stats?.finalized) });
+      setData({ student: j.student, classroom: j.classroom || null, assignments: j.assignments || [], stats: j.stats, strength: normalizeStrength(j.strength, j.stats?.finalized), recognition: normalizeRecognition(j.recognition) });
     } catch (e) { setError(e instanceof Error ? e.message : "تعذر تحميل الصفحة."); }
     finally { setLoading(false); }
   }
@@ -158,11 +159,11 @@ export default function StudentPortal({ token, displayName, onLogout }: Props) {
         {error && <div className="platform-error" role="alert">{error}</div>}
         {!loading && data && stats && (
           <>
-            <StudentIdentityCard student={data.student} classroom={data.classroom} displayName={displayName} rank={rank} onChangeAvatar={() => setAvatarPickerOpen(true)} />
-            <AvatarPickerDialog open={avatarPickerOpen} current={data.student.avatarId} saving={avatarSaving} onPick={pickAvatar} onClose={() => setAvatarPickerOpen(false)} />
+            <StudentIdentityCard student={data.student} classroom={data.classroom} displayName={displayName} rank={rank} token={token} onChangeAvatar={() => setAvatarPickerOpen(true)} />
+            <AvatarPickerDialog open={avatarPickerOpen} current={data.student.avatarId} saving={avatarSaving} photoManaged={!!data.student.profilePhoto} onPick={pickAvatar} onClose={() => setAvatarPickerOpen(false)} />
             <NowSection actionable={now_.actionable} upcoming={now_.upcoming} busy={busy} onOpen={open} />
             <StudentLearningMaterials token={token} onOpen={course => { setReaderCourse(course); window.scrollTo({ top: 0, behavior: reducedMotion ? "auto" : "smooth" }); }} />
-            <StudentProgressSection stats={stats} medals={medals} rank={rank} progress={progress} strength={strength} averageFinalized={averageFinalized} />
+            <StudentProgressSection stats={stats} medals={medals} rank={rank} progress={progress} strength={strength} recognition={data?.recognition ?? null} averageFinalized={averageFinalized} />
             <section className="eb-sp-panel" aria-labelledby="eb-sp-tasks-title">
               <SectionHeader level={2} id="eb-sp-tasks-title" title="المهام والواجبات" count={visible.length} description="كل واجباتك ونتائجك؛ ما يحتاج إجراءً يظهر أولًا." />
               <div className="eb-sp-filters" role="group" aria-label="تصفية المهام">

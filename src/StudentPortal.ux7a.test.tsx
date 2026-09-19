@@ -150,7 +150,7 @@ describe("UX-7a StudentPortal — hierarchy and the primary section", () => {
     expect(document.querySelectorAll("h1").length).toBe(1);                                         // the shell's brand title only
     expect(document.querySelector(".eb-sp h1")).toBeNull();
     const h2s = Array.from(document.querySelectorAll(".eb-sp h2")).map(h => h.textContent?.replace(/\d+$/, "").trim());
-    expect(h2s).toEqual(["مرحبًا أحمد", "ماذا عليّ أن أفعل الآن؟", "موادي التعليمية", "تقدّمي", "المهام والواجبات", "مشاريعي", "إنجازات الصف"]);
+    expect(h2s).toEqual(["مرحبًا أحمد", "ماذا عليّ أن أفعل الآن؟", "موادي التعليمية", "تقدّمي وقوتي", "المهام والواجبات", "مشاريعي", "إنجازات الصف"]);   // «تقدّمي» became the Achievement Hub «تقدّمي وقوتي»
     expect(screen.getByLabelText(/مرحبًا أحمد/).textContent).toContain("الصف · 11 · 2026");          // identity: class · grade · school year
     expect(screen.getByLabelText(/مرحبًا أحمد/).textContent).toContain("C1");
     expect(document.querySelector(".platform-hero, .student-next-panel")).toBeNull();                 // no hero, no marketing card

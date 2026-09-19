@@ -39,6 +39,7 @@ import "./studentexam-pro.css";
 import "./review-pro.css";
 import "./assignments-pro.css";
 import "./studentportal-pro.css";
+import { teacherProfileApi, resolveTeacherDisplayName, type TeacherProfile } from "./teacher/teacherProfile";
 import "./login-pro.css";
 // FINAL_BUILDER_PHASE_6
 // EXAMBANK_2_PHASE_A
@@ -513,6 +514,9 @@ function getStoredDisplayName() {
 
 function App() {
   const [token, setToken] = useState(getStoredToken);
+  // Teacher self-profile (name / preset icon / photo metadata) — loaded once per teacher session; the sidebar and
+  // the display-name authority (profile → session → "المعلم") read it. Failures leave the fallback name.
+  const [teacherProfile, setTeacherProfile] = useState<TeacherProfile | null>(null);
 
   const [
     sessionRole,
@@ -602,6 +606,13 @@ function App() {
   // the authoritative /api/platform-session (using the role-appropriate header) before trusting the stale
   // sessionStorage metadata. A definitive negative answer (HTTP error or ok:false) clears the session; a
   // network error leaves it intact (ordinary API calls handle any later 401 per role). This does NOT
+  // Teacher self-profile: one read per teacher session (name / icon / photo metadata). Absent or failing → fallback.
+  useEffect(() => {
+    if (sessionRole !== "teacher" || !token) { setTeacherProfile(null); return; }
+    let cancelled = false;
+    teacherProfileApi.load(token).then(p => { if (!cancelled) setTeacherProfile(p); }).catch(() => { /* fallback name */ });
+    return () => { cancelled = true; };
+  }, [sessionRole, token]);
   // reintroduce the PR #56/#57 global-logout bug: only THIS authoritative check clears a session at boot.
   useEffect(() => {
     const storedToken = getStoredToken();
@@ -5463,7 +5474,8 @@ function App() {
     <TeacherAppShell
       nav={{ teacherView, workspaceTab, projectCode, projectList }}
       projectReadyTotal={projectReady.total}
-      displayName={sessionDisplayName || "المعلم"}
+      displayName={resolveTeacherDisplayName(teacherProfile, sessionDisplayName)}
+      identity={{ token, profile: teacherProfile, onProfileChange: setTeacherProfile }}
       onNavigate={navigateTeacher}
       onLogout={handleLogout}
     >

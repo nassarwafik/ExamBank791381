@@ -117,7 +117,8 @@ describe("B. explicit invariants", () => {
     const l = R["L.student.c1.s1"].body, g = R["G794589.student.c1.s1"].body;
     expect(Object.keys(l).sort()).toEqual(["balance", "config", "groups", "history", "nextBookStage", "nextPacketTracerStage", "ok", "progress", "readOnly", "stages", "student", "summary", "trackWeights"]);
     expect(Object.keys(l.summary).sort()).toEqual(["bookProgress", "complete", "counts", "overallProgress", "packetTracerProgress", "readyForReviewCount", "stale", "updatedAt"]);
-    expect(Object.keys(g).sort()).toEqual(["balance", "config", "groups", "history", "nextStages", "ok", "progress", "projectCode", "readOnly", "stages", "student", "summary", "trackWeights", "tracks"]);
+    // `performance` (project grade / project-specific Strength) is the additive Project-Performance field of the generic body.
+    expect(Object.keys(g).sort()).toEqual(["balance", "config", "groups", "history", "nextStages", "ok", "performance", "progress", "projectCode", "readOnly", "stages", "student", "summary", "trackWeights", "tracks"]);
     expect(l.summary.bookProgress).toBe(g.summary.trackProgress.book); expect(l.summary.packetTracerProgress).toBe(g.summary.trackProgress.packetTracer);
     expect(l.summary.overallProgress).toBe(g.summary.overallProgress); expect(l.counts).toBe(undefined);
     expect(l.nextBookStage).toEqual(g.nextStages.book); expect(l.nextPacketTracerStage).toEqual(g.nextStages.packetTracer);

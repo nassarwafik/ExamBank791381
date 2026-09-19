@@ -8,7 +8,9 @@ import ActionMenu from "../ui/ActionMenu";
 import IconButton from "../ui/IconButton";
 import EmptyState from "../ui/EmptyState";
 import { IconChevronBack, IconChevronDown, IconCheck } from "../icons";
-import type { StudentDetail, StageStatus, ProjectStage, StudentCard, StageProgressEntry, HistoryEvent, BalanceInsight, TrackMeta } from "./types";
+import ProjectRankHero from "./ProjectRankHero";
+import { fmtContribution, fmtStageScore, normalizeProjectPerformance, stageValueOf } from "./projectPerformance";
+import type { StudentDetail, StageStatus, ProjectStage, StudentCard, StageProgressEntry, HistoryEvent, BalanceInsight, TrackMeta, ProjectPerformance } from "./types";
 
 type Props = {
   token: string; projectCode: string; classId: string; studentId: string; tracks: TrackMeta[];
@@ -23,6 +25,7 @@ type Props = {
 type UpdateResponse = {
   ok: true; noChange?: boolean;
   summary: StudentCard;
+  performance?: ProjectPerformance;
   stage: StageProgressEntry & { stageId: string };
   nextStages: Record<string, ProjectStage | null>;
   balance: BalanceInsight;
@@ -44,36 +47,44 @@ export default function ProjectStudentDetail({ token, projectCode, classId, stud
   const [openStageId, setOpenStageId] = useState("");
   const [openGroups, setOpenGroups] = useState<Record<string, boolean>>({});
   const [noteDraft, setNoteDraft] = useState("");
+  const [scoreDraft, setScoreDraft] = useState("");
   const [busy, setBusy] = useState(false);
   const headingRef = useRef<HTMLHeadingElement | null>(null);
+  // Stale-selection guard: only the LATEST requested (project, class, student) may populate the view — a slow
+  // response for a previously selected student can never overwrite the current one's grade / rank / stages.
+  const requestSeq = useRef(0);
 
   async function load() {
+    const seq = ++requestSeq.current;
     setLoading(true); setError("");
     try {
       const r = await trackerGet<StudentDetail>(token, projectCode, "student", { classId, studentId });
+      if (seq !== requestSeq.current) return;
       setDetail(r);
-    } catch (e) { setError(e instanceof Error ? e.message : "تعذر تحميل ملف الطالب."); }
-    finally { setLoading(false); }
+    } catch (e) { if (seq === requestSeq.current) setError(e instanceof Error ? e.message : "تعذر تحميل ملف الطالب."); }
+    finally { if (seq === requestSeq.current) setLoading(false); }
   }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  useEffect(() => { void load(); }, [classId, studentId, projectCode]);
+  useEffect(() => { setDetail(null); setOpenStageId(""); void load(); }, [classId, studentId, projectCode]);
   useEffect(() => { headingRef.current?.focus(); }, [studentId]);
 
   const groups = useMemo(() => detail ? (detail.groups || []).filter(g => g.track === track).sort((a, b) => a.order - b.order) : [], [detail, track]);
   const byGroup = useMemo(() => detail ? stagesByGroup(detail.stages.filter(s => s.active !== false), track) : new Map(), [detail, track]);
 
-  async function updateStage(stage: ProjectStage, patch: { status?: StageStatus; note?: string }) {
+  // status (workflow), note and score (quality, 0–100, teacher-only) all go through the SAME progress.update write;
+  // the server validates the score and returns the recomputed performance (grade / project Strength / stage values).
+  async function updateStage(stage: ProjectStage, patch: { status?: StageStatus; note?: string; score?: number | string | null }) {
     if (!detail || detail.readOnly || busy) return;
     setBusy(true); setError(""); setNotice("");
     try {
       const res = await trackerPost<UpdateResponse>(token, projectCode, { action: "progress.update", classId, studentId, stageId: stage.stageId, ...patch });
       if (!res.noChange) {
         const { stageId: sid, ...entry } = res.stage;
-        setDetail(prev => prev ? { ...prev, summary: res.summary, progress: { ...prev.progress, [sid]: entry }, nextStages: res.nextStages, balance: res.balance, history: res.history } : prev);
+        setDetail(prev => prev ? { ...prev, summary: res.summary, performance: res.performance ?? prev.performance, progress: { ...prev.progress, [sid]: entry }, nextStages: res.nextStages, balance: res.balance, history: res.history } : prev);
         onChanged?.();
         if (patch.status !== undefined) onReadyChanged?.();
       }
-      setNotice(patch.note !== undefined ? "تم حفظ الملاحظة." : "تم تحديث حالة المرحلة.");
+      setNotice(patch.score !== undefined ? "تم حفظ العلامة." : patch.note !== undefined ? "تم حفظ الملاحظة." : "تم تحديث حالة المرحلة.");
     } catch (e) { setError(e instanceof Error ? e.message : "تعذر حفظ التغيير."); }
     finally { setBusy(false); }
   }
@@ -101,6 +112,7 @@ export default function ProjectStudentDetail({ token, projectCode, classId, stud
   }
 
   const s = detail.summary;
+  const perf = normalizeProjectPerformance(detail.performance);
   const timeline = [...detail.history].reverse().slice(0, 20);
   const readOnly = detail.readOnly;
 
@@ -110,6 +122,7 @@ export default function ProjectStudentDetail({ token, projectCode, classId, stud
       {error && <div className="platform-error assignment-inline-message" role="alert">{error}</div>}
       {notice && <div className="platform-notice assignment-inline-message" role="status" aria-live="polite">{notice}</div>}
 
+      {perf && <ProjectRankHero title={detail.student.displayName || name} performance={perf} compact />}
       <div className="eb-student-profile-summary">
         <ProgressBar label="التقدم العام" value={s.overallProgress} tone="primary" />
         <div className="eb-project-track-bars">
@@ -157,17 +170,28 @@ export default function ProjectStudentDetail({ token, projectCode, classId, stud
                     const stagePanelId = "eb-stage-" + stage.stageId;
                     return (
                       <li key={stage.stageId} className={"eb-stage-row " + STAGE_STATUS_CLASS[status]}>
-                        <button type="button" className="eb-stage-row-main" aria-expanded={isOpen} aria-controls={stagePanelId} onClick={() => { setOpenStageId(isOpen ? "" : stage.stageId); setNoteDraft(entry?.note || ""); }}>
+                        <button type="button" className="eb-stage-row-main" aria-expanded={isOpen} aria-controls={stagePanelId} onClick={() => { setOpenStageId(isOpen ? "" : stage.stageId); setNoteDraft(entry?.note || ""); setScoreDraft(typeof entry?.score === "number" ? String(entry.score) : ""); }}>
                           <IconChevronDown size={16} className={"eb-disclosure-chevron" + (isOpen ? " is-open" : "")} aria-hidden="true" />
                           <span className="eb-stage-code">{stage.stageId}</span>
                           <span className="eb-stage-title">{stage.title}{stage.required === false ? <em className="eb-stage-optional"> (اختياري)</em> : null}</span>
                           <StatusBadge tone={STAGE_STATUS_TONE[status]}>{stageStatusLabel(status)}</StatusBadge>
+                          {typeof entry?.score === "number" ? <small className="eb-muted eb-stage-row-score" dir="ltr">{fmtContribution(entry.score)} / 100</small> : null}
                           {entry?.note ? <small className="eb-muted">ملاحظة</small> : null}
                           <small className="eb-muted eb-stage-date">{fmtDate(entry?.updatedAt || "")}</small>
                         </button>
                         {isOpen && (
                           <div id={stagePanelId} className="eb-stage-detail">
                             {stage.description ? <p className="eb-muted">{stage.description}</p> : null}
+                            {perf && (() => {
+                              const value = stageValueOf(perf, stage.stageId);
+                              return (
+                                <p className="eb-stage-score">
+                                  <span>العلامة: <strong dir="ltr">{fmtStageScore(entry)}</strong></span>
+                                  {value && <span>القيمة في المشروع: <strong dir="ltr">{fmtContribution(value.contribution)} / {fmtContribution(value.maxContribution)}</strong></span>}
+                                  {value && !value.counted && typeof entry?.score === "number" && <small className="eb-muted">تُحتسب عند اعتماد المرحلة</small>}
+                                </p>
+                              );
+                            })()}
                             {readOnly ? (
                               entry?.note ? <p className="eb-stage-note-view">ملاحظة المعلم: {entry.note}</p> : <small className="eb-muted">لا توجد ملاحظة.</small>
                             ) : (
@@ -179,6 +203,14 @@ export default function ProjectStudentDetail({ token, projectCode, classId, stud
                                       <button key={st} type="button" className="eb-menu-item" disabled={busy || status === st} onClick={() => void updateStage(stage, { status: st })}>{stageStatusLabel(st)}</button>
                                     ))}
                                   </ActionMenu>
+                                </div>
+                                <div className="eb-stage-score-edit">
+                                  <label>العلامة
+                                    <input type="number" inputMode="decimal" min={0} max={100} step={0.5} dir="ltr" value={scoreDraft} onChange={e => setScoreDraft(e.target.value)} aria-label={"علامة المرحلة " + stage.stageId + " من 100"} placeholder="0–100" disabled={busy} />
+                                    <span aria-hidden="true">/ 100</span>
+                                  </label>
+                                  <button type="button" className="eb-button is-small" disabled={busy || scoreDraft.trim() === "" || Number(scoreDraft) === entry?.score} onClick={() => void updateStage(stage, { score: scoreDraft.trim() })}>حفظ العلامة</button>
+                                  {typeof entry?.score === "number" && <button type="button" className="eb-button is-quiet is-small" disabled={busy} onClick={() => { setScoreDraft(""); void updateStage(stage, { score: null }); }}>مسح العلامة</button>}
                                 </div>
                                 <label className="eb-field eb-stage-note-edit">ملاحظة المعلم
                                   <textarea value={noteDraft} onChange={e => setNoteDraft(e.target.value)} placeholder="اكتب ملاحظة للطالب..." rows={3} />
@@ -207,7 +239,7 @@ export default function ProjectStudentDetail({ token, projectCode, classId, stud
             {timeline.map(ev => (
               <li key={ev.eventId}>
                 <span className="eb-timeline-date">{fmtDate(ev.createdAt)}</span>
-                <span className="eb-timeline-text">{ev.type === "status" && ev.toStatus ? stageStatusLabel(ev.toStatus) + " — " + ev.stageId : "ملاحظة — " + ev.stageId}</span>
+                <span className="eb-timeline-text">{ev.type === "status" && ev.toStatus ? stageStatusLabel(ev.toStatus) + " — " + ev.stageId : ev.type === "score" ? (typeof ev.toScore === "number" ? "علامة " + fmtContribution(ev.toScore) + " / 100 — " + ev.stageId : "مسح العلامة — " + ev.stageId) : "ملاحظة — " + ev.stageId}</span>
               </li>
             ))}
           </ol>

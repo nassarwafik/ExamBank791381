@@ -1,5 +1,6 @@
 const { app } = require("@azure/functions");
 const { withObservability } = require("../lib/observability");
+const { resolveTeacherDisplayName } = require("../lib/teacher-profile");
 const { verifyBuilderToken } = require("../lib/builder-auth");
 const { requireActiveStudentSession } = require("../lib/student-auth");
 const { getContainer, downloadJsonOrNull } = require("../lib/platform-storage");
@@ -27,7 +28,8 @@ async function handler(request, deps = {}, obs = null) {
   const requireStudent = deps.requireActiveStudentSession || requireActiveStudentSession;
   const studentDeps = { getContainer: deps.getContainer || getContainer, downloadJsonOrNull: deps.downloadJsonOrNull || downloadJsonOrNull, container: deps.container };
 
-  const teacherResult = payload => ({ status: 200, headers: NO_STORE, jsonBody: { ok: true, role: "teacher", displayName: "المعلم", expiresAt: isoFromExp(payload.exp) } });
+  // Teacher display name: the self-profile document (platform/teacher-profiles/<sub>.json) → configured fallback → "المعلم".
+  const teacherResult = async payload => ({ status: 200, headers: NO_STORE, jsonBody: { ok: true, role: "teacher", displayName: await resolveTeacherDisplayName(() => studentDeps.container || studentDeps.getContainer(), payload.sub, studentDeps), expiresAt: isoFromExp(payload.exp) } });
   const studentResult = sess => ({
     status: 200, headers: NO_STORE,
     jsonBody: { ok: true, role: "student", displayName: String(sess.student.displayName || ""), userCode: String(sess.student.code || ""), classId: String(sess.student.classId || ""), expiresAt: isoFromExp(sess.user.exp) }
@@ -43,7 +45,7 @@ async function handler(request, deps = {}, obs = null) {
     // student, before returning 401.
     if (builderHeader) {
       const payload = verifyBuilder(builderHeader);
-      if (payload) return teacherResult(payload);
+      if (payload) return await teacherResult(payload);
       obs?.logWarn("auth.session.rejected", { reason: "invalid_teacher_token" });
       return UNAUTH;
     }
@@ -55,7 +57,7 @@ async function handler(request, deps = {}, obs = null) {
     }
     if (authBearer) {
       const teacher = verifyBuilder(authBearer);
-      if (teacher) return teacherResult(teacher);
+      if (teacher) return await teacherResult(teacher);
       const sess = await requireStudent(request, studentDeps);
       if (sess.ok) return studentResult(sess);
     }

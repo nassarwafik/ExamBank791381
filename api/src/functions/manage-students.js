@@ -21,10 +21,13 @@ const {
   getReadConcurrency
 } = require("../lib/platform-storage");
 const { recordAuditEvent } = require("../lib/audit-log");
+const { purgeProfilePhotos } = require("../lib/profile-photo-store");
 const { normalizeClassStatus } = require("../lib/class-lifecycle");
 const { isReportableAssessment } = require("../lib/assignment-lifecycle");
 const { deriveGradingStatus } = require("../lib/grading-status");
-const { FEED_PREFIX, REACTIONS } = require("../lib/achievement-feed");
+const { aggregateRecognition, medalTierFromPercentage } = require("../lib/achievement-feed");
+const { buildStrengthSummary } = require("../lib/student-strength");
+const { loadStudentProjects } = require("../lib/project-tracker/student-projects");
 const { withCredentialLock, CredentialLockBusyError } = require("../lib/student-credential-lock");
 // Roadmap #25 — classroom.studentIds is a denormalized, repairable roster INDEX (never authoritative). All
 // index writes go through lib/class-roster-index (CAS + retry, idempotent, sync status instead of failure).
@@ -130,6 +133,9 @@ function publicStudent(document) {
     classId: String(document.classId || ""),
     active: document.active !== false,
     archived: document.archived === true,
+    // Photo METADATA only (version for cache-busting); the bytes are served by /api/student-profile-photo on demand.
+    profilePhoto: document.profilePhoto && typeof document.profilePhoto === "object" && Number(document.profilePhoto.version) > 0 ? { version: Number(document.profilePhoto.version), updatedAt: String(document.profilePhoto.updatedAt || "") } : null,
+    avatarId: String(document.avatarId || ""),
     createdAt: String(document.createdAt || ""),
     updatedAt: String(document.updatedAt || ""),
     lastLoginAt: String(document.lastLoginAt || "")
@@ -196,40 +202,15 @@ async function listStudents(container, classId, includeArchived = false, obs = n
     });
   }
 
-  // Same single-pass pattern as the submissions count above: one listing pass under FEED_PREFIX
-  // (not scoped to classId, since a student's achievement history should still count after they
-  // move classes), summing every reaction — classmates' plus the teacher's — across every post
-  // that belongs to this student.
-  const likesByStudent = new Map(); // studentId -> total like count
-  if (idSet.size) {
-    // Roadmap #27: a post blob is named "{classId}/{assignmentId}_{studentId}.json" (achievement-feed
-    // feedBlobName), so the roster students' posts can be selected by NAME before downloading — the previous
-    // scan downloaded EVERY post in the system. A post is a candidate when its name ends with "_{id}" for ANY
-    // roster id (so ids that themselves contain "_" are still matched — never parsed by "last underscore");
-    // a name without the "_" pattern is still downloaded (never silently skipped). Over-inclusion is harmless:
-    // the aggregation below keeps using the post's own studentId as the authority.
-    const rosterSuffixes = [...idSet].map(id => "_" + id + ".json");
-    const feedNames = (await listBlobNames(container, FEED_PREFIX)).filter(name => {
-      const postId = name.slice(name.lastIndexOf("/") + 1);
-      return postId.indexOf("_") < 0 || rosterSuffixes.some(suffix => postId.endsWith(suffix));
-    });
-    for (const post of await downloadManyJson(container, feedNames)) {
-      if (!post) continue;
-      const studentId = String(post.studentId || "");
-      if (!idSet.has(studentId)) continue;
-      let total = 0;
-      for (const key of REACTIONS) {
-        if (Array.isArray(post.reactions?.[key])) total += post.reactions[key].length;
-      }
-      if (post.teacherReaction) total += 1;
-      likesByStudent.set(studentId, (likesByStudent.get(studentId) || 0) + total);
-    }
-  }
+  // likesCount = reactions RECEIVED on the student's achievement events (classmates' + the teacher's, every event
+  // type, across every class — a history still counts after a class move). ONE shared aggregation (achievement-feed
+  // aggregateRecognition, name-selected posts, never a full scan) also feeds the student dashboard's recognition.
+  const recognition = idSet.size ? await aggregateRecognition(container, [...idSet]) : new Map();
 
   return result.map(student => ({
     ...student,
     submittedAssignmentsCount: submittedSets.get(student.userId)?.size || 0,
-    likesCount: likesByStudent.get(student.userId) || 0
+    likesCount: recognition.get(student.userId)?.receivedReactionCount || 0
   }));
 }
 
@@ -519,6 +500,11 @@ async function deleteStudent(container, student, obs = null) {
     await container.getBlobClient(AUTH_PREFIX + studentCodeHash(code) + ".json").deleteIfExists();
   }
   await container.getBlobClient(USER_PREFIX + student.userId + ".json").deleteIfExists();
+  // Secondary cleanup: the CURRENT referenced photo revision first, then every other blob under the student's photo
+  // namespace (older revisions / orphans). Best-effort by design — never blocks the core delete.
+  try {
+    await purgeProfilePhotos(container, "platform/student-profile-images/" + student.userId + "/", {}, obs);
+  } catch (e) { obs?.logError("student.delete.photoCleanup", e); }
   return removeFromRosterIndex(container, String(student.classId || ""), [student.userId], { obs, operation: "delete" });
 }
 
@@ -690,8 +676,34 @@ async function buildStudentProfile(container, userId) {
     },
     assignments: history,
     submittedAssignmentsCount: submittedAssignments.length,
-    submittedAssignments
+    submittedAssignments,
+    // Concise Strength + recognition for the teacher's student profile — the SAME authorities as the student
+    // dashboard (student-strength policy over finalized count + practice best + project progress; recognition
+    // aggregation). Secondary: a failure here never hides the profile.
+    ...(await buildProfileStrength(container, student, classroom, history))
   };
+}
+
+async function buildProfileStrength(container, student, classroom, history) {
+  try {
+    const now = new Date().toISOString();
+    const finalizedCount = history.filter(h => h.gradingStatus === "final").length;
+    const medals = { total: 0, gold: 0, silver: 0, bronze: 0 };
+    for (const h of history) { if (h.gradingStatus !== "final" || h.latestPercentage === null) continue; const t = medalTierFromPercentage(Number(h.latestPercentage)); if (t) { medals.total++; medals[t]++; } }
+    const [practiceDoc, projects] = await Promise.all([
+      downloadJsonOrNull(container, "platform/learning-practice/" + student.userId + ".json"),
+      classroom && normalizeClassStatus(classroom) !== "archived" ? loadStudentProjects(container, classroom, String(student.classId || ""), student.userId, now) : Promise.resolve([])
+    ]);
+    const strength = buildStrengthSummary({ finalizedCount, trainings: practiceDoc && practiceDoc.trainings, projects: projects.map(p => ({ projectCode: p.projectCode, overallProgress: p.summary.overallProgress })) });
+    const rec = (await aggregateRecognition(container, [student.userId])).get(student.userId);
+    return {
+      strength,
+      recognition: { medals, reactionsReceived: { total: rec.receivedReactionCount, byType: rec.receivedReactionByType }, achievements: { total: rec.achievementCount, byType: rec.achievementByType } },
+      projectSummaries: projects.map(p => ({ projectCode: p.projectCode, title: p.definition.title, overallProgress: p.summary.overallProgress, complete: p.summary.complete === true }))
+    };
+  } catch {
+    return {};
+  }
 }
 
 // `deps` is an optional dependency-injection seam for unit tests (production passes nothing → real

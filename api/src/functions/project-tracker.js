@@ -8,6 +8,7 @@
 // shape and audit record, all unchanged.
 const { app } = require("@azure/functions");
 const { withObservability } = require("../lib/observability");
+const { recordProjectMilestones } = require("../lib/achievement-milestones");
 const { requireBuilderAuth } = require("../lib/builder-auth");
 const { getContainer, downloadJsonOrNull, listJson, StorageConflictError } = require("../lib/platform-storage");
 const { recordAuditEvent } = require("../lib/audit-log");
@@ -15,6 +16,7 @@ const { normalizeClassStatus } = require("../lib/class-lifecycle");
 const { isSupportedProject, getProjectDefinition, getStorageNamespace, getProjectMeta, getSupportedProjects } = require("../lib/project-tracker/registry");
 const svc = require("../lib/project-tracker/service");
 const core = require("../lib/project-tracker/core");
+const performance = require("../lib/project-tracker/performance");
 const analytics = require("../lib/project-tracker/analytics");
 const { countReadyStages } = require("../lib/project-tracker/ready-count");
 const { classHasProject } = require("../lib/project-tracker/class-programs");
@@ -29,6 +31,8 @@ function studentDetailBody(projectCode, workDef, config, readOnly, student, prog
     student,
     tracks: workDef.tracks,
     summary,
+    // Project performance (grade / project Strength / per-stage value) from the ONE calculator — display-only downstream.
+    performance: performance.buildProjectPerformanceSummary(workDef, progress, now, summary),
     stages: config.stages,
     groups: config.groups,
     trackWeights: config.trackWeights,
@@ -138,7 +142,11 @@ async function handler(request, deps = {}, obs = null) {
         }
         if (resource === "students") {
           const entries = await svc.loadProgressEntries(container, projectCode, classId, students);
-          const cards = entries.map(e => ({ studentId: e.studentId, displayName: e.displayName, code: e.code, ...core.buildStudentSummary(workDef, e.progress, now) }));
+          const cards = entries.map(e => {
+            const summary = core.buildStudentSummary(workDef, e.progress, now);
+            const perf = performance.buildProjectPerformanceSummary(workDef, e.progress, now, summary);
+            return { studentId: e.studentId, displayName: e.displayName, code: e.code, ...summary, grade: perf.grade, projectStrength: perf.projectStrength, projectTier: perf.tier };
+          });
           return { status: 200, jsonBody: { ok: true, projectCode, students: cards, tracks: definition.tracks, config: config.config, readOnly } };
         }
         if (resource === "analytics") {
@@ -186,12 +194,14 @@ async function handler(request, deps = {}, obs = null) {
           // Membership check BEFORE any mutate — an arbitrary/foreign studentId can never create a
           // ghost progress blob (shared pipeline: membership → snapshot → active stage → CAS mutation).
           const result = await svc.updateStudentProgress(container, projectCode, classroom, {
-            studentId, stageId, status: body.status, note: body.note, actor: auth.user?.sub, now
+            studentId, stageId, status: body.status, note: body.note, score: body.score, actor: auth.user?.sub, now
           });
           if (!result.ok && result.reason === "not_member") return { status: 404, jsonBody: { ok: false, error: "الطالب غير موجود في هذا الصف." } };
           if (!result.ok) return { status: 400, jsonBody: { ok: false, error: "المرحلة غير موجودة أو غير مفعّلة." } };
-          const { workDef, stage, written, outcome } = result;
+          const { workDef, stage, written, previous, outcome } = result;
           const summary = core.buildStudentSummary(workDef, written, now);
+          // Project milestones (project rank-up / completion) from the SAME before/after docs of this write — best-effort.
+          await (deps.recordProjectMilestones || recordProjectMilestones)(container, { classId, student: { ...result.student, shareAchievements: result.shareAchievements }, projectCode: projectCode, projectTitle: definition.title, workDef, before: previous, after: written, now });
           if (outcome.statusChanged) {
             await rec(container, {
               actor: auth.user?.sub,
@@ -206,11 +216,19 @@ async function handler(request, deps = {}, obs = null) {
               targetType: "project-stage", targetId: projectCode + "/" + classId + "/" + studentId + "/" + stageId, targetLabel: stage.title, details: { projectCode }
             });
           }
+          if (outcome.scoreChanged) {
+            await rec(container, {
+              actor: auth.user?.sub, action: "project.stage.score",
+              targetType: "project-stage", targetId: projectCode + "/" + classId + "/" + studentId + "/" + stageId, targetLabel: stage.title,
+              details: { projectCode, classId, studentId, stageId, oldScore: outcome.fromScore, newScore: outcome.toScore }
+            });
+          }
           return {
             status: 200,
             jsonBody: {
               ok: true, projectCode,
               summary,
+              performance: performance.buildProjectPerformanceSummary(workDef, written, now, summary),
               stage: { stageId, ...written.stages[stageId] },
               nextStages: core.getNextStages(workDef, written),
               balance: core.getBalanceInsight(summary.trackProgress, workDef),

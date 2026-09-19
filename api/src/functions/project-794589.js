@@ -12,6 +12,7 @@
 // the Final Architecture Audit, deliberately not "fixed" here (the generic route keeps its 404).
 const { app } = require("@azure/functions");
 const { withObservability } = require("../lib/observability");
+const { recordProjectMilestones } = require("../lib/achievement-milestones");
 const { requireBuilderAuth } = require("../lib/builder-auth");
 const { getContainer, StorageConflictError } = require("../lib/platform-storage");
 const { recordAuditEvent } = require("../lib/audit-log");
@@ -173,12 +174,14 @@ async function handler(request, deps = {}, obs = null) {
           // Membership check BEFORE any mutate (parity with the generic project-tracker route): an
           // arbitrary/foreign/archived studentId can never create a ghost progress blob under this class.
           const result = await svc.updateStudentProgress(container, PROGRAM_CODE, classroom, {
-            studentId, stageId, status: body.status, note: body.note, actor: auth.user?.sub, now
+            studentId, stageId, status: body.status, note: body.note, score: body.score, actor: auth.user?.sub, now
           }, LEGACY_SNAPSHOT);
           if (!result.ok && result.reason === "not_member") return { status: 404, jsonBody: { ok: false, error: "الطالب غير موجود في هذا الصف." } };
           if (!result.ok) return { status: 400, jsonBody: { ok: false, error: "المرحلة غير موجودة أو غير مفعّلة." } };
-          const { workDef, stage, written, outcome } = result;
+          const { workDef, stage, written, previous, outcome } = result;
           const summary = core.buildStudentSummary(workDef, written, now);
+          // Project milestones (project rank-up / completion) from the SAME before/after docs of this write — best-effort.
+          await (deps.recordProjectMilestones || recordProjectMilestones)(container, { classId, student: { ...result.student, shareAchievements: result.shareAchievements }, projectCode: PROGRAM_CODE, projectTitle: "مشروع 794589", workDef, before: previous, after: written, now });
           if (outcome.statusChanged) {
             await rec(container, {
               actor: auth.user?.sub,
@@ -191,6 +194,13 @@ async function handler(request, deps = {}, obs = null) {
             await rec(container, {
               actor: auth.user?.sub, action: "project.stage.note",
               targetType: "project-stage", targetId: classId + "/" + studentId + "/" + stageId, targetLabel: stage.title
+            });
+          }
+          if (outcome.scoreChanged) {
+            await rec(container, {
+              actor: auth.user?.sub, action: "project.stage.score",
+              targetType: "project-stage", targetId: classId + "/" + studentId + "/" + stageId, targetLabel: stage.title,
+              details: { projectCode: PROGRAM_CODE, classId, studentId, stageId, oldScore: outcome.fromScore, newScore: outcome.toScore }
             });
           }
           // Return the full set of derived fields the detail view shows, so the client can update

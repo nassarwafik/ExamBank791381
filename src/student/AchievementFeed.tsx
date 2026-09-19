@@ -1,6 +1,8 @@
-import { REACTIONS, type FeedPost, type ReactionId } from "../achievements";
+import { REACTIONS, eventTypeOf, feedEventParts, type FeedPost, type ReactionId } from "../achievements";
 import { IconMedal } from "../icons";
 import { MEDAL_LABELS } from "../medals";
+import { RANK_LABELS, type RankTier } from "../studentRank";
+import { RANK_VISUALS } from "../studentRankVisuals";
 import EmptyState from "../ui/EmptyState";
 import SectionHeader from "../ui/SectionHeader";
 import StatusBadge from "../ui/StatusBadge";
@@ -17,10 +19,24 @@ type Props = {
   onToggleShare: () => void; onReact: (postId: string, reaction: ReactionId) => void;
 };
 
+const LABELS = { medal: (tier: string) => MEDAL_LABELS[tier as keyof typeof MEDAL_LABELS] || tier, rank: (tier: string) => (RANK_VISUALS[tier as RankTier]?.title) || RANK_LABELS[tier as RankTier] || tier };
+
+/** The event's leading visual: the medal icon, or the SAME rank artwork for rank / project events. */
+function EventIcon({ post }: { post: FeedPost }) {
+  const type = eventTypeOf(post);
+  if (type === "medal") {
+    const tier = post.medal?.tier || post.tier || "bronze";
+    return <span className={"eb-sp-medal-icon is-" + tier} aria-hidden="true"><IconMedal size={26} /></span>;
+  }
+  const tier = (type === "global_rank_up" ? post.rank?.tier : post.project?.tier) || "beginner";
+  const v = RANK_VISUALS[tier as RankTier] || RANK_VISUALS.beginner;
+  return <img className={"eb-sp-feed-rank-art is-" + type} src={v.image} alt="" aria-hidden="true" width={40} height={40} loading="lazy" decoding="async" />;
+}
+
 export default function AchievementFeed({ posts, error, shareOn, shareSaving, now, onToggleShare, onReact }: Props) {
   return (
     <section className="eb-sp-panel eb-sp-feed" aria-labelledby="eb-sp-feed-title">
-      <SectionHeader level={2} id="eb-sp-feed-title" title="إنجازات الصف" description="أحدث الميداليات في صفك"
+      <SectionHeader level={2} id="eb-sp-feed-title" title="إنجازات الصف" description="أحدث الإنجازات والتقدّم في صفك"
         actions={<label className="eb-sp-share"><input type="checkbox" checked={shareOn} disabled={shareSaving} onChange={onToggleShare} />شارك إنجازاتي مع الصف</label>} />
       {error && <div className="platform-error" role="alert">{error}</div>}
       {posts.length ? (
@@ -29,10 +45,10 @@ export default function AchievementFeed({ posts, error, shareOn, shareSaving, no
             const teacher = post.teacherReaction ? REACTIONS.find(r => r.id === post.teacherReaction) : null;
             return (
               <li key={post.postId}>
-                <article className={"eb-sp-feed-item" + (post.isOwnPost ? " is-own" : "")}>
-                  <span className={"eb-sp-medal-icon is-" + post.tier} aria-hidden="true"><IconMedal size={26} /></span>
+                <article className={"eb-sp-feed-item is-" + eventTypeOf(post) + (post.isOwnPost ? " is-own" : "")} data-event-type={eventTypeOf(post)}>
+                  <EventIcon post={post} />
                   <div className="eb-sp-feed-body">
-                    <p className="eb-sp-feed-text"><strong>{post.studentDisplayName}</strong> حصل على ميدالية {MEDAL_LABELS[post.tier]} في <strong>{post.assignmentTitle}</strong></p>
+                    <p className="eb-sp-feed-text">{feedEventParts(post, LABELS).map((part, i) => part.strong ? <strong key={i}>{part.text}</strong> : <span key={i}>{part.text}</span>)}</p>
                     {(isRecent(post.createdAt, now) || post.isOwnPost || teacher) && (
                       <div className="eb-sp-feed-tags">
                         {isRecent(post.createdAt, now) && <StatusBadge tone="info">جديد</StatusBadge>}
@@ -60,7 +76,7 @@ export default function AchievementFeed({ posts, error, shareOn, shareSaving, no
           })}
         </ul>
       ) : (
-        <EmptyState compact title="لا توجد إنجازات بعد" description="عندما يحصل أحد زملائك على ميدالية سيظهر هنا." />
+        <EmptyState compact title="لا توجد إنجازات بعد" description="عندما يحقق أحد طلاب الصف إنجازًا سيظهر هنا." />
       )}
     </section>
   );

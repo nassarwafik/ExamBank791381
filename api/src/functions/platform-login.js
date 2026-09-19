@@ -79,7 +79,7 @@ async function handler(request, deps = {}, obs = null) {
       await throttleClear(container, userCode, clientId, deps);
       const token = mkBuilderToken(userCode);
       obs?.logInfo("auth.login.succeeded", { role: "teacher" });
-      return { status: 200, headers: NO_STORE, jsonBody: { ok: true, role: "teacher", token, userCode, displayName: "المعلم", expiresInSeconds: TOKEN_TTL_SECONDS } };
+      return { status: 200, headers: NO_STORE, jsonBody: { ok: true, role: "teacher", token, userCode, displayName: await resolveTeacherDisplayName(container, userCode, deps), expiresInSeconds: TOKEN_TTL_SECONDS } };
     }
 
     // Student credentials — bind password verification to the credential version (§3).

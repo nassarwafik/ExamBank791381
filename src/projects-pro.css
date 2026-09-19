@@ -65,6 +65,8 @@
 .eb-student-card-name strong{ color:var(--eb-text-heading); font-size:var(--eb-fs-14); }
 .eb-student-card-name .eb-muted{ font-size:var(--eb-fs-12); }
 .eb-student-card-counts{ margin:0; display:flex; flex-wrap:wrap; gap:var(--eb-space-2) var(--eb-space-3); color:var(--eb-text-secondary); font-size:var(--eb-fs-12); font-weight:var(--eb-fw-semibold); }
+.eb-student-card-perf{ margin:0; display:flex; flex-wrap:wrap; gap:var(--eb-space-1) var(--eb-space-3); color:var(--eb-text-secondary); font-size:var(--eb-fs-12); }
+.eb-student-card-perf strong{ color:var(--eb-text-heading); font-variant-numeric:tabular-nums; }
 .eb-student-card-foot{ display:flex; flex-wrap:wrap; justify-content:space-between; align-items:center; gap:var(--eb-space-2); margin-top:auto; }
 
 /* ---------- Student profile ---------- */

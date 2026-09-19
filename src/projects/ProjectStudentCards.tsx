@@ -5,6 +5,7 @@ import { stageStatusLabel, toneForTrack } from "./teacherPresentation";
 import ProgressBar from "../ui/ProgressBar";
 import StatusBadge from "../ui/StatusBadge";
 import EmptyState from "../ui/EmptyState";
+import { fmtGrade, projectRankVisual } from "./projectPerformance";
 import type { StudentCard, StudentFilter, TrackMeta } from "./types";
 
 type Props = {
@@ -76,6 +77,9 @@ export default function ProjectStudentCards({ token, projectCode, classId, track
                   </div>
                   <ProgressBar label="التقدم العام" value={c.overallProgress} tone="primary" size="sm" />
                   {tracks.map((t, i) => <ProgressBar key={t.trackId} label={t.title} value={c.trackProgress[t.trackId] || 0} tone={toneForTrack(i)} size="sm" />)}
+                  {typeof c.grade === "number" && c.projectTier && (
+                    <p className="eb-student-card-perf"><span>العلامة: <strong dir="ltr">{fmtGrade(c.grade)}</strong></span><span>قوة المشروع: <strong>{projectRankVisual(c.projectTier).title}</strong></span></p>
+                  )}
                   <p className="eb-student-card-counts">
                     <span>{stageStatusLabel("approved")} {c.counts.approved}</span>
                     <span>{stageStatusLabel("ready_for_review")} {c.readyForReviewCount}</span>

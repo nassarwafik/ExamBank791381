@@ -1,0 +1,38 @@
+/* ============================================================
+   ExamBank — Project Performance (shared by the teacher tracker
+   and the student portal): grade/progress circle + rank hero +
+   stage value rows. Token-only, RTL-first, mobile-first.
+   ============================================================ */
+.eb-ppc{ position:relative; display:flex; flex-direction:column; align-items:center; justify-content:center; flex:0 0 auto; }
+.eb-ppc-ring{ position:absolute; inset:0; }
+.eb-ppc-track{ stroke:var(--eb-line); stroke-width:8; }
+.eb-ppc-fill{ stroke:var(--eb-primary); stroke-width:8; transition:stroke-dashoffset var(--eb-dur) var(--eb-ease); }
+.eb-ppc-center{ display:flex; flex-direction:column; align-items:center; gap:2px; line-height:var(--eb-lh-tight); }
+.eb-ppc-grade{ color:var(--eb-text-heading); font-size:var(--eb-fs-20); font-weight:var(--eb-fw-bold); font-variant-numeric:tabular-nums; }
+.eb-ppc-grade-label{ color:var(--eb-muted); font-size:var(--eb-fs-12); font-weight:var(--eb-fw-semibold); }
+.eb-ppc-progress{ position:absolute; inset-block-end:-1.6em; margin:0; white-space:nowrap; color:var(--eb-text-secondary); font-size:var(--eb-fs-12); font-variant-numeric:tabular-nums; }
+
+.eb-prh{ display:flex; flex-direction:column; align-items:center; gap:var(--eb-space-4); padding:var(--eb-space-4); padding-block-end:calc(var(--eb-space-4) + 1.2em); background:var(--eb-surface); border:1px solid var(--eb-line); border-radius:var(--eb-r-lg); min-width:0; }
+.eb-prh-rank{ display:flex; align-items:center; gap:var(--eb-space-3); min-width:0; }
+.eb-prh-art{ flex:0 0 auto; object-fit:contain; }
+.eb-prh-text{ display:flex; flex-direction:column; gap:2px; min-width:0; }
+.eb-prh-title{ margin:0; color:var(--eb-text-heading); font-size:var(--eb-fs-17); font-weight:var(--eb-fw-bold); overflow-wrap:anywhere; }
+.eb-prh-rank-title{ margin:0; display:flex; flex-wrap:wrap; align-items:baseline; gap:var(--eb-space-2); color:var(--eb-primary-strong); font-weight:var(--eb-fw-semibold); }
+.eb-prh-level{ color:var(--eb-muted); font-size:var(--eb-fs-12); font-weight:var(--eb-fw-medium); }
+.eb-prh-strength{ margin:0; color:var(--eb-text); font-size:var(--eb-fs-14); font-variant-numeric:tabular-nums; }
+.eb-prh-facts{ margin:0; display:flex; flex-wrap:wrap; gap:var(--eb-space-2) var(--eb-space-4); }
+.eb-prh-facts div{ display:flex; gap:var(--eb-space-1); align-items:baseline; }
+.eb-prh-facts dt{ color:var(--eb-muted); font-size:var(--eb-fs-12); }
+.eb-prh-facts dt::after{ content:":"; }
+.eb-prh-facts dd{ margin:0; color:var(--eb-text-heading); font-weight:var(--eb-fw-semibold); font-variant-numeric:tabular-nums; }
+
+.eb-stage-score{ display:flex; flex-wrap:wrap; align-items:center; gap:var(--eb-space-2) var(--eb-space-3); font-size:var(--eb-fs-13); color:var(--eb-text-secondary); }
+.eb-stage-score strong{ color:var(--eb-text-heading); font-variant-numeric:tabular-nums; }
+.eb-stage-score-edit{ display:flex; flex-wrap:wrap; align-items:center; gap:var(--eb-space-2); }
+.eb-stage-score-edit label{ display:inline-flex; align-items:center; gap:var(--eb-space-1); color:var(--eb-muted); font-size:var(--eb-fs-13); font-weight:var(--eb-fw-semibold); }
+.eb-stage-score-edit input{ width:5.5em; min-height:40px; padding:var(--eb-space-1) var(--eb-space-2); border:1px solid var(--eb-border-strong); border-radius:var(--eb-r); background:var(--eb-surface); color:var(--eb-text); font:inherit; font-variant-numeric:tabular-nums; }
+
+@media (min-width: 768px){
+  .eb-prh{ flex-direction:row; justify-content:space-between; }
+  .eb-prh-facts{ flex-direction:column; }
+}

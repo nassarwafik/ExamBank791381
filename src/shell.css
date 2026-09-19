@@ -184,3 +184,15 @@
 @media (prefers-reduced-motion: reduce) {
   .eb-sidebar, .eb-nav-link, .eb-icon-button { transition: none; }
 }
+
+/* ---------- Teacher identity (sidebar): photo / preset icon + name; compact rail shows the avatar only ---------- */
+.eb-teacher-identity { display: flex; align-items: center; gap: var(--eb-space-2); min-width: 0; padding: var(--eb-space-1) var(--eb-space-2); border-radius: var(--eb-r-sm); }
+.eb-teacher-identity-avatar { flex: 0 0 auto; }
+.eb-teacher-identity-avatar:focus-visible { outline: 2px solid var(--eb-surface); outline-offset: 2px; }
+.eb-teacher-identity-name { color: var(--eb-nav-text); font-size: var(--eb-fs-14); font-weight: var(--eb-fw-semibold); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+.eb-shell.is-compact .eb-teacher-identity { justify-content: center; padding-inline: 0; }
+.eb-shell.is-compact .eb-teacher-identity-name { display: none; }
+@media (min-width: 1024px) and (max-width: 1279px) {
+  .eb-teacher-identity { justify-content: center; padding-inline: 0; }
+  .eb-teacher-identity-name { display: none; }
+}

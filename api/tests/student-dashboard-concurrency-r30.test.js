@@ -118,7 +118,7 @@ describe("B. output equivalence — concurrency 1 vs 8 over every dashboard stat
     // dueAt ascending, empty dueAt last
     expect(r.jsonBody.assignments.map(a => a.assignmentId)).toEqual(["aClosed", "aPending", "aActive", "aFinal", "aAvailable", "aScheduled", "aMissing", "aLegacy"]);
     expect(r.jsonBody.stats).toEqual({ assigned: 8, completed: 3, average: 72, submitted: 3, inProgress: 1, pendingReview: 1, finalized: 2, scheduled: 1, available: 2, closedUnsubmitted: 1, averageFinalized: 77 });
-    expect(r.jsonBody.student).toEqual({ userId: "u1", code: "S1", displayName: "علي", classId: "c1", avatarId: "a1", shareAchievements: true });
+    expect(r.jsonBody.student).toEqual({ userId: "u1", code: "S1", displayName: "علي", classId: "c1", avatarId: "a1", shareAchievements: true, profilePhoto: null });   // profilePhoto: teacher-managed photo metadata (null = none)
   });
   it("B3 with 40 assignments the parallel and sequential responses are deep-equal too", async () => {
     const seq = await dashboardHandler(req(), makeDeps(manyAssignments(40), { concurrency: 1 }).deps);
@@ -135,13 +135,17 @@ describe("C. read counts", () => {
     expect(subs(st).filter(k => /dDraft|xArchived|oOther/.test(k))).toHaveLength(0);
     expect(new Set(subs(st)).size).toBe(subs(st).length);                                        // no duplicates
   });
-  it("C2 one classroom read and one assignments listing; zero writes", async () => {
+  it("C2 one classroom read and one assignments listing; the only write is the ONE first-sight recognition baseline (steady state is write-free)", async () => {
     const { deps, st } = makeDeps(fixture(), { concurrency: 8, classroom: { classId: "c1", name: "صف", active: true, status: "active" } });
     const r = await dashboardHandler(req(), deps);
     expect(r.status).toBe(200); expect(r.jsonBody.classroom.name).toBe("صف");
     expect(st.reads.filter(k => k.startsWith(CP))).toEqual([CP + "c1.json"]);
     expect(st.reads.filter(k => k === "LIST " + AP)).toHaveLength(1);
-    expect(st.writes).toBe(0);
+    // Recognition: the global-rank observation doc is written once on first sight (this harness never stores it, so
+    // every call is a "first sight"); with the doc present and the tier unchanged no write happens — pinned in
+    // achievement-events.test.js. Student data, assignments and submissions are never written by the dashboard.
+    expect(st.writes).toBe(1);
+    expect(st.reads.filter(k => k.startsWith("platform/recognition/"))).toEqual(["platform/recognition/u1.json"]);
   });
 });
 

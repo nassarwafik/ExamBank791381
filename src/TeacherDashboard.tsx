@@ -4,7 +4,9 @@ import {Line,Doughnut,Bar} from "react-chartjs-2";
 import {IconMedal,IconRefresh,IconDownload,IconPrint,IconSparkles,IconCheck,IconWarning,IconInfo} from "./icons";
 import {MEDAL_COLORS,MEDAL_LABELS} from "./medals";
 import {QuestionTextBlock} from "./questionContent";
-import {REACTIONS,type ReactionId} from "./achievements";
+import {REACTIONS,eventTypeOf,feedEventParts,type ReactionId,type FeedMedal,type FeedRank,type FeedProject} from "./achievements";
+import {RANK_VISUALS} from "./studentRankVisuals";
+import type {RankTier} from "./studentRank";
 import {resolveGradingStatus,type GradingStatus} from "./gradingStatus";
 import StatCard from "./ui/StatCard";
 import SectionHeader from "./ui/SectionHeader";
@@ -54,7 +56,19 @@ type AttemptReview={
  questions:Array<{questionId:string;questionNumber:number;text:string;marks:number;type:string;autoGrade:{score:number;maxMarks:number;correct:boolean;manualReview:boolean;reviewed?:boolean}|null;manualScore:number|null;teacherComment:string}>;
 };
 type RangeKey="all"|"30"|"90"|"365";
-type AchievementPost={postId:string;classId:string;className:string;studentDisplayName:string;assignmentTitle:string;tier:"gold"|"silver"|"bronze";createdAt:string;reactionCounts:Record<ReactionId,number>;teacherReaction:ReactionId|null;teacherNote:string};
+type AchievementPost={postId:string;eventType?:string;classId:string;className:string;studentDisplayName:string;assignmentTitle:string;tier?:"gold"|"silver"|"bronze";medal?:FeedMedal|null;rank?:FeedRank|null;project?:FeedProject|null;createdAt:string;reactionCounts:Record<ReactionId,number>;teacherReaction:ReactionId|null;teacherNote:string};
+// The SAME event wording as the student feed (achievements.feedEventParts); the class name follows the student's name.
+const FEED_LABELS={medal:(tier:string)=>MEDAL_LABELS[tier as keyof typeof MEDAL_LABELS]||tier,rank:(tier:string)=>RANK_VISUALS[tier as RankTier]?.title||tier};
+function AchievementIcon({post}:{post:AchievementPost}){
+ const type=eventTypeOf(post);
+ if(type==="medal"){const tier=post.medal?.tier||post.tier||"bronze";return <IconMedal size={22} style={{color:MEDAL_COLORS[tier]}}/>;}
+ const tier=(type==="global_rank_up"?post.rank?.tier:post.project?.tier)||"beginner";
+ return <img className="achievement-rank-art" src={(RANK_VISUALS[tier as RankTier]||RANK_VISUALS.beginner).image} alt="" aria-hidden="true" width={32} height={32} loading="lazy" decoding="async"/>;
+}
+function AchievementText({post}:{post:AchievementPost}){
+ const parts=feedEventParts(post,FEED_LABELS);
+ return <p>{parts.map((part,i)=>part.strong?<strong key={i}>{part.text}</strong>:<span key={i}>{part.text}</span>)} <span className="eb-muted">({post.className})</span></p>;
+}
 type DrillKind="assignment"|"profile"|"review";
 
 const fmtDate=(value:string)=>value?new Date(value).toLocaleString("ar",{dateStyle:"medium",timeStyle:"short"}):"—";
@@ -461,7 +475,7 @@ function TeacherDashboard({token}:DashboardProps){
 
   <section className="eb-dash-section" aria-labelledby="eb-achievements-title">
    <SectionHeader level={2} id="eb-achievements-title" title="إنجازات الطلاب الأخيرة" count={achievements.length>0?achievements.length:undefined}/>
-   <article className="analytics-card achievement-notify-card">{achievementsError&&<div className="platform-error" role="alert">{achievementsError}</div>}<div className="achievement-notify-list">{achievements.map(post=><article key={post.postId} className="achievement-notify-item"><IconMedal size={22} style={{color:MEDAL_COLORS[post.tier]}}/><div className="achievement-notify-body"><p><strong>{post.studentDisplayName}</strong> ({post.className}) حصل على ميدالية {MEDAL_LABELS[post.tier]} في <strong>{post.assignmentTitle}</strong></p><div className="achievement-reaction-row">{REACTIONS.map(r=><button key={r.id} type="button" className={"achievement-reaction"+(post.teacherReaction===r.id?" active":"")} title={r.label} aria-label={r.label} aria-pressed={post.teacherReaction===r.id} onClick={()=>void teacherReact(post,r.id)}>{r.emoji} {post.reactionCounts[r.id]>0?post.reactionCounts[r.id]:""}</button>)}</div><div className="achievement-note-row"><input type="text" aria-label="كلمة تشجيع" placeholder="اكتب كلمة تشجيع..." maxLength={200} value={noteDrafts[post.postId]??post.teacherNote} onChange={e=>setNoteDrafts(prev=>({...prev,[post.postId]:e.target.value}))}/><button type="button" onClick={()=>void saveNote(post)} disabled={noteBusy===post.postId}>{noteBusy===post.postId?"جارٍ الإرسال...":"إرسال"}</button></div></div></article>)}{!achievements.length&&<div className="analytics-empty-chart">لا توجد إنجازات بعد.</div>}</div></article>
+   <article className="analytics-card achievement-notify-card">{achievementsError&&<div className="platform-error" role="alert">{achievementsError}</div>}<div className="achievement-notify-list">{achievements.map(post=><article key={post.postId} className="achievement-notify-item" data-event-type={eventTypeOf(post)}><AchievementIcon post={post}/><div className="achievement-notify-body"><AchievementText post={post}/><div className="achievement-reaction-row">{REACTIONS.map(r=><button key={r.id} type="button" className={"achievement-reaction"+(post.teacherReaction===r.id?" active":"")} title={r.label} aria-label={r.label} aria-pressed={post.teacherReaction===r.id} onClick={()=>void teacherReact(post,r.id)}>{r.emoji} {post.reactionCounts[r.id]>0?post.reactionCounts[r.id]:""}</button>)}</div><div className="achievement-note-row"><input type="text" aria-label="كلمة تشجيع" placeholder="اكتب كلمة تشجيع..." maxLength={200} value={noteDrafts[post.postId]??post.teacherNote} onChange={e=>setNoteDrafts(prev=>({...prev,[post.postId]:e.target.value}))}/><button type="button" onClick={()=>void saveNote(post)} disabled={noteBusy===post.postId}>{noteBusy===post.postId?"جارٍ الإرسال...":"إرسال"}</button></div></div></article>)}{!achievements.length&&<div className="analytics-empty-chart">لا توجد إنجازات بعد.</div>}</div></article>
   </section>
 
   <section className="eb-dash-section" aria-labelledby="eb-ai-title">
