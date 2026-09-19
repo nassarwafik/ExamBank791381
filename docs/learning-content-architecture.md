@@ -669,7 +669,10 @@ Strength                →  api/src/lib/student-strength.js    →  dashboard `
   `UNAVAILABLE`.
 - **Best-score storage.** `platform/learning-practice/<studentId>.json` (CAS via `mutateJsonWithRetry`), one entry
   per training: `bestPercentage`, `bestPoints = round(best% × 25 / 100)`, `attempts`, `lastCompletedAt`. Retries are
-  a **max-merge**: nothing lowers the best, a duplicate never double-awards, concurrent submits converge.
+  a **max-merge**: nothing lowers the best, a duplicate never double-awards, concurrent submits converge. The API
+  exposes `best` **only once attempted** (`attempts > 0`): a never-attempted training has no `best` (the card says
+  «لم تحلّ هذا التدريب بعد» / «ابدأ التدريب»); a real 0% attempt does (`bestPercentage 0, attempts 1` → «أفضل
+  نتيجة: 0%» / «أعد التدريب»).
 - **Not an assignment.** No assignment record, no due date, no attempt limit, no gradebook row, no medal, no
   teacher review queue. Teacher submissions are graded and returned but never persisted.
 
@@ -723,8 +726,16 @@ it (`src/studentRank.ts` keeps the compatible helpers for the six-rank ladder).
 | Project | up to 400 each | `round(overallProgress × 400 / 100)` from `core.buildStudentSummary()` — derived, never incremented; a reset lowers it |
 
 - **Ladder:** one step per 400 points — 0–399 none, 400 بذرة القوة (beginner), 800 شعلة صغيرة (bronze), 1200 نمر
-  البرق (silver), 1600 فارس الجليد (gold), 2000 تنين النار (platinum), 2400+ العنقاء الذهبية (legendary). The six
+  البرق (silver), 1600 فارس الجليد (gold), 2000 تنين النار (diamond), 2400+ العنقاء الذهبية (legendary). The six
   rank images and titles are immutable; there is no seventh level and no second image set.
+- **Client authority contract.** The frontend `StudentStrength` type is the exact server payload (points, `tier`,
+  `level`, `nextTier`, block progress, projects). `src/student/strengthPresentation.ts` only shapes and labels it
+  (`rankPresentationFromStrength`, `progressPresentationFromStrength`): a well-formed payload is trusted as a whole
+  and the client never divides, floors or compares `totalPoints` against a threshold; a tier id maps to its label
+  and artwork (presentation). No payload at all, or a malformed/incomplete one, falls back **as a whole** to the
+  legacy finalized × 100 path through the compatibility helpers of `studentRank.ts` — server fields are never mixed
+  with locally recalculated ones. Guarded by `strengthPresentation.test.ts` and
+  `StudentPortal.strengthAuthority.test.tsx` (a deliberately inconsistent server payload must render verbatim).
 - **Presentation** (Strength language only): «نقاط القوة: N» with the breakdown الواجبات النهائية / التدريبات /
   المشاريع; «التقدم نحو المستوى التالي: X / 400»; «بقي N نقطة قوة للوصول إلى رتبة …» (dual/singular forms). The
   ring shows the within-400 block. The project panel shows «تقدم المشروع: 75%» and «نقاط القوة من المشروع:

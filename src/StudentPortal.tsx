@@ -14,8 +14,7 @@ import StudentAssignmentCard from "./student/StudentAssignmentCard";
 import AchievementFeed from "./student/AchievementFeed";
 import AvatarPickerDialog from "./student/AvatarPickerDialog";
 import { FILTERS, matchesFilter, medalsFor, nowItems, sortTaskFirst, type PortalFilter } from "./student/portalPresentation";
-import { rankForStrength, strengthProgress } from "./studentRank";
-import { normalizeStrength } from "./student/strengthPresentation";
+import { normalizeStrength, progressPresentationFromStrength, rankPresentationFromStrength } from "./student/strengthPresentation";
 import type { Dashboard, Detail, Summary } from "./student/types";
 
 type Props = { token: string; displayName: string; onLogout: () => void };
@@ -139,11 +138,12 @@ export default function StudentPortal({ token, displayName, onLogout }: Props) {
 
   const stats = data?.stats;
   const medals = data ? medalsFor(data.assignments) : [];
-  // Unified Strength: the rank tier and the power ring come from the server's Strength total (exams + practice +
-  // projects), never from the finalized count alone; the finalized count stays a display detail on the rank.
+  // Unified Strength: the rank tier, the next tier and the power-ring progress are the SERVER's values in
+  // `dashboard.strength` (exams + practice + projects), only shaped/labelled here — the client never re-derives them
+  // from totalPoints. (normalizeStrength falls back, as a whole, to finalized × 100 when no payload exists.)
   const strength = data?.strength ?? null;
-  const rank = rankForStrength(strength?.totalPoints, stats);
-  const progress = strengthProgress(strength?.totalPoints);
+  const rank = strength ? rankPresentationFromStrength(strength, stats) : null;
+  const progress = progressPresentationFromStrength(strength ?? normalizeStrength(null, stats?.finalized));
   const averageFinalized = stats && stats.averageFinalized !== null && stats.averageFinalized !== undefined ? Number(stats.averageFinalized) : null;
   const ordered = data ? sortTaskFirst(data.assignments) : [];
   const visible = ordered.filter(item => matchesFilter(item, filter));

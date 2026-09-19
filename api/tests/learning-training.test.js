@@ -157,6 +157,38 @@ describe("server grading — real T-series items", () => {
   });
 });
 
+describe("best presence — never attempted vs a real 0% attempt", () => {
+  it("A. never attempted: the list row and the item carry NO `best` at all (the card says «لم تحلّ هذا التدريب بعد»)", async () => {
+    const d = studentDeps(seed([M01, M02]));
+    const list = await get(d);
+    expect(list.status).toBe(200);
+    for (const t of list.jsonBody.trainings) expect(Object.prototype.hasOwnProperty.call(t, "best"), t.trainingId).toBe(false);
+    const item = await get(d, "T01");
+    expect(item.status).toBe(200);
+    expect(Object.prototype.hasOwnProperty.call(item.jsonBody, "best")).toBe(false);
+    expect(JSON.stringify(list.jsonBody)).not.toContain('"bestPercentage":0');
+  });
+  it("B. attempted once with 0%: `best` IS present with bestPercentage 0 / bestPoints 0 / attempts 1 in the list and the item", async () => {
+    const d = studentDeps(seed([M01, M02]));
+    const r = await submit(d, "T01", { answers: answersFor("T01", 0) });
+    expect(r.jsonBody.practice).toMatchObject({ bestPercentage: 0, bestPoints: 0, attempts: 1 });
+    const list = await get(d);
+    const t01 = list.jsonBody.trainings.find(t => t.trainingId === "T01"), t02 = list.jsonBody.trainings.find(t => t.trainingId === "T02");
+    expect(t01.best).toMatchObject({ bestPercentage: 0, bestPoints: 0, maxPoints: 25, attempts: 1 });
+    expect(Object.prototype.hasOwnProperty.call(t02, "best")).toBe(false);          // the other training is still unattempted
+    const item = await get(d, "T01");
+    expect(item.jsonBody.best).toMatchObject({ bestPercentage: 0, bestPoints: 0, attempts: 1 });
+  });
+  it("teacher responses are unaffected: no `best` in the list or the item, submissions still not persisted", async () => {
+    const d = teacherDeps(seed([M01]));
+    const list = await get(d);
+    for (const t of list.jsonBody.trainings) expect(Object.prototype.hasOwnProperty.call(t, "best")).toBe(false);
+    const item = await get(d, "T03");
+    expect(Object.prototype.hasOwnProperty.call(item.jsonBody, "best")).toBe(false);
+    expect((await submit(d, "T03", { answers: answersFor("T03", 3) })).jsonBody).toMatchObject({ actor: "teacher", persisted: false });
+  });
+});
+
 describe("practice points — best score, anti-farming, storage", () => {
   it("T01 60 → 15; retry 80 → 20 (+5); retry 50 → stays 20; retry 80 → stays 20; T02 100 → +25; total 45", async () => {
     const ctx = seed([M01, M02]);

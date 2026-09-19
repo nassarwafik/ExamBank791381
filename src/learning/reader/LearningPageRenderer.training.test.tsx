@@ -70,6 +70,20 @@ describe("library-training card — host-decided states", () => {
     expect(within(c1).getByRole("button", { name: "أعد التدريب" })).toBeTruthy();
     expect(within(c1).queryByText("لم تحلّ هذا التدريب بعد.")).toBeNull();
   });
+  it("a REAL 0% attempt is a result (attempts 1): «أفضل نتيجة: 0% · نقاط التقوية: 0 / 25» + «أعد التدريب» — never confused with «لم تحلّ»", () => {
+    draw(hostOf({ T01: { kind: "available", title: "أساسيات الشبكات", best: { bestPercentage: 0, bestPoints: 0, maxPoints: 25, attempts: 1, lastCompletedAt: "2026-09-19T00:00:00.000Z" } } }));
+    const c1 = card("تدريب 1");
+    expect(within(c1).getByText(/أفضل نتيجة:/).textContent).toBe("أفضل نتيجة: 0% · نقاط التقوية: 0 / 25");
+    expect(within(c1).getByRole("button", { name: "أعد التدريب" })).toBeTruthy();
+    expect(within(c1).queryByText("لم تحلّ هذا التدريب بعد.")).toBeNull();
+  });
+  it("no `best` (never attempted) → «لم تحلّ هذا التدريب بعد.» + «ابدأ التدريب», and no «أفضل نتيجة» line", () => {
+    draw(hostOf({ T01: { kind: "available", title: "أساسيات الشبكات", best: null } }));
+    const c1 = card("تدريب 1");
+    expect(within(c1).getByText("لم تحلّ هذا التدريب بعد.")).toBeTruthy();
+    expect(within(c1).getByRole("button", { name: "ابدأ التدريب" })).toBeTruthy();
+    expect(within(c1).queryByText(/أفضل نتيجة:/)).toBeNull();
+  });
   it("the card never emits answer-key vocabulary or training titles the host did not disclose", () => {
     const { container } = draw(hostOf({ T01: { kind: "unavailable" }, T03: { kind: "unavailable" } }));
     const html = container.innerHTML;

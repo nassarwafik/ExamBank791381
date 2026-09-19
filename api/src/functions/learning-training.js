@@ -43,6 +43,11 @@ function trainingMeta(t, extra = {}) {
 function bestOf(entry) {
   return { bestPercentage: entry.bestPercentage, bestPoints: entry.bestPoints, maxPoints: TRAINING_MAX_STRENGTH_POINTS, attempts: entry.attempts, lastCompletedAt: entry.lastCompletedAt };
 }
+/** `best` is exposed ONLY once the student has attempted the training (attempts > 0): a never-attempted training has
+ *  no best result — a real 0% attempt does (bestPercentage 0, attempts ≥ 1). Teacher context has no entry at all. */
+function bestIfAttempted(entry) {
+  return entry && Number(entry.attempts) > 0 ? { best: bestOf(entry) } : {};
+}
 
 async function handler(request, deps = {}, obs = null) {
   const dl = deps.downloadJsonOrNull || downloadJsonOrNull;
@@ -74,7 +79,7 @@ async function handler(request, deps = {}, obs = null) {
         // Disclosure rule: a training's TITLE is shown only when it is available to this caller.
         if (!available) return trainingMeta(t, { available: false });
         const entry = actor.kind === "student" ? trainingEntry(practiceDoc, t.trainingId) : null;
-        return trainingMeta(t, { available: true, title: t.title, ...(entry ? { best: bestOf(entry) } : {}) });
+        return trainingMeta(t, { available: true, title: t.title, ...bestIfAttempted(entry) });
       });
       return { status: 200, jsonBody: { ok: true, actor: actor.kind, trainings } };
     }
@@ -89,7 +94,7 @@ async function handler(request, deps = {}, obs = null) {
     if (method === "GET" && !action) {
       const questionCount = Array.isArray(item.examSnapshot.questions) ? item.examSnapshot.questions.length : Number(item.questionCount || 0);
       const entry = actor.kind === "student" ? trainingEntry(practiceDoc, training.trainingId) : null;
-      return { status: 200, jsonBody: { ok: true, actor: actor.kind, training: trainingMeta(training, { title: training.title, questionCount, totalMarks: Number(item.examSnapshot.totalMarks || item.totalMarks || 0), maxPoints: TRAINING_MAX_STRENGTH_POINTS }), exam: sanitizeExamForStudent(item.examSnapshot), ...(entry ? { best: bestOf(entry) } : {}) } };
+      return { status: 200, jsonBody: { ok: true, actor: actor.kind, training: trainingMeta(training, { title: training.title, questionCount, totalMarks: Number(item.examSnapshot.totalMarks || item.totalMarks || 0), maxPoints: TRAINING_MAX_STRENGTH_POINTS }), exam: sanitizeExamForStudent(item.examSnapshot), ...bestIfAttempted(entry) } };
     }
 
     // ── submit ──
