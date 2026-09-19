@@ -8,7 +8,7 @@
 //     string taken from content. A renderer is reached ONLY through a statically-authored `load` thunk.
 //   - The registry is TRUSTED code in this repo. The production registry is an EXACT allowlist — every entry is
 //     enumerated in `productionActivityRegistry` below and pinned by engine.test.ts / activities.guards.test.ts
-//     (eleven entries at the Batch-3 phase); any descriptor without a trusted renderer for its exact identity
+//     (the enumerated, test-pinned production activity allowlist — the tests, not this comment, carry the count); any descriptor without a trusted renderer for its exact identity
 //     renders its faithful static fallback, and an activity chunk is loaded only when a matching descriptor renders. Generic built-in presenters (builtins.ts)
 //     resolve with the same {kind, key, version} discipline — never by block type alone.
 //   - The engine performs ZERO persistence and ZERO network: the only sink shipped is a no-op (no progress, no
@@ -155,7 +155,7 @@ export function createActivityRegistry(entries: readonly RegisteredActivity[]): 
  * diagrams). It is an EXACT allowlist of the entries below (pinned by engine.test.ts / activities.guards.test.ts):
  * interactive-diagram network-scope/v1 (Phase 3B), ipv4-octets/v1 (Phase 3E), cidr-network-host/v1 and
  * network-topologies/v1 (Units 4–6), cable-comparison/v1, mac-address-anatomy/v1 and broadcast-address/v1 (Units 7–8),
- * osi-layers/v1 (Batch 3); animation gateway-flow/v1 (Units 4–6); simulation hub-switch-router-flow/v1 (Units 4–6)
+ * osi-layers/v1 (Batch 3), network-domains/v1 (Batch 4); animation gateway-flow/v1 (Units 4–6); simulation hub-switch-router-flow/v1 (Units 4–6)
  * and message-delivery/v1 (Units 7–8) — each behind a
  * code-split `load` thunk, so a chunk is imported only when a matching descriptor renders. Any other descriptor
  * renders its faithful static fallback. The generic BUILT-IN presenters (see builtins.ts — currently only
@@ -264,6 +264,14 @@ export const productionActivityRegistry: LearningActivityRegistry = createActivi
     key: "osi-layers",
     versions: [1],
     load: () => import("./OsiLayersExplorer"),
+    capabilities: { fullscreen: true, reset: true, interactive: true },
+  },
+  {
+    // Batch 4 — the collision / broadcast domains explorer for PDF 101 («المجالات والمفاهيم»).
+    kind: "interactive-diagram",
+    key: "network-domains",
+    versions: [1],
+    load: () => import("./NetworkDomainsExplorer"),
     capabilities: { fullscreen: true, reset: true, interactive: true },
   },
 ]);
