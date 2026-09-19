@@ -360,7 +360,7 @@ static surface until a trusted presenter for that exact identity is added there;
 `RegisteredActivity` whose component is loaded through a statically-authored `load` thunk (its own code-split
 chunk). Content supplies only the **key** — never a component name, function, module path, or any executable code.
 There is **no `eval`, no `new Function`, and no dynamic `import()` of a data path**. `productionActivityRegistry`
-shipped **EMPTY** in Phase 3A (historical — see «Units 4–6» for today's six-entry allowlist): no registry-backed renderer (real simulation / animation / interactive diagram) is
+shipped **EMPTY** in Phase 3A (historical — the current allowlist is the enumerated, test-pinned `productionActivityRegistry` in `engine.ts`; each later content phase section below records the entries it added): no registry-backed renderer (real simulation / animation / interactive diagram) is
 registered, so those descriptors render their faithful static `ActivityFallback` and no activity chunk ever loads
 in production. This does **not** mean every activity family falls back — the generic built-in `guided / reveal / v1`
 presenter (`builtinActivityRegistry`, eager component, same `{kind, key, version}` discipline) is intentionally
@@ -1156,6 +1156,100 @@ No PDF 87+ (protocol functions, network commands, collisions / attacks), no T05+
 for page practice, no project / Achievement Hub / identity / login changes, no change to the approved m01–m12 content
 (m11 only gains a wider test), no change to any class's `visibleModuleIds`.
 
+## Batch 4 — البروتوكولات · أوامر فحص الشبكة · المجالات والمفاهيم (source PDF 87–106)
+
+The fourth content phase, deliberately **larger** than Batch 3 (twenty pages, three sections, three modules). The
+boundary was discovered from the book: PDF 87 opens «البروتوكولات» («أهم البروتوكولات»), PDF 93 opens
+«أوامر فحص الشبكة» (ping), PDF 98 opens «المجالات والمفاهيم» (Collision Domain), PDF 106 is that section's closing
+«تدريبات مراجعة سريعة» page, and **PDF 107 is the book's «الجزء الثاني · أمان الشبكات» part cover** — a structural page
+that starts network security (108–115), then «تجزئة البيانات» (116–118), the end-of-batch trainings (119) and the
+fourth batch cover «برمجة السويتش و VLAN» (120, whose pages are the historical m03 skeleton from PDF 123). Conversion
+**stops before PDF 107**: no page body has `pdfPageStart >= 107` and tests assert it for the batch and for the whole
+real course. Every page in the range is learner-facing (no divider inside 87–106), so structural range = learner range.
+
+### Source map and module structure
+
+| Section | Source PDF | Module (immutable id) | `order` | Batch | Lessons |
+| --- | --- | --- | --- | --- | --- |
+| «البروتوكولات» | **87–92** | `791381-m14` | 10 | b3 | `l01` ما هو البروتوكول؟ · DNS / HTTP / DHCP (87–88) · `l02` SMTP / FTP / TFTP · SSH / Telnet / NAT (89–90) · `l03` HTTPS / POP / IMAP / ICMP / ARP · نوع النقل (91–92) |
+| «أوامر فحص الشبكة» | **93–97** | `791381-m15` | 11 | b3 | `l01` ping و ipconfig (93–94) · `l02` tracert و nslookup و arp (95–97) |
+| «المجالات والمفاهيم» | **98–106** | `791381-m16` | 12 | b3 | `l01` مجال التصادم (98–99) · `l02` مجال البث (100–101) · `l03` STP و Duplex (102–103) · `l04` Localhost و APIPA (104–105) · `l05` تدريبات مراجعة سريعة (106) |
+
+- **1 source page → 1 interactive page**, twenty pages, printed page = the rendered page circle = PDF index (87…106).
+  Three separate modules because the book has three separate running headers; no numbered «الوحدة N» exists in
+  the range and none is invented. Each body is its own lazy chunk (`m14`, `m15`, `m16`).
+- **PDF 106** («تدريبات مراجعة سريعة») is kept as a learner-visible closing page with a `conversionNote`: the three
+  cards that group the book's electronic trainings 5–12 by topic and the QR note are the book's own text; the QR
+  codes live in the printed book and trainings 5–12 are **not** delivered in the platform, so no `library-training`
+  block is authored (the platform still serves T01–T04 only). The section's closing review follows on that page.
+- **Historical skeleton m03–m06 untouched**: ids, titles, lesson/page ids and PDF mappings pinned; only their explicit
+  `order` shifts to 13–16. **b3** «النماذج والبروتوكولات والأمان» now lists `[m13, m14, m15, m16]`.
+- **Protocol fidelity (PDF 87–92):** every protocol carries exactly the book's one-sentence function and its short
+  badge — DNS, HTTP, DHCP, SMTP, FTP, TFTP, SSH, Telnet, NAT, HTTPS, POP / IMAP, ICMP, ARP — plus the PDF 92
+  transport table (six rows, «UDP غالبًا» for DNS) and «القاعدة». No port numbers, message formats, handshakes or
+  security comparisons beyond the book's «SSH آمن / Telnet غير آمن» and «HTTPS نسخة آمنة». The book's two arrow
+  badges («google.com → IP», «داخلي → عام») are rendered as prose «من … إلى …».
+- **Command fidelity (PDF 93–97):** exactly the five commands the book prints, each as a `code` block with the
+  book's syntax line (`ping google.com`, `ipconfig /all`, `tracert google.com`, `nslookup google.com`, `arp -a`,
+  LTR CLI) and its one-sentence «الوظيفة»; the PDF 93 «تطبيق سريع» and «خطأ شائع»; the repeated «أوامر الشبكة» /
+  «تذكّر» boxes. The book prints **no terminal output**, so none is invented (a test bans `Reply from`, `TTL`,
+  `Request timed out`, OS names and extra switches). No traceroute / netstat / route (not in the book).
+- **Source order inside the batch (tested):** protocols appear page by page (87 names none; 88 DNS/HTTP/DHCP; 89
+  adds SMTP/FTP/TFTP; 90 adds SSH/Telnet/NAT; 91 adds the rest); the ping *command* never appears in m14 (`ping` is
+  printed there only as the book's ICMP example on PDF 91); each command appears from its own page only; domain
+  concepts (Collision / Broadcast Domain, STP, Duplex, Localhost, APIPA) never appear in m14/m15 and inside m16 only
+  from their pages; VLAN is named only where PDF 100–101 print it (as a separator of Broadcast domains), never
+  configured.
+- **Next-part leakage guard (semantic, all block fields):** attacks (القرصنة, DoS/DDoS, Hijacking, MitM, Phishing,
+  Spoofing), VPN / SSL / TLS, Segment / تغليف / غلاف, the 3-way handshake (SYN/ACK), and switch-CLI / VLAN
+  programming (Trunk, Dot1Q, VTP, `configure terminal`, `F0/1`, Access) are banned from m14–m16.
+
+### Pedagogy applied
+
+| Module | Solved examples | Clarifications | Inline practices | Worksheets (`practice-table`) | Closing review | Activities |
+| --- | --- | --- | --- | --- | --- | --- |
+| m14 | 2 | 3 | 14 | 2 (protocol → purpose on PDF 91 · protocol → TCP/UDP on PDF 92) | 3 on PDF 92 | 0 |
+| m15 | 2 (the PDF 93 «تطبيق سريع» · which command for which problem) | 2 | 10 | 1 (task → command on PDF 97) | 3 on PDF 97 | 0 |
+| m16 | 2 | 4 | 19 | 0 | 3 on PDF 106 | 1 |
+
+Practices are educational only (nothing stored, scored or ranked; no T05+); every wrong-answer feedback says what
+to **check** («افحص …»), every question carries a two-step hint ladder, every page ends with practice, and the
+shortInput answers are single deterministic tokens (`7`-style numbers, `DNS`, `ipconfig`, `tracert`, `127.0.0.1`).
+
+### One registry-backed activity (`productionActivityRegistry` = exact TWELVE-entry allowlist)
+
+| Activity | `{kind, key, version}` | Page | Renderer (own lazy chunk) |
+| --- | --- | --- | --- |
+| Collision / Broadcast domains explorer | `interactive-diagram / network-domains / 1` | PDF 101 (`m16-l02-p02-explorer`), after the PDF 101 table and «الخلاصة», before the practices | `NetworkDomainsExplorer` — four networks (Hub · Switch · Router · VLAN) as radio buttons; each redraws a native SVG with one **dashed** box per collision domain (the book's own drawing convention, PDF 98–99) and one coloured box per Broadcast domain (PDF 100–101); two toggles show / hide each family; the counts (Hub 1/1, Switch 4/1, Router 6/2, VLAN 4/2) and the book's reason sentences come from `config` and are mirrored as text in a `role="status"` region. No timers, no traffic simulation, no persistence; malformed config → note; unsupported version → fallback |
+
+Rejected on purpose: a terminal simulator for the commands (the book prints no output, so any output would be
+invented), a protocol animation, a second copy of the transport table as an activity (a keyed worksheet already is one).
+
+### Publication: deployable ≠ published
+
+`api/src/lib/learning-materials-registry.js` lists `m14` (10), `m15` (11), `m16` (12) with titles only. Nothing is
+auto-published: a real-registry test proves a class released through m13 exposes nothing of m14–m16, that
+publishing only m15 shows m15 alone, and that `[m16, m14, m15, m13]` canonicalizes to `[m13, m14, m15, m16]`. A
+frontend test cross-checks the server registry against the manifest: every module with a body is publishable with
+the same title and order, and no skeleton is.
+
+### Deferred PR #123 follow-ups applied here
+
+- **A** — `engine.ts` no longer states a count in its allowlist comment; it points at the enumerated, test-pinned
+  registry ("the tests, not this comment, carry the count").
+- **B** — the Phase 3A section's pointer to "today's six-entry allowlist" now points at the enumerated registry and
+  the per-phase sections, so it cannot go stale again.
+- **C** — the PDF 84 clarification in m13 uses the book's own wording («يتأكّد أن البيانات وصلت كاملة وبالترتيب
+  الصحيح») instead of the broader "resends what did not arrive".
+- **D** (arrow-key roving in the send/receive radiogroup) — left as optional polish; not implemented.
+
+### Deliberately NOT in this phase
+
+No PDF 107+ (network security, VPN / SSL / TLS, data encapsulation, the 3-way handshake, switch CLI / VLAN
+programming), no trainings T05+ inside the platform, no terminal output, no port numbers, no medals / Strength /
+leaderboard for page practice, no project / Achievement Hub / identity / login changes, no change to the approved
+m01–m13 content other than cleanup C, no change to any class's `visibleModuleIds`.
+
 ## Phase boundaries
 
 | Phase | Scope | Status |
@@ -1173,6 +1267,7 @@ for page practice, no project / Achievement Hub / identity / login changes, no c
 | **Units 4–6 (this)** | Book 791381 source PDF **34–60** as complete modules `m08` (Class/Subnet/CIDR, order 4), `m09` (أجهزة الشبكات, order 5), `m10` (أنواع شبكات الاتصال, order 6); PDF 47 divider not rendered; interactive `PracticeBlockView`; activities `cidr-network-host/v1`, `gateway-flow/v1`, `hub-switch-router-flow/v1`, `network-topologies/v1`; server publication registry lists m08–m10 (publishable, never auto-published) | done (awaiting review) |
 | **Units 7–8 (this)** | Book 791381 source PDF **61–75** as complete modules `m11` (الكوابل وعنوان MAC, order 7) and `m12` (أنواع الرسائل + the batch-2 summary PDF 75, order 8); b2 = m09–m12; activities `cable-comparison/v1`, `mac-address-anatomy/v1`, `message-delivery/v1`, `broadcast-address/v1` (registry = 10); server publication registry lists m11–m12 (publishable, never auto-published); PDF 76+ untouched | done (awaiting review) |
 | **Batch 3 (this)** | Book 791381 source PDF **76–86** (PDF 76 divider not rendered) as complete module `m13` («نماذج الاتصال: OSI و TCP/IP», order 9); b3 = [m13]; m03–m06 shift to orders 10–13; activity `osi-layers/v1` (registry = 11); server publication registry lists m13 (publishable, never auto-published); PDF 87+ («البروتوكولات») untouched; two deferred PR #122 cleanups applied | done (awaiting review) |
+| **Batch 4 (this)** | Book 791381 source PDF **87–106** as complete modules `m14` («البروتوكولات», order 10), `m15` («أوامر فحص الشبكة», order 11), `m16` («المجالات والمفاهيم» + the PDF 106 trainings page, order 12); b3 = [m13, m14, m15, m16]; m03–m06 shift to orders 13–16; activity `network-domains/v1` (registry = 12); server publication registry lists m14–m16 (publishable, never auto-published); PDF 107+ (Part 2: security …) untouched; PR #123 cleanups A–C applied | done (awaiting review) |
 | 4 | Interactive Practice — remaining inline checking families beyond closed-choice worksheets (free text, ordering, evaluator-backed hints) | deferred |
 | 5 | Simulations — real VLAN/subnet/CLI/… renderers registered behind the Phase-3A engine | deferred |
 | 6 | Student Progress — last page, completion, attempts (separate domain; attaches to the no-op event seam) | deferred |

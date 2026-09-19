@@ -78,7 +78,7 @@ describe("no-auto-publish invariant — DEPLOYMENT ≠ PUBLICATION", () => {
     const student = JSON.stringify(buildStudentLearningMaterials(existing));
     for (const hidden of ["791381-m08", "791381-m09", "791381-m10", "Class و Subnet و CIDR", "أجهزة الشبكات", "أنواع شبكات الاتصال"]) expect(student).not.toContain(hidden);
     const registry = require("../src/lib/learning-materials-registry.js");
-    expect(registry.listLearningModules("791381").map(m => m.moduleId)).toEqual([M01, M02, M07, "791381-m08", "791381-m09", "791381-m10", "791381-m11", "791381-m12", "791381-m13"]);
+    expect(registry.listLearningModules("791381").map(m => m.moduleId)).toEqual([M01, M02, M07, "791381-m08", "791381-m09", "791381-m10", "791381-m11", "791381-m12", "791381-m13", "791381-m14", "791381-m15", "791381-m16"]);
     expect(registry.validateLearningModuleIds("791381", ["791381-m10", "791381-m08"])).toEqual(["791381-m08", "791381-m10"]);   // explicit publication path
     expect(JSON.stringify(existing)).not.toContain("m08");                                                                    // the class document is untouched
   });
@@ -109,6 +109,23 @@ describe("no-auto-publish invariant — DEPLOYMENT ≠ PUBLICATION", () => {
     expect(registry.validateLearningModuleIds("791381", ["791381-m13", "791381-m12"])).toEqual(["791381-m12", "791381-m13"]);
     expect(JSON.stringify(existing)).not.toContain("m13");
     expect(getVisibleLearningModuleIds(room("c6", { learningMaterials: [{ courseId: "791381", visibleModuleIds: [M01, "791381-m13"] }] }), "791381")).toEqual([M01, "791381-m13"]);   // published explicitly → visible
+  });
+  it("REAL registry (Batch 4): a class released through m13 sees NOTHING of m14/m15/m16; explicit publication makes them visible in canonical order; the class document is untouched", () => {
+    const through13 = [M01, M02, M07, "791381-m08", "791381-m09", "791381-m10", "791381-m11", "791381-m12", "791381-m13"];
+    const existing = room("c7", { learningMaterials: [{ courseId: "791381", visibleModuleIds: through13 }] });
+    expect(getVisibleLearningModuleIds(existing, "791381")).toEqual(through13);
+    const student = JSON.stringify(buildStudentLearningMaterials(existing));
+    for (const hidden of ["791381-m14", "791381-m15", "791381-m16", "البروتوكولات", "أوامر فحص الشبكة", "المجالات والمفاهيم"]) expect(student).not.toContain(hidden);
+    const registry = require("../src/lib/learning-materials-registry.js");
+    expect(registry.findLearningModule("791381", "791381-m14")).toEqual({ moduleId: "791381-m14", title: "البروتوكولات", order: 10 });
+    expect(registry.findLearningModule("791381", "791381-m15")).toEqual({ moduleId: "791381-m15", title: "أوامر فحص الشبكة", order: 11 });
+    expect(registry.findLearningModule("791381", "791381-m16")).toEqual({ moduleId: "791381-m16", title: "المجالات والمفاهيم", order: 12 });
+    expect(registry.validateLearningModuleIds("791381", ["791381-m16", "791381-m14", "791381-m15", "791381-m13"])).toEqual(["791381-m13", "791381-m14", "791381-m15", "791381-m16"]);
+    expect(JSON.stringify(existing)).not.toMatch(/m14|m15|m16/);
+    // publishing only m15 (the commands) without m14 is allowed and visible; m14/m16 stay hidden
+    expect(getVisibleLearningModuleIds(room("c8", { learningMaterials: [{ courseId: "791381", visibleModuleIds: [M01, "791381-m15"] }] }), "791381")).toEqual([M01, "791381-m15"]);
+    const s8 = JSON.stringify(buildStudentLearningMaterials(room("c8", { learningMaterials: [{ courseId: "791381", visibleModuleIds: [M01, "791381-m15"] }] })));
+    expect(s8).toContain("791381-m15"); expect(s8).not.toMatch(/791381-m14|791381-m16/);
   });
   it("a NEWLY registered module (future Unit 4) is NOT appended to any existing class's visibleModuleIds", () => {
     const future = {

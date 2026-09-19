@@ -80,11 +80,11 @@ describe("Phase 2 — 791381 content manifest", () => {
 describe("Phase 3E — historical module ids, titles and source mappings are IMMUTABLE; `order` is the sequencing authority", () => {
   const byId = Object.fromEntries(manifest.modules.map(m => [m.id, m]));
 
-  it("keeps every pre-existing module id and adds the real Units 4–8 and Batch 3 as the next free ids m08–m13 — nothing renamed/repurposed", () => {
+  it("keeps every pre-existing module id and adds the real Units 4–8, Batch 3 and Batch 4 as the next free ids m08–m16 — nothing renamed/repurposed", () => {
     expect(manifest.modules.map(m => m.id)).toEqual([
-      "791381-m01", "791381-m02", "791381-m07", "791381-m08", "791381-m09", "791381-m10", "791381-m11", "791381-m12", "791381-m13", "791381-m03", "791381-m04", "791381-m05", "791381-m06",
+      "791381-m01", "791381-m02", "791381-m07", "791381-m08", "791381-m09", "791381-m10", "791381-m11", "791381-m12", "791381-m13", "791381-m14", "791381-m15", "791381-m16", "791381-m03", "791381-m04", "791381-m05", "791381-m06",
     ]);
-    expect(manifest.modules.map(m => m.order)).toEqual([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13]);
+    expect(manifest.modules.map(m => m.order)).toEqual([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16]);
     expect(byId["791381-m07"].order).toBe(3);          // the book's Unit 3 reads third …
     expect(byId["791381-m08"].order).toBe(4);          // … Unit 4 fourth, Unit 5 fifth …
     expect(byId["791381-m09"].order).toBe(5);
@@ -92,10 +92,13 @@ describe("Phase 3E — historical module ids, titles and source mappings are IMM
     expect(byId["791381-m11"].order).toBe(7);          // Units 7–8 phase: Unit 7 seventh, Unit 8 eighth …
     expect(byId["791381-m12"].order).toBe(8);
     expect(byId["791381-m13"].order).toBe(9);          // Batch 3: «نماذج الاتصال» ninth …
-    expect(byId["791381-m03"].order).toBe(10);         // … and the historical skeletons merely shift after the real units
-    expect(byId["791381-m04"].order).toBe(11);
-    expect(byId["791381-m05"].order).toBe(12);
-    expect(byId["791381-m06"].order).toBe(13);
+    expect(byId["791381-m14"].order).toBe(10);         // Batch 4: البروتوكولات, أوامر فحص الشبكة, المجالات والمفاهيم …
+    expect(byId["791381-m15"].order).toBe(11);
+    expect(byId["791381-m16"].order).toBe(12);
+    expect(byId["791381-m03"].order).toBe(13);         // … and the historical skeletons merely shift after the real units
+    expect(byId["791381-m04"].order).toBe(14);
+    expect(byId["791381-m05"].order).toBe(15);
+    expect(byId["791381-m06"].order).toBe(16);
     // the skeletons keep their ids, titles, lesson/page ids and PDF mappings (pinned below) — ONLY `order` moved
     for (const id of ["791381-m03", "791381-m04", "791381-m05", "791381-m06"]) expect(Object.keys(byId[id]).sort(), id).toEqual(["id", "lessons", "order", "shortTitle", "title"].filter(k => k in byId[id]).sort());
   });
@@ -129,12 +132,12 @@ describe("Phase 3E — historical module ids, titles and source mappings are IMM
     expect(batches.b6.moduleIds).toEqual(["791381-m06"]);
   });
 
-  it("Units 7–8 / Batch 3: b2 «الأجهزة والرسائل» lists m09, m10, m11, m12 in that exact order; b3 «النماذج والبروتوكولات والأمان» now lists m13 only (PDF 76–86); other batches unchanged", () => {
+  it("Units 7–8 / Batch 3: b2 «الأجهزة والرسائل» lists m09, m10, m11, m12 in that exact order; b3 «النماذج والبروتوكولات والأمان» lists m13, m14, m15, m16 in that order (PDF 76–106); other batches unchanged", () => {
     const batches = Object.fromEntries(manifest.batches!.map(b => [b.id, b]));
     expect(batches.b2.label).toBe("الأجهزة والرسائل");
     expect(batches.b2.moduleIds).toEqual(["791381-m09", "791381-m10", "791381-m11", "791381-m12"]);
     expect(batches.b3.label).toBe("النماذج والبروتوكولات والأمان");
-    expect(batches.b3.moduleIds).toEqual(["791381-m13"]);
+    expect(batches.b3.moduleIds).toEqual(["791381-m13", "791381-m14", "791381-m15", "791381-m16"]);
     expect(batches.b5.moduleIds).toEqual([]);
     expect(batches.intro.moduleIds).toEqual([]);
     expect(batches.summary.moduleIds).toEqual([]);
