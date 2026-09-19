@@ -146,12 +146,63 @@ const manifest: LearningCourseManifest = {
       ],
     },
     {
+      // Units 4–6 phase: the book's REAL Unit 4 «Class و Subnet و CIDR» (PDF 34–46), complete. New stable id m08
+      // (the next free id), placed fourth by explicit `order`. Printed page = the rendered page circle.
+      id: "791381-m08",
+      title: "Class و Subnet و CIDR",
+      shortTitle: "CIDR والفئات",
+      order: 4,
+      lessons: [
+        {
+          id: "791381-m08-l00",
+          title: "افتتاحية الوحدة",
+          order: 0,
+          pages: [
+            { id: "791381-m08-l00-p01", title: "Class و Subnet و CIDR", order: 1, source: { kind: "book", sourceId: "791381", pdfPageStart: 34 }, keywords: ["مقدمة", "الوحدة الرابعة", "CIDR"] },
+          ],
+        },
+        {
+          id: "791381-m08-l01",
+          title: "فئات العناوين والقناع الطبيعي",
+          order: 1,
+          pages: [
+            { id: "791381-m08-l01-p01", title: "فئات العناوين", order: 1, source: { kind: "book", sourceId: "791381", pdfPageStart: 35, printedPage: 35 }, keywords: ["Class A", "Class B", "Class C", "فئات"] },
+            { id: "791381-m08-l01-p02", title: "تدريب: لأي فئة ينتمي العنوان؟", order: 2, source: { kind: "book", sourceId: "791381", pdfPageStart: 36, printedPage: 36 }, keywords: ["تدريب", "الفئة"] },
+            { id: "791381-m08-l01-p03", title: "قناع الشبكة Subnet Mask", order: 3, source: { kind: "book", sourceId: "791381", pdfPageStart: 37, printedPage: 37 }, keywords: ["Subnet Mask", "قناع"] },
+            { id: "791381-m08-l01-p04", title: "القناع الطبيعي لكل فئة", order: 4, source: { kind: "book", sourceId: "791381", pdfPageStart: 38, printedPage: 38 }, keywords: ["القناع الطبيعي", "/8", "/16", "/24"] },
+            { id: "791381-m08-l01-p05", title: "تدريب: ما هو قناع الشبكة؟", order: 5, source: { kind: "book", sourceId: "791381", pdfPageStart: 39, printedPage: 39 }, keywords: ["تدريب", "قناع الشبكة"] },
+          ],
+        },
+        {
+          id: "791381-m08-l02",
+          title: "جزء الشبكة وجزء الجهاز و CIDR",
+          order: 2,
+          pages: [
+            { id: "791381-m08-l02-p01", title: "جزء الشبكة وجزء الجهاز", order: 1, source: { kind: "book", sourceId: "791381", pdfPageStart: 40, printedPage: 40 }, keywords: ["جزء الشبكة", "جزء الجهاز", "/24"] },
+            { id: "791381-m08-l02-p02", title: "ما هو CIDR؟", order: 2, source: { kind: "book", sourceId: "791381", pdfPageStart: 41, printedPage: 41 }, keywords: ["CIDR", "بتات الشبكة"] },
+            { id: "791381-m08-l02-p03", title: "أمثلة على CIDR", order: 3, source: { kind: "book", sourceId: "791381", pdfPageStart: 42, printedPage: 42 }, keywords: ["CIDR", "مجال العناوين", "Broadcast"] },
+          ],
+        },
+        {
+          id: "791381-m08-l03",
+          title: "الأجهزة في نفس الشبكة والبوابة الافتراضية",
+          order: 3,
+          pages: [
+            { id: "791381-m08-l03-p01", title: "أجهزة في نفس الشبكة", order: 1, source: { kind: "book", sourceId: "791381", pdfPageStart: 43, printedPage: 43 }, keywords: ["نفس الشبكة", "PC1", "PC2"] },
+            { id: "791381-m08-l03-p02", title: "تدريب: أعطِ عنوانًا لجهاز PC2", order: 2, source: { kind: "book", sourceId: "791381", pdfPageStart: 44, printedPage: 44 }, keywords: ["تدريب", "PC2"] },
+            { id: "791381-m08-l03-p03", title: "البوابة الافتراضية Default Gateway", order: 3, source: { kind: "book", sourceId: "791381", pdfPageStart: 45, printedPage: 45 }, keywords: ["Default Gateway", "البوابة الافتراضية", "Router"] },
+            { id: "791381-m08-l03-p04", title: "خلاصة سريعة", order: 4, source: { kind: "book", sourceId: "791381", pdfPageStart: 46 }, keywords: ["خلاصة", "نهاية الدفعة الأولى"] },
+          ],
+        },
+      ],
+    },
+    {
       // Historical Phase-2 skeleton (PDF 123+). Its ID and source mappings are immutable; only its reading `order`
-      // shifted (3 → 4) when the book's real Unit 3 (m07, order 3) was converted in Phase 3E.
+      // shifts as real units are converted (3 → 4 in Phase 3E; 4 → 7 when Units 4–6 became m08–m10).
       id: "791381-m03",
       title: "برمجة السويتش CLI و VLAN",
       shortTitle: "CLI و VLAN",
-      order: 4,
+      order: 7,
       lessons: [
         {
           id: "791381-m03-l01",
@@ -168,7 +219,7 @@ const manifest: LearningCourseManifest = {
       id: "791381-m04",
       title: "Trunk و Router on a Stick",
       shortTitle: "Trunk",
-      order: 5,
+      order: 8,
       lessons: [
         {
           id: "791381-m04-l01",
@@ -184,7 +235,7 @@ const manifest: LearningCourseManifest = {
       id: "791381-m05",
       title: "مرجع أوامر Cisco",
       shortTitle: "أوامر Cisco",
-      order: 6,
+      order: 9,
       lessons: [
         {
           id: "791381-m05-l01",
@@ -201,7 +252,7 @@ const manifest: LearningCourseManifest = {
       id: "791381-m06",
       title: "قوائم التحكم ACL",
       shortTitle: "ACL",
-      order: 7,
+      order: 10,
       lessons: [
         {
           id: "791381-m06-l01",
@@ -221,7 +272,7 @@ const manifest: LearningCourseManifest = {
   // sections whose canonical modules are authored during conversion, so they are empty here for now.
   batches: [
     { id: "intro", label: "المقدمة", moduleIds: [] },
-    { id: "b1", label: "الأساسيات · الأعداد · IP", moduleIds: ["791381-m01", "791381-m02", "791381-m07"] },
+    { id: "b1", label: "الأساسيات · الأعداد · IP", moduleIds: ["791381-m01", "791381-m02", "791381-m07", "791381-m08"] },
     { id: "b2", label: "الأجهزة والرسائل", moduleIds: [] },
     { id: "b3", label: "النماذج والبروتوكولات والأمان", moduleIds: [] },
     { id: "b4", label: "برمجة السويتش و VLAN", moduleIds: ["791381-m03", "791381-m04", "791381-m05"] },

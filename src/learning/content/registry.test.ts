@@ -23,11 +23,10 @@ describe("Phase 2 — content registry (lazy, module-level chunking)", () => {
     expect(manifest.modules.length).toBeGreaterThan(0);
     // the manifest carries TOC identities but NO block bodies exist on it (proves manifest ≠ content bodies)
     expect((manifest.modules[0].lessons[0].pages[0] as { blocks?: unknown }).blocks).toBeUndefined();
-    // m01, m02 (3B–3D) and m07 (3E, Unit 3) have real bodies; the remaining skeleton modules (m03–m06) do not.
-    expect(hasModuleContent("791381", "791381-m01")).toBe(true);
-    expect(hasModuleContent("791381", "791381-m02")).toBe(true);
-    expect(hasModuleContent("791381", "791381-m07")).toBe(true);
-    for (const m of manifest.modules.filter(m => !["791381-m01", "791381-m02", "791381-m07"].includes(m.id))) {
+    // m01, m02 (3B–3D), m07 (3E, Unit 3) and m08 (Unit 4) have real bodies; the skeleton modules (m03–m06) do not.
+    const REAL = ["791381-m01", "791381-m02", "791381-m07", "791381-m08"];
+    for (const id of REAL) expect(hasModuleContent("791381", id), id).toBe(true);
+    for (const m of manifest.modules.filter(m => !REAL.includes(m.id))) {
       expect(hasModuleContent("791381", m.id), m.id).toBe(false);
     }
     // hasModuleContent is pure — it triggers no import and no network
