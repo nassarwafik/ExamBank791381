@@ -3,6 +3,7 @@
 // callback stays deterministic and unit-testable, and history/audit are derived consistently.
 const crypto = require("crypto");
 const { STATUSES } = require("./project-794589-core");
+const { validateScoreInput } = require("./project-tracker/score");
 
 function emptyProgress({ programCode, classId, studentId, now }) {
   return {
@@ -17,8 +18,10 @@ function emptyProgress({ programCode, classId, studentId, now }) {
   };
 }
 
-// update: { stageId, status?, note?, actor, now, programCode, classId, studentId }
-// Returns { doc, statusChanged, noteChanged, fromStatus, toStatus }.
+// update: { stageId, status?, note?, score?, actor, now, programCode, classId, studentId }
+// Returns { doc, statusChanged, noteChanged, scoreChanged, fromStatus, toStatus, fromScore, toScore }.
+// `score` (teacher-only quality mark 0–100, additive/optional) is validated server-side; `null` clears it. It is
+// independent of `status` (workflow) — the project grade counts it only while the stage is approved.
 function applyProgressUpdate(current, update) {
   const { stageId, actor, now } = update;
   const doc = current
@@ -62,7 +65,16 @@ function applyProgressUpdate(current, update) {
     next.note = note;
   }
 
-  if (!statusChanged && !noteChanged) {
+  let scoreChanged = false;
+  const fromScore = (typeof prev.score === "number" && Number.isFinite(prev.score)) ? prev.score : null;
+  let toScore = fromScore;
+  if (update.score !== undefined) {
+    toScore = update.score === null || update.score === "" ? null : validateScoreInput(update.score);
+    if (toScore !== fromScore) scoreChanged = true;
+    if (toScore === null) delete next.score; else next.score = toScore;
+  }
+
+  if (!statusChanged && !noteChanged && !scoreChanged) {
     // Nothing to do - signal a no-op so the caller can avoid a pointless write/audit.
     const err = new Error("لا يوجد تغيير.");
     err.code = "NO_CHANGE";
@@ -84,6 +96,17 @@ function applyProgressUpdate(current, update) {
       createdAt: now
     });
   }
+  if (scoreChanged) {
+    doc.history.push({
+      eventId: crypto.randomUUID(),
+      stageId,
+      type: "score",
+      fromScore,
+      toScore,
+      actor: actor || "",
+      createdAt: now
+    });
+  }
   if (noteChanged) {
     // Record that the note changed, not its text (keep history free of free-text content).
     doc.history.push({
@@ -95,7 +118,7 @@ function applyProgressUpdate(current, update) {
     });
   }
 
-  return { doc, statusChanged, noteChanged, fromStatus, toStatus };
+  return { doc, statusChanged, noteChanged, scoreChanged, fromStatus, toStatus, fromScore, toScore };
 }
 
 module.exports = { emptyProgress, applyProgressUpdate };

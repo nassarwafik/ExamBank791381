@@ -12,6 +12,7 @@ const { getSupportedClassProgramCodes } = require("../lib/project-tracker/class-
 // per-project authoritative summaries (core.buildStudentSummary). Project math is never duplicated here.
 const { loadStudentProjects } = require("../lib/project-tracker/student-projects");
 const core = require("../lib/project-tracker/core");
+const performance = require("../lib/project-tracker/performance");
 
 const CLASS_PREFIX = "platform/classes/";
 const USER_PREFIX = "platform/users/";
@@ -42,6 +43,8 @@ async function handler(request, deps = {}, obs = null) {
         title: definition.title,
         tracks: definition.tracks,
         summary,
+        // Project performance (grade / project-specific Strength + rank / per-stage value) — the ONE calculator's output.
+        performance: performance.buildProjectPerformanceSummary(workDef, progress, now, summary),
         stages: snapshot.stages,
         groups: snapshot.groups,
         progress: progress ? progress.stages : {},

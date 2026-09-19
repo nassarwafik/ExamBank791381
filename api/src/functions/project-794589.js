@@ -173,7 +173,7 @@ async function handler(request, deps = {}, obs = null) {
           // Membership check BEFORE any mutate (parity with the generic project-tracker route): an
           // arbitrary/foreign/archived studentId can never create a ghost progress blob under this class.
           const result = await svc.updateStudentProgress(container, PROGRAM_CODE, classroom, {
-            studentId, stageId, status: body.status, note: body.note, actor: auth.user?.sub, now
+            studentId, stageId, status: body.status, note: body.note, score: body.score, actor: auth.user?.sub, now
           }, LEGACY_SNAPSHOT);
           if (!result.ok && result.reason === "not_member") return { status: 404, jsonBody: { ok: false, error: "الطالب غير موجود في هذا الصف." } };
           if (!result.ok) return { status: 400, jsonBody: { ok: false, error: "المرحلة غير موجودة أو غير مفعّلة." } };
@@ -191,6 +191,13 @@ async function handler(request, deps = {}, obs = null) {
             await rec(container, {
               actor: auth.user?.sub, action: "project.stage.note",
               targetType: "project-stage", targetId: classId + "/" + studentId + "/" + stageId, targetLabel: stage.title
+            });
+          }
+          if (outcome.scoreChanged) {
+            await rec(container, {
+              actor: auth.user?.sub, action: "project.stage.score",
+              targetType: "project-stage", targetId: classId + "/" + studentId + "/" + stageId, targetLabel: stage.title,
+              details: { projectCode: PROGRAM_CODE, classId, studentId, stageId, oldScore: outcome.fromScore, newScore: outcome.toScore }
             });
           }
           // Return the full set of derived fields the detail view shows, so the client can update
