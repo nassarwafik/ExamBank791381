@@ -14,7 +14,6 @@ const CLS = id => "platform/classes/" + id + ".json";
 const AUTH = { requireBuilderAuth: () => ({ ok: true, user: { sub: "teacher-1" } }) };
 const deps = (ctx, extra = {}) => ({ ...AUTH, container: ctx.container, getContainer: () => ctx.container, recordAuditEvent: async () => {}, ...extra });
 const post = (ctx, body, extra) => classrooms({ method: "POST", url: "https://x/api/classrooms", json: async () => body }, deps(ctx, extra));
-const get = ctx => classrooms({ method: "GET", url: "https://x/api/classrooms", json: async () => ({}) }, deps(ctx));
 const room = (id, extra = {}) => ({ schemaVersion: 1, classId: id, name: "صف " + id, grade: "11", schoolYear: "2026-2027", active: true, status: "active", studentIds: ["s1", "s2"], programCodes: ["794589"], createdAt: "2026-01-01", updatedAt: "2026-01-01T00:00:00.000Z", customNote: "keep-me", ...extra });
 const doc = (ctx, id) => ctx.getJson(CLS(id));
 const setModules = (ctx, classId, moduleIds, extra) => post(ctx, { action: "setLearningCourseModules", classId, courseId: "791381", moduleIds }, extra);

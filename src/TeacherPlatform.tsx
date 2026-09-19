@@ -10,7 +10,8 @@ import {getClassProgramCodes} from "./projects/classPrograms";
 import {useConfirm} from "./ui/useConfirm";
 import ClassesPane from "./students/ClassesPane";
 import RosterPane from "./students/RosterPane";
-import ClassLearningMaterialsPanel,{classLearningMaterials} from "./students/ClassLearningMaterialsPanel";
+import ClassLearningMaterialsPanel from "./students/ClassLearningMaterialsPanel";
+import {classLearningMaterials} from "./students/classLearningMaterials";
 import StudentDialog from "./students/StudentDialog";
 import {CreateClassDialog,AddStudentDialog,ImportStudentsDialog,EditStudentDialog} from "./students/StudentForms";
 import type {ClassArchiveView,Classroom,ClassLearningMaterial,LearningCatalogCourse,ProjectOption,Student,Credential,BulkStudent,BulkError,ImportPreviewRow,SubmittedAssignment,StudentProfile,SortKey,StatusFilter,ProfileSection} from "./students/types";
@@ -221,15 +222,13 @@ function TeacherPlatform(props:TeacherPlatformProps){
  function stillSelected(classId:string){return selectedClassRef.current===classId}
 
  useEffect(()=>{void loadClasses(false)},[]);
- async function loadLearningCatalog(){
-  setLearningCatalogError("");
-  try{
-   const result=await teacherApi<{ok:true;courses?:LearningCatalogCourse[]}>("/api/learning-materials-catalog");
-   setLearningCatalog(Array.isArray(result.courses)?result.courses:[]);
-  }catch(e){setLearningCatalog(null);setLearningCatalogError(e instanceof Error?e.message:"تعذر تحميل قائمة المواد التعليمية.")}
+ function loadLearningCatalog(){
+  return teacherApi<{ok:true;courses?:LearningCatalogCourse[]}>("/api/learning-materials-catalog")
+   .then(result=>{setLearningCatalog(Array.isArray(result.courses)?result.courses:[]);setLearningCatalogError("")})
+   .catch(e=>{setLearningCatalog(null);setLearningCatalogError(e instanceof Error?e.message:"تعذر تحميل قائمة المواد التعليمية.")});
  }
  // The catalog is needed only by the Classes & Students workspace (the panel lives there); other tabs never request it.
- useEffect(()=>{if(workspaceTab==="students"&&learningCatalog===null)void loadLearningCatalog()},[workspaceTab]);// eslint-disable-line react-hooks/exhaustive-deps
+ useEffect(()=>{if(workspaceTab!=="students"||learningCatalog!==null)return;void loadLearningCatalog()},[workspaceTab]);// eslint-disable-line react-hooks/exhaustive-deps
  // Registry-driven list of projects for the per-class project selector (no hard-coded codes).
  // Only a standalone mount (no catalog from App) reads the registry itself; inside the app the boot read is reused.
  useEffect(()=>{if(props.projects!==undefined)return;teacherApi<{projects?:ProjectOption[]}>("/api/project-tracker?resource=projects").then(r=>setPrograms(r.projects||[])).catch(()=>setPrograms([]));},[]);// eslint-disable-line react-hooks/exhaustive-deps

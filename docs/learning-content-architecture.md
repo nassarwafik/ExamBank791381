@@ -556,6 +556,81 @@ CIDR و Subnet و Class»). Nothing from PDF 34 onward is converted; a test asse
 
 **Deferred next work: Unit 4 (PDF 34+)** — CIDR, Subnet, Class A/B/C, masks, network/host bits.
 
+## Class Learning Materials & Progressive Release
+
+The first product slice that puts the converted book in front of REAL students, class by class, on the teacher's
+schedule. Three things are deliberately distinct — and the distinction is the core invariant of the feature:
+
+```text
+Content DEPLOYMENT   ≠   Class ASSIGNMENT   ≠   Module PUBLICATION
+(a module body ships      (a class uses book       (which modules of that book the
+ in the frontend build)    791381)                  class's students may see right now)
+```
+
+Deploying a newly converted unit changes nothing for any class. Attaching a book to a class shows nothing to its
+students until the teacher publishes at least one module. Publication is per module, reversible, and class-level.
+
+**Classroom data shape (authorization / delivery metadata only — never bodies, pages, blocks or PDF text):**
+
+```ts
+classroom.learningMaterials = [ { courseId: "791381", visibleModuleIds: ["791381-m01", "791381-m02"] } ]
+```
+
+A course may be attached with `visibleModuleIds: []` (teacher sees the card, students see nothing). It is a separate
+field from `programCodes` (projects) and from `platform/assignments/` (exams) — no coupling in either direction.
+
+**Server publication registry — `api/src/lib/learning-materials-registry.js`.** The only list the API trusts for
+course/module ids: course `791381` with `m01`, `m02`, `m07` in the book's content order (never a lexical sort; m07
+is Unit 3 after m02). Skeleton-only modules (m03–m06) are absent, so they can neither be published nor become
+student-visible. **Future module onboarding:** when a unit is converted and approved, the developer appends it here;
+it then appears to teachers as «مخفي عن الطلاب» and is NEVER appended to any class's `visibleModuleIds` — a test
+proves a newly registered module is not auto-published to existing classes.
+
+**One normalization authority — `api/src/lib/class-learning-materials.js`.** Every consumer reads the field through
+it: missing/malformed → `[]`; ids trimmed, de-duplicated, filtered to the registry, canonical order; duplicate
+course entries merged; unknown courses/modules default-denied (a stale `791381-m999` in storage is never echoed).
+Pure `set`/`remove` mutations and the safe student catalog builder live here too.
+
+**Teacher flow** (`POST /api/classrooms`, builder auth, `mutateJsonWithRetry` CAS, audit):
+`setLearningCourseModules { classId, courseId, moduleIds }` attaches the course if needed and sets EXACTLY the
+published ids (`[]` valid; unknown course/module → 400; archived class → 403 via `normalizeClassStatus`; missing →
+404; conflict → 503). `removeLearningCourse { classId, courseId }` detaches the course (idempotent: absent → 200
+`removed:false`, no write, no audit); content is never deleted, roster/projects/assignments untouched.
+`GET /api/classrooms` returns the normalized `learningMaterials` per class (derived from the same document — no
+extra reads). `GET /api/learning-materials-catalog` returns the publishable catalog (ids, titles, order only), read
+once per Classes & Students workspace. UI: `src/students/ClassLearningMaterialsPanel.tsx` below Classes | Students
+(add-course dialog with nothing pre-checked; hide and remove use non-destructive confirmations; archived = read-only;
+a response for class A never rewrites the panel of a class B selected meanwhile).
+
+**Student entitlement** (`GET /api/student-learning-materials`): `requireActiveStudentSession` → the CURRENT
+persisted student document → `student.classId` (never the token's `classId`, never a query parameter) → one class
+document read → lifecycle (archived class → 403, same rule as the dashboard) → normalized publication ∩ registry.
+Only courses with ≥ 1 published module are returned, each with ONLY its published modules (id, title, order): no
+hidden titles, no hidden count. Storage path: the session's user read + one class read; no scans, no bodies.
+
+**Student experience:** «موادي التعليمية» in the portal (after «ماذا عليّ أن أفعل الآن؟», before «تقدّمي») is an
+optional panel (one read; failures degrade locally, never a logout). «فتح المادة» RE-READS the entitlement, then
+opens the **same `LearningReader`** (no student fork) through `createRestrictedReaderContentApi` +
+`filterManifestByModuleIds`: the manifest contains only released modules (TOC, jump list, previous/next and the
+page total all follow), `hasModule` is false for anything else, and `loadModule` rejects BEFORE the base loader is
+invoked. A hidden MIDDLE module (m01 + m07 released) simply does not exist — the last m01 page reads straight into
+the first m07 page; no placeholder, no «قيد الإعداد», no locked entry. Exit returns to the portal.
+
+**Consistency model (phase 1):** changes appear on the student's next portal load, explicit refresh, or course
+re-open (open-time revalidation). No realtime push, no polling.
+
+**Honest boundary — static assets.** Module bodies are frontend code-split chunks. This phase enforces
+server-authoritative, default-deny access through every SUPPORTED application path (API entitlement, UI visibility,
+manifest filtering, navigation, loader guard). It is not asset-level confidentiality: a technically advanced user
+fetching chunk URLs by hand is not prevented. True confidentiality needs authenticated content delivery from the
+server in a future architecture; nothing here claims DRM.
+
+**Deliberately NOT in this phase:** page/lesson-level release (modules only), scheduled release, per-student
+exceptions (class-level only), reading progress (no last page, completion, streaks, XP or badges — Phase 6), answer
+checking (Phase 4), new book content (Unit 4 / PDF 34+ paused for the UX review this slice enables).
+
+See also `docs/class-learning-materials.md` for the authority chain in one diagram.
+
 ## Phase boundaries
 
 | Phase | Scope | Status |
@@ -566,7 +641,8 @@ CIDR و Subnet و Class»). Nothing from PDF 34 onward is converted; a test asse
 | 3B | First real conversion pilot — Book 791381 source PDF **7–14** | done |
 | 3C | Number-systems batch — Book 791381 source PDF **15–22** (decimal/binary/hex conversions) | done |
 | 3D | Complete Unit 2 — Book 791381 source PDF **23** (خلاصة التحويلات); m02 becomes complete | done |
-| **3E (this)** | Complete Unit 3 «عناوين IP» — Book 791381 source PDF **24–33** as new stable module `m07` (order 3); first IP-focused activity (`ipv4-octets/v1`) | done |
+| 3E | Complete Unit 3 «عناوين IP» — Book 791381 source PDF **24–33** as new stable module `m07` (order 3); first IP-focused activity (`ipv4-octets/v1`) | done |
+| **Class Learning Materials (this)** | Class assignment + progressive module release + «موادي التعليمية» + filtered shared Reader + default-deny student access; Unit 4 conversion paused for the real teacher/student UX review | done (awaiting UX review) |
 | 4 | Interactive Practice — answer checking + immediate feedback (inline) | deferred |
 | 5 | Simulations — real VLAN/subnet/CLI/… renderers registered behind the Phase-3A engine | deferred |
 | 6 | Student Progress — last page, completion, attempts (separate domain; attaches to the no-op event seam) | deferred |

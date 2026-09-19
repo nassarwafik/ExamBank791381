@@ -1,9 +1,10 @@
-import { useEffect, useId, useState } from "react";
+import { useId, useState } from "react";
 import SectionHeader from "../ui/SectionHeader";
 import EmptyState from "../ui/EmptyState";
 import StatusBadge from "../ui/StatusBadge";
 import Dialog from "../ui/Dialog";
 import { IconBook, IconPlus } from "../icons";
+import { classLearningMaterials } from "./classLearningMaterials";
 import type { Classroom, ClassLearningMaterial, LearningCatalogCourse } from "./types";
 
 /**
@@ -28,22 +29,17 @@ export type ClassLearningMaterialsPanelProps = {
   onRemoveCourse: (classroom: Classroom, courseId: string) => void;
 };
 
-/** Normalized read of a class's learning materials (never trusts a missing field). Pure. */
-export function classLearningMaterials(classroom: Classroom | null | undefined): ClassLearningMaterial[] {
-  const raw = classroom?.learningMaterials;
-  return Array.isArray(raw) ? raw.filter(e => e && typeof e.courseId === "string" && e.courseId).map(e => ({ courseId: e.courseId, visibleModuleIds: Array.isArray(e.visibleModuleIds) ? e.visibleModuleIds.slice() : [] })) : [];
-}
-
 export default function ClassLearningMaterialsPanel(p: ClassLearningMaterialsPanelProps) {
-  const [addOpen, setAddOpen] = useState(false);
+  // The add dialog is open FOR one class id: a class switch closes it by derivation (never adds to a class the
+  // teacher has left), with no effect-driven reset.
+  const [addOpenFor, setAddOpenFor] = useState("");
   const classroom = p.classroom;
+  const addOpen = Boolean(classroom) && addOpenFor === classroom!.classId;
+  const setAddOpen = (open: boolean) => setAddOpenFor(open && classroom ? classroom.classId : "");
   const materials = classLearningMaterials(classroom);
   const attachedIds = new Set(materials.map(m => m.courseId));
   const addable = (p.catalog || []).filter(c => !attachedIds.has(c.courseId));
   const editable = Boolean(classroom) && p.classActive;
-
-  // The dialog belongs to ONE class: a class switch closes it (never adds to a class the teacher has left).
-  useEffect(() => { setAddOpen(false); }, [classroom?.classId]);
 
   // The add affordance exists only while there is something left to add (catalog loaded, a course not yet attached).
   const addButton = classroom && p.classActive && p.catalog && addable.length > 0 ? (
@@ -83,6 +79,7 @@ export default function ClassLearningMaterialsPanel(p: ClassLearningMaterialsPan
       )}
       {classroom && (
         <AddCourseDialog
+          key={addOpen ? "open-" + classroom.classId : "closed"}   // fresh selection state on every open
           open={addOpen}
           classroom={classroom}
           courses={addable}
@@ -150,7 +147,6 @@ function AddCourseDialog({ open, classroom, courses, busy, onClose, onAdd }: {
   const [courseId, setCourseId] = useState("");
   const [picked, setPicked] = useState<string[]>([]);
   const groupId = useId();
-  useEffect(() => { if (!open) { setCourseId(""); setPicked([]); } }, [open]);
   const course = courses.find(c => c.courseId === courseId) || null;
   const modules = course ? course.modules.slice().sort((a, b) => a.order - b.order) : [];
   const toggle = (id: string, on: boolean) => setPicked(prev => on ? (prev.includes(id) ? prev : [...prev, id]) : prev.filter(x => x !== id));
