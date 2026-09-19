@@ -583,10 +583,13 @@ describe("Student Portal — rank cadence & medal sizing", () => {
     expect(rank).toMatch(/Math\.floor\(count \/ RANK_STEP_FINALIZED\)/);       // tier from the finalized count
     expect(rank).not.toMatch(/RANK_MIN_FINALIZED\s*=\s*10/);                   // old unlock gone
     expect(rank).not.toMatch(/bronze: 60, silver: 70, gold: 80, diamond: 90, legendary: 96/);  // old average-threshold table gone
-    // the component reads the denominator from the constant, never a hardcoded 4/10
-    expect(section).toMatch(/من \{RANK_STEP_FINALIZED\} امتحانات نهائية لفتح رتبتك/);
+    // Unified Strength: the component speaks in Strength points (one 400-point block per rank — the same boundary
+    // the four-finalized-exam cadence lands on, since a finalized exam is worth 100), never a hardcoded 4/10 and
+    // never the old exam-count or average-based wording.
+    expect(section).toMatch(/نقطة قوة لفتح رتبتك/);
+    expect(section).not.toMatch(/امتحانات نهائية لفتح رتبتك/);                      // old exam-count unlock wording gone
     expect(section).not.toMatch(/الرتبة التالية عند معدل نهائي/);                 // old average-based next-rank wording gone
-    expect(section).toMatch(/remainingExamsPhrase\(rank\.next\.remaining\)/);   // count-based next-rank wording
+    expect(section).toMatch(/remainingPointsPhrase\(rank\.next\.remaining\)/);  // Strength-based next-rank wording
   });
 
   it("medal icons use the enlarged sizes and the container stays overflow-safe (flex-wrap) on mobile", () => {

@@ -52,3 +52,14 @@
   .eb-lm-card-body{ flex:1 1 auto; }
   .eb-lm-meta, .eb-lm-meta-wide{ grid-template-columns:repeat(2, minmax(0,1fr)); }
 }
+
+/* ---------- Desktop inset (Learning Materials only) ----------
+   The teacher shell's content area carries no padding of its own, so on desktop the library, the course overview
+   and the Reader sat flush against the RTL sidebar. A LOGICAL inline inset (tokens only) separates them from the
+   sidebar edge on either side; the block inset keeps the page header off the top bar. Scoped to the Learning
+   Materials roots (`.eb-lm`, `.eb-lm-reader`) — the student portal's Reader and every other teacher page are
+   untouched, and below 1024px nothing changes (the phone/tablet baseline is the protected one). The Reader keeps
+   its wide slide canvas: the inset is a gutter, never a max-width. */
+@media (min-width: 1024px){
+  .eb-lm, .eb-lm-reader{ padding-inline:var(--eb-space-5); padding-block:var(--eb-space-4) var(--eb-space-6); }
+}

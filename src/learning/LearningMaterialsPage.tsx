@@ -30,15 +30,19 @@ export default function LearningMaterialsPage({ token }: { token?: string } = {}
 
   if (course && view.kind === "reader") {
     return (
-      <Suspense fallback={<p className="eb-muted" role="status">جارٍ فتح القارئ التفاعلي...</p>}>
-        <LearningReaderWithTraining
-          courseId={course.id}
-          onExit={() => setView({ kind: "course", courseId: course.id })}
-          exitLabel="العودة إلى نظرة الكتاب"
-          client={client}
-          actor="teacher"
-        />
-      </Suspense>
+      // `.eb-lm-reader` is the Learning-Materials-only desktop inset root (learning.css); the Reader itself is shared
+      // with the student portal and stays untouched.
+      <div className="eb-lm-reader">
+        <Suspense fallback={<p className="eb-muted" role="status">جارٍ فتح القارئ التفاعلي...</p>}>
+          <LearningReaderWithTraining
+            courseId={course.id}
+            onExit={() => setView({ kind: "course", courseId: course.id })}
+            exitLabel="العودة إلى نظرة الكتاب"
+            client={client}
+            actor="teacher"
+          />
+        </Suspense>
+      </div>
     );
   }
 
