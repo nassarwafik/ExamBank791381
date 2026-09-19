@@ -9,9 +9,9 @@ import PracticeBlockView from "./PracticeBlockView";
 import { ACTIVITY_ENRICHMENT_LABEL } from "../activities/labels";
 import type { LearningActivityRegistry, LearningActivityEventSink } from "../activities/engine";
 
-/** Injection seam for the interactive-activity engine. The reader passes nothing → the PRODUCTION registry (an
- *  exact six-entry allowlist — the network-scope, ipv4-octets, cidr-network-host and network-topologies diagrams,
- *  the gateway-flow animation and the hub-switch-router-flow simulation) and the no-op
+/** Injection seam for the interactive-activity engine. The reader passes nothing → the PRODUCTION registry (the
+ *  enumerated, test-pinned allowlist in `activities/engine.ts` — every renderer is a static import thunk keyed by
+ *  kind/key/version and pinned by `engine.test.ts` / `activities.guards.test.ts`) and the no-op
  *  event sink are used; a descriptor without a trusted renderer shows its faithful static fallback and nothing is
  *  persisted. Tests inject a synthetic registry / sink to exercise the live path. */
 export type ActivityRenderContext = {

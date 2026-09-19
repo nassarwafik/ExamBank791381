@@ -1071,6 +1071,91 @@ No PDF 76+ (OSI, TCP/IP, TCP vs UDP, protocol commands), no T05+, no medals for 
 page practice, no leaderboard, no project scoring / Achievement Hub / profile identity / teacher login changes, no
 change to the approved m08–m10 content.
 
+## Batch 3 — نماذج الاتصال: OSI و TCP/IP (source PDF 76–86)
+
+The third content phase after Units 7–8. Its boundary was **discovered from the book, not assumed**: PDF 76 is the
+batch-3 divider («الدفعة الثالثة · نماذج الاتصال والبروتوكولات والأمان …», a structural page like PDF 47), PDF 77–86
+is the section «نماذج الاتصال · OSI و TCP/IP» (OSI → its seven layers → lower / upper layers → TCP/IP → its four
+layers → the comparison → TCP و UDP → when TCP → when UDP), and PDF 87 opens the **next** section «البروتوكولات ·
+أهم البروتوكولات» (DNS / HTTP / DHCP …, then «أوامر فحص الشبكة» from PDF 93). The section is converted as one
+complete module and conversion **stops before PDF 87**: no page body has `pdfPageStart >= 87` and tests assert it
+for m13 and for the whole real course. This batch has **no «الوحدة N» opener page** in the book, so none is invented:
+the section header is the module title and PDF 76 is represented only by the module's coarse source range
+(`pdfPageStart: 76` + `sourceNote`), never as a learner page.
+
+### Source map and module structure
+
+| Section | Source PDF | Module (immutable id) | `order` | Batch | Lessons |
+| --- | --- | --- | --- | --- | --- |
+| «نماذج الاتصال: OSI و TCP/IP» | **76 (divider) · 77–86** | `791381-m13` | 9 | b3 | `l01` نموذج OSI (77–80) · `l02` نموذج TCP/IP (81–83) · `l03` TCP و UDP (84–86) |
+
+- **1 source page → 1 interactive page** (ten pages, PDF 77…86), page ids `791381-m13-lNN-pNN` authored once and
+  immutable; the body registers as its own lazy chunk (`m13`). Faithful blocks are `origin:"book"` (29 blocks);
+  clarifications, solved examples, the explorer, worksheets, practices and the closing review are
+  `origin:"teacher-enrichment"`.
+- **Printed page numbers** follow the rendered page circle (PDF 77 → «77» … PDF 86 → «86»); the divider prints none.
+- **Historical skeleton m03–m06 untouched**: ids, titles, lesson/page ids and PDF mappings pinned; only their explicit
+  `order` shifts to 10–13. **b3** «النماذج والبروتوكولات والأمان» now lists `[m13]` (it was empty after Units 7–8);
+  b1/b2/b4–b6 unchanged. (This supersedes the "b3 stays empty" and "TEN-entry allowlist" statements in the Units 7–8
+  section above, which describe that phase as delivered.)
+- **Source order inside the section is sacred (tested):** TCP / UDP are only *named* as layer-4 tokens on PDF 78–79;
+  their reliability / speed semantics («موثوق», «سريع», «يتأكّد», «يضمن» …) appear on PDF 84–86 only. The four TCP/IP
+  layers (Internet, Link, «4 طبقات») never appear on the OSI pages (PDF 77–80). OSI layer *functions* follow the
+  book's page order (PDF 78 names + tokens only; PDF 79 the lower four; PDF 80 the upper three). Protocol functions
+  (PDF 87–92: DNS, DHCP, TFTP, SSH, Telnet, NAT, HTTPS, POP, IMAP, ICMP, ARP …) and network commands (PDF 93+: ping …)
+  never appear; HTTP / FTP / SMTP are printed only as bare example names exactly where the book prints them (PDF 80,
+  85).
+- **Book level preserved:** no port numbers, no handshake / header structure, no PDU names beyond the book's Frame /
+  Packet, no encapsulation walkthrough; the comparison keeps the book's 7-row figure (upper three → Application,
+  Network → Internet, Data Link + Physical → Link).
+- **Transparent normalization (documented, not silent):** the book's send-down / receive-up memorisation rule is kept
+  as prose «عند الإرسال ننزل من 7 إلى 1، وعند الاستقبال نصعد من 1 إلى 7» under the permanent «من X إلى Y» rule; the
+  content tests ban `←` / `→` from m13 entirely, and the explorer's direction radios read «إرسال: من 7 إلى 1» /
+  «استقبال: من 1 إلى 7».
+
+### Pedagogy applied
+
+| Module | Solved examples | Clarifications | Inline practices | Worksheets (`practice-table`) | Closing review | Activities |
+| --- | --- | --- | --- | --- | --- | --- |
+| m13 | 4 (send/receive order · MAC vs IP layer · Session in TCP/IP · file vs live stream) | 4 | 20 (every page ends with practice) | 2 (OSI → TCP/IP mapping on PDF 83 · TCP-or-UDP cases on PDF 86) | 3 exam-style questions on PDF 86 | 1 |
+
+Practices are educational only (nothing stored, scored or ranked; no T05+); every wrong-answer feedback says what to
+**check** («افحص …») and every question carries a two-step hint ladder. Keyed `fillBlank` is not used.
+
+### One registry-backed activity (`productionActivityRegistry` = exact ELEVEN-entry allowlist)
+
+Only one activity was added, because only one place in the section benefits from interaction beyond a table: the
+seven-layer stack, once all seven layers are introduced. The OSI ↔ TCP/IP comparison stays a table + keyed worksheet
+and TCP vs UDP stays cards + a keyed worksheet (an animation there would add nothing the book teaches).
+
+| Activity | `{kind, key, version}` | Page | Renderer (own lazy chunk) |
+| --- | --- | --- | --- |
+| OSI layers explorer | `interactive-diagram / osi-layers / 1` | PDF 80 (`m13-l01-p04-explorer`), after the Session / Presentation / Application cards and the «الفكرة» line, before the page's practices | `OsiLayersExplorer` — the book's stack drawn top (7) to bottom (1) as real buttons (number · name · Arabic · token), upper/lower groups named in words; pressing a layer shows its function as TEXT in a `role="status"` region (the PDF 79–80 wording, from the block's `config`); an «إرسال» / «استقبال» radio applies the PDF 78 rule by renumbering the steps (send: layer 7 = الخطوة 1; receive: layer 1 = الخطوة 1) and swapping the prose note. No timers, no protocol functions, no persistence; malformed config (duplicate numbers, fewer than two layers) → a note; unsupported version → the faithful static fallback |
+
+Shared contract (tested): trusted registry key + positive version, statically-authored `import()` thunk (pinned by
+`engine.test.ts` / `activities.guards.test.ts`, allowlist size 11), faithful `ActivityFallback`, `reducedMotion`
+reflected as `data-reduced-motion`, real keyboard-operable buttons with `aria-pressed` / radio semantics, shell
+`commands.reset` epoch, no network, single-column at phone width.
+
+### Publication: deployable ≠ published
+
+`api/src/lib/learning-materials-registry.js` lists `m13` (order 9, title only). Nothing is auto-published: a
+real-registry test proves a class released through m12 exposes nothing of m13 to its students, that an explicitly
+published m13 is visible, and that the teacher's `[m13, m12]` canonicalizes to `[m12, m13]`.
+
+### Deferred PR #122 follow-ups applied here
+
+- `LearningPageRenderer.tsx`'s injection-seam comment no longer states a count; it points at the enumerated,
+  test-pinned allowlist in `activities/engine.ts` (a count there went stale twice).
+- The m11 «no Unit-8 delivery semantics» guard is now applied to **every block of m11** (all pages, configs and
+  fallbacks), not only to the eleven blocks around the broadcast MAC; the whole module was verified clean first.
+
+### Deliberately NOT in this phase
+
+No PDF 87+ (protocol functions, network commands, collisions / attacks), no T05+, no medals / Strength / leaderboard
+for page practice, no project / Achievement Hub / identity / login changes, no change to the approved m01–m12 content
+(m11 only gains a wider test), no change to any class's `visibleModuleIds`.
+
 ## Phase boundaries
 
 | Phase | Scope | Status |
@@ -1087,6 +1172,7 @@ change to the approved m08–m10 content.
 | **Project Performance, Achievement Hub & Profile Identity (this)** | Teacher stage scores → project grade /100 → project Strength /600 + six-band project rank (per project); generic achievement events (global/project rank-up, completion) with privacy + reactions + lifetime recognition; Achievement Hub «تقدّمي وقوتي»; teacher-managed student photo + preset avatars; teacher name / preset / own photo identity. Unit 4 still paused. | done (awaiting review) |
 | **Units 4–6 (this)** | Book 791381 source PDF **34–60** as complete modules `m08` (Class/Subnet/CIDR, order 4), `m09` (أجهزة الشبكات, order 5), `m10` (أنواع شبكات الاتصال, order 6); PDF 47 divider not rendered; interactive `PracticeBlockView`; activities `cidr-network-host/v1`, `gateway-flow/v1`, `hub-switch-router-flow/v1`, `network-topologies/v1`; server publication registry lists m08–m10 (publishable, never auto-published) | done (awaiting review) |
 | **Units 7–8 (this)** | Book 791381 source PDF **61–75** as complete modules `m11` (الكوابل وعنوان MAC, order 7) and `m12` (أنواع الرسائل + the batch-2 summary PDF 75, order 8); b2 = m09–m12; activities `cable-comparison/v1`, `mac-address-anatomy/v1`, `message-delivery/v1`, `broadcast-address/v1` (registry = 10); server publication registry lists m11–m12 (publishable, never auto-published); PDF 76+ untouched | done (awaiting review) |
+| **Batch 3 (this)** | Book 791381 source PDF **76–86** (PDF 76 divider not rendered) as complete module `m13` («نماذج الاتصال: OSI و TCP/IP», order 9); b3 = [m13]; m03–m06 shift to orders 10–13; activity `osi-layers/v1` (registry = 11); server publication registry lists m13 (publishable, never auto-published); PDF 87+ («البروتوكولات») untouched; two deferred PR #122 cleanups applied | done (awaiting review) |
 | 4 | Interactive Practice — remaining inline checking families beyond closed-choice worksheets (free text, ordering, evaluator-backed hints) | deferred |
 | 5 | Simulations — real VLAN/subnet/CLI/… renderers registered behind the Phase-3A engine | deferred |
 | 6 | Student Progress — last page, completion, attempts (separate domain; attaches to the no-op event seam) | deferred |
