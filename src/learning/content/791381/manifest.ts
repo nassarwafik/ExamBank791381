@@ -475,7 +475,7 @@ const manifest: LearningCourseManifest = {
     },
     {
       // Batch 4 phase: the book's REAL section «المجالات والمفاهيم» (PDF 98–105) + its PDF 106 trainings page, complete.
-      // Stable id m16, order 12. PDF 107 («الجزء الثاني · أمان الشبكات» cover) is the HARD STOP and is NOT converted.
+      // Stable id m16, order 12. PDF 107+ is Batch 5 (m17–m18).
       id: "791381-m16",
       title: "المجالات والمفاهيم",
       shortTitle: "المجالات والمفاهيم",
@@ -528,13 +528,80 @@ const manifest: LearningCourseManifest = {
       ],
     },
     {
+      // Batch 5 phase: the book's REAL section «أمان الشبكات» (PDF 108–115; PDF 107 is the «الجزء الثاني» part cover),
+      // complete. Stable id m17, order 13.
+      id: "791381-m17",
+      title: "أمان الشبكات",
+      shortTitle: "أمان الشبكات",
+      order: 13,
+      lessons: [
+        {
+          id: "791381-m17-l01",
+          title: "القرصنة والهجمات على الشبكة",
+          order: 1,
+          pages: [
+            { id: "791381-m17-l01-p01", title: "القرصنة والهجمات على الشبكة", order: 1, source: { kind: "book", sourceId: "791381", pdfPageStart: 108, printedPage: 108 }, keywords: ["القرصنة", "الهجمات", "أمان الشبكات"] },
+            { id: "791381-m17-l01-p02", title: "DoS / DDoS", order: 2, source: { kind: "book", sourceId: "791381", pdfPageStart: 109, printedPage: 109 }, keywords: ["DoS", "DDoS", "إغراق الخادم"] },
+            { id: "791381-m17-l01-p03", title: "Session Hijacking / MitM", order: 3, source: { kind: "book", sourceId: "791381", pdfPageStart: 110, printedPage: 110 }, keywords: ["Session Hijacking", "MitM", "اختطاف الجلسة", "الرجل في الوسط"] },
+            { id: "791381-m17-l01-p04", title: "Phishing / Spoofing", order: 4, source: { kind: "book", sourceId: "791381", pdfPageStart: 111, printedPage: 111 }, keywords: ["Phishing", "Spoofing", "خداع", "تزييف"] },
+          ],
+        },
+        {
+          id: "791381-m17-l02",
+          title: "الاتصالات الآمنة",
+          order: 2,
+          pages: [
+            { id: "791381-m17-l02-p01", title: "الاتصالات الآمنة", order: 1, source: { kind: "book", sourceId: "791381", pdfPageStart: 112, printedPage: 112 }, keywords: ["الاتصالات الآمنة", "التشفير", "الهوية"] },
+            { id: "791381-m17-l02-p02", title: "VPN", order: 2, source: { kind: "book", sourceId: "791381", pdfPageStart: 113, printedPage: 113 }, keywords: ["VPN", "اتصال آمن", "عمل عن بُعد", "Wi-Fi عامة"] },
+            { id: "791381-m17-l02-p03", title: "SSL / TLS و HTTPS", order: 3, source: { kind: "book", sourceId: "791381", pdfPageStart: 114, printedPage: 114 }, keywords: ["SSL/TLS", "HTTPS", "القفل", "المتصفح"] },
+            { id: "791381-m17-l02-p04", title: "SSH", order: 4, source: { kind: "book", sourceId: "791381", pdfPageStart: 115, printedPage: 115 }, keywords: ["SSH", "Telnet", "إدارة عن بُعد", "مفاتيح تشفير"] },
+          ],
+        },
+      ],
+    },
+    {
+      // Batch 5 phase: the book's REAL section «تجزئة البيانات» (PDF 116–118) + the PDF 119 end-of-batch trainings page,
+      // complete. Stable id m18, order 14. PDF 120 («الدفعة الرابعة · برمجة السويتش و VLAN» cover) is the HARD STOP and is NOT converted.
+      id: "791381-m18",
+      title: "تجزئة البيانات",
+      shortTitle: "تجزئة البيانات",
+      order: 14,
+      lessons: [
+        {
+          id: "791381-m18-l01",
+          title: "Segment و Packet و Frame",
+          order: 1,
+          pages: [
+            { id: "791381-m18-l01-p01", title: "تجزئة البيانات في OSI", order: 1, source: { kind: "book", sourceId: "791381", pdfPageStart: 116, printedPage: 116 }, keywords: ["تجزئة البيانات", "Segment", "Packet", "Frame", "غلاف"] },
+            { id: "791381-m18-l01-p02", title: "Frame / Packet / Segment", order: 2, source: { kind: "book", sourceId: "791381", pdfPageStart: 117, printedPage: 117 }, keywords: ["Segment", "Packet", "Frame", "المنافذ", "IP", "MAC"] },
+          ],
+        },
+        {
+          id: "791381-m18-l02",
+          title: "TCP 3-Way Handshake",
+          order: 2,
+          pages: [
+            { id: "791381-m18-l02-p01", title: "TCP 3-Way Handshake", order: 1, source: { kind: "book", sourceId: "791381", pdfPageStart: 118, printedPage: 118 }, keywords: ["TCP", "3-Way Handshake", "SYN", "SYN-ACK", "ACK"] },
+          ],
+        },
+        {
+          id: "791381-m18-l03",
+          title: "تدريبات نهاية الدفعة",
+          order: 3,
+          pages: [
+            { id: "791381-m18-l03-p01", title: "تدريبات نهاية الدفعة", order: 1, source: { kind: "book", sourceId: "791381", pdfPageStart: 119 }, keywords: ["تدريبات", "نهاية الدفعة", "QR"] },
+          ],
+        },
+      ],
+    },
+    {
       // Historical Phase-2 skeleton (PDF 123+). Its ID and source mappings are immutable; only its reading `order`
       // shifts as real units are converted (3 → 4 in Phase 3E; 4 → 7 when Units 4–6 became m08–m10; 7 → 9 when Units 7–8 became m11–m12;
-      // 9 → 10 when Batch 3 became m13; 10 → 13 when Batch 4 became m14–m16).
+      // 9 → 10 when Batch 3 became m13; 10 → 13 when Batch 4 became m14–m16; 13 → 15 when Batch 5 became m17–m18).
       id: "791381-m03",
       title: "برمجة السويتش CLI و VLAN",
       shortTitle: "CLI و VLAN",
-      order: 13,
+      order: 15,
       lessons: [
         {
           id: "791381-m03-l01",
@@ -551,7 +618,7 @@ const manifest: LearningCourseManifest = {
       id: "791381-m04",
       title: "Trunk و Router on a Stick",
       shortTitle: "Trunk",
-      order: 14,
+      order: 16,
       lessons: [
         {
           id: "791381-m04-l01",
@@ -567,7 +634,7 @@ const manifest: LearningCourseManifest = {
       id: "791381-m05",
       title: "مرجع أوامر Cisco",
       shortTitle: "أوامر Cisco",
-      order: 15,
+      order: 17,
       lessons: [
         {
           id: "791381-m05-l01",
@@ -584,7 +651,7 @@ const manifest: LearningCourseManifest = {
       id: "791381-m06",
       title: "قوائم التحكم ACL",
       shortTitle: "ACL",
-      order: 16,
+      order: 18,
       lessons: [
         {
           id: "791381-m06-l01",
@@ -606,7 +673,7 @@ const manifest: LearningCourseManifest = {
     { id: "intro", label: "المقدمة", moduleIds: [] },
     { id: "b1", label: "الأساسيات · الأعداد · IP", moduleIds: ["791381-m01", "791381-m02", "791381-m07", "791381-m08"] },
     { id: "b2", label: "الأجهزة والرسائل", moduleIds: ["791381-m09", "791381-m10", "791381-m11", "791381-m12"] },
-    { id: "b3", label: "النماذج والبروتوكولات والأمان", moduleIds: ["791381-m13", "791381-m14", "791381-m15", "791381-m16"] },
+    { id: "b3", label: "النماذج والبروتوكولات والأمان", moduleIds: ["791381-m13", "791381-m14", "791381-m15", "791381-m16", "791381-m17", "791381-m18"] },
     { id: "b4", label: "برمجة السويتش و VLAN", moduleIds: ["791381-m03", "791381-m04", "791381-m05"] },
     { id: "b5", label: "الأمان · Wi-Fi · IPv6 · DHCP", moduleIds: [] },
     { id: "b6", label: "ACL · التوجيه · WAN", moduleIds: ["791381-m06"] },

@@ -1250,6 +1250,87 @@ programming), no trainings T05+ inside the platform, no terminal output, no port
 leaderboard for page practice, no project / Achievement Hub / identity / login changes, no change to the approved
 m01–m13 content other than cleanup C, no change to any class's `visibleModuleIds`.
 
+## Batch 5 — أمان الشبكات · تجزئة البيانات (source PDF 107–119)
+
+The fifth content phase closes the book's third batch. The boundary was discovered from the book: PDF 107 is the
+**«الجزء الثاني · أمان الشبكات» part cover** (structural), PDF 108–115 is the section «أمان الشبكات» (attacks 108–111,
+secure communications 112–115), PDF 116–118 is «تجزئة البيانات» (encapsulation names, Segment / Packet / Frame, the
+TCP 3-way handshake), PDF 119 is the batch's closing «نهاية الدفعة · تدريبات» QR page, and **PDF 120 is the
+«الدفعة الرابعة · برمجة السويتش و VLAN» cover** whose pages (from PDF 123) are already claimed by the historical m03
+skeleton. Thirteen PDF pages, twelve learner-facing (108–119). Going past 119 would cut into a different part of the
+book and require repurposing skeleton modules, so 119 is the clean boundary even though the batch is smaller than
+Batch 4. Conversion **stops before PDF 120**: no converted body has `pdfPageStart >= 120` and tests assert it.
+
+### Source map and module structure
+
+| Section | Source PDF | Module (immutable id) | `order` | Batch | Lessons |
+| --- | --- | --- | --- | --- | --- |
+| «أمان الشبكات» | **107 (part cover) · 108–115** | `791381-m17` | 13 | b3 | `l01` القرصنة والهجمات على الشبكة (108–111) · `l02` الاتصالات الآمنة (112–115) |
+| «تجزئة البيانات» | **116–118 · 119 (closing trainings page)** | `791381-m18` | 14 | b3 | `l01` Segment و Packet و Frame (116–117) · `l02` TCP 3-Way Handshake (118) · `l03` تدريبات نهاية الدفعة (119) |
+
+- **1 source page → 1 interactive page** (twelve pages), printed page = the rendered page circle (108…118); PDF 107
+  (cover) and PDF 119 (trainings page) print none. PDF 107 is represented only by m17's coarse source range +
+  `sourceNote` (the PDF 47 / 76 divider treatment). PDF 119 is a learner-visible closing page with a
+  `conversionNote`: the book's three training cards (13–14, 15–16, 17–18), the QR line and «الدفعة التالية» as
+  printed; trainings 13–18 are **not** delivered in the platform, so no `library-training` block (T01–T04 only).
+- **Historical skeleton m03–m06 untouched**: ids, titles, lesson/page ids and PDF mappings pinned; only their explicit
+  `order` shifts to 15–18. **b3** «النماذج والبروتوكولات والأمان» = `[m13, m14, m15, m16, m17, m18]`.
+- **Security fidelity (108–115):** one book sentence per attack (DoS, DDoS, Session Hijacking, MitM, Phishing,
+  Spoofing) and per protection (VPN, SSL/TLS + HTTPS, SSH), the figure captions of PDF 110 as text, «الفرق» /
+  «الوقاية» / «احذر» / «الأمان يعني» / «متى نستعمله؟» / «تذكّر» as printed. Exactly the book's level — «اسم الهجوم +
+  فكرته الأساسية، دون الدخول في تفاصيل تقنية»: no attack mechanics, tools, defence configuration or key details.
+- **Encapsulation fidelity (116–118):** the PDF 116 stack as a table (Data → Segment / Transport → Packet / Network →
+  Frame / Data Link) with «احفظ», the PDF 117 cards with the book's field families («أرقام المنافذ والتحكّم بالتدفّق»,
+  «IP المصدر والهدف ومعلومات التوجيه», «MAC المصدر والهدف وفحص الأخطاء»), the book's arrow line «Segment ← Packet ← Frame»
+  rendered as prose «من Segment إلى Packet ثم إلى Frame», and the three handshake steps with «الفكرة» / «الخلاصة».
+  No header layouts, sequence numbers or teardown.
+- **Source order inside the batch (tested):** attacks appear page by page (108 names none; 109 DoS/DDoS; 110
+  Hijacking/MitM; 111 Phishing/Spoofing); VPN is named on PDF 110 only because the book's «الوقاية» prints it, then
+  explained from 112; SSL/TLS not before 112; nothing from «تجزئة البيانات» in m17; no attack or security tool in m18;
+  the PDF 117 field families not on PDF 116; SYN/ACK not before 118.
+- **Next-batch leakage guard:** switch CLI / VLAN programming (VLAN, Trunk, Dot1Q, VTP, `configure terminal`,
+  `Switch(config)`, `enable`, `F0/1`, Access, «برمجة السويتش») is banned from m17–m18.
+
+### Pedagogy applied
+
+| Module | Solved examples | Clarifications | Inline practices | Worksheets (`practice-table`) | Closing review | Activities |
+| --- | --- | --- | --- | --- | --- | --- |
+| m17 | 1 | 5 | 17 | 2 (attack → name on PDF 111 · tool → purpose on PDF 115) | 3 on PDF 115 | 0 |
+| m18 | 1 | 3 | 9 | 1 (description → Segment/Packet/Frame on PDF 117) | 3 on PDF 119 | 1 |
+
+Practices are educational only (nothing stored, scored or ranked; no T05+); every wrong-answer feedback says what
+to **check** («افحص …»), every question carries a two-step hint ladder, every page ends with practice, and the
+shortInput answers are single deterministic tokens (`HTTPS`, `3`).
+
+### One registry-backed activity (`productionActivityRegistry` = exact THIRTEEN-entry allowlist)
+
+| Activity | `{kind, key, version}` | Page | Renderer (own lazy chunk) |
+| --- | --- | --- | --- |
+| TCP three-way handshake stepper | `interactive-diagram / tcp-handshake / 1` | PDF 118 (`m18-l02-p01-stepper`), after «الفكرة», the three steps and «الخلاصة», before the practices | `TcpHandshakeStepper` — two devices in a native SVG; «الخطوة التالية» / «الخطوة السابقة» reveal or hide one arrow (SYN, SYN-ACK, ACK) at a time with the book's sentence; the summary appears after the third; every revealed step is mirrored as text in a `role="status"` list. Deterministic, no timers, no persistence; malformed config → note; unsupported version → fallback |
+
+Rejected on purpose: an attack "simulation" (the book gives one idea per attack, nothing to simulate), an
+encapsulation animation (the table + cards + keyed worksheet already carry the book's content).
+
+### Publication: deployable ≠ published
+
+`api/src/lib/learning-materials-registry.js` lists `m17` (13) and `m18` (14) with titles only. Nothing is
+auto-published: a real-registry test proves a class released through m16 exposes nothing of m17–m18, that
+publishing only m18 shows m18 alone, and that `[m18, m17, m16]` canonicalizes to `[m16, m17, m18]`. The frontend
+cross-check test (every module with a body is publishable with the same title and order; no skeleton is) covers
+the new modules automatically.
+
+### Deliberately NOT in this phase
+
+No PDF 120+ (switch CLI, VLAN, Trunk, the m03–m06 skeleton ranges), no trainings T05+ inside the platform, no attack
+mechanics, no medals / Strength / leaderboard for page practice, no project / Achievement Hub / identity / login
+changes, no change to the approved m01–m16 content, no change to any class's `visibleModuleIds`.
+
+### Where the next batch begins
+
+**The next Learning Content batch begins at PDF 120** («الدفعة الرابعة · برمجة السويتش و VLAN» cover, then
+«برمجة السويتش CLI و VLAN» from PDF 121). PDF 123–124 are the historical m03 skeleton pages, so that batch must decide
+whether to fill m03 in place (keeping its immutable ids) rather than create a parallel module.
+
 ## Phase boundaries
 
 | Phase | Scope | Status |
@@ -1268,6 +1349,7 @@ m01–m13 content other than cleanup C, no change to any class's `visibleModuleI
 | **Units 7–8 (this)** | Book 791381 source PDF **61–75** as complete modules `m11` (الكوابل وعنوان MAC, order 7) and `m12` (أنواع الرسائل + the batch-2 summary PDF 75, order 8); b2 = m09–m12; activities `cable-comparison/v1`, `mac-address-anatomy/v1`, `message-delivery/v1`, `broadcast-address/v1` (registry = 10); server publication registry lists m11–m12 (publishable, never auto-published); PDF 76+ untouched | done (awaiting review) |
 | **Batch 3 (this)** | Book 791381 source PDF **76–86** (PDF 76 divider not rendered) as complete module `m13` («نماذج الاتصال: OSI و TCP/IP», order 9); b3 = [m13]; m03–m06 shift to orders 10–13; activity `osi-layers/v1` (registry = 11); server publication registry lists m13 (publishable, never auto-published); PDF 87+ («البروتوكولات») untouched; two deferred PR #122 cleanups applied | done (awaiting review) |
 | **Batch 4 (this)** | Book 791381 source PDF **87–106** as complete modules `m14` («البروتوكولات», order 10), `m15` («أوامر فحص الشبكة», order 11), `m16` («المجالات والمفاهيم» + the PDF 106 trainings page, order 12); b3 = [m13, m14, m15, m16]; m03–m06 shift to orders 13–16; activity `network-domains/v1` (registry = 12); server publication registry lists m14–m16 (publishable, never auto-published); PDF 107+ (Part 2: security …) untouched; PR #123 cleanups A–C applied | done (awaiting review) |
+| **Batch 5 (this)** | Book 791381 source PDF **107–119** (PDF 107 part cover not rendered) as complete modules `m17` («أمان الشبكات», order 13) and `m18` («تجزئة البيانات» + the PDF 119 trainings page, order 14); b3 = [m13 … m18]; m03–m06 shift to orders 15–18; activity `tcp-handshake/v1` (registry = 13); server publication registry lists m17–m18 (publishable, never auto-published); next batch begins at PDF 120 | done (awaiting review) |
 | 4 | Interactive Practice — remaining inline checking families beyond closed-choice worksheets (free text, ordering, evaluator-backed hints) | deferred |
 | 5 | Simulations — real VLAN/subnet/CLI/… renderers registered behind the Phase-3A engine | deferred |
 | 6 | Student Progress — last page, completion, attempts (separate domain; attaches to the no-op event seam) | deferred |

@@ -30,7 +30,7 @@ const COURSE_MANIFESTS: Record<string, ManifestLoader> = {
 };
 
 // Module BODY loaders per course. Each converted module body is registered here as its own
-// `import("./791381/modules/<id>")` chunk (m01, m02, m07, m08, m09, m10, m11, m12, m13, m14, m15 and m16 today); manifest modules without an entry are still
+// `import("./791381/modules/<id>")` chunk (m01, m02, m07, m08, m09, m10, m11, m12, m13, m14, m15, m16, m17 and m18 today); manifest modules without an entry are still
 // skeleton-only and the Reader shows them as «قيد الإعداد».
 const COURSE_MODULE_LOADERS: Record<string, Record<string, ModuleLoader>> = {
   // REAL module bodies, each its own lazy chunk; the main bundle imports none of these eagerly.
@@ -45,7 +45,9 @@ const COURSE_MODULE_LOADERS: Record<string, Record<string, ModuleLoader>> = {
   //   m13 — Batch 3 «نماذج الاتصال · OSI و TCP/IP» (PDF 77–86; PDF 76 is the batch divider): complete, order 9.
   //   m14 — Batch 4 «البروتوكولات» (PDF 87–92): complete, order 10.
   //   m15 — Batch 4 «أوامر فحص الشبكة» (PDF 93–97): complete, order 11.
-  //   m16 — Batch 4 «المجالات والمفاهيم» (PDF 98–106): complete, order 12. PDF 107+ (Part 2: security …) is not converted.
+  //   m16 — Batch 4 «المجالات والمفاهيم» (PDF 98–106): complete, order 12.
+  //   m17 — Batch 5 «أمان الشبكات» (PDF 108–115; PDF 107 is the part cover): complete, order 13.
+  //   m18 — Batch 5 «تجزئة البيانات» (PDF 116–119): complete, order 14. PDF 120+ (switch CLI / VLAN) is not converted.
   // The remaining skeleton modules (m03–m06) have no body yet, so the Reader shows them as «قيد الإعداد».
   "791381": {
     "791381-m01": () => import("./791381/modules/m01"),
@@ -60,6 +62,8 @@ const COURSE_MODULE_LOADERS: Record<string, Record<string, ModuleLoader>> = {
     "791381-m14": () => import("./791381/modules/m14"),
     "791381-m15": () => import("./791381/modules/m15"),
     "791381-m16": () => import("./791381/modules/m16"),
+    "791381-m17": () => import("./791381/modules/m17"),
+    "791381-m18": () => import("./791381/modules/m18"),
   },
 };
 
@@ -83,7 +87,7 @@ export async function loadCourseManifest(courseId: string): Promise<LearningCour
   return (await loader()).default;
 }
 
-/** Whether a specific module BODY is registered (791381: m01, m02, m07, m08, m09, m10, m11, m12, m13, m14, m15, m16 today). Pure, no import triggered. */
+/** Whether a specific module BODY is registered (791381: m01, m02, m07, m08, m09, m10, m11, m12, m13, m14, m15, m16, m17, m18 today). Pure, no import triggered. */
 export function hasModuleContent(courseId: string, moduleId: string): boolean {
   return Boolean(COURSE_MODULE_LOADERS[courseId] && Object.prototype.hasOwnProperty.call(COURSE_MODULE_LOADERS[courseId], moduleId));
 }

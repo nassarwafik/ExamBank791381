@@ -78,7 +78,7 @@ describe("no-auto-publish invariant — DEPLOYMENT ≠ PUBLICATION", () => {
     const student = JSON.stringify(buildStudentLearningMaterials(existing));
     for (const hidden of ["791381-m08", "791381-m09", "791381-m10", "Class و Subnet و CIDR", "أجهزة الشبكات", "أنواع شبكات الاتصال"]) expect(student).not.toContain(hidden);
     const registry = require("../src/lib/learning-materials-registry.js");
-    expect(registry.listLearningModules("791381").map(m => m.moduleId)).toEqual([M01, M02, M07, "791381-m08", "791381-m09", "791381-m10", "791381-m11", "791381-m12", "791381-m13", "791381-m14", "791381-m15", "791381-m16"]);
+    expect(registry.listLearningModules("791381").map(m => m.moduleId)).toEqual([M01, M02, M07, "791381-m08", "791381-m09", "791381-m10", "791381-m11", "791381-m12", "791381-m13", "791381-m14", "791381-m15", "791381-m16", "791381-m17", "791381-m18"]);
     expect(registry.validateLearningModuleIds("791381", ["791381-m10", "791381-m08"])).toEqual(["791381-m08", "791381-m10"]);   // explicit publication path
     expect(JSON.stringify(existing)).not.toContain("m08");                                                                    // the class document is untouched
   });
@@ -126,6 +126,20 @@ describe("no-auto-publish invariant — DEPLOYMENT ≠ PUBLICATION", () => {
     expect(getVisibleLearningModuleIds(room("c8", { learningMaterials: [{ courseId: "791381", visibleModuleIds: [M01, "791381-m15"] }] }), "791381")).toEqual([M01, "791381-m15"]);
     const s8 = JSON.stringify(buildStudentLearningMaterials(room("c8", { learningMaterials: [{ courseId: "791381", visibleModuleIds: [M01, "791381-m15"] }] })));
     expect(s8).toContain("791381-m15"); expect(s8).not.toMatch(/791381-m14|791381-m16/);
+  });
+  it("REAL registry (Batch 5): a class released through m16 sees NOTHING of m17/m18; explicit publication makes them visible in canonical order; the class document is untouched", () => {
+    const through16 = [M01, M02, M07, "791381-m08", "791381-m09", "791381-m10", "791381-m11", "791381-m12", "791381-m13", "791381-m14", "791381-m15", "791381-m16"];
+    const existing = room("c9", { learningMaterials: [{ courseId: "791381", visibleModuleIds: through16 }] });
+    expect(getVisibleLearningModuleIds(existing, "791381")).toEqual(through16);
+    const student = JSON.stringify(buildStudentLearningMaterials(existing));
+    for (const hidden of ["791381-m17", "791381-m18", "أمان الشبكات", "تجزئة البيانات"]) expect(student).not.toContain(hidden);
+    const registry = require("../src/lib/learning-materials-registry.js");
+    expect(registry.findLearningModule("791381", "791381-m17")).toEqual({ moduleId: "791381-m17", title: "أمان الشبكات", order: 13 });
+    expect(registry.findLearningModule("791381", "791381-m18")).toEqual({ moduleId: "791381-m18", title: "تجزئة البيانات", order: 14 });
+    expect(registry.validateLearningModuleIds("791381", ["791381-m18", "791381-m17", "791381-m16"])).toEqual(["791381-m16", "791381-m17", "791381-m18"]);
+    expect(JSON.stringify(existing)).not.toMatch(/m17|m18/);
+    const s10 = JSON.stringify(buildStudentLearningMaterials(room("c10", { learningMaterials: [{ courseId: "791381", visibleModuleIds: [M01, "791381-m18"] }] })));
+    expect(s10).toContain("791381-m18"); expect(s10).not.toContain("791381-m17");
   });
   it("a NEWLY registered module (future Unit 4) is NOT appended to any existing class's visibleModuleIds", () => {
     const future = {
