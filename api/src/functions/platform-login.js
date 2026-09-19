@@ -23,6 +23,11 @@ const {
   clearLoginThrottle,
   clientIdFromRequest
 } = require("../lib/login-throttle");
+// The canonical teacher display-name authority (profile document → configured fallback → «المعلم»), shared with
+// platform-session. It MUST be required here: the teacher branch below calls it after valid credentials are
+// accepted, and a missing import turns every successful teacher login into a 500 (hotfix regression test:
+// api/tests/platform-login-teacher.test.js).
+const { resolveTeacherDisplayName } = require("../lib/teacher-profile");
 
 const NO_STORE = { "Cache-Control": "no-store", "Pragma": "no-cache" };
 const GENERIC_AUTH_ERROR = "بيانات الدخول غير صحيحة.";
