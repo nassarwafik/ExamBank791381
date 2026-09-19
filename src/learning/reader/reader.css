@@ -154,15 +154,6 @@
 }
 .learning-reader-drawer-head{ display:flex; align-items:center; justify-content:space-between; gap:var(--eb-space-2); padding:var(--eb-space-2); color:var(--eb-text-heading); font-weight:var(--eb-fw-bold); border-block-end:1px solid var(--eb-line); }
 
-/* ---------- Tablet / desktop ---------- */
-@media (min-width: 1024px){
-  .learning-reader-toc-toggle{ display:none; }
-  .learning-reader-layout{ display:grid; grid-template-columns:minmax(240px, 300px) minmax(0, 1fr); gap:var(--eb-space-4); align-items:start; }
-  .learning-reader-sidebar{ display:block; position:sticky; inset-block-start:var(--eb-space-3); max-block-size:calc(100vh - var(--eb-space-6, 48px)); overflow-y:auto; padding:var(--eb-space-2); background:var(--eb-surface); border:1px solid var(--eb-line); border-radius:var(--eb-r-lg); box-shadow:var(--eb-sh-xs); }
-  .learning-reader-main{ max-width:var(--eb-measure, 72ch); }
-  .learning-reader-page-title{ font-size:var(--eb-fs-24); }
-}
-
 @media (prefers-reduced-motion: reduce){
   .learning-reader-toc-caret{ transition:none; }
 }
@@ -214,3 +205,33 @@
 /* Phase 3E — per-COLUMN direction (TableBlock.columnDirs): LTR technical cells (IP addresses, ranges, class names)
    inside an RTL table keep their digit/dot order and isolate their bidi run, while the Arabic column order stays RTL. */
 .learning-reader-table td[dir="ltr"]{ direction:ltr; unicode-bidi:isolate; text-align:start; font-variant-numeric:tabular-nums; }
+
+/* ---------- Tablet / desktop: sidebar + WIDE SLIDE CANVAS ----------
+   Phone layout above is the protected baseline and is untouched. From 1024px the Reader is a two-column grid:
+   a BOUNDED TOC sidebar and a FLEXIBLE main track. The lesson page is a wide educational slide/canvas that takes
+   the entire remaining track (no 72ch document cap on the main/page); only PROSE paragraphs keep a comfortable
+   reading measure — tables, card grids, activities and the unit opener use the full canvas. No fixed widths, no
+   fixed heights, no clipping: a short page gets a slide-like minimum block size, a long page simply grows.
+   SOURCE-ORDER CONTRACT: this block is the LAST rule set in the file. Its declarations override same-specificity
+   base rules above (Phase 3B list / opener, 3C, 3E) by normal cascade order alone — no !important, no artificial
+   specificity. Keep it after every base block it overrides (guarded by reader.layout.guards.test.ts). */
+@media (min-width: 1024px){
+  .learning-reader-toc-toggle{ display:none; }
+  .learning-reader-layout{ display:grid; grid-template-columns:minmax(240px, 300px) minmax(0, 1fr); gap:var(--eb-space-5); align-items:start; }
+  .learning-reader-sidebar{ display:block; position:sticky; inset-block-start:var(--eb-space-3); max-block-size:calc(100vh - var(--eb-space-6, 48px)); overflow-y:auto; padding:var(--eb-space-2); background:var(--eb-surface); border:1px solid var(--eb-line); border-radius:var(--eb-r-lg); box-shadow:var(--eb-sh-xs); }
+  /* The main track is the canvas: it fills the grid column instead of stopping at a 72ch measure. */
+  .learning-reader-main{ inline-size:100%; max-inline-size:none; min-inline-size:0; }
+  /* The page occupies 100% of the main track; slide-like minimum height, more generous (token) padding. */
+  .learning-reader-page{ inline-size:100%; min-inline-size:0; box-sizing:border-box; min-block-size:60vh; padding:var(--eb-space-6); }
+  .learning-reader-page-title{ font-size:var(--eb-fs-28); }
+  /* Readability: prose paragraphs alone keep a reading measure; everything else spans the canvas. */
+  .learning-reader-text{ max-inline-size:var(--eb-measure, 72ch); }
+  .learning-reader-jump select{ flex:0 1 auto; max-inline-size:48ch; }
+  /* Cards spread across the wide canvas (2–4 columns by available space) instead of stacking in a narrow column. */
+  .learning-reader-list.variant-cards .learning-reader-list-items{ grid-template-columns:repeat(auto-fit, minmax(240px, 1fr)); }
+  /* Unit opener: a real slide on desktop — centred hero, larger type, the number stays proportionate. */
+  .learning-reader-opener{ min-block-size:calc(60vh - 2 * var(--eb-space-6)); align-content:center; gap:var(--eb-space-6); padding:var(--eb-space-6) var(--eb-space-4); }
+  .learning-reader-opener-number{ font-size:clamp(96px, 10vw, 144px); }
+  .learning-reader-opener-title{ font-size:clamp(32px, 3vw, 44px); }
+  .learning-reader-opener-subtitle{ font-size:var(--eb-fs-20); }
+}
