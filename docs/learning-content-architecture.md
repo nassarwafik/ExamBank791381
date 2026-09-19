@@ -750,6 +750,125 @@ No page-reading completion; no points for opening pages, clicks or inline worksh
 or projects; no project rank or second image set; no assignment records for T01–T04; no change to project stage
 authority; no leaderboard; no scheduled release; no per-student exceptions; **no Unit 4 conversion**.
 
+## Project Performance, Achievement Hub, Achievement Events & Profile Identity
+
+Four connected additions on top of Unified Strength. Each keeps ONE authority and none of them changes assignment
+grading, medals, project stage authority, class membership or publication.
+
+### Project Performance (per project, isolated by `programCodes[]` / tracker namespaces)
+
+```text
+teacher score (0–100, per stage)   → stage project value  → weighted contribution → project GRADE /100
+progress (core.buildStudentSummary) ┐
+                                    ├→ project STRENGTH /600 → six-band project rank (the SAME six artworks)
+project grade                       ┘
+```
+
+- **Stage score** — an additive, optional `score` on the per-student stage entry (`{ status, score, note, updatedAt,
+  approvedAt, approvedBy }`), written ONLY by the builder through the canonical `progress.update` pipeline (generic
+  and legacy 794589 routes share `service.updateStudentProgress` → `applyProgressUpdate`). Server validation:
+  finite `0 ≤ score ≤ 100` (Arabic 400, nothing written); `null` clears. History type `"score"` (`fromScore`,
+  `toScore`); audit `project.stage.score` (projectCode / classId / studentId / stageId / oldScore / newScore). No
+  migration — legacy entries simply have no score. Status (workflow) and score (quality) are separate.
+- **ONE calculator** — `api/src/lib/project-tracker/performance.js`: `calculateStageProjectWeight` (track weight
+  share × stage weight share of the track's COUNTED stages — the same trackWeights / stage weights / active +
+  required set the progress math uses), `calculateStageWeightedScore` (counted only while approved; a stage moved
+  back keeps its score but contributes 0 until approved again), `calculateProjectGrade` (Σ contributions, ≤ 100,
+  precision kept — presentation rounds), `calculateProjectStrength` = round((progress + grade) / 200 × 600) clamped
+  0..600, `projectStrengthTier` (0–99 بذرة القوة · 100–199 شعلة صغيرة · 200–299 نمر البرق · 300–399 فارس الجليد ·
+  400–499 تنين النار · 500–600 العنقاء الذهبية) and `buildProjectPerformanceSummary`. Example: track 50 %, stage 20 %
+  of its track → max 10 / 100; score 85 → 8.5. Progress 80 + grade 70 → 450 (تنين النار).
+- **Progress vs grade** are independent axes (90 % / 65 and 45 % / 42 are both valid); neither derives from the
+  other. Correction / reset lowers grade, Strength and the local rank — no "highest ever" is kept.
+- **Surfaces** — `performance` on the teacher student detail and the student project tracker; grade /
+  projectStrength / projectTier on teacher cards. Frontend `projectPerformance.ts` only formats and maps a tier id
+  to `RANK_VISUALS` (no second artwork set); `ProjectPerformanceCircle` (grade in the centre, progress on the ring,
+  textual equivalent) and `ProjectRankHero` («قوة المشروع: X / 600»). Student cards → detail (read-only stage scores
+  «العلامة: 85 / 100» / «لم تُرصد بعد», «القيمة في المشروع: 8.5 / 10»); every project's numbers come from the one
+  response, so switching never shows a previous project's values. Teacher detail: score control per stage, stale-
+  selection guard (only the latest requested student may populate the view).
+- **Global Strength stays separate**: the per-project contribution to the GLOBAL Strength is still
+  round(overallProgress × 4) ≤ 400 (student-strength.js); the project-specific Strength /600 never feeds it.
+
+### Achievement events (generic, server-decided)
+
+- **Schema** (`api/src/lib/achievement-feed.js`): `{ schemaVersion, eventType, postId, classId, studentId,
+  studentDisplayName, createdAt, shareWithClass, medal? | rank? | project?, reactions, teacherReaction, teacherNote }`
+  with `eventType ∈ medal | global_rank_up | project_rank_up | project_complete`. Legacy posts without `eventType`
+  normalize as `medal` (no migration; their legacy fields stay). ONE public projection (`publicPost`) serves both
+  feeds. Ids are deterministic and create-only, ending `_<studentId>`: `<assignmentId>_<studentId>`,
+  `global_rank_<tier>_<studentId>`, `project_<code>_rank_<tier>_<studentId>`, `project_<code>_complete_<studentId>`.
+- **Milestones** (`achievement-milestones.js`) — React never decides: the global rank-up is observed at the one
+  place the total Strength is built (the student dashboard) against `platform/recognition/<studentId>.json`
+  (first sight = baseline only, so an already-earned rank is never posted retroactively; a NEW tier → exactly one
+  event; a jump → one event for the final tier; a decrease → nothing; steady state write-free). Project rank-up /
+  completion come from the before/after documents of a real progress write (both tracker routes), per project,
+  idempotent, never on a lowering correction. Small changes (+2 %, a score edit, one status) create nothing.
+- **Privacy** — new events are stored regardless of the sharing flag; `shareWithClass` (from `shareAchievements`)
+  governs classmates: the owner always sees their own, the teacher sees every managed student's event, a classmate
+  sees (and can react to) only shared events. Reacting to your own or an unshared event is refused.
+- **Reactions** — unchanged types (heart / clap / cheer / fire), one active per student, toggle / replace, CAS-safe,
+  on every event type; the teacher reacts / notes through the generalized teacher feed. Reactions and events never
+  alter Strength, project Strength, grade, progress or medals (recognition only).
+- **Recognition summary** — `aggregateRecognition` (name-selected posts across every class, never a full scan) is
+  the ONE aggregation behind the roster `likesCount` and the dashboard `recognition`: reactions RECEIVED (by type +
+  total, never sent), non-medal achievements (by type), medal counts from the finalized authority. Lifetime, not the
+  visible 30 posts.
+- **Feed wording** (`achievements.feedEventParts`, shared by the student feed and the teacher dashboard):
+  «حصلت ليان على ميدالية ذهبية في …», «تقدّم كريم إلى تنين النار — المستوى 5», «تقدّمت هاجر في مشروع AquaSense إلى
+  نمر البرق», «أكمل أحمد مشروع SecureBank». Section: «أحدث الإنجازات والتقدّم في صفك»; empty: «عندما يحقق أحد طلاب
+  الصف إنجازًا سيظهر هنا.»
+
+### Student Achievement Hub («تقدّمي وقوتي»)
+
+The global rank artwork stays central (level, %, «نقاط القوة» + the الواجبات النهائية / التدريبات / المشاريع
+breakdown) and three separate recognition tiles follow — الميداليات · التفاعلات (received, per-type detail) ·
+الإنجازات — never summed into one number: Strength = academic progression, medals = finalized assessment, reactions
+= social appreciation received, achievements = meaningful milestones. The teacher's student profile shows the same
+concise line-up (rank + Strength, the three counts, per-project progress) from the same server authorities.
+
+### Student profile photo (teacher-managed) and preset avatar (student)
+
+- `profilePhoto` (real photo) is separate from `avatarId` (preset). Display precedence, ONE component
+  (`ProfileAvatar` / `avatarSource`): photo → selected preset → default initial. A student can never upload,
+  replace or delete a photo (the picker is preset-only and explains «الصورة الشخصية يحددها المعلم…» when a photo
+  exists); the teacher photo endpoint refuses a student token (403).
+- **Teacher entry point**: الصفوف والطلاب → ⋯ → تعديل → «صورة الطالب» (circular preview, اختيار / استبدال / إزالة,
+  preview / loading / error / success, no reload). `POST /api/student-profile-photo` (upload / remove, builder only,
+  audited `student.photo.upload` / `student.photo.remove`); `GET` serves the bytes to the teacher (any student) or the
+  student (OWN only), cache-busted by `version`. Remove clears the metadata and blob and keeps `avatarId`.
+- **ONE safe image service** (`api/src/lib/profile-image.js`, sharp): ≤ 3 MB, JPEG / PNG / WebP by REAL bytes (SVG,
+  GIF, PDF, HTML, text, arbitrary binary, URLs rejected), decoded (a fake signature fails), EXIF-orientation-aware
+  resize to a ≤ 512 square, WebP re-encode with EXIF / ICC / XMP stripped. Storage
+  `platform/student-profile-images/<studentId>/current.webp`; user document `profilePhoto: { version, updatedAt }`
+  only (never Base64, never a public URL). Roster / dashboard carry metadata only (no N+1: bytes load in the edit
+  dialog and for the student's own identity). Permanent delete cleans the blob as a secondary step.
+
+### Teacher identity (name · preset avatar · own photo)
+
+- **Audit**: one builder identity (`BUILDER_USER_CODE`, token `sub`), display name hard-coded «المعلم», no profile
+  document → the minimal canonical self-profile `platform/teacher-profiles/<sub>.json { displayName, avatarId,
+  profilePhoto: { version, updatedAt }, updatedAt }` was introduced. The teacher id is ALWAYS the verified token
+  subject (a body `teacherId` / `targetTeacherId` is ignored). Name authority: profile `displayName` → configured
+  `TEACHER_DISPLAY_NAME` → «المعلم», reported by `platform-login` / `platform-session` (storage failure → fallback).
+- `GET/POST /api/teacher-profile` (setAvatar — the same preset allow-list as students, setDisplayName 1–60,
+  uploadPhoto, removePhoto) + `GET /api/teacher-profile-photo` (own photo): builder only, student 403, anonymous
+  401, audited. The photo uses the SAME image service and `profile-photo-store` as the student photo;
+  `platform/teacher-profile-images/<sub>/current.webp`.
+- Sidebar: identity block under the brand (ExamBank / 791381 kept): photo → preset → initial as the button
+  «تعديل صورة وملف المعلم» + the name; compact rail / tablet keep the avatar only; drawer readable. «ملف المعلم»
+  dialog (shared Dialog: focus trap, Escape, focus return): preset grid, upload / replace / remove, optional name.
+  App reads the profile once per teacher session.
+- **Authorization summary**: student real photo = teacher only · student preset avatar = student · teacher own
+  photo / avatar / name = teacher self-service only.
+
+### Deliberately NOT in this phase
+
+No Unit 4 / PDF 34+; no leaderboard; reactions and medals never create Strength; students never set a stage score,
+never upload a personal photo, never use an arbitrary avatar URL; photo blobs are never public; no project-specific
+artwork set; membership authorities unchanged; assignment grading unchanged; the teacher self-profile API never
+targets another teacher.
+
 ## Phase boundaries
 
 | Phase | Scope | Status |
@@ -762,7 +881,8 @@ authority; no leaderboard; no scheduled release; no per-student exceptions; **no
 | 3D | Complete Unit 2 — Book 791381 source PDF **23** (خلاصة التحويلات); m02 becomes complete | done |
 | 3E | Complete Unit 3 «عناوين IP» — Book 791381 source PDF **24–33** as new stable module `m07` (order 3); first IP-focused activity (`ipv4-octets/v1`) | done |
 | Class Learning Materials | Class assignment + progressive module release + «موادي التعليمية» + filtered shared Reader + default-deny student access | done |
-| **Learning Practice & Unified Strength (this)** | Book trainings T01–T04 as `library-training` blocks + the shared Training Runner + server grading/best-score storage; inline `practice-table` worksheets (PDF 29 / 32); Unified Strength Points (exams + trainings + projects) on the existing six-rank ladder; Learning Materials desktop inset. Unit 4 conversion still paused. | done (awaiting review) |
+| Learning Practice & Unified Strength | Book trainings T01–T04 as `library-training` blocks + the shared Training Runner + server grading/best-score storage; inline `practice-table` worksheets (PDF 29 / 32); Unified Strength Points (exams + trainings + projects) on the existing six-rank ladder; Learning Materials desktop inset. Unit 4 conversion still paused. | done (awaiting review) |
+| **Project Performance, Achievement Hub & Profile Identity (this)** | Teacher stage scores → project grade /100 → project Strength /600 + six-band project rank (per project); generic achievement events (global/project rank-up, completion) with privacy + reactions + lifetime recognition; Achievement Hub «تقدّمي وقوتي»; teacher-managed student photo + preset avatars; teacher name / preset / own photo identity. Unit 4 still paused. | done (awaiting review) |
 | 4 | Interactive Practice — further inline checking families beyond closed-choice worksheets (free text, ordering, evaluator-backed hints) | deferred |
 | 5 | Simulations — real VLAN/subnet/CLI/… renderers registered behind the Phase-3A engine | deferred |
 | 6 | Student Progress — last page, completion, attempts (separate domain; attaches to the no-op event seam) | deferred |

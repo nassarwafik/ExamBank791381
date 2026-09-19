@@ -118,7 +118,7 @@ describe("B. output equivalence — concurrency 1 vs 8 over every dashboard stat
     // dueAt ascending, empty dueAt last
     expect(r.jsonBody.assignments.map(a => a.assignmentId)).toEqual(["aClosed", "aPending", "aActive", "aFinal", "aAvailable", "aScheduled", "aMissing", "aLegacy"]);
     expect(r.jsonBody.stats).toEqual({ assigned: 8, completed: 3, average: 72, submitted: 3, inProgress: 1, pendingReview: 1, finalized: 2, scheduled: 1, available: 2, closedUnsubmitted: 1, averageFinalized: 77 });
-    expect(r.jsonBody.student).toEqual({ userId: "u1", code: "S1", displayName: "علي", classId: "c1", avatarId: "a1", shareAchievements: true });
+    expect(r.jsonBody.student).toEqual({ userId: "u1", code: "S1", displayName: "علي", classId: "c1", avatarId: "a1", shareAchievements: true, profilePhoto: null });   // profilePhoto: teacher-managed photo metadata (null = none)
   });
   it("B3 with 40 assignments the parallel and sequential responses are deep-equal too", async () => {
     const seq = await dashboardHandler(req(), makeDeps(manyAssignments(40), { concurrency: 1 }).deps);
