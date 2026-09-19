@@ -370,7 +370,7 @@ const manifest: LearningCourseManifest = {
     },
     {
       // Batch 3 phase: the book's REAL section «نماذج الاتصال · OSI و TCP/IP» (PDF 77–86; PDF 76 is the batch divider),
-      // complete. Stable id m13, order 9. Batch 3 has no unit-opener page. PDF 87 («البروتوكولات») is NOT converted.
+      // complete. Stable id m13, order 9. Batch 3 has no unit-opener page. PDF 87+ is Batch 4 (m14–m16).
       id: "791381-m13",
       title: "نماذج الاتصال: OSI و TCP/IP",
       shortTitle: "OSI و TCP/IP",
@@ -410,12 +410,131 @@ const manifest: LearningCourseManifest = {
       ],
     },
     {
+      // Batch 4 phase: the book's REAL section «البروتوكولات» (PDF 87–92), complete. Stable id m14, order 10.
+      id: "791381-m14",
+      title: "البروتوكولات",
+      shortTitle: "البروتوكولات",
+      order: 10,
+      lessons: [
+        {
+          id: "791381-m14-l01",
+          title: "ما هو البروتوكول؟ · DNS / HTTP / DHCP",
+          order: 1,
+          pages: [
+            { id: "791381-m14-l01-p01", title: "أهم البروتوكولات", order: 1, source: { kind: "book", sourceId: "791381", pdfPageStart: 87, printedPage: 87 }, keywords: ["بروتوكول", "قاعدة", "لغة", "وظيفة"] },
+            { id: "791381-m14-l01-p02", title: "DNS / HTTP / DHCP", order: 2, source: { kind: "book", sourceId: "791381", pdfPageStart: 88, printedPage: 88 }, keywords: ["DNS", "HTTP", "DHCP", "اسم الموقع", "صفحات الويب"] },
+          ],
+        },
+        {
+          id: "791381-m14-l02",
+          title: "SMTP / FTP / TFTP · SSH / Telnet / NAT",
+          order: 2,
+          pages: [
+            { id: "791381-m14-l02-p01", title: "SMTP / FTP / TFTP", order: 1, source: { kind: "book", sourceId: "791381", pdfPageStart: 89, printedPage: 89 }, keywords: ["SMTP", "FTP", "TFTP", "البريد", "نقل الملفات"] },
+            { id: "791381-m14-l02-p02", title: "SSH / Telnet / NAT", order: 2, source: { kind: "book", sourceId: "791381", pdfPageStart: 90, printedPage: 90 }, keywords: ["SSH", "Telnet", "NAT", "تحكّم عن بُعد", "عنوان عام"] },
+          ],
+        },
+        {
+          id: "791381-m14-l03",
+          title: "HTTPS / POP / IMAP / ICMP / ARP · نوع النقل",
+          order: 3,
+          pages: [
+            { id: "791381-m14-l03-p01", title: "HTTPS / POP / IMAP / ICMP / ARP", order: 1, source: { kind: "book", sourceId: "791381", pdfPageStart: 91, printedPage: 91 }, keywords: ["HTTPS", "POP", "IMAP", "ICMP", "ARP"] },
+            { id: "791381-m14-l03-p02", title: "البروتوكولات ونوع النقل", order: 2, source: { kind: "book", sourceId: "791381", pdfPageStart: 92, printedPage: 92 }, keywords: ["TCP", "UDP", "نوع النقل", "الموثوقية", "السرعة"] },
+          ],
+        },
+      ],
+    },
+    {
+      // Batch 4 phase: the book's REAL section «أوامر فحص الشبكة» (PDF 93–97), complete. Stable id m15, order 11.
+      id: "791381-m15",
+      title: "أوامر فحص الشبكة",
+      shortTitle: "أوامر الشبكة",
+      order: 11,
+      lessons: [
+        {
+          id: "791381-m15-l01",
+          title: "ping و ipconfig",
+          order: 1,
+          pages: [
+            { id: "791381-m15-l01-p01", title: "أمر ping", order: 1, source: { kind: "book", sourceId: "791381", pdfPageStart: 93, printedPage: 93 }, keywords: ["ping", "اتصال", "زمن الوصول"] },
+            { id: "791381-m15-l01-p02", title: "أمر ipconfig", order: 2, source: { kind: "book", sourceId: "791381", pdfPageStart: 94, printedPage: 94 }, keywords: ["ipconfig", "إعدادات الشبكة", "البوابة الافتراضية", "MAC"] },
+          ],
+        },
+        {
+          id: "791381-m15-l02",
+          title: "tracert و nslookup و arp",
+          order: 2,
+          pages: [
+            { id: "791381-m15-l02-p01", title: "أمر tracert", order: 1, source: { kind: "book", sourceId: "791381", pdfPageStart: 95, printedPage: 95 }, keywords: ["tracert", "الطريق", "خطوة بعد خطوة"] },
+            { id: "791381-m15-l02-p02", title: "أمر nslookup", order: 2, source: { kind: "book", sourceId: "791381", pdfPageStart: 96, printedPage: 96 }, keywords: ["nslookup", "DNS", "اسم الموقع"] },
+            { id: "791381-m15-l02-p03", title: "أمر arp", order: 3, source: { kind: "book", sourceId: "791381", pdfPageStart: 97, printedPage: 97 }, keywords: ["arp", "جدول", "IP", "MAC"] },
+          ],
+        },
+      ],
+    },
+    {
+      // Batch 4 phase: the book's REAL section «المجالات والمفاهيم» (PDF 98–105) + its PDF 106 trainings page, complete.
+      // Stable id m16, order 12. PDF 107 («الجزء الثاني · أمان الشبكات» cover) is the HARD STOP and is NOT converted.
+      id: "791381-m16",
+      title: "المجالات والمفاهيم",
+      shortTitle: "المجالات والمفاهيم",
+      order: 12,
+      lessons: [
+        {
+          id: "791381-m16-l01",
+          title: "مجال التصادم",
+          order: 1,
+          pages: [
+            { id: "791381-m16-l01-p01", title: "Collision Domain", order: 1, source: { kind: "book", sourceId: "791381", pdfPageStart: 98, printedPage: 98 }, keywords: ["Collision Domain", "تصادم", "Hub", "Switch", "منفذ"] },
+            { id: "791381-m16-l01-p02", title: "كيف يقلّل السويتش التصادم؟", order: 2, source: { kind: "book", sourceId: "791381", pdfPageStart: 99, printedPage: 99 }, keywords: ["Switch", "Hub", "تصادم", "المقصود فقط"] },
+          ],
+        },
+        {
+          id: "791381-m16-l02",
+          title: "مجال البث",
+          order: 2,
+          pages: [
+            { id: "791381-m16-l02-p01", title: "Broadcast Domain", order: 1, source: { kind: "book", sourceId: "791381", pdfPageStart: 100, printedPage: 100 }, keywords: ["Broadcast Domain", "Broadcast", "Router", "VLAN"] },
+            { id: "791381-m16-l02-p02", title: "Broadcast Domain في Switch و Router", order: 2, source: { kind: "book", sourceId: "791381", pdfPageStart: 101, printedPage: 101 }, keywords: ["Broadcast Domain", "Switch", "Router", "VLAN"] },
+          ],
+        },
+        {
+          id: "791381-m16-l03",
+          title: "STP و Duplex",
+          order: 3,
+          pages: [
+            { id: "791381-m16-l03-p01", title: "بروتوكول STP", order: 1, source: { kind: "book", sourceId: "791381", pdfPageStart: 102, printedPage: 102 }, keywords: ["STP", "حلقات", "Loops", "سويتشات"] },
+            { id: "791381-m16-l03-p02", title: "Half Duplex / Full Duplex", order: 2, source: { kind: "book", sourceId: "791381", pdfPageStart: 103, printedPage: 103 }, keywords: ["Half Duplex", "Full Duplex", "إرسال", "استقبال"] },
+          ],
+        },
+        {
+          id: "791381-m16-l04",
+          title: "Localhost و APIPA",
+          order: 4,
+          pages: [
+            { id: "791381-m16-l04-p01", title: "Localhost", order: 1, source: { kind: "book", sourceId: "791381", pdfPageStart: 104, printedPage: 104 }, keywords: ["Localhost", "127.0.0.1", "اختبار محلي"] },
+            { id: "791381-m16-l04-p02", title: "APIPA", order: 2, source: { kind: "book", sourceId: "791381", pdfPageStart: 105, printedPage: 105 }, keywords: ["APIPA", "169.254", "DHCP"] },
+          ],
+        },
+        {
+          id: "791381-m16-l05",
+          title: "تدريبات مراجعة سريعة",
+          order: 5,
+          pages: [
+            { id: "791381-m16-l05-p01", title: "تدريبات مراجعة سريعة", order: 1, source: { kind: "book", sourceId: "791381", pdfPageStart: 106, printedPage: 106 }, keywords: ["تدريبات", "مراجعة", "QR"] },
+          ],
+        },
+      ],
+    },
+    {
       // Historical Phase-2 skeleton (PDF 123+). Its ID and source mappings are immutable; only its reading `order`
-      // shifts as real units are converted (3 → 4 in Phase 3E; 4 → 7 when Units 4–6 became m08–m10; 7 → 9 when Units 7–8 became m11–m12).
+      // shifts as real units are converted (3 → 4 in Phase 3E; 4 → 7 when Units 4–6 became m08–m10; 7 → 9 when Units 7–8 became m11–m12;
+      // 9 → 10 when Batch 3 became m13; 10 → 13 when Batch 4 became m14–m16).
       id: "791381-m03",
       title: "برمجة السويتش CLI و VLAN",
       shortTitle: "CLI و VLAN",
-      order: 10,
+      order: 13,
       lessons: [
         {
           id: "791381-m03-l01",
@@ -432,7 +551,7 @@ const manifest: LearningCourseManifest = {
       id: "791381-m04",
       title: "Trunk و Router on a Stick",
       shortTitle: "Trunk",
-      order: 11,
+      order: 14,
       lessons: [
         {
           id: "791381-m04-l01",
@@ -448,7 +567,7 @@ const manifest: LearningCourseManifest = {
       id: "791381-m05",
       title: "مرجع أوامر Cisco",
       shortTitle: "أوامر Cisco",
-      order: 12,
+      order: 15,
       lessons: [
         {
           id: "791381-m05-l01",
@@ -465,7 +584,7 @@ const manifest: LearningCourseManifest = {
       id: "791381-m06",
       title: "قوائم التحكم ACL",
       shortTitle: "ACL",
-      order: 13,
+      order: 16,
       lessons: [
         {
           id: "791381-m06-l01",
@@ -487,7 +606,7 @@ const manifest: LearningCourseManifest = {
     { id: "intro", label: "المقدمة", moduleIds: [] },
     { id: "b1", label: "الأساسيات · الأعداد · IP", moduleIds: ["791381-m01", "791381-m02", "791381-m07", "791381-m08"] },
     { id: "b2", label: "الأجهزة والرسائل", moduleIds: ["791381-m09", "791381-m10", "791381-m11", "791381-m12"] },
-    { id: "b3", label: "النماذج والبروتوكولات والأمان", moduleIds: ["791381-m13"] },
+    { id: "b3", label: "النماذج والبروتوكولات والأمان", moduleIds: ["791381-m13", "791381-m14", "791381-m15", "791381-m16"] },
     { id: "b4", label: "برمجة السويتش و VLAN", moduleIds: ["791381-m03", "791381-m04", "791381-m05"] },
     { id: "b5", label: "الأمان · Wi-Fi · IPv6 · DHCP", moduleIds: [] },
     { id: "b6", label: "ACL · التوجيه · WAN", moduleIds: ["791381-m06"] },

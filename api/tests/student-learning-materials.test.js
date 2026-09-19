@@ -142,8 +142,11 @@ describe("learning-materials-catalog — teacher catalog endpoint", () => {
       { moduleId: "791381-m08", title: "Class و Subnet و CIDR", order: 4 }, { moduleId: "791381-m09", title: "أجهزة الشبكات", order: 5 }, { moduleId: "791381-m10", title: "أنواع شبكات الاتصال", order: 6 },
       // Units 7–8 phase: same rule — listed = publishable, never auto-visible.
       { moduleId: "791381-m11", title: "الكوابل وعنوان MAC", order: 7 }, { moduleId: "791381-m12", title: "أنواع الرسائل", order: 8 },
-      // Batch 3 phase: same rule — listed = publishable, never auto-visible.
-      { moduleId: "791381-m13", title: "نماذج الاتصال: OSI و TCP/IP", order: 9 }
+      // Batch 3 / Batch 4 phases: same rule — listed = publishable, never auto-visible.
+      { moduleId: "791381-m13", title: "نماذج الاتصال: OSI و TCP/IP", order: 9 },
+      { moduleId: "791381-m14", title: "البروتوكولات", order: 10 },
+      { moduleId: "791381-m15", title: "أوامر فحص الشبكة", order: 11 },
+      { moduleId: "791381-m16", title: "المجالات والمفاهيم", order: 12 }
     ] }] });
     expect(JSON.stringify(r.jsonBody)).not.toMatch(/m03|m04|m05|m06|pages|lessons|blocks|answer|pdf/i);
   });
