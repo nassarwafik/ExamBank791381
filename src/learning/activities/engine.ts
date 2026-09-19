@@ -208,4 +208,13 @@ export const productionActivityRegistry: LearningActivityRegistry = createActivi
     load: () => import("./HubSwitchRouterFlow"),
     capabilities: { fullscreen: true, reset: true, replay: true, animated: true, interactive: true },
   },
+  // Units 4–6 phase — Unit 6 (PDF 58–60): the topology explorer — P2P / Bus / Ring / Star / Tree / Hybrid redrawn
+  // on selection, «أرسل» path highlight with a text mirror, the book's conceptual Bus collision. Its own lazy chunk.
+  {
+    kind: "interactive-diagram",
+    key: "network-topologies",
+    versions: [1],
+    load: () => import("./NetworkTopologiesExplorer"),
+    capabilities: { fullscreen: true, reset: true, animated: true, interactive: true },
+  },
 ]);

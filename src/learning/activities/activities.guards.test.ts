@@ -24,10 +24,11 @@ const octets = stripComments(read("./IPv4OctetsDiagram.tsx"));
 const cidr = stripComments(read("./CidrNetworkHostDiagram.tsx"));
 const gateway = stripComments(read("./GatewayFlowAnimation.tsx"));
 const devices = stripComments(read("./HubSwitchRouterFlow.tsx"));
+const topo = stripComments(read("./NetworkTopologiesExplorer.tsx"));
 const builtins = stripComments(read("./builtins.ts"));
 const css = read("./activities.css");
 
-const sources = { engine, host, boundary, fallback, guided, builtins, scope, octets, cidr, gateway, devices };
+const sources = { engine, host, boundary, fallback, guided, builtins, scope, octets, cidr, gateway, devices, topo };
 
 describe("Phase 3A — source files are plain text (ZERO U+0000 bytes)", () => {
   it("engine.ts and LearningActivityHost.tsx contain no NUL byte", () => {
@@ -100,11 +101,12 @@ describe("production registry is an exact allowlist", () => {
       { kind: "interactive-diagram", key: "cidr-network-host", versions: [1] },
       { kind: "animation", key: "gateway-flow", versions: [1] },
       { kind: "simulation", key: "hub-switch-router-flow", versions: [1] },
+      { kind: "interactive-diagram", key: "network-topologies", versions: [1] },
     ]);
     expect(productionActivityRegistry.list().some(e => /cli|vlan|subnet-calc/i.test(e.key))).toBe(false);
   });
   it("every Units 4–6 renderer is reached only through a static string-literal import thunk", () => {
-    for (const name of ["CidrNetworkHostDiagram", "GatewayFlowAnimation", "HubSwitchRouterFlow"]) expect(engine).toContain(`import("./${name}")`);
+    for (const name of ["CidrNetworkHostDiagram", "GatewayFlowAnimation", "HubSwitchRouterFlow", "NetworkTopologiesExplorer"]) expect(engine).toContain(`import("./${name}")`);
   });
   it("the ipv4-octets renderer is reached only through a static string-literal import thunk", () => {
     expect(engine).toContain('import("./IPv4OctetsDiagram")');

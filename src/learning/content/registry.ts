@@ -45,6 +45,7 @@ const COURSE_MODULE_LOADERS: Record<string, Record<string, ModuleLoader>> = {
     "791381-m07": () => import("./791381/modules/m07"),
     "791381-m08": () => import("./791381/modules/m08"),
     "791381-m09": () => import("./791381/modules/m09"),
+    "791381-m10": () => import("./791381/modules/m10"),
   },
 };
 

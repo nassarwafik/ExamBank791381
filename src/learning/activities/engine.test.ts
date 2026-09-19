@@ -11,15 +11,16 @@ const nullComponent: ActivityComponent = () => null;
 const noop = async () => ({ default: nullComponent });
 
 describe("production activity registry is an EXACT allowlist (3B, 3E and the Units 4–6 renderers)", () => {
-  it("registers ONLY network-scope/v1, ipv4-octets/v1, cidr-network-host/v1, gateway-flow/v1 and hub-switch-router-flow/v1", () => {
+  it("registers ONLY network-scope/v1, ipv4-octets/v1, cidr-network-host/v1, gateway-flow/v1, hub-switch-router-flow/v1 and network-topologies/v1", () => {
     expect(productionActivityRegistry.list()).toEqual([
       { kind: "interactive-diagram", key: "network-scope", versions: [1] },
       { kind: "interactive-diagram", key: "ipv4-octets", versions: [1] },
       { kind: "interactive-diagram", key: "cidr-network-host", versions: [1] },
       { kind: "animation", key: "gateway-flow", versions: [1] },
       { kind: "simulation", key: "hub-switch-router-flow", versions: [1] },
+      { kind: "interactive-diagram", key: "network-topologies", versions: [1] },
     ]);
-    expect(productionActivityRegistry.size).toBe(5);
+    expect(productionActivityRegistry.size).toBe(6);
     expect(productionActivityRegistry.has("interactive-diagram", "network-scope")).toBe(true);
     expect(productionActivityRegistry.has("interactive-diagram", "ipv4-octets")).toBe(true);
   });

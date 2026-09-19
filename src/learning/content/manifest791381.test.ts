@@ -82,12 +82,13 @@ describe("Phase 3E — historical module ids, titles and source mappings are IMM
 
   it("keeps every pre-existing module id (m01–m07) and adds the real Units 4–6 as the next free ids m08–m10 — nothing renamed/repurposed", () => {
     expect(manifest.modules.map(m => m.id)).toEqual([
-      "791381-m01", "791381-m02", "791381-m07", "791381-m08", "791381-m09", "791381-m03", "791381-m04", "791381-m05", "791381-m06",
+      "791381-m01", "791381-m02", "791381-m07", "791381-m08", "791381-m09", "791381-m10", "791381-m03", "791381-m04", "791381-m05", "791381-m06",
     ]);
-    expect(manifest.modules.map(m => m.order)).toEqual([1, 2, 3, 4, 5, 7, 8, 9, 10]);
+    expect(manifest.modules.map(m => m.order)).toEqual([1, 2, 3, 4, 5, 6, 7, 8, 9, 10]);
     expect(byId["791381-m07"].order).toBe(3);          // the book's Unit 3 reads third …
     expect(byId["791381-m08"].order).toBe(4);          // … Unit 4 fourth, Unit 5 fifth …
     expect(byId["791381-m09"].order).toBe(5);
+    expect(byId["791381-m10"].order).toBe(6);
     expect(byId["791381-m03"].order).toBe(7);          // … and the historical m03 skeleton merely shifts after the real units
   });
 

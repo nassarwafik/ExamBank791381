@@ -244,6 +244,41 @@ const manifest: LearningCourseManifest = {
       ],
     },
     {
+      // Units 4–6 phase: the book's REAL Unit 6 «أنواع شبكات الاتصال» (PDF 57–60), complete. Stable id m10, order 6.
+      // PDF 61 opens Unit 7 («الكوابل وعنوان MAC») and is NOT converted.
+      id: "791381-m10",
+      title: "أنواع شبكات الاتصال",
+      shortTitle: "أنواع الشبكات",
+      order: 6,
+      lessons: [
+        {
+          id: "791381-m10-l00",
+          title: "افتتاحية الوحدة",
+          order: 0,
+          pages: [
+            { id: "791381-m10-l00-p01", title: "أنواع شبكات الاتصال", order: 1, source: { kind: "book", sourceId: "791381", pdfPageStart: 57 }, keywords: ["مقدمة", "الوحدة السادسة", "أنواع الشبكات"] },
+          ],
+        },
+        {
+          id: "791381-m10-l01",
+          title: "الشبكات البسيطة والتقليدية",
+          order: 1,
+          pages: [
+            { id: "791381-m10-l01-p01", title: "أنواع الشبكات البسيطة", order: 1, source: { kind: "book", sourceId: "791381", pdfPageStart: 58, printedPage: 58 }, keywords: ["P2P", "نقطة لنقطة", "عقدة لعقدة"] },
+            { id: "791381-m10-l01-p02", title: "الشبكات السلكية التقليدية", order: 2, source: { kind: "book", sourceId: "791381", pdfPageStart: 59, printedPage: 59 }, keywords: ["Bus", "Ring", "Collision"] },
+          ],
+        },
+        {
+          id: "791381-m10-l02",
+          title: "الشبكات الحديثة",
+          order: 2,
+          pages: [
+            { id: "791381-m10-l02-p01", title: "الشبكات الحديثة", order: 1, source: { kind: "book", sourceId: "791381", pdfPageStart: 60, printedPage: 60 }, keywords: ["Star", "Tree", "Hybrid"] },
+          ],
+        },
+      ],
+    },
+    {
       // Historical Phase-2 skeleton (PDF 123+). Its ID and source mappings are immutable; only its reading `order`
       // shifts as real units are converted (3 → 4 in Phase 3E; 4 → 7 when Units 4–6 became m08–m10).
       id: "791381-m03",
@@ -320,7 +355,7 @@ const manifest: LearningCourseManifest = {
   batches: [
     { id: "intro", label: "المقدمة", moduleIds: [] },
     { id: "b1", label: "الأساسيات · الأعداد · IP", moduleIds: ["791381-m01", "791381-m02", "791381-m07", "791381-m08"] },
-    { id: "b2", label: "الأجهزة والرسائل", moduleIds: ["791381-m09"] },
+    { id: "b2", label: "الأجهزة والرسائل", moduleIds: ["791381-m09", "791381-m10"] },
     { id: "b3", label: "النماذج والبروتوكولات والأمان", moduleIds: [] },
     { id: "b4", label: "برمجة السويتش و VLAN", moduleIds: ["791381-m03", "791381-m04", "791381-m05"] },
     { id: "b5", label: "الأمان · Wi-Fi · IPv6 · DHCP", moduleIds: [] },
