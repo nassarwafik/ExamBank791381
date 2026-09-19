@@ -67,10 +67,20 @@ describe("normalization — getClassLearningMaterials is default-deny and canoni
 });
 
 describe("no-auto-publish invariant — DEPLOYMENT ≠ PUBLICATION", () => {
-  it("a class that published only m01 stays at m01 even though the registry knows m02 and m07", () => {
+  it("a class that published only m01 stays at m01 even though the registry knows m02, m07 and now m08–m10", () => {
     const c = { learningMaterials: [{ courseId: "791381", visibleModuleIds: [M01] }] };
     expect(getVisibleLearningModuleIds(c, "791381")).toEqual([M01]);
     expect(buildStudentLearningMaterials(c)[0].modules.map(m => m.moduleId)).toEqual([M01]);
+  });
+  it("REAL registry: a class that published m01 + m02 + m07 before Units 4–6 were deployed sees NOTHING of m08–m10 until the teacher publishes them; the teacher CAN publish them", () => {
+    const existing = room("c1", { learningMaterials: [{ courseId: "791381", visibleModuleIds: [M01, M02, M07] }] });
+    expect(getVisibleLearningModuleIds(existing, "791381")).toEqual([M01, M02, M07]);
+    const student = JSON.stringify(buildStudentLearningMaterials(existing));
+    for (const hidden of ["791381-m08", "791381-m09", "791381-m10", "Class و Subnet و CIDR", "أجهزة الشبكات", "أنواع شبكات الاتصال"]) expect(student).not.toContain(hidden);
+    const registry = require("../src/lib/learning-materials-registry.js");
+    expect(registry.listLearningModules("791381").map(m => m.moduleId)).toEqual([M01, M02, M07, "791381-m08", "791381-m09", "791381-m10"]);
+    expect(registry.validateLearningModuleIds("791381", ["791381-m10", "791381-m08"])).toEqual(["791381-m08", "791381-m10"]);   // explicit publication path
+    expect(JSON.stringify(existing)).not.toContain("m08");                                                                    // the class document is untouched
   });
   it("a NEWLY registered module (future Unit 4) is NOT appended to any existing class's visibleModuleIds", () => {
     const future = {

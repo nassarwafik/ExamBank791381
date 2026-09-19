@@ -30,7 +30,7 @@ const COURSE_MANIFESTS: Record<string, ManifestLoader> = {
 };
 
 // Module BODY loaders per course. Each converted module body is registered here as its own
-// `import("./791381/modules/<id>")` chunk (m01, m02 and m07 today); manifest modules without an entry are still
+// `import("./791381/modules/<id>")` chunk (m01, m02, m07, m08, m09 and m10 today); manifest modules without an entry are still
 // skeleton-only and the Reader shows them as «قيد الإعداد».
 const COURSE_MODULE_LOADERS: Record<string, Record<string, ModuleLoader>> = {
   // REAL module bodies, each its own lazy chunk; the main bundle imports none of these eagerly.
@@ -38,6 +38,8 @@ const COURSE_MODULE_LOADERS: Record<string, Record<string, ModuleLoader>> = {
   //   m02 — Unit 2 (PDF 14–23), complete (Phase 3B–3D)
   //   m07 — Unit 3 «عناوين IP» (PDF 24–33), complete (Phase 3E). It is `m07` (the next free stable module id), NOT
   //         `m03`: the historical m03 skeleton (CLI/VLAN, PDF 123+) keeps its id; reading position comes from `order`.
+  //   m08 — Unit 4 «Class و Subnet و CIDR» (PDF 34–46), m09 — Unit 5 «أجهزة الشبكات» (PDF 48–56; PDF 47 is the batch
+  //         divider), m10 — Unit 6 «أنواع شبكات الاتصال» (PDF 57–60): complete (Units 4–6 phase), orders 4–6.
   // The remaining skeleton modules (m03–m06) have no body yet, so the Reader shows them as «قيد الإعداد».
   "791381": {
     "791381-m01": () => import("./791381/modules/m01"),
@@ -69,7 +71,7 @@ export async function loadCourseManifest(courseId: string): Promise<LearningCour
   return (await loader()).default;
 }
 
-/** Whether a specific module BODY is registered (791381: m01, m02, m07 today). Pure, no import triggered. */
+/** Whether a specific module BODY is registered (791381: m01, m02, m07, m08, m09, m10 today). Pure, no import triggered. */
 export function hasModuleContent(courseId: string, moduleId: string): boolean {
   return Boolean(COURSE_MODULE_LOADERS[courseId] && Object.prototype.hasOwnProperty.call(COURSE_MODULE_LOADERS[courseId], moduleId));
 }
