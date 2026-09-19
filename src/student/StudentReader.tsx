@@ -1,14 +1,34 @@
 import { useMemo } from "react";
-import LearningReader from "../learning/reader/LearningReader";
+import LearningReaderWithTraining from "../learning/training/LearningReaderWithTraining";
 import { createRestrictedReaderContentApi } from "../learning/reader/restrictedContentApi";
+import { createTrainingClient, studentTrainingHeaders } from "../learning/training/trainingClient";
 
 /**
  * The student's Reader = the SAME LearningReader (one Reader authority, no student fork) fed by a content API that
- * is restricted to the module ids the student's class has published. Code-split by StudentPortal: opening the
- * portal loads neither this file nor any book body; the module bodies remain the Reader's own lazy chunks.
+ * is restricted to the module ids the student's class has published, hosted by the shared Reader-plus-training
+ * wrapper so the book's trainings (T01–T04) open the shared runner and return to the SAME page. Code-split by
+ * StudentPortal: opening the portal loads neither this file nor any book body; the module bodies remain the
+ * Reader's own lazy chunks and the runner is a further lazy chunk.
  */
-export default function StudentReader({ courseId, allowedModuleIds, onExit }: { courseId: string; allowedModuleIds: string[]; onExit: () => void }) {
+export default function StudentReader({ courseId, allowedModuleIds, token, onExit, onTrainingSubmitted }: {
+  courseId: string;
+  allowedModuleIds: string[];
+  token: string;
+  onExit: () => void;
+  onTrainingSubmitted?: () => void;
+}) {
   const key = allowedModuleIds.join("|");
   const api = useMemo(() => createRestrictedReaderContentApi(courseId, allowedModuleIds), [courseId, key]);   // eslint-disable-line react-hooks/exhaustive-deps
-  return <LearningReader courseId={courseId} api={api} onExit={onExit} exitLabel="العودة إلى موادي التعليمية" />;
+  const client = useMemo(() => createTrainingClient(studentTrainingHeaders(token)), [token]);
+  return (
+    <LearningReaderWithTraining
+      courseId={courseId}
+      api={api}
+      onExit={onExit}
+      exitLabel="العودة إلى موادي التعليمية"
+      client={client}
+      actor="student"
+      onTrainingSubmitted={onTrainingSubmitted}
+    />
+  );
 }

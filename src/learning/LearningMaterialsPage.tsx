@@ -1,13 +1,15 @@
-import { lazy, Suspense, useState } from "react";
+import { lazy, Suspense, useMemo, useState } from "react";
 import SectionHeader from "../ui/SectionHeader";
 import StatusBadge from "../ui/StatusBadge";
 import { IconBook, IconChevronBack } from "../icons";
 import { LEARNING_COURSES, findLearningCourse, type LearningCourse } from "./catalog";
 import { hasCourseContent } from "./content/registry";
+import { createTrainingClient, teacherTrainingHeaders } from "./training/trainingClient";
 import "./learning.css";
 
-// The interactive reader is code-split so it (and the content layer it pulls) never weighs down the library view.
-const LearningReader = lazy(() => import("./reader/LearningReader"));
+// The interactive reader (hosted by the shared Reader-plus-training wrapper) is code-split so it and the content
+// layer it pulls never weigh down the library view.
+const LearningReaderWithTraining = lazy(() => import("./training/LearningReaderWithTraining"));
 
 type View =
   | { kind: "library" }
@@ -17,16 +19,25 @@ type View =
 /**
  * Learning Materials (المواد التعليمية). Local state only (no router): the library of course cards, a course
  * overview (eight high-level sections), and the interactive Reader. Opening the library/overview issues ZERO
- * network requests; the Reader performs no backend request either (only code-split content imports).
+ * network requests; the Reader performs no backend request for CONTENT (only code-split content imports). With a
+ * teacher token the Reader additionally reads the trainings list once (Learning Practice) so the teacher can
+ * preview and solve T01–T04 regardless of class publication; without a token it stays fully local.
  */
-export default function LearningMaterialsPage() {
+export default function LearningMaterialsPage({ token }: { token?: string } = {}) {
   const [view, setView] = useState<View>({ kind: "library" });
   const course = view.kind === "library" ? undefined : findLearningCourse(view.courseId);
+  const client = useMemo(() => (token ? createTrainingClient(teacherTrainingHeaders(token)) : null), [token]);
 
   if (course && view.kind === "reader") {
     return (
       <Suspense fallback={<p className="eb-muted" role="status">جارٍ فتح القارئ التفاعلي...</p>}>
-        <LearningReader courseId={course.id} onExit={() => setView({ kind: "course", courseId: course.id })} />
+        <LearningReaderWithTraining
+          courseId={course.id}
+          onExit={() => setView({ kind: "course", courseId: course.id })}
+          exitLabel="العودة إلى نظرة الكتاب"
+          client={client}
+          actor="teacher"
+        />
       </Suspense>
     );
   }

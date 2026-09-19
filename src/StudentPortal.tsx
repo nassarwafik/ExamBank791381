@@ -1,4 +1,4 @@
-import { lazy, Suspense, useEffect, useState } from "react";
+import { lazy, Suspense, useEffect, useRef, useState } from "react";
 import StudentExamPage from "./StudentExamPage";
 import StudentShell from "./shell/StudentShell";
 import StudentProjectPanel from "./projects/StudentProjectPanel";
@@ -41,6 +41,7 @@ export default function StudentPortal({ token, displayName, onLogout }: Props) {
   // The learning course currently open in the Reader (its published module ids as re-validated at open time).
   const [readerCourse, setReaderCourse] = useState<StudentLearningCourse | null>(null);
   const headers = { "x-student-token": token, Authorization: "Bearer " + token };
+  const strengthDirtyRef = useRef(false);
 
   async function load() {
     setLoading(true); setError("");
@@ -119,7 +120,18 @@ export default function StudentPortal({ token, displayName, onLogout }: Props) {
   if (readerCourse && data) {
     return (
       <Suspense fallback={<p className="eb-muted eb-sp-status" role="status">جارٍ فتح المادة التعليمية...</p>}>
-        <StudentReader courseId={readerCourse.courseId} allowedModuleIds={readerCourse.modules.map(m => m.moduleId)} onExit={() => { setReaderCourse(null); window.scrollTo({ top: 0, behavior: reducedMotion ? "auto" : "smooth" }); }} />
+        <StudentReader
+          courseId={readerCourse.courseId}
+          allowedModuleIds={readerCourse.modules.map(m => m.moduleId)}
+          token={token}
+          onTrainingSubmitted={() => { strengthDirtyRef.current = true; }}
+          onExit={() => {
+            setReaderCourse(null);
+            window.scrollTo({ top: 0, behavior: reducedMotion ? "auto" : "smooth" });
+            // A graded training changes the server's Strength total → ONE dashboard reload on return (never per page).
+            if (strengthDirtyRef.current) { strengthDirtyRef.current = false; void load(); }
+          }}
+        />
       </Suspense>
     );
   }

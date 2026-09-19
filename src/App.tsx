@@ -5520,7 +5520,7 @@ function App() {
 
       {teacherView === "learning" && (
         <Suspense fallback={<p className="eb-muted" role="status">جارٍ التحميل...</p>}>
-          <LearningMaterialsPage />
+          <LearningMaterialsPage token={token} />
         </Suspense>
       )}
 

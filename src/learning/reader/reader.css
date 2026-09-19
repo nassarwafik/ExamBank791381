@@ -162,6 +162,15 @@
 .learning-reader-list{ display:flex; flex-direction:column; gap:var(--eb-space-2); min-width:0; }
 .learning-reader-list-title{ margin:0; color:var(--eb-text-heading); font-weight:var(--eb-fw-semibold); font-size:var(--eb-fs-16); }
 .learning-reader-list-items{ list-style:none; margin:0; padding:0; display:grid; gap:var(--eb-space-2); min-width:0; }
+
+/* ---------- Library training (Learning Practice pointer) ---------- */
+.learning-reader-training{ display:flex; flex-direction:column; gap:var(--eb-space-2); min-width:0; padding:var(--eb-space-3) var(--eb-space-4); background:var(--eb-surface); border:1px solid var(--eb-line); border-radius:var(--eb-r); }
+.learning-reader-training.is-available{ border-color:var(--eb-primary-strong); }
+.learning-reader-training-label{ margin:0; align-self:flex-start; padding:2px var(--eb-space-2); border-radius:var(--eb-pill); background:var(--eb-primary-050); color:var(--eb-primary-strong); font-size:var(--eb-fs-12); font-weight:var(--eb-fw-bold); }
+.learning-reader-training-title{ margin:0; color:var(--eb-text-heading); font-weight:var(--eb-fw-semibold); font-size:var(--eb-fs-16); }
+.learning-reader-training-note{ margin:0; display:flex; flex-wrap:wrap; align-items:center; gap:var(--eb-space-2); color:var(--eb-muted); font-size:var(--eb-fs-14); line-height:var(--eb-lh-body); }
+.learning-reader-training-best{ margin:0; color:var(--eb-text); font-size:var(--eb-fs-14); font-variant-numeric:tabular-nums; }
+.learning-reader-training-cta{ align-self:flex-start; min-height:44px; }
 .learning-reader-list.variant-cards .learning-reader-list-items{ grid-template-columns:repeat(auto-fit, minmax(200px, 1fr)); }
 .learning-reader-list.variant-checklist .learning-reader-list-items,
 .learning-reader-list.variant-plain .learning-reader-list-items{ grid-template-columns:1fr; }

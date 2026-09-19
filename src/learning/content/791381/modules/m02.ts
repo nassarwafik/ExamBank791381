@@ -227,23 +227,20 @@ const m02: ContentModule = {
             },
           ],
         },
-        // PDF 22 — تدريبات قصيرة (new page). The four exercises are solved electronically via printed QR codes; the
-        // reader lists them (no QR image, no external link, no answers).
+        // PDF 22 — تدريبات قصيرة (new page). The book's four printed QR exercises are the platform's Learning-Practice
+        // trainings T01–T04 (Exam Library items, served by the safe learning-training API — never bundled here). Each
+        // block is METADATA ONLY (id, printed label, gating module); the host shows availability / titles / best
+        // results, so a hidden module never leaks a training title through the book content.
         {
           id: "791381-m02-l01-p08",
           title: "تدريبات قصيرة",
           order: 8,
           source: src(22, 20),
           blocks: [
-            {
-              id: "m02-l01-p08-list", type: "list", origin: "book", variant: "cards",
-              items: [
-                { id: "m02-l01-p08-t1", term: "تدريب 1", text: [{ text: "افتح الرمز بكاميرا الهاتف لحل التدريب إلكترونيًا مع التفسير ومراجعة الأخطاء." }] },
-                { id: "m02-l01-p08-t2", term: "تدريب 2", text: [{ text: "افتح الرمز بكاميرا الهاتف لحل التدريب إلكترونيًا مع التفسير ومراجعة الأخطاء." }] },
-                { id: "m02-l01-p08-t3", term: "تدريب 3", text: [{ text: "افتح الرمز بكاميرا الهاتف لحل التدريب إلكترونيًا مع التفسير ومراجعة الأخطاء." }] },
-                { id: "m02-l01-p08-t4", term: "تدريب 4", text: [{ text: "افتح الرمز بكاميرا الهاتف لحل التدريب إلكترونيًا مع التفسير ومراجعة الأخطاء." }] },
-              ],
-            },
+            { id: "m02-l01-p08-t1", type: "library-training", origin: "book", trainingId: "T01", label: "تدريب 1", requiredModuleId: "791381-m01" },
+            { id: "m02-l01-p08-t2", type: "library-training", origin: "book", trainingId: "T02", label: "تدريب 2", requiredModuleId: "791381-m02" },
+            { id: "m02-l01-p08-t3", type: "library-training", origin: "book", trainingId: "T03", label: "تدريب 3", requiredModuleId: "791381-m07" },
+            { id: "m02-l01-p08-t4", type: "library-training", origin: "book", trainingId: "T04", label: "تدريب 4", requiredModuleId: "791381-m07" },
             {
               id: "m02-l01-p08-important", type: "callout", origin: "book", kind: "important", title: "مهم",
               spans: [{ text: "لا تحفظ الأجوبة فقط — احفظ طريقة الصناديق وجدول التحويل، فهي ما يُسأل عنه في الامتحان." }],
@@ -251,7 +248,7 @@ const m02: ContentModule = {
             {
               id: "m02-l01-p08-qrnote", type: "callout", origin: "teacher-enrichment", kind: "clarification", title: "توضيح المعلم",
               source: src(22, 20),
-              spans: [{ text: "رموز التدريبات (QR) موجودة في الكتاب المطبوع وتُفتح بكاميرا الهاتف لحلّها إلكترونيًا؛ تعرض نسخة القراءة قائمة التدريبات فقط." }],
+              spans: [{ text: "رموز التدريبات (QR) موجودة في الكتاب المطبوع وتُفتح بكاميرا الهاتف لحلّها إلكترونيًا؛ وفي هذه النسخة التفاعلية تحلّ التدريب مباشرة من هنا عند إتاحته لصفك." }],
             },
           ],
         },

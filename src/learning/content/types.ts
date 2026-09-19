@@ -362,6 +362,23 @@ export interface UnitOpenerBlock extends BlockBase {
   goal?: string;
 }
 
+/**
+ * A generic pointer to a Learning-Practice training (an Exam Library item served by the safe learning-training
+ * API). The block carries METADATA ONLY — a training id, the printed label and the module whose publication gates
+ * it. No questions, no answers, no titles: the host decides (via the injected `training` seam) whether the training
+ * is available and what to show; the renderer never hardcodes a training list. Origin "book" is allowed because the
+ * printed page itself lists these trainings (they are the book's QR exercises).
+ */
+export interface LibraryTrainingBlock extends BlockBase {
+  type: "library-training";
+  /** Stable training id (e.g. "T01") — the ONLY key the learning-training API accepts. */
+  trainingId: string;
+  /** The book's printed label (e.g. "تدريب 1"). Always safe to show. */
+  label: string;
+  /** Module id whose publication makes the training available to a class (progressive-release gate). */
+  requiredModuleId: string;
+}
+
 /** The canonical, strongly-typed block union. */
 export type ContentBlock =
   | TextBlock
@@ -378,13 +395,14 @@ export type ContentBlock =
   | SimulationBlock
   | AnimationBlock
   | GuidedBlock
-  | InteractiveDiagramBlock;
+  | InteractiveDiagramBlock
+  | LibraryTrainingBlock;
 
 export type BlockType = ContentBlock["type"];
 /** The closed set of supported block types (used by the validator; keep in sync with the union). */
 export const BLOCK_TYPES: readonly BlockType[] = [
   "text", "heading", "image", "callout", "example", "table", "code", "diagram", "practice", "list", "unit-opener",
-  "simulation", "animation", "guided", "interactive-diagram",
+  "simulation", "animation", "guided", "interactive-diagram", "library-training",
 ];
 export const LIST_VARIANTS: readonly NonNullable<ListBlock["variant"]>[] = ["cards", "checklist", "plain", "ordered"];
 export const CALLOUT_KINDS: readonly CalloutKind[] = ["remember", "important", "warning", "tip", "summary", "clarification"];

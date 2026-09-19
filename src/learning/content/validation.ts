@@ -46,7 +46,8 @@ export type ContentIssueCode =
   | "list-empty-items"
   | "list-invalid-item"
   | "unit-opener-missing-title"
-  | "invalid-table-row";
+  | "invalid-table-row"
+  | "library-training-invalid";
 
 /** A single structured validation finding. Location fields are filled in from the outermost known node. */
 export interface ContentValidationIssue {
@@ -231,6 +232,17 @@ function checkBlock(
       break;
     case "practice":
       checkPractice(block.question, add, loc);
+      break;
+    case "library-training":
+      // Metadata only: a training id, a printed label and the gating module id. Anything content-like (questions,
+      // options, answers, titles) does NOT belong in the book — it is served by the learning-training API.
+      if (!isNonEmptyString(block.trainingId) || !isNonEmptyString(block.label) || !isNonEmptyString(block.requiredModuleId)) {
+        add("library-training-invalid", "library-training requires non-empty trainingId, label and requiredModuleId", loc);
+      } else if (!/^[A-Za-z0-9_-]{1,32}$/.test(block.trainingId)) {
+        add("library-training-invalid", "library-training trainingId must be a short safe identifier", loc);
+      } else if (/^library-training-/.test(block.trainingId) || Object.keys(block).some(k => /^(question|options|answer|title|exam)/i.test(k))) {
+        add("library-training-invalid", "library-training carries metadata only (no questions, options, answers or titles)", loc);
+      }
       break;
     case "simulation":
     case "animation":

@@ -7,6 +7,7 @@ import type { LearningCourseManifest, ContentModule, ContentPage } from "../cont
 import LearningReaderToc from "./LearningReaderToc";
 import LearningPageRenderer, { type ReaderPageBody, type ReaderPageHeader } from "./LearningPageRenderer";
 import { registryContentApi, type ReaderContentApi } from "./readerContentApi";
+import type { LibraryTrainingHost } from "../training/types";
 import "./reader.css";
 
 export type { ReaderContentApi } from "./readerContentApi";
@@ -24,13 +25,20 @@ type ManifestState =
  * navigation helpers — never array positions re-implemented here.
  */
 export default function LearningReader({
-  courseId, onExit, api = registryContentApi, exitLabel = "العودة إلى نظرة الكتاب",
+  courseId, onExit, api = registryContentApi, exitLabel = "العودة إلى نظرة الكتاب", training, initialPageId, onPageChange,
 }: {
   courseId: string;
   onExit: () => void;
   api?: ReaderContentApi;
   /** Label of the back/exit control — the host decides where "back" leads (teacher library, student portal). */
   exitLabel?: string;
+  /** Learning-Practice host seam (availability + open) for `library-training` blocks. Absent → generic cards. */
+  training?: LibraryTrainingHost;
+  /** The page to open first (validated against the manifest; unknown → first page). Lets a host that swaps the
+   *  Reader out (e.g. for a training) remount it on the SAME page. Read once, at manifest load. */
+  initialPageId?: string;
+  /** Notified with every selected page id (including the initial one) so a host can remember where the reader is. */
+  onPageChange?: (pageId: string) => void;
 }) {
   const [manifestState, setManifestState] = useState<ManifestState>({ status: "loading" });
   const [selectedPageId, setSelectedPageId] = useState<string>("");
@@ -46,6 +54,10 @@ export default function LearningReader({
   const contentRef = useRef<HTMLDivElement>(null);
   const drawerRef = useRef<HTMLDivElement>(null);
   const reducedMotion = usePrefersReducedMotion();
+  // Host-remembered start page + change notifier, held in refs so neither re-arms the manifest load.
+  const initialPageRef = useRef(initialPageId);
+  const onPageChangeRef = useRef(onPageChange);
+  useEffect(() => { onPageChangeRef.current = onPageChange; }, [onPageChange]);
 
   // Load the manifest once per course (re-armed by the retry button); pick the first page in reading order. The
   // state is only ever set from the ASYNC callbacks, so nothing is set synchronously inside the effect.
@@ -55,7 +67,8 @@ export default function LearningReader({
       if (!alive) return;
       const pages = flattenPageRefs(manifest);
       setManifestState({ status: "ready", manifest });
-      setSelectedPageId(pages.length > 0 ? pages[0].page.id : "");
+      const wanted = initialPageRef.current;
+      setSelectedPageId(wanted && findPage(manifest, wanted) ? wanted : pages.length > 0 ? pages[0].page.id : "");
     }).catch(() => { if (alive) setManifestState({ status: "error" }); });
     return () => { alive = false; };
   }, [courseId, api, manifestNonce]);
@@ -66,6 +79,7 @@ export default function LearningReader({
   const activeModuleId = located?.module.id;
 
   useEffect(() => { mountedRef.current = true; return () => { mountedRef.current = false; }; }, []);
+  useEffect(() => { if (selectedPageId) onPageChangeRef.current?.(selectedPageId); }, [selectedPageId]);
 
   // Trigger the async load of the owning module for the selected page — exactly once (de-duplicated by inflight +
   // the loaded/errored state). State is only set from the async callbacks; the page body is DERIVED during render
@@ -188,7 +202,7 @@ export default function LearningReader({
               {pages.map((f, i) => <option key={f.page.id} value={f.page.id}>{i + 1} — {f.page.title}</option>)}
             </select>
           </div>
-          {header ? <LearningPageRenderer header={header} body={body} /> : <p className="learning-reader-status" role="status">لا توجد صفحات بعد.</p>}
+          {header ? <LearningPageRenderer header={header} body={body} training={training} /> : <p className="learning-reader-status" role="status">لا توجد صفحات بعد.</p>}
         </main>
       </div>
 
