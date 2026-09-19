@@ -180,4 +180,22 @@ export const productionActivityRegistry: LearningActivityRegistry = createActivi
     load: () => import("./IPv4OctetsDiagram"),
     capabilities: { fullscreen: true, reset: true, interactive: true },
   },
+  // Units 4–6 phase — Unit 4 (PDF 40): the CIDR network-part / host-part visualizer (/8, /16, /24 at the book's
+  // whole-octet level, with a small "another device in the same network" task). Its own lazy chunk.
+  {
+    kind: "interactive-diagram",
+    key: "cidr-network-host",
+    versions: [1],
+    load: () => import("./CidrNetworkHostDiagram"),
+    capabilities: { fullscreen: true, reset: true, interactive: true },
+  },
+  // Units 4–6 phase — Unit 4 (PDF 45): the FIRST animation renderer — local traffic via the switch versus traffic
+  // that leaves through the default gateway. Stepped, text-mirrored, reduced-motion aware. Its own lazy chunk.
+  {
+    kind: "animation",
+    key: "gateway-flow",
+    versions: [1],
+    load: () => import("./GatewayFlowAnimation"),
+    capabilities: { fullscreen: true, reset: true, replay: true, animated: true, interactive: true },
+  },
 ]);
