@@ -5,10 +5,10 @@ import { listLearningCourses, findLearningCourse, listLearningModules, findLearn
 // teacher may publish. It lists exactly the production-approved, fully converted modules in the book's content
 // order (never a lexical id sort) and never the skeleton-only modules.
 
-const M = ["791381-m01", "791381-m02", "791381-m07", "791381-m08", "791381-m09", "791381-m10", "791381-m11", "791381-m12", "791381-m13", "791381-m14", "791381-m15", "791381-m16"];
+const M = ["791381-m01", "791381-m02", "791381-m07", "791381-m08", "791381-m09", "791381-m10", "791381-m11", "791381-m12", "791381-m13", "791381-m14", "791381-m15", "791381-m16", "791381-m17", "791381-m18"];
 
 describe("registry — exact production catalog", () => {
-  it("lists exactly course 791381 with m01, m02, m07, m08, m09, m10, m11, m12, m13, m14, m15, m16 in canonical content order (m07 = Unit 3 after m02; m08–m10 = Units 4–6; m11–m12 = Units 7–8; m13 = Batch 3; m14–m16 = Batch 4)", () => {
+  it("lists exactly course 791381 with m01, m02, m07, m08, m09, m10, m11, m12, m13, m14, m15, m16, m17, m18 in canonical content order (m07 = Unit 3 after m02; m08–m10 = Units 4–6; m11–m12 = Units 7–8; m13 = Batch 3; m14–m16 = Batch 4; m17–m18 = Batch 5)", () => {
     const courses = listLearningCourses();
     expect(courses.map(c => c.courseId)).toEqual(["791381"]);
     expect(courses[0]).toMatchObject({ courseId: "791381", title: "شبكات الاتصال", subject: "أنظمة محوسبة" });
@@ -24,7 +24,9 @@ describe("registry — exact production catalog", () => {
       { moduleId: "791381-m13", title: "نماذج الاتصال: OSI و TCP/IP", order: 9 },
       { moduleId: "791381-m14", title: "البروتوكولات", order: 10 },
       { moduleId: "791381-m15", title: "أوامر فحص الشبكة", order: 11 },
-      { moduleId: "791381-m16", title: "المجالات والمفاهيم", order: 12 }
+      { moduleId: "791381-m16", title: "المجالات والمفاهيم", order: 12 },
+      { moduleId: "791381-m17", title: "أمان الشبكات", order: 13 },
+      { moduleId: "791381-m18", title: "تجزئة البيانات", order: 14 }
     ]);
   });
   it("never exposes skeleton-only modules (m03–m06) or any page/lesson body", () => {
@@ -64,6 +66,7 @@ describe("registry — canonicalizeLearningModuleIds (storage-side, never throws
     expect(canonicalizeLearningModuleIds("791381", ["791381-m12", "791381-m11"])).toEqual(["791381-m11", "791381-m12"]);
     expect(canonicalizeLearningModuleIds("791381", ["791381-m13", "791381-m12"])).toEqual(["791381-m12", "791381-m13"]);
     expect(canonicalizeLearningModuleIds("791381", ["791381-m16", "791381-m14", "791381-m15", "791381-m13"])).toEqual(["791381-m13", "791381-m14", "791381-m15", "791381-m16"]);
+    expect(canonicalizeLearningModuleIds("791381", ["791381-m18", "791381-m17", "791381-m16"])).toEqual(["791381-m16", "791381-m17", "791381-m18"]);
   });
   it("[] / non-array / unknown course → []", () => {
     expect(canonicalizeLearningModuleIds("791381", [])).toEqual([]);
@@ -82,6 +85,7 @@ describe("registry — validateLearningModuleIds (request-side, throws httpStatu
     expect(validateLearningModuleIds("791381", ["791381-m12", "791381-m11"])).toEqual(["791381-m11", "791381-m12"]);   // Units 7–8 canonicalize by registry order
     expect(validateLearningModuleIds("791381", ["791381-m13", "791381-m12"])).toEqual(["791381-m12", "791381-m13"]);   // Batch 3 canonicalizes after Unit 8
     expect(validateLearningModuleIds("791381", ["791381-m16", "791381-m15", "791381-m14"])).toEqual(["791381-m14", "791381-m15", "791381-m16"]);   // Batch 4 canonicalizes by registry order
+    expect(validateLearningModuleIds("791381", ["791381-m18", "791381-m17"])).toEqual(["791381-m17", "791381-m18"]);   // Batch 5 canonicalizes by registry order
   });
   it("unknown course → 400; unknown module → 400; skeleton module → 400; non-array → 400", () => {
     expect(status(() => validateLearningModuleIds("794589", []))).toBe(400);

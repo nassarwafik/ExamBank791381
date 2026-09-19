@@ -8,7 +8,7 @@
 // ORDER is the explicit content order of the book (module `order` in the frontend manifest), NEVER a lexical
 // sort of ids: m07 («عناوين IP») is the book's Unit 3 and reads after m02 even though its id is not m03; m08–m10
 // are Units 4–6 (orders 4–6), m11–m12 are Units 7–8 (orders 7–8), m13 is the Batch-3 section «نماذج الاتصال»
-// (order 9) and m14–m16 are the Batch-4 sections (orders 10–12).
+// (order 9), m14–m16 are the Batch-4 sections (orders 10–12) and m17–m18 are the Batch-5 sections (orders 13–14).
 //
 // FUTURE CONTENT ONBOARDING RULE: when a new unit is converted and approved, the developer appends its module
 // here (id, title, order). That alone makes it PUBLISHABLE (the teacher sees it as «مخفي عن الطلاب»); it is
@@ -38,7 +38,10 @@ const COURSES = [
       // Batch 4 phase: publishable (the teacher sees them as «مخفي عن الطلاب»); NEVER auto-published to any class.
       { moduleId: "791381-m14", title: "البروتوكولات", order: 10 },
       { moduleId: "791381-m15", title: "أوامر فحص الشبكة", order: 11 },
-      { moduleId: "791381-m16", title: "المجالات والمفاهيم", order: 12 }
+      { moduleId: "791381-m16", title: "المجالات والمفاهيم", order: 12 },
+      // Batch 5 phase: publishable (the teacher sees them as «مخفي عن الطلاب»); NEVER auto-published to any class.
+      { moduleId: "791381-m17", title: "أمان الشبكات", order: 13 },
+      { moduleId: "791381-m18", title: "تجزئة البيانات", order: 14 }
     ]
   }
 ];

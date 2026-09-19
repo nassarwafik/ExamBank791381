@@ -155,7 +155,7 @@ export function createActivityRegistry(entries: readonly RegisteredActivity[]): 
  * diagrams). It is an EXACT allowlist of the entries below (pinned by engine.test.ts / activities.guards.test.ts):
  * interactive-diagram network-scope/v1 (Phase 3B), ipv4-octets/v1 (Phase 3E), cidr-network-host/v1 and
  * network-topologies/v1 (Units 4–6), cable-comparison/v1, mac-address-anatomy/v1 and broadcast-address/v1 (Units 7–8),
- * osi-layers/v1 (Batch 3), network-domains/v1 (Batch 4); animation gateway-flow/v1 (Units 4–6); simulation hub-switch-router-flow/v1 (Units 4–6)
+ * osi-layers/v1 (Batch 3), network-domains/v1 (Batch 4), tcp-handshake/v1 (Batch 5); animation gateway-flow/v1 (Units 4–6); simulation hub-switch-router-flow/v1 (Units 4–6)
  * and message-delivery/v1 (Units 7–8) — each behind a
  * code-split `load` thunk, so a chunk is imported only when a matching descriptor renders. Any other descriptor
  * renders its faithful static fallback. The generic BUILT-IN presenters (see builtins.ts — currently only
@@ -272,6 +272,14 @@ export const productionActivityRegistry: LearningActivityRegistry = createActivi
     key: "network-domains",
     versions: [1],
     load: () => import("./NetworkDomainsExplorer"),
+    capabilities: { fullscreen: true, reset: true, interactive: true },
+  },
+  {
+    // Batch 5 — the TCP three-way handshake step-through for PDF 118 («تجزئة البيانات»).
+    kind: "interactive-diagram",
+    key: "tcp-handshake",
+    versions: [1],
+    load: () => import("./TcpHandshakeStepper"),
     capabilities: { fullscreen: true, reset: true, interactive: true },
   },
 ]);
