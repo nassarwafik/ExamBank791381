@@ -210,3 +210,7 @@
 /* Numeric tables (place-value / conversion) opt into dir="ltr" so columns read MSB→LSB left-to-right (never
    reversed under RTL). The wrapper still scrolls horizontally on small screens instead of the page. */
 .learning-reader-table[dir="ltr"]{ direction:ltr; }
+
+/* Phase 3E — per-COLUMN direction (TableBlock.columnDirs): LTR technical cells (IP addresses, ranges, class names)
+   inside an RTL table keep their digit/dot order and isolate their bidi run, while the Arabic column order stays RTL. */
+.learning-reader-table td[dir="ltr"]{ direction:ltr; unicode-bidi:isolate; text-align:start; font-variant-numeric:tabular-nums; }

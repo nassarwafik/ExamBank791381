@@ -40,6 +40,15 @@ block  :  <page-scoped>-bNN     (e.g. fa-b1 in fixtures)
 Ids are authored, unique, and **never regenerated at runtime**. Ordering uses the `order` field (not array index),
 with the id as a deterministic tiebreaker.
 
+**Stable module ids are immutable identifiers, not sequence numbers.** A module id is **not** guaranteed to equal the
+source book's unit number or the module's current reading position; the explicit `order` field is the **only**
+sequencing authority (Reader, TOC and navigation all sort by it). The Phase-2 skeleton claimed `m03`–`m06` for a
+representative set of later book sections, so when the book's real Unit 3 («عناوين IP») was converted (Phase 3E) it
+became the next free id, **`791381-m07`, with `order: 3`**, while the historical `m03` skeleton kept its id, title
+and source mappings and merely moved to `order: 4` (m04→5, m05→6, m06→7). Future real units continue with `m08`,
+`m09`, … placed by `order`. Existing ids are **never renumbered or repurposed**; a regression test pins every
+pre-existing module id and source mapping.
+
 ## Source traceability
 
 Every production **Page** carries `source`:
@@ -60,7 +69,8 @@ only, and `printedPage` (the number printed on the paper) differs from the PDF p
 - **text** — safe inline `spans` (`strong`/`em`/`term`/`code`, optional per-span `dir`). No raw HTML.
 - **callout** — `remember` · `important` · `warning` · `tip` · `summary` · `clarification` (maps to book boxes تذكّر / الخلاصة / الفكرة; `clarification` is the separable teacher note, always `origin:"teacher-enrichment"`).
 - **example** — `mode: "solved" | "practice"` (default `solved`), `title?` + `prompt?` + structured `steps[]` + `result?` + `explanation?` (never one blob string). Solved = مثال محلول; practice = مثال للحل.
-- **table** — `headers[]` + `rows[][]` (not an HTML string).
+- **table** — `headers[]` + `rows[][]` (not an HTML string); optional `columnDirs[]` (Phase 3E) marks body columns
+  `"ltr"` so IP addresses / ranges / class names keep their digit order inside an RTL table whose header order stays RTL.
 - **code** — `language: cli|text|config`, whitespace preserved, usually `dir:"ltr"`.
 - **image / diagram** — local `src`, `alt` **required unless `decorative`**; diagram is metadata + image only (no sim behavior).
 - **practice** — lightweight interactive practice with immediate-feedback readiness. Question kinds `multipleChoice` / `trueFalse` / `shortInput` / `fillBlank`, plus a `feedback` object (`hint` / `correctFeedback` / `incorrectFeedback` / `explanation`). **Not** the ExamBank exam schema, not graded, not a rank/medal input. *Extension path:* richer kinds (matching, ordering, classify, binary-entry, IP/CIDR, CLI) are added as new union members (or expressed as `simulation`) without touching existing ones.
@@ -480,10 +490,71 @@ which **completes module m02**. The Unit-2 boundary is confirmed from the render
   primitives. The page is pure book content (`origin:"book"` throughout) — no practice, no answers, no QR image,
   no external link, no evaluator wiring.
 
-**Unit 3 is deferred.** PDF 24 begins «عناوين IP» (IP addresses). The Phase-2 skeleton's `m03`
-(«برمجة السويتش CLI و VLAN» @ PDF 123) is a sparse representative placeholder that does **not** correspond to the
-book's actual Unit 3, so reconciling the module structure for «عناوين IP» is left to a future batch (owner
-decision), not folded into this one.
+**Unit 3 followed in Phase 3E** (see the next section) as a **new** stable module `791381-m07` placed by
+`order: 3`. The Phase-2 skeleton's `m03` («برمجة السويتش CLI و VLAN» @ PDF 123) does **not** correspond to the
+book's actual Unit 3 and was deliberately left untouched (id, title and source mappings immutable).
+
+## Phase 3E — Complete Unit 3: IP Addresses (source PDF 24–33)
+
+Phase 3E converts the whole of **Unit 3 «عناوين IP» — PDF 24–33** (printed 22–31) into one **complete** module.
+The boundary is verified from the rendered source: PDF 24 is the Unit-3 opener («الوحدة الثالثة · 03 · عناوين
+IP»), PDF 25–33 all carry the «الوحدة الثالثة · عناوين IP» header, and **PDF 34 opens Unit 4** («الوحدة الرابعة —
+CIDR و Subnet و Class»). Nothing from PDF 34 onward is converted; a test asserts no m07 body page has
+`pdfPageStart >= 34`.
+
+- **New stable module `791381-m07`, `order: 3`** (title «عناوين IP»). The historical Phase-2 skeleton `m03`
+  («برمجة السويتش CLI و VLAN», PDF 123+) is **not** reused, renamed or re-mapped — module ids are immutable and
+  are **not** unit numbers; explicit `order` is the sequencing authority (m03→4, m04→5, m05→6, m06→7). The
+  overview batch **b1** («الأساسيات · الأعداد · IP») now lists `[m01, m02, m07]`; its id/label and the other batch
+  mappings are unchanged (CLI/VLAN stays in b4). A regression test pins every pre-existing module id, title and
+  PDF mapping.
+- **Structure (1 source page → 1 interactive page, no `pdfPageEnd`):**
+  `l00` افتتاحية الوحدة — PDF 24 (generic `unit-opener` hero) ·
+  `l01` عنوان IP وبنية IPv4 — PDF 25 (what is an IP address), 26 (IPv4 / IPv6), 27 (IPv4 structure: four octets),
+  28 (when is an address invalid — the book's own school rules), 29 (تدريب: صالح أو غير صالح؟) ·
+  `l02` العناوين العامة والخاصة — PDF 30 (public / private), 31 (private ranges), 32 (تدريب: خاص أم عام؟),
+  33 (Static IP / Dynamic IP — the last Unit-3 page). Page ids `791381-m07-lNN-pNN` are new, authored once, and
+  immutable from here on. The module is **complete** (manifest page ids ↔ body page ids match exactly; no
+  `partial` flag).
+- **Source fidelity, no silent corrections.** The book presents simplified school-level IP rules (e.g. PDF 28's
+  validity rules incl. the Localhost/127 and APIPA `169.254.x.x` exclusions, and the explicit nuance that `255` in
+  a *middle* octet is not automatically invalid — `192.255.10.10`; PDF 31's private ranges incl. the "172: second
+  octet 16–31" rule; PDF 32's `192.167` ≠ `192.168` warning). These are converted **as written**; outside
+  networking nuance is never substituted. Every faithful block is `origin:"book"`.
+- **RTL/LTR.** Every IP address, IPv4/IPv6 token, range and PC label is authored as a `dir:"ltr"` code span or
+  inside an LTR table so digits and dots are never reversed inside the RTL page; DOM tests cover the representative
+  strings (`192.168.1.5`, `2001:db8::1`, `192.168.100.10`, `192.255.10.10`, `169.254.10.234`, `8.8.8.8`,
+  `172.16.32.30`, …). The worksheet/range tables mark their address columns with the small generic `table`
+  capability added here, `columnDirs: ["ltr", …]`, so those cells are explicitly LTR while the Arabic header
+  order stays RTL. Wide tables scroll inside their own container.
+- **Transparent normalizations (documented, not silent):** PDF 28 rule 5 is printed with «المجال» touching
+  `169.254.x.x` — a normal space is used (typography only). PDF 33's title is authored as the logical RTL string
+  «Static IP و Dynamic IP», which reproduces the printed visual (Static rightmost) under the reader's RTL base; its
+  closing «الفرق الأساسي» box is printed with an LTR base direction (an authoring artifact) and is shown as
+  normal RTL prose with the identical logical content `Dynamic = متغيّر · Static = ثابت`.
+- **The first IP-focused interaction — `interactive-diagram / ipv4-octets / v1`** (PDF 27, `origin:
+  "teacher-enrichment"` with a source association): the second registry-backed production activity, its own lazy
+  chunk (`IPv4OctetsDiagram`). The student selects one of the FOUR octet segments of the example address (real
+  buttons, ≥44px, keyboard + touch, `aria-pressed` + a visible mark — never colour-only, LTR row, reduced-motion
+  contract, shell reset). It shows only PDF 27's concept — four parts, each in the book's 0–255 range — with **no**
+  validity rules, no free-text input, no CIDR/subnet/class, no scoring. The production registry is an exact
+  two-entry allowlist (`network-scope/v1`, `ipv4-octets/v1`); still zero simulation/animation/CLI renderers.
+- **PDF 28 guided reveal** (built-in `guided / reveal / v1`, `origin:"teacher-enrichment"`, source PDF 28): «كيف
+  نفحص إن كان العنوان صالحًا حسب قواعد هذه الصفحة؟» reveals the page's **own** rules one at a time — no new rules,
+  no answers from the PDF 29 training.
+- **Source exercises stay book exercises.** PDF 29 and PDF 32 are rendered as faithful worksheet tables (the
+  address rows with empty صالح/غير صالح · السبب / خاص/عام columns), exactly as the book presents them: **no**
+  answer key, no `correct` flag, no evaluator wiring, no Correct/Incorrect UI, no score, no solution reveal.
+  Interactive answer checking is Phase 4.
+- **One small Reader robustness fix (found by the new lazy-load test).** When a navigation interleaved two module
+  loads, the Reader released a module id from its in-flight set inside the promise callback — *before* the state
+  commit — so a passive-effect run triggered by the other module's commit could observe "not in flight, not loaded"
+  and request the same chunk twice. The id is now released only where the committed `modules` / `erroredModules`
+  state shows it (in the effect). Session caching, stale-load protection, error/retry and the ready / unavailable /
+  missing distinction are unchanged; the Phase-3E reader test asserts each module body is requested exactly once.
+- Confined to `src/learning/**` and `docs/`; no product area outside Learning is touched.
+
+**Deferred next work: Unit 4 (PDF 34+)** — CIDR, Subnet, Class A/B/C, masks, network/host bits.
 
 ## Phase boundaries
 
@@ -494,14 +565,16 @@ decision), not folded into this one.
 | **3A (this)** | Interactive Learning **Engine foundation** — activity descriptors, trusted registry + lazy loader (EMPTY production), host shell + error boundary + fullscreen + reduced-motion, no-op event sink, validation, tests, docs | done (foundation) |
 | 3B | First real conversion pilot — Book 791381 source PDF **7–14** | done |
 | 3C | Number-systems batch — Book 791381 source PDF **15–22** (decimal/binary/hex conversions) | done |
-| **3D (this)** | Complete Unit 2 — Book 791381 source PDF **23** (خلاصة التحويلات); m02 becomes complete | done |
+| 3D | Complete Unit 2 — Book 791381 source PDF **23** (خلاصة التحويلات); m02 becomes complete | done |
+| **3E (this)** | Complete Unit 3 «عناوين IP» — Book 791381 source PDF **24–33** as new stable module `m07` (order 3); first IP-focused activity (`ipv4-octets/v1`) | done |
 | 4 | Interactive Practice — answer checking + immediate feedback (inline) | deferred |
 | 5 | Simulations — real VLAN/subnet/CLI/… renderers registered behind the Phase-3A engine | deferred |
 | 6 | Student Progress — last page, completion, attempts (separate domain; attaches to the no-op event seam) | deferred |
 | 7 | Teacher Content Management — editors, publish/unpublish | deferred |
 | 8 | AI Learning Assistant | deferred |
 
-Phase 3 ships the Reader **shell only**: it renders synthetic/test content and the "قيد الإعداد" state for the real
-book. **PDF → native content conversion has not started** — it begins in Phase 3B, only after the Reader UX is
-approved, choosing a small contiguous page range first. The source PDF remains the authoritative source and is never
-bundled into production.
+Phase 3 shipped the Reader **shell** first (synthetic/test content + the "قيد الإعداد" state for the real book).
+**PDF → native content conversion started in Phase 3B** and proceeds in small contiguous page ranges, each verified
+against the rendered source: **m01 (Unit 1) and m02 (Unit 2) are complete**, and **Phase 3E continues with Unit 3
+(«عناوين IP», module `m07`)**. Later units remain skeleton-only until their batch. The source PDF remains the
+authoritative source and is never bundled into production.

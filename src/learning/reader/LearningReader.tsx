@@ -71,12 +71,18 @@ export default function LearningReader({
   // page.
   useEffect(() => {
     if (!manifest || !activeModuleId) return;
-    if (!api.hasModule(courseId, activeModuleId) || modules[activeModuleId] || erroredModules.has(activeModuleId) || inflightRef.current.has(activeModuleId)) return;
+    if (!api.hasModule(courseId, activeModuleId)) return;
+    // A module the COMMITTED state now shows as loaded (or errored) is no longer in flight — it is released HERE, where
+    // that state is observable, never inside the promise callbacks: releasing it there, before the state commit, let
+    // a passive-effect run triggered by ANOTHER module's commit (two loads interleaved by a quick navigation) observe
+    // "not in flight, not loaded" and request the same chunk a second time. (Found by the Phase-3E reader test.)
+    if (modules[activeModuleId] || erroredModules.has(activeModuleId)) { inflightRef.current.delete(activeModuleId); return; }
+    if (inflightRef.current.has(activeModuleId)) return;
     const moduleId = activeModuleId;
     inflightRef.current.add(moduleId);
     api.loadModule(courseId, moduleId)
-      .then(mod => { inflightRef.current.delete(moduleId); if (mountedRef.current) setModules(prev => ({ ...prev, [moduleId]: mod })); })
-      .catch(() => { inflightRef.current.delete(moduleId); if (mountedRef.current) setErroredModules(prev => new Set(prev).add(moduleId)); });
+      .then(mod => { if (mountedRef.current) setModules(prev => ({ ...prev, [moduleId]: mod })); })
+      .catch(() => { if (mountedRef.current) setErroredModules(prev => new Set(prev).add(moduleId)); });
   }, [manifest, activeModuleId, courseId, api, modules, erroredModules]);
 
   // Derived page body for the CURRENT selection (never stale): unavailable / error / loading / ready-from-state.

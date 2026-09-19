@@ -248,3 +248,29 @@
 }
 .learning-scope[data-reduced-motion="true"] .learning-scope-tab,
 .learning-scope[data-reduced-motion="true"] .learning-scope-ring{ transition:none; }
+
+/* ── Phase 3E: ipv4-octets interactive diagram (four selectable parts of an IPv4 address) ─────────────────── */
+.learning-octets{ display:flex; flex-direction:column; gap:var(--eb-space-3); }
+.learning-octets-caption{ margin:0; color:var(--eb-text-secondary); font-size:var(--eb-fs-14); line-height:var(--eb-lh-body); }
+/* The address row is LTR (MSB-left) and wraps on very narrow screens instead of overflowing the page. */
+.learning-octets-row{ direction:ltr; display:flex; flex-wrap:wrap; align-items:center; justify-content:center; gap:var(--eb-space-1); }
+.learning-octets-cell{ display:inline-flex; align-items:center; gap:var(--eb-space-1); }
+.learning-octets-dot{ font-size:var(--eb-fs-20); font-weight:var(--eb-fw-bold); color:var(--eb-text-heading); }
+.learning-octets-octet{ min-height:44px; min-width:56px; display:inline-flex; align-items:center; justify-content:center; gap:4px;
+  padding:var(--eb-space-2); border:2px solid var(--eb-line); border-radius:var(--eb-r); background:var(--eb-surface);
+  color:var(--eb-text-heading); font-size:var(--eb-fs-18); font-weight:var(--eb-fw-bold); font-variant-numeric:tabular-nums;
+  cursor:pointer; transition:border-color var(--eb-dur) var(--eb-ease), background var(--eb-dur) var(--eb-ease); }
+.learning-octets-octet:hover{ border-color:var(--eb-primary); }
+.learning-octets-octet.is-active{ border-color:var(--eb-primary); background:var(--eb-primary-050); }
+.learning-octets-octet:focus-visible{ outline:2px solid var(--eb-primary); outline-offset:2px; }
+.learning-octets-mark{ font-size:var(--eb-fs-13); color:var(--eb-primary-strong); }
+.learning-octets-detail{ display:flex; flex-direction:column; gap:4px; }
+.learning-octets-title{ margin:0; display:flex; flex-wrap:wrap; align-items:center; gap:var(--eb-space-2); color:var(--eb-text-heading); font-weight:var(--eb-fw-semibold); font-size:var(--eb-fs-16); }
+.learning-octets-badge{ direction:ltr; padding:1px var(--eb-space-2); border-radius:var(--eb-pill); background:var(--eb-primary-050); color:var(--eb-primary-strong); font-size:var(--eb-fs-12); font-weight:var(--eb-fw-bold); }
+.learning-octets-range{ margin:0; color:var(--eb-text); font-size:var(--eb-fs-14); line-height:var(--eb-lh-body); }
+.learning-octets-note{ margin:0; color:var(--eb-muted); font-size:var(--eb-fs-12); }
+.learning-octets-empty{ margin:0; color:var(--eb-muted); font-size:var(--eb-fs-13); }
+@media (prefers-reduced-motion: reduce){
+  .learning-octets-octet{ transition:none; }
+}
+.learning-octets[data-reduced-motion="true"] .learning-octets-octet{ transition:none; }

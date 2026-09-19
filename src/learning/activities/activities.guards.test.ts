@@ -20,10 +20,11 @@ const boundary = stripComments(read("./LearningActivityBoundary.tsx"));
 const fallback = stripComments(read("./ActivityFallback.tsx"));
 const guided = stripComments(read("./GuidedActivity.tsx"));
 const scope = stripComments(read("./NetworkScopeDiagram.tsx"));
+const octets = stripComments(read("./IPv4OctetsDiagram.tsx"));
 const builtins = stripComments(read("./builtins.ts"));
 const css = read("./activities.css");
 
-const sources = { engine, host, boundary, fallback, guided, builtins, scope };
+const sources = { engine, host, boundary, fallback, guided, builtins, scope, octets };
 
 describe("Phase 3A — source files are plain text (ZERO U+0000 bytes)", () => {
   it("engine.ts and LearningActivityHost.tsx contain no NUL byte", () => {
@@ -88,12 +89,32 @@ describe("Phase 3A — no code execution from content", () => {
   });
 });
 
-describe("Phase 3B — production registry is an exact allowlist", () => {
-  it("registers ONLY the exact allowlist and ZERO simulation/animation renderers (no chunk loads at import time)", () => {
+describe("Phase 3B/3E — production registry is an exact allowlist", () => {
+  it("registers ONLY the exact allowlist and ZERO simulation/animation/CLI renderers (no chunk loads at import time)", () => {
     expect(productionActivityRegistry.list()).toEqual([
       { kind: "interactive-diagram", key: "network-scope", versions: [1] },
+      { kind: "interactive-diagram", key: "ipv4-octets", versions: [1] },
     ]);
     expect(productionActivityRegistry.list().some(e => e.kind === "simulation" || e.kind === "animation")).toBe(false);
+    expect(productionActivityRegistry.list().some(e => /cli/i.test(e.key))).toBe(false);
+  });
+  it("the ipv4-octets renderer is reached only through a static string-literal import thunk", () => {
+    expect(engine).toContain('import("./IPv4OctetsDiagram")');
+  });
+});
+
+describe("Phase 3E — ipv4-octets mobile & reduced-motion CSS contract", () => {
+  const noSpaces = (s: string) => s.replace(/\s+/g, "");
+  const rule = (selector: string) => { const i = css.indexOf(selector); return noSpaces(css.slice(i, css.indexOf("}", i))); };
+  it("octet buttons meet the ≥44px touch target, the address row is LTR and wraps (no page overflow)", () => {
+    expect(rule(".learning-octets-octet{")).toContain("min-height:44px");
+    expect(rule(".learning-octets-row{")).toContain("direction:ltr");
+    expect(rule(".learning-octets-row{")).toContain("flex-wrap:wrap");
+    expect(css).not.toMatch(/\.learning-octets[^{]*\{[^}]*width:\s*\d{3,}px/);
+  });
+  it("shows a visible focus ring and disables the transition under reduced motion", () => {
+    expect(rule(".learning-octets-octet:focus-visible")).toContain("outline:2px");
+    expect(noSpaces(css)).toContain('.learning-octets[data-reduced-motion="true"].learning-octets-octet{transition:none');
   });
 });
 
