@@ -203,3 +203,22 @@
   .eb-sp-learning-list{ grid-template-columns:repeat(auto-fit,minmax(300px,1fr)); }
   .eb-sp-learning-open{ width:auto; align-self:flex-start; min-width:160px; }
 }
+
+/* ---------- Project Performance (student): cards + detail ---------- */
+.eb-sp-project-cards{ list-style:none; margin:0; padding:0; display:grid; grid-template-columns:1fr; gap:var(--eb-space-3); min-width:0; }
+.eb-sp-project-card{ display:flex; gap:var(--eb-space-3); align-items:flex-start; padding:var(--eb-space-3) var(--eb-space-4); background:var(--eb-surface); border:1px solid var(--eb-line); border-radius:var(--eb-r-lg); min-width:0; }
+.eb-sp-project-card-art{ flex:0 0 auto; object-fit:contain; }
+.eb-sp-project-card-body{ display:flex; flex-direction:column; gap:var(--eb-space-2); min-width:0; flex:1 1 auto; }
+.eb-sp-project-card-title{ margin:0; color:var(--eb-text-heading); font-size:var(--eb-fs-16); font-weight:var(--eb-fw-bold); overflow-wrap:anywhere; }
+.eb-sp-project-card-facts{ margin:0; display:flex; flex-wrap:wrap; gap:var(--eb-space-1) var(--eb-space-3); }
+.eb-sp-project-card-facts div{ display:flex; gap:var(--eb-space-1); align-items:baseline; font-size:var(--eb-fs-13); }
+.eb-sp-project-card-facts dt{ color:var(--eb-muted); }
+.eb-sp-project-card-facts dt::after{ content:":"; }
+.eb-sp-project-card-facts dd{ margin:0; color:var(--eb-text-heading); font-weight:var(--eb-fw-semibold); font-variant-numeric:tabular-nums; }
+.eb-sp-project-card .eb-button{ align-self:flex-start; }
+.eb-sp-project-back{ align-self:flex-start; }
+.eb-sp-stage-score{ margin:0; display:flex; flex-wrap:wrap; gap:var(--eb-space-1) var(--eb-space-3); color:var(--eb-text-secondary); font-size:var(--eb-fs-12); }
+.eb-sp-stage-score strong{ color:var(--eb-text-heading); font-variant-numeric:tabular-nums; }
+@media (min-width: 768px){
+  .eb-sp-project-cards{ grid-template-columns:repeat(auto-fill, minmax(280px, 1fr)); }
+}

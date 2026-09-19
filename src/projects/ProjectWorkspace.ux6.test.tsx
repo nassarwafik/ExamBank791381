@@ -301,7 +301,7 @@ describe("UX-6a student profile — non-modal, focus, disclosures, actions, exac
     const panel = document.getElementById(stage.getAttribute("aria-controls") || "") as HTMLElement;
     expect(panel.textContent).toContain("اقرأ الفصل الأول");
     // exactly one primary action + one menu (no four equal buttons)
-    expect(within(panel).getAllByRole("button").map(b => b.textContent)).toEqual(["اعتماد المرحلة", "تغيير الحالة", "حفظ الملاحظة"]);
+    expect(within(panel).getAllByRole("button").map(b => b.textContent)).toEqual(["اعتماد المرحلة", "تغيير الحالة", "حفظ العلامة", "حفظ الملاحظة"]);   // + the Project-Performance score control
     fireEvent.click(within(panel).getByRole("button", { name: "تغيير حالة المرحلة B01" }));
     const menu = await screen.findByRole("group", { name: "تغيير حالة المرحلة B01" });
     const items = within(menu).getAllByRole("button");
