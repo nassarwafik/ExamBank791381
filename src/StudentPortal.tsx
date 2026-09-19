@@ -1,4 +1,4 @@
-import { lazy, Suspense, useEffect, useState } from "react";
+import { lazy, Suspense, useEffect, useRef, useState } from "react";
 import StudentExamPage from "./StudentExamPage";
 import StudentShell from "./shell/StudentShell";
 import StudentProjectPanel from "./projects/StudentProjectPanel";
@@ -14,7 +14,7 @@ import StudentAssignmentCard from "./student/StudentAssignmentCard";
 import AchievementFeed from "./student/AchievementFeed";
 import AvatarPickerDialog from "./student/AvatarPickerDialog";
 import { FILTERS, matchesFilter, medalsFor, nowItems, sortTaskFirst, type PortalFilter } from "./student/portalPresentation";
-import { rankFor, rankProgress } from "./studentRank";
+import { normalizeStrength, progressPresentationFromStrength, rankPresentationFromStrength } from "./student/strengthPresentation";
 import type { Dashboard, Detail, Summary } from "./student/types";
 
 type Props = { token: string; displayName: string; onLogout: () => void };
@@ -40,6 +40,7 @@ export default function StudentPortal({ token, displayName, onLogout }: Props) {
   // The learning course currently open in the Reader (its published module ids as re-validated at open time).
   const [readerCourse, setReaderCourse] = useState<StudentLearningCourse | null>(null);
   const headers = { "x-student-token": token, Authorization: "Bearer " + token };
+  const strengthDirtyRef = useRef(false);
 
   async function load() {
     setLoading(true); setError("");
@@ -47,7 +48,7 @@ export default function StudentPortal({ token, displayName, onLogout }: Props) {
       const r = await fetch("/api/student-dashboard", { headers }), j = await r.json() as any;
       if (r.status === 401) { onLogout(); return; }
       if (!r.ok || !j.student || !j.stats) throw new Error(j.error || "تعذر تحميل صفحة الطالب.");
-      setData({ student: j.student, classroom: j.classroom || null, assignments: j.assignments || [], stats: j.stats });
+      setData({ student: j.student, classroom: j.classroom || null, assignments: j.assignments || [], stats: j.stats, strength: normalizeStrength(j.strength, j.stats?.finalized) });
     } catch (e) { setError(e instanceof Error ? e.message : "تعذر تحميل الصفحة."); }
     finally { setLoading(false); }
   }
@@ -118,7 +119,18 @@ export default function StudentPortal({ token, displayName, onLogout }: Props) {
   if (readerCourse && data) {
     return (
       <Suspense fallback={<p className="eb-muted eb-sp-status" role="status">جارٍ فتح المادة التعليمية...</p>}>
-        <StudentReader courseId={readerCourse.courseId} allowedModuleIds={readerCourse.modules.map(m => m.moduleId)} onExit={() => { setReaderCourse(null); window.scrollTo({ top: 0, behavior: reducedMotion ? "auto" : "smooth" }); }} />
+        <StudentReader
+          courseId={readerCourse.courseId}
+          allowedModuleIds={readerCourse.modules.map(m => m.moduleId)}
+          token={token}
+          onTrainingSubmitted={() => { strengthDirtyRef.current = true; }}
+          onExit={() => {
+            setReaderCourse(null);
+            window.scrollTo({ top: 0, behavior: reducedMotion ? "auto" : "smooth" });
+            // A graded training changes the server's Strength total → ONE dashboard reload on return (never per page).
+            if (strengthDirtyRef.current) { strengthDirtyRef.current = false; void load(); }
+          }}
+        />
       </Suspense>
     );
   }
@@ -126,8 +138,12 @@ export default function StudentPortal({ token, displayName, onLogout }: Props) {
 
   const stats = data?.stats;
   const medals = data ? medalsFor(data.assignments) : [];
-  const rank = rankFor(stats);
-  const progress = rankProgress(stats);
+  // Unified Strength: the rank tier, the next tier and the power-ring progress are the SERVER's values in
+  // `dashboard.strength` (exams + practice + projects), only shaped/labelled here — the client never re-derives them
+  // from totalPoints. (normalizeStrength falls back, as a whole, to finalized × 100 when no payload exists.)
+  const strength = data?.strength ?? null;
+  const rank = strength ? rankPresentationFromStrength(strength, stats) : null;
+  const progress = progressPresentationFromStrength(strength ?? normalizeStrength(null, stats?.finalized));
   const averageFinalized = stats && stats.averageFinalized !== null && stats.averageFinalized !== undefined ? Number(stats.averageFinalized) : null;
   const ordered = data ? sortTaskFirst(data.assignments) : [];
   const visible = ordered.filter(item => matchesFilter(item, filter));
@@ -146,7 +162,7 @@ export default function StudentPortal({ token, displayName, onLogout }: Props) {
             <AvatarPickerDialog open={avatarPickerOpen} current={data.student.avatarId} saving={avatarSaving} onPick={pickAvatar} onClose={() => setAvatarPickerOpen(false)} />
             <NowSection actionable={now_.actionable} upcoming={now_.upcoming} busy={busy} onOpen={open} />
             <StudentLearningMaterials token={token} onOpen={course => { setReaderCourse(course); window.scrollTo({ top: 0, behavior: reducedMotion ? "auto" : "smooth" }); }} />
-            <StudentProgressSection stats={stats} medals={medals} rank={rank} progress={progress} averageFinalized={averageFinalized} />
+            <StudentProgressSection stats={stats} medals={medals} rank={rank} progress={progress} strength={strength} averageFinalized={averageFinalized} />
             <section className="eb-sp-panel" aria-labelledby="eb-sp-tasks-title">
               <SectionHeader level={2} id="eb-sp-tasks-title" title="المهام والواجبات" count={visible.length} description="كل واجباتك ونتائجك؛ ما يحتاج إجراءً يظهر أولًا." />
               <div className="eb-sp-filters" role="group" aria-label="تصفية المهام">
@@ -162,7 +178,7 @@ export default function StudentPortal({ token, displayName, onLogout }: Props) {
                 {!!data.assignments.length && !visible.length && <EmptyState compact title="لا توجد مهام في هذا التصنيف" description="جرّب تصنيفًا آخر." />}
               </div>
             </section>
-            <StudentProjectPanel token={token} />
+            <StudentProjectPanel token={token} contributions={strength?.projects ?? []} />
             <AchievementFeed posts={feed} error={feedError} shareOn={data.student.shareAchievements !== false} shareSaving={shareSaving} now={now} onToggleShare={toggleShareAchievements} onReact={(postId, reaction) => void react(postId, reaction)} />
           </>
         )}

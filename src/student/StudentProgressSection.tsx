@@ -5,19 +5,35 @@ import SectionHeader from "../ui/SectionHeader";
 import StatCard from "../ui/StatCard";
 import StatusBadge from "../ui/StatusBadge";
 import VisuallyHidden from "../ui/VisuallyHidden";
-import { RANK_STEP_FINALIZED, remainingExamsPhrase, type RankProgress, type StudentRank } from "../studentRank";
+import { remainingPointsPhrase, type StrengthProgress, type StudentRank } from "../studentRank";
 import { RANK_VISUALS } from "../studentRankVisuals";
 import { countMedals } from "./portalPresentation";
-import type { Stats } from "./types";
+import type { Stats, StudentStrength } from "./types";
 
 /**
  * "تقدّمي" (UX-7a): the server's own counts as StatCards, the finalized-only average as a ring (always with a
  * textual equivalent), medals (finalized-only) and the personal rank — the custom rank artwork sitting inside a
  * circular progress ring that fills toward the next tier, with the numeric level and the percentage shown.
- * Presentation only: every value arrives already derived from the authoritative dashboard stats (studentRank.ts);
- * nothing here recomputes a rank, a tier or a percentage.
+ * The ring and the tier follow the UNIFIED STRENGTH POINTS (نقاط القوة: finalized exams + T-series practice +
+ * projects) the server derived; the breakdown is shown so a project-only student sees exactly why the ring moves.
+ * Presentation only: nothing here recomputes a rank, a tier, a percentage or a point.
  */
-type Props = { stats: Stats; medals: MedalTier[]; rank: StudentRank | null; progress: RankProgress; averageFinalized: number | null };
+type Props = { stats: Stats; medals: MedalTier[]; rank: StudentRank | null; progress: StrengthProgress; strength: StudentStrength | null; averageFinalized: number | null };
+
+/** «نقاط القوة: 520» + the three-source breakdown. */
+function StrengthBreakdown({ strength }: { strength: StudentStrength | null }) {
+  if (!strength) return null;
+  return (
+    <div className="eb-sp-strength" aria-label="نقاط القوة">
+      <p className="eb-sp-strength-total">نقاط القوة: <strong>{strength.totalPoints}</strong></p>
+      <ul className="eb-sp-strength-breakdown">
+        <li><span>الواجبات النهائية</span><strong>{strength.examPoints}</strong></li>
+        <li><span>التدريبات</span><strong>{strength.practicePoints}</strong></li>
+        <li><span>المشاريع</span><strong>{strength.projectPoints}</strong></li>
+      </ul>
+    </div>
+  );
+}
 
 // A dependency-free SVG circular progress ring with the custom rank artwork centered inside it. The two circles
 // are decorative (aria-hidden); the ACCESSIBLE progress semantic is a role="progressbar" wrapper carrying the
@@ -45,15 +61,15 @@ function RankRing({ src, alt, percent, progressLabel, muted }: { src: string; al
   );
 }
 
-export default function StudentProgressSection({ stats, medals, rank, progress, averageFinalized }: Props) {
+export default function StudentProgressSection({ stats, medals, rank, progress, strength, averageFinalized }: Props) {
   const grouped = countMedals(medals);
-  // The ring's percentage comes ONLY from the authoritative finalized-count progress (never the average):
-  //   • before the first rank → progress.percent (toward unlocking level 1)
-  //   • an earned rank with a next tier → rank.next.percent (through the current four-exam block)
+  // The ring's percentage comes ONLY from the authoritative Strength progress (never the average):
+  //   • before the first rank → progress.percent (points toward unlocking level 1, within the 400-point block)
+  //   • an earned rank with a next tier → rank.next.percent (through the current 400-point block)
   //   • legendary (no next) → a full 100% decorative ring.
   return (
     <section className="eb-sp-panel eb-sp-progress" aria-labelledby="eb-sp-progress-title">
-      <SectionHeader level={2} id="eb-sp-progress-title" title="تقدّمي" description="أرقامك من الواجبات المنشورة لصفك؛ المعدل من النتائج النهائية فقط." />
+      <SectionHeader level={2} id="eb-sp-progress-title" title="تقدّمي" description="أرقامك من الواجبات المنشورة لصفك؛ المعدل من النتائج النهائية فقط، ورتبتك من نقاط القوة (الواجبات النهائية والتدريبات والمشاريع)." />
       <div className="eb-sp-stats">
         <StatCard label="المهام" value={stats.assigned} />
         <StatCard label="قيد الحل" value={stats.inProgress ?? 0} tone="info" />
@@ -87,14 +103,16 @@ export default function StudentProgressSection({ stats, medals, rank, progress, 
                   <RankRing src={RANK_VISUALS[rank.tier].image} alt={RANK_VISUALS[rank.tier].alt} percent={rank.next.percent} progressLabel={"التقدم نحو رتبة " + rank.next.label} />
                   <div className="eb-sp-rank-hero-text">
                     <p className="eb-sp-rank-title">{RANK_VISUALS[rank.tier].title}</p>
-                    <p className="eb-sp-rank"><StatusBadge tone="info" className="eb-sp-rank-badge"><IconMedal size={18} aria-hidden="true" />الرتبة: {rank.label}</StatusBadge><span className="eb-sp-rank-hint">من {rank.finalized} واجبات نهائية</span></p>
+                    <p className="eb-sp-rank"><StatusBadge tone="info" className="eb-sp-rank-badge"><IconMedal size={18} aria-hidden="true" />الرتبة: {rank.label}</StatusBadge><span className="eb-sp-rank-hint">بـ {rank.points} نقطة قوة</span></p>
                     <p className="eb-sp-rank-meta"><span className="eb-sp-rank-level">المستوى {RANK_VISUALS[rank.tier].level}</span><span className="eb-sp-rank-percent" aria-hidden="true">{Math.round(rank.next.percent)}%</span></p>
                   </div>
                 </div>
+                <StrengthBreakdown strength={strength} />
                 <p className="eb-sp-rank-hint eb-sp-rank-next">
                   <img className="eb-sp-rank-next-art" src={RANK_VISUALS[rank.next.tier].image} alt="" aria-hidden="true" width={40} height={40} loading="lazy" decoding="async" />
-                  <span>{remainingExamsPhrase(rank.next.remaining)} للوصول إلى رتبة {rank.next.label}</span>
+                  <span>{remainingPointsPhrase(rank.next.remaining)} للوصول إلى رتبة {rank.next.label}</span>
                 </p>
+                <p className="eb-sp-rank-hint">التقدم نحو المستوى التالي: {progress.withinBlock} / {progress.needed}</p>
               </div>
             ) : (
               // Legendary (top rank): the artwork with a full, decorative 100% ring — no next-tier target/thumbnail.
@@ -103,10 +121,11 @@ export default function StudentProgressSection({ stats, medals, rank, progress, 
                   <RankRing src={RANK_VISUALS[rank.tier].image} alt={RANK_VISUALS[rank.tier].alt} percent={100} />
                   <div className="eb-sp-rank-hero-text">
                     <p className="eb-sp-rank-title">{RANK_VISUALS[rank.tier].title}</p>
-                    <p className="eb-sp-rank"><StatusBadge tone="info" className="eb-sp-rank-badge"><IconMedal size={18} aria-hidden="true" />الرتبة: {rank.label}</StatusBadge><span className="eb-sp-rank-hint">من {rank.finalized} واجبات نهائية</span></p>
+                    <p className="eb-sp-rank"><StatusBadge tone="info" className="eb-sp-rank-badge"><IconMedal size={18} aria-hidden="true" />الرتبة: {rank.label}</StatusBadge><span className="eb-sp-rank-hint">بـ {rank.points} نقطة قوة</span></p>
                     <p className="eb-sp-rank-meta"><span className="eb-sp-rank-level">المستوى {RANK_VISUALS[rank.tier].level}</span><span className="eb-sp-rank-percent">100%</span></p>
                   </div>
                 </div>
+                <StrengthBreakdown strength={strength} />
                 <p className="eb-sp-rank-hint">بلغت أعلى رتبة</p>
               </div>
             )
@@ -121,7 +140,8 @@ export default function StudentProgressSection({ stats, medals, rank, progress, 
                   <p className="eb-sp-rank-meta"><span className="eb-sp-rank-level">المستوى {RANK_VISUALS.beginner.level}</span><span className="eb-sp-rank-percent" aria-hidden="true">{Math.round(progress.percent)}%</span></p>
                 </div>
               </div>
-              <p className="eb-sp-rank-hint">{progress.finalized} من {RANK_STEP_FINALIZED} امتحانات نهائية لفتح رتبتك</p>
+              <StrengthBreakdown strength={strength} />
+              <p className="eb-sp-rank-hint">{progress.withinBlock} من {progress.needed} نقطة قوة لفتح رتبتك</p>
             </div>
           )}
         </div>

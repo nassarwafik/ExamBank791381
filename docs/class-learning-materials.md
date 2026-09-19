@@ -35,4 +35,10 @@ LearningReader (the SAME Reader the teacher uses; exitLabel «العودة إل�
 - **Consistency:** next portal load / refresh / course re-open (the open button re-validates). No realtime.
 - **Static-asset boundary:** bodies are frontend chunks; access is default-deny through every supported app path,
   not asset-level confidentiality (see `docs/learning-content-architecture.md`).
-- **No reading progress yet** (Phase 6) and **no answer checking** (Phase 4).
+- **Same gate for trainings.** `GET/POST /api/learning-training` (Learning Practice, T01–T04) reuses this exact
+  authority: persisted `classId` → active class → course assigned → the training's `requiredModuleId` published. A
+  hidden module hides the training's TITLE too (only the printed label + availability note render). Teachers may
+  open every training. See `docs/learning-content-architecture.md` → *Learning Practice*.
+- **No reading progress yet** (Phase 6). Answer checking exists only as (a) inline `practice-table` worksheets —
+  local, unstored, unscored — and (b) Learning-Practice trainings graded server-side (best score only, Strength
+  points, never an assignment record).

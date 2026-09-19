@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { RANK_STEP_FINALIZED, RANK_ORDER, rankTierForFinalized, nextRankForFinalized, rankFor, rankProgress, remainingExamsPhrase } from "./studentRank";
+import { RANK_STEP_FINALIZED, RANK_STEP_STRENGTH_POINTS, FINALIZED_EXAM_STRENGTH_POINTS, RANK_ORDER, rankTierForFinalized, nextRankForFinalized, rankFor, rankProgress, remainingExamsPhrase, rankTierForStrength, nextRankForStrength, rankForStrength, strengthProgress, strengthFromFinalized, remainingPointsPhrase } from "./studentRank";
 
 // Student Portal — the personal rank now advances by ONE tier every FOUR finalized exams (progression by
 // completed finalized exams, NOT by average). These tests pin the NEW recurring cadence at every boundary and
@@ -123,5 +123,61 @@ describe("remainingExamsPhrase — natural Arabic singular/dual/plural", () => {
     expect(remainingExamsPhrase(2)).toBe("بقي امتحانان");
     expect(remainingExamsPhrase(3)).toBe("بقي 3 امتحانات");
     expect(remainingExamsPhrase(4)).toBe("بقي 4 امتحانات");
+  });
+});
+
+// ── Unified Strength Points (نقاط القوة) — the canonical helpers, and the finalized-count wrappers proven equal ──
+describe("Strength constants", () => {
+  it("one tier per 400 points; 100 points per finalized exam (4 × 100 = the historical four-exam cadence)", () => {
+    expect(RANK_STEP_STRENGTH_POINTS).toBe(400);
+    expect(FINALIZED_EXAM_STRENGTH_POINTS).toBe(100);
+    expect(RANK_STEP_STRENGTH_POINTS / FINALIZED_EXAM_STRENGTH_POINTS).toBe(RANK_STEP_FINALIZED);
+  });
+});
+
+describe("rankTierForStrength — unified thresholds", () => {
+  it("0–399 none · 400 beginner · 800 bronze · 1200 silver · 1600 gold · 2000 diamond · 2400+ legendary; no level 7", () => {
+    const boundaries: [number, string | null][] = [[0, null], [399, null], [400, "beginner"], [799, "beginner"], [800, "bronze"], [1199, "bronze"], [1200, "silver"], [1599, "silver"], [1600, "gold"], [1999, "gold"], [2000, "diamond"], [2399, "diamond"], [2400, "legendary"], [9999, "legendary"]];
+    for (const [points, tier] of boundaries) expect(rankTierForStrength(points), String(points)).toBe(tier);
+    for (const bad of [-1, NaN, Infinity, null, undefined, "x" as never]) expect(rankTierForStrength(bad)).toBeNull();
+  });
+  it("BACKWARD COMPATIBILITY: for every finalized count 0..40, finalized × 100 yields exactly the old tier / next-rank percent", () => {
+    for (let n = 0; n <= 40; n++) {
+      expect(rankTierForStrength(strengthFromFinalized(n)), "tier " + n).toBe(rankTierForFinalized(n));
+      const oldNext = nextRankForFinalized(n), newNext = nextRankForStrength(n * 100);
+      expect(newNext?.tier ?? null, "next tier " + n).toBe(oldNext?.tier ?? null);
+      expect(newNext?.percent ?? null, "next percent " + n).toBe(oldNext?.percent ?? null);
+      expect(strengthProgress(n * 100).percent, "progress " + n).toBe(rankProgress({ finalized: n }).percent);
+      expect(rankFor({ finalized: n })?.tier ?? null).toBe(rankForStrength(n * 100)?.tier ?? null);
+    }
+    // the old boundaries, pinned explicitly with zero practice / project points
+    expect([3, 4, 7, 8, 11, 12, 15, 16, 19, 20, 23, 24].map(n => rankTierForStrength(n * 100))).toEqual([null, "beginner", "beginner", "bronze", "bronze", "silver", "silver", "gold", "gold", "diamond", "diamond", "legendary"]);
+  });
+});
+
+describe("rankForStrength / strengthProgress / nextRankForStrength", () => {
+  it("PROJECT-ONLY 200 points: no rank yet, 50% toward the first rank, 200 remaining", () => {
+    expect(rankForStrength(200)).toBeNull();
+    expect(strengthProgress(200)).toEqual({ points: 200, withinBlock: 200, needed: 400, remaining: 200, percent: 50 });
+  });
+  it("PROJECT-ONLY 400 points: level 1 (beginner) with zero finalized exams", () => {
+    expect(rankForStrength(400, { finalized: 0 })).toMatchObject({ tier: "beginner", finalized: 0, points: 400, next: { tier: "bronze", remaining: 400, percent: 0 } });
+  });
+  it("MIXED 520: beginner, 120 into the block, 280 remaining, 30%", () => {
+    const r = rankForStrength(520, { finalized: 3, averageFinalized: 88 });
+    expect(r).toMatchObject({ tier: "beginner", label: "مبتدئ", finalized: 3, averageFinalized: 88, points: 520 });
+    expect(r?.next).toEqual({ tier: "bronze", label: "برونزي", remaining: 280, percent: 30 });
+    expect(strengthProgress(520)).toEqual({ points: 520, withinBlock: 120, needed: 400, remaining: 280, percent: 30 });
+  });
+  it("legendary has no next; malformed points → 0", () => {
+    expect(rankForStrength(2400)?.next).toBeNull();
+    expect(nextRankForStrength(3000)).toBeNull();
+    expect(strengthProgress(NaN).points).toBe(0);
+    expect(strengthProgress(-5)).toEqual({ points: 0, withinBlock: 0, needed: 400, remaining: 400, percent: 0 });
+  });
+  it("remainingPointsPhrase: natural Arabic for 1 / 2 / many", () => {
+    expect(remainingPointsPhrase(1)).toBe("بقيت نقطة قوة واحدة");
+    expect(remainingPointsPhrase(2)).toBe("بقيت نقطتا قوة");
+    expect(remainingPointsPhrase(280)).toBe("بقي 280 نقطة قوة");
   });
 });

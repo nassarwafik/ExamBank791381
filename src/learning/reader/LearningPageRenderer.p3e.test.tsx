@@ -1,8 +1,9 @@
 // @vitest-environment happy-dom
 // Phase 3E — DOM rendering of the Unit-3 pages: IP addresses / IPv4 / IPv6 tokens render inside dir="ltr" code
 // spans or dir="ltr" table cells (never reversed under RTL), the worksheet tables keep their RTL header order with
-// LTR address columns and EMPTY answer cells, the octets activity lazy-loads four real buttons, the PDF-28 guided
-// reveal starts with zero steps, and no exercise page exposes an input, a check control or a Correct/Incorrect UI.
+// LTR address columns and NEUTRAL (unchosen) answer cells that check in place, the octets activity lazy-loads four
+// real buttons, the PDF-28 guided reveal starts with zero steps, and no exercise page exposes a free-text input, a
+// check control or a pre-filled Correct/Incorrect UI.
 import { describe, it, expect, afterEach } from "vitest";
 import { render, cleanup, screen, fireEvent, within } from "@testing-library/react";
 import LearningPageRenderer, { type ReaderPageHeader } from "./LearningPageRenderer";
@@ -64,22 +65,50 @@ describe("Phase 3E — technical tokens render LTR in the DOM", () => {
     for (const addr of ["127.11.10.1", "169.169.10.10", "169.254.10.234"]) expect(container.textContent).not.toContain(addr);
   });
 
-  it("PDF 29: worksheet table — العنوان header first (RTL order), five LTR address cells, answer cells EMPTY, no check UI", () => {
+  it("PDF 29: interactive worksheet — العنوان first (RTL order), five LTR address cells, a neutral «اختر...» choice per row, السبب blank, no verdict and no key before a choice", () => {
     const { container } = draw(pageBy("791381-m07-l01-p05"));
     const heads = [...container.querySelectorAll("thead th")].map(th => th.textContent);
     expect(heads).toEqual(["العنوان", "صالح / غير صالح", "السبب"]);
     expect(ltrCells(container)).toEqual(["192.168.10.1", "192.255.10.10", "127.11.10.1", "169.169.10.10", "169.254.10.234"]);
     const rows = [...container.querySelectorAll("tbody tr")];
     expect(rows.length).toBe(5);
-    for (const r of rows) {
+    const selects = [...container.querySelectorAll("tbody select")] as HTMLSelectElement[];
+    expect(selects.length).toBe(5);
+    for (const [i, r] of rows.entries()) {
       const cells = [...r.querySelectorAll("td")];
-      expect(cells[1].textContent).toBe("");
-      expect(cells[2].textContent).toBe("");
+      expect(cells[1].querySelector("select")).toBe(selects[i]);
+      expect(selects[i].value).toBe("");
+      expect([...selects[i].options].map(o => o.textContent)).toEqual(["اختر...", "صالح", "غير صالح"]);   // the printed vocabulary only
+      expect(cells[2].textContent).toBe("");                                                        // السبب stays blank
     }
-    expect(container.querySelector("tbody")!.textContent).not.toMatch(/صالح|السبب/);   // no printed answers
-    expect(container.querySelector("input, textarea, select, [data-command='check']")).toBeNull();
-    expect(container.textContent).not.toMatch(/صحيح ✓|خطأ ✗|Correct|Incorrect|النتيجة:/);
-    expect(container.closest("body")!.querySelector(".learning-reader-tablewrap")).toBeTruthy();   // scrolls inside itself
+    expect(selects[2].getAttribute("aria-label")).toBe("127.11.10.1 — صالح / غير صالح");
+    expect(container.querySelector("[role=status]")).toBeNull();                                     // no verdict before a choice
+    expect(container.textContent).not.toMatch(/✓|✕|صحيح|Correct|Incorrect|النتيجة:/);
+    expect(container.innerHTML).not.toMatch(/key=|data-key|data-answer|data-expected/);              // the expected choice is not in the DOM
+    expect(container.querySelector("input, textarea, [data-command='check']")).toBeNull();           // no free text, no check button
+    expect(container.closest("body")!.querySelector(".learning-reader-tablewrap")).toBeTruthy();    // scrolls inside itself
+  });
+
+  it("PDF 29: choosing gives an immediate, retryable, non-colour-only verdict (127.11.10.1 → غير صالح); reset clears everything; nothing persists", () => {
+    const { container } = draw(pageBy("791381-m07-l01-p05"));
+    const selects = [...container.querySelectorAll("tbody select")] as HTMLSelectElement[];
+    fireEvent.change(selects[2], { target: { value: "صالح" } });
+    const cell = selects[2].closest("td") as HTMLElement;
+    expect(within(cell).getByRole("status").textContent).toBe("✕ غير صحيح — حاول مرة أخرى");
+    expect(within(cell).getByRole("status").querySelector("svg")).toBeTruthy();                       // icon + word, never colour-only
+    expect(selects[2].className).toContain("is-wrong");
+    expect(selects[2].disabled).toBe(false);                                                          // retry in place
+    fireEvent.change(selects[2], { target: { value: "غير صالح" } });
+    expect(within(cell).getByRole("status").textContent).toBe("✓ صحيح");
+    expect(selects[2].className).toContain("is-right");
+    fireEvent.change(selects[0], { target: { value: "صالح" } });                                     // 192.168.10.1 → صالح
+    expect(within(selects[0].closest("td") as HTMLElement).getByRole("status").textContent).toBe("✓ صحيح");
+    fireEvent.change(selects[4], { target: { value: "صالح" } });                                     // 169.254.10.234 (APIPA) → غير صالح
+    expect(within(selects[4].closest("td") as HTMLElement).getByRole("status").textContent).toBe("✕ غير صحيح — حاول مرة أخرى");
+    fireEvent.click(screen.getByRole("button", { name: "امسح الإجابات" }));
+    expect(container.querySelector("[role=status]")).toBeNull();
+    for (const s of selects) expect(s.value).toBe("");
+    expect(container.innerHTML).not.toMatch(/key=|data-key/);
   });
 
   it("PDF 31: the private-range table cells are LTR (Class A/B/C, patterns, examples) with RTL header order", () => {
@@ -91,15 +120,24 @@ describe("Phase 3E — technical tokens render LTR in the DOM", () => {
     expect(ltrCodes(container)).toContain("192.168");
   });
 
-  it("PDF 32: PC1–PC5 rows with LTR addresses, the خاص/عام column EMPTY, the 192.167 warning LTR; no grading UI", () => {
+  it("PDF 32: PC1–PC5 rows with LTR addresses, the خاص/عام column as a neutral choice, the 192.167 warning LTR; 192.167.100.2 → عام checks in place", () => {
     const { container } = draw(pageBy("791381-m07-l02-p03"));
     const cells = ltrCells(container);
     for (const tok of ["PC1", "192.167.100.2", "PC3", "172.16.32.30", "220.100.100.100", "9.10.11.12"]) expect(cells).toContain(tok);
-    for (const r of container.querySelectorAll("tbody tr")) expect([...r.querySelectorAll("td")][2].textContent).toBe("");
-    expect(container.querySelector("tbody")!.textContent).not.toMatch(/خاص|عام/);   // classification not pre-filled
+    const selects = [...container.querySelectorAll("tbody select")] as HTMLSelectElement[];
+    expect(selects.length).toBe(5);
+    for (const s of selects) { expect(s.value).toBe(""); expect([...s.options].map(o => o.textContent)).toEqual(["اختر...", "خاص", "عام"]); }
+    expect(selects[0].getAttribute("aria-label")).toBe("PC1 — خاص / عام");
+    expect(container.querySelector("[role=status]")).toBeNull();                                     // classification not pre-filled
     expect(ltrCodes(container)).toContain("192.167");
-    expect(container.querySelector("input, textarea, select")).toBeNull();
-    expect(container.textContent).not.toMatch(/Correct|Incorrect|صحيح ✓|خطأ ✗/);
+    expect(container.querySelector("input, textarea")).toBeNull();
+    expect(container.textContent).not.toMatch(/Correct|Incorrect|✓|✕/);
+    fireEvent.change(selects[0], { target: { value: "خاص" } });                                       // the trap: 192.167 ≠ 192.168
+    expect(within(selects[0].closest("td") as HTMLElement).getByRole("status").textContent).toBe("✕ غير صحيح — حاول مرة أخرى");
+    fireEvent.change(selects[0], { target: { value: "عام" } });
+    expect(within(selects[0].closest("td") as HTMLElement).getByRole("status").textContent).toBe("✓ صحيح");
+    fireEvent.change(selects[1], { target: { value: "خاص" } });                                       // 10.100.10.10 → خاص
+    expect(within(selects[1].closest("td") as HTMLElement).getByRole("status").textContent).toBe("✓ صحيح");
   });
 
   it("PDF 30 + 33: 8.8.8.8 / 192.168.1.5 and Static / Dynamic render as LTR spans", () => {

@@ -304,6 +304,12 @@ navigation ordering:
   bottom Previous/Next, ≥44px touch targets, tables/code scroll only inside their own container (never the page),
   focus moves to the page title on navigation (never on first mount), and animations respect reduced motion.
 
+- **Learning Materials desktop inset.** The teacher shell's content area carries no padding; from 1024px the
+  Learning-Materials roots (`.eb-lm` library/overview and the `.eb-lm-reader` wrapper around the teacher's Reader)
+  take a LOGICAL inline inset (`--eb-space-5`) and a block inset, in `src/learning/learning.css` only. The shared
+  Reader stylesheet, the student portal's Reader and the phone/tablet baseline are untouched; the Reader keeps its
+  wide slide canvas (a gutter, never a max-width). Guarded by `learning.layout.guards.test.ts`.
+
 ## Interactive Page Design Principles (rendering contract)
 
 Each converted page is one native **Interactive Learning Page** that can combine, in **authored block order**:
@@ -631,6 +637,119 @@ checking (Phase 4), new book content (Unit 4 / PDF 34+ paused for the UX review 
 
 See also `docs/class-learning-materials.md` for the authority chain in one diagram.
 
+## Learning Practice, Interactive Worksheets & Unified Strength
+
+The first phase in which the student **does** something in the book and it counts. Three additive layers, each with
+one authority, none of which touches assignments, medals, project stages or class publication:
+
+```text
+library-training block  →  GET/POST /api/learning-training  →  platform/learning-practice/<studentId>.json (best only)
+practice-table block    →  checked in the Reader, in place    →  nothing stored, nothing scored
+Strength                →  api/src/lib/student-strength.js    →  dashboard `strength` (exams + trainings + projects)
+```
+
+### `library-training` — a book page points at a platform training
+
+- **Metadata only.** `{ type: "library-training", trainingId, label, requiredModuleId }`. No questions, options,
+  answers or titles may live in the content (validated: `library-training-invalid`). Origin `book` is allowed because
+  the printed page itself lists the trainings (791381 PDF 22 → T01–T04, blocks `m02-l01-p08-t1..t4`).
+- **Disclosure rule.** The Reader renders only what the injected HOST discloses. Without a host: the printed label
+  and a generic note (no CTA, no request). Unavailable: label + «سيصبح متاحًا عند نشر الجزء المرتبط به.» + a disabled
+  CTA — **no title**. Available: title, best result («أفضل نتيجة: 80% · نقاط التقوية: 20 / 25») and «ابدأ التدريب» /
+  «أعد التدريب». The renderer never hardcodes training ids.
+- **Registry (server).** `api/src/lib/learning-training-registry.js`: T01 → `791381-m01` (أساسيات الشبكات), T02 →
+  `791381-m02` (أنظمة العد), T03 → `791381-m07` (عناوين IPv4 وصلاحية العنوان), T04 → `791381-m07` (العناوين
+  الخاصة والعامة). The gate is the SAME publication authority as Class Learning Materials: active student session →
+  persisted `classId` → active class → course assigned → `requiredModuleId` published. Teachers (builder token) may
+  open every training regardless.
+- **API** (`api/src/functions/learning-training.js`): `GET /api/learning-training` (list; `title` only when
+  `available`), `GET /api/learning-training/{id}` (the Exam-Library item through `sanitizeExamForStudent` — no
+  answers, hints, notes or history), `POST /api/learning-training/{id}/submit` (grades **only** `body.answers` with
+  `gradeExam`; the browser never sends a score/percentage/points). Unknown id → 404; hidden module → 403
+  `UNAVAILABLE`.
+- **Best-score storage.** `platform/learning-practice/<studentId>.json` (CAS via `mutateJsonWithRetry`), one entry
+  per training: `bestPercentage`, `bestPoints = round(best% × 25 / 100)`, `attempts`, `lastCompletedAt`. Retries are
+  a **max-merge**: nothing lowers the best, a duplicate never double-awards, concurrent submits converge. The API
+  exposes `best` **only once attempted** (`attempts > 0`): a never-attempted training has no `best` (the card says
+  «لم تحلّ هذا التدريب بعد» / «ابدأ التدريب»); a real 0% attempt does (`bestPercentage 0, attempts 1` → «أفضل
+  نتيجة: 0%» / «أعد التدريب»).
+- **Not an assignment.** No assignment record, no due date, no attempt limit, no gradebook row, no medal, no
+  teacher review queue. Teacher submissions are graded and returned but never persisted.
+
+### The shared Training Runner and host
+
+- **One runner** — `src/learning/training/LearningTrainingRunner.tsx` — for teacher preview and student practice;
+  only the injected `client` (auth headers) and `actor` differ. It reuses `StudentQuestionCard` (no second question
+  engine), enables submission once every question is answered, and renders the SERVER's grading: «8 / 10 إجابات
+  صحيحة», «80%», «20 / 25 نقاط تقوية» (student), the improvement note, and a per-question review (chosen option,
+  right option for wrong answers, hint) marked `is-right` / `is-wrong` with icon + word. «أعد التدريب» restarts
+  without re-fetching.
+- **One host** — `src/learning/training/LearningReaderWithTraining.tsx` — used by both `StudentReader` and the
+  teacher's `LearningMaterialsPage`. It mounts the SAME `LearningReader` with the `training` seam, reads the list
+  **once per mount** (and once more when a training closes — never per block), swaps the Reader for the runner and
+  remounts it on the **same page** (`initialPageId` / `onPageChange`; never page 1). The portal reloads the
+  dashboard once on Reader exit, only if a training was submitted.
+
+### `practice-table` — the authoring standard for inline worksheets
+
+A `table` whose answerable cells are small closed choices, checked in the Reader the moment the learner chooses:
+
+```ts
+{ id, type: "practice-table", origin: "book", headers: [...], columnDirs?: [...],
+  rows: [["192.168.10.1", { kind: "select", options: ["صالح", "غير صالح"], key: "صالح" }, ""], ...] }
+```
+
+- **Data, not code.** The values, the choices and the expected choice are content; `PracticeTableView` is generic
+  (no page ids, no address logic, no course names — guarded by a source test). Any future worksheet of any book is
+  authored the same way; a page-specific component is a violation.
+- **Contract** (validated as `invalid-practice-table` / `invalid-table-row`): non-empty headers; every row matches
+  the header count; every select cell has ≥ 2 unique non-empty `options` and a `key` that is one of them; at least
+  one select cell (otherwise author a `table`). Cells are strings or select objects — never HTML, never free text.
+- **Rendering.** The static table's skeleton (`.learning-reader-tablewrap > table.learning-reader-table`, per-column
+  `dir`, LTR isolation) plus a native `<select>` with the neutral «اختر...» placeholder. Verdicts are immediate,
+  retryable in place, never colour-only («✓ صحيح» / «✕ غير صحيح — حاول مرة أخرى» with an icon), `role="status"`
+  and `aria-describedby` from the select; «امسح الإجابات» resets. State is component-local: **nothing is stored,
+  sent or scored, and no Strength points come from inline worksheets**. The key never appears in the DOM.
+- **Vocabulary.** The choice words are the printed column's own words (PDF 29 «صالح / غير صالح»; PDF 32 «خاص /
+  عام»), and the expected choices follow the book's own rules (PDF 28 / PDF 31). Untouched columns (PDF 29's
+  «السبب») stay blank as printed.
+
+### Unified Strength Points (one rank system)
+
+`api/src/lib/student-strength.js` is the ONLY policy; the dashboard returns it as `strength` and the portal renders
+it (`src/studentRank.ts` keeps the compatible helpers for the six-rank ladder).
+
+| Source | Points | Rule |
+| --- | --- | --- |
+| Finalized exam | 100 each | `FINALIZED_EXAM_STRENGTH_POINTS` — the old 4-exam-per-rank boundaries are unchanged (4 × 100 = 400) |
+| Training (T01–T04) | up to 25 each | `round(best% × 25 / 100)` — best only; retries never lower it |
+| Project | up to 400 each | `round(overallProgress × 400 / 100)` from `core.buildStudentSummary()` — derived, never incremented; a reset lowers it |
+
+- **Ladder:** one step per 400 points — 0–399 none, 400 بذرة القوة (beginner), 800 شعلة صغيرة (bronze), 1200 نمر
+  البرق (silver), 1600 فارس الجليد (gold), 2000 تنين النار (diamond), 2400+ العنقاء الذهبية (legendary). The six
+  rank images and titles are immutable; there is no seventh level and no second image set.
+- **Client authority contract.** The frontend `StudentStrength` type is the exact server payload (points, `tier`,
+  `level`, `nextTier`, block progress, projects). `src/student/strengthPresentation.ts` only shapes and labels it
+  (`rankPresentationFromStrength`, `progressPresentationFromStrength`): a well-formed payload is trusted as a whole
+  and the client never divides, floors or compares `totalPoints` against a threshold; a tier id maps to its label
+  and artwork (presentation). No payload at all, or a malformed/incomplete one, falls back **as a whole** to the
+  legacy finalized × 100 path through the compatibility helpers of `studentRank.ts` — server fields are never mixed
+  with locally recalculated ones. Guarded by `strengthPresentation.test.ts` and
+  `StudentPortal.strengthAuthority.test.tsx` (a deliberately inconsistent server payload must render verbatim).
+- **Presentation** (Strength language only): «نقاط القوة: N» with the breakdown الواجبات النهائية / التدريبات /
+  المشاريع; «التقدم نحو المستوى التالي: X / 400»; «بقي N نقطة قوة للوصول إلى رتبة …» (dual/singular forms). The
+  ring shows the within-400 block. The project panel shows «تقدم المشروع: 75%» and «نقاط القوة من المشروع:
+  300 / 400» (no second ring, no project rank).
+- **Medals are unchanged** (exam-only 70/80/90). Trainings and projects award no medals.
+- **Projects:** `programCodes[]` is the authority; every project of the class counts (each ≤ 400); reads go through
+  the shared `loadStudentProjects` (bounded concurrency, no scans) that `student-project-tracker` also uses.
+
+### Deliberately NOT in this phase
+
+No page-reading completion; no points for opening pages, clicks or inline worksheet choices; no medals for trainings
+or projects; no project rank or second image set; no assignment records for T01–T04; no change to project stage
+authority; no leaderboard; no scheduled release; no per-student exceptions; **no Unit 4 conversion**.
+
 ## Phase boundaries
 
 | Phase | Scope | Status |
@@ -642,8 +761,9 @@ See also `docs/class-learning-materials.md` for the authority chain in one diagr
 | 3C | Number-systems batch — Book 791381 source PDF **15–22** (decimal/binary/hex conversions) | done |
 | 3D | Complete Unit 2 — Book 791381 source PDF **23** (خلاصة التحويلات); m02 becomes complete | done |
 | 3E | Complete Unit 3 «عناوين IP» — Book 791381 source PDF **24–33** as new stable module `m07` (order 3); first IP-focused activity (`ipv4-octets/v1`) | done |
-| **Class Learning Materials (this)** | Class assignment + progressive module release + «موادي التعليمية» + filtered shared Reader + default-deny student access; Unit 4 conversion paused for the real teacher/student UX review | done (awaiting UX review) |
-| 4 | Interactive Practice — answer checking + immediate feedback (inline) | deferred |
+| Class Learning Materials | Class assignment + progressive module release + «موادي التعليمية» + filtered shared Reader + default-deny student access | done |
+| **Learning Practice & Unified Strength (this)** | Book trainings T01–T04 as `library-training` blocks + the shared Training Runner + server grading/best-score storage; inline `practice-table` worksheets (PDF 29 / 32); Unified Strength Points (exams + trainings + projects) on the existing six-rank ladder; Learning Materials desktop inset. Unit 4 conversion still paused. | done (awaiting review) |
+| 4 | Interactive Practice — further inline checking families beyond closed-choice worksheets (free text, ordering, evaluator-backed hints) | deferred |
 | 5 | Simulations — real VLAN/subnet/CLI/… renderers registered behind the Phase-3A engine | deferred |
 | 6 | Student Progress — last page, completion, attempts (separate domain; attaches to the no-op event seam) | deferred |
 | 7 | Teacher Content Management — editors, publish/unpublish | deferred |

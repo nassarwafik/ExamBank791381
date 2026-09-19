@@ -1,8 +1,10 @@
 import type { ReactNode } from "react";
 import { IconWarning, IconBook, IconSparkles, IconCheck } from "../../icons";
 import RichTextRenderer from "./RichTextRenderer";
-import { isActivityBlock, type ContentBlock, type ContentPage, type ContentSource, type CalloutKind, type PracticeQuestion, type ListBlock, type UnitOpenerBlock } from "../content/types";
+import { isActivityBlock, type ContentBlock, type ContentPage, type ContentSource, type CalloutKind, type PracticeQuestion, type ListBlock, type UnitOpenerBlock, type LibraryTrainingBlock } from "../content/types";
+import type { LibraryTrainingHost } from "../training/types";
 import LearningActivityHost from "../activities/LearningActivityHost";
+import PracticeTableView from "./PracticeTableView";
 import { ACTIVITY_ENRICHMENT_LABEL } from "../activities/labels";
 import type { LearningActivityRegistry, LearningActivityEventSink } from "../activities/engine";
 
@@ -14,6 +16,9 @@ export type ActivityRenderContext = {
   courseId: string;
   registry?: LearningActivityRegistry;
   emit?: LearningActivityEventSink;
+  /** Learning-Practice seam: the HOST decides a training's availability/title/best result and owns "open". Absent
+   *  (e.g. a Reader with no session) → a generic label card with no CTA and no network. */
+  training?: LibraryTrainingHost;
 };
 
 // The page header is always derived from the MANIFEST, so title/context/position/source render immediately —
@@ -41,13 +46,15 @@ export type ReaderPageBody =
  * are wrapped in a clearly-labelled (non-color-only) enrichment surface. Blocks render in EXACT authored order —
  * nothing is regrouped. No answer keys are ever emitted to the DOM (see PracticeBlockView).
  */
-export default function LearningPageRenderer({ header, body, activity }: {
+export default function LearningPageRenderer({ header, body, activity, training }: {
   header: ReaderPageHeader;
   body: ReaderPageBody;
   /** Optional activity-engine injection. Omitted in production → the production allowlist registry + no-op sink. */
   activity?: { registry?: LearningActivityRegistry; emit?: LearningActivityEventSink };
+  /** Optional Learning-Practice host (availability + open). Omitted → generic training cards, no CTA. */
+  training?: LibraryTrainingHost;
 }) {
-  const ctx: ActivityRenderContext = { courseId: header.courseId, registry: activity?.registry, emit: activity?.emit };
+  const ctx: ActivityRenderContext = { courseId: header.courseId, registry: activity?.registry, emit: activity?.emit, training };
 
   // Unit-opener pages render an intentionally distinct hero instead of the normal lesson header. The hero owns the
   // focus target (its <h2> carries the reader's title id/class); the source line is kept for traceability.
@@ -268,6 +275,10 @@ function renderBlock(block: ContentBlock, ctx: ActivityRenderContext): ReactNode
       return <UnitOpenerView block={block} />;
     case "practice":
       return <PracticeBlockView question={block.question} />;
+    case "practice-table":
+      return <PracticeTableView block={block} />;
+    case "library-training":
+      return <LibraryTrainingView block={block} host={ctx.training} />;
     // Interactive activities are DELEGATED to the engine shell (never rendered inline here): it resolves the
     // trusted registry (an exact allowlist; unmatched descriptors → faithful static fallback), isolates a live renderer, and owns
     // fullscreen/reduced-motion. This keeps the renderer lean and the security boundary in one place.
@@ -327,5 +338,49 @@ function PracticeBlockView({ question }: { question: PracticeQuestion }) {
       )}
       <p className="learning-reader-practice-hint">سيتوفر التحقق من الإجابة في مرحلة لاحقة.</p>
     </div>
+  );
+}
+
+/**
+ * A `library-training` block: the book's printed training label plus whatever the HOST allows to be shown. The
+ * content never carries a title, questions or answers; the host's status is the ONLY source of the title/best
+ * result, so a training whose module is hidden from a class shows the printed label and the availability note only.
+ * Never hardcodes training ids — any course can point at any registered training.
+ */
+function LibraryTrainingView({ block, host }: { block: LibraryTrainingBlock; host?: LibraryTrainingHost }) {
+  const status = host ? host.status(block.trainingId) : null;
+  const headingId = "learning-reader-training-" + block.id;
+  const available = status?.kind === "available" ? status : null;
+  const best = available?.best ?? null;
+  const solved = !!best && best.attempts > 0;
+  return (
+    <section className={"learning-reader-training " + (available ? "is-available" : "is-pending")} aria-labelledby={headingId}>
+      <p id={headingId} className="learning-reader-training-label">{block.label}</p>
+      {!host && <p className="learning-reader-training-note">يُحلّ هذا التدريب تفاعليًا من داخل المنصة.</p>}
+      {status?.kind === "loading" && <p className="learning-reader-training-note" role="status">جارٍ التحقق من إتاحة التدريب...</p>}
+      {status?.kind === "error" && (
+        <p className="learning-reader-training-note" role="status">
+          تعذّر التحقق من إتاحة التدريب.
+          {host?.onRetry && <button type="button" className="eb-button is-quiet is-small" onClick={() => host.onRetry?.()}>إعادة المحاولة</button>}
+        </p>
+      )}
+      {status?.kind === "unavailable" && (
+        <>
+          <p className="learning-reader-training-note">سيصبح متاحًا عند نشر الجزء المرتبط به.</p>
+          <button type="button" className="eb-button learning-reader-training-cta" disabled aria-describedby={headingId}>ابدأ التدريب</button>
+        </>
+      )}
+      {available && (
+        <>
+          <p className="learning-reader-training-title">{available.title}</p>
+          {best
+            ? <p className="learning-reader-training-best">أفضل نتيجة: <span dir="ltr">{best.bestPercentage}%</span> · نقاط التقوية: <span dir="ltr">{best.bestPoints} / {best.maxPoints}</span></p>
+            : <p className="learning-reader-training-note">لم تحلّ هذا التدريب بعد.</p>}
+          <button type="button" className="eb-button is-primary learning-reader-training-cta" onClick={() => host?.onOpen(block.trainingId)} aria-describedby={headingId}>
+            <IconSparkles size={16} aria-hidden="true" />{solved ? "أعد التدريب" : "ابدأ التدريب"}
+          </button>
+        </>
+      )}
+    </section>
   );
 }

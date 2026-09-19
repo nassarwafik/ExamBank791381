@@ -13,12 +13,15 @@
 // of PDF 28's own rules — both origin:"teacher-enrichment" with a source ASSOCIATION (association ≠ book origin).
 // NOTHING here goes beyond PDF 33 (PDF 34 opens Unit 4 — CIDR / Subnet / Class — not started).
 
-import type { ContentModule, ContentSource, InlineSpan } from "../../types";
+import type { ContentModule, ContentSource, InlineSpan, PracticeTableSelectCell } from "../../types";
 
 const CID = "791381";
 const src = (pdf: number, printed?: number): ContentSource => ({ kind: "book", sourceId: CID, pdfPageStart: pdf, printedPage: printed });
 /** An LTR technical token (IP address, range, protocol name) — never reversed under RTL. */
 const L = (text: string): InlineSpan => ({ text, dir: "ltr", style: "code" });
+// Worksheet choice cells (PDF 29 / PDF 32): the printed column's own two words, with the expected one as the key.
+const V = (key: "صالح" | "غير صالح"): PracticeTableSelectCell => ({ kind: "select", options: ["صالح", "غير صالح"], key });
+const P = (key: "خاص" | "عام"): PracticeTableSelectCell => ({ kind: "select", options: ["خاص", "عام"], key });
 
 const m07: ContentModule = {
   id: "791381-m07",
@@ -217,16 +220,18 @@ const m07: ContentModule = {
           order: 5,
           source: src(29, 27),
           blocks: [
+            // The book's blank worksheet, answerable in place: the «صالح / غير صالح» column is a closed choice checked
+            // locally against the book's own rules (PDF 28); the «السبب» column stays the learner's (blank, as printed).
             {
-              id: "m07-l01-p05-table", type: "table", origin: "book",
+              id: "m07-l01-p05-table", type: "practice-table", origin: "book",
               headers: ["العنوان", "صالح / غير صالح", "السبب"],
               columnDirs: ["ltr", "rtl", "rtl"],
               rows: [
-                ["192.168.10.1", "", ""],
-                ["192.255.10.10", "", ""],
-                ["127.11.10.1", "", ""],
-                ["169.169.10.10", "", ""],
-                ["169.254.10.234", "", ""],
+                ["192.168.10.1", V("صالح"), ""],
+                ["192.255.10.10", V("صالح"), ""],
+                ["127.11.10.1", V("غير صالح"), ""],
+                ["169.169.10.10", V("صالح"), ""],
+                ["169.254.10.234", V("غير صالح"), ""],
               ],
             },
             {
@@ -302,16 +307,18 @@ const m07: ContentModule = {
           order: 3,
           source: src(32, 30),
           blocks: [
+            // The book's blank classification worksheet, answerable in place: «خاص / عام» is a closed choice checked
+            // locally against the private ranges of PDF 31 (192.167 is NOT 192.168 → عام).
             {
-              id: "m07-l02-p03-table", type: "table", origin: "book",
+              id: "m07-l02-p03-table", type: "practice-table", origin: "book",
               headers: ["الجهاز", "العنوان", "خاص / عام"],
               columnDirs: ["ltr", "ltr", "rtl"],
               rows: [
-                ["PC1", "192.167.100.2", ""],
-                ["PC2", "10.100.10.10", ""],
-                ["PC3", "172.16.32.30", ""],
-                ["PC4", "220.100.100.100", ""],
-                ["PC5", "9.10.11.12", ""],
+                ["PC1", "192.167.100.2", P("عام")],
+                ["PC2", "10.100.10.10", P("خاص")],
+                ["PC3", "172.16.32.30", P("خاص")],
+                ["PC4", "220.100.100.100", P("عام")],
+                ["PC5", "9.10.11.12", P("عام")],
               ],
             },
             {

@@ -7,9 +7,10 @@ const { app } = require("@azure/functions");
 const { withObservability } = require("../lib/observability");
 const { requireActiveStudentSession } = require("../lib/student-auth");
 const { getContainer, downloadJsonOrNull } = require("../lib/platform-storage");
-const { getProjectDefinition, getStorageNamespace } = require("../lib/project-tracker/registry");
-const { workingDefinition, buildClassSnapshot } = require("../lib/project-tracker/service");
 const { getSupportedClassProgramCodes } = require("../lib/project-tracker/class-programs");
+// Shared with the student dashboard's Strength calculation: the ONE loader that turns class programCodes into
+// per-project authoritative summaries (core.buildStudentSummary). Project math is never duplicated here.
+const { loadStudentProjects } = require("../lib/project-tracker/student-projects");
 const core = require("../lib/project-tracker/core");
 
 const CLASS_PREFIX = "platform/classes/";
@@ -35,27 +36,18 @@ async function handler(request, deps = {}, obs = null) {
         return { status: 200, jsonBody: { ok: true, enrolled: false, projects: [] } };
       }
 
-      const projects = [];
-      for (const projectCode of codes) {
-        const definition = getProjectDefinition(projectCode);
-        const ns = getStorageNamespace(projectCode);
-        const snapshot = (await downloadJsonOrNull(container, ns.configName(classId)))
-          || buildClassSnapshot(definition, classId, now);
-        const workDef = workingDefinition(projectCode, snapshot);
-        const progress = await downloadJsonOrNull(container, ns.progressName(classId, studentId));
-        const summary = core.buildStudentSummary(workDef, progress, now);
-        projects.push({
-          projectCode,
-          title: definition.title,
-          tracks: definition.tracks,
-          summary,
-          stages: snapshot.stages,
-          groups: snapshot.groups,
-          progress: progress ? progress.stages : {},
-          nextStages: core.getNextStages(workDef, progress),
-          balance: core.getBalanceInsight(summary.trackProgress, workDef)
-        });
-      }
+      const loaded = await loadStudentProjects(container, classroom, classId, studentId, now, deps);
+      const projects = loaded.map(({ projectCode, definition, snapshot, workDef, progress, summary }) => ({
+        projectCode,
+        title: definition.title,
+        tracks: definition.tracks,
+        summary,
+        stages: snapshot.stages,
+        groups: snapshot.groups,
+        progress: progress ? progress.stages : {},
+        nextStages: core.getNextStages(workDef, progress),
+        balance: core.getBalanceInsight(summary.trackProgress, workDef)
+      }));
 
       return { status: 200, jsonBody: { ok: true, enrolled: true, className: classroom.name, projects } };
     } catch (e) {

@@ -362,6 +362,51 @@ export interface UnitOpenerBlock extends BlockBase {
   goal?: string;
 }
 
+/**
+ * A generic pointer to a Learning-Practice training (an Exam Library item served by the safe learning-training
+ * API). The block carries METADATA ONLY — a training id, the printed label and the module whose publication gates
+ * it. No questions, no answers, no titles: the host decides (via the injected `training` seam) whether the training
+ * is available and what to show; the renderer never hardcodes a training list. Origin "book" is allowed because the
+ * printed page itself lists these trainings (they are the book's QR exercises).
+ */
+export interface LibraryTrainingBlock extends BlockBase {
+  type: "library-training";
+  /** Stable training id (e.g. "T01") — the ONLY key the learning-training API accepts. */
+  trainingId: string;
+  /** The book's printed label (e.g. "تدريب 1"). Always safe to show. */
+  label: string;
+  /** Module id whose publication makes the training available to a class (progressive-release gate). */
+  requiredModuleId: string;
+}
+
+/**
+ * One answerable cell of a `practice-table`: a small closed choice list (the printed worksheet's own vocabulary,
+ * e.g. «صالح / غير صالح») plus the expected choice (`key`). The Reader checks the choice LOCALLY the moment the
+ * learner picks it (immediate, non-persistent feedback); nothing is stored, sent or scored. The key never reaches
+ * the DOM before a choice is made and never appears as text/attributes.
+ */
+export interface PracticeTableSelectCell {
+  kind: "select";
+  /** The dropdown choices, in authored order (≥ 2, unique, non-empty). */
+  options: string[];
+  /** The expected choice — MUST be one of `options`. */
+  key: string;
+}
+export type PracticeTableCell = string | PracticeTableSelectCell;
+/**
+ * A generic INTERACTIVE worksheet table — the same shape as `table` (headers / row-major cells / optional per-column
+ * direction) where some cells are answerable dropdowns. It is course-agnostic and carries no page or domain logic:
+ * any book's "fill the column" exercise is authored as data (the values, the choices and the expected choice), and
+ * the Reader renders the checking UI. At least one cell must be a select cell (otherwise author a `table`).
+ */
+export interface PracticeTableBlock extends BlockBase {
+  type: "practice-table";
+  caption?: string;
+  headers: string[];
+  rows: PracticeTableCell[][];
+  columnDirs?: ContentDirection[];
+}
+
 /** The canonical, strongly-typed block union. */
 export type ContentBlock =
   | TextBlock
@@ -378,13 +423,15 @@ export type ContentBlock =
   | SimulationBlock
   | AnimationBlock
   | GuidedBlock
-  | InteractiveDiagramBlock;
+  | InteractiveDiagramBlock
+  | LibraryTrainingBlock
+  | PracticeTableBlock;
 
 export type BlockType = ContentBlock["type"];
 /** The closed set of supported block types (used by the validator; keep in sync with the union). */
 export const BLOCK_TYPES: readonly BlockType[] = [
   "text", "heading", "image", "callout", "example", "table", "code", "diagram", "practice", "list", "unit-opener",
-  "simulation", "animation", "guided", "interactive-diagram",
+  "simulation", "animation", "guided", "interactive-diagram", "library-training", "practice-table",
 ];
 export const LIST_VARIANTS: readonly NonNullable<ListBlock["variant"]>[] = ["cards", "checklist", "plain", "ordered"];
 export const CALLOUT_KINDS: readonly CalloutKind[] = ["remember", "important", "warning", "tip", "summary", "clarification"];

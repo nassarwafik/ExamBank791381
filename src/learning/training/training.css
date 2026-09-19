@@ -1,0 +1,43 @@
+/* ============================================================
+   ExamBank — Learning Practice · Training Runner
+   Mobile-first, token-only (--eb-*), RTL-first via logical
+   properties. Namespaced `learning-training-*`. Question cards
+   reuse the student exam primitives (`iex-*`). Right/wrong is
+   never colour-only: an icon + a word accompany every mark.
+   ============================================================ */
+.learning-training{ display:flex; flex-direction:column; gap:var(--eb-space-4); min-width:0; }
+.learning-training-back{ align-self:flex-start; }
+.learning-training-status, .learning-training-note, .learning-training-hintline{ margin:0; color:var(--eb-muted); font-size:var(--eb-fs-14); line-height:var(--eb-lh-body); }
+.learning-training-state{ display:flex; flex-direction:column; gap:var(--eb-space-3); padding:var(--eb-space-4); background:var(--eb-surface); border:1px solid var(--eb-line); border-radius:var(--eb-r-lg); }
+.learning-training-state-title{ margin:0; color:var(--eb-text-heading); font-weight:var(--eb-fw-semibold); }
+.learning-training-head, .learning-training-result{ display:flex; flex-direction:column; gap:var(--eb-space-2); padding:var(--eb-space-4); background:var(--eb-surface); border:1px solid var(--eb-line); border-radius:var(--eb-r-lg); min-width:0; }
+.learning-training-kicker{ margin:0; align-self:flex-start; padding:2px var(--eb-space-2); border-radius:var(--eb-pill); background:var(--eb-primary-050); color:var(--eb-primary-strong); font-size:var(--eb-fs-12); font-weight:var(--eb-fw-bold); }
+.learning-training-title{ margin:0; color:var(--eb-text-heading); font-size:var(--eb-fs-20); font-weight:var(--eb-fw-bold); line-height:var(--eb-lh-tight); outline:none; }
+.learning-training-subtitle{ margin:0; color:var(--eb-text-heading); font-size:var(--eb-fs-16); font-weight:var(--eb-fw-semibold); }
+.learning-training-meta{ margin:0; display:flex; flex-wrap:wrap; gap:var(--eb-space-2) var(--eb-space-4); color:var(--eb-muted); font-size:var(--eb-fs-12); font-variant-numeric:tabular-nums; }
+.learning-training-questions{ display:flex; flex-direction:column; gap:var(--eb-space-4); min-width:0; }
+.learning-training-submitbar{ position:sticky; inset-block-end:0; display:flex; flex-wrap:wrap; align-items:center; justify-content:space-between; gap:var(--eb-space-2); padding:var(--eb-space-3) var(--eb-space-4); padding-block-end:calc(var(--eb-space-3) + env(safe-area-inset-bottom, 0px)); background:var(--eb-surface); border:1px solid var(--eb-line); border-radius:var(--eb-r-lg); box-shadow:var(--eb-sh-sm); }
+.learning-training-submitbar .eb-button{ min-height:44px; }
+.learning-training-count{ color:var(--eb-muted); font-size:var(--eb-fs-14); font-variant-numeric:tabular-nums; }
+.learning-training-error{ margin:0; flex-basis:100%; color:var(--eb-danger-tx); font-size:var(--eb-fs-14); }
+.learning-training-summary{ margin:0; display:grid; gap:var(--eb-space-2); }
+.learning-training-summary div{ display:flex; flex-wrap:wrap; gap:var(--eb-space-2); align-items:baseline; }
+.learning-training-summary dt{ color:var(--eb-muted); font-size:var(--eb-fs-12); min-inline-size:8em; }
+.learning-training-summary dd{ margin:0; color:var(--eb-text-heading); font-weight:var(--eb-fw-semibold); }
+.learning-training-num{ font-variant-numeric:tabular-nums; font-size:var(--eb-fs-20); font-weight:var(--eb-fw-bold); }
+.learning-training-actions{ display:flex; flex-wrap:wrap; gap:var(--eb-space-2); }
+.learning-training-actions .eb-button{ min-height:44px; }
+.learning-training-review{ display:flex; flex-direction:column; gap:var(--eb-space-3); min-width:0; }
+.learning-training-review-list{ list-style:none; margin:0; padding:0; display:grid; gap:var(--eb-space-3); }
+.learning-training-review-item{ display:flex; flex-direction:column; gap:var(--eb-space-2); padding:var(--eb-space-3) var(--eb-space-4); background:var(--eb-surface); border:1px solid var(--eb-line); border-inline-start:4px solid var(--eb-line-2); border-radius:var(--eb-r); min-width:0; }
+.learning-training-review-item.is-right{ border-inline-start-color:var(--eb-success); }
+.learning-training-review-item.is-wrong{ border-inline-start-color:var(--eb-danger); }
+.learning-training-review-head{ margin:0; display:flex; flex-wrap:wrap; align-items:center; gap:var(--eb-space-2); }
+.learning-training-mark{ display:inline-flex; align-items:center; gap:4px; padding:2px var(--eb-space-2); border-radius:var(--eb-pill); font-size:var(--eb-fs-12); font-weight:var(--eb-fw-bold); }
+.learning-training-mark.is-right{ background:var(--eb-success-bg); color:var(--eb-success-tx); }
+.learning-training-mark.is-wrong{ background:var(--eb-danger-bg); color:var(--eb-danger-tx); }
+.learning-training-review-num{ color:var(--eb-muted); font-size:var(--eb-fs-12); }
+.learning-training-review-text{ margin:0; color:var(--eb-text-heading); font-weight:var(--eb-fw-semibold); line-height:var(--eb-lh-body); }
+.learning-training-review-line, .learning-training-review-hint{ margin:0; color:var(--eb-text); line-height:var(--eb-lh-body); display:flex; flex-wrap:wrap; gap:var(--eb-space-2); align-items:baseline; }
+.learning-training-review-hint{ color:var(--eb-muted); font-size:var(--eb-fs-14); }
+.learning-training-tag{ padding:1px var(--eb-space-2); border-radius:var(--eb-pill); background:var(--eb-primary-050); color:var(--eb-primary-strong); font-size:var(--eb-fs-12); font-weight:var(--eb-fw-semibold); white-space:nowrap; }

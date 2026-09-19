@@ -138,11 +138,16 @@ describe("architecture guards — one Reader, lazy from the portal, no eager boo
   const root = path.join(process.cwd(), "src") + path.sep;
   const read = (rel: string) => readFileSync(root + rel, "utf8");
   it("the student flow renders the SAME LearningReader; no duplicate Reader implementation exists", () => {
-    const studentReader = read("student/StudentReader.tsx");
-    expect(studentReader).toContain('from "../learning/reader/LearningReader"');
+    // The student Reader mounts the SHARED Reader-plus-training host (the same one the teacher's Learning Materials
+    // uses), and that host mounts the one LearningReader — the student side never re-implements either.
+    const studentReader = read("student/StudentReader.tsx"), host = read("learning/training/LearningReaderWithTraining.tsx");
+    expect(studentReader).toContain('from "../learning/training/LearningReaderWithTraining"');
     expect(studentReader).toContain("createRestrictedReaderContentApi");
-    expect(studentReader).toMatch(/<LearningReader /);
-    expect(studentReader).not.toMatch(/flattenPageRefs|nextPage|previousPage|LearningPageRenderer|learning-reader-/);   // no re-implemented navigation/rendering
+    expect(studentReader).toMatch(/<LearningReaderWithTraining/);
+    expect(host).toContain('from "../reader/LearningReader"');
+    expect(host).toMatch(/<LearningReader\s/);
+    expect(read("learning/LearningMaterialsPage.tsx")).toContain('import("./training/LearningReaderWithTraining")');
+    for (const src of [studentReader, host]) expect(src).not.toMatch(/flattenPageRefs|nextPage|previousPage|LearningPageRenderer|learning-reader-/);   // no re-implemented navigation/rendering
     for (const forbidden of ["student/StudentLearningReader.tsx", "learning/reader/StudentLearningReader.tsx", "learning/reader/StudentReader.tsx"]) expect(existsSync(root + forbidden), forbidden).toBe(false);
     expect(read("learning/reader/LearningReader.tsx")).toContain("exitLabel");
   });
