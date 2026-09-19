@@ -30,7 +30,7 @@ const COURSE_MANIFESTS: Record<string, ManifestLoader> = {
 };
 
 // Module BODY loaders per course. Each converted module body is registered here as its own
-// `import("./791381/modules/<id>")` chunk (m01, m02, m07, m08, m09, m10, m11, m12, m13, m14, m15, m16, m17 and m18 today); manifest modules without an entry are still
+// `import("./791381/modules/<id>")` chunk (m01, m02, m07, m08, m09, m10, m11, m12, m13, m14, m15, m16, m17, m18 and m03 today); manifest modules without an entry are still
 // skeleton-only and the Reader shows them as «قيد الإعداد».
 const COURSE_MODULE_LOADERS: Record<string, Record<string, ModuleLoader>> = {
   // REAL module bodies, each its own lazy chunk; the main bundle imports none of these eagerly.
@@ -47,8 +47,11 @@ const COURSE_MODULE_LOADERS: Record<string, Record<string, ModuleLoader>> = {
   //   m15 — Batch 4 «أوامر فحص الشبكة» (PDF 93–97): complete, order 11.
   //   m16 — Batch 4 «المجالات والمفاهيم» (PDF 98–106): complete, order 12.
   //   m17 — Batch 5 «أمان الشبكات» (PDF 108–115; PDF 107 is the part cover): complete, order 13.
-  //   m18 — Batch 5 «تجزئة البيانات» (PDF 116–119): complete, order 14. PDF 120+ (switch CLI / VLAN) is not converted.
-  // The remaining skeleton modules (m03–m06) have no body yet, so the Reader shows them as «قيد الإعداد».
+  //   m18 — Batch 5 «تجزئة البيانات» (PDF 116–119): complete, order 14.
+  //   m03 — Batch 6 «برمجة السويتش CLI و VLAN» (PDF 121–138; PDF 120 is the batch cover): the historical Phase-2
+  //         skeleton COMPLETED IN PLACE (same id, title, lesson l01 and historical page ids p01/p02), order 15.
+  //         PDF 139+ (the next section's cover and the centralised VLAN management pages) is not converted.
+  // The remaining skeleton modules (m04–m06) have no body yet, so the Reader shows them as «قيد الإعداد».
   "791381": {
     "791381-m01": () => import("./791381/modules/m01"),
     "791381-m02": () => import("./791381/modules/m02"),
@@ -64,6 +67,7 @@ const COURSE_MODULE_LOADERS: Record<string, Record<string, ModuleLoader>> = {
     "791381-m16": () => import("./791381/modules/m16"),
     "791381-m17": () => import("./791381/modules/m17"),
     "791381-m18": () => import("./791381/modules/m18"),
+    "791381-m03": () => import("./791381/modules/m03"),
   },
 };
 

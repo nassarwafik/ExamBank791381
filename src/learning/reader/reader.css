@@ -90,8 +90,9 @@
 .learning-reader-table th, .learning-reader-table td{ padding:var(--eb-space-2) var(--eb-space-3); border:1px solid var(--eb-line); text-align:start; white-space:nowrap; }
 .learning-reader-table th{ background:var(--eb-surface-2); color:var(--eb-text-heading); font-weight:var(--eb-fw-bold); }
 
-/* Code — LTR, only the wrapper scrolls */
-.learning-reader-codewrap{ overflow-x:auto; max-width:100%; background:var(--eb-navy); border-radius:var(--eb-r); }
+/* Code — LTR, only the wrapper scrolls. The wrapper itself is LTR so that, inside the RTL reader, a long command line
+   starts scrolled at its BEGINNING (the prompt «Switch(config)#»), never at its tail (Batch 6: switch CLI pages). */
+.learning-reader-codewrap{ overflow-x:auto; max-width:100%; background:var(--eb-navy); border-radius:var(--eb-r); direction:ltr; text-align:left; }
 .learning-reader-code{ margin:0; padding:var(--eb-space-3); }
 .learning-reader-code code{ font-family:ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace; font-size:var(--eb-fs-13); line-height:var(--eb-lh-body); color:#e6edf7; white-space:pre; }
 

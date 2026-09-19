@@ -595,9 +595,15 @@ const manifest: LearningCourseManifest = {
       ],
     },
     {
-      // Historical Phase-2 skeleton (PDF 123+). Its ID and source mappings are immutable; only its reading `order`
-      // shifts as real units are converted (3 → 4 in Phase 3E; 4 → 7 when Units 4–6 became m08–m10; 7 → 9 when Units 7–8 became m11–m12;
-      // 9 → 10 when Batch 3 became m13; 10 → 13 when Batch 4 became m14–m16; 13 → 15 when Batch 5 became m17–m18).
+      // m03 — COMPLETED IN PLACE (Batch 6): the historical Phase-2 skeleton module, now the book's section
+      // «برمجة السويتش · CLI و VLAN» (source PDF 121–138; PDF 120 is the batch cover, metadata only in the body's
+      // module source). Its id, title, lesson id/title and the two historical page ids, titles and source mappings
+      // (`-l01-p01` = PDF 123 / printed 121, `-l01-p02` = PDF 124 / printed 122) are IMMUTABLE. PDF 121–122 precede
+      // them in the book, so they are NEW stable page ids (`-l01-p03`, `-l01-p04`) placed first by explicit `order`;
+      // the historical pages moved to orders 3–4 (ids are opaque — `order` sequences). New pages follow the
+      // PRINTED PAGE = page circle = PDF index rule. Reading `order` stayed 15 (3 → 4 in Phase 3E; 4 → 7 when
+      // Units 4–6 became m08–m10; 7 → 9 when Units 7–8 became m11–m12; 9 → 10 when Batch 3 became m13; 10 → 13 when
+      // Batch 4 became m14–m16; 13 → 15 when Batch 5 became m17–m18).
       id: "791381-m03",
       title: "برمجة السويتش CLI و VLAN",
       shortTitle: "CLI و VLAN",
@@ -608,8 +614,46 @@ const manifest: LearningCourseManifest = {
           title: "مدخل إلى CLI و VLAN",
           order: 1,
           pages: [
-            { id: "791381-m03-l01-p01", title: "منافذ السويتش", order: 1, source: { kind: "book", sourceId: "791381", pdfPageStart: 123, printedPage: 121 }, keywords: ["switch", "ports", "CLI"] },
-            { id: "791381-m03-l01-p02", title: "برمجة المنافذ من CLI", order: 2, source: { kind: "book", sourceId: "791381", pdfPageStart: 124, printedPage: 122 }, keywords: ["access", "trunk", "VLAN"] },
+            { id: "791381-m03-l01-p03", title: "برمجة السويتش — CLI", order: 1, source: { kind: "book", sourceId: "791381", pdfPageStart: 121, printedPage: 121 }, keywords: ["CLI", "واجهة الأوامر", "برمجة السويتش", "Command Line Interface"] },
+            { id: "791381-m03-l01-p04", title: "الدخول إلى وضع البرمجة", order: 2, source: { kind: "book", sourceId: "791381", pdfPageStart: 122, printedPage: 122 }, keywords: ["enable", "configure terminal", "وضع الإعدادات", "الموجّه", "Switch CLI"] },
+            // historical pages: id, title, source and keywords unchanged since the Phase-2 skeleton; ONLY `order` moved (1 → 3, 2 → 4)
+            { id: "791381-m03-l01-p01", title: "منافذ السويتش", order: 3, source: { kind: "book", sourceId: "791381", pdfPageStart: 123, printedPage: 121 }, keywords: ["switch", "ports", "CLI"] },
+            { id: "791381-m03-l01-p02", title: "برمجة المنافذ من CLI", order: 4, source: { kind: "book", sourceId: "791381", pdfPageStart: 124, printedPage: 122 }, keywords: ["access", "trunk", "VLAN"] },
+          ],
+        },
+        {
+          id: "791381-m03-l02",
+          title: "مفهوم VLAN والمصطلحات",
+          order: 2,
+          pages: [
+            { id: "791381-m03-l02-p01", title: "ما هي VLAN؟", order: 1, source: { kind: "book", sourceId: "791381", pdfPageStart: 125, printedPage: 125 }, keywords: ["VLAN", "تقسيم الشبكة", "شبكة افتراضية", "الإدارة", "المحاسبة"] },
+            { id: "791381-m03-l02-p02", title: "مصطلحات مهمة في VLAN", order: 2, source: { kind: "book", sourceId: "791381", pdfPageStart: 126, printedPage: 126 }, keywords: ["VLAN ID", "VLAN 1", "Trunk", "1–4094", "Access"] },
+            { id: "791381-m03-l02-p03", title: "فكرة VLAN", order: 3, source: { kind: "book", sourceId: "791381", pdfPageStart: 127, printedPage: 127 }, keywords: ["فكرة VLAN", "راوتر", "سويتش طبقة ثالثة", "فصل الشبكة"] },
+            { id: "791381-m03-l02-p04", title: "جدول مثال VLAN", order: 4, source: { kind: "book", sourceId: "791381", pdfPageStart: 128, printedPage: 128 }, keywords: ["جدول VLAN", "192.168.10", "192.168.20", "/24", "Pc1-ADMIN", "Pc1-GAZ"] },
+            { id: "791381-m03-l02-p05", title: "توزيع الأجهزة على VLAN", order: 5, source: { kind: "book", sourceId: "791381", pdfPageStart: 129, printedPage: 129 }, keywords: ["توزيع الأجهزة", "إعداد المنفذ", "VLAN 10", "VLAN 20"] },
+          ],
+        },
+        {
+          id: "791381-m03-l03",
+          title: "إنشاء VLAN وربط المنافذ",
+          order: 3,
+          pages: [
+            { id: "791381-m03-l03-p01", title: "إنشاء VLAN على السويتش", order: 1, source: { kind: "book", sourceId: "791381", pdfPageStart: 130, printedPage: 130 }, keywords: ["vlan 10", "name", "MNG", "GAZ", "إنشاء VLAN"] },
+            { id: "791381-m03-l03-p02", title: "ربط المنافذ مع VLAN", order: 2, source: { kind: "book", sourceId: "791381", pdfPageStart: 131, printedPage: 131 }, keywords: ["interface range", "switchport mode access", "switchport access vlan", "ربط المنافذ"] },
+            { id: "791381-m03-l03-p03", title: "توضيح Access Ports", order: 3, source: { kind: "book", sourceId: "791381", pdfPageStart: 132, printedPage: 132 }, keywords: ["Access Port", "VLAN واحدة", "Tag", "الأجهزة النهائية"] },
+            { id: "791381-m03-l03-p04", title: "الواجهة SVI", order: 4, source: { kind: "book", sourceId: "791381", pdfPageStart: 133, printedPage: 133 }, keywords: ["SVI", "interface vlan", "ip address", "no shutdown", "Layer 3"] },
+            { id: "791381-m03-l03-p05", title: "فكرة SVI و Gateway", order: 5, source: { kind: "book", sourceId: "791381", pdfPageStart: 134, printedPage: 134 }, keywords: ["Gateway", "Default Gateway", "نقطة خروج", "192.168.1.254"] },
+          ],
+        },
+        {
+          id: "791381-m03-l04",
+          title: "Native / Tagged / Untagged",
+          order: 4,
+          pages: [
+            { id: "791381-m03-l04-p01", title: "Native / Tagged / Untagged VLAN", order: 1, source: { kind: "book", sourceId: "791381", pdfPageStart: 135, printedPage: 135 }, keywords: ["Native VLAN", "Tagged VLAN", "Untagged VLAN", "Tag", "Trunk"] },
+            { id: "791381-m03-l04-p02", title: "إعداد Native VLAN", order: 2, source: { kind: "book", sourceId: "791381", pdfPageStart: 136, printedPage: 136 }, keywords: ["switchport mode trunk", "switchport trunk native vlan", "vlan 99", "f0/24"] },
+            { id: "791381-m03-l04-p03", title: "إعداد Tagged VLAN عبر Trunk", order: 3, source: { kind: "book", sourceId: "791381", pdfPageStart: 137, printedPage: 137 }, keywords: ["switchport trunk allowed vlan", "Tagged", "Trunk", "10,20"] },
+            { id: "791381-m03-l04-p04", title: "إعداد Untagged / Access", order: 4, source: { kind: "book", sourceId: "791381", pdfPageStart: 138, printedPage: 138 }, keywords: ["Untagged", "Access", "switchport access vlan", "f0/1", "Trunk Port"] },
           ],
         },
       ],
