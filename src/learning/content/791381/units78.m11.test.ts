@@ -137,7 +137,12 @@ describe("m11 — SOURCE ORDER: PDF 64 names the broadcast MAC, it does NOT teac
     expect(r3.type === "practice" && r3.question.kind === "multipleChoice" && r3.question.prompt).toBe("سؤال بأسلوب الامتحان: أي من العناوين التالية هو عنوان Broadcast في MAC؟");
     expect(r3.type === "practice" && r3.question.kind === "multipleChoice" && r3.question.options.map(o => [o.text, Boolean(o.correct)])).toEqual([["A0:02:AF:2D:10:22", false], [BCAST, true], ["192.168.1.255", false]]);
     for (const id of ["m11-l02-p02-r1", "m11-l02-p02-r2", "m11-l02-p02-r3", "m11-l02-p02-q1", "m11-l02-p02-q2", "m11-l02-p02-ex1"]) expect(JSON.stringify(blockBy(p65, id)), id).not.toMatch(FUTURE);
-    // nowhere in m11 is the Unit-8 claim made
+  });
+  it("WHOLE-MODULE guard: no block anywhere in m11 (any page, any origin, configs and fallbacks included) carries Unit-8 delivery semantics", () => {
+    // Widened from the eleven-block list above (deferred PR #122 follow-up): the same FUTURE pattern is applied to every
+    // block of the module, so a future enrichment edit on any Unit-7 page cannot smuggle in who-receives-a-broadcast.
+    for (const p of pages) for (const b of p.blocks) expect(JSON.stringify(b), `${p.id} / ${b.id}`).not.toMatch(FUTURE);
+    expect(JSON.stringify(m11)).not.toMatch(FUTURE);
     expect(JSON.stringify(m11)).not.toMatch(/الرسالة للجميع داخل الشبكة|تصل لجميع الأجهزة داخل الشبكة|إلى من ستصل/);
   });
 });

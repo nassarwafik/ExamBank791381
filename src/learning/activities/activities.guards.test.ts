@@ -94,7 +94,7 @@ describe("Phase 3A — no code execution from content", () => {
 });
 
 describe("production registry is an exact allowlist", () => {
-  it("registers ONLY the exact ten-entry allowlist (3B, 3E, Units 4–6, Units 7–8) and ZERO CLI renderers (no chunk loads at import time)", () => {
+  it("registers ONLY the exact eleven-entry allowlist (3B, 3E, Units 4–6, Units 7–8, Batch 3) and ZERO CLI renderers (no chunk loads at import time)", () => {
     expect(productionActivityRegistry.list()).toEqual([
       { kind: "interactive-diagram", key: "network-scope", versions: [1] },
       { kind: "interactive-diagram", key: "ipv4-octets", versions: [1] },
@@ -106,12 +106,13 @@ describe("production registry is an exact allowlist", () => {
       { kind: "interactive-diagram", key: "mac-address-anatomy", versions: [1] },
       { kind: "simulation", key: "message-delivery", versions: [1] },
       { kind: "interactive-diagram", key: "broadcast-address", versions: [1] },
+      { kind: "interactive-diagram", key: "osi-layers", versions: [1] },
     ]);
-    expect(productionActivityRegistry.size).toBe(10);
+    expect(productionActivityRegistry.size).toBe(11);
     expect(productionActivityRegistry.list().some(e => /cli|vlan|subnet-calc/i.test(e.key))).toBe(false);
   });
-  it("every Units 4–6 and Units 7–8 renderer is reached only through a static string-literal import thunk", () => {
-    for (const name of ["CidrNetworkHostDiagram", "GatewayFlowAnimation", "HubSwitchRouterFlow", "NetworkTopologiesExplorer", "CableComparisonDiagram", "MacAddressAnatomy", "MessageDeliverySimulation", "BroadcastAddressBuilder"]) expect(engine).toContain(`import("./${name}")`);
+  it("every Units 4–6, Units 7–8 and Batch 3 renderer is reached only through a static string-literal import thunk", () => {
+    for (const name of ["CidrNetworkHostDiagram", "GatewayFlowAnimation", "HubSwitchRouterFlow", "NetworkTopologiesExplorer", "CableComparisonDiagram", "MacAddressAnatomy", "MessageDeliverySimulation", "BroadcastAddressBuilder", "OsiLayersExplorer"]) expect(engine).toContain(`import("./${name}")`);
   });
   it("the ipv4-octets renderer is reached only through a static string-literal import thunk", () => {
     expect(engine).toContain('import("./IPv4OctetsDiagram")');

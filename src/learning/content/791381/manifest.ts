@@ -369,12 +369,53 @@ const manifest: LearningCourseManifest = {
       ],
     },
     {
+      // Batch 3 phase: the book's REAL section «نماذج الاتصال · OSI و TCP/IP» (PDF 77–86; PDF 76 is the batch divider),
+      // complete. Stable id m13, order 9. Batch 3 has no unit-opener page. PDF 87 («البروتوكولات») is NOT converted.
+      id: "791381-m13",
+      title: "نماذج الاتصال: OSI و TCP/IP",
+      shortTitle: "OSI و TCP/IP",
+      order: 9,
+      lessons: [
+        {
+          id: "791381-m13-l01",
+          title: "نموذج OSI",
+          order: 1,
+          pages: [
+            { id: "791381-m13-l01-p01", title: "ما هو نموذج OSI؟", order: 1, source: { kind: "book", sourceId: "791381", pdfPageStart: 77, printedPage: 77 }, keywords: ["OSI", "7 طبقات"] },
+            { id: "791381-m13-l01-p02", title: "طبقات OSI السبع", order: 2, source: { kind: "book", sourceId: "791381", pdfPageStart: 78, printedPage: 78 }, keywords: ["Application", "Presentation", "Session", "Transport", "Network", "Data Link", "Physical"] },
+            { id: "791381-m13-l01-p03", title: "طبقات OSI الأساسية", order: 3, source: { kind: "book", sourceId: "791381", pdfPageStart: 79, printedPage: 79 }, keywords: ["Physical", "Data Link", "Network", "Transport"] },
+            { id: "791381-m13-l01-p04", title: "باقي طبقات OSI", order: 4, source: { kind: "book", sourceId: "791381", pdfPageStart: 80, printedPage: 80 }, keywords: ["Session", "Presentation", "Application"] },
+          ],
+        },
+        {
+          id: "791381-m13-l02",
+          title: "نموذج TCP/IP",
+          order: 2,
+          pages: [
+            { id: "791381-m13-l02-p01", title: "نموذج TCP/IP", order: 1, source: { kind: "book", sourceId: "791381", pdfPageStart: 81, printedPage: 81 }, keywords: ["TCP/IP", "4 طبقات"] },
+            { id: "791381-m13-l02-p02", title: "طبقات TCP/IP الأربع", order: 2, source: { kind: "book", sourceId: "791381", pdfPageStart: 82, printedPage: 82 }, keywords: ["Application", "Transport", "Internet", "Link"] },
+            { id: "791381-m13-l02-p03", title: "مقارنة سريعة: OSI و TCP/IP", order: 3, source: { kind: "book", sourceId: "791381", pdfPageStart: 83, printedPage: 83 }, keywords: ["مقارنة", "OSI", "TCP/IP"] },
+          ],
+        },
+        {
+          id: "791381-m13-l03",
+          title: "TCP و UDP",
+          order: 3,
+          pages: [
+            { id: "791381-m13-l03-p01", title: "TCP و UDP", order: 1, source: { kind: "book", sourceId: "791381", pdfPageStart: 84, printedPage: 84 }, keywords: ["TCP", "UDP", "Transport Layer"] },
+            { id: "791381-m13-l03-p02", title: "متى نستخدم TCP؟", order: 2, source: { kind: "book", sourceId: "791381", pdfPageStart: 85, printedPage: 85 }, keywords: ["TCP", "موثوق"] },
+            { id: "791381-m13-l03-p03", title: "متى نستخدم UDP؟", order: 3, source: { kind: "book", sourceId: "791381", pdfPageStart: 86, printedPage: 86 }, keywords: ["UDP", "السرعة"] },
+          ],
+        },
+      ],
+    },
+    {
       // Historical Phase-2 skeleton (PDF 123+). Its ID and source mappings are immutable; only its reading `order`
       // shifts as real units are converted (3 → 4 in Phase 3E; 4 → 7 when Units 4–6 became m08–m10; 7 → 9 when Units 7–8 became m11–m12).
       id: "791381-m03",
       title: "برمجة السويتش CLI و VLAN",
       shortTitle: "CLI و VLAN",
-      order: 9,
+      order: 10,
       lessons: [
         {
           id: "791381-m03-l01",
@@ -391,7 +432,7 @@ const manifest: LearningCourseManifest = {
       id: "791381-m04",
       title: "Trunk و Router on a Stick",
       shortTitle: "Trunk",
-      order: 10,
+      order: 11,
       lessons: [
         {
           id: "791381-m04-l01",
@@ -407,7 +448,7 @@ const manifest: LearningCourseManifest = {
       id: "791381-m05",
       title: "مرجع أوامر Cisco",
       shortTitle: "أوامر Cisco",
-      order: 11,
+      order: 12,
       lessons: [
         {
           id: "791381-m05-l01",
@@ -424,7 +465,7 @@ const manifest: LearningCourseManifest = {
       id: "791381-m06",
       title: "قوائم التحكم ACL",
       shortTitle: "ACL",
-      order: 12,
+      order: 13,
       lessons: [
         {
           id: "791381-m06-l01",
@@ -446,7 +487,7 @@ const manifest: LearningCourseManifest = {
     { id: "intro", label: "المقدمة", moduleIds: [] },
     { id: "b1", label: "الأساسيات · الأعداد · IP", moduleIds: ["791381-m01", "791381-m02", "791381-m07", "791381-m08"] },
     { id: "b2", label: "الأجهزة والرسائل", moduleIds: ["791381-m09", "791381-m10", "791381-m11", "791381-m12"] },
-    { id: "b3", label: "النماذج والبروتوكولات والأمان", moduleIds: [] },
+    { id: "b3", label: "النماذج والبروتوكولات والأمان", moduleIds: ["791381-m13"] },
     { id: "b4", label: "برمجة السويتش و VLAN", moduleIds: ["791381-m03", "791381-m04", "791381-m05"] },
     { id: "b5", label: "الأمان · Wi-Fi · IPv6 · DHCP", moduleIds: [] },
     { id: "b6", label: "ACL · التوجيه · WAN", moduleIds: ["791381-m06"] },
