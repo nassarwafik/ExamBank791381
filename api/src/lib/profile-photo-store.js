@@ -100,8 +100,12 @@ async function removeProfilePhoto(container, { ownerPrefix, docName, prepareDoc 
   let previousBlobKey = "";
   const committed = await (deps.mutateJsonWithRetry || mutateJsonWithRetry)(container, docName, current => {
     const doc = prepareDoc ? prepareDoc(current) : current;
-    previousBlobKey = resolveBlobKey(photoRecord(doc), ownerPrefix);
-    doc.profilePhoto = null;                                             // profilePhotoSeq is kept: versions stay monotonic
+    const prev = photoRecord(doc);
+    // Preserve the highest known public version in the monotonic sequence BEFORE clearing the record — a legacy
+    // record (no profilePhotoSeq) would otherwise let the next publication restart at v1 and reuse a cached version.
+    if (prev) doc.profilePhotoSeq = nextVersion(doc, prev) - 1;
+    previousBlobKey = resolveBlobKey(prev, ownerPrefix);
+    doc.profilePhoto = null;
     return doc;
   });
   const cleanedPrevious = await bestEffortDelete(container, previousBlobKey, deps, obs, "profilePhoto.removeCleanup");

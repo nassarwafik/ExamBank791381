@@ -100,6 +100,37 @@ describe("publication semantics", () => {
   });
 });
 
+describe("legacy records stay monotonic across removal (shared store → student AND teacher photos)", () => {
+  const legacySeed = version => { const ctx = seed(); ctx.setJson(DOC, { ...ctx.getJson(DOC), profilePhoto: { version, updatedAt: NOW } }); ctx.store.set(PREFIX + LEGACY_BLOB_FILE, { content: Buffer.from("legacy-bytes-v" + version), etag: "e-legacy", contentType: "image/webp" }); return ctx; };
+  it("legacy v3 (no blobKey, no profilePhotoSeq) → remove → republish = v4 on a new immutable key; current.webp is no longer the active photo; public shape unchanged", async () => {
+    const ctx = legacySeed(3);
+    expect("profilePhotoSeq" in ctx.getJson(DOC)).toBe(false);
+    expect((await serve(ctx)).body.toString()).toBe("legacy-bytes-v3");
+    const rm = await remove(ctx);
+    expect(rm.previousBlobKey).toBe(PREFIX + LEGACY_BLOB_FILE); expect(rm.cleanedPrevious).toBe(true);
+    const cleared = ctx.getJson(DOC);
+    expect(cleared.profilePhoto).toBeNull(); expect(cleared.profilePhotoSeq).toBeGreaterThanOrEqual(3);
+    expect((await serve(ctx)).status).toBe(404);
+    const p = await publish(ctx, await png("#4444aa"));
+    expect(p.meta).toEqual({ version: 4, updatedAt: NOW });
+    expect(p.record.blobKey).toMatch(new RegExp("^" + PREFIX + "[a-z0-9]+-[0-9a-f]{24}\\.webp$")); expect(ctx.has(p.record.blobKey)).toBe(true);
+    const served = await serve(ctx);
+    expect(served.status).toBe(200); expect(Buffer.compare(served.body, ctx.getBinary(p.record.blobKey).buffer)).toBe(0); expect(served.body.toString()).not.toContain("legacy-bytes");
+    expect(ctx.has(PREFIX + LEGACY_BLOB_FILE)).toBe(false); expect(revisions(ctx)).toEqual([p.record.blobKey]);
+    expect(Object.keys(photoMeta(ctx.getJson(DOC)))).toEqual(["version", "updatedAt"]);
+  });
+  it("simplest case: legacy v1 → remove → republish = v2; and a legacy remove whose blob delete fails still records the sequence", async () => {
+    const ctx = legacySeed(1);
+    await remove(ctx);
+    expect(ctx.getJson(DOC)).toMatchObject({ profilePhoto: null, profilePhotoSeq: 1 });
+    expect((await publish(ctx, await png("#aa4444"))).meta.version).toBe(2);
+    const ctx2 = legacySeed(5);
+    await remove(ctx2, { deleteBlob: async () => { throw new Error("delete down"); } });
+    expect(ctx2.getJson(DOC)).toMatchObject({ profilePhoto: null, profilePhotoSeq: 5 });
+    expect((await publish(ctx2, await png("#44aa44"))).meta.version).toBe(6);
+  });
+});
+
 describe("concurrency (real CAS on the memory container)", () => {
   it("two overlapping replacements: both commit in some order, the final metadata references ONE exact blob, GET serves it, version reflects the committed publication, the loser's revision is cleaned", async () => {
     const ctx = seed();
