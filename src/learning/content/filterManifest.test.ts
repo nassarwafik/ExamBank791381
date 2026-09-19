@@ -8,7 +8,7 @@ const M01 = "791381-m01", M02 = "791381-m02", M07 = "791381-m07";
 const pagesOf = (m: typeof manifest, id: string) => m.modules.find(x => x.id === id)!.lessons.reduce((n, l) => n + l.pages.length, 0);
 const ids = (m: typeof manifest) => orderedModules(m).map(x => x.id);
 
-describe("filterManifestByModuleIds — canonical 791381 (m01, m02, m07 + skeleton m03–m06)", () => {
+describe("filterManifestByModuleIds — canonical 791381 (m01, m02, m07, m08–m18, m03 + skeleton m04–m06)", () => {
   it("allowed [m01, m02] → EXACTLY m01, m02 with their lessons/pages intact, course metadata preserved, original unchanged", () => {
     const before = JSON.stringify(manifest);
     const out = filterManifestByModuleIds(manifest, [M01, M02]);

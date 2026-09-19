@@ -97,21 +97,30 @@ describe("Phase 3E — historical module ids, titles and source mappings are IMM
     expect(byId["791381-m16"].order).toBe(12);
     expect(byId["791381-m17"].order).toBe(13);         // Batch 5: أمان الشبكات, تجزئة البيانات …
     expect(byId["791381-m18"].order).toBe(14);
-    expect(byId["791381-m03"].order).toBe(15);         // … and the historical skeletons merely shift after the real units
+    expect(byId["791381-m03"].order).toBe(15);         // … Batch 6 completed the historical m03 IN PLACE at order 15; the remaining skeletons follow
     expect(byId["791381-m04"].order).toBe(16);
     expect(byId["791381-m05"].order).toBe(17);
     expect(byId["791381-m06"].order).toBe(18);
     // the skeletons keep their ids, titles, lesson/page ids and PDF mappings (pinned below) — ONLY `order` moved
-    for (const id of ["791381-m03", "791381-m04", "791381-m05", "791381-m06"]) expect(Object.keys(byId[id]).sort(), id).toEqual(["id", "lessons", "order", "shortTitle", "title"].filter(k => k in byId[id]).sort());
+    for (const id of ["791381-m04", "791381-m05", "791381-m06"]) expect(Object.keys(byId[id]).sort(), id).toEqual(["id", "lessons", "order", "shortTitle", "title"].filter(k => k in byId[id]).sort());
+    expect(Object.keys(byId["791381-m03"]).sort()).toEqual(["id", "lessons", "order", "shortTitle", "title"]);   // m03 completed in place: the same TOC shape, no `source` on the ModuleRef
   });
 
-  it("pins the historical m03–m06 skeleton titles and PDF source mappings exactly (id ≠ unit number ≠ position)", () => {
+  it("pins the historical m03 identity + its two historical pages (completed in place by Batch 6) and the m04–m06 skeleton titles and PDF source mappings exactly (id ≠ unit number ≠ position)", () => {
     const pages = (id: string) => byId[id].lessons.flatMap(l => l.pages.map(p => [p.id, p.title, p.source!.pdfPageStart, p.source!.printedPage]));
     expect(byId["791381-m03"].title).toBe("برمجة السويتش CLI و VLAN");
-    expect(pages("791381-m03")).toEqual([
+    expect(byId["791381-m03"].shortTitle).toBe("CLI و VLAN");
+    expect(byId["791381-m03"].lessons[0]).toMatchObject({ id: "791381-m03-l01", title: "مدخل إلى CLI و VLAN", order: 1 });
+    // the two historical pages: id, title, pdfPageStart AND printedPage are byte-for-byte the Phase-2 skeleton values
+    expect(pages("791381-m03").filter(p => p[0] === "791381-m03-l01-p01" || p[0] === "791381-m03-l01-p02")).toEqual([
       ["791381-m03-l01-p01", "منافذ السويتش", 123, 121],
       ["791381-m03-l01-p02", "برمجة المنافذ من CLI", 124, 122],
     ]);
+    // Batch 6 completed the section IN PLACE: PDF 121–122 precede them as new stable ids (orders 1–2), the historical pages read 3rd/4th
+    expect(byId["791381-m03"].lessons[0].pages.map(p => [p.id, p.order, p.source!.pdfPageStart])).toEqual([
+      ["791381-m03-l01-p03", 1, 121], ["791381-m03-l01-p04", 2, 122], ["791381-m03-l01-p01", 3, 123], ["791381-m03-l01-p02", 4, 124],
+    ]);
+    expect(pages("791381-m03").map(p => p[2])).toEqual(Array.from({ length: 18 }, (_, i) => 121 + i));
     expect(byId["791381-m04"].title).toBe("Trunk و Router on a Stick");
     expect(pages("791381-m04")).toEqual([["791381-m04-l01-p01", "أوامر Trunk", 148, 146]]);
     expect(byId["791381-m05"].title).toBe("مرجع أوامر Cisco");
