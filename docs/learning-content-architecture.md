@@ -360,7 +360,7 @@ static surface until a trusted presenter for that exact identity is added there;
 `RegisteredActivity` whose component is loaded through a statically-authored `load` thunk (its own code-split
 chunk). Content supplies only the **key** — never a component name, function, module path, or any executable code.
 There is **no `eval`, no `new Function`, and no dynamic `import()` of a data path**. `productionActivityRegistry`
-ships **EMPTY** in Phase 3A: no registry-backed renderer (real simulation / animation / interactive diagram) is
+shipped **EMPTY** in Phase 3A (historical — see «Units 4–6» for today's six-entry allowlist): no registry-backed renderer (real simulation / animation / interactive diagram) is
 registered, so those descriptors render their faithful static `ActivityFallback` and no activity chunk ever loads
 in production. This does **not** mean every activity family falls back — the generic built-in `guided / reveal / v1`
 presenter (`builtinActivityRegistry`, eager component, same `{kind, key, version}` discipline) is intentionally
@@ -560,7 +560,7 @@ CIDR و Subnet و Class»). Nothing from PDF 34 onward is converted; a test asse
   missing distinction are unchanged; the Phase-3E reader test asserts each module body is requested exactly once.
 - Confined to `src/learning/**` and `docs/`; no product area outside Learning is touched.
 
-**Deferred next work: Unit 4 (PDF 34+)** — CIDR, Subnet, Class A/B/C, masks, network/host bits.
+**Unit 4 (PDF 34+) followed in the «Units 4–6» phase** (CIDR, Subnet, Class A/B/C, masks, network/host bits, devices, topologies).
 
 ## Class Learning Materials & Progressive Release
 
@@ -896,6 +896,100 @@ never upload a personal photo, never use an arbitrary avatar URL; photo blobs ar
 artwork set; membership authorities unchanged; assignment grading unchanged; the teacher self-profile API never
 targets another teacher.
 
+## Units 4–6 — CIDR, Devices & Topologies (source PDF 34–60)
+
+The first content phase after the Reader, Class Learning Materials and Unified Strength slices: three complete book
+units converted **in exact book order** from the authoritative teacher PDF (`Book791381.pdf`, 264 pages, never
+bundled). Every source page was reviewed against the rendered PDF before authoring. Conversion **stops before PDF 61**
+(Unit 7): no page body has `pdfPageStart >= 61`, and a test asserts it.
+
+### Source map and module structure
+
+| Unit | Source PDF | Module (immutable id) | `order` | Batch | Lessons |
+| --- | --- | --- | --- | --- | --- |
+| 4 «Class و Subnet و CIDR» | **34–46** | `791381-m08` | 4 | b1 | `l00` افتتاحية (34) · `l01` فئات العناوين والقناع الطبيعي (35–39) · `l02` جزء الشبكة وجزء الجهاز و CIDR (40–42) · `l03` الأجهزة في نفس الشبكة والبوابة الافتراضية (43–46) |
+| — divider | **47** | (no learner page) | — | — | The second-batch divider sheet; recorded only as `m09.source.pdfPageStart: 47` + `sourceNote`, never rendered |
+| 5 «أجهزة الشبكات» | **48–56** | `791381-m09` | 5 | b2 | `l00` افتتاحية (48) · `l01` Hub و Switch (49–53) · `l02` Router (54–55) · `l03` خلاصة الأجهزة (56) |
+| 6 «أنواع شبكات الاتصال» | **57–60** | `791381-m10` | 6 | b2 | `l00` افتتاحية (57) · `l01` الشبكات البسيطة والتقليدية (58–59) · `l02` الشبكات الحديثة (60) |
+
+- **1 source page → 1 interactive page**, no splits or merges, page ids `791381-mNN-lNN-pNN` authored once and
+  immutable. Every body page records `source.pdfPageStart` (and `printedPage`, see below); every faithful block
+  is `origin:"book"`, every added solved example / guided walkthrough / practice / activity is
+  `origin:"teacher-enrichment"` with a source association. Module bodies register as their own lazy chunks
+  (`m08`, `m09`, `m10` in `src/learning/content/registry.ts`); the batch b1 overview now lists
+  `[m01, m02, m07, m08]` and b2 `[m09, m10]` (b3/b4 unchanged).
+- **Historical skeleton m03–m06 untouched.** Ids, titles and PDF mappings are pinned by tests; only their explicit
+  `order` shifts to 7–10 (previously 4–7) because m08–m10 are inserted at orders 4–6. As with m07, module ids are
+  not unit numbers.
+- **Rendered title.** The Unit-4 opener prints «CIDR و Subnet و Class» (LTR reading). It is authored as the logical
+  RTL string «Class و Subnet و CIDR» (rightmost word first), the same rule as m07's «Static IP و Dynamic IP».
+- **Printed page number (documented discrepancy, not silent).** The rendered page circle on PDF 35–60 shows the
+  PDF index itself (PDF 35 renders «35»); an overlapping hidden text-layer number (PDF−2) exists underneath and is
+  what m01 / m02 / m07 recorded as `printedPage` (e.g. PDF 24 → printed 22). m08–m10 record the **rendered**
+  value (`printedPage === pdfPageStart`) because that is the number a teacher sees on the page; the older modules
+  are left as recorded. Unit openers and PDF 46 (a closing summary page without a printed number) carry no
+  `printedPage`.
+- **PDF 44's answer column stays blank** (`origin:"book"` table exactly as printed); the checkable version is a
+  separate `origin:"teacher-enrichment"` `practice-table` whose keys keep the network part and differ from PC1.
+  PDF 36 / 39 worksheets are `practice-table` blocks whose keys follow the page's own class rule.
+
+### Pedagogical standard applied (with judgment, never mechanically)
+
+Every concept page follows **explanation → solved example → guided practice → independent practice → immediate
+feedback («ماذا أفحص؟») → short summary** where the source page supports it. Totals:
+
+| Module | Solved examples (`example`, `mode:"solved"`) | Guided walkthrough | Inline practices (`practice`) | Worksheet tables (`practice-table`) | Activities |
+| --- | --- | --- | --- | --- | --- |
+| m08 | 9 | 1 (`m08-l02-p01-guided`, /16 on 172.18.200.100) | 11 | 3 | 2 |
+| m09 | 1 | — | 8 | 1 (device-feature matching) | 1 |
+| m10 | 1 | — | 3 | 1 (topology matching) | 1 |
+
+Inline practices are **educational only**: nothing is stored, scored, ranked or turned into a medal, assignment or
+Strength; no T05+ training exists. Every practice carries `feedback.hint` / `incorrectFeedback` telling the student
+**what to check** (the class rule, the mask, the prefix, the network part) rather than the answer.
+
+### Interactive inline practice — `PracticeBlockView` (Phase-4 first slice, Reader-local)
+
+The static Phase-3 practice preview is replaced by `src/learning/reader/PracticeBlockView.tsx`: MCQ / true-false
+options are real `role="radio"` buttons, short-input practices are a form with «تحقّق», answers are checked in the
+browser by the Phase-3A `localEvaluator`, and the verdict is announced in a `role="status"` region
+(«✓ صحيح» / «✕ غير صحيح — حاول مرة أخرى») with the block's `correctFeedback` / `incorrectFeedback`, the explanation
+on success, the `hintLadder` behind «ماذا أفحص؟ (تلميح)» → «تلميح آخر», and «امسح الإجابة». A practice without a
+key, or of a kind whose answering surface is not implemented in the view yet (`fillBlank`, even when keyed), renders
+the old static surface — never a prompt with an interactive footer and no field. State lives in React memory only; no network, no persistence, no score, no
+Strength — the answer key is compared locally and never displayed as a key.
+
+### Four registry-backed activities (`productionActivityRegistry` = exact six-entry allowlist)
+
+| Activity | `{kind, key, version}` | Page | Renderer (own lazy chunk) |
+| --- | --- | --- | --- |
+| A — CIDR network/host visualizer | `interactive-diagram / cidr-network-host / 1` | PDF 40 (`m08-l02-p01-visualizer`) | `CidrNetworkHostDiagram` — pick /8, /16 or /24 on the book's examples; the network part and host part of the four octets are highlighted and named |
+| B — Default-gateway flow | `animation / gateway-flow / 1` | PDF 45 (`m08-l03-p03-flow`) | `GatewayFlowAnimation` — a packet leaves PC1 for a local host directly, and for an outside address via the Switch → Router (192.168.1.1) hop by hop; replay/reset |
+| C — Hub vs Switch vs Router | `simulation / hub-switch-router-flow / 1` | PDF 49 (`m09-l01-p01-sim`) | `HubSwitchRouterFlow` — the same PC1 → PC3 frame through a Hub (all ports), a Switch (target port only) and a Router (between networks) |
+| D — Topologies explorer | `interactive-diagram / network-topologies / 1` | PDF 60 (`m10-l02-p01-explorer`) | `NetworkTopologiesExplorer` — p2p / bus / ring / star / tree / hybrid with the book's collision note for Bus |
+
+Shared contract (tested per renderer): trusted registry key + positive version, statically-authored `import()`
+thunk, the descriptor's faithful `ActivityFallback` when the registry is injected empty or the chunk fails,
+`reducedMotion` jumps straight to the final state (no timers), every control is a real ≥44px keyboard-operable
+button with `aria-pressed` and a visible mark (never colour-only), state is stamped with the shell's
+`commands.reset` / `commands.replay` epochs, live text mirrors the visual (`aria-live`) as plain prose «من <المرسل>
+إلى <المستقبل>» — sender first, receiver second, never an arrow glyph inside a mixed Arabic/Latin string, so a
+screen-reader user gets the same direction as the animation — single-column at phone width. The earlier "EMPTY" / "two-entry allowlist" statements in the Phase 3A / 3E sections are historical.
+
+### Publication: deployable ≠ published
+
+`api/src/lib/learning-materials-registry.js` now lists `m08` (order 4), `m09` (order 5) and `m10` (order 6) with
+titles only, so the teacher's catalog shows them as «مخفي عن الطلاب» and `validateLearningModuleIds` accepts them in
+canonical order. **Nothing is auto-published:** deployment changes no class document, `visibleModuleIds` are
+untouched, and a real-registry test proves a class that released `[m01, m02, m07]` still exposes none of m08–m10 to
+its students until the teacher publishes them explicitly.
+
+### Deliberately NOT in this phase
+
+No leaderboard, no page-reading Strength, no medals for inline practices, no new rank levels, no project scoring
+change, no T05+ trainings, no AI tutor, no CMS, no change to Project Performance / Achievement Hub / profile photo,
+and **no Unit 7 (PDF 61+)**.
+
 ## Phase boundaries
 
 | Phase | Scope | Status |
@@ -910,7 +1004,8 @@ targets another teacher.
 | Class Learning Materials | Class assignment + progressive module release + «موادي التعليمية» + filtered shared Reader + default-deny student access | done |
 | Learning Practice & Unified Strength | Book trainings T01–T04 as `library-training` blocks + the shared Training Runner + server grading/best-score storage; inline `practice-table` worksheets (PDF 29 / 32); Unified Strength Points (exams + trainings + projects) on the existing six-rank ladder; Learning Materials desktop inset. Unit 4 conversion still paused. | done (awaiting review) |
 | **Project Performance, Achievement Hub & Profile Identity (this)** | Teacher stage scores → project grade /100 → project Strength /600 + six-band project rank (per project); generic achievement events (global/project rank-up, completion) with privacy + reactions + lifetime recognition; Achievement Hub «تقدّمي وقوتي»; teacher-managed student photo + preset avatars; teacher name / preset / own photo identity. Unit 4 still paused. | done (awaiting review) |
-| 4 | Interactive Practice — further inline checking families beyond closed-choice worksheets (free text, ordering, evaluator-backed hints) | deferred |
+| **Units 4–6 (this)** | Book 791381 source PDF **34–60** as complete modules `m08` (Class/Subnet/CIDR, order 4), `m09` (أجهزة الشبكات, order 5), `m10` (أنواع شبكات الاتصال, order 6); PDF 47 divider not rendered; interactive `PracticeBlockView`; activities `cidr-network-host/v1`, `gateway-flow/v1`, `hub-switch-router-flow/v1`, `network-topologies/v1`; server publication registry lists m08–m10 (publishable, never auto-published) | done (awaiting review) |
+| 4 | Interactive Practice — remaining inline checking families beyond closed-choice worksheets (free text, ordering, evaluator-backed hints) | deferred |
 | 5 | Simulations — real VLAN/subnet/CLI/… renderers registered behind the Phase-3A engine | deferred |
 | 6 | Student Progress — last page, completion, attempts (separate domain; attaches to the no-op event seam) | deferred |
 | 7 | Teacher Content Management — editors, publish/unpublish | deferred |
@@ -919,5 +1014,5 @@ targets another teacher.
 Phase 3 shipped the Reader **shell** first (synthetic/test content + the "قيد الإعداد" state for the real book).
 **PDF → native content conversion started in Phase 3B** and proceeds in small contiguous page ranges, each verified
 against the rendered source: **m01 (Unit 1) and m02 (Unit 2) are complete**, and **Phase 3E continues with Unit 3
-(«عناوين IP», module `m07`)**. Later units remain skeleton-only until their batch. The source PDF remains the
+(«عناوين IP», module `m07`)**; Units 4–6 (`m08`–`m10`, PDF 34–60) followed. Later units remain skeleton-only until their batch. The source PDF remains the
 authoritative source and is never bundled into production.

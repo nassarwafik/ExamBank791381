@@ -1,15 +1,16 @@
 // Learning Materials — Phase 3A: Interactive Learning ENGINE FOUNDATION (runtime contract).
 //
 // This module defines the trusted activity registry + the no-op event sink + the props every activity renderer
-// receives. It contains NO real simulations/animations and NO React components — those live behind code-split
-// import thunks registered here in later phases. Security invariants encoded here:
+// receives. It contains NO React components — every renderer lives behind a code-split import thunk registered
+// here. Security invariants encoded here:
 //   - Content supplies only a registry KEY (a plain string) + opaque `config` DATA — never a component name,
 //     function, module path, or executable code. There is no eval, no new Function, and no dynamic import of a
 //     string taken from content. A renderer is reached ONLY through a statically-authored `load` thunk.
-//   - The registry is TRUSTED code in this repo. The production registry is an EXACT allowlist: today it holds two
-//     interactive DIAGRAMS (network-scope/v1, ipv4-octets/v1) and NO real simulation/animation renderer; any
-//     descriptor without a trusted renderer for its exact identity renders its faithful static fallback, and an
-//     activity chunk is loaded only when a matching descriptor renders. Generic built-in presenters (builtins.ts)
+//   - The registry is TRUSTED code in this repo. The production registry is an EXACT six-entry allowlist
+//     (interactive-diagram: network-scope/v1, ipv4-octets/v1, cidr-network-host/v1, network-topologies/v1;
+//     animation: gateway-flow/v1; simulation: hub-switch-router-flow/v1); any descriptor without a trusted renderer
+//     for its exact identity renders its faithful static fallback, and an activity chunk is loaded only when a
+//     matching descriptor renders. Generic built-in presenters (builtins.ts)
 //     resolve with the same {kind, key, version} discipline — never by block type alone.
 //   - The engine performs ZERO persistence and ZERO network: the only sink shipped is a no-op (no progress, no
 //     grades, no rank, no /api). Progress is a separate later domain.
@@ -152,12 +153,13 @@ export function createActivityRegistry(entries: readonly RegisteredActivity[]): 
 
 /**
  * The PRODUCTION activity registry for REGISTRY-BACKED renderers (real simulations / animations / interactive
- * diagrams). It is an EXACT allowlist, currently: interactive-diagram/network-scope/v1 (Phase 3B) and
- * interactive-diagram/ipv4-octets/v1 (Phase 3E) — each behind a code-split `load` thunk, so a chunk is imported
- * only when a matching descriptor renders. There is still NO real simulation or animation renderer: such
- * descriptors render their faithful static fallback. The generic BUILT-IN presenters (see builtins.ts — currently
- * only guided/reveal/v1) are resolved separately with the same identity discipline. New renderers are registered
- * here in later phases; the Reader never changes.
+ * diagrams). It is an EXACT six-entry allowlist: interactive-diagram/network-scope/v1 (Phase 3B),
+ * interactive-diagram/ipv4-octets/v1 (Phase 3E), interactive-diagram/cidr-network-host/v1, animation/gateway-flow/v1,
+ * simulation/hub-switch-router-flow/v1 and interactive-diagram/network-topologies/v1 (Units 4–6) — each behind a
+ * code-split `load` thunk, so a chunk is imported only when a matching descriptor renders. Any other descriptor
+ * renders its faithful static fallback. The generic BUILT-IN presenters (see builtins.ts — currently only
+ * guided/reveal/v1) are resolved separately with the same identity discipline. New renderers are registered here;
+ * the Reader never changes.
  */
 export const productionActivityRegistry: LearningActivityRegistry = createActivityRegistry([
   // Phase 3B — the FIRST real registry-backed production activity (the PAN/LAN/WAN scope diagram for PDF 11).
@@ -179,5 +181,42 @@ export const productionActivityRegistry: LearningActivityRegistry = createActivi
     versions: [1],
     load: () => import("./IPv4OctetsDiagram"),
     capabilities: { fullscreen: true, reset: true, interactive: true },
+  },
+  // Units 4–6 phase — Unit 4 (PDF 40): the CIDR network-part / host-part visualizer (/8, /16, /24 at the book's
+  // whole-octet level, with a small "another device in the same network" task). Its own lazy chunk.
+  {
+    kind: "interactive-diagram",
+    key: "cidr-network-host",
+    versions: [1],
+    load: () => import("./CidrNetworkHostDiagram"),
+    capabilities: { fullscreen: true, reset: true, interactive: true },
+  },
+  // Units 4–6 phase — Unit 4 (PDF 45): the FIRST animation renderer — local traffic via the switch versus traffic
+  // that leaves through the default gateway. Stepped, text-mirrored, reduced-motion aware. Its own lazy chunk.
+  {
+    kind: "animation",
+    key: "gateway-flow",
+    versions: [1],
+    load: () => import("./GatewayFlowAnimation"),
+    capabilities: { fullscreen: true, reset: true, replay: true, animated: true, interactive: true },
+  },
+  // Units 4–6 phase — Unit 5 (PDF 49): the FIRST simulation renderer — Hub broadcasts to every attached device,
+  // Switch delivers to the intended device only, Router carries traffic between two networks (and out). Stepped,
+  // text-mirrored, reduced-motion aware, conceptual only. Its own lazy chunk.
+  {
+    kind: "simulation",
+    key: "hub-switch-router-flow",
+    versions: [1],
+    load: () => import("./HubSwitchRouterFlow"),
+    capabilities: { fullscreen: true, reset: true, replay: true, animated: true, interactive: true },
+  },
+  // Units 4–6 phase — Unit 6 (PDF 58–60): the topology explorer — P2P / Bus / Ring / Star / Tree / Hybrid redrawn
+  // on selection, «أرسل» path highlight with a text mirror, the book's conceptual Bus collision. Its own lazy chunk.
+  {
+    kind: "interactive-diagram",
+    key: "network-topologies",
+    versions: [1],
+    load: () => import("./NetworkTopologiesExplorer"),
+    capabilities: { fullscreen: true, reset: true, animated: true, interactive: true },
   },
 ]);

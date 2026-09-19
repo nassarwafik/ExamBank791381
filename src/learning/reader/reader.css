@@ -239,6 +239,31 @@
    SOURCE-ORDER CONTRACT: this block is the LAST rule set in the file. Its declarations override same-specificity
    base rules above (Phase 3B list / opener, 3C, 3E) by normal cascade order alone — no !important, no artificial
    specificity. Keep it after every base block it overrides (guarded by reader.layout.guards.test.ts). */
+/* ── Interactive inline practice (جرّب بنفسك): immediate local checking, hint ladder, retry ──────────────────── */
+.learning-reader-practice.is-interactive .learning-reader-practice-option{ width:100%; gap:var(--eb-space-2); text-align:start; font:inherit; cursor:pointer; transition:border-color var(--eb-dur) var(--eb-ease), background var(--eb-dur) var(--eb-ease); }
+.learning-reader-practice.is-interactive .learning-reader-practice-option:hover{ border-color:var(--eb-primary); }
+.learning-reader-practice.is-interactive .learning-reader-practice-option:focus-visible{ outline:2px solid var(--eb-primary); outline-offset:2px; }
+.learning-reader-practice-option.is-picked{ border-color:var(--eb-primary); background:var(--eb-primary-050); }
+.learning-reader-practice-option.is-picked.is-right{ border-color:var(--eb-success); }
+.learning-reader-practice-option.is-picked.is-wrong{ border-color:var(--eb-danger); }
+.learning-reader-practice-radio{ font-size:var(--eb-fs-14); color:var(--eb-primary-strong); flex:0 0 auto; }
+.learning-reader-practice-optiontext{ flex:1 1 auto; min-width:0; }
+.learning-reader-practice-form{ display:flex; flex-wrap:wrap; align-items:center; gap:var(--eb-space-2); }
+.learning-reader-practice-textinput{ min-height:44px; flex:1 1 12em; min-width:0; padding:var(--eb-space-1) var(--eb-space-2); border:1px solid var(--eb-line-2); border-radius:var(--eb-r); background:var(--eb-surface); color:var(--eb-text); font:inherit; font-family:ui-monospace, monospace; }
+.learning-reader-practice-textinput:focus-visible{ outline:2px solid var(--eb-primary); outline-offset:2px; }
+.learning-reader-practice-textinput.is-right{ border-color:var(--eb-success); }
+.learning-reader-practice-textinput.is-wrong{ border-color:var(--eb-danger); }
+.learning-reader-practice-verdict{ display:flex; flex-direction:column; gap:var(--eb-space-1); padding:var(--eb-space-2) var(--eb-space-3); border-radius:var(--eb-r); border:1px solid var(--eb-line); background:var(--eb-surface); }
+.learning-reader-practice-verdict.is-right{ border-color:var(--eb-success); }
+.learning-reader-practice-verdict.is-wrong{ border-color:var(--eb-danger); }
+.learning-reader-practice-verdict .learning-reader-practice-feedback{ margin:0; font-size:var(--eb-fs-14); }
+.learning-reader-practice-message, .learning-reader-practice-explain{ margin:0; color:var(--eb-text); font-size:var(--eb-fs-14); line-height:var(--eb-lh-body); }
+.learning-reader-practice-explain{ color:var(--eb-text-secondary); }
+.learning-reader-practice-hints{ margin:0; padding-inline-start:var(--eb-space-4); display:flex; flex-direction:column; gap:4px; color:var(--eb-text); font-size:var(--eb-fs-14); line-height:var(--eb-lh-body); }
+.learning-reader-practice-hintno{ margin-inline-end:var(--eb-space-1); padding:0 var(--eb-space-1); border-radius:var(--eb-r-sm); background:var(--eb-surface-2); color:var(--eb-text-secondary); font-size:var(--eb-fs-12); font-weight:var(--eb-fw-semibold); }
+.learning-reader-practice-actions{ display:flex; flex-wrap:wrap; gap:var(--eb-space-1); }
+@media (prefers-reduced-motion: reduce){ .learning-reader-practice.is-interactive .learning-reader-practice-option{ transition:none; } }
+
 @media (min-width: 1024px){
   .learning-reader-toc-toggle{ display:none; }
   .learning-reader-layout{ display:grid; grid-template-columns:minmax(240px, 300px) minmax(0, 1fr); gap:var(--eb-space-5); align-items:start; }

@@ -6,7 +6,8 @@
 // can neither be published nor become student-visible).
 //
 // ORDER is the explicit content order of the book (module `order` in the frontend manifest), NEVER a lexical
-// sort of ids: m07 («عناوين IP») is the book's Unit 3 and reads after m02 even though its id is not m03.
+// sort of ids: m07 («عناوين IP») is the book's Unit 3 and reads after m02 even though its id is not m03; m08–m10
+// are Units 4–6 (orders 4–6).
 //
 // FUTURE CONTENT ONBOARDING RULE: when a new unit is converted and approved, the developer appends its module
 // here (id, title, order). That alone makes it PUBLISHABLE (the teacher sees it as «مخفي عن الطلاب»); it is
@@ -23,7 +24,11 @@ const COURSES = [
     modules: [
       { moduleId: "791381-m01", title: "أساسيات الشبكات", order: 1 },
       { moduleId: "791381-m02", title: "الأعداد والموازين", order: 2 },
-      { moduleId: "791381-m07", title: "عناوين IP", order: 3 }
+      { moduleId: "791381-m07", title: "عناوين IP", order: 3 },
+      // Units 4–6 phase: publishable (the teacher sees them as «مخفي عن الطلاب»); NEVER auto-published to any class.
+      { moduleId: "791381-m08", title: "Class و Subnet و CIDR", order: 4 },
+      { moduleId: "791381-m09", title: "أجهزة الشبكات", order: 5 },
+      { moduleId: "791381-m10", title: "أنواع شبكات الاتصال", order: 6 }
     ]
   }
 ];

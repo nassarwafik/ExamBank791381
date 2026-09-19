@@ -5,17 +5,20 @@ import { listLearningCourses, findLearningCourse, listLearningModules, findLearn
 // teacher may publish. It lists exactly the production-approved, fully converted modules in the book's content
 // order (never a lexical id sort) and never the skeleton-only modules.
 
-const M = ["791381-m01", "791381-m02", "791381-m07"];
+const M = ["791381-m01", "791381-m02", "791381-m07", "791381-m08", "791381-m09", "791381-m10"];
 
 describe("registry — exact production catalog", () => {
-  it("lists exactly course 791381 with m01, m02, m07 in canonical content order (m07 = Unit 3 after m02)", () => {
+  it("lists exactly course 791381 with m01, m02, m07, m08, m09, m10 in canonical content order (m07 = Unit 3 after m02; m08–m10 = Units 4–6)", () => {
     const courses = listLearningCourses();
     expect(courses.map(c => c.courseId)).toEqual(["791381"]);
     expect(courses[0]).toMatchObject({ courseId: "791381", title: "شبكات الاتصال", subject: "أنظمة محوسبة" });
     expect(courses[0].modules).toEqual([
       { moduleId: "791381-m01", title: "أساسيات الشبكات", order: 1 },
       { moduleId: "791381-m02", title: "الأعداد والموازين", order: 2 },
-      { moduleId: "791381-m07", title: "عناوين IP", order: 3 }
+      { moduleId: "791381-m07", title: "عناوين IP", order: 3 },
+      { moduleId: "791381-m08", title: "Class و Subnet و CIDR", order: 4 },
+      { moduleId: "791381-m09", title: "أجهزة الشبكات", order: 5 },
+      { moduleId: "791381-m10", title: "أنواع شبكات الاتصال", order: 6 }
     ]);
   });
   it("never exposes skeleton-only modules (m03–m06) or any page/lesson body", () => {
@@ -50,7 +53,7 @@ describe("registry — lookups", () => {
 
 describe("registry — canonicalizeLearningModuleIds (storage-side, never throws)", () => {
   it("re-orders into canonical order, drops duplicates, blanks, unknown and skeleton ids", () => {
-    expect(canonicalizeLearningModuleIds("791381", ["791381-m07", " 791381-m01 ", "791381-m01", "", null, "791381-m03", "791381-m999"])).toEqual(["791381-m01", "791381-m07"]);
+    expect(canonicalizeLearningModuleIds("791381", ["791381-m10", "791381-m07", " 791381-m01 ", "791381-m01", "", null, "791381-m03", "791381-m999"])).toEqual(["791381-m01", "791381-m07", "791381-m10"]);
     expect(canonicalizeLearningModuleIds("791381", M.slice().reverse())).toEqual(M);
   });
   it("[] / non-array / unknown course → []", () => {

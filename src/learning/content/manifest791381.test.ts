@@ -80,13 +80,16 @@ describe("Phase 2 — 791381 content manifest", () => {
 describe("Phase 3E — historical module ids, titles and source mappings are IMMUTABLE; `order` is the sequencing authority", () => {
   const byId = Object.fromEntries(manifest.modules.map(m => [m.id, m]));
 
-  it("keeps every pre-existing module id (m01–m06) and adds Unit 3 as the next free id m07 — nothing renamed/repurposed", () => {
+  it("keeps every pre-existing module id (m01–m07) and adds the real Units 4–6 as the next free ids m08–m10 — nothing renamed/repurposed", () => {
     expect(manifest.modules.map(m => m.id)).toEqual([
-      "791381-m01", "791381-m02", "791381-m07", "791381-m03", "791381-m04", "791381-m05", "791381-m06",
+      "791381-m01", "791381-m02", "791381-m07", "791381-m08", "791381-m09", "791381-m10", "791381-m03", "791381-m04", "791381-m05", "791381-m06",
     ]);
-    expect(manifest.modules.map(m => m.order)).toEqual([1, 2, 3, 4, 5, 6, 7]);
+    expect(manifest.modules.map(m => m.order)).toEqual([1, 2, 3, 4, 5, 6, 7, 8, 9, 10]);
     expect(byId["791381-m07"].order).toBe(3);          // the book's Unit 3 reads third …
-    expect(byId["791381-m03"].order).toBe(4);          // … and the historical m03 skeleton merely shifts to 4
+    expect(byId["791381-m08"].order).toBe(4);          // … Unit 4 fourth, Unit 5 fifth …
+    expect(byId["791381-m09"].order).toBe(5);
+    expect(byId["791381-m10"].order).toBe(6);
+    expect(byId["791381-m03"].order).toBe(7);          // … and the historical m03 skeleton merely shifts after the real units
   });
 
   it("pins the historical m03–m06 skeleton titles and PDF source mappings exactly (id ≠ unit number ≠ position)", () => {
@@ -110,10 +113,10 @@ describe("Phase 3E — historical module ids, titles and source mappings are IMM
     expect(byId["791381-m02"].title).toBe("الأعداد والموازين");
   });
 
-  it("b1 now lists Unit 3 (m07) after m02; the batch id/label and the other batch mappings are unchanged", () => {
+  it("b1 lists Units 1–4 (m01, m02, m07, m08) in order; the batch id/label and the other batch mappings are unchanged", () => {
     const batches = Object.fromEntries(manifest.batches!.map(b => [b.id, b]));
     expect(batches.b1.label).toBe("الأساسيات · الأعداد · IP");
-    expect(batches.b1.moduleIds).toEqual(["791381-m01", "791381-m02", "791381-m07"]);
+    expect(batches.b1.moduleIds).toEqual(["791381-m01", "791381-m02", "791381-m07", "791381-m08"]);
     expect(batches.b4.moduleIds).toEqual(["791381-m03", "791381-m04", "791381-m05"]);   // CLI/VLAN NOT moved into b1
     expect(batches.b6.moduleIds).toEqual(["791381-m06"]);
   });
