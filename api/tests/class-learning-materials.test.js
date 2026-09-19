@@ -78,9 +78,25 @@ describe("no-auto-publish invariant — DEPLOYMENT ≠ PUBLICATION", () => {
     const student = JSON.stringify(buildStudentLearningMaterials(existing));
     for (const hidden of ["791381-m08", "791381-m09", "791381-m10", "Class و Subnet و CIDR", "أجهزة الشبكات", "أنواع شبكات الاتصال"]) expect(student).not.toContain(hidden);
     const registry = require("../src/lib/learning-materials-registry.js");
-    expect(registry.listLearningModules("791381").map(m => m.moduleId)).toEqual([M01, M02, M07, "791381-m08", "791381-m09", "791381-m10"]);
+    expect(registry.listLearningModules("791381").map(m => m.moduleId)).toEqual([M01, M02, M07, "791381-m08", "791381-m09", "791381-m10", "791381-m11", "791381-m12"]);
     expect(registry.validateLearningModuleIds("791381", ["791381-m10", "791381-m08"])).toEqual(["791381-m08", "791381-m10"]);   // explicit publication path
     expect(JSON.stringify(existing)).not.toContain("m08");                                                                    // the class document is untouched
+  });
+  it("REAL registry (Units 7–8): a class released only through m10 sees NOTHING of m11/m12 for its students; the teacher CAN publish [m12, m11] → canonical [m11, m12]; the class document is untouched", () => {
+    const through10 = [M01, M02, M07, "791381-m08", "791381-m09", "791381-m10"];
+    const existing = room("c2", { learningMaterials: [{ courseId: "791381", visibleModuleIds: through10 }] });
+    expect(getVisibleLearningModuleIds(existing, "791381")).toEqual(through10);
+    const student = JSON.stringify(buildStudentLearningMaterials(existing));
+    for (const hidden of ["791381-m11", "791381-m12", "الكوابل وعنوان MAC", "أنواع الرسائل"]) expect(student).not.toContain(hidden);
+    const registry = require("../src/lib/learning-materials-registry.js");
+    expect(registry.findLearningModule("791381", "791381-m11")).toEqual({ moduleId: "791381-m11", title: "الكوابل وعنوان MAC", order: 7 });
+    expect(registry.findLearningModule("791381", "791381-m12")).toEqual({ moduleId: "791381-m12", title: "أنواع الرسائل", order: 8 });
+    expect(registry.validateLearningModuleIds("791381", ["791381-m12", "791381-m11"])).toEqual(["791381-m11", "791381-m12"]);
+    expect(JSON.stringify(existing)).not.toMatch(/m11|m12/);
+    // student access = class publication ∩ registry: a stale/hand-edited id for a module the registry knows but the
+    // class never published is not visible either
+    expect(getVisibleLearningModuleIds(room("c3", { learningMaterials: [{ courseId: "791381", visibleModuleIds: [M01, "791381-m12"] }] }), "791381")).toEqual([M01, "791381-m12"]);   // published explicitly → visible
+    expect(getVisibleLearningModuleIds(room("c4", { learningMaterials: [{ courseId: "791381", visibleModuleIds: [M01] }] }), "791381")).toEqual([M01]);                            // not published → hidden
   });
   it("a NEWLY registered module (future Unit 4) is NOT appended to any existing class's visibleModuleIds", () => {
     const future = {

@@ -139,7 +139,9 @@ describe("learning-materials-catalog — teacher catalog endpoint", () => {
     expect(r.jsonBody).toEqual({ ok: true, courses: [{ courseId: "791381", title: "شبكات الاتصال", subject: "أنظمة محوسبة", modules: [
       { moduleId: M01, title: "أساسيات الشبكات", order: 1 }, { moduleId: M02, title: "الأعداد والموازين", order: 2 }, { moduleId: M07, title: "عناوين IP", order: 3 },
       // Units 4–6 phase: publishable metadata only — being listed here NEVER makes a module visible to any class.
-      { moduleId: "791381-m08", title: "Class و Subnet و CIDR", order: 4 }, { moduleId: "791381-m09", title: "أجهزة الشبكات", order: 5 }, { moduleId: "791381-m10", title: "أنواع شبكات الاتصال", order: 6 }
+      { moduleId: "791381-m08", title: "Class و Subnet و CIDR", order: 4 }, { moduleId: "791381-m09", title: "أجهزة الشبكات", order: 5 }, { moduleId: "791381-m10", title: "أنواع شبكات الاتصال", order: 6 },
+      // Units 7–8 phase: same rule — listed = publishable, never auto-visible.
+      { moduleId: "791381-m11", title: "الكوابل وعنوان MAC", order: 7 }, { moduleId: "791381-m12", title: "أنواع الرسائل", order: 8 }
     ] }] });
     expect(JSON.stringify(r.jsonBody)).not.toMatch(/m03|m04|m05|m06|pages|lessons|blocks|answer|pdf/i);
   });

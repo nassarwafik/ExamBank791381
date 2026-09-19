@@ -219,4 +219,41 @@ export const productionActivityRegistry: LearningActivityRegistry = createActivi
     load: () => import("./NetworkTopologiesExplorer"),
     capabilities: { fullscreen: true, reset: true, animated: true, interactive: true },
   },
+  // Units 7–8 phase — Unit 7 (PDF 62–63): the cable comparison / chooser — UTP, STP, Fiber Optic, Coaxial with the
+  // book's traits, then teacher-enrichment scenarios with immediate feedback. No timers. Its own lazy chunk.
+  {
+    kind: "interactive-diagram",
+    key: "cable-comparison",
+    versions: [1],
+    load: () => import("./CableComparisonDiagram"),
+    capabilities: { fullscreen: true, reset: true, interactive: true },
+  },
+  // Units 7–8 phase — Unit 7 (PDF 64): the MAC address anatomy — six two-digit groups (12 hex digits), the
+  // broadcast MAC toggle, the "which string has the MAC shape?" task. No timers. Its own lazy chunk.
+  {
+    kind: "interactive-diagram",
+    key: "mac-address-anatomy",
+    versions: [1],
+    load: () => import("./MacAddressAnatomy"),
+    capabilities: { fullscreen: true, reset: true, interactive: true },
+  },
+  // Units 7–8 phase — Unit 8 (PDF 67–69): the SECOND simulation renderer — Unicast (one receiver), Multicast (the
+  // selected group), Broadcast (every local device; the Router boundary «يتوقّف هنا»). Stepped, prose-mirrored,
+  // reduced-motion aware, conceptual only. Its own lazy chunk.
+  {
+    kind: "simulation",
+    key: "message-delivery",
+    versions: [1],
+    load: () => import("./MessageDeliverySimulation"),
+    capabilities: { fullscreen: true, reset: true, replay: true, animated: true, interactive: true },
+  },
+  // Units 7–8 phase — Unit 8 (PDF 70): the broadcast-address builder at the book's whole-octet level (/8, /16, /24
+  // only): inspect the book's rows, then build the address by making host octets 255. No timers. Its own lazy chunk.
+  {
+    kind: "interactive-diagram",
+    key: "broadcast-address",
+    versions: [1],
+    load: () => import("./BroadcastAddressBuilder"),
+    capabilities: { fullscreen: true, reset: true, interactive: true },
+  },
 ]);

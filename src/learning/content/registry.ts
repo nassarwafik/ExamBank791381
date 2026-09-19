@@ -30,7 +30,7 @@ const COURSE_MANIFESTS: Record<string, ManifestLoader> = {
 };
 
 // Module BODY loaders per course. Each converted module body is registered here as its own
-// `import("./791381/modules/<id>")` chunk (m01, m02, m07, m08, m09 and m10 today); manifest modules without an entry are still
+// `import("./791381/modules/<id>")` chunk (m01, m02, m07, m08, m09, m10, m11 and m12 today); manifest modules without an entry are still
 // skeleton-only and the Reader shows them as «قيد الإعداد».
 const COURSE_MODULE_LOADERS: Record<string, Record<string, ModuleLoader>> = {
   // REAL module bodies, each its own lazy chunk; the main bundle imports none of these eagerly.
@@ -40,6 +40,8 @@ const COURSE_MODULE_LOADERS: Record<string, Record<string, ModuleLoader>> = {
   //         `m03`: the historical m03 skeleton (CLI/VLAN, PDF 123+) keeps its id; reading position comes from `order`.
   //   m08 — Unit 4 «Class و Subnet و CIDR» (PDF 34–46), m09 — Unit 5 «أجهزة الشبكات» (PDF 48–56; PDF 47 is the batch
   //         divider), m10 — Unit 6 «أنواع شبكات الاتصال» (PDF 57–60): complete (Units 4–6 phase), orders 4–6.
+  //   m11 — Unit 7 «الكوابل وعنوان MAC» (PDF 61–65), m12 — Unit 8 «أنواع الرسائل» + the batch-2 summary (PDF 66–75):
+  //         complete (Units 7–8 phase), orders 7–8. PDF 76+ (batch 3) is not converted.
   // The remaining skeleton modules (m03–m06) have no body yet, so the Reader shows them as «قيد الإعداد».
   "791381": {
     "791381-m01": () => import("./791381/modules/m01"),
@@ -48,6 +50,8 @@ const COURSE_MODULE_LOADERS: Record<string, Record<string, ModuleLoader>> = {
     "791381-m08": () => import("./791381/modules/m08"),
     "791381-m09": () => import("./791381/modules/m09"),
     "791381-m10": () => import("./791381/modules/m10"),
+    "791381-m11": () => import("./791381/modules/m11"),
+    "791381-m12": () => import("./791381/modules/m12"),
   },
 };
 
@@ -71,7 +75,7 @@ export async function loadCourseManifest(courseId: string): Promise<LearningCour
   return (await loader()).default;
 }
 
-/** Whether a specific module BODY is registered (791381: m01, m02, m07, m08, m09, m10 today). Pure, no import triggered. */
+/** Whether a specific module BODY is registered (791381: m01, m02, m07, m08, m09, m10, m11, m12 today). Pure, no import triggered. */
 export function hasModuleContent(courseId: string, moduleId: string): boolean {
   return Boolean(COURSE_MODULE_LOADERS[courseId] && Object.prototype.hasOwnProperty.call(COURSE_MODULE_LOADERS[courseId], moduleId));
 }

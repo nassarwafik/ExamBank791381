@@ -279,12 +279,102 @@ const manifest: LearningCourseManifest = {
       ],
     },
     {
+      // Units 7–8 phase: the book's REAL Unit 7 «الكوابل وعنوان MAC» (PDF 61–65), complete. Stable id m11, order 7.
+      id: "791381-m11",
+      title: "الكوابل وعنوان MAC",
+      shortTitle: "الكوابل و MAC",
+      order: 7,
+      lessons: [
+        {
+          id: "791381-m11-l00",
+          title: "افتتاحية الوحدة",
+          order: 0,
+          pages: [
+            { id: "791381-m11-l00-p01", title: "الكوابل وعنوان MAC", order: 1, source: { kind: "book", sourceId: "791381", pdfPageStart: 61 }, keywords: ["مقدمة", "الوحدة السابعة", "الكوابل", "MAC"] },
+          ],
+        },
+        {
+          id: "791381-m11-l01",
+          title: "كوابل الشبكة",
+          order: 1,
+          pages: [
+            { id: "791381-m11-l01-p01", title: "الكوابل المستعملة في الشبكات", order: 1, source: { kind: "book", sourceId: "791381", pdfPageStart: 62, printedPage: 62 }, keywords: ["UTP", "STP", "زوج ملتوي", "التشويش"] },
+            { id: "791381-m11-l01-p02", title: "أنواع أخرى من الكوابل", order: 2, source: { kind: "book", sourceId: "791381", pdfPageStart: 63, printedPage: 63 }, keywords: ["Fiber Optic", "Coaxial", "ألياف بصرية", "كابل محوري"] },
+          ],
+        },
+        {
+          id: "791381-m11-l02",
+          title: "عنوان MAC واستخداماته",
+          order: 2,
+          pages: [
+            { id: "791381-m11-l02-p01", title: "عنوان MAC Address", order: 1, source: { kind: "book", sourceId: "791381", pdfPageStart: 64, printedPage: 64 }, keywords: ["MAC", "MAC Address", "سداسي عشري", "FF:FF:FF:FF:FF:FF"] },
+            { id: "791381-m11-l02-p02", title: "استخدامات MAC Address", order: 2, source: { kind: "book", sourceId: "791381", pdfPageStart: 65, printedPage: 65 }, keywords: ["استخدامات MAC", "الأمان", "الجدار الناري"] },
+          ],
+        },
+      ],
+    },
+    {
+      // Units 7–8 phase: the book's REAL Unit 8 «أنواع الرسائل» (PDF 66–74) + the batch-2 summary page (PDF 75) as its
+      // last lesson. Stable id m12, order 8. PDF 76 opens batch 3 and is NOT converted.
+      id: "791381-m12",
+      title: "أنواع الرسائل",
+      shortTitle: "أنواع الرسائل",
+      order: 8,
+      lessons: [
+        {
+          id: "791381-m12-l00",
+          title: "افتتاحية الوحدة",
+          order: 0,
+          pages: [
+            { id: "791381-m12-l00-p01", title: "أنواع الرسائل", order: 1, source: { kind: "book", sourceId: "791381", pdfPageStart: 66 }, keywords: ["مقدمة", "الوحدة الثامنة", "أنواع الرسائل"] },
+          ],
+        },
+        {
+          id: "791381-m12-l01",
+          title: "Unicast / Multicast / Broadcast",
+          order: 1,
+          pages: [
+            { id: "791381-m12-l01-p01", title: "Unicast / Multicast / Broadcast", order: 1, source: { kind: "book", sourceId: "791381", pdfPageStart: 67, printedPage: 67 }, keywords: ["Unicast", "Multicast", "Broadcast"] },
+            { id: "791381-m12-l01-p02", title: "Unicast و Multicast", order: 2, source: { kind: "book", sourceId: "791381", pdfPageStart: 68, printedPage: 68 }, keywords: ["Unicast", "Multicast", "بث فيديو"] },
+            { id: "791381-m12-l01-p03", title: "Broadcast", order: 3, source: { kind: "book", sourceId: "791381", pdfPageStart: 69, printedPage: 69 }, keywords: ["Broadcast", "الراوتر", "FF:FF:FF:FF:FF:FF"] },
+          ],
+        },
+        {
+          id: "791381-m12-l02",
+          title: "عنوان Broadcast والبروتوكولات",
+          order: 2,
+          pages: [
+            { id: "791381-m12-l02-p01", title: "كيف نعرف عنوان Broadcast؟", order: 1, source: { kind: "book", sourceId: "791381", pdfPageStart: 70, printedPage: 70 }, keywords: ["عنوان Broadcast", "/8", "/16", "/24"] },
+            { id: "791381-m12-l02-p02", title: "بروتوكولات تستعمل Broadcast", order: 2, source: { kind: "book", sourceId: "791381", pdfPageStart: 71, printedPage: 71 }, keywords: ["ARP", "DHCP", "RIP"] },
+          ],
+        },
+        {
+          id: "791381-m12-l03",
+          title: "وحدات التخزين ومبنى الرسالة",
+          order: 3,
+          pages: [
+            { id: "791381-m12-l03-p01", title: "وحدات التخزين", order: 1, source: { kind: "book", sourceId: "791381", pdfPageStart: 72, printedPage: 72 }, keywords: ["Bit", "Byte", "KB", "MB", "GB", "TB"] },
+            { id: "791381-m12-l03-p02", title: "مبنى الرسائل في الشبكات", order: 2, source: { kind: "book", sourceId: "791381", pdfPageStart: 73, printedPage: 73 }, keywords: ["IP المصدر", "IP الهدف", "MAC المصدر", "MAC الهدف"] },
+            { id: "791381-m12-l03-p03", title: "مبنى رسالة Broadcast", order: 3, source: { kind: "book", sourceId: "791381", pdfPageStart: 74, printedPage: 74 }, keywords: ["Broadcast Domain", "MAC الهدف"] },
+          ],
+        },
+        {
+          id: "791381-m12-l04",
+          title: "خلاصة الدفعة الثانية",
+          order: 4,
+          pages: [
+            { id: "791381-m12-l04-p01", title: "نهاية الدفعة الثانية — خلاصة سريعة", order: 1, source: { kind: "book", sourceId: "791381", pdfPageStart: 75 }, keywords: ["خلاصة", "الدفعة الثانية"] },
+          ],
+        },
+      ],
+    },
+    {
       // Historical Phase-2 skeleton (PDF 123+). Its ID and source mappings are immutable; only its reading `order`
-      // shifts as real units are converted (3 → 4 in Phase 3E; 4 → 7 when Units 4–6 became m08–m10).
+      // shifts as real units are converted (3 → 4 in Phase 3E; 4 → 7 when Units 4–6 became m08–m10; 7 → 9 when Units 7–8 became m11–m12).
       id: "791381-m03",
       title: "برمجة السويتش CLI و VLAN",
       shortTitle: "CLI و VLAN",
-      order: 7,
+      order: 9,
       lessons: [
         {
           id: "791381-m03-l01",
@@ -301,7 +391,7 @@ const manifest: LearningCourseManifest = {
       id: "791381-m04",
       title: "Trunk و Router on a Stick",
       shortTitle: "Trunk",
-      order: 8,
+      order: 10,
       lessons: [
         {
           id: "791381-m04-l01",
@@ -317,7 +407,7 @@ const manifest: LearningCourseManifest = {
       id: "791381-m05",
       title: "مرجع أوامر Cisco",
       shortTitle: "أوامر Cisco",
-      order: 9,
+      order: 11,
       lessons: [
         {
           id: "791381-m05-l01",
@@ -334,7 +424,7 @@ const manifest: LearningCourseManifest = {
       id: "791381-m06",
       title: "قوائم التحكم ACL",
       shortTitle: "ACL",
-      order: 10,
+      order: 12,
       lessons: [
         {
           id: "791381-m06-l01",
@@ -355,7 +445,7 @@ const manifest: LearningCourseManifest = {
   batches: [
     { id: "intro", label: "المقدمة", moduleIds: [] },
     { id: "b1", label: "الأساسيات · الأعداد · IP", moduleIds: ["791381-m01", "791381-m02", "791381-m07", "791381-m08"] },
-    { id: "b2", label: "الأجهزة والرسائل", moduleIds: ["791381-m09", "791381-m10"] },
+    { id: "b2", label: "الأجهزة والرسائل", moduleIds: ["791381-m09", "791381-m10", "791381-m11", "791381-m12"] },
     { id: "b3", label: "النماذج والبروتوكولات والأمان", moduleIds: [] },
     { id: "b4", label: "برمجة السويتش و VLAN", moduleIds: ["791381-m03", "791381-m04", "791381-m05"] },
     { id: "b5", label: "الأمان · Wi-Fi · IPv6 · DHCP", moduleIds: [] },
