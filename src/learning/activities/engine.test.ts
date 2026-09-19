@@ -10,8 +10,8 @@ import { simBlock, animBlock, unsupportedVersionBlock, unregisteredBlock } from 
 const nullComponent: ActivityComponent = () => null;
 const noop = async () => ({ default: nullComponent });
 
-describe("production activity registry is an EXACT allowlist (3B, 3E, Units 4–6 and Units 7–8 renderers)", () => {
-  it("registers ONLY the ten allowlisted renderers: network-scope, ipv4-octets, cidr-network-host, gateway-flow, hub-switch-router-flow, network-topologies, cable-comparison, mac-address-anatomy, message-delivery, broadcast-address (all v1)", () => {
+describe("production activity registry is an EXACT allowlist (3B, 3E, Units 4–6, Units 7–8 and Batch 3 renderers)", () => {
+  it("registers ONLY the eleven allowlisted renderers: network-scope, ipv4-octets, cidr-network-host, gateway-flow, hub-switch-router-flow, network-topologies, cable-comparison, mac-address-anatomy, message-delivery, broadcast-address, osi-layers (all v1)", () => {
     expect(productionActivityRegistry.list()).toEqual([
       { kind: "interactive-diagram", key: "network-scope", versions: [1] },
       { kind: "interactive-diagram", key: "ipv4-octets", versions: [1] },
@@ -23,8 +23,9 @@ describe("production activity registry is an EXACT allowlist (3B, 3E, Units 4–
       { kind: "interactive-diagram", key: "mac-address-anatomy", versions: [1] },
       { kind: "simulation", key: "message-delivery", versions: [1] },
       { kind: "interactive-diagram", key: "broadcast-address", versions: [1] },
+      { kind: "interactive-diagram", key: "osi-layers", versions: [1] },
     ]);
-    expect(productionActivityRegistry.size).toBe(10);
+    expect(productionActivityRegistry.size).toBe(11);
     expect(productionActivityRegistry.has("interactive-diagram", "network-scope")).toBe(true);
     expect(productionActivityRegistry.has("interactive-diagram", "ipv4-octets")).toBe(true);
   });

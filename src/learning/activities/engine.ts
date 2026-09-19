@@ -8,7 +8,7 @@
 //     string taken from content. A renderer is reached ONLY through a statically-authored `load` thunk.
 //   - The registry is TRUSTED code in this repo. The production registry is an EXACT allowlist — every entry is
 //     enumerated in `productionActivityRegistry` below and pinned by engine.test.ts / activities.guards.test.ts
-//     (ten entries at the Units 7–8 phase); any descriptor without a trusted renderer for its exact identity
+//     (eleven entries at the Batch-3 phase); any descriptor without a trusted renderer for its exact identity
 //     renders its faithful static fallback, and an activity chunk is loaded only when a matching descriptor renders. Generic built-in presenters (builtins.ts)
 //     resolve with the same {kind, key, version} discipline — never by block type alone.
 //   - The engine performs ZERO persistence and ZERO network: the only sink shipped is a no-op (no progress, no
@@ -152,10 +152,11 @@ export function createActivityRegistry(entries: readonly RegisteredActivity[]): 
 
 /**
  * The PRODUCTION activity registry for REGISTRY-BACKED renderers (real simulations / animations / interactive
- * diagrams). It is an EXACT allowlist of the entries below — ten at the Units 7–8 phase: interactive-diagram
- * network-scope/v1 (Phase 3B), ipv4-octets/v1 (Phase 3E), cidr-network-host/v1 and network-topologies/v1 (Units 4–6),
- * cable-comparison/v1, mac-address-anatomy/v1 and broadcast-address/v1 (Units 7–8); animation gateway-flow/v1
- * (Units 4–6); simulation hub-switch-router-flow/v1 (Units 4–6) and message-delivery/v1 (Units 7–8) — each behind a
+ * diagrams). It is an EXACT allowlist of the entries below (pinned by engine.test.ts / activities.guards.test.ts):
+ * interactive-diagram network-scope/v1 (Phase 3B), ipv4-octets/v1 (Phase 3E), cidr-network-host/v1 and
+ * network-topologies/v1 (Units 4–6), cable-comparison/v1, mac-address-anatomy/v1 and broadcast-address/v1 (Units 7–8),
+ * osi-layers/v1 (Batch 3); animation gateway-flow/v1 (Units 4–6); simulation hub-switch-router-flow/v1 (Units 4–6)
+ * and message-delivery/v1 (Units 7–8) — each behind a
  * code-split `load` thunk, so a chunk is imported only when a matching descriptor renders. Any other descriptor
  * renders its faithful static fallback. The generic BUILT-IN presenters (see builtins.ts — currently only
  * guided/reveal/v1) are resolved separately with the same identity discipline. New renderers are registered here;
@@ -254,6 +255,15 @@ export const productionActivityRegistry: LearningActivityRegistry = createActivi
     key: "broadcast-address",
     versions: [1],
     load: () => import("./BroadcastAddressBuilder"),
+    capabilities: { fullscreen: true, reset: true, interactive: true },
+  },
+  // Batch 3 — «نماذج الاتصال» (PDF 80): the OSI seven-layer explorer — tap a layer for its book function, send
+  // (7 → 1) / receive (1 → 7) order toggle. No timers, no protocol functions. Its own lazy chunk.
+  {
+    kind: "interactive-diagram",
+    key: "osi-layers",
+    versions: [1],
+    load: () => import("./OsiLayersExplorer"),
     capabilities: { fullscreen: true, reset: true, interactive: true },
   },
 ]);
