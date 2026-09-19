@@ -168,10 +168,12 @@ const CALLOUT_LABELS: Record<CalloutKind, string> = {
  *  `plain` → a simple list. Semantic <ul>/<li>; term is a real <strong>; text is safe spans, never raw HTML. */
 function ListView({ block }: { block: ListBlock }) {
   const variant = block.variant ?? "cards";
+  // An "ordered" list is a real <ol> (numbered procedure); every other variant is a semantic <ul>.
+  const ListTag = variant === "ordered" ? "ol" : "ul";
   return (
     <div className={"learning-reader-list variant-" + variant}>
       {block.title && <p className="learning-reader-list-title">{block.title}</p>}
-      <ul className="learning-reader-list-items">
+      <ListTag className="learning-reader-list-items">
         {block.items.map(it => (
           <li key={it.id} className="learning-reader-list-item">
             {variant === "checklist" && <IconCheck size={16} className="learning-reader-list-check" aria-hidden="true" />}
@@ -182,7 +184,7 @@ function ListView({ block }: { block: ListBlock }) {
             </div>
           </li>
         ))}
-      </ul>
+      </ListTag>
     </div>
   );
 }
@@ -231,7 +233,7 @@ function renderBlock(block: ContentBlock, ctx: ActivityRenderContext): ReactNode
     case "table":
       return (
         <div className="learning-reader-tablewrap">
-          <table className="learning-reader-table">
+          <table className="learning-reader-table" dir={block.dir}>
             {block.caption && <caption>{block.caption}</caption>}
             <thead><tr>{block.headers.map((h, i) => <th key={i} scope="col">{h}</th>)}</tr></thead>
             <tbody>{block.rows.map((row, r) => <tr key={r}>{row.map((cell, c) => <td key={c}>{cell}</td>)}</tr>)}</tbody>

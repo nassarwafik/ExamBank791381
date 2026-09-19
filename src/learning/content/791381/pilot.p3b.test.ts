@@ -13,7 +13,8 @@ const pilotCourse: LearningCourseContent = {
   modules: [m01, m02],
 };
 
-const allPages = [m01, m02].flatMap(m => m.lessons.flatMap(l => l.pages));
+// Phase 3B assertions are scoped to the 3B batch (PDF 7–14); Phase 3C (PDF 15–22) is covered by its own test.
+const allPages = [m01, m02].flatMap(m => m.lessons.flatMap(l => l.pages)).filter(p => p.source.pdfPageStart <= 14);
 const pageBy = (id: string): ContentPage => allPages.find(p => p.id === id)!;
 const blocksText = (p: ContentPage): string => JSON.stringify(p.blocks);
 const flatSpanText = (p: ContentPage): string => {

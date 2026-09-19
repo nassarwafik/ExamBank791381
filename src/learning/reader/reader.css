@@ -198,3 +198,15 @@
 .learning-reader-opener-subtitle{ margin:0; color:var(--eb-text-secondary); font-size:var(--eb-fs-16); line-height:var(--eb-lh-body); }
 .learning-reader-opener-goal{ align-self:flex-start; margin:0; padding:var(--eb-space-2) var(--eb-space-3);
   border-radius:var(--eb-pill); background:var(--eb-primary-050); color:var(--eb-primary-strong); font-size:var(--eb-fs-14); font-weight:var(--eb-fw-medium); }
+
+/* ── Phase 3C: ordered (numbered) list variant for procedures/methods ──────────────────────────────────────── */
+.learning-reader-list.variant-ordered .learning-reader-list-items{ grid-template-columns:1fr; counter-reset:eb-step; }
+.learning-reader-list.variant-ordered .learning-reader-list-item{ counter-increment:eb-step; align-items:center; }
+.learning-reader-list.variant-ordered .learning-reader-list-item::before{
+  content:counter(eb-step); flex:0 0 auto; display:inline-grid; place-items:center; min-width:26px; height:26px;
+  border-radius:var(--eb-pill); background:var(--eb-primary-050); color:var(--eb-primary-strong);
+  font-size:var(--eb-fs-13); font-weight:var(--eb-fw-bold); }
+
+/* Numeric tables (place-value / conversion) opt into dir="ltr" so columns read MSB→LSB left-to-right (never
+   reversed under RTL). The wrapper still scrolls horizontally on small screens instead of the page. */
+.learning-reader-table[dir="ltr"]{ direction:ltr; }
