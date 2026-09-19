@@ -11,6 +11,11 @@ const { normalizeClassStatus, applyClassLifecycleAction } = require("../lib/clas
 const { recordAuditEvent } = require("../lib/audit-log");
 const { isSupportedProject } = require("../lib/project-tracker/registry");
 const { getClassProgramCodes, validateProgramCodes } = require("../lib/project-tracker/class-programs");
+// Class Learning Materials — an INDEPENDENT domain from projects (programCodes): which book/course a class uses
+// and which of its modules are currently published to students. Normalization + validation live in the lib; the
+// handler only wires auth, lifecycle, CAS persistence and audit.
+const { getClassLearningMaterials, setClassLearningCourseModules, removeClassLearningCourse } = require("../lib/class-learning-materials");
+const { validateLearningModuleIds, findLearningCourse } = require("../lib/learning-materials-registry");
 
 // A class's programCode is valid only when it is empty (no project) or a project the registry knows.
 // Pure + exported so the rule is unit-tested and enforced server-side (never trusting the UI).
@@ -20,6 +25,8 @@ function programCodeAccepted(programCode) {
 }
 
 const CONFLICT_MESSAGE = "حدث تعارض مؤقت أثناء حفظ البيانات. حاول مرة أخرى.";
+// Thrown inside a CAS callback to mean "nothing to write" (idempotent no-op); carries the current document.
+class NoChange extends Error { constructor(document) { super("no-change"); this.name = "NoChange"; this.document = document; } }
 const BANK_CONTAINER = "bank";
 const CLASS_PREFIX = "platform/classes/";
 const USER_PREFIX = "platform/users/";
@@ -75,6 +82,9 @@ async function listClasses(container, dl) {
       archiveReason: document.archiveReason || "",
       graduationYear: document.graduationYear || "",
       studentCount: Array.isArray(document.studentIds) ? document.studentIds.length : 0,
+      // Normalized learning materials (course assignment + published module ids); [] when none. Derived from
+      // this same document — no extra storage read.
+      learningMaterials: getClassLearningMaterials(document),
       createdAt: String(document.createdAt || "")
     });
   }
@@ -85,6 +95,13 @@ async function listClasses(container, dl) {
 // A class's project link may be changed only while the class is active (an archived class is read-only
 // for the project tracker). Pure + exported so the rule is unit-tested.
 function programChangeAllowed(classroom) {
+  return normalizeClassStatus(classroom) !== "archived";
+}
+
+// Learning materials (course assignment / module publication) may be changed only while the class is active — an
+// archived class is read-only for its teacher (view configuration, no publish/hide/remove). Same authority as the
+// project link: normalizeClassStatus, never the raw `active` flag alone. Pure + exported for unit tests.
+function learningMaterialsChangeAllowed(classroom) {
   return normalizeClassStatus(classroom) !== "archived";
 }
 
@@ -190,6 +207,71 @@ async function handler(request, deps = {}, obs = null) {
       }
     }
 
+    // Class Learning Materials — setLearningCourseModules: attach the course to the class if needed, then set
+    // EXACTLY which of its modules are published to students (moduleIds:[] = attached, nothing released). Ids are
+    // validated against the SERVER registry (unknown course/module → 400, skeleton modules are unknown here),
+    // de-duplicated and canonicalized into content order. CAS-protected; touches ONLY learningMaterials +
+    // updatedAt (projects, roster, lifecycle fields untouched). Archived class → 403. Audited.
+    if (action === "setlearningcoursemodules") {
+      const classId = String(body?.classId || "").trim();
+      const courseId = String(body?.courseId || "").trim();
+      if (!classId) return { status: 400, jsonBody: { ok: false, error: "classId is required." } };
+      if (!courseId) return { status: 400, jsonBody: { ok: false, error: "courseId is required." } };
+      let moduleIds;
+      try {
+        moduleIds = validateLearningModuleIds(courseId, body?.moduleIds);
+      } catch (e) {
+        return { status: e.httpStatus || 400, jsonBody: { ok: false, error: e.message } };
+      }
+      try {
+        const updated = await mut(container, CLASS_PREFIX + classId + ".json", current => {
+          if (!current) { const notFound = new Error("الصف غير موجود."); notFound.httpStatus = 404; throw notFound; }
+          if (!learningMaterialsChangeAllowed(current)) { const blocked = new Error("الصف مؤرشف — لا يمكن تعديل مواده التعليمية."); blocked.httpStatus = 403; throw blocked; }
+          const next = setClassLearningCourseModules(current, courseId, moduleIds);
+          next.updatedAt = new Date().toISOString();
+          return next;
+        });
+        const learningMaterials = getClassLearningMaterials(updated);
+        await rec(container, { actor: auth.user?.sub, action: "class.learningMaterials.setModules", targetType: "class", targetId: classId, targetLabel: String(updated.name || ""), details: { courseId, moduleIds } });
+        return { status: 200, jsonBody: { ok: true, classId, learningMaterials } };
+      } catch (mutateError) {
+        if (mutateError instanceof StorageConflictError) return { status: 503, jsonBody: { ok: false, error: CONFLICT_MESSAGE } };
+        if (mutateError?.httpStatus) return { status: mutateError.httpStatus, jsonBody: { ok: false, error: mutateError.message } };
+        throw mutateError;
+      }
+    }
+
+    // Class Learning Materials — removeLearningCourse: detach the course (and its publication list) from THIS
+    // class. Content is never deleted; students, assignments and projects are untouched. IDEMPOTENT: removing a
+    // course that is not attached is a 200 with removed:false and writes/audits nothing. Archived class → 403.
+    if (action === "removelearningcourse") {
+      const classId = String(body?.classId || "").trim();
+      const courseId = String(body?.courseId || "").trim();
+      if (!classId) return { status: 400, jsonBody: { ok: false, error: "classId is required." } };
+      if (!courseId) return { status: 400, jsonBody: { ok: false, error: "courseId is required." } };
+      let removed = false;
+      let updated = null;
+      try {
+        updated = await mut(container, CLASS_PREFIX + classId + ".json", current => {
+          if (!current) { const notFound = new Error("الصف غير موجود."); notFound.httpStatus = 404; throw notFound; }
+          if (!learningMaterialsChangeAllowed(current)) { const blocked = new Error("الصف مؤرشف — لا يمكن تعديل مواده التعليمية."); blocked.httpStatus = 403; throw blocked; }
+          const result = removeClassLearningCourse(current, courseId);
+          if (!result.changed) throw new NoChange(current);   // idempotent no-op: nothing is written
+          result.classroom.updatedAt = new Date().toISOString();
+          return result.classroom;
+        });
+        removed = true;
+      } catch (mutateError) {
+        if (mutateError instanceof NoChange) { updated = mutateError.document; removed = false; }
+        else if (mutateError instanceof StorageConflictError) return { status: 503, jsonBody: { ok: false, error: CONFLICT_MESSAGE } };
+        else if (mutateError?.httpStatus) return { status: mutateError.httpStatus, jsonBody: { ok: false, error: mutateError.message } };
+        else throw mutateError;
+      }
+      const learningMaterials = getClassLearningMaterials(updated);
+      if (removed) await rec(container, { actor: auth.user?.sub, action: "class.learningMaterials.removeCourse", targetType: "class", targetId: classId, targetLabel: String(updated.name || ""), details: { courseId, ...(findLearningCourse(courseId) ? { courseTitle: findLearningCourse(courseId).title } : {}) } });
+      return { status: 200, jsonBody: { ok: true, classId, removed, learningMaterials } };
+    }
+
     // Roadmap #25 — reconcileRoster: rebuild ONE class's denormalized studentIds index from the authoritative
     // user documents. Explicit and rare (repair-only), so a full users scan is acceptable here; it is never part
     // of the class listing. Returns counts only — no student data.
@@ -259,4 +341,4 @@ async function handler(request, deps = {}, obs = null) {
 
 app.http("manageClassrooms", { methods: ["GET", "POST"], authLevel: "anonymous", route: "classrooms", handler: withObservability("classrooms", handler) });
 
-module.exports = { handler, buildNewClassroomDocument, programChangeAllowed, programCodeAccepted };
+module.exports = { handler, buildNewClassroomDocument, programChangeAllowed, programCodeAccepted, learningMaterialsChangeAllowed };

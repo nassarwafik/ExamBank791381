@@ -24,11 +24,13 @@ type ManifestState =
  * navigation helpers — never array positions re-implemented here.
  */
 export default function LearningReader({
-  courseId, onExit, api = registryContentApi,
+  courseId, onExit, api = registryContentApi, exitLabel = "العودة إلى نظرة الكتاب",
 }: {
   courseId: string;
   onExit: () => void;
   api?: ReaderContentApi;
+  /** Label of the back/exit control — the host decides where "back" leads (teacher library, student portal). */
+  exitLabel?: string;
 }) {
   const [manifestState, setManifestState] = useState<ManifestState>({ status: "loading" });
   const [selectedPageId, setSelectedPageId] = useState<string>("");
@@ -132,7 +134,7 @@ export default function LearningReader({
         <div className="learning-reader-state is-error" role="alert">
           <p className="learning-reader-state-title">تعذّر تحميل فهرس الكتاب</p>
           <button type="button" className="eb-button is-primary" onClick={() => { setManifestState({ status: "loading" }); setManifestNonce(n => n + 1); }}>إعادة المحاولة</button>
-          <button type="button" className="eb-button is-quiet is-small" onClick={onExit}>العودة إلى نظرة الكتاب</button>
+          <button type="button" className="eb-button is-quiet is-small" onClick={onExit}>{exitLabel}</button>
         </div>
       </div>
     );
@@ -166,7 +168,7 @@ export default function LearningReader({
     <div className="learning-reader" dir="rtl">
       <div className="learning-reader-topbar">
         <button type="button" className="eb-button is-quiet is-small learning-reader-back" onClick={onExit}>
-          <IconChevronBack size={18} className="eb-flip-rtl" aria-hidden="true" />العودة إلى نظرة الكتاب
+          <IconChevronBack size={18} className="eb-flip-rtl" aria-hidden="true" />{exitLabel}
         </button>
         <span className="learning-reader-booktitle">كتاب {courseId}</span>
         <button type="button" className="eb-button is-quiet is-small learning-reader-toc-toggle" aria-expanded={drawerOpen} aria-controls="learning-reader-drawer" onClick={() => setDrawerOpen(true)}>

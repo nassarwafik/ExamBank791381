@@ -186,3 +186,20 @@
 @media (prefers-reduced-motion: reduce){
   .eb-sp-task, .student-avatar-circle, .eb-sp-avatar-option, .eb-sp-rankring-fill{ transition:none; }
 }
+
+/* ---------- موادي التعليمية (Class Learning Materials) ---------- */
+.eb-sp-learning-list{ list-style:none; margin:0; padding:0; display:grid; grid-template-columns:1fr; gap:var(--eb-space-3); min-width:0; }
+.eb-sp-learning-card{ display:flex; flex-direction:column; gap:var(--eb-space-3); min-width:0; padding:var(--eb-space-4); background:var(--eb-surface); border:1px solid var(--eb-line); border-inline-start:4px solid var(--eb-primary); border-radius:var(--eb-r); }
+.eb-sp-learning-head{ display:flex; align-items:center; gap:var(--eb-space-3); min-width:0; }
+.eb-sp-learning-cover{ flex:0 0 auto; display:inline-grid; place-items:center; inline-size:48px; block-size:48px; border-radius:var(--eb-r); background:var(--eb-primary-050); color:var(--eb-primary-strong); }
+.eb-sp-learning-text{ display:flex; flex-direction:column; gap:2px; min-width:0; }
+.eb-sp-learning-title{ margin:0; color:var(--eb-text-heading); font-size:var(--eb-fs-17); font-weight:var(--eb-fw-bold); line-height:var(--eb-lh-tight); overflow-wrap:anywhere; }
+.eb-sp-learning-meta{ margin:0; color:var(--eb-muted); font-size:var(--eb-fs-13); }
+.eb-sp-learning-count{ margin:0; color:var(--eb-text-secondary); font-size:var(--eb-fs-13); font-variant-numeric:tabular-nums; }
+.eb-sp-learning-modules{ margin:0; padding-inline-start:var(--eb-space-5); display:flex; flex-direction:column; gap:var(--eb-space-1); color:var(--eb-text); font-size:var(--eb-fs-14); line-height:var(--eb-lh-body); overflow-wrap:anywhere; }
+.eb-sp-learning-open{ width:100%; min-height:44px; }
+.eb-sp-learning-error{ margin:0; padding:var(--eb-space-2) var(--eb-space-3); border-radius:var(--eb-r-sm); background:var(--eb-warn-bg); color:var(--eb-warn-tx); font-size:var(--eb-fs-13); }
+@media (min-width:768px){
+  .eb-sp-learning-list{ grid-template-columns:repeat(auto-fit,minmax(300px,1fr)); }
+  .eb-sp-learning-open{ width:auto; align-self:flex-start; min-width:160px; }
+}
