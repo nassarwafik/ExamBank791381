@@ -222,3 +222,17 @@
 @media (min-width: 768px){
   .eb-sp-project-cards{ grid-template-columns:repeat(auto-fill, minmax(280px, 1fr)); }
 }
+
+/* ---------- Achievement Hub: recognition tiles + feed event art ---------- */
+.eb-sp-recognition{ list-style:none; margin:0; padding:0; display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:var(--eb-space-2); min-width:0; }
+.eb-sp-recognition-tile{ display:flex; flex-direction:column; align-items:center; gap:2px; padding:var(--eb-space-3) var(--eb-space-2); background:var(--eb-surface); border:1px solid var(--eb-line); border-radius:var(--eb-r); min-width:0; text-align:center; }
+.eb-sp-recognition-icon.is-medal{ color:var(--eb-warn); }
+.eb-sp-recognition-icon.is-reaction{ color:var(--eb-danger); }
+.eb-sp-recognition-icon.is-achievement{ color:var(--eb-primary-strong); }
+.eb-sp-recognition-count{ color:var(--eb-text-heading); font-size:var(--eb-fs-20); font-weight:var(--eb-fw-bold); font-variant-numeric:tabular-nums; line-height:var(--eb-lh-tight); }
+.eb-sp-recognition-label{ color:var(--eb-muted); font-size:var(--eb-fs-12); font-weight:var(--eb-fw-semibold); }
+.eb-sp-recognition-detail{ display:flex; flex-wrap:wrap; justify-content:center; gap:var(--eb-space-2); color:var(--eb-text-secondary); font-size:var(--eb-fs-12); font-variant-numeric:tabular-nums; }
+.eb-sp-feed-rank-art{ flex:0 0 auto; object-fit:contain; }
+@media (min-width: 768px){
+  .eb-sp-recognition{ gap:var(--eb-space-3); }
+}

@@ -27,6 +27,10 @@ export type StudentProfile = {
   assignments: Array<{ assignmentId: string; title: string; status: string; dueAt: string; totalMarks: number; attemptsUsed: number; latestScore: number | null; latestPercentage: number | null; submittedAt: string; gradingStatus?: GradingStatus; finalized?: boolean }>;
   submittedAssignmentsCount: number;
   submittedAssignments: SubmittedAssignment[];
+  /** Additive (same authorities as the student dashboard): global Strength + rank, recognition, project summaries. */
+  strength?: { totalPoints: number; examPoints: number; practicePoints: number; projectPoints: number; tier: string | null; level: number; nextTier: string | null; nextLevelRemaining: number } | null;
+  recognition?: { medals: { total: number; gold: number; silver: number; bronze: number }; reactionsReceived: { total: number; byType: Record<string, number> }; achievements: { total: number; byType: Record<string, number> } } | null;
+  projectSummaries?: { projectCode: string; title: string; overallProgress: number; complete: boolean }[];
 };
 export type SortKey = "firstName" | "familyName" | "identityNumber" | "status";
 export type StatusFilter = "all" | "active" | "disabled" | "archived";

@@ -30,7 +30,14 @@ export type StudentStrength = {
   levelBlockSize: number; withinLevelPoints: number; nextLevelRemaining: number; percent: number;
   projects: ProjectStrength[];
 };
-export type Dashboard = { student: StudentInfo; classroom: Classroom | null; assignments: Summary[]; stats: Stats; strength: StudentStrength | null };
+/** Recognition (never Strength): medals (finalized authority), reactions RECEIVED on the student's events, and
+ *  meaningful non-medal achievements — three separate counts that are never combined into one score. */
+export type StudentRecognition = {
+  medals: { total: number; gold: number; silver: number; bronze: number };
+  reactionsReceived: { total: number; byType: Record<"heart" | "clap" | "cheer" | "fire", number> };
+  achievements: { total: number; byType: Record<"global_rank_up" | "project_rank_up" | "project_complete", number> };
+};
+export type Dashboard = { student: StudentInfo; classroom: Classroom | null; assignments: Summary[]; stats: Stats; strength: StudentStrength | null; recognition: StudentRecognition | null };
 export type Detail = {
   assignmentId: string; title: string; instructions: string; openAt: string; dueAt: string; effectiveDueAt?: string; maxAttempts: number; questionCount: number; totalMarks: number; durationMinutes?: number; requiresStart?: boolean; timed?: boolean;
   marksDistribution?: { rows: { title: string; marks: number }[]; total: number };

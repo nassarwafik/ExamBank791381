@@ -258,3 +258,10 @@
   .eb-lm-class-module-label{ min-height:44px; }
   .eb-lm-add-course,.eb-lm-add-module{ min-height:44px; }
 }
+
+/* ---------- Teacher student profile: concise Strength / recognition (Achievement Hub parity) ---------- */
+.eb-profile-strength{ display:flex; flex-direction:column; gap:var(--eb-space-2); margin-block-start:var(--eb-space-3); padding:var(--eb-space-3); border:1px solid var(--eb-line); border-radius:var(--eb-r-sm); background:var(--eb-surface-2); }
+.eb-profile-strength p{ margin:0; display:flex; flex-wrap:wrap; align-items:center; gap:var(--eb-space-2) var(--eb-space-3); font-size:var(--eb-fs-13); }
+.eb-profile-strength img{ object-fit:contain; }
+.eb-profile-strength strong{ color:var(--eb-text-heading); font-variant-numeric:tabular-nums; }
+.achievement-rank-art{ flex:0 0 auto; object-fit:contain; }

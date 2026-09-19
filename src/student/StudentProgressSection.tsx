@@ -1,4 +1,4 @@
-import { IconMedal } from "../icons";
+import { IconMedal, IconHeart, IconSparkles } from "../icons";
 import { MEDAL_LABELS, type MedalTier } from "../medals";
 import ProgressRing from "../ui/ProgressRing";
 import SectionHeader from "../ui/SectionHeader";
@@ -8,7 +8,8 @@ import VisuallyHidden from "../ui/VisuallyHidden";
 import { remainingPointsPhrase, type StrengthProgress, type StudentRank } from "../studentRank";
 import { RANK_VISUALS } from "../studentRankVisuals";
 import { countMedals } from "./portalPresentation";
-import type { Stats, StudentStrength } from "./types";
+import { REACTIONS } from "../achievements";
+import type { Stats, StudentRecognition, StudentStrength } from "./types";
 
 /**
  * "تقدّمي" (UX-7a): the server's own counts as StatCards, the finalized-only average as a ring (always with a
@@ -18,7 +19,43 @@ import type { Stats, StudentStrength } from "./types";
  * projects) the server derived; the breakdown is shown so a project-only student sees exactly why the ring moves.
  * Presentation only: nothing here recomputes a rank, a tier, a percentage or a point.
  */
-type Props = { stats: Stats; medals: MedalTier[]; rank: StudentRank | null; progress: StrengthProgress; strength: StudentStrength | null; averageFinalized: number | null };
+type Props = { stats: Stats; medals: MedalTier[]; rank: StudentRank | null; progress: StrengthProgress; strength: StudentStrength | null; recognition: StudentRecognition | null; averageFinalized: number | null };
+
+/**
+ * The three kinds of recognition side by side — الميداليات (finalized assessment), التفاعلات (reactions RECEIVED on
+ * the student's achievement events) and الإنجازات (meaningful milestones) — each with its own count. They are
+ * deliberately never summed into one number: recognition is not Strength.
+ */
+function RecognitionTiles({ recognition, medalCount }: { recognition: StudentRecognition | null; medalCount: number }) {
+  const medals = recognition ? recognition.medals.total : medalCount;
+  const reactions = recognition?.reactionsReceived.total ?? 0;
+  const achievements = recognition?.achievements.total ?? 0;
+  const byType = recognition?.reactionsReceived.byType;
+  return (
+    <ul className="eb-sp-recognition" aria-label="التقدير">
+      <li className="eb-sp-recognition-tile">
+        <IconMedal size={22} className="eb-sp-recognition-icon is-medal" aria-hidden="true" />
+        <strong className="eb-sp-recognition-count">{medals}</strong>
+        <span className="eb-sp-recognition-label">الميداليات</span>
+      </li>
+      <li className="eb-sp-recognition-tile">
+        <IconHeart size={22} className="eb-sp-recognition-icon is-reaction" aria-hidden="true" />
+        <strong className="eb-sp-recognition-count">{reactions}</strong>
+        <span className="eb-sp-recognition-label">التفاعلات</span>
+        {byType && reactions > 0 && (
+          <span className="eb-sp-recognition-detail" aria-label="التفاعلات حسب النوع">
+            {REACTIONS.filter(r => byType[r.id] > 0).map(r => <span key={r.id}><span aria-hidden="true">{r.emoji}</span><VisuallyHidden>{r.label}</VisuallyHidden> {byType[r.id]}</span>)}
+          </span>
+        )}
+      </li>
+      <li className="eb-sp-recognition-tile">
+        <IconSparkles size={22} className="eb-sp-recognition-icon is-achievement" aria-hidden="true" />
+        <strong className="eb-sp-recognition-count">{achievements}</strong>
+        <span className="eb-sp-recognition-label">الإنجازات</span>
+      </li>
+    </ul>
+  );
+}
 
 /** «نقاط القوة: 520» + the three-source breakdown. */
 function StrengthBreakdown({ strength }: { strength: StudentStrength | null }) {
@@ -61,15 +98,16 @@ function RankRing({ src, alt, percent, progressLabel, muted }: { src: string; al
   );
 }
 
-export default function StudentProgressSection({ stats, medals, rank, progress, strength, averageFinalized }: Props) {
+export default function StudentProgressSection({ stats, medals, rank, progress, strength, recognition, averageFinalized }: Props) {
   const grouped = countMedals(medals);
+  const medalCount = grouped.reduce((n, g) => n + g.count, 0);
   // The ring's percentage comes ONLY from the authoritative Strength progress (never the average):
   //   • before the first rank → progress.percent (points toward unlocking level 1, within the 400-point block)
   //   • an earned rank with a next tier → rank.next.percent (through the current 400-point block)
   //   • legendary (no next) → a full 100% decorative ring.
   return (
     <section className="eb-sp-panel eb-sp-progress" aria-labelledby="eb-sp-progress-title">
-      <SectionHeader level={2} id="eb-sp-progress-title" title="تقدّمي" description="أرقامك من الواجبات المنشورة لصفك؛ المعدل من النتائج النهائية فقط، ورتبتك من نقاط القوة (الواجبات النهائية والتدريبات والمشاريع)." />
+      <SectionHeader level={2} id="eb-sp-progress-title" title="تقدّمي وقوتي" description="أرقامك من الواجبات المنشورة لصفك؛ المعدل من النتائج النهائية فقط، ورتبتك من نقاط القوة (الواجبات النهائية والتدريبات والمشاريع)، وتقديرك من الميداليات والتفاعلات والإنجازات." />
       <div className="eb-sp-stats">
         <StatCard label="المهام" value={stats.assigned} />
         <StatCard label="قيد الحل" value={stats.inProgress ?? 0} tone="info" />
@@ -146,6 +184,7 @@ export default function StudentProgressSection({ stats, medals, rank, progress, 
           )}
         </div>
       </div>
+      <RecognitionTiles recognition={recognition} medalCount={medalCount} />
     </section>
   );
 }

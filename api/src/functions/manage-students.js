@@ -24,7 +24,9 @@ const { recordAuditEvent } = require("../lib/audit-log");
 const { normalizeClassStatus } = require("../lib/class-lifecycle");
 const { isReportableAssessment } = require("../lib/assignment-lifecycle");
 const { deriveGradingStatus } = require("../lib/grading-status");
-const { aggregateRecognition } = require("../lib/achievement-feed");
+const { aggregateRecognition, medalTierFromPercentage } = require("../lib/achievement-feed");
+const { buildStrengthSummary } = require("../lib/student-strength");
+const { loadStudentProjects } = require("../lib/project-tracker/student-projects");
 const { withCredentialLock, CredentialLockBusyError } = require("../lib/student-credential-lock");
 // Roadmap #25 — classroom.studentIds is a denormalized, repairable roster INDEX (never authoritative). All
 // index writes go through lib/class-roster-index (CAS + retry, idempotent, sync status instead of failure).
@@ -665,8 +667,34 @@ async function buildStudentProfile(container, userId) {
     },
     assignments: history,
     submittedAssignmentsCount: submittedAssignments.length,
-    submittedAssignments
+    submittedAssignments,
+    // Concise Strength + recognition for the teacher's student profile — the SAME authorities as the student
+    // dashboard (student-strength policy over finalized count + practice best + project progress; recognition
+    // aggregation). Secondary: a failure here never hides the profile.
+    ...(await buildProfileStrength(container, student, classroom, history))
   };
+}
+
+async function buildProfileStrength(container, student, classroom, history) {
+  try {
+    const now = new Date().toISOString();
+    const finalizedCount = history.filter(h => h.gradingStatus === "final").length;
+    const medals = { total: 0, gold: 0, silver: 0, bronze: 0 };
+    for (const h of history) { if (h.gradingStatus !== "final" || h.latestPercentage === null) continue; const t = medalTierFromPercentage(Number(h.latestPercentage)); if (t) { medals.total++; medals[t]++; } }
+    const [practiceDoc, projects] = await Promise.all([
+      downloadJsonOrNull(container, "platform/learning-practice/" + student.userId + ".json"),
+      classroom && normalizeClassStatus(classroom) !== "archived" ? loadStudentProjects(container, classroom, String(student.classId || ""), student.userId, now) : Promise.resolve([])
+    ]);
+    const strength = buildStrengthSummary({ finalizedCount, trainings: practiceDoc && practiceDoc.trainings, projects: projects.map(p => ({ projectCode: p.projectCode, overallProgress: p.summary.overallProgress })) });
+    const rec = (await aggregateRecognition(container, [student.userId])).get(student.userId);
+    return {
+      strength,
+      recognition: { medals, reactionsReceived: { total: rec.receivedReactionCount, byType: rec.receivedReactionByType }, achievements: { total: rec.achievementCount, byType: rec.achievementByType } },
+      projectSummaries: projects.map(p => ({ projectCode: p.projectCode, title: p.definition.title, overallProgress: p.summary.overallProgress, complete: p.summary.complete === true }))
+    };
+  } catch {
+    return {};
+  }
 }
 
 // `deps` is an optional dependency-injection seam for unit tests (production passes nothing → real

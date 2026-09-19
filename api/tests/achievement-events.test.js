@@ -197,3 +197,17 @@ describe("47/107/108/96. recognition summary — received (never sent), shared w
     expect(after.jsonBody.recognition.reactionsReceived.total).toBe(3);
   });
 });
+
+describe("49. teacher student profile — concise Strength + recognition + project summaries (same authorities)", () => {
+  it("GET /api/students?profileUserId returns strength (finalized × 100 + projects), recognition and projectSummaries", async () => {
+    const ctx = school({ ...exams(4) });
+    ctx.setJson("platform/submissions/A1/s1.json", { attempts: [finalAttempt(95)] });
+    await recordAchievementIfEligible(ctx.container, { classId: "c1", studentId: "s1", studentDisplayName: "ليان", assignmentId: "A1", assignmentTitle: "x", percentage: 95, shareAchievements: true });
+    await react(ctx, "s2", "A1_s1", "heart");
+    const r = await students({ method: "GET", url: "https://x/api/students?profileUserId=s1", headers: { get: () => null } }, teacherDeps(ctx));
+    expect(r.status).toBe(200);
+    expect(r.jsonBody.profile.strength).toMatchObject({ totalPoints: 400, examPoints: 400, tier: "beginner", level: 1, nextTier: "bronze" });
+    expect(r.jsonBody.profile.recognition).toEqual({ medals: { total: 1, gold: 1, silver: 0, bronze: 0 }, reactionsReceived: { total: 1, byType: { heart: 1, clap: 0, cheer: 0, fire: 0 } }, achievements: { total: 0, byType: { global_rank_up: 0, project_rank_up: 0, project_complete: 0 } } });
+    expect(r.jsonBody.profile.projectSummaries).toEqual([{ projectCode: "899373", title: "مشروع 899373", overallProgress: 0, complete: false }]);
+  });
+});
