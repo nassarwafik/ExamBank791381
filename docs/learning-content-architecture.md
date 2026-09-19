@@ -974,7 +974,7 @@ thunk, the descriptor's faithful `ActivityFallback` when the registry is injecte
 button with `aria-pressed` and a visible mark (never colour-only), state is stamped with the shell's
 `commands.reset` / `commands.replay` epochs, live text mirrors the visual (`aria-live`) as plain prose «من <المرسل>
 إلى <المستقبل>» — sender first, receiver second, never an arrow glyph inside a mixed Arabic/Latin string, so a
-screen-reader user gets the same direction as the animation — single-column at phone width. The earlier "EMPTY" / "two-entry allowlist" statements in the Phase 3A / 3E sections are historical.
+screen-reader user gets the same direction as the animation — single-column at phone width. The earlier "EMPTY" / "two-entry allowlist" statements in the Phase 3A / 3E sections are historical; the Units 7–8 phase brings the allowlist to ten entries.
 
 ### Publication: deployable ≠ published
 
@@ -989,6 +989,87 @@ its students until the teacher publishes them explicitly.
 No leaderboard, no page-reading Strength, no medals for inline practices, no new rank levels, no project scoring
 change, no T05+ trainings, no AI tutor, no CMS, no change to Project Performance / Achievement Hub / profile photo,
 and **no Unit 7 (PDF 61+)**.
+
+## Units 7–8 — Cables, MAC & Message Types (source PDF 61–75)
+
+The second content phase after Units 4–6, converted as one **complete logical learning unit**: cables → MAC →
+Unicast / Multicast / Broadcast → the broadcast address → protocols that use Broadcast → storage units → message
+fields → the Broadcast message → the book's batch-2 summary. Every page of PDF 61–75 was rendered and reviewed
+against the source before authoring. Conversion **stops before PDF 76** (batch 3: OSI · TCP/IP · TCP/UDP …); no page
+body has `pdfPageStart >= 76` and a test asserts it.
+
+### Source map and module structure
+
+| Unit | Source PDF | Module (immutable id) | `order` | Batch | Lessons |
+| --- | --- | --- | --- | --- | --- |
+| 7 «الكوابل وعنوان MAC» | **61–65** | `791381-m11` | 7 | b2 | `l00` افتتاحية (61) · `l01` كوابل الشبكة (62–63) · `l02` عنوان MAC واستخداماته (64–65) |
+| 8 «أنواع الرسائل» | **66–74** | `791381-m12` | 8 | b2 | `l00` افتتاحية (66) · `l01` Unicast / Multicast / Broadcast (67–69) · `l02` عنوان Broadcast والبروتوكولات (70–71) · `l03` وحدات التخزين ومبنى الرسالة (72–74) |
+| batch-2 summary | **75** | `791381-m12` · `l04` خلاصة الدفعة الثانية | — | b2 | one learner-visible summary page (`conversionNote`), not a fake unit; its «الدفعة التالية» line is kept as printed |
+
+- **1 source page → 1 interactive page**, page ids `791381-mNN-lNN-pNN` authored once and immutable. Faithful blocks
+  are `origin:"book"`; clarifications, solved examples, activities, worksheets and practices are
+  `origin:"teacher-enrichment"`. Both bodies register as their own lazy chunks (`m11`, `m12`).
+- **Historical skeleton m03–m06 untouched**: ids, titles, lesson/page ids and PDF mappings pinned; only their explicit
+  `order` shifts to 9–12. **b2** «الأجهزة والرسائل» now lists `[m09, m10, m11, m12]`; **b3** stays empty until PDF 76+.
+- **Printed page numbers** follow the Units 4–6 decision: the rendered page circle (PDF 62 → «62» … PDF 74 → «74»);
+  the two openers (PDF 61, 66) and the summary (PDF 75) print none and carry no `printedPage`.
+- **Transparent normalization (documented, not silent):** PDF 68 prints «مصدر واحد ← هدف واحد» / «مصدر واحد ← مجموعة
+  محدّدة» with an arrow glyph; the page renders the same meaning as prose «من مصدر واحد إلى هدف واحد» under the
+  permanent «من X إلى Y» rule. PDF 64's facts mention «الطبقة الثانية من نموذج OSI» and PDF 75 names the next batch;
+  both are kept as printed, and nothing from PDF 76+ is taught. **Source order inside the phase is sacred too:** the
+  broadcast MAC on PDF 64 is named exactly as the book names it (m11 never says who receives a broadcast — that is
+  Unit 8), and the message-delivery simulation sits on PDF 69, after the Broadcast / Router-boundary facts, not on
+  PDF 67 where only the receiver-count distinction is taught.
+- **Book level preserved:** no OUI/vendor or bit-level MAC structure; no cable categories, speeds or distances;
+  broadcast addresses at whole-octet **/8 /16 /24 only**; storage units by the book's **1024** convention (never 1000);
+  RIP v1 = Broadcast / RIP v2 = Multicast exactly as printed.
+
+### The permanent mixed RTL/LTR rule
+
+Technical values (MAC, IP, Hub, Switch, Router, UTP, STP, Fiber Optic, Coaxial, Broadcast, `192.168.1.1`,
+`FF:FF:FF:FF:FF:FF`) are LTR code spans inside Arabic prose, and LTR table columns where tabular. **Semantic traffic
+direction in text is always prose «من X إلى Y»** — never an arrow glyph inside a mixed Arabic/Latin string — in
+aria-live mirrors, textual equivalents of animations and explanatory flow sentences. Visual diagram arrows are allowed
+where the direction is visually explicit. Content tests ban `←` / `→` from m11 and m12 entirely.
+
+### Pedagogy applied
+
+| Module | Solved examples | Clarifications | Inline practices | Worksheets (`practice-table`) | Closing review | Activities |
+| --- | --- | --- | --- | --- | --- | --- |
+| m11 | 3 | 2 | 13 | 1 (four cables) | 3 exam-style questions on PDF 65 | 2 |
+| m12 | 5 | 5 | 21 | 3 (protocols, storage units, message classification) | 4 items on PDF 74 + 2 batch-review questions on PDF 75 | 2 |
+
+Practices are educational only (nothing stored, scored or ranked; no T05+); every wrong-answer feedback says what
+to **check** («افحص …») and every question carries a hint ladder. Keyed `fillBlank` is not used (no interactive UI).
+
+### Four registry-backed activities (`productionActivityRegistry` = exact TEN-entry allowlist)
+
+| Activity | `{kind, key, version}` | Page | Renderer (own lazy chunk) |
+| --- | --- | --- | --- |
+| A — cable comparison / chooser | `interactive-diagram / cable-comparison / 1` | PDF 63 (`m11-l01-p02-chooser`) | `CableComparisonDiagram` — four cable tabs with the book's traits (text list + schematic cross-section), then teacher-enrichment scenarios (classroom / noisy workshop / long fast link / cable TV) with an immediate verdict and «افحص صفات …» on a wrong pick |
+| B — MAC address anatomy | `interactive-diagram / mac-address-anatomy / 1` | PDF 64 (`m11-l02-p01-anatomy`) | `MacAddressAnatomy` — `A0:02:AF:2D:10:22` as six LTR two-digit groups (12 hex digits stated in words), group press names its digits, the broadcast toggle shows `FF:FF:FF:FF:FF:FF` = «للجميع», a "which string has the MAC shape?" task |
+| C — message delivery | `simulation / message-delivery / 1` | PDF 69 (`m12-l01-p03-sim`), after the book's Broadcast + Router-boundary facts | `MessageDeliverySimulation` — Unicast (exactly one receiver), Multicast (the selected group), Broadcast (every local device) from PC1 via Switch; receiver count line; the **Router boundary marked «يتوقّف هنا» in words** — a normal Broadcast never crosses |
+| D — broadcast address builder | `interactive-diagram / broadcast-address / 1` | PDF 70 (`m12-l02-p01-builder`) | `BroadcastAddressBuilder` — the book's five rows as examples (network/host text badges, the resulting address), then guided attempts: toggle host octets to 255 → «تحقّق»; feedback names the octet to check; «أظهر الحل»; /8 /16 /24 only |
+
+Shared contract (tested per renderer): trusted registry key + positive version, statically-authored `import()`
+thunk, faithful `ActivityFallback` when the registry is injected empty or the version is unsupported (fallbacks never
+expose answer keys), `reducedMotion` renders the final state at once (no timers), real ≥44px keyboard-operable
+buttons with `aria-pressed` / radio semantics and a visible mark, shell `commands.reset` / `commands.replay`
+epochs, prose text mirrors, single-column at phone width. Timers exist only in the simulation (and are skipped under
+reduced motion).
+
+### Publication: deployable ≠ published
+
+`api/src/lib/learning-materials-registry.js` lists `m11` (order 7) and `m12` (order 8) with titles only. Nothing is
+auto-published: a real-registry test proves a class released only through m10 exposes none of m11/m12 to its
+students, that a stale id the class never published stays hidden, and that the teacher's `[m12, m11]` canonicalizes
+to `[m11, m12]`.
+
+### Deliberately NOT in this phase
+
+No PDF 76+ (OSI, TCP/IP, TCP vs UDP, protocol commands), no T05+, no medals for learning practice, no Strength for
+page practice, no leaderboard, no project scoring / Achievement Hub / profile identity / teacher login changes, no
+change to the approved m08–m10 content.
 
 ## Phase boundaries
 
@@ -1005,6 +1086,7 @@ and **no Unit 7 (PDF 61+)**.
 | Learning Practice & Unified Strength | Book trainings T01–T04 as `library-training` blocks + the shared Training Runner + server grading/best-score storage; inline `practice-table` worksheets (PDF 29 / 32); Unified Strength Points (exams + trainings + projects) on the existing six-rank ladder; Learning Materials desktop inset. Unit 4 conversion still paused. | done (awaiting review) |
 | **Project Performance, Achievement Hub & Profile Identity (this)** | Teacher stage scores → project grade /100 → project Strength /600 + six-band project rank (per project); generic achievement events (global/project rank-up, completion) with privacy + reactions + lifetime recognition; Achievement Hub «تقدّمي وقوتي»; teacher-managed student photo + preset avatars; teacher name / preset / own photo identity. Unit 4 still paused. | done (awaiting review) |
 | **Units 4–6 (this)** | Book 791381 source PDF **34–60** as complete modules `m08` (Class/Subnet/CIDR, order 4), `m09` (أجهزة الشبكات, order 5), `m10` (أنواع شبكات الاتصال, order 6); PDF 47 divider not rendered; interactive `PracticeBlockView`; activities `cidr-network-host/v1`, `gateway-flow/v1`, `hub-switch-router-flow/v1`, `network-topologies/v1`; server publication registry lists m08–m10 (publishable, never auto-published) | done (awaiting review) |
+| **Units 7–8 (this)** | Book 791381 source PDF **61–75** as complete modules `m11` (الكوابل وعنوان MAC, order 7) and `m12` (أنواع الرسائل + the batch-2 summary PDF 75, order 8); b2 = m09–m12; activities `cable-comparison/v1`, `mac-address-anatomy/v1`, `message-delivery/v1`, `broadcast-address/v1` (registry = 10); server publication registry lists m11–m12 (publishable, never auto-published); PDF 76+ untouched | done (awaiting review) |
 | 4 | Interactive Practice — remaining inline checking families beyond closed-choice worksheets (free text, ordering, evaluator-backed hints) | deferred |
 | 5 | Simulations — real VLAN/subnet/CLI/… renderers registered behind the Phase-3A engine | deferred |
 | 6 | Student Progress — last page, completion, attempts (separate domain; attaches to the no-op event seam) | deferred |

@@ -44,7 +44,7 @@ describe("m10 — validation, mapping PDF 57–60, completeness, HARD STOP befor
     expect(m10.source).toEqual({ kind: "book", sourceId: "791381", pdfPageStart: 57, pdfPageEnd: 60 });
     for (const banned of ["الكوابل وعنوان MAC", "Unicast", "Multicast", "الوحدة السابعة"]) expect(JSON.stringify([m08, m09, m10]), banned).not.toContain(banned);
   });
-  it("m10 is COMPLETE: manifest ↔ body match; order 6; batch b2 lists m09 then m10", () => {
+  it("m10 is COMPLETE: manifest ↔ body match; order 6; batch b2 starts with m09 then m10", () => {
     const mm = manifest.modules.find(m => m.id === "791381-m10")!;
     expect(mm.order).toBe(6); expect(m10.order).toBe(6); expect(m10.partial).toBeFalsy();
     expect(mm.lessons.flatMap(l => l.pages.map(p => p.id)).sort()).toEqual(pages.map(p => p.id).sort());
@@ -53,7 +53,7 @@ describe("m10 — validation, mapping PDF 57–60, completeness, HARD STOP befor
       expect([body.order, body.title], l.id).toEqual([l.order, l.title]);
       for (const p of l.pages) { const bp = pageBy(p.id); expect([bp.order, bp.title, bp.source.pdfPageStart, bp.source.printedPage], p.id).toEqual([p.order, p.title, p.source!.pdfPageStart, p.source!.printedPage]); }
     }
-    expect(manifest.batches!.find(b => b.id === "b2")!.moduleIds).toEqual(["791381-m09", "791381-m10"]);
+    expect(manifest.batches!.find(b => b.id === "b2")!.moduleIds.slice(0, 2)).toEqual(["791381-m09", "791381-m10"]);   // Units 7–8 appended m11, m12 after these
   });
 });
 

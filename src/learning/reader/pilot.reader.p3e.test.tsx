@@ -51,6 +51,10 @@ describe("Phase 3E — reading order places Unit 3 (m07, order 3) directly after
     expect(nextPage(manifest, "791381-m02-l01-p09")?.id).toBe("791381-m07-l00-p01");
     expect(previousPage(manifest, "791381-m07-l00-p01")?.id).toBe("791381-m02-l01-p09");
     expect(nextPage(manifest, "791381-m07-l02-p04")?.id).toBe("791381-m08-l00-p01");   // Unit 4 (m08) now follows Unit 3; the historical m03 reads after the real units
+    expect(nextPage(manifest, "791381-m10-l02-p01")?.id).toBe("791381-m11-l00-p01");   // Units 7–8: Unit 7 (m11) follows Unit 6 …
+    expect(nextPage(manifest, "791381-m11-l02-p02")?.id).toBe("791381-m12-l00-p01");   // … Unit 8 (m12) follows Unit 7 …
+    expect(nextPage(manifest, "791381-m12-l04-p01")?.id).toBe("791381-m03-l01-p01");   // … and the historical m03 skeleton reads only after the batch-2 summary
+    expect(previousPage(manifest, "791381-m11-l00-p01")?.id).toBe("791381-m10-l02-p01");
   });
 });
 
