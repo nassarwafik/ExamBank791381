@@ -1329,7 +1329,108 @@ changes, no change to the approved m01–m16 content, no change to any class's `
 
 **The next Learning Content batch begins at PDF 120** («الدفعة الرابعة · برمجة السويتش و VLAN» cover, then
 «برمجة السويتش CLI و VLAN» from PDF 121). PDF 123–124 are the historical m03 skeleton pages, so that batch must decide
-whether to fill m03 in place (keeping its immutable ids) rather than create a parallel module.
+whether to fill m03 in place (keeping its immutable ids) rather than create a parallel module. *(Decided in Batch 6
+below: m03 was completed in place.)*
+
+## Batch 6 — برمجة السويتش · CLI و VLAN (source PDF 120–138) — m03 completed IN PLACE
+
+The sixth content phase converts the book's fourth-batch opening section. The boundary was discovered from the book:
+**PDF 120 is the «الدفعة الرابعة · برمجة السويتش و VLAN» cover** (structural), PDF 121–138 is the section
+«برمجة السويتش · CLI و VLAN» (CLI and the switch ports 121–124, the VLAN concept and terms 125–129, VLAN creation /
+port binding / SVI / gateway 130–134, Native / Tagged / Untagged with their commands 135–138), and **PDF 139 is the
+«إدارة مركزية» cover of the next section** (centralised VLAN management across switches). Nineteen PDF pages, eighteen
+learner-facing (121–138). Conversion **stops before PDF 139**: no converted body has `pdfPageStart >= 139` and tests
+assert it.
+
+### The in-place completion of the historical skeleton `791381-m03`
+
+The Phase-2 skeleton claimed `791381-m03` («برمجة السويتش CLI و VLAN», lesson `791381-m03-l01` «مدخل إلى CLI و VLAN»)
+with two pages, `-l01-p01` = PDF 123 «منافذ السويتش» and `-l01-p02` = PDF 124 «برمجة المنافذ من CLI». Module ids are
+immutable, so this batch **completes m03 in place** instead of creating a parallel `m19` or renaming anything:
+
+- **Module identity unchanged**: id, title, `shortTitle`, `order: 15` (it already read after m18), lesson `l01` id and
+  title, batch membership (`b4` = `[m03, m04, m05]`).
+- **Historical page ids, titles, meanings and source mappings unchanged** — byte-for-byte the skeleton's values,
+  including `printedPage` 121 / 122 (the Phase-2 skeleton recorded the hidden running number of the PDF text layer,
+  two lower than the page circle; the values are pinned as immutable rather than "corrected"). Only their explicit
+  `order` moved (1 → 3, 2 → 4) so the book's PDF 121–122 can precede them.
+- **PDF 121 and 122 are NEW stable page ids** `791381-m03-l01-p03` («برمجة السويتش — CLI») and `-l01-p04»
+  («الدخول إلى وضع البرمجة») placed first by `order` 1 and 2 — ids are opaque, `order` sequences, and the mixed
+  numbering is the visible proof that nothing historical was renumbered. New pages follow the established rule
+  printed page = page circle = PDF index (121 … 138).
+- **PDF 120** is represented only by m03's coarse source range `120–138` + `sourceNote` (the PDF 47 / 76 / 107
+  divider treatment); it is never a learner page and no unit opener is invented.
+
+### Source map and module structure
+
+| Section | Source PDF | Module (immutable id) | `order` | Batch | Lessons |
+| --- | --- | --- | --- | --- | --- |
+| «برمجة السويتش · CLI و VLAN» | **120 (cover) · 121–138** | `791381-m03` | 15 | b4 | `l01` مدخل إلى CLI و VLAN (121–124: new `p03`, new `p04`, historical `p01`, historical `p02`) · `l02` مفهوم VLAN والمصطلحات (125–129) · `l03` إنشاء VLAN وربط المنافذ (130–134) · `l04` Native / Tagged / Untagged (135–138) |
+
+- **1 source page → 1 interactive page** (eighteen pages), TOC in the manifest = pages in the body (ids, titles,
+  orders, sources pinned equal).
+- **CLI fidelity:** every «Switch CLI» box of the book (PDF 122, 130, 131, 133, 136, 137, 138) is a `code` block
+  (`language: "cli"`, origin book) with the book's exact command lines and prompts — `Switch>`, `Switch#`,
+  `Switch(config)#`, `Switch(config-vlan)#` — rendered inside `<pre><code dir="ltr">` so Cisco commands, port names
+  (`f0/1-10`, `f0/24`) and addresses never reverse under RTL; each box is followed by a command/explanation table
+  whose command column is `ltr` and whose second column carries the book's own annotations. There is **no real
+  terminal and no invented output**: tests assert every code line is a prompt + command, and ban `show …`, `%`,
+  `[OK]`, `Building configuration`, `hostname`, `exit`, `end`, `write`, passwords and other commands the book does
+  not print in these pages. Where the book abbreviates a prompt (PDF 131 prints `Switch(config)#` before the
+  `switchport` commands), the code block keeps the book's text and a teacher clarification notes that a real device
+  changes the prompt after `interface`, without inventing the string.
+- **Concept fidelity:** the CLI definition and facts (121), the prompt transition «من > إلى # ثم (config)#» as prose
+  (122), the port figure and naming facts (123), the three port-programming steps (124), the VLAN definition, figure
+  and benefits (125), the three term cards with the printed range 1–4094 and the VLAN 1 note (126), «الفكرة الأساسية»
+  / «الخلاصة» (127), the PDF 128 table as a five-column table with LTR device / VLAN / address / mask columns (128),
+  the distribution facts (129), «تذكّر» / «النتيجة» / «متى؟» / «لماذا؟» / «الفائدة» / «ما هو الـ Tag؟» as printed.
+  Technical tokens (CLI, VLAN, Trunk, Access, Tag, SVI, Gateway, port names, commands, addresses) are LTR spans.
+- **Source order inside the module (tested):** no command on PDF 121; `enable` / `configure terminal` from 122; the
+  PDF 124 steps page names Access / Trunk / VLAN but prints no command; `name MNG` from 130; `switchport` and
+  `interface range` from 131; SVI commands and `192.168.10.254` from 133; Gateway from 134; Tag first named on 132
+  (explained on 135); Native / Tagged / Untagged cards from 135; trunk commands from 136; `allowed vlan` from 137.
+- **Historical skeletons m04–m06 untouched**: ids, titles, lesson/page ids, PDF mappings and orders 16–18 pinned;
+  m03 still precedes them.
+- **Next-section leakage guard:** the centralised VLAN-management protocol and its server/client roles, Router on a
+  Stick, sub-interfaces, Dot1Q / 802.1Q encapsulation, port security, DHCP configuration and ACLs are banned from
+  m03 by tests; m01–m18 are asserted to contain none of the switch-programming content (VLAN is named in m16 only
+  because PDF 100–101 print it as a Broadcast-domain separator).
+
+### Pedagogy applied
+
+| Module | Solved examples | Clarifications | Inline practices | Worksheets (`practice-table`) | Closing review | Activities |
+| --- | --- | --- | --- | --- | --- | --- |
+| m03 | 2 (PDF 128 table reading · PDF 138 «F0/3 → VLAN 20» built only from the book's commands) | 18 (one per page) | 37 | 6 (Access/Trunk on 124 and 138 · term on 126 · device → VLAN on 128 · command → purpose on 131 · Native/Tagged/Untagged on 135) | 3 on PDF 138 | 0 |
+
+Practices are educational only (nothing stored, scored or ranked; no T05+); every wrong-answer feedback says what
+to **check** («افحص …»), every question carries a two-step hint ladder, every page ends with practice, and the one
+shortInput answer is a single deterministic token (`F0/24`).
+
+**No activity was added on purpose.** A "CLI stepper" would re-present the seven code blocks + command tables that
+already carry the book's content, and a fake terminal would contradict the "no real terminal, no invented output"
+rule. The `productionActivityRegistry` allowlist stays at thirteen entries.
+
+### Publication: deployable ≠ published
+
+`api/src/lib/learning-materials-registry.js` now lists `m03` (title «برمجة السويتش CLI و VLAN», `order: 15`) after
+m18 — by order, never by id (lexically `m03` would sort before `m07`). Nothing is auto-published: a real-registry
+test proves a class released through m18 exposes nothing of m03, that publishing `[m01, m03]` shows exactly those two
+(m03 last), that `[m03, m18, m01]` canonicalizes to `[m01, m18, m03]`, that the catalog still carries identity +
+title + order only, and that m04–m06 remain unpublishable (400). No class's `visibleModuleIds` changed.
+
+### Deliberately NOT in this phase
+
+No PDF 139+ (centralised VLAN management, Router on a Stick, sub-interfaces, Dot1Q, port security, DHCP, ACL — the
+m04–m06 skeleton ranges), no new activity, no trainings T05+ inside the platform, no medals / Strength / leaderboard
+for page practice, no project / Achievement Hub / identity / login changes, no change to the approved m01–m18 content
+(only test labels that described m03 as skeleton-only were refreshed), no change to m04 / m05 / m06, no change to any
+class's `visibleModuleIds`.
+
+### Where the next batch begins
+
+**The next untouched page is PDF 139** («إدارة مركزية» cover of the next section, then its pages from PDF 140). The
+historical `m04` skeleton («Trunk و Router on a Stick», PDF 148) is the next module that will need the same in-place
+decision.
 
 ## Phase boundaries
 
@@ -1349,7 +1450,8 @@ whether to fill m03 in place (keeping its immutable ids) rather than create a pa
 | **Units 7–8 (this)** | Book 791381 source PDF **61–75** as complete modules `m11` (الكوابل وعنوان MAC, order 7) and `m12` (أنواع الرسائل + the batch-2 summary PDF 75, order 8); b2 = m09–m12; activities `cable-comparison/v1`, `mac-address-anatomy/v1`, `message-delivery/v1`, `broadcast-address/v1` (registry = 10); server publication registry lists m11–m12 (publishable, never auto-published); PDF 76+ untouched | done (awaiting review) |
 | **Batch 3 (this)** | Book 791381 source PDF **76–86** (PDF 76 divider not rendered) as complete module `m13` («نماذج الاتصال: OSI و TCP/IP», order 9); b3 = [m13]; m03–m06 shift to orders 10–13; activity `osi-layers/v1` (registry = 11); server publication registry lists m13 (publishable, never auto-published); PDF 87+ («البروتوكولات») untouched; two deferred PR #122 cleanups applied | done (awaiting review) |
 | **Batch 4 (this)** | Book 791381 source PDF **87–106** as complete modules `m14` («البروتوكولات», order 10), `m15` («أوامر فحص الشبكة», order 11), `m16` («المجالات والمفاهيم» + the PDF 106 trainings page, order 12); b3 = [m13, m14, m15, m16]; m03–m06 shift to orders 13–16; activity `network-domains/v1` (registry = 12); server publication registry lists m14–m16 (publishable, never auto-published); PDF 107+ (Part 2: security …) untouched; PR #123 cleanups A–C applied | done (awaiting review) |
-| **Batch 5 (this)** | Book 791381 source PDF **107–119** (PDF 107 part cover not rendered) as complete modules `m17` («أمان الشبكات», order 13) and `m18` («تجزئة البيانات» + the PDF 119 trainings page, order 14); b3 = [m13 … m18]; m03–m06 shift to orders 15–18; activity `tcp-handshake/v1` (registry = 13); server publication registry lists m17–m18 (publishable, never auto-published); next batch begins at PDF 120 | done (awaiting review) |
+| **Batch 5** | Book 791381 source PDF **107–119** (PDF 107 part cover not rendered) as complete modules `m17` («أمان الشبكات», order 13) and `m18` («تجزئة البيانات» + the PDF 119 trainings page, order 14); b3 = [m13 … m18]; m03–m06 shift to orders 15–18; activity `tcp-handshake/v1` (registry = 13); server publication registry lists m17–m18 (publishable, never auto-published); next batch begins at PDF 120 | done (merged) |
+| **Batch 6 (this)** | Book 791381 source PDF **120–138** (PDF 120 batch cover not rendered) as the historical skeleton `m03` («برمجة السويتش CLI و VLAN», order 15) **completed in place** — historical page ids `-l01-p01` (PDF 123) / `-l01-p02` (PDF 124) preserved with unchanged titles and mappings, PDF 121–122 as new stable ids placed first by `order`; four lessons, eighteen pages, seven CLI `code` blocks, no new activity (registry stays 13); server publication registry lists m03 (publishable, never auto-published); m04–m06 untouched; next untouched page = PDF 139 | done (awaiting review) |
 | 4 | Interactive Practice — remaining inline checking families beyond closed-choice worksheets (free text, ordering, evaluator-backed hints) | deferred |
 | 5 | Simulations — real VLAN/subnet/CLI/… renderers registered behind the Phase-3A engine | deferred |
 | 6 | Student Progress — last page, completion, attempts (separate domain; attaches to the no-op event seam) | deferred |
