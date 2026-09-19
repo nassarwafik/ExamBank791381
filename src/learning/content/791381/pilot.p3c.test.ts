@@ -53,13 +53,12 @@ describe("Phase 3C — validation + exact scope PDF 15–22", () => {
     }
   });
 
-  it("converts NOTHING beyond PDF 22 (PDF 23 is manifest-only; no later body exists)", () => {
+  it("the 15–22 batch pages still map 1:1 within range (Unit-2 body now extends to PDF 23; nothing from Unit 3)", () => {
+    // Phase 3C converted PDF 15–22; Phase 3D then added PDF 23 (Unit-2 summary), so the converted body now spans
+    // 15–23. Nothing from Unit 3 (PDF 24 onward) is converted.
     const bodyPages = [m01, m02].flatMap(m => m.lessons.flatMap(l => l.pages));
-    for (const p of bodyPages) expect(p.source.pdfPageStart, p.id).toBeLessThanOrEqual(22);
-    // PDF 23 is in the manifest (skeleton) but has NO converted body
-    const manifestPdfs = new Set(manifest.modules.flatMap(m => m.lessons.flatMap(l => l.pages.map(p => p.source!.pdfPageStart))));
-    expect(manifestPdfs.has(23)).toBe(true);
-    expect(m02Pages.some(p => p.source.pdfPageStart === 23)).toBe(false);
+    for (const p of bodyPages) expect(p.source.pdfPageStart, p.id).toBeLessThanOrEqual(23);
+    expect(m02Pages.some(p => p.source.pdfPageStart >= 24)).toBe(false);   // Unit 3 (عناوين IP) not started
   });
 });
 
@@ -75,11 +74,11 @@ describe("Phase 3C — stable IDs preserved (only order interleaved)", () => {
   });
 });
 
-describe("Phase 3C — m02 stays PARTIAL (PDF 23 not converted)", () => {
-  it("m02 body is partial; every converted page (15–22) has real blocks; PDF 23 has no body", () => {
-    expect(m02.partial).toBe(true);
+describe("m02 completion (updated by Phase 3D — PDF 23 now converted)", () => {
+  it("m02 is COMPLETE (no partial flag); every 15–22 page still has real blocks; PDF 23 now has a body too", () => {
+    expect(m02.partial).toBeFalsy();                                                     // completed in Phase 3D
     for (const id of ["791381-m02-l01-p04", "791381-m02-l01-p08"]) expect(pageBy(id).blocks.length).toBeGreaterThan(0);
-    expect(m02Pages.find(p => p.id === "791381-m02-l01-p09")).toBeUndefined();
+    expect(pageBy("791381-m02-l01-p09").blocks.length).toBeGreaterThan(0);               // PDF 23 body present
   });
 });
 

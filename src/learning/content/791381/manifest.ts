@@ -65,9 +65,8 @@ const manifest: LearningCourseManifest = {
       order: 2,
       lessons: [
         {
-          // Phase 3B/3C: unit-opener lesson for Unit 2 (PDF 14). The Unit-2 lesson (m02-l01) is now largely
-          // converted (PDF 15–22); m02 stays a PARTIAL conversion because PDF 23 (خلاصة التحويلات) is listed but
-          // not yet converted.
+          // Phase 3B/3C/3D: unit-opener lesson for Unit 2 (PDF 14). The Unit-2 lesson (m02-l01) is now FULLY
+          // converted (PDF 15–23), so m02 is a COMPLETE conversion (no `partial` flag on the module body).
           id: "791381-m02-l00",
           title: "افتتاحية الوحدة",
           order: 0,
@@ -76,10 +75,10 @@ const manifest: LearningCourseManifest = {
           ],
         },
         {
-          // Phase 3C: the full number-systems sequence PDF 15–22 in reading order. The three Phase-2 skeleton pages
+          // Phase 3C/3D: the full number-systems sequence PDF 15–23 in reading order. The three Phase-2 skeleton pages
           // (p01=PDF16, p02=PDF18, p03=PDF20) keep their STABLE IDs; only their `order` is adjusted to interleave the
-          // newly-added pages (p02's title is corrected to the authoritative rendered source). p09 (PDF 23) is a
-          // skeleton-only entry (no body yet) — it keeps m02 partial and shows as "قيد الإعداد".
+          // newly-added pages (p02's title is corrected to the authoritative rendered source). p09 (PDF 23,
+          // خلاصة التحويلات) is Unit 2's closing summary — converted in Phase 3D, completing the module.
           id: "791381-m02-l01",
           title: "أنظمة العد والتحويل",
           order: 1,

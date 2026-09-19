@@ -457,7 +457,33 @@ PDF 22.**
   reader). The exercises are a faithful list — **no practice blocks, no answers, no external link/image, no
   evaluator wiring.** Answer-key secrecy is untouched.
 
-The next batch continues from **PDF 23** (خلاصة التحويلات) into Unit 3.
+The next batch continues from **PDF 23** (خلاصة التحويلات).
+
+## Phase 3D — Complete Unit 2 (source PDF 23)
+
+Phase 3D converts the single remaining page of Unit 2 — **PDF 23 «خلاصة التحويلات»**, the unit's closing summary —
+which **completes module m02**. The Unit-2 boundary is confirmed from the rendered source: PDF 23 is still headed
+«الوحدة الثانية · الأعداد والموازين», and **PDF 24 opens Unit 3** («الوحدة الثالثة · عناوين IP»). So m02 spans PDF
+14 + 15–23, and every one of those pages now has a real body.
+
+- **Fills the existing `p09` skeleton.** PDF 23 was already listed in the manifest as `791381-m02-l01-p09`
+  («خلاصة التحويلات», order 9); Phase 3D adds its body only — the **stable id is unchanged** and no other id moves.
+- **m02 becomes COMPLETE.** With PDF 23 converted, every manifest page of m02 has a body, so the module's
+  `partial` flag is dropped. An unexpectedly-absent m02 page is once again a genuine integrity error rather than a
+  «قيد الإعداد» state. The professional unavailable state remains covered by the synthetic-fixture reader tests.
+- **Source fidelity + RTL safety.** The four conversion methods and the closing «لماذا هذا مهم؟» callout are
+  reproduced verbatim. The source's four badge labels use a compact «A ← B» arrow whose direction is
+  bidi-ambiguous under RTL, so each conversion is preserved using the book's own directional phrasing («من X إلى
+  Y») — no technical label can render reversed. `IPv4` / `IPv6` are authored as `dir:"ltr"` code spans; a DOM test
+  asserts they render inside `dir="ltr"` and are never reversed.
+- **No new capability, no enrichment.** No renderer changes; reuses the existing `list` (cards) + `callout`
+  primitives. The page is pure book content (`origin:"book"` throughout) — no practice, no answers, no QR image,
+  no external link, no evaluator wiring.
+
+**Unit 3 is deferred.** PDF 24 begins «عناوين IP» (IP addresses). The Phase-2 skeleton's `m03`
+(«برمجة السويتش CLI و VLAN» @ PDF 123) is a sparse representative placeholder that does **not** correspond to the
+book's actual Unit 3, so reconciling the module structure for «عناوين IP» is left to a future batch (owner
+decision), not folded into this one.
 
 ## Phase boundaries
 
@@ -467,7 +493,8 @@ The next batch continues from **PDF 23** (خلاصة التحويلات) into Un
 | 3 | Interactive **Reader** — TOC, previous/next, jump-to-page, page/block rendering, provenance display, lazy module loading, professional not-yet-converted state | done (reader shell) |
 | **3A (this)** | Interactive Learning **Engine foundation** — activity descriptors, trusted registry + lazy loader (EMPTY production), host shell + error boundary + fullscreen + reduced-motion, no-op event sink, validation, tests, docs | done (foundation) |
 | 3B | First real conversion pilot — Book 791381 source PDF **7–14** | done |
-| **3C (this)** | Number-systems batch — Book 791381 source PDF **15–22** (decimal/binary/hex conversions) | done |
+| 3C | Number-systems batch — Book 791381 source PDF **15–22** (decimal/binary/hex conversions) | done |
+| **3D (this)** | Complete Unit 2 — Book 791381 source PDF **23** (خلاصة التحويلات); m02 becomes complete | done |
 | 4 | Interactive Practice — answer checking + immediate feedback (inline) | deferred |
 | 5 | Simulations — real VLAN/subnet/CLI/… renderers registered behind the Phase-3A engine | deferred |
 | 6 | Student Progress — last page, completion, attempts (separate domain; attaches to the no-op event seam) | deferred |
