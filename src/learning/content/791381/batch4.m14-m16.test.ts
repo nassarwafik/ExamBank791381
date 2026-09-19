@@ -313,3 +313,34 @@ describe("Batch 4 — provenance, RTL/LTR, safety, skeletons and registry consis
     for (const m of BATCH) expect(manifest.modules.find(x => x.id === m.id)!.lessons.flatMap(l => l.pages.map(p => p.id)).sort()).toEqual(pagesOf(m).map(p => p.id).sort());
   });
 });
+
+describe("Batch 4 — review fixes: enrichment claims stay within what the book states", () => {
+  const ex = (pid: string, bid: string) => { const b = blockBy(pageBy(pid), bid); return b.type === "example" ? b : null; };
+  it("PDF 88: the book «معًا» block is unchanged; the DHCP/DNS/HTTP example is an explicit one-scenario walk-through (device joined the network first), never a universal chronological order", () => {
+    const together = blockBy(pageBy("791381-m14-l01-p02"), "m14-l01-p02-together");
+    expect(together.type === "callout" && [together.origin, together.kind, together.title, together.spans.map(s => s.text).join("")]).toEqual(["book", "summary", "معًا", "DNS يجد العنوان، HTTP يجلب الصفحة، و DHCP يمنح الجهاز عنوانه — أساس تصفّح الإنترنت."]);
+    const e = ex("791381-m14-l01-p02", "m14-l01-p02-ex1")!;
+    expect(e.origin).toBe("teacher-enrichment");
+    expect(e.prompt).toMatch(/وصل جهازه بالشبكة/);
+    expect(e.prompt).toMatch(/حصل على إعداداته تلقائيًا/);
+    expect(e.steps[0].text).toMatch(/عند الانضمام إلى الشبكة/);
+    expect(e.explanation).toMatch(/موقف واحد/);
+    expect(e.explanation).toMatch(/لا يلزم أن يعمل من جديد عند كل فتح صفحة/);
+    const all = JSON.stringify(e);
+    expect(all).not.toMatch(/ترتيب الحدوث|دائمًا|في كل مرة يفتح|قبل كل شيء/);
+  });
+  it("PDF 93: the book «تطبيق سريع» is unchanged; the ping example is conditional (قد / يعتمد على الشبكة), keeps 10.255.255.1 as a private address, notes that no reply does not prove the Internet is down, and invents no output", () => {
+    const tryBox = blockBy(pageBy("791381-m15-l01-p01"), "m15-l01-p01-try");
+    expect(tryBox.type === "callout" && [tryBox.origin, tryBox.title, tryBox.spans.map(s => s.text).join("")]).toEqual(["book", "تطبيق سريع", "نفّذ ping 8.8.8.8 ثم ping 10.255.255.1. أيّهما يصل؟ ولماذا؟"]);
+    const e = ex("791381-m15-l01-p01", "m15-l01-p01-ex1")!;
+    expect(e.origin).toBe("teacher-enrichment");
+    const all = JSON.stringify(e);
+    expect(all).not.toMatch(/فسيصل|8\.8\.8\.8 يصل|الأول يصل|متّصلًا بالإنترنت فسيصل|سيرد|يصل \(عبر الإنترنت\)/);
+    expect(e.result).toMatch(/قد يردّ/);
+    expect(e.result).toMatch(/تعتمد على الشبكة/);
+    expect(e.steps[1].text).toMatch(/العناوين الخاصة/);
+    expect(e.steps[2].text).toMatch(/لا يثبت أن الإنترنت غير متاح/);
+    expect(e.steps[2].text).toMatch(/ICMP/);
+    expect(all).not.toMatch(/Reply from|bytes=|TTL|time=|Request timed out|جدار الحماية|firewall/i);
+  });
+});
