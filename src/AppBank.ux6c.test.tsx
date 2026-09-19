@@ -66,8 +66,9 @@ describe("UX-6c — Exam Bank navigation", () => {
     expect(nav("بنك الامتحانات").getAttribute("aria-current")).toBe("page");
     await screen.findByRole("region", { name: "بنك الامتحانات" });
     await screen.findByText("عدد الأسئلة");
-    // exactly the two entry loads; App's pre-existing per-view effect also re-reads the project summary on any view change (unchanged)
-    await waitFor(() => expect(calls.slice(before).filter(u => !u.includes("/api/project-tracker")).sort()).toEqual(["/api/bank-questions", "/api/saved-exams"]));
+    // exactly the two entry loads; App's pre-existing per-view effect also re-reads the project summary on any view change (unchanged),
+    // and the ONE teacher self-profile read of the session (identity) may still be in flight from login.
+    await waitFor(() => expect(calls.slice(before).filter(u => !u.includes("/api/project-tracker") && !u.includes("/api/teacher-profile")).sort()).toEqual(["/api/bank-questions", "/api/saved-exams"]));
     expect(within(sidebar()).getAllByRole("button").filter(b => b.getAttribute("aria-current") === "page")).toHaveLength(1);
     fireEvent.click(nav("باني الامتحان"));
     expect(h1()).toBe("باني الامتحان"); expect(document.querySelector(".builder-content")).toBeTruthy();

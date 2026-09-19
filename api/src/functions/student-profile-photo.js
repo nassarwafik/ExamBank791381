@@ -12,21 +12,16 @@ const { app } = require("@azure/functions");
 const { withObservability } = require("../lib/observability");
 const { requireBuilderAuth } = require("../lib/builder-auth");
 const { requireStudentAuth } = require("../lib/student-auth");
-const { getContainer, downloadJsonOrNull, mutateJsonWithRetry, uploadBinary, downloadBinaryOrNull, deleteBlob, StorageConflictError } = require("../lib/platform-storage");
+const { getContainer, downloadJsonOrNull, mutateJsonWithRetry, StorageConflictError } = require("../lib/platform-storage");
 const { recordAuditEvent } = require("../lib/audit-log");
-const { decodeImageDataUrl, normalizeProfileImage, ProfileImageError, MESSAGES } = require("../lib/profile-image");
+const { ProfileImageError, MESSAGES } = require("../lib/profile-image");
+const { photoMeta, storeProfilePhoto, removeProfilePhoto, photoResponse } = require("../lib/profile-photo-store");
 
 const USER_PREFIX = "platform/users/";
 const PHOTO_PREFIX = "platform/student-profile-images/";
 const CONFLICT_MESSAGE = "حدث تعارض مؤقت أثناء حفظ البيانات. حاول مرة أخرى.";
 const studentPhotoBlobName = studentId => PHOTO_PREFIX + String(studentId) + "/current.webp";
 const VALID_ID = /^[A-Za-z0-9_-]{1,80}$/;
-
-/** The public photo metadata of a user document (null when no photo). */
-function photoMeta(user) {
-  const p = user && user.profilePhoto;
-  return p && typeof p === "object" && Number(p.version) > 0 ? { version: Number(p.version), updatedAt: String(p.updatedAt || "") } : null;
-}
 
 /** Teacher (builder) or an active student session — never both, never a body-supplied identity. */
 function resolveActor(request, deps) {
@@ -54,10 +49,7 @@ async function handler(request, deps = {}, obs = null) {
       if (!VALID_ID.test(studentId)) return { status: 400, jsonBody: { ok: false, error: "studentId مطلوب." } };
       const user = await dl(container, USER_PREFIX + studentId + ".json");
       const meta = user && user.role === "student" ? photoMeta(user) : null;
-      if (!meta) return { status: 404, jsonBody: { ok: false, error: "لا توجد صورة." } };
-      const blob = await (deps.downloadBinaryOrNull || downloadBinaryOrNull)(container, studentPhotoBlobName(studentId));
-      if (!blob) return { status: 404, jsonBody: { ok: false, error: "لا توجد صورة." } };
-      return { status: 200, body: blob.buffer, headers: { "content-type": blob.contentType || "image/webp", "cache-control": "private, max-age=3600", etag: '"v' + meta.version + '"', "x-photo-version": String(meta.version) } };
+      return photoResponse(container, studentPhotoBlobName(studentId), meta, deps);
     }
 
     // ---- POST: teacher only ----
@@ -74,12 +66,11 @@ async function handler(request, deps = {}, obs = null) {
     if (action === "upload") {
       let normalized;
       try {
-        normalized = await (deps.normalizeProfileImage || normalizeProfileImage)(decodeImageDataUrl(body?.dataUrl));
+        normalized = await storeProfilePhoto(container, studentPhotoBlobName(studentId), body?.dataUrl, deps);
       } catch (e) {
         if (e instanceof ProfileImageError) return { status: e.httpStatus || 400, jsonBody: { ok: false, error: e.message, code: e.code } };
         throw e;
       }
-      await (deps.uploadBinary || uploadBinary)(container, studentPhotoBlobName(studentId), normalized.buffer, normalized.contentType);
       let meta = null;
       try {
         const updated = await (deps.mutateJsonWithRetry || mutateJsonWithRetry)(container, USER_PREFIX + studentId + ".json", current => {
@@ -101,7 +92,7 @@ async function handler(request, deps = {}, obs = null) {
     }
 
     if (action === "remove") {
-      await (deps.deleteBlob || deleteBlob)(container, studentPhotoBlobName(studentId));
+      await removeProfilePhoto(container, studentPhotoBlobName(studentId), deps);
       try {
         await (deps.mutateJsonWithRetry || mutateJsonWithRetry)(container, USER_PREFIX + studentId + ".json", current => {
           if (!current) { const err = new Error("الطالب غير موجود."); err.httpStatus = 404; throw err; }

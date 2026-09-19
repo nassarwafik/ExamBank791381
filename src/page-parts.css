@@ -278,3 +278,16 @@
 .eb-student-photo-notice{ margin:0; color:var(--eb-success-tx); font-size:var(--eb-fs-13); }
 .eb-student-photo-error{ margin:0; }
 .eb-sp-avatar-note{ margin:0 0 var(--eb-space-3); font-size:var(--eb-fs-13); line-height:var(--eb-lh-body); }
+
+/* ---------- Teacher profile dialog ---------- */
+.eb-teacher-profile{ display:flex; flex-direction:column; gap:var(--eb-space-4); }
+.eb-teacher-profile-photo{ display:flex; gap:var(--eb-space-3); align-items:flex-start; }
+.eb-teacher-profile-photo-body{ display:flex; flex-direction:column; gap:var(--eb-space-2); min-width:0; flex:1 1 auto; }
+.eb-teacher-profile-photo-body p{ margin:0; font-size:var(--eb-fs-13); line-height:var(--eb-lh-body); }
+.eb-teacher-profile-title{ color:var(--eb-text-heading); font-weight:var(--eb-fw-semibold); }
+.eb-teacher-profile-avatars{ margin:0; padding:0; border:0; display:flex; flex-direction:column; gap:var(--eb-space-2); }
+.eb-teacher-profile-avatars legend{ padding:0; color:var(--eb-text-heading); font-weight:var(--eb-fw-semibold); font-size:var(--eb-fs-13); }
+.eb-teacher-profile-name{ display:flex; flex-wrap:wrap; align-items:flex-end; gap:var(--eb-space-2); }
+.eb-teacher-profile-name label{ display:flex; flex-direction:column; gap:var(--eb-space-1); flex:1 1 200px; color:var(--eb-muted); font-size:var(--eb-fs-13); font-weight:var(--eb-fw-semibold); }
+.eb-teacher-profile-name input{ min-height:40px; padding:var(--eb-space-2) var(--eb-space-3); border:1px solid var(--eb-border-strong); border-radius:var(--eb-r); background:var(--eb-surface); color:var(--eb-text); font:inherit; font-weight:var(--eb-fw-regular); }
+.eb-teacher-profile-notice{ margin:0; color:var(--eb-success-tx); font-size:var(--eb-fs-13); }

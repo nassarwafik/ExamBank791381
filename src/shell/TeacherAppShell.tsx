@@ -11,6 +11,8 @@ import {
   NAV_LABELS, EXAM_BANK_GROUP_LABEL, EXAM_BANK_HEAD, PRIMARY_NAV, EXAM_BANK_NAV, FOOTER_NAV,
   activeNavId, breadcrumbFor, pageTitleFor, type TeacherNavId, type TeacherNavState
 } from "./teacherNav";
+import TeacherIdentity from "../teacher/TeacherIdentity";
+import type { TeacherProfile } from "../teacher/teacherProfile";
 import "../ui/ui.css";
 import "../shell.css";
 
@@ -27,12 +29,14 @@ type Props = {
   nav: TeacherNavState;
   projectReadyTotal: number;
   displayName: string;
+  /** Teacher identity (self-profile): the sidebar shows the photo / preset icon + name and opens the profile dialog. */
+  identity?: { token: string; profile: TeacherProfile | null; onProfileChange: (p: TeacherProfile) => void };
   onNavigate: (id: TeacherNavId) => void;
   onLogout: () => void;
   children: ReactNode;
 };
 
-export default function TeacherAppShell({ nav, projectReadyTotal, displayName, onNavigate, onLogout, children }: Props) {
+export default function TeacherAppShell({ nav, projectReadyTotal, displayName, identity, onNavigate, onLogout, children }: Props) {
   const [compact, setCompact] = useState(false);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const asideRef = useRef<HTMLElement>(null);
@@ -117,6 +121,7 @@ export default function TeacherAppShell({ nav, projectReadyTotal, displayName, o
             />
           )}
         </div>
+        {identity && <TeacherIdentity token={identity.token} profile={identity.profile} sessionDisplayName={displayName} onProfileChange={identity.onProfileChange} compact={compact} />}
         <nav className="eb-nav" aria-label="الأقسام">
           {PRIMARY_NAV.map(id => navButton(id))}
           {/* UX-6c — the group head is a real destination (Exam Bank management); builder + import stay as its children. */}
@@ -127,7 +132,7 @@ export default function TeacherAppShell({ nav, projectReadyTotal, displayName, o
         </nav>
         <nav className="eb-nav eb-nav-footer" aria-label="إعدادات وحساب">
           {FOOTER_NAV.map(id => navButton(id))}
-          <div className="eb-user" title={displayName}><IconUser size={16} /><span className="eb-nav-label">{displayName}</span></div>
+          {!identity && <div className="eb-user" title={displayName}><IconUser size={16} /><span className="eb-nav-label">{displayName}</span></div>}
           <button type="button" className="eb-nav-link eb-logout app-sidebar-logout" title="تسجيل الخروج" onClick={onLogout}>
             <IconLogout size={18} /><span className="eb-nav-label">تسجيل الخروج</span>
           </button>
