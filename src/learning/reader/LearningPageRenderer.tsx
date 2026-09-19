@@ -1,10 +1,11 @@
 import type { ReactNode } from "react";
 import { IconWarning, IconBook, IconSparkles, IconCheck } from "../../icons";
 import RichTextRenderer from "./RichTextRenderer";
-import { isActivityBlock, type ContentBlock, type ContentPage, type ContentSource, type CalloutKind, type PracticeQuestion, type ListBlock, type UnitOpenerBlock, type LibraryTrainingBlock } from "../content/types";
+import { isActivityBlock, type ContentBlock, type ContentPage, type ContentSource, type CalloutKind, type ListBlock, type UnitOpenerBlock, type LibraryTrainingBlock } from "../content/types";
 import type { LibraryTrainingHost } from "../training/types";
 import LearningActivityHost from "../activities/LearningActivityHost";
 import PracticeTableView from "./PracticeTableView";
+import PracticeBlockView from "./PracticeBlockView";
 import { ACTIVITY_ENRICHMENT_LABEL } from "../activities/labels";
 import type { LearningActivityRegistry, LearningActivityEventSink } from "../activities/engine";
 
@@ -44,7 +45,7 @@ export type ReaderPageBody =
  * Renders one interactive learning page: a manifest-derived header (title, lesson context, reader position and a
  * visually-quiet source reference) plus a body. Book content is the dominant surface; teacher-enrichment blocks
  * are wrapped in a clearly-labelled (non-color-only) enrichment surface. Blocks render in EXACT authored order —
- * nothing is regrouped. No answer keys are ever emitted to the DOM (see PracticeBlockView).
+ * nothing is regrouped. No answer key reaches the DOM before the student answers (see PracticeBlockView).
  */
 export default function LearningPageRenderer({ header, body, activity, training }: {
   header: ReaderPageHeader;
@@ -308,35 +309,6 @@ function ExampleView({ block }: { block: Extract<ContentBlock, { type: "example"
         <p className="learning-reader-example-result"><span className="learning-reader-example-tag">النتيجة</span><span dir="ltr" className="learning-reader-mono">{block.result}</span></p>
       )}
       {solved && block.explanation && <p className="learning-reader-example-explain">{block.explanation}</p>}
-    </div>
-  );
-}
-
-/**
- * STATIC Phase-3 practice preview. It shows only the question prompt and the SHAPE of the answer (option texts /
- * an input placeholder). It NEVER renders the answer key: no `correct` flag, no `answer`/`answers`, and no
- * feedback (hint/correctFeedback/incorrectFeedback/explanation) reaches the DOM — not as text, attribute, prop or
- * label. Answer checking is Phase 4.
- */
-function PracticeBlockView({ question }: { question: PracticeQuestion }) {
-  return (
-    <div className="learning-reader-practice">
-      <p className="learning-reader-practice-prompt">{question.prompt}</p>
-      {question.kind === "multipleChoice" && (
-        <ul className="learning-reader-practice-options">
-          {question.options.map(o => <li key={o.id} className="learning-reader-practice-option">{o.text}</li>)}
-        </ul>
-      )}
-      {question.kind === "trueFalse" && (
-        <ul className="learning-reader-practice-options">
-          <li className="learning-reader-practice-option">صح</li>
-          <li className="learning-reader-practice-option">خطأ</li>
-        </ul>
-      )}
-      {(question.kind === "shortInput" || question.kind === "fillBlank") && (
-        <p className="learning-reader-practice-input" aria-hidden="true">✎ ________</p>
-      )}
-      <p className="learning-reader-practice-hint">سيتوفر التحقق من الإجابة في مرحلة لاحقة.</p>
     </div>
   );
 }
