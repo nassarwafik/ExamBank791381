@@ -224,3 +224,37 @@
   .eb-classes-pane,.eb-roster-toolbar,.eb-bulk-bar,.eb-menu-trigger,.eb-section-actions,.eb-credential-box{ display:none !important; }
   .eb-students-layout{ grid-template-columns:minmax(0,1fr); }
 }
+
+/* ---------- Class Learning Materials panel (المواد التعليمية لهذا الصف) — below Classes | Students ---------- */
+.eb-lm-class-panel{ display:flex; flex-direction:column; gap:var(--eb-space-3); min-width:0; padding:var(--eb-space-4); background:var(--eb-surface); border:1px solid var(--eb-line); border-radius:var(--eb-r-lg); box-shadow:var(--eb-sh-xs); }
+.eb-lm-class-readonly{ margin:0; }
+.eb-lm-class-list{ list-style:none; margin:0; padding:0; display:grid; grid-template-columns:1fr; gap:var(--eb-space-3); min-width:0; }
+.eb-lm-class-card{ min-width:0; }
+.eb-lm-class-card > article{ display:flex; flex-direction:column; gap:var(--eb-space-3); padding:var(--eb-space-3); border:1px solid var(--eb-line); border-radius:var(--eb-r); background:var(--eb-surface-2); min-width:0; }
+.eb-lm-class-card-head{ display:flex; align-items:center; gap:var(--eb-space-3); flex-wrap:wrap; min-width:0; }
+.eb-lm-class-cover{ flex:0 0 auto; display:inline-grid; place-items:center; inline-size:44px; block-size:44px; border-radius:var(--eb-r); background:var(--eb-primary-050); color:var(--eb-primary-strong); }
+.eb-lm-class-card-text{ display:flex; flex-direction:column; gap:2px; min-width:0; flex:1 1 200px; }
+.eb-lm-class-card-title{ margin:0; font-size:var(--eb-fs-16); font-weight:var(--eb-fw-bold); color:var(--eb-text-heading); overflow-wrap:anywhere; }
+.eb-lm-class-card-meta{ margin:0; color:var(--eb-muted); font-size:var(--eb-fs-13); }
+.eb-lm-class-modules{ list-style:none; margin:0; padding:0; display:flex; flex-direction:column; gap:var(--eb-space-2); min-width:0; }
+.eb-lm-class-module{ display:flex; align-items:center; justify-content:space-between; gap:var(--eb-space-2); flex-wrap:wrap; padding:var(--eb-space-2) var(--eb-space-3); border:1px solid var(--eb-line); border-radius:var(--eb-r-sm); background:var(--eb-surface); min-width:0; }
+.eb-lm-class-module.is-on{ border-color:var(--eb-primary); }
+.eb-lm-class-module-label{ display:flex; align-items:center; gap:var(--eb-space-2); min-width:0; flex:1 1 220px; cursor:pointer; min-height:32px; }
+.eb-lm-class-module-label input{ width:18px; height:18px; margin:0; flex:0 0 auto; }
+.eb-lm-class-module-order{ flex:0 0 auto; display:inline-grid; place-items:center; min-width:24px; height:24px; border-radius:var(--eb-pill); background:var(--eb-surface-2); color:var(--eb-text-secondary); font-size:var(--eb-fs-12); font-weight:var(--eb-fw-bold); }
+.eb-lm-class-module-title{ min-width:0; overflow-wrap:anywhere; font-size:var(--eb-fs-14); color:var(--eb-text); }
+.eb-lm-class-card-foot{ display:flex; justify-content:flex-start; }
+.eb-lm-add-courses,.eb-lm-add-modules{ display:flex; flex-direction:column; gap:var(--eb-space-2); margin:0 0 var(--eb-space-3); padding:0; border:0; min-width:0; }
+.eb-lm-add-legend{ padding:0; margin-bottom:var(--eb-space-1); font-weight:var(--eb-fw-semibold); color:var(--eb-text-heading); font-size:var(--eb-fs-14); }
+.eb-lm-add-course{ display:flex; align-items:center; gap:var(--eb-space-3); padding:var(--eb-space-2) var(--eb-space-3); border:1px solid var(--eb-line); border-radius:var(--eb-r); cursor:pointer; min-width:0; }
+.eb-lm-add-course.is-on{ border-color:var(--eb-primary); background:var(--eb-primary-050); }
+.eb-lm-add-course input{ width:18px; height:18px; margin:0; flex:0 0 auto; }
+.eb-lm-add-course-text{ display:flex; flex-direction:column; gap:2px; min-width:0; }
+.eb-lm-add-module{ padding:var(--eb-space-2) var(--eb-space-3); border:1px solid var(--eb-line); border-radius:var(--eb-r-sm); }
+.eb-lm-add-module.is-on{ border-color:var(--eb-primary); }
+.eb-lm-add-hint{ margin:0; font-size:var(--eb-fs-13); }
+@media (max-width:767px){
+  .eb-lm-class-panel{ padding:var(--eb-space-3); }
+  .eb-lm-class-module-label{ min-height:44px; }
+  .eb-lm-add-course,.eb-lm-add-module{ min-height:44px; }
+}

@@ -10,9 +10,10 @@ import {getClassProgramCodes} from "./projects/classPrograms";
 import {useConfirm} from "./ui/useConfirm";
 import ClassesPane from "./students/ClassesPane";
 import RosterPane from "./students/RosterPane";
+import ClassLearningMaterialsPanel,{classLearningMaterials} from "./students/ClassLearningMaterialsPanel";
 import StudentDialog from "./students/StudentDialog";
 import {CreateClassDialog,AddStudentDialog,ImportStudentsDialog,EditStudentDialog} from "./students/StudentForms";
-import type {ClassArchiveView,Classroom,ProjectOption,Student,Credential,BulkStudent,BulkError,ImportPreviewRow,SubmittedAssignment,StudentProfile,SortKey,StatusFilter,ProfileSection} from "./students/types";
+import type {ClassArchiveView,Classroom,ClassLearningMaterial,LearningCatalogCourse,ProjectOption,Student,Credential,BulkStudent,BulkError,ImportPreviewRow,SubmittedAssignment,StudentProfile,SortKey,StatusFilter,ProfileSection} from "./students/types";
 import {type CredentialBatch,openCredentialBatch,toggleCredentialBatchCollapsed,credentialBatchVisible,buildCredentialsDownload} from "./credentialBatch";
 import {appendStudentRow,mergeStudentRow,removeStudentRow,pruneSelectedIds,needsAuthoritativeReload} from "./rosterPatch";
 
@@ -65,6 +66,10 @@ function TeacherPlatform(props:TeacherPlatformProps){
  const selectedClassRef=useRef("");
  const [loading,setLoading]=useState(false);
  const [actionBusy,setActionBusy]=useState(false);
+ // Class Learning Materials: the publishable catalog (GET /api/learning-materials-catalog) is read ONCE per students
+ // workspace lifecycle — never per class card — and is metadata only (course/module ids, titles, order).
+ const [learningCatalog,setLearningCatalog]=useState<LearningCatalogCourse[]|null>(null);
+ const [learningCatalogError,setLearningCatalogError]=useState("");
  const [error,setError]=useState("");
  const [notice,setNotice]=useState("");
 
@@ -216,6 +221,15 @@ function TeacherPlatform(props:TeacherPlatformProps){
  function stillSelected(classId:string){return selectedClassRef.current===classId}
 
  useEffect(()=>{void loadClasses(false)},[]);
+ async function loadLearningCatalog(){
+  setLearningCatalogError("");
+  try{
+   const result=await teacherApi<{ok:true;courses?:LearningCatalogCourse[]}>("/api/learning-materials-catalog");
+   setLearningCatalog(Array.isArray(result.courses)?result.courses:[]);
+  }catch(e){setLearningCatalog(null);setLearningCatalogError(e instanceof Error?e.message:"تعذر تحميل قائمة المواد التعليمية.")}
+ }
+ // The catalog is needed only by the Classes & Students workspace (the panel lives there); other tabs never request it.
+ useEffect(()=>{if(workspaceTab==="students"&&learningCatalog===null)void loadLearningCatalog()},[workspaceTab]);// eslint-disable-line react-hooks/exhaustive-deps
  // Registry-driven list of projects for the per-class project selector (no hard-coded codes).
  // Only a standalone mount (no catalog from App) reads the registry itself; inside the app the boot read is reused.
  useEffect(()=>{if(props.projects!==undefined)return;teacherApi<{projects?:ProjectOption[]}>("/api/project-tracker?resource=projects").then(r=>setPrograms(r.projects||[])).catch(()=>setPrograms([]));},[]);// eslint-disable-line react-hooks/exhaustive-deps
@@ -281,6 +295,61 @@ function TeacherPlatform(props:TeacherPlatformProps){
    await loadClasses();
    setNotice(enable?("✓ تمت إضافة "+projectTitle(code)+" للصف. افتحه من قسم المشاريع."):("✓ تمت إزالة "+projectTitle(code)+" من الصف (البيانات محفوظة)."));
   }catch(e){setError(e instanceof Error?e.message:"تعذر تعديل مشاريع الصف.")}
+  finally{setActionBusy(false)}
+ }
+
+ // ── Class Learning Materials (progressive release) ─────────────────────────────────────────────────────────────
+ // Every mutation goes through POST /api/classrooms; the server validates course/module ids against ITS registry,
+ // canonicalizes the order and returns the class's normalized `learningMaterials`, which is patched into the classes
+ // list BY classId (Roadmap #32 discipline: a response for class A can never overwrite the panel of a class B the
+ // teacher selected meanwhile — the patch targets A's row only, and the visible panel always reads the selected row).
+ function commitLearningMaterials(classId:string,learningMaterials:ClassLearningMaterial[]){
+  setClasses(prev=>prev.map(c=>c.classId===classId?{...c,learningMaterials}:c));
+ }
+ const learningCourseTitle=(courseId:string)=>learningCatalog?.find(c=>c.courseId===courseId)?.title||("كتاب "+courseId);
+ const learningModuleTitle=(courseId:string,moduleId:string)=>learningCatalog?.find(c=>c.courseId===courseId)?.modules.find(m=>m.moduleId===moduleId)?.title||moduleId;
+ async function setLearningCourseModules(classroom:Classroom,courseId:string,moduleIds:string[],successMessage:string){
+  setActionBusy(true);setError("");setNotice("");
+  try{
+   const result=await teacherApi<{ok:true;classId:string;learningMaterials:ClassLearningMaterial[]}>("/api/classrooms",{method:"POST",body:JSON.stringify({action:"setLearningCourseModules",classId:classroom.classId,courseId,moduleIds})});
+   commitLearningMaterials(classroom.classId,Array.isArray(result.learningMaterials)?result.learningMaterials:[]);
+   setNotice(successMessage);
+  }catch(e){setError(e instanceof Error?e.message:"تعذر تعديل المواد التعليمية للصف.")}
+  finally{setActionBusy(false)}
+ }
+ // Attach a course with its INITIAL published modules ([] is valid: attached, nothing released yet).
+ async function addLearningCourse(classroom:Classroom,courseId:string,moduleIds:string[]){
+  if(actionBusy)return;
+  const title=learningCourseTitle(courseId);
+  await setLearningCourseModules(classroom,courseId,moduleIds,moduleIds.length?("✓ تمت إضافة «"+title+"» للصف ونشر "+moduleIds.length+" من فصوله للطلاب."):("✓ تمت إضافة «"+title+"» للصف. لم يُنشر أي فصل بعد — انشر الفصول عندما تكون جاهزًا."));
+ }
+ // Publish / hide ONE module. Hiding an already visible module is confirmed (it is not a deletion: the content stays
+ // and can be published again). The next list is computed from the class's CURRENT normalized materials.
+ async function toggleLearningModule(classroom:Classroom,courseId:string,moduleId:string,publish:boolean){
+  if(actionBusy)return;
+  const entry=classLearningMaterials(classroom).find(e=>e.courseId===courseId);
+  const current=entry?entry.visibleModuleIds:[];
+  const moduleTitle=learningModuleTitle(courseId,moduleId);
+  if(!publish){
+   if(!(await confirm({message:"سيختفي فصل \""+moduleTitle+"\" من طلاب الصف. لن يتم حذف المحتوى ويمكن نشره مرة أخرى.",confirmLabel:"إخفاء عن الطلاب"})))return;
+  }
+  // The next list is sent in the catalog's canonical content order (the server canonicalizes anyway; the request
+  // simply never implies that the teacher controls order — only visibility).
+  const wanted=new Set(publish?[...current,moduleId]:current.filter(id=>id!==moduleId));
+  const order=learningCatalog?.find(c=>c.courseId===courseId)?.modules.map(m=>m.moduleId)||[];
+  const next=[...order.filter(id=>wanted.has(id)),...[...wanted].filter(id=>!order.includes(id))];
+  await setLearningCourseModules(classroom,courseId,next,publish?("✓ نُشر فصل «"+moduleTitle+"» لطلاب الصف."):("✓ أُخفي فصل «"+moduleTitle+"» عن طلاب الصف (المحتوى محفوظ)."));
+ }
+ // Detach the whole course from THIS class (its publication list goes with it). Never deletes book content.
+ async function removeLearningCourse(classroom:Classroom,courseId:string){
+  if(actionBusy)return;
+  if(!(await confirm({message:"ستختفي المادة التعليمية من طلاب الصف. لن يتم حذف محتوى الكتاب، ويمكن إضافتها مرة أخرى لاحقًا.",confirmLabel:"إزالة من الصف"})))return;
+  setActionBusy(true);setError("");setNotice("");
+  try{
+   const result=await teacherApi<{ok:true;classId:string;removed:boolean;learningMaterials:ClassLearningMaterial[]}>("/api/classrooms",{method:"POST",body:JSON.stringify({action:"removeLearningCourse",classId:classroom.classId,courseId})});
+   commitLearningMaterials(classroom.classId,Array.isArray(result.learningMaterials)?result.learningMaterials:[]);
+   setNotice("✓ أُزيلت «"+learningCourseTitle(courseId)+"» من الصف (محتوى الكتاب محفوظ).");
+  }catch(e){setError(e instanceof Error?e.message:"تعذر إزالة المادة التعليمية من الصف.")}
   finally{setActionBusy(false)}
  }
 
@@ -696,6 +765,14 @@ function TeacherPlatform(props:TeacherPlatformProps){
     onCopyCredential={c=>void copyText(credentialText(((c.firstName||"")+" "+(c.familyName||"")).trim(),c.identityNumber||c.code,c.password),"✓ تم نسخ بيانات دخول الطالب.")}
     bulkErrors={bulkErrors} statusLabel={statusLabel} fmtDate={fmtDate} splitName={splitName}/>
   </div>
+
+  <ClassLearningMaterialsPanel
+   classroom={selectedClass} classActive={classActive}
+   catalog={learningCatalog} catalogError={learningCatalogError} busy={actionBusy}
+   onRetryCatalog={()=>void loadLearningCatalog()}
+   onAddCourse={(classroom,courseId,moduleIds)=>void addLearningCourse(classroom,courseId,moduleIds)}
+   onToggleModule={(classroom,courseId,moduleId,publish)=>void toggleLearningModule(classroom,courseId,moduleId,publish)}
+   onRemoveCourse={(classroom,courseId)=>void removeLearningCourse(classroom,courseId)}/>
 
   <CreateClassDialog open={dialog==="createClass"} onClose={()=>setDialog("none")} name={newClassName} grade={newClassGrade} schoolYear={newSchoolYear}
    onName={setNewClassName} onGrade={setNewClassGrade} onSchoolYear={setNewSchoolYear} onSubmit={()=>void createClass()} busy={actionBusy}/>

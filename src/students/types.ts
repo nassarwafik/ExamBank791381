@@ -4,7 +4,15 @@
 import type { GradingStatus } from "../gradingStatus";
 
 export type ClassArchiveView = "active" | "archived";
-export type Classroom = { classId: string; name: string; grade: string; schoolYear: string; programCode?: string; programCodes?: string[]; active: boolean; status?: string; archivedAt?: string; archivedBy?: string; archiveReason?: string; graduationYear?: string; studentCount: number; createdAt: string };
+// Class Learning Materials — an INDEPENDENT domain from projects (programCodes) and from exam assignments.
+// `courseId` = the book/course the class uses; `visibleModuleIds` = the modules CURRENTLY published to its students
+// (canonical content order, server-normalized). A course may be attached with [] (nothing released yet).
+export type ClassLearningMaterial = { courseId: string; visibleModuleIds: string[] };
+/** One releasable module as the server publication registry describes it (identity + title + content order only). */
+export type LearningCatalogModule = { moduleId: string; title: string; order: number };
+/** One publishable course from GET /api/learning-materials-catalog (production-approved modules only, no bodies). */
+export type LearningCatalogCourse = { courseId: string; title: string; subject: string; modules: LearningCatalogModule[] };
+export type Classroom = { classId: string; name: string; grade: string; schoolYear: string; programCode?: string; programCodes?: string[]; active: boolean; status?: string; archivedAt?: string; archivedBy?: string; archiveReason?: string; graduationYear?: string; studentCount: number; createdAt: string; learningMaterials?: ClassLearningMaterial[] };
 export type ProjectOption = { projectCode: string; title: string };
 export type Student = { userId: string; code: string; identityNumber: string; firstName: string; familyName: string; displayName: string; classId: string; active: boolean; archived: boolean; createdAt: string; updatedAt: string; lastLoginAt: string; submittedAssignmentsCount: number; likesCount: number };
 export type Credential = { userId?: string; firstName?: string; familyName?: string; displayName?: string; code: string; identityNumber?: string; password: string };
