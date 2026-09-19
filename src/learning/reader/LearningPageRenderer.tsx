@@ -6,8 +6,9 @@ import LearningActivityHost from "../activities/LearningActivityHost";
 import { ACTIVITY_ENRICHMENT_LABEL } from "../activities/labels";
 import type { LearningActivityRegistry, LearningActivityEventSink } from "../activities/engine";
 
-/** Injection seam for the interactive-activity engine. The reader passes nothing → the EMPTY production registry
- *  and the no-op event sink are used, so activities render their faithful static fallback and nothing is
+/** Injection seam for the interactive-activity engine. The reader passes nothing → the PRODUCTION registry (an
+ *  exact allowlist — currently the network-scope and ipv4-octets diagrams; no simulation/animation) and the no-op
+ *  event sink are used; a descriptor without a trusted renderer shows its faithful static fallback and nothing is
  *  persisted. Tests inject a synthetic registry / sink to exercise the live path. */
 export type ActivityRenderContext = {
   courseId: string;
@@ -43,7 +44,7 @@ export type ReaderPageBody =
 export default function LearningPageRenderer({ header, body, activity }: {
   header: ReaderPageHeader;
   body: ReaderPageBody;
-  /** Optional activity-engine injection. Omitted in production → EMPTY registry + no-op sink (static fallback). */
+  /** Optional activity-engine injection. Omitted in production → the production allowlist registry + no-op sink. */
   activity?: { registry?: LearningActivityRegistry; emit?: LearningActivityEventSink };
 }) {
   const ctx: ActivityRenderContext = { courseId: header.courseId, registry: activity?.registry, emit: activity?.emit };
@@ -268,7 +269,7 @@ function renderBlock(block: ContentBlock, ctx: ActivityRenderContext): ReactNode
     case "practice":
       return <PracticeBlockView question={block.question} />;
     // Interactive activities are DELEGATED to the engine shell (never rendered inline here): it resolves the
-    // trusted registry (EMPTY in production → faithful static fallback), isolates a live renderer, and owns
+    // trusted registry (an exact allowlist; unmatched descriptors → faithful static fallback), isolates a live renderer, and owns
     // fullscreen/reduced-motion. This keeps the renderer lean and the security boundary in one place.
     case "simulation":
     case "animation":

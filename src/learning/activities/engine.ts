@@ -6,10 +6,11 @@
 //   - Content supplies only a registry KEY (a plain string) + opaque `config` DATA — never a component name,
 //     function, module path, or executable code. There is no eval, no new Function, and no dynamic import of a
 //     string taken from content. A renderer is reached ONLY through a statically-authored `load` thunk.
-//   - The registry is TRUSTED code in this repo. Production ships the registry-backed one EMPTY (Phase 3A builds
-//     no real simulation/animation), so those descriptors render their faithful static fallback and no activity
-//     chunk is ever loaded in production. Generic built-in presenters (builtins.ts) resolve with the same
-//     {kind, key, version} discipline — never by block type alone.
+//   - The registry is TRUSTED code in this repo. The production registry is an EXACT allowlist: today it holds two
+//     interactive DIAGRAMS (network-scope/v1, ipv4-octets/v1) and NO real simulation/animation renderer; any
+//     descriptor without a trusted renderer for its exact identity renders its faithful static fallback, and an
+//     activity chunk is loaded only when a matching descriptor renders. Generic built-in presenters (builtins.ts)
+//     resolve with the same {kind, key, version} discipline — never by block type alone.
 //   - The engine performs ZERO persistence and ZERO network: the only sink shipped is a no-op (no progress, no
 //     grades, no rank, no /api). Progress is a separate later domain.
 //
@@ -151,11 +152,12 @@ export function createActivityRegistry(entries: readonly RegisteredActivity[]): 
 
 /**
  * The PRODUCTION activity registry for REGISTRY-BACKED renderers (real simulations / animations / interactive
- * diagrams) — deliberately EMPTY in Phase 3A: none is shipped yet, so every registry-backed descriptor renders its
- * faithful static fallback and no activity chunk is ever imported in production. The generic BUILT-IN presenters
- * (see builtins.ts — currently only guided/reveal/v1) are resolved separately with the same identity discipline;
- * an empty production registry therefore does NOT mean every activity family falls back. Real renderers are
- * registered here (each behind a code-split `load` thunk) in later phases; the Reader never changes.
+ * diagrams). It is an EXACT allowlist, currently: interactive-diagram/network-scope/v1 (Phase 3B) and
+ * interactive-diagram/ipv4-octets/v1 (Phase 3E) — each behind a code-split `load` thunk, so a chunk is imported
+ * only when a matching descriptor renders. There is still NO real simulation or animation renderer: such
+ * descriptors render their faithful static fallback. The generic BUILT-IN presenters (see builtins.ts — currently
+ * only guided/reveal/v1) are resolved separately with the same identity discipline. New renderers are registered
+ * here in later phases; the Reader never changes.
  */
 export const productionActivityRegistry: LearningActivityRegistry = createActivityRegistry([
   // Phase 3B — the FIRST real registry-backed production activity (the PAN/LAN/WAN scope diagram for PDF 11).

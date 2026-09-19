@@ -29,9 +29,9 @@ const COURSE_MANIFESTS: Record<string, ManifestLoader> = {
   "791381": () => import("./791381/manifest"),
 };
 
-// Module BODY loaders per course. Phase 2 authors the manifest (TOC) but no converted module bodies yet, so this
-// map is intentionally empty for 791381 — the wiring and types are proven; bodies arrive with content conversion
-// in a later phase, each as its own `import("./791381/modules/<id>")` chunk registered here.
+// Module BODY loaders per course. Each converted module body is registered here as its own
+// `import("./791381/modules/<id>")` chunk (m01, m02 and m07 today); manifest modules without an entry are still
+// skeleton-only and the Reader shows them as «قيد الإعداد».
 const COURSE_MODULE_LOADERS: Record<string, Record<string, ModuleLoader>> = {
   // REAL module bodies, each its own lazy chunk; the main bundle imports none of these eagerly.
   //   m01 — Unit 1 (PDF 7–13), complete (Phase 3B)
@@ -66,7 +66,7 @@ export async function loadCourseManifest(courseId: string): Promise<LearningCour
   return (await loader()).default;
 }
 
-/** Whether a specific module BODY is registered (Phase 2: none yet for 791381). Pure, no import triggered. */
+/** Whether a specific module BODY is registered (791381: m01, m02, m07 today). Pure, no import triggered. */
 export function hasModuleContent(courseId: string, moduleId: string): boolean {
   return Boolean(COURSE_MODULE_LOADERS[courseId] && Object.prototype.hasOwnProperty.call(COURSE_MODULE_LOADERS[courseId], moduleId));
 }
