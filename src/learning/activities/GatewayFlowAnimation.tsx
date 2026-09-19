@@ -7,7 +7,9 @@ import type { LearningActivityProps } from "./engine";
  * The student chooses a destination — a device in the SAME local network, or the Internet — and presses «أرسل
  * البيانات». A packet then travels step by step along the page's own figure: PC1 → Switch → PC2 (local traffic
  * never touches the gateway) versus PC1 → Switch → Router (the default gateway) → Internet. Every step is also
- * written as text (an aria-live list), so the meaning never depends on motion or colour. Reduced motion: the
+ * mirrored as plain Arabic prose «من X إلى Y» (sender first, receiver second) so the aria-live text carries the same
+ * direction as the animation without relying on arrow glyphs inside mixed Arabic/Latin strings; that aria-live list
+ * means the meaning never depends on motion or colour. Reduced motion: the
  * final state renders at once, no stepping. Replay/reset are the shell's commands. No network, no persistence,
  * no dependency, native SVG only. All labels and captions come from the block's `config`.
  */
@@ -109,7 +111,7 @@ export default function GatewayFlowAnimation({ block, reducedMotion, commands, e
         {path.slice(1).map((k, i) => (
           <li key={k} className={"learning-gateway-step" + (step >= i + 1 ? " is-done" : "")} aria-current={step === i + 1 ? "step" : undefined}>
             <span className="learning-gateway-stepno" aria-hidden="true">{i + 1}</span>
-            <span dir="auto">{names[path[i]]} ← {names[k]}{k === "router" ? ` (${cfg.router.role})` : ""}</span>
+            <span dir="auto">من {names[path[i]]} إلى {names[k]}{k === "router" ? ` (${cfg.router.role})` : ""}</span>
           </li>
         ))}
       </ol>

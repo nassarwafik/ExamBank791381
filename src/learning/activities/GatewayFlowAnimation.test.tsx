@@ -37,21 +37,21 @@ describe("registry identity", () => {
 });
 
 describe("behaviour", () => {
-  it("local destination: the text steps are PC1 → Switch → PC2 (no gateway); the packet advances one hop per tick; the local caption ends the run", async () => {
+  it("local destination: the text mirror reads sender → receiver in prose (من PC1 إلى Switch, من Switch إلى PC2 — no gateway, no arrow glyphs); the packet advances one hop per tick; the local caption ends the run", async () => {
     const fetchSpy = vi.spyOn(globalThis, "fetch");
     const { container } = render(<LearningActivityHost block={block} courseId="791381" />);
     await waitFor(() => { if (!container.querySelector(".learning-gateway")) throw new Error("not yet"); });
     vi.useFakeTimers();                                                              // only the hop timer is faked (after the lazy load)
     expect(screen.getByRole("radio", { name: "جهاز في نفس الشبكة (PC2)" }).getAttribute("aria-checked")).toBe("true");
-    expect(steps()).toEqual([["1PC1 ← Switch", false], ["2Switch ← PC2", false]]);
+    expect(steps()).toEqual([["1من PC1 إلى Switch", false], ["2من Switch إلى PC2", false]]);
     expect(container.querySelector(".learning-gateway-packet")).toBeNull();
     fireEvent.click(screen.getByRole("button", { name: "أرسل البيانات" }));
     expect(container.querySelector(".learning-gateway-packet")).toBeTruthy();
-    expect(steps()).toEqual([["1PC1 ← Switch", false], ["2Switch ← PC2", false]]);
+    expect(steps()).toEqual([["1من PC1 إلى Switch", false], ["2من Switch إلى PC2", false]]);
     await act(async () => { vi.advanceTimersByTime(700); });
-    expect(steps()).toEqual([["1PC1 ← Switch", true], ["2Switch ← PC2", false]]);
+    expect(steps()).toEqual([["1من PC1 إلى Switch", true], ["2من Switch إلى PC2", false]]);
     await act(async () => { vi.advanceTimersByTime(700); });
-    expect(steps()).toEqual([["1PC1 ← Switch", true], ["2Switch ← PC2", true]]);
+    expect(steps()).toEqual([["1من PC1 إلى Switch", true], ["2من Switch إلى PC2", true]]);
     expect(screen.getByRole("status").textContent).toContain("لا تحتاج البوابة");
     expect(container.querySelector(".learning-gateway-node.is-router.is-current")).toBeNull();   // the gateway never lit up
     expect(fetchSpy).not.toHaveBeenCalled();
@@ -63,7 +63,13 @@ describe("behaviour", () => {
     await waitFor(() => { if (!container.querySelector(".learning-gateway")) throw new Error("not yet"); });
     vi.useFakeTimers();
     fireEvent.click(screen.getByRole("radio", { name: "الإنترنت (خارج الشبكة)" }));
-    expect(steps().map(s => s[0])).toEqual(["1PC1 ← Switch", "2Switch ← Router (البوابة الافتراضية)", "3Router ← الإنترنت"]);
+    expect(steps().map(s => s[0])).toEqual(["1من PC1 إلى Switch", "2من Switch إلى Router (البوابة الافتراضية)", "3من Router إلى الإنترنت"]);
+    // Semantic direction: every hop names the SENDER first («من X») and the RECEIVER second («إلى Y»), and the chain
+    // is PC1 → Switch → Router → الإنترنت (each hop's receiver is the next hop's sender). No arrow glyph is used.
+    const pairs = steps().map(s => /^\d+من (.+?) إلى (.+?)(?: \(.*\))?$/.exec(String(s[0]))!.slice(1, 3));
+    expect(pairs).toEqual([["PC1", "Switch"], ["Switch", "Router"], ["Router", "الإنترنت"]]);
+    for (let i = 1; i < pairs.length; i++) expect(pairs[i][0]).toBe(pairs[i - 1][1]);
+    expect(steps().map(s => s[0]).join(" ")).not.toMatch(/[←→]/);
     expect(container.textContent).toContain("192.168.1.1");
     fireEvent.click(screen.getByRole("button", { name: "أرسل البيانات" }));
     expect(emit).toHaveBeenCalledWith(expect.objectContaining({ name: "gateway-send", detail: { destination: "outside" } }));

@@ -26,6 +26,15 @@ const block: SimulationBlock = {
 };
 const outcomes = () => [...document.querySelectorAll(".learning-devices-outcomes li")].map(li => li.textContent);
 const hops = async (n: number) => { for (let i = 0; i < n; i++) await act(async () => { vi.advanceTimersByTime(700); }); };
+/** Parses the aria-live text mirror into [sender, receiver] pairs, asserting each hop's receiver is the next hop's
+ *  sender and that no arrow glyph is used (the direction must be carried by the words «من … إلى …» alone). */
+const chain = (root: HTMLElement) => {
+  const texts = [...root.querySelectorAll(".learning-devices-step")].map(li => li.textContent || "");
+  expect(texts.join(" ")).not.toMatch(/[←→]/);
+  const hops = texts.map(t => /^\d+من (.+?) إلى (.+?)(?: \(.*\)| فقط)?$/.exec(t)!.slice(1, 3));
+  for (let i = 1; i < hops.length; i++) expect(hops[i][0]).toBe(hops[i - 1][1]);
+  return hops;
+};
 const mount = async () => { const r = render(<LearningActivityHost block={block} courseId="791381" />); await waitFor(() => { if (!r.container.querySelector(".learning-devices")) throw new Error("not yet"); }); return r; };
 
 describe("registry identity", () => {
@@ -50,7 +59,8 @@ describe("behaviour", () => {
     expect(container.querySelectorAll(".learning-devices-node.is-reached").length).toBe(3);                // all three others
     expect(outcomes()).toEqual(["PC3: يستعملها", "PC2: يتجاهلها", "PC4: يتجاهلها"]);
     expect(screen.getByRole("status").textContent).toContain("Hub يرسل للجميع.");
-    expect([...container.querySelectorAll(".learning-devices-step.is-done")].map(li => li.textContent)).toEqual(["1PC1 ← Hub", "2Hub ← كل الأجهزة (PC3، PC2، PC4)"]);
+    expect([...container.querySelectorAll(".learning-devices-step.is-done")].map(li => li.textContent)).toEqual(["1من PC1 إلى Hub", "2من Hub إلى جميع الأجهزة (PC3، PC2، PC4)"]);
+    expect(chain(container)).toEqual([["PC1", "Hub"], ["Hub", "جميع الأجهزة"]]);
     expect(fetchSpy).not.toHaveBeenCalled();
   });
 
@@ -68,6 +78,9 @@ describe("behaviour", () => {
     expect(container.querySelectorAll(".learning-devices-node.is-reached").length).toBe(1);
     expect(outcomes()).toEqual(["PC3: المقصود", "PC2: لا تصله", "PC4: لا تصله"]);
     expect(screen.getByRole("status").textContent).toContain("Switch يرسل للمقصود فقط.");
+    // Text mirror, semantic direction: sender first, receiver second — PC1 → Switch → PC3 only; no arrow glyphs.
+    expect([...container.querySelectorAll(".learning-devices-step")].map(li => li.textContent)).toEqual(["1من PC1 إلى Switch", "2من Switch إلى PC3 فقط"]);
+    expect(chain(container)).toEqual([["PC1", "Switch"], ["Switch", "PC3"]]);
   });
 
   it("Router: PC1 (شبكة 1) → Switch → Router → Switch (شبكة 2) → PC3; the two networks and the Internet are drawn; replay restarts; reset returns to Hub", async () => {
@@ -77,7 +90,8 @@ describe("behaviour", () => {
     fireEvent.click(screen.getByRole("radio", { name: "Router" }));
     expect(r.container.querySelectorAll(".learning-devices-lan").length).toBe(2);
     expect(r.container.textContent).toContain("الإنترنت");
-    expect([...r.container.querySelectorAll(".learning-devices-step")].map(li => li.textContent)).toEqual(["1PC1 ← Switch (شبكة 1)", "2Switch ← Router", "3Router ← Switch (شبكة 2)", "4Switch ← PC3"]);
+    expect([...r.container.querySelectorAll(".learning-devices-step")].map(li => li.textContent)).toEqual(["1من PC1 إلى Switch (شبكة 1)", "2من Switch إلى Router", "3من Router إلى Switch (شبكة 2)", "4من Switch إلى PC3"]);
+    expect(chain(r.container)).toEqual([["PC1", "Switch"], ["Switch", "Router"], ["Router", "Switch"], ["Switch", "PC3"]]);
     vi.useFakeTimers();
     fireEvent.click(screen.getByRole("button", { name: "أرسل البيانات" }));
     expect(emit).toHaveBeenCalledWith(expect.objectContaining({ name: "devices-send", detail: { mode: "router" } }));

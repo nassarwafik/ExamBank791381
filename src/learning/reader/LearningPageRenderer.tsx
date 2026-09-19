@@ -10,7 +10,8 @@ import { ACTIVITY_ENRICHMENT_LABEL } from "../activities/labels";
 import type { LearningActivityRegistry, LearningActivityEventSink } from "../activities/engine";
 
 /** Injection seam for the interactive-activity engine. The reader passes nothing → the PRODUCTION registry (an
- *  exact allowlist — currently the network-scope and ipv4-octets diagrams; no simulation/animation) and the no-op
+ *  exact six-entry allowlist — the network-scope, ipv4-octets, cidr-network-host and network-topologies diagrams,
+ *  the gateway-flow animation and the hub-switch-router-flow simulation) and the no-op
  *  event sink are used; a descriptor without a trusted renderer shows its faithful static fallback and nothing is
  *  persisted. Tests inject a synthetic registry / sink to exercise the live path. */
 export type ActivityRenderContext = {

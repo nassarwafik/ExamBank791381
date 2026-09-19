@@ -14,15 +14,19 @@ import { localEvaluator, revealNextHint, INITIAL_FEEDBACK_STATE, type LearningFe
  *
  * Answer-key discipline: before the student answers, nothing from the key reaches the DOM (no `correct` flag, no
  * hint, no feedback text, no attribute); feedback appears only for the answer actually given, and class names never
- * spell the key (`is-right` / `is-wrong`). A question WITHOUT an answer key (the evaluator says "unknown") renders
- * the static shape with a note — exactly the pre-existing behaviour.
+ * spell the key (`is-right` / `is-wrong`). A question WITHOUT an answer key (the evaluator says "unknown"), or of
+ * a kind whose interactive surface is not implemented here yet (`fillBlank`), renders the static shape with a note
+ * — exactly the pre-existing behaviour.
  */
 export default function PracticeBlockView({ question }: { question: PracticeQuestion }) {
   const baseId = useId();
   const [response, setResponse] = useState<LearningResponse | null>(null);
   const [draft, setDraft] = useState("");
   const [feedback, setFeedback] = useState<LearningFeedbackState>(INITIAL_FEEDBACK_STATE);
-  const hasKey = localEvaluator.evaluate(question, probeResponse(question)).status !== "unknown";
+  // Interactive ONLY for kinds that have a complete answering surface below (multipleChoice / trueFalse /
+  // shortInput) AND an answer key. A keyed `fillBlank` (supported by the evaluator, no per-blank input here yet)
+  // keeps the controlled static surface — never a prompt with a "answer to see the result" footer and no field.
+  const hasKey = hasInteractiveSurface(question) && localEvaluator.evaluate(question, probeResponse(question)).status !== "unknown";
   const result = response ? localEvaluator.evaluate(question, response) : null;
   const status = result?.status === "correct" ? "right" : result && result.status !== "unknown" ? "wrong" : "empty";
   const ladder = hintLadder(question.feedback);
@@ -123,6 +127,11 @@ export default function PracticeBlockView({ question }: { question: PracticeQues
       </div>
     </div>
   );
+}
+
+/** The kinds that have a complete interactive answering surface in this view. */
+function hasInteractiveSurface(question: PracticeQuestion): boolean {
+  return question.kind === "multipleChoice" || question.kind === "trueFalse" || question.kind === "shortInput";
 }
 
 /** A throwaway response of the question's kind, used only to ask the evaluator whether a key exists at all. */

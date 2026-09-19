@@ -85,10 +85,11 @@ export default function HubSwitchRouterFlow({ block, reducedMotion, commands, em
   };
   const reached = (device: string) => device !== cfg.sender && (liveMode === "hub" ? delivered : liveMode === "switch" ? delivered && device === cfg.target : done && device === cfg.target);
 
-  // Text mirror of the hops.
+  // Text mirror of the hops — plain prose «من <sender> إلى <receiver>» (never an arrow glyph inside a mixed
+  // Arabic/Latin string), so the aria-live list states the SAME direction the packet travels on the stage.
   const hopTexts: string[] = liveMode === "router"
-    ? [`${cfg.sender} ← ${cfg.switch.label} (${cfg.router.networks[0]})`, `${cfg.switch.label} ← ${cfg.router.label}`, `${cfg.router.label} ← ${cfg.switch.label} (${cfg.router.networks[1]})`, `${cfg.switch.label} ← ${cfg.target}`]
-    : [`${cfg.sender} ← ${labelOf[liveMode]}`, liveMode === "hub" ? `${labelOf.hub} ← كل الأجهزة (${[cfg.target, ...cfg.others].join("، ")})` : `${labelOf.switch} ← ${cfg.target} فقط`];
+    ? [`من ${cfg.sender} إلى ${cfg.switch.label} (${cfg.router.networks[0]})`, `من ${cfg.switch.label} إلى ${cfg.router.label}`, `من ${cfg.router.label} إلى ${cfg.switch.label} (${cfg.router.networks[1]})`, `من ${cfg.switch.label} إلى ${cfg.target}`]
+    : [`من ${cfg.sender} إلى ${labelOf[liveMode]}`, liveMode === "hub" ? `من ${labelOf.hub} إلى جميع الأجهزة (${[cfg.target, ...cfg.others].join("، ")})` : `من ${labelOf.switch} إلى ${cfg.target} فقط`];
   const caption = liveMode === "hub" ? cfg.hub.caption : liveMode === "switch" ? cfg.switch.caption : cfg.router.caption;
 
   // Geometry (LTR stage 320×190).

@@ -955,7 +955,8 @@ options are real `role="radio"` buttons, short-input practices are a form with �
 browser by the Phase-3A `localEvaluator`, and the verdict is announced in a `role="status"` region
 («✓ صحيح» / «✕ غير صحيح — حاول مرة أخرى») with the block's `correctFeedback` / `incorrectFeedback`, the explanation
 on success, the `hintLadder` behind «ماذا أفحص؟ (تلميح)» → «تلميح آخر», and «امسح الإجابة». A practice without a
-key renders the old static surface. State lives in React memory only; no network, no persistence, no score, no
+key, or of a kind whose answering surface is not implemented in the view yet (`fillBlank`, even when keyed), renders
+the old static surface — never a prompt with an interactive footer and no field. State lives in React memory only; no network, no persistence, no score, no
 Strength — the answer key is compared locally and never displayed as a key.
 
 ### Four registry-backed activities (`productionActivityRegistry` = exact six-entry allowlist)
@@ -971,8 +972,9 @@ Shared contract (tested per renderer): trusted registry key + positive version, 
 thunk, the descriptor's faithful `ActivityFallback` when the registry is injected empty or the chunk fails,
 `reducedMotion` jumps straight to the final state (no timers), every control is a real ≥44px keyboard-operable
 button with `aria-pressed` and a visible mark (never colour-only), state is stamped with the shell's
-`commands.reset` / `commands.replay` epochs, live text mirrors the visual (`aria-live`), single-column at phone
-width. The earlier "EMPTY" / "two-entry allowlist" statements in the Phase 3A / 3E sections are historical.
+`commands.reset` / `commands.replay` epochs, live text mirrors the visual (`aria-live`) as plain prose «من <المرسل>
+إلى <المستقبل>» — sender first, receiver second, never an arrow glyph inside a mixed Arabic/Latin string, so a
+screen-reader user gets the same direction as the animation — single-column at phone width. The earlier "EMPTY" / "two-entry allowlist" statements in the Phase 3A / 3E sections are historical.
 
 ### Publication: deployable ≠ published
 

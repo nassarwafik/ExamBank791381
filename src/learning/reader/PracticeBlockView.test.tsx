@@ -79,4 +79,21 @@ describe("interactive practice — verdict, feedback, hints, retry", () => {
     expect(screen.getByText("سيتوفر التحقق من الإجابة في مرحلة لاحقة.")).toBeTruthy();
     expect(screen.getByText("أ")).toBeTruthy();
   });
+
+  it("a KEYED fillBlank keeps the controlled static surface (no dead-end): no interactive footer, no radio / textbox / check button, no key text", () => {
+    const keyedFill: PracticeQuestion = {
+      kind: "fillBlank", prompt: "أكمل: القناع الطبيعي للفئة C هو ____", answers: ["255.255.255.0"],
+      feedback: { hints: ["تذكّر عدد الأقسام المخصّصة للشبكة في الفئة C."], correctFeedback: "صحيح.", incorrectFeedback: "افحص جدول الأقنعة الطبيعية.", explanation: "الفئة C تستعمل ثلاثة أقسام للشبكة." },
+    };
+    const { container } = render(<PracticeBlockView question={keyedFill} />);
+    expect(container.querySelector(".learning-reader-practice.is-interactive")).toBeNull();
+    expect(screen.queryByRole("radio")).toBeNull();
+    expect(screen.queryByRole("textbox")).toBeNull();
+    expect(screen.queryByRole("button")).toBeNull();
+    expect(screen.queryByText("تمرين ذاتي: أجب لترى النتيجة فورًا. لا يُحفظ شيء ولا تُحسب نقاط.")).toBeNull();
+    expect(screen.getByText("سيتوفر التحقق من الإجابة في مرحلة لاحقة.")).toBeTruthy();
+    expect(screen.getByText("أكمل: القناع الطبيعي للفئة C هو ____")).toBeTruthy();
+    expect(container.textContent).not.toContain("255.255.255.0");
+    expect(container.textContent).not.toContain("افحص جدول الأقنعة الطبيعية.");
+  });
 });

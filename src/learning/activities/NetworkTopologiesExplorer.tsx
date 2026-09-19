@@ -140,13 +140,18 @@ export default function NetworkTopologiesExplorer({ block, reducedMotion, comman
         <ol className="learning-topo-steps" aria-label="مسار البيانات" aria-live="polite">
           {shape.path.slice(1).map((id, i) => (
             <li key={i} className={"learning-topo-step" + (step >= i + 1 ? " is-done" : "")} aria-current={step === i + 1 ? "step" : undefined}>
-              <span className="learning-topo-stepno" aria-hidden="true">{i + 1}</span><span dir="auto">{labelOf(shape.path[i])} ← {labelOf(id)}</span>
+              <span className="learning-topo-stepno" aria-hidden="true">{i + 1}</span><span dir="auto">من {labelOf(shape.path[i])} إلى {labelOf(id)}</span>
             </li>
           ))}
         </ol>
       )}
-      {done && <p className="learning-topo-result" role="status">وصلت البيانات من {labelOf(shape.path[0])} إلى {labelOf(shape.path[last])} عبر {shape.path.length - 1} {shape.path.length - 1 === 1 ? "خطوة" : shape.path.length - 1 === 2 ? "خطوتين" : "خطوات"}.</p>}
+      {done && <p className="learning-topo-result" role="status">وصلت البيانات من {labelOf(shape.path[0])} إلى {labelOf(shape.path[last])} عبر {hopCountText(shape.path.length - 1)}.</p>}
       {liveRun.collision && <p className="learning-topo-result is-collision" role="status">{cfg.collisionNote}</p>}
     </div>
   );
+}
+
+/** Arabic count phrase for the hop count: «خطوة واحدة» (1), «خطوتين» (2), «N خطوات» (3+). */
+function hopCountText(hops: number): string {
+  return hops === 1 ? "خطوة واحدة" : hops === 2 ? "خطوتين" : `${hops} خطوات`;
 }

@@ -77,10 +77,14 @@ describe("behaviour", () => {
     pick("Star");
     vi.useFakeTimers();
     fireEvent.click(screen.getByRole("button", { name: "أرسل" }));
-    expect(stepTexts()).toEqual(["1A ← Switch", "2Switch ← D"]);
+    expect(stepTexts()).toEqual(["1من A إلى Switch", "2من Switch إلى D"]);
     await hops(2);
     expect([...container.querySelectorAll(".learning-topo-step.is-done")].length).toBe(2);
-    expect(screen.getByRole("status").textContent).toBe("وصلت البيانات من A إلى D عبر 2 خطوتين.");
+    expect(screen.getByRole("status").textContent).toBe("وصلت البيانات من A إلى D عبر خطوتين.");
+    // Semantic direction: sender first, receiver second, chained A → Switch → D; no arrow glyphs in the mirror.
+    const pairs = stepTexts().map(t => /^\d+من (.+) إلى (.+)$/.exec(t)!.slice(1, 3));
+    expect(pairs).toEqual([["A", "Switch"], ["Switch", "D"]]);
+    expect(stepTexts().join(" ")).not.toMatch(/[←→]/);
     pick("Ring");
     expect(screen.queryByRole("status")).toBeNull();
     expect(stepTexts()).toEqual([]);
@@ -96,7 +100,7 @@ describe("behaviour", () => {
     vi.useFakeTimers();
     fireEvent.click(screen.getByRole("button", { name: "أرسل" }));
     expect(container.querySelector(".learning-topo-collision-mark")).toBeNull();
-    expect(stepTexts()).toEqual(["1A ← الخط المشترك", "2الخط المشترك ← C"]);
+    expect(stepTexts()).toEqual(["1من A إلى الخط المشترك", "2من الخط المشترك إلى C"]);
     await hops(2);
     expect(container.querySelector(".learning-topo-bus.is-on")).toBeTruthy();
     fireEvent.click(screen.getByRole("button", { name: "إعادة تعيين" }));
