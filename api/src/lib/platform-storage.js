@@ -4,6 +4,9 @@ const CONTAINER="bank";
 async function streamToBuffer(stream){const parts=[];for await(const chunk of stream)parts.push(Buffer.from(chunk));return Buffer.concat(parts)}
 function getContainer(){const cs=process.env.AZURE_STORAGE_CONNECTION_STRING;if(!cs)throw new Error("AZURE_STORAGE_CONNECTION_STRING is not configured.");return BlobServiceClient.fromConnectionString(cs).getContainerClient(CONTAINER)}
 async function downloadJsonOrNull(container,name){try{const r=await container.getBlobClient(name).download();if(!r.readableStreamBody)return null;return JSON.parse((await streamToBuffer(r.readableStreamBody)).toString("utf8"))}catch(e){if(e?.statusCode===404||e?.code==="BlobNotFound")return null;throw e}}
+// Binary blobs (profile images): stored with their content type; never JSON, never Base64 inside a user document.
+async function uploadBinary(container,name,buffer,contentType){await container.getBlockBlobClient(name).upload(buffer,buffer.length,{overwrite:true,blobHTTPHeaders:{blobContentType:contentType||"application/octet-stream"}})}
+async function downloadBinaryOrNull(container,name){try{const r=await container.getBlobClient(name).download();if(!r.readableStreamBody)return null;return {buffer:await streamToBuffer(r.readableStreamBody),contentType:r.contentType||"",etag:r.etag||""}}catch(e){if(e?.statusCode===404||e?.code==="BlobNotFound")return null;throw e}}
 async function uploadJson(container,name,value){const body=JSON.stringify(value,null,2);await container.getBlockBlobClient(name).upload(body,Buffer.byteLength(body),{overwrite:true,blobHTTPHeaders:{blobContentType:"application/json; charset=utf-8"}})}
 // Roadmap #27 — bounded-concurrency reads. Every teacher workflow used to download blobs strictly one
 // after another (max 1 in flight), so wall time was (blob count × storage latency). Reads that are
@@ -107,4 +110,4 @@ async function mutateJsonWithRetry(container,name,mutateFn,observer){
  throw new StorageConflictError("Optimistic concurrency conflict after "+MAX_MUTATE_ATTEMPTS+" attempts.");
 }
 
-module.exports={getContainer,downloadJsonOrNull,uploadJson,listJson,listBlobNames,deleteBlob,downloadJsonWithEtagOrNull,uploadJsonConditional,mutateJsonWithRetry,StorageConflictError,isConcurrencyConflict,mapConcurrent,downloadManyJson,setReadConcurrency,getReadConcurrency};
+module.exports={getContainer,downloadJsonOrNull,uploadJson,uploadBinary,downloadBinaryOrNull,listJson,listBlobNames,deleteBlob,downloadJsonWithEtagOrNull,uploadJsonConditional,mutateJsonWithRetry,StorageConflictError,isConcurrencyConflict,mapConcurrent,downloadManyJson,setReadConcurrency,getReadConcurrency};

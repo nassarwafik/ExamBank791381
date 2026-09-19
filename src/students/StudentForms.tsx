@@ -1,8 +1,9 @@
 import type { ChangeEvent, FormEvent } from "react";
 import Dialog from "../ui/Dialog";
+import StudentPhotoField from "./StudentPhotoField";
 import StatusBadge from "../ui/StatusBadge";
 import { IconPlus, IconUpload } from "../icons";
-import type { Classroom, ImportPreviewRow } from "./types";
+import type { Classroom, ImportPreviewRow, Student, ProfilePhotoMeta } from "./types";
 import { IDENTITY_ERROR, validIdentity } from "./identity";
 
 /* Form dialogs for the Classes & Students workspace. Field VALUES and handlers live in TeacherPlatform
@@ -99,17 +100,20 @@ export function ImportStudentsDialog({ open, onClose, classroom, classActive, fi
   );
 }
 
-export function EditStudentDialog({ open, onClose, classes, firstName, familyName, identityNumber, classId, password, onFirstName, onFamilyName, onIdentityNumber, onClassId, onPassword, canSubmit, onSubmit, busy }: {
+export function EditStudentDialog({ open, onClose, classes, firstName, familyName, identityNumber, classId, password, onFirstName, onFamilyName, onIdentityNumber, onClassId, onPassword, canSubmit, onSubmit, busy, photo }: {
   open: boolean; onClose: () => void; classes: Classroom[];
   firstName: string; familyName: string; identityNumber: string; classId: string; password: string;
   onFirstName: (v: string) => void; onFamilyName: (v: string) => void; onIdentityNumber: (v: string) => void; onClassId: (v: string) => void; onPassword: (v: string) => void;
   canSubmit: boolean; onSubmit: () => void; busy: boolean;
+  /** Teacher-managed student photo (top of the dialog). Omitted → no photo section (older hosts). */
+  photo?: { token: string; student: Student; onChange: (meta: ProfilePhotoMeta | null) => void };
 }) {
   const formId = "eb-edit-student-form";
   const identity = identityFieldProps(identityNumber, formId + "-identity-error");
   return (
     <Dialog open={open} title="تعديل تفاصيل الطالب" onClose={onClose} size="sm"
       footer={<><button type="button" className="eb-button" onClick={onClose}>إلغاء</button><button type="submit" form={formId} className="eb-button is-primary" disabled={busy || !canSubmit}>حفظ التعديلات</button></>}>
+      {photo && <StudentPhotoField token={photo.token} studentId={photo.student.userId} studentName={photo.student.displayName} avatarId={photo.student.avatarId} profilePhoto={photo.student.profilePhoto ?? null} onChange={photo.onChange} />}
       <form id={formId} className="eb-form-grid" onSubmit={submitHandler(onSubmit)}>
         <label>الاسم<input value={firstName} onChange={e => onFirstName(e.target.value)} autoComplete="off" /></label>
         <label>اسم العائلة<input value={familyName} onChange={e => onFamilyName(e.target.value)} autoComplete="off" /></label>

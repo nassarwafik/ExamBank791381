@@ -159,8 +159,8 @@ export default function StudentPortal({ token, displayName, onLogout }: Props) {
         {error && <div className="platform-error" role="alert">{error}</div>}
         {!loading && data && stats && (
           <>
-            <StudentIdentityCard student={data.student} classroom={data.classroom} displayName={displayName} rank={rank} onChangeAvatar={() => setAvatarPickerOpen(true)} />
-            <AvatarPickerDialog open={avatarPickerOpen} current={data.student.avatarId} saving={avatarSaving} onPick={pickAvatar} onClose={() => setAvatarPickerOpen(false)} />
+            <StudentIdentityCard student={data.student} classroom={data.classroom} displayName={displayName} rank={rank} token={token} onChangeAvatar={() => setAvatarPickerOpen(true)} />
+            <AvatarPickerDialog open={avatarPickerOpen} current={data.student.avatarId} saving={avatarSaving} photoManaged={!!data.student.profilePhoto} onPick={pickAvatar} onClose={() => setAvatarPickerOpen(false)} />
             <NowSection actionable={now_.actionable} upcoming={now_.upcoming} busy={busy} onOpen={open} />
             <StudentLearningMaterials token={token} onOpen={course => { setReaderCourse(course); window.scrollTo({ top: 0, behavior: reducedMotion ? "auto" : "smooth" }); }} />
             <StudentProgressSection stats={stats} medals={medals} rank={rank} progress={progress} strength={strength} recognition={data?.recognition ?? null} averageFinalized={averageFinalized} />

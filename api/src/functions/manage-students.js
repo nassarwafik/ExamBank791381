@@ -132,6 +132,9 @@ function publicStudent(document) {
     classId: String(document.classId || ""),
     active: document.active !== false,
     archived: document.archived === true,
+    // Photo METADATA only (version for cache-busting); the bytes are served by /api/student-profile-photo on demand.
+    profilePhoto: document.profilePhoto && typeof document.profilePhoto === "object" && Number(document.profilePhoto.version) > 0 ? { version: Number(document.profilePhoto.version), updatedAt: String(document.profilePhoto.updatedAt || "") } : null,
+    avatarId: String(document.avatarId || ""),
     createdAt: String(document.createdAt || ""),
     updatedAt: String(document.updatedAt || ""),
     lastLoginAt: String(document.lastLoginAt || "")
@@ -496,6 +499,8 @@ async function deleteStudent(container, student, obs = null) {
     await container.getBlobClient(AUTH_PREFIX + studentCodeHash(code) + ".json").deleteIfExists();
   }
   await container.getBlobClient(USER_PREFIX + student.userId + ".json").deleteIfExists();
+  // Secondary cleanup: the profile photo blob (never blocks the core delete).
+  try { await container.getBlobClient("platform/student-profile-images/" + student.userId + "/current.webp").deleteIfExists(); } catch (e) { obs?.logError("student.delete.photoCleanup", e); }
   return removeFromRosterIndex(container, String(student.classId || ""), [student.userId], { obs, operation: "delete" });
 }
 

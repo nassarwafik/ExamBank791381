@@ -24,16 +24,18 @@ function createMemoryContainer(seed = {}, hooks = {}) {
   let counter = 0;
   const nextEtag = () => "etag-" + (++counter);
 
-  function writeRaw(name, content) { store.set(name, { content: String(content), etag: nextEtag() }); }
+  // Content is kept as a Buffer so binary blobs (profile images) round-trip byte-exact; JSON helpers decode UTF-8.
+  function writeRaw(name, content, contentType) { store.set(name, { content: Buffer.isBuffer(content) ? Buffer.from(content) : Buffer.from(String(content), "utf8"), etag: nextEtag(), contentType: contentType || "" }); }
   function setJson(name, value) { writeRaw(name, JSON.stringify(value, null, 2)); }
-  function getJson(name) { const e = store.get(name); return e ? JSON.parse(e.content) : null; }
+  function getJson(name) { const e = store.get(name); return e ? JSON.parse(e.content.toString("utf8")) : null; }
+  function getBinary(name) { const e = store.get(name); return e ? { buffer: Buffer.from(e.content), contentType: e.contentType } : null; }
   function has(name) { return store.has(name); }
   function names(prefix = "") { return Array.from(store.keys()).filter(n => n.startsWith(prefix)); }
 
   // Seed helpers: seed is a { blobName: object } map written as JSON with a fresh etag.
   for (const [name, value] of Object.entries(seed)) setJson(name, value);
 
-  const api = { store, setJson, getJson, has, names };
+  const api = { store, setJson, getJson, getBinary, has, names };
 
   const container = {
     getBlobClient(name) {
@@ -41,7 +43,7 @@ function createMemoryContainer(seed = {}, hooks = {}) {
         async download() {
           const entry = store.get(name);
           if (!entry) throw conflict(404, "BlobNotFound");
-          return { readableStreamBody: [Buffer.from(entry.content, "utf8")], etag: entry.etag };
+          return { readableStreamBody: [Buffer.from(entry.content)], etag: entry.etag, contentType: entry.contentType || undefined };
         },
         async deleteIfExists() { const had = store.delete(name); return { succeeded: had }; }
       };
@@ -58,7 +60,7 @@ function createMemoryContainer(seed = {}, hooks = {}) {
           const existing = store.get(name);
           if (conditions.ifNoneMatch === "*" && existing) throw conflict(409, "BlobAlreadyExists");
           if (conditions.ifMatch && (!existing || existing.etag !== conditions.ifMatch)) throw conflict(412, "ConditionNotMet");
-          writeRaw(name, body);
+          writeRaw(name, body, options.blobHTTPHeaders && options.blobHTTPHeaders.blobContentType);
           return { etag: store.get(name).etag };
         }
       };

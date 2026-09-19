@@ -10,7 +10,7 @@ export type Summary = {
   attemptStatus?: string; hasActiveAttempt?: boolean; latestScore: number | null; latestPercentage: number | null; latestResult?: LatestResult | null; createdAt: string;
 };
 export type Stats = { assigned: number; completed: number; average: number | null; submitted?: number; inProgress?: number; pendingReview?: number; finalized?: number; scheduled?: number; available?: number; closedUnsubmitted?: number; averageFinalized?: number | null };
-export type StudentInfo = { userId: string; code: string; displayName: string; classId: string; avatarId?: string; shareAchievements?: boolean };
+export type StudentInfo = { userId: string; code: string; displayName: string; classId: string; avatarId?: string; shareAchievements?: boolean; profilePhoto?: { version: number; updatedAt: string } | null };
 export type Classroom = { classId: string; name: string; grade: string; schoolYear: string };
 /** One enrolled project's Strength contribution as the server derived it (round(overallProgress × 4), ≤ 400). */
 export type ProjectStrength = { projectCode: string; overallProgress: number; strengthPoints: number };
