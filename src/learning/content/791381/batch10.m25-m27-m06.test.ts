@@ -314,7 +314,29 @@ describe("Batch 10 — the fifteen REAL book CLI exercises (simulation / cli-ter
     expect(allBlocks.filter(b => b.type === "animation" || b.type === "guided" || b.type === "interactive-diagram")).toHaveLength(0);
     expect(productionActivityRegistry.list().length).toBe(14);
   });
-  it("Review (201–206): the basics task needs hostname R1 + an addressed, up g0/0; the VLAN task needs vlan 10 on f0/1…f0/10 and trunk on f0/24; the VTP challenge ends with the fix-the-command; the dot1Q challenge follows the box; the Port Security guided box starts inside f0/1; the show challenge accepts only show", () => {
+  it("PDF 202 VLAN task (regression): the book's range completes it; VLAN 10 on ONLY f0/1 + f0/10 (+ trunk) stays incomplete; a missing middle port (f0/5) is reported unmet; goals cover every port f0/1 … f0/10", () => {
+    const vlan = exOf("m25-l01-p02-sim");
+    expect(vlan.goals!.map(g => g.id)).toEqual(["g-vlan", "g-f1", "g-f2", "g-f3", "g-f4", "g-f5", "g-f6", "g-f7", "g-f8", "g-f9", "g-f10", "g-trunk"]);
+    expect(vlan.goals!.filter(g => g.condition.kind === "interface" && g.condition.prop === "accessVlan").map(g => (g.condition as { name: string }).name)).toEqual(Array.from({ length: 10 }, (_, i) => "f0/" + (i + 1)));
+    // A. the book's lines (range) + the VLAN definition + the trunk → complete
+    const ok = drive(vlan, "vlan 10", "exit", "interface range f0/1-10", "switchport access vlan 10", "exit", "interface f0/24", "switchport mode trunk");
+    expect([ok.completed, last(ok).feedback]).toEqual([true, "✓ أحسنت، VLAN 10 على المنافذ العشرة و Trunk على f0/24."]);
+    // B. false-positive reproduction: only the first and the last port → MUST stay incomplete
+    const edges = drive(vlan, "vlan 10", "exit", "interface f0/1", "switchport access vlan 10", "exit", "interface f0/10", "switchport access vlan 10", "exit", "interface f0/24", "switchport mode trunk");
+    expect(edges.completed).toBe(false);
+    const edgeStatus = Object.fromEntries(goalStatus(vlan, edges.state).map(g => [g.id, g.met]));
+    expect([edgeStatus["g-vlan"], edgeStatus["g-f1"], edgeStatus["g-f10"], edgeStatus["g-trunk"]]).toEqual([true, true, true, true]);
+    for (const n of [2, 3, 4, 5, 6, 7, 8, 9]) expect(edgeStatus["g-f" + n], "f0/" + n).toBe(false);
+    // C. every port except the middle one f0/5 → incomplete, and exactly that goal is unmet
+    const noFive = drive(vlan, "vlan 10", "exit", "interface range f0/1-4", "switchport access vlan 10", "exit", "interface range f0/6-10", "switchport access vlan 10", "exit", "interface f0/24", "switchport mode trunk");
+    expect(noFive.completed).toBe(false);
+    expect(goalStatus(vlan, noFive.state).filter(g => !g.met).map(g => g.id)).toEqual(["g-f5"]);
+    expect(submitCommand(vlan, submitCommand(vlan, submitCommand(vlan, noFive, "exit"), "interface f0/5"), "switchport access vlan 10").completed).toBe(true);
+    // a port in the wrong VLAN keeps it open too
+    const wrongVlan = drive(vlan, "vlan 10", "exit", "interface range f0/1-10", "switchport access vlan 10", "exit", "interface f0/7", "switchport access vlan 20", "exit", "interface f0/24", "switchport mode trunk");
+    expect([wrongVlan.completed, goalStatus(vlan, wrongVlan.state).filter(g => !g.met).map(g => g.id)]).toEqual([false, ["g-f7"]]);
+  });
+  it("Review (201–206): the basics task needs hostname R1 + an addressed, up g0/0; the VLAN task needs the trunk on f0/24 beside the ten ports (checked above); the VTP challenge ends with the fix-the-command; the dot1Q challenge follows the box; the Port Security guided box starts inside f0/1; the show challenge accepts only show", () => {
     const basics = exOf("m25-l01-p01-sim");
     const partial = drive(basics, "enable", "configure terminal", "hostname R1", "interface g0/0", "ip address 192.168.1.1 255.255.255.0");
     expect([partial.completed, goalStatus(basics, partial.state).map(g => g.met)]).toEqual([false, [true, true, true, false]]);
@@ -324,6 +346,7 @@ describe("Batch 10 — the fifteen REAL book CLI exercises (simulation / cli-ter
     const v = drive(vlan, "vlan 10", "exit", "interface range f0/1-10", "switchport access vlan 10", "exit", "interface f0/24", "switchport mode trunk");
     expect([v.completed, v.state.interfaces["f0/10"].accessVlan, v.state.interfaces["f0/24"].switchportMode]).toEqual([true, 10, "trunk"]);
     expect(drive(vlan, "vlan 10", "exit", "interface range f0/1-9", "switchport access vlan 10", "exit", "interface f0/24", "switchport mode trunk").completed).toBe(false);   // f0/10 missing
+    expect(drive(vlan, "vlan 10", "exit", "interface range f0/1-10", "switchport access vlan 10").completed).toBe(false);   // trunk missing
     const vtp = exOf("m25-l01-p03-sim");
     let s = drive(vtp, "vtp mode server", "vtp mode client", "enable secret cisco", "line vty 0 4", "line console 0");
     expect([s.stepIndex, last(s).status]).toEqual([4, "wrong-mode"]);   // still inside line vty: the step asks for exit first
@@ -460,6 +483,16 @@ describe("Batch 10 — pedagogy, provenance, direction", () => {
       for (const row of b.rows) for (const cell of row) if (typeof cell !== "string") { selects++; expect(sel(cell).options, b.id).toContain(sel(cell).key); expect(new Set(sel(cell).options).size).toBe(sel(cell).options.length); }
       expect(selects, b.id).toBeGreaterThan(0);
     }
+  });
+  it("every newly authored Batch-10 keyed practice uses an interactive kind (multipleChoice / trueFalse / shortInput) — no keyed fillBlank (its static fallback is untouched, just not used here)", () => {
+    const kinds = new Set(allBlocks.filter(b => b.type === "practice").map(b => b.question.kind));
+    expect([...kinds].sort()).toEqual(["multipleChoice", "shortInput", "trueFalse"]);
+    expect(allBlocks.some(b => b.type === "practice" && b.question.kind === "fillBlank")).toBe(false);
+    const packet = blockBy(pageBy(M26 + "-l01-p02"), "m26-l01-p02-q2"), distance = blockBy(pageBy(M27 + "-l01-p03"), "m27-l01-p03-q2");
+    expect(packet.type === "practice" && [packet.origin, packet.question.kind, (packet.question as { answer?: string }).answer, packet.question.feedback?.hints?.length, packet.question.feedback?.incorrectFeedback?.startsWith("افحص")]).toEqual(["teacher-enrichment", "shortInput", "Packet", 2, true]);
+    expect(distance.type === "practice" && [distance.origin, distance.question.kind, (distance.question as { answer?: string }).answer, distance.question.feedback?.hints?.length, distance.question.feedback?.incorrectFeedback?.startsWith("افحص")]).toEqual(["teacher-enrichment", "shortInput", "Distance", 2, true]);
+    expect(plain(pageBy(M27 + "-l01-p03"))).toContain("يركّز على تحديث معلومات الحالة عند حدوث تغيير");
+    expect(plain(pageBy(M27 + "-l01-p03"))).not.toContain("يصمت");
   });
   it("provenance: book blocks are text / callout / table / list / code only; practice, worksheets, clarifications, headings and simulations are teacher-enrichment; no raw HTML", () => {
     for (const b of allBlocks) {

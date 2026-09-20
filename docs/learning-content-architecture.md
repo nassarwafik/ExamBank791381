@@ -1866,7 +1866,11 @@ component and the exercise kinds are unchanged (the allowlist stays fourteen ent
   a preset R1 with two addressed interfaces. m06 — PDF 224 guided (write the list, select g0/0, apply `out`), 225
   challenge (the three standard rules; only `access-list` accepted), 226 task (list 30 `host`, list 40 network,
   applied `in` on g0/0 — the page's «خطأ شائع» is the point), 227 challenge (the book's HTTP line, then the same
-  rule for the port 443 the page names). No exercise on PDF 207–215, 218, 219, 223, 228, 229. Tests drive all
+  rule for the port 443 the page names). No exercise on PDF 207–215, 218, 219, 223, 228, 229. The `allowed` gate of a
+  challenge refuses unlisted NON-navigation commands without executing them; navigation / inspection commands
+  (`enable`, `configure terminal`, `exit`, `end`, `interface`, `vlan`, `line`, `router`, `show`, …) keep the existing
+  exercise behaviour and are never refused. The PDF 202 task lists one goal per port f0/1 … f0/10 (the book's
+  `interface range f0/1-10`), so configuring only the first and the last port cannot complete it. Tests drive all
   fifteen with the book's own lines to completion and prove wrong values / wrong modes / the wrong process, port,
   interface or direction keep them open; typed text never reaches events or analytics.
 

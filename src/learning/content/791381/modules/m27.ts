@@ -174,7 +174,7 @@ const m27: ContentModule = {
             },
             {
               id: "m27-l01-p03-note", type: "callout", origin: "teacher-enrichment", kind: "clarification", title: "توضيح المعلّم",
-              spans: [T("«تحديثات دورية» تعني أن الراوتر يرسل ما يعرفه كل فترة ولو لم يتغيّر شيء، أما «عند التغيير» فتعني أنه يصمت حتى يحدث تغيير فعلي؛ وهذا سبب ملاءمة "), L("Link-State"), T(" للشبكات الكبيرة.")],
+              spans: [T("في تبسيط هذه الوحدة: "), L("Distance Vector"), T(" يعتمد تحديثات دورية يرسل فيها الراوتر ما يعرفه كل فترة، بينما "), L("Link-State"), T(" يركّز على تحديث معلومات الحالة عند حدوث تغيير؛ وهذا سبب ملاءمة "), L("Link-State"), T(" للشبكات الكبيرة.")],
             },
             {
               id: "m27-l01-p03-q1", type: "practice", origin: "teacher-enrichment",
@@ -192,7 +192,7 @@ const m27: ContentModule = {
             {
               id: "m27-l01-p03-q2", type: "practice", origin: "teacher-enrichment",
               question: {
-                kind: "fillBlank", prompt: "OSPF = Link-State، و EIGRP = ____ Vector متطوّر.", answers: ["Distance"],
+                kind: "shortInput", prompt: "OSPF = Link-State، و EIGRP = ____ Vector متطوّر. (اكتب الكلمة الناقصة)", answer: "Distance",
                 feedback: {
                   hints: ["صندوق «للطالب».", "الكلمة الأولى في اسم النوع الأول."],
                   correctFeedback: "صحيح — Distance Vector.",

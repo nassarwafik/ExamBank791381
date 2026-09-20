@@ -161,10 +161,20 @@ const m25: ContentModule = {
                 device: "switch",
                 startMode: "global",
                 intro: "أنت في وضع الإعداد العام لسويتش.",
+                // One goal per port: the book's `interface range f0/1-10` means EVERY port f0/1 … f0/10, so the final state is
+                // checked port by port (configuring only the first and the last port must not complete the task).
                 goals: [
                   { id: "g-vlan", label: "VLAN 10 معرّفة", condition: { kind: "vlan", vlanId: 10 } },
-                  { id: "g-first", label: "المنفذ f0/1 في VLAN 10", condition: { kind: "interface", name: "f0/1", prop: "accessVlan", value: 10 } },
-                  { id: "g-last", label: "المنفذ f0/10 في VLAN 10", condition: { kind: "interface", name: "f0/10", prop: "accessVlan", value: 10 } },
+                  { id: "g-f1", label: "المنفذ f0/1 في VLAN 10", condition: { kind: "interface", name: "f0/1", prop: "accessVlan", value: 10 } },
+                  { id: "g-f2", label: "المنفذ f0/2 في VLAN 10", condition: { kind: "interface", name: "f0/2", prop: "accessVlan", value: 10 } },
+                  { id: "g-f3", label: "المنفذ f0/3 في VLAN 10", condition: { kind: "interface", name: "f0/3", prop: "accessVlan", value: 10 } },
+                  { id: "g-f4", label: "المنفذ f0/4 في VLAN 10", condition: { kind: "interface", name: "f0/4", prop: "accessVlan", value: 10 } },
+                  { id: "g-f5", label: "المنفذ f0/5 في VLAN 10", condition: { kind: "interface", name: "f0/5", prop: "accessVlan", value: 10 } },
+                  { id: "g-f6", label: "المنفذ f0/6 في VLAN 10", condition: { kind: "interface", name: "f0/6", prop: "accessVlan", value: 10 } },
+                  { id: "g-f7", label: "المنفذ f0/7 في VLAN 10", condition: { kind: "interface", name: "f0/7", prop: "accessVlan", value: 10 } },
+                  { id: "g-f8", label: "المنفذ f0/8 في VLAN 10", condition: { kind: "interface", name: "f0/8", prop: "accessVlan", value: 10 } },
+                  { id: "g-f9", label: "المنفذ f0/9 في VLAN 10", condition: { kind: "interface", name: "f0/9", prop: "accessVlan", value: 10 } },
+                  { id: "g-f10", label: "المنفذ f0/10 في VLAN 10", condition: { kind: "interface", name: "f0/10", prop: "accessVlan", value: 10 } },
                   { id: "g-trunk", label: "المنفذ f0/24 في وضع Trunk", condition: { kind: "interface", name: "f0/24", prop: "switchportMode", value: "trunk" } },
                 ],
                 hints: ["interface range يختار المنافذ العشرة دفعة واحدة.", "لا تنسَ الخروج من المنافذ (exit) قبل اختيار f0/24."],

@@ -132,7 +132,7 @@ const m26: ContentModule = {
             {
               id: "m26-l01-p02-q2", type: "practice", origin: "teacher-enrichment",
               question: {
-                kind: "fillBlank", prompt: "Frame Relay يعتمد على ____ Switching.", answers: ["Packet"],
+                kind: "shortInput", prompt: "Frame Relay يعتمد على ____ Switching. (اكتب الكلمة الناقصة)", answer: "Packet",
                 feedback: {
                   hints: ["البطاقة الأولى.", "الكلمة الإنجليزية لـ «حزمة»."],
                   correctFeedback: "صحيح — Packet Switching.",
