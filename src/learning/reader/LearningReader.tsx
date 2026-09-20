@@ -8,6 +8,7 @@ import LearningReaderToc from "./LearningReaderToc";
 import LearningPageRenderer, { type ReaderPageBody, type ReaderPageHeader } from "./LearningPageRenderer";
 import { registryContentApi, type ReaderContentApi } from "./readerContentApi";
 import type { LibraryTrainingHost } from "../training/types";
+import type { StudyHost } from "../study/types";
 import "./reader.css";
 
 export type { ReaderContentApi } from "./readerContentApi";
@@ -35,7 +36,7 @@ type ManifestState =
  * authority and stays usable when the request is refused or unavailable. Nothing is persisted.
  */
 export default function LearningReader({
-  courseId, onExit, api = registryContentApi, exitLabel = "العودة إلى نظرة الكتاب", training, initialPageId, onPageChange,
+  courseId, onExit, api = registryContentApi, exitLabel = "العودة إلى نظرة الكتاب", training, study, initialPageId, onPageChange,
   initialPresentation, onPresentationChange,
 }: {
   courseId: string;
@@ -45,6 +46,8 @@ export default function LearningReader({
   exitLabel?: string;
   /** Learning-Practice host seam (availability + open) for `library-training` blocks. Absent → generic cards. */
   training?: LibraryTrainingHost;
+  /** Study-Practice host seam (completion state + report) for in-page exercises. Absent → practice stays local. */
+  study?: StudyHost;
   /** The page to open first (validated against the manifest; unknown → first page). Lets a host that swaps the
    *  Reader out (e.g. for a training) remount it on the SAME page. Read once, at manifest load. */
   initialPageId?: string;
@@ -338,7 +341,7 @@ export default function LearningReader({
               </select>
             </div>
           )}
-          {header ? <LearningPageRenderer header={header} body={body} training={training} /> : <p className="learning-reader-status" role="status">لا توجد صفحات بعد.</p>}
+          {header ? <LearningPageRenderer header={header} body={body} training={training} study={study} /> : <p className="learning-reader-status" role="status">لا توجد صفحات بعد.</p>}
         </main>
       </div>
 

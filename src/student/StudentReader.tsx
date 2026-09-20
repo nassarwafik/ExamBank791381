@@ -2,6 +2,7 @@ import { useMemo } from "react";
 import LearningReaderWithTraining from "../learning/training/LearningReaderWithTraining";
 import { createRestrictedReaderContentApi } from "../learning/reader/restrictedContentApi";
 import { createTrainingClient, studentTrainingHeaders } from "../learning/training/trainingClient";
+import { createStudyClient } from "../learning/study/studyClient";
 
 /**
  * The student's Reader = the SAME LearningReader (one Reader authority, no student fork) fed by a content API that
@@ -10,16 +11,19 @@ import { createTrainingClient, studentTrainingHeaders } from "../learning/traini
  * StudentPortal: opening the portal loads neither this file nor any book body; the module bodies remain the
  * Reader's own lazy chunks and the runner is a further lazy chunk.
  */
-export default function StudentReader({ courseId, allowedModuleIds, token, onExit, onTrainingSubmitted }: {
+export default function StudentReader({ courseId, allowedModuleIds, token, onExit, onTrainingSubmitted, onStudyPointsEarned }: {
   courseId: string;
   allowedModuleIds: string[];
   token: string;
   onExit: () => void;
   onTrainingSubmitted?: () => void;
+  /** Fired when the server awarded Study-Practice points (the portal refreshes Strength once on exit). */
+  onStudyPointsEarned?: () => void;
 }) {
   const key = allowedModuleIds.join("|");
   const api = useMemo(() => createRestrictedReaderContentApi(courseId, allowedModuleIds), [courseId, key]);   // eslint-disable-line react-hooks/exhaustive-deps
   const client = useMemo(() => createTrainingClient(studentTrainingHeaders(token)), [token]);
+  const study = useMemo(() => createStudyClient(studentTrainingHeaders(token)), [token]);
   return (
     <LearningReaderWithTraining
       courseId={courseId}
@@ -29,6 +33,8 @@ export default function StudentReader({ courseId, allowedModuleIds, token, onExi
       client={client}
       actor="student"
       onTrainingSubmitted={onTrainingSubmitted}
+      study={study}
+      onStudyPointsEarned={onStudyPointsEarned}
     />
   );
 }

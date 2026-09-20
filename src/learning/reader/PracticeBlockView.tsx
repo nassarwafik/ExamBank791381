@@ -1,7 +1,9 @@
-import { useId, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 import { IconCheck, IconClose } from "../../icons";
 import { hintLadder, type PracticeQuestion } from "../content/types";
 import { localEvaluator, revealNextHint, INITIAL_FEEDBACK_STATE, type LearningFeedbackState, type LearningResponse } from "../practice/evaluator";
+import { practiceQuestionKey } from "../study/eligibility";
+import type { StudyAttemptResponse, StudyHost } from "../study/types";
 
 /**
  * Inline learning practice (جرّب بنفسك) — the immediate, LOCAL checker for a `practice` block.
@@ -17,12 +19,20 @@ import { localEvaluator, revealNextHint, INITIAL_FEEDBACK_STATE, type LearningFe
  * spell the key (`is-right` / `is-wrong`). A question WITHOUT an answer key (the evaluator says "unknown"), or of
  * a kind whose interactive surface is not implemented here yet (`fillBlank`), renders the static shape with a note
  * — exactly the pre-existing behaviour.
+ *
+ * STUDY PRACTICE STRENGTH: when a study HOST is injected (a student session), a locally-right answer of an ELIGIBLE
+ * exercise is reported once to the server, which alone judges it and decides the points; the view then shows the
+ * server's outcome — «+1 نقطة قوة» for a first completion, a quiet «محسوبة سابقًا» for a repeat, «اكتملت نقاط
+ * الدراسة لهذه الصفحة» once the page is full — and nothing on a transport failure. Without a host nothing is sent.
  */
-export default function PracticeBlockView({ question }: { question: PracticeQuestion }) {
+export default function PracticeBlockView({ question, activityId, pageId, study }: { question: PracticeQuestion; activityId?: string; pageId?: string; study?: StudyHost }) {
   const baseId = useId();
   const [response, setResponse] = useState<LearningResponse | null>(null);
   const [draft, setDraft] = useState("");
   const [feedback, setFeedback] = useState<LearningFeedbackState>(INITIAL_FEEDBACK_STATE);
+  const [outcome, setOutcome] = useState<StudyAttemptResponse | null>(null);
+  const reportedRef = useRef<string | null>(null);        // the response already reported (one report per answer)
+  const eligible = !!study && !!activityId && !!pageId && practiceQuestionKey(question) !== null;
   // Interactive ONLY for kinds that have a complete answering surface below (multipleChoice / trueFalse /
   // shortInput) AND an answer key. A keyed `fillBlank` (supported by the evaluator, no per-blank input here yet)
   // keeps the controlled static surface — never a prompt with a "answer to see the result" footer and no field.
@@ -33,8 +43,19 @@ export default function PracticeBlockView({ question }: { question: PracticeQues
   const shownHints = ladder.slice(0, feedback.revealedHints);
   const feedbackId = baseId + "-fb";
 
-  const answer = (r: LearningResponse) => { setResponse(r); };
-  const clear = () => { setResponse(null); setDraft(""); setFeedback(INITIAL_FEEDBACK_STATE); };
+  const answer = (r: LearningResponse) => { setResponse(r); setOutcome(null); };
+  const clear = () => { setResponse(null); setDraft(""); setFeedback(INITIAL_FEEDBACK_STATE); setOutcome(null); };
+
+  // Report a right answer ONCE per answer (never per render; never twice for the same response object).
+  useEffect(() => {
+    if (!eligible || !study || !activityId || !pageId || !response || status !== "right") return;
+    const stamp = JSON.stringify(response);
+    if (reportedRef.current === stamp) return;
+    reportedRef.current = stamp;
+    let alive = true;
+    study.report(pageId, activityId, response as never).then(r => { if (alive) setOutcome(r); }).catch(() => { /* quiet: the local verdict stands, points can be earned on a later answer */ });
+    return () => { alive = false; };
+  }, [eligible, study, activityId, pageId, response, status]);
 
   if (!hasKey) return <StaticPractice question={question} />;
 
@@ -104,6 +125,7 @@ export default function PracticeBlockView({ question }: { question: PracticeQues
           </p>
           {result?.message && <p className="learning-reader-practice-message">{result.message}</p>}
           {status === "right" && question.feedback?.explanation && <p className="learning-reader-practice-explain">{question.feedback.explanation}</p>}
+          {status === "right" && outcome && <StudyOutcome outcome={outcome} />}
           {status === "wrong" && shownHints.length > 0 && (
             <ol className="learning-reader-practice-hints" aria-label="التلميحات">
               {shownHints.map((h, i) => <li key={i}><span className="learning-reader-practice-hintno">تلميح {i + 1}</span>{h}</li>)}
@@ -113,7 +135,7 @@ export default function PracticeBlockView({ question }: { question: PracticeQues
       )}
 
       <div className="learning-reader-practice-foot">
-        <p className="learning-reader-practice-hint">تمرين ذاتي: أجب لترى النتيجة فورًا. لا يُحفظ شيء ولا تُحسب نقاط.</p>
+        <p className="learning-reader-practice-hint">{eligible ? "تمرين ذاتي: أجب لترى النتيجة فورًا. أول إجابة صحيحة تُضيف نقطة دراسة (حتى نقطتين للصفحة)." : "تمرين ذاتي: أجب لترى النتيجة فورًا. لا يُحفظ شيء ولا تُحسب نقاط."}</p>
         <div className="learning-reader-practice-actions">
           {status === "wrong" && feedback.revealedHints < ladder.length && (
             <button type="button" className="eb-button is-quiet is-small" onClick={() => setFeedback(s => revealNextHint(question.feedback, s))}>
@@ -127,6 +149,14 @@ export default function PracticeBlockView({ question }: { question: PracticeQues
       </div>
     </div>
   );
+}
+
+/** The SERVER's study outcome for a right answer — one quiet line, never colour-only, never animated. */
+export function StudyOutcome({ outcome }: { outcome: StudyAttemptResponse }) {
+  if (!outcome.correct || outcome.actor !== "student") return null;
+  if (outcome.gained > 0) return <p className="learning-reader-study-outcome is-gained" role="status">+{outcome.gained} نقطة قوة — أحسنت، واصل الدراسة.</p>;
+  if (outcome.alreadyCompleted) return <p className="learning-reader-study-outcome is-repeat" role="status">نقطة هذا التمرين محسوبة سابقًا.</p>;
+  return <p className="learning-reader-study-outcome is-full" role="status">اكتملت نقاط الدراسة لهذه الصفحة: <span dir="ltr">{outcome.page.points} / {outcome.page.max}</span></p>;
 }
 
 /** The kinds that have a complete interactive answering surface in this view. */

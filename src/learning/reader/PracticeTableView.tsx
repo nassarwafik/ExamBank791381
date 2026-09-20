@@ -1,6 +1,9 @@
-import { useId, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 import { IconCheck, IconClose } from "../../icons";
 import type { PracticeTableBlock, PracticeTableSelectCell } from "../content/types";
+import { practiceTableKey } from "../study/eligibility";
+import type { StudyAttemptResponse, StudyHost } from "../study/types";
+import { StudyOutcome } from "./PracticeBlockView";
 
 /**
  * The generic interactive worksheet renderer for a `practice-table` block. Same table skeleton as the static
@@ -12,13 +15,32 @@ import type { PracticeTableBlock, PracticeTableSelectCell } from "../content/typ
  * Nothing here is domain-specific: no page ids, no address logic, no course names — every rule lives in the data.
  * Nothing is stored, sent or scored: the state is component-local and disappears with the page; no Strength points
  * come from inline practice. The expected choice never appears in the DOM (no attribute, no hidden text).
+ *
+ * STUDY PRACTICE STRENGTH: with a study HOST (a student session) the whole worksheet is ONE eligible exercise — it is
+ * reported once, when every answerable cell is right, and the server alone judges it and decides the points.
  */
-export default function PracticeTableView({ block }: { block: PracticeTableBlock }) {
+export default function PracticeTableView({ block, pageId, study }: { block: PracticeTableBlock; pageId?: string; study?: StudyHost }) {
   const [choices, setChoices] = useState<Record<string, string>>({});
+  const [outcome, setOutcome] = useState<StudyAttemptResponse | null>(null);
+  const reportedRef = useRef<string | null>(null);
   const baseId = useId();
   const cellKey = (r: number, c: number) => r + ":" + c;
   const isSelect = (cell: PracticeTableBlock["rows"][number][number]): cell is PracticeTableSelectCell => typeof cell !== "string";
   const answered = Object.keys(choices).length > 0;
+  const key = practiceTableKey(block);
+  const cells = key && key.kind === "practice-table" ? key.cells : null;
+  const eligible = !!study && !!pageId && cells !== null;
+  const allRight = cells !== null && Object.entries(cells).every(([k, expected]) => choices[k] === expected);
+
+  useEffect(() => {
+    if (!eligible || !study || !pageId || !allRight) return;
+    const stamp = JSON.stringify(choices);
+    if (reportedRef.current === stamp) return;
+    reportedRef.current = stamp;
+    let alive = true;
+    study.report(pageId, block.id, { kind: "practice-table", choices: { ...choices } }).then(r => { if (alive) setOutcome(r); }).catch(() => { /* quiet */ });
+    return () => { alive = false; };
+  }, [eligible, study, pageId, block.id, allRight, choices]);
 
   // The row's accessible label is its first plain-text cell (the item being classified), else its ordinal.
   const rowLabel = (row: PracticeTableBlock["rows"][number], r: number) => {
@@ -68,9 +90,10 @@ export default function PracticeTableView({ block }: { block: PracticeTableBlock
           </tbody>
         </table>
       </div>
+      {allRight && outcome && <StudyOutcome outcome={outcome} />}
       <div className="learning-reader-practice-foot">
-        <p className="learning-reader-practice-hint">تمرين ذاتي: اختر الإجابة في كل صف لترى النتيجة فورًا، وغيّرها كما تشاء. لا يُحفظ شيء ولا تُحسب نقاط.</p>
-        {answered && <button type="button" className="eb-button is-quiet is-small" onClick={() => setChoices({})}>امسح الإجابات</button>}
+        <p className="learning-reader-practice-hint">{eligible ? "تمرين ذاتي: اختر الإجابة في كل صف لترى النتيجة فورًا، وغيّرها كما تشاء. إكمال الجدول كله صحيحًا يُضيف نقطة دراسة (حتى نقطتين للصفحة)." : "تمرين ذاتي: اختر الإجابة في كل صف لترى النتيجة فورًا، وغيّرها كما تشاء. لا يُحفظ شيء ولا تُحسب نقاط."}</p>
+        {answered && <button type="button" className="eb-button is-quiet is-small" onClick={() => { setChoices({}); setOutcome(null); }}>امسح الإجابات</button>}
       </div>
     </div>
   );

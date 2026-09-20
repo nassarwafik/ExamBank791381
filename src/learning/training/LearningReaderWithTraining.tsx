@@ -2,11 +2,13 @@ import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } fro
 import LearningReader from "../reader/LearningReader";
 import type { ReaderContentApi } from "../reader/readerContentApi";
 import type { LibraryTrainingHost, TrainingClient, TrainingListEntry, TrainingStatus } from "./types";
+import type { StudyAttemptResponse, StudyClient, StudyHost, StudyModuleState, StudyPageState, StudyPageStatus, StudyResponse } from "../study/types";
 
 // The runner (and the exam question primitive it pulls) is code-split: reading never pays for practising.
 const LearningTrainingRunner = lazy(() => import("./LearningTrainingRunner"));
 
 type ListState = { kind: "loading" } | { kind: "error" } | { kind: "ready"; byId: Record<string, TrainingListEntry> };
+type StudyState = { kind: "loading" } | { kind: "error" } | { kind: "ready"; pages: Record<string, StudyPageState>; modules: Record<string, StudyModuleState> };
 type View = { kind: "reader"; pageId?: string; presentation?: boolean } | { kind: "training"; trainingId: string; returnPageId?: string; returnPresentation?: boolean };
 
 /**
@@ -18,7 +20,7 @@ type View = { kind: "reader"; pageId?: string; presentation?: boolean } | { kind
  *
  * `client === null` → no session → the Reader renders with no training host (generic cards, zero requests).
  */
-export default function LearningReaderWithTraining({ courseId, api, onExit, exitLabel, client, actor, onTrainingSubmitted }: {
+export default function LearningReaderWithTraining({ courseId, api, onExit, exitLabel, client, actor, onTrainingSubmitted, study = null, onStudyPointsEarned }: {
   courseId: string;
   api?: ReaderContentApi;
   onExit: () => void;
@@ -27,10 +29,16 @@ export default function LearningReaderWithTraining({ courseId, api, onExit, exit
   actor: "student" | "teacher";
   /** Fired after a graded submission was accepted by the server (hosts use it to refresh Strength on exit). */
   onTrainingSubmitted?: () => void;
+  /** Study-Practice transport (student sessions). `null` → in-page practice stays local, no study UI, no request. */
+  study?: StudyClient | null;
+  /** Fired when the server awarded study points (hosts use it to refresh Strength on exit). */
+  onStudyPointsEarned?: () => void;
 }) {
   const [view, setView] = useState<View>({ kind: "reader" });
   const [list, setList] = useState<ListState>({ kind: "loading" });
   const [listNonce, setListNonce] = useState(0);
+  const [studyState, setStudyState] = useState<StudyState>({ kind: "loading" });
+  const [studyNonce, setStudyNonce] = useState(0);
   const pageRef = useRef<string | undefined>(undefined);
   const presentationRef = useRef(false);            // the Reader's presentation mode, remembered across a training
 
@@ -49,6 +57,42 @@ export default function LearningReaderWithTraining({ courseId, api, onExit, exit
       .catch(() => { if (alive) setList({ kind: "error" }); });
     return () => { alive = false; };
   }, [client, listNonce]);
+
+  // The study state is read ONCE per mount (a swap to the runner and back never re-reads it); each accepted
+  // attempt updates it from the server's own response, so the page bar and the cards never guess.
+  useEffect(() => {
+    if (!study) return;
+    let alive = true;
+    study.state(courseId)
+      .then(r => { if (alive) setStudyState({ kind: "ready", pages: r.pages || {}, modules: r.modules || {} }); })
+      .catch(() => { if (alive) setStudyState({ kind: "error" }); });
+    return () => { alive = false; };
+  }, [study, courseId, studyNonce]);
+  const onStudyPointsEarnedRef = useRef(onStudyPointsEarned);
+  useEffect(() => { onStudyPointsEarnedRef.current = onStudyPointsEarned; }, [onStudyPointsEarned]);
+  const studyHost = useMemo<StudyHost | undefined>(() => {
+    if (!study) return undefined;
+    return {
+      pageStatus(pageId: string): StudyPageStatus {
+        if (studyState.kind === "loading") return { kind: "loading" };
+        if (studyState.kind === "error") return { kind: "error" };
+        const page = studyState.pages[pageId];
+        const moduleId = page?.moduleId;
+        return { kind: "ready", completed: new Set(page?.completed ?? []), points: page?.points ?? 0, max: page?.max ?? 2, module: moduleId ? (studyState.modules[moduleId] ?? null) : null };
+      },
+      async report(pageId: string, activityId: string, response: StudyResponse): Promise<StudyAttemptResponse> {
+        const r = await study.attempt(courseId, pageId, activityId, response);
+        if (r.correct && r.actor === "student") {
+          setStudyState(prev => prev.kind === "ready"
+            ? { kind: "ready", pages: { ...prev.pages, [pageId]: { moduleId: r.page.moduleId, completed: r.page.completed, points: r.page.points, max: r.page.max } }, modules: { ...prev.modules, [r.page.moduleId]: r.module } }
+            : prev);
+          if (studyState.kind === "error") setStudyNonce(n => n + 1);
+          if (r.gained > 0) onStudyPointsEarnedRef.current?.();
+        }
+        return r;
+      },
+    };
+  }, [study, courseId, studyState]);
 
   const onPageChange = useCallback((pageId: string) => { pageRef.current = pageId; }, []);
   const onPresentationChange = useCallback((on: boolean) => { presentationRef.current = on; }, []);
@@ -101,6 +145,7 @@ export default function LearningReaderWithTraining({ courseId, api, onExit, exit
       onExit={onExit}
       exitLabel={exitLabel}
       training={host}
+      study={studyHost}
       initialPageId={view.kind === "reader" ? view.pageId : undefined}
       onPageChange={onPageChange}
       initialPresentation={view.kind === "reader" ? view.presentation : undefined}

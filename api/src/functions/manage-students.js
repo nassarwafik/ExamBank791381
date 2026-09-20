@@ -27,6 +27,8 @@ const { isReportableAssessment } = require("../lib/assignment-lifecycle");
 const { deriveGradingStatus } = require("../lib/grading-status");
 const { aggregateRecognition, medalTierFromPercentage } = require("../lib/achievement-feed");
 const { buildStrengthSummary } = require("../lib/student-strength");
+const { studyDocName, studyModulesForStrength } = require("../lib/learning-study");
+const { listLearningCourses } = require("../lib/learning-materials-registry");
 const { loadStudentProjects } = require("../lib/project-tracker/student-projects");
 const { withCredentialLock, CredentialLockBusyError } = require("../lib/student-credential-lock");
 // Roadmap #25 — classroom.studentIds is a denormalized, repairable roster INDEX (never authoritative). All
@@ -690,11 +692,13 @@ async function buildProfileStrength(container, student, classroom, history) {
     const finalizedCount = history.filter(h => h.gradingStatus === "final").length;
     const medals = { total: 0, gold: 0, silver: 0, bronze: 0 };
     for (const h of history) { if (h.gradingStatus !== "final" || h.latestPercentage === null) continue; const t = medalTierFromPercentage(Number(h.latestPercentage)); if (t) { medals.total++; medals[t]++; } }
-    const [practiceDoc, projects] = await Promise.all([
+    const [practiceDoc, studyDoc, projects] = await Promise.all([
       downloadJsonOrNull(container, "platform/learning-practice/" + student.userId + ".json"),
+      downloadJsonOrNull(container, studyDocName(student.userId)),
       classroom && normalizeClassStatus(classroom) !== "archived" ? loadStudentProjects(container, classroom, String(student.classId || ""), student.userId, now) : Promise.resolve([])
     ]);
-    const strength = buildStrengthSummary({ finalizedCount, trainings: practiceDoc && practiceDoc.trainings, projects: projects.map(p => ({ projectCode: p.projectCode, overallProgress: p.summary.overallProgress })) });
+    const study = studyModulesForStrength(studyDoc, listLearningCourses().map(x => x.courseId));
+    const strength = buildStrengthSummary({ finalizedCount, trainings: practiceDoc && practiceDoc.trainings, study, projects: projects.map(p => ({ projectCode: p.projectCode, overallProgress: p.summary.overallProgress })) });
     const rec = (await aggregateRecognition(container, [student.userId])).get(student.userId);
     return {
       strength,
