@@ -153,7 +153,10 @@ describe("learning-materials-catalog — teacher catalog endpoint", () => {
       { moduleId: "791381-m03", title: "برمجة السويتش CLI و VLAN", order: 15 },
       // Batch 7: the VTP section (m19) and the historical m04 id completed in place — listed = publishable, never auto-visible.
       { moduleId: "791381-m19", title: "إدارة VLAN: VTP", order: 16 },
-      { moduleId: "791381-m04", title: "Trunk و Router on a Stick", order: 17 }
+      { moduleId: "791381-m04", title: "Trunk و Router on a Stick", order: 17 },
+      { moduleId: "791381-m20", title: "Wi-Fi والشبكات اللاسلكية", order: 18 },
+      { moduleId: "791381-m21", title: "IPv6 والمنافذ", order: 19 },
+      { moduleId: "791381-m22", title: "بروتوكول DHCP", order: 20 }
     ] }] });
     expect(JSON.stringify(r.jsonBody)).not.toMatch(/m05|m06|pages|lessons|blocks|answer|pdf/i);
   });

@@ -1517,6 +1517,138 @@ were refreshed), no change to m05 / m06 beyond their explicit `order`, no change
 اللاسلكية» from PDF 159). None of the remaining skeletons (m05 «مرجع أوامر Cisco» PDF 193, m06 «قوائم التحكم ACL» PDF 227)
 claims pages in that range, so the next batch will need new stable ids.
 
+## Batch 8 — Wi-Fi · IPv6 والمنافذ · DHCP (source PDF 158–179) + the interactive CLI simulator
+
+The eighth content phase opens the book's fifth batch. The boundary was discovered from the book: **PDF 158 is the
+«الدفعة الخامسة · Wi-Fi و IPv6 و DHCP والأمان» batch cover** (structural; its first line lists «DMZ · Wi-Fi · IPv6 ·
+المنافذ · DHCP», its second «Port Security · كلمات المرور · مرجع أوامر Cisco»). PDF 159–165 is the section «Wi-Fi ·
+الشبكات اللاسلكية» (159 DMZ, 160 Wi-Fi, 161 wireless types, 162 SSID, 163 security, 164 WEP / WPA, 165 Access Point),
+PDF 166–168 is «IPv6 والمنافذ» (166 IPv6, 167 shortening examples, 168 the port table), PDF 169–179 is «بروتوكول DHCP»
+(169 intro, 170 DORA, 171 the router example, **172–173 the two «Cisco CLI» boxes**, 174 command explanations, 175
+notes, 176–179 DHCP from a Packet Tracer server), **PDF 180 begins «Port Security»** (180–184), then «حماية أجهزة Cisco»
+(185–191), «مرجع أوامر Cisco» (192–199 — the m05 skeleton's PDF 193–194 live there) and the sixth-batch cover at PDF
+200. The smallest coherent batch is the cover's first line: **PDF 158–179, three sections, twenty-one learner pages**.
+Conversion **stops before PDF 180**: no converted body has `pdfPageStart >= 180` and tests assert it.
+
+### Three NEW stable ids; nothing historical is touched
+
+None of the remaining skeletons claims pages in 158–179 (m05 = PDF 193–194, m06 = PDF 227), so the three sections
+are the next free ids, placed by explicit `order` after m04 (17):
+
+- **`791381-m20` «Wi-Fi والشبكات اللاسلكية»** (`shortTitle` «Wi-Fi»), order 18, source 158–165 (PDF 158 only in the
+  module's coarse source range + `sourceNote`). Lessons `l01` DMZ و Wi-Fi (159–161) · `l02` SSID وأمان الشبكة اللاسلكية
+  (162–165).
+- **`791381-m21` «IPv6 والمنافذ»**, order 19, source 166–168, one lesson `l01` IPv6 والمنافذ المهمة.
+- **`791381-m22` «بروتوكول DHCP»** (`shortTitle` «DHCP»), order 20, source 169–179. Lessons `l01` ما هو DHCP (169–171) ·
+  `l02` DHCP على الراوتر (172–175) · `l03` DHCP عن طريق Server (176–179).
+- **m05 and m06 shift** to orders 21 / 22 (ids, titles, page ids, mappings untouched). **b5** («الأمان · Wi-Fi · IPv6 ·
+  DHCP», previously empty) = `[m20, m21, m22]`; b4 / b6 unchanged. Batch 7 bodies (m19, m04) are untouched.
+
+### Source map and module structure
+
+| Section | Source PDF | Module (new stable id) | `order` | Batch | Lessons |
+| --- | --- | --- | --- | --- | --- |
+| «Wi-Fi · الشبكات اللاسلكية» | **158 (batch cover) · 159–165** | `791381-m20` | 18 | b5 | `l01` DMZ و Wi-Fi (159–161) · `l02` SSID وأمان الشبكة اللاسلكية (162–165) |
+| «IPv6 والمنافذ» | **166–168** | `791381-m21` | 19 | b5 | `l01` IPv6 والمنافذ المهمة (166–168) |
+| «بروتوكول DHCP» | **169–179** | `791381-m22` | 20 | b5 | `l01` ما هو DHCP (169–171) · `l02` DHCP على الراوتر (172–175) · `l03` DHCP عن طريق Server (176–179) |
+
+- **1 source page → 1 interactive page** (twenty-one pages); printed page = page circle = PDF index everywhere; no
+  split, merge or `conversionNote`.
+- **CLI fidelity:** the «Cisco CLI» boxes of PDF 172 and 173 are `code` blocks (`language: "cli"`, origin book) with
+  the book's exact seven lines and prompts (`Router(config-if)#`, `Router(config)#`, `Router(dhcp-config)#`), each
+  followed by the command/annotation table with an LTR command column. The interface name **G0/0** comes from the
+  book's PDF 174 explanation («interface G0/0»). Nothing the book does not print appears in book-origin blocks.
+- **Concept fidelity:** DMZ definition, diagram roles, facts and «الفكرة» (159); Wi-Fi facts and «تذكّر» (160); the
+  PAN / WLAN / WPAN / WWAN table and «احفظ من المثال» (161); SSID facts (162); security facts and «قاعدة» (163); the
+  WEP / WPA / WPA2-WPA3 rows and «للطالب» (164); Access Point (165); 128 / 32 bit, Hexadecimal (166); the three IPv6
+  addresses copied character by character and the «::» rule (167); the nine-row port table and «الفكرة» (168); DHCP
+  facts (169); DORA in prose «ثم» (170); the 192.168.1.0/24 example numbers (171); the CLI boxes and «تذكّر» (172–173);
+  the four command roles (174); APIPA 169.254.x.x (175); the server facts and three Packet Tracer steps (176–179).
+- **Source order inside the batch (tested):** m20 never names IPv6 / ports / DHCP; m21 never names DHCP / Access
+  Point / WPA; in m22 DORA first appears on 170, the router commands on 172–173, APIPA on 175, the server steps from 176.
+- **Next-batch leakage guard:** Port Security, sticky MAC, violation, device passwords, `line vty` / `line console`,
+  `enable secret`, `service password-encryption`, `banner motd`, `show running-config` / `show startup-config`, the
+  command reference, OSPF / EIGRP / ACL / WAN are banned from m20–m22 by tests.
+
+### The interactive CLI simulator (`src/learning/cli/`, `simulation / cli-terminal / v1`)
+
+Batch 8 ships **v1 of a deterministic TEACHING simulator** of a Cisco-style command line — not an IOS emulator. It is
+a generic Learning-Reader component reusable by every CLI section (VLAN, Trunk, VTP, Router on a Stick, DHCP, and
+later routing / ACL / show commands); exercises are **declarative data** in content modules.
+
+- **Engine (no React):** `types.ts` (state model, closed command union, exercise config), `normalize.ts` (trim,
+  collapse whitespace, canonical interface spelling `FastEthernet0/1` = `fa0/1` = `f0/1`, IPv4 / mask / VLAN checks),
+  `grammar.ts` (the closed command table — keyword sequences with the book's abbreviations such as `config t`, valid
+  modes, display syntax, argument parsers; `parseCommand` → empty / unknown / incomplete / invalid / ok), `state.ts`
+  (device state, prompts, Arabic mode labels, initial state from an exercise), `engine.ts` (`executeCommand`: parse →
+  mode check → apply; pure, returns a new state; unknown / incomplete / invalid / wrong-mode input never changes
+  state), `show.ts` (simplified deterministic `show` output labelled as simulation), `exercise.ts` (session =
+  state + transcript + step / goal progress + hint ladder; `submitCommand`, `revealHint`, `goalStatus`; the exact
+  feedback strings), `config.ts` (defensive reading of the opaque block `config`; unknown commands / modes / shapes →
+  null → the block's static fallback).
+- **Modes:** user EXEC `>`, privileged EXEC `#`, global `(config)#`, interface `(config-if)#`, sub-interface
+  `(config-subif)#`, VLAN `(config-vlan)#`, DHCP pool `(dhcp-config)#`. **Commands (v1):** `enable`, `disable`,
+  `configure terminal`, `exit`, `end`, `?`, `hostname`, `interface` (+ `range`, sub-interfaces, `vlan N` SVI),
+  `vlan`, `name`, `switchport mode access|trunk`, `switchport access vlan`, `switchport trunk allowed vlan`,
+  `ip address`, `no shutdown`, `shutdown`, `encapsulation dot1Q`, `ip dhcp pool`, `network`, `default-router`,
+  `dns-server`, `ip dhcp excluded-address`, `vtp mode|domain|password`, `show running-config`, `show ip interface
+  brief`, `show vlan brief`, `show ip dhcp pool`, `show vtp status`.
+- **Exercise kinds:** `guided` (ordered instructions, step-specific success text such as «✓ أحسنت، انتقلت إلى وضع
+  الإعداد العام»), `challenge` (questions, «✓ صحيح» / «✗ حاول مرة أخرى», upcoming questions hidden, answers never
+  printed), `task` (required final state as goal conditions; completes only when every goal holds, in any command
+  order). Feedback distinguishes unknown («✗ أمر غير معروف في هذا المحاكي التعليمي»), wrong mode («✗ الأمر صحيح لكنك
+  في الوضع غير المناسب — المطلوب: …»), interface-mode commands outside an interface («✗ اختر الواجهة أولًا»),
+  incomplete, invalid value, not required by the exercise («✗ هذا الأمر غير مطلوب في هذا التدريب» — never executed),
+  correct step, and completed final state. Two-step hint ladders (hint 1 never reveals the answer).
+- **Component:** `CliTerminalActivity.tsx` + `cli.css`, registered in `productionActivityRegistry` as
+  `simulation / cli-terminal / v1` (its own lazy chunk; capabilities fullscreen + reset + interactive; the allowlist
+  is now **fourteen** entries). RTL instruction panel (kind, intro, step list or goal checklist, hints, completion
+  banner) + an **LTR terminal island** (transcript, prompt, input with Enter / «تنفيذ», ArrowUp history) contained at
+  320 / 360 px (`min-width: 0`, `max-width: 100%`, the screen scrolls inside itself, ≥ 44 px input row). Shell reset
+  rebuilds the session from the exercise's initial state; nothing is persisted or sent (interaction events carry only
+  status / completed, never the typed text).
+- **Safety:** input is only ever matched against the closed grammar table — no `eval`, `Function`, dynamic `import`,
+  shell / process APIs, `fetch`, storage or DOM globals in any simulator source (a test scans the folder), and hostile
+  input (shell metacharacters, JS, HTML) is inert text that never executes, never mutates state and never advances an
+  exercise.
+- **Book exercises (m22):** PDF 172 guided example (the eight lines of part one, from `enable` to `network`), PDF 173
+  command challenges (`default-router`, `dns-server`, then `ip dhcp excluded-address` from global config; only those
+  three commands are accepted), PDF 174 multi-step task (seven goals: G0/0 address, mask, up; pool LAN network,
+  default-router, dns-server; the excluded range). Tests drive all three with the book's own lines (and common
+  spellings) to completion and prove wrong values / wrong modes / a shut interface keep them open. **Batch 7 content
+  was not retroactively changed**; a later PR may add CLI exercises to VTP / Trunk / Router on a Stick.
+
+### Pedagogy applied
+
+| Module | Clarifications | Inline practices | Worksheets (`practice-table`) | Closing review | Activities |
+| --- | --- | --- | --- | --- | --- |
+| m20 | 7 (one per page) | 14 | 2 (example → wireless type on 161 · technology → rating on 164) | 3 on PDF 165 | 0 |
+| m21 | 3 (one per page) | 8 | 1 (port → service on 168) | 3 on PDF 168 | 0 |
+| m22 | 11 (one per page) | 21 | 2 (DORA order on 170 · command → role on 174) | 3 on PDF 179 | 3 CLI exercises (172 guided · 173 challenge · 174 task) |
+
+Practices are educational only (nothing stored, scored or ranked); every wrong-answer feedback says what to **check**
+(«افحص …»), every question carries a two-step hint ladder, every page ends with practice.
+
+### Publication: deployable ≠ published
+
+`api/src/lib/learning-materials-registry.js` lists `m20` (18), `m21` (19), `m22` (20) after m04 — by order, never by
+id. Nothing is auto-published: a real-registry test proves a class released through m04 exposes nothing of m20–m22,
+that publishing `[m01, m22]` shows exactly those two, that `[m22, m20, m04]` canonicalizes to `[m04, m20, m22]`, and
+that m05 / m06 remain unpublishable (400). No class's `visibleModuleIds` changed.
+
+### Deliberately NOT in this phase
+
+No PDF 180+ (Port Security, device passwords, the command reference m05, ACL m06), no `show`-command exercise type
+(the grammar carries simplified `show` output as a foundation; the diagnostic exercise kind is deferred), no answer
+reveal after the hint ladder, no `line` / routing / ACL / NAT commands, no persistence or progress of CLI sessions, no
+retroactive CLI exercises in m03 / m19 / m04, no change to any class's `visibleModuleIds`.
+
+### Where the next batch begins
+
+**The next untouched page is PDF 180** («Port Security», 180–184, then «حماية أجهزة Cisco» 185–191 — both CLI-rich and
+natural candidates for `cli-terminal` challenges — then «مرجع أوامر Cisco» 192–199 where the m05 skeleton's PDF 193–194
+live, and the sixth-batch cover at PDF 200).
+
 ## Phase boundaries
 
 | Phase | Scope | Status |
@@ -1537,7 +1669,8 @@ claims pages in that range, so the next batch will need new stable ids.
 | **Batch 4 (this)** | Book 791381 source PDF **87–106** as complete modules `m14` («البروتوكولات», order 10), `m15` («أوامر فحص الشبكة», order 11), `m16` («المجالات والمفاهيم» + the PDF 106 trainings page, order 12); b3 = [m13, m14, m15, m16]; m03–m06 shift to orders 13–16; activity `network-domains/v1` (registry = 12); server publication registry lists m14–m16 (publishable, never auto-published); PDF 107+ (Part 2: security …) untouched; PR #123 cleanups A–C applied | done (awaiting review) |
 | **Batch 5** | Book 791381 source PDF **107–119** (PDF 107 part cover not rendered) as complete modules `m17` («أمان الشبكات», order 13) and `m18` («تجزئة البيانات» + the PDF 119 trainings page, order 14); b3 = [m13 … m18]; m03–m06 shift to orders 15–18; activity `tcp-handshake/v1` (registry = 13); server publication registry lists m17–m18 (publishable, never auto-published); next batch begins at PDF 120 | done (merged) |
 | **Batch 6** | Book 791381 source PDF **120–138** (PDF 120 batch cover not rendered) as the historical skeleton `m03` («برمجة السويتش CLI و VLAN», order 15) **completed in place** — historical page ids `-l01-p01` (PDF 123) / `-l01-p02` (PDF 124) preserved with unchanged titles and mappings, PDF 121–122 as new stable ids placed first by `order`; four lessons, eighteen pages, seven CLI `code` blocks, no new activity (registry stays 13); server publication registry lists m03 (publishable, never auto-published); m04–m06 untouched; next untouched page = PDF 139 | done (merged) |
-| **Batch 7 (this)** | Book 791381 source PDF **139–157** (PDF 139 / 145 section covers not rendered) as NEW module `m19` («إدارة VLAN: VTP», order 16, PDF 140–144) and the historical skeleton `m04` («Trunk و Router on a Stick», order 17, PDF 146–157) **completed in place** — historical page `-l01-p01` (PDF 148) preserved with unchanged title and mapping, PDF 146–147 as new stable ids placed first by `order`; five CLI `code` blocks, no new activity (registry stays 13); server publication registry lists m19 and m04 (publishable, never auto-published); m05–m06 shift to orders 18–19; next untouched page = PDF 158 | done (awaiting review) |
+| Batch 7 | Book 791381 source PDF **139–157** (PDF 139 / 145 section covers not rendered) as NEW module `m19` («إدارة VLAN: VTP», order 16, PDF 140–144) and the historical skeleton `m04` («Trunk و Router on a Stick», order 17, PDF 146–157) **completed in place** — historical page `-l01-p01` (PDF 148) preserved with unchanged title and mapping, PDF 146–147 as new stable ids placed first by `order`; five CLI `code` blocks, no new activity (registry stays 13); server publication registry lists m19 and m04 (publishable, never auto-published); m05–m06 shift to orders 18–19; next untouched page = PDF 158 | done (awaiting review) |
+| **Batch 8 (this)** | Book 791381 source PDF **158–179** (PDF 158 batch cover not rendered) as NEW modules `m20` («Wi-Fi والشبكات اللاسلكية», order 18, PDF 159–165), `m21` («IPv6 والمنافذ», order 19, PDF 166–168) and `m22` («بروتوكول DHCP», order 20, PDF 169–179); two CLI `code` blocks; **the interactive CLI teaching simulator** (`src/learning/cli/`, `simulation / cli-terminal / v1`, registry now 14) with three declarative book exercises on PDF 172–174; server publication registry lists m20–m22 (publishable, never auto-published); m05–m06 shift to orders 21–22; next untouched page = PDF 180 | done (awaiting review) |
 | 4 | Interactive Practice — remaining inline checking families beyond closed-choice worksheets (free text, ordering, evaluator-backed hints) | deferred |
 | 5 | Simulations — real VLAN/subnet/CLI/… renderers registered behind the Phase-3A engine | deferred |
 | 6 | Student Progress — last page, completion, attempts (separate domain; attaches to the no-op event seam) | deferred |

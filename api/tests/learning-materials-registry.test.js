@@ -5,10 +5,10 @@ import { listLearningCourses, findLearningCourse, listLearningModules, findLearn
 // teacher may publish. It lists exactly the production-approved, fully converted modules in the book's content
 // order (never a lexical id sort) and never the skeleton-only modules.
 
-const M = ["791381-m01", "791381-m02", "791381-m07", "791381-m08", "791381-m09", "791381-m10", "791381-m11", "791381-m12", "791381-m13", "791381-m14", "791381-m15", "791381-m16", "791381-m17", "791381-m18", "791381-m03", "791381-m19", "791381-m04"];
+const M = ["791381-m01", "791381-m02", "791381-m07", "791381-m08", "791381-m09", "791381-m10", "791381-m11", "791381-m12", "791381-m13", "791381-m14", "791381-m15", "791381-m16", "791381-m17", "791381-m18", "791381-m03", "791381-m19", "791381-m04", "791381-m20", "791381-m21", "791381-m22"];
 
 describe("registry — exact production catalog", () => {
-  it("lists exactly course 791381 with m01, m02, m07, m08, m09, m10, m11, m12, m13, m14, m15, m16, m17, m18, m03 in canonical content order (m07 = Unit 3 after m02; m08–m10 = Units 4–6; m11–m12 = Units 7–8; m13 = Batch 3; m14–m16 = Batch 4; m17–m18 = Batch 5; m03 = Batch 6, the historical id completed in place, order 15; m19 = Batch 7 VTP, order 16; m04 = Batch 7, the historical id completed in place, order 17)", () => {
+  it("lists exactly course 791381 with m01, m02, m07, m08, m09, m10, m11, m12, m13, m14, m15, m16, m17, m18, m03 in canonical content order (m07 = Unit 3 after m02; m08–m10 = Units 4–6; m11–m12 = Units 7–8; m13 = Batch 3; m14–m16 = Batch 4; m17–m18 = Batch 5; m03 = Batch 6, the historical id completed in place, order 15; m19 = Batch 7 VTP, order 16; m04 = Batch 7, the historical id completed in place, order 17; m20–m22 = Batch 8 Wi-Fi / IPv6 والمنافذ / DHCP, orders 18–20)", () => {
     const courses = listLearningCourses();
     expect(courses.map(c => c.courseId)).toEqual(["791381"]);
     expect(courses[0]).toMatchObject({ courseId: "791381", title: "شبكات الاتصال", subject: "أنظمة محوسبة" });
@@ -29,13 +29,16 @@ describe("registry — exact production catalog", () => {
       { moduleId: "791381-m18", title: "تجزئة البيانات", order: 14 },
       { moduleId: "791381-m03", title: "برمجة السويتش CLI و VLAN", order: 15 },
       { moduleId: "791381-m19", title: "إدارة VLAN: VTP", order: 16 },
-      { moduleId: "791381-m04", title: "Trunk و Router on a Stick", order: 17 }
+      { moduleId: "791381-m04", title: "Trunk و Router on a Stick", order: 17 },
+      { moduleId: "791381-m20", title: "Wi-Fi والشبكات اللاسلكية", order: 18 },
+      { moduleId: "791381-m21", title: "IPv6 والمنافذ", order: 19 },
+      { moduleId: "791381-m22", title: "بروتوكول DHCP", order: 20 }
     ]);
   });
-  it("never exposes skeleton-only modules (m05–m06) or any page/lesson body; m03 / m19 / m04 (Batches 6 / 7) ARE listed, in that order at the end", () => {
+  it("never exposes skeleton-only modules (m05–m06) or any page/lesson body; m03 / m19 / m04 (Batches 6 / 7) then m20 / m21 / m22 (Batch 8) ARE listed, in that order at the end", () => {
     const ids = listLearningModules("791381").map(m => m.moduleId);
     for (const skel of ["791381-m05", "791381-m06"]) expect(ids).not.toContain(skel);
-    expect(ids.slice(-3)).toEqual(["791381-m03", "791381-m19", "791381-m04"]);
+    expect(ids.slice(-6)).toEqual(["791381-m03", "791381-m19", "791381-m04", "791381-m20", "791381-m21", "791381-m22"]);
     const text = JSON.stringify(listLearningCourses());
     expect(text).not.toMatch(/pages|lessons|blocks|answer|pdf/i);
   });
