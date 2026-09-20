@@ -68,7 +68,7 @@ describe("visuals — motion always respects reduced motion", () => {
     // Chapter 1 CSS animation classes
     ".eb-visual-pulse", ".eb-visual-leaf-anim", ".eb-visual-pillar-anim",
     // Batch 2 CSS animation classes
-    ".eb-visual-glow-anim", ".eb-visual-sweep-anim", ".eb-visual-pin-anim",
+    ".eb-visual-glow-anim", ".eb-visual-sweep-anim", ".eb-visual-pin-anim", ".eb-visual-prefix-anim",
   ];
   const motionMarks = (root: Element) =>
     MOTION_SELECTORS.reduce((n, sel) => n + root.querySelectorAll(sel).length, 0);

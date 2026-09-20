@@ -154,9 +154,13 @@
 @keyframes eb-visual-sweep{ 0%{ transform:translateX(26px); } 100%{ transform:translateX(354px); } }
 .eb-visual-pin-anim{ transform-box:fill-box; transform-origin:center; animation:eb-visual-bob 2.8s var(--eb-ease, ease-in-out) infinite; }
 @keyframes eb-visual-bob{ 0%,100%{ transform:translateY(0); } 50%{ transform:translateY(-3px); } }
+.eb-visual-route{ stroke:transparent; fill:none; }
+.eb-visual-prefix-anim{ animation:eb-visual-prefix-glow 2.8s var(--eb-ease, ease-in-out) infinite; }
+@keyframes eb-visual-prefix-glow{ 0%,100%{ opacity:.55; } 45%{ opacity:1; } }
 
 @media (prefers-reduced-motion: reduce){
   .eb-visual-glow-anim,
   .eb-visual-sweep-anim,
-  .eb-visual-pin-anim{ animation:none !important; }
+  .eb-visual-pin-anim,
+  .eb-visual-prefix-anim{ animation:none !important; }
 }
