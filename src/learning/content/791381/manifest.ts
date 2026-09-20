@@ -659,17 +659,81 @@ const manifest: LearningCourseManifest = {
       ],
     },
     {
+      // m19 — Batch 7: the book's section «إدارة VLAN · VTP» (PDF 140–144; PDF 139 is the section cover, metadata only in
+      // the body's module source). NEW stable id (the next free one — the m04 skeleton below is the DIFFERENT section that
+      // starts at the PDF 145 cover); placed by explicit `order` 16, between m03 (15) and m04 (17).
+      id: "791381-m19",
+      title: "إدارة VLAN: VTP",
+      shortTitle: "VTP",
+      order: 16,
+      lessons: [
+        {
+          id: "791381-m19-l01",
+          title: "ما هو VTP وكيف يعمل",
+          order: 1,
+          pages: [
+            { id: "791381-m19-l01-p01", title: "ما هو VTP؟", order: 1, source: { kind: "book", sourceId: "791381", pdfPageStart: 140, printedPage: 140 }, keywords: ["VTP", "VLAN Trunking Protocol", "Server", "Clients", "Cisco"] },
+            { id: "791381-m19-l01-p02", title: "كيف يعمل VTP؟", order: 2, source: { kind: "book", sourceId: "791381", pdfPageStart: 141, printedPage: 141 }, keywords: ["خطوات تشغيل VTP", "Server", "Client", "تلقائيًا"] },
+          ],
+        },
+        {
+          id: "791381-m19-l02",
+          title: "إعداد VTP",
+          order: 2,
+          pages: [
+            { id: "791381-m19-l02-p01", title: "إعداد VTP: Server و Client", order: 1, source: { kind: "book", sourceId: "791381", pdfPageStart: 142, printedPage: 142 }, keywords: ["vtp mode server", "vtp domain", "vtp password", "vtp mode client"] },
+            { id: "791381-m19-l02-p02", title: "إعداد VTP لباقي السويتشات", order: 2, source: { kind: "book", sourceId: "791381", pdfPageStart: 143, printedPage: 143 }, keywords: ["Client", "Domain", "باقي السويتشات", "Server"] },
+            { id: "791381-m19-l02-p03", title: "تعريف VLAN على سويتش السيرفر", order: 3, source: { kind: "book", sourceId: "791381", pdfPageStart: 144, printedPage: 144 }, keywords: ["تعريف VLAN", "السيرفر", "العملاء", "تلقائيًا"] },
+          ],
+        },
+      ],
+    },
+    {
+      // m04 — COMPLETED IN PLACE (Batch 7): the historical Phase-2 skeleton module, now the book's section
+      // «توجيه بين الشبكات · Trunk و Router on a Stick» (source PDF 146–156 + the PDF 157 end-of-batch trainings page;
+      // PDF 145 is the section cover, metadata only in the body's module source). Its id, title, lesson id/title and the
+      // historical page id, title and source mapping (`-l01-p01` = PDF 148 / printed 146) are IMMUTABLE. PDF 146–147
+      // precede it in the book, so they are NEW stable page ids (`-l01-p02`, `-l01-p03`) placed first by explicit
+      // `order`; the historical page moved to order 3; PDF 149–150 follow as `-l01-p04` / `-l01-p05` (ids are opaque —
+      // `order` sequences). New pages follow the PRINTED PAGE = page circle = PDF index rule. Reading `order` 16 → 17
+      // because the book's VTP section (m19, order 16) precedes this one.
       id: "791381-m04",
       title: "Trunk و Router on a Stick",
       shortTitle: "Trunk",
-      order: 16,
+      order: 17,
       lessons: [
         {
           id: "791381-m04-l01",
           title: "الربط بين السويتشات والتوجيه",
           order: 1,
           pages: [
-            { id: "791381-m04-l01-p01", title: "أوامر Trunk", order: 1, source: { kind: "book", sourceId: "791381", pdfPageStart: 148, printedPage: 146 }, keywords: ["trunk", "dot1q"] },
+            { id: "791381-m04-l01-p02", title: "منافذ الربط بين السويتشات", order: 1, source: { kind: "book", sourceId: "791381", pdfPageStart: 146, printedPage: 146 }, keywords: ["منافذ الربط", "Trunk", "Sw1-HFA", "F0/23", "F0/24", "G0/0"] },
+            { id: "791381-m04-l01-p03", title: "ما هو Trunk؟", order: 2, source: { kind: "book", sourceId: "791381", pdfPageStart: 147, printedPage: 147 }, keywords: ["Trunk", "Tag", "كابل واحد", "Access"] },
+            // historical page: id, title, source and keywords unchanged since the Phase-2 skeleton; ONLY `order` moved (1 → 3)
+            { id: "791381-m04-l01-p01", title: "أوامر Trunk", order: 3, source: { kind: "book", sourceId: "791381", pdfPageStart: 148, printedPage: 146 }, keywords: ["trunk", "dot1q"] },
+            { id: "791381-m04-l01-p04", title: "أوامر Trunk — باقي السويتشات", order: 4, source: { kind: "book", sourceId: "791381", pdfPageStart: 149, printedPage: 149 }, keywords: ["Trunk", "المنفذ المقابل", "من الجهتين", "قاعدة"] },
+            { id: "791381-m04-l01-p05", title: "Trunk على Sw6 مع الراوتر", order: 5, source: { kind: "book", sourceId: "791381", pdfPageStart: 150, printedPage: 150 }, keywords: ["Sw6", "الراوتر", "G0/0", "Router on a Stick"] },
+          ],
+        },
+        {
+          id: "791381-m04-l02",
+          title: "Router on a Stick و Dot1Q",
+          order: 2,
+          pages: [
+            { id: "791381-m04-l02-p01", title: "Router on a Stick", order: 1, source: { kind: "book", sourceId: "791381", pdfPageStart: 151, printedPage: 151 }, keywords: ["Router on a Stick", "Sub-Interface", "Inter-VLAN Routing", "Layer 2"] },
+            { id: "791381-m04-l02-p02", title: "ما هو Dot1Q؟", order: 2, source: { kind: "book", sourceId: "791381", pdfPageStart: 152, printedPage: 152 }, keywords: ["Dot1Q", "Tag", "معيار", "Trunk"] },
+            { id: "791381-m04-l02-p03", title: "إعداد Dot1Q على منفذ Trunk", order: 3, source: { kind: "book", sourceId: "791381", pdfPageStart: 153, printedPage: 153 }, keywords: ["interface g0/1", "switchport mode trunk", "switchport trunk allowed vlan", "10,20,30"] },
+            { id: "791381-m04-l02-p04", title: "Router on a Stick — VLAN 10 / 20", order: 4, source: { kind: "book", sourceId: "791381", pdfPageStart: 154, printedPage: 154 }, keywords: ["interface g0/0.10", "encapsulation dot1Q", "ip address", "Sub-Interface", "Gateway"] },
+            { id: "791381-m04-l02-p05", title: "Router on a Stick — VLAN 30 / 40", order: 5, source: { kind: "book", sourceId: "791381", pdfPageStart: 155, printedPage: 155 }, keywords: ["g0/0.30", "g0/0.40", "encapsulation dot1Q", "192.168.30.254", "192.168.40.254"] },
+          ],
+        },
+        {
+          id: "791381-m04-l03",
+          title: "خلاصة الوحدة وتدريبات نهاية الدفعة",
+          order: 3,
+          pages: [
+            { id: "791381-m04-l03-p01", title: "خلاصة الوحدة", order: 1, source: { kind: "book", sourceId: "791381", pdfPageStart: 156, printedPage: 156 }, keywords: ["خلاصة", "VLAN", "Trunk", "Dot1Q", "Router on a Stick"] },
+            { id: "791381-m04-l03-p02", title: "تدريبات نهاية الدفعة", order: 2, source: { kind: "book", sourceId: "791381", pdfPageStart: 157 }, keywords: ["تدريبات", "نهاية الدفعة", "QR", "VLAN", "Trunk"] },
           ],
         },
       ],
@@ -678,7 +742,7 @@ const manifest: LearningCourseManifest = {
       id: "791381-m05",
       title: "مرجع أوامر Cisco",
       shortTitle: "أوامر Cisco",
-      order: 17,
+      order: 18,
       lessons: [
         {
           id: "791381-m05-l01",
@@ -695,7 +759,7 @@ const manifest: LearningCourseManifest = {
       id: "791381-m06",
       title: "قوائم التحكم ACL",
       shortTitle: "ACL",
-      order: 18,
+      order: 19,
       lessons: [
         {
           id: "791381-m06-l01",
@@ -718,7 +782,7 @@ const manifest: LearningCourseManifest = {
     { id: "b1", label: "الأساسيات · الأعداد · IP", moduleIds: ["791381-m01", "791381-m02", "791381-m07", "791381-m08"] },
     { id: "b2", label: "الأجهزة والرسائل", moduleIds: ["791381-m09", "791381-m10", "791381-m11", "791381-m12"] },
     { id: "b3", label: "النماذج والبروتوكولات والأمان", moduleIds: ["791381-m13", "791381-m14", "791381-m15", "791381-m16", "791381-m17", "791381-m18"] },
-    { id: "b4", label: "برمجة السويتش و VLAN", moduleIds: ["791381-m03", "791381-m04", "791381-m05"] },
+    { id: "b4", label: "برمجة السويتش و VLAN", moduleIds: ["791381-m03", "791381-m19", "791381-m04", "791381-m05"] },
     { id: "b5", label: "الأمان · Wi-Fi · IPv6 · DHCP", moduleIds: [] },
     { id: "b6", label: "ACL · التوجيه · WAN", moduleIds: ["791381-m06"] },
     { id: "summary", label: "التلخيص", moduleIds: [] },

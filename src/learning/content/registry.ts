@@ -30,7 +30,7 @@ const COURSE_MANIFESTS: Record<string, ManifestLoader> = {
 };
 
 // Module BODY loaders per course. Each converted module body is registered here as its own
-// `import("./791381/modules/<id>")` chunk (m01, m02, m07, m08, m09, m10, m11, m12, m13, m14, m15, m16, m17, m18 and m03 today); manifest modules without an entry are still
+// `import("./791381/modules/<id>")` chunk (m01, m02, m07, m08, m09, m10, m11, m12, m13, m14, m15, m16, m17, m18, m03, m19 and m04 today); manifest modules without an entry are still
 // skeleton-only and the Reader shows them as «قيد الإعداد».
 const COURSE_MODULE_LOADERS: Record<string, Record<string, ModuleLoader>> = {
   // REAL module bodies, each its own lazy chunk; the main bundle imports none of these eagerly.
@@ -50,8 +50,11 @@ const COURSE_MODULE_LOADERS: Record<string, Record<string, ModuleLoader>> = {
   //   m18 — Batch 5 «تجزئة البيانات» (PDF 116–119): complete, order 14.
   //   m03 — Batch 6 «برمجة السويتش CLI و VLAN» (PDF 121–138; PDF 120 is the batch cover): the historical Phase-2
   //         skeleton COMPLETED IN PLACE (same id, title, lesson l01 and historical page ids p01/p02), order 15.
-  //         PDF 139+ (the next section's cover and the centralised VLAN management pages) is not converted.
-  // The remaining skeleton modules (m04–m06) have no body yet, so the Reader shows them as «قيد الإعداد».
+  //   m19 — Batch 7 «إدارة VLAN: VTP» (PDF 140–144; PDF 139 is the section cover): NEW stable id, order 16.
+  //   m04 — Batch 7 «Trunk و Router on a Stick» (PDF 146–157; PDF 145 is the section cover): the historical Phase-2
+  //         skeleton COMPLETED IN PLACE (same id, title, lesson l01 and historical page id p01), order 17.
+  //         PDF 158+ (the fifth-batch cover: Wi-Fi, IPv6, DHCP …) is not converted.
+  // The remaining skeleton modules (m05–m06) have no body yet, so the Reader shows them as «قيد الإعداد».
   "791381": {
     "791381-m01": () => import("./791381/modules/m01"),
     "791381-m02": () => import("./791381/modules/m02"),
@@ -68,6 +71,8 @@ const COURSE_MODULE_LOADERS: Record<string, Record<string, ModuleLoader>> = {
     "791381-m17": () => import("./791381/modules/m17"),
     "791381-m18": () => import("./791381/modules/m18"),
     "791381-m03": () => import("./791381/modules/m03"),
+    "791381-m19": () => import("./791381/modules/m19"),
+    "791381-m04": () => import("./791381/modules/m04"),
   },
 };
 
