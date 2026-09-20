@@ -136,12 +136,77 @@ describe("R8 App — startup session validation", () => {
     expect(sessionStorage.getItem("examBankSessionDisplayName")).toBeNull();
   });
 
-  it("a network error during validation keeps the session (not proven invalid)", async () => {
+  it("a network error during validation keeps the session (not proven invalid) but holds the retry state — no app on a stale role", async () => {
     seedSession("student");
-    installFetch({ session: () => Promise.reject(new Error("network")) });
+    const calls = installFetch({ session: () => Promise.reject(new Error("network")) });
     render(<App />);
-    // portal still renders from the retained session (dashboard fetch succeeds)
-    expect(await screen.findByText(/مرحبًا أحمد محمد/)).toBeTruthy();
+    // §2 — the token is NOT cleared, but we do NOT enter the app on the stale role: a calm retry state is shown.
+    await waitFor(() => expect(screen.getByText(/تعذّر التحقق من الجلسة/)).toBeTruthy());
+    expect(screen.queryByText(/مرحبًا أحمد محمد/)).toBeNull();          // never the portal on an unverified role
+    expect(sessionStorage.getItem("examBankBuilderToken")).toBe("student-token"); // session preserved
+    expect(calls.filter(c => c.url.includes("/api/student-dashboard"))).toHaveLength(0); // no role-specific request
+  });
+
+  // PROD HOTFIX §2 — a TRANSIENT server/hosting failure during boot validation (deployment cold-start, gateway blip)
+  // must NEVER be treated as an invalid session (contract: only 401 revokes) AND must never launch the app from the
+  // unverified stored role. The session is preserved and a controlled retry state is held.
+  for (const status of [500, 502, 503, 429]) {
+    it(`a transient platform-session ${status} preserves the session but holds the retry state (no app on a stale role)`, async () => {
+      seedSession("student");
+      const calls = installFetch({ session: () => res(status, { error: "temporarily unavailable" }) });
+      render(<App />);
+      await waitFor(() => expect(screen.getByText(/تعذّر التحقق من الجلسة/)).toBeTruthy());
+      expect(screen.queryByText(/مرحبًا أحمد محمد/)).toBeNull();
+      expect(document.querySelector("form.auth-form")).toBeNull();     // not logged out either
+      expect(sessionStorage.getItem("examBankBuilderToken")).toBe("student-token");
+      expect(sessionStorage.getItem("examBankSessionRole")).toBe("student");
+      expect(calls.filter(c => c.url.includes("/api/student-dashboard"))).toHaveLength(0);
+    });
+  }
+
+  it("a malformed 200 (no ok/role) is treated as transient, NOT as revocation — session kept, retry state held", async () => {
+    seedSession("student");
+    installFetch({ session: () => res(200, { unexpected: true }) });
+    render(<App />);
+    await waitFor(() => expect(screen.getByText(/تعذّر التحقق من الجلسة/)).toBeTruthy());
+    expect(screen.queryByText(/مرحبًا أحمد محمد/)).toBeNull();
     expect(sessionStorage.getItem("examBankBuilderToken")).toBe("student-token");
+  });
+
+  it("§2 (1): stored TEACHER role + a valid STUDENT token + 503 → token preserved, NO teacher request, NO wrong-role portal; retry recovers to student", async () => {
+    // The stored role wrongly says teacher; the token is really a student's. A transient 503 must NOT launch a
+    // teacher-only request with the student token (which would 401 → logout and destroy the valid student session).
+    seedSession("teacher", "student-token", "STALE");
+    let n = 0;
+    const calls = installFetch({ session: () => { n += 1; return n === 1 ? res(503, { error: "x" }) : res(200, { ok: true, role: "student", displayName: "أحمد محمد" }); } });
+    render(<App />);
+    await waitFor(() => expect(screen.getByText(/تعذّر التحقق من الجلسة/)).toBeTruthy());
+    expect(sessionStorage.getItem("examBankBuilderToken")).toBe("student-token");     // token preserved
+    expect(calls.filter(c => c.url.includes("/api/project-tracker"))).toHaveLength(0); // NO teacher-only request
+    expect(screen.queryByText(/مرحبًا/)).toBeNull();                                   // NO wrong-role portal
+    fireEvent.click(screen.getByRole("button"));                                       // retry
+    expect(await screen.findByText(/مرحبًا أحمد محمد/)).toBeTruthy();                  // recovers to STUDENT
+    expect(calls.filter(c => c.url.includes("/api/project-tracker"))).toHaveLength(0); // still never a teacher call
+  });
+
+  it("§2 (2): stored STUDENT role + a valid TEACHER token + 503 → token preserved, NO wrong-role student request; retry recovers to teacher", async () => {
+    seedSession("student", "teacher-token", "STALE");
+    let n = 0;
+    const calls = installFetch({ session: () => { n += 1; return n === 1 ? res(503, { error: "x" }) : res(200, { ok: true, role: "teacher", displayName: "المعلم" }); }, projectTracker: 200 });
+    render(<App />);
+    await waitFor(() => expect(screen.getByText(/تعذّر التحقق من الجلسة/)).toBeTruthy());
+    expect(sessionStorage.getItem("examBankBuilderToken")).toBe("teacher-token");        // token preserved
+    expect(calls.filter(c => c.url.includes("/api/student-dashboard"))).toHaveLength(0);  // NO wrong-role student request
+    fireEvent.click(screen.getByRole("button"));                                          // retry
+    await waitFor(() => expect(document.querySelector(".app-sidebar-logout")).toBeTruthy()); // recovers to TEACHER
+    expect(calls.filter(c => c.url.includes("/api/student-dashboard"))).toHaveLength(0);  // never a student call
+  });
+
+  it("ONLY an authoritative 401 clears the session (contract revocation)", async () => {
+    seedSession("student", "revoked-token");
+    installFetch({ session: () => res(401, { ok: false, error: "Unauthorized" }) });
+    render(<App />);
+    await waitFor(() => expect(document.querySelector("form.auth-form")).toBeTruthy());
+    expect(sessionStorage.getItem("examBankBuilderToken")).toBeNull();
   });
 });

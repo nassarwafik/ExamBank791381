@@ -544,6 +544,18 @@ function App() {
   // immediately). sessionStorage remains the token store — nothing moves to localStorage.
   const [sessionChecking, setSessionChecking] = useState(() => Boolean(getStoredToken()));
 
+  // PROD HOTFIX §2 — a session is "validated" ONLY once /api/platform-session has AUTHORITATIVELY returned a role
+  // (a 200 with ok:true + role), or a fresh login just established one. A stored token whose validation is currently
+  // unavailable (transient 5xx/429/network/malformed 200) is deliberately NOT validated: we must never launch a
+  // role-specific UI or fire a role-specific request from an UNVERIFIED (possibly stale) stored role, because the
+  // stored role can disagree with the token (e.g. stored "teacher" + a valid student token → a teacher request with
+  // a student token → 401 → logout → the valid student session is destroyed). Until an authoritative role is
+  // established we hold a controlled retry state (see the render branch) instead of entering the app on a stale role.
+  const [sessionValidated, setSessionValidated] = useState(false);
+  // Bumped by the manual "retry" action to re-run the boot validation probe below.
+  const [sessionProbeNonce, setSessionProbeNonce] = useState(0);
+  function retrySessionValidation() { setSessionChecking(true); setSessionProbeNonce(n => n + 1); }
+
   const [
     teacherView,
     setTeacherView
@@ -602,17 +614,19 @@ function App() {
   }
 
   // Registry-driven sidebar list (so a new project appears automatically once added to the backend).
-  // Roadmap #8 §13/§14 — one-time startup session validation. If a token is stored, validate it against
-  // the authoritative /api/platform-session (using the role-appropriate header) before trusting the stale
-  // sessionStorage metadata. A definitive negative answer (HTTP error or ok:false) clears the session; a
-  // network error leaves it intact (ordinary API calls handle any later 401 per role). This does NOT
+  // Roadmap #8 §13/§14 (+ prod hotfix) — one-time startup session validation. If a token is stored, validate it
+  // against the authoritative /api/platform-session before trusting the stale sessionStorage metadata. ONLY an
+  // authoritative 401 clears the session; a transient failure (5xx / 429 / other non-2xx / network error) leaves
+  // it intact (ordinary API calls handle any later 401 per role), so a deployment cold-start or a momentary
+  // server blip can never silently log a valid student out on reload. This does NOT
   // Teacher self-profile: one read per teacher session (name / icon / photo metadata). Absent or failing → fallback.
   useEffect(() => {
-    if (sessionRole !== "teacher" || !token) { setTeacherProfile(null); return; }
+    // §2 — a teacher-only request must never fire from an UNVERIFIED role: gate on sessionValidated, not just role.
+    if (!sessionValidated || sessionRole !== "teacher" || !token) { setTeacherProfile(null); return; }
     let cancelled = false;
     teacherProfileApi.load(token).then(p => { if (!cancelled) setTeacherProfile(p); }).catch(() => { /* fallback name */ });
     return () => { cancelled = true; };
-  }, [sessionRole, token]);
+  }, [sessionValidated, sessionRole, token]);
   // reintroduce the PR #56/#57 global-logout bug: only THIS authoritative check clears a session at boot.
   useEffect(() => {
     const storedToken = getStoredToken();
@@ -626,49 +640,60 @@ function App() {
     fetch("/api/platform-session", { headers })
       .then(async response => {
         if (cancelled) return;
-        if (!response.ok) { handleLogout(); return; }
-        const data = (await response.json()) as { ok?: boolean; role?: "teacher" | "student"; displayName?: string };
-        if (!data.ok || !data.role) { handleLogout(); return; }
-        // Valid — refresh the role + display name from the SERVER (authoritative), never stale metadata.
+        // AUTHORITATIVE invalid session: the /api/platform-session contract returns 401 (and only 401) to say
+        // "this token is not a valid session" — that is the ONLY status that clears the stored session.
+        if (response.status === 401) { handleLogout(); return; }
+        // TRANSIENT / server failure (5xx, 429, deployment cold-start, any other non-2xx): the API/hosting is
+        // momentarily unavailable — this is NOT proof the session is invalid, so KEEP the stored session and let
+        // ordinary API calls re-validate later. Never convert a temporary server problem into a logout.
+        if (!response.ok) { return; }
+        const data = (await response.json().catch(() => null)) as { ok?: boolean; role?: "teacher" | "student"; displayName?: string } | null;
+        // A 200 that is not a well-formed positive session is treated as transient (a working API only returns 200
+        // with ok:true), never as an authoritative revocation — the retained session is left untouched and UNVALIDATED
+        // (the retry state handles it) so we never enter the app on a stale role.
+        if (!data || !data.ok || !data.role) { return; }
+        // Valid — refresh the role + display name from the SERVER (authoritative), never stale metadata, and mark the
+        // session VALIDATED so role-specific UI and requests are now allowed to launch.
         setSessionRole(data.role);
         setSessionDisplayName(data.displayName || "");
         try {
           sessionStorage.setItem("examBankSessionRole", data.role);
           sessionStorage.setItem("examBankSessionDisplayName", data.displayName || "");
         } catch { /* storage may be unavailable */ }
+        setSessionValidated(true);
       })
-      .catch(() => { /* network error: keep the stored session (not proven invalid) */ })
+      .catch(() => { /* network error: keep the stored session (not proven invalid), but leave it UNVALIDATED */ })
       .finally(() => { if (!cancelled) setSessionChecking(false); });
     return () => { cancelled = true; };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [sessionProbeNonce]);
 
   // TEACHER-ONLY: /api/project-tracker requires builder auth, so this must NEVER run for a student
   // session — a student token would get 401 and the generic apiRequest would log the student out.
   useEffect(() => {
-    // §6 — never fire teacher-only startup requests until session validation has completed AND the
-    // authoritative role is teacher (prevents a wrong-role/stale-role auxiliary request during boot).
-    if (sessionChecking || !token || sessionRole !== "teacher") { setProjectList([]); setProjectCatalogStatus("loading"); return; }
+    // §2/§6 — never fire teacher-only startup requests until the session is AUTHORITATIVELY validated AND the
+    // server-established role is teacher (a transient failure leaves it unvalidated, so no stale-role request fires).
+    if (!sessionValidated || !token || sessionRole !== "teacher") { setProjectList([]); setProjectCatalogStatus("loading"); return; }
     let cancelled = false;
     setProjectCatalogStatus("loading");
     apiRequest<{ projects?: { projectCode: string; title: string; tracks?: { trackId: string; title: string; icon?: string }[] }[] }>("/api/project-tracker?resource=projects")
       .then(r => { if (!cancelled) { setProjectList((r.projects || []).map(p => ({ ...p, tracks: Array.isArray(p.tracks) ? p.tracks : [] }))); setProjectCatalogStatus("ready"); } })
       .catch(() => { if (!cancelled) { setProjectList([]); setProjectCatalogStatus("error"); } });
     return () => { cancelled = true; };
-  }, [token, sessionRole, sessionChecking, projectCatalogNonce]);
+  }, [token, sessionRole, sessionValidated, projectCatalogNonce]);
 
   // Ready-for-review badge (global, not tied to the selected class). Re-checked when returning to the
   // projects view so approving a stage there refreshes the count. TEACHER-ONLY (builder-auth endpoint):
   // gated by sessionRole so a student session never calls it (which would 401 → logout).
   useEffect(() => {
-    // §6 — also gated on session validation completing (no teacher request during boot).
-    if (sessionChecking || !token || sessionRole !== "teacher") { setProjectReady({ total: 0, byProject: {} }); return; }
+    // §2/§6 — also gated on AUTHORITATIVE validation (no teacher request during boot or a transient-failure retry state).
+    if (!sessionValidated || !token || sessionRole !== "teacher") { setProjectReady({ total: 0, byProject: {} }); return; }
     let cancelled = false;
     apiRequest<{ totalReadyForReview?: number; byProject?: Record<string, number> }>("/api/project-tracker?resource=projects-summary")
       .then(r => { if (!cancelled) setProjectReady({ total: Number(r.totalReadyForReview) || 0, byProject: r.byProject || {} }); })
       .catch(() => { if (!cancelled) setProjectReady({ total: 0, byProject: {} }); });
     return () => { cancelled = true; };
-  }, [token, sessionRole, teacherView, sessionChecking, projectReadyNonce]);
+  }, [token, sessionRole, teacherView, sessionValidated, projectReadyNonce]);
 
   const [userCode, setUserCode] = useState("");
   const [password, setPassword] = useState("");
@@ -988,6 +1013,10 @@ function App() {
         "builder"
       );
 
+      // A fresh login is itself an authoritative role establishment — mark the session validated so the role app
+      // renders immediately (no boot re-probe / retry state needed).
+      setSessionValidated(true);
+      setSessionChecking(false);
       setToken(data.token);
       setPassword("");
     }
@@ -1016,6 +1045,7 @@ function App() {
     setToken("");
     setSessionRole("");
     setSessionDisplayName("");
+    setSessionValidated(false);
     setTeacherView("builder");
     setUserCode("");
     setPassword("");
@@ -5447,6 +5477,32 @@ function App() {
             <p className="auth-note login-note">
               نفس شاشة الدخول للمعلم والطالب
             </p>
+          </section>
+        </div>
+      </main>
+    );
+  }
+
+  // §2 — a stored session exists (loggedIn) and its boot probe finished, but the server could not AUTHORITATIVELY
+  // confirm the role (transient 5xx/429/network/malformed 200). We deliberately do NOT enter the app on the stale
+  // stored role — that could fire a wrong-role request and destroy a valid session. Instead we hold a calm retry
+  // state: the token/session is fully preserved, and "retry" re-probes /api/platform-session until an authoritative
+  // role is established (or a real 401 clears it).
+  if (!sessionValidated) {
+    return (
+      <main className="auth" dir="rtl">
+        <div className="auth-form-wrap">
+          <section className="auth-card login-card" style={{ margin: "auto", textAlign: "center" }}>
+            <h1 className="auth-welcome">ExamBank 791381</h1>
+            <p className="auth-sub subtitle">تعذّر التحقق من الجلسة مؤقتًا. جلستك محفوظة، حاول مرة أخرى.</p>
+            <button
+              type="button"
+              className="auth-submit primary-button"
+              onClick={retrySessionValidation}
+              disabled={sessionChecking}
+            >
+              {sessionChecking ? "جارٍ التحقق من الجلسة…" : "إعادة المحاولة"}
+            </button>
           </section>
         </div>
       </main>
