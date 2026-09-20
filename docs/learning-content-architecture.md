@@ -325,6 +325,41 @@ extra activities must never bury the original lesson. Preferred visual hierarchy
 (unless decorative), input labels, visible focus, feedback never by color alone, RTL Arabic with LTR technical
 values/commands (per-block/per-span `dir`), and mobile layouts.
 
+## Reader Presentation Mode (وضع العرض)
+
+A PowerPoint-like large view of the SAME Reader for desktops and projectors — local UI state in `LearningReader`,
+nothing persisted, the phone layout untouched:
+
+- **App-level overlay first.** `.learning-reader.is-presentation` promotes the existing Reader root to a fixed,
+  full-viewport, modal-layer overlay (`z-index: var(--eb-z-modal)`, above the shell nav / drawer; the Reader's own
+  index drawer and an activity's fullscreen stack inside it). Native browser fullscreen is requested **best-effort**
+  on entry (`requestFullscreen`, refusals swallowed) and released on exit; a browser that leaves fullscreen on its own
+  (`fullscreenchange`) ends presentation too. The overlay never depends on it.
+- **Layout.** Sidebar, the partial-conversion note and the jump select leave the tree; the page fills the viewport
+  (no document measure; prose keeps an 88ch measure; larger clamp()-scaled type); only the main area scrolls, never
+  horizontally. Top bar: index toggle (visible at every width), book + page title, keyboard hint (≥768px), the
+  toggle button «خروج من وضع العرض». Bottom bar (static flex item, never overlapping content, ≥44px hit areas):
+  «السابق» · the **Reader ordinal** position as a direct page-number field («98» `/ 248`, LTR, numeric, Arabic-Indic
+  digits accepted, Enter or «انتقل» navigates, out-of-range → an inline alert «أدخل رقم صفحة بين 1 و N.» and no
+  navigation) · «التالي». Both buttons and the field use the same navigation authority (`previousPage` / `nextPage`
+  / `flattenPageRefs`); first page → السابق disabled, last page → التالي disabled.
+- **Index.** The existing drawer (`LearningReaderToc`: module → lesson → page from the manifest, current page
+  `aria-current="page"`); choosing a page navigates, closes the drawer and keeps presentation.
+- **Keyboard (presentation only, except F):** ArrowLeft / PageDown → next, ArrowRight / PageUp → previous (RTL
+  reading — «next» is the visually-left button), Escape → exit (via the presentation focus trap), F → toggle (any
+  mode). None fires while typing (input / textarea / select / content-editable / `role=textbox` — the CLI terminal
+  line is an input), with a modifier, or while a nested dialog (index drawer, activity fullscreen) is open: those own
+  Escape and the keys.
+- **Accessibility.** The overlay is `role="dialog" aria-modal="true"` with a focus trap (Tab containment, Escape),
+  body scroll lock, `aria-pressed` on the toggle, and focus returns to the toggle on exit. Labels: «وضع العرض» /
+  «خروج من وضع العرض», «رقم الصفحة», «انتقل».
+- **Hosts.** `LearningReaderWithTraining` remembers the mode exactly like the page (`initialPresentation` /
+  `onPresentationChange`): a training opened from presentation returns to the SAME page in presentation; one opened
+  from the normal view returns to the normal view. Leaving the material and coming back starts in the normal view.
+- Guards: `LearningReader.presentation.test.tsx`, `LearningReaderWithTraining.presentation.test.tsx` (real content:
+  training return, CLI line), `reader.presentation.guards.test.ts` (CSS: fixed modal overlay, prefixed selectors
+  only, no horizontal scroll, hit areas, block placed before the desktop media block).
+
 ## Interactive Learning Engine (Phase 3A — foundation)
 
 Phase 3A adds the **engine foundation** the later interactive phases (real simulations in Phase 5, richer practice
@@ -2116,7 +2151,8 @@ because m28 exists, no change to any class's `visibleModuleIds`.
 | Batch 9 | Book 791381 source PDF **180–199** (PDF 200 sixth-batch cover not rendered) as NEW modules `m23` («Port Security», order 21, PDF 180–184) and `m24` («حماية أجهزة Cisco», order 22, PDF 185–191) and the historical skeleton `m05` («مرجع أوامر Cisco», order 23, PDF 192–199) **completed in place** — historical pages `-l01-p01` / `-l01-p02` (PDF 193–194) preserved with unchanged ids, titles and mappings, PDF 192 as a new stable id placed first by `order`; twelve CLI `code` blocks; the CLI simulator extended with line mode, Port Security, password / secret / banner and two `show` commands (registry stays 14) plus twelve declarative exercises; server publication registry lists m23, m24, m05 (publishable, never auto-published); m06 shifts to order 24; next untouched page = PDF 200 | done (awaiting review) |
 | Batch 10 | Book 791381 source PDF **200–229** (PDF 200 sixth-batch cover not rendered) as NEW modules `m25` («مراجعة الأوامر», order 24, PDF 201–206), `m26` («الشبكة الواسعة WAN», order 25, PDF 207–209), `m27` («بروتوكولات التوجيه», order 26, PDF 210–222) and the historical skeleton `m06` («قوائم التحكم ACL», order 27, PDF 223–229) **completed in place** — historical page `-l01-p01` (PDF 227, printed 225) preserved with unchanged id, title and mapping, PDF 223–226 as new stable ids placed first by `order`; twelve CLI `code` boxes; the CLI simulator extended with the router mode (OSPF / EIGRP `network` forms), numbered standard / extended ACLs, `ip access-group` and `show ip route` (registry stays 14) plus fifteen declarative exercises; server publication registry lists m25, m26, m27, m06 (publishable, never auto-published) — every manifest module now has a body; next untouched page = PDF 230 | done (merged) |
 | **Final summary (this)** | Book 791381 source PDF **230–264** (PDF 230 section cover and PDF 264 back cover not rendered) as the NEW module `m28` («الملخّص الشامل», order 28, the LAST module; fills the manifest's «summary» grouping) — eight lessons, 33 learner pages PDF 231–263 (printed 229–260 for 231–262), nine CLI `code` boxes; the CLI simulator extended with `switchport trunk native vlan`, the minimal static / default route `ip route … <next-hop>` (shown as `S` / `S*` routes) and the EIGRP optional wildcard (registry stays 14) plus ten declarative exercises; server publication registry lists m28 (publishable, never auto-published); the unknown-id test sentinel moves to `791381-m29`; the book is fully converted | done (awaiting review) |
-| **Learning Practice T05–T30 / F01–F06 (this)** | The remaining 32 Exam-Library items connected to the six book review pages (Reader positions 98, 110, 145, 178, 214, 215) as metadata-only `library-training` blocks, one per real library id, grouped as the book groups them; the ONE server registry extended to the full catalog with the catalog's titles and pageRange-derived gates; the shared runner extended to the F-series shapes (matching, open / manual review) with no second surface; F01–F06 keep practice history but contribute 0 Unified Strength (server rule, T01–T30 unchanged); no external QR / GitHub Pages links, no question copies, no assignment / gradebook / publication change | done (awaiting review) |
+| Learning Practice T05–T30 / F01–F06 | The remaining 32 Exam-Library items connected to the six book review pages (Reader positions 98, 110, 145, 178, 214, 215) as metadata-only `library-training` blocks, one per real library id, grouped as the book groups them; the ONE server registry extended to the full catalog with the catalog's titles and pageRange-derived gates; the shared runner extended to the F-series shapes (matching, open / manual review) with no second surface; F01–F06 keep practice history but contribute 0 Unified Strength (server rule, T01–T30 unchanged); no external QR / GitHub Pages links, no question copies, no assignment / gradebook / publication change | done (awaiting review) |
+| **Reader Presentation Mode (this)** | App-level fullscreen «وضع العرض» for the Learning Reader: fixed modal overlay (native fullscreen best-effort), السابق / التالي, Reader-ordinal indicator with a direct page-number field, hierarchical index drawer, keyboard shortcuts that never fire while typing, focus trap / return; presentation remembered across a training; phone layout, content, publication, grading, Strength, CLI semantics untouched | done (awaiting review) |
 | 4 | Interactive Practice — remaining inline checking families beyond closed-choice worksheets (free text, ordering, evaluator-backed hints) | deferred |
 | 5 | Simulations — real VLAN/subnet/CLI/… renderers registered behind the Phase-3A engine | deferred |
 | 6 | Student Progress — last page, completion, attempts (separate domain; attaches to the no-op event seam) | deferred |
