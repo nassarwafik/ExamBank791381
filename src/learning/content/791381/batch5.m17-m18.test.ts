@@ -157,7 +157,7 @@ describe("Batch 5 — key source facts as printed", () => {
     expect(st.type === "list" && [st.origin, st.variant, st.items.map(i => [i.term, i.text.map(s => s.text).join("")])]).toEqual(["book", "ordered", [["SYN", "الجهاز الأول يطلب بدء الاتصال."], ["SYN-ACK", "الجهاز الثاني يوافق ويردّ."], ["ACK", "الجهاز الأول يؤكّد، ثم يبدأ تبادل البيانات."]]]);
     expect(spans("791381-m18-l02-p01", "m18-l02-p01-summary")).toBe("الطرفان يتأكّدان أن الاتصال جاهز قبل إرسال البيانات الفعلية.");
   });
-  it("PDF 119 is a learner-visible CLOSING page: the QR line, the three training cards and «الدفعة التالية» as printed, a conversionNote, NO library-training block, no printed page, then the section review", () => {
+  it("PDF 119 is a learner-visible CLOSING page: the QR line, the three training cards and «الدفعة التالية» as printed, a conversionNote, the Learning-Practice cards T13–T18 (metadata only), no printed page, then the section review", () => {
     const p = pageBy("791381-m18-l03-p01");
     expect(p.source.printedPage).toBeUndefined();
     expect(p.conversionNote).toMatch(/PDF 119/);
@@ -165,8 +165,8 @@ describe("Batch 5 — key source facts as printed", () => {
     expect(spans("791381-m18-l03-p01", "m18-l03-p01-lead")).toBe("امسح الرمز للوصول إلى التدريبات.");
     expect(cardText("791381-m18-l03-p01", "m18-l03-p01-cards")).toEqual([["تدريب 13–14", "OSI و TCP/IP."], ["تدريب 15–16", "البروتوكولات والأوامر."], ["تدريب 17–18", "المجالات والأمان والتجزئة."]]);
     expect(spans("791381-m18-l03-p01", "m18-l03-p01-next")).toBe("مشاريع وتطبيقات عملية على ما تعلّمته في هذه الدفعة.");
-    expect(allBlocks.some(b => b.type === "library-training")).toBe(false);
-    expect(JSON.stringify(BATCH)).not.toMatch(/T1[3-8]|trainingId/);
+    expect(allBlocks.filter(b => b.type === "library-training").map(b => b.trainingId)).toEqual(["T13", "T14", "T15", "T16", "T17", "T18"]);   // since the Learning-Practice phase
+    expect(JSON.stringify(BATCH)).not.toMatch(/LIB-T|examSnapshot|correctOptionIndex|github\.io/);   // the T13–T18 pointers are metadata only
     expect(p.blocks.map(b => b.id).slice(-4)).toEqual(["m18-l03-p01-review", "m18-l03-p01-r1", "m18-l03-p01-r2", "m18-l03-p01-r3"]);
   });
 });
@@ -238,7 +238,7 @@ describe("Batch 5 — provenance, RTL/LTR, safety, skeletons and registry consis
       if (["practice", "practice-table", "example", "interactive-diagram", "heading"].includes(b.type) || (b.type === "callout" && b.kind === "clarification")) expect(b.origin, b.id).toBe("teacher-enrichment");
       else expect(b.origin, b.id).toBe("book");
     }
-    expect(BATCH.map(m => pagesOf(m).flatMap(p => p.blocks).filter(b => b.origin === "book").length)).toEqual([17, 12]);
+    expect(BATCH.map(m => pagesOf(m).flatMap(p => p.blocks).filter(b => b.origin === "book").length)).toEqual([17, 18]);   // m18 +6 book pointers (T13–T18) since the Learning-Practice phase
   });
   it("technical tokens are LTR spans; no arrow glyphs (the book's PDF 117 arrows are prose here), no urls / iframes / images", () => {
     const spans = allBlocks.flatMap(b => b.type === "callout" || b.type === "text" ? b.spans : b.type === "list" ? b.items.flatMap(i => i.text) : []);

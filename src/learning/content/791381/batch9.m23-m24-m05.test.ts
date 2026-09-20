@@ -205,7 +205,7 @@ describe("Batch 9 — source fidelity (facts, cards, the twelve CLI boxes)", () 
     expect(plain(pageBy(M23 + "-l02-p02"))).toContain("مفيد عندما لا نعرف");
     expect(plain(pageBy(M23 + "-l02-p03"))).toContain("إذا زاد العدد تحدث مخالفة، ويمكن تغيير العدد حسب الحاجة");
   });
-  it("PDF 185–191: the three access cards with their commands, the line / encryption / show annotations, «تذكّر» boxes, and the T23–T26 QR cards with the book's note (no library-training)", () => {
+  it("PDF 185–191: the three access cards with their commands, the line / encryption / show annotations, «تذكّر» boxes, and the T23–T26 QR cards with the book's note (+ the Learning-Practice cards T23–T26, metadata only)", () => {
     const cards = blockBy(pageBy(M24 + "-l01-p02"), "m24-l01-p02-table");
     expect(cards.type === "table" && cards.rows.map(r => [r[0], r[2]])).toEqual([["Console", "line console 0"], ["VTY", "line vty 0 4"], ["Enable", "enable secret"]]);
     expect(plain(pageBy(M24 + "-l01-p02"))).toContain("= قريب من الجهاز");
@@ -216,7 +216,7 @@ describe("Batch 9 — source fidelity (facts, cards, the twelve CLI boxes)", () 
     const qr = blockBy(pageBy(M24 + "-l03-p01"), "m24-l03-p01-cards");
     expect(qr.type === "list" && qr.items.map(i => i.term)).toEqual(["T23", "T24", "T25", "T26"]);
     expect(plain(pageBy(M24 + "-l03-p01"))).toContain("يُفضّل حل التدريبات بعد مراجعة");
-    expect(allBlocks.some(b => b.type === "library-training")).toBe(false);
+    expect(allBlocks.filter(b => b.type === "library-training").map(b => b.trainingId)).toEqual(["T23", "T24", "T25", "T26"]);   // since the Learning-Practice phase
   });
   it("PDF 192–199: intro facts + «مهم», the five reference boxes' annotations, «انتبه», the four show groups as printed, and the OSPF / EIGRP / ACL outlook", () => {
     expect(plain(pageBy(M05 + "-l01-p03"))).toContain("المطلوب: معرفة وظيفة الأمر ومتى يُستخدم");
@@ -375,7 +375,7 @@ describe("Batch 9 — pedagogy, provenance, direction", () => {
     expect(BATCH.map(m => count(m, b => b.type === "callout" && b.kind === "clarification"))).toEqual([5, 7, 8]);
     expect(BATCH.map(m => count(m, b => b.type === "code"))).toEqual([3, 4, 5]);
     expect(BATCH.map(m => count(m, b => b.type === "simulation"))).toEqual([3, 4, 5]);
-    expect(BATCH.map(m => count(m, b => b.origin === "book"))).toEqual([16, 19, 23]);
+    expect(BATCH.map(m => count(m, b => b.origin === "book"))).toEqual([16, 23, 23]);   // m24 +4 book pointers (T23–T26) since the Learning-Practice phase
     for (const b of allBlocks) if (b.type === "practice-table") {
       let selects = 0;
       for (const row of b.rows) for (const cell of row) if (typeof cell !== "string") { selects++; expect(sel(cell).options, b.id).toContain(sel(cell).key); expect(new Set(sel(cell).options).size).toBe(sel(cell).options.length); }
@@ -385,7 +385,7 @@ describe("Batch 9 — pedagogy, provenance, direction", () => {
   it("provenance: book blocks are text / callout / table / list / code only; practice, worksheets, clarifications, headings and simulations are teacher-enrichment; no raw HTML", () => {
     for (const b of allBlocks) {
       if (b.type === "practice" || b.type === "practice-table" || b.type === "simulation" || b.type === "heading" || (b.type === "callout" && b.kind === "clarification")) expect(b.origin, b.id).toBe("teacher-enrichment");
-      if (b.origin === "book") expect(["text", "callout", "table", "list", "code"], b.id).toContain(b.type);
+      if (b.origin === "book") expect(["text", "callout", "table", "list", "code", "library-training"], b.id).toContain(b.type);
     }
     expect(JSON.stringify(BATCH)).not.toMatch(/dangerouslySetInnerHTML|<script|javascript:/i);
   });

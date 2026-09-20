@@ -271,7 +271,7 @@ describe("Batch 10 — source fidelity (the twelve CLI boxes, the show output, t
       "via 192.168.1.1 يعني أن الطريق يمر عبر هذا العنوان.",
     ]);
   });
-  it("PDF 223–229: the ACL definition, permit / deny roles, facts, Standard / Extended cards, «تذكّر» placement rule, the three boxes' annotations, «قاعدة», the implicit deny and the common mistake, the Extended facts + «شرح المثال», and the T27–T30 / F01–F06 QR cards (no library-training)", () => {
+  it("PDF 223–229: the ACL definition, permit / deny roles, facts, Standard / Extended cards, «تذكّر» placement rule, the three boxes' annotations, «قاعدة», the implicit deny and the common mistake, the Extended facts + «شرح المثال», and the T27–T30 / F01–F06 QR cards (+ the Learning-Practice cards T27–T30 / F01–F06, metadata only)", () => {
     expect(plain(pageBy(M06 + "-l01-p02"))).toContain("مجموعة قواعد تسمح أو تمنع مرور البيانات في الشبكة");
     const roles = blockBy(pageBy(M06 + "-l01-p02"), "m06-l01-p02-rule"), types = blockBy(pageBy(M06 + "-l01-p02"), "m06-l01-p02-types");
     expect([roles.type === "list" && roles.items.map(i => i.term), types.type === "list" && types.items.map(i => i.term)]).toEqual([["permit", "deny"], ["Standard", "Extended"]]);
@@ -290,7 +290,7 @@ describe("Batch 10 — source fidelity (the twelve CLI boxes, the show output, t
     const t = blockBy(pageBy(M06 + "-l02-p01"), "m06-l02-p01-cards"), f = blockBy(pageBy(M06 + "-l02-p02"), "m06-l02-p02-cards");
     expect([t.type === "list" && t.items.map(i => i.term), f.type === "list" && f.items.map(i => i.term)]).toEqual([["T27", "T28", "T29", "T30"], ["F01", "F02", "F03", "F04", "F05", "F06"]]);
     expect(plain(pageBy(M06 + "-l02-p02"))).toContain("امتحانات نهائية للتدريب والمراجعة الشاملة قبل الاختبار الرسمي");
-    expect(allBlocks.some(b => b.type === "library-training")).toBe(false);
+    expect(allBlocks.filter(b => b.type === "library-training").map(b => b.trainingId)).toEqual(["T27", "T28", "T29", "T30", "F01", "F02", "F03", "F04", "F05", "F06"]);   // since the Learning-Practice phase
   });
 });
 
@@ -478,7 +478,7 @@ describe("Batch 10 — pedagogy, provenance, direction", () => {
     expect(BATCH.map(m => count(m, b => b.type === "callout" && b.kind === "clarification"))).toEqual([6, 3, 13, 7]);
     expect(BATCH.map(m => count(m, b => b.type === "code"))).toEqual([5, 0, 5, 4]);
     expect(BATCH.map(m => count(m, b => b.type === "simulation"))).toEqual([6, 0, 5, 4]);
-    expect(BATCH.map(m => count(m, b => b.origin === "book"))).toEqual([17, 10, 37, 22]);
+    expect(BATCH.map(m => count(m, b => b.origin === "book"))).toEqual([17, 10, 37, 32]);   // m06 +10 book pointers (T27–T30, F01–F06) since the Learning-Practice phase
     for (const b of allBlocks) if (b.type === "practice-table") {
       let selects = 0;
       for (const row of b.rows) for (const cell of row) if (typeof cell !== "string") { selects++; expect(sel(cell).options, b.id).toContain(sel(cell).key); expect(new Set(sel(cell).options).size).toBe(sel(cell).options.length); }
@@ -498,7 +498,7 @@ describe("Batch 10 — pedagogy, provenance, direction", () => {
   it("provenance: book blocks are text / callout / table / list / code only; practice, worksheets, clarifications, headings and simulations are teacher-enrichment; no raw HTML", () => {
     for (const b of allBlocks) {
       if (b.type === "practice" || b.type === "practice-table" || b.type === "simulation" || b.type === "heading" || (b.type === "callout" && b.kind === "clarification")) expect(b.origin, b.id).toBe("teacher-enrichment");
-      if (b.origin === "book") expect(["text", "callout", "table", "list", "code"], b.id).toContain(b.type);
+      if (b.origin === "book") expect(["text", "callout", "table", "list", "code", "library-training"], b.id).toContain(b.type);
     }
     expect(JSON.stringify(BATCH)).not.toMatch(/dangerouslySetInnerHTML|<script|javascript:/i);
   });

@@ -713,7 +713,7 @@ const m04: ContentModule = {
           title: "تدريبات نهاية الدفعة",
           order: 2,
           source: src(157),
-          conversionNote: "PDF 157 صفحة «نهاية الدفعة الرابعة» الختامية (بلا رقم صفحة مطبوع): أربع بطاقات للتدريبات الإلكترونية 19–22 خلف رموز QR وسطر الكتاب الختامي. الرموز في الكتاب المطبوع، والتدريبات 19–22 غير متاحة داخل المنصة بعد؛ تُعرض البطاقات والسطر كما هي، وتُضاف مراجعة ختامية للوحدة.",
+          conversionNote: "PDF 157 صفحة «نهاية الدفعة الرابعة» الختامية (بلا رقم صفحة مطبوع): أربع بطاقات للتدريبات الإلكترونية 19–22 خلف رموز QR وسطر الكتاب الختامي. الرموز في الكتاب المطبوع؛ تُعرض البطاقات والسطر كما هي، وتُفتح التدريبات 19–22 من داخل المنصة (library-training) عندما يصبح الجزء المرتبط بكل تدريب متاحًا، ثم تُضاف مراجعة ختامية للوحدة.",
           keywords: ["تدريبات", "نهاية الدفعة", "QR", "VLAN", "Trunk"],
           blocks: [
             {
@@ -735,8 +735,15 @@ const m04: ContentModule = {
             },
             {
               id: "m04-l03-p02-clar", type: "callout", origin: "teacher-enrichment", kind: "clarification", title: "توضيح",
-              spans: [T("رموز QR موجودة في الكتاب المطبوع. داخل المنصة، راجع الوحدة من خلال المراجعة الختامية التالية.")],
+              spans: [T("رموز QR موجودة في الكتاب المطبوع. يمكن فتح التدريبات 19–22 من داخل المنصة عندما يصبح الجزء المرتبط بكل تدريب متاحًا، ثم راجع الوحدة من خلال المراجعة الختامية التالية.")],
             },
+            // ── Learning Practice (Reader position 145): the platform's T19–T22, one card per printed training.
+            // Metadata only — the host / API decide availability and disclose the library title.
+            { id: "m04-l03-p02-practice", type: "heading", origin: "teacher-enrichment", level: 3, text: "تدريبات مرتبطة بهذه الصفحة" },
+            { id: "m04-l03-p02-lt19", type: "library-training", origin: "book", trainingId: "T19", label: "تدريب 19", requiredModuleId: "791381-m22" },
+            { id: "m04-l03-p02-lt20", type: "library-training", origin: "book", trainingId: "T20", label: "تدريب 20", requiredModuleId: "791381-m24" },
+            { id: "m04-l03-p02-lt21", type: "library-training", origin: "book", trainingId: "T21", label: "تدريب 21", requiredModuleId: "791381-m05" },
+            { id: "m04-l03-p02-lt22", type: "library-training", origin: "book", trainingId: "T22", label: "تدريب 22", requiredModuleId: "791381-m26" },
             // ── closing review for the module (easy, medium, exam-like) ──
             {
               id: "m04-l03-p02-review", type: "heading", origin: "teacher-enrichment", level: 3, text: "مراجعة ختامية: Trunk و Router on a Stick",

@@ -564,7 +564,7 @@ const m16: ContentModule = {
           title: "تدريبات مراجعة سريعة",
           order: 1,
           source: src(106, 106),
-          conversionNote: "PDF 106 صفحة ختامية لقسم «المجالات والمفاهيم»: ثلاث بطاقات تجمع تدريبات الكتاب الإلكترونية 5–12 حسب الموضوع خلف رموز QR. الرموز في الكتاب المطبوع، والتدريبات 5–12 غير متاحة داخل المنصة بعد؛ تُعرض البطاقات وملاحظة الكتاب كما هي، وتُضاف مراجعة ختامية للقسم.",
+          conversionNote: "PDF 106 صفحة ختامية لقسم «المجالات والمفاهيم»: ثلاث بطاقات تجمع تدريبات الكتاب الإلكترونية 5–12 حسب الموضوع خلف رموز QR. الرموز في الكتاب المطبوع؛ تُعرض البطاقات وملاحظة الكتاب كما هي، وتُفتح التدريبات 5–12 من داخل المنصة (library-training) عندما يصبح الجزء المرتبط بكل تدريب متاحًا، ثم تُضاف مراجعة ختامية للقسم.",
           keywords: ["تدريبات", "مراجعة", "QR"],
           blocks: [
             {
@@ -581,8 +581,22 @@ const m16: ContentModule = {
             },
             {
               id: "m16-l05-p01-clar", type: "callout", origin: "teacher-enrichment", kind: "clarification", title: "توضيح",
-              spans: [T("رموز QR موجودة في الكتاب المطبوع. داخل المنصة، راجع القسم من خلال المراجعة الختامية التالية.")],
+              spans: [T("رموز QR موجودة في الكتاب المطبوع. يمكن فتح التدريبات 5–12 من داخل المنصة عندما يصبح الجزء المرتبط بكل تدريب متاحًا، ثم راجع القسم من خلال المراجعة الختامية التالية.")],
             },
+            // ── Learning Practice (Reader position 98): the platform's T05–T12, grouped as the book groups them.
+            // Metadata only — the host / API decide availability and disclose the library title.
+            { id: "m16-l05-p01-practice", type: "heading", origin: "teacher-enrichment", level: 3, text: "تدريبات مرتبطة بهذه الصفحة" },
+            { id: "m16-l05-p01-g56", type: "heading", origin: "teacher-enrichment", level: 4, text: "تدريب 5–6" },
+            { id: "m16-l05-p01-lt05", type: "library-training", origin: "book", trainingId: "T05", label: "تدريب 5", requiredModuleId: "791381-m08" },
+            { id: "m16-l05-p01-lt06", type: "library-training", origin: "book", trainingId: "T06", label: "تدريب 6", requiredModuleId: "791381-m09" },
+            { id: "m16-l05-p01-g78", type: "heading", origin: "teacher-enrichment", level: 4, text: "تدريب 7–8" },
+            { id: "m16-l05-p01-lt07", type: "library-training", origin: "book", trainingId: "T07", label: "تدريب 7", requiredModuleId: "791381-m10" },
+            { id: "m16-l05-p01-lt08", type: "library-training", origin: "book", trainingId: "T08", label: "تدريب 8", requiredModuleId: "791381-m11" },
+            { id: "m16-l05-p01-g912", type: "heading", origin: "teacher-enrichment", level: 4, text: "تدريب 9–12" },
+            { id: "m16-l05-p01-lt09", type: "library-training", origin: "book", trainingId: "T09", label: "تدريب 9", requiredModuleId: "791381-m12" },
+            { id: "m16-l05-p01-lt10", type: "library-training", origin: "book", trainingId: "T10", label: "تدريب 10", requiredModuleId: "791381-m13" },
+            { id: "m16-l05-p01-lt11", type: "library-training", origin: "book", trainingId: "T11", label: "تدريب 11", requiredModuleId: "791381-m14" },
+            { id: "m16-l05-p01-lt12", type: "library-training", origin: "book", trainingId: "T12", label: "تدريب 12", requiredModuleId: "791381-m15" },
             // ── closing review for the section (easy, medium, exam-like) ──
             {
               id: "m16-l05-p01-review", type: "heading", origin: "teacher-enrichment", level: 3, text: "مراجعة ختامية: المجالات والمفاهيم",
