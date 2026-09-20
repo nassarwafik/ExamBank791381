@@ -30,7 +30,7 @@ const COURSE_MANIFESTS: Record<string, ManifestLoader> = {
 };
 
 // Module BODY loaders per course. Each converted module body is registered here as its own
-// `import("./791381/modules/<id>")` chunk (m01, m02, m07, m08, m09, m10, m11, m12, m13, m14, m15, m16, m17, m18, m03, m19 and m04 today); manifest modules without an entry are still
+// `import("./791381/modules/<id>")` chunk (m01, m02, m07, m08, m09, m10, m11, m12, m13, m14, m15, m16, m17, m18, m03, m19, m04, m20, m21 and m22 today); manifest modules without an entry are still
 // skeleton-only and the Reader shows them as «قيد الإعداد».
 const COURSE_MODULE_LOADERS: Record<string, Record<string, ModuleLoader>> = {
   // REAL module bodies, each its own lazy chunk; the main bundle imports none of these eagerly.
@@ -53,7 +53,10 @@ const COURSE_MODULE_LOADERS: Record<string, Record<string, ModuleLoader>> = {
   //   m19 — Batch 7 «إدارة VLAN: VTP» (PDF 140–144; PDF 139 is the section cover): NEW stable id, order 16.
   //   m04 — Batch 7 «Trunk و Router on a Stick» (PDF 146–157; PDF 145 is the section cover): the historical Phase-2
   //         skeleton COMPLETED IN PLACE (same id, title, lesson l01 and historical page id p01), order 17.
-  //         PDF 158+ (the fifth-batch cover: Wi-Fi, IPv6, DHCP …) is not converted.
+  //   m20 — Batch 8 «Wi-Fi والشبكات اللاسلكية» (PDF 159–165; PDF 158 is the fifth-batch cover): NEW stable id, order 18.
+  //   m21 — Batch 8 «IPv6 والمنافذ» (PDF 166–168): NEW stable id, order 19.
+  //   m22 — Batch 8 «بروتوكول DHCP» (PDF 169–179; the first module with interactive CLI exercises): NEW stable id, order 20.
+  //         PDF 180+ (Port Security, passwords, the command reference m05, ACL m06) is not converted.
   // The remaining skeleton modules (m05–m06) have no body yet, so the Reader shows them as «قيد الإعداد».
   "791381": {
     "791381-m01": () => import("./791381/modules/m01"),
@@ -73,6 +76,9 @@ const COURSE_MODULE_LOADERS: Record<string, Record<string, ModuleLoader>> = {
     "791381-m03": () => import("./791381/modules/m03"),
     "791381-m19": () => import("./791381/modules/m19"),
     "791381-m04": () => import("./791381/modules/m04"),
+    "791381-m20": () => import("./791381/modules/m20"),
+    "791381-m21": () => import("./791381/modules/m21"),
+    "791381-m22": () => import("./791381/modules/m22"),
   },
 };
 
@@ -96,7 +102,7 @@ export async function loadCourseManifest(courseId: string): Promise<LearningCour
   return (await loader()).default;
 }
 
-/** Whether a specific module BODY is registered (791381: m01, m02, m07, m08, m09, m10, m11, m12, m13, m14, m15, m16, m17, m18 today). Pure, no import triggered. */
+/** Whether a specific module BODY is registered (791381: m01, m02, m07–m18, m03, m19, m04, m20, m21, m22 today). Pure, no import triggered. */
 export function hasModuleContent(courseId: string, moduleId: string): boolean {
   return Boolean(COURSE_MODULE_LOADERS[courseId] && Object.prototype.hasOwnProperty.call(COURSE_MODULE_LOADERS[courseId], moduleId));
 }

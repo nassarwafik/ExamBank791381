@@ -739,10 +739,103 @@ const manifest: LearningCourseManifest = {
       ],
     },
     {
+      // m20 — Batch 8: the book's section «Wi-Fi · الشبكات اللاسلكية» (PDF 159–165; PDF 158 is the fifth-batch cover
+      // «Wi-Fi و IPv6 و DHCP والأمان», metadata only in the body's module source). NEW stable id; explicit `order` 18,
+      // after m04 (17). The m05 / m06 skeletons below are the DIFFERENT sections «مرجع أوامر Cisco» (PDF 193+) and «ACL».
+      id: "791381-m20",
+      title: "Wi-Fi والشبكات اللاسلكية",
+      shortTitle: "Wi-Fi",
+      order: 18,
+      lessons: [
+        {
+          id: "791381-m20-l01",
+          title: "DMZ و Wi-Fi",
+          order: 1,
+          pages: [
+            { id: "791381-m20-l01-p01", title: "DMZ — المنطقة العازلة", order: 1, source: { kind: "book", sourceId: "791381", pdfPageStart: 159, printedPage: 159 }, keywords: ["DMZ", "المنطقة العازلة", "جدار حماية", "Web", "Mail", "DNS"] },
+            { id: "791381-m20-l01-p02", title: "Wi-Fi — الشبكة اللاسلكية", order: 2, source: { kind: "book", sourceId: "791381", pdfPageStart: 160, printedPage: 160 }, keywords: ["Wi-Fi", "موجات الراديو", "التغطية", "التداخل", "الأمان"] },
+            { id: "791381-m20-l01-p03", title: "أنواع الشبكات اللاسلكية", order: 3, source: { kind: "book", sourceId: "791381", pdfPageStart: 161, printedPage: 161 }, keywords: ["PAN", "WLAN", "WPAN", "WWAN", "Bluetooth", "4G / 5G"] },
+          ],
+        },
+        {
+          id: "791381-m20-l02",
+          title: "SSID وأمان الشبكة اللاسلكية",
+          order: 2,
+          pages: [
+            { id: "791381-m20-l02-p01", title: "SSID — اسم شبكة Wi-Fi", order: 1, source: { kind: "book", sourceId: "791381", pdfPageStart: 162, printedPage: 162 }, keywords: ["SSID", "اسم الشبكة", "Access Point", "إخفاء الشبكة"] },
+            { id: "791381-m20-l02-p02", title: "أمان الشبكة اللاسلكية", order: 2, source: { kind: "book", sourceId: "791381", pdfPageStart: 163, printedPage: 163 }, keywords: ["أمان", "التنصّت", "Spoofing", "تشفير", "كلمة مرور قوية"] },
+            { id: "791381-m20-l02-p03", title: "تقنيات حماية Wi-Fi", order: 3, source: { kind: "book", sourceId: "791381", pdfPageStart: 164, printedPage: 164 }, keywords: ["WEP", "WPA", "WPA2", "WPA3", "تشفير"] },
+            { id: "791381-m20-l02-p04", title: "Access Point — نقطة الوصول", order: 4, source: { kind: "book", sourceId: "791381", pdfPageStart: 165, printedPage: 165 }, keywords: ["Access Point", "AP", "نقطة الوصول", "تغطية Wi-Fi", "Switch"] },
+          ],
+        },
+      ],
+    },
+    {
+      // m21 — Batch 8: the book's section «IPv6 والمنافذ» (PDF 166–168, no section cover). NEW stable id; order 19.
+      id: "791381-m21",
+      title: "IPv6 والمنافذ",
+      shortTitle: "IPv6 والمنافذ",
+      order: 19,
+      lessons: [
+        {
+          id: "791381-m21-l01",
+          title: "IPv6 والمنافذ المهمة",
+          order: 1,
+          pages: [
+            { id: "791381-m21-l01-p01", title: "IPv6 — عنوان الجيل الجديد", order: 1, source: { kind: "book", sourceId: "791381", pdfPageStart: 166, printedPage: 166 }, keywords: ["IPv6", "IPv4", "128 بت", "Hexadecimal"] },
+            { id: "791381-m21-l01-p02", title: "أمثلة اختصار IPv6", order: 2, source: { kind: "book", sourceId: "791381", pdfPageStart: 167, printedPage: 167 }, keywords: ["اختصار IPv6", "::", "الأصفار المتتالية", "2001:db8::ff00:42:8329"] },
+            { id: "791381-m21-l01-p03", title: "Ports — المنافذ المهمة", order: 3, source: { kind: "book", sourceId: "791381", pdfPageStart: 168, printedPage: 168 }, keywords: ["Port", "HTTP 80", "HTTPS 443", "SSH 22", "DNS 53", "FTP 21", "Telnet 23"] },
+          ],
+        },
+      ],
+    },
+    {
+      // m22 — Batch 8: the book's section «بروتوكول DHCP» (PDF 169–179, no section cover). NEW stable id; order 20. The
+      // three router pages (PDF 172–174) carry the first interactive CLI exercises (simulation / cli-terminal / v1).
+      id: "791381-m22",
+      title: "بروتوكول DHCP",
+      shortTitle: "DHCP",
+      order: 20,
+      lessons: [
+        {
+          id: "791381-m22-l01",
+          title: "ما هو DHCP",
+          order: 1,
+          pages: [
+            { id: "791381-m22-l01-p01", title: "DHCP — مقدمة", order: 1, source: { kind: "book", sourceId: "791381", pdfPageStart: 169, printedPage: 169 }, keywords: ["DHCP", "توزيع تلقائي", "IP", "Gateway", "DNS"] },
+            { id: "791381-m22-l01-p02", title: "مراحل عمل DHCP", order: 2, source: { kind: "book", sourceId: "791381", pdfPageStart: 170, printedPage: 170 }, keywords: ["Discover", "Offer", "Request", "ACK", "DORA"] },
+            { id: "791381-m22-l01-p03", title: "مثال DHCP على الراوتر", order: 3, source: { kind: "book", sourceId: "791381", pdfPageStart: 171, printedPage: 171 }, keywords: ["192.168.1.0/24", "192.168.1.10", "192.168.1.50", "192.168.1.254", "الراوتر كخادم DHCP"] },
+          ],
+        },
+        {
+          id: "791381-m22-l02",
+          title: "DHCP على الراوتر",
+          order: 2,
+          pages: [
+            { id: "791381-m22-l02-p01", title: "DHCP على الراوتر — الجزء الأول", order: 1, source: { kind: "book", sourceId: "791381", pdfPageStart: 172, printedPage: 172 }, keywords: ["ip address", "no shutdown", "ip dhcp pool LAN", "network", "Router(dhcp-config)#"] },
+            { id: "791381-m22-l02-p02", title: "DHCP على الراوتر — الجزء الثاني", order: 2, source: { kind: "book", sourceId: "791381", pdfPageStart: 173, printedPage: 173 }, keywords: ["default-router", "dns-server", "ip dhcp excluded-address", "8.8.8.8"] },
+            { id: "791381-m22-l02-p03", title: "شرح أوامر DHCP", order: 3, source: { kind: "book", sourceId: "791381", pdfPageStart: 174, printedPage: 174 }, keywords: ["interface G0/0", "ip address", "network", "default-router", "dns-server", "وظيفة كل أمر"] },
+            { id: "791381-m22-l02-p04", title: "DHCP — ملاحظات مهمة", order: 4, source: { kind: "book", sourceId: "791381", pdfPageStart: 175, printedPage: 175 }, keywords: ["العناوين المستثناة", "إعادة الاستخدام", "مدة العنوان", "APIPA", "169.254.x.x"] },
+          ],
+        },
+        {
+          id: "791381-m22-l03",
+          title: "DHCP عن طريق Server",
+          order: 3,
+          pages: [
+            { id: "791381-m22-l03-p01", title: "DHCP عن طريق Server", order: 1, source: { kind: "book", sourceId: "791381", pdfPageStart: 176, printedPage: 176 }, keywords: ["Server", "192.168.10.0/24", "Packet Tracer", "جهاز مركزي"] },
+            { id: "791381-m22-l03-p02", title: "خطوة 1: الدخول للسيرفر", order: 2, source: { kind: "book", sourceId: "791381", pdfPageStart: 177, printedPage: 177 }, keywords: ["Server", "Services", "DHCP Service", "Packet Tracer"] },
+            { id: "791381-m22-l03-p03", title: "خطوة 2: تشغيل DHCP", order: 3, source: { kind: "book", sourceId: "791381", pdfPageStart: 178, printedPage: 178 }, keywords: ["On", "Off", "تفعيل الخدمة"] },
+            { id: "791381-m22-l03-p04", title: "خطوة 3: إدخال التعريفات", order: 4, source: { kind: "book", sourceId: "791381", pdfPageStart: 179, printedPage: 179 }, keywords: ["Default Gateway", "DNS Server", "Start IP", "Add", "Save", "Static"] },
+          ],
+        },
+      ],
+    },
+    {
       id: "791381-m05",
       title: "مرجع أوامر Cisco",
       shortTitle: "أوامر Cisco",
-      order: 18,
+      order: 21,
       lessons: [
         {
           id: "791381-m05-l01",
@@ -759,7 +852,7 @@ const manifest: LearningCourseManifest = {
       id: "791381-m06",
       title: "قوائم التحكم ACL",
       shortTitle: "ACL",
-      order: 19,
+      order: 22,
       lessons: [
         {
           id: "791381-m06-l01",
@@ -783,7 +876,7 @@ const manifest: LearningCourseManifest = {
     { id: "b2", label: "الأجهزة والرسائل", moduleIds: ["791381-m09", "791381-m10", "791381-m11", "791381-m12"] },
     { id: "b3", label: "النماذج والبروتوكولات والأمان", moduleIds: ["791381-m13", "791381-m14", "791381-m15", "791381-m16", "791381-m17", "791381-m18"] },
     { id: "b4", label: "برمجة السويتش و VLAN", moduleIds: ["791381-m03", "791381-m19", "791381-m04", "791381-m05"] },
-    { id: "b5", label: "الأمان · Wi-Fi · IPv6 · DHCP", moduleIds: [] },
+    { id: "b5", label: "الأمان · Wi-Fi · IPv6 · DHCP", moduleIds: ["791381-m20", "791381-m21", "791381-m22"] },
     { id: "b6", label: "ACL · التوجيه · WAN", moduleIds: ["791381-m06"] },
     { id: "summary", label: "التلخيص", moduleIds: [] },
   ],

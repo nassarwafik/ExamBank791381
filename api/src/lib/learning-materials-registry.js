@@ -11,7 +11,8 @@
 // (order 9), m14–m16 are the Batch-4 sections (orders 10–12), m17–m18 are the Batch-5 sections (orders 13–14) and
 // m03 — the historical skeleton id completed in place by Batch 6 — is the switch CLI / VLAN section (order 15), m19 is
 // the Batch-7 VTP section (order 16) and m04 — the historical skeleton id completed in place by Batch 7 — is the
-// Trunk / Router on a Stick section (order 17).
+// Trunk / Router on a Stick section (order 17); m20–m22 are the Batch-8 sections Wi-Fi, IPv6 والمنافذ and DHCP
+// (orders 18–20). The skeletons m05 («مرجع أوامر Cisco») and m06 («ACL») remain absent.
 //
 // FUTURE CONTENT ONBOARDING RULE: when a new unit is converted and approved, the developer appends its module
 // here (id, title, order). That alone makes it PUBLISHABLE (the teacher sees it as «مخفي عن الطلاب»); it is
@@ -51,7 +52,12 @@ const COURSES = [
       // Batch 7 phase: the VTP section (new id m19) and the historical m04 id completed in place; publishable (the
       // teacher sees them as «مخفي عن الطلاب»); NEVER auto-published to any class.
       { moduleId: "791381-m19", title: "إدارة VLAN: VTP", order: 16 },
-      { moduleId: "791381-m04", title: "Trunk و Router on a Stick", order: 17 }
+      { moduleId: "791381-m04", title: "Trunk و Router on a Stick", order: 17 },
+      // Batch 8 phase: the fifth-batch sections Wi-Fi (m20), IPv6 والمنافذ (m21) and DHCP (m22) — new stable ids;
+      // publishable (the teacher sees them as «مخفي عن الطلاب»); NEVER auto-published to any class.
+      { moduleId: "791381-m20", title: "Wi-Fi والشبكات اللاسلكية", order: 18 },
+      { moduleId: "791381-m21", title: "IPv6 والمنافذ", order: 19 },
+      { moduleId: "791381-m22", title: "بروتوكول DHCP", order: 20 }
     ]
   }
 ];

@@ -81,7 +81,7 @@ describe("no-auto-publish invariant — DEPLOYMENT ≠ PUBLICATION", () => {
     const student = JSON.stringify(buildStudentLearningMaterials(existing));
     for (const hidden of ["791381-m08", "791381-m09", "791381-m10", "Class و Subnet و CIDR", "أجهزة الشبكات", "أنواع شبكات الاتصال"]) expect(student).not.toContain(hidden);
     const registry = require("../src/lib/learning-materials-registry.js");
-    expect(registry.listLearningModules("791381").map(m => m.moduleId)).toEqual([M01, M02, M07, "791381-m08", "791381-m09", "791381-m10", "791381-m11", "791381-m12", "791381-m13", "791381-m14", "791381-m15", "791381-m16", "791381-m17", "791381-m18", "791381-m03", "791381-m19", "791381-m04"]);
+    expect(registry.listLearningModules("791381").map(m => m.moduleId)).toEqual([M01, M02, M07, "791381-m08", "791381-m09", "791381-m10", "791381-m11", "791381-m12", "791381-m13", "791381-m14", "791381-m15", "791381-m16", "791381-m17", "791381-m18", "791381-m03", "791381-m19", "791381-m04", "791381-m20", "791381-m21", "791381-m22"]);
     expect(registry.validateLearningModuleIds("791381", ["791381-m10", "791381-m08"])).toEqual(["791381-m08", "791381-m10"]);   // explicit publication path
     expect(JSON.stringify(existing)).not.toContain("m08");                                                                    // the class document is untouched
   });
@@ -176,6 +176,25 @@ describe("no-auto-publish invariant — DEPLOYMENT ≠ PUBLICATION", () => {
     const s14 = buildStudentLearningMaterials(c14)[0].modules;
     expect(s14).toEqual([{ moduleId: M01, title: "أساسيات الشبكات", order: 1 }, { moduleId: "791381-m04", title: "Trunk و Router on a Stick", order: 17 }]);
     expect(JSON.stringify(s14)).not.toMatch(/m19|m05|m06|m03/);
+  });
+  it("REAL registry (Batch 8): a class released through m04 sees NOTHING of m20 / m21 / m22; explicit publication makes them visible in canonical order (18, 19, 20); m05 / m06 stay unpublishable; the class document is untouched", () => {
+    const through04 = [M01, M02, M07, "791381-m08", "791381-m09", "791381-m10", "791381-m11", "791381-m12", "791381-m13", "791381-m14", "791381-m15", "791381-m16", "791381-m17", "791381-m18", "791381-m03", "791381-m19", "791381-m04"];
+    const existing = room("c15", { learningMaterials: [{ courseId: "791381", visibleModuleIds: through04 }] });
+    expect(getVisibleLearningModuleIds(existing, "791381")).toEqual(through04);
+    const student = JSON.stringify(buildStudentLearningMaterials(existing));
+    for (const hidden of ["791381-m20", "791381-m21", "791381-m22", "Wi-Fi", "IPv6 والمنافذ", "بروتوكول DHCP"]) expect(student).not.toContain(hidden);
+    const registry = require("../src/lib/learning-materials-registry.js");
+    expect(registry.findLearningModule("791381", "791381-m20")).toEqual({ moduleId: "791381-m20", title: "Wi-Fi والشبكات اللاسلكية", order: 18 });
+    expect(registry.findLearningModule("791381", "791381-m21")).toEqual({ moduleId: "791381-m21", title: "IPv6 والمنافذ", order: 19 });
+    expect(registry.findLearningModule("791381", "791381-m22")).toEqual({ moduleId: "791381-m22", title: "بروتوكول DHCP", order: 20 });
+    expect(registry.validateLearningModuleIds("791381", ["791381-m22", "791381-m20", "791381-m04"])).toEqual(["791381-m04", "791381-m20", "791381-m22"]);   // by order, never by id
+    for (const skel of ["791381-m05", "791381-m06"]) expect(() => registry.validateLearningModuleIds("791381", [skel])).toThrow();
+    expect(JSON.stringify(existing)).not.toMatch(/m20|m21|m22/);
+    const c16 = room("c16", { learningMaterials: [{ courseId: "791381", visibleModuleIds: [M01, "791381-m22"] }] });   // publishing DHCP alone is allowed
+    expect(getVisibleLearningModuleIds(c16, "791381")).toEqual([M01, "791381-m22"]);
+    const s16 = buildStudentLearningMaterials(c16)[0].modules;
+    expect(s16).toEqual([{ moduleId: M01, title: "أساسيات الشبكات", order: 1 }, { moduleId: "791381-m22", title: "بروتوكول DHCP", order: 20 }]);
+    expect(JSON.stringify(s16)).not.toMatch(/m20|m21|m05|m06|m04/);
   });
   it("a NEWLY registered module (future Unit 4) is NOT appended to any existing class's visibleModuleIds", () => {
     const future = {

@@ -295,9 +295,9 @@ describe("Batch 4 — provenance, RTL/LTR, safety, skeletons and registry consis
     expect(m13.source).toMatchObject({ pdfPageStart: 76, pdfPageEnd: 86 });
     expect(Math.max(...PREV.flatMap(m => m.lessons.flatMap(l => l.pages.map(p => p.source.pdfPageStart))))).toBe(86);
   });
-  it("historical m03 / m04 (completed in place by Batches 6 / 7) keep their historical pages' ids, titles and PDF mappings; skeletons m05–m06 are untouched and merely shift after every real module (orders 18–19 since Batch 7)", () => {
+  it("historical m03 / m04 (completed in place by Batches 6 / 7) keep their historical pages' ids, titles and PDF mappings; skeletons m05–m06 are untouched and merely shift after every real module (orders 21–22 since Batch 8)", () => {
     const byId = Object.fromEntries(manifest.modules.map(m => [m.id, m]));
-    expect(["791381-m03", "791381-m19", "791381-m04", "791381-m05", "791381-m06"].map(id => byId[id].order)).toEqual([15, 16, 17, 18, 19]);
+    expect(["791381-m03", "791381-m19", "791381-m04", "791381-m20", "791381-m21", "791381-m22", "791381-m05", "791381-m06"].map(id => byId[id].order)).toEqual([15, 16, 17, 18, 19, 20, 21, 22]);
     expect(byId["791381-m03"].lessons[0].pages.filter(p => /-p0[12]$/.test(p.id)).map(p => [p.id, p.title, p.source!.pdfPageStart, p.source!.printedPage])).toEqual([["791381-m03-l01-p01", "منافذ السويتش", 123, 121], ["791381-m03-l01-p02", "برمجة المنافذ من CLI", 124, 122]]);
     expect(byId["791381-m06"].lessons[0].pages.map(p => [p.id, p.source!.pdfPageStart, p.source!.printedPage])).toEqual([["791381-m06-l01-p01", 227, 225]]);
     expect(["791381-m03", "791381-m19", "791381-m04", "791381-m05", "791381-m06"].map(id => hasModuleContent("791381", id))).toEqual([true, true, true, false, false]);
