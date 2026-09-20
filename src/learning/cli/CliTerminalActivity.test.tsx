@@ -173,8 +173,8 @@ describe("isolation", () => {
   it("emits only status/completed in interaction events (never the typed text)", () => {
     const emit = vi.fn();
     render(<CliTerminalActivity block={cliBlock(trunkTask)} courseId="791381" reducedMotion={false} fullscreen={false} commands={{ reset: 0, replay: 0 }} emit={emit} />);
-    type("enable secret hunter2");   // «enable» takes no value → invalid, never executed
-    expect(emit).toHaveBeenCalledWith({ type: "interaction", activityId: "cli-demo", name: "cli-command", detail: { status: "invalid", completed: false } });
+    type("enable secret hunter2");   // «enable secret» is a global-config command → wrong mode from user EXEC, never executed
+    expect(emit).toHaveBeenCalledWith({ type: "interaction", activityId: "cli-demo", name: "cli-command", detail: { status: "wrong-mode", completed: false } });
     expect(JSON.stringify(emit.mock.calls)).not.toContain("hunter2");
   });
 });

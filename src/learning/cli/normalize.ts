@@ -105,3 +105,18 @@ export function parseVlanList(raw: string): number[] | null {
 export function isSimpleName(raw: string): boolean {
   return /^[A-Za-z0-9][A-Za-z0-9_-]{0,62}$/.test(raw);
 }
+
+/** Cisco dotted MAC notation: HHHH.HHHH.HHHH (12 hex digits in three groups), as the book prints it. */
+export function isCiscoMac(raw: string): boolean {
+  return /^[0-9a-f]{4}\.[0-9a-f]{4}\.[0-9a-f]{4}$/i.test(raw);
+}
+
+/** The largest `switchport port-security maximum` the simulator accepts. */
+export const PORT_SECURITY_MAX = 8192;
+
+/** A plain decimal integer within [min, max], else null (no signs, no leading zeros, no decimals). */
+export function parseIntInRange(raw: string, min: number, max: number): number | null {
+  if (!/^(0|[1-9]\d{0,5})$/.test(raw)) return null;
+  const n = Number(raw);
+  return n >= min && n <= max ? n : null;
+}

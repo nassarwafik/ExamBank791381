@@ -1,6 +1,7 @@
 // Learning Materials — CLI simulator: SYNTHETIC exercise fixtures for tests ONLY (imported by *.test.ts(x)).
-// These are generic demo scenarios (a switch trunk task, a guided walkthrough, a challenge) that exercise the
-// engine independently of any book content; they are never shipped to students and never wired into a module.
+// These are generic demo scenarios (a switch trunk task, a guided walkthrough, a challenge, a Port Security task,
+// a device-hardening task) that exercise the engine independently of any book content; they are never shipped to
+// students and never wired into a module.
 import type { CliExerciseConfig } from "./types";
 import type { SimulationBlock } from "../content/types";
 
@@ -38,6 +39,36 @@ export const trunkChallenge: CliExerciseConfig = {
     { id: "c1", instruction: "اكتب الأمر الذي يحوّل المنفذ إلى Trunk", expect: { command: "switchport-mode", args: { mode: "trunk" } }, hints: ["فكر في الوضع الذي يجب أن تكون فيه قبل تعديل إعدادات المنفذ.", "بعد الدخول إلى interface استخدم أمرًا يبدأ بـ switchport."] },
   ],
   allowed: ["switchport-mode"],
+};
+
+/** Batch 9 — a Port Security TASK checked on the final state (access port, enabled, max 2, sticky, shutdown). */
+export const portSecurityTask: CliExerciseConfig = {
+  kind: "task",
+  device: "switch",
+  intro: "أمّن المنفذ f0/1: وضع Access، فعّل Port Security، جهازان على الأكثر، Sticky، والإجراء shutdown.",
+  goals: [
+    { id: "g-access", label: "f0/1 في وضع Access", condition: { kind: "interface", name: "f0/1", prop: "switchportMode", value: "access" } },
+    { id: "g-on", label: "Port Security مفعّل على f0/1", condition: { kind: "port-security", name: "f0/1", prop: "enabled", value: true } },
+    { id: "g-max", label: "الحد الأقصى جهازان", condition: { kind: "port-security", name: "f0/1", prop: "maximum", value: 2 } },
+    { id: "g-sticky", label: "Sticky MAC مفعّل", condition: { kind: "port-security", name: "f0/1", prop: "sticky", value: true } },
+    { id: "g-violation", label: "الإجراء عند المخالفة shutdown", condition: { kind: "port-security", name: "f0/1", prop: "violation", value: "shutdown" } },
+  ],
+  hints: ["ادخل إلى الواجهة أولًا ثم استخدم أوامر switchport.", "أوامر Port Security كلها تبدأ بـ switchport port-security."],
+};
+
+/** Batch 9 — a device-hardening TASK: console + vty passwords with login, enable secret, password encryption. */
+export const hardeningTask: CliExerciseConfig = {
+  kind: "task",
+  device: "switch",
+  goals: [
+    { id: "g-con-pw", label: "كلمة مرور Console هي cisco123", condition: { kind: "line", line: "console", prop: "password", value: "cisco123" } },
+    { id: "g-con-login", label: "Console يطلب كلمة المرور", condition: { kind: "line", line: "console", prop: "login", value: true } },
+    { id: "g-vty-pw", label: "كلمة مرور VTY هي cisco123", condition: { kind: "line", line: "vty", prop: "password", value: "cisco123" } },
+    { id: "g-vty-login", label: "VTY يطلب كلمة المرور", condition: { kind: "line", line: "vty", prop: "login", value: true } },
+    { id: "g-secret", label: "enable secret هو cisco123", condition: { kind: "device", prop: "enableSecret", value: "cisco123" } },
+    { id: "g-enc", label: "تشفير كلمات المرور مفعّل", condition: { kind: "device", prop: "passwordEncryption", value: true } },
+  ],
+  hints: ["كل خط دخول له وضع خاص يبدأ بـ line.", "داخل الخط: password ثم login."],
 };
 
 /** A synthetic cli-terminal block wrapping an exercise (for component tests). */

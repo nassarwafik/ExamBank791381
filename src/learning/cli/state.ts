@@ -11,6 +11,7 @@ export const CLI_MODE_LABEL: Record<CliMode, string> = {
   subinterface: "وضع إعداد الواجهة الفرعية",
   vlan: "وضع إعداد VLAN",
   dhcp: "وضع إعداد مجموعة DHCP",
+  line: "وضع إعداد خط الدخول",
 };
 
 /** The prompt suffix of each mode (IOS-style). */
@@ -22,6 +23,7 @@ export const CLI_MODE_SUFFIX: Record<CliMode, string> = {
   subinterface: "(config-subif)#",
   vlan: "(config-vlan)#",
   dhcp: "(dhcp-config)#",
+  line: "(config-line)#",
 };
 
 /** The prompt line for a state, e.g. "Router(config-if)#". */
@@ -41,7 +43,10 @@ export function defaultHostname(device: CliDeviceType): string {
 
 /** An empty device of the given type in user EXEC mode. */
 export function createDeviceState(device: CliDeviceType, hostname = defaultHostname(device)): CliDeviceState {
-  return { device, hostname, mode: "user", selectedInterfaces: [], interfaces: {}, vlans: {}, dhcpPools: {}, dhcpExcluded: [], vtp: {} };
+  return {
+    device, hostname, mode: "user", selectedInterfaces: [], interfaces: {}, vlans: {}, dhcpPools: {}, dhcpExcluded: [], vtp: {},
+    lines: { console: { login: false }, vty: { login: false } }, passwordEncryption: false,
+  };
 }
 
 /**
@@ -68,6 +73,8 @@ export function createInitialState(exercise: CliExerciseConfig): CliDeviceState 
     }
   } else if (start === "dhcp") {
     if (exercise.startPool) state = { ...state, mode: "dhcp", selectedPool: exercise.startPool, dhcpPools: { ...state.dhcpPools, [exercise.startPool]: state.dhcpPools[exercise.startPool] ?? { dnsServers: [] } } };
+  } else if (start === "line") {
+    if (exercise.startLine) state = { ...state, mode: "line", selectedLine: exercise.startLine };
   } else {
     state = { ...state, mode: start };
   }

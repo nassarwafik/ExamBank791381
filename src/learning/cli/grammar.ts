@@ -1,12 +1,14 @@
-// Learning Materials — CLI simulator: the CLOSED command grammar (v1) and the parser.
+// Learning Materials — CLI simulator: the CLOSED command grammar and the parser.
 //
 // Every supported command is one `CommandSpec`: the keyword sequence(s) that introduce it (matched case-
 // insensitively, with the well-known IOS abbreviations the book itself uses, e.g. «config t»), the modes it is
 // valid in, a display syntax (for the «?» help) and a small argument parser built from the value checks in
 // normalize.ts. Input is ONLY ever compared against this table — there is no evaluation, no shell, no dynamic
 // dispatch by string: an unmatched line is "unknown" and can never change state.
+// ORDER MATTERS: a spec whose keyword sequence extends another's (e.g. «switchport port-security maximum» vs
+// «switchport port-security», «enable secret» vs «enable») is listed BEFORE the shorter one.
 import type { CliCommandId, CliMode, CliParseResult, ParsedCommand } from "./types";
-import { tokenize, normalizeInterfaceName, expandInterfaceRange, isSubInterface, isIpv4, isSubnetMask, parseVlanId, parseVlanList, isSimpleName } from "./normalize";
+import { tokenize, normalizeInterfaceName, expandInterfaceRange, isSubInterface, isIpv4, isSubnetMask, parseVlanId, parseVlanList, isSimpleName, isCiscoMac, parseIntInRange, PORT_SECURITY_MAX } from "./normalize";
 
 type ArgResult = ParsedCommand | { incomplete: string } | { invalid: string };
 
@@ -22,7 +24,7 @@ export interface CommandSpec {
   args: (rest: string[]) => ArgResult;
 }
 
-const CONFIG_MODES: readonly CliMode[] = ["global", "interface", "subinterface", "vlan", "dhcp"];
+const CONFIG_MODES: readonly CliMode[] = ["global", "interface", "subinterface", "vlan", "dhcp", "line"];
 const NOT_USER: readonly CliMode[] = ["privileged", ...CONFIG_MODES];
 const IF_MODES: readonly CliMode[] = ["interface", "subinterface"];
 
@@ -36,11 +38,15 @@ const ipAndMask = (id: "ip-address" | "network") => (rest: string[]): ArgResult 
   return { id, address: rest[0], mask: rest[1] };
 };
 
-const oneName = (id: "hostname" | "name" | "ip-dhcp-pool" | "vtp-domain" | "vtp-password", what: string) => (rest: string[]): ArgResult => {
+const oneName = (id: "hostname" | "name" | "ip-dhcp-pool" | "vtp-domain" | "vtp-password" | "password" | "enable-secret", what: string) => (rest: string[]): ArgResult => {
   if (rest.length === 0) return { incomplete: "المطلوب: " + what };
-  if (rest.length > 1) return { invalid: "الاسم يجب أن يكون كلمة واحدة" };
+  if (rest.length > 1) return { invalid: what + " يجب أن يكون كلمة واحدة" };
   if (!isSimpleName(rest[0])) return { invalid: what + " غير صالح: " + rest[0] };
-  return id === "vtp-password" ? { id, password: rest[0] } : { id, name: rest[0] };
+  switch (id) {
+    case "vtp-password": case "password": return { id, password: rest[0] };
+    case "enable-secret": return { id, secret: rest[0] };
+    default: return { id, name: rest[0] };
+  }
 };
 
 const oneVlan = (id: "vlan" | "switchport-access-vlan" | "encapsulation-dot1q") => (rest: string[]): ArgResult => {
@@ -50,15 +56,31 @@ const oneVlan = (id: "vlan" | "switchport-access-vlan" | "encapsulation-dot1q") 
   return v === null ? { invalid: "رقم VLAN غير صالح (1–4094): " + rest[0] } : { id, vlanId: v };
 };
 
+const showOf = (what: Extract<ParsedCommand, { id: "show" }>["what"]) => (rest: string[]): ArgResult => (rest.length ? { invalid: "قيم زائدة" } : { id: "show", what });
+
 /** The grammar table. Longer keyword sequences are listed BEFORE shorter ones that share a prefix. */
 export const COMMANDS: readonly CommandSpec[] = [
   { id: "help", keywords: [["?"], ["help"]], modes: ["user", ...NOT_USER], syntax: "?", args: none("help") },
+  // «enable secret» must precede «enable».
+  { id: "enable-secret", keywords: [["enable", "secret"]], modes: ["global"], syntax: "enable secret <password>", args: oneName("enable-secret", "كلمة السر") },
   { id: "enable", keywords: [["enable"], ["en"]], modes: ["user", "privileged"], syntax: "enable", args: none("enable") },
   { id: "disable", keywords: [["disable"]], modes: ["privileged"], syntax: "disable", args: none("disable") },
   { id: "configure-terminal", keywords: [["configure", "terminal"], ["configure", "t"], ["config", "terminal"], ["config", "t"], ["conf", "terminal"], ["conf", "term"], ["conf", "t"]], modes: ["privileged"], syntax: "configure terminal", args: none("configure-terminal") },
   { id: "end", keywords: [["end"]], modes: ["user", ...NOT_USER], syntax: "end", args: none("end") },
   { id: "exit", keywords: [["exit"]], modes: ["user", ...NOT_USER], syntax: "exit", args: none("exit") },
   { id: "hostname", keywords: [["hostname"]], modes: ["global"], syntax: "hostname <name>", args: oneName("hostname", "اسم الجهاز") },
+  {
+    id: "banner-motd", keywords: [["banner", "motd"]], modes: ["global"], syntax: "banner motd #<message>#",
+    args: rest => {
+      if (rest.length === 0) return { incomplete: "المطلوب: الرسالة بين رمزين متطابقين مثل #...#" };
+      const joined = rest.join(" ");
+      const delim = joined[0];
+      if (/[A-Za-z0-9\s]/.test(delim) || joined.length < 2 || joined[joined.length - 1] !== delim) return { invalid: "الرسالة يجب أن تبدأ وتنتهي بنفس الرمز، مثل #Welcome#" };
+      const text = joined.slice(1, -1);
+      if (text.length > 200) return { invalid: "الرسالة طويلة جدًا" };
+      return { id: "banner-motd", text };
+    },
+  },
   {
     id: "interface", keywords: [["interface", "range"], ["int", "range"], ["interface"], ["int"]], modes: ["global", ...IF_MODES], syntax: "interface <name>  |  interface range <from-to>",
     args: rest => {
@@ -90,6 +112,34 @@ export const COMMANDS: readonly CommandSpec[] = [
       return list ? { id: "switchport-trunk-allowed-vlan", vlans: list } : { invalid: "قائمة VLAN غير صالحة: " + rest.join(" ") };
     },
   },
+  // Port Security (Batch 9): the extended forms precede the bare «switchport port-security».
+  {
+    id: "port-security-maximum", keywords: [["switchport", "port-security", "maximum"]], modes: ["interface"], syntax: "switchport port-security maximum <n>",
+    args: rest => {
+      if (rest.length === 0) return { incomplete: "المطلوب: عدد الأجهزة المسموح بها" };
+      if (rest.length > 1) return { invalid: "قيم زائدة بعد العدد" };
+      const n = parseIntInRange(rest[0], 1, PORT_SECURITY_MAX);
+      return n === null ? { invalid: `العدد غير صالح (1–${PORT_SECURITY_MAX}): ` + rest[0] } : { id: "port-security-maximum", maximum: n };
+    },
+  },
+  { id: "port-security-sticky", keywords: [["switchport", "port-security", "mac-address", "sticky"]], modes: ["interface"], syntax: "switchport port-security mac-address sticky", args: none("port-security-sticky") },
+  {
+    id: "port-security-mac-address", keywords: [["switchport", "port-security", "mac-address"]], modes: ["interface"], syntax: "switchport port-security mac-address <HHHH.HHHH.HHHH>",
+    args: rest => {
+      if (rest.length === 0) return { incomplete: "المطلوب: عنوان MAC بصيغة HHHH.HHHH.HHHH أو الكلمة sticky" };
+      if (rest.length > 1) return { invalid: "قيم زائدة بعد عنوان MAC" };
+      return isCiscoMac(rest[0]) ? { id: "port-security-mac-address", mac: rest[0].toLowerCase() } : { invalid: "عنوان MAC غير صالح (مثل 00A0.1234.5678): " + rest[0] };
+    },
+  },
+  {
+    id: "port-security-violation", keywords: [["switchport", "port-security", "violation"]], modes: ["interface"], syntax: "switchport port-security violation shutdown",
+    args: rest => {
+      if (rest.length === 0) return { incomplete: "المطلوب: الإجراء عند المخالفة (shutdown)" };
+      if (rest.length > 1 || rest[0].toLowerCase() !== "shutdown") return { invalid: "هذا المحاكي يدعم الإجراء shutdown فقط" };
+      return { id: "port-security-violation", action: "shutdown" };
+    },
+  },
+  { id: "switchport-port-security", keywords: [["switchport", "port-security"]], modes: ["interface"], syntax: "switchport port-security", args: none("switchport-port-security") },
   { id: "ip-address", keywords: [["ip", "address"], ["ip", "addr"]], modes: IF_MODES, syntax: "ip address <address> <mask>", args: ipAndMask("ip-address") },
   { id: "no-shutdown", keywords: [["no", "shutdown"], ["no", "shut"]], modes: IF_MODES, syntax: "no shutdown", args: none("no-shutdown") },
   { id: "shutdown", keywords: [["shutdown"], ["shut"]], modes: IF_MODES, syntax: "shutdown", args: none("shutdown") },
@@ -134,11 +184,40 @@ export const COMMANDS: readonly CommandSpec[] = [
   },
   { id: "vtp-domain", keywords: [["vtp", "domain"]], modes: ["global"], syntax: "vtp domain <name>", args: oneName("vtp-domain", "اسم المجال") },
   { id: "vtp-password", keywords: [["vtp", "password"]], modes: ["global"], syntax: "vtp password <password>", args: oneName("vtp-password", "كلمة المرور") },
-  { id: "show", keywords: [["show", "running-config"], ["show", "run"]], modes: NOT_USER, syntax: "show running-config", args: rest => (rest.length ? { invalid: "قيم زائدة" } : { id: "show", what: "running-config" }) },
-  { id: "show", keywords: [["show", "ip", "interface", "brief"], ["show", "ip", "int", "brief"], ["show", "ip", "int", "br"]], modes: NOT_USER, syntax: "show ip interface brief", args: rest => (rest.length ? { invalid: "قيم زائدة" } : { id: "show", what: "ip-interface-brief" }) },
-  { id: "show", keywords: [["show", "ip", "dhcp", "pool"]], modes: NOT_USER, syntax: "show ip dhcp pool", args: rest => (rest.length ? { invalid: "قيم زائدة" } : { id: "show", what: "ip-dhcp-pool" }) },
-  { id: "show", keywords: [["show", "vlan", "brief"], ["show", "vlan"]], modes: NOT_USER, syntax: "show vlan brief", args: rest => (rest.length ? { invalid: "قيم زائدة" } : { id: "show", what: "vlan-brief" }) },
-  { id: "show", keywords: [["show", "vtp", "status"]], modes: NOT_USER, syntax: "show vtp status", args: rest => (rest.length ? { invalid: "قيم زائدة" } : { id: "show", what: "vtp-status" }) },
+  // Device protection (Batch 9): the two access lines the book prints, and their passwords.
+  {
+    id: "line", keywords: [["line", "console"]], modes: ["global"], syntax: "line console 0",
+    args: rest => {
+      if (rest.length === 0) return { incomplete: "المطلوب: رقم الخط (line console 0)" };
+      return rest.length === 1 && rest[0] === "0" ? { id: "line", line: "console" } : { invalid: "خط الدخول المباشر في هذا المحاكي هو line console 0" };
+    },
+  },
+  {
+    id: "line", keywords: [["line", "vty"]], modes: ["global"], syntax: "line vty 0 4",
+    args: rest => {
+      if (rest.length === 0) return { incomplete: "المطلوب: مدى الخطوط (line vty 0 4)" };
+      return rest.length === 2 && rest[0] === "0" && rest[1] === "4" ? { id: "line", line: "vty" } : { invalid: "خطوط الدخول عن بُعد في هذا المحاكي هي line vty 0 4" };
+    },
+  },
+  { id: "password", keywords: [["password"]], modes: ["line"], syntax: "password <password>", args: oneName("password", "كلمة المرور") },
+  { id: "login", keywords: [["login"]], modes: ["line"], syntax: "login", args: none("login") },
+  { id: "service-password-encryption", keywords: [["service", "password-encryption"]], modes: ["global"], syntax: "service password-encryption", args: none("service-password-encryption") },
+  // show (simplified deterministic output); «show port-security interface» precedes «show port-security».
+  { id: "show", keywords: [["show", "running-config"], ["show", "run"]], modes: NOT_USER, syntax: "show running-config", args: showOf("running-config") },
+  { id: "show", keywords: [["show", "startup-config"], ["show", "start"]], modes: NOT_USER, syntax: "show startup-config", args: showOf("startup-config") },
+  { id: "show", keywords: [["show", "ip", "interface", "brief"], ["show", "ip", "int", "brief"], ["show", "ip", "int", "br"]], modes: NOT_USER, syntax: "show ip interface brief", args: showOf("ip-interface-brief") },
+  { id: "show", keywords: [["show", "ip", "dhcp", "pool"]], modes: NOT_USER, syntax: "show ip dhcp pool", args: showOf("ip-dhcp-pool") },
+  { id: "show", keywords: [["show", "vlan", "brief"], ["show", "vlan"]], modes: NOT_USER, syntax: "show vlan brief", args: showOf("vlan-brief") },
+  { id: "show", keywords: [["show", "vtp", "status"]], modes: NOT_USER, syntax: "show vtp status", args: showOf("vtp-status") },
+  {
+    id: "show", keywords: [["show", "port-security", "interface"]], modes: NOT_USER, syntax: "show port-security interface <name>",
+    args: rest => {
+      if (rest.length === 0) return { incomplete: "المطلوب: اسم الواجهة" };
+      const name = normalizeInterfaceName(rest.join(""));
+      return name ? { id: "show", what: "port-security", iface: name } : { invalid: "اسم الواجهة غير صالح: " + rest.join(" ") };
+    },
+  },
+  { id: "show", keywords: [["show", "port-security"]], modes: NOT_USER, syntax: "show port-security", args: showOf("port-security") },
 ];
 
 /** The modes a command id is valid in (union over its specs). */
@@ -148,8 +227,8 @@ export function modesOf(id: CliCommandId): readonly CliMode[] {
   return [...out];
 }
 
-/** The command ids that only MOVE between modes (always accepted by an exercise, never «غير مطلوب»). */
-export const NAVIGATION_COMMANDS: readonly CliCommandId[] = ["enable", "disable", "configure-terminal", "exit", "end", "help", "interface", "vlan", "ip-dhcp-pool", "show"];
+/** The command ids that only MOVE between modes or inspect (always accepted by an exercise, never «غير مطلوب»). */
+export const NAVIGATION_COMMANDS: readonly CliCommandId[] = ["enable", "disable", "configure-terminal", "exit", "end", "help", "interface", "vlan", "ip-dhcp-pool", "line", "show"];
 
 const startsWith = (tokens: string[], seq: readonly string[]) => seq.length <= tokens.length && seq.every((k, i) => tokens[i].toLowerCase() === k);
 

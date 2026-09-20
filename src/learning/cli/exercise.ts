@@ -99,6 +99,14 @@ export function conditionMet(state: CliDeviceState, cond: CliStateCondition): bo
     }
     case "dhcp-excluded": return state.dhcpExcluded.some(e => e.from === cond.from && e.to === cond.to);
     case "vtp": return sameValue(state.vtp[cond.prop], cond.value);
+    case "port-security": {
+      const name = normalizeInterfaceName(cond.name);
+      const ps = name ? state.interfaces[name]?.portSecurity : undefined;
+      if (!ps) return cond.prop === "enabled" ? cond.value === false : false;
+      return sameValue(ps[cond.prop], cond.value);
+    }
+    case "line": return sameValue(state.lines[cond.line][cond.prop], cond.value);
+    case "device": return sameValue(state[cond.prop], cond.value);
   }
 }
 

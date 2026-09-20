@@ -79,7 +79,7 @@ describe("grammar / parser", () => {
     expect(parseCommand("switchport mode hybrid")).toMatchObject({ kind: "invalid", id: "switchport-mode" });
     expect(parseCommand("enable please")).toMatchObject({ kind: "invalid", id: "enable" });
     expect(parseCommand("vlan create 10")).toMatchObject({ kind: "invalid", id: "vlan" });
-    for (const u of ["router ospf 1", "show mac-address-table", "ping 8.8.8.8", "line vty 0 4", "ls -la", "hello"]) expect(parseCommand(u), u).toEqual({ kind: "unknown" });
+    for (const u of ["router ospf 1", "show mac-address-table", "ping 8.8.8.8", "line aux 0", "ls -la", "hello"]) expect(parseCommand(u), u).toEqual({ kind: "unknown" });
     expect(parseCommand("")).toEqual({ kind: "empty" });
     expect(parseCommand("    ")).toEqual({ kind: "empty" });
   });
@@ -328,7 +328,7 @@ describe("learner-facing wording is pinned literally (the specification's feedba
     expect(CLI_FEEDBACK.guidedStep).toBe("✓ أحسنت");
     expect(CLI_FEEDBACK.done).toBe("✓ تم");
     expect(CLI_FEEDBACK.taskCompleted).toBe("✓ أحسنت، الإعداد المطلوب مكتمل");
-    expect(CLI_MODE_LABEL).toEqual({ user: "وضع المستخدم", privileged: "وضع الأوامر المتقدّم", global: "وضع الإعداد العام", interface: "وضع إعداد الواجهة", subinterface: "وضع إعداد الواجهة الفرعية", vlan: "وضع إعداد VLAN", dhcp: "وضع إعداد مجموعة DHCP" });
+    expect(CLI_MODE_LABEL).toEqual({ user: "وضع المستخدم", privileged: "وضع الأوامر المتقدّم", global: "وضع الإعداد العام", interface: "وضع إعداد الواجهة", subinterface: "وضع إعداد الواجهة الفرعية", vlan: "وضع إعداد VLAN", dhcp: "وضع إعداد مجموعة DHCP", line: "وضع إعداد خط الدخول" });
     expect(promptFor({ hostname: "Switch", mode: "global" })).toBe("Switch(config)#");
   });
 });
