@@ -80,3 +80,83 @@
   .eb-visual-leaf-anim,
   .eb-visual-pillar-anim{ animation:none !important; }
 }
+
+/* ============================================================
+   Batch 2 — additional marks + motion for the 40-page batch
+   (number bases, IP addresses, class/subnet/CIDR, devices).
+   Same token-only, RTL-safe, reduced-motion-gated language.
+   ============================================================ */
+
+/* shared text */
+.eb-visual-caption-svg{ fill:var(--eb-text-secondary); font-size:12px; font-weight:600; }
+.eb-visual-meta{ fill:var(--eb-text-secondary); font-size:11px; }
+.eb-visual-row-label{ fill:var(--eb-text-heading); font-size:13px; font-weight:700; font-family:var(--eb-font-mono); }
+.eb-visual-part-label{ fill:var(--eb-text-secondary); font-size:11px; font-weight:600; }
+.eb-visual-token.is-inverse{ fill:#fff; }
+.eb-visual-node-label.is-inverse{ fill:#fff; }
+
+/* binary/hex cells */
+.eb-visual-weight{ fill:var(--eb-muted); font-size:11px; font-weight:600; font-family:var(--eb-font-mono); }
+.eb-visual-bit{ fill:var(--eb-surface); stroke:var(--eb-line-2); stroke-width:1.5; }
+.eb-visual-bit.is-on{ fill:var(--eb-primary-050, var(--eb-surface)); stroke:var(--eb-primary); }
+.eb-visual-bit-label{ fill:var(--eb-text-secondary); font-size:15px; font-weight:700; font-family:var(--eb-font-mono); }
+.eb-visual-bit-label.is-on{ fill:var(--eb-primary-strong); }
+.eb-visual-sum{ fill:var(--eb-text-heading); font-size:15px; font-weight:700; font-family:var(--eb-font-mono); }
+.eb-visual-hex-cell{ fill:var(--eb-primary); }
+.eb-visual-hex-label{ fill:#fff; font-size:18px; font-weight:700; font-family:var(--eb-font-mono); }
+.eb-visual-tri{ stroke:transparent; }
+
+/* segments / bars (IPv4 vs IPv6, classes) */
+.eb-visual-seg{ fill:var(--eb-surface); stroke:var(--eb-line-2); stroke-width:1.2; }
+.eb-visual-seg.is-v4{ fill:var(--eb-primary-050, var(--eb-surface)); stroke:var(--eb-primary); }
+.eb-visual-seg.is-v6{ fill:var(--eb-info-bg); stroke:var(--eb-info); }
+.eb-visual-axis{ stroke:var(--eb-line-2); stroke-width:2; }
+.eb-visual-band{ stroke:var(--eb-line-2); stroke-width:1; }
+.eb-visual-band.is-a{ fill:var(--eb-primary); }
+.eb-visual-band.is-b{ fill:var(--eb-info); }
+.eb-visual-band.is-c{ fill:var(--eb-success); }
+.eb-visual-band-label{ fill:#fff; font-size:15px; font-weight:700; }
+.eb-visual-tick{ fill:var(--eb-muted); font-size:10.5px; font-weight:600; font-family:var(--eb-font-mono); }
+.eb-visual-marker{ stroke:var(--eb-primary-strong); stroke-width:3; stroke-linecap:round; }
+
+/* octets / mask */
+.eb-visual-octet{ fill:var(--eb-surface); stroke:var(--eb-line-2); stroke-width:1.5; }
+.eb-visual-octet.is-network{ fill:var(--eb-primary-050, var(--eb-surface)); stroke:var(--eb-primary); }
+.eb-visual-octet.is-host{ fill:var(--eb-success-050, var(--eb-surface)); stroke:var(--eb-success); }
+.eb-visual-token.is-octet{ fill:var(--eb-text-heading); font-size:15px; }
+.eb-visual-mask-cell{ fill:var(--eb-text-secondary); font-size:13px; font-weight:700; font-family:var(--eb-font-mono); }
+.eb-visual-prefix{ fill:var(--eb-primary-strong); font-weight:700; }
+.eb-visual-hostpart{ fill:var(--eb-success); font-weight:700; }
+
+/* devices / zones / packets */
+.eb-visual-node.is-target{ fill:var(--eb-primary-050, var(--eb-surface)); stroke:var(--eb-primary); stroke-width:2; }
+.eb-visual-node.is-dim{ opacity:.55; }
+.eb-visual-zone{ fill:none; stroke:var(--eb-primary); stroke-width:1.5; stroke-dasharray:5 5; }
+.eb-visual-zone-label{ fill:var(--eb-primary-strong); font-size:11.5px; font-weight:700; }
+.eb-visual-router{ fill:var(--eb-primary); }
+.eb-visual-cloud{ fill:var(--eb-info); }
+.eb-visual-server{ fill:var(--eb-primary-strong); }
+.eb-visual-hub-box{ fill:var(--eb-muted); }
+.eb-visual-switch-box{ fill:var(--eb-primary); }
+.eb-visual-link.is-strong{ stroke:var(--eb-primary); stroke-width:2.5; }
+.eb-visual-link.is-faint{ stroke:var(--eb-line); stroke-width:1.5; }
+.eb-visual-divider{ stroke:var(--eb-line-2); stroke-width:1.5; stroke-dasharray:4 5; }
+.eb-visual-pin{ fill:var(--eb-danger); }
+.eb-visual-dot.is-response{ fill:var(--eb-success); }
+.eb-visual-packet > rect{ fill:var(--eb-primary-strong); }
+.eb-visual-packet.is-flood > rect{ fill:var(--eb-info); }
+.eb-visual-packet-static{ fill:var(--eb-primary-strong); }
+
+/* motion classes (all suffixed -anim; disabled under reduced motion below) */
+.eb-visual-glow-anim{ animation:eb-visual-glow 2.6s var(--eb-ease, ease-in-out) infinite; }
+@keyframes eb-visual-glow{ 0%,100%{ opacity:.72; } 50%{ opacity:1; } }
+.eb-visual-sweep-anim{ animation:eb-visual-sweep 3.4s var(--eb-ease, ease-in-out) infinite; }
+@keyframes eb-visual-sweep{ 0%{ transform:translateX(26px); } 100%{ transform:translateX(354px); } }
+.eb-visual-pin-anim{ transform-box:fill-box; transform-origin:center; animation:eb-visual-bob 2.8s var(--eb-ease, ease-in-out) infinite; }
+@keyframes eb-visual-bob{ 0%,100%{ transform:translateY(0); } 50%{ transform:translateY(-3px); } }
+
+@media (prefers-reduced-motion: reduce){
+  .eb-visual-glow-anim,
+  .eb-visual-sweep-anim,
+  .eb-visual-pin-anim{ animation:none !important; }
+}

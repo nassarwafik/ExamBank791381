@@ -104,8 +104,11 @@ describe("Phase 3D — PDF 23 source fidelity (four conversion methods + why-it-
 });
 
 describe("Phase 3D — provenance + answer-key safety", () => {
-  it("every PDF-23 block is origin:book (the summary is faithful book content — no enrichment added)", () => {
-    for (const b of pageBy("791381-m02-l01-p09").blocks as ContentBlock[]) expect(b.origin, b.id).toBe("book");
+  it("every PDF-23 block is faithful book content, except the appended Batch-2 visual enrichment", () => {
+    for (const b of pageBy("791381-m02-l01-p09").blocks as ContentBlock[]) {
+      if (b.type === "visual") expect(b.origin, b.id).toBe("teacher-enrichment");
+      else expect(b.origin, b.id).toBe("book");
+    }
   });
 
   it("adds NO practice, NO answers, NO image/iframe/external link/QR on the summary page", () => {
@@ -118,9 +121,12 @@ describe("Phase 3D — provenance + answer-key safety", () => {
     }
   });
 
-  // The one m02 teacher-enrichment block is still ONLY the Phase-3C QR clarification; Phase 3D adds none.
-  it("does not add any new teacher-enrichment block", () => {
+  // Phase 3D adds no enrichment of its own; the m02 teacher-enrichment blocks are the Phase-3C QR clarification plus
+  // the three Batch-2 SVG visual enrichments (m02 selections).
+  it("adds no NEW enrichment beyond the QR clarification and the Batch-2 visuals", () => {
     const enrich = m02Pages.flatMap(p => (p.blocks as ContentBlock[]).filter(b => b.origin === "teacher-enrichment").map(b => b.id));
-    expect(enrich).toEqual(["m02-l01-p08-qrnote"]);
+    expect([...enrich].sort()).toEqual([
+      "m02-l01-p01-visual", "m02-l01-p03-visual", "m02-l01-p08-qrnote", "m02-l01-p09-visual",
+    ]);
   });
 });

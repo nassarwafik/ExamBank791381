@@ -9,9 +9,9 @@ import { resolveVisual, REGISTERED_VISUAL_IDS } from "./registry";
 
 afterEach(cleanup);
 
-const dir = resolve(process.cwd(), "src/learning/visuals/791381/chapter1") + "/";
-const componentFiles = readdirSync(dir).filter(f => f.endsWith(".tsx"));
-const sources = componentFiles.map(f => readFileSync(dir + f, "utf8"));
+const DIRS = ["src/learning/visuals/791381/chapter1", "src/learning/visuals/791381/batch2"].map(d => resolve(process.cwd(), d) + "/");
+const componentFiles = DIRS.flatMap(dir => readdirSync(dir).filter(f => f.endsWith(".tsx")).map(f => dir + f));
+const sources = componentFiles.map(f => readFileSync(f, "utf8"));
 const css = readFileSync(resolve(process.cwd(), "src/learning/visuals/visuals.css"), "utf8");
 const noSpaces = (s: string) => s.replace(/\s+/g, "");
 
@@ -63,7 +63,13 @@ describe("visuals — motion always respects reduced motion", () => {
   // (traveling dots) and CSS animation classes (`.eb-visual-pulse`, `.eb-visual-leaf-anim`, `.eb-visual-pillar-anim`).
   // Under reduced motion NONE may appear in the rendered DOM; with motion on, at least one must. (The visuals.css
   // @media query is retained as the additional CSS-level safety net.)
-  const MOTION_SELECTORS = ["animateMotion", ".eb-visual-pulse", ".eb-visual-leaf-anim", ".eb-visual-pillar-anim"];
+  const MOTION_SELECTORS = [
+    "animateMotion",
+    // Chapter 1 CSS animation classes
+    ".eb-visual-pulse", ".eb-visual-leaf-anim", ".eb-visual-pillar-anim",
+    // Batch 2 CSS animation classes
+    ".eb-visual-glow-anim", ".eb-visual-sweep-anim", ".eb-visual-pin-anim",
+  ];
   const motionMarks = (root: Element) =>
     MOTION_SELECTORS.reduce((n, sel) => n + root.querySelectorAll(sel).length, 0);
 

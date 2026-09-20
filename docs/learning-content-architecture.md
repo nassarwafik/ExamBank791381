@@ -462,6 +462,32 @@ pilot; the pattern is course/chapter-agnostic so later chapters reuse it by addi
   outside Chapter 1 touched), `reader/LearningPageRenderer.visuals.test.tsx`. Nothing here touches grading, Strength,
   publication, `visibleModuleIds`, assignments, membership, training rules or CLI semantics.
 
+### Batch 2 — 40-page discovery batch (`src/learning/visuals/791381/batch2/`)
+
+The same architecture, extended (registry entries + SVG components only) to a 40-page batch immediately after
+Chapter 1: units m02 (number bases), m07 (IP addresses), m08 (class/subnet/CIDR) and m09 (devices). Each of the 40
+learner pages was classified HIGH / MEDIUM / SKIP; **13 professional animated SVGs** were added to the strongest
+pages, with per-module namespaced ids (`791381/m02/…`, `791381/m07/…`, `791381/m08/…`, `791381/m09/…`).
+
+- **The 13 visuals.** `binary-to-decimal` (place-value boxes summing to 123), `hex-to-binary` (each hex symbol → a
+  4-bit nibble), `conversion-map` (decimal/binary/hex triangle); `ip-identity` (a packet reaches the device that owns
+  the address), `ipv4-vs-ipv6` (32-bit/4-octet vs 128-bit/8-group bars), `private-public` (private LAN behind a
+  router, one public address to the internet), `static-dynamic` (fixed manual IP vs a DHCP request/response);
+  `address-classes` (first-octet number line A/B/C), `subnet-mask` (255 = network / 0 = host overlay), `same-network`
+  (four hosts sharing the 192.168.1 prefix); `hub-flood` (a frame copied to every port), `switch-unicast` (a frame
+  forwarded to the one destination port), `router-networks` (a packet forwarded between two networks to the internet).
+- **Purposeful motion.** Traveling data packets (SMIL `<animateMotion>`) for flow/forwarding visuals; a request↔response
+  pair for DHCP; a gentle sweep for the class number line; sequential highlight for bit/nibble and octet split. All
+  motion is reduced-motion-gated at the component level (SMIL omitted; CSS `-anim` classes dropped) and by the
+  `@media (prefers-reduced-motion: reduce)` fallback; each visual has a correct still frame.
+- **Deliberate SKIPs.** Pages already served by a strong interactive activity are not duplicated: `ipv4-octets`,
+  `cidr-network-host`, `gateway-flow` and the `hub-switch-router-flow` simulation. Unit-opener title pages, worksheet
+  and short-summary pages are skipped too.
+- **Guards / tests.** `content/791381/batch2.visuals.test.ts` (scope, provenance, a11y, placement, the SKIPs);
+  `visuals/registry.test.ts` (18 total), `visuals/visuals.guards.test.tsx` (both directories; motion always
+  reduced-motion-gated); no overflow at 320/360 px. No change to grading, Strength, publication, `visibleModuleIds`,
+  assignments, membership, training, learning-study or CLI semantics.
+
 ## Interactive Learning Engine (Phase 3A — foundation)
 
 Phase 3A adds the **engine foundation** the later interactive phases (real simulations in Phase 5, richer practice

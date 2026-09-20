@@ -147,6 +147,15 @@ const m09: ContentModule = {
                 },
               },
             },
+            {
+              // ENRICHMENT (Batch 2): SVG visual enrichment appended after the book content.
+              id: "m09-l01-p02-visual", type: "visual", origin: "teacher-enrichment",
+              visualId: "791381/m09/hub-flood", motion: true,
+              source: src(50),
+              title: "رسم توضيحي: بثّ الـ Hub",
+              alt: "رسم يبيّن جهاز Hub يرسل البيانات الواردة إلى كل المنافذ، فيستعملها الجهاز الصحيح ويتجاهلها الباقون.",
+              caption: "يصل إلى الجميع — والصحيح فقط يستعملها.",
+            },
           ],
         },
         // PDF 51 — لماذا استُبدل Hub بـ Switch؟
@@ -228,6 +237,15 @@ const m09: ContentModule = {
               ],
               result: "PC1 → Switch → PC3",
               explanation: "PC2 و PC4 لا تصلهما البيانات أصلًا؛ هذا سبب قلّة الازدحام وزيادة الأمان.",
+            },
+            {
+              // ENRICHMENT (Batch 2): SVG visual enrichment appended after the book content.
+              id: "m09-l01-p04-visual", type: "visual", origin: "teacher-enrichment",
+              visualId: "791381/m09/switch-unicast", motion: true,
+              source: src(52),
+              title: "رسم توضيحي: توجيه الـ Switch",
+              alt: "رسم يبيّن جهاز Switch يرسل البيانات إلى المنفذ الموصول بالجهاز المقصود فقط حسب عنوان MAC.",
+              caption: "إلى الجهاز المقصود فقط، فيقلّ الازدحام ويزيد الأمان.",
             },
           ],
         },
@@ -314,6 +332,15 @@ const m09: ContentModule = {
                   explanation: "Router يربط بين شبكات مختلفة، ومنها شبكة المدرسة والإنترنت.",
                 },
               },
+            },
+            {
+              // ENRICHMENT (Batch 2): SVG visual enrichment appended after the book content.
+              id: "m09-l02-p01-visual", type: "visual", origin: "teacher-enrichment",
+              visualId: "791381/m09/router-networks", motion: true,
+              source: src(54),
+              title: "رسم توضيحي: الراوتر بين الشبكات",
+              alt: "رسم يبيّن راوترًا يربط شبكتين محليتين ويمرّر البيانات بينهما وإلى الإنترنت.",
+              caption: "الراوتر يربط شبكتين مختلفتين ويمرّر البيانات إلى الإنترنت.",
             },
           ],
         },

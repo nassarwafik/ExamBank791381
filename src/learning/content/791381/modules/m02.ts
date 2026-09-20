@@ -96,6 +96,15 @@ const m02: ContentModule = {
               id: "m02-l01-p01-result", type: "callout", origin: "book", kind: "summary", title: "النتيجة",
               spans: [{ text: "إذن " }, { text: "01111011", dir: "ltr", style: "code" }, { text: " في الثنائي تساوي " }, { text: "123", dir: "ltr", style: "code" }, { text: " في العشري. اجمع قيم الصناديق المضيئة فقط." }],
             },
+            {
+              // ENRICHMENT (Batch 2): SVG visual enrichment appended after the book content.
+              id: "m02-l01-p01-visual", type: "visual", origin: "teacher-enrichment",
+              visualId: "791381/m02/binary-to-decimal", motion: true,
+              source: src(16),
+              title: "مخطط: قيمة كل خانة ثنائية",
+              alt: "رسم يبيّن خانات القيَم (128 حتى 1)، وتُضيء الخانات التي تحتها 1 ويُجمع مجموعها ليساوي 123.",
+              caption: "اجمع قيَم الخانات المضيئة فقط: 64+32+16+8+2+1 = 123.",
+            },
           ],
         },
         // PDF 17 — تحويل من العشري للثنائي (new page)
@@ -197,6 +206,15 @@ const m02: ContentModule = {
               id: "m02-l01-p03-remember", type: "callout", origin: "book", kind: "remember", title: "تذكّر",
               spans: [{ text: "رتّب المجموعات من اليسار لليمين بنفس ترتيب رموز Hex دون خلط." }],
             },
+            {
+              // ENRICHMENT (Batch 2): SVG visual enrichment appended after the book content.
+              id: "m02-l01-p03-visual", type: "visual", origin: "teacher-enrichment",
+              visualId: "791381/m02/hex-to-binary", motion: true,
+              source: src(20),
+              title: "مخطط: كل رمز Hex إلى 4 بتات",
+              alt: "رسم يبيّن تحويل كل رمز سادس عشري إلى أربعة أرقام ثنائية، مثل A إلى 1010.",
+              caption: "كل رمز Hex يتحوّل إلى مجموعة من 4 بتات بالترتيب نفسه.",
+            },
           ],
         },
         // PDF 21 — من الثنائي إلى السادس عشر (new page)
@@ -280,6 +298,15 @@ const m02: ContentModule = {
                 { text: "IPv6", dir: "ltr", style: "code" },
                 { text: " وقناع الشبكة لاحقًا." },
               ],
+            },
+            {
+              // ENRICHMENT (Batch 2): SVG visual enrichment appended after the book content.
+              id: "m02-l01-p09-visual", type: "visual", origin: "teacher-enrichment",
+              visualId: "791381/m02/conversion-map", motion: true,
+              source: src(23),
+              title: "مخطط: خريطة التحويلات",
+              alt: "مخطط مثلث يربط الأنظمة الثلاثة: العشري والثنائي والسادس عشري مع اتجاهات التحويل بينها.",
+              caption: "يمكن التنقّل بين العشري والثنائي والسادس عشري في الاتجاهين.",
             },
           ],
         },

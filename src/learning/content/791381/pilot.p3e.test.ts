@@ -287,13 +287,16 @@ describe("Phase 3E — LTR technical tokens are authored explicitly LTR (never r
 });
 
 describe("Phase 3E — provenance + answer-key safety", () => {
-  it("exactly TWO enrichment blocks (the octets diagram and the PDF-28 guided reveal); every other block is origin:book", () => {
+  it("the octets diagram, the PDF-28 guided reveal, and the four Batch-2 SVG visuals are the only enrichment; every other block is origin:book", () => {
     const enrich: string[] = [];
     for (const p of pages) for (const b of p.blocks) {
       if (b.origin === "teacher-enrichment") enrich.push(b.id);
       else expect(b.origin, b.id).toBe("book");
     }
-    expect(enrich).toEqual(["m07-l01-p03-octets", "m07-l01-p04-guided"]);
+    expect([...enrich].sort()).toEqual([
+      "m07-l01-p01-visual", "m07-l01-p02-visual", "m07-l01-p03-octets", "m07-l01-p04-guided",
+      "m07-l02-p01-visual", "m07-l02-p04-visual",
+    ]);
     // an enrichment surface never claims book provenance in its wording
     expect(JSON.stringify(m07)).not.toContain("من الكتاب");
   });

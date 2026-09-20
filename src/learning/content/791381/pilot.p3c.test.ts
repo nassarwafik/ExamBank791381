@@ -149,13 +149,16 @@ describe("Phase 3C — numeric fidelity (exact source values, correct digit orde
 });
 
 describe("Phase 3C — provenance + answer-key safety", () => {
-  it("every m02 converted block is origin:book except the single QR clarification (teacher-enrichment)", () => {
+  it("every m02 converted block is origin:book except the QR clarification and the Batch-2 SVG visual enrichments", () => {
     const enrich: string[] = [];
     for (const p of m02Pages) for (const b of p.blocks as ContentBlock[]) {
       if (b.origin === "teacher-enrichment") enrich.push(b.id);
       else expect(b.origin, b.id).toBe("book");
     }
-    expect(enrich).toEqual(["m02-l01-p08-qrnote"]);
+    // the original QR clarification plus the three Batch-2 visual-enrichment blocks (m02 selections)
+    expect([...enrich].sort()).toEqual([
+      "m02-l01-p01-visual", "m02-l01-p03-visual", "m02-l01-p08-qrnote", "m02-l01-p09-visual",
+    ]);
   });
 
   it("adds NO practice blocks, NO answer keys, and NO embedded image / iframe / external link (exercises are a plain list)", () => {

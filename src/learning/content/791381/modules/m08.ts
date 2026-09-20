@@ -125,6 +125,15 @@ const m08: ContentModule = {
                 },
               },
             },
+            {
+              // ENRICHMENT (Batch 2): SVG visual enrichment appended after the book content.
+              id: "m08-l01-p01-visual", type: "visual", origin: "teacher-enrichment",
+              visualId: "791381/m08/address-classes", motion: true,
+              source: src(35),
+              title: "مخطط: فئات العناوين على خط الأرقام",
+              alt: "مخطط خط أرقام يقسّم الرقم الأول إلى فئات: A من 1 إلى 126، وB من 128 إلى 191، وC من 192 إلى 223.",
+              caption: "الرقم الأول وحده يحدّد الفئة: A ثم B ثم C.",
+            },
           ],
         },
         // PDF 36 — تدريب: لأي فئة ينتمي العنوان؟ (the printed worksheet, answerable in place)
@@ -216,6 +225,15 @@ const m08: ContentModule = {
                   hints: ["ضع القناع تحت العنوان قسمًا تحت قسم.", "255 = شبكة، 0 = جهاز."],
                 },
               },
+            },
+            {
+              // ENRICHMENT (Batch 2): SVG visual enrichment appended after the book content.
+              id: "m08-l01-p03-visual", type: "visual", origin: "teacher-enrichment",
+              visualId: "791381/m08/subnet-mask", motion: true,
+              source: src(37),
+              title: "مخطط: قناع الشبكة",
+              alt: "مخطط يبيّن عنوانًا فوق قناعه، حيث 255 تُحدّد جزء الشبكة و0 تُحدّد جزء الجهاز.",
+              caption: "‏255 = جزء الشبكة · 0 = جزء الجهاز.",
             },
           ],
         },
@@ -572,6 +590,15 @@ const m08: ContentModule = {
                   hints: ["كم قسمًا يخص الشبكة مع /16؟", "قارن أول قسمين فقط."],
                 },
               },
+            },
+            {
+              // ENRICHMENT (Batch 2): SVG visual enrichment appended after the book content.
+              id: "m08-l03-p01-visual", type: "visual", origin: "teacher-enrichment",
+              visualId: "791381/m08/same-network", motion: true,
+              source: src(43),
+              title: "مخطط: أجهزة في نفس الشبكة",
+              alt: "مخطط يبيّن أربعة أجهزة تشترك في جزء الشبكة 192.168.1 ويختلف جزء الجهاز الأخير فقط.",
+              caption: "نفس جزء الشبكة ويختلف جزء الجهاز فقط، فتتواصل مباشرة.",
             },
           ],
         },
