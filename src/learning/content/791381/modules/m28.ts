@@ -801,7 +801,7 @@ const m28: ContentModule = {
             {
               id: "m28-l03-p04-q1", type: "practice", origin: "teacher-enrichment",
               question: {
-                kind: "shortInput", prompt: "اكتب الشكل النهائي المصغّر للعنوان 2001:0DB8:0000:0000:0000:0000:0000:0001", answer: "2001:DB8::1",
+                kind: "shortInput", prompt: "اكتب الشكل النهائي المصغّر للعنوان الكامل الوارد في الجدول (يبدأ بـ 2001:0DB8 وينتهي بـ 0001).", answer: "2001:DB8::1",
                 feedback: {
                   hints: ["السطر الأخير في الجدول.", "احذف الأصفار البادئة ثم استبدل سلسلة الأصفار بـ :: مرة واحدة."],
                   correctFeedback: "صحيح — 2001:DB8::1.",
