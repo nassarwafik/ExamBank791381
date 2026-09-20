@@ -282,7 +282,7 @@ describe("Batch 8 — the REAL book CLI exercises (simulation / cli-terminal / v
     expect([noShut.completed, goalStatus(ex, noShut.state)[2].met]).toEqual([false, false]);
     const partTwoFirst = drive("enable", "conf t", "ip dhcp excluded-address 192.168.1.1 192.168.1.9", "ip dhcp pool LAN", "network 192.168.1.0 255.255.255.0", "default-router 192.168.1.254", "dns-server 8.8.8.8", "exit", "interface g0/0", "ip address 192.168.1.254 255.255.255.0", "no shutdown");
     expect(partTwoFirst.completed).toBe(true);
-    expect(createSession(ex).state).toEqual({ device: "router", hostname: "Router", mode: "user", selectedInterfaces: [], interfaces: {}, vlans: {}, dhcpPools: {}, dhcpExcluded: [], vtp: {}, lines: { console: { login: false }, vty: { login: false } }, passwordEncryption: false, routing: {}, acls: {} });   // routing / acls since Batch 10
+    expect(createSession(ex).state).toEqual({ device: "router", hostname: "Router", mode: "user", selectedInterfaces: [], interfaces: {}, vlans: {}, dhcpPools: {}, dhcpExcluded: [], vtp: {}, lines: { console: { login: false }, vty: { login: false } }, passwordEncryption: false, routing: {}, acls: {}, staticRoutes: [] });   // routing / acls since Batch 10; staticRoutes since the final summary (m28)
   });
 });
 

@@ -11,8 +11,11 @@
 // Batch 10 added (only what the book prints on PDF 201–229): the `router` mode entered by `router ospf <id>` /
 // `router eigrp <as>` with its `network` forms, numbered standard / extended access lists (`access-list …`),
 // `ip access-group <n> in|out` on an interface, and `show ip route`.
+// Final summary (m28) added (only what the book prints on PDF 246 / 251 / 253): `switchport trunk native vlan <id>`
+// on an interface, the minimal static route `ip route <network> <mask> <next-hop>` (incl. the default route
+// `ip route 0.0.0.0 0.0.0.0 <next-hop>`) and the optional wildcard of the EIGRP `network <address> [<wildcard>]`.
 
-/** The CLI modes the simulator models. NAT, named ACLs, static routes … are deliberately absent. */
+/** The CLI modes the simulator models. NAT, named ACLs, RIP … are deliberately absent. */
 export type CliMode = "user" | "privileged" | "global" | "interface" | "subinterface" | "vlan" | "dhcp" | "line" | "router";
 export const CLI_MODES: readonly CliMode[] = ["user", "privileged", "global", "interface", "subinterface", "vlan", "dhcp", "line", "router"];
 
@@ -39,6 +42,8 @@ export interface CliInterfaceState {
   accessVlan?: number;
   /** Sorted, de-duplicated VLAN ids allowed on a trunk. */
   allowedVlans?: number[];
+  /** `switchport trunk native vlan <id>` (final summary, PDF 246). */
+  nativeVlan?: number;
   ipAddress?: string;
   subnetMask?: string;
   /** `encapsulation dot1Q N` on a sub-interface. */
@@ -73,9 +78,15 @@ export interface CliOspfNetwork { address: string; wildcard: string; area: numbe
 export interface CliRoutingState {
   /** `router ospf <process-id>` + its `network … area …` statements (authored order, de-duplicated). */
   ospf?: { id: number; networks: CliOspfNetwork[] };
-  /** `router eigrp <as>` + its classful `network <address>` statements (authored order, de-duplicated). */
+  /**
+   * `router eigrp <as>` + its `network` statements as canonical texts («10.0.0.0» or, with the optional wildcard the
+   * book prints on PDF 253, «192.168.1.0 0.0.0.255»), authored order, de-duplicated.
+   */
   eigrp?: { id: number; networks: string[] };
 }
+
+/** One static route `ip route <network> <mask> <next-hop>` (final summary, PDF 251); the default route has network and mask 0.0.0.0. */
+export interface CliStaticRoute { network: string; mask: string; nextHop: string }
 
 export interface CliDhcpPool {
   network?: string;
@@ -124,6 +135,8 @@ export interface CliDeviceState {
   routing: CliRoutingState;
   /** Numbered access lists keyed by the list number as a string (Batch 10); entries in authored order. */
   acls: Record<string, CliAclEntry[]>;
+  /** Static routes in authored order, de-duplicated (final summary). */
+  staticRoutes: CliStaticRoute[];
 }
 
 /** The CLOSED set of commands the simulator understands. Anything else is "unknown" and never changes state. */
@@ -141,6 +154,7 @@ export type ParsedCommand =
   | { id: "switchport-mode"; mode: "access" | "trunk" }
   | { id: "switchport-access-vlan"; vlanId: number }
   | { id: "switchport-trunk-allowed-vlan"; vlans: number[] }
+  | { id: "switchport-trunk-native-vlan"; vlanId: number }
   | { id: "switchport-port-security" }
   | { id: "port-security-maximum"; maximum: number }
   | { id: "port-security-mac-address"; mac: string }
@@ -151,10 +165,11 @@ export type ParsedCommand =
   | { id: "shutdown" }
   | { id: "encapsulation-dot1q"; vlanId: number }
   | { id: "ip-dhcp-pool"; name: string }
-  /** `network` has three book forms: DHCP pool (address + mask), OSPF (address + wildcard + area), EIGRP (address). */
+  /** `network` has three book forms: DHCP pool (address + mask), OSPF (address + wildcard + area), EIGRP (address [+ wildcard]). */
   | { id: "network"; form: "dhcp"; address: string; mask: string }
   | { id: "network"; form: "ospf"; address: string; wildcard: string; area: number }
-  | { id: "network"; form: "eigrp"; address: string }
+  | { id: "network"; form: "eigrp"; address: string; wildcard?: string }
+  | { id: "ip-route"; network: string; mask: string; nextHop: string }
   | { id: "router"; protocol: CliRoutingProtocol; number: number }
   | { id: "access-list"; number: number; entry: CliAclEntry }
   | { id: "ip-access-group"; number: number; direction: CliAclDirection }
@@ -197,7 +212,7 @@ export type CliExecStatus = CliExecResult["status"];
 export type CliStateCondition =
   | { kind: "mode"; mode: CliMode }
   | { kind: "hostname"; value: string }
-  | { kind: "interface"; name: string; prop: "switchportMode" | "accessVlan" | "allowedVlans" | "ipAddress" | "subnetMask" | "encapsulationVlan" | "shutdown" | "accessGroup"; value: string | number | boolean | number[] }
+  | { kind: "interface"; name: string; prop: "switchportMode" | "accessVlan" | "allowedVlans" | "nativeVlan" | "ipAddress" | "subnetMask" | "encapsulationVlan" | "shutdown" | "accessGroup"; value: string | number | boolean | number[] }
   | { kind: "port-security"; name: string; prop: "enabled" | "maximum" | "macAddress" | "sticky" | "violation"; value: string | number | boolean }
   | { kind: "vlan"; vlanId: number }
   | { kind: "dhcp-pool"; name: string; prop: "network" | "mask" | "defaultRouter" | "dnsServers"; value: string | string[] }
@@ -208,7 +223,9 @@ export type CliStateCondition =
   /** `id`: the process / AS number; `network`: one canonical statement («192.168.1.0 0.0.0.255 area 0» / «10.0.0.0»). */
   | { kind: "routing"; protocol: CliRoutingProtocol; prop: "id" | "network"; value: number | string }
   /** `entry`: one canonical line («permit 192.168.1.0 0.0.0.255», «deny any», «permit tcp any any eq 80»); `count`: number of lines. */
-  | { kind: "acl"; number: number; prop: "entry" | "count"; value: string | number };
+  | { kind: "acl"; number: number; prop: "entry" | "count"; value: string | number }
+  /** `route`: one canonical static route («192.168.2.0 255.255.255.0 10.0.0.2», «0.0.0.0 0.0.0.0 10.0.0.2»); `count`: number of static routes. */
+  | { kind: "static-route"; prop: "route" | "count"; value: string | number };
 
 /** Argument values an expectation may pin on a command (compared canonically — see exercise.ts). */
 export type CliExpectedArgs = Record<string, string | number | boolean | (string | number)[]>;

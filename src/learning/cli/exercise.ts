@@ -5,7 +5,7 @@ import type { CliDeviceState, CliExecResult, CliExerciseConfig, CliExpectation, 
 import { executeCommand } from "./engine";
 import { NAVIGATION_COMMANDS } from "./grammar";
 import { createInitialState, promptFor, CLI_MODE_LABEL } from "./state";
-import { normalizeInterfaceName, aclEntryText, ospfNetworkText } from "./normalize";
+import { normalizeInterfaceName, aclEntryText, ospfNetworkText, staticRouteText } from "./normalize";
 
 export type CliTone = "success" | "error" | "info";
 export interface CliHistoryEntry {
@@ -120,6 +120,10 @@ export function conditionMet(state: CliDeviceState, cond: CliStateCondition): bo
       const list = state.acls[String(cond.number)] ?? [];
       if (cond.prop === "count") return list.length === cond.value;
       return list.some(e => sameValue(aclEntryText(e), cond.value));
+    }
+    case "static-route": {
+      if (cond.prop === "count") return state.staticRoutes.length === cond.value;
+      return state.staticRoutes.some(r => sameValue(staticRouteText(r), cond.value));
     }
   }
 }

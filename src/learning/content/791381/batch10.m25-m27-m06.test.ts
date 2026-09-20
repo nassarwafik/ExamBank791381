@@ -396,7 +396,7 @@ describe("Batch 10 — the fifteen REAL book CLI exercises (simulation / cli-ter
     expect(last(submitCommand(c, createSession(c), "hostname R3")).status).toBe("not-required");
     const eg = exOf("m27-l03-p03-sim");
     let es = drive(eg, "router eigrp 100", "network 192.168.1.0 0.0.0.255 area 0");
-    expect([es.stepIndex, last(es).status, last(es).feedback]).toEqual([1, "invalid", CLI_FEEDBACK.invalid("في EIGRP لا نكتب area؛ الصيغة: network <address>")]);
+    expect([es.stepIndex, last(es).status, last(es).feedback]).toEqual([1, "invalid", CLI_FEEDBACK.invalid("في EIGRP لا نكتب area؛ الصيغة: network <address> [<wildcard>]")]);
     es = ["network 192.168.1.0", "network 10.0.0.0"].reduce((acc, l) => submitCommand(eg, acc, l), es);
     expect([es.completed, es.state.routing.eigrp]).toEqual([true, { id: 100, networks: ["192.168.1.0", "10.0.0.0"] }]);
     const t = exOf("m27-l03-p04-sim");

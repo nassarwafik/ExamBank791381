@@ -1,5 +1,5 @@
 // Learning Materials — CLI simulator: input NORMALIZATION + value parsers. Pure string functions, no state.
-import type { CliAclEntry, CliOspfNetwork } from "./types";
+import type { CliAclEntry, CliOspfNetwork, CliStaticRoute } from "./types";
 //
 // Rules (v1): trim, collapse runs of whitespace, case-insensitive KEYWORDS (handled by the grammar), values kept as
 // typed, interface spellings folded to one canonical short form where that is safe (FastEthernet0/1 = fa0/1 =
@@ -166,4 +166,19 @@ export function aclEntryText(e: CliAclEntry): string {
 /** The canonical text of an OSPF network statement («192.168.1.0 0.0.0.255 area 0»). */
 export function ospfNetworkText(n: CliOspfNetwork): string {
   return n.address + " " + n.wildcard + " area " + n.area;
+}
+
+/** The canonical text of an EIGRP network statement («10.0.0.0», or «192.168.1.0 0.0.0.255» with the optional wildcard of PDF 253). */
+export function eigrpNetworkText(address: string, wildcard?: string): string {
+  return wildcard === undefined ? address : address + " " + wildcard;
+}
+
+/** A static-route mask: a contiguous subnet mask, or 0.0.0.0 for the default route (PDF 251). */
+export function isRouteMask(raw: string): boolean {
+  return raw === "0.0.0.0" || isSubnetMask(raw);
+}
+
+/** The canonical text of a static route («192.168.2.0 255.255.255.0 10.0.0.2»). */
+export function staticRouteText(r: CliStaticRoute): string {
+  return r.network + " " + r.mask + " " + r.nextHop;
 }
