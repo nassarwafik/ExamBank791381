@@ -30,8 +30,8 @@ const COURSE_MANIFESTS: Record<string, ManifestLoader> = {
 };
 
 // Module BODY loaders per course. Each converted module body is registered here as its own
-// `import("./791381/modules/<id>")` chunk (m01, m02, m07–m18, m03, m19, m04, m20–m22, m23, m24 and m05 today); manifest modules without an entry are still
-// skeleton-only and the Reader shows them as «قيد الإعداد».
+// `import("./791381/modules/<id>")` chunk (m01, m02, m07–m18, m03, m19, m04, m20–m22, m23, m24, m05, m25–m27 and m06 today — every
+// module of the 791381 manifest); a manifest module without an entry would be skeleton-only and the Reader would show it as «قيد الإعداد».
 const COURSE_MODULE_LOADERS: Record<string, Record<string, ModuleLoader>> = {
   // REAL module bodies, each its own lazy chunk; the main bundle imports none of these eagerly.
   //   m01 — Unit 1 (PDF 7–13), complete (Phase 3B)
@@ -59,9 +59,14 @@ const COURSE_MODULE_LOADERS: Record<string, Record<string, ModuleLoader>> = {
   //   m23 — Batch 9 «Port Security» (PDF 180–184): NEW stable id, order 21.
   //   m24 — Batch 9 «حماية أجهزة Cisco» (PDF 185–191): NEW stable id, order 22.
   //   m05 — Batch 9 «مرجع أوامر Cisco» (PDF 192–199): the historical Phase-2 skeleton COMPLETED IN PLACE (same id,
-  //         title, lesson l01 and historical page ids p01/p02), order 23. PDF 200+ (the sixth-batch cover: WAN,
-  //         routing, ACL m06) is not converted.
-  // The remaining skeleton module (m06) has no body yet, so the Reader shows it as «قيد الإعداد».
+  //         title, lesson l01 and historical page ids p01/p02), order 23.
+  //   m25 — Batch 10 «مراجعة الأوامر» (PDF 200 cover + 201–206): NEW stable id, order 24.
+  //   m26 — Batch 10 «الشبكة الواسعة WAN» (PDF 207–209): NEW stable id, order 25.
+  //   m27 — Batch 10 «بروتوكولات التوجيه» (PDF 210–222): NEW stable id, order 26.
+  //   m06 — Batch 10 «قوائم التحكم ACL» (PDF 223–229): the historical Phase-2 skeleton COMPLETED IN PLACE (same id,
+  //         title, lesson l01 and historical page id p01), order 27. PDF 230+ (the final reference: glossary, closing
+  //         word, visual summary) is not converted.
+  // Every skeleton module of the Phase-2 manifest now has a body; nothing is shown as «قيد الإعداد».
   "791381": {
     "791381-m01": () => import("./791381/modules/m01"),
     "791381-m02": () => import("./791381/modules/m02"),
@@ -86,6 +91,10 @@ const COURSE_MODULE_LOADERS: Record<string, Record<string, ModuleLoader>> = {
     "791381-m23": () => import("./791381/modules/m23"),
     "791381-m24": () => import("./791381/modules/m24"),
     "791381-m05": () => import("./791381/modules/m05"),
+    "791381-m25": () => import("./791381/modules/m25"),
+    "791381-m26": () => import("./791381/modules/m26"),
+    "791381-m27": () => import("./791381/modules/m27"),
+    "791381-m06": () => import("./791381/modules/m06"),
   },
 };
 

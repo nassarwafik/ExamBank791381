@@ -7,8 +7,8 @@
 // command the simulator does not implement, nor a value the learner could never type.
 import type { CliCommandId, CliExerciseConfig, CliExpectation, CliExpectedArgs, CliGoal, CliStateCondition, CliStep } from "./types";
 import { CLI_DEVICE_TYPES, CLI_EXERCISE_KINDS, CLI_MODES } from "./types";
-import { COMMANDS } from "./grammar";
-import { isSimpleName, isIpv4, isSubnetMask, normalizeInterfaceName, isCiscoMac, PORT_SECURITY_MAX } from "./normalize";
+import { COMMANDS, parseCommand } from "./grammar";
+import { isSimpleName, isIpv4, isSubnetMask, normalizeInterfaceName, isCiscoMac, aclEntryText, ospfNetworkText, PORT_SECURITY_MAX, ACL_NUMBER_MAX, ROUTING_ID_MAX, OSPF_AREA_MAX, PORT_MAX } from "./normalize";
 
 const KNOWN_IDS = new Set<string>(COMMANDS.map(c => c.id));
 const isStr = (v: unknown): v is string => typeof v === "string" && v.trim().length > 0;
@@ -21,13 +21,27 @@ const isIfName = (v: unknown): v is string => isStr(v) && normalizeInterfaceName
 const isIfList = (v: unknown): v is string[] => Array.isArray(v) && v.length > 0 && v.every(isIfName);
 const isMax = (v: unknown): v is number => Number.isInteger(v) && (v as number) >= 1 && (v as number) <= PORT_SECURITY_MAX;
 const strList = (v: unknown, max: number): string[] => (Array.isArray(v) ? v.filter(isStr).slice(0, max) : []);
+const intIn = (min: number, max: number) => (v: unknown): v is number => Number.isInteger(v) && (v as number) >= min && (v as number) <= max;
+const isAclNumber = intIn(1, ACL_NUMBER_MAX);
+/** Parse a canonical text with the RUNTIME grammar and accept it only when it round-trips unchanged. */
+const roundTrips = (line: string, canonical: (cmd: Extract<ReturnType<typeof parseCommand>, { kind: "ok" }>["command"]) => string | null) => {
+  const r = parseCommand(line);
+  return r.kind === "ok" && canonical(r.command) === line;
+};
+/** «<address> <wildcard> area <n>» exactly as the runtime would re-print it. */
+const isOspfNetworkText = (v: unknown): boolean => isStr(v) && roundTrips("network " + v, c => (c.id === "network" && c.form === "ospf" ? "network " + ospfNetworkText(c) : null));
+/** One ACL entry text («permit host 192.168.1.10», «permit tcp any any eq 80») that the runtime parses back identically. */
+const isAclEntryText = (number: number) => (v: unknown): boolean => isStr(v) && roundTrips(`access-list ${number} ` + v, c => (c.id === "access-list" && c.number === number ? `access-list ${number} ` + aclEntryText(c.entry) : null));
+/** «<number> in|out» as `ip access-group` prints it. */
+const isAccessGroupText = (v: unknown): boolean => isStr(v) && roundTrips("ip access-group " + v, c => (c.id === "ip-access-group" ? "ip access-group " + c.number + " " + c.direction : null));
+const isAclAddressText = (v: unknown): boolean => isStr(v) && roundTrips("access-list 1 permit " + v, c => (c.id === "access-list" ? "access-list 1 permit " + c.entry.source : null));
 const rec = (v: unknown): Record<string, unknown> | null => (v && typeof v === "object" && !Array.isArray(v) ? (v as Record<string, unknown>) : null);
 
 /** Value validators per condition kind + prop (the runtime grammar's own rules). */
 const IF_PROP: Record<string, (v: unknown) => boolean> = {
   switchportMode: v => v === "access" || v === "trunk",
   accessVlan: isVlanId, encapsulationVlan: isVlanId, allowedVlans: isVlanList,
-  ipAddress: v => isStr(v) && isIpv4(v), subnetMask: v => isStr(v) && isSubnetMask(v), shutdown: isBool,
+  ipAddress: v => isStr(v) && isIpv4(v), subnetMask: v => isStr(v) && isSubnetMask(v), shutdown: isBool, accessGroup: isAccessGroupText,
 };
 const PS_PROP: Record<string, (v: unknown) => boolean> = {
   enabled: isBool, maximum: isMax, macAddress: v => isStr(v) && isCiscoMac(v), sticky: isBool, violation: v => v === "shutdown",
@@ -55,6 +69,18 @@ function readCondition(v: unknown): CliStateCondition | null {
     case "vtp": { const p = propOf(VTP_PROP); return p ? { kind: "vtp", prop: p as "mode" | "domain" | "password", value: c.value as string } : null; }
     case "line": { const p = propOf(LINE_PROP); return (c.line === "console" || c.line === "vty") && p ? { kind: "line", line: c.line, prop: p as "password" | "login", value: c.value as never } : null; }
     case "device": { const p = propOf(DEVICE_PROP); return p ? { kind: "device", prop: p as "enableSecret" | "passwordEncryption" | "banner", value: c.value as never } : null; }
+    case "routing": {
+      if (c.protocol !== "ospf" && c.protocol !== "eigrp") return null;
+      if (c.prop === "id") return intIn(1, ROUTING_ID_MAX)(c.value) ? { kind: "routing", protocol: c.protocol, prop: "id", value: c.value } : null;
+      if (c.prop !== "network") return null;
+      const ok = c.protocol === "ospf" ? isOspfNetworkText(c.value) : isStr(c.value) && isIpv4(c.value);
+      return ok ? { kind: "routing", protocol: c.protocol, prop: "network", value: c.value as string } : null;
+    }
+    case "acl": {
+      if (!isAclNumber(c.number)) return null;
+      if (c.prop === "count") return intIn(0, 40)(c.value) ? { kind: "acl", number: c.number, prop: "count", value: c.value } : null;
+      return c.prop === "entry" && isAclEntryText(c.number)(c.value) ? { kind: "acl", number: c.number, prop: "entry", value: c.value as string } : null;
+    }
     default: return null;
   }
 }
@@ -65,8 +91,12 @@ const ARG_CHECK: Record<string, (v: unknown) => boolean> = {
   mode: v => v === "access" || v === "trunk" || v === "server" || v === "client",
   address: v => isStr(v) && isIpv4(v), mask: v => isStr(v) && isSubnetMask(v), addresses: v => Array.isArray(v) && v.length > 0 && v.every(x => isStr(x) && isIpv4(x)),
   from: v => isStr(v) && isIpv4(v), to: v => isStr(v) && isIpv4(v), password: v => isStr(v) && isSimpleName(v), secret: v => isStr(v) && isSimpleName(v),
-  maximum: isMax, mac: v => isStr(v) && isCiscoMac(v), action: v => v === "shutdown", line: v => v === "console" || v === "vty", text: isStr,
-  what: v => ["running-config", "startup-config", "ip-interface-brief", "vlan-brief", "ip-dhcp-pool", "vtp-status", "port-security"].includes(v as string), iface: isIfName,
+  maximum: isMax, mac: v => isStr(v) && isCiscoMac(v), action: v => v === "shutdown" || v === "permit" || v === "deny", line: v => v === "console" || v === "vty", text: isStr,
+  what: v => ["running-config", "startup-config", "ip-interface-brief", "vlan-brief", "ip-dhcp-pool", "vtp-status", "port-security", "ip-route"].includes(v as string), iface: isIfName,
+  // Batch 10 — routing and ACL arguments.
+  form: v => v === "dhcp" || v === "ospf" || v === "eigrp", wildcard: v => isStr(v) && isIpv4(v), area: intIn(0, OSPF_AREA_MAX),
+  protocol: v => ["ospf", "eigrp", "tcp", "udp", "icmp", "ip"].includes(v as string), number: intIn(1, Math.max(ROUTING_ID_MAX, ACL_NUMBER_MAX)),
+  source: isAclAddressText, destination: isAclAddressText, port: intIn(1, PORT_MAX), direction: v => v === "in" || v === "out",
 };
 
 function readExpectation(v: unknown): CliExpectation | null {

@@ -1,4 +1,5 @@
 // Learning Materials — CLI simulator: input NORMALIZATION + value parsers. Pure string functions, no state.
+import type { CliAclEntry, CliOspfNetwork } from "./types";
 //
 // Rules (v1): trim, collapse runs of whitespace, case-insensitive KEYWORDS (handled by the grammar), values kept as
 // typed, interface spellings folded to one canonical short form where that is safe (FastEthernet0/1 = fa0/1 =
@@ -119,4 +120,50 @@ export function parseIntInRange(raw: string, min: number, max: number): number |
   if (!/^(0|[1-9]\d{0,5})$/.test(raw)) return null;
   const n = Number(raw);
   return n >= min && n <= max ? n : null;
+}
+
+/** Number of leading one-bits of a valid subnet mask (255.255.255.0 → 24). */
+export function prefixLength(mask: string): number {
+  return mask.split(".").map(o => Number(o).toString(2).padStart(8, "0")).join("").split("1").length - 1;
+}
+
+/** The network address of `address` under `mask` (192.168.1.1 / 255.255.255.0 → 192.168.1.0). */
+export function networkOf(address: string, mask: string): string {
+  const a = address.split(".").map(Number), m = mask.split(".").map(Number);
+  return a.map((o, i) => o & m[i]).join(".");
+}
+
+/** The numbered access-list ranges the book teaches (PDF 224 / 227): 1–99 standard, 100–199 extended. */
+export const ACL_STANDARD_MAX = 99;
+export const ACL_NUMBER_MAX = 199;
+/** The largest routing process / AS number and OSPF area the simulator accepts. */
+export const ROUTING_ID_MAX = 65535;
+export const OSPF_AREA_MAX = 65535;
+export const PORT_MAX = 65535;
+
+/**
+ * An ACL source / destination as the book writes it: «any», «host <address>» or «<address> <wildcard>». Returns
+ * the canonical text and how many tokens it consumed, or why it is incomplete / invalid.
+ */
+export function parseAclAddress(tokens: string[]): { text: string; used: number } | { incomplete: string } | { invalid: string } {
+  if (tokens.length === 0) return { incomplete: "المطلوب: عنوان الشبكة مع wildcard، أو host ثم عنوان جهاز، أو any" };
+  const first = tokens[0].toLowerCase();
+  if (first === "any") return { text: "any", used: 1 };
+  if (first === "host") {
+    if (tokens.length < 2) return { incomplete: "المطلوب: عنوان الجهاز بعد host" };
+    return isIpv4(tokens[1]) ? { text: "host " + tokens[1], used: 2 } : { invalid: "عنوان الجهاز غير صالح: " + tokens[1] };
+  }
+  if (!isIpv4(tokens[0])) return { invalid: "عنوان غير صالح: " + tokens[0] };
+  if (tokens.length < 2) return { incomplete: "المطلوب: wildcard بعد عنوان الشبكة (مثل 0.0.0.255)" };
+  return isIpv4(tokens[1]) ? { text: tokens[0] + " " + tokens[1], used: 2 } : { invalid: "wildcard غير صالح: " + tokens[1] };
+}
+
+/** The canonical one-line text of an ACL entry («permit 192.168.1.0 0.0.0.255», «permit tcp any any eq 80»). */
+export function aclEntryText(e: CliAclEntry): string {
+  return [e.action, e.protocol, e.source, e.destination, e.port === undefined ? undefined : "eq " + e.port].filter(Boolean).join(" ");
+}
+
+/** The canonical text of an OSPF network statement («192.168.1.0 0.0.0.255 area 0»). */
+export function ospfNetworkText(n: CliOspfNetwork): string {
+  return n.address + " " + n.wildcard + " area " + n.area;
 }

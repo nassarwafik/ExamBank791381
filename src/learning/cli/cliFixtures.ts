@@ -1,6 +1,6 @@
 // Learning Materials — CLI simulator: SYNTHETIC exercise fixtures for tests ONLY (imported by *.test.ts(x)).
 // These are generic demo scenarios (a switch trunk task, a guided walkthrough, a challenge, a Port Security task,
-// a device-hardening task) that exercise the engine independently of any book content; they are never shipped to
+// a device-hardening task, an OSPF task, ACL task / challenge) that exercise the engine independently of any book content; they are never shipped to
 // students and never wired into a module.
 import type { CliExerciseConfig } from "./types";
 import type { SimulationBlock } from "../content/types";
@@ -69,6 +69,43 @@ export const hardeningTask: CliExerciseConfig = {
     { id: "g-enc", label: "تشفير كلمات المرور مفعّل", condition: { kind: "device", prop: "passwordEncryption", value: true } },
   ],
   hints: ["كل خط دخول له وضع خاص يبدأ بـ line.", "داخل الخط: password ثم login."],
+};
+
+/** Batch 10 — an OSPF TASK on a router (PDF 216): process 1 announcing the two networks of the book's example. */
+export const ospfTask: CliExerciseConfig = {
+  kind: "task",
+  device: "router",
+  hostname: "R1",
+  goals: [
+    { id: "g-proc", label: "عملية OSPF رقم 1 مفعّلة", condition: { kind: "routing", protocol: "ospf", prop: "id", value: 1 } },
+    { id: "g-net1", label: "الشبكة 192.168.1.0 معلنة في area 0", condition: { kind: "routing", protocol: "ospf", prop: "network", value: "192.168.1.0 0.0.0.255 area 0" } },
+    { id: "g-net2", label: "الشبكة 10.0.0.0 معلنة في area 0", condition: { kind: "routing", protocol: "ospf", prop: "network", value: "10.0.0.0 0.0.0.3 area 0" } },
+  ],
+  hints: ["ابدأ بـ router ospf ثم رقم العملية.", "كل شبكة تُعلن بأمر network مع wildcard و area."],
+};
+
+/** Batch 10 — a standard-ACL TASK (PDF 226): list 40 permits the LAN and is applied inbound on g0/0. */
+export const aclTask: CliExerciseConfig = {
+  kind: "task",
+  device: "router",
+  goals: [
+    { id: "g-entry", label: "القائمة 40 تسمح للشبكة 192.168.1.0/24", condition: { kind: "acl", number: 40, prop: "entry", value: "permit 192.168.1.0 0.0.0.255" } },
+    { id: "g-count", label: "القائمة 40 فيها سطر واحد", condition: { kind: "acl", number: 40, prop: "count", value: 1 } },
+    { id: "g-apply", label: "القائمة 40 مطبّقة على g0/0 بالاتجاه in", condition: { kind: "interface", name: "g0/0", prop: "accessGroup", value: "40 in" } },
+  ],
+  hints: ["القائمة تُكتب في وضع الإعداد العام بـ access-list.", "التطبيق يكون داخل الواجهة بـ ip access-group."],
+};
+
+/** Batch 10 — an extended-ACL CHALLENGE (PDF 227): the book's HTTP line, then the same rule for HTTPS. */
+export const aclChallenge: CliExerciseConfig = {
+  kind: "challenge",
+  device: "router",
+  startMode: "global",
+  steps: [
+    { id: "c1", instruction: "اكتب القاعدة التي تسمح بمرور HTTP (المنفذ 80) لأي مصدر وأي وجهة في القائمة 100", expect: { command: "access-list", args: { number: 100, action: "permit", protocol: "tcp", source: "any", destination: "any", port: 80 } }, hints: ["القائمة الموسّعة تبدأ بالبروتوكول بعد permit.", "المنفذ يُكتب بعد eq."] },
+    { id: "c2", instruction: "اكتب القاعدة نفسها للمنفذ 443", expect: { command: "access-list", args: { number: 100, action: "permit", protocol: "tcp", source: "any", destination: "any", port: 443 } }, hints: ["غيّر رقم المنفذ فقط.", "eq 443."] },
+  ],
+  allowed: ["access-list"],
 };
 
 /** A synthetic cli-terminal block wrapping an exercise (for component tests). */

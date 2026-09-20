@@ -8,10 +8,13 @@
 // Batch 9 added (only what the book prints on PDF 180–199): Port Security on an interface, the `line` mode for
 // console / vty passwords, `enable secret`, `service password-encryption`, `banner motd`, and the `show` commands
 // `startup-config`, `port-security`, `port-security interface`.
+// Batch 10 added (only what the book prints on PDF 201–229): the `router` mode entered by `router ospf <id>` /
+// `router eigrp <as>` with its `network` forms, numbered standard / extended access lists (`access-list …`),
+// `ip access-group <n> in|out` on an interface, and `show ip route`.
 
-/** The CLI modes the simulator models. Routing protocols, ACLs, NAT … are deliberately absent. */
-export type CliMode = "user" | "privileged" | "global" | "interface" | "subinterface" | "vlan" | "dhcp" | "line";
-export const CLI_MODES: readonly CliMode[] = ["user", "privileged", "global", "interface", "subinterface", "vlan", "dhcp", "line"];
+/** The CLI modes the simulator models. NAT, named ACLs, static routes … are deliberately absent. */
+export type CliMode = "user" | "privileged" | "global" | "interface" | "subinterface" | "vlan" | "dhcp" | "line" | "router";
+export const CLI_MODES: readonly CliMode[] = ["user", "privileged", "global", "interface", "subinterface", "vlan", "dhcp", "line", "router"];
 
 export type CliDeviceType = "switch" | "router";
 export const CLI_DEVICE_TYPES: readonly CliDeviceType[] = ["switch", "router"];
@@ -43,6 +46,35 @@ export interface CliInterfaceState {
   /** Router interfaces start administratively down; switch ports start up. */
   shutdown: boolean;
   portSecurity?: CliPortSecurity;
+  /** `ip access-group <n> in|out` (Batch 10): the access list applied to this interface and its direction. */
+  accessGroup?: { acl: number; direction: CliAclDirection };
+}
+
+export type CliAclDirection = "in" | "out";
+export type CliAclAction = "permit" | "deny";
+export type CliAclProtocol = "tcp" | "udp" | "icmp" | "ip";
+/**
+ * One line of a numbered access list (Batch 10). `source` / `destination` are canonical texts exactly as the book
+ * writes them: "any", "host 192.168.1.10" or "192.168.1.0 0.0.0.255" (address + wildcard). Standard lists
+ * (1–99) carry only the source; extended lists (100–199) carry protocol, source, destination and an optional
+ * `eq <port>`.
+ */
+export interface CliAclEntry {
+  action: CliAclAction;
+  source: string;
+  protocol?: CliAclProtocol;
+  destination?: string;
+  port?: number;
+}
+
+export type CliRoutingProtocol = "ospf" | "eigrp";
+/** `network <address> <wildcard> area <n>` under `router ospf`. */
+export interface CliOspfNetwork { address: string; wildcard: string; area: number }
+export interface CliRoutingState {
+  /** `router ospf <process-id>` + its `network … area …` statements (authored order, de-duplicated). */
+  ospf?: { id: number; networks: CliOspfNetwork[] };
+  /** `router eigrp <as>` + its classful `network <address>` statements (authored order, de-duplicated). */
+  eigrp?: { id: number; networks: string[] };
 }
 
 export interface CliDhcpPool {
@@ -72,6 +104,8 @@ export interface CliDeviceState {
   selectedPool?: string;
   /** The line selected by `line console 0` / `line vty 0 4`; set only in line mode. */
   selectedLine?: CliLineName;
+  /** The routing process selected by `router ospf` / `router eigrp`; set only in router mode. */
+  selectedRouter?: CliRoutingProtocol;
   /** Keyed by canonical interface name (e.g. "f0/1", "g0/0.10", "vlan1"). */
   interfaces: Record<string, CliInterfaceState>;
   /** Keyed by the VLAN id as a string. */
@@ -86,6 +120,10 @@ export interface CliDeviceState {
   passwordEncryption: boolean;
   /** `banner motd #text#` (the text between the delimiters). */
   banner?: string;
+  /** Routing processes (Batch 10). */
+  routing: CliRoutingState;
+  /** Numbered access lists keyed by the list number as a string (Batch 10); entries in authored order. */
+  acls: Record<string, CliAclEntry[]>;
 }
 
 /** The CLOSED set of commands the simulator understands. Anything else is "unknown" and never changes state. */
@@ -113,7 +151,13 @@ export type ParsedCommand =
   | { id: "shutdown" }
   | { id: "encapsulation-dot1q"; vlanId: number }
   | { id: "ip-dhcp-pool"; name: string }
-  | { id: "network"; address: string; mask: string }
+  /** `network` has three book forms: DHCP pool (address + mask), OSPF (address + wildcard + area), EIGRP (address). */
+  | { id: "network"; form: "dhcp"; address: string; mask: string }
+  | { id: "network"; form: "ospf"; address: string; wildcard: string; area: number }
+  | { id: "network"; form: "eigrp"; address: string }
+  | { id: "router"; protocol: CliRoutingProtocol; number: number }
+  | { id: "access-list"; number: number; entry: CliAclEntry }
+  | { id: "ip-access-group"; number: number; direction: CliAclDirection }
   | { id: "default-router"; address: string }
   | { id: "dns-server"; addresses: string[] }
   | { id: "ip-dhcp-excluded-address"; from: string; to?: string }
@@ -126,7 +170,7 @@ export type ParsedCommand =
   | { id: "enable-secret"; secret: string }
   | { id: "service-password-encryption" }
   | { id: "banner-motd"; text: string }
-  | { id: "show"; what: "running-config" | "startup-config" | "ip-interface-brief" | "vlan-brief" | "ip-dhcp-pool" | "vtp-status" | "port-security"; iface?: string };
+  | { id: "show"; what: "running-config" | "startup-config" | "ip-interface-brief" | "vlan-brief" | "ip-dhcp-pool" | "vtp-status" | "port-security" | "ip-route"; iface?: string };
 export type CliCommandId = ParsedCommand["id"];
 
 /** Outcome of PARSING one input line against the closed grammar (mode is not considered yet). */
@@ -153,14 +197,18 @@ export type CliExecStatus = CliExecResult["status"];
 export type CliStateCondition =
   | { kind: "mode"; mode: CliMode }
   | { kind: "hostname"; value: string }
-  | { kind: "interface"; name: string; prop: "switchportMode" | "accessVlan" | "allowedVlans" | "ipAddress" | "subnetMask" | "encapsulationVlan" | "shutdown"; value: string | number | boolean | number[] }
+  | { kind: "interface"; name: string; prop: "switchportMode" | "accessVlan" | "allowedVlans" | "ipAddress" | "subnetMask" | "encapsulationVlan" | "shutdown" | "accessGroup"; value: string | number | boolean | number[] }
   | { kind: "port-security"; name: string; prop: "enabled" | "maximum" | "macAddress" | "sticky" | "violation"; value: string | number | boolean }
   | { kind: "vlan"; vlanId: number }
   | { kind: "dhcp-pool"; name: string; prop: "network" | "mask" | "defaultRouter" | "dnsServers"; value: string | string[] }
   | { kind: "dhcp-excluded"; from: string; to?: string }
   | { kind: "vtp"; prop: "mode" | "domain" | "password"; value: string }
   | { kind: "line"; line: CliLineName; prop: "password" | "login"; value: string | boolean }
-  | { kind: "device"; prop: "enableSecret" | "passwordEncryption" | "banner"; value: string | boolean };
+  | { kind: "device"; prop: "enableSecret" | "passwordEncryption" | "banner"; value: string | boolean }
+  /** `id`: the process / AS number; `network`: one canonical statement («192.168.1.0 0.0.0.255 area 0» / «10.0.0.0»). */
+  | { kind: "routing"; protocol: CliRoutingProtocol; prop: "id" | "network"; value: number | string }
+  /** `entry`: one canonical line («permit 192.168.1.0 0.0.0.255», «deny any», «permit tcp any any eq 80»); `count`: number of lines. */
+  | { kind: "acl"; number: number; prop: "entry" | "count"; value: string | number };
 
 /** Argument values an expectation may pin on a command (compared canonically — see exercise.ts). */
 export type CliExpectedArgs = Record<string, string | number | boolean | (string | number)[]>;

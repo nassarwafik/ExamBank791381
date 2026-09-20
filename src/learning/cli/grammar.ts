@@ -7,8 +7,8 @@
 // dispatch by string: an unmatched line is "unknown" and can never change state.
 // ORDER MATTERS: a spec whose keyword sequence extends another's (e.g. «switchport port-security maximum» vs
 // «switchport port-security», «enable secret» vs «enable») is listed BEFORE the shorter one.
-import type { CliCommandId, CliMode, CliParseResult, ParsedCommand } from "./types";
-import { tokenize, normalizeInterfaceName, expandInterfaceRange, isSubInterface, isIpv4, isSubnetMask, parseVlanId, parseVlanList, isSimpleName, isCiscoMac, parseIntInRange, PORT_SECURITY_MAX } from "./normalize";
+import type { CliAclProtocol, CliCommandId, CliMode, CliParseResult, ParsedCommand } from "./types";
+import { tokenize, normalizeInterfaceName, expandInterfaceRange, isSubInterface, isIpv4, isSubnetMask, parseVlanId, parseVlanList, isSimpleName, isCiscoMac, parseIntInRange, parseAclAddress, PORT_SECURITY_MAX, ACL_STANDARD_MAX, ACL_NUMBER_MAX, ROUTING_ID_MAX, OSPF_AREA_MAX, PORT_MAX } from "./normalize";
 
 type ArgResult = ParsedCommand | { incomplete: string } | { invalid: string };
 
@@ -24,18 +24,92 @@ export interface CommandSpec {
   args: (rest: string[]) => ArgResult;
 }
 
-const CONFIG_MODES: readonly CliMode[] = ["global", "interface", "subinterface", "vlan", "dhcp", "line"];
+const CONFIG_MODES: readonly CliMode[] = ["global", "interface", "subinterface", "vlan", "dhcp", "line", "router"];
 const NOT_USER: readonly CliMode[] = ["privileged", ...CONFIG_MODES];
 const IF_MODES: readonly CliMode[] = ["interface", "subinterface"];
 
 const none = (id: CliCommandId): ((rest: string[]) => ArgResult) => rest => (rest.length ? { invalid: "هذا الأمر لا يأخذ قيمًا إضافية" } : ({ id } as ParsedCommand));
 
-const ipAndMask = (id: "ip-address" | "network") => (rest: string[]): ArgResult => {
+const ipAddressArgs = (rest: string[]): ArgResult => {
   if (rest.length < 2) return { incomplete: "المطلوب: عنوان IP ثم قناع الشبكة" };
   if (rest.length > 2) return { invalid: "قيم زائدة بعد القناع" };
   if (!isIpv4(rest[0])) return { invalid: "عنوان IP غير صالح: " + rest[0] };
   if (!isSubnetMask(rest[1])) return { invalid: "قناع الشبكة غير صالح: " + rest[1] };
-  return { id, address: rest[0], mask: rest[1] };
+  return { id: "ip-address", address: rest[0], mask: rest[1] };
+};
+
+/**
+ * `network` has the three shapes the book prints: DHCP pool «network <address> <mask>» (PDF 172), OSPF «network
+ * <address> <wildcard> area <n>» (PDF 216–217) and EIGRP «network <address>» (PDF 220–221). The shape is decided
+ * by the tokens; the engine then checks it against the current mode / routing process (see engine.ts).
+ */
+const networkArgs = (rest: string[]): ArgResult => {
+  if (rest.length === 0) return { incomplete: "المطلوب: عنوان الشبكة (ثم القناع في DHCP، أو wildcard و area في OSPF)" };
+  if (!isIpv4(rest[0])) return { invalid: "عنوان الشبكة غير صالح: " + rest[0] };
+  if (rest.length === 1) return { id: "network", form: "eigrp", address: rest[0] };
+  if (!isIpv4(rest[1])) return { invalid: "القيمة بعد العنوان غير صالحة: " + rest[1] };
+  if (rest.length === 2) {
+    if (!isSubnetMask(rest[1])) return { invalid: "قناع الشبكة غير صالح: " + rest[1] + " — في OSPF تُكتب بعد wildcard الكلمة area ورقمها" };
+    return { id: "network", form: "dhcp", address: rest[0], mask: rest[1] };
+  }
+  if (rest[2].toLowerCase() !== "area") return { invalid: "بعد wildcard تُكتب الكلمة area ثم رقمها" };
+  if (rest.length === 3) return { incomplete: "المطلوب: رقم area بعد الكلمة area" };
+  if (rest.length > 4) return { invalid: "قيم زائدة بعد رقم area" };
+  const area = parseIntInRange(rest[3], 0, OSPF_AREA_MAX);
+  return area === null ? { invalid: "رقم area غير صالح: " + rest[3] } : { id: "network", form: "ospf", address: rest[0], wildcard: rest[1], area };
+};
+
+const routerArgs = (protocol: "ospf" | "eigrp") => (rest: string[]): ArgResult => {
+  if (rest.length === 0) return { incomplete: protocol === "ospf" ? "المطلوب: رقم العملية (process-id)" : "المطلوب: رقم AS" };
+  if (rest.length > 1) return { invalid: "قيم زائدة بعد الرقم" };
+  const n = parseIntInRange(rest[0], 1, ROUTING_ID_MAX);
+  return n === null ? { invalid: `الرقم غير صالح (1–${ROUTING_ID_MAX}): ` + rest[0] } : { id: "router", protocol, number: n };
+};
+
+const ACL_PROTOCOLS: readonly CliAclProtocol[] = ["tcp", "udp", "icmp", "ip"];
+
+/** `access-list <1-99> permit|deny <source>` · `access-list <100-199> permit|deny <protocol> <source> <destination> [eq <port>]`. */
+const accessListArgs = (rest: string[]): ArgResult => {
+  if (rest.length === 0) return { incomplete: "المطلوب: رقم القائمة ثم permit أو deny" };
+  const number = parseIntInRange(rest[0], 1, ACL_NUMBER_MAX);
+  if (number === null) return { invalid: `رقم القائمة غير صالح (1–${ACL_STANDARD_MAX} قياسية، ${ACL_STANDARD_MAX + 1}–${ACL_NUMBER_MAX} موسّعة): ` + rest[0] };
+  if (rest.length === 1) return { incomplete: "المطلوب: permit أو deny" };
+  const action = rest[1].toLowerCase();
+  if (action !== "permit" && action !== "deny") return { invalid: "بعد رقم القائمة تُكتب permit أو deny" };
+  let tail = rest.slice(2);
+  if (number <= ACL_STANDARD_MAX) {
+    const src = parseAclAddress(tail);
+    if (!("text" in src)) return src;
+    if (tail.length > src.used) return { invalid: "القائمة القياسية تأخذ المصدر فقط — قيم زائدة: " + tail.slice(src.used).join(" ") };
+    return { id: "access-list", number, entry: { action, source: src.text } };
+  }
+  if (tail.length === 0) return { incomplete: "المطلوب في القائمة الموسّعة: البروتوكول (tcp / udp / icmp / ip) ثم المصدر ثم الوجهة" };
+  const protocol = tail[0].toLowerCase() as CliAclProtocol;
+  if (!ACL_PROTOCOLS.includes(protocol)) return { invalid: "البروتوكول يجب أن يكون tcp أو udp أو icmp أو ip: " + tail[0] };
+  tail = tail.slice(1);
+  const src = parseAclAddress(tail);
+  if (!("text" in src)) return src;
+  tail = tail.slice(src.used);
+  const dst = parseAclAddress(tail);
+  if (!("text" in dst)) return "incomplete" in dst ? { incomplete: "المطلوب: الوجهة (any أو host <address> أو <address> <wildcard>)" } : dst;
+  tail = tail.slice(dst.used);
+  if (tail.length === 0) return { id: "access-list", number, entry: { action, protocol, source: src.text, destination: dst.text } };
+  if (tail[0].toLowerCase() !== "eq") return { invalid: "بعد الوجهة يمكن كتابة eq ثم رقم المنفذ فقط" };
+  if (protocol !== "tcp" && protocol !== "udp") return { invalid: "eq <port> يُستعمل مع tcp أو udp فقط" };
+  if (tail.length === 1) return { incomplete: "المطلوب: رقم المنفذ بعد eq (مثل 80 أو 443)" };
+  if (tail.length > 2) return { invalid: "قيم زائدة بعد رقم المنفذ" };
+  const port = parseIntInRange(tail[1], 1, PORT_MAX);
+  return port === null ? { invalid: "رقم المنفذ غير صالح (1–65535): " + tail[1] } : { id: "access-list", number, entry: { action, protocol, source: src.text, destination: dst.text, port } };
+};
+
+const accessGroupArgs = (rest: string[]): ArgResult => {
+  if (rest.length === 0) return { incomplete: "المطلوب: رقم القائمة ثم in أو out" };
+  const number = parseIntInRange(rest[0], 1, ACL_NUMBER_MAX);
+  if (number === null) return { invalid: `رقم القائمة غير صالح (1–${ACL_NUMBER_MAX}): ` + rest[0] };
+  if (rest.length === 1) return { incomplete: "المطلوب: الاتجاه in أو out" };
+  const direction = rest[1].toLowerCase();
+  if (rest.length > 2 || (direction !== "in" && direction !== "out")) return { invalid: "الاتجاه يجب أن يكون in أو out" };
+  return { id: "ip-access-group", number, direction };
 };
 
 const oneName = (id: "hostname" | "name" | "ip-dhcp-pool" | "vtp-domain" | "vtp-password" | "password" | "enable-secret", what: string) => (rest: string[]): ArgResult => {
@@ -140,7 +214,9 @@ export const COMMANDS: readonly CommandSpec[] = [
     },
   },
   { id: "switchport-port-security", keywords: [["switchport", "port-security"]], modes: ["interface"], syntax: "switchport port-security", args: none("switchport-port-security") },
-  { id: "ip-address", keywords: [["ip", "address"], ["ip", "addr"]], modes: IF_MODES, syntax: "ip address <address> <mask>", args: ipAndMask("ip-address") },
+  { id: "ip-address", keywords: [["ip", "address"], ["ip", "addr"]], modes: IF_MODES, syntax: "ip address <address> <mask>", args: ipAddressArgs },
+  // ACL (Batch 10): applying a numbered list to the selected interface (PDF 224 / 226).
+  { id: "ip-access-group", keywords: [["ip", "access-group"]], modes: IF_MODES, syntax: "ip access-group <number> in | out", args: accessGroupArgs },
   { id: "no-shutdown", keywords: [["no", "shutdown"], ["no", "shut"]], modes: IF_MODES, syntax: "no shutdown", args: none("no-shutdown") },
   { id: "shutdown", keywords: [["shutdown"], ["shut"]], modes: IF_MODES, syntax: "shutdown", args: none("shutdown") },
   { id: "encapsulation-dot1q", keywords: [["encapsulation", "dot1q"], ["encap", "dot1q"]], modes: ["subinterface"], syntax: "encapsulation dot1Q <vlan>", args: oneVlan("encapsulation-dot1q") },
@@ -155,7 +231,7 @@ export const COMMANDS: readonly CommandSpec[] = [
       return rest[1] === undefined ? { id: "ip-dhcp-excluded-address", from: rest[0] } : { id: "ip-dhcp-excluded-address", from: rest[0], to: rest[1] };
     },
   },
-  { id: "network", keywords: [["network"]], modes: ["dhcp"], syntax: "network <address> <mask>", args: ipAndMask("network") },
+  { id: "network", keywords: [["network"]], modes: ["dhcp", "router"], syntax: "network <address> <mask>  |  network <address> <wildcard> area <n>  |  network <address>", args: networkArgs },
   {
     id: "default-router", keywords: [["default-router"]], modes: ["dhcp"], syntax: "default-router <address>",
     args: rest => {
@@ -202,11 +278,17 @@ export const COMMANDS: readonly CommandSpec[] = [
   { id: "password", keywords: [["password"]], modes: ["line"], syntax: "password <password>", args: oneName("password", "كلمة المرور") },
   { id: "login", keywords: [["login"]], modes: ["line"], syntax: "login", args: none("login") },
   { id: "service-password-encryption", keywords: [["service", "password-encryption"]], modes: ["global"], syntax: "service password-encryption", args: none("service-password-encryption") },
+  // Routing (Batch 10): the two processes the book prints (PDF 216–221); `network` inside them is handled above.
+  { id: "router", keywords: [["router", "ospf"]], modes: ["global"], syntax: "router ospf <process-id>", args: routerArgs("ospf") },
+  { id: "router", keywords: [["router", "eigrp"]], modes: ["global"], syntax: "router eigrp <as>", args: routerArgs("eigrp") },
+  // ACL (Batch 10): numbered standard (1–99) and extended (100–199) lists (PDF 224–227).
+  { id: "access-list", keywords: [["access-list"]], modes: ["global"], syntax: "access-list <number> permit | deny …", args: accessListArgs },
   // show (simplified deterministic output); «show port-security interface» precedes «show port-security».
   { id: "show", keywords: [["show", "running-config"], ["show", "run"]], modes: NOT_USER, syntax: "show running-config", args: showOf("running-config") },
   { id: "show", keywords: [["show", "startup-config"], ["show", "start"]], modes: NOT_USER, syntax: "show startup-config", args: showOf("startup-config") },
   { id: "show", keywords: [["show", "ip", "interface", "brief"], ["show", "ip", "int", "brief"], ["show", "ip", "int", "br"]], modes: NOT_USER, syntax: "show ip interface brief", args: showOf("ip-interface-brief") },
   { id: "show", keywords: [["show", "ip", "dhcp", "pool"]], modes: NOT_USER, syntax: "show ip dhcp pool", args: showOf("ip-dhcp-pool") },
+  { id: "show", keywords: [["show", "ip", "route"]], modes: NOT_USER, syntax: "show ip route", args: showOf("ip-route") },
   { id: "show", keywords: [["show", "vlan", "brief"], ["show", "vlan"]], modes: NOT_USER, syntax: "show vlan brief", args: showOf("vlan-brief") },
   { id: "show", keywords: [["show", "vtp", "status"]], modes: NOT_USER, syntax: "show vtp status", args: showOf("vtp-status") },
   {
@@ -228,7 +310,7 @@ export function modesOf(id: CliCommandId): readonly CliMode[] {
 }
 
 /** The command ids that only MOVE between modes or inspect (always accepted by an exercise, never «غير مطلوب»). */
-export const NAVIGATION_COMMANDS: readonly CliCommandId[] = ["enable", "disable", "configure-terminal", "exit", "end", "help", "interface", "vlan", "ip-dhcp-pool", "line", "show"];
+export const NAVIGATION_COMMANDS: readonly CliCommandId[] = ["enable", "disable", "configure-terminal", "exit", "end", "help", "interface", "vlan", "ip-dhcp-pool", "line", "router", "show"];
 
 const startsWith = (tokens: string[], seq: readonly string[]) => seq.length <= tokens.length && seq.every((k, i) => tokens[i].toLowerCase() === k);
 

@@ -1,15 +1,16 @@
 // Learning Materials — CLI simulator: EXECUTION of one input line against a device state (parse → mode check →
 // apply). Pure: returns a NEW state + a result descriptor; the input state is never mutated. No exercise logic here
 // (see exercise.ts) and no presentation. Unknown / incomplete / invalid / wrong-mode input NEVER changes state.
-import type { CliDeviceState, CliExecResult, CliInterfaceState, CliLineState, CliMode, ParsedCommand } from "./types";
+import type { CliAclEntry, CliDeviceState, CliExecResult, CliInterfaceState, CliLineState, CliMode, ParsedCommand } from "./types";
 import { COMMANDS, parseCommand } from "./grammar";
 import { newInterface } from "./state";
 import { showOutput } from "./show";
+import { aclEntryText, ospfNetworkText } from "./normalize";
 
-const EXIT_TO: Record<CliMode, CliMode> = { user: "user", privileged: "user", global: "privileged", interface: "global", subinterface: "global", vlan: "global", dhcp: "global", line: "global" };
+const EXIT_TO: Record<CliMode, CliMode> = { user: "user", privileged: "user", global: "privileged", interface: "global", subinterface: "global", vlan: "global", dhcp: "global", line: "global", router: "global" };
 
 /** Leave every sub-mode selection behind (used by `exit`, `end` and when entering another sub-mode). */
-const unselect = (state: CliDeviceState): CliDeviceState => ({ ...state, selectedInterfaces: [], selectedVlan: undefined, selectedPool: undefined, selectedLine: undefined });
+const unselect = (state: CliDeviceState): CliDeviceState => ({ ...state, selectedInterfaces: [], selectedVlan: undefined, selectedPool: undefined, selectedLine: undefined, selectedRouter: undefined });
 
 function mapSelected(state: CliDeviceState, f: (i: CliInterfaceState) => CliInterfaceState): CliDeviceState {
   const interfaces = { ...state.interfaces };
@@ -72,7 +73,32 @@ export function applyCommand(state: CliDeviceState, cmd: ParsedCommand): { state
     case "shutdown": return { state: mapSelected(state, i => ({ ...i, shutdown: true })) };
     case "encapsulation-dot1q": return { state: mapSelected(state, i => ({ ...i, encapsulationVlan: cmd.vlanId })) };
     case "ip-dhcp-pool": return { state: { ...unselect(state), mode: "dhcp", selectedPool: cmd.name, dhcpPools: { ...state.dhcpPools, [cmd.name]: state.dhcpPools[cmd.name] ?? { dnsServers: [] } } } };
-    case "network": return { state: mapPool(state, p => ({ ...p, network: cmd.address, mask: cmd.mask })) };
+    case "network": {
+      if (cmd.form === "dhcp") return { state: mapPool(state, p => ({ ...p, network: cmd.address, mask: cmd.mask })) };
+      if (cmd.form === "ospf") {
+        const ospf = state.routing.ospf;
+        if (!ospf || state.selectedRouter !== "ospf") return { state };
+        const entry = { address: cmd.address, wildcard: cmd.wildcard, area: cmd.area };
+        const dup = ospf.networks.some(n => ospfNetworkText(n) === ospfNetworkText(entry));
+        return { state: dup ? state : { ...state, routing: { ...state.routing, ospf: { ...ospf, networks: [...ospf.networks, entry] } } } };
+      }
+      const eigrp = state.routing.eigrp;
+      if (!eigrp || state.selectedRouter !== "eigrp") return { state };
+      return { state: eigrp.networks.includes(cmd.address) ? state : { ...state, routing: { ...state.routing, eigrp: { ...eigrp, networks: [...eigrp.networks, cmd.address] } } } };
+    }
+    case "router": {
+      // One process per protocol: re-entering the same number keeps its networks; a different number starts afresh.
+      const current = state.routing[cmd.protocol];
+      const process = current && current.id === cmd.number ? current : { id: cmd.number, networks: [] };
+      return { state: { ...unselect(state), mode: "router", selectedRouter: cmd.protocol, routing: { ...state.routing, [cmd.protocol]: process } } };
+    }
+    case "access-list": {
+      const key = String(cmd.number);
+      const list: CliAclEntry[] = state.acls[key] ?? [];
+      const dup = list.some(e => aclEntryText(e) === aclEntryText(cmd.entry));
+      return { state: dup ? state : { ...state, acls: { ...state.acls, [key]: [...list, { ...cmd.entry }] } } };
+    }
+    case "ip-access-group": return { state: mapSelected(state, i => ({ ...i, accessGroup: { acl: cmd.number, direction: cmd.direction } })) };
     case "default-router": return { state: mapPool(state, p => ({ ...p, defaultRouter: cmd.address })) };
     case "dns-server": return { state: mapPool(state, p => ({ ...p, dnsServers: [...cmd.addresses] })) };
     case "ip-dhcp-excluded-address": {
@@ -93,6 +119,8 @@ export function applyCommand(state: CliDeviceState, cmd: ParsedCommand): { state
 
 /** The modes in which a parsed command is valid (its matching grammar specs). */
 export function requiredModes(cmd: ParsedCommand): readonly CliMode[] {
+  // `network` is one grammar entry with three book forms: the DHCP form lives in the pool, the routing forms in `router`.
+  if (cmd.id === "network") return cmd.form === "dhcp" ? ["dhcp"] : ["router"];
   const out = new Set<CliMode>();
   for (const c of COMMANDS) if (c.id === cmd.id) for (const m of c.modes) out.add(m);
   return [...out];
@@ -111,6 +139,11 @@ export function executeCommand(state: CliDeviceState, raw: unknown): { state: Cl
   if (parsed.kind === "invalid") return { state, result: { status: "invalid", id: parsed.id, detail: parsed.detail } };
   const modes = requiredModes(parsed.command);
   if (!modes.includes(state.mode)) return { state, result: { status: "wrong-mode", command: parsed.command, requiredModes: modes } };
+  // Inside a routing process the `network` form must match the process (the book's «انتبه» on PDF 220: no area in EIGRP).
+  if (parsed.command.id === "network" && state.mode === "router") {
+    if (parsed.command.form === "eigrp" && state.selectedRouter === "ospf") return { state, result: { status: "incomplete", id: "network", detail: "في OSPF المطلوب: network <address> <wildcard> area <n>" } };
+    if (parsed.command.form === "ospf" && state.selectedRouter === "eigrp") return { state, result: { status: "invalid", id: "network", detail: "في EIGRP لا نكتب area؛ الصيغة: network <address>" } };
+  }
   const applied = applyCommand(state, parsed.command);
   return { state: applied.state, result: applied.output ? { status: "ok", command: parsed.command, output: applied.output } : { status: "ok", command: parsed.command } };
 }
