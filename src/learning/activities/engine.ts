@@ -155,8 +155,8 @@ export function createActivityRegistry(entries: readonly RegisteredActivity[]): 
  * diagrams). It is an EXACT allowlist of the entries below (pinned by engine.test.ts / activities.guards.test.ts):
  * interactive-diagram network-scope/v1 (Phase 3B), ipv4-octets/v1 (Phase 3E), cidr-network-host/v1 and
  * network-topologies/v1 (Units 4–6), cable-comparison/v1, mac-address-anatomy/v1 and broadcast-address/v1 (Units 7–8),
- * osi-layers/v1 (Batch 3), network-domains/v1 (Batch 4), tcp-handshake/v1 (Batch 5); animation gateway-flow/v1 (Units 4–6); simulation hub-switch-router-flow/v1 (Units 4–6)
- * and message-delivery/v1 (Units 7–8) — each behind a
+ * osi-layers/v1 (Batch 3), network-domains/v1 (Batch 4), tcp-handshake/v1 (Batch 5); animation gateway-flow/v1 (Units 4–6); simulation hub-switch-router-flow/v1 (Units 4–6),
+ * message-delivery/v1 (Units 7–8) and cli-terminal/v1 (Batch 8, the CLI teaching simulator) — each behind a
  * code-split `load` thunk, so a chunk is imported only when a matching descriptor renders. Any other descriptor
  * renders its faithful static fallback. The generic BUILT-IN presenters (see builtins.ts — currently only
  * guided/reveal/v1) are resolved separately with the same identity discipline. New renderers are registered here;
@@ -175,7 +175,7 @@ export const productionActivityRegistry: LearningActivityRegistry = createActivi
   },
   // Phase 3E — the SECOND registry-backed production activity: the four-octet IPv4 structure diagram for PDF 27.
   // Also an interactive DIAGRAM (select one of four parts; no validity rules, no CIDR/subnet/class, no input, no
-  // scoring). Its own lazy chunk. No CLI renderer exists in any phase.
+  // scoring). Its own lazy chunk. (The CLI teaching simulator arrived in Batch 8 — see cli-terminal below.)
   {
     kind: "interactive-diagram",
     key: "ipv4-octets",
@@ -280,6 +280,17 @@ export const productionActivityRegistry: LearningActivityRegistry = createActivi
     key: "tcp-handshake",
     versions: [1],
     load: () => import("./TcpHandshakeStepper"),
+    capabilities: { fullscreen: true, reset: true, interactive: true },
+  },
+  {
+    // Batch 8 — the interactive CLI TEACHING simulator (src/learning/cli/): a deterministic terminal-like box that
+    // matches input ONLY against a closed command grammar (no IOS emulation, no evaluation, no shell, no network).
+    // The exercise (guided / challenge / task) is declarative block `config` read defensively by the renderer.
+    // First used on the DHCP router pages (PDF 172–174); reusable by any CLI section. Its own lazy chunk.
+    kind: "simulation",
+    key: "cli-terminal",
+    versions: [1],
+    load: () => import("../cli/CliTerminalActivity"),
     capabilities: { fullscreen: true, reset: true, interactive: true },
   },
 ]);

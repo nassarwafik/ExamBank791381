@@ -1,0 +1,58 @@
+/* Learning Materials — Batch 8: the interactive CLI TEACHING simulator (`simulation / cli-terminal / v1`).
+   Namespaced `learning-cli-*`. The reader page stays RTL; ONLY the terminal box is LTR. Mobile-first: the terminal
+   never exceeds its container (min-width:0 / max-width:100%), long output scrolls INSIDE the screen, the input row
+   keeps a ≥44px target. Colors/spacing come from the shared `--eb-*` design tokens. */
+
+.learning-cli{ display:flex; flex-direction:column; gap:var(--eb-space-3); min-width:0; max-width:100%; }
+.learning-cli-empty{ margin:0; color:var(--eb-text-secondary); font-size:var(--eb-fs-14); }
+
+/* Instruction panel (RTL, inherits the page direction) */
+.learning-cli-panel{ display:flex; flex-direction:column; gap:var(--eb-space-2); min-width:0; }
+.learning-cli-kind{ margin:0; color:var(--eb-primary-strong); font-size:var(--eb-fs-12); font-weight:var(--eb-fw-bold); }
+.learning-cli-intro{ margin:0; color:var(--eb-text); font-size:var(--eb-fs-14); line-height:var(--eb-lh-body); }
+.learning-cli-steps, .learning-cli-goals, .learning-cli-hintlist{ list-style:none; margin:0; padding:0; display:flex; flex-direction:column; gap:4px; }
+.learning-cli-step, .learning-cli-goal{ display:flex; align-items:flex-start; gap:var(--eb-space-2); font-size:var(--eb-fs-14); line-height:var(--eb-lh-body); color:var(--eb-text-secondary); overflow-wrap:anywhere; }
+.learning-cli-step[data-state="current"]{ color:var(--eb-text-heading); font-weight:var(--eb-fw-semibold); }
+.learning-cli-step[data-state="done"], .learning-cli-goal[data-met="true"]{ color:var(--eb-success-tx); }
+.learning-cli-step-mark, .learning-cli-goal-mark{ flex:0 0 auto; display:inline-flex; align-items:center; justify-content:center; min-width:22px; height:22px; border-radius:var(--eb-pill); background:var(--eb-surface); border:1px solid var(--eb-line); font-size:var(--eb-fs-12); font-weight:var(--eb-fw-bold); }
+.learning-cli-step[data-state="current"] .learning-cli-step-mark{ background:var(--eb-primary-050); border-color:var(--eb-primary); color:var(--eb-primary-strong); }
+.learning-cli-step[data-state="done"] .learning-cli-step-mark, .learning-cli-goal[data-met="true"] .learning-cli-goal-mark{ background:var(--eb-success-bg); border-color:var(--eb-success); color:var(--eb-success-tx); }
+.learning-cli-sr{ position:absolute; width:1px; height:1px; overflow:hidden; clip:rect(0 0 0 0); white-space:nowrap; }
+.learning-cli-hints{ display:flex; flex-direction:column; gap:var(--eb-space-1); }
+.learning-cli-hint{ padding:var(--eb-space-1) var(--eb-space-2); border-inline-start:3px solid var(--eb-warn); background:var(--eb-warn-bg); color:var(--eb-warn-tx); border-radius:var(--eb-r-sm); font-size:var(--eb-fs-13); line-height:var(--eb-lh-body); }
+.learning-cli-done{ margin:0; padding:var(--eb-space-2) var(--eb-space-3); background:var(--eb-success-bg); color:var(--eb-success-tx); border-radius:var(--eb-r); font-weight:var(--eb-fw-semibold); font-size:var(--eb-fs-14); }
+
+.learning-cli-btn{ align-self:flex-start; min-height:44px; padding:var(--eb-space-1) var(--eb-space-3); border:1px solid var(--eb-primary); border-radius:var(--eb-pill); background:var(--eb-primary-050); font:inherit; font-weight:var(--eb-fw-semibold); color:var(--eb-primary-strong); cursor:pointer; }
+.learning-cli-btn:disabled{ opacity:.5; cursor:default; }
+.learning-cli-btn:focus-visible{ outline:2px solid var(--eb-primary); outline-offset:2px; }
+
+/* The terminal: LTR island inside the RTL page */
+.learning-cli-terminal{ direction:ltr; text-align:left; display:flex; flex-direction:column; min-width:0; max-width:100%; background:var(--eb-navy); color:#e6edf7; border-radius:var(--eb-r); font-family:ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace; font-size:var(--eb-fs-13); line-height:var(--eb-lh-body); overflow:hidden; }
+.learning-cli-titlebar{ display:flex; justify-content:space-between; gap:var(--eb-space-2); padding:6px var(--eb-space-3); color:#9aa8c2; font-size:var(--eb-fs-12); border-bottom:1px solid rgba(255,255,255,.12); }
+.learning-cli-dots{ letter-spacing:2px; }
+.learning-cli-screen{ overflow:auto; min-height:140px; max-height:260px; padding:var(--eb-space-2) var(--eb-space-3); overscroll-behavior:contain; }
+.learning-cli[data-fullscreen] .learning-cli-screen{ max-height:55vh; }
+.learning-cli-entry{ margin:0 0 4px; }
+.learning-cli-line{ margin:0; white-space:pre-wrap; overflow-wrap:anywhere; }
+.learning-cli-muted{ color:#9aa8c2; }
+.learning-cli-prompt{ color:#9fd3a8; }
+.learning-cli-typed{ color:#ffffff; }
+.learning-cli-output{ margin:2px 0 4px; padding:0; font:inherit; color:#c8d3e6; white-space:pre; overflow-x:auto; max-width:100%; }
+.learning-cli-feedback{ margin:2px 0 6px; direction:rtl; text-align:right; font-family:var(--eb-font); font-size:var(--eb-fs-13); overflow-wrap:anywhere; }
+.learning-cli-feedback[data-tone="error"]{ color:#ffb4b4; }
+.learning-cli-feedback[data-tone="success"]{ color:#9fe3a8; }
+.learning-cli-feedback[data-tone="info"]{ color:#c8d3e6; }
+.learning-cli-inputrow{ display:flex; align-items:center; gap:6px; padding:6px var(--eb-space-3); border-top:1px solid rgba(255,255,255,.12); min-width:0; }
+.learning-cli-liveprompt{ flex:0 1 auto; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:45%; }
+.learning-cli-input{ flex:1 1 auto; min-width:0; width:0; min-height:44px; background:transparent; border:0; color:#ffffff; font:inherit; caret-color:#9fd3a8; }
+.learning-cli-input::placeholder{ color:#7f8ca6; font-family:var(--eb-font); }
+.learning-cli-input:focus-visible{ outline:2px solid #9fd3a8; outline-offset:-2px; border-radius:var(--eb-r-xs); }
+.learning-cli-run{ flex:0 0 auto; align-self:center; border-color:#9fd3a8; background:transparent; color:#e6edf7; font-family:var(--eb-font); padding-inline:var(--eb-space-2); }
+.learning-cli-run:focus-visible{ outline-color:#9fd3a8; }
+.learning-cli-status{ margin:0; color:var(--eb-text-secondary); font-size:var(--eb-fs-13); line-height:var(--eb-lh-body); }
+.learning-cli-status code{ font-family:ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace; }
+
+@media (max-width: 480px){
+  .learning-cli-liveprompt{ max-width:40%; }
+  .learning-cli-screen{ max-height:220px; }
+}
