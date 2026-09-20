@@ -93,6 +93,16 @@ const m14: ContentModule = {
                 },
               },
             },
+          
+            {
+              // ENRICHMENT (Batch 3): SVG visual enrichment appended after the book content.
+              id: "m14-l01-p01-visual", type: "visual", origin: "teacher-enrichment",
+              visualId: "791381/m14/protocols-overview", motion: true,
+              source: src(87),
+              title: "مخطط: خريطة البروتوكولات حسب المهمة",
+              alt: "مركز يتفرّع إلى فئات بروتوكولات حسب المهمة: الويب والأسماء والإعداد والبريد والملفات والإدارة عن بُعد.",
+              caption: "لكل مهمة بروتوكول (أو أكثر) يقوم بها.",
+            },
           ],
         },
         // PDF 88 — DNS / HTTP / DHCP
@@ -152,6 +162,16 @@ const m14: ContentModule = {
                   explanation: "DHCP يمنح الجهاز عنوانه؛ DNS يجد عنوان الموقع.",
                 },
               },
+            },
+          
+            {
+              // ENRICHMENT (Batch 3): SVG visual enrichment appended after the book content.
+              id: "m14-l01-p02-visual", type: "visual", origin: "teacher-enrichment",
+              visualId: "791381/m14/dns-http-dhcp", motion: true,
+              source: src(88),
+              title: "مخطط: تسلسل DHCP ثم DNS ثم HTTP",
+              alt: "ثلاث خطوات مرتّبة: DHCP يمنح عنوان IP، ثم DNS يحوّل google.com إلى عنوان، ثم HTTP يجلب الصفحة.",
+              caption: "من الانضمام للشبكة إلى فتح الموقع: DHCP ثم DNS ثم HTTP.",
             },
           ],
         },
@@ -260,6 +280,16 @@ const m14: ContentModule = {
                   explanation: "NAT: من العناوين الداخلية إلى عنوان عام واحد.",
                 },
               },
+            },
+          
+            {
+              // ENRICHMENT (Batch 3): SVG visual enrichment appended after the book content.
+              id: "m14-l02-p02-visual", type: "visual", origin: "teacher-enrichment",
+              visualId: "791381/m14/ssh-vs-telnet", motion: true,
+              source: src(90),
+              title: "مخطط: SSH مقابل Telnet",
+              alt: "لوحتان لوصول عن بُعد: SSH بقناة مشفّرة لا تُقرأ، وTelnet بنص صريح يمكن قراءته.",
+              caption: "كلاهما وصول عن بُعد · SSH يشفّر و Telnet يرسل نصًا صريحًا.",
             },
           ],
         },
@@ -446,6 +476,16 @@ const m14: ContentModule = {
                   explanation: "اجمع الوظيفة (من البطاقات) مع نوع النقل (من الجدول).",
                 },
               },
+            },
+          
+            {
+              // ENRICHMENT (Batch 3): SVG visual enrichment appended after the book content.
+              id: "m14-l03-p02-visual", type: "visual", origin: "teacher-enrichment",
+              visualId: "791381/m14/protocols-by-transport", motion: true,
+              source: src(92),
+              title: "مخطط: البروتوكولات حسب نوع النقل",
+              alt: "عمودان يصنّفان البروتوكولات: TCP الموثوق مثل FTP وHTTP، وUDP السريع مثل DHCP وDNS.",
+              caption: "مثال: FTP على TCP (ملف كامل) · DHCP على UDP (رسالة قصيرة سريعة).",
             },
           ],
         },

@@ -243,7 +243,8 @@ describe("Batch 4 — pedagogy: worksheets, solved examples, practices with «ا
       expect(fb.correctFeedback && fb.explanation, b.id).toBeTruthy();
       if (b.question.kind === "multipleChoice") expect(b.question.options.filter(o => o.correct).length, b.id).toBe(1);
     }
-    for (const p of pages) expect(p.blocks.at(-1)?.type, p.id).toBe("practice");
+    // the exercise flow ends with a practice; a Batch-3 SVG visual enrichment may be appended after it, so check the last NON-visual block
+    for (const p of pages) expect(p.blocks.filter(b => b.type !== "visual").at(-1)?.type, p.id).toBe("practice");
     // shortInput answers are single deterministic tokens
     for (const b of practices) if (b.type === "practice" && b.question.kind === "shortInput") expect(String(b.question.answer), b.id).toMatch(/^[A-Za-z0-9.]+$/);
   });
@@ -266,7 +267,8 @@ describe("Batch 4 — pedagogy: worksheets, solved examples, practices with «ا
     expect(allBlocks.filter(b => b.type === "callout" && b.kind === "clarification").length).toBe(9);
     for (const m of BATCH) {
       const last = pagesOf(m).at(-1)!;
-      expect(last.blocks.map(b => b.id).slice(-4).map(id => id.replace(/^m1\d-l\d\d-p\d\d-/, "")), m.id).toEqual(["review", "r1", "r2", "r3"]);
+      // ignore a trailing Batch-3 visual enrichment when checking the closing-review tail
+      expect(last.blocks.filter(b => b.type !== "visual").map(b => b.id).slice(-4).map(id => id.replace(/^m1\d-l\d\d-p\d\d-/, "")), m.id).toEqual(["review", "r1", "r2", "r3"]);
       expect(pagesOf(m).flatMap(p => p.blocks).filter(b => /-r\d$/.test(b.id)).length, m.id).toBe(3);
     }
   });
@@ -275,7 +277,7 @@ describe("Batch 4 — pedagogy: worksheets, solved examples, practices with «ا
 describe("Batch 4 — provenance, RTL/LTR, safety, skeletons and registry consistency", () => {
   it("book-derived blocks are origin:book (definitions, facts, cards, tables, code lines, «تذكّر» boxes); every practice/example/worksheet/activity/clarification/heading is enrichment", () => {
     for (const b of allBlocks) {
-      if (["practice", "practice-table", "example", "interactive-diagram", "heading"].includes(b.type) || (b.type === "callout" && b.kind === "clarification")) expect(b.origin, b.id).toBe("teacher-enrichment");
+      if (["practice", "practice-table", "example", "interactive-diagram", "heading", "visual"].includes(b.type) || (b.type === "callout" && b.kind === "clarification")) expect(b.origin, b.id).toBe("teacher-enrichment");
       else expect(b.origin, b.id).toBe("book");
     }
     expect(BATCH.map(m => pagesOf(m).flatMap(p => p.blocks).filter(b => b.origin === "book").length)).toEqual([13, 20, 35]);   // m16 +8 book pointers (T05–T12) since the Learning-Practice phase

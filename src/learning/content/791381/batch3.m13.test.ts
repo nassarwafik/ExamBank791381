@@ -256,7 +256,7 @@ describe("m13 — pedagogy: worksheets, solved examples, inline practices with �
 describe("m13 — provenance, RTL/LTR and content safety", () => {
   it("book-derived blocks are origin:book (definitions, facts, tables, cards, «تذكّر»); every practice/example/worksheet/activity/clarification/heading is enrichment", () => {
     for (const b of allBlocks) {
-      if (["practice", "practice-table", "example", "interactive-diagram", "heading"].includes(b.type) || (b.type === "callout" && b.kind === "clarification")) expect(b.origin, b.id).toBe("teacher-enrichment");
+      if (["practice", "practice-table", "example", "interactive-diagram", "heading", "visual"].includes(b.type) || (b.type === "callout" && b.kind === "clarification")) expect(b.origin, b.id).toBe("teacher-enrichment");
       else expect(b.origin, b.id).toBe("book");
     }
     expect(allBlocks.filter(b => b.origin === "book").length).toBe(29);   // 10 pages of book bullets/tables/cards/callouts

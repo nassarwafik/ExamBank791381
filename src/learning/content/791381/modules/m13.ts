@@ -435,6 +435,16 @@ const m13: ContentModule = {
                 },
               },
             },
+          
+            {
+              // ENRICHMENT (Batch 3): SVG visual enrichment appended after the book content.
+              id: "m13-l02-p02-visual", type: "visual", origin: "teacher-enrichment",
+              visualId: "791381/m13/tcpip-layers", motion: true,
+              source: src(82),
+              title: "مخطط: طبقات TCP/IP الأربع",
+              alt: "مكدّس من أربع طبقات TCP/IP: Application وTransport وInternet وNetwork Access مع نزول البيانات عند الإرسال.",
+              caption: "أربع طبقات؛ البيانات تنزل من الأعلى إلى الأسفل عند الإرسال.",
+            },
           ],
         },
         // PDF 83 — مقارنة سريعة: OSI و TCP/IP
@@ -513,6 +523,16 @@ const m13: ContentModule = {
                 },
               },
             },
+          
+            {
+              // ENRICHMENT (Batch 3): SVG visual enrichment appended after the book content.
+              id: "m13-l02-p03-visual", type: "visual", origin: "teacher-enrichment",
+              visualId: "791381/m13/osi-vs-tcpip", motion: true,
+              source: src(83),
+              title: "مخطط: مقارنة OSI وTCP/IP",
+              alt: "عمودان يقابلان طبقات OSI السبع بطبقات TCP/IP الأربع، مع جمع الطبقات الثلاث العليا في Application واحدة.",
+              caption: "الطبقات الثلاث العليا في OSI تُجمع في Application واحدة في TCP/IP.",
+            },
           ],
         },
       ],
@@ -589,6 +609,16 @@ const m13: ContentModule = {
                   explanation: "طبقة النقل تنظّم وصول البيانات، وفيها TCP و UDP.",
                 },
               },
+            },
+          
+            {
+              // ENRICHMENT (Batch 3): SVG visual enrichment appended after the book content.
+              id: "m13-l03-p01-visual", type: "visual", origin: "teacher-enrichment",
+              visualId: "791381/m13/tcp-vs-udp", motion: true,
+              source: src(84),
+              title: "مخطط: TCP مقابل UDP",
+              alt: "لوحتان: TCP يرسل ثم يتلقّى تأكيد الوصول، وUDP يرسل بسرعة بلا تأكيد.",
+              caption: "TCP موثوق ومرتّب · UDP سريع بلا تأكيد.",
             },
           ],
         },

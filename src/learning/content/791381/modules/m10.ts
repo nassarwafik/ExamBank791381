@@ -85,6 +85,16 @@ const m10: ContentModule = {
                 },
               },
             },
+          
+            {
+              // ENRICHMENT (Batch 3): SVG visual enrichment appended after the book content.
+              id: "m10-l01-p01-visual", type: "visual", origin: "teacher-enrichment",
+              visualId: "791381/m10/topology-shapes", motion: true,
+              source: src(58),
+              title: "مخطط: أشكال ترتيب الشبكة",
+              alt: "ستة مخططات صغيرة لأشكال ترتيب الأجهزة في الشبكة: P2P وBus وRing وStar وTree وHybrid.",
+              caption: "أشكال ترتيب الأجهزة داخل الشبكة.",
+            },
           ],
         },
         // PDF 59 — الشبكات السلكية التقليدية
@@ -129,6 +139,16 @@ const m10: ContentModule = {
                   explanation: "Ring: الأجهزة على دائرة مغلقة وتسير البيانات باتجاه محدّد.",
                 },
               },
+            },
+          
+            {
+              // ENRICHMENT (Batch 3): SVG visual enrichment appended after the book content.
+              id: "m10-l01-p02-visual", type: "visual", origin: "teacher-enrichment",
+              visualId: "791381/m10/bus-collision", motion: true,
+              source: src(59),
+              title: "مخطط: التصادم في شبكة Bus",
+              alt: "مخطط يبيّن جهازين على خط واحد مشترك يرسلان في اللحظة نفسها فتلتقي بياناتهما ويقع تصادم.",
+              caption: "إرسالان في اللحظة نفسها على الخط المشترك ⇐ تصادم فتتلف البيانات.",
             },
           ],
         },

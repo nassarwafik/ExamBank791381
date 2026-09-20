@@ -31,6 +31,23 @@ import SameNetwork from "./791381/batch2/SameNetwork";
 import HubFlood from "./791381/batch2/HubFlood";
 import SwitchUnicast from "./791381/batch2/SwitchUnicast";
 import RouterNetworks from "./791381/batch2/RouterNetworks";
+// Batch 3 — the next four+one units in reading order (m10 topologies, m11 cables/MAC, m12 message types, m13 OSI &
+// TCP/IP, m14 protocols; source PDF 57–92). Same data-only, exact-allowlist, reduced-motion discipline.
+import TopologyShapes from "./791381/batch3/TopologyShapes";
+import BusCollision from "./791381/batch3/BusCollision";
+import CableTypes from "./791381/batch3/CableTypes";
+import MacFrameDelivery from "./791381/batch3/MacFrameDelivery";
+import MessageTypes from "./791381/batch3/MessageTypes";
+import UnicastMulticast from "./791381/batch3/UnicastMulticast";
+import StorageUnits from "./791381/batch3/StorageUnits";
+import MessageStructure from "./791381/batch3/MessageStructure";
+import TcpIpLayers from "./791381/batch3/TcpIpLayers";
+import OsiVsTcpIp from "./791381/batch3/OsiVsTcpIp";
+import TcpVsUdp from "./791381/batch3/TcpVsUdp";
+import ProtocolsOverview from "./791381/batch3/ProtocolsOverview";
+import DnsHttpDhcp from "./791381/batch3/DnsHttpDhcp";
+import SshVsTelnet from "./791381/batch3/SshVsTelnet";
+import ProtocolsByTransport from "./791381/batch3/ProtocolsByTransport";
 
 const VISUALS: readonly RegisteredVisual[] = [
   // Chapter 1 pilot
@@ -56,6 +73,26 @@ const VISUALS: readonly RegisteredVisual[] = [
   { id: "791381/m09/hub-flood", component: HubFlood, motion: true },
   { id: "791381/m09/switch-unicast", component: SwitchUnicast, motion: true },
   { id: "791381/m09/router-networks", component: RouterNetworks, motion: true },
+  // Batch 3 — topologies (m10)
+  { id: "791381/m10/topology-shapes", component: TopologyShapes, motion: true },
+  { id: "791381/m10/bus-collision", component: BusCollision, motion: true },
+  // Batch 3 — cables / MAC (m11)
+  { id: "791381/m11/cable-types", component: CableTypes, motion: true },
+  { id: "791381/m11/mac-frame-delivery", component: MacFrameDelivery, motion: true },
+  // Batch 3 — message types (m12)
+  { id: "791381/m12/message-types", component: MessageTypes, motion: true },
+  { id: "791381/m12/unicast-multicast", component: UnicastMulticast, motion: true },
+  { id: "791381/m12/storage-units", component: StorageUnits, motion: true },
+  { id: "791381/m12/message-structure", component: MessageStructure, motion: true },
+  // Batch 3 — communication models (m13)
+  { id: "791381/m13/tcpip-layers", component: TcpIpLayers, motion: true },
+  { id: "791381/m13/osi-vs-tcpip", component: OsiVsTcpIp, motion: true },
+  { id: "791381/m13/tcp-vs-udp", component: TcpVsUdp, motion: true },
+  // Batch 3 — protocols (m14)
+  { id: "791381/m14/protocols-overview", component: ProtocolsOverview, motion: true },
+  { id: "791381/m14/dns-http-dhcp", component: DnsHttpDhcp, motion: true },
+  { id: "791381/m14/ssh-vs-telnet", component: SshVsTelnet, motion: true },
+  { id: "791381/m14/protocols-by-transport", component: ProtocolsByTransport, motion: true },
 ];
 
 // Build the lookup once. A duplicate id is a programming error (a later entry silently shadowing an earlier one), so
