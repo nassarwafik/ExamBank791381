@@ -3,6 +3,8 @@ import { IconWarning, IconBook, IconSparkles, IconCheck } from "../../icons";
 import RichTextRenderer from "./RichTextRenderer";
 import { isActivityBlock, type ContentBlock, type ContentPage, type ContentSource, type CalloutKind, type ListBlock, type UnitOpenerBlock, type LibraryTrainingBlock } from "../content/types";
 import type { LibraryTrainingHost } from "../training/types";
+import type { StudyHost } from "../study/types";
+import { eligibleStudyActivities } from "../study/eligibility";
 import LearningActivityHost from "../activities/LearningActivityHost";
 import PracticeTableView from "./PracticeTableView";
 import PracticeBlockView from "./PracticeBlockView";
@@ -21,6 +23,11 @@ export type ActivityRenderContext = {
   /** Learning-Practice seam: the HOST decides a training's availability/title/best result and owns "open". Absent
    *  (e.g. a Reader with no session) → a generic label card with no CTA and no network. */
   training?: LibraryTrainingHost;
+  /** Study-Practice seam: the HOST holds the student's completion state and reports a correct answer to the server,
+   *  which alone decides correctness and points. Absent (no session / teacher preview) → practice stays local. */
+  study?: StudyHost;
+  /** The id of the page being rendered (set only for a ready body) — what an exercise reports against. */
+  pageId?: string;
 };
 
 // The page header is always derived from the MANIFEST, so title/context/position/source render immediately —
@@ -48,15 +55,17 @@ export type ReaderPageBody =
  * are wrapped in a clearly-labelled (non-color-only) enrichment surface. Blocks render in EXACT authored order —
  * nothing is regrouped. No answer key reaches the DOM before the student answers (see PracticeBlockView).
  */
-export default function LearningPageRenderer({ header, body, activity, training }: {
+export default function LearningPageRenderer({ header, body, activity, training, study }: {
   header: ReaderPageHeader;
   body: ReaderPageBody;
   /** Optional activity-engine injection. Omitted in production → the production allowlist registry + no-op sink. */
   activity?: { registry?: LearningActivityRegistry; emit?: LearningActivityEventSink };
   /** Optional Learning-Practice host (availability + open). Omitted → generic training cards, no CTA. */
   training?: LibraryTrainingHost;
+  /** Optional Study-Practice host (completion state + report). Omitted → in-page practice stays local, no points UI. */
+  study?: StudyHost;
 }) {
-  const ctx: ActivityRenderContext = { courseId: header.courseId, registry: activity?.registry, emit: activity?.emit, training };
+  const ctx: ActivityRenderContext = { courseId: header.courseId, registry: activity?.registry, emit: activity?.emit, training, study, pageId: body.kind === "ready" ? body.page.id : undefined };
 
   // Unit-opener pages render an intentionally distinct hero instead of the normal lesson header. The hero owns the
   // focus target (its <h2> carries the reader's title id/class); the source line is kept for traceability.
@@ -141,10 +150,35 @@ function ReaderBody({ header, body, ctx }: { header: ReaderPageHeader; body: Rea
     case "ready":
       return (
         <div className="learning-reader-blocks">
+          {ctx.study && <StudyPageBar page={body.page} host={ctx.study} />}
           {body.page.blocks.map(block => <BlockView key={block.id} block={block} ctx={ctx} />)}
         </div>
       );
   }
+}
+
+/**
+ * The quiet study-points line of a page that carries eligible exercises: «نقاط الدراسة لهذه الصفحة: n / 2» (+ the
+ * module's «n / 15» when the host knows it). Only what the SERVER reported is shown; a page without an eligible
+ * exercise shows nothing. Never an animation, never a modal.
+ */
+function StudyPageBar({ page, host }: { page: ContentPage; host: StudyHost }) {
+  if (eligibleStudyActivities(page).length === 0) return null;
+  const status = host.pageStatus(page.id);
+  if (status.kind === "loading") return <p className="learning-reader-study is-loading" role="status">جارٍ تحميل نقاط الدراسة...</p>;
+  if (status.kind === "error") return <p className="learning-reader-study is-error" role="status">تعذّر تحميل نقاط الدراسة لهذه الصفحة.</p>;
+  const full = status.points >= status.max;
+  return (
+    <p className={"learning-reader-study" + (full ? " is-full" : "")} role="status">
+      <span className="learning-reader-study-page">
+        {full ? "اكتملت نقاط الدراسة لهذه الصفحة: " : "نقاط الدراسة لهذه الصفحة: "}
+        <span dir="ltr">{status.points} / {status.max}</span>
+      </span>
+      {status.module && (
+        <span className="learning-reader-study-module">نقاط الدراسة في هذه الوحدة: <span dir="ltr">{status.module.points} / {status.module.max}</span></span>
+      )}
+    </p>
+  );
 }
 
 // ── provenance wrapper ──────────────────────────────────────────────────────────────────────────────────────
@@ -276,9 +310,9 @@ function renderBlock(block: ContentBlock, ctx: ActivityRenderContext): ReactNode
     case "unit-opener":
       return <UnitOpenerView block={block} />;
     case "practice":
-      return <PracticeBlockView question={block.question} />;
+      return <PracticeBlockView question={block.question} activityId={block.id} pageId={ctx.pageId} study={ctx.study} />;
     case "practice-table":
-      return <PracticeTableView block={block} />;
+      return <PracticeTableView block={block} pageId={ctx.pageId} study={ctx.study} />;
     case "library-training":
       return <LibraryTrainingView block={block} host={ctx.training} />;
     // Interactive activities are DELEGATED to the engine shell (never rendered inline here): it resolves the

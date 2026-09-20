@@ -15,7 +15,7 @@ import type { StudentRecognition } from "./types";
 afterEach(() => { cleanup(); vi.restoreAllMocks(); });
 
 const stats = { assigned: 5, completed: 4, average: 80, pendingReview: 0, finalized: 4, inProgress: 1, averageFinalized: 82 };
-const strength = { totalPoints: 1888, examPoints: 1200, practicePoints: 88, projectPoints: 600, tier: "diamond" as const, level: 5, nextTier: "legendary" as const, levelBlockSize: 400, withinLevelPoints: 288, nextLevelRemaining: 112, percent: 72, projects: [] };
+const strength = { totalPoints: 1888, examPoints: 1200, practicePoints: 88, studyPoints: 0, projectPoints: 600, tier: "diamond" as const, level: 5, nextTier: "legendary" as const, levelBlockSize: 400, withinLevelPoints: 288, nextLevelRemaining: 112, percent: 72, projects: [] };
 const rank = { tier: "diamond" as const, label: "ألماسي", averageFinalized: 82, finalized: 4, points: 1888, next: { tier: "legendary" as const, label: "أسطوري", remaining: 112, percent: 72 } };
 const progress = { points: 1888, withinBlock: 288, needed: 400, remaining: 112, percent: 72 };
 const recognition: StudentRecognition = { medals: { total: 12, gold: 5, silver: 4, bronze: 3 }, reactionsReceived: { total: 36, byType: { heart: 18, clap: 10, cheer: 5, fire: 3 } }, achievements: { total: 7, byType: { global_rank_up: 4, project_rank_up: 2, project_complete: 1 } } };
@@ -102,7 +102,7 @@ describe("Teacher student profile — concise Strength / recognition", () => {
     classroom: { classId: "c1", name: "الحادي عشر", grade: "11", schoolYear: "2026" },
     stats: { assigned: 5, completed: 4, pending: 1, average: 80, lastLoginAt: "" },
     assignments: [], submittedAssignmentsCount: 0, submittedAssignments: [],
-    strength: { totalPoints: 1888, examPoints: 1200, practicePoints: 88, projectPoints: 600, tier: "diamond", level: 5, nextTier: "legendary", nextLevelRemaining: 112 },
+    strength: { totalPoints: 1888, examPoints: 1200, practicePoints: 88, studyPoints: 0, projectPoints: 600, tier: "diamond", level: 5, nextTier: "legendary", nextLevelRemaining: 112 },
     recognition,
     projectSummaries: [{ projectCode: "AQ", title: "AquaSense", overallProgress: 72, complete: false }, { projectCode: "SB", title: "SecureBank", overallProgress: 100, complete: true }]
   };

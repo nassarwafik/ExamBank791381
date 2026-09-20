@@ -11,7 +11,7 @@ import type { StudentStrength } from "./types";
 
 /** DELIBERATELY inconsistent: 520 points would be «beginner» under the 400-step rule — the server says «bronze». */
 const SYNTHETIC: StudentStrength = {
-  totalPoints: 520, examPoints: 300, practicePoints: 20, projectPoints: 200,
+  totalPoints: 520, examPoints: 300, practicePoints: 20, studyPoints: 0, projectPoints: 200,
   tier: "bronze", level: 2, nextTier: "silver",
   levelBlockSize: 400, withinLevelPoints: 77, nextLevelRemaining: 323, percent: 19,
   projects: [{ projectCode: "899373", overallProgress: 50, strengthPoints: 200 }],
@@ -43,7 +43,7 @@ describe("server payload → trusted completely (no client threshold logic)", ()
     expect(progressPresentationFromStrength(top)).toEqual({ points: 3000, withinBlock: 400, needed: 400, remaining: 0, percent: 100 });
   });
   it("the real server example (3 exams + 80% T02 + 50% project = 520, beginner → bronze) shapes 1:1", () => {
-    const server = { totalPoints: 520, examPoints: 300, practicePoints: 20, projectPoints: 200, tier: "beginner", level: 1, nextTier: "bronze", levelBlockSize: 400, withinLevelPoints: 120, nextLevelRemaining: 280, percent: 30, projects: [{ projectCode: "899373", overallProgress: 50, strengthPoints: 200 }] };
+    const server = { totalPoints: 520, examPoints: 300, practicePoints: 20, studyPoints: 0, projectPoints: 200, tier: "beginner", level: 1, nextTier: "bronze", levelBlockSize: 400, withinLevelPoints: 120, nextLevelRemaining: 280, percent: 30, projects: [{ projectCode: "899373", overallProgress: 50, strengthPoints: 200 }] };
     const s = normalizeStrength(server, 3);
     expect(s).toEqual(server);
     expect(rankPresentationFromStrength(s, stats)?.next).toEqual({ tier: "bronze", label: "برونزي", remaining: 280, percent: 30 });
@@ -53,7 +53,7 @@ describe("server payload → trusted completely (no client threshold logic)", ()
 describe("legacy fallback — used as a WHOLE, never mixed", () => {
   it("no payload (undefined / null / non-object) → finalized × 100 through the compatibility rule", () => {
     for (const raw of [undefined, null, "x", 7]) expect(strengthAuthority(raw)).toBe("legacy");
-    expect(normalizeStrength(undefined, 3)).toEqual({ totalPoints: 300, examPoints: 300, practicePoints: 0, projectPoints: 0, tier: null, level: 0, nextTier: "beginner", levelBlockSize: 400, withinLevelPoints: 300, nextLevelRemaining: 100, percent: 75, projects: [] });
+    expect(normalizeStrength(undefined, 3)).toEqual({ totalPoints: 300, examPoints: 300, practicePoints: 0, studyPoints: 0, projectPoints: 0, tier: null, level: 0, nextTier: "beginner", levelBlockSize: 400, withinLevelPoints: 300, nextLevelRemaining: 100, percent: 75, projects: [] });
     expect(normalizeStrength(null, 4)).toMatchObject({ totalPoints: 400, tier: "beginner", level: 1, nextTier: "bronze", withinLevelPoints: 0, nextLevelRemaining: 400, percent: 0 });
     expect(normalizeStrength(null, 5)).toMatchObject({ totalPoints: 500, tier: "beginner", nextTier: "bronze", withinLevelPoints: 100, nextLevelRemaining: 300, percent: 25 });
     expect(normalizeStrength(null, 24)).toMatchObject({ totalPoints: 2400, tier: "legendary", level: 6, nextTier: null, withinLevelPoints: 400, nextLevelRemaining: 0, percent: 100 });

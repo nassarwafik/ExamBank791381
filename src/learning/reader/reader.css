@@ -233,6 +233,18 @@
 .learning-reader-practice-foot{ display:flex; flex-wrap:wrap; align-items:center; justify-content:space-between; gap:var(--eb-space-2); }
 .learning-reader-practice-hint{ margin:0; color:var(--eb-muted); font-size:var(--eb-fs-12); line-height:var(--eb-lh-body); }
 
+/* ---------- Study Practice Strength (in-page learning exercises) ----------
+   One quiet line per page that carries eligible exercises («نقاط الدراسة لهذه الصفحة: 1 / 2», optionally the
+   module's «8 / 15») and one quiet outcome line under a right answer («+1 نقطة قوة …»). Never colour-only, never
+   animated, never a modal; both work unchanged inside the presentation overlay. */
+.learning-reader-study{ margin:0; display:flex; flex-wrap:wrap; align-items:center; gap:var(--eb-space-1) var(--eb-space-3); padding:var(--eb-space-2) var(--eb-space-3); border:1px solid var(--eb-line); border-radius:var(--eb-r); background:var(--eb-surface-2); color:var(--eb-text); font-size:var(--eb-fs-13); font-weight:var(--eb-fw-semibold); font-variant-numeric:tabular-nums; }
+.learning-reader-study.is-full{ border-color:var(--eb-success); background:var(--eb-success-bg); color:var(--eb-success-tx, var(--eb-text)); }
+.learning-reader-study.is-loading, .learning-reader-study.is-error{ color:var(--eb-muted); font-weight:var(--eb-fw-medium); }
+.learning-reader-study-module{ color:var(--eb-text-secondary); font-weight:var(--eb-fw-medium); }
+.learning-reader-study-outcome{ margin:0; color:var(--eb-text); font-size:var(--eb-fs-14); font-weight:var(--eb-fw-semibold); line-height:var(--eb-lh-body); }
+.learning-reader-study-outcome.is-gained{ color:var(--eb-success-tx, var(--eb-text)); }
+.learning-reader-study-outcome.is-repeat, .learning-reader-study-outcome.is-full, .learning-reader-study-outcome.is-module-full{ color:var(--eb-text-secondary); font-weight:var(--eb-fw-medium); }
+
 /* ---------- Presentation mode (وضع العرض) ----------
    App-level fullscreen: the SAME Reader tree promoted to a fixed, full-viewport overlay above the app shell
    (z: modal — above the shell nav / drawer; the Reader's own index drawer (50) and an activity's fullscreen (60)

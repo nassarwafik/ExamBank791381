@@ -2,7 +2,7 @@
 const {app}=require("@azure/functions");
 const {withObservability}=require("../lib/observability");
 const {requireActiveStudentSession}=require("../lib/student-auth");
-const {getContainer,downloadJsonOrNull,listJson,mapConcurrent,getReadConcurrency}=require("../lib/platform-storage");
+const {downloadJsonOrNull,listJson,mapConcurrent,getReadConcurrency}=require("../lib/platform-storage");
 const {normalizeClassStatus}=require("../lib/class-lifecycle");
 const {attemptState,deriveAttemptStatus,attemptModelVersion,activeAttemptOf}=require("../lib/assignment-availability");
 const {deriveGradingStatus}=require("../lib/grading-status");
@@ -10,6 +10,8 @@ const {deriveGradingStatus}=require("../lib/grading-status");
 // (round(overallProgress × 4), ≤ 400 each) → the six ranks. The policy lives in student-strength.js; project
 // progress comes from the SAME loader as /api/student-project-tracker (never re-derived here).
 const {buildStrengthSummary}=require("../lib/student-strength");
+const {studyDocName,studyModulesForStrength}=require("../lib/learning-study");
+const {listLearningCourses}=require("../lib/learning-materials-registry");
 const {loadStudentProjects}=require("../lib/project-tracker/student-projects");
 const {aggregateRecognition,medalTierFromPercentage,emptyRecognition}=require("../lib/achievement-feed");
 const {recordGlobalRankMilestone}=require("../lib/achievement-milestones");
@@ -75,8 +77,11 @@ async function handler(request,deps={},obs=null){
   // concurrency, no scans). `finalized` is the same server-derived count the stats expose.
   const now=new Date().toISOString();
   const practiceDoc=await dl(c,LP+student.userId+".json");
+  // Study Practice: ONE completion-state read; points re-derived against the generated key index (never stored).
+  const studyDoc=await dl(c,studyDocName(student.userId));
+  const study=studyModulesForStrength(studyDoc,listLearningCourses().map(x=>x.courseId));
   const projects=classroom?await loadStudentProjects(c,classroom,String(student.classId||""),student.userId,now,{...deps,downloadJsonOrNull:dl,mapConcurrent:mc,getReadConcurrency:readConcurrency}):[];
-  const strength=buildStrengthSummary({finalizedCount:finalized,trainings:practiceDoc&&practiceDoc.trainings,projects:projects.map(p=>({projectCode:p.projectCode,overallProgress:p.summary.overallProgress}))});
+  const strength=buildStrengthSummary({finalizedCount:finalized,trainings:practiceDoc&&practiceDoc.trainings,study,projects:projects.map(p=>({projectCode:p.projectCode,overallProgress:p.summary.overallProgress}))});
   // Recognition (never Strength): the global rank-up milestone is observed HERE — the one place the total Strength is
   // built — against the persisted last-seen tier (create-only event ids, baseline on first sight); the summary counts
   // medals (the same finalized-only authority as the portal), reactions RECEIVED and non-medal achievements lifetime.

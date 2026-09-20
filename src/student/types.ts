@@ -21,6 +21,8 @@ export type ProjectStrength = { projectCode: string; overallProgress: number; st
  */
 export type StudentStrength = {
   totalPoints: number; examPoints: number; practicePoints: number; projectPoints: number;
+  /** Study Practice Strength (in-page learning exercises) — 0 for a payload from before that phase. */
+  studyPoints: number;
   /** The earned rank tier id (null below the first rank). The client maps it to a label/artwork — never decides it. */
   tier: RankTier | null;
   /** 0 before the first rank, then 1..6. */

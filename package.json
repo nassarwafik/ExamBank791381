@@ -12,7 +12,8 @@
     "lint": "oxlint",
     "preview": "vite preview",
     "test": "vitest run",
-    "build:exam-library": "node scripts/build-791381-library.cjs"
+    "build:exam-library": "node scripts/build-791381-library.cjs",
+    "build:learning-study-index": "node scripts/build-learning-study-index.mjs"
   },
   "dependencies": {
     "chart.js": "^4.5.1",

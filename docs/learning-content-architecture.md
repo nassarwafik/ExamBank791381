@@ -325,6 +325,67 @@ extra activities must never bury the original lesson. Preferred visual hierarchy
 (unless decorative), input labels, visible focus, feedback never by color alone, RTL Arabic with LTR technical
 values/commands (per-block/per-span `dir`), and mobile layouts.
 
+## Study Practice Strength — in-page learning exercises
+
+The FOURTH, smallest source of Unified Strength: the student earns a little for actually solving the practice inside
+the lesson pages — never for opening a page, never twice for the same exercise, never more than a few points per
+page or module, and never as much as the T-series trainings.
+
+- **Eligible activities (the platform can prove the answer):** `practice` multipleChoice with a `correct` option,
+  `practice` trueFalse with an `answer`, `practice` shortInput with a non-empty `answer`, and every `practice-table`
+  (the whole worksheet is ONE exercise, complete when every select cell is right). **Excluded:** `practice`
+  fillBlank (no interactive answering surface yet), CLI simulator exercises (their goal checking runs in the browser
+  engine only — deferred until the server can verify the final state), diagrams / animations / guided activities,
+  open or reflective prompts, reading blocks. No AI grading. The rule lives once in
+  `src/learning/study/eligibility.ts`, shared by the Reader and the index generator.
+- **Identity:** the activity id is the block's own id (validator-unique, page-scoped, e.g. `m08-l03-p04-q1`), never
+  an array index or the text. Renaming a block id is a content change: the old id stops counting (it is no longer in
+  the index) and the new one can be completed again — bounded by the page cap.
+- **Server key index (server authority without the frontend content):** `api/src/data/learning-study/<courseId>.json`
+  — `{ schemaVersion, courseId, pages: { pageId: { moduleId, activities: { activityId: key } } } }` — is generated
+  from the real content by `npm run build:learning-study-index` (Vite SSR loader → `buildStudyIndex`) and pinned by
+  `src/learning/study/studyIndex.sync.test.ts` (fails on drift). 791381 today: 216 pages, 453 activities (247 MC,
+  86 T/F, 60 short input, 60 tables), 26 modules; every page fully solved = 291 points (T-series max is 750).
+- **Policy (one place — `student-strength.js`):** `STUDY_POINT_PER_ACTIVITY = 1`, `STUDY_PAGE_MAX_POINTS = 2`,
+  `STUDY_MODULE_MAX_POINTS = 15`. Page = `min(uniquely completed eligible ids, 2)`; module = `min(Σ pages, 15)`;
+  study total = Σ modules; `totalPoints = examPoints + practicePoints + studyPoints + projectPoints`. Rank thresholds,
+  rank order, exam / T-series (≤ 25, best only) / F-series (0) / project points are unchanged; a student without a
+  study document has `studyPoints = 0` (older payloads without the field are still complete on the client).
+- **Storage — completion state, never a counter:** `platform/learning-study/<studentId>.json` =
+  `{ schemaVersion: 1, pages: { pageId: { courseId, moduleId, completed: { activityId: isoTime } } } }`. No points
+  are stored; every read re-derives them from the completed ids the CURRENT index still lists for that page (a
+  forged `points` field or a ghost id is ignored). A repeat of a completed exercise is read-only (no write, the first
+  timestamp stands); a first completion is a `mutateJsonWithRetry` CAS write, so overlapping copies converge on one
+  entry — exactly one of them reports `gained: 1`, the rest `alreadyCompleted`, or a clean 503 after the retries.
+  `gained` is the ACTUAL Study Strength delta of the completion (study total after minus before, page cap AND
+  module cap applied, computed inside the CAS mutation against the freshest document): a completion whose page rises
+  but whose module is already at 15 reports `gained: 0`, and the UI then says «اكتملت نقاط الدراسة لهذه الوحدة»,
+  never a false «+1». The Reader's views release their report marker on a transport failure (so the same right
+  answer can be reported again) and keep it after an accepted report; the host merges responses monotonically
+  (union of completed ids, max points), so out-of-order responses never roll a page back.
+- **API `api/src/functions/learning-study.js`:** `GET /api/learning-study/{courseId}` (per-page completed ids +
+  points, per-module points, total, the policy) · `POST /api/learning-study/{courseId}/attempt` with
+  `{ pageId, activityId, response }` where `response` is the learner's answer only (`multipleChoice` optionId /
+  `trueFalse` value / `shortInput` text / `practice-table` choices). The server: unknown course / page / activity →
+  404 (an activity of another page too), malformed → 400, class archived / course not attached / the page's own
+  module not published → 403 (the same authority as Learning Practice: persisted `classId`, `classHasLearningCourse`,
+  `classCanSeeLearningModule`), then JUDGES the response itself (`evaluateStudyResponse`, the evaluator's own
+  normalization) and records the completion. Client `correct` / `points` / `gained` fields are ignored. Teachers are
+  judged, never persisted. Wrong answers write nothing.
+- **Reader:** `LearningReaderWithTraining` takes an optional `study: StudyClient` (the student portal injects it;
+  the teacher's Learning Materials passes none), reads the state ONCE per mount, builds a `StudyHost`
+  (`pageStatus`, `report`) that the renderer passes to `PracticeBlockView` / `PracticeTableView`, and updates the
+  state from each server response (no re-read per attempt; the state survives a training swap). A page with
+  eligible exercises shows «نقاط الدراسة لهذه الصفحة: n / 2» (+ «نقاط الدراسة في هذه الوحدة: n / 15» once known);
+  a right answer of an eligible exercise is reported once and the SERVER's outcome is shown under it: «+1 نقطة قوة —
+  أحسنت، واصل الدراسة», «نقطة هذا التمرين محسوبة سابقًا» on a repeat, «اكتملت نقاط الدراسة لهذه الصفحة: 2 / 2» when
+  the page is full; a transport failure is quiet (the local verdict stands). Without a host the practice is exactly
+  the pre-existing local exercise (old footer, no request). Works unchanged inside Presentation Mode; the portal
+  refreshes Strength once on Reader exit after a gain (`onStudyPointsEarned`).
+- Guards: `api/tests/learning-study.test.js` (index, evaluator, policy, storage, API policy / anti-farming /
+  security, dashboard integration), `src/learning/study/studyIndex.sync.test.ts`,
+  `src/learning/reader/PracticeBlockView.study.test.tsx`, `src/learning/training/LearningReaderWithTraining.study.test.tsx`.
+
 ## Reader Presentation Mode (وضع العرض)
 
 A PowerPoint-like large view of the SAME Reader for desktops and projectors — local UI state in `LearningReader`,
@@ -804,6 +865,7 @@ it (`src/studentRank.ts` keeps the compatible helpers for the six-rank ladder).
 | --- | --- | --- |
 | Finalized exam | 100 each | `FINALIZED_EXAM_STRENGTH_POINTS` — the old 4-exam-per-rank boundaries are unchanged (4 × 100 = 400) |
 | Training (T01–T30 only) | up to 25 each | `round(best% × 25 / 100)` — best only; retries never lower it. F01–F06 (final exams for training) are stored as practice history but contribute **0** |
+| Study practice (in-page exercises) | 1 per exercise, ≤ 2 per page, ≤ 15 per module | completion state of eligible exercise ids, re-derived against the server key index; never a counter (Study Practice Strength) |
 | Project | up to 400 each | `round(overallProgress × 400 / 100)` from `core.buildStudentSummary()` — derived, never incremented; a reset lowers it |
 
 - **Ladder:** one step per 400 points — 0–399 none, 400 بذرة القوة (beginner), 800 شعلة صغيرة (bronze), 1200 نمر
@@ -2152,7 +2214,8 @@ because m28 exists, no change to any class's `visibleModuleIds`.
 | Batch 10 | Book 791381 source PDF **200–229** (PDF 200 sixth-batch cover not rendered) as NEW modules `m25` («مراجعة الأوامر», order 24, PDF 201–206), `m26` («الشبكة الواسعة WAN», order 25, PDF 207–209), `m27` («بروتوكولات التوجيه», order 26, PDF 210–222) and the historical skeleton `m06` («قوائم التحكم ACL», order 27, PDF 223–229) **completed in place** — historical page `-l01-p01` (PDF 227, printed 225) preserved with unchanged id, title and mapping, PDF 223–226 as new stable ids placed first by `order`; twelve CLI `code` boxes; the CLI simulator extended with the router mode (OSPF / EIGRP `network` forms), numbered standard / extended ACLs, `ip access-group` and `show ip route` (registry stays 14) plus fifteen declarative exercises; server publication registry lists m25, m26, m27, m06 (publishable, never auto-published) — every manifest module now has a body; next untouched page = PDF 230 | done (merged) |
 | **Final summary (this)** | Book 791381 source PDF **230–264** (PDF 230 section cover and PDF 264 back cover not rendered) as the NEW module `m28` («الملخّص الشامل», order 28, the LAST module; fills the manifest's «summary» grouping) — eight lessons, 33 learner pages PDF 231–263 (printed 229–260 for 231–262), nine CLI `code` boxes; the CLI simulator extended with `switchport trunk native vlan`, the minimal static / default route `ip route … <next-hop>` (shown as `S` / `S*` routes) and the EIGRP optional wildcard (registry stays 14) plus ten declarative exercises; server publication registry lists m28 (publishable, never auto-published); the unknown-id test sentinel moves to `791381-m29`; the book is fully converted | done (awaiting review) |
 | Learning Practice T05–T30 / F01–F06 | The remaining 32 Exam-Library items connected to the six book review pages (Reader positions 98, 110, 145, 178, 214, 215) as metadata-only `library-training` blocks, one per real library id, grouped as the book groups them; the ONE server registry extended to the full catalog with the catalog's titles and pageRange-derived gates; the shared runner extended to the F-series shapes (matching, open / manual review) with no second surface; F01–F06 keep practice history but contribute 0 Unified Strength (server rule, T01–T30 unchanged); no external QR / GitHub Pages links, no question copies, no assignment / gradebook / publication change | done (awaiting review) |
-| **Reader Presentation Mode (this)** | App-level fullscreen «وضع العرض» for the Learning Reader: fixed modal overlay (native fullscreen best-effort), السابق / التالي, Reader-ordinal indicator with a direct page-number field, hierarchical index drawer, keyboard shortcuts that never fire while typing, focus trap / return; presentation remembered across a training; phone layout, content, publication, grading, Strength, CLI semantics untouched | done (awaiting review) |
+| Reader Presentation Mode | App-level fullscreen «وضع العرض» for the Learning Reader: fixed modal overlay (native fullscreen best-effort), السابق / التالي, Reader-ordinal indicator with a direct page-number field, hierarchical index drawer, keyboard shortcuts that never fire while typing, focus trap / return; presentation remembered across a training; phone layout, content, publication, grading, Strength, CLI semantics untouched | done (awaiting review) |
+| **Study Practice Strength (this)** | In-page learning exercises earn small, server-derived Strength: 1 per uniquely completed eligible exercise, ≤ 2 per page, ≤ 15 per module (policy constants), judged by the server against a content-generated key index (`api/src/data/learning-study/791381.json`, pinned by a sync test); completion state in `platform/learning-study/<studentId>.json` (never a counter, CAS writes, repeats read-only); the same class / module publication gate; fourth source in `buildStrengthSummary` (`studyPoints`); page study bar + quiet outcome lines in the Reader (normal and Presentation Mode); fillBlank and CLI deferred; T / F / exams / projects / thresholds unchanged | done (awaiting review) |
 | 4 | Interactive Practice — remaining inline checking families beyond closed-choice worksheets (free text, ordering, evaluator-backed hints) | deferred |
 | 5 | Simulations — real VLAN/subnet/CLI/… renderers registered behind the Phase-3A engine | deferred |
 | 6 | Student Progress — last page, completion, attempts (separate domain; attaches to the no-op event seam) | deferred |

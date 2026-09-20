@@ -125,6 +125,7 @@ export default function StudentPortal({ token, displayName, onLogout }: Props) {
           allowedModuleIds={readerCourse.modules.map(m => m.moduleId)}
           token={token}
           onTrainingSubmitted={() => { strengthDirtyRef.current = true; }}
+          onStudyPointsEarned={() => { strengthDirtyRef.current = true; }}
           onExit={() => {
             setReaderCourse(null);
             window.scrollTo({ top: 0, behavior: reducedMotion ? "auto" : "smooth" });

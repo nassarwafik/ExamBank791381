@@ -42,6 +42,8 @@ export function normalizeStrength(raw: unknown, finalized: number | null | undef
   // Shape only: integers where the contract is integral; the tier ids and the progression are the server's.
   return {
     totalPoints: nonNegativeInt(raw.totalPoints), examPoints: nonNegativeInt(raw.examPoints), practicePoints: nonNegativeInt(raw.practicePoints), projectPoints: nonNegativeInt(raw.projectPoints),
+    // Study Practice Strength is a later, optional field: an older payload without it is still a complete server payload.
+    studyPoints: isFiniteNumber((raw as Record<string, unknown>).studyPoints) ? nonNegativeInt((raw as Record<string, unknown>).studyPoints as number) : 0,
     tier: raw.tier, level: nonNegativeInt(raw.level), nextTier: raw.nextTier,
     levelBlockSize: nonNegativeInt(raw.levelBlockSize), withinLevelPoints: nonNegativeInt(raw.withinLevelPoints), nextLevelRemaining: nonNegativeInt(raw.nextLevelRemaining), percent: nonNegativeInt(raw.percent),
     projects,
@@ -82,7 +84,7 @@ function legacyStrength(finalized: number | null | undefined): StudentStrength {
   const next = nextRankForStrength(examPoints);
   const p = strengthProgress(examPoints);
   return {
-    totalPoints: examPoints, examPoints, practicePoints: 0, projectPoints: 0,
+    totalPoints: examPoints, examPoints, practicePoints: 0, studyPoints: 0, projectPoints: 0,
     tier, level: tier ? RANK_ORDER.indexOf(tier) + 1 : 0, nextTier: tier ? (next ? next.tier : null) : "beginner",
     levelBlockSize: p.needed, withinLevelPoints: tier && !next ? p.needed : p.withinBlock, nextLevelRemaining: tier && !next ? 0 : p.remaining, percent: tier && !next ? 100 : p.percent,
     projects: [],

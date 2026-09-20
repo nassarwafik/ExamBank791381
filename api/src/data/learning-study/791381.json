@@ -1,0 +1,3724 @@
+{
+  "schemaVersion": 1,
+  "courseId": "791381",
+  "pages": {
+    "791381-m07-l01-p05": {
+      "moduleId": "791381-m07",
+      "activities": {
+        "m07-l01-p05-table": {
+          "kind": "practice-table",
+          "cells": {
+            "0:1": "صالح",
+            "1:1": "صالح",
+            "2:1": "غير صالح",
+            "3:1": "صالح",
+            "4:1": "غير صالح"
+          }
+        }
+      }
+    },
+    "791381-m07-l02-p03": {
+      "moduleId": "791381-m07",
+      "activities": {
+        "m07-l02-p03-table": {
+          "kind": "practice-table",
+          "cells": {
+            "0:2": "عام",
+            "1:2": "خاص",
+            "2:2": "خاص",
+            "3:2": "عام",
+            "4:2": "عام"
+          }
+        }
+      }
+    },
+    "791381-m08-l01-p01": {
+      "moduleId": "791381-m08",
+      "activities": {
+        "m08-l01-p01-q1": {
+          "kind": "multipleChoice",
+          "correct": [
+            "m08-l01-p01-q1-a"
+          ]
+        }
+      }
+    },
+    "791381-m08-l01-p02": {
+      "moduleId": "791381-m08",
+      "activities": {
+        "m08-l01-p02-table": {
+          "kind": "practice-table",
+          "cells": {
+            "0:1": "C",
+            "1:1": "C",
+            "2:1": "A",
+            "3:1": "B",
+            "4:1": "B",
+            "5:1": "C",
+            "6:1": "A"
+          }
+        }
+      }
+    },
+    "791381-m08-l01-p03": {
+      "moduleId": "791381-m08",
+      "activities": {
+        "m08-l01-p03-q1": {
+          "kind": "trueFalse",
+          "answer": true
+        }
+      }
+    },
+    "791381-m08-l01-p04": {
+      "moduleId": "791381-m08",
+      "activities": {
+        "m08-l01-p04-q1": {
+          "kind": "multipleChoice",
+          "correct": [
+            "m08-l01-p04-q1-b"
+          ]
+        }
+      }
+    },
+    "791381-m08-l01-p05": {
+      "moduleId": "791381-m08",
+      "activities": {
+        "m08-l01-p05-table": {
+          "kind": "practice-table",
+          "cells": {
+            "0:1": "255.255.255.0",
+            "1:1": "255.255.255.0",
+            "2:1": "255.0.0.0",
+            "3:1": "255.255.0.0",
+            "4:1": "255.255.0.0",
+            "5:1": "255.255.255.0",
+            "6:1": "255.0.0.0"
+          }
+        }
+      }
+    },
+    "791381-m08-l02-p01": {
+      "moduleId": "791381-m08",
+      "activities": {
+        "m08-l02-p01-q1": {
+          "kind": "multipleChoice",
+          "correct": [
+            "m08-l02-p01-q1-a"
+          ]
+        }
+      }
+    },
+    "791381-m08-l02-p02": {
+      "moduleId": "791381-m08",
+      "activities": {
+        "m08-l02-p02-q1": {
+          "kind": "multipleChoice",
+          "correct": [
+            "m08-l02-p02-q1-c"
+          ]
+        }
+      }
+    },
+    "791381-m08-l02-p03": {
+      "moduleId": "791381-m08",
+      "activities": {
+        "m08-l02-p03-q1": {
+          "kind": "multipleChoice",
+          "correct": [
+            "m08-l02-p03-q1-c"
+          ]
+        }
+      }
+    },
+    "791381-m08-l03-p01": {
+      "moduleId": "791381-m08",
+      "activities": {
+        "m08-l03-p01-q1": {
+          "kind": "trueFalse",
+          "answer": true
+        }
+      }
+    },
+    "791381-m08-l03-p02": {
+      "moduleId": "791381-m08",
+      "activities": {
+        "m08-l03-p02-check": {
+          "kind": "practice-table",
+          "cells": {
+            "0:2": "192.168.20.7",
+            "1:2": "172.18.50.5",
+            "2:2": "10.200.1.1",
+            "3:2": "200.10.10.201",
+            "4:2": "189.10.7.7"
+          }
+        }
+      }
+    },
+    "791381-m08-l03-p03": {
+      "moduleId": "791381-m08",
+      "activities": {
+        "m08-l03-p03-q1": {
+          "kind": "multipleChoice",
+          "correct": [
+            "m08-l03-p03-q1-b"
+          ]
+        }
+      }
+    },
+    "791381-m08-l03-p04": {
+      "moduleId": "791381-m08",
+      "activities": {
+        "m08-l03-p04-q1": {
+          "kind": "multipleChoice",
+          "correct": [
+            "m08-l03-p04-q1-b"
+          ]
+        },
+        "m08-l03-p04-q2": {
+          "kind": "multipleChoice",
+          "correct": [
+            "m08-l03-p04-q2-c"
+          ]
+        },
+        "m08-l03-p04-q3": {
+          "kind": "multipleChoice",
+          "correct": [
+            "m08-l03-p04-q3-a"
+          ]
+        }
+      }
+    },
+    "791381-m09-l01-p01": {
+      "moduleId": "791381-m09",
+      "activities": {
+        "m09-l01-p01-q1": {
+          "kind": "multipleChoice",
+          "correct": [
+            "m09-l01-p01-q1-a"
+          ]
+        }
+      }
+    },
+    "791381-m09-l01-p02": {
+      "moduleId": "791381-m09",
+      "activities": {
+        "m09-l01-p02-q1": {
+          "kind": "trueFalse",
+          "answer": false
+        }
+      }
+    },
+    "791381-m09-l01-p03": {
+      "moduleId": "791381-m09",
+      "activities": {
+        "m09-l01-p03-q1": {
+          "kind": "multipleChoice",
+          "correct": [
+            "m09-l01-p03-q1-a"
+          ]
+        }
+      }
+    },
+    "791381-m09-l01-p05": {
+      "moduleId": "791381-m09",
+      "activities": {
+        "m09-l01-p05-match": {
+          "kind": "practice-table",
+          "cells": {
+            "0:1": "توسيع",
+            "1:1": "أمان",
+            "2:1": "دقة",
+            "3:1": "أداء"
+          }
+        }
+      }
+    },
+    "791381-m09-l02-p01": {
+      "moduleId": "791381-m09",
+      "activities": {
+        "m09-l02-p01-q1": {
+          "kind": "multipleChoice",
+          "correct": [
+            "m09-l02-p01-q1-c"
+          ]
+        }
+      }
+    },
+    "791381-m09-l02-p02": {
+      "moduleId": "791381-m09",
+      "activities": {
+        "m09-l02-p02-q1": {
+          "kind": "trueFalse",
+          "answer": false
+        }
+      }
+    },
+    "791381-m09-l03-p01": {
+      "moduleId": "791381-m09",
+      "activities": {
+        "m09-l03-p01-q1": {
+          "kind": "multipleChoice",
+          "correct": [
+            "m09-l03-p01-q1-a"
+          ]
+        },
+        "m09-l03-p01-q2": {
+          "kind": "multipleChoice",
+          "correct": [
+            "m09-l03-p01-q2-b"
+          ]
+        },
+        "m09-l03-p01-q3": {
+          "kind": "multipleChoice",
+          "correct": [
+            "m09-l03-p01-q3-c"
+          ]
+        }
+      }
+    },
+    "791381-m10-l01-p01": {
+      "moduleId": "791381-m10",
+      "activities": {
+        "m10-l01-p01-q1": {
+          "kind": "trueFalse",
+          "answer": false
+        }
+      }
+    },
+    "791381-m10-l01-p02": {
+      "moduleId": "791381-m10",
+      "activities": {
+        "m10-l01-p02-q1": {
+          "kind": "multipleChoice",
+          "correct": [
+            "m10-l01-p02-q1-b"
+          ]
+        }
+      }
+    },
+    "791381-m10-l02-p01": {
+      "moduleId": "791381-m10",
+      "activities": {
+        "m10-l02-p01-match": {
+          "kind": "practice-table",
+          "cells": {
+            "0:1": "Star",
+            "1:1": "Bus",
+            "2:1": "Ring",
+            "3:1": "Tree",
+            "4:1": "P2P",
+            "5:1": "Hybrid"
+          }
+        },
+        "m10-l02-p01-q1": {
+          "kind": "multipleChoice",
+          "correct": [
+            "m10-l02-p01-q1-b"
+          ]
+        }
+      }
+    },
+    "791381-m11-l01-p01": {
+      "moduleId": "791381-m11",
+      "activities": {
+        "m11-l01-p01-q1": {
+          "kind": "trueFalse",
+          "answer": true
+        },
+        "m11-l01-p01-q2": {
+          "kind": "multipleChoice",
+          "correct": [
+            "m11-l01-p01-q2-a"
+          ]
+        }
+      }
+    },
+    "791381-m11-l01-p02": {
+      "moduleId": "791381-m11",
+      "activities": {
+        "m11-l01-p02-match": {
+          "kind": "practice-table",
+          "cells": {
+            "0:1": "Fiber Optic",
+            "1:1": "UTP",
+            "2:1": "Coaxial",
+            "3:1": "STP"
+          }
+        },
+        "m11-l01-p02-q1": {
+          "kind": "multipleChoice",
+          "correct": [
+            "m11-l01-p02-q1-c"
+          ]
+        },
+        "m11-l01-p02-q2": {
+          "kind": "multipleChoice",
+          "correct": [
+            "m11-l01-p02-q2-a"
+          ]
+        }
+      }
+    },
+    "791381-m11-l02-p01": {
+      "moduleId": "791381-m11",
+      "activities": {
+        "m11-l02-p01-q1": {
+          "kind": "multipleChoice",
+          "correct": [
+            "m11-l02-p01-q1-b"
+          ]
+        },
+        "m11-l02-p01-q2": {
+          "kind": "shortInput",
+          "answer": "12"
+        },
+        "m11-l02-p01-q3": {
+          "kind": "trueFalse",
+          "answer": true
+        },
+        "m11-l02-p01-q4": {
+          "kind": "multipleChoice",
+          "correct": [
+            "m11-l02-p01-q4-b"
+          ]
+        }
+      }
+    },
+    "791381-m11-l02-p02": {
+      "moduleId": "791381-m11",
+      "activities": {
+        "m11-l02-p02-q1": {
+          "kind": "multipleChoice",
+          "correct": [
+            "m11-l02-p02-q1-a"
+          ]
+        },
+        "m11-l02-p02-q2": {
+          "kind": "trueFalse",
+          "answer": true
+        },
+        "m11-l02-p02-r1": {
+          "kind": "multipleChoice",
+          "correct": [
+            "m11-l02-p02-r1-b"
+          ]
+        },
+        "m11-l02-p02-r2": {
+          "kind": "multipleChoice",
+          "correct": [
+            "m11-l02-p02-r2-c"
+          ]
+        },
+        "m11-l02-p02-r3": {
+          "kind": "multipleChoice",
+          "correct": [
+            "m11-l02-p02-r3-b"
+          ]
+        }
+      }
+    },
+    "791381-m12-l01-p01": {
+      "moduleId": "791381-m12",
+      "activities": {
+        "m12-l01-p01-q1": {
+          "kind": "multipleChoice",
+          "correct": [
+            "m12-l01-p01-q1-c"
+          ]
+        },
+        "m12-l01-p01-q2": {
+          "kind": "multipleChoice",
+          "correct": [
+            "m12-l01-p01-q2-b"
+          ]
+        }
+      }
+    },
+    "791381-m12-l01-p02": {
+      "moduleId": "791381-m12",
+      "activities": {
+        "m12-l01-p02-q1": {
+          "kind": "trueFalse",
+          "answer": false
+        },
+        "m12-l01-p02-q2": {
+          "kind": "multipleChoice",
+          "correct": [
+            "m12-l01-p02-q2-a"
+          ]
+        }
+      }
+    },
+    "791381-m12-l01-p03": {
+      "moduleId": "791381-m12",
+      "activities": {
+        "m12-l01-p03-q1": {
+          "kind": "trueFalse",
+          "answer": false
+        },
+        "m12-l01-p03-q2": {
+          "kind": "multipleChoice",
+          "correct": [
+            "m12-l01-p03-q2-a"
+          ]
+        }
+      }
+    },
+    "791381-m12-l02-p01": {
+      "moduleId": "791381-m12",
+      "activities": {
+        "m12-l02-p01-q1": {
+          "kind": "shortInput",
+          "answer": "192.168.20.255"
+        },
+        "m12-l02-p01-q2": {
+          "kind": "shortInput",
+          "answer": "172.16.255.255"
+        },
+        "m12-l02-p01-q3": {
+          "kind": "multipleChoice",
+          "correct": [
+            "m12-l02-p01-q3-b"
+          ]
+        }
+      }
+    },
+    "791381-m12-l02-p02": {
+      "moduleId": "791381-m12",
+      "activities": {
+        "m12-l02-p02-match": {
+          "kind": "practice-table",
+          "cells": {
+            "0:1": "DHCP",
+            "1:1": "ARP",
+            "2:1": "RIP"
+          }
+        },
+        "m12-l02-p02-q1": {
+          "kind": "multipleChoice",
+          "correct": [
+            "m12-l02-p02-q1-b"
+          ]
+        },
+        "m12-l02-p02-q2": {
+          "kind": "trueFalse",
+          "answer": true
+        }
+      }
+    },
+    "791381-m12-l03-p01": {
+      "moduleId": "791381-m12",
+      "activities": {
+        "m12-l03-p01-match": {
+          "kind": "practice-table",
+          "cells": {
+            "0:1": "Bit",
+            "1:1": "MB",
+            "2:1": "Byte",
+            "3:1": "TB"
+          }
+        },
+        "m12-l03-p01-q1": {
+          "kind": "multipleChoice",
+          "correct": [
+            "m12-l03-p01-q1-a"
+          ]
+        },
+        "m12-l03-p01-q2": {
+          "kind": "shortInput",
+          "answer": "1024"
+        }
+      }
+    },
+    "791381-m12-l03-p02": {
+      "moduleId": "791381-m12",
+      "activities": {
+        "m12-l03-p02-q1": {
+          "kind": "multipleChoice",
+          "correct": [
+            "m12-l03-p02-q1-b"
+          ]
+        },
+        "m12-l03-p02-q2": {
+          "kind": "trueFalse",
+          "answer": true
+        }
+      }
+    },
+    "791381-m12-l03-p03": {
+      "moduleId": "791381-m12",
+      "activities": {
+        "m12-l03-p03-q1": {
+          "kind": "multipleChoice",
+          "correct": [
+            "m12-l03-p03-q1-b"
+          ]
+        },
+        "m12-l03-p03-r0": {
+          "kind": "practice-table",
+          "cells": {
+            "0:1": "Unicast",
+            "1:1": "Multicast",
+            "2:1": "Broadcast",
+            "3:1": "Unicast"
+          }
+        },
+        "m12-l03-p03-r1": {
+          "kind": "multipleChoice",
+          "correct": [
+            "m12-l03-p03-r1-b"
+          ]
+        },
+        "m12-l03-p03-r2": {
+          "kind": "multipleChoice",
+          "correct": [
+            "m12-l03-p03-r2-b"
+          ]
+        },
+        "m12-l03-p03-r3": {
+          "kind": "shortInput",
+          "answer": "172.30.255.255"
+        }
+      }
+    },
+    "791381-m12-l04-p01": {
+      "moduleId": "791381-m12",
+      "activities": {
+        "m12-l04-p01-q1": {
+          "kind": "multipleChoice",
+          "correct": [
+            "m12-l04-p01-q1-b"
+          ]
+        },
+        "m12-l04-p01-q2": {
+          "kind": "multipleChoice",
+          "correct": [
+            "m12-l04-p01-q2-b"
+          ]
+        }
+      }
+    },
+    "791381-m13-l01-p01": {
+      "moduleId": "791381-m13",
+      "activities": {
+        "m13-l01-p01-q1": {
+          "kind": "shortInput",
+          "answer": "7"
+        },
+        "m13-l01-p01-q2": {
+          "kind": "trueFalse",
+          "answer": false
+        }
+      }
+    },
+    "791381-m13-l01-p02": {
+      "moduleId": "791381-m13",
+      "activities": {
+        "m13-l01-p02-q1": {
+          "kind": "multipleChoice",
+          "correct": [
+            "m13-l01-p02-q1-b"
+          ]
+        },
+        "m13-l01-p02-q2": {
+          "kind": "multipleChoice",
+          "correct": [
+            "m13-l01-p02-q2-b"
+          ]
+        }
+      }
+    },
+    "791381-m13-l01-p03": {
+      "moduleId": "791381-m13",
+      "activities": {
+        "m13-l01-p03-q1": {
+          "kind": "multipleChoice",
+          "correct": [
+            "m13-l01-p03-q1-c"
+          ]
+        },
+        "m13-l01-p03-q2": {
+          "kind": "multipleChoice",
+          "correct": [
+            "m13-l01-p03-q2-a"
+          ]
+        }
+      }
+    },
+    "791381-m13-l01-p04": {
+      "moduleId": "791381-m13",
+      "activities": {
+        "m13-l01-p04-q1": {
+          "kind": "multipleChoice",
+          "correct": [
+            "m13-l01-p04-q1-a"
+          ]
+        },
+        "m13-l01-p04-q2": {
+          "kind": "multipleChoice",
+          "correct": [
+            "m13-l01-p04-q2-b"
+          ]
+        }
+      }
+    },
+    "791381-m13-l02-p01": {
+      "moduleId": "791381-m13",
+      "activities": {
+        "m13-l02-p01-q1": {
+          "kind": "shortInput",
+          "answer": "4"
+        },
+        "m13-l02-p01-q2": {
+          "kind": "multipleChoice",
+          "correct": [
+            "m13-l02-p01-q2-b"
+          ]
+        }
+      }
+    },
+    "791381-m13-l02-p02": {
+      "moduleId": "791381-m13",
+      "activities": {
+        "m13-l02-p02-q1": {
+          "kind": "multipleChoice",
+          "correct": [
+            "m13-l02-p02-q1-b"
+          ]
+        },
+        "m13-l02-p02-q2": {
+          "kind": "multipleChoice",
+          "correct": [
+            "m13-l02-p02-q2-a"
+          ]
+        }
+      }
+    },
+    "791381-m13-l02-p03": {
+      "moduleId": "791381-m13",
+      "activities": {
+        "m13-l02-p03-match": {
+          "kind": "practice-table",
+          "cells": {
+            "0:1": "Application",
+            "1:1": "Internet",
+            "2:1": "Link",
+            "3:1": "Transport",
+            "4:1": "Application",
+            "5:1": "Link"
+          }
+        },
+        "m13-l02-p03-q1": {
+          "kind": "trueFalse",
+          "answer": true
+        }
+      }
+    },
+    "791381-m13-l03-p01": {
+      "moduleId": "791381-m13",
+      "activities": {
+        "m13-l03-p01-q1": {
+          "kind": "multipleChoice",
+          "correct": [
+            "m13-l03-p01-q1-a"
+          ]
+        },
+        "m13-l03-p01-q2": {
+          "kind": "trueFalse",
+          "answer": true
+        }
+      }
+    },
+    "791381-m13-l03-p02": {
+      "moduleId": "791381-m13",
+      "activities": {
+        "m13-l03-p02-q1": {
+          "kind": "multipleChoice",
+          "correct": [
+            "m13-l03-p02-q1-b"
+          ]
+        }
+      }
+    },
+    "791381-m13-l03-p03": {
+      "moduleId": "791381-m13",
+      "activities": {
+        "m13-l03-p03-match": {
+          "kind": "practice-table",
+          "cells": {
+            "0:1": "TCP",
+            "1:1": "UDP",
+            "2:1": "TCP",
+            "3:1": "UDP",
+            "4:1": "TCP",
+            "5:1": "UDP"
+          }
+        },
+        "m13-l03-p03-q1": {
+          "kind": "multipleChoice",
+          "correct": [
+            "m13-l03-p03-q1-a"
+          ]
+        },
+        "m13-l03-p03-r1": {
+          "kind": "multipleChoice",
+          "correct": [
+            "m13-l03-p03-r1-a"
+          ]
+        },
+        "m13-l03-p03-r2": {
+          "kind": "multipleChoice",
+          "correct": [
+            "m13-l03-p03-r2-b"
+          ]
+        },
+        "m13-l03-p03-r3": {
+          "kind": "multipleChoice",
+          "correct": [
+            "m13-l03-p03-r3-b"
+          ]
+        }
+      }
+    },
+    "791381-m14-l01-p01": {
+      "moduleId": "791381-m14",
+      "activities": {
+        "m14-l01-p01-q1": {
+          "kind": "trueFalse",
+          "answer": true
+        },
+        "m14-l01-p01-q2": {
+          "kind": "multipleChoice",
+          "correct": [
+            "m14-l01-p01-q2-a"
+          ]
+        }
+      }
+    },
+    "791381-m14-l01-p02": {
+      "moduleId": "791381-m14",
+      "activities": {
+        "m14-l01-p02-q1": {
+          "kind": "multipleChoice",
+          "correct": [
+            "m14-l01-p02-q1-a"
+          ]
+        },
+        "m14-l01-p02-q2": {
+          "kind": "multipleChoice",
+          "correct": [
+            "m14-l01-p02-q2-b"
+          ]
+        }
+      }
+    },
+    "791381-m14-l02-p01": {
+      "moduleId": "791381-m14",
+      "activities": {
+        "m14-l02-p01-q1": {
+          "kind": "multipleChoice",
+          "correct": [
+            "m14-l02-p01-q1-b"
+          ]
+        },
+        "m14-l02-p01-q2": {
+          "kind": "trueFalse",
+          "answer": true
+        }
+      }
+    },
+    "791381-m14-l02-p02": {
+      "moduleId": "791381-m14",
+      "activities": {
+        "m14-l02-p02-q1": {
+          "kind": "multipleChoice",
+          "correct": [
+            "m14-l02-p02-q1-a"
+          ]
+        },
+        "m14-l02-p02-q2": {
+          "kind": "multipleChoice",
+          "correct": [
+            "m14-l02-p02-q2-b"
+          ]
+        }
+      }
+    },
+    "791381-m14-l03-p01": {
+      "moduleId": "791381-m14",
+      "activities": {
+        "m14-l03-p01-match": {
+          "kind": "practice-table",
+          "cells": {
+            "0:1": "يحوّل اسم الموقع إلى عنوان IP",
+            "1:1": "تحكّم آمن ومشفّر عن بُعد",
+            "2:1": "يوزّع عناوين IP تلقائيًا",
+            "3:1": "يربط عنوان IP بعنوان MAC",
+            "4:1": "إرسال البريد بين الخوادم",
+            "5:1": "تصفّح آمن بالتشفير",
+            "6:1": "نقل الملفات بين جهاز وخادم",
+            "7:1": "رسائل فحص وأخطاء"
+          }
+        },
+        "m14-l03-p01-q1": {
+          "kind": "multipleChoice",
+          "correct": [
+            "m14-l03-p01-q1-b"
+          ]
+        },
+        "m14-l03-p01-q2": {
+          "kind": "multipleChoice",
+          "correct": [
+            "m14-l03-p01-q2-a"
+          ]
+        }
+      }
+    },
+    "791381-m14-l03-p02": {
+      "moduleId": "791381-m14",
+      "activities": {
+        "m14-l03-p02-match": {
+          "kind": "practice-table",
+          "cells": {
+            "0:1": "UDP",
+            "1:1": "TCP",
+            "2:1": "UDP",
+            "3:1": "TCP",
+            "4:1": "UDP",
+            "5:1": "TCP"
+          }
+        },
+        "m14-l03-p02-q1": {
+          "kind": "multipleChoice",
+          "correct": [
+            "m14-l03-p02-q1-a"
+          ]
+        },
+        "m14-l03-p02-r1": {
+          "kind": "shortInput",
+          "answer": "dns"
+        },
+        "m14-l03-p02-r2": {
+          "kind": "multipleChoice",
+          "correct": [
+            "m14-l03-p02-r2-b"
+          ]
+        },
+        "m14-l03-p02-r3": {
+          "kind": "multipleChoice",
+          "correct": [
+            "m14-l03-p02-r3-a"
+          ]
+        }
+      }
+    },
+    "791381-m15-l01-p01": {
+      "moduleId": "791381-m15",
+      "activities": {
+        "m15-l01-p01-q1": {
+          "kind": "multipleChoice",
+          "correct": [
+            "m15-l01-p01-q1-a"
+          ]
+        },
+        "m15-l01-p01-q2": {
+          "kind": "trueFalse",
+          "answer": false
+        }
+      }
+    },
+    "791381-m15-l01-p02": {
+      "moduleId": "791381-m15",
+      "activities": {
+        "m15-l01-p02-q1": {
+          "kind": "multipleChoice",
+          "correct": [
+            "m15-l01-p02-q1-b"
+          ]
+        },
+        "m15-l01-p02-q2": {
+          "kind": "shortInput",
+          "answer": "ipconfig"
+        }
+      }
+    },
+    "791381-m15-l02-p01": {
+      "moduleId": "791381-m15",
+      "activities": {
+        "m15-l02-p01-q1": {
+          "kind": "multipleChoice",
+          "correct": [
+            "m15-l02-p01-q1-a"
+          ]
+        }
+      }
+    },
+    "791381-m15-l02-p02": {
+      "moduleId": "791381-m15",
+      "activities": {
+        "m15-l02-p02-q1": {
+          "kind": "multipleChoice",
+          "correct": [
+            "m15-l02-p02-q1-a"
+          ]
+        }
+      }
+    },
+    "791381-m15-l02-p03": {
+      "moduleId": "791381-m15",
+      "activities": {
+        "m15-l02-p03-match": {
+          "kind": "practice-table",
+          "cells": {
+            "0:1": "ipconfig",
+            "1:1": "ping",
+            "2:1": "arp",
+            "3:1": "nslookup",
+            "4:1": "tracert"
+          }
+        },
+        "m15-l02-p03-q1": {
+          "kind": "multipleChoice",
+          "correct": [
+            "m15-l02-p03-q1-a"
+          ]
+        },
+        "m15-l02-p03-r1": {
+          "kind": "multipleChoice",
+          "correct": [
+            "m15-l02-p03-r1-a"
+          ]
+        },
+        "m15-l02-p03-r2": {
+          "kind": "multipleChoice",
+          "correct": [
+            "m15-l02-p03-r2-b"
+          ]
+        },
+        "m15-l02-p03-r3": {
+          "kind": "shortInput",
+          "answer": "tracert"
+        }
+      }
+    },
+    "791381-m16-l01-p01": {
+      "moduleId": "791381-m16",
+      "activities": {
+        "m16-l01-p01-q1": {
+          "kind": "multipleChoice",
+          "correct": [
+            "m16-l01-p01-q1-a"
+          ]
+        },
+        "m16-l01-p01-q2": {
+          "kind": "shortInput",
+          "answer": "6"
+        }
+      }
+    },
+    "791381-m16-l01-p02": {
+      "moduleId": "791381-m16",
+      "activities": {
+        "m16-l01-p02-q1": {
+          "kind": "multipleChoice",
+          "correct": [
+            "m16-l01-p02-q1-a"
+          ]
+        },
+        "m16-l01-p02-q2": {
+          "kind": "trueFalse",
+          "answer": true
+        }
+      }
+    },
+    "791381-m16-l02-p01": {
+      "moduleId": "791381-m16",
+      "activities": {
+        "m16-l02-p01-q1": {
+          "kind": "multipleChoice",
+          "correct": [
+            "m16-l02-p01-q1-a"
+          ]
+        },
+        "m16-l02-p01-q2": {
+          "kind": "multipleChoice",
+          "correct": [
+            "m16-l02-p01-q2-b"
+          ]
+        }
+      }
+    },
+    "791381-m16-l02-p02": {
+      "moduleId": "791381-m16",
+      "activities": {
+        "m16-l02-p02-q1": {
+          "kind": "multipleChoice",
+          "correct": [
+            "m16-l02-p02-q1-b"
+          ]
+        },
+        "m16-l02-p02-q2": {
+          "kind": "trueFalse",
+          "answer": true
+        }
+      }
+    },
+    "791381-m16-l03-p01": {
+      "moduleId": "791381-m16",
+      "activities": {
+        "m16-l03-p01-q1": {
+          "kind": "multipleChoice",
+          "correct": [
+            "m16-l03-p01-q1-a"
+          ]
+        },
+        "m16-l03-p01-q2": {
+          "kind": "multipleChoice",
+          "correct": [
+            "m16-l03-p01-q2-a"
+          ]
+        }
+      }
+    },
+    "791381-m16-l03-p02": {
+      "moduleId": "791381-m16",
+      "activities": {
+        "m16-l03-p02-q1": {
+          "kind": "multipleChoice",
+          "correct": [
+            "m16-l03-p02-q1-a"
+          ]
+        },
+        "m16-l03-p02-q2": {
+          "kind": "trueFalse",
+          "answer": true
+        }
+      }
+    },
+    "791381-m16-l04-p01": {
+      "moduleId": "791381-m16",
+      "activities": {
+        "m16-l04-p01-q1": {
+          "kind": "shortInput",
+          "answer": "127.0.0.1"
+        },
+        "m16-l04-p01-q2": {
+          "kind": "trueFalse",
+          "answer": false
+        }
+      }
+    },
+    "791381-m16-l04-p02": {
+      "moduleId": "791381-m16",
+      "activities": {
+        "m16-l04-p02-q1": {
+          "kind": "multipleChoice",
+          "correct": [
+            "m16-l04-p02-q1-a"
+          ]
+        },
+        "m16-l04-p02-q2": {
+          "kind": "multipleChoice",
+          "correct": [
+            "m16-l04-p02-q2-b"
+          ]
+        }
+      }
+    },
+    "791381-m16-l05-p01": {
+      "moduleId": "791381-m16",
+      "activities": {
+        "m16-l05-p01-r1": {
+          "kind": "multipleChoice",
+          "correct": [
+            "m16-l05-p01-r1-a"
+          ]
+        },
+        "m16-l05-p01-r2": {
+          "kind": "multipleChoice",
+          "correct": [
+            "m16-l05-p01-r2-a"
+          ]
+        },
+        "m16-l05-p01-r3": {
+          "kind": "multipleChoice",
+          "correct": [
+            "m16-l05-p01-r3-b"
+          ]
+        }
+      }
+    },
+    "791381-m17-l01-p01": {
+      "moduleId": "791381-m17",
+      "activities": {
+        "m17-l01-p01-q1": {
+          "kind": "trueFalse",
+          "answer": true
+        },
+        "m17-l01-p01-q2": {
+          "kind": "multipleChoice",
+          "correct": [
+            "m17-l01-p01-q2-a"
+          ]
+        }
+      }
+    },
+    "791381-m17-l01-p02": {
+      "moduleId": "791381-m17",
+      "activities": {
+        "m17-l01-p02-q1": {
+          "kind": "multipleChoice",
+          "correct": [
+            "m17-l01-p02-q1-b"
+          ]
+        },
+        "m17-l01-p02-q2": {
+          "kind": "trueFalse",
+          "answer": true
+        }
+      }
+    },
+    "791381-m17-l01-p03": {
+      "moduleId": "791381-m17",
+      "activities": {
+        "m17-l01-p03-q1": {
+          "kind": "multipleChoice",
+          "correct": [
+            "m17-l01-p03-q1-a"
+          ]
+        },
+        "m17-l01-p03-q2": {
+          "kind": "multipleChoice",
+          "correct": [
+            "m17-l01-p03-q2-a"
+          ]
+        }
+      }
+    },
+    "791381-m17-l01-p04": {
+      "moduleId": "791381-m17",
+      "activities": {
+        "m17-l01-p04-match": {
+          "kind": "practice-table",
+          "cells": {
+            "0:1": "DoS",
+            "1:1": "MitM",
+            "2:1": "Spoofing",
+            "3:1": "DDoS",
+            "4:1": "Phishing",
+            "5:1": "Session Hijacking"
+          }
+        },
+        "m17-l01-p04-q1": {
+          "kind": "multipleChoice",
+          "correct": [
+            "m17-l01-p04-q1-a"
+          ]
+        }
+      }
+    },
+    "791381-m17-l02-p01": {
+      "moduleId": "791381-m17",
+      "activities": {
+        "m17-l02-p01-q1": {
+          "kind": "multipleChoice",
+          "correct": [
+            "m17-l02-p01-q1-a"
+          ]
+        },
+        "m17-l02-p01-q2": {
+          "kind": "trueFalse",
+          "answer": true
+        }
+      }
+    },
+    "791381-m17-l02-p02": {
+      "moduleId": "791381-m17",
+      "activities": {
+        "m17-l02-p02-q1": {
+          "kind": "multipleChoice",
+          "correct": [
+            "m17-l02-p02-q1-a"
+          ]
+        },
+        "m17-l02-p02-q2": {
+          "kind": "trueFalse",
+          "answer": true
+        }
+      }
+    },
+    "791381-m17-l02-p03": {
+      "moduleId": "791381-m17",
+      "activities": {
+        "m17-l02-p03-q1": {
+          "kind": "multipleChoice",
+          "correct": [
+            "m17-l02-p03-q1-a"
+          ]
+        },
+        "m17-l02-p03-q2": {
+          "kind": "shortInput",
+          "answer": "https"
+        }
+      }
+    },
+    "791381-m17-l02-p04": {
+      "moduleId": "791381-m17",
+      "activities": {
+        "m17-l02-p04-match": {
+          "kind": "practice-table",
+          "cells": {
+            "0:1": "VPN",
+            "1:1": "SSH",
+            "2:1": "SSL/TLS",
+            "3:1": "HTTPS"
+          }
+        },
+        "m17-l02-p04-q1": {
+          "kind": "multipleChoice",
+          "correct": [
+            "m17-l02-p04-q1-a"
+          ]
+        },
+        "m17-l02-p04-r1": {
+          "kind": "multipleChoice",
+          "correct": [
+            "m17-l02-p04-r1-a"
+          ]
+        },
+        "m17-l02-p04-r2": {
+          "kind": "multipleChoice",
+          "correct": [
+            "m17-l02-p04-r2-a"
+          ]
+        },
+        "m17-l02-p04-r3": {
+          "kind": "multipleChoice",
+          "correct": [
+            "m17-l02-p04-r3-a"
+          ]
+        }
+      }
+    },
+    "791381-m18-l01-p01": {
+      "moduleId": "791381-m18",
+      "activities": {
+        "m18-l01-p01-q1": {
+          "kind": "multipleChoice",
+          "correct": [
+            "m18-l01-p01-q1-a"
+          ]
+        },
+        "m18-l01-p01-q2": {
+          "kind": "trueFalse",
+          "answer": true
+        }
+      }
+    },
+    "791381-m18-l01-p02": {
+      "moduleId": "791381-m18",
+      "activities": {
+        "m18-l01-p02-match": {
+          "kind": "practice-table",
+          "cells": {
+            "0:1": "Frame",
+            "1:1": "Segment",
+            "2:1": "Packet",
+            "3:1": "Frame",
+            "4:1": "Segment"
+          }
+        },
+        "m18-l01-p02-q1": {
+          "kind": "multipleChoice",
+          "correct": [
+            "m18-l01-p02-q1-a"
+          ]
+        }
+      }
+    },
+    "791381-m18-l02-p01": {
+      "moduleId": "791381-m18",
+      "activities": {
+        "m18-l02-p01-q1": {
+          "kind": "multipleChoice",
+          "correct": [
+            "m18-l02-p01-q1-a"
+          ]
+        },
+        "m18-l02-p01-q2": {
+          "kind": "shortInput",
+          "answer": "3"
+        },
+        "m18-l02-p01-q3": {
+          "kind": "trueFalse",
+          "answer": false
+        }
+      }
+    },
+    "791381-m18-l03-p01": {
+      "moduleId": "791381-m18",
+      "activities": {
+        "m18-l03-p01-r1": {
+          "kind": "multipleChoice",
+          "correct": [
+            "m18-l03-p01-r1-a"
+          ]
+        },
+        "m18-l03-p01-r2": {
+          "kind": "multipleChoice",
+          "correct": [
+            "m18-l03-p01-r2-a"
+          ]
+        },
+        "m18-l03-p01-r3": {
+          "kind": "multipleChoice",
+          "correct": [
+            "m18-l03-p01-r3-a"
+          ]
+        }
+      }
+    },
+    "791381-m03-l01-p03": {
+      "moduleId": "791381-m03",
+      "activities": {
+        "m03-l01-p03-q1": {
+          "kind": "multipleChoice",
+          "correct": [
+            "m03-l01-p03-q1-a"
+          ]
+        },
+        "m03-l01-p03-q2": {
+          "kind": "trueFalse",
+          "answer": true
+        }
+      }
+    },
+    "791381-m03-l01-p04": {
+      "moduleId": "791381-m03",
+      "activities": {
+        "m03-l01-p04-q1": {
+          "kind": "multipleChoice",
+          "correct": [
+            "m03-l01-p04-q1-a"
+          ]
+        },
+        "m03-l01-p04-q2": {
+          "kind": "multipleChoice",
+          "correct": [
+            "m03-l01-p04-q2-a"
+          ]
+        }
+      }
+    },
+    "791381-m03-l01-p01": {
+      "moduleId": "791381-m03",
+      "activities": {
+        "m03-l01-p01-q1": {
+          "kind": "multipleChoice",
+          "correct": [
+            "m03-l01-p01-q1-a"
+          ]
+        },
+        "m03-l01-p01-q2": {
+          "kind": "shortInput",
+          "answer": "f0/24"
+        }
+      }
+    },
+    "791381-m03-l01-p02": {
+      "moduleId": "791381-m03",
+      "activities": {
+        "m03-l01-p02-match": {
+          "kind": "practice-table",
+          "cells": {
+            "0:1": "Access",
+            "1:1": "Trunk",
+            "2:1": "Access"
+          }
+        },
+        "m03-l01-p02-q1": {
+          "kind": "multipleChoice",
+          "correct": [
+            "m03-l01-p02-q1-a"
+          ]
+        },
+        "m03-l01-p02-q2": {
+          "kind": "trueFalse",
+          "answer": false
+        }
+      }
+    },
+    "791381-m03-l02-p01": {
+      "moduleId": "791381-m03",
+      "activities": {
+        "m03-l02-p01-q1": {
+          "kind": "multipleChoice",
+          "correct": [
+            "m03-l02-p01-q1-a"
+          ]
+        },
+        "m03-l02-p01-q2": {
+          "kind": "trueFalse",
+          "answer": false
+        }
+      }
+    },
+    "791381-m03-l02-p02": {
+      "moduleId": "791381-m03",
+      "activities": {
+        "m03-l02-p02-match": {
+          "kind": "practice-table",
+          "cells": {
+            "0:1": "VLAN ID",
+            "1:1": "Trunk",
+            "2:1": "VLAN 1",
+            "3:1": "Trunk"
+          }
+        },
+        "m03-l02-p02-q1": {
+          "kind": "multipleChoice",
+          "correct": [
+            "m03-l02-p02-q1-a"
+          ]
+        },
+        "m03-l02-p02-q2": {
+          "kind": "trueFalse",
+          "answer": false
+        }
+      }
+    },
+    "791381-m03-l02-p03": {
+      "moduleId": "791381-m03",
+      "activities": {
+        "m03-l02-p03-q1": {
+          "kind": "multipleChoice",
+          "correct": [
+            "m03-l02-p03-q1-a"
+          ]
+        },
+        "m03-l02-p03-q2": {
+          "kind": "trueFalse",
+          "answer": true
+        }
+      }
+    },
+    "791381-m03-l02-p04": {
+      "moduleId": "791381-m03",
+      "activities": {
+        "m03-l02-p04-match": {
+          "kind": "practice-table",
+          "cells": {
+            "0:1": "10",
+            "1:1": "20",
+            "2:1": "20",
+            "3:1": "10"
+          }
+        },
+        "m03-l02-p04-q1": {
+          "kind": "multipleChoice",
+          "correct": [
+            "m03-l02-p04-q1-a"
+          ]
+        }
+      }
+    },
+    "791381-m03-l02-p05": {
+      "moduleId": "791381-m03",
+      "activities": {
+        "m03-l02-p05-q1": {
+          "kind": "multipleChoice",
+          "correct": [
+            "m03-l02-p05-q1-a"
+          ]
+        },
+        "m03-l02-p05-q2": {
+          "kind": "trueFalse",
+          "answer": true
+        }
+      }
+    },
+    "791381-m03-l03-p01": {
+      "moduleId": "791381-m03",
+      "activities": {
+        "m03-l03-p01-q1": {
+          "kind": "multipleChoice",
+          "correct": [
+            "m03-l03-p01-q1-a"
+          ]
+        },
+        "m03-l03-p01-q2": {
+          "kind": "trueFalse",
+          "answer": false
+        }
+      }
+    },
+    "791381-m03-l03-p02": {
+      "moduleId": "791381-m03",
+      "activities": {
+        "m03-l03-p02-match": {
+          "kind": "practice-table",
+          "cells": {
+            "0:1": "يربط المنافذ بـ VLAN 10",
+            "1:1": "يحدّد مجموعة منافذ",
+            "2:1": "المنفذ لجهاز عادي"
+          }
+        },
+        "m03-l03-p02-q1": {
+          "kind": "multipleChoice",
+          "correct": [
+            "m03-l03-p02-q1-a"
+          ]
+        },
+        "m03-l03-p02-q2": {
+          "kind": "trueFalse",
+          "answer": true
+        }
+      }
+    },
+    "791381-m03-l03-p03": {
+      "moduleId": "791381-m03",
+      "activities": {
+        "m03-l03-p03-q1": {
+          "kind": "multipleChoice",
+          "correct": [
+            "m03-l03-p03-q1-a"
+          ]
+        },
+        "m03-l03-p03-q2": {
+          "kind": "trueFalse",
+          "answer": false
+        }
+      }
+    },
+    "791381-m03-l03-p04": {
+      "moduleId": "791381-m03",
+      "activities": {
+        "m03-l03-p04-q1": {
+          "kind": "multipleChoice",
+          "correct": [
+            "m03-l03-p04-q1-a"
+          ]
+        },
+        "m03-l03-p04-q2": {
+          "kind": "multipleChoice",
+          "correct": [
+            "m03-l03-p04-q2-a"
+          ]
+        }
+      }
+    },
+    "791381-m03-l03-p05": {
+      "moduleId": "791381-m03",
+      "activities": {
+        "m03-l03-p05-q1": {
+          "kind": "multipleChoice",
+          "correct": [
+            "m03-l03-p05-q1-a"
+          ]
+        },
+        "m03-l03-p05-q2": {
+          "kind": "trueFalse",
+          "answer": true
+        }
+      }
+    },
+    "791381-m03-l04-p01": {
+      "moduleId": "791381-m03",
+      "activities": {
+        "m03-l04-p01-match": {
+          "kind": "practice-table",
+          "cells": {
+            "0:1": "Tagged VLAN",
+            "1:1": "Native VLAN",
+            "2:1": "Untagged VLAN",
+            "3:1": "Native VLAN"
+          }
+        },
+        "m03-l04-p01-q1": {
+          "kind": "multipleChoice",
+          "correct": [
+            "m03-l04-p01-q1-a"
+          ]
+        },
+        "m03-l04-p01-q2": {
+          "kind": "trueFalse",
+          "answer": false
+        }
+      }
+    },
+    "791381-m03-l04-p02": {
+      "moduleId": "791381-m03",
+      "activities": {
+        "m03-l04-p02-q1": {
+          "kind": "multipleChoice",
+          "correct": [
+            "m03-l04-p02-q1-a"
+          ]
+        },
+        "m03-l04-p02-q2": {
+          "kind": "trueFalse",
+          "answer": true
+        }
+      }
+    },
+    "791381-m03-l04-p03": {
+      "moduleId": "791381-m03",
+      "activities": {
+        "m03-l04-p03-q1": {
+          "kind": "multipleChoice",
+          "correct": [
+            "m03-l04-p03-q1-a"
+          ]
+        },
+        "m03-l04-p03-q2": {
+          "kind": "multipleChoice",
+          "correct": [
+            "m03-l04-p03-q2-a"
+          ]
+        }
+      }
+    },
+    "791381-m03-l04-p04": {
+      "moduleId": "791381-m03",
+      "activities": {
+        "m03-l04-p04-match": {
+          "kind": "practice-table",
+          "cells": {
+            "0:1": "Access",
+            "1:1": "Trunk",
+            "2:1": "Trunk",
+            "3:1": "Access"
+          }
+        },
+        "m03-l04-p04-q1": {
+          "kind": "trueFalse",
+          "answer": true
+        },
+        "m03-l04-p04-r1": {
+          "kind": "multipleChoice",
+          "correct": [
+            "m03-l04-p04-r1-a"
+          ]
+        },
+        "m03-l04-p04-r2": {
+          "kind": "multipleChoice",
+          "correct": [
+            "m03-l04-p04-r2-a"
+          ]
+        },
+        "m03-l04-p04-r3": {
+          "kind": "multipleChoice",
+          "correct": [
+            "m03-l04-p04-r3-a"
+          ]
+        }
+      }
+    },
+    "791381-m19-l01-p01": {
+      "moduleId": "791381-m19",
+      "activities": {
+        "m19-l01-p01-q1": {
+          "kind": "multipleChoice",
+          "correct": [
+            "m19-l01-p01-q1-a"
+          ]
+        },
+        "m19-l01-p01-q2": {
+          "kind": "trueFalse",
+          "answer": true
+        }
+      }
+    },
+    "791381-m19-l01-p02": {
+      "moduleId": "791381-m19",
+      "activities": {
+        "m19-l01-p02-match": {
+          "kind": "practice-table",
+          "cells": {
+            "0:1": "Server",
+            "1:1": "Client",
+            "2:1": "Server"
+          }
+        },
+        "m19-l01-p02-q1": {
+          "kind": "multipleChoice",
+          "correct": [
+            "m19-l01-p02-q1-a"
+          ]
+        }
+      }
+    },
+    "791381-m19-l02-p01": {
+      "moduleId": "791381-m19",
+      "activities": {
+        "m19-l02-p01-match": {
+          "kind": "practice-table",
+          "cells": {
+            "0:1": "اسم المجال المشترك",
+            "1:1": "على السويتش العميل",
+            "2:1": "كلمة مرور المجال",
+            "3:1": "Server يدير تعريفات VLAN"
+          }
+        },
+        "m19-l02-p01-q1": {
+          "kind": "multipleChoice",
+          "correct": [
+            "m19-l02-p01-q1-a"
+          ]
+        }
+      }
+    },
+    "791381-m19-l02-p02": {
+      "moduleId": "791381-m19",
+      "activities": {
+        "m19-l02-p02-match": {
+          "kind": "practice-table",
+          "cells": {
+            "0:1": "Server",
+            "1:1": "Client",
+            "2:1": "Client"
+          }
+        },
+        "m19-l02-p02-q1": {
+          "kind": "trueFalse",
+          "answer": false
+        }
+      }
+    },
+    "791381-m19-l02-p03": {
+      "moduleId": "791381-m19",
+      "activities": {
+        "m19-l02-p03-q1": {
+          "kind": "multipleChoice",
+          "correct": [
+            "m19-l02-p03-q1-a"
+          ]
+        },
+        "m19-l02-p03-q2": {
+          "kind": "trueFalse",
+          "answer": true
+        },
+        "m19-l02-p03-r1": {
+          "kind": "multipleChoice",
+          "correct": [
+            "m19-l02-p03-r1-a"
+          ]
+        },
+        "m19-l02-p03-r2": {
+          "kind": "multipleChoice",
+          "correct": [
+            "m19-l02-p03-r2-a"
+          ]
+        },
+        "m19-l02-p03-r3": {
+          "kind": "multipleChoice",
+          "correct": [
+            "m19-l02-p03-r3-a"
+          ]
+        }
+      }
+    },
+    "791381-m04-l01-p02": {
+      "moduleId": "791381-m04",
+      "activities": {
+        "m04-l01-p02-q1": {
+          "kind": "multipleChoice",
+          "correct": [
+            "m04-l01-p02-q1-a"
+          ]
+        },
+        "m04-l01-p02-q2": {
+          "kind": "shortInput",
+          "answer": "g0/0"
+        }
+      }
+    },
+    "791381-m04-l01-p03": {
+      "moduleId": "791381-m04",
+      "activities": {
+        "m04-l01-p03-q1": {
+          "kind": "multipleChoice",
+          "correct": [
+            "m04-l01-p03-q1-a"
+          ]
+        },
+        "m04-l01-p03-q2": {
+          "kind": "trueFalse",
+          "answer": true
+        }
+      }
+    },
+    "791381-m04-l01-p01": {
+      "moduleId": "791381-m04",
+      "activities": {
+        "m04-l01-p01-q1": {
+          "kind": "multipleChoice",
+          "correct": [
+            "m04-l01-p01-q1-a"
+          ]
+        },
+        "m04-l01-p01-q2": {
+          "kind": "trueFalse",
+          "answer": false
+        }
+      }
+    },
+    "791381-m04-l01-p04": {
+      "moduleId": "791381-m04",
+      "activities": {
+        "m04-l01-p04-q1": {
+          "kind": "trueFalse",
+          "answer": false
+        },
+        "m04-l01-p04-q2": {
+          "kind": "multipleChoice",
+          "correct": [
+            "m04-l01-p04-q2-a"
+          ]
+        }
+      }
+    },
+    "791381-m04-l01-p05": {
+      "moduleId": "791381-m04",
+      "activities": {
+        "m04-l01-p05-q1": {
+          "kind": "multipleChoice",
+          "correct": [
+            "m04-l01-p05-q1-a"
+          ]
+        },
+        "m04-l01-p05-q2": {
+          "kind": "trueFalse",
+          "answer": false
+        }
+      }
+    },
+    "791381-m04-l02-p01": {
+      "moduleId": "791381-m04",
+      "activities": {
+        "m04-l02-p01-q1": {
+          "kind": "multipleChoice",
+          "correct": [
+            "m04-l02-p01-q1-a"
+          ]
+        },
+        "m04-l02-p01-q2": {
+          "kind": "multipleChoice",
+          "correct": [
+            "m04-l02-p01-q2-a"
+          ]
+        }
+      }
+    },
+    "791381-m04-l02-p02": {
+      "moduleId": "791381-m04",
+      "activities": {
+        "m04-l02-p02-q1": {
+          "kind": "multipleChoice",
+          "correct": [
+            "m04-l02-p02-q1-a"
+          ]
+        },
+        "m04-l02-p02-q2": {
+          "kind": "trueFalse",
+          "answer": true
+        }
+      }
+    },
+    "791381-m04-l02-p03": {
+      "moduleId": "791381-m04",
+      "activities": {
+        "m04-l02-p03-match": {
+          "kind": "practice-table",
+          "cells": {
+            "0:1": "نسمح بمرور VLAN 10 و 20 و 30",
+            "1:1": "نحدّد منفذ GigabitEthernet0/1",
+            "2:1": "نجعله Trunk"
+          }
+        },
+        "m04-l02-p03-q1": {
+          "kind": "multipleChoice",
+          "correct": [
+            "m04-l02-p03-q1-a"
+          ]
+        }
+      }
+    },
+    "791381-m04-l02-p04": {
+      "moduleId": "791381-m04",
+      "activities": {
+        "m04-l02-p04-q1": {
+          "kind": "multipleChoice",
+          "correct": [
+            "m04-l02-p04-q1-a"
+          ]
+        },
+        "m04-l02-p04-q2": {
+          "kind": "multipleChoice",
+          "correct": [
+            "m04-l02-p04-q2-a"
+          ]
+        }
+      }
+    },
+    "791381-m04-l02-p05": {
+      "moduleId": "791381-m04",
+      "activities": {
+        "m04-l02-p05-match": {
+          "kind": "practice-table",
+          "cells": {
+            "0:1": "VLAN 30",
+            "1:1": "VLAN 40",
+            "2:1": "VLAN 10",
+            "3:1": "VLAN 20"
+          }
+        },
+        "m04-l02-p05-q1": {
+          "kind": "multipleChoice",
+          "correct": [
+            "m04-l02-p05-q1-a"
+          ]
+        }
+      }
+    },
+    "791381-m04-l03-p01": {
+      "moduleId": "791381-m04",
+      "activities": {
+        "m04-l03-p01-match": {
+          "kind": "practice-table",
+          "cells": {
+            "0:1": "Trunk",
+            "1:1": "Router on a Stick",
+            "2:1": "Dot1Q",
+            "3:1": "VLAN"
+          }
+        },
+        "m04-l03-p01-q1": {
+          "kind": "multipleChoice",
+          "correct": [
+            "m04-l03-p01-q1-a"
+          ]
+        }
+      }
+    },
+    "791381-m04-l03-p02": {
+      "moduleId": "791381-m04",
+      "activities": {
+        "m04-l03-p02-r1": {
+          "kind": "multipleChoice",
+          "correct": [
+            "m04-l03-p02-r1-a"
+          ]
+        },
+        "m04-l03-p02-r2": {
+          "kind": "multipleChoice",
+          "correct": [
+            "m04-l03-p02-r2-a"
+          ]
+        },
+        "m04-l03-p02-r3": {
+          "kind": "multipleChoice",
+          "correct": [
+            "m04-l03-p02-r3-a"
+          ]
+        }
+      }
+    },
+    "791381-m20-l01-p01": {
+      "moduleId": "791381-m20",
+      "activities": {
+        "m20-l01-p01-q1": {
+          "kind": "multipleChoice",
+          "correct": [
+            "m20-l01-p01-q1-a"
+          ]
+        },
+        "m20-l01-p01-q2": {
+          "kind": "trueFalse",
+          "answer": false
+        }
+      }
+    },
+    "791381-m20-l01-p02": {
+      "moduleId": "791381-m20",
+      "activities": {
+        "m20-l01-p02-q1": {
+          "kind": "multipleChoice",
+          "correct": [
+            "m20-l01-p02-q1-a"
+          ]
+        }
+      }
+    },
+    "791381-m20-l01-p03": {
+      "moduleId": "791381-m20",
+      "activities": {
+        "m20-l01-p03-ws": {
+          "kind": "practice-table",
+          "cells": {
+            "0:1": "WLAN",
+            "1:1": "WWAN",
+            "2:1": "WPAN"
+          }
+        },
+        "m20-l01-p03-q1": {
+          "kind": "multipleChoice",
+          "correct": [
+            "m20-l01-p03-q1-a"
+          ]
+        }
+      }
+    },
+    "791381-m20-l02-p01": {
+      "moduleId": "791381-m20",
+      "activities": {
+        "m20-l02-p01-q1": {
+          "kind": "trueFalse",
+          "answer": false
+        },
+        "m20-l02-p01-q2": {
+          "kind": "multipleChoice",
+          "correct": [
+            "m20-l02-p01-q2-a"
+          ]
+        }
+      }
+    },
+    "791381-m20-l02-p02": {
+      "moduleId": "791381-m20",
+      "activities": {
+        "m20-l02-p02-q1": {
+          "kind": "multipleChoice",
+          "correct": [
+            "m20-l02-p02-q1-a"
+          ]
+        },
+        "m20-l02-p02-q2": {
+          "kind": "trueFalse",
+          "answer": false
+        }
+      }
+    },
+    "791381-m20-l02-p03": {
+      "moduleId": "791381-m20",
+      "activities": {
+        "m20-l02-p03-ws": {
+          "kind": "practice-table",
+          "cells": {
+            "0:1": "ضعيف",
+            "1:1": "أفضل من WEP",
+            "2:1": "الأفضل"
+          }
+        },
+        "m20-l02-p03-q1": {
+          "kind": "multipleChoice",
+          "correct": [
+            "m20-l02-p03-q1-a"
+          ]
+        }
+      }
+    },
+    "791381-m20-l02-p04": {
+      "moduleId": "791381-m20",
+      "activities": {
+        "m20-l02-p04-q1": {
+          "kind": "multipleChoice",
+          "correct": [
+            "m20-l02-p04-q1-a"
+          ]
+        },
+        "m20-l02-p04-r1": {
+          "kind": "multipleChoice",
+          "correct": [
+            "m20-l02-p04-r1-a"
+          ]
+        },
+        "m20-l02-p04-r2": {
+          "kind": "shortInput",
+          "answer": "wpa2"
+        },
+        "m20-l02-p04-r3": {
+          "kind": "trueFalse",
+          "answer": true
+        }
+      }
+    },
+    "791381-m21-l01-p01": {
+      "moduleId": "791381-m21",
+      "activities": {
+        "m21-l01-p01-q1": {
+          "kind": "multipleChoice",
+          "correct": [
+            "m21-l01-p01-q1-a"
+          ]
+        },
+        "m21-l01-p01-q2": {
+          "kind": "shortInput",
+          "answer": "128"
+        }
+      }
+    },
+    "791381-m21-l01-p02": {
+      "moduleId": "791381-m21",
+      "activities": {
+        "m21-l01-p02-q1": {
+          "kind": "multipleChoice",
+          "correct": [
+            "m21-l01-p02-q1-a"
+          ]
+        },
+        "m21-l01-p02-q2": {
+          "kind": "trueFalse",
+          "answer": false
+        }
+      }
+    },
+    "791381-m21-l01-p03": {
+      "moduleId": "791381-m21",
+      "activities": {
+        "m21-l01-p03-ws": {
+          "kind": "practice-table",
+          "cells": {
+            "0:1": "HTTPS",
+            "1:1": "SSH",
+            "2:1": "DNS",
+            "3:1": "FTP"
+          }
+        },
+        "m21-l01-p03-q1": {
+          "kind": "shortInput",
+          "answer": "80"
+        },
+        "m21-l01-p03-r1": {
+          "kind": "multipleChoice",
+          "correct": [
+            "m21-l01-p03-r1-a"
+          ]
+        },
+        "m21-l01-p03-r2": {
+          "kind": "multipleChoice",
+          "correct": [
+            "m21-l01-p03-r2-a"
+          ]
+        },
+        "m21-l01-p03-r3": {
+          "kind": "multipleChoice",
+          "correct": [
+            "m21-l01-p03-r3-a"
+          ]
+        }
+      }
+    },
+    "791381-m22-l01-p01": {
+      "moduleId": "791381-m22",
+      "activities": {
+        "m22-l01-p01-q1": {
+          "kind": "multipleChoice",
+          "correct": [
+            "m22-l01-p01-q1-a"
+          ]
+        },
+        "m22-l01-p01-q2": {
+          "kind": "trueFalse",
+          "answer": true
+        }
+      }
+    },
+    "791381-m22-l01-p02": {
+      "moduleId": "791381-m22",
+      "activities": {
+        "m22-l01-p02-ws": {
+          "kind": "practice-table",
+          "cells": {
+            "0:1": "Discover",
+            "1:1": "Offer",
+            "2:1": "Request",
+            "3:1": "ACK"
+          }
+        },
+        "m22-l01-p02-q1": {
+          "kind": "multipleChoice",
+          "correct": [
+            "m22-l01-p02-q1-a"
+          ]
+        }
+      }
+    },
+    "791381-m22-l01-p03": {
+      "moduleId": "791381-m22",
+      "activities": {
+        "m22-l01-p03-q1": {
+          "kind": "shortInput",
+          "answer": "192.168.1.254"
+        },
+        "m22-l01-p03-q2": {
+          "kind": "multipleChoice",
+          "correct": [
+            "m22-l01-p03-q2-a"
+          ]
+        }
+      }
+    },
+    "791381-m22-l02-p01": {
+      "moduleId": "791381-m22",
+      "activities": {
+        "m22-l02-p01-q1": {
+          "kind": "multipleChoice",
+          "correct": [
+            "m22-l02-p01-q1-a"
+          ]
+        },
+        "m22-l02-p01-q2": {
+          "kind": "trueFalse",
+          "answer": false
+        }
+      }
+    },
+    "791381-m22-l02-p02": {
+      "moduleId": "791381-m22",
+      "activities": {
+        "m22-l02-p02-q1": {
+          "kind": "multipleChoice",
+          "correct": [
+            "m22-l02-p02-q1-a"
+          ]
+        },
+        "m22-l02-p02-q2": {
+          "kind": "shortInput",
+          "answer": "8.8.8.8"
+        }
+      }
+    },
+    "791381-m22-l02-p03": {
+      "moduleId": "791381-m22",
+      "activities": {
+        "m22-l02-p03-ws": {
+          "kind": "practice-table",
+          "cells": {
+            "0:1": "نحدّد الواجهة المتصلة بالشبكة",
+            "1:1": "عنوان الراوتر داخل الشبكة",
+            "2:1": "يحدّد نطاق التوزيع",
+            "3:1": "تُعطى تلقائيًا للأجهزة"
+          }
+        },
+        "m22-l02-p03-q1": {
+          "kind": "multipleChoice",
+          "correct": [
+            "m22-l02-p03-q1-a"
+          ]
+        }
+      }
+    },
+    "791381-m22-l02-p04": {
+      "moduleId": "791381-m22",
+      "activities": {
+        "m22-l02-p04-q1": {
+          "kind": "multipleChoice",
+          "correct": [
+            "m22-l02-p04-q1-a"
+          ]
+        },
+        "m22-l02-p04-q2": {
+          "kind": "trueFalse",
+          "answer": false
+        }
+      }
+    },
+    "791381-m22-l03-p01": {
+      "moduleId": "791381-m22",
+      "activities": {
+        "m22-l03-p01-q1": {
+          "kind": "multipleChoice",
+          "correct": [
+            "m22-l03-p01-q1-a"
+          ]
+        }
+      }
+    },
+    "791381-m22-l03-p02": {
+      "moduleId": "791381-m22",
+      "activities": {
+        "m22-l03-p02-q1": {
+          "kind": "multipleChoice",
+          "correct": [
+            "m22-l03-p02-q1-a"
+          ]
+        }
+      }
+    },
+    "791381-m22-l03-p03": {
+      "moduleId": "791381-m22",
+      "activities": {
+        "m22-l03-p03-q1": {
+          "kind": "trueFalse",
+          "answer": false
+        },
+        "m22-l03-p03-q2": {
+          "kind": "multipleChoice",
+          "correct": [
+            "m22-l03-p03-q2-a"
+          ]
+        }
+      }
+    },
+    "791381-m22-l03-p04": {
+      "moduleId": "791381-m22",
+      "activities": {
+        "m22-l03-p04-q1": {
+          "kind": "multipleChoice",
+          "correct": [
+            "m22-l03-p04-q1-a"
+          ]
+        },
+        "m22-l03-p04-r1": {
+          "kind": "multipleChoice",
+          "correct": [
+            "m22-l03-p04-r1-a"
+          ]
+        },
+        "m22-l03-p04-r2": {
+          "kind": "shortInput",
+          "answer": "default-router 192.168.1.254"
+        },
+        "m22-l03-p04-r3": {
+          "kind": "trueFalse",
+          "answer": false
+        }
+      }
+    },
+    "791381-m23-l01-p01": {
+      "moduleId": "791381-m23",
+      "activities": {
+        "m23-l01-p01-q1": {
+          "kind": "multipleChoice",
+          "correct": [
+            "m23-l01-p01-q1-a"
+          ]
+        },
+        "m23-l01-p01-q2": {
+          "kind": "trueFalse",
+          "answer": true
+        }
+      }
+    },
+    "791381-m23-l01-p02": {
+      "moduleId": "791381-m23",
+      "activities": {
+        "m23-l01-p02-ws": {
+          "kind": "practice-table",
+          "cells": {
+            "0:1": "يعمل",
+            "1:1": "يعمل",
+            "2:1": "يُرفض"
+          }
+        },
+        "m23-l01-p02-q1": {
+          "kind": "multipleChoice",
+          "correct": [
+            "m23-l01-p02-q1-a"
+          ]
+        }
+      }
+    },
+    "791381-m23-l02-p01": {
+      "moduleId": "791381-m23",
+      "activities": {
+        "m23-l02-p01-q1": {
+          "kind": "multipleChoice",
+          "correct": [
+            "m23-l02-p01-q1-a"
+          ]
+        },
+        "m23-l02-p01-q2": {
+          "kind": "shortInput",
+          "answer": "00a0.1234.5678"
+        }
+      }
+    },
+    "791381-m23-l02-p02": {
+      "moduleId": "791381-m23",
+      "activities": {
+        "m23-l02-p02-q1": {
+          "kind": "multipleChoice",
+          "correct": [
+            "m23-l02-p02-q1-a"
+          ]
+        }
+      }
+    },
+    "791381-m23-l02-p03": {
+      "moduleId": "791381-m23",
+      "activities": {
+        "m23-l02-p03-ws": {
+          "kind": "practice-table",
+          "cells": {
+            "0:1": "يفعّل الحماية على المنفذ",
+            "1:1": "يتعلّم MAC تلقائيًا",
+            "2:1": "يسمح بثلاثة أجهزة فقط",
+            "3:1": "يغلق المنفذ عند المخالفة"
+          }
+        },
+        "m23-l02-p03-q1": {
+          "kind": "shortInput",
+          "answer": "3"
+        },
+        "m23-l02-p03-r1": {
+          "kind": "multipleChoice",
+          "correct": [
+            "m23-l02-p03-r1-a"
+          ]
+        },
+        "m23-l02-p03-r2": {
+          "kind": "trueFalse",
+          "answer": true
+        },
+        "m23-l02-p03-r3": {
+          "kind": "multipleChoice",
+          "correct": [
+            "m23-l02-p03-r3-a"
+          ]
+        }
+      }
+    },
+    "791381-m24-l01-p01": {
+      "moduleId": "791381-m24",
+      "activities": {
+        "m24-l01-p01-q1": {
+          "kind": "multipleChoice",
+          "correct": [
+            "m24-l01-p01-q1-a"
+          ]
+        }
+      }
+    },
+    "791381-m24-l01-p02": {
+      "moduleId": "791381-m24",
+      "activities": {
+        "m24-l01-p02-ws": {
+          "kind": "practice-table",
+          "cells": {
+            "0:1": "line console 0",
+            "1:1": "line vty 0 4",
+            "2:1": "enable secret"
+          }
+        },
+        "m24-l01-p02-q1": {
+          "kind": "multipleChoice",
+          "correct": [
+            "m24-l01-p02-q1-a"
+          ]
+        }
+      }
+    },
+    "791381-m24-l02-p01": {
+      "moduleId": "791381-m24",
+      "activities": {
+        "m24-l02-p01-q1": {
+          "kind": "multipleChoice",
+          "correct": [
+            "m24-l02-p01-q1-a"
+          ]
+        },
+        "m24-l02-p01-q2": {
+          "kind": "trueFalse",
+          "answer": false
+        }
+      }
+    },
+    "791381-m24-l02-p02": {
+      "moduleId": "791381-m24",
+      "activities": {
+        "m24-l02-p02-q1": {
+          "kind": "multipleChoice",
+          "correct": [
+            "m24-l02-p02-q1-a"
+          ]
+        }
+      }
+    },
+    "791381-m24-l02-p03": {
+      "moduleId": "791381-m24",
+      "activities": {
+        "m24-l02-p03-q1": {
+          "kind": "multipleChoice",
+          "correct": [
+            "m24-l02-p03-q1-a"
+          ]
+        },
+        "m24-l02-p03-q2": {
+          "kind": "trueFalse",
+          "answer": true
+        }
+      }
+    },
+    "791381-m24-l02-p04": {
+      "moduleId": "791381-m24",
+      "activities": {
+        "m24-l02-p04-q1": {
+          "kind": "multipleChoice",
+          "correct": [
+            "m24-l02-p04-q1-a"
+          ]
+        }
+      }
+    },
+    "791381-m24-l03-p01": {
+      "moduleId": "791381-m24",
+      "activities": {
+        "m24-l03-p01-r1": {
+          "kind": "multipleChoice",
+          "correct": [
+            "m24-l03-p01-r1-a"
+          ]
+        },
+        "m24-l03-p01-r2": {
+          "kind": "shortInput",
+          "answer": "service password-encryption"
+        },
+        "m24-l03-p01-r3": {
+          "kind": "trueFalse",
+          "answer": true
+        }
+      }
+    },
+    "791381-m05-l01-p03": {
+      "moduleId": "791381-m05",
+      "activities": {
+        "m05-l01-p03-q1": {
+          "kind": "multipleChoice",
+          "correct": [
+            "m05-l01-p03-q1-a"
+          ]
+        },
+        "m05-l01-p03-q2": {
+          "kind": "trueFalse",
+          "answer": true
+        }
+      }
+    },
+    "791381-m05-l01-p01": {
+      "moduleId": "791381-m05",
+      "activities": {
+        "m05-l01-p01-q1": {
+          "kind": "multipleChoice",
+          "correct": [
+            "m05-l01-p01-q1-a"
+          ]
+        },
+        "m05-l01-p01-q2": {
+          "kind": "shortInput",
+          "answer": "sw1"
+        }
+      }
+    },
+    "791381-m05-l01-p02": {
+      "moduleId": "791381-m05",
+      "activities": {
+        "m05-l01-p02-q1": {
+          "kind": "multipleChoice",
+          "correct": [
+            "m05-l01-p02-q1-a"
+          ]
+        }
+      }
+    },
+    "791381-m05-l02-p01": {
+      "moduleId": "791381-m05",
+      "activities": {
+        "m05-l02-p01-q1": {
+          "kind": "multipleChoice",
+          "correct": [
+            "m05-l02-p01-q1-a"
+          ]
+        }
+      }
+    },
+    "791381-m05-l02-p02": {
+      "moduleId": "791381-m05",
+      "activities": {
+        "m05-l02-p02-q1": {
+          "kind": "multipleChoice",
+          "correct": [
+            "m05-l02-p02-q1-a"
+          ]
+        },
+        "m05-l02-p02-q2": {
+          "kind": "trueFalse",
+          "answer": false
+        }
+      }
+    },
+    "791381-m05-l02-p03": {
+      "moduleId": "791381-m05",
+      "activities": {
+        "m05-l02-p03-q1": {
+          "kind": "shortInput",
+          "answer": "2"
+        }
+      }
+    },
+    "791381-m05-l03-p01": {
+      "moduleId": "791381-m05",
+      "activities": {
+        "m05-l03-p01-ws": {
+          "kind": "practice-table",
+          "cells": {
+            "0:1": "VLAN & Ports",
+            "1:1": "Port Security",
+            "2:1": "Config",
+            "3:1": "Routing & Services"
+          }
+        },
+        "m05-l03-p01-q1": {
+          "kind": "trueFalse",
+          "answer": false
+        }
+      }
+    },
+    "791381-m05-l03-p02": {
+      "moduleId": "791381-m05",
+      "activities": {
+        "m05-l03-p02-q1": {
+          "kind": "multipleChoice",
+          "correct": [
+            "m05-l03-p02-q1-a"
+          ]
+        },
+        "m05-l03-p02-r1": {
+          "kind": "multipleChoice",
+          "correct": [
+            "m05-l03-p02-r1-a"
+          ]
+        },
+        "m05-l03-p02-r2": {
+          "kind": "shortInput",
+          "answer": "interface g0/0.10"
+        },
+        "m05-l03-p02-r3": {
+          "kind": "multipleChoice",
+          "correct": [
+            "m05-l03-p02-r3-a"
+          ]
+        }
+      }
+    },
+    "791381-m25-l01-p01": {
+      "moduleId": "791381-m25",
+      "activities": {
+        "m25-l01-p01-q1": {
+          "kind": "multipleChoice",
+          "correct": [
+            "m25-l01-p01-q1-a"
+          ]
+        },
+        "m25-l01-p01-q2": {
+          "kind": "shortInput",
+          "answer": "ip address"
+        }
+      }
+    },
+    "791381-m25-l01-p02": {
+      "moduleId": "791381-m25",
+      "activities": {
+        "m25-l01-p02-q1": {
+          "kind": "multipleChoice",
+          "correct": [
+            "m25-l01-p02-q1-a"
+          ]
+        },
+        "m25-l01-p02-q2": {
+          "kind": "trueFalse",
+          "answer": true
+        }
+      }
+    },
+    "791381-m25-l01-p03": {
+      "moduleId": "791381-m25",
+      "activities": {
+        "m25-l01-p03-q1": {
+          "kind": "multipleChoice",
+          "correct": [
+            "m25-l01-p03-q1-a"
+          ]
+        },
+        "m25-l01-p03-q2": {
+          "kind": "shortInput",
+          "answer": "line console 0"
+        }
+      }
+    },
+    "791381-m25-l01-p04": {
+      "moduleId": "791381-m25",
+      "activities": {
+        "m25-l01-p04-q1": {
+          "kind": "multipleChoice",
+          "correct": [
+            "m25-l01-p04-q1-a"
+          ]
+        },
+        "m25-l01-p04-q2": {
+          "kind": "trueFalse",
+          "answer": true
+        }
+      }
+    },
+    "791381-m25-l01-p05": {
+      "moduleId": "791381-m25",
+      "activities": {
+        "m25-l01-p05-q1": {
+          "kind": "shortInput",
+          "answer": "2"
+        },
+        "m25-l01-p05-q2": {
+          "kind": "multipleChoice",
+          "correct": [
+            "m25-l01-p05-q2-a"
+          ]
+        }
+      }
+    },
+    "791381-m25-l01-p06": {
+      "moduleId": "791381-m25",
+      "activities": {
+        "m25-l01-p06-ws": {
+          "kind": "practice-table",
+          "cells": {
+            "0:1": "VLAN / Interfaces / Config",
+            "1:1": "Security / Routing / DHCP",
+            "2:1": "VLAN / Interfaces / Config",
+            "3:1": "Security / Routing / DHCP",
+            "4:1": "Security / Routing / DHCP",
+            "5:1": "VLAN / Interfaces / Config"
+          }
+        },
+        "m25-l01-p06-q1": {
+          "kind": "trueFalse",
+          "answer": false
+        },
+        "m25-l01-p06-r1": {
+          "kind": "multipleChoice",
+          "correct": [
+            "m25-l01-p06-r1-a"
+          ]
+        },
+        "m25-l01-p06-r2": {
+          "kind": "shortInput",
+          "answer": "switchport mode trunk"
+        },
+        "m25-l01-p06-r3": {
+          "kind": "multipleChoice",
+          "correct": [
+            "m25-l01-p06-r3-a"
+          ]
+        }
+      }
+    },
+    "791381-m26-l01-p01": {
+      "moduleId": "791381-m26",
+      "activities": {
+        "m26-l01-p01-q1": {
+          "kind": "multipleChoice",
+          "correct": [
+            "m26-l01-p01-q1-a"
+          ]
+        },
+        "m26-l01-p01-q2": {
+          "kind": "trueFalse",
+          "answer": true
+        }
+      }
+    },
+    "791381-m26-l01-p02": {
+      "moduleId": "791381-m26",
+      "activities": {
+        "m26-l01-p02-q1": {
+          "kind": "multipleChoice",
+          "correct": [
+            "m26-l01-p02-q1-a"
+          ]
+        },
+        "m26-l01-p02-q2": {
+          "kind": "shortInput",
+          "answer": "packet"
+        }
+      }
+    },
+    "791381-m26-l01-p03": {
+      "moduleId": "791381-m26",
+      "activities": {
+        "m26-l01-p03-ws": {
+          "kind": "practice-table",
+          "cells": {
+            "0:1": "Frame Relay",
+            "1:1": "ATM",
+            "2:1": "HDLC",
+            "3:1": "Metro Ethernet"
+          }
+        },
+        "m26-l01-p03-q1": {
+          "kind": "trueFalse",
+          "answer": true
+        },
+        "m26-l01-p03-r1": {
+          "kind": "multipleChoice",
+          "correct": [
+            "m26-l01-p03-r1-a"
+          ]
+        },
+        "m26-l01-p03-r2": {
+          "kind": "shortInput",
+          "answer": "frame relay"
+        },
+        "m26-l01-p03-r3": {
+          "kind": "multipleChoice",
+          "correct": [
+            "m26-l01-p03-r3-a"
+          ]
+        }
+      }
+    },
+    "791381-m27-l01-p01": {
+      "moduleId": "791381-m27",
+      "activities": {
+        "m27-l01-p01-q1": {
+          "kind": "multipleChoice",
+          "correct": [
+            "m27-l01-p01-q1-a"
+          ]
+        },
+        "m27-l01-p01-q2": {
+          "kind": "trueFalse",
+          "answer": true
+        }
+      }
+    },
+    "791381-m27-l01-p02": {
+      "moduleId": "791381-m27",
+      "activities": {
+        "m27-l01-p02-q1": {
+          "kind": "multipleChoice",
+          "correct": [
+            "m27-l01-p02-q1-a"
+          ]
+        },
+        "m27-l01-p02-q2": {
+          "kind": "trueFalse",
+          "answer": false
+        }
+      }
+    },
+    "791381-m27-l01-p03": {
+      "moduleId": "791381-m27",
+      "activities": {
+        "m27-l01-p03-q1": {
+          "kind": "multipleChoice",
+          "correct": [
+            "m27-l01-p03-q1-a"
+          ]
+        },
+        "m27-l01-p03-q2": {
+          "kind": "shortInput",
+          "answer": "distance"
+        }
+      }
+    },
+    "791381-m27-l01-p04": {
+      "moduleId": "791381-m27",
+      "activities": {
+        "m27-l01-p04-ws": {
+          "kind": "practice-table",
+          "cells": {
+            "0:1": "110",
+            "1:1": "0",
+            "2:1": "120",
+            "3:1": "90",
+            "4:1": "1"
+          }
+        },
+        "m27-l01-p04-q1": {
+          "kind": "multipleChoice",
+          "correct": [
+            "m27-l01-p04-q1-a"
+          ]
+        }
+      }
+    },
+    "791381-m27-l02-p01": {
+      "moduleId": "791381-m27",
+      "activities": {
+        "m27-l02-p01-q1": {
+          "kind": "multipleChoice",
+          "correct": [
+            "m27-l02-p01-q1-a"
+          ]
+        },
+        "m27-l02-p01-q2": {
+          "kind": "shortInput",
+          "answer": "path"
+        }
+      }
+    },
+    "791381-m27-l02-p02": {
+      "moduleId": "791381-m27",
+      "activities": {
+        "m27-l02-p02-q1": {
+          "kind": "multipleChoice",
+          "correct": [
+            "m27-l02-p02-q1-a"
+          ]
+        },
+        "m27-l02-p02-q2": {
+          "kind": "shortInput",
+          "answer": "10.0.0.0/30"
+        }
+      }
+    },
+    "791381-m27-l02-p03": {
+      "moduleId": "791381-m27",
+      "activities": {
+        "m27-l02-p03-q1": {
+          "kind": "multipleChoice",
+          "correct": [
+            "m27-l02-p03-q1-a"
+          ]
+        },
+        "m27-l02-p03-q2": {
+          "kind": "shortInput",
+          "answer": "1"
+        }
+      }
+    },
+    "791381-m27-l02-p04": {
+      "moduleId": "791381-m27",
+      "activities": {
+        "m27-l02-p04-q1": {
+          "kind": "multipleChoice",
+          "correct": [
+            "m27-l02-p04-q1-a"
+          ]
+        },
+        "m27-l02-p04-q2": {
+          "kind": "trueFalse",
+          "answer": false
+        }
+      }
+    },
+    "791381-m27-l03-p01": {
+      "moduleId": "791381-m27",
+      "activities": {
+        "m27-l03-p01-q1": {
+          "kind": "multipleChoice",
+          "correct": [
+            "m27-l03-p01-q1-a"
+          ]
+        },
+        "m27-l03-p01-q2": {
+          "kind": "trueFalse",
+          "answer": false
+        }
+      }
+    },
+    "791381-m27-l03-p02": {
+      "moduleId": "791381-m27",
+      "activities": {
+        "m27-l03-p02-q1": {
+          "kind": "shortInput",
+          "answer": "100"
+        },
+        "m27-l03-p02-q2": {
+          "kind": "trueFalse",
+          "answer": true
+        }
+      }
+    },
+    "791381-m27-l03-p03": {
+      "moduleId": "791381-m27",
+      "activities": {
+        "m27-l03-p03-q1": {
+          "kind": "multipleChoice",
+          "correct": [
+            "m27-l03-p03-q1-a"
+          ]
+        },
+        "m27-l03-p03-q2": {
+          "kind": "shortInput",
+          "answer": "router eigrp 100"
+        }
+      }
+    },
+    "791381-m27-l03-p04": {
+      "moduleId": "791381-m27",
+      "activities": {
+        "m27-l03-p04-q1": {
+          "kind": "multipleChoice",
+          "correct": [
+            "m27-l03-p04-q1-a"
+          ]
+        },
+        "m27-l03-p04-q2": {
+          "kind": "shortInput",
+          "answer": "192.168.2.0"
+        }
+      }
+    },
+    "791381-m27-l03-p05": {
+      "moduleId": "791381-m27",
+      "activities": {
+        "m27-l03-p05-q1": {
+          "kind": "multipleChoice",
+          "correct": [
+            "m27-l03-p05-q1-a"
+          ]
+        },
+        "m27-l03-p05-r1": {
+          "kind": "multipleChoice",
+          "correct": [
+            "m27-l03-p05-r1-a"
+          ]
+        },
+        "m27-l03-p05-r2": {
+          "kind": "shortInput",
+          "answer": "network 192.168.1.0 0.0.0.255 area 0"
+        },
+        "m27-l03-p05-r3": {
+          "kind": "multipleChoice",
+          "correct": [
+            "m27-l03-p05-r3-a"
+          ]
+        }
+      }
+    },
+    "791381-m06-l01-p02": {
+      "moduleId": "791381-m06",
+      "activities": {
+        "m06-l01-p02-q1": {
+          "kind": "multipleChoice",
+          "correct": [
+            "m06-l01-p02-q1-a"
+          ]
+        },
+        "m06-l01-p02-q2": {
+          "kind": "trueFalse",
+          "answer": true
+        }
+      }
+    },
+    "791381-m06-l01-p03": {
+      "moduleId": "791381-m06",
+      "activities": {
+        "m06-l01-p03-q1": {
+          "kind": "multipleChoice",
+          "correct": [
+            "m06-l01-p03-q1-a"
+          ]
+        },
+        "m06-l01-p03-q2": {
+          "kind": "shortInput",
+          "answer": "ip access-group 10 out"
+        }
+      }
+    },
+    "791381-m06-l01-p04": {
+      "moduleId": "791381-m06",
+      "activities": {
+        "m06-l01-p04-q1": {
+          "kind": "multipleChoice",
+          "correct": [
+            "m06-l01-p04-q1-a"
+          ]
+        },
+        "m06-l01-p04-q2": {
+          "kind": "shortInput",
+          "answer": "192.168.2.0"
+        }
+      }
+    },
+    "791381-m06-l01-p05": {
+      "moduleId": "791381-m06",
+      "activities": {
+        "m06-l01-p05-q1": {
+          "kind": "multipleChoice",
+          "correct": [
+            "m06-l01-p05-q1-a"
+          ]
+        },
+        "m06-l01-p05-q2": {
+          "kind": "trueFalse",
+          "answer": false
+        }
+      }
+    },
+    "791381-m06-l01-p01": {
+      "moduleId": "791381-m06",
+      "activities": {
+        "m06-l01-p01-ws": {
+          "kind": "practice-table",
+          "cells": {
+            "0:1": "سماح",
+            "1:1": "البروتوكول",
+            "2:1": "أي مصدر / أي وجهة",
+            "3:1": "منفذ HTTP"
+          }
+        },
+        "m06-l01-p01-q1": {
+          "kind": "multipleChoice",
+          "correct": [
+            "m06-l01-p01-q1-a"
+          ]
+        }
+      }
+    },
+    "791381-m06-l02-p01": {
+      "moduleId": "791381-m06",
+      "activities": {
+        "m06-l02-p01-q1": {
+          "kind": "shortInput",
+          "answer": "ip access-group"
+        }
+      }
+    },
+    "791381-m06-l02-p02": {
+      "moduleId": "791381-m06",
+      "activities": {
+        "m06-l02-p02-r1": {
+          "kind": "multipleChoice",
+          "correct": [
+            "m06-l02-p02-r1-a"
+          ]
+        },
+        "m06-l02-p02-r2": {
+          "kind": "shortInput",
+          "answer": "access-list 30 permit host 192.168.1.10"
+        },
+        "m06-l02-p02-r3": {
+          "kind": "trueFalse",
+          "answer": true
+        }
+      }
+    },
+    "791381-m28-l01-p01": {
+      "moduleId": "791381-m28",
+      "activities": {
+        "m28-l01-p01-ws": {
+          "kind": "practice-table",
+          "cells": {
+            "0:1": "خاص Private",
+            "1:1": "عام Public",
+            "2:1": "خاص Private",
+            "3:1": "خاص Private",
+            "4:1": "عام Public"
+          }
+        },
+        "m28-l01-p01-q1": {
+          "kind": "multipleChoice",
+          "correct": [
+            "m28-l01-p01-q1-a"
+          ]
+        }
+      }
+    },
+    "791381-m28-l01-p02": {
+      "moduleId": "791381-m28",
+      "activities": {
+        "m28-l01-p02-ws": {
+          "kind": "practice-table",
+          "cells": {
+            "0:1": "Class A",
+            "1:1": "Class B",
+            "2:1": "Class C",
+            "3:1": "Class B",
+            "4:1": "Class C"
+          }
+        },
+        "m28-l01-p02-q1": {
+          "kind": "shortInput",
+          "answer": "254"
+        }
+      }
+    },
+    "791381-m28-l01-p03": {
+      "moduleId": "791381-m28",
+      "activities": {
+        "m28-l01-p03-q1": {
+          "kind": "shortInput",
+          "answer": "11000000"
+        },
+        "m28-l01-p03-q2": {
+          "kind": "multipleChoice",
+          "correct": [
+            "m28-l01-p03-q2-a"
+          ]
+        }
+      }
+    },
+    "791381-m28-l01-p04": {
+      "moduleId": "791381-m28",
+      "activities": {
+        "m28-l01-p04-ws": {
+          "kind": "practice-table",
+          "cells": {
+            "0:1": "Data Link",
+            "1:1": "Network",
+            "2:1": "Physical",
+            "3:1": "Data Link",
+            "4:1": "Physical"
+          }
+        },
+        "m28-l01-p04-q1": {
+          "kind": "trueFalse",
+          "answer": true
+        }
+      }
+    },
+    "791381-m28-l01-p05": {
+      "moduleId": "791381-m28",
+      "activities": {
+        "m28-l01-p05-ws": {
+          "kind": "practice-table",
+          "cells": {
+            "0:1": "Straight",
+            "1:1": "Cross",
+            "2:1": "Roll-over",
+            "3:1": "Straight"
+          }
+        },
+        "m28-l01-p05-q1": {
+          "kind": "multipleChoice",
+          "correct": [
+            "m28-l01-p05-q1-a"
+          ]
+        }
+      }
+    },
+    "791381-m28-l01-p06": {
+      "moduleId": "791381-m28",
+      "activities": {
+        "m28-l01-p06-ws": {
+          "kind": "practice-table",
+          "cells": {
+            "0:1": "PAN",
+            "1:1": "LAN",
+            "2:1": "MAN",
+            "3:1": "WAN",
+            "4:1": "WLAN"
+          }
+        },
+        "m28-l01-p06-q1": {
+          "kind": "shortInput",
+          "answer": "man"
+        }
+      }
+    },
+    "791381-m28-l02-p01": {
+      "moduleId": "791381-m28",
+      "activities": {
+        "m28-l02-p01-q1": {
+          "kind": "multipleChoice",
+          "correct": [
+            "m28-l02-p01-q1-a"
+          ]
+        },
+        "m28-l02-p01-q2": {
+          "kind": "shortInput",
+          "answer": "data link"
+        }
+      }
+    },
+    "791381-m28-l02-p02": {
+      "moduleId": "791381-m28",
+      "activities": {
+        "m28-l02-p02-ws": {
+          "kind": "practice-table",
+          "cells": {
+            "0:1": "80",
+            "1:1": "22",
+            "2:1": "53",
+            "3:1": "443",
+            "4:1": "23",
+            "5:1": "25"
+          }
+        },
+        "m28-l02-p02-q1": {
+          "kind": "multipleChoice",
+          "correct": [
+            "m28-l02-p02-q1-a"
+          ]
+        }
+      }
+    },
+    "791381-m28-l02-p03": {
+      "moduleId": "791381-m28",
+      "activities": {
+        "m28-l02-p03-ws": {
+          "kind": "practice-table",
+          "cells": {
+            "0:1": "TCP",
+            "1:1": "UDP",
+            "2:1": "كلاهما",
+            "3:1": "TCP",
+            "4:1": "UDP",
+            "5:1": "TCP"
+          }
+        },
+        "m28-l02-p03-q1": {
+          "kind": "trueFalse",
+          "answer": false
+        }
+      }
+    },
+    "791381-m28-l02-p04": {
+      "moduleId": "791381-m28",
+      "activities": {
+        "m28-l02-p04-ws": {
+          "kind": "practice-table",
+          "cells": {
+            "0:1": "Segment",
+            "1:1": "Packet",
+            "2:1": "Frame",
+            "3:1": "Bit",
+            "4:1": "Data"
+          }
+        },
+        "m28-l02-p04-q1": {
+          "kind": "multipleChoice",
+          "correct": [
+            "m28-l02-p04-q1-a"
+          ]
+        }
+      }
+    },
+    "791381-m28-l03-p01": {
+      "moduleId": "791381-m28",
+      "activities": {
+        "m28-l03-p01-ws": {
+          "kind": "practice-table",
+          "cells": {
+            "0:1": "127.0.0.1",
+            "1:1": "255.255.255.255",
+            "2:1": "169.254.x.x",
+            "3:1": "0.0.0.0"
+          }
+        },
+        "m28-l03-p01-q1": {
+          "kind": "multipleChoice",
+          "correct": [
+            "m28-l03-p01-q1-a"
+          ]
+        }
+      }
+    },
+    "791381-m28-l03-p02": {
+      "moduleId": "791381-m28",
+      "activities": {
+        "m28-l03-p02-q1": {
+          "kind": "shortInput",
+          "answer": "172.16.255.255"
+        },
+        "m28-l03-p02-q2": {
+          "kind": "shortInput",
+          "answer": "10.0.0.1"
+        }
+      }
+    },
+    "791381-m28-l03-p03": {
+      "moduleId": "791381-m28",
+      "activities": {
+        "m28-l03-p03-ws": {
+          "kind": "practice-table",
+          "cells": {
+            "0:1": "0.0.0.255",
+            "1:1": "0.0.0.0",
+            "2:1": "0.0.255.255",
+            "3:1": "255.255.255.255"
+          }
+        },
+        "m28-l03-p03-q1": {
+          "kind": "shortInput",
+          "answer": "0.0.255.255"
+        }
+      }
+    },
+    "791381-m28-l03-p04": {
+      "moduleId": "791381-m28",
+      "activities": {
+        "m28-l03-p04-q1": {
+          "kind": "shortInput",
+          "answer": "2001:db8::1"
+        },
+        "m28-l03-p04-q2": {
+          "kind": "trueFalse",
+          "answer": false
+        }
+      }
+    },
+    "791381-m28-l04-p01": {
+      "moduleId": "791381-m28",
+      "activities": {
+        "m28-l04-p01-q1": {
+          "kind": "shortInput",
+          "answer": "4094"
+        },
+        "m28-l04-p01-q2": {
+          "kind": "multipleChoice",
+          "correct": [
+            "m28-l04-p01-q2-a"
+          ]
+        }
+      }
+    },
+    "791381-m28-l04-p02": {
+      "moduleId": "791381-m28",
+      "activities": {
+        "m28-l04-p02-q1": {
+          "kind": "multipleChoice",
+          "correct": [
+            "m28-l04-p02-q1-a"
+          ]
+        }
+      }
+    },
+    "791381-m28-l04-p03": {
+      "moduleId": "791381-m28",
+      "activities": {
+        "m28-l04-p03-q1": {
+          "kind": "multipleChoice",
+          "correct": [
+            "m28-l04-p03-q1-a"
+          ]
+        }
+      }
+    },
+    "791381-m28-l04-p04": {
+      "moduleId": "791381-m28",
+      "activities": {
+        "m28-l04-p04-q1": {
+          "kind": "trueFalse",
+          "answer": false
+        }
+      }
+    },
+    "791381-m28-l04-p05": {
+      "moduleId": "791381-m28",
+      "activities": {
+        "m28-l04-p05-q1": {
+          "kind": "multipleChoice",
+          "correct": [
+            "m28-l04-p05-q1-a"
+          ]
+        },
+        "m28-l04-p05-q2": {
+          "kind": "shortInput",
+          "answer": "flooding"
+        }
+      }
+    },
+    "791381-m28-l04-p06": {
+      "moduleId": "791381-m28",
+      "activities": {
+        "m28-l04-p06-q1": {
+          "kind": "multipleChoice",
+          "correct": [
+            "m28-l04-p06-q1-a"
+          ]
+        }
+      }
+    },
+    "791381-m28-l05-p01": {
+      "moduleId": "791381-m28",
+      "activities": {
+        "m28-l05-p01-q1": {
+          "kind": "shortInput",
+          "answer": "10.0.0.2"
+        }
+      }
+    },
+    "791381-m28-l05-p02": {
+      "moduleId": "791381-m28",
+      "activities": {
+        "m28-l05-p02-ws": {
+          "kind": "practice-table",
+          "cells": {
+            "0:1": "1",
+            "1:1": "110",
+            "2:1": "0",
+            "3:1": "90",
+            "4:1": "120"
+          }
+        },
+        "m28-l05-p02-q1": {
+          "kind": "multipleChoice",
+          "correct": [
+            "m28-l05-p02-q1-a"
+          ]
+        }
+      }
+    },
+    "791381-m28-l05-p03": {
+      "moduleId": "791381-m28",
+      "activities": {
+        "m28-l05-p03-q1": {
+          "kind": "multipleChoice",
+          "correct": [
+            "m28-l05-p03-q1-a"
+          ]
+        }
+      }
+    },
+    "791381-m28-l06-p01": {
+      "moduleId": "791381-m28",
+      "activities": {
+        "m28-l06-p01-ws": {
+          "kind": "practice-table",
+          "cells": {
+            "0:1": "DDoS",
+            "1:1": "Phishing",
+            "2:1": "Sniffing",
+            "3:1": "MitM",
+            "4:1": "Spoofing",
+            "5:1": "Hijacking"
+          }
+        },
+        "m28-l06-p01-q1": {
+          "kind": "multipleChoice",
+          "correct": [
+            "m28-l06-p01-q1-a"
+          ]
+        }
+      }
+    },
+    "791381-m28-l06-p02": {
+      "moduleId": "791381-m28",
+      "activities": {
+        "m28-l06-p02-q1": {
+          "kind": "multipleChoice",
+          "correct": [
+            "m28-l06-p02-q1-a"
+          ]
+        }
+      }
+    },
+    "791381-m28-l06-p03": {
+      "moduleId": "791381-m28",
+      "activities": {
+        "m28-l06-p03-q1": {
+          "kind": "shortInput",
+          "answer": "22"
+        }
+      }
+    },
+    "791381-m28-l06-p04": {
+      "moduleId": "791381-m28",
+      "activities": {
+        "m28-l06-p04-q1": {
+          "kind": "multipleChoice",
+          "correct": [
+            "m28-l06-p04-q1-a"
+          ]
+        }
+      }
+    },
+    "791381-m28-l07-p01": {
+      "moduleId": "791381-m28",
+      "activities": {
+        "m28-l07-p01-ws": {
+          "kind": "practice-table",
+          "cells": {
+            "0:1": "PAT",
+            "1:1": "APIPA",
+            "2:1": "NAT"
+          }
+        },
+        "m28-l07-p01-q1": {
+          "kind": "trueFalse",
+          "answer": false
+        }
+      }
+    },
+    "791381-m28-l07-p02": {
+      "moduleId": "791381-m28",
+      "activities": {
+        "m28-l07-p02-q1": {
+          "kind": "multipleChoice",
+          "correct": [
+            "m28-l07-p02-q1-a"
+          ]
+        }
+      }
+    },
+    "791381-m28-l07-p03": {
+      "moduleId": "791381-m28",
+      "activities": {
+        "m28-l07-p03-q1": {
+          "kind": "shortInput",
+          "answer": "syn-ack"
+        },
+        "m28-l07-p03-q2": {
+          "kind": "trueFalse",
+          "answer": true
+        }
+      }
+    },
+    "791381-m28-l07-p04": {
+      "moduleId": "791381-m28",
+      "activities": {
+        "m28-l07-p04-ws": {
+          "kind": "practice-table",
+          "cells": {
+            "0:1": "4",
+            "1:1": "1",
+            "2:1": "3",
+            "3:1": "2"
+          }
+        },
+        "m28-l07-p04-q1": {
+          "kind": "multipleChoice",
+          "correct": [
+            "m28-l07-p04-q1-a"
+          ]
+        }
+      }
+    },
+    "791381-m28-l07-p05": {
+      "moduleId": "791381-m28",
+      "activities": {
+        "m28-l07-p05-ws": {
+          "kind": "practice-table",
+          "cells": {
+            "0:1": "ping 8.8.8.8",
+            "1:1": "ipconfig /all",
+            "2:1": "nslookup",
+            "3:1": "arp -a",
+            "4:1": "tracert"
+          }
+        },
+        "m28-l07-p05-ws2": {
+          "kind": "practice-table",
+          "cells": {
+            "0:1": "show interfaces trunk",
+            "1:1": "show vtp status",
+            "2:1": "show spanning-tree",
+            "3:1": "show vlan brief",
+            "4:1": "show interfaces status",
+            "5:1": "show mac address-table"
+          }
+        },
+        "m28-l07-p05-r1": {
+          "kind": "multipleChoice",
+          "correct": [
+            "m28-l07-p05-r1-a"
+          ]
+        },
+        "m28-l07-p05-r2": {
+          "kind": "shortInput",
+          "answer": "0.0.0.255"
+        },
+        "m28-l07-p05-r3": {
+          "kind": "multipleChoice",
+          "correct": [
+            "m28-l07-p05-r3-a"
+          ]
+        }
+      }
+    }
+  }
+}

@@ -10,8 +10,11 @@
 //                       practice history, but contribute 0 — their open questions cannot be auto-graded, so their
 //                       automatic percentage must never move a rank (see trainingCountsTowardStrength).
 //   PROJECTS          — each enrolled project's authoritative progress     = round(overallProgress × 4)  (≤ 400)
+//   STUDY PRACTICE    — in-page learning exercises (Study Practice Strength): 1 point per uniquely completed eligible
+//                       exercise, at most STUDY_PAGE_MAX_POINTS per page and STUDY_MODULE_MAX_POINTS per module —
+//                       small, felt, never farmable (completion state, never a counter; see learning-study.js)
 //
-//   totalStrengthPoints = examPoints + practicePoints + projectPoints
+//   totalStrengthPoints = examPoints + practicePoints + studyPoints + projectPoints
 //   rank tier           = floor(total / 400): 0–399 none · 400 beginner · 800 bronze · 1200 silver · 1600 gold ·
 //                         2000 diamond · 2400+ legendary (no level 7)
 //
@@ -29,6 +32,10 @@ const TRAINING_MAX_STRENGTH_POINTS = 25;
 // The ONE rule deciding which Learning-Practice ids feed Strength: the T-series only (id = "T" + digits).
 const STRENGTH_TRAINING_ID = /^T\d+$/;
 const PROJECT_MAX_STRENGTH_POINTS = 400;
+// Study Practice policy (the ONE place these numbers live; the UI reads them from the API, never hardcodes them).
+const STUDY_POINT_PER_ACTIVITY = 1;
+const STUDY_PAGE_MAX_POINTS = 2;
+const STUDY_MODULE_MAX_POINTS = 15;
 const RANK_STEP_STRENGTH_POINTS = 400;
 const RANK_ORDER = ["beginner", "bronze", "silver", "gold", "diamond", "legendary"];
 
@@ -84,6 +91,25 @@ function practicePointsFromTrainings(trainings) {
   return total;
 }
 
+/** Study points of ONE page from its count of uniquely completed ELIGIBLE exercises: min(count × 1, 2). */
+function studyPointsForPage(completedCount) {
+  return Math.min(safeCount(completedCount) * STUDY_POINT_PER_ACTIVITY, STUDY_PAGE_MAX_POINTS);
+}
+/** Study points of ONE module from its pages' completed counts { pageId: count }: min(Σ page points, 15). */
+function studyPointsForModule(pages) {
+  if (!pages || typeof pages !== "object") return 0;
+  let total = 0;
+  for (const count of Object.values(pages)) total += studyPointsForPage(count);
+  return Math.min(total, STUDY_MODULE_MAX_POINTS);
+}
+/** Study total from { moduleId: { pageId: completedEligibleCount } } — every level re-derived, nothing stored is trusted. */
+function studyPointsFromModules(study) {
+  if (!study || typeof study !== "object") return 0;
+  let total = 0;
+  for (const pages of Object.values(study)) total += studyPointsForModule(pages);
+  return total;
+}
+
 /** Rank tier for a total: null below 400, then one tier per 400, capped at legendary. */
 function rankTierFromStrength(totalPoints) {
   const total = safeCount(totalPoints);
@@ -109,25 +135,28 @@ function strengthProgress(totalPoints) {
 
 /**
  * The student's full Strength summary (the dashboard payload):
- *   input  { finalizedCount, trainings, projects: [{ projectCode, overallProgress }] }
- *   output { totalPoints, examPoints, practicePoints, projectPoints, levelBlockSize, withinLevelPoints,
+ *   input  { finalizedCount, trainings, projects: [{ projectCode, overallProgress }], study: { moduleId: { pageId: count } } }
+ *   output { totalPoints, examPoints, practicePoints, studyPoints, projectPoints, levelBlockSize, withinLevelPoints,
  *            nextLevelRemaining, percent, tier, level, nextTier, projects: [{ projectCode, overallProgress, strengthPoints }] }
+ *   `study` absent (a student with no study document, an older caller) → studyPoints 0: fully backward compatible.
  */
-function buildStrengthSummary({ finalizedCount, trainings, projects } = {}) {
+function buildStrengthSummary({ finalizedCount, trainings, projects, study } = {}) {
   const examPoints = strengthFromFinalizedCount(finalizedCount);
   const practicePoints = practicePointsFromTrainings(trainings);
+  const studyPoints = studyPointsFromModules(study);
   const projectRows = (Array.isArray(projects) ? projects : []).map(p => {
     const overallProgress = Math.round(clampPercent(p && p.overallProgress));
     return { projectCode: String((p && p.projectCode) || ""), overallProgress, strengthPoints: strengthFromProjectProgress(overallProgress) };
   });
   const projectPoints = projectRows.reduce((sum, p) => sum + p.strengthPoints, 0);
-  const totalPoints = examPoints + practicePoints + projectPoints;
+  const totalPoints = examPoints + practicePoints + studyPoints + projectPoints;
   const progress = strengthProgress(totalPoints);
-  return { totalPoints, examPoints, practicePoints, projectPoints, ...progress, projects: projectRows };
+  return { totalPoints, examPoints, practicePoints, studyPoints, projectPoints, ...progress, projects: projectRows };
 }
 
 module.exports = {
   FINALIZED_EXAM_STRENGTH_POINTS, TRAINING_MAX_STRENGTH_POINTS, PROJECT_MAX_STRENGTH_POINTS, RANK_STEP_STRENGTH_POINTS, RANK_ORDER,
+  STUDY_POINT_PER_ACTIVITY, STUDY_PAGE_MAX_POINTS, STUDY_MODULE_MAX_POINTS, studyPointsForPage, studyPointsForModule, studyPointsFromModules,
   clampPercent, strengthFromFinalizedCount, strengthFromTrainingBest, trainingCountsTowardStrength, trainingMaxStrengthPoints,
   strengthFromTrainingResult, strengthFromProjectProgress, practicePointsFromTrainings,
   rankTierFromStrength, strengthProgress, buildStrengthSummary
