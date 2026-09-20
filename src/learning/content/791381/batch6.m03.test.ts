@@ -377,6 +377,6 @@ describe("Batch 6 — loader, navigation, server registry agreement, publication
     for (const id of ["791381-m05", "791381-m06"]) expect(Object.keys(byId[id]).sort(), id).toEqual(["id", "lessons", "order", "shortTitle", "title"].filter(k => k in byId[id]).sort());
     expect(manifest.batches!.find(b => b.id === "b4")!.moduleIds).toEqual([M03, "791381-m19", "791381-m04"]);   // Batch 9 moved m05 (the book's fifth-batch section) into b5
     expect(manifest.batches!.find(b => b.id === "b6")!.moduleIds).toEqual(["791381-m25", "791381-m26", "791381-m27", "791381-m06"]);   // Batch 10 filled the sixth-batch grouping
-    expect(manifest.modules.map(m => m.order)).toEqual(Array.from({ length: 27 }, (_, i) => i + 1));   // 27 since Batch 10
+    expect(manifest.modules.map(m => m.order)).toEqual(Array.from({ length: 28 }, (_, i) => i + 1));   // 27 since Batch 10, 28 since the final summary (m28)
   });
 });

@@ -81,7 +81,7 @@ describe("Batch 8 — validation, identities, mapping PDF 159–179, cover PDF 1
     expect(m22.lessons.map(l => [l.id, l.title, l.order, l.pages.length])).toEqual([[M22 + "-l01", "ما هو DHCP", 1, 3], [M22 + "-l02", "DHCP على الراوتر", 2, 4], [M22 + "-l03", "DHCP عن طريق Server", 3, 4]]);
     for (const [id, title, order] of [[M20, "Wi-Fi والشبكات اللاسلكية", 18], [M21, "IPv6 والمنافذ", 19], [M22, "بروتوكول DHCP", 20]] as const) expect([byId[id].title, byId[id].order], id).toEqual([title, order]);
     expect(manifest.modules.filter(m => /m2[0-2]/.test(m.id)).map(m => m.id)).toEqual([M20, M21, M22]);
-    expect(manifest.modules.some(m => /m28|m29/.test(m.id))).toBe(false);   // Batch 9 later added m23 / m24, Batch 10 m25–m27
+    expect(manifest.modules.some(m => /m29|m30/.test(m.id))).toBe(false);   // Batch 9 later added m23 / m24, Batch 10 m25–m27, the final summary m28
   });
   it("maps the twenty-one learner pages 1:1 to PDF 159..179 in SOURCE ORDER (explicit `order`), with the pinned titles, ids and printed pages; manifest TOC = body", () => {
     expect(pagesOf(m20).map(p => p.source.pdfPageStart)).toEqual([159, 160, 161, 162, 163, 164, 165]);
@@ -382,7 +382,7 @@ describe("Batch 8 — loaders, navigation, server registry agreement, publicatio
     expect(manifest.batches!.find(b => b.id === "b5")!.moduleIds).toEqual([M20, M21, M22, "791381-m23", "791381-m24", "791381-m05"]);   // Batch 9 completed the fifth-batch grouping
     expect(manifest.batches!.find(b => b.id === "b4")!.moduleIds).toEqual(["791381-m03", "791381-m19", "791381-m04"]);   // Batch 9 moved m05 (the book's fifth-batch section) into b5
     expect(manifest.batches!.find(b => b.id === "b6")!.moduleIds).toEqual(["791381-m25", "791381-m26", "791381-m27", "791381-m06"]);   // Batch 10 filled the sixth-batch grouping
-    expect(manifest.modules.map(m => m.order)).toEqual(Array.from({ length: 27 }, (_, i) => i + 1));   // 27 since Batch 10
+    expect(manifest.modules.map(m => m.order)).toEqual(Array.from({ length: 28 }, (_, i) => i + 1));   // 27 since Batch 10, 28 since the final summary (m28)
     expect([m19.order, m04.order, pagesOf(m19).length, pagesOf(m04).length, m04.lessons[0].pages.find(p => p.id === "791381-m04-l01-p01")!.source]).toEqual([16, 17, 5, 12, { kind: "book", sourceId: "791381", pdfPageStart: 148, printedPage: 146 }]);
     expect(sims(m19).length + sims(m04).length + sims(m03).length).toBe(0);   // no retroactive CLI exercises in Batches 6–7 (a later PR may add them)
   });

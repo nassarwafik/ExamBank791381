@@ -91,7 +91,7 @@ describe("Batch 9 — validation, identities, mapping PDF 180–199, m05 complet
     expect(m05.lessons.map(l => [l.id, l.title, l.order, l.pages.length])).toEqual([[M05 + "-l01", "الأوامر الأساسية", 1, 3], [M05 + "-l02", "VTP و Dot1Q و Port Security", 2, 3], [M05 + "-l03", "أوامر الفحص وما بعد", 3, 2]]);
     for (const [id, title, order] of [[M23, "Port Security", 21], [M24, "حماية أجهزة Cisco", 22], [M05, "مرجع أوامر Cisco", 23]] as const) expect([byId[id].title, byId[id].order], id).toEqual([title, order]);
     expect(manifest.modules.filter(m => /m05|m23|m24/.test(m.id)).map(m => m.id)).toEqual([M23, M24, M05]);   // no duplicate / parallel module for the command reference
-    expect(manifest.modules.some(m => /m28|m29/.test(m.id))).toBe(false);   // Batch 10 later added m25–m27
+    expect(manifest.modules.some(m => /m29|m30/.test(m.id))).toBe(false);   // Batch 10 later added m25–m27, the final summary m28
   });
   it("HISTORICAL-ID IMMUTABILITY: 791381-m05-l01-p01 = PDF 193 «أوامر أساسية للجهاز» (printed 191) and -p02 = PDF 194 «أوامر VLAN و Trunk» (printed 192), same keywords, identical in manifest and body; only their `order` moved (2 / 3); not recreated under new ids", () => {
     const hist = (src: { id: string; title: string; order: number; source?: unknown; keywords?: string[] }[]) => src.filter(p => /-l01-p0[12]$/.test(p.id)).map(p => [p.id, p.title, p.order, p.source, p.keywords]);
@@ -443,7 +443,7 @@ describe("Batch 9 — loaders, navigation, server registry agreement, publicatio
     expect(manifest.batches!.find(b => b.id === "b5")!.moduleIds).toEqual(["791381-m20", "791381-m21", "791381-m22", M23, M24, M05]);
     expect(manifest.batches!.find(b => b.id === "b4")!.moduleIds).toEqual(["791381-m03", "791381-m19", "791381-m04"]);
     expect(manifest.batches!.find(b => b.id === "b6")!.moduleIds).toEqual(["791381-m25", "791381-m26", "791381-m27", "791381-m06"]);   // Batch 10 filled the sixth-batch grouping
-    expect(manifest.modules.map(m => m.order)).toEqual(Array.from({ length: 27 }, (_, i) => i + 1));   // 27 since Batch 10
+    expect(manifest.modules.map(m => m.order)).toEqual(Array.from({ length: 28 }, (_, i) => i + 1));   // 27 since Batch 10, 28 since the final summary (m28)
     expect([m20.order, m21.order, m22.order, pagesOf(m20).length, pagesOf(m21).length, pagesOf(m22).length, sims(m22).length, sims(m20).length + sims(m21).length]).toEqual([18, 19, 20, 7, 3, 11, 3, 0]);
     expect(sims(m19).length + sims(m04).length + sims(m03).length).toBe(0);   // no retroactive CLI exercises in Batches 6–7
     expect([m03.order, m19.order, m04.order]).toEqual([15, 16, 17]);
