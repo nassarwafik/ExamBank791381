@@ -71,6 +71,26 @@ describe("ErrorBoundary", () => {
     vi.unstubAllEnvs();
   });
 
+  it("PRODUCTION log is bounded even when the secret is in error.NAME (not just the message)", () => {
+    // Error.name is an arbitrary mutable string — an application could overwrite it with sensitive data. The
+    // production diagnostic must map it through a fixed allowlist, never emit it verbatim.
+    vi.stubEnv("DEV", false);
+    vi.stubEnv("PROD", true);
+    const spy = vi.spyOn(console, "error").mockImplementation(() => {});
+    const secret = new Error("ordinary message");
+    secret.name = "Bearer SECRET-TOKEN studentId=123 password=abc";
+    render(<ErrorBoundary><Boom error={secret} /></ErrorBoundary>);
+    expect(spy.mock.calls.some(c => String(c[0]).includes("(dev)"))).toBe(false);
+    const ours = JSON.stringify(spy.mock.calls.filter(c => c[0] === "[ErrorBoundary]"));
+    expect(ours).toContain("runtime");        // the fixed classification is still present
+    expect(ours).toContain("\"Error\"");      // the unknown name collapsed to the safe allowlist default
+    expect(ours).not.toContain("SECRET-TOKEN");
+    expect(ours).not.toContain("studentId=123");
+    expect(ours).not.toContain("password=abc");
+    expect(ours).not.toMatch(/bearer/i);
+    vi.unstubAllEnvs();
+  });
+
   it("renders children normally when there is no error", () => {
     render(<ErrorBoundary><p>OK-CONTENT</p></ErrorBoundary>);
     expect(screen.getByText("OK-CONTENT")).toBeTruthy();

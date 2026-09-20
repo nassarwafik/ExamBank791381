@@ -6,6 +6,15 @@ type Props = { children: ReactNode };
 type ErrorKind = "chunk" | "runtime";
 type State = { hasError: boolean; kind: ErrorKind };
 
+// A strict allowlist of known, non-sensitive error-class labels. `Error.name` is a mutable arbitrary string (an app
+// could set it to anything, including a token/URL/id), so a production diagnostic must never copy it verbatim — any
+// value outside this set is normalized to "Error".
+const SAFE_ERROR_NAMES = new Set(["Error", "TypeError", "ChunkLoadError", "ReferenceError", "SyntaxError", "RangeError", "EvalError", "URIError", "AggregateError"]);
+function safeErrorName(error: unknown): string {
+  const name = (error as { name?: unknown } | null | undefined)?.name;
+  return typeof name === "string" && SAFE_ERROR_NAMES.has(name) ? name : "Error";
+}
+
 /**
  * Low-risk safety net: catches render errors anywhere below it and shows a calm Arabic fallback instead of a
  * blank/broken screen. Does not touch App logic, routing, or auth — purely a wrapper around <App/> in main.tsx.
@@ -27,16 +36,16 @@ export default class ErrorBoundary extends Component<Props, State> {
   }
 
   componentDidCatch(error: unknown, info: { componentStack?: string | null }) {
-    // SANITIZED observability. A runtime error's `message` can carry request URLs, ids, or token/password fragments
-    // that bubbled up from application code, and its component stack can leak internal structure. In PRODUCTION we
-    // therefore emit ONLY a bounded, structured summary — the classification code and the error's constructor name
-    // (a safe class label like "TypeError"/"ChunkLoadError"), never the message, stack, or component tree. The full
-    // error and React component stack are logged in DEV only, where the developer already has these values locally.
-    const e = (error ?? {}) as { name?: unknown };
+    // SANITIZED observability. A runtime error's `message`, its component stack, AND its `name` can all carry
+    // sensitive data: `message`/stack can hold request URLs, ids or token/password fragments, and `Error.name` is an
+    // arbitrary mutable string an application could have overwritten with anything. In PRODUCTION we therefore emit
+    // ONLY a bounded, structured summary — the fixed classification code plus a `name` mapped through a strict
+    // allowlist of known error-class labels (any other value collapses to "Error"). No message, stack, component
+    // tree, or raw `name` ever reaches a production log. The full error + component stack are logged in DEV only.
     const kind: ErrorKind = isChunkLoadError(error) ? "chunk" : "runtime";
     const code = kind === "chunk" ? "chunk-load" : "runtime";
     // eslint-disable-next-line no-console
-    console.error("[ErrorBoundary]", { code, name: typeof e.name === "string" ? e.name : "Error" });
+    console.error("[ErrorBoundary]", { code, name: safeErrorName(error) });
     if (import.meta.env.DEV) {
       // eslint-disable-next-line no-console
       console.error("[ErrorBoundary] (dev) full error:", error, "\ncomponentStack:", info?.componentStack);
