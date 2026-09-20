@@ -73,18 +73,18 @@ describe("Phase 2 — 791381 content manifest", () => {
     ]);
     const byId = Object.fromEntries(manifest.batches!.map(b => [b.id, b.moduleIds]));
     expect(byId.intro).toEqual([]);   // not yet represented in interactive content (NOT empty in the book)
-    expect(byId.summary).toEqual([]);
+    expect(byId.summary).toEqual(["791381-m28"]);   // the final summary «الملخّص الشامل» (m28) fills the summary grouping
   });
 });
 
 describe("Phase 3E — historical module ids, titles and source mappings are IMMUTABLE; `order` is the sequencing authority", () => {
   const byId = Object.fromEntries(manifest.modules.map(m => [m.id, m]));
 
-  it("keeps every pre-existing module id and adds the real Units 4–8, Batch 3, Batch 4, Batch 5 (m08–m18), Batch 7 (m19), Batch 8 (m20–m22) and Batch 9 (m23–m24) as the next free ids — nothing renamed/repurposed", () => {
+  it("keeps every pre-existing module id and adds the real Units 4–8, Batch 3, Batch 4, Batch 5 (m08–m18), Batch 7 (m19), Batch 8 (m20–m22), Batch 9 (m23–m24), Batch 10 (m25–m27) and the final summary (m28) as the next free ids — nothing renamed/repurposed", () => {
     expect(manifest.modules.map(m => m.id)).toEqual([
-      "791381-m01", "791381-m02", "791381-m07", "791381-m08", "791381-m09", "791381-m10", "791381-m11", "791381-m12", "791381-m13", "791381-m14", "791381-m15", "791381-m16", "791381-m17", "791381-m18", "791381-m03", "791381-m19", "791381-m04", "791381-m20", "791381-m21", "791381-m22", "791381-m23", "791381-m24", "791381-m05", "791381-m25", "791381-m26", "791381-m27", "791381-m06",
+      "791381-m01", "791381-m02", "791381-m07", "791381-m08", "791381-m09", "791381-m10", "791381-m11", "791381-m12", "791381-m13", "791381-m14", "791381-m15", "791381-m16", "791381-m17", "791381-m18", "791381-m03", "791381-m19", "791381-m04", "791381-m20", "791381-m21", "791381-m22", "791381-m23", "791381-m24", "791381-m05", "791381-m25", "791381-m26", "791381-m27", "791381-m06", "791381-m28",
     ]);
-    expect(manifest.modules.map(m => m.order)).toEqual([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27]);
+    expect(manifest.modules.map(m => m.order)).toEqual([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28]);
     expect(byId["791381-m07"].order).toBe(3);          // the book's Unit 3 reads third …
     expect(byId["791381-m08"].order).toBe(4);          // … Unit 4 fourth, Unit 5 fifth …
     expect(byId["791381-m09"].order).toBe(5);
@@ -167,7 +167,7 @@ describe("Phase 3E — historical module ids, titles and source mappings are IMM
     expect(batches.b3.moduleIds).toEqual(["791381-m13", "791381-m14", "791381-m15", "791381-m16", "791381-m17", "791381-m18"]);
     expect(batches.b5.moduleIds).toEqual(["791381-m20", "791381-m21", "791381-m22", "791381-m23", "791381-m24", "791381-m05"]);   // Batch 8 + Batch 9 filled the fifth-batch grouping (m05 moved here from b4)
     expect(batches.intro.moduleIds).toEqual([]);
-    expect(batches.summary.moduleIds).toEqual([]);
+    expect(batches.summary.moduleIds).toEqual(["791381-m28"]);   // the final summary fills the summary grouping
     // every module id appears in at most one batch, and the two new modules appear only in b2
     const all = manifest.batches!.flatMap(b => b.moduleIds);
     expect(new Set(all).size).toBe(all.length);

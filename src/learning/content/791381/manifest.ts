@@ -943,8 +943,7 @@ const manifest: LearningCourseManifest = {
     },
     // ── Batch 10 (PDF 200–229): m25 «مراجعة الأوامر» (PDF 200 cover + 201–206), m26 «الشبكة الواسعة WAN» (207–209),
     // m27 «بروتوكولات التوجيه» (210–222) as NEW stable ids, then the historical m06 skeleton («قوائم التحكم ACL»)
-    // COMPLETED IN PLACE for PDF 223–229. PDF 230+ (the final reference: glossary, closing word, visual summary) is
-    // not converted.
+    // COMPLETED IN PLACE for PDF 223–229. PDF 230–264 (the final reference «الملخّص الشامل») is m28 below.
     {
       id: "791381-m25",
       title: "مراجعة الأوامر",
@@ -1060,6 +1059,106 @@ const manifest: LearningCourseManifest = {
         },
       ],
     },
+    // ── Final summary (PDF 230–264): m28 «الملخّص الشامل» — the book's closing reference «مرجع نهائي», NEW stable id,
+    // order 28 (the LAST module). PDF 230 is the section cover and PDF 264 the back cover: neither is a learner page.
+    // Learner pages PDF 231–263 (33), printed 229–260 for 231–262 (PDF − 2); PDF 263 «كلمة الختام» has no printed number.
+    {
+      id: "791381-m28",
+      title: "الملخّص الشامل",
+      shortTitle: "الملخّص",
+      order: 28,
+      lessons: [
+        {
+          id: "791381-m28-l01",
+          title: "الأساسيات",
+          order: 1,
+          pages: [
+            { id: "791381-m28-l01-p01", title: "المفاهيم الأولى: IP و MAC", order: 1, source: { kind: "book", sourceId: "791381", pdfPageStart: 231, printedPage: 229 }, keywords: ["IP", "Private", "MAC", "Subnet Mask", "Gateway", "Static", "DHCP"] },
+            { id: "791381-m28-l01-p02", title: "فئات عناوين IPv4", order: 2, source: { kind: "book", sourceId: "791381", pdfPageStart: 232, printedPage: 230 }, keywords: ["Class A", "Class B", "Class C", "Loopback", "2^host − 2"] },
+            { id: "791381-m28-l01-p03", title: "أنظمة العدّ والتحويل", order: 3, source: { kind: "book", sourceId: "791381", pdfPageStart: 233, printedPage: 231 }, keywords: ["Decimal", "Binary", "Hex", "128 64 32 16 8 4 2 1", "192 = 128 + 64"] },
+            { id: "791381-m28-l01-p04", title: "أجهزة الشبكة", order: 4, source: { kind: "book", sourceId: "791381", pdfPageStart: 234, printedPage: 232 }, keywords: ["Hub", "Switch", "Router", "Access Point", "Modem"] },
+            { id: "791381-m28-l01-p05", title: "الكوابل ووسائط الاتصال", order: 5, source: { kind: "book", sourceId: "791381", pdfPageStart: 235, printedPage: 233 }, keywords: ["UTP", "STP", "Fiber", "Coaxial", "Straight", "Cross", "Roll-over"] },
+            { id: "791381-m28-l01-p06", title: "أنواع الشبكات حسب النطاق", order: 6, source: { kind: "book", sourceId: "791381", pdfPageStart: 236, printedPage: 234 }, keywords: ["PAN", "LAN", "MAN", "WAN", "WLAN"] },
+          ],
+        },
+        {
+          id: "791381-m28-l02",
+          title: "النماذج والبروتوكولات",
+          order: 2,
+          pages: [
+            { id: "791381-m28-l02-p01", title: "نموذج OSI — الطبقات السبع", order: 1, source: { kind: "book", sourceId: "791381", pdfPageStart: 237, printedPage: 235 }, keywords: ["OSI", "Application", "Transport", "Network", "Data Link", "Physical", "All People Seem To Need Data Processing"] },
+            { id: "791381-m28-l02-p02", title: "البروتوكولات والمنافذ المهمّة", order: 2, source: { kind: "book", sourceId: "791381", pdfPageStart: 238, printedPage: 236 }, keywords: ["HTTP 80", "HTTPS 443", "DNS 53", "SSH 22", "TELNET 23", "ARP", "ICMP"] },
+            { id: "791381-m28-l02-p03", title: "الفروق بين TCP و UDP", order: 3, source: { kind: "book", sourceId: "791381", pdfPageStart: 239, printedPage: 237 }, keywords: ["TCP", "UDP", "Connection-Oriented", "ACK", "VoIP"] },
+            { id: "791381-m28-l02-p04", title: "وحدات البيانات والتغليف", order: 4, source: { kind: "book", sourceId: "791381", pdfPageStart: 240, printedPage: 238 }, keywords: ["Data", "Segment", "Packet", "Frame", "Bit"] },
+          ],
+        },
+        {
+          id: "791381-m28-l03",
+          title: "العنونة والتجزئة",
+          order: 3,
+          pages: [
+            { id: "791381-m28-l03-p01", title: "العناوين الخاصة وأنواع الرسائل", order: 1, source: { kind: "book", sourceId: "791381", pdfPageStart: 241, printedPage: 239 }, keywords: ["127.0.0.1", "APIPA", "169.254.x.x", "0.0.0.0", "255.255.255.255", "Unicast", "Multicast", "Broadcast"] },
+            { id: "791381-m28-l03-p02", title: "التجزئة Subnetting — أمثلة محلولة", order: 2, source: { kind: "book", sourceId: "791381", pdfPageStart: 242, printedPage: 240 }, keywords: ["Subnetting", "/8", "/16", "/24", "الشبكة", "أول جهاز", "آخر جهاز", "البث"] },
+            { id: "791381-m28-l03-p03", title: "قناع البدل Wildcard Mask", order: 3, source: { kind: "book", sourceId: "791381", pdfPageStart: 243, printedPage: 241 }, keywords: ["Wildcard", "0.0.0.255", "0.0.255.255", "ACL", "OSPF"] },
+            { id: "791381-m28-l03-p04", title: "العنوان IPv6 — البنية والتصغير", order: 4, source: { kind: "book", sourceId: "791381", pdfPageStart: 244, printedPage: 242 }, keywords: ["IPv6", "128 bit", "Hextet", "2001:DB8::1", "::1", "FE80::/10", "FF00::/8"] },
+          ],
+        },
+        {
+          id: "791381-m28-l04",
+          title: "التبديل و VLANs",
+          order: 4,
+          pages: [
+            { id: "791381-m28-l04-p01", title: "مفهوم VLANs و VTP", order: 1, source: { kind: "book", sourceId: "791381", pdfPageStart: 245, printedPage: 243 }, keywords: ["VLAN", "VTP", "1 إلى 4094", "Trunk (802.1Q)", "DMZ", "VPN"] },
+            { id: "791381-m28-l04-p02", title: "أوامر VLAN و Trunk", order: 2, source: { kind: "book", sourceId: "791381", pdfPageStart: 246, printedPage: 244 }, keywords: ["vlan 10", "name SALES", "switchport access vlan 10", "switchport mode trunk", "switchport trunk allowed vlan 10,20,30", "switchport trunk native vlan 99"] },
+            { id: "791381-m28-l04-p03", title: "أوضاع وأوامر VTP", order: 3, source: { kind: "book", sourceId: "791381", pdfPageStart: 247, printedPage: 245 }, keywords: ["Server", "Client", "Transparent", "vtp mode server", "vtp domain HFA", "vtp password SA1234"] },
+            { id: "791381-m28-l04-p04", title: "التوجيه بين VLANs — Dot1Q", order: 4, source: { kind: "book", sourceId: "791381", pdfPageStart: 248, printedPage: 246 }, keywords: ["interface gi0/0.10", "encapsulation dot1Q 10", "ip address 192.168.10.1 255.255.255.0", "Trunk"] },
+            { id: "791381-m28-l04-p05", title: "بروتوكول STP وسلوك السويتش", order: 5, source: { kind: "book", sourceId: "791381", pdfPageStart: 249, printedPage: 247 }, keywords: ["STP", "Root Bridge", "Blocking", "Listening", "Learning", "Forwarding", "Flooding"] },
+            { id: "791381-m28-l04-p06", title: "Metro-Ethernet و VLAN", order: 6, source: { kind: "book", sourceId: "791381", pdfPageStart: 250, printedPage: 248 }, keywords: ["Metro-Ethernet", "VLANs", "العزل"] },
+          ],
+        },
+        {
+          id: "791381-m28-l05",
+          title: "التوجيه",
+          order: 5,
+          pages: [
+            { id: "791381-m28-l05-p01", title: "أنواع المسارات والمسار الثابت", order: 1, source: { kind: "book", sourceId: "791381", pdfPageStart: 251, printedPage: 249 }, keywords: ["Static Route", "Dynamic Route", "Default Route", "0.0.0.0/0", "ip route 192.168.2.0 255.255.255.0 10.0.0.2"] },
+            { id: "791381-m28-l05-p02", title: "المسافة الإدارية AD", order: 2, source: { kind: "book", sourceId: "791381", pdfPageStart: 252, printedPage: 250 }, keywords: ["AD", "RIP 120", "OSPF 110", "EIGRP 90", "Static 1", "Connected 0"] },
+            { id: "791381-m28-l05-p03", title: "بروتوكولات التوجيه — مقارنة", order: 3, source: { kind: "book", sourceId: "791381", pdfPageStart: 253, printedPage: 251 }, keywords: ["RIP", "OSPF", "EIGRP", "BGP", "Distance Vector", "Link State", "Hybrid", "Path Vector", "network 192.168.1.0 0.0.0.255"] },
+          ],
+        },
+        {
+          id: "791381-m28-l06",
+          title: "الأمان",
+          order: 6,
+          pages: [
+            { id: "791381-m28-l06-p01", title: "الهجمات الشائعة", order: 1, source: { kind: "book", sourceId: "791381", pdfPageStart: 254, printedPage: 252 }, keywords: ["DoS", "DDoS", "Spoofing", "MitM", "Sniffing", "Hijacking", "Phishing"] },
+            { id: "791381-m28-l06-p02", title: "تأمين المنافذ Port Security", order: 2, source: { kind: "book", sourceId: "791381", pdfPageStart: 255, printedPage: 253 }, keywords: ["switchport port-security", "maximum 2", "mac-address sticky", "violation shutdown", "Restrict", "Protect"] },
+            { id: "791381-m28-l06-p03", title: "تأمين الوصول بكلمات المرور و SSH", order: 3, source: { kind: "book", sourceId: "791381", pdfPageStart: 256, printedPage: 254 }, keywords: ["line console 0", "line vty 0 4", "enable secret cisco123", "service password-encryption", "SSH", "المنفذ 22"] },
+            { id: "791381-m28-l06-p04", title: "قوائم التحكم بالوصول ACL", order: 4, source: { kind: "book", sourceId: "791381", pdfPageStart: 257, printedPage: 255 }, keywords: ["Standard ACL", "Extended ACL", "1–99", "100–199", "ip access-group 10 out", "ip access-group 100 in"] },
+          ],
+        },
+        {
+          id: "791381-m28-l07",
+          title: "الخدمات والأوامر",
+          order: 7,
+          pages: [
+            { id: "791381-m28-l07-p01", title: "NAT و PAT و APIPA", order: 1, source: { kind: "book", sourceId: "791381", pdfPageStart: 258, printedPage: 256 }, keywords: ["NAT", "PAT", "APIPA", "169.254.x.x"] },
+            { id: "791381-m28-l07-p02", title: "بروتوكول DHCP — DORA و Pool", order: 2, source: { kind: "book", sourceId: "791381", pdfPageStart: 259, printedPage: 257 }, keywords: ["DORA", "Discover", "Offer", "Request", "ACK", "ip dhcp pool STUDENTS", "ipconfig /release", "ipconfig /renew"] },
+            { id: "791381-m28-l07-p03", title: "مصافحة TCP الثلاثية", order: 3, source: { kind: "book", sourceId: "791381", pdfPageStart: 260, printedPage: 258 }, keywords: ["SYN", "SYN-ACK", "ACK", "اتصال موثوق"] },
+            { id: "791381-m28-l07-p04", title: "سيناريو تكاملي: فتح موقع", order: 4, source: { kind: "book", sourceId: "791381", pdfPageStart: 261, printedPage: 259 }, keywords: ["DNS", "ARP", "TCP Handshake", "HTTP/HTTPS", "UDP 53", "80/443"] },
+            { id: "791381-m28-l07-p05", title: "أوامر CMD و Show", order: 5, source: { kind: "book", sourceId: "791381", pdfPageStart: 262, printedPage: 260 }, keywords: ["ping 8.8.8.8", "tracert", "ipconfig /all", "nslookup", "arp -a", "show vlan brief", "show vtp status", "show spanning-tree"] },
+          ],
+        },
+        {
+          id: "791381-m28-l08",
+          title: "كلمة الختام",
+          order: 8,
+          pages: [
+            { id: "791381-m28-l08-p01", title: "كلمة الختام", order: 1, source: { kind: "book", sourceId: "791381", pdfPageStart: 263 }, keywords: ["كلمة الختام", "المؤلف", "الأستاذ وفيق نصار"] },
+          ],
+        },
+      ],
+    },
   ],
   // The EIGHT Phase-3 overview "batches" are PRESENTATION groupings that each map to one OR MORE real modules (§29);
   // they are NOT themselves canonical modules. The order is the OWNER-approved visible order (intro … summary).
@@ -1074,7 +1173,7 @@ const manifest: LearningCourseManifest = {
     { id: "b4", label: "برمجة السويتش و VLAN", moduleIds: ["791381-m03", "791381-m19", "791381-m04"] },
     { id: "b5", label: "الأمان · Wi-Fi · IPv6 · DHCP", moduleIds: ["791381-m20", "791381-m21", "791381-m22", "791381-m23", "791381-m24", "791381-m05"] },
     { id: "b6", label: "ACL · التوجيه · WAN", moduleIds: ["791381-m25", "791381-m26", "791381-m27", "791381-m06"] },
-    { id: "summary", label: "التلخيص", moduleIds: [] },
+    { id: "summary", label: "التلخيص", moduleIds: ["791381-m28"] },
   ],
 };
 

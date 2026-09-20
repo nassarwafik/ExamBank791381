@@ -3,7 +3,7 @@
 // terminal labels it as such. Pure functions: state in, lines out. Secrets are never echoed: `enable secret` and
 // encrypted line passwords are shown as hidden placeholders, as a real device would obscure them.
 import type { CliDeviceState, CliLineName, ParsedCommand } from "./types";
-import { aclEntryText, ospfNetworkText, networkOf, prefixLength } from "./normalize";
+import { aclEntryText, ospfNetworkText, staticRouteText, networkOf, prefixLength } from "./normalize";
 
 const ifDisplay = (name: string) => name.replace(/^f/, "FastEthernet").replace(/^g/, "GigabitEthernet").replace(/^e/, "Ethernet").replace(/^vlan/, "Vlan");
 const pad = (s: string, n: number) => (s.length >= n ? s + " " : s.padEnd(n));
@@ -41,6 +41,7 @@ export function runningConfig(state: CliDeviceState): string[] {
     if (i.switchportMode) out.push(" switchport mode " + i.switchportMode);
     if (i.accessVlan !== undefined) out.push(" switchport access vlan " + i.accessVlan);
     if (i.allowedVlans?.length) out.push(" switchport trunk allowed vlan " + i.allowedVlans.join(","));
+    if (i.nativeVlan !== undefined) out.push(" switchport trunk native vlan " + i.nativeVlan);
     const ps = i.portSecurity;
     if (ps) {
       if (ps.enabled) out.push(" switchport port-security");
@@ -52,6 +53,7 @@ export function runningConfig(state: CliDeviceState): string[] {
     if (i.accessGroup) out.push(" ip access-group " + i.accessGroup.acl + " " + i.accessGroup.direction);
     out.push(i.shutdown ? " shutdown" : " no shutdown");
   }
+  if (state.staticRoutes.length) { out.push("!"); for (const r of state.staticRoutes) out.push("ip route " + staticRouteText(r)); }
   if (state.routing.ospf) { out.push("!", "router ospf " + state.routing.ospf.id); for (const n of state.routing.ospf.networks) out.push(" network " + ospfNetworkText(n)); }
   if (state.routing.eigrp) { out.push("!", "router eigrp " + state.routing.eigrp.id); for (const n of state.routing.eigrp.networks) out.push(" network " + n); }
   const aclNumbers = Object.keys(state.acls).map(Number).sort((a, b) => a - b);
@@ -129,15 +131,19 @@ export function portSecurityInterface(state: CliDeviceState, name: string): stri
 }
 
 /**
- * `show ip route` (PDF 222): the connected routes of every interface that is up and addressed. Routes learned
- * from OSPF / EIGRP neighbours are not simulated (there is only one device), so the output says so instead of
- * inventing them.
+ * `show ip route` (PDF 222): the connected routes of every interface that is up and addressed, then the static
+ * routes configured with `ip route` (PDF 251; `S*` for the default route, «Gateway of last resort» line). Routes
+ * learned from OSPF / EIGRP neighbours are not simulated (there is only one device), so the output says so
+ * instead of inventing them.
  */
 export function ipRoute(state: CliDeviceState): string[] {
   const out = ["Codes: C - connected, S - static, R - RIP, O - OSPF, D - EIGRP", ""];
+  const gateway = state.staticRoutes.find(r => r.network === "0.0.0.0");
+  if (gateway) out.push("Gateway of last resort is " + gateway.nextHop + " to network 0.0.0.0", "");
   const rows = Object.entries(state.interfaces).filter(([, i]) => i.ipAddress && i.subnetMask && !i.shutdown);
   for (const [name, i] of rows) out.push("C    " + networkOf(i.ipAddress!, i.subnetMask!) + "/" + prefixLength(i.subnetMask!) + " is directly connected, " + ifDisplay(name));
-  if (rows.length === 0) out.push("(no connected networks yet: give an interface an address and no shutdown)");
+  for (const r of state.staticRoutes) out.push((r.network === "0.0.0.0" ? "S*   " : "S    ") + r.network + "/" + prefixLength(r.mask) + " [1/0] via " + r.nextHop);
+  if (rows.length === 0 && state.staticRoutes.length === 0) out.push("(no connected networks yet: give an interface an address and no shutdown)");
   if (state.routing.ospf || state.routing.eigrp) out.push("% (simulation) routes learned via " + [state.routing.ospf && "OSPF", state.routing.eigrp && "EIGRP"].filter(Boolean).join(" / ") + " appear only after neighbours exchange updates");
   return out;
 }

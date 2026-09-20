@@ -48,7 +48,7 @@ export function createDeviceState(device: CliDeviceType, hostname = defaultHostn
   return {
     device, hostname, mode: "user", selectedInterfaces: [], interfaces: {}, vlans: {}, dhcpPools: {}, dhcpExcluded: [], vtp: {},
     lines: { console: { login: false }, vty: { login: false } }, passwordEncryption: false,
-    routing: {}, acls: {},
+    routing: {}, acls: {}, staticRoutes: [],
   };
 }
 

@@ -28,7 +28,7 @@ describe("normalization — getClassLearningMaterials is default-deny and canoni
     expect(getClassLearningMaterials(null)).toEqual([]);
   });
   it("one course: ids trimmed, de-duplicated, unknown/skeleton dropped, canonical order restored", () => {
-    const c = { learningMaterials: [{ courseId: " 791381 ", visibleModuleIds: [M07, " " + M01 + " ", M01, "791381-m28", "791381-m999", "", 7] }] };   // m28 is not in the registry (since Batch 10 no skeleton remains: m06 became publishable)
+    const c = { learningMaterials: [{ courseId: " 791381 ", visibleModuleIds: [M07, " " + M01 + " ", M01, "791381-m29", "791381-m999", "", 7] }] };   // m29 is not in the registry (no skeleton remains; m28 is the final summary)
     expect(getClassLearningMaterials(c)).toEqual([{ courseId: "791381", visibleModuleIds: [M01, M07] }]);
   });
   it("empty published list stays attached; empty/unknown courseId entries and non-object entries are ignored", () => {
@@ -81,7 +81,7 @@ describe("no-auto-publish invariant — DEPLOYMENT ≠ PUBLICATION", () => {
     const student = JSON.stringify(buildStudentLearningMaterials(existing));
     for (const hidden of ["791381-m08", "791381-m09", "791381-m10", "Class و Subnet و CIDR", "أجهزة الشبكات", "أنواع شبكات الاتصال"]) expect(student).not.toContain(hidden);
     const registry = require("../src/lib/learning-materials-registry.js");
-    expect(registry.listLearningModules("791381").map(m => m.moduleId)).toEqual([M01, M02, M07, "791381-m08", "791381-m09", "791381-m10", "791381-m11", "791381-m12", "791381-m13", "791381-m14", "791381-m15", "791381-m16", "791381-m17", "791381-m18", "791381-m03", "791381-m19", "791381-m04", "791381-m20", "791381-m21", "791381-m22", "791381-m23", "791381-m24", "791381-m05", "791381-m25", "791381-m26", "791381-m27", "791381-m06"]);
+    expect(registry.listLearningModules("791381").map(m => m.moduleId)).toEqual([M01, M02, M07, "791381-m08", "791381-m09", "791381-m10", "791381-m11", "791381-m12", "791381-m13", "791381-m14", "791381-m15", "791381-m16", "791381-m17", "791381-m18", "791381-m03", "791381-m19", "791381-m04", "791381-m20", "791381-m21", "791381-m22", "791381-m23", "791381-m24", "791381-m05", "791381-m25", "791381-m26", "791381-m27", "791381-m06", "791381-m28"]);
     expect(registry.validateLearningModuleIds("791381", ["791381-m10", "791381-m08"])).toEqual(["791381-m08", "791381-m10"]);   // explicit publication path
     expect(JSON.stringify(existing)).not.toContain("m08");                                                                    // the class document is untouched
   });
@@ -188,7 +188,7 @@ describe("no-auto-publish invariant — DEPLOYMENT ≠ PUBLICATION", () => {
     expect(registry.findLearningModule("791381", "791381-m21")).toEqual({ moduleId: "791381-m21", title: "IPv6 والمنافذ", order: 19 });
     expect(registry.findLearningModule("791381", "791381-m22")).toEqual({ moduleId: "791381-m22", title: "بروتوكول DHCP", order: 20 });
     expect(registry.validateLearningModuleIds("791381", ["791381-m22", "791381-m20", "791381-m04"])).toEqual(["791381-m04", "791381-m20", "791381-m22"]);   // by order, never by id
-    for (const unknown of ["791381-m28"]) expect(() => registry.validateLearningModuleIds("791381", [unknown])).toThrow();   // m06 became publishable in Batch 10
+    for (const unknown of ["791381-m29"]) expect(() => registry.validateLearningModuleIds("791381", [unknown])).toThrow();   // m06 became publishable in Batch 10, m28 with the final summary
     expect(JSON.stringify(existing)).not.toMatch(/m20|m21|m22/);
     const c16 = room("c16", { learningMaterials: [{ courseId: "791381", visibleModuleIds: [M01, "791381-m22"] }] });   // publishing DHCP alone is allowed
     expect(getVisibleLearningModuleIds(c16, "791381")).toEqual([M01, "791381-m22"]);
@@ -207,7 +207,7 @@ describe("no-auto-publish invariant — DEPLOYMENT ≠ PUBLICATION", () => {
     expect(registry.findLearningModule("791381", "791381-m24")).toEqual({ moduleId: "791381-m24", title: "حماية أجهزة Cisco", order: 22 });
     expect(registry.findLearningModule("791381", "791381-m05")).toEqual({ moduleId: "791381-m05", title: "مرجع أوامر Cisco", order: 23 });
     expect(registry.validateLearningModuleIds("791381", ["791381-m05", "791381-m23", "791381-m22"])).toEqual(["791381-m22", "791381-m23", "791381-m05"]);   // by order, never by id (m05 reads LAST)
-    expect(() => registry.validateLearningModuleIds("791381", ["791381-m28"])).toThrow();   // m06 became publishable in Batch 10
+    expect(() => registry.validateLearningModuleIds("791381", ["791381-m29"])).toThrow();   // m06 became publishable in Batch 10, m28 with the final summary
     expect(JSON.stringify(existing)).not.toMatch(/m23|m24|m05/);
     const c18 = room("c18", { learningMaterials: [{ courseId: "791381", visibleModuleIds: [M01, "791381-m05"] }] });   // publishing the command reference alone is allowed
     expect(getVisibleLearningModuleIds(c18, "791381")).toEqual([M01, "791381-m05"]);
@@ -227,13 +227,36 @@ describe("no-auto-publish invariant — DEPLOYMENT ≠ PUBLICATION", () => {
     expect(registry.findLearningModule("791381", "791381-m27")).toEqual({ moduleId: "791381-m27", title: "بروتوكولات التوجيه", order: 26 });
     expect(registry.findLearningModule("791381", "791381-m06")).toEqual({ moduleId: "791381-m06", title: "قوائم التحكم ACL", order: 27 });
     expect(registry.validateLearningModuleIds("791381", ["791381-m06", "791381-m25", "791381-m05", "791381-m27"])).toEqual(["791381-m05", "791381-m25", "791381-m27", "791381-m06"]);   // by order, never by id (m06 reads LAST)
-    expect(() => registry.validateLearningModuleIds("791381", ["791381-m28"])).toThrow();
+    expect(() => registry.validateLearningModuleIds("791381", ["791381-m29"])).toThrow();
     expect(JSON.stringify(existing)).not.toMatch(/m25|m26|m27|m06/);
     const c20 = room("c20", { learningMaterials: [{ courseId: "791381", visibleModuleIds: [M01, "791381-m06"] }] });   // publishing the ACL section alone is allowed
     expect(getVisibleLearningModuleIds(c20, "791381")).toEqual([M01, "791381-m06"]);
     const s20 = buildStudentLearningMaterials(c20)[0].modules;
     expect(s20).toEqual([{ moduleId: M01, title: "أساسيات الشبكات", order: 1 }, { moduleId: "791381-m06", title: "قوائم التحكم ACL", order: 27 }]);
     expect(JSON.stringify(s20)).not.toMatch(/m25|m26|m27|m05/);
+  });
+  it("REAL registry (final summary): a class released through m06 sees NOTHING of m28; explicit publication makes it visible LAST (28); a mixed list canonicalizes with m28 last; m29 is rejected; the class document is byte-unaffected", () => {
+    const through06 = [M01, M02, M07, "791381-m08", "791381-m09", "791381-m10", "791381-m11", "791381-m12", "791381-m13", "791381-m14", "791381-m15", "791381-m16", "791381-m17", "791381-m18", "791381-m03", "791381-m19", "791381-m04", "791381-m20", "791381-m21", "791381-m22", "791381-m23", "791381-m24", "791381-m05", "791381-m25", "791381-m26", "791381-m27", "791381-m06"];
+    const existing = room("c21", { learningMaterials: [{ courseId: "791381", visibleModuleIds: through06 }] });
+    const before = JSON.stringify(existing);
+    expect(getVisibleLearningModuleIds(existing, "791381")).toEqual(through06);
+    const student = JSON.stringify(buildStudentLearningMaterials(existing));
+    for (const hidden of ["791381-m28", "الملخّص الشامل", "الملخّص"]) expect(student).not.toContain(hidden);
+    expect(buildStudentLearningMaterials(existing)[0].modules).toHaveLength(27);
+    const registry = require("../src/lib/learning-materials-registry.js");
+    expect(registry.findLearningModule("791381", "791381-m28")).toEqual({ moduleId: "791381-m28", title: "الملخّص الشامل", order: 28 });
+    expect(registry.findLearningModule("791381", "791381-m29")).toBeNull();
+    expect(registry.validateLearningModuleIds("791381", ["791381-m28"])).toEqual(["791381-m28"]);
+    expect(registry.validateLearningModuleIds("791381", ["791381-m28", "791381-m06", M01, "791381-m25"])).toEqual([M01, "791381-m25", "791381-m06", "791381-m28"]);   // by order, never by id (m28 reads LAST)
+    expect(() => registry.validateLearningModuleIds("791381", ["791381-m29"])).toThrow();
+    expect(() => registry.validateLearningModuleIds("791381", ["791381-m28", "791381-m29"])).toThrow();
+    expect(JSON.stringify(existing)).toBe(before);
+    expect(before).not.toMatch(/m28|m29/);
+    const c22 = room("c22", { learningMaterials: [{ courseId: "791381", visibleModuleIds: [M01, "791381-m28"] }] });   // publishing the final summary alone is allowed
+    expect(getVisibleLearningModuleIds(c22, "791381")).toEqual([M01, "791381-m28"]);
+    const s22 = buildStudentLearningMaterials(c22)[0].modules;
+    expect(s22).toEqual([{ moduleId: M01, title: "أساسيات الشبكات", order: 1 }, { moduleId: "791381-m28", title: "الملخّص الشامل", order: 28 }]);
+    expect(JSON.stringify(s22)).not.toMatch(/m06|m27|m29/);
   });
   it("a NEWLY registered module (future Unit 4) is NOT appended to any existing class's visibleModuleIds", () => {
     const future = {
@@ -320,7 +343,7 @@ describe("handler — setLearningCourseModules", () => {
     const before = JSON.stringify(doc(ctx, "c1"));
     expect((await post(ctx, { action: "setLearningCourseModules", classId: "c1", courseId: "794589", moduleIds: [] })).status).toBe(400);
     expect((await setModules(ctx, "c1", ["791381-m999"])).status).toBe(400);
-    expect((await setModules(ctx, "c1", ["791381-m28"])).status).toBe(400);   // not in the registry (m03 / m19 / m04 / m05 / m06 became publishable in Batches 6 / 7 / 9 / 10)
+    expect((await setModules(ctx, "c1", ["791381-m29"])).status).toBe(400);   // not in the registry (m03 / m19 / m04 / m05 / m06 became publishable in Batches 6 / 7 / 9 / 10, m28 with the final summary)
     expect((await post(ctx, { action: "setLearningCourseModules", classId: "c1", moduleIds: [] })).status).toBe(400);
     expect(JSON.stringify(doc(ctx, "c1"))).toBe(before);
   });

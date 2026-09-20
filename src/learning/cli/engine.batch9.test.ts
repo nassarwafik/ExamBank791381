@@ -25,8 +25,9 @@ describe("Batch 9 grammar — only the book's commands were added; the table sta
     for (const id of ["switchport-port-security", "port-security-maximum", "port-security-mac-address", "port-security-sticky", "port-security-violation", "line", "password", "login", "enable-secret", "service-password-encryption", "banner-motd"]) expect(ids.has(id), id).toBe(true);
     expect(parseCommand("switchport port-security violation protect")).toMatchObject({ kind: "invalid", id: "port-security-violation" });
     expect(parseCommand("switchport port-security violation restrict")).toMatchObject({ kind: "invalid", id: "port-security-violation" });
-    // Batch 10 later added `show ip route`, `router ospf` and `access-list` (the book's PDF 216–227); the rest stays unknown.
-    for (const u of ["show mac-address-table", "show interfaces", "show arp", "show cdp neighbors", "show access-lists", "write memory", "copy running-config startup-config", "ip route 0.0.0.0 0.0.0.0 10.0.0.1", "line aux 0", "username admin secret x"]) expect(parseCommand(u), u).toEqual({ kind: "unknown" });
+    // Batch 10 later added `show ip route`, `router ospf` and `access-list` (the book's PDF 216–227) and the final
+    // summary (m28) added `ip route <network> <mask> <next-hop>` (PDF 251); the rest stays unknown.
+    for (const u of ["show mac-address-table", "show interfaces", "show arp", "show cdp neighbors", "show access-lists", "write memory", "copy running-config startup-config", "no ip route 192.168.2.0 255.255.255.0 10.0.0.2", "line aux 0", "username admin secret x"]) expect(parseCommand(u), u).toEqual({ kind: "unknown" });
     expect(parseCommand("enable password cisco")).toMatchObject({ kind: "invalid", id: "enable" });   // the book prints only «enable secret»
     expect(NAVIGATION_COMMANDS).toContain("line");
   });

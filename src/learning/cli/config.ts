@@ -8,7 +8,7 @@
 import type { CliCommandId, CliExerciseConfig, CliExpectation, CliExpectedArgs, CliGoal, CliStateCondition, CliStep } from "./types";
 import { CLI_DEVICE_TYPES, CLI_EXERCISE_KINDS, CLI_MODES } from "./types";
 import { COMMANDS, parseCommand } from "./grammar";
-import { isSimpleName, isIpv4, isSubnetMask, normalizeInterfaceName, isCiscoMac, aclEntryText, ospfNetworkText, PORT_SECURITY_MAX, ACL_NUMBER_MAX, ROUTING_ID_MAX, OSPF_AREA_MAX, PORT_MAX } from "./normalize";
+import { isSimpleName, isIpv4, isSubnetMask, isRouteMask, normalizeInterfaceName, isCiscoMac, aclEntryText, ospfNetworkText, eigrpNetworkText, staticRouteText, PORT_SECURITY_MAX, ACL_NUMBER_MAX, ROUTING_ID_MAX, OSPF_AREA_MAX, PORT_MAX } from "./normalize";
 
 const KNOWN_IDS = new Set<string>(COMMANDS.map(c => c.id));
 const isStr = (v: unknown): v is string => typeof v === "string" && v.trim().length > 0;
@@ -30,6 +30,10 @@ const roundTrips = (line: string, canonical: (cmd: Extract<ReturnType<typeof par
 };
 /** «<address> <wildcard> area <n>» exactly as the runtime would re-print it. */
 const isOspfNetworkText = (v: unknown): boolean => isStr(v) && roundTrips("network " + v, c => (c.id === "network" && c.form === "ospf" ? "network " + ospfNetworkText(c) : null));
+/** «<address>» or «<address> <wildcard>» (PDF 253) exactly as the runtime would re-print an EIGRP network statement. */
+const isEigrpNetworkText = (v: unknown): boolean => isStr(v) && roundTrips("network " + v, c => (c.id === "network" && c.form === "eigrp" ? "network " + eigrpNetworkText(c.address, c.wildcard) : null));
+/** «<network> <mask> <next-hop>» exactly as `ip route` prints it (incl. «0.0.0.0 0.0.0.0 <next-hop>»). */
+const isStaticRouteText = (v: unknown): boolean => isStr(v) && roundTrips("ip route " + v, c => (c.id === "ip-route" ? "ip route " + staticRouteText(c) : null));
 /** One ACL entry text («permit host 192.168.1.10», «permit tcp any any eq 80») that the runtime parses back identically. */
 const isAclEntryText = (number: number) => (v: unknown): boolean => isStr(v) && roundTrips(`access-list ${number} ` + v, c => (c.id === "access-list" && c.number === number ? `access-list ${number} ` + aclEntryText(c.entry) : null));
 /** «<number> in|out» as `ip access-group` prints it. */
@@ -40,7 +44,7 @@ const rec = (v: unknown): Record<string, unknown> | null => (v && typeof v === "
 /** Value validators per condition kind + prop (the runtime grammar's own rules). */
 const IF_PROP: Record<string, (v: unknown) => boolean> = {
   switchportMode: v => v === "access" || v === "trunk",
-  accessVlan: isVlanId, encapsulationVlan: isVlanId, allowedVlans: isVlanList,
+  accessVlan: isVlanId, encapsulationVlan: isVlanId, allowedVlans: isVlanList, nativeVlan: isVlanId,
   ipAddress: v => isStr(v) && isIpv4(v), subnetMask: v => isStr(v) && isSubnetMask(v), shutdown: isBool, accessGroup: isAccessGroupText,
 };
 const PS_PROP: Record<string, (v: unknown) => boolean> = {
@@ -73,13 +77,17 @@ function readCondition(v: unknown): CliStateCondition | null {
       if (c.protocol !== "ospf" && c.protocol !== "eigrp") return null;
       if (c.prop === "id") return intIn(1, ROUTING_ID_MAX)(c.value) ? { kind: "routing", protocol: c.protocol, prop: "id", value: c.value } : null;
       if (c.prop !== "network") return null;
-      const ok = c.protocol === "ospf" ? isOspfNetworkText(c.value) : isStr(c.value) && isIpv4(c.value);
+      const ok = c.protocol === "ospf" ? isOspfNetworkText(c.value) : isEigrpNetworkText(c.value);
       return ok ? { kind: "routing", protocol: c.protocol, prop: "network", value: c.value as string } : null;
     }
     case "acl": {
       if (!isAclNumber(c.number)) return null;
       if (c.prop === "count") return intIn(0, 40)(c.value) ? { kind: "acl", number: c.number, prop: "count", value: c.value } : null;
       return c.prop === "entry" && isAclEntryText(c.number)(c.value) ? { kind: "acl", number: c.number, prop: "entry", value: c.value as string } : null;
+    }
+    case "static-route": {
+      if (c.prop === "count") return intIn(0, 40)(c.value) ? { kind: "static-route", prop: "count", value: c.value } : null;
+      return c.prop === "route" && isStaticRouteText(c.value) ? { kind: "static-route", prop: "route", value: c.value as string } : null;
     }
     default: return null;
   }
@@ -97,6 +105,12 @@ const ARG_CHECK: Record<string, (v: unknown) => boolean> = {
   form: v => v === "dhcp" || v === "ospf" || v === "eigrp", wildcard: v => isStr(v) && isIpv4(v), area: intIn(0, OSPF_AREA_MAX),
   protocol: v => ["ospf", "eigrp", "tcp", "udp", "icmp", "ip"].includes(v as string), number: intIn(1, Math.max(ROUTING_ID_MAX, ACL_NUMBER_MAX)),
   source: isAclAddressText, destination: isAclAddressText, port: intIn(1, PORT_MAX), direction: v => v === "in" || v === "out",
+  // Final summary — static route arguments (`mask` is overridden per command below: a route mask may be 0.0.0.0).
+  network: v => isStr(v) && isIpv4(v), nextHop: v => isStr(v) && isIpv4(v),
+};
+/** Per-command overrides of ARG_CHECK (the default route's mask 0.0.0.0 is valid only for `ip route`). */
+const ARG_CHECK_FOR: Partial<Record<CliCommandId, Record<string, (v: unknown) => boolean>>> = {
+  "ip-route": { mask: v => isStr(v) && isRouteMask(v) },
 };
 
 function readExpectation(v: unknown): CliExpectation | null {
@@ -106,7 +120,8 @@ function readExpectation(v: unknown): CliExpectation | null {
     if (!isCommandId(e.command)) return null;
     const args = rec(e.args);
     if (e.args !== undefined && !args) return null;
-    if (args && !Object.entries(args).every(([k, val]) => ARG_CHECK[k] !== undefined && ARG_CHECK[k](val))) return null;
+    const checks = { ...ARG_CHECK, ...(ARG_CHECK_FOR[e.command] ?? {}) };
+    if (args && !Object.entries(args).every(([k, val]) => checks[k] !== undefined && checks[k](val))) return null;
     return args ? { command: e.command, args: args as CliExpectedArgs } : { command: e.command };
   }
   if ("mode" in e) return isMode(e.mode) ? { mode: e.mode! } : null;

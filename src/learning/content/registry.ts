@@ -30,7 +30,7 @@ const COURSE_MANIFESTS: Record<string, ManifestLoader> = {
 };
 
 // Module BODY loaders per course. Each converted module body is registered here as its own
-// `import("./791381/modules/<id>")` chunk (m01, m02, m07–m18, m03, m19, m04, m20–m22, m23, m24, m05, m25–m27 and m06 today — every
+// `import("./791381/modules/<id>")` chunk (m01, m02, m07–m18, m03, m19, m04, m20–m22, m23, m24, m05, m25–m27, m06 and m28 today — every
 // module of the 791381 manifest); a manifest module without an entry would be skeleton-only and the Reader would show it as «قيد الإعداد».
 const COURSE_MODULE_LOADERS: Record<string, Record<string, ModuleLoader>> = {
   // REAL module bodies, each its own lazy chunk; the main bundle imports none of these eagerly.
@@ -64,8 +64,9 @@ const COURSE_MODULE_LOADERS: Record<string, Record<string, ModuleLoader>> = {
   //   m26 — Batch 10 «الشبكة الواسعة WAN» (PDF 207–209): NEW stable id, order 25.
   //   m27 — Batch 10 «بروتوكولات التوجيه» (PDF 210–222): NEW stable id, order 26.
   //   m06 — Batch 10 «قوائم التحكم ACL» (PDF 223–229): the historical Phase-2 skeleton COMPLETED IN PLACE (same id,
-  //         title, lesson l01 and historical page id p01), order 27. PDF 230+ (the final reference: glossary, closing
-  //         word, visual summary) is not converted.
+  //         title, lesson l01 and historical page id p01), order 27.
+  //   m28 — Final summary «الملخّص الشامل» (PDF 230 cover + 231–263; PDF 264 back cover not converted): NEW stable id,
+  //         order 28, the LAST module (fills the manifest's «summary» batch).
   // Every skeleton module of the Phase-2 manifest now has a body; nothing is shown as «قيد الإعداد».
   "791381": {
     "791381-m01": () => import("./791381/modules/m01"),
@@ -95,6 +96,7 @@ const COURSE_MODULE_LOADERS: Record<string, Record<string, ModuleLoader>> = {
     "791381-m26": () => import("./791381/modules/m26"),
     "791381-m27": () => import("./791381/modules/m27"),
     "791381-m06": () => import("./791381/modules/m06"),
+    "791381-m28": () => import("./791381/modules/m28"),
   },
 };
 
@@ -118,7 +120,7 @@ export async function loadCourseManifest(courseId: string): Promise<LearningCour
   return (await loader()).default;
 }
 
-/** Whether a specific module BODY is registered (791381: every manifest module except the m06 skeleton today). Pure, no import triggered. */
+/** Whether a specific module BODY is registered (791381: every manifest module today). Pure, no import triggered. */
 export function hasModuleContent(courseId: string, moduleId: string): boolean {
   return Boolean(COURSE_MODULE_LOADERS[courseId] && Object.prototype.hasOwnProperty.call(COURSE_MODULE_LOADERS[courseId], moduleId));
 }

@@ -8,7 +8,7 @@
 // ORDER MATTERS: a spec whose keyword sequence extends another's (e.g. «switchport port-security maximum» vs
 // «switchport port-security», «enable secret» vs «enable») is listed BEFORE the shorter one.
 import type { CliAclProtocol, CliCommandId, CliMode, CliParseResult, ParsedCommand } from "./types";
-import { tokenize, normalizeInterfaceName, expandInterfaceRange, isSubInterface, isIpv4, isSubnetMask, parseVlanId, parseVlanList, isSimpleName, isCiscoMac, parseIntInRange, parseAclAddress, PORT_SECURITY_MAX, ACL_STANDARD_MAX, ACL_NUMBER_MAX, ROUTING_ID_MAX, OSPF_AREA_MAX, PORT_MAX } from "./normalize";
+import { tokenize, normalizeInterfaceName, expandInterfaceRange, isSubInterface, isIpv4, isSubnetMask, isRouteMask, networkOf, parseVlanId, parseVlanList, isSimpleName, isCiscoMac, parseIntInRange, parseAclAddress, PORT_SECURITY_MAX, ACL_STANDARD_MAX, ACL_NUMBER_MAX, ROUTING_ID_MAX, OSPF_AREA_MAX, PORT_MAX } from "./normalize";
 
 type ArgResult = ParsedCommand | { incomplete: string } | { invalid: string };
 
@@ -40,8 +40,10 @@ const ipAddressArgs = (rest: string[]): ArgResult => {
 
 /**
  * `network` has the three shapes the book prints: DHCP pool «network <address> <mask>» (PDF 172), OSPF «network
- * <address> <wildcard> area <n>» (PDF 216–217) and EIGRP «network <address>» (PDF 220–221). The shape is decided
- * by the tokens; the engine then checks it against the current mode / routing process (see engine.ts).
+ * <address> <wildcard> area <n>» (PDF 216–217) and EIGRP «network <address>» (PDF 220–221) with the optional
+ * wildcard the final summary prints on PDF 253 («network 192.168.1.0 0.0.0.255»). The shape is decided by the
+ * tokens (two values: a contiguous subnet mask → DHCP, any other wildcard → EIGRP); the engine then checks it
+ * against the current mode / routing process (see engine.ts).
  */
 const networkArgs = (rest: string[]): ArgResult => {
   if (rest.length === 0) return { incomplete: "المطلوب: عنوان الشبكة (ثم القناع في DHCP، أو wildcard و area في OSPF)" };
@@ -49,14 +51,31 @@ const networkArgs = (rest: string[]): ArgResult => {
   if (rest.length === 1) return { id: "network", form: "eigrp", address: rest[0] };
   if (!isIpv4(rest[1])) return { invalid: "القيمة بعد العنوان غير صالحة: " + rest[1] };
   if (rest.length === 2) {
-    if (!isSubnetMask(rest[1])) return { invalid: "قناع الشبكة غير صالح: " + rest[1] + " — في OSPF تُكتب بعد wildcard الكلمة area ورقمها" };
-    return { id: "network", form: "dhcp", address: rest[0], mask: rest[1] };
+    if (isSubnetMask(rest[1])) return { id: "network", form: "dhcp", address: rest[0], mask: rest[1] };
+    return { id: "network", form: "eigrp", address: rest[0], wildcard: rest[1] };
   }
   if (rest[2].toLowerCase() !== "area") return { invalid: "بعد wildcard تُكتب الكلمة area ثم رقمها" };
   if (rest.length === 3) return { incomplete: "المطلوب: رقم area بعد الكلمة area" };
   if (rest.length > 4) return { invalid: "قيم زائدة بعد رقم area" };
   const area = parseIntInRange(rest[3], 0, OSPF_AREA_MAX);
   return area === null ? { invalid: "رقم area غير صالح: " + rest[3] } : { id: "network", form: "ospf", address: rest[0], wildcard: rest[1], area };
+};
+
+/**
+ * The minimal static route the final summary prints (PDF 251): «ip route <network> <mask> <next-hop>», and the
+ * default route «ip route 0.0.0.0 0.0.0.0 <next-hop>». No exit-interface, distance, permanent or track variants.
+ */
+const ipRouteArgs = (rest: string[]): ArgResult => {
+  if (rest.length === 0) return { incomplete: "المطلوب: عنوان الشبكة الهدف ثم قناعها ثم عنوان القفزة التالية (next-hop)" };
+  if (!isIpv4(rest[0])) return { invalid: "عنوان الشبكة غير صالح: " + rest[0] };
+  if (rest.length === 1) return { incomplete: "المطلوب: قناع الشبكة بعد العنوان (مثل 255.255.255.0)" };
+  if (!isRouteMask(rest[1])) return { invalid: "قناع الشبكة غير صالح: " + rest[1] };
+  if (rest.length === 2) return { incomplete: "المطلوب: عنوان القفزة التالية (next-hop) بعد القناع" };
+  if (rest.length > 3) return { invalid: "هذا المحاكي يدعم الصيغة ip route <network> <mask> <next-hop> فقط — قيم زائدة: " + rest.slice(3).join(" ") };
+  if (!isIpv4(rest[2])) return { invalid: "عنوان القفزة التالية غير صالح: " + rest[2] };
+  if ((rest[0] === "0.0.0.0") !== (rest[1] === "0.0.0.0")) return { invalid: "المسار الافتراضي يُكتب ip route 0.0.0.0 0.0.0.0 <next-hop>" };
+  if (networkOf(rest[0], rest[1]) !== rest[0]) return { invalid: "عنوان الشبكة لا يطابق القناع: " + rest[0] + " " + rest[1] };
+  return { id: "ip-route", network: rest[0], mask: rest[1], nextHop: rest[2] };
 };
 
 const routerArgs = (protocol: "ospf" | "eigrp") => (rest: string[]): ArgResult => {
@@ -123,7 +142,7 @@ const oneName = (id: "hostname" | "name" | "ip-dhcp-pool" | "vtp-domain" | "vtp-
   }
 };
 
-const oneVlan = (id: "vlan" | "switchport-access-vlan" | "encapsulation-dot1q") => (rest: string[]): ArgResult => {
+const oneVlan = (id: "vlan" | "switchport-access-vlan" | "switchport-trunk-native-vlan" | "encapsulation-dot1q") => (rest: string[]): ArgResult => {
   if (rest.length === 0) return { incomplete: "المطلوب: رقم VLAN" };
   if (rest.length > 1) return { invalid: "قيم زائدة بعد رقم VLAN" };
   const v = parseVlanId(rest[0]);
@@ -186,6 +205,7 @@ export const COMMANDS: readonly CommandSpec[] = [
       return list ? { id: "switchport-trunk-allowed-vlan", vlans: list } : { invalid: "قائمة VLAN غير صالحة: " + rest.join(" ") };
     },
   },
+  { id: "switchport-trunk-native-vlan", keywords: [["switchport", "trunk", "native", "vlan"]], modes: ["interface"], syntax: "switchport trunk native vlan <id>", args: oneVlan("switchport-trunk-native-vlan") },
   // Port Security (Batch 9): the extended forms precede the bare «switchport port-security».
   {
     id: "port-security-maximum", keywords: [["switchport", "port-security", "maximum"]], modes: ["interface"], syntax: "switchport port-security maximum <n>",
@@ -220,6 +240,8 @@ export const COMMANDS: readonly CommandSpec[] = [
   { id: "no-shutdown", keywords: [["no", "shutdown"], ["no", "shut"]], modes: IF_MODES, syntax: "no shutdown", args: none("no-shutdown") },
   { id: "shutdown", keywords: [["shutdown"], ["shut"]], modes: IF_MODES, syntax: "shutdown", args: none("shutdown") },
   { id: "encapsulation-dot1q", keywords: [["encapsulation", "dot1q"], ["encap", "dot1q"]], modes: ["subinterface"], syntax: "encapsulation dot1Q <vlan>", args: oneVlan("encapsulation-dot1q") },
+  // Static route (final summary, PDF 251): global config only.
+  { id: "ip-route", keywords: [["ip", "route"]], modes: ["global"], syntax: "ip route <network> <mask> <next-hop>", args: ipRouteArgs },
   { id: "ip-dhcp-pool", keywords: [["ip", "dhcp", "pool"]], modes: ["global"], syntax: "ip dhcp pool <name>", args: oneName("ip-dhcp-pool", "اسم مجموعة التوزيع") },
   {
     id: "ip-dhcp-excluded-address", keywords: [["ip", "dhcp", "excluded-address"]], modes: ["global"], syntax: "ip dhcp excluded-address <from> [<to>]",
@@ -231,7 +253,7 @@ export const COMMANDS: readonly CommandSpec[] = [
       return rest[1] === undefined ? { id: "ip-dhcp-excluded-address", from: rest[0] } : { id: "ip-dhcp-excluded-address", from: rest[0], to: rest[1] };
     },
   },
-  { id: "network", keywords: [["network"]], modes: ["dhcp", "router"], syntax: "network <address> <mask>  |  network <address> <wildcard> area <n>  |  network <address>", args: networkArgs },
+  { id: "network", keywords: [["network"]], modes: ["dhcp", "router"], syntax: "network <address> <mask>  |  network <address> <wildcard> area <n>  |  network <address> [<wildcard>]", args: networkArgs },
   {
     id: "default-router", keywords: [["default-router"]], modes: ["dhcp"], syntax: "default-router <address>",
     args: rest => {

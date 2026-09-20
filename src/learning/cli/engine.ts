@@ -5,7 +5,7 @@ import type { CliAclEntry, CliDeviceState, CliExecResult, CliInterfaceState, Cli
 import { COMMANDS, parseCommand } from "./grammar";
 import { newInterface } from "./state";
 import { showOutput } from "./show";
-import { aclEntryText, ospfNetworkText } from "./normalize";
+import { aclEntryText, ospfNetworkText, eigrpNetworkText, staticRouteText } from "./normalize";
 
 const EXIT_TO: Record<CliMode, CliMode> = { user: "user", privileged: "user", global: "privileged", interface: "global", subinterface: "global", vlan: "global", dhcp: "global", line: "global", router: "global" };
 
@@ -63,6 +63,7 @@ export function applyCommand(state: CliDeviceState, cmd: ParsedCommand): { state
     case "switchport-mode": return { state: mapSelected(state, i => ({ ...i, switchportMode: cmd.mode })) };
     case "switchport-access-vlan": return { state: mapSelected(state, i => ({ ...i, accessVlan: cmd.vlanId })) };
     case "switchport-trunk-allowed-vlan": return { state: mapSelected(state, i => ({ ...i, allowedVlans: [...cmd.vlans] })) };
+    case "switchport-trunk-native-vlan": return { state: mapSelected(state, i => ({ ...i, nativeVlan: cmd.vlanId })) };
     case "switchport-port-security": return { state: mapPortSecurity(state, ps => ({ ...ps, enabled: true })) };
     case "port-security-maximum": return { state: mapPortSecurity(state, ps => ({ ...ps, maximum: cmd.maximum })) };
     case "port-security-mac-address": return { state: mapPortSecurity(state, ps => ({ ...ps, macAddress: cmd.mac })) };
@@ -84,7 +85,13 @@ export function applyCommand(state: CliDeviceState, cmd: ParsedCommand): { state
       }
       const eigrp = state.routing.eigrp;
       if (!eigrp || state.selectedRouter !== "eigrp") return { state };
-      return { state: eigrp.networks.includes(cmd.address) ? state : { ...state, routing: { ...state.routing, eigrp: { ...eigrp, networks: [...eigrp.networks, cmd.address] } } } };
+      const text = eigrpNetworkText(cmd.address, cmd.wildcard);
+      return { state: eigrp.networks.includes(text) ? state : { ...state, routing: { ...state.routing, eigrp: { ...eigrp, networks: [...eigrp.networks, text] } } } };
+    }
+    case "ip-route": {
+      const route = { network: cmd.network, mask: cmd.mask, nextHop: cmd.nextHop };
+      const dup = state.staticRoutes.some(r => staticRouteText(r) === staticRouteText(route));
+      return { state: dup ? state : { ...state, staticRoutes: [...state.staticRoutes, route] } };
     }
     case "router": {
       // One process per protocol: re-entering the same number keeps its networks; a different number starts afresh.
@@ -137,12 +144,14 @@ export function executeCommand(state: CliDeviceState, raw: unknown): { state: Cl
   if (parsed.kind === "unknown") return { state, result: { status: "unknown" } };
   if (parsed.kind === "incomplete") return { state, result: { status: "incomplete", id: parsed.id, detail: parsed.detail } };
   if (parsed.kind === "invalid") return { state, result: { status: "invalid", id: parsed.id, detail: parsed.detail } };
+  // In a DHCP pool a second value that is not a contiguous mask is a bad mask (never an EIGRP wildcard).
+  if (parsed.command.id === "network" && parsed.command.form === "eigrp" && parsed.command.wildcard !== undefined && state.mode === "dhcp") return { state, result: { status: "invalid", id: "network", detail: "قناع الشبكة غير صالح: " + parsed.command.wildcard } };
   const modes = requiredModes(parsed.command);
   if (!modes.includes(state.mode)) return { state, result: { status: "wrong-mode", command: parsed.command, requiredModes: modes } };
   // Inside a routing process the `network` form must match the process (the book's «انتبه» on PDF 220: no area in EIGRP).
   if (parsed.command.id === "network" && state.mode === "router") {
     if (parsed.command.form === "eigrp" && state.selectedRouter === "ospf") return { state, result: { status: "incomplete", id: "network", detail: "في OSPF المطلوب: network <address> <wildcard> area <n>" } };
-    if (parsed.command.form === "ospf" && state.selectedRouter === "eigrp") return { state, result: { status: "invalid", id: "network", detail: "في EIGRP لا نكتب area؛ الصيغة: network <address>" } };
+    if (parsed.command.form === "ospf" && state.selectedRouter === "eigrp") return { state, result: { status: "invalid", id: "network", detail: "في EIGRP لا نكتب area؛ الصيغة: network <address> [<wildcard>]" } };
   }
   const applied = applyCommand(state, parsed.command);
   return { state: applied.state, result: applied.output ? { status: "ok", command: parsed.command, output: applied.output } : { status: "ok", command: parsed.command } };

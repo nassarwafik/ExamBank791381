@@ -21,11 +21,11 @@ const OSPF = () => run(GLOBAL(), "router ospf 1");
 const EIGRP = () => run(GLOBAL(), "router eigrp 100");
 
 describe("Batch 10 grammar — only the book's routing / ACL lines were added; the table stays closed", () => {
-  it("knows router, the three network forms, access-list, ip access-group and show ip route; nothing invented (no rip, static routes, named ACLs, no-forms, show access-lists)", () => {
+  it("knows router, the three network forms, access-list, ip access-group and show ip route; nothing invented (no rip, named ACLs, no-forms, show access-lists; the static route arrived with the final summary)", () => {
     const ids = new Set<string>(COMMANDS.map(c => c.id));
     for (const id of ["router", "network", "access-list", "ip-access-group"]) expect(ids.has(id), id).toBe(true);
     expect(parseCommand("show ip route")).toEqual({ kind: "ok", command: { id: "show", what: "ip-route" } });
-    for (const u of ["router rip", "router bgp 65000", "ip route 0.0.0.0 0.0.0.0 10.0.0.1", "ip access-list standard LAN", "no access-list 10", "show access-lists", "show ip ospf neighbor", "show ip protocols", "passive-interface g0/0", "router-id 1.1.1.1"]) expect(parseCommand(u), u).toEqual({ kind: "unknown" });
+    for (const u of ["router rip", "router bgp 65000", "ip default-gateway 10.0.0.1", "ip access-list standard LAN", "no access-list 10", "show access-lists", "show ip ospf neighbor", "show ip protocols", "passive-interface g0/0", "router-id 1.1.1.1"]) expect(parseCommand(u), u).toEqual({ kind: "unknown" });
     expect(NAVIGATION_COMMANDS).toContain("router");
     expect(NAVIGATION_COMMANDS).not.toContain("access-list");
     expect(CLI_MODE_LABEL.router).toBe("وضع إعداد التوجيه");
@@ -55,7 +55,7 @@ describe("Batch 10 grammar — only the book's routing / ACL lines were added; t
     expect(parseCommand("router ospf 1 2")).toMatchObject({ kind: "invalid", id: "router" });
     expect(parseCommand("network")).toMatchObject({ kind: "incomplete", id: "network" });
     expect(parseCommand("network 192.168.1.0 0.0.0.255 area")).toMatchObject({ kind: "incomplete", id: "network" });
-    expect(parseCommand("network 192.168.1.0 0.0.0.255")).toMatchObject({ kind: "invalid", id: "network" });   // a wildcard is not a mask: area is missing
+    expect(parseCommand("network 192.168.1.0 0.0.0.255")).toEqual({ kind: "ok", command: { id: "network", form: "eigrp", address: "192.168.1.0", wildcard: "0.0.0.255" } });   // since the final summary (PDF 253): the EIGRP wildcard form; OSPF still needs area (checked in the engine)
     expect(parseCommand("network 192.168.1.0 0.0.0.255 zone 0")).toMatchObject({ kind: "invalid", id: "network" });
     expect(parseCommand("network 192.168.1.0 0.0.0.255 area 0 extra")).toMatchObject({ kind: "invalid", id: "network" });
     expect(parseCommand("network 192.168.1.256")).toMatchObject({ kind: "invalid", id: "network" });
