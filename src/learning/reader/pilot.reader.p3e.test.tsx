@@ -1,8 +1,8 @@
 // @vitest-environment happy-dom
 // Phase 3E — the Reader over the REAL Unit-3 content (m07, source PDF 24–33) through the real lazy registry:
 // opening the Unit-3 opener lazy-loads m07 exactly once, navigating PDF 24→33 stays inside the session cache (no
-// reload, no network), m01/m02 behaviour is unchanged, and the remaining skeleton modules (m04+) still render the
-// professional «قيد الإعداد» state because they have no body yet (m03 was completed in place by Batch 6). Reading
+// reload, no network), m01/m02 behaviour is unchanged, and the remaining skeleton modules (m05+) still render the
+// professional «قيد الإعداد» state because they have no body yet (m03 / m04 were completed in place by Batches 6 / 7). Reading
 // order follows explicit `order`, so m07 (order 3) comes right after m02 even though its id is not m03.
 import { describe, it, expect, afterEach, vi } from "vitest";
 import { render, cleanup, screen, fireEvent, waitFor } from "@testing-library/react";
@@ -47,7 +47,7 @@ const M07_PAGES = [
 ];
 
 describe("Phase 3E — reading order places Unit 3 (m07, order 3) directly after Unit 2", () => {
-  it("the page after the last Unit-2 page (PDF 23) is the Unit-3 opener (PDF 24); the historical m03 (now real) comes after m18, then the m04 skeleton", () => {
+  it("the page after the last Unit-2 page (PDF 23) is the Unit-3 opener (PDF 24); the historical m03 (now real) comes after m18, then m19 (VTP), then the historical m04 (now real), then the m05 skeleton", () => {
     expect(nextPage(manifest, "791381-m02-l01-p09")?.id).toBe("791381-m07-l00-p01");
     expect(previousPage(manifest, "791381-m07-l00-p01")?.id).toBe("791381-m02-l01-p09");
     expect(nextPage(manifest, "791381-m07-l02-p04")?.id).toBe("791381-m08-l00-p01");   // Unit 4 (m08) now follows Unit 3; the historical m03 reads after the real units
@@ -61,7 +61,10 @@ describe("Phase 3E — reading order places Unit 3 (m07, order 3) directly after
     expect(nextPage(manifest, "791381-m17-l02-p04")?.id).toBe("791381-m18-l01-p01");   // … then data segmentation (m18, PDF 116) …
     expect(nextPage(manifest, "791381-m18-l03-p01")?.id).toBe("791381-m03-l01-p03");   // … Batch 6: m03 (completed in place) reads after m18's last page (PDF 119), starting at its NEW PDF 121 page …
     expect(nextPage(manifest, "791381-m03-l01-p04")?.id).toBe("791381-m03-l01-p01");   // … then the historical PDF 123 page (order 3) follows the new PDF 122 page …
-    expect(nextPage(manifest, "791381-m03-l04-p04")?.id).toBe("791381-m04-l01-p01");   // … and after m03's last page (PDF 138) comes the m04 skeleton (PDF 148)
+    expect(nextPage(manifest, "791381-m03-l04-p04")?.id).toBe("791381-m19-l01-p01");   // … Batch 7: after m03's last page (PDF 138) comes the VTP section (m19, PDF 140) …
+    expect(nextPage(manifest, "791381-m19-l02-p03")?.id).toBe("791381-m04-l01-p02");   // … then m04 (completed in place) starting at its NEW PDF 146 page …
+    expect(nextPage(manifest, "791381-m04-l01-p03")?.id).toBe("791381-m04-l01-p01");   // … the historical PDF 148 page follows the new PDF 147 page …
+    expect(nextPage(manifest, "791381-m04-l03-p02")?.id).toBe("791381-m05-l01-p01");   // … and after m04's last page (PDF 157) comes the m05 skeleton (PDF 193)
     expect(previousPage(manifest, "791381-m11-l00-p01")?.id).toBe("791381-m10-l02-p01");
   });
 });
@@ -96,10 +99,10 @@ describe("Phase 3E — Reader over the real Unit-3 module (lazy, cached, no netw
     expect(api.loads.filter(m => m === "791381-m07").length).toBe(1);
   }, CHUNK_TEST_TIMEOUT);
 
-  it("the remaining skeleton m04 (order 16, no body yet) still shows «قيد الإعداد», not an integrity error", async () => {
+  it("the remaining skeleton m05 (order 18, no body yet) still shows «قيد الإعداد», not an integrity error", async () => {
     mount();
     await screen.findByRole("heading", { level: 2, name: "أساسيات الشبكات" }, SLOW);
-    goTo("791381-m04-l01-p01");
+    goTo("791381-m05-l01-p01");
     await waitFor(() => expect(screen.getByText("المحتوى التفاعلي لهذه الصفحة قيد الإعداد")).toBeTruthy(), SLOW);
     expect(screen.queryByText(/لم يتم العثور على محتوى هذه الصفحة/)).toBeNull();
   }, CHUNK_TEST_TIMEOUT);
