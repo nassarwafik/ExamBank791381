@@ -33,15 +33,15 @@ function answersFor(id, correct) {
 const seed = (visible, extra = {}) => createMemoryContainer({ [USR("u1")]: student("u1", "cA"), [CLS("cA")]: room("cA", visible), ...extra });
 
 describe("registry — the canonical T-series mapping", () => {
-  it("T01 → m01 · T02 → m02 · T03/T04 → m07, in book order, real library titles", () => {
-    expect(listLearningTrainings()).toEqual([
+  it("T01 → m01 · T02 → m02 · T03/T04 → m07, in book order, real library titles (T05–T30 / F01–F06 follow — pinned in learning-training-t05-f06.test.js)", () => {
+    expect(listLearningTrainings().slice(0, 4)).toEqual([
       { trainingId: "T01", order: 1, label: "تدريب 1", title: "أساسيات الشبكات", courseId: "791381", requiredModuleId: M01 },
       { trainingId: "T02", order: 2, label: "تدريب 2", title: "أنظمة العد", courseId: "791381", requiredModuleId: M02 },
       { trainingId: "T03", order: 3, label: "تدريب 3", title: "عناوين IPv4 وصلاحية العنوان", courseId: "791381", requiredModuleId: M07 },
       { trainingId: "T04", order: 4, label: "تدريب 4", title: "العناوين الخاصة والعامة", courseId: "791381", requiredModuleId: M07 }
     ]);
     for (const id of ["T01", "T02", "T03", "T04"]) { const item = ITEM(id); expect(item.title).toBe(findLearningTraining(id).title); expect(item.questionCount).toBe(10); expect(item.publishable).toBe(true); }
-    expect(findLearningTraining("T09")).toBeNull(); expect(findLearningTraining("")).toBeNull();
+    expect(findLearningTraining("T99")).toBeNull(); expect(findLearningTraining("F07")).toBeNull(); expect(findLearningTraining("")).toBeNull();   // T09 became a real item with the Learning-Practice phase
   });
   it("gate: course assigned + required module published; [] / unassigned / unknown → false", () => {
     const t = id => findLearningTraining(id);
@@ -75,7 +75,8 @@ describe("progressive-release gate + authority", () => {
   it.each(matrix)("published %j → T01..T04 available %j (list discloses titles only when available)", async (visible, expected) => {
     const r = await get(studentDeps(seed(visible)));
     expect(r.status).toBe(200);
-    expect(r.jsonBody.trainings.map(t => t.available)).toEqual(expected);
+    expect(r.jsonBody.trainings.slice(0, 4).map(t => t.available)).toEqual(expected);   // T05–T30 / F01–F06 follow (all gated by later modules → unavailable here)
+    expect(r.jsonBody.trainings.slice(4).every(t => t.available === false)).toBe(true);
     for (const t of r.jsonBody.trainings) {
       if (t.available) expect(t.title).toBe(findLearningTraining(t.trainingId).title);
       else expect("title" in t).toBe(false);
@@ -99,7 +100,7 @@ describe("progressive-release gate + authority", () => {
   it("MOVED STUDENT: token says class STALE; persisted class cB (m01 only) decides", async () => {
     const ctx = createMemoryContainer({ [USR("u1")]: student("u1", "cB"), [CLS("cA")]: room("cA", [M01, M02, M07]), [CLS("cB")]: room("cB", [M01]) });
     const r = await get(studentDeps(ctx));
-    expect(r.jsonBody.trainings.map(t => t.available)).toEqual([true, false, false, false]);
+    expect(r.jsonBody.trainings.slice(0, 4).map(t => t.available)).toEqual([true, false, false, false]);
     expect((await get(studentDeps(ctx), "T03")).status).toBe(403);
   });
   it("archived class → 403 (list, item, submit); inactive / archived student → 401", async () => {

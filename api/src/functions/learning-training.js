@@ -11,8 +11,8 @@ const { listLearningTrainings, findLearningTraining, trainingAllowedForClass } =
 const { practiceDocName, normalizePracticeDoc, trainingEntry, applyTrainingResult } = require("../lib/learning-practice");
 const { TRAINING_MAX_STRENGTH_POINTS } = require("../lib/student-strength");
 
-// Learning Practice API — the SAFE delivery of the book's T-series trainings (real Exam Library items) and their
-// server-side grading. Self-study only: NO assignment record, no due date, no gradebook entry, no attempt limit,
+// Learning Practice API — the SAFE delivery of the book's Learning-Practice items (the T-series trainings T01–T30
+// and the F-series final exams for training F01–F06 — all real Exam Library items) and their server-side grading. Self-study only: NO assignment record, no due date, no gradebook entry, no attempt limit,
 // no medal. Routes (one function):
 //   GET  /api/learning-training                     → the trainings for the caller (student: gated, with best results)
 //   GET  /api/learning-training/{trainingId}        → the SANITIZED exam (no answer keys, no hints) — student gated
@@ -108,13 +108,19 @@ async function handler(request, deps = {}, obs = null) {
       const review = graded.questions.map(g => {
         const q = questions.find(x => String(x.examQuestionId || x.id || "") === String(g.questionId)) || {};
         const chosen = answers[g.questionId];
+        const correctOptionIndex = Number.isInteger(Number(q.answer?.correctOptionIndex)) ? Number(q.answer.correctOptionIndex) : null;
         return {
           questionId: g.questionId,
           questionNumber: g.questionNumber,
           correct: g.correct === true,
+          // A question the grader could not auto-grade (e.g. an open question of a final exam): its marks are
+          // counted in the total by the SAME grader as everywhere else; the browser only labels it.
+          manualReview: g.manualReview === true,
           chosenIndex: chosen && chosen.kind === "choice" && Number.isInteger(Number(chosen.index)) ? Number(chosen.index) : null,
           // Post-submission reveal for self-study: the key and the item's own explanation (never before submit).
-          correctOptionIndex: Number.isInteger(Number(q.answer?.correctOptionIndex)) ? Number(q.answer.correctOptionIndex) : null,
+          correctOptionIndex,
+          // Non-choice keys (matching / table pairs) are revealed as the item's own answer text — after submit only.
+          correctText: correctOptionIndex === null && typeof q.answer?.text === "string" ? q.answer.text : "",
           hint: String(q.hint || "")
         };
       });
