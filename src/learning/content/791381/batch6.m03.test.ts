@@ -369,14 +369,14 @@ describe("Batch 6 — loader, navigation, server registry agreement, publication
     // nothing in the registry module marks m03 (or anything) as published / visible by default
     expect(Object.keys(server().listLearningModules("791381")[0]).sort()).toEqual(["moduleId", "order", "title"]);
   });
-  it("m04's historical page and m05 / m06 are UNCHANGED (ids, titles, page ids, PDF mappings); since Batch 7 m04 has a body at order 17 and m05 / m06 shift to 18 / 19; b6 unchanged", () => {
+  it("m04's historical page and m05 / m06 are UNCHANGED (ids, titles, page ids, PDF mappings); since Batch 7 m04 has a body at order 17 and since Batch 8 m05 / m06 shift to 21 / 22; b6 unchanged", () => {
     const pagesRef = (id: string) => byId[id].lessons.flatMap(l => l.pages.map(p => [p.id, p.title, p.source!.pdfPageStart, p.source!.printedPage]));
     expect([byId["791381-m04"].title, byId["791381-m04"].order, pagesRef("791381-m04").filter(p => p[0] === "791381-m04-l01-p01")]).toEqual(["Trunk و Router on a Stick", 17, [["791381-m04-l01-p01", "أوامر Trunk", 148, 146]]]);
-    expect([byId["791381-m05"].title, byId["791381-m05"].order, pagesRef("791381-m05")]).toEqual(["مرجع أوامر Cisco", 18, [["791381-m05-l01-p01", "أوامر أساسية للجهاز", 193, 191], ["791381-m05-l01-p02", "أوامر VLAN و Trunk", 194, 192]]]);
-    expect([byId["791381-m06"].title, byId["791381-m06"].order, pagesRef("791381-m06")]).toEqual(["قوائم التحكم ACL", 19, [["791381-m06-l01-p01", "Extended ACL", 227, 225]]]);
+    expect([byId["791381-m05"].title, byId["791381-m05"].order, pagesRef("791381-m05")]).toEqual(["مرجع أوامر Cisco", 21, [["791381-m05-l01-p01", "أوامر أساسية للجهاز", 193, 191], ["791381-m05-l01-p02", "أوامر VLAN و Trunk", 194, 192]]]);
+    expect([byId["791381-m06"].title, byId["791381-m06"].order, pagesRef("791381-m06")]).toEqual(["قوائم التحكم ACL", 22, [["791381-m06-l01-p01", "Extended ACL", 227, 225]]]);
     for (const id of ["791381-m05", "791381-m06"]) expect(Object.keys(byId[id]).sort(), id).toEqual(["id", "lessons", "order", "shortTitle", "title"].filter(k => k in byId[id]).sort());
     expect(manifest.batches!.find(b => b.id === "b4")!.moduleIds).toEqual([M03, "791381-m19", "791381-m04", "791381-m05"]);
     expect(manifest.batches!.find(b => b.id === "b6")!.moduleIds).toEqual(["791381-m06"]);
-    expect(manifest.modules.map(m => m.order)).toEqual(Array.from({ length: 19 }, (_, i) => i + 1));
+    expect(manifest.modules.map(m => m.order)).toEqual(Array.from({ length: 22 }, (_, i) => i + 1));
   });
 });

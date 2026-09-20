@@ -311,8 +311,8 @@ describe("Batch 7 — loaders, navigation, server registry agreement, publicatio
     expect([a.id, a.order, pagesOf(a).length, b.id, b.order, pagesOf(b).length]).toEqual([M19, 16, 5, M04, 17, 12]);
     expect(["791381-m05", "791381-m06"].map(id => hasModuleContent("791381", id))).toEqual([false, false]);
   });
-  it("navigation: m18 → m03 → m19 → m04 → m05; m03's last page (PDF 138) leads to PDF 140; m19's last page (PDF 144) leads to PDF 146; the historical PDF 148 page follows the new PDF 147 page; after PDF 157 comes the m05 skeleton (PDF 193)", () => {
-    expect(orderedModules(manifest).map(m => m.id).slice(14, 19)).toEqual(["791381-m03", M19, M04, "791381-m05", "791381-m06"]);
+  it("navigation: m18 → m03 → m19 → m04 → m20 (Batch 8) → … → m05; m03's last page (PDF 138) leads to PDF 140; m19's last page (PDF 144) leads to PDF 146; the historical PDF 148 page follows the new PDF 147 page; after PDF 157 comes Wi-Fi (PDF 159)", () => {
+    expect(orderedModules(manifest).map(m => m.id).slice(14, 22)).toEqual(["791381-m03", M19, M04, "791381-m20", "791381-m21", "791381-m22", "791381-m05", "791381-m06"]);
     expect(nextPage(manifest, "791381-m03-l04-p04")?.id).toBe(M19 + "-l01-p01");
     expect(previousPage(manifest, M19 + "-l01-p01")?.id).toBe("791381-m03-l04-p04");
     expect(nextPage(manifest, M19 + "-l02-p03")?.id).toBe(M04 + "-l01-p02");
@@ -321,13 +321,13 @@ describe("Batch 7 — loaders, navigation, server registry agreement, publicatio
     const walk: number[] = []; let cur = nextPage(manifest, "791381-m03-l04-p04");
     while (cur && (cur.id.startsWith(M19) || cur.id.startsWith(M04))) { walk.push(cur.source!.pdfPageStart); cur = nextPage(manifest, cur.id); }
     expect(walk).toEqual([140, 141, 142, 143, 144, ...Array.from({ length: 12 }, (_, i) => 146 + i)]);
-    expect([cur?.id, cur?.source!.pdfPageStart]).toEqual(["791381-m05-l01-p01", 193]);
+    expect([cur?.id, cur?.source!.pdfPageStart]).toEqual(["791381-m20-l01-p01", 159]);   // since Batch 8 the Wi-Fi section follows PDF 157
   });
   it("FRONTEND ↔ SERVER agreement: every module with a body is in the server publication registry with the same title and order (and only those); m19 = 16, m04 = 17 after m03; skeletons m05–m06 absent", () => {
     const withBody = manifest.modules.filter(m => hasModuleContent("791381", m.id)).map(m => ({ moduleId: m.id, title: m.title, order: m.order }));
     const s = server().listLearningModules("791381");
     expect(s).toEqual([...withBody].sort((a, b) => a.order - b.order));
-    expect(s.slice(-3)).toEqual([{ moduleId: "791381-m03", title: "برمجة السويتش CLI و VLAN", order: 15 }, { moduleId: M19, title: "إدارة VLAN: VTP", order: 16 }, { moduleId: M04, title: "Trunk و Router on a Stick", order: 17 }]);
+    expect(s.slice(14, 17)).toEqual([{ moduleId: "791381-m03", title: "برمجة السويتش CLI و VLAN", order: 15 }, { moduleId: M19, title: "إدارة VLAN: VTP", order: 16 }, { moduleId: M04, title: "Trunk و Router on a Stick", order: 17 }]);
     for (const skel of ["791381-m05", "791381-m06"]) expect(server().findLearningModule("791381", skel)).toBeNull();
   });
   it("PUBLISHABLE but NOT auto-published: the server accepts m19 / m04 for explicit publication in canonical order; the registry carries identity + title + order only", () => {
@@ -336,13 +336,13 @@ describe("Batch 7 — loaders, navigation, server registry agreement, publicatio
     expect(JSON.stringify(server().listLearningModules("791381"))).not.toMatch(/pages|lessons|blocks|pdf|visibleModuleIds|published/i);
     for (const m of server().listLearningModules("791381")) expect(Object.keys(m).sort()).toEqual(["moduleId", "order", "title"]);
   });
-  it("m05 and m06 are UNCHANGED (ids, titles, page ids, PDF mappings, no body) apart from their explicit orders 18 / 19; b4 = [m03, m19, m04, m05]; b6 unchanged; orders 1..19 contiguous", () => {
+  it("m05 and m06 are UNCHANGED (ids, titles, page ids, PDF mappings, no body) apart from their explicit orders (21 / 22 since Batch 8); b4 = [m03, m19, m04, m05]; b6 unchanged; orders 1..22 contiguous", () => {
     const pagesRef = (id: string) => byId[id].lessons.flatMap(l => l.pages.map(p => [p.id, p.title, p.source!.pdfPageStart, p.source!.printedPage]));
-    expect([byId["791381-m05"].title, byId["791381-m05"].order, pagesRef("791381-m05")]).toEqual(["مرجع أوامر Cisco", 18, [["791381-m05-l01-p01", "أوامر أساسية للجهاز", 193, 191], ["791381-m05-l01-p02", "أوامر VLAN و Trunk", 194, 192]]]);
-    expect([byId["791381-m06"].title, byId["791381-m06"].order, pagesRef("791381-m06")]).toEqual(["قوائم التحكم ACL", 19, [["791381-m06-l01-p01", "Extended ACL", 227, 225]]]);
+    expect([byId["791381-m05"].title, byId["791381-m05"].order, pagesRef("791381-m05")]).toEqual(["مرجع أوامر Cisco", 21, [["791381-m05-l01-p01", "أوامر أساسية للجهاز", 193, 191], ["791381-m05-l01-p02", "أوامر VLAN و Trunk", 194, 192]]]);
+    expect([byId["791381-m06"].title, byId["791381-m06"].order, pagesRef("791381-m06")]).toEqual(["قوائم التحكم ACL", 22, [["791381-m06-l01-p01", "Extended ACL", 227, 225]]]);
     for (const id of ["791381-m05", "791381-m06"]) expect(Object.keys(byId[id]).sort(), id).toEqual(["id", "lessons", "order", "shortTitle", "title"].filter(k => k in byId[id]).sort());
     expect(manifest.batches!.find(b => b.id === "b4")!.moduleIds).toEqual(["791381-m03", M19, M04, "791381-m05"]);
     expect(manifest.batches!.find(b => b.id === "b6")!.moduleIds).toEqual(["791381-m06"]);
-    expect(manifest.modules.map(m => m.order)).toEqual(Array.from({ length: 19 }, (_, i) => i + 1));
+    expect(manifest.modules.map(m => m.order)).toEqual(Array.from({ length: 22 }, (_, i) => i + 1));
   });
 });
