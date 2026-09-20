@@ -153,7 +153,8 @@ describe("architecture guards — one Reader, lazy from the portal, no eager boo
   });
   it("StudentPortal code-splits the Reader and neither the portal nor the section imports a module body or the Reader eagerly", () => {
     const portal = read("StudentPortal.tsx"), section = read("student/StudentLearningMaterials.tsx");
-    expect(portal).toContain('lazy(() => import("./student/StudentReader"))');
+    // Code-split via lazy(), now wrapped in the deployment-recovery helper (still one dynamic import of StudentReader).
+    expect(portal).toContain('lazy(lazyWithRetry(() => import("./student/StudentReader"), "student-reader"))');
     for (const src of [portal, section]) {
       expect(src).not.toMatch(/from "\.\.?\/learning\/reader\/LearningReader"/);
       expect(src).not.toMatch(/content\/791381\/modules|content\/791381\/manifest|content\/registry/);

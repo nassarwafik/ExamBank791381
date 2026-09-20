@@ -6,10 +6,11 @@ import { LEARNING_COURSES, findLearningCourse, type LearningCourse } from "./cat
 import { hasCourseContent } from "./content/registry";
 import { createTrainingClient, teacherTrainingHeaders } from "./training/trainingClient";
 import "./learning.css";
+import { lazyWithRetry } from "../lazyWithRetry";
 
 // The interactive reader (hosted by the shared Reader-plus-training wrapper) is code-split so it and the content
 // layer it pulls never weigh down the library view.
-const LearningReaderWithTraining = lazy(() => import("./training/LearningReaderWithTraining"));
+const LearningReaderWithTraining = lazy(lazyWithRetry(() => import("./training/LearningReaderWithTraining"), "learning-reader-with-training"));
 
 type View =
   | { kind: "library" }

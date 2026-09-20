@@ -4,6 +4,7 @@ import StudentShell from "./shell/StudentShell";
 import StudentProjectPanel from "./projects/StudentProjectPanel";
 import type { FeedPost, ReactionId } from "./achievements";
 import SectionHeader from "./ui/SectionHeader";
+import { lazyWithRetry } from "./lazyWithRetry";
 import EmptyState from "./ui/EmptyState";
 import { usePrefersReducedMotion } from "./ui/usePrefersReducedMotion";
 import StudentIdentityCard from "./student/StudentIdentityCard";
@@ -22,7 +23,7 @@ type Props = { token: string; displayName: string; onLogout: () => void };
 
 // Class Learning Materials: the student's Reader (the shared LearningReader behind a restricted content API) is
 // code-split so opening the portal never loads the Reader or any book body — only «فتح المادة» does.
-const StudentReader = lazy(() => import("./student/StudentReader"));
+const StudentReader = lazy(lazyWithRetry(() => import("./student/StudentReader"), "student-reader"));
 
 /**
  * Student Portal (UX-7a — mobile-first, actionable-first). Hierarchy: who am I → what should I do now →

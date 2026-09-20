@@ -1,11 +1,12 @@
 import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import LearningReader from "../reader/LearningReader";
+import { lazyWithRetry } from "../../lazyWithRetry";
 import type { ReaderContentApi } from "../reader/readerContentApi";
 import type { LibraryTrainingHost, TrainingClient, TrainingListEntry, TrainingStatus } from "./types";
 import type { StudyAttemptResponse, StudyClient, StudyHost, StudyModuleState, StudyPageState, StudyPageStatus, StudyResponse } from "../study/types";
 
 // The runner (and the exam question primitive it pulls) is code-split: reading never pays for practising.
-const LearningTrainingRunner = lazy(() => import("./LearningTrainingRunner"));
+const LearningTrainingRunner = lazy(lazyWithRetry(() => import("./LearningTrainingRunner"), "learning-training-runner"));
 
 type ListState = { kind: "loading" } | { kind: "error" } | { kind: "ready"; byId: Record<string, TrainingListEntry> };
 type StudyState = { kind: "loading" } | { kind: "error" } | { kind: "ready"; pages: Record<string, StudyPageState>; modules: Record<string, StudyModuleState> };

@@ -144,4 +144,35 @@ describe("R8 App — startup session validation", () => {
     expect(await screen.findByText(/مرحبًا أحمد محمد/)).toBeTruthy();
     expect(sessionStorage.getItem("examBankBuilderToken")).toBe("student-token");
   });
+
+  // PROD HOTFIX — a TRANSIENT server/hosting failure during boot validation (deployment cold-start, gateway blip)
+  // must NEVER be treated as an invalid session. The platform-session contract uses 401, and only 401, to revoke.
+  for (const status of [500, 502, 503, 429]) {
+    it(`a transient platform-session ${status} does NOT clear the session (student stays logged in)`, async () => {
+      seedSession("student");
+      installFetch({ session: () => res(status, { error: "temporarily unavailable" }) });
+      render(<App />);
+      // the retained session still renders the portal (dashboard fetch succeeds)
+      expect(await screen.findByText(/مرحبًا أحمد محمد/)).toBeTruthy();
+      expect(document.querySelector("form.auth-form")).toBeNull();
+      expect(sessionStorage.getItem("examBankBuilderToken")).toBe("student-token");
+      expect(sessionStorage.getItem("examBankSessionRole")).toBe("student");
+    });
+  }
+
+  it("a malformed 200 (no ok/role) is treated as transient, NOT as revocation — session kept", async () => {
+    seedSession("student");
+    installFetch({ session: () => res(200, { unexpected: true }) });
+    render(<App />);
+    expect(await screen.findByText(/مرحبًا أحمد محمد/)).toBeTruthy();
+    expect(sessionStorage.getItem("examBankBuilderToken")).toBe("student-token");
+  });
+
+  it("ONLY an authoritative 401 clears the session (contract revocation)", async () => {
+    seedSession("student", "revoked-token");
+    installFetch({ session: () => res(401, { ok: false, error: "Unauthorized" }) });
+    render(<App />);
+    await waitFor(() => expect(document.querySelector("form.auth-form")).toBeTruthy());
+    expect(sessionStorage.getItem("examBankBuilderToken")).toBeNull();
+  });
 });

@@ -602,10 +602,11 @@ function App() {
   }
 
   // Registry-driven sidebar list (so a new project appears automatically once added to the backend).
-  // Roadmap #8 §13/§14 — one-time startup session validation. If a token is stored, validate it against
-  // the authoritative /api/platform-session (using the role-appropriate header) before trusting the stale
-  // sessionStorage metadata. A definitive negative answer (HTTP error or ok:false) clears the session; a
-  // network error leaves it intact (ordinary API calls handle any later 401 per role). This does NOT
+  // Roadmap #8 §13/§14 (+ prod hotfix) — one-time startup session validation. If a token is stored, validate it
+  // against the authoritative /api/platform-session before trusting the stale sessionStorage metadata. ONLY an
+  // authoritative 401 clears the session; a transient failure (5xx / 429 / other non-2xx / network error) leaves
+  // it intact (ordinary API calls handle any later 401 per role), so a deployment cold-start or a momentary
+  // server blip can never silently log a valid student out on reload. This does NOT
   // Teacher self-profile: one read per teacher session (name / icon / photo metadata). Absent or failing → fallback.
   useEffect(() => {
     if (sessionRole !== "teacher" || !token) { setTeacherProfile(null); return; }
@@ -626,9 +627,17 @@ function App() {
     fetch("/api/platform-session", { headers })
       .then(async response => {
         if (cancelled) return;
-        if (!response.ok) { handleLogout(); return; }
-        const data = (await response.json()) as { ok?: boolean; role?: "teacher" | "student"; displayName?: string };
-        if (!data.ok || !data.role) { handleLogout(); return; }
+        // AUTHORITATIVE invalid session: the /api/platform-session contract returns 401 (and only 401) to say
+        // "this token is not a valid session" — that is the ONLY status that clears the stored session.
+        if (response.status === 401) { handleLogout(); return; }
+        // TRANSIENT / server failure (5xx, 429, deployment cold-start, any other non-2xx): the API/hosting is
+        // momentarily unavailable — this is NOT proof the session is invalid, so KEEP the stored session and let
+        // ordinary API calls re-validate later. Never convert a temporary server problem into a logout.
+        if (!response.ok) { return; }
+        const data = (await response.json().catch(() => null)) as { ok?: boolean; role?: "teacher" | "student"; displayName?: string } | null;
+        // A 200 that is not a well-formed positive session is treated as transient (a working API only returns 200
+        // with ok:true), never as an authoritative revocation — the retained session is left untouched.
+        if (!data || !data.ok || !data.role) { return; }
         // Valid — refresh the role + display name from the SERVER (authoritative), never stale metadata.
         setSessionRole(data.role);
         setSessionDisplayName(data.displayName || "");
