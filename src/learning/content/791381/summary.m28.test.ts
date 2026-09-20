@@ -223,6 +223,10 @@ describe("Final summary — pedagogy, provenance, direction", () => {
     expect(p262.blocks.slice(-3).map(b => b.id)).toEqual(["m28-l07-p05-r1", "m28-l07-p05-r2", "m28-l07-p05-r3"]);
     expect(byPdf(263).blocks.map(b => b.type)).toEqual(["text", "text", "text", "text", "callout", "callout"]);
     expect(byPdf(263).blocks.filter(b => b.origin === "book")).toHaveLength(5);
+    // SOURCE FIDELITY (review finding): the rendered PDF 263 opens with «الحمد لله …» — no initial ف (the PDF text layer's ف is a glyph artifact).
+    const first = blockBy(byPdf(263), "m28-l08-p01-t1");
+    expect(first.type === "text" && first.origin === "book" && first.spans.map(sp => sp.text).join("")).toBe("الحمد لله الذي وفّقنا وأعاننا على إتمام هذا الكتاب.");
+    expect(JSON.stringify(byPdf(263).blocks)).not.toContain("فالحمد");
   });
   it("counts: 33 pages, 41 practices (21 MC / 6 TF / 14 shortInput / 0 fillBlank), 16 worksheets, 10 simulations, 9 code, 37 tables, 93 book blocks, 101 enrichment, 194 blocks; every worksheet key is one of its options", () => {
     expect([pages.length, count(m28, b => b.type === "practice"), count(m28, b => b.type === "practice-table"), count(m28, b => b.type === "simulation"), count(m28, b => b.type === "code"), count(m28, b => b.type === "table")]).toEqual([33, 41, 16, 10, 9, 37]);
