@@ -1,0 +1,82 @@
+/* ============================================================
+   ExamBank — Learning Materials · SVG VISUAL ENRICHMENT
+   Token-only (--eb-*), RTL-safe, mobile-first. Native inline
+   SVG (no external asset, no CDN). Subtle motion only, always
+   disabled under prefers-reduced-motion.
+   ============================================================ */
+
+.eb-visual-figure{
+  margin:0; display:flex; flex-direction:column; gap:var(--eb-space-2);
+  padding:var(--eb-space-3); background:var(--eb-surface-2);
+  border:1px solid var(--eb-line); border-radius:var(--eb-r-lg);
+  /* never widen the reading column, and never establish a wide min-content floor from the SVG */
+  min-width:0; max-width:100%;
+}
+.eb-visual-title{
+  order:-1; margin:0; color:var(--eb-text-heading);
+  font-size:var(--eb-fs-14); font-weight:var(--eb-fw-semibold); line-height:var(--eb-lh-tight);
+}
+.eb-visual-caption{
+  margin:0; color:var(--eb-text-secondary); font-size:var(--eb-fs-13); line-height:var(--eb-lh-body);
+}
+.eb-visual-frame{ display:flex; justify-content:center; width:100%; min-width:0; }
+
+/* The SVG scales to its container width and never overflows; height follows the viewBox aspect ratio. The explicit
+   min-width:0 stops the inline SVG from imposing a min-content floor on a flex ancestor (which would overflow a
+   narrow reading column on mobile). */
+.eb-visual{
+  display:block; width:100%; min-width:0; height:auto; max-width:420px;
+  overflow:visible;
+}
+
+/* ---------- shared marks ---------- */
+.eb-visual-link{ stroke:var(--eb-line-2); stroke-width:2; }
+.eb-visual-ground{ stroke:var(--eb-line-2); stroke-width:2; }
+.eb-visual-ring{ stroke:var(--eb-line-2); stroke-width:2; stroke-dasharray:5 6; }
+
+.eb-visual-hub{ fill:var(--eb-primary); }
+.eb-visual-hub-core{ fill:var(--eb-primary-strong); }
+.eb-visual-hub-label{ fill:#fff; font-size:14px; font-weight:700; }
+.eb-visual-center-label{ fill:var(--eb-text-heading); }
+
+.eb-visual-node{ fill:var(--eb-surface); stroke:var(--eb-line-2); stroke-width:1.5; }
+.eb-visual-node-label{ fill:var(--eb-text); font-size:13px; font-weight:600; }
+
+.eb-visual-leaf{ fill:var(--eb-info-bg); stroke:var(--eb-info); stroke-width:1.5; }
+.eb-visual-leaf-label{ fill:var(--eb-text-heading); font-size:13px; font-weight:600; }
+
+.eb-visual-printer{ fill:var(--eb-success-050, var(--eb-surface)); stroke:var(--eb-success); stroke-width:2; }
+.eb-visual-printer-slot{ fill:var(--eb-surface); stroke:var(--eb-success); stroke-width:1; }
+
+.eb-visual-pillar{ fill:var(--eb-surface); stroke:var(--eb-primary); stroke-width:2; }
+.eb-visual-pillar-label{ fill:var(--eb-text-heading); font-size:12.5px; font-weight:600; }
+.eb-visual-token{ fill:var(--eb-primary-strong); font-size:12px; font-weight:700; font-family:var(--eb-font-mono); }
+
+.eb-visual-area{ fill:var(--eb-primary-050, var(--eb-surface)); stroke:var(--eb-primary); stroke-width:1.5; }
+.eb-visual-area-label{ fill:var(--eb-text-heading); font-size:12.5px; font-weight:600; }
+
+.eb-visual-dot{ fill:var(--eb-primary-strong); }
+
+/* ---------- fallback (unknown visualId) ---------- */
+.eb-visual-missing{
+  display:flex; align-items:center; justify-content:center; gap:var(--eb-space-2);
+  min-height:120px; color:var(--eb-text-secondary); font-size:var(--eb-fs-13);
+  background:var(--eb-surface); border:1px dashed var(--eb-line-2); border-radius:var(--eb-r);
+}
+
+/* ---------- subtle motion (CSS-driven pulse) ---------- */
+.eb-visual-pulse{ transform-box:fill-box; transform-origin:center; animation:eb-visual-pulse 3.2s var(--eb-ease, ease-in-out) infinite; }
+@keyframes eb-visual-pulse{ 0%,100%{ opacity:1; } 50%{ opacity:.62; } }
+
+.eb-visual-leaf-anim{ transform-box:fill-box; transform-origin:center; animation:eb-visual-breathe 3.6s var(--eb-ease, ease-in-out) infinite; }
+.eb-visual-pillar-anim{ animation:eb-visual-rise 3.6s var(--eb-ease, ease-in-out) infinite; }
+@keyframes eb-visual-breathe{ 0%,100%{ opacity:.9; } 50%{ opacity:1; } }
+@keyframes eb-visual-rise{ 0%,100%{ opacity:.85; } 50%{ opacity:1; } }
+
+/* Reduced motion: neutralize ALL CSS motion. SMIL <animateMotion> dots are additionally gated in the components
+   (they are not rendered at all when the shared prefers-reduced-motion hook reports reduced motion). */
+@media (prefers-reduced-motion: reduce){
+  .eb-visual-pulse,
+  .eb-visual-leaf-anim,
+  .eb-visual-pillar-anim{ animation:none !important; }
+}

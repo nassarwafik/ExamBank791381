@@ -64,7 +64,8 @@ only, and `printedPage` (the number printed on the paper) differs from the PDF p
 ## Block families (union on `type`)
 
 `text` · `heading` · `image` · `callout` · `example` · `table` · `code` · `diagram` · `practice` · `list` ·
-`unit-opener` · `simulation` · `animation` · `guided` · `interactive-diagram`.
+`unit-opener` · `simulation` · `animation` · `guided` · `interactive-diagram` · `practice-table` · `library-training` ·
+`visual`.
 
 - **text** — safe inline `spans` (`strong`/`em`/`term`/`code`, optional per-span `dir`). No raw HTML.
 - **callout** — `remember` · `important` · `warning` · `tip` · `summary` · `clarification` (maps to book boxes تذكّر / الخلاصة / الفكرة; `clarification` is the separable teacher note, always `origin:"teacher-enrichment"`).
@@ -73,6 +74,11 @@ only, and `printedPage` (the number printed on the paper) differs from the PDF p
   `"ltr"` so IP addresses / ranges / class names keep their digit order inside an RTL table whose header order stays RTL.
 - **code** — `language: cli|text|config`, whitespace preserved, usually `dir:"ltr"`.
 - **image / diagram** — local `src`, `alt` **required unless `decorative`**; diagram is metadata + image only (no sim behavior).
+- **visual** — a native inline-**SVG** illustration (teacher-enrichment). A pure DATA descriptor: a trusted registry
+  key `visualId` (a plain string; unknown ⇒ faithful "قيد الإعداد" fallback), a **required** `alt`, and optional
+  short `title` / `caption` / `motion` flag. No `src`, no external asset, no network. Renders through the visuals
+  registry (see *SVG Visual Enrichment* below); always `origin:"teacher-enrichment"` (a visual can never pass as book
+  content). Subtle motion always degrades to a still frame under `prefers-reduced-motion`.
 - **practice** — lightweight interactive practice with immediate-feedback readiness. Question kinds `multipleChoice` / `trueFalse` / `shortInput` / `fillBlank`, plus a `feedback` object (`hint` / `correctFeedback` / `incorrectFeedback` / `explanation`). **Not** the ExamBank exam schema, not graded, not a rank/medal input. *Extension path:* richer kinds (matching, ordering, classify, binary-entry, IP/CIDR, CLI) are added as new union members (or expressed as `simulation`) without touching existing ones.
 - **simulation / animation / guided / interactive-diagram** — the four interactive **activity** families (Phase 3A
   engine). Each is a pure DATA descriptor: a trusted registry **key** (`simulationType` / `animationType` /
@@ -420,6 +426,41 @@ nothing persisted, the phone layout untouched:
 - Guards: `LearningReader.presentation.test.tsx`, `LearningReaderWithTraining.presentation.test.tsx` (real content:
   training return, CLI line), `reader.presentation.guards.test.ts` (CSS: fixed modal overlay, prefixed selectors
   only, no horizontal scroll, hit areas, block placed before the desktop media block).
+
+## SVG Visual Enrichment (Chapter 1 pilot)
+
+Native, inline **SVG** illustrations that help explain a concept — added as clearly-tagged teacher enrichment
+(«رسم توضيحي»), never a rewrite of book content. Book blocks keep their exact order; each `visual` block is
+**appended after** the page's book content. Scoped to Chapter 1 (module `m01` «أساسيات الشبكات») as a reviewable
+pilot; the pattern is course/chapter-agnostic so later chapters reuse it by adding registry entries only.
+
+- **Data + registry (security).** A `visual` block carries only a string `visualId`; it never names a component,
+  path or code. The visuals registry (`src/learning/visuals/registry.ts`) is an **exact allowlist** mapping each id
+  to a trusted repo SVG component (eager import — each SVG is tiny). An unknown id resolves to `null` and the Reader
+  renders a faithful "قيد الإعداد" fallback (never blank, never a guess). Ids are namespaced (`791381/ch1/…`).
+- **Rendering.** `VisualBlockView` wraps the resolved SVG in a semantic `<figure>`; the SVG is `role="img"` with the
+  block's `alt` as its accessible name, and `title`/`caption` are quiet chrome. Delegated from `LearningPageRenderer`
+  like any other block (`case "visual"`).
+- **Responsive + RTL.** Every SVG uses a `viewBox` + `preserveAspectRatio`, scales to `width:100%` (capped
+  `max-width:420px`, centered), with `min-width:0` so it never imposes a min-content floor that would overflow a
+  narrow reading column. Verified: no horizontal overflow at 320 / 360 px (scrollWidth == clientWidth). Arabic labels
+  are short; technical tokens (IP, TCP/IP) render LTR.
+- **Motion + reduced motion.** Subtle only (traveling data pulses via SMIL `<animateMotion>`; gentle CSS
+  opacity/breathe). Motion is gated by the shared `usePrefersReducedMotion` hook (SMIL dots are not rendered under
+  reduced motion) AND by a `@media (prefers-reduced-motion: reduce)` rule in `visuals.css` (CSS animations disabled).
+  The still frame always renders a correct, complete diagram.
+- **The five pilot visuals** (page → visualId): «ما هي الشبكة؟» PDF 8 → `network-connected-devices` (connected
+  devices exchanging data); «استخدامات الشبكة» PDF 9 → `network-uses-map` (uses radiating from one network);
+  «حسنات الشبكة» PDF 10 → `shared-printer` (the book's shared-printer example); «احتياجات بناء شبكة» PDF 12 →
+  `network-building-blocks` (infrastructure + IP + protocol); «إدارة الشبكة وصيانتها» PDF 13 →
+  `network-management-cycle` (the four management areas as an ongoing cycle). The unit opener (PDF 7) and the types
+  page (PDF 11, which already carries the `network-scope` interactive diagram) are deliberately **skipped** to avoid
+  redundant clutter.
+- **Guards / tests.** `visuals/registry.test.ts`, `visuals/VisualBlockView.test.tsx`, `visuals/visuals.guards.test.tsx`
+  (no external/CDN/`<img>`/fetch/api coupling; responsive attrs; motion always reduced-motion-gated),
+  `content/validation.visual.test.ts`, `content/791381/chapter1.visuals.test.ts` (scope, provenance, a11y, nothing
+  outside Chapter 1 touched), `reader/LearningPageRenderer.visuals.test.tsx`. Nothing here touches grading, Strength,
+  publication, `visibleModuleIds`, assignments, membership, training rules or CLI semantics.
 
 ## Interactive Learning Engine (Phase 3A — foundation)
 

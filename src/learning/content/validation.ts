@@ -48,7 +48,8 @@ export type ContentIssueCode =
   | "unit-opener-missing-title"
   | "invalid-table-row"
   | "library-training-invalid"
-  | "invalid-practice-table";
+  | "invalid-practice-table"
+  | "visual-missing-id";
 
 /** A single structured validation finding. Location fields are filled in from the outermost known node. */
 export interface ContentValidationIssue {
@@ -254,6 +255,17 @@ function checkBlock(
     case "interactive-diagram":
       checkActivity(block, add, loc);
       break;
+    case "visual":
+      // A visual is a meaningful illustration (never decorative): a non-empty registry KEY resolved by the trusted
+      // allowlist, plus a required accessible `alt`. The key is opaque DATA (an unknown key ⇒ faithful fallback,
+      // validated by the renderer, never executed here); provenance is enforced via isEnrichmentOnly above.
+      if (!isNonEmptyString((block as { visualId?: string }).visualId)) {
+        add("visual-missing-id", "visual requires a non-empty visualId (registry key)", loc);
+      }
+      if (!isNonEmptyString((block as { alt?: string }).alt)) {
+        add("image-missing-alt", "visual requires a non-empty alt (accessible description)", loc);
+      }
+      break;
   }
 }
 
@@ -383,7 +395,7 @@ function checkPracticeTable(
 
 /** Block families that are, by policy, ALWAYS teacher enrichment (never faithful book content). */
 function isEnrichmentOnly(block: ContentBlock): boolean {
-  return block.type === "practice" || isActivityBlock(block) || (block.type === "callout" && block.kind === "clarification");
+  return block.type === "practice" || block.type === "visual" || isActivityBlock(block) || (block.type === "callout" && block.kind === "clarification");
 }
 function enrichmentKindLabel(block: ContentBlock): string {
   return block.type === "callout" ? "a clarification callout" : `a ${block.type} block`;

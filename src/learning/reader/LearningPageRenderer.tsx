@@ -8,6 +8,7 @@ import { eligibleStudyActivities } from "../study/eligibility";
 import LearningActivityHost from "../activities/LearningActivityHost";
 import PracticeTableView from "./PracticeTableView";
 import PracticeBlockView from "./PracticeBlockView";
+import VisualBlockView from "../visuals/VisualBlockView";
 import { ACTIVITY_ENRICHMENT_LABEL } from "../activities/labels";
 import type { LearningActivityRegistry, LearningActivityEventSink } from "../activities/engine";
 
@@ -200,6 +201,7 @@ function enrichmentLabel(block: ContentBlock): string {
   if (block.type === "practice") return "جرّب بنفسك";
   if (isActivityBlock(block)) return ACTIVITY_ENRICHMENT_LABEL[block.type];
   if (block.type === "example") return "مثال إضافي";
+  if (block.type === "visual") return "رسم توضيحي";
   return "إثراء تعليمي";
 }
 
@@ -313,6 +315,8 @@ function renderBlock(block: ContentBlock, ctx: ActivityRenderContext): ReactNode
       return <PracticeBlockView question={block.question} activityId={block.id} pageId={ctx.pageId} study={ctx.study} />;
     case "practice-table":
       return <PracticeTableView block={block} pageId={ctx.pageId} study={ctx.study} />;
+    case "visual":
+      return <VisualBlockView block={block} />;
     case "library-training":
       return <LibraryTrainingView block={block} host={ctx.training} />;
     // Interactive activities are DELEGATED to the engine shell (never rendered inline here): it resolves the
