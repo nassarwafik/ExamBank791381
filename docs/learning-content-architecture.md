@@ -1769,6 +1769,143 @@ sessions, no retroactive CLI exercises in m03 / m19 / m04 / Batch 8 modules, no 
 **The next untouched page is PDF 200** (the sixth-batch cover «ACL · التوجيه · WAN»; the m06 skeleton's PDF 227 lives
 in that batch).
 
+## Batch 10 — مراجعة الأوامر · WAN · بروتوكولات التوجيه · قوائم التحكم ACL (source PDF 200–229) — m06 completed IN PLACE
+
+The tenth content phase converts the book's sixth batch. The boundary was discovered from the book: **PDF 200 is the
+«الدفعة السادسة · WAN والتوجيه و ACL وقاموس شامل» batch cover** (structural; its first line lists «مراجعة الأوامر · WAN ·
+OSPF و EIGRP · ACL», its second «قاموس شامل للمصطلحات · كلمة الختام», its third «ملخّص بصري · أمثلة عملية · مرجع نهائي»).
+**PDF 201–206 is «مراجعة الأوامر»** (six review boxes: basics, VLAN / Trunk, VTP / passwords, Router on a Stick, Port
+Security, the `show` cards), **PDF 207–209 is «الشبكة الواسعة WAN»** (WAN, Frame Relay / ATM, HDLC / Metro Ethernet),
+**PDF 210–222 is «بروتوكولات التوجيه»** (overview, Static Route, Distance Vector / Link-State, AD / METRIC, OSPF +
+its R1 / R2 boxes, EIGRP + its R1 / R2 boxes, `show ip route`), **PDF 223–229 is «قوائم التحكم ACL»** (definition,
+Standard ACL box, examples, additional examples, the historical m06 page «Extended ACL» at PDF 227, the QR trainings
+page T27–T30, the QR final-exams page F01–F06) and **PDF 230 is the «مرجع نهائي · الملخّص الشامل» divider** (the final
+reference: glossary, closing word, visual summary, worked examples). The batch is the cover's first line: **PDF
+200–229, four sections, twenty-nine learner pages**. Conversion **stops before PDF 230**: no converted body has
+`pdfPageStart >= 230` and tests assert it (the Batch 9 maximum 199 is pinned too).
+
+### Three NEW stable ids, the historical m06 completed IN PLACE — no skeleton remains
+
+- **`791381-m25` «مراجعة الأوامر»**, order 24, source 200–206 (PDF 200 only in the module's coarse source range +
+  `sourceNote`). One lesson `l01` مراجعة أوامر Cisco (201–206).
+- **`791381-m26` «الشبكة الواسعة WAN»** (`shortTitle` «WAN»), order 25, source 207–209, one lesson `l01` WAN وتقنياتها.
+- **`791381-m27` «بروتوكولات التوجيه»** (`shortTitle` «التوجيه»), order 26, source 210–222. Lessons `l01` أساسيات
+  التوجيه (210–213) · `l02` OSPF (214–217) · `l03` EIGRP و show ip route (218–222).
+- **`791381-m06` «قوائم التحكم ACL»** (`shortTitle` «ACL»), order 27, source 223–229 — the Phase-2 skeleton whose one
+  historical page `-l01-p01` (PDF 227 «Extended ACL», printed 225) was the only known content. **Decision: complete
+  in place** (like m03 / m04 / m05 before it): module id, title, shortTitle, the lesson id `791381-m06-l01`
+  («التحكم بالوصول») and the historical page id, title, mapping and keywords are byte-for-byte unchanged; only its
+  `order` moved (1 → 5) because PDF 223–226 precede it as new stable ids `-l01-p02` … `-l01-p05` (orders 1–4). A new
+  lesson `l02` تدريبات وامتحانات (228–229) closes the module and the course. Manifest `order` is the sole authority;
+  a test pins the historical line.
+- **b6** («ACL · التوجيه · WAN») = `[m25, m26, m27, m06]`; b4 / b5 unchanged. Every module of the 791381 manifest now
+  has a body: nothing is shown as «قيد الإعداد» and the server registry lists all 27 modules. Batch 6–9 bodies
+  (m03, m19, m04, m20–m24, m05) are untouched.
+
+### Source map and module structure
+
+| Section | Source PDF | Module | `order` | Batch | Lessons |
+| --- | --- | --- | --- | --- | --- |
+| «مراجعة الأوامر» | **200 (batch cover) · 201–206** | `791381-m25` (new) | 24 | b6 | `l01` مراجعة أوامر Cisco (201–206) |
+| «الشبكة الواسعة WAN» | **207–209** | `791381-m26` (new) | 25 | b6 | `l01` WAN وتقنياتها (207–209) |
+| «بروتوكولات التوجيه» | **210–222** | `791381-m27` (new) | 26 | b6 | `l01` أساسيات التوجيه (210–213) · `l02` OSPF (214–217) · `l03` EIGRP و show ip route (218–222) |
+| «قوائم التحكم ACL» | **223–229** | `791381-m06` (completed in place) | 27 | b6 | `l01` التحكم بالوصول (223, 224, 225, 226, 227) · `l02` تدريبات وامتحانات (228–229) |
+
+- **1 source page → 1 interactive page** (twenty-nine pages); printed page = page circle = PDF index everywhere
+  except the historical m06 page, which keeps its historical printed number 225; no split or merge. PDF 228 (QR
+  trainings) and 229 (QR exams) carry a `conversionNote`; their cards are static, no `library-training`.
+- **CLI fidelity:** the twelve «Cisco CLI» boxes (PDF 201–205, 216, 217, 220, 221, 224, 225, 226) are `code` blocks
+  (`language: "cli"`, origin book) with the book's exact lines and prompts — the generic `Device(config)#` /
+  `Device(config-if)#` prompts and PDF 224's `Router(config)#` / `Router(config-if)#` kept verbatim — each followed
+  by the command / annotation table with an LTR command column. The visible wildcard of the shared /30 link on PDF
+  216 / 217 is `0.0.0.3` (a hidden text layer says 0.0.0.255; the rendered page wins). PDF 222's `show ip route`
+  sample and PDF 227's two-line `access-list 100 / permit tcp any any eq 80` example are book `code` blocks too.
+  The book's figures (PDF 215 / 219 topologies, PDF 223 rule drawing) are carried as book tables / cards.
+
+### CLI simulator extension (v1, same activity `simulation / cli-terminal / v1`)
+
+Batch 8's simulator is extended **only with the lines the book prints on PDF 201–229**; the registry entry, the
+component and the exercise kinds are unchanged (the allowlist stays fourteen entries).
+
+- **New mode:** router configuration `(config-router)#` (Arabic label «وضع إعداد التوجيه»), entered from global
+  config by `router ospf <1–65535>` or `router eigrp <1–65535>`, left by `exit` (→ global) or `end`. One process per
+  protocol: re-entering the same number keeps its networks, a different number starts afresh. The device state
+  gains `routing.ospf` / `routing.eigrp` (id + network statements), `selectedRouter`, `acls` (numbered lists of
+  canonical entries) and each interface an optional `accessGroup` (`{ acl, direction }`). There is no `startMode:
+  "router"` initial state: an exercise that asks for it starts in global config and enters the process itself.
+- **`network` has three book forms in ONE grammar entry:** the DHCP pool form `network <address> <mask>` (Batch 8),
+  the OSPF form `network <address> <wildcard> area <n>` and the EIGRP form `network <address>`. The shape is decided
+  by the tokens; the engine then checks it against the mode and the selected process — the EIGRP form inside OSPF
+  is «incomplete» («في OSPF المطلوب: network <address> <wildcard> area <n>»), the OSPF form inside EIGRP is «invalid»
+  («في EIGRP لا نكتب area»: the book's PDF 220 «تذكّر»), the DHCP form in a process is wrong-mode. None mutates state.
+- **New commands (closed grammar):** `router ospf` / `router eigrp`, the two routing `network` forms, `access-list
+  <1–99> permit|deny (<address> <wildcard> | host <address> | any)`, `access-list <100–199> permit|deny
+  tcp|udp|icmp|ip <source> <destination> [eq <port>]` (the book prints the `tcp … eq 80` form and names TCP / UDP /
+  ICMP and the ports 80 / 443 on PDF 227; `eq` only with tcp / udp), `ip access-group <n> in|out` (interface mode,
+  one list per interface in this simulation), `show ip route`. Everything else (`ip route`, `router rip`, named
+  `ip access-list`, `access-class`, `show access-lists`, `no access-list`, `router-id`, `passive-interface`) stays
+  unknown and never mutates state. Entries and network statements are de-duplicated; order is authored order.
+- **`show ip route`** prints the connected routes of every interface that is up and addressed (`C <network>/<len>
+  is directly connected, <interface>`), and — because there is only one device and no neighbours — says that routes
+  learned via OSPF / EIGRP appear only after neighbours exchange updates instead of inventing R / O / D lines. The
+  book's PDF 222 sample (with R and O lines) is quoted as book output on that page. `show running-config` now prints
+  the `router` blocks, the `access-list` lines and ` ip access-group` under the interface.
+- **Config validation by grammar round-trip** (`config.ts`): a routing `network` text, an ACL `entry` text and an
+  interface `accessGroup` text are accepted only when the RUNTIME parser reads them back to exactly the same
+  canonical string (`network 10.0.0.0 0.0.0.3 area 0`, `access-list 30 permit host 192.168.1.10`, `ip access-group
+  40 in`), so a goal can never name a line the learner could not type; expectation `args` gained `form`, `wildcard`,
+  `area`, `protocol`, `number`, `action` (permit / deny beside shutdown), `source`, `destination`, `port`,
+  `direction` and `what: "ip-route"`, each checked with the runtime validators.
+- **Book exercises (fifteen, all declarative):** m25 — PDF 201 task (hostname R1 + an addressed, up g0/0), 202 task
+  (VLAN 10 on f0/1–10 and trunk on f0/24: the teacher's uplink scenario), 203 challenge (VTP server / client, `enable
+  secret`, `line vty`, then a **fix-the-command**: «line console 1» → `line console 0` after `exit`), 204 challenge
+  (sub-interface, dot1Q, address), 205 guided (inside f0/1: access, maximum 2, violation shutdown), 206 `show`
+  challenge (the six show commands of the two cards on a preset device; only `show` advances). m27 — PDF 216 guided
+  (`router ospf 1` + the two `network … area 0` lines), 217 challenge (R2), 220 guided (`router eigrp 100` + two
+  classful networks), 221 task (R2: AS 100 + both networks, judged on final state), 222 `show ip route` challenge on
+  a preset R1 with two addressed interfaces. m06 — PDF 224 guided (write the list, select g0/0, apply `out`), 225
+  challenge (the three standard rules; only `access-list` accepted), 226 task (list 30 `host`, list 40 network,
+  applied `in` on g0/0 — the page's «خطأ شائع» is the point), 227 challenge (the book's HTTP line, then the same
+  rule for the port 443 the page names). No exercise on PDF 207–215, 218, 219, 223, 228, 229. Tests drive all
+  fifteen with the book's own lines to completion and prove wrong values / wrong modes / the wrong process, port,
+  interface or direction keep them open; typed text never reaches events or analytics.
+
+### Pedagogy applied
+
+| Module | Clarifications | Inline practices | Worksheets (`practice-table`) | Closing review | CLI exercises |
+| --- | --- | --- | --- | --- | --- |
+| m25 | 6 (one per page) | 14 | 1 (show command → card group on 206) | 3 on PDF 206 | 6 (201 task · 202 task · 203 challenge + fix · 204 challenge · 205 guided · 206 show challenge) |
+| m26 | 3 (one per page) | 8 | 1 (description → WAN technology on 209) | 3 on PDF 209 | 0 |
+| m27 | 13 (one per page) | 27 | 1 (routing source → AD value on 213) | 3 on PDF 222 | 5 (216 guided · 217 challenge · 220 guided · 221 task · 222 show challenge) |
+| m06 | 7 (one per page) | 13 | 1 (token → meaning of the Extended example on 227) | 3 on PDF 229 | 4 (224 guided · 225 challenge · 226 task · 227 challenge) |
+
+Practices are educational only (nothing stored, scored or ranked); every wrong-answer feedback says what to **check**
+(«افحص …»), every question carries a two-step hint ladder, every page ends with practice.
+
+### Publication: deployable ≠ published
+
+`api/src/lib/learning-materials-registry.js` lists `m25` (24), `m26` (25), `m27` (26) and `m06` (27) after m05 — by
+order, never by id. With them, every module of the manifest is listed: the registry no longer has a skeleton to
+withhold, so the tests that used m06 as the «unpublishable skeleton» example now use an id outside the manifest
+(`791381-m28`) for the unknown-id cases. Nothing is auto-published: a real-registry test proves a class released
+through m05 exposes nothing of Batch 10, that publishing `[m01, m06]` shows exactly those two, and that a mixed list
+canonicalizes by order with m06 last. No class's `visibleModuleIds` changed.
+
+### Deliberately NOT in this phase
+
+No PDF 230+ (the final reference: glossary, closing word, visual summary, worked examples), no static routes (`ip
+route`), no RIP configuration, no named ACLs / `access-class` / `show access-lists` (not on these pages), no
+`protect` / `restrict`, no learned-route simulation between devices (one device only), no save commands, no answer
+reveal after the hint ladder, no persistence of CLI sessions, no retroactive exercises in earlier modules, no change
+to any class's `visibleModuleIds`.
+
+### Where the next batch begins
+
+**The next untouched page is PDF 230** (the «مرجع نهائي · الملخّص الشامل» divider, then the glossary, closing word,
+visual summary and worked examples up to the last page 264). Every manifest module now has a body; the remaining
+pages are reference material whose presentation (a glossary module, a summary module) is a decision for the next
+phase.
+
 ## Phase boundaries
 
 | Phase | Scope | Status |
@@ -1791,7 +1928,8 @@ in that batch).
 | **Batch 6** | Book 791381 source PDF **120–138** (PDF 120 batch cover not rendered) as the historical skeleton `m03` («برمجة السويتش CLI و VLAN», order 15) **completed in place** — historical page ids `-l01-p01` (PDF 123) / `-l01-p02` (PDF 124) preserved with unchanged titles and mappings, PDF 121–122 as new stable ids placed first by `order`; four lessons, eighteen pages, seven CLI `code` blocks, no new activity (registry stays 13); server publication registry lists m03 (publishable, never auto-published); m04–m06 untouched; next untouched page = PDF 139 | done (merged) |
 | Batch 7 | Book 791381 source PDF **139–157** (PDF 139 / 145 section covers not rendered) as NEW module `m19` («إدارة VLAN: VTP», order 16, PDF 140–144) and the historical skeleton `m04` («Trunk و Router on a Stick», order 17, PDF 146–157) **completed in place** — historical page `-l01-p01` (PDF 148) preserved with unchanged title and mapping, PDF 146–147 as new stable ids placed first by `order`; five CLI `code` blocks, no new activity (registry stays 13); server publication registry lists m19 and m04 (publishable, never auto-published); m05–m06 shift to orders 18–19; next untouched page = PDF 158 | done (awaiting review) |
 | Batch 8 | Book 791381 source PDF **158–179** (PDF 158 batch cover not rendered) as NEW modules `m20` («Wi-Fi والشبكات اللاسلكية», order 18, PDF 159–165), `m21` («IPv6 والمنافذ», order 19, PDF 166–168) and `m22` («بروتوكول DHCP», order 20, PDF 169–179); two CLI `code` blocks; **the interactive CLI teaching simulator** (`src/learning/cli/`, `simulation / cli-terminal / v1`, registry now 14) with three declarative book exercises on PDF 172–174; server publication registry lists m20–m22 (publishable, never auto-published); m05–m06 shift to orders 21–22; next untouched page = PDF 180 | done (awaiting review) |
-| **Batch 9 (this)** | Book 791381 source PDF **180–199** (PDF 200 sixth-batch cover not rendered) as NEW modules `m23` («Port Security», order 21, PDF 180–184) and `m24` («حماية أجهزة Cisco», order 22, PDF 185–191) and the historical skeleton `m05` («مرجع أوامر Cisco», order 23, PDF 192–199) **completed in place** — historical pages `-l01-p01` / `-l01-p02` (PDF 193–194) preserved with unchanged ids, titles and mappings, PDF 192 as a new stable id placed first by `order`; twelve CLI `code` blocks; the CLI simulator extended with line mode, Port Security, password / secret / banner and two `show` commands (registry stays 14) plus twelve declarative exercises; server publication registry lists m23, m24, m05 (publishable, never auto-published); m06 shifts to order 24; next untouched page = PDF 200 | done (awaiting review) |
+| Batch 9 | Book 791381 source PDF **180–199** (PDF 200 sixth-batch cover not rendered) as NEW modules `m23` («Port Security», order 21, PDF 180–184) and `m24` («حماية أجهزة Cisco», order 22, PDF 185–191) and the historical skeleton `m05` («مرجع أوامر Cisco», order 23, PDF 192–199) **completed in place** — historical pages `-l01-p01` / `-l01-p02` (PDF 193–194) preserved with unchanged ids, titles and mappings, PDF 192 as a new stable id placed first by `order`; twelve CLI `code` blocks; the CLI simulator extended with line mode, Port Security, password / secret / banner and two `show` commands (registry stays 14) plus twelve declarative exercises; server publication registry lists m23, m24, m05 (publishable, never auto-published); m06 shifts to order 24; next untouched page = PDF 200 | done (awaiting review) |
+| **Batch 10 (this)** | Book 791381 source PDF **200–229** (PDF 200 sixth-batch cover not rendered) as NEW modules `m25` («مراجعة الأوامر», order 24, PDF 201–206), `m26` («الشبكة الواسعة WAN», order 25, PDF 207–209), `m27` («بروتوكولات التوجيه», order 26, PDF 210–222) and the historical skeleton `m06` («قوائم التحكم ACL», order 27, PDF 223–229) **completed in place** — historical page `-l01-p01` (PDF 227, printed 225) preserved with unchanged id, title and mapping, PDF 223–226 as new stable ids placed first by `order`; twelve CLI `code` boxes; the CLI simulator extended with the router mode (OSPF / EIGRP `network` forms), numbered standard / extended ACLs, `ip access-group` and `show ip route` (registry stays 14) plus fifteen declarative exercises; server publication registry lists m25, m26, m27, m06 (publishable, never auto-published) — every manifest module now has a body; next untouched page = PDF 230 | done (awaiting review) |
 | 4 | Interactive Practice — remaining inline checking families beyond closed-choice worksheets (free text, ordering, evaluator-backed hints) | deferred |
 | 5 | Simulations — real VLAN/subnet/CLI/… renderers registered behind the Phase-3A engine | deferred |
 | 6 | Student Progress — last page, completion, attempts (separate domain; attaches to the no-op event seam) | deferred |
