@@ -7,13 +7,13 @@ import type { LibraryTrainingHost, TrainingClient, TrainingListEntry, TrainingSt
 const LearningTrainingRunner = lazy(() => import("./LearningTrainingRunner"));
 
 type ListState = { kind: "loading" } | { kind: "error" } | { kind: "ready"; byId: Record<string, TrainingListEntry> };
-type View = { kind: "reader"; pageId?: string } | { kind: "training"; trainingId: string; returnPageId?: string };
+type View = { kind: "reader"; pageId?: string; presentation?: boolean } | { kind: "training"; trainingId: string; returnPageId?: string; returnPresentation?: boolean };
 
 /**
  * The ONE Reader-plus-training host used by BOTH the teacher's Learning Materials and the student's portal. It does
  * not fork the Reader: it mounts the SAME LearningReader with an injected `training` seam, remembers the current
- * page, swaps the Reader for the shared LearningTrainingRunner when a training is opened and, on return, remounts
- * the Reader on the SAME page (never page 1). The availability list is read ONCE per mount (and again after a
+ * page (and whether the Reader was in presentation mode), swaps the Reader for the shared LearningTrainingRunner when
+ * a training is opened and, on return, remounts the Reader on the SAME page (never page 1) in the same mode. The availability list is read ONCE per mount (and again after a
  * training closes, so best results refresh); a page never issues per-block requests.
  *
  * `client === null` → no session → the Reader renders with no training host (generic cards, zero requests).
@@ -32,6 +32,7 @@ export default function LearningReaderWithTraining({ courseId, api, onExit, exit
   const [list, setList] = useState<ListState>({ kind: "loading" });
   const [listNonce, setListNonce] = useState(0);
   const pageRef = useRef<string | undefined>(undefined);
+  const presentationRef = useRef(false);            // the Reader's presentation mode, remembered across a training
 
   // The list is set from the async callbacks only (the initial state is "loading"; a refresh resets it from the
   // handler that requests it), so nothing is set synchronously inside the effect.
@@ -50,6 +51,7 @@ export default function LearningReaderWithTraining({ courseId, api, onExit, exit
   }, [client, listNonce]);
 
   const onPageChange = useCallback((pageId: string) => { pageRef.current = pageId; }, []);
+  const onPresentationChange = useCallback((on: boolean) => { presentationRef.current = on; }, []);
   const refreshList = useCallback(() => { setList({ kind: "loading" }); setListNonce(n => n + 1); }, []);
 
   const host = useMemo<LibraryTrainingHost | undefined>(() => {
@@ -63,7 +65,7 @@ export default function LearningReaderWithTraining({ courseId, api, onExit, exit
         return { kind: "available", title: t.title, best: t.best ?? null };
       },
       // The current page is captured HERE (an event), so the return remounts the Reader on the same page.
-      onOpen(trainingId: string) { setView({ kind: "training", trainingId, returnPageId: pageRef.current }); },
+      onOpen(trainingId: string) { setView({ kind: "training", trainingId, returnPageId: pageRef.current, returnPresentation: presentationRef.current }); },
       onRetry: refreshList,
     };
   }, [client, list, refreshList]);
@@ -86,7 +88,7 @@ export default function LearningReaderWithTraining({ courseId, api, onExit, exit
           actor={actor}
           client={runnerClient}
           exitLabel="العودة إلى الصفحة"
-          onExit={() => { setView({ kind: "reader", pageId: view.returnPageId }); refreshList(); }}
+          onExit={() => { setView({ kind: "reader", pageId: view.returnPageId, presentation: view.returnPresentation }); refreshList(); }}
         />
       </Suspense>
     );
@@ -101,6 +103,8 @@ export default function LearningReaderWithTraining({ courseId, api, onExit, exit
       training={host}
       initialPageId={view.kind === "reader" ? view.pageId : undefined}
       onPageChange={onPageChange}
+      initialPresentation={view.kind === "reader" ? view.presentation : undefined}
+      onPresentationChange={onPresentationChange}
     />
   );
 }

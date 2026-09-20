@@ -458,3 +458,25 @@ export function IconHeart(props: IconProps) {
     </svg>
   );
 }
+
+export function IconMaximize(props: IconProps) {
+  return (
+    <svg {...base(props)}>
+      <path d="M3 8V3h5" />
+      <path d="M17 12v5h-5" />
+      <path d="m3 3 5.5 5.5" />
+      <path d="m17 17-5.5-5.5" />
+    </svg>
+  );
+}
+
+export function IconMinimize(props: IconProps) {
+  return (
+    <svg {...base(props)}>
+      <path d="M8.5 3v5.5H3" />
+      <path d="M11.5 17v-5.5H17" />
+      <path d="M3 17l5.5-5.5" />
+      <path d="M17 3l-5.5 5.5" />
+    </svg>
+  );
+}

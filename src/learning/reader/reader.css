@@ -233,6 +233,72 @@
 .learning-reader-practice-foot{ display:flex; flex-wrap:wrap; align-items:center; justify-content:space-between; gap:var(--eb-space-2); }
 .learning-reader-practice-hint{ margin:0; color:var(--eb-muted); font-size:var(--eb-fs-12); line-height:var(--eb-lh-body); }
 
+/* ---------- Presentation mode (وضع العرض) ----------
+   App-level fullscreen: the SAME Reader tree promoted to a fixed, full-viewport overlay above the app shell
+   (z: modal — above the shell nav / drawer; the Reader's own index drawer (50) and an activity's fullscreen (60)
+   stack inside this context and stay on top of the page). Native browser fullscreen is best-effort only; this layout
+   never depends on it. Selectors are prefixed with `.learning-reader.is-presentation` so the phone baseline and the
+   desktop block below keep their exact rules; the higher specificity (0,3,0) wins over both without !important.
+   Viewport-independent by design: the same overlay serves 320px phones and 1366px+ projectors. */
+.learning-reader-present-toggle{ display:inline-flex; align-items:center; gap:var(--eb-space-1); min-height:44px; }
+.learning-reader-srtext{ position:absolute; inline-size:1px; block-size:1px; margin:-1px; padding:0; overflow:hidden; clip:rect(0 0 0 0); white-space:nowrap; border:0; }
+.learning-reader.is-presentation{
+  position:fixed; inset:0; z-index:var(--eb-z-modal, 70); display:flex; flex-direction:column; gap:0; min-width:0;
+  background:var(--eb-bg, var(--eb-surface-2)); overflow:hidden; overscroll-behavior:contain;
+}
+.learning-reader.is-presentation .learning-reader-topbar{
+  flex:0 0 auto; flex-wrap:wrap; gap:var(--eb-space-2); padding:var(--eb-space-2) var(--eb-space-3);
+  padding-block-start:calc(var(--eb-space-2) + env(safe-area-inset-top, 0px));
+  background:var(--eb-surface); border-block-end:1px solid var(--eb-line); box-shadow:var(--eb-sh-xs);
+}
+.learning-reader.is-presentation .learning-reader-toc-toggle{ display:inline-flex; min-height:44px; }
+.learning-reader.is-presentation .learning-reader-booktitle{ flex:1 1 12ch; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.learning-reader-topbar-page{ color:var(--eb-text-secondary); font-weight:var(--eb-fw-medium); }
+.learning-reader-keyhint{ display:none; color:var(--eb-muted); font-size:var(--eb-fs-12); font-variant-numeric:tabular-nums; }
+.learning-reader.is-presentation .learning-reader-partial,
+.learning-reader.is-presentation .learning-reader-sidebar,
+.learning-reader.is-presentation .learning-reader-jump{ display:none; }
+/* The layout is a single flexible track; only the main area scrolls (vertically), never the page itself. */
+.learning-reader.is-presentation .learning-reader-layout{ display:block; flex:1 1 auto; min-block-size:0; min-width:0; }
+.learning-reader.is-presentation .learning-reader-main{
+  box-sizing:border-box; block-size:100%; inline-size:100%; max-inline-size:none; min-inline-size:0; overflow-y:auto; overflow-x:hidden;
+  padding:var(--eb-space-3); padding-inline:max(var(--eb-space-3), env(safe-area-inset-right, 0px)) max(var(--eb-space-3), env(safe-area-inset-left, 0px));
+  gap:var(--eb-space-3);
+}
+/* The page is the slide: it fills the track (no document measure), grows to the viewport height, larger type. */
+.learning-reader.is-presentation .learning-reader-page{
+  box-sizing:border-box; inline-size:100%; min-inline-size:0; max-inline-size:none; margin:0 auto;
+  min-block-size:100%; padding:clamp(16px, 3vw, 48px);
+}
+.learning-reader.is-presentation .learning-reader-page-title{ font-size:clamp(22px, 2vw + 12px, 40px); }
+.learning-reader.is-presentation .learning-reader-text{ max-inline-size:88ch; font-size:clamp(17px, 0.6vw + 13px, 22px); }
+.learning-reader.is-presentation .learning-reader-heading{ font-size:clamp(18px, 0.8vw + 13px, 28px); }
+.learning-reader.is-presentation .learning-reader-callout-body,
+.learning-reader.is-presentation .learning-reader-list-text,
+.learning-reader.is-presentation .learning-reader-table{ font-size:clamp(15px, 0.4vw + 12px, 18px); }
+.learning-reader.is-presentation .learning-reader-code code{ font-size:clamp(14px, 0.4vw + 11px, 17px); }
+.learning-reader.is-presentation .learning-reader-list.variant-cards .learning-reader-list-items{ grid-template-columns:repeat(auto-fit, minmax(220px, 1fr)); }
+/* Control bar: static flex item at the bottom (never overlaps content), large hit areas, page-number field. */
+.learning-reader.is-presentation .learning-reader-nav{
+  position:static; flex:0 0 auto; flex-wrap:wrap; border-radius:0; border-inline:0; border-block-end:0; box-shadow:none;
+  padding-block-end:calc(var(--eb-space-2) + env(safe-area-inset-bottom, 0px));
+}
+.learning-reader.is-presentation .learning-reader-navbtn{ min-height:48px; padding-inline:var(--eb-space-4); font-weight:var(--eb-fw-semibold); }
+.learning-reader-pagejump{ display:flex; flex-wrap:wrap; align-items:center; justify-content:center; gap:var(--eb-space-1) var(--eb-space-2); margin:0; min-width:0; }
+.learning-reader-pagejump-input{
+  inline-size:5.5ch; min-height:44px; padding:0 var(--eb-space-2); text-align:center; font:inherit; font-weight:var(--eb-fw-semibold); font-variant-numeric:tabular-nums;
+  color:var(--eb-text); background:var(--eb-surface); border:1px solid var(--eb-line-2); border-radius:var(--eb-r); direction:ltr;
+}
+.learning-reader-pagejump-input:focus-visible{ outline:2px solid var(--eb-primary); outline-offset:2px; }
+.learning-reader-pagejump-input[aria-invalid="true"]{ border-color:var(--eb-danger); }
+.learning-reader-pagejump-total{ color:var(--eb-text-secondary); font-size:var(--eb-fs-14); font-weight:var(--eb-fw-semibold); font-variant-numeric:tabular-nums; white-space:nowrap; }
+.learning-reader-pagejump-go{ min-height:44px; }
+.learning-reader-pagejump-error{ flex-basis:100%; margin:0; text-align:center; color:var(--eb-danger-tx, var(--eb-danger)); font-size:var(--eb-fs-12); font-weight:var(--eb-fw-semibold); }
+@media (min-width: 768px){
+  .learning-reader.is-presentation .learning-reader-keyhint{ display:inline; margin-inline-start:auto; }
+  .learning-reader.is-presentation .learning-reader-nav{ justify-content:center; gap:var(--eb-space-5); }
+}
+
 /* ---------- Tablet / desktop: sidebar + WIDE SLIDE CANVAS ----------
    Phone layout above is the protected baseline and is untouched. From 1024px the Reader is a two-column grid:
    a BOUNDED TOC sidebar and a FLEXIBLE main track. The lesson page is a wide educational slide/canvas that takes
