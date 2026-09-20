@@ -1,16 +1,34 @@
-// Learning Materials — Interactive CLI simulator (v1): the TYPE contract.
+// Learning Materials — Interactive CLI simulator (v1, extended in Batch 9): the TYPE contract.
 //
 // A deterministic TEACHING simulator of a Cisco-style command line — NOT an IOS emulator. Everything here is plain
 // data: the device state model, the closed set of parsed commands, the parse/execute outcomes and the declarative
 // exercise definitions that content modules author. No React, no DOM, no network, no persistence, no code
 // execution of any kind: student input is only ever matched against the closed grammar in grammar.ts.
+//
+// Batch 9 added (only what the book prints on PDF 180–199): Port Security on an interface, the `line` mode for
+// console / vty passwords, `enable secret`, `service password-encryption`, `banner motd`, and the `show` commands
+// `startup-config`, `port-security`, `port-security interface`.
 
-/** The CLI modes the simulator models. `line` config, routing protocols, ACLs … are deliberately absent (v1). */
-export type CliMode = "user" | "privileged" | "global" | "interface" | "subinterface" | "vlan" | "dhcp";
-export const CLI_MODES: readonly CliMode[] = ["user", "privileged", "global", "interface", "subinterface", "vlan", "dhcp"];
+/** The CLI modes the simulator models. Routing protocols, ACLs, NAT … are deliberately absent. */
+export type CliMode = "user" | "privileged" | "global" | "interface" | "subinterface" | "vlan" | "dhcp" | "line";
+export const CLI_MODES: readonly CliMode[] = ["user", "privileged", "global", "interface", "subinterface", "vlan", "dhcp", "line"];
 
 export type CliDeviceType = "switch" | "router";
 export const CLI_DEVICE_TYPES: readonly CliDeviceType[] = ["switch", "router"];
+
+/** Port Security on one switch port (the book's PDF 182–184 / 197 commands only). */
+export interface CliPortSecurity {
+  /** `switchport port-security` was issued. */
+  enabled: boolean;
+  /** `switchport port-security maximum <n>`. */
+  maximum?: number;
+  /** `switchport port-security mac-address HHHH.HHHH.HHHH` (canonical lower-case). */
+  macAddress?: string;
+  /** `switchport port-security mac-address sticky`. */
+  sticky?: boolean;
+  /** `switchport port-security violation shutdown` (the only action the book prints). */
+  violation?: "shutdown";
+}
 
 /** Per-interface configuration the simulator tracks (only what the book's exercises need). */
 export interface CliInterfaceState {
@@ -24,6 +42,7 @@ export interface CliInterfaceState {
   encapsulationVlan?: number;
   /** Router interfaces start administratively down; switch ports start up. */
   shutdown: boolean;
+  portSecurity?: CliPortSecurity;
 }
 
 export interface CliDhcpPool {
@@ -34,6 +53,14 @@ export interface CliDhcpPool {
   dnsServers: string[];
 }
 
+/** One access line (`line console 0` / `line vty 0 4`). */
+export interface CliLineState {
+  password?: string;
+  /** `login` was issued (the line asks for its password). */
+  login: boolean;
+}
+export type CliLineName = "console" | "vty";
+
 /** The whole simulated device. Immutable by convention: the engine returns NEW objects, never mutates. */
 export interface CliDeviceState {
   device: CliDeviceType;
@@ -43,6 +70,8 @@ export interface CliDeviceState {
   selectedInterfaces: string[];
   selectedVlan?: number;
   selectedPool?: string;
+  /** The line selected by `line console 0` / `line vty 0 4`; set only in line mode. */
+  selectedLine?: CliLineName;
   /** Keyed by canonical interface name (e.g. "f0/1", "g0/0.10", "vlan1"). */
   interfaces: Record<string, CliInterfaceState>;
   /** Keyed by the VLAN id as a string. */
@@ -50,6 +79,13 @@ export interface CliDeviceState {
   dhcpPools: Record<string, CliDhcpPool>;
   dhcpExcluded: { from: string; to?: string }[];
   vtp: { mode?: "server" | "client"; domain?: string; password?: string };
+  lines: { console: CliLineState; vty: CliLineState };
+  /** `enable secret <secret>`. */
+  enableSecret?: string;
+  /** `service password-encryption`. */
+  passwordEncryption: boolean;
+  /** `banner motd #text#` (the text between the delimiters). */
+  banner?: string;
 }
 
 /** The CLOSED set of commands the simulator understands. Anything else is "unknown" and never changes state. */
@@ -67,6 +103,11 @@ export type ParsedCommand =
   | { id: "switchport-mode"; mode: "access" | "trunk" }
   | { id: "switchport-access-vlan"; vlanId: number }
   | { id: "switchport-trunk-allowed-vlan"; vlans: number[] }
+  | { id: "switchport-port-security" }
+  | { id: "port-security-maximum"; maximum: number }
+  | { id: "port-security-mac-address"; mac: string }
+  | { id: "port-security-sticky" }
+  | { id: "port-security-violation"; action: "shutdown" }
   | { id: "ip-address"; address: string; mask: string }
   | { id: "no-shutdown" }
   | { id: "shutdown" }
@@ -79,7 +120,13 @@ export type ParsedCommand =
   | { id: "vtp-mode"; mode: "server" | "client" }
   | { id: "vtp-domain"; name: string }
   | { id: "vtp-password"; password: string }
-  | { id: "show"; what: "running-config" | "ip-interface-brief" | "vlan-brief" | "ip-dhcp-pool" | "vtp-status" };
+  | { id: "line"; line: CliLineName }
+  | { id: "password"; password: string }
+  | { id: "login" }
+  | { id: "enable-secret"; secret: string }
+  | { id: "service-password-encryption" }
+  | { id: "banner-motd"; text: string }
+  | { id: "show"; what: "running-config" | "startup-config" | "ip-interface-brief" | "vlan-brief" | "ip-dhcp-pool" | "vtp-status" | "port-security"; iface?: string };
 export type CliCommandId = ParsedCommand["id"];
 
 /** Outcome of PARSING one input line against the closed grammar (mode is not considered yet). */
@@ -107,10 +154,13 @@ export type CliStateCondition =
   | { kind: "mode"; mode: CliMode }
   | { kind: "hostname"; value: string }
   | { kind: "interface"; name: string; prop: "switchportMode" | "accessVlan" | "allowedVlans" | "ipAddress" | "subnetMask" | "encapsulationVlan" | "shutdown"; value: string | number | boolean | number[] }
+  | { kind: "port-security"; name: string; prop: "enabled" | "maximum" | "macAddress" | "sticky" | "violation"; value: string | number | boolean }
   | { kind: "vlan"; vlanId: number }
   | { kind: "dhcp-pool"; name: string; prop: "network" | "mask" | "defaultRouter" | "dnsServers"; value: string | string[] }
   | { kind: "dhcp-excluded"; from: string; to?: string }
-  | { kind: "vtp"; prop: "mode" | "domain" | "password"; value: string };
+  | { kind: "vtp"; prop: "mode" | "domain" | "password"; value: string }
+  | { kind: "line"; line: CliLineName; prop: "password" | "login"; value: string | boolean }
+  | { kind: "device"; prop: "enableSecret" | "passwordEncryption" | "banner"; value: string | boolean };
 
 /** Argument values an expectation may pin on a command (compared canonically — see exercise.ts). */
 export type CliExpectedArgs = Record<string, string | number | boolean | (string | number)[]>;
@@ -159,6 +209,8 @@ export interface CliExerciseConfig {
   startInterface?: string;
   /** Required when `startMode` is "dhcp". */
   startPool?: string;
+  /** Required when `startMode` is "line". */
+  startLine?: CliLineName;
   /** Optional pre-configured state (applied before the exercise starts). */
   preset?: {
     interfaces?: Record<string, Partial<CliInterfaceState>>;

@@ -1,13 +1,27 @@
 // Learning Materials — CLI simulator: deterministic, SIMPLIFIED «show» output rendered from the simulated state.
 // This is instructional simulation output (it is not printed in the book and is not real device output); the
-// terminal labels it as such. Pure functions: state in, lines out.
-import type { CliDeviceState, ParsedCommand } from "./types";
+// terminal labels it as such. Pure functions: state in, lines out. Secrets are never echoed: `enable secret` and
+// encrypted line passwords are shown as hidden placeholders, as a real device would obscure them.
+import type { CliDeviceState, CliLineName, ParsedCommand } from "./types";
 
 const ifDisplay = (name: string) => name.replace(/^f/, "FastEthernet").replace(/^g/, "GigabitEthernet").replace(/^e/, "Ethernet").replace(/^vlan/, "Vlan");
 const pad = (s: string, n: number) => (s.length >= n ? s + " " : s.padEnd(n));
+const HIDDEN = "<hidden>";
+
+function lineBlock(state: CliDeviceState, line: CliLineName): string[] {
+  const l = state.lines[line];
+  if (!l.password && !l.login) return [];
+  const out = ["line " + (line === "console" ? "console 0" : "vty 0 4")];
+  if (l.password) out.push(" password " + (state.passwordEncryption ? "7 " + HIDDEN : l.password));
+  if (l.login) out.push(" login");
+  return out;
+}
 
 export function runningConfig(state: CliDeviceState): string[] {
   const out: string[] = ["!", "hostname " + state.hostname, "!"];
+  if (state.passwordEncryption) out.push("service password-encryption");
+  if (state.enableSecret) out.push("enable secret 5 " + HIDDEN);
+  if (state.banner !== undefined) out.push("banner motd ^C" + state.banner + "^C");
   if (state.vtp.mode) out.push("vtp mode " + state.vtp.mode);
   if (state.vtp.domain) out.push("vtp domain " + state.vtp.domain);
   if (state.vtp.password) out.push("vtp password " + state.vtp.password);
@@ -26,10 +40,23 @@ export function runningConfig(state: CliDeviceState): string[] {
     if (i.switchportMode) out.push(" switchport mode " + i.switchportMode);
     if (i.accessVlan !== undefined) out.push(" switchport access vlan " + i.accessVlan);
     if (i.allowedVlans?.length) out.push(" switchport trunk allowed vlan " + i.allowedVlans.join(","));
+    const ps = i.portSecurity;
+    if (ps) {
+      if (ps.enabled) out.push(" switchport port-security");
+      if (ps.maximum !== undefined) out.push(" switchport port-security maximum " + ps.maximum);
+      if (ps.violation) out.push(" switchport port-security violation " + ps.violation);
+      if (ps.sticky) out.push(" switchport port-security mac-address sticky");
+      if (ps.macAddress) out.push(" switchport port-security mac-address " + ps.macAddress);
+    }
     out.push(i.shutdown ? " shutdown" : " no shutdown");
   }
-  out.push("!", "end");
+  out.push("!", ...lineBlock(state, "console"), ...lineBlock(state, "vty"), "!", "end");
   return out;
+}
+
+/** The book (PDF 190) says «لا تنسَ الحفظ بعد البرمجة» but prints no save command, so nothing is ever saved here. */
+export function startupConfig(): string[] {
+  return ["startup-config is not present", "% (simulation) nothing has been saved to startup-config yet"];
 }
 
 export function ipInterfaceBrief(state: CliDeviceState): string[] {
@@ -68,13 +95,41 @@ export function vtpStatus(state: CliDeviceState): string[] {
   return ["VTP Operating Mode : " + (state.vtp.mode ? state.vtp.mode[0].toUpperCase() + state.vtp.mode.slice(1) : "(not set)"), "VTP Domain Name    : " + (state.vtp.domain ?? "(not set)"), "VTP Password       : " + (state.vtp.password ? "(configured)" : "(not set)")];
 }
 
+/** `show port-security`: one row per interface with Port Security enabled. */
+export function portSecurity(state: CliDeviceState): string[] {
+  const rows = Object.entries(state.interfaces).filter(([, i]) => i.portSecurity?.enabled);
+  if (rows.length === 0) return ["(no interface has port-security enabled yet)"];
+  const out = [pad("Secure Port", 20) + pad("MaxSecureAddr", 15) + pad("CurrentAddr", 13) + "SecurityViolation"];
+  for (const [name, i] of rows) {
+    const ps = i.portSecurity!;
+    out.push(pad(ifDisplay(name), 20) + pad(String(ps.maximum ?? 1), 15) + pad(String(ps.macAddress ? 1 : 0), 13) + (ps.violation ?? "shutdown"));
+  }
+  return out;
+}
+
+/** `show port-security interface <name>`: the details of one interface. */
+export function portSecurityInterface(state: CliDeviceState, name: string): string[] {
+  const i = state.interfaces[name];
+  const ps = i?.portSecurity;
+  const out = ["Port Security              : " + (ps?.enabled ? "Enabled" : "Disabled")];
+  if (!i) return [...out, "% (simulation) interface " + ifDisplay(name) + " has no configuration yet"];
+  out.push("Port Status                : " + (i.shutdown ? "Secure-shutdown" : "Secure-up"));
+  out.push("Violation Mode             : " + (ps?.violation ?? "shutdown"));
+  out.push("Maximum MAC Addresses      : " + String(ps?.maximum ?? 1));
+  out.push("Sticky MAC Addresses       : " + (ps?.sticky ? "enabled" : "0"));
+  out.push("Configured MAC Address     : " + (ps?.macAddress ?? "(none)"));
+  return out;
+}
+
 /** Dispatch a parsed `show` command to its formatter. */
 export function showOutput(state: CliDeviceState, cmd: Extract<ParsedCommand, { id: "show" }>): string[] {
   switch (cmd.what) {
     case "running-config": return runningConfig(state);
+    case "startup-config": return startupConfig();
     case "ip-interface-brief": return ipInterfaceBrief(state);
     case "vlan-brief": return vlanBrief(state);
     case "ip-dhcp-pool": return ipDhcpPool(state);
     case "vtp-status": return vtpStatus(state);
+    case "port-security": return cmd.iface ? portSecurityInterface(state, cmd.iface) : portSecurity(state);
   }
 }

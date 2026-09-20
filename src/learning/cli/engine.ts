@@ -1,12 +1,15 @@
 // Learning Materials — CLI simulator: EXECUTION of one input line against a device state (parse → mode check →
 // apply). Pure: returns a NEW state + a result descriptor; the input state is never mutated. No exercise logic here
 // (see exercise.ts) and no presentation. Unknown / incomplete / invalid / wrong-mode input NEVER changes state.
-import type { CliDeviceState, CliExecResult, CliInterfaceState, CliMode, ParsedCommand } from "./types";
+import type { CliDeviceState, CliExecResult, CliInterfaceState, CliLineState, CliMode, ParsedCommand } from "./types";
 import { COMMANDS, parseCommand } from "./grammar";
 import { newInterface } from "./state";
 import { showOutput } from "./show";
 
-const EXIT_TO: Record<CliMode, CliMode> = { user: "user", privileged: "user", global: "privileged", interface: "global", subinterface: "global", vlan: "global", dhcp: "global" };
+const EXIT_TO: Record<CliMode, CliMode> = { user: "user", privileged: "user", global: "privileged", interface: "global", subinterface: "global", vlan: "global", dhcp: "global", line: "global" };
+
+/** Leave every sub-mode selection behind (used by `exit`, `end` and when entering another sub-mode). */
+const unselect = (state: CliDeviceState): CliDeviceState => ({ ...state, selectedInterfaces: [], selectedVlan: undefined, selectedPool: undefined, selectedLine: undefined });
 
 function mapSelected(state: CliDeviceState, f: (i: CliInterfaceState) => CliInterfaceState): CliDeviceState {
   const interfaces = { ...state.interfaces };
@@ -14,10 +17,20 @@ function mapSelected(state: CliDeviceState, f: (i: CliInterfaceState) => CliInte
   return { ...state, interfaces };
 }
 
+function mapPortSecurity(state: CliDeviceState, f: (ps: NonNullable<CliInterfaceState["portSecurity"]>) => NonNullable<CliInterfaceState["portSecurity"]>): CliDeviceState {
+  return mapSelected(state, i => ({ ...i, portSecurity: f(i.portSecurity ?? { enabled: false }) }));
+}
+
 function mapPool(state: CliDeviceState, f: (p: CliDeviceState["dhcpPools"][string]) => CliDeviceState["dhcpPools"][string]): CliDeviceState {
   const name = state.selectedPool;
   if (!name) return state;
   return { ...state, dhcpPools: { ...state.dhcpPools, [name]: f(state.dhcpPools[name] ?? { dnsServers: [] }) } };
+}
+
+function mapLine(state: CliDeviceState, f: (l: CliLineState) => CliLineState): CliDeviceState {
+  const line = state.selectedLine;
+  if (!line) return state;
+  return { ...state, lines: { ...state.lines, [line]: f(state.lines[line]) } };
 }
 
 /** Help output: the syntax of every command valid in the CURRENT mode. */
@@ -35,27 +48,30 @@ export function applyCommand(state: CliDeviceState, cmd: ParsedCommand): { state
     case "enable": return { state: { ...state, mode: "privileged" } };
     case "disable": return { state: { ...state, mode: "user" } };
     case "configure-terminal": return { state: { ...state, mode: "global" } };
-    case "end": return { state: state.mode === "user" ? state : { ...state, mode: "privileged", selectedInterfaces: [], selectedVlan: undefined, selectedPool: undefined } };
-    case "exit": {
-      const mode = EXIT_TO[state.mode];
-      return { state: { ...state, mode, selectedInterfaces: [], selectedVlan: undefined, selectedPool: undefined } };
-    }
+    case "end": return { state: state.mode === "user" ? state : { ...unselect(state), mode: "privileged" } };
+    case "exit": return { state: { ...unselect(state), mode: EXIT_TO[state.mode] } };
     case "hostname": return { state: { ...state, hostname: cmd.name } };
+    case "banner-motd": return { state: { ...state, banner: cmd.text } };
     case "interface": {
       const interfaces = { ...state.interfaces };
       for (const name of cmd.interfaces) if (!interfaces[name]) interfaces[name] = newInterface(state.device);
-      return { state: { ...state, mode: cmd.sub ? "subinterface" : "interface", selectedInterfaces: cmd.interfaces, selectedVlan: undefined, selectedPool: undefined, interfaces } };
+      return { state: { ...unselect(state), mode: cmd.sub ? "subinterface" : "interface", selectedInterfaces: cmd.interfaces, interfaces } };
     }
-    case "vlan": return { state: { ...state, mode: "vlan", selectedVlan: cmd.vlanId, selectedInterfaces: [], vlans: { ...state.vlans, [String(cmd.vlanId)]: state.vlans[String(cmd.vlanId)] ?? {} } } };
+    case "vlan": return { state: { ...unselect(state), mode: "vlan", selectedVlan: cmd.vlanId, vlans: { ...state.vlans, [String(cmd.vlanId)]: state.vlans[String(cmd.vlanId)] ?? {} } } };
     case "name": return { state: state.selectedVlan === undefined ? state : { ...state, vlans: { ...state.vlans, [String(state.selectedVlan)]: { ...state.vlans[String(state.selectedVlan)], name: cmd.name } } } };
     case "switchport-mode": return { state: mapSelected(state, i => ({ ...i, switchportMode: cmd.mode })) };
     case "switchport-access-vlan": return { state: mapSelected(state, i => ({ ...i, accessVlan: cmd.vlanId })) };
     case "switchport-trunk-allowed-vlan": return { state: mapSelected(state, i => ({ ...i, allowedVlans: [...cmd.vlans] })) };
+    case "switchport-port-security": return { state: mapPortSecurity(state, ps => ({ ...ps, enabled: true })) };
+    case "port-security-maximum": return { state: mapPortSecurity(state, ps => ({ ...ps, maximum: cmd.maximum })) };
+    case "port-security-mac-address": return { state: mapPortSecurity(state, ps => ({ ...ps, macAddress: cmd.mac })) };
+    case "port-security-sticky": return { state: mapPortSecurity(state, ps => ({ ...ps, sticky: true })) };
+    case "port-security-violation": return { state: mapPortSecurity(state, ps => ({ ...ps, violation: cmd.action })) };
     case "ip-address": return { state: mapSelected(state, i => ({ ...i, ipAddress: cmd.address, subnetMask: cmd.mask })) };
     case "no-shutdown": return { state: mapSelected(state, i => ({ ...i, shutdown: false })) };
     case "shutdown": return { state: mapSelected(state, i => ({ ...i, shutdown: true })) };
     case "encapsulation-dot1q": return { state: mapSelected(state, i => ({ ...i, encapsulationVlan: cmd.vlanId })) };
-    case "ip-dhcp-pool": return { state: { ...state, mode: "dhcp", selectedPool: cmd.name, selectedInterfaces: [], dhcpPools: { ...state.dhcpPools, [cmd.name]: state.dhcpPools[cmd.name] ?? { dnsServers: [] } } } };
+    case "ip-dhcp-pool": return { state: { ...unselect(state), mode: "dhcp", selectedPool: cmd.name, dhcpPools: { ...state.dhcpPools, [cmd.name]: state.dhcpPools[cmd.name] ?? { dnsServers: [] } } } };
     case "network": return { state: mapPool(state, p => ({ ...p, network: cmd.address, mask: cmd.mask })) };
     case "default-router": return { state: mapPool(state, p => ({ ...p, defaultRouter: cmd.address })) };
     case "dns-server": return { state: mapPool(state, p => ({ ...p, dnsServers: [...cmd.addresses] })) };
@@ -66,6 +82,11 @@ export function applyCommand(state: CliDeviceState, cmd: ParsedCommand): { state
     case "vtp-mode": return { state: { ...state, vtp: { ...state.vtp, mode: cmd.mode } } };
     case "vtp-domain": return { state: { ...state, vtp: { ...state.vtp, domain: cmd.name } } };
     case "vtp-password": return { state: { ...state, vtp: { ...state.vtp, password: cmd.password } } };
+    case "line": return { state: { ...unselect(state), mode: "line", selectedLine: cmd.line } };
+    case "password": return { state: mapLine(state, l => ({ ...l, password: cmd.password })) };
+    case "login": return { state: mapLine(state, l => ({ ...l, login: true })) };
+    case "enable-secret": return { state: { ...state, enableSecret: cmd.secret } };
+    case "service-password-encryption": return { state: { ...state, passwordEncryption: true } };
     case "show": return { state, output: showOutput(state, cmd) };
   }
 }

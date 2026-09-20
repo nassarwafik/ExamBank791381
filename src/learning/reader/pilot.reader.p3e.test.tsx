@@ -67,7 +67,11 @@ describe("Phase 3E — reading order places Unit 3 (m07, order 3) directly after
     expect(nextPage(manifest, "791381-m04-l03-p02")?.id).toBe("791381-m20-l01-p01");   // … Batch 8: after m04's last page (PDF 157) comes Wi-Fi (m20, PDF 159) …
     expect(nextPage(manifest, "791381-m20-l02-p04")?.id).toBe("791381-m21-l01-p01");   // … then IPv6 والمنافذ (m21, PDF 166) …
     expect(nextPage(manifest, "791381-m21-l01-p03")?.id).toBe("791381-m22-l01-p01");   // … then DHCP (m22, PDF 169) …
-    expect(nextPage(manifest, "791381-m22-l03-p04")?.id).toBe("791381-m05-l01-p01");   // … and after m22's last page (PDF 179) comes the m05 skeleton (PDF 193)
+    expect(nextPage(manifest, "791381-m22-l03-p04")?.id).toBe("791381-m23-l01-p01");   // … Batch 9: after m22's last page (PDF 179) comes Port Security (m23, PDF 180) …
+    expect(nextPage(manifest, "791381-m23-l02-p03")?.id).toBe("791381-m24-l01-p01");   // … then حماية أجهزة Cisco (m24, PDF 185) …
+    expect(nextPage(manifest, "791381-m24-l03-p01")?.id).toBe("791381-m05-l01-p03");   // … then m05 (completed in place) starting at its NEW PDF 192 page …
+    expect(nextPage(manifest, "791381-m05-l01-p03")?.id).toBe("791381-m05-l01-p01");   // … the historical PDF 193 page follows the new PDF 192 page …
+    expect(nextPage(manifest, "791381-m05-l03-p02")?.id).toBe("791381-m06-l01-p01");   // … and after m05's last page (PDF 199) comes the m06 skeleton (PDF 227)
     expect(previousPage(manifest, "791381-m11-l00-p01")?.id).toBe("791381-m10-l02-p01");
   });
 });
@@ -102,10 +106,10 @@ describe("Phase 3E — Reader over the real Unit-3 module (lazy, cached, no netw
     expect(api.loads.filter(m => m === "791381-m07").length).toBe(1);
   }, CHUNK_TEST_TIMEOUT);
 
-  it("the remaining skeleton m05 (order 18, no body yet) still shows «قيد الإعداد», not an integrity error", async () => {
+  it("the remaining skeleton m06 (order 24, no body yet) still shows «قيد الإعداد», not an integrity error", async () => {
     mount();
     await screen.findByRole("heading", { level: 2, name: "أساسيات الشبكات" }, SLOW);
-    goTo("791381-m05-l01-p01");
+    goTo("791381-m06-l01-p01");
     await waitFor(() => expect(screen.getByText("المحتوى التفاعلي لهذه الصفحة قيد الإعداد")).toBeTruthy(), SLOW);
     expect(screen.queryByText(/لم يتم العثور على محتوى هذه الصفحة/)).toBeNull();
   }, CHUNK_TEST_TIMEOUT);
