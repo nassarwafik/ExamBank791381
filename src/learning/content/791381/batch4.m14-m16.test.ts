@@ -297,19 +297,19 @@ describe("Batch 4 — provenance, RTL/LTR, safety, skeletons and registry consis
   });
   it("historical m03 / m04 (completed in place by Batches 6 / 7) keep their historical pages' ids, titles and PDF mappings; skeletons m05–m06 are untouched and merely shift after every real module (orders 21–22 since Batch 8)", () => {
     const byId = Object.fromEntries(manifest.modules.map(m => [m.id, m]));
-    expect(["791381-m03", "791381-m19", "791381-m04", "791381-m20", "791381-m21", "791381-m22", "791381-m05", "791381-m06"].map(id => byId[id].order)).toEqual([15, 16, 17, 18, 19, 20, 21, 22]);
+    expect(["791381-m03", "791381-m19", "791381-m04", "791381-m20", "791381-m21", "791381-m22", "791381-m23", "791381-m24", "791381-m05", "791381-m06"].map(id => byId[id].order)).toEqual([15, 16, 17, 18, 19, 20, 21, 22, 23, 24]);
     expect(byId["791381-m03"].lessons[0].pages.filter(p => /-p0[12]$/.test(p.id)).map(p => [p.id, p.title, p.source!.pdfPageStart, p.source!.printedPage])).toEqual([["791381-m03-l01-p01", "منافذ السويتش", 123, 121], ["791381-m03-l01-p02", "برمجة المنافذ من CLI", 124, 122]]);
     expect(byId["791381-m06"].lessons[0].pages.map(p => [p.id, p.source!.pdfPageStart, p.source!.printedPage])).toEqual([["791381-m06-l01-p01", 227, 225]]);
-    expect(["791381-m03", "791381-m19", "791381-m04", "791381-m05", "791381-m06"].map(id => hasModuleContent("791381", id))).toEqual([true, true, true, false, false]);
+    expect(["791381-m03", "791381-m19", "791381-m04", "791381-m05", "791381-m06"].map(id => hasModuleContent("791381", id))).toEqual([true, true, true, true, false]);   // m05 completed in place by Batch 9
     expect(manifest.batches!.find(b => b.id === "b3")!.moduleIds.slice(0, 4)).toEqual(["791381-m13", "791381-m14", "791381-m15", "791381-m16"]);
-    expect(manifest.batches!.find(b => b.id === "b4")!.moduleIds).toEqual(["791381-m03", "791381-m19", "791381-m04", "791381-m05"]);
+    expect(manifest.batches!.find(b => b.id === "b4")!.moduleIds).toEqual(["791381-m03", "791381-m19", "791381-m04"]);   // Batch 9 moved m05 (the book's fifth-batch section) into b5
   });
   it("FRONTEND ↔ SERVER registry consistency: every manifest module WITH a body is in the server publication registry with the same title and order (and only those); no skeleton (m05–m06) is publishable", () => {
     const withBody = manifest.modules.filter(m => hasModuleContent("791381", m.id)).map(m => ({ moduleId: m.id, title: m.title, order: m.order }));
     const server = (apiRegistry as unknown as { listLearningModules: (c: string) => { moduleId: string; title: string; order: number }[] }).listLearningModules("791381");
     expect(server).toEqual([...withBody].sort((a, b) => a.order - b.order));
     expect(server.map(m => m.moduleId)).toEqual(expect.arrayContaining(["791381-m14", "791381-m15", "791381-m16"]));
-    for (const s of ["791381-m05", "791381-m06"]) expect(server.map(m => m.moduleId)).not.toContain(s);
+    for (const s of ["791381-m06"]) expect(server.map(m => m.moduleId)).not.toContain(s);
     for (const m of BATCH) expect(manifest.modules.find(x => x.id === m.id)!.lessons.flatMap(l => l.pages.map(p => p.id)).sort()).toEqual(pagesOf(m).map(p => p.id).sort());
   });
 });

@@ -832,18 +832,111 @@ const manifest: LearningCourseManifest = {
       ],
     },
     {
+      // m23 — Batch 9: the book's section «Port Security» (PDF 180–184, no section cover). NEW stable id; order 21.
+      id: "791381-m23",
+      title: "Port Security",
+      shortTitle: "Port Security",
+      order: 21,
+      lessons: [
+        {
+          id: "791381-m23-l01",
+          title: "ما هو Port Security",
+          order: 1,
+          pages: [
+            { id: "791381-m23-l01-p01", title: "Port Security", order: 1, source: { kind: "book", sourceId: "791381", pdfPageStart: 180, printedPage: 180 }, keywords: ["Port Security", "MAC Address", "حماية المنافذ", "جهاز غير مسموح"] },
+            { id: "791381-m23-l01-p02", title: "سيناريو Port Security", order: 2, source: { kind: "book", sourceId: "791381", pdfPageStart: 181, printedPage: 181 }, keywords: ["سيناريو", "PC0", "PC1", "جهاز غريب", "Sticky", "MAC ثابت"] },
+          ],
+        },
+        {
+          id: "791381-m23-l02",
+          title: "أوامر Port Security",
+          order: 2,
+          pages: [
+            { id: "791381-m23-l02-p01", title: "Port Security — MAC ثابت", order: 1, source: { kind: "book", sourceId: "791381", pdfPageStart: 182, printedPage: 182 }, keywords: ["interface f0/1", "switchport mode access", "switchport port-security mac-address", "violation shutdown"] },
+            { id: "791381-m23-l02-p02", title: "Port Security — Sticky MAC", order: 2, source: { kind: "book", sourceId: "791381", pdfPageStart: 183, printedPage: 183 }, keywords: ["switchport port-security", "mac-address sticky", "Sticky"] },
+            { id: "791381-m23-l02-p03", title: "Port Security — عدد الأجهزة", order: 3, source: { kind: "book", sourceId: "791381", pdfPageStart: 184, printedPage: 184 }, keywords: ["switchport port-security maximum 3", "violation shutdown", "عدد الأجهزة"] },
+          ],
+        },
+      ],
+    },
+    {
+      // m24 — Batch 9: the book's section «حماية أجهزة Cisco» (PDF 185–191; PDF 191 is the closing QR trainings page).
+      // NEW stable id; order 22.
+      id: "791381-m24",
+      title: "حماية أجهزة Cisco",
+      shortTitle: "حماية الأجهزة",
+      order: 22,
+      lessons: [
+        {
+          id: "791381-m24-l01",
+          title: "طرق الدخول إلى أجهزة Cisco",
+          order: 1,
+          pages: [
+            { id: "791381-m24-l01-p01", title: "حماية السويتشات والراوترات", order: 1, source: { kind: "book", sourceId: "791381", pdfPageStart: 185, printedPage: 185 }, keywords: ["كلمات مرور", "Console", "VTY", "Enable", "الدخول غير المصرّح به"] },
+            { id: "791381-m24-l01-p02", title: "طرق الدخول إلى أجهزة Cisco", order: 2, source: { kind: "book", sourceId: "791381", pdfPageStart: 186, printedPage: 186 }, keywords: ["Console", "VTY", "Enable", "line console 0", "line vty 0 4", "enable secret", "Telnet", "SSH"] },
+          ],
+        },
+        {
+          id: "791381-m24-l02",
+          title: "كلمات المرور وعرض الإعدادات",
+          order: 2,
+          pages: [
+            { id: "791381-m24-l02-p01", title: "كلمة مرور VTY", order: 1, source: { kind: "book", sourceId: "791381", pdfPageStart: 187, printedPage: 187 }, keywords: ["line vty 0 4", "password cisco123", "login", "SSH", "Telnet"] },
+            { id: "791381-m24-l02-p02", title: "كلمة مرور Console", order: 2, source: { kind: "book", sourceId: "791381", pdfPageStart: 188, printedPage: 188 }, keywords: ["line console 0", "password cisco123", "login", "Packet Tracer"] },
+            { id: "791381-m24-l02-p03", title: "تشفير كلمات المرور", order: 3, source: { kind: "book", sourceId: "791381", pdfPageStart: 189, printedPage: 189 }, keywords: ["service password-encryption", "enable secret cisco123", "enable password"] },
+            { id: "791381-m24-l02-p04", title: "عرض الإعدادات", order: 4, source: { kind: "book", sourceId: "791381", pdfPageStart: 190, printedPage: 190 }, keywords: ["show running-config", "show startup-config", "الفحص", "الحفظ"] },
+          ],
+        },
+        {
+          id: "791381-m24-l03",
+          title: "تدريبات نهاية القسم",
+          order: 3,
+          pages: [
+            { id: "791381-m24-l03-p01", title: "تدريبات على DHCP و Security", order: 1, source: { kind: "book", sourceId: "791381", pdfPageStart: 191, printedPage: 191 }, keywords: ["تدريبات", "QR", "T23", "T24", "T25", "T26"] },
+          ],
+        },
+      ],
+    },
+    {
+      // m05 — COMPLETED IN PLACE (Batch 9): the historical Phase-2 skeleton module, now the book's section
+      // «مرجع أوامر Cisco» (PDF 192–199). Its id, title, shortTitle, lesson `791381-m05-l01` id/title and the historical
+      // page ids, titles and source mappings (`-l01-p01` = PDF 193 / printed 191, `-l01-p02` = PDF 194 / printed 192)
+      // are IMMUTABLE. PDF 192 precedes them in the book, so it is the NEW stable page id `-l01-p03` placed first by
+      // explicit `order`; the historical pages moved to orders 2 / 3 (ids are opaque — `order` sequences). New pages
+      // follow the PRINTED PAGE = page circle = PDF index rule. Reading `order` 21 → 23 because the Batch-9 sections
+      // Port Security (m23) and حماية أجهزة Cisco (m24) precede it in the book.
       id: "791381-m05",
       title: "مرجع أوامر Cisco",
       shortTitle: "أوامر Cisco",
-      order: 21,
+      order: 23,
       lessons: [
         {
           id: "791381-m05-l01",
           title: "الأوامر الأساسية",
           order: 1,
           pages: [
-            { id: "791381-m05-l01-p01", title: "أوامر أساسية للجهاز", order: 1, source: { kind: "book", sourceId: "791381", pdfPageStart: 193, printedPage: 191 }, keywords: ["cisco", "cli"] },
-            { id: "791381-m05-l01-p02", title: "أوامر VLAN و Trunk", order: 2, source: { kind: "book", sourceId: "791381", pdfPageStart: 194, printedPage: 192 }, keywords: ["vlan", "trunk"] },
+            { id: "791381-m05-l01-p03", title: "أوامر السويتش والراوتر", order: 1, source: { kind: "book", sourceId: "791381", pdfPageStart: 192, printedPage: 192 }, keywords: ["CLI", "أوامر", "الامتحانات العملية", "نوع الجهاز والإصدار"] },
+            { id: "791381-m05-l01-p01", title: "أوامر أساسية للجهاز", order: 2, source: { kind: "book", sourceId: "791381", pdfPageStart: 193, printedPage: 191 }, keywords: ["cisco", "cli"] },
+            { id: "791381-m05-l01-p02", title: "أوامر VLAN و Trunk", order: 3, source: { kind: "book", sourceId: "791381", pdfPageStart: 194, printedPage: 192 }, keywords: ["vlan", "trunk"] },
+          ],
+        },
+        {
+          id: "791381-m05-l02",
+          title: "VTP و Dot1Q و Port Security",
+          order: 2,
+          pages: [
+            { id: "791381-m05-l02-p01", title: "VTP وكلمات مرور سريعة", order: 1, source: { kind: "book", sourceId: "791381", pdfPageStart: 195, printedPage: 195 }, keywords: ["vtp mode server", "vtp mode client", "enable secret cisco123", "line console 0", "line vty 0 4", "VTP domain"] },
+            { id: "791381-m05-l02-p02", title: "Sub-Interface و Dot1Q", order: 2, source: { kind: "book", sourceId: "791381", pdfPageStart: 196, printedPage: 196 }, keywords: ["interface g0/0.10", "encapsulation dot1Q 10", "ip address 192.168.10.254", "Sub-Interface", "Gateway"] },
+            { id: "791381-m05-l02-p03", title: "أوامر Port Security مختصرة", order: 3, source: { kind: "book", sourceId: "791381", pdfPageStart: 197, printedPage: 197 }, keywords: ["interface f0/1", "switchport mode access", "switchport port-security maximum 2", "violation shutdown"] },
+          ],
+        },
+        {
+          id: "791381-m05-l03",
+          title: "أوامر الفحص وما بعد",
+          order: 3,
+          pages: [
+            { id: "791381-m05-l03-p01", title: "أوامر الفحص المهمة", order: 1, source: { kind: "book", sourceId: "791381", pdfPageStart: 198, printedPage: 198 }, keywords: ["show", "show vlan brief", "show port-security", "show running-config", "show ip route"] },
+            { id: "791381-m05-l03-p02", title: "OSPF / EIGRP / ACL — تذكير سريع", order: 2, source: { kind: "book", sourceId: "791381", pdfPageStart: 199, printedPage: 199 }, keywords: ["OSPF", "EIGRP", "ACL", "show access-lists", "الدفعة التالية"] },
           ],
         },
       ],
@@ -852,7 +945,7 @@ const manifest: LearningCourseManifest = {
       id: "791381-m06",
       title: "قوائم التحكم ACL",
       shortTitle: "ACL",
-      order: 22,
+      order: 24,
       lessons: [
         {
           id: "791381-m06-l01",
@@ -875,8 +968,8 @@ const manifest: LearningCourseManifest = {
     { id: "b1", label: "الأساسيات · الأعداد · IP", moduleIds: ["791381-m01", "791381-m02", "791381-m07", "791381-m08"] },
     { id: "b2", label: "الأجهزة والرسائل", moduleIds: ["791381-m09", "791381-m10", "791381-m11", "791381-m12"] },
     { id: "b3", label: "النماذج والبروتوكولات والأمان", moduleIds: ["791381-m13", "791381-m14", "791381-m15", "791381-m16", "791381-m17", "791381-m18"] },
-    { id: "b4", label: "برمجة السويتش و VLAN", moduleIds: ["791381-m03", "791381-m19", "791381-m04", "791381-m05"] },
-    { id: "b5", label: "الأمان · Wi-Fi · IPv6 · DHCP", moduleIds: ["791381-m20", "791381-m21", "791381-m22"] },
+    { id: "b4", label: "برمجة السويتش و VLAN", moduleIds: ["791381-m03", "791381-m19", "791381-m04"] },
+    { id: "b5", label: "الأمان · Wi-Fi · IPv6 · DHCP", moduleIds: ["791381-m20", "791381-m21", "791381-m22", "791381-m23", "791381-m24", "791381-m05"] },
     { id: "b6", label: "ACL · التوجيه · WAN", moduleIds: ["791381-m06"] },
     { id: "summary", label: "التلخيص", moduleIds: [] },
   ],
