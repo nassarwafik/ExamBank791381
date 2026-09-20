@@ -82,9 +82,9 @@ describe("Phase 3E — historical module ids, titles and source mappings are IMM
 
   it("keeps every pre-existing module id and adds the real Units 4–8, Batch 3, Batch 4, Batch 5 (m08–m18), Batch 7 (m19), Batch 8 (m20–m22) and Batch 9 (m23–m24) as the next free ids — nothing renamed/repurposed", () => {
     expect(manifest.modules.map(m => m.id)).toEqual([
-      "791381-m01", "791381-m02", "791381-m07", "791381-m08", "791381-m09", "791381-m10", "791381-m11", "791381-m12", "791381-m13", "791381-m14", "791381-m15", "791381-m16", "791381-m17", "791381-m18", "791381-m03", "791381-m19", "791381-m04", "791381-m20", "791381-m21", "791381-m22", "791381-m23", "791381-m24", "791381-m05", "791381-m06",
+      "791381-m01", "791381-m02", "791381-m07", "791381-m08", "791381-m09", "791381-m10", "791381-m11", "791381-m12", "791381-m13", "791381-m14", "791381-m15", "791381-m16", "791381-m17", "791381-m18", "791381-m03", "791381-m19", "791381-m04", "791381-m20", "791381-m21", "791381-m22", "791381-m23", "791381-m24", "791381-m05", "791381-m25", "791381-m26", "791381-m27", "791381-m06",
     ]);
-    expect(manifest.modules.map(m => m.order)).toEqual([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24]);
+    expect(manifest.modules.map(m => m.order)).toEqual([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27]);
     expect(byId["791381-m07"].order).toBe(3);          // the book's Unit 3 reads third …
     expect(byId["791381-m08"].order).toBe(4);          // … Unit 4 fourth, Unit 5 fifth …
     expect(byId["791381-m09"].order).toBe(5);
@@ -106,7 +106,10 @@ describe("Phase 3E — historical module ids, titles and source mappings are IMM
     expect(byId["791381-m23"].order).toBe(21);         // Batch 9: Port Security (m23), حماية أجهزة Cisco (m24) — new stable ids …
     expect(byId["791381-m24"].order).toBe(22);
     expect(byId["791381-m05"].order).toBe(23);         // … then the historical m05 completed IN PLACE, then the remaining m06 skeleton
-    expect(byId["791381-m06"].order).toBe(24);
+    expect(byId["791381-m25"].order).toBe(24);         // Batch 10: مراجعة الأوامر, WAN, بروتوكولات التوجيه, then the historical m06 (ACL) completed in place
+    expect(byId["791381-m26"].order).toBe(25);
+    expect(byId["791381-m27"].order).toBe(26);
+    expect(byId["791381-m06"].order).toBe(27);
     // the skeletons keep their ids, titles, lesson/page ids and PDF mappings (pinned below) — ONLY `order` moved
     for (const id of ["791381-m05", "791381-m06"]) expect(Object.keys(byId[id]).sort(), id).toEqual(["id", "lessons", "order", "shortTitle", "title"].filter(k => k in byId[id]).sort());
     for (const id of ["791381-m03", "791381-m19", "791381-m04", "791381-m20", "791381-m21", "791381-m22", "791381-m23", "791381-m24", "791381-m05"]) expect(Object.keys(byId[id]).sort(), id).toEqual(["id", "lessons", "order", "shortTitle", "title"]);   // completed modules: the same TOC shape, no `source` on the ModuleRef
@@ -142,7 +145,7 @@ describe("Phase 3E — historical module ids, titles and source mappings are IMM
     expect(byId["791381-m05"].title).toBe("مرجع أوامر Cisco");
     expect(pages("791381-m05")).toEqual([["791381-m05-l01-p03", "أوامر السويتش والراوتر", 192, 192], ["791381-m05-l01-p01", "أوامر أساسية للجهاز", 193, 191], ["791381-m05-l01-p02", "أوامر VLAN و Trunk", 194, 192], ["791381-m05-l02-p01", "VTP وكلمات مرور سريعة", 195, 195], ["791381-m05-l02-p02", "Sub-Interface و Dot1Q", 196, 196], ["791381-m05-l02-p03", "أوامر Port Security مختصرة", 197, 197], ["791381-m05-l03-p01", "أوامر الفحص المهمة", 198, 198], ["791381-m05-l03-p02", "OSPF / EIGRP / ACL — تذكير سريع", 199, 199]]);   // Batch 9 completed m05 in place: the two historical pages keep id / title / PDF / printed page
     expect(byId["791381-m06"].title).toBe("قوائم التحكم ACL");
-    expect(pages("791381-m06")).toEqual([["791381-m06-l01-p01", "Extended ACL", 227, 225]]);
+    expect(pages("791381-m06")).toEqual([["791381-m06-l01-p02", "ACL — Access Control List", 223, 223], ["791381-m06-l01-p03", "Standard ACL", 224, 224], ["791381-m06-l01-p04", "Standard ACL — أمثلة", 225, 225], ["791381-m06-l01-p05", "Standard ACL — أمثلة إضافية", 226, 226], ["791381-m06-l01-p01", "Extended ACL", 227, 225], ["791381-m06-l02-p01", "تدريبات", 228, 228], ["791381-m06-l02-p02", "امتحانات نهائية للتدريب", 229, 229]]);   // completed in place by Batch 10; the historical page keeps its id / title / mapping at order 5
     // m01 / m02 identities are unchanged too (their page ids are pinned by the 3B/3C/3D tests)
     expect(byId["791381-m01"].title).toBe("أساسيات الشبكات");
     expect(byId["791381-m02"].title).toBe("الأعداد والموازين");
@@ -153,7 +156,7 @@ describe("Phase 3E — historical module ids, titles and source mappings are IMM
     expect(batches.b1.label).toBe("الأساسيات · الأعداد · IP");
     expect(batches.b1.moduleIds).toEqual(["791381-m01", "791381-m02", "791381-m07", "791381-m08"]);
     expect(batches.b4.moduleIds).toEqual(["791381-m03", "791381-m19", "791381-m04"]);   // CLI/VLAN NOT moved into b1; Batch 7 inserted m19 (VTP) before m04; Batch 9 moved m05 to b5
-    expect(batches.b6.moduleIds).toEqual(["791381-m06"]);
+    expect(batches.b6.moduleIds).toEqual(["791381-m25", "791381-m26", "791381-m27", "791381-m06"]);   // Batch 10
   });
 
   it("Units 7–8 / Batch 3: b2 «الأجهزة والرسائل» lists m09, m10, m11, m12 in that exact order; b3 «النماذج والبروتوكولات والأمان» lists m13 … m18 in that order (PDF 76–119); other batches unchanged", () => {

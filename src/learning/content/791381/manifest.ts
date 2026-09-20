@@ -741,7 +741,7 @@ const manifest: LearningCourseManifest = {
     {
       // m20 — Batch 8: the book's section «Wi-Fi · الشبكات اللاسلكية» (PDF 159–165; PDF 158 is the fifth-batch cover
       // «Wi-Fi و IPv6 و DHCP والأمان», metadata only in the body's module source). NEW stable id; explicit `order` 18,
-      // after m04 (17). The m05 / m06 skeletons below are the DIFFERENT sections «مرجع أوامر Cisco» (PDF 193+) and «ACL».
+      // after m04 (17). The m05 / m06 modules below are the DIFFERENT sections «مرجع أوامر Cisco» (PDF 192+) and «ACL» (PDF 223+).
       id: "791381-m20",
       title: "Wi-Fi والشبكات اللاسلكية",
       shortTitle: "Wi-Fi",
@@ -941,18 +941,121 @@ const manifest: LearningCourseManifest = {
         },
       ],
     },
+    // ── Batch 10 (PDF 200–229): m25 «مراجعة الأوامر» (PDF 200 cover + 201–206), m26 «الشبكة الواسعة WAN» (207–209),
+    // m27 «بروتوكولات التوجيه» (210–222) as NEW stable ids, then the historical m06 skeleton («قوائم التحكم ACL»)
+    // COMPLETED IN PLACE for PDF 223–229. PDF 230+ (the final reference: glossary, closing word, visual summary) is
+    // not converted.
     {
+      id: "791381-m25",
+      title: "مراجعة الأوامر",
+      shortTitle: "مراجعة الأوامر",
+      order: 24,
+      lessons: [
+        {
+          id: "791381-m25-l01",
+          title: "مراجعة أوامر Cisco",
+          order: 1,
+          pages: [
+            { id: "791381-m25-l01-p01", title: "الدخول والإعداد الأساسي", order: 1, source: { kind: "book", sourceId: "791381", pdfPageStart: 201, printedPage: 201 }, keywords: ["enable", "configure terminal", "hostname R1", "interface g0/0", "ip address"] },
+            { id: "791381-m25-l01-p02", title: "VLAN و Trunk", order: 2, source: { kind: "book", sourceId: "791381", pdfPageStart: 202, printedPage: 202 }, keywords: ["interface range f0/1-10", "vlan 10", "switchport access vlan 10", "switchport mode trunk"] },
+            { id: "791381-m25-l01-p03", title: "VTP وكلمات المرور", order: 3, source: { kind: "book", sourceId: "791381", pdfPageStart: 203, printedPage: 203 }, keywords: ["vtp mode server", "vtp mode client", "enable secret cisco", "line vty 0 4", "line console 0", "enable password"] },
+            { id: "791381-m25-l01-p04", title: "Router on a Stick — Dot1Q", order: 4, source: { kind: "book", sourceId: "791381", pdfPageStart: 204, printedPage: 204 }, keywords: ["interface g0/0.10", "encapsulation dot1Q 10", "ip address 192.168.10.254", "Sub-Interface", "Gateway"] },
+            { id: "791381-m25-l01-p05", title: "Port Security — أمان المنفذ", order: 5, source: { kind: "book", sourceId: "791381", pdfPageStart: 205, printedPage: 205 }, keywords: ["switchport mode access", "switchport port-security maximum 2", "violation shutdown"] },
+            { id: "791381-m25-l01-p06", title: "أوامر الفحص المهمة", order: 6, source: { kind: "book", sourceId: "791381", pdfPageStart: 206, printedPage: 206 }, keywords: ["show vlan brief", "show ip interface brief", "show running-config", "show port-security", "show ip route", "show ip dhcp pool"] },
+          ],
+        },
+      ],
+    },
+    {
+      id: "791381-m26",
+      title: "الشبكة الواسعة WAN",
+      shortTitle: "WAN",
+      order: 25,
+      lessons: [
+        {
+          id: "791381-m26-l01",
+          title: "WAN وتقنياتها",
+          order: 1,
+          pages: [
+            { id: "791381-m26-l01-p01", title: "الشبكة الواسعة WAN", order: 1, source: { kind: "book", sourceId: "791381", pdfPageStart: 207, printedPage: 207 }, keywords: ["WAN", "الشبكة الواسعة", "ربط الفروع", "الألياف الضوئية"] },
+            { id: "791381-m26-l01-p02", title: "تقنيات WAN القديمة", order: 2, source: { kind: "book", sourceId: "791381", pdfPageStart: 208, printedPage: 208 }, keywords: ["Frame Relay", "ATM", "Packet Switching", "Frames"] },
+            { id: "791381-m26-l01-p03", title: "HDLC و Metro Ethernet", order: 3, source: { kind: "book", sourceId: "791381", pdfPageStart: 209, printedPage: 209 }, keywords: ["HDLC", "Metro Ethernet", "ربط المواقع", "منطقة حضرية"] },
+          ],
+        },
+      ],
+    },
+    {
+      id: "791381-m27",
+      title: "بروتوكولات التوجيه",
+      shortTitle: "التوجيه",
+      order: 26,
+      lessons: [
+        {
+          id: "791381-m27-l01",
+          title: "أساسيات التوجيه",
+          order: 1,
+          pages: [
+            { id: "791381-m27-l01-p01", title: "بروتوكولات التوجيه", order: 1, source: { kind: "book", sourceId: "791381", pdfPageStart: 210, printedPage: 210 }, keywords: ["Static Route", "OSPF", "EIGRP", "التوجيه", "Link-State", "Bandwidth"] },
+            { id: "791381-m27-l01-p02", title: "Static Route — التوجيه الثابت", order: 2, source: { kind: "book", sourceId: "791381", pdfPageStart: 211, printedPage: 211 }, keywords: ["Static Route", "المزايا", "العيوب", "الشبكات الصغيرة"] },
+            { id: "791381-m27-l01-p03", title: "Distance Vector / Link-State", order: 3, source: { kind: "book", sourceId: "791381", pdfPageStart: 212, printedPage: 212 }, keywords: ["Distance Vector", "Link-State", "Metric", "تحديثات دورية", "هجين"] },
+            { id: "791381-m27-l01-p04", title: "Administrative Distance و METRIC", order: 4, source: { kind: "book", sourceId: "791381", pdfPageStart: 213, printedPage: 213 }, keywords: ["METRIC", "Administrative Distance", "AD", "RIP = 120", "OSPF = 110", "EIGRP = 90", "Static = 1", "Connected = 0"] },
+          ],
+        },
+        {
+          id: "791381-m27-l02",
+          title: "OSPF",
+          order: 2,
+          pages: [
+            { id: "791381-m27-l02-p01", title: "OSPF", order: 1, source: { kind: "book", sourceId: "791381", pdfPageStart: 214, printedPage: 214 }, keywords: ["OSPF", "Open Shortest Path First", "Link-State", "Open Standard", "خريطة كاملة"] },
+            { id: "791381-m27-l02-p02", title: "مثال OSPF", order: 2, source: { kind: "book", sourceId: "791381", pdfPageStart: 215, printedPage: 215 }, keywords: ["مثال OSPF", "R1", "R2", "10.0.0.0/30", "192.168.1.0/24", "192.168.2.0/24", "area"] },
+            { id: "791381-m27-l02-p03", title: "مثال OSPF — تعريفات R1", order: 3, source: { kind: "book", sourceId: "791381", pdfPageStart: 216, printedPage: 216 }, keywords: ["router ospf 1", "network 192.168.1.0 0.0.0.255 area 0", "network 10.0.0.0 0.0.0.3 area 0", "wildcard"] },
+            { id: "791381-m27-l02-p04", title: "مثال OSPF — تعريفات R2", order: 4, source: { kind: "book", sourceId: "791381", pdfPageStart: 217, printedPage: 217 }, keywords: ["router ospf 1", "network 192.168.2.0 0.0.0.255 area 0", "network 10.0.0.0 0.0.0.3 area 0", "نفس رقم العملية"] },
+          ],
+        },
+        {
+          id: "791381-m27-l03",
+          title: "EIGRP و show ip route",
+          order: 3,
+          pages: [
+            { id: "791381-m27-l03-p01", title: "EIGRP", order: 1, source: { kind: "book", sourceId: "791381", pdfPageStart: 218, printedPage: 218 }, keywords: ["EIGRP", "Enhanced Interior Gateway Routing Protocol", "Distance Vector", "Cisco", "Bandwidth + Delay"] },
+            { id: "791381-m27-l03-p02", title: "مثال EIGRP", order: 2, source: { kind: "book", sourceId: "791381", pdfPageStart: 219, printedPage: 219 }, keywords: ["مثال EIGRP", "AS 100", "رقم AS", "R1", "R2"] },
+            { id: "791381-m27-l03-p03", title: "مثال EIGRP — تعريفات R1", order: 3, source: { kind: "book", sourceId: "791381", pdfPageStart: 220, printedPage: 220 }, keywords: ["router eigrp 100", "network 192.168.1.0", "network 10.0.0.0", "لا نكتب area"] },
+            { id: "791381-m27-l03-p04", title: "مثال EIGRP — تعريفات R2", order: 4, source: { kind: "book", sourceId: "791381", pdfPageStart: 221, printedPage: 221 }, keywords: ["router eigrp 100", "network 192.168.2.0", "network 10.0.0.0", "نفس رقم AS"] },
+            { id: "791381-m27-l03-p05", title: "show ip route", order: 5, source: { kind: "book", sourceId: "791381", pdfPageStart: 222, printedPage: 222 }, keywords: ["show ip route", "directly connected", "[120/1]", "via", "C", "R", "O", "D"] },
+          ],
+        },
+      ],
+    },
+    {
+      // m06 — COMPLETED IN PLACE (Batch 10): the historical Phase-2 skeleton module, now the book's section
+      // «قوائم التحكم ACL» (PDF 223–229). Its id, title, shortTitle, lesson `791381-m06-l01` id/title and the historical
+      // page id `791381-m06-l01-p01` (title, PDF 227 / printedPage 225 mapping, keywords) are byte-for-byte unchanged;
+      // only that page's explicit `order` moved (1 → 5) because PDF 223–226 precede it. Manifest `order` is the
+      // sole authority for reading order.
       id: "791381-m06",
       title: "قوائم التحكم ACL",
       shortTitle: "ACL",
-      order: 24,
+      order: 27,
       lessons: [
         {
           id: "791381-m06-l01",
           title: "التحكم بالوصول",
           order: 1,
           pages: [
-            { id: "791381-m06-l01-p01", title: "Extended ACL", order: 1, source: { kind: "book", sourceId: "791381", pdfPageStart: 227, printedPage: 225 }, keywords: ["acl", "extended"] },
+            { id: "791381-m06-l01-p02", title: "ACL — Access Control List", order: 1, source: { kind: "book", sourceId: "791381", pdfPageStart: 223, printedPage: 223 }, keywords: ["ACL", "Access Control List", "permit", "deny", "Standard", "Extended"] },
+            { id: "791381-m06-l01-p03", title: "Standard ACL", order: 2, source: { kind: "book", sourceId: "791381", pdfPageStart: 224, printedPage: 224 }, keywords: ["access-list 10 permit 192.168.1.0 0.0.0.255", "interface g0/0", "ip access-group 10 out", "1 إلى 99"] },
+            { id: "791381-m06-l01-p04", title: "Standard ACL — أمثلة", order: 3, source: { kind: "book", sourceId: "791381", pdfPageStart: 225, printedPage: 225 }, keywords: ["access-list 10 permit", "access-list 20 deny", "access-list 20 permit any", "القاعدة الأقرب للهدف"] },
+            { id: "791381-m06-l01-p05", title: "Standard ACL — أمثلة إضافية", order: 4, source: { kind: "book", sourceId: "791381", pdfPageStart: 226, printedPage: 226 }, keywords: ["access-list 30 permit host", "access-list 40 permit", "ip access-group 40 in", "الرفض الضمني", "deny any", "خطأ شائع"] },
+            { id: "791381-m06-l01-p01", title: "Extended ACL", order: 5, source: { kind: "book", sourceId: "791381", pdfPageStart: 227, printedPage: 225 }, keywords: ["acl", "extended"] },
+          ],
+        },
+        {
+          id: "791381-m06-l02",
+          title: "تدريبات وامتحانات",
+          order: 2,
+          pages: [
+            { id: "791381-m06-l02-p01", title: "تدريبات", order: 1, source: { kind: "book", sourceId: "791381", pdfPageStart: 228, printedPage: 228 }, keywords: ["تدريبات", "QR", "T27", "T28", "T29", "T30"] },
+            { id: "791381-m06-l02-p02", title: "امتحانات نهائية للتدريب", order: 2, source: { kind: "book", sourceId: "791381", pdfPageStart: 229, printedPage: 229 }, keywords: ["امتحانات نهائية", "QR", "F01", "F02", "F03", "F04", "F05", "F06"] },
           ],
         },
       ],
@@ -970,7 +1073,7 @@ const manifest: LearningCourseManifest = {
     { id: "b3", label: "النماذج والبروتوكولات والأمان", moduleIds: ["791381-m13", "791381-m14", "791381-m15", "791381-m16", "791381-m17", "791381-m18"] },
     { id: "b4", label: "برمجة السويتش و VLAN", moduleIds: ["791381-m03", "791381-m19", "791381-m04"] },
     { id: "b5", label: "الأمان · Wi-Fi · IPv6 · DHCP", moduleIds: ["791381-m20", "791381-m21", "791381-m22", "791381-m23", "791381-m24", "791381-m05"] },
-    { id: "b6", label: "ACL · التوجيه · WAN", moduleIds: ["791381-m06"] },
+    { id: "b6", label: "ACL · التوجيه · WAN", moduleIds: ["791381-m25", "791381-m26", "791381-m27", "791381-m06"] },
     { id: "summary", label: "التلخيص", moduleIds: [] },
   ],
 };
