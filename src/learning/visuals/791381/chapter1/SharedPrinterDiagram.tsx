@@ -34,7 +34,7 @@ export default function SharedPrinterDiagram({ ariaLabel, reducedMotion, classNa
 
       {/* shared printer */}
       <g>
-        <rect className="eb-visual-printer eb-visual-pulse" x={PRINTER.x - 44} y={PRINTER.y - 34} width="88" height="68" rx="10" />
+        <rect className={"eb-visual-printer" + (reducedMotion ? "" : " eb-visual-pulse")} x={PRINTER.x - 44} y={PRINTER.y - 34} width="88" height="68" rx="10" />
         <rect className="eb-visual-printer-slot" x={PRINTER.x - 26} y={PRINTER.y - 8} width="52" height="14" rx="3" />
         <text className="eb-visual-node-label" x={PRINTER.x} y={PRINTER.y + 22} textAnchor="middle" dominantBaseline="central">طابعة</text>
       </g>

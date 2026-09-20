@@ -59,16 +59,21 @@ describe("visuals — motion always respects reduced motion", () => {
     expect(noSpaces(css)).toContain("animation:none!important");
   });
 
-  // Two motion mechanisms are used, both gated by the reducedMotion prop: SMIL <animateMotion> (traveling dots) and
-  // a CSS animation applied via an `-anim` class. Under reduced motion NEITHER may appear; with motion on, at least
-  // one must. (The visuals.css @media query is the additional CSS-level safety net for the class-based animations.)
+  // Motion mechanisms, all gated by the reducedMotion PROP (not only the CSS @media query): SMIL <animateMotion>
+  // (traveling dots) and CSS animation classes (`.eb-visual-pulse`, `.eb-visual-leaf-anim`, `.eb-visual-pillar-anim`).
+  // Under reduced motion NONE may appear in the rendered DOM; with motion on, at least one must. (The visuals.css
+  // @media query is retained as the additional CSS-level safety net.)
+  const MOTION_SELECTORS = ["animateMotion", ".eb-visual-pulse", ".eb-visual-leaf-anim", ".eb-visual-pillar-anim"];
   const motionMarks = (root: Element) =>
-    root.querySelectorAll("animateMotion").length + root.querySelectorAll('[class*="-anim"]').length;
+    MOTION_SELECTORS.reduce((n, sel) => n + root.querySelectorAll(sel).length, 0);
 
-  it("each component omits ALL motion (SMIL and CSS class) when reducedMotion is true, and renders a valid still SVG", () => {
+  it("each component omits ALL motion markers (SMIL + every CSS animation class) when reducedMotion is true, and renders a valid still SVG", () => {
     for (const id of REGISTERED_VISUAL_IDS) {
       const Comp = resolveVisual(id)!.component;
       const still = render(<Comp ariaLabel="x" reducedMotion={true} />);
+      for (const sel of MOTION_SELECTORS) {
+        expect(still.container.querySelectorAll(sel).length, `${id} ${sel}`).toBe(0);
+      }
       expect(motionMarks(still.container), id).toBe(0);
       expect(still.container.querySelector('svg[role="img"]'), id).not.toBeNull();
       cleanup();

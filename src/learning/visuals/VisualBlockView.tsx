@@ -7,9 +7,12 @@ import "./visuals.css";
 /**
  * Renders a `visual` block: a trusted, registry-resolved SVG illustration wrapped in a semantic <figure>. The
  * component supplies the accessible name on its root <svg role="img">; the optional `title`/`caption` are quiet
- * chrome around it. An unknown `visualId` renders a faithful "قيد الإعداد" fallback (never blank, never a guess).
- * Motion is decided by the shared prefers-reduced-motion hook and passed to the SVG (still frame under reduced
- * motion); visuals.css additionally neutralizes CSS motion under the media query as defense-in-depth.
+ * chrome around it. A semantic <figure> holds at most ONE <figcaption> — so the optional `title` renders as a plain
+ * <p> heading above the figure, and the single <figcaption> is reserved for the bottom explanatory `caption`. The
+ * SVG's role="img" + aria-label={alt} remains the illustration's accessible name (never duplicated by the caption).
+ * An unknown `visualId` renders a faithful "قيد الإعداد" fallback (never blank, never a guess). Motion is decided by
+ * the shared prefers-reduced-motion hook and passed to the SVG (still frame under reduced motion); visuals.css
+ * additionally neutralizes CSS motion under the media query as defense-in-depth.
  */
 export default function VisualBlockView({ block }: { block: VisualBlock }) {
   const reducedMotion = usePrefersReducedMotion();
@@ -17,7 +20,7 @@ export default function VisualBlockView({ block }: { block: VisualBlock }) {
 
   return (
     <figure className="eb-visual-figure">
-      {block.title && <figcaption className="eb-visual-title">{block.title}</figcaption>}
+      {block.title && <p className="eb-visual-title">{block.title}</p>}
       <div className="eb-visual-frame">
         {entry
           ? <entry.component ariaLabel={block.alt} reducedMotion={reducedMotion} />

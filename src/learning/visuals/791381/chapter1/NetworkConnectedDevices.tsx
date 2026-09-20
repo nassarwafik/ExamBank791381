@@ -30,7 +30,7 @@ export default function NetworkConnectedDevices({ ariaLabel, reducedMotion, clas
 
       {/* central switch / hub */}
       <g>
-        <circle className="eb-visual-hub eb-visual-pulse" cx={HUB.x} cy={HUB.y} r="34" />
+        <circle className={"eb-visual-hub" + (reducedMotion ? "" : " eb-visual-pulse")} cx={HUB.x} cy={HUB.y} r="34" />
         <circle className="eb-visual-hub-core" cx={HUB.x} cy={HUB.y} r="26" />
         <text className="eb-visual-hub-label" x={HUB.x} y={HUB.y} textAnchor="middle" dominantBaseline="central">شبكة</text>
       </g>

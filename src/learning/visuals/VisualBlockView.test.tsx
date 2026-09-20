@@ -40,6 +40,21 @@ describe("VisualBlockView", () => {
     expect(fetchSpy).not.toHaveBeenCalled();
   });
 
+  it("figure semantics: with both title and caption, exactly ONE <figcaption> exists (title is a <p>), both render, and the SVG keeps the alt as its accessible name", () => {
+    setMatchMedia(false);
+    const { container } = render(<VisualBlockView block={base} />);
+    const fig = container.querySelector("figure")!;
+    expect(fig.querySelectorAll("figcaption").length).toBe(1);
+    // the single figcaption is the bottom explanatory caption
+    expect(fig.querySelector("figcaption")!.textContent).toBe("تتبادل الأجهزة المعلومات عبر الشبكة.");
+    // the title renders as a plain paragraph, not a figcaption
+    const title = container.querySelector("p.eb-visual-title")!;
+    expect(title.tagName.toLowerCase()).toBe("p");
+    expect(title.textContent).toBe("رسم توضيحي: الشبكة أجهزة متصلة");
+    // accessible name is the block alt (on the SVG), never duplicated by the caption
+    expect(screen.getByRole("img", { name: base.alt }).tagName.toLowerCase()).toBe("svg");
+  });
+
   it("motion ON: renders the traveling SMIL pulses", () => {
     setMatchMedia(false);
     const { container } = render(<VisualBlockView block={base} />);
