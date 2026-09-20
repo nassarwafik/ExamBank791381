@@ -6,6 +6,7 @@
 //   C. mismatch that survives the reload → the calm "site updated" boundary (session preserved), no loop
 import { describe, it, expect, afterEach, beforeEach, vi } from "vitest";
 import { lazy, Suspense } from "react";
+import type { ReactElement } from "react";
 import { render, cleanup, screen, waitFor } from "@testing-library/react";
 import ErrorBoundary from "./ErrorBoundary";
 import { lazyWithRetry } from "./lazyWithRetry";
@@ -13,7 +14,7 @@ import { lazyWithRetry } from "./lazyWithRetry";
 const KEY = "student-reader";
 const chunkErr = () => Object.assign(new Error("Failed to fetch dynamically imported module: /assets/StudentReader-OLD.js"), { name: "TypeError" });
 
-function Harness({ factory }: { factory: () => Promise<{ default: () => JSX.Element }> }) {
+function Harness({ factory }: { factory: () => Promise<{ default: () => ReactElement }> }) {
   const Lazy = lazy(lazyWithRetry(factory, KEY));
   return (
     <ErrorBoundary>

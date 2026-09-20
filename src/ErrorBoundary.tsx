@@ -27,17 +27,19 @@ export default class ErrorBoundary extends Component<Props, State> {
   }
 
   componentDidCatch(error: unknown, info: { componentStack?: string | null }) {
-    // SAFE observability: the boundary only ever receives an Error object and a React component stack — it never
-    // has access to tokens, student ids, passwords or request headers, so logging name/kind/message exposes no
-    // sensitive data (a chunk error's message is a public asset URL). Enabled in production so a future failure
-    // is diagnosable from the browser console without shipping any private data.
-    const e = (error ?? {}) as { name?: unknown; message?: unknown };
+    // SANITIZED observability. A runtime error's `message` can carry request URLs, ids, or token/password fragments
+    // that bubbled up from application code, and its component stack can leak internal structure. In PRODUCTION we
+    // therefore emit ONLY a bounded, structured summary — the classification code and the error's constructor name
+    // (a safe class label like "TypeError"/"ChunkLoadError"), never the message, stack, or component tree. The full
+    // error and React component stack are logged in DEV only, where the developer already has these values locally.
+    const e = (error ?? {}) as { name?: unknown };
     const kind: ErrorKind = isChunkLoadError(error) ? "chunk" : "runtime";
+    const code = kind === "chunk" ? "chunk-load" : "runtime";
     // eslint-disable-next-line no-console
-    console.error("[ErrorBoundary]", { kind, name: typeof e.name === "string" ? e.name : "Error", message: typeof e.message === "string" ? e.message : String(error) });
+    console.error("[ErrorBoundary]", { code, name: typeof e.name === "string" ? e.name : "Error" });
     if (import.meta.env.DEV) {
       // eslint-disable-next-line no-console
-      console.error("ErrorBoundary component stack:", info?.componentStack);
+      console.error("[ErrorBoundary] (dev) full error:", error, "\ncomponentStack:", info?.componentStack);
     }
   }
 

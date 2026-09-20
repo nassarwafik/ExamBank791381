@@ -16,29 +16,50 @@
 
 const MARKER_PREFIX = "examBankChunkReload:";
 
-/** True when `err` is a stale dynamic-import / chunk-load failure (Vite/Rollup or Webpack shapes), not a normal error. */
+/**
+ * True when `err` is a stale dynamic-import / chunk-load failure (Vite/Rollup or Webpack shapes), not a normal error.
+ *
+ * The signatures are kept PRECISE on purpose. A broad phrase like "failed to import" would misclassify ordinary
+ * application errors (e.g. `Error("Failed to import student data")`) as deploy mismatches and trigger a reload,
+ * masking a real bug. The native Vite/ESM dynamic-import failures are additionally required to carry the TypeError
+ * shape the browser actually throws, so an application Error whose text merely resembles one of these phrases is
+ * NOT treated as a chunk failure.
+ */
 export function isChunkLoadError(err: unknown): boolean {
   if (!err) return false;
-  const e = err as { name?: unknown; message?: unknown; code?: unknown };
+  const e = err as { name?: unknown; message?: unknown };
   const name = typeof e.name === "string" ? e.name : "";
   const message = typeof e.message === "string" ? e.message : "";
-  if (name === "ChunkLoadError") return true;                       // Webpack-style
-  return (
-    // Vite / native ESM dynamic-import failures
+  // Webpack-style: an explicit error class, or a precise numbered "loading chunk N failed" / CSS-chunk message.
+  if (name === "ChunkLoadError") return true;
+  if (/loading chunk [\d]+ failed/i.test(message)) return true;
+  if (/loading css chunk [\w\d]+ failed/i.test(message)) return true;
+  // Native Vite / ESM dynamic-import failures — thrown by the browser as a TypeError with one of these exact
+  // messages. Requiring the TypeError shape avoids false positives from same-worded application errors.
+  if (name === "TypeError" && (
     /failed to fetch dynamically imported module/i.test(message) ||
     /error loading dynamically imported module/i.test(message) ||
-    /importing a module script failed/i.test(message) ||           // Safari
-    /failed to import/i.test(message) ||
-    /loading chunk [\d]+ failed/i.test(message) ||                  // Webpack-style message
-    /loading css chunk/i.test(message)
-  );
+    /importing a module script failed/i.test(message)              // Safari
+  )) return true;
+  return false;
 }
 
-function readMarker(key: string): boolean {
-  try { return sessionStorage.getItem(MARKER_PREFIX + key) === "1"; } catch { return false; }
-}
-function setMarker(key: string): void {
-  try { sessionStorage.setItem(MARKER_PREFIX + key, "1"); } catch { /* storage may be unavailable */ }
+/**
+ * Atomically acquire the SINGLE reload permit for `key`. Returns true only for the one call allowed to reload:
+ * the marker was not already present, it could be persisted, AND it read back as persisted. If sessionStorage is
+ * unavailable, throws, or the write cannot be verified, returns false — so the caller must NOT auto-reload and
+ * instead lets the chunk error surface to the ErrorBoundary's manual recovery UI. This is what prevents an
+ * infinite reload loop when storage silently fails to keep the one-shot marker.
+ */
+function acquireReloadPermit(key: string): boolean {
+  const k = MARKER_PREFIX + key;
+  try {
+    if (sessionStorage.getItem(k) === "1") return false;  // a reload was already attempted → never loop
+    sessionStorage.setItem(k, "1");
+    return sessionStorage.getItem(k) === "1";             // proceed only if the marker truly persisted
+  } catch {
+    return false;                                         // storage unavailable/throwing → never auto-reload
+  }
 }
 /** Clear a recovery marker (exported for tests + explicit success paths). */
 export function clearChunkRecoveryMarker(key: string): void {
@@ -63,15 +84,16 @@ export function lazyWithRetry<T>(factory: () => Promise<T>, key: string): () => 
         return mod;
       },
       (err: unknown) => {
-        // Only a genuine stale-chunk failure, and only if we have not already tried, triggers the one reload.
-        if (isChunkLoadError(err) && !readMarker(key)) {
-          setMarker(key);
+        // Only a genuine stale-chunk failure triggers a reload, and only when we can atomically acquire the ONE
+        // reload permit (marker not already set AND it persisted). If storage cannot hold the marker, the permit
+        // is denied and we rethrow instead of reloading — so a broken/unavailable storage can NEVER loop.
+        if (isChunkLoadError(err) && acquireReloadPermit(key)) {
           reloadOnce();
           // Keep the caller suspended (never resolve/reject) while the controlled reload happens, so React does
           // not fall through to the error path before navigation completes.
           return new Promise<T>(() => {});
         }
-        // Non-chunk error, or the reload already happened and it STILL fails → surface honestly (no loop).
+        // Non-chunk error, the reload already happened, or the permit could not be persisted → surface honestly.
         throw err;
       },
     );

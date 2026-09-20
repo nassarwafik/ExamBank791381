@@ -9,6 +9,11 @@ const { getContainer, downloadJsonOrNull } = require("../lib/platform-storage");
 // a stored session before rendering an authenticated app. Never returns secrets/hashes. Always no-store.
 const NO_STORE = { "Cache-Control": "no-store", "Pragma": "no-cache" };
 const UNAUTH = { status: 401, headers: NO_STORE, jsonBody: { ok: false, error: "Unauthorized" } };
+// A 401 is a CONTRACT statement: "this session is definitively invalid — clear it." An internal/transient failure
+// (storage outage, dependency exception, teacher-profile lookup throwing) is NOT a revocation and must never be
+// reported as one, or a valid session gets destroyed by a passing gateway blip. Those return 503 with a generic
+// body only — never the underlying error — so the frontend keeps the token and retries instead of logging out.
+const SERVER_UNAVAILABLE = { status: 503, headers: NO_STORE, jsonBody: { ok: false, error: "Service Unavailable" } };
 
 function isoFromExp(exp) {
   return Number.isInteger(exp) ? new Date(exp * 1000).toISOString() : "";
@@ -64,8 +69,11 @@ async function handler(request, deps = {}, obs = null) {
     obs?.logWarn("auth.session.rejected", { reason: "no_valid_credentials" });
     return UNAUTH;
   } catch (e) {
+    // An UNEXPECTED failure reached here (storage/dependency exception, teacher-profile lookup throwing, etc.).
+    // The clean auth negatives above all RETURN 401 explicitly and never throw — so an exception here is internal,
+    // NOT a revocation. Report 503 (transient/unavailable) so the frontend preserves the session and retries.
     obs?.logError("auth.session.error", e);
-    return UNAUTH;
+    return SERVER_UNAVAILABLE;
   }
 }
 
