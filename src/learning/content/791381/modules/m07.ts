@@ -83,6 +83,15 @@ const m07: ContentModule = {
               id: "m07-l01-p01-sum", type: "callout", origin: "book", kind: "summary", title: "الخلاصة",
               spans: [{ text: "كل جهاز يحتاج عنوانًا ليتواصل مع باقي الأجهزة." }],
             },
+            {
+              // ENRICHMENT (Batch 2): SVG visual enrichment appended after the book content.
+              id: "m07-l01-p01-visual", type: "visual", origin: "teacher-enrichment",
+              visualId: "791381/m07/ip-identity", motion: true,
+              source: src(25),
+              title: "رسم توضيحي: عنوان لكل جهاز",
+              alt: "رسم يبيّن أجهزة على الشبكة يحمل كل منها عنوان IP، ووصول رسالة إلى الجهاز صاحب العنوان المقصود.",
+              caption: "كل جهاز له عنوان خاص، فتصل البيانات إلى الجهاز الصحيح.",
+            },
           ],
         },
         // PDF 26 — IPv4 و IPv6
@@ -105,6 +114,15 @@ const m07: ContentModule = {
                 { text: "في هذه الوحدة نركّز غالبًا على " }, L("IPv4"),
                 { text: " لأنه الأساس في تدريبات الشبكات والامتحانات." },
               ],
+            },
+            {
+              // ENRICHMENT (Batch 2): SVG visual enrichment appended after the book content.
+              id: "m07-l01-p02-visual", type: "visual", origin: "teacher-enrichment",
+              visualId: "791381/m07/ipv4-vs-ipv6", motion: true,
+              source: src(26),
+              title: "مخطط: مقارنة IPv4 و IPv6",
+              alt: "مخطط يقارن عنوان IPv4 المكوّن من 4 مقاطع رقمية بعنوان IPv6 المكوّن من 8 مجموعات.",
+              caption: "IPv4 أقصر (4 مقاطع رقمية)، وIPv6 أطول (8 مجموعات، أرقام وحروف).",
             },
           ],
         },
@@ -267,6 +285,15 @@ const m07: ContentModule = {
               id: "m07-l02-p01-important", type: "callout", origin: "book", kind: "important", title: "مهم",
               spans: [{ text: "العنوان الخاص لا يُستخدم مباشرة على الإنترنت العام، بل داخل الشبكة المحلية فقط." }],
             },
+            {
+              // ENRICHMENT (Batch 2): SVG visual enrichment appended after the book content.
+              id: "m07-l02-p01-visual", type: "visual", origin: "teacher-enrichment",
+              visualId: "791381/m07/private-public", motion: true,
+              source: src(30),
+              title: "رسم توضيحي: خاص وعام",
+              alt: "رسم يبيّن أجهزة بعناوين خاصة داخل شبكة محلية خلف راوتر يتصل بالإنترنت بعنوان عام.",
+              caption: "العناوين الخاصة داخل الشبكة المحلية، والعام هو الوجه نحو الإنترنت.",
+            },
           ],
         },
         // PDF 31 — مجالات العناوين الخاصة (the table is reproduced exactly as rendered)
@@ -352,6 +379,15 @@ const m07: ContentModule = {
               // authoring artifact; the logical content is kept exactly and shown as normal RTL prose.)
               id: "m07-l02-p04-diff", type: "callout", origin: "book", kind: "summary", title: "الفرق الأساسي",
               spans: [L("Dynamic"), { text: " = متغيّر · " }, L("Static"), { text: " = ثابت" }],
+            },
+            {
+              // ENRICHMENT (Batch 2): SVG visual enrichment appended after the book content.
+              id: "m07-l02-p04-visual", type: "visual", origin: "teacher-enrichment",
+              visualId: "791381/m07/static-dynamic", motion: true,
+              source: src(33),
+              title: "مخطط: ثابت ومتغيّر",
+              alt: "مخطط يقارن عنوانًا ثابتًا يُضبط يدويًا بعنوان متغيّر يوزّعه سيرفر DHCP.",
+              caption: "الثابت يُضبط يدويًا، والمتغيّر يوزّعه DHCP وقد يتغيّر.",
             },
           ],
         },

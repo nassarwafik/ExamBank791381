@@ -16,13 +16,46 @@ import NetworkUsesMap from "./791381/chapter1/NetworkUsesMap";
 import SharedPrinterDiagram from "./791381/chapter1/SharedPrinterDiagram";
 import NetworkBuildingBlocks from "./791381/chapter1/NetworkBuildingBlocks";
 import NetworkManagementCycle from "./791381/chapter1/NetworkManagementCycle";
+// Batch 2 — 40-page discovery batch across units m02 (number bases), m07 (IP addresses), m08 (class/subnet/CIDR),
+// m09 (devices). Same data-only, exact-allowlist discipline; ids namespaced per source module.
+import BinaryToDecimal from "./791381/batch2/BinaryToDecimal";
+import HexToBinary from "./791381/batch2/HexToBinary";
+import ConversionMap from "./791381/batch2/ConversionMap";
+import IpIdentity from "./791381/batch2/IpIdentity";
+import Ipv4VsIpv6 from "./791381/batch2/Ipv4VsIpv6";
+import PrivatePublicIp from "./791381/batch2/PrivatePublicIp";
+import StaticDynamicIp from "./791381/batch2/StaticDynamicIp";
+import AddressClasses from "./791381/batch2/AddressClasses";
+import SubnetMask from "./791381/batch2/SubnetMask";
+import SameNetwork from "./791381/batch2/SameNetwork";
+import HubFlood from "./791381/batch2/HubFlood";
+import SwitchUnicast from "./791381/batch2/SwitchUnicast";
+import RouterNetworks from "./791381/batch2/RouterNetworks";
 
 const VISUALS: readonly RegisteredVisual[] = [
+  // Chapter 1 pilot
   { id: "791381/ch1/network-connected-devices", component: NetworkConnectedDevices, motion: true },
   { id: "791381/ch1/network-uses-map", component: NetworkUsesMap, motion: true },
   { id: "791381/ch1/shared-printer", component: SharedPrinterDiagram, motion: true },
   { id: "791381/ch1/network-building-blocks", component: NetworkBuildingBlocks, motion: true },
   { id: "791381/ch1/network-management-cycle", component: NetworkManagementCycle, motion: true },
+  // Batch 2 — number bases (m02)
+  { id: "791381/m02/binary-to-decimal", component: BinaryToDecimal, motion: true },
+  { id: "791381/m02/hex-to-binary", component: HexToBinary, motion: true },
+  { id: "791381/m02/conversion-map", component: ConversionMap, motion: true },
+  // Batch 2 — IP addresses (m07)
+  { id: "791381/m07/ip-identity", component: IpIdentity, motion: true },
+  { id: "791381/m07/ipv4-vs-ipv6", component: Ipv4VsIpv6, motion: true },
+  { id: "791381/m07/private-public", component: PrivatePublicIp, motion: true },
+  { id: "791381/m07/static-dynamic", component: StaticDynamicIp, motion: true },
+  // Batch 2 — class / subnet / CIDR (m08)
+  { id: "791381/m08/address-classes", component: AddressClasses, motion: true },
+  { id: "791381/m08/subnet-mask", component: SubnetMask, motion: true },
+  { id: "791381/m08/same-network", component: SameNetwork, motion: true },
+  // Batch 2 — devices (m09)
+  { id: "791381/m09/hub-flood", component: HubFlood, motion: true },
+  { id: "791381/m09/switch-unicast", component: SwitchUnicast, motion: true },
+  { id: "791381/m09/router-networks", component: RouterNetworks, motion: true },
 ];
 
 // Build the lookup once. A duplicate id is a programming error (a later entry silently shadowing an earlier one), so

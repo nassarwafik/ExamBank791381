@@ -3,19 +3,37 @@ import { describe, it, expect } from "vitest";
 import { resolveVisual, REGISTERED_VISUAL_IDS } from "./registry";
 
 describe("visuals registry", () => {
-  it("enumerates exactly the Chapter 1 pilot visuals (stable, namespaced ids)", () => {
+  it("enumerates exactly the Chapter 1 pilot + Batch 2 visuals (stable, namespaced ids)", () => {
     expect(REGISTERED_VISUAL_IDS).toEqual([
+      // Chapter 1 pilot
       "791381/ch1/network-connected-devices",
       "791381/ch1/network-uses-map",
       "791381/ch1/shared-printer",
       "791381/ch1/network-building-blocks",
       "791381/ch1/network-management-cycle",
+      // Batch 2 — number bases (m02)
+      "791381/m02/binary-to-decimal",
+      "791381/m02/hex-to-binary",
+      "791381/m02/conversion-map",
+      // Batch 2 — IP addresses (m07)
+      "791381/m07/ip-identity",
+      "791381/m07/ipv4-vs-ipv6",
+      "791381/m07/private-public",
+      "791381/m07/static-dynamic",
+      // Batch 2 — class / subnet / CIDR (m08)
+      "791381/m08/address-classes",
+      "791381/m08/subnet-mask",
+      "791381/m08/same-network",
+      // Batch 2 — devices (m09)
+      "791381/m09/hub-flood",
+      "791381/m09/switch-unicast",
+      "791381/m09/router-networks",
     ]);
-    expect(REGISTERED_VISUAL_IDS.length).toBe(5);
+    expect(REGISTERED_VISUAL_IDS.length).toBe(18);
   });
 
-  it("every id is course/chapter namespaced (reusable pattern for later chapters)", () => {
-    for (const id of REGISTERED_VISUAL_IDS) expect(id).toMatch(/^791381\/ch1\/[a-z0-9-]+$/);
+  it("every id is course/namespace scoped (reusable pattern for later chapters)", () => {
+    for (const id of REGISTERED_VISUAL_IDS) expect(id).toMatch(/^791381\/(ch1|m\d{2})\/[a-z0-9-]+$/);
   });
 
   it("resolves each registered id to a component with a motion flag", () => {

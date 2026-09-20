@@ -27,9 +27,10 @@ describe("Phase 3C — numeric table renders LTR (no digit-order reversal)", () 
     expect(heads).toEqual(["128", "64", "32", "16", "8", "4", "2", "1"]);   // authored order preserved in DOM
     const cells = [...table.querySelectorAll("tbody td")].map(td => td.textContent);
     expect(cells).toEqual(["0", "1", "1", "1", "1", "0", "1", "1"]);
-    // the equation + binary example render as LTR code spans with intact digit order
+    // the equation + binary example render as LTR code spans with intact digit order (the Batch-2 SVG visual on this
+    // page also draws the same equation faithfully, so the equation may appear more than once — at least the book one)
     expect(container.querySelector("code[dir=ltr]")).toBeTruthy();
-    expect(screen.getByText("64 + 32 + 16 + 8 + 2 + 1 = 123")).toBeTruthy();
+    expect(screen.getAllByText("64 + 32 + 16 + 8 + 2 + 1 = 123").length).toBeGreaterThanOrEqual(1);
     expect(screen.getAllByText("01111011").length).toBeGreaterThanOrEqual(1);
   });
 

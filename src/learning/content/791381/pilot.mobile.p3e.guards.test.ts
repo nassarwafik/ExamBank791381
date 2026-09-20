@@ -34,6 +34,6 @@ describe("Phase 3E — native content, not a PDF viewer", () => {
     for (const banned of [".pdf", "<iframe", "screenshot", "http://", "https://"]) expect(json, banned).not.toContain(banned);
     const blocks = m07.lessons.flatMap(l => l.pages).flatMap(p => p.blocks);
     expect(blocks.filter(b => b.type === "image" || b.type === "diagram").length).toBe(0);
-    expect(new Set(blocks.map(b => b.type))).toEqual(new Set(["unit-opener", "text", "callout", "list", "table", "practice-table", "interactive-diagram", "guided"]));
+    expect(new Set(blocks.map(b => b.type))).toEqual(new Set(["unit-opener", "text", "callout", "list", "table", "practice-table", "interactive-diagram", "guided", "visual"]));
   });
 });
