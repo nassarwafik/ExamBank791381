@@ -2,7 +2,7 @@
 //
 // This is the ONLY list the API trusts for course/module ids arriving from the browser (the React catalog is a
 // convenience, never an authority). It contains exactly the PRODUCTION-APPROVED, fully converted modules of each
-// book — never skeleton-only modules (791381: m05–m06 have no student content yet, so they are absent here and
+// book — never skeleton-only modules (791381: m06 has no student content yet, so it is absent here and
 // can neither be published nor become student-visible).
 //
 // ORDER is the explicit content order of the book (module `order` in the frontend manifest), NEVER a lexical
@@ -12,7 +12,9 @@
 // m03 — the historical skeleton id completed in place by Batch 6 — is the switch CLI / VLAN section (order 15), m19 is
 // the Batch-7 VTP section (order 16) and m04 — the historical skeleton id completed in place by Batch 7 — is the
 // Trunk / Router on a Stick section (order 17); m20–m22 are the Batch-8 sections Wi-Fi, IPv6 والمنافذ and DHCP
-// (orders 18–20). The skeletons m05 («مرجع أوامر Cisco») and m06 («ACL») remain absent.
+// (orders 18–20), m23–m24 are the Batch-9 sections Port Security and حماية أجهزة Cisco (orders 21–22) and m05 — the
+// historical skeleton id completed in place by Batch 9 — is the command reference (order 23). The skeleton m06 («ACL»)
+// remains absent.
 //
 // FUTURE CONTENT ONBOARDING RULE: when a new unit is converted and approved, the developer appends its module
 // here (id, title, order). That alone makes it PUBLISHABLE (the teacher sees it as «مخفي عن الطلاب»); it is
@@ -57,7 +59,13 @@ const COURSES = [
       // publishable (the teacher sees them as «مخفي عن الطلاب»); NEVER auto-published to any class.
       { moduleId: "791381-m20", title: "Wi-Fi والشبكات اللاسلكية", order: 18 },
       { moduleId: "791381-m21", title: "IPv6 والمنافذ", order: 19 },
-      { moduleId: "791381-m22", title: "بروتوكول DHCP", order: 20 }
+      { moduleId: "791381-m22", title: "بروتوكول DHCP", order: 20 },
+      // Batch 9 phase: Port Security (m23), حماية أجهزة Cisco (m24) — new stable ids — and the historical m05 id
+      // («مرجع أوامر Cisco») completed in place; publishable (the teacher sees them as «مخفي عن الطلاب»); NEVER
+      // auto-published to any class.
+      { moduleId: "791381-m23", title: "Port Security", order: 21 },
+      { moduleId: "791381-m24", title: "حماية أجهزة Cisco", order: 22 },
+      { moduleId: "791381-m05", title: "مرجع أوامر Cisco", order: 23 }
     ]
   }
 ];

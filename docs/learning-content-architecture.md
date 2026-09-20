@@ -1649,6 +1649,126 @@ retroactive CLI exercises in m03 / m19 / m04, no change to any class's `visibleM
 natural candidates for `cli-terminal` challenges — then «مرجع أوامر Cisco» 192–199 where the m05 skeleton's PDF 193–194
 live, and the sixth-batch cover at PDF 200).
 
+## Batch 9 — Port Security · حماية أجهزة Cisco · مرجع أوامر Cisco (source PDF 180–199) — m05 completed IN PLACE
+
+The ninth content phase completes the book's fifth batch (its cover at PDF 158 lists «Port Security · كلمات المرور ·
+مرجع أوامر Cisco» on its second line). The boundary was discovered from the book: **PDF 180–184 is «Port Security»**
+(180 what it is, 181 why / the scenario, 182 the enabling box, 183 sticky MAC, 184 maximum + violation), **PDF 185–191
+is «حماية أجهزة Cisco»** (185 why passwords, 186 the three doors Console / VTY / Enable, 187 the VTY box, 188 the
+Console box, 189 `enable secret` + `service password-encryption`, 190 `show running-config` / `show startup-config`,
+191 the QR trainings page T23–T26), **PDF 192–199 is «مرجع أوامر Cisco»** (192 intro, 193–194 the historical m05
+skeleton pages, 195 VTP + quick passwords, 196 sub-interface / dot1Q, 197 Port Security digest, 198 the `show`
+reference, 199 OSPF / EIGRP / ACL reminders + «الدفعة التالية») and **PDF 200 is the sixth-batch cover** (structural,
+not rendered). Conversion **stops before PDF 200**: no converted body has `pdfPageStart >= 200` and tests assert it
+(the Batch 8 maximum 179 and the m06 skeleton at PDF 227 are pinned too).
+
+### Two NEW stable ids, the historical m05 completed IN PLACE
+
+- **`791381-m23` «Port Security»** (`shortTitle` «Port Security»), order 21, source 180–184. Lessons `l01` ما هو Port
+  Security (180–181) · `l02` أوامر Port Security (182–184).
+- **`791381-m24` «حماية أجهزة Cisco»** (`shortTitle` «حماية الأجهزة»), order 22, source 185–191. Lessons `l01` طرق الدخول إلى
+  أجهزة Cisco (185–186) · `l02` كلمات المرور وعرض الإعدادات (187–190) · `l03` تدريبات نهاية القسم (191, the QR page as
+  static cards with a `conversionNote`; no `library-training`).
+- **`791381-m05` «مرجع أوامر Cisco»** (`shortTitle` «أوامر Cisco»), order 23, source 192–199 — the Phase-2 skeleton
+  whose two historical pages `-l01-p01` (PDF 193, printed 191) and `-l01-p02` (PDF 194, printed 192) were the only
+  known content. **Decision: complete in place** (like m03 in Batch 6 and m04 in Batch 7): the module id, title, the
+  lesson id `791381-m05-l01`, both historical page ids, titles, mappings and keywords are byte-for-byte unchanged; only
+  their `order` moved to 2 / 3 so that PDF 192 (new id `-l01-p03`, order 1) opens the lesson. Two new lessons follow:
+  `l02` VTP و Dot1Q و Port Security (195–197) · `l03` أوامر الفحص وما بعد (198–199). Manifest `order` is the sole
+  authority; a test pins that the historical lines are unchanged.
+- **m06 shifts** to order 24 (id, title, page, mapping untouched). **b5** = `[m20, m21, m22, m23, m24, m05]` (m05 moved
+  from b4 to b5 because the book's fifth-batch cover names «مرجع أوامر Cisco»); **b4** = `[m03, m19, m04]`; b6
+  unchanged. Batch 6–8 bodies (m03, m19, m04, m20, m21, m22) are untouched.
+
+### Source map and module structure
+
+| Section | Source PDF | Module | `order` | Batch | Lessons |
+| --- | --- | --- | --- | --- | --- |
+| «Port Security» | **180–184** | `791381-m23` (new) | 21 | b5 | `l01` ما هو Port Security (180–181) · `l02` أوامر Port Security (182–184) |
+| «حماية أجهزة Cisco» | **185–191** | `791381-m24` (new) | 22 | b5 | `l01` طرق الدخول إلى أجهزة Cisco (185–186) · `l02` كلمات المرور وعرض الإعدادات (187–190) · `l03` تدريبات نهاية القسم (191) |
+| «مرجع أوامر Cisco» | **192–199** | `791381-m05` (completed in place) | 23 | b5 | `l01` الأوامر الأساسية (192, 193, 194) · `l02` VTP و Dot1Q و Port Security (195–197) · `l03` أوامر الفحص وما بعد (198–199) |
+
+- **1 source page → 1 interactive page** (twenty pages); printed page = page circle = PDF index everywhere except the
+  two historical m05 pages, which keep their historical printed numbers 191 / 192 (the book's own footer); no split
+  or merge. PDF 191 (QR trainings) and the OSPF / EIGRP / ACL page 199 carry a `conversionNote`.
+- **CLI fidelity:** the twelve «Cisco CLI» boxes (PDF 182, 183, 184, 187, 188, 189, 190, 193, 194, 195, 196, 197) are
+  `code` blocks (`language: "cli"`, origin book) with the book's exact lines and prompts — including the book's
+  generic `Device(config)#` / `Device(config-line)#` prompts, kept verbatim — each followed by the command / annotation
+  table with an LTR command column. The sample MAC `00A0.1234.5678`, the password `cisco123` and the addresses of
+  PDF 196 are the book's. Nothing the book does not print appears in book-origin blocks; the `show` reference (198)
+  and the routing / ACL reminders (199) are static text and cards, not exercises, because the simulator does not
+  carry those commands.
+
+### CLI simulator extension (v1, same activity `simulation / cli-terminal / v1`)
+
+Batch 8's simulator is extended **only with commands the book prints in PDF 180–199**; the registry entry, the
+component and the exercise kinds are unchanged (the allowlist stays fourteen entries).
+
+- **New mode:** line configuration `(config-line)#` (Arabic label «وضع إعداد خط الدخول»), entered from global config
+  by `line console 0` or `line vty 0 4` (exactly the book's ranges), left by `exit` (→ global) or `end`. The device
+  state gains `lines.console` / `lines.vty` (`password?`, `login`), `selectedLine`, `enableSecret?`,
+  `passwordEncryption`, `banner?`, and each interface gains an optional `portSecurity` record (`enabled`, `maximum?`,
+  `macAddress?`, `sticky?`, `violation?`). Exercises may start in line mode (`startMode: "line"` + `startLine`).
+- **New commands (closed grammar, book lines only):** `switchport port-security`, `switchport port-security maximum
+  N` (1–8192), `switchport port-security mac-address H.H.H` (Cisco dotted MAC), `switchport port-security
+  mac-address sticky`, `switchport port-security violation shutdown` (the book teaches only `shutdown`; `protect` /
+  `restrict` are rejected as invalid values, not silently accepted), `line console 0`, `line vty 0 4`, `password …`,
+  `login`, `enable secret …`, `service password-encryption`, `banner motd <delim>…<delim>` (same non-alphanumeric
+  delimiter first and last, ≤ 200 chars), `show port-security`, `show port-security interface <if>`, `show
+  startup-config` (deterministic «nothing has been saved» simulation text — there is no save command). Every other
+  input stays unknown / incomplete / invalid and never mutates state.
+- **`show running-config`** now prints `service password-encryption`, `enable secret 5 <hidden>`, the banner, the
+  port-security lines and the line blocks (`password 7 <hidden>` once encryption is on, `login`). Secrets are never
+  echoed by any `show` output.
+- **Stricter `config` validation** (`config.ts`, no refactor): per-property validators for interface / port-security /
+  pool / VTP / line / device goal conditions (VLAN 1–4094, canonical interface names, IPv4 and masks, numeric ranges,
+  the Port Security maximum), expectation `args` checked per command (unknown keys rejected), `startLine` required
+  with `startMode: "line"`, preset keys validated. A malformed block still degrades to its static fallback.
+- **Book exercises (twelve, all declarative):** m23 — PDF 182 guided from global config (interface f0/1 → access → the fixed MAC →
+  violation shutdown, the book's four lines), 183 challenge (`switchport port-security` + sticky; only those two
+  accepted, from interface f0/1 preset to access), 184 task (access + enabled + maximum 3 + violation shutdown, judged
+  on final state). m24 — PDF 187 guided VTY box from user EXEC, 188 challenge Console box
+  (`password`, `login` only), 189 task (both lines protected + `enable secret` + `service password-encryption`, six
+  goals), 190 `show` challenge (`show running-config` then `show startup-config`; no configuration command accepted).
+  m05 — PDF 193 guided (hostname, banner, interface, `no shutdown`), 194 challenge (range, access VLAN, VLAN, trunk),
+  195 challenge (VTP server / client, `enable secret`, a **fix-the-command** step: the book's `line vty 0-4` typo must
+  be typed as `line vty 0 4`), 196 router task (dot1Q sub-interface + address), 197 task (Port Security digest). No
+  exercise on PDF 180, 181, 185, 186, 191, 192, 198, 199. Tests drive all twelve with the book's own lines to
+  completion and prove wrong values / wrong modes / the wrong interface keep them open; typed text never reaches
+  events or analytics.
+
+### Pedagogy applied
+
+| Module | Clarifications | Inline practices | Worksheets (`practice-table`) | Closing review | CLI exercises |
+| --- | --- | --- | --- | --- | --- |
+| m23 | 5 (one per page) | 10 | 2 (device → result on 181 · command → function on 184) | 3 on PDF 184 | 3 (182 guided · 183 challenge · 184 task) |
+| m24 | 7 (one per page) | 12 | 1 (access method → command on 186) | 3 on PDF 191 | 4 (187 guided · 188 challenge · 189 task · 190 show challenge) |
+| m05 | 8 (one per page) | 14 | 1 (`show` command → group on 198) | 3 on PDF 199 | 5 (193 guided · 194 challenge · 195 challenge + fix · 196 task · 197 task) |
+
+Practices are educational only (nothing stored, scored or ranked); every wrong-answer feedback says what to **check**
+(«افحص …»), every question carries a two-step hint ladder, every page ends with practice.
+
+### Publication: deployable ≠ published
+
+`api/src/lib/learning-materials-registry.js` lists `m23` (21), `m24` (22), `m05` (23) after m22 — by order, never by
+id. Nothing is auto-published: a real-registry test proves a class released through m22 exposes nothing of m23 / m24 /
+m05, that publishing `[m01, m05]` shows exactly those two, that a mixed list canonicalizes by order, and that m06
+remains the sole unpublishable skeleton (400). No class's `visibleModuleIds` changed.
+
+### Deliberately NOT in this phase
+
+No PDF 200+ (ACL m06, routing, NAT, WAN), no `protect` / `restrict` violation modes, no `copy running-config
+startup-config` / `write memory` (so `show startup-config` is a fixed simulation text), no `show` commands beyond the
+book's boxes (`show mac address-table`, `show ip route`, `show access-lists`, `show interfaces` … of PDF 198 are
+reference text only), no OSPF / EIGRP / ACL commands, no answer reveal after the hint ladder, no persistence of CLI
+sessions, no retroactive CLI exercises in m03 / m19 / m04 / Batch 8 modules, no change to any class's
+`visibleModuleIds`.
+
+### Where the next batch begins
+
+**The next untouched page is PDF 200** (the sixth-batch cover «ACL · التوجيه · WAN»; the m06 skeleton's PDF 227 lives
+in that batch).
+
 ## Phase boundaries
 
 | Phase | Scope | Status |
@@ -1670,7 +1790,8 @@ live, and the sixth-batch cover at PDF 200).
 | **Batch 5** | Book 791381 source PDF **107–119** (PDF 107 part cover not rendered) as complete modules `m17` («أمان الشبكات», order 13) and `m18` («تجزئة البيانات» + the PDF 119 trainings page, order 14); b3 = [m13 … m18]; m03–m06 shift to orders 15–18; activity `tcp-handshake/v1` (registry = 13); server publication registry lists m17–m18 (publishable, never auto-published); next batch begins at PDF 120 | done (merged) |
 | **Batch 6** | Book 791381 source PDF **120–138** (PDF 120 batch cover not rendered) as the historical skeleton `m03` («برمجة السويتش CLI و VLAN», order 15) **completed in place** — historical page ids `-l01-p01` (PDF 123) / `-l01-p02` (PDF 124) preserved with unchanged titles and mappings, PDF 121–122 as new stable ids placed first by `order`; four lessons, eighteen pages, seven CLI `code` blocks, no new activity (registry stays 13); server publication registry lists m03 (publishable, never auto-published); m04–m06 untouched; next untouched page = PDF 139 | done (merged) |
 | Batch 7 | Book 791381 source PDF **139–157** (PDF 139 / 145 section covers not rendered) as NEW module `m19` («إدارة VLAN: VTP», order 16, PDF 140–144) and the historical skeleton `m04` («Trunk و Router on a Stick», order 17, PDF 146–157) **completed in place** — historical page `-l01-p01` (PDF 148) preserved with unchanged title and mapping, PDF 146–147 as new stable ids placed first by `order`; five CLI `code` blocks, no new activity (registry stays 13); server publication registry lists m19 and m04 (publishable, never auto-published); m05–m06 shift to orders 18–19; next untouched page = PDF 158 | done (awaiting review) |
-| **Batch 8 (this)** | Book 791381 source PDF **158–179** (PDF 158 batch cover not rendered) as NEW modules `m20` («Wi-Fi والشبكات اللاسلكية», order 18, PDF 159–165), `m21` («IPv6 والمنافذ», order 19, PDF 166–168) and `m22` («بروتوكول DHCP», order 20, PDF 169–179); two CLI `code` blocks; **the interactive CLI teaching simulator** (`src/learning/cli/`, `simulation / cli-terminal / v1`, registry now 14) with three declarative book exercises on PDF 172–174; server publication registry lists m20–m22 (publishable, never auto-published); m05–m06 shift to orders 21–22; next untouched page = PDF 180 | done (awaiting review) |
+| Batch 8 | Book 791381 source PDF **158–179** (PDF 158 batch cover not rendered) as NEW modules `m20` («Wi-Fi والشبكات اللاسلكية», order 18, PDF 159–165), `m21` («IPv6 والمنافذ», order 19, PDF 166–168) and `m22` («بروتوكول DHCP», order 20, PDF 169–179); two CLI `code` blocks; **the interactive CLI teaching simulator** (`src/learning/cli/`, `simulation / cli-terminal / v1`, registry now 14) with three declarative book exercises on PDF 172–174; server publication registry lists m20–m22 (publishable, never auto-published); m05–m06 shift to orders 21–22; next untouched page = PDF 180 | done (awaiting review) |
+| **Batch 9 (this)** | Book 791381 source PDF **180–199** (PDF 200 sixth-batch cover not rendered) as NEW modules `m23` («Port Security», order 21, PDF 180–184) and `m24` («حماية أجهزة Cisco», order 22, PDF 185–191) and the historical skeleton `m05` («مرجع أوامر Cisco», order 23, PDF 192–199) **completed in place** — historical pages `-l01-p01` / `-l01-p02` (PDF 193–194) preserved with unchanged ids, titles and mappings, PDF 192 as a new stable id placed first by `order`; twelve CLI `code` blocks; the CLI simulator extended with line mode, Port Security, password / secret / banner and two `show` commands (registry stays 14) plus twelve declarative exercises; server publication registry lists m23, m24, m05 (publishable, never auto-published); m06 shifts to order 24; next untouched page = PDF 200 | done (awaiting review) |
 | 4 | Interactive Practice — remaining inline checking families beyond closed-choice worksheets (free text, ordering, evaluator-backed hints) | deferred |
 | 5 | Simulations — real VLAN/subnet/CLI/… renderers registered behind the Phase-3A engine | deferred |
 | 6 | Student Progress — last page, completion, attempts (separate domain; attaches to the no-op event seam) | deferred |
