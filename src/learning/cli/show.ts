@@ -3,6 +3,7 @@
 // terminal labels it as such. Pure functions: state in, lines out. Secrets are never echoed: `enable secret` and
 // encrypted line passwords are shown as hidden placeholders, as a real device would obscure them.
 import type { CliDeviceState, CliLineName, ParsedCommand } from "./types";
+import { aclEntryText, ospfNetworkText, networkOf, prefixLength } from "./normalize";
 
 const ifDisplay = (name: string) => name.replace(/^f/, "FastEthernet").replace(/^g/, "GigabitEthernet").replace(/^e/, "Ethernet").replace(/^vlan/, "Vlan");
 const pad = (s: string, n: number) => (s.length >= n ? s + " " : s.padEnd(n));
@@ -48,8 +49,14 @@ export function runningConfig(state: CliDeviceState): string[] {
       if (ps.sticky) out.push(" switchport port-security mac-address sticky");
       if (ps.macAddress) out.push(" switchport port-security mac-address " + ps.macAddress);
     }
+    if (i.accessGroup) out.push(" ip access-group " + i.accessGroup.acl + " " + i.accessGroup.direction);
     out.push(i.shutdown ? " shutdown" : " no shutdown");
   }
+  if (state.routing.ospf) { out.push("!", "router ospf " + state.routing.ospf.id); for (const n of state.routing.ospf.networks) out.push(" network " + ospfNetworkText(n)); }
+  if (state.routing.eigrp) { out.push("!", "router eigrp " + state.routing.eigrp.id); for (const n of state.routing.eigrp.networks) out.push(" network " + n); }
+  const aclNumbers = Object.keys(state.acls).map(Number).sort((a, b) => a - b);
+  if (aclNumbers.length) out.push("!");
+  for (const n of aclNumbers) for (const e of state.acls[String(n)]) out.push("access-list " + n + " " + aclEntryText(e));
   out.push("!", ...lineBlock(state, "console"), ...lineBlock(state, "vty"), "!", "end");
   return out;
 }
@@ -121,6 +128,20 @@ export function portSecurityInterface(state: CliDeviceState, name: string): stri
   return out;
 }
 
+/**
+ * `show ip route` (PDF 222): the connected routes of every interface that is up and addressed. Routes learned
+ * from OSPF / EIGRP neighbours are not simulated (there is only one device), so the output says so instead of
+ * inventing them.
+ */
+export function ipRoute(state: CliDeviceState): string[] {
+  const out = ["Codes: C - connected, S - static, R - RIP, O - OSPF, D - EIGRP", ""];
+  const rows = Object.entries(state.interfaces).filter(([, i]) => i.ipAddress && i.subnetMask && !i.shutdown);
+  for (const [name, i] of rows) out.push("C    " + networkOf(i.ipAddress!, i.subnetMask!) + "/" + prefixLength(i.subnetMask!) + " is directly connected, " + ifDisplay(name));
+  if (rows.length === 0) out.push("(no connected networks yet: give an interface an address and no shutdown)");
+  if (state.routing.ospf || state.routing.eigrp) out.push("% (simulation) routes learned via " + [state.routing.ospf && "OSPF", state.routing.eigrp && "EIGRP"].filter(Boolean).join(" / ") + " appear only after neighbours exchange updates");
+  return out;
+}
+
 /** Dispatch a parsed `show` command to its formatter. */
 export function showOutput(state: CliDeviceState, cmd: Extract<ParsedCommand, { id: "show" }>): string[] {
   switch (cmd.what) {
@@ -131,5 +152,6 @@ export function showOutput(state: CliDeviceState, cmd: Extract<ParsedCommand, { 
     case "ip-dhcp-pool": return ipDhcpPool(state);
     case "vtp-status": return vtpStatus(state);
     case "port-security": return cmd.iface ? portSecurityInterface(state, cmd.iface) : portSecurity(state);
+    case "ip-route": return ipRoute(state);
   }
 }

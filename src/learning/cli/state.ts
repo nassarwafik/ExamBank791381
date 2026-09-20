@@ -12,6 +12,7 @@ export const CLI_MODE_LABEL: Record<CliMode, string> = {
   vlan: "وضع إعداد VLAN",
   dhcp: "وضع إعداد مجموعة DHCP",
   line: "وضع إعداد خط الدخول",
+  router: "وضع إعداد التوجيه",
 };
 
 /** The prompt suffix of each mode (IOS-style). */
@@ -24,6 +25,7 @@ export const CLI_MODE_SUFFIX: Record<CliMode, string> = {
   vlan: "(config-vlan)#",
   dhcp: "(dhcp-config)#",
   line: "(config-line)#",
+  router: "(config-router)#",
 };
 
 /** The prompt line for a state, e.g. "Router(config-if)#". */
@@ -46,6 +48,7 @@ export function createDeviceState(device: CliDeviceType, hostname = defaultHostn
   return {
     device, hostname, mode: "user", selectedInterfaces: [], interfaces: {}, vlans: {}, dhcpPools: {}, dhcpExcluded: [], vtp: {},
     lines: { console: { login: false }, vty: { login: false } }, passwordEncryption: false,
+    routing: {}, acls: {},
   };
 }
 
@@ -75,6 +78,9 @@ export function createInitialState(exercise: CliExerciseConfig): CliDeviceState 
     if (exercise.startPool) state = { ...state, mode: "dhcp", selectedPool: exercise.startPool, dhcpPools: { ...state.dhcpPools, [exercise.startPool]: state.dhcpPools[exercise.startPool] ?? { dnsServers: [] } } };
   } else if (start === "line") {
     if (exercise.startLine) state = { ...state, mode: "line", selectedLine: exercise.startLine };
+  } else if (start === "router") {
+    // No `startRouter` option: an exercise that needs a routing process starts in global config and enters it.
+    state = { ...state, mode: "global" };
   } else {
     state = { ...state, mode: start };
   }

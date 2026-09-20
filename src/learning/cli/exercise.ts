@@ -5,7 +5,7 @@ import type { CliDeviceState, CliExecResult, CliExerciseConfig, CliExpectation, 
 import { executeCommand } from "./engine";
 import { NAVIGATION_COMMANDS } from "./grammar";
 import { createInitialState, promptFor, CLI_MODE_LABEL } from "./state";
-import { normalizeInterfaceName } from "./normalize";
+import { normalizeInterfaceName, aclEntryText, ospfNetworkText } from "./normalize";
 
 export type CliTone = "success" | "error" | "info";
 export interface CliHistoryEntry {
@@ -72,7 +72,8 @@ function sameValue(actual: unknown, expected: unknown, interfaceNames = false): 
 export function commandMatches(cmd: ParsedCommand, id: ParsedCommand["id"], args?: CliExpectedArgs): boolean {
   if (cmd.id !== id) return false;
   if (!args) return true;
-  const rec = cmd as unknown as Record<string, unknown>;
+  // An access-list expectation pins the entry's fields flat (`action`, `source`, `protocol`, `destination`, `port`).
+  const rec = (cmd.id === "access-list" ? { ...cmd, ...cmd.entry } : cmd) as unknown as Record<string, unknown>;
   return Object.entries(args).every(([k, v]) => sameValue(rec[k], v, k === "interfaces" || k === "name" && id === "interface"));
 }
 
@@ -90,6 +91,7 @@ export function conditionMet(state: CliDeviceState, cond: CliStateCondition): bo
       const name = normalizeInterfaceName(cond.name);
       const i = name ? state.interfaces[name] : undefined;
       if (!i) return false;
+      if (cond.prop === "accessGroup") return sameValue(i.accessGroup ? i.accessGroup.acl + " " + i.accessGroup.direction : undefined, cond.value);
       return sameValue(i[cond.prop], cond.value);
     }
     case "vlan": return Boolean(state.vlans[String(cond.vlanId)]);
@@ -107,6 +109,18 @@ export function conditionMet(state: CliDeviceState, cond: CliStateCondition): bo
     }
     case "line": return sameValue(state.lines[cond.line][cond.prop], cond.value);
     case "device": return sameValue(state[cond.prop], cond.value);
+    case "routing": {
+      const proc = state.routing[cond.protocol];
+      if (!proc) return false;
+      if (cond.prop === "id") return proc.id === cond.value;
+      const texts = cond.protocol === "ospf" ? state.routing.ospf!.networks.map(ospfNetworkText) : state.routing.eigrp!.networks;
+      return texts.some(t => sameValue(t, cond.value));
+    }
+    case "acl": {
+      const list = state.acls[String(cond.number)] ?? [];
+      if (cond.prop === "count") return list.length === cond.value;
+      return list.some(e => sameValue(aclEntryText(e), cond.value));
+    }
   }
 }
 
