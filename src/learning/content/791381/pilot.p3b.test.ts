@@ -89,8 +89,13 @@ describe("Phase 3B — book fidelity: key source concepts are present", () => {
 });
 
 describe("Phase 3B — provenance: book vs teacher-enrichment is explicit and correct", () => {
-  const enrichmentIds = new Set(["m01-l02-p01-scope", "m01-l02-p02-guided"]);
-  it("every book-derived block is origin:book; the two interactive activities are the only teacher-enrichment blocks", () => {
+  // The two interactive activities PLUS the five Chapter-1 SVG visual-enrichment illustrations (pilot). Every other
+  // block on m01 remains faithful book content.
+  const enrichmentIds = new Set([
+    "m01-l02-p01-scope", "m01-l02-p02-guided",
+    "m01-l01-p01-visual", "m01-l01-p02-visual", "m01-l01-p03-visual", "m01-l02-p02-visual", "m01-l02-p03-visual",
+  ]);
+  it("every book-derived block is origin:book; the two activities + five SVG visuals are the only teacher-enrichment blocks", () => {
     const enrich: string[] = [];
     for (const p of allPages) for (const b of p.blocks as ContentBlock[]) {
       if (b.origin === "teacher-enrichment") enrich.push(b.id);

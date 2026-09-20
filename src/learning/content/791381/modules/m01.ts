@@ -1,9 +1,10 @@
 // Learning Materials — Phase 3B PILOT: REAL converted body for Book 791381, module m01 (أساسيات الشبكات).
 //
 // Faithful native conversion of source PDF pages 7–13 (1 source page → 1 interactive page). Book-derived blocks are
-// origin:"book"; added interactive teaching layers (the network-scope diagram, the "حل مع المعلم" guided reveal)
-// are origin:"teacher-enrichment" with a block-level `source` ASSOCIATING them to the page they build on (source
-// association ≠ provenance). Wording is kept faithful to the source (verified against the rendered pages); technical
+// origin:"book"; added interactive teaching layers (the network-scope diagram, the "حل مع المعلم" guided reveal) and
+// the SVG visual-enrichment illustrations (Chapter 1 pilot — `type:"visual"`, resolved by the trusted visuals
+// registry) are origin:"teacher-enrichment" with a block-level `source` ASSOCIATING them to the page they build on
+// (source association ≠ provenance). Wording is kept faithful to the source (verified against the rendered pages); technical
 // strings (PAN/LAN/WAN, Wi-Fi, IP, TCP/IP, ping, ipconfig) render LTR. NOTHING here goes beyond PDF 13.
 //
 // This module is COMPLETE (every m01 manifest page has a body), so it carries no `partial` flag.
@@ -71,6 +72,15 @@ const m01: ContentModule = {
               id: "m01-l01-p01-sum", type: "callout", origin: "book", kind: "summary", title: "الخلاصة",
               spans: [{ text: "بدون شبكة لا تستطيع الأجهزة التواصل مع بعضها بسهولة؛ الشبكة هي ما يجعل الأجهزة تعمل معًا." }],
             },
+            {
+              // ENRICHMENT: SVG visual for the core idea — a network IS connected devices exchanging data.
+              id: "m01-l01-p01-visual", type: "visual", origin: "teacher-enrichment",
+              visualId: "791381/ch1/network-connected-devices", motion: true,
+              source: src(8, 6),
+              title: "رسم توضيحي: الشبكة أجهزة متصلة",
+              alt: "رسم يبيّن أجهزة متصلة بشبكة مركزية تتبادل البيانات فيما بينها.",
+              caption: "تتبادل الأجهزة المتصلة المعلومات عبر الشبكة.",
+            },
           ],
         },
         // PDF 9 — استخدامات الشبكة
@@ -92,6 +102,15 @@ const m01: ContentModule = {
             {
               id: "m01-l01-p02-idea", type: "callout", origin: "book", kind: "important", title: "الفكرة",
               spans: [{ text: "الشبكة تجعل الأجهزة تعمل معًا بدلًا من أن يكون كل جهاز منفصلًا وحيدًا." }],
+            },
+            {
+              // ENRICHMENT: SVG concept map — the four uses radiate from one central network.
+              id: "m01-l01-p02-visual", type: "visual", origin: "teacher-enrichment",
+              visualId: "791381/ch1/network-uses-map", motion: true,
+              source: src(9, 7),
+              title: "مخطط: استخدامات الشبكة",
+              alt: "مخطط إشعاعي يربط شبكة مركزية بأربعة استخدامات: الملفات والإنترنت والتواصل والتعاون.",
+              caption: "الاستخدامات المختلفة تنطلق من شبكة واحدة.",
             },
           ],
         },
@@ -117,6 +136,15 @@ const m01: ContentModule = {
               id: "m01-l01-p03-ex", type: "example", origin: "book", mode: "solved", title: "مثال بسيط",
               steps: [],
               explanation: "في المدرسة يستطيع أكثر من حاسوب استعمال نفس الطابعة عن طريق الشبكة، بدل شراء طابعة لكل جهاز.",
+            },
+            {
+              // ENRICHMENT: SVG for the book's own shared-printer example — many computers, one printer.
+              id: "m01-l01-p03-visual", type: "visual", origin: "teacher-enrichment",
+              visualId: "791381/ch1/shared-printer", motion: true,
+              source: src(10, 8),
+              title: "رسم توضيحي: مشاركة الطابعة",
+              alt: "رسم يبيّن ثلاثة حواسيب تشترك في طابعة واحدة عبر الشبكة.",
+              caption: "عدة حواسيب تشترك في طابعة واحدة عبر الشبكة.",
             },
           ],
         },
@@ -197,6 +225,15 @@ const m01: ContentModule = {
               spans: [{ text: "الشبكة ليست كابلات فقط؛ تحتاج أيضًا إعدادات وأمان وخدمات." }],
             },
             {
+              // ENRICHMENT: SVG for the three foundations that build a network (complements the guided reveal below).
+              id: "m01-l02-p02-visual", type: "visual", origin: "teacher-enrichment",
+              visualId: "791381/ch1/network-building-blocks", motion: true,
+              source: src(12, 10),
+              title: "مخطط: أسس بناء الشبكة",
+              alt: "مخطط يبيّن ثلاثة أسس تحمل شبكة تعمل: البنية التحتية وعناوين IP وبروتوكول الاتصال.",
+              caption: "ثلاثة أسس تحمل شبكة تعمل: بنية تحتية، وعناوين IP، وبروتوكول اتصال.",
+            },
+            {
               // ENRICHMENT: teacher-led "حل مع المعلم" reveal of the three fundamentals. Built-in guided/reveal/v1.
               id: "m01-l02-p02-guided", type: "guided", origin: "teacher-enrichment",
               guidedType: "reveal", version: 1, title: "ما الذي نحتاجه لبناء شبكة؟",
@@ -237,6 +274,15 @@ const m01: ContentModule = {
                 { text: "ipconfig", dir: "ltr", style: "code" },
                 { text: " للتأكد أن الأجهزة تتواصل بشكل صحيح." },
               ],
+            },
+            {
+              // ENRICHMENT: SVG cycle of the four ongoing network-management areas.
+              id: "m01-l02-p03-visual", type: "visual", origin: "teacher-enrichment",
+              visualId: "791381/ch1/network-management-cycle", motion: true,
+              source: src(13, 11),
+              title: "مخطط: دورة إدارة الشبكة",
+              alt: "مخطط دائري يبيّن مجالات إدارة الشبكة الأربعة: التكوين والأمان والخدمات والصيانة.",
+              caption: "الإدارة والصيانة عملية مستمرة تدور بين أربعة مجالات.",
             },
           ],
         },

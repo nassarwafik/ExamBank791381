@@ -407,6 +407,29 @@ export interface PracticeTableBlock extends BlockBase {
   columnDirs?: ContentDirection[];
 }
 
+/**
+ * A native SVG VISUAL enrichment (teacher-enrichment; §13 accessibility). It is NOT a book image and NOT an
+ * interactive activity: it is a lightweight, scalable illustration that helps explain a concept (structure,
+ * comparison, flow, hierarchy, resource sharing …). The block carries ONLY DATA — a registry KEY (`visualId`,
+ * matched against an exact allowlist of trusted repo SVG components; an unknown key renders a faithful "قيد الإعداد"
+ * fallback), a required accessible `alt`, and optional short `title`/`caption` chrome. It never names a component,
+ * path or code, and there is no dynamic import of a content string. Any subtle motion always degrades to a still
+ * frame under prefers-reduced-motion; `motion` merely documents whether the visual animates.
+ */
+export interface VisualBlock extends BlockBase {
+  type: "visual";
+  /** Registry key resolving to a trusted local SVG component (exact allowlist; unknown ⇒ faithful fallback). */
+  visualId: string;
+  /** Accessible description of the illustration (required — a visual is meaningful, never decorative). */
+  alt: string;
+  /** Optional short heading rendered above the figure. */
+  title?: string;
+  /** Optional short caption rendered below the figure. */
+  caption?: string;
+  /** Whether the visual contains subtle motion (documentation only; motion always respects reduced-motion). */
+  motion?: boolean;
+}
+
 /** The canonical, strongly-typed block union. */
 export type ContentBlock =
   | TextBlock
@@ -425,13 +448,14 @@ export type ContentBlock =
   | GuidedBlock
   | InteractiveDiagramBlock
   | LibraryTrainingBlock
-  | PracticeTableBlock;
+  | PracticeTableBlock
+  | VisualBlock;
 
 export type BlockType = ContentBlock["type"];
 /** The closed set of supported block types (used by the validator; keep in sync with the union). */
 export const BLOCK_TYPES: readonly BlockType[] = [
   "text", "heading", "image", "callout", "example", "table", "code", "diagram", "practice", "list", "unit-opener",
-  "simulation", "animation", "guided", "interactive-diagram", "library-training", "practice-table",
+  "simulation", "animation", "guided", "interactive-diagram", "library-training", "practice-table", "visual",
 ];
 export const LIST_VARIANTS: readonly NonNullable<ListBlock["variant"]>[] = ["cards", "checklist", "plain", "ordered"];
 export const CALLOUT_KINDS: readonly CalloutKind[] = ["remember", "important", "warning", "tip", "summary", "clarification"];
