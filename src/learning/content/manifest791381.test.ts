@@ -82,9 +82,9 @@ describe("Phase 3E — historical module ids, titles and source mappings are IMM
 
   it("keeps every pre-existing module id and adds the real Units 4–8, Batch 3, Batch 4 and Batch 5 as the next free ids m08–m18 — nothing renamed/repurposed", () => {
     expect(manifest.modules.map(m => m.id)).toEqual([
-      "791381-m01", "791381-m02", "791381-m07", "791381-m08", "791381-m09", "791381-m10", "791381-m11", "791381-m12", "791381-m13", "791381-m14", "791381-m15", "791381-m16", "791381-m17", "791381-m18", "791381-m03", "791381-m04", "791381-m05", "791381-m06",
+      "791381-m01", "791381-m02", "791381-m07", "791381-m08", "791381-m09", "791381-m10", "791381-m11", "791381-m12", "791381-m13", "791381-m14", "791381-m15", "791381-m16", "791381-m17", "791381-m18", "791381-m03", "791381-m19", "791381-m04", "791381-m05", "791381-m06",
     ]);
-    expect(manifest.modules.map(m => m.order)).toEqual([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18]);
+    expect(manifest.modules.map(m => m.order)).toEqual([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19]);
     expect(byId["791381-m07"].order).toBe(3);          // the book's Unit 3 reads third …
     expect(byId["791381-m08"].order).toBe(4);          // … Unit 4 fourth, Unit 5 fifth …
     expect(byId["791381-m09"].order).toBe(5);
@@ -98,15 +98,16 @@ describe("Phase 3E — historical module ids, titles and source mappings are IMM
     expect(byId["791381-m17"].order).toBe(13);         // Batch 5: أمان الشبكات, تجزئة البيانات …
     expect(byId["791381-m18"].order).toBe(14);
     expect(byId["791381-m03"].order).toBe(15);         // … Batch 6 completed the historical m03 IN PLACE at order 15; the remaining skeletons follow
-    expect(byId["791381-m04"].order).toBe(16);
-    expect(byId["791381-m05"].order).toBe(17);
-    expect(byId["791381-m06"].order).toBe(18);
+    expect(byId["791381-m19"].order).toBe(16);         // Batch 7: the VTP section is a NEW stable id (m19) placed by order before m04 …
+    expect(byId["791381-m04"].order).toBe(17);         // … and the historical m04 was completed IN PLACE at order 17; the remaining skeletons follow
+    expect(byId["791381-m05"].order).toBe(18);
+    expect(byId["791381-m06"].order).toBe(19);
     // the skeletons keep their ids, titles, lesson/page ids and PDF mappings (pinned below) — ONLY `order` moved
-    for (const id of ["791381-m04", "791381-m05", "791381-m06"]) expect(Object.keys(byId[id]).sort(), id).toEqual(["id", "lessons", "order", "shortTitle", "title"].filter(k => k in byId[id]).sort());
-    expect(Object.keys(byId["791381-m03"]).sort()).toEqual(["id", "lessons", "order", "shortTitle", "title"]);   // m03 completed in place: the same TOC shape, no `source` on the ModuleRef
+    for (const id of ["791381-m05", "791381-m06"]) expect(Object.keys(byId[id]).sort(), id).toEqual(["id", "lessons", "order", "shortTitle", "title"].filter(k => k in byId[id]).sort());
+    for (const id of ["791381-m03", "791381-m19", "791381-m04"]) expect(Object.keys(byId[id]).sort(), id).toEqual(["id", "lessons", "order", "shortTitle", "title"]);   // completed modules: the same TOC shape, no `source` on the ModuleRef
   });
 
-  it("pins the historical m03 identity + its two historical pages (completed in place by Batch 6) and the m04–m06 skeleton titles and PDF source mappings exactly (id ≠ unit number ≠ position)", () => {
+  it("pins the historical m03 / m04 identities + their historical pages (completed in place by Batches 6 / 7) and the m05–m06 skeleton titles and PDF source mappings exactly (id ≠ unit number ≠ position)", () => {
     const pages = (id: string) => byId[id].lessons.flatMap(l => l.pages.map(p => [p.id, p.title, p.source!.pdfPageStart, p.source!.printedPage]));
     expect(byId["791381-m03"].title).toBe("برمجة السويتش CLI و VLAN");
     expect(byId["791381-m03"].shortTitle).toBe("CLI و VLAN");
@@ -122,7 +123,17 @@ describe("Phase 3E — historical module ids, titles and source mappings are IMM
     ]);
     expect(pages("791381-m03").map(p => p[2])).toEqual(Array.from({ length: 18 }, (_, i) => 121 + i));
     expect(byId["791381-m04"].title).toBe("Trunk و Router on a Stick");
-    expect(pages("791381-m04")).toEqual([["791381-m04-l01-p01", "أوامر Trunk", 148, 146]]);
+    expect(byId["791381-m04"].shortTitle).toBe("Trunk");
+    expect(byId["791381-m04"].lessons[0]).toMatchObject({ id: "791381-m04-l01", title: "الربط بين السويتشات والتوجيه", order: 1 });
+    // the historical page: id, title, pdfPageStart AND printedPage are byte-for-byte the Phase-2 skeleton values
+    expect(pages("791381-m04").filter(p => p[0] === "791381-m04-l01-p01")).toEqual([["791381-m04-l01-p01", "أوامر Trunk", 148, 146]]);
+    // Batch 7 completed the section IN PLACE: PDF 146–147 precede it as new stable ids (orders 1–2), the historical page reads 3rd, PDF 149–150 follow
+    expect(byId["791381-m04"].lessons[0].pages.map(p => [p.id, p.order, p.source!.pdfPageStart])).toEqual([
+      ["791381-m04-l01-p02", 1, 146], ["791381-m04-l01-p03", 2, 147], ["791381-m04-l01-p01", 3, 148], ["791381-m04-l01-p04", 4, 149], ["791381-m04-l01-p05", 5, 150],
+    ]);
+    expect(pages("791381-m04").map(p => p[2])).toEqual(Array.from({ length: 12 }, (_, i) => 146 + i));
+    expect(byId["791381-m19"].title).toBe("إدارة VLAN: VTP");
+    expect(pages("791381-m19").map(p => p[2])).toEqual([140, 141, 142, 143, 144]);
     expect(byId["791381-m05"].title).toBe("مرجع أوامر Cisco");
     expect(pages("791381-m05")).toEqual([
       ["791381-m05-l01-p01", "أوامر أساسية للجهاز", 193, 191],
@@ -139,7 +150,7 @@ describe("Phase 3E — historical module ids, titles and source mappings are IMM
     const batches = Object.fromEntries(manifest.batches!.map(b => [b.id, b]));
     expect(batches.b1.label).toBe("الأساسيات · الأعداد · IP");
     expect(batches.b1.moduleIds).toEqual(["791381-m01", "791381-m02", "791381-m07", "791381-m08"]);
-    expect(batches.b4.moduleIds).toEqual(["791381-m03", "791381-m04", "791381-m05"]);   // CLI/VLAN NOT moved into b1
+    expect(batches.b4.moduleIds).toEqual(["791381-m03", "791381-m19", "791381-m04", "791381-m05"]);   // CLI/VLAN NOT moved into b1; Batch 7 inserted m19 (VTP) before m04
     expect(batches.b6.moduleIds).toEqual(["791381-m06"]);
   });
 

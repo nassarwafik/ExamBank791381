@@ -2,14 +2,16 @@
 //
 // This is the ONLY list the API trusts for course/module ids arriving from the browser (the React catalog is a
 // convenience, never an authority). It contains exactly the PRODUCTION-APPROVED, fully converted modules of each
-// book — never skeleton-only modules (791381: m04–m06 have no student content yet, so they are absent here and
+// book — never skeleton-only modules (791381: m05–m06 have no student content yet, so they are absent here and
 // can neither be published nor become student-visible).
 //
 // ORDER is the explicit content order of the book (module `order` in the frontend manifest), NEVER a lexical
 // sort of ids: m07 («عناوين IP») is the book's Unit 3 and reads after m02 even though its id is not m03; m08–m10
 // are Units 4–6 (orders 4–6), m11–m12 are Units 7–8 (orders 7–8), m13 is the Batch-3 section «نماذج الاتصال»
 // (order 9), m14–m16 are the Batch-4 sections (orders 10–12), m17–m18 are the Batch-5 sections (orders 13–14) and
-// m03 — the historical skeleton id completed in place by Batch 6 — is the switch CLI / VLAN section (order 15).
+// m03 — the historical skeleton id completed in place by Batch 6 — is the switch CLI / VLAN section (order 15), m19 is
+// the Batch-7 VTP section (order 16) and m04 — the historical skeleton id completed in place by Batch 7 — is the
+// Trunk / Router on a Stick section (order 17).
 //
 // FUTURE CONTENT ONBOARDING RULE: when a new unit is converted and approved, the developer appends its module
 // here (id, title, order). That alone makes it PUBLISHABLE (the teacher sees it as «مخفي عن الطلاب»); it is
@@ -45,7 +47,11 @@ const COURSES = [
       { moduleId: "791381-m18", title: "تجزئة البيانات", order: 14 },
       // Batch 6 phase: the historical m03 id completed in place; publishable (the teacher sees it as «مخفي عن الطلاب»);
       // NEVER auto-published to any class.
-      { moduleId: "791381-m03", title: "برمجة السويتش CLI و VLAN", order: 15 }
+      { moduleId: "791381-m03", title: "برمجة السويتش CLI و VLAN", order: 15 },
+      // Batch 7 phase: the VTP section (new id m19) and the historical m04 id completed in place; publishable (the
+      // teacher sees them as «مخفي عن الطلاب»); NEVER auto-published to any class.
+      { moduleId: "791381-m19", title: "إدارة VLAN: VTP", order: 16 },
+      { moduleId: "791381-m04", title: "Trunk و Router on a Stick", order: 17 }
     ]
   }
 ];

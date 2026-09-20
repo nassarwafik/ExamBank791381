@@ -28,7 +28,7 @@ describe("normalization — getClassLearningMaterials is default-deny and canoni
     expect(getClassLearningMaterials(null)).toEqual([]);
   });
   it("one course: ids trimmed, de-duplicated, unknown/skeleton dropped, canonical order restored", () => {
-    const c = { learningMaterials: [{ courseId: " 791381 ", visibleModuleIds: [M07, " " + M01 + " ", M01, "791381-m04", "791381-m999", "", 7] }] };
+    const c = { learningMaterials: [{ courseId: " 791381 ", visibleModuleIds: [M07, " " + M01 + " ", M01, "791381-m05", "791381-m999", "", 7] }] };
     expect(getClassLearningMaterials(c)).toEqual([{ courseId: "791381", visibleModuleIds: [M01, M07] }]);
   });
   it("empty published list stays attached; empty/unknown courseId entries and non-object entries are ignored", () => {
@@ -61,8 +61,10 @@ describe("normalization — getClassLearningMaterials is default-deny and canoni
     expect(getVisibleLearningModuleIds(c, "791381")).toEqual([M01, M02]);
     expect(classCanSeeLearningModule(c, "791381", M02)).toBe(true);
     expect(classCanSeeLearningModule(c, "791381", M07)).toBe(false);
-    expect(classCanSeeLearningModule(c, "791381", "791381-m04")).toBe(false);
+    expect(classCanSeeLearningModule(c, "791381", "791381-m05")).toBe(false);
     expect(classCanSeeLearningModule(c, "791381", "791381-m03")).toBe(false);   // Batch 6: publishable, but this class never published it
+    expect(classCanSeeLearningModule(c, "791381", "791381-m19")).toBe(false);   // Batch 7: publishable, but this class never published it
+    expect(classCanSeeLearningModule(c, "791381", "791381-m04")).toBe(false);
     expect(JSON.stringify(c)).toBe(before);
   });
 });
@@ -79,7 +81,7 @@ describe("no-auto-publish invariant — DEPLOYMENT ≠ PUBLICATION", () => {
     const student = JSON.stringify(buildStudentLearningMaterials(existing));
     for (const hidden of ["791381-m08", "791381-m09", "791381-m10", "Class و Subnet و CIDR", "أجهزة الشبكات", "أنواع شبكات الاتصال"]) expect(student).not.toContain(hidden);
     const registry = require("../src/lib/learning-materials-registry.js");
-    expect(registry.listLearningModules("791381").map(m => m.moduleId)).toEqual([M01, M02, M07, "791381-m08", "791381-m09", "791381-m10", "791381-m11", "791381-m12", "791381-m13", "791381-m14", "791381-m15", "791381-m16", "791381-m17", "791381-m18", "791381-m03"]);
+    expect(registry.listLearningModules("791381").map(m => m.moduleId)).toEqual([M01, M02, M07, "791381-m08", "791381-m09", "791381-m10", "791381-m11", "791381-m12", "791381-m13", "791381-m14", "791381-m15", "791381-m16", "791381-m17", "791381-m18", "791381-m03", "791381-m19", "791381-m04"]);
     expect(registry.validateLearningModuleIds("791381", ["791381-m10", "791381-m08"])).toEqual(["791381-m08", "791381-m10"]);   // explicit publication path
     expect(JSON.stringify(existing)).not.toContain("m08");                                                                    // the class document is untouched
   });
@@ -156,7 +158,24 @@ describe("no-auto-publish invariant — DEPLOYMENT ≠ PUBLICATION", () => {
     expect(getVisibleLearningModuleIds(c12, "791381")).toEqual([M01, "791381-m03"]);
     const s12 = buildStudentLearningMaterials(c12)[0].modules;
     expect(s12).toEqual([{ moduleId: M01, title: "أساسيات الشبكات", order: 1 }, { moduleId: "791381-m03", title: "برمجة السويتش CLI و VLAN", order: 15 }]);
-    expect(JSON.stringify(s12)).not.toMatch(/m04|m05|m06|m18/);
+    expect(JSON.stringify(s12)).not.toMatch(/m04|m05|m06|m18|m19/);
+  });
+  it("REAL registry (Batch 7): a class released through m03 sees NOTHING of m19 / m04; explicit publication makes them visible in canonical order (16, 17); m05 / m06 stay unpublishable; the class document is untouched", () => {
+    const through03 = [M01, M02, M07, "791381-m08", "791381-m09", "791381-m10", "791381-m11", "791381-m12", "791381-m13", "791381-m14", "791381-m15", "791381-m16", "791381-m17", "791381-m18", "791381-m03"];
+    const existing = room("c13", { learningMaterials: [{ courseId: "791381", visibleModuleIds: through03 }] });
+    expect(getVisibleLearningModuleIds(existing, "791381")).toEqual(through03);
+    const student = JSON.stringify(buildStudentLearningMaterials(existing));
+    for (const hidden of ["791381-m19", "791381-m04", "VTP", "Trunk و Router on a Stick"]) expect(student).not.toContain(hidden);
+    const registry = require("../src/lib/learning-materials-registry.js");
+    expect(registry.findLearningModule("791381", "791381-m19")).toEqual({ moduleId: "791381-m19", title: "إدارة VLAN: VTP", order: 16 });
+    expect(registry.findLearningModule("791381", "791381-m04")).toEqual({ moduleId: "791381-m04", title: "Trunk و Router on a Stick", order: 17 });
+    expect(registry.validateLearningModuleIds("791381", ["791381-m04", "791381-m19", "791381-m03"])).toEqual(["791381-m03", "791381-m19", "791381-m04"]);   // by order, never by id
+    expect(JSON.stringify(existing)).not.toMatch(/m19|m04/);
+    const c14 = room("c14", { learningMaterials: [{ courseId: "791381", visibleModuleIds: [M01, "791381-m04"] }] });   // publishing m04 alone (without m19) is allowed
+    expect(getVisibleLearningModuleIds(c14, "791381")).toEqual([M01, "791381-m04"]);
+    const s14 = buildStudentLearningMaterials(c14)[0].modules;
+    expect(s14).toEqual([{ moduleId: M01, title: "أساسيات الشبكات", order: 1 }, { moduleId: "791381-m04", title: "Trunk و Router on a Stick", order: 17 }]);
+    expect(JSON.stringify(s14)).not.toMatch(/m19|m05|m06|m03/);
   });
   it("a NEWLY registered module (future Unit 4) is NOT appended to any existing class's visibleModuleIds", () => {
     const future = {
@@ -243,7 +262,7 @@ describe("handler — setLearningCourseModules", () => {
     const before = JSON.stringify(doc(ctx, "c1"));
     expect((await post(ctx, { action: "setLearningCourseModules", classId: "c1", courseId: "794589", moduleIds: [] })).status).toBe(400);
     expect((await setModules(ctx, "c1", ["791381-m999"])).status).toBe(400);
-    expect((await setModules(ctx, "c1", ["791381-m04"])).status).toBe(400);   // m04 is still skeleton-only (m03 became publishable in Batch 6)
+    expect((await setModules(ctx, "c1", ["791381-m05"])).status).toBe(400);   // m05 is still skeleton-only (m03 / m19 / m04 became publishable in Batches 6 / 7)
     expect((await post(ctx, { action: "setLearningCourseModules", classId: "c1", moduleIds: [] })).status).toBe(400);
     expect(JSON.stringify(doc(ctx, "c1"))).toBe(before);
   });
