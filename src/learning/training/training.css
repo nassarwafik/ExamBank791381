@@ -41,3 +41,8 @@
 .learning-training-review-line, .learning-training-review-hint{ margin:0; color:var(--eb-text); line-height:var(--eb-lh-body); display:flex; flex-wrap:wrap; gap:var(--eb-space-2); align-items:baseline; }
 .learning-training-review-hint{ color:var(--eb-muted); font-size:var(--eb-fs-14); }
 .learning-training-tag{ padding:1px var(--eb-space-2); border-radius:var(--eb-pill); background:var(--eb-primary-050); color:var(--eb-primary-strong); font-size:var(--eb-fs-12); font-weight:var(--eb-fw-semibold); white-space:nowrap; }
+
+/* A question the server's grader could not auto-grade (open question of a final exam): neutral, not "wrong". */
+.learning-training-review-item.is-manual{ border-inline-start-color:var(--eb-muted); }
+.learning-training-mark.is-manual{ color:var(--eb-muted); }
+.learning-training-review-manual{ color:var(--eb-muted); }

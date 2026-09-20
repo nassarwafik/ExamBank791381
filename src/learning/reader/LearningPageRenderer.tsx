@@ -328,7 +328,10 @@ function LibraryTrainingView({ block, host }: { block: LibraryTrainingBlock; hos
   const solved = !!best && best.attempts > 0;
   return (
     <section className={"learning-reader-training " + (available ? "is-available" : "is-pending")} aria-labelledby={headingId}>
-      <p id={headingId} className="learning-reader-training-label">{block.label}</p>
+      <p className="learning-reader-training-head">
+        <span className="learning-reader-training-code" dir="ltr">{block.trainingId}</span>
+        <span id={headingId} className="learning-reader-training-label">{block.label}</span>
+      </p>
       {!host && <p className="learning-reader-training-note">يُحلّ هذا التدريب تفاعليًا من داخل المنصة.</p>}
       {status?.kind === "loading" && <p className="learning-reader-training-note" role="status">جارٍ التحقق من إتاحة التدريب...</p>}
       {status?.kind === "error" && (

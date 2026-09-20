@@ -37,8 +37,12 @@ export type TrainingReviewRow = {
   questionId: string;
   questionNumber: number;
   correct: boolean;
+  /** The server's grader could not auto-grade this question (e.g. an open question of a final exam). */
+  manualReview?: boolean;
   chosenIndex: number | null;
   correctOptionIndex: number | null;
+  /** Post-submit key of a non-choice question (matching / table pairs) as the item's own answer text. */
+  correctText?: string;
   hint: string;
 };
 export type TrainingResult = {

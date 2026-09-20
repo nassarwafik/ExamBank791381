@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { IconChevronBack, IconCheck, IconClose } from "../../icons";
-import StudentQuestionCard, { qid, answered, optionsFor, type Answer, type Question } from "../../StudentQuestionCard";
+import StudentQuestionCard, { qid, answered, optionsFor, type Answer, type FieldValue, type Question } from "../../StudentQuestionCard";
 import type { TrainingClient, TrainingLoadResponse, TrainingSubmitResponse } from "./types";
 import "./training.css";
 
@@ -15,6 +15,14 @@ const optionText = (q: Question, index: number | null) => {
   if (index === null || index === undefined) return "";
   const o = optionsFor(q)[index];
   return o ? String(o.text || o.label || o.value || "") : "";
+};
+/** The learner's OWN answer of a non-choice question (matching / table / sequence / open text) as plain text. */
+const answerText = (a: Answer | undefined): string => {
+  if (!a) return "";
+  if (a.kind === "text") return a.value.trim();
+  if (a.kind === "sequence" || a.kind === "table") return a.values.map(v => (typeof v === "boolean" ? (v ? "صحيح" : "غير صحيح") : String(v ?? ""))).filter(v => v !== "").join(" · ");
+  if (a.kind === "fields") return Object.values(a.values).map(v => (Array.isArray(v) ? v.join(" ") : String(v ?? ""))).filter(v => v !== "").join(" · ");
+  return "";
 };
 
 /**
@@ -56,6 +64,26 @@ export default function LearningTrainingRunner({ trainingId, actor, client, onEx
   }, [phase.kind]);
 
   const setChoice = useCallback((id: string, index: number) => setAnswers(a => ({ ...a, [id]: { kind: "choice", index } })), []);
+  // The other answer kinds the student exam's question primitive collects (matching / table pairs, word-bank
+  // sequences, open text, generalized fields) — the final exams for training (F01–F06) mix them with MCQs. The
+  // shapes are the student exam's own `Answer` union; the server grades them with the same grader.
+  const setSeq = useCallback((id: string, index: number, value: string) => setAnswers(a => {
+    const prev = a[id];
+    const values = prev?.kind === "sequence" ? [...prev.values] : [];
+    values[index] = value;
+    return { ...a, [id]: { kind: "sequence", values } };
+  }), []);
+  const setTable = useCallback((id: string, index: number, value: string | boolean) => setAnswers(a => {
+    const prev = a[id];
+    const values = prev?.kind === "table" ? [...prev.values] : [];
+    values[index] = value;
+    return { ...a, [id]: { kind: "table", values } };
+  }), []);
+  const setText = useCallback((id: string, value: string) => setAnswers(a => ({ ...a, [id]: { kind: "text", value } })), []);
+  const setField = useCallback((id: string, fieldId: string, value: FieldValue) => setAnswers(a => {
+    const prev = a[id];
+    return { ...a, [id]: { kind: "fields", values: { ...(prev?.kind === "fields" ? prev.values : {}), [fieldId]: value } } };
+  }), []);
 
   async function submit(data: TrainingLoadResponse) {
     setPhase({ kind: "submitting", data });
@@ -134,20 +162,26 @@ export default function LearningTrainingRunner({ trainingId, actor, client, onEx
           <h3 className="learning-training-subtitle">مراجعة الإجابات</h3>
           <ol className="learning-training-review-list">
             {questions.map((q, i) => {
-              const row = byId.get(qid(q, i));
+              const id = qid(q, i);
+              const row = byId.get(id);
               const right = row?.correct === true;
+              const manual = row?.manualReview === true && !right;
+              const own = answers[id];
+              const mine = own?.kind === "choice" ? optionText(q, row?.chosenIndex ?? own.index) : answerText(own);
+              const key = row?.correctOptionIndex !== null && row?.correctOptionIndex !== undefined ? optionText(q, row.correctOptionIndex) : (row?.correctText || "");
               return (
-                <li key={qid(q, i)} className={"learning-training-review-item " + (right ? "is-right" : "is-wrong")}>
+                <li key={id} className={"learning-training-review-item " + (right ? "is-right" : manual ? "is-manual" : "is-wrong")}>
                   <p className="learning-training-review-head">
-                    <span className={"learning-training-mark " + (right ? "is-right" : "is-wrong")}>
+                    <span className={"learning-training-mark " + (right ? "is-right" : manual ? "is-manual" : "is-wrong")}>
                       {right ? <IconCheck size={14} aria-hidden="true" /> : <IconClose size={14} aria-hidden="true" />}
-                      {right ? "صحيح" : "غير صحيح"}
+                      {right ? "صحيح" : manual ? "لا يُصحَّح تلقائيًا" : "غير صحيح"}
                     </span>
                     <span className="learning-training-review-num">السؤال {row?.questionNumber ?? i + 1}</span>
                   </p>
                   <p className="learning-training-review-text">{q.text}</p>
-                  <p className="learning-training-review-line"><span className="learning-training-tag">إجابتك</span>{optionText(q, row?.chosenIndex ?? null) || "لم تُجب"}</p>
-                  {!right && <p className="learning-training-review-line"><span className="learning-training-tag">الإجابة الصحيحة</span>{optionText(q, row?.correctOptionIndex ?? null)}</p>}
+                  <p className="learning-training-review-line"><span className="learning-training-tag">إجابتك</span>{mine || "لم تُجب"}</p>
+                  {!right && key && <p className="learning-training-review-line"><span className="learning-training-tag">الإجابة الصحيحة</span>{key}</p>}
+                  {manual && <p className="learning-training-review-line learning-training-review-manual">سؤال مقالي يُراجعه المعلّم؛ لا تُحتسب علامته تلقائيًا في هذا التدريب.</p>}
                   {row?.hint && <p className="learning-training-review-hint"><span className="learning-training-tag">تلميح</span>{row.hint}</p>}
                 </li>
               );
@@ -183,9 +217,10 @@ export default function LearningTrainingRunner({ trainingId, actor, client, onEx
               id={"training-" + id}
               answer={answers[id]}
               onChoice={n => setChoice(id, n)}
-              onSeq={() => {}}
-              onTable={() => {}}
-              onText={() => {}}
+              onSeq={(n, v) => setSeq(id, n, v)}
+              onTable={(n, v) => setTable(id, n, v)}
+              onText={v => setText(id, v)}
+              onField={(f, v) => setField(id, f, v)}
               disabled={submitting}
             />
           );

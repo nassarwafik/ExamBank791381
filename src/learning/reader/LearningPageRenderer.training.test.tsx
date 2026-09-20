@@ -84,6 +84,15 @@ describe("library-training card — host-decided states", () => {
     expect(within(c1).getByRole("button", { name: "ابدأ التدريب" })).toBeTruthy();
     expect(within(c1).queryByText(/أفضل نتيجة:/)).toBeNull();
   });
+  it("every card shows the canonical library code (T01 / T03) as an LTR badge next to the printed label, in every host state", () => {
+    draw(hostOf({ T01: { kind: "available", title: "أساسيات الشبكات", best: null }, T03: { kind: "unavailable" } }));
+    const c1 = card("تدريب 1"), c3 = card("تدريب 3");
+    const code1 = c1.querySelector(".learning-reader-training-code")!, code3 = c3.querySelector(".learning-reader-training-code")!;
+    expect([code1.textContent, code1.getAttribute("dir"), code3.textContent, code3.getAttribute("dir")]).toEqual(["T01", "ltr", "T03", "ltr"]);
+    cleanup();
+    draw();
+    expect(card("تدريب 1").querySelector(".learning-reader-training-code")!.textContent).toBe("T01");   // no host → still the safe code
+  });
   it("the card never emits answer-key vocabulary or training titles the host did not disclose", () => {
     const { container } = draw(hostOf({ T01: { kind: "unavailable" }, T03: { kind: "unavailable" } }));
     const html = container.innerHTML;
