@@ -5,6 +5,10 @@
 //
 //   FINALIZED EXAMS   — each server-finalized assignment result            = 100 points
 //   T-SERIES PRACTICE — each unique training's BEST percentage             = round(best × 25 / 100)  (≤ 25)
+//                       ONLY the T-series trainings (T01, T02, …) count. The F-series «امتحانات نهائية للتدريب»
+//                       (F01–F06) are solved through the same Learning-Practice runner and keep a best result for
+//                       practice history, but contribute 0 — their open questions cannot be auto-graded, so their
+//                       automatic percentage must never move a rank (see trainingCountsTowardStrength).
 //   PROJECTS          — each enrolled project's authoritative progress     = round(overallProgress × 4)  (≤ 400)
 //
 //   totalStrengthPoints = examPoints + practicePoints + projectPoints
@@ -22,6 +26,8 @@
 
 const FINALIZED_EXAM_STRENGTH_POINTS = 100;
 const TRAINING_MAX_STRENGTH_POINTS = 25;
+// The ONE rule deciding which Learning-Practice ids feed Strength: the T-series only (id = "T" + digits).
+const STRENGTH_TRAINING_ID = /^T\d+$/;
 const PROJECT_MAX_STRENGTH_POINTS = 400;
 const RANK_STEP_STRENGTH_POINTS = 400;
 const RANK_ORDER = ["beginner", "bronze", "silver", "gold", "diamond", "legendary"];
@@ -46,21 +52,34 @@ function roundPoints(value) {
 function strengthFromFinalizedCount(finalizedCount) {
   return safeCount(finalizedCount) * FINALIZED_EXAM_STRENGTH_POINTS;
 }
-/** Practice contribution of ONE training from its best percentage: 40 → 10, 60 → 15, 80 → 20, 100 → 25. */
+/** Practice contribution of ONE T-series training from its best percentage: 40 → 10, 60 → 15, 80 → 20, 100 → 25. */
 function strengthFromTrainingBest(bestPercentage) {
   return roundPoints(clampPercent(bestPercentage) * TRAINING_MAX_STRENGTH_POINTS / 100);
+}
+/** Whether a Learning-Practice id contributes to Strength: T01…T30 → true; F01…F06 (and anything else) → false. */
+function trainingCountsTowardStrength(trainingId) {
+  return STRENGTH_TRAINING_ID.test(String(trainingId || "").trim());
+}
+/** The ceiling advertised for one id: 25 for a T-series training, 0 for an F-series final exam for training. */
+function trainingMaxStrengthPoints(trainingId) {
+  return trainingCountsTowardStrength(trainingId) ? TRAINING_MAX_STRENGTH_POINTS : 0;
+}
+/** Practice contribution of ONE id from its best percentage — 0 for every non-T id whatever the percentage. */
+function strengthFromTrainingResult(trainingId, bestPercentage) {
+  return trainingCountsTowardStrength(trainingId) ? strengthFromTrainingBest(bestPercentage) : 0;
 }
 /** Project contribution from authoritative overallProgress: 0 → 0, 1 → 4, 25 → 100, 50 → 200, 75 → 300, 100 → 400. */
 function strengthFromProjectProgress(overallProgress) {
   return roundPoints(clampPercent(overallProgress) * PROJECT_MAX_STRENGTH_POINTS / 100);
 }
-/** Practice total from a trainings map { T01: { bestPercentage } … } (stored bestPoints are never trusted). */
+/** Practice total from a trainings map { T01: { bestPercentage } … }: stored bestPoints are never trusted, and an
+ *  entry stored under a non-T id (F01–F06 practice history) adds 0 whatever it contains. */
 function practicePointsFromTrainings(trainings) {
   if (!trainings || typeof trainings !== "object") return 0;
   let total = 0;
-  for (const entry of Object.values(trainings)) {
+  for (const [trainingId, entry] of Object.entries(trainings)) {
     if (!entry || typeof entry !== "object") continue;
-    total += strengthFromTrainingBest(entry.bestPercentage);
+    total += strengthFromTrainingResult(trainingId, entry.bestPercentage);
   }
   return total;
 }
@@ -109,6 +128,7 @@ function buildStrengthSummary({ finalizedCount, trainings, projects } = {}) {
 
 module.exports = {
   FINALIZED_EXAM_STRENGTH_POINTS, TRAINING_MAX_STRENGTH_POINTS, PROJECT_MAX_STRENGTH_POINTS, RANK_STEP_STRENGTH_POINTS, RANK_ORDER,
-  clampPercent, strengthFromFinalizedCount, strengthFromTrainingBest, strengthFromProjectProgress, practicePointsFromTrainings,
+  clampPercent, strengthFromFinalizedCount, strengthFromTrainingBest, trainingCountsTowardStrength, trainingMaxStrengthPoints,
+  strengthFromTrainingResult, strengthFromProjectProgress, practicePointsFromTrainings,
   rankTierFromStrength, strengthProgress, buildStrengthSummary
 };

@@ -128,10 +128,14 @@ export default function LearningTrainingRunner({ trainingId, actor, client, onEx
   const total = questions.length;
   const answeredCount = questions.filter((q, i) => answered(answers[qid(q, i)])).length;
   const maxPoints = data.training.maxPoints;
+  // The SERVER decides whether this item feeds Unified Strength (T-series yes, F-series final exams no). The runner
+  // only mirrors it: no Strength-point promise, ceiling or gain is ever shown for an item the server marks ineligible.
+  const strengthEligible = data.training.strengthEligible !== false && maxPoints > 0;
 
   if (phase.kind === "result") {
     const { result, practice, persisted } = phase.outcome;
     const byId = new Map(result.review.map(r => [r.questionId, r]));
+    const manualCount = result.review.filter(r => r.manualReview === true && r.correct !== true).length;
     return (
       <div className="learning-training" dir="rtl" ref={rootRef}>
         {backButton}
@@ -141,15 +145,26 @@ export default function LearningTrainingRunner({ trainingId, actor, client, onEx
           <dl className="learning-training-summary">
             <div><dt>الإجابات الصحيحة</dt><dd><span dir="ltr" className="learning-training-num">{result.correctCount} / {result.questionCount}</span> إجابات صحيحة</dd></div>
             <div><dt>النسبة</dt><dd><span dir="ltr" className="learning-training-num">{result.percentage}%</span></dd></div>
-            {actor === "student" && persisted && practice && (
+            {actor === "student" && persisted && practice && strengthEligible && (
               <div><dt>نقاط التقوية</dt><dd><span dir="ltr" className="learning-training-num">{practice.earnedPoints} / {practice.maxPoints}</span> نقاط تقوية</dd></div>
             )}
           </dl>
-          {actor === "student" && persisted && practice && (
+          {manualCount > 0 && (
+            <p className="learning-training-note learning-training-note-manual" role="status">
+              النسبة المعروضة تلقائية: {manualCount === 1 ? "سؤال مقالي واحد" : `${manualCount} أسئلة مقالية`} لا يُصحَّح تلقائيًا، وعلاماته غير مُحتسبة في النتيجة التلقائية.
+            </p>
+          )}
+          {actor === "student" && persisted && practice && strengthEligible && (
             <p className="learning-training-note" role="status">
               {practice.improved
                 ? (practice.pointsGained > 0 ? `تحسّنت أفضل نتيجتك: +${practice.pointsGained} نقاط قوة.` : "تحسّنت أفضل نتيجتك.")
                 : `أفضل نتيجتك المحفوظة ما زالت ${practice.bestPercentage}% (${practice.bestPoints} / ${practice.maxPoints} نقاط تقوية) — المحاولات لا تُنقصها أبدًا.`}
+            </p>
+          )}
+          {actor === "student" && persisted && practice && !strengthEligible && (
+            <p className="learning-training-note" role="status">
+              {practice.improved ? "تحسّنت أفضل نتيجتك التلقائية." : `أفضل نتيجتك التلقائية المحفوظة ما زالت ${practice.bestPercentage}% — المحاولات لا تُنقصها أبدًا.`}
+              {" "}امتحان للتدريب: لا يمنح نقاط تقوية.
             </p>
           )}
           {actor === "teacher" && <p className="learning-training-note" role="status">معاينة المعلم: النتيجة لا تُحفظ ولا تُمنح عنها نقاط.</p>}
@@ -181,7 +196,7 @@ export default function LearningTrainingRunner({ trainingId, actor, client, onEx
                   <p className="learning-training-review-text">{q.text}</p>
                   <p className="learning-training-review-line"><span className="learning-training-tag">إجابتك</span>{mine || "لم تُجب"}</p>
                   {!right && key && <p className="learning-training-review-line"><span className="learning-training-tag">الإجابة الصحيحة</span>{key}</p>}
-                  {manual && <p className="learning-training-review-line learning-training-review-manual">سؤال مقالي يُراجعه المعلّم؛ لا تُحتسب علامته تلقائيًا في هذا التدريب.</p>}
+                  {manual && <p className="learning-training-review-line learning-training-review-manual">سؤال مقالي لا يُصحَّح تلقائيًا؛ علامته غير مُحتسبة في النتيجة التلقائية لهذا التدريب.</p>}
                   {row?.hint && <p className="learning-training-review-hint"><span className="learning-training-tag">تلميح</span>{row.hint}</p>}
                 </li>
               );
@@ -201,10 +216,15 @@ export default function LearningTrainingRunner({ trainingId, actor, client, onEx
         <h2 className="learning-training-title" tabIndex={-1}>{data.training.title}</h2>
         <p className="learning-training-meta">
           <span>{total} أسئلة</span>
-          {actor === "student" && <span>حتى {maxPoints} نقطة تقوية</span>}
+          {actor === "student" && strengthEligible && <span>حتى {maxPoints} نقطة تقوية</span>}
+          {actor === "student" && !strengthEligible && <span>امتحان للتدريب — بلا نقاط تقوية</span>}
           {data.best && <span>أفضل نتيجة: <span dir="ltr">{data.best.bestPercentage}%</span></span>}
         </p>
-        <p className="learning-training-hintline">تدريب حرّ: أعده كما تشاء — تُحفظ أفضل نتيجة فقط ولا تُحسب كواجب.</p>
+        <p className="learning-training-hintline">
+          {strengthEligible
+            ? "تدريب حرّ: أعده كما تشاء — تُحفظ أفضل نتيجة فقط ولا تُحسب كواجب."
+            : "امتحان للتدريب الحرّ: أعده كما تشاء — تُحفظ أفضل نتيجة تلقائية فقط، لا يُحسب كواجب ولا يمنح نقاط تقوية؛ الأسئلة المقالية لا تُصحَّح تلقائيًا."}
+        </p>
       </header>
       <div className="learning-training-questions iex-list">
         {questions.map((q, i) => {

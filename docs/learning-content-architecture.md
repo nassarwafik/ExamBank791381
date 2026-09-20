@@ -694,8 +694,17 @@ Strength                →  api/src/lib/student-strength.js    →  dashboard `
   (post-submission only). The **F-series** final exams (multiple choice + matching + open questions) go through the
   SAME sanitizer, grader, runner and best-score flow: matching keys (`answer.text`, field `correct` flags) never reach
   the student before submission; open questions are `manualReview` rows that the grader keeps in the total, so the
-  automatic percentage of an exam with open questions cannot reach 100% (F01 max 98%, F06 max 85%) — the existing
-  scoring rule, not a new one.
+  automatic percentage of an exam with open questions cannot reach 100% (F01 max 94%, F06 max 85%) — the existing
+  scoring rule, not a new one, and never "corrected" to 100.
+- **T-series vs F-series Strength (server authority).** Only the T-series feeds Unified Strength.
+  `student-strength.js` owns the rule (`trainingCountsTowardStrength`: id = `T` + digits), and every path applies it:
+  `practicePointsFromTrainings` (the dashboard / profile total) adds 0 for any non-T id whatever the entry holds;
+  `learning-practice.js` derives the persisted `bestPoints` through `strengthFromTrainingResult` (F → 0 on every
+  normalization and write, so a stored, client-sent or malformed value can never become points); the API advertises
+  `strengthEligible: false` and `maxPoints: 0` on every F row and returns `bestPoints / earnedPoints / pointsGained
+  = 0` after an F submission. F entries still keep `bestPercentage`, `attempts` and `lastCompletedAt` as practice
+  history (best never lowers). T01–T30 semantics are unchanged (up to 25 each). Regression suite:
+  `api/tests/learning-practice-strength-fseries.test.js`.
 - **Best-score storage.** `platform/learning-practice/<studentId>.json` (CAS via `mutateJsonWithRetry`), one entry
   per training: `bestPercentage`, `bestPoints = round(best% × 25 / 100)`, `attempts`, `lastCompletedAt`. Retries are
   a **max-merge**: nothing lowers the best, a duplicate never double-awards, concurrent submits converge. The API
@@ -716,6 +725,11 @@ Strength                →  api/src/lib/student-strength.js    →  dashboard `
   `StudentQuestionCard` emits (choice, sequence, table / matching, text, fields), so the F-series shapes render
   without a second surface (`LearningTrainingRunner.fseries.test.tsx`). «أعد التدريب» restarts without re-fetching.
   The card header shows the canonical library code (`T05`, `F01`, `dir="ltr"`) beside the printed label.
+  **Strength messaging mirrors the server flag:** a T-series item shows «حتى 25 نقطة تقوية», the earned «n / 25
+  نقاط تقوية» and «+n نقاط قوة»; an item the server marks `strengthEligible: false` (F01–F06) shows «امتحان للتدريب
+  — بلا نقاط تقوية», never a ceiling, earned points or gain, keeps the automatic result and best, and says that
+  open questions are not part of the automatic score. The Reader card omits the «نقاط التقوية» fragment when
+  `best.maxPoints` is 0. No teacher-grading workflow is promised anywhere.
 - **One host** — `src/learning/training/LearningReaderWithTraining.tsx` — used by both `StudentReader` and the
   teacher's `LearningMaterialsPage`. It mounts the SAME `LearningReader` with the `training` seam, reads the list
   **once per mount** (and once more when a training closes — never per block), swaps the Reader for the runner and
@@ -754,7 +768,7 @@ it (`src/studentRank.ts` keeps the compatible helpers for the six-rank ladder).
 | Source | Points | Rule |
 | --- | --- | --- |
 | Finalized exam | 100 each | `FINALIZED_EXAM_STRENGTH_POINTS` — the old 4-exam-per-rank boundaries are unchanged (4 × 100 = 400) |
-| Training (T01–T30, F01–F06) | up to 25 each | `round(best% × 25 / 100)` — best only; retries never lower it |
+| Training (T01–T30 only) | up to 25 each | `round(best% × 25 / 100)` — best only; retries never lower it. F01–F06 (final exams for training) are stored as practice history but contribute **0** |
 | Project | up to 400 each | `round(overallProgress × 400 / 100)` from `core.buildStudentSummary()` — derived, never incremented; a reset lowers it |
 
 - **Ladder:** one step per 400 points — 0–399 none, 400 بذرة القوة (beginner), 800 شعلة صغيرة (bronze), 1200 نمر
@@ -2102,7 +2116,7 @@ because m28 exists, no change to any class's `visibleModuleIds`.
 | Batch 9 | Book 791381 source PDF **180–199** (PDF 200 sixth-batch cover not rendered) as NEW modules `m23` («Port Security», order 21, PDF 180–184) and `m24` («حماية أجهزة Cisco», order 22, PDF 185–191) and the historical skeleton `m05` («مرجع أوامر Cisco», order 23, PDF 192–199) **completed in place** — historical pages `-l01-p01` / `-l01-p02` (PDF 193–194) preserved with unchanged ids, titles and mappings, PDF 192 as a new stable id placed first by `order`; twelve CLI `code` blocks; the CLI simulator extended with line mode, Port Security, password / secret / banner and two `show` commands (registry stays 14) plus twelve declarative exercises; server publication registry lists m23, m24, m05 (publishable, never auto-published); m06 shifts to order 24; next untouched page = PDF 200 | done (awaiting review) |
 | Batch 10 | Book 791381 source PDF **200–229** (PDF 200 sixth-batch cover not rendered) as NEW modules `m25` («مراجعة الأوامر», order 24, PDF 201–206), `m26` («الشبكة الواسعة WAN», order 25, PDF 207–209), `m27` («بروتوكولات التوجيه», order 26, PDF 210–222) and the historical skeleton `m06` («قوائم التحكم ACL», order 27, PDF 223–229) **completed in place** — historical page `-l01-p01` (PDF 227, printed 225) preserved with unchanged id, title and mapping, PDF 223–226 as new stable ids placed first by `order`; twelve CLI `code` boxes; the CLI simulator extended with the router mode (OSPF / EIGRP `network` forms), numbered standard / extended ACLs, `ip access-group` and `show ip route` (registry stays 14) plus fifteen declarative exercises; server publication registry lists m25, m26, m27, m06 (publishable, never auto-published) — every manifest module now has a body; next untouched page = PDF 230 | done (merged) |
 | **Final summary (this)** | Book 791381 source PDF **230–264** (PDF 230 section cover and PDF 264 back cover not rendered) as the NEW module `m28` («الملخّص الشامل», order 28, the LAST module; fills the manifest's «summary» grouping) — eight lessons, 33 learner pages PDF 231–263 (printed 229–260 for 231–262), nine CLI `code` boxes; the CLI simulator extended with `switchport trunk native vlan`, the minimal static / default route `ip route … <next-hop>` (shown as `S` / `S*` routes) and the EIGRP optional wildcard (registry stays 14) plus ten declarative exercises; server publication registry lists m28 (publishable, never auto-published); the unknown-id test sentinel moves to `791381-m29`; the book is fully converted | done (awaiting review) |
-| **Learning Practice T05–T30 / F01–F06 (this)** | The remaining 32 Exam-Library items connected to the six book review pages (Reader positions 98, 110, 145, 178, 214, 215) as metadata-only `library-training` blocks, one per real library id, grouped as the book groups them; the ONE server registry extended to the full catalog with the catalog's titles and pageRange-derived gates; the shared runner extended to the F-series shapes (matching, open / manual review) with no second surface; no external QR / GitHub Pages links, no question copies, no assignment / gradebook / publication change | done (awaiting review) |
+| **Learning Practice T05–T30 / F01–F06 (this)** | The remaining 32 Exam-Library items connected to the six book review pages (Reader positions 98, 110, 145, 178, 214, 215) as metadata-only `library-training` blocks, one per real library id, grouped as the book groups them; the ONE server registry extended to the full catalog with the catalog's titles and pageRange-derived gates; the shared runner extended to the F-series shapes (matching, open / manual review) with no second surface; F01–F06 keep practice history but contribute 0 Unified Strength (server rule, T01–T30 unchanged); no external QR / GitHub Pages links, no question copies, no assignment / gradebook / publication change | done (awaiting review) |
 | 4 | Interactive Practice — remaining inline checking families beyond closed-choice worksheets (free text, ordering, evaluator-backed hints) | deferred |
 | 5 | Simulations — real VLAN/subnet/CLI/… renderers registered behind the Phase-3A engine | deferred |
 | 6 | Student Progress — last page, completion, attempts (separate domain; attaches to the no-op event seam) | deferred |

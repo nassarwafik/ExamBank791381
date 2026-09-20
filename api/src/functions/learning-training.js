@@ -9,7 +9,7 @@ const { sanitizeExamForStudent } = require("../lib/student-exam-sanitize");
 const { gradeExam } = require("../lib/assignment-grading");
 const { listLearningTrainings, findLearningTraining, trainingAllowedForClass } = require("../lib/learning-training-registry");
 const { practiceDocName, normalizePracticeDoc, trainingEntry, applyTrainingResult } = require("../lib/learning-practice");
-const { TRAINING_MAX_STRENGTH_POINTS } = require("../lib/student-strength");
+const { trainingCountsTowardStrength, trainingMaxStrengthPoints } = require("../lib/student-strength");
 
 // Learning Practice API — the SAFE delivery of the book's Learning-Practice items (the T-series trainings T01–T30
 // and the F-series final exams for training F01–F06 — all real Exam Library items) and their server-side grading. Self-study only: NO assignment record, no due date, no gradebook entry, no attempt limit,
@@ -17,6 +17,10 @@ const { TRAINING_MAX_STRENGTH_POINTS } = require("../lib/student-strength");
 //   GET  /api/learning-training                     → the trainings for the caller (student: gated, with best results)
 //   GET  /api/learning-training/{trainingId}        → the SANITIZED exam (no answer keys, no hints) — student gated
 //   POST /api/learning-training/{trainingId}/submit → server grading; student results persisted as BEST-score
+//
+// Strength: only the T-series feeds Unified Strength (student-strength.js). The F-series final exams for training
+// run through the very same routes, grading and best-score storage, but every response advertises
+// strengthEligible: false / maxPoints: 0 and their persisted bestPoints / earnedPoints / pointsGained are 0.
 //
 // Actors: a builder (teacher) token → may review/solve any training regardless of class publication, nothing is
 // persisted; otherwise an active student session → the PERSISTED student.classId (never the token's) → current
@@ -38,15 +42,15 @@ async function resolveActor(request, deps) {
 
 /** Public training metadata (never the exam). */
 function trainingMeta(t, extra = {}) {
-  return { trainingId: t.trainingId, order: t.order, label: t.label, requiredModuleId: t.requiredModuleId, courseId: t.courseId, ...extra };
+  return { trainingId: t.trainingId, order: t.order, label: t.label, requiredModuleId: t.requiredModuleId, courseId: t.courseId, strengthEligible: trainingCountsTowardStrength(t.trainingId), ...extra };
 }
-function bestOf(entry) {
-  return { bestPercentage: entry.bestPercentage, bestPoints: entry.bestPoints, maxPoints: TRAINING_MAX_STRENGTH_POINTS, attempts: entry.attempts, lastCompletedAt: entry.lastCompletedAt };
+function bestOf(entry, trainingId) {
+  return { bestPercentage: entry.bestPercentage, bestPoints: entry.bestPoints, maxPoints: trainingMaxStrengthPoints(trainingId), attempts: entry.attempts, lastCompletedAt: entry.lastCompletedAt };
 }
 /** `best` is exposed ONLY once the student has attempted the training (attempts > 0): a never-attempted training has
  *  no best result — a real 0% attempt does (bestPercentage 0, attempts ≥ 1). Teacher context has no entry at all. */
-function bestIfAttempted(entry) {
-  return entry && Number(entry.attempts) > 0 ? { best: bestOf(entry) } : {};
+function bestIfAttempted(entry, trainingId) {
+  return entry && Number(entry.attempts) > 0 ? { best: bestOf(entry, trainingId) } : {};
 }
 
 async function handler(request, deps = {}, obs = null) {
@@ -79,7 +83,7 @@ async function handler(request, deps = {}, obs = null) {
         // Disclosure rule: a training's TITLE is shown only when it is available to this caller.
         if (!available) return trainingMeta(t, { available: false });
         const entry = actor.kind === "student" ? trainingEntry(practiceDoc, t.trainingId) : null;
-        return trainingMeta(t, { available: true, title: t.title, ...bestIfAttempted(entry) });
+        return trainingMeta(t, { available: true, title: t.title, ...bestIfAttempted(entry, t.trainingId) });
       });
       return { status: 200, jsonBody: { ok: true, actor: actor.kind, trainings } };
     }
@@ -94,7 +98,7 @@ async function handler(request, deps = {}, obs = null) {
     if (method === "GET" && !action) {
       const questionCount = Array.isArray(item.examSnapshot.questions) ? item.examSnapshot.questions.length : Number(item.questionCount || 0);
       const entry = actor.kind === "student" ? trainingEntry(practiceDoc, training.trainingId) : null;
-      return { status: 200, jsonBody: { ok: true, actor: actor.kind, training: trainingMeta(training, { title: training.title, questionCount, totalMarks: Number(item.examSnapshot.totalMarks || item.totalMarks || 0), maxPoints: TRAINING_MAX_STRENGTH_POINTS }), exam: sanitizeExamForStudent(item.examSnapshot), ...bestIfAttempted(entry) } };
+      return { status: 200, jsonBody: { ok: true, actor: actor.kind, training: trainingMeta(training, { title: training.title, questionCount, totalMarks: Number(item.examSnapshot.totalMarks || item.totalMarks || 0), maxPoints: trainingMaxStrengthPoints(training.trainingId) }), exam: sanitizeExamForStudent(item.examSnapshot), ...bestIfAttempted(entry, training.trainingId) } };
     }
 
     // ── submit ──
@@ -141,7 +145,7 @@ async function handler(request, deps = {}, obs = null) {
         if (e instanceof StorageConflictError) return { status: 503, jsonBody: { ok: false, error: CONFLICT_MESSAGE } };
         throw e;
       }
-      return { status: 200, jsonBody: { ok: true, actor: "student", persisted: true, result, practice: { ...bestOf(outcome.after), improved: outcome.improved, pointsGained: outcome.pointsGained, earnedPoints: outcome.after.bestPoints } } };
+      return { status: 200, jsonBody: { ok: true, actor: "student", persisted: true, result, practice: { ...bestOf(outcome.after, training.trainingId), improved: outcome.improved, pointsGained: outcome.pointsGained, earnedPoints: outcome.after.bestPoints } } };
     }
 
     return { status: 405, jsonBody: { ok: false, error: "Unsupported learning-training request." } };

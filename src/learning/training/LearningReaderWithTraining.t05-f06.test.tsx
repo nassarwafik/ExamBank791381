@@ -29,7 +29,7 @@ const LIST98: TrainingListEntry[] = [
   meta("T10", 10, "تدريب 10", "791381-m13"), meta("T11", 11, "تدريب 11", "791381-m14"), meta("T12", 12, "تدريب 12", "791381-m15"),
 ];
 const LIST215: TrainingListEntry[] = [
-  meta("F01", 31, "الامتحان الأول", "791381-m06", { available: true, title: "نموذج A — 2025" }),
+  meta("F01", 31, "الامتحان الأول", "791381-m06", { available: true, strengthEligible: false, title: "نموذج A — 2025", best: { bestPercentage: 94, bestPoints: 0, maxPoints: 0, attempts: 2, lastCompletedAt: null } }),
   ...["الثاني", "الثالث", "الرابع", "الخامس", "السادس"].map((n, i) => meta(`F0${i + 2}`, 32 + i, "الامتحان " + n, "791381-m06")),
 ];
 const questions = (id: string, n = 4): Question[] => Array.from({ length: n }, (_, i) => ({
@@ -37,7 +37,7 @@ const questions = (id: string, n = 4): Question[] => Array.from({ length: n }, (
   options: [{ value: "0", text: "أ" }, { value: "1", text: "ب" }], answer: {}, hint: "",
 } as unknown as Question));
 const loaded = (entry: TrainingListEntry, title: string): TrainingLoadResponse =>
-  ({ ok: true, actor: "student", training: { ...entry, title, questionCount: 4, totalMarks: 100, maxPoints: 25 }, exam: { questions: questions(entry.trainingId) } });
+  ({ ok: true, actor: "student", training: { ...entry, title, questionCount: 4, totalMarks: 100, maxPoints: entry.strengthEligible === false ? 0 : 25 }, exam: { questions: questions(entry.trainingId) } });
 const graded = (id: string): TrainingSubmitResponse => ({
   ok: true, actor: "student", persisted: true,
   result: { correctCount: 4, questionCount: 4, score: 100, totalMarks: 100, percentage: 100, review: questions(id).map((q, i) => ({ questionId: q.examQuestionId!, questionNumber: i + 1, correct: true, chosenIndex: 0, correctOptionIndex: 0, hint: "" })) },
@@ -119,11 +119,14 @@ describe("Reader position 215 (791381-m06-l02-p02) — F01–F06 under «امت�
     const cards = labels.map(n => screen.getByRole("region", { name: n }));
     expect(cards.map(code)).toEqual(["F01", "F02", "F03", "F04", "F05", "F06"]);
     expect(within(cards[0]).getByText("نموذج A — 2025")).toBeTruthy();
+    // an F-series best result is shown WITHOUT Strength points (the server advertises maxPoints 0)
+    expect(within(cards[0]).getByText(/أفضل نتيجة:/).textContent).toBe("أفضل نتيجة: 94%");
+    expect(within(cards[0]).getByRole("button", { name: "أعد التدريب" })).toBeTruthy();
     for (const c of cards.slice(1)) {
       expect((within(c).getByRole("button", { name: "ابدأ التدريب" }) as HTMLButtonElement).disabled).toBe(true);
       expect(c.textContent).not.toMatch(/نموذج|بجروت/);
     }
-    await solveAndReturn(within(cards[0]).getByRole("button", { name: "ابدأ التدريب" }), "نموذج A — 2025", pageHeading, P215, "F01", client);
+    await solveAndReturn(within(cards[0]).getByRole("button", { name: "أعد التدريب" }), "نموذج A — 2025", pageHeading, P215, "F01", client);
     expect(screen.getByRole("region", { name: "الامتحان الأول" })).toBeTruthy();
   }, T);
 });

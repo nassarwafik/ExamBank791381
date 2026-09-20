@@ -1,14 +1,19 @@
-// Learning Practice — the per-student summary of T-series training results, the source of the PRACTICE part of
+// Learning Practice — the per-student summary of Learning-Practice results, the source of the PRACTICE part of
 // Unified Strength. Storage: platform/learning-practice/<studentId>.json, ONE document per student:
 //
 //   { schemaVersion: 1, trainings: { T01: { bestPercentage, bestPoints, attempts, lastPercentage, lastCompletedAt } } }
+//
+// T-SERIES vs F-SERIES: every id (T01–T30 trainings, F01–F06 final exams for training) keeps its best result and
+// attempts here as practice history, but bestPoints is derived through the Strength policy's id rule
+// (strengthFromTrainingResult): a T entry earns up to 25, an F entry is ALWAYS 0 — stored, client-sent or
+// malformed values under an F id can never become points.
 //
 // BEST-SCORE, NOT A COUNTER (anti-farming): a retry only ever raises bestPercentage (max-merge), so repeated
 // solving cannot create points; bestPoints is re-derived from bestPercentage through the Strength policy on
 // every write, and readers (the dashboard) recompute from bestPercentage rather than trusting stored points.
 // Writes go through mutateJsonWithRetry (CAS): two overlapping submissions resolve to max(bestA, bestB), and a
 // duplicate request cannot double-award. Pure helpers here; the HTTP orchestration lives in the function.
-const { strengthFromTrainingBest, clampPercent } = require("./student-strength");
+const { strengthFromTrainingResult, clampPercent } = require("./student-strength");
 
 const PRACTICE_PREFIX = "platform/learning-practice/";
 const practiceDocName = studentId => PRACTICE_PREFIX + String(studentId || "").trim() + ".json";
@@ -23,7 +28,7 @@ function normalizePracticeDoc(doc) {
     const attempts = Number.isFinite(Number(entry.attempts)) && Number(entry.attempts) > 0 ? Math.floor(Number(entry.attempts)) : 0;
     out.trainings[id] = {
       bestPercentage,
-      bestPoints: strengthFromTrainingBest(bestPercentage),
+      bestPoints: strengthFromTrainingResult(id, bestPercentage),
       attempts,
       lastPercentage: Math.round(clampPercent(entry.lastPercentage)),
       lastCompletedAt: String(entry.lastCompletedAt || "")
@@ -48,7 +53,7 @@ function applyTrainingResult(doc, trainingId, percentage, now) {
   const bestPercentage = Math.max(before.bestPercentage, pct);
   const after = {
     bestPercentage,
-    bestPoints: strengthFromTrainingBest(bestPercentage),
+    bestPoints: strengthFromTrainingResult(trainingId, bestPercentage),
     attempts: before.attempts + 1,
     lastPercentage: pct,
     lastCompletedAt: String(now || new Date().toISOString())
@@ -57,7 +62,7 @@ function applyTrainingResult(doc, trainingId, percentage, now) {
   return { doc: normalized, before, after, improved: after.bestPercentage > before.bestPercentage, pointsGained: after.bestPoints - before.bestPoints };
 }
 
-/** Total practice Strength = Σ bestPoints (each re-derived from bestPercentage). Pure. */
+/** Total practice Strength = Σ bestPoints (each re-derived from bestPercentage; F ids contribute 0). Pure. */
 function practicePointsOf(doc) {
   return Object.values(normalizePracticeDoc(doc).trainings).reduce((sum, t) => sum + t.bestPoints, 0);
 }
