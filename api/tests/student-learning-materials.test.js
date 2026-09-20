@@ -48,11 +48,11 @@ describe("student-learning-materials — safe catalog from the class's publicati
     const { r } = await call(ctx);
     expect(r.jsonBody).toEqual({ ok: true, materials: [] });
   });
-  it("Case 4: storage contains m999 (+ skeleton m03): omitted, default-denied; nothing echoed", async () => {
-    const ctx = createMemoryContainer({ [USR("u1")]: student("u1", "cA"), [CLS("cA")]: room("cA", [{ courseId: "791381", visibleModuleIds: [M01, "791381-m999", "791381-m03"] }, { courseId: "999999", visibleModuleIds: ["999999-m01"] }]) });
+  it("Case 4: storage contains m999 (+ skeleton m04): omitted, default-denied; nothing echoed", async () => {
+    const ctx = createMemoryContainer({ [USR("u1")]: student("u1", "cA"), [CLS("cA")]: room("cA", [{ courseId: "791381", visibleModuleIds: [M01, "791381-m999", "791381-m04"] }, { courseId: "999999", visibleModuleIds: ["999999-m01"] }]) });
     const { r } = await call(ctx);
     expect(r.jsonBody.materials).toEqual([{ courseId: "791381", title: "شبكات الاتصال", modules: [{ moduleId: M01, title: "أساسيات الشبكات", order: 1 }] }]);
-    expect(JSON.stringify(r.jsonBody)).not.toMatch(/m999|m03|999999/);
+    expect(JSON.stringify(r.jsonBody)).not.toMatch(/m999|m04|m03|999999/);
   });
   it("Case 5: token says class A, persisted student is in class B → class B's publication wins", async () => {
     const ctx = createMemoryContainer({
@@ -148,9 +148,11 @@ describe("learning-materials-catalog — teacher catalog endpoint", () => {
       { moduleId: "791381-m15", title: "أوامر فحص الشبكة", order: 11 },
       { moduleId: "791381-m16", title: "المجالات والمفاهيم", order: 12 },
       { moduleId: "791381-m17", title: "أمان الشبكات", order: 13 },
-      { moduleId: "791381-m18", title: "تجزئة البيانات", order: 14 }
+      { moduleId: "791381-m18", title: "تجزئة البيانات", order: 14 },
+      // Batch 6: the historical m03 id completed in place — listed = publishable, never auto-visible; LAST by order 15.
+      { moduleId: "791381-m03", title: "برمجة السويتش CLI و VLAN", order: 15 }
     ] }] });
-    expect(JSON.stringify(r.jsonBody)).not.toMatch(/m03|m04|m05|m06|pages|lessons|blocks|answer|pdf/i);
+    expect(JSON.stringify(r.jsonBody)).not.toMatch(/m04|m05|m06|pages|lessons|blocks|answer|pdf/i);
   });
   it("unauthenticated → 401", async () => {
     const r = await catalog(breq(), { requireBuilderAuth: () => ({ ok: false, response: { status: 401, jsonBody: { ok: false, error: "Unauthorized" } } }) });
