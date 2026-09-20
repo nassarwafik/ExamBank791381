@@ -16,7 +16,7 @@
 // (orders 18–20), m23–m24 are the Batch-9 sections Port Security and حماية أجهزة Cisco (orders 21–22) and m05 — the
 // historical skeleton id completed in place by Batch 9 — is the command reference (order 23); m25–m27 are the Batch-10
 // sections مراجعة الأوامر, WAN and بروتوكولات التوجيه (orders 24–26) and m06 — the historical skeleton id completed in
-// place by Batch 10 — is the ACL section (order 27).
+// place by Batch 10 — is the ACL section (order 27); m28 is the final summary «الملخّص الشامل» (order 28), the last module.
 //
 // FUTURE CONTENT ONBOARDING RULE: when a new unit is converted and approved, the developer appends its module
 // here (id, title, order). That alone makes it PUBLISHABLE (the teacher sees it as «مخفي عن الطلاب»); it is
@@ -74,7 +74,10 @@ const COURSES = [
       { moduleId: "791381-m25", title: "مراجعة الأوامر", order: 24 },
       { moduleId: "791381-m26", title: "الشبكة الواسعة WAN", order: 25 },
       { moduleId: "791381-m27", title: "بروتوكولات التوجيه", order: 26 },
-      { moduleId: "791381-m06", title: "قوائم التحكم ACL", order: 27 }
+      { moduleId: "791381-m06", title: "قوائم التحكم ACL", order: 27 },
+      // Final summary phase: the book's closing reference «الملخّص الشامل» (PDF 230–263) — new stable id m28, the LAST
+      // module; publishable (the teacher sees it as «مخفي عن الطلاب»); NEVER auto-published to any class.
+      { moduleId: "791381-m28", title: "الملخّص الشامل", order: 28 }
     ]
   }
 ];

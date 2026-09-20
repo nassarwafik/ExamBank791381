@@ -1891,7 +1891,8 @@ Practices are educational only (nothing stored, scored or ranked); every wrong-a
 `api/src/lib/learning-materials-registry.js` lists `m25` (24), `m26` (25), `m27` (26) and `m06` (27) after m05 — by
 order, never by id. With them, every module of the manifest is listed: the registry no longer has a skeleton to
 withhold, so the tests that used m06 as the «unpublishable skeleton» example now use an id outside the manifest
-(`791381-m28`) for the unknown-id cases. Nothing is auto-published: a real-registry test proves a class released
+for the unknown-id cases (`791381-m28` at the time; since the final summary made m28 real, that sentinel is
+`791381-m29`). Nothing is auto-published: a real-registry test proves a class released
 through m05 exposes nothing of Batch 10, that publishing `[m01, m06]` shows exactly those two, and that a mixed list
 canonicalizes by order with m06 last. No class's `visibleModuleIds` changed.
 
@@ -1905,10 +1906,136 @@ to any class's `visibleModuleIds`.
 
 ### Where the next batch begins
 
-**The next untouched page is PDF 230** (the «مرجع نهائي · الملخّص الشامل» divider, then the glossary, closing word,
-visual summary and worked examples up to the last page 264). Every manifest module now has a body; the remaining
-pages are reference material whose presentation (a glossary module, a summary module) is a decision for the next
-phase.
+**The next untouched page was PDF 230** (the «مرجع نهائي · الملخّص الشامل» divider); the final summary phase below
+converts it as the last module `m28`.
+
+## Final summary — الملخّص الشامل (source PDF 230–264) — m28, the LAST module
+
+The closing phase converts the book's final reference. Discovered from the rendered pages: **PDF 230 is the section
+cover «مرجع نهائي — الملخّص الشامل · أهمّ المفاهيم والأوامر والمصطلحات في سبعة أقسام متسلسلة»** (structural, not a learner
+page — recorded like every earlier section cover as the module's coarse source start + `sourceNote`); **PDF 231–262
+are the seven summary sections** under the running header «الملخّص الشامل · <section>»; **PDF 263 is «كلمة الختام»**
+(the author's closing word, no printed number); **PDF 264 is the back cover** (title, description, the six batches
+with their page ranges, the QR to the trainings site, the author and 2026–2027 — metadata only, **not converted**).
+The book has no glossary pages: the cover's «قاموس شامل» line names the summary tables themselves.
+
+**Printed pages:** the page circle of PDF 231–262 shows the PDF index, but the running-header number is **229–260 =
+PDF − 2**; `printedPage` records that header number (a test pins printed 229–260 ↔ PDF 231–262 and no printed number
+for PDF 263).
+
+### One NEW stable id, the summary grouping filled
+
+- **`791381-m28` «الملخّص الشامل»** (`shortTitle` «الملخّص»), order **28** — after m06 (27), the last module of the
+  course. Eight lessons in the book's section order: `l01` الأساسيات (231–236) · `l02` النماذج والبروتوكولات (237–240)
+  · `l03` العنونة والتجزئة (241–244) · `l04` التبديل و VLANs (245–250) · `l05` التوجيه (251–253) · `l06` الأمان
+  (254–257) · `l07` الخدمات والأوامر (258–262) · `l08` كلمة الختام (263). **33 learner pages, 1 book page → 1
+  interactive page**, no split or merge.
+- **Manifest:** only `{ id: "summary", label: "التلخيص", moduleIds: [] }` changed → `["791381-m28"]`. `intro` stays
+  empty (the book's introduction pages were never converted into a module), b1–b6 unchanged, orders exactly 1..28.
+  No b7: the final reference is the book's own «التلخيص» grouping.
+- **Navigation:** m06 PDF 229 → m28 PDF 231 (230 skipped), 231 → … → 263; PDF 263 has no next page; PDF 264 never
+  appears in the sequence. Batch 6–10 bodies are untouched (their shapes are pinned again).
+
+### Source map
+
+| Section | Source PDF | Lesson | Pages |
+| --- | --- | --- | --- |
+| cover «مرجع نهائي — الملخّص الشامل» | **230** | — (module source start only) | 0 |
+| الأساسيات | **231–236** | `l01` | IP / MAC / Subnet / Gateway / Static vs DHCP + private ranges · IPv4 classes · numeral systems + the 128…1 boxes · devices → layer · cables / media / Straight-Cross-Roll-over · PAN / LAN / MAN / WAN / WLAN |
+| النماذج والبروتوكولات | **237–240** | `l02` | OSI seven layers + «All People Seem To Need Data Processing» · protocol → port table + ARP / ICMP · TCP vs UDP · Data → Segment → Packet → Frame → Bit |
+| العنونة والتجزئة | **241–244** | `l03` | special addresses + Unicast / Multicast / Broadcast · three solved subnetting examples + طريقة الحل · wildcard table + rule · IPv6 structure + shortening + special addresses |
+| التبديل و VLANs | **245–250** | `l04` | VLAN / VTP / Trunk / DMZ / VPN · VLAN + Trunk CLI (+ `switchport trunk native vlan 99`) · VTP modes + CLI · Router on a Stick CLI · STP + flooding / learning · Metro-Ethernet + VLAN |
+| التوجيه | **251–253** | `l05` | Static / Dynamic / Default + `ip route 192.168.2.0 255.255.255.0 10.0.0.2` · AD table · RIP / OSPF / EIGRP / BGP comparison + the OSPF / EIGRP lines |
+| الأمان | **254–257** | `l06` | attacks table + الوقاية · Port Security CLI + Shutdown / Restrict / Protect · console / vty / enable secret / encryption + SSH · Standard / Extended ACL + the four ACL lines |
+| الخدمات والأوامر | **258–262** | `l07` | NAT / PAT / APIPA · DORA + DHCP pool CLI + `ipconfig /release` / `/renew` · TCP three-way handshake · open-a-website DNS → ARP → TCP → HTTP/HTTPS · Windows CMD table + `show` table + «تمّ بحمد الله» |
+| كلمة الختام | **263** | `l08` | the four closing sentences + المؤلف (static, respectful, no forced quiz) |
+| back cover | **264** | — (not converted) | 0 |
+
+- **Content fidelity:** every summary table is a book `table` with the printed values (classes, ports, AD, wildcard,
+  IPv6 shortening steps, attacks, CMD / show); the book's «الفكرة» / «تذكّر» / «للتذكّر» / «انتبه» / «القاعدة» /
+  «الوقاية» / «شرط أساسي» / «النتيجة» boxes are book callouts; the nine CLI boxes (PDF 246, 247, 248, 251, 253, 255,
+  256, 257, 259) are book `code` blocks with the exact lines and prompts (`Device(config)#`, `Switch(config)#`,
+  `R(config)#`, `Router(config)#`, `R(dhcp-config)#`, the «/» that joins two commands on one printed line), each
+  followed by its command table (LTR command column). Arrow glyphs are written as «ثم»; technical tokens are LTR code
+  spans. Summary pages stay summaries: nothing beyond the book's own lines is added to a book block.
+- **Teacher enrichment:** exactly one «توضيح المعلّم» per page (33), 1–2 practices per page (41 inline practices:
+  21 multipleChoice · 6 trueFalse · 14 shortInput · **0 fillBlank**; 16 `practice-table` worksheets: private /
+  public, class from the first octet, device → layer, cable → use, network scope, protocol → port, TCP / UDP /
+  both, PDU per layer, special address → meaning, mask → wildcard, AD per source, attack → description, NAT / PAT /
+  APIPA, open-a-website step order, CMD command → task, show command → function), two-step hint ladders,
+  «افحص …» incorrect feedback, an explanation and a correct-feedback line on every practice. The module review
+  (`مراجعة الوحدة`, r1–r3) sits on PDF 262 — the last content page — so that PDF 263 stays static.
+
+### CLI simulator — final-reference extensions (v1, same activity `simulation / cli-terminal / v1`)
+
+The engine is extended **only where these pages require it**; no second simulator, no `cmd` framework, the registry
+stays fourteen entries.
+
+- **PDF 246 → `switchport trunk native vlan <1–4094>`** (interface mode; a new interface prop `nativeVlan`; printed
+  by `show running-config` right after the allowed list; invalid ids and wrong modes are inert; the existing
+  `switchport trunk allowed vlan` entry is untouched; new interface-condition prop `nativeVlan`).
+- **PDF 251 → the minimal static route `ip route <network> <mask> <next-hop>`** (global mode), including the
+  default route `ip route 0.0.0.0 0.0.0.0 <next-hop>` from the book's Default Route card. No exit-interface,
+  distance, permanent or track variants (those forms are unknown / invalid and never mutate). Routes are stored in
+  authored order without duplicates (`staticRoutes`), the network must match its mask, a half-default route is
+  rejected; `show running-config` prints them between the interfaces and the routing processes; `show ip route`
+  prints `S <net>/<len> [1/0] via <next-hop>` and `S* 0.0.0.0/0 …` with the «Gateway of last resort» line — only
+  from configured statics, never an invented learned route (the Batch 10 output without statics is unchanged).
+  New condition kind `static-route` (`route` text round-trips through the grammar; `count`), `ip-route` expectation
+  args with a per-command mask rule (0.0.0.0 is valid only for the route, never for `ip address`).
+- **PDF 253 → EIGRP `network <address> [<wildcard>]`**: two values that form a contiguous subnet mask remain the DHCP
+  pool form; any other wildcard is the EIGRP form; the plain `network <address>` of PDF 220–221 still works; OSPF
+  still requires `area` (the EIGRP forms under `router ospf` stay «incomplete — area missing», the OSPF form under
+  `router eigrp` stays «invalid — no area in EIGRP» with the widened syntax in the message); a wildcard typed inside
+  a DHCP pool is still «قناع الشبكة غير صالح»; the selected process is authoritative. EIGRP statements are stored as
+  canonical texts («10.0.0.0» or «192.168.1.0 0.0.0.255»), de-duplicated; an EIGRP network condition accepts either
+  text through the grammar round-trip.
+- **PDF 255** names Shutdown / Restrict / Protect in prose but prints only `violation shutdown`: restrict / protect
+  are NOT added (a practice distinguishes them). **PDF 262**'s Windows commands (`ping`, `tracert`, `ipconfig`,
+  `ipconfig /all`, `nslookup`, `arp -a`) are practised in a worksheet and never enter the Cisco simulator; of its six
+  `show` commands the simulator answers `show vlan brief` and `show vtp status` (a test proves `show interfaces
+  trunk` is refused without state change).
+- **Ten declarative exercises:** 246 task (VLAN 10 / SALES, f0/1–10 access — one goal per port, f0/24 trunk with
+  allowed 10,20,30 and native 99: 14 goals) · 247 guided VTP · 248 guided Router on a Stick · 251 task (static +
+  default route, `allowed: ["ip-route"]`) · 253 challenge (OSPF with area, EIGRP with wildcard) · 255 guided Port
+  Security (starts inside f0/1, ends with `violation shutdown`) · 256 task (console / vty password + login, enable
+  secret, encryption: 6 goals) · 257 task (both ACL lines applied — 10 out on g0/0, 100 in on g0/1, a teaching
+  scenario the clarification states) · 259 task (pool STUDENTS + exclusion: 5 goals) · 262 show challenge on a preset
+  switch. Tests: `src/learning/cli/engine.summary.test.ts` (grammar / engine / show / config for the three
+  additions, DHCP and OSPF non-regression, hostile input) and the guard suite below (every exercise driven to
+  completion through the real engine with negative paths).
+
+### Publication: deployable ≠ published
+
+`api/src/lib/learning-materials-registry.js` appends `{ 791381-m28, الملخّص الشامل, 28 }` after m06 — by order, never
+by id. m28 is **publishable on explicit request only**: real-registry tests prove that a class released through m06
+sees nothing of m28 (its student payload has 27 modules and no «الملخّص»), that publishing `[m01, m28]` shows exactly
+those two, that a mixed list canonicalizes by order with m28 LAST, that the class document is byte-unaffected, and
+that `791381-m29` — the new unknown-id sentinel now that m28 is real — is rejected (400 / thrown / absent / no body).
+No class's `visibleModuleIds` changed.
+
+### Guard suite
+
+`src/learning/content/791381/summary.m28.test.ts` pins: exactly one new module m28 at order 28 (the last); summary
+grouping = [m28], intro unchanged; 33 pages = PDF 231–263 exactly (230 / 264 are not learner pages, the whole
+course has no duplicate PDF index, maximum source page 263, no PDF 264 body); printed 229–260 ↔ PDF 231–262 and none
+for 263; navigation 229 → 231 → … → 263 → null; manifest TOC = body; whole-course validation = zero issues;
+fidelity spot checks of the tables and the nine CLI boxes; pedagogy / provenance / direction rules (no fillBlank, no
+raw HTML, no arrow glyphs, column directions, LTR tokens); the ten exercises resolve via `cli-terminal`, registry =
+14, Windows commands and restrict / protect never in a simulator config; every exercise completes with the book's
+lines and stays open on the documented wrong inputs; no summary text leaks into earlier bodies; earlier simulator
+configs carry none of the new additions; Batch 6–10 shapes unchanged; frontend ↔ server agreement (28, m28 last);
+m29 unknown. API suites: the m28 real-registry test + the m28 → m29 sentinel migration in
+`class-learning-materials`, `learning-materials-registry` and `student-learning-materials`.
+
+### Deliberately NOT in this phase
+
+No PDF 264 body (back cover), no glossary module (the book has none), no b7 grouping, no restrict / protect, no
+`ip route` exit-interface / distance / permanent / track forms, no RIP / BGP configuration, no `show interfaces
+trunk` / `show mac address-table` / `show interfaces status` / `show spanning-tree` simulation, no Windows command
+simulator, no learned-route simulation, no save commands, no answer reveal, no CLI session persistence, no
+retroactive exercises in earlier modules, no change to approved Batch 1–10 bodies beyond the pins that became real
+because m28 exists, no change to any class's `visibleModuleIds`.
 
 ## Phase boundaries
 
@@ -1933,7 +2060,8 @@ phase.
 | Batch 7 | Book 791381 source PDF **139–157** (PDF 139 / 145 section covers not rendered) as NEW module `m19` («إدارة VLAN: VTP», order 16, PDF 140–144) and the historical skeleton `m04` («Trunk و Router on a Stick», order 17, PDF 146–157) **completed in place** — historical page `-l01-p01` (PDF 148) preserved with unchanged title and mapping, PDF 146–147 as new stable ids placed first by `order`; five CLI `code` blocks, no new activity (registry stays 13); server publication registry lists m19 and m04 (publishable, never auto-published); m05–m06 shift to orders 18–19; next untouched page = PDF 158 | done (awaiting review) |
 | Batch 8 | Book 791381 source PDF **158–179** (PDF 158 batch cover not rendered) as NEW modules `m20` («Wi-Fi والشبكات اللاسلكية», order 18, PDF 159–165), `m21` («IPv6 والمنافذ», order 19, PDF 166–168) and `m22` («بروتوكول DHCP», order 20, PDF 169–179); two CLI `code` blocks; **the interactive CLI teaching simulator** (`src/learning/cli/`, `simulation / cli-terminal / v1`, registry now 14) with three declarative book exercises on PDF 172–174; server publication registry lists m20–m22 (publishable, never auto-published); m05–m06 shift to orders 21–22; next untouched page = PDF 180 | done (awaiting review) |
 | Batch 9 | Book 791381 source PDF **180–199** (PDF 200 sixth-batch cover not rendered) as NEW modules `m23` («Port Security», order 21, PDF 180–184) and `m24` («حماية أجهزة Cisco», order 22, PDF 185–191) and the historical skeleton `m05` («مرجع أوامر Cisco», order 23, PDF 192–199) **completed in place** — historical pages `-l01-p01` / `-l01-p02` (PDF 193–194) preserved with unchanged ids, titles and mappings, PDF 192 as a new stable id placed first by `order`; twelve CLI `code` blocks; the CLI simulator extended with line mode, Port Security, password / secret / banner and two `show` commands (registry stays 14) plus twelve declarative exercises; server publication registry lists m23, m24, m05 (publishable, never auto-published); m06 shifts to order 24; next untouched page = PDF 200 | done (awaiting review) |
-| **Batch 10 (this)** | Book 791381 source PDF **200–229** (PDF 200 sixth-batch cover not rendered) as NEW modules `m25` («مراجعة الأوامر», order 24, PDF 201–206), `m26` («الشبكة الواسعة WAN», order 25, PDF 207–209), `m27` («بروتوكولات التوجيه», order 26, PDF 210–222) and the historical skeleton `m06` («قوائم التحكم ACL», order 27, PDF 223–229) **completed in place** — historical page `-l01-p01` (PDF 227, printed 225) preserved with unchanged id, title and mapping, PDF 223–226 as new stable ids placed first by `order`; twelve CLI `code` boxes; the CLI simulator extended with the router mode (OSPF / EIGRP `network` forms), numbered standard / extended ACLs, `ip access-group` and `show ip route` (registry stays 14) plus fifteen declarative exercises; server publication registry lists m25, m26, m27, m06 (publishable, never auto-published) — every manifest module now has a body; next untouched page = PDF 230 | done (awaiting review) |
+| Batch 10 | Book 791381 source PDF **200–229** (PDF 200 sixth-batch cover not rendered) as NEW modules `m25` («مراجعة الأوامر», order 24, PDF 201–206), `m26` («الشبكة الواسعة WAN», order 25, PDF 207–209), `m27` («بروتوكولات التوجيه», order 26, PDF 210–222) and the historical skeleton `m06` («قوائم التحكم ACL», order 27, PDF 223–229) **completed in place** — historical page `-l01-p01` (PDF 227, printed 225) preserved with unchanged id, title and mapping, PDF 223–226 as new stable ids placed first by `order`; twelve CLI `code` boxes; the CLI simulator extended with the router mode (OSPF / EIGRP `network` forms), numbered standard / extended ACLs, `ip access-group` and `show ip route` (registry stays 14) plus fifteen declarative exercises; server publication registry lists m25, m26, m27, m06 (publishable, never auto-published) — every manifest module now has a body; next untouched page = PDF 230 | done (merged) |
+| **Final summary (this)** | Book 791381 source PDF **230–264** (PDF 230 section cover and PDF 264 back cover not rendered) as the NEW module `m28` («الملخّص الشامل», order 28, the LAST module; fills the manifest's «summary» grouping) — eight lessons, 33 learner pages PDF 231–263 (printed 229–260 for 231–262), nine CLI `code` boxes; the CLI simulator extended with `switchport trunk native vlan`, the minimal static / default route `ip route … <next-hop>` (shown as `S` / `S*` routes) and the EIGRP optional wildcard (registry stays 14) plus ten declarative exercises; server publication registry lists m28 (publishable, never auto-published); the unknown-id test sentinel moves to `791381-m29`; the book is fully converted | done (awaiting review) |
 | 4 | Interactive Practice — remaining inline checking families beyond closed-choice worksheets (free text, ordering, evaluator-backed hints) | deferred |
 | 5 | Simulations — real VLAN/subnet/CLI/… renderers registered behind the Phase-3A engine | deferred |
 | 6 | Student Progress — last page, completion, attempts (separate domain; attaches to the no-op event seam) | deferred |
