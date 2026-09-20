@@ -243,7 +243,7 @@
 .learning-reader-study-module{ color:var(--eb-text-secondary); font-weight:var(--eb-fw-medium); }
 .learning-reader-study-outcome{ margin:0; color:var(--eb-text); font-size:var(--eb-fs-14); font-weight:var(--eb-fw-semibold); line-height:var(--eb-lh-body); }
 .learning-reader-study-outcome.is-gained{ color:var(--eb-success-tx, var(--eb-text)); }
-.learning-reader-study-outcome.is-repeat, .learning-reader-study-outcome.is-full{ color:var(--eb-text-secondary); font-weight:var(--eb-fw-medium); }
+.learning-reader-study-outcome.is-repeat, .learning-reader-study-outcome.is-full, .learning-reader-study-outcome.is-module-full{ color:var(--eb-text-secondary); font-weight:var(--eb-fw-medium); }
 
 /* ---------- Presentation mode (وضع العرض) ----------
    App-level fullscreen: the SAME Reader tree promoted to a fixed, full-viewport overlay above the app shell

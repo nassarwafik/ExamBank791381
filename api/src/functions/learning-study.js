@@ -13,7 +13,8 @@ const { studyDocName, loadStudyIndex, findStudyActivity, evaluateStudyResponse, 
 //                                                   activity ids + points, per-module points, total, the policy
 //   POST /api/learning-study/{courseId}/attempt  → { pageId, activityId, response } — the server looks the activity
 //                                                   up in the generated key index, checks the class gate, JUDGES the
-//                                                   response itself and records the completion (idempotent)
+//                                                   response itself and records the completion (idempotent); `gained`
+//                                                   is the ACTUAL Study Strength delta (page cap AND module cap)
 // The browser sends only the learner's response: any client-supplied "correct", "points" or "gained" is ignored.
 // Teachers (builder token) may try any exercise: judged and answered, never persisted. Nothing here touches
 // assignments, the gradebook, class membership or publication.
@@ -117,7 +118,7 @@ async function handler(request, deps = {}, obs = null) {
       const view = state.pages[pageId];
       return { status: 200, jsonBody: {
         ok: true, actor: "student", correct: true, persisted: !outcome.alreadyCompleted, alreadyCompleted: outcome.alreadyCompleted,
-        gained: outcome.alreadyCompleted ? 0 : outcome.pageAfter - outcome.pageBefore,
+        gained: outcome.gained,                                  // the ACTUAL Strength delta (page + module caps), from the CAS-fresh document
         page: { ...page, completed: view.completed, points: view.points, max: STUDY_PAGE_MAX_POINTS },
         module: state.moduleViews[found.moduleId], totalPoints: state.totalPoints,
       } };

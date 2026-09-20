@@ -83,9 +83,18 @@ export default function LearningReaderWithTraining({ courseId, api, onExit, exit
       async report(pageId: string, activityId: string, response: StudyResponse): Promise<StudyAttemptResponse> {
         const r = await study.attempt(courseId, pageId, activityId, response);
         if (r.correct && r.actor === "student") {
-          setStudyState(prev => prev.kind === "ready"
-            ? { kind: "ready", pages: { ...prev.pages, [pageId]: { moduleId: r.page.moduleId, completed: r.page.completed, points: r.page.points, max: r.page.max } }, modules: { ...prev.modules, [r.page.moduleId]: r.module } }
-            : prev);
+          // MONOTONIC within the mounted session: two right answers can be in flight at once and their responses can
+          // arrive out of order; the client keeps the union of completed ids and the max of the points it has seen,
+          // so an older 1-point snapshot can never roll a 2-point page back (the server storage is right either way).
+          setStudyState(prev => {
+            if (prev.kind !== "ready") return prev;
+            const old = prev.pages[pageId];
+            const completed = [...new Set([...(old?.completed ?? []), ...r.page.completed])].sort();
+            const page: StudyPageState = { moduleId: r.page.moduleId, completed, points: Math.max(old?.points ?? 0, r.page.points), max: r.page.max };
+            const oldModule = prev.modules[r.page.moduleId];
+            const module: StudyModuleState = { points: Math.max(oldModule?.points ?? 0, r.module.points), max: r.module.max };
+            return { kind: "ready", pages: { ...prev.pages, [pageId]: page }, modules: { ...prev.modules, [r.page.moduleId]: module } };
+          });
           if (studyState.kind === "error") setStudyNonce(n => n + 1);
           if (r.gained > 0) onStudyPointsEarnedRef.current?.();
         }

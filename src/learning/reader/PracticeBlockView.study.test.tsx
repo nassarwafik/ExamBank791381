@@ -118,3 +118,64 @@ describe("PracticeTableView × study host", () => {
     expect(screen.getByText(/لا يُحفظ شيء ولا تُحسب نقاط/)).toBeTruthy();
   });
 });
+
+describe("retry after a transport failure (review fix)", () => {
+  it("PracticeBlockView: rejection → the same right answer again → a SECOND report → success shows +1 → the same answer once more → no third request", async () => {
+    let fail = true;
+    const h = host(async () => { if (fail) throw new Error("network"); return outcome(); });
+    render(<PracticeBlockView question={MC} activityId="q1" pageId="p1" study={h} />);
+    fireEvent.click(screen.getByRole("radio", { name: /Access/ }));
+    await waitFor(() => expect(h.report).toHaveBeenCalledTimes(1));
+    await waitFor(() => {});
+    expect(document.querySelector(".learning-reader-study-outcome")).toBeNull();
+    fail = false;
+    fireEvent.click(screen.getByRole("button", { name: "امسح الإجابة" }));
+    fireEvent.click(screen.getByRole("radio", { name: /Access/ }));
+    await screen.findByText("+1 نقطة قوة — أحسنت، واصل الدراسة.");
+    expect(h.report).toHaveBeenCalledTimes(2);
+    fireEvent.click(screen.getByRole("button", { name: "امسح الإجابة" }));
+    fireEvent.click(screen.getByRole("radio", { name: /Access/ }));
+    await waitFor(() => {});
+    expect(h.report).toHaveBeenCalledTimes(2);                                              // accepted once → never re-reported
+    // a request still in flight is never duplicated by re-renders / re-picks
+    let resolve!: (r: StudyAttemptResponse) => void;
+    const slow = host(() => new Promise<StudyAttemptResponse>(res => { resolve = res; }));
+    cleanup();
+    render(<PracticeBlockView question={MC} activityId="q1" pageId="p1" study={slow} />);
+    fireEvent.click(screen.getByRole("radio", { name: /Access/ }));
+    fireEvent.click(screen.getByRole("radio", { name: /Access/ }));
+    fireEvent.click(screen.getByRole("radio", { name: /Access/ }));
+    await waitFor(() => expect(slow.report).toHaveBeenCalledTimes(1));
+    resolve(outcome());
+    await screen.findByText(/\+1 نقطة قوة/);
+    expect(slow.report).toHaveBeenCalledTimes(1);
+  });
+  it("PracticeTableView: the same sequence for the fully-right table", async () => {
+    let fail = true;
+    const h = host(async () => { if (fail) throw new Error("network"); return outcome({ page: { pageId: "p1", moduleId: "m1", completed: ["tbl"], points: 1, max: 2 } }); });
+    render(<PracticeTableView block={TABLE} pageId="p1" study={h} />);
+    const fill = () => { const s = screen.getAllByRole("combobox") as HTMLSelectElement[]; fireEvent.change(s[0], { target: { value: "خاص" } }); fireEvent.change(s[1], { target: { value: "عام" } }); };
+    fill();
+    await waitFor(() => expect(h.report).toHaveBeenCalledTimes(1));
+    await waitFor(() => {});
+    expect(document.querySelector(".learning-reader-study-outcome")).toBeNull();
+    fail = false;
+    fireEvent.click(screen.getByRole("button", { name: "امسح الإجابات" }));
+    fill();
+    await screen.findByText(/\+1 نقطة قوة/);
+    expect(h.report).toHaveBeenCalledTimes(2);
+    fireEvent.click(screen.getByRole("button", { name: "امسح الإجابات" }));
+    fill();
+    await waitFor(() => {});
+    expect(h.report).toHaveBeenCalledTimes(2);
+  });
+  it("StudyOutcome case D: no gain because the MODULE is at its cap while the page is not full → the module line, never the page-complete line", async () => {
+    const h = host(async () => outcome({ gained: 0, alreadyCompleted: false, persisted: true, page: { pageId: "p1", moduleId: "m1", completed: ["q1"], points: 1, max: 2 }, module: { points: 15, max: 15 } }));
+    render(<PracticeBlockView question={MC} activityId="q1" pageId="p1" study={h} />);
+    fireEvent.click(screen.getByRole("radio", { name: /Access/ }));
+    const line = await screen.findByText(/اكتملت نقاط الدراسة لهذه الوحدة:/);
+    expect(line.textContent).toBe("اكتملت نقاط الدراسة لهذه الوحدة: 15 / 15");
+    expect(screen.queryByText(/لهذه الصفحة/)).toBeNull();
+    expect(screen.queryByText(/\+1/)).toBeNull();
+  });
+});

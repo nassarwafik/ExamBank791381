@@ -85,11 +85,15 @@ function normalizeStudyDoc(doc) {
 
 /**
  * Record ONE correct completion. Idempotent: an activity already completed is left exactly as it was (its original
- * timestamp kept) and reports gained 0. Returns { doc, alreadyCompleted, pageBefore, pageAfter } where the page
- * values are the derived page points against the index (so the caller can tell +1 / capped / repeat apart). Pure.
+ * timestamp kept) and reports gained 0. Returns { doc, alreadyCompleted, pageBefore, pageAfter, gained } where
+ * `gained` is the ACTUAL Study Strength delta of this completion — the student's study total (page cap AND module
+ * cap applied, re-derived against the index) after minus before, never negative — while pageBefore / pageAfter are
+ * the page's own points. A completion that raises the page but not the (already capped) module gains 0. Called
+ * inside the CAS mutation with the FRESHEST document, so a retry recomputes both totals. Pure.
  */
 function applyStudyCompletion(doc, index, { courseId, moduleId, pageId, activityId }, now) {
   const normalized = normalizeStudyDoc(doc);
+  const before = studyStateOf(normalized, index).totalPoints;
   const page = normalized.pages[pageId] || { courseId: cleanId(courseId), moduleId: cleanId(moduleId), completed: {} };
   const alreadyCompleted = Object.prototype.hasOwnProperty.call(page.completed, activityId);
   const pageBefore = studyPointsForPage(eligibleCompletedCount(index, pageId, page.completed));
@@ -97,7 +101,8 @@ function applyStudyCompletion(doc, index, { courseId, moduleId, pageId, activity
   page.courseId = cleanId(courseId); page.moduleId = cleanId(moduleId);
   normalized.pages[pageId] = page;
   const pageAfter = studyPointsForPage(eligibleCompletedCount(index, pageId, page.completed));
-  return { doc: normalized, alreadyCompleted, pageBefore, pageAfter };
+  const after = studyStateOf(normalized, index).totalPoints;
+  return { doc: normalized, alreadyCompleted, pageBefore, pageAfter, gained: alreadyCompleted ? 0 : Math.max(0, after - before) };
 }
 
 /** How many of a page's completed ids the index STILL lists as eligible (ids that left the content stop counting). */

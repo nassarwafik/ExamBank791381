@@ -357,6 +357,12 @@ page or module, and never as much as the T-series trainings.
   forged `points` field or a ghost id is ignored). A repeat of a completed exercise is read-only (no write, the first
   timestamp stands); a first completion is a `mutateJsonWithRetry` CAS write, so overlapping copies converge on one
   entry — exactly one of them reports `gained: 1`, the rest `alreadyCompleted`, or a clean 503 after the retries.
+  `gained` is the ACTUAL Study Strength delta of the completion (study total after minus before, page cap AND
+  module cap applied, computed inside the CAS mutation against the freshest document): a completion whose page rises
+  but whose module is already at 15 reports `gained: 0`, and the UI then says «اكتملت نقاط الدراسة لهذه الوحدة»,
+  never a false «+1». The Reader's views release their report marker on a transport failure (so the same right
+  answer can be reported again) and keep it after an accepted report; the host merges responses monotonically
+  (union of completed ids, max points), so out-of-order responses never roll a page back.
 - **API `api/src/functions/learning-study.js`:** `GET /api/learning-study/{courseId}` (per-page completed ids +
   points, per-module points, total, the policy) · `POST /api/learning-study/{courseId}/attempt` with
   `{ pageId, activityId, response }` where `response` is the learner's answer only (`multipleChoice` optionId /

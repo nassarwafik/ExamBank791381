@@ -19,7 +19,9 @@ export type StudyStateResponse = {
 /** `POST /api/learning-study/{courseId}/attempt` — the server's verdict and the derived state after it. */
 export type StudyAttemptResponse = {
   ok: true; actor: "teacher" | "student"; correct: boolean; persisted: boolean; alreadyCompleted: boolean;
-  /** Page points gained by THIS completion (1 for the first / second completed exercise of a page, else 0). */
+  /** The ACTUAL Study Strength gained by THIS completion — the server's study total after minus before, with BOTH the
+   *  page cap and the module cap applied (0 for a repeat, for a third exercise on a full page, and for a completion
+   *  whose module is already at its cap even when the page's own points rose). Never a page delta. */
   gained: number;
   page: { pageId: string; moduleId: string; completed: string[]; points: number; max: number };
   module: StudyModuleState; totalPoints: number;

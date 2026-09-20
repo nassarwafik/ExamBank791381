@@ -22,7 +22,11 @@ import { StudyOutcome } from "./PracticeBlockView";
 export default function PracticeTableView({ block, pageId, study }: { block: PracticeTableBlock; pageId?: string; study?: StudyHost }) {
   const [choices, setChoices] = useState<Record<string, string>>({});
   const [outcome, setOutcome] = useState<StudyAttemptResponse | null>(null);
-  const reportedRef = useRef<string | null>(null);
+  const reportedRef = useRef<string | null>(null);        // the choices the server ACCEPTED (never re-reported)
+  const inFlightRef = useRef<string | null>(null);        // the choices currently being reported (never duplicated)
+  const latestStampRef = useRef<string | null>(null);     // the choices currently on screen (a late outcome for old choices is dropped)
+  const mountedRef = useRef(true);
+  useEffect(() => { mountedRef.current = true; return () => { mountedRef.current = false; }; }, []);
   const baseId = useId();
   const cellKey = (r: number, c: number) => r + ":" + c;
   const isSelect = (cell: PracticeTableBlock["rows"][number][number]): cell is PracticeTableSelectCell => typeof cell !== "string";
@@ -32,14 +36,18 @@ export default function PracticeTableView({ block, pageId, study }: { block: Pra
   const eligible = !!study && !!pageId && cells !== null;
   const allRight = cells !== null && Object.entries(cells).every(([k, expected]) => choices[k] === expected);
 
+  // Same retry-safe, duplicate-safe reporting as PracticeBlockView: accepted → never again; in flight → never twice;
+  // a transport failure releases the marker so the same fully-right table can be reported again.
   useEffect(() => {
-    if (!eligible || !study || !pageId || !allRight) return;
+    if (!eligible || !study || !pageId || !allRight) { latestStampRef.current = null; return; }
     const stamp = JSON.stringify(choices);
-    if (reportedRef.current === stamp) return;
-    reportedRef.current = stamp;
-    let alive = true;
-    study.report(pageId, block.id, { kind: "practice-table", choices: { ...choices } }).then(r => { if (alive) setOutcome(r); }).catch(() => { /* quiet */ });
-    return () => { alive = false; };
+    latestStampRef.current = stamp;
+    if (reportedRef.current === stamp || inFlightRef.current === stamp) return;
+    inFlightRef.current = stamp;
+    study.report(pageId, block.id, { kind: "practice-table", choices: { ...choices } })
+      .then(r => { reportedRef.current = stamp; if (mountedRef.current && latestStampRef.current === stamp) setOutcome(r); })
+      .catch(() => { /* quiet */ })
+      .finally(() => { if (inFlightRef.current === stamp) inFlightRef.current = null; });
   }, [eligible, study, pageId, block.id, allRight, choices]);
 
   // The row's accessible label is its first plain-text cell (the item being classified), else its ordinal.

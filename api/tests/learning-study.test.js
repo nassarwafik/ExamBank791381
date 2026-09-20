@@ -232,6 +232,37 @@ describe("API — attempts through the real handler (student)", () => {
   });
 });
 
+describe("API — `gained` is the ACTUAL Strength delta, not the page delta (review fix, REAL m28 data)", () => {
+  it("module at 14 → activity A gains 1 (module 15) → activity B on the SAME page: page 1 → 2, persisted, module stays 15, total unchanged, gained 0; a new page under the capped module: gained 0", async () => {
+    const ctx = seed(through("791381-m28"));
+    const m28 = pagesOf("791381-m28").filter(p => p.activities.length >= 2);
+    expect(m28.length).toBeGreaterThanOrEqual(9);
+    for (const p of m28.slice(0, 7)) for (const i of [0, 1]) { const x = act(p, i); expect((await attempt(studentDeps(ctx), { pageId: x.pageId, activityId: x.activityId, response: correctResponse(x.key) })).jsonBody.gained).toBe(1); }
+    expect((await get(studentDeps(ctx))).jsonBody.modules["791381-m28"]).toEqual({ points: 14, max: 15 });
+    const A = act(m28[7], 0), B = act(m28[7], 1), C = act(m28[8], 0);
+    const ra = await attempt(studentDeps(ctx), { pageId: A.pageId, activityId: A.activityId, response: correctResponse(A.key) });
+    expect(ra.jsonBody).toMatchObject({ persisted: true, gained: 1, page: { points: 1 }, module: { points: 15, max: 15 }, totalPoints: 15 });
+    const rb = await attempt(studentDeps(ctx), { pageId: B.pageId, activityId: B.activityId, response: correctResponse(B.key) });
+    expect(rb.jsonBody).toMatchObject({ correct: true, persisted: true, alreadyCompleted: false, gained: 0, page: { points: 2, max: 2 }, module: { points: 15, max: 15 }, totalPoints: 15 });
+    expect(rb.jsonBody.page.completed).toContain(B.activityId);                              // the completion IS recorded
+    const rc = await attempt(studentDeps(ctx), { pageId: C.pageId, activityId: C.activityId, response: correctResponse(C.key) });
+    expect(rc.jsonBody).toMatchObject({ persisted: true, gained: 0, page: { points: 1, max: 2 }, module: { points: 15, max: 15 }, totalPoints: 15 });
+    // repeats stay 0 and the dashboard agrees with the server total
+    expect((await attempt(studentDeps(ctx), { pageId: B.pageId, activityId: B.activityId, response: correctResponse(B.key) })).jsonBody).toMatchObject({ alreadyCompleted: true, gained: 0 });
+    expect((await get(studentDeps(ctx))).jsonBody.totalPoints).toBe(15);
+  });
+  it("page cap: the third eligible completion on a 2-point page gains 0 (page 2 → 2) even though the module is far below its cap; the pure helper reports the same", async () => {
+    const ctx = seed(through(M08));
+    const a = act(P1, 0), b = act(P1, 1), c = act(P1, 2);
+    for (const x of [a, b]) expect((await attempt(studentDeps(ctx), { pageId: x.pageId, activityId: x.activityId, response: correctResponse(x.key) })).jsonBody.gained).toBe(1);
+    const r = await attempt(studentDeps(ctx), { pageId: c.pageId, activityId: c.activityId, response: correctResponse(c.key) });
+    expect(r.jsonBody).toMatchObject({ persisted: true, alreadyCompleted: false, gained: 0, page: { points: 2 }, module: { points: 2 }, totalPoints: 2 });
+    const doc = ctx.getJson(studyDocName("u1"));
+    expect(applyStudyCompletion(doc, INDEX, { courseId: "791381", moduleId: M08, pageId: act(P2, 0).pageId, activityId: act(P2, 0).activityId }, "t").gained).toBe(1);
+    expect(applyStudyCompletion(doc, INDEX, { courseId: "791381", moduleId: M08, pageId: c.pageId, activityId: c.activityId }, "t").gained).toBe(0);   // repeat
+  });
+});
+
 describe("API — security", () => {
   it("invented activity id, activity of another page, unknown page, unknown course, malformed payload → 404 / 400, nothing written", async () => {
     const ctx = seed(through(M08));

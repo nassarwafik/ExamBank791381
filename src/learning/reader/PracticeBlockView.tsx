@@ -31,7 +31,11 @@ export default function PracticeBlockView({ question, activityId, pageId, study 
   const [draft, setDraft] = useState("");
   const [feedback, setFeedback] = useState<LearningFeedbackState>(INITIAL_FEEDBACK_STATE);
   const [outcome, setOutcome] = useState<StudyAttemptResponse | null>(null);
-  const reportedRef = useRef<string | null>(null);        // the response already reported (one report per answer)
+  const reportedRef = useRef<string | null>(null);        // the response the server ACCEPTED (never re-reported)
+  const inFlightRef = useRef<string | null>(null);        // the response currently being reported (never duplicated)
+  const latestStampRef = useRef<string | null>(null);     // the answer currently on screen (a late outcome for an old answer is dropped)
+  const mountedRef = useRef(true);
+  useEffect(() => { mountedRef.current = true; return () => { mountedRef.current = false; }; }, []);
   const eligible = !!study && !!activityId && !!pageId && practiceQuestionKey(question) !== null;
   // Interactive ONLY for kinds that have a complete answering surface below (multipleChoice / trueFalse /
   // shortInput) AND an answer key. A keyed `fillBlank` (supported by the evaluator, no per-blank input here yet)
@@ -46,15 +50,19 @@ export default function PracticeBlockView({ question, activityId, pageId, study 
   const answer = (r: LearningResponse) => { setResponse(r); setOutcome(null); };
   const clear = () => { setResponse(null); setDraft(""); setFeedback(INITIAL_FEEDBACK_STATE); setOutcome(null); };
 
-  // Report a right answer ONCE per answer (never per render; never twice for the same response object).
+  // Report a right answer ONCE: a response the server accepted is never re-reported (re-picking it is deduplicated),
+  // a response in flight is never duplicated by a re-render, and a TRANSPORT FAILURE releases the marker so the same
+  // right answer can be reported again (the server stays authoritative and idempotent — a retry can never farm).
   useEffect(() => {
-    if (!eligible || !study || !activityId || !pageId || !response || status !== "right") return;
+    if (!eligible || !study || !activityId || !pageId || !response || status !== "right") { latestStampRef.current = null; return; }
     const stamp = JSON.stringify(response);
-    if (reportedRef.current === stamp) return;
-    reportedRef.current = stamp;
-    let alive = true;
-    study.report(pageId, activityId, response as never).then(r => { if (alive) setOutcome(r); }).catch(() => { /* quiet: the local verdict stands, points can be earned on a later answer */ });
-    return () => { alive = false; };
+    latestStampRef.current = stamp;
+    if (reportedRef.current === stamp || inFlightRef.current === stamp) return;
+    inFlightRef.current = stamp;
+    study.report(pageId, activityId, response as never)
+      .then(r => { reportedRef.current = stamp; if (mountedRef.current && latestStampRef.current === stamp) setOutcome(r); })
+      .catch(() => { /* quiet: the local verdict stands; the marker is released so a later pick reports again */ })
+      .finally(() => { if (inFlightRef.current === stamp) inFlightRef.current = null; });
   }, [eligible, study, activityId, pageId, response, status]);
 
   if (!hasKey) return <StaticPractice question={question} />;
@@ -151,12 +159,16 @@ export default function PracticeBlockView({ question, activityId, pageId, study 
   );
 }
 
-/** The SERVER's study outcome for a right answer — one quiet line, never colour-only, never animated. */
+/** The SERVER's study outcome for a right answer — one quiet, truthful line, never colour-only, never animated:
+ *  A) actual gain → «+n نقطة قوة» · B) repeat → «محسوبة سابقًا» · C) the page is full → «اكتملت … لهذه الصفحة» ·
+ *  D) no gain because the MODULE is at its cap while the page is not full → «اكتملت … لهذه الوحدة» (never C). */
 export function StudyOutcome({ outcome }: { outcome: StudyAttemptResponse }) {
   if (!outcome.correct || outcome.actor !== "student") return null;
   if (outcome.gained > 0) return <p className="learning-reader-study-outcome is-gained" role="status">+{outcome.gained} نقطة قوة — أحسنت، واصل الدراسة.</p>;
   if (outcome.alreadyCompleted) return <p className="learning-reader-study-outcome is-repeat" role="status">نقطة هذا التمرين محسوبة سابقًا.</p>;
-  return <p className="learning-reader-study-outcome is-full" role="status">اكتملت نقاط الدراسة لهذه الصفحة: <span dir="ltr">{outcome.page.points} / {outcome.page.max}</span></p>;
+  if (outcome.page.points >= outcome.page.max) return <p className="learning-reader-study-outcome is-full" role="status">اكتملت نقاط الدراسة لهذه الصفحة: <span dir="ltr">{outcome.page.points} / {outcome.page.max}</span></p>;
+  if (outcome.module.points >= outcome.module.max) return <p className="learning-reader-study-outcome is-module-full" role="status">اكتملت نقاط الدراسة لهذه الوحدة: <span dir="ltr">{outcome.module.points} / {outcome.module.max}</span></p>;
+  return null;
 }
 
 /** The kinds that have a complete interactive answering surface in this view. */

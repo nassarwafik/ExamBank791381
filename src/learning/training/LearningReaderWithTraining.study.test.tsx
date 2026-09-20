@@ -185,3 +185,31 @@ describe("Presentation Mode + training round-trip", () => {
     expect(study.state).toHaveBeenCalledTimes(1);
   }, T);
 });
+
+describe("out-of-order responses (review robustness check)", () => {
+  it("two right answers in flight: the newer 2-point response arrives first, the older 1-point one later → the bar must stay at 2 / 2 (monotonic client state)", async () => {
+    await loadMcBlocks();
+    const real = fakeStudy();
+    // the real fake server answers immediately; the GATE holds each answer until the test releases it, in any order
+    const resolvers: Array<[(r: StudyAttemptResponse) => void, StudyAttemptResponse]> = [];
+    const gated: StudyClient = {
+      state: real.state,
+      attempt: (c: string, p: string, a: string, r: StudyResponse) => new Promise<StudyAttemptResponse>(res => { void real.attempt(c, p, a, r).then(x => resolvers.push([res, x])); }),
+    };
+    mount(gated);
+    await screen.findByRole("heading", { level: 2, name: "أساسيات الشبكات" }, SLOW);
+    await goTo(PAGE_ID);
+    await waitFor(() => expect(bar()).toBeTruthy(), SLOW);
+    await answerRight(0);
+    await answerRight(1);
+    await waitFor(() => expect(resolvers.length).toBe(2));
+    // deliver the NEWER (2-point) response first, then the OLDER (1-point) one
+    resolvers[1][0](resolvers[1][1]);
+    await waitFor(() => expect(bar()!.textContent).toContain("2 / 2"));
+    resolvers[0][0](resolvers[0][1]);
+    await waitFor(() => {});
+    await new Promise(r => setTimeout(r, 50));
+    expect(bar()!.textContent).toContain("2 / 2");                                           // never regresses to 1 / 2
+    expect(bar()!.textContent).toContain("نقاط الدراسة في هذه الوحدة: 2 / 15");
+  }, T);
+});
