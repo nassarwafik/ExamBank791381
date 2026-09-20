@@ -202,7 +202,7 @@ describe("Batch 7 — key source facts as printed (CLI boxes, tables, definition
     expect(table(M04 + "-l02-p05", "m04-l02-p05-cmds")[2].map(r => r[1])).toEqual(["Sub-Interface لـ VLAN 30", "رقم Dot1Q خاص بـ VLAN 30", "Gateway VLAN 30", "Sub-Interface لـ VLAN 40", "رقم Dot1Q خاص بـ VLAN 40", "Gateway VLAN 40"]);
     expect(spans(M04 + "-l02-p05", "m04-l02-p05-remember")).toBe("لكل VLAN واجهة فرعية Sub-Interface خاصة بها: رقم Dot1Q مختلف وعنوان Gateway مختلف.");
   });
-  it("PDF 156–157: the four concept cards with their notes + «للامتحان»; the closing page prints no page number, carries a conversionNote, the four training cards, the book's line, NO library-training block, then the module review", () => {
+  it("PDF 156–157: the four concept cards with their notes + «للامتحان»; the closing page prints no page number, carries a conversionNote, the four training cards, the book's line, the Learning-Practice cards T19–T22 (metadata only), then the module review", () => {
     expect(items(M04 + "-l03-p01", "m04-l03-p01-cards")).toEqual([
       ["VLAN", "تقسيم افتراضي للشبكة إلى أقسام مستقلة.", "VLAN 10 / VLAN 20"], ["Trunk", "رابط ينقل عدة VLAN عبر نفس الكابل.", "بين سويتشات"],
       ["Dot1Q", "Tag يحدّد رقم VLAN داخل الحزمة.", "encapsulation dot1Q"], ["Router on a Stick", "راوتر واحد يوجّه بين VLAN مختلفة.", "Sub-Interfaces"],
@@ -214,8 +214,8 @@ describe("Batch 7 — key source facts as printed (CLI boxes, tables, definition
     expect(p.conversionNote).toMatch(/QR/);
     expect(items(M04 + "-l03-p02", "m04-l03-p02-cards")!.map(i => i[0])).toEqual(["التدريب التاسع عشر", "التدريب العشرون", "التدريب الحادي والعشرون", "التدريب الثاني والعشرون"]);
     expect(spans(M04 + "-l03-p02", "m04-l03-p02-line")).toBe("امسح رمز QR أو ضع روابط التدريبات هنا · أتممت نموذج 791381 بالكامل.");
-    expect(allBlocks.some(b => b.type === "library-training")).toBe(false);
-    expect(JSON.stringify(BATCH)).not.toMatch(/T(19|2[0-2])\b|trainingId/);
+    expect(allBlocks.filter(b => b.type === "library-training").map(b => b.trainingId)).toEqual(["T19", "T20", "T21", "T22"]);   // since the Learning-Practice phase
+    expect(JSON.stringify(BATCH)).not.toMatch(/LIB-T|examSnapshot|correctOptionIndex|github\.io/);   // the T19–T22 pointers are metadata only
     expect(p.blocks.map(b => b.id).slice(-4)).toEqual(["m04-l03-p02-review", "m04-l03-p02-r1", "m04-l03-p02-r2", "m04-l03-p02-r3"]);
   });
   it("every CLI box is a `code` block (cli, origin book) that OPENS its page and is followed by a command table whose LTR first column repeats the SAME lines — PDF 142, 148, 153, 154, 155", () => {
@@ -276,7 +276,7 @@ describe("Batch 7 — pedagogy: worksheets, solved example, practices with «ا�
       expect(last.blocks.map(b => b.id).slice(-4).map(id => id.replace(/^m(19|04)-l\d\d-p\d\d-/, "")), m.id).toEqual(["review", "r1", "r2", "r3"]);
       expect(pagesOf(m).flatMap(p => p.blocks).filter(b => /-r\d$/.test(b.id)).length, m.id).toBe(3);
     }
-    expect(allBlocks.some(b => ["simulation", "animation", "guided", "interactive-diagram", "library-training"].includes(b.type))).toBe(false);
+    expect(allBlocks.some(b => ["simulation", "animation", "guided", "interactive-diagram"].includes(b.type))).toBe(false);   // library-training cards arrived with the Learning-Practice phase (m04 PDF 157)
     expect(JSON.stringify(BATCH)).not.toMatch(/interactionType|simulationType|animationType/);
   });
 });
@@ -287,7 +287,7 @@ describe("Batch 7 — provenance, RTL/LTR, safety", () => {
       if (["practice", "practice-table", "example", "heading"].includes(b.type) || (b.type === "callout" && b.kind === "clarification")) expect(b.origin, b.id).toBe("teacher-enrichment");
       else expect(b.origin, b.id).toBe("book");
     }
-    expect(BATCH.map(m => pagesOf(m).flatMap(p => p.blocks).filter(b => b.origin === "book").length)).toEqual([15, 36]);
+    expect(BATCH.map(m => pagesOf(m).flatMap(p => p.blocks).filter(b => b.origin === "book").length)).toEqual([15, 40]);   // m04 +4 book pointers (T19–T22) since the Learning-Practice phase
   });
   it("technical tokens are LTR spans; command tables mark the command column ltr; no arrow glyphs, urls, iframes or images; ids are prefix-scoped", () => {
     const spans = allBlocks.flatMap(b => b.type === "callout" || b.type === "text" ? b.spans : b.type === "list" ? b.items.flatMap(i => i.text) : []);

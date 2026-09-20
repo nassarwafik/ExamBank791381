@@ -18,6 +18,9 @@ export type TrainingListEntry = {
   requiredModuleId: string;
   courseId: string;
   available: boolean;
+  /** Server policy: T-series trainings feed Unified Strength; the F-series final exams for training never do
+   *  (their maxPoints / bestPoints / earnedPoints are 0). Older responses without the flag are treated as eligible. */
+  strengthEligible?: boolean;
   title?: string;
   best?: TrainingBest;
 };
@@ -37,8 +40,12 @@ export type TrainingReviewRow = {
   questionId: string;
   questionNumber: number;
   correct: boolean;
+  /** The server's grader could not auto-grade this question (e.g. an open question of a final exam). */
+  manualReview?: boolean;
   chosenIndex: number | null;
   correctOptionIndex: number | null;
+  /** Post-submit key of a non-choice question (matching / table pairs) as the item's own answer text. */
+  correctText?: string;
   hint: string;
 };
 export type TrainingResult = {

@@ -276,7 +276,7 @@ const m18: ContentModule = {
           title: "تدريبات نهاية الدفعة",
           order: 1,
           source: src(119),
-          conversionNote: "PDF 119 صفحة ختامية للدفعة الثالثة من الكتاب (بلا رقم صفحة مطبوع): ثلاث بطاقات تجمع التدريبات الإلكترونية 13–18 حسب الموضوع خلف رموز QR، وسطر «الدفعة التالية». الرموز في الكتاب المطبوع، والتدريبات 13–18 غير متاحة داخل المنصة بعد؛ تُعرض البطاقات والسطور كما هي، وتُضاف مراجعة ختامية للقسم.",
+          conversionNote: "PDF 119 صفحة ختامية للدفعة الثالثة من الكتاب (بلا رقم صفحة مطبوع): ثلاث بطاقات تجمع التدريبات الإلكترونية 13–18 حسب الموضوع خلف رموز QR، وسطر «الدفعة التالية». الرموز في الكتاب المطبوع؛ تُعرض البطاقات والسطور كما هي، وتُفتح التدريبات 13–18 من داخل المنصة (library-training) عندما يصبح الجزء المرتبط بكل تدريب متاحًا، ثم تُضاف مراجعة ختامية للقسم.",
           keywords: ["تدريبات", "نهاية الدفعة", "QR"],
           blocks: [
             {
@@ -297,8 +297,20 @@ const m18: ContentModule = {
             },
             {
               id: "m18-l03-p01-clar", type: "callout", origin: "teacher-enrichment", kind: "clarification", title: "توضيح",
-              spans: [T("رموز QR موجودة في الكتاب المطبوع. داخل المنصة، راجع القسم من خلال المراجعة الختامية التالية.")],
+              spans: [T("رموز QR موجودة في الكتاب المطبوع. يمكن فتح التدريبات 13–18 من داخل المنصة عندما يصبح الجزء المرتبط بكل تدريب متاحًا، ثم راجع القسم من خلال المراجعة الختامية التالية.")],
             },
+            // ── Learning Practice (Reader position 110): the platform's T13–T18, grouped as the book groups them.
+            // Metadata only — the host / API decide availability and disclose the library title.
+            { id: "m18-l03-p01-practice", type: "heading", origin: "teacher-enrichment", level: 3, text: "تدريبات مرتبطة بهذه الصفحة" },
+            { id: "m18-l03-p01-g1314", type: "heading", origin: "teacher-enrichment", level: 4, text: "تدريب 13–14" },
+            { id: "m18-l03-p01-lt13", type: "library-training", origin: "book", trainingId: "T13", label: "تدريب 13", requiredModuleId: "791381-m16" },
+            { id: "m18-l03-p01-lt14", type: "library-training", origin: "book", trainingId: "T14", label: "تدريب 14", requiredModuleId: "791381-m18" },
+            { id: "m18-l03-p01-g1516", type: "heading", origin: "teacher-enrichment", level: 4, text: "تدريب 15–16" },
+            { id: "m18-l03-p01-lt15", type: "library-training", origin: "book", trainingId: "T15", label: "تدريب 15", requiredModuleId: "791381-m03" },
+            { id: "m18-l03-p01-lt16", type: "library-training", origin: "book", trainingId: "T16", label: "تدريب 16", requiredModuleId: "791381-m19" },
+            { id: "m18-l03-p01-g1718", type: "heading", origin: "teacher-enrichment", level: 4, text: "تدريب 17–18" },
+            { id: "m18-l03-p01-lt17", type: "library-training", origin: "book", trainingId: "T17", label: "تدريب 17", requiredModuleId: "791381-m04" },
+            { id: "m18-l03-p01-lt18", type: "library-training", origin: "book", trainingId: "T18", label: "تدريب 18", requiredModuleId: "791381-m21" },
             // ── closing review for the section (easy, medium, exam-like) ──
             {
               id: "m18-l03-p01-review", type: "heading", origin: "teacher-enrichment", level: 3, text: "مراجعة ختامية: تجزئة البيانات",

@@ -464,7 +464,7 @@ const m24: ContentModule = {
           title: "تدريبات على DHCP و Security",
           order: 1,
           source: src(191, 191),
-          conversionNote: "صفحة تدريبات QR ختامية في الكتاب (التدريبات 23–26). البطاقات الأربع تُعرض كما في الكتاب كبطاقات ثابتة مع ملاحظة الكتاب؛ التدريبات T23–T26 لا تُقدَّم داخل المنصة (لا library-training)، ومراجعة الوحدة أُضيفت بعدها كإثراء تعليمي.",
+          conversionNote: "صفحة تدريبات QR ختامية في الكتاب (التدريبات 23–26). البطاقات الأربع تُعرض كما في الكتاب كبطاقات ثابتة مع ملاحظة الكتاب؛ وتُفتح التدريبات T23–T26 من داخل المنصة (library-training) عندما يصبح الجزء المرتبط بكل تدريب متاحًا، ومراجعة الوحدة أُضيفت بعدها كإثراء تعليمي.",
           keywords: ["تدريبات", "QR", "T23", "T24", "T25", "T26"],
           blocks: [
             {
@@ -482,8 +482,15 @@ const m24: ContentModule = {
             },
             {
               id: "m24-l03-p01-clar", type: "callout", origin: "teacher-enrichment", kind: "clarification", title: "توضيح المعلّم",
-              spans: [T("التدريبات 23–26 تُحل من رموز QR في الكتاب المطبوع كما هي؛ هنا نضيف مراجعة قصيرة تجمع الوحدات الثلاث التي يذكرها الكتاب.")],
+              spans: [T("يمكن فتح التدريبات 23–26 من داخل المنصة عندما يصبح الجزء المرتبط بكل تدريب متاحًا؛ وهنا نضيف بعدها مراجعة قصيرة تجمع الوحدات الثلاث التي يذكرها الكتاب.")],
             },
+            // ── Learning Practice (Reader position 178): the platform's T23–T26, one card per printed training
+            // (T25 / T26 are the comprehensive basic-section exams). Metadata only — the host / API decide availability.
+            { id: "m24-l03-p01-practice", type: "heading", origin: "teacher-enrichment", level: 3, text: "تدريبات مرتبطة بهذه الصفحة" },
+            { id: "m24-l03-p01-lt23", type: "library-training", origin: "book", trainingId: "T23", label: "تدريب 23", requiredModuleId: "791381-m27" },
+            { id: "m24-l03-p01-lt24", type: "library-training", origin: "book", trainingId: "T24", label: "تدريب 24", requiredModuleId: "791381-m06" },
+            { id: "m24-l03-p01-lt25", type: "library-training", origin: "book", trainingId: "T25", label: "تدريب 25", requiredModuleId: "791381-m24" },
+            { id: "m24-l03-p01-lt26", type: "library-training", origin: "book", trainingId: "T26", label: "تدريب 26", requiredModuleId: "791381-m24" },
             { id: "m24-l03-p01-review", type: "heading", origin: "teacher-enrichment", text: "مراجعة الوحدة", level: 3 },
             {
               id: "m24-l03-p01-r1", type: "practice", origin: "teacher-enrichment",

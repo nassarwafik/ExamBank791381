@@ -191,15 +191,15 @@ describe("Batch 4 — key source facts as printed", () => {
     expect(plain(pageBy("791381-m16-l04-p02"))).toContain("169.254.x.x");
     expect(plain(pageBy("791381-m16-l04-p02"))).toContain("فغالبًا هناك مشكلة في ");
   });
-  it("PDF 106 is a learner-visible CLOSING page: the three training cards + the QR note as printed, a conversionNote, NO library-training block (trainings 5–12 are not delivered in the platform), then the section review", () => {
+  it("PDF 106 is a learner-visible CLOSING page: the three training cards + the QR note as printed, a conversionNote, the Learning-Practice cards T05–T12 (metadata only, pinned in learningPractice.t05-f06.test.ts), then the section review", () => {
     const p = pageBy("791381-m16-l05-p01");
     expect(p.conversionNote).toMatch(/PDF 106/);
     expect(p.conversionNote).toMatch(/QR/);
     const c = blockBy(p, "m16-l05-p01-cards");
     expect(c.type === "list" && [c.origin, c.items.map(i => [i.term, i.text.map(s => s.text).join("")])]).toEqual(["book", [["تدريب 5–6", "IP، Subnet، وفحص الاتصال."], ["تدريب 7–8", "أوامر الشبكة والبروتوكولات."], ["تدريب 9–12", "OSI، TCP/UDP، ومفاهيم Broadcast."]]]);
     expect(plain(p)).toContain("امسح رمز كل تدريب لحلّه إلكترونيًا مع التفسير الفوري ومراجعة الأخطاء.");
-    expect(allBlocks.some(b => b.type === "library-training")).toBe(false);
-    expect(JSON.stringify(BATCH)).not.toMatch(/T0[5-9]|T1[0-2]|trainingId/);
+    expect(allBlocks.filter(b => b.type === "library-training").map(b => b.trainingId)).toEqual(["T05", "T06", "T07", "T08", "T09", "T10", "T11", "T12"]);   // since the Learning-Practice phase (T05–T30, F01–F06)
+    expect(JSON.stringify(BATCH)).not.toMatch(/LIB-T|examSnapshot|correctOptionIndex|github\.io/);   // the T05–T12 pointers are metadata only (ids + labels), never titles / questions / links
     expect(p.blocks.map(b => b.id).slice(-4)).toEqual(["m16-l05-p01-review", "m16-l05-p01-r1", "m16-l05-p01-r2", "m16-l05-p01-r3"]);
   });
 });
@@ -278,7 +278,7 @@ describe("Batch 4 — provenance, RTL/LTR, safety, skeletons and registry consis
       if (["practice", "practice-table", "example", "interactive-diagram", "heading"].includes(b.type) || (b.type === "callout" && b.kind === "clarification")) expect(b.origin, b.id).toBe("teacher-enrichment");
       else expect(b.origin, b.id).toBe("book");
     }
-    expect(BATCH.map(m => pagesOf(m).flatMap(p => p.blocks).filter(b => b.origin === "book").length)).toEqual([13, 20, 27]);
+    expect(BATCH.map(m => pagesOf(m).flatMap(p => p.blocks).filter(b => b.origin === "book").length)).toEqual([13, 20, 35]);   // m16 +8 book pointers (T05–T12) since the Learning-Practice phase
   });
   it("technical tokens are LTR spans (protocol names, IP, MAC, VLAN, STP, 127.0.0.1, 169.254.x.x); code lines are LTR CLI; no arrow glyphs, urls, iframes or images anywhere", () => {
     const spans = allBlocks.flatMap(b => b.type === "callout" || b.type === "text" ? b.spans : b.type === "list" ? b.items.flatMap(i => i.text) : []);

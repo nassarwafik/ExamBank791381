@@ -438,7 +438,7 @@ const m06: ContentModule = {
           title: "تدريبات",
           order: 1,
           source: src(228, 228),
-          conversionNote: "صفحة تدريبات QR في الكتاب (التدريبات 27–30). البطاقات الأربع تُعرض كما في الكتاب كبطاقات ثابتة مع ملاحظة الكتاب؛ التدريبات T27–T30 لا تُقدَّم داخل المنصة (لا library-training).",
+          conversionNote: "صفحة تدريبات QR في الكتاب (التدريبات 27–30). البطاقات الأربع تُعرض كما في الكتاب كبطاقات ثابتة مع ملاحظة الكتاب؛ وتُفتح التدريبات T27–T30 من داخل المنصة (library-training) عندما يصبح الجزء المرتبط بها متاحًا.",
           keywords: ["تدريبات", "QR", "T27", "T28", "T29", "T30"],
           blocks: [
             {
@@ -456,8 +456,15 @@ const m06: ContentModule = {
             },
             {
               id: "m06-l02-p01-note", type: "callout", origin: "teacher-enrichment", kind: "clarification", title: "توضيح المعلّم",
-              spans: [T("التدريبات 27–30 تُحل من رموز QR في الكتاب المطبوع كما هي؛ قبل حلّها راجع الصفحات الخمس السابقة وتدرّب في محاكياتها على كتابة القائمة ثم تطبيقها.")],
+              spans: [T("يمكن فتح التدريبات 27–30 من داخل المنصة عندما يصبح الجزء المرتبط بها متاحًا؛ قبل حلّها راجع الصفحات الخمس السابقة وتدرّب في محاكياتها على كتابة القائمة ثم تطبيقها.")],
             },
+            // ── Learning Practice (Reader position 214): the platform's T27–T30 (exam reviews), one card per printed
+            // training. Metadata only — the host / API decide availability and disclose the library title.
+            { id: "m06-l02-p01-practice", type: "heading", origin: "teacher-enrichment", level: 3, text: "تدريبات مرتبطة بهذه الصفحة" },
+            { id: "m06-l02-p01-lt27", type: "library-training", origin: "book", trainingId: "T27", label: "تدريب 27", requiredModuleId: "791381-m06" },
+            { id: "m06-l02-p01-lt28", type: "library-training", origin: "book", trainingId: "T28", label: "تدريب 28", requiredModuleId: "791381-m06" },
+            { id: "m06-l02-p01-lt29", type: "library-training", origin: "book", trainingId: "T29", label: "تدريب 29", requiredModuleId: "791381-m06" },
+            { id: "m06-l02-p01-lt30", type: "library-training", origin: "book", trainingId: "T30", label: "تدريب 30", requiredModuleId: "791381-m06" },
             {
               id: "m06-l02-p01-q1", type: "practice", origin: "teacher-enrichment",
               question: {
@@ -478,7 +485,7 @@ const m06: ContentModule = {
           title: "امتحانات نهائية للتدريب",
           order: 2,
           source: src(229, 229),
-          conversionNote: "صفحة امتحانات QR في الكتاب (الامتحانات F01–F06). البطاقات الست تُعرض كما في الكتاب كبطاقات ثابتة مع ملاحظة الكتاب؛ الامتحانات لا تُقدَّم داخل المنصة (لا library-training)، ومراجعة الوحدة أُضيفت بعدها كإثراء تعليمي.",
+          conversionNote: "صفحة امتحانات QR في الكتاب (الامتحانات F01–F06). البطاقات الست تُعرض كما في الكتاب كبطاقات ثابتة مع ملاحظة الكتاب؛ وتُفتح الامتحانات النهائية للتدريب F01–F06 من داخل المنصة (library-training) عندما يصبح الجزء المرتبط بها متاحًا، ومراجعة الوحدة أُضيفت بعدها كإثراء تعليمي.",
           keywords: ["امتحانات نهائية", "QR", "F01", "F02", "F03", "F04", "F05", "F06"],
           blocks: [
             {
@@ -498,8 +505,17 @@ const m06: ContentModule = {
             },
             {
               id: "m06-l02-p02-note", type: "callout", origin: "teacher-enrichment", kind: "clarification", title: "توضيح المعلّم",
-              spans: [T("الامتحانات الستة تُفتح من رموز QR في الكتاب المطبوع كما هي؛ هنا نختم بمراجعة قصيرة لوحدة "), L("ACL"), T(".")],
+              spans: [T("الامتحانات النهائية للتدريب الستة يمكن فتحها من داخل المنصة عندما يصبح الجزء المرتبط بها متاحًا (كل امتحان يُحل كتدريب حرّ: تُحفظ أفضل نتيجة تلقائية فقط، لا يُحسب كواجب ولا يمنح نقاط تقوية)؛ وهنا نختم بمراجعة قصيرة لوحدة "), L("ACL"), T(".")],
             },
+            // ── Learning Practice (Reader position 215): the platform's F01–F06 «امتحانات نهائية للتدريب», one card per
+            // printed exam. Metadata only — the host / API decide availability and disclose the library title.
+            { id: "m06-l02-p02-practice", type: "heading", origin: "teacher-enrichment", level: 3, text: "امتحانات نهائية للتدريب" },
+            { id: "m06-l02-p02-lf01", type: "library-training", origin: "book", trainingId: "F01", label: "الامتحان الأول", requiredModuleId: "791381-m06" },
+            { id: "m06-l02-p02-lf02", type: "library-training", origin: "book", trainingId: "F02", label: "الامتحان الثاني", requiredModuleId: "791381-m06" },
+            { id: "m06-l02-p02-lf03", type: "library-training", origin: "book", trainingId: "F03", label: "الامتحان الثالث", requiredModuleId: "791381-m06" },
+            { id: "m06-l02-p02-lf04", type: "library-training", origin: "book", trainingId: "F04", label: "الامتحان الرابع", requiredModuleId: "791381-m06" },
+            { id: "m06-l02-p02-lf05", type: "library-training", origin: "book", trainingId: "F05", label: "الامتحان الخامس", requiredModuleId: "791381-m06" },
+            { id: "m06-l02-p02-lf06", type: "library-training", origin: "book", trainingId: "F06", label: "الامتحان السادس", requiredModuleId: "791381-m06" },
             { id: "m06-l02-p02-review", type: "heading", origin: "teacher-enrichment", text: "مراجعة الوحدة", level: 3 },
             {
               id: "m06-l02-p02-r1", type: "practice", origin: "teacher-enrichment",

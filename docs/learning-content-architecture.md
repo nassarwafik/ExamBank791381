@@ -653,20 +653,58 @@ Strength                →  api/src/lib/student-strength.js    →  dashboard `
 - **Metadata only.** `{ type: "library-training", trainingId, label, requiredModuleId }`. No questions, options,
   answers or titles may live in the content (validated: `library-training-invalid`). Origin `book` is allowed because
   the printed page itself lists the trainings (791381 PDF 22 → T01–T04, blocks `m02-l01-p08-t1..t4`).
+- **The six book review pages** (Learning Practice — T05–T30 and F01–F06). The book's QR pages are the platform's
+  pointers, ONE block per real Exam-Library id (never a combined `T05-T06` id), grouped by `heading` level 4 exactly
+  as the book groups its cards, under a level-3 «تدريبات مرتبطة بهذه الصفحة» (page 215: «امتحانات نهائية للتدريب»).
+  Page numbers are **Reader ordinal positions** (the footer «n / 248»), not PDF numbers:
+
+  | Reader position | Page id | PDF | Items | Blocks |
+  | --- | --- | --- | --- | --- |
+  | 98 | `791381-m16-l05-p01` «تدريبات مراجعة سريعة» | 106 | T05–T12 (groups 5–6, 7–8, 9–12) | `m16-l05-p01-lt05..lt12` |
+  | 110 | `791381-m18-l03-p01` «تدريبات نهاية الدفعة» | 119 | T13–T18 (groups 13–14, 15–16, 17–18) | `m18-l03-p01-lt13..lt18` |
+  | 145 | `791381-m04-l03-p02` «تدريبات نهاية الدفعة» | 157 | T19–T22 | `m04-l03-p02-lt19..lt22` |
+  | 178 | `791381-m24-l03-p01` «تدريبات على DHCP و Security» | 191 | T23–T26 | `m24-l03-p01-lt23..lt26` |
+  | 214 | `791381-m06-l02-p01` «تدريبات» | 228 | T27–T30 | `m06-l02-p01-lt27..lt30` |
+  | 215 | `791381-m06-l02-p02` «امتحانات نهائية للتدريب» | 229 | F01–F06 | `m06-l02-p02-lf01..lf06` |
+
+  The book's own cards and QR note stay as provenance; the clarification says the trainings open from inside the
+  platform once their linked part is released. m28 begins at position 216 and is untouched. Guards:
+  `src/learning/content/791381/learningPractice.t05-f06.test.ts` (ordinal → page identity, exact association,
+  cardinality, metadata-only shape, gate agreement with the server registry) and
+  `api/tests/learning-training-t05-f06.test.js` (registry = catalog, gate per item, F-series safety).
 - **Disclosure rule.** The Reader renders only what the injected HOST discloses. Without a host: the printed label
   and a generic note (no CTA, no request). Unavailable: label + «سيصبح متاحًا عند نشر الجزء المرتبط به.» + a disabled
   CTA — **no title**. Available: title, best result («أفضل نتيجة: 80% · نقاط التقوية: 20 / 25») and «ابدأ التدريب» /
   «أعد التدريب». The renderer never hardcodes training ids.
-- **Registry (server).** `api/src/lib/learning-training-registry.js`: T01 → `791381-m01` (أساسيات الشبكات), T02 →
-  `791381-m02` (أنظمة العد), T03 → `791381-m07` (عناوين IPv4 وصلاحية العنوان), T04 → `791381-m07` (العناوين
-  الخاصة والعامة). The gate is the SAME publication authority as Class Learning Materials: active student session →
-  persisted `classId` → active class → course assigned → `requiredModuleId` published. Teachers (builder token) may
-  open every training regardless.
+- **Registry (server).** `api/src/lib/learning-training-registry.js` — the ONE registry — lists the whole
+  Exam-Library catalog (36 items: T01–T30, F01–F06) with the catalog's own titles. The gate is the SAME publication
+  authority as Class Learning Materials: active student session → persisted `classId` → active class → course
+  assigned → `requiredModuleId` published. Teachers (builder token) may open every training regardless.
+  `requiredModuleId` is the **latest module the item's catalog `pageRange` requires** (not the module of the page that
+  lists it — precedent T03/T04 on PDF 22 gated by m07): T01 m01 · T02 m02 · T03/T04 m07 · T05 m08 · T06 m09 · T07 m10
+  · T08 m11 · T09 m12 · T10 m13 · T11 m14 · T12 m15 · T13 m16 · T14 m18 · T15 m03 · T16 m19 · T17 m04 · T18 m21 · T19
+  m22 · T20 m24 · T21 m05 · T22 m26 · T23 m27 · T24 m06 · T25/T26 (comprehensive, 6–188) m24 · T27–T30 (advanced
+  226) m06 · F01–F06 (final exams) m06. Every entry is cross-checked against `catalog.json` pageRange / category /
+  title by the API guard suite.
 - **API** (`api/src/functions/learning-training.js`): `GET /api/learning-training` (list; `title` only when
   `available`), `GET /api/learning-training/{id}` (the Exam-Library item through `sanitizeExamForStudent` — no
   answers, hints, notes or history), `POST /api/learning-training/{id}/submit` (grades **only** `body.answers` with
   `gradeExam`; the browser never sends a score/percentage/points). Unknown id → 404; hidden module → 403
-  `UNAVAILABLE`.
+  `UNAVAILABLE`. The review rows carry `manualReview` and, for non-choice questions, the key text `correctText`
+  (post-submission only). The **F-series** final exams (multiple choice + matching + open questions) go through the
+  SAME sanitizer, grader, runner and best-score flow: matching keys (`answer.text`, field `correct` flags) never reach
+  the student before submission; open questions are `manualReview` rows that the grader keeps in the total, so the
+  automatic percentage of an exam with open questions cannot reach 100% (F01 max 94%, F06 max 85%) — the existing
+  scoring rule, not a new one, and never "corrected" to 100.
+- **T-series vs F-series Strength (server authority).** Only the T-series feeds Unified Strength.
+  `student-strength.js` owns the rule (`trainingCountsTowardStrength`: id = `T` + digits), and every path applies it:
+  `practicePointsFromTrainings` (the dashboard / profile total) adds 0 for any non-T id whatever the entry holds;
+  `learning-practice.js` derives the persisted `bestPoints` through `strengthFromTrainingResult` (F → 0 on every
+  normalization and write, so a stored, client-sent or malformed value can never become points); the API advertises
+  `strengthEligible: false` and `maxPoints: 0` on every F row and returns `bestPoints / earnedPoints / pointsGained
+  = 0` after an F submission. F entries still keep `bestPercentage`, `attempts` and `lastCompletedAt` as practice
+  history (best never lowers). T01–T30 semantics are unchanged (up to 25 each). Regression suite:
+  `api/tests/learning-practice-strength-fseries.test.js`.
 - **Best-score storage.** `platform/learning-practice/<studentId>.json` (CAS via `mutateJsonWithRetry`), one entry
   per training: `bestPercentage`, `bestPoints = round(best% × 25 / 100)`, `attempts`, `lastCompletedAt`. Retries are
   a **max-merge**: nothing lowers the best, a duplicate never double-awards, concurrent submits converge. The API
@@ -682,8 +720,16 @@ Strength                →  api/src/lib/student-strength.js    →  dashboard `
   only the injected `client` (auth headers) and `actor` differ. It reuses `StudentQuestionCard` (no second question
   engine), enables submission once every question is answered, and renders the SERVER's grading: «8 / 10 إجابات
   صحيحة», «80%», «20 / 25 نقاط تقوية» (student), the improvement note, and a per-question review (chosen option,
-  right option for wrong answers, hint) marked `is-right` / `is-wrong` with icon + word. «أعد التدريب» restarts
-  without re-fetching.
+  right option for wrong answers, hint) marked `is-right` / `is-wrong` with icon + word, plus `is-manual` («لا
+  يُصحَّح تلقائيًا», the learner's own text, no key) for open questions. The runner handles every answer kind
+  `StudentQuestionCard` emits (choice, sequence, table / matching, text, fields), so the F-series shapes render
+  without a second surface (`LearningTrainingRunner.fseries.test.tsx`). «أعد التدريب» restarts without re-fetching.
+  The card header shows the canonical library code (`T05`, `F01`, `dir="ltr"`) beside the printed label.
+  **Strength messaging mirrors the server flag:** a T-series item shows «حتى 25 نقطة تقوية», the earned «n / 25
+  نقاط تقوية» and «+n نقاط قوة»; an item the server marks `strengthEligible: false` (F01–F06) shows «امتحان للتدريب
+  — بلا نقاط تقوية», never a ceiling, earned points or gain, keeps the automatic result and best, and says that
+  open questions are not part of the automatic score. The Reader card omits the «نقاط التقوية» fragment when
+  `best.maxPoints` is 0. No teacher-grading workflow is promised anywhere.
 - **One host** — `src/learning/training/LearningReaderWithTraining.tsx` — used by both `StudentReader` and the
   teacher's `LearningMaterialsPage`. It mounts the SAME `LearningReader` with the `training` seam, reads the list
   **once per mount** (and once more when a training closes — never per block), swaps the Reader for the runner and
@@ -722,7 +768,7 @@ it (`src/studentRank.ts` keeps the compatible helpers for the six-rank ladder).
 | Source | Points | Rule |
 | --- | --- | --- |
 | Finalized exam | 100 each | `FINALIZED_EXAM_STRENGTH_POINTS` — the old 4-exam-per-rank boundaries are unchanged (4 × 100 = 400) |
-| Training (T01–T04) | up to 25 each | `round(best% × 25 / 100)` — best only; retries never lower it |
+| Training (T01–T30 only) | up to 25 each | `round(best% × 25 / 100)` — best only; retries never lower it. F01–F06 (final exams for training) are stored as practice history but contribute **0** |
 | Project | up to 400 each | `round(overallProgress × 400 / 100)` from `core.buildStudentSummary()` — derived, never incremented; a reset lowers it |
 
 - **Ladder:** one step per 400 points — 0–399 none, 400 بذرة القوة (beginner), 800 شعلة صغيرة (bronze), 1200 نمر
@@ -748,7 +794,9 @@ it (`src/studentRank.ts` keeps the compatible helpers for the six-rank ladder).
 
 No page-reading completion; no points for opening pages, clicks or inline worksheet choices; no medals for trainings
 or projects; no project rank or second image set; no assignment records for T01–T04; no change to project stage
-authority; no leaderboard; no scheduled release; no per-student exceptions; **no Unit 4 conversion**.
+authority; no leaderboard; no scheduled release; no per-student exceptions; **no Unit 4 conversion**. (The later
+Learning-Practice phase connected T05–T30 and F01–F06 under the same rules — still no assignment record, gradebook
+row or medal for any of them.)
 
 ## Project Performance, Achievement Hub, Achievement Events & Profile Identity
 
@@ -1180,8 +1228,9 @@ real course. Every page in the range is learner-facing (no divider inside 87–1
   the range and none is invented. Each body is its own lazy chunk (`m14`, `m15`, `m16`).
 - **PDF 106** («تدريبات مراجعة سريعة») is kept as a learner-visible closing page with a `conversionNote`: the three
   cards that group the book's electronic trainings 5–12 by topic and the QR note are the book's own text; the QR
-  codes live in the printed book and trainings 5–12 are **not** delivered in the platform, so no `library-training`
-  block is authored (the platform still serves T01–T04 only). The section's closing review follows on that page.
+  codes live in the printed book; since the Learning-Practice T05–T30 phase the page also carries `library-training`
+  blocks `lt05..lt12` (Reader position 98, one per library id, grouped 5–6 / 7–8 / 9–12). The section's closing
+  review follows on that page.
 - **Historical skeleton m03–m06 untouched**: ids, titles, lesson/page ids and PDF mappings pinned; only their explicit
   `order` shifts to 13–16. **b3** «النماذج والبروتوكولات والأمان» now lists `[m13, m14, m15, m16]`.
 - **Protocol fidelity (PDF 87–92):** every protocol carries exactly the book's one-sentence function and its short
@@ -1272,7 +1321,8 @@ Batch 4. Conversion **stops before PDF 120**: no converted body has `pdfPageStar
   (cover) and PDF 119 (trainings page) print none. PDF 107 is represented only by m17's coarse source range +
   `sourceNote` (the PDF 47 / 76 divider treatment). PDF 119 is a learner-visible closing page with a
   `conversionNote`: the book's three training cards (13–14, 15–16, 17–18), the QR line and «الدفعة التالية» as
-  printed; trainings 13–18 are **not** delivered in the platform, so no `library-training` block (T01–T04 only).
+  printed; since the Learning-Practice T05–T30 phase the page also carries `library-training` blocks `lt13..lt18`
+  (Reader position 110).
 - **Historical skeleton m03–m06 untouched**: ids, titles, lesson/page ids and PDF mappings pinned; only their explicit
   `order` shifts to 15–18. **b3** «النماذج والبروتوكولات والأمان» = `[m13, m14, m15, m16, m17, m18]`.
 - **Security fidelity (108–115):** one book sentence per attack (DoS, DDoS, Session Hijacking, MitM, Phishing,
@@ -1468,7 +1518,8 @@ So:
 
 - **1 source page → 1 interactive page** (seventeen pages); printed page = page circle = PDF index for every new page;
   PDF 157 prints none and is a learner-visible closing page with a `conversionNote` (four training cards 19–22 and the
-  book's line as printed; trainings 19–22 are **not** delivered in the platform, so no `library-training` block).
+  book's line as printed; since the Learning-Practice T05–T30 phase the page also carries `library-training` blocks
+  `lt19..lt22`, Reader position 145).
 - **CLI fidelity:** the «Switch CLI» boxes of PDF 142, 148, 153 and the «Router CLI» boxes of PDF 154, 155 are `code`
   blocks (`language: "cli"`, origin book) with the book's exact command lines and prompts (`Switch(config)#`,
   `Router(config)#`, `Router(config-subif)#`), each followed by a command/explanation table with an LTR command
@@ -1668,7 +1719,8 @@ not rendered). Conversion **stops before PDF 200**: no converted body has `pdfPa
   Security (180–181) · `l02` أوامر Port Security (182–184).
 - **`791381-m24` «حماية أجهزة Cisco»** (`shortTitle` «حماية الأجهزة»), order 22, source 185–191. Lessons `l01` طرق الدخول إلى
   أجهزة Cisco (185–186) · `l02` كلمات المرور وعرض الإعدادات (187–190) · `l03` تدريبات نهاية القسم (191, the QR page as
-  static cards with a `conversionNote`; no `library-training`).
+  static cards with a `conversionNote`, plus — since the Learning-Practice T05–T30 phase — `library-training` blocks
+  `lt23..lt26`, Reader position 178).
 - **`791381-m05` «مرجع أوامر Cisco»** (`shortTitle` «أوامر Cisco»), order 23, source 192–199 — the Phase-2 skeleton
   whose two historical pages `-l01-p01` (PDF 193, printed 191) and `-l01-p02` (PDF 194, printed 192) were the only
   known content. **Decision: complete in place** (like m03 in Batch 6 and m04 in Batch 7): the module id, title, the
@@ -1813,7 +1865,9 @@ reference: glossary, closing word, visual summary, worked examples). The batch i
 
 - **1 source page → 1 interactive page** (twenty-nine pages); printed page = page circle = PDF index everywhere
   except the historical m06 page, which keeps its historical printed number 225; no split or merge. PDF 228 (QR
-  trainings) and 229 (QR exams) carry a `conversionNote`; their cards are static, no `library-training`.
+  trainings) and 229 (QR exams) carry a `conversionNote`; their cards are static provenance, and since the
+  Learning-Practice T05–T30 phase they also carry `library-training` blocks `lt27..lt30` (Reader position 214) and
+  `lf01..lf06` (Reader position 215, «امتحانات نهائية للتدريب»).
 - **CLI fidelity:** the twelve «Cisco CLI» boxes (PDF 201–205, 216, 217, 220, 221, 224, 225, 226) are `code` blocks
   (`language: "cli"`, origin book) with the book's exact lines and prompts — the generic `Device(config)#` /
   `Device(config-if)#` prompts and PDF 224's `Router(config)#` / `Router(config-if)#` kept verbatim — each followed
@@ -2062,6 +2116,7 @@ because m28 exists, no change to any class's `visibleModuleIds`.
 | Batch 9 | Book 791381 source PDF **180–199** (PDF 200 sixth-batch cover not rendered) as NEW modules `m23` («Port Security», order 21, PDF 180–184) and `m24` («حماية أجهزة Cisco», order 22, PDF 185–191) and the historical skeleton `m05` («مرجع أوامر Cisco», order 23, PDF 192–199) **completed in place** — historical pages `-l01-p01` / `-l01-p02` (PDF 193–194) preserved with unchanged ids, titles and mappings, PDF 192 as a new stable id placed first by `order`; twelve CLI `code` blocks; the CLI simulator extended with line mode, Port Security, password / secret / banner and two `show` commands (registry stays 14) plus twelve declarative exercises; server publication registry lists m23, m24, m05 (publishable, never auto-published); m06 shifts to order 24; next untouched page = PDF 200 | done (awaiting review) |
 | Batch 10 | Book 791381 source PDF **200–229** (PDF 200 sixth-batch cover not rendered) as NEW modules `m25` («مراجعة الأوامر», order 24, PDF 201–206), `m26` («الشبكة الواسعة WAN», order 25, PDF 207–209), `m27` («بروتوكولات التوجيه», order 26, PDF 210–222) and the historical skeleton `m06` («قوائم التحكم ACL», order 27, PDF 223–229) **completed in place** — historical page `-l01-p01` (PDF 227, printed 225) preserved with unchanged id, title and mapping, PDF 223–226 as new stable ids placed first by `order`; twelve CLI `code` boxes; the CLI simulator extended with the router mode (OSPF / EIGRP `network` forms), numbered standard / extended ACLs, `ip access-group` and `show ip route` (registry stays 14) plus fifteen declarative exercises; server publication registry lists m25, m26, m27, m06 (publishable, never auto-published) — every manifest module now has a body; next untouched page = PDF 230 | done (merged) |
 | **Final summary (this)** | Book 791381 source PDF **230–264** (PDF 230 section cover and PDF 264 back cover not rendered) as the NEW module `m28` («الملخّص الشامل», order 28, the LAST module; fills the manifest's «summary» grouping) — eight lessons, 33 learner pages PDF 231–263 (printed 229–260 for 231–262), nine CLI `code` boxes; the CLI simulator extended with `switchport trunk native vlan`, the minimal static / default route `ip route … <next-hop>` (shown as `S` / `S*` routes) and the EIGRP optional wildcard (registry stays 14) plus ten declarative exercises; server publication registry lists m28 (publishable, never auto-published); the unknown-id test sentinel moves to `791381-m29`; the book is fully converted | done (awaiting review) |
+| **Learning Practice T05–T30 / F01–F06 (this)** | The remaining 32 Exam-Library items connected to the six book review pages (Reader positions 98, 110, 145, 178, 214, 215) as metadata-only `library-training` blocks, one per real library id, grouped as the book groups them; the ONE server registry extended to the full catalog with the catalog's titles and pageRange-derived gates; the shared runner extended to the F-series shapes (matching, open / manual review) with no second surface; F01–F06 keep practice history but contribute 0 Unified Strength (server rule, T01–T30 unchanged); no external QR / GitHub Pages links, no question copies, no assignment / gradebook / publication change | done (awaiting review) |
 | 4 | Interactive Practice — remaining inline checking families beyond closed-choice worksheets (free text, ordering, evaluator-backed hints) | deferred |
 | 5 | Simulations — real VLAN/subnet/CLI/… renderers registered behind the Phase-3A engine | deferred |
 | 6 | Student Progress — last page, completion, attempts (separate domain; attaches to the no-op event seam) | deferred |

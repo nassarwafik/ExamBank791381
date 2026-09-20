@@ -70,6 +70,13 @@ describe("library-training card — host-decided states", () => {
     expect(within(c1).getByRole("button", { name: "أعد التدريب" })).toBeTruthy();
     expect(within(c1).queryByText("لم تحلّ هذا التدريب بعد.")).toBeNull();
   });
+  it("a best result advertised with maxPoints 0 (an F-series final exam for training) shows the percentage only — no «نقاط التقوية» fragment", () => {
+    draw(hostOf({ T01: { kind: "available", title: "نموذج A — 2025", best: { bestPercentage: 94, bestPoints: 0, maxPoints: 0, attempts: 2, lastCompletedAt: "2026-09-20T00:00:00.000Z" } } }));
+    const c1 = screen.getByRole("region", { name: "تدريب 1" });
+    expect(within(c1).getByText(/أفضل نتيجة:/).textContent).toBe("أفضل نتيجة: 94%");
+    expect(c1.textContent).not.toContain("نقاط التقوية");
+    expect(within(c1).getByRole("button", { name: "أعد التدريب" })).toBeTruthy();
+  });
   it("a REAL 0% attempt is a result (attempts 1): «أفضل نتيجة: 0% · نقاط التقوية: 0 / 25» + «أعد التدريب» — never confused with «لم تحلّ»", () => {
     draw(hostOf({ T01: { kind: "available", title: "أساسيات الشبكات", best: { bestPercentage: 0, bestPoints: 0, maxPoints: 25, attempts: 1, lastCompletedAt: "2026-09-19T00:00:00.000Z" } } }));
     const c1 = card("تدريب 1");
@@ -83,6 +90,15 @@ describe("library-training card — host-decided states", () => {
     expect(within(c1).getByText("لم تحلّ هذا التدريب بعد.")).toBeTruthy();
     expect(within(c1).getByRole("button", { name: "ابدأ التدريب" })).toBeTruthy();
     expect(within(c1).queryByText(/أفضل نتيجة:/)).toBeNull();
+  });
+  it("every card shows the canonical library code (T01 / T03) as an LTR badge next to the printed label, in every host state", () => {
+    draw(hostOf({ T01: { kind: "available", title: "أساسيات الشبكات", best: null }, T03: { kind: "unavailable" } }));
+    const c1 = card("تدريب 1"), c3 = card("تدريب 3");
+    const code1 = c1.querySelector(".learning-reader-training-code")!, code3 = c3.querySelector(".learning-reader-training-code")!;
+    expect([code1.textContent, code1.getAttribute("dir"), code3.textContent, code3.getAttribute("dir")]).toEqual(["T01", "ltr", "T03", "ltr"]);
+    cleanup();
+    draw();
+    expect(card("تدريب 1").querySelector(".learning-reader-training-code")!.textContent).toBe("T01");   // no host → still the safe code
   });
   it("the card never emits answer-key vocabulary or training titles the host did not disclose", () => {
     const { container } = draw(hostOf({ T01: { kind: "unavailable" }, T03: { kind: "unavailable" } }));
