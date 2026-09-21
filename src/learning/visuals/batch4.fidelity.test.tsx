@@ -23,6 +23,7 @@ import HttpsSecureChannel from "./791381/batch4/HttpsSecureChannel";
 afterEach(cleanup);
 const text = (node: Element) => node.textContent || "";
 const anim = (root: Element, id: string) => root.querySelector(`animateMotion[id="${id}"]`);
+const byId = (root: Element, id: string) => root.querySelector(`[id="${id}"]`);   // any SMIL element (animate / animateMotion)
 const allMotion = (root: Element) => root.querySelectorAll("animateMotion").length;
 
 // ── m16 · PDF 98–99 — collision domains: Hub shares one domain (collision), Switch separates each port ──
@@ -40,6 +41,26 @@ describe("Batch 4 — collision-domains (PDF 98–99): Hub shares, Switch separa
     // two converging packets on the hub side + two independent switch flows
     expect(container.querySelectorAll('[data-flow="1"]').length).toBeGreaterThanOrEqual(2);
     expect(allMotion(container)).toBeGreaterThanOrEqual(4);
+  });
+  it("is a causal bounded cycle: A and B start TOGETHER, arrive TOGETHER, THEN the burst, THEN the next pair", () => {
+    const { container } = render(<CollisionDomains ariaLabel="x" reducedMotion={false} />);
+    const a = anim(container, "hubA")!, b = anim(container, "hubB")!, burst = byId(container, "hubCollision")!;
+    expect(a).not.toBeNull(); expect(b).not.toBeNull(); expect(burst).not.toBeNull();
+    // the two packets start together and travel for the same time (→ arrive together)
+    expect(a.getAttribute("begin")).toBe(b.getAttribute("begin"));
+    expect(a.getAttribute("dur")).toBe(b.getAttribute("dur"));
+    // the collision animates ONLY after the packets arrive (on hubA.end), and is NOT an independent pulse
+    expect(burst.tagName.toLowerCase()).toBe("animate");
+    expect(burst.getAttribute("begin")).toBe("hubA.end");
+    // the next pair waits for the burst to finish (bounded cycle, no independent infinite loops)
+    expect(a.getAttribute("begin")).toContain("hubCollision.end");
+    expect(container.querySelector(".eb-visual-pulse")).toBeNull();   // no unrelated pulse
+  });
+  it("the Switch panel has NO collision marker (independent forwarding, never a collision)", () => {
+    const { container } = render(<CollisionDomains ariaLabel="x" reducedMotion={false} />);
+    // the collision marker sits on the Hub; the switch flows carry data-flow and no data-collision of their own
+    const flows = [...container.querySelectorAll('[data-flow="1"]')];
+    for (const f of flows) expect(f.querySelector('[data-collision="1"]')).toBeNull();
   });
   it("under reduced motion the collision burst is NOT animated (no pulse class) but the still frame keeps the domains", () => {
     const { container } = render(<CollisionDomains ariaLabel="x" reducedMotion={true} />);
@@ -142,9 +163,22 @@ describe("Batch 4 — apipa-fallback (PDF 105): 169.254 self-assignment, local o
     expect(t).toContain("داخل الشبكة المحلية فقط");     // explicitly local-only
     for (const claim of ["الإنترنت", "اتصال بالإنترنت", "متصل بالإنترنت"]) expect(t).not.toContain(claim);
   });
-  it("motion sends a request toward the DHCP server that never answers (one outbound animation)", () => {
+  it("motion sends a request toward the DHCP server that never answers (one outbound animation, no return reply)", () => {
     const { container } = render(<ApipaFallback ariaLabel="x" reducedMotion={false} />);
-    expect(allMotion(container)).toBe(1);
+    expect(allMotion(container)).toBe(1);   // exactly one packet path — the request; there is NO return-path DHCP reply
+  });
+  it("is a causal fallback sequence: request → no-response → APIPA self-assignment (not APIPA from time zero)", () => {
+    const { container } = render(<ApipaFallback ariaLabel="x" reducedMotion={false} />);
+    const req = anim(container, "apipaReq")!, noResp = byId(container, "apipaNoResp")!, fb = byId(container, "apipaFallback")!;
+    expect(req).not.toBeNull(); expect(noResp).not.toBeNull(); expect(fb).not.toBeNull();
+    // the no-response mark appears only when the request arrives
+    expect(noResp.getAttribute("begin")).toBe("apipaReq.end");
+    // the APIPA fallback is revealed ONLY after the no-response stage (never glowing from time zero)
+    expect(fb.getAttribute("begin")).toBe("apipaNoResp.end");
+    // the APIPA group starts hidden under motion (opacity 0) — it is not visible before the failure
+    expect(container.querySelector('[data-fallback="1"]')!.getAttribute("opacity")).toBe("0");
+    // the next request waits for the fallback stage to complete (bounded cycle)
+    expect(req.getAttribute("begin")).toContain("apipaFallback.end");
   });
 });
 
@@ -156,6 +190,18 @@ describe("Batch 4 — attack-targets (PDF 108): the three book targets, conceptu
     const t = text(container);
     for (const target of ["المستخدم", "المعلومات", "الخوادم"]) expect(t).toContain(target);
     for (const banned of ["Wireshark", "nmap", "botnet", "SYN", "port", "exploit", "malware"]) expect(t).not.toContain(banned);
+  });
+  it("reaches the three targets IN TURN via a bounded CHAIN — not three independent infinite loops", () => {
+    const { container } = render(<AttackTargets ariaLabel="x" reducedMotion={false} />);
+    const legs = [anim(container, "at0")!, anim(container, "at1")!, anim(container, "at2")!];
+    for (const l of legs) expect(l).not.toBeNull();
+    // each leg begins on the previous leg's end (sequential, no overlap)
+    expect(legs[1].getAttribute("begin")).toBe("at0.end");
+    expect(legs[2].getAttribute("begin")).toBe("at1.end");
+    // the first leg restarts only when the last leg ends (bounded cycle)
+    expect(legs[0].getAttribute("begin")).toContain("at2.end");
+    // none is an independent infinite loop
+    for (const l of legs) expect(l.getAttribute("repeatCount")).toBeNull();
   });
 });
 
@@ -193,6 +239,16 @@ describe("Batch 4 — hijacking-vs-mitm (PDF 110): a distinct topology per conce
     // the MitM leg routes via the middle node at x=190
     expect(paths.some(p => p === "M 86 194 L 190 194 L 294 194")).toBe(true);
   });
+  it("Session Hijacking is causal: the active session runs FIRST, THEN the attacker takeover appears (on the session's end)", () => {
+    const { container } = render(<HijackingVsMitm ariaLabel="x" reducedMotion={false} />);
+    const session = anim(container, "hjSession")!, takeover = byId(container, "hjTakeover")!;
+    expect(session).not.toBeNull(); expect(takeover).not.toBeNull();
+    // the takeover is hidden until the session is established, and begins only on the session's end
+    expect(container.querySelector('[data-hijack="1"]')!.getAttribute("opacity")).toBe("0");
+    expect(takeover.getAttribute("begin")).toBe("hjSession.end");
+    // the session restarts only after the takeover finishes (bounded cycle, not a static takeover from t=0)
+    expect(session.getAttribute("begin")).toContain("hjTakeover.end");
+  });
 });
 
 // ── m17 · PDF 111 — phishing (deceive the user) vs spoofing (forge the identity) ──
@@ -218,14 +274,23 @@ describe("Batch 4 — secure-two-pillars (PDF 112): both pillars, causal", () =>
     expect(container.querySelectorAll('[data-identity="1"]').length).toBe(1);
     expect(text(container)).toContain("الأمان = تشفير البيانات + التحقق من هوية الطرف الآخر");
   });
-  it("is causal: the identity check begins only when the data crossing ENDS", () => {
+  it("presents TWO PILLARS together — NOT a data-then-identity protocol sequence (source PDF112 gives no such order)", () => {
     const { container } = render(<SecureTwoPillars ariaLabel="x" reducedMotion={false} />);
-    const data = anim(container, "secData");
-    const check = container.querySelector('animate[id="secCheck"]');
+    const data = anim(container, "secData")!;
+    const check = container.querySelector('animate[id="secCheck"]')!;
     expect(data).not.toBeNull();
     expect(check).not.toBeNull();
-    expect(check!.getAttribute("begin")).toBe("secData.end");     // verify identity AFTER the data arrives
-    expect(data!.getAttribute("begin")).toContain("secCheck.end");
+    // both pillars begin at 0s — concurrent; NEITHER is a consequence of the other
+    expect(data.getAttribute("begin")).toBe("0s");
+    expect(check.getAttribute("begin")).toBe("0s");
+    // the identity check is NOT gated on the data arriving, and the data does NOT wait on the check
+    expect(check.getAttribute("begin")).not.toContain("secData");
+    expect(data.getAttribute("begin")).not.toContain("secCheck");
+  });
+  it("reduced motion still shows BOTH pillars (encrypted channel + identity verification)", () => {
+    const { container } = render(<SecureTwoPillars ariaLabel="x" reducedMotion={true} />);
+    expect(container.querySelectorAll('[data-encrypted="1"]').length).toBe(1);
+    expect(container.querySelectorAll('[data-identity="1"]').length).toBe(1);
   });
 });
 

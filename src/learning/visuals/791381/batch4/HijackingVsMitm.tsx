@@ -19,17 +19,20 @@ export default function HijackingVsMitm({ ariaLabel, reducedMotion, className }:
       <line data-session="1" className="eb-visual-link is-strong" x1="86" y1="60" x2="294" y2="60" />
       {node(60, 60, "المستخدم")}
       {node(320, 60, "الخادم")}
-      {/* attacker off to the side takes over the open session */}
-      <g data-hijack="1">
+      {/* the session runs FIRST; only after it is established does the attacker's takeover appear and move into it —
+          so the MOTION teaches that an ALREADY-OPEN session is being seized. Reduced motion shows the takeover statically. */}
+      {!reducedMotion ? (
+        <g className="eb-visual-packet"><rect x="-5" y="-5" width="10" height="10" rx="2" /><animateMotion id="hjSession" begin="0s;hjTakeover.end" dur="1.4s" fill="freeze" keyPoints="0;1;0" keyTimes="0;0.5;1" calcMode="linear" path="M 86 60 L 294 60" /></g>
+      ) : <rect className="eb-visual-packet-static" x="185" y="55" width="10" height="10" rx="2" />}
+      {/* attacker takeover — hidden until the session is established (begins on hjSession.end), then seizes the open session */}
+      <g data-hijack="1" opacity={reducedMotion ? 1 : 0}>
         <rect className="eb-visual-node is-dim" x="164" y="94" width="52" height="26" rx="6" stroke="var(--eb-danger)" />
         <text className="eb-visual-node-label" x="190" y="107" textAnchor="middle" dominantBaseline="central">مهاجم</text>
         <line className="eb-visual-link" x1="190" y1="94" x2="190" y2="74" stroke="var(--eb-danger)" strokeDasharray="4 4" />
         <path className="eb-visual-pin" d="M186 70 l4 8 4 -8 z" />
+        {!reducedMotion && <animate id="hjTakeover" attributeName="opacity" begin="hjSession.end" dur="1.3s" values="0;1;1;0" keyTimes="0;0.25;0.75;1" />}
       </g>
       <text className="eb-visual-part-label" x="190" y="134" textAnchor="middle">يستولي على جلسة مفتوحة أصلًا</text>
-      {!reducedMotion ? (
-        <g className="eb-visual-packet"><rect x="-5" y="-5" width="10" height="10" rx="2" /><animateMotion dur="1.6s" repeatCount="indefinite" keyPoints="0;1;0" keyTimes="0;0.5;1" calcMode="linear" path="M 86 60 L 294 60" /></g>
-      ) : <rect className="eb-visual-packet-static" x="185" y="55" width="10" height="10" rx="2" />}
 
       {/* ── MitM — attacker BETWEEN the two parties ── */}
       <text className="eb-visual-row-label" x="190" y="164" textAnchor="middle" direction="ltr">MitM</text>

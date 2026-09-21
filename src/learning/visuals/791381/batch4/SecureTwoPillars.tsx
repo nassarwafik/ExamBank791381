@@ -25,12 +25,15 @@ export default function SecureTwoPillars({ ariaLabel, reducedMotion, className }
         <path className="eb-visual-printer" d="M0 -12 L11 -7 V2 a11 13 0 0 1 -11 12 a11 13 0 0 1 -11 -12 V-7 Z" />
         <path d="M-5 0 l3 4 6 -7" fill="none" stroke="var(--eb-success)" strokeWidth="2.4" />
       </g>
-      {/* causal motion: data crosses the encrypted channel, then the identity check confirms */}
+      {/* TWO PILLARS shown TOGETHER — NOT a protocol sequence. The book (PDF112) defines security as protecting the
+          data AND verifying the other party's identity, both at once; it does not say the data is sent first and the
+          identity checked afterward. So the data crosses the encrypted channel while the identity check runs — both
+          begin at 0s, neither is a consequence of the other. Reduced motion shows both pillars statically. */}
       {!reducedMotion ? (
         <>
-          <g className="eb-visual-packet"><rect x="-6" y="-5" width="12" height="10" rx="2" /><animateMotion id="secData" begin="0s;secCheck.end" dur="1.6s" path={`M ${S.x + 26} ${S.y} L ${R.x - 26} ${R.y}`} /></g>
+          <g className="eb-visual-packet"><rect x="-6" y="-5" width="12" height="10" rx="2" /><animateMotion id="secData" begin="0s" dur="1.8s" repeatCount="indefinite" path={`M ${S.x + 26} ${S.y} L ${R.x - 26} ${R.y}`} /></g>
           <circle data-identity-anim="1" cx={R.x} cy={R.y + 30} r="16" fill="none" stroke="var(--eb-success)" strokeWidth="2" opacity="0">
-            <animate id="secCheck" attributeName="opacity" begin="secData.end" dur="0.8s" values="0;1;0" />
+            <animate id="secCheck" attributeName="opacity" begin="0s" dur="1.8s" repeatCount="indefinite" values="0;1;1;0" keyTimes="0;0.3;0.7;1" />
           </circle>
         </>
       ) : (

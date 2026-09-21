@@ -24,13 +24,16 @@ export default function CollisionDomains({ ariaLabel, reducedMotion, className }
       <g data-domain="shared"><rect className="eb-visual-zone" x="14" y="26" width="164" height="140" rx="14" /></g>
       {HUB_DEV.map((p, i) => <g key={i}>{node(p, i)}<line className="eb-visual-link" x1={p.x} y1={p.y} x2={HUB.x} y2={HUB.y} /></g>)}
       <circle className="eb-visual-hub" cx={HUB.x} cy={HUB.y} r="13" />
-      {/* two senders (top-left + top-right) transmit at once → collide at the hub */}
+      {/* two senders transmit AT ONCE → both reach the hub → ONLY THEN the collision burst → next pair (bounded cycle).
+          hubA/hubB share begin+dur so they start and arrive together; the burst begins on their arrival (hubA.end); the
+          next pair waits for the burst to finish (begin lists hubCollision.end). fill=freeze parks each packet on the hub
+          during the burst. */}
       {!reducedMotion ? (
         <>
           <path id="cd-a" className="eb-visual-route" d={`M ${HUB_DEV[0].x} ${HUB_DEV[0].y} L ${HUB.x} ${HUB.y}`} />
-          <g className="eb-visual-packet"><rect x="-5" y="-5" width="10" height="10" rx="2" /><animateMotion dur="1.6s" repeatCount="indefinite"><mpath href="#cd-a" /></animateMotion></g>
+          <g className="eb-visual-packet"><rect x="-5" y="-5" width="10" height="10" rx="2" /><animateMotion id="hubA" begin="0s;hubCollision.end" dur="1.2s" fill="freeze"><mpath href="#cd-a" /></animateMotion></g>
           <path id="cd-b" className="eb-visual-route" d={`M ${HUB_DEV[1].x} ${HUB_DEV[1].y} L ${HUB.x} ${HUB.y}`} />
-          <g className="eb-visual-packet"><rect x="-5" y="-5" width="10" height="10" rx="2" /><animateMotion dur="1.6s" repeatCount="indefinite"><mpath href="#cd-b" /></animateMotion></g>
+          <g className="eb-visual-packet"><rect x="-5" y="-5" width="10" height="10" rx="2" /><animateMotion id="hubB" begin="0s;hubCollision.end" dur="1.2s" fill="freeze"><mpath href="#cd-b" /></animateMotion></g>
         </>
       ) : (
         <>
@@ -38,8 +41,10 @@ export default function CollisionDomains({ ariaLabel, reducedMotion, className }
           <rect className="eb-visual-packet-static" x={HUB.x + 10} y={HUB.y - 20} width="10" height="10" rx="2" />
         </>
       )}
-      <g data-collision="1" className={reducedMotion ? "" : "eb-visual-pulse"}>
+      {/* the burst is hidden until the packets arrive; still (reduced) frame keeps it visible on the hub */}
+      <g data-collision="1" opacity={reducedMotion ? 1 : 0}>
         <path className="eb-visual-pin" d={`M${HUB.x} ${HUB.y - 24} l3 7 7 -2 -4 6 4 6 -7 -2 -3 7 -3 -7 -7 2 4 -6 -4 -6 7 2 z`} />
+        {!reducedMotion && <animate id="hubCollision" attributeName="opacity" begin="hubA.end" dur="0.7s" values="0;1;1;0" keyTimes="0;0.15;0.75;1" />}
       </g>
       <text className="eb-visual-part-label" x={HUB.x} y="182" textAnchor="middle">مجال تصادم واحد للجميع</text>
 
