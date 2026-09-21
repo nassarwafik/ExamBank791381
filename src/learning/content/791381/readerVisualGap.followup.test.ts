@@ -15,6 +15,7 @@ import m22 from "./modules/m22";
 import type { ContentModule, ContentPage, VisualBlock, SimulationBlock, PracticeTableBlock, PracticeTableSelectCell } from "../types";
 import { REGISTERED_VISUAL_IDS, resolveVisual } from "../../visuals/registry";
 import { productionActivityRegistry } from "../../activities/engine";
+import { studyActivityOf, eligibleStudyActivities } from "../../study/eligibility";
 
 const pagesOf = (m: ContentModule): ContentPage[] => [...m.lessons].sort((a, b) => a.order - b.order).flatMap(l => [...l.pages].sort((a, b) => a.order - b.order));
 const pageByPdf = (m: ContentModule, pdf: number): ContentPage => {
@@ -114,6 +115,26 @@ describe("Reader follow-up — site 147 (PDF 160): source-faithful «حسنة أ
     expect(page.blocks.some(b => b.id === "m20-l01-p02-q2")).toBe(true);
     expect(page.blocks[page.blocks.length - 1].type).toBe("practice");
   });
+  it("the dropdown is a LOCAL self-check only: studyEligible=false keeps its keys/options intact but excludes it from Study Strength", () => {
+    const page = pageByPdf(m20, 160);
+    const table = page.blocks.find(b => b.id === "m20-l01-p02-classify") as PracticeTableBlock;
+    expect(table.studyEligible).toBe(false);
+    // local checking data is still present (every select cell keeps a key that is one of its options)
+    for (const r of table.rows) expect(sel(r[1]).options).toContain(sel(r[1]).key);
+    // excluded from the shared eligibility rule (→ server index + the page study bar) — but its q1 stays eligible
+    expect(studyActivityOf(table)).toBeNull();
+    const eligibleIds = eligibleStudyActivities(page).map(s => s.activityId);
+    expect(eligibleIds).not.toContain("m20-l01-p02-classify");
+    expect(eligibleIds).toContain("m20-l01-p02-q1");
+  });
+  it("the opt-out is generic: a normal keyed practice-table stays eligible; the same table with studyEligible:false does not", () => {
+    const base: PracticeTableBlock = {
+      id: "probe", type: "practice-table", origin: "teacher-enrichment", headers: ["a", "b"], columnDirs: ["rtl", "rtl"],
+      rows: [["x", { kind: "select", options: ["p", "q"], key: "p" }]],
+    };
+    expect(studyActivityOf(base)).not.toBeNull();                       // default/undefined → eligible, as before
+    expect(studyActivityOf({ ...base, studyEligible: false })).toBeNull();   // explicit opt-out → excluded
+  });
 });
 
 describe("Reader follow-up — site 154 (PDF 167): the IPv6 long→short practice simulator", () => {
@@ -133,6 +154,8 @@ describe("Reader follow-up — site 154 (PDF 167): the IPv6 long→short practic
       { long: "fe80:0000:0000:0000:0202:b3ff:fe1e:8329", short: "fe80::202:b3ff:fe1e:8329" },
       { long: "2a00:8640:0000:0000:0200:23ff:fe10:8329", short: "2a00:8640::200:23ff:fe10:8329" },
     ]);
+    // the fallback (shown if the renderer can't load) must reveal NONE of the three short answers
+    for (const ex of examples) expect(sim!.fallback!.text).not.toContain(ex.short);
     // placement: after the visual + note, before the closing practice; the page still ends with practice
     const ids = page.blocks.map(b => b.id);
     expect(ids.indexOf("m21-l01-p02-note")).toBeLessThan(ids.indexOf("m21-l01-p02-sim"));

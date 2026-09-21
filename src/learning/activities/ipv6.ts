@@ -8,6 +8,9 @@
 
 export type Ipv6Example = { long: string; short: string };
 
+/** Normalize a typed short address for the v1 exact-target comparison: trim + lowercase (letter-case/whitespace only). */
+export const normalizeShort = (s: string): string => String(s ?? "").trim().toLowerCase();
+
 // The THREE exact PDF 167 examples (the canonical source of truth; also mirrored in the content block config).
 export const BOOK_EXAMPLES: Ipv6Example[] = [
   { long: "2001:0db8:0000:0000:0000:ff00:0042:8329", short: "2001:db8::ff00:42:8329" },

@@ -1,18 +1,18 @@
 import { useMemo, useState } from "react";
 import { IconCheck, IconClose } from "../../icons";
 import type { LearningActivityProps } from "./engine";
-import { canonicalIpv6, readExamples } from "./ipv6";
+import { normalizeShort, readExamples } from "./ipv6";
 
 /**
  * Reader follow-up — `simulation / ipv6-compress / v1` (Book 791381 PDF 167).
  *
- * A tiny, LOCAL learning practice: the student is shown a FULL IPv6 address and types its shortened form; the check
- * is deterministic and offline (no grading, no persistence, no network, no rank/Strength). It uses ONLY the three
- * exact book examples from PDF 167 (v1) — the pure address logic lives in `./ipv6`. The answer is NEVER placed in the
- * DOM before a correct check — the verdict is computed in JS by canonicalizing both sides (expand → RFC-5952-style
- * compress) so the book's short form, the long form, any other valid compression, and different letter-casing all
- * verify equal, while a double «::» or any non-hex input is rejected as "try again". Two hints teach the method
- * without revealing the answer. Keyboard + touch, shell reset (epoch stamp), reduced-motion aware (no motion anyway).
+ * A tiny, LOCAL learning practice: the student is shown a FULL IPv6 address and must type its SHORTENED form. The
+ * check is deterministic and offline (no grading, no persistence, no network, no rank/Strength) and uses ONLY the
+ * three exact book examples from PDF 167 (v1). For v1 correctness is the book's exact short form, compared
+ * case-insensitively and with surrounding whitespace ignored (`normalizeShort`): typing the full long address back,
+ * or an only-partially-shortened form that is not the book's target, is WRONG — the task is «اكتب العنوان المختصر».
+ * The answer is NEVER placed in the DOM before a correct check. Two hints teach the method without revealing the
+ * answer. Keyboard + touch, shell reset (epoch stamp), reduced-motion aware (no motion is used anyway).
  */
 export default function Ipv6CompressSimulator({ block, commands, emit }: LearningActivityProps) {
   const examples = useMemo(() => readExamples(block.config), [block.config]);
@@ -21,7 +21,8 @@ export default function Ipv6CompressSimulator({ block, commands, emit }: Learnin
   const live = state.epoch === commands.reset ? state : fresh;
 
   const ex = examples[Math.min(live.index, examples.length - 1)];
-  const right = live.checked && canonicalIpv6(live.input) !== null && canonicalIpv6(live.input) === canonicalIpv6(ex.long);
+  const isCorrect = (input: string) => normalizeShort(input) === normalizeShort(ex.short);   // the book's exact short form only
+  const right = live.checked && isCorrect(live.input);
 
   const patch = (p: Partial<typeof state>, name: string, detail?: Record<string, unknown>) => {
     setState({ ...live, ...p, epoch: commands.reset });
@@ -39,7 +40,7 @@ export default function Ipv6CompressSimulator({ block, commands, emit }: Learnin
           value={live.input} aria-label="اكتب العنوان المختصر"
           onChange={e => patch({ input: e.target.value, checked: false }, "")} />
         <button type="button" className="eb-button is-primary learning-ipv6c-check" disabled={!live.input.trim()}
-          onClick={() => patch({ checked: true }, "ipv6c-check", { correct: canonicalIpv6(live.input) === canonicalIpv6(ex.long) })}>تحقّق</button>
+          onClick={() => patch({ checked: true }, "ipv6c-check", { correct: isCorrect(live.input) })}>تحقّق</button>
       </div>
 
       {live.checked && (

@@ -33,7 +33,7 @@ export default function PracticeTableView({ block, pageId, study }: { block: Pra
   const answered = Object.keys(choices).length > 0;
   const key = practiceTableKey(block);
   const cells = key && key.kind === "practice-table" ? key.cells : null;
-  const eligible = !!study && !!pageId && cells !== null;
+  const eligible = !!study && !!pageId && cells !== null && block.studyEligible !== false;   // opt-out: still checks locally, just earns no point
   const allRight = cells !== null && Object.entries(cells).every(([k, expected]) => choices[k] === expected);
 
   // Same retry-safe, duplicate-safe reporting as PracticeBlockView: accepted → never again; in flight → never twice;

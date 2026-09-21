@@ -52,10 +52,12 @@ export function practiceTableKey(block: PracticeTableBlock): StudyActivityKey | 
   return Object.keys(cells).length > 0 ? { kind: "practice-table", cells } : null;
 }
 
-/** The eligible activity of one block, or null. Pure. */
+/** The eligible activity of one block, or null. Pure.
+ *  A practice-capable block may explicitly opt OUT with `studyEligible: false` (local self-check only): it stays
+ *  interactive in the Reader but never earns a study point. This is generic — no page id is ever special-cased. */
 export function studyActivityOf(block: ContentBlock): StudyActivitySpec | null {
-  if (block.type === "practice") { const key = practiceQuestionKey(block.question); return key ? { activityId: block.id, key } : null; }
-  if (block.type === "practice-table") { const key = practiceTableKey(block); return key ? { activityId: block.id, key } : null; }
+  if (block.type === "practice") { if (block.studyEligible === false) return null; const key = practiceQuestionKey(block.question); return key ? { activityId: block.id, key } : null; }
+  if (block.type === "practice-table") { if (block.studyEligible === false) return null; const key = practiceTableKey(block); return key ? { activityId: block.id, key } : null; }
   return null;
 }
 

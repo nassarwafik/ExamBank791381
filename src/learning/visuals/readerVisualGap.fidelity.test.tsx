@@ -20,7 +20,7 @@ import SubinterfacesVlan1020 from "./791381/batch7/SubinterfacesVlan1020";
 import WellKnownPorts from "./791381/batch6/WellKnownPorts";
 import DhcpAutomaticConfig from "./791381/batch8/DhcpAutomaticConfig";
 import Ipv6CompressSimulator from "../activities/Ipv6CompressSimulator";
-import { expandIpv6, canonicalIpv6 } from "../activities/ipv6";
+import { expandIpv6, normalizeShort } from "../activities/ipv6";
 import type { LearningActivityProps } from "../activities/engine";
 import type { SimulationBlock } from "../content/types";
 
@@ -113,53 +113,71 @@ describe("Reader follow-up — dhcp-automatic-config (site 156 / PDF 169): two s
   });
 });
 
-// ── site 154 (PDF 167) — IPv6 compressor logic + rendering ──
-describe("Reader follow-up — ipv6-compress canonicalization logic", () => {
-  const BOOK: [string, string][] = [
-    ["2001:0db8:0000:0000:0000:ff00:0042:8329", "2001:db8::ff00:42:8329"],
-    ["fe80:0000:0000:0000:0202:b3ff:fe1e:8329", "fe80::202:b3ff:fe1e:8329"],
-    ["2a00:8640:0000:0000:0200:23ff:fe10:8329", "2a00:8640::200:23ff:fe10:8329"],
-  ];
-  it("the book's long and short forms canonicalize equal (and case-insensitively)", () => {
-    for (const [long, short] of BOOK) {
-      expect(canonicalIpv6(long)).toBe(canonicalIpv6(short));
-      expect(canonicalIpv6(long.toUpperCase())).toBe(canonicalIpv6(short));
-      expect(canonicalIpv6(short)).toBe(short);   // each book short form is already the canonical (RFC-5952) compression
-    }
-  });
-  it("rejects a doubled «::», bad hex and the wrong group count", () => {
-    expect(expandIpv6("2001::db8::1")).toBeNull();
-    expect(canonicalIpv6("2001::db8::1")).toBeNull();
-    expect(expandIpv6("gggg::1")).toBeNull();
-    expect(expandIpv6("2001:db8:0:0:0:0:0")).toBeNull();     // only 7 groups, no ::
-    expect(canonicalIpv6("")).toBeNull();
-  });
-  it("«::» must stand for at least one group (a full 8-group address with :: is invalid)", () => {
-    expect(expandIpv6("1:2:3:4:5:6:7:8")).toEqual(["0001", "0002", "0003", "0004", "0005", "0006", "0007", "0008"]);
-    expect(expandIpv6("1:2:3:4::5:6:7:8")).toBeNull();
+// ── site 154 (PDF 167) — IPv6 compressor: v1 correctness is the book's EXACT short form ──
+// Each row: [long shown, book short target, an only-partially-shortened (leading zeros stripped, no ::) non-final form].
+const BOOK: { long: string; short: string; partial: string }[] = [
+  { long: "2001:0db8:0000:0000:0000:ff00:0042:8329", short: "2001:db8::ff00:42:8329", partial: "2001:db8:0:0:0:ff00:42:8329" },
+  { long: "fe80:0000:0000:0000:0202:b3ff:fe1e:8329", short: "fe80::202:b3ff:fe1e:8329", partial: "fe80:0:0:0:202:b3ff:fe1e:8329" },
+  { long: "2a00:8640:0000:0000:0200:23ff:fe10:8329", short: "2a00:8640::200:23ff:fe10:8329", partial: "2a00:8640:0:0:0:200:23ff:fe10:8329" },
+];
+
+describe("Reader follow-up — ipv6-compress correctness rule (v1 = the book's exact short form)", () => {
+  const correct = (input: string, short: string) => normalizeShort(input) === normalizeShort(short);
+  for (const { long, short, partial } of BOOK) {
+    it(`accepts ONLY the book short form «${short}» (case/space-insensitive); rejects the full long form and non-final compressions`, () => {
+      expect(correct(short, short)).toBe(true);                 // exact short → correct
+      expect(correct(short.toUpperCase(), short)).toBe(true);   // uppercase short → correct
+      expect(correct("  " + short + "  ", short)).toBe(true);   // surrounding whitespace → correct
+      expect(correct(long, short)).toBe(false);                 // FULL long form → WRONG (copying the shown address fails)
+      expect(correct(partial, short)).toBe(false);              // only-partially-shortened, not the book target → WRONG
+      expect(correct("2001:db8::1", short)).toBe(false);        // unrelated valid address → WRONG
+      expect(correct("2001::db8::1", short)).toBe(false);       // invalid doubled «::» → WRONG
+    });
+  }
+  it("keeps expandIpv6 as a validity helper only (config validation), NOT as the correctness rule", () => {
+    expect(expandIpv6("2001::db8::1")).toBeNull();              // doubled «::»
+    expect(expandIpv6("gggg::1")).toBeNull();                    // bad hex
+    expect(expandIpv6("2001:db8:0:0:0:0:0")).toBeNull();         // wrong group count
   });
 });
 
-describe("Reader follow-up — ipv6-compress renderer: no answer leaks before a check", () => {
+describe("Reader follow-up — ipv6-compress renderer: requires the short form; no answer leaks before a correct check", () => {
   const block: SimulationBlock = {
     id: "sim", type: "simulation", origin: "teacher-enrichment", simulationType: "ipv6-compress", version: 1, title: "t",
-    config: { examples: [{ long: "2001:0db8:0000:0000:0000:ff00:0042:8329", short: "2001:db8::ff00:42:8329" }] },
+    config: { examples: BOOK.map(({ long, short }) => ({ long, short })) },
   };
   const props = (over: Partial<LearningActivityProps> = {}): LearningActivityProps => ({
     block, courseId: "791381", reducedMotion: true, fullscreen: false, commands: { reset: 0, replay: 0 }, emit: () => {}, ...over,
   });
+  const check = (u: ReturnType<typeof render>, value: string) => {
+    fireEvent.change(u.getByLabelText("اكتب العنوان المختصر"), { target: { value } });
+    fireEvent.click(u.getByText("تحقّق"));
+  };
 
-  it("shows the FULL address but NOT the short answer until the student checks a correct input", () => {
-    const { container, getByLabelText, getByText } = render(<Ipv6CompressSimulator {...props()} />);
-    expect(container.querySelector("[data-full]")!.getAttribute("data-full")).toBe("2001:0db8:0000:0000:0000:ff00:0042:8329");
-    expect(text(container)).not.toContain("2001:db8::ff00:42:8329");   // answer absent before any check
-    // a wrong check still does not reveal the answer
-    fireEvent.change(getByLabelText("اكتب العنوان المختصر"), { target: { value: "2001:db8::1" } });
-    fireEvent.click(getByText("تحقّق"));
-    expect(text(container)).not.toContain("2001:db8::ff00:42:8329");
-    // a correct (differently-cased / differently-compressed) answer verifies and only THEN shows the canonical short form
-    fireEvent.change(getByLabelText("اكتب العنوان المختصر"), { target: { value: "2001:DB8:0:0:0:FF00:42:8329" } });
-    fireEvent.click(getByText("تحقّق"));
-    expect(text(container)).toContain("2001:db8::ff00:42:8329");
+  it("shows the full address but no short answer until a CORRECT (short-form) check; the full long input is rejected", () => {
+    const u = render(<Ipv6CompressSimulator {...props()} />);
+    expect(u.container.querySelector("[data-full]")!.getAttribute("data-full")).toBe(BOOK[0].long);
+    expect(text(u.container)).not.toContain(BOOK[0].short);   // answer absent before any check
+    // typing the FULL long address back is WRONG and reveals nothing
+    check(u, BOOK[0].long);
+    expect(text(u.container)).toContain("حاول مرة أخرى");
+    expect(text(u.container)).not.toContain(BOOK[0].short);
+    // an only-partially-shortened form is WRONG too
+    check(u, BOOK[0].partial);
+    expect(text(u.container)).not.toContain(BOOK[0].short);
+    // the exact short form (uppercased) is accepted and ONLY THEN is the book short form shown
+    check(u, BOOK[0].short.toUpperCase());
+    expect(text(u.container)).toContain("صحيح");
+    expect(text(u.container)).toContain(BOOK[0].short);
+  });
+
+  it("«مثال آخر» cycles deterministically and shell reset returns to example 1", () => {
+    const u = render(<Ipv6CompressSimulator {...props()} />);
+    check(u, BOOK[0].short);
+    fireEvent.click(u.getByText("مثال آخر"));
+    expect(u.container.querySelector("[data-full]")!.getAttribute("data-full")).toBe(BOOK[1].long);   // deterministic next
+    // reset (epoch bump) returns to the first example
+    u.rerender(<Ipv6CompressSimulator {...props({ commands: { reset: 1, replay: 0 } })} />);
+    expect(u.container.querySelector("[data-full]")!.getAttribute("data-full")).toBe(BOOK[0].long);
   });
 });

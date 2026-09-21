@@ -73,7 +73,10 @@ const m22: ContentModule = {
               // methods — router-as-DHCP or a dedicated DHCP server — both introduced in this unit, PDF 169–176).
               id: "m22-l01-p01-visual", type: "visual", origin: "teacher-enrichment",
               visualId: "791381/m22/dhcp-automatic-config", motion: true,
-              source: src(169),
+              // Teacher-enrichment evidence range: the automatic-DHCP concept prints on PDF 169; the two source
+              // methods (router-as-DHCP, dedicated server) are established across the unit (PDF 169–176). The PAGE
+              // source stays PDF 169 — only this enrichment block documents the wider range.
+              source: { kind: "book", sourceId: CID, pdfPageStart: 169, pdfPageEnd: 176 },
               title: "مخطط: DHCP تلقائيًا — الراوتر أو خادم مخصّص",
               alt: "مخطط متحرّك يبيّن طريقتين لتوفير DHCP: الراوتر كخادم DHCP أو خادم DHCP مخصّص، وكلاهما يعطي الجهاز الجديد عنوان IP والبوابة وخادم DNS تلقائيًا بدل الإدخال اليدوي، دون عرض مراحل التبادل الأربع.",
               caption: "‏الراوتر أو خادم مخصّص — كلاهما يوزّع IP والبوابة و DNS تلقائيًا.",

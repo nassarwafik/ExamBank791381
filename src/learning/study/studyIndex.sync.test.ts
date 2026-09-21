@@ -35,8 +35,8 @@ describe("the committed server index equals the content-derived one", () => {
         kinds[key.kind] = (kinds[key.kind] || 0) + 1;
       }
     }
-    expect(ids.size).toBe(454);
-    expect(kinds).toEqual({ multipleChoice: 247, trueFalse: 86, shortInput: 60, "practice-table": 61 });
+    expect(ids.size).toBe(453);
+    expect(kinds).toEqual({ multipleChoice: 247, trueFalse: 86, shortInput: 60, "practice-table": 60 });
     expect(modules.size).toBe(26);
   });
 });

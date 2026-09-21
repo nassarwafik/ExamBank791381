@@ -57,7 +57,7 @@ const P2 = m08pages.find(p => p.pageId !== P1.pageId);
 const act = (page, i) => ({ pageId: page.pageId, activityId: page.activities[i][0], key: page.activities[i][1] });
 
 describe("the generated key index", () => {
-  it("covers the real content: 216 pages / 454 eligible activities of four kinds, every page mapped to a registered module; unknown ids resolve to null", () => {
+  it("covers the real content: 216 pages / 453 eligible activities of four kinds, every page mapped to a registered module; unknown ids resolve to null", () => {
     expect(INDEX.schemaVersion).toBe(1); expect(INDEX.courseId).toBe("791381");
     const pages = Object.entries(INDEX.pages);
     expect(pages.length).toBe(216);
@@ -68,8 +68,8 @@ describe("the generated key index", () => {
       expect(pageId.startsWith(p.moduleId + "-")).toBe(true);
       for (const [id, key] of Object.entries(p.activities)) { count++; kinds[key.kind] = (kinds[key.kind] || 0) + 1; expect(id).toMatch(/^m\d\d-l\d\d-p\d\d-/); }
     }
-    expect(count).toBe(454);
-    expect(kinds).toEqual({ multipleChoice: 247, trueFalse: 86, shortInput: 60, "practice-table": 61 });
+    expect(count).toBe(453);
+    expect(kinds).toEqual({ multipleChoice: 247, trueFalse: 86, shortInput: 60, "practice-table": 60 });
     expect(findStudyActivity(INDEX, "791381-m99-l01-p01", "x")).toBeNull();
     expect(findStudyActivity(INDEX, P1.pageId, "m08-l01-p01-nope")).toBeNull();
     expect(findStudyActivity(INDEX, P2.pageId, act(P1, 0).activityId)).toBeNull();          // an activity of ANOTHER page
@@ -114,7 +114,7 @@ describe("policy — the authoritative formula", () => {
     // the whole content, fully completed, stays a small source: every page at its cap, every module at its cap
     const everything = {};
     for (const [pageId, p] of Object.entries(INDEX.pages)) { everything[p.moduleId] = everything[p.moduleId] || {}; everything[p.moduleId][pageId] = Object.keys(p.activities).length; }
-    expect(studyPointsFromModules(everything)).toBe(292);   // Reader follow-up added one worksheet on m20-l01-p02 (page rose 1→2 pts; formula & thresholds unchanged)
+    expect(studyPointsFromModules(everything)).toBe(291);
   });
 });
 

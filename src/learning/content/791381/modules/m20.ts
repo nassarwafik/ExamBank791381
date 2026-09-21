@@ -154,6 +154,7 @@ const m20: ContentModule = {
               // ENRICHMENT (Reader follow-up): dropdown self-check — classify each Wi-Fi trait as حسنة أم عيب
               // (source-faithful to the PDF 160 «حسناتها … / عيوبها …» two lines; no new facts).
               id: "m20-l01-p02-classify", type: "practice-table", origin: "teacher-enrichment",
+              studyEligible: false,   // local learning self-check only — never enters Study Practice Strength
               caption: "صنّف خصائص Wi-Fi: حسنة أم عيب؟ (اعتمد على سطرَي «حسناتها» و«عيوبها»)",
               headers: ["الخاصية", "حسنة أم عيب؟"],
               columnDirs: ["rtl", "rtl"],
