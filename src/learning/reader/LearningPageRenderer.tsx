@@ -183,13 +183,26 @@ function StudyPageBar({ page, host }: { page: ContentPage; host: StudyHost }) {
 }
 
 // ── provenance wrapper ──────────────────────────────────────────────────────────────────────────────────────
+/**
+ * A teacher-enrichment block that already renders its OWN complete framed surface (a bordered card / figure) does not
+ * also need the heavy tinted enrichment box around it — that only produces nested surfaces and stacked blue boxes.
+ * These "self-framed" blocks keep the small textual enrichment tag (the non-color-only provenance marker) but drop the
+ * outer container (see `.is-selfframed` in reader.css): visual (`.eb-visual-figure`), the interactive activities
+ * (`.learning-activity` card), the practice-table (its bordered worksheet) and inline practice (its bordered option
+ * controls). Text-like enrichment (clarification, example, an enrichment text/list) keeps the light tinted container so
+ * it stays visibly separate from ordinary book prose.
+ */
+function isSelfFramedEnrichment(block: ContentBlock): boolean {
+  return block.type === "visual" || block.type === "practice" || block.type === "practice-table" || isActivityBlock(block);
+}
 function BlockView({ block, ctx }: { block: ContentBlock; ctx: ActivityRenderContext }) {
   if (block.origin !== "teacher-enrichment") {
     return <div className="learning-reader-block is-book">{renderBlock(block, ctx)}</div>;
   }
   const label = enrichmentLabel(block);
+  const selfFramed = isSelfFramedEnrichment(block);
   return (
-    <section className={"learning-reader-block is-enrichment kind-" + block.type} aria-label={label}>
+    <section className={"learning-reader-block is-enrichment" + (selfFramed ? " is-selfframed" : "") + " kind-" + block.type} aria-label={label}>
       <p className="learning-reader-enrichment-tag"><IconSparkles size={13} aria-hidden="true" />{label}</p>
       {renderBlock(block, ctx)}
     </section>
@@ -268,6 +281,12 @@ function renderBlock(block: ContentBlock, ctx: ActivityRenderContext): ReactNode
         </figure>
       );
     case "callout":
+      // A clarification is always teacher-enrichment, so it is already inside the enrichment wrapper, which supplies
+      // the light tinted container AND the «توضيح المعلم» tag. Rendering its own bordered callout box + a matching
+      // label here only nests a second surface and repeats the label — emit just the body (surface economy).
+      if (block.kind === "clarification") {
+        return <p className="learning-reader-callout-body" dir={block.dir}><RichTextRenderer spans={block.spans} /></p>;
+      }
       return (
         <div className={"learning-reader-callout kind-" + block.kind}>
           <p className="learning-reader-callout-label">{block.title || CALLOUT_LABELS[block.kind]}</p>

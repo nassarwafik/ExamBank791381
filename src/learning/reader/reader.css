@@ -62,7 +62,16 @@
   display:flex; flex-direction:column; gap:var(--eb-space-2); min-width:0;
   padding:var(--eb-space-3); background:var(--eb-primary-050); border:1px solid var(--eb-line); border-inline-start:3px solid var(--eb-primary); border-radius:var(--eb-r);
 }
+/* Self-framed enrichment (visual, activity, practice, practice-table): the child already draws its own complete
+   surface, so the outer tinted box is dropped to avoid nested/stacked blue boxes. The textual enrichment tag stays as
+   the non-color-only provenance marker; only a small gap separates it from the child's own frame. */
+.learning-reader-block.is-enrichment.is-selfframed{
+  padding:0; background:transparent; border:0;
+}
 .learning-reader-enrichment-tag{ display:inline-flex; align-items:center; gap:4px; align-self:flex-start; margin:0; padding:2px var(--eb-space-2); border-radius:var(--eb-pill); background:var(--eb-surface); color:var(--eb-primary-strong); font-size:var(--eb-fs-12); font-weight:var(--eb-fw-bold); }
+/* On the flat self-framed layout the tag sits directly on the page, so give it a hairline to keep it legible without
+   the tinted box behind it (still token-only, no new color). */
+.learning-reader-block.is-enrichment.is-selfframed > .learning-reader-enrichment-tag{ border:1px solid var(--eb-line); }
 
 /* Callout */
 .learning-reader-callout{ display:flex; flex-direction:column; gap:var(--eb-space-1); padding:var(--eb-space-3); border:1px solid var(--eb-line); border-inline-start:3px solid var(--eb-text-secondary); border-radius:var(--eb-r); background:var(--eb-surface-2); }
