@@ -1,10 +1,15 @@
 // Reader follow-up — pure IPv6 address logic for the `ipv6-compress` practice simulator (Book 791381 PDF 167).
 //
 // Kept in its own module (no React) so the renderer file exports only its component and the logic can be unit-tested
-// directly. Everything here is deterministic and offline: NO grading, NO persistence, NO network. Canonicalization
-// follows RFC-5952 (expand to 8 groups → strip leading zeros → compress the first longest run of ≥2 zero groups with
-// «::»), which lets the book's short form, the long form, any other valid compression and any letter-casing all verify
-// equal, while a double «::» or non-hex input is rejected.
+// directly. Everything here is deterministic and offline: NO grading, NO persistence, NO network.
+//
+// TWO distinct roles — do not conflate them:
+//   • expandIpv6 / canonicalIpv6 are PARSING / CONFIG-VALIDATION helpers only (RFC-5952: expand to 8 groups → strip
+//     leading zeros → compress the first longest run of ≥2 zero groups with «::»). readExamples uses canonicalIpv6 to
+//     reject a malformed config pair. They do NOT decide simulator correctness.
+//   • SIMULATOR CORRECTNESS (v1) is normalizeShort(input) === normalizeShort(book short target): the exact printed
+//     short form, compared with trim + case-insensitivity. The full long address and non-final/partial compressions
+//     are WRONG.
 
 export type Ipv6Example = { long: string; short: string };
 
