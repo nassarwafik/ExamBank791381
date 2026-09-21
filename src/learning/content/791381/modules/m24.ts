@@ -122,6 +122,15 @@ const m24: ContentModule = {
               spans: [L("Console"), T(" = قريب من الجهاز، و "), L("VTY"), T(" = دخول عن بُعد.")],
             },
             {
+              // ENRICHMENT (Batch 6): SVG visual enrichment appended after the book content.
+              id: "m24-l01-p02-visual", type: "visual", origin: "teacher-enrichment",
+              visualId: "791381/m24/device-access-paths", motion: false,
+              source: src(186),
+              title: "مخطط: طرق الدخول إلى أجهزة Cisco",
+              alt: "مخطط لثلاث طرق للدخول إلى جهاز Cisco: Console بكابل مباشر (line console 0)، و VTY عن بُعد عبر Telnet أو SSH (line vty 0 4)، و Enable للوضع المتقدّم (enable secret).",
+              caption: "‏Console محلي · VTY عن بُعد · Enable للأوامر المتقدّمة.",
+            },
+            {
               id: "m24-l01-p02-note", type: "callout", origin: "teacher-enrichment", kind: "clarification", title: "توضيح المعلّم",
               spans: [T("الأرقام في الأمرين هي أرقام الخطوط: "), L("line console 0"), T(" هو خط الكابل المباشر الوحيد، و "), L("line vty 0 4"), T(" يعني خمسة خطوط للدخول عن بُعد (من 0 إلى 4) تُضبط معًا. الصفحتان التاليتان تكملان كل أمر بكلمة المرور.")],
             },

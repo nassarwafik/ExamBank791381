@@ -84,6 +84,15 @@ const m06: ContentModule = {
               spans: [T("نضع القائمة قريبًا من الوجهة في "), L("Standard ACL"), T("، وقريبًا من المصدر في "), L("Extended"), T(".")],
             },
             {
+              // ENRICHMENT (Batch 6): SVG visual enrichment appended after the book content.
+              id: "m06-l01-p02-visual", type: "visual", origin: "teacher-enrichment",
+              visualId: "791381/m06/acl-gate", motion: true,
+              source: src(223),
+              title: "مخطط: ACL — بوابة Permit / Deny",
+              alt: "مخطط متحرّك يبيّن ACL على واجهة الراوتر كبوابة: حزمة Permit تعبر، وحزمة Deny تتوقّف؛ مع قاعدة الموضع: Standard قرب الوجهة و Extended قرب المصدر.",
+              caption: "‏الراوتر يسمح أو يمنع الحزمة عند الواجهة حسب قاعدة ACL.",
+            },
+            {
               id: "m06-l01-p02-note", type: "callout", origin: "teacher-enrichment", kind: "clarification", title: "توضيح المعلّم",
               spans: [T("السبب في قاعدة الموضع: "), L("Standard"), T(" لا تعرف الوجهة، فلو وضعناها قرب المصدر لمنعت الجهاز عن كل الشبكات لا عن الوجهة المقصودة فقط؛ أما "), L("Extended"), T(" فتعرف الوجهة، فنوقف الحركة غير المرغوبة مبكرًا قرب مصدرها.")],
             },

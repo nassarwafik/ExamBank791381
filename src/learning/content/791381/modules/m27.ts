@@ -173,6 +173,15 @@ const m27: ContentModule = {
               spans: [T("ميّز فقط: "), L("OSPF = Link-State"), T("، و "), L("EIGRP = Distance Vector"), T(" متطوّر — ويسمّى أحيانًا هجينًا لأنه يجمع صفات من النوعين.")],
             },
             {
+              // ENRICHMENT (Batch 6): SVG visual enrichment appended after the book content.
+              id: "m27-l01-p03-visual", type: "visual", origin: "teacher-enrichment",
+              visualId: "791381/m27/routing-update-types", motion: true,
+              source: src(212),
+              title: "مخطط: Distance Vector مقابل Link-State",
+              alt: "مخطط متحرّك يقارن Distance Vector الذي يرسل تحديثات دورية (مثل EIGRP) بـ Link-State الذي يرسل تحديثًا عند التغيير ويبني خريطة كاملة (مثل OSPF).",
+              caption: "‏Distance Vector يرسل دوريًا · Link-State يرسل عند التغيير.",
+            },
+            {
               id: "m27-l01-p03-note", type: "callout", origin: "teacher-enrichment", kind: "clarification", title: "توضيح المعلّم",
               spans: [T("في تبسيط هذه الوحدة: "), L("Distance Vector"), T(" يعتمد تحديثات دورية يرسل فيها الراوتر ما يعرفه كل فترة، بينما "), L("Link-State"), T(" يركّز على تحديث معلومات الحالة عند حدوث تغيير؛ وهذا سبب ملاءمة "), L("Link-State"), T(" للشبكات الكبيرة.")],
             },
@@ -229,6 +238,15 @@ const m27: ContentModule = {
               headers: ["المصدر", "AD"],
               columnDirs: ["ltr", "ltr"],
               rows: [["Connected", "0"], ["Static", "1"], ["EIGRP", "90"], ["OSPF", "110"], ["RIP", "120"]],
+            },
+            {
+              // ENRICHMENT (Batch 6): SVG visual enrichment appended after the book content.
+              id: "m27-l01-p04-visual", type: "visual", origin: "teacher-enrichment",
+              visualId: "791381/m27/admin-distance", motion: false,
+              source: src(213),
+              title: "مخطط: سلّم المسافة الإدارية (AD)",
+              alt: "مخطط لسلّم الثقة بحسب المسافة الإدارية، الأصغر أفضل: Connected 0 ثم Static 1 ثم EIGRP 90 ثم OSPF 110 ثم RIP 120.",
+              caption: "‏كلّما صغُرت قيمة AD زادت ثقة الراوتر بمصدر المسار.",
             },
             {
               id: "m27-l01-p04-note", type: "callout", origin: "teacher-enrichment", kind: "clarification", title: "توضيح المعلّم",
@@ -350,6 +368,15 @@ const m27: ContentModule = {
             {
               id: "m27-l02-p02-idea", type: "callout", origin: "book", kind: "tip", title: "الفكرة",
               spans: [T("الراوترات تتبادل معلومات الشبكات تلقائيًا بعد تعريف "), L("OSPF"), T(".")],
+            },
+            {
+              // ENRICHMENT (Batch 6): SVG visual enrichment appended after the book content.
+              id: "m27-l02-p02-visual", type: "visual", origin: "teacher-enrichment",
+              visualId: "791381/m27/ospf-topology", motion: false,
+              source: src(215),
+              title: "مخطط: مثال شبكة OSPF",
+              alt: "مخطط طوبولوجيا OSPF: الراوتران R1 و R2 يربطهما رابط 10.0.0.0/30، خلف R1 شبكة 192.168.1.0/24 وخلف R2 شبكة 192.168.2.0/24، وكلاهما في area 0.",
+              caption: "‏R1 و R2 يتبادلان مساراتهما بـ OSPF في area 0.",
             },
             {
               id: "m27-l02-p02-note", type: "callout", origin: "teacher-enrichment", kind: "clarification", title: "توضيح المعلّم",
@@ -837,6 +864,15 @@ const m27: ContentModule = {
                 { id: "m27-l03-p05-f3", text: [L("[120/1]"), T(": الرقم "), L("120"), T(" هو المسافة الإدارية "), L("AD"), T("، والرقم "), L("1"), T(" هو المقياس "), L("Metric"), T(".")] },
                 { id: "m27-l03-p05-f4", text: [L("via 192.168.1.1"), T(" يعني أن الطريق يمر عبر هذا العنوان.")] },
               ],
+            },
+            {
+              // ENRICHMENT (Batch 6): SVG visual enrichment appended after the book content.
+              id: "m27-l03-p05-visual", type: "visual", origin: "teacher-enrichment",
+              visualId: "791381/m27/show-ip-route", motion: false,
+              source: src(222),
+              title: "مخطط: قراءة سطر من جدول التوجيه",
+              alt: "مخطط يشرح حقول سطر جدول التوجيه: الكود (R = RIP، C = متّصل مباشرة، O = OSPF، D = EIGRP)، والقوسان [AD/Metric] مثل [120/1]، و via عنوان القفزة التالية.",
+              caption: "‏الكود يدلّ على مصدر المسار، والقوسان [AD/Metric]، و via القفزة التالية.",
             },
             {
               id: "m27-l03-p05-note", type: "callout", origin: "teacher-enrichment", kind: "clarification", title: "توضيح المعلّم",

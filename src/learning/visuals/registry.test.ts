@@ -86,8 +86,33 @@ describe("visuals registry", () => {
       "791381/m03/access-port-assignment",
       "791381/m03/svi-gateway",
       "791381/m03/tagged-untagged-native",
+      // Batch 6 — Router on a Stick & Trunk (m04)
+      "791381/m04/trunk-multi-vlan",
+      "791381/m04/dot1q-tag-frame",
+      "791381/m04/router-on-a-stick",
+      "791381/m04/inter-vlan-flow",
+      // Batch 6 — VTP (m19)
+      "791381/m19/vtp-propagation",
+      // Batch 6 — well-known ports (m21)
+      "791381/m21/well-known-ports",
+      // Batch 6 — DHCP (m22)
+      "791381/m22/dhcp-dora",
+      "791381/m22/dhcp-pool-excluded",
+      // Batch 6 — Port Security (m23)
+      "791381/m23/port-security-scenario",
+      // Batch 6 — Cisco device access (m24)
+      "791381/m24/device-access-paths",
+      // Batch 6 — WAN (m26)
+      "791381/m26/wan-vs-lan-scope",
+      // Batch 6 — routing protocols (m27)
+      "791381/m27/admin-distance",
+      "791381/m27/routing-update-types",
+      "791381/m27/ospf-topology",
+      "791381/m27/show-ip-route",
+      // Batch 6 — ACL (m06)
+      "791381/m06/acl-gate",
     ]);
-    expect(REGISTERED_VISUAL_IDS.length).toBe(65);
+    expect(REGISTERED_VISUAL_IDS.length).toBe(81);
   });
 
   it("every id is course/namespace scoped (reusable pattern for later chapters)", () => {

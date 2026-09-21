@@ -87,6 +87,26 @@ import CreateVlan from "./791381/batch5/CreateVlan";
 import AccessPortToVlan from "./791381/batch5/AccessPortToVlan";
 import SviGateway from "./791381/batch5/SviGateway";
 import TaggedUntaggedNative from "./791381/batch5/TaggedUntaggedNative";
+// Batch 6 — the routing / switch-services arc across the previously visual-free modules: Router on a Stick & Trunk
+// (m04, PDF 147–156), VTP (m19, PDF 141), well-known ports (m21, PDF 168), DHCP (m22, PDF 170–171), Port Security
+// (m23, PDF 181), Cisco device access (m24, PDF 186), WAN (m26, PDF 207), routing protocols (m27, PDF 212–222) and
+// ACL (m06, PDF 223). Same data-only, exact-allowlist, reduced-motion discipline; no CLI-simulator duplication.
+import TrunkMultiVlan from "./791381/batch6/TrunkMultiVlan";
+import Dot1qTagFrame from "./791381/batch6/Dot1qTagFrame";
+import RouterOnAStick from "./791381/batch6/RouterOnAStick";
+import InterVlanFlow from "./791381/batch6/InterVlanFlow";
+import VtpPropagation from "./791381/batch6/VtpPropagation";
+import WellKnownPorts from "./791381/batch6/WellKnownPorts";
+import DhcpDora from "./791381/batch6/DhcpDora";
+import DhcpPoolExcluded from "./791381/batch6/DhcpPoolExcluded";
+import PortSecurityScenario from "./791381/batch6/PortSecurityScenario";
+import DeviceAccessPaths from "./791381/batch6/DeviceAccessPaths";
+import WanVsLanScope from "./791381/batch6/WanVsLanScope";
+import AdminDistance from "./791381/batch6/AdminDistance";
+import RoutingUpdateTypes from "./791381/batch6/RoutingUpdateTypes";
+import OspfTopology from "./791381/batch6/OspfTopology";
+import ShowIpRoute from "./791381/batch6/ShowIpRoute";
+import AclGate from "./791381/batch6/AclGate";
 
 const VISUALS: readonly RegisteredVisual[] = [
   // Chapter 1 pilot
@@ -170,6 +190,31 @@ const VISUALS: readonly RegisteredVisual[] = [
   { id: "791381/m03/access-port-assignment", component: AccessPortToVlan, motion: true },
   { id: "791381/m03/svi-gateway", component: SviGateway, motion: true },
   { id: "791381/m03/tagged-untagged-native", component: TaggedUntaggedNative, motion: true },
+  // Batch 6 — Router on a Stick & Trunk (m04)
+  { id: "791381/m04/trunk-multi-vlan", component: TrunkMultiVlan, motion: false },
+  { id: "791381/m04/dot1q-tag-frame", component: Dot1qTagFrame, motion: true },
+  { id: "791381/m04/router-on-a-stick", component: RouterOnAStick, motion: false },
+  { id: "791381/m04/inter-vlan-flow", component: InterVlanFlow, motion: true },
+  // Batch 6 — VTP (m19)
+  { id: "791381/m19/vtp-propagation", component: VtpPropagation, motion: true },
+  // Batch 6 — well-known ports (m21)
+  { id: "791381/m21/well-known-ports", component: WellKnownPorts, motion: false },
+  // Batch 6 — DHCP (m22)
+  { id: "791381/m22/dhcp-dora", component: DhcpDora, motion: true },
+  { id: "791381/m22/dhcp-pool-excluded", component: DhcpPoolExcluded, motion: false },
+  // Batch 6 — Port Security (m23)
+  { id: "791381/m23/port-security-scenario", component: PortSecurityScenario, motion: false },
+  // Batch 6 — Cisco device access (m24)
+  { id: "791381/m24/device-access-paths", component: DeviceAccessPaths, motion: false },
+  // Batch 6 — WAN (m26)
+  { id: "791381/m26/wan-vs-lan-scope", component: WanVsLanScope, motion: false },
+  // Batch 6 — routing protocols (m27)
+  { id: "791381/m27/admin-distance", component: AdminDistance, motion: false },
+  { id: "791381/m27/routing-update-types", component: RoutingUpdateTypes, motion: true },
+  { id: "791381/m27/ospf-topology", component: OspfTopology, motion: false },
+  { id: "791381/m27/show-ip-route", component: ShowIpRoute, motion: false },
+  // Batch 6 — ACL (m06)
+  { id: "791381/m06/acl-gate", component: AclGate, motion: true },
 ];
 
 // Build the lookup once. A duplicate id is a programming error (a later entry silently shadowing an earlier one), so

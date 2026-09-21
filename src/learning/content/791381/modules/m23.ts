@@ -134,6 +134,15 @@ const m23: ContentModule = {
               spans: [T("المنفذ لا يقبل أي جهاز عشوائي، بل المسموح به فقط.")],
             },
             {
+              // ENRICHMENT (Batch 6): SVG visual enrichment appended after the book content.
+              id: "m23-l01-p02-visual", type: "visual", origin: "teacher-enrichment",
+              visualId: "791381/m23/port-security-scenario", motion: false,
+              source: src(181),
+              title: "مخطط: سيناريو Port Security",
+              alt: "مخطط يبيّن منفذ سويتش يسمح للجهازين المصرّح بهما PC0 و PC1 بالعمل، ويرفض جهازًا غريبًا.",
+              caption: "‏المنفذ يقبل الأجهزة المسموح بها فقط.",
+            },
+            {
               id: "m23-l01-p02-note", type: "callout", origin: "teacher-enrichment", kind: "clarification", title: "توضيح المعلّم",
               spans: [T("«"), L("MAC"), T(" ثابت» يعني أن التقني يكتب عنوان الجهاز المسموح بنفسه في الأمر، أما «"), L("Sticky"), T("» فيعني أن السويتش يتعلّم عنوان أول جهاز يتصل ويثبّته تلقائيًا. الصفحتان التاليتان تعرضان أوامر الطريقتين.")],
             },
