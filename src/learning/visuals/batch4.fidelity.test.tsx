@@ -180,6 +180,26 @@ describe("Batch 4 — apipa-fallback (PDF 105): 169.254 self-assignment, local o
     // the next request waits for the fallback stage to complete (bounded cycle)
     expect(req.getAttribute("begin")).toContain("apipaFallback.end");
   });
+  it("RESETS the no-response state between cycles: it does not freeze, and returns to opacity 0 before the next request", () => {
+    const { container } = render(<ApipaFallback ariaLabel="x" reducedMotion={false} />);
+    const noResp = byId(container, "apipaNoResp")!;
+    // it must NOT hold its last value — otherwise «لا استجابة» would linger into the next request
+    expect(noResp.getAttribute("fill")).not.toBe("freeze");
+    // its opacity animation ends at 0 (a bounded flash, cleanly reset)
+    const values = (noResp.getAttribute("values") || "").split(";").map(s => s.trim());
+    expect(values.at(-1)).toBe("0");
+    // both transient groups are hidden at cycle start (base opacity 0 under motion)
+    expect(container.querySelector('[data-noresp="1"]')!.getAttribute("opacity")).toBe("0");
+    expect(container.querySelector('[data-fallback="1"]')!.getAttribute("opacity")).toBe("0");
+  });
+  it("reduced motion still shows the no-response mark AND the APIPA address (both visible statically)", () => {
+    const { container } = render(<ApipaFallback ariaLabel="x" reducedMotion={true} />);
+    expect(container.querySelector('[data-noresp="1"]')!.getAttribute("opacity")).toBe("1");
+    expect(container.querySelector('[data-fallback="1"]')!.getAttribute("opacity")).toBe("1");
+    expect(container.querySelector('[data-apipa="1"]')).not.toBeNull();
+    expect(text(container)).toContain("169.254");
+    expect(text(container)).toContain("لا استجابة");
+  });
 });
 
 // ── m17 · PDF 108 — attack targets: conceptual only (user / information / servers); no tools or mechanics ──
@@ -267,7 +287,7 @@ describe("Batch 4 — phishing-vs-spoofing (PDF 111): deception vs forgery", () 
 });
 
 // ── m17 · PDF 112 — secure communication = encryption AND identity verification (both pillars) ──
-describe("Batch 4 — secure-two-pillars (PDF 112): both pillars, causal", () => {
+describe("Batch 4 — secure-two-pillars (PDF 112): both pillars, concurrent", () => {
   it("shows the encrypted channel AND the identity-verification check together", () => {
     const { container } = render(<SecureTwoPillars ariaLabel="x" reducedMotion={true} />);
     expect(container.querySelectorAll('[data-encrypted="1"]').length).toBe(1);

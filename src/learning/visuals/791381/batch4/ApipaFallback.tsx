@@ -33,7 +33,8 @@ export default function ApipaFallback({ ariaLabel, reducedMotion, className }: L
           <circle className="eb-visual-pin" r="12" /><path d="M-4 -4 L4 4 M4 -4 L-4 4" stroke="#fff" strokeWidth="2" fill="none" />
         </g>
         <text className="eb-visual-part-label" x={SERVER.x} y={SERVER.y + 34} textAnchor="middle">لا استجابة</text>
-        {!reducedMotion && <animate id="apipaNoResp" attributeName="opacity" begin="apipaReq.end" dur="0.7s" values="0;1;1" keyTimes="0;0.5;1" fill="freeze" />}
+        {/* the no-response flash appears then RESETS to 0 (no fill=freeze), so it does not linger into the next request */}
+        {!reducedMotion && <animate id="apipaNoResp" attributeName="opacity" begin="apipaReq.end" dur="0.9s" values="0;1;1;0" keyTimes="0;0.25;0.7;1" />}
       </g>
       {/* bounded causal cycle: the request goes out (nothing returns — no DHCP reply); on arrival the no-response mark
           appears; ONLY THEN the APIPA fallback is revealed; the next request waits for the fallback stage to finish. */}

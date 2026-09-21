@@ -3,9 +3,9 @@ import type { LearningVisualProps } from "../../types";
 /**
  * «الاتصالات الآمنة» (Book 791381, PDF 112) — the page defines security as TWO things together: (1) protecting the
  * data (encryption) AND (2) verifying the identity of the other party. The visual has both pillars: the data crosses
- * a protected/encrypted channel, and the receiver carries an identity-verification check. Motion is causal: the data
- * first crosses the encrypted channel, then the identity check confirms the endpoint. Reduced motion ⇒ a still frame
- * with both pillars shown. No certificate internals or key mechanics.
+ * a protected/encrypted channel, and the receiver carries an identity-verification check. The two pillars are shown
+ * TOGETHER (both begin at 0s) — neither is a chronological consequence of the other; the book states no order, only
+ * that security requires both. Reduced motion ⇒ a still frame with both pillars shown. No certificate/key mechanics.
  */
 const S = { x: 58, y: 66 };
 const R = { x: 322, y: 66 };
