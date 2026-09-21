@@ -114,6 +114,16 @@ const m12: ContentModule = {
                 },
               },
             },
+          
+            {
+              // ENRICHMENT (Batch 3): SVG visual enrichment appended after the book content.
+              id: "m12-l01-p01-visual", type: "visual", origin: "teacher-enrichment",
+              visualId: "791381/m12/message-types", motion: true,
+              source: src(67),
+              title: "مخطط: Unicast وMulticast وBroadcast",
+              alt: "ثلاثة صفوف تبيّن مصدرًا واحدًا يصل إلى جهاز واحد، ثم إلى مجموعة محدّدة، ثم إلى كل الأجهزة.",
+              caption: "مدى الوصول: جهاز واحد · مجموعة · الجميع.",
+            },
           ],
         },
         // PDF 68 — Unicast و Multicast (examples + the Multicast warning)
@@ -177,6 +187,16 @@ const m12: ContentModule = {
                   explanation: "مثال Unicast في الكتاب: تصفّح موقع أو إرسال رسالة لجهاز محدّد.",
                 },
               },
+            },
+          
+            {
+              // ENRICHMENT (Batch 3): SVG visual enrichment appended after the book content.
+              id: "m12-l01-p02-visual", type: "visual", origin: "teacher-enrichment",
+              visualId: "791381/m12/unicast-multicast", motion: true,
+              source: src(68),
+              title: "مخطط: Unicast مقابل Multicast",
+              alt: "لوحتان: Unicast من مصدر إلى هدف واحد، وMulticast من مصدر إلى مجموعة محدّدة فقط وليس الجميع.",
+              caption: "Unicast: هدف واحد · Multicast: مجموعة محدّدة.",
             },
           ],
         },
@@ -552,6 +572,16 @@ const m12: ContentModule = {
                 },
               },
             },
+          
+            {
+              // ENRICHMENT (Batch 3): SVG visual enrichment appended after the book content.
+              id: "m12-l03-p01-visual", type: "visual", origin: "teacher-enrichment",
+              visualId: "791381/m12/storage-units", motion: true,
+              source: src(72),
+              title: "مخطط: سلّم وحدات التخزين",
+              alt: "سلّم صاعد لوحدات التخزين من البت إلى البايت ثم كيلوبايت وميجابايت وجيجابايت وتيرابايت.",
+              caption: "1 بايت = 8 بت، ثم كل وحدة = 1024 من التي تحتها.",
+            },
           ],
         },
         // PDF 73 — مبنى الرسائل في الشبكات
@@ -629,6 +659,16 @@ const m12: ContentModule = {
                   explanation: "في Unicast الهدف محدّد، فعنواناه IP و MAC معروفان.",
                 },
               },
+            },
+          
+            {
+              // ENRICHMENT (Batch 3): SVG visual enrichment appended after the book content.
+              id: "m12-l03-p02-visual", type: "visual", origin: "teacher-enrichment",
+              visualId: "791381/m12/message-structure", motion: true,
+              source: src(73),
+              title: "مخطط: مبنى رسالة Unicast",
+              alt: "إطار رسالة يبيّن حقول MAC الهدف وMAC المصدر وIP الهدف وIP المصدر ثم البيانات في مثال PC1 إلى PC2.",
+              caption: "العناوين تحيط بالبيانات فتصل الرسالة إلى الجهاز الصحيح.",
             },
           ],
         },

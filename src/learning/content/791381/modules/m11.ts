@@ -126,6 +126,16 @@ const m11: ContentModule = {
                 },
               },
             },
+          
+            {
+              // ENRICHMENT (Batch 3): SVG visual enrichment appended after the book content.
+              id: "m11-l01-p01-visual", type: "visual", origin: "teacher-enrichment",
+              visualId: "791381/m11/utp-vs-stp", motion: true,
+              source: src(62),
+              title: "مخطط: UTP مقابل STP والحماية من التشويش",
+              alt: "مقارنة كابل UTP بلا درع مع كابل STP ذي درع معدني، حيث يصل التشويش الخارجي إلى سلكي UTP بينما يصدّه درع STP.",
+              caption: "الدرع المعدني في STP يزيد المقاومة للتشويش الخارجي.",
+            },
           ],
         },
         // PDF 63 — أنواع أخرى من الكوابل (+ the cable chooser after all four cables are known)
@@ -452,6 +462,16 @@ const m11: ContentModule = {
                   explanation: "عنوان Broadcast في MAC هو FF:FF:FF:FF:FF:FF (صفحة MAC Address).",
                 },
               },
+            },
+          
+            {
+              // ENRICHMENT (Batch 3): SVG visual enrichment appended after the book content.
+              id: "m11-l02-p02-visual", type: "visual", origin: "teacher-enrichment",
+              visualId: "791381/m11/mac-frame-delivery", motion: true,
+              source: src(65),
+              title: "مخطط: تسليم الإطار بعنوان MAC",
+              alt: "مخطط يبيّن إطارًا يحمل عنوان MAC الهدف ينتقل من PC1 عبر السويتش إلى PC2 داخل الشبكة المحلية.",
+              caption: "داخل الشبكة يُسلَّم الإطار بعنوان MAC المرتبط بكرت الشبكة.",
             },
           ],
         },

@@ -3,7 +3,7 @@ import { describe, it, expect } from "vitest";
 import { resolveVisual, REGISTERED_VISUAL_IDS } from "./registry";
 
 describe("visuals registry", () => {
-  it("enumerates exactly the Chapter 1 pilot + Batch 2 visuals (stable, namespaced ids)", () => {
+  it("enumerates exactly the Chapter 1 pilot + Batch 2 + Batch 3 visuals (stable, namespaced ids)", () => {
     expect(REGISTERED_VISUAL_IDS).toEqual([
       // Chapter 1 pilot
       "791381/ch1/network-connected-devices",
@@ -28,8 +28,32 @@ describe("visuals registry", () => {
       "791381/m09/hub-flood",
       "791381/m09/switch-unicast",
       "791381/m09/router-networks",
+      // Batch 3 — topologies (m10)
+      "791381/m10/p2p-direct",
+      "791381/m10/bus-collision",
+      // Batch 3 — cables / MAC (m11)
+      "791381/m11/utp-vs-stp",
+      "791381/m11/mac-frame-delivery",
+      // Batch 3 — message types (m12)
+      "791381/m12/message-types",
+      "791381/m12/unicast-multicast",
+      "791381/m12/storage-units",
+      "791381/m12/message-structure",
+      // Batch 3 — communication models (m13)
+      "791381/m13/tcpip-layers",
+      "791381/m13/osi-vs-tcpip",
+      "791381/m13/tcp-vs-udp",
+      // Batch 3 — protocols (m14)
+      "791381/m14/protocol-agreement",
+      "791381/m14/dns-http-dhcp",
+      "791381/m14/ssh-vs-telnet",
+      "791381/m14/protocols-by-transport",
+      // Batch 3 — network-check commands (m15)
+      "791381/m15/ping-echo",
+      "791381/m15/tracert-hops",
+      "791381/m15/arp-association",
     ]);
-    expect(REGISTERED_VISUAL_IDS.length).toBe(18);
+    expect(REGISTERED_VISUAL_IDS.length).toBe(36);
   });
 
   it("every id is course/namespace scoped (reusable pattern for later chapters)", () => {

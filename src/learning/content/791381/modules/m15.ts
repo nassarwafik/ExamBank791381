@@ -101,6 +101,16 @@ const m15: ContentModule = {
                 },
               },
             },
+          
+            {
+              // ENRICHMENT (Batch 3): SVG visual enrichment appended after the book content.
+              id: "m15-l01-p01-visual", type: "visual", origin: "teacher-enrichment",
+              visualId: "791381/m15/ping-echo", motion: true,
+              source: src(93),
+              title: "مخطط: طلب ورد أمر ping",
+              alt: "مخطط يبيّن جهازك يرسل طلب Echo عبر ICMP إلى الوجهة ثم يعود رد Echo، ما يقيس الوصول وزمنه.",
+              caption: "طلب ثم رد يقيس الوصول وزمنه · بعض الوجهات لا تردّ على ICMP.",
+            },
           ],
         },
         // PDF 94 — أمر ipconfig
@@ -185,6 +195,16 @@ const m15: ContentModule = {
                   explanation: "ping = اتصال وزمن وصول؛ tracert = الطريق خطوة بعد خطوة.",
                 },
               },
+            },
+          
+            {
+              // ENRICHMENT (Batch 3): SVG visual enrichment appended after the book content.
+              id: "m15-l02-p01-visual", type: "visual", origin: "teacher-enrichment",
+              visualId: "791381/m15/tracert-hops", motion: true,
+              source: src(95),
+              title: "مخطط: مسار أمر tracert قفزة بقفزة",
+              alt: "مخطط يبيّن رزمة تتقدّم من جهازك عبر القفزات (الراوترات) واحدة تلو الأخرى حتى تصل إلى الوجهة.",
+              caption: "يعرض الطريق قفزة بعد قفزة حتى الوجهة.",
             },
           ],
         },
@@ -319,6 +339,16 @@ const m15: ContentModule = {
                   explanation: "tracert google.com يعرض الطريق خطوة بعد خطوة.",
                 },
               },
+            },
+          
+            {
+              // ENRICHMENT (Batch 3): SVG visual enrichment appended after the book content.
+              id: "m15-l02-p03-visual", type: "visual", origin: "teacher-enrichment",
+              visualId: "791381/m15/arp-association", motion: true,
+              source: src(97),
+              title: "مخطط: ربط IP بعنوان MAC (arp)",
+              alt: "مخطط يبيّن جهازك يسأل من له عنوان IP، فيردّ الجار بعنوان MAC الخاص به، فيُسجَّل ربط IP↔MAC.",
+              caption: "ARP يربط عنوان IP بعنوان MAC الذي يملكه الجهاز · arp -a يعرض ما تعلّمه.",
             },
           ],
         },
