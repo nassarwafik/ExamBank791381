@@ -54,6 +54,15 @@ const m21: ContentModule = {
               spans: [L("IPv4 = 32"), T(" بت، و "), L("IPv6 = 128"), T(" بت.")],
             },
             {
+              // ENRICHMENT (Batch 7): SVG visual enrichment appended after the book content.
+              id: "m21-l01-p01-visual", type: "visual", origin: "teacher-enrichment",
+              visualId: "791381/m21/ipv6-anatomy", motion: false,
+              source: src(166),
+              title: "مخطط: بنية عنوان IPv6",
+              alt: "مخطط يقارن طول عنوان IPv4 (32 بت) بعنوان IPv6 (128 بت)، ويوضّح أنّ IPv6 يُكتب بالميزان السادس عشر Hexadecimal.",
+              caption: "‏IPv6 = 128 بت مقابل IPv4 = 32 بت، ويُكتب بالنظام السادس عشر.",
+            },
+            {
               id: "m21-l01-p01-note", type: "callout", origin: "teacher-enrichment", kind: "clarification", title: "توضيح المعلّم",
               spans: [T("الميزان السادس عشر هو الذي درسته في وحدة الأعداد: أرقامه من "), L("0"), T(" إلى "), L("9"), T(" ثم الحروف من "), L("a"), T(" إلى "), L("f"), T(". لذلك تظهر حروف مثل "), L("d"), T(" و "), L("b"), T(" و "), L("f"), T(" داخل عنوان "), L("IPv6"), T(".")],
             },
@@ -105,6 +114,15 @@ const m21: ContentModule = {
             {
               id: "m21-l01-p02-rule", type: "callout", origin: "book", kind: "important", title: "القاعدة",
               spans: [T("نختصر الأصفار المتتالية باستعمال "), L("::"), T(" مرة واحدة فقط في العنوان.")],
+            },
+            {
+              // ENRICHMENT (Batch 7): SVG visual enrichment appended after the book content.
+              id: "m21-l01-p02-visual", type: "visual", origin: "teacher-enrichment",
+              visualId: "791381/m21/ipv6-compression", motion: true,
+              source: src(167),
+              title: "مخطط: اختصار عناوين IPv6",
+              alt: "مخطط متحرّك يعرض أمثلة الكتاب الثلاثة كاملة ثم مختصرة: تُحذف الأصفار في بداية كل مقطع، وتُستبدل المقاطع الصفرية المتتالية بـ :: مرة واحدة.",
+              caption: "‏الأصفار المتتالية تُستبدل بـ :: مرة واحدة فقط في العنوان.",
             },
             {
               id: "m21-l01-p02-note", type: "callout", origin: "teacher-enrichment", kind: "clarification", title: "توضيح المعلّم",

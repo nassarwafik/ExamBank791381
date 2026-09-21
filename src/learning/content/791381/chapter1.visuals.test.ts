@@ -69,14 +69,15 @@ describe("Chapter 1 pilot — scope of visual enrichment", () => {
   // Chapter 1 pilot (m01) + Batch 2 (m02, m07, m08, m09) + Batch 3 (m10, m11, m12, m13, m14, m15) + Batch 4 (m16, m17)
   // + Batch 5 (m03 switch CLI & VLAN, m18 data segmentation; the backlog visuals live on the existing m08/m12/m13)
   // + Batch 6 (the routing/switch-services arc: m04, m19, m21, m22, m23, m24, m26, m27, m06)
+  // + Batch 7 (VTP/Trunk remainder + Wi-Fi + IPv6: m19, m04, m20, m21 — m20 gains its first visuals here)
   // + Batch 8 (the services/routing CONCEPT pages: m05 Cisco command reference; the rest reuse the already-touched
   //   m22, m23, m24, m26, m27) are the modules that carry SVG visual enrichment. Any OTHER module gaining a `visual`
   //   block would be out of scope.
-  it("only the pilot + Batch 2 + Batch 3 + Batch 4 + Batch 5 + Batch 6 + Batch 8 modules contain visual blocks (no other module touched)", () => {
+  it("only the pilot + Batch 2 + Batch 3 + Batch 4 + Batch 5 + Batch 6 + Batch 7 + Batch 8 modules contain visual blocks (no other module touched)", () => {
     const withVisual = readdirSync(modulesDir)
       .filter(f => /^m\d+\.ts$/.test(f))
       .filter(f => /type:\s*"visual"/.test(readFileSync(modulesDir + f, "utf8")))
       .sort();
-    expect(withVisual).toEqual(["m01.ts", "m02.ts", "m03.ts", "m04.ts", "m05.ts", "m06.ts", "m07.ts", "m08.ts", "m09.ts", "m10.ts", "m11.ts", "m12.ts", "m13.ts", "m14.ts", "m15.ts", "m16.ts", "m17.ts", "m18.ts", "m19.ts", "m21.ts", "m22.ts", "m23.ts", "m24.ts", "m26.ts", "m27.ts"]);
+    expect(withVisual).toEqual(["m01.ts", "m02.ts", "m03.ts", "m04.ts", "m05.ts", "m06.ts", "m07.ts", "m08.ts", "m09.ts", "m10.ts", "m11.ts", "m12.ts", "m13.ts", "m14.ts", "m15.ts", "m16.ts", "m17.ts", "m18.ts", "m19.ts", "m20.ts", "m21.ts", "m22.ts", "m23.ts", "m24.ts", "m26.ts", "m27.ts"]);
   });
 });

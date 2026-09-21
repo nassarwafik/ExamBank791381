@@ -2,7 +2,7 @@
 // DHCP intro & dedicated server (m22, PDF 169 / 176), Port Security concept (m23, PDF 180), Cisco device security
 // framing (m24, PDF 185), the Cisco command reference maps (m05, PDF 192 / 198), WAN technologies (m26, PDF 208 /
 // 209) and routing protocols (m27, PDF 210 / 211 / 218). Pins the exact 11 NEW unique ids, branch-local registry
-// total 92 (81 baseline + 11), the 11 visual blocks, page ids / PDF sources, provenance and after-book placement.
+// post-sync registry total 105 (81 + Batch 7's 13 + Batch 8's 11), the 11 visual blocks, page ids / PDF sources, provenance and after-book placement.
 // The CLI-simulator command pages get NO redundant SVG; the two existing components enhanced in place (DHCP pool
 // PDF 171, Admin Distance PDF 213) keep their ids and add no new registry entry.
 import { describe, it, expect } from "vitest";
@@ -72,8 +72,8 @@ describe("Batch 8 — scope and placement (services / routing concept arc)", () 
     expect(used.size).toBe(11);
   });
 
-  it("branch-local registry total is 92 (81 baseline + 11); each new id resolves", () => {
-    expect(REGISTERED_VISUAL_IDS.length).toBe(92);
+  it("post-sync registry total = 81 + Batch 7 (13) + Batch 8 (11) = 105; each new Batch 8 id resolves", () => {
+    expect(REGISTERED_VISUAL_IDS.length).toBe(105);
     for (const id of NEW_IDS) expect(resolveVisual(id), id).not.toBeNull();
   });
 

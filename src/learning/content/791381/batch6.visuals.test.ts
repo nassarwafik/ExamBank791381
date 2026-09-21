@@ -80,7 +80,7 @@ describe("Batch 6 — scope and placement (routing / switch-services arc)", () =
   });
 
   it("registry grew by exactly 16 (65 → 81); each new id resolves", () => {
-    expect(REGISTERED_VISUAL_IDS.length).toBe(92);
+    expect(REGISTERED_VISUAL_IDS.length).toBe(105);
     for (const id of NEW_IDS) expect(resolveVisual(id), id).not.toBeNull();
   });
 

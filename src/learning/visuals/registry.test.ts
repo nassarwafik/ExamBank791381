@@ -111,6 +111,23 @@ describe("visuals registry", () => {
       "791381/m27/show-ip-route",
       // Batch 6 — ACL (m06)
       "791381/m06/acl-gate",
+      // Batch 7 — VTP roles (m19)
+      "791381/m19/vtp-roles",
+      // Batch 7 — inter-switch trunk ports & router sub-interfaces (m04)
+      "791381/m04/inter-switch-trunk-ports",
+      "791381/m04/subinterfaces-vlan10-20",
+      "791381/m04/subinterfaces-vlan30-40",
+      // Batch 7 — Wi-Fi & wireless (m20)
+      "791381/m20/dmz-three-zone",
+      "791381/m20/wifi-radio-link",
+      "791381/m20/wireless-network-types",
+      "791381/m20/ssid-beacon",
+      "791381/m20/wifi-security",
+      "791381/m20/wifi-protection-technologies",
+      "791381/m20/access-point-bridge",
+      // Batch 7 — IPv6 (m21)
+      "791381/m21/ipv6-anatomy",
+      "791381/m21/ipv6-compression",
       // Batch 8 — DHCP concept pages (m22)
       "791381/m22/dhcp-automatic-config",
       "791381/m22/dedicated-dhcp-server",
@@ -129,7 +146,7 @@ describe("visuals registry", () => {
       "791381/m27/static-route-path",
       "791381/m27/eigrp-metric-adaptation",
     ]);
-    expect(REGISTERED_VISUAL_IDS.length).toBe(92);
+    expect(REGISTERED_VISUAL_IDS.length).toBe(105);
   });
 
   it("every id is course/namespace scoped (reusable pattern for later chapters)", () => {
