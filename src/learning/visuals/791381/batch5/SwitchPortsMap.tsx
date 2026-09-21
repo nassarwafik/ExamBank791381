@@ -1,17 +1,18 @@
 import type { LearningVisualProps } from "../../types";
 
 /**
- * «منافذ السويتش» / «برمجة المنافذ من CLI» (Book 791381, PDF 123–124) — every switch port has a name used in
- * programming: FastEthernet ports F0/1 … F0/24 (first port F0/1, counted from the left) and the faster Gigabit ports
- * G0/1, G0/2. Before programming, we pick the right port. Motion TEACHES the CLI→port link: the `interface f0/1`
- * selection lights up, and ONLY THEN the matching physical port is highlighted. Reduced motion ⇒ the panel with the
- * selected port shown statically. No fake full-device Cisco UI, no invented ports.
+ * «منافذ السويتش» / «برمجة المنافذ من CLI» (Book 791381, PDF 123–124) — every port has a name: FastEthernet F0/1 … F0/24
+ * (first port F0/1, from the left) and the faster Gigabit ports G0/1, G0/2. Before programming we CHOOSE the correct
+ * port. PDF 124 gives the steps in WORDS only (choose the port/group → pick Access or Trunk → associate a VLAN) and its
+ * clarification says the actual commands come later — so this visual shows PORT SELECTION, never a CLI command (no
+ * `interface f0/1`). Motion is one-shot: the chosen port F0/1 is highlighted and labelled, ending in the selected
+ * state. Reduced motion ⇒ the panel with F0/1 already selected.
  */
 const COLS = 12;
 const px = (col: number) => 20 + col * 24;
 export default function SwitchPortsMap({ ariaLabel, reducedMotion, className }: LearningVisualProps) {
   return (
-    <svg className={"eb-visual" + (className ? " " + className : "")} viewBox="0 0 380 176"
+    <svg className={"eb-visual" + (className ? " " + className : "")} viewBox="0 0 380 188"
       role="img" aria-label={ariaLabel} xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMidYMid meet">
       <text className="eb-visual-row-label" x="190" y="20" textAnchor="middle">‏واجهة السويتش من الأمام — لكل منفذ اسم</text>
       {/* chassis */}
@@ -26,10 +27,10 @@ export default function SwitchPortsMap({ ariaLabel, reducedMotion, className }: 
             x={px(col)} y={44 + row * 26} width="20" height="20" rx="3" />
         );
       }))}
-      {/* selection highlight on F0/1 (motion: appears only after the CLI selection) */}
+      {/* selection highlight on F0/1 — one-shot, appears and stays (no CLI command) */}
       {!reducedMotion && (
         <rect data-highlight="1" className="eb-visual-node is-target" x={px(0)} y="44" width="20" height="20" rx="3" opacity="0">
-          <animate id="portSel" attributeName="opacity" begin="portCmd.end" dur="1.4s" values="0;1;1;0" keyTimes="0;0.15;0.8;1" />
+          <animate id="portSel" attributeName="opacity" begin="portLabel.end" dur="0.6s" values="0;1" fill="freeze" />
         </rect>
       )}
       <text className="eb-visual-meta" x={px(0) + 10} y="90" textAnchor="middle">F0/1</text>
@@ -40,15 +41,15 @@ export default function SwitchPortsMap({ ariaLabel, reducedMotion, className }: 
       <rect className="eb-visual-octet is-network" x="342" y="44" width="22" height="20" rx="3" />
       <text className="eb-visual-bit-label" x="353" y="54" textAnchor="middle" dominantBaseline="central" fontSize="9">G0/2</text>
       <text className="eb-visual-meta" x="340" y="90" textAnchor="middle">Gigabit أسرع</text>
-      {/* CLI selection */}
-      <rect data-cmd="1" className="eb-visual-seg is-v4" x="90" y="112" width="200" height="26" rx="6" opacity={reducedMotion ? 1 : 0}>
-        {!reducedMotion && <animate id="portCmd" attributeName="opacity" begin="0s;portSel.end" dur="1.0s" values="0;1;1" keyTimes="0;0.5;1" fill="freeze" />}
-      </rect>
-      <text className="eb-visual-token" x="190" y="125" textAnchor="middle" dominantBaseline="central" direction="ltr" opacity={reducedMotion ? 1 : 0}>
-        interface f0/1
-        {!reducedMotion && <animate attributeName="opacity" begin="0s;portSel.end" dur="1.0s" values="0;1;1" keyTimes="0;0.5;1" fill="freeze" />}
-      </text>
-      <text className="eb-visual-caption-svg" x="190" y="164" textAnchor="middle">‏نختار المنفذ الصحيح (interface f0/1) قبل كتابة أوامر البرمجة</text>
+      {/* port SELECTION (concept, not a command) */}
+      <g data-select="1" opacity={reducedMotion ? 1 : 0}>
+        <rect className="eb-visual-seg is-v4" x="120" y="110" width="140" height="26" rx="6" />
+        <text className="eb-visual-node-label" x="190" y="123" textAnchor="middle" dominantBaseline="central">نحدّد المنفذ F0/1</text>
+        {!reducedMotion && <animate id="portLabel" attributeName="opacity" begin="0.2s" dur="0.7s" values="0;1;1" keyTimes="0;0.5;1" fill="freeze" />}
+      </g>
+      {/* PDF 124 conceptual stages — words only, no command syntax */}
+      <text className="eb-visual-caption-svg" x="190" y="156" textAnchor="middle">‏اختيار المنفذ · تحديد Access / Trunk · ربطه بـ VLAN</text>
+      <text className="eb-visual-meta" x="190" y="174" textAnchor="middle">‏نختار المنفذ الصحيح قبل كتابة أوامر البرمجة</text>
     </svg>
   );
 }

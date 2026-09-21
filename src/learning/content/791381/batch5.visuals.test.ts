@@ -1,6 +1,6 @@
 // SVG Visual Enrichment — Batch 5. Three owner-requested backlog visuals (m08 CIDR/PDF41, m12 broadcast-message/PDF74,
 // m13 OSI seven-layers/PDF78) + the roadmap scope (m18 encapsulation/anatomy PDF116–117, m03 switch CLI & VLAN
-// PDF121–138). Pins the exact 14 NEW unique ids, registry total 63, the 23 visual blocks, page ids/PDF sources,
+// PDF121–138). Pins the exact 16 NEW unique ids (2 source-fidelity splits), registry total 65, the 23 visual blocks, page ids/PDF sources,
 // provenance, placement, and the deliberate skips (PDF118 tcp-handshake interactive, PDF119 trainings, PDF120 cover).
 import { describe, it, expect } from "vitest";
 import m08 from "./modules/m08";
@@ -18,7 +18,7 @@ const pages: ContentPage[] = MODS.flatMap(m => m.lessons.flatMap(l => l.pages));
 const pageBy = (id: string) => pages.find(p => p.id === id)!;
 const allVisuals = pages.flatMap(p => p.blocks.filter((b): b is VisualBlock => b.type === "visual").map(b => ({ page: p.id, block: b })));
 
-// The 23 visual-block placements (page id → visual id + PDF source). 14 unique ids; some reused across pages.
+// The 23 visual-block placements (page id → visual id + PDF source). 16 unique ids; some reused across pages.
 const PLACEMENTS: Record<string, { visualId: string; pdf: number }> = {
   // backlog
   "791381-m08-l02-p02": { visualId: "791381/m08/cidr-prefix", pdf: 41 },
@@ -27,8 +27,8 @@ const PLACEMENTS: Record<string, { visualId: string; pdf: number }> = {
   // m18
   "791381-m18-l01-p01": { visualId: "791381/m18/encapsulation-stack", pdf: 116 },
   "791381-m18-l01-p02": { visualId: "791381/m18/pdu-anatomy", pdf: 117 },
-  // m03 — CLI ladder (PDF121/122), ports map (PDF123/124)
-  "791381-m03-l01-p03": { visualId: "791381/m03/cli-mode-ladder", pdf: 121 },
+  // m03 — CLI interface (PDF121, generic) / CLI ladder (PDF122), ports map (PDF123/124)
+  "791381-m03-l01-p03": { visualId: "791381/m03/cli-interface", pdf: 121 },
   "791381-m03-l01-p04": { visualId: "791381/m03/cli-mode-ladder", pdf: 122 },
   "791381-m03-l01-p01": { visualId: "791381/m03/switch-ports-map", pdf: 123 },
   "791381-m03-l01-p02": { visualId: "791381/m03/switch-ports-map", pdf: 124 },
@@ -40,10 +40,10 @@ const PLACEMENTS: Record<string, { visualId: string; pdf: number }> = {
   "791381-m03-l02-p04": { visualId: "791381/m03/vlan-example-topology", pdf: 128 },
   "791381-m03-l02-p05": { visualId: "791381/m03/vlan-example-topology", pdf: 129 },
   "791381-m03-l03-p01": { visualId: "791381/m03/create-vlan", pdf: 130 },
-  // m03 — access port assignment (PDF131/132/138), SVI (PDF133/134)
+  // m03 — access port assignment (PDF131/132/138), SVI interface (PDF133) / SVI gateway (PDF134)
   "791381-m03-l03-p02": { visualId: "791381/m03/access-port-assignment", pdf: 131 },
   "791381-m03-l03-p03": { visualId: "791381/m03/access-port-assignment", pdf: 132 },
-  "791381-m03-l03-p04": { visualId: "791381/m03/svi-gateway", pdf: 133 },
+  "791381-m03-l03-p04": { visualId: "791381/m03/svi-interface", pdf: 133 },
   "791381-m03-l03-p05": { visualId: "791381/m03/svi-gateway", pdf: 134 },
   // m03 — tagged/untagged/native (PDF135/136/137), access on PDF138
   "791381-m03-l04-p01": { visualId: "791381/m03/tagged-untagged-native", pdf: 135 },
@@ -54,11 +54,12 @@ const PLACEMENTS: Record<string, { visualId: string; pdf: number }> = {
 const NEW_IDS = [
   "791381/m08/cidr-prefix", "791381/m12/broadcast-message-structure", "791381/m13/osi-seven-layers",
   "791381/m18/encapsulation-stack", "791381/m18/pdu-anatomy",
-  "791381/m03/cli-mode-ladder", "791381/m03/switch-ports-map", "791381/m03/vlan-segmentation",
+  "791381/m03/cli-interface", "791381/m03/cli-mode-ladder", "791381/m03/switch-ports-map",
+  "791381/m03/svi-interface", "791381/m03/vlan-segmentation",
   "791381/m03/vlan-access-trunk-terms", "791381/m03/vlan-example-topology", "791381/m03/create-vlan",
   "791381/m03/access-port-assignment", "791381/m03/svi-gateway", "791381/m03/tagged-untagged-native",
 ];
-// m08/m12/m13 already carry Batch-2/3 visuals; Batch 5 owns only the blocks whose id is one of the 14 NEW ids.
+// m08/m12/m13 already carry Batch-2/3 visuals; Batch 5 owns only the blocks whose id is one of the 16 NEW ids.
 const visuals = allVisuals.filter(v => NEW_IDS.includes(v.block.visualId));
 
 describe("Batch 5 — scope and placement (backlog + m18 + m03)", () => {
@@ -72,14 +73,14 @@ describe("Batch 5 — scope and placement (backlog + m18 + m03)", () => {
     expect(byPage).toEqual(Object.fromEntries(Object.entries(PLACEMENTS).map(([p, s]) => [p, s.visualId])));
   });
 
-  it("introduces exactly 14 NEW unique visual ids", () => {
+  it("introduces exactly 16 NEW unique visual ids", () => {
     const used = new Set(visuals.map(v => v.block.visualId));
     expect([...used].sort()).toEqual([...NEW_IDS].sort());
-    expect(used.size).toBe(14);
+    expect(used.size).toBe(16);
   });
 
-  it("registry grew by exactly 14 (49 → 63); each new id resolves", () => {
-    expect(REGISTERED_VISUAL_IDS.length).toBe(63);
+  it("registry grew by exactly 16 (49 → 65); each new id resolves", () => {
+    expect(REGISTERED_VISUAL_IDS.length).toBe(65);
     for (const id of NEW_IDS) expect(resolveVisual(id), id).not.toBeNull();
   });
 

@@ -134,7 +134,9 @@ describe("Batch 6 — SOURCE ORDER inside m03 (no concept before the book introd
   const P = (id: string) => plain(pageBy(id));
   const firstPdf = (re: RegExp) => pages.filter(p => re.test(plain(p))).map(p => p.source.pdfPageStart)[0];
   it("commands appear only where the book prints them: enable / configure terminal from PDF 122; vlan / name from 122 and 130; interface range + switchport from 131; SVI commands from 133; trunk commands from 136", () => {
-    expect(P(M03 + "-l01-p03")).not.toMatch(/Switch>|Switch#|Switch\(config\)|configure terminal|switchport|interface/);
+    // `interface` is matched in its Cisco COMMAND form (interface f0/g0/range/vlan …) so the Batch-5 visual id
+    // 791381/m03/cli-interface (a legitimate generic-CLI concept on PDF 121) does not trip this source-order guard.
+    expect(P(M03 + "-l01-p03")).not.toMatch(/Switch>|Switch#|Switch\(config\)|configure terminal|switchport|interface (f0|g0|range|vlan)/);
     expect(firstPdf(/\benable\b/)).toBe(122);
     expect(firstPdf(/configure terminal/)).toBe(122);
     expect(firstPdf(/\bname MNG\b/)).toBe(130);

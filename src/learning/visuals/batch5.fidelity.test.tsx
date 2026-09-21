@@ -9,8 +9,10 @@ import BroadcastMessageStructure from "./791381/batch5/BroadcastMessageStructure
 import OsiSevenLayers from "./791381/batch5/OsiSevenLayers";
 import EncapsulationStack from "./791381/batch5/EncapsulationStack";
 import PduAnatomy from "./791381/batch5/PduAnatomy";
+import CliInterface from "./791381/batch5/CliInterface";
 import CliModeLadder from "./791381/batch5/CliModeLadder";
 import SwitchPortsMap from "./791381/batch5/SwitchPortsMap";
+import SviInterface from "./791381/batch5/SviInterface";
 import VlanSegmentation from "./791381/batch5/VlanSegmentation";
 import VlanAccessTrunkTerms from "./791381/batch5/VlanAccessTrunkTerms";
 import VlanExampleTopology from "./791381/batch5/VlanExampleTopology";
@@ -65,6 +67,12 @@ describe("Batch 5 — broadcast-message-structure (PDF 74): dest MAC all-F, sour
     expect(change).not.toBeNull(); expect(deliver).not.toBeNull();
     expect(deliver.getAttribute("begin")).toBe("bcChange.end");
   });
+  it("is a clean one-shot: the unicast stage does NOT restart, so no stale unicap/FF flip on a second cycle", () => {
+    const { container } = render(<BroadcastMessageStructure ariaLabel="x" reducedMotion={false} />);
+    const uni = byId(container, "bcUni")!;
+    expect(uni.getAttribute("begin")).not.toContain(".end");   // begins at 0s only — never restarts from bcDeliver.end
+    expect(uni.getAttribute("fill")).toBe("freeze");           // fades out once and stays gone
+  });
 });
 
 // ── backlog #3 — OSI seven layers (site 70 / PDF 78) ──
@@ -103,7 +111,10 @@ describe("Batch 5 — encapsulation-stack (PDF 116): wrappers added in order", (
     const seg = byId(container, "encSegment")!, pkt = byId(container, "encPacket")!, frm = byId(container, "encFrame")!;
     expect(pkt.getAttribute("begin")).toBe("encSegment.end");
     expect(frm.getAttribute("begin")).toBe("encPacket.end");
-    expect(seg.getAttribute("begin")).toContain("encFrame.end");
+    // ONE-SHOT: the innermost wrapper does NOT restart from the outer wrapper's end, so cycle 2 never begins with all
+    // wrappers already frozen present; it stops in the complete nested state.
+    expect(seg.getAttribute("begin")).not.toContain(".end");
+    for (const a of [seg, pkt, frm]) expect(a.getAttribute("fill")).toBe("freeze");
   });
 });
 
@@ -119,24 +130,56 @@ describe("Batch 5 — pdu-anatomy (PDF 117): field families per unit", () => {
 });
 
 // ── m03 CLI ladder (PDF 121–122) ──
-describe("Batch 5 — cli-mode-ladder (PDF 121–122): prompt changes after each command", () => {
-  it("shows the exact prompt progression and the exact commands (full configure terminal)", () => {
+// ── m03 CLI interface (PDF 121) — generic CLI only, NO Cisco command syntax ──
+describe("Batch 5 — cli-interface (PDF 121): generic CLI, no PDF-122 command leak", () => {
+  it("names CLI and its source-supported categories, and shows NO real Cisco command or prompt", () => {
+    const { container } = render(<CliInterface ariaLabel="x" reducedMotion={true} />);
+    const t = text(container);
+    expect(t).toContain("CLI = Command Line Interface");
+    for (const cat of ["VLAN", "المنافذ", "كلمات المرور", "Trunk"]) expect(t).toContain(cat);
+    // must NOT leak PDF 122 commands/prompts
+    for (const leak of ["enable", "configure terminal", "vlan 10", "Switch#", "Switch(config)#", "Switch>"]) expect(t).not.toContain(leak);
+  });
+  it("motion writes the command lines one by one (one-shot, no restart)", () => {
+    const { container } = render(<CliInterface ariaLabel="x" reducedMotion={false} />);
+    const first = byId(container, "cliLine0")!;
+    expect(first).not.toBeNull();
+    expect(first.getAttribute("begin")).not.toContain(".end");   // one-shot start, not a restart from the last line
+  });
+});
+
+describe("Batch 5 — cli-mode-ladder (PDF 122): exact 3-prompt ladder, command → prompt sequencing", () => {
+  it("shows EXACTLY Switch> / Switch# / Switch(config)# — never Switch(config-vlan)#", () => {
     const { container } = render(<CliModeLadder ariaLabel="x" reducedMotion={true} />);
     const prompts = [...container.querySelectorAll("[data-prompt]")].map(p => text(p));
-    expect(prompts).toEqual(["Switch>", "Switch#", "Switch(config)#", "Switch(config-vlan)#"]);
+    expect(prompts).toEqual(["Switch>", "Switch#", "Switch(config)#"]);
+    expect(text(container)).not.toContain("Switch(config-vlan)#");
     const t = text(container);
     for (const cmd of ["enable", "configure terminal", "vlan 10"]) expect(t).toContain(cmd);
     expect(t).not.toContain("config t");   // the book uses the full form
   });
+  it("is causal: a prompt becomes active only AFTER the previous command (one-shot, no restart)", () => {
+    const { container } = render(<CliModeLadder ariaLabel="x" reducedMotion={false} />);
+    // prompt 1 (Switch#) activates on the enable command's end; prompt 2 on configure terminal's end
+    expect(byId(container, "active1")!.getAttribute("begin")).toBe("cmd0.end");
+    expect(byId(container, "active2")!.getAttribute("begin")).toBe("cmd1.end");
+    // the first prompt does not restart from any later stage's end
+    expect(byId(container, "active0")!.getAttribute("begin")).not.toContain(".end");
+  });
 });
 
-// ── m03 switch ports (PDF 123–124) ──
-describe("Batch 5 — switch-ports-map (PDF 123–124): named ports + CLI selection", () => {
-  it("labels F0/1, F0/24, G0/1, G0/2 and links interface f0/1 to a highlighted port", () => {
+// ── m03 switch ports (PDF 123–124) — port selection, NO command ──
+describe("Batch 5 — switch-ports-map (PDF 123–124): named ports + port SELECTION (no command)", () => {
+  it("labels F0/1, F0/24, G0/1, G0/2, highlights the selected port, and shows NO `interface f0/1` command", () => {
     const { container } = render(<SwitchPortsMap ariaLabel="x" reducedMotion={true} />);
     const t = text(container);
-    for (const p of ["F0/1", "F0/24", "G0/1", "G0/2", "interface f0/1"]) expect(t).toContain(p);
+    for (const p of ["F0/1", "F0/24", "G0/1", "G0/2"]) expect(t).toContain(p);
+    expect(t).not.toContain("interface f0/1");   // future-command leak removed
     expect(container.querySelector('[data-selected="1"]')).not.toBeNull();
+  });
+  it("selection motion is one-shot (no restart from the highlight's end)", () => {
+    const { container } = render(<SwitchPortsMap ariaLabel="x" reducedMotion={false} />);
+    expect(byId(container, "portLabel")!.getAttribute("begin")).not.toContain(".end");
   });
 });
 
@@ -188,6 +231,9 @@ describe("Batch 5 — create-vlan (PDF 130): VLAN appears after its command", ()
     // VLAN box reveal begins on its own command's end (causal)
     expect(byId(container, "vl0")!.getAttribute("begin")).toBe("mk0.end");
     expect(byId(container, "vl1")!.getAttribute("begin")).toBe("mk1.end");
+    // ONE-SHOT: command 1 does not restart from command 2's end, so cycle 2 never begins with both VLANs already present
+    expect(byId(container, "mk0")!.getAttribute("begin")).not.toContain(".end");
+    for (const id of ["mk0", "mk1", "vl0", "vl1"]) expect(byId(container, id)!.getAttribute("fill")).toBe("freeze");
   });
 });
 
@@ -199,18 +245,41 @@ describe("Batch 5 — access-port-to-vlan (PDF 131/132/138): member only after a
     for (const s of ["interface f0/1", "switchport mode access", "switchport access vlan 10"]) expect(t).toContain(s);
     expect(container.querySelector('[data-member="1"]')).not.toBeNull();
     expect(byId(container, "apJoin")!.getAttribute("begin")).toBe("ap2.end");
+    // one-shot: the first step does not restart from a later stage's end
+    expect(byId(container, "ap0")!.getAttribute("begin")).not.toContain(".end");
+    // membership is a frozen final state (fill=freeze), not a fade-out
+    expect(byId(container, "apJoin")!.getAttribute("fill")).toBe("freeze");
   });
 });
 
-// ── m03 SVI + gateway (PDF 133–134) ──
-describe("Batch 5 — svi-gateway (PDF 133–134): logical SVI carries the gateway IP", () => {
-  it("shows the logical SVI (interface vlan 10) with the exact IP and a gateway exit", () => {
-    const { container } = render(<SviGateway ariaLabel="x" reducedMotion={true} />);
+// ── m03 SVI interface (PDF 133) — logical interface only, NO gateway leak ──
+describe("Batch 5 — svi-interface (PDF 133): logical SVI, no gateway leak", () => {
+  it("shows interface vlan 10 with 192.168.10.254, marks it logical, and shows NO Gateway / other-networks content", () => {
+    const { container } = render(<SviInterface ariaLabel="x" reducedMotion={true} />);
     expect(container.querySelector('[data-svi="1"]')).not.toBeNull();
     const t = text(container);
     expect(t).toContain("interface vlan 10");
     expect(t).toContain("192.168.10.254");
+    expect(t).toContain("no shutdown");
+    expect(t).toContain("افتراضية");                 // logical
+    for (const leak of ["Gateway", "شبكات أخرى", "192.168.1.254"]) expect(t).not.toContain(leak);
+  });
+  it("builds the SVI one command at a time (one-shot, no restart)", () => {
+    const { container } = render(<SviInterface ariaLabel="x" reducedMotion={false} />);
+    expect(byId(container, "svi0")!.getAttribute("begin")).not.toContain(".end");
+  });
+});
+
+// ── m03 SVI gateway (PDF 134) — gateway exit, 192.168.1.254 ──
+describe("Batch 5 — svi-gateway (PDF 134): Default Gateway exit to other networks", () => {
+  it("shows the Gateway concept with 192.168.1.254 and the exit to other networks; not the PDF-133 SVI address", () => {
+    const { container } = render(<SviGateway ariaLabel="x" reducedMotion={true} />);
+    expect(container.querySelector('[data-gateway="1"]')).not.toBeNull();
+    const t = text(container);
     expect(t).toContain("Gateway");
+    expect(t).toContain("192.168.1.254");
+    expect(t).toContain("الشبكات الأخرى");
+    expect(t).not.toContain("192.168.10.254");       // that is the PDF-133 SVI example, not the gateway value
   });
 });
 
@@ -231,9 +300,9 @@ describe("Batch 5 — tagged-untagged-native (PDF 135–137): tag state per case
 
 // ── cross-cutting: reduced motion removes ALL SMIL animation from every batch-5 visual ──
 describe("Batch 5 — reduced motion drops all motion; motion-on renders some", () => {
-  const COMPS = [CidrPrefix, BroadcastMessageStructure, OsiSevenLayers, EncapsulationStack, PduAnatomy, CliModeLadder,
-    SwitchPortsMap, VlanSegmentation, VlanAccessTrunkTerms, VlanExampleTopology, CreateVlan, AccessPortToVlan,
-    SviGateway, TaggedUntaggedNative];
+  const COMPS = [CidrPrefix, BroadcastMessageStructure, OsiSevenLayers, EncapsulationStack, PduAnatomy, CliInterface,
+    CliModeLadder, SwitchPortsMap, SviInterface, VlanSegmentation, VlanAccessTrunkTerms, VlanExampleTopology,
+    CreateVlan, AccessPortToVlan, SviGateway, TaggedUntaggedNative];
   it("no <animateMotion>, no <animate>, and a valid still svg[role=img] for each", () => {
     for (const Comp of COMPS) {
       const { container } = render(<Comp ariaLabel="x" reducedMotion={true} />);

@@ -22,12 +22,12 @@ export default function CreateVlan({ ariaLabel, reducedMotion, className }: Lear
         return (
           <g key={i} data-cmd={i}>
             <rect className="eb-visual-seg is-v4" x="14" y={y} width="176" height="48" rx="6" opacity={reducedMotion ? 1 : 0}>
-              {!reducedMotion && <animate id={`mk${i}`} attributeName="opacity" begin={i === 0 ? "0s;mk1.end" : `mk${i - 1}.end`} dur="1.0s" values="0;1;1" keyTimes="0;0.4;1" fill="freeze" />}
+              {!reducedMotion && <animate id={`mk${i}`} attributeName="opacity" begin={i === 0 ? "0.2s" : `mk${i - 1}.end`} dur="1.0s" values="0;1;1" keyTimes="0;0.4;1" fill="freeze" />}
             </rect>
             <text className="eb-visual-token" x="24" y={y + 18} direction="ltr" fontSize="11" opacity={reducedMotion ? 1 : 0}>{c.line1}
-              {!reducedMotion && <animate attributeName="opacity" begin={i === 0 ? "0s;mk1.end" : `mk${i - 1}.end`} dur="1.0s" values="0;1;1" keyTimes="0;0.4;1" fill="freeze" />}</text>
+              {!reducedMotion && <animate attributeName="opacity" begin={i === 0 ? "0.2s" : `mk${i - 1}.end`} dur="1.0s" values="0;1;1" keyTimes="0;0.4;1" fill="freeze" />}</text>
             <text className="eb-visual-token is-octet" x="34" y={y + 36} direction="ltr" fontSize="11" opacity={reducedMotion ? 1 : 0}>Switch(config-vlan)# {c.line2}
-              {!reducedMotion && <animate attributeName="opacity" begin={i === 0 ? "0s;mk1.end" : `mk${i - 1}.end`} dur="1.0s" values="0;1;1" keyTimes="0;0.4;1" fill="freeze" />}</text>
+              {!reducedMotion && <animate attributeName="opacity" begin={i === 0 ? "0.2s" : `mk${i - 1}.end`} dur="1.0s" values="0;1;1" keyTimes="0;0.4;1" fill="freeze" />}</text>
           </g>
         );
       })}

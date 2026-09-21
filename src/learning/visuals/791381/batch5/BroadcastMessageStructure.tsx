@@ -31,7 +31,9 @@ export default function BroadcastMessageStructure({ ariaLabel, reducedMotion, cl
         {!reducedMotion && (
           <text className="eb-visual-token is-octet" data-unicast="1" x="366" y="64" textAnchor="end" direction="ltr" fontSize="11" opacity="1">
             B4:11:C2:07:9E:31
-            <animate id="bcUni" attributeName="opacity" begin="0s;bcDeliver.end" dur="1.0s" values="1;1;0" keyTimes="0;0.55;1" />
+            {/* ONE-SHOT: the unicast MAC fades out once (and stays gone) as the broadcast MAC is revealed — it never
+                restarts, so the frame does not flip back to unicast while the all-F value is still shown. */}
+            <animate id="bcUni" attributeName="opacity" begin="0s" dur="1.0s" values="1;1;0" keyTimes="0;0.55;1" fill="freeze" />
           </text>
         )}
         {/* broadcast value (everyone) */}

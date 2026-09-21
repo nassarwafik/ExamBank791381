@@ -75,8 +75,10 @@ describe("visuals registry", () => {
       "791381/m18/encapsulation-stack",
       "791381/m18/pdu-anatomy",
       // Batch 5 — switch CLI & VLAN (m03)
+      "791381/m03/cli-interface",
       "791381/m03/cli-mode-ladder",
       "791381/m03/switch-ports-map",
+      "791381/m03/svi-interface",
       "791381/m03/vlan-segmentation",
       "791381/m03/vlan-access-trunk-terms",
       "791381/m03/vlan-example-topology",
@@ -85,7 +87,7 @@ describe("visuals registry", () => {
       "791381/m03/svi-gateway",
       "791381/m03/tagged-untagged-native",
     ]);
-    expect(REGISTERED_VISUAL_IDS.length).toBe(63);
+    expect(REGISTERED_VISUAL_IDS.length).toBe(65);
   });
 
   it("every id is course/namespace scoped (reusable pattern for later chapters)", () => {

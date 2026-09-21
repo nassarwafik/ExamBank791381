@@ -22,10 +22,11 @@ export default function EncapsulationStack({ ariaLabel, reducedMotion, className
     <svg className={"eb-visual" + (className ? " " + className : "")} viewBox="0 0 380 214"
       role="img" aria-label={ariaLabel} xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMidYMid meet">
       <text className="eb-visual-row-label" x="190" y="22" textAnchor="middle">‏كل طبقة تضيف غلافًا حول ما قبله</text>
-      {/* Frame wraps Packet wraps Segment wraps Data (outer → inner). The reset chains off the outer wrapper's end. */}
+      {/* ONE-SHOT nesting: Segment is added around Data, THEN Packet around Segment, THEN Frame around Packet, and the
+          animation STOPS in the complete nested final state — the wrappers do not restart while already frozen visible. */}
       {wrap("encFrame", 40, 34, 300, 150, "Frame — ربط البيانات (MAC)", "encPacket.end")}
       {wrap("encPacket", 70, 60, 240, 106, "Packet — الشبكة (IP)", "encSegment.end")}
-      {wrap("encSegment", 100, 86, 180, 62, "Segment — النقل (منافذ)", "0s;encFrame.end")}
+      {wrap("encSegment", 100, 86, 180, 62, "Segment — النقل (منافذ)", "0.2s")}
       {/* Data — always present at the core */}
       <rect className="eb-visual-node is-target" x="150" y="112" width="80" height="30" rx="6" />
       <text className="eb-visual-node-label" x="190" y="127" textAnchor="middle" dominantBaseline="central">Data</text>

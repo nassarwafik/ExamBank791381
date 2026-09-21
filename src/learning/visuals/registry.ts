@@ -76,8 +76,10 @@ import BroadcastMessageStructure from "./791381/batch5/BroadcastMessageStructure
 import OsiSevenLayers from "./791381/batch5/OsiSevenLayers";
 import EncapsulationStack from "./791381/batch5/EncapsulationStack";
 import PduAnatomy from "./791381/batch5/PduAnatomy";
+import CliInterface from "./791381/batch5/CliInterface";
 import CliModeLadder from "./791381/batch5/CliModeLadder";
 import SwitchPortsMap from "./791381/batch5/SwitchPortsMap";
+import SviInterface from "./791381/batch5/SviInterface";
 import VlanSegmentation from "./791381/batch5/VlanSegmentation";
 import VlanAccessTrunkTerms from "./791381/batch5/VlanAccessTrunkTerms";
 import VlanExampleTopology from "./791381/batch5/VlanExampleTopology";
@@ -157,8 +159,10 @@ const VISUALS: readonly RegisteredVisual[] = [
   { id: "791381/m18/encapsulation-stack", component: EncapsulationStack, motion: true },
   { id: "791381/m18/pdu-anatomy", component: PduAnatomy, motion: true },
   // Batch 5 — switch CLI & VLAN (m03)
+  { id: "791381/m03/cli-interface", component: CliInterface, motion: true },
   { id: "791381/m03/cli-mode-ladder", component: CliModeLadder, motion: true },
   { id: "791381/m03/switch-ports-map", component: SwitchPortsMap, motion: true },
+  { id: "791381/m03/svi-interface", component: SviInterface, motion: true },
   { id: "791381/m03/vlan-segmentation", component: VlanSegmentation, motion: true },
   { id: "791381/m03/vlan-access-trunk-terms", component: VlanAccessTrunkTerms, motion: true },
   { id: "791381/m03/vlan-example-topology", component: VlanExampleTopology, motion: true },

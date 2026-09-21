@@ -20,10 +20,10 @@ export default function AccessPortToVlan({ ariaLabel, reducedMotion, className }
         return (
           <g key={i} data-step={i}>
             <rect className="eb-visual-seg is-v4" x="14" y={y} width="196" height="30" rx="6" opacity={reducedMotion ? 1 : 0}>
-              {!reducedMotion && <animate id={`ap${i}`} attributeName="opacity" begin={i === 0 ? "0s;apJoin.end" : `ap${i - 1}.end`} dur="0.9s" values="0;1;1" keyTimes="0;0.4;1" fill="freeze" />}
+              {!reducedMotion && <animate id={`ap${i}`} attributeName="opacity" begin={i === 0 ? "0.2s" : `ap${i - 1}.end`} dur="0.9s" values="0;1;1" keyTimes="0;0.4;1" fill="freeze" />}
             </rect>
             <text className="eb-visual-token" x="24" y={y + 15} dominantBaseline="central" direction="ltr" fontSize="11" opacity={reducedMotion ? 1 : 0}>{s}
-              {!reducedMotion && <animate attributeName="opacity" begin={i === 0 ? "0s;apJoin.end" : `ap${i - 1}.end`} dur="0.9s" values="0;1;1" keyTimes="0;0.4;1" fill="freeze" />}</text>
+              {!reducedMotion && <animate attributeName="opacity" begin={i === 0 ? "0.2s" : `ap${i - 1}.end`} dur="0.9s" values="0;1;1" keyTimes="0;0.4;1" fill="freeze" />}</text>
           </g>
         );
       })}
@@ -36,12 +36,12 @@ export default function AccessPortToVlan({ ariaLabel, reducedMotion, className }
         <line className="eb-visual-link is-strong" x1="302" y1="92" x2="302" y2="120" />
         <rect className="eb-visual-node" x="278" y="120" width="48" height="26" rx="5" />
         <text className="eb-visual-node-label" x="302" y="133" textAnchor="middle" dominantBaseline="central" fontSize="11">جهاز</text>
-        {/* membership highlight — appears only after the final step */}
+        {/* membership highlight — appears only after the final step and STAYS (one-shot final state, no restart) */}
         <rect data-member="1" className="eb-visual-node is-target" x="278" y="120" width="48" height="26" rx="5" opacity={reducedMotion ? 1 : 0}>
-          {!reducedMotion && <animate id="apJoin" attributeName="opacity" begin="ap2.end" dur="1.2s" values="0;1;1;0" keyTimes="0;0.2;0.85;1" />}
+          {!reducedMotion && <animate id="apJoin" attributeName="opacity" begin="ap2.end" dur="0.8s" values="0;1;1" keyTimes="0;0.6;1" fill="freeze" />}
         </rect>
         <text className="eb-visual-node-label" x="302" y="133" textAnchor="middle" dominantBaseline="central" fontSize="11" opacity={reducedMotion ? 1 : 0}>عضو VLAN 10
-          {!reducedMotion && <animate attributeName="opacity" begin="ap2.end" dur="1.2s" values="0;1;1;0" keyTimes="0;0.2;0.85;1" />}</text>
+          {!reducedMotion && <animate attributeName="opacity" begin="ap2.end" dur="0.8s" values="0;1;1" keyTimes="0;0.6;1" fill="freeze" />}</text>
       </g>
       <text className="eb-visual-caption-svg" x="190" y="176" textAnchor="middle">‏Access Port = جهاز واحد في VLAN واحدة، بلا Tag</text>
       <text className="eb-visual-meta" x="190" y="194" textAnchor="middle">‏الجهاز المتصل يدخل VLAN المحدّدة تلقائيًا</text>

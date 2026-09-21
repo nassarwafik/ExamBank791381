@@ -112,11 +112,11 @@ const m03: ContentModule = {
             {
               // ENRICHMENT (Batch 5): SVG visual enrichment appended after the book content.
               id: "m03-l01-p03-visual", type: "visual", origin: "teacher-enrichment",
-              visualId: "791381/m03/cli-mode-ladder", motion: true,
+              visualId: "791381/m03/cli-interface", motion: true,
               source: src(121),
-              title: "مخطط: أوضاع CLI والرمز الذي يميّز كل وضع",
-              alt: "مخطط يبيّن أن لكل وضع في واجهة الأوامر رمزًا خاصًا في بداية السطر، ويتغيّر الرمز كلّما انتقلنا إلى وضع أعمق في البرمجة.",
-              caption: "‏لكل وضع رمزه الخاص في بداية السطر — يتغيّر مع كل انتقال.",
+              title: "مخطط: CLI — واجهة الأوامر",
+              alt: "مخطط لطرفية عامة تظهر فيها أسطر الأوامر واحدًا تلو الآخر، يبيّن أن CLI هي واجهة الأوامر التي نبرمج منها السويتش (لتعريف VLAN والمنافذ وكلمات المرور و Trunk)، وكل أمر في سطر مستقل.",
+              caption: "‏CLI = Command Line Interface · كل أمر في سطر مستقل.",
             },
           ],
         },
@@ -984,7 +984,7 @@ const m03: ContentModule = {
             {
               // ENRICHMENT (Batch 5): SVG visual enrichment appended after the book content.
               id: "m03-l03-p04-visual", type: "visual", origin: "teacher-enrichment",
-              visualId: "791381/m03/svi-gateway", motion: true,
+              visualId: "791381/m03/svi-interface", motion: true,
               source: src(133),
               title: "مخطط: الواجهة المنطقية SVI",
               alt: "مخطط يبيّن الواجهة المنطقية interface vlan 10 داخل السويتش بعنوان 192.168.10.254، مميّزة بخط متقطّع عن المنافذ الفيزيائية.",
@@ -1052,8 +1052,8 @@ const m03: ContentModule = {
               id: "m03-l03-p05-visual", type: "visual", origin: "teacher-enrichment",
               visualId: "791381/m03/svi-gateway", motion: true,
               source: src(134),
-              title: "مخطط: فكرة SVI و Gateway",
-              alt: "المخطط نفسه لفكرة SVI: الواجهة المنطقية تعمل بوابة (Gateway) تخرج منها أجهزة VLAN إلى الشبكات الأخرى؛ بدونها تعمل VLAN داخليًا فقط.",
+              title: "مخطط: Gateway — الخروج إلى الشبكات الأخرى",
+              alt: "مخطط يبيّن أن Default Gateway بعنوان 192.168.1.254 هو باب خروج أجهزة VLAN إلى الشبكات الأخرى؛ بدونه تعمل VLAN داخليًا فقط.",
               caption: "‏Gateway باب الخروج · بدونه تعمل VLAN داخليًا فقط.",
             },
           ],
