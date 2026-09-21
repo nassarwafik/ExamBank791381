@@ -29,15 +29,20 @@ describe("sidebar ↔ content spacing — Projects / Reports / Question Bank", (
   for (const p of PAGES) {
     const css = read(p.file);
     describe(p.name, () => {
-      it("adds a desktop-only horizontal gutter (padding-inline: var(--eb-space-4)) at ≥1024px", () => {
-        // the gutter lives inside the desktop media query, applied to the page's own root selector
-        expect(norm(css)).toContain(`@media(min-width:1024px){${p.selector}{padding-inline:var(--eb-space-4);}}`);
+      it("adds a desktop-only inline-start gutter (padding-inline-start: var(--eb-space-4)) at ≥1024px — separation from the RTL sidebar rail only", () => {
+        // the gutter lives inside the desktop media query, applied to the page's own root selector; inline-START only
+        // (the sidebar is at inline-start in RTL) so the opposite side keeps its full card/grid width
+        expect(norm(css)).toContain(`@media(min-width:1024px){${p.selector}{padding-inline-start:var(--eb-space-4);}}`);
       });
       it("does NOT add side padding at the base (mobile/drawer) rule — no leftover side space when the sidebar is a drawer", () => {
         const base = baseRule(css, p.selector);
         expect(base).not.toBe("");
         expect(base).not.toContain("padding-inline");
         expect(base).not.toContain("padding:");
+      });
+      it("insets only the sidebar side — no symmetric padding-inline and no inline-end gutter", () => {
+        expect(norm(css)).not.toContain(`${p.selector}{padding-inline:`);
+        expect(css).not.toMatch(/padding-inline-end\s*:/);
       });
       it("uses RTL-safe logical properties only — no margin-left/right or padding-left/right hacks", () => {
         expect(css).not.toMatch(/margin-(?:left|right)\s*:/);
