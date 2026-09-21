@@ -64,6 +64,15 @@ const m19: ContentModule = {
               spans: [L("VTP = VLAN Trunking Protocol"), T(".")],
             },
             {
+              // ENRICHMENT (Batch 7): SVG visual enrichment appended after the book content.
+              id: "m19-l01-p01-visual", type: "visual", origin: "teacher-enrichment",
+              visualId: "791381/m19/vtp-roles", motion: false,
+              source: src(140),
+              title: "مخطط: أدوار VTP — Server و Client",
+              alt: "مخطط يبيّن أدوار VTP: سويتش Server يعرّف VLAN ويرسل التحديثات، وسويتشات Client تستقبلها، عبر وصلات Trunk بين السويتشات.",
+              caption: "‏Server يرسل التحديثات إلى Clients عبر Trunk — إدارة VLAN على عدة سويتشات.",
+            },
+            {
               id: "m19-l01-p01-clar", type: "callout", origin: "teacher-enrichment", kind: "clarification", title: "توضيح",
               spans: [T("في القسم السابق عرّفت "), L("VLAN"), T(" على سويتش واحد بالأوامر. عندما يكون في الشبكة عدة سويتشات، يوفّر "), L("VTP"), T(" كتابة التعريفات نفسها على كل سويتش: سويتش واحد ("), L("Server"), T(") يعرّفها ويرسلها، والباقي ("), L("Clients"), T(") يستقبلها. كلمة "), L("Trunk"), T(" هنا هي الوصلة التي عرفتها بين السويتشات، والتي تمرّ عبرها هذه التحديثات.")],
             },

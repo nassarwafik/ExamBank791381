@@ -75,6 +75,15 @@ const m20: ContentModule = {
               spans: [T("خدمات عامة متاحة للناس، والشبكة الداخلية تبقى محمية.")],
             },
             {
+              // ENRICHMENT (Batch 7): SVG visual enrichment appended after the book content.
+              id: "m20-l01-p01-visual", type: "visual", origin: "teacher-enrichment",
+              visualId: "791381/m20/dmz-three-zone", motion: true,
+              source: src(159),
+              title: "مخطط: DMZ — بنية المناطق الثلاث",
+              alt: "مخطط متحرّك يبيّن الإنترنت ثم جدار حماية ثم DMZ (خدمات عامة: Web و Mail و DNS) ثم جدار ثانٍ ثم الشبكة الداخلية؛ الزائر يصل إلى DMZ فقط ولا يدخل الداخلية.",
+              caption: "‏الزائر يصل إلى DMZ فقط · جداران يجعلان DMZ منطقة معزولة.",
+            },
+            {
               id: "m20-l01-p01-note", type: "callout", origin: "teacher-enrichment", kind: "clarification", title: "توضيح المعلّم",
               spans: [T("في رسم الكتاب يوجد جداران للحماية: واحد بين الإنترنت و "), L("DMZ"), T("، وآخر بين "), L("DMZ"), T(" والشبكة الداخلية. لذلك حتى لو وصل زائر إلى خادم الموقع، تبقى أجهزة الموظفين خلف جدار آخر.")],
             },
@@ -125,6 +134,15 @@ const m20: ContentModule = {
             {
               id: "m20-l01-p02-remember", type: "callout", origin: "book", kind: "remember", title: "تذكّر",
               spans: [L("Wi-Fi"), T(" مناسب للحركة، لكنه يحتاج حماية جيدة.")],
+            },
+            {
+              // ENRICHMENT (Batch 7): SVG visual enrichment appended after the book content.
+              id: "m20-l01-p02-visual", type: "visual", origin: "teacher-enrichment",
+              visualId: "791381/m20/wifi-radio-link", motion: true,
+              source: src(160),
+              title: "مخطط: Wi-Fi — الوصلة اللاسلكية",
+              alt: "مخطط متحرّك يبيّن جهازًا يتصل بالشبكة عبر موجات الراديو بدل الكابل، ضمن مدى التغطية.",
+              caption: "‏الجهاز يتصل بالشبكة لاسلكيًا عبر موجات الراديو، بدون كابل.",
             },
             {
               id: "m20-l01-p02-note", type: "callout", origin: "teacher-enrichment", kind: "clarification", title: "توضيح المعلّم",
@@ -179,6 +197,15 @@ const m20: ContentModule = {
             {
               id: "m20-l01-p03-remember", type: "callout", origin: "book", kind: "remember", title: "احفظ من المثال",
               spans: [L("WLAN"), T(" = بيت، "), L("WWAN"), T(" = خلوي، "), L("WPAN"), T(" = بلوتوث.")],
+            },
+            {
+              // ENRICHMENT (Batch 7): SVG visual enrichment appended after the book content.
+              id: "m20-l01-p03-visual", type: "visual", origin: "teacher-enrichment",
+              visualId: "791381/m20/wireless-network-types", motion: false,
+              source: src(161),
+              title: "مخطط: أنواع الشبكات اللاسلكية حسب المدى",
+              alt: "مخطط يقارن أنواع الشبكات اللاسلكية بحسب المدى كما في جدول الكتاب: PAN و WPAN (قريبة جدًا)، WLAN (بيت أو مدرسة)، WWAN (4G / 5G).",
+              caption: "‏PAN و WPAN قريبة · WLAN محلية · WWAN واسعة — كلّها لاسلكية.",
             },
             {
               id: "m20-l01-p03-note", type: "callout", origin: "teacher-enrichment", kind: "clarification", title: "توضيح المعلّم",
@@ -239,6 +266,15 @@ const m20: ContentModule = {
               spans: [L("SSID"), T(" ليس كلمة السر، بل اسم الشبكة الذي تراه عند البحث.")],
             },
             {
+              // ENRICHMENT (Batch 7): SVG visual enrichment appended after the book content.
+              id: "m20-l02-p01-visual", type: "visual", origin: "teacher-enrichment",
+              visualId: "791381/m20/ssid-beacon", motion: true,
+              source: src(162),
+              title: "مخطط: SSID — بثّ اسم الشبكة",
+              alt: "مخطط متحرّك يبيّن نقطة الوصول تبثّ اسم الشبكة SSID فتصبح مرئية، فيجدها الجهاز ويختارها.",
+              caption: "‏SSID هو اسم الشبكة الذي يُبَثّ فيراه الجهاز ويختاره.",
+            },
+            {
               id: "m20-l02-p01-note", type: "callout", origin: "teacher-enrichment", kind: "clarification", title: "توضيح المعلّم",
               spans: [T("عندما تفتح قائمة شبكات "), L("Wi-Fi"), T(" على هاتفك، كل اسم تراه في القائمة هو "), L("SSID"), T(" لشبكة قريبة. إخفاؤه يجعل الشبكة لا تظهر في القائمة، لكنه ليس بديلًا عن كلمة مرور قوية.")],
             },
@@ -289,6 +325,15 @@ const m20: ContentModule = {
             {
               id: "m20-l02-p02-rule", type: "callout", origin: "book", kind: "important", title: "قاعدة",
               spans: [T("لا تترك شبكة "), L("Wi-Fi"), T(" مفتوحة دون كلمة مرور أبدًا.")],
+            },
+            {
+              // ENRICHMENT (Batch 7): SVG visual enrichment appended after the book content.
+              id: "m20-l02-p02-visual", type: "visual", origin: "teacher-enrichment",
+              visualId: "791381/m20/wifi-security", motion: false,
+              source: src(163),
+              title: "مخطط: أمان الشبكة اللاسلكية",
+              alt: "مخطط يقارن شبكة مفتوحة معرّضة للمخاطر (التنصّت، دخول دون إذن، Spoofing) بشبكة محمية بتشفير وكلمة مرور قوية.",
+              caption: "‏لا تترك شبكة Wi-Fi مفتوحة دون كلمة مرور أبدًا.",
             },
             {
               id: "m20-l02-p02-note", type: "callout", origin: "teacher-enrichment", kind: "clarification", title: "توضيح المعلّم",
@@ -342,6 +387,15 @@ const m20: ContentModule = {
             {
               id: "m20-l02-p03-tip", type: "callout", origin: "book", kind: "tip", title: "للطالب",
               spans: [T("إذا رأيت "), L("WPA2"), T(" أو "), L("WPA3"), T(" فهذا اختيار جيد وآمن.")],
+            },
+            {
+              // ENRICHMENT (Batch 7): SVG visual enrichment appended after the book content.
+              id: "m20-l02-p03-visual", type: "visual", origin: "teacher-enrichment",
+              visualId: "791381/m20/wifi-protection-technologies", motion: false,
+              source: src(164),
+              title: "مخطط: تقنيات حماية Wi-Fi",
+              alt: "مخطط سُلّم يرتّب تقنيات الحماية من الأقدم إلى الأحدث: WEP (ضعيف) ثم WPA (أفضل من WEP) ثم WPA2 / WPA3 (الأفضل).",
+              caption: "‏WEP ثم WPA ثم WPA2 / WPA3 — كلّما تأخّر زاد الأمان.",
             },
             {
               id: "m20-l02-p03-note", type: "callout", origin: "teacher-enrichment", kind: "clarification", title: "توضيح المعلّم",
@@ -403,6 +457,15 @@ const m20: ContentModule = {
             {
               id: "m20-l02-p04-remember", type: "callout", origin: "book", kind: "remember", title: "تذكّر",
               spans: [L("Access Point"), T(" ليس الإنترنت نفسه، بل نقطة اتصال بالشبكة.")],
+            },
+            {
+              // ENRICHMENT (Batch 7): SVG visual enrichment appended after the book content.
+              id: "m20-l02-p04-visual", type: "visual", origin: "teacher-enrichment",
+              visualId: "791381/m20/access-point-bridge", motion: false,
+              source: src(165),
+              title: "مخطط: Access Point يربط اللاسلكي بالسلكي",
+              alt: "مخطط يبيّن السويتش السلكي موصولًا بكابل إلى نقطة الوصول AP، والأجهزة تتصل بها لاسلكيًا؛ اللاسلكي بين الأجهزة و AP فقط.",
+              caption: "‏اللاسلكي بين الأجهزة و AP فقط · AP نقطة اتصال بالشبكة لا الإنترنت.",
             },
             {
               id: "m20-l02-p04-note", type: "callout", origin: "teacher-enrichment", kind: "clarification", title: "توضيح المعلّم",
