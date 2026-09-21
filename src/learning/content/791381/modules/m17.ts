@@ -95,6 +95,16 @@ const m17: ContentModule = {
                 },
               },
             },
+          
+            {
+              // ENRICHMENT (Batch 4): SVG visual enrichment appended after the book content.
+              id: "m17-l01-p01-visual", type: "visual", origin: "teacher-enrichment",
+              visualId: "791381/m17/attack-targets", motion: true,
+              source: src(108),
+              title: "مخطط: أهداف الهجوم المحتملة",
+              alt: "مخطط مفاهيمي يبيّن أن الهجوم على الشبكة قد يستهدف المستخدم أو المعلومات أو الخوادم.",
+              caption: "قد يستهدف الهجوم: المستخدم أو المعلومات أو الخوادم.",
+            },
           ],
         },
         // PDF 109 — DoS / DDoS
@@ -146,6 +156,16 @@ const m17: ContentModule = {
                 },
               },
             },
+          
+            {
+              // ENRICHMENT (Batch 4): SVG visual enrichment appended after the book content.
+              id: "m17-l01-p02-visual", type: "visual", origin: "teacher-enrichment",
+              visualId: "791381/m17/dos-vs-ddos", motion: true,
+              source: src(109),
+              title: "مخطط: DoS مقابل DDoS",
+              alt: "مخطط يقارن DoS حيث مصدر واحد يُغرق الخادم، بـ DDoS حيث أجهزة كثيرة تُغرق الخادم نفسه في آن واحد.",
+              caption: "DoS: مصدر واحد · DDoS: مصادر كثيرة معًا.",
+            },
           ],
         },
         // PDF 110 — Session Hijacking / MitM
@@ -196,6 +216,16 @@ const m17: ContentModule = {
                   explanation: "البيانات المشفّرة لا يفهمها من يعترضها.",
                 },
               },
+            },
+          
+            {
+              // ENRICHMENT (Batch 4): SVG visual enrichment appended after the book content.
+              id: "m17-l01-p03-visual", type: "visual", origin: "teacher-enrichment",
+              visualId: "791381/m17/hijacking-vs-mitm", motion: true,
+              source: src(110),
+              title: "مخطط: Session Hijacking مقابل MitM",
+              alt: "مخطط بلوحتين: الاستيلاء على جلسة مفتوحة أصلًا، مقابل مهاجم يقف بين الطرفين فيمرّ كل شيء عبره.",
+              caption: "الاستيلاء يأخذ جلسة قائمة · MitM يمرّ كل شيء عبر المهاجم.",
             },
           ],
         },
@@ -256,6 +286,16 @@ const m17: ContentModule = {
                   explanation: "الاثنان يعتمدان على أن يبدو الشيء حقيقيًا أو موثوقًا.",
                 },
               },
+            },
+          
+            {
+              // ENRICHMENT (Batch 4): SVG visual enrichment appended after the book content.
+              id: "m17-l01-p04-visual", type: "visual", origin: "teacher-enrichment",
+              visualId: "791381/m17/phishing-vs-spoofing", motion: true,
+              source: src(111),
+              title: "مخطط: Phishing مقابل Spoofing",
+              alt: "مخطط بلوحتين: رسالة مزيّفة تخدع المستخدم، مقابل تزييف هوية المصدر لتبدو من جهة موثوقة.",
+              caption: "Phishing يخدع المستخدم · Spoofing يزيّف هوية المصدر.",
             },
           ],
         },
@@ -318,6 +358,16 @@ const m17: ContentModule = {
                 },
               },
             },
+          
+            {
+              // ENRICHMENT (Batch 4): SVG visual enrichment appended after the book content.
+              id: "m17-l02-p01-visual", type: "visual", origin: "teacher-enrichment",
+              visualId: "791381/m17/secure-two-pillars", motion: true,
+              source: src(112),
+              title: "مخطط: ركيزتا الاتصال الآمن",
+              alt: "مخطط يبيّن ركيزتي الأمان معًا: تشفير البيانات عبر قناة محميّة، والتحقق من هوية الطرف الآخر.",
+              caption: "الأمان = تشفير البيانات + التحقق من هوية الطرف الآخر.",
+            },
           ],
         },
         // PDF 113 — VPN
@@ -366,6 +416,16 @@ const m17: ContentModule = {
                   explanation: "الكتاب يقول «جزئيًا» لا «كليًا».",
                 },
               },
+            },
+          
+            {
+              // ENRICHMENT (Batch 4): SVG visual enrichment appended after the book content.
+              id: "m17-l02-p02-visual", type: "visual", origin: "teacher-enrichment",
+              visualId: "791381/m17/vpn-tunnel", motion: true,
+              source: src(113),
+              title: "مخطط: نفق VPN المشفّر",
+              alt: "مخطط يبيّن بيانات تبقى داخل نفق مشفّر وهي تعبر شبكة عامة غير موثوقة حتى تصل إلى وجهة خاصّة موثوقة.",
+              caption: "VPN ينشئ نفقًا مشفّرًا يعبر الشبكة العامة بأمان.",
             },
           ],
         },
@@ -419,6 +479,16 @@ const m17: ContentModule = {
                   explanation: "HTTPS = HTTP مع طبقة أمان.",
                 },
               },
+            },
+          
+            {
+              // ENRICHMENT (Batch 4): SVG visual enrichment appended after the book content.
+              id: "m17-l02-p03-visual", type: "visual", origin: "teacher-enrichment",
+              visualId: "791381/m17/https-secure-channel", motion: true,
+              source: src(114),
+              title: "مخطط: SSL/TLS و HTTPS",
+              alt: "مخطط يبيّن أن SSL/TLS يحمي القناة بين المتصفّح والخادم، وأن HTTPS هو HTTP مع طبقة أمان.",
+              caption: "HTTPS = HTTP مع طبقة أمان تحمي الاتصال بين المتصفّح والخادم.",
             },
           ],
         },
@@ -510,6 +580,16 @@ const m17: ContentModule = {
                   explanation: "أداة أمان (HTTPS) مقابل هجوم بالخداع (Phishing).",
                 },
               },
+            },
+          
+            {
+              // ENRICHMENT (Batch 4): SVG visual enrichment appended after the book content.
+              id: "m17-l02-p04-visual", type: "visual", origin: "teacher-enrichment",
+              visualId: "791381/m14/ssh-vs-telnet", motion: true,
+              source: src(115),
+              title: "مخطط: SSH الآمن مقابل Telnet",
+              alt: "المخطط نفسه من وحدة البروتوكولات: SSH يشفّر جلسة الإدارة عن بُعد بينما Telnet يرسل نصًا صريحًا، فـ SSH أكثر أمانًا.",
+              caption: "SSH آمن ومشفّر للإدارة عن بُعد · أكثر أمانًا من Telnet.",
             },
           ],
         },
