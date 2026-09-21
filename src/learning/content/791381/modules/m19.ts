@@ -120,6 +120,15 @@ const m19: ContentModule = {
               spans: [T("توفير الوقت وتقليل أخطاء تكرار الإعدادات على كل سويتش.")],
             },
             {
+              // ENRICHMENT (Batch 6): SVG visual enrichment appended after the book content.
+              id: "m19-l01-p02-visual", type: "visual", origin: "teacher-enrichment",
+              visualId: "791381/m19/vtp-propagation", motion: true,
+              source: src(141),
+              title: "مخطط: VTP — من Server إلى Clients تلقائيًا",
+              alt: "مخطط متحرّك: سويتش Server يعرّف VLAN مرّة واحدة، فتصل التحديثات تلقائيًا إلى سويتشات Client عبر روابط Trunk.",
+              caption: "‏نعرّف VLAN في السيرفر مرّة واحدة، فتصل إلى العملاء تلقائيًا.",
+            },
+            {
               id: "m19-l01-p02-clar", type: "callout", origin: "teacher-enrichment", kind: "clarification", title: "توضيح",
               spans: [T("ثلاث خطوات فقط: واحد "), L("Server"), T("، الباقي "), L("Client"), T("، ثم التعريف في السيرفر وحده. لاحظ أن الخطوة الثالثة هي أمر "), L("vlan 10"), T(" نفسه الذي تعلّمته في صفحة إنشاء VLAN، لكن مكتوبًا مرة واحدة على السيرفر بدل تكراره على كل سويتش.")],
             },

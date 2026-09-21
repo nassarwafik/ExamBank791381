@@ -55,6 +55,15 @@ const m26: ContentModule = {
               spans: [L("WAN"), T(" تربط شبكات بعيدة مع بعضها عبر مسافات شاسعة.")],
             },
             {
+              // ENRICHMENT (Batch 6): SVG visual enrichment appended after the book content.
+              id: "m26-l01-p01-visual", type: "visual", origin: "teacher-enrichment",
+              visualId: "791381/m26/wan-vs-lan-scope", motion: false,
+              source: src(207),
+              title: "مخطط: نطاق LAN مقابل WAN",
+              alt: "مخطط يقارن نطاق الشبكة المحلية LAN داخل مبنى واحد تملكه المؤسسة، بنطاق الشبكة الواسعة WAN التي تربط الفروع بالمقر الرئيسي عبر مسافات كبيرة.",
+              caption: "‏LAN داخل مبنى واحد · WAN تربط الفروع بالمقر عبر مسافات كبيرة.",
+            },
+            {
               id: "m26-l01-p01-note", type: "callout", origin: "teacher-enrichment", kind: "clarification", title: "توضيح المعلّم",
               spans: [T("تذكّر الفرق مع "), L("LAN"), T(" من وحدة أنواع شبكات الاتصال: "), L("LAN"), T(" داخل مبنى واحد وتملكه المؤسسة، أما "), L("WAN"), T(" فتمرّ عبر خطوط شركات الاتصالات لتصل فروعًا متباعدة.")],
             },

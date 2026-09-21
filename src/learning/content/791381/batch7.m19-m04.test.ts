@@ -286,7 +286,7 @@ describe("Batch 7 — pedagogy: worksheets, solved example, practices with «ا�
 describe("Batch 7 — provenance, RTL/LTR, safety", () => {
   it("book-derived blocks are origin:book (m19 15 · m04 36); every practice / worksheet / example / clarification / heading is enrichment", () => {
     for (const b of allBlocks) {
-      if (["practice", "practice-table", "example", "heading"].includes(b.type) || (b.type === "callout" && b.kind === "clarification")) expect(b.origin, b.id).toBe("teacher-enrichment");
+      if (["practice", "practice-table", "example", "heading", "visual"].includes(b.type) || (b.type === "callout" && b.kind === "clarification")) expect(b.origin, b.id).toBe("teacher-enrichment");
       else expect(b.origin, b.id).toBe("book");
     }
     expect(BATCH.map(m => pagesOf(m).flatMap(p => p.blocks).filter(b => b.origin === "book").length)).toEqual([15, 40]);   // m04 +4 book pointers (T19–T22) since the Learning-Practice phase

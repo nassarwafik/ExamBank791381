@@ -133,6 +133,15 @@ const m04: ContentModule = {
               spans: [L("Access"), T(" لجهاز واحد، و "), L("Trunk"), T(" لنقل عدة "), L("VLAN"), T(" عبر كابل واحد.")],
             },
             {
+              // ENRICHMENT (Batch 6): SVG visual enrichment appended after the book content.
+              id: "m04-l01-p03-visual", type: "visual", origin: "teacher-enrichment",
+              visualId: "791381/m04/trunk-multi-vlan", motion: false,
+              source: src(147),
+              title: "مخطط: Trunk — كابل واحد يحمل عدة VLAN",
+              alt: "مخطط يبيّن كابل Trunk واحدًا بين Switch 1 و Switch 2 تمرّ عبره VLAN 10 و VLAN 20 و VLAN 30، وكل حزمة تحمل Tag يميّز VLAN؛ وبدونه نحتاج كابلًا لكل VLAN.",
+              caption: "‏كابل واحد + Tag لكل حزمة يميّز VLAN.",
+            },
+            {
               id: "m04-l01-p03-clar", type: "callout", origin: "teacher-enrichment", kind: "clarification", title: "توضيح",
               spans: [T("عرفت "), L("Trunk"), T(" و "), L("Tag"), T(" كمصطلحين في قسم برمجة السويتش؛ هذه الصفحة تجمعهما في صورة واحدة: كابل واحد بين السويتشين، وعلى كل حزمة علامة برقم الـ "), L("VLAN"), T(" حتى يعرف السويتش المستقبِل لمن هي. لولا ذلك لاحتجنا إلى ثلاثة كابلات لثلاث "), L("VLAN"), T(".")],
             },
@@ -371,6 +380,15 @@ const m04: ContentModule = {
               spans: [L("Inter-VLAN Routing"), T(" — اتصال بين "), L("VLAN"), T(" مختلفة عبر راوتر واحد.")],
             },
             {
+              // ENRICHMENT (Batch 6): SVG visual enrichment appended after the book content.
+              id: "m04-l02-p01-visual", type: "visual", origin: "teacher-enrichment",
+              visualId: "791381/m04/router-on-a-stick", motion: false,
+              source: src(151),
+              title: "مخطط: Router on a Stick — واجهتان فرعيّتان",
+              alt: "مخطط طوبولوجيا: راوتر مرتبط بكابل Trunk واحد إلى سويتش، وعليه الواجهتان الفرعيّتان g0/0.10 و g0/0.20، وتحت السويتش مجموعتا VLAN 10 و VLAN 20.",
+              caption: "‏كابل Trunk واحد وواجهتان فرعيّتان تربطان VLAN مختلفة عبر راوتر واحد.",
+            },
+            {
               id: "m04-l02-p01-clar", type: "callout", origin: "teacher-enrichment", kind: "clarification", title: "توضيح",
               spans: [T("في قسم برمجة السويتش قرأت أن الانتقال بين "), L("VLAN"), T(" مختلفة يحتاج راوتر. "), L("Router on a Stick"), T(" هو الاسم الشائع لهذه الطريقة: راوتر واحد موصول بكابل واحد "), L("Trunk"), T(" («العصا»)، وعلى منفذه الواحد واجهة فرعية "), L("Sub-Interface"), T(" لكل "), L("VLAN"), T(" (في الرسم "), L("g0/0.10"), T(" لـ "), L("VLAN 10"), T(" و "), L("g0/0.20"), T(" لـ "), L("VLAN 20"), T("). الأوامر تأتي بعد صفحتين.")],
             },
@@ -425,6 +443,15 @@ const m04: ContentModule = {
             {
               id: "m04-l02-p02-idea", type: "callout", origin: "book", kind: "summary", title: "الفكرة",
               spans: [L("Dot1Q"), T(" يخبر الجهاز: هذه الحزمة تابعة لأي "), L("VLAN"), T("؟")],
+            },
+            {
+              // ENRICHMENT (Batch 6): SVG visual enrichment appended after the book content.
+              id: "m04-l02-p02-visual", type: "visual", origin: "teacher-enrichment",
+              visualId: "791381/m04/dot1q-tag-frame", motion: true,
+              source: src(152),
+              title: "مخطط: Dot1Q يضع Tag يحمل رقم VLAN",
+              alt: "مخطط لإطار يُدرَج فيه حقل Tag يحمل رقم VLAN بمعيار Dot1Q، ليميّز عدة VLAN على نفس رابط Trunk.",
+              caption: "‏Dot1Q يضيف Tag يدلّ على VLAN التي تنتمي إليها الحزمة.",
             },
             {
               id: "m04-l02-p02-clar", type: "callout", origin: "teacher-enrichment", kind: "clarification", title: "توضيح",
@@ -675,6 +702,15 @@ const m04: ContentModule = {
             {
               id: "m04-l03-p01-exam", type: "callout", origin: "book", kind: "important", title: "للامتحان",
               spans: [T("هذه المفاهيم الأربعة مرتبطة ببعضها: "), L("VLAN"), T(" تُقسّم، "), L("Trunk"), T(" ينقل، "), L("Dot1Q"), T(" يميّز، والراوتر يوجّه.")],
+            },
+            {
+              // ENRICHMENT (Batch 6): SVG visual enrichment appended after the book content.
+              id: "m04-l03-p01-visual", type: "visual", origin: "teacher-enrichment",
+              visualId: "791381/m04/inter-vlan-flow", motion: true,
+              source: src(156),
+              title: "مخطط: رحلة الحزمة بين VLAN عبر الراوتر",
+              alt: "مخطط متحرّك يبيّن حزمة تخرج من VLAN 10 عبر Trunk يحمل Tag إلى الواجهة g0/0.10، يوجّهها الراوتر، فتخرج من g0/0.20 إلى VLAN 20.",
+              caption: "‏من VLAN 10 عبر الراوتر إلى VLAN 20 — التوجيه بين VLAN.",
             },
             {
               id: "m04-l03-p01-clar", type: "callout", origin: "teacher-enrichment", kind: "clarification", title: "توضيح",

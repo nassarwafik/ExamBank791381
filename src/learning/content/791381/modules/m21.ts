@@ -166,6 +166,15 @@ const m21: ContentModule = {
               spans: [T("المنفذ يساعد الجهاز أن يعرف لأي خدمة وصلت البيانات.")],
             },
             {
+              // ENRICHMENT (Batch 6): SVG visual enrichment appended after the book content.
+              id: "m21-l01-p03-visual", type: "visual", origin: "teacher-enrichment",
+              visualId: "791381/m21/well-known-ports", motion: false,
+              source: src(168),
+              title: "مخطط: المنافذ المهمة وأرقامها",
+              alt: "مخطط لأرقام المنافذ المعروفة: HTTP 80 و HTTPS 443 و DNS 53 و SSH 22 و Telnet 23 و FTP 21 و SMTP 25 و POP3 110 و IMAP 143.",
+              caption: "‏لكل خدمة رقم منفذ ثابت.",
+            },
+            {
               id: "m21-l01-p03-note", type: "callout", origin: "teacher-enrichment", kind: "clarification", title: "توضيح المعلّم",
               spans: [T("لاحظ الأزواج في الجدول: "), L("HTTP 80"), T(" و "), L("HTTPS 443"), T(" للتصفّح (الثاني آمن)، و "), L("Telnet 23"), T(" و "), L("SSH 22"), T(" للاتصال بجهاز آخر (الثاني آمن). البريد له ثلاثة منافذ: "), L("SMTP 25"), T(" للإرسال، و "), L("POP3 110"), T(" و "), L("IMAP 143"), T(" للاستقبال.")],
             },

@@ -125,6 +125,15 @@ const m22: ContentModule = {
               spans: [L("Discover"), T(" ثم "), L("Offer"), T(" ثم "), L("Request"), T(" ثم "), L("ACK"), T(" (اختصارًا: "), L("DORA"), T(").")],
             },
             {
+              // ENRICHMENT (Batch 6): SVG visual enrichment appended after the book content.
+              id: "m22-l01-p02-visual", type: "visual", origin: "teacher-enrichment",
+              visualId: "791381/m22/dhcp-dora", motion: true,
+              source: src(170),
+              title: "مخطط: مراحل DHCP الأربع (DORA)",
+              alt: "مخطط متحرّك للتبادل بين الجهاز وخادم DHCP: Discover و Request يخرجان من الجهاز، و Offer و ACK يعودان من الخادم، بالترتيب DORA.",
+              caption: "‏الطلب يبدأ من الجهاز والخادم يردّ في كل مرحلة — DORA.",
+            },
+            {
               id: "m22-l01-p02-note", type: "callout", origin: "teacher-enrichment", kind: "clarification", title: "توضيح المعلّم",
               spans: [T("في رسم الكتاب السهمان الأول والثالث ("), L("Discover"), T(" و "), L("Request"), T(") يخرجان من الجهاز إلى الخادم، والسهمان الثاني والرابع ("), L("Offer"), T(" و "), L("ACK"), T(") يعودان من الخادم إلى الجهاز؛ لذلك «الخادم يردّ في كل مرّة». الوصف المختصر لكل مرحلة في القائمة أعلاه من شرح المعلّم للرسم.")],
             },
@@ -174,6 +183,15 @@ const m22: ContentModule = {
             {
               id: "m22-l01-p03-idea", type: "callout", origin: "book", kind: "summary", title: "الفكرة",
               spans: [T("جهاز واحد (الراوتر) يوزّع الإعدادات على كل أجهزة الشبكة.")],
+            },
+            {
+              // ENRICHMENT (Batch 6): SVG visual enrichment appended after the book content.
+              id: "m22-l01-p03-visual", type: "visual", origin: "teacher-enrichment",
+              visualId: "791381/m22/dhcp-pool-excluded", motion: false,
+              source: src(171),
+              title: "مخطط: نطاق توزيع DHCP في المثال",
+              alt: "مخطط لمساحة العناوين 192.168.1.0/24 يبيّن نطاق توزيع DHCP في المثال من 192.168.1.10 إلى 192.168.1.50 فقط، والعناوين قبله وبعده ليست ضمن النطاق، والبوابة 192.168.1.254 خارج النطاق.",
+              caption: "‏نطاق التوزيع في المثال من 192.168.1.10 إلى 192.168.1.50 فقط، والبوابة 192.168.1.254 خارجه.",
             },
             {
               id: "m22-l01-p03-note", type: "callout", origin: "teacher-enrichment", kind: "clarification", title: "توضيح المعلّم",
