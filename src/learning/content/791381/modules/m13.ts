@@ -170,6 +170,16 @@ const m13: ContentModule = {
                 },
               },
             },
+          
+            {
+              // ENRICHMENT (Batch 5): SVG visual enrichment appended after the book content.
+              id: "m13-l01-p02-visual", type: "visual", origin: "teacher-enrichment",
+              visualId: "791381/m13/osi-seven-layers", motion: true,
+              source: src(78),
+              title: "مخطط: طبقات OSI السبع — إرسال من 7 إلى 1 واستقبال من 1 إلى 7",
+              alt: "مخطط عمودي للطبقات السبع، الأعلى 7 التطبيق والأسفل 1 الفيزيائية، يبيّن نزول الإرسال من 7 إلى 1 ثم صعود الاستقبال من 1 إلى 7.",
+              caption: "‏الإرسال ينزل من 7 إلى 1 ثم الاستقبال يصعد من 1 إلى 7.",
+            },
           ],
         },
         // PDF 79 — طبقات OSI الأساسية (Physical / Data Link / Network / Transport)

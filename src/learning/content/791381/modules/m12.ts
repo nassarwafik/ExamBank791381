@@ -780,6 +780,16 @@ const m12: ContentModule = {
                 },
               },
             },
+          
+            {
+              // ENRICHMENT (Batch 5): SVG visual enrichment appended after the book content.
+              id: "m12-l03-p03-visual", type: "visual", origin: "teacher-enrichment",
+              visualId: "791381/m12/broadcast-message-structure", motion: true,
+              source: src(74),
+              title: "مخطط: مبنى رسالة Broadcast — MAC الهدف",
+              alt: "مخطط يبيّن أن حقول المصدر تبقى ثابتة بينما يتحوّل MAC الهدف إلى FF:FF:FF:FF:FF:FF فتصل الرسالة لكل الأجهزة داخل مجال البث نفسه ولا يمرّرها الراوتر.",
+              caption: "‏MAC الهدف = FF:FF:FF:FF:FF:FF فتصل للجميع محليًا، ولا يعبر الراوتر.",
+            },
           ],
         },
       ],

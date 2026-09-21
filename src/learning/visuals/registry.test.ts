@@ -67,8 +67,27 @@ describe("visuals registry", () => {
       "791381/m17/secure-two-pillars",
       "791381/m17/vpn-tunnel",
       "791381/m17/https-secure-channel",
+      // Batch 5 — backlog (m08 CIDR, m12 broadcast message, m13 OSI seven layers)
+      "791381/m08/cidr-prefix",
+      "791381/m12/broadcast-message-structure",
+      "791381/m13/osi-seven-layers",
+      // Batch 5 — data segmentation (m18)
+      "791381/m18/encapsulation-stack",
+      "791381/m18/pdu-anatomy",
+      // Batch 5 — switch CLI & VLAN (m03)
+      "791381/m03/cli-interface",
+      "791381/m03/cli-mode-ladder",
+      "791381/m03/switch-ports-map",
+      "791381/m03/svi-interface",
+      "791381/m03/vlan-segmentation",
+      "791381/m03/vlan-access-trunk-terms",
+      "791381/m03/vlan-example-topology",
+      "791381/m03/create-vlan",
+      "791381/m03/access-port-assignment",
+      "791381/m03/svi-gateway",
+      "791381/m03/tagged-untagged-native",
     ]);
-    expect(REGISTERED_VISUAL_IDS.length).toBe(49);
+    expect(REGISTERED_VISUAL_IDS.length).toBe(65);
   });
 
   it("every id is course/namespace scoped (reusable pattern for later chapters)", () => {

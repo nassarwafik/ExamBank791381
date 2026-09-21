@@ -134,7 +134,9 @@ describe("Batch 6 — SOURCE ORDER inside m03 (no concept before the book introd
   const P = (id: string) => plain(pageBy(id));
   const firstPdf = (re: RegExp) => pages.filter(p => re.test(plain(p))).map(p => p.source.pdfPageStart)[0];
   it("commands appear only where the book prints them: enable / configure terminal from PDF 122; vlan / name from 122 and 130; interface range + switchport from 131; SVI commands from 133; trunk commands from 136", () => {
-    expect(P(M03 + "-l01-p03")).not.toMatch(/Switch>|Switch#|Switch\(config\)|configure terminal|switchport|interface/);
+    // `interface` is matched in its Cisco COMMAND form (interface f0/g0/range/vlan …) so the Batch-5 visual id
+    // 791381/m03/cli-interface (a legitimate generic-CLI concept on PDF 121) does not trip this source-order guard.
+    expect(P(M03 + "-l01-p03")).not.toMatch(/Switch>|Switch#|Switch\(config\)|configure terminal|switchport|interface (f0|g0|range|vlan)/);
     expect(firstPdf(/\benable\b/)).toBe(122);
     expect(firstPdf(/configure terminal/)).toBe(122);
     expect(firstPdf(/\bname MNG\b/)).toBe(130);
@@ -264,7 +266,8 @@ describe("Batch 6 — pedagogy: worksheets, solved examples, practices with «ا
       if (b.question.kind === "multipleChoice") expect(b.question.options.filter(o => o.correct).length, b.id).toBe(1);
       if (b.question.kind === "shortInput") expect(String(b.question.answer), b.id).toMatch(/^[A-Za-z0-9./]+$/);
     }
-    for (const p of pages) expect(p.blocks.at(-1)?.type, p.id).toBe("practice");
+    // a Batch-5 SVG visual enrichment may be appended after the practice, so check the last NON-visual block
+    for (const p of pages) expect(p.blocks.filter(b => b.type !== "visual").at(-1)?.type, p.id).toBe("practice");
     expect(pages.every(p => p.blocks.some(b => b.type === "practice"))).toBe(true);
   });
   it("six keyed worksheets: Access/Trunk (PDF 124, 138), term (126), device → VLAN (128), command → purpose (131), Native/Tagged/Untagged (135)", () => {
@@ -287,7 +290,8 @@ describe("Batch 6 — pedagogy: worksheets, solved examples, practices with «ا
     expect(pages.every(p => p.blocks.filter(b => b.type === "callout" && b.kind === "clarification").length === 1)).toBe(true);
     const last = pages.at(-1)!;
     expect(last.source.pdfPageStart).toBe(138);
-    expect(last.blocks.map(b => b.id).slice(-4)).toEqual(["m03-l04-p04-review", "m03-l04-p04-r1", "m03-l04-p04-r2", "m03-l04-p04-r3"]);
+    // ignore a trailing Batch-5 visual enrichment when checking the closing-review tail
+    expect(last.blocks.filter(b => b.type !== "visual").map(b => b.id).slice(-4)).toEqual(["m03-l04-p04-review", "m03-l04-p04-r1", "m03-l04-p04-r2", "m03-l04-p04-r3"]);
     expect(allBlocks.filter(b => /-r\d$/.test(b.id)).length).toBe(3);
   });
   it("NO activity block in m03 (none of simulation / animation / guided / interactive-diagram / library-training); the activity allowlist is untouched by this batch", () => {
@@ -299,11 +303,11 @@ describe("Batch 6 — pedagogy: worksheets, solved examples, practices with «ا
 describe("Batch 6 — provenance, RTL/LTR (Cisco commands never reversed), safety", () => {
   it("book-derived blocks are origin:book (52); every practice / worksheet / example / clarification / heading is enrichment", () => {
     for (const b of allBlocks) {
-      if (["practice", "practice-table", "example", "heading"].includes(b.type) || (b.type === "callout" && b.kind === "clarification")) expect(b.origin, b.id).toBe("teacher-enrichment");
+      if (["practice", "practice-table", "example", "heading", "visual"].includes(b.type) || (b.type === "callout" && b.kind === "clarification")) expect(b.origin, b.id).toBe("teacher-enrichment");
       else expect(b.origin, b.id).toBe("book");
     }
     expect(allBlocks.filter(b => b.origin === "book").length).toBe(52);
-    expect(allBlocks.length).toBe(116);
+    expect(allBlocks.length).toBe(134);   // 116 book/enrichment + 18 Batch-5 visual blocks
   });
   it("technical tokens are LTR spans (CLI, VLAN, Trunk, Access, Tag, SVI, Gateway, port names, prompts, commands, addresses); command tables mark the command column ltr; no arrow glyphs, urls, iframes or images", () => {
     const spans = allBlocks.flatMap(b => b.type === "callout" || b.type === "text" ? b.spans : b.type === "list" ? b.items.flatMap(i => i.text) : []);

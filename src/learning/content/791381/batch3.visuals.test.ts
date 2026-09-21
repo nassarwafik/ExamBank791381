@@ -15,7 +15,7 @@ const MODS = [m10, m11, m12, m13, m14, m15];
 const course: LearningCourseContent = { schemaVersion: LEARNING_CONTENT_SCHEMA_VERSION, courseId: "791381", title: "شبكات الاتصال", direction: "rtl", modules: MODS };
 const pages: ContentPage[] = MODS.flatMap(m => m.lessons.flatMap(l => l.pages));
 const pageBy = (id: string) => pages.find(p => p.id === id)!;
-const visuals = pages.flatMap(p => p.blocks.filter((b): b is VisualBlock => b.type === "visual").map(b => ({ page: p.id, block: b })));
+const allVisuals = pages.flatMap(p => p.blocks.filter((b): b is VisualBlock => b.type === "visual").map(b => ({ page: p.id, block: b })));
 
 // The 18 deliberate selections: page → { visualId, source PDF }.
 const SELECTION: Record<string, { visualId: string; pdf: number }> = {
@@ -39,6 +39,10 @@ const SELECTION: Record<string, { visualId: string; pdf: number }> = {
   "791381-m15-l02-p01": { visualId: "791381/m15/tracert-hops", pdf: 95 },
   "791381-m15-l02-p03": { visualId: "791381/m15/arp-association", pdf: 97 },
 };
+
+// m12/m13 later gained Batch-5 backlog visuals (broadcast-message-structure, osi-seven-layers); Batch 3 owns only its own ids.
+const B3_IDS = new Set(Object.values(SELECTION).map(s => s.visualId));
+const visuals = allVisuals.filter(v => B3_IDS.has(v.block.visualId));
 
 // Pages deliberately SKIPPED because they already carry a strong interactive activity (would duplicate).
 const SKIP_WITH_ACTIVITY: Record<string, string> = {

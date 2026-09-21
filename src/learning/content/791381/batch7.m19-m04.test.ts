@@ -147,7 +147,9 @@ describe("Batch 7 — SOURCE ORDER (no concept before the book introduces it)", 
     expect(plain(pageBy(M04 + "-l01-p02"))).not.toMatch(/switchport|Switch\(config\)|Dot1Q|Router on a Stick/);
   });
   it("the earlier real modules (m01 … m18, m03) contain none of the Batch-7 content (VTP, Router on a Stick, Dot1Q, sub-interfaces, the Sw*-HFA topology)", () => {
-    expect(JSON.stringify(PREV)).not.toMatch(/\bVTP\b|Router on a Stick|Dot1Q|dot1q|Sub-?Interface|encapsulation|Sw\d-HFA|Inter-VLAN|g0\/0\.\d/);
+    // "encapsulation" is tightened to the Batch-7 sub-interface command form (encapsulation dot1Q); the bare word now
+    // legitimately appears in the Batch-5 m18 OSI-data-encapsulation visual id (791381/m18/encapsulation-stack, PDF 116).
+    expect(JSON.stringify(PREV)).not.toMatch(/\bVTP\b|Router on a Stick|Dot1Q|dot1q|Sub-?Interface|encapsulation dot1[Qq]|Sw\d-HFA|Inter-VLAN|g0\/0\.\d/);
   });
 });
 

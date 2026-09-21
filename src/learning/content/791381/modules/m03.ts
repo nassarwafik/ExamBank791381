@@ -108,6 +108,16 @@ const m03: ContentModule = {
                 },
               },
             },
+          
+            {
+              // ENRICHMENT (Batch 5): SVG visual enrichment appended after the book content.
+              id: "m03-l01-p03-visual", type: "visual", origin: "teacher-enrichment",
+              visualId: "791381/m03/cli-interface", motion: true,
+              source: src(121),
+              title: "مخطط: CLI — واجهة الأوامر",
+              alt: "مخطط لطرفية عامة تظهر فيها أسطر الأوامر واحدًا تلو الآخر، يبيّن أن CLI هي واجهة الأوامر التي نبرمج منها السويتش (لتعريف VLAN والمنافذ وكلمات المرور و Trunk)، وكل أمر في سطر مستقل.",
+              caption: "‏CLI = Command Line Interface · كل أمر في سطر مستقل.",
+            },
           ],
         },
         // PDF 122 — الدخول إلى وضع البرمجة (NEW stable id p04, reads SECOND by explicit order)
@@ -166,6 +176,16 @@ const m03: ContentModule = {
                   explanation: "الموجّه يدلّك على الوضع الذي أنت فيه.",
                 },
               },
+            },
+          
+            {
+              // ENRICHMENT (Batch 5): SVG visual enrichment appended after the book content.
+              id: "m03-l01-p04-visual", type: "visual", origin: "teacher-enrichment",
+              visualId: "791381/m03/cli-mode-ladder", motion: true,
+              source: src(122),
+              title: "مخطط: الدخول إلى وضع البرمجة",
+              alt: "المخطط نفسه لأوضاع CLI: enable ينقل إلى وضع الأوامر المتقدّم، وconfigure terminal إلى وضع الإعدادات، ثم vlan 10 إلى وضع إعداد VLAN.",
+              caption: "‏enable ثم configure terminal ثم vlan 10 · الرمز يتغيّر بعد كل أمر.",
             },
           ],
         },
@@ -226,6 +246,16 @@ const m03: ContentModule = {
                   explanation: "F0/1 يعني المنفذ رقم 1، و F0/24 المنفذ رقم 24.",
                 },
               },
+            },
+          
+            {
+              // ENRICHMENT (Batch 5): SVG visual enrichment appended after the book content.
+              id: "m03-l01-p01-visual", type: "visual", origin: "teacher-enrichment",
+              visualId: "791381/m03/switch-ports-map", motion: true,
+              source: src(123),
+              title: "مخطط: منافذ السويتش من الأمام",
+              alt: "مخطط لواجهة السويتش يبيّن منافذ FastEthernet من F0/1 حتى F0/24 ومنفذَي Gigabit G0/1 وG0/2، مع تمييز المنفذ المختار.",
+              caption: "‏لكل منفذ اسم: F0/1 … F0/24 و G0/1 و G0/2.",
             },
           ],
         },
@@ -293,6 +323,16 @@ const m03: ContentModule = {
                   explanation: "العبارة عكست النوعين.",
                 },
               },
+            },
+          
+            {
+              // ENRICHMENT (Batch 5): SVG visual enrichment appended after the book content.
+              id: "m03-l01-p02-visual", type: "visual", origin: "teacher-enrichment",
+              visualId: "791381/m03/switch-ports-map", motion: true,
+              source: src(124),
+              title: "مخطط: اختيار المنفذ قبل البرمجة",
+              alt: "المخطط نفسه لمنافذ السويتش: نحدّد المنفذ الصحيح أو مجموعة المنافذ فيُضاء المنفذ الفيزيائي المقابل قبل كتابة أوامر البرمجة.",
+              caption: "‏نختار المنفذ الصحيح قبل كتابة أوامر البرمجة.",
             },
           ],
         },
@@ -368,6 +408,16 @@ const m03: ContentModule = {
                 },
               },
             },
+          
+            {
+              // ENRICHMENT (Batch 5): SVG visual enrichment appended after the book content.
+              id: "m03-l02-p01-visual", type: "visual", origin: "teacher-enrichment",
+              visualId: "791381/m03/vlan-segmentation", motion: true,
+              source: src(125),
+              title: "مخطط: سويتش واحد مقسّم منطقيًا",
+              alt: "مخطط لسويتش واحد مقسّم منطقيًا إلى VLAN 10 للإدارة وVLAN 20 للمحاسبة، والحركة تبقى داخل كل VLAN دون تغيير الكابلات.",
+              caption: "‏سويتش واحد · تقسيم منطقي · الحركة تبقى داخل VLAN.",
+            },
           ],
         },
         // PDF 126 — مصطلحات مهمة في VLAN
@@ -432,6 +482,16 @@ const m03: ContentModule = {
                 },
               },
             },
+          
+            {
+              // ENRICHMENT (Batch 5): SVG visual enrichment appended after the book content.
+              id: "m03-l02-p02-visual", type: "visual", origin: "teacher-enrichment",
+              visualId: "791381/m03/vlan-access-trunk-terms", motion: true,
+              source: src(126),
+              title: "مخطط: Access مقابل Trunk",
+              alt: "مخطط يميّز منفذ Access الذي ينتمي إلى VLAN واحدة عن وصلة Trunk التي تحمل أكثر من VLAN عبر كابل واحد بين السويتشات.",
+              caption: "‏Access = VLAN واحدة · Trunk = عدة VLAN بين السويتشات.",
+            },
           ],
         },
         // PDF 127 — فكرة VLAN
@@ -487,6 +547,16 @@ const m03: ContentModule = {
                   explanation: "الصعوبة تكون فقط بين VLAN مختلفة.",
                 },
               },
+            },
+          
+            {
+              // ENRICHMENT (Batch 5): SVG visual enrichment appended after the book content.
+              id: "m03-l02-p03-visual", type: "visual", origin: "teacher-enrichment",
+              visualId: "791381/m03/vlan-segmentation", motion: true,
+              source: src(127),
+              title: "مخطط: فكرة VLAN — فصل الأقسام منطقيًا",
+              alt: "المخطط نفسه لفكرة VLAN: كل مجموعة أجهزة في VLAN مختلفة، والأجهزة داخل نفس VLAN تتواصل بينما تبقى الأقسام منفصلة منطقيًا.",
+              caption: "‏كل قسم يصبح كأنه شبكة مستقلة.",
             },
           ],
         },
@@ -554,6 +624,16 @@ const m03: ContentModule = {
                 },
               },
             },
+          
+            {
+              // ENRICHMENT (Batch 5): SVG visual enrichment appended after the book content.
+              id: "m03-l02-p04-visual", type: "visual", origin: "teacher-enrichment",
+              visualId: "791381/m03/vlan-example-topology", motion: true,
+              source: src(128),
+              title: "مخطط: جدول مثال VLAN — أي جهاز في أي VLAN",
+              alt: "مخطط يوزّع أجهزة المثال على شبكاتها: Pc1-ADMIN وPc2-ADMIN في VLAN 10 بعناوين 192.168.10.x، وPc1-GAZ وPc2-GAZ في VLAN 20 بعناوين 192.168.20.x.",
+              caption: "‏كل VLAN لها شبكة IP مختلفة في هذا المثال.",
+            },
           ],
         },
         // PDF 129 — توزيع الأجهزة على VLAN
@@ -609,6 +689,16 @@ const m03: ContentModule = {
                   explanation: "نفس التوزيع الذي في جدول المثال.",
                 },
               },
+            },
+          
+            {
+              // ENRICHMENT (Batch 5): SVG visual enrichment appended after the book content.
+              id: "m03-l02-p05-visual", type: "visual", origin: "teacher-enrichment",
+              visualId: "791381/m03/vlan-example-topology", motion: true,
+              source: src(129),
+              title: "مخطط: توزيع الأجهزة على VLAN",
+              alt: "المخطط نفسه لتوزيع الأجهزة: السويتش يميّز كل جهاز حسب المنفذ المتصل به، فيضع أجهزة الإدارة في VLAN 10 وأجهزة المحاسبة في VLAN 20.",
+              caption: "‏السويتش يميّز الجهاز حسب المنفذ لا حسب الاسم.",
             },
           ],
         },
@@ -677,6 +767,16 @@ const m03: ContentModule = {
                   explanation: "ما يميّز VLAN هو رقمها.",
                 },
               },
+            },
+          
+            {
+              // ENRICHMENT (Batch 5): SVG visual enrichment appended after the book content.
+              id: "m03-l03-p01-visual", type: "visual", origin: "teacher-enrichment",
+              visualId: "791381/m03/create-vlan", motion: true,
+              source: src(130),
+              title: "مخطط: إنشاء VLAN بالأمر vlan",
+              alt: "مخطط يبيّن أن الأمر vlan 10 ثم name MNG ينشئ VLAN داخل السويتش، ثم vlan 20 ثم name GAZ ينشئ الثانية — والاسم للإدارة فقط.",
+              caption: "‏vlan 10 ثم name MNG · vlan 20 ثم name GAZ.",
             },
           ],
         },
@@ -748,6 +848,16 @@ const m03: ContentModule = {
                 },
               },
             },
+          
+            {
+              // ENRICHMENT (Batch 5): SVG visual enrichment appended after the book content.
+              id: "m03-l03-p02-visual", type: "visual", origin: "teacher-enrichment",
+              visualId: "791381/m03/access-port-assignment", motion: true,
+              source: src(131),
+              title: "مخطط: ربط المنفذ بـ VLAN",
+              alt: "مخطط يبيّن خطوات ربط المنفذ: interface f0/1 ثم switchport mode access ثم switchport access vlan 10، فيدخل الجهاز VLAN 10 تلقائيًا.",
+              caption: "‏الجهاز المتصل يدخل VLAN المحدّدة بعد الإعداد.",
+            },
           ],
         },
         // PDF 132 — توضيح Access Ports
@@ -800,6 +910,16 @@ const m03: ContentModule = {
                   explanation: "الإعداد على المنفذ لا على الجهاز.",
                 },
               },
+            },
+          
+            {
+              // ENRICHMENT (Batch 5): SVG visual enrichment appended after the book content.
+              id: "m03-l03-p03-visual", type: "visual", origin: "teacher-enrichment",
+              visualId: "791381/m03/access-port-assignment", motion: true,
+              source: src(132),
+              title: "مخطط: Access Port — جهاز واحد في VLAN واحدة",
+              alt: "المخطط نفسه لمنفذ Access: بعد الخطوات يصبح المنفذ عضوًا في VLAN واحدة فقط، ويرسل الجهاز ويستقبل بلا Tag.",
+              caption: "‏Access Port = جهاز واحد في VLAN واحدة، بلا Tag.",
             },
           ],
         },
@@ -860,6 +980,16 @@ const m03: ContentModule = {
                 },
               },
             },
+          
+            {
+              // ENRICHMENT (Batch 5): SVG visual enrichment appended after the book content.
+              id: "m03-l03-p04-visual", type: "visual", origin: "teacher-enrichment",
+              visualId: "791381/m03/svi-interface", motion: true,
+              source: src(133),
+              title: "مخطط: الواجهة المنطقية SVI",
+              alt: "مخطط يبيّن الواجهة المنطقية interface vlan 10 داخل السويتش بعنوان 192.168.10.254، مميّزة بخط متقطّع عن المنافذ الفيزيائية.",
+              caption: "‏SVI واجهة منطقية داخل السويتش لا منفذ فيزيائي.",
+            },
           ],
         },
         // PDF 134 — فكرة SVI و Gateway
@@ -915,6 +1045,16 @@ const m03: ContentModule = {
                   explanation: "تُستخدم لإدارة أو توجيه بين الشبكات الظاهرية.",
                 },
               },
+            },
+          
+            {
+              // ENRICHMENT (Batch 5): SVG visual enrichment appended after the book content.
+              id: "m03-l03-p05-visual", type: "visual", origin: "teacher-enrichment",
+              visualId: "791381/m03/svi-gateway", motion: true,
+              source: src(134),
+              title: "مخطط: Gateway — الخروج إلى الشبكات الأخرى",
+              alt: "مخطط يبيّن أن Default Gateway بعنوان 192.168.1.254 هو باب خروج أجهزة VLAN إلى الشبكات الأخرى؛ بدونه تعمل VLAN داخليًا فقط.",
+              caption: "‏Gateway باب الخروج · بدونه تعمل VLAN داخليًا فقط.",
             },
           ],
         },
@@ -988,6 +1128,16 @@ const m03: ContentModule = {
                 },
               },
             },
+          
+            {
+              // ENRICHMENT (Batch 5): SVG visual enrichment appended after the book content.
+              id: "m03-l04-p01-visual", type: "visual", origin: "teacher-enrichment",
+              visualId: "791381/m03/tagged-untagged-native", motion: true,
+              source: src(135),
+              title: "مخطط: Tagged و Untagged و Native",
+              alt: "مخطط يميّز بين الحزمة المُوسَمة (Tagged) التي تحمل رقم VLAN عبر Trunk، والحزمة على منفذ Access بلا Tag، والحزمة على Native VLAN التي تعبر Trunk بلا Tag.",
+              caption: "‏الوسم يخبر السويتش لأي VLAN تنتمي الحزمة.",
+            },
           ],
         },
         // PDF 136 — إعداد Native VLAN
@@ -1047,6 +1197,16 @@ const m03: ContentModule = {
                 },
               },
             },
+          
+            {
+              // ENRICHMENT (Batch 5): SVG visual enrichment appended after the book content.
+              id: "m03-l04-p02-visual", type: "visual", origin: "teacher-enrichment",
+              visualId: "791381/m03/tagged-untagged-native", motion: true,
+              source: src(136),
+              title: "مخطط: إعداد Native VLAN",
+              alt: "المخطط نفسه: Native VLAN (مثال 99) تعبر وصلة Trunk بدون Tag، ويُفضّل ألا تبقى على VLAN 1 لأسباب أمنية.",
+              caption: "‏Native VLAN تعبر Trunk بلا Tag.",
+            },
           ],
         },
         // PDF 137 — إعداد Tagged VLAN عبر Trunk
@@ -1105,6 +1265,16 @@ const m03: ContentModule = {
                   explanation: "Trunk = كابل واحد لعدة VLAN، والتمييز بالـ Tag.",
                 },
               },
+            },
+          
+            {
+              // ENRICHMENT (Batch 5): SVG visual enrichment appended after the book content.
+              id: "m03-l04-p03-visual", type: "visual", origin: "teacher-enrichment",
+              visualId: "791381/m03/tagged-untagged-native", motion: true,
+              source: src(137),
+              title: "مخطط: إعداد Tagged VLAN عبر Trunk",
+              alt: "المخطط نفسه: على وصلة Trunk تحمل حزم VLAN 10 و20 وسمًا (Tag) يعرّف السويتش بمصدرها، بينما Native تعبر بلا Tag.",
+              caption: "‏Tagged: الحزم تحمل رقم VLAN عبر Trunk.",
             },
           ],
         },
@@ -1217,6 +1387,16 @@ const m03: ContentModule = {
                   explanation: "السويتش لا يعرف القسم من اسم الجهاز، بل من إعداد المنفذ.",
                 },
               },
+            },
+          
+            {
+              // ENRICHMENT (Batch 5): SVG visual enrichment appended after the book content.
+              id: "m03-l04-p04-visual", type: "visual", origin: "teacher-enrichment",
+              visualId: "791381/m03/access-port-assignment", motion: true,
+              source: src(138),
+              title: "مخطط: إعداد Untagged / Access",
+              alt: "المخطط نفسه لإعداد Access: interface f0/1 ثم switchport mode access ثم switchport access vlan 10، والجهاز يرسل ويستقبل بدون Tag.",
+              caption: "‏إعداد Access: المنفذ ينتمي إلى VLAN واحدة بلا Tag.",
             },
           ],
         },

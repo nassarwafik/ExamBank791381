@@ -67,12 +67,13 @@ describe("Chapter 1 SVG visual enrichment — scope", () => {
 describe("Chapter 1 pilot — scope of visual enrichment", () => {
   const modulesDir = fileURLToPath(new URL("./modules/", import.meta.url));
   // Chapter 1 pilot (m01) + Batch 2 (m02, m07, m08, m09) + Batch 3 (m10, m11, m12, m13, m14, m15) + Batch 4 (m16, m17)
+  // + Batch 5 (m03 switch CLI & VLAN, m18 data segmentation; the backlog visuals live on the existing m08/m12/m13)
   // are the modules that carry SVG visual enrichment. Any OTHER module gaining a `visual` block would be out of scope.
-  it("only the pilot + Batch 2 + Batch 3 + Batch 4 modules contain visual blocks (no other module touched)", () => {
+  it("only the pilot + Batch 2 + Batch 3 + Batch 4 + Batch 5 modules contain visual blocks (no other module touched)", () => {
     const withVisual = readdirSync(modulesDir)
       .filter(f => /^m\d+\.ts$/.test(f))
       .filter(f => /type:\s*"visual"/.test(readFileSync(modulesDir + f, "utf8")))
       .sort();
-    expect(withVisual).toEqual(["m01.ts", "m02.ts", "m07.ts", "m08.ts", "m09.ts", "m10.ts", "m11.ts", "m12.ts", "m13.ts", "m14.ts", "m15.ts", "m16.ts", "m17.ts"]);
+    expect(withVisual).toEqual(["m01.ts", "m02.ts", "m03.ts", "m07.ts", "m08.ts", "m09.ts", "m10.ts", "m11.ts", "m12.ts", "m13.ts", "m14.ts", "m15.ts", "m16.ts", "m17.ts", "m18.ts"]);
   });
 });
