@@ -51,6 +51,21 @@ import SshVsTelnet from "./791381/batch3/SshVsTelnet";
 import ProtocolsByTransport from "./791381/batch3/ProtocolsByTransport";
 import PingEcho from "./791381/batch3/PingEcho";
 import TracertHops from "./791381/batch3/TracertHops";
+// Batch 4 — network domains & security concepts (m16 PDF 98–105, m17 PDF 108–114; PDF115 SSH reuses the existing
+// m14 ssh-vs-telnet visual, so it adds NO registry entry). Same data-only, exact-allowlist, reduced-motion discipline.
+import CollisionDomains from "./791381/batch4/CollisionDomains";
+import BroadcastDomain from "./791381/batch4/BroadcastDomain";
+import StpLoopBlocking from "./791381/batch4/StpLoopBlocking";
+import HalfFullDuplex from "./791381/batch4/HalfFullDuplex";
+import LocalhostLoopback from "./791381/batch4/LocalhostLoopback";
+import ApipaFallback from "./791381/batch4/ApipaFallback";
+import AttackTargets from "./791381/batch4/AttackTargets";
+import DosVsDdos from "./791381/batch4/DosVsDdos";
+import HijackingVsMitm from "./791381/batch4/HijackingVsMitm";
+import PhishingVsSpoofing from "./791381/batch4/PhishingVsSpoofing";
+import SecureTwoPillars from "./791381/batch4/SecureTwoPillars";
+import VpnTunnel from "./791381/batch4/VpnTunnel";
+import HttpsSecureChannel from "./791381/batch4/HttpsSecureChannel";
 import ArpAssociation from "./791381/batch3/ArpAssociation";
 
 const VISUALS: readonly RegisteredVisual[] = [
@@ -101,6 +116,21 @@ const VISUALS: readonly RegisteredVisual[] = [
   { id: "791381/m15/ping-echo", component: PingEcho, motion: true },
   { id: "791381/m15/tracert-hops", component: TracertHops, motion: true },
   { id: "791381/m15/arp-association", component: ArpAssociation, motion: true },
+  // Batch 4 — domains & switching concepts (m16)
+  { id: "791381/m16/collision-domains", component: CollisionDomains, motion: true },
+  { id: "791381/m16/broadcast-domain", component: BroadcastDomain, motion: true },
+  { id: "791381/m16/stp-loop-blocking", component: StpLoopBlocking, motion: true },
+  { id: "791381/m16/half-full-duplex", component: HalfFullDuplex, motion: true },
+  { id: "791381/m16/localhost-loopback", component: LocalhostLoopback, motion: true },
+  { id: "791381/m16/apipa-fallback", component: ApipaFallback, motion: true },
+  // Batch 4 — network security (m17)
+  { id: "791381/m17/attack-targets", component: AttackTargets, motion: true },
+  { id: "791381/m17/dos-vs-ddos", component: DosVsDdos, motion: true },
+  { id: "791381/m17/hijacking-vs-mitm", component: HijackingVsMitm, motion: true },
+  { id: "791381/m17/phishing-vs-spoofing", component: PhishingVsSpoofing, motion: true },
+  { id: "791381/m17/secure-two-pillars", component: SecureTwoPillars, motion: true },
+  { id: "791381/m17/vpn-tunnel", component: VpnTunnel, motion: true },
+  { id: "791381/m17/https-secure-channel", component: HttpsSecureChannel, motion: true },
 ];
 
 // Build the lookup once. A duplicate id is a programming error (a later entry silently shadowing an earlier one), so

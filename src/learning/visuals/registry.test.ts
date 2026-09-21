@@ -3,7 +3,7 @@ import { describe, it, expect } from "vitest";
 import { resolveVisual, REGISTERED_VISUAL_IDS } from "./registry";
 
 describe("visuals registry", () => {
-  it("enumerates exactly the Chapter 1 pilot + Batch 2 + Batch 3 visuals (stable, namespaced ids)", () => {
+  it("enumerates exactly the Chapter 1 pilot + Batch 2 + Batch 3 + Batch 4 visuals (stable, namespaced ids)", () => {
     expect(REGISTERED_VISUAL_IDS).toEqual([
       // Chapter 1 pilot
       "791381/ch1/network-connected-devices",
@@ -52,8 +52,23 @@ describe("visuals registry", () => {
       "791381/m15/ping-echo",
       "791381/m15/tracert-hops",
       "791381/m15/arp-association",
+      // Batch 4 — domains & switching concepts (m16)
+      "791381/m16/collision-domains",
+      "791381/m16/broadcast-domain",
+      "791381/m16/stp-loop-blocking",
+      "791381/m16/half-full-duplex",
+      "791381/m16/localhost-loopback",
+      "791381/m16/apipa-fallback",
+      // Batch 4 — network security (m17)
+      "791381/m17/attack-targets",
+      "791381/m17/dos-vs-ddos",
+      "791381/m17/hijacking-vs-mitm",
+      "791381/m17/phishing-vs-spoofing",
+      "791381/m17/secure-two-pillars",
+      "791381/m17/vpn-tunnel",
+      "791381/m17/https-secure-channel",
     ]);
-    expect(REGISTERED_VISUAL_IDS.length).toBe(36);
+    expect(REGISTERED_VISUAL_IDS.length).toBe(49);
   });
 
   it("every id is course/namespace scoped (reusable pattern for later chapters)", () => {

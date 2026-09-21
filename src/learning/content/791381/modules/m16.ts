@@ -108,6 +108,16 @@ const m16: ContentModule = {
                 },
               },
             },
+          
+            {
+              // ENRICHMENT (Batch 4): SVG visual enrichment appended after the book content.
+              id: "m16-l01-p01-visual", type: "visual", origin: "teacher-enrichment",
+              visualId: "791381/m16/collision-domains", motion: true,
+              source: src(98),
+              title: "مخطط: مجالات التصادم — Hub مقابل Switch",
+              alt: "مخطط يقارن Hub الذي يجمع الأجهزة في مجال تصادم واحد بـ Switch الذي يجعل كل منفذ مجال تصادم مستقل.",
+              caption: "Hub يشارك مجال التصادم · Switch يفصله لكل منفذ.",
+            },
           ],
         },
         // PDF 99 — كيف يقلّل السويتش التصادم؟
@@ -166,6 +176,16 @@ const m16: ContentModule = {
                   explanation: "السويتش يعالج ذلك بإعطاء كل منفذ طريقًا خاصًا.",
                 },
               },
+            },
+          
+            {
+              // ENRICHMENT (Batch 4): SVG visual enrichment appended after the book content.
+              id: "m16-l01-p02-visual", type: "visual", origin: "teacher-enrichment",
+              visualId: "791381/m16/collision-domains", motion: true,
+              source: src(99),
+              title: "مخطط: كيف يقلّل السويتش التصادم",
+              alt: "المخطط نفسه لمجالات التصادم: بفصل كل منفذ في مجاله يقلّل السويتش التصادمات مقارنةً بالـ Hub المشترك.",
+              caption: "بفصل كل منفذ في مجاله يقلّل السويتش التصادمات.",
             },
           ],
         },
@@ -237,6 +257,16 @@ const m16: ContentModule = {
                   explanation: "السويتش لا يفصلها؛ الراوتر و VLAN يفصلانها.",
                 },
               },
+            },
+          
+            {
+              // ENRICHMENT (Batch 4): SVG visual enrichment appended after the book content.
+              id: "m16-l02-p01-visual", type: "visual", origin: "teacher-enrichment",
+              visualId: "791381/m16/broadcast-domain", motion: true,
+              source: src(100),
+              title: "مخطط: مجال البث",
+              alt: "مخطط يبيّن رسالة بث تنتقل من المرسِل عبر السويتش لتصل إلى كل الأجهزة داخل مجال البث نفسه.",
+              caption: "البث يصل إلى كل الأجهزة داخل مجال البث نفسه.",
             },
           ],
         },
@@ -382,6 +412,16 @@ const m16: ContentModule = {
                 },
               },
             },
+          
+            {
+              // ENRICHMENT (Batch 4): SVG visual enrichment appended after the book content.
+              id: "m16-l03-p01-visual", type: "visual", origin: "teacher-enrichment",
+              visualId: "791381/m16/stp-loop-blocking", motion: true,
+              source: src(102),
+              title: "مخطط: STP يحظر مسارًا زائدًا",
+              alt: "مخطط لثلاثة سويتشات SW1 وSW2 وSW3 بروابط زائدة، حيث يحظر STP أحد المسارات لمنع الحلقة ويبقي الشجرة الفعّالة.",
+              caption: "STP يحظر مسارًا زائدًا فيمنع الحلقة.",
+            },
           ],
         },
         // PDF 103 — Half Duplex / Full Duplex
@@ -428,6 +468,16 @@ const m16: ContentModule = {
                   explanation: "Half = اتجاه واحد في كل مرة.",
                 },
               },
+            },
+          
+            {
+              // ENRICHMENT (Batch 4): SVG visual enrichment appended after the book content.
+              id: "m16-l03-p02-visual", type: "visual", origin: "teacher-enrichment",
+              visualId: "791381/m16/half-full-duplex", motion: true,
+              source: src(103),
+              title: "مخطط: Half Duplex مقابل Full Duplex",
+              alt: "مخطط يقارن Half Duplex حيث الإرسال باتجاه واحد في كل مرة، بـ Full Duplex حيث الإرسال والاستقبال في نفس الوقت.",
+              caption: "Half: اتجاه واحد كل مرة · Full: إرسال واستقبال معًا.",
             },
           ],
         },
@@ -485,6 +535,16 @@ const m16: ContentModule = {
                   explanation: "Localhost يشير إلى الجهاز نفسه، فالاختبار محلي.",
                 },
               },
+            },
+          
+            {
+              // ENRICHMENT (Batch 4): SVG visual enrichment appended after the book content.
+              id: "m16-l04-p01-visual", type: "visual", origin: "teacher-enrichment",
+              visualId: "791381/m16/localhost-loopback", motion: true,
+              source: src(104),
+              title: "مخطط: Localhost والعودة إلى الجهاز نفسه",
+              alt: "مخطط يبيّن طلبًا إلى 127.0.0.1 يعود داخل الجهاز نفسه عبر مكدّس الشبكة دون أن يغادر إلى الشبكة.",
+              caption: "127.0.0.1 يعود إلى نفس الجهاز — لا يغادر إلى الشبكة.",
             },
           ],
         },
@@ -548,6 +608,16 @@ const m16: ContentModule = {
                   explanation: "169.254.x.x = APIPA = مشكلة في DHCP غالبًا.",
                 },
               },
+            },
+          
+            {
+              // ENRICHMENT (Batch 4): SVG visual enrichment appended after the book content.
+              id: "m16-l04-p02-visual", type: "visual", origin: "teacher-enrichment",
+              visualId: "791381/m16/apipa-fallback", motion: true,
+              source: src(105),
+              title: "مخطط: APIPA عند غياب DHCP",
+              alt: "مخطط يبيّن جهازًا يطلب إعدادًا تلقائيًا فلا يجد خادم DHCP فيختار لنفسه عنوان 169.254 الذي يعمل محليًا فقط.",
+              caption: "لا يجد DHCP فيختار 169.254 لنفسه · محلي فقط.",
             },
           ],
         },
