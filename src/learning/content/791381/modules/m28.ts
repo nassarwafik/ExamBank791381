@@ -1600,13 +1600,14 @@ const m28: ContentModule = {
               spans: [L("Shutdown"), T(" = إغلاق المنفذ ("), L("err-disabled"), T(")، "), L("Restrict"), T(" = إسقاط مع تنبيه، "), L("Protect"), T(" = إسقاط بلا تنبيه.")],
             },
             {
-              // ENRICHMENT (Batch 9): REUSE of the existing m23 port-security-scenario visual (exact source match, PDF 255).
+              // ENRICHMENT (Batch 9 review-fix): NEW source-exact Port Security config summary for PDF 255 (the PDF181
+              // PC0/PC1 scenario reuse was not source-exact for this configuration page).
               id: "m28-l06-p02-visual", type: "visual", origin: "teacher-enrichment",
-              visualId: "791381/m23/port-security-scenario", motion: false,
+              visualId: "791381/m28/port-security-config-summary", motion: false,
               source: src(255),
-              title: "مخطط: تأمين المنفذ Port Security",
-              alt: "مخطط يوضّح تأمين المنفذ: الأجهزة المسموح بها تمرّ والجهاز الغريب يُمنع، وهو معنى تحديد عدد الأجهزة المسموح والإجراء عند المخالفة.",
-              caption: "‏المنفذ المؤمَّن يسمح للأجهزة المصرّح بها ويمنع الغريب.",
+              title: "مخطط: تأمين المنفذ — خطوات الإعداد والمخالفة",
+              alt: "مخطط يلخّص إعداد Port Security: وضع Access ثم تفعيل الميزة ثم Maximum 2 ثم تعلّم MAC بـ Sticky ثم سياسة المخالفة، مع المخالفات الثلاث Shutdown و Restrict و Protect.",
+              caption: "‏سلسلة إعداد المنفذ، ثم سياسات المخالفة الثلاث.",
             },
             {
               id: "m28-l06-p02-note", type: "callout", origin: "teacher-enrichment", kind: "clarification", title: "توضيح المعلّم",

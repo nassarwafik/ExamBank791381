@@ -1,5 +1,5 @@
 // SVG Visual Enrichment — Batch 9 (FINAL). The ACL decision detail (m06 Standard/Extended, PDF 224/227) and the
-// comprehensive summary module m28 (PDF 231–262). Pins the 11 NEW unique ids, the branch-local registry total 92,
+// comprehensive summary module m28 (PDF 231–262). Pins the 12 NEW unique ids, the branch-local registry total 93,
 // the new placements, the existing-id REUSE placements (one per summary page, exact source association), the
 // page-by-page audit decisions for PDF 231–262, and the pages intentionally DEFERRED for Batch 7/8 reuse after the
 // controlled sync (IPv6 PDF 244, Metro-Ethernet PDF 250, Static Route PDF 251). No CLI-engine / grading / publication
@@ -17,12 +17,14 @@ const pages: ContentPage[] = MODS.flatMap(m => m.lessons.flatMap(l => l.pages));
 const pageBy = (id: string) => pages.find(p => p.id === id)!;
 const allVisuals = pages.flatMap(p => p.blocks.filter((b): b is VisualBlock => b.type === "visual").map(b => ({ page: p.id, block: b })));
 
-// The 11 NEW unique ids introduced by Batch 9 (2 in m06, 9 in m28).
+// The 12 NEW unique ids introduced by Batch 9 (2 in m06, 10 in m28). PDF 255 gets a source-exact NEW visual (the
+// PDF181 scenario reuse was dropped in the review-fix), so the new count is 12 and the reuse count is 11.
 const NEW_IDS = [
   "791381/m06/standard-acl-source", "791381/m06/extended-acl-decision",
   "791381/m28/ip-vs-mac-summary", "791381/m28/network-device-roles", "791381/m28/cable-media-overview",
   "791381/m28/subnetting-walkthrough", "791381/m28/wildcard-inversion", "791381/m28/nat-pat-apipa",
   "791381/m28/tcp-three-way-handshake", "791381/m28/web-opening-journey", "791381/m28/troubleshooting-command-map",
+  "791381/m28/port-security-config-summary",
 ];
 
 // NEW-visual placements: page id → { visual id, PDF source }.
@@ -38,6 +40,7 @@ const NEW_PLACEMENTS: Record<string, { visualId: string; pdf: number }> = {
   "791381-m28-l07-p03": { visualId: "791381/m28/tcp-three-way-handshake", pdf: 260 },
   "791381-m28-l07-p04": { visualId: "791381/m28/web-opening-journey", pdf: 261 },
   "791381-m28-l07-p05": { visualId: "791381/m28/troubleshooting-command-map", pdf: 262 },
+  "791381-m28-l06-p02": { visualId: "791381/m28/port-security-config-summary", pdf: 255 },
 };
 
 // REUSE placements: page id → { EXISTING visual id, PDF source }. These reuse a strong visual we already own where
@@ -50,8 +53,11 @@ const REUSE_PLACEMENTS: Record<string, { visualId: string; pdf: number }> = {
   "791381-m28-l02-p03": { visualId: "791381/m13/tcp-vs-udp", pdf: 239 },
   "791381-m28-l02-p04": { visualId: "791381/m18/encapsulation-stack", pdf: 240 },
   "791381-m28-l04-p05": { visualId: "791381/m16/stp-loop-blocking", pdf: 249 },
+  // NOTE (future-sync hazard): the PDF 252 admin-distance reuse is source-exact on the frozen base (AD-only). Batch 8
+  // is concurrently enhancing this SAME id to include Metric. AFTER Batch 8 merges and this branch is synced, PDF 252
+  // MUST be re-audited: if `admin-distance` then carries Metric content, this reuse MUST NOT stay unchanged (either
+  // drop the reuse and keep the AD table, or use an AD-only source-faithful visual). Do not reference Batch 8 now.
   "791381-m28-l05-p02": { visualId: "791381/m27/admin-distance", pdf: 252 },
-  "791381-m28-l06-p02": { visualId: "791381/m23/port-security-scenario", pdf: 255 },
   "791381-m28-l06-p03": { visualId: "791381/m24/device-access-paths", pdf: 256 },
   "791381-m28-l06-p04": { visualId: "791381/m06/acl-gate", pdf: 257 },
   "791381-m28-l07-p02": { visualId: "791381/m22/dhcp-dora", pdf: 259 },
@@ -85,12 +91,12 @@ describe("Batch 9 — scope, registry and the 11 new unique ids", () => {
   it("m06 + m28 validate with the visuals present", () => {
     expect(validateLearningCourseContent(course)).toEqual([]);
   });
-  it("introduces exactly 11 NEW unique visual ids, each resolving in the registry", () => {
-    expect(new Set(NEW_IDS).size).toBe(11);
+  it("introduces exactly 12 NEW unique visual ids, each resolving in the registry", () => {
+    expect(new Set(NEW_IDS).size).toBe(12);
     for (const id of NEW_IDS) expect(resolveVisual(id), id).not.toBeNull();
   });
-  it("branch-local registry total is 92 (81 baseline + 11 Batch 9)", () => {
-    expect(REGISTERED_VISUAL_IDS.length).toBe(92);
+  it("branch-local registry total is 93 (81 baseline + 12 Batch 9)", () => {
+    expect(REGISTERED_VISUAL_IDS.length).toBe(93);
     expect(NEW_IDS.every(id => REGISTERED_VISUAL_IDS.includes(id))).toBe(true);
   });
   it("no Batch 7/8 future id is referenced (all reused ids exist on the frozen base)", () => {
@@ -107,8 +113,8 @@ describe("Batch 9 — scope, registry and the 11 new unique ids", () => {
 });
 
 describe("Batch 9 — NEW-visual placements (exact PDF association)", () => {
-  it("places exactly the 11 new visuals on their intended pages", () => {
-    expect(newVisuals.length).toBe(11);
+  it("places exactly the 12 new visuals on their intended pages", () => {
+    expect(newVisuals.length).toBe(12);
     const byPage = Object.fromEntries(newVisuals.map(v => [v.page, v.block.visualId]));
     expect(byPage).toEqual(Object.fromEntries(Object.entries(NEW_PLACEMENTS).map(([p, s]) => [p, s.visualId])));
   });
@@ -128,8 +134,8 @@ describe("Batch 9 — NEW-visual placements (exact PDF association)", () => {
 });
 
 describe("Batch 9 — REUSE placements (existing ids on summary pages)", () => {
-  it("reuses exactly 12 existing visuals, one per intended summary page, exactly source-associated", () => {
-    expect(reuseVisuals.length).toBe(12);
+  it("reuses exactly 11 existing visuals, one per intended summary page, exactly source-associated", () => {
+    expect(reuseVisuals.length).toBe(11);
     const byPage = Object.fromEntries(reuseVisuals.map(v => [v.page, v.block.visualId]));
     expect(byPage).toEqual(Object.fromEntries(Object.entries(REUSE_PLACEMENTS).map(([p, s]) => [p, s.visualId])));
     for (const { page, block } of reuseVisuals) {

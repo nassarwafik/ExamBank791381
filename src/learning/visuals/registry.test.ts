@@ -124,8 +124,10 @@ describe("visuals registry", () => {
       "791381/m28/tcp-three-way-handshake",
       "791381/m28/web-opening-journey",
       "791381/m28/troubleshooting-command-map",
+      // Batch 9 review-fix — source-exact Port Security config summary (m28 PDF 255)
+      "791381/m28/port-security-config-summary",
     ]);
-    expect(REGISTERED_VISUAL_IDS.length).toBe(92);
+    expect(REGISTERED_VISUAL_IDS.length).toBe(93);
   });
 
   it("every id is course/namespace scoped (reusable pattern for later chapters)", () => {

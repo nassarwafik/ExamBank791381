@@ -123,6 +123,7 @@ import NatPatApipa from "./791381/batch9/NatPatApipa";
 import TcpThreeWayHandshake from "./791381/batch9/TcpThreeWayHandshake";
 import WebOpeningJourney from "./791381/batch9/WebOpeningJourney";
 import TroubleshootingCommandMap from "./791381/batch9/TroubleshootingCommandMap";
+import PortSecurityConfigSummary from "./791381/batch9/PortSecurityConfigSummary";
 
 const VISUALS: readonly RegisteredVisual[] = [
   // Chapter 1 pilot
@@ -244,6 +245,8 @@ const VISUALS: readonly RegisteredVisual[] = [
   { id: "791381/m28/tcp-three-way-handshake", component: TcpThreeWayHandshake, motion: true },
   { id: "791381/m28/web-opening-journey", component: WebOpeningJourney, motion: true },
   { id: "791381/m28/troubleshooting-command-map", component: TroubleshootingCommandMap, motion: false },
+  // Batch 9 review-fix — source-exact Port Security config summary (m28 PDF 255; replaces the PDF181 scenario reuse)
+  { id: "791381/m28/port-security-config-summary", component: PortSecurityConfigSummary, motion: false },
 ];
 
 // Build the lookup once. A duplicate id is a programming error (a later entry silently shadowing an earlier one), so

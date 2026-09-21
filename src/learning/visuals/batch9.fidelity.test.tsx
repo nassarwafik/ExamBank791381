@@ -20,6 +20,7 @@ import NatPatApipa from "./791381/batch9/NatPatApipa";
 import TcpThreeWayHandshake from "./791381/batch9/TcpThreeWayHandshake";
 import WebOpeningJourney from "./791381/batch9/WebOpeningJourney";
 import TroubleshootingCommandMap from "./791381/batch9/TroubleshootingCommandMap";
+import PortSecurityConfigSummary from "./791381/batch9/PortSecurityConfigSummary";
 
 afterEach(cleanup);
 const text = (n: Element) => n.textContent || "";
@@ -85,14 +86,20 @@ describe("Batch 9 — network-device-roles (PDF 234): exactly the five printed d
   });
 });
 
-// ── m28 cable & media (PDF 235) ──
-describe("Batch 9 — cable-media-overview (PDF 235): the three cables and three wiring uses", () => {
-  it("shows UTP/STP/Fiber cables and Straight/Cross/Roll-over wiring; no invented speed/distance figure", () => {
+// ── m28 cable & media (PDF 235): the FULL three-section source (cables + media table + wiring) ──
+describe("Batch 9 — cable-media-overview (PDF 235): cables, the media speed/range table, and wiring", () => {
+  it("shows the three cable types, the three media rows incl. Coaxial with the book's exact speeds and ranges, and the three wiring uses", () => {
     const { container } = render(<CableMediaOverview ariaLabel="x" reducedMotion={true} />);
     expect(attrs(container, "[data-cable]", "data-cable")).toEqual(["UTP", "STP", "Fiber"]);
+    expect(attrs(container, "[data-media]", "data-media")).toEqual(["UTP", "Fiber", "Coaxial"]);
     expect(attrs(container, "[data-wiring]", "data-wiring")).toEqual(["Straight", "Cross", "Roll-over"]);
     const t = text(container);
-    for (const banned of ["Gbps", "Mbps", "100 م", "عدّة كم"]) expect(t).not.toContain(banned);
+    // Coaxial and the exact source speed values
+    for (const s of ["Coaxial", "1 Gbps", "100 Gbps", "10 Mbps"]) expect(t).toContain(s);
+    // the exact source range values
+    for (const s of ["100 م", "عدّة كم", "قصير"]) expect(t).toContain(s);
+    // no external figures / standards / connectors are added
+    for (const banned of ["Cat5", "Cat6", "Cat 5", "Cat 6", "RJ45", "RJ-45", "10 Gbps", "40 Gbps", "الموصل"]) expect(t).not.toContain(banned);
   });
 });
 
@@ -152,13 +159,16 @@ describe("Batch 9 — nat-pat-apipa (PDF 258): three separate concepts, APIPA is
 
 // ── m28 TCP handshake (PDF 260): causal SYN → SYN-ACK → ACK ──
 describe("Batch 9 — tcp-three-way-handshake (PDF 260): SYN → SYN-ACK → ACK causally", () => {
-  it("shows the three steps in order between client and server; no sequence-number fields drawn", () => {
+  it("shows the three steps in order with the source's sequence-number CONCEPT, but no invented numeric values", () => {
     const { container } = render(<TcpThreeWayHandshake ariaLabel="x" reducedMotion={true} />);
     expect(attrs(container, "[data-step]", "data-step")).toEqual(["SYN", "SYN-ACK", "ACK"]);
     const t = text(container);
     for (const s of ["العميل", "الخادم"]) expect(t).toContain(s);
-    expect(t).not.toContain("Seq=");
-    expect(t).not.toContain("Ack=");
+    // the page's conceptual notes are represented
+    for (const s of ["رقم تسلسل", "تأكيد SYN", "تأكيد الرد"]) expect(t).toContain(s);
+    // but no invented numeric sequence/ack values
+    for (const banned of ["Seq=", "Ack=", "ACK=", "SEQ="]) expect(t).not.toContain(banned);
+    expect(t).not.toMatch(/(Seq|Ack|Sequence)\s*[:=]?\s*\d/i);
   });
   it("SYN arrives before SYN-ACK before ACK, one-shot (freeze)", () => {
     const { container } = render(<TcpThreeWayHandshake ariaLabel="x" reducedMotion={false} />);
@@ -200,14 +210,29 @@ describe("Batch 9 — troubleshooting-command-map (PDF 262): question → comman
   });
 });
 
+// ── m28 Port Security config summary (PDF 255): source-exact, no scenario names ──
+describe("Batch 9 — port-security-config-summary (PDF 255): the config chain + three violation policies", () => {
+  it("shows the ordered config steps and the exact three violation outcomes; no PC0/PC1 scenario, no invented output", () => {
+    const { container } = render(<PortSecurityConfigSummary ariaLabel="x" reducedMotion={true} />);
+    expect(attrs(container, "[data-step]", "data-step")).toEqual(["Access", "Port Security", "Maximum 2", "Sticky", "Violation"]);
+    expect(attrs(container, "[data-violation]", "data-violation")).toEqual(["Shutdown", "Restrict", "Protect"]);
+    const t = text(container);
+    for (const s of ["Maximum 2", "Sticky", "Shutdown", "Restrict", "Protect", "err-disabled"]) expect(t).toContain(s);
+    // the PDF181 scenario names must NOT leak onto this configuration page
+    for (const banned of ["PC0", "PC1", "جهاز غريب"]) expect(t).not.toContain(banned);
+    // conceptual summary, never a terminal
+    for (const fake of ["Switch#", "Switch(config", "% ", "Security Violation Count"]) expect(t).not.toContain(fake);
+  });
+});
+
 // ── one-shot motion discipline: NO infinite loops, NO cyclic self-restart anywhere in Batch 9 ──
 describe("Batch 9 — one-shot motion discipline (source scan)", () => {
   const dir = resolve(process.cwd(), "src/learning/visuals/791381/batch9") + "/";
   const files = readdirSync(dir).filter(f => f.endsWith(".tsx"));
   const sources = files.map(f => [f, readFileSync(dir + f, "utf8")] as const);
 
-  it("has exactly the eleven Batch 9 component files", () => {
-    expect(files.length).toBe(11);
+  it("has exactly the twelve Batch 9 component files", () => {
+    expect(files.length).toBe(12);
   });
   it("scans every Batch 9 component and finds ZERO infinite animations (no indefinite repeatCount)", () => {
     for (const [f, src] of sources) {
@@ -229,7 +254,8 @@ describe("Batch 9 — one-shot motion discipline (source scan)", () => {
 // ── cross-cutting: reduced motion removes ALL SMIL animation; the six animated ones render some when on ──
 describe("Batch 9 — reduced motion drops all motion; the animated ones render some when on", () => {
   const ALL = [StandardAclSource, ExtendedAclDecision, IpVsMacSummary, NetworkDeviceRoles, CableMediaOverview,
-    SubnettingWalkthrough, WildcardInversion, NatPatApipa, TcpThreeWayHandshake, WebOpeningJourney, TroubleshootingCommandMap];
+    SubnettingWalkthrough, WildcardInversion, NatPatApipa, TcpThreeWayHandshake, WebOpeningJourney, TroubleshootingCommandMap,
+    PortSecurityConfigSummary];
   const ANIMATED = [StandardAclSource, ExtendedAclDecision, SubnettingWalkthrough, WildcardInversion, TcpThreeWayHandshake, WebOpeningJourney];
   it("no <animateMotion>, no <animate>, and a valid still svg[role=img] for each under reduced motion", () => {
     for (const Comp of ALL) {
