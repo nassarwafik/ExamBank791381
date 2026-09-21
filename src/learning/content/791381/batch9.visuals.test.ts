@@ -205,3 +205,22 @@ describe("Batch 9 — no forbidden coupling in the visual blocks", () => {
     expect(text).not.toMatch(/strength|grade|gradebook|publish|visibleModule|assignment|localStorage|classId|\/api\b/i);
   });
 });
+
+describe("Batch 9 — reuse ALT accuracy: an alt never claims content the reused SVG does not draw", () => {
+  const altOf = (pageId: string) => (pageBy(pageId).blocks.find(b => b.type === "visual") as VisualBlock).alt;
+  it("PDF232 alt describes the A/B/C first-octet ranges only — it does NOT claim a subnet mask is drawn", () => {
+    const alt = altOf("791381-m28-l01-p02");   // reuse 791381/m08/address-classes (draws A/B/C first-octet ranges, no mask)
+    for (const banned of ["Subnet Mask", "القناع الافتراضي", "قناع"]) expect(alt, banned).not.toContain(banned);
+    for (const s of ["1", "126", "128", "191", "192", "223"]) expect(alt, s).toContain(s);
+  });
+  it("PDF240 alt describes Data/Segment/Packet/Frame nesting only — it does NOT claim Bits or protocol headers", () => {
+    const alt = altOf("791381-m28-l02-p04");   // reuse 791381/m18/encapsulation-stack (nested wrappers, no Bits, no header fields)
+    for (const banned of ["Bits", "ترويسة"]) expect(alt, banned).not.toContain(banned);
+    for (const s of ["Data", "Segment", "Packet", "Frame"]) expect(alt, s).toContain(s);
+  });
+  it("PDF249 alt describes a blocked redundant path only — it does NOT claim Root-Bridge election or BPDU details", () => {
+    const alt = altOf("791381-m28-l04-p05");   // reuse 791381/m16/stp-loop-blocking (switches + blocked redundant path, no root election)
+    for (const banned of ["Root Bridge", "Root", "BPDU"]) expect(alt, banned).not.toContain(banned);
+    for (const s of ["STP", "حلقة"]) expect(alt, s).toContain(s);
+  });
+});
