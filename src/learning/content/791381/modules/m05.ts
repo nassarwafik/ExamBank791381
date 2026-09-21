@@ -67,6 +67,15 @@ const m05: ContentModule = {
               spans: [L("CLI"), T(" مهم جدًا في أسئلة البرمجة والامتحانات العملية.")],
             },
             {
+              // ENRICHMENT (Batch 8): SVG visual enrichment appended after the book content.
+              id: "m05-l01-p03-visual", type: "visual", origin: "teacher-enrichment",
+              visualId: "791381/m05/cisco-command-families", motion: false,
+              source: src(192),
+              title: "مخطط: خريطة عائلات أوامر Cisco",
+              alt: "خريطة تنقّل: عائلات أوامر Cisco التي يجمعها المرجع (السويتش و VLAN، VTP، Router on a Stick، Port Security، كلمات المرور) وكل عائلة بمهمّتها، دون سرد الأوامر نفسها.",
+              caption: "‏خريطة: أيّ عائلة أوامر ترتبط بأيّ مهمّة — لا سرد للأوامر.",
+            },
+            {
               id: "m05-l01-p03-note", type: "callout", origin: "teacher-enrichment", kind: "clarification", title: "توضيح المعلّم",
               spans: [T("هذه الوحدة مرجع يجمع الأوامر التي تفرّقت في الوحدات السابقة (السويتش و "), L("VLAN"), T("، "), L("VTP"), T("، "), L("Router on a Stick"), T("، "), L("Port Security"), T("، كلمات المرور). في صفحات المرجع يكتب الكتاب كل الأوامر تحت المؤشّر العام "), L("Device(config)#"), T("؛ في المحاكي ستكتب كل أمر في وضعه الصحيح.")],
             },
@@ -497,6 +506,15 @@ const m05: ContentModule = {
             {
               id: "m05-l03-p01-remember", type: "callout", origin: "book", kind: "remember", title: "تذكّر",
               spans: [T("أوامر "), L("show"), T(" للفحص فقط، ولا تغيّر الإعدادات.")],
+            },
+            {
+              // ENRICHMENT (Batch 8): SVG visual enrichment appended after the book content.
+              id: "m05-l03-p01-visual", type: "visual", origin: "teacher-enrichment",
+              visualId: "791381/m05/show-commands-map", motion: false,
+              source: src(198),
+              title: "مخطط: خريطة أوامر الفحص show",
+              alt: "خريطة قرار: ماذا أريد أن أفحص؟ المجموعات الأربع من أوامر show كما في الكتاب — VLAN & Ports و Port Security و Config و Routing & Services.",
+              caption: "‏«ماذا أريد أن أفحص؟» تقودك إلى مجموعة أمر show المناسبة.",
             },
             {
               id: "m05-l03-p01-note", type: "callout", origin: "teacher-enrichment", kind: "clarification", title: "توضيح المعلّم",

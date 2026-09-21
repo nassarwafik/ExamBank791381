@@ -69,6 +69,15 @@ const m22: ContentModule = {
               spans: [T("بدون "), L("DHCP"), T(" نحتاج إدخال "), L("IP"), T(" يدويًا لكل جهاز على حدة.")],
             },
             {
+              // ENRICHMENT (Batch 8): SVG visual enrichment appended after the book content.
+              id: "m22-l01-p01-visual", type: "visual", origin: "teacher-enrichment",
+              visualId: "791381/m22/dhcp-automatic-config", motion: true,
+              source: src(169),
+              title: "مخطط: DHCP يوزّع الإعدادات تلقائيًا",
+              alt: "مخطط متحرّك: عند انضمام جهاز جديد يعطيه DHCP عنوان IP والبوابة وخادم DNS تلقائيًا بدل الإدخال اليدوي، دون عرض مراحل التبادل الأربع.",
+              caption: "‏DHCP يعطي الجهاز الجديد عنوان IP والبوابة و DNS تلقائيًا.",
+            },
+            {
               id: "m22-l01-p01-note", type: "callout", origin: "teacher-enrichment", kind: "clarification", title: "توضيح المعلّم",
               spans: [T("«إعدادات الشبكة» التي يوزّعها "), L("DHCP"), T(" هي نفس الأشياء التي تكتبها يدويًا عند إعداد حاسوب: عنوان "), L("IP"), T(" وقناع الشبكة و "), L("Gateway"), T(" و "), L("DNS"), T(". الفرق أنها تصل تلقائيًا.")],
             },
@@ -558,6 +567,15 @@ const m22: ContentModule = {
             {
               id: "m22-l03-p01-idea", type: "callout", origin: "book", kind: "summary", title: "الفكرة",
               spans: [T("نفس المبدأ: جهاز مركزي يوزّع إعدادات الشبكة على الأجهزة.")],
+            },
+            {
+              // ENRICHMENT (Batch 8): SVG visual enrichment appended after the book content.
+              id: "m22-l03-p01-visual", type: "visual", origin: "teacher-enrichment",
+              visualId: "791381/m22/dedicated-dhcp-server", motion: false,
+              source: src(176),
+              title: "مخطط: توزيع DHCP من خادم مخصّص",
+              alt: "مخطط: خادم مخصّص يوزّع الإعدادات تلقائيًا عبر السويتش على أجهزة شبكة 192.168.10.0/24، دون إعادة رسم واجهة Packet Tracer.",
+              caption: "‏خادم مخصّص يوزّع إعدادات شبكة 192.168.10.0/24 على الأجهزة.",
             },
             {
               id: "m22-l03-p01-note", type: "callout", origin: "teacher-enrichment", kind: "clarification", title: "توضيح المعلّم",

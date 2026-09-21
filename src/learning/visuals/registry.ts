@@ -107,6 +107,21 @@ import RoutingUpdateTypes from "./791381/batch6/RoutingUpdateTypes";
 import OspfTopology from "./791381/batch6/OspfTopology";
 import ShowIpRoute from "./791381/batch6/ShowIpRoute";
 import AclGate from "./791381/batch6/AclGate";
+// Batch 8 — services / routing arc across the previously visual-free CONCEPT pages of m22 (DHCP), m23 (Port
+// Security), m24 (Cisco device security), m05 (Cisco command reference), m26 (WAN) and m27 (routing protocols).
+// Concept pages only — the CLI-simulator command pages get no redundant SVG. Same data-only, exact-allowlist,
+// finite one-shot / reduced-motion discipline.
+import DhcpAutomaticConfig from "./791381/batch8/DhcpAutomaticConfig";
+import DedicatedDhcpServer from "./791381/batch8/DedicatedDhcpServer";
+import PortSecurityConcept from "./791381/batch8/PortSecurityConcept";
+import DeviceSecurityLayers from "./791381/batch8/DeviceSecurityLayers";
+import CiscoCommandFamilies from "./791381/batch8/CiscoCommandFamilies";
+import ShowCommandsMap from "./791381/batch8/ShowCommandsMap";
+import FrameRelayVsAtm from "./791381/batch8/FrameRelayVsAtm";
+import HdlcVsMetro from "./791381/batch8/HdlcVsMetro";
+import RoutingMethodsOverview from "./791381/batch8/RoutingMethodsOverview";
+import StaticRoutePath from "./791381/batch8/StaticRoutePath";
+import EigrpNeighborsMetric from "./791381/batch8/EigrpNeighborsMetric";
 
 const VISUALS: readonly RegisteredVisual[] = [
   // Chapter 1 pilot
@@ -215,6 +230,23 @@ const VISUALS: readonly RegisteredVisual[] = [
   { id: "791381/m27/show-ip-route", component: ShowIpRoute, motion: false },
   // Batch 6 — ACL (m06)
   { id: "791381/m06/acl-gate", component: AclGate, motion: true },
+  // Batch 8 — DHCP concept pages (m22)
+  { id: "791381/m22/dhcp-automatic-config", component: DhcpAutomaticConfig, motion: true },
+  { id: "791381/m22/dedicated-dhcp-server", component: DedicatedDhcpServer, motion: false },
+  // Batch 8 — Port Security concept (m23)
+  { id: "791381/m23/port-security-concept", component: PortSecurityConcept, motion: true },
+  // Batch 8 — Cisco device security framing (m24)
+  { id: "791381/m24/device-security-layers", component: DeviceSecurityLayers, motion: false },
+  // Batch 8 — Cisco command reference maps (m05)
+  { id: "791381/m05/cisco-command-families", component: CiscoCommandFamilies, motion: false },
+  { id: "791381/m05/show-commands-map", component: ShowCommandsMap, motion: false },
+  // Batch 8 — WAN technologies (m26)
+  { id: "791381/m26/frame-relay-vs-atm", component: FrameRelayVsAtm, motion: false },
+  { id: "791381/m26/hdlc-vs-metro", component: HdlcVsMetro, motion: false },
+  // Batch 8 — routing protocols (m27)
+  { id: "791381/m27/routing-methods-overview", component: RoutingMethodsOverview, motion: false },
+  { id: "791381/m27/static-route-path", component: StaticRoutePath, motion: true },
+  { id: "791381/m27/eigrp-neighbors-metric", component: EigrpNeighborsMetric, motion: false },
 ];
 
 // Build the lookup once. A duplicate id is a programming error (a later entry silently shadowing an earlier one), so

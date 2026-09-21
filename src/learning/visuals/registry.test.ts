@@ -111,8 +111,25 @@ describe("visuals registry", () => {
       "791381/m27/show-ip-route",
       // Batch 6 — ACL (m06)
       "791381/m06/acl-gate",
+      // Batch 8 — DHCP concept pages (m22)
+      "791381/m22/dhcp-automatic-config",
+      "791381/m22/dedicated-dhcp-server",
+      // Batch 8 — Port Security concept (m23)
+      "791381/m23/port-security-concept",
+      // Batch 8 — Cisco device security framing (m24)
+      "791381/m24/device-security-layers",
+      // Batch 8 — Cisco command reference maps (m05)
+      "791381/m05/cisco-command-families",
+      "791381/m05/show-commands-map",
+      // Batch 8 — WAN technologies (m26)
+      "791381/m26/frame-relay-vs-atm",
+      "791381/m26/hdlc-vs-metro",
+      // Batch 8 — routing protocols (m27)
+      "791381/m27/routing-methods-overview",
+      "791381/m27/static-route-path",
+      "791381/m27/eigrp-neighbors-metric",
     ]);
-    expect(REGISTERED_VISUAL_IDS.length).toBe(81);
+    expect(REGISTERED_VISUAL_IDS.length).toBe(92);
   });
 
   it("every id is course/namespace scoped (reusable pattern for later chapters)", () => {

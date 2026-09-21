@@ -69,6 +69,15 @@ const m24: ContentModule = {
               spans: [T("حماية الجهاز نفسه لا تقل أهمية عن حماية الشبكة.")],
             },
             {
+              // ENRICHMENT (Batch 8): SVG visual enrichment appended after the book content.
+              id: "m24-l01-p01-visual", type: "visual", origin: "teacher-enrichment",
+              visualId: "791381/m24/device-security-layers", motion: false,
+              source: src(185),
+              title: "مخطط: حماية الجهاز نفسه بكلمات المرور",
+              alt: "مخطط: جهاز Cisco تحميه ثلاث طرق دخول مقفلة بكلمة مرور — Console و VTY و Enable — دون عرض أوامر أو قيم كلمات المرور.",
+              caption: "‏نحمي الجهاز نفسه: Console و VTY و Enable كلٌّ بكلمة مرور.",
+            },
+            {
               id: "m24-l01-p01-note", type: "callout", origin: "teacher-enrichment", kind: "clarification", title: "توضيح المعلّم",
               spans: [T("في الوحدات السابقة حمينا الشبكة (جدار الحماية، "), L("Port Security"), T("…)؛ هنا نحمي الجهاز نفسه: من يستطيع فتح السويتش أو الراوتر وتغيير إعداداته. الصفحة التالية تعرض الطرق الثلاث للدخول، وكل طريقة لها كلمة مرور.")],
             },

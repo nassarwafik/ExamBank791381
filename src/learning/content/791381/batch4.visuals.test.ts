@@ -61,7 +61,7 @@ describe("Batch 4 — scope and quality (m16 + m17, PDF 98–115)", () => {
   });
 
   it("registry grew by exactly 13 (36 → 49); the SSH reuse added NO new entry", () => {
-    expect(REGISTERED_VISUAL_IDS.length).toBe(81);
+    expect(REGISTERED_VISUAL_IDS.length).toBe(92);
     const m16m17New = REGISTERED_VISUAL_IDS.filter(id => /^791381\/m1[67]\//.test(id));
     expect(m16m17New.length).toBe(13);
   });
