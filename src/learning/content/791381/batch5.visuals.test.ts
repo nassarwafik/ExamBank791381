@@ -80,7 +80,7 @@ describe("Batch 5 — scope and placement (backlog + m18 + m03)", () => {
   });
 
   it("registry grew by exactly 16 (49 → 65); each new id resolves", () => {
-    expect(REGISTERED_VISUAL_IDS.length).toBe(105);
+    expect(REGISTERED_VISUAL_IDS.length).toBe(121);   // total after Batch 7 + 8 + 9 controlled sync
     for (const id of NEW_IDS) expect(resolveVisual(id), id).not.toBeNull();
   });
 

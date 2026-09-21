@@ -151,6 +151,15 @@ const m06: ContentModule = {
               spans: [L("Standard ACL"), T(" تتحكّم بالمرور حسب "), L("IP"), T(" المصدر فقط، وأرقامها من "), L("1"), T(" إلى "), L("99"), T("، ونضعها قريبًا من الوجهة.")],
             },
             {
+              // ENRICHMENT (Batch 9): SVG visual enrichment appended after the book content.
+              id: "m06-l01-p03-visual", type: "visual", origin: "teacher-enrichment",
+              visualId: "791381/m06/standard-acl-source", motion: true,
+              source: src(224),
+              title: "مخطط: Standard ACL — القرار على المصدر",
+              alt: "مخطط يوضّح أن القائمة القياسية Standard ACL تقرّر السماح أو المنع بناءً على عنوان المصدر فقط: المصدر ثم ACL ثم Permit أو Deny، دون فحص الوجهة أو البروتوكول أو المنفذ.",
+              caption: "‏القائمة القياسية تسأل «من المصدر؟» فقط قبل السماح أو المنع.",
+            },
+            {
               id: "m06-l01-p03-note", type: "callout", origin: "teacher-enrichment", kind: "clarification", title: "توضيح المعلّم",
               spans: [T("خطوتان دائمًا: كتابة القائمة في الإعداد العام، ثم ربطها بواجهة واتجاه ("), L("in"), T(" داخل إلى الراوتر، "), L("out"), T(" خارج منه). الرقم "), L("0.0.0.255"), T(" هو "), L("wildcard"), T(" — مقلوب القناع — ويعني «أي جهاز في الشبكة 192.168.1.0».")],
             },
@@ -387,6 +396,15 @@ const m06: ContentModule = {
             {
               id: "m06-l01-p01-explain", type: "callout", origin: "book", kind: "summary", title: "شرح المثال",
               spans: [L("permit"), T(" = سماح · "), L("tcp"), T(" = البروتوكول · "), L("any"), T(" = أي وجهة · "), L("eq 80"), T(" = منفذ "), L("HTTP"), T(". "), L("Extended ACL"), T(" أكثر تفصيلًا من "), L("Standard"), T(" لأنها تفحص المصدر والوجهة والبروتوكول والمنفذ معًا.")],
+            },
+            {
+              // ENRICHMENT (Batch 9): SVG visual enrichment appended after the book content.
+              id: "m06-l01-p01-visual", type: "visual", origin: "teacher-enrichment",
+              visualId: "791381/m06/extended-acl-decision", motion: true,
+              source: src(227),
+              title: "مخطط: Extended ACL — أربعة معايير",
+              alt: "مخطط يوضّح أن القائمة الموسّعة Extended ACL تفحص المصدر والوجهة والبروتوكول والمنفذ معًا قبل قرار السماح أو المنع، وأرقامها من 100 إلى 199.",
+              caption: "‏الموسّعة تفحص المصدر والوجهة والبروتوكول والمنفذ معًا.",
             },
             {
               id: "m06-l01-p01-note", type: "callout", origin: "teacher-enrichment", kind: "clarification", title: "توضيح المعلّم",

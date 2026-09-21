@@ -145,8 +145,28 @@ describe("visuals registry", () => {
       "791381/m27/routing-methods-overview",
       "791381/m27/static-route-path",
       "791381/m27/eigrp-metric-adaptation",
+      // Batch 9 — ACL decision detail (m06)
+      "791381/m06/standard-acl-source",
+      "791381/m06/extended-acl-decision",
+      // Batch 9 — comprehensive summary (m28)
+      "791381/m28/ip-vs-mac-summary",
+      "791381/m28/network-device-roles",
+      "791381/m28/cable-media-overview",
+      "791381/m28/subnetting-walkthrough",
+      "791381/m28/wildcard-inversion",
+      "791381/m28/nat-pat-apipa",
+      "791381/m28/tcp-three-way-handshake",
+      "791381/m28/web-opening-journey",
+      "791381/m28/troubleshooting-command-map",
+      // Batch 9 review-fix — source-exact Port Security config summary (m28 PDF 255)
+      "791381/m28/port-security-config-summary",
+      // Batch 9 controlled sync — source-exact summaries (m28 PDF 244 / 250 / 251 / 252)
+      "791381/m28/ipv6-summary",
+      "791381/m28/metro-vlan-summary",
+      "791381/m28/route-types-summary",
+      "791381/m28/admin-distance-summary",
     ]);
-    expect(REGISTERED_VISUAL_IDS.length).toBe(105);
+    expect(REGISTERED_VISUAL_IDS.length).toBe(121);
   });
 
   it("every id is course/namespace scoped (reusable pattern for later chapters)", () => {
