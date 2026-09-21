@@ -6,6 +6,9 @@
 
 /* ---------- Hub ---------- */
 .eb-reports-hub{ display:flex; flex-direction:column; gap:var(--eb-space-5); }
+/* Desktop: keep the page content clear of the fixed sidebar rail (RTL-safe logical padding). Below 1024px the
+   sidebar is an off-canvas drawer, so no side gutter is added there. */
+@media (min-width:1024px){ .eb-reports-hub{ padding-inline-start:var(--eb-space-4); } }
 .eb-reports-group{ display:flex; flex-direction:column; gap:var(--eb-space-3); }
 .eb-reports-group-head{ display:flex; flex-direction:column; gap:2px; }
 .eb-report-cards{ list-style:none; margin:0; padding:0; display:grid; grid-template-columns:repeat(auto-fill,minmax(260px,1fr)); gap:var(--eb-space-3); }
