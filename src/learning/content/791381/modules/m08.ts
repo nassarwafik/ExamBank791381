@@ -475,6 +475,16 @@ const m08: ContentModule = {
                 },
               },
             },
+          
+            {
+              // ENRICHMENT (Batch 5): SVG visual enrichment appended after the book content.
+              id: "m08-l02-p02-visual", type: "visual", origin: "teacher-enrichment",
+              visualId: "791381/m08/cidr-prefix", motion: true,
+              source: src(41),
+              title: "مخطط: البادئة /8 · /16 · /24 والقناع المقابل",
+              alt: "مخطط لعنوان من أربعة أقسام يبيّن كيف تنمو بتات الشبكة مع /8 ثم /16 ثم /24، والقناع المقابل 255.0.0.0 و255.255.0.0 و255.255.255.0.",
+              caption: "‏/N = عدد بتات الشبكة · /24 = ثلاثة أقسام شبكة = 24 بت.",
+            },
           ],
         },
         // PDF 42 — أمثلة على CIDR

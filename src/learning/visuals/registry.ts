@@ -67,6 +67,24 @@ import SecureTwoPillars from "./791381/batch4/SecureTwoPillars";
 import VpnTunnel from "./791381/batch4/VpnTunnel";
 import HttpsSecureChannel from "./791381/batch4/HttpsSecureChannel";
 import ArpAssociation from "./791381/batch3/ArpAssociation";
+// Batch 5 — three owner-requested backlog visuals (m08 CIDR PDF41, m12 broadcast-message PDF74, m13 OSI seven-layers
+// PDF78) + the next roadmap scope (m18 encapsulation/anatomy PDF116–117, m03 switch CLI & VLAN PDF121–138). The backlog
+// components live here in batch5/ but keep their correct m08/m12/m13 ids. Same data-only, exact-allowlist, reduced-
+// motion discipline.
+import CidrPrefix from "./791381/batch5/CidrPrefix";
+import BroadcastMessageStructure from "./791381/batch5/BroadcastMessageStructure";
+import OsiSevenLayers from "./791381/batch5/OsiSevenLayers";
+import EncapsulationStack from "./791381/batch5/EncapsulationStack";
+import PduAnatomy from "./791381/batch5/PduAnatomy";
+import CliModeLadder from "./791381/batch5/CliModeLadder";
+import SwitchPortsMap from "./791381/batch5/SwitchPortsMap";
+import VlanSegmentation from "./791381/batch5/VlanSegmentation";
+import VlanAccessTrunkTerms from "./791381/batch5/VlanAccessTrunkTerms";
+import VlanExampleTopology from "./791381/batch5/VlanExampleTopology";
+import CreateVlan from "./791381/batch5/CreateVlan";
+import AccessPortToVlan from "./791381/batch5/AccessPortToVlan";
+import SviGateway from "./791381/batch5/SviGateway";
+import TaggedUntaggedNative from "./791381/batch5/TaggedUntaggedNative";
 
 const VISUALS: readonly RegisteredVisual[] = [
   // Chapter 1 pilot
@@ -131,6 +149,23 @@ const VISUALS: readonly RegisteredVisual[] = [
   { id: "791381/m17/secure-two-pillars", component: SecureTwoPillars, motion: true },
   { id: "791381/m17/vpn-tunnel", component: VpnTunnel, motion: true },
   { id: "791381/m17/https-secure-channel", component: HttpsSecureChannel, motion: true },
+  // Batch 5 — backlog: CIDR (m08), broadcast message structure (m12), OSI seven layers (m13)
+  { id: "791381/m08/cidr-prefix", component: CidrPrefix, motion: true },
+  { id: "791381/m12/broadcast-message-structure", component: BroadcastMessageStructure, motion: true },
+  { id: "791381/m13/osi-seven-layers", component: OsiSevenLayers, motion: true },
+  // Batch 5 — data segmentation (m18)
+  { id: "791381/m18/encapsulation-stack", component: EncapsulationStack, motion: true },
+  { id: "791381/m18/pdu-anatomy", component: PduAnatomy, motion: true },
+  // Batch 5 — switch CLI & VLAN (m03)
+  { id: "791381/m03/cli-mode-ladder", component: CliModeLadder, motion: true },
+  { id: "791381/m03/switch-ports-map", component: SwitchPortsMap, motion: true },
+  { id: "791381/m03/vlan-segmentation", component: VlanSegmentation, motion: true },
+  { id: "791381/m03/vlan-access-trunk-terms", component: VlanAccessTrunkTerms, motion: true },
+  { id: "791381/m03/vlan-example-topology", component: VlanExampleTopology, motion: true },
+  { id: "791381/m03/create-vlan", component: CreateVlan, motion: true },
+  { id: "791381/m03/access-port-assignment", component: AccessPortToVlan, motion: true },
+  { id: "791381/m03/svi-gateway", component: SviGateway, motion: true },
+  { id: "791381/m03/tagged-untagged-native", component: TaggedUntaggedNative, motion: true },
 ];
 
 // Build the lookup once. A duplicate id is a programming error (a later entry silently shadowing an earlier one), so

@@ -105,6 +105,16 @@ const m18: ContentModule = {
                 },
               },
             },
+          
+            {
+              // ENRICHMENT (Batch 5): SVG visual enrichment appended after the book content.
+              id: "m18-l01-p01-visual", type: "visual", origin: "teacher-enrichment",
+              visualId: "791381/m18/encapsulation-stack", motion: true,
+              source: src(116),
+              title: "مخطط: التغليف: Data ثم Segment ثم Packet ثم Frame",
+              alt: "مخطط تغليف متداخل يبيّن كل طبقة تضيف غلافًا حول ما قبله: Segment يغلّف Data ثم Packet يغلّف Segment ثم Frame يغلّف Packet.",
+              caption: "‏كل طبقة تضيف غلافًا حول الوحدة الأصغر.",
+            },
           ],
         },
         // PDF 117 — Frame / Packet / Segment
@@ -163,6 +173,16 @@ const m18: ContentModule = {
                   explanation: "Segment: منافذ وتحكّم. Packet: IP وتوجيه. Frame: MAC وفحص.",
                 },
               },
+            },
+          
+            {
+              // ENRICHMENT (Batch 5): SVG visual enrichment appended after the book content.
+              id: "m18-l01-p02-visual", type: "visual", origin: "teacher-enrichment",
+              visualId: "791381/m18/pdu-anatomy", motion: true,
+              source: src(117),
+              title: "مخطط: مبنى Segment و Packet و Frame",
+              alt: "مخطط يبيّن حقول كل وحدة: Segment فيه المنافذ والتحكّم، Packet يضيف عناوين IP حول Segment، وFrame يضيف عناوين MAC وفحص الأخطاء حول Packet.",
+              caption: "‏Packet يغلّف Segment · Frame يغلّف Packet ويضيف فحص الأخطاء.",
             },
           ],
         },
