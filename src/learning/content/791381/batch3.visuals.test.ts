@@ -6,21 +6,22 @@ import m11 from "./modules/m11";
 import m12 from "./modules/m12";
 import m13 from "./modules/m13";
 import m14 from "./modules/m14";
+import m15 from "./modules/m15";
 import { validateLearningCourseContent } from "../validation";
 import { resolveVisual } from "../../visuals/registry";
 import { LEARNING_CONTENT_SCHEMA_VERSION, type LearningCourseContent, type ContentPage, type VisualBlock } from "../types";
 
-const MODS = [m10, m11, m12, m13, m14];
+const MODS = [m10, m11, m12, m13, m14, m15];
 const course: LearningCourseContent = { schemaVersion: LEARNING_CONTENT_SCHEMA_VERSION, courseId: "791381", title: "شبكات الاتصال", direction: "rtl", modules: MODS };
 const pages: ContentPage[] = MODS.flatMap(m => m.lessons.flatMap(l => l.pages));
 const pageBy = (id: string) => pages.find(p => p.id === id)!;
 const visuals = pages.flatMap(p => p.blocks.filter((b): b is VisualBlock => b.type === "visual").map(b => ({ page: p.id, block: b })));
 
-// The 15 deliberate selections: page → { visualId, source PDF }.
+// The 18 deliberate selections: page → { visualId, source PDF }.
 const SELECTION: Record<string, { visualId: string; pdf: number }> = {
-  "791381-m10-l01-p01": { visualId: "791381/m10/topology-shapes", pdf: 58 },
+  "791381-m10-l01-p01": { visualId: "791381/m10/p2p-direct", pdf: 58 },
   "791381-m10-l01-p02": { visualId: "791381/m10/bus-collision", pdf: 59 },
-  "791381-m11-l01-p01": { visualId: "791381/m11/cable-types", pdf: 62 },
+  "791381-m11-l01-p01": { visualId: "791381/m11/utp-vs-stp", pdf: 62 },
   "791381-m11-l02-p02": { visualId: "791381/m11/mac-frame-delivery", pdf: 65 },
   "791381-m12-l01-p01": { visualId: "791381/m12/message-types", pdf: 67 },
   "791381-m12-l01-p02": { visualId: "791381/m12/unicast-multicast", pdf: 68 },
@@ -29,10 +30,14 @@ const SELECTION: Record<string, { visualId: string; pdf: number }> = {
   "791381-m13-l02-p02": { visualId: "791381/m13/tcpip-layers", pdf: 82 },
   "791381-m13-l02-p03": { visualId: "791381/m13/osi-vs-tcpip", pdf: 83 },
   "791381-m13-l03-p01": { visualId: "791381/m13/tcp-vs-udp", pdf: 84 },
-  "791381-m14-l01-p01": { visualId: "791381/m14/protocols-overview", pdf: 87 },
+  "791381-m14-l01-p01": { visualId: "791381/m14/protocol-agreement", pdf: 87 },
   "791381-m14-l01-p02": { visualId: "791381/m14/dns-http-dhcp", pdf: 88 },
   "791381-m14-l02-p02": { visualId: "791381/m14/ssh-vs-telnet", pdf: 90 },
   "791381-m14-l03-p02": { visualId: "791381/m14/protocols-by-transport", pdf: 92 },
+  // m15 — network-check commands (completes the 40-page discovery m10–m15, PDF 57–97)
+  "791381-m15-l01-p01": { visualId: "791381/m15/ping-echo", pdf: 93 },
+  "791381-m15-l02-p01": { visualId: "791381/m15/tracert-hops", pdf: 95 },
+  "791381-m15-l02-p03": { visualId: "791381/m15/arp-association", pdf: 97 },
 };
 
 // Pages deliberately SKIPPED because they already carry a strong interactive activity (would duplicate).
@@ -50,8 +55,8 @@ describe("Batch 3 — scope and quality", () => {
     expect(validateLearningCourseContent(course)).toEqual([]);
   });
 
-  it("adds exactly 15 visuals (target ~15), one per selected page, on the intended pages", () => {
-    expect(visuals.length).toBe(15);
+  it("adds exactly 18 visuals (target 15–18), one per selected page, on the intended pages", () => {
+    expect(visuals.length).toBe(18);
     const byPage = Object.fromEntries(visuals.map(v => [v.page, v.block.visualId]));
     expect(byPage).toEqual(Object.fromEntries(Object.entries(SELECTION).map(([p, s]) => [p, s.visualId])));
   });

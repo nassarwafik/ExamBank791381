@@ -7,12 +7,17 @@ import type { LearningVisualProps } from "../../types";
  * TCP/IP boxes spanning their matching OSI rows. Motion: a subtle glow on the collapsed top group. Reduced motion ⇒
  * a still mapping. Names render LTR.
  */
-const OSI = ["Application", "Presentation", "Session", "Transport", "Network", "Data Link", "Physical"];
+// OSI is numbered 7→1 top-to-bottom per the book (7 Application … 1 Physical); n carries the book's layer number.
+const OSI = [
+  { n: 7, en: "Application" }, { n: 6, en: "Presentation" }, { n: 5, en: "Session" },
+  { n: 4, en: "Transport" }, { n: 3, en: "Network" }, { n: 2, en: "Data Link" }, { n: 1, en: "Physical" },
+];
+// TCP/IP is numbered 4→1 (4 Application … 1 Link); each box spans the OSI rows (by array index) it maps onto.
 const MAP = [
-  { en: "Application", from: 0, to: 2 },
-  { en: "Transport", from: 3, to: 3 },
-  { en: "Internet", from: 4, to: 4 },
-  { en: "Network Access", from: 5, to: 6 },
+  { n: 4, en: "Application", from: 0, to: 2 },
+  { n: 3, en: "Transport", from: 3, to: 3 },
+  { n: 2, en: "Internet", from: 4, to: 4 },
+  { n: 1, en: "Link", from: 5, to: 6 },
 ];
 export default function OsiVsTcpIp({ ariaLabel, reducedMotion, className }: LearningVisualProps) {
   const y0 = 40, rh = 24, gap = 2;
@@ -25,19 +30,19 @@ export default function OsiVsTcpIp({ ariaLabel, reducedMotion, className }: Lear
       <text className="eb-visual-row-label" x={oX + oW / 2} y="26" textAnchor="middle" direction="ltr">OSI · 7</text>
       {/* OSI 7 rows */}
       {OSI.map((l, i) => (
-        <g key={l}>
+        <g key={l.en}>
           <rect className="eb-visual-seg is-v6" x={oX} y={rowY(i)} width={oW} height={rh} rx="4" />
-          <text className="eb-visual-token" x={oX + oW / 2} y={rowY(i) + rh / 2} textAnchor="middle" dominantBaseline="central" direction="ltr">{i + 1}. {l}</text>
+          <text className="eb-visual-token" x={oX + oW / 2} y={rowY(i) + rh / 2} textAnchor="middle" dominantBaseline="central" direction="ltr">{l.n}. {l.en}</text>
         </g>
       ))}
       {/* TCP/IP 4 boxes spanning matching OSI rows */}
-      {MAP.map((m, k) => {
+      {MAP.map(m => {
         const y = rowY(m.from), hgt = rowY(m.to) + rh - rowY(m.from);
         const grouped = m.to > m.from, glow = grouped && !reducedMotion;
         return (
           <g key={m.en}>
             <rect className={"eb-visual-seg is-v4" + (glow ? " eb-visual-glow-anim" : "")} x={tX} y={y} width={tW} height={hgt} rx="6" />
-            <text className="eb-visual-token" x={tX + tW / 2} y={y + hgt / 2} textAnchor="middle" dominantBaseline="central" direction="ltr">{k + 1}. {m.en}</text>
+            <text className="eb-visual-token" x={tX + tW / 2} y={y + hgt / 2} textAnchor="middle" dominantBaseline="central" direction="ltr">{m.n}. {m.en}</text>
             {/* connectors to the OSI span */}
             <line className="eb-visual-link is-faint" x1={tX + tW} y1={y + hgt / 2} x2={oX} y2={rowY(m.from) + (grouped ? rh / 2 : rh / 2)} />
           </g>

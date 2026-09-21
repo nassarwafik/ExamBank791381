@@ -442,7 +442,7 @@ const m13: ContentModule = {
               visualId: "791381/m13/tcpip-layers", motion: true,
               source: src(82),
               title: "مخطط: طبقات TCP/IP الأربع",
-              alt: "مكدّس من أربع طبقات TCP/IP: Application وTransport وInternet وNetwork Access مع نزول البيانات عند الإرسال.",
+              alt: "مكدّس من أربع طبقات TCP/IP مرقّمة 4 Application و3 Transport و2 Internet و1 Link مع نزول البيانات عند الإرسال.",
               caption: "أربع طبقات؛ البيانات تنزل من الأعلى إلى الأسفل عند الإرسال.",
             },
           ],

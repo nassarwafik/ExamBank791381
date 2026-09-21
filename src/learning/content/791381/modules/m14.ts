@@ -97,11 +97,11 @@ const m14: ContentModule = {
             {
               // ENRICHMENT (Batch 3): SVG visual enrichment appended after the book content.
               id: "m14-l01-p01-visual", type: "visual", origin: "teacher-enrichment",
-              visualId: "791381/m14/protocols-overview", motion: true,
+              visualId: "791381/m14/protocol-agreement", motion: true,
               source: src(87),
-              title: "مخطط: خريطة البروتوكولات حسب المهمة",
-              alt: "مركز يتفرّع إلى فئات بروتوكولات حسب المهمة: الويب والأسماء والإعداد والبريد والملفات والإدارة عن بُعد.",
-              caption: "لكل مهمة بروتوكول (أو أكثر) يقوم بها.",
+              title: "مخطط: البروتوكول قواعد متّفق عليها",
+              alt: "جهازان يتواصلان بنجاح عبر قواعد متّفق عليها (بروتوكول) بينهما، مع فئات المهام العامة: نقل وتصفّح وبريد وأمان.",
+              caption: "البروتوكول قواعد متّفق عليها تُنجح الاتصال بين الجهازين.",
             },
           ],
         },

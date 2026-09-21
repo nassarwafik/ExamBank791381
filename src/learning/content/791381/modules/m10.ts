@@ -89,11 +89,11 @@ const m10: ContentModule = {
             {
               // ENRICHMENT (Batch 3): SVG visual enrichment appended after the book content.
               id: "m10-l01-p01-visual", type: "visual", origin: "teacher-enrichment",
-              visualId: "791381/m10/topology-shapes", motion: true,
+              visualId: "791381/m10/p2p-direct", motion: true,
               source: src(58),
-              title: "مخطط: أشكال ترتيب الشبكة",
-              alt: "ستة مخططات صغيرة لأشكال ترتيب الأجهزة في الشبكة: P2P وBus وRing وStar وTree وHybrid.",
-              caption: "أشكال ترتيب الأجهزة داخل الشبكة.",
+              title: "مخطط: الاتصال المباشر P2P",
+              alt: "مخطط يبيّن جهازين متّصلين مباشرة نقطة إلى نقطة بلا جهاز وسيط بينهما، مع رسالة تنتقل بينهما مباشرة.",
+              caption: "‏P2P: تواصل مباشر بين جهازين بلا وسيط.",
             },
           ],
         },
