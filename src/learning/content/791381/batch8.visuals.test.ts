@@ -73,7 +73,7 @@ describe("Batch 8 — scope and placement (services / routing concept arc)", () 
   });
 
   it("post-sync registry total = 81 + Batch 7 (13) + Batch 8 (11) + Batch 9 (16) = 121; each new Batch 8 id resolves", () => {
-    expect(REGISTERED_VISUAL_IDS.length).toBe(121);
+    expect(REGISTERED_VISUAL_IDS.length).toBe(122);
     for (const id of NEW_IDS) expect(resolveVisual(id), id).not.toBeNull();
   });
 

@@ -162,6 +162,10 @@ import Ipv6Summary from "./791381/batch9/Ipv6Summary";
 import MetroVlanSummary from "./791381/batch9/MetroVlanSummary";
 import RouteTypesSummary from "./791381/batch9/RouteTypesSummary";
 import AdminDistanceSummary from "./791381/batch9/AdminDistanceSummary";
+// Reader follow-up (visual gap pass) — a teacher-reported missing network diagram on m04 PDF150 (site page 138): the
+// Sw6 ↔ Router trunk topology. Its own dir keeps the follow-up provenance clear; it is a normal data-only, exact-
+// allowlist, reduced-motion-safe SVG like every other registered visual.
+import Sw6RouterTrunk from "./791381/followup/Sw6RouterTrunk";
 
 const VISUALS: readonly RegisteredVisual[] = [
   // Chapter 1 pilot
@@ -325,6 +329,8 @@ const VISUALS: readonly RegisteredVisual[] = [
   { id: "791381/m28/metro-vlan-summary", component: MetroVlanSummary, motion: false },
   { id: "791381/m28/route-types-summary", component: RouteTypesSummary, motion: false },
   { id: "791381/m28/admin-distance-summary", component: AdminDistanceSummary, motion: false },
+  // Reader follow-up — Sw6 ↔ Router trunk topology (m04 PDF150, site page 138)
+  { id: "791381/m04/sw6-router-trunk", component: Sw6RouterTrunk, motion: false },
 ];
 
 // Build the lookup once. A duplicate id is a programming error (a later entry silently shadowing an earlier one), so

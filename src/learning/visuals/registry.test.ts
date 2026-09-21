@@ -165,8 +165,10 @@ describe("visuals registry", () => {
       "791381/m28/metro-vlan-summary",
       "791381/m28/route-types-summary",
       "791381/m28/admin-distance-summary",
+      // Reader follow-up — Sw6 ↔ Router trunk topology (m04 PDF 150, site page 138)
+      "791381/m04/sw6-router-trunk",
     ]);
-    expect(REGISTERED_VISUAL_IDS.length).toBe(121);
+    expect(REGISTERED_VISUAL_IDS.length).toBe(122);
   });
 
   it("every id is course/namespace scoped (reusable pattern for later chapters)", () => {
