@@ -1,15 +1,40 @@
 // @vitest-environment happy-dom
-// Learning Materials (المواد التعليمية) — Phase 1. Behavioural coverage of the library ⇄ course-overview local
-// state, the first course card and its metadata, the six high-level content batches, and the request discipline
-// (Phase 1 is fully local — zero network requests during catalog / overview navigation).
+// Learning Materials (المواد التعليمية). Behavioural coverage of the library ⇄ course-overview ⇄ reader local
+// state, the first course card and its metadata, the eight high-level content sections — now a live index that opens
+// the Reader at each section's first canonical page — and the request discipline (catalog/overview navigation is
+// fully local; the Reader is code-split and issues no network request for content).
 import { describe, it, expect, afterEach, vi } from "vitest";
-import { render, cleanup, screen, fireEvent, within } from "@testing-library/react";
+import { render, cleanup, screen, fireEvent, within, waitFor } from "@testing-library/react";
 import LearningMaterialsPage from "./LearningMaterialsPage";
 import { LEARNING_COURSES } from "./catalog";
+
+// Stub the code-split Reader wrapper so the overview → reader wiring (which pageId is forwarded, and the exit path)
+// is observable without mounting the whole reader/content layer. It surfaces the forwarded `initialPageId` and the
+// `exitLabel`, and calls `onExit` from a button so "back to the overview" stays testable.
+vi.mock("./training/LearningReaderWithTraining", () => ({
+  default: (props: { courseId: string; initialPageId?: string; exitLabel: string; onExit: () => void }) => (
+    <div data-testid="reader" data-course={props.courseId} data-initial={props.initialPageId ?? "«beginning»"}>
+      <button type="button" onClick={props.onExit}>{props.exitLabel}</button>
+    </div>
+  ),
+}));
 
 afterEach(() => { cleanup(); vi.restoreAllMocks(); });
 
 const course = LEARNING_COURSES[0];
+// The authoritative section → first-canonical-page mapping (proven in content/navigation.batches.test.ts). intro
+// carries no dedicated page, so it opens the book's beginning via the Reader's controlled fallback (initial = «beginning»).
+const EXPECTED_TARGETS: Record<string, string> = {
+  intro: "«beginning»",
+  b1: "791381-m01-l00-p01",
+  b2: "791381-m09-l00-p01",
+  b3: "791381-m13-l01-p01",
+  b4: "791381-m03-l01-p03",
+  b5: "791381-m20-l01-p01",
+  b6: "791381-m25-l01-p01",
+  summary: "791381-m28-l01-p01",
+};
+const openOverview = () => fireEvent.click(screen.getByRole("button", { name: "فتح الكتاب" }));
 
 describe("Learning Materials — Phase 1 library", () => {
   it("renders the library with the first course (791381) card and its metadata, from the catalog", () => {
@@ -30,19 +55,29 @@ describe("Learning Materials — Phase 1 library", () => {
     expect(fetchSpy).not.toHaveBeenCalled();                                    // no network on entry
   });
 
-  it("opening the book shows a course overview with identity + eight sections marked قريبًا; back restores the library — all with zero requests", () => {
+  it("opening the book shows a course overview whose eight sections are a live index (no قريبًا, no stale release note); back restores the library — all with zero requests", () => {
     const fetchSpy = vi.spyOn(globalThis, "fetch");
     render(<LearningMaterialsPage />);
-    fireEvent.click(screen.getByRole("button", { name: "فتح الكتاب" }));
+    openOverview();
     // overview identity
     expect(screen.getByRole("heading", { level: 2, name: course.productTitle })).toBeTruthy();  // "كتاب 791381 — شبكات الاتصال"
     expect(screen.queryByRole("button", { name: "فتح الكتاب" })).toBeNull();     // not the library anymore
-    // six high-level content batches, each a non-interactive "قريبًا" (never a reader/lesson in Phase 1)
+    // the completed book's sections carry NO "قريبًا" and NOT the stale gradual-release description
     const batchList = screen.getByRole("list", { name: "أقسام محتوى الكتاب" });
-    const items = within(batchList).getAllByRole("listitem");
-    expect(items.map(li => li.textContent)).toEqual(course.overviewBatches.map((b, i) => (i + 1) + b.label + "قريبًا"));
-    expect(items.length).toBe(8);
-    expect(within(batchList).getAllByText("قريبًا").length).toBe(8);
+    expect(within(batchList).queryByText("قريبًا")).toBeNull();
+    expect(screen.queryByText("ستُتاح هذه الأقسام تفاعليًا في القارئ تدريجيًا.")).toBeNull();
+    expect(screen.getByText("اختر قسمًا للانتقال مباشرة إلى محتواه في القارئ التفاعلي.")).toBeTruthy();
+    // exactly eight sections, each an interactive control with a meaningful accessible name "فتح قسم <label>"
+    const controls = within(batchList).getAllByRole("button");
+    expect(controls.length).toBe(8);
+    expect(controls.map(b => b.getAttribute("aria-label"))).toEqual(course.overviewBatches.map(b => "فتح قسم " + b.label));
+    // each row still shows its number, title and the "فتح القسم" affordance
+    course.overviewBatches.forEach((b, i) => {
+      const row = within(batchList).getByRole("button", { name: "فتح قسم " + b.label });
+      expect(row.textContent).toContain(String(i + 1));
+      expect(row.textContent).toContain(b.label);
+      expect(row.textContent).toContain("فتح القسم");
+    });
     // back to the library
     fireEvent.click(screen.getByRole("button", { name: "العودة إلى المواد التعليمية" }));
     expect(screen.getByRole("heading", { level: 2, name: "المواد التعليمية" })).toBeTruthy();
@@ -55,6 +90,68 @@ describe("Learning Materials — Phase 1 library", () => {
     const cta = screen.getByRole("button", { name: "فتح الكتاب" });
     expect(cta.tagName).toBe("BUTTON");
     expect(cta.getAttribute("type")).toBe("button");
+  });
+});
+
+describe("Learning Materials — Course-Overview section navigation", () => {
+  const batchList = () => screen.getByRole("list", { name: "أقسام محتوى الكتاب" });
+
+  it("every section row is a real, keyboard-activatable <button type=button> (not a fake link or clickable div)", () => {
+    render(<LearningMaterialsPage />);
+    openOverview();
+    const controls = within(batchList()).getAllByRole("button");
+    expect(controls.length).toBe(8);
+    for (const c of controls) {
+      expect(c.tagName).toBe("BUTTON");
+      expect(c.getAttribute("type")).toBe("button");
+      expect(c.querySelector('a[href="#"]')).toBeNull();   // no fake anchor
+    }
+  });
+
+  it("clicking each section opens the Reader at that section's first canonical page (intro → the book's beginning)", async () => {
+    for (const b of course.overviewBatches) {
+      render(<LearningMaterialsPage />);
+      openOverview();
+      fireEvent.click(within(batchList()).getByRole("button", { name: "فتح قسم " + b.label }));
+      const reader = await screen.findByTestId("reader");
+      expect(reader.getAttribute("data-course")).toBe("791381");
+      expect(reader.getAttribute("data-initial")).toBe(EXPECTED_TARGETS[b.id]);
+      cleanup();
+    }
+  });
+
+  it("«بدء القراءة» opens the Reader from the canonical beginning — never a section shortcut", async () => {
+    render(<LearningMaterialsPage />);
+    openOverview();
+    fireEvent.click(screen.getByRole("button", { name: "بدء القراءة" }));
+    const reader = await screen.findByTestId("reader");
+    expect(reader.getAttribute("data-initial")).toBe("«beginning»");   // no initialPageId forwarded
+  });
+
+  it("opening a section then «العودة إلى نظرة الكتاب» returns to the overview, and «بدء القراءة» then starts clean (no stale initial page)", async () => {
+    render(<LearningMaterialsPage />);
+    openOverview();
+    // open a deep section (summary → m28)
+    fireEvent.click(within(batchList()).getByRole("button", { name: "فتح قسم التلخيص" }));
+    let reader = await screen.findByTestId("reader");
+    expect(reader.getAttribute("data-initial")).toBe("791381-m28-l01-p01");
+    // back to the overview
+    fireEvent.click(screen.getByRole("button", { name: "العودة إلى نظرة الكتاب" }));
+    expect(screen.getByRole("heading", { level: 2, name: course.productTitle })).toBeTruthy();
+    await waitFor(() => expect(screen.queryByTestId("reader")).toBeNull());
+    // pressing "بدء القراءة" now must NOT inherit the previous section's page
+    fireEvent.click(screen.getByRole("button", { name: "بدء القراءة" }));
+    reader = await screen.findByTestId("reader");
+    expect(reader.getAttribute("data-initial")).toBe("«beginning»");
+  });
+
+  it("section navigation issues no network request (the Reader is code-split, content is a local import)", async () => {
+    const fetchSpy = vi.spyOn(globalThis, "fetch");
+    render(<LearningMaterialsPage />);
+    openOverview();
+    fireEvent.click(within(batchList()).getByRole("button", { name: "فتح قسم برمجة السويتش و VLAN" }));
+    await screen.findByTestId("reader");
+    expect(fetchSpy).not.toHaveBeenCalled();
   });
 });
 

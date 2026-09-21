@@ -94,3 +94,20 @@ export function pagePosition(manifest: LearningCourseManifest, pageId: string): 
   if (i < 0) return null;
   return { index: i + 1, total: flat.length };
 }
+
+/**
+ * The first canonical page (in reading order) that an overview "batch" (a presentation section that spans one or
+ * more modules, §29) opens at: the earliest page — by the same module.order → lesson.order → page.order authority
+ * as every other navigation helper — among ANY of the batch's modules. Returns `null` when the batch is unknown,
+ * carries no modules of its own, or (defensively) none of its modules contribute a page: a batch without a
+ * dedicated page has no canonical destination, so the CALLER decides what "no destination" means — the Reader's
+ * own controlled fallback (unknown/absent `initialPageId` → the course's first page) then opens the book at its
+ * canonical beginning. Pure; re-uses `flattenPageRefs`, never a re-implemented ordering.
+ */
+export function batchFirstPageId(manifest: LearningCourseManifest, batchId: string): string | null {
+  const batch = manifest?.batches?.find(b => b.id === batchId);
+  if (!batch || batch.moduleIds.length === 0) return null;
+  const ids = new Set(batch.moduleIds);
+  const first = flattenPageRefs(manifest).find(f => ids.has(f.module.id));
+  return first ? first.page.id : null;
+}

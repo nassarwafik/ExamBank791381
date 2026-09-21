@@ -21,7 +21,7 @@ type View = { kind: "reader"; pageId?: string; presentation?: boolean } | { kind
  *
  * `client === null` → no session → the Reader renders with no training host (generic cards, zero requests).
  */
-export default function LearningReaderWithTraining({ courseId, api, onExit, exitLabel, client, actor, onTrainingSubmitted, study = null, onStudyPointsEarned }: {
+export default function LearningReaderWithTraining({ courseId, api, onExit, exitLabel, client, actor, onTrainingSubmitted, study = null, onStudyPointsEarned, initialPageId }: {
   courseId: string;
   api?: ReaderContentApi;
   onExit: () => void;
@@ -34,8 +34,13 @@ export default function LearningReaderWithTraining({ courseId, api, onExit, exit
   study?: StudyClient | null;
   /** Fired when the server awarded study points (hosts use it to refresh Strength on exit). */
   onStudyPointsEarned?: () => void;
+  /** The page the Reader should open on FIRST mount (e.g. a Course-Overview section shortcut). Forwarded verbatim
+   *  to the wrapped LearningReader's `initialPageId` — read once, validated there against the manifest with the
+   *  Reader's existing controlled fallback. A remount with no value opens the book from its canonical beginning
+   *  (so «بدء القراءة» never inherits a section shortcut). Never re-read after mount. */
+  initialPageId?: string;
 }) {
-  const [view, setView] = useState<View>({ kind: "reader" });
+  const [view, setView] = useState<View>({ kind: "reader", pageId: initialPageId });
   const [list, setList] = useState<ListState>({ kind: "loading" });
   const [listNonce, setListNonce] = useState(0);
   const [studyState, setStudyState] = useState<StudyState>({ kind: "loading" });
