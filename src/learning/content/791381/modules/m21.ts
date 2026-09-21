@@ -129,6 +129,25 @@ const m21: ContentModule = {
               spans: [T("لاحظ في أمثلة الكتاب أمرين: الأصفار في بداية كل مقطع تُحذف ("), L("0db8"), T(" تصبح "), L("db8"), T("، و "), L("0042"), T(" تصبح "), L("42"), T(")، والمقاطع المكوّنة من أصفار فقط والمتتالية تُستبدل بـ "), L("::"), T(" مرة واحدة فقط.")],
             },
             {
+              // ENRICHMENT (Reader follow-up): a small LOCAL practice simulator — the student types the shortened form
+              // of the FULL address and checks it offline (no grading, no persistence). It uses ONLY the three exact
+              // PDF 167 examples from the book table above; correctness is the book's EXACT short target, compared with
+              // trim + case-insensitivity — the full long address and any non-final/partial compression are rejected.
+              id: "m21-l01-p02-sim", type: "simulation", origin: "teacher-enrichment",
+              simulationType: "ipv6-compress", version: 1,
+              title: "تدرّب: اختصر العنوان الكامل",
+              description: "يظهر لك العنوان الكامل؛ اكتب شكله المختصر كما في الكتاب ثم اضغط «تحقّق». التحقق يتم محليًا وبدون تصحيح أو حفظ، ويُتجاهل اختلاف حجم الأحرف والمسافات المحيطة. الأمثلة الثلاثة هي نفسها أمثلة جدول الكتاب. تلميحان يشرحان الخطوتين دون كشف الإجابة.",
+              capabilities: { fullscreen: true, reset: true, interactive: true },
+              fallback: { text: "تدريب اختصار IPv6: احذف الأصفار في بداية كل مقطع، ثم استبدل المقاطع الصفرية المتتالية بـ :: مرة واحدة." },
+              config: {
+                examples: [
+                  { long: "2001:0db8:0000:0000:0000:ff00:0042:8329", short: "2001:db8::ff00:42:8329" },
+                  { long: "fe80:0000:0000:0000:0202:b3ff:fe1e:8329", short: "fe80::202:b3ff:fe1e:8329" },
+                  { long: "2a00:8640:0000:0000:0200:23ff:fe10:8329", short: "2a00:8640::200:23ff:fe10:8329" },
+                ],
+              },
+            },
+            {
               id: "m21-l01-p02-q1", type: "practice", origin: "teacher-enrichment",
               question: {
                 kind: "multipleChoice", prompt: "ما الاختصار الصحيح للعنوان fe80:0000:0000:0000:0202:b3ff:fe1e:8329 كما في الكتاب؟",

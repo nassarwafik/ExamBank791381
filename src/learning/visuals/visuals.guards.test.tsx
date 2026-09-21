@@ -9,7 +9,7 @@ import { resolveVisual, REGISTERED_VISUAL_IDS } from "./registry";
 
 afterEach(cleanup);
 
-const DIRS = ["src/learning/visuals/791381/chapter1", "src/learning/visuals/791381/batch2", "src/learning/visuals/791381/batch3", "src/learning/visuals/791381/batch4", "src/learning/visuals/791381/batch5", "src/learning/visuals/791381/batch6", "src/learning/visuals/791381/batch7", "src/learning/visuals/791381/batch8", "src/learning/visuals/791381/batch9"].map(d => resolve(process.cwd(), d) + "/");
+const DIRS = ["src/learning/visuals/791381/chapter1", "src/learning/visuals/791381/batch2", "src/learning/visuals/791381/batch3", "src/learning/visuals/791381/batch4", "src/learning/visuals/791381/batch5", "src/learning/visuals/791381/batch6", "src/learning/visuals/791381/batch7", "src/learning/visuals/791381/batch8", "src/learning/visuals/791381/batch9", "src/learning/visuals/791381/followup"].map(d => resolve(process.cwd(), d) + "/");
 const componentFiles = DIRS.flatMap(dir => readdirSync(dir).filter(f => f.endsWith(".tsx")).map(f => dir + f));
 const sources = componentFiles.map(f => readFileSync(f, "utf8"));
 const css = readFileSync(resolve(process.cwd(), "src/learning/visuals/visuals.css"), "utf8");

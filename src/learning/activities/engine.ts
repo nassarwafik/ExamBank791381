@@ -293,4 +293,14 @@ export const productionActivityRegistry: LearningActivityRegistry = createActivi
     load: () => import("../cli/CliTerminalActivity"),
     capabilities: { fullscreen: true, reset: true, interactive: true },
   },
+  {
+    // Reader follow-up — the IPv6 long→short compression practice (PDF 167): show a full address, the student types
+    // the shortened form, and an offline canonicalizer verifies it (no grading / persistence / network). Uses only
+    // the three exact book examples. Its own lazy chunk.
+    kind: "simulation",
+    key: "ipv6-compress",
+    versions: [1],
+    load: () => import("./Ipv6CompressSimulator"),
+    capabilities: { fullscreen: true, reset: true, interactive: true },
+  },
 ]);

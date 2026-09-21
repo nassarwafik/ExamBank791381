@@ -81,7 +81,7 @@ describe("Batch 6 — scope and placement (routing / switch-services arc)", () =
 
   it("registry grew by exactly 16 (65 → 81) for Batch 6; each new id resolves (total is 121 after Batch 7+8+9 sync)", () => {
     // Batch 6 added these 16 ids; the whole-course registry total is 121 after Batch 7 + 8 + 9 are all present.
-    expect(REGISTERED_VISUAL_IDS.length).toBe(121);
+    expect(REGISTERED_VISUAL_IDS.length).toBe(122);
     for (const id of NEW_IDS) expect(resolveVisual(id), id).not.toBeNull();
   });
 

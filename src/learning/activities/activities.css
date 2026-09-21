@@ -631,3 +631,26 @@
 .learning-handshake-line, .learning-handshake-hint, .learning-handshake-summary{ color:var(--eb-text); font-size:var(--eb-fs-14); line-height:var(--eb-lh-body); }
 .learning-handshake-hint, .learning-handshake-empty{ color:var(--eb-muted); }
 .learning-handshake-summary{ font-weight:var(--eb-fw-semibold); color:var(--eb-text-heading); }
+
+/* ── Reader follow-up: IPv6 long→short compression practice simulator ─────────────────────────────────────── */
+.learning-ipv6c{ display:flex; flex-direction:column; gap:var(--eb-space-3); }
+.learning-ipv6c-prompt{ margin:0; color:var(--eb-text); font-size:var(--eb-fs-14); line-height:var(--eb-lh-body); }
+/* The address itself is a LTR technical token; it wraps on narrow screens instead of overflowing the page. */
+.learning-ipv6c-full{ margin:0; direction:ltr; text-align:center; overflow-wrap:anywhere; }
+.learning-ipv6c-full code{ font-family:var(--eb-font-mono, ui-monospace, monospace); font-size:var(--eb-fs-16); font-weight:var(--eb-fw-bold); color:var(--eb-text-heading); }
+.learning-ipv6c-label{ font-size:var(--eb-fs-13); color:var(--eb-text-secondary); }
+.learning-ipv6c-row{ display:flex; flex-wrap:wrap; align-items:center; gap:var(--eb-space-2); }
+.learning-ipv6c-input{ flex:1 1 12rem; min-height:44px; direction:ltr; padding:var(--eb-space-2) var(--eb-space-3);
+  border:2px solid var(--eb-line); border-radius:var(--eb-r); background:var(--eb-surface); color:var(--eb-text-heading);
+  font-family:var(--eb-font-mono, ui-monospace, monospace); font-size:var(--eb-fs-16); }
+.learning-ipv6c-input:focus-visible{ outline:2px solid var(--eb-primary); outline-offset:2px; border-color:var(--eb-primary); }
+.learning-ipv6c-check{ min-height:44px; }
+.learning-ipv6c-verdict{ margin:0; display:flex; flex-wrap:wrap; align-items:center; gap:var(--eb-space-1);
+  font-size:var(--eb-fs-14); font-weight:var(--eb-fw-semibold); }
+.learning-ipv6c-verdict code{ font-family:var(--eb-font-mono, ui-monospace, monospace); font-weight:var(--eb-fw-bold); }
+.learning-ipv6c-verdict.is-right{ color:var(--eb-success, var(--eb-primary-strong)); }
+.learning-ipv6c-verdict.is-wrong{ color:var(--eb-danger, var(--eb-text-heading)); }
+.learning-ipv6c-hints{ display:flex; flex-wrap:wrap; gap:var(--eb-space-2); }
+.learning-ipv6c-hint{ margin:0; padding:var(--eb-space-2) var(--eb-space-3); border-radius:var(--eb-r);
+  background:var(--eb-primary-050); color:var(--eb-text); font-size:var(--eb-fs-14); line-height:var(--eb-lh-body); }
+.learning-ipv6c-next{ align-self:flex-start; min-height:44px; }

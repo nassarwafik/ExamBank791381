@@ -232,7 +232,8 @@ describe("Batch 8 — the REAL book CLI exercises (simulation / cli-terminal / v
       expect(e.block.fallback?.text, e.block.id).toBeTruthy();
       expect(e.block.capabilities, e.block.id).toEqual({ fullscreen: true, reset: true, interactive: true });
     }
-    expect(sims(m20).length + sims(m21).length).toBe(0);
+    expect(sims(m20).length).toBe(0);
+    expect(sims(m21).length).toBe(1);   // Reader follow-up: the ipv6-compress practice simulator on the PDF 167 page
     expect(allBlocks.filter(b => b.type === "animation" || b.type === "guided" || b.type === "interactive-diagram")).toHaveLength(0);
   });
   it("the guided example (PDF 172) is completed by the book's own eight lines (with the G0/0 interface from PDF 174) and by common spellings; a wrong-mode line does not advance it", () => {
@@ -305,14 +306,14 @@ describe("Batch 8 — pedagogy, provenance, direction", () => {
       expect(p.blocks[rev].type === "heading" && p.blocks[rev].text).toBe("مراجعة الوحدة");
     }
   });
-  it("counts: 7 / 3 / 11 pages, 14 / 8 / 21 practices, 2 / 1 / 2 worksheets, 7 / 3 / 11 clarifications, 0 / 0 / 2 code blocks, 0 / 0 / 3 simulations; worksheet keys are always one of their options", () => {
+  it("counts: 7 / 3 / 11 pages, 14 / 8 / 21 practices, 3 / 1 / 2 worksheets, 7 / 3 / 11 clarifications, 0 / 0 / 2 code blocks, 0 / 1 / 3 simulations; worksheet keys are always one of their options", () => {
     const count = (m: ContentModule, f: (b: ContentBlock) => boolean) => pagesOf(m).flatMap(p => p.blocks).filter(f).length;
     expect(BATCH.map(m => pagesOf(m).length)).toEqual([7, 3, 11]);
     expect(BATCH.map(m => count(m, b => b.type === "practice"))).toEqual([14, 8, 21]);
-    expect(BATCH.map(m => count(m, b => b.type === "practice-table"))).toEqual([2, 1, 2]);
+    expect(BATCH.map(m => count(m, b => b.type === "practice-table"))).toEqual([3, 1, 2]);
     expect(BATCH.map(m => count(m, b => b.type === "callout" && b.kind === "clarification"))).toEqual([7, 3, 11]);
     expect(BATCH.map(m => count(m, b => b.type === "code"))).toEqual([0, 0, 2]);
-    expect(BATCH.map(m => count(m, b => b.type === "simulation"))).toEqual([0, 0, 3]);
+    expect(BATCH.map(m => count(m, b => b.type === "simulation"))).toEqual([0, 1, 3]);
     for (const b of allBlocks) if (b.type === "practice-table") {
       let selects = 0;
       for (const row of b.rows) for (const cell of row) if (typeof cell !== "string") { selects++; expect(sel(cell).options, b.id).toContain(sel(cell).key); expect(new Set(sel(cell).options).size).toBe(sel(cell).options.length); }

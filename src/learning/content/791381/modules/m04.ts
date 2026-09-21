@@ -321,6 +321,15 @@ const m04: ContentModule = {
               spans: [T("الراوتر لا يعرف "), L("VLAN"), T(" إلا إذا وصلته الحزم عبر "), L("Trunk"), T(".")],
             },
             {
+              // ENRICHMENT (Reader follow-up): teacher-requested network diagram — Sw6 ↔ Router trunk topology.
+              id: "m04-l01-p05-visual", type: "visual", origin: "teacher-enrichment",
+              visualId: "791381/m04/sw6-router-trunk", motion: false,
+              source: src(150),
+              title: "مخطط الشبكة: Sw6 مع الراوتر عبر Trunk",
+              alt: "مخطط شبكة يبيّن الراوتر في الأعلى متصلًا بـ Sw6 عبر المنفذ G0/0 كوصلة Trunk، و Sw6 متصل بسويتشات أخرى عبر المنافذ F0/22 و F0/23 و F0/24.",
+              caption: "‏رابط Sw6 بالراوتر Trunk لأن عدة VLAN يجب أن تصل الراوتر · F0/22–F0/24 نحو سويتشات أخرى.",
+            },
+            {
               id: "m04-l01-p05-clar", type: "callout", origin: "teacher-enrichment", kind: "clarification", title: "توضيح",
               spans: [T("هنا يظهر المنفذ "), L("G0/0"), T(" الذي رأيته في صف "), L("Sw6-HFA"), T(" من الجدول: إنه المنفذ نحو الراوتر، ويجب أن يكون "), L("Trunk"), T(" أيضًا حتى تصل الحزم مع الـ "), L("Tag"), T(" إلى الراوتر. اسم الطريقة "), L("Router on a Stick"), T(" يشرحه الكتاب في الصفحة التالية.")],
             },
@@ -584,9 +593,9 @@ const m04: ContentModule = {
               id: "m04-l02-p04-visual", type: "visual", origin: "teacher-enrichment",
               visualId: "791381/m04/subinterfaces-vlan10-20", motion: false,
               source: src(154),
-              title: "مخطط: واجهات فرعية — VLAN 10 / 20",
-              alt: "مخطط يبيّن الواجهة الفيزيائية g0/0 مقسّمة إلى واجهات فرعية: g0/0.10 مرتبطة بـ VLAN 10 (encapsulation dot1Q 10، البوابة 192.168.10.254)، و g0/0.20 تُفتح لـ VLAN 20.",
-              caption: "‏g0/0.10 = بوابة VLAN 10 (192.168.10.254) · g0/0.20 تُفتح لـ VLAN 20.",
+              title: "مخطط الشبكة: Router on a Stick — VLAN 10 / 20",
+              alt: "مخطط شبكة يبيّن الراوتر متصلًا بالسويتش عبر g0/0 كوصلة Trunk، و g0/0 مقسّمة إلى واجهتين فرعيتين: g0/0.10 لـ VLAN 10 (encapsulation dot1Q 10، البوابة 192.168.10.254) و g0/0.20 فُتحت لـ VLAN 20، والسويتش يوزّع الشبكتين على أجهزة VLAN 10 و VLAN 20.",
+              caption: "‏g0/0 Trunk واحد ينقسم إلى g0/0.10 (بوابة VLAN 10 = 192.168.10.254) و g0/0.20 (تُفتح لـ VLAN 20).",
             },
             {
               id: "m04-l02-p04-clar", type: "callout", origin: "teacher-enrichment", kind: "clarification", title: "توضيح",

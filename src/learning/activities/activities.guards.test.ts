@@ -94,7 +94,7 @@ describe("Phase 3A — no code execution from content", () => {
 });
 
 describe("production registry is an exact allowlist", () => {
-  it("registers ONLY the exact fourteen-entry allowlist (3B, 3E, Units 4–6, Units 7–8, Batch 3, Batch 4, Batch 5, Batch 8) — the single CLI renderer is the Batch-8 teaching simulator (no chunk loads at import time)", () => {
+  it("registers ONLY the exact fifteen-entry allowlist (3B, 3E, Units 4–6, Units 7–8, Batch 3, Batch 4, Batch 5, Batch 8, Reader follow-up) — the single CLI renderer is the Batch-8 teaching simulator (no chunk loads at import time)", () => {
     expect(productionActivityRegistry.list()).toEqual([
       { kind: "interactive-diagram", key: "network-scope", versions: [1] },
       { kind: "interactive-diagram", key: "ipv4-octets", versions: [1] },
@@ -110,8 +110,9 @@ describe("production registry is an exact allowlist", () => {
       { kind: "interactive-diagram", key: "network-domains", versions: [1] },
       { kind: "interactive-diagram", key: "tcp-handshake", versions: [1] },
       { kind: "simulation", key: "cli-terminal", versions: [1] },
+      { kind: "simulation", key: "ipv6-compress", versions: [1] },
     ]);
-    expect(productionActivityRegistry.size).toBe(14);
+    expect(productionActivityRegistry.size).toBe(15);
     expect(productionActivityRegistry.list().filter(e => /cli/i.test(e.key)).map(e => e.key)).toEqual(["cli-terminal"]);
     expect(productionActivityRegistry.list().some(e => /vlan|subnet-calc/i.test(e.key))).toBe(false);
   });
@@ -123,6 +124,9 @@ describe("production registry is an exact allowlist", () => {
   });
   it("the Batch-8 CLI teaching simulator is reached only through a static string-literal import thunk (its own chunk)", () => {
     expect(engine).toContain('import("../cli/CliTerminalActivity")');
+  });
+  it("the Reader follow-up IPv6 compressor is reached only through a static string-literal import thunk (its own chunk)", () => {
+    expect(engine).toContain('import("./Ipv6CompressSimulator")');
   });
 });
 

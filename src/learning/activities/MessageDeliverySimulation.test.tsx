@@ -40,7 +40,7 @@ describe("registry identity", () => {
     expect(productionActivityRegistry.resolve(block)?.key).toBe("message-delivery");
     expect(productionActivityRegistry.resolve({ ...block, version: 2 })).toBeUndefined();
     expect(productionActivityRegistry.resolve({ ...block, simulationType: "packet-delivery" })).toBeUndefined();
-    expect(productionActivityRegistry.list().filter(e => e.kind === "simulation").map(e => e.key)).toEqual(["hub-switch-router-flow", "message-delivery", "cli-terminal"]);   // Batch 8 added the CLI teaching simulator
+    expect(productionActivityRegistry.list().filter(e => e.kind === "simulation").map(e => e.key)).toEqual(["hub-switch-router-flow", "message-delivery", "cli-terminal", "ipv6-compress"]);   // Batch 8 added the CLI teaching simulator; the Reader follow-up added the IPv6 compressor
   });
 });
 

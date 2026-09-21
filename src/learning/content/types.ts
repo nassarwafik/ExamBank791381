@@ -177,7 +177,17 @@ export type PracticeQuestion =
   | { kind: "fillBlank"; prompt: string; answers?: string[]; feedback?: PracticeFeedback };
 export type PracticeQuestionKind = PracticeQuestion["kind"];
 export const PRACTICE_QUESTION_KINDS: readonly PracticeQuestionKind[] = ["multipleChoice", "trueFalse", "shortInput", "fillBlank"];
-export interface PracticeBlock extends BlockBase { type: "practice"; question: PracticeQuestion; }
+/**
+ * Opt-OUT for Study Practice Strength, shared by the practice-capable blocks. A locally-checked exercise stays fully
+ * interactive in the Reader (immediate feedback, retry, reset) but is kept OUT of Study Strength — it never enters the
+ * server key index, never appears in the page's study bar, and can earn no point / rank / medal. This is a generic,
+ * course-agnostic flag (never a page-id special case). Default/undefined = eligible, exactly as before.
+ */
+export interface StudyEligibilityOptOut {
+  /** Set to `false` for a local-only self-check that must not count toward Study Strength. Omit to stay eligible. */
+  studyEligible?: false;
+}
+export interface PracticeBlock extends BlockBase, StudyEligibilityOptOut { type: "practice"; question: PracticeQuestion; }
 
 // ────────────────────────────────────────────────────────────────────────────
 // Interactive Learning Engine (Phase 3A) — activity descriptor contract.
@@ -399,7 +409,7 @@ export type PracticeTableCell = string | PracticeTableSelectCell;
  * any book's "fill the column" exercise is authored as data (the values, the choices and the expected choice), and
  * the Reader renders the checking UI. At least one cell must be a select cell (otherwise author a `table`).
  */
-export interface PracticeTableBlock extends BlockBase {
+export interface PracticeTableBlock extends BlockBase, StudyEligibilityOptOut {
   type: "practice-table";
   caption?: string;
   headers: string[];
