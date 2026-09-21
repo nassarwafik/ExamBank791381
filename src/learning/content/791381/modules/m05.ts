@@ -69,11 +69,11 @@ const m05: ContentModule = {
             {
               // ENRICHMENT (Batch 8): SVG visual enrichment appended after the book content.
               id: "m05-l01-p03-visual", type: "visual", origin: "teacher-enrichment",
-              visualId: "791381/m05/cisco-command-families", motion: false,
+              visualId: "791381/m05/cisco-cli-overview", motion: false,
               source: src(192),
-              title: "مخطط: خريطة عائلات أوامر Cisco",
-              alt: "خريطة تنقّل: عائلات أوامر Cisco التي يجمعها المرجع (السويتش و VLAN، VTP، Router on a Stick، Port Security، كلمات المرور) وكل عائلة بمهمّتها، دون سرد الأوامر نفسها.",
-              caption: "‏خريطة: أيّ عائلة أوامر ترتبط بأيّ مهمّة — لا سرد للأوامر.",
+              title: "مخطط: إدارة أجهزة Cisco عبر CLI",
+              alt: "مخطط: أجهزة Cisco تُدار عبر CLI بأوامر مباشرة لإعداد الجهاز، وتختلف الأوامر حسب نوع الجهاز والإصدار، والمطلوب فهم وظيفة الأمر ومتى يُستخدم.",
+              caption: "‏أجهزة Cisco تُدار عبر CLI: افهم وظيفة الأمر ومتى يُستخدم.",
             },
             {
               id: "m05-l01-p03-note", type: "callout", origin: "teacher-enrichment", kind: "clarification", title: "توضيح المعلّم",

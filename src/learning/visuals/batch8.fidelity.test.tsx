@@ -12,13 +12,13 @@ import DhcpAutomaticConfig from "./791381/batch8/DhcpAutomaticConfig";
 import DedicatedDhcpServer from "./791381/batch8/DedicatedDhcpServer";
 import PortSecurityConcept from "./791381/batch8/PortSecurityConcept";
 import DeviceSecurityLayers from "./791381/batch8/DeviceSecurityLayers";
-import CiscoCommandFamilies from "./791381/batch8/CiscoCommandFamilies";
+import CiscoCliOverview from "./791381/batch8/CiscoCliOverview";
 import ShowCommandsMap from "./791381/batch8/ShowCommandsMap";
 import FrameRelayVsAtm from "./791381/batch8/FrameRelayVsAtm";
 import HdlcVsMetro from "./791381/batch8/HdlcVsMetro";
 import RoutingMethodsOverview from "./791381/batch8/RoutingMethodsOverview";
 import StaticRoutePath from "./791381/batch8/StaticRoutePath";
-import EigrpNeighborsMetric from "./791381/batch8/EigrpNeighborsMetric";
+import EigrpMetricAdaptation from "./791381/batch8/EigrpMetricAdaptation";
 // the two Batch-6 components enhanced in place by Batch 8
 import DhcpPoolExcluded from "./791381/batch6/DhcpPoolExcluded";
 import AdminDistance from "./791381/batch6/AdminDistance";
@@ -84,14 +84,19 @@ describe("Batch 8 — device-security-layers (PDF 185): protect the device itsel
   });
 });
 
-// ── m05 command families (PDF 192) — navigation map by task, NO command dump ──
-describe("Batch 8 — cisco-command-families (PDF 192): family → task map, not a command dump", () => {
-  it("names the command families by task; does NOT dump the per-family commands from PDF 193–197", () => {
-    const { container } = render(<CiscoCommandFamilies ariaLabel="x" reducedMotion={true} />);
+// ── m05 CLI overview (PDF 192) — ONLY the page's own general CLI concepts, NO future command families ──
+describe("Batch 8 — cisco-cli-overview (PDF 192): general CLI concepts only, no future family structure", () => {
+  it("shows the device managed by the CLI and the page's own ideas; leaks NO downstream command families/commands", () => {
+    const { container } = render(<CiscoCliOverview ariaLabel="x" reducedMotion={true} />);
     const t = text(container);
-    for (const s of ["CLI", "VTP", "Router on a Stick", "Port Security", "كلمات المرور"]) expect(t).toContain(s);
-    expect(container.querySelectorAll("[data-family]").length).toBe(5);
-    for (const cmd of ["switchport", "vlan brief", "enable secret", "line vty", "ip dhcp pool"]) expect(t).not.toContain(cmd);
+    // PDF 192's own source concepts
+    for (const s of ["CLI", "جهاز Cisco", "أوامر مباشرة", "وظيفة الأمر", "الامتحانات العملية"]) expect(t).toContain(s);
+    expect(container.querySelector('[data-node="device"]')).not.toBeNull();
+    expect(container.querySelector('[data-node="cli"]')).not.toBeNull();
+    // future-page command FAMILIES / commands must not leak onto PDF 192 (none are literally on the page)
+    for (const leak of ["VTP", "Router on a Stick", "Port Security", "VLAN", "enable secret", "switchport", "line vty"]) {
+      expect(t, leak).not.toContain(leak);
+    }
   });
 });
 
@@ -156,15 +161,25 @@ describe("Batch 8 — static-route-path (PDF 211): admin-defined fixed path, no 
   });
 });
 
-// ── m27 EIGRP (PDF 218) — neighbours + metric, NO PDF 219/220/221 leak ──
-describe("Batch 8 — eigrp-neighbors-metric (PDF 218): neighbours exchange, metric Bandwidth + Delay", () => {
-  it("shows the neighbour exchange and the metric; does NOT leak the AS number or config commands", () => {
-    const { container } = render(<EigrpNeighborsMetric ariaLabel="x" reducedMotion={true} />);
+// ── m27 EIGRP (PDF 218) — ONLY PDF 218 concepts (metric + fast adaptation); NO neighbours/exchange/topology/CLI ──
+describe("Batch 8 — eigrp-metric-adaptation (PDF 218): metric Bandwidth + Delay + fast adaptation, PDF 218 only", () => {
+  it("shows only PDF 218's own EIGRP concepts", () => {
+    const { container } = render(<EigrpMetricAdaptation ariaLabel="x" reducedMotion={true} />);
     const t = text(container);
-    for (const s of ["EIGRP", "Bandwidth + Delay", "Distance Vector", "Cisco"]) expect(t).toContain(s);
-    expect(container.querySelectorAll('[data-role="router"]').length).toBe(2);
+    for (const s of ["EIGRP", "Enhanced Interior Gateway Routing Protocol", "Distance Vector", "Cisco", "Bandwidth + Delay", "سريع", "التكيّف"]) {
+      expect(t, s).toContain(s);
+    }
     expect(container.querySelector('[data-metric="1"]')).not.toBeNull();
-    for (const leak of ["router eigrp", "network", "no auto-summary", "AS 100", "100", "R1", "R2"]) expect(t).not.toContain(leak);
+    expect(container.querySelector('[data-adapt="1"]')).not.toBeNull();
+  });
+  it("does NOT introduce the unsupported neighbours/exchange idea, the PDF 219 topology, or PDF 220/221 CLI", () => {
+    const { container } = render(<EigrpMetricAdaptation ariaLabel="x" reducedMotion={true} />);
+    const t = text(container);
+    for (const leak of ["جيران", "تبادل المسارات", "neighbors", "exchange routes", "AS 100", "R1", "R2", "router eigrp", "network"]) {
+      expect(t, leak).not.toContain(leak);
+    }
+    // no neighbour topology: this concept visual has no paired routers
+    expect(container.querySelectorAll('[data-role="router"]').length).toBe(0);
   });
 });
 
@@ -203,8 +218,8 @@ describe("Batch 8 enhancement — admin-distance (PDF 213): exact AD values kept
 
 // ── cross-cutting: reduced motion removes ALL SMIL animation from every Batch-8 visual (incl. the two enhanced) ──
 describe("Batch 8 — reduced motion drops all motion; the animated ones render some when on", () => {
-  const ALL = [DhcpAutomaticConfig, DedicatedDhcpServer, PortSecurityConcept, DeviceSecurityLayers, CiscoCommandFamilies,
-    ShowCommandsMap, FrameRelayVsAtm, HdlcVsMetro, RoutingMethodsOverview, StaticRoutePath, EigrpNeighborsMetric,
+  const ALL = [DhcpAutomaticConfig, DedicatedDhcpServer, PortSecurityConcept, DeviceSecurityLayers, CiscoCliOverview,
+    ShowCommandsMap, FrameRelayVsAtm, HdlcVsMetro, RoutingMethodsOverview, StaticRoutePath, EigrpMetricAdaptation,
     DhcpPoolExcluded, AdminDistance];
   const ANIMATED = [DhcpAutomaticConfig, PortSecurityConcept, StaticRoutePath];
   it("no <animateMotion>, no <animate>, and a valid still svg[role=img] for each", () => {

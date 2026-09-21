@@ -115,13 +115,13 @@ import DhcpAutomaticConfig from "./791381/batch8/DhcpAutomaticConfig";
 import DedicatedDhcpServer from "./791381/batch8/DedicatedDhcpServer";
 import PortSecurityConcept from "./791381/batch8/PortSecurityConcept";
 import DeviceSecurityLayers from "./791381/batch8/DeviceSecurityLayers";
-import CiscoCommandFamilies from "./791381/batch8/CiscoCommandFamilies";
+import CiscoCliOverview from "./791381/batch8/CiscoCliOverview";
 import ShowCommandsMap from "./791381/batch8/ShowCommandsMap";
 import FrameRelayVsAtm from "./791381/batch8/FrameRelayVsAtm";
 import HdlcVsMetro from "./791381/batch8/HdlcVsMetro";
 import RoutingMethodsOverview from "./791381/batch8/RoutingMethodsOverview";
 import StaticRoutePath from "./791381/batch8/StaticRoutePath";
-import EigrpNeighborsMetric from "./791381/batch8/EigrpNeighborsMetric";
+import EigrpMetricAdaptation from "./791381/batch8/EigrpMetricAdaptation";
 
 const VISUALS: readonly RegisteredVisual[] = [
   // Chapter 1 pilot
@@ -238,7 +238,7 @@ const VISUALS: readonly RegisteredVisual[] = [
   // Batch 8 — Cisco device security framing (m24)
   { id: "791381/m24/device-security-layers", component: DeviceSecurityLayers, motion: false },
   // Batch 8 — Cisco command reference maps (m05)
-  { id: "791381/m05/cisco-command-families", component: CiscoCommandFamilies, motion: false },
+  { id: "791381/m05/cisco-cli-overview", component: CiscoCliOverview, motion: false },
   { id: "791381/m05/show-commands-map", component: ShowCommandsMap, motion: false },
   // Batch 8 — WAN technologies (m26)
   { id: "791381/m26/frame-relay-vs-atm", component: FrameRelayVsAtm, motion: false },
@@ -246,7 +246,7 @@ const VISUALS: readonly RegisteredVisual[] = [
   // Batch 8 — routing protocols (m27)
   { id: "791381/m27/routing-methods-overview", component: RoutingMethodsOverview, motion: false },
   { id: "791381/m27/static-route-path", component: StaticRoutePath, motion: true },
-  { id: "791381/m27/eigrp-neighbors-metric", component: EigrpNeighborsMetric, motion: false },
+  { id: "791381/m27/eigrp-metric-adaptation", component: EigrpMetricAdaptation, motion: false },
 ];
 
 // Build the lookup once. A duplicate id is a programming error (a later entry silently shadowing an earlier one), so

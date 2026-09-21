@@ -32,7 +32,7 @@ const PLACEMENTS: Record<string, { visualId: string; pdf: number }> = {
   // m24 — Cisco device security framing
   "791381-m24-l01-p01": { visualId: "791381/m24/device-security-layers", pdf: 185 },
   // m05 — Cisco command reference maps
-  "791381-m05-l01-p03": { visualId: "791381/m05/cisco-command-families", pdf: 192 },
+  "791381-m05-l01-p03": { visualId: "791381/m05/cisco-cli-overview", pdf: 192 },
   "791381-m05-l03-p01": { visualId: "791381/m05/show-commands-map", pdf: 198 },
   // m26 — WAN technologies
   "791381-m26-l01-p02": { visualId: "791381/m26/frame-relay-vs-atm", pdf: 208 },
@@ -40,15 +40,15 @@ const PLACEMENTS: Record<string, { visualId: string; pdf: number }> = {
   // m27 — routing protocols
   "791381-m27-l01-p01": { visualId: "791381/m27/routing-methods-overview", pdf: 210 },
   "791381-m27-l01-p02": { visualId: "791381/m27/static-route-path", pdf: 211 },
-  "791381-m27-l03-p01": { visualId: "791381/m27/eigrp-neighbors-metric", pdf: 218 },
+  "791381-m27-l03-p01": { visualId: "791381/m27/eigrp-metric-adaptation", pdf: 218 },
 };
 const NEW_IDS = [
   "791381/m22/dhcp-automatic-config", "791381/m22/dedicated-dhcp-server",
   "791381/m23/port-security-concept",
   "791381/m24/device-security-layers",
-  "791381/m05/cisco-command-families", "791381/m05/show-commands-map",
+  "791381/m05/cisco-cli-overview", "791381/m05/show-commands-map",
   "791381/m26/frame-relay-vs-atm", "791381/m26/hdlc-vs-metro",
-  "791381/m27/routing-methods-overview", "791381/m27/static-route-path", "791381/m27/eigrp-neighbors-metric",
+  "791381/m27/routing-methods-overview", "791381/m27/static-route-path", "791381/m27/eigrp-metric-adaptation",
 ];
 // Two EXISTING (Batch 6) components enhanced in place — same id, NO new registry entry.
 const ENHANCED_EXISTING_IDS = ["791381/m22/dhcp-pool-excluded", "791381/m27/admin-distance"];

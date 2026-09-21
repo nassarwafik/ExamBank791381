@@ -621,11 +621,11 @@ const m27: ContentModule = {
             {
               // ENRICHMENT (Batch 8): SVG visual enrichment appended after the book content.
               id: "m27-l03-p01-visual", type: "visual", origin: "teacher-enrichment",
-              visualId: "791381/m27/eigrp-neighbors-metric", motion: false,
+              visualId: "791381/m27/eigrp-metric-adaptation", motion: false,
               source: src(218),
-              title: "مخطط: جيران EIGRP والمقياس",
-              alt: "مخطط: راوتران جاران في EIGRP يتبادلان المسارات، والمقياس Bandwidth + Delay، وهو بروتوكول Distance Vector من Cisco سريع التقارب — دون رقم AS أو أوامر الإعداد.",
-              caption: "‏EIGRP: الجيران يتبادلون المسارات ويختارون بـ Bandwidth + Delay.",
+              title: "مخطط: مقياس EIGRP والتكيّف السريع",
+              alt: "مخطط: EIGRP بروتوكول Distance Vector من Cisco، يختار المسار بمقياس Bandwidth + Delay ويتكيّف بسرعة مع تغيّرات الشبكة، عند مستوى صفحة المفهوم دون أوامر إعداد.",
+              caption: "‏EIGRP: مقياس Bandwidth + Delay لاختيار المسار، وتكيّف سريع مع التغييرات.",
             },
             {
               id: "m27-l03-p01-note", type: "callout", origin: "teacher-enrichment", kind: "clarification", title: "توضيح المعلّم",
