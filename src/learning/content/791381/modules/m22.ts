@@ -69,13 +69,14 @@ const m22: ContentModule = {
               spans: [T("بدون "), L("DHCP"), T(" نحتاج إدخال "), L("IP"), T(" يدويًا لكل جهاز على حدة.")],
             },
             {
-              // ENRICHMENT (Batch 8): SVG visual enrichment appended after the book content.
+              // ENRICHMENT (Batch 8; Reader follow-up: teacher-authorized unit-level enrichment showing the TWO DHCP
+              // methods — router-as-DHCP or a dedicated DHCP server — both introduced in this unit, PDF 169–176).
               id: "m22-l01-p01-visual", type: "visual", origin: "teacher-enrichment",
               visualId: "791381/m22/dhcp-automatic-config", motion: true,
               source: src(169),
-              title: "مخطط: DHCP يوزّع الإعدادات تلقائيًا",
-              alt: "مخطط متحرّك: عند انضمام جهاز جديد يعطيه DHCP عنوان IP والبوابة وخادم DNS تلقائيًا بدل الإدخال اليدوي، دون عرض مراحل التبادل الأربع.",
-              caption: "‏DHCP يعطي الجهاز الجديد عنوان IP والبوابة و DNS تلقائيًا.",
+              title: "مخطط: DHCP تلقائيًا — الراوتر أو خادم مخصّص",
+              alt: "مخطط متحرّك يبيّن طريقتين لتوفير DHCP: الراوتر كخادم DHCP أو خادم DHCP مخصّص، وكلاهما يعطي الجهاز الجديد عنوان IP والبوابة وخادم DNS تلقائيًا بدل الإدخال اليدوي، دون عرض مراحل التبادل الأربع.",
+              caption: "‏الراوتر أو خادم مخصّص — كلاهما يوزّع IP والبوابة و DNS تلقائيًا.",
             },
             {
               id: "m22-l01-p01-note", type: "callout", origin: "teacher-enrichment", kind: "clarification", title: "توضيح المعلّم",
