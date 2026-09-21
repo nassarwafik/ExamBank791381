@@ -124,6 +124,21 @@ import WifiProtectionTechnologies from "./791381/batch7/WifiProtectionTechnologi
 import AccessPointBridge from "./791381/batch7/AccessPointBridge";
 import Ipv6Anatomy from "./791381/batch7/Ipv6Anatomy";
 import Ipv6Compression from "./791381/batch7/Ipv6Compression";
+// Batch 8 — services / routing arc across the previously visual-free CONCEPT pages of m22 (DHCP), m23 (Port
+// Security), m24 (Cisco device security), m05 (Cisco command reference), m26 (WAN) and m27 (routing protocols).
+// Concept pages only — the CLI-simulator command pages get no redundant SVG. Same data-only, exact-allowlist,
+// finite one-shot / reduced-motion discipline.
+import DhcpAutomaticConfig from "./791381/batch8/DhcpAutomaticConfig";
+import DedicatedDhcpServer from "./791381/batch8/DedicatedDhcpServer";
+import PortSecurityConcept from "./791381/batch8/PortSecurityConcept";
+import DeviceSecurityLayers from "./791381/batch8/DeviceSecurityLayers";
+import CiscoCliOverview from "./791381/batch8/CiscoCliOverview";
+import ShowCommandsMap from "./791381/batch8/ShowCommandsMap";
+import FrameRelayVsAtm from "./791381/batch8/FrameRelayVsAtm";
+import HdlcVsMetro from "./791381/batch8/HdlcVsMetro";
+import RoutingMethodsOverview from "./791381/batch8/RoutingMethodsOverview";
+import StaticRoutePath from "./791381/batch8/StaticRoutePath";
+import EigrpMetricAdaptation from "./791381/batch8/EigrpMetricAdaptation";
 
 const VISUALS: readonly RegisteredVisual[] = [
   // Chapter 1 pilot
@@ -249,6 +264,23 @@ const VISUALS: readonly RegisteredVisual[] = [
   // Batch 7 — IPv6 (m21)
   { id: "791381/m21/ipv6-anatomy", component: Ipv6Anatomy, motion: false },
   { id: "791381/m21/ipv6-compression", component: Ipv6Compression, motion: true },
+  // Batch 8 — DHCP concept pages (m22)
+  { id: "791381/m22/dhcp-automatic-config", component: DhcpAutomaticConfig, motion: true },
+  { id: "791381/m22/dedicated-dhcp-server", component: DedicatedDhcpServer, motion: false },
+  // Batch 8 — Port Security concept (m23)
+  { id: "791381/m23/port-security-concept", component: PortSecurityConcept, motion: true },
+  // Batch 8 — Cisco device security framing (m24)
+  { id: "791381/m24/device-security-layers", component: DeviceSecurityLayers, motion: false },
+  // Batch 8 — Cisco command reference maps (m05)
+  { id: "791381/m05/cisco-cli-overview", component: CiscoCliOverview, motion: false },
+  { id: "791381/m05/show-commands-map", component: ShowCommandsMap, motion: false },
+  // Batch 8 — WAN technologies (m26)
+  { id: "791381/m26/frame-relay-vs-atm", component: FrameRelayVsAtm, motion: false },
+  { id: "791381/m26/hdlc-vs-metro", component: HdlcVsMetro, motion: false },
+  // Batch 8 — routing protocols (m27)
+  { id: "791381/m27/routing-methods-overview", component: RoutingMethodsOverview, motion: false },
+  { id: "791381/m27/static-route-path", component: StaticRoutePath, motion: true },
+  { id: "791381/m27/eigrp-metric-adaptation", component: EigrpMetricAdaptation, motion: false },
 ];
 
 // Build the lookup once. A duplicate id is a programming error (a later entry silently shadowing an earlier one), so

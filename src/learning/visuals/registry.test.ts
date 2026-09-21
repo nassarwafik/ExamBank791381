@@ -128,8 +128,25 @@ describe("visuals registry", () => {
       // Batch 7 — IPv6 (m21)
       "791381/m21/ipv6-anatomy",
       "791381/m21/ipv6-compression",
+      // Batch 8 — DHCP concept pages (m22)
+      "791381/m22/dhcp-automatic-config",
+      "791381/m22/dedicated-dhcp-server",
+      // Batch 8 — Port Security concept (m23)
+      "791381/m23/port-security-concept",
+      // Batch 8 — Cisco device security framing (m24)
+      "791381/m24/device-security-layers",
+      // Batch 8 — Cisco command reference maps (m05)
+      "791381/m05/cisco-cli-overview",
+      "791381/m05/show-commands-map",
+      // Batch 8 — WAN technologies (m26)
+      "791381/m26/frame-relay-vs-atm",
+      "791381/m26/hdlc-vs-metro",
+      // Batch 8 — routing protocols (m27)
+      "791381/m27/routing-methods-overview",
+      "791381/m27/static-route-path",
+      "791381/m27/eigrp-metric-adaptation",
     ]);
-    expect(REGISTERED_VISUAL_IDS.length).toBe(94);
+    expect(REGISTERED_VISUAL_IDS.length).toBe(105);
   });
 
   it("every id is course/namespace scoped (reusable pattern for later chapters)", () => {

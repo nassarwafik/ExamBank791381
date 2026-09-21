@@ -64,6 +64,15 @@ const m27: ContentModule = {
               spans: [T("اختيار الطريق الذي تسلكه البيانات للوصول إلى الشبكة المطلوبة.")],
             },
             {
+              // ENRICHMENT (Batch 8): SVG visual enrichment appended after the book content.
+              id: "m27-l01-p01-visual", type: "visual", origin: "teacher-enrichment",
+              visualId: "791381/m27/routing-methods-overview", motion: false,
+              source: src(210),
+              title: "مخطط: نظرة عامة على طرق التوجيه",
+              alt: "مخطط: طرق التوجيه الثلاث كما في الكتاب — Static Route (مسار يدوي)، و OSPF (Link-State حسب Bandwidth)، و EIGRP (من Cisco بـ Bandwidth + Delay) — دون أوامر إعداد.",
+              caption: "‏Static يدوي · OSPF ذكي حسب Bandwidth · EIGRP من Cisco.",
+            },
+            {
               id: "m27-l01-p01-note", type: "callout", origin: "teacher-enrichment", kind: "clarification", title: "توضيح المعلّم",
               spans: [T("الراوتر لا يعرف الشبكات البعيدة من تلقاء نفسه: إما أن يكتبها له المدير يدويًا ("), L("Static"), T(")، أو أن يتعلّمها من الراوترات الأخرى ببروتوكول مثل "), L("OSPF"), T(" أو "), L("EIGRP"), T(". الصفحات التالية تشرح كلًّا منها ثم تطبّقها بالأوامر.")],
             },
@@ -121,6 +130,15 @@ const m27: ContentModule = {
             {
               id: "m27-l01-p02-when", type: "callout", origin: "book", kind: "tip", title: "متى نستعمله؟",
               spans: [T("في الشبكات الصغيرة الثابتة التي لا تتغيّر كثيرًا.")],
+            },
+            {
+              // ENRICHMENT (Batch 8): SVG visual enrichment appended after the book content.
+              id: "m27-l01-p02-visual", type: "visual", origin: "teacher-enrichment",
+              visualId: "791381/m27/static-route-path", motion: true,
+              source: src(211),
+              title: "مخطط: المسار الثابت يحدّده المدير",
+              alt: "مخطط متحرّك: مدير الشبكة يحدّد مسارًا ثابتًا يدويًا من الراوتر إلى الشبكة الهدف، مسار واحد ثابت بلا سلوك بروتوكول ديناميكي.",
+              caption: "‏التوجيه الثابت: المدير يحدّد المسار يدويًا نحو الشبكة الهدف.",
             },
             {
               id: "m27-l01-p02-note", type: "callout", origin: "teacher-enrichment", kind: "clarification", title: "توضيح المعلّم",
@@ -244,9 +262,9 @@ const m27: ContentModule = {
               id: "m27-l01-p04-visual", type: "visual", origin: "teacher-enrichment",
               visualId: "791381/m27/admin-distance", motion: false,
               source: src(213),
-              title: "مخطط: سلّم المسافة الإدارية (AD)",
-              alt: "مخطط لسلّم الثقة بحسب المسافة الإدارية، الأصغر أفضل: Connected 0 ثم Static 1 ثم EIGRP 90 ثم OSPF 110 ثم RIP 120.",
-              caption: "‏كلّما صغُرت قيمة AD زادت ثقة الراوتر بمصدر المسار.",
+              title: "مخطط: Metric مقابل Administrative Distance",
+              alt: "مخطط يميّز سؤالين: Metric يختار أفضل طريق داخل البروتوكول (EIGRP: Bandwidth + Delay، OSPF: Bandwidth)، و AD يختار بين البروتوكولات بالقيم Connected 0 ثم Static 1 ثم EIGRP 90 ثم OSPF 110 ثم RIP 120 — وفي الحالتين الأصغر أفضل.",
+              caption: "‏Metric يختار داخل البروتوكول · AD يختار بين البروتوكولات — الأصغر أفضل.",
             },
             {
               id: "m27-l01-p04-note", type: "callout", origin: "teacher-enrichment", kind: "clarification", title: "توضيح المعلّم",
@@ -599,6 +617,15 @@ const m27: ContentModule = {
             {
               id: "m27-l03-p01-remember", type: "callout", origin: "book", kind: "remember", title: "تذكّر",
               spans: [L("EIGRP"), T(" خاص بأجهزة "), L("Cisco"), T(" وأسرع في التقارب من البروتوكولات القديمة.")],
+            },
+            {
+              // ENRICHMENT (Batch 8): SVG visual enrichment appended after the book content.
+              id: "m27-l03-p01-visual", type: "visual", origin: "teacher-enrichment",
+              visualId: "791381/m27/eigrp-metric-adaptation", motion: false,
+              source: src(218),
+              title: "مخطط: مقياس EIGRP والتكيّف السريع",
+              alt: "مخطط: EIGRP بروتوكول Distance Vector من Cisco، يختار المسار بمقياس Bandwidth + Delay ويتكيّف بسرعة مع تغيّرات الشبكة، عند مستوى صفحة المفهوم دون أوامر إعداد.",
+              caption: "‏EIGRP: مقياس Bandwidth + Delay لاختيار المسار، وتكيّف سريع مع التغييرات.",
             },
             {
               id: "m27-l03-p01-note", type: "callout", origin: "teacher-enrichment", kind: "clarification", title: "توضيح المعلّم",

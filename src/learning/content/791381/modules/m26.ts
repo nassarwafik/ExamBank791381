@@ -122,6 +122,15 @@ const m26: ContentModule = {
               spans: [T("تقنيات "), L("WAN"), T(" القديمة تساعد في فهم فكرة الربط بين الفروع.")],
             },
             {
+              // ENRICHMENT (Batch 8): SVG visual enrichment appended after the book content.
+              id: "m26-l01-p02-visual", type: "visual", origin: "teacher-enrichment",
+              visualId: "791381/m26/frame-relay-vs-atm", motion: false,
+              source: src(208),
+              title: "مخطط: Frame Relay مقابل ATM",
+              alt: "مخطط مقارنة كما في الكتاب: Frame Relay ينقل البيانات على شكل Frames ويعتمد على Packet Switching، و ATM ينقل صوتًا وفيديو وبيانات معًا.",
+              caption: "‏Frame Relay ينقل Frames بـ Packet Switching · ATM يجمع الصوت والفيديو والبيانات.",
+            },
+            {
               id: "m26-l01-p02-note", type: "callout", origin: "teacher-enrichment", kind: "clarification", title: "توضيح المعلّم",
               spans: [L("Packet Switching"), T(" يعني تقطيع البيانات إلى وحدات صغيرة تُرسل كلٌّ منها عبر الشبكة على حدة — الفكرة نفسها التي رأيتها في تجزئة البيانات؛ "), L("Frame Relay"), T(" يسمّي هذه الوحدات "), L("Frames"), T(".")],
             },
@@ -174,6 +183,15 @@ const m26: ContentModule = {
             {
               id: "m26-l01-p03-common", type: "callout", origin: "book", kind: "tip", title: "شائع",
               spans: [L("Metro Ethernet"), T(" شائع لربط فروع داخل منطقة حضرية واحدة.")],
+            },
+            {
+              // ENRICHMENT (Batch 8): SVG visual enrichment appended after the book content.
+              id: "m26-l01-p03-visual", type: "visual", origin: "teacher-enrichment",
+              visualId: "791381/m26/hdlc-vs-metro", motion: false,
+              source: src(209),
+              title: "مخطط: HDLC مقابل Metro Ethernet",
+              alt: "مخطط مقارنة كما في الكتاب: HDLC بروتوكول لربط الأجهزة عبر خطوط WAN، و Metro Ethernet يربط مواقع متعددة داخل مدينة بسرعة واستقرار وسهولة توسعة.",
+              caption: "‏HDLC يربط الأجهزة عبر خطوط WAN · Metro Ethernet يربط مواقع المدينة.",
             },
             {
               id: "m26-l01-p03-note", type: "callout", origin: "teacher-enrichment", kind: "clarification", title: "توضيح المعلّم",

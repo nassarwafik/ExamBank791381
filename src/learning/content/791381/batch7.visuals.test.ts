@@ -1,7 +1,7 @@
 // SVG Visual Enrichment — Batch 7 (VTP/Trunk remainder + Wi-Fi + IPv6). Enriches the previously-unenriched pages of
 // m19 (VTP roles, PDF 140), m04 (inter-switch trunk ports PDF 146; router sub-interfaces PDF 154/155 — SPLIT per source
 // fidelity), m20 (Wi-Fi & wireless, PDF 159–165) and m21 (IPv6 anatomy/compression, PDF 166–167). Pins the exact 13 NEW
-// unique ids, branch-local registry total 94 (frozen base 81 + 13), the 13 visual blocks, page ids / PDF sources,
+// unique ids, post-sync registry total 105 (81 + Batch 7's 13 + Batch 8's 11), the 13 visual blocks, page ids / PDF sources,
 // provenance, after-book placement, and the deliberate scope (PDF 157 training / 158 cover get no SVG; PDF 168 keeps its
 // existing well-known-ports visual and is not duplicated).
 import { describe, it, expect } from "vitest";
@@ -66,8 +66,8 @@ describe("Batch 7 — scope and placement (VTP/Trunk remainder + Wi-Fi + IPv6)",
     expect(used.size).toBe(13);
   });
 
-  it("branch-local registry = frozen base 81 + 13 = 94; each new id resolves", () => {
-    expect(REGISTERED_VISUAL_IDS.length).toBe(94);
+  it("post-sync registry total = 81 + Batch 7 (13) + Batch 8 (11) = 105; each new Batch 7 id resolves", () => {
+    expect(REGISTERED_VISUAL_IDS.length).toBe(105);
     for (const id of NEW_IDS) expect(resolveVisual(id), id).not.toBeNull();
   });
 
