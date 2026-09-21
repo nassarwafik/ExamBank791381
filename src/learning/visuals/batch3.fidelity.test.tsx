@@ -11,10 +11,14 @@ import TcpIpLayers from "./791381/batch3/TcpIpLayers";
 import OsiVsTcpIp from "./791381/batch3/OsiVsTcpIp";
 import MessageTypes from "./791381/batch3/MessageTypes";
 import UnicastMulticast from "./791381/batch3/UnicastMulticast";
+import PingEcho from "./791381/batch3/PingEcho";
+import ArpAssociation from "./791381/batch3/ArpAssociation";
+import TcpVsUdp from "./791381/batch3/TcpVsUdp";
 
 afterEach(cleanup);
 const text = (node: Element) => node.textContent || "";
 const motions = (root: Element, sel = "") => root.querySelectorAll(`${sel} animateMotion`).length;
+const anim = (root: Element, id: string) => root.querySelector(`animateMotion[id="${id}"]`);
 
 describe("Batch 3 — PDF58 P2P is source-accurate (no later-page topologies)", () => {
   it("shows P2P/direct only and NEVER Bus/Ring/Star/Tree/Hybrid", () => {
@@ -98,5 +102,57 @@ describe("Batch 3 — UnicastMulticast motion reaches the whole selected group",
   it("has ZERO motion elements under reduced motion", () => {
     const { container } = render(<UnicastMulticast ariaLabel="x" reducedMotion={true} />);
     expect(motions(container)).toBe(0);
+  });
+});
+
+describe("Batch 3 — request/response round trips are SEQUENCED (arrival before response)", () => {
+  it("Ping: reply begins only when the request animation ENDS, and the cycle repeats after the reply", () => {
+    const { container } = render(<PingEcho ariaLabel="x" reducedMotion={false} />);
+    const req = anim(container, "pingReq")!, rep = anim(container, "pingRep")!;
+    expect(req).not.toBeNull();
+    expect(rep.getAttribute("begin")).toBe("pingReq.end");        // reply starts exactly when the request arrives
+    expect(req.getAttribute("begin")).toContain("pingRep.end");   // next request waits for the reply (bounded cycle)
+    expect(req.getAttribute("dur")).toBe(rep.getAttribute("dur")); // symmetric legs
+  });
+  it("Ping: reducedMotion=true has ZERO animateMotion", () => {
+    const { container } = render(<PingEcho ariaLabel="x" reducedMotion={true} />);
+    expect(motions(container)).toBe(0);
+  });
+
+  it("ARP: the MAC response begins only when the query animation ENDS, and the cycle repeats after the response", () => {
+    const { container } = render(<ArpAssociation ariaLabel="x" reducedMotion={false} />);
+    const q = anim(container, "arpQuery")!, r = anim(container, "arpReply")!;
+    expect(q).not.toBeNull();
+    expect(r.getAttribute("begin")).toBe("arpQuery.end");
+    expect(q.getAttribute("begin")).toContain("arpReply.end");
+    expect(q.getAttribute("dur")).toBe(r.getAttribute("dur"));
+  });
+  it("ARP: reducedMotion=true has ZERO animateMotion", () => {
+    const { container } = render(<ArpAssociation ariaLabel="x" reducedMotion={true} />);
+    expect(motions(container)).toBe(0);
+  });
+
+  it("TCP: the ACK begins only when the data animation ENDS (send→receive→acknowledge); UDP is unchanged", () => {
+    const { container } = render(<TcpVsUdp ariaLabel="x" reducedMotion={false} />);
+    const data = anim(container, "tcpData")!, ack = anim(container, "tcpAck")!;
+    expect(data).not.toBeNull();
+    expect(ack.getAttribute("begin")).toBe("tcpData.end");
+    expect(data.getAttribute("begin")).toContain("tcpAck.end");
+    // UDP unchanged: three independent, non-acknowledged packets staggered at 0s / 0.6s / 1.2s
+    const udp = [...container.querySelectorAll('[data-mt="udp"] animateMotion')].map(a => a.getAttribute("begin"));
+    expect(udp).toEqual(["0s", "0.6s", "1.2s"]);
+  });
+  it("TCP/UDP: reducedMotion=true has ZERO animateMotion", () => {
+    const { container } = render(<TcpVsUdp ariaLabel="x" reducedMotion={true} />);
+    expect(motions(container)).toBe(0);
+  });
+});
+
+describe("Batch 3 — TCP/IP layer 1 uses the book's Arabic term", () => {
+  it("renders «الربط» for Link, not «الوصول للشبكة»", () => {
+    const { container } = render(<TcpIpLayers ariaLabel="x" reducedMotion={true} />);
+    const t = text(container);
+    expect(t).toContain("الربط");
+    expect(t).not.toContain("الوصول للشبكة");
   });
 });

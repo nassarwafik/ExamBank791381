@@ -28,12 +28,15 @@ export default function TcpVsUdp({ ariaLabel, reducedMotion, className }: Learni
       <text className="eb-visual-meta" x="284" y={panelTop + 96} textAnchor="middle">سريع · بث مباشر، ألعاب</text>
       {!reducedMotion ? (
         <>
+          {/* TCP is SEQUENCED (send → receive → acknowledge): the data travels the FULL leg first; the ACK begins
+              only when the data animation ENDS (tcpData.end); the next data waits for the ACK to end (tcpAck.end). */}
           <path id="tu-tcp" className="eb-visual-route" d={`M 38 ${aY} L 154 ${aY}`} />
-          <g className="eb-visual-packet"><rect x="-6" y="-5" width="12" height="10" rx="2" /><animateMotion dur="2.6s" repeatCount="indefinite"><mpath href="#tu-tcp" /></animateMotion></g>
+          <g data-mt="tcp-data" className="eb-visual-packet"><rect x="-6" y="-5" width="12" height="10" rx="2" /><animateMotion id="tcpData" begin="0s;tcpAck.end" dur="1.8s"><mpath href="#tu-tcp" /></animateMotion></g>
           <path id="tu-ack" className="eb-visual-route" d={`M 154 ${bY} L 38 ${bY}`} />
-          <g className="eb-visual-dot is-response"><circle r="5" /><animateMotion dur="2.6s" begin="1.3s" repeatCount="indefinite"><mpath href="#tu-ack" /></animateMotion></g>
+          <g data-mt="tcp-ack" className="eb-visual-dot is-response"><circle r="5" /><animateMotion id="tcpAck" begin="tcpData.end" dur="1.8s"><mpath href="#tu-ack" /></animateMotion></g>
+          {/* UDP is UNCHANGED — fast, independent, no acknowledgement */}
           <path id="tu-udp" className="eb-visual-route" d={`M 226 ${aY} L 342 ${aY}`} />
-          {[0, 0.6, 1.2].map((b, i) => <g key={i} className="eb-visual-packet"><rect x="-6" y="-5" width="12" height="10" rx="2" /><animateMotion dur="1.8s" begin={`${b}s`} repeatCount="indefinite"><mpath href="#tu-udp" /></animateMotion></g>)}
+          {[0, 0.6, 1.2].map((b, i) => <g key={i} data-mt="udp" className="eb-visual-packet"><rect x="-6" y="-5" width="12" height="10" rx="2" /><animateMotion dur="1.8s" begin={`${b}s`} repeatCount="indefinite"><mpath href="#tu-udp" /></animateMotion></g>)}
         </>
       ) : (
         <>

@@ -27,11 +27,14 @@ export default function PingEcho({ ariaLabel, reducedMotion, className }: Learni
       {node(A, "جهازك")}
       {node(B, "الوجهة")}
       {!reducedMotion ? (
+        // Sequenced round trip: the request travels the FULL leg first; the reply begins only when the request
+        // animation ENDS (pingReq.end), i.e. after it reaches the destination; the next request waits for the reply
+        // to end (pingRep.end). No overlap, so the student sees REQUEST → ARRIVAL → REPLY, repeating coherently.
         <>
           <path id="pe-req" className="eb-visual-route" d={`M ${A.x + 30} ${A.y - 10} L ${B.x - 30} ${A.y - 10}`} />
-          <g className="eb-visual-packet"><rect x="-6" y="-5" width="12" height="10" rx="2" /><animateMotion dur="1.5s" repeatCount="indefinite"><mpath href="#pe-req" /></animateMotion></g>
+          <g data-mt="request" className="eb-visual-packet"><rect x="-6" y="-5" width="12" height="10" rx="2" /><animateMotion id="pingReq" begin="0s;pingRep.end" dur="1.4s"><mpath href="#pe-req" /></animateMotion></g>
           <path id="pe-rep" className="eb-visual-route" d={`M ${B.x - 30} ${A.y + 10} L ${A.x + 30} ${A.y + 10}`} />
-          <g className="eb-visual-dot is-response"><circle r="5" /><animateMotion dur="1.5s" begin="0.75s" repeatCount="indefinite"><mpath href="#pe-rep" /></animateMotion></g>
+          <g data-mt="reply" className="eb-visual-dot is-response"><circle r="5" /><animateMotion id="pingRep" begin="pingReq.end" dur="1.4s"><mpath href="#pe-rep" /></animateMotion></g>
         </>
       ) : (
         <>

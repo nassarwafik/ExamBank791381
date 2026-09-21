@@ -28,11 +28,14 @@ export default function ArpAssociation({ ariaLabel, reducedMotion, className }: 
       {node(A, "جهازك")}
       {node(B, "الجار")}
       {!reducedMotion ? (
+        // Sequenced: the "who has this IP?" query travels the FULL leg to the neighbour; the MAC response begins only
+        // when the query animation ENDS (arpQuery.end); the next query waits for the response to end. No overlap, so
+        // the response can never appear before the query is received.
         <>
           <path id="arp-q" className="eb-visual-route" d={`M ${A.x + 30} ${A.y - 8} L ${B.x - 30} ${A.y - 8}`} />
-          <g className="eb-visual-packet"><rect x="-6" y="-5" width="12" height="10" rx="2" /><animateMotion dur="1.7s" repeatCount="indefinite"><mpath href="#arp-q" /></animateMotion></g>
+          <g data-mt="query" className="eb-visual-packet"><rect x="-6" y="-5" width="12" height="10" rx="2" /><animateMotion id="arpQuery" begin="0s;arpReply.end" dur="1.5s"><mpath href="#arp-q" /></animateMotion></g>
           <path id="arp-r" className="eb-visual-route" d={`M ${B.x - 30} ${A.y + 8} L ${A.x + 30} ${A.y + 8}`} />
-          <g className="eb-visual-dot is-response"><circle r="5" /><animateMotion dur="1.7s" begin="0.85s" repeatCount="indefinite"><mpath href="#arp-r" /></animateMotion></g>
+          <g data-mt="reply" className="eb-visual-dot is-response"><circle r="5" /><animateMotion id="arpReply" begin="arpQuery.end" dur="1.5s"><mpath href="#arp-r" /></animateMotion></g>
         </>
       ) : (
         <rect className="eb-visual-packet-static" x={A.x + 40} y={A.y - 13} width="12" height="10" rx="2" />

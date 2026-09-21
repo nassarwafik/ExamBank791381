@@ -3,7 +3,7 @@ import type { LearningVisualProps } from "../../types";
 /**
  * «مقارنة سريعة: OSI و TCP/IP» (Book 791381, PDF 83) — the mapping the book stresses: OSI has 7 layers, TCP/IP has 4,
  * and the OSI top three (Application, Presentation, Session) collapse into TCP/IP's single Application layer; then
- * Transport↔Transport, Network↔Internet, and Data Link + Physical↔Network Access. Two aligned columns with the four
+ * Transport↔Transport, Network↔Internet, and Data Link + Physical↔Link. Two aligned columns with the four
  * TCP/IP boxes spanning their matching OSI rows. Motion: a subtle glow on the collapsed top group. Reduced motion ⇒
  * a still mapping. Names render LTR.
  */

@@ -10,7 +10,7 @@ const LAYERS = [
   { n: 4, en: "Application", ar: "التطبيقات" },
   { n: 3, en: "Transport", ar: "النقل" },
   { n: 2, en: "Internet", ar: "الإنترنت" },
-  { n: 1, en: "Link", ar: "الوصول للشبكة" },
+  { n: 1, en: "Link", ar: "الربط" },
 ];
 export default function TcpIpLayers({ ariaLabel, reducedMotion, className }: LearningVisualProps) {
   const x = 70, w = 240, h = 40, gap = 8, y0 = 16;
