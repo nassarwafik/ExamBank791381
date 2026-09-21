@@ -4,10 +4,11 @@ import type { LearningVisualProps } from "../../types";
  * «DMZ — المنطقة العازلة» (Book 791381, PDF 159) — the DMZ is a zone BETWEEN the internal network and the Internet. The
  * page's figure is three zones in order: the Internet (outside) passes through a firewall into the DMZ (public services
  * Web / Mail / DNS), and the internal LAN sits behind a SECOND firewall. A visitor reaches the DMZ only and never
- * enters the internal network. Motion TEACHES that isolation: a visitor from the Internet crosses the first firewall
- * into the DMZ and STOPS there (one-shot, freezes at the DMZ) — it never reaches the internal LAN. Reduced motion ⇒
- * the three zones with the two firewalls shown statically. Book scope: the three zones, the public services and the
- * two firewalls only.
+ * enters the internal network. Motion TEACHES that isolation: a visitor travels along the zone row (y=108, inside the
+ * zone boxes), visibly crosses the firewall-1 line at x=124, and STOPS INSIDE the DMZ box (one-shot, freezes at x≈190)
+ * — it never reaches firewall 2 (x=256) or the internal LAN. Reduced motion ⇒ the three zones with the two firewalls,
+ * and the static packet positioned INSIDE the DMZ box. Book scope: the three zones, the public services and the two
+ * firewalls only.
  */
 export default function DmzThreeZone({ ariaLabel, reducedMotion, className }: LearningVisualProps) {
   return (
@@ -47,14 +48,15 @@ export default function DmzThreeZone({ ariaLabel, reducedMotion, className }: Le
         <text className="eb-visual-meta" x="316" y="86" textAnchor="middle">محمية</text>
       </g>
 
-      {/* the visitor: Internet → DMZ, then stops (never reaches internal) */}
+      {/* the visitor travels along the zone row (y=108): starts in the Internet zone, crosses firewall 1 (x=124),
+          and freezes INSIDE the DMZ box (x≈190) — it never reaches firewall 2 (x=256) or the internal LAN. */}
       {!reducedMotion ? (
         <g className="eb-visual-packet" data-stop="1">
           <rect x="-6" y="-6" width="12" height="12" rx="2" />
-          <animateMotion id="dmzVisit" begin="0.4s" dur="1.3s" fill="freeze" path="M 64 150 L 190 150" />
+          <animateMotion id="dmzVisit" begin="0.4s" dur="1.3s" fill="freeze" path="M 64 108 L 190 108" />
         </g>
       ) : (
-        <rect className="eb-visual-packet-static" data-stop="1" x="184" y="144" width="12" height="12" rx="2" />
+        <rect className="eb-visual-packet-static" data-stop="1" x="184" y="102" width="12" height="12" rx="2" />
       )}
       <text className="eb-visual-caption-svg" x="190" y="176" textAnchor="middle">‏الزائر يصل إلى DMZ فقط ولا يدخل الشبكة الداخلية</text>
       <text className="eb-visual-meta" x="190" y="192" textAnchor="middle">جداران للحماية يجعلان DMZ منطقة معزولة</text>

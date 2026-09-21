@@ -88,6 +88,35 @@ describe("Batch 7 — dmz-three-zone (PDF 159): three zones, two firewalls, visi
     expect(visit.getAttribute("begin")).not.toContain(".end");
     expect(visit.getAttribute("fill")).toBe("freeze");
   });
+  // GEOMETRY: firewall 1 at x=124 (y 40..122), firewall 2 at x=256, Internet box x=16..112, DMZ box x=136..244, both y=44..118.
+  const FW1_X = 124, FW1_Y0 = 40, FW1_Y1 = 122, FW2_X = 256, INT_X0 = 16, INT_X1 = 112, DMZ_X0 = 136, DMZ_X1 = 244, ZONE_Y0 = 44, ZONE_Y1 = 118;
+  it("the packet path starts in the Internet zone, physically crosses firewall 1, and ends INSIDE the DMZ (left of firewall 2)", () => {
+    const { container } = render(<DmzThreeZone ariaLabel="x" reducedMotion={false} />);
+    const path = byId(container, "dmzVisit")!.getAttribute("path")!;
+    const m = path.match(/M\s*(\d+)\s+(\d+)\s+L\s*(\d+)\s+(\d+)/)!;
+    const [sx, sy, ex, ey] = [Number(m[1]), Number(m[2]), Number(m[3]), Number(m[4])];
+    // 1. starts inside the Internet zone
+    expect(sx).toBeGreaterThanOrEqual(INT_X0); expect(sx).toBeLessThanOrEqual(INT_X1);
+    expect(sy).toBeGreaterThanOrEqual(ZONE_Y0); expect(sy).toBeLessThanOrEqual(ZONE_Y1);
+    // 2. physically crosses firewall 1 (x=124) while within the firewall's y-range
+    expect(sx).toBeLessThan(FW1_X); expect(ex).toBeGreaterThan(FW1_X);
+    expect(sy).toBeGreaterThanOrEqual(FW1_Y0); expect(sy).toBeLessThanOrEqual(FW1_Y1);
+    expect(ey).toBeGreaterThanOrEqual(FW1_Y0); expect(ey).toBeLessThanOrEqual(FW1_Y1);
+    // 3. ends INSIDE the DMZ bounds
+    expect(ex).toBeGreaterThanOrEqual(DMZ_X0); expect(ex).toBeLessThanOrEqual(DMZ_X1);
+    expect(ey).toBeGreaterThanOrEqual(ZONE_Y0); expect(ey).toBeLessThanOrEqual(ZONE_Y1);
+    // 4. never reaches firewall 2 / the internal LAN
+    expect(ex).toBeLessThan(FW2_X);
+  });
+  it("reduced-motion static packet sits INSIDE the DMZ box (not below the zones)", () => {
+    const { container } = render(<DmzThreeZone ariaLabel="x" reducedMotion={true} />);
+    const r = container.querySelector('[data-stop="1"]')!;
+    const cx = Number(r.getAttribute("x")) + Number(r.getAttribute("width")) / 2;
+    const cy = Number(r.getAttribute("y")) + Number(r.getAttribute("height")) / 2;
+    expect(cx).toBeGreaterThanOrEqual(DMZ_X0); expect(cx).toBeLessThanOrEqual(DMZ_X1);
+    expect(cy).toBeGreaterThanOrEqual(ZONE_Y0); expect(cy).toBeLessThanOrEqual(ZONE_Y1);
+    expect(cx).toBeLessThan(FW2_X);
+  });
 });
 
 // ── m20 Wi-Fi radio (PDF 160) ──
@@ -126,11 +155,37 @@ describe("Batch 7 — ssid-beacon (PDF 162): the network name is broadcast", () 
     expect(container.querySelector('[data-ssid="1"]')).not.toBeNull();
     for (const leak of ["WEP", "WPA", "WPA2", "WPA3"]) expect(t).not.toContain(leak);
   });
-  it("the beacon reveal is one-shot (freeze)", () => {
+  // AP at x=66, device at x=312 (midpoint 189).
+  const AP_X = 66, DEV_X = 312, MID = (AP_X + DEV_X) / 2;
+  it("the SSID name TRAVELS from near the AP to near the device (real positional animateMotion)", () => {
     const { container } = render(<SsidBeacon ariaLabel="x" reducedMotion={false} />);
-    const beam = byId(container, "ssidBeam")!;
-    expect(beam.getAttribute("begin")).not.toContain(".end");
-    expect(beam.getAttribute("fill")).toBe("freeze");
+    const move = byId(container, "ssidMove")!;
+    expect(move.tagName.toLowerCase()).toBe("animatemotion");   // real positional travel, not a fade-in
+    const m = move.getAttribute("path")!.match(/M\s*(\d+)\s+(\d+)\s+L\s*(\d+)\s+(\d+)/)!;
+    const [sx, ex] = [Number(m[1]), Number(m[3])];
+    expect(sx).toBeLessThan(ex);                 // moves left → right (AP → device)
+    expect(sx).toBeLessThan(MID);                // starts on the AP side
+    expect(ex).toBeGreaterThan(MID);             // ends on the device side
+    expect(sx).toBeLessThanOrEqual(AP_X + 60);   // starts near the AP
+    expect(ex).toBeGreaterThanOrEqual(DEV_X - 60); // ends near the device
+    // one-shot, no cyclic restart
+    expect(move.getAttribute("begin")).not.toContain(".end");
+    expect(move.getAttribute("begin")).not.toContain(";");
+    expect(move.getAttribute("fill")).toBe("freeze");
+  });
+  it("the device-found stage is revealed ONLY after the name arrives (begin = ssidMove.end)", () => {
+    const { container } = render(<SsidBeacon ariaLabel="x" reducedMotion={false} />);
+    const found = byId(container, "ssidFound")!;
+    expect(found.getAttribute("begin")).toBe("ssidMove.end");
+    expect(found.getAttribute("fill")).toBe("freeze");
+    expect(container.querySelector('[data-found="1"]')).not.toBeNull();
+  });
+  it("reduced motion shows the final state (AP, SSID arrived at the device, device-found) with ZERO animation", () => {
+    const { container } = render(<SsidBeacon ariaLabel="x" reducedMotion={true} />);
+    expect(container.querySelectorAll("animateMotion, animate").length).toBe(0);
+    expect(container.querySelector('[data-ssid="1"]')).not.toBeNull();
+    expect(container.querySelector('[data-found="1"]')).not.toBeNull();
+    expect(text(container)).toContain("وجد الشبكة");
   });
 });
 
