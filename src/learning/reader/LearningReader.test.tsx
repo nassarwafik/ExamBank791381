@@ -85,6 +85,24 @@ describe("Phase 3 — LearningReader: lazy loading, cache, stale-load safety, no
   });
 });
 
+describe("Phase 3 — LearningReader: initialPageId seam (Course-Overview section shortcuts)", () => {
+  it("a valid initialPageId opens the Reader directly on that page (not page 1)", async () => {
+    const onExit = vi.fn();
+    render(<LearningReader courseId="791381" onExit={onExit} api={makeImmediateApi()} initialPageId="p5" />);
+    await heading("صفحة ٥");                                                 // opened on the requested page
+    expect(screen.getByText("صفحة 5 من 7")).toBeTruthy();
+    expect(prevBtn().disabled).toBe(false);                                  // not the first page
+  });
+
+  it("an unknown initialPageId falls back to the first manifest page (existing controlled fallback, never a crash)", async () => {
+    const onExit = vi.fn();
+    render(<LearningReader courseId="791381" onExit={onExit} api={makeImmediateApi()} initialPageId="no-such-page" />);
+    await heading("صفحة غنية");                                              // fell back to the first page
+    expect(screen.getByText("صفحة 1 من 7")).toBeTruthy();
+    expect(prevBtn().disabled).toBe(true);
+  });
+});
+
 describe("Phase 3 — LearningReader: mobile TOC drawer", () => {
   it("opens the drawer, selecting a page navigates and closes it, without a second navigation authority", async () => {
     mount();

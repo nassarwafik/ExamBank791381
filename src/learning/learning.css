@@ -38,12 +38,31 @@
   display:flex; align-items:center; flex-wrap:wrap; gap:var(--eb-space-2) var(--eb-space-3); min-width:0;
   padding:var(--eb-space-3); background:var(--eb-surface); border:1px solid var(--eb-line); border-radius:var(--eb-r);
 }
+/* Interactive section index: the li is a bare container; the button below carries the row box (so it is one, whole,
+   keyboard-focusable target with no double border). */
+.eb-lm-batch--interactive{ display:block; padding:0; background:none; border:0; border-radius:0; }
+.eb-lm-batch-open{
+  inline-size:100%; min-block-size:44px; box-sizing:border-box;
+  display:flex; align-items:center; flex-wrap:wrap; gap:var(--eb-space-2) var(--eb-space-3);
+  padding:var(--eb-space-3); text-align:start; cursor:pointer; color:inherit; font:inherit;
+  background:var(--eb-surface); border:1px solid var(--eb-line); border-radius:var(--eb-r);
+  transition:background-color .15s ease, border-color .15s ease;
+}
+.eb-lm-batch-open:hover{ background:var(--eb-primary-050); border-color:var(--eb-primary); }
+.eb-lm-batch-open:focus-visible{ outline:2px solid var(--eb-primary); outline-offset:2px; }
 .eb-lm-batch-index{
   display:inline-flex; align-items:center; justify-content:center; flex:0 0 auto; inline-size:28px; block-size:28px;
   color:var(--eb-primary-strong); background:var(--eb-primary-050); border-radius:50%; font-size:var(--eb-fs-13); font-weight:var(--eb-fw-bold); font-variant-numeric:tabular-nums;
 }
+.eb-lm-batch--interactive .eb-lm-batch-index{ background:var(--eb-surface); border:1px solid var(--eb-line); }
+.eb-lm-batch-open:hover .eb-lm-batch-index{ background:var(--eb-surface); }
 .eb-lm-batch-label{ flex:1 1 auto; min-width:0; color:var(--eb-text-heading); font-size:var(--eb-fs-14); font-weight:var(--eb-fw-medium); overflow-wrap:anywhere; }
 .eb-lm-batch-status{ flex:0 0 auto; }
+/* The "فتح القسم" affordance + a forward (reading-direction) chevron. Text-labelled, never color-only. */
+.eb-lm-batch-action{
+  flex:0 0 auto; display:inline-flex; align-items:center; gap:var(--eb-space-1);
+  color:var(--eb-primary-strong); font-size:var(--eb-fs-13); font-weight:var(--eb-fw-semibold);
+}
 
 /* ---------- Tablet and up ---------- */
 @media (min-width: 768px){

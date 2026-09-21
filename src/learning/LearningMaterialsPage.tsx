@@ -1,9 +1,10 @@
-import { lazy, Suspense, useMemo, useState } from "react";
+import { lazy, Suspense, useCallback, useMemo, useState } from "react";
 import SectionHeader from "../ui/SectionHeader";
 import StatusBadge from "../ui/StatusBadge";
 import { IconBook, IconChevronBack } from "../icons";
 import { LEARNING_COURSES, findLearningCourse, type LearningCourse } from "./catalog";
-import { hasCourseContent } from "./content/registry";
+import { hasCourseContent, loadCourseManifest } from "./content/registry";
+import { batchFirstPageId } from "./content/navigation";
 import { createTrainingClient, teacherTrainingHeaders } from "./training/trainingClient";
 import "./learning.css";
 import { lazyWithRetry } from "../lazyWithRetry";
@@ -15,7 +16,9 @@ const LearningReaderWithTraining = lazy(lazyWithRetry(() => import("./training/L
 type View =
   | { kind: "library" }
   | { kind: "course"; courseId: string }
-  | { kind: "reader"; courseId: string };
+  // `initialPageId` is the Course-Overview section shortcut (a canonical pageId). Absent → «بدء القراءة»: the
+  // Reader opens from its canonical beginning. Each reader open is a fresh mount, so a shortcut is never stale.
+  | { kind: "reader"; courseId: string; initialPageId?: string };
 
 /**
  * Learning Materials (المواد التعليمية). Local state only (no router): the library of course cards, a course
@@ -29,7 +32,22 @@ export default function LearningMaterialsPage({ token }: { token?: string } = {}
   const course = view.kind === "library" ? undefined : findLearningCourse(view.courseId);
   const client = useMemo(() => (token ? createTrainingClient(teacherTrainingHeaders(token)) : null), [token]);
 
+  // Open the Reader at a Course-Overview section's first canonical page. The section→pageId mapping lives in the
+  // manifest (batches + reading order), which is the SAME code-split chunk the Reader is about to load — so this
+  // triggers no extra eager bundle. A batch with no dedicated page (e.g. المقدمة) resolves to `undefined`, and the
+  // Reader's existing controlled fallback opens the book's canonical beginning; a failed manifest load does the
+  // same, and the Reader then surfaces any genuine load error itself.
+  const openSection = useCallback(async (courseId: string, batchId: string) => {
+    try {
+      const manifest = await loadCourseManifest(courseId);
+      setView({ kind: "reader", courseId, initialPageId: batchFirstPageId(manifest, batchId) ?? undefined });
+    } catch {
+      setView({ kind: "reader", courseId });
+    }
+  }, []);
+
   if (course && view.kind === "reader") {
+    const initialPageId = view.initialPageId;
     return (
       // `.eb-lm-reader` is the Learning-Materials-only desktop inset root (learning.css); the Reader itself is shared
       // with the student portal and stays untouched.
@@ -37,6 +55,7 @@ export default function LearningMaterialsPage({ token }: { token?: string } = {}
         <Suspense fallback={<p className="eb-muted" role="status">جارٍ فتح القارئ التفاعلي...</p>}>
           <LearningReaderWithTraining
             courseId={course.id}
+            initialPageId={initialPageId}
             onExit={() => setView({ kind: "course", courseId: course.id })}
             exitLabel="العودة إلى نظرة الكتاب"
             client={client}
@@ -54,6 +73,7 @@ export default function LearningMaterialsPage({ token }: { token?: string } = {}
         canRead={hasCourseContent(course.id)}
         onBack={() => setView({ kind: "library" })}
         onStartReading={() => setView({ kind: "reader", courseId: course.id })}
+        onOpenSection={batchId => { void openSection(course.id, batchId); }}
       />
     );
   }
@@ -106,7 +126,7 @@ function CourseCard({ course, onOpen }: { course: LearningCourse; onOpen: () => 
 }
 
 /** Course overview: identity + a short intro + the eight high-level content sections, and the reader entry point. */
-function CourseOverview({ course, canRead, onBack, onStartReading }: { course: LearningCourse; canRead: boolean; onBack: () => void; onStartReading: () => void }) {
+function CourseOverview({ course, canRead, onBack, onStartReading, onOpenSection }: { course: LearningCourse; canRead: boolean; onBack: () => void; onStartReading: () => void; onOpenSection: (batchId: string) => void }) {
   return (
     <section className="eb-lm eb-lm-overview" aria-labelledby="eb-lm-course-title">
       <button type="button" className="eb-button is-quiet is-small eb-lm-back" onClick={onBack}>
@@ -131,13 +151,39 @@ function CourseOverview({ course, canRead, onBack, onStartReading }: { course: L
         <div><dt>العام الدراسي</dt><dd>{course.year}</dd></div>
       </dl>
       <div className="eb-lm-batches">
-        <SectionHeader level={3} title="محتوى الكتاب" description="ستُتاح هذه الأقسام تفاعليًا في القارئ تدريجيًا." count={course.overviewBatches.length} />
+        {/* When the book is readable the sections are a live index: each row is one control that opens the Reader at
+            that section's first canonical page. When it is not (a future, unconverted course) the legacy static
+            "قريبًا" list is kept unchanged. */}
+        <SectionHeader
+          level={3}
+          title="محتوى الكتاب"
+          description={canRead ? "اختر قسمًا للانتقال مباشرة إلى محتواه في القارئ التفاعلي." : "ستُتاح هذه الأقسام تفاعليًا في القارئ تدريجيًا."}
+          count={course.overviewBatches.length}
+        />
         <ul className="eb-lm-batch-list" aria-label="أقسام محتوى الكتاب">
           {course.overviewBatches.map((b, i) => (
-            <li key={b.id} className="eb-lm-batch">
-              <span className="eb-lm-batch-index" aria-hidden="true">{i + 1}</span>
-              <span className="eb-lm-batch-label">{b.label}</span>
-              <StatusBadge tone="neutral" className="eb-lm-batch-status">قريبًا</StatusBadge>
+            <li key={b.id} className={canRead ? "eb-lm-batch eb-lm-batch--interactive" : "eb-lm-batch"}>
+              {canRead ? (
+                <button
+                  type="button"
+                  className="eb-lm-batch-open"
+                  onClick={() => onOpenSection(b.id)}
+                  aria-label={"فتح قسم " + b.label}
+                >
+                  <span className="eb-lm-batch-index" aria-hidden="true">{i + 1}</span>
+                  <span className="eb-lm-batch-label">{b.label}</span>
+                  <span className="eb-lm-batch-action">
+                    فتح القسم
+                    <IconChevronBack size={16} aria-hidden="true" />
+                  </span>
+                </button>
+              ) : (
+                <>
+                  <span className="eb-lm-batch-index" aria-hidden="true">{i + 1}</span>
+                  <span className="eb-lm-batch-label">{b.label}</span>
+                  <StatusBadge tone="neutral" className="eb-lm-batch-status">قريبًا</StatusBadge>
+                </>
+              )}
             </li>
           ))}
         </ul>
