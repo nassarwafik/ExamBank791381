@@ -2042,6 +2042,17 @@
     "791381-m20-l01-p02": {
       "moduleId": "791381-m20",
       "activities": {
+        "m20-l01-p02-classify": {
+          "kind": "practice-table",
+          "cells": {
+            "0:1": "حسنة",
+            "1:1": "حسنة",
+            "2:1": "حسنة",
+            "3:1": "عيب",
+            "4:1": "عيب",
+            "5:1": "عيب"
+          }
+        },
         "m20-l01-p02-q1": {
           "kind": "multipleChoice",
           "correct": [

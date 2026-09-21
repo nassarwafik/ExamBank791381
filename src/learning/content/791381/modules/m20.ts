@@ -27,6 +27,8 @@ const TYPES = ["PAN", "WLAN", "WPAN", "WWAN"] as const;
 const TY = (key: (typeof TYPES)[number]): PracticeTableSelectCell => ({ kind: "select", options: [...TYPES], key });
 const LEVELS = ["ضعيف", "أفضل من WEP", "الأفضل"] as const;
 const LV = (key: (typeof LEVELS)[number]): PracticeTableSelectCell => ({ kind: "select", options: [...LEVELS], key });
+const WIFI = ["حسنة", "عيب"] as const;
+const WF = (key: (typeof WIFI)[number]): PracticeTableSelectCell => ({ kind: "select", options: [...WIFI], key });
 
 const m20: ContentModule = {
   id: "791381-m20",
@@ -147,6 +149,22 @@ const m20: ContentModule = {
             {
               id: "m20-l01-p02-note", type: "callout", origin: "teacher-enrichment", kind: "clarification", title: "توضيح المعلّم",
               spans: [T("«ضمن التغطية» تعني أن الجهاز يجب أن يكون قريبًا بما يكفي من مصدر الإشارة؛ كلما ابتعدت ضعفت الإشارة، وهذا هو «المدى المحدود» الذي يذكره الكتاب.")],
+            },
+            {
+              // ENRICHMENT (Reader follow-up): dropdown self-check — classify each Wi-Fi trait as حسنة أم عيب
+              // (source-faithful to the PDF 160 «حسناتها … / عيوبها …» two lines; no new facts).
+              id: "m20-l01-p02-classify", type: "practice-table", origin: "teacher-enrichment",
+              caption: "صنّف خصائص Wi-Fi: حسنة أم عيب؟ (اعتمد على سطرَي «حسناتها» و«عيوبها»)",
+              headers: ["الخاصية", "حسنة أم عيب؟"],
+              columnDirs: ["rtl", "rtl"],
+              rows: [
+                ["سهولة الاستخدام", WF("حسنة")],
+                ["المرونة", WF("حسنة")],
+                ["ربط عدة أجهزة", WF("حسنة")],
+                ["المدى محدود", WF("عيب")],
+                ["التأثر بالتداخل", WF("عيب")],
+                ["ضعف الأمان", WF("عيب")],
+              ],
             },
             {
               id: "m20-l01-p02-q1", type: "practice", origin: "teacher-enrichment",

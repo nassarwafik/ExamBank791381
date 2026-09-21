@@ -287,7 +287,7 @@ describe("Final summary — the ten REAL book CLI exercises (simulation / cli-te
       if (cfg!.kind === "task") expect(cfg!.goals!.length, e.block.id).toBe((raw.goals as unknown[]).length);
       else expect(cfg!.steps!.length, e.block.id).toBe((raw.steps as unknown[]).length);
     }
-    expect(productionActivityRegistry.list().length).toBe(14);
+    expect(productionActivityRegistry.list().length).toBe(15);
     const cfgText = JSON.stringify(list.map(s => s.block.config));
     expect(cfgText).not.toMatch(/ping|tracert|ipconfig|nslookup|arp -a|restrict|protect|show interfaces trunk|show mac address-table|show spanning-tree/i);
     expect(list.map(s => (s.block.config as { kind: string }).kind)).toEqual(["task", "guided", "guided", "task", "challenge", "guided", "task", "task", "task", "challenge"]);

@@ -444,7 +444,7 @@ describe("Batch 9 — loaders, navigation, server registry agreement, publicatio
     expect(manifest.batches!.find(b => b.id === "b4")!.moduleIds).toEqual(["791381-m03", "791381-m19", "791381-m04"]);
     expect(manifest.batches!.find(b => b.id === "b6")!.moduleIds).toEqual(["791381-m25", "791381-m26", "791381-m27", "791381-m06"]);   // Batch 10 filled the sixth-batch grouping
     expect(manifest.modules.map(m => m.order)).toEqual(Array.from({ length: 28 }, (_, i) => i + 1));   // 27 since Batch 10, 28 since the final summary (m28)
-    expect([m20.order, m21.order, m22.order, pagesOf(m20).length, pagesOf(m21).length, pagesOf(m22).length, sims(m22).length, sims(m20).length + sims(m21).length]).toEqual([18, 19, 20, 7, 3, 11, 3, 0]);
+    expect([m20.order, m21.order, m22.order, pagesOf(m20).length, pagesOf(m21).length, pagesOf(m22).length, sims(m22).length, sims(m20).length + sims(m21).length]).toEqual([18, 19, 20, 7, 3, 11, 3, 1]);   // Reader follow-up added the ipv6-compress practice simulator on m21 PDF 167
     expect(sims(m19).length + sims(m04).length + sims(m03).length).toBe(0);   // no retroactive CLI exercises in Batches 6–7
     expect([m03.order, m19.order, m04.order]).toEqual([15, 16, 17]);
   });
