@@ -107,8 +107,8 @@ describe("Batch 6 — scope and placement (routing / switch-services arc)", () =
       if (idxs.length) {
         expect(idxs[0]).toBeGreaterThan(0);
         expect(p.blocks[0].origin).toBe("book");
-        // never the very last block: the pedagogical tail (practice / review) stays after the figure
-        expect(p.blocks.at(-1)!.type, p.id).toBe("practice");
+        // never the very last block: the pedagogical tail (an interactive exercise) stays after the figure
+        expect(["practice", "practice-table"], p.id).toContain(p.blocks.at(-1)!.type);
       }
     }
   });

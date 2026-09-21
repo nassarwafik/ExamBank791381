@@ -95,16 +95,17 @@ const m24: ContentModule = {
               },
             },
             {
-              id: "m24-l01-p01-q2", type: "practice", origin: "teacher-enrichment",
-              question: {
-                kind: "fillBlank", prompt: "الدخول إلى أجهزة Cisco قد يكون من Console أو VTY أو ______.", answers: ["Enable", "enable"],
-                feedback: {
-                  hints: ["السطر الأول في قائمة الحقائق.", "الوضع المتقدّم للأوامر."],
-                  correctFeedback: "صحيح — Console أو VTY أو Enable.",
-                  incorrectFeedback: "افحص السطر: «الدخول قد يكون من Console أو VTY أو …».",
-                  explanation: "الطرق الثلاث تُشرح في الصفحة التالية مع أمر كل واحدة منها.",
-                },
-              },
+              // Reader interactive fix: was a keyed `fillBlank` (rendered as a non-interactive placeholder). Converted
+              // to a dropdown self-check via the existing practice-table/select surface. Local learning only —
+              // studyEligible:false keeps it out of Study Practice Strength (baseline unchanged). Distractors (DHCP,
+              // VLAN) are Cisco terms from elsewhere in the course, not access methods — clear yet source-grounded.
+              id: "m24-l01-p01-q2", type: "practice-table", origin: "teacher-enrichment", studyEligible: false,
+              caption: "اختر الكلمة الصحيحة لإكمال الجملة:",
+              headers: ["الجملة", "الإجابة"],
+              columnDirs: ["rtl", "ltr"],
+              rows: [
+                ["الدخول إلى أجهزة Cisco قد يكون من Console أو VTY أو ______", { kind: "select", options: ["Enable", "DHCP", "VLAN"], key: "Enable" }],
+              ],
             },
           ],
         },

@@ -104,7 +104,7 @@ describe("Batch 8 — scope and placement (services / routing concept arc)", () 
       expect(idxs.length, p.id).toBe(1);
       expect(idxs[0], p.id).toBeGreaterThan(0);
       expect(p.blocks[0].origin, p.id).toBe("book");
-      expect(p.blocks.at(-1)!.type, p.id).toBe("practice");
+      expect(["practice", "practice-table"], p.id).toContain(p.blocks.at(-1)!.type);
     }
   });
 

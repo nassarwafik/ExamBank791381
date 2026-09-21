@@ -181,16 +181,17 @@ const m20: ContentModule = {
               },
             },
             {
-              id: "m20-l01-p02-q2", type: "practice", origin: "teacher-enrichment",
-              question: {
-                kind: "fillBlank", prompt: "Wi-Fi تقنية اتصال بدون كابلات تعتمد على موجات ______.", answers: ["الراديو", "راديو"],
-                feedback: {
-                  hints: ["ما الذي يحمل الإشارة في الهواء بدون كابل؟", "الكلمة في السطر الأول من الصفحة."],
-                  correctFeedback: "صحيح — موجات الراديو.",
-                  incorrectFeedback: "افحص السطر الأول: «تعتمد على موجات …».",
-                  explanation: "الشبكة اللاسلكية تنقل البيانات عبر موجات الراديو بدل الكابلات.",
-                },
-              },
+              // Reader interactive fix: was a keyed `fillBlank` (rendered as a non-interactive placeholder). Converted
+              // to a dropdown self-check via the existing practice-table/select surface. Local learning only —
+              // studyEligible:false keeps it out of Study Practice Strength (baseline unchanged). Distractors are
+              // source-faithful (الضوء / الكابلات are the two ideas the book contrasts Wi-Fi's radio waves against).
+              id: "m20-l01-p02-q2", type: "practice-table", origin: "teacher-enrichment", studyEligible: false,
+              caption: "اختر الكلمة الصحيحة لإكمال الجملة:",
+              headers: ["الجملة", "الإجابة"],
+              columnDirs: ["rtl", "rtl"],
+              rows: [
+                ["Wi-Fi تقنية اتصال بدون كابلات تعتمد على موجات ______", { kind: "select", options: ["الراديو", "الضوء", "الكابلات"], key: "الراديو" }],
+              ],
             },
           ],
         },
