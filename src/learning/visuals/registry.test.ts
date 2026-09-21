@@ -111,8 +111,21 @@ describe("visuals registry", () => {
       "791381/m27/show-ip-route",
       // Batch 6 — ACL (m06)
       "791381/m06/acl-gate",
+      // Batch 9 — ACL decision detail (m06)
+      "791381/m06/standard-acl-source",
+      "791381/m06/extended-acl-decision",
+      // Batch 9 — comprehensive summary (m28)
+      "791381/m28/ip-vs-mac-summary",
+      "791381/m28/network-device-roles",
+      "791381/m28/cable-media-overview",
+      "791381/m28/subnetting-walkthrough",
+      "791381/m28/wildcard-inversion",
+      "791381/m28/nat-pat-apipa",
+      "791381/m28/tcp-three-way-handshake",
+      "791381/m28/web-opening-journey",
+      "791381/m28/troubleshooting-command-map",
     ]);
-    expect(REGISTERED_VISUAL_IDS.length).toBe(81);
+    expect(REGISTERED_VISUAL_IDS.length).toBe(92);
   });
 
   it("every id is course/namespace scoped (reusable pattern for later chapters)", () => {

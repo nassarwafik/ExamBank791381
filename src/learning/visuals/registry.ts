@@ -107,6 +107,22 @@ import RoutingUpdateTypes from "./791381/batch6/RoutingUpdateTypes";
 import OspfTopology from "./791381/batch6/OspfTopology";
 import ShowIpRoute from "./791381/batch6/ShowIpRoute";
 import AclGate from "./791381/batch6/AclGate";
+// Batch 9 — the FINAL visual-enrichment batch: the ACL decision detail (m06 Standard/Extended, PDF 224/227) and the
+// comprehensive summary module m28 (PDF 231–262) — IP vs MAC, device roles, cable/media, the solved subnetting
+// example, wildcard inversion, NAT/PAT/APIPA, the TCP handshake, the website journey and the CMD/Show map. Same
+// data-only, exact-allowlist, finite one-shot, reduced-motion discipline; summary pages that already own a strong
+// visual REUSE it (no duplicate registry entry).
+import StandardAclSource from "./791381/batch9/StandardAclSource";
+import ExtendedAclDecision from "./791381/batch9/ExtendedAclDecision";
+import IpVsMacSummary from "./791381/batch9/IpVsMacSummary";
+import NetworkDeviceRoles from "./791381/batch9/NetworkDeviceRoles";
+import CableMediaOverview from "./791381/batch9/CableMediaOverview";
+import SubnettingWalkthrough from "./791381/batch9/SubnettingWalkthrough";
+import WildcardInversion from "./791381/batch9/WildcardInversion";
+import NatPatApipa from "./791381/batch9/NatPatApipa";
+import TcpThreeWayHandshake from "./791381/batch9/TcpThreeWayHandshake";
+import WebOpeningJourney from "./791381/batch9/WebOpeningJourney";
+import TroubleshootingCommandMap from "./791381/batch9/TroubleshootingCommandMap";
 
 const VISUALS: readonly RegisteredVisual[] = [
   // Chapter 1 pilot
@@ -215,6 +231,19 @@ const VISUALS: readonly RegisteredVisual[] = [
   { id: "791381/m27/show-ip-route", component: ShowIpRoute, motion: false },
   // Batch 6 — ACL (m06)
   { id: "791381/m06/acl-gate", component: AclGate, motion: true },
+  // Batch 9 — ACL decision detail (m06)
+  { id: "791381/m06/standard-acl-source", component: StandardAclSource, motion: true },
+  { id: "791381/m06/extended-acl-decision", component: ExtendedAclDecision, motion: true },
+  // Batch 9 — comprehensive summary (m28)
+  { id: "791381/m28/ip-vs-mac-summary", component: IpVsMacSummary, motion: false },
+  { id: "791381/m28/network-device-roles", component: NetworkDeviceRoles, motion: false },
+  { id: "791381/m28/cable-media-overview", component: CableMediaOverview, motion: false },
+  { id: "791381/m28/subnetting-walkthrough", component: SubnettingWalkthrough, motion: true },
+  { id: "791381/m28/wildcard-inversion", component: WildcardInversion, motion: true },
+  { id: "791381/m28/nat-pat-apipa", component: NatPatApipa, motion: false },
+  { id: "791381/m28/tcp-three-way-handshake", component: TcpThreeWayHandshake, motion: true },
+  { id: "791381/m28/web-opening-journey", component: WebOpeningJourney, motion: true },
+  { id: "791381/m28/troubleshooting-command-map", component: TroubleshootingCommandMap, motion: false },
 ];
 
 // Build the lookup once. A duplicate id is a programming error (a later entry silently shadowing an earlier one), so

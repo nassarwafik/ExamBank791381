@@ -90,6 +90,15 @@ const m28: ContentModule = {
               spans: [L("Static"), T(" = يُدخَل يدويًّا ولا يتغيّر، و "), L("DHCP"), T(" = يُعطى تلقائيًّا ("), L("IP · Gateway · Subnet · DNS"), T(").")],
             },
             {
+              // ENRICHMENT (Batch 9): SVG visual enrichment appended after the book content.
+              id: "m28-l01-p01-visual", type: "visual", origin: "teacher-enrichment",
+              visualId: "791381/m28/ip-vs-mac-summary", motion: false,
+              source: src(231),
+              title: "مخطط: IP منطقي مقابل MAC فيزيائي",
+              alt: "مخطط مقارنة يوضّح أن IP عنوان منطقي بطول 32 bit يتغيّر بتغيّر الشبكة، بينما MAC عنوان فيزيائي بطول 48 bit ثابت في بطاقة الجهاز.",
+              caption: "‏IP منطقي يتغيّر مع الشبكة · MAC فيزيائي ثابت في البطاقة.",
+            },
+            {
               id: "m28-l01-p01-note", type: "callout", origin: "teacher-enrichment", kind: "clarification", title: "توضيح المعلّم",
               spans: [T("هذه الصفحة تجمع ما تفرّق في الوحدات الأولى: "), L("IP"), T(" منطقي ويتغيّر بتغيّر الشبكة، أما "), L("MAC"), T(" ففيزيائي مطبوع في البطاقة. القناع يفصل جزء الشبكة عن جزء الأجهزة، والبوابة هي الراوتر الذي تخرج منه إلى الإنترنت.")],
             },
@@ -136,6 +145,15 @@ const m28: ContentModule = {
             {
               id: "m28-l01-p02-notes", type: "callout", origin: "book", kind: "remember", title: "ملاحظتان",
               spans: [L("127.x"), T(" محجوز لـ "), L("Loopback"), T(" (لذلك تنتهي "), L("A"), T(" عند "), L("126"), T(")، وعدد الأجهزة = "), L("2^host − 2"), T(" بعد طرح الشبكة والبث.")],
+            },
+            {
+              // ENRICHMENT (Batch 9): REUSE of the existing m08 address-classes visual (exact source match, PDF 232).
+              id: "m28-l01-p02-visual", type: "visual", origin: "teacher-enrichment",
+              visualId: "791381/m08/address-classes", motion: true,
+              source: src(232),
+              title: "مخطط: فئات العناوين A · B · C",
+              alt: "مخطط يوضّح فئات عناوين IPv4 الثلاث A و B و C بمداها وقناعها الافتراضي، كما في جدول الصفحة.",
+              caption: "‏الخانة الأولى تحدّد الفئة، والقناع الافتراضي يتبعها.",
             },
             {
               id: "m28-l01-p02-note", type: "callout", origin: "teacher-enrichment", kind: "clarification", title: "توضيح المعلّم",
@@ -190,6 +208,15 @@ const m28: ContentModule = {
             {
               id: "m28-l01-p03-idea", type: "callout", origin: "book", kind: "tip", title: "الفكرة",
               spans: [T("نضع "), L("1"), T(" تحت الصناديق التي مجموعها يساوي الرقم. مثال: "), L("192 = 128 + 64 = 11000000₂"), T(".")],
+            },
+            {
+              // ENRICHMENT (Batch 9): REUSE of the existing m02 conversion-map visual (exact source match, PDF 233).
+              id: "m28-l01-p03-visual", type: "visual", origin: "teacher-enrichment",
+              visualId: "791381/m02/conversion-map", motion: true,
+              source: src(233),
+              title: "مخطط: التحويل بين أنظمة العدّ",
+              alt: "مخطط يربط أنظمة العدّ الثلاثة العشري والثنائي والسادس عشر واتجاهات التحويل بينها، كما في جدول الصفحة.",
+              caption: "‏العشري · الثنائي · السادس عشر والتحويل بينها.",
             },
             {
               id: "m28-l01-p03-note", type: "callout", origin: "teacher-enrichment", kind: "clarification", title: "توضيح المعلّم",
@@ -248,6 +275,15 @@ const m28: ContentModule = {
               spans: [L("Hub"), T(" يرسل للكل، "), L("Switch"), T(" للمقصود، "), L("Router"), T(" بين الشبكات.")],
             },
             {
+              // ENRICHMENT (Batch 9): SVG visual enrichment appended after the book content.
+              id: "m28-l01-p04-visual", type: "visual", origin: "teacher-enrichment",
+              visualId: "791381/m28/network-device-roles", motion: false,
+              source: src(234),
+              title: "مخطط: أجهزة الشبكة ووظائفها وطبقاتها",
+              alt: "مخطط يعرض الأجهزة الخمسة Hub و Switch و Router و Access Point و Modem مع وظيفة كل جهاز والطبقة التي يعمل فيها، كما في جدول الصفحة.",
+              caption: "‏الطبقة تكشف ما «يفهمه» كل جهاز: إشارة أم MAC أم IP.",
+            },
+            {
               id: "m28-l01-p04-note", type: "callout", origin: "teacher-enrichment", kind: "clarification", title: "توضيح المعلّم",
               spans: [T("الطبقة تخبرك بما «يفهمه» الجهاز: "), L("Hub"), T(" و "), L("Modem"), T(" يتعاملان مع الإشارة فقط، و "), L("Switch"), T(" و "), L("Access Point"), T(" يقرآن عنوان "), L("MAC"), T("، و "), L("Router"), T(" وحده يقرأ عنوان "), L("IP"), T(" ليختار الطريق بين الشبكات.")],
             },
@@ -303,6 +339,15 @@ const m28: ContentModule = {
             {
               id: "m28-l01-p05-remember", type: "callout", origin: "book", kind: "remember", title: "للتذكّر",
               spans: [T("الألياف "), L("Fiber"), T(" هي الأسرع والأبعد والأكثر مقاومة للتشويش.")],
+            },
+            {
+              // ENRICHMENT (Batch 9): SVG visual enrichment appended after the book content.
+              id: "m28-l01-p05-visual", type: "visual", origin: "teacher-enrichment",
+              visualId: "791381/m28/cable-media-overview", motion: false,
+              source: src(235),
+              title: "مخطط: الكوابل وطرق التوصيل",
+              alt: "مخطط يعرض أنواع الكوابل UTP و STP و Fiber وطرق التوصيل الثلاث Straight و Cross و Roll-over، كما في جداول الصفحة.",
+              caption: "‏لكل كابل نوعه، ولكل حالة توصيلها المناسب.",
             },
             {
               id: "m28-l01-p05-note", type: "callout", origin: "teacher-enrichment", kind: "clarification", title: "توضيح المعلّم",
@@ -418,6 +463,15 @@ const m28: ContentModule = {
               spans: [L("All People Seem To Need Data Processing"), T(" ابدأ من الأعلى ("), L("Application"), T(") للأسفل ("), L("Physical"), T(") — وهذا اتجاه الإرسال.")],
             },
             {
+              // ENRICHMENT (Batch 9): REUSE of the existing m13 osi-seven-layers visual (exact source match, PDF 237).
+              id: "m28-l02-p01-visual", type: "visual", origin: "teacher-enrichment",
+              visualId: "791381/m13/osi-seven-layers", motion: true,
+              source: src(237),
+              title: "مخطط: طبقات OSI السبع",
+              alt: "مخطط يعرض طبقات نموذج OSI السبع من التطبيقات إلى الإشارات بترتيبها، كما في جدول الصفحة.",
+              caption: "‏سبع طبقات، المرسل ينزل من 7 إلى 1.",
+            },
+            {
               id: "m28-l02-p01-note", type: "callout", origin: "teacher-enrichment", kind: "clarification", title: "توضيح المعلّم",
               spans: [T("كل كلمة في جملة الحفظ تبدأ بحرف الطبقة: "), L("A"), T("pplication، "), L("P"), T("resentation، "), L("S"), T("ession، "), L("T"), T("ransport، "), L("N"), T("etwork، "), L("D"), T("ata Link، "), L("P"), T("hysical. المرسل ينزل من 7 إلى 1، والمستقبل يصعد من 1 إلى 7.")],
             },
@@ -472,6 +526,16 @@ const m28: ContentModule = {
               spans: [L("ARP"), T(" يربط "), L("IP"), T(" بـ "), L("MAC"), T("، و "), L("ICMP"), T(" للفحص ("), L("ping"), T(")، وكلاهما في الطبقات الدنيا.")],
             },
             {
+              // ENRICHMENT (Batch 9): REUSE of the existing m21 well-known-ports visual (a source-faithful subset of the
+              // page's port table — every service/port it draws is printed here; PDF 238).
+              id: "m28-l02-p02-visual", type: "visual", origin: "teacher-enrichment",
+              visualId: "791381/m21/well-known-ports", motion: false,
+              source: src(238),
+              title: "مخطط: البروتوكولات ومنافذها",
+              alt: "مخطط يربط البروتوكولات الشائعة بأرقام منافذها مثل HTTP 80 و HTTPS 443 و DNS 53 و SSH 22، كما في جدول الصفحة.",
+              caption: "‏لكل بروتوكول منفذه المعروف.",
+            },
+            {
               id: "m28-l02-p02-note", type: "callout", origin: "teacher-enrichment", kind: "clarification", title: "توضيح المعلّم",
               spans: [T("لاحظ الأزواج: "), L("HTTP 80"), T(" وأخوه الآمن "), L("HTTPS 443"), T("، و "), L("TELNET 23"), T(" وبديله الآمن "), L("SSH 22"), T("، و "), L("FTP"), T(" الكامل مقابل "), L("TFTP"), T(" البسيط. "), L("ARP"), T(" و "), L("ICMP"), T(" لا منفذ لهما لأنهما تحت طبقة النقل.")],
             },
@@ -522,6 +586,15 @@ const m28: ContentModule = {
               spans: [L("TCP: HTTP/HTTPS · FTP · SMTP · SSH"), T(" — "), L("UDP: TFTP · DHCP · RIP · SNMP"), T(" — كلاهما: "), L("DNS"), T(".")],
             },
             {
+              // ENRICHMENT (Batch 9): REUSE of the existing m13 tcp-vs-udp visual (exact source match, PDF 239).
+              id: "m28-l02-p03-visual", type: "visual", origin: "teacher-enrichment",
+              visualId: "791381/m13/tcp-vs-udp", motion: true,
+              source: src(239),
+              title: "مخطط: TCP مقابل UDP",
+              alt: "مخطط مقارنة يوضّح الفروق بين TCP الموثوق الذي يتصل أولًا ويؤكّد، و UDP السريع بلا اتصال ولا تأكيد، كما في جدول الصفحة.",
+              caption: "‏TCP موثوق ويؤكّد · UDP سريع بلا تأكيد.",
+            },
+            {
               id: "m28-l02-p03-note", type: "callout", origin: "teacher-enrichment", kind: "clarification", title: "توضيح المعلّم",
               spans: [T("القاعدة العملية: إذا كان ضياع جزء من البيانات مقبولًا مقابل السرعة (صوت، بث، ألعاب) فهو "), L("UDP"), T("، وإذا وجب وصول كل بايت (ملف، صفحة ويب، بريد) فهو "), L("TCP"), T(". "), L("DNS"), T(" يستعمل الاثنين.")],
             },
@@ -569,6 +642,15 @@ const m28: ContentModule = {
             {
               id: "m28-l02-p04-remember", type: "callout", origin: "book", kind: "remember", title: "للتذكّر",
               spans: [L("Data"), T(" ثم "), L("Segment"), T(" ثم "), L("Packet"), T(" ثم "), L("Frame"), T(" ثم "), L("Bits"), T(" عند الإرسال، والعكس عند الاستقبال.")],
+            },
+            {
+              // ENRICHMENT (Batch 9): REUSE of the existing m18 encapsulation-stack visual (exact source match, PDF 240).
+              id: "m28-l02-p04-visual", type: "visual", origin: "teacher-enrichment",
+              visualId: "791381/m18/encapsulation-stack", motion: true,
+              source: src(240),
+              title: "مخطط: التغليف ووحدات البيانات",
+              alt: "مخطط يوضّح وحدات البيانات في كل طبقة Data ثم Segment ثم Packet ثم Frame ثم Bits وكيف يضيف التغليف ترويسة كل طبقة، كما في جدول الصفحة.",
+              caption: "‏كل طبقة تغلّف وحدتها بترويسة تحمل عنوانها.",
             },
             {
               id: "m28-l02-p04-note", type: "callout", origin: "teacher-enrichment", kind: "clarification", title: "توضيح المعلّم",
@@ -687,6 +769,15 @@ const m28: ContentModule = {
               spans: [T("عدد الأجهزة القابلة للاستخدام = "), L("2^host − 2"), T(".")],
             },
             {
+              // ENRICHMENT (Batch 9): SVG visual enrichment appended after the book content.
+              id: "m28-l03-p02-visual", type: "visual", origin: "teacher-enrichment",
+              visualId: "791381/m28/subnetting-walkthrough", motion: true,
+              source: src(242),
+              title: "مخطط: مثال التجزئة 192.168.1.25/24",
+              alt: "مخطط يفصل مثال الكتاب 192.168.1.25/24 إلى جزء الشبكة وجزء الجهاز عند البادئة، ويعرض النتائج: الشبكة 192.168.1.0 وأول جهاز .1 وآخر جهاز .254 والبث .255.",
+              caption: "‏نصفّر جزء الجهاز للشبكة ونملؤه بـ 255 للبث.",
+            },
+            {
               id: "m28-l03-p02-note", type: "callout", origin: "teacher-enrichment", kind: "clarification", title: "توضيح المعلّم",
               spans: [T("البادئة تخبرك أين ينتهي جزء الشبكة: "), L("/8"), T(" بعد الخانة الأولى، "), L("/16"), T(" بعد الثانية، "), L("/24"), T(" بعد الثالثة. ما بعدها هو جزء الأجهزة الذي تصفّره للشبكة وتملؤه بـ 255 للبث.")],
             },
@@ -742,6 +833,15 @@ const m28: ContentModule = {
             {
               id: "m28-l03-p03-example", type: "callout", origin: "book", kind: "tip", title: "مثال",
               spans: [T("قناع "), L("255.255.255.0"), T(" يقابله "), L("Wildcard 0.0.0.255"), T(" (شبكة "), L("/24"), T(" كاملة).")],
+            },
+            {
+              // ENRICHMENT (Batch 9): SVG visual enrichment appended after the book content.
+              id: "m28-l03-p03-visual", type: "visual", origin: "teacher-enrichment",
+              visualId: "791381/m28/wildcard-inversion", motion: true,
+              source: src(243),
+              title: "مخطط: قلب القناع إلى Wildcard",
+              alt: "مخطط يحوّل القناع 255.255.255.0 إلى قناع البدل 0.0.0.255 خانةً خانةً بقاعدة 255 ناقص الخانة، كما في مثال الصفحة.",
+              caption: "‏كل خانة في القناع = 255 − الخانة المقابلة في Wildcard.",
             },
             {
               id: "m28-l03-p03-note", type: "callout", origin: "teacher-enrichment", kind: "clarification", title: "توضيح المعلّم",
@@ -1118,6 +1218,15 @@ const m28: ContentModule = {
               spans: [T("عند استقبال إطار بعنوان "), L("MAC"), T(" غير موجود في الجدول يقوم بـ "), L("Flooding"), T(" (إرساله لكل المنافذ عدا المصدر). وعندما يردّ الجهاز الهدف، يتعلّم السويتش العنوان ويضيفه إلى جدول الـ "), L("MAC"), T(".")],
             },
             {
+              // ENRICHMENT (Batch 9): REUSE of the existing m16 stp-loop-blocking visual (exact source match, PDF 249).
+              id: "m28-l04-p05-visual", type: "visual", origin: "teacher-enrichment",
+              visualId: "791381/m16/stp-loop-blocking", motion: true,
+              source: src(249),
+              title: "مخطط: STP يمنع الحلقات",
+              alt: "مخطط يوضّح كيف يمنع STP الحلقات باختيار Root Bridge وتعطيل المسار الزائد، كما في جدول الصفحة.",
+              caption: "‏STP يعطّل المسار الزائد فيمنع دوران الإطار بلا نهاية.",
+            },
+            {
               id: "m28-l04-p05-note", type: "callout", origin: "teacher-enrichment", kind: "clarification", title: "توضيح المعلّم",
               spans: [T("لا تخلط بين الأمرين: "), L("Flooding"), T(" سلوك طبيعي مؤقّت حتى يتعلّم السويتش العنوان، أما الحلقة "), L("Loop"), T(" فمشكلة دائمة تجعل الإطار يدور بلا نهاية، و "), L("STP"), T(" يمنعها بتعطيل المسار الزائد.")],
             },
@@ -1287,6 +1396,15 @@ const m28: ContentModule = {
             {
               id: "m28-l05-p02-remember", type: "callout", origin: "book", kind: "remember", title: "تذكّر",
               spans: [T("عند وجود أكثر من مسار لنفس الشبكة، يختار الراوتر الأقل "), L("AD"), T(": "), L("Connected"), T(" ثم "), L("Static"), T(" ثم "), L("EIGRP"), T(" ثم "), L("OSPF"), T(" ثم "), L("RIP"), T(".")],
+            },
+            {
+              // ENRICHMENT (Batch 9): REUSE of the existing m27 admin-distance visual (exact source match, PDF 252).
+              id: "m28-l05-p02-visual", type: "visual", origin: "teacher-enrichment",
+              visualId: "791381/m27/admin-distance", motion: false,
+              source: src(252),
+              title: "مخطط: المسافة الإدارية AD",
+              alt: "مخطط يرتّب قيم المسافة الإدارية Connected 0 و Static 1 و EIGRP 90 و OSPF 110 و RIP 120، والأصغر أوثق، كما في جدول الصفحة.",
+              caption: "‏كلّما صغرت قيمة AD زادت ثقة المسار.",
             },
             {
               id: "m28-l05-p02-note", type: "callout", origin: "teacher-enrichment", kind: "clarification", title: "توضيح المعلّم",
@@ -1482,6 +1600,15 @@ const m28: ContentModule = {
               spans: [L("Shutdown"), T(" = إغلاق المنفذ ("), L("err-disabled"), T(")، "), L("Restrict"), T(" = إسقاط مع تنبيه، "), L("Protect"), T(" = إسقاط بلا تنبيه.")],
             },
             {
+              // ENRICHMENT (Batch 9): REUSE of the existing m23 port-security-scenario visual (exact source match, PDF 255).
+              id: "m28-l06-p02-visual", type: "visual", origin: "teacher-enrichment",
+              visualId: "791381/m23/port-security-scenario", motion: false,
+              source: src(255),
+              title: "مخطط: تأمين المنفذ Port Security",
+              alt: "مخطط يوضّح تأمين المنفذ: الأجهزة المسموح بها تمرّ والجهاز الغريب يُمنع، وهو معنى تحديد عدد الأجهزة المسموح والإجراء عند المخالفة.",
+              caption: "‏المنفذ المؤمَّن يسمح للأجهزة المصرّح بها ويمنع الغريب.",
+            },
+            {
               id: "m28-l06-p02-note", type: "callout", origin: "teacher-enrichment", kind: "clarification", title: "توضيح المعلّم",
               spans: [T("الأوامر الخمسة تُكتب داخل المنفذ (وضع الواجهة) رغم أن الكتاب يختصر البادئة. المحاكي ينفّذ الإجراء الذي يطبعه الكتاب ("), L("violation shutdown"), T(")؛ أما "), L("Restrict"), T(" و "), L("Protect"), T(" فتفرّق بينهما في التدريب أدناه: كلاهما يُسقط الإطارات المخالفة، والفرق في التنبيه.")],
             },
@@ -1551,6 +1678,16 @@ const m28: ContentModule = {
             {
               id: "m28-l06-p03-ssh", type: "callout", origin: "book", kind: "important", title: "SSH",
               spans: [T("بديل آمن ومشفّر لـ "), L("Telnet"), T(" لتسجيل الدخول إلى السويتش أو الراوتر عبر الشبكة (المنفذ "), L("22"), T(").")],
+            },
+            {
+              // ENRICHMENT (Batch 9): REUSE of the existing m24 device-access-paths visual (exact source match, PDF 256):
+              // the page secures exactly the Console / VTY / Enable access paths the visual maps.
+              id: "m28-l06-p03-visual", type: "visual", origin: "teacher-enrichment",
+              visualId: "791381/m24/device-access-paths", motion: false,
+              source: src(256),
+              title: "مخطط: طرق الوصول إلى الجهاز",
+              alt: "مخطط يوضّح طرق الوصول الثلاث Console و VTY و Enable وأوامر خطوطها التي تحميها الصفحة بكلمات المرور.",
+              caption: "‏Console محلي · VTY عن بُعد · Enable للوضع المميّز.",
             },
             {
               id: "m28-l06-p03-note", type: "callout", origin: "teacher-enrichment", kind: "clarification", title: "توضيح المعلّم",
@@ -1631,6 +1768,16 @@ const m28: ContentModule = {
               spans: [L("Standard"), T(" قريبة من الوجهة (تفحص المصدر فقط)، و "), L("Extended"), T(" قريبة من المصدر (تفحص المصدر والوجهة والمنفذ).")],
             },
             {
+              // ENRICHMENT (Batch 9): REUSE of the existing m06 acl-gate visual (exact source match, PDF 257):
+              // the Standard-vs-Extended permit/deny gate and placement rule the page compares.
+              id: "m28-l06-p04-visual", type: "visual", origin: "teacher-enrichment",
+              visualId: "791381/m06/acl-gate", motion: true,
+              source: src(257),
+              title: "مخطط: ACL — بوابة Permit / Deny",
+              alt: "مخطط يبيّن ACL كبوابة تسمح أو تمنع، مع قاعدة الموضع: Standard قرب الوجهة (المصدر فقط) و Extended قرب المصدر (المصدر والوجهة والمنفذ).",
+              caption: "‏Standard قرب الوجهة · Extended قرب المصدر.",
+            },
+            {
               id: "m28-l06-p04-note", type: "callout", origin: "teacher-enrichment", kind: "clarification", title: "توضيح المعلّم",
               spans: [T("الرقم يقرّر النوع قبل أي شيء: "), L("10"), T(" قياسية فلا تقبل إلا المصدر، و "), L("100"), T(" موسّعة فتطلب البروتوكول والمصدر والوجهة. في المهمّة أدناه سيناريو تعليمي: القائمة 10 تُطبَّق خروجًا على "), L("g0/0"), T(" والقائمة 100 دخولًا على "), L("g0/1"), T(" (الكتاب لا يسمّي المنافذ).")],
             },
@@ -1704,6 +1851,15 @@ const m28: ContentModule = {
               spans: [L("NAT/PAT"), T(" يتيحان لأجهزة الشبكة الخاصة الخروج إلى الإنترنت عبر عنوان عام، و "), L("APIPA"), T(" إشارة لمشكلة في "), L("DHCP"), T(".")],
             },
             {
+              // ENRICHMENT (Batch 9): SVG visual enrichment appended after the book content.
+              id: "m28-l07-p01-visual", type: "visual", origin: "teacher-enrichment",
+              visualId: "791381/m28/nat-pat-apipa", motion: false,
+              source: src(258),
+              title: "مخطط: NAT و PAT و APIPA — مفاهيم منفصلة",
+              alt: "مخطط يفصل ثلاثة مفاهيم: NAT وPAT للخروج بعنوان عام (PAT بالمنافذ)، وAPIPA المنفصل الذي يبدأ بـ 169.254 عند فشل DHCP وليس نمط NAT.",
+              caption: "‏NAT/PAT للخروج بعنوان عام · APIPA إشارة إلى فشل DHCP.",
+            },
+            {
               id: "m28-l07-p01-note", type: "callout", origin: "teacher-enrichment", kind: "clarification", title: "توضيح المعلّم",
               spans: [T("العناوين الخاصة من الصفحة الأولى لا تُوجَّه على الإنترنت، لذلك يبدّلها الراوتر بعنوانه العام ("), L("NAT"), T(")، ويميّز الأجهزة برقم المنفذ حين يشتركون في عنوان واحد ("), L("PAT"), T("). و "), L("APIPA"), T(" ليس حلًّا بل عَرَض: الجهاز لم يجد خادم "), L("DHCP"), T(".")],
             },
@@ -1763,6 +1919,16 @@ const m28: ContentModule = {
             {
               id: "m28-l07-p02-pc", type: "callout", origin: "book", kind: "remember", title: "في الحاسوب",
               spans: [L("ipconfig /release"), T(" لتحرير العنوان، "), L("ipconfig /renew"), T(" لطلب عنوان جديد من الخادم.")],
+            },
+            {
+              // ENRICHMENT (Batch 9): REUSE of the existing m22 dhcp-dora visual (exact source match, PDF 259): the four
+              // DORA stages the page lists (the pool-numbers visual is a different example, so it is NOT reused here).
+              id: "m28-l07-p02-visual", type: "visual", origin: "teacher-enrichment",
+              visualId: "791381/m22/dhcp-dora", motion: true,
+              source: src(259),
+              title: "مخطط: مراحل DHCP — DORA",
+              alt: "مخطط يعرض مراحل DHCP الأربع Discover ثم Offer ثم Request ثم ACK بترتيبها واتجاهاتها بين الجهاز والخادم، كما في قائمة الصفحة.",
+              caption: "‏الطلب يبدأ من الجهاز، والخادم يردّ — بالترتيب DORA.",
             },
             {
               id: "m28-l07-p02-note", type: "callout", origin: "teacher-enrichment", kind: "clarification", title: "توضيح المعلّم",
@@ -1828,6 +1994,15 @@ const m28: ContentModule = {
               spans: [T("اتصال موثوق بين الجهازين قبل تبادل أي بيانات فعلية عبر "), L("TCP"), T(".")],
             },
             {
+              // ENRICHMENT (Batch 9): SVG visual enrichment appended after the book content.
+              id: "m28-l07-p03-visual", type: "visual", origin: "teacher-enrichment",
+              visualId: "791381/m28/tcp-three-way-handshake", motion: true,
+              source: src(260),
+              title: "مخطط: مصافحة TCP الثلاثية",
+              alt: "مخطط يوضّح مصافحة TCP الثلاثية بالترتيب السببي: SYN من العميل، ثم SYN-ACK من الخادم، ثم ACK من العميل، ثم يبدأ تبادل البيانات.",
+              caption: "‏SYN ثم SYN-ACK ثم ACK — ثم يبدأ تبادل البيانات.",
+            },
+            {
               id: "m28-l07-p03-note", type: "callout", origin: "teacher-enrichment", kind: "clarification", title: "توضيح المعلّم",
               spans: [T("هذه المصافحة هي معنى «يتصل أولًا» في جدول "), L("TCP"), T(" و "), L("UDP"), T(": الطرفان يتبادلان أرقام التسلسل قبل أي بيانات، ولذلك يستطيع كل طرف لاحقًا اكتشاف ما ضاع وطلب إعادته.")],
             },
@@ -1877,6 +2052,15 @@ const m28: ContentModule = {
             {
               id: "m28-l07-p04-idea", type: "callout", origin: "book", kind: "tip", title: "الفكرة",
               spans: [T("فتح موقع واحد يجمع "), L("DNS"), T(" و "), L("ARP"), T(" و "), L("TCP"), T(" و "), L("HTTP"), T(" معًا — مثال يربط كل البروتوكولات.")],
+            },
+            {
+              // ENRICHMENT (Batch 9): SVG visual enrichment appended after the book content.
+              id: "m28-l07-p04-visual", type: "visual", origin: "teacher-enrichment",
+              visualId: "791381/m28/web-opening-journey", motion: true,
+              source: src(261),
+              title: "مخطط: رحلة فتح موقع",
+              alt: "مخطط يعرض خطوات فتح موقع بالترتيب المطبوع: DNS ثم ARP ثم مصافحة TCP ثم HTTP/HTTPS، كل خطوة تلي التي قبلها.",
+              caption: "‏DNS ثم ARP ثم TCP ثم HTTP — رحلة سببية متتابعة.",
             },
             {
               id: "m28-l07-p04-note", type: "callout", origin: "teacher-enrichment", kind: "clarification", title: "توضيح المعلّم",
@@ -1933,6 +2117,16 @@ const m28: ContentModule = {
             {
               id: "m28-l07-p05-end", type: "callout", origin: "book", kind: "summary", title: "تمّ بحمد الله",
               spans: [T("تلخيص الشبكات الشامل — نموذج "), L("791381"), T(" · إعداد المعلّم وفيق نصار.")],
+            },
+            {
+              // ENRICHMENT (Batch 9): SVG visual enrichment appended after the book content — a CONCEPTUAL decision map
+              // (not a terminal) that maps a question to its command; the page's own simulator remains the live terminal.
+              id: "m28-l07-p05-visual", type: "visual", origin: "teacher-enrichment",
+              visualId: "791381/m28/troubleshooting-command-map", motion: false,
+              source: src(262),
+              title: "مخطط: خريطة أوامر CMD و Show",
+              alt: "خريطة قرار تربط سؤال الفحص بالأمر المناسب: أوامر CMD على الحاسوب مثل ping و tracert، وأوامر Show على جهاز الشبكة مثل show vlan brief و show vtp status، بلا مخرجات مزيّفة.",
+              caption: "‏لكل سؤال أمره المناسب — على الحاسوب أو على جهاز الشبكة.",
             },
             {
               id: "m28-l07-p05-note", type: "callout", origin: "teacher-enrichment", kind: "clarification", title: "توضيح المعلّم",
