@@ -4,6 +4,8 @@
 // Port Security, device access, WAN, routing protocols, ACL). Motion visuals are checked for causal, one-shot
 // sequencing (no stale-restart).
 import { describe, it, expect, afterEach } from "vitest";
+import { readFileSync, readdirSync } from "node:fs";
+import { resolve } from "node:path";
 import { render, cleanup } from "@testing-library/react";
 import TrunkMultiVlan from "./791381/batch6/TrunkMultiVlan";
 import Dot1qTagFrame from "./791381/batch6/Dot1qTagFrame";
@@ -130,14 +132,26 @@ describe("Batch 6 — dhcp-dora (PDF 170): the four stages in order, correct dir
 });
 
 // ── m22 DHCP pool (PDF 171) ──
-describe("Batch 6 — dhcp-pool-excluded (PDF 171): reserved vs distributed on /24", () => {
-  it("shows the network, the gateway and the reserved/pool bands; no command words", () => {
+describe("Batch 6 — dhcp-pool-excluded (PDF 171): the example pool is EXACTLY .10–.50, not 'the rest'", () => {
+  it("shows the /24 network, the gateway, and the exact .10–.50 distribution range", () => {
     const { container } = render(<DhcpPoolExcluded ariaLabel="x" reducedMotion={true} />);
     const t = text(container);
-    expect(t).toContain("192.168.1.0/24");
-    expect(t).toContain("192.168.1.254");
-    expect([...container.querySelectorAll("[data-band]")].map(g => g.getAttribute("data-band")).sort()).toEqual(["gateway", "pool", "reserved"]);
+    for (const s of ["192.168.1.0/24", "192.168.1.254", ".10", ".50"]) expect(t).toContain(s);
     for (const cmd of ["ip dhcp pool", "default-router", "dns-server", "excluded-address"]) expect(t).not.toContain(cmd);
+  });
+  it("the POOL element corresponds specifically to 192.168.1.10 – 192.168.1.50", () => {
+    const { container } = render(<DhcpPoolExcluded ariaLabel="x" reducedMotion={true} />);
+    const pool = container.querySelector('[data-band="pool"]')!;
+    expect(pool).not.toBeNull();
+    expect(text(pool)).toContain("192.168.1.10");
+    expect(text(pool)).toContain("192.168.1.50");
+  });
+  it("does NOT imply an unspecified 'rest of the /24' pool: shows an explicit out-of-pool band and no 'the rest' language", () => {
+    const { container } = render(<DhcpPoolExcluded ariaLabel="x" reducedMotion={true} />);
+    // the .51–.253 space is drawn as its own out-of-pool band, not folded into the distribution range
+    expect(container.querySelector('[data-band="after"]'), "out-of-pool band").not.toBeNull();
+    const t = text(container);
+    for (const rest of ["باقي العناوين", "الباقي", "the rest"]) expect(t).not.toContain(rest);
   });
 });
 
@@ -234,6 +248,32 @@ describe("Batch 6 — acl-gate (PDF 223): permit passes, deny stops; placement r
       const a = byId(container, id)!;
       expect(a.getAttribute("begin"), id).not.toContain(".end");
       expect(a.getAttribute("fill"), id).toBe("freeze");
+    }
+  });
+});
+
+// ── one-shot motion discipline: NO infinite loops, NO cyclic self-restart anywhere in Batch 6 ──
+describe("Batch 6 — one-shot motion discipline (source scan)", () => {
+  const dir = resolve(process.cwd(), "src/learning/visuals/791381/batch6") + "/";
+  const files = readdirSync(dir).filter(f => f.endsWith(".tsx"));
+  const sources = files.map(f => [f, readFileSync(dir + f, "utf8")] as const);
+
+  it("scans every Batch 6 component and finds ZERO infinite animations (no repeatCount=\"indefinite\")", () => {
+    expect(files.length).toBeGreaterThan(0);
+    for (const [f, src] of sources) {
+      expect(src, `${f} must not contain an infinite animation`).not.toContain('repeatCount="indefinite"');
+      expect(src, `${f} must not contain any indefinite repeatCount`).not.toMatch(/repeatCount=["'][^"']*indefinite/);
+    }
+  });
+
+  it("no animation uses a cyclic self-restart begin (the multi-value \"...;X.end\" loop pattern)", () => {
+    for (const [f, src] of sources) {
+      const begins = src.match(/begin=[`"'][^`"']*[`"']/g) || [];
+      for (const b of begins) {
+        // a semicolon in a begin list is how SMIL restarts a stage from a later stage's end (e.g. "0s;last.end"),
+        // producing an endless cycle. Batch 6 is strictly one-shot, so no begin may contain one.
+        expect(b, `${f}: cyclic-restart begin ${b}`).not.toContain(";");
+      }
     }
   });
 });

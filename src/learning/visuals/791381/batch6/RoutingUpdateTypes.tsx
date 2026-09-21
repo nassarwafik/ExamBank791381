@@ -4,10 +4,11 @@ import type { LearningVisualProps } from "../../types";
  * «Distance Vector / Link-State» (Book 791381, PDF 212) — the two families of dynamic routing differ in WHEN they send
  * updates: a Distance Vector protocol (example EIGRP) sends updates periodically, on a timer; a Link-State protocol
  * (example OSPF) sends an update only when something changes and builds a full map. Motion TEACHES that difference:
- * the Distance Vector side emits repeated periodic pulses (a steady loop that leaves no stale state), while the
- * Link-State side sends a single update triggered by a change (one-shot, freeze). Reduced motion ⇒ the two labelled
- * panels shown statically. Book scope: the two update behaviours and their example protocols only — no metric values,
- * AD numbers, areas or commands.
+ * the Distance Vector side emits THREE successive periodic updates, one after another (each plays once and freezes
+ * lit), then stops in the complete state — a finite, one-shot demonstration of "updates on a timer", never an endless
+ * loop. The Link-State side sends a single update triggered by a change (one-shot, freeze). Reduced motion ⇒ the two
+ * labelled panels shown statically (all ticks already lit). Book scope: the two update behaviours and their example
+ * protocols only — no metric values, AD numbers, areas or commands.
  */
 export default function RoutingUpdateTypes({ ariaLabel, reducedMotion, className }: LearningVisualProps) {
   return (
@@ -21,12 +22,15 @@ export default function RoutingUpdateTypes({ ariaLabel, reducedMotion, className
         <text className="eb-visual-node-label" x="100" y="60" textAnchor="middle" fontSize="12">Distance Vector</text>
         <text className="eb-visual-meta" x="100" y="78" textAnchor="middle">تحديثات دورية (بمؤقّت)</text>
         <text className="eb-visual-token" x="100" y="98" textAnchor="middle" fontSize="10">EIGRP</text>
+        {/* three successive periodic updates: each lights once and freezes; the panel then rests with all three lit
+            (finite, one-shot — no repeatCount, no cyclic .end restart). */}
         {[0, 1, 2].map(k => (
-          <circle key={k} className="eb-visual-dot" cx={52 + k * 32} cy="126" r="6" opacity={reducedMotion ? 1 : 0.3}>
-            {!reducedMotion && <animate attributeName="opacity" begin={`${k * 0.4}s`} dur="1.2s" values="0.3;1;0.3" repeatCount="indefinite" />}
+          <circle key={k} className="eb-visual-dot" cx={52 + k * 32} cy="126" r="6" opacity={reducedMotion ? 1 : 0}>
+            {!reducedMotion && <animate id={`dvPulse${k}`} attributeName="opacity"
+              begin={k === 0 ? "0.4s" : `dvPulse${k - 1}.end`} dur="0.7s" values="0;1" fill="freeze" />}
           </circle>
         ))}
-        <text className="eb-visual-meta" x="100" y="150" textAnchor="middle">كل فترة زمنية</text>
+        <text className="eb-visual-meta" x="100" y="150" textAnchor="middle">تحديثات متتالية على مؤقّت</text>
       </g>
 
       {/* Link-State — update only on change */}
