@@ -111,6 +111,40 @@ describe("visuals registry", () => {
       "791381/m27/show-ip-route",
       // Batch 6 — ACL (m06)
       "791381/m06/acl-gate",
+      // Batch 7 — VTP roles (m19)
+      "791381/m19/vtp-roles",
+      // Batch 7 — inter-switch trunk ports & router sub-interfaces (m04)
+      "791381/m04/inter-switch-trunk-ports",
+      "791381/m04/subinterfaces-vlan10-20",
+      "791381/m04/subinterfaces-vlan30-40",
+      // Batch 7 — Wi-Fi & wireless (m20)
+      "791381/m20/dmz-three-zone",
+      "791381/m20/wifi-radio-link",
+      "791381/m20/wireless-network-types",
+      "791381/m20/ssid-beacon",
+      "791381/m20/wifi-security",
+      "791381/m20/wifi-protection-technologies",
+      "791381/m20/access-point-bridge",
+      // Batch 7 — IPv6 (m21)
+      "791381/m21/ipv6-anatomy",
+      "791381/m21/ipv6-compression",
+      // Batch 8 — DHCP concept pages (m22)
+      "791381/m22/dhcp-automatic-config",
+      "791381/m22/dedicated-dhcp-server",
+      // Batch 8 — Port Security concept (m23)
+      "791381/m23/port-security-concept",
+      // Batch 8 — Cisco device security framing (m24)
+      "791381/m24/device-security-layers",
+      // Batch 8 — Cisco command reference maps (m05)
+      "791381/m05/cisco-cli-overview",
+      "791381/m05/show-commands-map",
+      // Batch 8 — WAN technologies (m26)
+      "791381/m26/frame-relay-vs-atm",
+      "791381/m26/hdlc-vs-metro",
+      // Batch 8 — routing protocols (m27)
+      "791381/m27/routing-methods-overview",
+      "791381/m27/static-route-path",
+      "791381/m27/eigrp-metric-adaptation",
       // Batch 9 — ACL decision detail (m06)
       "791381/m06/standard-acl-source",
       "791381/m06/extended-acl-decision",
@@ -126,8 +160,13 @@ describe("visuals registry", () => {
       "791381/m28/troubleshooting-command-map",
       // Batch 9 review-fix — source-exact Port Security config summary (m28 PDF 255)
       "791381/m28/port-security-config-summary",
+      // Batch 9 controlled sync — source-exact summaries (m28 PDF 244 / 250 / 251 / 252)
+      "791381/m28/ipv6-summary",
+      "791381/m28/metro-vlan-summary",
+      "791381/m28/route-types-summary",
+      "791381/m28/admin-distance-summary",
     ]);
-    expect(REGISTERED_VISUAL_IDS.length).toBe(93);
+    expect(REGISTERED_VISUAL_IDS.length).toBe(121);
   });
 
   it("every id is course/namespace scoped (reusable pattern for later chapters)", () => {

@@ -21,6 +21,10 @@ import TcpThreeWayHandshake from "./791381/batch9/TcpThreeWayHandshake";
 import WebOpeningJourney from "./791381/batch9/WebOpeningJourney";
 import TroubleshootingCommandMap from "./791381/batch9/TroubleshootingCommandMap";
 import PortSecurityConfigSummary from "./791381/batch9/PortSecurityConfigSummary";
+import Ipv6Summary from "./791381/batch9/Ipv6Summary";
+import MetroVlanSummary from "./791381/batch9/MetroVlanSummary";
+import RouteTypesSummary from "./791381/batch9/RouteTypesSummary";
+import AdminDistanceSummary from "./791381/batch9/AdminDistanceSummary";
 
 afterEach(cleanup);
 const text = (n: Element) => n.textContent || "";
@@ -225,14 +229,64 @@ describe("Batch 9 — port-security-config-summary (PDF 255): the config chain +
   });
 });
 
+// ── m28 IPv6 summary (PDF 244): exact structure, compression chain and special addresses ──
+describe("Batch 9 (sync) — ipv6-summary (PDF 244): 128-bit structure + the book's compression example", () => {
+  it("carries the exact PDF244 compression chain, the /64 structure and the special addresses; no PDF167 example", () => {
+    const { container } = render(<Ipv6Summary ariaLabel="x" reducedMotion={true} />);
+    const t = text(container);
+    for (const s of ["128 bit", "8 مجموعات", "/64", "::1", "FE80::/10", "FF00::/8", "لا Broadcast"]) expect(t).toContain(s);
+    // the exact three-step compression from PDF244
+    expect(attrs(container, "[data-compress]", "data-compress")).toEqual([
+      "2001:0DB8:0000:0000:0000:0000:0000:0001", "2001:DB8:0:0:0:0:0:1", "2001:DB8::1",
+    ]);
+    // no PDF167 example addresses leak in
+    for (const banned of ["2001:0DB8:AC10", "FE80::1%", "2000::/3"]) expect(t).not.toContain(banned);
+  });
+});
+
+// ── m28 Metro-Ethernet + VLAN (PDF 250): relationship, no HDLC ──
+describe("Batch 9 (sync) — metro-vlan-summary (PDF 250): physical Metro-Ethernet vs logical VLAN, no HDLC", () => {
+  it("shows Metro-Ethernet connecting branches physically and VLANs isolating customers logically; never mentions HDLC", () => {
+    const { container } = render(<MetroVlanSummary ariaLabel="x" reducedMotion={true} />);
+    const t = text(container);
+    for (const s of ["Metro-Ethernet", "VLAN", "ألياف", "فرع", "فيزيائي", "منطقي"]) expect(t).toContain(s);
+    expect(container.querySelector('[data-infra="metro-ethernet"]')).not.toBeNull();
+    expect([...container.querySelectorAll("[data-vlan]")].map(g => g.getAttribute("data-vlan"))).toEqual(["A", "B"]);
+    for (const banned of ["HDLC", "ATM", "Frame Relay", "PPP"]) expect(t).not.toContain(banned);
+  });
+});
+
+// ── m28 route types (PDF 251): Static/Dynamic/Default + exact static example ──
+describe("Batch 9 (sync) — route-types-summary (PDF 251): three types + the exact static route", () => {
+  it("shows Static/Dynamic/Default and decodes the book's exact static-route values and the default route", () => {
+    const { container } = render(<RouteTypesSummary ariaLabel="x" reducedMotion={true} />);
+    expect([...container.querySelectorAll("[data-route]")].map(g => g.getAttribute("data-route"))).toEqual(["Static", "Dynamic", "Default"]);
+    const t = text(container);
+    for (const s of ["192.168.2.0", "255.255.255.0", "10.0.0.2", "0.0.0.0/0", "OSPF", "EIGRP"]) expect(t).toContain(s);
+    // conceptual decode, not a terminal with fabricated output
+    for (const fake of ["Router#", "Gateway of last resort", "% ", "S*", "Codes:"]) expect(t).not.toContain(fake);
+  });
+});
+
+// ── m28 admin distance (PDF 252): AD-only, no Metric ──
+describe("Batch 9 (sync) — admin-distance-summary (PDF 252): AD values only, no Metric formulas", () => {
+  it("shows the exact AD values ordered smallest-first and the 'smaller = more trusted' rule; NO Bandwidth/Delay/Metric", () => {
+    const { container } = render(<AdminDistanceSummary ariaLabel="x" reducedMotion={true} />);
+    expect([...container.querySelectorAll("[data-ad]")].map(g => g.getAttribute("data-ad"))).toEqual(["0", "1", "90", "110", "120"]);
+    const t = text(container);
+    for (const s of ["Connected", "Static", "EIGRP", "OSPF", "RIP", "الأصغر"]) expect(t).toContain(s);
+    for (const banned of ["Bandwidth", "Delay", "Metric", "المقياس", "عرض النطاق", "التأخير"]) expect(t).not.toContain(banned);
+  });
+});
+
 // ── one-shot motion discipline: NO infinite loops, NO cyclic self-restart anywhere in Batch 9 ──
 describe("Batch 9 — one-shot motion discipline (source scan)", () => {
   const dir = resolve(process.cwd(), "src/learning/visuals/791381/batch9") + "/";
   const files = readdirSync(dir).filter(f => f.endsWith(".tsx"));
   const sources = files.map(f => [f, readFileSync(dir + f, "utf8")] as const);
 
-  it("has exactly the twelve Batch 9 component files", () => {
-    expect(files.length).toBe(12);
+  it("has exactly the sixteen Batch 9 component files", () => {
+    expect(files.length).toBe(16);
   });
   it("scans every Batch 9 component and finds ZERO infinite animations (no indefinite repeatCount)", () => {
     for (const [f, src] of sources) {
@@ -255,7 +309,7 @@ describe("Batch 9 — one-shot motion discipline (source scan)", () => {
 describe("Batch 9 — reduced motion drops all motion; the animated ones render some when on", () => {
   const ALL = [StandardAclSource, ExtendedAclDecision, IpVsMacSummary, NetworkDeviceRoles, CableMediaOverview,
     SubnettingWalkthrough, WildcardInversion, NatPatApipa, TcpThreeWayHandshake, WebOpeningJourney, TroubleshootingCommandMap,
-    PortSecurityConfigSummary];
+    PortSecurityConfigSummary, Ipv6Summary, MetroVlanSummary, RouteTypesSummary, AdminDistanceSummary];
   const ANIMATED = [StandardAclSource, ExtendedAclDecision, SubnettingWalkthrough, WildcardInversion, TcpThreeWayHandshake, WebOpeningJourney];
   it("no <animateMotion>, no <animate>, and a valid still svg[role=img] for each under reduced motion", () => {
     for (const Comp of ALL) {

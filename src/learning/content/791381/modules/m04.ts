@@ -73,6 +73,15 @@ const m04: ContentModule = {
               spans: [T("المنافذ بين السويتشات غالبًا تكون "), L("Trunk"), T(" لتمرير عدة "), L("VLAN"), T(" عبرها.")],
             },
             {
+              // ENRICHMENT (Batch 7): SVG visual enrichment appended after the book content.
+              id: "m04-l01-p02-visual", type: "visual", origin: "teacher-enrichment",
+              visualId: "791381/m04/inter-switch-trunk-ports", motion: false,
+              source: src(146),
+              title: "مخطط: منافذ الربط بين السويتشات",
+              alt: "مخطط للسويتشات الستة Sw1-HFA حتى Sw6-HFA مع المنافذ التي ستكون Trunk في كل منها؛ فقط Sw6-HFA يحمل المنفذ G0/0.",
+              caption: "‏المنافذ بين السويتشات تكون Trunk · فقط Sw6-HFA يحمل G0/0.",
+            },
+            {
               id: "m04-l01-p02-clar", type: "callout", origin: "teacher-enrichment", kind: "clarification", title: "توضيح",
               spans: [T("الجدول هو مخطّط شبكة المثال في هذا القسم: ستة سويتشات أسماؤها من "), L("Sw1-HFA"), T(" إلى "), L("Sw6-HFA"), T("، وأمام كل واحد المنافذ التي تصله بسويتش آخر. هذه المنافذ عادة آخر منافذ "), L("FastEthernet"), T(" (من "), L("F0/22"), T(" إلى "), L("F0/24"), T(")، وفي "), L("Sw6-HFA"), T(" يوجد أيضًا المنفذ الأسرع "), L("G0/0"), T(". باقي المنافذ تبقى "), L("Access"), T(" للأجهزة كما تعلّمت.")],
             },
@@ -571,6 +580,15 @@ const m04: ContentModule = {
               spans: [T("لكل "), L("VLAN"), T(" نكتب "), L("Sub-Interface"), T(" وعنوان "), L("Gateway"), T(" خاص بها.")],
             },
             {
+              // ENRICHMENT (Batch 7): SVG visual enrichment appended after the book content.
+              id: "m04-l02-p04-visual", type: "visual", origin: "teacher-enrichment",
+              visualId: "791381/m04/subinterfaces-vlan10-20", motion: false,
+              source: src(154),
+              title: "مخطط: واجهات فرعية — VLAN 10 / 20",
+              alt: "مخطط يبيّن الواجهة الفيزيائية g0/0 مقسّمة إلى واجهات فرعية: g0/0.10 مرتبطة بـ VLAN 10 (encapsulation dot1Q 10، البوابة 192.168.10.254)، و g0/0.20 تُفتح لـ VLAN 20.",
+              caption: "‏g0/0.10 = بوابة VLAN 10 (192.168.10.254) · g0/0.20 تُفتح لـ VLAN 20.",
+            },
+            {
               id: "m04-l02-p04-clar", type: "callout", origin: "teacher-enrichment", kind: "clarification", title: "توضيح",
               spans: [T("أوّل أوامر على الراوتر في الكتاب؛ الموجّه "), L("Router(config)#"), T(" ثم "), L("Router(config-subif)#"), T(" عندما تدخل واجهة فرعية. الاسم "), L("g0/0.10"), T(" هو المنفذ "), L("g0/0"), T(" وبعده نقطة ورقم الـ "), L("VLAN"), T("؛ "), L("encapsulation dot1Q 10"), T(" يربطها بـ "), L("VLAN 10"), T("؛ والعنوان "), L("192.168.10.254"), T(" هو نفسه عنوان "), L("Gateway"), T(" شبكة الإدارة الذي رأيته في قسم برمجة السويتش. السطر الأخير يبدأ الواجهة الفرعية الثانية لـ "), L("VLAN 20"), T(" بنفس الطريقة.")],
             },
@@ -631,6 +649,15 @@ const m04: ContentModule = {
             {
               id: "m04-l02-p05-remember", type: "callout", origin: "book", kind: "remember", title: "تذكّر",
               spans: [T("لكل "), L("VLAN"), T(" واجهة فرعية "), L("Sub-Interface"), T(" خاصة بها: رقم "), L("Dot1Q"), T(" مختلف وعنوان "), L("Gateway"), T(" مختلف.")],
+            },
+            {
+              // ENRICHMENT (Batch 7): SVG visual enrichment appended after the book content.
+              id: "m04-l02-p05-visual", type: "visual", origin: "teacher-enrichment",
+              visualId: "791381/m04/subinterfaces-vlan30-40", motion: false,
+              source: src(155),
+              title: "مخطط: واجهات فرعية — VLAN 30 / 40",
+              alt: "مخطط يبيّن الواجهة g0/0 بواجهتين فرعيّتين: g0/0.30 (encapsulation dot1Q 30، البوابة 192.168.30.254) و g0/0.40 (encapsulation dot1Q 40، البوابة 192.168.40.254).",
+              caption: "‏g0/0.30 = بوابة VLAN 30 · g0/0.40 = بوابة VLAN 40 — رقم dot1Q يطابق رقم VLAN.",
             },
             {
               id: "m04-l02-p05-clar", type: "callout", origin: "teacher-enrichment", kind: "clarification", title: "توضيح",

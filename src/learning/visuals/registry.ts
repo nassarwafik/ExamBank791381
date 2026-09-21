@@ -107,9 +107,43 @@ import RoutingUpdateTypes from "./791381/batch6/RoutingUpdateTypes";
 import OspfTopology from "./791381/batch6/OspfTopology";
 import ShowIpRoute from "./791381/batch6/ShowIpRoute";
 import AclGate from "./791381/batch6/AclGate";
+// Batch 7 — VTP/Trunk remainder + Wi-Fi + IPv6: the previously-unenriched pages of m19 (VTP roles, PDF 140), m04
+// (inter-switch trunk ports PDF 146, router sub-interfaces PDF 154/155 — split per source fidelity), m20 (Wi-Fi &
+// wireless, PDF 159–165) and m21 (IPv6 anatomy/compression, PDF 166–167). Same data-only, exact-allowlist,
+// reduced-motion discipline; finite one-shot motion only.
+import VtpRoles from "./791381/batch7/VtpRoles";
+import InterSwitchTrunkPorts from "./791381/batch7/InterSwitchTrunkPorts";
+import SubinterfacesVlan1020 from "./791381/batch7/SubinterfacesVlan1020";
+import SubinterfacesVlan3040 from "./791381/batch7/SubinterfacesVlan3040";
+import DmzThreeZone from "./791381/batch7/DmzThreeZone";
+import WifiRadioLink from "./791381/batch7/WifiRadioLink";
+import WirelessNetworkTypes from "./791381/batch7/WirelessNetworkTypes";
+import SsidBeacon from "./791381/batch7/SsidBeacon";
+import WifiSecurity from "./791381/batch7/WifiSecurity";
+import WifiProtectionTechnologies from "./791381/batch7/WifiProtectionTechnologies";
+import AccessPointBridge from "./791381/batch7/AccessPointBridge";
+import Ipv6Anatomy from "./791381/batch7/Ipv6Anatomy";
+import Ipv6Compression from "./791381/batch7/Ipv6Compression";
+// Batch 8 — services / routing arc across the previously visual-free CONCEPT pages of m22 (DHCP), m23 (Port
+// Security), m24 (Cisco device security), m05 (Cisco command reference), m26 (WAN) and m27 (routing protocols).
+// Concept pages only — the CLI-simulator command pages get no redundant SVG. Same data-only, exact-allowlist,
+// finite one-shot / reduced-motion discipline.
+import DhcpAutomaticConfig from "./791381/batch8/DhcpAutomaticConfig";
+import DedicatedDhcpServer from "./791381/batch8/DedicatedDhcpServer";
+import PortSecurityConcept from "./791381/batch8/PortSecurityConcept";
+import DeviceSecurityLayers from "./791381/batch8/DeviceSecurityLayers";
+import CiscoCliOverview from "./791381/batch8/CiscoCliOverview";
+import ShowCommandsMap from "./791381/batch8/ShowCommandsMap";
+import FrameRelayVsAtm from "./791381/batch8/FrameRelayVsAtm";
+import HdlcVsMetro from "./791381/batch8/HdlcVsMetro";
+import RoutingMethodsOverview from "./791381/batch8/RoutingMethodsOverview";
+import StaticRoutePath from "./791381/batch8/StaticRoutePath";
+import EigrpMetricAdaptation from "./791381/batch8/EigrpMetricAdaptation";
 // Batch 9 — the FINAL visual-enrichment batch: the ACL decision detail (m06 Standard/Extended, PDF 224/227) and the
 // comprehensive summary module m28 (PDF 231–262) — IP vs MAC, device roles, cable/media, the solved subnetting
-// example, wildcard inversion, NAT/PAT/APIPA, the TCP handshake, the website journey and the CMD/Show map. Same
+// example, wildcard inversion, NAT/PAT/APIPA, the TCP handshake, the website journey and the CMD/Show map. After the
+// controlled sync it also owns the four sensitive summary pages that could not reuse a Batch 7/8 component
+// source-exactly: IPv6 (PDF244), Metro-Ethernet+VLAN (PDF250), route types (PDF251) and AD-only (PDF252). Same
 // data-only, exact-allowlist, finite one-shot, reduced-motion discipline; summary pages that already own a strong
 // visual REUSE it (no duplicate registry entry).
 import StandardAclSource from "./791381/batch9/StandardAclSource";
@@ -124,6 +158,10 @@ import TcpThreeWayHandshake from "./791381/batch9/TcpThreeWayHandshake";
 import WebOpeningJourney from "./791381/batch9/WebOpeningJourney";
 import TroubleshootingCommandMap from "./791381/batch9/TroubleshootingCommandMap";
 import PortSecurityConfigSummary from "./791381/batch9/PortSecurityConfigSummary";
+import Ipv6Summary from "./791381/batch9/Ipv6Summary";
+import MetroVlanSummary from "./791381/batch9/MetroVlanSummary";
+import RouteTypesSummary from "./791381/batch9/RouteTypesSummary";
+import AdminDistanceSummary from "./791381/batch9/AdminDistanceSummary";
 
 const VISUALS: readonly RegisteredVisual[] = [
   // Chapter 1 pilot
@@ -232,6 +270,40 @@ const VISUALS: readonly RegisteredVisual[] = [
   { id: "791381/m27/show-ip-route", component: ShowIpRoute, motion: false },
   // Batch 6 — ACL (m06)
   { id: "791381/m06/acl-gate", component: AclGate, motion: true },
+  // Batch 7 — VTP roles (m19)
+  { id: "791381/m19/vtp-roles", component: VtpRoles, motion: false },
+  // Batch 7 — inter-switch trunk ports & router sub-interfaces (m04)
+  { id: "791381/m04/inter-switch-trunk-ports", component: InterSwitchTrunkPorts, motion: false },
+  { id: "791381/m04/subinterfaces-vlan10-20", component: SubinterfacesVlan1020, motion: false },
+  { id: "791381/m04/subinterfaces-vlan30-40", component: SubinterfacesVlan3040, motion: false },
+  // Batch 7 — Wi-Fi & wireless (m20)
+  { id: "791381/m20/dmz-three-zone", component: DmzThreeZone, motion: true },
+  { id: "791381/m20/wifi-radio-link", component: WifiRadioLink, motion: true },
+  { id: "791381/m20/wireless-network-types", component: WirelessNetworkTypes, motion: false },
+  { id: "791381/m20/ssid-beacon", component: SsidBeacon, motion: true },
+  { id: "791381/m20/wifi-security", component: WifiSecurity, motion: false },
+  { id: "791381/m20/wifi-protection-technologies", component: WifiProtectionTechnologies, motion: false },
+  { id: "791381/m20/access-point-bridge", component: AccessPointBridge, motion: false },
+  // Batch 7 — IPv6 (m21)
+  { id: "791381/m21/ipv6-anatomy", component: Ipv6Anatomy, motion: false },
+  { id: "791381/m21/ipv6-compression", component: Ipv6Compression, motion: true },
+  // Batch 8 — DHCP concept pages (m22)
+  { id: "791381/m22/dhcp-automatic-config", component: DhcpAutomaticConfig, motion: true },
+  { id: "791381/m22/dedicated-dhcp-server", component: DedicatedDhcpServer, motion: false },
+  // Batch 8 — Port Security concept (m23)
+  { id: "791381/m23/port-security-concept", component: PortSecurityConcept, motion: true },
+  // Batch 8 — Cisco device security framing (m24)
+  { id: "791381/m24/device-security-layers", component: DeviceSecurityLayers, motion: false },
+  // Batch 8 — Cisco command reference maps (m05)
+  { id: "791381/m05/cisco-cli-overview", component: CiscoCliOverview, motion: false },
+  { id: "791381/m05/show-commands-map", component: ShowCommandsMap, motion: false },
+  // Batch 8 — WAN technologies (m26)
+  { id: "791381/m26/frame-relay-vs-atm", component: FrameRelayVsAtm, motion: false },
+  { id: "791381/m26/hdlc-vs-metro", component: HdlcVsMetro, motion: false },
+  // Batch 8 — routing protocols (m27)
+  { id: "791381/m27/routing-methods-overview", component: RoutingMethodsOverview, motion: false },
+  { id: "791381/m27/static-route-path", component: StaticRoutePath, motion: true },
+  { id: "791381/m27/eigrp-metric-adaptation", component: EigrpMetricAdaptation, motion: false },
   // Batch 9 — ACL decision detail (m06)
   { id: "791381/m06/standard-acl-source", component: StandardAclSource, motion: true },
   { id: "791381/m06/extended-acl-decision", component: ExtendedAclDecision, motion: true },
@@ -247,6 +319,12 @@ const VISUALS: readonly RegisteredVisual[] = [
   { id: "791381/m28/troubleshooting-command-map", component: TroubleshootingCommandMap, motion: false },
   // Batch 9 review-fix — source-exact Port Security config summary (m28 PDF 255; replaces the PDF181 scenario reuse)
   { id: "791381/m28/port-security-config-summary", component: PortSecurityConfigSummary, motion: false },
+  // Batch 9 controlled sync — source-exact summaries for the four sensitive pages that could not reuse a Batch 7/8
+  // component exactly (m28 PDF 244 IPv6, PDF 250 Metro-Ethernet+VLAN, PDF 251 route types, PDF 252 AD-only)
+  { id: "791381/m28/ipv6-summary", component: Ipv6Summary, motion: false },
+  { id: "791381/m28/metro-vlan-summary", component: MetroVlanSummary, motion: false },
+  { id: "791381/m28/route-types-summary", component: RouteTypesSummary, motion: false },
+  { id: "791381/m28/admin-distance-summary", component: AdminDistanceSummary, motion: false },
 ];
 
 // Build the lookup once. A duplicate id is a programming error (a later entry silently shadowing an earlier one), so

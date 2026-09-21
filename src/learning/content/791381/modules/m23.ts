@@ -70,6 +70,15 @@ const m23: ContentModule = {
               spans: [L("Port Security"), T(" = حماية المنفذ حسب الجهاز المتصل به.")],
             },
             {
+              // ENRICHMENT (Batch 8): SVG visual enrichment appended after the book content.
+              id: "m23-l01-p01-visual", type: "visual", origin: "teacher-enrichment",
+              visualId: "791381/m23/port-security-concept", motion: true,
+              source: src(180),
+              title: "مخطط: مفهوم Port Security",
+              alt: "مخطط متحرّك: منفذ السويتش يسمح للجهاز المعروف بعنوان MAC ويمنع الجهاز المجهول، بلا أسماء أجهزة السيناريو.",
+              caption: "‏المنفذ يسمح للجهاز المعروف بعنوان MAC ويمنع المجهول.",
+            },
+            {
               id: "m23-l01-p01-note", type: "callout", origin: "teacher-enrichment", kind: "clarification", title: "توضيح المعلّم",
               spans: [T("عرفت في وحدة الكوابل أن لكل بطاقة شبكة عنوان "), L("MAC"), T(" ثابتًا؛ "), L("Port Security"), T(" يستعمل هذا العنوان ليعرف السويتش أي جهاز موصول بالمنفذ، فيسمح للمعروف ويمنع المجهول.")],
             },

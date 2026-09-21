@@ -895,6 +895,16 @@ const m28: ContentModule = {
               spans: [L("Loopback = ::1"), T("، و "), L("::"), T(" = لا عنوان، و "), L("Link-Local = FE80::/10"), T("، و "), L("Multicast = FF00::/8"), T(" (لا يوجد "), L("Broadcast"), T(" في "), L("IPv6"), T(").")],
             },
             {
+              // ENRICHMENT (Batch 9 controlled sync): NEW source-exact IPv6 summary (PDF 244); deferred pages are now
+              // filled with their own m28 visuals rather than reusing a Batch 7 component with different examples.
+              id: "m28-l03-p04-visual", type: "visual", origin: "teacher-enrichment",
+              visualId: "791381/m28/ipv6-summary", motion: false,
+              source: src(244),
+              title: "مخطط: IPv6 — البنية والتصغير",
+              alt: "مخطط يلخّص IPv6: الطول 128 bit في 8 مجموعات Hextet، بادئة /64، ومثال التصغير 2001:0DB8...0001 ثم 2001:DB8:0:0:0:0:0:1 ثم 2001:DB8::1، مع العناوين الخاصة ولا Broadcast.",
+              caption: "‏128 bit · 8 Hextets · /64 · التصغير بـ :: مرة واحدة.",
+            },
+            {
               id: "m28-l03-p04-note", type: "callout", origin: "teacher-enrichment", kind: "clarification", title: "توضيح المعلّم",
               spans: [T("خطوتا التصغير بالترتيب: أولًا احذف الأصفار في بداية كل مجموعة، ثم استبدل أطول سلسلة من مجموعات الأصفار المتتالية بـ "), L("::"), T(" مرة واحدة فقط، وإلا لم يعد ممكنًا معرفة عدد المجموعات المحذوفة.")],
             },
@@ -1281,6 +1291,15 @@ const m28: ContentModule = {
               spans: [L("Metro-Ethernet"), T(" يربط المواقع فيزيائيًّا، و "), L("VLAN"), T(" تفصلها منطقيًّا داخل نفس البنية.")],
             },
             {
+              // ENRICHMENT (Batch 9 controlled sync): NEW source-exact Metro-Ethernet + VLAN summary (PDF 250).
+              id: "m28-l04-p06-visual", type: "visual", origin: "teacher-enrichment",
+              visualId: "791381/m28/metro-vlan-summary", motion: false,
+              source: src(250),
+              title: "مخطط: Metro-Ethernet و VLAN",
+              alt: "مخطط يوضّح Metro-Ethernet كألياف تربط الفروع فيزيائيًّا، و VLAN تفصل العملاء منطقيًّا داخل البنية نفسها.",
+              caption: "‏Metro-Ethernet يربط المواقع · VLAN تعزل العملاء داخلها.",
+            },
+            {
               id: "m28-l04-p06-note", type: "callout", origin: "teacher-enrichment", kind: "clarification", title: "توضيح المعلّم",
               spans: [T("هذا هو الرابط بين وحدة "), L("WAN"), T(" ووحدة "), L("VLAN"), T(": شركة الاتصالات تمدّ ألياف "), L("Metro-Ethernet"), T(" الواحدة لعدة عملاء، وتفصل حركة كل عميل عن الآخر بـ "), L("VLAN"), T(" خاصة به على البنية نفسها.")],
             },
@@ -1333,6 +1352,15 @@ const m28: ContentModule = {
               headers: ["الأمر", "ماذا يفعل"],
               columnDirs: ["ltr", "rtl"],
               rows: [["Router(config)# ip route 192.168.2.0 255.255.255.0 10.0.0.2", "مسار ثابت إلى الشبكة 192.168.2.0/24 عبر القفزة التالية 10.0.0.2"]],
+            },
+            {
+              // ENRICHMENT (Batch 9 controlled sync): NEW source-exact route-types summary (PDF 251).
+              id: "m28-l05-p01-visual", type: "visual", origin: "teacher-enrichment",
+              visualId: "791381/m28/route-types-summary", motion: false,
+              source: src(251),
+              title: "مخطط: أنواع المسارات",
+              alt: "مخطط يقارن المسار الثابت والديناميكي والافتراضي، ويحلّل مثال الكتاب ip route 192.168.2.0 255.255.255.0 10.0.0.2 والمسار الافتراضي 0.0.0.0/0.",
+              caption: "‏Static · Dynamic · Default، مع تحليل المسار الثابت.",
             },
             {
               id: "m28-l05-p01-note", type: "callout", origin: "teacher-enrichment", kind: "clarification", title: "توضيح المعلّم",
@@ -1398,12 +1426,14 @@ const m28: ContentModule = {
               spans: [T("عند وجود أكثر من مسار لنفس الشبكة، يختار الراوتر الأقل "), L("AD"), T(": "), L("Connected"), T(" ثم "), L("Static"), T(" ثم "), L("EIGRP"), T(" ثم "), L("OSPF"), T(" ثم "), L("RIP"), T(".")],
             },
             {
-              // ENRICHMENT (Batch 9): REUSE of the existing m27 admin-distance visual (exact source match, PDF 252).
+              // ENRICHMENT (Batch 9 controlled sync): the PDF252 reuse of m27/admin-distance was DROPPED because Batch 8
+              // enhanced that component with Metric-vs-AD content (not on PDF252, which is AD-only). Replaced with a NEW
+              // source-exact AD-only summary; the production m27/admin-distance keeps its enhanced form for PDF213.
               id: "m28-l05-p02-visual", type: "visual", origin: "teacher-enrichment",
-              visualId: "791381/m27/admin-distance", motion: false,
+              visualId: "791381/m28/admin-distance-summary", motion: false,
               source: src(252),
               title: "مخطط: المسافة الإدارية AD",
-              alt: "مخطط يرتّب قيم المسافة الإدارية Connected 0 و Static 1 و EIGRP 90 و OSPF 110 و RIP 120، والأصغر أوثق، كما في جدول الصفحة.",
+              alt: "مخطط يرتّب قيم المسافة الإدارية Connected 0 و Static 1 و EIGRP 90 و OSPF 110 و RIP 120، والأصغر أوثق، كما في جدول الصفحة، بلا مقاييس Metric.",
               caption: "‏كلّما صغرت قيمة AD زادت ثقة المسار.",
             },
             {

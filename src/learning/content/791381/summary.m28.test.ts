@@ -228,11 +228,11 @@ describe("Final summary — pedagogy, provenance, direction", () => {
     expect(first.type === "text" && first.origin === "book" && first.spans.map(sp => sp.text).join("")).toBe("الحمد لله الذي وفّقنا وأعاننا على إتمام هذا الكتاب.");
     expect(JSON.stringify(byPdf(263).blocks)).not.toContain("فالحمد");
   });
-  it("counts: 33 pages, 41 practices (21 MC / 6 TF / 14 shortInput / 0 fillBlank), 16 worksheets, 10 simulations, 9 code, 37 tables, 21 visual-enrichment blocks (Batch 9), 93 book blocks, 122 enrichment, 215 blocks; every worksheet key is one of its options", () => {
+  it("counts: 33 pages, 41 practices (21 MC / 6 TF / 14 shortInput / 0 fillBlank), 16 worksheets, 10 simulations, 9 code, 37 tables, 24 visual-enrichment blocks (Batch 9 after controlled sync), 93 book blocks, 125 enrichment, 218 blocks; every worksheet key is one of its options", () => {
     expect([pages.length, count(m28, b => b.type === "practice"), count(m28, b => b.type === "practice-table"), count(m28, b => b.type === "simulation"), count(m28, b => b.type === "code"), count(m28, b => b.type === "table")]).toEqual([33, 41, 16, 10, 9, 37]);
     expect(["multipleChoice", "trueFalse", "shortInput", "fillBlank"].map(k => count(m28, b => b.type === "practice" && b.question.kind === k))).toEqual([21, 6, 14, 0]);
-    expect(count(m28, b => b.type === "visual")).toBe(21);
-    expect([count(m28, b => b.origin === "book"), count(m28, b => b.origin === "teacher-enrichment"), count(m28, () => true)]).toEqual([93, 122, 215]);
+    expect(count(m28, b => b.type === "visual")).toBe(24);
+    expect([count(m28, b => b.origin === "book"), count(m28, b => b.origin === "teacher-enrichment"), count(m28, () => true)]).toEqual([93, 125, 218]);
     for (const b of allBlocks) if (b.type === "practice-table") {
       let selects = 0;
       for (const row of b.rows) for (const cell of row) if (typeof cell !== "string") { selects++; expect(sel(cell).options, b.id).toContain(sel(cell).key); expect(new Set(sel(cell).options).size, b.id).toBe(sel(cell).options.length); }
