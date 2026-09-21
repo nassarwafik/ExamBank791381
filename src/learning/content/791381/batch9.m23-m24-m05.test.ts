@@ -350,9 +350,9 @@ describe("Batch 9 — the twelve REAL book CLI exercises (simulation / cli-termi
 });
 
 describe("Batch 9 — pedagogy, provenance, direction", () => {
-  it("every page ends with a practice; exactly ONE clarification per page; every practice has 2 hints + «افحص» incorrect feedback + explanation; review heading + r1–r3 on each module's last page (184, 191, 199)", () => {
+  it("every page ends with an interactive exercise (practice or practice-table); exactly ONE clarification per page; every practice has 2 hints + «افحص» incorrect feedback + explanation; review heading + r1–r3 on each module's last page (184, 191, 199)", () => {
     for (const p of pages) {
-      expect(p.blocks.at(-1)!.type, p.id).toBe("practice");
+      expect(["practice", "practice-table"], p.id).toContain(p.blocks.at(-1)!.type);
       expect(p.blocks.filter(b => b.type === "callout" && b.kind === "clarification"), p.id).toHaveLength(1);
       for (const b of p.blocks) if (b.type === "practice") {
         const f = b.question.feedback!;
@@ -367,11 +367,12 @@ describe("Batch 9 — pedagogy, provenance, direction", () => {
       expect(p.blocks.slice(rev + 1).map(b => b.id.slice(-3)), p.id).toEqual(["-r1", "-r2", "-r3"]);
     }
   });
-  it("counts: 5 / 7 / 8 pages, 10 / 12 / 14 practices, 2 / 1 / 1 worksheets, 5 / 7 / 8 clarifications, 3 / 4 / 5 code blocks, 3 / 4 / 5 simulations, book blocks 16 / 19 / 23; worksheet keys are always one of their options", () => {
+  it("counts: 5 / 7 / 8 pages, 10 / 11 / 14 practices, 2 / 2 / 1 worksheets, 5 / 7 / 8 clarifications, 3 / 4 / 5 code blocks, 3 / 4 / 5 simulations, book blocks 16 / 19 / 23; worksheet keys are always one of their options", () => {
     const count = (m: ContentModule, f: (b: ContentBlock) => boolean) => pagesOf(m).flatMap(p => p.blocks).filter(f).length;
     expect(BATCH.map(m => pagesOf(m).length)).toEqual([5, 7, 8]);
-    expect(BATCH.map(m => count(m, b => b.type === "practice"))).toEqual([10, 12, 14]);
-    expect(BATCH.map(m => count(m, b => b.type === "practice-table"))).toEqual([2, 1, 1]);
+    // m24-l01-p01-q2 converted from a static fillBlank practice to a dropdown practice-table
+    expect(BATCH.map(m => count(m, b => b.type === "practice"))).toEqual([10, 11, 14]);
+    expect(BATCH.map(m => count(m, b => b.type === "practice-table"))).toEqual([2, 2, 1]);
     expect(BATCH.map(m => count(m, b => b.type === "callout" && b.kind === "clarification"))).toEqual([5, 7, 8]);
     expect(BATCH.map(m => count(m, b => b.type === "code"))).toEqual([3, 4, 5]);
     expect(BATCH.map(m => count(m, b => b.type === "simulation"))).toEqual([3, 4, 5]);

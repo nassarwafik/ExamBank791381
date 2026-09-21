@@ -110,10 +110,11 @@ describe("Reader follow-up — site 147 (PDF 160): source-faithful «حسنة أ
       ["ضعف الأمان", "عيب"],
     ]);
     for (const r of table!.rows) expect(sel(r[1]).options).toEqual(["حسنة", "عيب"]);
-    // the existing two practice questions are untouched and the page still ENDS with practice
+    // the existing two practice questions are still present and the page still ENDS with an interactive exercise
+    // (q2 was converted from a static fillBlank to a dropdown practice-table in the Reader fillBlank-dropdown fix)
     expect(page.blocks.some(b => b.id === "m20-l01-p02-q1")).toBe(true);
     expect(page.blocks.some(b => b.id === "m20-l01-p02-q2")).toBe(true);
-    expect(page.blocks[page.blocks.length - 1].type).toBe("practice");
+    expect(["practice", "practice-table"]).toContain(page.blocks[page.blocks.length - 1].type);
   });
   it("the dropdown is a LOCAL self-check only: studyEligible=false keeps its keys/options intact but excludes it from Study Strength", () => {
     const page = pageByPdf(m20, 160);

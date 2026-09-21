@@ -599,16 +599,17 @@ const m22: ContentModule = {
               },
             },
             {
-              id: "m22-l03-p01-q2", type: "practice", origin: "teacher-enrichment",
-              question: {
-                kind: "fillBlank", prompt: "الشبكة التي يذكرها الكتاب مثالًا للتوزيع من السيرفر هي 192.168.10.0/____.", answers: ["24"],
-                feedback: {
-                  hints: ["السطر الثاني في قائمة الحقائق.", "نفس طول القناع الذي رأيته في مثال الراوتر."],
-                  correctFeedback: "صحيح — 192.168.10.0/24.",
-                  incorrectFeedback: "افحص السطر: «نحدّد الشبكة مثل …».",
-                  explanation: "/24 يعني قناع 255.255.255.0، كما في مثال الراوتر 192.168.1.0/24.",
-                },
-              },
+              // Reader interactive fix: was a keyed `fillBlank` (rendered as a non-interactive placeholder). Converted
+              // to a dropdown self-check via the existing practice-table/select surface. Local learning only —
+              // studyEligible:false keeps it out of Study Practice Strength (baseline unchanged). Distractors are the
+              // other common CIDR mask lengths (/16, /32); /24 is the book's example value.
+              id: "m22-l03-p01-q2", type: "practice-table", origin: "teacher-enrichment", studyEligible: false,
+              caption: "اختر القيمة الصحيحة لإكمال الجملة:",
+              headers: ["الجملة", "الإجابة"],
+              columnDirs: ["rtl", "ltr"],
+              rows: [
+                ["الشبكة التي يذكرها الكتاب مثالًا للتوزيع من السيرفر هي 192.168.10.0/______", { kind: "select", options: ["24", "16", "32"], key: "24" }],
+              ],
             },
           ],
         },

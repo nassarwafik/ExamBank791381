@@ -100,7 +100,7 @@ describe("Batch 7 — scope and placement (VTP/Trunk remainder + Wi-Fi + IPv6)",
       if (idxs.length) {
         expect(idxs[0]).toBeGreaterThan(0);
         expect(p.blocks[0].origin).toBe("book");
-        expect(p.blocks.at(-1)!.type, p.id).toBe("practice");
+        expect(["practice", "practice-table"], p.id).toContain(p.blocks.at(-1)!.type);
       }
     }
   });
