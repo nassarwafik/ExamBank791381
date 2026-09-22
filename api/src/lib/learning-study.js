@@ -6,12 +6,14 @@
 // COMPLETION STATE, NOT A COUNTER (anti-farming): an activity id is either completed or not; a repeat, a duplicate
 // request, a retry or a re-opened page can never add a second entry, and a wrong answer writes nothing. Points are
 // NEVER stored — they are re-derived on every read from the completed ids that the SERVER-SIDE KEY INDEX
-// (api/src/data/learning-study/<courseId>.json, generated from the real content) still lists as eligible for that
-// page, through the Strength policy (student-strength.js): min(count, 2) per page, min(Σ, 15) per module.
+// (api/src/data/learning-study/<courseId>.json, generated from the real content) still lists as eligible, through
+// the Strength policy (student-strength.js): per MODULE, round(completed / eligible × 20), 0..20 — where `eligible`
+// is the module's total count of eligible activities in the index and `completed` the uniquely completed ones.
+// Library-training blocks (T/F items) are never in the index: they belong only to their own 40-point bucket.
 // Writes go through mutateJsonWithRetry (CAS): overlapping submissions converge on the same set.
 const { normalizeClassStatus } = require("./class-lifecycle");
 const { classHasLearningCourse, classCanSeeLearningModule } = require("./class-learning-materials");
-const { STUDY_PAGE_MAX_POINTS, STUDY_MODULE_MAX_POINTS, studyPointsForPage, studyPointsForModule, studyPointsFromModules } = require("./student-strength");
+const { STUDY_MODULE_MAX_POINTS, studyPointsForModule, studyPointsFromModules } = require("./student-strength");
 
 const STUDY_PREFIX = "platform/learning-study/";
 const studyDocName = studentId => STUDY_PREFIX + String(studentId || "").trim() + ".json";
@@ -36,6 +38,23 @@ function findStudyPage(index, pageId) {
   const id = cleanId(pageId);
   const page = index && ID.test(id) ? index.pages[id] : null;
   return page && typeof page === "object" && page.activities && typeof page.activities === "object" ? page : null;
+}
+/** How many eligible activities the index lists for one page (0 for an unknown page). */
+function pageEligibleCount(index, pageId) {
+  const page = findStudyPage(index, pageId);
+  return page ? Object.keys(page.activities).length : 0;
+}
+/** The eligible-activity total of every module in the index: { moduleId: eligibleCount }. */
+function moduleEligibleCounts(index) {
+  const out = {};
+  if (!index || !index.pages) return out;
+  for (const page of Object.values(index.pages)) {
+    if (!page || typeof page !== "object" || !page.activities || typeof page.activities !== "object") continue;
+    const moduleId = cleanId(page.moduleId);
+    if (!moduleId) continue;
+    out[moduleId] = (out[moduleId] || 0) + Object.keys(page.activities).length;
+  }
+  return out;
 }
 /** The key of one activity on one page, or null (unknown page / unknown activity / not eligible). */
 function findStudyActivity(index, pageId, activityId) {
@@ -86,21 +105,22 @@ function normalizeStudyDoc(doc) {
 /**
  * Record ONE correct completion. Idempotent: an activity already completed is left exactly as it was (its original
  * timestamp kept) and reports gained 0. Returns { doc, alreadyCompleted, pageBefore, pageAfter, gained } where
- * `gained` is the ACTUAL Study Strength delta of this completion — the student's study total (page cap AND module
- * cap applied, re-derived against the index) after minus before, never negative — while pageBefore / pageAfter are
- * the page's own points. A completion that raises the page but not the (already capped) module gains 0. Called
- * inside the CAS mutation with the FRESHEST document, so a retry recomputes both totals. Pure.
+ * `gained` is the ACTUAL Study Strength delta of this completion — the student's study total (every module
+ * re-derived against the index through round(completed / eligible × 20)) after minus before, never negative — while
+ * pageBefore / pageAfter are the page's counts of eligible completed activities. A completion whose module fraction
+ * rounds to the same points gains 0 (and a later one may gain 1 — the module total is exact at 100%). Called inside
+ * the CAS mutation with the FRESHEST document, so a retry recomputes both totals. Pure.
  */
 function applyStudyCompletion(doc, index, { courseId, moduleId, pageId, activityId }, now) {
   const normalized = normalizeStudyDoc(doc);
   const before = studyStateOf(normalized, index).totalPoints;
   const page = normalized.pages[pageId] || { courseId: cleanId(courseId), moduleId: cleanId(moduleId), completed: {} };
   const alreadyCompleted = Object.prototype.hasOwnProperty.call(page.completed, activityId);
-  const pageBefore = studyPointsForPage(eligibleCompletedCount(index, pageId, page.completed));
+  const pageBefore = eligibleCompletedCount(index, pageId, page.completed);
   if (!alreadyCompleted) page.completed = { ...page.completed, [activityId]: String(now || new Date().toISOString()) };
   page.courseId = cleanId(courseId); page.moduleId = cleanId(moduleId);
   normalized.pages[pageId] = page;
-  const pageAfter = studyPointsForPage(eligibleCompletedCount(index, pageId, page.completed));
+  const pageAfter = eligibleCompletedCount(index, pageId, page.completed);
   const after = studyStateOf(normalized, index).totalPoints;
   return { doc: normalized, alreadyCompleted, pageBefore, pageAfter, gained: alreadyCompleted ? 0 : Math.max(0, after - before) };
 }
@@ -113,25 +133,30 @@ function eligibleCompletedCount(index, pageId, completed) {
 }
 
 /**
- * The authoritative study state of a student for ONE course: the { moduleId: { pageId: count } } map the Strength
- * summary consumes, plus per-page / per-module views for the API. Nothing stored is trusted beyond the completed ids.
+ * The authoritative study state of a student for ONE course: the { moduleId: { completed, eligible } } map the
+ * Strength summary consumes (EVERY module the index knows, so a module with nothing completed reads 0 / eligible),
+ * plus per-page views ({ moduleId, completed: [ids], eligible }) and per-module views ({ completed, eligible, points,
+ * max }) for the API. Nothing stored is trusted beyond the completed ids; an id the index no longer lists (or a
+ * library-training id, which is never in the index) does not count.
  */
 function studyStateOf(doc, index) {
   const normalized = normalizeStudyDoc(doc);
   const modules = {};
   const pages = {};
   if (index) {
+    for (const [moduleId, eligible] of Object.entries(moduleEligibleCounts(index))) modules[moduleId] = { completed: 0, eligible };
     for (const [pageId, entry] of Object.entries(normalized.pages)) {
       const spec = findStudyPage(index, pageId);
       if (!spec || entry.courseId !== index.courseId) continue;
       const completed = Object.keys(entry.completed).filter(id => Object.prototype.hasOwnProperty.call(spec.activities, id)).sort();
-      modules[spec.moduleId] = modules[spec.moduleId] || {};
-      modules[spec.moduleId][pageId] = completed.length;
-      pages[pageId] = { moduleId: spec.moduleId, completed, points: studyPointsForPage(completed.length), max: STUDY_PAGE_MAX_POINTS };
+      const moduleId = cleanId(spec.moduleId);
+      modules[moduleId] = modules[moduleId] || { completed: 0, eligible: 0 };
+      modules[moduleId].completed += completed.length;
+      pages[pageId] = { moduleId, completed, eligible: Object.keys(spec.activities).length };
     }
   }
   const moduleViews = {};
-  for (const [moduleId, pageCounts] of Object.entries(modules)) moduleViews[moduleId] = { points: studyPointsForModule(pageCounts), max: STUDY_MODULE_MAX_POINTS };
+  for (const [moduleId, m] of Object.entries(modules)) moduleViews[moduleId] = { completed: m.completed, eligible: m.eligible, points: studyPointsForModule(m), max: STUDY_MODULE_MAX_POINTS };
   return { modules, pages, moduleViews, totalPoints: studyPointsFromModules(modules) };
 }
 
@@ -153,6 +178,6 @@ function studyAllowedForClass(classroom, courseId, moduleId) {
 }
 
 module.exports = {
-  STUDY_PREFIX, studyDocName, loadStudyIndex, findStudyPage, findStudyActivity, evaluateStudyResponse,
+  STUDY_PREFIX, studyDocName, loadStudyIndex, findStudyPage, pageEligibleCount, moduleEligibleCounts, findStudyActivity, evaluateStudyResponse,
   normalizeStudyDoc, applyStudyCompletion, eligibleCompletedCount, studyStateOf, studyModulesForStrength, studyAllowedForClass,
 };

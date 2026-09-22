@@ -11,9 +11,14 @@
 // and every page the manifest lists for m02 (PDF 14, 15–22, 23) now has a real body — so `partial` is dropped and an
 // unexpectedly-absent page would again be a genuine integrity error rather than a "قيد الإعداد" state.
 
-import type { ContentModule, ContentSource } from "../../types";
+import type { ContentModule, ContentSource, PracticeOption } from "../../types";
 
 const src = (pdf: number, printed?: number): ContentSource => ({ kind: "book", sourceId: "791381", pdfPageStart: pdf, printedPage: printed });
+
+// Study-Practice exercises (teacher enrichment, Strength phase): short self-checks on what THIS page teaches — the
+// Reader judges them locally and the server (learning-study key index) awards the module's Strength for uniquely
+// completed exercises. Never book content, never a training (the T/F Learning-Practice items keep their own bucket).
+const opt = (id: string, text: string, correct?: true): PracticeOption => (correct ? { id, text, correct } : { id, text });
 
 const m02: ContentModule = {
   id: "791381-m02",
@@ -72,6 +77,25 @@ const m02: ContentModule = {
               id: "m02-l01-p04-computer", type: "callout", origin: "book", kind: "tip", title: "في الحاسوب",
               spans: [{ text: "الرقم 0 يعني إطفاء، والرقم 1 يعني تشغيل. كل البيانات في النهاية أصفار وآحاد." }],
             },
+            {
+              id: "m02-l01-p04-q1", type: "practice", origin: "teacher-enrichment",
+              question: {
+                kind: "multipleChoice", prompt: "كم رقمًا يستخدم النظام الثنائي الذي يفهمه الحاسوب؟",
+                options: [
+                  opt("m02-l01-p04-q1-a", "رقمان فقط: 0 و1", true),
+                  opt("m02-l01-p04-q1-b", "عشرة أرقام من 0 إلى 9"),
+                  opt("m02-l01-p04-q1-c", "ستة عشر رمزًا"),
+                ],
+                feedback: { hints: ["افحص بطاقة «العدد الثنائي».", "0 و1 فقط."], correctFeedback: "أحسنت — الثنائي يستخدم رقمين فقط.", incorrectFeedback: "افحص بطاقة «العدد الثنائي»: «يستخدم رقمين فقط».", explanation: "العشري يستخدم 0–9، والثنائي 0 و1 فقط." },
+              },
+            },
+            {
+              id: "m02-l01-p04-q2", type: "practice", origin: "teacher-enrichment",
+              question: {
+                kind: "trueFalse", prompt: "في الحاسوب، الرقم 0 يعني إطفاء والرقم 1 يعني تشغيل.", answer: true,
+                feedback: { hints: ["افحص صندوق «في الحاسوب»."], correctFeedback: "أحسنت — كل البيانات في النهاية أصفار وآحاد.", incorrectFeedback: "افحص صندوق «في الحاسوب».", explanation: "0 إطفاء، 1 تشغيل." },
+              },
+            },
           ],
         },
         // PDF 16 — تحويل من الثنائي للعشري (existing id p01)
@@ -105,6 +129,25 @@ const m02: ContentModule = {
               alt: "رسم يبيّن خانات القيَم (128 حتى 1)، وتُضيء الخانات التي تحتها 1 ويُجمع مجموعها ليساوي 123.",
               caption: "اجمع قيَم الخانات المضيئة فقط: 64+32+16+8+2+1 = 123.",
             },
+            {
+              id: "m02-l01-p01-q1", type: "practice", origin: "teacher-enrichment",
+              question: {
+                kind: "shortInput", prompt: "حوّل العدد الثنائي 01111011 إلى عشري كما في مثال الكتاب (اكتب العدد فقط).", answer: "123",
+                feedback: { hints: ["افحص صف الصناديق ثم اجمع القيم التي تحتها 1.", "64 + 32 + 16 + 8 + 2 + 1."], correctFeedback: "أحسنت — 01111011 تساوي 123.", incorrectFeedback: "افحص صندوق «النتيجة»: مجموع قيم الصناديق المضيئة.", explanation: "نجمع فقط القيم التي تحتها الرقم 1." },
+              },
+            },
+            {
+              id: "m02-l01-p01-q2", type: "practice", origin: "teacher-enrichment",
+              question: {
+                kind: "multipleChoice", prompt: "في طريقة الصناديق للتحويل من الثنائي إلى العشري، ما الذي نجمعه؟",
+                options: [
+                  opt("m02-l01-p01-q2-a", "قيم الصناديق التي تحتها الرقم 1 فقط", true),
+                  opt("m02-l01-p01-q2-b", "كل قيم الصناديق دون استثناء"),
+                  opt("m02-l01-p01-q2-c", "قيم الصناديق التي تحتها الرقم 0 فقط"),
+                ],
+                feedback: { hints: ["افحص صندوق «الطريقة»."], correctFeedback: "أحسنت — نجمع القيم التي تحتها 1 فقط.", incorrectFeedback: "افحص صندوق «الطريقة»: «نجمع فقط القيم التي تحتها الرقم 1».", explanation: "اجمع قيم الصناديق المضيئة فقط." },
+              },
+            },
           ],
         },
         // PDF 17 — تحويل من العشري للثنائي (new page)
@@ -128,6 +171,13 @@ const m02: ContentModule = {
             {
               id: "m02-l01-p05-result", type: "callout", origin: "book", kind: "summary", title: "النتيجة",
               spans: [{ text: "إذن " }, { text: "44", dir: "ltr", style: "code" }, { text: " في العشري تساوي " }, { text: "00101100", dir: "ltr", style: "code" }, { text: " في الثنائي. اكتب 1 تحت كل صندوق استعملته." }],
+            },
+            {
+              id: "m02-l01-p05-q1", type: "practice", origin: "teacher-enrichment",
+              question: {
+                kind: "shortInput", prompt: "حوّل العدد 44 إلى ثنائي بثمانية أرقام كما في نتيجة الكتاب.", answer: "00101100",
+                feedback: { hints: ["افحص صف الصناديق: 32 + 8 + 4 = 44.", "اكتب 1 تحت الصناديق المستعملة و0 تحت الباقي، من 128 إلى 1."], correctFeedback: "أحسنت — 44 تساوي 00101100.", incorrectFeedback: "افحص صندوق «النتيجة»: ثمانية أرقام من 128 إلى 1.", explanation: "نختار الصناديق التي مجموعها يساوي العدد ونكتب 1 تحتها." },
+              },
             },
           ],
         },
@@ -156,6 +206,25 @@ const m02: ContentModule = {
               id: "m02-l01-p02-why", type: "callout", origin: "book", kind: "tip", title: "لماذا Hex؟",
               spans: [{ text: "يُستعمل كثيرًا في الحوسبة لأنه يختصر الأعداد الثنائية الطويلة بشكل كبير." }],
             },
+            {
+              id: "m02-l01-p02-q1", type: "practice", origin: "teacher-enrichment",
+              question: {
+                kind: "multipleChoice", prompt: "كم رمزًا يستخدم النظام السادس عشري (Hex)؟",
+                options: [
+                  opt("m02-l01-p02-q1-a", "16 رمزًا", true),
+                  opt("m02-l01-p02-q1-b", "10 أرقام"),
+                  opt("m02-l01-p02-q1-c", "رمزان"),
+                ],
+                feedback: { hints: ["افحص بطاقة «الفكرة»."], correctFeedback: "أحسنت — Hex نظام ترقيم بـ 16 رمزًا.", incorrectFeedback: "افحص بطاقة «الفكرة»: «يستخدم 16 رمزًا».", explanation: "الأرقام من 0 إلى 9 ثم الأحرف A حتى F." },
+              },
+            },
+            {
+              id: "m02-l01-p02-q2", type: "practice", origin: "teacher-enrichment",
+              question: {
+                kind: "shortInput", prompt: "ما قيمة الحرف F في النظام السادس عشري؟ (اكتب الرقم العشري)", answer: "15",
+                feedback: { hints: ["افحص جدول «قيم الأحرف».", "A = 10 … F = ؟"], correctFeedback: "أحسنت — F تساوي 15.", incorrectFeedback: "افحص جدول «قيم الأحرف»: العمود الأخير.", explanation: "A=10، B=11، C=12، D=13، E=14، F=15." },
+              },
+            },
           ],
         },
         // PDF 19 — جدول السادس عشر والثنائي (new page). NOTE: the SOURCE table itself lists only 0–6 and 8–E
@@ -177,6 +246,20 @@ const m02: ContentModule = {
             {
               id: "m02-l01-p06-key", type: "callout", origin: "book", kind: "remember", title: "احفظ الفكرة",
               spans: [{ text: "كل منزلة سادسية عشرية تساوي 4 بتات (أرقام) ثنائية بالضبط." }],
+            },
+            {
+              id: "m02-l01-p06-q1", type: "practice", origin: "teacher-enrichment",
+              question: {
+                kind: "trueFalse", prompt: "كل منزلة سادسية عشرية تساوي 4 بتات (أرقام) ثنائية بالضبط.", answer: true,
+                feedback: { hints: ["افحص صندوق «احفظ الفكرة»."], correctFeedback: "أحسنت — كل رمز Hex يقابل 4 بتات.", incorrectFeedback: "افحص صندوق «احفظ الفكرة».", explanation: "لهذا يختصر Hex الأعداد الثنائية الطويلة." },
+              },
+            },
+            {
+              id: "m02-l01-p06-q2", type: "practice", origin: "teacher-enrichment",
+              question: {
+                kind: "shortInput", prompt: "اكتب القيمة الثنائية للرمز A حسب الجدول (4 أرقام).", answer: "1010",
+                feedback: { hints: ["افحص صف A في الجدول.", "A = 10 بالعشري."], correctFeedback: "أحسنت — A تساوي 1010.", incorrectFeedback: "افحص صف «A» في جدول «من السادس عشر إلى الثنائي».", explanation: "كل رمز Hex يتحوّل إلى 4 أرقام ثنائية حسب الجدول." },
+              },
             },
           ],
         },
@@ -215,6 +298,18 @@ const m02: ContentModule = {
               alt: "رسم يبيّن تحويل كل رمز سادس عشري إلى أربعة أرقام ثنائية، مثل A إلى 1010.",
               caption: "كل رمز Hex يتحوّل إلى مجموعة من 4 بتات بالترتيب نفسه.",
             },
+            {
+              id: "m02-l01-p03-q1", type: "practice", origin: "teacher-enrichment",
+              question: {
+                kind: "multipleChoice", prompt: "ما القاعدة لتحويل عدد من السادس عشر إلى الثنائي؟",
+                options: [
+                  opt("m02-l01-p03-q1-a", "نأخذ كل رمز Hex ونحوّله إلى 4 أرقام ثنائية حسب الجدول", true),
+                  opt("m02-l01-p03-q1-b", "نأخذ كل رمز Hex ونحوّله إلى رقم عشري ثم نجمع"),
+                  opt("m02-l01-p03-q1-c", "نكتب الرموز كما هي ونضيف أصفارًا في النهاية"),
+                ],
+                feedback: { hints: ["افحص صندوق «القاعدة».", "A23F = 1010 0010 0011 1111."], correctFeedback: "أحسنت — كل رمز إلى 4 بتات.", incorrectFeedback: "افحص صندوق «القاعدة»: «نحوّله إلى 4 أرقام ثنائية».", explanation: "رتّب المجموعات من اليسار لليمين بنفس ترتيب رموز Hex." },
+              },
+            },
           ],
         },
         // PDF 21 — من الثنائي إلى السادس عشر (new page)
@@ -242,6 +337,20 @@ const m02: ContentModule = {
             {
               id: "m02-l01-p07-final", type: "callout", origin: "book", kind: "summary", title: "في الحل النهائي",
               spans: [{ text: "يجب أن تكون كل مجموعة مكوّنة من 4 أرقام بالضبط: أكمل بالأصفار عند الحاجة." }],
+            },
+            {
+              id: "m02-l01-p07-q1", type: "practice", origin: "teacher-enrichment",
+              question: {
+                kind: "shortInput", prompt: "حوّل العدد الثنائي 0010 0101 1010 1001 إلى السادس عشر كما في نتيجة الكتاب.", answer: "25A9",
+                feedback: { hints: ["افحص صف «كل 4 بتات إلى رمز».", "0010 = 2، 0101 = 5، 1010 = A، 1001 = 9."], correctFeedback: "أحسنت — النتيجة 25A9.", incorrectFeedback: "افحص صندوق النتيجة تحت الجدول: كل مجموعة من 4 بتات تصبح رمزًا واحدًا.", explanation: "نقسّم إلى مجموعات من 4 من اليمين لليسار ثم نحوّل كل مجموعة." },
+              },
+            },
+            {
+              id: "m02-l01-p07-q2", type: "practice", origin: "teacher-enrichment",
+              question: {
+                kind: "trueFalse", prompt: "إذا كانت المجموعة الأخيرة ناقصة عن 4 بتات نضيف أصفارًا من اليسار.", answer: true,
+                feedback: { hints: ["افحص الخطوة الثانية في «الطريقة»."], correctFeedback: "أحسنت — نكمل بالأصفار من اليسار.", incorrectFeedback: "افحص الخطوة الثانية: «نضيف أصفارًا من اليسار».", explanation: "كل مجموعة يجب أن تكون 4 أرقام بالضبط." },
+              },
             },
           ],
         },
@@ -307,6 +416,18 @@ const m02: ContentModule = {
               title: "مخطط: خريطة التحويلات",
               alt: "مخطط مثلث يربط الأنظمة الثلاثة: العشري والثنائي والسادس عشري مع اتجاهات التحويل بينها.",
               caption: "يمكن التنقّل بين العشري والثنائي والسادس عشري في الاتجاهين.",
+            },
+            {
+              id: "m02-l01-p09-q1", type: "practice", origin: "teacher-enrichment",
+              question: {
+                kind: "multipleChoice", prompt: "للتحويل من الثنائي إلى Hex نقسّم العدد إلى مجموعات، كم بتًا في كل مجموعة؟",
+                options: [
+                  opt("m02-l01-p09-q1-a", "2"),
+                  opt("m02-l01-p09-q1-b", "4", true),
+                  opt("m02-l01-p09-q1-c", "8"),
+                ],
+                feedback: { hints: ["افحص بطاقة «من الثنائي إلى Hex».", "كل رمز Hex = 4 بتات."], correctFeedback: "أحسنت — مجموعات من 4 بتات.", incorrectFeedback: "افحص بطاقة «من الثنائي إلى Hex»: «قسّم إلى مجموعات من 4».", explanation: "الطرق الأربع في الخلاصة تدور كلها حول الصناديق ومجموعات الأربع بتات." },
+              },
             },
           ],
         },

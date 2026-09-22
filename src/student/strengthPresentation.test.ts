@@ -1,99 +1,110 @@
-// Unified Strength — CLIENT AUTHORITY CONTRACT. The server's `dashboard.strength` decides the progression (tier /
-// level / nextTier / block progress); the portal only shapes and labels it. These tests prove (1) a well-formed
-// server payload is trusted as a whole — even when its presentation fields deliberately disagree with what a local
-// threshold rule would say about totalPoints; (2) a missing OR malformed payload falls back, as a WHOLE, to the
-// legacy finalized × 100 path; (3) statically, the current portal path never runs threshold logic over totalPoints.
+// Unified Strength presentation — the portal accepts a COMPLETE server payload verbatim and NEVER derives a stage:
+// a missing / malformed payload is "unavailable" (null), never a client-side computation from points.
 import { describe, it, expect } from "vitest";
-import { readFileSync } from "fs";
-import path from "path";
-import { isServerStrength, normalizeStrength, progressPresentationFromStrength, rankPresentationFromStrength, strengthAuthority } from "./strengthPresentation";
-import type { StudentStrength } from "./types";
+import { isServerStrength, normalizeStrength, remainingStrengthPhrase, stagePresentationFromStrength, strengthAuthority, projectContribution } from "./strengthPresentation";
+import { STAGE_VISUALS, stageVisual } from "../studentStageVisuals";
 
-/** DELIBERATELY inconsistent: 520 points would be «beginner» under the 400-step rule — the server says «bronze». */
-const SYNTHETIC: StudentStrength = {
-  totalPoints: 520, examPoints: 300, practicePoints: 20, studyPoints: 0, projectPoints: 200,
-  tier: "bronze", level: 2, nextTier: "silver",
-  levelBlockSize: 400, withinLevelPoints: 77, nextLevelRemaining: 323, percent: 19,
-  projects: [{ projectCode: "899373", overallProgress: 50, strengthPoints: 200 }],
+const SERVER = {
+  rawTotalPoints: 510, totalPoints: 510, examPoints: 300, practicePoints: 150, studyPoints: 20, projectPoints: 40,
+  stagePoints: 510, stageMaxPoints: 2000, stageNumber: 7, stageCount: 25, stageBlockSize: 80, stageFloor: 480, withinStagePoints: 30, stagePercent: 38,
+  nextStageNumber: 8, nextStageRemaining: 50, pointsToMaximum: 1490, isMaximumStage: false, pathComplete: false,
+  legacyRank: { tier: "beginner", level: 1, nextTier: "bronze", levelBlockSize: 400, withinLevelPoints: 110, nextLevelRemaining: 290, percent: 28 },
+  projects: [{ projectCode: "899373", overallProgress: 10, strengthPoints: 40 }],
 };
-const stats = { finalized: 3, averageFinalized: 88.5 };
 
-describe("server payload → trusted completely (no client threshold logic)", () => {
-  it("shapes the SERVER tier / nextTier / block progress verbatim — 520 points stay «bronze» because the server said so", () => {
-    expect(strengthAuthority(SYNTHETIC)).toBe("server");
-    const s = normalizeStrength(SYNTHETIC, 3);
-    expect(s).toEqual(SYNTHETIC);
-    const rank = rankPresentationFromStrength(s, stats)!;
-    expect(rank.tier).toBe("bronze");
-    expect(rank.label).toBe("برونزي");
-    expect(rank.points).toBe(520);
-    expect(rank.finalized).toBe(3);
-    expect(rank.averageFinalized).toBe(88.5);
-    expect(rank.next).toEqual({ tier: "silver", label: "فضي", remaining: 323, percent: 19 });
-    expect(progressPresentationFromStrength(s)).toEqual({ points: 520, withinBlock: 77, needed: 400, remaining: 323, percent: 19 });
-  });
-  it("tier null → no rank object; nextTier null (top) → no next; the ring still reads the server's block values", () => {
-    const none = normalizeStrength({ ...SYNTHETIC, tier: null, level: 0, nextTier: "beginner", totalPoints: 120, withinLevelPoints: 120, nextLevelRemaining: 280, percent: 30 }, 0);
-    expect(rankPresentationFromStrength(none, stats)).toBeNull();
-    expect(progressPresentationFromStrength(none)).toEqual({ points: 120, withinBlock: 120, needed: 400, remaining: 280, percent: 30 });
-    const top = normalizeStrength({ ...SYNTHETIC, tier: "legendary", level: 6, nextTier: null, totalPoints: 3000, withinLevelPoints: 400, nextLevelRemaining: 0, percent: 100 }, 30);
-    const rank = rankPresentationFromStrength(top, stats)!;
-    expect(rank.tier).toBe("legendary");
-    expect(rank.next).toBeNull();
-    expect(progressPresentationFromStrength(top)).toEqual({ points: 3000, withinBlock: 400, needed: 400, remaining: 0, percent: 100 });
-  });
-  it("the real server example (3 exams + 80% T02 + 50% project = 520, beginner → bronze) shapes 1:1", () => {
-    const server = { totalPoints: 520, examPoints: 300, practicePoints: 20, studyPoints: 0, projectPoints: 200, tier: "beginner", level: 1, nextTier: "bronze", levelBlockSize: 400, withinLevelPoints: 120, nextLevelRemaining: 280, percent: 30, projects: [{ projectCode: "899373", overallProgress: 50, strengthPoints: 200 }] };
-    const s = normalizeStrength(server, 3);
-    expect(s).toEqual(server);
-    expect(rankPresentationFromStrength(s, stats)?.next).toEqual({ tier: "bronze", label: "برونزي", remaining: 280, percent: 30 });
-  });
-});
-
-describe("legacy fallback — used as a WHOLE, never mixed", () => {
-  it("no payload (undefined / null / non-object) → finalized × 100 through the compatibility rule", () => {
-    for (const raw of [undefined, null, "x", 7]) expect(strengthAuthority(raw)).toBe("legacy");
-    expect(normalizeStrength(undefined, 3)).toEqual({ totalPoints: 300, examPoints: 300, practicePoints: 0, studyPoints: 0, projectPoints: 0, tier: null, level: 0, nextTier: "beginner", levelBlockSize: 400, withinLevelPoints: 300, nextLevelRemaining: 100, percent: 75, projects: [] });
-    expect(normalizeStrength(null, 4)).toMatchObject({ totalPoints: 400, tier: "beginner", level: 1, nextTier: "bronze", withinLevelPoints: 0, nextLevelRemaining: 400, percent: 0 });
-    expect(normalizeStrength(null, 5)).toMatchObject({ totalPoints: 500, tier: "beginner", nextTier: "bronze", withinLevelPoints: 100, nextLevelRemaining: 300, percent: 25 });
-    expect(normalizeStrength(null, 24)).toMatchObject({ totalPoints: 2400, tier: "legendary", level: 6, nextTier: null, withinLevelPoints: 400, nextLevelRemaining: 0, percent: 100 });
-    expect(normalizeStrength(null, -2)).toMatchObject({ totalPoints: 0, tier: null, nextTier: "beginner" });
-  });
-  it("a malformed / incomplete strength object is rejected as a WHOLE (never partially accepted + locally recomputed)", () => {
-    const cases: unknown[] = [
-      { ...SYNTHETIC, tier: undefined },                    // missing tier
-      { ...SYNTHETIC, nextTier: "platinum" },               // unknown tier id
-      { ...SYNTHETIC, withinLevelPoints: "77" },            // non-numeric
-      { ...SYNTHETIC, percent: Number.NaN },                // NaN
-      { totalPoints: 520 },                                 // points only (the OLD partial shape)
-      { ...SYNTHETIC, projects: "none" },                   // projects not an array
-    ];
-    for (const raw of cases) {
-      expect(strengthAuthority(raw), JSON.stringify(raw)).toBe("legacy");
-      expect(normalizeStrength(raw, 3), JSON.stringify(raw)).toEqual(normalizeStrength(null, 3));   // identical to the no-payload path
+describe("isServerStrength / strengthAuthority — the acceptance rule", () => {
+  it("accepts the complete server contract; rejects a missing payload, a missing stage field, a non-numeric field, a stage outside 1..25", () => {
+    expect(isServerStrength(SERVER)).toBe(true);
+    expect(strengthAuthority(SERVER)).toBe("server");
+    for (const bad of [undefined, null, "x", 5, {}, { ...SERVER, stageNumber: undefined }, { ...SERVER, stagePercent: "38" }, { ...SERVER, withinStagePoints: NaN }, { ...SERVER, stageNumber: 0 }, { ...SERVER, stageNumber: 26 }, { ...SERVER, stageNumber: 7.5 }, { ...SERVER, projects: "none" }, { ...SERVER, nextStageNumber: "8" }]) {
+      expect(isServerStrength(bad), JSON.stringify(bad)?.slice(0, 60)).toBe(false);
+      expect(strengthAuthority(bad)).toBe("unavailable");
+      expect(normalizeStrength(bad)).toBeNull();
     }
-    expect(isServerStrength(SYNTHETIC)).toBe(true);
+  });
+  it("enforces the FIXED 25-stage contract: stageNumber 26 + stageCount 30, stageCount 30, stageBlockSize 400, stageMaxPoints 2400, nextStageNumber 26, out-of-range points / percent → unavailable (never clamped)", () => {
+    const cases: Record<string, unknown> = {
+      "stageNumber 26 + stageCount 30": { ...SERVER, stageNumber: 26, stageCount: 30 },
+      "stageCount 30": { ...SERVER, stageCount: 30 },
+      "stageBlockSize 400": { ...SERVER, stageBlockSize: 400 },
+      "stageMaxPoints 2400": { ...SERVER, stageMaxPoints: 2400 },
+      "nextStageNumber 26": { ...SERVER, nextStageNumber: 26 },
+      "nextStageNumber 0": { ...SERVER, nextStageNumber: 0 },
+      "stagePoints 2001": { ...SERVER, stagePoints: 2001 },
+      "stagePoints -1": { ...SERVER, stagePoints: -1 },
+      "withinStagePoints 81": { ...SERVER, withinStagePoints: 81 },
+      "withinStagePoints 30.5": { ...SERVER, withinStagePoints: 30.5 },
+      "stagePercent 101": { ...SERVER, stagePercent: 101 },
+      "nextStageRemaining 81": { ...SERVER, nextStageRemaining: 81 },
+      "nextStageRemaining -5": { ...SERVER, nextStageRemaining: -5 },
+    };
+    for (const [label, bad] of Object.entries(cases)) {
+      expect(isServerStrength(bad), label).toBe(false);
+      expect(strengthAuthority(bad), label).toBe("unavailable");
+      expect(normalizeStrength(bad), label).toBeNull();
+    }
+    // the exact contract values are the only accepted geometry
+    expect(isServerStrength({ ...SERVER, stageCount: 25, stageBlockSize: 80, stageMaxPoints: 2000 })).toBe(true);
+  });
+  it("normalizeStrength shapes integers and keeps EVERY progression value the server's; legacyRank is carried, never used for the stage", () => {
+    const s = normalizeStrength({ ...SERVER, examPoints: 300.7, projects: [...SERVER.projects, null, { projectCode: "X", overallProgress: "bad", strengthPoints: -3 }] })!;
+    expect(s).not.toBeNull();
+    expect(s).toMatchObject({ rawTotalPoints: 510, totalPoints: 510, examPoints: 300, stageNumber: 7, withinStagePoints: 30, stagePercent: 38, nextStageNumber: 8, nextStageRemaining: 50, pointsToMaximum: 1490, isMaximumStage: false, pathComplete: false, stageBlockSize: 80, stageMaxPoints: 2000, stageCount: 25 });
+    expect(s.legacyRank).toEqual(SERVER.legacyRank);
+    expect(s.projects).toEqual([{ projectCode: "899373", overallProgress: 10, strengthPoints: 40 }, { projectCode: "X", overallProgress: 0, strengthPoints: 0 }]);
+    expect(projectContribution(s, "899373")).toEqual({ projectCode: "899373", overallProgress: 10, strengthPoints: 40 });
+    expect(projectContribution(s, "nope")).toBeNull();
+    // an older payload without rawTotalPoints / legacyRank / studyPoints still normalizes (totalPoints is the raw total)
+    const older = normalizeStrength({ ...SERVER, rawTotalPoints: undefined, legacyRank: undefined, studyPoints: undefined, pointsToMaximum: undefined })!;
+    expect(older).toMatchObject({ rawTotalPoints: 510, studyPoints: 0, legacyRank: null, pointsToMaximum: 1490 });
+  });
+  it("INCONSISTENT server values are shown as given — 900 points but stage 17 / 11 / 14% is presented as stage 17, 11 / 80, 14% (no recomputation from 900)", () => {
+    const s = normalizeStrength({ ...SERVER, rawTotalPoints: 900, totalPoints: 900, stagePoints: 900, stageNumber: 17, withinStagePoints: 11, stagePercent: 14, nextStageNumber: 18, nextStageRemaining: 69 })!;
+    expect(s.stageNumber).toBe(17); expect(s.withinStagePoints).toBe(11); expect(s.stagePercent).toBe(14);
+    const p = stagePresentationFromStrength(s);
+    expect(p.current.stageNumber).toBe(17); expect(p.current.title).toBe("تنين الجليد");
+    expect(p.stageLabel).toBe("المرحلة 17 من 25");
+    expect(p.next?.stageNumber).toBe(18);
+    expect(p.remainingText).toBe("بقي 69 نقطة قوة للوصول إلى المرحلة 18 — سيد العواصف");
+    // what a client-side 80-step rule over 900 would produce (stage 12, 20 / 80, 25%) must NOT appear
+    expect(p.current.stageNumber).not.toBe(12);
   });
 });
 
-describe("static authority guards", () => {
-  const read = (rel: string) => readFileSync(path.join(process.cwd(), "src", rel), "utf8");
-  const code = (src: string) => src.replace(/\/\*[\s\S]*?\*\//g, "").replace(/^\s*\/\/.*$/gm, "").replace(/^import [\s\S]*?;$/gm, "");
-  it("StudentPortal no longer calls the client-side Strength policy helpers for the current server payload", () => {
-    const portal = code(read("StudentPortal.tsx"));
-    expect(portal).not.toMatch(/rankForStrength\(|strengthProgress\(|rankTierForStrength\(|nextRankForStrength\(|rankFor\(|rankProgress\(/);
-    expect(portal).not.toMatch(/RANK_STEP_STRENGTH_POINTS|RANK_STEP_FINALIZED|% ?400|\/ ?400/);
-    expect(portal).toContain("rankPresentationFromStrength(strength, stats)");
-    expect(portal).toContain("progressPresentationFromStrength(");
+describe("stagePresentationFromStrength — copy for stages 1–24, stage 25 in progress, and the complete path", () => {
+  it("stage 7 (510 points): current ذئب الرياح · مرحلة البناء · next سيد الأمواج · «بقي 50 نقطة قوة للوصول إلى المرحلة 8 — سيد الأمواج»", () => {
+    const p = stagePresentationFromStrength(normalizeStrength(SERVER)!);
+    expect(p.current).toEqual(stageVisual(7));
+    expect(p.current.title).toBe("ذئب الرياح"); expect(p.current.group.label).toBe("مرحلة البناء");
+    expect(p.next).toEqual(stageVisual(8));
+    expect(p.stageLabel).toBe("المرحلة 7 من 25");
+    expect(p.progressLabel).toBe("التقدم نحو المرحلة 8 — سيد الأمواج");
+    expect(p.remainingText).toBe("بقي 50 نقطة قوة للوصول إلى المرحلة 8 — سيد الأمواج");
   });
-  it("the server path of strengthPresentation.ts contains no threshold arithmetic; the policy helpers appear only inside the legacy fallback", () => {
-    const src = code(read("student/strengthPresentation.ts"));
-    const cut = src.indexOf("function legacyStrength(");
-    expect(cut).toBeGreaterThan(0);
-    const serverPath = src.slice(0, cut), legacyPath = src.slice(cut);
-    expect(serverPath).not.toMatch(/rankTierForStrength\(|nextRankForStrength\(|strengthProgress\(|strengthFromFinalized\(|rankForStrength\(/);
-    expect(serverPath).not.toMatch(/Math\.floor|Math\.round|\s%\s|\s\/\s|RANK_STEP_STRENGTH_POINTS|400/);
-    expect(serverPath).not.toMatch(/RANK_ORDER\[|indexOf\(/);                   // tier is never positioned/derived, only validated
-    expect(legacyPath).toMatch(/rankTierForStrength\(examPoints\)/);            // the ONLY client-side rank derivation
+  it("zero points: stage 1 بذرة القوة, 0 / 80, next شعلة صغيرة — never «no rank»", () => {
+    const p = stagePresentationFromStrength(normalizeStrength({ ...SERVER, rawTotalPoints: 0, totalPoints: 0, examPoints: 0, practicePoints: 0, studyPoints: 0, projectPoints: 0, stagePoints: 0, stageNumber: 1, stageFloor: 0, withinStagePoints: 0, stagePercent: 0, nextStageNumber: 2, nextStageRemaining: 80, pointsToMaximum: 2000, legacyRank: null, projects: [] })!);
+    expect(p.current.stageNumber).toBe(1); expect(p.current.title).toBe("بذرة القوة"); expect(p.current.group.label).toBe("بداية الرحلة");
+    expect(p.stageLabel).toBe("المرحلة 1 من 25");
+    expect(p.next?.title).toBe("شعلة صغيرة");
+    expect(p.remainingText).toBe("بقي 80 نقطة قوة للوصول إلى المرحلة 2 — شعلة صغيرة");
+  });
+  it("stage 25 at 1960: no next stage, «بقي 40 نقطة قوة لإكمال مسار القوة»; at 2000: «أكملت مسار القوة»; raw 2675 is still stage 25 complete", () => {
+    const at1960 = stagePresentationFromStrength(normalizeStrength({ ...SERVER, rawTotalPoints: 1960, totalPoints: 1960, stagePoints: 1960, stageNumber: 25, stageFloor: 1920, withinStagePoints: 40, stagePercent: 50, nextStageNumber: null, nextStageRemaining: 0, pointsToMaximum: 40, isMaximumStage: true, pathComplete: false })!);
+    expect(at1960.current.title).toBe("أسطورة القوة"); expect(at1960.current.group.label).toBe("مرحلة الأسطورة");
+    expect(at1960.next).toBeNull();
+    expect(at1960.progressLabel).toBe("التقدم نحو إكمال مسار القوة");
+    expect(at1960.remainingText).toBe("بقي 40 نقطة قوة لإكمال مسار القوة");
+    for (const raw of [2000, 2675]) {
+      const done = stagePresentationFromStrength(normalizeStrength({ ...SERVER, rawTotalPoints: raw, totalPoints: raw, stagePoints: 2000, stageNumber: 25, stageFloor: 1920, withinStagePoints: 80, stagePercent: 100, nextStageNumber: null, nextStageRemaining: 0, pointsToMaximum: 0, isMaximumStage: true, pathComplete: true })!);
+      expect(done.next).toBeNull(); expect(done.remainingText).toBe("أكملت مسار القوة"); expect(done.progressLabel).toBe("اكتمال مسار القوة");
+      expect(done.current.stageNumber).toBe(25);
+    }
+    expect(STAGE_VISUALS.some(v => v.stageNumber === 26)).toBe(false);
+  });
+  it("remainingStrengthPhrase: 1 → «بقيت نقطة قوة واحدة», 2 → «بقيت نقطتا قوة», n → «بقي n نقطة قوة»", () => {
+    expect(remainingStrengthPhrase(1)).toBe("بقيت نقطة قوة واحدة");
+    expect(remainingStrengthPhrase(2)).toBe("بقيت نقطتا قوة");
+    expect(remainingStrengthPhrase(50)).toBe("بقي 50 نقطة قوة");
+    expect(remainingStrengthPhrase(0)).toBe("بقيت نقطة قوة واحدة");
   });
 });

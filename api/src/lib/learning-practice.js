@@ -3,14 +3,16 @@
 //
 //   { schemaVersion: 1, trainings: { T01: { bestPercentage, bestPoints, attempts, lastPercentage, lastCompletedAt } } }
 //
-// T-SERIES vs F-SERIES: every id (T01–T30 trainings, F01–F06 final exams for training) keeps its best result and
-// attempts here as practice history, but bestPoints is derived through the Strength policy's id rule
-// (strengthFromTrainingResult): a T entry earns up to 25, an F entry is ALWAYS 0 — stored, client-sent or
-// malformed values under an F id can never become points.
+// ONE ITEM = ONE BUCKET: every canonical Learning-Practice id (T01–T30 trainings AND F01–F06 final exams for
+// training — all 36 are Strength eligible, 40 points each) keeps ONE best result and attempt count here, whatever
+// surface it was solved from (the Training Library and the Learning-Materials Reader both submit to the same id).
+// bestPoints is derived through the Strength policy (strengthFromTrainingResult = round(best × 40 / 100)); an entry
+// stored under an unknown id earns 0 — stored, client-sent or malformed point values can never become points.
 //
 // BEST-SCORE, NOT A COUNTER (anti-farming): a retry only ever raises bestPercentage (max-merge), so repeated
 // solving cannot create points; bestPoints is re-derived from bestPercentage through the Strength policy on
-// every write, and readers (the dashboard) recompute from bestPercentage rather than trusting stored points.
+// every write, and readers (the dashboard) recompute from bestPercentage rather than trusting stored points
+// (a document that says { bestPercentage: 80, bestPoints: 20 } is worth 32 — the stored 20 is ignored).
 // Writes go through mutateJsonWithRetry (CAS): two overlapping submissions resolve to max(bestA, bestB), and a
 // duplicate request cannot double-award. Pure helpers here; the HTTP orchestration lives in the function.
 const { strengthFromTrainingResult, clampPercent } = require("./student-strength");
@@ -62,7 +64,7 @@ function applyTrainingResult(doc, trainingId, percentage, now) {
   return { doc: normalized, before, after, improved: after.bestPercentage > before.bestPercentage, pointsGained: after.bestPoints - before.bestPoints };
 }
 
-/** Total practice Strength = Σ bestPoints (each re-derived from bestPercentage; F ids contribute 0). Pure. */
+/** Total practice Strength = Σ bestPoints (each re-derived from bestPercentage; unknown ids contribute 0). Pure. */
 function practicePointsOf(doc) {
   return Object.values(normalizePracticeDoc(doc).trainings).reduce((sum, t) => sum + t.bestPoints, 0);
 }

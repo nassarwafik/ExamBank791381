@@ -15,20 +15,19 @@ import type { StudentRecognition } from "./types";
 afterEach(() => { cleanup(); vi.restoreAllMocks(); });
 
 const stats = { assigned: 5, completed: 4, average: 80, pendingReview: 0, finalized: 4, inProgress: 1, averageFinalized: 82 };
-const strength = { totalPoints: 1888, examPoints: 1200, practicePoints: 88, studyPoints: 0, projectPoints: 600, tier: "diamond" as const, level: 5, nextTier: "legendary" as const, levelBlockSize: 400, withinLevelPoints: 288, nextLevelRemaining: 112, percent: 72, projects: [] };
-const rank = { tier: "diamond" as const, label: "ألماسي", averageFinalized: 82, finalized: 4, points: 1888, next: { tier: "legendary" as const, label: "أسطوري", remaining: 112, percent: 72 } };
-const progress = { points: 1888, withinBlock: 288, needed: 400, remaining: 112, percent: 72 };
+// 1888 raw points → the SERVER says stage 24 (1840–1919), 48 / 80, 60%, 32 to stage 25.
+const strength = { rawTotalPoints: 1888, totalPoints: 1888, examPoints: 1200, practicePoints: 88, studyPoints: 0, projectPoints: 600, stagePoints: 1888, stageMaxPoints: 2000, stageNumber: 24, stageCount: 25, stageBlockSize: 80, stageFloor: 1840, withinStagePoints: 48, stagePercent: 60, nextStageNumber: 25, nextStageRemaining: 32, pointsToMaximum: 112, isMaximumStage: false, pathComplete: false, legacyRank: null, projects: [] };
 const recognition: StudentRecognition = { medals: { total: 12, gold: 5, silver: 4, bronze: 3 }, reactionsReceived: { total: 36, byType: { heart: 18, clap: 10, cheer: 5, fire: 3 } }, achievements: { total: 7, byType: { global_rank_up: 4, project_rank_up: 2, project_complete: 1 } } };
 
 describe("Achievement Hub — تقدّمي وقوتي", () => {
-  it("keeps the rank artwork central with the Strength breakdown, and shows medals / reactions received / achievements as three separate tiles", () => {
-    render(<StudentProgressSection stats={stats} medals={["gold", "gold", "silver"]} rank={rank} progress={progress} strength={strength} recognition={recognition} averageFinalized={82} />);
+  it("keeps the stage artwork central with the Strength breakdown, and shows medals / reactions received / achievements as three separate tiles", () => {
+    render(<StudentProgressSection stats={stats} medals={["gold", "gold", "silver"]} strength={strength} recognition={recognition} averageFinalized={82} />);
     expect(screen.getByRole("heading", { level: 2, name: "تقدّمي وقوتي" })).toBeTruthy();
-    expect(screen.getByText("تنين النار")).toBeTruthy();
-    expect(screen.getByText("المستوى 5")).toBeTruthy();
-    expect(screen.getByText(/نقاط القوة:/).textContent).toBe("نقاط القوة: 1888");
+    expect(screen.getByText("ملك السيادة")).toBeTruthy();                                   // stage 24's title
+    expect(screen.getByText("المرحلة 24 من 25")).toBeTruthy();
+    expect(screen.getByText(/نقاط القوة:/).textContent).toBe("نقاط القوة: 1888 / 2000");
     const breakdown = screen.getByText("الواجبات النهائية").closest("ul") as HTMLElement;
-    expect(breakdown.textContent).toBe("الواجبات النهائية1200التدريبات88المشاريع600");
+    expect(breakdown.textContent).toBe("الواجبات النهائية1200التدريبات والامتحانات التدريبية88تمارين الدراسة0المشاريع600");
     const tiles = within(screen.getByRole("list", { name: "التقدير" })).getAllByRole("listitem");
     expect(tiles.map(t => t.querySelector(".eb-sp-recognition-label")?.textContent)).toEqual(["الميداليات", "التفاعلات", "الإنجازات"]);
     expect(tiles.map(t => t.querySelector(".eb-sp-recognition-count")?.textContent)).toEqual(["12", "36", "7"]);   // server values, never medalsFor()
@@ -37,7 +36,7 @@ describe("Achievement Hub — تقدّمي وقوتي", () => {
     expect(document.body.textContent).not.toMatch(/\b55\b/);
   });
   it("without a server recognition payload the medal tile falls back to the finalized medal list and the others read 0", () => {
-    render(<StudentProgressSection stats={stats} medals={["gold", "bronze"]} rank={null} progress={{ points: 100, withinBlock: 100, needed: 400, remaining: 300, percent: 25 }} strength={null} recognition={null} averageFinalized={null} />);
+    render(<StudentProgressSection stats={stats} medals={["gold", "bronze"]} strength={null} recognition={null} averageFinalized={null} />);
     const tiles = within(screen.getByRole("list", { name: "التقدير" })).getAllByRole("listitem");
     expect(tiles.map(t => t.querySelector(".eb-sp-recognition-count")?.textContent)).toEqual(["2", "0", "0"]);
     expect(screen.queryByLabelText("التفاعلات حسب النوع")).toBeNull();
@@ -102,15 +101,16 @@ describe("Teacher student profile — concise Strength / recognition", () => {
     classroom: { classId: "c1", name: "الحادي عشر", grade: "11", schoolYear: "2026" },
     stats: { assigned: 5, completed: 4, pending: 1, average: 80, lastLoginAt: "" },
     assignments: [], submittedAssignmentsCount: 0, submittedAssignments: [],
-    strength: { totalPoints: 1888, examPoints: 1200, practicePoints: 88, studyPoints: 0, projectPoints: 600, tier: "diamond", level: 5, nextTier: "legendary", nextLevelRemaining: 112 },
+    strength: { totalPoints: 1888, rawTotalPoints: 1888, examPoints: 1200, practicePoints: 88, studyPoints: 0, projectPoints: 600, stagePoints: 1888, stageMaxPoints: 2000, stageNumber: 24, stageCount: 25, withinStagePoints: 48, stageBlockSize: 80, stagePercent: 60, legacyRank: { tier: "diamond", level: 5, nextTier: "legendary" } },
     recognition,
     projectSummaries: [{ projectCode: "AQ", title: "AquaSense", overallProgress: 72, complete: false }, { projectCode: "SB", title: "SecureBank", overallProgress: 100, complete: true }]
   };
   const noop = () => {};
-  it("shows rank + Strength, the three recognition counts and project summaries; absent payload → nothing extra", () => {
+  it("shows the server's stage + Strength, the three recognition counts and project summaries; absent payload → nothing extra", () => {
     render(<StudentDialog profile={profile as never} section="summary" onClose={noop} busy={false} suspended={false} passwordReveal={null} onResetPassword={noop} onCopyPassword={noop} onReview={noop} onAllowRetry={noop} deadlineFor={null} deadlineValue="" onDeadlineValue={noop} onOpenDeadline={noop} onCloseDeadline={noop} onSaveDeadline={noop} onClearDeadline={noop} fmtDate={v => v} />);
     const block = screen.getByLabelText("القوة والتقدير");
-    expect(block.textContent).toContain("تنين النار"); expect(block.textContent).toContain("المستوى 5"); expect(block.textContent).toContain("نقاط القوة: 1888");
+    expect(block.textContent).toContain("ملك السيادة"); expect(block.textContent).toContain("المرحلة 24 من 25"); expect(block.textContent).toContain("نقاط القوة: 1888 / 2000");
+    expect(block.textContent).not.toMatch(/تنين النار|المستوى 5|لا رتبة/);                    // the legacy tier never decides the shown stage
     expect(block.textContent).toContain("الميداليات: 12"); expect(block.textContent).toContain("التفاعلات المستلمة: 36"); expect(block.textContent).toContain("الإنجازات: 7");
     expect(block.textContent).toContain("AquaSense: 72%"); expect(block.textContent).toContain("SecureBank: 100% · مكتمل");
     cleanup();

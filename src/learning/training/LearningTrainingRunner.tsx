@@ -29,8 +29,9 @@ const answerText = (a: Answer | undefined): string => {
  * The ONE shared Learning-Practice runner (teacher preview and student practice both mount it; only the injected
  * `client` — i.e. the auth headers — and the `actor` differ). It loads the SANITIZED exam from the safe API (no
  * answers, no hints), collects choices through the student exam's own question primitive, sends ONLY the answers,
- * and renders the server's grading: the summary line, the Strength points (student) and a per-question review with
- * the chosen/right option and the hint. Nothing here scores, and nothing is stored in the browser.
+ * and renders the server's grading: the summary line, the Strength points (student — best percentage, earned points
+ * out of the server's maxPoints (40 for every T/F item), and the gain of THIS submission) and a per-question review
+ * with the chosen/right option and the hint. Nothing here scores, and nothing is stored in the browser.
  *
  * A training is NOT an assignment: no attempt limit, no due date, no gradebook — "أعد التدريب" simply restarts.
  */
@@ -128,8 +129,8 @@ export default function LearningTrainingRunner({ trainingId, actor, client, onEx
   const total = questions.length;
   const answeredCount = questions.filter((q, i) => answered(answers[qid(q, i)])).length;
   const maxPoints = data.training.maxPoints;
-  // The SERVER decides whether this item feeds Unified Strength (T-series yes, F-series final exams no). The runner
-  // only mirrors it: no Strength-point promise, ceiling or gain is ever shown for an item the server marks ineligible.
+  // The SERVER decides the Strength ceiling of this item (40 for every canonical T/F item). The runner only mirrors
+  // it: the promise, the ceiling and the gain are never computed here, and never shown for an unknown item.
   const strengthEligible = data.training.strengthEligible !== false && maxPoints > 0;
 
   if (phase.kind === "result") {
@@ -146,7 +147,11 @@ export default function LearningTrainingRunner({ trainingId, actor, client, onEx
             <div><dt>الإجابات الصحيحة</dt><dd><span dir="ltr" className="learning-training-num">{result.correctCount} / {result.questionCount}</span> إجابات صحيحة</dd></div>
             <div><dt>النسبة</dt><dd><span dir="ltr" className="learning-training-num">{result.percentage}%</span></dd></div>
             {actor === "student" && persisted && practice && strengthEligible && (
-              <div><dt>نقاط التقوية</dt><dd><span dir="ltr" className="learning-training-num">{practice.earnedPoints} / {practice.maxPoints}</span> نقاط تقوية</dd></div>
+              <>
+                <div><dt>أفضل نسبة</dt><dd><span dir="ltr" className="learning-training-num">{practice.bestPercentage}%</span></dd></div>
+                <div><dt>نقاط القوة</dt><dd><span dir="ltr" className="learning-training-num">{practice.earnedPoints} / {practice.maxPoints}</span> نقاط قوة</dd></div>
+                <div><dt>المكتسب الآن</dt><dd><span dir="ltr" className={"learning-training-num" + (practice.pointsGained > 0 ? " is-gained" : "")}>{practice.pointsGained > 0 ? "+" + practice.pointsGained : "+0"}</span> نقاط قوة</dd></div>
+              </>
             )}
           </dl>
           {manualCount > 0 && (
@@ -158,13 +163,12 @@ export default function LearningTrainingRunner({ trainingId, actor, client, onEx
             <p className="learning-training-note" role="status">
               {practice.improved
                 ? (practice.pointsGained > 0 ? `تحسّنت أفضل نتيجتك: +${practice.pointsGained} نقاط قوة.` : "تحسّنت أفضل نتيجتك.")
-                : `أفضل نتيجتك المحفوظة ما زالت ${practice.bestPercentage}% (${practice.bestPoints} / ${practice.maxPoints} نقاط تقوية) — المحاولات لا تُنقصها أبدًا.`}
+                : `لم تزد نقاط القوة: أفضل نتيجتك المحفوظة ما زالت ${practice.bestPercentage}% (${practice.bestPoints} / ${practice.maxPoints} نقاط قوة) — المحاولات لا تُنقصها أبدًا.`}
             </p>
           )}
           {actor === "student" && persisted && practice && !strengthEligible && (
             <p className="learning-training-note" role="status">
-              {practice.improved ? "تحسّنت أفضل نتيجتك التلقائية." : `أفضل نتيجتك التلقائية المحفوظة ما زالت ${practice.bestPercentage}% — المحاولات لا تُنقصها أبدًا.`}
-              {" "}امتحان للتدريب: لا يمنح نقاط تقوية.
+              {practice.improved ? "تحسّنت أفضل نتيجتك." : `أفضل نتيجتك المحفوظة ما زالت ${practice.bestPercentage}% — المحاولات لا تُنقصها أبدًا.`}
             </p>
           )}
           {actor === "teacher" && <p className="learning-training-note" role="status">معاينة المعلم: النتيجة لا تُحفظ ولا تُمنح عنها نقاط.</p>}
@@ -216,14 +220,11 @@ export default function LearningTrainingRunner({ trainingId, actor, client, onEx
         <h2 className="learning-training-title" tabIndex={-1}>{data.training.title}</h2>
         <p className="learning-training-meta">
           <span>{total} أسئلة</span>
-          {actor === "student" && strengthEligible && <span>حتى {maxPoints} نقطة تقوية</span>}
-          {actor === "student" && !strengthEligible && <span>امتحان للتدريب — بلا نقاط تقوية</span>}
-          {data.best && <span>أفضل نتيجة: <span dir="ltr">{data.best.bestPercentage}%</span></span>}
+          {actor === "student" && strengthEligible && <span>حتى {maxPoints} نقطة قوة</span>}
+          {data.best && <span>أفضل نتيجة: <span dir="ltr">{data.best.bestPercentage}%</span>{actor === "student" && strengthEligible && <> · <span dir="ltr">{data.best.bestPoints} / {data.best.maxPoints}</span> نقاط قوة</>}</span>}
         </p>
         <p className="learning-training-hintline">
-          {strengthEligible
-            ? "تدريب حرّ: أعده كما تشاء — تُحفظ أفضل نتيجة فقط ولا تُحسب كواجب."
-            : "امتحان للتدريب الحرّ: أعده كما تشاء — تُحفظ أفضل نتيجة تلقائية فقط، لا يُحسب كواجب ولا يمنح نقاط تقوية؛ الأسئلة المقالية لا تُصحَّح تلقائيًا."}
+          تدريب حرّ: أعده كما تشاء — تُحفظ أفضل نتيجة فقط ولا تُحسب كواجب؛ نقاط القوة تتبع أفضل نسبتك وحدها.
         </p>
       </header>
       <div className="learning-training-questions iex-list">

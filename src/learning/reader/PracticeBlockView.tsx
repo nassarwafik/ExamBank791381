@@ -22,7 +22,7 @@ import type { StudyAttemptResponse, StudyHost } from "../study/types";
  *
  * STUDY PRACTICE STRENGTH: when a study HOST is injected (a student session), a locally-right answer of an ELIGIBLE
  * exercise is reported once to the server, which alone judges it and decides the points; the view then shows the
- * server's outcome — «+1 نقطة قوة» for a first completion, a quiet «محسوبة سابقًا» for a repeat, «اكتملت نقاط
+ * server's outcome — «+n نقطة قوة» when the module's Strength rose, a quiet «محسوبة سابقًا» for a repeat, «سُجّل
  * الدراسة لهذه الصفحة» once the page is full — and nothing on a transport failure. Without a host nothing is sent.
  */
 export default function PracticeBlockView({ question, activityId, pageId, study }: { question: PracticeQuestion; activityId?: string; pageId?: string; study?: StudyHost }) {
@@ -143,7 +143,7 @@ export default function PracticeBlockView({ question, activityId, pageId, study 
       )}
 
       <div className="learning-reader-practice-foot">
-        <p className="learning-reader-practice-hint">{eligible ? "تمرين ذاتي: أجب لترى النتيجة فورًا. أول إجابة صحيحة تُضيف نقطة دراسة (حتى نقطتين للصفحة)." : "تمرين ذاتي: أجب لترى النتيجة فورًا. لا يُحفظ شيء ولا تُحسب نقاط."}</p>
+        <p className="learning-reader-practice-hint">{eligible ? "تمرين ذاتي: أجب لترى النتيجة فورًا. أول إجابة صحيحة تُسجَّل لك مرة واحدة وترفع نقاط قوة هذه الوحدة (حتى 20 نقطة للوحدة)." : "تمرين ذاتي: أجب لترى النتيجة فورًا. لا يُحفظ شيء ولا تُحسب نقاط."}</p>
         <div className="learning-reader-practice-actions">
           {status === "wrong" && feedback.revealedHints < ladder.length && (
             <button type="button" className="eb-button is-quiet is-small" onClick={() => setFeedback(s => revealNextHint(question.feedback, s))}>
@@ -160,15 +160,14 @@ export default function PracticeBlockView({ question, activityId, pageId, study 
 }
 
 /** The SERVER's study outcome for a right answer — one quiet, truthful line, never colour-only, never animated:
- *  A) actual gain → «+n نقطة قوة» · B) repeat → «محسوبة سابقًا» · C) the page is full → «اكتملت … لهذه الصفحة» ·
- *  D) no gain because the MODULE is at its cap while the page is not full → «اكتملت … لهذه الوحدة» (never C). */
+ *  A) actual gain → «+n نقطة قوة» · B) repeat → «محسوبة سابقًا» · C) the module is complete → «أكملت … هذه الوحدة» ·
+ *  D) recorded, but the module's rounded value did not move yet → «سُجّل … » with the module's progress. */
 export function StudyOutcome({ outcome }: { outcome: StudyAttemptResponse }) {
   if (!outcome.correct || outcome.actor !== "student") return null;
-  if (outcome.gained > 0) return <p className="learning-reader-study-outcome is-gained" role="status">+{outcome.gained} نقطة قوة — أحسنت، واصل الدراسة.</p>;
-  if (outcome.alreadyCompleted) return <p className="learning-reader-study-outcome is-repeat" role="status">نقطة هذا التمرين محسوبة سابقًا.</p>;
-  if (outcome.page.points >= outcome.page.max) return <p className="learning-reader-study-outcome is-full" role="status">اكتملت نقاط الدراسة لهذه الصفحة: <span dir="ltr">{outcome.page.points} / {outcome.page.max}</span></p>;
-  if (outcome.module.points >= outcome.module.max) return <p className="learning-reader-study-outcome is-module-full" role="status">اكتملت نقاط الدراسة لهذه الوحدة: <span dir="ltr">{outcome.module.points} / {outcome.module.max}</span></p>;
-  return null;
+  if (outcome.gained > 0) return <p className="learning-reader-study-outcome is-gained" role="status">+{outcome.gained} نقطة قوة — أحسنت، واصل الدراسة. <span dir="ltr">{outcome.module.points} / {outcome.module.max}</span> من هذه الوحدة.</p>;
+  if (outcome.alreadyCompleted) return <p className="learning-reader-study-outcome is-repeat" role="status">هذا التمرين محسوب سابقًا.</p>;
+  if (outcome.module.points >= outcome.module.max) return <p className="learning-reader-study-outcome is-module-full" role="status">أكملت نقاط قوة هذه الوحدة: <span dir="ltr">{outcome.module.points} / {outcome.module.max}</span></p>;
+  return <p className="learning-reader-study-outcome is-recorded" role="status">سُجّل التمرين ({outcome.module.completed} من {outcome.module.eligible} في هذه الوحدة) — نقاط قوة الوحدة: <span dir="ltr">{outcome.module.points} / {outcome.module.max}</span>.</p>;
 }
 
 /** The kinds that have a complete interactive answering surface in this view. */

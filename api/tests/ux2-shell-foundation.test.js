@@ -573,35 +573,32 @@ describe("UX-6d — Smart Structured Exam Import & Repair", () => {
 });
 
 
-describe("Student Portal — rank cadence & medal sizing", () => {
+describe("Student Portal — 25-stage Strength path & medal sizing", () => {
   const rank = readFileSync(join(ROOT, "src", "studentRank.ts"), "utf8");
   const section = read("student/StudentProgressSection.tsx");
   const css = readFileSync(join(ROOT, "src", "studentportal-pro.css"), "utf8");
 
-  it("rank advances every four finalized exams from ONE central constant (no scattered literal 4, no old 10-unlock / average table)", () => {
-    expect(rank).toMatch(/RANK_STEP_FINALIZED = 4/);
-    expect(rank).toMatch(/Math\.floor\(count \/ RANK_STEP_FINALIZED\)/);       // tier from the finalized count
-    expect(rank).not.toMatch(/RANK_MIN_FINALIZED\s*=\s*10/);                   // old unlock gone
-    expect(rank).not.toMatch(/bronze: 60, silver: 70, gold: 80, diamond: 90, legendary: 96/);  // old average-threshold table gone
-    // Unified Strength: the component speaks in Strength points (one 400-point block per rank — the same boundary
-    // the four-finalized-exam cadence lands on, since a finalized exam is worth 100), never a hardcoded 4/10 and
-    // never the old exam-count or average-based wording.
-    expect(section).toMatch(/نقطة قوة لفتح رتبتك/);
-    expect(section).not.toMatch(/امتحانات نهائية لفتح رتبتك/);                      // old exam-count unlock wording gone
-    expect(section).not.toMatch(/الرتبة التالية عند معدل نهائي/);                 // old average-based next-rank wording gone
-    expect(section).toMatch(/remainingPointsPhrase\(rank\.next\.remaining\)/);  // Strength-based next-rank wording
+  it("the progress section speaks in the server's 25 stages — no six-rank primary UI, no client-side stage math, no old wording", () => {
+    expect(section).toMatch(/stagePresentationFromStrength/);                 // the ONE presentation helper over the server payload
+    expect(section).toMatch(/strength\.withinStagePoints/); expect(section).toMatch(/strength\.stagePercent/); expect(section).toMatch(/strength\.stagePoints\} \/ \{strength\.stageMaxPoints/);
+    expect(section).not.toMatch(/Math\.floor|% 80|\/ 80\)|\* 100 \//);          // never derives a stage / percent from a total
+    expect(section).not.toMatch(/RANK_VISUALS|rankPresentation|remainingPointsPhrase|الرتبة:|لفتح رتبتك|بلغت أعلى رتبة|الرتبة القادمة|المستوى \{/);
+    expect(section).not.toMatch(/امتحانات نهائية لفتح رتبتك|الرتبة التالية عند معدل نهائي/);
+    expect(section).toMatch(/aria-valuemax=\{max\}/); expect(section).toMatch(/aria-valuenow=\{value\}/);   // ring semantic: within-stage points out of the block size
+    // the legacy six-rank module is documented as legacy and no longer imported by the primary section
+    expect(rank).toMatch(/^\/\/ LEGACY — the six-rank cadence/);
+    expect(section).not.toMatch(/from "\.\.\/studentRank"/);
   });
 
   it("medal icons use the enlarged sizes and the container stays overflow-safe (flex-wrap) on mobile", () => {
     expect(section).toContain('size={20} className={"eb-sp-medal is-" + g.tier}');
-    expect(section).toContain('eb-sp-rank-badge"><IconMedal size={18}');
     expect(read("student/AchievementFeed.tsx")).toContain('<IconMedal size={26} />');
     expect(css).toMatch(/\.eb-sp-medal-icon\{[^}]*width:40px; height:40px/);
     expect(css).toMatch(/\.eb-sp-medals\{[^}]*flex-wrap:wrap/);
-    expect(css).toMatch(/\.eb-sp-rank\{[^}]*flex-wrap:wrap/);
+    expect(css).toMatch(/\.eb-sp-rank-hero\{[^}]*flex-wrap:wrap/);
   });
 
-  it("the rank-ring fill animates normally but is switched off under prefers-reduced-motion", () => {
+  it("the stage-ring fill animates normally but is switched off under prefers-reduced-motion", () => {
     const stripped = css.replace(/\/\*[\s\S]*?\*\//g, "");
     // normal mode keeps the stroke-dashoffset transition
     expect(stripped).toMatch(/\.eb-sp-rankring-fill\{[^}]*transition:stroke-dashoffset var\(--eb-dur\) var\(--eb-ease\)/);
@@ -617,7 +614,56 @@ describe("Student Portal — rank cadence & medal sizing", () => {
   });
 });
 
-describe("Student Portal — circular rank badge artwork (owner-provided final assets)", () => {
+describe("Student Strength — the 25 stage images (owner archive strength_25_icons.zip, bytes committed unchanged)", () => {
+  const { createHash } = require("node:crypto");
+  const STAGES_DIR = join(ROOT, "src", "assets", "student-stages");
+  const manifest = JSON.parse(readFileSync(join(STAGES_DIR, "owner-manifest.json"), "utf8"));
+  const APPROVED = ["بذرة القوة", "شعلة صغيرة", "نمر البرق", "فارس الجليد", "تنين النار", "العنقاء الذهبية", "ذئب الرياح", "سيد الأمواج", "صقر العاصفة", "أسد البلور", "حارس الغابة", "محارب الظلال", "سيد النجوم", "بطل العناصر", "ملك الصواعق", "فارس الشمس", "تنين الجليد", "سيد العواصف", "حامي الأساطير", "العنقاء الملكية", "أسد المجرة", "سيد الأكوان", "تنين النور", "ملك السيادة", "أسطورة القوة"];
+  const pad = n => String(n).padStart(2, "0");
+
+  it("the owner manifest lists exactly 25 stages in the approved order with the 25 × 80 = 2000 geometry", () => {
+    expect(manifest.stageCount).toBe(25); expect(manifest.stagePoints).toBe(80); expect(manifest.maxVisibleStrengthPoints).toBe(2000);
+    expect(manifest.stages.map(s => s.stage)).toEqual(Array.from({ length: 25 }, (_, i) => i + 1));
+    expect(manifest.stages.map(s => s.name)).toEqual(APPROVED);
+    expect(manifest.stages.map(s => s.file)).toEqual(APPROVED.map((_, i) => "strength-stage-" + pad(i + 1) + ".png"));
+  });
+
+  it("each canonical stage-NN.png is the owner's strength-stage-NN.png byte-for-byte (SHA-256 from the manifest); 25 distinct payloads; nothing else in the folder", () => {
+    const seen = new Set();
+    for (const s of manifest.stages) {
+      const bytes = readFileSync(join(STAGES_DIR, "stage-" + pad(s.stage) + ".png"));
+      const actual = createHash("sha256").update(bytes).digest("hex");
+      expect(actual, s.file).toBe(s.sha256);
+      expect(seen.has(actual), s.file + " duplicates another stage's image").toBe(false);
+      seen.add(actual);
+    }
+    expect(readdirSync(STAGES_DIR).filter(f => !f.startsWith(".")).sort()).toEqual([...manifest.stages.map(s => "stage-" + pad(s.stage) + ".png"), "owner-manifest.json"].sort());
+  });
+
+  it("every stage image is a 512×512 8-bit RGBA PNG (transparent canvas preserved, no resize / recompression / conversion)", () => {
+    for (const s of manifest.stages) {
+      const b = readFileSync(join(STAGES_DIR, "stage-" + pad(s.stage) + ".png"));
+      expect(b.subarray(0, 8).toString("hex"), s.file).toBe("89504e470d0a1a0a");
+      expect(b.toString("ascii", 12, 16), s.file).toBe("IHDR");
+      expect([b.readUInt32BE(16), b.readUInt32BE(20)], s.file).toEqual(s.size);
+      expect(s.size).toEqual([512, 512]);
+      expect([b[24], b[25]], s.file + " bitDepth/colorType").toEqual([8, 6]);
+    }
+  });
+
+  it("src/studentStageVisuals.ts is the ONE import site of the 25 files, in order, with the approved titles; no component imports a stage PNG directly", () => {
+    const visuals = read("studentStageVisuals.ts");
+    for (let i = 1; i <= 25; i++) expect(visuals, "stage " + i).toContain('from "./assets/student-stages/stage-' + pad(i) + '.png"');
+    expect((visuals.match(/assets\/student-stages\/stage-\d\d\.png/g) || []).length).toBe(25);
+    for (const t of APPROVED) expect(visuals).toContain('"' + t + '"');
+    const walk = dir => readdirSync(dir, { withFileTypes: true }).flatMap(e => e.isDirectory() ? walk(join(dir, e.name)) : [join(dir, e.name)]);
+    const offenders = walk(join(ROOT, "src")).filter(f => /\.(tsx?|css)$/.test(f) && !f.endsWith("studentStageVisuals.ts") && readFileSync(f, "utf8").includes("assets/student-stages/"));
+    expect(offenders).toEqual([]);
+    expect(read("student/StudentProgressSection.tsx")).toMatch(/stagePresentationFromStrength/);
+  });
+});
+
+describe("LEGACY six-rank badge artwork (owner-provided final assets; kept for project ranks + historical feed events)", () => {
   const { createHash } = require("node:crypto");
   const RANKS_DIR = join(ROOT, "src", "assets", "student-ranks");
   // The owner's AAA set, byte-for-byte. The mapping is deliberately NOT numeric (A3 is bronze, A2 is silver,
@@ -658,7 +704,7 @@ describe("Student Portal — circular rank badge artwork (owner-provided final a
   it("the central mapping still imports exactly the six canonical files (single rank-art authority)", () => {
     const visuals = read("studentRankVisuals.ts");
     for (const tier of Object.keys(OWNER_ASSETS)) expect(visuals, tier).toContain('from "./assets/student-ranks/rank-' + tier + '.png"');
-    expect(read("student/StudentProgressSection.tsx")).not.toMatch(/assets\/student-ranks/);   // consumers go through RANK_VISUALS
+    expect(read("student/StudentProgressSection.tsx")).not.toMatch(/assets\/student-ranks|RANK_VISUALS/);   // the primary section uses the 25-stage authority; legacy consumers go through RANK_VISUALS
   });
 
   it("the badge sits inside the ring as one circle: art box 76–82% of the ring, object-fit contain, no framing that would fake or fight the circular art", () => {

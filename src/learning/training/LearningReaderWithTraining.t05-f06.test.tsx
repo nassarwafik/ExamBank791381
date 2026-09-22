@@ -20,7 +20,7 @@ const goTo = async (id: string) => { fireEvent.change(jump(), { target: { value:
 
 const meta = (id: string, order: number, label: string, mod: string, extra: Partial<TrainingListEntry> = {}): TrainingListEntry =>
   ({ trainingId: id, order, label, requiredModuleId: mod, courseId: "791381", available: false, ...extra });
-const BEST = { bestPercentage: 60, bestPoints: 15, maxPoints: 25, attempts: 1, lastCompletedAt: null };
+const BEST = { bestPercentage: 60, bestPoints: 24, maxPoints: 40, attempts: 1, lastCompletedAt: null };
 // The host decides availability; the page carries only code + label + gate. T05/T06 available here, T07–T12 not.
 const LIST98: TrainingListEntry[] = [
   meta("T05", 5, "تدريب 5", "791381-m08", { available: true, title: "Class وSubnet وCIDR" }),
@@ -29,7 +29,7 @@ const LIST98: TrainingListEntry[] = [
   meta("T10", 10, "تدريب 10", "791381-m13"), meta("T11", 11, "تدريب 11", "791381-m14"), meta("T12", 12, "تدريب 12", "791381-m15"),
 ];
 const LIST215: TrainingListEntry[] = [
-  meta("F01", 31, "الامتحان الأول", "791381-m06", { available: true, strengthEligible: false, title: "نموذج A — 2025", best: { bestPercentage: 94, bestPoints: 0, maxPoints: 0, attempts: 2, lastCompletedAt: null } }),
+  meta("F01", 31, "الامتحان الأول", "791381-m06", { available: true, strengthEligible: true, title: "نموذج A — 2025", best: { bestPercentage: 94, bestPoints: 38, maxPoints: 40, attempts: 2, lastCompletedAt: null } }),
   ...["الثاني", "الثالث", "الرابع", "الخامس", "السادس"].map((n, i) => meta(`F0${i + 2}`, 32 + i, "الامتحان " + n, "791381-m06")),
 ];
 const questions = (id: string, n = 4): Question[] => Array.from({ length: n }, (_, i) => ({
@@ -37,11 +37,11 @@ const questions = (id: string, n = 4): Question[] => Array.from({ length: n }, (
   options: [{ value: "0", text: "أ" }, { value: "1", text: "ب" }], answer: {}, hint: "",
 } as unknown as Question));
 const loaded = (entry: TrainingListEntry, title: string): TrainingLoadResponse =>
-  ({ ok: true, actor: "student", training: { ...entry, title, questionCount: 4, totalMarks: 100, maxPoints: entry.strengthEligible === false ? 0 : 25 }, exam: { questions: questions(entry.trainingId) } });
+  ({ ok: true, actor: "student", training: { ...entry, title, questionCount: 4, totalMarks: 100, maxPoints: entry.strengthEligible === false ? 0 : 40 }, exam: { questions: questions(entry.trainingId) } });
 const graded = (id: string): TrainingSubmitResponse => ({
   ok: true, actor: "student", persisted: true,
   result: { correctCount: 4, questionCount: 4, score: 100, totalMarks: 100, percentage: 100, review: questions(id).map((q, i) => ({ questionId: q.examQuestionId!, questionNumber: i + 1, correct: true, chosenIndex: 0, correctOptionIndex: 0, hint: "" })) },
-  practice: { bestPercentage: 100, bestPoints: 25, maxPoints: 25, attempts: 1, lastCompletedAt: null, improved: true, pointsGained: 25, earnedPoints: 25 },
+  practice: { bestPercentage: 100, bestPoints: 40, maxPoints: 40, attempts: 1, lastCompletedAt: null, improved: true, pointsGained: 40, earnedPoints: 40 },
 });
 
 function fakeClient(list: TrainingListEntry[], load: TrainingLoadResponse, submit: TrainingSubmitResponse) {
@@ -89,7 +89,7 @@ describe("Reader position 98 (791381-m16-l05-p01) — T05–T12 cards, one per l
     expect(within(cards[0]).getByText("لم تحلّ هذا التدريب بعد.")).toBeTruthy();
     expect(within(cards[0]).getByRole("button", { name: "ابدأ التدريب" })).toBeTruthy();
     expect(within(cards[1]).getByText("المجالات الخاصة والعامة")).toBeTruthy();
-    expect(within(cards[1]).getByText(/أفضل نتيجة:/).textContent).toBe("أفضل نتيجة: 60% · نقاط التقوية: 15 / 25");
+    expect(within(cards[1]).getByText(/أفضل نتيجة:/).textContent).toBe("أفضل نتيجة: 60% · نقاط القوة: 24 / 40");
     expect(within(cards[1]).getByRole("button", { name: "أعد التدريب" })).toBeTruthy();
     for (const c of cards.slice(2)) {
       expect(within(c).getByText("سيصبح متاحًا عند نشر الجزء المرتبط به.")).toBeTruthy();
@@ -119,8 +119,8 @@ describe("Reader position 215 (791381-m06-l02-p02) — F01–F06 under «امت�
     const cards = labels.map(n => screen.getByRole("region", { name: n }));
     expect(cards.map(code)).toEqual(["F01", "F02", "F03", "F04", "F05", "F06"]);
     expect(within(cards[0]).getByText("نموذج A — 2025")).toBeTruthy();
-    // an F-series best result is shown WITHOUT Strength points (the server advertises maxPoints 0)
-    expect(within(cards[0]).getByText(/أفضل نتيجة:/).textContent).toBe("أفضل نتيجة: 94%");
+    // an F-series best result carries Strength points exactly like a T item (the server advertises maxPoints 40)
+    expect(within(cards[0]).getByText(/أفضل نتيجة:/).textContent).toBe("أفضل نتيجة: 94% · نقاط القوة: 38 / 40");
     expect(within(cards[0]).getByRole("button", { name: "أعد التدريب" })).toBeTruthy();
     for (const c of cards.slice(1)) {
       expect((within(c).getByRole("button", { name: "ابدأ التدريب" }) as HTMLButtonElement).disabled).toBe(true);

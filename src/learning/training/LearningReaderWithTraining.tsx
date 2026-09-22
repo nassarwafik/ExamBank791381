@@ -84,21 +84,21 @@ export default function LearningReaderWithTraining({ courseId, api, onExit, exit
         if (studyState.kind === "error") return { kind: "error" };
         const page = studyState.pages[pageId];
         const moduleId = page?.moduleId;
-        return { kind: "ready", completed: new Set(page?.completed ?? []), points: page?.points ?? 0, max: page?.max ?? 2, module: moduleId ? (studyState.modules[moduleId] ?? null) : null };
+        return { kind: "ready", completed: new Set(page?.completed ?? []), eligible: page?.eligible ?? 0, module: moduleId ? (studyState.modules[moduleId] ?? null) : null };
       },
       async report(pageId: string, activityId: string, response: StudyResponse): Promise<StudyAttemptResponse> {
         const r = await study.attempt(courseId, pageId, activityId, response);
         if (r.correct && r.actor === "student") {
           // MONOTONIC within the mounted session: two right answers can be in flight at once and their responses can
-          // arrive out of order; the client keeps the union of completed ids and the max of the points it has seen,
-          // so an older 1-point snapshot can never roll a 2-point page back (the server storage is right either way).
+          // arrive out of order; the client keeps the union of completed ids and the max of the module values it has
+          // seen, so an older snapshot can never roll a module back (the server storage is right either way).
           setStudyState(prev => {
             if (prev.kind !== "ready") return prev;
             const old = prev.pages[pageId];
             const completed = [...new Set([...(old?.completed ?? []), ...r.page.completed])].sort();
-            const page: StudyPageState = { moduleId: r.page.moduleId, completed, points: Math.max(old?.points ?? 0, r.page.points), max: r.page.max };
+            const page: StudyPageState = { moduleId: r.page.moduleId, completed, eligible: Math.max(old?.eligible ?? 0, r.page.eligible) };
             const oldModule = prev.modules[r.page.moduleId];
-            const module: StudyModuleState = { points: Math.max(oldModule?.points ?? 0, r.module.points), max: r.module.max };
+            const module: StudyModuleState = { completed: Math.max(oldModule?.completed ?? 0, r.module.completed), eligible: r.module.eligible, points: Math.max(oldModule?.points ?? 0, r.module.points), max: r.module.max };
             return { kind: "ready", pages: { ...prev.pages, [pageId]: page }, modules: { ...prev.modules, [r.page.moduleId]: module } };
           });
           if (studyState.kind === "error") setStudyNonce(n => n + 1);

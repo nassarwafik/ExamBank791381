@@ -39,22 +39,22 @@ function deps(ctx, id = "s1", extra = {}) {
 const req = () => ({ method: "GET", url: "https://x/api/student-dashboard", headers: { get: () => null } });
 
 describe("dashboard strength — project-only students (the reported problem)", () => {
-  it("PROJECT-ONLY 50%: 0 assignments, no practice, 899373 at book 50% / access 50% → strength 200, 50% toward the first rank", async () => {
+  it("PROJECT-ONLY 50%: 0 assignments, no practice, 899373 at book 50% / access 50% → strength 200 = stage 3, 40 / 80, 50%", async () => {
     const ctx = createMemoryContainer({ "platform/classes/c1.json": room("c1", { programCodes: ["899373"] }), "platform/users/s1.json": user("s1", "c1"), [NS.A.progressName("c1", "s1")]: progressAt("899373", "c1", "s1", 0.5, 0.5) });
     const { d } = deps(ctx);
     const r = await dashboard(req(), d);
     expect(r.status).toBe(200);
     expect(r.jsonBody.stats.finalized).toBe(0);
-    expect(r.jsonBody.strength).toMatchObject({ totalPoints: 200, examPoints: 0, practicePoints: 0, projectPoints: 200, tier: null, level: 0, nextTier: "beginner", withinLevelPoints: 200, nextLevelRemaining: 200, percent: 50, levelBlockSize: 400 });
+    expect(r.jsonBody.strength).toMatchObject({ totalPoints: 200, rawTotalPoints: 200, examPoints: 0, practicePoints: 0, studyPoints: 0, projectPoints: 200, stagePoints: 200, stageNumber: 3, withinStagePoints: 40, stagePercent: 50, nextStageNumber: 4, nextStageRemaining: 40, stageBlockSize: 80, stageMaxPoints: 2000, stageCount: 25, isMaximumStage: false, pathComplete: false });
     expect(r.jsonBody.strength.projects).toEqual([{ projectCode: "899373", overallProgress: 50, strengthPoints: 200 }]);
     // the SAME authority as the student project tracker
     const t = await studentTracker({ method: "GET", url: "https://x/api/student-project-tracker", headers: { get: () => null } }, deps(ctx).d);
     expect(t.jsonBody.projects[0].summary.overallProgress).toBe(50);
   });
-  it("PROJECT-ONLY 100%: unlocks level 1 with 400 points and zero assignments", async () => {
+  it("PROJECT-ONLY 100%: 400 points = stage 6 (0 / 80) with zero assignments", async () => {
     const ctx = createMemoryContainer({ "platform/classes/c1.json": room("c1", { programCodes: ["899373"] }), "platform/users/s1.json": user("s1", "c1"), [NS.A.progressName("c1", "s1")]: progressAt("899373", "c1", "s1", 1, 1) });
     const r = await dashboard(req(), deps(ctx).d);
-    expect(r.jsonBody.strength).toMatchObject({ totalPoints: 400, projectPoints: 400, tier: "beginner", level: 1, percent: 0 });
+    expect(r.jsonBody.strength).toMatchObject({ totalPoints: 400, projectPoints: 400, stageNumber: 6, withinStagePoints: 0, stagePercent: 0 });
   });
   it("MULTI-PROJECT: 899373 at 50% + legacy 794589 at 25% (book 27/54, packetTracer 0) → 300; each project once; unsupported codes ignored", async () => {
     const ctx = createMemoryContainer({
@@ -77,18 +77,18 @@ describe("dashboard strength — project-only students (the reported problem)", 
 });
 
 describe("dashboard strength — mixed sources, compatibility, authority, read path", () => {
-  it("MIXED: 3 finalized exams (300) + T02 best 80% (20) + project 50% (200) = 520 → level 1, 120/400, 30%, 280 remaining", async () => {
+  it("MIXED: 3 finalized exams (300) + T02 best 80% (32) + project 50% (200) = 532 → stage 7, 52 / 80, 65%, 28 remaining", async () => {
     const seed = { "platform/classes/c1.json": room("c1", { programCodes: ["899373"] }), "platform/users/s1.json": user("s1", "c1"), [NS.A.progressName("c1", "s1")]: progressAt("899373", "c1", "s1", 0.5, 0.5),
       "platform/learning-practice/s1.json": { trainings: { T02: { bestPercentage: 80, bestPoints: 999, attempts: 2 } } } };
     for (const id of ["a1", "a2", "a3"]) { seed["platform/assignments/" + id + ".json"] = assignment(id, "c1"); seed["platform/submissions/" + id + "/s1.json"] = { assignmentId: id, studentId: "s1", classId: "c1", attempts: [finalAttempt], activeAttempt: null }; }
     const r = await dashboard(req(), deps(createMemoryContainer(seed)).d);
     expect(r.jsonBody.stats.finalized).toBe(3);
-    expect(r.jsonBody.strength).toMatchObject({ totalPoints: 520, examPoints: 300, practicePoints: 20, projectPoints: 200, tier: "beginner", level: 1, nextTier: "bronze", withinLevelPoints: 120, nextLevelRemaining: 280, percent: 30 });
+    expect(r.jsonBody.strength).toMatchObject({ totalPoints: 532, rawTotalPoints: 532, examPoints: 300, practicePoints: 32, projectPoints: 200, stageNumber: 7, withinStagePoints: 52, nextStageNumber: 8, nextStageRemaining: 28, stagePercent: 65 });
   });
-  it("OLD BEHAVIOUR: exams only (no class projects, no practice) → 4 finalized = 400 = level 1; 3 = none", async () => {
+  it("EXAMS ONLY (no class projects, no practice): 3 finalized = 300 = stage 4 (60 / 80, 75%); 4 = 400 = stage 6 (0 / 80)", async () => {
     const mk = n => { const seed = { "platform/classes/c1.json": room("c1"), "platform/users/s1.json": user("s1", "c1") }; for (let i = 0; i < n; i++) { seed["platform/assignments/a" + i + ".json"] = assignment("a" + i, "c1"); seed["platform/submissions/a" + i + "/s1.json"] = { assignmentId: "a" + i, studentId: "s1", classId: "c1", attempts: [finalAttempt], activeAttempt: null }; } return createMemoryContainer(seed); };
-    expect((await dashboard(req(), deps(mk(3)).d)).jsonBody.strength).toMatchObject({ totalPoints: 300, tier: null, percent: 75 });
-    expect((await dashboard(req(), deps(mk(4)).d)).jsonBody.strength).toMatchObject({ totalPoints: 400, tier: "beginner", level: 1, percent: 0 });
+    expect((await dashboard(req(), deps(mk(3)).d)).jsonBody.strength).toMatchObject({ totalPoints: 300, stageNumber: 4, withinStagePoints: 60, stagePercent: 75 });
+    expect((await dashboard(req(), deps(mk(4)).d)).jsonBody.strength).toMatchObject({ totalPoints: 400, stageNumber: 6, withinStagePoints: 0, stagePercent: 0 });
   });
   it("PERSISTED CLASS AUTHORITY: token says class STALE; persisted class c2's project drives the points; no scans, bounded reads", async () => {
     const ctx = createMemoryContainer({ "platform/classes/c2.json": room("c2", { programCodes: ["899373"] }), "platform/classes/c1.json": room("c1", { programCodes: ["883589"] }), "platform/users/s1.json": user("s1", "c2"), [NS.A.progressName("c2", "s1")]: progressAt("899373", "c2", "s1", 1, 1), [NS.B.progressName("c1", "s1")]: progressAt("883589", "c1", "s1", 1, 1) });
@@ -114,6 +114,6 @@ describe("dashboard strength — mixed sources, compatibility, authority, read p
   });
   it("stored bestPoints / client-shaped junk in the practice doc never count — only bestPercentage through the policy", async () => {
     const ctx = createMemoryContainer({ "platform/classes/c1.json": room("c1"), "platform/users/s1.json": user("s1", "c1"), "platform/learning-practice/s1.json": { trainings: { T01: { bestPercentage: 60, bestPoints: 25 }, T09: "x", T02: { bestPercentage: "abc" } }, strengthPoints: 9999 } });
-    expect((await dashboard(req(), deps(ctx).d)).jsonBody.strength.practicePoints).toBe(15);
+    expect((await dashboard(req(), deps(ctx).d)).jsonBody.strength.practicePoints).toBe(24);
   });
 });

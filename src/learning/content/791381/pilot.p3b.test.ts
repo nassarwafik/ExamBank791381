@@ -89,19 +89,33 @@ describe("Phase 3B — book fidelity: key source concepts are present", () => {
 });
 
 describe("Phase 3B — provenance: book vs teacher-enrichment is explicit and correct", () => {
-  // The two interactive activities PLUS the five Chapter-1 SVG visual-enrichment illustrations (pilot). Every other
-  // block on m01 remains faithful book content.
+  // The two interactive activities PLUS the five Chapter-1 SVG visual-enrichment illustrations (pilot) PLUS the m01
+  // Study-Practice exercises (Strength phase: nine `practice` self-checks on what each page teaches). Every other block
+  // on m01 remains faithful book content.
   const enrichmentIds = new Set([
     "m01-l02-p01-scope", "m01-l02-p02-guided",
     "m01-l01-p01-visual", "m01-l01-p02-visual", "m01-l01-p03-visual", "m01-l02-p02-visual", "m01-l02-p03-visual",
   ]);
-  it("every book-derived block is origin:book; the two activities + five SVG visuals are the only teacher-enrichment blocks", () => {
+  const practiceIds = new Set([
+    "m01-l01-p01-q1", "m01-l01-p02-q1", "m01-l01-p03-q1", "m01-l02-p01-q1", "m01-l02-p01-q2", "m01-l02-p02-q1", "m01-l02-p02-q2", "m01-l02-p03-q1", "m01-l02-p03-q2",
+  ]);
+  it("every book-derived block is origin:book; the two activities + five SVG visuals + nine Study-Practice exercises are the only teacher-enrichment blocks", () => {
     const enrich: string[] = [];
     for (const p of allPages) for (const b of p.blocks as ContentBlock[]) {
       if (b.origin === "teacher-enrichment") enrich.push(b.id);
       else expect(b.origin, b.id).toBe("book");
     }
-    expect(new Set(enrich)).toEqual(enrichmentIds);
+    expect(new Set(enrich)).toEqual(new Set([...enrichmentIds, ...practiceIds]));
+  });
+  it("the m01 Study-Practice exercises are teacher-enrichment `practice` blocks of the supported study kinds, appended after the book content of every content page", () => {
+    const pages = allPages.filter(p => p.id.startsWith("791381-m01-l0") && !p.id.endsWith("l00-p01"));
+    expect(pages.length).toBe(6);
+    for (const p of pages) {
+      const practice = p.blocks.filter(b => b.type === "practice");
+      expect(practice.length, p.id).toBeGreaterThanOrEqual(1);
+      for (const b of practice) { expect(b.origin, b.id).toBe("teacher-enrichment"); expect(practiceIds.has(b.id), b.id).toBe(true); expect(b.type === "practice" && ["multipleChoice", "trueFalse", "shortInput"].includes(b.question.kind), b.id).toBe(true); }
+      expect(p.blocks.at(-1)!.type, p.id).toBe("practice");
+    }
   });
   it("the shared-printer example (PDF 10) is a real ExampleBlock with origin:book (never an enrichment example)", () => {
     const ex = pageBy("791381-m01-l01-p03").blocks.find(b => b.type === "example")!;

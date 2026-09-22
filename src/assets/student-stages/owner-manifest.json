@@ -1,0 +1,257 @@
+{
+  "stageCount": 25,
+  "stagePoints": 80,
+  "maxVisibleStrengthPoints": 2000,
+  "stages": [
+    {
+      "stage": 1,
+      "name": "بذرة القوة",
+      "file": "strength-stage-01.png",
+      "sha256": "2ad0a976fb83472c4ed6277491614db6f567e8bcc9cc6ea60ec178b3d0164c62",
+      "size": [
+        512,
+        512
+      ]
+    },
+    {
+      "stage": 2,
+      "name": "شعلة صغيرة",
+      "file": "strength-stage-02.png",
+      "sha256": "041adf441013bb02ba5b03914136da41e0be8e5a49fff54f0108d84095ee78d3",
+      "size": [
+        512,
+        512
+      ]
+    },
+    {
+      "stage": 3,
+      "name": "نمر البرق",
+      "file": "strength-stage-03.png",
+      "sha256": "f6c81dc23d66a7b06ec16c6d46629e9684dff399604be3d83d6184847dc36e1d",
+      "size": [
+        512,
+        512
+      ]
+    },
+    {
+      "stage": 4,
+      "name": "فارس الجليد",
+      "file": "strength-stage-04.png",
+      "sha256": "33bee5d22c77ec0499a9859aef8990bab8a046627a1f62ba2761535ed725c334",
+      "size": [
+        512,
+        512
+      ]
+    },
+    {
+      "stage": 5,
+      "name": "تنين النار",
+      "file": "strength-stage-05.png",
+      "sha256": "aa257ecdd794ad4b862c412d1a0124358e228785359c178d62877eadb57ad7ed",
+      "size": [
+        512,
+        512
+      ]
+    },
+    {
+      "stage": 6,
+      "name": "العنقاء الذهبية",
+      "file": "strength-stage-06.png",
+      "sha256": "70cd46ec0bd6c64eba05dbf781c46092b8ffb15bbcb518d4e1fd3ca4d3d49eff",
+      "size": [
+        512,
+        512
+      ]
+    },
+    {
+      "stage": 7,
+      "name": "ذئب الرياح",
+      "file": "strength-stage-07.png",
+      "sha256": "342956d3e4d9771b3b76e6ecc35bb3b50308ba1be473a53cfff5fff54dc94218",
+      "size": [
+        512,
+        512
+      ]
+    },
+    {
+      "stage": 8,
+      "name": "سيد الأمواج",
+      "file": "strength-stage-08.png",
+      "sha256": "a3b18cf73312a00df80781bd71120e88cc0177242e97bf6550862c40dd0b3559",
+      "size": [
+        512,
+        512
+      ]
+    },
+    {
+      "stage": 9,
+      "name": "صقر العاصفة",
+      "file": "strength-stage-09.png",
+      "sha256": "4c5d1fb728eab97ed1dcbef329decf222432d204b3dd6cd4dac1618f61d2f829",
+      "size": [
+        512,
+        512
+      ]
+    },
+    {
+      "stage": 10,
+      "name": "أسد البلور",
+      "file": "strength-stage-10.png",
+      "sha256": "e4c11cecd91302e90a7d6af73471a58e8fad89be0b5e96e033a247aa1a0da065",
+      "size": [
+        512,
+        512
+      ]
+    },
+    {
+      "stage": 11,
+      "name": "حارس الغابة",
+      "file": "strength-stage-11.png",
+      "sha256": "9063fbd17fca961080e173d0f47c6b0c91c52cf23b9e379a3d32c734795b5597",
+      "size": [
+        512,
+        512
+      ]
+    },
+    {
+      "stage": 12,
+      "name": "محارب الظلال",
+      "file": "strength-stage-12.png",
+      "sha256": "d5a774aea11d17bd7ec5bf7945bcee7a4bbcb4bf92f64f666d72ac7ea288c83a",
+      "size": [
+        512,
+        512
+      ]
+    },
+    {
+      "stage": 13,
+      "name": "سيد النجوم",
+      "file": "strength-stage-13.png",
+      "sha256": "24a6d46ab800f1ec809be9fe4d000b1abac2d55b929866a0f1ccec37d62d0876",
+      "size": [
+        512,
+        512
+      ]
+    },
+    {
+      "stage": 14,
+      "name": "بطل العناصر",
+      "file": "strength-stage-14.png",
+      "sha256": "db4414f83f9a78afdffc3d674331de91b404221c6a679fdc5f6018ee5725e505",
+      "size": [
+        512,
+        512
+      ]
+    },
+    {
+      "stage": 15,
+      "name": "ملك الصواعق",
+      "file": "strength-stage-15.png",
+      "sha256": "a1d2a95cab2467b05d2288b67cdad475af9cadf3527f8ea40a74ce39f237e4d8",
+      "size": [
+        512,
+        512
+      ]
+    },
+    {
+      "stage": 16,
+      "name": "فارس الشمس",
+      "file": "strength-stage-16.png",
+      "sha256": "8bc3cca454894545e20adf5b891e28ff8ad57f5871f66adf4bb70272480346d4",
+      "size": [
+        512,
+        512
+      ]
+    },
+    {
+      "stage": 17,
+      "name": "تنين الجليد",
+      "file": "strength-stage-17.png",
+      "sha256": "429fa6eac3936488a4ba290e05e7a61b65d7bcdb4a506063b53f9292b80a5214",
+      "size": [
+        512,
+        512
+      ]
+    },
+    {
+      "stage": 18,
+      "name": "سيد العواصف",
+      "file": "strength-stage-18.png",
+      "sha256": "0d5a4c16fa8656c0e92d5eb7607de922606810ac8b41f427a7a035c59759aec7",
+      "size": [
+        512,
+        512
+      ]
+    },
+    {
+      "stage": 19,
+      "name": "حامي الأساطير",
+      "file": "strength-stage-19.png",
+      "sha256": "f49be772fba747fb5f63dd38b0644d599be9233478662bb2d9e95e6ddbf0d1ff",
+      "size": [
+        512,
+        512
+      ]
+    },
+    {
+      "stage": 20,
+      "name": "العنقاء الملكية",
+      "file": "strength-stage-20.png",
+      "sha256": "23dffc4aaaeff334b0fe31a4e2ff7a4973cfa0e80a9e921ccb02cdd64bc348cb",
+      "size": [
+        512,
+        512
+      ]
+    },
+    {
+      "stage": 21,
+      "name": "أسد المجرة",
+      "file": "strength-stage-21.png",
+      "sha256": "ac83b030aef2a7bbb8914c828897f3da3205dfa390692077fe94d147b84631cc",
+      "size": [
+        512,
+        512
+      ]
+    },
+    {
+      "stage": 22,
+      "name": "سيد الأكوان",
+      "file": "strength-stage-22.png",
+      "sha256": "857be5ffc754d1509cd23ca65dd61b017666e9662ac5cd9d7c27c0e20bc4ca37",
+      "size": [
+        512,
+        512
+      ]
+    },
+    {
+      "stage": 23,
+      "name": "تنين النور",
+      "file": "strength-stage-23.png",
+      "sha256": "f356b0e42f28755b6747ad9be3a2984e4819a8d9df27c190d67518d1e92a3070",
+      "size": [
+        512,
+        512
+      ]
+    },
+    {
+      "stage": 24,
+      "name": "ملك السيادة",
+      "file": "strength-stage-24.png",
+      "sha256": "acb514c511851538bba1418e4beaea12682e1d95e5d9a486276af37f637cc5ba",
+      "size": [
+        512,
+        512
+      ]
+    },
+    {
+      "stage": 25,
+      "name": "أسطورة القوة",
+      "file": "strength-stage-25.png",
+      "sha256": "7708723d736d872927bc72fffce475975db8fadae26508aceeb876f1c4bcf00c",
+      "size": [
+        512,
+        512
+      ]
+    }
+  ]
+}

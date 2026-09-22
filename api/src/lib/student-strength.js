@@ -1,41 +1,57 @@
-// UNIFIED STRENGTH POINTS (نقاط القوة) — the ONE progression policy behind the student's six rank images.
+// UNIFIED STRENGTH POINTS (نقاط القوة) — the ONE progression policy behind the student's 25-STAGE Strength path.
 //
-// Three authoritative sources feed one total; the SAME six ranks (beginner … legendary) remain the visual
-// progression — no project rank, no training rank, no exam rank, no second image set:
+// Four authoritative sources feed one RAW total; the visible path is 25 stages of 80 points (2000 points):
 //
-//   FINALIZED EXAMS   — each server-finalized assignment result            = 100 points
-//   T-SERIES PRACTICE — each unique training's BEST percentage             = round(best × 25 / 100)  (≤ 25)
-//                       ONLY the T-series trainings (T01, T02, …) count. The F-series «امتحانات نهائية للتدريب»
-//                       (F01–F06) are solved through the same Learning-Practice runner and keep a best result for
-//                       practice history, but contribute 0 — their open questions cannot be auto-graded, so their
-//                       automatic percentage must never move a rank (see trainingCountsTowardStrength).
-//   PROJECTS          — each enrolled project's authoritative progress     = round(overallProgress × 4)  (≤ 400)
-//   STUDY PRACTICE    — in-page learning exercises (Study Practice Strength): 1 point per uniquely completed eligible
-//                       exercise, at most STUDY_PAGE_MAX_POINTS per page and STUDY_MODULE_MAX_POINTS per module —
-//                       small, felt, never farmable (completion state, never a counter; see learning-study.js)
+//   FINALIZED EXAMS    — each server-finalized assignment result                 = 100 points (uncapped)
+//   LEARNING PRACTICE  — each of the 36 canonical Learning-Practice items (T01–T30 AND F01–F06), from its BEST
+//                        percentage                                             = round(best × 40 / 100)  (≤ 40 each)
+//                        36 × 40 = 1440. One item = ONE bucket, wherever it was opened (Training Library or the
+//                        Learning-Materials Reader): the same id, the same best percentage, the same 40-point cap.
+//   STUDY PRACTICE     — each of the 28 course modules, from its uniquely completed eligible in-page exercises
+//                                                                               = round(completed / eligible × 20)  (≤ 20 each)
+//                        28 × 20 = 560. Completion STATE, never a counter (see learning-study.js); a module without
+//                        eligible exercises contributes 0. Library-training blocks embedded in a module are NOT study
+//                        exercises — they belong only to their canonical 40-point Learning-Practice bucket.
+//   PROJECTS           — each enrolled project's authoritative progress         = round(overallProgress × 4)  (≤ 400 each)
 //
-//   totalStrengthPoints = examPoints + practicePoints + studyPoints + projectPoints
-//   rank tier           = floor(total / 400): 0–399 none · 400 beginner · 800 bronze · 1200 silver · 1600 gold ·
-//                         2000 diamond · 2400+ legendary (no level 7)
+//   rawTotalPoints = examPoints + practicePoints + studyPoints + projectPoints           (never capped, never lost)
+//   stagePoints    = min(rawTotalPoints, 2000)                                           (the VISIBLE path only)
+//   stageNumber    = stagePoints ≥ 2000 ? 25 : floor(stagePoints / 80) + 1                (1..25 — there is NO stage 26)
 //
-// BACKWARD COMPATIBILITY: with zero practice and zero project points, 4 finalized exams = 400 points, so the
-// historical "one tier per four finalized exams" boundaries (3/4, 7/8, 11/12, 15/16, 19/20, 23/24) are unchanged.
+// Learning Practice (1440) + Study Practice (560) = exactly the 2000 visible points by design; exams and projects can
+// push the raw total beyond 2000 — that raw total is kept and reported, only the path presentation is capped.
 //
-// PROJECT POINTS ARE DERIVED, NEVER INCREMENTED: they follow the CURRENT authoritative Project Tracker summary
-// (`core.buildStudentSummary(...).overallProgress`, approved weighted stages). Repeated reads or status flips never
-// stack points, there is no counter to farm, and a deliberate teacher reset/correction lowers the contribution.
-// Practice points come from the per-student BEST percentage per training (retries only ever improve it).
-// Medals stay exam-only and are not touched here. Pure module: no IO, no HTTP.
+// The SERVER is authoritative for every stage field below (buildStrengthSummary); the browser never derives a stage
+// from a total. Practice points come from the per-student BEST percentage per item (retries only ever improve it,
+// stored bestPoints are never trusted); project points are DERIVED from the current Project Tracker summary, never
+// incremented. Medals stay exam-only and are not touched here. Pure module: no IO, no HTTP.
+//
+// LEGACY six-rank cadence (beginner … legendary, one tier per 400 raw points): kept ONLY so historical achievement
+// events and their renderers stay readable (`legacyRank` on the summary, RANK_ORDER). It never decides the stage.
 
 const FINALIZED_EXAM_STRENGTH_POINTS = 100;
-const TRAINING_MAX_STRENGTH_POINTS = 25;
-// The ONE rule deciding which Learning-Practice ids feed Strength: the T-series only (id = "T" + digits).
-const STRENGTH_TRAINING_ID = /^T\d+$/;
+
+// ── Learning Practice (the 36 canonical items) ──────────────────────────────────────────────────────────────
+const LEARNING_PRACTICE_MAX_POINTS = 40;
+/** The ONE rule deciding which ids are canonical Learning-Practice items: T01…T30 and F01…F06 — nothing else. */
+const LEARNING_PRACTICE_ITEM_ID = /^(?:T(?:0[1-9]|[12]\d|30)|F0[1-6])$/;
+const LEARNING_PRACTICE_ITEM_COUNT = 36;
+const LEARNING_PRACTICE_MAX_TOTAL = LEARNING_PRACTICE_ITEM_COUNT * LEARNING_PRACTICE_MAX_POINTS;   // 1440
+
+// ── Study Practice (the 28 modules) ─────────────────────────────────────────────────────────────────────────
+const STUDY_MODULE_MAX_POINTS = 20;
+const STUDY_MODULE_COUNT = 28;
+const STUDY_MAX_TOTAL = STUDY_MODULE_COUNT * STUDY_MODULE_MAX_POINTS;                                // 560
+
+// ── Projects ────────────────────────────────────────────────────────────────────────────────────────────────
 const PROJECT_MAX_STRENGTH_POINTS = 400;
-// Study Practice policy (the ONE place these numbers live; the UI reads them from the API, never hardcodes them).
-const STUDY_POINT_PER_ACTIVITY = 1;
-const STUDY_PAGE_MAX_POINTS = 2;
-const STUDY_MODULE_MAX_POINTS = 15;
+
+// ── The visible 25-stage path ───────────────────────────────────────────────────────────────────────────────
+const STRENGTH_STAGE_COUNT = 25;
+const STRENGTH_STAGE_POINTS = 80;
+const STRENGTH_STAGE_MAX_POINTS = STRENGTH_STAGE_COUNT * STRENGTH_STAGE_POINTS;                       // 2000
+
+// ── LEGACY six-rank cadence (historical events only — never the stage) ──────────────────────────────────────
 const RANK_STEP_STRENGTH_POINTS = 400;
 const RANK_ORDER = ["beginner", "bronze", "silver", "gold", "diamond", "legendary"];
 
@@ -59,28 +75,28 @@ function roundPoints(value) {
 function strengthFromFinalizedCount(finalizedCount) {
   return safeCount(finalizedCount) * FINALIZED_EXAM_STRENGTH_POINTS;
 }
-/** Practice contribution of ONE T-series training from its best percentage: 40 → 10, 60 → 15, 80 → 20, 100 → 25. */
+/** Whether an id is a canonical Learning-Practice item (T01…T30, F01…F06) — every one of them feeds Strength. */
+function isLearningPracticeItem(trainingId) {
+  return LEARNING_PRACTICE_ITEM_ID.test(String(trainingId || "").trim());
+}
+/** Practice contribution of ONE item from its best percentage: 25 → 10, 40 → 16, 50 → 20, 60 → 24, 75 → 30, 80 → 32, 90 → 36, 100 → 40. */
 function strengthFromTrainingBest(bestPercentage) {
-  return roundPoints(clampPercent(bestPercentage) * TRAINING_MAX_STRENGTH_POINTS / 100);
+  return roundPoints(clampPercent(bestPercentage) * LEARNING_PRACTICE_MAX_POINTS / 100);
 }
-/** Whether a Learning-Practice id contributes to Strength: T01…T30 → true; F01…F06 (and anything else) → false. */
-function trainingCountsTowardStrength(trainingId) {
-  return STRENGTH_TRAINING_ID.test(String(trainingId || "").trim());
-}
-/** The ceiling advertised for one id: 25 for a T-series training, 0 for an F-series final exam for training. */
+/** The ceiling advertised for one id: 40 for every canonical item, 0 for an unknown id. */
 function trainingMaxStrengthPoints(trainingId) {
-  return trainingCountsTowardStrength(trainingId) ? TRAINING_MAX_STRENGTH_POINTS : 0;
+  return isLearningPracticeItem(trainingId) ? LEARNING_PRACTICE_MAX_POINTS : 0;
 }
-/** Practice contribution of ONE id from its best percentage — 0 for every non-T id whatever the percentage. */
+/** Practice contribution of ONE id from its best percentage — 0 for an unknown id whatever the percentage. */
 function strengthFromTrainingResult(trainingId, bestPercentage) {
-  return trainingCountsTowardStrength(trainingId) ? strengthFromTrainingBest(bestPercentage) : 0;
+  return isLearningPracticeItem(trainingId) ? strengthFromTrainingBest(bestPercentage) : 0;
 }
 /** Project contribution from authoritative overallProgress: 0 → 0, 1 → 4, 25 → 100, 50 → 200, 75 → 300, 100 → 400. */
 function strengthFromProjectProgress(overallProgress) {
   return roundPoints(clampPercent(overallProgress) * PROJECT_MAX_STRENGTH_POINTS / 100);
 }
-/** Practice total from a trainings map { T01: { bestPercentage } … }: stored bestPoints are never trusted, and an
- *  entry stored under a non-T id (F01–F06 practice history) adds 0 whatever it contains. */
+/** Practice total from a trainings map { T01: { bestPercentage } … }: ONE bucket per id, stored bestPoints are never
+ *  trusted (re-derived from bestPercentage), and an entry under an unknown id adds 0 whatever it contains. */
 function practicePointsFromTrainings(trainings) {
   if (!trainings || typeof trainings !== "object") return 0;
   let total = 0;
@@ -91,37 +107,67 @@ function practicePointsFromTrainings(trainings) {
   return total;
 }
 
-/** Study points of ONE page from its count of uniquely completed ELIGIBLE exercises: min(count × 1, 2). */
-function studyPointsForPage(completedCount) {
-  return Math.min(safeCount(completedCount) * STUDY_POINT_PER_ACTIVITY, STUDY_PAGE_MAX_POINTS);
+/** Study points of ONE module from { completed, eligible }: eligible 0 → 0, else round(min(completed, eligible) /
+ *  eligible × 20), clamped to 0..20. 25% → 5, 50% → 10, 75% → 15, 100% → 20. */
+function studyPointsForModule(moduleState) {
+  const eligible = safeCount(moduleState && moduleState.eligible);
+  if (eligible === 0) return 0;
+  const completed = Math.min(safeCount(moduleState && moduleState.completed), eligible);
+  return Math.min(STUDY_MODULE_MAX_POINTS, Math.max(0, roundPoints(completed / eligible * STUDY_MODULE_MAX_POINTS)));
 }
-/** Study points of ONE module from its pages' completed counts { pageId: count }: min(Σ page points, 15). */
-function studyPointsForModule(pages) {
-  if (!pages || typeof pages !== "object") return 0;
-  let total = 0;
-  for (const count of Object.values(pages)) total += studyPointsForPage(count);
-  return Math.min(total, STUDY_MODULE_MAX_POINTS);
-}
-/** Study total from { moduleId: { pageId: completedEligibleCount } } — every level re-derived, nothing stored is trusted. */
+/** Study total from { moduleId: { completed, eligible } } — every module re-derived, nothing stored is trusted. */
 function studyPointsFromModules(study) {
   if (!study || typeof study !== "object") return 0;
   let total = 0;
-  for (const pages of Object.values(study)) total += studyPointsForModule(pages);
+  for (const moduleState of Object.values(study)) total += studyPointsForModule(moduleState);
   return total;
 }
 
-/** Rank tier for a total: null below 400, then one tier per 400, capped at legendary. */
+/**
+ * The visible 25-stage path for a RAW total — the ONE stage formula (server authority):
+ *   stagePoints = min(raw, 2000) · stageNumber = stagePoints ≥ 2000 ? 25 : floor(stagePoints / 80) + 1
+ *   stageFloor = (stageNumber − 1) × 80 · withinStagePoints = clamp(stagePoints − stageFloor, 0, 80)
+ *   stagePercent = round(withinStagePoints × 100 / 80)
+ *   stages 1–24: nextStageNumber = stageNumber + 1, nextStageRemaining = 80 − withinStagePoints
+ *   stage 25:    nextStageNumber = null, nextStageRemaining = 0 (there is NO stage 26); pointsToMaximum says how far
+ *                the path is from complete (2000), and pathComplete flags 2000 / 2000.
+ */
+function strengthStageProgress(rawTotalPoints) {
+  const raw = safeCount(rawTotalPoints);
+  const stagePoints = Math.min(raw, STRENGTH_STAGE_MAX_POINTS);
+  const isMaximumStage = stagePoints >= (STRENGTH_STAGE_COUNT - 1) * STRENGTH_STAGE_POINTS;
+  const stageNumber = isMaximumStage ? STRENGTH_STAGE_COUNT : Math.floor(stagePoints / STRENGTH_STAGE_POINTS) + 1;
+  const stageFloor = (stageNumber - 1) * STRENGTH_STAGE_POINTS;
+  const withinStagePoints = Math.min(STRENGTH_STAGE_POINTS, Math.max(0, stagePoints - stageFloor));
+  const stagePercent = Math.round(withinStagePoints * 100 / STRENGTH_STAGE_POINTS);
+  const pointsToMaximum = STRENGTH_STAGE_MAX_POINTS - stagePoints;
+  return {
+    rawTotalPoints: raw,
+    stagePoints,
+    stageMaxPoints: STRENGTH_STAGE_MAX_POINTS,
+    stageNumber,
+    stageCount: STRENGTH_STAGE_COUNT,
+    stageBlockSize: STRENGTH_STAGE_POINTS,
+    stageFloor,
+    withinStagePoints,
+    stagePercent,
+    nextStageNumber: isMaximumStage ? null : stageNumber + 1,
+    nextStageRemaining: isMaximumStage ? 0 : STRENGTH_STAGE_POINTS - withinStagePoints,
+    pointsToMaximum,
+    isMaximumStage,
+    pathComplete: pointsToMaximum === 0
+  };
+}
+
+// ── LEGACY six-rank helpers (historical achievement events only) ────────────────────────────────────────────
+/** LEGACY: the six-rank tier for a raw total (null below 400, one tier per 400, capped at legendary). Never the stage. */
 function rankTierFromStrength(totalPoints) {
   const total = safeCount(totalPoints);
   if (total < RANK_STEP_STRENGTH_POINTS) return null;
   return RANK_ORDER[Math.min(Math.floor(total / RANK_STEP_STRENGTH_POINTS) - 1, RANK_ORDER.length - 1)];
 }
-/**
- * Progress within the current 400-point block: { tier, level, nextTier, withinLevelPoints, nextLevelRemaining,
- * percent }. Before the first rank the block is 0..399 toward beginner. At the top rank the block is shown full
- * (400 / 400, 100%) — a decorative flourish, there is no next tier.
- */
-function strengthProgress(totalPoints) {
+/** LEGACY: the six-rank block progress { tier, level, nextTier, levelBlockSize, withinLevelPoints, nextLevelRemaining, percent }. */
+function legacyRankProgress(totalPoints) {
   const total = safeCount(totalPoints);
   const tier = rankTierFromStrength(total);
   const level = tier ? RANK_ORDER.indexOf(tier) + 1 : 0;
@@ -129,16 +175,19 @@ function strengthProgress(totalPoints) {
   const withinLevelPoints = top ? RANK_STEP_STRENGTH_POINTS : total % RANK_STEP_STRENGTH_POINTS;
   const nextLevelRemaining = top ? 0 : RANK_STEP_STRENGTH_POINTS - withinLevelPoints;
   const percent = top ? 100 : Math.round((withinLevelPoints / RANK_STEP_STRENGTH_POINTS) * 100);
-  const nextTier = top ? null : RANK_ORDER[level];   // level is 0-based index of the NEXT tier (beginner when unranked)
+  const nextTier = top ? null : RANK_ORDER[level];
   return { tier, level, nextTier, levelBlockSize: RANK_STEP_STRENGTH_POINTS, withinLevelPoints, nextLevelRemaining, percent };
 }
 
 /**
  * The student's full Strength summary (the dashboard payload):
- *   input  { finalizedCount, trainings, projects: [{ projectCode, overallProgress }], study: { moduleId: { pageId: count } } }
- *   output { totalPoints, examPoints, practicePoints, studyPoints, projectPoints, levelBlockSize, withinLevelPoints,
- *            nextLevelRemaining, percent, tier, level, nextTier, projects: [{ projectCode, overallProgress, strengthPoints }] }
- *   `study` absent (a student with no study document, an older caller) → studyPoints 0: fully backward compatible.
+ *   input  { finalizedCount, trainings, projects: [{ projectCode, overallProgress }], study: { moduleId: { completed, eligible } } }
+ *   output { rawTotalPoints, totalPoints (= rawTotalPoints), examPoints, practicePoints, studyPoints, projectPoints,
+ *            stagePoints, stageMaxPoints, stageNumber, stageCount, stageBlockSize, stageFloor, withinStagePoints,
+ *            stagePercent, nextStageNumber, nextStageRemaining, pointsToMaximum, isMaximumStage, pathComplete,
+ *            legacyRank: { tier, level, nextTier, … }   (historical events only — never decides the stage)
+ *            projects: [{ projectCode, overallProgress, strengthPoints }] }
+ *   `study` absent (a student with no study document, an older caller) → studyPoints 0.
  */
 function buildStrengthSummary({ finalizedCount, trainings, projects, study } = {}) {
   const examPoints = strengthFromFinalizedCount(finalizedCount);
@@ -149,15 +198,20 @@ function buildStrengthSummary({ finalizedCount, trainings, projects, study } = {
     return { projectCode: String((p && p.projectCode) || ""), overallProgress, strengthPoints: strengthFromProjectProgress(overallProgress) };
   });
   const projectPoints = projectRows.reduce((sum, p) => sum + p.strengthPoints, 0);
-  const totalPoints = examPoints + practicePoints + studyPoints + projectPoints;
-  const progress = strengthProgress(totalPoints);
-  return { totalPoints, examPoints, practicePoints, studyPoints, projectPoints, ...progress, projects: projectRows };
+  const rawTotalPoints = examPoints + practicePoints + studyPoints + projectPoints;
+  const stage = strengthStageProgress(rawTotalPoints);
+  return { ...stage, totalPoints: rawTotalPoints, examPoints, practicePoints, studyPoints, projectPoints, legacyRank: legacyRankProgress(rawTotalPoints), projects: projectRows };
 }
 
 module.exports = {
-  FINALIZED_EXAM_STRENGTH_POINTS, TRAINING_MAX_STRENGTH_POINTS, PROJECT_MAX_STRENGTH_POINTS, RANK_STEP_STRENGTH_POINTS, RANK_ORDER,
-  STUDY_POINT_PER_ACTIVITY, STUDY_PAGE_MAX_POINTS, STUDY_MODULE_MAX_POINTS, studyPointsForPage, studyPointsForModule, studyPointsFromModules,
-  clampPercent, strengthFromFinalizedCount, strengthFromTrainingBest, trainingCountsTowardStrength, trainingMaxStrengthPoints,
+  FINALIZED_EXAM_STRENGTH_POINTS,
+  LEARNING_PRACTICE_MAX_POINTS, LEARNING_PRACTICE_ITEM_ID, LEARNING_PRACTICE_ITEM_COUNT, LEARNING_PRACTICE_MAX_TOTAL,
+  STUDY_MODULE_MAX_POINTS, STUDY_MODULE_COUNT, STUDY_MAX_TOTAL,
+  PROJECT_MAX_STRENGTH_POINTS,
+  STRENGTH_STAGE_COUNT, STRENGTH_STAGE_POINTS, STRENGTH_STAGE_MAX_POINTS,
+  RANK_STEP_STRENGTH_POINTS, RANK_ORDER,
+  clampPercent, strengthFromFinalizedCount, isLearningPracticeItem, strengthFromTrainingBest, trainingMaxStrengthPoints,
   strengthFromTrainingResult, strengthFromProjectProgress, practicePointsFromTrainings,
-  rankTierFromStrength, strengthProgress, buildStrengthSummary
+  studyPointsForModule, studyPointsFromModules,
+  strengthStageProgress, rankTierFromStrength, legacyRankProgress, buildStrengthSummary
 };

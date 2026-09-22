@@ -5,7 +5,8 @@
 // affected pages, that: the block is a practice-table (no longer a fillBlank practice), it renders a usable <select>
 // with no placeholder, the correct choice succeeds and a wrong choice fails-then-retries, the answer key is not
 // revealed before interaction, the RTL/mobile table contract holds, and the exercises stay OUT of Study Strength so
-// the 453-activity baseline (247 MC / 86 T/F / 60 short input / 60 practice-table) is unchanged.
+// the eligible baseline (475 activities: 257 MC / 91 T/F / 67 short input / 60 practice-table — the Strength-phase m01/m02
+// exercises included) is unchanged by the dropdown conversion.
 import { describe, it, expect, afterEach } from "vitest";
 import { readFileSync } from "fs";
 import { resolve } from "path";
@@ -110,7 +111,7 @@ describe("Reader fillBlank→dropdown — Study Strength unaffected", () => {
       expect(studyActivityOf(block)).toBeNull();
     }
   });
-  it("the committed server study index still holds exactly 453 eligible (247 MC / 86 T/F / 60 shortInput / 60 practice-table) and none of the three converted ids", () => {
+  it("the committed server study index still holds exactly 475 eligible (257 MC / 91 T/F / 67 shortInput / 60 practice-table) and none of the three converted ids", () => {
     const idx = JSON.parse(readFileSync(resolve(process.cwd(), "api/src/data/learning-study/791381.json"), "utf8"));
     const kinds: Record<string, number> = {};
     let total = 0;
@@ -118,8 +119,8 @@ describe("Reader fillBlank→dropdown — Study Strength unaffected", () => {
     for (const p of Object.values(idx.pages as Record<string, { activities: Record<string, { kind: string }> }>)) {
       for (const [id, a] of Object.entries(p.activities)) { total++; ids.add(id); kinds[a.kind] = (kinds[a.kind] || 0) + 1; }
     }
-    expect(total).toBe(453);
-    expect(kinds).toEqual({ multipleChoice: 247, trueFalse: 86, shortInput: 60, "practice-table": 60 });
+    expect(total).toBe(475);
+    expect(kinds).toEqual({ multipleChoice: 257, trueFalse: 91, shortInput: 67, "practice-table": 60 });
     for (const c of CASES) expect(ids.has(c.blockId)).toBe(false);
   });
 });

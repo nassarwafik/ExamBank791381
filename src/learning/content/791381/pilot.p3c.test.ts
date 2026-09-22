@@ -149,21 +149,25 @@ describe("Phase 3C — numeric fidelity (exact source values, correct digit orde
 });
 
 describe("Phase 3C — provenance + answer-key safety", () => {
-  it("every m02 converted block is origin:book except the QR clarification and the Batch-2 SVG visual enrichments", () => {
+  it("every m02 converted block is origin:book except the QR clarification, the Batch-2 SVG visual enrichments and the Study-Practice exercises", () => {
     const enrich: string[] = [];
     for (const p of m02Pages) for (const b of p.blocks as ContentBlock[]) {
       if (b.origin === "teacher-enrichment") enrich.push(b.id);
       else expect(b.origin, b.id).toBe("book");
     }
-    // the original QR clarification plus the three Batch-2 visual-enrichment blocks (m02 selections)
+    // the original QR clarification plus the three Batch-2 visual-enrichment blocks (m02 selections) plus the
+    // thirteen Study-Practice exercises (Strength phase) — never on the trainings page (p08) itself
     expect([...enrich].sort()).toEqual([
-      "m02-l01-p01-visual", "m02-l01-p03-visual", "m02-l01-p08-qrnote", "m02-l01-p09-visual",
+      "m02-l01-p01-q1", "m02-l01-p01-q2", "m02-l01-p01-visual", "m02-l01-p02-q1", "m02-l01-p02-q2", "m02-l01-p03-q1", "m02-l01-p03-visual",
+      "m02-l01-p04-q1", "m02-l01-p04-q2", "m02-l01-p05-q1", "m02-l01-p06-q1", "m02-l01-p06-q2", "m02-l01-p07-q1", "m02-l01-p07-q2",
+      "m02-l01-p08-qrnote", "m02-l01-p09-q1", "m02-l01-p09-visual",
     ]);
   });
 
-  it("adds NO practice blocks, NO answer keys, and NO embedded image / iframe / external link (exercises are a plain list)", () => {
-    const json = JSON.stringify(m02);
-    expect(m02Pages.some(p => p.blocks.some(b => b.type === "practice"))).toBe(false);          // no Phase-4 practice
+  it("the BOOK content carries NO answer keys and NO embedded image / iframe / external link (exercises page is a plain list); the Study-Practice exercises are the only practice blocks and never sit on the trainings page", () => {
+    const bookOnly = { ...m02, lessons: m02.lessons.map(l => ({ ...l, pages: l.pages.map(p => ({ ...p, blocks: p.blocks.filter(b => b.type !== "practice") })) })) };
+    const json = JSON.stringify(bookOnly);
+    expect(pageBy("791381-m02-l01-p08").blocks.some(b => b.type === "practice")).toBe(false);   // the T01–T04 page carries no study exercise (no double bucket)
     expect(m02Pages.some(p => p.blocks.some(b => b.type === "image" || b.type === "diagram"))).toBe(false); // no QR/screenshot image
     for (const banned of ["<iframe", ".pdf", "http", "correct", "feedback", "PracticeFeedback"]) {
       expect(json, banned).not.toContain(banned);

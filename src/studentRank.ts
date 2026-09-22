@@ -1,12 +1,23 @@
+// LEGACY — the six-rank cadence (beginner … legendary, one tier per 400 points / four finalized exams).
+//
+// The PRIMARY student progression is now the 25-STAGE STRENGTH PATH (80 points per stage, 2000 visible points),
+// decided by the SERVER (`dashboard.strength.stageNumber`, api/src/lib/student-strength.js) and presented through
+// src/studentStageVisuals.ts + src/student/strengthPresentation.ts. Nothing in this file decides the stage, and no
+// primary Student Portal surface derives a rank from it any more. It is kept ONLY for:
+//   • historical achievement events (`global_rank_up` posts written in the six-rank era carry `rank.tier`) and the
+//     labels their renderers need (RANK_LABELS / RankTier);
+//   • the RankTier type used by the legacy `legacyRank` block the server still carries for those events.
+// The finalized-count / Strength helpers below are legacy math kept for the tests that document the old cadence.
+//
 // UX-7 — the student's PERSONAL rank (progression only; there is no class leaderboard and nothing here ever
 // compares one student with another).
 //
-// UNIFIED STRENGTH POINTS (نقاط القوة): the rank now advances by ONE tier every 400 Strength Points, and the
-// points come from THREE server-authoritative sources (computed by the API in `dashboard.strength`, never here):
-//   finalized exams × 100  +  T-series practice best (≤ 25 each)  +  projects round(overallProgress × 4) (≤ 400 each)
-// The SAME six rank tiers / images remain the visual progression. With zero practice and project points this is
-// exactly the historical "one tier per four finalized exams" cadence (4 × 100 = 400), so every finalized-count
-// helper below is kept as a backward-compatible wrapper and proven equivalent by tests.
+// HISTORICAL NOTE (six-rank era): the rank advanced by ONE tier every 400 Strength Points over the raw total the API
+// computed (`dashboard.strength.legacyRank` still carries this block for historical events). With zero practice and
+// project points that was exactly the "one tier per four finalized exams" cadence (4 × 100 = 400), so the
+// finalized-count helpers below stayed equivalent wrappers, proven by tests. Today's point sources and ceilings are
+// defined ONLY in api/src/lib/student-strength.js (36 Learning-Practice items × 40, 28 study modules × 20, exams
+// 100 each, projects ≤ 400) and feed the 25-stage path — nothing here describes or decides them.
 //
 // Provisional / pendingReview results, raw percentages and averages never reach the tier: `averageFinalized` is
 // carried on the rank object for the academic-average display only. Medals keep their own separate thresholds

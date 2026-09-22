@@ -532,7 +532,7 @@ const m06: ContentModule = {
             },
             {
               id: "m06-l02-p02-note", type: "callout", origin: "teacher-enrichment", kind: "clarification", title: "توضيح المعلّم",
-              spans: [T("الامتحانات النهائية للتدريب الستة يمكن فتحها من داخل المنصة عندما يصبح الجزء المرتبط بها متاحًا (كل امتحان يُحل كتدريب حرّ: تُحفظ أفضل نتيجة تلقائية فقط، لا يُحسب كواجب ولا يمنح نقاط تقوية)؛ وهنا نختم بمراجعة قصيرة لوحدة "), L("ACL"), T(".")],
+              spans: [T("الامتحانات النهائية للتدريب الستة يمكن فتحها من داخل المنصة عندما يصبح الجزء المرتبط بها متاحًا (كل امتحان يُحل كتدريب حرّ: تُحفظ أفضل نتيجة فقط، لا يُحسب كواجب، ويمنح حتى 40 نقطة قوة كأي تدريب)؛ وهنا نختم بمراجعة قصيرة لوحدة "), L("ACL"), T(".")],
             },
             // ── Learning Practice (Reader position 215): the platform's F01–F06 «امتحانات نهائية للتدريب», one card per
             // printed exam. Metadata only — the host / API decide availability and disclose the library title.

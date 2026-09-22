@@ -19,7 +19,7 @@ const questions: Question[] = Array.from({ length: 10 }, (_, i) => ({
 } as unknown as Question));
 const loaded = (best?: TrainingLoadResponse["best"]): TrainingLoadResponse => ({
   ok: true, actor: "student",
-  training: { trainingId: "T02", order: 2, label: "تدريب 2", requiredModuleId: "791381-m02", courseId: "791381", available: true, title: "أنظمة العد", questionCount: 10, totalMarks: 100, maxPoints: 25 },
+  training: { trainingId: "T02", order: 2, label: "تدريب 2", requiredModuleId: "791381-m02", courseId: "791381", available: true, title: "أنظمة العد", questionCount: 10, totalMarks: 100, maxPoints: 40 },
   exam: { examId: "LIB-T02", title: "أنظمة العد", questions, totalMarks: 100 },
   ...(best ? { best } : {}),
 });
@@ -29,7 +29,7 @@ const graded = (actor: "student" | "teacher", improved = true): TrainingSubmitRe
     correctCount: 8, questionCount: 10, score: 80, totalMarks: 100, percentage: 80,
     review: questions.map((q, i) => ({ questionId: q.examQuestionId!, questionNumber: i + 1, correct: i < 8, chosenIndex: 0, correctOptionIndex: i < 8 ? 0 : 2, hint: `تلميح_سري_${i + 1}` })),
   },
-  ...(actor === "student" ? { practice: { bestPercentage: 80, bestPoints: 20, maxPoints: 25, attempts: 1, lastCompletedAt: "2026-09-19T00:00:00.000Z", improved, pointsGained: improved ? 20 : 0, earnedPoints: 20 } } : {}),
+  ...(actor === "student" ? { practice: { bestPercentage: 80, bestPoints: 32, maxPoints: 40, attempts: 1, lastCompletedAt: "2026-09-19T00:00:00.000Z", improved, pointsGained: improved ? 32 : 0, earnedPoints: 32 } } : {}),
 });
 function client(over: Partial<TrainingClient> = {}, actor: "student" | "teacher" = "student"): TrainingClient & { submit: ReturnType<typeof vi.fn> } {
   const submit = vi.fn(async () => graded(actor));
@@ -47,7 +47,7 @@ describe("LearningTrainingRunner — solving", () => {
     expect(document.querySelectorAll(".iex-q").length).toBe(10);
     expect(screen.getAllByRole("radio").length).toBe(40);
     expect(screen.getByText("تدريب 2")).toBeTruthy();
-    expect(screen.getByText("حتى 25 نقطة تقوية")).toBeTruthy();
+    expect(screen.getByText("حتى 40 نقطة قوة")).toBeTruthy();
     expect(submitBtn().disabled).toBe(true);
     expect(screen.getByText(/أسئلة مُجابة/).textContent).toBe("0 / 10 أسئلة مُجابة");
     fireEvent.click(screen.getAllByRole("radio")[1]);
@@ -78,11 +78,14 @@ describe("LearningTrainingRunner — solving", () => {
     expect(answers["LIB-T02-Q01"]).toEqual({ kind: "choice", index: 1 });
     expect(answers["LIB-T02-Q02"]).toEqual({ kind: "choice", index: 0 });
     expect(JSON.stringify(c.submit.mock.calls[0])).not.toMatch(/score|percentage|points/);
-    // summary: "8 / 10 إجابات صحيحة", "80%", "20 / 25 نقاط تقوية"
+    // summary: "8 / 10 إجابات صحيحة", "80%", best 80%, "32 / 40 نقاط قوة", "+32 نقاط قوة"
     expect(screen.getByText(/إجابات صحيحة$/).textContent).toBe("8 / 10 إجابات صحيحة");
-    expect(screen.getByText("80%")).toBeTruthy();
-    expect(screen.getByText(/نقاط تقوية$/).textContent).toBe("20 / 25 نقاط تقوية");
-    expect(screen.getByRole("status").textContent).toContain("تحسّنت أفضل نتيجتك: +20 نقاط قوة.");
+    expect(screen.getAllByText("80%").length).toBe(2);                                  // النسبة + أفضل نسبة (both the server's)
+    expect(screen.getByText("32 / 40").closest("dd")!.textContent).toBe("32 / 40 نقاط قوة");
+    expect(screen.getByText("+32").closest("dd")!.textContent).toBe("+32 نقاط قوة");
+    expect(screen.getByText("أفضل نسبة")).toBeTruthy();
+    expect(screen.getByRole("status").textContent).toContain("تحسّنت أفضل نتيجتك: +32 نقاط قوة.");
+    expect(document.body.textContent).not.toMatch(/25|تقوية/);
     // review: 8 right, 2 wrong; wrong rows show the right option + hint; right rows show chosen only
     const items = screen.getAllByRole("listitem").filter(li => li.classList.contains("learning-training-review-item"));
     expect(items.length).toBe(10);
@@ -120,18 +123,18 @@ describe("LearningTrainingRunner — solving", () => {
     await screen.findByRole("heading", { level: 2, name: "أنظمة العد" });
     answerAll(); fireEvent.click(submitBtn());
     await screen.findByText("مراجعة الإجابات");
-    expect(screen.getByRole("status").textContent).toContain("أفضل نتيجتك المحفوظة ما زالت 80%");
+    expect(screen.getByRole("status").textContent).toContain("لم تزد نقاط القوة: أفضل نتيجتك المحفوظة ما زالت 80% (32 / 40 نقاط قوة)");
   });
 
   it("teacher actor: the same runner, a preview note, no Strength points line", async () => {
     const c = client({}, "teacher");
     render(<LearningTrainingRunner trainingId="T02" actor="teacher" client={c} onExit={vi.fn()} />);
     await screen.findByRole("heading", { level: 2, name: "أنظمة العد" });
-    expect(screen.queryByText("حتى 25 نقطة تقوية")).toBeNull();
+    expect(screen.queryByText("حتى 40 نقطة قوة")).toBeNull();
     answerAll(); fireEvent.click(submitBtn());
     await screen.findByText("مراجعة الإجابات");
     expect(screen.getByText(/إجابات صحيحة$/).textContent).toBe("8 / 10 إجابات صحيحة");
-    expect(screen.queryByText(/نقاط تقوية$/)).toBeNull();
+    expect(screen.queryByText(/نقاط قوة$/)).toBeNull();
     expect(screen.getByRole("status").textContent).toContain("معاينة المعلم: النتيجة لا تُحفظ ولا تُمنح عنها نقاط.");
   });
 
