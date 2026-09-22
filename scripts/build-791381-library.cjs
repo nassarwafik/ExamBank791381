@@ -137,6 +137,10 @@ function buildFSnapshot(code, examId, title, html) {
 //   { "table": ["..", ".."] }  -> matching/table, one answer per row in row order
 //   { "manual": true }         -> intentionally teacher-graded (Cisco commands, essays): not a
 //                                 defect, graded by hand at runtime, does not block "ready".
+// Any entry may additionally carry { "marks": N } (integer >= 0): a teacher-authorized marks
+// override for that ONE question, applied after the source marks (e.g. F06's source gives its
+// manual extra exercise g11 `mark: 0`; the teacher rule awards it 4 and takes 1 mark off each of
+// g7..g10 so the exam total stays 154). totalMarks is recomputed after the overlay.
 // A key file MUST declare its provenance so it's never mistaken for an official source of truth.
 function loadAnswerKey(code) {
   const file = path.join(__dirname, "answer-keys", code + ".json");
@@ -144,11 +148,20 @@ function loadAnswerKey(code) {
   return JSON.parse(fs.readFileSync(file, "utf8"));
 }
 
+function applyMarksOverride(snapshot, q, entry) {
+  if (entry.marks === undefined) return;
+  if (!Number.isInteger(entry.marks) || entry.marks < 0) {
+    throw new Error(snapshot.examId + "/" + q.sourceQuestionId + ": invalid marks override (need an integer >= 0)");
+  }
+  q.marks = entry.marks;
+}
+
 function applyAnswerKey(snapshot, key) {
   if (!key || !key.answers) return;
   for (const q of snapshot.questions) {
     const entry = key.answers[q.sourceQuestionId];
     if (!entry) continue;
+    applyMarksOverride(snapshot, q, entry);
     if (entry.manual === true) {
       q.answer = {};
       q.presentationType = "open";
@@ -189,6 +202,8 @@ function applyAnswerKey(snapshot, key) {
     q.requiresManualReview = false;
     q.teacherNote = "";
   }
+  // The overlay may change per-question marks: the exam total must follow them (finalizeSnapshot ran before).
+  snapshot.totalMarks = snapshot.questions.reduce((sum, q) => sum + (Number(q.marks) || 0), 0);
 }
 
 function classifyStatus(snapshot) {

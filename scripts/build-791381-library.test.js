@@ -71,6 +71,23 @@ describe("buildLibrary - end to end against real Book791381 files", () => {
     }
   });
 
+  it("F06 marks overlay: g11 (source mark 0) is awarded 4, g7..g10 go 4 -> 3, the total stays 154 and no question is worth 0", () => {
+    const f06 = readItem("F06");
+    const bySource = Object.fromEntries(f06.examSnapshot.questions.map(q => [q.sourceQuestionId, q]));
+    expect(bySource.g11.marks).toBe(4);
+    expect(bySource.g11.presentationType).toBe("open"); // still the intentionally-manual exercise
+    expect(Object.keys(bySource.g11.answer)).toHaveLength(0);
+    for (const id of ["g7", "g8", "g9", "g10"]) expect(bySource[id].marks).toBe(3);
+    expect(bySource.g6.marks).toBe(4); // an untouched neighbour keeps its source marks
+    expect(f06.examSnapshot.questions.some(q => !(Number(q.marks) > 0))).toBe(false);
+    const sum = f06.examSnapshot.questions.reduce((s, q) => s + q.marks, 0);
+    expect(sum).toBe(154);
+    // The overlay runs after finalizeSnapshot: the stored totals must follow the overridden marks.
+    expect(f06.examSnapshot.totalMarks).toBe(154);
+    expect(f06.totalMarks).toBe(154);
+    expect(catalog.find(c => c.libraryItemId === "F06").totalMarks).toBe(154);
+  });
+
   it("externalizes images: no item JSON contains a base64 data: URI, and asset files exist", () => {
     for (const item of catalog) {
       const raw = fs.readFileSync(path.join(dataDir, "items", item.libraryItemId + ".json"), "utf8");

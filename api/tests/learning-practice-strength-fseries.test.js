@@ -112,9 +112,9 @@ describe("API — F submissions never advertise or award Strength; T submissions
     const t05 = await get(studentDeps(ctx), "T05"); expect(t05.jsonBody.training).toMatchObject({ strengthEligible: true, maxPoints: 25 });
     const f06 = await get(studentDeps(ctx), "F06"); expect(f06.jsonBody.training).toMatchObject({ strengthEligible: false, maxPoints: 0 });
   });
-  it("F01 / F06 full answers: the real grader's percentage (94 / 85 — NOT manufactured to 100), best + attempts persisted, bestPoints / earnedPoints / pointsGained / maxPoints all 0; the persisted document yields 0 practice Strength", async () => {
+  it("F01 / F06 full answers: the real grader's percentage (94 / 82 — NOT manufactured to 100; F06: 127 auto-gradable of 154 marks since Q45 = 4 manual marks and Q41..Q44 = 3), best + attempts persisted, bestPoints / earnedPoints / pointsGained / maxPoints all 0; the persisted document yields 0 practice Strength", async () => {
     const ctx = seed();
-    for (const [id, expectedPct] of [["F01", 94], ["F06", 85]]) {
+    for (const [id, expectedPct] of [["F01", 94], ["F06", 82]]) {
       const answers = fullAnswers(id);
       const expected = gradeExam(ITEM(id).examSnapshot, answers);
       expect(Math.round(expected.percentage)).toBe(expectedPct);                   // the open questions stay in the total
@@ -128,7 +128,7 @@ describe("API — F submissions never advertise or award Strength; T submissions
     }
     const stored = ctx.getJson(practiceDocName("u1"));
     expect(stored.trainings.F01).toMatchObject({ bestPercentage: 94, bestPoints: 0, attempts: 2 });
-    expect(stored.trainings.F06).toMatchObject({ bestPercentage: 85, bestPoints: 0, attempts: 2 });
+    expect(stored.trainings.F06).toMatchObject({ bestPercentage: 82, bestPoints: 0, attempts: 2 });
     expect(practicePointsFromTrainings(stored.trainings)).toBe(0);
     expect(buildStrengthSummary({ finalizedCount: 0, trainings: stored.trainings, projects: [] }).totalPoints).toBe(0);
     // the list keeps the practice history visible, with maxPoints 0
