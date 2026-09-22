@@ -1,15 +1,14 @@
 // Milestone recording — the SERVER compares authoritative before/after states and creates at most ONE achievement
 // event per newly reached milestone (deterministic create-only ids). React never decides a milestone.
 //
-//   global_rank_up   : the student's UNIFIED Strength tier (student-strength.js) rose above the last observed tier.
-//                      Evaluated at the ONE place the total Strength is built (the student dashboard), against the
-//                      persisted observation in platform/recognition/<studentId>.json — so a change from ANY source
-//                      (finalized exam, training best, project progress) is caught on the next portal load. The
-//                      first observation only records the baseline (no retroactive event for an existing rank).
+//   global_rank_up   : the student's UNIFIED Strength STAGE (student-strength.js, 1..25) rose above the last observed
+//                      stage. Evaluated at the ONE place the total Strength is built (the student dashboard), against
+//                      the persisted observation in platform/recognition/<studentId>.json — so a change from ANY
+//                      library/module source is caught on the next portal load. The first observation only records the
+//                      baseline (no retroactive event for an already-reached stage).
 //   project_rank_up  : ONE project's Strength (/600) tier rose in a real progress mutation (before vs after docs).
 //   project_complete : the first not-complete → complete transition of a project.
-// A jump over several tiers records ONE event for the final tier; a decrease (reset / correction) records nothing.
-const { RANK_ORDER } = require("./student-strength");
+// A jump over several stages records ONE event for the final stage; a decrease (reset / correction) records nothing.
 const { downloadJsonOrNull, uploadJson } = require("./platform-storage");
 const { recordAchievementEvent } = require("./achievement-feed");
 const perf = require("./project-tracker/performance");
@@ -20,31 +19,33 @@ const recognitionDocName = studentId => RECOGNITION_PREFIX + String(studentId) +
 const tierIndex = (order, tier) => (tier ? order.indexOf(tier) : -1);
 
 /**
- * Global rank milestone: returns the tier of the event created now, or null. Best-effort (never throws).
- * Steady state is WRITE-FREE: the observation doc is written only on first sight (baseline — an already-earned rank
- * is never posted retroactively) and when the tier changes. Reads/writes go through the dashboard's seams.
+ * Global stage milestone: returns the stage (1..25) of the event created now, or null. Best-effort (never throws).
+ * Steady state is WRITE-FREE: the observation doc is written only on first sight (baseline — an already-reached stage
+ * is never posted retroactively) and when the stage changes. Reads/writes go through the dashboard's seams.
+ * Backward compatible: an older recognition doc (with lastGlobalTier but no lastGlobalStage) is treated as first
+ * sight for the STAGE milestone, so it records the baseline and posts nothing retroactively.
  */
 async function recordGlobalRankMilestone(container, { student, classId, strength, now }, deps = {}) {
   try {
     const dl = deps.downloadJsonOrNull || downloadJsonOrNull;
     const up = deps.uploadJson || uploadJson;
     const studentId = String(student && student.userId || "");
-    const currentTier = strength && strength.tier ? strength.tier : null;
+    const currentStage = Math.max(0, Math.floor(Number(strength && strength.stage) || 0));   // 1..25 (0 = no strength)
     if (!studentId) return null;
     const existing = await dl(container, recognitionDocName(studentId));
-    const first = !existing || typeof existing !== "object" || !Object.prototype.hasOwnProperty.call(existing, "lastGlobalTier");
-    const previous = first ? null : (existing.lastGlobalTier || null);
-    if (first || previous !== currentTier) {
-      await up(container, recognitionDocName(studentId), { ...(existing && typeof existing === "object" ? existing : { schemaVersion: 1, studentId }), lastGlobalTier: currentTier, lastGlobalPoints: Number(strength && strength.totalPoints || 0), updatedAt: now || new Date().toISOString() });
+    const first = !existing || typeof existing !== "object" || !Object.prototype.hasOwnProperty.call(existing, "lastGlobalStage");
+    const previous = first ? 0 : Math.max(0, Math.floor(Number(existing.lastGlobalStage) || 0));
+    if (first || previous !== currentStage) {
+      await up(container, recognitionDocName(studentId), { ...(existing && typeof existing === "object" ? existing : { schemaVersion: 1, studentId }), lastGlobalStage: currentStage, lastGlobalPoints: Number(strength && strength.totalPoints || 0), updatedAt: now || new Date().toISOString() });
     }
-    if (first || !currentTier || !classId) return null;
-    if (tierIndex(RANK_ORDER, currentTier) <= tierIndex(RANK_ORDER, previous)) return null;
+    if (first || !currentStage || !classId) return null;
+    if (currentStage <= previous) return null;   // only a real increase posts; a jump records ONE event for the final stage
     const created = await recordAchievementEvent(container, {
-      eventType: "global_rank_up", postId: "global_rank_" + currentTier + "_" + studentId, classId, studentId,
+      eventType: "global_rank_up", postId: "global_stage_" + currentStage + "_" + studentId, classId, studentId,
       studentDisplayName: student.displayName, shareWithClass: student.shareAchievements !== false, now,
-      rank: { tier: currentTier, level: Number(strength.level || 0), points: Number(strength.totalPoints || 0) }
+      rank: { stage: currentStage, points: Number(strength.totalPoints || 0) }
     });
-    return created ? currentTier : null;
+    return created ? currentStage : null;
   } catch {
     return null;
   }

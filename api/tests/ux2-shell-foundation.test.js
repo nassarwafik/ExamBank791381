@@ -578,18 +578,31 @@ describe("Student Portal — rank cadence & medal sizing", () => {
   const section = read("student/StudentProgressSection.tsx");
   const css = readFileSync(join(ROOT, "src", "studentportal-pro.css"), "utf8");
 
-  it("rank advances every four finalized exams from ONE central constant (no scattered literal 4, no old 10-unlock / average table)", () => {
-    expect(rank).toMatch(/RANK_STEP_FINALIZED = 4/);
-    expect(rank).toMatch(/Math\.floor\(count \/ RANK_STEP_FINALIZED\)/);       // tier from the finalized count
-    expect(rank).not.toMatch(/RANK_MIN_FINALIZED\s*=\s*10/);                   // old unlock gone
-    expect(rank).not.toMatch(/bronze: 60, silver: 70, gold: 80, diamond: 90, legendary: 96/);  // old average-threshold table gone
-    // Unified Strength: the component speaks in Strength points (one 400-point block per rank — the same boundary
-    // the four-finalized-exam cadence lands on, since a finalized exam is worth 100), never a hardcoded 4/10 and
-    // never the old exam-count or average-based wording.
-    expect(section).toMatch(/نقطة قوة لفتح رتبتك/);
-    expect(section).not.toMatch(/امتحانات نهائية لفتح رتبتك/);                      // old exam-count unlock wording gone
-    expect(section).not.toMatch(/الرتبة التالية عند معدل نهائي/);                 // old average-based next-rank wording gone
-    expect(section).toMatch(/remainingPointsPhrase\(rank\.next\.remaining\)/);  // Strength-based next-rank wording
+  it("studentRank.ts is now ONLY the 6-tier PROJECT vocabulary; the retired finalized-exam / global-strength cadence is gone; the visible Student Strength is the server 25-stage model", () => {
+    // studentRank.ts keeps only the six PROJECT-rank tiers + Arabic labels (used by projectPerformance / rank visuals
+    // and the project achievement events). The old global-strength helpers (finalized × 100 → six tiers, 400-point
+    // blocks, the 10-unlock and average-threshold table) have been removed.
+    expect(rank).toMatch(/RANK_ORDER: RankTier\[\] = \["beginner", "bronze", "silver", "gold", "diamond", "legendary"\]/);
+    expect(rank).toMatch(/RANK_LABELS: Record<RankTier, string>/);
+    for (const tier of ["beginner", "bronze", "silver", "gold", "diamond", "legendary"]) expect(rank, tier).toMatch(new RegExp(tier + ":"));
+    // every retired global-strength / finalized-exam helper is gone
+    expect(rank).not.toMatch(/RANK_STEP_FINALIZED/);
+    expect(rank).not.toMatch(/RANK_MIN_FINALIZED/);
+    expect(rank).not.toMatch(/RANK_STEP_STRENGTH/);
+    expect(rank).not.toMatch(/strengthFromFinalizedCount|rankTierFromStrength|strengthProgress/);
+    expect(rank).not.toMatch(/Math\.floor\(count \/ RANK_STEP_FINALIZED\)/);
+    expect(rank).not.toMatch(/bronze: 60, silver: 70, gold: 80, diamond: 90, legendary: 96/);   // old average-threshold table gone
+
+    // The visible Student Strength (نقاط القوة) is presented from the 25-stage module, mirroring the server policy
+    // (api/src/lib/student-strength.js): 25 stages of 80 points, each bound 1:1 to an uploaded stage icon.
+    const stages = read("student/strengthStages.ts");
+    expect(stages).toMatch(/export const STAGE_COUNT = 25/);
+    expect(stages).toMatch(/export const STAGE_SPAN = 80/);
+    expect(stages).toMatch(/STRENGTH_TOTAL_MAX = STAGE_SPAN \* STAGE_COUNT/);
+    const icons = [...stages.matchAll(/strength-stages\/strength-stage-(\d{2})\.png/g)].map(m => m[1]);
+    expect(icons.length).toBe(25);                                                               // 25 icons imported
+    expect(new Set(icons).size).toBe(25);                                                        // one per stage, distinct
+    expect(icons[0]).toBe("01"); expect(icons[24]).toBe("25");
   });
 
   it("medal icons use the enlarged sizes and the container stays overflow-safe (flex-wrap) on mobile", () => {

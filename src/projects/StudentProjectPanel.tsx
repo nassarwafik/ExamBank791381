@@ -8,7 +8,6 @@ import SectionHeader from "../ui/SectionHeader";
 import StatusBadge from "../ui/StatusBadge";
 import { IconChevronBack } from "../icons";
 import type { ProjectStage, ProjectGroup, ProjectPerformance, StageProgressEntry, StudentCard, TrackMeta } from "./types";
-import type { ProjectStrength } from "../student/types";
 
 type StudentProject = {
   projectCode: string;
@@ -24,11 +23,10 @@ type StudentProject = {
 };
 type ProjectData = { ok: true; enrolled: boolean; className?: string; projects?: StudentProject[] };
 
-/** The per-project ceiling of the GLOBAL Strength contribution (display only; the policy lives on the server). */
-const PROJECT_MAX_STRENGTH_POINTS = 400;
-
-/** One project card: progress, grade, project rank (the SAME six artworks) and the open action. */
-function ProjectCard({ project, contribution, onOpen }: { project: StudentProject; contribution: ProjectStrength | null; onOpen: () => void }) {
+/** One project card: progress, grade, project rank (the project's own /600 rank artworks) and the open action.
+ *  NOTE: projects no longer feed the GLOBAL Student Strength (نقاط القوة) — that is now library trainings + book-module
+ *  completion only. The project rank shown here is the project's own performance tier, a separate feature. */
+function ProjectCard({ project, onOpen }: { project: StudentProject; onOpen: () => void }) {
   const perf = normalizeProjectPerformance(project.performance);
   const rank = perf ? projectRankVisual(perf.tier) : null;
   const headingId = "eb-sp-project-card-" + project.projectCode;
@@ -40,9 +38,8 @@ function ProjectCard({ project, contribution, onOpen }: { project: StudentProjec
         <dl className="eb-sp-project-card-facts">
           <div><dt>التقدم</dt><dd dir="ltr">{project.summary.overallProgress}%</dd></div>
           {perf && <div><dt>العلامة</dt><dd dir="ltr">{fmtGrade(perf.grade)}</dd></div>}
-          {rank && <div><dt>القوة</dt><dd>{rank.title}</dd></div>}
+          {rank && <div><dt>مستوى المشروع</dt><dd>{rank.title}</dd></div>}
         </dl>
-        {contribution && <p className="eb-sp-project-strength">مساهمته في قوتك العامة: <strong dir="ltr">{contribution.strengthPoints} / {PROJECT_MAX_STRENGTH_POINTS}</strong></p>}
         <button type="button" className="eb-button is-primary is-small" onClick={onOpen}>فتح المشروع</button>
       </div>
     </article>
@@ -52,7 +49,7 @@ function ProjectCard({ project, contribution, onOpen }: { project: StudentProjec
 // Read-only detail of ONE project (UX-7a presentation on the shared primitives + the Project Performance hero):
 // the values are the server's summary / performance / progress exactly as delivered — nothing is recomputed and
 // nothing is written from here. Stage scores are the teacher's marks, read-only for the student.
-function OneProject({ project, contribution, onBack }: { project: StudentProject; contribution: ProjectStrength | null; onBack: (() => void) | null }) {
+function OneProject({ project, onBack }: { project: StudentProject; onBack: (() => void) | null }) {
   const [track, setTrack] = useState<string>(project.tracks[0]?.trackId || "");
   const groups = useMemo(() => project.groups.filter(g => g.track === track).sort((a, b) => a.order - b.order), [project, track]);
   const byGroup = useMemo(() => stagesByGroup(project.stages.filter(s => s.active !== false), track), [project, track]);
@@ -65,11 +62,9 @@ function OneProject({ project, contribution, onBack }: { project: StudentProject
     <div className="eb-sp-project" data-project-code={project.projectCode}>
       {onBack && <button type="button" className="eb-button is-quiet is-small eb-sp-project-back" onClick={onBack}><IconChevronBack size={18} className="eb-flip-rtl" aria-hidden="true" />العودة إلى المشاريع</button>}
       {perf ? <ProjectRankHero title={project.title} performance={perf} /> : <ProgressBar label="التقدم العام" value={s.overallProgress} />}
-      {/* This project's share of the GLOBAL Strength as the SERVER derived it (round(overallProgress × 4), ≤ 400) —
-          distinct from the project-specific Strength (/600) in the hero. Rendered, never computed here. */}
-      {contribution && (
-        <p className="eb-sp-project-strength">تقدم المشروع: <strong>{contribution.overallProgress}%</strong> · نقاط القوة من المشروع: <strong>{contribution.strengthPoints} / {PROJECT_MAX_STRENGTH_POINTS}</strong></p>
-      )}
+      {/* The project-specific Strength (/600) lives in the hero above. Projects no longer contribute to the GLOBAL
+          Student Strength (نقاط القوة) — that is library trainings + book-module completion only — so no global
+          contribution line is shown here. */}
       <ul className="eb-sp-project-tracks" aria-label="تقدم المسارات">
         {project.tracks.map((t, i) => <li key={t.trackId}><ProgressBar size="sm" label={t.title} value={s.trackProgress[t.trackId] || 0} tone={toneForTrack(i)} /></li>)}
       </ul>
@@ -118,7 +113,7 @@ function OneProject({ project, contribution, onBack }: { project: StudentProject
 // project rank) → one project's detail (hero + circle + stages) → back. OPTIONAL secondary panel: ONE read; on
 // any failure (or when the class runs no project) it renders nothing and NEVER logs the student out. Every
 // project's metrics come from the same single response, so switching never shows a previous project's values.
-export default function StudentProjectPanel({ token, contributions = [] }: { token: string; contributions?: ProjectStrength[] }) {
+export default function StudentProjectPanel({ token }: { token: string }) {
   const [data, setData] = useState<ProjectData | null>(null);
   const [openCode, setOpenCode] = useState<string>("");
 
@@ -140,16 +135,15 @@ export default function StudentProjectPanel({ token, contributions = [] }: { tok
   // One project → its detail directly; several → cards first, then the chosen project's detail (never a stale one:
   // every project's metrics come from the same single response and are looked up by code at render time).
   const open = projects.length === 1 ? projects[0] : openCode ? projects.find(p => p.projectCode === openCode) ?? null : null;
-  const contributionOf = (code: string) => contributions.find(c => c.projectCode === code) ?? null;
 
   return (
     <section className="eb-sp-panel eb-sp-projects" aria-labelledby="eb-sp-projects-title">
       <SectionHeader level={2} id="eb-sp-projects-title" title="مشاريعي" count={projects.length > 1 ? projects.length : undefined} description="تقدّمك وعلاماتك في مشاريع صفك، كما سجّلها المعلم." />
       {open ? (
-        <OneProject key={open.projectCode} project={open} contribution={contributionOf(open.projectCode)} onBack={projects.length > 1 ? () => setOpenCode("") : null} />
+        <OneProject key={open.projectCode} project={open} onBack={projects.length > 1 ? () => setOpenCode("") : null} />
       ) : (
         <ul className="eb-sp-project-cards" aria-label="المشاريع">
-          {projects.map(p => <li key={p.projectCode}><ProjectCard project={p} contribution={contributionOf(p.projectCode)} onOpen={() => setOpenCode(p.projectCode)} /></li>)}
+          {projects.map(p => <li key={p.projectCode}><ProjectCard project={p} onOpen={() => setOpenCode(p.projectCode)} /></li>)}
         </ul>
       )}
     </section>

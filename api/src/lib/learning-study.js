@@ -7,11 +7,12 @@
 // request, a retry or a re-opened page can never add a second entry, and a wrong answer writes nothing. Points are
 // NEVER stored — they are re-derived on every read from the completed ids that the SERVER-SIDE KEY INDEX
 // (api/src/data/learning-study/<courseId>.json, generated from the real content) still lists as eligible for that
-// page, through the Strength policy (student-strength.js): min(count, 2) per page, min(Σ, 15) per module.
+// module, through the Strength policy (student-strength.js): a MODULE's Strength is round(completed/total × 20),
+// i.e. the module's unique eligible Study-Practice completion ratio, capped at 20 per module (the 25-stage model).
 // Writes go through mutateJsonWithRetry (CAS): overlapping submissions converge on the same set.
 const { normalizeClassStatus } = require("./class-lifecycle");
 const { classHasLearningCourse, classCanSeeLearningModule } = require("./class-learning-materials");
-const { STUDY_PAGE_MAX_POINTS, STUDY_MODULE_MAX_POINTS, studyPointsForPage, studyPointsForModule, studyPointsFromModules } = require("./student-strength");
+const { MODULE_MAX_POINTS, strengthFromModuleCompletion, modulePointsFromCompletion } = require("./student-strength");
 
 const STUDY_PREFIX = "platform/learning-study/";
 const studyDocName = studentId => STUDY_PREFIX + String(studentId || "").trim() + ".json";
@@ -96,12 +97,14 @@ function applyStudyCompletion(doc, index, { courseId, moduleId, pageId, activity
   const before = studyStateOf(normalized, index).totalPoints;
   const page = normalized.pages[pageId] || { courseId: cleanId(courseId), moduleId: cleanId(moduleId), completed: {} };
   const alreadyCompleted = Object.prototype.hasOwnProperty.call(page.completed, activityId);
-  const pageBefore = studyPointsForPage(eligibleCompletedCount(index, pageId, page.completed));
+  const pageBefore = eligibleCompletedCount(index, pageId, page.completed);
   if (!alreadyCompleted) page.completed = { ...page.completed, [activityId]: String(now || new Date().toISOString()) };
   page.courseId = cleanId(courseId); page.moduleId = cleanId(moduleId);
   normalized.pages[pageId] = page;
-  const pageAfter = studyPointsForPage(eligibleCompletedCount(index, pageId, page.completed));
+  const pageAfter = eligibleCompletedCount(index, pageId, page.completed);
   const after = studyStateOf(normalized, index).totalPoints;
+  // `gained` is the ACTUAL module-Strength delta (module completion cap applied), never negative — the whole point
+  // of the immediate «+N نقاط قوة» feedback. `pageBefore`/`pageAfter` are the page's eligible-completed COUNTS.
   return { doc: normalized, alreadyCompleted, pageBefore, pageAfter, gained: alreadyCompleted ? 0 : Math.max(0, after - before) };
 }
 
@@ -112,38 +115,58 @@ function eligibleCompletedCount(index, pageId, completed) {
   return Object.keys(completed || {}).filter(id => Object.prototype.hasOwnProperty.call(page.activities, id)).length;
 }
 
+/** Total eligible Study-Practice activities per module of a course, from the index (the module-completion DENOMINATOR).
+ *  Only modules with at least one eligible activity appear. Pure. */
+function moduleTotalsOf(index) {
+  const totals = {};
+  if (!index || !index.pages || typeof index.pages !== "object") return totals;
+  for (const page of Object.values(index.pages)) {
+    if (!page || typeof page !== "object" || !page.moduleId || !page.activities || typeof page.activities !== "object") continue;
+    const n = Object.keys(page.activities).length;
+    if (n > 0) totals[page.moduleId] = (totals[page.moduleId] || 0) + n;
+  }
+  return totals;
+}
+
 /**
- * The authoritative study state of a student for ONE course: the { moduleId: { pageId: count } } map the Strength
- * summary consumes, plus per-page / per-module views for the API. Nothing stored is trusted beyond the completed ids.
+ * The authoritative study state of a student for ONE course: the module-completion map the Strength summary
+ * consumes ({ moduleId: { completed, total } }), plus per-page / per-module views for the API. Module Strength is
+ * round(completed/total × 20). Nothing stored is trusted beyond the completed ids; the totals come from the index.
  */
 function studyStateOf(doc, index) {
   const normalized = normalizeStudyDoc(doc);
-  const modules = {};
+  const totals = moduleTotalsOf(index);
+  const completedByModule = {};
   const pages = {};
   if (index) {
     for (const [pageId, entry] of Object.entries(normalized.pages)) {
       const spec = findStudyPage(index, pageId);
       if (!spec || entry.courseId !== index.courseId) continue;
       const completed = Object.keys(entry.completed).filter(id => Object.prototype.hasOwnProperty.call(spec.activities, id)).sort();
-      modules[spec.moduleId] = modules[spec.moduleId] || {};
-      modules[spec.moduleId][pageId] = completed.length;
-      pages[pageId] = { moduleId: spec.moduleId, completed, points: studyPointsForPage(completed.length), max: STUDY_PAGE_MAX_POINTS };
+      completedByModule[spec.moduleId] = (completedByModule[spec.moduleId] || 0) + completed.length;
+      pages[pageId] = { moduleId: spec.moduleId, completed, total: Object.keys(spec.activities).length };
     }
   }
+  const moduleCompletion = {};
   const moduleViews = {};
-  for (const [moduleId, pageCounts] of Object.entries(modules)) moduleViews[moduleId] = { points: studyPointsForModule(pageCounts), max: STUDY_MODULE_MAX_POINTS };
-  return { modules, pages, moduleViews, totalPoints: studyPointsFromModules(modules) };
+  for (const [moduleId, total] of Object.entries(totals)) {
+    const completed = completedByModule[moduleId] || 0;
+    moduleCompletion[moduleId] = { completed, total };
+    moduleViews[moduleId] = { points: strengthFromModuleCompletion(completed, total), max: MODULE_MAX_POINTS, completed, total };
+  }
+  return { moduleCompletion, pages, moduleViews, totalPoints: modulePointsFromCompletion(moduleCompletion) };
 }
 
-/** The study contribution of a student across every course that has an index (the dashboard / profile path). */
-function studyModulesForStrength(doc, courseIds) {
-  const modules = {};
+/** The study contribution of a student across every course that has an index (the dashboard / profile path):
+ *  { moduleId: { completed, total } } for every module with eligible activities. */
+function studyModuleCompletionForStrength(doc, courseIds) {
+  const moduleCompletion = {};
   for (const courseId of courseIds || []) {
     const index = loadStudyIndex(courseId);
     if (!index) continue;
-    Object.assign(modules, studyStateOf(doc, index).modules);
+    Object.assign(moduleCompletion, studyStateOf(doc, index).moduleCompletion);
   }
-  return modules;
+  return moduleCompletion;
 }
 
 /** The SAME publication authority as Learning Practice: active class + course attached + module published. */
@@ -154,5 +177,5 @@ function studyAllowedForClass(classroom, courseId, moduleId) {
 
 module.exports = {
   STUDY_PREFIX, studyDocName, loadStudyIndex, findStudyPage, findStudyActivity, evaluateStudyResponse,
-  normalizeStudyDoc, applyStudyCompletion, eligibleCompletedCount, studyStateOf, studyModulesForStrength, studyAllowedForClass,
+  normalizeStudyDoc, applyStudyCompletion, eligibleCompletedCount, moduleTotalsOf, studyStateOf, studyModuleCompletionForStrength, studyAllowedForClass,
 };

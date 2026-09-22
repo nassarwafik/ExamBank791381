@@ -89,13 +89,20 @@ describe("Phase 3B — book fidelity: key source concepts are present", () => {
 });
 
 describe("Phase 3B — provenance: book vs teacher-enrichment is explicit and correct", () => {
-  // The two interactive activities PLUS the five Chapter-1 SVG visual-enrichment illustrations (pilot). Every other
-  // block on m01 remains faithful book content.
+  // The two interactive activities PLUS the five Chapter-1 SVG visual-enrichment illustrations (pilot) PLUS the three
+  // Study-Practice questions added on PDF 8/9/10. Every other block on m01 remains faithful book content.
   const enrichmentIds = new Set([
     "m01-l02-p01-scope", "m01-l02-p02-guided",
     "m01-l01-p01-visual", "m01-l01-p02-visual", "m01-l01-p03-visual", "m01-l02-p02-visual", "m01-l02-p03-visual",
+    "m01-l01-p01-q1", "m01-l01-p02-q1", "m01-l01-p03-q1",
   ]);
-  it("every book-derived block is origin:book; the two activities + five SVG visuals are the only teacher-enrichment blocks", () => {
+  // The enrichment blocks that carry a block-level book SOURCE association (the interactive activities + SVG visuals).
+  // The Study-Practice questions are enrichment too but associate only via their page, not a block-level source.
+  const sourcedEnrichmentIds = new Set([
+    "m01-l02-p01-scope", "m01-l02-p02-guided",
+    "m01-l01-p01-visual", "m01-l01-p02-visual", "m01-l01-p03-visual", "m01-l02-p02-visual", "m01-l02-p03-visual",
+  ]);
+  it("every book-derived block is origin:book; the two activities + five SVG visuals + three practice questions are the only teacher-enrichment blocks", () => {
     const enrich: string[] = [];
     for (const p of allPages) for (const b of p.blocks as ContentBlock[]) {
       if (b.origin === "teacher-enrichment") enrich.push(b.id);
@@ -109,7 +116,7 @@ describe("Phase 3B — provenance: book vs teacher-enrichment is explicit and co
     expect(blocksText(pageBy("791381-m01-l01-p03"))).toContain("الطابعة");
   });
   it("the interactive activities carry a block-level book SOURCE (association) yet stay teacher-enrichment (origin ≠ source)", () => {
-    for (const id of enrichmentIds) {
+    for (const id of sourcedEnrichmentIds) {
       const b = allPages.flatMap(p => p.blocks).find(x => x.id === id)!;
       expect(b.origin).toBe("teacher-enrichment");
       expect(b.source?.sourceId).toBe("791381");

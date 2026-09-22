@@ -1,12 +1,12 @@
-// Learning Practice — the per-student summary of Learning-Practice results, the source of the PRACTICE part of
-// Unified Strength. Storage: platform/learning-practice/<studentId>.json, ONE document per student:
+// Learning Practice — the per-student summary of Learning-Practice results, the source of the LIBRARY part of the
+// 25-stage Unified Strength. Storage: platform/learning-practice/<studentId>.json, ONE document per student:
 //
 //   { schemaVersion: 1, trainings: { T01: { bestPercentage, bestPoints, attempts, lastPercentage, lastCompletedAt } } }
 //
-// T-SERIES vs F-SERIES: every id (T01–T30 trainings, F01–F06 final exams for training) keeps its best result and
-// attempts here as practice history, but bestPoints is derived through the Strength policy's id rule
-// (strengthFromTrainingResult): a T entry earns up to 25, an F entry is ALWAYS 0 — stored, client-sent or
-// malformed values under an F id can never become points.
+// T-SERIES and F-SERIES BOTH count now: every id (T01–T30 trainings, F01–F06 final exams for training) is a canonical
+// LIBRARY item worth up to 40, bestPoints derived through the Strength policy (strengthFromTrainingResult →
+// round(bestPercentage × 40 / 100)). `bestPercentage` is the SERVER's gradable-only percentage (the function passes it
+// in), so an F final exam is never understated by its manual-review questions.
 //
 // BEST-SCORE, NOT A COUNTER (anti-farming): a retry only ever raises bestPercentage (max-merge), so repeated
 // solving cannot create points; bestPoints is re-derived from bestPercentage through the Strength policy on
@@ -62,7 +62,7 @@ function applyTrainingResult(doc, trainingId, percentage, now) {
   return { doc: normalized, before, after, improved: after.bestPercentage > before.bestPercentage, pointsGained: after.bestPoints - before.bestPoints };
 }
 
-/** Total practice Strength = Σ bestPoints (each re-derived from bestPercentage; F ids contribute 0). Pure. */
+/** Total library Strength = Σ bestPoints (each re-derived from bestPercentage; T AND F ids contribute, ≤40 each). Pure. */
 function practicePointsOf(doc) {
   return Object.values(normalizePracticeDoc(doc).trainings).reduce((sum, t) => sum + t.bestPoints, 0);
 }

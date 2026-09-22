@@ -2,6 +2,66 @@
   "schemaVersion": 1,
   "courseId": "791381",
   "pages": {
+    "791381-m01-l01-p01": {
+      "moduleId": "791381-m01",
+      "activities": {
+        "m01-l01-p01-q1": {
+          "kind": "trueFalse",
+          "answer": true
+        }
+      }
+    },
+    "791381-m01-l01-p02": {
+      "moduleId": "791381-m01",
+      "activities": {
+        "m01-l01-p02-q1": {
+          "kind": "multipleChoice",
+          "correct": [
+            "m01-l01-p02-q1-a"
+          ]
+        }
+      }
+    },
+    "791381-m01-l01-p03": {
+      "moduleId": "791381-m01",
+      "activities": {
+        "m01-l01-p03-q1": {
+          "kind": "multipleChoice",
+          "correct": [
+            "m01-l01-p03-q1-a"
+          ]
+        }
+      }
+    },
+    "791381-m02-l01-p04": {
+      "moduleId": "791381-m02",
+      "activities": {
+        "m02-l01-p04-q1": {
+          "kind": "multipleChoice",
+          "correct": [
+            "m02-l01-p04-q1-a"
+          ]
+        }
+      }
+    },
+    "791381-m02-l01-p01": {
+      "moduleId": "791381-m02",
+      "activities": {
+        "m02-l01-p01-q1": {
+          "kind": "shortInput",
+          "answer": "123"
+        }
+      }
+    },
+    "791381-m02-l01-p05": {
+      "moduleId": "791381-m02",
+      "activities": {
+        "m02-l01-p05-q1": {
+          "kind": "trueFalse",
+          "answer": true
+        }
+      }
+    },
     "791381-m07-l01-p05": {
       "moduleId": "791381-m07",
       "activities": {

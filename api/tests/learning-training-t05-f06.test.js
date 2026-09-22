@@ -6,6 +6,7 @@ import { listLearningTrainings, findLearningTraining, trainingAllowedForClass } 
 import { readLibraryCatalog, readLibraryItem } from "../src/lib/exam-library-store.js";
 import { listLearningModules } from "../src/lib/learning-materials-registry.js";
 import { gradeExam } from "../src/lib/assignment-grading.js";
+import { gradableStrengthPercentage, strengthFromLibraryBest } from "../src/lib/student-strength.js";
 const req_ = createRequire(import.meta.url);
 const ITEM = id => req_("../src/data/exam-library/items/" + id + ".json");
 
@@ -147,12 +148,17 @@ describe("F-series safety — the final exams for training reuse the SAME saniti
       for (const f of q.fields || []) { expect("correct" in f).toBe(false); for (const o of f.options || []) expect("correct" in o).toBe(false); }
     }
     expect(r.jsonBody.exam.questions.map(q => q.presentationType).filter(t => t === "matching").length).toBe(8);
-    expect(r.jsonBody.training).toMatchObject({ trainingId: "F01", title: "نموذج A — 2025", questionCount: 34, totalMarks: 100, maxPoints: 0, strengthEligible: false, label: "الامتحان الأول" });
+    expect(r.jsonBody.training).toMatchObject({ trainingId: "F01", title: "نموذج A — 2025", questionCount: 34, totalMarks: 100, maxPoints: 40, strengthEligible: true, label: "الامتحان الأول" });
   });
-  it("POST F01 grades server-side with the real grader: MCQ + matching count, open questions are flagged manualReview (their marks stay in the total, as everywhere else); review reveals keys only now; best is persisted; no assignment / gradebook document", async () => {
+  it("POST F01 grades server-side with the real grader: MCQ + matching count, open questions are flagged manualReview (their marks leave the Strength denominator, but stay in the displayed total); review reveals keys only now; best is persisted; no assignment / gradebook document", async () => {
     const ctx = seed(through(M("m06")));
     const answers = fullAnswers("F01");
     const expected = gradeExam(ITEM("F01").examSnapshot, answers);
+    // Strength is scored on the SERVER's gradable-only percentage (manual-review marks leave the denominator), so a
+    // perfect auto-gradable run yields 100% / 40 points even though the displayed percentage (over the full total) is 94.
+    const gradablePct = gradableStrengthPercentage({ score: expected.score, totalMarks: expected.totalMarks, manualReviewMarks: expected.manualReviewMarks });
+    const bestPoints = strengthFromLibraryBest(gradablePct);
+    expect(gradablePct).toBe(100); expect(bestPoints).toBe(40);
     const r = await submit(studentDeps(ctx), "F01", { answers, percentage: 100, score: 999 });
     expect(r.status).toBe(200);
     expect(r.jsonBody.result).toMatchObject({ questionCount: 34, score: expected.score, totalMarks: expected.totalMarks, percentage: Math.round(expected.percentage) });
@@ -166,14 +172,14 @@ describe("F-series safety — the final exams for training reuse the SAME saniti
     const matchingRows = review.filter(x => x.correctText);
     expect(matchingRows.length).toBe(8); expect(matchingRows.every(x => x.correct && x.correctOptionIndex === null)).toBe(true);
     expect(review.filter(x => x.correctOptionIndex !== null).length).toBe(24);
-    // practice history is kept, Strength is NOT advertised or awarded for an F-series exam (see learning-practice-strength-fseries.test.js)
-    expect(r.jsonBody.practice).toMatchObject({ attempts: 1, bestPercentage: Math.round(expected.percentage), maxPoints: 0, bestPoints: 0, earnedPoints: 0, pointsGained: 0, improved: true });
+    // F-series NOW feeds Strength: the persisted best is the gradable-only percentage, points re-derived (≤40)
+    expect(r.jsonBody.practice).toMatchObject({ attempts: 1, bestPercentage: gradablePct, maxPoints: 40, bestPoints, earnedPoints: bestPoints, pointsGained: bestPoints, improved: true });
     expect(ctx.names("platform/").filter(n => !n.startsWith("platform/users/") && !n.startsWith("platform/classes/"))).toEqual(["platform/learning-practice/u1.json"]);
     expect(ctx.names("platform/assignments/")).toEqual([]); expect(ctx.names("platform/submissions/")).toEqual([]); expect(ctx.names("platform/gradebook/")).toEqual([]);
-    // a retry with fewer right answers never lowers the best
+    // a retry with fewer right answers never lowers the best (max-merge anti-farming)
     const worse = await submit(studentDeps(ctx), "F01", { answers: {} });
     expect(worse.jsonBody.result.percentage).toBe(0);
-    expect(worse.jsonBody.practice).toMatchObject({ attempts: 2, bestPercentage: Math.round(expected.percentage), improved: false });
+    expect(worse.jsonBody.practice).toMatchObject({ attempts: 2, bestPercentage: gradablePct, bestPoints, improved: false, pointsGained: 0 });
     // the class document is byte-unaffected by practice
     expect(ctx.getJson(CLS("cA")).learningMaterials[0].visibleModuleIds).toEqual(through(M("m06")));
   });

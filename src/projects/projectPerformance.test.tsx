@@ -70,8 +70,8 @@ describe("StudentProjectPanel — cards → detail, multi-project switching, leg
     const r = within(await region());
     const cards = r.getAllByRole("article");
     expect(cards.map(c => c.querySelector(".eb-sp-project-card-title")?.textContent)).toEqual(["AquaSense", "SecureBank"]);
-    expect(cards[0].textContent).toContain("التقدم80%"); expect(cards[0].textContent).toContain("العلامة70 / 100"); expect(cards[0].textContent).toContain("القوةتنين النار");
-    expect(cards[1].textContent).toContain("التقدم20%"); expect(cards[1].textContent).toContain("العلامة15 / 100"); expect(cards[1].textContent).toContain("القوةشعلة صغيرة");
+    expect(cards[0].textContent).toContain("التقدم80%"); expect(cards[0].textContent).toContain("العلامة70 / 100"); expect(cards[0].textContent).toContain("مستوى المشروعتنين النار");
+    expect(cards[1].textContent).toContain("التقدم20%"); expect(cards[1].textContent).toContain("العلامة15 / 100"); expect(cards[1].textContent).toContain("مستوى المشروعشعلة صغيرة");
     fireEvent.click(within(cards[0]).getByRole("button", { name: "فتح المشروع" }));
     expect(strengthLine()).toBe("قوة المشروع: 450 / 600");
     expect(r.getByRole("img", { name: "رتبة المشروع: تنين النار — المستوى 5" })).toBeTruthy();
@@ -92,14 +92,15 @@ describe("StudentProjectPanel — cards → detail, multi-project switching, leg
     expect(r.queryByText(/450 \/ 600|تنين النار|AquaSense/)).toBeNull();
     expect((globalThis.fetch as unknown as { mock: { calls: unknown[] } }).mock.calls.length).toBe(1);   // one read for everything
   });
-  it("a single project opens directly (no cards, no back); the global contribution line stays distinct from the project Strength", async () => {
+  it("a single project opens directly (no cards, no back); projects no longer show a GLOBAL-Strength contribution line", async () => {
     mockTracker({ ...TWO, projects: [TWO.projects[0]] });
-    render(<StudentProjectPanel token="t" contributions={[{ projectCode: "AQ", overallProgress: 80, strengthPoints: 320 }]} />);
+    render(<StudentProjectPanel token="t" />);
     const r = within(await region());
     expect(r.queryByRole("button", { name: "فتح المشروع" })).toBeNull();
     expect(r.queryByRole("button", { name: "العودة إلى المشاريع" })).toBeNull();
-    expect(strengthLine()).toBe("قوة المشروع: 450 / 600");
-    expect(r.getByText(/نقاط القوة من المشروع:/).textContent).toBe("تقدم المشروع: 80% · نقاط القوة من المشروع: 320 / 400");
+    expect(strengthLine()).toBe("قوة المشروع: 450 / 600");   // the project's OWN /600 Strength (in the hero) stays
+    // projects were removed as a global Student-Strength source, so no "مساهمته في قوتك العامة" / "نقاط القوة من المشروع"
+    expect(r.queryByText(/مساهمته في قوتك العامة|نقاط القوة من المشروع/)).toBeNull();
   });
   it("an older payload without `performance` still renders (progress bars, no grade / rank / stage scores)", async () => {
     const legacy = { ...TWO, projects: [{ ...TWO.projects[0], performance: undefined }] };

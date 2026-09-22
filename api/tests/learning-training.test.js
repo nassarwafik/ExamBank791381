@@ -59,7 +59,7 @@ describe("answer-key secrecy — GET item before submit", () => {
     const json = JSON.stringify(r.jsonBody);
     expect(r.jsonBody.exam.questions.length).toBe(10);
     expect(r.jsonBody.exam.questions[0].options.length).toBeGreaterThan(1);
-    expect(r.jsonBody.training).toMatchObject({ trainingId: id, questionCount: 10, totalMarks: 100, maxPoints: 25 });
+    expect(r.jsonBody.training).toMatchObject({ trainingId: id, questionCount: 10, totalMarks: 100, maxPoints: 40 });
     for (const banned of ["correctOptionIndex", '"correct":true', "correctText", "solution", "expectedAnswer", "answerKey", "explanation", "rationale"]) expect(json, banned).not.toContain(banned);
     for (const q of ITEM(id).examSnapshot.questions) { expect(json).not.toContain(q.hint); expect(q.hint.length).toBeGreaterThan(0); }
     // legacy-identical blanking: the keys exist but are EMPTY (answer {}, hint/teacherNote/aiInstruction "", history/redoStack [])
@@ -127,14 +127,14 @@ describe("progressive-release gate + authority", () => {
 });
 
 describe("server grading — real T-series items", () => {
-  it("all correct → 10/10, 100%, 25 points; partial 8/10 → 80%, 20 points; all wrong → 0/10, 0%", async () => {
+  it("all correct → 10/10, 100%, 40 points; partial 8/10 → 80%, 32 points; all wrong → 0/10, 0%", async () => {
     const ctx = seed([M01, M02, M07]);
     const full = await submit(studentDeps(ctx), "T02", { answers: answersFor("T02", 10) });
     expect(full.jsonBody.result).toMatchObject({ correctCount: 10, questionCount: 10, score: 100, totalMarks: 100, percentage: 100 });
-    expect(full.jsonBody.practice).toMatchObject({ bestPercentage: 100, bestPoints: 25, maxPoints: 25, attempts: 1, improved: true, pointsGained: 25 });
+    expect(full.jsonBody.practice).toMatchObject({ bestPercentage: 100, bestPoints: 40, maxPoints: 40, attempts: 1, improved: true, pointsGained: 40 });
     const part = await submit(studentDeps(seed([M01, M02, M07])), "T02", { answers: answersFor("T02", 8) });
     expect(part.jsonBody.result).toMatchObject({ correctCount: 8, percentage: 80 });
-    expect(part.jsonBody.practice).toMatchObject({ bestPercentage: 80, bestPoints: 20 });
+    expect(part.jsonBody.practice).toMatchObject({ bestPercentage: 80, bestPoints: 32 });
     const none = await submit(studentDeps(seed([M01, M02, M07])), "T02", { answers: answersFor("T02", 0) });
     expect(none.jsonBody.result).toMatchObject({ correctCount: 0, percentage: 0 });
     expect(none.jsonBody.practice).toMatchObject({ bestPercentage: 0, bestPoints: 0, attempts: 1 });
@@ -150,7 +150,7 @@ describe("server grading — real T-series items", () => {
   it("client-supplied percentage / score / strengthPoints / correctCount have NO authority; missing answers → 0", async () => {
     const r = await submit(studentDeps(seed([M01])), "T01", { answers: answersFor("T01", 2), percentage: 100, score: 100, strengthPoints: 25, correctCount: 10, practice: { bestPercentage: 100 } });
     expect(r.jsonBody.result).toMatchObject({ correctCount: 2, percentage: 20 });
-    expect(r.jsonBody.practice.bestPoints).toBe(5);
+    expect(r.jsonBody.practice.bestPoints).toBe(8);
     const empty = await submit(studentDeps(seed([M01])), "T01", { percentage: 100 });
     expect(empty.jsonBody.result).toMatchObject({ correctCount: 0, percentage: 0 });
     const junk = await submit(studentDeps(seed([M01])), "T01", { answers: "LIB-T01-Q01" });
@@ -175,7 +175,7 @@ describe("best presence — never attempted vs a real 0% attempt", () => {
     expect(r.jsonBody.practice).toMatchObject({ bestPercentage: 0, bestPoints: 0, attempts: 1 });
     const list = await get(d);
     const t01 = list.jsonBody.trainings.find(t => t.trainingId === "T01"), t02 = list.jsonBody.trainings.find(t => t.trainingId === "T02");
-    expect(t01.best).toMatchObject({ bestPercentage: 0, bestPoints: 0, maxPoints: 25, attempts: 1 });
+    expect(t01.best).toMatchObject({ bestPercentage: 0, bestPoints: 0, maxPoints: 40, attempts: 1 });
     expect(Object.prototype.hasOwnProperty.call(t02, "best")).toBe(false);          // the other training is still unattempted
     const item = await get(d, "T01");
     expect(item.jsonBody.best).toMatchObject({ bestPercentage: 0, bestPoints: 0, attempts: 1 });
@@ -191,30 +191,30 @@ describe("best presence — never attempted vs a real 0% attempt", () => {
 });
 
 describe("practice points — best score, anti-farming, storage", () => {
-  it("T01 60 → 15; retry 80 → 20 (+5); retry 50 → stays 20; retry 80 → stays 20; T02 100 → +25; total 45", async () => {
+  it("T01 60 → 24; retry 80 → 32 (+8); retry 50 → stays 32; retry 80 → stays 32; T02 100 → +40; total 72", async () => {
     const ctx = seed([M01, M02]);
     const d = () => studentDeps(ctx);
-    expect((await submit(d(), "T01", { answers: answersFor("T01", 6) })).jsonBody.practice).toMatchObject({ bestPercentage: 60, bestPoints: 15, attempts: 1, improved: true, pointsGained: 15 });
-    expect((await submit(d(), "T01", { answers: answersFor("T01", 8) })).jsonBody.practice).toMatchObject({ bestPercentage: 80, bestPoints: 20, attempts: 2, improved: true, pointsGained: 5 });
-    expect((await submit(d(), "T01", { answers: answersFor("T01", 5) })).jsonBody.practice).toMatchObject({ bestPercentage: 80, bestPoints: 20, attempts: 3, improved: false, pointsGained: 0 });
-    expect((await submit(d(), "T01", { answers: answersFor("T01", 8) })).jsonBody.practice).toMatchObject({ bestPercentage: 80, bestPoints: 20, attempts: 4, improved: false, pointsGained: 0 });
-    expect((await submit(d(), "T02", { answers: answersFor("T02", 10) })).jsonBody.practice).toMatchObject({ bestPercentage: 100, bestPoints: 25, attempts: 1 });
+    expect((await submit(d(), "T01", { answers: answersFor("T01", 6) })).jsonBody.practice).toMatchObject({ bestPercentage: 60, bestPoints: 24, attempts: 1, improved: true, pointsGained: 24 });
+    expect((await submit(d(), "T01", { answers: answersFor("T01", 8) })).jsonBody.practice).toMatchObject({ bestPercentage: 80, bestPoints: 32, attempts: 2, improved: true, pointsGained: 8 });
+    expect((await submit(d(), "T01", { answers: answersFor("T01", 5) })).jsonBody.practice).toMatchObject({ bestPercentage: 80, bestPoints: 32, attempts: 3, improved: false, pointsGained: 0 });
+    expect((await submit(d(), "T01", { answers: answersFor("T01", 8) })).jsonBody.practice).toMatchObject({ bestPercentage: 80, bestPoints: 32, attempts: 4, improved: false, pointsGained: 0 });
+    expect((await submit(d(), "T02", { answers: answersFor("T02", 10) })).jsonBody.practice).toMatchObject({ bestPercentage: 100, bestPoints: 40, attempts: 1 });
     const doc = ctx.getJson(practiceDocName("u1"));
-    expect(doc.trainings.T01).toMatchObject({ bestPercentage: 80, bestPoints: 20, attempts: 4, lastPercentage: 80 });
-    expect(doc.trainings.T02).toMatchObject({ bestPercentage: 100, bestPoints: 25 });
-    expect(practicePointsOf(doc)).toBe(45);
+    expect(doc.trainings.T01).toMatchObject({ bestPercentage: 80, bestPoints: 32, attempts: 4, lastPercentage: 80 });
+    expect(doc.trainings.T02).toMatchObject({ bestPercentage: 100, bestPoints: 40 });
+    expect(practicePointsOf(doc)).toBe(72);
     expect(ctx.names("platform/learning-practice/")).toEqual([practiceDocName("u1")]);   // ONE document per student
     // the list shows the best result per training
     const list = await get(d());
-    expect(list.jsonBody.trainings[0].best).toMatchObject({ bestPercentage: 80, bestPoints: 20, attempts: 4 });
+    expect(list.jsonBody.trainings[0].best).toMatchObject({ bestPercentage: 80, bestPoints: 32, attempts: 4 });
   });
   it("pure helpers: normalize malformed docs, max-merge, points re-derived from bestPercentage only", () => {
     expect(normalizePracticeDoc(null)).toEqual({ schemaVersion: 1, trainings: {} });
-    expect(normalizePracticeDoc({ trainings: { T01: { bestPercentage: 80, bestPoints: 999, attempts: "3" }, T02: "x" } }).trainings).toEqual({ T01: { bestPercentage: 80, bestPoints: 20, attempts: 3, lastPercentage: 0, lastCompletedAt: "" } });
+    expect(normalizePracticeDoc({ trainings: { T01: { bestPercentage: 80, bestPoints: 999, attempts: "3" }, T02: "x" } }).trainings).toEqual({ T01: { bestPercentage: 80, bestPoints: 32, attempts: 3, lastPercentage: 0, lastCompletedAt: "" } });
     const a = applyTrainingResult(null, "T01", 60, "t1");
-    expect(a.after).toMatchObject({ bestPercentage: 60, bestPoints: 15, attempts: 1 });
+    expect(a.after).toMatchObject({ bestPercentage: 60, bestPoints: 24, attempts: 1 });
     const b = applyTrainingResult(a.doc, "T01", 40, "t2");
-    expect(b.after).toMatchObject({ bestPercentage: 60, bestPoints: 15, attempts: 2, lastPercentage: 40 }); expect(b.improved).toBe(false); expect(b.pointsGained).toBe(0);
+    expect(b.after).toMatchObject({ bestPercentage: 60, bestPoints: 24, attempts: 2, lastPercentage: 40 }); expect(b.improved).toBe(false); expect(b.pointsGained).toBe(0);
     expect(applyTrainingResult(a.doc, "T01", 150, "t3").after.bestPercentage).toBe(100);
   });
   it("CONCURRENCY: two overlapping submissions to the same training resolve to max(bestA, bestB); a duplicate never double-awards", async () => {
@@ -232,12 +232,12 @@ describe("practice points — best score, anti-farming, storage", () => {
     const r = await submit(studentDeps(ctx), "T01", { answers: answersFor("T01", 6) });
     expect(r.status).toBe(200);
     const doc = ctx.getJson(practiceDocName("u1"));
-    expect(doc.trainings.T01.bestPercentage).toBe(80); expect(doc.trainings.T01.bestPoints).toBe(20);
-    expect(practicePointsOf(doc)).toBe(20);
+    expect(doc.trainings.T01.bestPercentage).toBe(80); expect(doc.trainings.T01.bestPoints).toBe(32);
+    expect(practicePointsOf(doc)).toBe(32);
     // duplicate identical submissions: attempts count up, points do not
     await submit(studentDeps(ctx), "T01", { answers: answersFor("T01", 8) });
     await submit(studentDeps(ctx), "T01", { answers: answersFor("T01", 8) });
-    expect(practicePointsOf(ctx.getJson(practiceDocName("u1")))).toBe(20);
+    expect(practicePointsOf(ctx.getJson(practiceDocName("u1")))).toBe(32);
     // persistent conflict → 503, nothing corrupted
     const stuck = createMemoryContainer({ [USR("u1")]: student("u1", "cA"), [CLS("cA")]: room("cA", [M01]), [practiceDocName("u1")]: { trainings: {} } }, { beforeConditionalUpload: (name, api) => { if (name === practiceDocName("u1")) api.setJson(name, api.getJson(name)); } });
     expect((await submit(studentDeps(stuck), "T01", { answers: answersFor("T01", 10) })).status).toBe(503);

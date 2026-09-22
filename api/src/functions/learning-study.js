@@ -5,7 +5,7 @@ const { requireActiveStudentSession } = require("../lib/student-auth");
 const { getContainer, downloadJsonOrNull, mutateJsonWithRetry, StorageConflictError } = require("../lib/platform-storage");
 const { normalizeClassStatus } = require("../lib/class-lifecycle");
 const { classHasLearningCourse, classCanSeeLearningModule } = require("../lib/class-learning-materials");
-const { STUDY_PAGE_MAX_POINTS, STUDY_MODULE_MAX_POINTS, STUDY_POINT_PER_ACTIVITY } = require("../lib/student-strength");
+const { MODULE_MAX_POINTS } = require("../lib/student-strength");
 const { studyDocName, loadStudyIndex, findStudyActivity, evaluateStudyResponse, normalizeStudyDoc, applyStudyCompletion, studyStateOf } = require("../lib/learning-study");
 
 // Study Practice Strength API — the SERVER AUTHORITY for in-page learning exercises. Routes (one function):
@@ -24,7 +24,10 @@ const ARCHIVED = { status: 403, jsonBody: { ok: false, error: "هذا الصف �
 const UNAVAILABLE = { status: 403, jsonBody: { ok: false, error: "هذه الصفحة غير متاحة لصفك بعد." } };
 const NOT_FOUND = { status: 404, jsonBody: { ok: false, error: "التمرين غير موجود." } };
 const BAD_REQUEST = { status: 400, jsonBody: { ok: false, error: "طلب غير صالح." } };
-const POLICY = { pointPerActivity: STUDY_POINT_PER_ACTIVITY, pagePointsMax: STUDY_PAGE_MAX_POINTS, modulePointsMax: STUDY_MODULE_MAX_POINTS };
+// 25-stage model: a module's Strength is round(completed/total × 20) — module-completion, not per-page points.
+const POLICY = { model: "module-completion", modulePointsMax: MODULE_MAX_POINTS };
+const EMPTY_MODULE = { points: 0, max: MODULE_MAX_POINTS, completed: 0, total: 0 };
+const pageView = (page, view) => ({ ...page, completed: view.completed, total: view.total });
 const ID = /^[A-Za-z0-9_-]{1,64}$/;
 
 async function resolveActor(request, deps) {
@@ -88,17 +91,17 @@ async function handler(request, deps = {}, obs = null) {
       const page = { pageId, moduleId: found.moduleId };
       if (!correct) {
         const state = actor.kind === "student" ? studyStateOf(studyDoc, index) : studyStateOf(null, index);
-        const view = state.pages[pageId] || { completed: [], points: 0, max: STUDY_PAGE_MAX_POINTS };
-        return { status: 200, jsonBody: { ok: true, actor: actor.kind, correct: false, persisted: false, alreadyCompleted: false, gained: 0, page: { ...page, completed: view.completed, points: view.points, max: STUDY_PAGE_MAX_POINTS }, module: state.moduleViews[found.moduleId] || { points: 0, max: STUDY_MODULE_MAX_POINTS }, totalPoints: state.totalPoints } };
+        const view = state.pages[pageId] || { completed: [], total: 0 };
+        return { status: 200, jsonBody: { ok: true, actor: actor.kind, correct: false, persisted: false, alreadyCompleted: false, gained: 0, page: pageView(page, view), module: state.moduleViews[found.moduleId] || EMPTY_MODULE, totalPoints: state.totalPoints } };
       }
       if (actor.kind === "teacher") {
-        return { status: 200, jsonBody: { ok: true, actor: "teacher", correct: true, persisted: false, alreadyCompleted: false, gained: 0, page: { ...page, completed: [], points: 0, max: STUDY_PAGE_MAX_POINTS }, module: { points: 0, max: STUDY_MODULE_MAX_POINTS }, totalPoints: 0 } };
+        return { status: 200, jsonBody: { ok: true, actor: "teacher", correct: true, persisted: false, alreadyCompleted: false, gained: 0, page: { ...page, completed: [], total: 0 }, module: EMPTY_MODULE, totalPoints: 0 } };
       }
       // A repeat of an ALREADY completed exercise is read-only: no write, no CAS round, the original entry stands.
       if (studyDoc.pages[pageId] && Object.prototype.hasOwnProperty.call(studyDoc.pages[pageId].completed, activityId)) {
         const state = studyStateOf(studyDoc, index);
-        const view = state.pages[pageId] || { completed: [], points: 0, max: STUDY_PAGE_MAX_POINTS };
-        return { status: 200, jsonBody: { ok: true, actor: "student", correct: true, persisted: false, alreadyCompleted: true, gained: 0, page: { ...page, completed: view.completed, points: view.points, max: STUDY_PAGE_MAX_POINTS }, module: state.moduleViews[found.moduleId] || { points: 0, max: STUDY_MODULE_MAX_POINTS }, totalPoints: state.totalPoints } };
+        const view = state.pages[pageId] || { completed: [], total: 0 };
+        return { status: 200, jsonBody: { ok: true, actor: "student", correct: true, persisted: false, alreadyCompleted: true, gained: 0, page: pageView(page, view), module: state.moduleViews[found.moduleId] || EMPTY_MODULE, totalPoints: state.totalPoints } };
       }
       const now = new Date().toISOString();
       let outcome = null, finalDoc = null;
@@ -115,12 +118,12 @@ async function handler(request, deps = {}, obs = null) {
         throw e;
       }
       const state = studyStateOf(finalDoc, index);
-      const view = state.pages[pageId];
+      const view = state.pages[pageId] || { completed: [], total: 0 };
       return { status: 200, jsonBody: {
         ok: true, actor: "student", correct: true, persisted: !outcome.alreadyCompleted, alreadyCompleted: outcome.alreadyCompleted,
-        gained: outcome.gained,                                  // the ACTUAL Strength delta (page + module caps), from the CAS-fresh document
-        page: { ...page, completed: view.completed, points: view.points, max: STUDY_PAGE_MAX_POINTS },
-        module: state.moduleViews[found.moduleId], totalPoints: state.totalPoints,
+        gained: outcome.gained,                                  // the ACTUAL module-Strength delta, from the CAS-fresh document
+        page: pageView(page, view),
+        module: state.moduleViews[found.moduleId] || EMPTY_MODULE, totalPoints: state.totalPoints,
       } };
     }
 

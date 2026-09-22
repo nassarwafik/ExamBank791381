@@ -3,6 +3,7 @@ import { IconMedal } from "../icons";
 import { MEDAL_LABELS } from "../medals";
 import { RANK_LABELS, type RankTier } from "../studentRank";
 import { RANK_VISUALS } from "../studentRankVisuals";
+import { stageDef } from "./strengthStages";
 import EmptyState from "../ui/EmptyState";
 import SectionHeader from "../ui/SectionHeader";
 import StatusBadge from "../ui/StatusBadge";
@@ -19,17 +20,21 @@ type Props = {
   onToggleShare: () => void; onReact: (postId: string, reaction: ReactionId) => void;
 };
 
-const LABELS = { medal: (tier: string) => MEDAL_LABELS[tier as keyof typeof MEDAL_LABELS] || tier, rank: (tier: string) => (RANK_VISUALS[tier as RankTier]?.title) || RANK_LABELS[tier as RankTier] || tier };
+// The Strength STAGE name (25-stage pack) for global_rank_up; the project's 6-tier title for project events.
+const LABELS = { medal: (tier: string) => MEDAL_LABELS[tier as keyof typeof MEDAL_LABELS] || tier, rank: (tier: string) => (RANK_VISUALS[tier as RankTier]?.title) || RANK_LABELS[tier as RankTier] || tier, stage: (stage: number) => stageDef(stage).name };
 
-/** The event's leading visual: the medal icon, or the SAME rank artwork for rank / project events. */
+/** The event's leading visual: the medal icon, the current STAGE artwork (global), or the project's 6-tier artwork. */
 function EventIcon({ post }: { post: FeedPost }) {
   const type = eventTypeOf(post);
   if (type === "medal") {
     const tier = post.medal?.tier || post.tier || "bronze";
     return <span className={"eb-sp-medal-icon is-" + tier} aria-hidden="true"><IconMedal size={26} /></span>;
   }
-  const tier = (type === "global_rank_up" ? post.rank?.tier : post.project?.tier) || "beginner";
-  const v = RANK_VISUALS[tier as RankTier] || RANK_VISUALS.beginner;
+  if (type === "global_rank_up") {
+    const def = stageDef(post.rank?.stage);
+    return <img className="eb-sp-feed-rank-art is-global_rank_up" src={def.image} alt="" aria-hidden="true" width={40} height={40} loading="lazy" decoding="async" />;
+  }
+  const v = RANK_VISUALS[(post.project?.tier as RankTier) || "beginner"] || RANK_VISUALS.beginner;
   return <img className={"eb-sp-feed-rank-art is-" + type} src={v.image} alt="" aria-hidden="true" width={40} height={40} loading="lazy" decoding="async" />;
 }
 

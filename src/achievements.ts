@@ -15,7 +15,8 @@ export type AchievementEventType = "medal" | "global_rank_up" | "project_rank_up
 export const EVENT_TYPES: AchievementEventType[] = ["medal", "global_rank_up", "project_rank_up", "project_complete"];
 export type RankTierId = "beginner" | "bronze" | "silver" | "gold" | "diamond" | "legendary";
 export type FeedMedal = { tier: "gold" | "silver" | "bronze"; assignmentId?: string; assignmentTitle: string };
-export type FeedRank = { tier: RankTierId; level: number; points?: number };
+/** Global Strength STAGE reached (1..25) — the server posts `rank: { stage, points }` (student-strength.js). */
+export type FeedRank = { stage: number; points?: number };
 export type FeedProject = { projectCode: string; title: string; tier: RankTierId | null; level: number; projectStrength?: number };
 
 export type FeedPost = {
@@ -47,18 +48,19 @@ export function eventTypeOf(post: { eventType?: string }): AchievementEventType 
  * The feed sentence for an event as ordered parts (plain text + the emphasised tokens), so both the student feed and
  * the teacher dashboard render the SAME wording (the class name is inserted by the teacher view only):
  *   medal            → حصلت ليان على ميدالية ذهبية في …
- *   global_rank_up   → تقدّم كريم إلى تنين النار — المستوى 5
+ *   global_rank_up   → تقدّم كريم إلى تنين النار — المرحلة 5
  *   project_rank_up  → تقدّمت هاجر في مشروع AquaSense إلى نمر البرق
  *   project_complete → أكمل أحمد مشروع SecureBank
- * (Arabic verbs are gender-neutral in the shared helper; the caller passes `rankTitle` for tiers.)
+ * (Arabic verbs are gender-neutral in the shared helper; the caller passes `stage` for the 25-stage Strength name and
+ *  `rank` for the project's 6-tier title.)
  */
 export type FeedTextPart = { text: string; strong?: boolean };
-export function feedEventParts(post: { eventType?: string; studentDisplayName: string; assignmentTitle?: string; tier?: string; medal?: FeedMedal | null; rank?: FeedRank | null; project?: FeedProject | null }, labels: { medal: (tier: string) => string; rank: (tier: string) => string }): FeedTextPart[] {
+export function feedEventParts(post: { eventType?: string; studentDisplayName: string; assignmentTitle?: string; tier?: string; medal?: FeedMedal | null; rank?: FeedRank | null; project?: FeedProject | null }, labels: { medal: (tier: string) => string; rank: (tier: string) => string; stage: (stage: number) => string }): FeedTextPart[] {
   const name = post.studentDisplayName;
   switch (eventTypeOf(post)) {
     case "global_rank_up": {
-      const tier = post.rank?.tier || "beginner";
-      return [{ text: "تقدّم " }, { text: name, strong: true }, { text: " إلى " }, { text: labels.rank(tier), strong: true }, { text: " — المستوى " + (post.rank?.level || 0) }];
+      const stage = Math.max(1, Math.floor(Number(post.rank?.stage) || 1));
+      return [{ text: "تقدّم " }, { text: name, strong: true }, { text: " إلى " }, { text: labels.stage(stage), strong: true }, { text: " — المرحلة " + stage }];
     }
     case "project_rank_up": {
       const tier = post.project?.tier || "beginner";

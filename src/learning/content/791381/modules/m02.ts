@@ -72,6 +72,19 @@ const m02: ContentModule = {
               id: "m02-l01-p04-computer", type: "callout", origin: "book", kind: "tip", title: "في الحاسوب",
               spans: [{ text: "الرقم 0 يعني إطفاء، والرقم 1 يعني تشغيل. كل البيانات في النهاية أصفار وآحاد." }],
             },
+            {
+              // STUDY PRACTICE (eligible): derives m02's module Strength via completion.
+              id: "m02-l01-p04-q1", type: "practice", origin: "teacher-enrichment",
+              question: {
+                kind: "multipleChoice", prompt: "أي رقمين فقط يستخدمهما النظام الثنائي؟",
+                options: [
+                  { id: "m02-l01-p04-q1-a", text: "0 و 1", correct: true },
+                  { id: "m02-l01-p04-q1-b", text: "0 إلى 9" },
+                  { id: "m02-l01-p04-q1-c", text: "0 إلى F" },
+                ],
+                feedback: { correctFeedback: "أحسنت — الثنائي يستخدم 0 و1 فقط.", incorrectFeedback: "راجع بطاقة العدد الثنائي.", explanation: "النظام الثنائي (الذي يفهمه الحاسوب) يستخدم رقمين فقط: 0 و1." },
+              },
+            },
           ],
         },
         // PDF 16 — تحويل من الثنائي للعشري (existing id p01)
@@ -105,6 +118,13 @@ const m02: ContentModule = {
               alt: "رسم يبيّن خانات القيَم (128 حتى 1)، وتُضيء الخانات التي تحتها 1 ويُجمع مجموعها ليساوي 123.",
               caption: "اجمع قيَم الخانات المضيئة فقط: 64+32+16+8+2+1 = 123.",
             },
+            {
+              id: "m02-l01-p01-q1", type: "practice", origin: "teacher-enrichment",
+              question: {
+                kind: "shortInput", prompt: "حوّل العدد الثنائي 01111011 إلى عشري (اجمع قيم الصناديق المضيئة).", answer: "123",
+                feedback: { correctFeedback: "أحسنت — 64+32+16+8+2+1 = 123.", incorrectFeedback: "اجمع قيم الخانات التي تحتها 1 فقط.", explanation: "64 + 32 + 16 + 8 + 2 + 1 = 123." },
+              },
+            },
           ],
         },
         // PDF 17 — تحويل من العشري للثنائي (new page)
@@ -128,6 +148,13 @@ const m02: ContentModule = {
             {
               id: "m02-l01-p05-result", type: "callout", origin: "book", kind: "summary", title: "النتيجة",
               spans: [{ text: "إذن " }, { text: "44", dir: "ltr", style: "code" }, { text: " في العشري تساوي " }, { text: "00101100", dir: "ltr", style: "code" }, { text: " في الثنائي. اكتب 1 تحت كل صندوق استعملته." }],
+            },
+            {
+              id: "m02-l01-p05-q1", type: "practice", origin: "teacher-enrichment",
+              question: {
+                kind: "trueFalse", prompt: "العدد العشري 44 يساوي 00101100 في النظام الثنائي.", answer: true,
+                feedback: { correctFeedback: "أحسنت — 32+8+4 = 44.", incorrectFeedback: "اجمع قيم الصناديق المستعمَلة: 32+8+4.", explanation: "32 + 8 + 4 = 44 → 00101100." },
+              },
             },
           ],
         },

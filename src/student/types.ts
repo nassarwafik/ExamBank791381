@@ -1,7 +1,6 @@
 // UX-7 — the /api/student-dashboard payload as the portal consumes it (unchanged contract; every field is
 // server-authoritative, the portal only displays it).
 import type { DashboardState, GradingStatus } from "../gradingStatus";
-import type { RankTier } from "../studentRank";
 
 export type LatestResult = { attemptNumber: number; score: number; totalMarks: number; percentage: number; submittedAt: string; manualReviewMarks: number; finalized?: boolean; gradingStatus?: GradingStatus; teacherFeedback: string };
 export type Summary = {
@@ -12,25 +11,27 @@ export type Summary = {
 export type Stats = { assigned: number; completed: number; average: number | null; submitted?: number; inProgress?: number; pendingReview?: number; finalized?: number; scheduled?: number; available?: number; closedUnsubmitted?: number; averageFinalized?: number | null };
 export type StudentInfo = { userId: string; code: string; displayName: string; classId: string; avatarId?: string; shareAchievements?: boolean; profilePhoto?: { version: number; updatedAt: string } | null };
 export type Classroom = { classId: string; name: string; grade: string; schoolYear: string };
-/** One enrolled project's Strength contribution as the server derived it (round(overallProgress × 4), ≤ 400). */
-export type ProjectStrength = { projectCode: string; overallProgress: number; strengthPoints: number };
 /**
  * The server-authoritative unified Strength summary (نقاط القوة) — the EXACT `dashboard.strength` contract of
- * `api/src/lib/student-strength.js` (`buildStrengthSummary`). The points AND the progression (tier / level /
- * nextTier / block progress) are decided by the server; the portal only shapes and labels them.
+ * `api/src/lib/student-strength.js` (`buildStrengthSummary`), the 25-STAGE model. The points AND the stage /
+ * progress are decided by the SERVER; the portal only maps the stage number to its icon/name and displays them.
+ *   library (T01–T30 + F01–F06, ≤40 each) + modules (28 book modules, completion ratio × 20, ≤20 each) = 0..2000,
+ *   stage = 1..25 (each stage spans 80 points; stage 25 completes at 2000).
  */
 export type StudentStrength = {
-  totalPoints: number; examPoints: number; practicePoints: number; projectPoints: number;
-  /** Study Practice Strength (in-page learning exercises) — 0 for a payload from before that phase. */
-  studyPoints: number;
-  /** The earned rank tier id (null below the first rank). The client maps it to a label/artwork — never decides it. */
-  tier: RankTier | null;
-  /** 0 before the first rank, then 1..6. */
-  level: number;
-  /** The next tier id (null at the top rank). */
-  nextTier: RankTier | null;
-  levelBlockSize: number; withinLevelPoints: number; nextLevelRemaining: number; percent: number;
-  projects: ProjectStrength[];
+  totalPoints: number;
+  /** Library source total (T + F items). */
+  libraryPoints: number;
+  /** Learning-module source total (in-page Study-Practice completion). */
+  modulePoints: number;
+  /** The current stage (1..25). The client maps it to artwork/name — never decides it. */
+  stage: number;
+  stageCount: number; stageSpan: number;
+  /** Progress within the current 80-point stage. */
+  withinStagePoints: number; nextStageRemaining: number; percent: number;
+  /** The next stage number (null at the top stage 25). */
+  nextStage: number | null;
+  totalMax: number;
 };
 /** Recognition (never Strength): medals (finalized authority), reactions RECEIVED on the student's events, and
  *  meaningful non-medal achievements — three separate counts that are never combined into one score. */
