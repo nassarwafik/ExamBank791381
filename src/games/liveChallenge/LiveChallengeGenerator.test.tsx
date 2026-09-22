@@ -138,3 +138,37 @@ describe("structural boundary", () => {
     expect(src).not.toContain("QuestionBodyEditor");   // does not re-implement body selection
   });
 });
+
+describe("LiveChallengeGenerator — semantics (standalone vs embedded in a host that owns <main>/<h1>)", () => {
+  const TITLE = "مولّد التحدّي المباشر";
+  it("standalone (default): a <main> root and an <h1> title — on home AND in the editor (unchanged)", async () => {
+    const { container } = render(<LiveChallengeGenerator token="t" onBack={vi.fn()} client={fakeClient()} />);
+    await screen.findByRole("heading", { level: 1, name: TITLE });
+    expect(container.firstElementChild?.tagName).toBe("MAIN");
+    fireEvent.click(await screen.findByRole("button", { name: "إنشاء تحدٍّ جديد" }));
+    await screen.findByLabelText("عنوان التحدّي");
+    expect(container.firstElementChild?.tagName).toBe("MAIN");
+    expect(screen.getByRole("heading", { level: 1, name: TITLE })).toBeTruthy();
+  });
+
+  it("embedded: a <div> root (no <main>) and an <h2> title — same classes, same controls — on home AND in the editor", async () => {
+    const onBack = vi.fn();
+    const { container } = render(<LiveChallengeGenerator token="t" onBack={onBack} client={fakeClient()} embedded />);
+    await screen.findByRole("heading", { level: 2, name: TITLE });
+    const root = container.firstElementChild as HTMLElement;
+    expect(root.tagName).toBe("DIV");
+    expect(root.className).toBe("student-portal eb-student-shell eb-games-surface eb-lc");   // identical styling hooks
+    expect(root.getAttribute("dir")).toBe("rtl");
+    expect(container.querySelector("main")).toBeNull();
+    expect(container.querySelector("h1")).toBeNull();
+    fireEvent.click(await screen.findByRole("button", { name: "إنشاء تحدٍّ جديد" }));
+    await screen.findByLabelText("عنوان التحدّي");
+    expect(container.querySelector("main")).toBeNull();
+    expect(container.querySelector("h1")).toBeNull();
+    expect(screen.getByRole("heading", { level: 2, name: TITLE })).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: /التحدّيات/ }));             // editor back → home, still embedded
+    await screen.findByRole("heading", { level: 2, name: TITLE });
+    fireEvent.click(screen.getByRole("button", { name: /العودة إلى الألعاب/ }));
+    expect(onBack).toHaveBeenCalledTimes(1);
+  });
+});

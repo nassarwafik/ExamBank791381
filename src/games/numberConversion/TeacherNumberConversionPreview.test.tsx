@@ -22,6 +22,7 @@ describe("TeacherNumberConversionPreview — reuses the student game component",
     expect(getByTestId("shared-game")).toBeTruthy();
     expect(seen.props?.mode).toBe("teacher-preview");
     expect(seen.props?.onBack).toBe(onBack);
+    expect(seen.props?.embedded).toBe(false);                    // semantics default: standalone
     const client = seen.props?.client as NumberConversionClient;
     expect(typeof client.getState).toBe("function");
     expect(typeof client.start).toBe("function");
@@ -33,6 +34,12 @@ describe("TeacherNumberConversionPreview — reuses the student game component",
     expect(calls[0][0]).toBe("/api/game-number-conversion-preview/start");
     expect(calls[0][1].headers["x-builder-token"]).toBe("builder-tok");
     expect(calls[0][1].headers).not.toHaveProperty("x-student-token");
+  });
+
+  it("forwards `embedded` (semantics only) to the shared game — it never changes the mode or the transport", () => {
+    render(<TeacherNumberConversionPreview token="builder-tok" onBack={vi.fn()} embedded />);
+    expect(seen.props?.embedded).toBe(true);
+    expect(seen.props?.mode).toBe("teacher-preview");
   });
 
   it("keeps ONE client for the component's lifetime (re-renders never replace the transport mid-round)", () => {
