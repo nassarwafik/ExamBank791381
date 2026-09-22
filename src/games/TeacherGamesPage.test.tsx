@@ -22,4 +22,11 @@ describe("TeacherGamesPage", () => {
     expect(studentsOnly.disabled).toBe(true);
     expect(soon.disabled).toBe(true);
   });
+
+  it("carries the teacher-scoped modifier so it gets the desktop sidebar↔content inset", () => {
+    render(<TeacherGamesPage />);
+    const region = screen.getByRole("region", { name: "الألعاب المتاحة" });
+    expect(region.classList.contains("eb-games-page")).toBe(true);
+    expect(region.classList.contains("eb-games-page--teacher")).toBe(true);
+  });
 });

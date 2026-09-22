@@ -12,7 +12,7 @@ import "./games.css";
 export default function TeacherGamesPage() {
   const games = listGames();
   return (
-    <section className="eb-games-page" aria-labelledby="eb-games-page-title">
+    <section className="eb-games-page eb-games-page--teacher" aria-labelledby="eb-games-page-title">
       <SectionHeader
         level={2}
         id="eb-games-page-title"
