@@ -13,16 +13,18 @@ import "./games.css";
  * Phase 3B turns the Live Challenge card into an AUTHORING entry point: "إنشاء تحدٍّ" opens the Live Challenge
  * Generator as a nested full-view (no router, same swap pattern as the student games destination). This is authoring
  * only — no participant selection, lobby, join code, real-time session, medals or Strength (those are later phases).
+ * Both nested views render `embedded`: the teacher shell already owns the page's <main> and <h1>, so they render a <div>
+ * root and an <h2> title (one <main>, one <h1> per page).
  */
 export default function TeacherGamesPage({ token }: { token: string }) {
   const games = listGames();
   const [view, setView] = useState<"list" | "live-authoring" | "nc-preview">("list");
 
   if (view === "live-authoring") {
-    return <LiveChallengeGenerator token={token} onBack={() => setView("list")} />;
+    return <LiveChallengeGenerator token={token} onBack={() => setView("list")} embedded />;
   }
   if (view === "nc-preview") {
-    return <TeacherNumberConversionPreview token={token} onBack={() => setView("list")} />;
+    return <TeacherNumberConversionPreview token={token} onBack={() => setView("list")} embedded />;
   }
 
   return (

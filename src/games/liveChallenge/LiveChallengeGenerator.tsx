@@ -27,7 +27,14 @@ function singleQuestionPreview(title: string, q: BuilderQuestion): PreviewExamIn
   return { examId: "challenge-preview", title, sections: [{ id: "challenge-preview-sec", title: "", gradingPolicy: "all", questions: [q] }] } as unknown as PreviewExamInput;
 }
 
-export default function LiveChallengeGenerator({ token, onBack, client: injected }: { token: string; onBack: () => void; client?: LiveChallengeClient }) {
+/**
+ * `embedded` — SEMANTICS only: inside a host that already owns the page's <main> landmark and <h1> (the teacher app
+ * shell) the root renders as a <div> and the generator title as an <h2> (one <main>, one <h1> per page). Same classes →
+ * identical look. Default (standalone): <main> + <h1>.
+ */
+export default function LiveChallengeGenerator({ token, onBack, client: injected, embedded = false }: { token: string; onBack: () => void; client?: LiveChallengeClient; embedded?: boolean }) {
+  const Root = embedded ? "div" : "main";
+  const Title = embedded ? "h2" : "h1";
   const clientRef = useRef<LiveChallengeClient>(injected || createLiveChallengeClient(token));
   const [phase, setPhase] = useState<Phase>("home");
   const [summaries, setSummaries] = useState<ChallengeSummary[] | null>(null);
@@ -73,7 +80,7 @@ export default function LiveChallengeGenerator({ token, onBack, client: injected
   // ── home: saved challenges + create ──
   if (phase === "home") {
     return (
-      <main className="student-portal eb-student-shell eb-games-surface eb-lc" dir="rtl">
+      <Root className="student-portal eb-student-shell eb-games-surface eb-lc" dir="rtl">
         <div className="eb-games-surface-bar">
           <button type="button" className="eb-button is-quiet is-small" onClick={onBack}>
             <IconChevronBack size={18} className="eb-flip-rtl" aria-hidden="true" />العودة إلى الألعاب
@@ -81,7 +88,7 @@ export default function LiveChallengeGenerator({ token, onBack, client: injected
         </div>
         <section className="eb-games-page" aria-labelledby="eb-lc-title">
           <header className="eb-games-page-head">
-            <h1 id="eb-lc-title" className="eb-games-page-title">مولّد التحدّي المباشر</h1>
+            <Title id="eb-lc-title" className="eb-games-page-title">مولّد التحدّي المباشر</Title>
             <p className="eb-games-page-desc">أنشئ تحدّيًا صفّيًا وحضّر أسئلته الآن؛ إدارة الجلسة المباشرة تأتي لاحقًا.</p>
           </header>
           {error && <div className="platform-error" role="alert">{error}</div>}
@@ -97,14 +104,14 @@ export default function LiveChallengeGenerator({ token, onBack, client: injected
             ))}
           </div>
         </section>
-      </main>
+      </Root>
     );
   }
 
   // ── editing ──
   if (!def) return null;
   return (
-    <main className="student-portal eb-student-shell eb-games-surface eb-lc" dir="rtl">
+    <Root className="student-portal eb-student-shell eb-games-surface eb-lc" dir="rtl">
       <div className="eb-games-surface-bar">
         <button type="button" className="eb-button is-quiet is-small" onClick={() => { setPhase("home"); setDef(null); }}>
           <IconChevronBack size={18} className="eb-flip-rtl" aria-hidden="true" />التحدّيات
@@ -113,7 +120,7 @@ export default function LiveChallengeGenerator({ token, onBack, client: injected
 
       <section className="eb-lc-editor" aria-labelledby="eb-lc-editor-title">
         <header className="eb-lc-editor-head">
-          <h1 id="eb-lc-editor-title" className="eb-games-page-title">مولّد التحدّي المباشر</h1>
+          <Title id="eb-lc-editor-title" className="eb-games-page-title">مولّد التحدّي المباشر</Title>
           <label className="eb-lc-title-field">
             <span className="sb-field-label">عنوان التحدّي</span>
             <input className="sb-input" value={def.title} onChange={e => mutate(setChallengeTitle(def, e.target.value))} disabled={saving} placeholder="عنوان التحدّي" />
@@ -169,6 +176,6 @@ export default function LiveChallengeGenerator({ token, onBack, client: injected
         <ExamPreview exam={singleQuestionPreview(def.title, preview)} onClose={() => setPreview(null)} />,
         document.body,
       )}
-    </main>
+    </Root>
   );
 }

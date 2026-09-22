@@ -16,6 +16,10 @@ import { DIRECTION_META, PATH_META, LEVEL_META, emptyBits, formatElapsed, guidan
 // `mode` — the SAME component serves the teacher preview (TeacherNumberConversionPreview injects a non-persistent
 // teacher-preview client): "teacher-preview" only adds a quiet preview notice and never shows a saved best record.
 // The default ("student") is the unchanged student game.
+//
+// `embedded` — SEMANTICS only (independent of `mode`): when the game is shown inside a host that already owns the page's
+// <main> landmark and <h1> (the teacher app shell), the root renders as a <div> and the game title as an <h2>, so the
+// page keeps exactly one <main> and one <h1>. Same classes → identical look. Default (standalone student game): <main> + <h1>.
 export type NumberConversionMode = "student" | "teacher-preview";
 type Phase = "loading" | "home" | "playing" | "result" | "error";
 type Feedback =
@@ -26,8 +30,10 @@ type Feedback =
   | null;
 const ANSWER_MSG_ID = "eb-ncgame-answer-msg";
 
-export default function NumberConversionGame({ token, onBack, client: injected, mode = "student" }: { token: string; onBack: () => void; client?: NumberConversionClient; mode?: NumberConversionMode }) {
+export default function NumberConversionGame({ token, onBack, client: injected, mode = "student", embedded = false }: { token: string; onBack: () => void; client?: NumberConversionClient; mode?: NumberConversionMode; embedded?: boolean }) {
   const preview = mode === "teacher-preview";
+  const Root = embedded ? "div" : "main";
+  const Title = embedded ? "h2" : "h1";
   const reducedMotion = usePrefersReducedMotion();
   const clientRef = useRef<NumberConversionClient>(injected || createNumberConversionClient(token));
   const [phase, setPhase] = useState<Phase>("loading");
@@ -141,17 +147,17 @@ export default function NumberConversionGame({ token, onBack, client: injected, 
   const previewNote = preview ? <p className="eb-ncgame-preview-note" role="note">معاينة المعلم — لا يتم حفظ النتائج</p> : null;
 
   if (phase === "loading") {
-    return <main className="student-portal eb-student-shell eb-games-surface eb-ncgame" dir="rtl"><p className="eb-muted eb-sp-status" role="status">جارٍ تحميل اللعبة...</p></main>;
+    return <Root className="student-portal eb-student-shell eb-games-surface eb-ncgame" dir="rtl"><p className="eb-muted eb-sp-status" role="status">جارٍ تحميل اللعبة...</p></Root>;
   }
 
   if (phase === "home") {
     return (
-      <main className="student-portal eb-student-shell eb-games-surface eb-ncgame" dir="rtl">
+      <Root className="student-portal eb-student-shell eb-games-surface eb-ncgame" dir="rtl">
         <BackBar label="العودة إلى الألعاب" />
         {previewNote}
         <section className="eb-ncgame-home" aria-labelledby="eb-ncgame-title">
           <header className="eb-ncgame-head">
-            <h1 id="eb-ncgame-title" className="eb-ncgame-title">تحدّي أنظمة العد</h1>
+            <Title id="eb-ncgame-title" className="eb-ncgame-title">تحدّي أنظمة العد</Title>
             <p className="eb-ncgame-sub">حوّل بين العشري والثنائي والسادس عشر باستخدام صناديق القيم — ١٠ مهمات في كل جولة.</p>
           </header>
           {best && !preview && (
@@ -181,16 +187,16 @@ export default function NumberConversionGame({ token, onBack, client: injected, 
           </fieldset>
           <button type="button" className="eb-button is-primary eb-ncgame-start" disabled={busy} onClick={() => startRound(path, level)}>ابدأ التحدّي</button>
         </section>
-      </main>
+      </Root>
     );
   }
 
   if (phase === "result" && result) {
     return (
-      <main className="student-portal eb-student-shell eb-games-surface eb-ncgame" dir="rtl">
+      <Root className="student-portal eb-student-shell eb-games-surface eb-ncgame" dir="rtl">
         {previewNote}
         <section className="eb-ncgame-result" aria-labelledby="eb-ncgame-result-title">
-          <h1 id="eb-ncgame-result-title" className="eb-ncgame-title">تحدّي أنظمة العد</h1>
+          <Title id="eb-ncgame-result-title" className="eb-ncgame-title">تحدّي أنظمة العد</Title>
           <p className="eb-ncgame-score"><strong dir="ltr">{result.correct} / {result.total}</strong></p>
           <p className="eb-ncgame-percent" dir="ltr">{result.percentage}%</p>
           <ul className="eb-ncgame-stats">
@@ -204,24 +210,24 @@ export default function NumberConversionGame({ token, onBack, client: injected, 
             <button type="button" className="eb-button is-quiet" onClick={onBack}>العودة إلى الألعاب</button>
           </div>
         </section>
-      </main>
+      </Root>
     );
   }
 
   // playing
   const task = state?.currentTask;
-  if (!task) return <main className="student-portal eb-student-shell eb-games-surface eb-ncgame" dir="rtl"><p className="eb-muted eb-sp-status" role="status">جارٍ التحميل...</p></main>;
+  if (!task) return <Root className="student-portal eb-student-shell eb-games-surface eb-ncgame" dir="rtl"><p className="eb-muted eb-sp-status" role="status">جارٍ التحميل...</p></Root>;
   const meta = DIRECTION_META[task.direction];
   const locked = feedback?.kind === "correct" || feedback?.kind === "revealed";
   const answerSpec = answerInputFor(meta.targetBase, sourceValueOf(task.sourceDisplay, meta.sourceBase));
   const guidance = guidanceFor(task.direction, state!.level);
   return (
-    <main className={"student-portal eb-student-shell eb-games-surface eb-ncgame" + (reducedMotion ? " is-reduced-motion" : "")} dir="rtl">
+    <Root className={"student-portal eb-student-shell eb-games-surface eb-ncgame" + (reducedMotion ? " is-reduced-motion" : "")} dir="rtl">
       <BackBar label="العودة إلى الألعاب" />
       {previewNote}
       <section className="eb-ncgame-play" aria-labelledby="eb-ncgame-play-title">
         <header className="eb-ncgame-playhead">
-          <h1 id="eb-ncgame-play-title" className="eb-ncgame-title">تحدّي أنظمة العد</h1>
+          <Title id="eb-ncgame-play-title" className="eb-ncgame-title">تحدّي أنظمة العد</Title>
           <div className="eb-ncgame-meters">
             <span className="eb-ncgame-meter">المهمة {state!.taskNumber} / {state!.total}</span>
             <span className="eb-ncgame-meter" aria-label={"السلسلة الصحيحة الحالية " + state!.streak}>🔥 <span dir="ltr">{state!.streak}</span></span>
@@ -290,6 +296,6 @@ export default function NumberConversionGame({ token, onBack, client: injected, 
           </div>
         </form>
       </section>
-    </main>
+    </Root>
   );
 }

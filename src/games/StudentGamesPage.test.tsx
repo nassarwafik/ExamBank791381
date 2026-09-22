@@ -30,6 +30,8 @@ describe("StudentGamesPage — the student's dedicated Games destination", () =>
     fireEvent.click(screen.getByRole("button", { name: "ابدأ" }));
     await waitFor(() => expect(screen.getByRole("heading", { level: 1, name: "تحدّي أنظمة العد" })).toBeTruthy());
     expect(screen.queryByRole("list", { name: "الألعاب" })).toBeNull();   // left the games list
+    expect(document.querySelectorAll("main").length).toBe(1);             // standalone game keeps its own single <main> (unchanged)
+    expect(document.querySelectorAll("h1").length).toBe(1);
     expect(screen.getByRole("button", { name: /العودة إلى الألعاب/ })).toBeTruthy();
   });
 

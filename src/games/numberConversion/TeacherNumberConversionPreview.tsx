@@ -8,7 +8,7 @@ import { createNumberConversionTeacherPreviewClient } from "./teacherPreviewClie
  * record, no best record, no rewards) and shown in "teacher-preview" mode (a quiet «معاينة المعلم» notice).
  * No gameplay lives here — only the transport + mode choice.
  */
-export default function TeacherNumberConversionPreview({ token, onBack }: { token: string; onBack: () => void }) {
+export default function TeacherNumberConversionPreview({ token, onBack, embedded = false }: { token: string; onBack: () => void; embedded?: boolean }) {
   const [client] = useState(() => createNumberConversionTeacherPreviewClient(token));
-  return <NumberConversionGame token={token} onBack={onBack} client={client} mode="teacher-preview" />;
+  return <NumberConversionGame token={token} onBack={onBack} client={client} mode="teacher-preview" embedded={embedded} />;
 }

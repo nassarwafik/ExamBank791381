@@ -267,3 +267,51 @@ describe("NumberConversionGame — mode (the SAME component serves the teacher p
     expect(screen.getAllByText(NOTE).length).toBe(1);                // one notice per screen, not repeated
   });
 });
+
+describe("NumberConversionGame — semantics (standalone vs embedded in a host that owns <main>/<h1>)", () => {
+  const TITLE = "تحدّي أنظمة العد";
+  const DONE = { ok: true, correct: true, canonicalAnswer: "00101101", solutionBits: SOL_45, explanation: "x", done: true, result: { correct: 2, total: 2, percentage: 100, bestStreak: 2, elapsedMs: 1000, at: "" }, state: { ...activeAt(2, "t2"), currentTask: null, done: true } };
+  const playThrough = async (embedded: boolean, check: (screenName: string) => void) => {
+    const client = fakeClient({ answer: vi.fn(async () => DONE) });
+    render(<NumberConversionGame token="t" onBack={vi.fn()} client={client} embedded={embedded} />);
+    await screen.findByText("ابدأ التحدّي");
+    check("home");
+    fireEvent.click(screen.getByText("ابدأ التحدّي"));
+    await screen.findByText("المهمة 1 / 2");
+    check("play");
+    typeAnswer("00101101");
+    fireEvent.click(checkButton());
+    fireEvent.click(await screen.findByRole("button", { name: "التالي" }));
+    await screen.findByText("2 / 2");
+    check("result");
+  };
+
+  it("standalone student game (default): a <main> root and an <h1> title on home, play and result (unchanged)", async () => {
+    await playThrough(false, s => {
+      expect(document.querySelectorAll("main").length, s).toBe(1);
+      expect(document.body.firstElementChild?.firstElementChild?.tagName, s).toBe("MAIN");
+      expect(screen.getByRole("heading", { level: 1, name: TITLE }), s).toBeTruthy();
+      expect(document.querySelector("h2.eb-ncgame-title"), s).toBeNull();
+    });
+  });
+
+  it("embedded: a <div> root (no <main>) and an <h2> title on home, play and result — same classes", async () => {
+    await playThrough(true, s => {
+      expect(document.querySelector("main"), s).toBeNull();
+      expect(document.querySelector("h1"), s).toBeNull();
+      expect(screen.getByRole("heading", { level: 2, name: TITLE }), s).toBeTruthy();
+      const root = document.body.firstElementChild?.firstElementChild as HTMLElement;
+      expect(root.tagName, s).toBe("DIV");
+      expect(root.classList.contains("student-portal") && root.classList.contains("eb-games-surface") && root.classList.contains("eb-ncgame"), s).toBe(true);
+      expect(root.getAttribute("dir"), s).toBe("rtl");
+    });
+  });
+
+  it("`embedded` is independent of `mode`: a teacher preview can be embedded or not, and keeps its notice either way", async () => {
+    render(<NumberConversionGame token="t" onBack={vi.fn()} client={fakeClient()} mode="teacher-preview" embedded />);
+    await screen.findByText("ابدأ التحدّي");
+    expect(screen.getByText("معاينة المعلم — لا يتم حفظ النتائج")).toBeTruthy();
+    expect(screen.getByRole("heading", { level: 2, name: TITLE })).toBeTruthy();
+    expect(document.querySelector("main")).toBeNull();
+  });
+});
