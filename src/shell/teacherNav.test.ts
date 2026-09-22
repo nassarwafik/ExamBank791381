@@ -45,7 +45,7 @@ describe("UX-2 teacherNav mapping", () => {
     expect(EXAM_BANK_NAV).toEqual(["builder", "import"]);
   });
   it("Learning Materials is a top-level destination in the exact primary order (Phase 1), not inside Exam Bank", () => {
-    expect(PRIMARY_NAV).toEqual(["dashboard", "learning", "students", "assignments", "projects", "reports"]);
+    expect(PRIMARY_NAV).toEqual(["dashboard", "learning", "students", "assignments", "projects", "reports", "games"]);
     expect(NAV_LABELS.learning).toBe("المواد التعليمية");
     expect(EXAM_BANK_NAV).not.toContain("learning");                          // never a child of Exam Bank
     expect(activeNavId(base({ teacherView: "learning" }))).toBe("learning");

@@ -15,6 +15,7 @@ import StudentLearningMaterials, { type StudentLearningCourse } from "./student/
 import StudentAssignmentCard from "./student/StudentAssignmentCard";
 import AchievementFeed from "./student/AchievementFeed";
 import AvatarPickerDialog from "./student/AvatarPickerDialog";
+import StudentGamesPage from "./games/StudentGamesPage";
 import { FILTERS, matchesFilter, medalsFor, nowItems, sortTaskFirst, type PortalFilter } from "./student/portalPresentation";
 import { normalizeStrength } from "./student/strengthPresentation";
 import { stageVisual } from "./studentStageVisuals";
@@ -43,6 +44,8 @@ export default function StudentPortal({ token, displayName, onLogout }: Props) {
   const [filter, setFilter] = useState<PortalFilter>("all");
   // The learning course currently open in the Reader (its published module ids as re-validated at open time).
   const [readerCourse, setReaderCourse] = useState<StudentLearningCourse | null>(null);
+  // The dedicated Educational Games destination (a full-view swap, like the Reader/exam) — opened from the shell.
+  const [gamesOpen, setGamesOpen] = useState(false);
   const headers = { "x-student-token": token, Authorization: "Bearer " + token };
   const strengthDirtyRef = useRef(false);
 
@@ -87,7 +90,7 @@ export default function StudentPortal({ token, displayName, onLogout }: Props) {
   // owns its own state (the Reader `readerCourse`, an open exam/detail `detail`) or the avatar modal
   // (`avatarPickerOpen`), so a background swap never disturbs them; on returning to the main view it re-enables.
   // The lightweight, session-neutral achievement feed rides the same cycle (its 401 is already swallowed).
-  const autoRefreshEnabled = !readerCourse && !detail && !avatarPickerOpen;
+  const autoRefreshEnabled = !readerCourse && !detail && !avatarPickerOpen && !gamesOpen;
   useAutoRefresh(() => { void loadFeed({ silent: true }); return load({ silent: true }); }, { intervalMs: 15000, enabled: autoRefreshEnabled });
 
   async function pickAvatar(avatarId: string) {
@@ -160,6 +163,8 @@ export default function StudentPortal({ token, displayName, onLogout }: Props) {
     );
   }
   if (detail && data) return <StudentExamPage token={token} assignment={detail} studentName={data.student.displayName || displayName} className={data.classroom ? data.classroom.name + (data.classroom.grade ? " · " + data.classroom.grade : "") : ""} onLogout={onLogout} onBack={() => { setDetail(null); void load(); }} />;
+  // Dedicated Educational Games destination (full-view swap, same pattern as the Reader/exam); back returns to the portal.
+  if (gamesOpen) return <StudentGamesPage onBack={() => { setGamesOpen(false); window.scrollTo({ top: 0, behavior: reducedMotion ? "auto" : "smooth" }); }} />;
 
   const stats = data?.stats;
   const medals = data ? medalsFor(data.assignments) : [];
@@ -175,7 +180,7 @@ export default function StudentPortal({ token, displayName, onLogout }: Props) {
   const now = Date.now();
 
   return (
-    <StudentShell studentName={data?.student.displayName || displayName} className={data?.classroom?.name || ""} onLogout={onLogout}>
+    <StudentShell studentName={data?.student.displayName || displayName} className={data?.classroom?.name || ""} onLogout={onLogout} onOpenGames={() => { setGamesOpen(true); window.scrollTo({ top: 0, behavior: reducedMotion ? "auto" : "smooth" }); }}>
       <div className="eb-sp">
         {loading && <p className="eb-muted eb-sp-status" role="status">جارٍ تحميل حسابك...</p>}
         {busy && <p className="eb-muted eb-sp-status" role="status">جارٍ فتح الواجب...</p>}

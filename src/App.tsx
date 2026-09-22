@@ -8,6 +8,7 @@ const ReportsCenter = lazy(() => import("./reports/ReportsCenter"));
 const ExamBankPage = lazy(() => import("./bank/ExamBankPage"));
 // Learning Materials (المواد التعليمية) — Phase 1 foundation; code-split so it only loads when opened.
 const LearningMaterialsPage = lazy(() => import("./learning/LearningMaterialsPage"));
+const TeacherGamesPage = lazy(() => import("./games/TeacherGamesPage"));
 // Structured Exam Builder (Phase 2) — code-split so it only loads when a teacher opens it.
 const StructuredExamBuilder = lazy(() => import("./StructuredExamBuilder"));
 const SmartStructuredExamImportWizard = lazy(() => import("./SmartStructuredExamImportWizard"));
@@ -567,7 +568,8 @@ function App() {
       "project" |
       "reports" |
       "bank" |
-      "learning"
+      "learning" |
+      "games"
     >(
       "builder"
     );
@@ -606,6 +608,7 @@ function App() {
   function navigateTeacher(id: TeacherNavId) {
     if (id === "dashboard" || id === "students" || id === "assignments" || id === "audit") { goToWorkspace(id); return; }
     if (id === "learning") { setTeacherView("learning"); return; }
+    if (id === "games") { setTeacherView("games"); return; }
     if (id === "projects") { goToProjects(""); return; }
     if (id === "reports") { setTeacherView("reports"); return; }
     if (id === "import") { setTeacherView("import"); return; }
@@ -5589,6 +5592,12 @@ function App() {
       {teacherView === "learning" && (
         <Suspense fallback={<p className="eb-muted" role="status">جارٍ التحميل...</p>}>
           <LearningMaterialsPage token={token} />
+        </Suspense>
+      )}
+
+      {teacherView === "games" && (
+        <Suspense fallback={<p className="eb-muted" role="status">جارٍ التحميل...</p>}>
+          <TeacherGamesPage />
         </Suspense>
       )}
 

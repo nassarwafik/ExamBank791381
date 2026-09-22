@@ -143,13 +143,14 @@ describe("UX-7a StudentPortal — task-first home", () => {
 });
 
 describe("UX-7a StudentPortal — hierarchy and the primary section", () => {
-  it("renders exactly the seven sections in order under the shell's single h1: identity → now → learning materials → progress → assignments → projects → achievements", async () => {
+  it("renders exactly the seven sections in order under the shell's single h1: identity → now → learning materials → progress → assignments → projects → achievements (Games is a dedicated destination, not an inline section)", async () => {
     mount({ student, classroom, assignments: [asg("AV", { dashboardState: "available" })], stats: { ...baseStats, assigned: 1 } }, { tracker: PROJECT, posts: [post({})] });
     await screen.findByRole("region", { name: "مشاريعي" });
     expect(document.querySelectorAll("h1").length).toBe(1);                                         // the shell's brand title only
     expect(document.querySelector(".eb-sp h1")).toBeNull();
     const h2s = Array.from(document.querySelectorAll(".eb-sp h2")).map(h => h.textContent?.replace(/\d+$/, "").trim());
-    expect(h2s).toEqual(["مرحبًا أحمد", "ماذا عليّ أن أفعل الآن؟", "موادي التعليمية", "تقدّمي وقوتي", "المهام والواجبات", "مشاريعي", "إنجازات الصف"]);   // «تقدّمي» became the Achievement Hub «تقدّمي وقوتي»
+    expect(h2s).toEqual(["مرحبًا أحمد", "ماذا عليّ أن أفعل الآن؟", "موادي التعليمية", "تقدّمي وقوتي", "المهام والواجبات", "مشاريعي", "إنجازات الصف"]);   // the games cards are NOT a permanent dashboard section
+    expect(document.querySelector(".eb-sp .eb-games-hub, .eb-sp .eb-game-cards")).toBeNull();       // no inline games grid on the dashboard
     expect(screen.getByLabelText(/مرحبًا أحمد/).textContent).toContain("الصف · 11 · 2026");          // identity: class · grade · school year
     expect(screen.getByLabelText(/مرحبًا أحمد/).textContent).toContain("C1");
     expect(document.querySelector(".platform-hero, .student-next-panel")).toBeNull();                 // no hero, no marketing card
