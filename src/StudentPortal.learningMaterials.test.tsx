@@ -43,13 +43,11 @@ function mount(opts: { materials?: (n: number) => unknown; dashboardStatus?: num
 const section = () => screen.findByRole("region", { name: "موادي التعليمية" });
 
 describe("placement, card, empty state, degrade", () => {
-  it("sits right after «ماذا عليّ أن أفعل الآن؟» and before the games hub / «تقدّمي»; the card shows ONLY the released titles and count (m07 hidden, no hidden count)", async () => {
+  it("sits right after «ماذا عليّ أن أفعل الآن؟» and before «تقدّمي»; the card shows ONLY the released titles and count (m07 hidden, no hidden count)", async () => {
     mount();
     const s = await section();
     expect(s.previousElementSibling?.getAttribute("aria-labelledby")).toBe("eb-sp-now-title");
-    // The games hub now sits between learning materials and progress; progress («تقدّمي») still follows it.
-    expect(s.nextElementSibling?.getAttribute("aria-labelledby")).toBe("eb-games-title");
-    expect(screen.getByRole("region", { name: "تقدّمي وقوتي" })).toBeTruthy();
+    expect(s.nextElementSibling?.textContent).toContain("تقدّمي");
     const card = await within(s).findByRole("article", { name: "شبكات الاتصال" });
     expect(within(card).getByText("كتاب 791381")).toBeTruthy();
     expect(within(card).getByText(/الوحدات المتاحة الآن:/).textContent).toBe("الوحدات المتاحة الآن: 2");

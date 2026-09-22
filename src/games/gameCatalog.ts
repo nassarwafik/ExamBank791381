@@ -46,5 +46,5 @@ export function getGame(id: GameId): GameDefinition | null {
   return GAMES.find(g => g.id === id) ?? null;
 }
 
-/** The registered ids, in display order. */
-export const GAME_IDS: readonly GameId[] = GAMES.map(g => g.id);
+/** The registered ids, in display order — runtime-frozen, consistent with the frozen GAMES registry. */
+export const GAME_IDS: readonly GameId[] = Object.freeze(GAMES.map(g => g.id));

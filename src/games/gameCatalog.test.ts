@@ -33,11 +33,14 @@ describe("game catalog — the two approved Phase-1 games", () => {
     expect(GAME_MODE_LABELS.live).toBe("متعدد اللاعبين المباشر");
   });
 
-  it("getGame returns null for an unknown id; the registry is frozen (never mutable at runtime)", () => {
+  it("getGame returns null for an unknown id; the registry AND the id list are frozen (never mutable at runtime)", () => {
     expect(getGame("nope" as GameId)).toBeNull();
     const games = listGames();
     expect(Object.isFrozen(games)).toBe(true);
     expect(() => { (games as unknown as { push: (x: unknown) => void }).push({}); }).toThrow();
     expect(Object.isFrozen(games[0])).toBe(true);
+    // GAME_IDS is runtime-frozen too (Fix 2)
+    expect(Object.isFrozen(GAME_IDS)).toBe(true);
+    expect(() => { (GAME_IDS as unknown as { push: (x: unknown) => void }).push("x"); }).toThrow();
   });
 });

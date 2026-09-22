@@ -1,14 +1,15 @@
 import type { ReactNode } from "react";
-import { IconLogout } from "../icons";
+import { IconLogout, IconSparkles } from "../icons";
 import "../ui/ui.css";
 import "../shell.css";
 
 // UX-2 — Student shell: the portal's existing top bar (brand + logout, same class hooks so platform.css keeps
-// styling it) plus a small identity area (name · class) and the main content container. No navigation,
-// no bottom bar, no content reordering here (UX-7 owns the task-first redesign).
-type Props = { studentName: string; className?: string; onLogout: () => void; children: ReactNode };
+// styling it) plus a small identity area (name · class) and the main content container. The top bar is the
+// student's only chrome/nav surface, so the Educational Games entry lives here (when `onOpenGames` is given): it
+// opens the dedicated Games destination — the games cards are NOT a permanent dashboard section.
+type Props = { studentName: string; className?: string; onLogout: () => void; onOpenGames?: () => void; children: ReactNode };
 
-export default function StudentShell({ studentName, className, onLogout, children }: Props) {
+export default function StudentShell({ studentName, className, onLogout, onOpenGames, children }: Props) {
   return (
     <main className="student-portal eb-student-shell" dir="rtl">
       <header className="student-topbar">
@@ -22,7 +23,14 @@ export default function StudentShell({ studentName, className, onLogout, childre
             {className && <span>{className}</span>}
           </div>
         )}
-        <button type="button" className="student-logout" onClick={onLogout}><IconLogout size={16} />تسجيل الخروج</button>
+        <div className="student-topbar-actions">
+          {onOpenGames && (
+            <button type="button" className="student-topbar-link eb-student-games-entry" onClick={onOpenGames}>
+              <IconSparkles size={16} />الألعاب التعليمية
+            </button>
+          )}
+          <button type="button" className="student-logout" onClick={onLogout}><IconLogout size={16} />تسجيل الخروج</button>
+        </div>
       </header>
       <section className="student-shell">{children}</section>
     </main>
