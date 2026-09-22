@@ -44,3 +44,41 @@ describe("Learning Materials — desktop inset", () => {
     expect(page.match(/className="eb-lm(?: eb-lm-overview)?" aria-labelledby/g)?.length).toBe(2);
   });
 });
+
+// Reader Presentation mode — the white lesson page must contain the ENTIRE authored page: a SHORT page fills the
+// presentation viewport, a LONG page grows with its content (no clamp to one viewport, no nested page scrollbar).
+// CSS is stubbed under Vitest, so this is a structural guard on the presentation-page contract read from disk.
+describe("Reader Presentation — lesson page surface grows with content", () => {
+  const readerCss = read("learning/reader/reader.css");
+  const nospace = (s: string) => s.replace(/\s+/g, "");
+  /** The (brace-matched) body of the FIRST rule whose selector is exactly `sel`. */
+  const ruleBody = (sel: string): string => {
+    const i = readerCss.indexOf(sel + "{");
+    if (i < 0) return "";
+    const from = readerCss.indexOf("{", i) + 1;
+    return nospace(readerCss.slice(from, readerCss.indexOf("}", from)));
+  };
+  const presPage = ruleBody(".learning-reader.is-presentation .learning-reader-page");
+  const presMain = ruleBody(".learning-reader.is-presentation .learning-reader-main");
+
+  it("the presentation page is a NON-shrinking, content-sized flex item (scoped to .is-presentation)", () => {
+    expect(presPage).not.toBe("");                     // the presentation-scoped rule exists
+    expect(presPage).toContain("flex:00auto");         // never shrink to the track height (the bug) — whitespace-stripped
+    expect(presPage).toContain("block-size:auto");     // long pages grow with their content
+    expect(presPage).toContain("min-block-size:100%"); // short pages still fill the presentation viewport
+  });
+  it("adds no page-level scroll or fixed-viewport / clipping hack (one scroll owner, natural height)", () => {
+    expect(presPage).not.toMatch(/overflow/);          // no nested page scrollbar
+    expect(presPage).not.toMatch(/100vh|100dvh/);      // no fixed viewport-height page
+    expect(presPage).not.toMatch(/max-block-size|max-height/);
+    expect(presPage).not.toMatch(/height:100%/);       // not clamped to the track (min-block-size:100% is allowed)
+  });
+  it(".learning-reader-main remains the single vertical scroll owner in presentation", () => {
+    expect(presMain).toContain("overflow-y:auto");
+  });
+  it("does not disturb normal-mode Reader: the base .learning-reader-page rule has no no-shrink/auto-height override", () => {
+    const basePage = ruleBody(".learning-reader-page");
+    expect(basePage).not.toBe("");
+    expect(basePage).not.toContain("flex:00auto");
+  });
+});
