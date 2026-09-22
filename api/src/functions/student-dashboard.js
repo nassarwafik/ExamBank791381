@@ -45,6 +45,10 @@ async function handler(request,deps={},obs=null){
   // Legacy stats (kept for backward compatibility) + Roadmap #12 additive authoritative stats.
   let completed=0,sum=0;                                                     // legacy: any completed latest result
   let submitted=0,inProgress=0,pendingReview=0,finalized=0,scheduled=0,available=0,closedUnsubmitted=0,finalSum=0,finalCount=0;
+  // Exam Strength is DERIVED from the CURRENT authoritative final percentages (gradingStatus==="final"), summed and
+  // rounded per result — never a flat per-exam award and never a stored counter. Collected in the SAME loop below
+  // (no extra read); a correction to a stored final grade changes the value on the next dashboard read.
+  const finalizedPercentages=[];
   // Roadmap #30: the selected assignments (published, this student's class) are fixed FIRST, then their
   // submissions are read with BOUNDED concurrency through the R27 primitive (order-preserving, index-aligned,
   // the first non-404 failure rejects — nothing partial). Still exactly ONE submission read per selected
@@ -66,7 +70,7 @@ async function handler(request,deps={},obs=null){
    else if(dashboardState==="available")available++;
    // averageFinalized: latest percentage ONLY for assignments whose latest grading status is final
    // (never includes a provisional/pending grade).
-   if(gradingStatus==="final"&&latest){finalSum+=Number(latest.percentage||0);finalCount++}
+   if(gradingStatus==="final"&&latest){finalSum+=Number(latest.percentage||0);finalCount++;finalizedPercentages.push(Number(latest.percentage))}
    // gradingStatus is the normalized authoritative field. `finalized` is echoed as the historical RAW value
    // and OMITTED entirely when the stored result never had it (legacy) — never fabricated to false, which
    // would contradict a legacy result whose gradingStatus normalizes to "final".
@@ -82,7 +86,7 @@ async function handler(request,deps={},obs=null){
   const studyDoc=await dl(c,studyDocName(student.userId));
   const study=studyModulesForStrength(studyDoc,listLearningCourses().map(x=>x.courseId));
   const projects=classroom?await loadStudentProjects(c,classroom,String(student.classId||""),student.userId,now,{...deps,downloadJsonOrNull:dl,mapConcurrent:mc,getReadConcurrency:readConcurrency}):[];
-  const strength=buildStrengthSummary({finalizedCount:finalized,trainings:practiceDoc&&practiceDoc.trainings,study,projects:projects.map(p=>({projectCode:p.projectCode,overallProgress:p.summary.overallProgress}))});
+  const strength=buildStrengthSummary({finalizedPercentages,trainings:practiceDoc&&practiceDoc.trainings,study,projects:projects.map(p=>({projectCode:p.projectCode,overallProgress:p.summary.overallProgress}))});
   // Recognition (never Strength): the global stage-up milestone is observed HERE — the one place the total Strength is
   // built — against the persisted last-seen stage (create-only event ids, baseline on first sight); the summary counts
   // medals (the same finalized-only authority as the portal), reactions RECEIVED and non-medal achievements lifetime.

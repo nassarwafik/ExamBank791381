@@ -1,17 +1,18 @@
 import { describe, it, expect } from "vitest";
 import {
-  FINALIZED_EXAM_STRENGTH_POINTS, LEARNING_PRACTICE_MAX_POINTS, LEARNING_PRACTICE_ITEM_COUNT, LEARNING_PRACTICE_MAX_TOTAL,
+  FINALIZED_EXAM_MAX_POINTS, LEARNING_PRACTICE_MAX_POINTS, LEARNING_PRACTICE_ITEM_COUNT, LEARNING_PRACTICE_MAX_TOTAL,
   STUDY_MODULE_MAX_POINTS, STUDY_MODULE_COUNT, STUDY_MAX_TOTAL, PROJECT_MAX_STRENGTH_POINTS,
   STRENGTH_STAGE_COUNT, STRENGTH_STAGE_POINTS, STRENGTH_STAGE_MAX_POINTS, RANK_ORDER,
-  strengthFromFinalizedCount, isLearningPracticeItem, strengthFromTrainingBest, trainingMaxStrengthPoints, strengthFromTrainingResult,
+  examStrengthFromPercentage, examPointsFromFinalizedResults, isLearningPracticeItem, strengthFromTrainingBest, trainingMaxStrengthPoints, strengthFromTrainingResult,
   strengthFromProjectProgress, practicePointsFromTrainings, studyPointsForModule, studyPointsFromModules,
   strengthStageProgress, rankTierFromStrength, legacyRankProgress, buildStrengthSummary
 } from "../src/lib/student-strength.js";
 import { listLearningTrainings } from "../src/lib/learning-training-registry.js";
 import { listLearningModules } from "../src/lib/learning-materials-registry.js";
 
-// The Unified Strength policy — 25 stages × 80 points = 2000 visible points fed by exams (100 each, uncapped),
-// Learning Practice (36 items × 40 = 1440), Study Practice (28 modules × 20 = 560) and projects (≤ 400 each).
+// The Unified Strength policy — 25 stages × 80 points = 2000 visible points fed by finalized school exams (each the
+// rounded FINAL percentage, 0..100, uncapped total), Learning Practice (36 items × 40 = 1440), Study Practice
+// (28 modules × 20 = 560) and projects (≤ 400 each).
 const T_IDS = Array.from({ length: 30 }, (_, i) => "T" + String(i + 1).padStart(2, "0"));
 const F_IDS = Array.from({ length: 6 }, (_, i) => "F0" + (i + 1));
 const ALL_IDS = [...T_IDS, ...F_IDS];
@@ -29,7 +30,7 @@ describe("constants — the centralized policy", () => {
     expect(STUDY_MODULE_COUNT).toBe(28);
     expect(STUDY_MAX_TOTAL).toBe(560);
     expect(LEARNING_PRACTICE_MAX_TOTAL + STUDY_MAX_TOTAL).toBe(STRENGTH_STAGE_MAX_POINTS);
-    expect(FINALIZED_EXAM_STRENGTH_POINTS).toBe(100);
+    expect(FINALIZED_EXAM_MAX_POINTS).toBe(100);
     expect(PROJECT_MAX_STRENGTH_POINTS).toBe(400);
   });
   it("the 36 canonical items are exactly the registry's Learning-Practice ids; the 28 modules are exactly the course's modules", () => {
@@ -128,14 +129,41 @@ describe("the 25-stage path — every threshold pair, the extremes, no stage 26"
   });
 });
 
-describe("buildStrengthSummary — raw total, visible path, sources, legacy rank", () => {
-  it("exams 100 each (uncapped) + projects round(progress × 4) ≤ 400 each — unchanged", () => {
-    expect(strengthFromFinalizedCount(7)).toBe(700); expect(strengthFromFinalizedCount(-1)).toBe(0); expect(strengthFromFinalizedCount("x")).toBe(0);
+describe("finalized school exams — each result contributes its rounded final percentage (0..100), summed", () => {
+  it("ONE result = round(clamp(final %, 0, 100)): 100 → 100, 70 → 70, 20 → 20, 0 → 0; decimals half-up; out-of-range/NaN safe", () => {
+    expect(examStrengthFromPercentage(100)).toBe(100);
+    expect(examStrengthFromPercentage(70)).toBe(70);
+    expect(examStrengthFromPercentage(20)).toBe(20);
+    expect(examStrengthFromPercentage(0)).toBe(0);
+    expect(examStrengthFromPercentage(84.0)).toBe(84);
+    expect(examStrengthFromPercentage(84.4)).toBe(84);
+    expect(examStrengthFromPercentage(84.5)).toBe(85);
+    expect(examStrengthFromPercentage(99.6)).toBe(100);
+    expect(examStrengthFromPercentage(-20)).toBe(0);       // clamped, never negative
+    expect(examStrengthFromPercentage(130)).toBe(100);     // clamped, never above 100 for one exam
+    expect(examStrengthFromPercentage(NaN)).toBe(0);
+    expect(examStrengthFromPercentage("abc")).toBe(0);
+    expect(examStrengthFromPercentage(Infinity)).toBe(0);
+  });
+  it("the total is the SUM of final percentages (never count × 100): [] → 0, [100] → 100, [70] → 70, [0] → 0, [100,70] → 170, [100,90,70,55] → 315", () => {
+    expect(examPointsFromFinalizedResults([])).toBe(0);
+    expect(examPointsFromFinalizedResults([100])).toBe(100);
+    expect(examPointsFromFinalizedResults([70])).toBe(70);
+    expect(examPointsFromFinalizedResults([0])).toBe(0);
+    expect(examPointsFromFinalizedResults([100, 70])).toBe(170);
+    expect(examPointsFromFinalizedResults([100, 90, 70, 55])).toBe(315);
+    expect(examPointsFromFinalizedResults([84.4, 84.5])).toBe(169);          // 84 + 85
+    expect(examPointsFromFinalizedResults([-20, 130, NaN, 50])).toBe(150);   // 0 + 100 + 0 + 50
+    expect(examPointsFromFinalizedResults(undefined)).toBe(0);               // older caller / no assignments
+    expect(examPointsFromFinalizedResults("x")).toBe(0);
+    expect(examPointsFromFinalizedResults(3)).toBe(0);                       // a bare count is NOT accepted as points
+  });
+  it("projects round(progress × 4) ≤ 400 each — unchanged", () => {
     for (const [p, pts] of [[0, 0], [1, 4], [25, 100], [50, 200], [75, 300], [100, 400], [140, 400]]) expect(strengthFromProjectProgress(p), p + "%").toBe(pts);
   });
   it("raw = exams + practice + study + projects; the raw total survives above 2000 while the path caps at 25 / 2000 / 100%", () => {
     const s = buildStrengthSummary({
-      finalizedCount: 12,                                                                          // 1200
+      finalizedPercentages: Array(12).fill(100),                                                   // 1200 (12 × 100%)
       trainings: Object.fromEntries(ALL_IDS.map(id => [id, { bestPercentage: 100 }])),             // 1440
       study: { m1: { completed: 4, eligible: 4 } },                                                //   20
       projects: [{ projectCode: "P", overallProgress: 100 }]                                       //  400
@@ -145,16 +173,16 @@ describe("buildStrengthSummary — raw total, visible path, sources, legacy rank
   });
   it("Learning Practice + Study alone fill the path exactly: 1440 + 560 = 2000 = stage 25 complete", () => {
     const study = Object.fromEntries(Array.from({ length: 28 }, (_, i) => ["m" + i, { completed: 3, eligible: 3 }]));
-    const s = buildStrengthSummary({ finalizedCount: 0, trainings: Object.fromEntries(ALL_IDS.map(id => [id, { bestPercentage: 100 }])), study, projects: [] });
+    const s = buildStrengthSummary({ finalizedPercentages: [], trainings: Object.fromEntries(ALL_IDS.map(id => [id, { bestPercentage: 100 }])), study, projects: [] });
     expect(s).toMatchObject({ practicePoints: 1440, studyPoints: 560, rawTotalPoints: 2000, stagePoints: 2000, stageNumber: 25, pathComplete: true });
   });
   it("zero everything → stage 1, 0 / 80, 0 / 2000; the mixed example 300 + 32 + 10 + 200 = 542 → stage 7, 62 / 80, 78%", () => {
     expect(buildStrengthSummary({})).toMatchObject({ rawTotalPoints: 0, totalPoints: 0, stageNumber: 1, stagePoints: 0, withinStagePoints: 0, stagePercent: 0, nextStageNumber: 2, nextStageRemaining: 80, pointsToMaximum: 2000, projects: [] });
-    expect(buildStrengthSummary({ finalizedCount: 3, trainings: { T02: { bestPercentage: 80 } }, study: { m: { completed: 1, eligible: 2 } }, projects: [{ projectCode: "P", overallProgress: 50 }] }))
+    expect(buildStrengthSummary({ finalizedPercentages: [100, 100, 100], trainings: { T02: { bestPercentage: 80 } }, study: { m: { completed: 1, eligible: 2 } }, projects: [{ projectCode: "P", overallProgress: 50 }] }))
       .toMatchObject({ examPoints: 300, practicePoints: 32, studyPoints: 10, projectPoints: 200, rawTotalPoints: 542, stageNumber: 7, withinStagePoints: 62, stagePercent: 78, nextStageNumber: 8, nextStageRemaining: 18 });
   });
   it("legacyRank (six-rank cadence, historical events only) is carried but never decides the stage", () => {
-    const s = buildStrengthSummary({ finalizedCount: 4 });
+    const s = buildStrengthSummary({ finalizedPercentages: [100, 100, 100, 100] });
     expect(s.stageNumber).toBe(6);                                       // 400 points → stage 6 on the 25-stage path
     expect(s.legacyRank).toEqual({ tier: "beginner", level: 1, nextTier: "bronze", levelBlockSize: 400, withinLevelPoints: 0, nextLevelRemaining: 400, percent: 0 });
     expect(rankTierFromStrength(399)).toBeNull(); expect(rankTierFromStrength(2400)).toBe("legendary"); expect(RANK_ORDER).toHaveLength(6);

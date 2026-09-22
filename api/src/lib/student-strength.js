@@ -2,7 +2,12 @@
 //
 // Four authoritative sources feed one RAW total; the visible path is 25 stages of 80 points (2000 points):
 //
-//   FINALIZED EXAMS    — each server-finalized assignment result                 = 100 points (uncapped)
+//   FINALIZED SCHOOL EXAMS — each CURRENT authoritative final assignment result   = round(clamp(final %, 0, 100))
+//                        (0..100 per exam, uncapped total). A result contributes ONLY while its gradingStatus is
+//                        "final" (pending manual review / in progress / scheduled / closed-without-final = 0); the
+//                        value is always DERIVED from the current final percentage, never a stored/incremented
+//                        counter, so a later teacher correction (70% → 85%, or 90% → 60%) moves it automatically.
+//                        Examples: 100% = 100, 70% = 70, 20% = 20, 0% = 0.
 //   LEARNING PRACTICE  — each of the 36 canonical Learning-Practice items (T01–T30 AND F01–F06), from its BEST
 //                        percentage                                             = round(best × 40 / 100)  (≤ 40 each)
 //                        36 × 40 = 1440. One item = ONE bucket, wherever it was opened (Training Library or the
@@ -29,7 +34,8 @@
 // LEGACY six-rank cadence (beginner … legendary, one tier per 400 raw points): kept ONLY so historical achievement
 // events and their renderers stay readable (`legacyRank` on the summary, RANK_ORDER). It never decides the stage.
 
-const FINALIZED_EXAM_STRENGTH_POINTS = 100;
+// ── Finalized school exams (each result contributes its rounded final percentage, 0..100) ─────────────────────
+const FINALIZED_EXAM_MAX_POINTS = 100;
 
 // ── Learning Practice (the 36 canonical items) ──────────────────────────────────────────────────────────────
 const LEARNING_PRACTICE_MAX_POINTS = 40;
@@ -71,9 +77,20 @@ function roundPoints(value) {
   return Math.round(Number(value) || 0);
 }
 
-/** Exam contribution: finalized count × 100. */
-function strengthFromFinalizedCount(finalizedCount) {
-  return safeCount(finalizedCount) * FINALIZED_EXAM_STRENGTH_POINTS;
+/** Exam contribution of ONE finalized result: its FINAL percentage, clamped to 0..100 and rounded half-up
+ *  (100 → 100, 70 → 70, 20 → 20, 0 → 0, 84.5 → 85; NaN / <0 / >100 → safe 0..100). */
+function examStrengthFromPercentage(finalPercentage) {
+  return roundPoints(clampPercent(finalPercentage));
+}
+/** Exam total: the sum of every CURRENT FINAL result's rounded percentage. The caller passes only the percentages
+ *  of results whose gradingStatus is "final" (see student-dashboard / manage-students) — pending review and every
+ *  non-final state are simply absent, contributing 0. A non-array (an older caller / no assignments) → 0. This is
+ *  DERIVED each time from the authoritative percentages, never a stored counter, so corrections move it. */
+function examPointsFromFinalizedResults(finalizedPercentages) {
+  if (!Array.isArray(finalizedPercentages)) return 0;
+  let total = 0;
+  for (const pct of finalizedPercentages) total += examStrengthFromPercentage(pct);
+  return total;
 }
 /** Whether an id is a canonical Learning-Practice item (T01…T30, F01…F06) — every one of them feeds Strength. */
 function isLearningPracticeItem(trainingId) {
@@ -181,7 +198,7 @@ function legacyRankProgress(totalPoints) {
 
 /**
  * The student's full Strength summary (the dashboard payload):
- *   input  { finalizedCount, trainings, projects: [{ projectCode, overallProgress }], study: { moduleId: { completed, eligible } } }
+ *   input  { finalizedPercentages: number[] (each CURRENT final result's %), trainings, projects: [{ projectCode, overallProgress }], study: { moduleId: { completed, eligible } } }
  *   output { rawTotalPoints, totalPoints (= rawTotalPoints), examPoints, practicePoints, studyPoints, projectPoints,
  *            stagePoints, stageMaxPoints, stageNumber, stageCount, stageBlockSize, stageFloor, withinStagePoints,
  *            stagePercent, nextStageNumber, nextStageRemaining, pointsToMaximum, isMaximumStage, pathComplete,
@@ -189,8 +206,8 @@ function legacyRankProgress(totalPoints) {
  *            projects: [{ projectCode, overallProgress, strengthPoints }] }
  *   `study` absent (a student with no study document, an older caller) → studyPoints 0.
  */
-function buildStrengthSummary({ finalizedCount, trainings, projects, study } = {}) {
-  const examPoints = strengthFromFinalizedCount(finalizedCount);
+function buildStrengthSummary({ finalizedPercentages, trainings, projects, study } = {}) {
+  const examPoints = examPointsFromFinalizedResults(finalizedPercentages);
   const practicePoints = practicePointsFromTrainings(trainings);
   const studyPoints = studyPointsFromModules(study);
   const projectRows = (Array.isArray(projects) ? projects : []).map(p => {
@@ -204,13 +221,13 @@ function buildStrengthSummary({ finalizedCount, trainings, projects, study } = {
 }
 
 module.exports = {
-  FINALIZED_EXAM_STRENGTH_POINTS,
+  FINALIZED_EXAM_MAX_POINTS,
   LEARNING_PRACTICE_MAX_POINTS, LEARNING_PRACTICE_ITEM_ID, LEARNING_PRACTICE_ITEM_COUNT, LEARNING_PRACTICE_MAX_TOTAL,
   STUDY_MODULE_MAX_POINTS, STUDY_MODULE_COUNT, STUDY_MAX_TOTAL,
   PROJECT_MAX_STRENGTH_POINTS,
   STRENGTH_STAGE_COUNT, STRENGTH_STAGE_POINTS, STRENGTH_STAGE_MAX_POINTS,
   RANK_STEP_STRENGTH_POINTS, RANK_ORDER,
-  clampPercent, strengthFromFinalizedCount, isLearningPracticeItem, strengthFromTrainingBest, trainingMaxStrengthPoints,
+  clampPercent, examStrengthFromPercentage, examPointsFromFinalizedResults, isLearningPracticeItem, strengthFromTrainingBest, trainingMaxStrengthPoints,
   strengthFromTrainingResult, strengthFromProjectProgress, practicePointsFromTrainings,
   studyPointsForModule, studyPointsFromModules,
   strengthStageProgress, rankTierFromStrength, legacyRankProgress, buildStrengthSummary

@@ -689,7 +689,9 @@ async function buildStudentProfile(container, userId) {
 async function buildProfileStrength(container, student, classroom, history) {
   try {
     const now = new Date().toISOString();
-    const finalizedCount = history.filter(h => h.gradingStatus === "final").length;
+    // Exam Strength = the sum of the CURRENT final results' rounded percentages (the same authority the medal loop
+    // below reads), derived from history — never a flat per-exam award. Only gradingStatus==="final" contributes.
+    const finalizedPercentages = history.filter(h => h.gradingStatus === "final").map(h => Number(h.latestPercentage));
     const medals = { total: 0, gold: 0, silver: 0, bronze: 0 };
     for (const h of history) { if (h.gradingStatus !== "final" || h.latestPercentage === null) continue; const t = medalTierFromPercentage(Number(h.latestPercentage)); if (t) { medals.total++; medals[t]++; } }
     const [practiceDoc, studyDoc, projects] = await Promise.all([
@@ -698,7 +700,7 @@ async function buildProfileStrength(container, student, classroom, history) {
       classroom && normalizeClassStatus(classroom) !== "archived" ? loadStudentProjects(container, classroom, String(student.classId || ""), student.userId, now) : Promise.resolve([])
     ]);
     const study = studyModulesForStrength(studyDoc, listLearningCourses().map(x => x.courseId));
-    const strength = buildStrengthSummary({ finalizedCount, trainings: practiceDoc && practiceDoc.trainings, study, projects: projects.map(p => ({ projectCode: p.projectCode, overallProgress: p.summary.overallProgress })) });
+    const strength = buildStrengthSummary({ finalizedPercentages, trainings: practiceDoc && practiceDoc.trainings, study, projects: projects.map(p => ({ projectCode: p.projectCode, overallProgress: p.summary.overallProgress })) });
     const rec = (await aggregateRecognition(container, [student.userId])).get(student.userId);
     return {
       strength,

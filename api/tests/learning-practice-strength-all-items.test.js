@@ -44,7 +44,7 @@ describe("policy — every Learning-Practice id feeds Strength", () => {
     };
     expect(practicePointsFromTrainings(trainings)).toBe(40 + 32 + 16 + 40 + 39 + 34);
     expect(practicePointsFromTrainings(Object.fromEntries(F_IDS.map(id => [id, { bestPercentage: 100 }])))).toBe(240);
-    const s = buildStrengthSummary({ finalizedCount: 3, trainings, projects: [] });
+    const s = buildStrengthSummary({ finalizedPercentages: [100, 100, 100], trainings, projects: [] });
     expect(s).toMatchObject({ practicePoints: 201, rawTotalPoints: 501, stageNumber: 7, withinStagePoints: 21 });
   });
 });
@@ -144,7 +144,7 @@ describe("API — every item advertises and awards Strength (max 40)", () => {
     expect(stored.trainings.F01).toMatchObject({ bestPercentage: 94, bestPoints: 38, attempts: 2 });
     expect(stored.trainings.F06).toMatchObject({ bestPercentage: 85, bestPoints: 34, attempts: 2 });
     expect(practicePointsFromTrainings(stored.trainings)).toBe(72);
-    expect(buildStrengthSummary({ finalizedCount: 0, trainings: stored.trainings, projects: [] })).toMatchObject({ practicePoints: 72, rawTotalPoints: 72, stageNumber: 1 });
+    expect(buildStrengthSummary({ finalizedPercentages: [], trainings: stored.trainings, projects: [] })).toMatchObject({ practicePoints: 72, rawTotalPoints: 72, stageNumber: 1 });
     const list = await get(studentDeps(ctx));
     expect(list.jsonBody.trainings.find(t => t.trainingId === "F01").best).toMatchObject({ bestPercentage: 94, bestPoints: 38, maxPoints: 40, attempts: 2 });
     expect((await dash(ctx)).jsonBody.strength).toMatchObject({ practicePoints: 72, rawTotalPoints: 72, stagePoints: 72, stageNumber: 1, withinStagePoints: 72 });
@@ -182,7 +182,7 @@ describe("API — every item advertises and awards Strength (max 40)", () => {
     expect((await get(studentDeps(ctx), "T10")).jsonBody.best).toMatchObject({ bestPercentage: 100, bestPoints: 40, attempts: 2 });
   });
   it("36 perfect items through the policy = 1440 practice points = stage 19 on the path (1440 / 80 = 18 → stage 19, 0 / 80)", async () => {
-    const s = buildStrengthSummary({ finalizedCount: 0, trainings: Object.fromEntries(ALL_IDS.map(id => [id, { bestPercentage: 100 }])), projects: [] });
+    const s = buildStrengthSummary({ finalizedPercentages: [], trainings: Object.fromEntries(ALL_IDS.map(id => [id, { bestPercentage: 100 }])), projects: [] });
     expect(s).toMatchObject({ practicePoints: 1440, rawTotalPoints: 1440, stageNumber: 19, withinStagePoints: 0, stagePercent: 0 });
   });
 });
