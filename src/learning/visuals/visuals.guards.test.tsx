@@ -65,6 +65,8 @@ describe("visuals — motion always respects reduced motion", () => {
   // @media query is retained as the additional CSS-level safety net.)
   const MOTION_SELECTORS = [
     "animateMotion",
+    // SMIL <animateTransform> (translate travel — e.g. the trunk's tagged VLAN frames crossing the one cable).
+    "animateTransform",
     // SMIL <animate> (opacity reveals used from Batch 4 onward — e.g. collision burst, APIPA fallback, CIDR prefix
     // growth, encapsulation wrappers, CLI prompt reveals). Always gated by the reducedMotion prop.
     "animate",

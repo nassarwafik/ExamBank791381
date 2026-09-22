@@ -38,6 +38,31 @@ describe("Batch 6 — trunk-multi-vlan (PDF 147): one cable, VLAN 10/20/30 tagge
     expect([...container.querySelectorAll("[data-tagvlan]")].map(g => g.getAttribute("data-tagvlan"))).toEqual(["10", "20", "30"]);
     expect(t).not.toContain("Dot1Q");   // Dot1Q term arrives on PDF 152
   });
+  it("motion ON: the three tagged frames travel the ONE cable Switch 1 → Switch 2 (left → right), staggered one-shot (freeze)", () => {
+    const { container } = render(<TrunkMultiVlan ariaLabel="x" reducedMotion={false} />);
+    const xforms = [...container.querySelectorAll("animateTransform")];
+    expect(xforms.length).toBe(3);                                   // one traveling frame per VLAN
+    const begins = xforms.map(a => a.getAttribute("begin"));
+    expect(new Set(begins).size).toBe(3);                            // staggered, not simultaneous
+    for (const a of xforms) {
+      expect(a.getAttribute("type")).toBe("translate");
+      expect(a.getAttribute("fill")).toBe("freeze");                 // one-shot: rests arrived at Switch 2
+      const from = a.getAttribute("from")!.split(/\s+/).map(Number);
+      const to = a.getAttribute("to")!.split(/\s+/).map(Number);
+      expect(to[0]).toBeGreaterThan(from[0]);                        // travels left → right (Switch 1 → Switch 2)
+      expect(to[1]).toBe(from[1]);                                   // stays on the single trunk lane (no drift)
+    }
+  });
+  it("reduced motion: NO active animation, but the three tagged frames remain parked along the one cable (complete still frame)", () => {
+    const { container } = render(<TrunkMultiVlan ariaLabel="x" reducedMotion={true} />);
+    expect(container.querySelectorAll("animateTransform").length).toBe(0);
+    expect(container.querySelectorAll("animateMotion, animate").length).toBe(0);
+    const parked = [...container.querySelectorAll("[data-tagvlan]")];
+    expect(parked.length).toBe(3);
+    const xs = parked.map(g => Number((g.getAttribute("transform") || "").match(/translate\(([\d.]+)/)?.[1]));
+    expect(xs.every(x => Number.isFinite(x))).toBe(true);
+    expect(xs[0] < xs[1] && xs[1] < xs[2]).toBe(true);              // spread out along the cable, in order
+  });
 });
 
 // ── m04 Dot1Q (PDF 152) ──

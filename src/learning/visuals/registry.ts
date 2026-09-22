@@ -250,7 +250,7 @@ const VISUALS: readonly RegisteredVisual[] = [
   { id: "791381/m03/svi-gateway", component: SviGateway, motion: true },
   { id: "791381/m03/tagged-untagged-native", component: TaggedUntaggedNative, motion: true },
   // Batch 6 — Router on a Stick & Trunk (m04)
-  { id: "791381/m04/trunk-multi-vlan", component: TrunkMultiVlan, motion: false },
+  { id: "791381/m04/trunk-multi-vlan", component: TrunkMultiVlan, motion: true },
   { id: "791381/m04/dot1q-tag-frame", component: Dot1qTagFrame, motion: true },
   { id: "791381/m04/router-on-a-stick", component: RouterOnAStick, motion: false },
   { id: "791381/m04/inter-vlan-flow", component: InterVlanFlow, motion: true },

@@ -64,14 +64,18 @@
   background:var(--eb-surface); border:1px dashed var(--eb-line-2); border-radius:var(--eb-r);
 }
 
-/* ---------- subtle motion (CSS-driven pulse) ---------- */
-.eb-visual-pulse{ transform-box:fill-box; transform-origin:center; animation:eb-visual-pulse 3.2s var(--eb-ease, ease-in-out) infinite; }
-@keyframes eb-visual-pulse{ 0%,100%{ opacity:1; } 50%{ opacity:.62; } }
+/* ---------- calm but PERCEPTIBLE motion (CSS-driven) ----------
+   Opacity-only pulses around .85–.90 → 1 read as static to a learner. Every looping pulse therefore combines a
+   deeper opacity swing with a small transform (scale / translate) so the movement is actually noticeable while
+   staying calm. Transforms are paint-only (transform-box:fill-box, .eb-visual keeps overflow:visible) so nothing
+   reflows or clips. All classes remain neutralized under prefers-reduced-motion (see the @media blocks). */
+.eb-visual-pulse{ transform-box:fill-box; transform-origin:center; animation:eb-visual-pulse 3s var(--eb-ease, ease-in-out) infinite; }
+@keyframes eb-visual-pulse{ 0%,100%{ opacity:1; transform:scale(1); } 50%{ opacity:.5; transform:scale(1.14); } }
 
-.eb-visual-leaf-anim{ transform-box:fill-box; transform-origin:center; animation:eb-visual-breathe 3.6s var(--eb-ease, ease-in-out) infinite; }
-.eb-visual-pillar-anim{ animation:eb-visual-rise 3.6s var(--eb-ease, ease-in-out) infinite; }
-@keyframes eb-visual-breathe{ 0%,100%{ opacity:.9; } 50%{ opacity:1; } }
-@keyframes eb-visual-rise{ 0%,100%{ opacity:.85; } 50%{ opacity:1; } }
+.eb-visual-leaf-anim{ transform-box:fill-box; transform-origin:center; animation:eb-visual-breathe 3.2s var(--eb-ease, ease-in-out) infinite; }
+.eb-visual-pillar-anim{ transform-box:fill-box; transform-origin:center; animation:eb-visual-rise 3.2s var(--eb-ease, ease-in-out) infinite; }
+@keyframes eb-visual-breathe{ 0%,100%{ opacity:.6; transform:scale(.93); } 50%{ opacity:1; transform:scale(1.07); } }
+@keyframes eb-visual-rise{ 0%,100%{ opacity:.62; transform:translateY(3px); } 50%{ opacity:1; transform:translateY(-3px); } }
 
 /* Reduced motion: neutralize ALL CSS motion. SMIL <animateMotion> dots are additionally gated in the components
    (they are not rendered at all when the shared prefers-reduced-motion hook reports reduced motion). */
@@ -148,15 +152,15 @@
 .eb-visual-packet-static{ fill:var(--eb-primary-strong); }
 
 /* motion classes (all suffixed -anim; disabled under reduced motion below) */
-.eb-visual-glow-anim{ animation:eb-visual-glow 2.6s var(--eb-ease, ease-in-out) infinite; }
-@keyframes eb-visual-glow{ 0%,100%{ opacity:.72; } 50%{ opacity:1; } }
+.eb-visual-glow-anim{ transform-box:fill-box; transform-origin:center; animation:eb-visual-glow 2.6s var(--eb-ease, ease-in-out) infinite; }
+@keyframes eb-visual-glow{ 0%,100%{ opacity:.55; transform:scale(1); } 50%{ opacity:1; transform:scale(1.08); } }
 .eb-visual-sweep-anim{ animation:eb-visual-sweep 3.4s var(--eb-ease, ease-in-out) infinite; }
 @keyframes eb-visual-sweep{ 0%{ transform:translateX(26px); } 100%{ transform:translateX(354px); } }
-.eb-visual-pin-anim{ transform-box:fill-box; transform-origin:center; animation:eb-visual-bob 2.8s var(--eb-ease, ease-in-out) infinite; }
-@keyframes eb-visual-bob{ 0%,100%{ transform:translateY(0); } 50%{ transform:translateY(-3px); } }
+.eb-visual-pin-anim{ transform-box:fill-box; transform-origin:center; animation:eb-visual-bob 2.6s var(--eb-ease, ease-in-out) infinite; }
+@keyframes eb-visual-bob{ 0%,100%{ transform:translateY(0); } 50%{ transform:translateY(-7px); } }
 .eb-visual-route{ stroke:transparent; fill:none; }
-.eb-visual-prefix-anim{ animation:eb-visual-prefix-glow 2.8s var(--eb-ease, ease-in-out) infinite; }
-@keyframes eb-visual-prefix-glow{ 0%,100%{ opacity:.55; } 45%{ opacity:1; } }
+.eb-visual-prefix-anim{ transform-box:fill-box; transform-origin:center; animation:eb-visual-prefix-glow 2.6s var(--eb-ease, ease-in-out) infinite; }
+@keyframes eb-visual-prefix-glow{ 0%,100%{ opacity:.4; transform:scale(1); } 45%{ opacity:1; transform:scale(1.12); } }
 
 @media (prefers-reduced-motion: reduce){
   .eb-visual-glow-anim,

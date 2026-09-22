@@ -1,8 +1,27 @@
+import { useEffect, useRef } from "react";
 import { usePrefersReducedMotion } from "../../ui/usePrefersReducedMotion";
 import type { VisualBlock } from "../content/types";
 import { resolveVisual } from "./registry";
 import { IconWarning } from "../../icons";
 import "./visuals.css";
+
+/**
+ * Restart the SMIL timeline of every animated inline SVG inside `frame` from t=0. Many educational visuals play a
+ * ONE-SHOT sequence (a packet travels, a DORA exchange, an encapsulation build-up) whose `begin` is a fixed offset
+ * from MOUNT. The reader mounts a whole page on navigation, so a one-shot low on the page can finish (fill="freeze")
+ * before the learner scrolls to it — arriving to a frozen final frame that reads as a static picture. Replaying the
+ * timeline once the figure is actually visible makes the sequence noticeable after render. Looping animations restart
+ * seamlessly, so it is safe to apply uniformly. Fully guarded: `setCurrentTime` exists only on real SVG SMIL engines
+ * (a no-op/throw-safe elsewhere), so the still frame always stands when SMIL is unavailable.
+ */
+function restartVisualMotion(frame: HTMLElement): void {
+  const svgs = frame.querySelectorAll<SVGSVGElement>("svg");
+  svgs.forEach(svg => {
+    if (typeof svg.setCurrentTime !== "function") return;
+    if (!svg.querySelector("animate, animateMotion, animateTransform")) return;
+    try { svg.setCurrentTime(0); } catch { /* SMIL not driveable here — the authored still frame stands */ }
+  });
+}
 
 /**
  * Renders a `visual` block: a trusted, registry-resolved SVG illustration wrapped in a semantic <figure>. The
@@ -17,11 +36,30 @@ import "./visuals.css";
 export default function VisualBlockView({ block }: { block: VisualBlock }) {
   const reducedMotion = usePrefersReducedMotion();
   const entry = resolveVisual(block.visualId);
+  const frameRef = useRef<HTMLDivElement | null>(null);
+
+  // Start the visual's motion when it is actually on screen (see restartVisualMotion). One trigger on first
+  // visibility keeps it calm — no perpetual re-runs while scrolling — and revisiting the page naturally replays it
+  // through the component remount. Never runs under reduced motion (the components render no animation at all), and
+  // it degrades to nothing where IntersectionObserver is unavailable (SSR/tests): the animation then simply plays at
+  // mount as before, and the still frame is always correct.
+  useEffect(() => {
+    if (reducedMotion || !entry) return;
+    const frame = frameRef.current;
+    if (!frame || typeof IntersectionObserver === "undefined") return;
+    const io = new IntersectionObserver((entries, obs) => {
+      for (const e of entries) {
+        if (e.isIntersecting) { restartVisualMotion(frame); obs.disconnect(); return; }
+      }
+    }, { threshold: 0.25 });
+    io.observe(frame);
+    return () => io.disconnect();
+  }, [reducedMotion, entry, block.visualId]);
 
   return (
     <figure className="eb-visual-figure">
       {block.title && <p className="eb-visual-title">{block.title}</p>}
-      <div className="eb-visual-frame">
+      <div className="eb-visual-frame" ref={frameRef}>
         {entry
           ? <entry.component ariaLabel={block.alt} reducedMotion={reducedMotion} />
           : (
