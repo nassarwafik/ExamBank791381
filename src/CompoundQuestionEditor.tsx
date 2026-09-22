@@ -1,15 +1,13 @@
 
 import type { BuilderQuestion, BuilderPart, BuilderPartType } from "./examTypes";
-import { QUESTION_TYPE_LABELS } from "./examTypes";
+import { QUESTION_TYPE_LABELS, BUILDER_PART_TYPES } from "./examTypes";
 import { addPart, deletePart, duplicatePart, movePart, newPart, changePartType, partMarksInfo, ordinalLabel } from "./examBuilderState";
 import QuestionBodyEditor from "./QuestionBodyEditor";
 
-// Editor for a compound question's independent parts. Each part chooses its own type and gets the same
-// body editors a standalone question uses. Part marks are optional: when every part has marks the total
-// is compared against the question's marks (mismatch warned, never silently changed); when marks are
-// blank the engine splits equally, shown here as "توزيع تلقائي".
-
-const PART_TYPES: BuilderPartType[] = ["multipleChoice", "trueFalse", "multiTrueFalse", "shortAnswer", "fillBlank", "wordBank", "matching", "ordering", "tableFill", "cliFill"];
+// Editor for a compound question's independent parts. Each part chooses its own type (the canonical part registry —
+// every question type except compound) and gets the same body editors a standalone question uses. Part marks are
+// optional: when every part has marks the total is compared against the question's marks (mismatch warned, never
+// silently changed); when marks are blank the engine splits equally, shown here as "توزيع تلقائي".
 
 type Props = { question: BuilderQuestion; onChange: (patch: Partial<BuilderQuestion>) => void; disabled?: boolean };
 
@@ -33,7 +31,7 @@ export default function CompoundQuestionEditor({ question, onChange, disabled }:
           <div className="sb-part-head">
             <b className="sb-part-badge">{p.label?.trim() ? p.label : ordinalLabel(i)}</b>
             <select className="sb-input sb-input-sm" value={p.type} onChange={e => patchPart(p.id, changePartType(p, e.target.value as BuilderPartType))} disabled={disabled}>
-              {PART_TYPES.map(t => <option key={t} value={t}>{QUESTION_TYPE_LABELS[t]}</option>)}
+              {BUILDER_PART_TYPES.map(t => <option key={t} value={t}>{QUESTION_TYPE_LABELS[t]}</option>)}
             </select>
             <input className="sb-input sb-input-sm" value={p.label ?? ""} placeholder="التسمية (أ، ب...)" onChange={e => patchPart(p.id, { label: e.target.value })} disabled={disabled} />
             <input className="sb-input sb-input-xs" type="number" step="0.25" value={p.marks ?? ""} placeholder="علامة" onChange={e => patchPart(p.id, { marks: e.target.value === "" ? undefined : Number(e.target.value) })} disabled={disabled} />

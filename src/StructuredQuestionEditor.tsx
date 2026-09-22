@@ -1,12 +1,13 @@
 
 import { useState } from "react";
-import type { BuilderQuestion, BuilderQuestionType } from "./examTypes";
-import { QUESTION_TYPE_LABELS } from "./examTypes";
-import { changeQuestionType } from "./examBuilderState";
-import QuestionBodyEditor from "./QuestionBodyEditor";
-import CompoundQuestionEditor from "./CompoundQuestionEditor";
+import type { BuilderQuestion } from "./examTypes";
+import QuestionComposer from "./QuestionComposer";
 
-const QUESTION_TYPES: BuilderQuestionType[] = ["multipleChoice", "trueFalse", "multiTrueFalse", "shortAnswer", "fillBlank", "wordBank", "matching", "ordering", "tableFill", "cliFill", "compound"];
+// Exam-specific chrome around a question: collapse, the displayed-number badge, and the row actions (preview, move,
+// duplicate, delete), plus the exam-only metadata (display number, marks, shared stimulus/group, move-to-section).
+// The actual question CONTENT — type selector, prompt, and type-specific / compound body — is delegated to the shared
+// QuestionComposer, so the Live Challenge composer can reuse the same content editors without inheriting this
+// exam-only chrome. This component adds no second body-selection logic of its own.
 
 type Props = {
   question: BuilderQuestion;
@@ -33,9 +34,6 @@ export default function StructuredQuestionEditor(props: Props) {
       <div className="sb-q-head">
         <button type="button" className="sb-collapse" onClick={() => setOpen(o => !o)} title={open ? "طيّ" : "فتح"}>{open ? "▾" : "▸"}</button>
         <span className="sb-q-badge">{q.displayNumber?.trim() ? q.displayNumber : index + 1}</span>
-        <select className="sb-input sb-input-sm" value={q.presentationType} onChange={e => onChange(changeQuestionType(q, e.target.value as BuilderQuestionType))} disabled={disabled}>
-          {QUESTION_TYPES.map(t => <option key={t} value={t}>{QUESTION_TYPE_LABELS[t]}</option>)}
-        </select>
         <span className="sb-spacer" />
         <button type="button" className="sb-icon-btn" title="معاينة الطالب" onClick={onPreview} disabled={disabled}>👁</button>
         <button type="button" className="sb-icon-btn" title="أعلى" onClick={() => onMove(-1)} disabled={disabled || index === 0}>↑</button>
@@ -66,11 +64,7 @@ export default function StructuredQuestionEditor(props: Props) {
             )}
           </div>
 
-          <textarea className="sb-input sb-textarea" value={q.text ?? ""} placeholder={q.presentationType === "compound" ? "نص السؤال المركّب (اختياري)" : "نص السؤال"} onChange={e => onChange({ text: e.target.value })} disabled={disabled} />
-
-          {q.presentationType === "compound"
-            ? <CompoundQuestionEditor question={q} onChange={onChange} disabled={disabled} />
-            : <QuestionBodyEditor node={q} type={q.presentationType} onChange={onChange} disabled={disabled} />}
+          <QuestionComposer question={q} onChange={onChange} disabled={disabled} />
         </div>
       )}
     </div>
