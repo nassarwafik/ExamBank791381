@@ -33,6 +33,18 @@ describe("StudentGamesPage — the student's dedicated Games destination", () =>
     expect(screen.getByRole("button", { name: /العودة إلى الألعاب/ })).toBeTruthy();
   });
 
+  it("REGRESSION: the student game is the default student mode over the STUDENT API (student token) — never the teacher preview", async () => {
+    const calls: [string, RequestInit & { headers: Record<string, string> }][] = [];
+    globalThis.fetch = vi.fn(async (u: string, i: RequestInit & { headers: Record<string, string> }) => { calls.push([u, i]); return { ok: true, status: 200, json: async () => ({ ok: true, active: null, best: { percentage: 70, correct: 7, total: 10, bestStreak: 3, elapsedMs: 0, at: "" } }) }; }) as unknown as typeof fetch;
+    render(<StudentGamesPage token="stu-tok" onBack={vi.fn()} />);
+    fireEvent.click(screen.getByRole("button", { name: "ابدأ" }));
+    await screen.findByText(/أفضل نتيجة محفوظة/);                                   // the persisted student best record is still shown
+    expect(calls[0][0]).toBe("/api/game-number-conversion");
+    expect(calls[0][1].headers["x-student-token"]).toBe("stu-tok");
+    expect(calls.some(c => c[0].includes("preview"))).toBe(false);
+    expect(screen.queryByText("معاينة المعلم — لا يتم حفظ النتائج")).toBeNull();
+  });
+
   it("offers a clear back path to the portal", () => {
     const onBack = vi.fn();
     render(<StudentGamesPage token="t" onBack={onBack} />);

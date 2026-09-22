@@ -12,6 +12,11 @@ import { DIRECTION_META, PATH_META, LEVEL_META, emptyBits, formatElapsed, guidan
 // the typed FINAL answer is what the SERVER grades (it owns generation, grading and the best record). A malformed
 // answer is a format message only — it keeps the task, the board and the typed text, and never resyncs.
 // No Strength, no medals.
+//
+// `mode` — the SAME component serves the teacher preview (TeacherNumberConversionPreview injects a non-persistent
+// teacher-preview client): "teacher-preview" only adds a quiet preview notice and never shows a saved best record.
+// The default ("student") is the unchanged student game.
+export type NumberConversionMode = "student" | "teacher-preview";
 type Phase = "loading" | "home" | "playing" | "result" | "error";
 type Feedback =
   | { kind: "hint"; hint: string }
@@ -21,7 +26,8 @@ type Feedback =
   | null;
 const ANSWER_MSG_ID = "eb-ncgame-answer-msg";
 
-export default function NumberConversionGame({ token, onBack, client: injected }: { token: string; onBack: () => void; client?: NumberConversionClient }) {
+export default function NumberConversionGame({ token, onBack, client: injected, mode = "student" }: { token: string; onBack: () => void; client?: NumberConversionClient; mode?: NumberConversionMode }) {
+  const preview = mode === "teacher-preview";
   const reducedMotion = usePrefersReducedMotion();
   const clientRef = useRef<NumberConversionClient>(injected || createNumberConversionClient(token));
   const [phase, setPhase] = useState<Phase>("loading");
@@ -131,6 +137,9 @@ export default function NumberConversionGame({ token, onBack, client: injected }
     </div>
   );
 
+  // Teacher preview notice: a static note (not a live region, not a warning) shown on every screen of the preview.
+  const previewNote = preview ? <p className="eb-ncgame-preview-note" role="note">معاينة المعلم — لا يتم حفظ النتائج</p> : null;
+
   if (phase === "loading") {
     return <main className="student-portal eb-student-shell eb-games-surface eb-ncgame" dir="rtl"><p className="eb-muted eb-sp-status" role="status">جارٍ تحميل اللعبة...</p></main>;
   }
@@ -139,12 +148,13 @@ export default function NumberConversionGame({ token, onBack, client: injected }
     return (
       <main className="student-portal eb-student-shell eb-games-surface eb-ncgame" dir="rtl">
         <BackBar label="العودة إلى الألعاب" />
+        {previewNote}
         <section className="eb-ncgame-home" aria-labelledby="eb-ncgame-title">
           <header className="eb-ncgame-head">
             <h1 id="eb-ncgame-title" className="eb-ncgame-title">تحدّي أنظمة العد</h1>
             <p className="eb-ncgame-sub">حوّل بين العشري والثنائي والسادس عشر باستخدام صناديق القيم — ١٠ مهمات في كل جولة.</p>
           </header>
-          {best && (
+          {best && !preview && (
             <p className="eb-ncgame-best" role="note">أفضل نتيجة محفوظة: <strong dir="ltr">{best.percentage}%</strong> ({best.correct}/{best.total}) · أفضل سلسلة {best.bestStreak}</p>
           )}
           {error && <div className="platform-error" role="alert">{error}</div>}
@@ -178,6 +188,7 @@ export default function NumberConversionGame({ token, onBack, client: injected }
   if (phase === "result" && result) {
     return (
       <main className="student-portal eb-student-shell eb-games-surface eb-ncgame" dir="rtl">
+        {previewNote}
         <section className="eb-ncgame-result" aria-labelledby="eb-ncgame-result-title">
           <h1 id="eb-ncgame-result-title" className="eb-ncgame-title">تحدّي أنظمة العد</h1>
           <p className="eb-ncgame-score"><strong dir="ltr">{result.correct} / {result.total}</strong></p>
@@ -186,7 +197,7 @@ export default function NumberConversionGame({ token, onBack, client: injected }
             <li>أفضل سلسلة صحيحة: <strong dir="ltr">{result.bestStreak}</strong></li>
             <li>الوقت: <strong dir="ltr">{formatElapsed(result.elapsedMs)}</strong></li>
           </ul>
-          {best && <p className="eb-ncgame-best" role="note">أفضل نتيجة محفوظة: <strong dir="ltr">{best.percentage}%</strong> ({best.correct}/{best.total})</p>}
+          {best && !preview && <p className="eb-ncgame-best" role="note">أفضل نتيجة محفوظة: <strong dir="ltr">{best.percentage}%</strong> ({best.correct}/{best.total})</p>}
           <div className="eb-ncgame-actions">
             <button type="button" className="eb-button is-primary" onClick={() => startRound(path, level)}>إعادة المحاولة</button>
             <button type="button" className="eb-button" onClick={() => { setResult(null); setAnswerText(""); setPhase("home"); }}>تحدٍّ جديد</button>
@@ -207,6 +218,7 @@ export default function NumberConversionGame({ token, onBack, client: injected }
   return (
     <main className={"student-portal eb-student-shell eb-games-surface eb-ncgame" + (reducedMotion ? " is-reduced-motion" : "")} dir="rtl">
       <BackBar label="العودة إلى الألعاب" />
+      {previewNote}
       <section className="eb-ncgame-play" aria-labelledby="eb-ncgame-play-title">
         <header className="eb-ncgame-playhead">
           <h1 id="eb-ncgame-play-title" className="eb-ncgame-title">تحدّي أنظمة العد</h1>
