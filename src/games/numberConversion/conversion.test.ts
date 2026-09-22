@@ -1,7 +1,7 @@
 import { describe, it, expect } from "vitest";
 import {
   PLACES, NIBBLE_PLACES, BIT_WIDTH, emptyBits, valueFromBits, binaryString, activePlaces, nibbleHexDigit, hexString,
-  nibbleWeightAt, boardViewFor, readoutPolicy,
+  nibbleWeightAt, boardViewFor, readoutPolicy, guidanceFor, answerInputFor, sourceValueOf,
   targetReadout, targetIsHex, DIRECTION_META, PATH_META, LEVEL_META, formatElapsed, type Bit,
 } from "./conversion";
 
@@ -69,17 +69,58 @@ describe("board views — global octet vs hex nibble weights (Fix 1)", () => {
   });
 });
 
-describe("assistance-level readout policy — genuinely different scaffolding (Fix 2)", () => {
-  it("guided shows everything; practice hides the derived target; challenge shows boxes only until Check", () => {
-    expect(readoutPolicy("guided", false)).toEqual({ showSum: true, showDerived: true, showBinaryLine: true, showNibbleHexLive: true });
-    expect(readoutPolicy("practice", false)).toEqual({ showSum: true, showDerived: false, showBinaryLine: true, showNibbleHexLive: false });
-    expect(readoutPolicy("challenge", false)).toEqual({ showSum: false, showDerived: false, showBinaryLine: false, showNibbleHexLive: false });
-    // guided and challenge are NOT identical while working
-    expect(readoutPolicy("guided", false)).not.toEqual(readoutPolicy("challenge", false));
-    // after Check / reveal (locked) every level shows the full teaching readout
+describe("readout policy — NO level leaks a derived answer before resolution", () => {
+  it("unresolved: every level prints nothing derived; resolved (locked): every level shows the full teaching readout", () => {
+    const none = { showSum: false, showDerived: false, showBinaryLine: false, showNibbleHexLive: false };
+    const all = { showSum: true, showDerived: true, showBinaryLine: true, showNibbleHexLive: true };
     for (const l of ["guided", "practice", "challenge"] as const) {
-      expect(readoutPolicy(l, true)).toEqual({ showSum: true, showDerived: true, showBinaryLine: true, showNibbleHexLive: true });
+      expect(readoutPolicy(l, false)).toEqual(none);
+      expect(readoutPolicy(l, true)).toEqual(all);
     }
+  });
+});
+
+describe("assistance levels differ in GUIDANCE, never in answer leakage", () => {
+  const DIRS = ["dec2bin", "bin2dec", "bin2hex", "hex2bin", "dec2hex", "hex2dec"] as const;
+  it("guided = direction-specific method; practice = short; challenge = none", () => {
+    for (const d of DIRS) {
+      const g = guidanceFor(d, "guided");
+      const p = guidanceFor(d, "practice");
+      expect(g).toBeTruthy();
+      expect(p).toBeTruthy();
+      expect(g).not.toBe(p);
+      expect(guidanceFor(d, "challenge")).toBeNull();
+    }
+    expect(new Set(DIRS.map(d => guidanceFor(d, "guided"))).size).toBe(6);      // each direction has its own method
+  });
+  it("guidance is method-only: it never contains digits beyond the positional weights", () => {
+    for (const d of DIRS) for (const l of ["guided", "practice"] as const) {
+      const digits = (guidanceFor(d, l) || "").match(/\d+/g) || [];
+      for (const n of digits) expect([1, 2, 4, 8, 16, 32, 64, 128]).toContain(Number(n));
+    }
+  });
+});
+
+describe("final-answer input per target base", () => {
+  it("binary / decimal use a numeric keypad; hex uses text; placeholders are examples, lengths fit the octet", () => {
+    expect(answerInputFor(2)).toEqual({ inputMode: "numeric", placeholder: "مثال: 00101101", maxLength: 8, subscript: "₂" });
+    expect(answerInputFor(10)).toEqual({ inputMode: "numeric", placeholder: "مثال: 45", maxLength: 3, subscript: "₁₀" });
+    expect(answerInputFor(16)).toEqual({ inputMode: "text", placeholder: "مثال: 3A", maxLength: 2, subscript: "₁₆" });
+  });
+  it("the placeholder example can NEVER be the task's own answer", () => {
+    expect(answerInputFor(2, 45).placeholder).toBe("مثال: 00011010");   // a 45 task must not show 00101101
+    expect(answerInputFor(10, 45).placeholder).toBe("مثال: 26");
+    expect(answerInputFor(16, 58).placeholder).toBe("مثال: 1F");        // a 58 (3A) task must not show 3A
+    expect(answerInputFor(2, 10).placeholder).toBe("مثال: 00101101");   // otherwise the primary example
+    // exhaustive: for every value 0–255 and each target base, the placeholder differs from that value's canonical form
+    const canon = (v: number, b: number) => b === 2 ? v.toString(2).padStart(8, "0") : b === 16 ? v.toString(16).toUpperCase().padStart(2, "0") : String(v);
+    for (let v = 0; v <= 255; v++) for (const b of [2, 10, 16]) expect(answerInputFor(b, v).placeholder).not.toBe("مثال: " + canon(v, b));
+  });
+  it("sourceValueOf parses the displayed source in its base", () => {
+    expect(sourceValueOf("45", 10)).toBe(45);
+    expect(sourceValueOf("00101101", 2)).toBe(45);
+    expect(sourceValueOf("3A", 16)).toBe(58);
+    expect(sourceValueOf("", 10)).toBeUndefined();
   });
 });
 

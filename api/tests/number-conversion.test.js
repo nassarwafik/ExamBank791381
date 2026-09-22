@@ -2,7 +2,7 @@ import { describe, it, expect } from "vitest";
 import {
   PLACES, NIBBLE_PLACES, BIT_WIDTH, DIRECTION_IDS, PATHS,
   renderInBase, bitsFromValue, valueFromBits, isValidBits, activePlaces, nibblesOf, nibbleBreakdown,
-  buildTask, publicTask, generateRound, evaluateBits, solutionBits, hintForTask, explanationForTask, normalizeValue,
+  buildTask, publicTask, generateRound, parseAnswer, evaluateAnswer, canonicalAnswerForTask, solutionBits, hintForTask, explanationForTask, normalizeValue,
 } from "../src/lib/number-conversion.js";
 
 // The pure conversion engine — deterministic generation + server-authoritative grading over the 8-bit octet model,
@@ -98,6 +98,44 @@ describe("generator — deterministic, 0–255, only bases 2/10/16, all six dire
       expect(round[i].direction + ":" + round[i].value).not.toBe(round[i - 1].direction + ":" + round[i - 1].value);
     }
   });
+  it("the default round is exactly 10 tasks with NO duplicate (direction, value) pair anywhere", () => {
+    for (const path of Object.keys(PATHS)) {
+      for (const seed of ["s1", "s2", "s3", "s4", "s5", "s6", "s7", "s8"]) {
+        const round = generateRound(seed, { path });
+        expect(round.length).toBe(10);
+        const keys = round.map(t => t.direction + ":" + t.value);
+        expect(new Set(keys).size, path + " " + seed).toBe(keys.length);
+      }
+    }
+    // also holds for a large round, where collisions would otherwise be likely
+    const big = generateRound("big", { path: "dec-bin", count: 50 });
+    expect(new Set(big.map(t => t.direction + ":" + t.value)).size).toBe(50);
+  });
+  it("two-direction paths always cover BOTH directions; the default mixed round covers ALL SIX", () => {
+    for (const seed of ["a", "b", "c", "d", "e", "f", "g", "h", "i", "j"]) {
+      for (const path of ["dec-bin", "bin-hex", "dec-hex"]) {
+        const dirs = new Set(generateRound(seed, { path }).map(t => t.direction));
+        expect([...dirs].sort(), path + " " + seed).toEqual([...PATHS[path]].sort());
+      }
+      const mixed = new Set(generateRound(seed, { path: "mixed" }).map(t => t.direction));
+      expect(mixed.size, "mixed " + seed).toBe(6);
+    }
+  });
+  it("small explicit counts stay valid + deterministic without impossible coverage", () => {
+    const a = generateRound("tiny", { path: "mixed", count: 3 });
+    expect(a).toEqual(generateRound("tiny", { path: "mixed", count: 3 }));
+    expect(a.length).toBe(3);
+    for (const t of a) { expect(PATHS.mixed).toContain(t.direction); expect(t.value).toBeGreaterThanOrEqual(0); expect(t.value).toBeLessThanOrEqual(255); }
+    expect(new Set(a.map(t => t.direction + ":" + t.value)).size).toBe(3);
+    const one = generateRound("tiny", { path: "dec-bin", count: 1 });
+    expect(one.length).toBe(1);
+    expect(PATHS["dec-bin"]).toContain(one[0].direction);
+  });
+  it("representative different server seeds produce different rounds", () => {
+    const seeds = ["0f1c", "9a7e", "b3d2", "c4e5", "d6f7"];
+    const sigs = new Set(seeds.map(seed => generateRound(seed, { path: "mixed" }).map(t => t.direction + ":" + t.value).join(",")));
+    expect(sigs.size).toBe(seeds.length);
+  });
   it("publicTask omits the value / any answer key (no leak)", () => {
     const t = buildTask("t1", "dec2bin", 45);
     const pub = publicTask(t);
@@ -107,21 +145,54 @@ describe("generator — deterministic, 0–255, only bases 2/10/16, all six dire
   });
 });
 
-describe("evaluator — every direction, boundaries, case-insensitive hex via the shared value", () => {
-  const bitsFor = v => bitsFromValue(v);
-  it("grades the board value against the task value for all six directions", () => {
+describe("final-answer evaluator — the TEXT answer is graded, per target base", () => {
+  it("canonical answers for the pinned curriculum examples (hex = two uppercase digits)", () => {
+    expect(canonicalAnswerForTask(buildTask("t", "dec2bin", 45))).toBe("00101101");
+    expect(canonicalAnswerForTask(buildTask("t", "bin2dec", 45))).toBe("45");
+    expect(canonicalAnswerForTask(buildTask("t", "bin2hex", 182))).toBe("B6");
+    expect(canonicalAnswerForTask(buildTask("t", "hex2bin", 58))).toBe("00111010");
+    expect(canonicalAnswerForTask(buildTask("t", "dec2hex", 58))).toBe("3A");
+    expect(canonicalAnswerForTask(buildTask("t", "hex2dec", 58))).toBe("58");
+    expect(canonicalAnswerForTask(buildTask("t", "dec2hex", 10))).toBe("0A");   // full-octet, two digits
+    expect(canonicalAnswerForTask(buildTask("t", "bin2hex", 0))).toBe("00");
+    expect(canonicalAnswerForTask(buildTask("t", "hex2dec", 255))).toBe("255");
+  });
+  it("every direction: the canonical answer grades correct, a different valid value grades incorrect", () => {
     for (const dir of DIRECTION_IDS) {
-      for (const v of [0, 1, 128, 255, 45, 182, 58]) {
+      for (const v of [0, 1, 10, 128, 255, 45, 182, 58]) {
         const t = buildTask("t", dir, v);
-        expect(evaluateBits(t, bitsFor(v)).correct, dir + " " + v).toBe(true);
-        expect(evaluateBits(t, bitsFor((v + 1) % 256)).correct, dir + " wrong " + v).toBe(false);
+        expect(evaluateAnswer(t, canonicalAnswerForTask(t)), dir + " " + v).toEqual({ status: "correct", value: v });
+        const other = buildTask("t", dir, (v + 1) % 256);
+        expect(evaluateAnswer(t, canonicalAnswerForTask(other)).status, dir + " wrong " + v).toBe("incorrect");
       }
     }
   });
-  it("a malformed submission is graded incorrect, never throwing", () => {
+  it("binary targets accept leading-zero equivalents (max 8 bits)", () => {
     const t = buildTask("t", "dec2bin", 45);
-    expect(evaluateBits(t, [1, 0, 1]).correct).toBe(false);
-    expect(evaluateBits(t, null).correct).toBe(false);
+    expect(evaluateAnswer(t, "101101").status).toBe("correct");
+    expect(evaluateAnswer(t, "00101101").status).toBe("correct");
+    expect(evaluateAnswer(t, "0101101").status).toBe("correct");
+    expect(evaluateAnswer(t, " 00101101 ").status).toBe("correct");      // surrounding whitespace ignored
+  });
+  it("hex targets are case-insensitive and accept one digit when numerically valid", () => {
+    expect(evaluateAnswer(buildTask("t", "dec2hex", 58), "3A").status).toBe("correct");
+    expect(evaluateAnswer(buildTask("t", "dec2hex", 58), "3a").status).toBe("correct");
+    expect(evaluateAnswer(buildTask("t", "bin2hex", 10), "A").status).toBe("correct");
+    expect(evaluateAnswer(buildTask("t", "bin2hex", 10), "a").status).toBe("correct");
+    expect(evaluateAnswer(buildTask("t", "bin2hex", 10), "0a").status).toBe("correct");
+  });
+  it("decimal targets accept Arabic-Indic / Persian digits typed on an Arabic keypad", () => {
+    expect(evaluateAnswer(buildTask("t", "bin2dec", 45), "٤٥").status).toBe("correct");
+    expect(evaluateAnswer(buildTask("t", "hex2dec", 58), "۵۸").status).toBe("correct");
+  });
+  it("MALFORMED answers are format errors (distinct from incorrect) for each target base", () => {
+    const bin = buildTask("t", "dec2bin", 45), dec = buildTask("t", "bin2dec", 45), hex = buildTask("t", "dec2hex", 58);
+    for (const a of ["102010", "", "   ", "0010 1101", "101010101", "1b", "-1"]) expect(evaluateAnswer(bin, a).status, "bin " + a).toBe("malformed");
+    for (const a of ["4x", "256", "999", "-1", "1.5", "", "1e2", "0x2D", "4 5"]) expect(evaluateAnswer(dec, a).status, "dec " + a).toBe("malformed");
+    for (const a of ["G7", "3A5", "0x3A", "", "#3A", "3 A"]) expect(evaluateAnswer(hex, a).status, "hex " + a).toBe("malformed");
+    expect(evaluateAnswer(dec, 45).status).toBe("malformed");                // non-string → malformed, never throws
+    expect(evaluateAnswer(dec, null).status).toBe("malformed");
+    expect(parseAnswer("11", 8)).toEqual({ ok: false });                    // no octal target base
   });
   it("solutionBits returns the correct eight bits (revealed only by policy)", () => {
     expect(solutionBits(buildTask("t", "dec2bin", 45))).toEqual([0, 0, 1, 0, 1, 1, 0, 1]);
@@ -157,6 +228,21 @@ describe("hints (guide, never reveal) + explanations", () => {
     const hexChallenge = hintForTask(buildTask("t", "bin2hex", 182), bitsFromValue(0), "challenge");
     expect(hexChallenge).not.toContain("4 بتات");
     expect(hexChallenge).toBe(challenge);                 // same generic nudge regardless of direction
+  });
+  it("hints use the working board: a correct board with a wrong typed answer gets a read-out hint (no answer leaked)", () => {
+    for (const [dir, v] of [["dec2bin", 45], ["bin2dec", 45], ["bin2hex", 182], ["hex2bin", 58], ["dec2hex", 58], ["hex2dec", 58]]) {
+      const t = buildTask("t", dir, v);
+      const h = hintForTask(t, bitsFromValue(v), "guided", null);
+      expect(h, dir).toContain("صناديقك صحيحة");
+      expect(h, dir).not.toContain(canonicalAnswerForTask(t));
+    }
+  });
+  it("decimal-target hints use the typed value to say too big / too small (guided only)", () => {
+    const t = buildTask("t", "bin2dec", 45);
+    expect(hintForTask(t, bitsFromValue(0), "guided", 60)).toContain("أكبر");
+    expect(hintForTask(t, bitsFromValue(0), "guided", 30)).toContain("أصغر");
+    expect(hintForTask(t, bitsFromValue(0), "practice", 60)).not.toContain("أكبر");
+    expect(hintForTask(t, bitsFromValue(0), "guided", 60)).not.toContain("45");
   });
   it("explanation follows the CONVERSION DIRECTION (pinned curriculum examples; binary-bridge, never ÷16)", () => {
     expect(explanationForTask(buildTask("t", "dec2bin", 45))).toBe("45₁₀ → 32 + 8 + 4 + 1 → 00101101₂");

@@ -80,12 +80,26 @@
 .eb-ncb-sum{ margin:0; color:var(--eb-text-secondary); font-size:var(--eb-fs-14); font-variant-numeric:tabular-nums; }
 .eb-ncb-derived{ margin:0; color:var(--eb-text-heading); font-size:var(--eb-fs-16); }
 .eb-ncb-binary{ margin:0; color:var(--eb-muted); font-size:var(--eb-fs-13); letter-spacing:2px; font-variant-numeric:tabular-nums; }
-.eb-ncb-locked-note{ margin:0; font-size:var(--eb-fs-13); }
 
 .eb-ncgame-feedback{ min-block-size:1.5em; }
-.eb-ncgame-hint, .eb-ncgame-correct, .eb-ncgame-reveal{ margin:0; display:flex; align-items:center; gap:var(--eb-space-1); font-size:var(--eb-fs-14); line-height:var(--eb-lh-body); }
+.eb-ncgame-hint, .eb-ncgame-format{ margin:0; display:flex; align-items:center; gap:var(--eb-space-1); font-size:var(--eb-fs-14); line-height:var(--eb-lh-body); }
 .eb-ncgame-hint{ color:var(--eb-info-tx); }
+/* a format error is announced by text + a ⚠ glyph, never by colour alone */
+.eb-ncgame-format{ color:var(--eb-danger-tx, var(--eb-danger)); font-weight:var(--eb-fw-semibold); }
+.eb-ncgame-correct, .eb-ncgame-reveal{ display:flex; flex-direction:column; gap:4px; font-size:var(--eb-fs-14); line-height:var(--eb-lh-body); }
+.eb-ncgame-correct p, .eb-ncgame-reveal p{ margin:0; display:flex; flex-wrap:wrap; align-items:center; gap:var(--eb-space-1); }
 .eb-ncgame-correct{ color:var(--eb-text-heading); font-weight:var(--eb-fw-semibold); }
+.eb-ncgame-explain{ justify-content:flex-end; color:var(--eb-text-secondary); font-weight:var(--eb-fw-regular, 400); font-variant-numeric:tabular-nums; overflow-wrap:anywhere; }
+/* method guidance under the board (instruction only — never an answer) */
+.eb-ncgame-guidance{ margin:0; color:var(--eb-text-secondary); font-size:var(--eb-fs-13); line-height:var(--eb-lh-body); }
+/* the FINAL answer area — the student's submitted answer, deliberately prominent */
+.eb-ncgame-answer{ display:flex; flex-direction:column; gap:var(--eb-space-2); padding:var(--eb-space-3); background:var(--eb-surface); border:1px solid var(--eb-line); border-radius:var(--eb-r-lg); min-width:0; }
+.eb-ncgame-answer-label{ color:var(--eb-text-heading); font-weight:var(--eb-fw-bold); font-size:var(--eb-fs-16); }
+.eb-ncgame-answer-base{ color:var(--eb-muted); font-weight:var(--eb-fw-semibold); font-size:var(--eb-fs-13); }
+.eb-ncgame-answer-input{ box-sizing:border-box; inline-size:100%; max-inline-size:320px; min-block-size:48px; padding:var(--eb-space-2) var(--eb-space-3); border:2px solid var(--eb-line-2); border-radius:var(--eb-r-sm); background:var(--eb-surface); color:var(--eb-text-heading); font:inherit; font-size:var(--eb-fs-20); font-weight:var(--eb-fw-bold); letter-spacing:2px; font-variant-numeric:tabular-nums; text-align:left; }
+.eb-ncgame-answer-input:focus-visible{ outline:3px solid var(--eb-primary); outline-offset:2px; border-color:var(--eb-primary); }
+.eb-ncgame-answer-input[aria-invalid="true"]{ border-color:var(--eb-danger); }
+.eb-ncgame-answer-input:disabled{ opacity:.85; }
 .eb-ncgame-actions{ display:flex; flex-wrap:wrap; gap:var(--eb-space-2); }
 
 .eb-ncgame-result{ align-items:center; text-align:center; }

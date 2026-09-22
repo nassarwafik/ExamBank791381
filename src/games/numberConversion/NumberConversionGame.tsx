@@ -4,18 +4,22 @@ import ProgressBar from "../../ui/ProgressBar";
 import { usePrefersReducedMotion } from "../../ui/usePrefersReducedMotion";
 import ConversionBoard from "./ConversionBoard";
 import { createNumberConversionClient, type NumberConversionClient, type ActiveState, type BestRecord, type RoundResult, type AnswerResponse } from "./numberConversionClient";
-import { DIRECTION_META, PATH_META, LEVEL_META, emptyBits, formatElapsed, type Bit, type ChallengePath, type AssistanceLevel } from "./conversion";
+import { DIRECTION_META, PATH_META, LEVEL_META, emptyBits, formatElapsed, guidanceFor, answerInputFor, sourceValueOf, type Bit, type ChallengePath, type AssistanceLevel } from "./conversion";
 
 // Number Conversion Challenge — the solo game controller (FREE PLAY). A nested full-view inside the Games
 // destination: home (choose a path + assistance) → round (the interactive board, progress, streak, timer, forgiving
-// hint→reveal feedback) → result (score, best streak, time, best record). The SERVER owns generation, grading and
-// the best record; this component renders state and submits the student's eight bits. No Strength, no medals.
+// hint→reveal feedback) → result (score, best streak, time, best record). The boxes are the student's WORKING area;
+// the typed FINAL answer is what the SERVER grades (it owns generation, grading and the best record). A malformed
+// answer is a format message only — it keeps the task, the board and the typed text, and never resyncs.
+// No Strength, no medals.
 type Phase = "loading" | "home" | "playing" | "result" | "error";
 type Feedback =
   | { kind: "hint"; hint: string }
-  | { kind: "correct"; explanation: string }
-  | { kind: "revealed"; explanation: string; solutionBits: Bit[] }
+  | { kind: "format"; message: string }
+  | { kind: "correct"; explanation: string; canonical: string }
+  | { kind: "revealed"; explanation: string; canonical: string; solutionBits: Bit[] }
   | null;
+const ANSWER_MSG_ID = "eb-ncgame-answer-msg";
 
 export default function NumberConversionGame({ token, onBack, client: injected }: { token: string; onBack: () => void; client?: NumberConversionClient }) {
   const reducedMotion = usePrefersReducedMotion();
@@ -25,6 +29,7 @@ export default function NumberConversionGame({ token, onBack, client: injected }
   const [best, setBest] = useState<BestRecord | null>(null);
   const [result, setResult] = useState<RoundResult | null>(null);
   const [bits, setBits] = useState<Bit[]>(emptyBits());
+  const [answerText, setAnswerText] = useState("");   // the typed FINAL answer (local draft; never persisted per keystroke)
   const [feedback, setFeedback] = useState<Feedback>(null);
   const [pending, setPending] = useState<AnswerResponse | null>(null);   // the answer response awaiting "next"
   const [busy, setBusy] = useState(false);
@@ -45,7 +50,7 @@ export default function NumberConversionGame({ token, onBack, client: injected }
           // Resume the SAME round AND restore its selected path + assistance level (so a later «إعادة المحاولة» repeats
           // this round's mode, not the defaults).
           setPath(s.active.path); setLevel(s.active.level);
-          setState(s.active); setBits(emptyBits()); setPhase("playing");
+          setState(s.active); setBits(emptyBits()); setAnswerText(""); setPhase("playing");
         } else setPhase("home");
       } catch { if (!cancelled) setPhase("home"); }
     })();
@@ -66,44 +71,49 @@ export default function NumberConversionGame({ token, onBack, client: injected }
       if (!s.ok || !s.active) { setError("تعذّر بدء التحدّي. حاول مرة أخرى."); return; }
       setPath(p); setLevel(l);
       setBest(s.best ?? best);
-      setState(s.active); setBits(emptyBits()); setFeedback(null); setPending(null); setResult(null); setPhase("playing");
+      setState(s.active); setBits(emptyBits()); setAnswerText(""); setFeedback(null); setPending(null); setResult(null); setPhase("playing");
     } catch { setError("تعذّر بدء التحدّي. حاول مرة أخرى."); }
     finally { setBusy(false); }
   }, [best]);
 
   const submit = useCallback(async () => {
-    if (!state || !state.currentTask || busy) return;
+    if (!state || !state.currentTask || busy || !answerText.trim()) return;
     setBusy(true); setError("");
     try {
-      const r = await clientRef.current.answer(state.currentTask.taskId, bits);
+      const r = await clientRef.current.answer(state.currentTask.taskId, bits, answerText);
+      if (r.error === "invalid-answer-format") {
+        // A FORMAT error is not an attempt and not a conflict: keep the task, the board and the typed text; just say so.
+        setFeedback({ kind: "format", message: String(r.message || "تحقّق من صيغة الإجابة.") });
+        return;
+      }
       if (r.ok === false || r.error) {
         // stale / conflict → resync from the server (refresh-safe)
         const s = await clientRef.current.getState();
         setBest(s.best ?? null);
         if (s.active && !s.active.done && s.active.currentTask) {
           setPath(s.active.path); setLevel(s.active.level);
-          setState(s.active); setBits(emptyBits()); setFeedback(null); setPending(null); setPhase("playing");
+          setState(s.active); setBits(emptyBits()); setAnswerText(""); setFeedback(null); setPending(null); setPhase("playing");
         } else setPhase("home");
         return;
       }
-      if (r.correct) {
-        setFeedback({ kind: "correct", explanation: String(r.explanation || "") });
-        setPending(r);
-      } else if (r.revealed) {
-        const sol = (r.solutionBits || emptyBits()) as Bit[];
+      if (r.correct || r.revealed) {
+        // Resolved: the board now shows the server's canonical solution bits for teaching (the text was the authority).
+        const sol = (r.solutionBits || bits) as Bit[];
         setBits(sol);
-        setFeedback({ kind: "revealed", explanation: String(r.explanation || ""), solutionBits: sol });
+        const canonical = String(r.canonicalAnswer || "");
+        const explanation = String(r.explanation || "");
+        setFeedback(r.correct ? { kind: "correct", explanation, canonical } : { kind: "revealed", explanation, canonical, solutionBits: sol });
         setPending(r);
       } else {
-        setFeedback({ kind: "hint", hint: String(r.hint || "حاول مرة أخرى.") });   // first miss: keep the board, retry
+        setFeedback({ kind: "hint", hint: String(r.hint || "حاول مرة أخرى.") });   // first miss: keep board + text, retry
       }
     } catch { setError("تعذّر إرسال إجابتك. حاول مرة أخرى."); }
     finally { setBusy(false); }
-  }, [state, bits, busy]);
+  }, [state, bits, busy, answerText]);
 
   const next = useCallback(() => {
     const r = pending;
-    setFeedback(null); setPending(null); setBits(emptyBits());
+    setFeedback(null); setPending(null); setBits(emptyBits()); setAnswerText("");
     if (!r) return;
     if (r.done) { setResult(r.result ?? null); setBest(r.best ?? best); setPhase("result"); return; }
     if (r.state) setState(r.state);
@@ -179,7 +189,7 @@ export default function NumberConversionGame({ token, onBack, client: injected }
           {best && <p className="eb-ncgame-best" role="note">أفضل نتيجة محفوظة: <strong dir="ltr">{best.percentage}%</strong> ({best.correct}/{best.total})</p>}
           <div className="eb-ncgame-actions">
             <button type="button" className="eb-button is-primary" onClick={() => startRound(path, level)}>إعادة المحاولة</button>
-            <button type="button" className="eb-button" onClick={() => { setResult(null); setPhase("home"); }}>تحدٍّ جديد</button>
+            <button type="button" className="eb-button" onClick={() => { setResult(null); setAnswerText(""); setPhase("home"); }}>تحدٍّ جديد</button>
             <button type="button" className="eb-button is-quiet" onClick={onBack}>العودة إلى الألعاب</button>
           </div>
         </section>
@@ -192,6 +202,8 @@ export default function NumberConversionGame({ token, onBack, client: injected }
   if (!task) return <main className="student-portal eb-student-shell eb-games-surface eb-ncgame" dir="rtl"><p className="eb-muted eb-sp-status" role="status">جارٍ التحميل...</p></main>;
   const meta = DIRECTION_META[task.direction];
   const locked = feedback?.kind === "correct" || feedback?.kind === "revealed";
+  const answerSpec = answerInputFor(meta.targetBase, sourceValueOf(task.sourceDisplay, meta.sourceBase));
+  const guidance = guidanceFor(task.direction, state!.level);
   return (
     <main className={"student-portal eb-student-shell eb-games-surface eb-ncgame" + (reducedMotion ? " is-reduced-motion" : "")} dir="rtl">
       <BackBar label="العودة إلى الألعاب" />
@@ -215,21 +227,56 @@ export default function NumberConversionGame({ token, onBack, client: injected }
 
         <ConversionBoard bits={bits} onChange={setBits} direction={task.direction} level={state!.level} disabled={locked} solutionBits={feedback?.kind === "revealed" ? feedback.solutionBits : null} />
 
-        <div className="eb-ncgame-feedback" aria-live="polite">
-          {feedback?.kind === "hint" && <p className="eb-ncgame-hint"><IconInfo size={16} aria-hidden="true" /> {feedback.hint}</p>}
-          {feedback?.kind === "correct" && <p className="eb-ncgame-correct"><IconCheck size={16} aria-hidden="true" /> أحسنت! {feedback.explanation}</p>}
-          {feedback?.kind === "revealed" && <p className="eb-ncgame-reveal">الحل الصحيح: {feedback.explanation}</p>}
-        </div>
+        {!locked && guidance && <p className="eb-ncgame-guidance">{guidance}</p>}
 
-        {error && <div className="platform-error" role="alert">{error}</div>}
+        <form className="eb-ncgame-answer" onSubmit={e => { e.preventDefault(); if (!locked) void submit(); }}>
+          <label htmlFor="eb-ncgame-answer-input" className="eb-ncgame-answer-label">
+            الجواب النهائي <span className="eb-ncgame-answer-base">({meta.targetLabelAr})</span>
+          </label>
+          <input
+            id="eb-ncgame-answer-input"
+            className="eb-ncgame-answer-input"
+            type="text"
+            dir="ltr"
+            autoComplete="off"
+            spellCheck={false}
+            inputMode={answerSpec.inputMode}
+            placeholder={answerSpec.placeholder}
+            maxLength={answerSpec.maxLength}
+            value={answerText}
+            onChange={e => { setAnswerText(e.target.value); if (feedback?.kind === "format") setFeedback(null); }}
+            disabled={locked}
+            aria-invalid={feedback?.kind === "format" || undefined}
+            aria-describedby={!locked && (feedback?.kind === "format" || feedback?.kind === "hint") ? ANSWER_MSG_ID : undefined}
+          />
 
-        <div className="eb-ncgame-actions">
-          {locked ? (
-            <button type="button" className="eb-button is-primary" onClick={next}>التالي</button>
-          ) : (
-            <button type="button" className="eb-button is-primary" disabled={busy} onClick={submit}>تحقّق</button>
-          )}
-        </div>
+          <div className="eb-ncgame-feedback" aria-live="polite">
+            {feedback?.kind === "format" && <p id={ANSWER_MSG_ID} className="eb-ncgame-format" role="alert"><span aria-hidden="true">⚠</span> {feedback.message}</p>}
+            {feedback?.kind === "hint" && <p id={ANSWER_MSG_ID} className="eb-ncgame-hint"><IconInfo size={16} aria-hidden="true" /> {feedback.hint}</p>}
+            {feedback?.kind === "correct" && (
+              <div className="eb-ncgame-correct">
+                <p><IconCheck size={16} aria-hidden="true" /> أحسنت! الجواب: <strong dir="ltr">{feedback.canonical}{answerSpec.subscript}</strong></p>
+                <p className="eb-ncgame-explain" dir="ltr">{feedback.explanation}</p>
+              </div>
+            )}
+            {feedback?.kind === "revealed" && (
+              <div className="eb-ncgame-reveal">
+                <p>الجواب الصحيح: <strong dir="ltr">{feedback.canonical}{answerSpec.subscript}</strong></p>
+                <p className="eb-ncgame-explain" dir="ltr">{feedback.explanation}</p>
+              </div>
+            )}
+          </div>
+
+          {error && <div className="platform-error" role="alert">{error}</div>}
+
+          <div className="eb-ncgame-actions">
+            {locked ? (
+              <button type="button" className="eb-button is-primary" onClick={next}>التالي</button>
+            ) : (
+              <button type="submit" className="eb-button is-primary" disabled={busy || !answerText.trim()}>تحقّق</button>
+            )}
+          </div>
+        </form>
       </section>
     </main>
   );

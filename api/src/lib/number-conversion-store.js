@@ -4,12 +4,14 @@
 //   { schemaVersion: 1, active: <attempt snapshot> | null, best: <best record> | null }
 //
 // The active attempt SNAPSHOTS its generated round (server-side, including each task's value), so a refresh/reconnect
-// resumes the SAME tasks and a completed task can never be re-answered or farmed. The answer flow is forgiving:
-// first wrong → a guiding hint (retry); second wrong → the correct bits are revealed with a short explanation and the
-// round advances (that task counts as incorrect). The result and the best record are SERVER-derived; the client's
-// score is never trusted. Best is a non-additive "best record" merge, not a mutable counter. Pure module (no IO).
+// resumes the SAME tasks and a completed task can never be re-answered or farmed. The student submits their working
+// boxes AND a typed FINAL answer; the TEXT answer is graded (the boxes only inform hints). The answer flow is
+// forgiving: a malformed answer is a format error that consumes nothing; first wrong (well-formed) answer → a guiding
+// hint (retry); second wrong → the canonical answer + solution bits are revealed with a short explanation and the task
+// is resolved (counts as incorrect). The result and the best record are SERVER-derived; the client's score is never
+// trusted. Best is a non-additive "best record" merge, not a mutable counter. Pure module (no IO).
 const {
-  generateRound, evaluateBits, solutionBits, hintForTask, explanationForTask, publicTask,
+  generateRound, evaluateAnswer, canonicalAnswerForTask, solutionBits, hintForTask, explanationForTask, publicTask,
   PATHS, ASSISTANCE_LEVELS, DEFAULT_ROUND_SIZE,
 } = require("./number-conversion");
 
@@ -119,12 +121,19 @@ function mergeBest(prevBest, result) {
   return prevBest;
 }
 
+/** The machine-readable condition + Arabic message for a malformed final answer (NOT an academic attempt). */
+const INVALID_ANSWER_FORMAT = "invalid-answer-format";
+const INVALID_ANSWER_MESSAGE = "تحقّق من صيغة الإجابة.";
+
 /**
- * Apply an eight-bit submission to the current task. Returns { doc, response, changed }. Server-authoritative:
- * validates the task identity, grades the bits, enforces the attempt/hint/reveal policy, advances the round, and on
- * completion computes the result and merges the best record (clearing the active attempt).
+ * Apply a submission { bits, answer } to the current task. Returns { doc, response, changed }. Server-authoritative:
+ * validates the task identity, then the FORMAT of the typed answer against the task's target base — a malformed answer
+ * returns `invalid-answer-format` with changed:false (no attempt consumed, nothing advanced, revealed or re-scored).
+ * A well-formed answer is graded from its TEXT (never from the boxes): correct → resolved; first wrong → hint (the
+ * working bits + typed value shape the hint); second wrong → canonical answer + solution bits revealed and resolved.
+ * On completion it computes the result and merges the best record (clearing the active attempt).
  */
-function applyAnswer(doc, { taskId, bits, now }) {
+function applyAnswer(doc, { taskId, bits, answer, now }) {
   const normalized = normalizeGameDoc(doc);
   const active = normalized.active;
   if (!active) return { doc: normalized, response: { ok: false, error: "no-active-attempt" }, changed: false };
@@ -133,23 +142,29 @@ function applyAnswer(doc, { taskId, bits, now }) {
   // A completed / mismatched task can never be re-answered (anti-farming, refresh-safe).
   if (String(taskId) !== String(task.taskId)) return { doc: normalized, response: { ok: false, error: "stale-task", expectedTaskId: task.taskId }, changed: false };
 
-  const { correct } = evaluateBits(task, bits);
-  if (correct) {
+  // Format first — BEFORE any attempt state changes.
+  const graded = evaluateAnswer(task, answer);
+  if (graded.status === "malformed") {
+    return { doc: normalized, response: { ok: false, error: INVALID_ANSWER_FORMAT, message: INVALID_ANSWER_MESSAGE, taskId: task.taskId, targetBase: task.targetBase }, changed: false };
+  }
+  const resolution = () => ({ canonicalAnswer: canonicalAnswerForTask(task), solutionBits: solutionBits(task), explanation: explanationForTask(task) });
+
+  if (graded.status === "correct") {
     const attempts = active.currentAttempts + 1;
     active.outcomes.push({ taskId: task.taskId, status: "correct", attempts });
     active.index += 1; active.currentAttempts = 0;
-    return finalizeIfDone(normalized, { ok: true, correct: true, attempts, explanation: explanationForTask(task), taskId: task.taskId }, now);
+    return finalizeIfDone(normalized, { ok: true, correct: true, attempts, ...resolution(), taskId: task.taskId }, now);
   }
-  // wrong
+  // well-formed but wrong
   active.currentAttempts += 1;
   if (active.currentAttempts < MAX_ATTEMPTS) {
-    return { doc: normalized, response: { ok: true, correct: false, attempts: active.currentAttempts, hint: hintForTask(task, bits, active.level), taskId: task.taskId }, changed: true };
+    return { doc: normalized, response: { ok: true, correct: false, attempts: active.currentAttempts, hint: hintForTask(task, bits, active.level, graded.value), taskId: task.taskId }, changed: true };
   }
-  // exhausted → reveal + advance (counts incorrect)
+  // exhausted → reveal + resolve (counts incorrect)
   const attempts = active.currentAttempts;
   active.outcomes.push({ taskId: task.taskId, status: "revealed", attempts });
   active.index += 1; active.currentAttempts = 0;
-  return finalizeIfDone(normalized, { ok: true, correct: false, revealed: true, attempts, solutionBits: solutionBits(task), explanation: explanationForTask(task), taskId: task.taskId }, now);
+  return finalizeIfDone(normalized, { ok: true, correct: false, revealed: true, attempts, ...resolution(), taskId: task.taskId }, now);
 }
 
 /** After advancing, either report progress or (when the round is finished) compute the result + merge best + clear. */
@@ -167,6 +182,6 @@ function finalizeIfDone(normalized, base, now) {
 }
 
 module.exports = {
-  GAME_PREFIX, gameDocName, MAX_ATTEMPTS, isPath, isLevel,
+  GAME_PREFIX, gameDocName, MAX_ATTEMPTS, INVALID_ANSWER_FORMAT, INVALID_ANSWER_MESSAGE, isPath, isLevel,
   normalizeGameDoc, publicActive, startAttempt, applyAnswer, computeResult, mergeBest, streaksOf,
 };

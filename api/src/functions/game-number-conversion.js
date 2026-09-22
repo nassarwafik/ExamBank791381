@@ -3,18 +3,21 @@ const crypto = require("crypto");
 const { withObservability } = require("../lib/observability");
 const { requireActiveStudentSession } = require("../lib/student-auth");
 const { getContainer, downloadJsonOrNull, mutateJsonWithRetry, StorageConflictError } = require("../lib/platform-storage");
-const { gameDocName, normalizeGameDoc, publicActive, startAttempt, applyAnswer, isPath, isLevel } = require("../lib/number-conversion-store");
+const { gameDocName, normalizeGameDoc, publicActive, startAttempt, applyAnswer, isPath, isLevel, INVALID_ANSWER_FORMAT } = require("../lib/number-conversion-store");
 const { isValidBits } = require("../lib/number-conversion");
 
 // Number Conversion Challenge API — the SERVER AUTHORITY for the Phase 2 solo game (FREE PLAY only). Routes:
 //   GET  /api/game-number-conversion            → the caller's state: the active attempt (client-safe, NO answer key) + best record
 //   POST /api/game-number-conversion/start      → { path, level, count? } start/replace a round (server snapshots the tasks)
-//   POST /api/game-number-conversion/answer      → { taskId, bits[8] } the server grades, applies the hint/reveal policy, advances
+//   POST /api/game-number-conversion/answer      → { taskId, bits[8], answer } the server grades the TEXT answer, applies the hint/reveal policy
 //   POST /api/game-number-conversion/restart     → alias of start (a fresh round)
-// The browser only ever receives the source display + direction; it submits its eight bits and the server grades
-// here. Any client-sent correctness / score / best is ignored. No Strength, no medals, no teacher assignment — solo.
+// The browser only ever receives the source display + direction; it submits its working bits + typed final answer and
+// the server grades the answer here. Any client-sent correctness / score / best is ignored. No Strength, no medals, no teacher assignment — solo.
 const CONFLICT_MESSAGE = "حدث تعارض مؤقت أثناء حفظ البيانات. حاول مرة أخرى.";
 const BAD_REQUEST = { status: 400, jsonBody: { ok: false, error: "طلب غير صالح." } };
+const MAX_ANSWER_LENGTH = 32;
+/** Thrown inside the mutate callback to skip the write when an answer changes nothing. */
+class NoChange extends Error {}
 
 function stateBody(doc) {
   const n = normalizeGameDoc(doc);
@@ -67,22 +70,28 @@ async function handler(request, deps = {}, obs = null) {
     if (method === "POST" && action === "answer") {
       let body = {};
       try { body = await request.json(); } catch { body = {}; }
-      // STRICT contract: taskId string + bits = exactly eight elements each the number 0 or 1. A malformed payload is
-      // rejected BEFORE any mutation — no attempt is consumed, nothing is advanced or revealed. Only the eight bits are
-      // read; any client-sent "correct"/"score"/"best" is ignored (server is the authority).
-      if (!body || typeof body !== "object" || typeof body.taskId !== "string" || !isValidBits(body.bits)) return BAD_REQUEST;
-      const bits = body.bits;
+      // STRICT contract: taskId string, bits = exactly eight 0/1 numbers (the student's WORKING board, used for hints),
+      // answer = the typed FINAL answer string (the grading authority). A malformed payload is rejected BEFORE any
+      // mutation. Any client-sent "correct"/"score"/"best" is ignored (server is the authority).
+      if (!body || typeof body !== "object" || typeof body.taskId !== "string" || !isValidBits(body.bits)
+        || typeof body.answer !== "string" || body.answer.length > MAX_ANSWER_LENGTH) return BAD_REQUEST;
       let outcome = null;
       try {
         await mut(container, name, current => {
-          const res = applyAnswer(current, { taskId: body.taskId, bits, now });
+          const res = applyAnswer(current, { taskId: body.taskId, bits: body.bits, answer: body.answer, now });
           outcome = res.response;
+          // Nothing to record (format error, stale task, no attempt) → abort the write entirely: attempt state and the
+          // stored document stay byte-for-byte as they were.
+          if (!res.changed) throw new NoChange();
           return res.doc;
         });
       } catch (e) {
         if (e instanceof StorageConflictError) return { status: 503, jsonBody: { ok: false, error: CONFLICT_MESSAGE } };
-        throw e;
+        if (!(e instanceof NoChange)) throw e;
       }
+      // A malformed final answer is a FORMAT error, not a conflict: 422 so the client keeps its task/board/answer and
+      // shows the message — it must not resync.
+      if (outcome && outcome.error === INVALID_ANSWER_FORMAT) return { status: 422, jsonBody: { ...outcome } };
       if (!outcome || outcome.ok === false) {
         // no active attempt / stale-or-completed task → 409 so the client resyncs from GET state
         return { status: 409, jsonBody: { ...(outcome || { ok: false, error: "conflict" }) } };

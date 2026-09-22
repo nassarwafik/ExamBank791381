@@ -4,15 +4,20 @@ import {
 } from "./conversion";
 
 /**
- * The interactive 8-bit conversion board — the HEART of the game and the student's working method (not decoration).
- * Eight place-value boxes grouped into two 4-bit nibbles; the student toggles each bit and the answer is DERIVED
- * from the boxes (binary / decimal / hex per the task's target), never typed. Every box is a real <button>
- * (keyboard accessible, aria-pressed, meaningful label); correctness is never conveyed by colour alone.
+ * The interactive 8-bit conversion board — the student's WORKING area (the learning method, not decoration). Eight
+ * place-value boxes grouped into two 4-bit nibbles; the student toggles bits to reason, then types the FINAL answer in
+ * the game's answer field (the server grades that text — never these boxes). Every box is a real <button> (keyboard
+ * accessible, aria-pressed, meaningful label); correctness is never conveyed by colour alone.
+ *
+ * Orientation: the numeric board is always LEFT→RIGHT `128 64 32 16 | 8 4 2 1` (high nibble on the LEFT) — it is an
+ * explicit `dir="ltr"` island, so the surrounding RTL Arabic page can never mirror it. The canonical order array stays
+ * [128 … 1]; only the rendering direction is pinned.
  *
  * TWO pedagogical views over ONE source of truth (the eight bits): decimal/binary directions label the boxes with the
- * global octet 128…1; hexadecimal directions label EACH nibble with its own 8|4|2|1 weights (and show its hex digit);
- * decimal↔hex shows both (the binary bridge). The `level` governs how much LIVE derived scaffolding is shown while the
- * student works — the boxes and their weights ALWAYS remain, so the game never becomes a text-input quiz.
+ * global octet 128…1; hexadecimal directions label EACH nibble with its own 8|4|2|1 weights; decimal↔hex shows both.
+ * Before the task is resolved NOTHING derived from the boxes is printed (no sum/total, target result, binary line or
+ * nibble hex digit) — that would tell the student what to type. Once resolved (`disabled`, the board then holding the
+ * server's canonical solution bits) the full teaching readout appears.
  */
 export default function ConversionBoard({ bits, onChange, direction, level = "guided", disabled = false, solutionBits = null }: {
   bits: Bit[];
@@ -61,7 +66,7 @@ export default function ConversionBoard({ bits, onChange, direction, level = "gu
             );
           })}
         </div>
-        {view.showNibbleHex && (policy.showNibbleHexLive || disabled) && (
+        {view.showNibbleHex && policy.showNibbleHexLive && (
           <p className="eb-ncb-nibble-hex" aria-hidden="true">= {nibbleHexDigit(bits, half)}<sub>16</sub></p>
         )}
       </div>
@@ -69,7 +74,8 @@ export default function ConversionBoard({ bits, onChange, direction, level = "gu
   };
   return (
     <div className="eb-ncb" data-direction={direction} data-level={level}>
-      <div className="eb-ncb-board" role="group" aria-label="صناديق التحويل الثنائية">
+      {/* numeric LTR island: 128 is always the leftmost box and 1 the rightmost, whatever the page direction */}
+      <div className="eb-ncb-board" dir="ltr" role="group" aria-label="صناديق التحويل الثنائية">
         {renderNibble(0)}
         <span className="eb-ncb-sep" aria-hidden="true"></span>
         {renderNibble(1)}
@@ -86,9 +92,6 @@ export default function ConversionBoard({ bits, onChange, direction, level = "gu
         )}
         {policy.showBinaryLine && (
           <p className="eb-ncb-binary" dir="ltr" aria-label={"التمثيل الثنائي الحالي " + binaryString(bits)}>{binaryString(bits)}</p>
-        )}
-        {!policy.showSum && !policy.showDerived && !policy.showBinaryLine && (
-          <p className="eb-ncb-locked-note eb-muted">اضبط الصناديق ثم اضغط «تحقّق» لعرض النتيجة.</p>
         )}
       </div>
     </div>
