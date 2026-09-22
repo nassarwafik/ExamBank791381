@@ -1,4 +1,5 @@
 import { lazy, Suspense, useEffect, useRef, useState } from "react";
+import { useAutoRefresh } from "./ui/useAutoRefresh";
 import StudentExamPage from "./StudentExamPage";
 import StudentShell from "./shell/StudentShell";
 import StudentProjectPanel from "./projects/StudentProjectPanel";
@@ -44,31 +45,49 @@ export default function StudentPortal({ token, displayName, onLogout }: Props) {
   const headers = { "x-student-token": token, Authorization: "Bearer " + token };
   const strengthDirtyRef = useRef(false);
 
-  async function load() {
-    setLoading(true); setError("");
+  // `silent` = a background auto-refresh (interval / focus / visibility). A silent refresh must NOT flip the portal
+  // back to the blocking "جارٍ تحميل حسابك..." spinner (which hides all content) and must NOT wipe the currently
+  // shown dashboard on a transient failure — it silently swaps in fresh data on success, preserves the last-good
+  // data on failure, and clears any stale error banner once a refresh succeeds. The initial/manual load (silent
+  // omitted → false) keeps its exact previous behaviour. The 401 → onLogout session authority is preserved in BOTH
+  // modes: /api/student-dashboard is still the only session authority, so a revoked session logs out even in the
+  // background (never a silent zombie session).
+  async function load({ silent = false }: { silent?: boolean } = {}) {
+    if (!silent) { setLoading(true); setError(""); }
     try {
       const r = await fetch("/api/student-dashboard", { headers }), j = await r.json() as any;
       if (r.status === 401) { onLogout(); return; }
       if (!r.ok || !j.student || !j.stats) throw new Error(j.error || "تعذر تحميل صفحة الطالب.");
       setData({ student: j.student, classroom: j.classroom || null, assignments: j.assignments || [], stats: j.stats, strength: normalizeStrength(j.strength, j.stats?.finalized), recognition: normalizeRecognition(j.recognition) });
-    } catch (e) { setError(e instanceof Error ? e.message : "تعذر تحميل الصفحة."); }
-    finally { setLoading(false); }
+      if (silent) setError("");   // a successful background refresh clears any stale error banner
+    } catch (e) { if (!silent) setError(e instanceof Error ? e.message : "تعذر تحميل الصفحة."); }   // silent failure: keep last-good data, no flicker
+    finally { if (!silent) setLoading(false); }
   }
   // OPTIONAL/auxiliary panel. Its failure — including a 401 — must NEVER end the authenticated session:
   // only the PRIMARY /api/student-dashboard request (load()) is the session authority and may call
   // onLogout. Any failure here degrades this panel locally (no feed) and leaves the portal intact. This
   // mirrors StudentProjectPanel (fix a3761c8) so a secondary widget can't bounce a valid student to login.
-  async function loadFeed() {
+  async function loadFeed({ silent = false }: { silent?: boolean } = {}) {
     try {
       const r = await fetch("/api/achievement-feed", { headers });
-      if (!r.ok) { setFeed([]); setFeedError(r.status === 401 ? "" : "تعذر تحميل إنجازات الصف."); console.warn("[student-portal] achievement feed unavailable (" + r.status + ")"); return; }
+      // On a background (silent) refresh, a transient failure must NOT clear the currently shown feed — leave the
+      // last-good posts in place (no flicker) and try again next cycle. The initial/manual load is unchanged.
+      if (!r.ok) { if (!silent) { setFeed([]); setFeedError(r.status === 401 ? "" : "تعذر تحميل إنجازات الصف."); } console.warn("[student-portal] achievement feed unavailable (" + r.status + ")"); return; }
       const j = await r.json() as any;
-      if (!j.ok) { setFeed([]); return; }
+      if (!j.ok) { if (!silent) setFeed([]); return; }
       setFeed(j.posts || []); setFeedError("");
-    } catch { setFeed([]); console.warn("[student-portal] achievement feed request failed"); }
+    } catch { if (!silent) setFeed([]); console.warn("[student-portal] achievement feed request failed"); }
   }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => { void load(); void loadFeed(); }, [token]);
+  // Phase 1 auto-refresh: while the student sits on the MAIN portal, silently re-pull the dashboard (the single
+  // source of teacher-controlled state) every 15s, and immediately on window focus / return to a visible tab, so
+  // teacher-side changes appear without logout/login and without a full reload. DISABLED inside any sub-view that
+  // owns its own state (the Reader `readerCourse`, an open exam/detail `detail`) or the avatar modal
+  // (`avatarPickerOpen`), so a background swap never disturbs them; on returning to the main view it re-enables.
+  // The lightweight, session-neutral achievement feed rides the same cycle (its 401 is already swallowed).
+  const autoRefreshEnabled = !readerCourse && !detail && !avatarPickerOpen;
+  useAutoRefresh(() => { void loadFeed({ silent: true }); return load({ silent: true }); }, { intervalMs: 15000, enabled: autoRefreshEnabled });
 
   async function pickAvatar(avatarId: string) {
     if (avatarSaving) return;
