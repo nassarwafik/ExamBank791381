@@ -6,10 +6,11 @@ const {downloadJsonOrNull,listJson,mapConcurrent,getReadConcurrency}=require("..
 const {normalizeClassStatus}=require("../lib/class-lifecycle");
 const {attemptState,deriveAttemptStatus,attemptModelVersion,activeAttemptOf}=require("../lib/assignment-availability");
 const {deriveGradingStatus}=require("../lib/grading-status");
-// Unified Strength (نقاط القوة): finalized exams × 100 + Learning-Practice best (≤ 40 each, all 36 items) + Study
-// Practice (≤ 20 per module) + projects (round(overallProgress × 4), ≤ 400 each) → the raw total and the visible
-// 25-stage path (80 points per stage, 2000 max) — every stage field is decided HERE by student-strength.js; the
-// browser never derives a stage. Project progress comes from the SAME loader as /api/student-project-tracker.
+// Unified Strength (نقاط القوة): finalized school exams (each result's rounded FINAL percentage, 0..100 — 100% → 100,
+// 70% → 70, 20% → 20, 0% → 0; only gradingStatus === "final" contributes) + Learning-Practice best (≤ 40 each, all 36
+// items) + Study Practice (≤ 20 per module) + projects (round(overallProgress × 4), ≤ 400 each) → the raw total and
+// the visible 25-stage path (80 points per stage, 2000 max) — every stage field is decided HERE by student-strength.js;
+// the browser never derives a stage. Project progress comes from the SAME loader as /api/student-project-tracker.
 const {buildStrengthSummary}=require("../lib/student-strength");
 const {studyDocName,studyModulesForStrength}=require("../lib/learning-study");
 const {listLearningCourses}=require("../lib/learning-materials-registry");
@@ -79,7 +80,9 @@ async function handler(request,deps={},obs=null){
   }
   assignments.sort((a,b)=>(a.dueAt?new Date(a.dueAt).getTime():Number.MAX_SAFE_INTEGER)-(b.dueAt?new Date(b.dueAt).getTime():Number.MAX_SAFE_INTEGER));
   // Strength: ONE practice-summary read + the class's projects (one config + one progress read per project, bounded
-  // concurrency, no scans). `finalized` is the same server-derived count the stats expose.
+  // concurrency, no scans). Exam Strength is fed by `finalizedPercentages` (the rounded final % of each
+  // gradingStatus==="final" result, summed) — DISTINCT from `stats.finalized`, which stays the COUNT of finalized
+  // assignments: stats.finalized = how many are final, strength.examPoints = the sum of their final percentages.
   const now=new Date().toISOString();
   const practiceDoc=await dl(c,LP+student.userId+".json");
   // Study Practice: ONE completion-state read; points re-derived against the generated key index (never stored).

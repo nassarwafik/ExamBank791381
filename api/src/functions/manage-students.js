@@ -680,8 +680,8 @@ async function buildStudentProfile(container, userId) {
     submittedAssignmentsCount: submittedAssignments.length,
     submittedAssignments,
     // Concise Strength + recognition for the teacher's student profile — the SAME authorities as the student
-    // dashboard (student-strength policy over finalized count + practice best + project progress; recognition
-    // aggregation). Secondary: a failure here never hides the profile.
+    // dashboard (student-strength policy over finalized final percentages + practice best + study + project
+    // progress; recognition aggregation). Secondary: a failure here never hides the profile.
     ...(await buildProfileStrength(container, student, classroom, history))
   };
 }
