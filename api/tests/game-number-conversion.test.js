@@ -84,6 +84,46 @@ describe("server grades; client score is ignored", () => {
   });
 });
 
+describe("strict payload validation (Fix 3) — malformed input is a 400 that never mutates the attempt", () => {
+  const snapshot = ctx => { const a = ctx.getJson(DOC).active; return { index: a.index, currentAttempts: a.currentAttempts, outcomes: JSON.stringify(a.outcomes) }; };
+  it("rejects a bad start (explicitly invalid path or level) with 400 and no round created", async () => {
+    const ctx = createMemoryContainer();
+    expect((await start(studentDeps(ctx), { path: "octal", level: "guided" })).status).toBe(400);
+    expect((await start(studentDeps(ctx), { path: "mixed", level: "expert" })).status).toBe(400);
+    expect(ctx.getJson(DOC)).toBeNull();                                       // nothing was written
+    // omitted path/level still start with safe defaults
+    const ok = await start(studentDeps(ctx), {});
+    expect(ok.status).toBe(200);
+    expect(ok.jsonBody.active).toMatchObject({ path: "mixed", level: "guided" });
+  });
+  it("rejects every malformed /answer payload with 400 and leaves the active attempt untouched", async () => {
+    const ctx = createMemoryContainer();
+    await start(studentDeps(ctx), { path: "mixed", level: "guided" });
+    const tid = currentTaskId(ctx);
+    const before = snapshot(ctx);
+    const malformed = [
+      { taskId: tid, bits: [1, 0, 1] },                            // too short
+      { taskId: tid, bits: [0, 0, 0, 0, 0, 0, 0, 0, 0] },          // too long
+      { taskId: tid, bits: [0, 0, 0, 0, 0, 0, 0, 2] },             // value 2
+      { taskId: tid, bits: ["0", "1", "0", "1", "0", "1", "0", "1"] }, // strings
+      { taskId: tid, bits: [0, 0, 0, 0, 0, 0, 0, true] },          // boolean
+      { taskId: tid, bits: null },                                 // null
+      { taskId: tid },                                             // missing bits
+      { bits: [0, 0, 0, 0, 0, 0, 0, 0] },                          // missing taskId
+    ];
+    for (const body of malformed) {
+      const r = await answer(studentDeps(ctx), body);
+      expect(r.status, JSON.stringify(body)).toBe(400);
+      expect(r.jsonBody.ok).toBe(false);
+      expect(r.jsonBody).not.toHaveProperty("solutionBits");                 // nothing revealed
+      expect(snapshot(ctx)).toEqual(before);                                 // no attempt consumed / advance
+    }
+    // a well-formed submission after the malformed ones still works normally
+    const good = await answer(studentDeps(ctx), { taskId: tid, bits: correctBits(ctx) });
+    expect(good.status).toBe(200);
+  });
+});
+
 describe("completion → server result + idempotent best", () => {
   async function playAllCorrect(ctx) {
     for (let i = 0; i < 10; i++) {

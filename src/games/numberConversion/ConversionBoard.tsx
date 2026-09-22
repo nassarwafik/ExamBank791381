@@ -1,22 +1,30 @@
-import { PLACES, activePlaces, valueFromBits, binaryString, nibbleHexDigit, targetReadout, targetIsHex, DIRECTION_META, type Bit, type ConversionDirection } from "./conversion";
+import {
+  PLACES, NIBBLE_PLACES, activePlaces, valueFromBits, binaryString, nibbleHexDigit, targetReadout,
+  boardViewFor, readoutPolicy, DIRECTION_META, type Bit, type ConversionDirection, type AssistanceLevel,
+} from "./conversion";
 
 /**
  * The interactive 8-bit conversion board — the HEART of the game and the student's working method (not decoration).
- * Eight place-value boxes (128…1) grouped into two 4-bit nibbles; the student toggles each bit and the answer is
- * DERIVED from the boxes (binary / decimal / hex per the task's target), never typed. Every box is a real
- * <button> (keyboard accessible, aria-pressed, meaningful label); correctness is never conveyed by colour alone
- * (the on/off state carries text "1"/"0" and the pressed state). Place values stay visible at every assistance
- * level — the box method is the identity of this game.
+ * Eight place-value boxes grouped into two 4-bit nibbles; the student toggles each bit and the answer is DERIVED
+ * from the boxes (binary / decimal / hex per the task's target), never typed. Every box is a real <button>
+ * (keyboard accessible, aria-pressed, meaningful label); correctness is never conveyed by colour alone.
+ *
+ * TWO pedagogical views over ONE source of truth (the eight bits): decimal/binary directions label the boxes with the
+ * global octet 128…1; hexadecimal directions label EACH nibble with its own 8|4|2|1 weights (and show its hex digit);
+ * decimal↔hex shows both (the binary bridge). The `level` governs how much LIVE derived scaffolding is shown while the
+ * student works — the boxes and their weights ALWAYS remain, so the game never becomes a text-input quiz.
  */
-export default function ConversionBoard({ bits, onChange, direction, disabled = false, solutionBits = null }: {
+export default function ConversionBoard({ bits, onChange, direction, level = "guided", disabled = false, solutionBits = null }: {
   bits: Bit[];
   onChange: (bits: Bit[]) => void;
   direction: ConversionDirection;
+  level?: AssistanceLevel;
   disabled?: boolean;
   solutionBits?: Bit[] | null;
 }) {
   const meta = DIRECTION_META[direction];
-  const hexTarget = targetIsHex(direction);
+  const view = boardViewFor(direction);
+  const policy = readoutPolicy(level, disabled);
   const value = valueFromBits(bits);
   const sum = activePlaces(bits);
   const toggle = (i: number) => {
@@ -34,16 +42,18 @@ export default function ConversionBoard({ bits, onChange, direction, disabled = 
             const i = start + k;
             const on = bits[i] === 1;
             const isSolutionDiff = solutionBits ? solutionBits[i] !== bits[i] : false;
+            const primaryWeight = view.showGlobalPlaces ? PLACES[i] : NIBBLE_PLACES[k];
             return (
               <div className={"eb-ncb-col" + (on ? " is-on" : "")} key={i}>
-                <span className="eb-ncb-place" aria-hidden="true">{PLACES[i]}</span>
+                {view.showGlobalPlaces && <span className="eb-ncb-place" aria-hidden="true">{PLACES[i]}</span>}
+                {view.showNibbleWeights && <span className="eb-ncb-nibweight" aria-hidden="true">{NIBBLE_PLACES[k]}</span>}
                 <button
                   type="button"
                   className={"eb-ncb-bit" + (on ? " is-on" : "") + (disabled && solutionBits && isSolutionDiff ? " is-missed" : "")}
                   aria-pressed={on}
                   disabled={disabled}
                   onClick={() => toggle(i)}
-                  aria-label={"الخانة بقيمة " + PLACES[i] + ": " + (on ? "مضاءة" : "مطفأة")}
+                  aria-label={"الخانة بقيمة " + primaryWeight + ": " + (on ? "مضاءة" : "مطفأة")}
                 >
                   <span aria-hidden="true">{on ? "1" : "0"}</span>
                 </button>
@@ -51,26 +61,35 @@ export default function ConversionBoard({ bits, onChange, direction, disabled = 
             );
           })}
         </div>
-        {hexTarget && (
+        {view.showNibbleHex && (policy.showNibbleHexLive || disabled) && (
           <p className="eb-ncb-nibble-hex" aria-hidden="true">= {nibbleHexDigit(bits, half)}<sub>16</sub></p>
         )}
       </div>
     );
   };
   return (
-    <div className="eb-ncb" data-direction={direction}>
+    <div className="eb-ncb" data-direction={direction} data-level={level}>
       <div className="eb-ncb-board" role="group" aria-label="صناديق التحويل الثنائية">
         {renderNibble(0)}
         <span className="eb-ncb-sep" aria-hidden="true"></span>
         {renderNibble(1)}
       </div>
       <div className="eb-ncb-readout" aria-live="polite">
-        <p className="eb-ncb-sum">{sum.length ? sum.join(" + ") + " = " + value : "لم تُختَر أي قيمة بعد (0)"}</p>
-        <p className="eb-ncb-derived">
-          <span className="eb-ncb-derived-label">النتيجة ({meta.targetLabelAr}):</span>{" "}
-          <strong dir="ltr">{targetReadout(bits, meta.targetBase)}{meta.targetBase === 2 ? "₂" : meta.targetBase === 16 ? "₁₆" : ""}</strong>
-        </p>
-        <p className="eb-ncb-binary" dir="ltr" aria-label={"التمثيل الثنائي الحالي " + binaryString(bits)}>{binaryString(bits)}</p>
+        {policy.showSum && (
+          <p className="eb-ncb-sum">{sum.length ? sum.join(" + ") + " = " + value : "لم تُختَر أي قيمة بعد (0)"}</p>
+        )}
+        {policy.showDerived && (
+          <p className="eb-ncb-derived">
+            <span className="eb-ncb-derived-label">النتيجة ({meta.targetLabelAr}):</span>{" "}
+            <strong dir="ltr">{targetReadout(bits, meta.targetBase)}{meta.targetBase === 2 ? "₂" : meta.targetBase === 16 ? "₁₆" : ""}</strong>
+          </p>
+        )}
+        {policy.showBinaryLine && (
+          <p className="eb-ncb-binary" dir="ltr" aria-label={"التمثيل الثنائي الحالي " + binaryString(bits)}>{binaryString(bits)}</p>
+        )}
+        {!policy.showSum && !policy.showDerived && !policy.showBinaryLine && (
+          <p className="eb-ncb-locked-note eb-muted">اضبط الصناديق ثم اضغط «تحقّق» لعرض النتيجة.</p>
+        )}
       </div>
     </div>
   );

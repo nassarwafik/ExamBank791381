@@ -1,6 +1,7 @@
 import { describe, it, expect } from "vitest";
 import {
-  PLACES, BIT_WIDTH, emptyBits, valueFromBits, binaryString, activePlaces, nibbleHexDigit, hexString,
+  PLACES, NIBBLE_PLACES, BIT_WIDTH, emptyBits, valueFromBits, binaryString, activePlaces, nibbleHexDigit, hexString,
+  nibbleWeightAt, boardViewFor, readoutPolicy,
   targetReadout, targetIsHex, DIRECTION_META, PATH_META, LEVEL_META, formatElapsed, type Bit,
 } from "./conversion";
 
@@ -47,6 +48,38 @@ describe("direction / path / level metadata", () => {
   it("offers the four challenge paths and three assistance levels", () => {
     expect(PATH_META.map(p => p.id)).toEqual(["dec-bin", "bin-hex", "dec-hex", "mixed"]);
     expect(LEVEL_META.map(l => l.id)).toEqual(["guided", "practice", "challenge"]);
+  });
+});
+
+describe("board views — global octet vs hex nibble weights (Fix 1)", () => {
+  it("exposes the per-nibble 8|4|2|1 weights, repeating for each 4-bit group", () => {
+    expect(NIBBLE_PLACES).toEqual([8, 4, 2, 1]);
+    expect([0, 1, 2, 3, 4, 5, 6, 7].map(nibbleWeightAt)).toEqual([8, 4, 2, 1, 8, 4, 2, 1]);
+  });
+  it("decimal/binary directions use the GLOBAL octet only; hex directions teach the NIBBLE weights", () => {
+    // dec↔bin: global place values, no nibble weights/hex
+    expect(boardViewFor("dec2bin")).toEqual({ showGlobalPlaces: true, showNibbleWeights: false, showNibbleHex: false });
+    expect(boardViewFor("bin2dec")).toEqual({ showGlobalPlaces: true, showNibbleWeights: false, showNibbleHex: false });
+    // bin↔hex: nibble weights + hex digits, NOT the global octet
+    expect(boardViewFor("bin2hex")).toEqual({ showGlobalPlaces: false, showNibbleWeights: true, showNibbleHex: true });
+    expect(boardViewFor("hex2bin")).toEqual({ showGlobalPlaces: false, showNibbleWeights: true, showNibbleHex: true });
+    // dec↔hex: BOTH views (the binary bridge)
+    expect(boardViewFor("dec2hex")).toEqual({ showGlobalPlaces: true, showNibbleWeights: true, showNibbleHex: true });
+    expect(boardViewFor("hex2dec")).toEqual({ showGlobalPlaces: true, showNibbleWeights: true, showNibbleHex: true });
+  });
+});
+
+describe("assistance-level readout policy — genuinely different scaffolding (Fix 2)", () => {
+  it("guided shows everything; practice hides the derived target; challenge shows boxes only until Check", () => {
+    expect(readoutPolicy("guided", false)).toEqual({ showSum: true, showDerived: true, showBinaryLine: true, showNibbleHexLive: true });
+    expect(readoutPolicy("practice", false)).toEqual({ showSum: true, showDerived: false, showBinaryLine: true, showNibbleHexLive: false });
+    expect(readoutPolicy("challenge", false)).toEqual({ showSum: false, showDerived: false, showBinaryLine: false, showNibbleHexLive: false });
+    // guided and challenge are NOT identical while working
+    expect(readoutPolicy("guided", false)).not.toEqual(readoutPolicy("challenge", false));
+    // after Check / reveal (locked) every level shows the full teaching readout
+    for (const l of ["guided", "practice", "challenge"] as const) {
+      expect(readoutPolicy(l, true)).toEqual({ showSum: true, showDerived: true, showBinaryLine: true, showNibbleHexLive: true });
+    }
   });
 });
 

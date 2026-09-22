@@ -10,7 +10,8 @@
 // correct-answer key: it gets the source display + direction and submits its eight bits; the server grades here.
 
 const BASES = Object.freeze({ DECIMAL: 10, BINARY: 2, HEX: 16 });
-const PLACES = Object.freeze([128, 64, 32, 16, 8, 4, 2, 1]);   // MSB → LSB, index 0 is the 128-box
+const PLACES = Object.freeze([128, 64, 32, 16, 8, 4, 2, 1]);   // MSB → LSB, index 0 is the 128-box (global octet view)
+const NIBBLE_PLACES = Object.freeze([8, 4, 2, 1]);             // the per-nibble weights — the hexadecimal teaching view
 const BIT_WIDTH = 8;
 const MIN_VALUE = 0;
 const MAX_VALUE = 255;
@@ -58,14 +59,16 @@ function bitsFromValue(value) {
   const n = normalizeValue(value) ?? 0;
   return PLACES.map(p => ((n & p) ? 1 : 0));
 }
+/** Strict submission contract: an array of EXACTLY eight elements, each the number 0 or 1 (no booleans, no coercion). */
+function isValidBits(bits) {
+  return Array.isArray(bits) && bits.length === BIT_WIDTH && bits.every(b => b === 0 || b === 1);
+}
 /** The value of an eight-bit board, or null when the bits array is malformed (not length 8 of 0/1). */
 function valueFromBits(bits) {
-  if (!Array.isArray(bits) || bits.length !== BIT_WIDTH) return null;
+  if (!isValidBits(bits)) return null;
   let total = 0;
   for (let i = 0; i < BIT_WIDTH; i++) {
-    const b = bits[i];
-    if (b !== 0 && b !== 1) return null;
-    if (b === 1) total += PLACES[i];
+    if (bits[i] === 1) total += PLACES[i];
   }
   return total;
 }
@@ -81,6 +84,13 @@ function nibblesOf(value) {
 }
 const HEX_DIGITS = "0123456789ABCDEF";
 const hexDigit = nibble => HEX_DIGITS[nibble & 0xf];
+/** One nibble's teaching breakdown from its 8|4|2|1 weights, e.g. 11 → "8+2+1 = 11 = B", 6 → "4+2 = 6". */
+function nibbleBreakdown(nib) {
+  const n = nib & 0xf;
+  const weights = NIBBLE_PLACES.filter(w => (n & w));
+  const sum = weights.length ? weights.join("+") : "0";
+  return n >= 10 ? sum + " = " + n + " = " + hexDigit(n) : sum + " = " + n;
+}
 
 // ── deterministic PRNG (seeded, pure) ─────────────────────────────────────────────────────────────────────────
 /** cyrb53 string → 32-bit seed. */
@@ -171,55 +181,79 @@ function solutionBits(task) {
 }
 
 /**
- * A contextual, thinking-guiding hint (never the answer). Depends on the direction and, where the student is building
- * the number from the boxes, the remaining amount.
+ * A contextual, thinking-guiding hint (never the answer). Depends on the direction, the remaining amount where the
+ * student is building from the boxes, AND the assistance level: `guided` is the most explicit (names the remaining
+ * amount and the nibble method), `practice` is a lighter nudge, and `challenge` is a minimal, direction-agnostic
+ * prompt — so the same wrong answer produces genuinely different scaffolding per level.
  */
-function hintForTask(task, bits) {
+function hintForTask(task, bits, level = "guided") {
+  if (level === "challenge") return "غير صحيح. راجع قيم الخانات المختارة وحاول مرة أخرى.";
+  const detailed = level !== "practice";   // guided = most explicit; practice = lighter
   const submitted = valueFromBits(bits) || 0;
   const remaining = task.value - submitted;
   switch (task.direction) {
     case "dec2bin":
     case "dec2hex": {
-      if (remaining > 0) return "بقي لديك " + remaining + ". أي قيمة من الصناديق يمكن استخدامها الآن؟";
+      if (remaining > 0) return detailed
+        ? "بقي لديك " + remaining + ". أي قيمة من الصناديق يمكن استخدامها الآن؟"
+        : "المجموع أقل من العدد المطلوب — أضِف قيمة مناسبة.";
       if (remaining < 0) return "المجموع أكبر من العدد المطلوب — أزِل إحدى القيم المختارة.";
-      return task.direction === "dec2hex" ? "أحسنت! الآن اقرأ كل مجموعة من 4 بتات كرقم سادس عشر." : "المجموع صحيح — تحقّق من ترتيب الخانات.";
+      return task.direction === "dec2hex" ? "المجموع صحيح — اقرأ كل مجموعة من 4 بتات كرقم سادس عشر." : "المجموع صحيح — تحقّق من ترتيب الخانات.";
     }
     case "bin2dec":
       return "اجمع القيم الموجودة أسفل الخانات التي تحوي 1.";
     case "bin2hex":
-      return "قسّم العدد الثنائي إلى مجموعتين من 4 بتات، واحسب قيمة كل مجموعة.";
+      return detailed
+        ? "قسّم العدد الثنائي إلى مجموعتين من 4 بتات، واحسب قيمة كل مجموعة."
+        : "فكّر في كل مجموعة من 4 بتات على حدة.";
     case "hex2bin":
-      return "تذكّر: كل رقم سادس عشر يساوي 4 بتات؛ مثلاً A تساوي 10 = 1010.";
+      return detailed
+        ? "تذكّر: كل رقم سادس عشر يساوي 4 بتات؛ مثلاً A تساوي 10 = 1010."
+        : "كل رقم سادس عشر يساوي 4 بتات.";
     case "hex2dec":
-      return "حوّل كل رقم سادس عشر إلى 4 بتات، ثم اجمع القيم لتحصل على العدد العشري.";
+      return detailed
+        ? "حوّل كل رقم سادس عشر إلى 4 بتات، ثم اجمع القيم لتحصل على العدد العشري."
+        : "حوّل كل رقم سادس عشر إلى 4 بتات ثم اجمع القيم.";
     default:
-      return "استخدم قيم الخانات 128 و64 و32 … للوصول إلى العدد المطلوب.";
+      return "استخدم قيم الخانات للوصول إلى العدد المطلوب.";
   }
 }
 
-/** A short transformation explanation shown after a correct answer or a reveal (no shaming, motivational tone). */
+/**
+ * A short transformation explanation shown after a correct answer or a reveal — following the CONVERSION DIRECTION
+ * (not merely the target base). Decimal↔hex is taught via the binary bridge (octet → nibbles → hex), never
+ * division-by-16; binary↔hex shows each nibble's 8|4|2|1 breakdown. No shaming; motivational, teaching tone.
+ */
 function explanationForTask(task) {
-  const sum = activePlaces(task.value);
+  const value = task.value;
+  const bin = renderInBase(value, 2);
+  const hi4 = bin.slice(0, 4), lo4 = bin.slice(4);
+  const [hi, lo] = nibblesOf(value);
+  const hex = renderInBase(value, 16);
+  const sum = activePlaces(value);
   const sumText = sum.length ? sum.join(" + ") : "0";
-  const bin = renderInBase(task.value, 2);
-  const [hi, lo] = nibblesOf(task.value);
-  const hex = renderInBase(task.value, 16);
-  switch (task.targetBase) {
-    case 10:
-      return bin + "₂ = " + sumText + " = " + task.value;
-    case 2:
-      return task.value + " = " + sumText + " → " + bin + "₂";
-    case 16:
-      return task.value + " = " + bin.slice(0, 4) + " " + bin.slice(4) + "₂ = " + hi + " " + lo + " → " + hex + "₁₆";
+  switch (task.direction) {
+    case "dec2bin":
+      return value + "₁₀ → " + sumText + " → " + bin + "₂";
+    case "bin2dec":
+      return bin + "₂ → " + sumText + " → " + value + "₁₀";
+    case "bin2hex":
+      return bin + "₂ → " + hi4 + " | " + lo4 + " → (" + nibbleBreakdown(hi) + ") | (" + nibbleBreakdown(lo) + ") → " + hex + "₁₆";
+    case "hex2bin":
+      return hex + "₁₆ → " + hexDigit(hi) + " | " + hexDigit(lo) + " → " + hi4 + " | " + lo4 + " → " + bin + "₂";
+    case "dec2hex":
+      return value + "₁₀ → " + bin + "₂ → " + hi4 + " | " + lo4 + " → " + hexDigit(hi) + " | " + hexDigit(lo) + " → " + hex + "₁₆";
+    case "hex2dec":
+      return hex + "₁₆ → " + bin + "₂ → " + sumText + " → " + value + "₁₀";
     default:
-      return sumText + " = " + task.value;
+      return sumText + " = " + value;
   }
 }
 
 module.exports = {
-  BASES, PLACES, BIT_WIDTH, MIN_VALUE, MAX_VALUE,
+  BASES, PLACES, NIBBLE_PLACES, BIT_WIDTH, MIN_VALUE, MAX_VALUE,
   DIRECTIONS, DIRECTION_IDS, PATHS, PATH_IDS, ASSISTANCE_LEVELS, DEFAULT_ROUND_SIZE,
-  normalizeValue, renderInBase, bitsFromValue, valueFromBits, activePlaces, nibblesOf, hexDigit,
+  normalizeValue, renderInBase, bitsFromValue, isValidBits, valueFromBits, activePlaces, nibblesOf, hexDigit, nibbleBreakdown,
   hashSeed, makeRng, buildTask, publicTask, generateRound,
   evaluateBits, solutionBits, hintForTask, explanationForTask,
 };

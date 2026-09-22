@@ -94,4 +94,23 @@ describe("NumberConversionGame — home → play → result", () => {
     expect(await screen.findByText("المهمة 2 / 2")).toBeTruthy();
     expect(client.start).not.toHaveBeenCalled();
   });
+
+  it("«إعادة المحاولة» after a RESUMED round preserves that round's path + level, not the defaults (Fix 4)", async () => {
+    const resumed: ActiveState = { ...activeAt(0, "t1"), path: "mixed", level: "challenge", total: 1, taskNumber: 1 };
+    const done = {
+      ok: true, correct: true, explanation: "x", done: true,
+      result: { correct: 1, total: 1, percentage: 100, bestStreak: 1, elapsedMs: 1000, at: "" },
+      state: { ...resumed, currentTask: null, done: true },
+    };
+    const client = fakeClient({
+      getState: vi.fn(async () => ({ ok: true, active: resumed, best: null })),   // resume mixed + challenge
+      answer: vi.fn(async () => done),
+    });
+    render(<NumberConversionGame token="t" onBack={vi.fn()} client={client} />);
+    await screen.findByText("المهمة 1 / 1");
+    fireEvent.click(screen.getByRole("button", { name: "تحقّق" }));
+    fireEvent.click(await screen.findByRole("button", { name: "التالي" }));
+    fireEvent.click(await screen.findByRole("button", { name: "إعادة المحاولة" }));
+    await waitFor(() => expect(client.start).toHaveBeenCalledWith("mixed", "challenge"));
+  });
 });

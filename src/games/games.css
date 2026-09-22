@@ -63,6 +63,7 @@
 .eb-ncb-cols{ display:flex; gap:var(--eb-space-1); }
 .eb-ncb-col{ display:flex; flex-direction:column; align-items:center; gap:4px; }
 .eb-ncb-place{ color:var(--eb-muted); font-size:var(--eb-fs-12); font-variant-numeric:tabular-nums; }
+.eb-ncb-nibweight{ color:var(--eb-info); font-size:var(--eb-fs-12); font-weight:var(--eb-fw-semibold); font-variant-numeric:tabular-nums; }
 .eb-ncb-bit{ inline-size:44px; block-size:44px; border-radius:var(--eb-r-sm); border:2px solid var(--eb-line-2); background:var(--eb-surface); color:var(--eb-text-secondary); font-size:var(--eb-fs-20); font-weight:var(--eb-fw-bold); cursor:pointer; transition:transform var(--eb-dur, .15s) var(--eb-ease, ease), background-color var(--eb-dur, .15s) var(--eb-ease, ease); }
 .eb-ncb-bit.is-on{ background:var(--eb-primary); border-color:var(--eb-primary); color:#fff; }
 .eb-ncb-bit:active{ transform:scale(0.94); }
@@ -74,6 +75,7 @@
 .eb-ncb-sum{ margin:0; color:var(--eb-text-secondary); font-size:var(--eb-fs-14); font-variant-numeric:tabular-nums; }
 .eb-ncb-derived{ margin:0; color:var(--eb-text-heading); font-size:var(--eb-fs-16); }
 .eb-ncb-binary{ margin:0; color:var(--eb-muted); font-size:var(--eb-fs-13); letter-spacing:2px; font-variant-numeric:tabular-nums; }
+.eb-ncb-locked-note{ margin:0; font-size:var(--eb-fs-13); }
 
 .eb-ncgame-feedback{ min-block-size:1.5em; }
 .eb-ncgame-hint, .eb-ncgame-correct, .eb-ncgame-reveal{ margin:0; display:flex; align-items:center; gap:var(--eb-space-1); font-size:var(--eb-fs-14); line-height:var(--eb-lh-body); }

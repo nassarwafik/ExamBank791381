@@ -8,10 +8,14 @@ export type ChallengePath = "dec-bin" | "bin-hex" | "dec-hex" | "mixed";
 export type AssistanceLevel = "guided" | "practice" | "challenge";
 export type Bit = 0 | 1;
 
-/** The 8-bit octet place values, MSB→LSB (index 0 is the 128-box). */
+/** The 8-bit octet place values, MSB→LSB (index 0 is the 128-box) — the global decimal/binary view. */
 export const PLACES: readonly number[] = [128, 64, 32, 16, 8, 4, 2, 1];
+/** The per-nibble weights (each 4-bit group independently) — the hexadecimal teaching view. */
+export const NIBBLE_PLACES: readonly number[] = [8, 4, 2, 1];
 export const BIT_WIDTH = 8;
 export const emptyBits = (): Bit[] => [0, 0, 0, 0, 0, 0, 0, 0];
+/** The weight of box `i` (0..7) within its own 4-bit nibble: always one of 8|4|2|1. */
+export const nibbleWeightAt = (i: number): number => NIBBLE_PLACES[i % 4];
 
 export function valueFromBits(bits: readonly Bit[]): number {
   return PLACES.reduce((sum, p, i) => sum + (bits[i] === 1 ? p : 0), 0);
@@ -54,6 +58,35 @@ export function targetIsHex(direction: ConversionDirection): boolean {
   return DIRECTION_META[direction]?.targetBase === 16;
 }
 
+/**
+ * Which pedagogical WEIGHTS a direction's board teaches. Decimal/binary use the global octet (128…1); any
+ * hexadecimal direction teaches each nibble's own 8|4|2|1 weights (and per-nibble hex digits); decimal↔hex shows
+ * BOTH (the octet AND the nibble split) so the binary-bridge is visible. There is always ONE source of truth for the
+ * eight selected bits — only the visible labels differ.
+ */
+export interface BoardView { showGlobalPlaces: boolean; showNibbleWeights: boolean; showNibbleHex: boolean }
+export function boardViewFor(direction: ConversionDirection): BoardView {
+  const { sourceBase, targetBase } = DIRECTION_META[direction];
+  const involvesHex = sourceBase === 16 || targetBase === 16;
+  const involvesDecimal = sourceBase === 10 || targetBase === 10;
+  if (!involvesHex) return { showGlobalPlaces: true, showNibbleWeights: false, showNibbleHex: false };
+  return { showGlobalPlaces: involvesDecimal, showNibbleWeights: true, showNibbleHex: true };
+}
+
+/**
+ * How much LIVE scaffolding the board shows at a given assistance level while the student is still working. Boxes and
+ * their weight labels are ALWAYS present (the method is the game); these flags govern the derived readouts that would
+ * otherwise form the answer in front of the student. `locked` (after Check / reveal) always shows everything — that is
+ * the teaching moment. Guided → full; Practice → sum + binary only; Challenge → boxes only until Check.
+ */
+export interface ReadoutPolicy { showSum: boolean; showDerived: boolean; showBinaryLine: boolean; showNibbleHexLive: boolean }
+export function readoutPolicy(level: AssistanceLevel, locked: boolean): ReadoutPolicy {
+  if (locked) return { showSum: true, showDerived: true, showBinaryLine: true, showNibbleHexLive: true };
+  if (level === "practice") return { showSum: true, showDerived: false, showBinaryLine: true, showNibbleHexLive: false };
+  if (level === "challenge") return { showSum: false, showDerived: false, showBinaryLine: false, showNibbleHexLive: false };
+  return { showSum: true, showDerived: true, showBinaryLine: true, showNibbleHexLive: true };   // guided
+}
+
 export const PATH_META: { id: ChallengePath; letter: string; titleAr: string; subtitleAr: string }[] = [
   { id: "dec-bin", letter: "أ", titleAr: "عشري ↔ ثنائي", subtitleAr: "Decimal ↔ Binary" },
   { id: "bin-hex", letter: "ب", titleAr: "ثنائي ↔ سادس عشر", subtitleAr: "Binary ↔ Hexadecimal" },
@@ -62,9 +95,9 @@ export const PATH_META: { id: ChallengePath; letter: string; titleAr: string; su
 ];
 
 export const LEVEL_META: { id: AssistanceLevel; labelAr: string; descAr: string }[] = [
-  { id: "guided", labelAr: "موجّه", descAr: "القيم والصناديق والإرشاد خطوة بخطوة — الأنسب للبداية." },
-  { id: "practice", labelAr: "تدريب", descAr: "القيم والصناديق مع إرشاد أقل." },
-  { id: "challenge", labelAr: "تحدٍّ", descAr: "الصناديق تبقى، مع أقل قدر من المساعدة." },
+  { id: "guided", labelAr: "موجّه", descAr: "الصناديق والقيم والمجموع والنتيجة المباشرة — إرشاد خطوة بخطوة، الأنسب للبداية." },
+  { id: "practice", labelAr: "تدريب", descAr: "الصناديق والقيم والمجموع، مع إخفاء نتيجة الهدف وإرشاد أقل." },
+  { id: "challenge", labelAr: "تحدٍّ", descAr: "الصناديق فقط أثناء الحل — لا تظهر النتائج المشتقّة إلا بعد التحقّق." },
 ];
 
 /** mm:ss for an elapsed-milliseconds value (display only). */

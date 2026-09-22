@@ -143,7 +143,7 @@ function applyAnswer(doc, { taskId, bits, now }) {
   // wrong
   active.currentAttempts += 1;
   if (active.currentAttempts < MAX_ATTEMPTS) {
-    return { doc: normalized, response: { ok: true, correct: false, attempts: active.currentAttempts, hint: hintForTask(task, bits), taskId: task.taskId }, changed: true };
+    return { doc: normalized, response: { ok: true, correct: false, attempts: active.currentAttempts, hint: hintForTask(task, bits, active.level), taskId: task.taskId }, changed: true };
   }
   // exhausted → reveal + advance (counts incorrect)
   const attempts = active.currentAttempts;

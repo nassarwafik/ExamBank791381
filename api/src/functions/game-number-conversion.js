@@ -4,6 +4,7 @@ const { withObservability } = require("../lib/observability");
 const { requireActiveStudentSession } = require("../lib/student-auth");
 const { getContainer, downloadJsonOrNull, mutateJsonWithRetry, StorageConflictError } = require("../lib/platform-storage");
 const { gameDocName, normalizeGameDoc, publicActive, startAttempt, applyAnswer, isPath, isLevel } = require("../lib/number-conversion-store");
+const { isValidBits } = require("../lib/number-conversion");
 
 // Number Conversion Challenge API — the SERVER AUTHORITY for the Phase 2 solo game (FREE PLAY only). Routes:
 //   GET  /api/game-number-conversion            → the caller's state: the active attempt (client-safe, NO answer key) + best record
@@ -44,6 +45,9 @@ async function handler(request, deps = {}, obs = null) {
       let body = {};
       try { body = await request.json(); } catch { body = {}; }
       if (!body || typeof body !== "object") return BAD_REQUEST;
+      // A supplied path/level MUST be valid — an explicitly invalid value is a 400, never a silent fallback.
+      if (body.path != null && !isPath(body.path)) return BAD_REQUEST;
+      if (body.level != null && !isLevel(body.level)) return BAD_REQUEST;
       const path = isPath(body.path) ? String(body.path) : "mixed";
       const level = isLevel(body.level) ? String(body.level) : "guided";
       const attemptId = crypto.randomUUID();
@@ -63,9 +67,11 @@ async function handler(request, deps = {}, obs = null) {
     if (method === "POST" && action === "answer") {
       let body = {};
       try { body = await request.json(); } catch { body = {}; }
-      if (!body || typeof body !== "object" || typeof body.taskId !== "string" || !Array.isArray(body.bits)) return BAD_REQUEST;
-      // Only the eight bits are read; any client-sent "correct"/"score"/"best" is ignored.
-      const bits = body.bits.map(b => (b === 1 || b === true ? 1 : 0));
+      // STRICT contract: taskId string + bits = exactly eight elements each the number 0 or 1. A malformed payload is
+      // rejected BEFORE any mutation — no attempt is consumed, nothing is advanced or revealed. Only the eight bits are
+      // read; any client-sent "correct"/"score"/"best" is ignored (server is the authority).
+      if (!body || typeof body !== "object" || typeof body.taskId !== "string" || !isValidBits(body.bits)) return BAD_REQUEST;
+      const bits = body.bits;
       let outcome = null;
       try {
         await mut(container, name, current => {

@@ -1,7 +1,7 @@
 import { describe, it, expect } from "vitest";
 import {
-  PLACES, BIT_WIDTH, DIRECTION_IDS, PATHS,
-  renderInBase, bitsFromValue, valueFromBits, activePlaces, nibblesOf,
+  PLACES, NIBBLE_PLACES, BIT_WIDTH, DIRECTION_IDS, PATHS,
+  renderInBase, bitsFromValue, valueFromBits, isValidBits, activePlaces, nibblesOf, nibbleBreakdown,
   buildTask, publicTask, generateRound, evaluateBits, solutionBits, hintForTask, explanationForTask, normalizeValue,
 } from "../src/lib/number-conversion.js";
 
@@ -39,6 +39,25 @@ describe("base rendering + bit round-trips", () => {
     expect(valueFromBits(null)).toBeNull();
     expect(normalizeValue(256)).toBeNull();
     expect(normalizeValue(-1)).toBeNull();
+  });
+  it("isValidBits enforces the STRICT 8×(0|1) contract (no coercion of booleans/strings/other numbers)", () => {
+    expect(isValidBits([0, 1, 0, 1, 0, 1, 0, 1])).toBe(true);
+    expect(isValidBits([0, 0, 0, 0, 0, 0, 0, 0])).toBe(true);
+    expect(isValidBits([1, 0, 1])).toBe(false);                                  // too short
+    expect(isValidBits([0, 0, 0, 0, 0, 0, 0, 0, 0])).toBe(false);                // too long
+    expect(isValidBits([0, 0, 0, 0, 0, 0, 0, 2])).toBe(false);                   // value 2
+    expect(isValidBits([0, 0, 0, 0, 0, 0, 0, true])).toBe(false);                // boolean, not the number 1
+    expect(isValidBits(["0", "1", "0", "1", "0", "1", "0", "1"])).toBe(false);   // strings
+    expect(isValidBits(null)).toBe(false);
+    expect(isValidBits("11110000")).toBe(false);
+  });
+  it("nibbleBreakdown teaches the 8|4|2|1 weights per nibble", () => {
+    expect(NIBBLE_PLACES).toEqual([8, 4, 2, 1]);
+    expect(nibbleBreakdown(11)).toBe("8+2+1 = 11 = B");     // B
+    expect(nibbleBreakdown(6)).toBe("4+2 = 6");             // 6 (decimal == hex digit)
+    expect(nibbleBreakdown(10)).toBe("8+2 = 10 = A");       // A
+    expect(nibbleBreakdown(3)).toBe("2+1 = 3");
+    expect(nibbleBreakdown(0)).toBe("0 = 0");
   });
 });
 
@@ -122,9 +141,34 @@ describe("hints (guide, never reveal) + explanations", () => {
     expect(hintForTask(buildTask("t", "hex2bin", 58), bitsFromValue(0))).toContain("A");
     expect(hintForTask(buildTask("t", "bin2dec", 45), bitsFromValue(0))).toContain("اجمع");
   });
-  it("explanation shows the transformation for the target base", () => {
-    expect(explanationForTask(buildTask("t", "dec2bin", 45))).toBe("45 = 32 + 8 + 4 + 1 → 00101101₂");
-    expect(explanationForTask(buildTask("t", "bin2dec", 45))).toBe("00101101₂ = 32 + 8 + 4 + 1 = 45");
-    expect(explanationForTask(buildTask("t", "dec2hex", 58))).toContain("3A₁₆");
+  it("hint DETAIL is level-dependent: guided > practice > challenge (boxes-only nudge)", () => {
+    const t = buildTask("t", "dec2bin", 45);
+    const partial = bitsFromValue(32);   // 13 remaining
+    const guided = hintForTask(t, partial, "guided");
+    const practice = hintForTask(t, partial, "practice");
+    const challenge = hintForTask(t, partial, "challenge");
+    expect(guided).toContain("13");                       // guided names the exact remaining amount
+    expect(practice).not.toContain("13");                 // practice is lighter — no exact number
+    expect(practice).not.toBe(guided);
+    expect(challenge).not.toContain("13");                // challenge is a minimal, direction-agnostic nudge
+    expect(challenge).not.toBe(guided);
+    expect(challenge).not.toBe(practice);
+    // a challenge hint carries no nibble/place-value method detail
+    const hexChallenge = hintForTask(buildTask("t", "bin2hex", 182), bitsFromValue(0), "challenge");
+    expect(hexChallenge).not.toContain("4 بتات");
+    expect(hexChallenge).toBe(challenge);                 // same generic nudge regardless of direction
+  });
+  it("explanation follows the CONVERSION DIRECTION (pinned curriculum examples; binary-bridge, never ÷16)", () => {
+    expect(explanationForTask(buildTask("t", "dec2bin", 45))).toBe("45₁₀ → 32 + 8 + 4 + 1 → 00101101₂");
+    expect(explanationForTask(buildTask("t", "bin2dec", 45))).toBe("00101101₂ → 32 + 8 + 4 + 1 → 45₁₀");
+    expect(explanationForTask(buildTask("t", "bin2hex", 182))).toBe("10110110₂ → 1011 | 0110 → (8+2+1 = 11 = B) | (4+2 = 6) → B6₁₆");
+    expect(explanationForTask(buildTask("t", "hex2bin", 58))).toBe("3A₁₆ → 3 | A → 0011 | 1010 → 00111010₂");
+    expect(explanationForTask(buildTask("t", "dec2hex", 58))).toBe("58₁₀ → 00111010₂ → 0011 | 1010 → 3 | A → 3A₁₆");
+    expect(explanationForTask(buildTask("t", "hex2dec", 58))).toBe("3A₁₆ → 00111010₂ → 32 + 16 + 8 + 2 → 58₁₀");
+    // decimal↔hex must teach via the binary bridge, not division-by-16
+    for (const v of [0, 58, 182, 255]) {
+      expect(explanationForTask(buildTask("t", "dec2hex", v))).not.toContain("16");
+      expect(explanationForTask(buildTask("t", "hex2dec", v))).toContain("₂");   // shows the 8-bit binary bridge
+    }
   });
 });

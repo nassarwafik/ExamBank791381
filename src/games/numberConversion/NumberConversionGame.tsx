@@ -41,8 +41,12 @@ export default function NumberConversionGame({ token, onBack, client: injected }
         const s = await clientRef.current.getState();
         if (cancelled) return;
         setBest(s.best ?? null);
-        if (s.active && !s.active.done && s.active.currentTask) { setState(s.active); setBits(emptyBits()); setPhase("playing"); }
-        else setPhase("home");
+        if (s.active && !s.active.done && s.active.currentTask) {
+          // Resume the SAME round AND restore its selected path + assistance level (so a later «إعادة المحاولة» repeats
+          // this round's mode, not the defaults).
+          setPath(s.active.path); setLevel(s.active.level);
+          setState(s.active); setBits(emptyBits()); setPhase("playing");
+        } else setPhase("home");
       } catch { if (!cancelled) setPhase("home"); }
     })();
     return () => { cancelled = true; };
@@ -60,6 +64,7 @@ export default function NumberConversionGame({ token, onBack, client: injected }
     try {
       const s = await clientRef.current.start(p, l);
       if (!s.ok || !s.active) { setError("تعذّر بدء التحدّي. حاول مرة أخرى."); return; }
+      setPath(p); setLevel(l);
       setBest(s.best ?? best);
       setState(s.active); setBits(emptyBits()); setFeedback(null); setPending(null); setResult(null); setPhase("playing");
     } catch { setError("تعذّر بدء التحدّي. حاول مرة أخرى."); }
@@ -75,8 +80,10 @@ export default function NumberConversionGame({ token, onBack, client: injected }
         // stale / conflict → resync from the server (refresh-safe)
         const s = await clientRef.current.getState();
         setBest(s.best ?? null);
-        if (s.active && !s.active.done && s.active.currentTask) { setState(s.active); setBits(emptyBits()); setFeedback(null); setPending(null); setPhase("playing"); }
-        else setPhase("home");
+        if (s.active && !s.active.done && s.active.currentTask) {
+          setPath(s.active.path); setLevel(s.active.level);
+          setState(s.active); setBits(emptyBits()); setFeedback(null); setPending(null); setPhase("playing");
+        } else setPhase("home");
         return;
       }
       if (r.correct) {
@@ -206,7 +213,7 @@ export default function NumberConversionGame({ token, onBack, client: injected }
           </p>
         </div>
 
-        <ConversionBoard bits={bits} onChange={setBits} direction={task.direction} disabled={locked} solutionBits={feedback?.kind === "revealed" ? feedback.solutionBits : null} />
+        <ConversionBoard bits={bits} onChange={setBits} direction={task.direction} level={state!.level} disabled={locked} solutionBits={feedback?.kind === "revealed" ? feedback.solutionBits : null} />
 
         <div className="eb-ncgame-feedback" aria-live="polite">
           {feedback?.kind === "hint" && <p className="eb-ncgame-hint"><IconInfo size={16} aria-hidden="true" /> {feedback.hint}</p>}
