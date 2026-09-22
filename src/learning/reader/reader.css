@@ -286,10 +286,14 @@
   padding:var(--eb-space-3); padding-inline:max(var(--eb-space-3), env(safe-area-inset-right, 0px)) max(var(--eb-space-3), env(safe-area-inset-left, 0px));
   gap:var(--eb-space-3);
 }
-/* The page is the slide: it fills the track (no document measure), grows to the viewport height, larger type. */
+/* The page is the slide and must contain the ENTIRE authored page. A SHORT page fills the presentation viewport
+   (min-block-size:100%); a LONG page grows with its own content (block-size:auto) rather than being clamped to the
+   track. flex:0 0 auto is the key: without it the page is a shrinkable flex item in this flex-column scroller, so a
+   tall page collapses to the track height while its descendants overflow below the white surface (the reported bug).
+   The single vertical scroll owner stays .learning-reader-main — the page itself never gets its own overflow. */
 .learning-reader.is-presentation .learning-reader-page{
   box-sizing:border-box; inline-size:100%; min-inline-size:0; max-inline-size:none; margin:0 auto;
-  min-block-size:100%; padding:clamp(16px, 3vw, 48px);
+  flex:0 0 auto; block-size:auto; min-block-size:100%; padding:clamp(16px, 3vw, 48px);
 }
 .learning-reader.is-presentation .learning-reader-page-title{ font-size:clamp(22px, 2vw + 12px, 40px); }
 .learning-reader.is-presentation .learning-reader-text{ max-inline-size:88ch; font-size:clamp(17px, 0.6vw + 13px, 22px); }
