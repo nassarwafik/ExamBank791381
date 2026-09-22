@@ -18,8 +18,9 @@ export type TrainingListEntry = {
   requiredModuleId: string;
   courseId: string;
   available: boolean;
-  /** Server policy: T-series trainings feed Unified Strength; the F-series final exams for training never do
-   *  (their maxPoints / bestPoints / earnedPoints are 0). Older responses without the flag are treated as eligible. */
+  /** Server policy: EVERY canonical Learning-Practice item (T01–T30 and F01–F06) feeds Unified Strength with the same
+   *  ceiling (maxPoints 40). The flag is kept in the contract for an unknown id (false, maxPoints 0); older responses
+   *  without it are treated as eligible. */
   strengthEligible?: boolean;
   title?: string;
   best?: TrainingBest;

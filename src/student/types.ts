@@ -14,22 +14,31 @@ export type StudentInfo = { userId: string; code: string; displayName: string; c
 export type Classroom = { classId: string; name: string; grade: string; schoolYear: string };
 /** One enrolled project's Strength contribution as the server derived it (round(overallProgress × 4), ≤ 400). */
 export type ProjectStrength = { projectCode: string; overallProgress: number; strengthPoints: number };
+/** LEGACY six-rank block (historical achievement events only). Carried by the server; it never decides the stage. */
+export type LegacyRank = { tier: RankTier | null; level: number; nextTier: RankTier | null; levelBlockSize: number; withinLevelPoints: number; nextLevelRemaining: number; percent: number };
 /**
  * The server-authoritative unified Strength summary (نقاط القوة) — the EXACT `dashboard.strength` contract of
- * `api/src/lib/student-strength.js` (`buildStrengthSummary`). The points AND the progression (tier / level /
- * nextTier / block progress) are decided by the server; the portal only shapes and labels them.
+ * `api/src/lib/student-strength.js` (`buildStrengthSummary`). The points AND the whole 25-stage progression (stage
+ * number, within-stage points, percent, next stage, remaining) are decided by the server; the portal only shapes and
+ * labels them and NEVER derives a stage from a total.
  */
 export type StudentStrength = {
-  totalPoints: number; examPoints: number; practicePoints: number; projectPoints: number;
-  /** Study Practice Strength (in-page learning exercises) — 0 for a payload from before that phase. */
-  studyPoints: number;
-  /** The earned rank tier id (null below the first rank). The client maps it to a label/artwork — never decides it. */
-  tier: RankTier | null;
-  /** 0 before the first rank, then 1..6. */
-  level: number;
-  /** The next tier id (null at the top rank). */
-  nextTier: RankTier | null;
-  levelBlockSize: number; withinLevelPoints: number; nextLevelRemaining: number; percent: number;
+  /** The uncapped authoritative total (exams + practice + study + projects). `totalPoints` is the same number (compat). */
+  rawTotalPoints: number; totalPoints: number;
+  examPoints: number; practicePoints: number; studyPoints: number; projectPoints: number;
+  /** The visible path: min(raw, 2000), its ceiling, and the 25 × 80 geometry. */
+  stagePoints: number; stageMaxPoints: number; stageCount: number; stageBlockSize: number;
+  /** 1..25 — never 26. */
+  stageNumber: number;
+  stageFloor: number; withinStagePoints: number; stagePercent: number;
+  /** null at stage 25 (there is no stage 26). */
+  nextStageNumber: number | null;
+  /** 0 at stage 25. */
+  nextStageRemaining: number;
+  /** 2000 − stagePoints: how far the whole path is from complete (0 when complete). */
+  pointsToMaximum: number;
+  isMaximumStage: boolean; pathComplete: boolean;
+  legacyRank: LegacyRank | null;
   projects: ProjectStrength[];
 };
 /** Recognition (never Strength): medals (finalized authority), reactions RECEIVED on the student's events, and

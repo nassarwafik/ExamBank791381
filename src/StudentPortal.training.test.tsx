@@ -24,7 +24,8 @@ const listBody = { ok: true, actor: "student", trainings: [
 
 function mount() {
   const calls: { url: string; method: string; headers: Record<string, string>; body?: string }[] = [];
-  let strength = { totalPoints: 0, examPoints: 0, practicePoints: 0, projectPoints: 0, tier: null, level: 0, nextTier: "beginner", levelBlockSize: 400, withinLevelPoints: 0, nextLevelRemaining: 400, percent: 0, projects: [] };
+  // the SERVER's Strength payload (25-stage path): 0 points → stage 1; after the T02 submission the server says 40 → stage 1, 40 / 80
+  let strength = { rawTotalPoints: 0, totalPoints: 0, examPoints: 0, practicePoints: 0, studyPoints: 0, projectPoints: 0, stagePoints: 0, stageMaxPoints: 2000, stageNumber: 1, stageCount: 25, stageBlockSize: 80, stageFloor: 0, withinStagePoints: 0, stagePercent: 0, nextStageNumber: 2, nextStageRemaining: 80, pointsToMaximum: 2000, isMaximumStage: false, pathComplete: false, legacyRank: null, projects: [] };
   globalThis.fetch = vi.fn((input: RequestInfo | URL, init?: RequestInit) => {
     const url = String(input), method = (init?.method || "GET").toUpperCase();
     calls.push({ url: url.replace(/\?.*$/, ""), method, headers: (init?.headers || {}) as Record<string, string>, body: init?.body as string | undefined });
@@ -33,10 +34,10 @@ function mount() {
     if (url.includes("/api/student-project-tracker")) return res(200, { ok: true, enrolled: false, projects: [] });
     if (url.includes("/api/student-learning-materials")) return res(200, materials);
     if (url === "/api/learning-training") return res(200, listBody);
-    if (url === "/api/learning-training/T02") return res(200, { ok: true, actor: "student", training: { ...listBody.trainings[1], questionCount: 10, totalMarks: 100, maxPoints: 25 }, exam: { questions } });
+    if (url === "/api/learning-training/T02") return res(200, { ok: true, actor: "student", training: { ...listBody.trainings[1], questionCount: 10, totalMarks: 100, maxPoints: 40 }, exam: { questions } });
     if (url === "/api/learning-training/T02/submit") {
-      strength = { ...strength, totalPoints: 25, practicePoints: 25, withinLevelPoints: 25, nextLevelRemaining: 375, percent: 6 };
-      return res(200, { ok: true, actor: "student", persisted: true, result: { correctCount: 10, questionCount: 10, score: 100, totalMarks: 100, percentage: 100, review: questions.map((q, i) => ({ questionId: q.examQuestionId, questionNumber: i + 1, correct: true, chosenIndex: 0, correctOptionIndex: 0, hint: "" })) }, practice: { bestPercentage: 100, bestPoints: 25, maxPoints: 25, attempts: 1, lastCompletedAt: null, improved: true, pointsGained: 25, earnedPoints: 25 } });
+      strength = { ...strength, rawTotalPoints: 40, totalPoints: 40, practicePoints: 40, stagePoints: 40, withinStagePoints: 40, stagePercent: 50, nextStageRemaining: 40, pointsToMaximum: 1960 };
+      return res(200, { ok: true, actor: "student", persisted: true, result: { correctCount: 10, questionCount: 10, score: 100, totalMarks: 100, percentage: 100, review: questions.map((q, i) => ({ questionId: q.examQuestionId, questionNumber: i + 1, correct: true, chosenIndex: 0, correctOptionIndex: 0, hint: "" })) }, practice: { bestPercentage: 100, bestPoints: 40, maxPoints: 40, attempts: 1, lastCompletedAt: null, improved: true, pointsGained: 40, earnedPoints: 40 } });
     }
     return res(404, { ok: false });
   }) as unknown as typeof fetch;
@@ -79,7 +80,8 @@ describe("Student portal — Learning Practice through the Reader", () => {
     fireEvent.click(screen.getByRole("button", { name: "العودة إلى موادي التعليمية" }));
     await screen.findByRole("region", { name: "موادي التعليمية" });
     await waitFor(() => expect(dashboardGets()).toBe(2));                               // ONE Strength reload on exit
-    expect((await screen.findByText(/نقاط القوة:/)).textContent).toContain("25");
+    expect((await screen.findByText(/نقاط القوة:/)).textContent).toBe("نقاط القوة: 40 / 2000");
+    expect(screen.getByText("40 / 80")).toBeTruthy();                                    // the server's new within-stage value, shown after the ONE reload
   }, T);
 
   it("leaving the Reader without submitting does NOT reload the dashboard", async () => {

@@ -159,24 +159,29 @@ function ReaderBody({ header, body, ctx }: { header: ReaderPageHeader; body: Rea
 }
 
 /**
- * The quiet study-points line of a page that carries eligible exercises: «نقاط الدراسة لهذه الصفحة: n / 2» (+ the
- * module's «n / 15» when the host knows it). Only what the SERVER reported is shown; a page without an eligible
- * exercise shows nothing. Never an animation, never a modal.
+ * The quiet study line of a page that carries eligible exercises: «تمارين الدراسة في هذه الصفحة: c / n» (the page's
+ * uniquely completed eligible exercises out of its eligible ones) + the module's Strength «نقاط القوة من هذه الوحدة:
+ * p / 20» when the host knows it. Only what the SERVER reported is shown; a page without an eligible exercise shows
+ * nothing. Library-training blocks are NOT study exercises (they have their own 40-point bucket) and never count here.
+ * Never an animation, never a modal.
  */
 function StudyPageBar({ page, host }: { page: ContentPage; host: StudyHost }) {
-  if (eligibleStudyActivities(page).length === 0) return null;
+  const eligibleHere = eligibleStudyActivities(page);
+  if (eligibleHere.length === 0) return null;
   const status = host.pageStatus(page.id);
   if (status.kind === "loading") return <p className="learning-reader-study is-loading" role="status">جارٍ تحميل نقاط الدراسة...</p>;
   if (status.kind === "error") return <p className="learning-reader-study is-error" role="status">تعذّر تحميل نقاط الدراسة لهذه الصفحة.</p>;
-  const full = status.points >= status.max;
+  const eligible = status.eligible || eligibleHere.length;
+  const done = eligibleHere.filter(a => status.completed.has(a.activityId)).length;
+  const full = done >= eligible;
   return (
     <p className={"learning-reader-study" + (full ? " is-full" : "")} role="status">
       <span className="learning-reader-study-page">
-        {full ? "اكتملت نقاط الدراسة لهذه الصفحة: " : "نقاط الدراسة لهذه الصفحة: "}
-        <span dir="ltr">{status.points} / {status.max}</span>
+        {full ? "أكملت تمارين الدراسة في هذه الصفحة: " : "تمارين الدراسة في هذه الصفحة: "}
+        <span dir="ltr">{done} / {eligible}</span>
       </span>
       {status.module && (
-        <span className="learning-reader-study-module">نقاط الدراسة في هذه الوحدة: <span dir="ltr">{status.module.points} / {status.module.max}</span></span>
+        <span className="learning-reader-study-module">نقاط القوة من هذه الوحدة: <span dir="ltr">{status.module.points} / {status.module.max}</span></span>
       )}
     </p>
   );
@@ -407,7 +412,7 @@ function LibraryTrainingView({ block, host }: { block: LibraryTrainingBlock; hos
         <>
           <p className="learning-reader-training-title">{available.title}</p>
           {best
-            ? <p className="learning-reader-training-best">أفضل نتيجة: <span dir="ltr">{best.bestPercentage}%</span>{best.maxPoints > 0 && <> · نقاط التقوية: <span dir="ltr">{best.bestPoints} / {best.maxPoints}</span></>}</p>
+            ? <p className="learning-reader-training-best">أفضل نتيجة: <span dir="ltr">{best.bestPercentage}%</span>{best.maxPoints > 0 && <> · نقاط القوة: <span dir="ltr">{best.bestPoints} / {best.maxPoints}</span></>}</p>
             : <p className="learning-reader-training-note">لم تحلّ هذا التدريب بعد.</p>}
           <button type="button" className="eb-button is-primary learning-reader-training-cta" onClick={() => host?.onOpen(block.trainingId)} aria-describedby={headingId}>
             <IconSparkles size={16} aria-hidden="true" />{solved ? "أعد التدريب" : "ابدأ التدريب"}

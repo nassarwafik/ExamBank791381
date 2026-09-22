@@ -16,7 +16,8 @@ import StudentAssignmentCard from "./student/StudentAssignmentCard";
 import AchievementFeed from "./student/AchievementFeed";
 import AvatarPickerDialog from "./student/AvatarPickerDialog";
 import { FILTERS, matchesFilter, medalsFor, nowItems, sortTaskFirst, type PortalFilter } from "./student/portalPresentation";
-import { normalizeStrength, progressPresentationFromStrength, rankPresentationFromStrength } from "./student/strengthPresentation";
+import { normalizeStrength } from "./student/strengthPresentation";
+import { stageVisual } from "./studentStageVisuals";
 import { normalizeRecognition } from "./student/recognitionPresentation";
 import type { Dashboard, Detail, Summary } from "./student/types";
 
@@ -58,7 +59,7 @@ export default function StudentPortal({ token, displayName, onLogout }: Props) {
       const r = await fetch("/api/student-dashboard", { headers }), j = await r.json() as any;
       if (r.status === 401) { onLogout(); return; }
       if (!r.ok || !j.student || !j.stats) throw new Error(j.error || "تعذر تحميل صفحة الطالب.");
-      setData({ student: j.student, classroom: j.classroom || null, assignments: j.assignments || [], stats: j.stats, strength: normalizeStrength(j.strength, j.stats?.finalized), recognition: normalizeRecognition(j.recognition) });
+      setData({ student: j.student, classroom: j.classroom || null, assignments: j.assignments || [], stats: j.stats, strength: normalizeStrength(j.strength), recognition: normalizeRecognition(j.recognition) });
       if (silent) setError("");   // a successful background refresh clears any stale error banner
     } catch (e) { if (!silent) setError(e instanceof Error ? e.message : "تعذر تحميل الصفحة."); }   // silent failure: keep last-good data, no flicker
     finally { if (!silent) setLoading(false); }
@@ -149,8 +150,10 @@ export default function StudentPortal({ token, displayName, onLogout }: Props) {
           onExit={() => {
             setReaderCourse(null);
             window.scrollTo({ top: 0, behavior: reducedMotion ? "auto" : "smooth" });
-            // A graded training changes the server's Strength total → ONE dashboard reload on return (never per page).
-            if (strengthDirtyRef.current) { strengthDirtyRef.current = false; void load(); }
+            // A graded training (T/F — the SAME bucket as the Training Library) or a study point inside the Reader changes
+            // the server's Strength → ONE silent authoritative dashboard reload on return (never per page, never a full
+            // page refresh, never while the Reader is open); the stage shown is the server's new stage.
+            if (strengthDirtyRef.current) { strengthDirtyRef.current = false; void load({ silent: true }); }
           }}
         />
       </Suspense>
@@ -160,12 +163,11 @@ export default function StudentPortal({ token, displayName, onLogout }: Props) {
 
   const stats = data?.stats;
   const medals = data ? medalsFor(data.assignments) : [];
-  // Unified Strength: the rank tier, the next tier and the power-ring progress are the SERVER's values in
-  // `dashboard.strength` (exams + practice + projects), only shaped/labelled here — the client never re-derives them
-  // from totalPoints. (normalizeStrength falls back, as a whole, to finalized × 100 when no payload exists.)
+  // Unified Strength: the 25-stage path (stage number, within-stage points, percent, next stage) is the SERVER's value
+  // in `dashboard.strength` (exams + practice + study + projects), only shaped/labelled here — the client never
+  // derives a stage from a total. No payload → the progress section shows an explicit "unavailable" state.
   const strength = data?.strength ?? null;
-  const rank = strength ? rankPresentationFromStrength(strength, stats) : null;
-  const progress = progressPresentationFromStrength(strength ?? normalizeStrength(null, stats?.finalized));
+  const stageGroup = strength ? stageVisual(strength.stageNumber).group.id : null;
   const averageFinalized = stats && stats.averageFinalized !== null && stats.averageFinalized !== undefined ? Number(stats.averageFinalized) : null;
   const ordered = data ? sortTaskFirst(data.assignments) : [];
   const visible = ordered.filter(item => matchesFilter(item, filter));
@@ -180,11 +182,11 @@ export default function StudentPortal({ token, displayName, onLogout }: Props) {
         {error && <div className="platform-error" role="alert">{error}</div>}
         {!loading && data && stats && (
           <>
-            <StudentIdentityCard student={data.student} classroom={data.classroom} displayName={displayName} rank={rank} token={token} onChangeAvatar={() => setAvatarPickerOpen(true)} />
+            <StudentIdentityCard student={data.student} classroom={data.classroom} displayName={displayName} stageGroup={stageGroup} token={token} onChangeAvatar={() => setAvatarPickerOpen(true)} />
             <AvatarPickerDialog open={avatarPickerOpen} current={data.student.avatarId} saving={avatarSaving} photoManaged={!!data.student.profilePhoto} onPick={pickAvatar} onClose={() => setAvatarPickerOpen(false)} />
             <NowSection actionable={now_.actionable} upcoming={now_.upcoming} busy={busy} onOpen={open} />
             <StudentLearningMaterials token={token} onOpen={course => { setReaderCourse(course); window.scrollTo({ top: 0, behavior: reducedMotion ? "auto" : "smooth" }); }} />
-            <StudentProgressSection stats={stats} medals={medals} rank={rank} progress={progress} strength={strength} recognition={data?.recognition ?? null} averageFinalized={averageFinalized} />
+            <StudentProgressSection stats={stats} medals={medals} strength={strength} recognition={data?.recognition ?? null} averageFinalized={averageFinalized} />
             <section className="eb-sp-panel" aria-labelledby="eb-sp-tasks-title">
               <SectionHeader level={2} id="eb-sp-tasks-title" title="المهام والواجبات" count={visible.length} description="كل واجباتك ونتائجك؛ ما يحتاج إجراءً يظهر أولًا." />
               <div className="eb-sp-filters" role="group" aria-label="تصفية المهام">

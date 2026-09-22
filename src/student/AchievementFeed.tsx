@@ -3,6 +3,7 @@ import { IconMedal } from "../icons";
 import { MEDAL_LABELS } from "../medals";
 import { RANK_LABELS, type RankTier } from "../studentRank";
 import { RANK_VISUALS } from "../studentRankVisuals";
+import { stageVisual } from "../studentStageVisuals";
 import EmptyState from "../ui/EmptyState";
 import SectionHeader from "../ui/SectionHeader";
 import StatusBadge from "../ui/StatusBadge";
@@ -19,14 +20,21 @@ type Props = {
   onToggleShare: () => void; onReact: (postId: string, reaction: ReactionId) => void;
 };
 
-const LABELS = { medal: (tier: string) => MEDAL_LABELS[tier as keyof typeof MEDAL_LABELS] || tier, rank: (tier: string) => (RANK_VISUALS[tier as RankTier]?.title) || RANK_LABELS[tier as RankTier] || tier };
+// Labels: the 25-stage title for stage-era global events; the LEGACY six-rank titles for historical global events
+// and for project ranks (the Project Tracker keeps its own six-tier ladder).
+const LABELS = { medal: (tier: string) => MEDAL_LABELS[tier as keyof typeof MEDAL_LABELS] || tier, rank: (tier: string) => (RANK_VISUALS[tier as RankTier]?.title) || RANK_LABELS[tier as RankTier] || tier, stage: (n: number) => stageVisual(n).title };
 
-/** The event's leading visual: the medal icon, or the SAME rank artwork for rank / project events. */
+/** The event's leading visual: the medal icon, the stage artwork (stage-era global events), or the legacy six-rank
+ *  artwork (historical global events, project events). */
 function EventIcon({ post }: { post: FeedPost }) {
   const type = eventTypeOf(post);
   if (type === "medal") {
     const tier = post.medal?.tier || post.tier || "bronze";
     return <span className={"eb-sp-medal-icon is-" + tier} aria-hidden="true"><IconMedal size={26} /></span>;
+  }
+  const stageNumber = Number(post.stage?.stageNumber);
+  if (type === "global_rank_up" && Number.isInteger(stageNumber) && stageNumber >= 1) {
+    return <img className="eb-sp-feed-rank-art is-global_rank_up is-stage" src={stageVisual(stageNumber).image} alt="" aria-hidden="true" width={40} height={40} loading="lazy" decoding="async" />;
   }
   const tier = (type === "global_rank_up" ? post.rank?.tier : post.project?.tier) || "beginner";
   const v = RANK_VISUALS[tier as RankTier] || RANK_VISUALS.beginner;

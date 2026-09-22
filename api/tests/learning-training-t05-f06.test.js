@@ -147,7 +147,7 @@ describe("F-series safety — the final exams for training reuse the SAME saniti
       for (const f of q.fields || []) { expect("correct" in f).toBe(false); for (const o of f.options || []) expect("correct" in o).toBe(false); }
     }
     expect(r.jsonBody.exam.questions.map(q => q.presentationType).filter(t => t === "matching").length).toBe(8);
-    expect(r.jsonBody.training).toMatchObject({ trainingId: "F01", title: "نموذج A — 2025", questionCount: 34, totalMarks: 100, maxPoints: 0, strengthEligible: false, label: "الامتحان الأول" });
+    expect(r.jsonBody.training).toMatchObject({ trainingId: "F01", title: "نموذج A — 2025", questionCount: 34, totalMarks: 100, maxPoints: 40, strengthEligible: true, label: "الامتحان الأول" });
   });
   it("POST F01 grades server-side with the real grader: MCQ + matching count, open questions are flagged manualReview (their marks stay in the total, as everywhere else); review reveals keys only now; best is persisted; no assignment / gradebook document", async () => {
     const ctx = seed(through(M("m06")));
@@ -166,8 +166,9 @@ describe("F-series safety — the final exams for training reuse the SAME saniti
     const matchingRows = review.filter(x => x.correctText);
     expect(matchingRows.length).toBe(8); expect(matchingRows.every(x => x.correct && x.correctOptionIndex === null)).toBe(true);
     expect(review.filter(x => x.correctOptionIndex !== null).length).toBe(24);
-    // practice history is kept, Strength is NOT advertised or awarded for an F-series exam (see learning-practice-strength-fseries.test.js)
-    expect(r.jsonBody.practice).toMatchObject({ attempts: 1, bestPercentage: Math.round(expected.percentage), maxPoints: 0, bestPoints: 0, earnedPoints: 0, pointsGained: 0, improved: true });
+    // an F item is a full Strength bucket like any T item: round(best × 40 / 100), max 40 (see learning-practice-strength-all-items.test.js)
+    const pts = Math.round(Math.round(expected.percentage) * 40 / 100);
+    expect(r.jsonBody.practice).toMatchObject({ attempts: 1, bestPercentage: Math.round(expected.percentage), maxPoints: 40, bestPoints: pts, earnedPoints: pts, pointsGained: pts, improved: true });
     expect(ctx.names("platform/").filter(n => !n.startsWith("platform/users/") && !n.startsWith("platform/classes/"))).toEqual(["platform/learning-practice/u1.json"]);
     expect(ctx.names("platform/assignments/")).toEqual([]); expect(ctx.names("platform/submissions/")).toEqual([]); expect(ctx.names("platform/gradebook/")).toEqual([]);
     // a retry with fewer right answers never lowers the best

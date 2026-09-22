@@ -55,29 +55,39 @@ describe("34/33/110. generic event shape + legacy medal posts", () => {
   });
 });
 
-describe("35/103/93. global rank-up milestone (dashboard = the Strength authority point)", () => {
-  it("first sight records the baseline only; crossing into a NEW tier creates exactly one event; a retry stays one; a jump records the final tier only", async () => {
-    const ctx = school({ ...exams(7) });                              // 700 → beginner
+describe("35/103/93. global stage-up milestone (dashboard = the Strength authority point; the 25-stage path decides, never the legacy tier)", () => {
+  it("first sight records the baseline only; reaching a NEW stage creates exactly one event (stage + legacy rank carried); a retry stays one; a jump records the final stage only", async () => {
+    const ctx = school({ ...exams(7) });                              // 700 → stage 9 (640–719)
     let r = await dash(ctx);
-    expect(r.jsonBody.strength.tier).toBe("beginner");
+    expect(r.jsonBody.strength.stageNumber).toBe(9);
     expect(feedNames(ctx)).toEqual([]);                                 // baseline, no retroactive event
-    expect(ctx.getJson(recognitionDocName("s1"))).toMatchObject({ lastGlobalTier: "beginner", lastGlobalPoints: 700 });
-    // +1 finalized exam → 800 → bronze
+    expect(ctx.getJson(recognitionDocName("s1"))).toMatchObject({ lastGlobalStage: 9, lastGlobalTier: "beginner", lastGlobalPoints: 700 });
+    // +1 finalized exam → 800 → stage 11
     ctx.setJson("platform/assignments/A8.json", assignment("A8", "c1")); ctx.setJson("platform/submissions/A8/s1.json", { attempts: [finalAttempt(60)] });
     r = await dash(ctx);
-    expect(r.jsonBody.strength.tier).toBe("bronze");
-    expect(feedNames(ctx)).toEqual([feedBlobName("c1", "global_rank_bronze_s1")]);
-    expect(ctx.getJson(feedBlobName("c1", "global_rank_bronze_s1"))).toMatchObject({ eventType: "global_rank_up", rank: { tier: "bronze", level: 2, points: 800 }, shareWithClass: true, studentDisplayName: "طالب s1" });
+    expect(r.jsonBody.strength.stageNumber).toBe(11);
+    expect(feedNames(ctx)).toEqual([feedBlobName("c1", "global_stage_11_s1")]);
+    expect(ctx.getJson(feedBlobName("c1", "global_stage_11_s1"))).toMatchObject({ eventType: "global_rank_up", stage: { stageNumber: 11, stageCount: 25 }, rank: { tier: "bronze", level: 2, points: 800 }, shareWithClass: true, studentDisplayName: "طالب s1" });
     expect(r.jsonBody.recognition.achievements).toEqual({ total: 1, byType: { global_rank_up: 1, project_rank_up: 0, project_complete: 0 } });
     await dash(ctx); await dash(ctx);                                    // retries / small changes → still one
     expect(feedNames(ctx).length).toBe(1);
-    // jump two tiers at once (800 → 1600 gold) → ONE event for the final tier
+    // jump many stages at once (800 → 1600 = stage 21) → ONE event for the final stage
     for (let i = 9; i <= 16; i++) { ctx.setJson("platform/assignments/A" + i + ".json", assignment("A" + i, "c1")); ctx.setJson("platform/submissions/A" + i + "/s1.json", { attempts: [finalAttempt(60)] }); }
     r = await dash(ctx);
-    expect(r.jsonBody.strength.tier).toBe("gold");
-    expect(feedNames(ctx)).toEqual([feedBlobName("c1", "global_rank_bronze_s1"), feedBlobName("c1", "global_rank_gold_s1")]);
+    expect(r.jsonBody.strength.stageNumber).toBe(21);
+    expect(feedNames(ctx)).toEqual([feedBlobName("c1", "global_stage_11_s1"), feedBlobName("c1", "global_stage_21_s1")]);
+    // the public projection carries `stage` for new events (renderers prefer it) and `rank` for the legacy fallback
+    const feed = await dashboard({ method: "GET", url: "https://x/api/student-dashboard", headers: { get: () => null } }, studentDeps(ctx));
+    expect(feed.status).toBe(200);
   });
-  it("steady state is write-free: after the first-sight baseline, repeated dashboard reads with an unchanged tier issue no writes; a tier change writes once", async () => {
+  it("a six-rank-era observation document (lastGlobalTier only, no lastGlobalStage) is a FIRST SIGHT: baseline written, nothing posted retroactively", async () => {
+    const ctx = school({ ...exams(8) });                              // 800 → stage 11
+    ctx.setJson(recognitionDocName("s1"), { schemaVersion: 1, studentId: "s1", lastGlobalTier: "beginner", lastGlobalPoints: 700, updatedAt: NOW });
+    await dash(ctx);
+    expect(feedNames(ctx)).toEqual([]);
+    expect(ctx.getJson(recognitionDocName("s1"))).toMatchObject({ lastGlobalStage: 11, lastGlobalTier: "bronze", lastGlobalPoints: 800 });
+  });
+  it("steady state is write-free: after the first-sight baseline, repeated dashboard reads with an unchanged stage issue no writes; a stage change writes once", async () => {
     const ctx = school({ ...exams(7) });
     const writes = [];
     const d = () => ({ ...studentDeps(ctx), uploadJson: async (_c, n, v) => { writes.push(n); ctx.setJson(n, v); } });
@@ -89,22 +99,27 @@ describe("35/103/93. global rank-up milestone (dashboard = the Strength authorit
     ctx.setJson("platform/assignments/A8.json", assignment("A8", "c1")); ctx.setJson("platform/submissions/A8/s1.json", { attempts: [finalAttempt(60)] });
     await dashboard({ method: "GET", url: "https://x/api/student-dashboard", headers: { get: () => null } }, d());
     expect(writes.length).toBe(2);
-    expect(feedNames(ctx)).toEqual([feedBlobName("c1", "global_rank_bronze_s1")]);
+    expect(feedNames(ctx)).toEqual([feedBlobName("c1", "global_stage_11_s1")]);
   });
-  it("790 → 795 (no tier change) creates nothing; a decrease creates nothing and a re-climb to the same tier is not re-posted", async () => {
+  it("800 → 808 (same stage) creates nothing; a decrease creates nothing and a re-climb to the same stage is not re-posted; stage 1 is never an event", async () => {
     const ctx = school({ ...exams(8) });
-    await dash(ctx);                                                     // baseline bronze
-    ctx.setJson("platform/learning-practice/s1.json", { trainings: { T01: { bestPercentage: 20, bestPoints: 5, attempts: 1 } } });   // 805
+    await dash(ctx);                                                     // baseline stage 11
+    ctx.setJson("platform/learning-practice/s1.json", { trainings: { T01: { bestPercentage: 20, bestPoints: 5, attempts: 1 } } });   // 808 (20% of 40 = 8)
     await dash(ctx);
     expect(feedNames(ctx)).toEqual([]);
-    ctx.setJson("platform/submissions/A8/s1.json", { attempts: [] });   // drop to 705 → beginner
-    expect((await dash(ctx)).jsonBody.strength.tier).toBe("beginner");
+    ctx.setJson("platform/submissions/A8/s1.json", { attempts: [] });   // drop to 708 → stage 9
+    expect((await dash(ctx)).jsonBody.strength.stageNumber).toBe(9);
     expect(feedNames(ctx)).toEqual([]);
-    ctx.setJson("platform/submissions/A8/s1.json", { attempts: [finalAttempt(60)] });   // back to bronze — a NEW tier vs last seen → one event
+    ctx.setJson("platform/submissions/A8/s1.json", { attempts: [finalAttempt(60)] });   // back to 808 → stage 11 — a NEW stage vs last seen (9) → one event
     await dash(ctx);
-    expect(feedNames(ctx)).toEqual([feedBlobName("c1", "global_rank_bronze_s1")]);
+    expect(feedNames(ctx)).toEqual([feedBlobName("c1", "global_stage_11_s1")]);
     await dash(ctx);
     expect(feedNames(ctx).length).toBe(1);
+    // a brand-new student at 0 points: baseline at stage 1, never a "stage 1" event
+    const zero = school({});
+    await dash(zero); await dash(zero);
+    expect(feedNames(zero)).toEqual([]);
+    expect(zero.getJson(recognitionDocName("s1"))).toMatchObject({ lastGlobalStage: 1 });
   });
 });
 
@@ -206,7 +221,7 @@ describe("49. teacher student profile — concise Strength + recognition + proje
     await react(ctx, "s2", "A1_s1", "heart");
     const r = await students({ method: "GET", url: "https://x/api/students?profileUserId=s1", headers: { get: () => null } }, teacherDeps(ctx));
     expect(r.status).toBe(200);
-    expect(r.jsonBody.profile.strength).toMatchObject({ totalPoints: 400, examPoints: 400, tier: "beginner", level: 1, nextTier: "bronze" });
+    expect(r.jsonBody.profile.strength).toMatchObject({ totalPoints: 400, rawTotalPoints: 400, examPoints: 400, stageNumber: 6, stagePercent: 0, legacyRank: { tier: "beginner", level: 1, nextTier: "bronze" } });
     expect(r.jsonBody.profile.recognition).toEqual({ medals: { total: 1, gold: 1, silver: 0, bronze: 0 }, reactionsReceived: { total: 1, byType: { heart: 1, clap: 0, cheer: 0, fire: 0 } }, achievements: { total: 0, byType: { global_rank_up: 0, project_rank_up: 0, project_complete: 0 } } });
     expect(r.jsonBody.profile.projectSummaries).toEqual([{ projectCode: "899373", title: "مشروع 899373", overallProgress: 0, complete: false }]);
   });

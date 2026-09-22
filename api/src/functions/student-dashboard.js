@@ -6,9 +6,10 @@ const {downloadJsonOrNull,listJson,mapConcurrent,getReadConcurrency}=require("..
 const {normalizeClassStatus}=require("../lib/class-lifecycle");
 const {attemptState,deriveAttemptStatus,attemptModelVersion,activeAttemptOf}=require("../lib/assignment-availability");
 const {deriveGradingStatus}=require("../lib/grading-status");
-// Unified Strength (نقاط القوة): finalized exams × 100 + T-series practice best (≤ 25 each) + projects
-// (round(overallProgress × 4), ≤ 400 each) → the six ranks. The policy lives in student-strength.js; project
-// progress comes from the SAME loader as /api/student-project-tracker (never re-derived here).
+// Unified Strength (نقاط القوة): finalized exams × 100 + Learning-Practice best (≤ 40 each, all 36 items) + Study
+// Practice (≤ 20 per module) + projects (round(overallProgress × 4), ≤ 400 each) → the raw total and the visible
+// 25-stage path (80 points per stage, 2000 max) — every stage field is decided HERE by student-strength.js; the
+// browser never derives a stage. Project progress comes from the SAME loader as /api/student-project-tracker.
 const {buildStrengthSummary}=require("../lib/student-strength");
 const {studyDocName,studyModulesForStrength}=require("../lib/learning-study");
 const {listLearningCourses}=require("../lib/learning-materials-registry");
@@ -82,8 +83,8 @@ async function handler(request,deps={},obs=null){
   const study=studyModulesForStrength(studyDoc,listLearningCourses().map(x=>x.courseId));
   const projects=classroom?await loadStudentProjects(c,classroom,String(student.classId||""),student.userId,now,{...deps,downloadJsonOrNull:dl,mapConcurrent:mc,getReadConcurrency:readConcurrency}):[];
   const strength=buildStrengthSummary({finalizedCount:finalized,trainings:practiceDoc&&practiceDoc.trainings,study,projects:projects.map(p=>({projectCode:p.projectCode,overallProgress:p.summary.overallProgress}))});
-  // Recognition (never Strength): the global rank-up milestone is observed HERE — the one place the total Strength is
-  // built — against the persisted last-seen tier (create-only event ids, baseline on first sight); the summary counts
+  // Recognition (never Strength): the global stage-up milestone is observed HERE — the one place the total Strength is
+  // built — against the persisted last-seen stage (create-only event ids, baseline on first sight); the summary counts
   // medals (the same finalized-only authority as the portal), reactions RECEIVED and non-medal achievements lifetime.
   const recMilestone=deps.recordGlobalRankMilestone||recordGlobalRankMilestone,recAgg=deps.aggregateRecognition||aggregateRecognition;
   await recMilestone(c,{student,classId:String(student.classId||""),strength,now},deps);

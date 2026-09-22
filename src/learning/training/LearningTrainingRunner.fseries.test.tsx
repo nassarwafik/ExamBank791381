@@ -4,9 +4,9 @@
 // the student exam's own question primitive, enables submission only when all are answered, sends ONLY the answers
 // (kinds choice / table / text), and renders the server's review: the learner's own non-choice answer, the revealed
 // key text of a matching question, and a neutral «لا يُصحَّح تلقائيًا» row for an open question. No second runner.
-// STRENGTH: the server marks the F-series strengthEligible: false / maxPoints 0 — the runner then shows NO Strength-point
-// ceiling, earned points or gain (T-series messaging is pinned unchanged in LearningTrainingRunner.test.tsx) and says
-// that open questions are not part of the automatic score.
+// STRENGTH: an F item is a full 40-point Strength bucket exactly like a T item — the server advertises
+// strengthEligible: true / maxPoints 40 and the runner shows the SAME ceiling, best percentage, earned points and gain
+// (no «بلا نقاط» wording anywhere); it still says that open questions are not part of the automatic score.
 import { describe, it, expect, afterEach, vi } from "vitest";
 import { render, cleanup, screen, fireEvent, within, waitFor } from "@testing-library/react";
 import LearningTrainingRunner from "./LearningTrainingRunner";
@@ -27,9 +27,10 @@ const questions: Question[] = [
 ] as unknown as Question[];
 const LOADED: TrainingLoadResponse = {
   ok: true, actor: "student",
-  training: { trainingId: "F01", order: 31, label: "الامتحان الأول", requiredModuleId: "791381-m06", courseId: "791381", available: true, strengthEligible: false, title: "نموذج A — 2025", questionCount: 3, totalMarks: 9, maxPoints: 0 },
+  training: { trainingId: "F01", order: 31, label: "الامتحان الأول", requiredModuleId: "791381-m06", courseId: "791381", available: true, strengthEligible: true, title: "نموذج A — 2025", questionCount: 3, totalMarks: 9, maxPoints: 40 },
   exam: { examId: "LIB-F01", title: "نموذج A — 2025", questions, totalMarks: 9 },
 };
+// 33% of 40 = 13.2 → 13 points (the SERVER's numbers; the runner never computes them)
 const GRADED: TrainingSubmitResponse = {
   ok: true, actor: "student", persisted: true,
   result: {
@@ -40,13 +41,19 @@ const GRADED: TrainingSubmitResponse = {
       { questionId: "LIB-F01-Q11", questionNumber: 3, correct: false, manualReview: true, chosenIndex: null, correctOptionIndex: null, correctText: "", hint: "" },
     ],
   },
-  practice: { bestPercentage: 33, bestPoints: 0, maxPoints: 0, attempts: 1, lastCompletedAt: null, improved: true, pointsGained: 0, earnedPoints: 0 },
+  practice: { bestPercentage: 33, bestPoints: 13, maxPoints: 40, attempts: 1, lastCompletedAt: null, improved: true, pointsGained: 13, earnedPoints: 13 },
 };
-function client() {
-  const submit = vi.fn(async () => GRADED);
-  return { list: vi.fn(async () => ({ ok: true as const, actor: "student" as const, trainings: [] })), load: vi.fn(async () => LOADED), submit } as TrainingClient & { submit: ReturnType<typeof vi.fn> };
+function client(loaded: TrainingLoadResponse = LOADED, graded: TrainingSubmitResponse = GRADED) {
+  const submit = vi.fn(async () => graded);
+  return { list: vi.fn(async () => ({ ok: true as const, actor: "student" as const, trainings: [] })), load: vi.fn(async () => loaded), submit } as TrainingClient & { submit: ReturnType<typeof vi.fn>; load: ReturnType<typeof vi.fn> };
 }
 const submitBtn = () => screen.getByRole("button", { name: /أرسل الإجابات|جارٍ التصحيح/ }) as HTMLButtonElement;
+function answerAllThree() {
+  fireEvent.click(screen.getAllByRole("radio")[1]);
+  const selects = screen.getAllByRole("combobox") as HTMLSelectElement[];
+  fireEvent.change(selects[0], { target: { value: PAIRS[1] } }); fireEvent.change(selects[1], { target: { value: PAIRS[0] } });
+  fireEvent.change(screen.getByPlaceholderText("اكتب إجابتك هنا..."), { target: { value: "إجابة الطالب" } });
+}
 
 describe("LearningTrainingRunner — F-series shapes (MCQ + matching + open) through the one shared runner", () => {
   it("renders the three shapes, collects choice / table / text answers, gates submission on all three, sends ONLY the answers, and reviews non-choice rows honestly", async () => {
@@ -54,10 +61,9 @@ describe("LearningTrainingRunner — F-series shapes (MCQ + matching + open) thr
     render(<LearningTrainingRunner trainingId="F01" actor="student" client={c} onExit={vi.fn()} />);
     expect(await screen.findByRole("heading", { level: 2, name: "نموذج A — 2025" })).toBeTruthy();
     expect(screen.getByText("الامتحان الأول")).toBeTruthy();
-    // no Strength promise for an F-series exam: no ceiling, and the hint line says so
-    expect(screen.queryByText(/نقطة تقوية/)).toBeNull();
-    expect(screen.getByText("امتحان للتدريب — بلا نقاط تقوية")).toBeTruthy();
-    expect(screen.getByText(/لا يمنح نقاط تقوية؛ الأسئلة المقالية لا تُصحَّح تلقائيًا/)).toBeTruthy();
+    // the SAME Strength promise as a T item: the 40-point ceiling; no «بلا نقاط» wording anywhere
+    expect(screen.getByText("حتى 40 نقطة قوة")).toBeTruthy();
+    expect(document.body.textContent).not.toMatch(/بلا نقاط|لا يمنح نقاط|تقوية|\/ 25|حتى 25/);
     expect(document.querySelectorAll(".iex-q").length).toBe(3);
     expect(screen.getByText("طابق")).toBeTruthy();                       // the matching card kind
     expect(screen.getByText(/أسئلة مُجابة/).textContent).toBe("0 / 3 أسئلة مُجابة");
@@ -87,13 +93,14 @@ describe("LearningTrainingRunner — F-series shapes (MCQ + matching + open) thr
       "LIB-F01-Q05": { kind: "table", values: [PAIRS[1], PAIRS[0]] },
       "LIB-F01-Q11": { kind: "text", value: "إجابة الطالب" },
     }]);
-    // the server's numbers, verbatim
+    // the server's numbers, verbatim: result, best percentage, earned points out of 40, the gain of THIS submission
     expect(screen.getByText(/إجابات صحيحة$/).textContent).toBe("1 / 3 إجابات صحيحة");
-    expect(screen.getByText("33%")).toBeTruthy();
-    // no earned Strength points, no «+n نقاط قوة», no «/ 25» — only the automatic result and its best
-    expect(screen.queryByText("نقاط التقوية")).toBeNull();                                   // no <dt> row
-    expect(document.body.innerHTML).not.toMatch(/\d+ \/ \d+ نقاط تقوية|\+\d+ نقاط قوة|حتى \d+ نقطة تقوية/);
-    expect(screen.getByText(/تحسّنت أفضل نتيجتك التلقائية\. امتحان للتدريب: لا يمنح نقاط تقوية\./)).toBeTruthy();
+    expect(screen.getAllByText("33%").length).toBeGreaterThanOrEqual(1);
+    expect(screen.getByText("أفضل نسبة")).toBeTruthy();
+    expect(screen.getByText("13 / 40").closest("dd")!.textContent).toBe("13 / 40 نقاط قوة");
+    expect(screen.getByText("+13").closest("dd")!.textContent).toBe("+13 نقاط قوة");
+    expect(screen.getByText("تحسّنت أفضل نتيجتك: +13 نقاط قوة.")).toBeTruthy();
+    expect(document.body.textContent).not.toMatch(/بلا نقاط|لا يمنح نقاط|تقوية|\/ 25|\/ 0 /);
     expect(screen.getByText("النسبة المعروضة تلقائية: سؤال مقالي واحد لا يُصحَّح تلقائيًا، وعلاماته غير مُحتسبة في النتيجة التلقائية.")).toBeTruthy();
     const items = document.querySelectorAll(".learning-training-review-item");
     const line = (el: Element, tag: string) => Array.from(el.querySelectorAll("p.learning-training-review-line")).find(p => p.textContent?.startsWith(tag))?.textContent ?? "";
@@ -118,22 +125,30 @@ describe("LearningTrainingRunner — F-series shapes (MCQ + matching + open) thr
     expect(c.load).toHaveBeenCalledTimes(1);
   });
 
-  it("the SAME runner keeps the T-series Strength messaging: strengthEligible: true / maxPoints 25 → «حتى 25 نقطة تقوية» and «8 / 25 نقاط تقوية» after submit", async () => {
-    const T: TrainingLoadResponse = { ...LOADED, training: { ...LOADED.training, trainingId: "T05", label: "تدريب 5", title: "Class وSubnet وCIDR", strengthEligible: true, maxPoints: 25 } };
-    const G: TrainingSubmitResponse = { ...GRADED, practice: { bestPercentage: 33, bestPoints: 8, maxPoints: 25, attempts: 1, lastCompletedAt: null, improved: true, pointsGained: 8, earnedPoints: 8 } };
-    const c = { list: vi.fn(async () => ({ ok: true as const, actor: "student" as const, trainings: [] })), load: vi.fn(async () => T), submit: vi.fn(async () => G) } as TrainingClient;
-    render(<LearningTrainingRunner trainingId="T05" actor="student" client={c} onExit={vi.fn()} />);
-    await screen.findByRole("heading", { level: 2, name: "Class وSubnet وCIDR" });
-    expect(screen.getByText("حتى 25 نقطة تقوية")).toBeTruthy();
-    expect(screen.queryByText("امتحان للتدريب — بلا نقاط تقوية")).toBeNull();
-    expect(screen.getByText("تدريب حرّ: أعده كما تشاء — تُحفظ أفضل نتيجة فقط ولا تُحسب كواجب.")).toBeTruthy();
-    fireEvent.click(screen.getAllByRole("radio")[1]);
-    const selects = screen.getAllByRole("combobox") as HTMLSelectElement[];
-    fireEvent.change(selects[0], { target: { value: PAIRS[1] } }); fireEvent.change(selects[1], { target: { value: PAIRS[0] } });
-    fireEvent.change(screen.getByPlaceholderText("اكتب إجابتك هنا..."), { target: { value: "إجابة الطالب" } });
-    fireEvent.click(submitBtn());
+  it("a retry that does NOT improve: «لم تزد نقاط القوة» with the kept best (33%, 13 / 40) and a +0 gain row", async () => {
+    const G: TrainingSubmitResponse = { ...GRADED, practice: { ...GRADED.practice!, attempts: 2, improved: false, pointsGained: 0 } };
+    render(<LearningTrainingRunner trainingId="F01" actor="student" client={client(LOADED, G)} onExit={vi.fn()} />);
+    await screen.findByRole("heading", { level: 2, name: "نموذج A — 2025" });
+    answerAllThree(); fireEvent.click(submitBtn());
     await screen.findByText("مراجعة الإجابات");
-    expect(screen.getByText(/نقاط تقوية$/).textContent).toBe("8 / 25 نقاط تقوية");
-    expect(screen.getByText("تحسّنت أفضل نتيجتك: +8 نقاط قوة.")).toBeTruthy();
+    expect(screen.getByText("13 / 40").closest("dd")!.textContent).toBe("13 / 40 نقاط قوة");
+    expect(screen.getByText("+0").closest("dd")!.textContent).toBe("+0 نقاط قوة");
+    expect(screen.getByText(/لم تزد نقاط القوة: أفضل نتيجتك المحفوظة ما زالت 33% \(13 \/ 40 نقاط قوة\)/)).toBeTruthy();
+    expect(document.body.textContent).not.toMatch(/\+13/);
+  });
+
+  it("the SAME runner shows the identical Strength messaging for a T item: maxPoints 40 → «حتى 40 نقطة قوة», «13 / 40 نقاط قوة», «+13 نقاط قوة», and a listed best with its points", async () => {
+    const T: TrainingLoadResponse = { ...LOADED, training: { ...LOADED.training, trainingId: "T05", label: "تدريب 5", title: "Class وSubnet وCIDR", strengthEligible: true, maxPoints: 40 }, best: { bestPercentage: 20, bestPoints: 8, maxPoints: 40, attempts: 1, lastCompletedAt: null } };
+    const G: TrainingSubmitResponse = { ...GRADED, practice: { bestPercentage: 33, bestPoints: 13, maxPoints: 40, attempts: 2, lastCompletedAt: null, improved: true, pointsGained: 5, earnedPoints: 13 } };
+    render(<LearningTrainingRunner trainingId="T05" actor="student" client={client(T, G)} onExit={vi.fn()} />);
+    await screen.findByRole("heading", { level: 2, name: "Class وSubnet وCIDR" });
+    expect(screen.getByText("حتى 40 نقطة قوة")).toBeTruthy();
+    expect(screen.getByText(/أفضل نتيجة:/).textContent).toBe("أفضل نتيجة: 20% · 8 / 40 نقاط قوة");
+    expect(screen.getByText(/تدريب حرّ: أعده كما تشاء/)).toBeTruthy();
+    answerAllThree(); fireEvent.click(submitBtn());
+    await screen.findByText("مراجعة الإجابات");
+    expect(screen.getByText("13 / 40").closest("dd")!.textContent).toBe("13 / 40 نقاط قوة");
+    expect(screen.getByText("+5").closest("dd")!.textContent).toBe("+5 نقاط قوة");
+    expect(screen.getByText("تحسّنت أفضل نتيجتك: +5 نقاط قوة.")).toBeTruthy();
   });
 });

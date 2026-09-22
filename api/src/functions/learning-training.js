@@ -9,18 +9,19 @@ const { sanitizeExamForStudent } = require("../lib/student-exam-sanitize");
 const { gradeExam } = require("../lib/assignment-grading");
 const { listLearningTrainings, findLearningTraining, trainingAllowedForClass } = require("../lib/learning-training-registry");
 const { practiceDocName, normalizePracticeDoc, trainingEntry, applyTrainingResult } = require("../lib/learning-practice");
-const { trainingCountsTowardStrength, trainingMaxStrengthPoints } = require("../lib/student-strength");
+const { isLearningPracticeItem, trainingMaxStrengthPoints } = require("../lib/student-strength");
 
-// Learning Practice API — the SAFE delivery of the book's Learning-Practice items (the T-series trainings T01–T30
-// and the F-series final exams for training F01–F06 — all real Exam Library items) and their server-side grading. Self-study only: NO assignment record, no due date, no gradebook entry, no attempt limit,
-// no medal. Routes (one function):
+// Learning Practice API — the SAFE delivery of the book's 36 Learning-Practice items (the T-series trainings T01–T30
+// and the F-series final exams for training F01–F06 — all real Exam Library items) and their server-side grading.
+// Self-study only: NO assignment record, no due date, no gradebook entry, no attempt limit, no medal. Routes (one function):
 //   GET  /api/learning-training                     → the trainings for the caller (student: gated, with best results)
 //   GET  /api/learning-training/{trainingId}        → the SANITIZED exam (no answer keys, no hints) — student gated
 //   POST /api/learning-training/{trainingId}/submit → server grading; student results persisted as BEST-score
 //
-// Strength: only the T-series feeds Unified Strength (student-strength.js). The F-series final exams for training
-// run through the very same routes, grading and best-score storage, but every response advertises
-// strengthEligible: false / maxPoints: 0 and their persisted bestPoints / earnedPoints / pointsGained are 0.
+// Strength: EVERY canonical item (T01–T30 and F01–F06) feeds Unified Strength with the same ceiling — maxPoints 40,
+// bestPoints = round(bestPercentage × 40 / 100) (student-strength.js). One id = one bucket: the Training Library and
+// the Learning-Materials Reader open the same item through these same routes, so a best result improved in either
+// place is the ONE best result the Student Portal's Strength reflects (never two buckets, never 40 + 40).
 //
 // Actors: a builder (teacher) token → may review/solve any training regardless of class publication, nothing is
 // persisted; otherwise an active student session → the PERSISTED student.classId (never the token's) → current
@@ -42,7 +43,7 @@ async function resolveActor(request, deps) {
 
 /** Public training metadata (never the exam). */
 function trainingMeta(t, extra = {}) {
-  return { trainingId: t.trainingId, order: t.order, label: t.label, requiredModuleId: t.requiredModuleId, courseId: t.courseId, strengthEligible: trainingCountsTowardStrength(t.trainingId), ...extra };
+  return { trainingId: t.trainingId, order: t.order, label: t.label, requiredModuleId: t.requiredModuleId, courseId: t.courseId, strengthEligible: isLearningPracticeItem(t.trainingId), ...extra };
 }
 function bestOf(entry, trainingId) {
   return { bestPercentage: entry.bestPercentage, bestPoints: entry.bestPoints, maxPoints: trainingMaxStrengthPoints(trainingId), attempts: entry.attempts, lastCompletedAt: entry.lastCompletedAt };

@@ -1,19 +1,24 @@
 // @vitest-environment happy-dom
-// Unified Strength — the PORTAL renders the SERVER's rank/progress verbatim. The dashboard mock returns a
-// deliberately inconsistent payload (520 points but tier «bronze», 77 / 400 into the block, 323 remaining, 19%):
-// under a client-side 400-step rule 520 points would read «beginner» with 120 / 400 — the portal must show the
-// server's values, proving it runs no threshold logic over totalPoints. A dashboard WITHOUT `strength` still shows
-// the legacy finalized × 100 ring.
+// Unified Strength — the PORTAL renders the SERVER's 25-stage progression verbatim. The dashboard mock returns a
+// deliberately inconsistent payload (900 points but stage 17, 11 / 80 into the stage, 14%): under a client-side
+// 80-step rule 900 points would read stage 12 with 20 / 80 and 25% — the portal must show the server's values,
+// proving it runs no threshold logic over the total. A dashboard WITHOUT `strength` shows an explicit "unavailable"
+// state (never a client-computed stage).
 import { describe, it, expect, afterEach, vi } from "vitest";
 import { render, cleanup, screen, within } from "@testing-library/react";
 import StudentPortal from "./StudentPortal";
+import { stageVisual } from "./studentStageVisuals";
 
 afterEach(() => { cleanup(); vi.restoreAllMocks(); });
 const res = (status: number, body: unknown) => Promise.resolve({ status, ok: status >= 200 && status < 300, json: async () => body } as Response);
 const student = { userId: "u1", code: "C1", displayName: "أحمد", classId: "c1", avatarId: "a1", shareAchievements: true };
 const classroom = { classId: "c1", name: "الصف", grade: "11", schoolYear: "2026" };
 const stats = { assigned: 3, completed: 3, average: 80, pendingReview: 0, finalized: 3, inProgress: 0, averageFinalized: 80 };
-const SYNTHETIC = { totalPoints: 520, examPoints: 300, practicePoints: 20, projectPoints: 200, tier: "bronze", level: 2, nextTier: "silver", levelBlockSize: 400, withinLevelPoints: 77, nextLevelRemaining: 323, percent: 19, projects: [] };
+const INCONSISTENT = {
+  rawTotalPoints: 900, totalPoints: 900, examPoints: 300, practicePoints: 400, studyPoints: 100, projectPoints: 100,
+  stagePoints: 900, stageMaxPoints: 2000, stageNumber: 17, stageCount: 25, stageBlockSize: 80, stageFloor: 1280, withinStagePoints: 11, stagePercent: 14,
+  nextStageNumber: 18, nextStageRemaining: 69, pointsToMaximum: 1100, isMaximumStage: false, pathComplete: false, legacyRank: null, projects: [],
+};
 
 function mount(strength: unknown) {
   globalThis.fetch = vi.fn((input: RequestInfo | URL) => {
@@ -28,30 +33,39 @@ function mount(strength: unknown) {
 }
 const progressRegion = () => screen.findByRole("region", { name: /تقدّمي/ });
 
-describe("Strength authority — the portal displays the server's progression, never a recomputed one", () => {
-  it("520 points + server tier «bronze» → الرتبة: برونزي · بـ 520 نقطة قوة · بقي 323 نقطة قوة للوصول إلى رتبة فضي · 77 / 400 · 19%", async () => {
-    mount(SYNTHETIC);
+describe("Strength authority — the portal displays the server's stage, never a recomputed one", () => {
+  it("900 points + server stage 17 / 11 / 14% → المرحلة 17 من 25 · تنين الجليد · 11 / 80 · 14% · نقاط القوة: 900 / 2000 · next سيد العواصف", async () => {
+    mount(INCONSISTENT);
     const region = await progressRegion();
-    expect(within(region).getByText(/الرتبة:/).textContent).toContain("الرتبة: برونزي");
-    expect(within(region).getByText("بـ 520 نقطة قوة")).toBeTruthy();
-    expect(within(region).getByText(/بقي 323 نقطة قوة للوصول إلى رتبة فضي/)).toBeTruthy();
-    expect(within(region).getByText("التقدم نحو المستوى التالي: 77 / 400")).toBeTruthy();
-    expect(within(region).getByText("19%")).toBeTruthy();
-    expect(within(region).getByText(/نقاط القوة:/).textContent).toBe("نقاط القوة: 520");
-    // what a client-side 400-step rule over 520 would have produced must NOT appear
-    expect(region.textContent).not.toMatch(/الرتبة: مبتدئ|بقي 280 نقطة|120 \/ 400|30%/);
+    expect(within(region).getByText("المرحلة 17 من 25")).toBeTruthy();
+    expect(within(region).getByText("تنين الجليد")).toBeTruthy();                       // stage 17's title
+    expect(within(region).getByText("مرحلة الريادة")).toBeTruthy();                      // stages 16–20
+    expect(within(region).getByText("11 / 80")).toBeTruthy();
+    expect(within(region).getByText("14%")).toBeTruthy();
+    expect(within(region).getByText(/نقاط القوة:/).textContent).toBe("نقاط القوة: 900 / 2000");
+    expect(within(region).getByText("بقي 69 نقطة قوة للوصول إلى المرحلة 18 — سيد العواصف")).toBeTruthy();
+    const ring = within(region).getByRole("progressbar", { name: "التقدم نحو المرحلة 18 — سيد العواصف" });
+    expect(ring.getAttribute("aria-valuemin")).toBe("0"); expect(ring.getAttribute("aria-valuemax")).toBe("80"); expect(ring.getAttribute("aria-valuenow")).toBe("11");
+    expect((within(region).getByRole("img", { name: "المرحلة 17 — تنين الجليد" }) as HTMLImageElement).getAttribute("src")).toBe(stageVisual(17).image);
+    expect((document.querySelector(".eb-sp-rank-next-art") as HTMLImageElement).getAttribute("src")).toBe(stageVisual(18).image);
+    // what a client-side 80-step rule over 900 would have produced must NOT appear
+    expect(region.textContent).not.toMatch(/المرحلة 12 من 25|20 \/ 80|25%|محارب الظلال/);
+    // the avatar frame follows the server's stage group (17 → group 4)
+    expect(document.querySelector(".eb-sp-avatar-frame.is-stage-group-4")).toBeTruthy();
   });
-  it("server tier null with the server's block values → the pre-rank ring reads those values (not totalPoints % 400)", async () => {
-    mount({ ...SYNTHETIC, tier: null, level: 0, nextTier: "beginner", totalPoints: 950, withinLevelPoints: 33, nextLevelRemaining: 367, percent: 8 });
-    const region = await progressRegion();
-    expect(within(region).getByText("33 من 400 نقطة قوة لفتح رتبتك")).toBeTruthy();
-    expect(within(region).queryByText(/الرتبة:/)).toBeNull();
-    expect(region.textContent).not.toMatch(/150 من 400|برونزي|مبتدئ/);
-  });
-  it("no strength payload (older API) → the legacy finalized × 100 ring: 3 exams → 300 من 400", async () => {
+  it("no strength payload (older API) → an explicit unavailable state; no stage, no ring, nothing computed from finalized", async () => {
     mount(undefined);
     const region = await progressRegion();
-    expect(within(region).getByText("300 من 400 نقطة قوة لفتح رتبتك")).toBeTruthy();
-    expect(within(region).getByText(/نقاط القوة:/).textContent).toBe("نقاط القوة: 300");
+    expect(within(region).getByText(/تعذّر تحميل مسار القوة/)).toBeTruthy();
+    expect(within(region).queryByText(/المرحلة \d+ من 25/)).toBeNull();
+    expect(within(region).queryByRole("progressbar", { name: /التقدم نحو/ })).toBeNull();
+    expect(region.textContent).not.toMatch(/300|بذرة القوة/);
+    expect(document.querySelector(".eb-sp-avatar-frame")?.className).not.toMatch(/is-stage-group-|is-rank-/);
+  });
+  it("a malformed payload (stage 26) is treated as unavailable — never clamped into a shown stage", async () => {
+    mount({ ...INCONSISTENT, stageNumber: 26 });
+    const region = await progressRegion();
+    expect(within(region).getByText(/تعذّر تحميل مسار القوة/)).toBeTruthy();
+    expect(within(region).queryByText(/المرحلة \d+ من 25/)).toBeNull();
   });
 });

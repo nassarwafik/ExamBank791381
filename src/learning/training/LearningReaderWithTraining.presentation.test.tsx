@@ -26,15 +26,15 @@ const meta = (id: string, order: number, mod: string, extra: Partial<TrainingLis
   ({ trainingId: id, order, label: "تدريب " + order, requiredModuleId: mod, courseId: "791381", available: false, strengthEligible: true, ...extra });
 const LIST: TrainingListEntry[] = [
   meta("T01", 1, "791381-m01", { available: true, title: "أساسيات الشبكات" }),
-  meta("T02", 2, "791381-m02", { available: true, title: "أنظمة العد", best: { bestPercentage: 60, bestPoints: 15, maxPoints: 25, attempts: 1, lastCompletedAt: null } }),
+  meta("T02", 2, "791381-m02", { available: true, title: "أنظمة العد", best: { bestPercentage: 60, bestPoints: 24, maxPoints: 40, attempts: 1, lastCompletedAt: null } }),
   meta("T03", 3, "791381-m07"), meta("T04", 4, "791381-m07"),
 ];
 const questions: Question[] = Array.from({ length: 3 }, (_, i) => ({
   examQuestionId: `LIB-T01-Q${i + 1}`, presentationType: "multipleChoice", marks: 10, text: `سؤال ${i + 1}`,
   options: [{ value: "0", text: "أ" }, { value: "1", text: "ب" }], answer: {}, hint: "",
 } as unknown as Question));
-const LOADED: TrainingLoadResponse = { ok: true, actor: "student", training: { ...LIST[0], title: "أساسيات الشبكات", questionCount: 3, totalMarks: 30, maxPoints: 25 }, exam: { questions } };
-const GRADED: TrainingSubmitResponse = { ok: true, actor: "student", persisted: true, result: { correctCount: 3, questionCount: 3, score: 30, totalMarks: 30, percentage: 100, review: questions.map((q, i) => ({ questionId: q.examQuestionId!, questionNumber: i + 1, correct: true, chosenIndex: 0, correctOptionIndex: 0, hint: "" })) }, practice: { bestPercentage: 100, bestPoints: 25, maxPoints: 25, attempts: 1, lastCompletedAt: null, improved: true, pointsGained: 25, earnedPoints: 25 } };
+const LOADED: TrainingLoadResponse = { ok: true, actor: "student", training: { ...LIST[0], title: "أساسيات الشبكات", questionCount: 3, totalMarks: 30, maxPoints: 40 }, exam: { questions } };
+const GRADED: TrainingSubmitResponse = { ok: true, actor: "student", persisted: true, result: { correctCount: 3, questionCount: 3, score: 30, totalMarks: 30, percentage: 100, review: questions.map((q, i) => ({ questionId: q.examQuestionId!, questionNumber: i + 1, correct: true, chosenIndex: 0, correctOptionIndex: 0, hint: "" })) }, practice: { bestPercentage: 100, bestPoints: 40, maxPoints: 40, attempts: 1, lastCompletedAt: null, improved: true, pointsGained: 40, earnedPoints: 40 } };
 function fakeClient() {
   const c = { list: vi.fn(async () => ({ ok: true as const, actor: "student" as const, trainings: LIST })), load: vi.fn(async () => LOADED), submit: vi.fn(async () => GRADED) };
   return c as TrainingClient & typeof c;
@@ -54,7 +54,7 @@ describe("14 · return from a training preserves the page AND presentation mode"
     // the Learning-Practice cards are the same inside presentation
     const c1 = screen.getByRole("region", { name: "تدريب 1" });
     expect(within(c1).getByText("أساسيات الشبكات")).toBeTruthy();
-    expect(within(screen.getByRole("region", { name: "تدريب 2" })).getByText(/أفضل نتيجة:/).textContent).toBe("أفضل نتيجة: 60% · نقاط التقوية: 15 / 25");
+    expect(within(screen.getByRole("region", { name: "تدريب 2" })).getByText(/أفضل نتيجة:/).textContent).toBe("أفضل نتيجة: 60% · نقاط القوة: 24 / 40");
     expect((within(screen.getByRole("region", { name: "تدريب 3" })).getByRole("button", { name: "ابدأ التدريب" }) as HTMLButtonElement).disabled).toBe(true);
     fireEvent.click(within(c1).getByRole("button", { name: "ابدأ التدريب" }));
     await screen.findByRole("heading", { level: 2, name: "أساسيات الشبكات" }, SLOW);   // the runner

@@ -15,7 +15,10 @@ export type AchievementEventType = "medal" | "global_rank_up" | "project_rank_up
 export const EVENT_TYPES: AchievementEventType[] = ["medal", "global_rank_up", "project_rank_up", "project_complete"];
 export type RankTierId = "beginner" | "bronze" | "silver" | "gold" | "diamond" | "legendary";
 export type FeedMedal = { tier: "gold" | "silver" | "bronze"; assignmentId?: string; assignmentTitle: string };
-export type FeedRank = { tier: RankTierId; level: number; points?: number };
+/** LEGACY six-rank payload of a global_rank_up event (historical events; new events also carry `stage`). */
+export type FeedRank = { tier: RankTierId | ""; level: number; points?: number };
+/** The 25-stage payload of a global_rank_up event written since the Strength path (absent on historical events). */
+export type FeedStage = { stageNumber: number; stageCount?: number };
 export type FeedProject = { projectCode: string; title: string; tier: RankTierId | null; level: number; projectStrength?: number };
 
 export type FeedPost = {
@@ -28,6 +31,7 @@ export type FeedPost = {
   tier?: "gold" | "silver" | "bronze";
   medal?: FeedMedal | null;
   rank?: FeedRank | null;
+  stage?: FeedStage | null;
   project?: FeedProject | null;
   createdAt: string;
   shareWithClass?: boolean;
@@ -47,16 +51,23 @@ export function eventTypeOf(post: { eventType?: string }): AchievementEventType 
  * The feed sentence for an event as ordered parts (plain text + the emphasised tokens), so both the student feed and
  * the teacher dashboard render the SAME wording (the class name is inserted by the teacher view only):
  *   medal            → حصلت ليان على ميدالية ذهبية في …
- *   global_rank_up   → تقدّم كريم إلى تنين النار — المستوى 5
+ *   global_rank_up   → stage-era event: وصل كريم إلى المرحلة 7 — ذئب الرياح · historical six-rank event:
+ *                      تقدّم كريم إلى تنين النار — المستوى 5
  *   project_rank_up  → تقدّمت هاجر في مشروع AquaSense إلى نمر البرق
  *   project_complete → أكمل أحمد مشروع SecureBank
- * (Arabic verbs are gender-neutral in the shared helper; the caller passes `rankTitle` for tiers.)
+ * (Arabic verbs are gender-neutral in the shared helper; the caller passes the label functions: `stage` for the
+ * 25-stage title, `rank` for the LEGACY six-rank / project-rank titles.)
  */
 export type FeedTextPart = { text: string; strong?: boolean };
-export function feedEventParts(post: { eventType?: string; studentDisplayName: string; assignmentTitle?: string; tier?: string; medal?: FeedMedal | null; rank?: FeedRank | null; project?: FeedProject | null }, labels: { medal: (tier: string) => string; rank: (tier: string) => string }): FeedTextPart[] {
+export function feedEventParts(post: { eventType?: string; studentDisplayName: string; assignmentTitle?: string; tier?: string; medal?: FeedMedal | null; rank?: FeedRank | null; stage?: FeedStage | null; project?: FeedProject | null }, labels: { medal: (tier: string) => string; rank: (tier: string) => string; stage?: (stageNumber: number) => string }): FeedTextPart[] {
   const name = post.studentDisplayName;
   switch (eventTypeOf(post)) {
     case "global_rank_up": {
+      const stageNumber = Number(post.stage?.stageNumber);
+      if (Number.isInteger(stageNumber) && stageNumber >= 1 && labels.stage) {
+        return [{ text: "وصل " }, { text: name, strong: true }, { text: " إلى المرحلة " + stageNumber + " — " }, { text: labels.stage(stageNumber), strong: true }];
+      }
+      // historical (six-rank era) event
       const tier = post.rank?.tier || "beginner";
       return [{ text: "تقدّم " }, { text: name, strong: true }, { text: " إلى " }, { text: labels.rank(tier), strong: true }, { text: " — المستوى " + (post.rank?.level || 0) }];
     }

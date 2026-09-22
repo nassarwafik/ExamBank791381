@@ -1,92 +1,110 @@
-// Unified Strength (نقاط القوة) — PRESENTATION of the server's `dashboard.strength`.
+// Unified Strength (نقاط القوة) — PRESENTATION of the server's `dashboard.strength` (the 25-stage path).
 //
 // Authority contract (one policy, on the server — api/src/lib/student-strength.js):
-//   • `strength` payload present and well-formed → it is trusted COMPLETELY: tier, level, nextTier, levelBlockSize,
-//     withinLevelPoints, nextLevelRemaining and percent are the server's values. Nothing here divides, floors or
-//     compares totalPoints against a threshold; the helpers below only shape and label those values (tier id →
-//     Arabic label / artwork is presentation, not policy).
-//   • no `strength` payload at all (an older API during a rollout) → the LEGACY finalized-only fallback: finalized
-//     × 100 through the compatibility helpers of studentRank.ts, so the ring never disappears. That is the ONLY
-//     place a rank is derived on the client, and it is used as a WHOLE — server fields are never mixed with locally
-//     recalculated ones.
-//   • a `strength` object that is malformed / incomplete (a missing or non-numeric field, an unknown tier id) →
-//     treated exactly like "no payload": the whole legacy fallback, never a partial acceptance.
-import { RANK_LABELS, RANK_ORDER, nextRankForStrength, rankTierForStrength, strengthFromFinalized, strengthProgress, type RankTier, type StrengthProgress, type StudentRank } from "../studentRank";
-import type { ProjectStrength, StudentStrength } from "./types";
+//   • `strength` payload present and well-formed → it is trusted COMPLETELY: stageNumber, stagePoints, withinStagePoints,
+//     stagePercent, nextStageNumber, nextStageRemaining, pointsToMaximum … are the server's values. Nothing here
+//     divides, floors or compares a total against a threshold; the helpers below only shape and label those values
+//     (stage number → Arabic title / artwork is presentation, not policy).
+//   • no `strength` payload, or a malformed / incomplete one (a missing or non-numeric stage field, a stage outside
+//     1..25) → `null`: the portal shows an explicit "unavailable" state. There is deliberately NO client-side fallback
+//     that would derive a stage from points — the browser must never compute the stage.
+import { stageVisual, type StageVisual } from "../studentStageVisuals";
+import { RANK_ORDER, type RankTier } from "../studentRank";
+import type { LegacyRank, ProjectStrength, StudentStrength } from "./types";
 
-const NUMERIC_FIELDS = ["totalPoints", "examPoints", "practicePoints", "projectPoints", "level", "levelBlockSize", "withinLevelPoints", "nextLevelRemaining", "percent"] as const;
+const NUMERIC_FIELDS = ["examPoints", "practicePoints", "projectPoints", "stagePoints", "stageMaxPoints", "stageNumber", "stageCount", "stageBlockSize", "withinStagePoints", "stagePercent", "nextStageRemaining"] as const;
 
 const isFiniteNumber = (v: unknown): v is number => typeof v === "number" && Number.isFinite(v);
 const isTierOrNull = (v: unknown): v is RankTier | null => v === null || (typeof v === "string" && (RANK_ORDER as string[]).includes(v));
+const nonNegativeInt = (value: number): number => (value > 0 ? Math.trunc(value) : 0);
 
 /** True when `raw` is a complete, well-formed server Strength payload (the documented acceptance rule). */
 export function isServerStrength(raw: unknown): raw is StudentStrength {
   if (!raw || typeof raw !== "object") return false;
   const r = raw as Record<string, unknown>;
-  return NUMERIC_FIELDS.every(k => isFiniteNumber(r[k])) && isTierOrNull(r.tier) && isTierOrNull(r.nextTier) && Array.isArray(r.projects);
+  if (!NUMERIC_FIELDS.every(k => isFiniteNumber(r[k]))) return false;
+  if (!isFiniteNumber(r.rawTotalPoints) && !isFiniteNumber(r.totalPoints)) return false;
+  const stage = r.stageNumber as number, count = r.stageCount as number;
+  if (!Number.isInteger(stage) || stage < 1 || stage > count) return false;
+  if (!(r.nextStageNumber === null || isFiniteNumber(r.nextStageNumber))) return false;
+  return Array.isArray(r.projects);
 }
 
-/** Which authority `normalizeStrength` would use for a raw payload — "server" or the "legacy" finalized fallback. */
-export function strengthAuthority(raw: unknown): "server" | "legacy" {
-  return isServerStrength(raw) ? "server" : "legacy";
+/** Which authority `normalizeStrength` would use for a raw payload — "server" or none ("unavailable"). */
+export function strengthAuthority(raw: unknown): "server" | "unavailable" {
+  return isServerStrength(raw) ? "server" : "unavailable";
 }
 
-const nonNegativeInt = (value: number): number => (value > 0 ? Math.trunc(value) : 0);
+function legacyRankOf(raw: unknown): LegacyRank | null {
+  if (!raw || typeof raw !== "object") return null;
+  const r = raw as Record<string, unknown>;
+  if (!isTierOrNull(r.tier) || !isTierOrNull(r.nextTier)) return null;
+  return { tier: r.tier, nextTier: r.nextTier, level: isFiniteNumber(r.level) ? nonNegativeInt(r.level) : 0, levelBlockSize: isFiniteNumber(r.levelBlockSize) ? nonNegativeInt(r.levelBlockSize) : 0, withinLevelPoints: isFiniteNumber(r.withinLevelPoints) ? nonNegativeInt(r.withinLevelPoints) : 0, nextLevelRemaining: isFiniteNumber(r.nextLevelRemaining) ? nonNegativeInt(r.nextLevelRemaining) : 0, percent: isFiniteNumber(r.percent) ? nonNegativeInt(r.percent) : 0 };
+}
 
-/** A well-formed StudentStrength from the server payload; `finalized` feeds the legacy fallback only. */
-export function normalizeStrength(raw: unknown, finalized: number | null | undefined): StudentStrength {
-  if (!isServerStrength(raw)) return legacyStrength(finalized);
-  const projects: ProjectStrength[] = (raw.projects as unknown[])
+/** A well-formed StudentStrength from the server payload, or null when there is no trustworthy payload. */
+export function normalizeStrength(raw: unknown): StudentStrength | null {
+  if (!isServerStrength(raw)) return null;
+  const r = raw as unknown as Record<string, unknown>;
+  const projects: ProjectStrength[] = (r.projects as unknown[])
     .filter((x): x is Record<string, unknown> => !!x && typeof x === "object")
     .map(x => ({ projectCode: String(x.projectCode || ""), overallProgress: isFiniteNumber(x.overallProgress) ? nonNegativeInt(x.overallProgress) : 0, strengthPoints: isFiniteNumber(x.strengthPoints) ? nonNegativeInt(x.strengthPoints) : 0 }));
-  // Shape only: integers where the contract is integral; the tier ids and the progression are the server's.
+  const rawTotal = nonNegativeInt(isFiniteNumber(r.rawTotalPoints) ? r.rawTotalPoints : (r.totalPoints as number));
+  const stagePoints = nonNegativeInt(r.stagePoints as number), stageMaxPoints = nonNegativeInt(r.stageMaxPoints as number);
+  // Shape only: integers where the contract is integral; every progression value is the server's.
   return {
-    totalPoints: nonNegativeInt(raw.totalPoints), examPoints: nonNegativeInt(raw.examPoints), practicePoints: nonNegativeInt(raw.practicePoints), projectPoints: nonNegativeInt(raw.projectPoints),
-    // Study Practice Strength is a later, optional field: an older payload without it is still a complete server payload.
-    studyPoints: isFiniteNumber((raw as Record<string, unknown>).studyPoints) ? nonNegativeInt((raw as Record<string, unknown>).studyPoints as number) : 0,
-    tier: raw.tier, level: nonNegativeInt(raw.level), nextTier: raw.nextTier,
-    levelBlockSize: nonNegativeInt(raw.levelBlockSize), withinLevelPoints: nonNegativeInt(raw.withinLevelPoints), nextLevelRemaining: nonNegativeInt(raw.nextLevelRemaining), percent: nonNegativeInt(raw.percent),
+    rawTotalPoints: rawTotal, totalPoints: rawTotal,
+    examPoints: nonNegativeInt(r.examPoints as number), practicePoints: nonNegativeInt(r.practicePoints as number), projectPoints: nonNegativeInt(r.projectPoints as number),
+    studyPoints: isFiniteNumber(r.studyPoints) ? nonNegativeInt(r.studyPoints) : 0,
+    stagePoints, stageMaxPoints, stageCount: nonNegativeInt(r.stageCount as number), stageBlockSize: nonNegativeInt(r.stageBlockSize as number),
+    stageNumber: r.stageNumber as number,
+    stageFloor: isFiniteNumber(r.stageFloor) ? nonNegativeInt(r.stageFloor) : 0,
+    withinStagePoints: nonNegativeInt(r.withinStagePoints as number), stagePercent: Math.min(100, nonNegativeInt(r.stagePercent as number)),
+    nextStageNumber: r.nextStageNumber === null ? null : nonNegativeInt(r.nextStageNumber as number) || null,
+    nextStageRemaining: nonNegativeInt(r.nextStageRemaining as number),
+    pointsToMaximum: isFiniteNumber(r.pointsToMaximum) ? nonNegativeInt(r.pointsToMaximum) : Math.max(0, stageMaxPoints - stagePoints),
+    isMaximumStage: r.isMaximumStage === true || r.nextStageNumber === null,
+    pathComplete: r.pathComplete === true || (isFiniteNumber(r.pointsToMaximum) && r.pointsToMaximum === 0),
+    legacyRank: legacyRankOf(r.legacyRank),
     projects,
   };
 }
 
-/** The rank object the progress section renders, shaped from the SERVER's tier / nextTier / block progress. */
-export function rankPresentationFromStrength(strength: StudentStrength, stats: { finalized?: number | null; averageFinalized?: number | null } | null | undefined): StudentRank | null {
-  if (!strength.tier) return null;
-  const avgRaw = stats?.averageFinalized;
-  const avg = Number(avgRaw);
-  const next = strength.nextTier
-    ? { tier: strength.nextTier, label: RANK_LABELS[strength.nextTier], remaining: strength.nextLevelRemaining, percent: strength.percent }
-    : null;
-  return {
-    tier: strength.tier, label: RANK_LABELS[strength.tier],
-    averageFinalized: avgRaw !== null && avgRaw !== undefined && Number.isFinite(avg) ? avg : 0,
-    finalized: isFiniteNumber(stats?.finalized) ? nonNegativeInt(stats!.finalized as number) : 0,
-    points: strength.totalPoints,
-    next,
-  };
+/** What the progress section renders for the stage: the current visual, the next one (null at stage 25) and copy. */
+export type StagePresentation = {
+  current: StageVisual;
+  next: StageVisual | null;
+  /** «المرحلة 7 من 25» */
+  stageLabel: string;
+  /** The accessible name of the ring's progressbar. */
+  progressLabel: string;
+  /** The "remaining" sentence under the ring: toward the next stage, toward completing the path, or the completion note. */
+  remainingText: string;
+};
+
+/** «بقي 50 نقطة قوة» — natural singular / dual / plural. */
+export function remainingStrengthPhrase(remaining: number): string {
+  const r = Math.max(1, Math.floor(Number(remaining) || 1));
+  if (r === 1) return "بقيت نقطة قوة واحدة";
+  if (r === 2) return "بقيت نقطتا قوة";
+  return "بقي " + r + " نقطة قوة";
 }
 
-/** The ring / "next level" progress, shaped from the SERVER's block values (never recomputed from totalPoints). */
-export function progressPresentationFromStrength(strength: StudentStrength): StrengthProgress {
-  return { points: strength.totalPoints, withinBlock: strength.withinLevelPoints, needed: strength.levelBlockSize, remaining: strength.nextLevelRemaining, percent: strength.percent };
+/** The stage presentation from the SERVER's values (never recomputed from a total). */
+export function stagePresentationFromStrength(strength: StudentStrength): StagePresentation {
+  const current = stageVisual(strength.stageNumber);
+  const next = strength.nextStageNumber !== null && strength.nextStageNumber > strength.stageNumber ? stageVisual(strength.nextStageNumber) : null;
+  const stageLabel = "المرحلة " + strength.stageNumber + " من " + strength.stageCount;
+  if (next) {
+    return { current, next, stageLabel, progressLabel: "التقدم نحو المرحلة " + next.stageNumber + " — " + next.title, remainingText: remainingStrengthPhrase(strength.nextStageRemaining) + " للوصول إلى المرحلة " + next.stageNumber + " — " + next.title };
+  }
+  if (strength.pathComplete || strength.pointsToMaximum === 0) {
+    return { current, next: null, stageLabel, progressLabel: "اكتمال مسار القوة", remainingText: "أكملت مسار القوة" };
+  }
+  return { current, next: null, stageLabel, progressLabel: "التقدم نحو إكمال مسار القوة", remainingText: remainingStrengthPhrase(strength.pointsToMaximum) + " لإكمال مسار القوة" };
 }
 
 /** The project contribution row for one project code (null when the server reported none). */
 export function projectContribution(strength: StudentStrength | null | undefined, projectCode: string): ProjectStrength | null {
   return strength?.projects.find(p => p.projectCode === projectCode) ?? null;
-}
-
-// ── Legacy fallback (no / malformed server payload): finalized × 100 through the compatibility helpers ─────────
-function legacyStrength(finalized: number | null | undefined): StudentStrength {
-  const examPoints = strengthFromFinalized(finalized);
-  const tier = rankTierForStrength(examPoints);
-  const next = nextRankForStrength(examPoints);
-  const p = strengthProgress(examPoints);
-  return {
-    totalPoints: examPoints, examPoints, practicePoints: 0, studyPoints: 0, projectPoints: 0,
-    tier, level: tier ? RANK_ORDER.indexOf(tier) + 1 : 0, nextTier: tier ? (next ? next.tier : null) : "beginner",
-    levelBlockSize: p.needed, withinLevelPoints: tier && !next ? p.needed : p.withinBlock, nextLevelRemaining: tier && !next ? 0 : p.remaining, percent: tier && !next ? 100 : p.percent,
-    projects: [],
-  };
 }

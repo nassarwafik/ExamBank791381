@@ -63,24 +63,24 @@ describe("library-training card — host-decided states", () => {
     expect(onOpen).toHaveBeenCalledWith("T01");
     expect(c1.classList.contains("is-available")).toBe(true);
   });
-  it("available with a best result → «أفضل نتيجة: 80% · نقاط التقوية: 20 / 25» and the CTA reads «أعد التدريب»", () => {
-    draw(hostOf({ T01: { kind: "available", title: "أساسيات الشبكات", best: { bestPercentage: 80, bestPoints: 20, maxPoints: 25, attempts: 2, lastCompletedAt: "2026-09-01T00:00:00.000Z" } } }));
+  it("available with a best result → «أفضل نتيجة: 80% · نقاط القوة: 32 / 40» and the CTA reads «أعد التدريب»", () => {
+    draw(hostOf({ T01: { kind: "available", title: "أساسيات الشبكات", best: { bestPercentage: 80, bestPoints: 32, maxPoints: 40, attempts: 2, lastCompletedAt: "2026-09-01T00:00:00.000Z" } } }));
     const c1 = card("تدريب 1");
-    expect(within(c1).getByText(/أفضل نتيجة:/).textContent).toBe("أفضل نتيجة: 80% · نقاط التقوية: 20 / 25");
+    expect(within(c1).getByText(/أفضل نتيجة:/).textContent).toBe("أفضل نتيجة: 80% · نقاط القوة: 32 / 40");
     expect(within(c1).getByRole("button", { name: "أعد التدريب" })).toBeTruthy();
     expect(within(c1).queryByText("لم تحلّ هذا التدريب بعد.")).toBeNull();
   });
-  it("a best result advertised with maxPoints 0 (an F-series final exam for training) shows the percentage only — no «نقاط التقوية» fragment", () => {
+  it("a best result advertised with maxPoints 0 (an id the server does not count) shows the percentage only — no «نقاط القوة» fragment; F items are NOT such a case (they advertise 40)", () => {
     draw(hostOf({ T01: { kind: "available", title: "نموذج A — 2025", best: { bestPercentage: 94, bestPoints: 0, maxPoints: 0, attempts: 2, lastCompletedAt: "2026-09-20T00:00:00.000Z" } } }));
     const c1 = screen.getByRole("region", { name: "تدريب 1" });
     expect(within(c1).getByText(/أفضل نتيجة:/).textContent).toBe("أفضل نتيجة: 94%");
-    expect(c1.textContent).not.toContain("نقاط التقوية");
+    expect(c1.textContent).not.toContain("نقاط القوة");
     expect(within(c1).getByRole("button", { name: "أعد التدريب" })).toBeTruthy();
   });
-  it("a REAL 0% attempt is a result (attempts 1): «أفضل نتيجة: 0% · نقاط التقوية: 0 / 25» + «أعد التدريب» — never confused with «لم تحلّ»", () => {
-    draw(hostOf({ T01: { kind: "available", title: "أساسيات الشبكات", best: { bestPercentage: 0, bestPoints: 0, maxPoints: 25, attempts: 1, lastCompletedAt: "2026-09-19T00:00:00.000Z" } } }));
+  it("a REAL 0% attempt is a result (attempts 1): «أفضل نتيجة: 0% · نقاط القوة: 0 / 40» + «أعد التدريب» — never confused with «لم تحلّ»", () => {
+    draw(hostOf({ T01: { kind: "available", title: "أساسيات الشبكات", best: { bestPercentage: 0, bestPoints: 0, maxPoints: 40, attempts: 1, lastCompletedAt: "2026-09-19T00:00:00.000Z" } } }));
     const c1 = card("تدريب 1");
-    expect(within(c1).getByText(/أفضل نتيجة:/).textContent).toBe("أفضل نتيجة: 0% · نقاط التقوية: 0 / 25");
+    expect(within(c1).getByText(/أفضل نتيجة:/).textContent).toBe("أفضل نتيجة: 0% · نقاط القوة: 0 / 40");
     expect(within(c1).getByRole("button", { name: "أعد التدريب" })).toBeTruthy();
     expect(within(c1).queryByText("لم تحلّ هذا التدريب بعد.")).toBeNull();
   });

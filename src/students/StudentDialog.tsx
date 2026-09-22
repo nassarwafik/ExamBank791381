@@ -5,21 +5,23 @@ import VisuallyHidden from "../ui/VisuallyHidden";
 import { IconKey, IconCopy, IconMedal, IconEye, IconPlus, IconEdit } from "../icons";
 import { MEDAL_COLORS, MEDAL_LABELS, medalTier } from "../medals";
 import { resolveGradingStatus } from "../gradingStatus";
-import { RANK_VISUALS } from "../studentRankVisuals";
-import type { RankTier } from "../studentRank";
+import { stageVisual } from "../studentStageVisuals";
 import type { ProfileSection, StudentProfile, SubmittedAssignment } from "./types";
 
 /** Concise Strength / recognition line-up (server values only; nothing recomputed). Absent on older payloads. */
 function StrengthSummary({ profile }: { profile: StudentProfile }) {
   const s = profile.strength, r = profile.recognition;
   if (!s && !r) return null;
-  const visual = s && s.tier && (s.tier in RANK_VISUALS) ? RANK_VISUALS[s.tier as RankTier] : null;
+  // The SERVER's stage (1..25) — the same authority as the student's portal; an older payload without a stage shows
+  // the points only (never a client-side stage).
+  const stage = s && Number.isInteger(s.stageNumber) && (s.stageNumber as number) >= 1 ? stageVisual(s.stageNumber as number) : null;
   return (
     <div className="eb-profile-strength" aria-label="القوة والتقدير">
       {s && (
         <p className="eb-profile-strength-rank">
-          {visual ? <><img src={visual.image} alt="" aria-hidden="true" width={32} height={32} loading="lazy" decoding="async" /><strong>{visual.title}</strong><span className="eb-muted">المستوى {visual.level}</span></> : <strong>لا رتبة بعد</strong>}
-          <span className="eb-muted">نقاط القوة: <strong dir="ltr">{s.totalPoints}</strong></span>
+          {stage ? <><img src={stage.image} alt="" aria-hidden="true" width={32} height={32} loading="lazy" decoding="async" /><strong>{stage.title}</strong><span className="eb-muted">المرحلة {stage.stageNumber} من {s.stageCount ?? 25}</span></> : null}
+          <span className="eb-muted">نقاط القوة: <strong dir="ltr">{s.stagePoints !== undefined && s.stageMaxPoints !== undefined ? s.stagePoints + " / " + s.stageMaxPoints : s.totalPoints}</strong></span>
+          {s.rawTotalPoints !== undefined && s.stageMaxPoints !== undefined && s.rawTotalPoints > s.stageMaxPoints && <span className="eb-muted">الإجمالي الفعلي: <strong dir="ltr">{s.rawTotalPoints}</strong></span>}
         </p>
       )}
       {r && (

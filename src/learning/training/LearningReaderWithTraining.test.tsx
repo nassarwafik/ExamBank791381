@@ -21,7 +21,7 @@ const meta = (id: string, order: number, mod: string, extra: Partial<TrainingLis
   ({ trainingId: id, order, label: "تدريب " + order, requiredModuleId: mod, courseId: "791381", available: false, ...extra });
 const LIST: TrainingListEntry[] = [
   meta("T01", 1, "791381-m01", { available: true, title: "أساسيات الشبكات" }),
-  meta("T02", 2, "791381-m02", { available: true, title: "أنظمة العد", best: { bestPercentage: 60, bestPoints: 15, maxPoints: 25, attempts: 1, lastCompletedAt: null } }),
+  meta("T02", 2, "791381-m02", { available: true, title: "أنظمة العد", best: { bestPercentage: 60, bestPoints: 24, maxPoints: 40, attempts: 1, lastCompletedAt: null } }),
   meta("T03", 3, "791381-m07"),
   meta("T04", 4, "791381-m07"),
 ];
@@ -29,8 +29,8 @@ const questions: Question[] = Array.from({ length: 10 }, (_, i) => ({
   examQuestionId: `LIB-T02-Q${String(i + 1).padStart(2, "0")}`, presentationType: "multipleChoice", marks: 10, text: `سؤال ${i + 1}`,
   options: [{ value: "0", text: "أ" }, { value: "1", text: "ب" }], answer: {}, hint: "",
 } as unknown as Question));
-const LOADED: TrainingLoadResponse = { ok: true, actor: "student", training: { ...LIST[1], title: "أنظمة العد", questionCount: 10, totalMarks: 100, maxPoints: 25 }, exam: { questions } };
-const GRADED: TrainingSubmitResponse = { ok: true, actor: "student", persisted: true, result: { correctCount: 10, questionCount: 10, score: 100, totalMarks: 100, percentage: 100, review: questions.map((q, i) => ({ questionId: q.examQuestionId!, questionNumber: i + 1, correct: true, chosenIndex: 0, correctOptionIndex: 0, hint: "" })) }, practice: { bestPercentage: 100, bestPoints: 25, maxPoints: 25, attempts: 2, lastCompletedAt: null, improved: true, pointsGained: 10, earnedPoints: 25 } };
+const LOADED: TrainingLoadResponse = { ok: true, actor: "student", training: { ...LIST[1], title: "أنظمة العد", questionCount: 10, totalMarks: 100, maxPoints: 40 }, exam: { questions } };
+const GRADED: TrainingSubmitResponse = { ok: true, actor: "student", persisted: true, result: { correctCount: 10, questionCount: 10, score: 100, totalMarks: 100, percentage: 100, review: questions.map((q, i) => ({ questionId: q.examQuestionId!, questionNumber: i + 1, correct: true, chosenIndex: 0, correctOptionIndex: 0, hint: "" })) }, practice: { bestPercentage: 100, bestPoints: 40, maxPoints: 40, attempts: 2, lastCompletedAt: null, improved: true, pointsGained: 16, earnedPoints: 40 } };
 
 function fakeClient(listImpl?: () => Promise<{ ok: true; actor: "student"; trainings: TrainingListEntry[] }>) {
   const list = vi.fn(listImpl ?? (async () => ({ ok: true as const, actor: "student" as const, trainings: LIST })));
@@ -57,7 +57,7 @@ describe("Reader-plus-training host — the PDF-22 page and the return flow", ()
     expect(within(cards[0]).getByText("أساسيات الشبكات")).toBeTruthy();
     expect(within(cards[0]).getByRole("button", { name: "ابدأ التدريب" })).toBeTruthy();
     expect(within(cards[1]).getByText("أنظمة العد")).toBeTruthy();
-    expect(within(cards[1]).getByText(/أفضل نتيجة:/).textContent).toBe("أفضل نتيجة: 60% · نقاط التقوية: 15 / 25");
+    expect(within(cards[1]).getByText(/أفضل نتيجة:/).textContent).toBe("أفضل نتيجة: 60% · نقاط القوة: 24 / 40");
     for (const c of [cards[2], cards[3]]) {
       expect(within(c).getByText("سيصبح متاحًا عند نشر الجزء المرتبط به.")).toBeTruthy();
       expect((within(c).getByRole("button", { name: "ابدأ التدريب" }) as HTMLButtonElement).disabled).toBe(true);
@@ -73,7 +73,8 @@ describe("Reader-plus-training host — the PDF-22 page and the return flow", ()
     fireEvent.click(screen.getByRole("button", { name: "أرسل الإجابات" }));
     await screen.findByText("مراجعة الإجابات");
     expect(onTrainingSubmitted).toHaveBeenCalledTimes(1);
-    expect(screen.getByText(/نقاط تقوية$/).textContent).toBe("25 / 25 نقاط تقوية");
+    expect(screen.getByText("40 / 40").closest("dd")!.textContent).toBe("40 / 40 نقاط قوة");
+    expect(screen.getByText("+16").closest("dd")!.textContent).toBe("+16 نقاط قوة");
 
     fireEvent.click(screen.getAllByRole("button", { name: "العودة إلى الصفحة" })[0]);
     await screen.findByRole("heading", { level: 2, name: "تدريبات قصيرة" }, SLOW);   // SAME page, not page 1

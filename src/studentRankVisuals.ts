@@ -1,3 +1,11 @@
+// LEGACY six-rank artwork (PR #107's owner assets). The PRIMARY Student Strength presentation is the 25-stage path in
+// src/studentStageVisuals.ts; these six images remain ONLY for their legitimate remaining consumers:
+//   • the PROJECT TRACKER's own six-tier project ranks (src/projects/projectPerformance.ts — project_rank_up /
+//     project_complete feed events and the project panel), which are a separate ladder from the Strength path;
+//   • historical `global_rank_up` feed events from the six-rank era (rendered by AchievementFeed / TeacherDashboard
+//     through `post.rank.tier` when a post carries no `stage`).
+// Nothing here decides a stage. The 25-stage visual authority never imports these files.
+//
 // UX-7 — the six PERSONAL rank levels' custom artwork (author-provided final assets). This is the ONE central
 // place that binds each rank tier to its image, its Arabic level name and its numeric level. Components import
 // from here instead of scattering image imports; nothing here touches the rank cadence, the finalized count,

@@ -30,7 +30,7 @@ export type StudentProfile = {
   submittedAssignmentsCount: number;
   submittedAssignments: SubmittedAssignment[];
   /** Additive (same authorities as the student dashboard): global Strength + rank, recognition, project summaries. */
-  strength?: { totalPoints: number; examPoints: number; practicePoints: number; projectPoints: number; tier: string | null; level: number; nextTier: string | null; nextLevelRemaining: number } | null;
+  strength?: { totalPoints: number; rawTotalPoints?: number; examPoints: number; practicePoints: number; studyPoints?: number; projectPoints: number; stagePoints?: number; stageMaxPoints?: number; stageNumber?: number; stageCount?: number; withinStagePoints?: number; stageBlockSize?: number; stagePercent?: number; legacyRank?: { tier: string | null; level: number; nextTier: string | null } | null } | null;
   recognition?: { medals: { total: number; gold: number; silver: number; bronze: number }; reactionsReceived: { total: number; byType: Record<string, number> }; achievements: { total: number; byType: Record<string, number> } } | null;
   projectSummaries?: { projectCode: string; title: string; overallProgress: number; complete: boolean }[];
 };

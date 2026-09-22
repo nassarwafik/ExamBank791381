@@ -60,6 +60,8 @@ function publicPost(post) {
     tier: medal ? medal.tier : undefined,
     medal,
     rank: post.rank && typeof post.rank === "object" ? { tier: String(post.rank.tier || ""), level: Number(post.rank.level || 0), points: Number(post.rank.points || 0) } : null,
+    // 25-stage milestone (stage-era global_rank_up events); null on historical six-rank events — renderers fall back to `rank`.
+    stage: post.stage && typeof post.stage === "object" && Number(post.stage.stageNumber) >= 1 ? { stageNumber: Number(post.stage.stageNumber), stageCount: Number(post.stage.stageCount || 25) } : null,
     project: post.project && typeof post.project === "object" ? { projectCode: String(post.project.projectCode || ""), title: String(post.project.title || ""), tier: post.project.tier ? String(post.project.tier) : null, level: Number(post.project.level || 0), projectStrength: Number(post.project.projectStrength || 0) } : null,
     createdAt: String(post.createdAt || ""),
     shareWithClass: post.shareWithClass !== false,
@@ -92,6 +94,7 @@ async function recordAchievementEvent(container, event) {
     };
     if (event.medal) { post.medal = event.medal; post.assignmentId = event.medal.assignmentId; post.assignmentTitle = event.medal.assignmentTitle; post.tier = event.medal.tier; }
     if (event.rank) post.rank = event.rank;
+    if (event.stage) post.stage = event.stage;
     if (event.project) post.project = event.project;
     await uploadJsonConditional(container, feedBlobName(classId, postId), post, null);
     return true;
