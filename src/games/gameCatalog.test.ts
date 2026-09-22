@@ -2,18 +2,20 @@ import { describe, it, expect } from "vitest";
 import { listGames, getGame, GAME_IDS, GAME_MODE_LABELS } from "./gameCatalog";
 import type { GameId } from "./domain/types";
 
-// The game registry is the single source both surfaces read. Phase 1 pins EXACTLY the two approved games, both
-// coming-soon (no engine yet), and proves the catalog is immutable and self-consistent.
+// The game registry is the single source both surfaces read. It pins EXACTLY the two approved games, proves the
+// catalog is immutable and self-consistent, and (Phase 2) that Number Conversion is now available while Live
+// Challenge remains coming-soon.
 
-describe("game catalog — the two approved Phase-1 games", () => {
-  it("registers exactly number-conversion (solo) and live-challenge (live), in that order, both coming-soon", () => {
+describe("game catalog — the two approved games", () => {
+  it("registers exactly number-conversion (solo, available) and live-challenge (live, coming-soon), in that order", () => {
     const games = listGames();
     expect(games.map(g => g.id)).toEqual(["number-conversion", "live-challenge"]);
     expect(GAME_IDS).toEqual(["number-conversion", "live-challenge"]);
-    expect(games.every(g => g.availability === "coming-soon")).toBe(true);   // no gameplay ships in Phase 1
     const nc = getGame("number-conversion")!, live = getGame("live-challenge")!;
     expect(nc.mode).toBe("solo");
+    expect(nc.availability).toBe("available");    // Phase 2: the engine ships
     expect(live.mode).toBe("live");
+    expect(live.availability).toBe("coming-soon"); // Live Challenge stays coming-soon
   });
 
   it("carries the owner-approved Arabic names, modes and topic lines", () => {

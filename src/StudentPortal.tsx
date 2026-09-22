@@ -164,7 +164,7 @@ export default function StudentPortal({ token, displayName, onLogout }: Props) {
   }
   if (detail && data) return <StudentExamPage token={token} assignment={detail} studentName={data.student.displayName || displayName} className={data.classroom ? data.classroom.name + (data.classroom.grade ? " · " + data.classroom.grade : "") : ""} onLogout={onLogout} onBack={() => { setDetail(null); void load(); }} />;
   // Dedicated Educational Games destination (full-view swap, same pattern as the Reader/exam); back returns to the portal.
-  if (gamesOpen) return <StudentGamesPage onBack={() => { setGamesOpen(false); window.scrollTo({ top: 0, behavior: reducedMotion ? "auto" : "smooth" }); }} />;
+  if (gamesOpen) return <StudentGamesPage token={token} onBack={() => { setGamesOpen(false); window.scrollTo({ top: 0, behavior: reducedMotion ? "auto" : "smooth" }); }} />;
 
   const stats = data?.stats;
   const medals = data ? medalsFor(data.assignments) : [];

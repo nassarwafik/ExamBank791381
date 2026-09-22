@@ -7,35 +7,36 @@ import { getGame } from "./gameCatalog";
 afterEach(cleanup);
 
 describe("GameCard", () => {
-  it("renders a coming-soon game: Arabic + English names, mode badge, description, topic, highlights, and a DISABLED action (no gameplay)", () => {
-    const nc = getGame("number-conversion")!;
-    render(<GameCard game={nc} />);
-    expect(screen.getByRole("heading", { name: "تحدّي أنظمة العد" })).toBeTruthy();
-    expect(screen.getByText("Number Conversion Challenge")).toBeTruthy();
-    expect(screen.getByText("فردي")).toBeTruthy();               // Solo mode badge
-    expect(screen.getByText("قريبًا")).toBeTruthy();             // coming-soon badge
-    expect(screen.getByText(nc.descriptionAr)).toBeTruthy();
-    expect(screen.getByText(nc.topicAr)).toBeTruthy();
-    for (const h of nc.highlightsAr) expect(screen.getByText(h)).toBeTruthy();
+  it("a coming-soon game (Live Challenge): mode badge, «قريبًا» badge, and a DISABLED «قريبًا — في المرحلة القادمة» action", () => {
+    const live = getGame("live-challenge")!;
+    render(<GameCard game={live} onStart={vi.fn()} />);
+    expect(screen.getByRole("heading", { name: "التحدّي المباشر" })).toBeTruthy();
+    expect(screen.getByText("متعدد اللاعبين المباشر")).toBeTruthy();   // Live Multiplayer badge
+    expect(screen.getByText("قريبًا")).toBeTruthy();                    // coming-soon badge
     const btn = screen.getByRole("button", { name: "قريبًا — في المرحلة القادمة" }) as HTMLButtonElement;
-    expect(btn.disabled).toBe(true);
-    fireEvent.click(btn);                                        // clicking a coming-soon card starts nothing
-    // card carries its stable id for later wiring
+    expect(btn.disabled).toBe(true);                                    // never startable while coming-soon, even with onStart
+  });
+
+  it("an available game with an onStart (student surface) enables «ابدأ» and fires onStart; no «قريبًا» badge", () => {
+    const onStart = vi.fn();
+    const nc = getGame("number-conversion")!;
+    render(<GameCard game={nc} onStart={onStart} />);
+    expect(screen.getByText("Number Conversion Challenge")).toBeTruthy();
+    expect(screen.getByText("فردي")).toBeTruthy();                      // Solo badge
+    expect(screen.queryByText("قريبًا")).toBeNull();                    // available → no coming-soon badge
+    for (const h of nc.highlightsAr) expect(screen.getByText(h)).toBeTruthy();
+    const btn = screen.getByRole("button", { name: "ابدأ" }) as HTMLButtonElement;
+    expect(btn.disabled).toBe(false);
+    fireEvent.click(btn);
+    expect(onStart).toHaveBeenCalledTimes(1);
     expect(document.querySelector('[data-game-id="number-conversion"]')).toBeTruthy();
   });
 
-  it("shows the Live Multiplayer badge for the live game", () => {
-    render(<GameCard game={getGame("live-challenge")!} />);
-    expect(screen.getByText("متعدد اللاعبين المباشر")).toBeTruthy();
-  });
-
-  it("stays disabled even if an onStart is passed while the game is still coming-soon (no fake gameplay)", () => {
-    const onStart = vi.fn();
-    render(<GameCard game={getGame("number-conversion")!} onStart={onStart} />);
-    const btn = screen.getByRole("button") as HTMLButtonElement;
+  it("an available game WITHOUT an onStart (teacher surface) shows a disabled «متاح للطلاب» — no fake Start", () => {
+    render(<GameCard game={getGame("number-conversion")!} />);
+    const btn = screen.getByRole("button", { name: "متاح للطلاب" }) as HTMLButtonElement;
     expect(btn.disabled).toBe(true);
-    fireEvent.click(btn);
-    expect(onStart).not.toHaveBeenCalled();
+    expect(screen.queryByText("قريبًا")).toBeNull();
   });
 
   it("uses the requested heading level (h2 in a page context)", () => {
