@@ -124,13 +124,13 @@ describe("policy — the authoritative module formula", () => {
     const everything = Object.fromEntries(Object.entries(ELIGIBLE).map(([m, n]) => [m, { completed: n, eligible: n }]));
     const trainings = Object.fromEntries(listLearningTrainings().map(t => [t.trainingId, { bestPercentage: 100 }]));
     expect(Object.keys(trainings).length).toBe(36);
-    const s = buildStrengthSummary({ finalizedCount: 0, trainings, study: everything, projects: [] });
+    const s = buildStrengthSummary({ finalizedPercentages: [], trainings, study: everything, projects: [] });
     expect(s).toMatchObject({ examPoints: 0, projectPoints: 0, practicePoints: 1440, studyPoints: 560, rawTotalPoints: 2000, stagePoints: 2000, stageNumber: 25, withinStagePoints: 80, stagePercent: 100, nextStageNumber: null, nextStageRemaining: 0, pointsToMaximum: 0, isMaximumStage: true, pathComplete: true });
     // one item or one module short of perfect is NOT complete
-    expect(buildStrengthSummary({ finalizedCount: 0, trainings: { ...trainings, F06: { bestPercentage: 90 } }, study: everything, projects: [] })).toMatchObject({ rawTotalPoints: 1996, stageNumber: 25, pathComplete: false, pointsToMaximum: 4 });
+    expect(buildStrengthSummary({ finalizedPercentages: [], trainings: { ...trainings, F06: { bestPercentage: 90 } }, study: everything, projects: [] })).toMatchObject({ rawTotalPoints: 1996, stageNumber: 25, pathComplete: false, pointsToMaximum: 4 });
   });
   it("buildStrengthSummary: study is the fourth raw source; absent study → 0; T05 80% = 32 and F01 100% = 40 both count", () => {
-    const base = { finalizedCount: 3, trainings: { T05: { bestPercentage: 80 }, F01: { bestPercentage: 100 } }, projects: [{ projectCode: "794589", overallProgress: 25 }] };
+    const base = { finalizedPercentages: [100, 100, 100], trainings: { T05: { bestPercentage: 80 }, F01: { bestPercentage: 100 } }, projects: [{ projectCode: "794589", overallProgress: 25 }] };
     expect(buildStrengthSummary(base)).toMatchObject({ examPoints: 300, practicePoints: 72, studyPoints: 0, projectPoints: 100, rawTotalPoints: 472, stageNumber: 6 });
     const withStudy = buildStrengthSummary({ ...base, study: { [M08]: { completed: 7, eligible: 14 }, "791381-m09": { completed: 9, eligible: 9 } } });
     expect(withStudy).toMatchObject({ examPoints: 300, practicePoints: 72, studyPoints: 30, projectPoints: 100, rawTotalPoints: 502, stageNumber: 7, withinStagePoints: 22 });

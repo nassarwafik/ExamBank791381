@@ -25,8 +25,17 @@ function progressAt(code, cid, sid, bookFraction, otherFraction) {
   const extra = ids(tracks[0]).find(id => !stages[id]); if (extra) stages[extra] = { status: "ready_for_review", updatedAt: NOW };
   return { programCode: code, classId: cid, studentId: sid, stages, history: [], updatedAt: NOW };
 }
-const finalAttempt = { attemptNumber: 1, submittedAt: NOW, score: 84, totalMarks: 100, percentage: 84, manualReviewMarks: 0, finalized: true, teacherFeedback: "" };
+// A FINAL attempt at a given percentage (gradingStatus === "final": finalized true, no pending manual marks).
+const finalAt = (pct, attemptNumber = 1) => ({ attemptNumber, submittedAt: NOW, score: pct, totalMarks: 100, percentage: pct, manualReviewMarks: 0, finalized: true, teacherFeedback: "" });
+// A PENDING-REVIEW attempt (manual marks outstanding) — a provisional percentage that must NOT contribute Strength.
+const pendingAt = (pct) => ({ attemptNumber: 1, submittedAt: NOW, score: pct, totalMarks: 100, percentage: pct, manualReviewMarks: 5, finalized: false, teacherFeedback: "" });
+// A LEGACY final attempt: no `finalized` field at all; grading-status authority normalizes it to "final".
+const legacyFinalAt = (pct) => ({ attemptNumber: 1, submittedAt: NOW, score: pct, totalMarks: 100, percentage: pct, manualReviewMarks: 0, teacherFeedback: "" });
 const assignment = (id, cid) => ({ assignmentId: id, classId: cid, status: "published", title: id, instructions: "", maxAttempts: 1, durationMinutes: 0, attemptModelVersion: 2, questionCount: 1, totalMarks: 100, openAt: "", dueAt: "", createdAt: NOW });
+// Seed one published assignment + its submission (a list of attempts; the LATEST is the authority) for student s1 in c1.
+const seedAssignment = (seed, id, attempts) => { seed["platform/assignments/" + id + ".json"] = assignment(id, "c1"); seed["platform/submissions/" + id + "/s1.json"] = { assignmentId: id, studentId: "s1", classId: "c1", attempts, activeAttempt: null }; return seed; };
+const baseSeed = () => ({ "platform/classes/c1.json": room("c1"), "platform/users/s1.json": user("s1", "c1") });
+const examStrengthOf = async (ctx) => (await dashboard(req(), deps(ctx).d)).jsonBody;
 function deps(ctx, id = "s1", extra = {}) {
   const reads = [];
   return { reads, d: {
@@ -77,18 +86,20 @@ describe("dashboard strength — project-only students (the reported problem)", 
 });
 
 describe("dashboard strength — mixed sources, compatibility, authority, read path", () => {
-  it("MIXED: 3 finalized exams (300) + T02 best 80% (32) + project 50% (200) = 532 → stage 7, 52 / 80, 65%, 28 remaining", async () => {
+  it("MIXED: 3 finalized exams 84% + 70% + 100% = 254 (sum of percentages) + T02 best 80% (32) + project 50% (200) = 486 → stage 7, 6 / 80, 8%", async () => {
     const seed = { "platform/classes/c1.json": room("c1", { programCodes: ["899373"] }), "platform/users/s1.json": user("s1", "c1"), [NS.A.progressName("c1", "s1")]: progressAt("899373", "c1", "s1", 0.5, 0.5),
       "platform/learning-practice/s1.json": { trainings: { T02: { bestPercentage: 80, bestPoints: 999, attempts: 2 } } } };
-    for (const id of ["a1", "a2", "a3"]) { seed["platform/assignments/" + id + ".json"] = assignment(id, "c1"); seed["platform/submissions/" + id + "/s1.json"] = { assignmentId: id, studentId: "s1", classId: "c1", attempts: [finalAttempt], activeAttempt: null }; }
+    seedAssignment(seed, "a1", [finalAt(84)]); seedAssignment(seed, "a2", [finalAt(70)]); seedAssignment(seed, "a3", [finalAt(100)]);
     const r = await dashboard(req(), deps(createMemoryContainer(seed)).d);
-    expect(r.jsonBody.stats.finalized).toBe(3);
-    expect(r.jsonBody.strength).toMatchObject({ totalPoints: 532, rawTotalPoints: 532, examPoints: 300, practicePoints: 32, projectPoints: 200, stageNumber: 7, withinStagePoints: 52, nextStageNumber: 8, nextStageRemaining: 28, stagePercent: 65 });
+    expect(r.jsonBody.stats.finalized).toBe(3);                      // stats.finalized stays a COUNT of finalized exams
+    expect(r.jsonBody.strength).toMatchObject({ totalPoints: 486, rawTotalPoints: 486, examPoints: 254, practicePoints: 32, projectPoints: 200, stageNumber: 7, withinStagePoints: 6, nextStageNumber: 8, nextStageRemaining: 74, stagePercent: 8 });
   });
-  it("EXAMS ONLY (no class projects, no practice): 3 finalized = 300 = stage 4 (60 / 80, 75%); 4 = 400 = stage 6 (0 / 80)", async () => {
-    const mk = n => { const seed = { "platform/classes/c1.json": room("c1"), "platform/users/s1.json": user("s1", "c1") }; for (let i = 0; i < n; i++) { seed["platform/assignments/a" + i + ".json"] = assignment("a" + i, "c1"); seed["platform/submissions/a" + i + "/s1.json"] = { assignmentId: "a" + i, studentId: "s1", classId: "c1", attempts: [finalAttempt], activeAttempt: null }; } return createMemoryContainer(seed); };
-    expect((await dashboard(req(), deps(mk(3)).d)).jsonBody.strength).toMatchObject({ totalPoints: 300, stageNumber: 4, withinStagePoints: 60, stagePercent: 75 });
-    expect((await dashboard(req(), deps(mk(4)).d)).jsonBody.strength).toMatchObject({ totalPoints: 400, stageNumber: 6, withinStagePoints: 0, stagePercent: 0 });
+  it("EXAMS ONLY (no class projects, no practice): finals 100 + 70 = 170 (never 200); finals 84 + 84 + 84 = 252", async () => {
+    const mk = pcts => { const seed = baseSeed(); pcts.forEach((p, i) => seedAssignment(seed, "a" + i, [finalAt(p)])); return createMemoryContainer(seed); };
+    const two = (await dashboard(req(), deps(mk([100, 70])).d)).jsonBody;
+    expect(two.stats.finalized).toBe(2);
+    expect(two.strength).toMatchObject({ totalPoints: 170, examPoints: 170 });
+    expect((await dashboard(req(), deps(mk([84, 84, 84])).d)).jsonBody.strength).toMatchObject({ examPoints: 252, totalPoints: 252 });
   });
   it("PERSISTED CLASS AUTHORITY: token says class STALE; persisted class c2's project drives the points; no scans, bounded reads", async () => {
     const ctx = createMemoryContainer({ "platform/classes/c2.json": room("c2", { programCodes: ["899373"] }), "platform/classes/c1.json": room("c1", { programCodes: ["883589"] }), "platform/users/s1.json": user("s1", "c2"), [NS.A.progressName("c2", "s1")]: progressAt("899373", "c2", "s1", 1, 1), [NS.B.progressName("c1", "s1")]: progressAt("883589", "c1", "s1", 1, 1) });
@@ -115,5 +126,64 @@ describe("dashboard strength — mixed sources, compatibility, authority, read p
   it("stored bestPoints / client-shaped junk in the practice doc never count — only bestPercentage through the policy", async () => {
     const ctx = createMemoryContainer({ "platform/classes/c1.json": room("c1"), "platform/users/s1.json": user("s1", "c1"), "platform/learning-practice/s1.json": { trainings: { T01: { bestPercentage: 60, bestPoints: 25 }, T09: "x", T02: { bestPercentage: "abc" } }, strengthPoints: 9999 } });
     expect((await dashboard(req(), deps(ctx).d)).jsonBody.strength.practicePoints).toBe(24);
+  });
+});
+
+// Owner policy: a finalized school assignment/exam contributes its FINAL percentage (0..100), summed and rounded —
+// never a flat 100 per exam, never a stored counter. Only gradingStatus==="final" counts; the value is DERIVED, so a
+// teacher correction moves it. stats.finalized stays a COUNT; only strength.examPoints changes semantics.
+describe("dashboard strength — finalized school exam points follow the FINAL percentage", () => {
+  const one = attempts => createMemoryContainer(seedAssignment(baseSeed(), "a1", attempts));
+
+  it("CASE A — one final at 100% → examPoints 100", async () => {
+    const b = await examStrengthOf(one([finalAt(100)]));
+    expect(b.strength.examPoints).toBe(100); expect(b.stats.finalized).toBe(1);
+  });
+  it("CASE B — one final at 70% → examPoints 70 (NOT 100)", async () => {
+    expect((await examStrengthOf(one([finalAt(70)]))).strength.examPoints).toBe(70);
+  });
+  it("CASE C — one final at 20% → examPoints 20 (NOT 100)", async () => {
+    expect((await examStrengthOf(one([finalAt(20)]))).strength.examPoints).toBe(20);
+  });
+  it("one final at 0% → examPoints 0", async () => {
+    expect((await examStrengthOf(one([finalAt(0)]))).strength.examPoints).toBe(0);
+  });
+  it("CASE D — two finals 70% + 85% → examPoints 155", async () => {
+    const seed = baseSeed(); seedAssignment(seed, "a1", [finalAt(70)]); seedAssignment(seed, "a2", [finalAt(85)]);
+    const b = await examStrengthOf(createMemoryContainer(seed));
+    expect(b.strength.examPoints).toBe(155); expect(b.stats.finalized).toBe(2);
+  });
+  it("CASE E — a pending-manual-review result contributes 0 (its provisional percentage is ignored)", async () => {
+    const b = await examStrengthOf(one([pendingAt(90)]));
+    expect(b.strength.examPoints).toBe(0);
+    expect(b.stats.finalized).toBe(0);
+    expect(b.stats.pendingReview).toBe(1);
+  });
+  it("CASE F — teacher correction 70 → 85 raises examPoints 70 → 85 on the next read (derived, not incremented)", async () => {
+    const ctx = one([finalAt(70)]);
+    expect((await examStrengthOf(ctx)).strength.examPoints).toBe(70);
+    ctx.setJson("platform/submissions/a1/s1.json", { assignmentId: "a1", studentId: "s1", classId: "c1", attempts: [finalAt(85)], activeAttempt: null });
+    expect((await examStrengthOf(ctx)).strength.examPoints).toBe(85);   // no lingering 100-point award, no double count
+  });
+  it("CASE G — teacher correction 90 → 60 lowers examPoints 90 → 60", async () => {
+    const ctx = one([finalAt(90)]);
+    expect((await examStrengthOf(ctx)).strength.examPoints).toBe(90);
+    ctx.setJson("platform/submissions/a1/s1.json", { assignmentId: "a1", studentId: "s1", classId: "c1", attempts: [finalAt(60)], activeAttempt: null });
+    expect((await examStrengthOf(ctx)).strength.examPoints).toBe(60);
+  });
+  it("CASE H — a LEGACY final (no `finalized` field, no pending marks) still counts by its percentage", async () => {
+    const b = await examStrengthOf(one([legacyFinalAt(75)]));
+    expect(b.strength.examPoints).toBe(75); expect(b.stats.finalized).toBe(1);
+  });
+  it("RETAKE — one assignment contributes only its LATEST final: attempt1 40% then attempt2 85% → 85 (never 125 / 200 / 100)", async () => {
+    const b = await examStrengthOf(one([finalAt(40, 1), finalAt(85, 2)]));
+    expect(b.strength.examPoints).toBe(85);
+    expect(b.stats.finalized).toBe(1);              // ONE assignment, not one Strength award per attempt
+  });
+  it("STATS vs STRENGTH — 2 finals at 70% and 80%: stats.finalized = 2 (count), strength.examPoints = 150 (sum of percentages)", async () => {
+    const seed = baseSeed(); seedAssignment(seed, "a1", [finalAt(70)]); seedAssignment(seed, "a2", [finalAt(80)]);
+    const b = await examStrengthOf(createMemoryContainer(seed));
+    expect(b.stats.finalized).toBe(2);
+    expect(b.strength.examPoints).toBe(150);
   });
 });

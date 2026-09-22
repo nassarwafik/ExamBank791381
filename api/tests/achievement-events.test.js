@@ -23,7 +23,10 @@ const finalAttempt = pct => ({ attemptNumber: 1, submittedAt: NOW, score: pct, t
 const assignment = (id, cid) => ({ assignmentId: id, classId: cid, status: "published", title: "واجب " + id, instructions: "", maxAttempts: 1, durationMinutes: 0, attemptModelVersion: 2, questionCount: 1, totalMarks: 100, openAt: "", dueAt: "", createdAt: NOW });
 const school = extra => createMemoryContainer({ "platform/classes/c1.json": room("c1"), "platform/users/s1.json": user("s1", "c1"), "platform/users/s2.json": user("s2", "c1"), ...extra });
 /** N finalized assignments for s1 (each 100 Strength points) */
-const exams = (n, cid = "c1", sid = "s1") => { const out = {}; for (let i = 1; i <= n; i++) { out["platform/assignments/A" + i + ".json"] = assignment("A" + i, cid); out["platform/submissions/A" + i + "/" + sid + ".json"] = { attempts: [finalAttempt(60)] }; } return out; };
+// Each finalized exam contributes its final percentage to Strength. Milestone tests use 100% (so N exams = N×100,
+// the exact stage totals they assert); recognition/medal tests pass a non-medal pct (60) so only the explicit 95%
+// override earns a medal.
+const exams = (n, cid = "c1", sid = "s1", pct = 100) => { const out = {}; for (let i = 1; i <= n; i++) { out["platform/assignments/A" + i + ".json"] = assignment("A" + i, cid); out["platform/submissions/A" + i + "/" + sid + ".json"] = { attempts: [finalAttempt(pct)] }; } return out; };
 function studentDeps(ctx, id = "s1") {
   return {
     requireActiveStudentSession: async () => { const student = ctx.getJson("platform/users/" + id + ".json"); return student ? { ok: true, container: ctx.container, user: { sub: id, sv: 1 }, student } : { ok: false, response: { status: 401, jsonBody: { ok: false, error: "Unauthorized" } } }; },
@@ -63,7 +66,7 @@ describe("35/103/93. global stage-up milestone (dashboard = the Strength authori
     expect(feedNames(ctx)).toEqual([]);                                 // baseline, no retroactive event
     expect(ctx.getJson(recognitionDocName("s1"))).toMatchObject({ lastGlobalStage: 9, lastGlobalTier: "beginner", lastGlobalPoints: 700 });
     // +1 finalized exam → 800 → stage 11
-    ctx.setJson("platform/assignments/A8.json", assignment("A8", "c1")); ctx.setJson("platform/submissions/A8/s1.json", { attempts: [finalAttempt(60)] });
+    ctx.setJson("platform/assignments/A8.json", assignment("A8", "c1")); ctx.setJson("platform/submissions/A8/s1.json", { attempts: [finalAttempt(100)] });
     r = await dash(ctx);
     expect(r.jsonBody.strength.stageNumber).toBe(11);
     expect(feedNames(ctx)).toEqual([feedBlobName("c1", "global_stage_11_s1")]);
@@ -72,7 +75,7 @@ describe("35/103/93. global stage-up milestone (dashboard = the Strength authori
     await dash(ctx); await dash(ctx);                                    // retries / small changes → still one
     expect(feedNames(ctx).length).toBe(1);
     // jump many stages at once (800 → 1600 = stage 21) → ONE event for the final stage
-    for (let i = 9; i <= 16; i++) { ctx.setJson("platform/assignments/A" + i + ".json", assignment("A" + i, "c1")); ctx.setJson("platform/submissions/A" + i + "/s1.json", { attempts: [finalAttempt(60)] }); }
+    for (let i = 9; i <= 16; i++) { ctx.setJson("platform/assignments/A" + i + ".json", assignment("A" + i, "c1")); ctx.setJson("platform/submissions/A" + i + "/s1.json", { attempts: [finalAttempt(100)] }); }
     r = await dash(ctx);
     expect(r.jsonBody.strength.stageNumber).toBe(21);
     expect(feedNames(ctx)).toEqual([feedBlobName("c1", "global_stage_11_s1"), feedBlobName("c1", "global_stage_21_s1")]);
@@ -96,7 +99,7 @@ describe("35/103/93. global stage-up milestone (dashboard = the Strength authori
     await dashboard({ method: "GET", url: "https://x/api/student-dashboard", headers: { get: () => null } }, d());
     await dashboard({ method: "GET", url: "https://x/api/student-dashboard", headers: { get: () => null } }, d());
     expect(writes.length).toBe(1);
-    ctx.setJson("platform/assignments/A8.json", assignment("A8", "c1")); ctx.setJson("platform/submissions/A8/s1.json", { attempts: [finalAttempt(60)] });
+    ctx.setJson("platform/assignments/A8.json", assignment("A8", "c1")); ctx.setJson("platform/submissions/A8/s1.json", { attempts: [finalAttempt(100)] });
     await dashboard({ method: "GET", url: "https://x/api/student-dashboard", headers: { get: () => null } }, d());
     expect(writes.length).toBe(2);
     expect(feedNames(ctx)).toEqual([feedBlobName("c1", "global_stage_11_s1")]);
@@ -110,7 +113,7 @@ describe("35/103/93. global stage-up milestone (dashboard = the Strength authori
     ctx.setJson("platform/submissions/A8/s1.json", { attempts: [] });   // drop to 708 → stage 9
     expect((await dash(ctx)).jsonBody.strength.stageNumber).toBe(9);
     expect(feedNames(ctx)).toEqual([]);
-    ctx.setJson("platform/submissions/A8/s1.json", { attempts: [finalAttempt(60)] });   // back to 808 → stage 11 — a NEW stage vs last seen (9) → one event
+    ctx.setJson("platform/submissions/A8/s1.json", { attempts: [finalAttempt(100)] });   // back to 808 → stage 11 — a NEW stage vs last seen (9) → one event
     await dash(ctx);
     expect(feedNames(ctx)).toEqual([feedBlobName("c1", "global_stage_11_s1")]);
     await dash(ctx);
@@ -189,7 +192,7 @@ describe("40/106/42/43/44. privacy + reactions", () => {
 
 describe("47/107/108/96. recognition summary — received (never sent), shared with the roster likesCount, never Strength", () => {
   it("dashboard recognition: medals from the finalized authority, reactions received by type + total, achievements by type; sent reactions excluded", async () => {
-    const ctx = school({ ...exams(2) });
+    const ctx = school({ ...exams(2, "c1", "s1", 60) });                                 // A2 at 60% earns no medal
     ctx.setJson("platform/submissions/A1/s1.json", { attempts: [finalAttempt(95)] });   // gold medal for s1
     await recordAchievementIfEligible(ctx.container, { classId: "c1", studentId: "s1", studentDisplayName: "ليان", assignmentId: "A1", assignmentTitle: "x", percentage: 95, shareAchievements: true });
     await recordAchievementIfEligible(ctx.container, { classId: "c1", studentId: "s2", studentDisplayName: "كريم", assignmentId: "A1", assignmentTitle: "x", percentage: 95, shareAchievements: true });
@@ -214,14 +217,15 @@ describe("47/107/108/96. recognition summary — received (never sent), shared w
 });
 
 describe("49. teacher student profile — concise Strength + recognition + project summaries (same authorities)", () => {
-  it("GET /api/students?profileUserId returns strength (finalized × 100 + projects), recognition and projectSummaries", async () => {
-    const ctx = school({ ...exams(4) });
+  it("GET /api/students?profileUserId returns strength (sum of final percentages + projects), recognition and projectSummaries", async () => {
+    const ctx = school({ ...exams(4, "c1", "s1", 60) });                                 // A2/A3/A4 at 60% earn no medal
     ctx.setJson("platform/submissions/A1/s1.json", { attempts: [finalAttempt(95)] });
     await recordAchievementIfEligible(ctx.container, { classId: "c1", studentId: "s1", studentDisplayName: "ليان", assignmentId: "A1", assignmentTitle: "x", percentage: 95, shareAchievements: true });
     await react(ctx, "s2", "A1_s1", "heart");
     const r = await students({ method: "GET", url: "https://x/api/students?profileUserId=s1", headers: { get: () => null } }, teacherDeps(ctx));
     expect(r.status).toBe(200);
-    expect(r.jsonBody.profile.strength).toMatchObject({ totalPoints: 400, rawTotalPoints: 400, examPoints: 400, stageNumber: 6, stagePercent: 0, legacyRank: { tier: "beginner", level: 1, nextTier: "bronze" } });
+    // finalized school exams follow the FINAL percentage: A1 95% + A2/A3/A4 60% each = 275 (not 4 × 100 = 400)
+    expect(r.jsonBody.profile.strength).toMatchObject({ totalPoints: 275, rawTotalPoints: 275, examPoints: 275, stageNumber: 4, stagePercent: 44, legacyRank: { tier: null, level: 0, nextTier: "beginner" } });
     expect(r.jsonBody.profile.recognition).toEqual({ medals: { total: 1, gold: 1, silver: 0, bronze: 0 }, reactionsReceived: { total: 1, byType: { heart: 1, clap: 0, cheer: 0, fire: 0 } }, achievements: { total: 0, byType: { global_rank_up: 0, project_rank_up: 0, project_complete: 0 } } });
     expect(r.jsonBody.profile.projectSummaries).toEqual([{ projectCode: "899373", title: "مشروع 899373", overallProgress: 0, complete: false }]);
   });
