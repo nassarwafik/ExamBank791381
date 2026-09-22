@@ -9,8 +9,12 @@ import type { GameDefinition } from "./domain/types";
  * available game ("ابدأ"); the teacher page passes no `onStart`, so an available game reads "متاح للطلاب" (disabled)
  * — the teacher area stays foundation-only, never a fake Start. A coming-soon game is always the disabled
  * "قريبًا — في المرحلة القادمة".
+ *
+ * `teacherAction` is an optional teacher-only authoring entry (e.g. the Live Challenge Generator): when provided it
+ * renders an ENABLED action with that label regardless of `availability`, because authoring a challenge does not
+ * require the live-play engine to exist yet. The student surface never passes it, so student rendering is unchanged.
  */
-export default function GameCard({ game, headingLevel = 3, onStart }: { game: GameDefinition; headingLevel?: 2 | 3; onStart?: () => void }) {
+export default function GameCard({ game, headingLevel = 3, onStart, teacherAction }: { game: GameDefinition; headingLevel?: 2 | 3; onStart?: () => void; teacherAction?: { label: string; onClick: () => void } }) {
   const Heading = headingLevel === 2 ? "h2" : "h3";
   const comingSoon = game.availability === "coming-soon";
   const canStart = !comingSoon && !!onStart;
@@ -31,15 +35,25 @@ export default function GameCard({ game, headingLevel = 3, onStart }: { game: Ga
           {game.highlightsAr.map(h => <li key={h}>{h}</li>)}
         </ul>
       )}
-      <button
-        type="button"
-        className="eb-button is-primary is-small eb-game-card-action"
-        disabled={!canStart}
-        aria-disabled={!canStart || undefined}
-        onClick={canStart ? onStart : undefined}
-      >
-        {label}
-      </button>
+      {teacherAction ? (
+        <button
+          type="button"
+          className="eb-button is-primary is-small eb-game-card-action eb-game-card-manage"
+          onClick={teacherAction.onClick}
+        >
+          {teacherAction.label}
+        </button>
+      ) : (
+        <button
+          type="button"
+          className="eb-button is-primary is-small eb-game-card-action"
+          disabled={!canStart}
+          aria-disabled={!canStart || undefined}
+          onClick={canStart ? onStart : undefined}
+        >
+          {label}
+        </button>
+      )}
     </article>
   );
 }
