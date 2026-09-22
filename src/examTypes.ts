@@ -36,6 +36,18 @@ export type BuilderQuestionType =
 // Part types are every question type EXCEPT compound (parts do not nest compounds in this phase).
 export type BuilderPartType = Exclude<BuilderQuestionType, "compound">;
 
+// Canonical, ordered registries of the authorable types. Defined ONCE here and shared by every authoring surface
+// (the Structured Exam Builder / QuestionComposer today, the Live Challenge composer later) so the ordered lists are
+// never duplicated per component. Frozen at runtime, matching the games-catalog registry convention. Display text
+// always comes from QUESTION_TYPE_LABELS — these lists carry order + membership only.
+export const BUILDER_QUESTION_TYPES: readonly BuilderQuestionType[] = Object.freeze([
+  "multipleChoice", "trueFalse", "multiTrueFalse", "shortAnswer", "fillBlank", "wordBank", "matching", "ordering", "tableFill", "cliFill", "compound",
+]);
+// Parts allow every question type EXCEPT compound (no nested compounds) — derived from the single source above.
+export const BUILDER_PART_TYPES: readonly BuilderPartType[] = Object.freeze(
+  BUILDER_QUESTION_TYPES.filter((t): t is BuilderPartType => t !== "compound"),
+);
+
 export const QUESTION_TYPE_LABELS: Record<BuilderQuestionType, string> = {
   multipleChoice: "اختيار من متعدد",
   trueFalse: "صح أو خطأ",

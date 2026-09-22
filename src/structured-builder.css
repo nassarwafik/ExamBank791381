@@ -56,6 +56,9 @@
 .sb-q-badge,.sb-part-badge{min-width:26px;height:26px;display:inline-flex;align-items:center;justify-content:center;border-radius:50%;background:var(--primary,#2563eb);color:#fff;font-weight:800;font-size:13px;padding:0 6px}
 .sb-collapse{background:none;border:none;font:inherit;font-size:15px;cursor:pointer;color:var(--muted,#64748b)}
 .sb-q-body{padding:12px;display:flex;flex-direction:column;gap:10px}
+/* Shared QuestionComposer: keeps the exact vertical rhythm the question body had when the type selector, prompt and
+   body editor were direct children of .sb-q-body (same 10px column gap). No new visual language. */
+.sb-composer{display:flex;flex-direction:column;gap:10px}
 .sb-q-meta{display:flex;flex-wrap:wrap;gap:12px;align-items:center}
 
 .sb-icon-btn{border:1px solid var(--line2,#cdd5e0);background:#fff;border-radius:8px;min-width:30px;height:30px;padding:0 8px;font:inherit;cursor:pointer;color:var(--navy,#1e293b)}
