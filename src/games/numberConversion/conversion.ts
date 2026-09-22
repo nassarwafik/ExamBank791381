@@ -74,17 +74,60 @@ export function boardViewFor(direction: ConversionDirection): BoardView {
 }
 
 /**
- * How much LIVE scaffolding the board shows at a given assistance level while the student is still working. Boxes and
- * their weight labels are ALWAYS present (the method is the game); these flags govern the derived readouts that would
- * otherwise form the answer in front of the student. `locked` (after Check / reveal) always shows everything — that is
- * the teaching moment. Guided → full; Practice → sum + binary only; Challenge → boxes only until Check.
+ * Which derived READOUTS the board may print. The boxes are the student's WORKING area and the typed text is their
+ * FINAL answer, so before the task is resolved NO level prints anything derived from the boxes (no running sum/total,
+ * no target-base result, no binary line, no per-nibble hex digit) — any of those would tell the student what to type.
+ * Only the boxes and their positional weights are visible while working. Once the task is RESOLVED (`locked`: correct
+ * or revealed, the board then showing the server's canonical solution bits) every level shows the full teaching readout.
+ * The `level` parameter is kept explicit: assistance levels differ in guidance text and hints, never in answer leakage.
  */
 export interface ReadoutPolicy { showSum: boolean; showDerived: boolean; showBinaryLine: boolean; showNibbleHexLive: boolean }
-export function readoutPolicy(level: AssistanceLevel, locked: boolean): ReadoutPolicy {
-  if (locked) return { showSum: true, showDerived: true, showBinaryLine: true, showNibbleHexLive: true };
-  if (level === "practice") return { showSum: true, showDerived: false, showBinaryLine: true, showNibbleHexLive: false };
-  if (level === "challenge") return { showSum: false, showDerived: false, showBinaryLine: false, showNibbleHexLive: false };
-  return { showSum: true, showDerived: true, showBinaryLine: true, showNibbleHexLive: true };   // guided
+export function readoutPolicy(_level: AssistanceLevel, locked: boolean): ReadoutPolicy {
+  return locked
+    ? { showSum: true, showDerived: true, showBinaryLine: true, showNibbleHexLive: true }
+    : { showSum: false, showDerived: false, showBinaryLine: false, showNibbleHexLive: false };
+}
+
+/** Step-by-step METHOD guidance shown under the board (never an answer): guided = full method, practice = short, challenge = none. */
+const GUIDED_METHOD: Record<ConversionDirection, string> = {
+  dec2bin: "ابدأ من 128: أضِئ كل خانة لا تتجاوز قيمتُها ما تبقّى من العدد، ثم اكتب البتات الثمانية من اليسار إلى اليمين.",
+  bin2dec: "أضِئ الخانات التي يقابلها 1 في العدد الثنائي، ثم اجمع قيمها واكتب المجموع.",
+  bin2hex: "انسخ البتات إلى الصناديق، ثم احسب قيمة كل مجموعة من 4 بتات (8|4|2|1) وحوّلها إلى رقم سادس عشر.",
+  hex2bin: "حوّل كل رقم سادس عشر إلى 4 بتات في مجموعته (8|4|2|1)، ثم اكتب البتات الثمانية.",
+  dec2hex: "مثّل العدد بالصناديق الثمانية أولًا، ثم اقرأ كل مجموعة من 4 بتات كرقم سادس عشر.",
+  hex2dec: "حوّل كل رقم سادس عشر إلى 4 بتات، ثم اجمع قيم الخانات المضاءة (128…1).",
+};
+export function guidanceFor(direction: ConversionDirection, level: AssistanceLevel): string | null {
+  if (level === "challenge") return null;
+  if (level === "practice") return "احسب بالصناديق، ثم اكتب الجواب النهائي.";
+  return GUIDED_METHOD[direction] ?? null;
+}
+
+/**
+ * How the FINAL-answer field behaves for a target base (input mode, example placeholder, maximum length, subscript).
+ * The placeholder is an EXAMPLE of the format; if the task's own value equals the example's value (e.g. a task whose
+ * value is 45 would otherwise show "00101101" — its exact answer) a different example is used, so the placeholder can
+ * never be the answer. `taskValue` is the value of the displayed source (already visible to the student).
+ */
+export interface AnswerInputSpec { inputMode: "numeric" | "text"; placeholder: string; maxLength: number; subscript: string }
+const ANSWER_EXAMPLES: Record<2 | 10 | 16, { primary: [string, number]; alternate: [string, number] }> = {
+  2: { primary: ["00101101", 45], alternate: ["00011010", 26] },
+  10: { primary: ["45", 45], alternate: ["26", 26] },
+  16: { primary: ["3A", 58], alternate: ["1F", 31] },
+};
+export function answerInputFor(targetBase: number, taskValue?: number): AnswerInputSpec {
+  const base = (targetBase === 2 || targetBase === 16 ? targetBase : 10) as 2 | 10 | 16;
+  const ex = ANSWER_EXAMPLES[base];
+  const example = taskValue === ex.primary[1] ? ex.alternate[0] : ex.primary[0];
+  if (base === 2) return { inputMode: "numeric", placeholder: "مثال: " + example, maxLength: 8, subscript: "₂" };
+  if (base === 16) return { inputMode: "text", placeholder: "مثال: " + example, maxLength: 2, subscript: "₁₆" };
+  return { inputMode: "numeric", placeholder: "مثال: " + example, maxLength: 3, subscript: "₁₀" };
+}
+
+/** The numeric value of the task's displayed SOURCE (e.g. "3A" in base 16 → 58), or undefined when unparsable. */
+export function sourceValueOf(sourceDisplay: string, sourceBase: number): number | undefined {
+  const n = parseInt(String(sourceDisplay || ""), sourceBase);
+  return Number.isInteger(n) && n >= 0 && n <= 255 ? n : undefined;
 }
 
 export const PATH_META: { id: ChallengePath; letter: string; titleAr: string; subtitleAr: string }[] = [
@@ -95,9 +138,9 @@ export const PATH_META: { id: ChallengePath; letter: string; titleAr: string; su
 ];
 
 export const LEVEL_META: { id: AssistanceLevel; labelAr: string; descAr: string }[] = [
-  { id: "guided", labelAr: "موجّه", descAr: "الصناديق والقيم والمجموع والنتيجة المباشرة — إرشاد خطوة بخطوة، الأنسب للبداية." },
-  { id: "practice", labelAr: "تدريب", descAr: "الصناديق والقيم والمجموع، مع إخفاء نتيجة الهدف وإرشاد أقل." },
-  { id: "challenge", labelAr: "تحدٍّ", descAr: "الصناديق فقط أثناء الحل — لا تظهر النتائج المشتقّة إلا بعد التحقّق." },
+  { id: "guided", labelAr: "موجّه", descAr: "الصناديق والأوزان مع إرشاد خطوة بخطوة وأقوى تلميح بعد المحاولة الخاطئة — الأنسب للبداية." },
+  { id: "practice", labelAr: "تدريب", descAr: "الصناديق والأوزان مع إرشاد مختصر وتلميحات أخف." },
+  { id: "challenge", labelAr: "تحدٍّ", descAr: "الصناديق والأوزان فقط، بأقل قدر من المساعدة." },
 ];
 
 /** mm:ss for an elapsed-milliseconds value (display only). */

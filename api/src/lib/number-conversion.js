@@ -1,13 +1,13 @@
 // Number Conversion Challenge — the PURE conversion engine (Phase 2 solo game). No IO, no HTTP, deterministic.
 //
 // The teaching model is the 8-BIT networking octet (0–255) with positional boxes 128|64|32|16|8|4|2|1, grouped into
-// two 4-bit nibbles for the hexadecimal bridge. The student's ONE interaction across every direction is the 8-bit
-// board: they set the eight bits so the board represents the task's number. Correctness is therefore uniform and
-// server-graded — the board value must equal the task value — while the SOURCE and the DERIVED target are rendered
-// per direction (decimal / 8-bit binary / two-digit hex). Only bases 2, 10 and 16 are supported (no octal).
+// two 4-bit nibbles for the hexadecimal bridge. The boxes are the student's WORKING area; the student's FINAL answer is
+// the text they type in the task's target base. The server grades that TEXT (evaluateAnswer) against the authoritative
+// task value — the boxes never decide correctness, they only inform contextual hints. Only bases 2, 10 and 16 are
+// supported (no octal).
 //
 // This module is shared by the game API (generation + grading + hints + reveal). The browser never receives a
-// correct-answer key: it gets the source display + direction and submits its eight bits; the server grades here.
+// correct-answer key before resolution: it gets the source display + direction and submits { bits, answer }.
 
 const BASES = Object.freeze({ DECIMAL: 10, BINARY: 2, HEX: 16 });
 const PLACES = Object.freeze([128, 64, 32, 16, 8, 4, 2, 1]);   // MSB → LSB, index 0 is the 128-box (global octet view)
@@ -145,51 +145,107 @@ function publicTask(task) {
 
 /**
  * Deterministically generate a round of tasks. Same (seed, path, count) → identical tasks (so a refresh/reconnect
- * never regenerates a different round). Values are 0..255, bases only 2/10/16, all six directions reachable via the
- * paths, and no two CONSECUTIVE tasks are identical (same direction + value).
+ * never regenerates a different round). Values are 0..255, bases only 2/10/16.
+ *  - Direction coverage: when the round has at least as many tasks as the path has directions (always true for the
+ *    default 10-task round), every direction of the path appears at least once — both directions of a two-direction
+ *    path, all six for "mixed". The remaining slots are filled at random, then the whole plan is shuffled. Smaller
+ *    explicit counts skip the (impossible) coverage and simply draw directions at random.
+ *  - No duplicate (direction, value) pair ANYWHERE in the round.
  */
 function generateRound(seed, { path = "mixed", count = DEFAULT_ROUND_SIZE } = {}) {
-  const dirs = PATHS[path] || PATHS.mixed;
+  const pathKey = PATHS[path] ? path : "mixed";
+  const dirs = PATHS[pathKey];
   const n = Math.max(1, Math.min(50, Math.floor(Number(count) || DEFAULT_ROUND_SIZE)));
-  const rng = makeRng(hashSeed(seed + "|" + path + "|" + n));
-  const tasks = [];
-  let prevKey = "";
-  for (let i = 0; i < n; i++) {
-    let direction, value, key, guard = 0;
-    do {
-      direction = dirs[Math.floor(rng() * dirs.length) % dirs.length];
-      value = Math.floor(rng() * (MAX_VALUE + 1));   // 0..255
-      key = direction + ":" + value;
-      guard++;
-    } while (key === prevKey && guard < 12);
-    prevKey = key;
-    tasks.push(buildTask("t" + (i + 1), direction, value));
+  const rng = makeRng(hashSeed(seed + "|" + pathKey + "|" + n));
+  const pick = arr => arr[Math.floor(rng() * arr.length) % arr.length];
+
+  // 1) direction plan: guaranteed coverage (when it fits) + random fill, then a seeded Fisher–Yates shuffle
+  const plan = n >= dirs.length ? dirs.slice() : [];
+  while (plan.length < n) plan.push(pick(dirs));
+  for (let i = plan.length - 1; i > 0; i--) {
+    const j = Math.floor(rng() * (i + 1));
+    [plan[i], plan[j]] = [plan[j], plan[i]];
   }
-  return tasks;
+
+  // 2) values: random 0..255, never repeating a (direction, value) pair within the round
+  const used = new Set();
+  return plan.map((direction, i) => {
+    let value = Math.floor(rng() * (MAX_VALUE + 1));
+    for (let guard = 0; used.has(direction + ":" + value) && guard < 32; guard++) value = Math.floor(rng() * (MAX_VALUE + 1));
+    // deterministic fallback: the next unused value for this direction (≤ 50 tasks vs 256 values → always found)
+    for (let step = 0; used.has(direction + ":" + value) && step <= MAX_VALUE; step++) value = (value + 1) % (MAX_VALUE + 1);
+    used.add(direction + ":" + value);
+    return buildTask("t" + (i + 1), direction, value);
+  });
 }
 
 // ── grading / hints / reveal ──────────────────────────────────────────────────────────────────────────────────
-/** Grade an eight-bit submission against a task: { correct, submittedValue|null }. Pure, server-authoritative. */
-function evaluateBits(task, bits) {
-  const submitted = valueFromBits(bits);
-  if (submitted === null) return { correct: false, submittedValue: null };
-  return { correct: submitted === task.value, submittedValue: submitted };
+// Arabic-Indic (٠-٩) and Persian (۰-۹) digits → ASCII, so a student typing on an Arabic keypad is not rejected.
+const toAsciiDigits = s => String(s).replace(/[٠-٩]/g, d => String(d.charCodeAt(0) - 0x0660))
+  .replace(/[۰-۹]/g, d => String(d.charCodeAt(0) - 0x06F0));
+
+/**
+ * Parse a typed FINAL answer in a target base. Returns { ok: true, value } for a well-formed answer, or { ok: false }
+ * for a FORMAT error (which the caller must treat as "not an attempt"):
+ *   base 10 → 1–3 decimal digits, value 0–255 (out of range is a format error)
+ *   base 2  → 1–8 characters of 0/1 (leading zeros optional: "101101" ≡ "00101101")
+ *   base 16 → 1–2 hex digits, case-insensitive ("A" ≡ "0A", "3a" ≡ "3A"); no 0x prefix
+ * Surrounding whitespace is ignored; anything else (inner spaces, signs, other characters) is a format error.
+ */
+function parseAnswer(text, base) {
+  if (typeof text !== "string") return { ok: false };
+  const s = toAsciiDigits(text).trim();
+  let m = null;
+  if (base === 10) m = /^[0-9]{1,3}$/.test(s) ? parseInt(s, 10) : null;
+  else if (base === 2) m = /^[01]{1,8}$/.test(s) ? parseInt(s, 2) : null;
+  else if (base === 16) m = /^[0-9a-fA-F]{1,2}$/.test(s) ? parseInt(s, 16) : null;
+  if (m === null || !Number.isInteger(m) || m < MIN_VALUE || m > MAX_VALUE) return { ok: false };
+  return { ok: true, value: m };
 }
-/** The correct eight bits for a task (revealed ONLY by the API after attempts are exhausted). */
+
+/**
+ * Grade a typed FINAL answer against the task — the grading AUTHORITY. The working boxes play no part here.
+ * → { status: "correct" | "incorrect", value } for a well-formed answer, or { status: "malformed" } for a format error.
+ */
+function evaluateAnswer(task, text) {
+  const p = parseAnswer(text, task.targetBase);
+  if (!p.ok) return { status: "malformed" };
+  return { status: p.value === task.value ? "correct" : "incorrect", value: p.value };
+}
+
+/** The canonical answer text in the task's target base: decimal unpadded, binary 8-bit, hex two uppercase digits. */
+function canonicalAnswerForTask(task) {
+  return renderInBase(task.value, task.targetBase);
+}
+
+/** The correct eight bits for a task (revealed ONLY by the API once the task is resolved). */
 function solutionBits(task) {
   return bitsFromValue(task.value);
 }
 
+/** Once the working boxes already hold the right number, the slip is in writing the target — say how to read it. */
+function readOutHint(targetBase) {
+  if (targetBase === 2) return "صناديقك صحيحة — اكتب البتات الثمانية من اليسار (128) إلى اليمين (1).";
+  if (targetBase === 16) return "صناديقك صحيحة — حوّل كل مجموعة من 4 بتات إلى رقم سادس عشر واكتب الرقمين معًا.";
+  return "صناديقك صحيحة — اجمع قيم الخانات المضاءة واكتب المجموع.";
+}
+
 /**
- * A contextual, thinking-guiding hint (never the answer). Depends on the direction, the remaining amount where the
- * student is building from the boxes, AND the assistance level: `guided` is the most explicit (names the remaining
- * amount and the nibble method), `practice` is a lighter nudge, and `challenge` is a minimal, direction-agnostic
- * prompt — so the same wrong answer produces genuinely different scaffolding per level.
+ * A contextual, thinking-guiding hint after a WRONG (well-formed) final answer — never the answer itself. It uses the
+ * student's working boxes (and, for decimal targets, the typed value) plus the assistance level: `guided` is the most
+ * explicit, `practice` is a lighter nudge, `challenge` is a minimal, direction-agnostic prompt.
  */
-function hintForTask(task, bits, level = "guided") {
-  if (level === "challenge") return "غير صحيح. راجع قيم الخانات المختارة وحاول مرة أخرى.";
+function hintForTask(task, bits, level = "guided", answerValue = null) {
+  if (level === "challenge") return "غير صحيح. راجع عملك في الصناديق وحاول مرة أخرى.";
   const detailed = level !== "practice";   // guided = most explicit; practice = lighter
-  const submitted = valueFromBits(bits) || 0;
+  const boardValue = valueFromBits(bits);
+  if (boardValue === task.value) return detailed ? readOutHint(task.targetBase) : "صناديقك صحيحة — راجع كتابة الجواب النهائي.";
+  if (detailed && task.targetBase === 10 && Number.isInteger(answerValue)) {
+    return answerValue > task.value
+      ? "إجابتك أكبر من الصحيح. راجع الخانات المضاءة ثم اجمع قيمها من جديد."
+      : "إجابتك أصغر من الصحيح. هل أهملت إحدى الخانات المضاءة؟";
+  }
+  const submitted = boardValue || 0;
   const remaining = task.value - submitted;
   switch (task.direction) {
     case "dec2bin":
@@ -255,5 +311,5 @@ module.exports = {
   DIRECTIONS, DIRECTION_IDS, PATHS, PATH_IDS, ASSISTANCE_LEVELS, DEFAULT_ROUND_SIZE,
   normalizeValue, renderInBase, bitsFromValue, isValidBits, valueFromBits, activePlaces, nibblesOf, hexDigit, nibbleBreakdown,
   hashSeed, makeRng, buildTask, publicTask, generateRound,
-  evaluateBits, solutionBits, hintForTask, explanationForTask,
+  parseAnswer, evaluateAnswer, canonicalAnswerForTask, solutionBits, hintForTask, explanationForTask,
 };

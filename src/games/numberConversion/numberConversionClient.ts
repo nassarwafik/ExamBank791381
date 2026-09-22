@@ -1,5 +1,5 @@
-// Number Conversion Challenge — the browser's thin transport to the SERVER-AUTHORITATIVE game API. It sends only
-// the student's eight bits and never trusts a local score; grading, the task snapshot and the best record all live
+// Number Conversion Challenge — the browser's thin transport to the SERVER-AUTHORITATIVE game API. It sends the
+// student's working bits + typed FINAL answer (the server grades the answer) and never trusts a local score; grading, the task snapshot and the best record all live
 // on the server. Injectable so components/tests can pass a fake client.
 import type { ChallengePath, AssistanceLevel, ConversionDirection, Bit } from "./conversion";
 
@@ -36,8 +36,13 @@ export interface AnswerResponse {
   attempts?: number;
   hint?: string;
   revealed?: boolean;
+  /** Returned only once the task is resolved (correct or revealed) — never before. */
+  canonicalAnswer?: string;
   solutionBits?: Bit[];
   explanation?: string;
+  /** Arabic validation message for `error: "invalid-answer-format"` (a format error — not an attempt, not a conflict). */
+  message?: string;
+  targetBase?: number;
   taskId?: string;
   done?: boolean;
   result?: RoundResult;
@@ -50,7 +55,7 @@ export interface AnswerResponse {
 export interface NumberConversionClient {
   getState(): Promise<GameState>;
   start(path: ChallengePath, level: AssistanceLevel): Promise<GameState>;
-  answer(taskId: string, bits: Bit[]): Promise<AnswerResponse>;
+  answer(taskId: string, bits: Bit[], answer: string): Promise<AnswerResponse>;
 }
 
 const BASE = "/api/game-number-conversion";
@@ -67,6 +72,6 @@ export function createNumberConversionClient(token: string): NumberConversionCli
       return r.json();
     },
     start(path, level) { return post("start", { path, level }); },
-    answer(taskId, bits) { return post("answer", { taskId, bits }); },
+    answer(taskId, bits, answer) { return post("answer", { taskId, bits, answer }); },
   };
 }
