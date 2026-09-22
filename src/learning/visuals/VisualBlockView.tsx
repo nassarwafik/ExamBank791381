@@ -1,8 +1,31 @@
+import { useEffect, useRef } from "react";
 import { usePrefersReducedMotion } from "../../ui/usePrefersReducedMotion";
 import type { VisualBlock } from "../content/types";
 import { resolveVisual } from "./registry";
 import { IconWarning } from "../../icons";
 import "./visuals.css";
+
+/** A visual must be at least this fraction on screen before its one-shot motion is (re)started — a bare edge (a
+ *  1px sliver) must NOT count, or a one-shot would replay before the learner can meaningfully see it. */
+const VISIBLE_RATIO = 0.25;
+
+/**
+ * Restart the SMIL timeline of every animated inline SVG inside `frame` from t=0. Many educational visuals play a
+ * ONE-SHOT sequence (a packet travels, a DORA exchange, an encapsulation build-up) whose `begin` is a fixed offset
+ * from MOUNT. The reader mounts a whole page on navigation, so a one-shot low on the page can finish (fill="freeze")
+ * before the learner scrolls to it — arriving to a frozen final frame that reads as a static picture. Replaying the
+ * timeline once the figure is actually visible makes the sequence noticeable after render. Looping animations restart
+ * seamlessly, so it is safe to apply uniformly. Fully guarded: `setCurrentTime` exists only on real SVG SMIL engines
+ * (a no-op/throw-safe elsewhere), so the still frame always stands when SMIL is unavailable.
+ */
+function restartVisualMotion(frame: HTMLElement): void {
+  const svgs = frame.querySelectorAll<SVGSVGElement>("svg");
+  svgs.forEach(svg => {
+    if (typeof svg.setCurrentTime !== "function") return;
+    if (!svg.querySelector("animate, animateMotion, animateTransform")) return;
+    try { svg.setCurrentTime(0); } catch { /* SMIL not driveable here — the authored still frame stands */ }
+  });
+}
 
 /**
  * Renders a `visual` block: a trusted, registry-resolved SVG illustration wrapped in a semantic <figure>. The
@@ -17,11 +40,34 @@ import "./visuals.css";
 export default function VisualBlockView({ block }: { block: VisualBlock }) {
   const reducedMotion = usePrefersReducedMotion();
   const entry = resolveVisual(block.visualId);
+  const frameRef = useRef<HTMLDivElement | null>(null);
+
+  // Start the visual's motion when it is MEANINGFULLY on screen (see restartVisualMotion). We only observe a visual
+  // the audited registry marks as animated (entry.motion) — an intentionally static visual gets no observer at all.
+  // A trigger requires BOTH isIntersecting AND intersectionRatio >= VISIBLE_RATIO: `isIntersecting` alone fires when
+  // a 1px edge touches the viewport, which would replay a one-shot far too early (the very "finishes before it is
+  // seen" bug we are fixing), so a sub-threshold sliver never restarts and never disconnects. One trigger on first
+  // qualifying visibility keeps it calm — no perpetual re-runs while scrolling — and revisiting replays through the
+  // component remount. Never runs under reduced motion (the components render no animation at all), and it degrades to
+  // nothing where IntersectionObserver is unavailable (SSR/tests): the animation then plays at mount as before, and
+  // the still frame is always correct.
+  useEffect(() => {
+    if (reducedMotion || !entry || !entry.motion) return;
+    const frame = frameRef.current;
+    if (!frame || typeof IntersectionObserver === "undefined") return;
+    const io = new IntersectionObserver((entries, obs) => {
+      for (const e of entries) {
+        if (e.isIntersecting && e.intersectionRatio >= VISIBLE_RATIO) { restartVisualMotion(frame); obs.disconnect(); return; }
+      }
+    }, { threshold: VISIBLE_RATIO });
+    io.observe(frame);
+    return () => io.disconnect();
+  }, [reducedMotion, entry, block.visualId]);
 
   return (
     <figure className="eb-visual-figure">
       {block.title && <p className="eb-visual-title">{block.title}</p>}
-      <div className="eb-visual-frame">
+      <div className="eb-visual-frame" ref={frameRef}>
         {entry
           ? <entry.component ariaLabel={block.alt} reducedMotion={reducedMotion} />
           : (

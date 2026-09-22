@@ -194,4 +194,16 @@ describe("visuals registry", () => {
   it("has no duplicate ids", () => {
     expect(new Set(REGISTERED_VISUAL_IDS).size).toBe(REGISTERED_VISUAL_IDS.length);
   });
+
+  // The registry `motion` flag is the single motion authority (content `block.motion` is documentation only). After the
+  // SVG motion audit the truthful split is pinned here so a future change to a component (or a mis-set flag) is caught:
+  // 85 visuals animate meaningfully, 37 are intentionally static (reference maps, comparison charts, port/command
+  // tables, static topology anatomy). visuals.guards.test.tsx separately proves each motion:true actually animates and
+  // each still frame is neutralized under reduced motion.
+  it("pins the audited motion split: 122 total = 85 motion:true + 37 motion:false (truthful flag)", () => {
+    const flags = REGISTERED_VISUAL_IDS.map(id => resolveVisual(id)!.motion);
+    expect(flags.length).toBe(122);
+    expect(flags.filter(Boolean).length).toBe(85);
+    expect(flags.filter(m => m === false).length).toBe(37);
+  });
 });
