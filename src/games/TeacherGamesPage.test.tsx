@@ -15,10 +15,11 @@ describe("TeacherGamesPage", () => {
     expect(within(region).getAllByRole("article").length).toBe(2);
   });
 
-  it("shows the games as coming-soon (foundation shell only, no hosting yet)", () => {
+  it("is foundation-only: no teacher Start — Number Conversion reads «متاح للطلاب», Live Challenge «قريبًا …», both disabled", () => {
     render(<TeacherGamesPage />);
-    const buttons = screen.getAllByRole("button", { name: "قريبًا — في المرحلة القادمة" });
-    expect(buttons.length).toBe(2);
-    expect(buttons.every(b => (b as HTMLButtonElement).disabled)).toBe(true);
+    const studentsOnly = screen.getByRole("button", { name: "متاح للطلاب" }) as HTMLButtonElement;      // available game, no teacher hosting yet
+    const soon = screen.getByRole("button", { name: "قريبًا — في المرحلة القادمة" }) as HTMLButtonElement;
+    expect(studentsOnly.disabled).toBe(true);
+    expect(soon.disabled).toBe(true);
   });
 });

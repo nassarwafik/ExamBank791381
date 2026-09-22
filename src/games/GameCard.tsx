@@ -4,13 +4,17 @@ import type { GameDefinition } from "./domain/types";
 
 /**
  * One RTL game card — the shared presentation used by BOTH the student hub and the teacher games page, so the two
- * surfaces can never drift. Phase 1: every game is "coming-soon", so the action is a clearly-disabled placeholder
- * ("قريبًا — في المرحلة القادمة"). There is NO gameplay here — clicking starts nothing. When an engine ships, its
- * phase passes an `onStart` and flips the game's availability; this component then enables the action.
+ * surfaces can never drift. The "قريبًا" badge reflects the GAME's availability (its engine ships in a later phase).
+ * The action is enabled only when the game is available AND the surface passes an `onStart`: a student opens an
+ * available game ("ابدأ"); the teacher page passes no `onStart`, so an available game reads "متاح للطلاب" (disabled)
+ * — the teacher area stays foundation-only, never a fake Start. A coming-soon game is always the disabled
+ * "قريبًا — في المرحلة القادمة".
  */
 export default function GameCard({ game, headingLevel = 3, onStart }: { game: GameDefinition; headingLevel?: 2 | 3; onStart?: () => void }) {
   const Heading = headingLevel === 2 ? "h2" : "h3";
-  const comingSoon = game.availability === "coming-soon" || !onStart;
+  const comingSoon = game.availability === "coming-soon";
+  const canStart = !comingSoon && !!onStart;
+  const label = comingSoon ? "قريبًا — في المرحلة القادمة" : canStart ? "ابدأ" : "متاح للطلاب";
   const titleId = "eb-game-card-" + game.id;
   return (
     <article className={"eb-game-card is-mode-" + game.mode} aria-labelledby={titleId} data-game-id={game.id}>
@@ -30,11 +34,11 @@ export default function GameCard({ game, headingLevel = 3, onStart }: { game: Ga
       <button
         type="button"
         className="eb-button is-primary is-small eb-game-card-action"
-        disabled={comingSoon}
-        aria-disabled={comingSoon || undefined}
-        onClick={comingSoon ? undefined : onStart}
+        disabled={!canStart}
+        aria-disabled={!canStart || undefined}
+        onClick={canStart ? onStart : undefined}
       >
-        {comingSoon ? "قريبًا — في المرحلة القادمة" : "ابدأ"}
+        {label}
       </button>
     </article>
   );

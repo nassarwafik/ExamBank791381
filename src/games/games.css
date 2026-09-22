@@ -29,3 +29,64 @@
 .eb-game-card-topic{ margin:0; color:var(--eb-text-heading); font-size:var(--eb-fs-13); font-weight:var(--eb-fw-semibold); overflow-wrap:anywhere; }
 .eb-game-card-highlights{ margin:0; padding-inline-start:var(--eb-space-4); display:flex; flex-direction:column; gap:var(--eb-space-1); color:var(--eb-muted); font-size:var(--eb-fs-12); line-height:var(--eb-lh-body); }
 .eb-game-card-action{ align-self:flex-start; margin-block-start:var(--eb-space-1); }
+
+/* ── Number Conversion Challenge (Phase 2) ───────────────────────────────────────────────────────────────── */
+.eb-ncgame{ display:flex; flex-direction:column; gap:var(--eb-space-4); }
+.eb-ncgame-title{ margin:0; color:var(--eb-text-heading); font-size:var(--eb-fs-24); font-weight:var(--eb-fw-bold); line-height:var(--eb-lh-tight); }
+.eb-ncgame-sub, .eb-ncgame-level-desc{ margin:0; color:var(--eb-text-secondary); font-size:var(--eb-fs-14); line-height:var(--eb-lh-body); }
+.eb-ncgame-home, .eb-ncgame-play, .eb-ncgame-result{ display:flex; flex-direction:column; gap:var(--eb-space-4); min-width:0; }
+.eb-ncgame-best{ margin:0; color:var(--eb-text-secondary); font-size:var(--eb-fs-13); }
+
+.eb-ncgame-paths, .eb-ncgame-levels{ border:0; margin:0; padding:0; display:flex; flex-direction:column; gap:var(--eb-space-2); }
+.eb-ncgame-paths legend, .eb-ncgame-levels legend{ padding:0; margin-block-end:var(--eb-space-1); color:var(--eb-text-heading); font-weight:var(--eb-fw-semibold); font-size:var(--eb-fs-14); }
+.eb-ncgame-path-grid{ display:grid; grid-template-columns:1fr; gap:var(--eb-space-2); }
+@media (min-width: 640px){ .eb-ncgame-path-grid{ grid-template-columns:repeat(2, 1fr); } }
+.eb-ncgame-path{ display:flex; flex-direction:column; gap:2px; align-items:flex-start; padding:var(--eb-space-3); background:var(--eb-surface); border:2px solid var(--eb-line); border-radius:var(--eb-r-lg); cursor:pointer; font:inherit; text-align:start; }
+.eb-ncgame-path.is-selected{ border-color:var(--eb-primary); }
+.eb-ncgame-path-letter{ color:var(--eb-primary); font-weight:var(--eb-fw-bold); }
+.eb-ncgame-path-title{ color:var(--eb-text-heading); font-weight:var(--eb-fw-semibold); }
+.eb-ncgame-path-sub{ color:var(--eb-muted); font-size:var(--eb-fs-12); }
+.eb-ncgame-level-row{ display:flex; flex-wrap:wrap; gap:var(--eb-space-2); }
+.eb-ncgame-start{ align-self:flex-start; }
+
+.eb-ncgame-playhead{ display:flex; flex-direction:column; gap:var(--eb-space-2); }
+.eb-ncgame-meters{ display:flex; flex-wrap:wrap; gap:var(--eb-space-3); font-variant-numeric:tabular-nums; color:var(--eb-text-secondary); font-size:var(--eb-fs-14); }
+.eb-ncgame-task{ display:flex; flex-direction:column; gap:var(--eb-space-1); }
+.eb-ncgame-direction{ margin:0; color:var(--eb-muted); font-size:var(--eb-fs-13); }
+.eb-ncgame-prompt{ margin:0; color:var(--eb-text-heading); font-size:var(--eb-fs-17); }
+.eb-ncgame-source{ font-weight:var(--eb-fw-bold); font-variant-numeric:tabular-nums; }
+
+/* the conversion board — the heart of the game */
+.eb-ncb{ display:flex; flex-direction:column; gap:var(--eb-space-3); padding:var(--eb-space-4); background:var(--eb-surface); border:1px solid var(--eb-line); border-radius:var(--eb-r-xl); }
+.eb-ncb-board{ display:flex; align-items:flex-start; justify-content:center; gap:var(--eb-space-3); flex-wrap:wrap; }
+.eb-ncb-nibble{ display:flex; flex-direction:column; gap:var(--eb-space-1); align-items:center; }
+.eb-ncb-cols{ display:flex; gap:var(--eb-space-1); }
+.eb-ncb-col{ display:flex; flex-direction:column; align-items:center; gap:4px; }
+.eb-ncb-place{ color:var(--eb-muted); font-size:var(--eb-fs-12); font-variant-numeric:tabular-nums; }
+.eb-ncb-nibweight{ color:var(--eb-info); font-size:var(--eb-fs-12); font-weight:var(--eb-fw-semibold); font-variant-numeric:tabular-nums; }
+.eb-ncb-bit{ inline-size:44px; block-size:44px; border-radius:var(--eb-r-sm); border:2px solid var(--eb-line-2); background:var(--eb-surface); color:var(--eb-text-secondary); font-size:var(--eb-fs-20); font-weight:var(--eb-fw-bold); cursor:pointer; transition:transform var(--eb-dur, .15s) var(--eb-ease, ease), background-color var(--eb-dur, .15s) var(--eb-ease, ease); }
+.eb-ncb-bit.is-on{ background:var(--eb-primary); border-color:var(--eb-primary); color:#fff; }
+.eb-ncb-bit:active{ transform:scale(0.94); }
+.eb-ncb-bit.is-missed{ outline:3px dashed var(--eb-info); outline-offset:2px; }
+.eb-ncb-bit:disabled{ cursor:default; opacity:.9; }
+.eb-ncb-sep{ align-self:center; inline-size:2px; block-size:44px; background:var(--eb-line-2); border-radius:1px; }
+.eb-ncb-nibble-hex{ margin:0; color:var(--eb-text-heading); font-weight:var(--eb-fw-semibold); font-variant-numeric:tabular-nums; }
+.eb-ncb-readout{ display:flex; flex-direction:column; gap:2px; align-items:center; text-align:center; }
+.eb-ncb-sum{ margin:0; color:var(--eb-text-secondary); font-size:var(--eb-fs-14); font-variant-numeric:tabular-nums; }
+.eb-ncb-derived{ margin:0; color:var(--eb-text-heading); font-size:var(--eb-fs-16); }
+.eb-ncb-binary{ margin:0; color:var(--eb-muted); font-size:var(--eb-fs-13); letter-spacing:2px; font-variant-numeric:tabular-nums; }
+.eb-ncb-locked-note{ margin:0; font-size:var(--eb-fs-13); }
+
+.eb-ncgame-feedback{ min-block-size:1.5em; }
+.eb-ncgame-hint, .eb-ncgame-correct, .eb-ncgame-reveal{ margin:0; display:flex; align-items:center; gap:var(--eb-space-1); font-size:var(--eb-fs-14); line-height:var(--eb-lh-body); }
+.eb-ncgame-hint{ color:var(--eb-info-tx); }
+.eb-ncgame-correct{ color:var(--eb-text-heading); font-weight:var(--eb-fw-semibold); }
+.eb-ncgame-actions{ display:flex; flex-wrap:wrap; gap:var(--eb-space-2); }
+
+.eb-ncgame-result{ align-items:center; text-align:center; }
+.eb-ncgame-score{ margin:0; font-size:var(--eb-fs-28); font-weight:var(--eb-fw-bold); color:var(--eb-text-heading); font-variant-numeric:tabular-nums; }
+.eb-ncgame-percent{ margin:0; font-size:var(--eb-fs-20); color:var(--eb-primary); font-weight:var(--eb-fw-bold); }
+.eb-ncgame-stats{ list-style:none; margin:0; padding:0; display:flex; flex-wrap:wrap; gap:var(--eb-space-3); justify-content:center; color:var(--eb-text-secondary); font-size:var(--eb-fs-14); }
+
+@media (prefers-reduced-motion: reduce){ .eb-ncb-bit{ transition:none; } .eb-ncb-bit:active{ transform:none; } }
+.eb-ncgame.is-reduced-motion .eb-ncb-bit{ transition:none; }
