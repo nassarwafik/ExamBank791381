@@ -39,4 +39,11 @@ describe("StudentGamesPage — the student's dedicated Games destination", () =>
     fireEvent.click(screen.getByRole("button", { name: /العودة إلى لوحتي/ }));
     expect(onBack).toHaveBeenCalledTimes(1);
   });
+
+  it("does NOT receive the teacher-only desktop-inset modifier (it sits in .eb-games-surface with its own padding)", () => {
+    const { container } = render(<StudentGamesPage token="t" onBack={vi.fn()} />);
+    expect(container.querySelector(".eb-games-page")).toBeTruthy();               // uses the shared base class
+    expect(container.querySelector(".eb-games-page--teacher")).toBeNull();        // but never the teacher modifier
+    expect(container.querySelector(".eb-games-surface")).toBeTruthy();            // student destination keeps its own padded surface
+  });
 });

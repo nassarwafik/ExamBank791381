@@ -99,3 +99,30 @@ describe("sidebar ↔ content spacing — hubs + opened project workspace", () =
     expect(norm(shell)).toContain(norm(".eb-shell-content{flex:1 1 auto;min-width:0;}"));
   });
 });
+
+// Teacher Games (.eb-games-page--teacher) — same sidebar↔content gutter, but via a TEACHER-SCOPED modifier so the
+// STUDENT dedicated destination (which sits inside .eb-games-surface with its own padding) is never double-padded.
+describe("sidebar ↔ content spacing — Teacher Games page", () => {
+  const css = read("../games/games.css");
+  it("adds a desktop-only inline-start gutter (padding-inline-start: var(--eb-space-4)) at ≥1024px on the teacher modifier", () => {
+    expect(hasDesktopGutter(css, ".eb-games-page--teacher")).toBe(true);
+  });
+  it("the gutter is on the teacher modifier ONLY — never on the shared base class (no student double-padding)", () => {
+    // the shared base .eb-games-page has no side padding at any breakpoint
+    expect(topLevelRule(css, ".eb-games-page")).not.toContain("padding");
+    expect(hasDesktopGutter(css, ".eb-games-page{")).toBe(false);
+    // the modifier exists ONLY inside the desktop media query (no top-level rule → no gutter at mobile/drawer)
+    expect(stripAtMedia(css)).not.toContain(".eb-games-page--teacher");
+  });
+  it("insets only the sidebar side — no symmetric padding-inline, no inline-end, RTL-safe logical properties only", () => {
+    expect(norm(css)).not.toContain(".eb-games-page--teacher{padding-inline:");
+    expect(css).not.toMatch(/padding-inline-end\s*:/);
+    expect(css).not.toMatch(/margin-(?:left|right)\s*:/);
+    expect(css).not.toMatch(/padding-(?:left|right)\s*:/);
+  });
+  it("does not touch the sidebar or the navigation", () => {
+    expect(css).not.toContain(".eb-sidebar");
+    expect(css).not.toContain(".eb-nav");
+    expect(css).not.toContain("--eb-sidebar-w");
+  });
+});
