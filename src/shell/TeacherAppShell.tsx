@@ -5,7 +5,7 @@ import VisuallyHidden from "../ui/VisuallyHidden";
 import useFocusTrap from "../ui/useFocusTrap";
 import {
   IconDashboard, IconStudents, IconAssignments, IconProjects, IconReports, IconBuilder, IconUpload, IconAudit,
-  IconBank, IconBook, IconLogout, IconUser, IconMenu, IconClose, IconSidebar
+  IconBank, IconBook, IconSparkles, IconLogout, IconUser, IconMenu, IconClose, IconSidebar
 } from "../icons";
 import {
   NAV_LABELS, EXAM_BANK_GROUP_LABEL, EXAM_BANK_HEAD, PRIMARY_NAV, EXAM_BANK_NAV, FOOTER_NAV,
@@ -21,7 +21,7 @@ import "../shell.css";
 // with breadcrumb + <h1>, footer navigation (audit, user, logout). No data fetching, no routing authority.
 const ICONS: Record<TeacherNavId, (p: { size?: number }) => ReactNode> = {
   dashboard: IconDashboard, learning: IconBook, students: IconStudents, assignments: IconAssignments, projects: IconProjects,
-  reports: IconReports, bank: IconBank, builder: IconBuilder, import: IconUpload, audit: IconAudit
+  reports: IconReports, games: IconSparkles, bank: IconBank, builder: IconBuilder, import: IconUpload, audit: IconAudit
 };
 const DESKTOP_QUERY = "(min-width: 1024px)";
 
