@@ -7,6 +7,7 @@ import {QuestionTextBlock} from "./questionContent";
 import {REACTIONS,eventTypeOf,feedEventParts,type ReactionId,type FeedMedal,type FeedRank,type FeedProject} from "./achievements";
 import {RANK_VISUALS} from "./studentRankVisuals";
 import type {RankTier} from "./studentRank";
+import {stageDef} from "./student/strengthStages";
 import {resolveGradingStatus,type GradingStatus} from "./gradingStatus";
 import StatCard from "./ui/StatCard";
 import SectionHeader from "./ui/SectionHeader";
@@ -58,11 +59,13 @@ type AttemptReview={
 type RangeKey="all"|"30"|"90"|"365";
 type AchievementPost={postId:string;eventType?:string;classId:string;className:string;studentDisplayName:string;assignmentTitle:string;tier?:"gold"|"silver"|"bronze";medal?:FeedMedal|null;rank?:FeedRank|null;project?:FeedProject|null;createdAt:string;reactionCounts:Record<ReactionId,number>;teacherReaction:ReactionId|null;teacherNote:string};
 // The SAME event wording as the student feed (achievements.feedEventParts); the class name follows the student's name.
-const FEED_LABELS={medal:(tier:string)=>MEDAL_LABELS[tier as keyof typeof MEDAL_LABELS]||tier,rank:(tier:string)=>RANK_VISUALS[tier as RankTier]?.title||tier};
+const FEED_LABELS={medal:(tier:string)=>MEDAL_LABELS[tier as keyof typeof MEDAL_LABELS]||tier,rank:(tier:string)=>RANK_VISUALS[tier as RankTier]?.title||tier,stage:(stage:number)=>stageDef(stage).name};
 function AchievementIcon({post}:{post:AchievementPost}){
  const type=eventTypeOf(post);
  if(type==="medal"){const tier=post.medal?.tier||post.tier||"bronze";return <IconMedal size={22} style={{color:MEDAL_COLORS[tier]}}/>;}
- const tier=(type==="global_rank_up"?post.rank?.tier:post.project?.tier)||"beginner";
+ // global_rank_up → the current Strength STAGE artwork (25-stage pack); project events → the project's own 6-tier art.
+ if(type==="global_rank_up"){return <img className="achievement-rank-art" src={stageDef(post.rank?.stage).image} alt="" aria-hidden="true" width={32} height={32} loading="lazy" decoding="async"/>;}
+ const tier=post.project?.tier||"beginner";
  return <img className="achievement-rank-art" src={(RANK_VISUALS[tier as RankTier]||RANK_VISUALS.beginner).image} alt="" aria-hidden="true" width={32} height={32} loading="lazy" decoding="async"/>;
 }
 function AchievementText({post}:{post:AchievementPost}){

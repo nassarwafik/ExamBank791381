@@ -56,29 +56,38 @@ describe("34/33/110. generic event shape + legacy medal posts", () => {
 });
 
 describe("35/103/93. global rank-up milestone (dashboard = the Strength authority point)", () => {
-  it("first sight records the baseline only; crossing into a NEW tier creates exactly one event; a retry stays one; a jump records the final tier only", async () => {
-    const ctx = school({ ...exams(7) });                              // 700 → beginner
+  // The milestone is now STAGE-based (student-strength 25-stage model): it observes strength.stage (1..25), stores
+  // lastGlobalStage, and posts a create-only `global_rank_up` event with postId "global_stage_<stage>_<studentId>".
+  // Strength is driven ONLY by the LIBRARY (practice trainings, best% × 40 per item) — finalized exams no longer feed
+  // it — so the stage is moved here by seeding the student's learning-practice summary. Each T item at 100% = 40 pts,
+  // so stage = floor(40·n / 80) + 1 = floor(n/2) + 1 for n items.
+  const libFull = n => { const t = {}; for (let i = 1; i <= n; i++) t["T" + i] = { bestPercentage: 100 }; return t; };
+  const setLib = (ctx, trainings) => ctx.setJson("platform/learning-practice/s1.json", { trainings });
+  const practice = trainings => ({ "platform/learning-practice/s1.json": { trainings } });
+
+  it("first sight records the baseline only; crossing into a NEW stage creates exactly one event; a retry stays one; a jump records the final stage only", async () => {
+    const ctx = school({ ...practice(libFull(3)) });                    // 120 pts → stage 2
     let r = await dash(ctx);
-    expect(r.jsonBody.strength.tier).toBe("beginner");
+    expect(r.jsonBody.strength.stage).toBe(2);
     expect(feedNames(ctx)).toEqual([]);                                 // baseline, no retroactive event
-    expect(ctx.getJson(recognitionDocName("s1"))).toMatchObject({ lastGlobalTier: "beginner", lastGlobalPoints: 700 });
-    // +1 finalized exam → 800 → bronze
-    ctx.setJson("platform/assignments/A8.json", assignment("A8", "c1")); ctx.setJson("platform/submissions/A8/s1.json", { attempts: [finalAttempt(60)] });
+    expect(ctx.getJson(recognitionDocName("s1"))).toMatchObject({ lastGlobalStage: 2, lastGlobalPoints: 120 });
+    // +1 library item → 160 pts → stage 3
+    setLib(ctx, libFull(4));
     r = await dash(ctx);
-    expect(r.jsonBody.strength.tier).toBe("bronze");
-    expect(feedNames(ctx)).toEqual([feedBlobName("c1", "global_rank_bronze_s1")]);
-    expect(ctx.getJson(feedBlobName("c1", "global_rank_bronze_s1"))).toMatchObject({ eventType: "global_rank_up", rank: { tier: "bronze", level: 2, points: 800 }, shareWithClass: true, studentDisplayName: "طالب s1" });
+    expect(r.jsonBody.strength.stage).toBe(3);
+    expect(feedNames(ctx)).toEqual([feedBlobName("c1", "global_stage_3_s1")]);
+    expect(ctx.getJson(feedBlobName("c1", "global_stage_3_s1"))).toMatchObject({ eventType: "global_rank_up", rank: { stage: 3, points: 160 }, shareWithClass: true, studentDisplayName: "طالب s1" });
     expect(r.jsonBody.recognition.achievements).toEqual({ total: 1, byType: { global_rank_up: 1, project_rank_up: 0, project_complete: 0 } });
     await dash(ctx); await dash(ctx);                                    // retries / small changes → still one
     expect(feedNames(ctx).length).toBe(1);
-    // jump two tiers at once (800 → 1600 gold) → ONE event for the final tier
-    for (let i = 9; i <= 16; i++) { ctx.setJson("platform/assignments/A" + i + ".json", assignment("A" + i, "c1")); ctx.setJson("platform/submissions/A" + i + "/s1.json", { attempts: [finalAttempt(60)] }); }
+    // jump two stages at once (160 → 360 pts, stage 5) → ONE event for the final stage
+    setLib(ctx, libFull(9));                                            // 360 pts → stage 5
     r = await dash(ctx);
-    expect(r.jsonBody.strength.tier).toBe("gold");
-    expect(feedNames(ctx)).toEqual([feedBlobName("c1", "global_rank_bronze_s1"), feedBlobName("c1", "global_rank_gold_s1")]);
+    expect(r.jsonBody.strength.stage).toBe(5);
+    expect(feedNames(ctx)).toEqual([feedBlobName("c1", "global_stage_3_s1"), feedBlobName("c1", "global_stage_5_s1")]);
   });
-  it("steady state is write-free: after the first-sight baseline, repeated dashboard reads with an unchanged tier issue no writes; a tier change writes once", async () => {
-    const ctx = school({ ...exams(7) });
+  it("steady state is write-free: after the first-sight baseline, repeated dashboard reads with an unchanged stage issue no writes; a stage change writes once", async () => {
+    const ctx = school({ ...practice(libFull(3)) });                    // stage 2
     const writes = [];
     const d = () => ({ ...studentDeps(ctx), uploadJson: async (_c, n, v) => { writes.push(n); ctx.setJson(n, v); } });
     await dashboard({ method: "GET", url: "https://x/api/student-dashboard", headers: { get: () => null } }, d());
@@ -86,23 +95,24 @@ describe("35/103/93. global rank-up milestone (dashboard = the Strength authorit
     await dashboard({ method: "GET", url: "https://x/api/student-dashboard", headers: { get: () => null } }, d());
     await dashboard({ method: "GET", url: "https://x/api/student-dashboard", headers: { get: () => null } }, d());
     expect(writes.length).toBe(1);
-    ctx.setJson("platform/assignments/A8.json", assignment("A8", "c1")); ctx.setJson("platform/submissions/A8/s1.json", { attempts: [finalAttempt(60)] });
+    setLib(ctx, libFull(4));                                            // stage 3 — one recognition write
     await dashboard({ method: "GET", url: "https://x/api/student-dashboard", headers: { get: () => null } }, d());
     expect(writes.length).toBe(2);
-    expect(feedNames(ctx)).toEqual([feedBlobName("c1", "global_rank_bronze_s1")]);
+    expect(feedNames(ctx)).toEqual([feedBlobName("c1", "global_stage_3_s1")]);
   });
-  it("790 → 795 (no tier change) creates nothing; a decrease creates nothing and a re-climb to the same tier is not re-posted", async () => {
-    const ctx = school({ ...exams(8) });
-    await dash(ctx);                                                     // baseline bronze
-    ctx.setJson("platform/learning-practice/s1.json", { trainings: { T01: { bestPercentage: 20, bestPoints: 5, attempts: 1 } } });   // 805
+  it("a within-stage gain creates nothing; a decrease creates nothing and a re-climb to the same stage posts once (a NEW stage vs the last seen)", async () => {
+    const ctx = school({ ...practice(libFull(4)) });                    // 160 pts → stage 3 (baseline)
     await dash(ctx);
     expect(feedNames(ctx)).toEqual([]);
-    ctx.setJson("platform/submissions/A8/s1.json", { attempts: [] });   // drop to 705 → beginner
-    expect((await dash(ctx)).jsonBody.strength.tier).toBe("beginner");
-    expect(feedNames(ctx)).toEqual([]);
-    ctx.setJson("platform/submissions/A8/s1.json", { attempts: [finalAttempt(60)] });   // back to bronze — a NEW tier vs last seen → one event
+    setLib(ctx, { ...libFull(4), T5: { bestPercentage: 50 } });         // 180 pts → still stage 3
     await dash(ctx);
-    expect(feedNames(ctx)).toEqual([feedBlobName("c1", "global_rank_bronze_s1")]);
+    expect(feedNames(ctx)).toEqual([]);
+    setLib(ctx, libFull(3));                                            // drop to 120 pts → stage 2 (decrease → last seen becomes 2)
+    expect((await dash(ctx)).jsonBody.strength.stage).toBe(2);
+    expect(feedNames(ctx)).toEqual([]);
+    setLib(ctx, libFull(4));                                            // back to stage 3 — a NEW stage vs last seen (2) → one event
+    await dash(ctx);
+    expect(feedNames(ctx)).toEqual([feedBlobName("c1", "global_stage_3_s1")]);
     await dash(ctx);
     expect(feedNames(ctx).length).toBe(1);
   });
@@ -163,12 +173,12 @@ describe("40/106/42/43/44. privacy + reactions", () => {
     expect((await react(ctx, "s2", "A2_s1", "heart")).jsonBody).toMatchObject({ reactionCounts: { heart: 1 }, myReaction: "heart" });
     expect((await react(ctx, "s2", "A2_s1", "clap")).jsonBody).toMatchObject({ reactionCounts: { heart: 0, clap: 1 }, myReaction: "clap" });
     expect((await react(ctx, "s2", "A2_s1", "clap")).jsonBody).toMatchObject({ reactionCounts: { clap: 0 }, myReaction: null });
-    ctx.setJson(feedBlobName("c1", "global_rank_bronze_s1"), { schemaVersion: 2, eventType: "global_rank_up", postId: "global_rank_bronze_s1", classId: "c1", studentId: "s1", studentDisplayName: "ليان", createdAt: NOW, shareWithClass: true, reactions: {}, rank: { tier: "bronze", level: 2, points: 800 } });
-    expect((await tReact(ctx, "c1", "global_rank_bronze_s1", "fire")).jsonBody).toMatchObject({ ok: true, teacherReaction: "fire" });
-    expect((await tNote(ctx, "c1", "global_rank_bronze_s1", "  رائع جدًا  ")).jsonBody).toMatchObject({ ok: true, teacherNote: "رائع جدًا" });
-    const post = (await tFeedGet(ctx)).jsonBody.posts.find(p => p.postId === "global_rank_bronze_s1");
-    expect(post).toMatchObject({ eventType: "global_rank_up", rank: { tier: "bronze", level: 2 }, teacherReaction: "fire", teacherNote: "رائع جدًا", className: "صف c1" });
-    expect((await react(ctx, "s2", "global_rank_bronze_s1", "cheer")).status).toBe(200);
+    ctx.setJson(feedBlobName("c1", "global_stage_3_s1"), { schemaVersion: 2, eventType: "global_rank_up", postId: "global_stage_3_s1", classId: "c1", studentId: "s1", studentDisplayName: "ليان", createdAt: NOW, shareWithClass: true, reactions: {}, rank: { stage: 3, points: 160 } });
+    expect((await tReact(ctx, "c1", "global_stage_3_s1", "fire")).jsonBody).toMatchObject({ ok: true, teacherReaction: "fire" });
+    expect((await tNote(ctx, "c1", "global_stage_3_s1", "  رائع جدًا  ")).jsonBody).toMatchObject({ ok: true, teacherNote: "رائع جدًا" });
+    const post = (await tFeedGet(ctx)).jsonBody.posts.find(p => p.postId === "global_stage_3_s1");
+    expect(post).toMatchObject({ eventType: "global_rank_up", rank: { stage: 3, points: 160 }, teacherReaction: "fire", teacherNote: "رائع جدًا", className: "صف c1" });
+    expect((await react(ctx, "s2", "global_stage_3_s1", "cheer")).status).toBe(200);
   });
 });
 
@@ -199,14 +209,17 @@ describe("47/107/108/96. recognition summary — received (never sent), shared w
 });
 
 describe("49. teacher student profile — concise Strength + recognition + project summaries (same authorities)", () => {
-  it("GET /api/students?profileUserId returns strength (finalized × 100 + projects), recognition and projectSummaries", async () => {
-    const ctx = school({ ...exams(4) });
+  it("GET /api/students?profileUserId returns the 25-stage strength (library + module sources), recognition and projectSummaries", async () => {
+    // Medals stay exam-only (A1 at 95% → gold), but Strength is now the 25-stage model: it reads the library practice
+    // summary + module completion, NOT finalized exams or projects. Two library items at 100% = 80 pts → stage 2.
+    const ctx = school({ ...exams(4), "platform/learning-practice/s1.json": { trainings: { T01: { bestPercentage: 100 }, T02: { bestPercentage: 100 } } } });
     ctx.setJson("platform/submissions/A1/s1.json", { attempts: [finalAttempt(95)] });
     await recordAchievementIfEligible(ctx.container, { classId: "c1", studentId: "s1", studentDisplayName: "ليان", assignmentId: "A1", assignmentTitle: "x", percentage: 95, shareAchievements: true });
     await react(ctx, "s2", "A1_s1", "heart");
     const r = await students({ method: "GET", url: "https://x/api/students?profileUserId=s1", headers: { get: () => null } }, teacherDeps(ctx));
     expect(r.status).toBe(200);
-    expect(r.jsonBody.profile.strength).toMatchObject({ totalPoints: 400, examPoints: 400, tier: "beginner", level: 1, nextTier: "bronze" });
+    expect(r.jsonBody.profile.strength).toMatchObject({ totalPoints: 80, libraryPoints: 80, modulePoints: 0, stage: 2, stageCount: 25, nextStage: 3, totalMax: 2000 });
+    expect(r.jsonBody.profile.strength.examPoints).toBeUndefined();   // finalized exams no longer feed Strength
     expect(r.jsonBody.profile.recognition).toEqual({ medals: { total: 1, gold: 1, silver: 0, bronze: 0 }, reactionsReceived: { total: 1, byType: { heart: 1, clap: 0, cheer: 0, fire: 0 } }, achievements: { total: 0, byType: { global_rank_up: 0, project_rank_up: 0, project_complete: 0 } } });
     expect(r.jsonBody.profile.projectSummaries).toEqual([{ projectCode: "899373", title: "مشروع 899373", overallProgress: 0, complete: false }]);
   });

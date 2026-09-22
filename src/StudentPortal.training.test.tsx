@@ -24,7 +24,7 @@ const listBody = { ok: true, actor: "student", trainings: [
 
 function mount() {
   const calls: { url: string; method: string; headers: Record<string, string>; body?: string }[] = [];
-  let strength = { totalPoints: 0, examPoints: 0, practicePoints: 0, projectPoints: 0, tier: null, level: 0, nextTier: "beginner", levelBlockSize: 400, withinLevelPoints: 0, nextLevelRemaining: 400, percent: 0, projects: [] };
+  let strength = { totalPoints: 0, libraryPoints: 0, modulePoints: 0, stage: 1, stageCount: 25, stageSpan: 80, withinStagePoints: 0, nextStageRemaining: 80, percent: 0, nextStage: 2, totalMax: 2000 };
   globalThis.fetch = vi.fn((input: RequestInfo | URL, init?: RequestInit) => {
     const url = String(input), method = (init?.method || "GET").toUpperCase();
     calls.push({ url: url.replace(/\?.*$/, ""), method, headers: (init?.headers || {}) as Record<string, string>, body: init?.body as string | undefined });
@@ -35,7 +35,7 @@ function mount() {
     if (url === "/api/learning-training") return res(200, listBody);
     if (url === "/api/learning-training/T02") return res(200, { ok: true, actor: "student", training: { ...listBody.trainings[1], questionCount: 10, totalMarks: 100, maxPoints: 25 }, exam: { questions } });
     if (url === "/api/learning-training/T02/submit") {
-      strength = { ...strength, totalPoints: 25, practicePoints: 25, withinLevelPoints: 25, nextLevelRemaining: 375, percent: 6 };
+      strength = { ...strength, totalPoints: 25, libraryPoints: 25, withinStagePoints: 25, nextStageRemaining: 55, percent: 31 };
       return res(200, { ok: true, actor: "student", persisted: true, result: { correctCount: 10, questionCount: 10, score: 100, totalMarks: 100, percentage: 100, review: questions.map((q, i) => ({ questionId: q.examQuestionId, questionNumber: i + 1, correct: true, chosenIndex: 0, correctOptionIndex: 0, hint: "" })) }, practice: { bestPercentage: 100, bestPoints: 25, maxPoints: 25, attempts: 1, lastCompletedAt: null, improved: true, pointsGained: 25, earnedPoints: 25 } });
     }
     return res(404, { ok: false });

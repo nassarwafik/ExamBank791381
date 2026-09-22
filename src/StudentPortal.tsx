@@ -16,7 +16,7 @@ import StudentAssignmentCard from "./student/StudentAssignmentCard";
 import AchievementFeed from "./student/AchievementFeed";
 import AvatarPickerDialog from "./student/AvatarPickerDialog";
 import { FILTERS, matchesFilter, medalsFor, nowItems, sortTaskFirst, type PortalFilter } from "./student/portalPresentation";
-import { normalizeStrength, progressPresentationFromStrength, rankPresentationFromStrength } from "./student/strengthPresentation";
+import { normalizeStrength } from "./student/strengthPresentation";
 import { normalizeRecognition } from "./student/recognitionPresentation";
 import type { Dashboard, Detail, Summary } from "./student/types";
 
@@ -58,7 +58,7 @@ export default function StudentPortal({ token, displayName, onLogout }: Props) {
       const r = await fetch("/api/student-dashboard", { headers }), j = await r.json() as any;
       if (r.status === 401) { onLogout(); return; }
       if (!r.ok || !j.student || !j.stats) throw new Error(j.error || "تعذر تحميل صفحة الطالب.");
-      setData({ student: j.student, classroom: j.classroom || null, assignments: j.assignments || [], stats: j.stats, strength: normalizeStrength(j.strength, j.stats?.finalized), recognition: normalizeRecognition(j.recognition) });
+      setData({ student: j.student, classroom: j.classroom || null, assignments: j.assignments || [], stats: j.stats, strength: normalizeStrength(j.strength), recognition: normalizeRecognition(j.recognition) });
       if (silent) setError("");   // a successful background refresh clears any stale error banner
     } catch (e) { if (!silent) setError(e instanceof Error ? e.message : "تعذر تحميل الصفحة."); }   // silent failure: keep last-good data, no flicker
     finally { if (!silent) setLoading(false); }
@@ -160,12 +160,11 @@ export default function StudentPortal({ token, displayName, onLogout }: Props) {
 
   const stats = data?.stats;
   const medals = data ? medalsFor(data.assignments) : [];
-  // Unified Strength: the rank tier, the next tier and the power-ring progress are the SERVER's values in
-  // `dashboard.strength` (exams + practice + projects), only shaped/labelled here — the client never re-derives them
-  // from totalPoints. (normalizeStrength falls back, as a whole, to finalized × 100 when no payload exists.)
+  // Unified Strength (25-stage model): the stage (1..25) and the within-stage progress are the SERVER's values in
+  // `dashboard.strength` (library trainings + book-module completion), only mapped to the uploaded stage artwork/name
+  // here — the client never re-derives the stage from totalPoints. (normalizeStrength falls back, as a whole, to a
+  // zeroed stage-1 summary when no payload exists, so the hero never breaks.)
   const strength = data?.strength ?? null;
-  const rank = strength ? rankPresentationFromStrength(strength, stats) : null;
-  const progress = progressPresentationFromStrength(strength ?? normalizeStrength(null, stats?.finalized));
   const averageFinalized = stats && stats.averageFinalized !== null && stats.averageFinalized !== undefined ? Number(stats.averageFinalized) : null;
   const ordered = data ? sortTaskFirst(data.assignments) : [];
   const visible = ordered.filter(item => matchesFilter(item, filter));
@@ -180,11 +179,11 @@ export default function StudentPortal({ token, displayName, onLogout }: Props) {
         {error && <div className="platform-error" role="alert">{error}</div>}
         {!loading && data && stats && (
           <>
-            <StudentIdentityCard student={data.student} classroom={data.classroom} displayName={displayName} rank={rank} token={token} onChangeAvatar={() => setAvatarPickerOpen(true)} />
+            <StudentIdentityCard student={data.student} classroom={data.classroom} displayName={displayName} strength={strength} token={token} onChangeAvatar={() => setAvatarPickerOpen(true)} />
             <AvatarPickerDialog open={avatarPickerOpen} current={data.student.avatarId} saving={avatarSaving} photoManaged={!!data.student.profilePhoto} onPick={pickAvatar} onClose={() => setAvatarPickerOpen(false)} />
             <NowSection actionable={now_.actionable} upcoming={now_.upcoming} busy={busy} onOpen={open} />
             <StudentLearningMaterials token={token} onOpen={course => { setReaderCourse(course); window.scrollTo({ top: 0, behavior: reducedMotion ? "auto" : "smooth" }); }} />
-            <StudentProgressSection stats={stats} medals={medals} rank={rank} progress={progress} strength={strength} recognition={data?.recognition ?? null} averageFinalized={averageFinalized} />
+            <StudentProgressSection stats={stats} medals={medals} strength={strength} recognition={data?.recognition ?? null} averageFinalized={averageFinalized} />
             <section className="eb-sp-panel" aria-labelledby="eb-sp-tasks-title">
               <SectionHeader level={2} id="eb-sp-tasks-title" title="المهام والواجبات" count={visible.length} description="كل واجباتك ونتائجك؛ ما يحتاج إجراءً يظهر أولًا." />
               <div className="eb-sp-filters" role="group" aria-label="تصفية المهام">
@@ -200,7 +199,7 @@ export default function StudentPortal({ token, displayName, onLogout }: Props) {
                 {!!data.assignments.length && !visible.length && <EmptyState compact title="لا توجد مهام في هذا التصنيف" description="جرّب تصنيفًا آخر." />}
               </div>
             </section>
-            <StudentProjectPanel token={token} contributions={strength?.projects ?? []} />
+            <StudentProjectPanel token={token} />
             <AchievementFeed posts={feed} error={feedError} shareOn={data.student.shareAchievements !== false} shareSaving={shareSaving} now={now} onToggleShare={toggleShareAchievements} onReact={(postId, reaction) => void react(postId, reaction)} />
           </>
         )}

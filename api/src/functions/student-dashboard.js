@@ -6,13 +6,13 @@ const {downloadJsonOrNull,listJson,mapConcurrent,getReadConcurrency}=require("..
 const {normalizeClassStatus}=require("../lib/class-lifecycle");
 const {attemptState,deriveAttemptStatus,attemptModelVersion,activeAttemptOf}=require("../lib/assignment-availability");
 const {deriveGradingStatus}=require("../lib/grading-status");
-// Unified Strength (نقاط القوة): finalized exams × 100 + T-series practice best (≤ 25 each) + projects
-// (round(overallProgress × 4), ≤ 400 each) → the six ranks. The policy lives in student-strength.js; project
-// progress comes from the SAME loader as /api/student-project-tracker (never re-derived here).
+// Unified Strength (نقاط القوة) — the 25-stage model: LIBRARY items (T01–T30 + F01–F06, best% × 40, ≤40 each) +
+// LEARNING MODULES (28 book modules, in-page Study-Practice completion ratio × 20, ≤20 each) = up to 2000, 25 stages
+// of 80. Finalized exams and projects are NO LONGER Strength sources (the 2000 ceiling can't be exceeded). The policy
+// lives in student-strength.js. Medals stay exam-only; projects keep their own separate per-project rank.
 const {buildStrengthSummary}=require("../lib/student-strength");
-const {studyDocName,studyModulesForStrength}=require("../lib/learning-study");
+const {studyDocName,studyModuleCompletionForStrength}=require("../lib/learning-study");
 const {listLearningCourses}=require("../lib/learning-materials-registry");
-const {loadStudentProjects}=require("../lib/project-tracker/student-projects");
 const {aggregateRecognition,medalTierFromPercentage,emptyRecognition}=require("../lib/achievement-feed");
 const {recordGlobalRankMilestone}=require("../lib/achievement-milestones");
 const AP="platform/assignments/",SP="platform/submissions/",LP="platform/learning-practice/";
@@ -73,15 +73,14 @@ async function handler(request,deps={},obs=null){
    assignments.push({assignmentId:String(a.assignmentId||""),title:String(a.title||""),instructions:String(a.instructions||""),openAt:String(a.openAt||""),dueAt:String(a.dueAt||""),effectiveDueAt:String(effectiveDueAt||""),sourceExamTitle:String(a.sourceExamTitle||""),questionCount:Number(a.questionCount||0),totalMarks:Number(a.totalMarks||0),durationMinutes:Number(a.durationMinutes||0),attemptModelVersion:attemptModelVersion(a),attemptStatus:deriveAttemptStatus(s),hasActiveAttempt:!!activeAttemptOf(s),availability:avail,dashboardState,gradingStatus,attemptsUsed:attempts.length,allowedAttempts:allowed,canAttempt,latestScore:latest?Number(latest.score||0):null,latestPercentage:latest?Number(latest.percentage||0):null,latestResult,createdAt:String(a.createdAt||"")})
   }
   assignments.sort((a,b)=>(a.dueAt?new Date(a.dueAt).getTime():Number.MAX_SAFE_INTEGER)-(b.dueAt?new Date(b.dueAt).getTime():Number.MAX_SAFE_INTEGER));
-  // Strength: ONE practice-summary read + the class's projects (one config + one progress read per project, bounded
+  // Strength: ONE practice-summary read (library items) + ONE study completion-state read (module completion), bounded
   // concurrency, no scans). `finalized` is the same server-derived count the stats expose.
   const now=new Date().toISOString();
   const practiceDoc=await dl(c,LP+student.userId+".json");
   // Study Practice: ONE completion-state read; points re-derived against the generated key index (never stored).
   const studyDoc=await dl(c,studyDocName(student.userId));
-  const study=studyModulesForStrength(studyDoc,listLearningCourses().map(x=>x.courseId));
-  const projects=classroom?await loadStudentProjects(c,classroom,String(student.classId||""),student.userId,now,{...deps,downloadJsonOrNull:dl,mapConcurrent:mc,getReadConcurrency:readConcurrency}):[];
-  const strength=buildStrengthSummary({finalizedCount:finalized,trainings:practiceDoc&&practiceDoc.trainings,study,projects:projects.map(p=>({projectCode:p.projectCode,overallProgress:p.summary.overallProgress}))});
+  const moduleCompletion=studyModuleCompletionForStrength(studyDoc,listLearningCourses().map(x=>x.courseId));
+  const strength=buildStrengthSummary({trainings:practiceDoc&&practiceDoc.trainings,moduleCompletion});
   // Recognition (never Strength): the global rank-up milestone is observed HERE — the one place the total Strength is
   // built — against the persisted last-seen tier (create-only event ids, baseline on first sight); the summary counts
   // medals (the same finalized-only authority as the portal), reactions RECEIVED and non-medal achievements lifetime.

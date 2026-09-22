@@ -44,7 +44,9 @@ describe("Phase 3B — Reader over real pilot content", () => {
     await screen.findByRole("heading", { level: 2, name: "أساسيات الشبكات" });
     goTo("791381-m01-l01-p01");
     await screen.findByRole("heading", { level: 2, name: "ما هي الشبكة؟" });
-    expect(screen.getByText(/الشبكة هي مجموعة أجهزة متصلة/)).toBeTruthy();
+    // the book definition (its exact wording "متصلة مع بعضها" is unique to the book text, distinct from the
+    // Study-Practice question prompt on the same page, which also opens with "الشبكة هي مجموعة أجهزة متصلة")
+    expect(screen.getByText(/الشبكة هي مجموعة أجهزة متصلة مع بعضها/)).toBeTruthy();
     expect(screen.getByText(/الشبكة هي ما يجعل الأجهزة تعمل معًا/)).toBeTruthy();
   });
 

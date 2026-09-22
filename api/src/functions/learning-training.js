@@ -9,7 +9,7 @@ const { sanitizeExamForStudent } = require("../lib/student-exam-sanitize");
 const { gradeExam } = require("../lib/assignment-grading");
 const { listLearningTrainings, findLearningTraining, trainingAllowedForClass } = require("../lib/learning-training-registry");
 const { practiceDocName, normalizePracticeDoc, trainingEntry, applyTrainingResult } = require("../lib/learning-practice");
-const { trainingCountsTowardStrength, trainingMaxStrengthPoints } = require("../lib/student-strength");
+const { trainingCountsTowardStrength, trainingMaxStrengthPoints, gradableStrengthPercentage } = require("../lib/student-strength");
 
 // Learning Practice API — the SAFE delivery of the book's Learning-Practice items (the T-series trainings T01–T30
 // and the F-series final exams for training F01–F06 — all real Exam Library items) and their server-side grading. Self-study only: NO assignment record, no due date, no gradebook entry, no attempt limit,
@@ -18,9 +18,12 @@ const { trainingCountsTowardStrength, trainingMaxStrengthPoints } = require("../
 //   GET  /api/learning-training/{trainingId}        → the SANITIZED exam (no answer keys, no hints) — student gated
 //   POST /api/learning-training/{trainingId}/submit → server grading; student results persisted as BEST-score
 //
-// Strength: only the T-series feeds Unified Strength (student-strength.js). The F-series final exams for training
-// run through the very same routes, grading and best-score storage, but every response advertises
-// strengthEligible: false / maxPoints: 0 and their persisted bestPoints / earnedPoints / pointsGained are 0.
+// Strength (25-stage model): BOTH the T-series AND the F-series feed the LIBRARY Strength source (student-strength.js),
+// each up to 40 points = round(bestPercentage × 40 / 100), one canonical best per student/trainingId (max-merge), so
+// the same item solved from the library or from inside the Reader contributes identically and is never double-counted.
+// The best percentage stored is the SERVER'S gradable-only percentage (gradableStrengthPercentage): manual-review /
+// open-question marks leave the denominator, so a final exam is scored over its reliably auto-gradable portion only
+// and never understated. For a fully auto-graded item this equals the ordinary percentage.
 //
 // Actors: a builder (teacher) token → may review/solve any training regardless of class publication, nothing is
 // persisted; otherwise an active student session → the PERSISTED student.classId (never the token's) → current
@@ -129,6 +132,9 @@ async function handler(request, deps = {}, obs = null) {
         };
       });
       const percentage = Math.round(Number(graded.percentage) || 0);
+      // Strength uses the SERVER's gradable-only percentage (manual-review marks excluded from the denominator), so an
+      // F final exam with open questions is scored over its auto-gradable portion; for a T item this equals `percentage`.
+      const strengthPercentage = gradableStrengthPercentage({ score: graded.score, totalMarks: graded.totalMarks, manualReviewMarks: graded.manualReviewMarks });
       const result = { correctCount: graded.questions.filter(q => q.correct).length, questionCount: graded.questions.length, score: graded.score, totalMarks: graded.totalMarks, percentage, review };
       if (actor.kind === "teacher") return { status: 200, jsonBody: { ok: true, actor: "teacher", persisted: false, result } };
 
@@ -137,8 +143,8 @@ async function handler(request, deps = {}, obs = null) {
       try {
         await mut(actor.container, practiceDocName(actor.student.userId), current => {
           // Max-merge against the FRESHEST document on every CAS attempt: an overlapping submission can never
-          // downgrade the best, and a duplicate never double-awards.
-          outcome = applyTrainingResult(current, training.trainingId, percentage, now);
+          // downgrade the best, and a duplicate never double-awards. The canonical best percentage is the gradable one.
+          outcome = applyTrainingResult(current, training.trainingId, strengthPercentage, now);
           return outcome.doc;
         });
       } catch (e) {

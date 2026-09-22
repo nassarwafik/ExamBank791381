@@ -5,21 +5,23 @@ import VisuallyHidden from "../ui/VisuallyHidden";
 import { IconKey, IconCopy, IconMedal, IconEye, IconPlus, IconEdit } from "../icons";
 import { MEDAL_COLORS, MEDAL_LABELS, medalTier } from "../medals";
 import { resolveGradingStatus } from "../gradingStatus";
-import { RANK_VISUALS } from "../studentRankVisuals";
-import type { RankTier } from "../studentRank";
+import { stageDef } from "../student/strengthStages";
 import type { ProfileSection, StudentProfile, SubmittedAssignment } from "./types";
 
-/** Concise Strength / recognition line-up (server values only; nothing recomputed). Absent on older payloads. */
+/** Concise Strength / recognition line-up (server values only; nothing recomputed). Absent on older payloads.
+ *  The 25-STAGE Strength: the current stage's uploaded artwork + Arabic name + stage number, all server-decided. */
 function StrengthSummary({ profile }: { profile: StudentProfile }) {
   const s = profile.strength, r = profile.recognition;
   if (!s && !r) return null;
-  const visual = s && s.tier && (s.tier in RANK_VISUALS) ? RANK_VISUALS[s.tier as RankTier] : null;
+  const def = s ? stageDef(s.stage) : null;
   return (
     <div className="eb-profile-strength" aria-label="القوة والتقدير">
-      {s && (
+      {s && def && (
         <p className="eb-profile-strength-rank">
-          {visual ? <><img src={visual.image} alt="" aria-hidden="true" width={32} height={32} loading="lazy" decoding="async" /><strong>{visual.title}</strong><span className="eb-muted">المستوى {visual.level}</span></> : <strong>لا رتبة بعد</strong>}
-          <span className="eb-muted">نقاط القوة: <strong dir="ltr">{s.totalPoints}</strong></span>
+          {s.totalPoints > 0
+            ? <><img src={def.image} alt="" aria-hidden="true" width={32} height={32} loading="lazy" decoding="async" /><strong>{def.name}</strong><span className="eb-muted">المرحلة {s.stage} من {s.stageCount}</span></>
+            : <strong>لم تبدأ بعد</strong>}
+          <span className="eb-muted">نقاط القوة: <strong dir="ltr">{s.totalPoints} / {s.totalMax}</strong></span>
         </p>
       )}
       {r && (

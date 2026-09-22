@@ -59,7 +59,8 @@ function publicPost(post) {
     assignmentTitle: medal ? medal.assignmentTitle : "",
     tier: medal ? medal.tier : undefined,
     medal,
-    rank: post.rank && typeof post.rank === "object" ? { tier: String(post.rank.tier || ""), level: Number(post.rank.level || 0), points: Number(post.rank.points || 0) } : null,
+    // global_rank_up now carries the 25-stage Strength STAGE (1..25); older posts may still have tier/level.
+    rank: post.rank && typeof post.rank === "object" ? { stage: Number(post.rank.stage || 0), points: Number(post.rank.points || 0) } : null,
     project: post.project && typeof post.project === "object" ? { projectCode: String(post.project.projectCode || ""), title: String(post.project.title || ""), tier: post.project.tier ? String(post.project.tier) : null, level: Number(post.project.level || 0), projectStrength: Number(post.project.projectStrength || 0) } : null,
     createdAt: String(post.createdAt || ""),
     shareWithClass: post.shareWithClass !== false,

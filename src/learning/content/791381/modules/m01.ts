@@ -81,6 +81,14 @@ const m01: ContentModule = {
               alt: "رسم يبيّن أجهزة متصلة بشبكة مركزية تتبادل البيانات فيما بينها.",
               caption: "تتبادل الأجهزة المتصلة المعلومات عبر الشبكة.",
             },
+            {
+              // STUDY PRACTICE (eligible): derives m01's module Strength via completion.
+              id: "m01-l01-p01-q1", type: "practice", origin: "teacher-enrichment",
+              question: {
+                kind: "trueFalse", prompt: "الشبكة هي مجموعة أجهزة متصلة تتبادل المعلومات والملفات وتصل إلى الإنترنت.", answer: true,
+                feedback: { correctFeedback: "أحسنت — هذا هو تعريف الشبكة.", incorrectFeedback: "راجع تعريف الشبكة في أعلى الصفحة.", explanation: "الشبكة = أجهزة متصلة لتبادل المعلومات والوصول إلى الإنترنت." },
+              },
+            },
           ],
         },
         // PDF 9 — استخدامات الشبكة
@@ -111,6 +119,18 @@ const m01: ContentModule = {
               title: "مخطط: استخدامات الشبكة",
               alt: "مخطط إشعاعي يربط شبكة مركزية بأربعة استخدامات: الملفات والإنترنت والتواصل والتعاون.",
               caption: "الاستخدامات المختلفة تنطلق من شبكة واحدة.",
+            },
+            {
+              id: "m01-l01-p02-q1", type: "practice", origin: "teacher-enrichment",
+              question: {
+                kind: "multipleChoice", prompt: "أيٌّ مما يلي من استخدامات الشبكة؟",
+                options: [
+                  { id: "m01-l01-p02-q1-a", text: "مشاركة الملفات بين الأجهزة", correct: true },
+                  { id: "m01-l01-p02-q1-b", text: "زيادة سرعة معالج الحاسوب" },
+                  { id: "m01-l01-p02-q1-c", text: "رفع دقة شاشة الجهاز" },
+                ],
+                feedback: { correctFeedback: "أحسنت — مشاركة الملفات استخدام أساسي للشبكة.", incorrectFeedback: "راجع بطاقات الاستخدامات: الملفات والإنترنت والتواصل والتعاون.", explanation: "من استخدامات الشبكة: مشاركة الملفات، الإنترنت، التواصل، التعاون." },
+              },
             },
           ],
         },
@@ -145,6 +165,18 @@ const m01: ContentModule = {
               title: "رسم توضيحي: مشاركة الطابعة",
               alt: "رسم يبيّن ثلاثة حواسيب تشترك في طابعة واحدة عبر الشبكة.",
               caption: "عدة حواسيب تشترك في طابعة واحدة عبر الشبكة.",
+            },
+            {
+              id: "m01-l01-p03-q1", type: "practice", origin: "teacher-enrichment",
+              question: {
+                kind: "multipleChoice", prompt: "ما فائدة الشبكة في مثال الطابعة؟",
+                options: [
+                  { id: "m01-l01-p03-q1-a", text: "مشاركة طابعة واحدة بين عدة حواسيب", correct: true },
+                  { id: "m01-l01-p03-q1-b", text: "شراء طابعة لكل جهاز", },
+                  { id: "m01-l01-p03-q1-c", text: "إيقاف الطابعة عن العمل", },
+                ],
+                feedback: { correctFeedback: "أحسنت — الشبكة تتيح مشاركة الطابعة.", incorrectFeedback: "راجع مثال الطابعة في الصفحة.", explanation: "بفضل الشبكة تشترك عدة حواسيب في طابعة واحدة بدل شراء طابعة لكل جهاز." },
+              },
             },
           ],
         },

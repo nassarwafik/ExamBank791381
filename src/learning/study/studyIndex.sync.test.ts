@@ -20,9 +20,9 @@ describe("the committed server index equals the content-derived one", () => {
     expect(committed).toEqual(derived);
     expect(derived.schemaVersion).toBe(1); expect(derived.courseId).toBe("791381");
   }, 60000);
-  it("pins the current footprint: 216 pages, 453 eligible activities (247 MC · 86 T/F · 60 short input · 60 tables), 26 modules; every id unique and page-scoped", () => {
+  it("pins the current footprint: 222 pages, 459 eligible activities (250 MC · 88 T/F · 61 short input · 60 tables), 28 modules; every id unique and page-scoped", () => {
     const pages = Object.entries(committed.pages as Record<string, { moduleId: string; activities: Record<string, { kind: string }> }>);
-    expect(pages.length).toBe(216);
+    expect(pages.length).toBe(222);
     const kinds: Record<string, number> = {};
     const ids = new Set<string>();
     const modules = new Set<string>();
@@ -35,9 +35,9 @@ describe("the committed server index equals the content-derived one", () => {
         kinds[key.kind] = (kinds[key.kind] || 0) + 1;
       }
     }
-    expect(ids.size).toBe(453);
-    expect(kinds).toEqual({ multipleChoice: 247, trueFalse: 86, shortInput: 60, "practice-table": 60 });
-    expect(modules.size).toBe(26);
+    expect(ids.size).toBe(459);
+    expect(kinds).toEqual({ multipleChoice: 250, trueFalse: 88, shortInput: 61, "practice-table": 60 });
+    expect(modules.size).toBe(28);
   });
 });
 

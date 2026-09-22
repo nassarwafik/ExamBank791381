@@ -100,10 +100,10 @@ describe("student side — preset avatars only, teacher photo shown first", () =
     (globalThis as { URL: typeof URL }).URL.revokeObjectURL = () => {};
     const calls = mockFetch(() => ({ status: 200, blob: new Blob(["img"], { type: "image/webp" }) }));
     const base = { userId: "u1", code: "C1", displayName: "ليان", classId: "c1", avatarId: "a1" };
-    const { rerender } = render(<StudentIdentityCard student={{ ...base, profilePhoto: null }} classroom={null} displayName="ليان" rank={null} token="stok" onChangeAvatar={vi.fn()} />);
+    const { rerender } = render(<StudentIdentityCard student={{ ...base, profilePhoto: null }} classroom={null} displayName="ليان" strength={null} token="stok" onChangeAvatar={vi.fn()} />);
     expect(calls.length).toBe(0);
     expect(document.querySelector(".eb-profile-avatar.is-avatar")).toBeTruthy();
-    rerender(<StudentIdentityCard student={{ ...base, profilePhoto: { version: 3, updatedAt: "" } }} classroom={null} displayName="ليان" rank={null} token="stok" onChangeAvatar={vi.fn()} />);
+    rerender(<StudentIdentityCard student={{ ...base, profilePhoto: { version: 3, updatedAt: "" } }} classroom={null} displayName="ليان" strength={null} token="stok" onChangeAvatar={vi.fn()} />);
     await waitFor(() => expect(document.querySelector(".eb-profile-avatar.is-photo")).toBeTruthy());
     expect(calls.map(c => c.url)).toEqual(["/api/student-profile-photo?v=3"]);
     expect(calls[0].headers["x-student-token"]).toBe("stok");

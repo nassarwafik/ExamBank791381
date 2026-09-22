@@ -1,93 +1,175 @@
 import { describe, it, expect } from "vitest";
 import {
-  FINALIZED_EXAM_STRENGTH_POINTS, TRAINING_MAX_STRENGTH_POINTS, PROJECT_MAX_STRENGTH_POINTS, RANK_STEP_STRENGTH_POINTS, RANK_ORDER,
-  strengthFromFinalizedCount, strengthFromTrainingBest, strengthFromProjectProgress, practicePointsFromTrainings,
-  rankTierFromStrength, strengthProgress, buildStrengthSummary
+  LIBRARY_ITEM_MAX_POINTS, MODULE_MAX_POINTS, STAGE_SPAN, STAGE_COUNT, STRENGTH_TOTAL_MAX,
+  libraryItemCountsTowardStrength, libraryItemMaxPoints, strengthFromLibraryBest, strengthFromLibraryResult,
+  libraryPointsFromTrainings, gradableStrengthPercentage,
+  strengthFromModuleCompletion, modulePointsFromCompletion,
+  stageForTotal, stageProgress, buildStrengthSummary,
 } from "../src/lib/student-strength.js";
 
-// Unified Strength Points — the one progression policy. Pure, deterministic; pins the owner's acceptance numbers.
+// UNIFIED STRENGTH POINTS — the 25-STAGE progression policy. Pure, deterministic; pins the owner's authoritative
+// model: library items (T01–T30 + F01–F06, ≤40 each = 1440) + book modules (28 × ≤20 = 560) = 0..2000, stage = 25×80.
 
-describe("canonical constants", () => {
-  it("100 per finalized exam · 25 max per training · 400 max per project · 400 per rank level · six ranks", () => {
-    expect(FINALIZED_EXAM_STRENGTH_POINTS).toBe(100);
-    expect(TRAINING_MAX_STRENGTH_POINTS).toBe(25);
-    expect(PROJECT_MAX_STRENGTH_POINTS).toBe(400);
-    expect(RANK_STEP_STRENGTH_POINTS).toBe(400);
-    expect(RANK_ORDER).toEqual(["beginner", "bronze", "silver", "gold", "diamond", "legendary"]);
+describe("canonical constants — the 25-stage model", () => {
+  it("40 max per library item · 20 max per module · 80 per stage · 25 stages · 2000 total", () => {
+    expect(LIBRARY_ITEM_MAX_POINTS).toBe(40);
+    expect(MODULE_MAX_POINTS).toBe(20);
+    expect(STAGE_SPAN).toBe(80);
+    expect(STAGE_COUNT).toBe(25);
+    expect(STRENGTH_TOTAL_MAX).toBe(2000);
+    // the two source ceilings sum to EXACTLY 2000 (36 × 40 = 1440 library + 28 × 20 = 560 modules)
+    expect(36 * LIBRARY_ITEM_MAX_POINTS + 28 * MODULE_MAX_POINTS).toBe(STRENGTH_TOTAL_MAX);
   });
 });
 
-describe("contributions", () => {
-  it("exams: count × 100; malformed counts → 0", () => {
-    expect(strengthFromFinalizedCount(0)).toBe(0); expect(strengthFromFinalizedCount(3)).toBe(300); expect(strengthFromFinalizedCount(24)).toBe(2400);
-    for (const bad of [-1, NaN, Infinity, "x", null, undefined, 2.9]) expect(strengthFromFinalizedCount(bad)).toBe(bad === 2.9 ? 200 : 0);
+describe("library source — T01–T30 AND F01–F06 both count (up to 40 each)", () => {
+  it("which ids count: every T-series and F-series id → true; anything else → false", () => {
+    for (const id of ["T01", "T30", "F01", "F06", "T5", "F3"]) expect(libraryItemCountsTowardStrength(id), id).toBe(true);
+    for (const id of ["", "X01", "T", "01", "m01", null, undefined, "PROJECT", "TF01"]) expect(libraryItemCountsTowardStrength(id), String(id)).toBe(false);
   });
-  it("training best: 40 → 10, 60 → 15, 80 → 20, 100 → 25; clamped 0..100; deterministic rounding", () => {
-    expect(strengthFromTrainingBest(40)).toBe(10); expect(strengthFromTrainingBest(60)).toBe(15); expect(strengthFromTrainingBest(80)).toBe(20); expect(strengthFromTrainingBest(100)).toBe(25);
-    expect(strengthFromTrainingBest(50)).toBe(13); expect(strengthFromTrainingBest(0)).toBe(0);
-    expect(strengthFromTrainingBest(150)).toBe(25); expect(strengthFromTrainingBest(-20)).toBe(0); expect(strengthFromTrainingBest("abc")).toBe(0);
+  it("ceiling advertised: 40 for a T/F id, 0 for anything else", () => {
+    expect(libraryItemMaxPoints("T01")).toBe(40);
+    expect(libraryItemMaxPoints("F06")).toBe(40);
+    expect(libraryItemMaxPoints("m01")).toBe(0);
   });
-  it("project progress: 0 → 0, 1 → 4, 25 → 100, 50 → 200, 75 → 300, 100 → 400; malformed clamped to 0..100", () => {
-    expect(strengthFromProjectProgress(0)).toBe(0); expect(strengthFromProjectProgress(1)).toBe(4); expect(strengthFromProjectProgress(25)).toBe(100);
-    expect(strengthFromProjectProgress(50)).toBe(200); expect(strengthFromProjectProgress(75)).toBe(300); expect(strengthFromProjectProgress(100)).toBe(400);
-    expect(strengthFromProjectProgress(120)).toBe(400); expect(strengthFromProjectProgress(-5)).toBe(0); expect(strengthFromProjectProgress(NaN)).toBe(0); expect(strengthFromProjectProgress(null)).toBe(0);
+  it("strength of ONE item from its best percentage: 100 → 40, 90 → 36, 80 → 32, 50 → 20, 0 → 0; clamped 0..100", () => {
+    expect(strengthFromLibraryBest(100)).toBe(40);
+    expect(strengthFromLibraryBest(90)).toBe(36);
+    expect(strengthFromLibraryBest(80)).toBe(32);
+    expect(strengthFromLibraryBest(50)).toBe(20);
+    expect(strengthFromLibraryBest(0)).toBe(0);
+    expect(strengthFromLibraryBest(150)).toBe(40);   // clamped
+    expect(strengthFromLibraryBest(-20)).toBe(0);
+    expect(strengthFromLibraryBest("abc")).toBe(0);
   });
-  it("practice total sums the best of each unique training from bestPercentage (stored bestPoints are never trusted)", () => {
-    expect(practicePointsFromTrainings({ T01: { bestPercentage: 80, bestPoints: 999 }, T02: { bestPercentage: 100 } })).toBe(45);
-    expect(practicePointsFromTrainings({})).toBe(0); expect(practicePointsFromTrainings(null)).toBe(0); expect(practicePointsFromTrainings({ T01: null, T02: "x" })).toBe(0);
+  it("per-id result: a T id and an F id BOTH award; a foreign id awards 0 whatever the percentage (req #6, #7)", () => {
+    expect(strengthFromLibraryResult("T02", 80)).toBe(32);
+    expect(strengthFromLibraryResult("F01", 100)).toBe(40);   // F NOW contributes
+    expect(strengthFromLibraryResult("F06", 90)).toBe(36);
+    expect(strengthFromLibraryResult("m01", 100)).toBe(0);
+    expect(strengthFromLibraryResult("PROJECT", 100)).toBe(0);
   });
-});
-
-describe("rank thresholds — unified Strength", () => {
-  it("0–399 none · 400 beginner · 800 bronze · 1200 silver · 1600 gold · 2000 diamond · 2400+ legendary; no level 7", () => {
-    expect(rankTierFromStrength(0)).toBeNull(); expect(rankTierFromStrength(399)).toBeNull();
-    expect(rankTierFromStrength(400)).toBe("beginner"); expect(rankTierFromStrength(799)).toBe("beginner");
-    expect(rankTierFromStrength(800)).toBe("bronze"); expect(rankTierFromStrength(1199)).toBe("bronze");
-    expect(rankTierFromStrength(1200)).toBe("silver"); expect(rankTierFromStrength(1600)).toBe("gold");
-    expect(rankTierFromStrength(2000)).toBe("diamond"); expect(rankTierFromStrength(2399)).toBe("diamond");
-    expect(rankTierFromStrength(2400)).toBe("legendary"); expect(rankTierFromStrength(9999)).toBe("legendary");
-  });
-  it("OLD RANK REGRESSION: with zero practice/project points the finalized-exam boundaries are unchanged", () => {
-    const tierForFinalized = n => rankTierFromStrength(buildStrengthSummary({ finalizedCount: n }).totalPoints);
-    expect([3, 4, 7, 8, 11, 12, 15, 16, 19, 20, 23, 24].map(tierForFinalized)).toEqual([null, "beginner", "beginner", "bronze", "bronze", "silver", "silver", "gold", "gold", "diamond", "diamond", "legendary"]);
-  });
-  it("strengthProgress: within-block points / remaining / percent; top rank is a full decorative 100%", () => {
-    expect(strengthProgress(0)).toMatchObject({ tier: null, level: 0, nextTier: "beginner", withinLevelPoints: 0, nextLevelRemaining: 400, percent: 0, levelBlockSize: 400 });
-    expect(strengthProgress(200)).toMatchObject({ tier: null, level: 0, nextTier: "beginner", withinLevelPoints: 200, nextLevelRemaining: 200, percent: 50 });
-    expect(strengthProgress(520)).toMatchObject({ tier: "beginner", level: 1, nextTier: "bronze", withinLevelPoints: 120, nextLevelRemaining: 280, percent: 30 });
-    expect(strengthProgress(2400)).toMatchObject({ tier: "legendary", level: 6, nextTier: null, withinLevelPoints: 400, nextLevelRemaining: 0, percent: 100 });
-    expect(strengthProgress(3000)).toMatchObject({ tier: "legendary", percent: 100 });
+  it("library total sums T AND F from bestPercentage only (stored bestPoints are NEVER trusted)", () => {
+    expect(libraryPointsFromTrainings({ T01: { bestPercentage: 80, bestPoints: 999 }, T02: { bestPercentage: 100 }, F01: { bestPercentage: 50 } })).toBe(32 + 40 + 20);
+    expect(libraryPointsFromTrainings({})).toBe(0);
+    expect(libraryPointsFromTrainings(null)).toBe(0);
+    expect(libraryPointsFromTrainings({ T01: null, F02: "x", m01: { bestPercentage: 100 } })).toBe(0);   // foreign / malformed ids add 0
   });
 });
 
-describe("buildStrengthSummary — owner acceptance scenarios", () => {
-  it("PROJECT-ONLY 50%: 0 exams, 0 practice, project 50% → 200 points, 50% toward the first rank", () => {
-    const s = buildStrengthSummary({ finalizedCount: 0, trainings: {}, projects: [{ projectCode: "794589", overallProgress: 50 }] });
-    expect(s).toMatchObject({ totalPoints: 200, examPoints: 0, practicePoints: 0, projectPoints: 200, tier: null, level: 0, withinLevelPoints: 200, nextLevelRemaining: 200, percent: 50 });
-    expect(s.projects).toEqual([{ projectCode: "794589", overallProgress: 50, strengthPoints: 200 }]);
+describe("gradable-only percentage — F final exams are scored over the auto-gradable portion, never understated (req #7)", () => {
+  it("no manual-review marks → the ordinary percentage", () => {
+    expect(gradableStrengthPercentage({ score: 8, totalMarks: 10, manualReviewMarks: 0 })).toBe(80);
+    expect(gradableStrengthPercentage({ score: 10, totalMarks: 10, manualReviewMarks: 0 })).toBe(100);
   });
-  it("PROJECT-ONLY 100%: unlocks level 1 (بذرة القوة) with 400 points and no assignments at all", () => {
-    const s = buildStrengthSummary({ finalizedCount: 0, projects: [{ projectCode: "794589", overallProgress: 100 }] });
-    expect(s).toMatchObject({ totalPoints: 400, projectPoints: 400, tier: "beginner", level: 1, withinLevelPoints: 0, nextLevelRemaining: 400, percent: 0 });
+  it("manual-review marks leave the DENOMINATOR (they don't drag the percentage down)", () => {
+    // 38 auto-correct out of (45 − 7 manual) = 38/38 = 100%, not 38/45 = 84%
+    expect(gradableStrengthPercentage({ score: 38, totalMarks: 45, manualReviewMarks: 7 })).toBe(100);
+    expect(gradableStrengthPercentage({ score: 30, totalMarks: 50, manualReviewMarks: 10 })).toBe(75);   // 30/40
   });
-  it("MIXED: 3 exams (300) + T02 best 80% (20) + project 50% (200) = 520 → level 1, 120/400, 30%, 280 remaining", () => {
-    const s = buildStrengthSummary({ finalizedCount: 3, trainings: { T02: { bestPercentage: 80 } }, projects: [{ projectCode: "794589", overallProgress: 50 }] });
-    expect(s).toMatchObject({ totalPoints: 520, examPoints: 300, practicePoints: 20, projectPoints: 200, tier: "beginner", level: 1, nextTier: "bronze", withinLevelPoints: 120, nextLevelRemaining: 280, percent: 30 });
+  it("an all-manual item (no auto-gradable marks) → 0; malformed → 0", () => {
+    expect(gradableStrengthPercentage({ score: 0, totalMarks: 20, manualReviewMarks: 20 })).toBe(0);
+    expect(gradableStrengthPercentage({ score: 10, totalMarks: 10, manualReviewMarks: 10 })).toBe(0);
+    expect(gradableStrengthPercentage({})).toBe(0);
+    expect(gradableStrengthPercentage()).toBe(0);
   });
-  it("MULTI-PROJECT: A 50% + B 25% = 300, each project counted once and capped at 400", () => {
-    const s = buildStrengthSummary({ projects: [{ projectCode: "A", overallProgress: 50 }, { projectCode: "B", overallProgress: 25 }] });
-    expect(s.projectPoints).toBe(300);
-    expect(s.projects.map(p => p.strengthPoints)).toEqual([200, 100]);
-    expect(buildStrengthSummary({ projects: [{ projectCode: "A", overallProgress: 100 }, { projectCode: "B", overallProgress: 100 }] })).toMatchObject({ projectPoints: 800, tier: "bronze" });
+});
+
+describe("learning-module source — completion ratio × 20, non-farmable (req #8)", () => {
+  it("one module: 0/3 → 0, 1/3 → 7, 2/3 → 13, 3/3 → 20; a zero-eligible module → 0", () => {
+    expect(strengthFromModuleCompletion(0, 3)).toBe(0);
+    expect(strengthFromModuleCompletion(1, 3)).toBe(7);
+    expect(strengthFromModuleCompletion(2, 3)).toBe(13);
+    expect(strengthFromModuleCompletion(3, 3)).toBe(20);
+    expect(strengthFromModuleCompletion(5, 0)).toBe(0);   // no eligible activities → no points
   });
-  it("DERIVED, NOT FARMED: the same project state always yields the same points; a lowered progress lowers the contribution", () => {
-    const at = pct => buildStrengthSummary({ projects: [{ projectCode: "A", overallProgress: pct }] }).projectPoints;
-    expect(at(75)).toBe(300); expect(at(75)).toBe(300); expect(at(75)).toBe(300);
-    expect(at(40)).toBe(160);                                              // teacher reset/correction: follows current state
+  it("completed is capped at total (repeating / over-counting can never exceed the module ceiling)", () => {
+    expect(strengthFromModuleCompletion(9, 3)).toBe(20);
+    expect(strengthFromModuleCompletion(-2, 3)).toBe(0);
   });
-  it("malformed input → zeros, never NaN", () => {
-    const s = buildStrengthSummary({ finalizedCount: "x", trainings: "nope", projects: "nope" });
-    expect(s).toMatchObject({ totalPoints: 0, examPoints: 0, practicePoints: 0, projectPoints: 0, tier: null, projects: [] });
-    expect(buildStrengthSummary()).toMatchObject({ totalPoints: 0 });
+  it("module total re-derives every module (nothing stored is trusted)", () => {
+    expect(modulePointsFromCompletion({ m01: { completed: 3, total: 3 }, m02: { completed: 1, total: 4, points: 999 } })).toBe(20 + 5);
+    expect(modulePointsFromCompletion({})).toBe(0);
+    expect(modulePointsFromCompletion(null)).toBe(0);
+  });
+});
+
+describe("stages — 25 × 80, numbered 1..25, stage 25 completes at 2000 (req #2, #3, #4, #5)", () => {
+  it("the stage for a total: 0→1, 79→1, 80→2, 159→2, 160→3, 1919→24, 1920→25, 2000→25 (clamped, no stage 26)", () => {
+    expect(stageForTotal(0)).toBe(1);
+    expect(stageForTotal(79)).toBe(1);
+    expect(stageForTotal(80)).toBe(2);
+    expect(stageForTotal(159)).toBe(2);
+    expect(stageForTotal(160)).toBe(3);
+    expect(stageForTotal(1919)).toBe(24);
+    expect(stageForTotal(1920)).toBe(25);
+    expect(stageForTotal(2000)).toBe(25);
+    expect(stageForTotal(99999)).toBe(25);
+    for (const bad of [-1, NaN, Infinity, "x", null, undefined]) expect(stageForTotal(bad), String(bad)).toBe(1);
+  });
+  it("every 80-point boundary steps exactly one stage (1..25), no off-by-one across the whole range", () => {
+    for (let stage = 1; stage <= STAGE_COUNT; stage++) {
+      const start = (stage - 1) * STAGE_SPAN;
+      expect(stageForTotal(start), "start " + start).toBe(stage);
+      if (stage < STAGE_COUNT) expect(stageForTotal(start + STAGE_SPAN - 1), "end " + start).toBe(stage);
+    }
+  });
+  it("within-stage progress: mid-stage, boundary, and the top stage (full 80/80, 100%, nextStage null)", () => {
+    expect(stageProgress(0)).toMatchObject({ stage: 1, stageCount: 25, stageSpan: 80, withinStagePoints: 0, nextStageRemaining: 80, percent: 0, nextStage: 2, totalMax: 2000 });
+    expect(stageProgress(88)).toMatchObject({ stage: 2, withinStagePoints: 8, nextStageRemaining: 72, percent: 10, nextStage: 3 });
+    expect(stageProgress(1920)).toMatchObject({ stage: 25, withinStagePoints: 0, nextStageRemaining: 0, percent: 0, nextStage: null });   // START of the top stage
+    expect(stageProgress(2000)).toMatchObject({ stage: 25, withinStagePoints: 80, nextStageRemaining: 0, percent: 100, nextStage: null });   // COMPLETES at the max
+    expect(stageProgress(3000)).toMatchObject({ stage: 25, percent: 100, nextStage: null });   // clamped
+  });
+});
+
+describe("buildStrengthSummary — the owner's authoritative acceptance scenarios", () => {
+  it("empty / missing input → 0 points, stage 1 (backward compatible)", () => {
+    const s = buildStrengthSummary();
+    expect(s).toMatchObject({ totalPoints: 0, libraryPoints: 0, modulePoints: 0, stage: 1, nextStage: 2, withinStagePoints: 0, nextStageRemaining: 80, percent: 0, totalMax: 2000 });
+    expect(buildStrengthSummary({ trainings: "nope", moduleCompletion: "nope" })).toMatchObject({ totalPoints: 0, stage: 1 });
+    expect(Number.isNaN(s.totalPoints)).toBe(false);
+  });
+  it("MIXED (library T+F + modules): T02 80% (32) + F01 90% (36) + module 3/3 (20) = 88 → stage 2, 8/80, 10%", () => {
+    const s = buildStrengthSummary({ trainings: { T02: { bestPercentage: 80 }, F01: { bestPercentage: 90 } }, moduleCompletion: { m01: { completed: 3, total: 3 } } });
+    expect(s).toMatchObject({ totalPoints: 88, libraryPoints: 68, modulePoints: 20, stage: 2, withinStagePoints: 8, nextStageRemaining: 72, percent: 10, nextStage: 3 });
+  });
+  it("F-series alone now moves Strength (req #7): F01 100% = 40 → stage 1, 40/80", () => {
+    const s = buildStrengthSummary({ trainings: { F01: { bestPercentage: 100 } } });
+    expect(s).toMatchObject({ totalPoints: 40, libraryPoints: 40, modulePoints: 0, stage: 1, withinStagePoints: 40, percent: 50 });
+  });
+  it("FULL: all 36 library items at 100% (1440) + all 28 modules complete (560) = 2000 → stage 25 completes (req #5)", () => {
+    const trainings = {};
+    for (let i = 1; i <= 30; i++) trainings["T" + String(i).padStart(2, "0")] = { bestPercentage: 100 };
+    for (let i = 1; i <= 6; i++) trainings["F" + String(i).padStart(2, "0")] = { bestPercentage: 100 };
+    const moduleCompletion = {};
+    for (let i = 1; i <= 28; i++) moduleCompletion["m" + i] = { completed: 4, total: 4 };
+    const s = buildStrengthSummary({ trainings, moduleCompletion });
+    expect(s).toMatchObject({ totalPoints: 2000, libraryPoints: 1440, modulePoints: 560, stage: 25, withinStagePoints: 80, nextStageRemaining: 0, percent: 100, nextStage: null, totalMax: 2000 });
+  });
+  it("the total is capped at 2000 and never exceeds stage 25 even if sources over-report", () => {
+    const trainings = {};
+    for (let i = 1; i <= 30; i++) trainings["T" + String(i).padStart(2, "0")] = { bestPercentage: 100 };
+    for (let i = 1; i <= 6; i++) trainings["F" + String(i).padStart(2, "0")] = { bestPercentage: 100 };
+    const moduleCompletion = {};
+    for (let i = 1; i <= 40; i++) moduleCompletion["m" + i] = { completed: 9, total: 9 };   // 40 "modules", over the real 28
+    const s = buildStrengthSummary({ trainings, moduleCompletion });
+    expect(s.totalPoints).toBe(2000);
+    expect(s.stage).toBe(25);
+    expect(s.nextStage).toBeNull();
+  });
+  it("modules are NOT farmable: repeating a completed activity (completed already = total) never adds points (req #8)", () => {
+    const once = buildStrengthSummary({ moduleCompletion: { m01: { completed: 3, total: 3 } } }).modulePoints;
+    const again = buildStrengthSummary({ moduleCompletion: { m01: { completed: 99, total: 3 } } }).modulePoints;
+    expect(once).toBe(20);
+    expect(again).toBe(20);
+  });
+  it("the RETIRED sources (finalized exams, projects) are ignored — passing them never changes the total", () => {
+    const base = buildStrengthSummary({ trainings: { T01: { bestPercentage: 100 } } });
+    const withOld = buildStrengthSummary({ trainings: { T01: { bestPercentage: 100 } }, finalizedCount: 24, projects: [{ projectCode: "A", overallProgress: 100 }] });
+    expect(withOld.totalPoints).toBe(base.totalPoints);
+    expect(withOld.totalPoints).toBe(40);
+    expect(withOld).not.toHaveProperty("examPoints");
+    expect(withOld).not.toHaveProperty("projectPoints");
   });
 });

@@ -121,12 +121,13 @@ describe("Phase 3D — provenance + answer-key safety", () => {
     }
   });
 
-  // Phase 3D adds no enrichment of its own; the m02 teacher-enrichment blocks are the Phase-3C QR clarification plus
-  // the three Batch-2 SVG visual enrichments (m02 selections).
-  it("adds no NEW enrichment beyond the QR clarification and the Batch-2 visuals", () => {
+  // Phase 3D adds no enrichment of its own; the m02 teacher-enrichment blocks are the Phase-3C QR clarification, the
+  // three Batch-2 SVG visual enrichments (m02 selections), and the three Study-Practice questions (m02 selections).
+  it("adds no NEW enrichment beyond the QR clarification, the Batch-2 visuals, and the Study-Practice questions", () => {
     const enrich = m02Pages.flatMap(p => (p.blocks as ContentBlock[]).filter(b => b.origin === "teacher-enrichment").map(b => b.id));
     expect([...enrich].sort()).toEqual([
-      "m02-l01-p01-visual", "m02-l01-p03-visual", "m02-l01-p08-qrnote", "m02-l01-p09-visual",
+      "m02-l01-p01-q1", "m02-l01-p01-visual", "m02-l01-p03-visual", "m02-l01-p04-q1", "m02-l01-p05-q1",
+      "m02-l01-p08-qrnote", "m02-l01-p09-visual",
     ]);
   });
 });

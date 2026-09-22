@@ -155,17 +155,22 @@ describe("Phase 3C — provenance + answer-key safety", () => {
       if (b.origin === "teacher-enrichment") enrich.push(b.id);
       else expect(b.origin, b.id).toBe("book");
     }
-    // the original QR clarification plus the three Batch-2 visual-enrichment blocks (m02 selections)
+    // the original QR clarification, the three Batch-2 visual-enrichment blocks (m02 selections), and the three
+    // Study-Practice questions added on PDF 15/16/17
     expect([...enrich].sort()).toEqual([
-      "m02-l01-p01-visual", "m02-l01-p03-visual", "m02-l01-p08-qrnote", "m02-l01-p09-visual",
+      "m02-l01-p01-q1", "m02-l01-p01-visual", "m02-l01-p03-visual", "m02-l01-p04-q1", "m02-l01-p05-q1",
+      "m02-l01-p08-qrnote", "m02-l01-p09-visual",
     ]);
   });
 
-  it("adds NO practice blocks, NO answer keys, and NO embedded image / iframe / external link (exercises are a plain list)", () => {
+  it("adds exactly the three Study-Practice enrichment questions (all teacher-enrichment), and NO embedded image / iframe / external link", () => {
     const json = JSON.stringify(m02);
-    expect(m02Pages.some(p => p.blocks.some(b => b.type === "practice"))).toBe(false);          // no Phase-4 practice
+    // the only practice blocks are the three Study-Practice additions, and every one is teacher-enrichment
+    const practiceIds = m02Pages.flatMap(p => p.blocks.filter(b => b.type === "practice").map(b => b.id));
+    expect([...practiceIds].sort()).toEqual(["m02-l01-p01-q1", "m02-l01-p04-q1", "m02-l01-p05-q1"]);
+    for (const p of m02Pages) for (const b of p.blocks) if (b.type === "practice") expect(b.origin, b.id).toBe("teacher-enrichment");
     expect(m02Pages.some(p => p.blocks.some(b => b.type === "image" || b.type === "diagram"))).toBe(false); // no QR/screenshot image
-    for (const banned of ["<iframe", ".pdf", "http", "correct", "feedback", "PracticeFeedback"]) {
+    for (const banned of ["<iframe", ".pdf", "http"]) {
       expect(json, banned).not.toContain(banned);
     }
     // the QR clarification is teacher-enrichment and never claims book provenance

@@ -8,8 +8,7 @@ import { describe, it, expect, afterEach, vi } from "vitest";
 import { render, cleanup, screen, fireEvent, within, waitFor } from "@testing-library/react";
 import StudentPortal from "./StudentPortal";
 import type { FeedPost } from "./achievements";
-import { RANK_VISUALS } from "./studentRankVisuals";
-import type { RankTier } from "./studentRank";
+import { stageDef } from "./student/strengthStages";
 
 afterEach(() => { cleanup(); vi.restoreAllMocks(); });
 const res = (status: number, body: unknown) => Promise.resolve({ status, ok: status >= 200 && status < 300, json: async () => body } as Response);
@@ -283,146 +282,65 @@ describe("UX-7a StudentPortal — identity, medals, average ring and personal ra
     expect(screen.getByText("من الواجبات النهائية فقط")).toBeTruthy();
   });
 
-  it("no rank before 400 Strength Points (4 finalized exams): shows the points progression instead (pending results never count)", async () => {
-    mount({ student, classroom, assignments: [], stats: { ...baseStats, assigned: 20, finalized: 3, pendingReview: 6, averageFinalized: 99 } });
+  it("the current STAGE hero renders the server's uploaded icon, name, number, points and within-stage progress", async () => {
+    // 650 points → the SERVER says stage 7 «ذئب الرياح» (a local floor(650/80)+1 rule would say 9); the portal trusts 7.
+    mount({ student, classroom, assignments: [], stats: { ...baseStats, assigned: 20, finalized: 3, averageFinalized: 88 }, strength: { totalPoints: 650, libraryPoints: 420, modulePoints: 230, stage: 7, stageCount: 25, stageSpan: 80, withinStagePoints: 33, nextStageRemaining: 47, percent: 41, nextStage: 8, totalMax: 2000 } });
     await screen.findByText(/مرحبًا أحمد/);
-    expect(screen.queryByText(/الرتبة:/)).toBeNull();
-    expect(screen.queryByRole("progressbar", { name: /نحو رتبة/ })).toBeNull();
-    const bar = screen.getByRole("progressbar", { name: "الطريق إلى رتبتك" });
-    expect(bar.getAttribute("aria-valuenow")).toBe("75");
-    expect(screen.getByText("300 من 400 نقطة قوة لفتح رتبتك")).toBeTruthy();   // compatibility: 3 finalized × 100
-    expect(document.body.textContent).not.toMatch(/من 10 |لفتح الرتبة/);          // old 10-based copy is gone
-    expect(document.querySelector(".eb-sp-avatar-frame")?.className).not.toMatch(/is-rank-/);
-    // No EARNED rank image before finalized 4: image 1 appears only as a clearly-muted, decorative preview
-    // (aria-hidden, empty alt) inside a LOCKED ring, labelled "الرتبة القادمة" — never as an owned rank.
-    expect(screen.queryByRole("img", { name: /رتبة بذرة القوة/ })).toBeNull();     // not presented as earned
-    const preview = document.querySelector(".eb-sp-rankring.is-locked .eb-sp-rankring-art") as HTMLImageElement;
-    expect(preview).toBeTruthy();
-    expect(preview.getAttribute("aria-hidden")).toBe("true");
-    expect(preview.getAttribute("alt")).toBe("");
-    expect(preview.getAttribute("src")).toBe(RANK_VISUALS.beginner.image);
-    expect(screen.getByText("الرتبة القادمة")).toBeTruthy();
-    expect(screen.getByText("بذرة القوة")).toBeTruthy();
-    expect(screen.getByText("المستوى 1")).toBeTruthy();                            // level 1 is shown, muted preview
-    // the circular ring IS the progress representation before the first rank — no horizontal rank bar remains.
+    expect(screen.getByText("ذئب الرياح")).toBeTruthy();                          // stage-7 name from the uploaded pack
+    expect(screen.getByText("المرحلة 7 من 25")).toBeTruthy();
+    expect(screen.getByText(/نقاط القوة:/).textContent).toBe("نقاط القوة: 650 / 2000");
+    expect(screen.getByText("التقدم في هذه المرحلة: 33 / 80")).toBeTruthy();
+    expect(screen.getByText(/بقي 47 نقطة قوة للوصول إلى سيد الأمواج/)).toBeTruthy();   // next = stage 8
+    // the current stage artwork is the primary visual (uploaded icon), inside the ring, with a meaningful alt
+    const art = screen.getByRole("img", { name: stageDef(7).alt }) as HTMLImageElement;
+    expect(art.getAttribute("src")).toBe(stageDef(7).image);
+    expect(art.className).toContain("eb-sp-rankring-art");
+    // the ring is the sole progress representation and carries the authoritative percent toward the next stage
+    expect((document.querySelector(".eb-sp-rank-percent") as HTMLElement)?.textContent).toBe("41%");
+    expect(screen.getByRole("progressbar", { name: "التقدم نحو سيد الأمواج" }).getAttribute("aria-valuenow")).toBe("41");
     expect(document.querySelector(".eb-sp-rank-progress .eb-progress-track")).toBeNull();
-    expect(document.querySelector(".eb-sp-rankring .eb-sp-rankring-svg")).toBeTruthy();
+    // the avatar frame band follows the server stage (7 → band 2); the OLD 6-rank frame classes are gone
+    expect(document.querySelector(".eb-sp-avatar-frame.is-stage-band-2")).toBeTruthy();
+    expect(document.querySelector(".eb-sp-avatar-frame")?.className).not.toMatch(/is-rank-/);
+    // a local floor(650/80)+1 = 9 recompute must NOT appear anywhere
+    expect(document.body.textContent).not.toMatch(/المرحلة 9|صقر العاصفة/);
   });
 
-  it("the six-tier personal rank badge, avatar frame and next-rank progress come from the finalized COUNT only (not the average); nothing compares students", async () => {
-    // finalized 22 → diamond (20–23); 2 into the block → 50% toward legendary; average is deliberately low to prove it is ignored.
-    mount({ student, classroom, assignments: [], stats: { ...baseStats, assigned: 30, finalized: 22, pendingReview: 4, average: 40, averageFinalized: 12 } });
+  it("stage 25 completes the ring: the top stage shows «بلغت المرحلة الأخيرة», a full 100% ring and no next-stage thumbnail", async () => {
+    mount({ student, classroom, assignments: [], stats: { ...baseStats, assigned: 30, finalized: 20, averageFinalized: 90 }, strength: { totalPoints: 2000, libraryPoints: 1440, modulePoints: 560, stage: 25, stageCount: 25, stageSpan: 80, withinStagePoints: 80, nextStageRemaining: 0, percent: 100, nextStage: null, totalMax: 2000 } });
     await screen.findByText(/مرحبًا أحمد/);
-    expect(screen.getByText(/الرتبة: ألماسي/).className).toContain("eb-badge");
-    expect(document.querySelector(".eb-sp-avatar-frame.is-rank-diamond")).toBeTruthy();
-    expect(screen.queryByRole("progressbar", { name: "الطريق إلى رتبتك" })).toBeNull();
-    const next = screen.getByRole("progressbar", { name: "التقدم نحو رتبة أسطوري" });
-    expect(next.getAttribute("aria-valuenow")).toBe("50");                                          // 2 of the next 4 exams
-    expect(screen.getByText("بقي 200 نقطة قوة للوصول إلى رتبة أسطوري")).toBeTruthy();   // 22 × 100 = 2200 → 200 into the diamond block
-    expect(document.body.textContent).not.toMatch(/الرتبة التالية عند معدل نهائي/);                 // old average-based wording gone
-    expect(screen.getByRole("progressbar", { name: "المعدل النهائي" }).getAttribute("aria-valuenow")).toBe("12");   // average still shown unchanged
-    expect(document.body.textContent).not.toMatch(/ترتيب|المركز|leaderboard/i);
-  });
-
-  it("rank tiers follow the four-exam count boundaries (4 مبتدئ · 8 برونزي · 12 فضي · 16 ذهبي · 20 ألماسي · 24 أسطوري) with matching frames — the average is fixed and irrelevant", async () => {
-    const cases: [number, string, string][] = [[4, "مبتدئ", "beginner"], [8, "برونزي", "bronze"], [12, "فضي", "silver"], [16, "ذهبي", "gold"], [20, "ألماسي", "diamond"], [24, "أسطوري", "legendary"]];
-    for (const [finalized, label, tier] of cases) {
-      const { unmount } = mount({ student, classroom, assignments: [], stats: { ...baseStats, assigned: 30, finalized, averageFinalized: 50 } });
-      await screen.findByText(/مرحبًا أحمد/);
-      expect(screen.getByText("الرتبة: " + label, { exact: false }).textContent, String(finalized)).toContain(label);
-      expect(document.querySelector(".eb-sp-avatar-frame.is-rank-" + tier), String(finalized)).toBeTruthy();
-      // the custom rank artwork is now the primary visual: the right image (by module identity), its Arabic
-      // level title, and meaningful alt — the textual "الرتبة: X" label stays too (asserted above).
-      const v = RANK_VISUALS[tier as RankTier];
-      const art = screen.getByRole("img", { name: v.alt }) as HTMLImageElement;
-      expect(art.getAttribute("src"), String(finalized)).toBe(v.image);
-      expect(art.className, String(finalized)).toContain("eb-sp-rankring-art");
-      expect(screen.getByText(v.title), String(finalized)).toBeTruthy();
-      expect(screen.getByText("المستوى " + v.level), String(finalized)).toBeTruthy();   // numeric level rendered
-      unmount();
-    }
-  });
-
-  it("legendary (24 finalized) shows no next-rank progress bar, only 'بلغت أعلى رتبة'; a beginner at 6 finalized progresses 50% toward bronze", async () => {
-    const { unmount } = mount({ student, classroom, assignments: [], stats: { ...baseStats, assigned: 30, finalized: 24, averageFinalized: 30 } });
-    await screen.findByText(/مرحبًا أحمد/);
-    expect(screen.getByText(/الرتبة: أسطوري/)).toBeTruthy();
-    expect(screen.queryByRole("progressbar", { name: /نحو رتبة/ })).toBeNull();
-    expect(screen.getByText("بلغت أعلى رتبة")).toBeTruthy();
-    // legendary shows its own art (image 6), title, level 6 and a full 100% ring — and NO next-rank preview
-    // thumbnail and NO "toward next" progressbar (top of the ladder; no reset to 0%).
-    expect((screen.getByRole("img", { name: RANK_VISUALS.legendary.alt }) as HTMLImageElement).getAttribute("src")).toBe(RANK_VISUALS.legendary.image);
-    expect(screen.getByText("العنقاء الذهبية")).toBeTruthy();
-    expect(screen.getByText("المستوى 6")).toBeTruthy();
+    expect(screen.getByText("أسطورة القوة")).toBeTruthy();                        // stage-25 name
+    expect(screen.getByText("المرحلة 25 من 25")).toBeTruthy();
+    expect(screen.getByText("بلغت المرحلة الأخيرة — أعلى قوة")).toBeTruthy();
     expect(screen.getByText("100%")).toBeTruthy();
-    expect(document.querySelector(".eb-sp-rank-next-art")).toBeNull();
-    expect(document.querySelector(".eb-sp-rank-progress [role='progressbar']")).toBeNull();   // no "toward next" ring semantic at the top
-    expect(document.querySelector(".eb-sp-rank-progress .eb-progress-track")).toBeNull();     // and no horizontal bar
-    unmount();
-    mount({ student, classroom, assignments: [], stats: { ...baseStats, assigned: 12, finalized: 6, averageFinalized: 30 } });   // beginner (4–7), 2 into the block
+    expect((screen.getByRole("img", { name: stageDef(25).alt }) as HTMLImageElement).getAttribute("src")).toBe(stageDef(25).image);
+    expect(document.querySelector(".eb-sp-rank-next-art")).toBeNull();                        // no next-stage thumbnail
+    expect(document.querySelector(".eb-sp-rank-progress [role='progressbar']")).toBeNull();   // no "toward next" ring at the top
+    expect(document.querySelector(".eb-sp-avatar-frame.is-stage-band-5")).toBeTruthy();       // stage 25 → band 5
+  });
+
+  it("no strength payload → a safe zeroed stage-1 hero (0 / 2000), never a broken / NaN render; the frame stays plain", async () => {
+    mount({ student, classroom, assignments: [], stats: { ...baseStats, assigned: 20, finalized: 3, pendingReview: 6, averageFinalized: 99 } });   // no `strength` key
     await screen.findByText(/مرحبًا أحمد/);
-    expect(screen.getByText(/الرتبة: مبتدئ/)).toBeTruthy();
-    expect(screen.getByRole("progressbar", { name: "التقدم نحو رتبة برونزي" }).getAttribute("aria-valuenow")).toBe("50");
-    expect(screen.getByText("بقي 200 نقطة قوة للوصول إلى رتبة برونزي")).toBeTruthy();   // 6 × 100 = 600
-    expect(document.querySelector(".eb-sp-avatar-frame.is-rank-beginner")).toBeTruthy();
-    // current rank = beginner art (image 1, meaningful alt); next-rank preview = bronze art (image 2), a small
-    // decorative thumbnail (aria-hidden, empty alt) that must NOT duplicate screen-reader text.
-    expect((screen.getByRole("img", { name: RANK_VISUALS.beginner.alt }) as HTMLImageElement).getAttribute("src")).toBe(RANK_VISUALS.beginner.image);
-    const nextArt = document.querySelector(".eb-sp-rank-next-art") as HTMLImageElement;
-    expect(nextArt).toBeTruthy();
-    expect(nextArt.getAttribute("src")).toBe(RANK_VISUALS.bronze.image);
-    expect(nextArt.getAttribute("aria-hidden")).toBe("true");
-    expect(nextArt.getAttribute("alt")).toBe("");
-    expect(screen.queryByRole("img", { name: /رتبة شعلة صغيرة/ })).toBeNull();     // preview is decorative, not a second labelled image
+    expect(screen.getByText("بذرة القوة")).toBeTruthy();                          // stage-1 name
+    expect(screen.getByText("المرحلة 1 من 25")).toBeTruthy();
+    expect(screen.getByText(/نقاط القوة:/).textContent).toBe("نقاط القوة: 0 / 2000");
+    expect(screen.getByText("التقدم في هذه المرحلة: 0 / 80")).toBeTruthy();
+    expect(document.body.textContent).not.toMatch(/NaN|undefined|-\d/);
+    expect(document.querySelector(".eb-sp-avatar-frame")?.className).not.toMatch(/is-stage-band-|is-rank-/);   // 0 points → plain frame
+    // the SEPARATE finalized-average ring is untouched by the Strength change
+    expect(screen.getByRole("progressbar", { name: "المعدل النهائي" }).getAttribute("aria-valuenow")).toBe("99");
   });
 
-  it("the rank ring shows the numeric level and the authoritative percent, filling the circular progressbar toward the next tier across every four-exam boundary", async () => {
-    const cases: { finalized: number; level: number; percent: number; earned: boolean; next: string | null }[] = [
-      { finalized: 0, level: 1, percent: 0, earned: false, next: null },   // pre-rank, toward level 1
-      { finalized: 1, level: 1, percent: 25, earned: false, next: null },
-      { finalized: 3, level: 1, percent: 75, earned: false, next: null },
-      { finalized: 4, level: 1, percent: 0, earned: true, next: "برونزي" },
-      { finalized: 5, level: 1, percent: 25, earned: true, next: "برونزي" },
-      { finalized: 6, level: 1, percent: 50, earned: true, next: "برونزي" },
-      { finalized: 7, level: 1, percent: 75, earned: true, next: "برونزي" },
-      { finalized: 8, level: 2, percent: 0, earned: true, next: "فضي" },
-      { finalized: 23, level: 5, percent: 75, earned: true, next: "أسطوري" },
-      { finalized: 24, level: 6, percent: 100, earned: true, next: null }  // legendary, full ring, no next
-    ];
-    for (const c of cases) {
-      const { unmount } = mount({ student, classroom, assignments: [], stats: { ...baseStats, assigned: 30, finalized: c.finalized, averageFinalized: 50 } });
+  it("the stage / points come from the SERVER only — changing finalized or averageFinalized never moves them", async () => {
+    const strength = { totalPoints: 360, libraryPoints: 220, modulePoints: 140, stage: 5, stageCount: 25, stageSpan: 80, withinStagePoints: 40, nextStageRemaining: 40, percent: 50, nextStage: 6, totalMax: 2000 };
+    for (const [finalized, averageFinalized] of [[0, 0], [24, 99], [3, null]] as [number, number | null][]) {
+      const { unmount } = mount({ student, classroom, assignments: [], stats: { ...baseStats, assigned: 30, finalized, averageFinalized }, strength });
       await screen.findByText(/مرحبًا أحمد/);
-      const tag = String(c.finalized);
-      // visible numeric level + percentage
-      expect((document.querySelector(".eb-sp-rank-level") as HTMLElement)?.textContent, tag).toBe("المستوى " + c.level);
-      expect((document.querySelector(".eb-sp-rank-percent") as HTMLElement)?.textContent, tag).toBe(c.percent + "%");
-      // circular progressbar semantic (aria-valuenow) — pre-rank vs earned-with-next; legendary has none
-      if (!c.earned) {
-        expect(screen.getByRole("progressbar", { name: "الطريق إلى رتبتك" }).getAttribute("aria-valuenow"), tag).toBe(String(c.percent));
-        expect(document.querySelector(".eb-sp-rankring.is-locked"), tag).toBeTruthy();          // muted/locked preview
-      } else if (c.next) {
-        expect(screen.getByRole("progressbar", { name: "التقدم نحو رتبة " + c.next }).getAttribute("aria-valuenow"), tag).toBe(String(c.percent));
-        expect(document.querySelector(".eb-sp-rankring.is-locked"), tag).toBeNull();             // earned art is full-colour
-      } else {
-        expect(document.querySelector(".eb-sp-rank-progress [role='progressbar']"), tag).toBeNull();  // legendary: no toward-next ring
-      }
-      // the ring — not a horizontal bar — is the sole rank-progress representation
-      expect(document.querySelector(".eb-sp-rank-progress .eb-progress-track"), tag).toBeNull();
-      expect(document.querySelector(".eb-sp-rankring .eb-sp-rankring-svg"), tag).toBeTruthy();
-      // the SEPARATE final-average ring is untouched (its own progressbar, its own value)
-      expect(screen.getByRole("progressbar", { name: "المعدل النهائي" }).getAttribute("aria-valuenow"), tag).toBe("50");
-      unmount();
-    }
-  });
-
-  it("the ring percentage and level come from the finalized COUNT only — changing averageFinalized never moves them", async () => {
-    for (const averageFinalized of [0, 99, null]) {
-      const { unmount } = mount({ student, classroom, assignments: [], stats: { ...baseStats, assigned: 30, finalized: 6, averageFinalized } });   // beginner, 50% toward bronze
-      await screen.findByText(/مرحبًا أحمد/);
-      const tag = String(averageFinalized);
-      expect((document.querySelector(".eb-sp-rank-level") as HTMLElement)?.textContent, tag).toBe("المستوى 1");
+      const tag = String(finalized) + "/" + String(averageFinalized);
+      expect(screen.getByText("تنين النار"), tag).toBeTruthy();                   // stage 5 name, regardless of finalized/average
+      expect(screen.getByText("المرحلة 5 من 25"), tag).toBeTruthy();
       expect((document.querySelector(".eb-sp-rank-percent") as HTMLElement)?.textContent, tag).toBe("50%");
-      expect(screen.getByRole("progressbar", { name: "التقدم نحو رتبة برونزي" }).getAttribute("aria-valuenow"), tag).toBe("50");
       unmount();
     }
   });
@@ -524,7 +442,7 @@ describe("UX-7a StudentPortal — achievement feed", () => {
 
 describe("UX-7a source guards", () => {
   const sources = import.meta.glob("./{StudentPortal,student/StudentIdentityCard,student/NowSection,student/StudentProgressSection,student/StudentAssignmentCard,student/AchievementFeed,student/AvatarPickerDialog,projects/StudentProjectPanel}.tsx", { query: "?raw", import: "default", eager: true }) as Record<string, string>;
-  const presentation = import.meta.glob("./{student/portalPresentation,studentRank}.ts", { query: "?raw", import: "default", eager: true }) as Record<string, string>;
+  const presentation = import.meta.glob("./{student/portalPresentation,studentRank,student/strengthPresentation,student/strengthStages}.ts", { query: "?raw", import: "default", eager: true }) as Record<string, string>;
   it("the portal files carry no emoji glyphs, no ad-hoc tablist, no locale digit formatting and no inline medal colours", () => {
     expect(Object.keys(sources).length).toBe(8);
     for (const [file, src] of Object.entries(sources)) {
@@ -535,18 +453,24 @@ describe("UX-7a source guards", () => {
       expect(src, file).not.toMatch(/outline\s*:\s*none/);
     }
   });
-  it("grading is never inferred from a score, medals are finalized-only and the rank reads only finalized stats", () => {
+  it("grading is never inferred from a score; the Student Strength is the server's 25-STAGE model, not a client rank", () => {
     const strip = (src: string) => src.replace(/\/\*[\s\S]*?\*\//g, "").replace(/^\s*\/\/.*$/gm, "");   // code only, not the module comments
     const pres = strip(presentation["./student/portalPresentation.ts"]), rank = strip(presentation["./studentRank.ts"]);
+    const stagePres = strip(presentation["./student/strengthPresentation.ts"]), stages = strip(presentation["./student/strengthStages.ts"]);
     expect(pres).toContain("resolveGradingStatus(item.latestResult || null)");
     expect(pres).not.toMatch(/medalTier\(\s*(item|a)\.latestPercentage/);
     expect(pres).toMatch(/gradingOf\(item\) !== "final"\) continue/);
-    expect(rank).toContain("RANK_STEP_FINALIZED = 4");
+    // studentRank.ts is now ONLY the six-tier PROJECT vocabulary — its old global-strength / finalized helpers are gone.
     expect(rank).toContain('["beginner", "bronze", "silver", "gold", "diamond", "legendary"]');
-    expect(rank).not.toMatch(/bronze: 60, silver: 70, gold: 80, diamond: 90, legendary: 96/);            // the old average-threshold table is gone
-    expect(rank).not.toMatch(/RANK_MIN_FINALIZED\s*=\s*10/);                                             // old 10-exam unlock removed
-    expect(rank).toMatch(/Math\.floor\(count \/ RANK_STEP_FINALIZED\)/);                                // tier from the finalized count only
-    expect(rank).not.toMatch(/pendingReview|latestPercentage|score|assignments/);
+    for (const gone of ["RANK_STEP_FINALIZED", "RANK_STEP_STRENGTH_POINTS", "rankTierForStrength", "rankTierForFinalized", "strengthFromFinalized"]) {
+      expect(rank, gone).not.toContain(gone);
+    }
+    // the visible Student Strength stage is the SERVER's — strengthPresentation.ts never recomputes it from points.
+    expect(stagePres).not.toMatch(/studentRank/);
+    expect(stagePres).not.toMatch(/stageForPoints\(/);
+    // the 25 uploaded icons are the visible artwork (one import per stage, 25 in all)
+    expect((stages.match(/from "\.\.\/assets\/strength-stages\/strength-stage-\d\d\.png"/g) || []).length).toBe(25);
+    expect(stages).toContain("STAGE_COUNT = 25");
     expect(rank).not.toMatch(/sort\(|leaderboard|classmates/i);
     for (const src of Object.values(sources)) expect(src).not.toMatch(/latestScore\s*[>!=<]/);
   });
