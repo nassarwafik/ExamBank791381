@@ -50,7 +50,8 @@ export default function LearningMaterialsPage({ token }: { token?: string } = {}
     const initialPageId = view.initialPageId;
     return (
       // `.eb-lm-reader` is the Learning-Materials-only desktop inset root (learning.css); the Reader itself is shared
-      // with the student portal and stays untouched.
+      // with the student portal and stays untouched. `embedded`: the teacher shell already owns the page's <main>, so
+      // the Reader's content column renders as a <div> (no nested <main>).
       <div className="eb-lm-reader">
         <Suspense fallback={<p className="eb-muted" role="status">جارٍ فتح القارئ التفاعلي...</p>}>
           <LearningReaderWithTraining
@@ -60,6 +61,7 @@ export default function LearningMaterialsPage({ token }: { token?: string } = {}
             exitLabel="العودة إلى نظرة الكتاب"
             client={client}
             actor="teacher"
+            embedded
           />
         </Suspense>
       </div>

@@ -114,6 +114,23 @@ describe("open flow — the same LearningReader, revalidated entitlement, back t
     expect(document.querySelector(".learning-reader")).toBeNull();
     expect(await screen.findByRole("region", { name: /المهام والواجبات/ })).toBeTruthy();
   }, T);
+  it("REGRESSION (landmarks): the student's full-screen Reader keeps its content column as the page's ONE <main> — normal and presentation mode", async () => {
+    mount();
+    const card = await within(await section()).findByRole("article", { name: "شبكات الاتصال" });
+    fireEvent.click(within(card).getByRole("button", { name: "فتح المادة" }));
+    await screen.findByRole("heading", { level: 2, name: "أساسيات الشبكات" }, SLOW);
+    const shape = () => ({ column: document.querySelector(".learning-reader-main")?.tagName, mains: document.querySelectorAll("main").length });
+    expect(shape()).toEqual({ column: "MAIN", mains: 1 });                            // default: the Reader owns the page's <main>
+    fireEvent.click(screen.getByRole("button", { name: "وضع العرض" }));
+    await waitFor(() => expect(document.querySelector(".learning-reader")?.classList.contains("is-presentation")).toBe(true));
+    expect(shape()).toEqual({ column: "MAIN", mains: 1 });
+    fireEvent.click(screen.getByRole("button", { name: "خروج من وضع العرض" }));
+    await waitFor(() => expect(document.querySelector(".learning-reader")?.classList.contains("is-presentation")).toBe(false));
+    expect(shape()).toEqual({ column: "MAIN", mains: 1 });
+    fireEvent.click(screen.getByRole("button", { name: "العودة إلى موادي التعليمية" }));
+    expect(await section()).toBeTruthy();
+  }, T);
+
   it("OPEN-TIME REVALIDATION: portal loaded with m01,m02,m07; the server hides m07 before the click → the Reader has no m07", async () => {
     mount({ materials: n => materials(n === 1 ? [M01, M02, M07] : [M01, M02]) });
     const card = await within(await section()).findByRole("article", { name: "شبكات الاتصال" });
