@@ -21,18 +21,23 @@ function setMatchMedia(reduced: boolean) {
   (window as unknown as { matchMedia: unknown }).matchMedia = () => mql;
 }
 
-// A controllable IntersectionObserver: capture instances and fire their callback on demand.
-type Entry = { isIntersecting: boolean; target: Element };
+// A controllable IntersectionObserver: capture instances + the requested threshold, and fire the callback on demand
+// with a realistic entry (isIntersecting AND intersectionRatio, exactly what the browser provides).
+type Entry = { isIntersecting: boolean; intersectionRatio: number; target: Element };
 class MockIO {
   static instances: MockIO[] = [];
   cb: (entries: Entry[], obs: MockIO) => void;
+  options: { threshold?: number | number[] };
   elements: Element[] = [];
   disconnected = false;
-  constructor(cb: (entries: Entry[], obs: MockIO) => void) { this.cb = cb; MockIO.instances.push(this); }
+  constructor(cb: (entries: Entry[], obs: MockIO) => void, options: { threshold?: number | number[] } = {}) { this.cb = cb; this.options = options; MockIO.instances.push(this); }
   observe(el: Element) { this.elements.push(el); }
   unobserve() {}
   disconnect() { this.disconnected = true; }
-  fire(isIntersecting: boolean) { this.cb(this.elements.map(target => ({ isIntersecting, target })), this); }
+  // Fire with a visibility ratio; isIntersecting is true for any ratio > 0 (as the real observer reports for a sliver).
+  // A disconnected observer delivers nothing more — exactly the browser's contract, which is how "one play per view"
+  // is enforced (the component keeps no fired-flag; it relies on disconnect()).
+  fireRatio(ratio: number) { if (this.disconnected) return; this.cb(this.elements.map(target => ({ isIntersecting: ratio > 0, intersectionRatio: ratio, target })), this); }
 }
 
 const RealIO = (globalThis as { IntersectionObserver?: unknown }).IntersectionObserver;
@@ -43,38 +48,81 @@ afterEach(() => {
 });
 function useMockIO() { (globalThis as { IntersectionObserver?: unknown }).IntersectionObserver = MockIO; }
 
-describe("VisualBlockView — motion begins when the figure is visible", () => {
-  it("motion ON: observes the figure and restarts each animated SVG's SMIL timeline (setCurrentTime(0)) on first intersection, then disconnects", () => {
+// Render the motion visual, spy on the inner SVG's SMIL timeline, and return the observer + spy for driving.
+function renderMotion(b: VisualBlock = block) {
+  const r = render(<VisualBlockView block={b} />);
+  const io = MockIO.instances[0];
+  const svg = r.container.querySelector("svg.eb-visual") as SVGSVGElement & { setCurrentTime: (t: number) => void };
+  const spy = vi.fn();
+  if (svg) (svg as unknown as { setCurrentTime: (t: number) => void }).setCurrentTime = spy;
+  return { ...r, io, svg, spy };
+}
+
+describe("VisualBlockView — motion begins only when the figure is MEANINGFULLY visible", () => {
+  it("observes with threshold 0.25 and only an animated (motion:true) visual", () => {
     setMatchMedia(false);
     useMockIO();
-    const { container } = render(<VisualBlockView block={block} />);
+    const { io } = renderMotion();
     expect(MockIO.instances.length).toBe(1);
-    const io = MockIO.instances[0];
     expect(io.elements.length).toBe(1);
     expect((io.elements[0] as HTMLElement).classList.contains("eb-visual-frame")).toBe(true);
-
-    // the animated SVG carries SMIL and (in this DOM) no native timeline — install a spy so the restart is observable
-    const svg = container.querySelector("svg.eb-visual") as SVGSVGElement & { setCurrentTime: (t: number) => void };
-    expect(svg.querySelector("animateMotion")).not.toBeNull();
-    const spy = vi.fn();
-    (svg as unknown as { setCurrentTime: (t: number) => void }).setCurrentTime = spy;
-
-    io.fire(true);
-    expect(spy).toHaveBeenCalledWith(0);      // the timeline is replayed from the start, now that it is visible
-    expect(io.disconnected).toBe(true);       // calm: one play per view (revisit replays via remount)
+    expect(io.options.threshold).toBe(0.25);   // the exact audited visibility threshold
   });
 
-  it("not-yet-visible: an intersection with isIntersecting=false does NOT restart and does NOT disconnect", () => {
+  // BLOCKER 1 — a bare sliver (isIntersecting true but ratio below 0.25) must NOT replay or disconnect; only ≥0.25 does.
+  const belowThreshold = [0.0, 0.01, 0.1, 0.24];
+  for (const ratio of belowThreshold) {
+    it(`ratio ${ratio}: does NOT restart and stays connected (a sub-threshold sliver is not "seen")`, () => {
+      setMatchMedia(false);
+      useMockIO();
+      const { io, spy } = renderMotion();
+      io.fireRatio(ratio);
+      expect(spy).not.toHaveBeenCalled();
+      expect(io.disconnected).toBe(false);
+    });
+  }
+
+  it("ratio 0.25: restarts EXACTLY once (setCurrentTime(0)) and disconnects", () => {
     setMatchMedia(false);
     useMockIO();
-    const { container } = render(<VisualBlockView block={block} />);
-    const io = MockIO.instances[0];
-    const svg = container.querySelector("svg.eb-visual")!;
-    const spy = vi.fn();
-    (svg as unknown as { setCurrentTime: (t: number) => void }).setCurrentTime = spy;
-    io.fire(false);
+    const { io, spy } = renderMotion();
+    io.fireRatio(0.25);
+    expect(spy).toHaveBeenCalledTimes(1);
+    expect(spy).toHaveBeenCalledWith(0);
+    expect(io.disconnected).toBe(true);
+  });
+
+  it("ratio 0.50 as the first qualifying entry: restarts once and disconnects", () => {
+    setMatchMedia(false);
+    useMockIO();
+    const { io, spy } = renderMotion();
+    io.fireRatio(0.5);
+    expect(spy).toHaveBeenCalledTimes(1);
+    expect(spy).toHaveBeenCalledWith(0);
+    expect(io.disconnected).toBe(true);
+  });
+
+  it("sub-threshold entries first, then a qualifying one: replays only once, on the qualifying entry", () => {
+    setMatchMedia(false);
+    useMockIO();
+    const { io, spy } = renderMotion();
+    io.fireRatio(0.1); io.fireRatio(0.24);       // ignored
     expect(spy).not.toHaveBeenCalled();
-    expect(io.disconnected).toBe(false);
+    io.fireRatio(0.4);                            // qualifies
+    expect(spy).toHaveBeenCalledTimes(1);
+    expect(io.disconnected).toBe(true);
+  });
+
+  it("after the qualifying replay + disconnect, further entries produce NO additional replay (calm: one play per view)", () => {
+    setMatchMedia(false);
+    useMockIO();
+    const { io, spy } = renderMotion();
+    io.fireRatio(0.6);
+    expect(spy).toHaveBeenCalledTimes(1);
+    expect(io.disconnected).toBe(true);
+    // a disconnected observer delivers nothing more → no second replay (the calm "one play per view" guarantee)
+    io.fireRatio(0.9); io.fireRatio(1.0);
+    expect(spy).toHaveBeenCalledTimes(1);
   });
 
   it("reduced motion: no IntersectionObserver is created (nothing to restart — the component renders a still frame)", () => {
@@ -88,6 +136,15 @@ describe("VisualBlockView — motion begins when the figure is visible", () => {
     setMatchMedia(false);
     useMockIO();
     render(<VisualBlockView block={{ ...block, visualId: "791381/ch1/nope" }} />);
+    expect(MockIO.instances.length).toBe(0);
+  });
+
+  // BLOCKER 2 — an intentionally static registered visual (motion:false) must allocate NO observer at all.
+  it("motion:false visual (registry-audited static): no IntersectionObserver is created", () => {
+    setMatchMedia(false);
+    useMockIO();
+    // m21/well-known-ports is registered motion:false (a reference port table — intentionally static)
+    render(<VisualBlockView block={{ ...block, visualId: "791381/m21/well-known-ports" }} />);
     expect(MockIO.instances.length).toBe(0);
   });
 });

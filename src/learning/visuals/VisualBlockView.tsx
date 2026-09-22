@@ -5,6 +5,10 @@ import { resolveVisual } from "./registry";
 import { IconWarning } from "../../icons";
 import "./visuals.css";
 
+/** A visual must be at least this fraction on screen before its one-shot motion is (re)started — a bare edge (a
+ *  1px sliver) must NOT count, or a one-shot would replay before the learner can meaningfully see it. */
+const VISIBLE_RATIO = 0.25;
+
 /**
  * Restart the SMIL timeline of every animated inline SVG inside `frame` from t=0. Many educational visuals play a
  * ONE-SHOT sequence (a packet travels, a DORA exchange, an encapsulation build-up) whose `begin` is a fixed offset
@@ -38,20 +42,24 @@ export default function VisualBlockView({ block }: { block: VisualBlock }) {
   const entry = resolveVisual(block.visualId);
   const frameRef = useRef<HTMLDivElement | null>(null);
 
-  // Start the visual's motion when it is actually on screen (see restartVisualMotion). One trigger on first
-  // visibility keeps it calm — no perpetual re-runs while scrolling — and revisiting the page naturally replays it
-  // through the component remount. Never runs under reduced motion (the components render no animation at all), and
-  // it degrades to nothing where IntersectionObserver is unavailable (SSR/tests): the animation then simply plays at
-  // mount as before, and the still frame is always correct.
+  // Start the visual's motion when it is MEANINGFULLY on screen (see restartVisualMotion). We only observe a visual
+  // the audited registry marks as animated (entry.motion) — an intentionally static visual gets no observer at all.
+  // A trigger requires BOTH isIntersecting AND intersectionRatio >= VISIBLE_RATIO: `isIntersecting` alone fires when
+  // a 1px edge touches the viewport, which would replay a one-shot far too early (the very "finishes before it is
+  // seen" bug we are fixing), so a sub-threshold sliver never restarts and never disconnects. One trigger on first
+  // qualifying visibility keeps it calm — no perpetual re-runs while scrolling — and revisiting replays through the
+  // component remount. Never runs under reduced motion (the components render no animation at all), and it degrades to
+  // nothing where IntersectionObserver is unavailable (SSR/tests): the animation then plays at mount as before, and
+  // the still frame is always correct.
   useEffect(() => {
-    if (reducedMotion || !entry) return;
+    if (reducedMotion || !entry || !entry.motion) return;
     const frame = frameRef.current;
     if (!frame || typeof IntersectionObserver === "undefined") return;
     const io = new IntersectionObserver((entries, obs) => {
       for (const e of entries) {
-        if (e.isIntersecting) { restartVisualMotion(frame); obs.disconnect(); return; }
+        if (e.isIntersecting && e.intersectionRatio >= VISIBLE_RATIO) { restartVisualMotion(frame); obs.disconnect(); return; }
       }
-    }, { threshold: 0.25 });
+    }, { threshold: VISIBLE_RATIO });
     io.observe(frame);
     return () => io.disconnect();
   }, [reducedMotion, entry, block.visualId]);
