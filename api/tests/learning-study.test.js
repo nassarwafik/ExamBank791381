@@ -57,10 +57,10 @@ const P2 = m08pages.find(p => p.pageId !== P1.pageId);
 const act = (page, i) => ({ pageId: page.pageId, activityId: page.activities[i][0], key: page.activities[i][1] });
 
 describe("the generated key index", () => {
-  it("covers the real content: 216 pages / 453 eligible activities of four kinds, every page mapped to a registered module; unknown ids resolve to null", () => {
+  it("covers the real content: 230 pages / 475 eligible activities of four kinds across ALL 28 modules, every page mapped to a registered module; unknown ids resolve to null", () => {
     expect(INDEX.schemaVersion).toBe(1); expect(INDEX.courseId).toBe("791381");
     const pages = Object.entries(INDEX.pages);
-    expect(pages.length).toBe(216);
+    expect(pages.length).toBe(230);
     const kinds = {};
     let count = 0;
     for (const [pageId, p] of pages) {
@@ -68,8 +68,8 @@ describe("the generated key index", () => {
       expect(pageId.startsWith(p.moduleId + "-")).toBe(true);
       for (const [id, key] of Object.entries(p.activities)) { count++; kinds[key.kind] = (kinds[key.kind] || 0) + 1; expect(id).toMatch(/^m\d\d-l\d\d-p\d\d-/); }
     }
-    expect(count).toBe(453);
-    expect(kinds).toEqual({ multipleChoice: 247, trueFalse: 86, shortInput: 60, "practice-table": 60 });
+    expect(count).toBe(475);
+    expect(kinds).toEqual({ multipleChoice: 257, trueFalse: 91, shortInput: 67, "practice-table": 60 });
     expect(findStudyActivity(INDEX, "791381-m99-l01-p01", "x")).toBeNull();
     expect(findStudyActivity(INDEX, P1.pageId, "m08-l01-p01-nope")).toBeNull();
     expect(findStudyActivity(INDEX, P2.pageId, act(P1, 0).activityId)).toBeNull();          // an activity of ANOTHER page
@@ -97,11 +97,13 @@ const m08pts = k => Math.round(k / M08_ELIGIBLE * 20);
 const m28pts = k => Math.round(k / M28_ELIGIBLE * 20);
 
 describe("policy — the authoritative module formula", () => {
-  it("constants: 20 per module, 28 modules, 560 total; m08 has 14 eligible activities, m28 has 57; the index covers 26 modules (m01 / m02 carry no eligible exercise)", () => {
+  it("constants: 20 per module, 28 modules, 560 total; m08 has 14 eligible activities, m28 has 57, m01 9, m02 13; the index covers ALL 28 modules", () => {
     expect([STUDY_MODULE_MAX_POINTS, STUDY_MODULE_COUNT, STUDY_MAX_TOTAL]).toEqual([20, 28, 560]);
     expect(M08_ELIGIBLE).toBe(14); expect(M28_ELIGIBLE).toBe(57);
-    expect(Object.values(ELIGIBLE).reduce((s, n) => s + n, 0)).toBe(453);
-    expect(Object.keys(ELIGIBLE).length).toBe(26);
+    expect(Object.values(ELIGIBLE).reduce((s, n) => s + n, 0)).toBe(475);
+    expect(Object.keys(ELIGIBLE).length).toBe(28);
+    expect(ELIGIBLE["791381-m01"]).toBe(9); expect(ELIGIBLE["791381-m02"]).toBe(13);
+    for (const id of ORDER) expect(ELIGIBLE[id], id).toBeGreaterThan(0);
     for (const id of Object.keys(ELIGIBLE)) expect(ORDER).toContain(id);
     expect(pageEligibleCount(INDEX, P1.pageId)).toBe(P1.activities.length); expect(pageEligibleCount(INDEX, "791381-m99-l01-p01")).toBe(0);
   });
@@ -109,12 +111,23 @@ describe("policy — the authoritative module formula", () => {
     expect([1, 2, 7, 14].map(k => studyPointsForModule({ completed: k, eligible: 14 }))).toEqual([1, 3, 10, 20]);
     expect([1, 2, 57].map(k => studyPointsForModule({ completed: k, eligible: 57 }))).toEqual([0, 1, 20]);
     expect(studyPointsForModule({ completed: 99, eligible: 14 })).toBe(20);
-    expect(studyPointsFromModules({ [M08]: { completed: 7, eligible: 14 }, "791381-m28": { completed: 57, eligible: 57 }, "791381-m01": { completed: 0, eligible: 0 } })).toBe(30);
+    expect(studyPointsFromModules({ [M08]: { completed: 7, eligible: 14 }, "791381-m28": { completed: 57, eligible: 57 }, "791381-m01": { completed: 0, eligible: 9 } })).toBe(30);
   });
-  it("the whole content fully completed = 26 modules × 20 = 520 (the 560 ceiling is the 28-module design capacity; m01 / m02 have no eligible exercise → 0)", () => {
+  it("the whole content fully completed = 28 modules × 20 = 560 — the FULL study capacity is attainable (m01 9/9 → 20, m02 13/13 → 20)", () => {
     const everything = Object.fromEntries(Object.entries(ELIGIBLE).map(([m, n]) => [m, { completed: n, eligible: n }]));
-    expect(studyPointsFromModules(everything)).toBe(520);
-    expect(studyPointsFromModules({ ...everything, "791381-m01": { completed: 0, eligible: 0 }, "791381-m02": { completed: 0, eligible: 0 } })).toBe(520);
+    expect(Object.keys(everything).length).toBe(28);
+    expect(studyPointsForModule(everything["791381-m01"])).toBe(20); expect(studyPointsForModule(everything["791381-m02"])).toBe(20);
+    expect(studyPointsFromModules(everything)).toBe(560);
+    expect(studyPointsFromModules(everything)).toBe(STUDY_MAX_TOTAL);
+  });
+  it("the learning-only path reaches EXACTLY 2000: 36 perfect Learning-Practice items (1440) + every study module complete (560) → stage 25 / 2000 / 80 / 100% / pathComplete, with no exam and no project", () => {
+    const everything = Object.fromEntries(Object.entries(ELIGIBLE).map(([m, n]) => [m, { completed: n, eligible: n }]));
+    const trainings = Object.fromEntries(listLearningTrainings().map(t => [t.trainingId, { bestPercentage: 100 }]));
+    expect(Object.keys(trainings).length).toBe(36);
+    const s = buildStrengthSummary({ finalizedCount: 0, trainings, study: everything, projects: [] });
+    expect(s).toMatchObject({ examPoints: 0, projectPoints: 0, practicePoints: 1440, studyPoints: 560, rawTotalPoints: 2000, stagePoints: 2000, stageNumber: 25, withinStagePoints: 80, stagePercent: 100, nextStageNumber: null, nextStageRemaining: 0, pointsToMaximum: 0, isMaximumStage: true, pathComplete: true });
+    // one item or one module short of perfect is NOT complete
+    expect(buildStrengthSummary({ finalizedCount: 0, trainings: { ...trainings, F06: { bestPercentage: 90 } }, study: everything, projects: [] })).toMatchObject({ rawTotalPoints: 1996, stageNumber: 25, pathComplete: false, pointsToMaximum: 4 });
   });
   it("buildStrengthSummary: study is the fourth raw source; absent study → 0; T05 80% = 32 and F01 100% = 40 both count", () => {
     const base = { finalizedCount: 3, trainings: { T05: { bestPercentage: 80 }, F01: { bestPercentage: 100 } }, projects: [{ projectCode: "794589", overallProgress: 25 }] };
@@ -145,8 +158,9 @@ describe("storage — completion state, never a counter", () => {
     expect(state.moduleViews[M08]).toEqual({ completed: 3, eligible: 14, points: m08pts(3), max: 20 }); expect(state.totalPoints).toBe(m08pts(3));
     expect(state.modules[M08]).toEqual({ completed: 3, eligible: 14 });
     // EVERY indexed module is present with its eligible total even when nothing was completed there
-    expect(Object.keys(state.modules).length).toBe(26);
+    expect(Object.keys(state.modules).length).toBe(28);
     expect(state.modules["791381-m28"]).toEqual({ completed: 0, eligible: 57 });
+    expect(state.modules["791381-m01"]).toEqual({ completed: 0, eligible: 9 }); expect(state.modules["791381-m02"]).toEqual({ completed: 0, eligible: 13 });
     expect(studyStateOf(null, INDEX).moduleViews["791381-m28"]).toEqual({ completed: 0, eligible: 57, points: 0, max: 20 });
   });
   it("ids that are no longer in the index stop counting (an activity removed / renamed in content never keeps a point), and a stored 'points' field is never trusted", () => {
@@ -155,7 +169,7 @@ describe("storage — completion state, never a counter", () => {
     expect(state.pages[P1.pageId].completed).toEqual([act(P1, 0).activityId]);
     expect(state.totalPoints).toBe(m08pts(1));
     expect(studyModulesForStrength(doc, ["791381"])[M08]).toEqual({ completed: 1, eligible: 14 });
-    expect(Object.keys(studyModulesForStrength(doc, ["791381"])).length).toBe(26);
+    expect(Object.keys(studyModulesForStrength(doc, ["791381"])).length).toBe(28);
     expect(studyModulesForStrength(doc, ["000000"])).toEqual({});
     // a page stored under another course id does not count for this course's index
     expect(studyStateOf({ pages: { [P1.pageId]: { courseId: "999999", moduleId: M08, completed: { [act(P1, 0).activityId]: "t" } } } }, INDEX).totalPoints).toBe(0);
@@ -186,7 +200,7 @@ describe("API — attempts through the real handler (student)", () => {
     expect(before.status).toBe(200);
     expect(before.jsonBody).toMatchObject({ ok: true, actor: "student", courseId: "791381", policy: { modulePointsMax: 20, moduleCount: 28 }, pages: {}, totalPoints: 0 });
     expect(before.jsonBody.modules[M08]).toEqual({ completed: 0, eligible: 14, points: 0, max: 20 });
-    expect(Object.keys(before.jsonBody.modules).length).toBe(26);
+    expect(Object.keys(before.jsonBody.modules).length).toBe(28);
     const wrong = await attempt(studentDeps(ctx), { pageId: a.pageId, activityId: a.activityId, response: wrongResponse(a.key) });
     expect(wrong.jsonBody).toMatchObject({ ok: true, correct: false, persisted: false, gained: 0, page: { pageId: a.pageId, moduleId: M08, completed: [], eligible: 3 }, module: { completed: 0, eligible: 14, points: 0, max: 20 } });
     expect(ctx.names("platform/learning-study/")).toEqual([]);                                // a wrong answer writes nothing
@@ -259,6 +273,42 @@ describe("API — attempts through the real handler (student)", () => {
     expect((await get(studentDeps(ctx))).jsonBody.modules[M08]).toEqual({ completed: 14, eligible: 14, points: 20, max: 20 });
     for (const p of pagesOf(M08)) { const x = act(p, 0); expect((await attempt(studentDeps(ctx), { pageId: x.pageId, activityId: x.activityId, response: correctResponse(x.key) })).jsonBody).toMatchObject({ alreadyCompleted: true, gained: 0 }); }
     expect((await get(studentDeps(ctx))).jsonBody.totalPoints).toBe(20);
+  });
+  it("m01 (9 exercises) and m02 (13 exercises) through the real handler: wrong answers add nothing, every unique completion is recorded once, repeats gain 0, each module completes at exactly 20 / 20 — and the T01–T04 trainings page of m02 carries no study activity (no second bucket)", async () => {
+    const ctx = seed(through("791381-m02"));
+    for (const [moduleId, expectedCount] of [["791381-m01", 9], ["791381-m02", 13]]) {
+      const pages = pagesOf(moduleId);
+      const all = pages.flatMap(p => p.activities.map((_, i) => act(p, i)));
+      expect(all.length, moduleId).toBe(expectedCount);
+      expect(pages.some(p => p.pageId === "791381-m02-l01-p08")).toBe(false);                 // the library-training page is not a study page
+      for (const x of all) expect(/^(T\d\d|F0\d)$/.test(x.activityId), x.activityId).toBe(false);
+      // a wrong answer writes nothing
+      const wrong = await attempt(studentDeps(ctx), { pageId: all[0].pageId, activityId: all[0].activityId, response: wrongResponse(all[0].key) });
+      expect(wrong.jsonBody).toMatchObject({ correct: false, persisted: false, gained: 0 });
+      let total = 0;
+      for (const x of all) {
+        const r = await attempt(studentDeps(ctx), { pageId: x.pageId, activityId: x.activityId, response: correctResponse(x.key) });
+        expect(r.status, x.activityId).toBe(200);
+        expect(r.jsonBody, x.activityId).toMatchObject({ correct: true, persisted: true, alreadyCompleted: false });
+        total += r.jsonBody.gained;
+      }
+      expect(total, moduleId).toBe(20);
+      expect((await get(studentDeps(ctx))).jsonBody.modules[moduleId], moduleId).toEqual({ completed: expectedCount, eligible: expectedCount, points: 20, max: 20 });
+      // repeats: unique completion only — nothing more, the stored document keeps one entry per activity
+      for (const x of all) expect((await attempt(studentDeps(ctx), { pageId: x.pageId, activityId: x.activityId, response: correctResponse(x.key) })).jsonBody, x.activityId).toMatchObject({ alreadyCompleted: true, persisted: false, gained: 0 });
+      expect((await get(studentDeps(ctx))).jsonBody.modules[moduleId].points, moduleId).toBe(20);
+    }
+    const stored = ctx.getJson(studyDocName("u1"));
+    expect(Object.values(stored.pages).reduce((n, p) => n + Object.keys(p.completed).length, 0)).toBe(22);
+    expect((await get(studentDeps(ctx))).jsonBody.totalPoints).toBe(40);
+    // the dashboard's study total agrees (m01 20 + m02 20), and a stored training-id "completion" still counts nothing
+    ctx.setJson(studyDocName("u1"), { ...stored, pages: { ...stored.pages, "791381-m02-l01-p08": { courseId: "791381", moduleId: "791381-m02", completed: { T01: "t", T02: "t" } } } });
+    expect((await get(studentDeps(ctx))).jsonBody.totalPoints).toBe(40);
+    const d = await dashboard({ method: "GET", url: "https://x/api/student-dashboard", headers: { get: () => null } }, {
+      requireActiveStudentSession: async () => ({ ok: true, container: ctx.container, user: { sub: "u1", sv: 1, classId: "STALE" }, student: ctx.getJson(USR("u1")) }),
+      downloadJsonOrNull: async (_c, n) => ctx.getJson(n), listJson: async (_c, prefix) => ctx.names(prefix).map(n => ctx.getJson(n)),
+    });
+    expect(d.jsonBody.strength).toMatchObject({ studyPoints: 40, practicePoints: 0, rawTotalPoints: 40, stageNumber: 1, withinStagePoints: 40 });
   });
 });
 

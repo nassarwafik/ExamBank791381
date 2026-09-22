@@ -104,29 +104,33 @@ describe("Phase 3D — PDF 23 source fidelity (four conversion methods + why-it-
 });
 
 describe("Phase 3D — provenance + answer-key safety", () => {
-  it("every PDF-23 block is faithful book content, except the appended Batch-2 visual enrichment", () => {
+  it("every PDF-23 block is faithful book content, except the appended Batch-2 visual enrichment and the closing Study-Practice exercise", () => {
     for (const b of pageBy("791381-m02-l01-p09").blocks as ContentBlock[]) {
-      if (b.type === "visual") expect(b.origin, b.id).toBe("teacher-enrichment");
+      if (b.type === "visual" || b.type === "practice") expect(b.origin, b.id).toBe("teacher-enrichment");
       else expect(b.origin, b.id).toBe("book");
     }
   });
 
-  it("adds NO practice, NO answers, NO image/iframe/external link/QR on the summary page", () => {
+  it("the BOOK content of the summary page carries NO answers, NO image/iframe/external link/QR; the one Study-Practice exercise closes the page", () => {
     const p9 = pageBy("791381-m02-l01-p09");
-    expect(p9.blocks.some(b => b.type === "practice")).toBe(false);
+    expect(p9.blocks.filter(b => b.type === "practice").map(b => b.id)).toEqual(["m02-l01-p09-q1"]);
+    expect(p9.blocks.at(-1)!.type).toBe("practice");
     expect(p9.blocks.some(b => b.type === "image" || b.type === "diagram")).toBe(false);
-    const json = JSON.stringify(p9);
+    const json = JSON.stringify({ ...p9, blocks: p9.blocks.filter(b => b.type !== "practice") });
     for (const banned of ["<iframe", ".pdf", "http", "correct", "feedback", "PracticeFeedback", "QR"]) {
       expect(json, banned).not.toContain(banned);
     }
   });
 
   // Phase 3D adds no enrichment of its own; the m02 teacher-enrichment blocks are the Phase-3C QR clarification plus
-  // the three Batch-2 SVG visual enrichments (m02 selections).
-  it("adds no NEW enrichment beyond the QR clarification and the Batch-2 visuals", () => {
-    const enrich = m02Pages.flatMap(p => (p.blocks as ContentBlock[]).filter(b => b.origin === "teacher-enrichment").map(b => b.id));
+  // the three Batch-2 SVG visual enrichments (m02 selections) plus the Strength-phase Study-Practice exercises.
+  it("adds no NEW enrichment beyond the QR clarification, the Batch-2 visuals and the Study-Practice exercises", () => {
+    const enrich = m02Pages.flatMap(p => (p.blocks as ContentBlock[]).filter(b => b.origin === "teacher-enrichment" && b.type !== "practice").map(b => b.id));
     expect([...enrich].sort()).toEqual([
       "m02-l01-p01-visual", "m02-l01-p03-visual", "m02-l01-p08-qrnote", "m02-l01-p09-visual",
     ]);
+    const practice = m02Pages.flatMap(p => (p.blocks as ContentBlock[]).filter(b => b.type === "practice"));
+    expect(practice.length).toBe(13);
+    for (const b of practice) expect(b.origin, b.id).toBe("teacher-enrichment");
   });
 });

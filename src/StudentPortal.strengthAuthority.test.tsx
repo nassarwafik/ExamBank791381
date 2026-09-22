@@ -62,10 +62,14 @@ describe("Strength authority — the portal displays the server's stage, never a
     expect(region.textContent).not.toMatch(/300|بذرة القوة/);
     expect(document.querySelector(".eb-sp-avatar-frame")?.className).not.toMatch(/is-stage-group-|is-rank-/);
   });
-  it("a malformed payload (stage 26) is treated as unavailable — never clamped into a shown stage", async () => {
-    mount({ ...INCONSISTENT, stageNumber: 26 });
-    const region = await progressRegion();
-    expect(within(region).getByText(/تعذّر تحميل مسار القوة/)).toBeTruthy();
-    expect(within(region).queryByText(/المرحلة \d+ من 25/)).toBeNull();
+  it("a malformed payload (stage 26 with stageCount 30, or a 400-point block) is treated as unavailable — never clamped into a shown stage", async () => {
+    for (const bad of [{ ...INCONSISTENT, stageNumber: 26, stageCount: 30 }, { ...INCONSISTENT, stageBlockSize: 400 }, { ...INCONSISTENT, stageMaxPoints: 2400 }]) {
+      cleanup();
+      mount(bad);
+      const region = await progressRegion();
+      expect(within(region).getByText(/تعذّر تحميل مسار القوة/)).toBeTruthy();
+      expect(within(region).queryByText(/المرحلة \d+ من 25/)).toBeNull();
+      expect(document.body.textContent).not.toMatch(/أسطورة القوة|المرحلة 26/);
+    }
   });
 });

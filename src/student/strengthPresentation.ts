@@ -5,16 +5,22 @@
 //     stagePercent, nextStageNumber, nextStageRemaining, pointsToMaximum … are the server's values. Nothing here
 //     divides, floors or compares a total against a threshold; the helpers below only shape and label those values
 //     (stage number → Arabic title / artwork is presentation, not policy).
-//   • no `strength` payload, or a malformed / incomplete one (a missing or non-numeric stage field, a stage outside
-//     1..25) → `null`: the portal shows an explicit "unavailable" state. There is deliberately NO client-side fallback
-//     that would derive a stage from points — the browser must never compute the stage.
+//   • no `strength` payload, or a malformed / incomplete one → `null`: the portal shows an explicit "unavailable"
+//     state. Structural validation enforces the FIXED 25-stage contract (stageCount 25, stageBlockSize 80,
+//     stageMaxPoints 2000, stageNumber 1..25, stagePoints 0..2000, withinStagePoints 0..80, stagePercent 0..100,
+//     nextStageNumber null | 1..25, nextStageRemaining 0..80) — a payload such as stageNumber 26 / stageCount 30 is
+//     rejected outright, never clamped into stage-25 artwork. There is deliberately NO client-side fallback that
+//     would derive or repair a stage from points — the browser only validates and presents what the server sent.
 import { stageVisual, type StageVisual } from "../studentStageVisuals";
 import { RANK_ORDER, type RankTier } from "../studentRank";
 import type { LegacyRank, ProjectStrength, StudentStrength } from "./types";
 
 const NUMERIC_FIELDS = ["examPoints", "practicePoints", "projectPoints", "stagePoints", "stageMaxPoints", "stageNumber", "stageCount", "stageBlockSize", "withinStagePoints", "stagePercent", "nextStageRemaining"] as const;
+/** The fixed visual contract this 25-stage frontend is built for (mirrors the server constants; validation only). */
+export const STAGE_CONTRACT = { stageCount: 25, stageBlockSize: 80, stageMaxPoints: 2000 } as const;
 
 const isFiniteNumber = (v: unknown): v is number => typeof v === "number" && Number.isFinite(v);
+const isIntBetween = (v: unknown, min: number, max: number): v is number => Number.isInteger(v) && (v as number) >= min && (v as number) <= max;
 const isTierOrNull = (v: unknown): v is RankTier | null => v === null || (typeof v === "string" && (RANK_ORDER as string[]).includes(v));
 const nonNegativeInt = (value: number): number => (value > 0 ? Math.trunc(value) : 0);
 
@@ -24,9 +30,14 @@ export function isServerStrength(raw: unknown): raw is StudentStrength {
   const r = raw as Record<string, unknown>;
   if (!NUMERIC_FIELDS.every(k => isFiniteNumber(r[k]))) return false;
   if (!isFiniteNumber(r.rawTotalPoints) && !isFiniteNumber(r.totalPoints)) return false;
-  const stage = r.stageNumber as number, count = r.stageCount as number;
-  if (!Number.isInteger(stage) || stage < 1 || stage > count) return false;
-  if (!(r.nextStageNumber === null || isFiniteNumber(r.nextStageNumber))) return false;
+  // The fixed 25-stage geometry — exact values, never "whatever the server says the count is".
+  if (r.stageCount !== STAGE_CONTRACT.stageCount || r.stageBlockSize !== STAGE_CONTRACT.stageBlockSize || r.stageMaxPoints !== STAGE_CONTRACT.stageMaxPoints) return false;
+  if (!isIntBetween(r.stageNumber, 1, STAGE_CONTRACT.stageCount)) return false;
+  if (!isIntBetween(r.stagePoints, 0, STAGE_CONTRACT.stageMaxPoints)) return false;
+  if (!isIntBetween(r.withinStagePoints, 0, STAGE_CONTRACT.stageBlockSize)) return false;
+  if (!isIntBetween(r.stagePercent, 0, 100)) return false;
+  if (!(r.nextStageNumber === null || isIntBetween(r.nextStageNumber, 1, STAGE_CONTRACT.stageCount))) return false;
+  if (!isIntBetween(r.nextStageRemaining, 0, STAGE_CONTRACT.stageBlockSize)) return false;
   return Array.isArray(r.projects);
 }
 

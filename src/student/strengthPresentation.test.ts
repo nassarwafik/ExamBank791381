@@ -22,8 +22,33 @@ describe("isServerStrength / strengthAuthority — the acceptance rule", () => {
       expect(normalizeStrength(bad)).toBeNull();
     }
   });
+  it("enforces the FIXED 25-stage contract: stageNumber 26 + stageCount 30, stageCount 30, stageBlockSize 400, stageMaxPoints 2400, nextStageNumber 26, out-of-range points / percent → unavailable (never clamped)", () => {
+    const cases: Record<string, unknown> = {
+      "stageNumber 26 + stageCount 30": { ...SERVER, stageNumber: 26, stageCount: 30 },
+      "stageCount 30": { ...SERVER, stageCount: 30 },
+      "stageBlockSize 400": { ...SERVER, stageBlockSize: 400 },
+      "stageMaxPoints 2400": { ...SERVER, stageMaxPoints: 2400 },
+      "nextStageNumber 26": { ...SERVER, nextStageNumber: 26 },
+      "nextStageNumber 0": { ...SERVER, nextStageNumber: 0 },
+      "stagePoints 2001": { ...SERVER, stagePoints: 2001 },
+      "stagePoints -1": { ...SERVER, stagePoints: -1 },
+      "withinStagePoints 81": { ...SERVER, withinStagePoints: 81 },
+      "withinStagePoints 30.5": { ...SERVER, withinStagePoints: 30.5 },
+      "stagePercent 101": { ...SERVER, stagePercent: 101 },
+      "nextStageRemaining 81": { ...SERVER, nextStageRemaining: 81 },
+      "nextStageRemaining -5": { ...SERVER, nextStageRemaining: -5 },
+    };
+    for (const [label, bad] of Object.entries(cases)) {
+      expect(isServerStrength(bad), label).toBe(false);
+      expect(strengthAuthority(bad), label).toBe("unavailable");
+      expect(normalizeStrength(bad), label).toBeNull();
+    }
+    // the exact contract values are the only accepted geometry
+    expect(isServerStrength({ ...SERVER, stageCount: 25, stageBlockSize: 80, stageMaxPoints: 2000 })).toBe(true);
+  });
   it("normalizeStrength shapes integers and keeps EVERY progression value the server's; legacyRank is carried, never used for the stage", () => {
     const s = normalizeStrength({ ...SERVER, examPoints: 300.7, projects: [...SERVER.projects, null, { projectCode: "X", overallProgress: "bad", strengthPoints: -3 }] })!;
+    expect(s).not.toBeNull();
     expect(s).toMatchObject({ rawTotalPoints: 510, totalPoints: 510, examPoints: 300, stageNumber: 7, withinStagePoints: 30, stagePercent: 38, nextStageNumber: 8, nextStageRemaining: 50, pointsToMaximum: 1490, isMaximumStage: false, pathComplete: false, stageBlockSize: 80, stageMaxPoints: 2000, stageCount: 25 });
     expect(s.legacyRank).toEqual(SERVER.legacyRank);
     expect(s.projects).toEqual([{ projectCode: "899373", overallProgress: 10, strengthPoints: 40 }, { projectCode: "X", overallProgress: 0, strengthPoints: 0 }]);

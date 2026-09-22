@@ -2,6 +2,184 @@
   "schemaVersion": 1,
   "courseId": "791381",
   "pages": {
+    "791381-m01-l01-p01": {
+      "moduleId": "791381-m01",
+      "activities": {
+        "m01-l01-p01-q1": {
+          "kind": "multipleChoice",
+          "correct": [
+            "m01-l01-p01-q1-a"
+          ]
+        }
+      }
+    },
+    "791381-m01-l01-p02": {
+      "moduleId": "791381-m01",
+      "activities": {
+        "m01-l01-p02-q1": {
+          "kind": "trueFalse",
+          "answer": true
+        }
+      }
+    },
+    "791381-m01-l01-p03": {
+      "moduleId": "791381-m01",
+      "activities": {
+        "m01-l01-p03-q1": {
+          "kind": "multipleChoice",
+          "correct": [
+            "m01-l01-p03-q1-a"
+          ]
+        }
+      }
+    },
+    "791381-m01-l02-p01": {
+      "moduleId": "791381-m01",
+      "activities": {
+        "m01-l02-p01-q1": {
+          "kind": "shortInput",
+          "answer": "lan"
+        },
+        "m01-l02-p01-q2": {
+          "kind": "multipleChoice",
+          "correct": [
+            "m01-l02-p01-q2-c"
+          ]
+        }
+      }
+    },
+    "791381-m01-l02-p02": {
+      "moduleId": "791381-m01",
+      "activities": {
+        "m01-l02-p02-q1": {
+          "kind": "multipleChoice",
+          "correct": [
+            "m01-l02-p02-q1-a"
+          ]
+        },
+        "m01-l02-p02-q2": {
+          "kind": "trueFalse",
+          "answer": true
+        }
+      }
+    },
+    "791381-m01-l02-p03": {
+      "moduleId": "791381-m01",
+      "activities": {
+        "m01-l02-p03-q1": {
+          "kind": "multipleChoice",
+          "correct": [
+            "m01-l02-p03-q1-c"
+          ]
+        },
+        "m01-l02-p03-q2": {
+          "kind": "shortInput",
+          "answer": "ping"
+        }
+      }
+    },
+    "791381-m02-l01-p04": {
+      "moduleId": "791381-m02",
+      "activities": {
+        "m02-l01-p04-q1": {
+          "kind": "multipleChoice",
+          "correct": [
+            "m02-l01-p04-q1-a"
+          ]
+        },
+        "m02-l01-p04-q2": {
+          "kind": "trueFalse",
+          "answer": true
+        }
+      }
+    },
+    "791381-m02-l01-p01": {
+      "moduleId": "791381-m02",
+      "activities": {
+        "m02-l01-p01-q1": {
+          "kind": "shortInput",
+          "answer": "123"
+        },
+        "m02-l01-p01-q2": {
+          "kind": "multipleChoice",
+          "correct": [
+            "m02-l01-p01-q2-a"
+          ]
+        }
+      }
+    },
+    "791381-m02-l01-p05": {
+      "moduleId": "791381-m02",
+      "activities": {
+        "m02-l01-p05-q1": {
+          "kind": "shortInput",
+          "answer": "00101100"
+        }
+      }
+    },
+    "791381-m02-l01-p02": {
+      "moduleId": "791381-m02",
+      "activities": {
+        "m02-l01-p02-q1": {
+          "kind": "multipleChoice",
+          "correct": [
+            "m02-l01-p02-q1-a"
+          ]
+        },
+        "m02-l01-p02-q2": {
+          "kind": "shortInput",
+          "answer": "15"
+        }
+      }
+    },
+    "791381-m02-l01-p06": {
+      "moduleId": "791381-m02",
+      "activities": {
+        "m02-l01-p06-q1": {
+          "kind": "trueFalse",
+          "answer": true
+        },
+        "m02-l01-p06-q2": {
+          "kind": "shortInput",
+          "answer": "1010"
+        }
+      }
+    },
+    "791381-m02-l01-p03": {
+      "moduleId": "791381-m02",
+      "activities": {
+        "m02-l01-p03-q1": {
+          "kind": "multipleChoice",
+          "correct": [
+            "m02-l01-p03-q1-a"
+          ]
+        }
+      }
+    },
+    "791381-m02-l01-p07": {
+      "moduleId": "791381-m02",
+      "activities": {
+        "m02-l01-p07-q1": {
+          "kind": "shortInput",
+          "answer": "25a9"
+        },
+        "m02-l01-p07-q2": {
+          "kind": "trueFalse",
+          "answer": true
+        }
+      }
+    },
+    "791381-m02-l01-p09": {
+      "moduleId": "791381-m02",
+      "activities": {
+        "m02-l01-p09-q1": {
+          "kind": "multipleChoice",
+          "correct": [
+            "m02-l01-p09-q1-b"
+          ]
+        }
+      }
+    },
     "791381-m07-l01-p05": {
       "moduleId": "791381-m07",
       "activities": {
