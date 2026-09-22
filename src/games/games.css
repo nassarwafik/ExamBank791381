@@ -41,6 +41,8 @@
 .eb-ncgame-sub, .eb-ncgame-level-desc{ margin:0; color:var(--eb-text-secondary); font-size:var(--eb-fs-14); line-height:var(--eb-lh-body); }
 .eb-ncgame-home, .eb-ncgame-play, .eb-ncgame-result{ display:flex; flex-direction:column; gap:var(--eb-space-4); min-width:0; }
 .eb-ncgame-best{ margin:0; color:var(--eb-text-secondary); font-size:var(--eb-fs-13); }
+/* Teacher preview notice — informational and quiet (not a warning, not an error). */
+.eb-ncgame-preview-note{ margin:0; align-self:flex-start; padding:var(--eb-space-1) var(--eb-space-3); border-inline-start:3px solid var(--eb-info); color:var(--eb-text-secondary); font-size:var(--eb-fs-13); line-height:var(--eb-lh-body); }
 
 .eb-ncgame-paths, .eb-ncgame-levels{ border:0; margin:0; padding:0; display:flex; flex-direction:column; gap:var(--eb-space-2); }
 .eb-ncgame-paths legend, .eb-ncgame-levels legend{ padding:0; margin-block-end:var(--eb-space-1); color:var(--eb-text-heading); font-weight:var(--eb-fw-semibold); font-size:var(--eb-fs-14); }

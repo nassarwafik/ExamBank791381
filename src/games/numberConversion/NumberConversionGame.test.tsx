@@ -227,3 +227,43 @@ describe("NumberConversionGame — a malformed answer is a FORMAT error, not a c
     await waitFor(() => expect((client.getState as unknown as { mock: { calls: unknown[] } }).mock.calls.length).toBe(before + 1));
   });
 });
+
+describe("NumberConversionGame — mode (the SAME component serves the teacher preview)", () => {
+  const BEST = { percentage: 80, correct: 8, total: 10, bestStreak: 5, elapsedMs: 1000, at: "" };
+  const DONE = { ok: true, correct: true, canonicalAnswer: "00101101", solutionBits: SOL_45, explanation: "x", done: true, result: { correct: 2, total: 2, percentage: 100, bestStreak: 2, elapsedMs: 222000, at: "" }, best: BEST, state: { ...activeAt(2, "t2"), currentTask: null, done: true } };
+  const NOTE = "معاينة المعلم — لا يتم حفظ النتائج";
+
+  it("default (student) mode: no preview notice, the saved best record is shown as before", async () => {
+    const client = fakeClient({ getState: vi.fn(async () => ({ ok: true, active: null, best: BEST })) });
+    render(<NumberConversionGame token="t" onBack={vi.fn()} client={client} />);
+    await screen.findByText("ابدأ التحدّي");
+    expect(screen.queryByText(NOTE)).toBeNull();
+    expect(document.querySelector(".eb-ncgame-preview-note")).toBeNull();
+    expect(screen.getByText(/أفضل نتيجة محفوظة/)).toBeTruthy();
+  });
+
+  it("teacher-preview mode: a quiet, static notice on home, play and result — never a saved best record", async () => {
+    const client = fakeClient({ getState: vi.fn(async () => ({ ok: true, active: null, best: BEST })), answer: vi.fn(async () => DONE) });
+    render(<NumberConversionGame token="t" onBack={vi.fn()} client={client} mode="teacher-preview" />);
+    await screen.findByText("ابدأ التحدّي");
+    const note = screen.getByText(NOTE);
+    expect(note.getAttribute("role")).toBe("note");                 // informational: not an alert, not a live region
+    expect(note.closest("[aria-live],[role=alert],[role=status]")).toBeNull();
+    expect(screen.queryByText(/أفضل نتيجة محفوظة/)).toBeNull();
+    // the SAME home controls (all paths, all levels)
+    for (const p of [/عشري ↔ ثنائي/, /ثنائي ↔ سادس عشر/, /عشري ↔ سادس عشر/, /تحدٍّ مختلط/]) expect(screen.getByRole("button", { name: p })).toBeTruthy();
+    for (const l of ["موجّه", "تدريب", "تحدٍّ"]) expect(screen.getByRole("button", { name: l })).toBeTruthy();
+    fireEvent.click(screen.getByText("ابدأ التحدّي"));
+    await screen.findByText("المهمة 1 / 2");
+    expect(screen.getByText(NOTE)).toBeTruthy();
+    expect(screen.getAllByRole("button", { name: /الخانة بقيمة/ }).length).toBe(8);   // the same board
+    expect(document.querySelector(".eb-ncb-board")?.getAttribute("dir")).toBe("ltr");
+    typeAnswer("00101101");
+    fireEvent.click(checkButton());
+    fireEvent.click(await screen.findByRole("button", { name: "التالي" }));
+    expect(await screen.findByText("2 / 2")).toBeTruthy();           // the temporary in-session result is still shown
+    expect(screen.getByText(NOTE)).toBeTruthy();
+    expect(screen.queryByText(/أفضل نتيجة محفوظة/)).toBeNull();      // …but never a saved best record
+    expect(screen.getAllByText(NOTE).length).toBe(1);                // one notice per screen, not repeated
+  });
+});
