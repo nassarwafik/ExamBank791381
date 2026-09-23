@@ -67,6 +67,7 @@ function StrengthBreakdown({ strength }: { strength: StudentStrength }) {
         <li><span>الواجبات النهائية</span><strong>{strength.examPoints}</strong></li>
         <li><span>التدريبات والامتحانات التدريبية</span><strong>{strength.practicePoints}</strong></li>
         <li><span>تمارين الدراسة</span><strong>{strength.studyPoints}</strong></li>
+        <li><span>الألعاب التعليمية</span><strong>{strength.gamePoints}</strong></li>
         <li><span>المشاريع</span><strong>{strength.projectPoints}</strong></li>
       </ul>
     </div>
@@ -127,7 +128,7 @@ export default function StudentProgressSection({ stats, medals, strength, recogn
   const medalCount = grouped.reduce((n, g) => n + g.count, 0);
   return (
     <section className="eb-sp-panel eb-sp-progress" aria-labelledby="eb-sp-progress-title">
-      <SectionHeader level={2} id="eb-sp-progress-title" title="تقدّمي وقوتي" description="أرقامك من الواجبات المنشورة لصفك؛ المعدل من النتائج النهائية فقط، ومرحلتك في مسار القوة من نقاط القوة (الواجبات النهائية والتدريبات وتمارين الدراسة والمشاريع)، وتقديرك من الميداليات والتفاعلات والإنجازات." />
+      <SectionHeader level={2} id="eb-sp-progress-title" title="تقدّمي وقوتي" description="أرقامك من الواجبات المنشورة لصفك؛ المعدل من النتائج النهائية فقط، ومرحلتك في مسار القوة من نقاط القوة (الواجبات النهائية والتدريبات وتمارين الدراسة والألعاب التعليمية والمشاريع)، وتقديرك من الميداليات والتفاعلات والإنجازات." />
       <div className="eb-sp-stats">
         <StatCard label="المهام" value={stats.assigned} />
         <StatCard label="قيد الحل" value={stats.inProgress ?? 0} tone="info" />

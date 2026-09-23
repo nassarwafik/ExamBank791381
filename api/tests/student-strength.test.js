@@ -5,6 +5,7 @@ import {
   STRENGTH_STAGE_COUNT, STRENGTH_STAGE_POINTS, STRENGTH_STAGE_MAX_POINTS, RANK_ORDER,
   examStrengthFromPercentage, examPointsFromFinalizedResults, isLearningPracticeItem, strengthFromTrainingBest, trainingMaxStrengthPoints, strengthFromTrainingResult,
   strengthFromProjectProgress, practicePointsFromTrainings, studyPointsForModule, studyPointsFromModules,
+  gameStrengthFromPercentage, gamePointsFromGames, GAME_MAX_STRENGTH_POINTS,
   strengthStageProgress, rankTierFromStrength, legacyRankProgress, buildStrengthSummary
 } from "../src/lib/student-strength.js";
 import { listLearningTrainings } from "../src/lib/learning-training-registry.js";
@@ -188,5 +189,54 @@ describe("finalized school exams — each result contributes its rounded final p
     expect(rankTierFromStrength(399)).toBeNull(); expect(rankTierFromStrength(2400)).toBe("legendary"); expect(RANK_ORDER).toHaveLength(6);
     expect(legacyRankProgress(2500)).toMatchObject({ tier: "legendary", nextTier: null, percent: 100 });
     expect(buildStrengthSummary({ finalizedCount: 0 }).legacyRank.tier).toBeNull();
+  });
+});
+
+// ── Phase 4E — educational-game Strength (gamePoints) ───────────────────────────────────────────────────────────
+describe("Phase 4E — gamePoints (assigned educational games)", () => {
+  it("gameStrengthFromPercentage = round(pct × 20 / 100), clamped 0..20", () => {
+    expect(GAME_MAX_STRENGTH_POINTS).toBe(20);
+    expect([100, 90, 75, 50, 25, 0].map(gameStrengthFromPercentage)).toEqual([20, 18, 15, 10, 5, 0]);
+    // rounding for non-integer conversions: 63% → 12.6 → 13, 62% → 12.4 → 12, 12.5 → 13 (half-up)
+    expect(gameStrengthFromPercentage(63)).toBe(13);
+    expect(gameStrengthFromPercentage(62)).toBe(12);
+    // defensive clamp 0..20 for out-of-range / malformed
+    expect(gameStrengthFromPercentage(150)).toBe(20);
+    expect(gameStrengthFromPercentage(-40)).toBe(0);
+    expect(gameStrengthFromPercentage(NaN)).toBe(0);
+    expect(gameStrengthFromPercentage("x")).toBe(0);
+  });
+  it("gamePointsFromGames sums per-game contributions (each ≤20) with NO global cap", () => {
+    expect(gamePointsFromGames([])).toBe(0);
+    expect(gamePointsFromGames(undefined)).toBe(0);
+    expect(gamePointsFromGames([100])).toBe(20);
+    expect(gamePointsFromGames([100, 50])).toBe(30);                     // two different assigned games ADD
+    expect(gamePointsFromGames([{ bestPercentage: 90 }, { percentage: 50 }])).toBe(28);   // 18 + 10
+    // no global cap — ten perfect games = 200 (well past any 100/200 style cap), each still individually ≤20
+    expect(gamePointsFromGames(Array(10).fill(100))).toBe(200);
+  });
+  it("buildStrengthSummary adds gamePoints exactly once into rawTotalPoints; absent games → 0 (backward compatible)", () => {
+    const withGames = buildStrengthSummary({ finalizedPercentages: [100], games: [100, 50] });
+    expect(withGames.gamePoints).toBe(30);
+    expect(withGames.examPoints).toBe(100);
+    expect(withGames.rawTotalPoints).toBe(130);                          // 100 exam + 30 game, counted once
+    expect(withGames.totalPoints).toBe(130);
+    const noGames = buildStrengthSummary({ finalizedPercentages: [100] });
+    expect(noGames.gamePoints).toBe(0);
+    expect(noGames.rawTotalPoints).toBe(100);                           // unchanged for a student with no game data
+  });
+  it("gamePoints participate in the stage path but stagePoints still caps at 2000 while rawTotalPoints may exceed it", () => {
+    // 30 finalized 100% exams (3000) + 5 perfect games (100) → raw 3100, stage capped at 2000 (stage 25)
+    const s = buildStrengthSummary({ finalizedPercentages: Array(30).fill(100), games: Array(5).fill(100) });
+    expect(s.gamePoints).toBe(100);
+    expect(s.rawTotalPoints).toBe(3100);                                 // uncapped raw includes gamePoints
+    expect(s.stagePoints).toBe(2000);                                   // visible path still capped at 2000
+    expect(s.stageNumber).toBe(25);
+  });
+  it("game MEDAL tier / podium placement can NOT be turned into gamePoints — only a performance percentage is used", () => {
+    // The API layer only ever passes a performance percentage; there is no code path from a medal/rank into gamePoints.
+    // Proven here at the policy layer: gamePoints is a pure function of percentages, with no medal/placement input.
+    expect(gamePointsFromGames([{ bestPercentage: 100, medal: "gold", placement: 1 }])).toBe(20);   // extra fields ignored
+    expect(gamePointsFromGames([{ placement: 1 }])).toBe(0);            // a placement with no percentage → 0
   });
 });

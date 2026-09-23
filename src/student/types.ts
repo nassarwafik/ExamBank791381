@@ -25,7 +25,7 @@ export type LegacyRank = { tier: RankTier | null; level: number; nextTier: RankT
 export type StudentStrength = {
   /** The uncapped authoritative total (exams + practice + study + projects). `totalPoints` is the same number (compat). */
   rawTotalPoints: number; totalPoints: number;
-  examPoints: number; practicePoints: number; studyPoints: number; projectPoints: number;
+  examPoints: number; practicePoints: number; studyPoints: number; gamePoints: number; projectPoints: number;
   /** The visible path: min(raw, 2000), its ceiling, and the 25 × 80 geometry. */
   stagePoints: number; stageMaxPoints: number; stageCount: number; stageBlockSize: number;
   /** 1..25 — never 26. */

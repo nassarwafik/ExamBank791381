@@ -67,6 +67,8 @@ export function normalizeStrength(raw: unknown): StudentStrength | null {
     rawTotalPoints: rawTotal, totalPoints: rawTotal,
     examPoints: nonNegativeInt(r.examPoints as number), practicePoints: nonNegativeInt(r.practicePoints as number), projectPoints: nonNegativeInt(r.projectPoints as number),
     studyPoints: isFiniteNumber(r.studyPoints) ? nonNegativeInt(r.studyPoints) : 0,
+    // Phase 4E — game Strength; optional like studyPoints so a cached/older payload without it still validates (→ 0).
+    gamePoints: isFiniteNumber(r.gamePoints) ? nonNegativeInt(r.gamePoints) : 0,
     stagePoints, stageMaxPoints, stageCount: nonNegativeInt(r.stageCount as number), stageBlockSize: nonNegativeInt(r.stageBlockSize as number),
     stageNumber: r.stageNumber as number,
     stageFloor: isFiniteNumber(r.stageFloor) ? nonNegativeInt(r.stageFloor) : 0,

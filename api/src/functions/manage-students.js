@@ -26,6 +26,7 @@ const { normalizeClassStatus } = require("../lib/class-lifecycle");
 const { isReportableAssessment } = require("../lib/assignment-lifecycle");
 const { deriveGradingStatus } = require("../lib/grading-status");
 const { aggregateRecognition, medalTierFromPercentage } = require("../lib/achievement-feed");
+const { gameResultsDocName, eligibleGamePercentages } = require("../lib/game-results-store");
 const { buildStrengthSummary } = require("../lib/student-strength");
 const { studyDocName, studyModulesForStrength } = require("../lib/learning-study");
 const { listLearningCourses } = require("../lib/learning-materials-registry");
@@ -694,13 +695,16 @@ async function buildProfileStrength(container, student, classroom, history) {
     const finalizedPercentages = history.filter(h => h.gradingStatus === "final").map(h => Number(h.latestPercentage));
     const medals = { total: 0, gold: 0, silver: 0, bronze: 0 };
     for (const h of history) { if (h.gradingStatus !== "final" || h.latestPercentage === null) continue; const t = medalTierFromPercentage(Number(h.latestPercentage)); if (t) { medals.total++; medals[t]++; } }
-    const [practiceDoc, studyDoc, projects] = await Promise.all([
+    const [practiceDoc, studyDoc, projects, gameResultsDoc] = await Promise.all([
       downloadJsonOrNull(container, "platform/learning-practice/" + student.userId + ".json"),
       downloadJsonOrNull(container, studyDocName(student.userId)),
-      classroom && normalizeClassStatus(classroom) !== "archived" ? loadStudentProjects(container, classroom, String(student.classId || ""), student.userId, now) : Promise.resolve([])
+      classroom && normalizeClassStatus(classroom) !== "archived" ? loadStudentProjects(container, classroom, String(student.classId || ""), student.userId, now) : Promise.resolve([]),
+      downloadJsonOrNull(container, gameResultsDocName(student.userId))
     ]);
     const study = studyModulesForStrength(studyDoc, listLearningCourses().map(x => x.courseId));
-    const strength = buildStrengthSummary({ finalizedPercentages, trainings: practiceDoc && practiceDoc.trainings, study, projects: projects.map(p => ({ projectCode: p.projectCode, overallProgress: p.summary.overallProgress })) });
+    // Phase 4E — the SAME authoritative game-Strength source as the student dashboard: gamePoints from the per-student
+    // assigned-game results store (best-percentage per game, ≤20 each), so dashboard and teacher profile always agree.
+    const strength = buildStrengthSummary({ finalizedPercentages, trainings: practiceDoc && practiceDoc.trainings, study, games: eligibleGamePercentages(gameResultsDoc), projects: projects.map(p => ({ projectCode: p.projectCode, overallProgress: p.summary.overallProgress })) });
     const rec = (await aggregateRecognition(container, [student.userId])).get(student.userId);
     // Phase 4D — SAME authority as the student dashboard: current exam-derived medals + persisted GAME medals
     // (medal.source === "game"). The two surfaces can never diverge because both add rec.gameMedals to the same
