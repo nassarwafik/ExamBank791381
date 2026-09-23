@@ -37,7 +37,7 @@ type ManifestState =
  */
 export default function LearningReader({
   courseId, onExit, api = registryContentApi, exitLabel = "العودة إلى نظرة الكتاب", training, study, initialPageId, onPageChange,
-  initialPresentation, onPresentationChange,
+  initialPresentation, onPresentationChange, embedded = false,
 }: {
   courseId: string;
   onExit: () => void;
@@ -57,6 +57,10 @@ export default function LearningReader({
   initialPresentation?: boolean;
   /** Notified whenever presentation mode is entered / left (local UI state — never persisted by the Reader). */
   onPresentationChange?: (presentation: boolean) => void;
+  /** SEMANTICS only: the host already owns the page's <main> landmark (the teacher app shell), so the content column
+   *  renders as a <div> instead of a nested <main>. Same class, ref, tabIndex and children → identical layout and
+   *  behavior (normal and presentation mode). Default (standalone, e.g. the student's full-screen Reader): <main>. */
+  embedded?: boolean;
 }) {
   const [manifestState, setManifestState] = useState<ManifestState>({ status: "loading" });
   const [selectedPageId, setSelectedPageId] = useState<string>("");
@@ -76,6 +80,7 @@ export default function LearningReader({
   const mountedRef = useRef(true);
   const pendingFocusRef = useRef(false);
   const contentRef = useRef<HTMLDivElement>(null);
+  const ContentRoot = embedded ? "div" : "main";
   const drawerRef = useRef<HTMLDivElement>(null);
   const rootRef = useRef<HTMLDivElement>(null);
   const presentToggleRef = useRef<HTMLButtonElement>(null);
@@ -332,7 +337,7 @@ export default function LearningReader({
       <div className="learning-reader-layout">
         <aside className="learning-reader-sidebar" aria-label="فهرس الكتاب (سطح المكتب)">{renderToc("desktop")}</aside>
 
-        <main className="learning-reader-main" ref={contentRef} tabIndex={-1}>
+        <ContentRoot className="learning-reader-main" ref={contentRef} tabIndex={-1}>
           {!presentation && (
             <div className="learning-reader-jump">
               <label htmlFor="learning-reader-jump-select">انتقل إلى صفحة</label>
@@ -342,7 +347,7 @@ export default function LearningReader({
             </div>
           )}
           {header ? <LearningPageRenderer header={header} body={body} training={training} study={study} /> : <p className="learning-reader-status" role="status">لا توجد صفحات بعد.</p>}
-        </main>
+        </ContentRoot>
       </div>
 
       <nav className="learning-reader-nav" aria-label="تنقّل بين الصفحات">

@@ -21,7 +21,7 @@ type View = { kind: "reader"; pageId?: string; presentation?: boolean } | { kind
  *
  * `client === null` → no session → the Reader renders with no training host (generic cards, zero requests).
  */
-export default function LearningReaderWithTraining({ courseId, api, onExit, exitLabel, client, actor, onTrainingSubmitted, study = null, onStudyPointsEarned, initialPageId }: {
+export default function LearningReaderWithTraining({ courseId, api, onExit, exitLabel, client, actor, onTrainingSubmitted, study = null, onStudyPointsEarned, initialPageId, embedded = false }: {
   courseId: string;
   api?: ReaderContentApi;
   onExit: () => void;
@@ -39,6 +39,9 @@ export default function LearningReaderWithTraining({ courseId, api, onExit, exit
    *  Reader's existing controlled fallback. A remount with no value opens the book from its canonical beginning
    *  (so «بدء القراءة» never inherits a section shortcut). Never re-read after mount. */
   initialPageId?: string;
+  /** SEMANTICS only, forwarded verbatim to LearningReader: the host already owns the page's <main> (the teacher app
+   *  shell), so the Reader's content column renders as a <div>. Default false (the student's full-screen Reader). */
+  embedded?: boolean;
 }) {
   const [view, setView] = useState<View>({ kind: "reader", pageId: initialPageId });
   const [list, setList] = useState<ListState>({ kind: "loading" });
@@ -165,6 +168,7 @@ export default function LearningReaderWithTraining({ courseId, api, onExit, exit
       onPageChange={onPageChange}
       initialPresentation={view.kind === "reader" ? view.presentation : undefined}
       onPresentationChange={onPresentationChange}
+      embedded={embedded}
     />
   );
 }
