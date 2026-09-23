@@ -14,11 +14,11 @@ import type { GameDefinition } from "./domain/types";
  * renders an ENABLED action with that label regardless of `availability`, because authoring a challenge does not
  * require the live-play engine to exist yet. The student surface never passes it, so student rendering is unchanged.
  */
-export default function GameCard({ game, headingLevel = 3, onStart, teacherAction }: { game: GameDefinition; headingLevel?: 2 | 3; onStart?: () => void; teacherAction?: { label: string; onClick: () => void } }) {
+export default function GameCard({ game, headingLevel = 3, onStart, startLabel, teacherAction }: { game: GameDefinition; headingLevel?: 2 | 3; onStart?: () => void; startLabel?: string; teacherAction?: { label: string; onClick: () => void } }) {
   const Heading = headingLevel === 2 ? "h2" : "h3";
   const comingSoon = game.availability === "coming-soon";
   const canStart = !comingSoon && !!onStart;
-  const label = comingSoon ? "قريبًا — في المرحلة القادمة" : canStart ? "ابدأ" : "متاح للطلاب";
+  const label = comingSoon ? "قريبًا — في المرحلة القادمة" : canStart ? (startLabel || "ابدأ") : "متاح للطلاب";
   const titleId = "eb-game-card-" + game.id;
   return (
     <article className={"eb-game-card is-mode-" + game.mode} aria-labelledby={titleId} data-game-id={game.id}>

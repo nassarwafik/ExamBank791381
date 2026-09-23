@@ -230,3 +230,58 @@
   .eb-lc-import-foot{ display:grid; grid-template-columns:minmax(0, 1fr); gap:var(--eb-space-2); }
   .eb-lc-import-foot .eb-lc-import-add{ order:-1; min-width:0; }
 }
+
+/* ============================================================
+   Live Challenge — LIVE SESSION / LOBBY (Phase 4A). Token-only, RTL, phone-first. Durable states only (no presence);
+   status is always text + a shape/tone dot, never colour alone.
+   ============================================================ */
+.eb-lc-live{ gap:var(--eb-space-4); }
+/* saved-challenge row: the edit card + a create-room action */
+.eb-lc-saved-row{ display:flex; align-items:stretch; gap:var(--eb-space-2); }
+.eb-lc-saved-row .eb-lc-saved-item{ flex:1 1 auto; }
+.eb-lc-saved-live{ align-self:center; white-space:nowrap; }
+
+/* create-room setup */
+.eb-lc-setup{ gap:var(--eb-space-4); }
+.eb-lc-students{ display:flex; flex-direction:column; gap:var(--eb-space-2); min-width:0; }
+.eb-lc-students-bar{ display:flex; flex-wrap:wrap; align-items:center; justify-content:space-between; gap:var(--eb-space-2); }
+.eb-lc-students-actions{ display:flex; gap:var(--eb-space-2); flex-wrap:wrap; }
+.eb-lc-sel-count{ color:var(--eb-text-secondary); font-size:var(--eb-fs-13); font-variant-numeric:tabular-nums; }
+.eb-lc-student-list{ list-style:none; margin:0; padding:0; display:flex; flex-direction:column; gap:var(--eb-space-1); max-height:min(50dvh, 360px); overflow:auto; min-width:0; }
+.eb-lc-student-row{ display:flex; align-items:center; gap:var(--eb-space-2); padding:var(--eb-space-2) var(--eb-space-3); border:1px solid var(--eb-line); border-radius:var(--eb-r-sm); cursor:pointer; min-height:44px; }
+.eb-lc-student-row:hover{ border-color:var(--eb-primary); }
+.eb-lc-student-row input{ inline-size:20px; block-size:20px; }
+.eb-lc-student-name{ min-width:0; overflow-wrap:anywhere; }
+.eb-lc-setup-foot{ display:flex; justify-content:flex-end; }
+
+/* lobby (teacher & student share the participant list + stats visuals) */
+.eb-lc-lobby{ gap:var(--eb-space-4); }
+.eb-lc-lobby-code{ display:flex; flex-direction:column; gap:2px; align-items:flex-start; }
+.eb-lc-lobby-code-label{ color:var(--eb-text-secondary); font-size:var(--eb-fs-13); }
+.eb-lc-lobby-code-value{ font-family:var(--eb-font-mono); font-size:var(--eb-fs-28, 28px); font-weight:var(--eb-fw-bold); letter-spacing:.18em; color:var(--eb-primary-strong); }
+.eb-lc-lobby-stats{ display:flex; flex-wrap:wrap; gap:var(--eb-space-4); color:var(--eb-text-secondary); font-size:var(--eb-fs-14); font-variant-numeric:tabular-nums; }
+.eb-lc-lobby-note{ margin:0; }
+.eb-lc-lobby-closed{ margin:0; padding:var(--eb-space-2) var(--eb-space-3); border-inline-start:3px solid var(--eb-danger); background:var(--eb-surface-2); color:var(--eb-text-heading); border-radius:var(--eb-r-sm); }
+.eb-lc-lobby-joined{ margin:0; padding:var(--eb-space-2) var(--eb-space-3); border-inline-start:3px solid var(--eb-success); background:var(--eb-surface-2); color:var(--eb-text-heading); border-radius:var(--eb-r-sm); }
+.eb-lc-lobby-participants{ list-style:none; margin:0; padding:0; display:flex; flex-direction:column; gap:var(--eb-space-1); min-width:0; }
+.eb-lc-lobby-participant{ display:flex; align-items:center; justify-content:space-between; gap:var(--eb-space-2); padding:var(--eb-space-2) var(--eb-space-3); border:1px solid var(--eb-line); border-radius:var(--eb-r-sm); min-width:0; }
+.eb-lc-participant-name{ min-width:0; overflow-wrap:anywhere; }
+.eb-lc-participant-state{ display:inline-flex; align-items:center; gap:var(--eb-space-1); white-space:nowrap; color:var(--eb-text-secondary); font-size:var(--eb-fs-13); }
+.eb-lc-state-dot{ inline-size:10px; block-size:10px; border-radius:50%; background:var(--eb-line-2); border:1px solid var(--eb-line-2); }
+.eb-lc-lobby-participant[data-state="joined"] .eb-lc-state-dot{ background:var(--eb-info); border-color:var(--eb-info); }
+.eb-lc-lobby-participant[data-state="ready"] .eb-lc-state-dot{ background:var(--eb-success); border-color:var(--eb-success); }
+.eb-lc-lobby-actions{ display:flex; flex-wrap:wrap; align-items:center; gap:var(--eb-space-2); }
+.eb-lc-confirm-text{ color:var(--eb-text-heading); font-size:var(--eb-fs-14); }
+
+/* student join + ready */
+.eb-lc-join-card{ gap:var(--eb-space-3); }
+.eb-lc-code-input{ font-family:var(--eb-font-mono); font-size:var(--eb-fs-24, 24px); letter-spacing:.3em; text-align:center; text-transform:uppercase; }
+.eb-lc-ready-toggle{ align-self:flex-start; min-height:44px; }
+.eb-lc-ready-toggle.is-ready{ background:var(--eb-success); color:#fff; }
+
+@media (max-width: 639.98px){
+  .eb-lc-saved-row{ flex-direction:column; }
+  .eb-lc-saved-live{ align-self:stretch; }
+  .eb-lc-setup-foot .eb-button, .eb-lc-ready-toggle{ inline-size:100%; }
+  .eb-lc-lobby-actions .eb-button{ flex:1 1 auto; }
+}
