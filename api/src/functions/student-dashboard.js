@@ -99,6 +99,12 @@ async function handler(request,deps={},obs=null){
   for(const a of assignments){if(a.gradingStatus!=="final"||!a.latestResult)continue;const t=medalTierFromPercentage(Number(a.latestResult.percentage));if(t){medals.total++;medals[t]++}}
   let rec=emptyRecognition();
   try{rec=(await recAgg(c,[student.userId],deps)).get(student.userId)||rec}catch(e){obs?.logError("student.dashboard.recognition",e)}   // secondary: never fails the dashboard
+  // Phase 4D: the SAME visible medal summary now = current exam-derived medals (above) + persisted GAME medals (only
+  // medal.source === "game" from the recognition aggregate). Assessment medals stay derived from CURRENT finalized
+  // results so a teacher grade correction still changes them; game medals persist independently. One combined counter —
+  // no second visible game-medal counter, and no Strength/exam/finalized field is touched.
+  const g=rec.gameMedals||{total:0,gold:0,silver:0,bronze:0};
+  medals.total+=g.total;medals.gold+=g.gold;medals.silver+=g.silver;medals.bronze+=g.bronze;
   const recognition={medals,reactionsReceived:{total:rec.receivedReactionCount,byType:rec.receivedReactionByType},achievements:{total:rec.achievementCount,byType:rec.achievementByType}};
   return {status:200,jsonBody:{ok:true,student:{userId:student.userId,code:student.code,displayName:student.displayName,classId:student.classId,avatarId:String(student.avatarId||""),shareAchievements:student.shareAchievements!==false,profilePhoto:student.profilePhoto&&typeof student.profilePhoto==="object"&&Number(student.profilePhoto.version)>0?{version:Number(student.profilePhoto.version),updatedAt:String(student.profilePhoto.updatedAt||"")}:null},classroom:classroom?{classId:classroom.classId,name:classroom.name,grade:classroom.grade,schoolYear:classroom.schoolYear}:null,assignments,stats:{assigned:assignments.length,completed,average:completed?Number((sum/completed).toFixed(1)):null,submitted,inProgress,pendingReview,finalized,scheduled,available,closedUnsubmitted,averageFinalized:finalCount?Number((finalSum/finalCount).toFixed(1)):null},strength,recognition,phase:"2.0C"}};
  }catch(e){obs?.logError("student.dashboard.error",e);return {status:500,jsonBody:{ok:false,error:"تعذر تحميل لوحة الطالب حاليًا."}}}

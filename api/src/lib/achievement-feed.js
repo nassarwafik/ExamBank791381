@@ -45,11 +45,27 @@ function receivedReactionsOf(post) {
   return { total, byType };
 }
 
+/** Safe game-medal metadata for the public projection (Phase 4D). Only present on a persisted GAME medal
+ *  (medal.source === "game"); exposes ONLY what the feed presentation needs. The internal session id (sourceId, which
+ *  is the join code) is NOT exposed — it was only a storage key. Answers, grades, competition points, the snapshot and
+ *  classmate ids are never part of a medal post and so never leak. */
+function gameMedalPublicFields(medal) {
+  if (!medal || typeof medal !== "object" || medal.source !== "game") return null;
+  return {
+    source: "game",
+    gameType: String(medal.gameType || "live_challenge"),
+    placement: Number(medal.placement) >= 1 ? Number(medal.placement) : undefined,
+    challengeId: medal.challengeId ? String(medal.challengeId) : undefined,
+  };
+}
+
 /** The ONE public projection of a stored post (both feeds add their own viewer-specific fields on top). */
 function publicPost(post) {
   const eventType = eventTypeOf(post);
-  const medal = post.medal && typeof post.medal === "object"
-    ? { tier: String(post.medal.tier || post.tier || ""), assignmentId: String(post.medal.assignmentId || post.assignmentId || ""), assignmentTitle: String(post.medal.assignmentTitle || post.assignmentTitle || "") }
+  const rawMedal = post.medal && typeof post.medal === "object" ? post.medal : null;
+  const game = gameMedalPublicFields(rawMedal);
+  const medal = rawMedal
+    ? { tier: String(rawMedal.tier || post.tier || ""), assignmentId: String(rawMedal.assignmentId || post.assignmentId || ""), assignmentTitle: String(rawMedal.assignmentTitle || post.assignmentTitle || ""), ...(game || {}) }
     : eventType === "medal" ? { tier: String(post.tier || ""), assignmentId: String(post.assignmentId || ""), assignmentTitle: String(post.assignmentTitle || "") } : null;
   return {
     postId: String(post.postId || ""),
@@ -144,14 +160,24 @@ async function aggregateRecognition(container, studentIds, deps = {}) {
     acc.receivedReactionCount += received.total;
     for (const key of REACTIONS) acc.receivedReactionByType[key] += received.byType[key];
     const type = eventTypeOf(post);
-    if (type === "medal") acc.medalPostCount += 1;
+    if (type === "medal") {
+      acc.medalPostCount += 1;
+      // Phase 4D — GAME medals are an INTERNAL aggregate, counted ONLY from a persisted medal explicitly marked
+      // medal.source === "game" (with a valid gold/silver/bronze tier). Legacy/exam medal posts (no `source`, or a
+      // different source) NEVER enter this game aggregate, so assessment medals are not double-counted here: the
+      // dashboard/profile still derive current exam medals from CURRENT finalized results and ADD these game medals.
+      const m = post.medal;
+      if (m && typeof m === "object" && m.source === "game" && (m.tier === "gold" || m.tier === "silver" || m.tier === "bronze")) {
+        acc.gameMedals.total += 1; acc.gameMedals[m.tier] += 1;
+      }
+    }
     else { acc.achievementCount += 1; acc.achievementByType[type] += 1; }
   }
   return out;
 }
 function emptyRecognition() {
   const byType = {}; for (const key of REACTIONS) byType[key] = 0;
-  return { receivedReactionCount: 0, receivedReactionByType: byType, achievementCount: 0, achievementByType: { global_rank_up: 0, project_rank_up: 0, project_complete: 0 }, medalPostCount: 0 };
+  return { receivedReactionCount: 0, receivedReactionByType: byType, achievementCount: 0, achievementByType: { global_rank_up: 0, project_rank_up: 0, project_complete: 0 }, medalPostCount: 0, gameMedals: { total: 0, gold: 0, silver: 0, bronze: 0 } };
 }
 
 module.exports = {

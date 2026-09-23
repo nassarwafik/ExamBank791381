@@ -216,6 +216,108 @@ describe("47/107/108/96. recognition summary — received (never sent), shared w
   });
 });
 
+// ── Phase 4D — persistent GAME medals fold into the SAME recognition totals (no double-count, 0 Strength) ────────────
+describe("Phase 4D. game medals in recognition — combine, no double-count, exam-correction authority, 0 Strength", () => {
+  // A stored game medal post exactly as recordAchievementEvent writes it (medal.source === "game").
+  const gameMedalPost = (studentId, tier, placement, { share = true, sessionId = "R2R2R2", name = "ليان" } = {}) => ({
+    schemaVersion: 2, eventType: "medal", postId: "game_live_" + sessionId + "_place_" + placement + "_" + studentId,
+    classId: "c1", studentId, studentDisplayName: name, createdAt: NOW, shareWithClass: share, reactions: {},
+    medal: { tier, source: "game", sourceId: sessionId, gameType: "live_challenge", placement, challengeId: "c9", assignmentTitle: "شبكات" },
+    assignmentTitle: "شبكات", tier,
+  });
+  const seedGame = (ctx, studentId, tier, placement, opts) => ctx.setJson(feedBlobName("c1", "game_live_" + (opts?.sessionId || "R2R2R2") + "_place_" + placement + "_" + studentId), gameMedalPost(studentId, tier, placement, opts));
+
+  it("aggregateRecognition counts ONLY medal.source==='game' into gameMedals; exam/legacy medals never enter it", async () => {
+    const ctx = school();
+    await recordAchievementIfEligible(ctx.container, { classId: "c1", studentId: "s1", studentDisplayName: "ليان", assignmentId: "A1", assignmentTitle: "x", percentage: 95, shareAchievements: true });  // exam gold (no source)
+    seedGame(ctx, "s1", "gold", 1);
+    seedGame(ctx, "s1", "bronze", 3, { sessionId: "BBBBBB" });
+    const rec = (await aggregateRecognition(ctx.container, ["s1"])).get("s1");
+    expect(rec.gameMedals).toEqual({ total: 2, gold: 1, silver: 0, bronze: 1 });   // exam medal excluded
+    expect(rec.medalPostCount).toBe(3);                                            // all three are medal posts
+  });
+
+  it("publicPost exposes safe game metadata only — never the session/join id, answers, grades or points", async () => {
+    const { publicPost } = await import("../src/lib/achievement-feed.js");
+    const pub = publicPost(gameMedalPost("s1", "gold", 1));
+    expect(pub.medal).toMatchObject({ tier: "gold", source: "game", gameType: "live_challenge", placement: 1, challengeId: "c9", assignmentTitle: "شبكات" });
+    // The internal session id is NOT surfaced as a medal field (sourceId stays internal). The postId is the opaque
+    // feed/reaction key and may embed the id, but no gameplay internals leak.
+    expect(pub.medal.sourceId).toBeUndefined();
+    const s = JSON.stringify(pub);
+    for (const banned of ["sourceId", "answers", "\"grade\"", "competitionPoints", "challengeSnapshot"]) expect(s, banned).not.toContain(banned);
+  });
+
+  it("dashboard combines exam-derived + game medals; a teacher grade CORRECTION drops the exam medal but keeps the game medal", async () => {
+    const ctx = school({ ...exams(1, "c1", "s1", 95) });                            // A1 95% → exam gold (derived)
+    await recordAchievementIfEligible(ctx.container, { classId: "c1", studentId: "s1", studentDisplayName: "ليان", assignmentId: "A1", assignmentTitle: "x", percentage: 95, shareAchievements: true });  // stale exam feed post
+    seedGame(ctx, "s1", "gold", 1);                                                 // one persisted game gold
+    expect((await dash(ctx)).jsonBody.recognition.medals).toEqual({ total: 2, gold: 2, silver: 0, bronze: 0 });
+    // Teacher corrects the exam to 60% (no longer a medal). The stale feed post remains, but the dashboard derives
+    // exam medals from the CURRENT result → exam gold gone; the GAME gold persists.
+    ctx.setJson("platform/submissions/A1/s1.json", { attempts: [finalAttempt(60)] });
+    expect((await dash(ctx)).jsonBody.recognition.medals).toEqual({ total: 1, gold: 1, silver: 0, bronze: 0 });
+  });
+
+  it("a persisted game medal contributes 0 Strength — every Strength authority is byte-identical before/after", async () => {
+    const ctx = school({ ...exams(2, "c1", "s1", 60) });
+    const before = await dash(ctx);
+    seedGame(ctx, "s1", "gold", 1);
+    const after = await dash(ctx);
+    // full deep-equal of the Strength summary (rawTotalPoints/totalPoints/examPoints/practicePoints/studyPoints/
+    // projectPoints/stagePoints/stageNumber/stagePercent all included) + the stats block
+    expect(after.jsonBody.strength).toEqual(before.jsonBody.strength);
+    expect(after.jsonBody.stats).toEqual(before.jsonBody.stats);
+    for (const k of ["rawTotalPoints", "totalPoints", "examPoints", "practicePoints", "studyPoints", "projectPoints", "stagePoints", "stageNumber", "stagePercent"]) {
+      expect(after.jsonBody.strength[k]).toEqual(before.jsonBody.strength[k]);
+    }
+    // but the game medal IS now recognized
+    expect(after.jsonBody.recognition.medals).toEqual({ total: 1, gold: 1, silver: 0, bronze: 0 });
+  });
+
+  it("combined recognition counter (exam gold+silver + game gold+bronze) agrees on dashboard AND teacher profile", async () => {
+    const ctx = school({ ...exams(2, "c1", "s1", 60) });
+    ctx.setJson("platform/submissions/A1/s1.json", { attempts: [finalAttempt(95)] });   // exam gold
+    ctx.setJson("platform/submissions/A2/s1.json", { attempts: [finalAttempt(85)] });   // exam silver
+    seedGame(ctx, "s1", "gold", 1);
+    seedGame(ctx, "s1", "bronze", 3, { sessionId: "BBBBBB" });
+    const expected = { total: 4, gold: 2, silver: 1, bronze: 1 };
+    expect((await dash(ctx)).jsonBody.recognition.medals).toEqual(expected);
+    const prof = await students({ method: "GET", url: "https://x/api/students?profileUserId=s1", headers: { get: () => null } }, teacherDeps(ctx));
+    expect(prof.jsonBody.profile.recognition.medals).toEqual(expected);            // teacher profile matches the dashboard
+  });
+
+  it("game medals from DIFFERENT sessions each persist (not collapsed across sessions)", async () => {
+    const ctx = school();
+    seedGame(ctx, "s1", "gold", 1, { sessionId: "AAAAAA" });
+    seedGame(ctx, "s1", "silver", 2, { sessionId: "BBBBBB" });
+    expect((await aggregateRecognition(ctx.container, ["s1"])).get("s1").gameMedals).toEqual({ total: 2, gold: 1, silver: 1, bronze: 0 });
+  });
+
+  it("game medal feed visibility follows shareWithClass: owner + teacher see a private one, a classmate does not", async () => {
+    const ctx = school();
+    seedGame(ctx, "s1", "gold", 1, { share: false });
+    const own = await feedGet(ctx, "s1");
+    expect((own.jsonBody.posts || []).some(p => p.medal && p.medal.source === "game")).toBe(true);   // owner sees own
+    const classmate = await feedGet(ctx, "s2");
+    expect((classmate.jsonBody.posts || []).some(p => p.medal && p.medal.source === "game")).toBe(false);   // hidden
+    const teacher = await tFeedGet(ctx);
+    expect((teacher.jsonBody.posts || []).some(p => p.medal && p.medal.source === "game")).toBe(true);   // teacher sees it
+  });
+
+  it("a shared game medal renders as a live-challenge win and a classmate can react (existing mechanics intact)", async () => {
+    const ctx = school();
+    seedGame(ctx, "s1", "gold", 1, { share: true });
+    const postId = "game_live_R2R2R2_place_1_s1";
+    const r = await react(ctx, "s2", postId, "cheer");                             // classmate reacts on a game medal
+    expect(r.status).toBe(200);
+    const own = await feedGet(ctx, "s1");
+    const post = (own.jsonBody.posts || []).find(p => p.postId === postId);
+    expect(post.reactionCounts.cheer).toBe(1);
+    expect(post.medal).toMatchObject({ source: "game", tier: "gold" });
+  });
+});
+
 describe("49. teacher student profile — concise Strength + recognition + project summaries (same authorities)", () => {
   it("GET /api/students?profileUserId returns strength (sum of final percentages + projects), recognition and projectSummaries", async () => {
     const ctx = school({ ...exams(4, "c1", "s1", 60) });                                 // A2/A3/A4 at 60% earn no medal

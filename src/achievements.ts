@@ -14,7 +14,18 @@ export const REACTIONS: { id: ReactionId; emoji: string; label: string }[] = [
 export type AchievementEventType = "medal" | "global_rank_up" | "project_rank_up" | "project_complete";
 export const EVENT_TYPES: AchievementEventType[] = ["medal", "global_rank_up", "project_rank_up", "project_complete"];
 export type RankTierId = "beginner" | "bronze" | "silver" | "gold" | "diamond" | "legendary";
-export type FeedMedal = { tier: "gold" | "silver" | "bronze"; assignmentId?: string; assignmentTitle: string };
+// A medal payload. Assessment medals carry only tier/assignmentId/assignmentTitle (historical posts have no `source`
+// and must keep working). Phase 4D game medals additionally carry `source: "game"` and safe live-challenge metadata
+// (the internal session id is never exposed to the client).
+export type FeedMedal = {
+  tier: "gold" | "silver" | "bronze";
+  assignmentId?: string;
+  assignmentTitle: string;
+  source?: "game";
+  gameType?: "live_challenge";
+  placement?: 1 | 2 | 3;
+  challengeId?: string;
+};
 /** LEGACY six-rank payload of a global_rank_up event (historical events; new events also carry `stage`). */
 export type FeedRank = { tier: RankTierId | ""; level: number; points?: number };
 /** The 25-stage payload of a global_rank_up event written since the Strength path (absent on historical events). */
@@ -80,6 +91,10 @@ export function feedEventParts(post: { eventType?: string; studentDisplayName: s
     default: {
       const tier = post.medal?.tier || post.tier || "bronze";
       const title = post.medal?.assignmentTitle || post.assignmentTitle || "";
+      // Phase 4D — a persisted GAME medal reads as a Live Challenge win; assessment medals keep their existing wording.
+      if (post.medal?.source === "game") {
+        return [{ text: name, strong: true }, { text: " حصل على ميدالية " + labels.medal(tier) + " في التحدّي المباشر " }, { text: "«" + title + "»", strong: true }];
+      }
       return [{ text: name, strong: true }, { text: " حصل على ميدالية " + labels.medal(tier) + " في " }, { text: title, strong: true }];
     }
   }
