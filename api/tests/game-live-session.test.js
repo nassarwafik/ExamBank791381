@@ -2,7 +2,7 @@ import { describe, it, expect } from "vitest";
 import { handler, createWithUniqueCode } from "../src/functions/game-live-session.js";
 import { uploadJsonConditional } from "../src/lib/platform-storage.js";
 import { sessionDocName } from "../src/lib/live-challenge-session-store.js";
-import { FEED_PREFIX, feedBlobName } from "../src/lib/achievement-feed.js";
+import { FEED_PREFIX, feedBlobName, recordAchievementEvent as realRecordAchievementEvent } from "../src/lib/achievement-feed.js";
 import { createMemoryContainer } from "./fixtures/memory-container.js";
 
 // Phase 4A — TEACHER live-session API through the REAL handler + REAL platform-storage CAS against the in-memory
@@ -444,5 +444,92 @@ describe("teacher finish — Phase 4D podium recognition medals", () => {
     expect(r.status).toBe(200);                                   // finish still succeeds
     expect(r.jsonBody.session.status).toBe("finished");          // and stays finished (no rollback)
     expect(gameBlobs(ctx)).toHaveLength(0);                      // recorder threw → no posts, but no HTTP failure
+  });
+
+  // ── Phase 4D fix — finished-room GET reconciles missing podium medals (deterministic create-only, idempotent) ──
+  // A medal-write recorder that FAILS (returns false, modelling a swallowed storage failure) for post ids matching
+  // `fails`, and otherwise delegates to the REAL create-only writer.
+  const recorder = fails => ({ requireBuilderAuth: () => ({ ok: true, user: { sub: "t1" } }), container: null, recordAchievementEvent: async (container, event) => (fails(event.postId) ? false : realRecordAchievementEvent(container, event)) });
+  const teacherRecorderDeps = (ctx, fails, sub = "t1") => ({ ...recorder(fails), container: ctx.container, requireBuilderAuth: () => ({ ok: true, user: { sub } }) });
+
+  it("FULL failure at finish → a later owned finished GET reconciles ALL missing podium medals", async () => {
+    const ctx = usersSchool();
+    seedFinishable(ctx, [{ id: "A", name: "أحمد", correct: 3 }, { id: "B", name: "بلال", correct: 2 }, { id: "C", name: "جود", correct: 1 }]);
+    // finish with every medal write failing → finished, but zero posts
+    const fin = await handler(req("finish", { joinCode: CODE, roundVersion: 3 }), teacherRecorderDeps(ctx, () => true));
+    expect(fin.status).toBe(200);
+    expect(fin.jsonBody.session.status).toBe("finished");
+    expect(gameBlobs(ctx)).toHaveLength(0);
+    // a normal owned GET of the finished room now reconciles (writes succeed this time)
+    const g = await handler(req("get", { joinCode: CODE }), teacherRecorderDeps(ctx, () => false));
+    expect(g.status).toBe(200);
+    expect(g.jsonBody.session.status).toBe("finished");
+    expect(gameBlobs(ctx)).toHaveLength(3);
+    expect(medalAt(ctx, 1, "A").medal.tier).toBe("gold");
+    expect(medalAt(ctx, 2, "B").medal.tier).toBe("silver");
+    expect(medalAt(ctx, 3, "C").medal.tier).toBe("bronze");
+  });
+
+  it("repeated reconciliation GET never duplicates completed medals", async () => {
+    const ctx = usersSchool();
+    seedFinishable(ctx, [{ id: "A", name: "أحمد", correct: 3 }, { id: "B", name: "بلال", correct: 1 }]);
+    await act(ctx, "finish", { joinCode: CODE, roundVersion: 3 });   // medals complete (2)
+    expect(gameBlobs(ctx)).toHaveLength(2);
+    for (let i = 0; i < 3; i++) expect((await act(ctx, "get", { joinCode: CODE })).status).toBe(200);
+    expect(gameBlobs(ctx)).toHaveLength(2);                          // still exactly two — create-only, no dupes
+  });
+
+  it("PARTIAL failure is healed: gold fails at finish, silver+bronze persist, GET adds gold only", async () => {
+    const ctx = usersSchool();
+    seedFinishable(ctx, [{ id: "A", name: "أحمد", correct: 3 }, { id: "B", name: "بلال", correct: 2 }, { id: "C", name: "جود", correct: 1 }]);
+    // A is gold (place 1) — its write fails at finish; B silver and C bronze succeed
+    const failGold = pid => pid.includes("_place_1_");
+    const fin = await handler(req("finish", { joinCode: CODE, roundVersion: 3 }), teacherRecorderDeps(ctx, failGold));
+    expect(fin.status).toBe(200);
+    expect(medalAt(ctx, 1, "A")).toBeNull();                         // gold missing
+    expect(gameBlobs(ctx)).toHaveLength(2);                          // silver + bronze
+    // reconcile via GET (all writes succeed) → gold appears, silver/bronze untouched, exactly 3
+    await handler(req("get", { joinCode: CODE }), teacherRecorderDeps(ctx, () => false));
+    expect(medalAt(ctx, 1, "A").medal.tier).toBe("gold");
+    expect(gameBlobs(ctx)).toHaveLength(3);
+  });
+
+  it("reconciliation failure during GET does NOT fail the GET or mutate game state", async () => {
+    const ctx = usersSchool();
+    seedFinishable(ctx, [{ id: "A", name: "أحمد", correct: 3 }, { id: "B", name: "بلال", correct: 1 }]);
+    // finish with all writes failing → finished, zero posts
+    await handler(req("finish", { joinCode: CODE, roundVersion: 3 }), teacherRecorderDeps(ctx, () => true));
+    const before = ctx.getJson(sessionDocName(CODE));
+    // GET whose reconciliation THROWS
+    const deps = { requireBuilderAuth: () => ({ ok: true, user: { sub: "t1" } }), container: ctx.container, recordLiveChallengePodiumMedals: async () => { throw new Error("boom"); } };
+    const g = await handler(req("get", { joinCode: CODE }), deps);
+    expect(g.status).toBe(200);
+    expect(g.jsonBody.session.status).toBe("finished");             // finished session still returned
+    expect(gameBlobs(ctx)).toHaveLength(0);                         // recon threw → still no posts, but GET is fine
+    expect(ctx.getJson(sessionDocName(CODE))).toEqual(before);      // NO gameplay state mutated
+  });
+
+  it("a NON-finished GET (lobby/active/closed) never attempts podium reconciliation", async () => {
+    for (const status of ["lobby", "active", "closed"]) {
+      const ctx = usersSchool();
+      seedFinishable(ctx, [{ id: "A", name: "أحمد", correct: 3 }, { id: "B", name: "بلال", correct: 1 }], 3, { status });
+      let called = 0;
+      const deps = { requireBuilderAuth: () => ({ ok: true, user: { sub: "t1" } }), container: ctx.container, recordLiveChallengePodiumMedals: async () => { called++; return { created: 0 }; } };
+      const g = await handler(req("get", { joinCode: CODE }), deps);
+      expect(g.status).toBe(200);
+      expect(called).toBe(0);                                        // reconciliation not attempted
+      expect(gameBlobs(ctx)).toHaveLength(0);
+    }
+  });
+
+  it("a FOREIGN teacher GET of a finished room does NOT reconcile (404, zero writes)", async () => {
+    const ctx = usersSchool();
+    seedFinishable(ctx, [{ id: "A", name: "أحمد", correct: 3 }, { id: "B", name: "بلال", correct: 1 }], 3, { status: "finished", finishedAt: "z" });
+    let called = 0;
+    const deps = { requireBuilderAuth: () => ({ ok: true, user: { sub: "t2" } }), container: ctx.container, recordLiveChallengePodiumMedals: async () => { called++; return { created: 0 }; } };
+    const g = await handler(req("get", { joinCode: CODE }), deps);
+    expect(g.status).toBe(404);
+    expect(called).toBe(0);                                          // foreign teacher never triggers reconciliation
+    expect(gameBlobs(ctx)).toHaveLength(0);
   });
 });

@@ -168,6 +168,18 @@ async function handler(request, deps = {}, obs = null) {
       if (!joinCode) return BAD_REQUEST;
       const session = await loadOwned(container, dl, joinCode, teacherId);
       if (!session) return NOT_FOUND;
+      // Phase 4D RECONCILIATION: for an OWNED FINISHED room, (re)record the Top-3 recognition medals best-effort here.
+      // Because the medal ids are deterministic and the writes are create-only, this heals medals that failed to persist
+      // at finish time (partial or full) WITHOUT ever duplicating an existing one — teacher recovery, post-finish polling
+      // and reopen all become automatic reconciliation paths (no manual "repair" action, no second finish CAS). It is
+      // owner-gated (loadOwned already returned 404 for an unknown/foreign room, so a foreign teacher never triggers it),
+      // runs ONLY for status "finished" (never lobby/active/closed), and is fully SECONDARY: a failure is logged and
+      // swallowed, GET still returns 200 with the finished session, and NO gameplay state is mutated (medals are a
+      // separate feed write; the session document is untouched).
+      if (session.status === "finished") {
+        const record = deps.recordLiveChallengePodiumMedals || recordLiveChallengePodiumMedals;
+        try { await record(container, session, deps); } catch (e) { obs?.logError("game.live-session.recognition", e); }
+      }
       return { status: 200, jsonBody: { ok: true, session: teacherView(session) } };
     }
 
