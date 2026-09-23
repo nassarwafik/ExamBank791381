@@ -179,3 +179,116 @@ describe("teacher close — zero write on unknown / foreign rooms (Fix 1)", () =
     expect(ctx.has(sessionDocName(code))).toBe(true);
   });
 });
+
+// ── Phase 4B — teacher round controls (start / next / finish) ───────────────────────────────────────────────────
+const CHALLENGE2 = {
+  kind: "live-challenge", schemaVersion: 1, savedAt: "2026-01-01T00:00:00.000Z",
+  challenge: {
+    schemaVersion: 1, challengeId: "c2", title: "جولة", courseId: "791381",
+    questions: [
+      { source: { kind: "manual" }, question: { examQuestionId: "q1", presentationType: "multipleChoice", text: "عاصمة؟", options: [{ text: "عمّان" }, { text: "إربد" }], correctOptionIndex: 0, answer: { correctOptionIndex: 0 }, marks: 1, solution: "عمّان" } },
+      { source: { kind: "manual" }, question: { examQuestionId: "q2", presentationType: "trueFalse", text: "١+١=٢", marks: 1, answer: { correct: true } } },
+    ],
+  },
+};
+const CHALLENGE0 = { kind: "live-challenge", schemaVersion: 1, savedAt: "z", challenge: { schemaVersion: 1, challengeId: "c0", title: "فارغ", courseId: "791381", questions: [] } };
+const school2 = (extra = {}) => school({ "platform/games/live-challenge/t1/c2.json": CHALLENGE2, "platform/games/live-challenge/t1/c0.json": CHALLENGE0, ...extra });
+const act = (ctx, action, body, sub = "t1") => handler(req(action, body), teacherDeps(ctx, sub));
+
+/** Create a 2-question room and mark `joined` of its participants as having joined (so start is allowed). */
+async function makeRoom(ctx, challengeId = "c2", joined = ["s1"]) {
+  const code = (await create(ctx, { challengeId, classId: "cl1", studentIds: ["s1", "s2"] })).jsonBody.session.joinCode;
+  const doc = ctx.getJson(sessionDocName(code));
+  for (const id of joined) { const p = doc.participants.find(x => x.studentId === id); if (p) p.joinedAt = "j"; }
+  ctx.setJson(sessionDocName(code), doc);
+  return code;
+}
+
+describe("teacher start — lobby → active", () => {
+  it("owner starts: status active, round 1, current sanitized question, answered 0 / playing", async () => {
+    const ctx = school2();
+    const code = await makeRoom(ctx);
+    const r = await act(ctx, "start", { joinCode: code });
+    expect(r.status).toBe(200);
+    const s = r.jsonBody.session;
+    expect(s.status).toBe("active");
+    expect(s.round).toMatchObject({ roundVersion: 1, questionNumber: 1, questionCount: 2, answered: 0, playing: 1 });
+    expect(s.round.question.examQuestionId).toBe("q1");
+    expect(JSON.stringify(r.jsonBody)).not.toContain("challengeSnapshot");
+    expect(JSON.stringify(r.jsonBody)).not.toContain("correctOptionIndex");
+    expect(JSON.stringify(r.jsonBody)).not.toContain("solution");
+  });
+  it("cannot start an empty challenge (400) or a room with zero joined students (400)", async () => {
+    const ctx = school2();
+    const empty = await makeRoom(ctx, "c0", ["s1"]);
+    expect((await act(ctx, "start", { joinCode: empty })).jsonBody.code).toBe("empty-challenge");
+    const none = await makeRoom(ctx, "c2", []);          // nobody joined
+    const r = await act(ctx, "start", { joinCode: none });
+    expect(r.status).toBe(400);
+    expect(r.jsonBody.code).toBe("no-participants");
+  });
+  it("start on a FOREIGN teacher's room → 404 with ZERO write (byte-identical)", async () => {
+    const ctx = school2();
+    const code = await makeRoom(ctx);
+    const name = sessionDocName(code);
+    const before = ctx.store.get(name);
+    const beforeEtag = before.etag, beforeContent = before.content.toString("utf8");
+    const r = await act(ctx, "start", { joinCode: code }, "t2");
+    expect(r.status).toBe(404);
+    expect(ctx.store.get(name).etag).toBe(beforeEtag);
+    expect(ctx.store.get(name).content.toString("utf8")).toBe(beforeContent);
+    expect(ctx.getJson(name).status).toBe("lobby");       // still a lobby for its owner
+  });
+  it("start on an UNKNOWN room → 404, no blob created", async () => {
+    const ctx = school2();
+    expect(ctx.has(sessionDocName("ZZZZZZ"))).toBe(false);
+    expect((await act(ctx, "start", { joinCode: "ZZZZZZ" })).status).toBe(404);
+    expect(ctx.has(sessionDocName("ZZZZZZ"))).toBe(false);
+  });
+});
+
+describe("teacher next / finish — round advance & completion", () => {
+  it("next advances the round; a stale roundVersion cannot double-advance (409, no change)", async () => {
+    const ctx = school2();
+    const code = await makeRoom(ctx);
+    await act(ctx, "start", { joinCode: code });
+    const r1 = await act(ctx, "next", { joinCode: code, roundVersion: 1 });
+    expect(r1.status).toBe(200);
+    expect(r1.jsonBody.session.round).toMatchObject({ roundVersion: 2, questionNumber: 2 });
+    // a stale teacher tab still on round 1 cannot advance again
+    const stale = await act(ctx, "next", { joinCode: code, roundVersion: 1 });
+    expect(stale.status).toBe(409);
+    expect(stale.jsonBody.code).toBe("stale-round");
+    expect(ctx.getJson(sessionDocName(code)).roundVersion).toBe(2);   // unchanged
+  });
+  it("next past the last question → 409 no-more-questions; a non-integer roundVersion → 400", async () => {
+    const ctx = school2();
+    const code = await makeRoom(ctx);
+    await act(ctx, "start", { joinCode: code });
+    await act(ctx, "next", { joinCode: code, roundVersion: 1 });      // now on Q2 (last)
+    expect((await act(ctx, "next", { joinCode: code, roundVersion: 2 })).jsonBody.code).toBe("no-more-questions");
+    expect((await act(ctx, "next", { joinCode: code, roundVersion: "2" })).status).toBe(400);
+  });
+  it("finish only on the last question (else 409); close still works from active and finished", async () => {
+    const ctx = school2();
+    const code = await makeRoom(ctx);
+    await act(ctx, "start", { joinCode: code });
+    expect((await act(ctx, "finish", { joinCode: code, roundVersion: 1 })).jsonBody.code).toBe("not-last-question");
+    await act(ctx, "next", { joinCode: code, roundVersion: 1 });
+    const fin = await act(ctx, "finish", { joinCode: code, roundVersion: 2 });
+    expect(fin.status).toBe(200);
+    expect(fin.jsonBody.session.status).toBe("finished");
+    const closed = await act(ctx, "close", { joinCode: code });
+    expect(closed.jsonBody.session.status).toBe("closed");            // finished → closed
+  });
+  it("teacher get returns the active runtime view (sanitized current question, no raw snapshot)", async () => {
+    const ctx = school2();
+    const code = await makeRoom(ctx);
+    await act(ctx, "start", { joinCode: code });
+    const g = await act(ctx, "get", { joinCode: code });
+    expect(g.status).toBe(200);
+    expect(g.jsonBody.session.round.question.examQuestionId).toBe("q1");
+    expect(JSON.stringify(g.jsonBody)).not.toContain("challengeSnapshot");
+    expect(JSON.stringify(g.jsonBody)).not.toContain("correctOptionIndex");
+  });
+});

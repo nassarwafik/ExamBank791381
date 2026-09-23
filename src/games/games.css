@@ -271,7 +271,19 @@
 .eb-lc-lobby-participant[data-state="joined"] .eb-lc-state-dot{ background:var(--eb-info); border-color:var(--eb-info); }
 .eb-lc-lobby-participant[data-state="ready"] .eb-lc-state-dot{ background:var(--eb-success); border-color:var(--eb-success); }
 .eb-lc-lobby-actions{ display:flex; flex-wrap:wrap; align-items:center; gap:var(--eb-space-2); }
+.eb-lc-lobby-close{ margin-block-start:var(--eb-space-2); }
 .eb-lc-confirm-text{ color:var(--eb-text-heading); font-size:var(--eb-fs-14); }
+.eb-lc-lobby-participant[data-state="waiting"] .eb-lc-state-dot{ background:var(--eb-line-2); border-color:var(--eb-line-2); }
+
+/* Phase 4B — live round */
+.eb-lc-round{ display:flex; flex-direction:column; gap:var(--eb-space-3); min-width:0; }
+.eb-lc-round-head{ display:flex; flex-wrap:wrap; align-items:center; justify-content:space-between; gap:var(--eb-space-2); color:var(--eb-text-secondary); font-size:var(--eb-fs-14); font-variant-numeric:tabular-nums; }
+.eb-lc-round-num{ font-weight:600; color:var(--eb-text-heading); }
+.eb-lc-round-answered{ color:var(--eb-text-secondary); }
+.eb-lc-submit{ align-self:flex-start; min-height:44px; }
+.eb-lc-answer-locked{ margin:0; padding:var(--eb-space-2) var(--eb-space-3); border-inline-start:3px solid var(--eb-success); background:var(--eb-surface-2); color:var(--eb-text-heading); border-radius:var(--eb-r-sm); }
+.eb-lc-lobby-finished{ margin:0; padding:var(--eb-space-2) var(--eb-space-3); border-inline-start:3px solid var(--eb-info); background:var(--eb-surface-2); color:var(--eb-text-heading); border-radius:var(--eb-r-sm); }
+.eb-lc-resume{ display:flex; flex-wrap:wrap; align-items:center; gap:var(--eb-space-2); padding:var(--eb-space-2) var(--eb-space-3); border:1px solid var(--eb-line); border-inline-start:3px solid var(--eb-info); border-radius:var(--eb-r-sm); background:var(--eb-surface-2); color:var(--eb-text-heading); font-size:var(--eb-fs-14); }
 
 /* student join + ready */
 .eb-lc-join-card{ gap:var(--eb-space-3); }
@@ -282,6 +294,7 @@
 @media (max-width: 639.98px){
   .eb-lc-saved-row{ flex-direction:column; }
   .eb-lc-saved-live{ align-self:stretch; }
-  .eb-lc-setup-foot .eb-button, .eb-lc-ready-toggle{ inline-size:100%; }
+  .eb-lc-setup-foot .eb-button, .eb-lc-ready-toggle, .eb-lc-submit{ inline-size:100%; }
   .eb-lc-lobby-actions .eb-button{ flex:1 1 auto; }
+  .eb-lc-round-head{ flex-direction:column; align-items:flex-start; }
 }
