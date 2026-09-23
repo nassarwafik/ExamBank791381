@@ -29,7 +29,8 @@
 // The SERVER is authoritative for every stage field below (buildStrengthSummary); the browser never derives a stage
 // from a total. Practice points come from the per-student BEST percentage per item (retries only ever improve it,
 // stored bestPoints are never trusted); project points are DERIVED from the current Project Tracker summary, never
-// incremented. Medals stay exam-only and are not touched here. Pure module: no IO, no HTTP.
+// incremented. Medals — assessment medals AND Phase 4D persistent game (Live Challenge) recognition medals — are
+// recognition only: they contribute 0 Strength and are not touched here. Pure module: no IO, no HTTP.
 //
 // LEGACY six-rank cadence (beginner … legendary, one tier per 400 raw points): kept ONLY so historical achievement
 // events and their renderers stay readable (`legacyRank` on the summary, RANK_ORDER). It never decides the stage.

@@ -2,6 +2,7 @@ import { describe, it, expect } from "vitest";
 import { handler, createWithUniqueCode } from "../src/functions/game-live-session.js";
 import { uploadJsonConditional } from "../src/lib/platform-storage.js";
 import { sessionDocName } from "../src/lib/live-challenge-session-store.js";
+import { FEED_PREFIX, feedBlobName } from "../src/lib/achievement-feed.js";
 import { createMemoryContainer } from "./fixtures/memory-container.js";
 
 // Phase 4A — TEACHER live-session API through the REAL handler + REAL platform-storage CAS against the in-memory
@@ -337,5 +338,111 @@ describe("teacher competition standings", () => {
     const code = await makeRoom(ctx, "c2", ["s1"]);
     const s = (await act(ctx, "get", { joinCode: code })).jsonBody.session;
     expect(s.competition).toMatchObject({ completedRounds: 0, standings: [] });   // lobby → no ranking
+  });
+});
+
+// ── Phase 4D — finish awards persistent Top-3 recognition medals (server standings only, best-effort/secondary) ──────
+describe("teacher finish — Phase 4D podium recognition medals", () => {
+  const CODE = "GAMERM";
+  const gUser = id => ({ userId: id, role: "student", active: true, archived: false, classId: "cl1", displayName: "طالب " + id, shareAchievements: true });
+  // Seed an ACTIVE session already on the LAST round, with joined players carrying authoritative answers so the final
+  // standings rank them deterministically by correctCount. finish then produces the finished session medals key off.
+  function seedFinishable(ctx, players, qCount = 3, over = {}) {
+    const participants = players.map(p => {
+      const answers = []; for (let i = 0; i < qCount; i++) answers.push({ roundVersion: i + 1, questionIndex: i, response: { kind: "choice", index: 0 }, submittedAt: "t", grade: { score: i < p.correct ? 1 : 0, maxMarks: 1, correct: i < p.correct } });
+      return { studentId: p.id, displayName: p.name, joinedAt: "j", readyAt: null, answers };
+    });
+    ctx.setJson(sessionDocName(CODE), {
+      kind: "live-challenge-session", schemaVersion: 2, sessionId: CODE, joinCode: CODE, teacherId: "t1",
+      challengeId: "c9", challengeTitle: "شبكات", classId: "cl1", status: "active",
+      currentQuestionIndex: qCount - 1, roundVersion: qCount, startedAt: "s", questionStartedAt: "s", finishedAt: null,
+      participants, challengeSnapshot: { questions: Array.from({ length: qCount }, () => ({ question: { examQuestionId: "q" } })) },
+      createdAt: "c", updatedAt: "u", closedAt: null, ...over,
+    });
+  }
+  const usersSchool = () => school({ "platform/users/A.json": gUser("A"), "platform/users/B.json": gUser("B"), "platform/users/C.json": gUser("C"), "platform/users/D.json": gUser("D") });
+  const gameBlobs = ctx => ctx.names(FEED_PREFIX).filter(n => n.includes("/game_live_")).sort();
+  const medalAt = (ctx, place, id) => ctx.getJson(feedBlobName("cl1", "game_live_" + CODE + "_place_" + place + "_" + id));
+
+  it("normal finish (4 players) → gold/silver/bronze to the top three, nothing for 4th", async () => {
+    const ctx = usersSchool();
+    seedFinishable(ctx, [{ id: "A", name: "أحمد", correct: 3 }, { id: "B", name: "بلال", correct: 2 }, { id: "C", name: "جود", correct: 1 }, { id: "D", name: "دانا", correct: 0 }]);
+    const r = await act(ctx, "finish", { joinCode: CODE, roundVersion: 3 });
+    expect(r.status).toBe(200);
+    expect(r.jsonBody.session.status).toBe("finished");
+    expect(medalAt(ctx, 1, "A").medal).toMatchObject({ tier: "gold", source: "game", gameType: "live_challenge", placement: 1, assignmentTitle: "شبكات" });
+    expect(medalAt(ctx, 2, "B").medal.tier).toBe("silver");
+    expect(medalAt(ctx, 3, "C").medal.tier).toBe("bronze");
+    expect(medalAt(ctx, 4, "D")).toBeNull();
+    expect(gameBlobs(ctx)).toHaveLength(3);
+  });
+
+  it("two players → gold + silver only; one player → gold only", async () => {
+    const ctx2 = usersSchool();
+    seedFinishable(ctx2, [{ id: "A", name: "أحمد", correct: 3 }, { id: "B", name: "بلال", correct: 1 }]);
+    await act(ctx2, "finish", { joinCode: CODE, roundVersion: 3 });
+    expect(gameBlobs(ctx2).map(n => n.split("/").pop())).toEqual(["game_live_GAMERM_place_1_A.json", "game_live_GAMERM_place_2_B.json"]);
+    const ctx1 = usersSchool();
+    seedFinishable(ctx1, [{ id: "A", name: "أحمد", correct: 2 }]);
+    await act(ctx1, "finish", { joinCode: CODE, roundVersion: 3 });
+    expect(gameBlobs(ctx1).map(n => n.split("/").pop())).toEqual(["game_live_GAMERM_place_1_A.json"]);
+  });
+
+  it("a STALE finish (wrong roundVersion) awards ZERO medals", async () => {
+    const ctx = usersSchool();
+    seedFinishable(ctx, [{ id: "A", name: "أحمد", correct: 3 }, { id: "B", name: "بلال", correct: 1 }]);
+    const r = await act(ctx, "finish", { joinCode: CODE, roundVersion: 99 });
+    expect(r.status).toBe(409);
+    expect(gameBlobs(ctx)).toHaveLength(0);
+  });
+
+  it("finish BEFORE the last question awards ZERO medals", async () => {
+    const ctx = usersSchool();
+    // active on Q1 (index 0) of a 3-question room → applyFinish rejects (not-last-question)
+    seedFinishable(ctx, [{ id: "A", name: "أحمد", correct: 1 }, { id: "B", name: "بلال", correct: 0 }], 3, { currentQuestionIndex: 0, roundVersion: 1 });
+    const r = await act(ctx, "finish", { joinCode: CODE, roundVersion: 1 });
+    expect(r.status).toBe(409);
+    expect(r.jsonBody.code).toBe("not-last-question");
+    expect(gameBlobs(ctx)).toHaveLength(0);
+  });
+
+  it("a FOREIGN teacher finishing awards ZERO medals (404, no write)", async () => {
+    const ctx = usersSchool();
+    seedFinishable(ctx, [{ id: "A", name: "أحمد", correct: 3 }, { id: "B", name: "بلال", correct: 1 }]);
+    const r = await act(ctx, "finish", { joinCode: CODE, roundVersion: 3 }, "t2");
+    expect(r.status).toBe(404);
+    expect(gameBlobs(ctx)).toHaveLength(0);
+    expect(ctx.getJson(sessionDocName(CODE)).status).toBe("active");   // still active for its owner
+  });
+
+  it("CLOSING an active room awards ZERO medals", async () => {
+    const ctx = usersSchool();
+    seedFinishable(ctx, [{ id: "A", name: "أحمد", correct: 3 }, { id: "B", name: "بلال", correct: 1 }]);
+    const r = await act(ctx, "close", { joinCode: CODE });
+    expect(r.status).toBe(200);
+    expect(r.jsonBody.session.status).toBe("closed");
+    expect(gameBlobs(ctx)).toHaveLength(0);
+  });
+
+  it("a duplicate/reconciliation finish never double-awards (idempotent recorder)", async () => {
+    const ctx = usersSchool();
+    seedFinishable(ctx, [{ id: "A", name: "أحمد", correct: 3 }, { id: "B", name: "بلال", correct: 1 }]);
+    await act(ctx, "finish", { joinCode: CODE, roundVersion: 3 });
+    expect(gameBlobs(ctx)).toHaveLength(2);
+    // Re-invoke the recorder directly against the now-finished session — create-only ids mean no new posts.
+    const { recordLiveChallengePodiumMedals } = await import("../src/lib/live-challenge-recognition.js");
+    const again = await recordLiveChallengePodiumMedals(ctx.container, ctx.getJson(sessionDocName(CODE)));
+    expect(again.created).toBe(0);
+    expect(gameBlobs(ctx)).toHaveLength(2);
+  });
+
+  it("recognition is SECONDARY: an injected recorder failure does NOT fail the finish", async () => {
+    const ctx = usersSchool();
+    seedFinishable(ctx, [{ id: "A", name: "أحمد", correct: 3 }, { id: "B", name: "بلال", correct: 1 }]);
+    const deps = { requireBuilderAuth: () => ({ ok: true, user: { sub: "t1" } }), container: ctx.container, recordLiveChallengePodiumMedals: async () => { throw new Error("boom"); } };
+    const r = await handler(req("finish", { joinCode: CODE, roundVersion: 3 }), deps);
+    expect(r.status).toBe(200);                                   // finish still succeeds
+    expect(r.jsonBody.session.status).toBe("finished");          // and stays finished (no rollback)
+    expect(gameBlobs(ctx)).toHaveLength(0);                      // recorder threw → no posts, but no HTTP failure
   });
 });

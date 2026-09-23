@@ -702,6 +702,11 @@ async function buildProfileStrength(container, student, classroom, history) {
     const study = studyModulesForStrength(studyDoc, listLearningCourses().map(x => x.courseId));
     const strength = buildStrengthSummary({ finalizedPercentages, trainings: practiceDoc && practiceDoc.trainings, study, projects: projects.map(p => ({ projectCode: p.projectCode, overallProgress: p.summary.overallProgress })) });
     const rec = (await aggregateRecognition(container, [student.userId])).get(student.userId);
+    // Phase 4D — SAME authority as the student dashboard: current exam-derived medals + persisted GAME medals
+    // (medal.source === "game"). The two surfaces can never diverge because both add rec.gameMedals to the same
+    // exam-derived totals; assessment medals remain correction-authoritative, Strength is untouched.
+    const g = (rec && rec.gameMedals) || { total: 0, gold: 0, silver: 0, bronze: 0 };
+    medals.total += g.total; medals.gold += g.gold; medals.silver += g.silver; medals.bronze += g.bronze;
     return {
       strength,
       recognition: { medals, reactionsReceived: { total: rec.receivedReactionCount, byType: rec.receivedReactionByType }, achievements: { total: rec.achievementCount, byType: rec.achievementByType } },

@@ -9,6 +9,8 @@ const {
   sessionDocName, generateJoinCode, newSessionDoc, teacherView,
   applyClose, applyStart, applyNext, applyFinish, SessionError,
 } = require("../lib/live-challenge-session-store");
+// Phase 4D — persistent Top-3 recognition medals, recorded ONLY after a successful finish CAS (best-effort/secondary).
+const { recordLiveChallengePodiumMedals } = require("../lib/live-challenge-recognition");
 
 // Live Challenge — TEACHER live-session API (Phase 4A lobby + Phase 4B live round engine).
 //   POST /api/game-live-session/create  { challengeId, classId, studentIds } → snapshot a saved challenge into a new
@@ -187,6 +189,14 @@ async function handler(request, deps = {}, obs = null) {
           action === "start" ? applyStart(current, now)
             : action === "next" ? applyNext(current, roundVersion, now)
               : applyFinish(current, roundVersion, now));
+        // Phase 4D: ONLY after the finish CAS actually succeeds and the session is authoritatively finished, persist the
+        // Top-3 podium recognition medals. Recognition is SECONDARY and best-effort — an error here (including an
+        // injected recorder failure) is logged and swallowed so a successful finish never becomes an HTTP failure and
+        // the finished session is never rolled back. A stale/foreign/non-last/failed finish never reaches this point.
+        if (action === "finish" && updated && updated.status === "finished") {
+          const record = deps.recordLiveChallengePodiumMedals || recordLiveChallengePodiumMedals;
+          try { await record(container, updated, deps); } catch (e) { obs?.logError("game.live-session.recognition", e); }
+        }
         return { status: 200, jsonBody: { ok: true, session: teacherView(updated) } };
       } catch (e) {
         if (e instanceof OwnedRoomAbort) return NOT_FOUND;
