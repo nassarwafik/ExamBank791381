@@ -4,6 +4,7 @@ import { createStudentLiveSessionClient, type StudentLiveSessionClient, type Stu
 import type { Answer } from "../../StudentQuestionCard";
 import { answered as isAnswered } from "../../StudentQuestionCard";
 import LiveChallengeQuestion from "./LiveChallengeQuestion";
+import { LiveStandingsTable, LivePodium } from "./LiveChallengeLeaderboard";
 import { useLobbyPoll } from "./useLobbyPoll";
 import { readStudentRoom, writeStudentRoom, clearStudentRoom } from "./liveSessionRecovery";
 import "../games.css";
@@ -147,6 +148,10 @@ export default function StudentLiveLobby({ token, onBack, client: injected }: { 
   const active = status === "active";
   const alreadyAnswered = !!lobby.you.answered;
   const canSubmit = active && !!answer && isAnswered(answer) && !alreadyAnswered && !busy;
+  const competition = lobby.competition;
+  // The live leaderboard appears only after at least one round is COMPLETED. The server already excludes the current
+  // active round from `completedRounds`, so my own just-submitted current-round points never show up here mid-round.
+  const showActiveStandings = active && !!competition && competition.completedRounds >= 1 && competition.standings.length > 0;
   return (
     <div className="student-portal eb-student-shell eb-games-surface eb-lc eb-lc-live" dir="rtl">
       <div className="eb-games-surface-bar">
@@ -189,6 +194,15 @@ export default function StudentLiveLobby({ token, onBack, client: injected }: { 
                 : <button type="button" className="eb-button is-primary eb-lc-submit" onClick={submitAnswer} disabled={!canSubmit}>
                     {busy ? "جارٍ الإرسال…" : "إرسال الإجابة"}
                   </button>}
+            </div>
+          )}
+
+          {showActiveStandings && <LiveStandingsTable standings={competition!.standings} title="الترتيب حتى السؤال السابق" />}
+
+          {finished && competition && competition.standings.length > 0 && (
+            <div className="eb-lc-results">
+              <LivePodium standings={competition.standings} />
+              <LiveStandingsTable standings={competition.standings} title="النتائج النهائية" />
             </div>
           )}
 

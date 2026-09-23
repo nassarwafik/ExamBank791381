@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { handler } from "../src/functions/game-live-session-student.js";
-import { newSessionDoc, sessionDocName, applyClose, applyJoin, applyStart, applyNext } from "../src/lib/live-challenge-session-store.js";
+import { newSessionDoc, sessionDocName, applyClose, applyJoin, applyStart, applyNext, applyFinish } from "../src/lib/live-challenge-session-store.js";
 import { createMemoryContainer } from "./fixtures/memory-container.js";
 
 // Phase 4A — STUDENT live-session API through the REAL handler + REAL CAS. Proves active-session auth, teacher-defined
@@ -341,5 +341,39 @@ describe("Phase 4B review fix — response canonicalization strips untrusted fie
     const okr = await ans(ctx, "s1", { roundVersion: 1, response: { kind: "choice", index: 0, score: 999, correct: true } });
     expect(okr.status).toBe(200);
     expect(ctx.getJson(name).participants.find(p => p.studentId === "s1").answers[0].response).toEqual({ kind: "choice", index: 0 });
+  });
+});
+
+// ── Phase 4C — student-SAFE competition standings through the real handler + the mandatory non-leak ────────────────
+describe("Phase 4C — student competition view", () => {
+  const name = sessionDocName("R2R2R2");
+  const advance = (ctx, apply) => ctx.setJson(name, apply(ctx.getJson(name)));   // drive teacher-side rounds in the store
+
+  it("MANDATORY non-leak (end-to-end): correctly answering the LIVE round never raises my points until it completes", async () => {
+    const ctx = seedActive();
+    await ans(ctx, "s1", { roundVersion: 1, response: { kind: "choice", index: 0 } });   // Q1 correct (server-graded)
+    // GET while Q1 is still the current round: my competition points MUST still be 0 (Q1 not yet completed).
+    let v = (await call(ctx, "s1", "get", { joinCode: "R2R2R2" })).jsonBody.session;
+    expect(v.competition.completedRounds).toBe(0);
+    expect(v.competition.standings.find(r => r.you)).toMatchObject({ points: 0, correctCount: 0, answeredCount: 0 });
+    // Teacher advances to Q2 → Q1 now completes; only THEN do my Q1 points appear.
+    advance(ctx, s => applyNext(s, 1, "2026-02-01T01:00:00.000Z"));
+    v = (await call(ctx, "s1", "get", { joinCode: "R2R2R2" })).jsonBody.session;
+    expect(v.competition.completedRounds).toBe(1);
+    expect(v.competition.standings.find(r => r.you)).toMatchObject({ points: 1000, correctCount: 1, answeredCount: 1 });
+  });
+
+  it("the student competition payload is SAFE: no classmate studentId, exactly my own row flagged `you`", async () => {
+    const ctx = seedActive();
+    await ans(ctx, "s1", { roundVersion: 1, response: { kind: "choice", index: 0 } });   // s1 correct
+    await ans(ctx, "s2", { roundVersion: 1, response: { kind: "choice", index: 1 } });   // s2 wrong
+    advance(ctx, s => applyFinish(applyNext(s, 1, "t"), 2, "t"));                          // finish → all rounds count
+    const v = (await call(ctx, "s1", "get", { joinCode: "R2R2R2" })).jsonBody.session;
+    expect(v.competition.standings).toHaveLength(2);
+    const mine = v.competition.standings.filter(r => r.you);
+    expect(mine).toHaveLength(1);
+    expect(mine[0]).toMatchObject({ displayName: "أحمد", points: 1000, rank: 1 });
+    noLeak(v.competition);                                       // no studentId / snapshot / key strings in the payload
+    expect(JSON.stringify(v.competition)).not.toContain("studentId");
   });
 });

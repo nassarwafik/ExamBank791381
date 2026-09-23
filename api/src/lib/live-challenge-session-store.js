@@ -14,6 +14,9 @@
 
 const crypto = require("crypto");
 const { sanitizeQuestionForStudent } = require("./student-exam-sanitize");
+// Phase 4C competition standings are derived by a SEPARATE pure module (no circular import: standings never requires
+// this store). Points/ranking are presentation-only and NEVER written back into the session or any academic total.
+const { buildLiveStandings, completedRoundsCount, competitionPointsForGrade } = require("./live-challenge-standings");
 
 const SESSION_PREFIX = "platform/games/live-challenge-sessions/";
 // v2 (Phase 4B) adds the live-round runtime fields (status active/finished, currentQuestionIndex, roundVersion,
@@ -320,6 +323,14 @@ function teacherView(session) {
     finishedAt: session.finishedAt || null,
     closedAt: session.closedAt || null,
   };
+  // Phase 4C — live competition standings (server-derived, presentation-only). During an active round this counts ONLY
+  // rounds strictly before the current question (completedRounds excludes the current one), so the current round's
+  // points never appear until the teacher advances/finishes; a finished session counts every round. The teacher may
+  // see studentId (they already own the roster). This never mutates the session or any academic total.
+  view.competition = {
+    completedRounds: completedRoundsCount(session),
+    standings: buildLiveStandings(session),
+  };
   if (status === "active") {
     const idx = currentIndexOf(session);
     const rawQ = rawCurrentQuestion(session);
@@ -363,6 +374,22 @@ function studentView(session, studentId) {
     updatedAt: session.updatedAt,
     closedAt: session.closedAt || null,
   };
+  // Phase 4C — student-SAFE competition standings. Same server-derived cutoff as the teacher view (active counts only
+  // rounds strictly before the current question), so a student's own current-round points never appear until the round
+  // completes. SAFE shape only: displayName + points + counts + rank — NO classmate studentId, NO raw grades, NO
+  // per-question correctness, NO answer keys, NO future-question info. Only THIS authenticated student's row is flagged
+  // `you:true` (a classmate row never is), so a student can locate themselves without exposing any classmate id.
+  {
+    const myId = String(studentId || "");
+    view.competition = {
+      completedRounds: completedRoundsCount(session),
+      standings: buildLiveStandings(session).map(s => {
+        const row = { displayName: s.displayName, points: s.points, correctCount: s.correctCount, answeredCount: s.answeredCount, rank: s.rank };
+        if (myId && s.studentId === myId) row.you = true;
+        return row;
+      }),
+    };
+  }
   // Round content is delivered ONLY to a participant who actually joined before the game started (the playing set).
   // Defense in depth: even if this is called for a preselected-but-never-joined participant during an active round,
   // it returns NO round.question and NO own submission — the API also rejects that case as not-joined.
@@ -394,4 +421,6 @@ module.exports = {
   findAnswer, playingParticipants, answeredCount, normalizeGrade,
   SessionError, applyJoin, applyReady, applyClose, applyStart, applyNext, applyFinish, applyAnswer,
   teacherView, studentView,
+  // Re-exported Phase 4C standings derivation (defined in live-challenge-standings.js) for tests / callers.
+  buildLiveStandings, completedRoundsCount, competitionPointsForGrade,
 };

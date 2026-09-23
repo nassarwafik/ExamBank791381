@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { IconChevronBack } from "../../icons";
 import { createTeacherLiveSessionClient, type TeacherLiveSessionClient, type TeacherLobby, type ClassOption, type StudentOption } from "./liveSessionClient";
 import LiveChallengeQuestion from "./LiveChallengeQuestion";
+import { LiveStandingsTable, LivePodium } from "./LiveChallengeLeaderboard";
 import { useLobbyPoll } from "./useLobbyPoll";
 import { writeTeacherRoom, clearTeacherRoom } from "./liveSessionRecovery";
 import "../games.css";
@@ -190,6 +191,10 @@ export default function TeacherLiveLobby({ token, challengeId, challengeTitle, o
   const active = status === "active";
   const round = lobby.round;
   const isLastQuestion = !!round && round.questionNumber != null && round.questionNumber >= round.questionCount;
+  const competition = lobby.competition;
+  // The live leaderboard is shown only once at least one round is COMPLETED (the server already excludes the current
+  // active round from `completedRounds`, so a teacher never sees mid-round points before advancing).
+  const showActiveStandings = active && !!competition && competition.completedRounds >= 1 && competition.standings.length > 0;
   return (
     <div className="student-portal eb-student-shell eb-games-surface eb-lc eb-lc-live" dir="rtl">
       <div className="eb-games-surface-bar">
@@ -236,10 +241,21 @@ export default function TeacherLiveLobby({ token, challengeId, challengeTitle, o
                   ? <button type="button" className="eb-button is-primary" onClick={finishGame} disabled={busy}>إنهاء التحدّي</button>
                   : <button type="button" className="eb-button is-primary" onClick={nextQuestion} disabled={busy}>السؤال التالي</button>}
               </div>
+              {showActiveStandings && <LiveStandingsTable standings={competition!.standings} title="الترتيب حتى السؤال السابق" />}
             </div>
           )}
 
-          {finished && <p className="eb-lc-lobby-finished" role="status">انتهى التحدّي — عدد الأسئلة: <span dir="ltr">{lobby.questionCount}</span>.</p>}
+          {finished && (
+            <div className="eb-lc-results">
+              <p className="eb-lc-lobby-finished" role="status">انتهى التحدّي — عدد الأسئلة: <span dir="ltr">{lobby.questionCount}</span>.</p>
+              {competition && competition.standings.length > 0 && (
+                <>
+                  <LivePodium standings={competition.standings} />
+                  <LiveStandingsTable standings={competition.standings} title="النتائج النهائية" />
+                </>
+              )}
+            </div>
+          )}
           {closed && <p className="eb-lc-lobby-closed" role="status">تم إغلاق هذه الغرفة.</p>}
 
           <ul className="eb-lc-lobby-participants" aria-label="المشاركون">

@@ -285,6 +285,26 @@
 .eb-lc-lobby-finished{ margin:0; padding:var(--eb-space-2) var(--eb-space-3); border-inline-start:3px solid var(--eb-info); background:var(--eb-surface-2); color:var(--eb-text-heading); border-radius:var(--eb-r-sm); }
 .eb-lc-resume{ display:flex; flex-wrap:wrap; align-items:center; gap:var(--eb-space-2); padding:var(--eb-space-2) var(--eb-space-3); border:1px solid var(--eb-line); border-inline-start:3px solid var(--eb-info); border-radius:var(--eb-r-sm); background:var(--eb-surface-2); color:var(--eb-text-heading); font-size:var(--eb-fs-14); }
 
+/* Phase 4C — competition leaderboard + final podium (presentation only; server-derived competition points) */
+.eb-lc-results{ display:flex; flex-direction:column; gap:var(--eb-space-3); min-width:0; }
+.eb-lc-standings{ display:flex; flex-direction:column; gap:var(--eb-space-2); min-width:0; margin-block-start:var(--eb-space-2); }
+.eb-lc-standings-title{ margin:0; font-size:var(--eb-fs-14); font-weight:600; color:var(--eb-text-heading); }
+.eb-lc-standings-list{ list-style:none; margin:0; padding:0; display:flex; flex-direction:column; gap:var(--eb-space-1); min-width:0; counter-reset:none; }
+.eb-lc-standings-row{ display:flex; align-items:center; gap:var(--eb-space-2); padding:var(--eb-space-2) var(--eb-space-3); border:1px solid var(--eb-line); border-radius:var(--eb-r-sm); min-width:0; font-variant-numeric:tabular-nums; }
+.eb-lc-standings-rank{ inline-size:1.75em; text-align:center; font-weight:600; color:var(--eb-text-secondary); flex:none; }
+.eb-lc-standings-name{ flex:1 1 auto; min-width:0; overflow-wrap:anywhere; display:inline-flex; align-items:center; gap:var(--eb-space-2); }
+.eb-lc-standings-correct{ color:var(--eb-text-secondary); font-size:var(--eb-fs-13); white-space:nowrap; flex:none; }
+.eb-lc-standings-points{ font-weight:600; color:var(--eb-text-heading); white-space:nowrap; flex:none; }
+.eb-lc-standings-row.is-you{ border-color:var(--eb-primary); background:var(--eb-surface-2); }
+.eb-lc-you-badge{ display:inline-block; padding:0 var(--eb-space-2); border-radius:var(--eb-r-sm); background:var(--eb-primary); color:#fff; font-size:var(--eb-fs-12, 12px); font-weight:600; }
+.eb-lc-podium{ display:flex; flex-wrap:wrap; align-items:stretch; justify-content:center; gap:var(--eb-space-2); min-width:0; }
+.eb-lc-podium-place{ display:flex; flex-direction:column; align-items:center; gap:var(--eb-space-1); flex:1 1 8rem; min-width:0; padding:var(--eb-space-3); border:1px solid var(--eb-line); border-radius:var(--eb-r-md, 12px); background:var(--eb-surface-2); text-align:center; }
+.eb-lc-podium-rank-1{ border-color:var(--eb-warning, #d99a00); }
+.eb-lc-podium-medal{ font-size:var(--eb-fs-28, 28px); line-height:1; }
+.eb-lc-podium-name{ font-weight:600; color:var(--eb-text-heading); overflow-wrap:anywhere; display:inline-flex; align-items:center; gap:var(--eb-space-1); flex-wrap:wrap; justify-content:center; }
+.eb-lc-podium-points{ color:var(--eb-text-secondary); font-size:var(--eb-fs-14); font-variant-numeric:tabular-nums; }
+.eb-lc-podium-place.is-you{ border-color:var(--eb-primary); }
+
 /* student join + ready */
 .eb-lc-join-card{ gap:var(--eb-space-3); }
 .eb-lc-code-input{ font-family:var(--eb-font-mono); font-size:var(--eb-fs-24, 24px); letter-spacing:.3em; text-align:center; text-transform:uppercase; }

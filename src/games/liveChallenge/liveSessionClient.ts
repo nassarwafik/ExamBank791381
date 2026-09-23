@@ -21,12 +21,21 @@ export interface LiveRound {
 }
 
 export interface TeacherLobbyParticipant { studentId: string; displayName: string; joined: boolean; ready: boolean; answered: boolean; joinedAt: string | null; readyAt: string | null }
+// Phase 4C — competition standings. `completedRounds` is how many rounds are counted (during an active round this
+// EXCLUDES the current question; a finished session counts all). Points are presentation-only competition points
+// (NOT academic marks). The teacher entry carries studentId; the student entry never carries a classmate id and flags
+// only the authenticated student's own row with `you`.
+export interface TeacherStanding { studentId: string; displayName: string; points: number; correctCount: number; answeredCount: number; rank: number }
+export interface StudentStanding { displayName: string; points: number; correctCount: number; answeredCount: number; rank: number; you?: boolean }
+export interface TeacherCompetition { completedRounds: number; standings: TeacherStanding[] }
+export interface StudentCompetition { completedRounds: number; standings: StudentStanding[] }
 export interface TeacherLobby {
   sessionId: string; joinCode: string; challengeId: string; challengeTitle: string; classId: string;
   status: LiveStatus; counts: { total: number; joined: number; ready: number };
   roundVersion: number; questionCount: number; playing: number;
   participants: TeacherLobbyParticipant[];
   round?: LiveRound & { answered: number; playing: number };
+  competition?: TeacherCompetition;
   startedAt: string | null; createdAt: string; updatedAt: string; finishedAt: string | null; closedAt: string | null;
 }
 export interface StudentLobbyParticipant { displayName: string; joined: boolean; ready: boolean }
@@ -36,6 +45,7 @@ export interface StudentLobby {
   you: { joined: boolean; ready: boolean; answered: boolean; submission?: StudentSubmission };
   counts: { total: number; joined: number; ready: number };
   round?: LiveRound;
+  competition?: StudentCompetition;
   participants: StudentLobbyParticipant[]; updatedAt: string; closedAt: string | null;
 }
 export interface ClassOption { classId: string; name: string; status?: string }

@@ -1,6 +1,6 @@
 // @vitest-environment happy-dom
 import { describe, it, expect, afterEach, vi } from "vitest";
-import { render, cleanup, screen, fireEvent, waitFor } from "@testing-library/react";
+import { render, cleanup, screen, fireEvent, waitFor, within } from "@testing-library/react";
 import StudentLiveLobby from "./StudentLiveLobby";
 import type { StudentLiveSessionClient, StudentLobby, StudentLiveSessionResult } from "./liveSessionClient";
 import type { Question } from "../../StudentQuestionCard";
@@ -244,5 +244,36 @@ describe("StudentLiveLobby — recovery lifecycle (review fix)", () => {
     renderLobby(fakeClient({ get }));
     expect(await screen.findByText("انتهى التحدّي — شكرًا لمشاركتك.")).toBeTruthy();
     expect(sessionStorage.getItem("eb-lc-student-room")).toBe("K7MX4P");           // finished stays resumable
+  });
+});
+
+describe("StudentLiveLobby — Phase 4C competition leaderboard + podium", () => {
+  it("active with a completed round shows the live leaderboard, highlighting my own row with «أنت»", async () => {
+    const competition = { completedRounds: 1, standings: [
+      { displayName: "أحمد", points: 1000, correctCount: 1, answeredCount: 1, rank: 1 },
+      { displayName: "أنا", points: 500, correctCount: 1, answeredCount: 2, rank: 2, you: true },
+    ] };
+    const server = slobby({ status: "active", you: { joined: true, ready: true, answered: false },
+      round: { roundVersion: 2, questionNumber: 2, questionCount: 2, questionStartedAt: null, question: Q2 }, competition });
+    renderLobby(fakeClient({ join: async () => ok(slobby()), get: async () => ok(server) }));
+    fireEvent.change(screen.getByLabelText("رمز الغرفة"), { target: { value: "K7MX4P" } });
+    fireEvent.click(screen.getByRole("button", { name: "انضمام" }));
+    const region = await screen.findByRole("region", { name: "الترتيب حتى السؤال السابق" });
+    expect(within(region).getByText("أحمد")).toBeTruthy();
+    expect(within(region).getByText("أنت")).toBeTruthy();       // my own row is flagged (text, not colour-only)
+  });
+
+  it("reopening a FINISHED room (recovery) restores the Top-3 podium + full final standings from the server", async () => {
+    try { sessionStorage.setItem("eb-lc-student-room", "K7MX4P"); } catch { /* ignore */ }
+    const competition = { completedRounds: 2, standings: [
+      { displayName: "أحمد", points: 2000, correctCount: 2, answeredCount: 2, rank: 1 },
+      { displayName: "أنا", points: 1000, correctCount: 1, answeredCount: 2, rank: 2, you: true },
+    ] };
+    const get = vi.fn(async () => ok(slobby({ status: "finished", closedAt: null, competition })));
+    renderLobby(fakeClient({ get }));
+    expect(await screen.findByRole("region", { name: "المراكز الأولى" })).toBeTruthy();   // podium from server data
+    const finals = screen.getByRole("region", { name: "النتائج النهائية" });
+    expect(within(finals).getByText("أحمد")).toBeTruthy();
+    expect(within(finals).getByText("أنت")).toBeTruthy();       // my own final row flagged
   });
 });
