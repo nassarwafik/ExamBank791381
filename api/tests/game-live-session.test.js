@@ -292,3 +292,50 @@ describe("teacher next / finish — round advance & completion", () => {
     expect(JSON.stringify(g.jsonBody)).not.toContain("correctOptionIndex");
   });
 });
+
+// ── Phase 4C — competition standings in the teacher view (server-derived, active EXCLUDES the current round) ────────
+describe("teacher competition standings", () => {
+  // Inject an authoritative answer record directly (the student-answer path is proven in its own suite); the teacher
+  // view derives standings purely from these stored grades.
+  const addAnswer = (ctx, code, sid, questionIndex, grade) => {
+    const doc = ctx.getJson(sessionDocName(code));
+    const p = doc.participants.find(x => x.studentId === sid);
+    p.answers = (p.answers || []).concat([{ roundVersion: questionIndex + 1, questionIndex, response: { kind: "choice", index: 0 }, submittedAt: "t", grade }]);
+    ctx.setJson(sessionDocName(code), doc);
+  };
+  const correct = { score: 1, maxMarks: 1, correct: true, manualReview: false };
+  const wrong = { score: 0, maxMarks: 1, correct: false, manualReview: false };
+
+  it("active view EXCLUDES the current round; advancing makes the completed round count; finish counts all", async () => {
+    const ctx = school2();
+    const code = await makeRoom(ctx, "c2", ["s1", "s2"]);
+    await act(ctx, "start", { joinCode: code });                 // Q1 live
+    addAnswer(ctx, code, "s1", 0, correct);
+    addAnswer(ctx, code, "s2", 0, wrong);
+    let s = (await act(ctx, "get", { joinCode: code })).jsonBody.session;
+    expect(s.competition.completedRounds).toBe(0);               // Q1 is current → not counted yet
+    expect(s.competition.standings).toEqual([]);                 // no artificial ranking before any round completes
+    // Advance to Q2 → Q1 completes.
+    await act(ctx, "next", { joinCode: code, roundVersion: 1 });
+    s = (await act(ctx, "get", { joinCode: code })).jsonBody.session;
+    expect(s.competition.completedRounds).toBe(1);
+    expect(s.competition.standings[0]).toMatchObject({ studentId: "s1", displayName: "طالب s1", points: 1000, correctCount: 1, answeredCount: 1, rank: 1 });
+    expect(s.competition.standings[1]).toMatchObject({ studentId: "s2", points: 0, answeredCount: 1, rank: 2 });
+    // Answer Q2, finish → both rounds counted.
+    addAnswer(ctx, code, "s1", 1, correct);
+    addAnswer(ctx, code, "s2", 1, correct);
+    await act(ctx, "finish", { joinCode: code, roundVersion: 2 });
+    s = (await act(ctx, "get", { joinCode: code })).jsonBody.session;
+    expect(s.competition.completedRounds).toBe(2);
+    expect(s.competition.standings[0]).toMatchObject({ studentId: "s1", points: 2000, correctCount: 2, answeredCount: 2 });
+    expect(JSON.stringify(s.jsonBody || s)).not.toContain("challengeSnapshot");
+    expect(s.competition.standings.map(r => r.rank)).toEqual([1, 2]);
+  });
+
+  it("a lobby teacher view carries an empty competition (completedRounds 0)", async () => {
+    const ctx = school2();
+    const code = await makeRoom(ctx, "c2", ["s1"]);
+    const s = (await act(ctx, "get", { joinCode: code })).jsonBody.session;
+    expect(s.competition).toMatchObject({ completedRounds: 0, standings: [] });   // lobby → no ranking
+  });
+});

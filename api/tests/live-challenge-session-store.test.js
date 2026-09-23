@@ -237,3 +237,69 @@ describe("Phase 4B — answer authority, grading, one-per-round & views", () => 
     expect(rawCurrentQuestion(v1).examQuestionId).toBe("q1");
   });
 });
+
+// ── Phase 4C — competition standings in the teacher/student views ────────────────────────────────────────────────
+describe("Phase 4C — competition standings & the non-leak cutoff", () => {
+  const grade = (s, id, rv, response) => applyAnswer(s, id, rv, response, q => require("../src/lib/assignment-grading.js").gradeQuestion(q, response), "a");
+
+  it("teacherView carries competition{completedRounds,standings} with studentId; active EXCLUDES the current round", () => {
+    const s = applyStart(joinAll(mkRich()), "t");
+    grade(s, "s1", 1, { kind: "choice", index: 0 });   // s1 correct on the LIVE Q1
+    grade(s, "s2", 1, { kind: "choice", index: 1 });   // s2 wrong on the LIVE Q1
+    // Q1 is still the active round → completedRounds 0 and NO standings at all (no artificial 0-point ranking).
+    let v = teacherView(s);
+    expect(v.competition.completedRounds).toBe(0);
+    expect(v.competition.standings).toEqual([]);
+    // Advance to Q2 → Q1 is now completed and counts.
+    applyNext(s, 1, "t");
+    v = teacherView(s);
+    expect(v.competition.completedRounds).toBe(1);
+    const s1 = v.competition.standings.find(r => r.studentId === "s1");
+    const s2 = v.competition.standings.find(r => r.studentId === "s2");
+    expect(s1).toMatchObject({ points: 1000, correctCount: 1, answeredCount: 1, rank: 1 });
+    expect(s2).toMatchObject({ points: 0, correctCount: 0, answeredCount: 1, rank: 2 });
+  });
+
+  it("MANDATORY non-leak: a student's OWN current-round points never appear until the round completes", () => {
+    const s = applyStart(joinAll(mkRich()), "t");
+    grade(s, "s1", 1, { kind: "choice", index: 0 });   // Q1 correct (stored grade correct)
+    // Still on Q1 → NO standings yet (the current round is not counted; the leaderboard is empty until it completes).
+    let v = studentView(s, "s1");
+    expect(v.competition.completedRounds).toBe(0);
+    expect(v.competition.standings).toEqual([]);
+    applyNext(s, 1, "t");                                // teacher advances → Q1 completes
+    grade(s, "s1", 2, { kind: "choice", index: 0 });    // s1 answers the live Q2 too (trueFalse; index-choice → wrong)
+    v = studentView(s, "s1");
+    // Now Q1's points show; the live Q2's answer is still excluded (completedRounds is 1, not 2).
+    expect(v.competition.completedRounds).toBe(1);
+    expect(v.competition.standings.find(r => r.you)).toMatchObject({ points: 1000, correctCount: 1, answeredCount: 1 });
+  });
+
+  it("studentView standings are SAFE: no classmate studentId, only my own row is flagged `you`, no raw grades", () => {
+    const s = applyStart(joinAll(mkRich()), "t");
+    grade(s, "s1", 1, { kind: "choice", index: 0 });
+    grade(s, "s2", 1, { kind: "choice", index: 1 });
+    applyFinish(applyNext(s, 1, "t"), 2, "t");          // finish so all rounds count
+    const v = studentView(s, "s1");
+    expect(v.competition.standings.length).toBe(2);
+    // exactly one row flagged `you`, and it is s1's row (by displayName, since ids are not exposed)
+    const mine = v.competition.standings.filter(r => r.you);
+    expect(mine).toHaveLength(1);
+    expect(mine[0].displayName).toBe("أحمد");
+    // no classmate id / no raw grade fields leak in the student competition payload
+    const sr = JSON.stringify(v.competition);
+    for (const banned of ["studentId", "\"score\"", "maxMarks", "\"correct\"", "correctOptionIndex"]) expect(sr, banned).not.toContain(banned);
+  });
+
+  it("finished results: full ranked standings for the playing set; a lobby view is empty/zero", () => {
+    const lobby = mkRich();
+    expect(teacherView(lobby).competition).toMatchObject({ completedRounds: 0, standings: [] });   // nobody joined
+    const s = applyStart(joinAll(mkRich()), "t");
+    grade(s, "s1", 1, { kind: "choice", index: 0 });   // s1 correct
+    applyFinish(applyNext(s, 1, "t"), 2, "t");
+    const v = teacherView(s);
+    expect(v.competition.completedRounds).toBe(2);
+    expect(v.competition.standings.map(r => r.rank)).toEqual([1, 2]);
+    expect(v.competition.standings[0]).toMatchObject({ studentId: "s1", points: 1000 });
+  });
+});

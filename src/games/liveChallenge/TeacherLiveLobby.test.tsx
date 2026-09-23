@@ -295,3 +295,37 @@ describe("TeacherLiveLobby — recovery lifecycle (review fix)", () => {
     expect(sessionStorage.getItem("eb-lc-teacher-room")).toBeNull();       // cleared on success
   });
 });
+
+describe("TeacherLiveLobby — Phase 4C competition leaderboard + podium", () => {
+  const COMP_ACTIVE = { completedRounds: 1, standings: [
+    { studentId: "s1", displayName: "أحمد", points: 1000, correctCount: 1, answeredCount: 1, rank: 1 },
+    { studentId: "s2", displayName: "حلا", points: 0, correctCount: 0, answeredCount: 1, rank: 2 },
+  ] };
+
+  it("shows the live leaderboard once at least one round is completed (active, completedRounds ≥ 1)", async () => {
+    const session = active(2, Q2, { competition: COMP_ACTIVE });
+    renderLobby(fakeClient({ get: async () => session }), { initialSession: session });   // stable poll
+    const region = await screen.findByRole("region", { name: "الترتيب حتى السؤال السابق" });
+    expect(within(region).getByText("أحمد")).toBeTruthy();
+    expect(within(region).getByText(/1000/)).toBeTruthy();
+  });
+
+  it("hides the live leaderboard before any round completes (completedRounds 0)", async () => {
+    const session = active(1, Q1, { competition: { completedRounds: 0, standings: [] } });
+    renderLobby(fakeClient({ get: async () => session }), { initialSession: session });
+    await screen.findByRole("button", { name: "السؤال التالي" });   // active view rendered
+    expect(screen.queryByRole("region", { name: "الترتيب حتى السؤال السابق" })).toBeNull();
+  });
+
+  it("finished shows the Top-3 podium and the full final standings", () => {
+    const session = lobby({ status: "finished", finishedAt: "z", competition: { completedRounds: 2, standings: [
+      { studentId: "s1", displayName: "أحمد", points: 2000, correctCount: 2, answeredCount: 2, rank: 1 },
+      { studentId: "s2", displayName: "حلا", points: 1000, correctCount: 1, answeredCount: 2, rank: 2 },
+    ] } });
+    renderLobby(fakeClient(), { initialSession: session });
+    expect(screen.getByRole("region", { name: "المراكز الأولى" })).toBeTruthy();   // podium
+    const finals = screen.getByRole("region", { name: "النتائج النهائية" });       // full standings
+    expect(within(finals).getByText("أحمد")).toBeTruthy();
+    expect(within(finals).getByText("حلا")).toBeTruthy();
+  });
+});
