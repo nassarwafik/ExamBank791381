@@ -46,8 +46,10 @@ export default function StudentLiveLobby({ token, onBack, client: injected }: { 
     let ok = true;
     clientRef.current.get(stored).then(r => {
       if (!ok) return;
-      if (r.ok && r.session) { setLobby(r.session); setJoinedCode(stored); }
-      else clearStored();                                // forbidden / closed / unknown → drop the stale pointer
+      // Restore only a still-open room (lobby / active / finished is resumable in Phase 4B). A closed room, a 403/404,
+      // or any invalid pointer drops the hint — a closed session must never be restored as a remembered session.
+      if (r.ok && r.session && r.session.status !== "closed") { setLobby(r.session); setJoinedCode(stored); }
+      else clearStored();
     }).catch(() => { if (ok) clearStored(); });
     return () => { ok = false; };
   }, []);
@@ -109,7 +111,9 @@ export default function StudentLiveLobby({ token, onBack, client: injected }: { 
     finally { setBusy(false); }
   }, [lobby, joinedCode, round, answer]);
 
-  const leave = useCallback(() => { clearStored(); onBack(); }, [onBack]);
+  // Normal navigation away KEEPS the reconnect hint so reopening Live Challenge can resume; the hint is only cleared
+  // by server revalidation (closed / forbidden / unknown) on the next mount.
+  const leave = useCallback(() => { onBack(); }, [onBack]);
 
   // ── Join screen ──
   if (!lobby) {

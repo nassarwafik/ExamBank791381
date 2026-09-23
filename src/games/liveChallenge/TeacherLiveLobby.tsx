@@ -120,12 +120,19 @@ export default function TeacherLiveLobby({ token, challengeId, challengeTitle, o
   const closeRoom = useCallback(async () => {
     if (!lobby) return;
     setConfirmClose(false); setBusy(true);
-    try { const r = await clientRef.current.close(lobby.joinCode); if (r.session) setLobby(r.session); clearStored(); }
-    catch { setError("تعذّر إغلاق الغرفة."); }
+    try {
+      const r = await clientRef.current.close(lobby.joinCode);
+      // Clear the reconnect hint ONLY when the close actually succeeds. If it failed, keep the hint so the teacher
+      // can still recover the room.
+      if (r.ok && r.session) { setLobby(r.session); clearStored(); }
+      else setError("تعذّر إغلاق الغرفة.");
+    } catch { setError("تعذّر إغلاق الغرفة."); }
     finally { setBusy(false); }
   }, [lobby]);
 
-  const leave = useCallback(() => { clearStored(); onBack(); }, [onBack]);
+  // Normal navigation away (رجوع إلى الألعاب) KEEPS the reconnect hint; it is cleared only by an explicit تجاهل, a
+  // successful close, or server revalidation (closed / foreign / unknown) on the next mount.
+  const leave = useCallback(() => { onBack(); }, [onBack]);
 
   // ── Setup: class + participant selection ──
   if (phase === "setup") {

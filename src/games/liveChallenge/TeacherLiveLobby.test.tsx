@@ -275,3 +275,47 @@ describe("TeacherLiveLobby — live round controls (Phase 4B)", () => {
     expect(sessionStorage.getItem("eb-lc-teacher-room")).toBeNull();
   });
 });
+
+describe("TeacherLiveLobby — recovery lifecycle (review fix)", () => {
+  async function createRoom(client: TeacherLiveSessionClient) {
+    await selectClassAndStudents(client);
+    fireEvent.click(screen.getByRole("button", { name: "اختيار الكل" }));
+    fireEvent.click(screen.getByRole("button", { name: "إنشاء الغرفة" }));
+    await screen.findByText("K7MX4P");
+  }
+  it("normal navigation away (رجوع) KEEPS the reconnect hint", async () => {
+    await createRoom(fakeClient());
+    expect(sessionStorage.getItem("eb-lc-teacher-room")).toBe("K7MX4P");
+    fireEvent.click(screen.getByRole("button", { name: "رجوع إلى الألعاب" }));
+    expect(sessionStorage.getItem("eb-lc-teacher-room")).toBe("K7MX4P");   // hint retained
+  });
+  it("a FAILED close keeps the reconnect hint", async () => {
+    await createRoom(fakeClient({ close: async () => ({ ok: false }) }));
+    fireEvent.click(screen.getByRole("button", { name: "إغلاق الغرفة" }));
+    fireEvent.click(screen.getByRole("button", { name: "تأكيد الإغلاق" }));
+    expect(await screen.findByText("تعذّر إغلاق الغرفة.")).toBeTruthy();
+    expect(sessionStorage.getItem("eb-lc-teacher-room")).toBe("K7MX4P");   // retained — close did not succeed
+  });
+  it("a SUCCESSFUL close clears the reconnect hint", async () => {
+    await createRoom(fakeClient());   // default close → { ok:true, session: closed }
+    fireEvent.click(screen.getByRole("button", { name: "إغلاق الغرفة" }));
+    fireEvent.click(screen.getByRole("button", { name: "تأكيد الإغلاق" }));
+    expect(await screen.findByText("تم إغلاق هذه الغرفة.")).toBeTruthy();
+    expect(sessionStorage.getItem("eb-lc-teacher-room")).toBeNull();       // cleared on success
+  });
+  it("recovery: a remembered FINISHED room is still offered for resume in Phase 4B", async () => {
+    try { sessionStorage.setItem("eb-lc-teacher-room", "K7MX4P"); } catch { /* ignore */ }
+    const client = fakeClient({ get: async () => lobby({ status: "finished", finishedAt: "z" }) });
+    renderLobby(client);
+    expect(await screen.findByRole("button", { name: "استئناف الجلسة" })).toBeTruthy();
+    expect(sessionStorage.getItem("eb-lc-teacher-room")).toBe("K7MX4P");
+  });
+  it("recovery: a remembered CLOSED room clears the hint (no resume)", async () => {
+    try { sessionStorage.setItem("eb-lc-teacher-room", "K7MX4P"); } catch { /* ignore */ }
+    const get = vi.fn(async () => lobby({ status: "closed", closedAt: "z" }));
+    renderLobby(fakeClient({ get }));
+    await waitFor(() => expect(get).toHaveBeenCalledWith("K7MX4P"));
+    expect(screen.queryByRole("button", { name: "استئناف الجلسة" })).toBeNull();
+    expect(sessionStorage.getItem("eb-lc-teacher-room")).toBeNull();
+  });
+});

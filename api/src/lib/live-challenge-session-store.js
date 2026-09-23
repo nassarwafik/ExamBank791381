@@ -363,10 +363,13 @@ function studentView(session, studentId) {
     updatedAt: session.updatedAt,
     closedAt: session.closedAt || null,
   };
-  if (status === "active") {
+  // Round content is delivered ONLY to a participant who actually joined before the game started (the playing set).
+  // Defense in depth: even if this is called for a preselected-but-never-joined participant during an active round,
+  // it returns NO round.question and NO own submission — the API also rejects that case as not-joined.
+  if (status === "active" && me && me.joinedAt) {
     const idx = currentIndexOf(session);
     const rawQ = rawCurrentQuestion(session);
-    const mine = me ? findAnswer(me, rv) : null;
+    const mine = findAnswer(me, rv);
     view.round = {
       roundVersion: rv,
       questionNumber: idx == null ? null : idx + 1,

@@ -4,7 +4,7 @@ const { requireActiveStudentSession } = require("../lib/student-auth");
 const { getContainer, downloadJsonOrNull, mutateJsonWithRetry } = require("../lib/platform-storage");
 const { gradeQuestion } = require("../lib/assignment-grading");
 const {
-  sessionDocName, normalizeJoinCode, studentView, applyJoin, applyReady, applyAnswer, isParticipant, SessionError,
+  sessionDocName, normalizeJoinCode, studentView, applyJoin, applyReady, applyAnswer, isParticipant, findParticipant, SessionError,
 } = require("../lib/live-challenge-session-store");
 
 // Live Challenge — STUDENT live-session API (Phase 4A lobby + Phase 4B live answer). Every action requires an ACTIVE
@@ -35,35 +35,60 @@ const MAX_FIELDS = 500;
 const MAX_PARTS = 200;
 const RESPONSE_KINDS = new Set(["choice", "sequence", "table", "text", "fields", "compound"]);
 const isPlainObject = v => !!v && typeof v === "object" && !Array.isArray(v);
-function validateResponse(resp, depth = 0) {
-  if (depth > 3 || !isPlainObject(resp)) return false;
-  const kind = resp.kind;
-  if (typeof kind !== "string" || !RESPONSE_KINDS.has(kind)) return false;
+// Structural NORMALIZER (not a grader): returns a NEW canonical response containing ONLY the allowed fields for each
+// kind, or null when the shape/bounds are invalid. It never copies arbitrary extra keys (score/correct/studentId/
+// questionIndex/…), so untrusted client fields can never be persisted into the authoritative answer record. Compound
+// parts recurse through the SAME normalizer.
+function normalizeStudentResponse(raw, depth = 0) {
+  if (depth > 3 || !isPlainObject(raw)) return null;
+  const kind = raw.kind;
+  if (typeof kind !== "string" || !RESPONSE_KINDS.has(kind)) return null;
   switch (kind) {
-    case "choice": return Number.isInteger(resp.index);
-    case "text": return typeof resp.value === "string";
-    case "sequence": return Array.isArray(resp.values) && resp.values.length <= MAX_ARRAY && resp.values.every(v => typeof v === "string");
-    case "table": return Array.isArray(resp.values) && resp.values.length <= MAX_ARRAY && resp.values.every(v => typeof v === "string" || typeof v === "boolean");
+    case "choice": return Number.isInteger(raw.index) ? { kind: "choice", index: raw.index } : null;
+    case "text": return typeof raw.value === "string" ? { kind: "text", value: raw.value } : null;
+    case "sequence":
+      if (!Array.isArray(raw.values) || raw.values.length > MAX_ARRAY || !raw.values.every(v => typeof v === "string")) return null;
+      return { kind: "sequence", values: raw.values.slice() };
+    case "table":
+      if (!Array.isArray(raw.values) || raw.values.length > MAX_ARRAY || !raw.values.every(v => typeof v === "string" || typeof v === "boolean")) return null;
+      return { kind: "table", values: raw.values.slice() };
     case "fields": {
-      if (!isPlainObject(resp.values)) return false;
-      const keys = Object.keys(resp.values);
-      if (keys.length > MAX_FIELDS) return false;
-      return keys.every(k => { const v = resp.values[k]; return typeof v === "string" || typeof v === "boolean" || (Array.isArray(v) && v.length <= MAX_ARRAY && v.every(x => typeof x === "string")); });
+      if (!isPlainObject(raw.values)) return null;
+      const keys = Object.keys(raw.values);
+      if (keys.length > MAX_FIELDS) return null;
+      const values = {};
+      for (const k of keys) {
+        const v = raw.values[k];
+        if (typeof v === "string" || typeof v === "boolean") values[k] = v;
+        else if (Array.isArray(v) && v.length <= MAX_ARRAY && v.every(x => typeof x === "string")) values[k] = v.slice();
+        else return null;
+      }
+      return { kind: "fields", values };
     }
     case "compound": {
-      if (!isPlainObject(resp.parts)) return false;
-      const keys = Object.keys(resp.parts);
-      return keys.length <= MAX_PARTS && keys.every(k => validateResponse(resp.parts[k], depth + 1));
+      if (!isPlainObject(raw.parts)) return null;
+      const keys = Object.keys(raw.parts);
+      if (keys.length > MAX_PARTS) return null;
+      const parts = {};
+      for (const k of keys) {
+        const part = normalizeStudentResponse(raw.parts[k], depth + 1);
+        if (!part) return null;
+        parts[k] = part;
+      }
+      return { kind: "compound", parts };
     }
-    default: return false;
+    default: return null;
   }
 }
-/** True when a response is a structurally valid, size-bounded canonical answer. */
-function isAcceptableResponse(resp) {
+/** Canonicalize + size-bound a submitted response: returns the CANONICAL object (used for BOTH grading and storage) or
+ *  null. There is exactly one accepted response object — never grade one shape and persist another. */
+function normalizeAcceptableResponse(raw) {
+  const canonical = normalizeStudentResponse(raw);
+  if (!canonical) return null;
   let sized;
-  try { sized = JSON.stringify(resp); } catch { return false; }
-  if (typeof sized !== "string" || sized.length > MAX_RESPONSE_BYTES) return false;
-  return validateResponse(resp);
+  try { sized = JSON.stringify(canonical); } catch { return null; }
+  if (typeof sized !== "string" || sized.length > MAX_RESPONSE_BYTES) return null;
+  return canonical;
 }
 
 async function readBody(request) { try { return await request.json(); } catch { return {}; } }
@@ -104,7 +129,12 @@ async function handler(request, deps = {}, obs = null) {
     if (action === "get") {
       const session = await dl(container, name);
       if (!session) return NOT_FOUND;
-      if (!isParticipant(session, studentId)) return FORBIDDEN;    // never confirm room contents to a non-member
+      const me = findParticipant(session, studentId);
+      if (!me) return FORBIDDEN;                                    // never confirm room contents to a non-member
+      // Gameplay (active / finished) is for the PLAYING set only: a preselected-but-never-joined student must not
+      // receive the live current question or any round content. Lobby / closed keep the Phase 4A behavior (a
+      // preselected student may still see the lobby and its closed state).
+      if ((session.status === "active" || session.status === "finished") && !me.joinedAt) return NOT_JOINED;
       return { status: 200, jsonBody: { ok: true, session: studentView(session, studentId) } };
     }
 
@@ -137,8 +167,10 @@ async function handler(request, deps = {}, obs = null) {
       // body are ignored entirely.
       const roundVersion = body && body.roundVersion;
       if (!Number.isInteger(roundVersion)) return { status: 400, jsonBody: { ok: false, code: "bad-round", error: "طلب غير صالح." } };
-      const response = body && body.response;
-      if (!isAcceptableResponse(response)) return BAD_REQUEST;      // structural bound BEFORE any mutation
+      // Canonicalize BEFORE any mutation: `response` is the ONE accepted object — extra client fields
+      // (score/correct/studentId/questionIndex/…) are stripped, so it is what we BOTH grade and persist.
+      const response = normalizeAcceptableResponse(body && body.response);
+      if (!response) return BAD_REQUEST;
       try {
         const updated = await mutate(container, name, current => {
           if (!current) throw new SessionError("not-found");

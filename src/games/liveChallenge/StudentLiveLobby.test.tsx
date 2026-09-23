@@ -219,3 +219,30 @@ describe("StudentLiveLobby — live round (Phase 4B)", () => {
     expect(screen.queryByRole("button", { name: "إرسال الإجابة" })).toBeNull();
   });
 });
+
+describe("StudentLiveLobby — recovery lifecycle (review fix)", () => {
+  it("normal navigation away KEEPS the reconnect hint (server revalidates on reopen)", async () => {
+    renderLobby(fakeClient());
+    fireEvent.change(screen.getByLabelText("رمز الغرفة"), { target: { value: "K7MX4P" } });
+    fireEvent.click(screen.getByRole("button", { name: "انضمام" }));
+    await screen.findByText("تم انضمامك — بانتظار بدء المعلم.");
+    expect(sessionStorage.getItem("eb-lc-student-room")).toBe("K7MX4P");
+    fireEvent.click(screen.getByRole("button", { name: "العودة إلى الألعاب" }));   // رجوع
+    expect(sessionStorage.getItem("eb-lc-student-room")).toBe("K7MX4P");           // hint retained
+  });
+  it("reconnect: a remembered room the server reports CLOSED clears the hint and stays on the join screen", async () => {
+    try { sessionStorage.setItem("eb-lc-student-room", "K7MX4P"); } catch { /* ignore */ }
+    const get = vi.fn(async () => ok(slobby({ status: "closed", closedAt: "z" })));
+    renderLobby(fakeClient({ get }));
+    await waitFor(() => expect(get).toHaveBeenCalledWith("K7MX4P"));
+    expect(screen.getByRole("button", { name: "انضمام" })).toBeTruthy();           // never restored a closed room
+    expect(sessionStorage.getItem("eb-lc-student-room")).toBeNull();               // hint cleared
+  });
+  it("reconnect: a remembered FINISHED room is still resumable in Phase 4B", async () => {
+    try { sessionStorage.setItem("eb-lc-student-room", "K7MX4P"); } catch { /* ignore */ }
+    const get = vi.fn(async () => ok(slobby({ status: "finished", closedAt: null })));
+    renderLobby(fakeClient({ get }));
+    expect(await screen.findByText("انتهى التحدّي — شكرًا لمشاركتك.")).toBeTruthy();
+    expect(sessionStorage.getItem("eb-lc-student-room")).toBe("K7MX4P");           // finished stays resumable
+  });
+});

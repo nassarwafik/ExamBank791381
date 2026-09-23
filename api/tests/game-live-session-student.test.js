@@ -258,3 +258,74 @@ describe("Phase 4B — student answer: one-per-round, stale, membership, validat
     expect(r.jsonBody.code).toBe("not-active");
   });
 });
+
+// ── Review fix 1 — ACTIVE GET requires an actually-joined student ────────────────────────────────────────────────
+describe("Phase 4B review fix — active GET requires a joined player", () => {
+  function seedActivePartial() {   // only s1 joined before start; s2 is preselected-but-never-joined
+    const doc = newSessionDoc({ joinCode: "R2R2R2", teacherId: "t1", challengeId: "c9", challengeTitle: "جولة", classId: "cl1", participants: [{ studentId: "s1", displayName: "أحمد" }, { studentId: "s2", displayName: "حلا" }], challengeSnapshot: ROUND_SNAPSHOT, now: "t" });
+    applyJoin(doc, "s1", "j"); applyStart(doc, "2026-02-01T00:00:00.000Z");
+    return createMemoryContainer({ [sessionDocName(doc.joinCode)]: doc });
+  }
+  it("a joined student gets the sanitized current question", async () => {
+    const r = await call(seedActivePartial(), "s1", "get", { joinCode: "R2R2R2" });
+    expect(r.status).toBe(200);
+    expect(r.jsonBody.session.round.question.examQuestionId).toBe("q1");
+  });
+  it("a preselected-but-never-joined student → 403 not-joined, and receives NO current question / snapshot / key", async () => {
+    const r = await call(seedActivePartial(), "s2", "get", { joinCode: "R2R2R2" });
+    expect(r.status).toBe(403);
+    expect(r.jsonBody.code).toBe("not-joined");
+    const s = JSON.stringify(r.jsonBody);
+    for (const banned of ["round", "question", "challengeSnapshot", "correctOptionIndex", "solution", "\"answer\""]) expect(s, banned).not.toContain(banned);
+  });
+  it("defense in depth: studentView for a never-joined participant during an active round carries NO round content", async () => {
+    // Directly exercise the view (the API also rejects this path as not-joined).
+    const { studentView } = await import("../src/lib/live-challenge-session-store.js");
+    const doc = newSessionDoc({ joinCode: "R2R2R2", teacherId: "t1", challengeId: "c9", challengeTitle: "جولة", classId: "cl1", participants: [{ studentId: "s1", displayName: "أ" }, { studentId: "s2", displayName: "ب" }], challengeSnapshot: ROUND_SNAPSHOT, now: "t" });
+    applyJoin(doc, "s1", "j"); applyStart(doc, "t");
+    const v = studentView(doc, "s2");
+    expect(v.status).toBe("active");
+    expect(v.round).toBeUndefined();
+    expect(v.you.answered).toBe(false);
+    expect(v.you.submission).toBeUndefined();
+    expect(JSON.stringify(v)).not.toContain("q1");
+  });
+});
+
+// ── Review fix 2 — student response is canonicalized before grading AND storage ──────────────────────────────────
+describe("Phase 4B review fix — response canonicalization strips untrusted fields", () => {
+  const storedResponse = ctx => ctx.getJson(sessionDocName("R2R2R2")).participants.find(p => p.studentId === "s1").answers[0].response;
+  it("choice: score/correct/studentId/questionIndex are stripped; grade stays server-derived", async () => {
+    const ctx = seedActive();
+    await ans(ctx, "s1", { roundVersion: 1, response: { kind: "choice", index: 0, score: 999, correct: true, studentId: "s2", questionIndex: 77 } });
+    expect(storedResponse(ctx)).toEqual({ kind: "choice", index: 0 });
+    const rec = ctx.getJson(sessionDocName("R2R2R2")).participants.find(p => p.studentId === "s1").answers[0];
+    expect(rec.grade).toMatchObject({ score: 1, maxMarks: 1, correct: true });   // central grader (index 0 is correct)
+    const s = JSON.stringify(rec.response);
+    for (const banned of ["999", "studentId", "questionIndex", "\"correct\""]) expect(s, banned).not.toContain(banned);
+  });
+  it("text: only kind + value persisted", async () => {
+    const ctx = seedActive();
+    await ans(ctx, "s1", { roundVersion: 1, response: { kind: "text", value: "إجابتي", score: 5, note: "x" } });
+    expect(storedResponse(ctx)).toEqual({ kind: "text", value: "إجابتي" });
+  });
+  it("fields: only canonical values survive, no arbitrary metadata", async () => {
+    const ctx = seedActive();
+    await ans(ctx, "s1", { roundVersion: 1, response: { kind: "fields", values: { a: "x", b: true, c: ["y"] }, evil: "z" } });
+    expect(storedResponse(ctx)).toEqual({ kind: "fields", values: { a: "x", b: true, c: ["y"] } });
+  });
+  it("compound: nested part extras are stripped recursively", async () => {
+    const ctx = seedActive();
+    await ans(ctx, "s1", { roundVersion: 1, response: { kind: "compound", parts: { p1: { kind: "choice", index: 1, score: 9, correct: true } }, extra: 1 } });
+    expect(storedResponse(ctx)).toEqual({ kind: "compound", parts: { p1: { kind: "choice", index: 1 } } });
+  });
+  it("no grading drift: the canonical response grades identically to the raw submission", async () => {
+    const { gradeQuestion } = await import("../src/lib/assignment-grading.js");
+    const ctx = seedActive();
+    await ans(ctx, "s1", { roundVersion: 1, response: { kind: "choice", index: 0, score: 999 } });
+    const rec = ctx.getJson(sessionDocName("R2R2R2")).participants.find(p => p.studentId === "s1").answers[0];
+    const q = ROUND_SNAPSHOT.questions[0].question;
+    const expected = gradeQuestion(q, { kind: "choice", index: 0 });
+    expect(rec.grade).toMatchObject({ score: expected.score, correct: expected.correct, maxMarks: expected.maxMarks });
+  });
+});
