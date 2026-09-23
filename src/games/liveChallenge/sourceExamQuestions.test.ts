@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { questionsFromSourceExam, questionPreviewText, parseExamJsonForChallenge, JSON_IMPORT_MESSAGES } from "./sourceExamQuestions";
-import { MAX_IMPORT_BYTES } from "../../structuredExamImport";
+import { MAX_IMPORT_BYTES, parseStructuredExamJson } from "../../structuredExamImport";
 import type { BuilderQuestion } from "../../examTypes";
 
 // The ONE authoritative exam → importable-questions boundary for the Live Challenge (saved exams + local JSON).
@@ -117,17 +117,104 @@ describe("parseExamJsonForChallenge — the JSON import boundary (reuses parseSt
       expect(parseExamJsonForChallenge(JSON.stringify(v), "x.json")).toEqual({ ok: false, error: JSON_IMPORT_MESSAGES.noExam });
     }
   });
-  it("unsupported question type: structured → the existing parser's concise reason; legacy (all unsupported) → «unrecognized»", () => {
+  it("unsupported question type → the existing parser's concise reason, for structured AND legacy alike", () => {
     const bad = { title: "خطأ", sections: [{ questions: [{ examQuestionId: "q", presentationType: "hologram", text: "?", marks: 1 }] }] };
-    const r = parseExamJsonForChallenge(JSON.stringify(bad), "bad.json");
-    expect(r.ok).toBe(false);
-    if (!r.ok) { expect(r.error).toContain("تعذّر استيراد الامتحان من الملف"); expect(r.error).toContain("hologram"); }
-    expect(parseExamJsonForChallenge(JSON.stringify({ questions: [{ presentationType: "hologram" }] }), "b.json")).toEqual({ ok: false, error: JSON_IMPORT_MESSAGES.unrecognized });
+    for (const json of [JSON.stringify(bad), JSON.stringify({ questions: [{ presentationType: "hologram" }] })]) {
+      const r = parseExamJsonForChallenge(json, "bad.json");
+      expect(r.ok).toBe(false);
+      if (!r.ok) { expect(r.error).toContain("تعذّر استيراد الامتحان من الملف"); expect(r.error).toContain("hologram"); }
+    }
   });
   it("is data-only: HTML/script/URL strings stay inert text in the question", () => {
     const evil = { title: "<script>alert(1)</script>", questions: [mcq("x", "<img src=x onerror=alert(1)> https://evil.example")] };
     const r = parseExamJsonForChallenge(JSON.stringify(evil), "e.json");
     expect(r.ok).toBe(true);
     if (r.ok) { expect(r.questions[0].text).toBe("<img src=x onerror=alert(1)> https://evil.example"); expect(r.title).toBe("<script>alert(1)</script>"); }
+  });
+});
+
+// Review fix: a LEGACY local file must cross the SAME structured-import security boundary as a structured one — the
+// existing parseStructuredExamJson (and its image sanitizer) — never a second sanitizer in the Live Challenge.
+describe("parseExamJsonForChallenge — legacy local JSON passes the existing parser/security boundary", () => {
+  const PNG = "data:image/png;base64,iVBORw0KGgo=";
+  const EXTERNAL = "https://example.invalid/image.png";
+  const SVG = "data:image/svg+xml;base64,PHN2ZyBvbmxvYWQ9YWxlcnQoMSk+";
+  const HTML = "data:text/html,<script>alert(1)</script>";
+  const assets = () => [{ dataUrl: EXTERNAL }, { dataUrl: SVG }, { dataUrl: HTML }, { dataUrl: PNG }];
+  const imgQuestion = () => ({
+    examQuestionId: "img", presentationType: "multipleChoice", text: "صورة", marks: 1, options: [{ text: "أ" }, { text: "ب" }],
+    answer: { correctOptionIndex: 0 }, image: { exists: true, visible: true, assets: assets() }, images: assets(),
+  });
+  const imgCompound = () => ({
+    examQuestionId: "cmp", presentationType: "compound", text: "مركّب", marks: 2,
+    parts: [{ id: "p1", type: "shortAnswer", text: "جزء", marks: 2, image: { exists: true, visible: true, assets: assets() } }],
+  });
+  const renderable = (v: unknown) => JSON.stringify(v);
+  const importOk = (json: string) => {
+    const r = parseExamJsonForChallenge(json, "exam.json");
+    expect(r.ok).toBe(true);
+    return r.ok ? r.questions : [];
+  };
+
+  it("legacy: external https, SVG and data:text/html image sources are stripped; the safe raster data:image/png stays", () => {
+    const qs = importOk(JSON.stringify({ title: "قديم", questions: [imgQuestion(), imgCompound()] }));
+    const out = renderable(qs);
+    expect(out).not.toContain("example.invalid");                     // external URL is not renderable (not kept at all)
+    expect(out).not.toContain("svg");
+    expect(out).not.toContain("text/html");
+    const q = qs[0] as unknown as { image: { assets: Record<string, unknown>[] }; images: Record<string, unknown>[] };
+    expect(q.image.assets.map(a => a.dataUrl ?? null)).toEqual([null, null, null, PNG]);   // image.assets[].dataUrl
+    expect(q.images.map(a => a.dataUrl ?? null)).toEqual([null, null, null, PNG]);         // images[].dataUrl
+    const part = (qs[1].parts as unknown as { image: { assets: Record<string, unknown>[] } }[])[0];
+    expect(part.image.assets.map(a => a.dataUrl ?? null)).toEqual([null, null, null, PNG]); // compound parts too
+  });
+
+  it("src / url fields are stripped the same way (not just dataUrl)", () => {
+    const qs = importOk(JSON.stringify({ questions: [{ ...imgQuestion(), image: { exists: true, visible: true, assets: [{ src: EXTERNAL }, { url: SVG }] }, images: [] }] }));
+    expect(renderable(qs)).not.toMatch(/example\.invalid|svg/);
+  });
+
+  it("legacy behaves EXACTLY like the same exam imported as structured JSON (same parser output)", () => {
+    const questions = [imgQuestion(), imgCompound()];
+    const legacy = importOk(JSON.stringify({ title: "ت", questions }));
+    const structured = importOk(JSON.stringify({ title: "ت", sections: [{ id: "s", title: "", gradingPolicy: "all", questions }] }));
+    expect(legacy).toEqual(structured);
+  });
+
+  it("the legacy result IS the existing parser's output for the canonical legacyToStructured conversion", () => {
+    const legacyExam = { title: "ق", questions: [imgQuestion()] };
+    const qs = importOk(JSON.stringify(legacyExam));
+    const direct = parseStructuredExamJson(JSON.stringify({ title: "ق", sections: [{ questions: [imgQuestion()] }] }), "x.json");
+    expect(direct.canOpen).toBe(true);
+    expect((qs[0] as unknown as { images: unknown }).images).toEqual((direct.exam!.sections[0].questions[0] as unknown as { images: unknown }).images);
+  });
+
+  it("preserves legacy semantics through the boundary: aliases, generated ids, points, compound/table/CLI/fields/answers, safe images", () => {
+    const legacy = { examId: "OLD-1", title: "امتحان قديم", questions: [
+      { presentationType: "open", text: "اشرح", points: 3 },                                    // alias + missing id + points
+      { type: "mcq", text: "اختر", marks: 2, options: [{ text: "x" }, { text: "y" }], answer: { correctOptionIndex: 1 } },
+      { examQuestionId: "EQ-3", presentationType: "fillBlank", text: "أكمل ___", marks: 1, fields: [{ id: "f1", correct: "كلمة" }] },
+      RICH,
+    ] };
+    const r = parseExamJsonForChallenge(JSON.stringify(legacy), "old.json");
+    expect(r).toMatchObject({ ok: true, title: "امتحان قديم", sourceId: "json:OLD-1", shape: "legacy", skipped: 0 });
+    if (!r.ok) return;
+    const [open, choice, fill, rich] = r.questions;
+    expect(open.presentationType).toBe("shortAnswer");
+    expect(open.examQuestionId).toMatch(/\S/);
+    expect(open.marks).toBe(3);
+    expect(choice.presentationType).toBe("multipleChoice");
+    expect(choice.marks).toBe(2);
+    expect(choice.answer).toEqual({ correctOptionIndex: 1 });
+    expect(choice.options?.map(o => o.text)).toEqual(["x", "y"]);
+    expect(fill.examQuestionId).toBe("EQ-3");
+    expect(fill.fields).toEqual([expect.objectContaining({ id: "f1", correct: "كلمة" })]);
+    expect(rich).toMatchObject({ examQuestionId: "rich", presentationType: "compound", marks: 6, displayNumber: "٣" });
+    expect((rich.image as unknown as { assets: { dataUrl: string }[] }).assets[0].dataUrl).toBe("data:image/png;base64,AAAA");
+    const [cli, table] = rich.parts as unknown as Record<string, unknown>[];
+    expect(cli).toMatchObject({ id: "p1", type: "cliFill", cli: "Router(config)# ___" });
+    expect(cli.fields).toEqual([expect.objectContaining({ id: "f1", correct: "hostname" })]);
+    expect(table).toMatchObject({ id: "p2", type: "tableFill", tableHeaders: ["أ", "ب"], tableRows: [["1", ""]] });
+    expect(table.fields).toEqual([expect.objectContaining({ id: "c", row: 0, column: 1, correct: "2" })]);
   });
 });

@@ -3,7 +3,7 @@
 // import dialog (saved exam | local JSON file), the legacy saved-exam regression through the REAL client, and the JSON
 // import flow (local parse only, selection before import, immutable snapshots, source metadata kind "exam").
 import { describe, it, expect, afterEach, vi } from "vitest";
-import { render, cleanup, screen, fireEvent, waitFor, within } from "@testing-library/react";
+import { render, cleanup, screen, fireEvent, waitFor, within, act } from "@testing-library/react";
 import { readFileSync } from "fs";
 import path from "path";
 import LiveChallengeGenerator from "./LiveChallengeGenerator";
@@ -247,6 +247,157 @@ describe("JSON import — local parse, selection first, immutable snapshots, sou
     chooseFile(big);
     expect((await within(dialog()).findByRole("alert")).textContent).toContain("حجم الملف أكبر من الحد المسموح");
     expect(textSpy).not.toHaveBeenCalled();
+  });
+});
+
+// Review fix: an older in-flight load (saved exam or JSON file) must never overwrite a newer source/request, and its
+// `finally` must never clear a newer request's loading state. Deterministic: every async step is a deferred promise.
+describe("import dialog — stale async loads are ignored (request generation)", () => {
+  type Deferred<T> = { promise: Promise<T>; resolve: (v: T) => void; reject: (e: unknown) => void };
+  const deferred = <T,>(): Deferred<T> => {
+    let resolve!: (v: T) => void, reject!: (e: unknown) => void;
+    const promise = new Promise<T>((res, rej) => { resolve = res; reject = rej; });
+    return { promise, resolve, reject };
+  };
+  const EXAMS = [
+    { blobName: "bA", examId: "EA", title: "امتحان أ", questionCount: 1 },
+    { blobName: "bB", examId: "EB", title: "امتحان ب", questionCount: 1 },
+  ];
+  const srcA = { title: "امتحان أ", questions: [mcq("qa", "سؤال من أ")] as never[] };
+  const srcB = { title: "امتحان ب", questions: [mcq("qb", "سؤال من ب")] as never[] };
+  /** A client whose loadSourceQuestions returns the deferred registered for each blob. */
+  const racingClient = () => {
+    const pending: Record<string, Deferred<{ title: string; questions: never[] }>> = {};
+    const client = fakeClient({
+      listSourceExams: vi.fn(async () => EXAMS),
+      loadSourceQuestions: vi.fn((blob: string) => { pending[blob] = deferred(); return pending[blob].promise; }),
+    });
+    return { client, pending };
+  };
+  /** A local file whose text() resolves only when the test says so. */
+  const slowFile = (name: string) => {
+    const d = deferred<string>();
+    const file = new File(["{}"], name, { type: "application/json" });
+    Object.defineProperty(file, "text", { value: () => d.promise });
+    return { file, d };
+  };
+  const openSaved = async (client: LiveChallengeClient) => {
+    await openEditor(client);
+    fireEvent.click(screen.getByRole("button", { name: "استيراد من امتحان" }));
+    await within(dialog()).findByRole("button", { name: /امتحان أ/ });
+  };
+  const loadingShown = () => within(dialog()).queryByText("جارٍ التحميل…") !== null;
+  const pressed = (name: string) => within(dialog()).getByRole("button", { name }).getAttribute("aria-pressed");
+
+  it("A: saved exam A is loading → switch to JSON → A resolves: JSON source stays, A's questions never appear", async () => {
+    const { client, pending } = racingClient();
+    await openSaved(client);
+    fireEvent.click(within(dialog()).getByRole("button", { name: /امتحان أ/ }));
+    expect(loadingShown()).toBe(true);
+    fireEvent.click(within(dialog()).getByRole("button", { name: "ملف JSON" }));
+    expect(loadingShown()).toBe(false);                                   // switching is immediate, never blocked
+    await act(async () => { pending.bA.resolve(srcA); });
+    expect(pressed("ملف JSON")).toBe("true");
+    expect(within(dialog()).getByRole("heading", { name: "اختر ملف JSON من جهازك" })).toBeTruthy();
+    expect(within(dialog()).queryByText("سؤال من أ")).toBeNull();
+    expect(within(dialog()).queryByRole("checkbox")).toBeNull();
+    expect(loadingShown()).toBe(false);
+  });
+
+  it("A′: a stale saved-exam FAILURE after switching to JSON shows no error", async () => {
+    const { client, pending } = racingClient();
+    await openSaved(client);
+    fireEvent.click(within(dialog()).getByRole("button", { name: /امتحان أ/ }));
+    fireEvent.click(within(dialog()).getByRole("button", { name: "ملف JSON" }));
+    await act(async () => { pending.bA.reject(new Error("boom")); });
+    expect(within(dialog()).queryByRole("alert")).toBeNull();
+    expect(pressed("ملف JSON")).toBe("true");
+  });
+
+  it("B: start A, start B, resolve B, then resolve A → B remains", async () => {
+    const { client, pending } = racingClient();
+    await openSaved(client);
+    fireEvent.click(within(dialog()).getByRole("button", { name: /امتحان أ/ }));
+    fireEvent.click(within(dialog()).getByRole("button", { name: /امتحان ب/ }));   // a newer load is allowed while A is pending
+    await act(async () => { pending.bB.resolve(srcB); });
+    expect(await within(dialog()).findByRole("heading", { name: "امتحان ب" })).toBeTruthy();
+    await act(async () => { pending.bA.resolve(srcA); });
+    expect(within(dialog()).getByRole("heading", { name: "امتحان ب" })).toBeTruthy();
+    expect(within(dialog()).getByRole("checkbox", { name: /سؤال من ب/ })).toBeTruthy();
+    expect(within(dialog()).queryByText("سؤال من أ")).toBeNull();
+    // what gets added is B's question, tagged with B's source
+    fireEvent.click(within(dialog()).getByRole("button", { name: "تحديد الكل" }));
+    fireEvent.click(within(dialog()).getByRole("button", { name: "أضف المحدّد (1)" }));
+    await waitFor(() => expect(document.querySelector(".eb-lcq-source")?.textContent).toBe("من امتحان · امتحان ب"));
+  });
+
+  it("C: a stale request's finally (resolve OR reject) never clears the newer request's loading state", async () => {
+    const { client, pending } = racingClient();
+    await openSaved(client);
+    fireEvent.click(within(dialog()).getByRole("button", { name: /امتحان أ/ }));
+    fireEvent.click(within(dialog()).getByRole("button", { name: /امتحان ب/ }));
+    await act(async () => { pending.bA.reject(new Error("late failure")); });    // A finishes first (its finally runs)
+    expect(loadingShown()).toBe(true);                                           // B is still loading
+    expect(within(dialog()).queryByRole("alert")).toBeNull();                    // …and A's error is not shown
+    await act(async () => { pending.bB.resolve(srcB); });
+    expect(loadingShown()).toBe(false);
+    expect(within(dialog()).getByRole("heading", { name: "امتحان ب" })).toBeTruthy();
+  });
+
+  it("C′: same for a resolved stale request (A resolves while B is pending)", async () => {
+    const { client, pending } = racingClient();
+    await openSaved(client);
+    fireEvent.click(within(dialog()).getByRole("button", { name: /امتحان أ/ }));
+    fireEvent.click(within(dialog()).getByRole("button", { name: /امتحان ب/ }));
+    await act(async () => { pending.bA.resolve(srcA); });
+    expect(loadingShown()).toBe(true);
+    expect(within(dialog()).queryByText("سؤال من أ")).toBeNull();
+    await act(async () => { pending.bB.resolve(srcB); });
+    expect(within(dialog()).getByRole("heading", { name: "امتحان ب" })).toBeTruthy();
+  });
+
+  it("D: JSON file is being read → switch to saved → the file resolves: saved source stays, the file's questions never appear", async () => {
+    const client = fakeClient({ listSourceExams: vi.fn(async () => EXAMS) });
+    await openEditor(client);
+    fireEvent.click(screen.getByRole("button", { name: "استيراد من JSON" }));
+    const { file, d } = slowFile("late.json");
+    chooseFile(file);
+    expect(loadingShown()).toBe(true);
+    fireEvent.click(within(dialog()).getByRole("button", { name: "امتحان محفوظ" }));
+    await act(async () => { d.resolve(JSON.stringify({ title: "ملف متأخر", questions: [mcq("j", "سؤال من الملف")] })); });
+    expect(pressed("امتحان محفوظ")).toBe("true");
+    expect(within(dialog()).getByRole("heading", { name: "اختر امتحانًا محفوظًا" })).toBeTruthy();
+    expect(within(dialog()).queryByText("ملف متأخر")).toBeNull();
+    expect(within(dialog()).queryByText("سؤال من الملف")).toBeNull();
+    expect(within(dialog()).queryByRole("alert")).toBeNull();
+    expect(loadingShown()).toBe(false);
+  });
+
+  it("JSON → JSON: a newer file wins even when the older file finishes last (and a stale bad file shows no error)", async () => {
+    await openEditor(fakeClient());
+    fireEvent.click(screen.getByRole("button", { name: "استيراد من JSON" }));
+    const first = slowFile("first.json");
+    const second = slowFile("second.json");
+    chooseFile(first.file);
+    chooseFile(second.file);
+    await act(async () => { second.d.resolve(JSON.stringify({ title: "الملف الثاني", questions: [mcq("s", "سؤال الثاني")] })); });
+    expect(await within(dialog()).findByRole("heading", { name: "الملف الثاني" })).toBeTruthy();
+    await act(async () => { first.d.resolve("{ not json"); });
+    expect(within(dialog()).getByRole("heading", { name: "الملف الثاني" })).toBeTruthy();
+    expect(within(dialog()).queryByRole("alert")).toBeNull();
+  });
+
+  it("closing the dialog while a load is pending: the late result is ignored (no state update after unmount)", async () => {
+    const errors = vi.spyOn(console, "error").mockImplementation(() => {});
+    const { client, pending } = racingClient();
+    await openSaved(client);
+    fireEvent.click(within(dialog()).getByRole("button", { name: /امتحان أ/ }));
+    fireEvent.keyDown(document, { key: "Escape" });
+    await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+    await act(async () => { pending.bA.resolve(srcA); });
+    expect(screen.queryByRole("dialog")).toBeNull();
+    expect(document.querySelectorAll(".eb-lcq").length).toBe(0);
+    expect(errors).not.toHaveBeenCalled();
   });
 });
 

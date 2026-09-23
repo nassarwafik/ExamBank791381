@@ -60,13 +60,21 @@ export default function ChallengeImportPicker({ client, initialSource = "saved",
     stepHeadingRef.current?.focus();
   }, [stepKey]);
 
-  const reset = () => { setLoaded(null); setChecked(new Set()); setError(""); setLoading(false); };
+  // Request generation: every reset (source switch, back, a newer exam/file load) and unmount advances it, so an
+  // older in-flight load finds itself stale and does nothing — it can never overwrite a newer source, request or
+  // loading state. Only the current request calls setLoaded / setError / the final setLoading(false).
+  const requestRef = useRef(0);
+  useEffect(() => () => { requestRef.current++; }, []);
+
+  const reset = () => { const v = ++requestRef.current; setLoaded(null); setChecked(new Set()); setError(""); setLoading(false); return v; };
   const switchSource = (next: ImportSource) => { if (next !== source) { reset(); setSource(next); } };
 
   const openExam = async (exam: SourceExamListItem) => {
-    reset(); setLoading(true);
+    const req = reset(); setLoading(true);
+    const current = () => req === requestRef.current;
     try {
       const src = await client.loadSourceQuestions(exam.blobName);
+      if (!current()) return;
       const questions = Array.isArray(src.questions) ? src.questions : [];
       const title = src.title || exam.title || exam.examId;
       setLoaded({
@@ -75,24 +83,27 @@ export default function ChallengeImportPicker({ client, initialSource = "saved",
         skipped: src.skipped ?? 0,
         source: { kind: "exam", sourceId: exam.examId, sourceTitle: title },
       });
-    } catch { setError("تعذّر تحميل أسئلة الامتحان."); }
-    finally { setLoading(false); }
+    } catch { if (current()) setError("تعذّر تحميل أسئلة الامتحان."); }
+    finally { if (current()) setLoading(false); }
   };
 
   const readFile = async (file: File | undefined) => {
-    reset();
+    const req = reset();
+    const current = () => req === requestRef.current;
     if (!file) return;
     if (file.size > MAX_IMPORT_BYTES) { setError(JSON_IMPORT_MESSAGES.tooLarge); return; }
     setLoading(true);
     try {
-      const r = parseExamJsonForChallenge(await file.text(), file.name);   // local, data-only parse — nothing is uploaded
+      const text = await file.text();
+      if (!current()) return;
+      const r = parseExamJsonForChallenge(text, file.name);   // local, data-only parse — nothing is uploaded
       if (!r.ok) { setError(r.error); return; }
       setLoaded({
         title: r.title, questions: r.questions, status: "ok", skipped: r.skipped,
         source: { kind: "exam", sourceId: r.sourceId, sourceTitle: r.title + " (ملف JSON)" },
       });
-    } catch { setError(JSON_IMPORT_MESSAGES.malformed); }
-    finally { setLoading(false); }
+    } catch { if (current()) setError(JSON_IMPORT_MESSAGES.malformed); }
+    finally { if (current()) setLoading(false); }
   };
 
   const total = loaded?.questions.length ?? 0;
@@ -145,7 +156,7 @@ export default function ChallengeImportPicker({ client, initialSource = "saved",
             <ul className="eb-lc-exams" aria-label="الامتحانات المحفوظة">
               {exams.map(ex => (
                 <li key={ex.blobName}>
-                  <button type="button" className="eb-lc-exam-card" onClick={() => openExam(ex)} disabled={loading}>
+                  <button type="button" className="eb-lc-exam-card" onClick={() => openExam(ex)}>
                     <span className="eb-lc-exam-title">{ex.title || ex.examId}</span>
                     <span className="eb-lc-exam-meta">
                       {typeof ex.questionCount === "number" && <span className="eb-lc-exam-count">{ex.questionCount} سؤال</span>}
@@ -171,7 +182,6 @@ export default function ChallengeImportPicker({ client, initialSource = "saved",
               type="file"
               accept=".json,application/json"
               aria-describedby={fileHintId}
-              disabled={loading}
               onChange={e => { const f = e.currentTarget.files?.[0]; e.currentTarget.value = ""; void readFile(f); }}
             />
           </label>

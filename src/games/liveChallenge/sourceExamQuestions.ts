@@ -89,11 +89,26 @@ export type JsonExamImport =
 const byteLength = (text: string) => new TextEncoder().encode(text).length;
 const cap = (s: string, n = 200) => (s.length > n ? s.slice(0, n) : s);
 
+/** Questions from a parseStructuredExamJson result: fatal parse problems → the parser's own concise reason. */
+function fromParsed(parsed: ReturnType<typeof parseStructuredExamJson>, fallbackTitle: string, sourceId: string, shape: SourceExamShape): JsonExamImport {
+  if (!parsed.canOpen || !parsed.exam) {
+    const reason = parsed.parseErrors[0]?.message;
+    return { ok: false, error: reason ? "تعذّر استيراد الامتحان من الملف: " + reason : JSON_IMPORT_MESSAGES.noExam };
+  }
+  const got = questionsFromSourceExam(parsed.exam);
+  if (got.status === "empty") return { ok: false, error: JSON_IMPORT_MESSAGES.noQuestions };
+  if (got.status !== "ok") return { ok: false, error: JSON_IMPORT_MESSAGES.unrecognized };
+  return { ok: true, title: cap(parsed.exam.title || fallbackTitle), sourceId, questions: got.questions, skipped: got.skipped, shape };
+}
+
 /**
  * Parse a local exam .json file (text) into importable canonical questions. Accepts the canonical Structured Exam
- * JSON (parsed by the EXISTING parseStructuredExamJson — aliases, generated ids, unsupported-type errors), a legacy
- * flat exam ({ questions: [...] }), and either wrapped as a saved-exam document ({ exam: {...} }). Data only:
- * nothing is executed, fetched or stored.
+ * JSON, a legacy flat exam ({ questions: [...] }), and either wrapped as a saved-exam document ({ exam: {...} }).
+ * EVERY local file passes the EXISTING structured-import boundary, parseStructuredExamJson — the security authority
+ * for imported exams (type aliases, generated ids, and the image-source sanitizer that strips external / SVG /
+ * non-raster renderable sources). A legacy exam is first converted with the canonical legacyToStructured, then parsed
+ * by that same function; there is no second parser and no second sanitizer here. Data only: nothing is executed,
+ * fetched or stored. (Saved exams from /api/saved-exams are application-stored data and use questionsFromSourceExam.)
  */
 export function parseExamJsonForChallenge(text: string, fileName: string): JsonExamImport {
   if (byteLength(text) > MAX_IMPORT_BYTES) return { ok: false, error: JSON_IMPORT_MESSAGES.tooLarge };
@@ -106,21 +121,11 @@ export function parseExamJsonForChallenge(text: string, fileName: string): JsonE
   const sourceId = cap("json:" + (originalId || fileName));
 
   if (Array.isArray(raw.sections)) {
-    const parsed = parseStructuredExamJson(wrapped ? JSON.stringify(raw) : text, fileName);
-    if (!parsed.canOpen || !parsed.exam) {
-      const reason = parsed.parseErrors[0]?.message;
-      return { ok: false, error: reason ? "تعذّر استيراد الامتحان من الملف: " + reason : JSON_IMPORT_MESSAGES.noExam };
-    }
-    const got = questionsFromSourceExam(parsed.exam);
-    if (got.status === "empty") return { ok: false, error: JSON_IMPORT_MESSAGES.noQuestions };
-    if (got.status !== "ok") return { ok: false, error: JSON_IMPORT_MESSAGES.unrecognized };
-    return { ok: true, title: cap(parsed.exam.title || fileName), sourceId, questions: got.questions, skipped: got.skipped, shape: "structured" };
+    return fromParsed(parseStructuredExamJson(wrapped ? JSON.stringify(raw) : text, fileName), fileName, sourceId, "structured");
   }
   if (Array.isArray(raw.questions)) {
-    const got = questionsFromSourceExam(raw);
-    if (got.status === "empty") return { ok: false, error: JSON_IMPORT_MESSAGES.noQuestions };
-    if (got.status !== "ok") return { ok: false, error: JSON_IMPORT_MESSAGES.unrecognized };
-    return { ok: true, title: cap(typeof raw.title === "string" && raw.title.trim() ? raw.title : fileName), sourceId, questions: got.questions, skipped: got.skipped, shape: "legacy" };
+    // legacy flat → the canonical one-section structured exam → the SAME parser/security boundary as structured JSON
+    return fromParsed(parseStructuredExamJson(JSON.stringify(legacyToStructured(raw)), fileName), fileName, sourceId, "legacy");
   }
   return { ok: false, error: JSON_IMPORT_MESSAGES.noExam };
 }
