@@ -3,6 +3,7 @@ import { IconChevronBack } from "../icons";
 import GameCard from "./GameCard";
 import { listGames } from "./gameCatalog";
 import NumberConversionGame from "./numberConversion/NumberConversionGame";
+import StudentLiveLobby from "./liveChallenge/StudentLiveLobby";
 import type { GameId } from "./domain/types";
 import "./games.css";
 
@@ -18,6 +19,9 @@ export default function StudentGamesPage({ token, onBack }: { token: string; onB
 
   if (openGame === "number-conversion") {
     return <NumberConversionGame token={token} onBack={() => setOpenGame(null)} />;
+  }
+  if (openGame === "live-challenge") {
+    return <StudentLiveLobby token={token} onBack={() => setOpenGame(null)} />;
   }
 
   return (
@@ -35,7 +39,11 @@ export default function StudentGamesPage({ token, onBack }: { token: string; onB
         <ul className="eb-game-cards" aria-label="الألعاب">
           {games.map(g => (
             <li key={g.id}>
-              <GameCard game={g} onStart={g.id === "number-conversion" ? () => setOpenGame("number-conversion") : undefined} />
+              <GameCard
+                game={g}
+                onStart={g.id === "number-conversion" ? () => setOpenGame("number-conversion") : g.id === "live-challenge" ? () => setOpenGame("live-challenge") : undefined}
+                startLabel={g.id === "live-challenge" ? "انضم إلى غرفة" : undefined}
+              />
             </li>
           ))}
         </ul>

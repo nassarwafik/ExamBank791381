@@ -13,13 +13,15 @@ import {
 import { createLiveChallengeClient, type LiveChallengeClient } from "./liveChallengeClient";
 import ChallengeQuestionCard from "./ChallengeQuestionCard";
 import ChallengeImportPicker, { type ImportSource } from "./ChallengeImportPicker";
+import TeacherLiveLobby from "./TeacherLiveLobby";
+import type { TeacherLiveSessionClient } from "./liveSessionClient";
 import "../games.css";
 
 // The Live Challenge Generator — the TEACHER's Kahoot-like challenge AUTHORING screen (Phase 3B). It builds an ordered
 // list of IMMUTABLE canonical-question snapshots and saves a Challenge Definition for a LATER live session. It edits
 // every question through the SHARED QuestionComposer (no second question editor, no second model). It contains NO
 // live/multiplayer controls: no participant selection, join code, lobby, start-game, real-time, medals or Strength.
-type Phase = "home" | "editing";
+type Phase = "home" | "editing" | "live";
 
 /** A one-question structured exam so the SHARED ExamPreview (which strips answer keys via toSafePreviewExam) can render
  *  a challenge question exactly as a student sees it — no second renderer, no answer-key leakage. */
@@ -32,7 +34,7 @@ function singleQuestionPreview(title: string, q: BuilderQuestion): PreviewExamIn
  * shell) the root renders as a <div> and the generator title as an <h2> (one <main>, one <h1> per page). Same classes →
  * identical look. Default (standalone): <main> + <h1>.
  */
-export default function LiveChallengeGenerator({ token, onBack, client: injected, embedded = false }: { token: string; onBack: () => void; client?: LiveChallengeClient; embedded?: boolean }) {
+export default function LiveChallengeGenerator({ token, onBack, client: injected, sessionClient, embedded = false }: { token: string; onBack: () => void; client?: LiveChallengeClient; sessionClient?: TeacherLiveSessionClient; embedded?: boolean }) {
   const Root = embedded ? "div" : "main";
   const Title = embedded ? "h2" : "h1";
   const Sub = embedded ? "h3" : "h2";   // the editor's section headings sit one level below the page title
@@ -46,6 +48,7 @@ export default function LiveChallengeGenerator({ token, onBack, client: injected
   const [error, setError] = useState("");
   const [importSource, setImportSource] = useState<ImportSource | null>(null);   // non-null = the import dialog is open
   const [preview, setPreview] = useState<BuilderQuestion | null>(null);
+  const [liveFor, setLiveFor] = useState<{ challengeId: string; title: string } | null>(null);   // the challenge a live room is being created for
 
   const refreshList = useCallback(async () => {
     setError("");
@@ -78,6 +81,19 @@ export default function LiveChallengeGenerator({ token, onBack, client: injected
     finally { setSaving(false); }
   }, [def]);
 
+  // ── live: create + host a lobby for a saved challenge (Phase 4A — lobby only) ──
+  if (phase === "live" && liveFor) {
+    return (
+      <TeacherLiveLobby
+        token={token}
+        challengeId={liveFor.challengeId}
+        challengeTitle={liveFor.title}
+        client={sessionClient}
+        onBack={() => { setLiveFor(null); setPhase("home"); }}
+      />
+    );
+  }
+
   // ── home: saved challenges + create ──
   if (phase === "home") {
     return (
@@ -98,10 +114,21 @@ export default function LiveChallengeGenerator({ token, onBack, client: injected
             {summaries === null && <p className="eb-muted" role="status">جارٍ التحميل…</p>}
             {summaries !== null && summaries.length === 0 && <p className="eb-muted">لا توجد تحدّيات محفوظة بعد.</p>}
             {summaries?.map(s => (
-              <button type="button" key={s.challengeId} className="eb-lc-saved-item" onClick={() => openExisting(s.challengeId)}>
-                <span className="eb-lc-saved-title">{s.title || "تحدٍّ بدون عنوان"}</span>
-                <span className="eb-lc-saved-count" dir="ltr">{s.questionCount} سؤال</span>
-              </button>
+              <div key={s.challengeId} className="eb-lc-saved-row">
+                <button type="button" className="eb-lc-saved-item" onClick={() => openExisting(s.challengeId)}>
+                  <span className="eb-lc-saved-title">{s.title || "تحدٍّ بدون عنوان"}</span>
+                  <span className="eb-lc-saved-count" dir="ltr">{s.questionCount} سؤال</span>
+                </button>
+                <button
+                  type="button"
+                  className="eb-button is-primary is-small eb-lc-saved-live"
+                  onClick={() => { setLiveFor({ challengeId: s.challengeId, title: s.title || "" }); setPhase("live"); }}
+                  disabled={s.questionCount === 0}
+                  title={s.questionCount === 0 ? "أضف سؤالًا واحدًا على الأقل قبل بدء غرفة." : undefined}
+                >
+                  إنشاء غرفة مباشرة
+                </button>
+              </div>
             ))}
           </div>
         </section>

@@ -32,7 +32,9 @@ const GAMES: readonly GameDefinition[] = Object.freeze([
     descriptionAr: "مسابقة صفّية مباشرة يديرها المعلم ويشارك فيها الطلاب المختارون في الوقت نفسه.",
     topicAr: "تعتمد على امتحاناتك وتدريباتك وبنك الأسئلة",
     highlightsAr: Object.freeze(["يستضيفها المعلم بشكل متزامن", "لوحة نتائج ومنصّة تتويج لأفضل خمسة"]),
-    availability: "coming-soon",
+    // Phase 4A: the multiplayer session LOBBY ships — a student can join a teacher-hosted room. The live quiz round
+    // (questions/answers/scoring/leaderboard) still arrives in later phases.
+    availability: "available",
   }) as GameDefinition,
 ]);
 

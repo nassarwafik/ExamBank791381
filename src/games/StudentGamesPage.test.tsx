@@ -15,12 +15,21 @@ describe("StudentGamesPage — the student's dedicated Games destination", () =>
     expect(screen.getByRole("heading", { name: "التحدّي المباشر" })).toBeTruthy();
   });
 
-  it("Number Conversion is playable («ابدأ»); Live Challenge stays disabled («قريبًا …»)", () => {
+  it("Number Conversion is playable («ابدأ»); Live Challenge is joinable («انضم إلى غرفة») — no coming-soon action", () => {
     render(<StudentGamesPage token="t" onBack={vi.fn()} />);
     const start = screen.getByRole("button", { name: "ابدأ" }) as HTMLButtonElement;
     expect(start.disabled).toBe(false);
-    const soon = screen.getByRole("button", { name: "قريبًا — في المرحلة القادمة" }) as HTMLButtonElement;
-    expect(soon.disabled).toBe(true);
+    const join = screen.getByRole("button", { name: "انضم إلى غرفة" }) as HTMLButtonElement;
+    expect(join.disabled).toBe(false);
+    expect(screen.queryByRole("button", { name: "قريبًا — في المرحلة القادمة" })).toBeNull();
+  });
+
+  it("opening Live Challenge swaps to the join screen (enter room code) and leaves the games list", () => {
+    render(<StudentGamesPage token="t" onBack={vi.fn()} />);
+    fireEvent.click(screen.getByRole("button", { name: "انضم إلى غرفة" }));
+    expect(screen.getByRole("heading", { level: 1, name: "التحدّي المباشر" })).toBeTruthy();
+    expect(screen.getByLabelText("رمز الغرفة")).toBeTruthy();
+    expect(screen.queryByRole("list", { name: "الألعاب" })).toBeNull();
   });
 
   it("opening Number Conversion swaps to the game (nested full-view); the games list is gone", async () => {

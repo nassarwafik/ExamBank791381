@@ -7,7 +7,7 @@ import type { GameId } from "./domain/types";
 // Challenge remains coming-soon.
 
 describe("game catalog — the two approved games", () => {
-  it("registers exactly number-conversion (solo, available) and live-challenge (live, coming-soon), in that order", () => {
+  it("registers exactly number-conversion (solo, available) and live-challenge (live, available), in that order", () => {
     const games = listGames();
     expect(games.map(g => g.id)).toEqual(["number-conversion", "live-challenge"]);
     expect(GAME_IDS).toEqual(["number-conversion", "live-challenge"]);
@@ -15,7 +15,7 @@ describe("game catalog — the two approved games", () => {
     expect(nc.mode).toBe("solo");
     expect(nc.availability).toBe("available");    // Phase 2: the engine ships
     expect(live.mode).toBe("live");
-    expect(live.availability).toBe("coming-soon"); // Live Challenge stays coming-soon
+    expect(live.availability).toBe("available");  // Phase 4A: the multiplayer LOBBY ships (join a teacher-hosted room)
   });
 
   it("carries the owner-approved Arabic names, modes and topic lines", () => {
