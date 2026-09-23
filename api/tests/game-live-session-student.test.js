@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { handler } from "../src/functions/game-live-session-student.js";
-import { newSessionDoc, sessionDocName, applyClose } from "../src/lib/live-challenge-session-store.js";
+import { newSessionDoc, sessionDocName, applyClose, applyJoin, applyStart, applyNext } from "../src/lib/live-challenge-session-store.js";
 import { createMemoryContainer } from "./fixtures/memory-container.js";
 
 // Phase 4A — STUDENT live-session API through the REAL handler + REAL CAS. Proves active-session auth, teacher-defined
@@ -11,7 +11,8 @@ const SNAPSHOT = {
   schemaVersion: 1, challengeId: "c1", title: "شبكات", courseId: "791381",
   questions: [{ source: { kind: "manual" }, question: { examQuestionId: "q1", presentationType: "multipleChoice", prompt: "عاصمة؟", options: ["أ", "ب"], correctOptionIndex: 1, answer: "ب", solution: "الحل ب" } }],
 };
-const ANSWER_KEY_STRINGS = ["challengeSnapshot", "questions", "answer", "correctOptionIndex", "solution", "presentationType", "عاصمة", "الحل ب", "studentId"];
+// `"answer"` is the quoted answer-key; the benign lobby status field `"answered"` is a different token (allowed).
+const ANSWER_KEY_STRINGS = ["challengeSnapshot", "questions", "\"answer\"", "correctOptionIndex", "solution", "presentationType", "عاصمة", "الحل ب", "studentId"];
 
 function seedSession(over = {}, hooks) {
   const doc = newSessionDoc({ joinCode: "K7MX4P", teacherId: "t1", challengeId: "c1", challengeTitle: "شبكات", classId: "cl1", participants: [{ studentId: "s1", displayName: "أحمد" }, { studentId: "s2", displayName: "حلا" }], challengeSnapshot: SNAPSHOT, now: "2026-01-01T00:00:00.000Z", ...over });
@@ -37,7 +38,7 @@ describe("student join — auth & membership", () => {
     const ctx = seedSession();
     const r = await call(ctx, "s1", "join");
     expect(r.status).toBe(200);
-    expect(r.jsonBody.session.you).toEqual({ joined: true, ready: false });
+    expect(r.jsonBody.session.you).toEqual({ joined: true, ready: false, answered: false });
     const firstJoinedAt = ctx.getJson(sessionDocName("K7MX4P")).participants.find(p => p.studentId === "s1").joinedAt;
     await call(ctx, "s1", "join");
     expect(ctx.getJson(sessionDocName("K7MX4P")).participants.find(p => p.studentId === "s1").joinedAt).toBe(firstJoinedAt);
@@ -72,7 +73,7 @@ describe("student ready", () => {
   it("a student sets/clears only their OWN ready flag; ready=false is allowed while lobby", async () => {
     const ctx = seedSession();
     const r = await call(ctx, "s1", "ready", { joinCode: "K7MX4P", ready: true });
-    expect(r.jsonBody.session.you).toEqual({ joined: true, ready: true });
+    expect(r.jsonBody.session.you).toEqual({ joined: true, ready: true, answered: false });
     const parts = () => ctx.getJson(sessionDocName("K7MX4P")).participants;
     expect(parts().find(p => p.studentId === "s2").readyAt).toBeNull();        // s2 untouched
     await call(ctx, "s1", "ready", { joinCode: "K7MX4P", ready: false });
@@ -84,10 +85,10 @@ describe("student ready", () => {
     // ready:true and ready:false are the only accepted payloads; "false" / 1 / {} / null / missing → 400 with NO mutation.
     const okTrue = await call(seedSession(), "s1", "ready", { joinCode: "K7MX4P", ready: true });
     expect(okTrue.status).toBe(200);
-    expect(okTrue.jsonBody.session.you).toEqual({ joined: true, ready: true });
+    expect(okTrue.jsonBody.session.you).toEqual({ joined: true, ready: true, answered: false });
     const okFalse = await call(seedSession(), "s1", "ready", { joinCode: "K7MX4P", ready: false });
     expect(okFalse.status).toBe(200);
-    expect(okFalse.jsonBody.session.you).toEqual({ joined: true, ready: false });
+    expect(okFalse.jsonBody.session.you).toEqual({ joined: true, ready: false, answered: false });
     for (const bad of ["false", 1, 0, {}, null, undefined]) {
       const ctx = seedSession();
       const r = await call(ctx, "s1", "ready", { joinCode: "K7MX4P", ready: bad });
@@ -137,5 +138,123 @@ describe("student get — safe view & closed state", () => {
     noLeak((await call(ctx, "s1", "join")).jsonBody);
     noLeak((await call(ctx, "s2", "ready", { joinCode: "K7MX4P", ready: true })).jsonBody);
     noLeak((await call(ctx, "s1", "get")).jsonBody);
+  });
+});
+
+// ── Phase 4B — student answer endpoint (grading authority, one-per-round, stale, reconnect) ─────────────────────
+const ROUND_SNAPSHOT = {
+  schemaVersion: 1, challengeId: "c9", title: "جولة", courseId: "791381",
+  questions: [
+    { question: { examQuestionId: "q1", presentationType: "multipleChoice", text: "عاصمة؟", options: [{ text: "عمّان" }, { text: "إربد" }], correctOptionIndex: 0, answer: { correctOptionIndex: 0 }, marks: 1, solution: "عمّان" } },
+    { question: { examQuestionId: "q2", presentationType: "trueFalse", text: "١+١=٢", marks: 1, answer: { correct: true } } },
+  ],
+};
+/** Seed a session already ACTIVE on round 1 with s1 & s2 joined. */
+function seedActive(over = {}) {
+  const doc = newSessionDoc({ joinCode: "R2R2R2", teacherId: "t1", challengeId: "c9", challengeTitle: "جولة", classId: "cl1", participants: [{ studentId: "s1", displayName: "أحمد" }, { studentId: "s2", displayName: "حلا" }], challengeSnapshot: ROUND_SNAPSHOT, now: "2026-01-01T00:00:00.000Z", ...over });
+  applyJoin(doc, "s1", "j"); applyJoin(doc, "s2", "j"); applyStart(doc, "2026-02-01T00:00:00.000Z");
+  return createMemoryContainer({ [sessionDocName(doc.joinCode)]: doc });
+}
+const ans = (ctx, sub, body) => handler(req("answer", { joinCode: "R2R2R2", ...body }), studentDeps(ctx, sub));
+
+describe("Phase 4B — student answer: authority & grading", () => {
+  it("a joined student answers the current round; the SERVER grades via the central grader (no client score)", async () => {
+    const ctx = seedActive();
+    const r = await ans(ctx, "s1", { roundVersion: 1, response: { kind: "choice", index: 0 }, score: 999, correct: true });
+    expect(r.status).toBe(200);
+    expect(r.jsonBody.session.you.answered).toBe(true);
+    const rec = ctx.getJson(sessionDocName("R2R2R2")).participants.find(p => p.studentId === "s1").answers[0];
+    expect(rec.grade).toMatchObject({ score: 1, maxMarks: 1, correct: true, manualReview: false });   // server-derived
+    expect(rec.grade.score).not.toBe(999);                                                             // client score ignored
+    expect(rec.response).toEqual({ kind: "choice", index: 0 });                                        // no client score persisted
+    expect(JSON.stringify(rec.response)).not.toContain("999");
+  });
+  it("studentId in the body is ignored — the answer is recorded under the authenticated student only", async () => {
+    const ctx = seedActive();
+    await ans(ctx, "s1", { roundVersion: 1, response: { kind: "choice", index: 0 }, studentId: "s2" });
+    const parts = ctx.getJson(sessionDocName("R2R2R2")).participants;
+    expect(parts.find(p => p.studentId === "s1").answers).toHaveLength(1);   // authenticated s1
+    expect(parts.find(p => p.studentId === "s2").answers).toHaveLength(0);   // body spoof ignored
+  });
+  it("the active studentView returns ONLY the sanitized current question — no key, no future question", async () => {
+    const ctx = seedActive();
+    const v = (await call(ctx, "s1", "get", { joinCode: "R2R2R2" })).jsonBody.session;
+    expect(v.status).toBe("active");
+    expect(v.round).toMatchObject({ roundVersion: 1, questionNumber: 1, questionCount: 2 });
+    expect(v.round.question.examQuestionId).toBe("q1");
+    const s = JSON.stringify(v);
+    for (const banned of ["challengeSnapshot", "correctOptionIndex", "solution", "\"correct\"", "q2", "١+١=٢", "\"score\""]) expect(s, banned).not.toContain(banned);
+  });
+  it("after answering, get restores the OWN submission (locked) but NEVER the grade", async () => {
+    const ctx = seedActive();
+    await ans(ctx, "s1", { roundVersion: 1, response: { kind: "choice", index: 1 } });
+    const v = (await call(ctx, "s1", "get", { joinCode: "R2R2R2" })).jsonBody.session;
+    expect(v.you.answered).toBe(true);
+    expect(v.you.submission.response).toEqual({ kind: "choice", index: 1 });
+    expect(v.you.grade).toBeUndefined();
+    for (const banned of ["\"score\"", "\"correct\"", "maxMarks", "correctOptionIndex"]) expect(JSON.stringify(v), banned).not.toContain(banned);
+  });
+});
+
+describe("Phase 4B — student answer: one-per-round, stale, membership, validation", () => {
+  it("a duplicate answer for the same round is idempotent — 200, original kept, NO second write", async () => {
+    const ctx = seedActive();
+    await ans(ctx, "s1", { roundVersion: 1, response: { kind: "choice", index: 0 } });
+    const name = sessionDocName("R2R2R2");
+    const before = ctx.store.get(name);
+    const beforeEtag = before.etag, beforeContent = before.content.toString("utf8");
+    const dup = await ans(ctx, "s1", { roundVersion: 1, response: { kind: "choice", index: 1 } });   // different payload
+    expect(dup.status).toBe(200);                                             // idempotent success
+    const after = ctx.store.get(name);
+    expect(after.etag).toBe(beforeEtag);                                      // ZERO write
+    expect(after.content.toString("utf8")).toBe(beforeContent);
+    const rec = ctx.getJson(name).participants.find(p => p.studentId === "s1").answers;
+    expect(rec).toHaveLength(1);                                              // still one record
+    expect(rec[0].response).toEqual({ kind: "choice", index: 0 });           // original NOT overwritten
+  });
+  it("a stale-round answer (previous round after teacher advanced) → 409 stale-round, ZERO mutation", async () => {
+    const ctx = seedActive();
+    const name = sessionDocName("R2R2R2");
+    ctx.setJson(name, applyNext(ctx.getJson(name), 1, "t"));                  // teacher advanced to round 2
+    const before = ctx.store.get(name).content.toString("utf8");
+    const r = await ans(ctx, "s1", { roundVersion: 1, response: { kind: "choice", index: 0 } });   // old round
+    expect(r.status).toBe(409);
+    expect(r.jsonBody.code).toBe("stale-round");
+    expect(ctx.store.get(name).content.toString("utf8")).toBe(before);       // unchanged
+  });
+  it("a future roundVersion → 409 stale-round; a malformed roundVersion → 400; both with no mutation", async () => {
+    const ctx = seedActive();
+    expect((await ans(ctx, "s1", { roundVersion: 5, response: { kind: "choice", index: 0 } })).jsonBody.code).toBe("stale-round");
+    expect((await ans(ctx, "s1", { roundVersion: "1", response: { kind: "choice", index: 0 } })).status).toBe(400);
+    expect((await ans(ctx, "s1", { response: { kind: "choice", index: 0 } })).status).toBe(400);
+    expect(ctx.getJson(sessionDocName("R2R2R2")).participants.find(p => p.studentId === "s1").answers).toHaveLength(0);
+  });
+  it("a non-participant → 403; a preselected-but-never-joined participant → 403 not-joined (no record)", async () => {
+    expect((await ans(seedActive(), "s9", { roundVersion: 1, response: { kind: "choice", index: 0 } })).status).toBe(403);
+    // only s1 joined before start → s2 never joined and cannot answer the running game
+    const doc = newSessionDoc({ joinCode: "R2R2R2", teacherId: "t1", challengeId: "c9", challengeTitle: "جولة", classId: "cl1", participants: [{ studentId: "s1", displayName: "أ" }, { studentId: "s2", displayName: "ب" }], challengeSnapshot: ROUND_SNAPSHOT, now: "t" });
+    applyJoin(doc, "s1", "j"); applyStart(doc, "t");
+    const ctx = createMemoryContainer({ [sessionDocName("R2R2R2")]: doc });
+    const r = await ans(ctx, "s2", { roundVersion: 1, response: { kind: "choice", index: 0 } });
+    expect(r.status).toBe(403);
+    expect(r.jsonBody.code).toBe("not-joined");
+    expect(ctx.getJson(sessionDocName("R2R2R2")).participants.find(p => p.studentId === "s2").answers).toHaveLength(0);
+  });
+  it("a malformed / oversized response → 400 before any mutation", async () => {
+    const ctx = seedActive();
+    const name = sessionDocName("R2R2R2");
+    const before = ctx.store.get(name).content.toString("utf8");
+    expect((await ans(ctx, "s1", { roundVersion: 1, response: { kind: "evil", data: 1 } })).status).toBe(400);
+    expect((await ans(ctx, "s1", { roundVersion: 1, response: { kind: "text", value: "x".repeat(30000) } })).status).toBe(400);
+    expect((await ans(ctx, "s1", { roundVersion: 1, response: "not-an-object" })).status).toBe(400);
+    expect(ctx.store.get(name).content.toString("utf8")).toBe(before);       // no mutation from any malformed attempt
+  });
+  it("answering is rejected once the room is not active (finished / closed) and stays answer-key-free", async () => {
+    const ctx = seedActive();
+    const name = sessionDocName("R2R2R2");
+    ctx.setJson(name, applyClose(ctx.getJson(name), "t"));
+    const r = await ans(ctx, "s1", { roundVersion: 1, response: { kind: "choice", index: 0 } });
+    expect(r.status).toBe(409);
+    expect(r.jsonBody.code).toBe("not-active");
   });
 });

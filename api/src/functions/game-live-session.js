@@ -6,29 +6,52 @@ const { challengeDocName, challengeFromDoc } = require("../lib/live-challenge-st
 const { normalizeClassStatus } = require("../lib/class-lifecycle");
 const { isStudentClassMember } = require("../lib/class-membership");
 const {
-  sessionDocName, generateJoinCode, newSessionDoc, teacherView, applyClose, SessionError,
+  sessionDocName, generateJoinCode, newSessionDoc, teacherView,
+  applyClose, applyStart, applyNext, applyFinish, SessionError,
 } = require("../lib/live-challenge-session-store");
 
-// Live Challenge — TEACHER live-session API (Phase 4A: lobby only, no question/answer/score/leaderboard).
+// Live Challenge — TEACHER live-session API (Phase 4A lobby + Phase 4B live round engine).
 //   POST /api/game-live-session/create  { challengeId, classId, studentIds } → snapshot a saved challenge into a new
 //                                        lobby with a random room code and the teacher's validated participant list
-//   POST /api/game-live-session/get     { joinCode } → this teacher's lobby (poll target), answer-key-free
+//   POST /api/game-live-session/get     { joinCode } → this teacher's runtime view (poll target), answer-key-free
+//   POST /api/game-live-session/start   { joinCode } → lobby → active, first question live (roundVersion 1)
+//   POST /api/game-live-session/next    { joinCode, roundVersion } → advance to the next question (concurrency-guarded)
+//   POST /api/game-live-session/finish  { joinCode, roundVersion } → active → finished (only on the last question)
 //   POST /api/game-live-session/close   { joinCode } → status → "closed" (idempotent; never deletes the blob)
 // Teacher auth via requireBuilderAuth. Every read/mutation verifies session.teacherId === the authenticated teacher —
 // a teacher can never reach another teacher's room by guessing its code (unknown / not-owned → 404, no existence leak).
 // The challenge is SNAPSHOTTED server-side at create; later edits to the saved challenge never mutate a live session.
+// Every state-changing action runs INSIDE mutateJsonWithRetry on the freshest document (ownership + status + round
+// checks are all in the CAS callback), so a stale teacher tab can never double-advance or act on a foreign room.
 
 const BAD_REQUEST = { status: 400, jsonBody: { ok: false, error: "طلب غير صالح." } };
 const NOT_FOUND = { status: 404, jsonBody: { ok: false, error: "لم يتم العثور على هذه الغرفة." } };
 const MAX_PARTICIPANTS = 300;
 const MAX_CODE_ATTEMPTS = 8;
 
-/** Thrown INSIDE the close CAS callback for an unknown or foreign room. mutateJsonWithRetry propagates a non-concurrency
- *  throw immediately WITHOUT writing, so the read-modify-write aborts with ZERO blob write: a nonexistent room is never
- *  materialized as an empty placeholder blob, and another teacher's room is never rewritten (byte-identical or not).
- *  The handler maps it to 404 — no existence leak between "unknown" and "not yours". */
-class NoCloseTarget extends Error {
-  constructor() { super("no-close-target"); this.name = "NoCloseTarget"; }
+/** Thrown INSIDE an owner-gated CAS callback for an unknown or foreign room. mutateJsonWithRetry propagates a
+ *  non-concurrency throw immediately WITHOUT writing, so the read-modify-write aborts with ZERO blob write: a
+ *  nonexistent room is never materialized as an empty placeholder blob, and another teacher's room is never
+ *  rewritten (byte-identical or not). The handler maps it to 404 — no existence leak between "unknown" and "not yours". */
+class OwnedRoomAbort extends Error {
+  constructor() { super("owned-room-abort"); this.name = "OwnedRoomAbort"; }
+}
+
+/** Map a domain SessionError (thrown by a store transition) → teacher HTTP response with a machine-readable `code`.
+ *  Returns null for a non-SessionError so the caller can rethrow (→ 500). */
+function fromTeacherSessionError(e) {
+  if (!(e instanceof SessionError)) return null;
+  const conflict = msg => ({ status: 409, jsonBody: { ok: false, code: e.code, error: msg } });
+  switch (e.code) {
+    case "empty-challenge": return { status: 400, jsonBody: { ok: false, code: e.code, error: "لا يحتوي التحدّي على أسئلة." } };
+    case "no-participants": return { status: 400, jsonBody: { ok: false, code: e.code, error: "لا يوجد طلاب منضمّون لبدء التحدّي." } };
+    case "not-lobby": return conflict("لا يمكن بدء هذه الغرفة في حالتها الحالية.");
+    case "not-active": return conflict("التحدّي ليس في جولة نشطة.");
+    case "stale-round": return conflict("انتقلت الجولة — حدّث الصفحة.");
+    case "no-more-questions": return conflict("لا مزيد من الأسئلة.");
+    case "not-last-question": return conflict("يجب الوصول إلى السؤال الأخير قبل الإنهاء.");
+    default: return conflict("تعذّر تنفيذ العملية على الغرفة.");
+  }
 }
 
 async function readBody(request) { try { return await request.json(); } catch { return {}; } }
@@ -110,6 +133,16 @@ async function loadOwned(container, dl, joinCode, teacherId) {
   return session;
 }
 
+/** Run an owner-gated CAS mutation on the freshest document: ownership is enforced INSIDE the callback (unknown/foreign
+ *  → OwnedRoomAbort → ZERO write → 404), and `apply(current)` is a store transition that may throw a domain
+ *  SessionError (also ZERO write, mapped to a 4xx). */
+async function mutateOwned(mutate, container, joinCode, teacherId, apply) {
+  return await mutate(container, sessionDocName(joinCode), current => {
+    if (!current || String(current.teacherId || "") !== teacherId) throw new OwnedRoomAbort();
+    return apply(current);
+  });
+}
+
 async function handler(request, deps = {}, obs = null) {
   try {
     const sess = (deps.requireBuilderAuth || requireBuilderAuth)(request);
@@ -136,21 +169,45 @@ async function handler(request, deps = {}, obs = null) {
       return { status: 200, jsonBody: { ok: true, session: teacherView(session) } };
     }
 
+    // ── Phase 4B teacher round controls (start / next / finish) ──
+    // Each is an owner-gated CAS mutation on the freshest document. Ownership abort → 404 (zero write); a domain
+    // SessionError → the mapped 4xx (zero write). next/finish require a matching roundVersion so a stale tab can't
+    // double-advance or finish the wrong round.
+    if (method === "POST" && (action === "start" || action === "next" || action === "finish")) {
+      const body = await readBody(request);
+      const joinCode = String(body && body.joinCode || "").trim().toUpperCase();
+      if (!joinCode) return BAD_REQUEST;
+      let roundVersion;
+      if (action !== "start") {
+        roundVersion = body && body.roundVersion;
+        if (!Number.isInteger(roundVersion)) return { status: 400, jsonBody: { ok: false, code: "bad-round", error: "طلب غير صالح." } };
+      }
+      try {
+        const updated = await mutateOwned(mutate, container, joinCode, teacherId, current =>
+          action === "start" ? applyStart(current, now)
+            : action === "next" ? applyNext(current, roundVersion, now)
+              : applyFinish(current, roundVersion, now));
+        return { status: 200, jsonBody: { ok: true, session: teacherView(updated) } };
+      } catch (e) {
+        if (e instanceof OwnedRoomAbort) return NOT_FOUND;
+        const mapped = fromTeacherSessionError(e);
+        if (mapped) return mapped;
+        throw e;
+      }
+    }
+
     if (method === "POST" && action === "close") {
       const body = await readBody(request);
       const joinCode = String(body && body.joinCode || "").trim().toUpperCase();
       if (!joinCode) return BAD_REQUEST;
       // Ownership is enforced INSIDE the CAS callback on the freshest document (never on a stale read). An unknown or
-      // foreign room throws NoCloseTarget so NO write occurs: mutateJsonWithRetry never creates a placeholder `{}` blob
+      // foreign room throws OwnedRoomAbort so NO write occurs: mutateJsonWithRetry never creates a placeholder `{}` blob
       // for a nonexistent room and never rewrites another teacher's room. Both map to 404 (no existence leak).
       try {
-        const updated = await mutate(container, sessionDocName(joinCode), current => {
-          if (!current || String(current.teacherId || "") !== teacherId) throw new NoCloseTarget();
-          return applyClose(current, now);
-        });
+        const updated = await mutateOwned(mutate, container, joinCode, teacherId, current => applyClose(current, now));
         return { status: 200, jsonBody: { ok: true, session: teacherView(updated) } };
       } catch (e) {
-        if (e instanceof NoCloseTarget) return NOT_FOUND;
+        if (e instanceof OwnedRoomAbort) return NOT_FOUND;
         throw e;
       }
     }
