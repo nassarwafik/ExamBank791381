@@ -3,18 +3,31 @@ import { describe, it, expect, afterEach, vi } from "vitest";
 import { render, cleanup, screen, within, fireEvent, waitFor, act } from "@testing-library/react";
 import TeacherLiveLobby from "./TeacherLiveLobby";
 import type { TeacherLiveSessionClient, TeacherLobby, StudentOption } from "./liveSessionClient";
+import type { Question } from "../../StudentQuestionCard";
 
-afterEach(() => { cleanup(); vi.restoreAllMocks(); vi.useRealTimers(); });
+// The recovery effect reads sessionStorage on mount and create() writes it, so clear it between tests.
+afterEach(() => { cleanup(); vi.restoreAllMocks(); vi.useRealTimers(); try { sessionStorage.clear(); } catch { /* ignore */ } });
 
-const lobby = (over: Partial<TeacherLobby> = {}): TeacherLobby => ({
-  sessionId: "K7MX4P", joinCode: "K7MX4P", challengeId: "c1", challengeTitle: "تحدّي الشبكات", classId: "cl1", status: "lobby",
-  counts: { total: 2, joined: 0, ready: 0 },
-  participants: [
-    { studentId: "s1", displayName: "أحمد", joined: false, ready: false, joinedAt: null, readyAt: null },
-    { studentId: "s2", displayName: "حلا", joined: false, ready: false, joinedAt: null, readyAt: null },
-  ],
-  createdAt: "", updatedAt: "", closedAt: null, ...over,
-});
+type PartLike = { studentId: string; displayName: string; joined: boolean; ready: boolean; answered?: boolean; joinedAt?: string | null; readyAt?: string | null };
+const lobby = (over: Partial<Omit<TeacherLobby, "participants">> & { participants?: PartLike[] } = {}): TeacherLobby => {
+  const { participants, ...rest } = over;
+  const parts = participants || [
+    { studentId: "s1", displayName: "أحمد", joined: false, ready: false },
+    { studentId: "s2", displayName: "حلا", joined: false, ready: false },
+  ];
+  return {
+    sessionId: "K7MX4P", joinCode: "K7MX4P", challengeId: "c1", challengeTitle: "تحدّي الشبكات", classId: "cl1", status: "lobby",
+    counts: { total: 2, joined: 0, ready: 0 },
+    roundVersion: 0, questionCount: 2, playing: 0,
+    participants: parts.map(p => ({ answered: false, joinedAt: null, readyAt: null, ...p })),
+    startedAt: null, createdAt: "", updatedAt: "", finishedAt: null, closedAt: null, ...rest,
+  };
+};
+const Q1: Question = { examQuestionId: "q1", presentationType: "multipleChoice", text: "عاصمة الأردن؟", marks: 1, options: [{ text: "عمّان" }, { text: "إربد" }] };
+const Q2: Question = { examQuestionId: "q2", presentationType: "multipleChoice", text: "أكبر كوكب؟", marks: 1, options: [{ text: "المشتري" }, { text: "الأرض" }] };
+const active = (roundVersion: number, q: Question, over: Partial<TeacherLobby> = {}): TeacherLobby =>
+  lobby({ status: "active", roundVersion, playing: 1, counts: { total: 2, joined: 1, ready: 1 },
+    round: { roundVersion, questionNumber: roundVersion, questionCount: 2, questionStartedAt: null, question: q, answered: 0, playing: 1 }, ...over });
 
 function fakeClient(over: Partial<TeacherLiveSessionClient> = {}): TeacherLiveSessionClient {
   return {
@@ -26,6 +39,9 @@ function fakeClient(over: Partial<TeacherLiveSessionClient> = {}): TeacherLiveSe
     ],
     create: async input => ({ ok: true, session: lobby({ counts: { total: input.studentIds.length, joined: 0, ready: 0 } }) }),
     get: async () => lobby(),
+    start: async () => ({ ok: true, status: 200, session: active(1, Q1) }),
+    next: async () => ({ ok: true, status: 200, session: active(2, Q2) }),
+    finish: async () => ({ ok: true, status: 200, session: lobby({ status: "finished", finishedAt: "z" }) }),
     close: async () => ({ ok: true, session: lobby({ status: "closed", closedAt: "z" }) }),
     ...over,
   };
@@ -179,5 +195,83 @@ describe("TeacherLiveLobby — lobby polling & close", () => {
     r.unmount();
     await act(async () => { vi.advanceTimersByTime(6000); });
     expect(get.mock.calls.length).toBe(before);                // no polls after unmount
+  });
+});
+
+describe("TeacherLiveLobby — live round controls (Phase 4B)", () => {
+  // A consistent fake server: create → lobby(joined 1); start/next/finish advance a mutable server state so polls
+  // reconcile to the same state instead of reverting.
+  function liveClient(over: Partial<TeacherLiveSessionClient> = {}) {
+    let server: TeacherLobby = lobby({ counts: { total: 2, joined: 1, ready: 1 }, playing: 1 });
+    return fakeClient({
+      create: async () => ({ ok: true, session: server }),
+      get: async () => server,
+      start: async () => { server = active(1, Q1); return { ok: true, status: 200, session: server }; },
+      next: async () => { server = active(2, Q2); return { ok: true, status: 200, session: server }; },
+      finish: async () => { server = lobby({ status: "finished", finishedAt: "z" }); return { ok: true, status: 200, session: server }; },
+      ...over,
+    });
+  }
+  async function createAndStart(client: TeacherLiveSessionClient) {
+    await selectClassAndStudents(client);
+    fireEvent.click(screen.getByRole("button", { name: "اختيار الكل" }));
+    fireEvent.click(screen.getByRole("button", { name: "إنشاء الغرفة" }));
+    await screen.findByRole("button", { name: "ابدأ التحدّي" });
+  }
+  it("start is disabled until at least one student has joined", async () => {
+    const client = fakeClient({ create: async () => ({ ok: true, session: lobby({ counts: { total: 2, joined: 0, ready: 0 } }) }), get: async () => lobby({ counts: { total: 2, joined: 0, ready: 0 } }) });
+    await selectClassAndStudents(client);
+    fireEvent.click(screen.getByRole("button", { name: "اختيار الكل" }));
+    fireEvent.click(screen.getByRole("button", { name: "إنشاء الغرفة" }));
+    expect((await screen.findByRole("button", { name: "ابدأ التحدّي" }) as HTMLButtonElement).disabled).toBe(true);
+  });
+  it("start → question + أجاب X / Y; next advances to the last question; finish ends the challenge", async () => {
+    await createAndStart(liveClient());
+    fireEvent.click(screen.getByRole("button", { name: "ابدأ التحدّي" }));
+    expect(await screen.findByText("عاصمة الأردن؟")).toBeTruthy();
+    expect(screen.getByText(/أجاب/)).toBeTruthy();
+    expect(screen.getByText(/0 من 1/)).toBeTruthy();
+    fireEvent.click(await screen.findByRole("button", { name: "السؤال التالي" }));
+    expect(await screen.findByText("أكبر كوكب؟")).toBeTruthy();
+    const finishBtn = await screen.findByRole("button", { name: "إنهاء التحدّي" });
+    fireEvent.click(finishBtn);
+    expect(await screen.findByText(/انتهى التحدّي/)).toBeTruthy();
+  });
+  it("a stale in-flight poll cannot revert the round after next (Fix 2)", async () => {
+    let releaseGet: (v: TeacherLobby) => void = () => {};
+    const staleGet = new Promise<TeacherLobby>(res => { releaseGet = res; });
+    let server: TeacherLobby = active(1, Q1);
+    let n = 0;
+    const client = fakeClient({
+      create: async () => ({ ok: true, session: lobby({ counts: { total: 2, joined: 1, ready: 1 } }) }),
+      start: async () => { server = active(1, Q1); return { ok: true, status: 200, session: server }; },
+      get: () => { n += 1; return n === 1 ? staleGet : Promise.resolve(server); },
+      next: async () => { server = active(2, Q2); return { ok: true, status: 200, session: server }; },
+    });
+    await createAndStart(client);
+    fireEvent.click(screen.getByRole("button", { name: "ابدأ التحدّي" }));
+    await screen.findByText("عاصمة الأردن؟");
+    await waitFor(() => expect(n).toBeGreaterThanOrEqual(1));       // first active poll held pending
+    fireEvent.click(await screen.findByRole("button", { name: "السؤال التالي" }));  // busy → polling paused; next → round 2
+    await screen.findByText("أكبر كوكب؟");
+    releaseGet(active(1, Q1));                                      // OLD poll resolves with round 1
+    await new Promise(r => setTimeout(r, 20));
+    expect(screen.getByText("أكبر كوكب؟")).toBeTruthy();           // still round 2 — stale poll ignored
+    expect(screen.queryByText("عاصمة الأردن؟")).toBeNull();
+  });
+  it("recovery: a remembered active room is offered and resumes into the live round", async () => {
+    try { sessionStorage.setItem("eb-lc-teacher-room", "K7MX4P"); } catch { /* ignore */ }
+    const client = fakeClient({ get: async () => active(1, Q1) });
+    renderLobby(client);
+    fireEvent.click(await screen.findByRole("button", { name: "استئناف الجلسة" }));
+    expect(await screen.findByText("عاصمة الأردن؟")).toBeTruthy();   // resumed straight into the active round
+  });
+  it("recovery: a stale/unknown remembered room clears the pointer (no resume offered)", async () => {
+    try { sessionStorage.setItem("eb-lc-teacher-room", "K7MX4P"); } catch { /* ignore */ }
+    const get = vi.fn(async () => null);
+    renderLobby(fakeClient({ get }));
+    await waitFor(() => expect(get).toHaveBeenCalledWith("K7MX4P"));
+    expect(screen.queryByRole("button", { name: "استئناف الجلسة" })).toBeNull();
+    expect(sessionStorage.getItem("eb-lc-teacher-room")).toBeNull();
   });
 });
