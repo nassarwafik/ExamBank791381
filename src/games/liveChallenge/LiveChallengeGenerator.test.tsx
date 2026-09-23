@@ -5,9 +5,11 @@ import { readFileSync } from "fs";
 import path from "path";
 import LiveChallengeGenerator from "./LiveChallengeGenerator";
 import type { LiveChallengeClient } from "./liveChallengeClient";
+import type { TeacherLiveSessionClient, TeacherLobby } from "./liveSessionClient";
 import { newQuestion } from "../../examBuilderState";
 
-afterEach(() => { cleanup(); vi.restoreAllMocks(); });
+// The teacher recovery-discovery effect reads sessionStorage on the home screen, so clear it between tests.
+afterEach(() => { cleanup(); vi.restoreAllMocks(); try { sessionStorage.clear(); } catch { /* ignore */ } });
 
 function fakeClient(over: Partial<LiveChallengeClient> = {}): LiveChallengeClient {
   return {
@@ -170,5 +172,83 @@ describe("LiveChallengeGenerator — semantics (standalone vs embedded in a host
     await screen.findByRole("heading", { level: 2, name: TITLE });
     fireEvent.click(screen.getByRole("button", { name: /العودة إلى الألعاب/ }));
     expect(onBack).toHaveBeenCalledTimes(1);
+  });
+});
+
+// ── Review fix 2 — teacher recovery is discoverable when Live Challenge is reopened (parent flow) ────────────────
+const tlobby = (over: Partial<TeacherLobby> = {}): TeacherLobby => ({
+  sessionId: "K7MX4P", joinCode: "K7MX4P", challengeId: "c1", challengeTitle: "تحدّي محفوظ", classId: "cl1",
+  status: "lobby", counts: { total: 1, joined: 1, ready: 1 }, roundVersion: 0, questionCount: 1, playing: 1,
+  participants: [], startedAt: null, createdAt: "", updatedAt: "", finishedAt: null, closedAt: null, ...over,
+});
+const tactive = (): TeacherLobby => tlobby({
+  status: "active", roundVersion: 1,
+  round: { roundVersion: 1, questionNumber: 1, questionCount: 1, questionStartedAt: null, answered: 0, playing: 1,
+    question: { examQuestionId: "q1", presentationType: "multipleChoice", text: "عاصمة الأردن؟", marks: 1, options: [{ text: "عمّان" }, { text: "إربد" }] } },
+});
+function fakeSessionClient(get: TeacherLiveSessionClient["get"]): TeacherLiveSessionClient {
+  return {
+    create: async () => ({ ok: true, session: tlobby() }),
+    get,
+    start: async () => ({ ok: true, status: 200, session: tactive() }),
+    next: async () => ({ ok: true, status: 200, session: tactive() }),
+    finish: async () => ({ ok: true, status: 200, session: tlobby({ status: "finished", finishedAt: "z" }) }),
+    close: async () => ({ ok: true, session: tlobby({ status: "closed", closedAt: "z" }) }),
+    listClasses: async () => [],
+    listStudents: async () => [],
+  };
+}
+const renderHome = (get: TeacherLiveSessionClient["get"]) =>
+  render(<LiveChallengeGenerator token="t" onBack={vi.fn()} client={fakeClient()} sessionClient={fakeSessionClient(get)} />);
+
+describe("LiveChallengeGenerator — teacher recovery on reopen (review fix)", () => {
+  it("a remembered active room surfaces استئناف on the HOME screen (no challenge opened) and resumes into the live session", async () => {
+    try { sessionStorage.setItem("eb-lc-teacher-room", "K7MX4P"); } catch { /* ignore */ }
+    const get = vi.fn(async () => tactive());
+    renderHome(get);
+    const resumeBtn = await screen.findByRole("button", { name: "استئناف الجلسة" });   // offered without opening a challenge
+    expect(get).toHaveBeenCalledWith("K7MX4P");
+    expect(screen.getByRole("button", { name: "إنشاء تحدٍّ جديد" })).toBeTruthy();       // still the authoring home
+    fireEvent.click(resumeBtn);
+    expect(await screen.findByText("رمز الدخول")).toBeTruthy();                          // live session UI
+    expect(screen.getByText("عاصمة الأردن؟")).toBeTruthy();                              // current active question
+  });
+  it("a remembered CLOSED room shows no resume card and clears the hint", async () => {
+    try { sessionStorage.setItem("eb-lc-teacher-room", "K7MX4P"); } catch { /* ignore */ }
+    const get = vi.fn(async () => tlobby({ status: "closed", closedAt: "z" }));
+    renderHome(get);
+    await waitFor(() => expect(get).toHaveBeenCalledWith("K7MX4P"));
+    expect(await screen.findByRole("button", { name: "إنشاء تحدٍّ جديد" })).toBeTruthy();
+    expect(screen.queryByRole("button", { name: "استئناف الجلسة" })).toBeNull();
+    expect(sessionStorage.getItem("eb-lc-teacher-room")).toBeNull();
+  });
+  it("an unknown / foreign room (get → null) clears the hint and leaves the normal home", async () => {
+    try { sessionStorage.setItem("eb-lc-teacher-room", "K7MX4P"); } catch { /* ignore */ }
+    const get = vi.fn(async () => null);
+    renderHome(get);
+    await waitFor(() => expect(get).toHaveBeenCalledWith("K7MX4P"));
+    expect(screen.queryByRole("button", { name: "استئناف الجلسة" })).toBeNull();
+    expect(sessionStorage.getItem("eb-lc-teacher-room")).toBeNull();
+  });
+  it("تجاهل clears the hint and removes the resume card, leaving the normal home", async () => {
+    try { sessionStorage.setItem("eb-lc-teacher-room", "K7MX4P"); } catch { /* ignore */ }
+    renderHome(vi.fn(async () => tactive()));
+    fireEvent.click(await screen.findByRole("button", { name: "تجاهل" }));
+    expect(screen.queryByRole("button", { name: "استئناف الجلسة" })).toBeNull();
+    expect(sessionStorage.getItem("eb-lc-teacher-room")).toBeNull();
+    expect(screen.getByRole("button", { name: "إنشاء تحدٍّ جديد" })).toBeTruthy();
+  });
+  it("a remembered FINISHED room is still resumable in Phase 4B", async () => {
+    try { sessionStorage.setItem("eb-lc-teacher-room", "K7MX4P"); } catch { /* ignore */ }
+    renderHome(vi.fn(async () => tlobby({ status: "finished", finishedAt: "z" })));
+    expect(await screen.findByRole("button", { name: "استئناف الجلسة" })).toBeTruthy();
+    expect(sessionStorage.getItem("eb-lc-teacher-room")).toBe("K7MX4P");
+  });
+  it("no remembered room → no resume card, and normal new-room creation still works", async () => {
+    render(<LiveChallengeGenerator token="t" onBack={vi.fn()} client={fakeClient({ list: vi.fn(async () => [{ challengeId: "c1", title: "تحدٍّ محفوظ", questionCount: 2 }]) })} sessionClient={fakeSessionClient(vi.fn(async () => null))} />);
+    await screen.findByText("تحدٍّ محفوظ");
+    expect(screen.queryByRole("button", { name: "استئناف الجلسة" })).toBeNull();
+    fireEvent.click(screen.getByRole("button", { name: "إنشاء غرفة مباشرة" }));           // normal flow still available
+    expect(await screen.findByRole("button", { name: "إنشاء الغرفة" })).toBeTruthy();
   });
 });

@@ -3,58 +3,44 @@ import { IconChevronBack } from "../../icons";
 import { createTeacherLiveSessionClient, type TeacherLiveSessionClient, type TeacherLobby, type ClassOption, type StudentOption } from "./liveSessionClient";
 import LiveChallengeQuestion from "./LiveChallengeQuestion";
 import { useLobbyPoll } from "./useLobbyPoll";
+import { writeTeacherRoom, clearTeacherRoom } from "./liveSessionRecovery";
 import "../games.css";
 
 // Teacher LIVE SESSION (Phase 4A lobby + Phase 4B round engine). From a SAVED challenge the teacher picks a class +
 // participants (via the EXISTING /api/classrooms and /api/students?classId), creates a room, watches a polled lobby,
 // then runs the live round: ابدأ التحدّي → per-question "أجاب X من Y" → السؤال التالي → إنهاء التحدّي. The teacher sees
-// the SANITIZED current question only (no answer key). Recovery after a refresh is server-revalidated via `get`;
-// sessionStorage only remembers which room to re-check. No leaderboard / podium / medals / Strength here — later phases.
+// the SANITIZED current question only (no answer key). Recovery DISCOVERY lives one level up in LiveChallengeGenerator
+// (the Live Challenge home): when it finds a still-owned remembered room it re-enters this component with
+// `initialSession`. Here we only WRITE the reconnect hint on create and CLEAR it on a successful close; normal Back
+// keeps it. No leaderboard / podium / medals / Strength here — later phases.
 const POLL_MS = 2000;
-const STORE_KEY = "eb-lc-teacher-room";   // reconnect HINT only — never authority
 
 /** Durable lobby state label (NOT presence): لم ينضم / انضم / جاهز — text always present, never colour-only. */
 function statusLabel(p: { joined: boolean; ready: boolean }): string {
   return p.ready ? "جاهز" : p.joined ? "انضم" : "لم ينضم";
 }
-function readStored(): string { try { return sessionStorage.getItem(STORE_KEY) || ""; } catch { return ""; } }
-function writeStored(code: string) { try { sessionStorage.setItem(STORE_KEY, code); } catch { /* private mode */ } }
-function clearStored() { try { sessionStorage.removeItem(STORE_KEY); } catch { /* ignore */ } }
 
-export default function TeacherLiveLobby({ token, challengeId, challengeTitle, onBack, client: injected }: {
-  token: string; challengeId: string; challengeTitle: string; onBack: () => void; client?: TeacherLiveSessionClient;
+export default function TeacherLiveLobby({ token, challengeId, challengeTitle, onBack, client: injected, initialSession }: {
+  token: string; challengeId: string; challengeTitle: string; onBack: () => void; client?: TeacherLiveSessionClient; initialSession?: TeacherLobby;
 }) {
   const clientRef = useRef<TeacherLiveSessionClient>(injected || createTeacherLiveSessionClient(token));
-  const [phase, setPhase] = useState<"setup" | "lobby">("setup");
+  // A recovered session (validated by the parent) starts us directly in the lobby/live view; otherwise begin at setup.
+  const [phase, setPhase] = useState<"setup" | "lobby">(initialSession ? "lobby" : "setup");
   const [classes, setClasses] = useState<ClassOption[] | null>(null);
   const [classId, setClassId] = useState("");
   const [students, setStudents] = useState<StudentOption[] | null>(null);
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [creating, setCreating] = useState(false);
   const [error, setError] = useState("");
-  const [lobby, setLobby] = useState<TeacherLobby | null>(null);
+  const [lobby, setLobby] = useState<TeacherLobby | null>(initialSession || null);
   const [confirmClose, setConfirmClose] = useState(false);
   const [busy, setBusy] = useState(false);               // any teacher mutation (start/next/finish/close) — pauses polling
-  const [resume, setResume] = useState<TeacherLobby | null>(null);   // a recovered room this teacher can re-enter
   const classReqRef = useRef(0);                          // request-generation guard for class-switch roster loads
 
-  // Load the teacher's classes once.
+  // Load the teacher's classes once (only needed for the setup/create flow).
   useEffect(() => {
     let ok = true;
     clientRef.current.listClasses().then(cs => { if (ok) setClasses(cs); }).catch(() => { if (ok) { setClasses([]); setError("تعذّر تحميل الصفوف."); } });
-    return () => { ok = false; };
-  }, []);
-
-  // Recovery: if a room code was remembered, re-validate it against the SERVER (get is authoritative). A still-owned
-  // lobby/active/finished room is offered as "استئناف الجلسة"; anything else clears the stale pointer.
-  useEffect(() => {
-    const stored = readStored();
-    if (!stored) return;
-    let ok = true;
-    clientRef.current.get(stored).then(s => {
-      if (!ok) return;
-      if (s && s.status !== "closed") setResume(s); else clearStored();
-    }).catch(() => { if (ok) clearStored(); });
     return () => { ok = false; };
   }, []);
 
@@ -85,13 +71,11 @@ export default function TeacherLiveLobby({ token, challengeId, challengeTitle, o
     setCreating(true); setError("");
     try {
       const r = await clientRef.current.create({ challengeId, classId, studentIds });
-      if (r.ok && r.session) { setLobby(r.session); setPhase("lobby"); writeStored(r.session.joinCode); }
+      if (r.ok && r.session) { setLobby(r.session); setPhase("lobby"); writeTeacherRoom(r.session.joinCode); }
       else setError(r.error || "تعذّر إنشاء الغرفة.");
     } catch { setError("تعذّر إنشاء الغرفة."); }
     finally { setCreating(false); }
   }, [challengeId, classId, selected, selectableIds]);
-
-  const enterResume = useCallback(() => { if (resume) { setLobby(resume); setPhase("lobby"); setResume(null); } }, [resume]);
 
   // Poll while the room is live (lobby or active). Pauses while a teacher mutation is busy so an older GET cannot
   // overwrite the newer start/next/finish/close response (the poll effect tears down and any in-flight GET goes stale).
@@ -124,7 +108,7 @@ export default function TeacherLiveLobby({ token, challengeId, challengeTitle, o
       const r = await clientRef.current.close(lobby.joinCode);
       // Clear the reconnect hint ONLY when the close actually succeeds. If it failed, keep the hint so the teacher
       // can still recover the room.
-      if (r.ok && r.session) { setLobby(r.session); clearStored(); }
+      if (r.ok && r.session) { setLobby(r.session); clearTeacherRoom(); }
       else setError("تعذّر إغلاق الغرفة.");
     } catch { setError("تعذّر إغلاق الغرفة."); }
     finally { setBusy(false); }
@@ -150,13 +134,6 @@ export default function TeacherLiveLobby({ token, challengeId, challengeTitle, o
             <p className="eb-games-page-desc">التحدّي: {challengeTitle || "بدون عنوان"}</p>
           </header>
           {error && <div className="platform-error" role="alert">{error}</div>}
-          {resume && (
-            <div className="eb-lc-resume" role="status">
-              <span>لديك غرفة مباشرة سابقة (<span dir="ltr">{resume.joinCode}</span>).</span>
-              <button type="button" className="eb-button is-primary is-small" onClick={enterResume}>استئناف الجلسة</button>
-              <button type="button" className="eb-button is-quiet is-small" onClick={() => { clearStored(); setResume(null); }}>تجاهل</button>
-            </div>
-          )}
           <div className="eb-lc-card eb-lc-setup">
             <label className="eb-lc-field">
               <span className="eb-lc-field-label">الصف</span>

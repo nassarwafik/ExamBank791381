@@ -47,8 +47,8 @@ function fakeClient(over: Partial<TeacherLiveSessionClient> = {}): TeacherLiveSe
   };
 }
 
-const renderLobby = (client: TeacherLiveSessionClient) =>
-  render(<TeacherLiveLobby token="t" challengeId="c1" challengeTitle="تحدّي الشبكات" onBack={vi.fn()} client={client} />);
+const renderLobby = (client: TeacherLiveSessionClient, extra: { initialSession?: TeacherLobby } = {}) =>
+  render(<TeacherLiveLobby token="t" challengeId="c1" challengeTitle="تحدّي الشبكات" onBack={vi.fn()} client={client} {...extra} />);
 
 async function selectClassAndStudents(client: TeacherLiveSessionClient) {
   renderLobby(client);
@@ -259,20 +259,11 @@ describe("TeacherLiveLobby — live round controls (Phase 4B)", () => {
     expect(screen.getByText("أكبر كوكب؟")).toBeTruthy();           // still round 2 — stale poll ignored
     expect(screen.queryByText("عاصمة الأردن؟")).toBeNull();
   });
-  it("recovery: a remembered active room is offered and resumes into the live round", async () => {
-    try { sessionStorage.setItem("eb-lc-teacher-room", "K7MX4P"); } catch { /* ignore */ }
-    const client = fakeClient({ get: async () => active(1, Q1) });
-    renderLobby(client);
-    fireEvent.click(await screen.findByRole("button", { name: "استئناف الجلسة" }));
-    expect(await screen.findByText("عاصمة الأردن؟")).toBeTruthy();   // resumed straight into the active round
-  });
-  it("recovery: a stale/unknown remembered room clears the pointer (no resume offered)", async () => {
-    try { sessionStorage.setItem("eb-lc-teacher-room", "K7MX4P"); } catch { /* ignore */ }
-    const get = vi.fn(async () => null);
-    renderLobby(fakeClient({ get }));
-    await waitFor(() => expect(get).toHaveBeenCalledWith("K7MX4P"));
-    expect(screen.queryByRole("button", { name: "استئناف الجلسة" })).toBeNull();
-    expect(sessionStorage.getItem("eb-lc-teacher-room")).toBeNull();
+  it("initialSession (recovered by the parent) opens directly in the live round without setup", async () => {
+    // Recovery DISCOVERY lives in LiveChallengeGenerator; TeacherLiveLobby just receives the validated session.
+    renderLobby(fakeClient(), { initialSession: active(1, Q1) });
+    expect(await screen.findByText("عاصمة الأردن؟")).toBeTruthy();          // straight into the active round
+    expect(screen.queryByRole("button", { name: "إنشاء الغرفة" })).toBeNull();   // never showed the setup form
   });
 });
 
@@ -302,20 +293,5 @@ describe("TeacherLiveLobby — recovery lifecycle (review fix)", () => {
     fireEvent.click(screen.getByRole("button", { name: "تأكيد الإغلاق" }));
     expect(await screen.findByText("تم إغلاق هذه الغرفة.")).toBeTruthy();
     expect(sessionStorage.getItem("eb-lc-teacher-room")).toBeNull();       // cleared on success
-  });
-  it("recovery: a remembered FINISHED room is still offered for resume in Phase 4B", async () => {
-    try { sessionStorage.setItem("eb-lc-teacher-room", "K7MX4P"); } catch { /* ignore */ }
-    const client = fakeClient({ get: async () => lobby({ status: "finished", finishedAt: "z" }) });
-    renderLobby(client);
-    expect(await screen.findByRole("button", { name: "استئناف الجلسة" })).toBeTruthy();
-    expect(sessionStorage.getItem("eb-lc-teacher-room")).toBe("K7MX4P");
-  });
-  it("recovery: a remembered CLOSED room clears the hint (no resume)", async () => {
-    try { sessionStorage.setItem("eb-lc-teacher-room", "K7MX4P"); } catch { /* ignore */ }
-    const get = vi.fn(async () => lobby({ status: "closed", closedAt: "z" }));
-    renderLobby(fakeClient({ get }));
-    await waitFor(() => expect(get).toHaveBeenCalledWith("K7MX4P"));
-    expect(screen.queryByRole("button", { name: "استئناف الجلسة" })).toBeNull();
-    expect(sessionStorage.getItem("eb-lc-teacher-room")).toBeNull();
   });
 });

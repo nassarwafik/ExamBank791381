@@ -5,6 +5,7 @@ import type { Answer } from "../../StudentQuestionCard";
 import { answered as isAnswered } from "../../StudentQuestionCard";
 import LiveChallengeQuestion from "./LiveChallengeQuestion";
 import { useLobbyPoll } from "./useLobbyPoll";
+import { readStudentRoom, writeStudentRoom, clearStudentRoom } from "./liveSessionRecovery";
 import "../games.css";
 
 // Student LIVE CHALLENGE (Phase 4A join/lobby + Phase 4B live round). The student enters the room code the TEACHER
@@ -15,7 +16,6 @@ import "../games.css";
 const POLL_MS = 2000;
 const CODE_ALPHABET = "ABCDEFGHJKMNPQRSTUVWXYZ23456789";
 const CODE_LENGTH = 6;
-const STORE_KEY = "eb-lc-student-room";   // reconnect HINT only — never authority
 
 function normalizeCode(raw: string): string {
   const up = String(raw || "").normalize("NFKC").trim().toUpperCase();
@@ -24,9 +24,6 @@ function normalizeCode(raw: string): string {
   return out;
 }
 function statusLabel(p: { joined: boolean; ready: boolean }): string { return p.ready ? "جاهز" : p.joined ? "انضم" : "لم ينضم"; }
-function readStored(): string { try { return sessionStorage.getItem(STORE_KEY) || ""; } catch { return ""; } }
-function writeStored(code: string) { try { sessionStorage.setItem(STORE_KEY, code); } catch { /* private mode: reconnect just won't persist */ } }
-function clearStored() { try { sessionStorage.removeItem(STORE_KEY); } catch { /* ignore */ } }
 
 export default function StudentLiveLobby({ token, onBack, client: injected }: { token: string; onBack: () => void; client?: StudentLiveSessionClient }) {
   const clientRef = useRef<StudentLiveSessionClient>(injected || createStudentLiveSessionClient(token));
@@ -41,7 +38,7 @@ export default function StudentLiveLobby({ token, onBack, client: injected }: { 
 
   // Reconnect on mount: if a room code was remembered, re-validate it against the SERVER (never trust the hint alone).
   useEffect(() => {
-    const stored = readStored();
+    const stored = readStudentRoom();
     if (!stored) return;
     let ok = true;
     clientRef.current.get(stored).then(r => {
@@ -49,8 +46,8 @@ export default function StudentLiveLobby({ token, onBack, client: injected }: { 
       // Restore only a still-open room (lobby / active / finished is resumable in Phase 4B). A closed room, a 403/404,
       // or any invalid pointer drops the hint — a closed session must never be restored as a remembered session.
       if (r.ok && r.session && r.session.status !== "closed") { setLobby(r.session); setJoinedCode(stored); }
-      else clearStored();
-    }).catch(() => { if (ok) clearStored(); });
+      else clearStudentRoom();
+    }).catch(() => { if (ok) clearStudentRoom(); });
     return () => { ok = false; };
   }, []);
 
@@ -60,7 +57,7 @@ export default function StudentLiveLobby({ token, onBack, client: injected }: { 
     setJoining(true); setError("");
     try {
       const r = await clientRef.current.join(norm);
-      if (r.ok && r.session) { setLobby(r.session); setJoinedCode(norm); writeStored(norm); }
+      if (r.ok && r.session) { setLobby(r.session); setJoinedCode(norm); writeStudentRoom(norm); }
       else if (r.status === 403) setError("لست ضمن هذه الغرفة.");
       else if (r.status === 409) setError("تم إغلاق هذه الغرفة.");
       else if (r.status === 404) setError("لم يتم العثور على غرفة بهذا الرمز.");

@@ -81,13 +81,17 @@ function normalizeStudentResponse(raw, depth = 0) {
   }
 }
 /** Canonicalize + size-bound a submitted response: returns the CANONICAL object (used for BOTH grading and storage) or
- *  null. There is exactly one accepted response object — never grade one shape and persist another. */
+ *  null. There is exactly one accepted response object — never grade one shape and persist another. The RAW payload is
+ *  size-checked FIRST so a huge unknown field (which canonicalization would strip) can't bypass the input bound. */
 function normalizeAcceptableResponse(raw) {
+  let rawSized;
+  try { rawSized = JSON.stringify(raw); } catch { return null; }   // reject unserializable (cycles) before any work
+  if (typeof rawSized !== "string" || rawSized.length > MAX_RESPONSE_BYTES) return null;   // RAW input bound (pre-strip)
   const canonical = normalizeStudentResponse(raw);
   if (!canonical) return null;
   let sized;
   try { sized = JSON.stringify(canonical); } catch { return null; }
-  if (typeof sized !== "string" || sized.length > MAX_RESPONSE_BYTES) return null;
+  if (typeof sized !== "string" || sized.length > MAX_RESPONSE_BYTES) return null;          // canonical bound (defense in depth)
   return canonical;
 }
 

@@ -328,4 +328,18 @@ describe("Phase 4B review fix — response canonicalization strips untrusted fie
     const expected = gradeQuestion(q, { kind: "choice", index: 0 });
     expect(rec.grade).toMatchObject({ score: expected.score, correct: expected.correct, maxMarks: expected.maxMarks });
   });
+  it("a huge RAW extra field is rejected BEFORE canonicalization (raw size bound), with no mutation", async () => {
+    const ctx = seedActive();
+    const name = sessionDocName("R2R2R2");
+    const before = ctx.store.get(name).content.toString("utf8");
+    // the canonicalizer would strip `junk`, but the raw payload must be rejected on size before it ever runs
+    const r = await ans(ctx, "s1", { roundVersion: 1, response: { kind: "choice", index: 0, junk: "x".repeat(25000) } });
+    expect(r.status).toBe(400);
+    expect(ctx.store.get(name).content.toString("utf8")).toBe(before);       // mutation callback never reached
+    expect(ctx.getJson(name).participants.find(p => p.studentId === "s1").answers).toHaveLength(0);
+    // a small unknown-field payload still succeeds (stripped, not rejected)
+    const okr = await ans(ctx, "s1", { roundVersion: 1, response: { kind: "choice", index: 0, score: 999, correct: true } });
+    expect(okr.status).toBe(200);
+    expect(ctx.getJson(name).participants.find(p => p.studentId === "s1").answers[0].response).toEqual({ kind: "choice", index: 0 });
+  });
 });

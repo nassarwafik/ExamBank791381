@@ -14,7 +14,8 @@ import { createLiveChallengeClient, type LiveChallengeClient } from "./liveChall
 import ChallengeQuestionCard from "./ChallengeQuestionCard";
 import ChallengeImportPicker, { type ImportSource } from "./ChallengeImportPicker";
 import TeacherLiveLobby from "./TeacherLiveLobby";
-import type { TeacherLiveSessionClient } from "./liveSessionClient";
+import { createTeacherLiveSessionClient, type TeacherLiveSessionClient, type TeacherLobby } from "./liveSessionClient";
+import { readTeacherRoom, clearTeacherRoom } from "./liveSessionRecovery";
 import "../games.css";
 
 // The Live Challenge Generator — the TEACHER's Kahoot-like challenge AUTHORING screen (Phase 3B). It builds an ordered
@@ -39,6 +40,7 @@ export default function LiveChallengeGenerator({ token, onBack, client: injected
   const Title = embedded ? "h2" : "h1";
   const Sub = embedded ? "h3" : "h2";   // the editor's section headings sit one level below the page title
   const clientRef = useRef<LiveChallengeClient>(injected || createLiveChallengeClient(token));
+  const sessionClientRef = useRef<TeacherLiveSessionClient>(sessionClient || createTeacherLiveSessionClient(token));
   const [phase, setPhase] = useState<Phase>("home");
   const [summaries, setSummaries] = useState<ChallengeSummary[] | null>(null);
   const [def, setDef] = useState<ChallengeDefinition | null>(null);
@@ -49,6 +51,8 @@ export default function LiveChallengeGenerator({ token, onBack, client: injected
   const [importSource, setImportSource] = useState<ImportSource | null>(null);   // non-null = the import dialog is open
   const [preview, setPreview] = useState<BuilderQuestion | null>(null);
   const [liveFor, setLiveFor] = useState<{ challengeId: string; title: string } | null>(null);   // the challenge a live room is being created for
+  const [resume, setResume] = useState<TeacherLobby | null>(null);       // a server-validated remembered room offered for resume
+  const [resumeSession, setResumeSession] = useState<TeacherLobby | null>(null);   // the recovered session handed to the lobby
 
   const refreshList = useCallback(async () => {
     setError("");
@@ -57,6 +61,29 @@ export default function LiveChallengeGenerator({ token, onBack, client: injected
   }, []);
 
   useEffect(() => { if (phase === "home") void refreshList(); }, [phase, refreshList]);
+
+  // Recovery DISCOVERY at the Live Challenge home: whenever we land on home, re-validate any remembered room against the
+  // SERVER (get is authoritative). A still-owned lobby/active/finished room is offered as "استئناف الجلسة" WITHOUT
+  // requiring the teacher to open a challenge first; a closed / foreign / unknown room clears the stale hint.
+  useEffect(() => {
+    if (phase !== "home") return;
+    const stored = readTeacherRoom();
+    if (!stored) return;                        // no hint → nothing to offer (resume stays null)
+    let ok = true;
+    sessionClientRef.current.get(stored).then(s => {
+      if (!ok) return;
+      if (s && s.status !== "closed") setResume(s); else { clearTeacherRoom(); setResume(null); }
+    }).catch(() => { if (ok) { clearTeacherRoom(); setResume(null); } });
+    return () => { ok = false; };
+  }, [phase]);
+
+  const resumeLive = useCallback((session: TeacherLobby) => {
+    setResumeSession(session);
+    setLiveFor({ challengeId: session.challengeId, title: session.challengeTitle });
+    setResume(null);
+    setPhase("live");
+  }, []);
+  const dismissResume = useCallback(() => { clearTeacherRoom(); setResume(null); }, []);
 
   const startNew = () => { setDef(newChallengeDefinition({ title: "تحدٍّ جديد" })); setNotice(""); setError(""); setPhase("editing"); };
 
@@ -89,7 +116,8 @@ export default function LiveChallengeGenerator({ token, onBack, client: injected
         challengeId={liveFor.challengeId}
         challengeTitle={liveFor.title}
         client={sessionClient}
-        onBack={() => { setLiveFor(null); setPhase("home"); }}
+        initialSession={resumeSession ?? undefined}
+        onBack={() => { setLiveFor(null); setResumeSession(null); setPhase("home"); }}
       />
     );
   }
@@ -109,6 +137,13 @@ export default function LiveChallengeGenerator({ token, onBack, client: injected
             <p className="eb-games-page-desc">أنشئ تحدّيًا صفّيًا وحضّر أسئلته الآن؛ إدارة الجلسة المباشرة تأتي لاحقًا.</p>
           </header>
           {error && <div className="platform-error" role="alert">{error}</div>}
+          {resume && (
+            <div className="eb-lc-resume" role="status">
+              <span>لديك جلسة مباشرة قيد المتابعة (رمز الغرفة: <span dir="ltr">{resume.joinCode}</span>).</span>
+              <button type="button" className="eb-button is-primary is-small" onClick={() => resumeLive(resume)}>استئناف الجلسة</button>
+              <button type="button" className="eb-button is-quiet is-small" onClick={dismissResume}>تجاهل</button>
+            </div>
+          )}
           <button type="button" className="eb-button is-primary eb-lc-create" onClick={startNew}>إنشاء تحدٍّ جديد</button>
           <div className="eb-lc-saved" aria-label="التحدّيات المحفوظة">
             {summaries === null && <p className="eb-muted" role="status">جارٍ التحميل…</p>}
