@@ -73,6 +73,11 @@ function completedRoundsCount(session) {
  */
 function buildLiveStandings(session) {
   const cutoff = completedRoundsCount(session);
+  // No meaningful ranking exists until at least one round has COMPLETED: a lobby, a closed session, and an active
+  // first question (even if students already submitted it) all have cutoff 0 and return NO standings. This is the
+  // authoritative server contract — the server never exposes an artificial 0-point ranking, and the frontend's
+  // completedRounds>=1 gate merely mirrors it. Ranking appears only once a round is behind the current one (or finish).
+  if (cutoff <= 0) return [];
   const rows = playingParticipants(session).map((p, order) => {
     let points = 0, correctCount = 0, answeredCount = 0;
     for (const a of answersOf(p)) {

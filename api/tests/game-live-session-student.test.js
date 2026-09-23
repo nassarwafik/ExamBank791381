@@ -352,10 +352,10 @@ describe("Phase 4C — student competition view", () => {
   it("MANDATORY non-leak (end-to-end): correctly answering the LIVE round never raises my points until it completes", async () => {
     const ctx = seedActive();
     await ans(ctx, "s1", { roundVersion: 1, response: { kind: "choice", index: 0 } });   // Q1 correct (server-graded)
-    // GET while Q1 is still the current round: my competition points MUST still be 0 (Q1 not yet completed).
+    // GET while Q1 is still the current round: NO standings exist yet (no artificial ranking before a round completes).
     let v = (await call(ctx, "s1", "get", { joinCode: "R2R2R2" })).jsonBody.session;
     expect(v.competition.completedRounds).toBe(0);
-    expect(v.competition.standings.find(r => r.you)).toMatchObject({ points: 0, correctCount: 0, answeredCount: 0 });
+    expect(v.competition.standings).toEqual([]);
     // Teacher advances to Q2 → Q1 now completes; only THEN do my Q1 points appear.
     advance(ctx, s => applyNext(s, 1, "2026-02-01T01:00:00.000Z"));
     v = (await call(ctx, "s1", "get", { joinCode: "R2R2R2" })).jsonBody.session;

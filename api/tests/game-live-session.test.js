@@ -314,7 +314,7 @@ describe("teacher competition standings", () => {
     addAnswer(ctx, code, "s2", 0, wrong);
     let s = (await act(ctx, "get", { joinCode: code })).jsonBody.session;
     expect(s.competition.completedRounds).toBe(0);               // Q1 is current → not counted yet
-    expect(s.competition.standings.every(r => r.points === 0)).toBe(true);
+    expect(s.competition.standings).toEqual([]);                 // no artificial ranking before any round completes
     // Advance to Q2 → Q1 completes.
     await act(ctx, "next", { joinCode: code, roundVersion: 1 });
     s = (await act(ctx, "get", { joinCode: code })).jsonBody.session;
@@ -336,7 +336,6 @@ describe("teacher competition standings", () => {
     const ctx = school2();
     const code = await makeRoom(ctx, "c2", ["s1"]);
     const s = (await act(ctx, "get", { joinCode: code })).jsonBody.session;
-    expect(s.competition).toMatchObject({ completedRounds: 0 });
-    expect(s.competition.standings.every(r => r.points === 0)).toBe(true);
+    expect(s.competition).toMatchObject({ completedRounds: 0, standings: [] });   // lobby → no ranking
   });
 });

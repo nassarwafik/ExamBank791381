@@ -246,10 +246,10 @@ describe("Phase 4C — competition standings & the non-leak cutoff", () => {
     const s = applyStart(joinAll(mkRich()), "t");
     grade(s, "s1", 1, { kind: "choice", index: 0 });   // s1 correct on the LIVE Q1
     grade(s, "s2", 1, { kind: "choice", index: 1 });   // s2 wrong on the LIVE Q1
-    // Q1 is still the active round → completedRounds 0, no round counted yet.
+    // Q1 is still the active round → completedRounds 0 and NO standings at all (no artificial 0-point ranking).
     let v = teacherView(s);
     expect(v.competition.completedRounds).toBe(0);
-    expect(v.competition.standings.every(r => r.points === 0)).toBe(true);
+    expect(v.competition.standings).toEqual([]);
     // Advance to Q2 → Q1 is now completed and counts.
     applyNext(s, 1, "t");
     v = teacherView(s);
@@ -263,10 +263,10 @@ describe("Phase 4C — competition standings & the non-leak cutoff", () => {
   it("MANDATORY non-leak: a student's OWN current-round points never appear until the round completes", () => {
     const s = applyStart(joinAll(mkRich()), "t");
     grade(s, "s1", 1, { kind: "choice", index: 0 });   // Q1 correct (stored grade correct)
-    // Still on Q1 → student's own competition points must be 0 (Q1 is the current, not-yet-completed round).
+    // Still on Q1 → NO standings yet (the current round is not counted; the leaderboard is empty until it completes).
     let v = studentView(s, "s1");
     expect(v.competition.completedRounds).toBe(0);
-    expect(v.competition.standings.find(r => r.you)).toMatchObject({ points: 0, answeredCount: 0 });
+    expect(v.competition.standings).toEqual([]);
     applyNext(s, 1, "t");                                // teacher advances → Q1 completes
     grade(s, "s1", 2, { kind: "choice", index: 0 });    // s1 answers the live Q2 too (trueFalse; index-choice → wrong)
     v = studentView(s, "s1");

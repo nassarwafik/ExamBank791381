@@ -93,10 +93,22 @@ describe("buildLiveStandings", () => {
     expect(st[0]).toMatchObject({ studentId: "s1", points: 1000, correctCount: 1, answeredCount: 1, rank: 1 });
   });
 
-  it("a lobby session yields an all-zero (or empty) leaderboard", () => {
+  it("returns NO standings until a round completes: lobby (even with joined players), closed, and the live first round", () => {
+    // lobby — no rounds completed → empty, even though a player has joined
     expect(buildLiveStandings(sess({ status: "lobby", currentQuestionIndex: null, participants: [] }))).toEqual([]);
     const joinedLobby = sess({ status: "lobby", currentQuestionIndex: null, participants: [part("s1", "A", "j", [])] });
-    expect(buildLiveStandings(joinedLobby)).toEqual([{ studentId: "s1", displayName: "A", points: 0, correctCount: 0, answeredCount: 0, rank: 1 }]);
+    expect(completedRoundsCount(joinedLobby)).toBe(0);
+    expect(buildLiveStandings(joinedLobby)).toEqual([]);            // no artificial rank:1 for a lobby
+    // closed — no ranking
+    const closed = sess({ status: "closed", currentQuestionIndex: 1, participants: [part("s1", "A", "j", [ans(0, 1, 1, true)])] });
+    expect(buildLiveStandings(closed)).toEqual([]);
+    // active first question — even if the student ALREADY submitted the live Q1, no round has completed yet → empty
+    const firstLive = sess({ status: "active", currentQuestionIndex: 0, participants: [part("s1", "A", "j", [ans(0, 1, 1, true)])] });
+    expect(completedRoundsCount(firstLive)).toBe(0);
+    expect(buildLiveStandings(firstLive)).toEqual([]);
+    // once the teacher advances to Q2, Q1 has completed → real standings appear
+    const advanced = sess({ status: "active", currentQuestionIndex: 1, participants: [part("s1", "A", "j", [ans(0, 1, 1, true)])] });
+    expect(buildLiveStandings(advanced)).toEqual([{ studentId: "s1", displayName: "A", points: 1000, correctCount: 1, answeredCount: 1, rank: 1 }]);
   });
 
   it("tolerates a backward-compat participant with no answers array (old 4A/4B blob)", () => {
