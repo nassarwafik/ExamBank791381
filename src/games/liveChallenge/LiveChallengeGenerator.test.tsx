@@ -81,7 +81,7 @@ describe("LiveChallengeGenerator — home + authoring", () => {
     const client = fakeClient();
     await openEditor(client);
     fireEvent.click(screen.getByRole("button", { name: "+ إضافة سؤال" }));
-    fireEvent.click(screen.getByRole("button", { name: "حفظ" }));
+    fireEvent.click(screen.getByRole("button", { name: "حفظ التحدّي" }));
     await waitFor(() => expect(client.save).toHaveBeenCalled());
     const saved = (client.save as unknown as { mock: { calls: unknown[][] } }).mock.calls[0][0] as { questions: unknown[] };
     expect(saved.questions.length).toBe(1);
