@@ -43,7 +43,10 @@ export default function StudentLiveLobby({ token, onBack, client: injected }: { 
     finally { setJoining(false); }
   }, [code]);
 
-  const polling = !!lobby && !!joinedCode && lobby.status === "lobby";
+  // Polling pauses while a non-poll mutation is in flight (busy). toggleReady sets busy=true BEFORE calling ready(...),
+  // so the polling effect tears down and any already in-flight GET becomes stale (its isCurrent() returns false and its
+  // result is dropped) — a slow, older lobby GET can never overwrite the newer ready(...) response.
+  const polling = !!lobby && !!joinedCode && lobby.status === "lobby" && !busy;
   const pollFn = useCallback(async (isCurrent: () => boolean) => {
     if (!joinedCode) return;
     const r = await clientRef.current.get(joinedCode);

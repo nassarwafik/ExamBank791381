@@ -58,7 +58,13 @@ async function handler(request, deps = {}, obs = null) {
     }
 
     if (action === "join" || action === "ready") {
-      const ready = action === "ready" ? body.ready !== false : undefined;   // ready endpoint: default true, explicit false clears
+      // The ready endpoint requires a STRICT boolean — "false" / 1 / {} / null / missing are rejected as 400 BEFORE any
+      // mutation (never coerced to true), so a malformed payload can never flip a participant's ready flag.
+      let ready;
+      if (action === "ready") {
+        if (typeof (body && body.ready) !== "boolean") return BAD_REQUEST;
+        ready = body.ready;
+      }
       try {
         const updated = await mutate(container, name, current => {
           if (!current) throw new SessionError("not-found");

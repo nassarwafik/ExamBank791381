@@ -23,6 +23,14 @@ const NOT_FOUND = { status: 404, jsonBody: { ok: false, error: "لم يتم ال
 const MAX_PARTICIPANTS = 300;
 const MAX_CODE_ATTEMPTS = 8;
 
+/** Thrown INSIDE the close CAS callback for an unknown or foreign room. mutateJsonWithRetry propagates a non-concurrency
+ *  throw immediately WITHOUT writing, so the read-modify-write aborts with ZERO blob write: a nonexistent room is never
+ *  materialized as an empty placeholder blob, and another teacher's room is never rewritten (byte-identical or not).
+ *  The handler maps it to 404 — no existence leak between "unknown" and "not yours". */
+class NoCloseTarget extends Error {
+  constructor() { super("no-close-target"); this.name = "NoCloseTarget"; }
+}
+
 async function readBody(request) { try { return await request.json(); } catch { return {}; } }
 
 /** De-duplicate + trim a list of ids (order preserved). */
@@ -132,14 +140,19 @@ async function handler(request, deps = {}, obs = null) {
       const body = await readBody(request);
       const joinCode = String(body && body.joinCode || "").trim().toUpperCase();
       if (!joinCode) return BAD_REQUEST;
-      // Ownership is enforced INSIDE the CAS callback on the freshest document (never on a stale read).
-      let forbidden = false;
-      const updated = await mutate(container, sessionDocName(joinCode), current => {
-        if (!current || String(current.teacherId || "") !== teacherId) { forbidden = true; return current || {}; }
-        return applyClose(current, now);
-      });
-      if (forbidden) return NOT_FOUND;
-      return { status: 200, jsonBody: { ok: true, session: teacherView(updated) } };
+      // Ownership is enforced INSIDE the CAS callback on the freshest document (never on a stale read). An unknown or
+      // foreign room throws NoCloseTarget so NO write occurs: mutateJsonWithRetry never creates a placeholder `{}` blob
+      // for a nonexistent room and never rewrites another teacher's room. Both map to 404 (no existence leak).
+      try {
+        const updated = await mutate(container, sessionDocName(joinCode), current => {
+          if (!current || String(current.teacherId || "") !== teacherId) throw new NoCloseTarget();
+          return applyClose(current, now);
+        });
+        return { status: 200, jsonBody: { ok: true, session: teacherView(updated) } };
+      } catch (e) {
+        if (e instanceof NoCloseTarget) return NOT_FOUND;
+        throw e;
+      }
     }
 
     return { status: 405, jsonBody: { ok: false, error: "Unsupported live-session request." } };

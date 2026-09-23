@@ -2,7 +2,7 @@
 import { describe, it, expect, afterEach, vi } from "vitest";
 import { render, cleanup, screen, within, fireEvent, waitFor, act } from "@testing-library/react";
 import TeacherLiveLobby from "./TeacherLiveLobby";
-import type { TeacherLiveSessionClient, TeacherLobby } from "./liveSessionClient";
+import type { TeacherLiveSessionClient, TeacherLobby, StudentOption } from "./liveSessionClient";
 
 afterEach(() => { cleanup(); vi.restoreAllMocks(); vi.useRealTimers(); });
 
@@ -110,6 +110,58 @@ describe("TeacherLiveLobby — lobby polling & close", () => {
     const afterClose = get.mock.calls.length;
     await new Promise(r => setTimeout(r, 60));                 // polling is gated on status==="lobby"; no further gets
     expect(get.mock.calls.length).toBe(afterClose);
+  });
+
+  it("close pauses polling immediately so an in-flight poll can't update the room mid-close (Fix 2)", async () => {
+    // The first poll GET is held pending. The teacher closes (close() also held). `closing` must pause polling the
+    // instant close begins, so the in-flight GET — resolving with a CHANGED open roster — is dropped and never shown.
+    // Removing the `&& !closing` gate makes the stale roster (2 / 2) appear and fails this test.
+    let releaseGet: (v: TeacherLobby) => void = () => {};
+    const staleGet = new Promise<TeacherLobby>(res => { releaseGet = res; });
+    let getCalls = 0;
+    const get = vi.fn(() => { getCalls += 1; return getCalls === 1 ? staleGet : Promise.resolve(lobby()); });
+    let releaseClose: (v: { ok: boolean; session: TeacherLobby }) => void = () => {};
+    const closeP = new Promise<{ ok: boolean; session: TeacherLobby }>(res => { releaseClose = res; });
+    const close = vi.fn(() => closeP);
+    const client = fakeClient({ create: async () => ({ ok: true, session: lobby() }), get, close });
+    await selectClassAndStudents(client);
+    fireEvent.click(screen.getByRole("button", { name: "اختيار الكل" }));
+    fireEvent.click(screen.getByRole("button", { name: "إنشاء الغرفة" }));
+    await screen.findByText("K7MX4P");
+    await waitFor(() => expect(get).toHaveBeenCalledTimes(1));        // first poll GET in flight (held pending)
+
+    fireEvent.click(screen.getByRole("button", { name: "إغلاق الغرفة" }));
+    fireEvent.click(screen.getByRole("button", { name: "تأكيد الإغلاق" }));  // closing=true → polling paused NOW
+    releaseGet(lobby({ counts: { total: 2, joined: 2, ready: 2 } }));  // the stale poll resolves with a CHANGED roster
+    await new Promise(r => setTimeout(r, 20));
+    expect(screen.queryAllByText(/2 \/ 2/).length).toBe(0);           // ignored — polling was paused by close
+
+    releaseClose({ ok: true, session: lobby({ status: "closed", closedAt: "z" }) });
+    expect(await screen.findByText("تم إغلاق هذه الغرفة.")).toBeTruthy();
+  });
+
+  it("a late class-A roster does not replace the newer class-B selection (Fix 4)", async () => {
+    // Pick class A (roster held pending), switch to class B (roster resolves), then A resolves LATE. The stale A roster
+    // must be dropped by the request-generation guard. Removing that guard makes "طالب أ" replace "طالبة ب" and fails.
+    let releaseA: (v: StudentOption[]) => void = () => {};
+    const aList = new Promise<StudentOption[]>(res => { releaseA = res; });
+    const listStudents = vi.fn((id: string) =>
+      id === "clA" ? aList : Promise.resolve([{ userId: "b1", displayName: "طالبة ب", active: true, archived: false }]));
+    const client = fakeClient({
+      listClasses: async () => [{ classId: "clA", name: "صف أ" }, { classId: "clB", name: "صف ب" }],
+      listStudents,
+    });
+    renderLobby(client);
+    await screen.findByRole("option", { name: "صف أ" });
+    fireEvent.change(screen.getByLabelText("الصف"), { target: { value: "clA" } });   // A pending
+    await waitFor(() => expect(listStudents).toHaveBeenCalledWith("clA"));
+    fireEvent.change(screen.getByLabelText("الصف"), { target: { value: "clB" } });   // switch to B
+    await screen.findByText("طالبة ب");                                              // B roster shown
+
+    releaseA([{ userId: "a1", displayName: "طالب أ", active: true, archived: false }]);  // A resolves LATE
+    await new Promise(r => setTimeout(r, 20));
+    expect(screen.getByText("طالبة ب")).toBeTruthy();               // newer B roster remains
+    expect(screen.queryByText("طالب أ")).toBeNull();                // stale A roster dropped
   });
 
   it("stops polling on unmount (no update-after-unmount)", async () => {

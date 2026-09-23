@@ -80,6 +80,26 @@ describe("student ready", () => {
     expect(parts().find(p => p.studentId === "s1").joinedAt).toBeTruthy();     // still joined
     noLeak(r.jsonBody);
   });
+  it("ready requires a STRICT boolean — malformed values are 400 and never mutate the participant (Fix 3)", async () => {
+    // ready:true and ready:false are the only accepted payloads; "false" / 1 / {} / null / missing → 400 with NO mutation.
+    const okTrue = await call(seedSession(), "s1", "ready", { joinCode: "K7MX4P", ready: true });
+    expect(okTrue.status).toBe(200);
+    expect(okTrue.jsonBody.session.you).toEqual({ joined: true, ready: true });
+    const okFalse = await call(seedSession(), "s1", "ready", { joinCode: "K7MX4P", ready: false });
+    expect(okFalse.status).toBe(200);
+    expect(okFalse.jsonBody.session.you).toEqual({ joined: true, ready: false });
+    for (const bad of ["false", 1, 0, {}, null, undefined]) {
+      const ctx = seedSession();
+      const r = await call(ctx, "s1", "ready", { joinCode: "K7MX4P", ready: bad });
+      expect(r.status, JSON.stringify(bad)).toBe(400);                              // rejected, not coerced to true
+      const p = ctx.getJson(sessionDocName("K7MX4P")).participants.find(x => x.studentId === "s1");
+      expect(p.joinedAt, JSON.stringify(bad)).toBeNull();                            // no mutation whatsoever
+      expect(p.readyAt, JSON.stringify(bad)).toBeNull();
+    }
+    // a missing `ready` key (the classic coercion trap that made {} → true) is also a 400.
+    const missing = await call(seedSession(), "s1", "ready", { joinCode: "K7MX4P" });
+    expect(missing.status).toBe(400);
+  });
   it("concurrent ready from two students preserves BOTH (CAS retry on a stale read)", async () => {
     // Inject s2's ready right before s1's conditional write, forcing a 412 and a retry on the fresh document.
     let fired = false;

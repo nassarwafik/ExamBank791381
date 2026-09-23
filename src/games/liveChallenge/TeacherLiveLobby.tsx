@@ -27,6 +27,8 @@ export default function TeacherLiveLobby({ token, challengeId, challengeTitle, o
   const [error, setError] = useState("");
   const [lobby, setLobby] = useState<TeacherLobby | null>(null);
   const [confirmClose, setConfirmClose] = useState(false);
+  const [closing, setClosing] = useState(false);         // gates polling off the moment a close begins
+  const classReqRef = useRef(0);                          // request-generation guard for class-switch roster loads
 
   // Load the teacher's classes once.
   useEffect(() => {
@@ -37,12 +39,17 @@ export default function TeacherLiveLobby({ token, challengeId, challengeTitle, o
 
   // Load the selectable (active, non-archived) students whenever the class changes.
   const onPickClass = useCallback(async (id: string) => {
+    const reqId = ++classReqRef.current;                  // a newer selection bumps this; a late older response is dropped
     setClassId(id); setStudents(null); setSelected(new Set()); setError("");
     if (!id) return;
     try {
       const list = await clientRef.current.listStudents(id);
+      if (classReqRef.current !== reqId) return;          // superseded by a newer class pick — ignore this roster
       setStudents(list.filter(s => s.active !== false && s.archived !== true));
-    } catch { setStudents([]); setError("تعذّر تحميل الطلاب."); }
+    } catch {
+      if (classReqRef.current !== reqId) return;
+      setStudents([]); setError("تعذّر تحميل الطلاب.");
+    }
   }, []);
 
   const selectableIds = useMemo(() => (students || []).map(s => s.userId), [students]);
@@ -63,8 +70,9 @@ export default function TeacherLiveLobby({ token, challengeId, challengeTitle, o
     finally { setCreating(false); }
   }, [challengeId, classId, selected, selectableIds]);
 
-  // Poll the lobby while it is open (stops on close / unmount / leaving the view).
-  const polling = phase === "lobby" && !!lobby && lobby.status === "lobby";
+  // Poll the lobby while it is open (stops on close / unmount / leaving the view). `closing` gates polling off the
+  // instant a close starts, so an older in-flight lobby GET can't win over the close response and revive the room.
+  const polling = phase === "lobby" && !!lobby && lobby.status === "lobby" && !closing;
   const pollFn = useCallback(async (isCurrent: () => boolean) => {
     if (!lobby) return;
     const s = await clientRef.current.get(lobby.joinCode);
@@ -74,9 +82,10 @@ export default function TeacherLiveLobby({ token, challengeId, challengeTitle, o
 
   const closeRoom = useCallback(async () => {
     if (!lobby) return;
-    setConfirmClose(false);
+    setConfirmClose(false); setClosing(true);            // pause polling before the async close; any in-flight GET goes stale
     try { const r = await clientRef.current.close(lobby.joinCode); if (r.session) setLobby(r.session); }
     catch { setError("تعذّر إغلاق الغرفة."); }
+    finally { setClosing(false); }                        // on success status is now "closed" (polling stays off); on error polling resumes
   }, [lobby]);
 
   // ── Setup: class + participant selection ──

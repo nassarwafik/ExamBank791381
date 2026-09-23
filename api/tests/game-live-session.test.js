@@ -127,3 +127,55 @@ describe("teacher get / close — ownership", () => {
     expect(ctx.getJson(sessionDocName(code)).participants).toHaveLength(1);   // never deletes the blob
   });
 });
+
+describe("teacher close — zero write on unknown / foreign rooms (Fix 1)", () => {
+  // A: an UNKNOWN room must 404 with NO blob write — the CAS callback throws NoCloseTarget instead of returning a
+  // placeholder object, so mutateJsonWithRetry never create-writes an empty {} blob for a nonexistent room.
+  // This test IS the mutation guard: restoring `return current || {}` would materialize the blob and fail the
+  // `ctx.has(name)` assertion below (the status would still read 404, so only the zero-write check catches it).
+  it("A — closing an UNKNOWN room returns 404 and creates NO blob", async () => {
+    const ctx = school();
+    const name = sessionDocName("ZZZZZZ");
+    expect(ctx.has(name)).toBe(false);
+    const r = await handler(req("close", { joinCode: "ZZZZZZ" }), teacherDeps(ctx, "t1"));
+    expect(r.status).toBe(404);
+    expect(ctx.has(name)).toBe(false);                       // no empty placeholder blob was materialized
+  });
+
+  // B: a FOREIGN teacher's room must 404 and stay BYTE-identical (zero write) — the callback throws before any upload,
+  // so neither the blob's content nor its ETag changes and the real owner's room is untouched.
+  it("B — closing ANOTHER teacher's room returns 404 and leaves it byte-identical (zero write)", async () => {
+    const ctx = school();
+    const code = (await create(ctx, { challengeId: "c1", classId: "cl1", studentIds: ["s1"] })).jsonBody.session.joinCode;
+    const name = sessionDocName(code);
+    const before = ctx.store.get(name);
+    const beforeEtag = before.etag, beforeContent = before.content.toString("utf8");
+    const r = await handler(req("close", { joinCode: code }), teacherDeps(ctx, "t2"));   // t2 is not the owner
+    expect(r.status).toBe(404);
+    const after = ctx.store.get(name);
+    expect(after.etag).toBe(beforeEtag);                     // ETag unchanged → no write occurred at all
+    expect(after.content.toString("utf8")).toBe(beforeContent);
+    expect(ctx.getJson(name).status).toBe("lobby");          // still open for its real owner
+  });
+
+  // C: the OWNER closes normally (lobby → closed) with history/participants preserved.
+  it("C — the OWNER can close (lobby → closed), participants preserved", async () => {
+    const ctx = school();
+    const code = (await create(ctx, { challengeId: "c1", classId: "cl1", studentIds: ["s1", "s2"] })).jsonBody.session.joinCode;
+    const r = await handler(req("close", { joinCode: code }), teacherDeps(ctx, "t1"));
+    expect(r.status).toBe(200);
+    expect(r.jsonBody.session.status).toBe("closed");
+    expect(ctx.getJson(sessionDocName(code)).participants).toHaveLength(2);   // history preserved (never deleted)
+  });
+
+  // D: a repeat owner close is idempotent — still closed, still exactly one blob.
+  it("D — a repeat owner close is idempotent (stays closed)", async () => {
+    const ctx = school();
+    const code = (await create(ctx, { challengeId: "c1", classId: "cl1", studentIds: ["s1"] })).jsonBody.session.joinCode;
+    expect((await handler(req("close", { joinCode: code }), teacherDeps(ctx, "t1"))).jsonBody.session.status).toBe("closed");
+    const again = await handler(req("close", { joinCode: code }), teacherDeps(ctx, "t1"));
+    expect(again.status).toBe(200);
+    expect(again.jsonBody.session.status).toBe("closed");
+    expect(ctx.has(sessionDocName(code))).toBe(true);
+  });
+});
