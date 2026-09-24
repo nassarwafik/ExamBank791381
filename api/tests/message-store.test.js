@@ -1,8 +1,8 @@
 import { describe, it, expect } from "vitest";
 import {
-  isSafeId, directPrefix, announcementPrefix, generateMessageId, normalizeMessageBody, clampLimit,
+  isSafeId, directPrefix, announcementPrefix, sequencedMessageId, messagePosition, normalizeMessageBody, clampLimit,
   createMessage, listRecentMessages, messageView, studentDisplayName,
-  DIRECT_PREFIX, ANNOUNCEMENT_PREFIX, MAX_BODY_LENGTH, MAX_HISTORY_LIMIT
+  DIRECT_PREFIX, ANNOUNCEMENT_PREFIX, MAX_BODY_LENGTH, MAX_HISTORY_LIMIT, MAX_CREATE_ATTEMPTS, SEQUENCE_KEY_BASE
 } from "../src/lib/message-store.js";
 import { createMemoryContainer } from "./fixtures/memory-container.js";
 
@@ -24,12 +24,26 @@ describe("safe prefixes", () => {
   });
 });
 
-describe("server-generated ids", () => {
-  it("13-digit time prefix + 16 hex randomness; lexicographic order == chronological order", () => {
-    const a = generateMessageId(1700000000000), b = generateMessageId(1700000000001), c = generateMessageId(1800000000000);
+describe("server-generated ids (publication positions)", () => {
+  it("<13-digit order key>-<16 hex>: key = SEQUENCE_KEY_BASE + position; order == position order; above every legacy id", () => {
+    const p = directPrefix("s1");
+    const [a, b, c] = [1, 2, 10].map(n => sequencedMessageId(p, n));
     for (const id of [a, b, c]) expect(id).toMatch(/^\d{13}-[a-f0-9]{16}$/);
+    expect(a.slice(0, 13)).toBe(String(SEQUENCE_KEY_BASE + 1));
     expect([c, a, b].sort()).toEqual([a, b, c]);
-    expect(generateMessageId(1700000000000)).not.toBe(a);   // randomness
+    expect("1799999999999-ffffffffffffffff" < a).toBe(true);                     // legacy ms ids sort first
+    expect(sequencedMessageId(p, 1)).toBe(a);                                    // deterministic per (stream, position)
+    expect(sequencedMessageId(directPrefix("s2"), 1)).not.toBe(a);               // distinct across streams
+    for (const bad of [0, -1, 1.5, NaN]) expect(() => sequencedMessageId(p, bad)).toThrow();
+  });
+  it("messagePosition: canonical sequenced id → position; legacy id → 0; forged / other-stream / malformed → -1", () => {
+    const p = directPrefix("s1");
+    expect(messagePosition(sequencedMessageId(p, 7), p)).toBe(7);
+    expect(messagePosition("1700000000000-aaaaaaaaaaaaaaaa", p)).toBe(0);
+    expect(messagePosition(sequencedMessageId(directPrefix("s2"), 7), p)).toBe(-1);   // another stream's position
+    expect(messagePosition(String(SEQUENCE_KEY_BASE + 7) + "-aaaaaaaaaaaaaaaa", p)).toBe(-1);
+    expect(messagePosition(String(SEQUENCE_KEY_BASE) + "-aaaaaaaaaaaaaaaa", p)).toBe(-1);
+    expect(messagePosition("x", p)).toBe(-1);
   });
 });
 
@@ -57,35 +71,34 @@ describe("create-only writes", () => {
     expect(ctx.names(DIRECT_PREFIX)).toEqual([directPrefix("s1") + doc.messageId + ".json"]);
     expect(ctx.getJson(directPrefix("s1") + doc.messageId + ".json")).toEqual(doc);
   });
-  it("rapid sends within the SAME millisecond keep send order (per-process monotonic id time)", async () => {
+  it("rapid sends within the SAME millisecond keep send order (consecutive publication positions)", async () => {
     const ctx = createMemoryContainer({});
     for (const t of ["a", "b", "c", "d", "e"]) await createMessage(ctx.container, directPrefix("s1"), directDoc("s1", t), { now: () => 1900000000000 });
     const r = await listRecentMessages(ctx.container, directPrefix("s1"), { kind: "direct", studentId: "s1" }, 100);
     expect(r.messages.map(m => m.body)).toEqual(["a", "b", "c", "d", "e"]);
   });
-  it("a forced id collision regenerates the id instead of overwriting; the existing message is unchanged", async () => {
+  it("a position already published (stale listing) is never overwritten: the create conflicts and the NEXT position is used", async () => {
     const ctx = createMemoryContainer({});
     const prefix = directPrefix("s1");
-    const fixed = "1700000000000-aaaaaaaaaaaaaaaa";
-    const original = { schemaVersion: 1, messageId: fixed, kind: "direct", studentId: "s1", senderRole: "student", senderId: "s1", senderDisplayName: "S", body: "ORIGINAL", createdAt: "2023-01-01T00:00:00.000Z" };
-    ctx.setJson(prefix + fixed + ".json", original);
-    const ids = [fixed, fixed, "1700000000000-bbbbbbbbbbbbbbbb"];
-    const doc = await createMessage(ctx.container, prefix, directDoc("s1", "NEW"), { now: () => 1700000000000, generateMessageId: () => ids.shift() });
-    expect(doc.messageId).toBe("1700000000000-bbbbbbbbbbbbbbbb");
-    expect(ctx.getJson(prefix + fixed + ".json")).toEqual(original);              // never overwritten
+    const first = sequencedMessageId(prefix, 1);
+    const original = { schemaVersion: 1, messageId: first, kind: "direct", studentId: "s1", senderRole: "student", senderId: "s1", senderDisplayName: "S", body: "ORIGINAL", createdAt: "2023-01-01T00:00:00.000Z" };
+    ctx.setJson(prefix + first + ".json", original);
+    const doc = await createMessage(ctx.container, prefix, directDoc("s1", "NEW"), { listBlobNames: async () => [] });   // listing missed position 1
+    expect(doc.messageId).toBe(sequencedMessageId(prefix, 2));
+    expect(ctx.getJson(prefix + first + ".json")).toEqual(original);              // never overwritten
     expect(ctx.names(prefix).length).toBe(2);
   });
-  it("gives up (throws) after bounded collisions and never overwrites", async () => {
+  it("gives up (throws) after bounded conflicts and never overwrites — nothing half-published", async () => {
     const ctx = createMemoryContainer({});
     const prefix = directPrefix("s1");
-    const fixed = "1700000000000-aaaaaaaaaaaaaaaa";
-    ctx.setJson(prefix + fixed + ".json", { keep: true });
-    await expect(createMessage(ctx.container, prefix, directDoc("s1", "x"), { generateMessageId: () => fixed })).rejects.toThrow();
-    expect(ctx.getJson(prefix + fixed + ".json")).toEqual({ keep: true });
+    for (let n = 1; n <= MAX_CREATE_ATTEMPTS; n++) ctx.setJson(prefix + sequencedMessageId(prefix, n) + ".json", { keep: n });
+    await expect(createMessage(ctx.container, prefix, directDoc("s1", "x"), { listBlobNames: async () => [] })).rejects.toThrow();
+    expect(ctx.names(prefix).length).toBe(MAX_CREATE_ATTEMPTS);
+    for (let n = 1; n <= MAX_CREATE_ATTEMPTS; n++) expect(ctx.getJson(prefix + sequencedMessageId(prefix, n) + ".json")).toEqual({ keep: n });
   });
   it("a non-conflict storage error propagates (not retried as a collision)", async () => {
     const boom = Object.assign(new Error("down"), { statusCode: 500 });
-    await expect(createMessage({}, directPrefix("s1"), directDoc("s1", "x"), { uploadJsonConditional: async () => { throw boom; } })).rejects.toBe(boom);
+    await expect(createMessage({}, directPrefix("s1"), directDoc("s1", "x"), { listBlobNames: async () => [], uploadJsonConditional: async () => { throw boom; } })).rejects.toBe(boom);
   });
 });
 

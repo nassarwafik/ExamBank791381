@@ -5,8 +5,8 @@ import { normalizeClassStatus } from "../classLifecycle";
 import type { Classroom, Student } from "../students/types";
 import { MessageComposer, MessageThread } from "./MessageParts";
 import {
-  MESSAGES_POLL_MS, createTeacherMessagesClient, mergeMessage,
-  type MessageView, type TeacherMessagesClient, type ThreadState
+  MESSAGES_POLL_MS, UNREAD_POLL_MS, createTeacherMessagesClient, mergeMessage, formatUnread, readAckFromSnapshot, ackKey,
+  type MessageView, type TeacherMessagesClient, type ThreadState, type UnreadCount, type ReadAck
 } from "./messagesClient";
 import "./messages.css";
 
@@ -22,6 +22,15 @@ import "./messages.css";
  * and can never overwrite the newer thread or erase a just-sent message. The roster has its own `rosterGen`.
  * Polling: only the currently visible thread, every 5s, via the shared single-flight useAutoRefresh (paused while
  * the tab is hidden and while a send is in flight; torn down on unmount). Classes/roster are NOT re-polled.
+ *
+ * Phase 5D — unread: the selected class's per-student unread replies (server summary, refreshed every 15s) show as
+ * «N جديدة» in the roster. When a student's conversation snapshot loads and is STILL the current, visible thread, it
+ * is acknowledged from THAT GET snapshot only: the latest STUDENT message shown + the student ids at its millisecond
+ * (the teacher's own messages never move the boundary; nothing is marked when no student message was shown). The badge
+ * only changes from the server's response, never optimistically. A stale response for a previous student returns before this point, so it can never
+ * mark the wrong thread; a failed mark leaves the badge until a later successful one. Mark responses are ordered per
+ * thread (`markSeq`): only the NEWEST mark request started for a thread may apply its count — an older request that
+ * resolves later (even successfully) is ignored for the UI, so a stale count can never overwrite a fresher one.
  */
 type Tab = "direct" | "announcements";
 const ARCHIVED_CLASS_TEXT = "هذا الصف مؤرشف. الرسائل السابقة متاحة للقراءة فقط.";
@@ -33,7 +42,7 @@ function studentStatus(s: Student): { label: string; code: "active" | "disabled"
   return { label: "نشط", code: "active" };
 }
 
-export default function TeacherMessagesPage({ token, client: injected }: { token: string; client?: TeacherMessagesClient }) {
+export default function TeacherMessagesPage({ token, client: injected, onUnreadChanged }: { token: string; client?: TeacherMessagesClient; onUnreadChanged?: () => void }) {
   const client = useMemo(() => injected || createTeacherMessagesClient(token), [injected, token]);
   const [classes, setClasses] = useState<Classroom[] | null>(null);
   const [classesError, setClassesError] = useState("");
@@ -53,6 +62,13 @@ export default function TeacherMessagesPage({ token, client: injected }: { token
   // Server-CONFIRMED messages sent from this page for the current thread. Every applied read is unioned with them, so
   // no read (however late or lagging) can drop a message the server already accepted. Cleared on thread switch.
   const confirmed = useRef<{ key: string; messages: MessageView[] }>({ key: "", messages: [] });
+  // Phase 5D — per-student unread replies for the selected class (server summary) + mark-read bookkeeping.
+  const [unreadByStudent, setUnreadByStudent] = useState<Record<string, UnreadCount>>({});
+  const summaryGen = useRef(0);
+  const summaryClass = useRef("");
+  const marked = useRef<Record<string, string>>({});        // thread key → last id successfully marked read
+  const marking = useRef<Record<string, string>>({});       // thread key → id currently being marked (single-flight)
+  const markSeq = useRef<Record<string, number>>({});       // thread key → sequence of the newest STARTED mark request
 
   useEffect(() => {
     let alive = true;
@@ -69,12 +85,50 @@ export default function TeacherMessagesPage({ token, client: injected }: { token
       const data = key.startsWith("ann:") ? await client.getAnnouncements(key.slice(4)) : await client.getDirect(key.slice(3));
       if (gen !== threadGen.current) return;                         // switched / sent meanwhile → stale, discard
       const own = confirmed.current.key === key ? confirmed.current.messages : [];
-      setThread({ key, ...data, messages: own.reduce(mergeMessage, data.messages) });
+      const messages = own.reduce(mergeMessage, data.messages);
+      setThread({ key, ...data, messages });
       setThreadError("");
+      // Still the current thread (the gen check above) → acknowledge what THIS GET snapshot showed (student messages).
+      if (key.startsWith("dm:")) {
+        const ack = readAckFromSnapshot(data.messages, m => m.senderRole === "student");
+        if (ack) void markThreadRead(key, ack);
+      }
     } catch (e) {
       if (gen !== threadGen.current) return;
       if (!silent) setThreadError(e instanceof Error ? e.message : "تعذر تحميل الرسائل.");   // a failed poll keeps the last-good thread
     }
+  }
+
+  async function markThreadRead(key: string, ack: ReadAck) {
+    if (activeKey.current !== key) return;
+    if (typeof document !== "undefined" && document.visibilityState !== "visible") return;
+    const throughMessageId = ackKey(ack);
+    if (marked.current[key] === throughMessageId || marking.current[key] === throughMessageId) return;
+    marking.current[key] = throughMessageId;
+    const seq = (markSeq.current[key] = (markSeq.current[key] || 0) + 1);
+    const sid = key.slice(3);
+    try {
+      const remaining = await client.markDirectRead(sid, ack);
+      if (seq !== markSeq.current[key]) return;                      // a newer mark for this thread started → its count wins
+      marked.current[key] = throughMessageId;
+      summaryGen.current += 1;                                        // an older in-flight class summary can't restore the old count
+      setUnreadByStudent(prev => ({ ...prev, [sid]: remaining }));
+      onUnreadChanged?.();
+    } catch {
+      /* the unread indicator stays until a later successful mark */
+    } finally {
+      if (marking.current[key] === throughMessageId) delete marking.current[key];
+    }
+  }
+
+  async function loadClassUnread(forClassId: string) {
+    if (!forClassId) return;
+    const gen = ++summaryGen.current;
+    try {
+      const summary = await client.getClassUnread(forClassId);
+      if (gen !== summaryGen.current || summaryClass.current !== forClassId) return;
+      setUnreadByStudent(summary.byStudent);
+    } catch { /* keep the last-good indicators */ }
   }
 
   function switchThread(key: string) {
@@ -102,6 +156,10 @@ export default function TeacherMessagesPage({ token, client: injected }: { token
     setStudentId("");
     setStudents(null); setRosterError("");
     if (nextClassId) void loadRoster(nextClassId); else rosterGen.current += 1;
+    summaryClass.current = nextClassId;
+    summaryGen.current += 1;
+    setUnreadByStudent({});
+    void loadClassUnread(nextClassId);
     switchThread(tab === "announcements" && nextClassId ? "ann:" + nextClassId : "");
   }
   function selectTab(next: Tab) {
@@ -138,6 +196,7 @@ export default function TeacherMessagesPage({ token, client: injected }: { token
 
   const threadKey = !classId ? "" : tab === "announcements" ? "ann:" + classId : studentId ? "dm:" + studentId : "";
   useAutoRefresh(() => loadThread(activeKey.current, true), { intervalMs: MESSAGES_POLL_MS, enabled: !!threadKey && !sending });
+  useAutoRefresh(() => loadClassUnread(summaryClass.current), { intervalMs: UNREAD_POLL_MS, enabled: !!classId });
 
   const selectedClass = (classes || []).find(c => c.classId === classId) || null;
   const classArchived = selectedClass ? normalizeClassStatus(selectedClass) === "archived" : false;
@@ -187,11 +246,13 @@ export default function TeacherMessagesPage({ token, client: injected }: { token
                     <ul className="eb-msg-roster-list" aria-label="طلاب الصف">
                       {students.map(s => {
                         const st = studentStatus(s);
+                        const u = unreadByStudent[s.userId];
                         return (
                           <li key={s.userId}>
                             <button type="button" className={"eb-msg-roster-item is-" + st.code} aria-pressed={s.userId === studentId} onClick={() => selectStudent(s.userId)} disabled={sending}>
                               <span className="eb-msg-roster-name">{s.displayName}</span>
                               <span className="eb-msg-roster-status">{st.label}</span>
+                              {u && u.unread > 0 && <span className="eb-msg-unread">{formatUnread(u.unread, u.capped)} جديدة</span>}
                             </button>
                           </li>
                         );

@@ -7,9 +7,22 @@
 // moment can never overwrite each other, there is no whole-thread CAS / lost update, history is immutable, and one
 // failed send cannot corrupt older history. There is no edit / delete / unsend in Phase 5C.
 //
-// Message ids are generated HERE (server side): a 13-digit Date.now() prefix + cryptographic randomness, so blob
-// names sort chronologically. A create collision regenerates the id and retries — an existing blob is NEVER
-// overwritten. Nothing the browser sends (messageId, createdAt, sender*) is ever authority.
+// PUBLICATION ORDER (Phase 5D third review). A message id is assigned BY ITS PUBLICATION, not by a clock: each stream
+// is a dense sequence of positions 1, 2, 3, … and a message is published by the create-only write (If-None-Match:"*")
+// of the blob for the NEXT position. That single atomic write is both the commit and the ordering authority:
+//   • a writer only attempts position p after observing p-1 exist (the listing max, or a create conflict at p-1),
+//     so positions become visible strictly in order and the visible sequenced set is always a prefix 1..n;
+//   • two concurrent writers race for the SAME blob name — exactly one wins, the other gets 409 and moves to p+1;
+//   • there is no second write, so a crash leaves either a published message or nothing (never a half-state).
+// A message that is slow to upload therefore cannot appear "below" a message published after it: if it loses the race
+// it is published at a LATER position. Wall clocks (Date.now / per-process monotonic ms) are only the display time
+// (createdAt) and never ordering authority — a process-local monotonic clock orders id ALLOCATION, not publication.
+// The id keeps the public format "<13 digits>-<16 hex>": the 13 digits are the ORDER KEY SEQUENCE_KEY_BASE + position
+// (above every legacy millisecond id) and the hex is a deterministic digest of (stream, position), so the blob name
+// for a position is fixed (the create-only race is on the same name) and ids stay distinct across streams.
+// LEGACY ids (Phase 5C, "<ms>-<random hex>", order key < SEQUENCE_KEY_BASE) stay readable and sort before every
+// sequenced id; they are never written by this code. Nothing the browser sends (messageId, createdAt, sender*) is
+// ever authority.
 //
 // Reads are always NARROW: one student's direct prefix or one class's announcement prefix — never a scan of all
 // messages. Names are listed (cheap, no download), sorted, and only the bounded most-recent page is downloaded.
@@ -24,8 +37,18 @@ const DIRECT_HISTORY_LIMIT = 100;
 const ANNOUNCEMENT_HISTORY_LIMIT = 50;
 const MAX_HISTORY_LIMIT = 200;
 const MAX_CREATE_ATTEMPTS = 5;
+// The reader's unread legacy FRONTIER (see scanLegacyFrontier): at most LEGACY_UNREAD_PAGE_LIMIT unread legacy messages
+// the reader must acknowledge ride along beyond a page's normal tail, and at most LEGACY_FRONTIER_SCAN_LIMIT unread
+// legacy candidates are classified per request — so a long unread 5C history never turns a poll into a full-history
+// download; the rest waits for a later page.
+const LEGACY_UNREAD_PAGE_LIMIT = 100;
+const LEGACY_FRONTIER_SCAN_LIMIT = 400;
+const LEGACY_FRONTIER_BATCH = 50;
 const SENDER_ROLES = new Set(["teacher", "student"]);
 const MESSAGE_ID_RE = /^\d{13}-[a-f0-9]{16}$/;
+// Order key of stream position 1 is SEQUENCE_KEY_BASE + 1. Every legacy millisecond id (< year 2255) sorts below it.
+const SEQUENCE_KEY_BASE = 9000000000000;
+const MAX_POSITION = 999999999999;
 
 /** A storage-safe id segment (class ids / user ids are UUIDs). Anything else — "../", "/", "%", empty, oversized —
  *  is REJECTED (never rewritten, so two different ids can never map to the same prefix). */
@@ -41,10 +64,21 @@ function announcementPrefix(classId) {
   return ANNOUNCEMENT_PREFIX + classId + "/";
 }
 
-/** Server-generated, chronologically sortable message id: <13-digit ms>-<16 hex chars of crypto randomness>. */
-function generateMessageId(nowMs = Date.now(), randomBytes = crypto.randomBytes) {
-  const ms = Math.max(0, Math.floor(Number(nowMs) || 0));
-  return String(ms).padStart(13, "0").slice(-13) + "-" + randomBytes(8).toString("hex");
+/** The id (and blob name) of stream position `position`: "<SEQUENCE_KEY_BASE + position>-<digest(stream, position)>". */
+function sequencedMessageId(prefix, position) {
+  if (!Number.isInteger(position) || position < 1 || position > MAX_POSITION) throw new Error("Invalid message position.");
+  const digest = crypto.createHash("sha256").update("message-position\n" + prefix + "\n" + position).digest("hex");
+  return String(SEQUENCE_KEY_BASE + position) + "-" + digest.slice(0, 16);
+}
+
+/** The stream position of a sequenced id under `prefix`; 0 for a legacy (millisecond) id; -1 when the id claims a
+ *  sequenced order key but is not the canonical id of that position in THIS stream (never trusted). */
+function messagePosition(id, prefix) {
+  if (typeof id !== "string" || !MESSAGE_ID_RE.test(id)) return -1;
+  const key = Number(id.slice(0, 13));
+  if (key <= SEQUENCE_KEY_BASE) return key < SEQUENCE_KEY_BASE ? 0 : -1;
+  const position = key - SEQUENCE_KEY_BASE;
+  return sequencedMessageId(prefix, position) === id ? position : -1;
 }
 
 /** Plain-text body contract: a string; CRLF → LF; control characters (except newline/tab) removed; outer whitespace
@@ -64,43 +98,45 @@ function clampLimit(value, fallback) {
   return Math.min(n, MAX_HISTORY_LIMIT);
 }
 
-/**
- * Create-only write of ONE new message under `prefix`. `buildDoc(messageId, createdAt)` returns the full document.
- * A blob-name collision (If-None-Match conflict) regenerates the id and retries; an existing message is never
- * overwritten. Returns the stored document.
- */
-// Last issued id timestamp in THIS process. Ids are ordered by their time prefix, so two sends within the same
-// millisecond would otherwise order by their random suffix; issuing strictly increasing milliseconds per process keeps
-// rapid consecutive sends (e.g. a teacher's quick follow-ups) in send order. Across instances, order is by clock.
-let lastIssuedMs = 0;
-function nextMonotonicMs(nowMs) {
-  const ms = Math.max(Math.floor(Number(nowMs) || 0), lastIssuedMs + 1);
-  lastIssuedMs = ms;
-  return ms;
+/** Highest stream position visible in a listing (0 when the stream has no sequenced message yet). */
+function maxListedPosition(names, prefix) {
+  let max = 0;
+  for (const name of names) {
+    const id = blobMessageId(name, prefix);
+    if (id) max = Math.max(max, messagePosition(id, prefix));
+  }
+  return max;
 }
 
+/**
+ * PUBLISH one new message under `prefix` at the next stream position (see PUBLICATION ORDER above).
+ * `buildDoc(messageId, createdAt)` returns the full document. The position is the listed maximum + 1; a create
+ * conflict means another writer published that position first, so the next position is tried — an existing message is
+ * never overwritten and a message is never published below one that became visible before it. Returns the document.
+ */
 async function createMessage(container, prefix, buildDoc, deps = {}) {
   const upload = deps.uploadJsonConditional || uploadJsonConditional;
+  const list = deps.listBlobNames || listBlobNames;
   const now = deps.now || (() => Date.now());
-  const newId = deps.generateMessageId || generateMessageId;
-  for (let attempt = 0; attempt < MAX_CREATE_ATTEMPTS; attempt++) {
-    const ms = nextMonotonicMs(now());
-    const messageId = newId(ms);
-    const doc = buildDoc(messageId, new Date(ms).toISOString());
+  let position = maxListedPosition(await list(container, prefix), prefix) + 1;
+  for (let attempt = 0; attempt < MAX_CREATE_ATTEMPTS; attempt++, position++) {
+    const messageId = sequencedMessageId(prefix, position);
+    const doc = buildDoc(messageId, new Date(now()).toISOString());   // createdAt = display time only
     try {
-      await upload(container, prefix + messageId + ".json", doc, null);   // etag=null → create-only
+      await upload(container, prefix + messageId + ".json", doc, null);   // etag=null → create-only = the commit
       return doc;
     } catch (e) {
-      if (!isConcurrencyConflict(e)) throw e;                             // only an id collision is retried
+      if (!isConcurrencyConflict(e)) throw e;                             // only "position already published" retries
     }
   }
-  throw new Error("Could not allocate a unique message id.");
+  throw new Error("Could not publish the message (stream position contention).");
 }
 
+/** The message id of a stream blob name: a legacy id, or the CANONICAL id of a sequenced position; else "". */
 function blobMessageId(name, prefix) {
   if (!name.startsWith(prefix) || !name.endsWith(".json")) return "";
   const id = name.slice(prefix.length, -".json".length);
-  return MESSAGE_ID_RE.test(id) ? id : "";
+  return messagePosition(id, prefix) >= 0 ? id : "";
 }
 
 /** A stored document is accepted only when it matches where it was read from; anything malformed is skipped. */
@@ -114,11 +150,60 @@ function normalizeStoredMessage(doc, expected) {
   return doc;
 }
 
+/** Whether a stored message is one THIS reader must acknowledge: a valid document of this stream (`expected`) that the
+ *  reader's sender-role rule (`include`) accepts — exactly what countUnread counts as unread. */
+function isRelevantMessage(doc, expected, messageId, include) {
+  const valid = normalizeStoredMessage(doc, { ...expected, messageId });
+  return !!valid && include(valid);
+}
+
 /**
- * The most recent `limit` messages under ONE prefix, oldest → newest. Lists names only, sorts them (ids are
- * chronological), downloads just the bounded tail. `expected` pins kind + studentId/classId for validation.
+ * The reader's LEGACY FRONTIER. `unreadIds` are the reader's unread legacy ids, ascending (legacy order); `loadDocs(ids)`
+ * returns their documents. Walks them oldest-first, classifying each with isRelevantMessage, and stops after the
+ * LEGACY_UNREAD_PAGE_LIMIT-th RELEVANT one or after LEGACY_FRONTIER_SCAN_LIMIT candidates. The reader's own (irrelevant)
+ * messages never spend the relevant budget. Returns:
+ *   classified  Map id → relevant? for every id walked (the frontier window; ids after it are unknown);
+ *   frontier    the relevant ids of the window — the only unread relevant legacy ids a page may show or an
+ *               acknowledgement may newly cover (message-read-state.js enforces the same rule);
+ *   absorbable  when the window holds NO relevant message (the bound was hit, or no unread legacy is left): its ids, all
+ *               the reader's own / invalid messages — safe to fold into the reader's legacy boundary (they are never
+ *               counted unread), so own messages can never permanently starve the frontier (absorbIrrelevantLegacy).
+ *               When the window holds a relevant message, the reader's own acknowledgement of it covers them instead.
+ * `until` (optional) stops the walk once ids pass it.
  */
-async function listRecentMessages(container, prefix, expected, limit, deps = {}) {
+async function scanLegacyFrontier(unreadIds, loadDocs, expected, include, { until } = {}) {
+  const classified = new Map();
+  const frontier = [];
+  const leading = [];
+  let i = 0;
+  while (i < unreadIds.length && classified.size < LEGACY_FRONTIER_SCAN_LIMIT && frontier.length < LEGACY_UNREAD_PAGE_LIMIT) {
+    if (until !== undefined && unreadIds[i] > until) break;
+    const slice = unreadIds.slice(i, i + Math.min(LEGACY_FRONTIER_BATCH, LEGACY_FRONTIER_SCAN_LIMIT - classified.size));
+    const docs = await loadDocs(slice);
+    for (let j = 0; j < slice.length && frontier.length < LEGACY_UNREAD_PAGE_LIMIT; j++) {
+      if (until !== undefined && slice[j] > until) break;
+      const relevant = isRelevantMessage(docs[j], expected, slice[j], include);
+      classified.set(slice[j], relevant);
+      if (relevant) frontier.push(slice[j]);
+      else if (!frontier.length) leading.push(slice[j]);
+    }
+    i += slice.length;
+  }
+  const exhausted = classified.size === unreadIds.length;
+  const boundHit = classified.size >= LEGACY_FRONTIER_SCAN_LIMIT && frontier.length < LEGACY_UNREAD_PAGE_LIMIT;
+  const absorbable = until === undefined && !frontier.length && (boundHit || exhausted) ? leading : [];
+  return { classified, frontier: new Set(frontier), absorbable };
+}
+
+/**
+ * The most recent `limit` messages under ONE prefix, oldest → newest (by id: legacy ids first), plus the reader's unread
+ * legacy frontier and the newest legacy group (see below). Lists names only, sorts them, downloads just the bounded
+ * page (and the bounded frontier window). `expected` pins kind + studentId/classId for validation. Reader options:
+ * `isLegacyRead(id)` — the reader's legacy read state (its marker); `include(doc)` — the reader's sender-role rule.
+ * Without them every legacy id counts as unread and relevant (fail-safe: nothing unread is ever skipped). Returns
+ * { messages, hasMore, legacyIds, absorbable } (see scanLegacyFrontier for `absorbable`).
+ */
+async function listRecentMessages(container, prefix, expected, limit, deps = {}, options = {}) {
   const list = deps.listBlobNames || listBlobNames;
   const many = deps.downloadManyJson || downloadManyJson;
   const entries = [];
@@ -127,14 +212,57 @@ async function listRecentMessages(container, prefix, expected, limit, deps = {})
     if (messageId) entries.push({ name, messageId });
   }
   entries.sort((a, b) => (a.messageId < b.messageId ? -1 : a.messageId > b.messageId ? 1 : 0));
-  const page = entries.slice(-limit);
-  const docs = await many(container, page.map(e => e.name), getReadConcurrency());
+  // Only the CONTIGUOUS published prefix 1..n is shown: a listing is not an atomic snapshot, so a position seen after
+  // a gap (its predecessor was missed by this listing) waits for the next read — a reader can never be shown, and so
+  // acknowledge, a position whose predecessor it did not see. Legacy ids are unaffected.
+  let nextPosition = 1;
+  const visible = entries.filter(e => {
+    const position = messagePosition(e.messageId, prefix);
+    if (position === 0) return true;
+    if (position !== nextPosition) return false;
+    nextPosition++;
+    return true;
+  });
+  // LEGACY FRONTIER. Legacy ids sort before every sequenced id, so in a long stream legacy messages published late (by
+  // a still-running Phase 5C writer, e.g. across a rollback) fall outside the tail. A legacy acknowledgement covers
+  // every legacy id below it, so the page must never show a RELEVANT legacy id while hiding an unread relevant one below:
+  //   • the reader's unread RELEVANT legacy ids ride along oldest-first, up to LEGACY_UNREAD_PAGE_LIMIT — the reader's
+  //     own messages never spend that budget (scanLegacyFrontier);
+  //   • an unread relevant legacy id outside that frontier is omitted everywhere (tail and newest group included) — it
+  //     stays unread and appears once the frontier before it has been acknowledged (a later page);
+  //   • the reader's own messages keep the normal tail / newest-group display (they are never acknowledged, so showing
+  //     them can never cover anything), and read ids are always safe (at or below the reader's boundary).
+  // Display order (by id) and the sequenced tail are unchanged.
+  const legacy = visible.filter(e => messagePosition(e.messageId, prefix) === 0);
+  const isLegacyRead = typeof options.isLegacyRead === "function" ? options.isLegacyRead : () => false;
+  const include = typeof options.include === "function" ? options.include : () => true;
+  const cache = new Map();                                                // name → document (immutable blobs)
+  const load = async names => {
+    const missing = names.filter(n => !cache.has(n));
+    if (missing.length) {
+      const got = await many(container, missing, getReadConcurrency());
+      missing.forEach((n, i) => cache.set(n, got[i]));
+    }
+    return names.map(n => cache.get(n));
+  };
+  const unreadIds = legacy.filter(e => !isLegacyRead(e.messageId)).map(e => e.messageId);
+  const scan = await scanLegacyFrontier(unreadIds, ids => load(ids.map(id => prefix + id + ".json")), expected, include);
+  const chosen = new Set(visible.slice(-limit).map(e => e.messageId));
+  for (const id of scan.frontier) chosen.add(id);
+  const newestKey = legacy.length ? legacy[legacy.length - 1].messageId.slice(0, 13) : "";
+  for (const e of legacy.filter(x => x.messageId.slice(0, 13) === newestKey).slice(-MAX_HISTORY_LIMIT)) chosen.add(e.messageId);
+  const candidates = visible.filter(e => chosen.has(e.messageId));
+  const docs = await load(candidates.map(e => e.name));
   const out = [];
-  for (let i = 0; i < page.length; i++) {
-    const doc = normalizeStoredMessage(docs[i], { ...expected, messageId: page[i].messageId });
-    if (doc) out.push(doc);
+  for (let i = 0; i < candidates.length; i++) {
+    const id = candidates[i].messageId;
+    const doc = normalizeStoredMessage(docs[i], { ...expected, messageId: id });
+    if (!doc) continue;
+    const unreadRelevant = messagePosition(id, prefix) === 0 && !isLegacyRead(id) && include(doc);
+    if (unreadRelevant && !scan.frontier.has(id)) continue;                 // outside the frontier: omitted, stays unread
+    out.push(doc);
   }
-  return { messages: out, hasMore: entries.length > page.length };
+  return { messages: out, hasMore: visible.length > out.length, legacyIds: legacy.map(e => e.messageId), absorbable: scan.absorbable };
 }
 
 /** The public view of a message. Never includes storage paths, sender ids or send-time class metadata unless the
@@ -163,6 +291,9 @@ function studentDisplayName(student) {
 module.exports = {
   MESSAGE_PREFIX, DIRECT_PREFIX, ANNOUNCEMENT_PREFIX, MAX_BODY_LENGTH, DIRECT_HISTORY_LIMIT, ANNOUNCEMENT_HISTORY_LIMIT,
   MAX_HISTORY_LIMIT, MAX_CREATE_ATTEMPTS,
-  isSafeId, directPrefix, announcementPrefix, generateMessageId, normalizeMessageBody, clampLimit,
-  createMessage, listRecentMessages, normalizeStoredMessage, messageView, studentDisplayName
+  isSafeId, directPrefix, announcementPrefix, sequencedMessageId, messagePosition, normalizeMessageBody, clampLimit,
+  createMessage, listRecentMessages, normalizeStoredMessage, messageView, studentDisplayName,
+  // Phase 5D — reused by the read-state store (message ids / stream listing), never duplicated there.
+  MESSAGE_ID_RE, SEQUENCE_KEY_BASE, blobMessageId, LEGACY_UNREAD_PAGE_LIMIT, LEGACY_FRONTIER_SCAN_LIMIT, isRelevantMessage,
+  scanLegacyFrontier
 };

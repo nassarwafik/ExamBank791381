@@ -49,6 +49,9 @@ export default function StudentPortal({ token, displayName, onLogout }: Props) {
   const [gamesOpen, setGamesOpen] = useState(false);
   // Phase 5C — the dedicated «الرسائل» destination (same full-view swap); it owns its own small polling lifecycle.
   const [messagesOpen, setMessagesOpen] = useState(false);
+  // Phase 5D — unread messages badge (AUXILIARY: its failure, including a 401, never logs out — the dashboard stays the
+  // only session authority; a failure keeps the last-good badge). Rides the portal's silent refresh cycle.
+  const [messagesUnread, setMessagesUnread] = useState<{ total: number; capped: boolean }>({ total: 0, capped: false });
   const headers = { "x-student-token": token, Authorization: "Bearer " + token };
   const strengthDirtyRef = useRef(false);
 
@@ -85,8 +88,17 @@ export default function StudentPortal({ token, displayName, onLogout }: Props) {
       setFeed(j.posts || []); setFeedError("");
     } catch { if (!silent) setFeed([]); console.warn("[student-portal] achievement feed request failed"); }
   }
+  async function loadMessagesUnread() {
+    try {
+      const r = await fetch("/api/student-messages?view=unread", { headers });
+      if (!r.ok) return;                                                   // incl. 401 → never a logout here
+      const j = await r.json() as any;
+      if (!j || !j.ok) return;
+      setMessagesUnread({ total: Math.max(0, Number(j.totalUnread) || 0), capped: j.totalCapped === true });
+    } catch { /* keep the last-good badge */ }
+  }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  useEffect(() => { void load(); void loadFeed(); }, [token]);
+  useEffect(() => { void load(); void loadFeed(); void loadMessagesUnread(); }, [token]);
   // Phase 1 auto-refresh: while the student sits on the MAIN portal, silently re-pull the dashboard (the single
   // source of teacher-controlled state) every 15s, and immediately on window focus / return to a visible tab, so
   // teacher-side changes appear without logout/login and without a full reload. DISABLED inside any sub-view that
@@ -94,7 +106,7 @@ export default function StudentPortal({ token, displayName, onLogout }: Props) {
   // (`avatarPickerOpen`), so a background swap never disturbs them; on returning to the main view it re-enables.
   // The lightweight, session-neutral achievement feed rides the same cycle (its 401 is already swallowed).
   const autoRefreshEnabled = !readerCourse && !detail && !avatarPickerOpen && !gamesOpen && !messagesOpen;
-  useAutoRefresh(() => { void loadFeed({ silent: true }); return load({ silent: true }); }, { intervalMs: 15000, enabled: autoRefreshEnabled });
+  useAutoRefresh(() => { void loadFeed({ silent: true }); void loadMessagesUnread(); return load({ silent: true }); }, { intervalMs: 15000, enabled: autoRefreshEnabled });
 
   async function pickAvatar(avatarId: string) {
     if (avatarSaving) return;
@@ -169,7 +181,7 @@ export default function StudentPortal({ token, displayName, onLogout }: Props) {
   // Dedicated Educational Games destination (full-view swap, same pattern as the Reader/exam); back returns to the portal.
   // Dedicated Messages destination (Phase 5C): a messaging failure degrades inside that view; this portal's
   // /api/student-dashboard refresh stays the only session authority when the student comes back.
-  if (messagesOpen) return <StudentMessagesPage token={token} onBack={() => { setMessagesOpen(false); window.scrollTo({ top: 0, behavior: reducedMotion ? "auto" : "smooth" }); }} />;
+  if (messagesOpen) return <StudentMessagesPage token={token} onUnreadChange={u => setMessagesUnread({ total: u.totalUnread, capped: u.totalCapped })} onBack={() => { setMessagesOpen(false); void loadMessagesUnread(); window.scrollTo({ top: 0, behavior: reducedMotion ? "auto" : "smooth" }); }} />;
   if (gamesOpen) return <StudentGamesPage token={token} onBack={() => { setGamesOpen(false); window.scrollTo({ top: 0, behavior: reducedMotion ? "auto" : "smooth" }); }} />;
 
   const stats = data?.stats;
@@ -186,7 +198,7 @@ export default function StudentPortal({ token, displayName, onLogout }: Props) {
   const now = Date.now();
 
   return (
-    <StudentShell studentName={data?.student.displayName || displayName} className={data?.classroom?.name || ""} onLogout={onLogout} onOpenGames={() => { setGamesOpen(true); window.scrollTo({ top: 0, behavior: reducedMotion ? "auto" : "smooth" }); }} onOpenMessages={() => { setMessagesOpen(true); window.scrollTo({ top: 0, behavior: reducedMotion ? "auto" : "smooth" }); }}>
+    <StudentShell studentName={data?.student.displayName || displayName} className={data?.classroom?.name || ""} onLogout={onLogout} onOpenGames={() => { setGamesOpen(true); window.scrollTo({ top: 0, behavior: reducedMotion ? "auto" : "smooth" }); }} onOpenMessages={() => { setMessagesOpen(true); window.scrollTo({ top: 0, behavior: reducedMotion ? "auto" : "smooth" }); }} messagesUnread={messagesUnread}>
       <div className="eb-sp">
         {loading && <p className="eb-muted eb-sp-status" role="status">جارٍ تحميل حسابك...</p>}
         {busy && <p className="eb-muted eb-sp-status" role="status">جارٍ فتح الواجب...</p>}

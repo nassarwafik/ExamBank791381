@@ -101,7 +101,8 @@ describe("Reader position 98 (791381-m16-l05-p01) — T05–T12 cards, one per l
 
     await solveAndReturn(within(cards[0]).getByRole("button", { name: "ابدأ التدريب" }), "Class وSubnet وCIDR", "تدريبات مراجعة سريعة", P98, "T05", client);
     expect(onTrainingSubmitted).toHaveBeenCalledTimes(1);
-    expect(screen.getByRole("region", { name: "تدريب 5" })).toBeTruthy();
+    // the return REMOUNTS the Reader: its page body (the module chunk) loads again after the heading, so wait for it
+    expect(await screen.findByRole("region", { name: "تدريب 5" }, SLOW)).toBeTruthy();
   }, T);
 });
 
@@ -127,6 +128,7 @@ describe("Reader position 215 (791381-m06-l02-p02) — F01–F06 under «امت�
       expect(c.textContent).not.toMatch(/نموذج|بجروت/);
     }
     await solveAndReturn(within(cards[0]).getByRole("button", { name: "أعد التدريب" }), "نموذج A — 2025", pageHeading, P215, "F01", client);
-    expect(screen.getByRole("region", { name: "الامتحان الأول" })).toBeTruthy();
+    // the return REMOUNTS the Reader: its page body (the module chunk) loads again after the heading, so wait for it
+    expect(await screen.findByRole("region", { name: "الامتحان الأول" }, SLOW)).toBeTruthy();
   }, T);
 });

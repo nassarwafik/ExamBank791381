@@ -68,7 +68,8 @@ describe("UX-6c — Exam Bank navigation", () => {
     await screen.findByText("عدد الأسئلة");
     // exactly the two entry loads; App's pre-existing per-view effect also re-reads the project summary on any view change (unchanged),
     // and the ONE teacher self-profile read of the session (identity) may still be in flight from login.
-    await waitFor(() => expect(calls.slice(before).filter(u => !u.includes("/api/project-tracker") && !u.includes("/api/teacher-profile")).sort()).toEqual(["/api/bank-questions", "/api/saved-exams"]));
+    // (App's global badge reads — project-tracker summary, teacher-profile, Phase 5D unread-messages summary — are not bank loads.)
+    await waitFor(() => expect(calls.slice(before).filter(u => !u.includes("/api/project-tracker") && !u.includes("/api/teacher-profile") && !u.includes("/api/messages?kind=unread-summary")).sort()).toEqual(["/api/bank-questions", "/api/saved-exams"]));
     expect(within(sidebar()).getAllByRole("button").filter(b => b.getAttribute("aria-current") === "page")).toHaveLength(1);
     fireEvent.click(nav("باني الامتحان"));
     expect(h1()).toBe("باني الامتحان"); expect(document.querySelector(".builder-content")).toBeTruthy();

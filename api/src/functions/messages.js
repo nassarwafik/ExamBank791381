@@ -4,6 +4,13 @@
 //   GET  /api/messages?classId=<id>&kind=announcements    → that class's announcement history (active OR archived)
 //   POST /api/messages { action: "sendDirect", studentId, body }
 //   POST /api/messages { action: "sendAnnouncement", classId, body }
+//   GET  /api/messages?kind=unread-summary[&classId=<id>]  → Phase 5D: THIS teacher's unread STUDENT replies (global
+//                                                           badge; with classId also per student — membership from the
+//                                                           CURRENT student documents)
+//   POST /api/messages { action: "markDirectRead", studentId, throughMessageId, seenIdsAtBoundary[, legacyThroughMessageId, legacySeenIdsAtBoundary] }  → Phase 5D: THIS
+//                                                           teacher's snapshot acknowledgement (latest STUDENT message
+//                                                           shown + the student ids at its ms in that snapshot), validated
+//                                                           against that student's stream; monotonic. Not audited.
 // Identity is ALWAYS server-derived: the teacher is the verified token subject and the display name comes from the
 // teacher profile (resolveTeacherDisplayName). Body fields such as teacherId / senderId / senderName / messageId /
 // createdAt are ignored. A NEW message requires an active, non-archived student whose CURRENT class (from the
@@ -20,6 +27,9 @@ const {
   isSafeId, directPrefix, announcementPrefix, normalizeMessageBody, clampLimit, createMessage, listRecentMessages,
   messageView, studentDisplayName, DIRECT_HISTORY_LIMIT, ANNOUNCEMENT_HISTORY_LIMIT
 } = require("../lib/message-store");
+const {
+  MarkReadError, markStreamRead, countUnread, loadMarker, isReadBy, absorbIrrelevantLegacy, READER_RELEVANCE, teacherDirectStateName, teacherDirectUnread
+} = require("../lib/message-read-state");
 
 const USER_PREFIX = "platform/users/";
 const CLASS_PREFIX = "platform/classes/";
@@ -79,11 +89,26 @@ async function handler(request, deps = {}, obs = null) {
       const studentId = String(url.searchParams.get("studentId") || "").trim();
       const classId = String(url.searchParams.get("classId") || "").trim();
       const kind = String(url.searchParams.get("kind") || "").trim();
+      if (kind === "unread-summary") {
+        if (classId) {
+          const classroom = await loadClass(container, classId, dl);
+          if (!classroom) return notFound(MSG.classNotFound);
+          return { status: 200, jsonBody: { ok: true, classId, ...(await teacherDirectUnread(container, teacherId, { classId }, deps)) } };
+        }
+        return { status: 200, jsonBody: { ok: true, ...(await teacherDirectUnread(container, teacherId, {}, deps)) } };
+      }
       if (studentId) {
         const student = await loadStudent(container, studentId, dl);
         if (!student) return notFound(MSG.studentNotFound);
         const state = await directSendState(container, student, dl);
-        const page = await listRecentMessages(container, directPrefix(studentId), { kind: "direct", studentId }, clampLimit(url.searchParams.get("limit"), DIRECT_HISTORY_LIMIT), deps);
+        // THIS teacher's legacy read state + relevance shape the page's unread legacy frontier (see listRecentMessages).
+        const stateName = teacherDirectStateName(teacherId, studentId);
+        const marker = await loadMarker(container, stateName, deps);
+        const page = await listRecentMessages(container, directPrefix(studentId), { kind: "direct", studentId }, clampLimit(url.searchParams.get("limit"), DIRECT_HISTORY_LIMIT), deps, { isLegacyRead: id => isReadBy(marker, id), include: READER_RELEVANCE.teacherDirect });
+        // A frontier window of only the teacher's own legacy messages is folded into the boundary (never starves it).
+        if (page.absorbable.length) {
+          await absorbIrrelevantLegacy(container, { stateName, legacyIds: page.legacyIds, ids: page.absorbable, meta: { principalRole: "teacher", streamKind: "direct", streamId: studentId, teacherId } }, deps).catch(() => {});
+        }
         return { status: 200, jsonBody: {
           ok: true,
           student: { userId: studentId, displayName: studentDisplayName(student), classId: String(student.classId || ""), active: student.active !== false, archived: student.archived === true },
@@ -95,7 +120,8 @@ async function handler(request, deps = {}, obs = null) {
         const classroom = await loadClass(container, classId, dl);
         if (!classroom) return notFound(MSG.classNotFound);
         const archived = normalizeClassStatus(classroom) === "archived";
-        const page = await listRecentMessages(container, announcementPrefix(classId), { kind: "announcement", classId }, clampLimit(url.searchParams.get("limit"), ANNOUNCEMENT_HISTORY_LIMIT), deps);
+        // The teacher has no read state for announcements (never acknowledged) → no unread legacy frontier.
+        const page = await listRecentMessages(container, announcementPrefix(classId), { kind: "announcement", classId }, clampLimit(url.searchParams.get("limit"), ANNOUNCEMENT_HISTORY_LIMIT), deps, { isLegacyRead: () => true });
         return { status: 200, jsonBody: {
           ok: true, classroom: classSummary(classroom), canSend: !archived, readOnlyCode: archived ? "classArchived" : "", readOnlyReason: archived ? MSG.classArchived : "",
           messages: page.messages.map(m => messageView(m, { includeClassId: true })), hasMore: page.hasMore
@@ -143,6 +169,29 @@ async function handler(request, deps = {}, obs = null) {
       }), deps);
       await rec(container, { actor: teacherId, action: "message.sendAnnouncement", targetType: "class", targetId: classId, targetLabel: String(classroom.name || "") });
       return { status: 200, jsonBody: { ok: true, message: messageView(doc, { includeClassId: true }) } };
+    }
+
+    if (action === "markDirectRead") {
+      // Historical (archived / disabled) students may still be READ; the student document is the authority.
+      const studentId = String(body.studentId || "").trim();
+      const student = await loadStudent(container, studentId, dl);
+      if (!student) return notFound(MSG.studentNotFound);
+      try {
+        // The teacher's unread-relevant messages are the STUDENT's; the acknowledgement must be built from those.
+        const stream = { streamPrefix: directPrefix(studentId), expected: { kind: "direct", studentId }, include: READER_RELEVANCE.teacherDirect };
+        const { marker } = await markStreamRead(container, {
+          stateName: teacherDirectStateName(teacherId, studentId), ...stream,
+          throughMessageId: body.throughMessageId, seenIdsAtBoundary: body.seenIdsAtBoundary,
+          legacyThroughMessageId: body.legacyThroughMessageId, legacySeenIdsAtBoundary: body.legacySeenIdsAtBoundary,
+          meta: { principalRole: "teacher", streamKind: "direct", streamId: studentId, teacherId }
+        }, deps);
+        // FRESH listing (no `ids`): a student message that arrived after validation is still counted.
+        const remaining = await countUnread(container, { ...stream, marker }, deps);
+        return { status: 200, jsonBody: { ok: true, studentId, ...remaining } };
+      } catch (e) {
+        if (e instanceof MarkReadError) return bad("الرسالة المحددة غير صالحة.");
+        throw e;
+      }
     }
 
     return bad("إجراء غير مدعوم.");

@@ -5,6 +5,72 @@ import type { Classroom, Student } from "../students/types";
 
 export const MAX_MESSAGE_LENGTH = 2000;
 export const MESSAGES_POLL_MS = 5000;
+/** Phase 5D — unread summaries (badges) refresh on a slower cadence than message bodies. */
+export const UNREAD_POLL_MS = 15000;
+
+/** A server-derived unread count; `capped` means "more than 99" (display "99+"). */
+export type UnreadCount = { unread: number; capped: boolean };
+export type TeacherUnreadSummary = { totalUnread: number; capped: boolean; byStudent: Record<string, UnreadCount> };
+export type StudentUnread = { directUnread: UnreadCount; announcementUnread: UnreadCount; totalUnread: number; totalCapped: boolean };
+export const NO_UNREAD: UnreadCount = { unread: 0, capped: false };
+
+/** A mark-read request built from the EXACT applied snapshot (Phase 5D review follow-up). The optional LEGACY part
+ *  acknowledges the displayed Phase 5C ids, which are a separate read domain on the server. */
+export type ReadAck = { throughMessageId: string; seenIdsAtBoundary: string[]; legacyThroughMessageId?: string; legacySeenIdsAtBoundary?: string[] };
+
+/** Order keys below this are legacy (Phase 5C "<ms>-<random>") ids; from it on, publication positions (server rule). */
+export const SEQUENCE_KEY_BASE = 9000000000000;
+const isLegacyId = (id: string) => Number(id.slice(0, 13)) < SEQUENCE_KEY_BASE;
+
+/**
+ * The snapshot acknowledgement for one stream: X = the latest unread-RELEVANT message in the applied snapshot, and
+ * seenIdsAtBoundary = every relevant snapshot id at X's order key. When X is sequenced and the snapshot ALSO showed
+ * relevant legacy ids, the legacy part names the latest of those + its same-millisecond ids — legacy and sequenced
+ * read progress are separate domains, so a sequenced X never acknowledges a legacy message. Never derived from later
+ * state, so a message the server created after this snapshot (even in the same millisecond) cannot be acknowledged.
+ * null when the snapshot has no relevant (incoming) message — then nothing is marked.
+ */
+export function readAckFromSnapshot(messages: MessageView[], isRelevant: (m: MessageView) => boolean): ReadAck | null {
+  const ids = messages.filter(isRelevant).map(m => m.messageId).filter(id => /^\d{13}-/.test(id)).sort();
+  if (!ids.length) return null;
+  const through = (list: string[]) => {
+    const x = list[list.length - 1];
+    return { x, seen: list.filter(id => id.slice(0, 13) === x.slice(0, 13)) };
+  };
+  const primary = through(ids);
+  const ack: ReadAck = { throughMessageId: primary.x, seenIdsAtBoundary: primary.seen };
+  const legacy = ids.filter(isLegacyId);
+  if (!isLegacyId(primary.x) && legacy.length) {
+    const l = through(legacy);
+    ack.legacyThroughMessageId = l.x;
+    ack.legacySeenIdsAtBoundary = l.seen;
+  }
+  return ack;
+}
+
+/** Identity of an acknowledgement (dedupes repeated marks of the same snapshot), covering BOTH domains' parts. */
+export function ackKey(ack: ReadAck): string {
+  return [ack.throughMessageId, ack.seenIdsAtBoundary.join(","), ack.legacyThroughMessageId || "", (ack.legacySeenIdsAtBoundary || []).join(",")].join("|");
+}
+/** The request fields of an acknowledgement (the legacy part only when present). */
+function ackBody(ack: ReadAck) {
+  return ack.legacyThroughMessageId
+    ? { throughMessageId: ack.throughMessageId, seenIdsAtBoundary: ack.seenIdsAtBoundary, legacyThroughMessageId: ack.legacyThroughMessageId, legacySeenIdsAtBoundary: ack.legacySeenIdsAtBoundary }
+    : { throughMessageId: ack.throughMessageId, seenIdsAtBoundary: ack.seenIdsAtBoundary };
+}
+
+/** Badge text: 1..99, or "99+" when the server capped the count. */
+export function formatUnread(count: number, capped: boolean): string {
+  return capped ? "99+" : String(Math.max(0, Math.floor(count)));
+}
+const unreadOf = (v: unknown): UnreadCount => {
+  const o = (v && typeof v === "object" ? v : {}) as Record<string, unknown>;
+  return { unread: Math.max(0, Number(o.unread) || 0), capped: o.capped === true };
+};
+const studentUnreadOf = (j: Record<string, unknown>): StudentUnread => ({
+  directUnread: unreadOf(j.directUnread), announcementUnread: unreadOf(j.announcementUnread),
+  totalUnread: Math.max(0, Number(j.totalUnread) || 0), totalCapped: j.totalCapped === true
+});
 
 export type MessageView = {
   messageId: string;
@@ -46,6 +112,10 @@ export interface TeacherMessagesClient {
   getAnnouncements(classId: string): Promise<ThreadState>;
   sendDirect(studentId: string, body: string): Promise<MessageView>;
   sendAnnouncement(classId: string, body: string): Promise<MessageView>;
+  /** Phase 5D — unread STUDENT replies for one class (per student; membership decided by the server). */
+  getClassUnread(classId: string): Promise<TeacherUnreadSummary>;
+  /** Phase 5D — advance this teacher's read marker for one conversation; returns what is still unread there. */
+  markDirectRead(studentId: string, ack: ReadAck): Promise<UnreadCount>;
 }
 
 export function createTeacherMessagesClient(token: string): TeacherMessagesClient {
@@ -69,13 +139,30 @@ export function createTeacherMessagesClient(token: string): TeacherMessagesClien
     async getDirect(studentId) { return thread(await get("/api/messages?studentId=" + encodeURIComponent(studentId), "تعذر تحميل المحادثة.")); },
     async getAnnouncements(classId) { return thread(await get("/api/messages?classId=" + encodeURIComponent(classId) + "&kind=announcements", "تعذر تحميل الإعلانات.")); },
     sendDirect: (studentId, body) => post({ action: "sendDirect", studentId, body }, "تعذر إرسال الرسالة."),
-    sendAnnouncement: (classId, body) => post({ action: "sendAnnouncement", classId, body }, "تعذر إرسال الإعلان.")
+    sendAnnouncement: (classId, body) => post({ action: "sendAnnouncement", classId, body }, "تعذر إرسال الإعلان."),
+    async getClassUnread(classId) {
+      const j = await get("/api/messages?kind=unread-summary&classId=" + encodeURIComponent(classId), "تعذر تحميل الرسائل الجديدة.");
+      const by: Record<string, UnreadCount> = {};
+      const raw = j.byStudent && typeof j.byStudent === "object" ? (j.byStudent as Record<string, unknown>) : {};
+      for (const [sid, v] of Object.entries(raw)) by[sid] = unreadOf(v);
+      return { totalUnread: Math.max(0, Number(j.totalUnread) || 0), capped: j.capped === true, byStudent: by };
+    },
+    async markDirectRead(studentId, ack) {
+      const r = await fetch("/api/messages", { method: "POST", headers, body: JSON.stringify({ action: "markDirectRead", studentId, ...ackBody(ack) }) });
+      const j = await readJson(r);
+      if (!r.ok || !j.ok) fail(j, r.status, "تعذر تحديث حالة القراءة.");
+      return unreadOf(j);
+    }
   };
 }
 
 export interface StudentMessagesClient {
   load(): Promise<StudentMessagesData>;
   sendDirect(body: string): Promise<MessageView>;
+  /** Phase 5D — this student's unread counts (own direct thread + CURRENT class announcements). */
+  getUnread(): Promise<StudentUnread>;
+  /** Phase 5D — mark one visible stream read through an id from its loaded snapshot; returns the fresh counts. */
+  markRead(stream: "direct" | "announcements", ack: ReadAck): Promise<StudentUnread>;
 }
 
 export function createStudentMessagesClient(token: string): StudentMessagesClient {
@@ -94,6 +181,18 @@ export function createStudentMessagesClient(token: string): StudentMessagesClien
       const j = await readJson(r);
       if (!r.ok || !j.ok || !j.message) fail(j, r.status, "تعذر إرسال الرسالة.");
       return j.message as MessageView;
+    },
+    async getUnread() {
+      const r = await fetch("/api/student-messages?view=unread", { headers });
+      const j = await readJson(r);
+      if (!r.ok || !j.ok) fail(j, r.status, "تعذر تحميل الرسائل الجديدة.");
+      return studentUnreadOf(j);
+    },
+    async markRead(stream, ack) {
+      const r = await fetch("/api/student-messages", { method: "POST", headers, body: JSON.stringify({ action: "markRead", stream, ...ackBody(ack) }) });
+      const j = await readJson(r);
+      if (!r.ok || !j.ok) fail(j, r.status, "تعذر تحديث حالة القراءة.");
+      return studentUnreadOf(j);
     }
   };
 }
