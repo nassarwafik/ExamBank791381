@@ -84,6 +84,15 @@ describe("QuestionMediaEditor — AI generation", () => {
     expect(onChange).not.toHaveBeenCalled();
   });
 
+  it.each([["a remote URL", "https://cdn.example/x.png"], ["no data", undefined]])("an invalid AI result (%s) keeps the previous image and shows an error", async (_l, dataUrl) => {
+    const onChange = vi.fn();
+    const requestQuestionImage = vi.fn(async () => ({ origin: "ai-generated", dataUrl } as BuilderImageAsset));
+    render(<QuestionMediaEditor question={withImage({ images: [{ dataUrl: "data:image/png;base64,LEG" }] })} onChange={onChange} requestQuestionImage={requestQuestionImage} />);
+    fireEvent.click(screen.getByRole("button", { name: "✨ إنشاء صورة جديدة" }));
+    await waitFor(() => expect(screen.getByRole("alert")).toBeTruthy());
+    expect(onChange).not.toHaveBeenCalled(); // no replace, images[] fallback untouched
+  });
+
   it("an existing image requires explicit replace intent (confirm=false → no request)", () => {
     const requestQuestionImage = vi.fn(async () => ({} as BuilderImageAsset));
     window.confirm = vi.fn(() => false);

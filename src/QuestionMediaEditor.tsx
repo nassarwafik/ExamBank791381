@@ -2,7 +2,7 @@ import { useRef, useState } from "react";
 import type { BuilderQuestion, BuilderImageAsset } from "./examTypes";
 import {
   IMAGE_ACCEPT_ATTR, MEDIA_MSG, readImageFile, aiRequestQuestion,
-  currentAsset, hasImage, isImageHidden, replaceImagePatch, removeImagePatch, setVisibilityPatch,
+  currentAsset, hasImage, isImageHidden, replaceImagePatch, removeImagePatch, setVisibilityPatch, isEmbeddedRasterDataUrl,
   type AiImageRequestQuestion,
 } from "./questionMedia";
 
@@ -72,6 +72,8 @@ export default function QuestionMediaEditor({ question, onChange, disabled, requ
     try {
       const generated = await requestQuestionImage(aiRequestQuestion(question)); // SAFE payload only (no answer)
       if (token === opSeq.current) {
+        // Only an embedded raster data URL may replace the image; anything else keeps the previous image.
+        if (!isEmbeddedRasterDataUrl(generated?.dataUrl)) throw new Error(MEDIA_MSG.aiFail);
         onChange(replaceImagePatch({ ...generated }));
         setNotice(MEDIA_MSG.aiSuccess);
       }

@@ -2,7 +2,7 @@
 import { describe, it, expect } from "vitest";
 import {
   isSafeSvg, svgToSafeDataUrl, readImageFile, aiRequestQuestion,
-  currentAsset, hasImage, isImageHidden, replaceImagePatch, removeImagePatch, setVisibilityPatch,
+  currentAsset, hasImage, isImageHidden, replaceImagePatch, removeImagePatch, setVisibilityPatch, isEmbeddedRasterDataUrl,
   MEDIA_MAX_BYTES, ALLOWED_IMAGE_MIME, MEDIA_MSG,
 } from "./questionMedia";
 import type { BuilderQuestion } from "./examTypes";
@@ -106,5 +106,30 @@ describe("Phase 5B — media state helpers (pure)", () => {
   it("setVisibilityPatch toggles visible on the canonical image", () => {
     expect(setVisibilityPatch(withImage(), false).image?.visible).toBe(false);
     expect(isImageHidden({ ...withImage(), image: { exists: true, visible: false, assets: [{ dataUrl: "x" }] } })).toBe(true);
+  });
+  it("setVisibilityPatch promotes a legacy images[]-only image (bytes kept) and clears the fallback", () => {
+    const legacy: BuilderQuestion = { examQuestionId: "q", presentationType: "shortAnswer", text: "t", marks: 1, images: [{ dataUrl: "data:image/png;base64,LEG" }] };
+    const hide = setVisibilityPatch(legacy, false);
+    expect(hide).toEqual({ image: { exists: true, visible: false, assets: [{ dataUrl: "data:image/png;base64,LEG" }] }, images: [] });
+    expect(isImageHidden({ ...legacy, ...hide })).toBe(true);
+    expect(currentAsset({ ...legacy, ...hide })?.dataUrl).toBe("data:image/png;base64,LEG");
+    expect(setVisibilityPatch({ ...legacy, ...hide }, true).image).toEqual({ exists: true, visible: true, assets: [{ dataUrl: "data:image/png;base64,LEG" }] });
+  });
+  it("setVisibilityPatch on a canonical image also clears a shadowed images[] fallback; no image → no-op", () => {
+    const both: BuilderQuestion = { ...withImage(), images: [{ dataUrl: "data:image/png;base64,SHADOW" }] };
+    const hide = setVisibilityPatch(both, false);
+    expect(hide.image?.assets).toEqual(withImage().image?.assets);
+    expect(hide.images).toEqual([]);
+    expect(setVisibilityPatch({ examQuestionId: "q", presentationType: "shortAnswer", text: "t", marks: 1 }, false)).toEqual({});
+  });
+  it("isEmbeddedRasterDataUrl accepts only embedded png/jpeg/webp data URLs", () => {
+    expect(isEmbeddedRasterDataUrl("data:image/png;base64,QUJD")).toBe(true);
+    expect(isEmbeddedRasterDataUrl("data:image/jpeg;base64,QUJD")).toBe(true);
+    expect(isEmbeddedRasterDataUrl("data:image/webp;base64,QUJD")).toBe(true);
+    expect(isEmbeddedRasterDataUrl("https://cdn.example/img.png")).toBe(false);
+    expect(isEmbeddedRasterDataUrl("data:image/svg+xml,%3Csvg%3E")).toBe(false);
+    expect(isEmbeddedRasterDataUrl("data:text/html;base64,QUJD")).toBe(false);
+    expect(isEmbeddedRasterDataUrl("data:image/png;base64,")).toBe(false);
+    expect(isEmbeddedRasterDataUrl(undefined)).toBe(false);
   });
 });

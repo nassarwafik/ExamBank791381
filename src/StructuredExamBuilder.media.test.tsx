@@ -105,7 +105,8 @@ describe("Phase 5B — builder-level question isolation (attach by examQuestionI
     const inputs = screen.getAllByLabelText("رفع صورة السؤال"); // [qA, qB]
     fireEvent.change(inputs[1], { target: { files: [png()] } });
     await waitFor(() => expect(onChange).toHaveBeenCalled());
-    const next = onChange.mock.calls[onChange.mock.calls.length - 1][0] as StructuredExam;
+    // onChange now carries a functional updater; apply it to the exam the state owner holds.
+    const next = (onChange.mock.calls[onChange.mock.calls.length - 1][0] as (p: StructuredExam) => StructuredExam)(exam);
     const [a, b] = next.sections[0].questions;
     expect(a.examQuestionId).toBe("qA");
     expect(a.image).toBeUndefined();                         // A untouched

@@ -160,9 +160,23 @@ export function replaceImagePatch(asset: BuilderImageAsset): Partial<BuilderQues
 export function removeImagePatch(): Partial<BuilderQuestion> {
   return { image: { exists: false, visible: false, assets: [] }, images: [] };
 }
-/** Toggle visibility of the canonical image (no-op shape when there is no canonical image). */
+/** Hide/show the question's image. The renderer falls back to the legacy images[] whenever the canonical
+ *  image is absent OR hidden, so visibility can only be honored on the canonical image: a legacy
+ *  images[]-only question is PROMOTED (its assets, bytes kept, become the canonical image) and images[] is
+ *  cleared — otherwise "hide" would leave the legacy image visible to students. A canonical image keeps its
+ *  own assets; any shadowed images[] fallback (never shown alongside it) is cleared for the same reason.
+ *  Show restores the same assets. No image at all → empty patch (no-op). */
 export function setVisibilityPatch(q: BuilderQuestion, visible: boolean): Partial<BuilderQuestion> {
   const img = q?.image;
-  const assets = img && Array.isArray(img.assets) ? img.assets : [];
-  return { image: { exists: assets.length > 0, visible, assets } };
+  const canonical = img && img.exists && Array.isArray(img.assets) && img.assets.length && img.assets[0]?.dataUrl ? img.assets : null;
+  const legacy = Array.isArray(q?.images) ? q.images.filter(a => a?.dataUrl).map(a => ({ ...a })) : [];
+  const assets = canonical || legacy;
+  if (!assets.length) return {};
+  return { image: { exists: true, visible, assets }, images: [] };
+}
+
+/** A generated asset may replace the current image only when it carries an EMBEDDED raster image
+ *  (data:image/png|jpeg|webp;base64,…) — never a remote URL or an empty result. */
+export function isEmbeddedRasterDataUrl(url: unknown): boolean {
+  return typeof url === "string" && /^data:image\/(png|jpeg|webp);base64,[A-Za-z0-9+/=]+$/.test(url);
 }
