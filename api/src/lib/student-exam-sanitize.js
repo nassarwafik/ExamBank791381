@@ -11,7 +11,8 @@
 // the sanitizer recurses into options/fields/parts. Everything else — the data a student needs to
 // render and answer the question (text, options text, field labels/options, wordBank, cli templates,
 // table headers/rows, marks, images, stimuli, section rules, groupId, presentation metadata,
-// displayNumber) — is preserved untouched.
+// displayNumber) — is preserved untouched, EXCEPT question media the teacher has hidden, which is removed from the
+// student copy (see applyStudentMediaVisibility).
 
 // Answer-key / solution flags that may appear on options and fields.
 const FLAG_SECRET_KEYS = ["correct", "isCorrect", "correctText", "correctOptionIndex", "correctOptionValue", "correctOptionLabel", "solution", "expectedAnswer", "answerKey"];
@@ -70,6 +71,26 @@ function sanitizeImageAssetForStudent(asset) {
   return out;
 }
 
+// STUDENT-VISIBLE MEDIA — the one visibility rule (hiding is a teacher choice; the student browser is student-
+// controlled, so anything returned here is visible to the student even if the renderer never draws it).
+// A question/part carries the canonical image { exists, visible, assets[] } and a legacy images[] fallback that
+// the student renderer shows only when the canonical image is not shown:
+//   • canonical SHOWN  (exists && visible)                              → its assets; images[] is never rendered → []
+//   • canonical HIDDEN (exists && assets non-empty && visible === false) → nothing: its assets AND images[] are removed,
+//     so the fallback can never re-show what the teacher hid (the teacher editor's isImageHidden, exactly)
+//   • otherwise (no canonical image, e.g. a legacy images[]-only question) → images[] unchanged
+// Canonical asset bytes are only ever sent when the canonical image is shown; otherwise only { exists, visible }
+// remain (no assets key, so the renderer's image-vs-images[] precedence is exactly what it was). Only the student
+// copy changes — the teacher's stored exam keeps the bytes, so "show" restores the same image.
+function applyStudentMediaVisibility(node) {
+  const img = node.image && typeof node.image === "object" && !Array.isArray(node.image) ? node.image : null;
+  if (!img) return;
+  const shown = !!(img.exists && img.visible && Array.isArray(img.assets));
+  const hidden = !!(img.exists && Array.isArray(img.assets) && img.assets.length && img.visible === false);
+  if (!shown) node.image = { exists: img.exists, visible: img.visible };   // flags only: no assets / bytes
+  if ((shown || hidden) && "images" in node) node.images = [];
+}
+
 function sanitizeOptionForStudent(option) {
   if (!option || typeof option !== "object") return option;
   const out = { ...option }; // keeps value / label / text / order / number
@@ -92,6 +113,7 @@ function sanitizePartForStudent(part) {
   stripKeys(out, NODE_SECRET_KEYS);
   if (out.image) out.image = sanitizeImageForStudent(out.image);
   if (Array.isArray(out.images)) out.images = out.images.map(sanitizeImageAssetForStudent);
+  applyStudentMediaVisibility(out);
   if (Array.isArray(out.options)) out.options = out.options.map(sanitizeOptionForStudent);
   if (Array.isArray(out.fields)) out.fields = out.fields.map(sanitizeFieldForStudent);
   if (Array.isArray(out.parts)) out.parts = out.parts.map(sanitizePartForStudent); // defensive: nested parts
@@ -106,6 +128,7 @@ function sanitizeQuestionForStudent(question) {
   stripKeys(out, ["explanation", "rationale", ...FLAG_SECRET_KEYS]);
   if (out.image) out.image = sanitizeImageForStudent(out.image);
   if (Array.isArray(out.images)) out.images = out.images.map(sanitizeImageAssetForStudent);
+  applyStudentMediaVisibility(out);
   if (Array.isArray(out.options)) out.options = out.options.map(sanitizeOptionForStudent);
   if (Array.isArray(out.fields)) out.fields = out.fields.map(sanitizeFieldForStudent);
   if (Array.isArray(out.parts)) out.parts = out.parts.map(sanitizePartForStudent);
@@ -142,6 +165,7 @@ function sanitizeExamForStudent(exam) {
 
 module.exports = {
   sanitizeExamForStudent,
+  applyStudentMediaVisibility,
   sanitizeCoverForStudent,
   sanitizeSectionForStudent,
   sanitizeQuestionForStudent,

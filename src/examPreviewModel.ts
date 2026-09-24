@@ -78,7 +78,32 @@ export function toSafePreviewExam<T extends PreviewExamInput>(exam: T): T {
   // kept only when it is a safe embedded raster data URL) so the safe preview model is safe BY ITSELF —
   // never dependent on a second sanitizer at render time. `undefined` (no/invalid cover) drops the key.
   if ("coverPage" in clone) clone.coverPage = sanitizeCoverForStudent(clone.coverPage);
+  // Media parity with the real student sanitizer (applyStudentMediaVisibility): hidden question/part media — and a
+  // legacy images[] fallback that would otherwise re-show it — never appears in the preview, so the teacher previews
+  // exactly the images the student receives.
+  for (const section of Array.isArray(clone.sections) ? clone.sections : []) {
+    const questions = (section as { questions?: unknown }).questions;
+    if (Array.isArray(questions)) questions.forEach(previewMediaVisibility);
+  }
+  if (Array.isArray(clone.questions)) clone.questions.forEach(previewMediaVisibility);
   return clone;
+}
+
+type MediaNode = { image?: unknown; images?: unknown; parts?: unknown };
+// Same rule as the student sanitizer: canonical SHOWN (exists && visible) → its assets, images[] dropped (never
+// rendered); canonical HIDDEN (exists && assets non-empty && visible === false) → no assets and no images[];
+// otherwise (no canonical image, e.g. legacy images[]-only) → images[] unchanged. Applied to compound parts too.
+function previewMediaVisibility(node: unknown): void {
+  if (!node || typeof node !== "object") return;
+  const n = node as MediaNode;
+  const img = n.image && typeof n.image === "object" && !Array.isArray(n.image) ? (n.image as { exists?: unknown; visible?: unknown; assets?: unknown }) : null;
+  if (img) {
+    const shown = !!(img.exists && img.visible && Array.isArray(img.assets));
+    const hidden = !!(img.exists && Array.isArray(img.assets) && img.assets.length && img.visible === false);
+    if (!shown) n.image = { exists: img.exists, visible: img.visible };   // flags only: no assets / bytes
+    if ((shown || hidden) && "images" in n) n.images = [];
+  }
+  if (Array.isArray(n.parts)) n.parts.forEach(previewMediaVisibility);
 }
 
 // Exam-level general instructions (plain text) → clean bullet lines for safe rendering. Never HTML.
