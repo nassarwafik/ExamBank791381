@@ -1,5 +1,12 @@
 {
   "platform": {
     "apiRuntime": "node:22"
+  },
+  "routes": [
+    { "route": "/sw.js", "headers": { "Cache-Control": "no-cache" } },
+    { "route": "/manifest.webmanifest", "headers": { "Cache-Control": "no-cache" } }
+  ],
+  "mimeTypes": {
+    ".webmanifest": "application/manifest+json"
   }
 }
