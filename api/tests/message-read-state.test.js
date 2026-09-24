@@ -20,7 +20,8 @@ function putAnn(ctx, classId, messageId) {
   ctx.setJson(announcementPrefix(classId) + messageId + ".json", { schemaVersion: 1, messageId, kind: "announcement", classId, senderRole: "teacher", senderId: "t1", senderDisplayName: "x", body: "a-" + messageId, createdAt: "" });
 }
 const teacherStream = sid => ({ streamPrefix: directPrefix(sid), expected: { kind: "direct", studentId: sid } });
-const markTeacher = (ctx, sid, through) => markStreamRead(ctx.container, { stateName: teacherDirectStateName("builder-1", sid), ...teacherStream(sid), throughMessageId: through, meta: { principalRole: "teacher", streamKind: "direct", streamId: sid } });
+// A snapshot acknowledgement: `seen` = the relevant ids at X's millisecond that were in the viewed snapshot.
+const markTeacher = (ctx, sid, through, seen = [through]) => markStreamRead(ctx.container, { stateName: teacherDirectStateName("builder-1", sid), ...teacherStream(sid), include: d => d.senderRole === "student", throughMessageId: through, seenIdsAtBoundary: seen, meta: { principalRole: "teacher", streamKind: "direct", streamId: sid } });
 const teacherCount = async (ctx, sid) => countUnread(ctx.container, { ...teacherStream(sid), marker: await loadMarker(ctx.container, teacherDirectStateName("builder-1", sid)), include: d => d.senderRole === "student" });
 
 describe("paths", () => {
@@ -60,7 +61,7 @@ describe("boundary", () => {
     const T = 1800000000500;
     const A = id(T, "5"), B = id(T, "9");                                // exist when the reader loads + marks
     putDirect(ctx, S1, A); putDirect(ctx, S1, B);
-    await markTeacher(ctx, S1, B);
+    await markTeacher(ctx, S1, B, [A, B]);                               // the viewed snapshot held A and B
     const C = id(T, "1");                                                // later, same ms, sorts BELOW A and B
     putDirect(ctx, S1, C);
     const m = await loadMarker(ctx.container, teacherDirectStateName("builder-1", S1));
@@ -190,5 +191,73 @@ describe("teacher summary authority", () => {
     await markTeacher(ctx, S1, id(1800000000002, "b"));
     expect((await teacherDirectUnread(ctx.container, "builder-1")).totalUnread).toBe(2);
     expect((await teacherDirectUnread(ctx.container, "builder-2")).totalUnread).toBe(4);
+  });
+});
+
+describe("snapshot acknowledgement (review follow-up) — the viewed snapshot, never a fresh listing", () => {
+  const T = 1800000000777;
+  it("EXACT RESIDUAL: GET shows only A; C (same ms, sorts below A) is created BEFORE the mark POST → A read, C unread", async () => {
+    const ctx = createMemoryContainer({});
+    const A = String(T) + "-8888888888888888";
+    putDirect(ctx, S1, A);
+    const snapshotBoundary = [A];                                        // 2. what the GET returned/showed
+    const C = String(T) + "-2222222222222222";
+    putDirect(ctx, S1, C);                                               // 3. arrives after the snapshot, C < A
+    expect(C < A).toBe(true);
+    await markTeacher(ctx, S1, A, snapshotBoundary);                      // 4. mark with the snapshot
+    const m = await loadMarker(ctx.container, teacherDirectStateName("builder-1", S1));
+    expect(isReadBy(m, A)).toBe(true);                                   // 5. A read
+    expect(isReadBy(m, C)).toBe(false);                                  //    C unread
+    expect(await teacherCount(ctx, S1)).toEqual({ unread: 1, capped: false });
+  });
+
+  it("MULTIPLE same-ms ids: snapshot [A=T-1111, B=T-8888], later C=T-2222 → A and B read, C unread (suffix order irrelevant)", async () => {
+    const ctx = createMemoryContainer({});
+    const A = String(T) + "-1111111111111111", B = String(T) + "-8888888888888888", C = String(T) + "-2222222222222222";
+    putDirect(ctx, S1, A); putDirect(ctx, S1, B);
+    putDirect(ctx, S1, C);                                               // after the snapshot, between A and B by suffix
+    await markTeacher(ctx, S1, B, [B, A, A]);                            // order + duplicates don't matter
+    const m = await loadMarker(ctx.container, teacherDirectStateName("builder-1", S1));
+    expect(m.seenIdsAtBoundary).toEqual([A, B]);
+    expect([isReadBy(m, A), isReadBy(m, B), isReadBy(m, C)]).toEqual([true, true, false]);
+  });
+
+  it("FORGED boundary lists are rejected with ZERO marker mutation", async () => {
+    const ctx = createMemoryContainer({});
+    const X = String(T) + "-8888888888888888";
+    putDirect(ctx, S1, X);
+    const otherStudents = String(T) + "-3333333333333333"; putDirect(ctx, S2, otherStudents);
+    const ann = String(T) + "-4444444444444444"; putAnn(ctx, C1, ann);
+    const teacherOwn = String(T) + "-5555555555555555"; putDirect(ctx, S1, teacherOwn, "teacher");
+    const cases = [
+      [X, [X, otherStudents]],                                           // another student's thread
+      [X, [X, ann]],                                                     // announcement id for a direct stream
+      [X, [X, String(T + 1) + "-1111111111111111"]],                     // different millisecond
+      [X, [X, String(T) + "-9999999999999999"]],                         // nonexistent
+      [X, [X, "not-an-id"]],                                             // malformed
+      [X, [X, 42]],                                                      // not a string
+      [X, []],                                                           // empty
+      [X, [String(T) + "-1111111111111111"]],                           // through absent from the list
+      [X, Array.from({ length: 201 }, () => X)],                         // oversized
+      [X, [X, teacherOwn]],                                              // not unread-relevant for the teacher
+      [teacherOwn, [teacherOwn]],                                        // through is the teacher's own message
+      [X, "not-an-array"]
+    ];
+    for (const [through, seen] of cases) {
+      await expect(markTeacher(ctx, S1, through, seen)).rejects.toBeInstanceOf(MarkReadError);
+    }
+    expect(ctx.names(READ_STATE_PREFIX)).toEqual([]);
+  });
+
+  it("the store also rejects an announcement acknowledgement that names a direct id", async () => {
+    const ctx = createMemoryContainer({});
+    const ann = String(T) + "-4444444444444444", dm = String(T) + "-6666666666666666";
+    putAnn(ctx, C1, ann); putDirect(ctx, S1, dm, "teacher");
+    const stateName = studentAnnouncementStateName(S1, C1);
+    const mark = seen => markStreamRead(ctx.container, { stateName, streamPrefix: announcementPrefix(C1), expected: { kind: "announcement", classId: C1 }, include: () => true, throughMessageId: ann, seenIdsAtBoundary: seen });
+    await expect(mark([ann, dm])).rejects.toBeInstanceOf(MarkReadError);
+    expect(ctx.names(READ_STATE_PREFIX)).toEqual([]);
+    await mark([ann]);
+    expect(ctx.names(READ_STATE_PREFIX)).toEqual([stateName]);
   });
 });

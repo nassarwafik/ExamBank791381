@@ -41,7 +41,7 @@ describe("teacher unread summary", () => {
   it("auth required; counts ONLY student replies (own teacher messages never unread)", async () => {
     const ctx = createMemoryContainer(seed());
     expect((await tGet(ANON(ctx), "?kind=unread-summary")).status).toBe(401);
-    expect((await tPost(ANON(ctx), { action: "markDirectRead", studentId: S1, throughMessageId: mid(1, "a") })).status).toBe(401);
+    expect((await tPost(ANON(ctx), { action: "markDirectRead", studentId: S1, throughMessageId: mid(1, "a"), seenIdsAtBoundary: [mid(1, "a")] })).status).toBe(401);
     await tPost(T(ctx), { action: "sendDirect", studentId: S1, body: "من المعلم" });
     await sPost(ST(ctx, S1), { action: "sendDirect", body: "رد 1" });
     await sPost(ST(ctx, S1), { action: "sendDirect", body: "رد 2" });
@@ -68,9 +68,9 @@ describe("teacher markDirectRead", () => {
     const ctx = createMemoryContainer(seed());
     putDirect(ctx, S1, mid(1800000000001, "a"), "student");
     putDirect(ctx, S2, mid(1800000000002, "b"), "student");
-    expect((await tPost(T(ctx), { action: "markDirectRead", studentId: "nobody", throughMessageId: mid(1800000000001, "a") })).status).toBe(404);
+    expect((await tPost(T(ctx), { action: "markDirectRead", studentId: "nobody", throughMessageId: mid(1800000000001, "a"), seenIdsAtBoundary: [mid(1800000000001, "a")] })).status).toBe(404);
     for (const through of ["9999999999999-ffffffffffffffff", mid(1800000000002, "b"), "x", undefined]) {
-      expect((await tPost(T(ctx), { action: "markDirectRead", studentId: S1, throughMessageId: through })).status).toBe(400);
+      expect((await tPost(T(ctx), { action: "markDirectRead", studentId: S1, throughMessageId: through, seenIdsAtBoundary: [through] })).status).toBe(400);
     }
     expect(ctx.names(READ_STATE_PREFIX)).toEqual([]);
   });
@@ -81,11 +81,11 @@ describe("teacher markDirectRead", () => {
     putDirect(ctx, S1, X, "student");
     putDirect(ctx, S1, Y, "student");                                       // arrived after the teacher's GET snapshot (through X)
     const before = snapshot(ctx, directPrefix(S1));
-    const r1 = await tPost(T(ctx), { action: "markDirectRead", studentId: S1, throughMessageId: X });
+    const r1 = await tPost(T(ctx), { action: "markDirectRead", studentId: S1, throughMessageId: X, seenIdsAtBoundary: [X] });
     expect(r1.jsonBody).toEqual({ ok: true, studentId: S1, unread: 1, capped: false });
-    const r2 = await tPost(T(ctx), { action: "markDirectRead", studentId: S1, throughMessageId: Y });
+    const r2 = await tPost(T(ctx), { action: "markDirectRead", studentId: S1, throughMessageId: Y, seenIdsAtBoundary: [Y] });
     expect(r2.jsonBody.unread).toBe(0);
-    const r3 = await tPost(T(ctx), { action: "markDirectRead", studentId: S1, throughMessageId: X });   // stale/slow older mark
+    const r3 = await tPost(T(ctx), { action: "markDirectRead", studentId: S1, throughMessageId: X, seenIdsAtBoundary: [X] });   // stale/slow older mark
     expect(r3.jsonBody.unread).toBe(0);
     expect(ctx.getJson(teacherDirectStateName("builder-1", S1)).boundaryMs).toBe(1800000000005);
     expect(snapshot(ctx, directPrefix(S1))).toBe(before);
@@ -97,7 +97,7 @@ describe("teacher markDirectRead", () => {
     const ctx = createMemoryContainer(seed());
     const X = mid(1800000000001, "a");
     putDirect(ctx, S3, X, "student");
-    expect((await tPost(T(ctx), { action: "markDirectRead", studentId: S3, throughMessageId: X })).jsonBody.unread).toBe(0);
+    expect((await tPost(T(ctx), { action: "markDirectRead", studentId: S3, throughMessageId: X, seenIdsAtBoundary: [X] })).jsonBody.unread).toBe(0);
   });
 });
 
@@ -121,9 +121,9 @@ describe("student unread summary", () => {
     putAnn(ctx, CA, oldAnn); putAnn(ctx, CB, newAnn);
     ctx.setJson("platform/users/" + S1 + ".json", user(S1, { classId: CB }));
     expect((await sGet(ST(ctx, S1), "?view=unread")).jsonBody.announcementUnread.unread).toBe(1);
-    expect((await sPost(ST(ctx, S1), { action: "markRead", stream: "announcements", throughMessageId: oldAnn, classId: CA })).status).toBe(400);
+    expect((await sPost(ST(ctx, S1), { action: "markRead", stream: "announcements", throughMessageId: oldAnn, seenIdsAtBoundary: [oldAnn], classId: CA })).status).toBe(400);
     expect(ctx.names(READ_STATE_PREFIX)).toEqual([]);
-    const ok = await sPost(ST(ctx, S1), { action: "markRead", stream: "announcements", throughMessageId: newAnn, classId: CA });
+    const ok = await sPost(ST(ctx, S1), { action: "markRead", stream: "announcements", throughMessageId: newAnn, seenIdsAtBoundary: [newAnn], classId: CA });
     expect(ok.jsonBody).toMatchObject({ ok: true, stream: "announcements", unread: 0, announcementUnread: { unread: 0, capped: false } });
     expect(ctx.names(READ_STATE_PREFIX)).toEqual([studentAnnouncementStateName(S1, CB)]);
   });
@@ -135,11 +135,11 @@ describe("student markRead", () => {
     const own = mid(1800000000001, "a"), other = mid(1800000000002, "b");
     putDirect(ctx, S1, own, "teacher"); putDirect(ctx, S2, other, "teacher");
     for (const through of [other, "9999999999999-ffffffffffffffff", ""]) {
-      expect((await sPost(ST(ctx, S1), { action: "markRead", stream: "direct", throughMessageId: through, studentId: S2 })).status).toBe(400);
+      expect((await sPost(ST(ctx, S1), { action: "markRead", stream: "direct", throughMessageId: through, seenIdsAtBoundary: [through], studentId: S2 })).status).toBe(400);
     }
-    expect((await sPost(ST(ctx, S1), { action: "markRead", stream: "nope", throughMessageId: own })).status).toBe(400);
+    expect((await sPost(ST(ctx, S1), { action: "markRead", stream: "nope", throughMessageId: own, seenIdsAtBoundary: [own] })).status).toBe(400);
     expect(ctx.names(READ_STATE_PREFIX)).toEqual([]);
-    const r = await sPost(ST(ctx, S1), { action: "markRead", stream: "direct", throughMessageId: own, studentId: S2 });
+    const r = await sPost(ST(ctx, S1), { action: "markRead", stream: "direct", throughMessageId: own, seenIdsAtBoundary: [own], studentId: S2 });
     expect(r.jsonBody).toMatchObject({ ok: true, stream: "direct", unread: 0, directUnread: { unread: 0, capped: false } });
     expect(ctx.names(READ_STATE_PREFIX)).toEqual([studentDirectStateName(S1)]);
   });
@@ -148,7 +148,7 @@ describe("student markRead", () => {
     const ctx = createMemoryContainer(seed());
     for (let i = 1; i <= 3; i++) putDirect(ctx, S1, mid(1800000000000 + i, "a"), "teacher");
     putAnn(ctx, CA, mid(1800000000010, "b")); putAnn(ctx, CA, mid(1800000000011, "c"));
-    const r = await sPost(ST(ctx, S1), { action: "markRead", stream: "direct", throughMessageId: mid(1800000000003, "a") });
+    const r = await sPost(ST(ctx, S1), { action: "markRead", stream: "direct", throughMessageId: mid(1800000000003, "a"), seenIdsAtBoundary: [mid(1800000000003, "a")] });
     expect(r.jsonBody).toMatchObject({ directUnread: { unread: 0 }, announcementUnread: { unread: 2 }, totalUnread: 2 });
   });
 
@@ -156,9 +156,9 @@ describe("student markRead", () => {
     const ctx = createMemoryContainer(seed());
     const X = mid(1800000000001, "a"), Y = mid(1800000000002, "b");
     putDirect(ctx, S1, X, "teacher"); putDirect(ctx, S1, Y, "teacher");
-    expect((await sPost(ST(ctx, S1), { action: "markRead", stream: "direct", throughMessageId: X })).jsonBody.unread).toBe(1);
-    await sPost(ST(ctx, S1), { action: "markRead", stream: "direct", throughMessageId: Y });
-    expect((await sPost(ST(ctx, S1), { action: "markRead", stream: "direct", throughMessageId: X })).jsonBody.unread).toBe(0);
+    expect((await sPost(ST(ctx, S1), { action: "markRead", stream: "direct", throughMessageId: X, seenIdsAtBoundary: [X] })).jsonBody.unread).toBe(1);
+    await sPost(ST(ctx, S1), { action: "markRead", stream: "direct", throughMessageId: Y, seenIdsAtBoundary: [Y] });
+    expect((await sPost(ST(ctx, S1), { action: "markRead", stream: "direct", throughMessageId: X, seenIdsAtBoundary: [X] })).jsonBody.unread).toBe(0);
     expect(ctx.getJson(studentDirectStateName(S1)).boundaryMs).toBe(1800000000002);
   });
 
@@ -166,7 +166,7 @@ describe("student markRead", () => {
     const ctx = createMemoryContainer(seed());
     const t = 1800000000777, A = mid(t, "8"), C = mid(t, "2");
     putDirect(ctx, S1, A, "teacher");
-    await sPost(ST(ctx, S1), { action: "markRead", stream: "direct", throughMessageId: A });
+    await sPost(ST(ctx, S1), { action: "markRead", stream: "direct", throughMessageId: A, seenIdsAtBoundary: [A] });
     putDirect(ctx, S1, C, "teacher");
     expect((await sGet(ST(ctx, S1), "?view=unread")).jsonBody.directUnread.unread).toBe(1);
   });
@@ -177,8 +177,62 @@ describe("student markRead", () => {
     const ann = mid(1800000000001, "a"), dm = mid(1800000000002, "b");
     putAnn(ctx, CX, ann); putDirect(ctx, S1, dm, "teacher");
     expect((await sGet(ST(ctx, S1), "?view=unread")).jsonBody.totalUnread).toBe(2);
-    expect((await sPost(ST(ctx, S1), { action: "markRead", stream: "announcements", throughMessageId: ann })).jsonBody.announcementUnread.unread).toBe(0);
-    expect((await sPost(ST(ctx, S1), { action: "markRead", stream: "direct", throughMessageId: dm })).jsonBody.totalUnread).toBe(0);
+    expect((await sPost(ST(ctx, S1), { action: "markRead", stream: "announcements", throughMessageId: ann, seenIdsAtBoundary: [ann] })).jsonBody.announcementUnread.unread).toBe(0);
+    expect((await sPost(ST(ctx, S1), { action: "markRead", stream: "direct", throughMessageId: dm, seenIdsAtBoundary: [dm] })).jsonBody.totalUnread).toBe(0);
     expect((await sPost(ST(ctx, S1), { action: "sendDirect", body: "رد" })).status).toBe(403);
+  });
+});
+
+describe("snapshot acknowledgement at the API (review follow-up)", () => {
+  it("EXACT RESIDUAL through the teacher API: GET snapshot [A] → same-ms C inserted → POST {A, [A]} → response unread === 1", async () => {
+    const ctx = createMemoryContainer(seed());
+    const A = "1800000000777-8888888888888888", C = "1800000000777-2222222222222222";
+    putDirect(ctx, S1, A, "student");
+    const get = await tGet(T(ctx), "?studentId=" + S1);
+    const shown = get.jsonBody.messages.map(m => m.messageId);                    // the viewed snapshot
+    expect(shown).toEqual([A]);
+    putDirect(ctx, S1, C, "student");                                            // after the GET, before the POST
+    const r = await tPost(T(ctx), { action: "markDirectRead", studentId: S1, throughMessageId: A, seenIdsAtBoundary: shown });
+    expect(r.jsonBody).toEqual({ ok: true, studentId: S1, unread: 1, capped: false });
+    expect((await tGet(T(ctx), "?kind=unread-summary")).jsonBody.totalUnread).toBe(1);
+  });
+
+  it("the boundary list is REQUIRED; a missing / forged list → 400 and no marker", async () => {
+    const ctx = createMemoryContainer(seed());
+    const A = "1800000000777-8888888888888888";
+    putDirect(ctx, S1, A, "student");
+    putDirect(ctx, S2, "1800000000777-1111111111111111", "student");
+    expect((await tPost(T(ctx), { action: "markDirectRead", studentId: S1, throughMessageId: A })).status).toBe(400);
+    expect((await tPost(T(ctx), { action: "markDirectRead", studentId: S1, throughMessageId: A, seenIdsAtBoundary: [A, "1800000000777-1111111111111111"] })).status).toBe(400);
+    expect((await sPost(ST(ctx, S1), { action: "markRead", stream: "direct", throughMessageId: A })).status).toBe(400);
+    expect(ctx.names(READ_STATE_PREFIX)).toEqual([]);
+  });
+
+  it("TEACHER role boundary: snapshot S1(student) then T1(teacher) → acknowledge S1 (T1 is rejected); a later S2 stays unread", async () => {
+    const ctx = createMemoryContainer(seed());
+    const s1 = mid(1800000000001, "a"), t1 = mid(1800000000002, "b"), s2 = mid(1800000000003, "c");
+    putDirect(ctx, S1, s1, "student"); putDirect(ctx, S1, t1, "teacher");
+    expect((await tPost(T(ctx), { action: "markDirectRead", studentId: S1, throughMessageId: t1, seenIdsAtBoundary: [t1] })).status).toBe(400);
+    putDirect(ctx, S1, s2, "student");
+    const r = await tPost(T(ctx), { action: "markDirectRead", studentId: S1, throughMessageId: s1, seenIdsAtBoundary: [s1] });
+    expect(r.jsonBody.unread).toBe(1);
+  });
+
+  it("STUDENT role boundary: snapshot T1(teacher) then own reply S1 → acknowledge T1 (S1 is rejected); a later unseen teacher message stays unread", async () => {
+    const ctx = createMemoryContainer(seed());
+    const t1 = mid(1800000000001, "a"), own = mid(1800000000002, "b"), t2 = mid(1800000000003, "c");
+    putDirect(ctx, S1, t1, "teacher"); putDirect(ctx, S1, own, "student");
+    expect((await sPost(ST(ctx, S1), { action: "markRead", stream: "direct", throughMessageId: own, seenIdsAtBoundary: [own] })).status).toBe(400);
+    putDirect(ctx, S1, t2, "teacher");
+    const r = await sPost(ST(ctx, S1), { action: "markRead", stream: "direct", throughMessageId: t1, seenIdsAtBoundary: [t1] });
+    expect(r.jsonBody).toMatchObject({ unread: 1, directUnread: { unread: 1 } });
+  });
+
+  it("ANNOUNCEMENTS: the latest visible announcement is the boundary; a direct id cannot be used", async () => {
+    const ctx = createMemoryContainer(seed());
+    const a1 = mid(1800000000001, "a"), a2 = mid(1800000000002, "b"), dm = mid(1800000000002, "c");
+    putAnn(ctx, CA, a1); putAnn(ctx, CA, a2); putDirect(ctx, S1, dm, "teacher");
+    expect((await sPost(ST(ctx, S1), { action: "markRead", stream: "announcements", throughMessageId: dm, seenIdsAtBoundary: [dm] })).status).toBe(400);
+    expect((await sPost(ST(ctx, S1), { action: "markRead", stream: "announcements", throughMessageId: a2, seenIdsAtBoundary: [a2] })).jsonBody.announcementUnread.unread).toBe(0);
   });
 });

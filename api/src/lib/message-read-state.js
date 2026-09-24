@@ -9,9 +9,13 @@
 // millisecond on different instances order by their random suffix — so a single "last read id" would wrongly hide a
 // later same-ms message whose suffix sorts lower. The marker is therefore { boundaryMs, seenIdsAtBoundary[] }:
 //   ms <  boundaryMs → read;  ms > boundaryMs → unread;  ms == boundaryMs → read ONLY if its id is in seenIdsAtBoundary.
-// Marking "through X" (X must EXIST in the authorized stream — a forged future id is rejected) sets the boundary to X's
-// millisecond with the ids at that millisecond that exist now and sort ≤ X (a subset of what the reader was shown up
-// to X). It is a monotonic CAS: a boundary never moves backwards; an equal boundary unions its ids.
+// Marking read is a SNAPSHOT ACKNOWLEDGEMENT: the client sends X (the latest unread-RELEVANT message it actually
+// displayed) and seenIdsAtBoundary — the relevant ids at X's millisecond that were in THAT applied snapshot. The boundary
+// ids are NEVER re-derived from a fresh listing: a message created in the same millisecond after the reader's GET (on
+// another instance, possibly sorting below X) was never shown, so it must stay unread. Every supplied id must exist
+// in the server-authorized stream, share X's millisecond, and validate for the stream AND its unread-relevant sender
+// role (a teacher acknowledges student messages, a student acknowledges teacher messages, any announcement) — anything
+// else is rejected with no write. It is a monotonic CAS: a boundary never moves backwards; an equal boundary unions.
 //
 // Unread counts derive from immutable messages + the marker: names are listed (no download), ids already covered by
 // the marker are dropped, and only the remaining CANDIDATES are downloaded (newest first, bounded concurrency) to check
@@ -23,6 +27,8 @@ const { MESSAGE_PREFIX, DIRECT_PREFIX, MESSAGE_ID_RE, isSafeId, directPrefix, no
 const READ_STATE_PREFIX = MESSAGE_PREFIX + "read-state/";
 const USER_PREFIX = "platform/users/";
 const UNREAD_DISPLAY_CAP = 99;
+// Upper bound on a snapshot acknowledgement's boundary ids (a snapshot page never exceeds the history cap).
+const MAX_BOUNDARY_IDS = 200;
 
 class MarkReadError extends Error {
   constructor(message) { super(message || "Invalid message reference."); this.name = "MarkReadError"; this.httpStatus = 400; }
@@ -99,21 +105,35 @@ async function loadMarker(container, stateName, deps = {}) {
 }
 
 /**
- * Mark ONE authorized stream read through `throughMessageId`. The id must be a real, valid message of this stream
- * (listed under `streamPrefix` AND its document validates against `expected`) — otherwise MarkReadError (400) and the
- * marker is not touched. Monotonic CAS through mutateJsonWithRetry: every retry re-reads the freshest marker, so an
- * older/slower mark can never regress a newer one. Returns { marker, ids } (ids = the stream's listed ids, reusable
- * for counting).
+ * Validate a snapshot acknowledgement. Returns the deduplicated, sorted boundary ids; throws MarkReadError (400) when
+ * X is malformed, the list is missing/oversized/malformed, an id has another millisecond, X is not in the list, or any
+ * id does not exist in this stream / does not validate / is not unread-relevant (`include`) for this reader.
  */
-async function markStreamRead(container, { stateName, streamPrefix, expected, throughMessageId, meta = {} }, deps = {}) {
+async function validateAcknowledgement(container, { streamPrefix, expected, include, throughMessageId, seenIdsAtBoundary }, deps = {}) {
   if (typeof throughMessageId !== "string" || !MESSAGE_ID_RE.test(throughMessageId)) throw new MarkReadError();
-  const ids = await listStreamIds(container, streamPrefix, deps);
-  if (!ids.includes(throughMessageId)) throw new MarkReadError();
-  const doc = await (deps.downloadJsonOrNull || downloadJsonOrNull)(container, streamPrefix + throughMessageId + ".json");
-  if (!normalizeStoredMessage(doc, { ...expected, messageId: throughMessageId })) throw new MarkReadError();
+  if (!Array.isArray(seenIdsAtBoundary) || !seenIdsAtBoundary.length || seenIdsAtBoundary.length > MAX_BOUNDARY_IDS) throw new MarkReadError();
   const boundaryMs = messageIdMs(throughMessageId);
-  // Ids at the boundary millisecond that exist now and sort ≤ X (everything the reader saw up to X at that ms).
-  const seenIdsAtBoundary = ids.filter(id => messageIdMs(id) === boundaryMs && id <= throughMessageId);
+  const seen = Array.from(new Set(seenIdsAtBoundary));
+  for (const id of seen) if (typeof id !== "string" || messageIdMs(id) !== boundaryMs) throw new MarkReadError();
+  if (!seen.includes(throughMessageId)) throw new MarkReadError();
+  const ids = await listStreamIds(container, streamPrefix, deps);
+  const listed = new Set(ids);
+  if (!seen.every(id => listed.has(id))) throw new MarkReadError();
+  const docs = await (deps.downloadManyJson || downloadManyJson)(container, seen.map(id => streamPrefix + id + ".json"), getReadConcurrency());
+  for (let i = 0; i < seen.length; i++) {
+    const doc = normalizeStoredMessage(docs[i], { ...expected, messageId: seen[i] });
+    if (!doc || !include(doc)) throw new MarkReadError();
+  }
+  return { boundaryMs, seenIdsAtBoundary: seen.sort(), ids };
+}
+
+/**
+ * Mark ONE authorized stream read from a validated snapshot acknowledgement (see validateAcknowledgement). Monotonic
+ * CAS through mutateJsonWithRetry: every retry re-reads the freshest marker, so an older/slower mark can never regress
+ * a newer one. Returns { marker, ids } (ids = the stream's listed ids, reusable for counting).
+ */
+async function markStreamRead(container, { stateName, streamPrefix, expected, include, throughMessageId, seenIdsAtBoundary: acknowledged, meta = {} }, deps = {}) {
+  const { boundaryMs, seenIdsAtBoundary, ids } = await validateAcknowledgement(container, { streamPrefix, expected, include, throughMessageId, seenIdsAtBoundary: acknowledged }, deps);
   const mutate = deps.mutateJsonWithRetry || mutateJsonWithRetry;
   try {
     const written = await mutate(container, stateName, current => {
@@ -209,7 +229,7 @@ async function teacherDirectUnread(container, teacherId, { classId = "" } = {}, 
 }
 
 module.exports = {
-  READ_STATE_PREFIX, UNREAD_DISPLAY_CAP, MarkReadError,
+  READ_STATE_PREFIX, UNREAD_DISPLAY_CAP, MAX_BOUNDARY_IDS, MarkReadError, validateAcknowledgement,
   teacherActorKey, teacherDirectStatePrefix, teacherDirectStateName, studentDirectStateName, studentAnnouncementStateName,
   messageIdMs, normalizeMarker, isReadBy, advanceMarker, listStreamIds, loadMarker, markStreamRead, countUnread,
   combineCounts, groupDirectIds, teacherDirectUnread

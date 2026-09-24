@@ -81,7 +81,7 @@ describe("TeacherMessagesPage — roster unread + mark read", () => {
     await screen.findByText("ثاني");
     const lastId = (client.getDirect as ReturnType<typeof vi.fn>).mock.results[0].value;
     const shown = (await lastId).messages as MessageView[];
-    expect(client.markDirectRead).toHaveBeenCalledWith("s1", shown[1].messageId);
+    expect(client.markDirectRead).toHaveBeenCalledWith("s1", { throughMessageId: shown[1].messageId, seenIdsAtBoundary: [shown[1].messageId] });
     expect(row(roster, /سارة/).textContent).toContain("3 جديدة");               // not optimistic
     await act(async () => { mark.resolve({ unread: 1, capped: false }); });     // a reply arrived after the marked id
     expect(row(roster, /سارة/).textContent).toContain("1 جديدة");
@@ -110,7 +110,7 @@ describe("TeacherMessagesPage — roster unread + mark read", () => {
     await act(async () => { b.resolve(thread([bMsg])); });
     await act(async () => { a.resolve(thread([msg("رسالة سارة", "student")])); });
     expect(client.markDirectRead).toHaveBeenCalledTimes(1);
-    expect(client.markDirectRead).toHaveBeenCalledWith("s2", bMsg.messageId);
+    expect(client.markDirectRead).toHaveBeenCalledWith("s2", { throughMessageId: bMsg.messageId, seenIdsAtBoundary: [bMsg.messageId] });
   });
 
   it("an archived student's unread history can be opened and marked", async () => {
@@ -119,7 +119,7 @@ describe("TeacherMessagesPage — roster unread + mark read", () => {
     const roster = await openClass();
     await waitFor(() => expect(row(roster, /ليلى/).textContent).toContain("1 جديدة"));
     fireEvent.click(row(roster, /ليلى/));
-    await waitFor(() => expect(client.markDirectRead).toHaveBeenCalledWith("s3", expect.any(String)));
+    await waitFor(() => expect(client.markDirectRead).toHaveBeenCalledWith("s3", expect.objectContaining({ throughMessageId: expect.any(String) })));
     await waitFor(() => expect(row(roster, /ليلى/).textContent).not.toContain("جديدة"));
   });
 

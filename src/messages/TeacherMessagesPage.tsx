@@ -5,8 +5,8 @@ import { normalizeClassStatus } from "../classLifecycle";
 import type { Classroom, Student } from "../students/types";
 import { MessageComposer, MessageThread } from "./MessageParts";
 import {
-  MESSAGES_POLL_MS, UNREAD_POLL_MS, createTeacherMessagesClient, mergeMessage, formatUnread,
-  type MessageView, type TeacherMessagesClient, type ThreadState, type UnreadCount
+  MESSAGES_POLL_MS, UNREAD_POLL_MS, createTeacherMessagesClient, mergeMessage, formatUnread, readAckFromSnapshot,
+  type MessageView, type TeacherMessagesClient, type ThreadState, type UnreadCount, type ReadAck
 } from "./messagesClient";
 import "./messages.css";
 
@@ -25,8 +25,9 @@ import "./messages.css";
  *
  * Phase 5D — unread: the selected class's per-student unread replies (server summary, refreshed every 15s) show as
  * «N جديدة» in the roster. When a student's conversation snapshot loads and is STILL the current, visible thread, it
- * is marked read through that snapshot's latest id (server-authoritative; the badge only changes from the server's
- * response, never optimistically). A stale response for a previous student returns before this point, so it can never
+ * is acknowledged from THAT GET snapshot only: the latest STUDENT message shown + the student ids at its millisecond
+ * (the teacher's own messages never move the boundary; nothing is marked when no student message was shown). The badge
+ * only changes from the server's response, never optimistically. A stale response for a previous student returns before this point, so it can never
  * mark the wrong thread; a failed mark leaves the badge until a later successful one.
  */
 type Tab = "direct" | "announcements";
@@ -84,22 +85,26 @@ export default function TeacherMessagesPage({ token, client: injected, onUnreadC
       const messages = own.reduce(mergeMessage, data.messages);
       setThread({ key, ...data, messages });
       setThreadError("");
-      // Still the current thread (the gen check above) → acknowledge what this snapshot showed.
-      if (key.startsWith("dm:") && messages.length) void markThreadRead(key, messages[messages.length - 1].messageId);
+      // Still the current thread (the gen check above) → acknowledge what THIS GET snapshot showed (student messages).
+      if (key.startsWith("dm:")) {
+        const ack = readAckFromSnapshot(data.messages, m => m.senderRole === "student");
+        if (ack) void markThreadRead(key, ack);
+      }
     } catch (e) {
       if (gen !== threadGen.current) return;
       if (!silent) setThreadError(e instanceof Error ? e.message : "تعذر تحميل الرسائل.");   // a failed poll keeps the last-good thread
     }
   }
 
-  async function markThreadRead(key: string, throughMessageId: string) {
+  async function markThreadRead(key: string, ack: ReadAck) {
     if (activeKey.current !== key) return;
     if (typeof document !== "undefined" && document.visibilityState !== "visible") return;
+    const throughMessageId = ack.throughMessageId + "|" + ack.seenIdsAtBoundary.join(",");
     if (marked.current[key] === throughMessageId || marking.current[key] === throughMessageId) return;
     marking.current[key] = throughMessageId;
     const sid = key.slice(3);
     try {
-      const remaining = await client.markDirectRead(sid, throughMessageId);
+      const remaining = await client.markDirectRead(sid, ack);
       marked.current[key] = throughMessageId;
       summaryGen.current += 1;                                        // an older in-flight class summary can't restore the old count
       setUnreadByStudent(prev => ({ ...prev, [sid]: remaining }));

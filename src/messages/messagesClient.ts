@@ -14,6 +14,23 @@ export type TeacherUnreadSummary = { totalUnread: number; capped: boolean; byStu
 export type StudentUnread = { directUnread: UnreadCount; announcementUnread: UnreadCount; totalUnread: number; totalCapped: boolean };
 export const NO_UNREAD: UnreadCount = { unread: 0, capped: false };
 
+/** A mark-read request built from the EXACT applied snapshot (Phase 5D review follow-up). */
+export type ReadAck = { throughMessageId: string; seenIdsAtBoundary: string[] };
+
+/**
+ * The snapshot acknowledgement for one stream: X = the latest unread-RELEVANT message in the applied snapshot, and
+ * seenIdsAtBoundary = every relevant snapshot id in X's millisecond. Never derived from later state, so a message the
+ * server created after this snapshot (even in the same millisecond) cannot be acknowledged. null when the snapshot has
+ * no relevant (incoming) message — then nothing is marked.
+ */
+export function readAckFromSnapshot(messages: MessageView[], isRelevant: (m: MessageView) => boolean): ReadAck | null {
+  const ids = messages.filter(isRelevant).map(m => m.messageId).filter(id => /^\d{13}-/.test(id)).sort();
+  if (!ids.length) return null;
+  const throughMessageId = ids[ids.length - 1];
+  const ms = throughMessageId.slice(0, 13);
+  return { throughMessageId, seenIdsAtBoundary: ids.filter(id => id.slice(0, 13) === ms) };
+}
+
 /** Badge text: 1..99, or "99+" when the server capped the count. */
 export function formatUnread(count: number, capped: boolean): string {
   return capped ? "99+" : String(Math.max(0, Math.floor(count)));
@@ -70,7 +87,7 @@ export interface TeacherMessagesClient {
   /** Phase 5D — unread STUDENT replies for one class (per student; membership decided by the server). */
   getClassUnread(classId: string): Promise<TeacherUnreadSummary>;
   /** Phase 5D — advance this teacher's read marker for one conversation; returns what is still unread there. */
-  markDirectRead(studentId: string, throughMessageId: string): Promise<UnreadCount>;
+  markDirectRead(studentId: string, ack: ReadAck): Promise<UnreadCount>;
 }
 
 export function createTeacherMessagesClient(token: string): TeacherMessagesClient {
@@ -102,8 +119,8 @@ export function createTeacherMessagesClient(token: string): TeacherMessagesClien
       for (const [sid, v] of Object.entries(raw)) by[sid] = unreadOf(v);
       return { totalUnread: Math.max(0, Number(j.totalUnread) || 0), capped: j.capped === true, byStudent: by };
     },
-    async markDirectRead(studentId, throughMessageId) {
-      const r = await fetch("/api/messages", { method: "POST", headers, body: JSON.stringify({ action: "markDirectRead", studentId, throughMessageId }) });
+    async markDirectRead(studentId, ack) {
+      const r = await fetch("/api/messages", { method: "POST", headers, body: JSON.stringify({ action: "markDirectRead", studentId, throughMessageId: ack.throughMessageId, seenIdsAtBoundary: ack.seenIdsAtBoundary }) });
       const j = await readJson(r);
       if (!r.ok || !j.ok) fail(j, r.status, "تعذر تحديث حالة القراءة.");
       return unreadOf(j);
@@ -117,7 +134,7 @@ export interface StudentMessagesClient {
   /** Phase 5D — this student's unread counts (own direct thread + CURRENT class announcements). */
   getUnread(): Promise<StudentUnread>;
   /** Phase 5D — mark one visible stream read through an id from its loaded snapshot; returns the fresh counts. */
-  markRead(stream: "direct" | "announcements", throughMessageId: string): Promise<StudentUnread>;
+  markRead(stream: "direct" | "announcements", ack: ReadAck): Promise<StudentUnread>;
 }
 
 export function createStudentMessagesClient(token: string): StudentMessagesClient {
@@ -143,8 +160,8 @@ export function createStudentMessagesClient(token: string): StudentMessagesClien
       if (!r.ok || !j.ok) fail(j, r.status, "تعذر تحميل الرسائل الجديدة.");
       return studentUnreadOf(j);
     },
-    async markRead(stream, throughMessageId) {
-      const r = await fetch("/api/student-messages", { method: "POST", headers, body: JSON.stringify({ action: "markRead", stream, throughMessageId }) });
+    async markRead(stream, ack) {
+      const r = await fetch("/api/student-messages", { method: "POST", headers, body: JSON.stringify({ action: "markRead", stream, throughMessageId: ack.throughMessageId, seenIdsAtBoundary: ack.seenIdsAtBoundary }) });
       const j = await readJson(r);
       if (!r.ok || !j.ok) fail(j, r.status, "تعذر تحديث حالة القراءة.");
       return studentUnreadOf(j);

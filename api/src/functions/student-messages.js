@@ -2,7 +2,9 @@
 //   GET  /api/student-messages                      → { direct, announcements, classroom, canSend, ... }
 //   POST /api/student-messages { action: "sendDirect", body }
 //   GET  /api/student-messages?view=unread          → Phase 5D: { directUnread, announcementUnread, totalUnread, ... }
-//   POST /api/student-messages { action: "markRead", stream: "direct" | "announcements", throughMessageId }
+//   POST /api/student-messages { action: "markRead", stream: "direct" | "announcements", throughMessageId, seenIdsAtBoundary }
+//        (a snapshot acknowledgement: the latest unread-relevant message shown — TEACHER messages for direct, any
+//        announcement — plus the relevant ids at its millisecond in THAT snapshot; validated server-side)
 // Phase 5D read state: the student's OWN direct stream and the CURRENT class's announcements only (both derived from the
 // persisted student document — never a request id). Reading/marking still works in an archived class (read-only for
 // sending only). Direct unread = TEACHER messages; announcement unread = every valid announcement of the current class.
@@ -99,7 +101,8 @@ async function handler(request, deps = {}, obs = null) {
       if (!s) return { status: 400, jsonBody: { ok: false, error: "القسم المحدد غير صالح." } };
       try {
         const { marker, ids } = await markStreamRead(container, {
-          stateName: s.stateName, streamPrefix: s.streamPrefix, expected: s.expected, throughMessageId: body.throughMessageId,
+          stateName: s.stateName, streamPrefix: s.streamPrefix, expected: s.expected, include: s.include,
+          throughMessageId: body.throughMessageId, seenIdsAtBoundary: body.seenIdsAtBoundary,
           meta: { principalRole: "student", streamKind: which === "direct" ? "direct" : "announcement", streamId: which === "direct" ? studentId : String(student.classId) }
         }, deps);
         const own = await countUnread(container, { streamPrefix: s.streamPrefix, expected: s.expected, include: s.include, marker, ids }, deps);

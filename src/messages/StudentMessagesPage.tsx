@@ -3,7 +3,7 @@ import { IconChevronBack } from "../icons";
 import { useAutoRefresh } from "../ui/useAutoRefresh";
 import { MessageComposer, MessageThread } from "./MessageParts";
 import {
-  MESSAGES_POLL_MS, UNREAD_POLL_MS, MessagesHttpError, createStudentMessagesClient, mergeMessage, formatUnread,
+  MESSAGES_POLL_MS, UNREAD_POLL_MS, MessagesHttpError, createStudentMessagesClient, mergeMessage, formatUnread, readAckFromSnapshot,
   type MessageView, type StudentMessagesClient, type StudentMessagesData, type StudentUnread
 } from "./messagesClient";
 import "./messages.css";
@@ -21,8 +21,10 @@ import "./messages.css";
  * can never erase the just-sent reply.
  *
  * Phase 5D — unread: each tab shows its own server-derived unread count. A stream is marked read ONLY while it is the
- * visible tab and after its snapshot loaded: opening this view marks the DIRECT conversation (the initial tab) through
- * its latest loaded id; announcements are marked only once «إعلانات الصف» is actually selected. Counts change only from
+ * visible tab and after its snapshot loaded: opening this view acknowledges the DIRECT conversation (the initial tab);
+ * announcements only once «إعلانات الصف» is actually selected. The acknowledgement is built from the last APPLIED GET
+ * snapshot only — direct: the latest TEACHER message shown + teacher ids at its millisecond (own replies never move the
+ * boundary); announcements: the latest announcement + announcements at its millisecond. Counts change only from
  * the server's mark response (a message that arrived after the marked id stays unread) — never optimistically.
  */
 type Tab = "direct" | "announcements";
@@ -42,7 +44,7 @@ export default function StudentMessagesPage({ token, onBack, client: injected, o
   // Phase 5D — unread counts + mark-read bookkeeping.
   const [unread, setUnread] = useState<StudentUnread | null>(null);
   const tabRef = useRef<Tab>("direct");                      // the VISIBLE tab (set in the tab handler)
-  const dataRef = useRef<StudentMessagesData | null>(null);  // the last applied snapshot
+  const dataRef = useRef<StudentMessagesData | null>(null);  // the last applied GET snapshot (never locally merged state)
   const unreadGen = useRef(0);
   const alive = useRef(true);
   const marked = useRef<Record<Tab, string>>({ direct: "", announcements: "" });
@@ -66,13 +68,15 @@ export default function StudentMessagesPage({ token, onBack, client: injected, o
     const d = dataRef.current;
     if (!d || !alive.current || tabRef.current !== stream) return;
     if (typeof document !== "undefined" && document.visibilityState !== "visible") return;
-    const list = stream === "direct" ? d.direct : d.announcements;
-    if (!list.length) return;
-    const through = list[list.length - 1].messageId;
+    const ack = stream === "direct"
+      ? readAckFromSnapshot(d.direct, m => m.senderRole === "teacher")
+      : readAckFromSnapshot(d.announcements, () => true);
+    if (!ack) return;                                                 // no incoming message shown → nothing to mark
+    const through = ack.throughMessageId + "|" + ack.seenIdsAtBoundary.join(",");
     if (marked.current[stream] === through || marking.current[stream] === through) return;
     marking.current[stream] = through;
     try {
-      const u = await client.markRead(stream, through);
+      const u = await client.markRead(stream, ack);
       marked.current[stream] = through;
       unreadGen.current += 1;
       if (alive.current) applyUnread(u);
@@ -89,7 +93,7 @@ export default function StudentMessagesPage({ token, onBack, client: injected, o
       const next = await client.load();
       if (mine !== gen.current) return;                               // superseded (a send happened) → discard
       const applied = { ...next, direct: confirmed.current.reduce(mergeMessage, next.direct) };
-      dataRef.current = applied;
+      dataRef.current = next;                                         // the acknowledgement uses the GET snapshot only
       setData(applied);
       setError("");
       void markVisible(tabRef.current);                               // only the currently visible stream
@@ -121,7 +125,7 @@ export default function StudentMessagesPage({ token, onBack, client: injected, o
       const message = await client.sendDirect(body);
       gen.current += 1;
       confirmed.current = [...confirmed.current, message];
-      setData(prev => { const n = prev ? { ...prev, direct: mergeMessage(prev.direct, message) } : prev; dataRef.current = n; return n; });
+      setData(prev => (prev ? { ...prev, direct: mergeMessage(prev.direct, message) } : prev));   // not an ack source
       setDraft("");
       void load(true);                                                // reconcile with the server
     } catch (e) {

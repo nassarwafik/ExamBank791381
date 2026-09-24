@@ -7,9 +7,10 @@
 //   GET  /api/messages?kind=unread-summary[&classId=<id>]  → Phase 5D: THIS teacher's unread STUDENT replies (global
 //                                                           badge; with classId also per student — membership from the
 //                                                           CURRENT student documents)
-//   POST /api/messages { action: "markDirectRead", studentId, throughMessageId }  → Phase 5D: advance THIS teacher's read
-//                                                           marker for that conversation (monotonic; the id must exist
-//                                                           in that student's stream). Reading is not audited.
+//   POST /api/messages { action: "markDirectRead", studentId, throughMessageId, seenIdsAtBoundary }  → Phase 5D: THIS
+//                                                           teacher's snapshot acknowledgement (latest STUDENT message
+//                                                           shown + the student ids at its ms in that snapshot), validated
+//                                                           against that student's stream; monotonic. Not audited.
 // Identity is ALWAYS server-derived: the teacher is the verified token subject and the display name comes from the
 // teacher profile (resolveTeacherDisplayName). Body fields such as teacherId / senderId / senderName / messageId /
 // createdAt are ignored. A NEW message requires an active, non-archived student whose CURRENT class (from the
@@ -166,12 +167,14 @@ async function handler(request, deps = {}, obs = null) {
       const student = await loadStudent(container, studentId, dl);
       if (!student) return notFound(MSG.studentNotFound);
       try {
-        const stream = { streamPrefix: directPrefix(studentId), expected: { kind: "direct", studentId } };
+        // The teacher's unread-relevant messages are the STUDENT's; the acknowledgement must be built from those.
+        const stream = { streamPrefix: directPrefix(studentId), expected: { kind: "direct", studentId }, include: doc => doc.senderRole === "student" };
         const { marker, ids } = await markStreamRead(container, {
-          stateName: teacherDirectStateName(teacherId, studentId), ...stream, throughMessageId: body.throughMessageId,
+          stateName: teacherDirectStateName(teacherId, studentId), ...stream,
+          throughMessageId: body.throughMessageId, seenIdsAtBoundary: body.seenIdsAtBoundary,
           meta: { principalRole: "teacher", streamKind: "direct", streamId: studentId, teacherId }
         }, deps);
-        const remaining = await countUnread(container, { ...stream, marker, ids, include: doc => doc.senderRole === "student" }, deps);
+        const remaining = await countUnread(container, { ...stream, marker, ids }, deps);
         return { status: 200, jsonBody: { ok: true, studentId, ...remaining } };
       } catch (e) {
         if (e instanceof MarkReadError) return bad("الرسالة المحددة غير صالحة.");

@@ -92,13 +92,13 @@ describe("StudentMessagesPage — per-tab unread + visible-only marking", () => 
     const onUnreadChange = vi.fn();
     render(<StudentMessagesPage token="t" onBack={() => {}} client={c} onUnreadChange={onUnreadChange} />);
     await screen.findByText("د3");
-    await waitFor(() => expect(c.markRead).toHaveBeenCalledWith("direct", DIRECT[2].messageId));
+    await waitFor(() => expect(c.markRead).toHaveBeenCalledWith("direct", { throughMessageId: DIRECT[2].messageId, seenIdsAtBoundary: [DIRECT[2].messageId] }));
     await waitFor(() => expect(tab(/إعلانات الصف/).textContent).toContain("2 غير مقروءة"));
     expect(tab(/المحادثة مع المعلم/).textContent).not.toContain("غير مقروءة");
     expect(c.markRead).not.toHaveBeenCalledWith("announcements", expect.anything());
     expect(onUnreadChange).toHaveBeenLastCalledWith(U(0, 2));
     fireEvent.click(tab(/إعلانات الصف/));
-    await waitFor(() => expect(c.markRead).toHaveBeenCalledWith("announcements", ANNS[1].messageId));
+    await waitFor(() => expect(c.markRead).toHaveBeenCalledWith("announcements", { throughMessageId: ANNS[1].messageId, seenIdsAtBoundary: [ANNS[1].messageId] }));
     await waitFor(() => expect(tab(/إعلانات الصف/).textContent).not.toContain("غير مقروءة"));
   });
 
@@ -121,7 +121,7 @@ describe("StudentMessagesPage — per-tab unread + visible-only marking", () => 
     render(<StudentMessagesPage token="t" onBack={() => {}} client={c} />);
     fireEvent.click(tab(/إعلانات الصف/));                                      // switch before the snapshot arrives
     await act(async () => { pending.resolve(data()); });
-    await waitFor(() => expect(c.markRead).toHaveBeenCalledWith("announcements", ANNS[1].messageId));
+    await waitFor(() => expect(c.markRead).toHaveBeenCalledWith("announcements", { throughMessageId: ANNS[1].messageId, seenIdsAtBoundary: [ANNS[1].messageId] }));
     expect(c.markRead).not.toHaveBeenCalledWith("direct", expect.anything());
   });
 
