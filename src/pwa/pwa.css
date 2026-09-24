@@ -1,0 +1,18 @@
+/* Phase 6A — optional install card (student portal). Uses the shared design tokens; RTL via logical properties. */
+.eb-install-card { position: relative; gap: var(--eb-space-3); }
+.eb-install-head { display: flex; align-items: flex-start; gap: var(--eb-space-3); min-width: 0; }
+.eb-install-mark {
+  flex: 0 0 auto; width: 40px; height: 40px; border-radius: var(--eb-r-sm);
+  display: inline-flex; align-items: center; justify-content: center;
+  background: var(--eb-primary); color: var(--eb-surface); font-weight: var(--eb-fw-bold); font-size: var(--eb-fs-14);
+}
+.eb-install-title { margin: 0; color: var(--eb-text-heading); font-size: var(--eb-fs-16); font-weight: var(--eb-fw-semibold); line-height: var(--eb-lh-tight); }
+.eb-install-desc { margin: var(--eb-space-1) 0 0; color: var(--eb-muted); font-size: var(--eb-fs-13); line-height: var(--eb-lh-body); }
+.eb-install-actions { display: flex; flex-wrap: wrap; gap: var(--eb-space-2); }
+.eb-install-button { min-height: 44px; }
+.eb-install-steps { margin: 0; padding-inline-start: var(--eb-space-5); display: flex; flex-direction: column; gap: var(--eb-space-2); color: var(--eb-text); font-size: var(--eb-fs-14); line-height: var(--eb-lh-body); }
+.eb-install-share { vertical-align: -3px; color: var(--eb-primary-strong); }
+.eb-install-hint { color: var(--eb-muted); font-size: var(--eb-fs-12); }
+.eb-install-notice { margin: 0; color: var(--eb-text); font-size: var(--eb-fs-13); line-height: var(--eb-lh-body); }
+/* Empty: kept in the accessibility tree (live region) but takes no space. */
+.eb-install-notice:empty { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
