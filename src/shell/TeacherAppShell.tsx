@@ -28,6 +28,8 @@ const DESKTOP_QUERY = "(min-width: 1024px)";
 type Props = {
   nav: TeacherNavState;
   projectReadyTotal: number;
+  /** Phase 5D — unread student replies (server-derived; App owns it). `capped` → "99+". */
+  messageUnread?: { total: number; capped: boolean };
   displayName: string;
   /** Teacher identity (self-profile): the sidebar shows the photo / preset icon + name and opens the profile dialog. */
   identity?: { token: string; profile: TeacherProfile | null; onProfileChange: (p: TeacherProfile) => void };
@@ -36,7 +38,7 @@ type Props = {
   children: ReactNode;
 };
 
-export default function TeacherAppShell({ nav, projectReadyTotal, displayName, identity, onNavigate, onLogout, children }: Props) {
+export default function TeacherAppShell({ nav, projectReadyTotal, messageUnread, displayName, identity, onNavigate, onLogout, children }: Props) {
   const [compact, setCompact] = useState(false);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const asideRef = useRef<HTMLElement>(null);
@@ -68,6 +70,7 @@ export default function TeacherAppShell({ nav, projectReadyTotal, displayName, i
     const Icon = ICONS[id];
     const isActive = id === active;
     const badge = id === "projects" && projectReadyTotal > 0 ? projectReadyTotal : 0;
+    const unread = id === "messages" && messageUnread && messageUnread.total > 0 ? messageUnread : null;
     return (
       <button
         key={id}
@@ -83,6 +86,12 @@ export default function TeacherAppShell({ nav, projectReadyTotal, displayName, i
           <span className="eb-nav-badge">
             {badge}
             <VisuallyHidden> مراحل بانتظار الفحص</VisuallyHidden>
+          </span>
+        )}
+        {unread && (
+          <span className="eb-nav-badge">
+            {unread.capped ? "99+" : unread.total}
+            <VisuallyHidden> رسائل جديدة</VisuallyHidden>
           </span>
         )}
       </button>

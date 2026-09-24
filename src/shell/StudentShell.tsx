@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 import { IconLogout, IconMail, IconSparkles } from "../icons";
+import VisuallyHidden from "../ui/VisuallyHidden";
 import "../ui/ui.css";
 import "../shell.css";
 
@@ -8,9 +9,10 @@ import "../shell.css";
 // student's only chrome/nav surface, so the Educational Games entry lives here (when `onOpenGames` is given): it
 // opens the dedicated Games destination — the games cards are NOT a permanent dashboard section. Phase 5C adds the
 // «الرسائل» entry (when `onOpenMessages` is given) with the same dedicated-destination pattern.
-type Props = { studentName: string; className?: string; onLogout: () => void; onOpenGames?: () => void; onOpenMessages?: () => void; children: ReactNode };
+// Phase 5D — `messagesUnread` (server-derived, owned by StudentPortal) badges the «الرسائل» entry; hidden at 0.
+type Props = { studentName: string; className?: string; onLogout: () => void; onOpenGames?: () => void; onOpenMessages?: () => void; messagesUnread?: { total: number; capped: boolean }; children: ReactNode };
 
-export default function StudentShell({ studentName, className, onLogout, onOpenGames, onOpenMessages, children }: Props) {
+export default function StudentShell({ studentName, className, onLogout, onOpenGames, onOpenMessages, messagesUnread, children }: Props) {
   return (
     <main className="student-portal eb-student-shell" dir="rtl">
       <header className="student-topbar">
@@ -28,6 +30,12 @@ export default function StudentShell({ studentName, className, onLogout, onOpenG
           {onOpenMessages && (
             <button type="button" className="student-topbar-link eb-student-messages-entry" onClick={onOpenMessages}>
               <IconMail size={16} />الرسائل
+              {messagesUnread && messagesUnread.total > 0 && (
+                <span className="eb-nav-badge">
+                  {messagesUnread.capped ? "99+" : messagesUnread.total}
+                  <VisuallyHidden> رسائل غير مقروءة</VisuallyHidden>
+                </span>
+              )}
             </button>
           )}
           {onOpenGames && (

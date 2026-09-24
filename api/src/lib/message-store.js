@@ -164,5 +164,7 @@ module.exports = {
   MESSAGE_PREFIX, DIRECT_PREFIX, ANNOUNCEMENT_PREFIX, MAX_BODY_LENGTH, DIRECT_HISTORY_LIMIT, ANNOUNCEMENT_HISTORY_LIMIT,
   MAX_HISTORY_LIMIT, MAX_CREATE_ATTEMPTS,
   isSafeId, directPrefix, announcementPrefix, generateMessageId, normalizeMessageBody, clampLimit,
-  createMessage, listRecentMessages, normalizeStoredMessage, messageView, studentDisplayName
+  createMessage, listRecentMessages, normalizeStoredMessage, messageView, studentDisplayName,
+  // Phase 5D — reused by the read-state store (message ids / stream listing), never duplicated there.
+  MESSAGE_ID_RE, blobMessageId
 };

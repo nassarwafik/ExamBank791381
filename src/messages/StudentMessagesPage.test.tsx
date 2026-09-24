@@ -23,6 +23,8 @@ const data = (over: Partial<StudentMessagesData> = {}): StudentMessagesData => (
 const makeClient = (over: Partial<StudentMessagesClient> = {}): StudentMessagesClient => ({
   load: vi.fn(async () => data()),
   sendDirect: vi.fn(async (body: string) => msg(body, "student", "سارة")),
+  getUnread: vi.fn(async () => ({ directUnread: { unread: 0, capped: false }, announcementUnread: { unread: 0, capped: false }, totalUnread: 0, totalCapped: false })),
+  markRead: vi.fn(async () => ({ directUnread: { unread: 0, capped: false }, announcementUnread: { unread: 0, capped: false }, totalUnread: 0, totalCapped: false })),
   ...over
 });
 const conv = () => screen.getByRole("list", { name: "المحادثة مع المعلم" });

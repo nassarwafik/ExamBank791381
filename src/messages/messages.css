@@ -49,3 +49,9 @@
 .eb-msg-surface-bar{ display:flex; }
 .eb-msg-student{ display:flex; flex-direction:column; gap:var(--eb-space-3); max-width:880px; width:100%; margin-inline:auto; min-width:0; }
 .eb-msg-title{ margin:0; color:var(--eb-text-heading); font-size:var(--eb-fs-24); font-weight:var(--eb-fw-bold); }
+
+/* Phase 5D — unread indicators (always a TEXT count; colour is only an accent). */
+.eb-msg-unread,.eb-msg-tab-badge{ display:inline-flex; align-items:center; white-space:nowrap; font-size:var(--eb-fs-12); font-weight:var(--eb-fw-semibold); padding:0 var(--eb-space-2); border-radius:var(--eb-pill); background:var(--eb-primary-050); color:var(--eb-primary-strong); border:1px solid var(--eb-primary); }
+.eb-msg-tab-badge{ margin-inline-start:var(--eb-space-1); }
+/* The student top-bar reuses the shell's .eb-nav-badge look but never its compact-rail absolute positioning. */
+.student-topbar-link .eb-nav-badge{ position:static; min-width:22px; line-height:22px; font-size:var(--eb-fs-12); margin-inline-start:var(--eb-space-1); }

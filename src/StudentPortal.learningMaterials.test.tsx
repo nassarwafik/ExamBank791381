@@ -89,7 +89,7 @@ describe("placement, card, empty state, degrade", () => {
     expect((await screen.findAllByText("واجب الشبكات")).length).toBeGreaterThan(0);   // now section + task list
     expect(await screen.findByRole("region", { name: "مشاريعي" })).toBeTruthy();
     expect(await screen.findByRole("region", { name: "إنجازات الصف" })).toBeTruthy();
-    await waitFor(() => expect(calls.filter(c => c.method === "GET").length).toBe(4));
+    await waitFor(() => expect(calls.filter(c => c.method === "GET").length).toBe(5));   // + the Phase 5D unread-messages summary GET
     expect(materialGets()).toBe(1);
     expect(calls.filter(c => c.method === "POST")).toEqual([]);
   });

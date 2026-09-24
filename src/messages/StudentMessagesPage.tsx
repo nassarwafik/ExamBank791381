@@ -3,8 +3,8 @@ import { IconChevronBack } from "../icons";
 import { useAutoRefresh } from "../ui/useAutoRefresh";
 import { MessageComposer, MessageThread } from "./MessageParts";
 import {
-  MESSAGES_POLL_MS, MessagesHttpError, createStudentMessagesClient, mergeMessage,
-  type MessageView, type StudentMessagesClient, type StudentMessagesData
+  MESSAGES_POLL_MS, UNREAD_POLL_MS, MessagesHttpError, createStudentMessagesClient, mergeMessage, formatUnread,
+  type MessageView, type StudentMessagesClient, type StudentMessagesData, type StudentUnread
 } from "./messagesClient";
 import "./messages.css";
 
@@ -19,10 +19,15 @@ import "./messages.css";
  * Polling: every 5s while this view is open (single-flight useAutoRefresh; paused while hidden and during a send;
  * torn down on back/unmount). Every read captures `gen`; a send bumps it, so a poll that started before the send
  * can never erase the just-sent reply.
+ *
+ * Phase 5D — unread: each tab shows its own server-derived unread count. A stream is marked read ONLY while it is the
+ * visible tab and after its snapshot loaded: opening this view marks the DIRECT conversation (the initial tab) through
+ * its latest loaded id; announcements are marked only once «إعلانات الصف» is actually selected. Counts change only from
+ * the server's mark response (a message that arrived after the marked id stays unread) — never optimistically.
  */
 type Tab = "direct" | "announcements";
 
-export default function StudentMessagesPage({ token, onBack, client: injected }: { token: string; onBack: () => void; client?: StudentMessagesClient }) {
+export default function StudentMessagesPage({ token, onBack, client: injected, onUnreadChange }: { token: string; onBack: () => void; client?: StudentMessagesClient; onUnreadChange?: (u: StudentUnread) => void }) {
   const client = useMemo(() => injected || createStudentMessagesClient(token), [injected, token]);
   const [data, setData] = useState<StudentMessagesData | null>(null);
   const [error, setError] = useState("");
@@ -34,14 +39,60 @@ export default function StudentMessagesPage({ token, onBack, client: injected }:
   // Server-CONFIRMED replies sent from this view; every applied read is unioned with them so a lagging read can never
   // drop a reply the server already accepted.
   const confirmed = useRef<MessageView[]>([]);
+  // Phase 5D — unread counts + mark-read bookkeeping.
+  const [unread, setUnread] = useState<StudentUnread | null>(null);
+  const tabRef = useRef<Tab>("direct");                      // the VISIBLE tab (set in the tab handler)
+  const dataRef = useRef<StudentMessagesData | null>(null);  // the last applied snapshot
+  const unreadGen = useRef(0);
+  const alive = useRef(true);
+  const marked = useRef<Record<Tab, string>>({ direct: "", announcements: "" });
+  const marking = useRef<Record<Tab, string>>({ direct: "", announcements: "" });
+  useEffect(() => { alive.current = true; return () => { alive.current = false; }; }, []);
+
+  function applyUnread(u: StudentUnread) {
+    setUnread(u);
+    onUnreadChange?.(u);
+  }
+  async function loadUnread() {
+    const mine = unreadGen.current;
+    try {
+      const u = await client.getUnread();
+      if (mine !== unreadGen.current || !alive.current) return;       // a mark response is fresher → keep it
+      applyUnread(u);
+    } catch { /* keep the last-good counts */ }
+  }
+  /** Mark ONE stream read through the latest id of the last applied snapshot — only while it is the visible tab. */
+  async function markVisible(stream: Tab) {
+    const d = dataRef.current;
+    if (!d || !alive.current || tabRef.current !== stream) return;
+    if (typeof document !== "undefined" && document.visibilityState !== "visible") return;
+    const list = stream === "direct" ? d.direct : d.announcements;
+    if (!list.length) return;
+    const through = list[list.length - 1].messageId;
+    if (marked.current[stream] === through || marking.current[stream] === through) return;
+    marking.current[stream] = through;
+    try {
+      const u = await client.markRead(stream, through);
+      marked.current[stream] = through;
+      unreadGen.current += 1;
+      if (alive.current) applyUnread(u);
+    } catch {
+      /* the badge stays until a later successful mark */
+    } finally {
+      if (marking.current[stream] === through) marking.current[stream] = "";
+    }
+  }
 
   async function load(silent: boolean) {
     const mine = gen.current;
     try {
       const next = await client.load();
       if (mine !== gen.current) return;                               // superseded (a send happened) → discard
-      setData({ ...next, direct: confirmed.current.reduce(mergeMessage, next.direct) });
+      const applied = { ...next, direct: confirmed.current.reduce(mergeMessage, next.direct) };
+      dataRef.current = applied;
+      setData(applied);
       setError("");
+      void markVisible(tabRef.current);                               // only the currently visible stream
     } catch (e) {
       if (mine !== gen.current) return;
       const text = e instanceof MessagesHttpError && e.status === 401 ? "تعذر التحقق من الجلسة. عد إلى لوحتك ثم حاول مرة أخرى." : e instanceof Error ? e.message : "تعذر تحميل الرسائل.";
@@ -51,8 +102,15 @@ export default function StudentMessagesPage({ token, onBack, client: injected }:
 
   // Initial load when the view opens (the timer below only handles subsequent refreshes).
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  useEffect(() => { void load(false); }, [client]);
+  useEffect(() => { void load(false); void loadUnread(); }, [client]);
   useAutoRefresh(() => load(true), { intervalMs: MESSAGES_POLL_MS, enabled: !sending });
+  useAutoRefresh(loadUnread, { intervalMs: UNREAD_POLL_MS });
+
+  function selectTab(next: Tab) {
+    setTab(next);
+    tabRef.current = next;
+    void markVisible(next);                                           // the snapshot already loaded for this tab
+  }
 
   async function send() {
     const body = draft;
@@ -63,7 +121,7 @@ export default function StudentMessagesPage({ token, onBack, client: injected }:
       const message = await client.sendDirect(body);
       gen.current += 1;
       confirmed.current = [...confirmed.current, message];
-      setData(prev => (prev ? { ...prev, direct: mergeMessage(prev.direct, message) } : prev));
+      setData(prev => { const n = prev ? { ...prev, direct: mergeMessage(prev.direct, message) } : prev; dataRef.current = n; return n; });
       setDraft("");
       void load(true);                                                // reconcile with the server
     } catch (e) {
@@ -88,8 +146,8 @@ export default function StudentMessagesPage({ token, onBack, client: injected }:
         {!data && !error && <p className="eb-muted" role="status">جارٍ تحميل الرسائل...</p>}
 
         <div className="eb-msg-tabs" role="tablist" aria-label="أقسام الرسائل">
-          <button type="button" role="tab" id="eb-smsg-tab-direct" aria-selected={tab === "direct"} aria-controls="eb-smsg-panel" className="eb-msg-tab" onClick={() => setTab("direct")}>المحادثة مع المعلم</button>
-          <button type="button" role="tab" id="eb-smsg-tab-ann" aria-selected={tab === "announcements"} aria-controls="eb-smsg-panel" className="eb-msg-tab" onClick={() => setTab("announcements")}>إعلانات الصف</button>
+          <button type="button" role="tab" id="eb-smsg-tab-direct" aria-selected={tab === "direct"} aria-controls="eb-smsg-panel" className="eb-msg-tab" onClick={() => selectTab("direct")}>المحادثة مع المعلم{unread && unread.directUnread.unread > 0 && <span className="eb-msg-tab-badge">{formatUnread(unread.directUnread.unread, unread.directUnread.capped)} غير مقروءة</span>}</button>
+          <button type="button" role="tab" id="eb-smsg-tab-ann" aria-selected={tab === "announcements"} aria-controls="eb-smsg-panel" className="eb-msg-tab" onClick={() => selectTab("announcements")}>إعلانات الصف{unread && unread.announcementUnread.unread > 0 && <span className="eb-msg-tab-badge">{formatUnread(unread.announcementUnread.unread, unread.announcementUnread.capped)} غير مقروءة</span>}</button>
         </div>
 
         <div id="eb-smsg-panel" role="tabpanel" aria-labelledby={tab === "direct" ? "eb-smsg-tab-direct" : "eb-smsg-tab-ann"} className="eb-msg-panel">

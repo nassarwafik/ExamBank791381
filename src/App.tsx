@@ -17,6 +17,7 @@ const SmartStructuredExamImportWizard = lazy(() => import("./SmartStructuredExam
 import { withTrackingCode } from "./lib/requestTrace";
 import { isStructuredExam } from "./examTypes";
 import type { StructuredExam, BuilderImageAsset } from "./examTypes";
+import { useAutoRefresh } from "./ui/useAutoRefresh";
 import type { AiImageRequestQuestion } from "./questionMedia";
 import { legacyToStructured, toSavedStructuredExam, newSection, newQuestion, applyStructuredExamUpdate, reconcileSavedStructuredExam, type StructuredExamUpdater } from "./examBuilderState";
 import "./project794589.css";
@@ -702,6 +703,24 @@ function App() {
       .catch(() => { if (!cancelled) setProjectReady({ total: 0, byProject: {} }); });
     return () => { cancelled = true; };
   }, [token, sessionRole, teacherView, sessionValidated, projectReadyNonce]);
+
+  // Phase 5D — the teacher's unread STUDENT replies (sidebar «الرسائل» badge). App owns it like the project-ready
+  // badge: TEACHER-ONLY and gated on authoritative session validation; refreshed silently every 15s (the shared
+  // single-flight hook pauses while the tab is hidden) and whenever the messages page reports a successful mark-read.
+  // A failed refresh keeps the last-good badge; a 401 follows the established teacher path (apiRequest → logout).
+  const [messageUnread, setMessageUnread] = useState<{ total: number; capped: boolean }>({ total: 0, capped: false });
+  const [messageUnreadNonce, setMessageUnreadNonce] = useState(0);
+  const teacherSessionReady = sessionValidated && !!token && sessionRole === "teacher";
+  async function loadMessageUnread() {
+    if (!teacherSessionReady) return;
+    try {
+      const r = await apiRequest<{ totalUnread?: number; capped?: boolean }>("/api/messages?kind=unread-summary");
+      setMessageUnread({ total: Math.max(0, Number(r.totalUnread) || 0), capped: r.capped === true });
+    } catch { /* keep the last-good badge */ }
+  }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  useEffect(() => { if (!teacherSessionReady) { setMessageUnread({ total: 0, capped: false }); return; } void loadMessageUnread(); }, [teacherSessionReady, token, messageUnreadNonce]);
+  useAutoRefresh(loadMessageUnread, { intervalMs: 15000, enabled: teacherSessionReady });
 
   const [userCode, setUserCode] = useState("");
   const [password, setPassword] = useState("");
@@ -5560,6 +5579,7 @@ function App() {
     <TeacherAppShell
       nav={{ teacherView, workspaceTab, projectCode, projectList }}
       projectReadyTotal={projectReady.total}
+      messageUnread={messageUnread}
       displayName={resolveTeacherDisplayName(teacherProfile, sessionDisplayName)}
       identity={{ token, profile: teacherProfile, onProfileChange: setTeacherProfile }}
       onNavigate={navigateTeacher}
@@ -5630,7 +5650,7 @@ function App() {
 
       {teacherView === "messages" && (
         <Suspense fallback={<p className="eb-muted" role="status">جارٍ التحميل...</p>}>
-          <TeacherMessagesPage token={token} />
+          <TeacherMessagesPage token={token} onUnreadChanged={() => setMessageUnreadNonce(n => n + 1)} />
         </Suspense>
       )}
 

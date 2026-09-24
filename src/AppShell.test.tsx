@@ -131,14 +131,15 @@ describe("UX-2 App + TeacherAppShell integration", () => {
     await waitFor(() => expect(document.querySelector("form.auth-form")).toBeTruthy());
     expect(sessionStorage.getItem("examBankBuilderToken")).toBeNull();
   });
-  it("the shell adds no API requests: a teacher boot calls exactly platform-login, projects, projects-summary and the ONE teacher self-profile read", async () => {
+  it("the shell adds no API requests: a teacher boot calls exactly platform-login, projects, projects-summary, the ONE teacher self-profile read and (Phase 5D) the App-owned unread-messages summary", async () => {
     const calls = installFetch("teacher");
     render(<App />); await login();
     await waitFor(() => expect(document.querySelector(".app-sidebar-logout")).toBeTruthy());
     await waitFor(() => expect(calls.some(u => u.includes("resource=projects-summary"))).toBe(true));
     const set = new Set(calls.map(pathOf));
     // /api/teacher-profile is the teacher identity (name / icon / photo metadata) — read once per session, never per page.
-    expect(set).toEqual(new Set(["/api/platform-login", "/api/project-tracker?resource=projects", "/api/project-tracker?resource=projects-summary", "/api/teacher-profile"]));
+    // /api/messages?kind=unread-summary is App's «الرسائل» badge (Phase 5D), owned by App like projects-summary — not the shell.
+    expect(set).toEqual(new Set(["/api/platform-login", "/api/project-tracker?resource=projects", "/api/project-tracker?resource=projects-summary", "/api/teacher-profile", "/api/messages?kind=unread-summary"]));
     expect(calls.filter(u => pathOf(u) === "/api/teacher-profile").length).toBe(1);
   });
   it("student login renders the StudentShell-wrapped portal (welcome text unchanged), never the teacher shell, never teacher requests", async () => {

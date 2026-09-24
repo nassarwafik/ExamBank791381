@@ -120,11 +120,11 @@ describe("UX-7a StudentPortal — task-first home", () => {
     expect(calls.length).toBe(before);
   });
 
-  it("issues exactly one dashboard GET, one feed GET, the project panel's GET and the learning-materials GET on mount — and no POST", async () => {
+  it("issues exactly one dashboard GET, one feed GET, the project panel's GET, the learning-materials GET and (Phase 5D) the unread-messages summary GET on mount — and no POST", async () => {
     const { calls, onLogout } = mount({ student, classroom, assignments: [], stats: baseStats });
     await screen.findByText(/مرحبًا أحمد/);
-    await waitFor(() => expect(gets(calls).length).toBe(4));
-    expect(gets(calls).sort()).toEqual(["/api/achievement-feed", "/api/student-dashboard", "/api/student-learning-materials", "/api/student-project-tracker"]);
+    await waitFor(() => expect(gets(calls).length).toBe(5));
+    expect(gets(calls).sort()).toEqual(["/api/achievement-feed", "/api/student-dashboard", "/api/student-learning-materials", "/api/student-messages", "/api/student-project-tracker"]);
     expect(posts(calls)).toEqual([]);
     expect(onLogout).not.toHaveBeenCalled();
     // the empty state keeps the list container (shell contract) and uses the shared EmptyState
@@ -190,7 +190,7 @@ describe("UX-7a StudentPortal — hierarchy and the primary section", () => {
     // would be one short and "+1" could never match (Quality Gate run 375: expected 4 to be 3). Settle the three
     // mount GETs pinned above ("issues exactly one dashboard GET, one feed GET, the project panel's GET and the
     // learning-materials GET") first.
-    await waitFor(() => expect(gets(calls).length).toBe(4));
+    await waitFor(() => expect(gets(calls).length).toBe(5));             // + the Phase 5D unread-messages summary GET
     const before = calls.length;
     fireEvent.click((await list()).getByRole("button", { name: "النتيجة / محاولة جديدة" }));
     await waitFor(() => expect(calls.length).toBe(before + 1));
@@ -400,7 +400,7 @@ describe("UX-7a StudentPortal — identity, medals, average ring and the Strengt
     await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
     expect(posts(calls)).toEqual([{ url: "/api/student-profile", method: "POST", body: { action: "setAvatar", avatarId: "a2" } }]);
     expect(screen.getByRole("button", { name: "تغيير الأيقونة (الحالية: قطة)" })).toBeTruthy();
-    expect(gets(calls).length).toBe(4);                                                // no re-read after the write
+    expect(gets(calls).length).toBe(5);                                                // no re-read after the write (5 mount GETs incl. unread summary)
   });
 
   it("the share toggle is a real checkbox that posts setShareAchievements once per change", async () => {

@@ -31,6 +31,8 @@ function makeClient(over: Partial<TeacherMessagesClient> = {}): TeacherMessagesC
     getAnnouncements: vi.fn(async (classId: string) => classId === "c1" ? thread([msg("اختبار الأحد", "teacher", "أ. أحمد", "announcement")]) : thread([msg("إعلان قديم", "teacher", "أ. أحمد", "announcement")], false, "هذا الصف مؤرشف. الرسائل السابقة متاحة للقراءة فقط.")),
     sendDirect: vi.fn(async (_s: string, body: string) => msg(body, "teacher", "أ. أحمد")),
     sendAnnouncement: vi.fn(async (_c: string, body: string) => msg(body, "teacher", "أ. أحمد", "announcement")),
+    getClassUnread: vi.fn(async () => ({ totalUnread: 0, capped: false, byStudent: {} })),
+    markDirectRead: vi.fn(async () => ({ unread: 0, capped: false })),
     ...over
   };
 }

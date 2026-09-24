@@ -4,6 +4,12 @@
 //   GET  /api/messages?classId=<id>&kind=announcements    → that class's announcement history (active OR archived)
 //   POST /api/messages { action: "sendDirect", studentId, body }
 //   POST /api/messages { action: "sendAnnouncement", classId, body }
+//   GET  /api/messages?kind=unread-summary[&classId=<id>]  → Phase 5D: THIS teacher's unread STUDENT replies (global
+//                                                           badge; with classId also per student — membership from the
+//                                                           CURRENT student documents)
+//   POST /api/messages { action: "markDirectRead", studentId, throughMessageId }  → Phase 5D: advance THIS teacher's read
+//                                                           marker for that conversation (monotonic; the id must exist
+//                                                           in that student's stream). Reading is not audited.
 // Identity is ALWAYS server-derived: the teacher is the verified token subject and the display name comes from the
 // teacher profile (resolveTeacherDisplayName). Body fields such as teacherId / senderId / senderName / messageId /
 // createdAt are ignored. A NEW message requires an active, non-archived student whose CURRENT class (from the
@@ -20,6 +26,7 @@ const {
   isSafeId, directPrefix, announcementPrefix, normalizeMessageBody, clampLimit, createMessage, listRecentMessages,
   messageView, studentDisplayName, DIRECT_HISTORY_LIMIT, ANNOUNCEMENT_HISTORY_LIMIT
 } = require("../lib/message-store");
+const { MarkReadError, markStreamRead, countUnread, teacherDirectStateName, teacherDirectUnread } = require("../lib/message-read-state");
 
 const USER_PREFIX = "platform/users/";
 const CLASS_PREFIX = "platform/classes/";
@@ -79,6 +86,14 @@ async function handler(request, deps = {}, obs = null) {
       const studentId = String(url.searchParams.get("studentId") || "").trim();
       const classId = String(url.searchParams.get("classId") || "").trim();
       const kind = String(url.searchParams.get("kind") || "").trim();
+      if (kind === "unread-summary") {
+        if (classId) {
+          const classroom = await loadClass(container, classId, dl);
+          if (!classroom) return notFound(MSG.classNotFound);
+          return { status: 200, jsonBody: { ok: true, classId, ...(await teacherDirectUnread(container, teacherId, { classId }, deps)) } };
+        }
+        return { status: 200, jsonBody: { ok: true, ...(await teacherDirectUnread(container, teacherId, {}, deps)) } };
+      }
       if (studentId) {
         const student = await loadStudent(container, studentId, dl);
         if (!student) return notFound(MSG.studentNotFound);
@@ -143,6 +158,25 @@ async function handler(request, deps = {}, obs = null) {
       }), deps);
       await rec(container, { actor: teacherId, action: "message.sendAnnouncement", targetType: "class", targetId: classId, targetLabel: String(classroom.name || "") });
       return { status: 200, jsonBody: { ok: true, message: messageView(doc, { includeClassId: true }) } };
+    }
+
+    if (action === "markDirectRead") {
+      // Historical (archived / disabled) students may still be READ; the student document is the authority.
+      const studentId = String(body.studentId || "").trim();
+      const student = await loadStudent(container, studentId, dl);
+      if (!student) return notFound(MSG.studentNotFound);
+      try {
+        const stream = { streamPrefix: directPrefix(studentId), expected: { kind: "direct", studentId } };
+        const { marker, ids } = await markStreamRead(container, {
+          stateName: teacherDirectStateName(teacherId, studentId), ...stream, throughMessageId: body.throughMessageId,
+          meta: { principalRole: "teacher", streamKind: "direct", streamId: studentId, teacherId }
+        }, deps);
+        const remaining = await countUnread(container, { ...stream, marker, ids, include: doc => doc.senderRole === "student" }, deps);
+        return { status: 200, jsonBody: { ok: true, studentId, ...remaining } };
+      } catch (e) {
+        if (e instanceof MarkReadError) return bad("الرسالة المحددة غير صالحة.");
+        throw e;
+      }
     }
 
     return bad("إجراء غير مدعوم.");
