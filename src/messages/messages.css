@@ -1,0 +1,51 @@
+/* Phase 5C — Messaging & Class Announcements (teacher page + student dedicated view). RTL-first, token-only. Message
+   bodies keep their newlines (pre-wrap) and always wrap long words; sender identity is a text label, not colour. */
+.eb-msg-page{ display:flex; flex-direction:column; gap:var(--eb-space-4); min-width:0; }
+@media (min-width: 1024px){ .eb-msg-page{ padding-inline-start:var(--eb-space-4); } }
+
+.eb-msg-toolbar{ display:flex; flex-wrap:wrap; align-items:flex-end; gap:var(--eb-space-3); }
+.eb-msg-field{ display:flex; flex-direction:column; gap:var(--eb-space-1); font-size:var(--eb-fs-13); color:var(--eb-text-secondary); min-width:220px; }
+.eb-msg-field select{ font:inherit; padding:var(--eb-space-1) var(--eb-space-2); border:1px solid var(--eb-line-2); border-radius:var(--eb-r-sm); background:var(--eb-surface); color:var(--eb-text); }
+.eb-msg-class-state{ font-size:var(--eb-fs-12); font-weight:var(--eb-fw-semibold); padding:2px var(--eb-space-2); border-radius:var(--eb-pill); background:var(--eb-primary-050); color:var(--eb-primary-strong); }
+.eb-msg-class-state.is-archived{ background:var(--eb-surface-2, #f1f5f9); color:var(--eb-muted); }
+
+.eb-msg-tabs{ display:flex; gap:var(--eb-space-2); border-block-end:1px solid var(--eb-line); }
+.eb-msg-tab{ font:inherit; background:transparent; border:0; border-block-end:3px solid transparent; padding:var(--eb-space-2) var(--eb-space-3); color:var(--eb-text-secondary); cursor:pointer; }
+.eb-msg-tab[aria-selected="true"]{ border-block-end-color:var(--eb-primary); color:var(--eb-text-heading); font-weight:var(--eb-fw-semibold); }
+.eb-msg-tab:focus-visible,.eb-msg-roster-item:focus-visible{ outline:2px solid var(--eb-primary); outline-offset:2px; }
+
+.eb-msg-panel{ min-width:0; }
+.eb-msg-direct{ display:grid; grid-template-columns:1fr; gap:var(--eb-space-4); min-width:0; }
+@media (min-width: 900px){ .eb-msg-direct{ grid-template-columns:minmax(220px, 280px) 1fr; } }
+.eb-msg-subtitle{ margin:0 0 var(--eb-space-2); font-size:var(--eb-fs-15, 15px); color:var(--eb-text-heading); }
+.eb-msg-roster-list{ list-style:none; margin:0; padding:0; display:flex; flex-direction:column; gap:var(--eb-space-1); max-height:60vh; overflow:auto; }
+.eb-msg-roster-item{ width:100%; display:flex; justify-content:space-between; gap:var(--eb-space-2); font:inherit; text-align:start; padding:var(--eb-space-2); border:1px solid var(--eb-line); border-radius:var(--eb-r-sm); background:var(--eb-surface); color:var(--eb-text); cursor:pointer; }
+.eb-msg-roster-item[aria-pressed="true"]{ border-color:var(--eb-primary); background:var(--eb-primary-050); }
+.eb-msg-roster-name{ overflow-wrap:anywhere; }
+.eb-msg-roster-status{ font-size:var(--eb-fs-12); color:var(--eb-muted); white-space:nowrap; }
+.eb-msg-roster-item.is-archived .eb-msg-roster-name,.eb-msg-roster-item.is-disabled .eb-msg-roster-name{ color:var(--eb-muted); }
+
+.eb-msg-conversation,.eb-msg-announcements{ display:flex; flex-direction:column; gap:var(--eb-space-3); min-width:0; }
+.eb-msg-thread{ list-style:none; margin:0; padding:0; display:flex; flex-direction:column; gap:var(--eb-space-2); max-height:60vh; overflow:auto; }
+.eb-msg{ max-width:min(640px, 92%); padding:var(--eb-space-2) var(--eb-space-3); border:1px solid var(--eb-line); border-radius:var(--eb-r-lg); background:var(--eb-surface); }
+.eb-msg.is-mine{ align-self:flex-start; background:var(--eb-primary-050); }
+.eb-msg.is-theirs{ align-self:flex-end; }
+.eb-msg-meta{ display:flex; flex-wrap:wrap; gap:var(--eb-space-2); align-items:baseline; font-size:var(--eb-fs-12); color:var(--eb-muted); }
+.eb-msg-sender{ color:var(--eb-text-heading); }
+.eb-msg-body{ margin:var(--eb-space-1) 0 0; white-space:pre-wrap; overflow-wrap:anywhere; word-break:break-word; line-height:var(--eb-lh-body); color:var(--eb-text); }
+.eb-msg-empty{ margin:0; color:var(--eb-muted); font-size:var(--eb-fs-13); }
+.eb-msg-readonly{ margin:0; padding:var(--eb-space-2) var(--eb-space-3); border-radius:var(--eb-r-sm); background:var(--eb-surface-2, #f1f5f9); color:var(--eb-text-secondary); font-size:var(--eb-fs-13); }
+
+.eb-msg-composer{ display:flex; flex-direction:column; gap:var(--eb-space-1); }
+.eb-msg-composer-label{ font-size:var(--eb-fs-13); font-weight:var(--eb-fw-semibold); color:var(--eb-text-heading); }
+.eb-msg-input{ font:inherit; width:100%; box-sizing:border-box; resize:vertical; min-height:72px; padding:var(--eb-space-2); border:1px solid var(--eb-line-2); border-radius:var(--eb-r-sm); background:var(--eb-surface); color:var(--eb-text); white-space:pre-wrap; }
+.eb-msg-input:focus-visible{ outline:2px solid var(--eb-primary); outline-offset:1px; }
+.eb-msg-composer-row{ display:flex; justify-content:space-between; align-items:center; gap:var(--eb-space-2); }
+.eb-msg-count{ font-size:var(--eb-fs-12); color:var(--eb-muted); }
+.eb-msg-error{ margin:0; color:var(--eb-danger-tx); font-size:var(--eb-fs-13); }
+
+/* Student dedicated view (full-view swap over the portal, like Educational Games). */
+.eb-msg-surface{ display:flex; flex-direction:column; gap:var(--eb-space-4); padding:var(--eb-space-4); min-height:100dvh; }
+.eb-msg-surface-bar{ display:flex; }
+.eb-msg-student{ display:flex; flex-direction:column; gap:var(--eb-space-3); max-width:880px; width:100%; margin-inline:auto; min-width:0; }
+.eb-msg-title{ margin:0; color:var(--eb-text-heading); font-size:var(--eb-fs-24); font-weight:var(--eb-fw-bold); }

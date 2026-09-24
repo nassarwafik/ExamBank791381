@@ -1,15 +1,16 @@
 import type { ReactNode } from "react";
-import { IconLogout, IconSparkles } from "../icons";
+import { IconLogout, IconMail, IconSparkles } from "../icons";
 import "../ui/ui.css";
 import "../shell.css";
 
 // UX-2 — Student shell: the portal's existing top bar (brand + logout, same class hooks so platform.css keeps
 // styling it) plus a small identity area (name · class) and the main content container. The top bar is the
 // student's only chrome/nav surface, so the Educational Games entry lives here (when `onOpenGames` is given): it
-// opens the dedicated Games destination — the games cards are NOT a permanent dashboard section.
-type Props = { studentName: string; className?: string; onLogout: () => void; onOpenGames?: () => void; children: ReactNode };
+// opens the dedicated Games destination — the games cards are NOT a permanent dashboard section. Phase 5C adds the
+// «الرسائل» entry (when `onOpenMessages` is given) with the same dedicated-destination pattern.
+type Props = { studentName: string; className?: string; onLogout: () => void; onOpenGames?: () => void; onOpenMessages?: () => void; children: ReactNode };
 
-export default function StudentShell({ studentName, className, onLogout, onOpenGames, children }: Props) {
+export default function StudentShell({ studentName, className, onLogout, onOpenGames, onOpenMessages, children }: Props) {
   return (
     <main className="student-portal eb-student-shell" dir="rtl">
       <header className="student-topbar">
@@ -24,6 +25,11 @@ export default function StudentShell({ studentName, className, onLogout, onOpenG
           </div>
         )}
         <div className="student-topbar-actions">
+          {onOpenMessages && (
+            <button type="button" className="student-topbar-link eb-student-messages-entry" onClick={onOpenMessages}>
+              <IconMail size={16} />الرسائل
+            </button>
+          )}
           {onOpenGames && (
             <button type="button" className="student-topbar-link eb-student-games-entry" onClick={onOpenGames}>
               <IconSparkles size={16} />الألعاب التعليمية
