@@ -106,8 +106,11 @@ describe("Phase 5B follow-up — a pending image never reverts newer edits", () 
   });
 });
 
-describe("Phase 5B follow-up — save during a pending generation", () => {
-  it("4a: save uses the latest edits; an image that arrives DURING the save is kept (not rolled back)", async () => {
+describe("Phase 5B follow-up — a save racing a pending image never claims unpersisted content as saved", () => {
+  // The builder's save buttons are disabled while media is pending (StructuredExamBuilder.mediaSave.test);
+  // this drives the save PROGRAMMATICALLY to prove the state authority itself (reconcileSavedStructuredExam)
+  // is safe even if that gate were bypassed.
+  it("D: an image that lands DURING a save is kept in memory but the exam is NOT marked final/saved", async () => {
     const ai = deferredAI();
     render(<Host req={ai.fn as never} />);
     fireEvent.click(aiButtons()[0]);
@@ -119,30 +122,22 @@ describe("Phase 5B follow-up — save during a pending generation", () => {
     await act(async () => { release(); await saving; });
     const payload = await saving;
     expect(payload.title).toBe("NEW TITLE");                                     // save used the latest state
-    expect(h.latest!.title).toBe("NEW TITLE");
-    expect(imgOf("qA")).toBe(IMG_A);                                             // save completion did not roll it back
-    expect(h.latest!.status).toBe("final");                                      // saved metadata adopted
+    expect(payload.sections[0].questions[0].image).toBeUndefined();              // persisted WITHOUT image X
+    expect(imgOf("qA")).toBe(IMG_A);                                             // in memory WITH image X (no rollback)
+    expect(h.latest!.status).not.toBe("final");                                  // …so it must NOT claim final
+    expect(h.latest!.updatedAt).not.toBe(payload.updatedAt);                     // …nor carry the save's stamp
   });
 
-  it("4b: an image that arrives AFTER the save completes does not roll the saved state back", async () => {
-    const ai = deferredAI();
-    render(<Host req={ai.fn as never} />);
-    fireEvent.click(aiButtons()[0]);
-    fireEvent.change(screen.getByPlaceholderText("عنوان الامتحان المنظّم"), { target: { value: "NEW TITLE" } });
-    await act(async () => { await h.save(Promise.resolve()); });
-    expect(h.latest!.status).toBe("final");
-    const savedAt = h.latest!.updatedAt;
-    await ai.resolve("qA", IMG_A);
-    expect(h.latest!.title).toBe("NEW TITLE");
-    expect(h.latest!.status).toBe("final");
-    expect(h.latest!.updatedAt).toBe(savedAt);
-    expect(imgOf("qA")).toBe(IMG_A);                                             // unsaved image kept in memory
-  });
-
-  it("reconcileSavedStructuredExam: unchanged → saved payload; cleared → stays cleared; other exam untouched", () => {
+  it("reconcileSavedStructuredExam: unchanged → saved payload; changed → never labelled saved/final; cleared/other untouched", () => {
     const snap = makeExam();
-    const saved = { ...snap, status: "final" as const, updatedAt: "T" };
+    const saved = { ...snap, status: "final" as const, createdAt: "C", updatedAt: "T" };
     expect(reconcileSavedStructuredExam(snap, snap, saved)).toBe(saved);
+    const newer = { ...snap, title: "NEWER", status: "final" as const, updatedAt: "OLD" };
+    const out = reconcileSavedStructuredExam(newer, snap, saved)!;
+    expect(out.title).toBe("NEWER");
+    expect(out.status).toBe("draft");
+    expect(out.updatedAt).toBe("OLD");
+    expect(out.createdAt).toBe("C");
     expect(reconcileSavedStructuredExam(null, snap, saved)).toBeNull();
     const other = makeExam("ex2");
     expect(reconcileSavedStructuredExam(other, snap, saved)).toBe(other);

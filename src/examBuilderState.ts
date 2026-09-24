@@ -423,15 +423,18 @@ export function applyStructuredExamUpdate(prev: StructuredExam | null, updater: 
   return prev ? updater(prev) : prev;
 }
 /** Reconcile the latest exam with a save that just resolved. `snapshot` is the exam object the save was
- *  built from, `saved` the persisted payload. Unchanged since the snapshot → adopt the saved payload.
- *  Changed meanwhile (e.g. an image arrived during the save) → keep the NEWER in-memory content and take only
- *  the saved metadata, so a save never rolls a late edit back. A cleared exam is not recreated and a
- *  different exam is never touched. */
+ *  built from, `saved` the persisted payload.
+ *  - Unchanged since the snapshot → adopt the saved payload (what is shown IS what was persisted).
+ *  - Changed meanwhile → the newer content was NOT persisted, so it must never be labelled as saved: keep the
+ *    newer content (no rollback) but do NOT stamp the save's updatedAt, and never mark it final (status is
+ *    "draft" — not yet persisted as final). Only createdAt, a creation fact, is adopted if missing. The builder
+ *    blocks saving while media is pending, so this branch is defense in depth.
+ *  - A cleared exam is not recreated and a different exam is never touched. */
 export function reconcileSavedStructuredExam(prev: StructuredExam | null, snapshot: StructuredExam, saved: StructuredExam): StructuredExam | null {
   if (!prev) return prev;
   if (prev === snapshot) return saved;
   if (prev.examId !== saved.examId) return prev;
-  return { ...prev, status: saved.status, createdAt: saved.createdAt, updatedAt: saved.updatedAt };
+  return { ...prev, status: "draft", createdAt: prev.createdAt || saved.createdAt };
 }
 
 // A copy for the "duplicate exam" flow: new examId, fresh question/part/field ids, preserved section

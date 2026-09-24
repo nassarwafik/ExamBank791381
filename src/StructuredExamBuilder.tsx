@@ -66,6 +66,27 @@ export default function StructuredExamBuilder({ exam, onChange, onSave, onExit, 
     onChange(prev => (prev.examId === sourceExamId ? fn(prev) : prev));
   };
   const setSections = (updater: (s: BuilderSection[]) => BuilderSection[]) => update(prev => ({ ...prev, sections: updater(prev.sections || []) }));
+
+  // Pending media operations (upload read / AI generation), counted per question id. While any operation on
+  // a question that still exists is pending, BOTH save buttons are disabled: a save snapshot taken now would
+  // miss the image the operation is about to apply, yet the UI would report the exam as saved/final. Editing
+  // and concurrent generation on other questions stay allowed. A count (not a boolean) per id so overlapping
+  // operations never clear each other; every registration is released when its operation settles; a deleted
+  // question's pending result is a no-op (updateQuestion by id), so it no longer blocks saving; after this
+  // builder unmounts no state is updated.
+  const [pendingMedia, setPendingMedia] = useState<Record<string, number>>({});
+  const onMediaBusyChange = (questionId: string, busy: boolean) => {
+    if (!alive.current) return;
+    setPendingMedia(prev => {
+      const n = Math.max(0, (prev[questionId] || 0) + (busy ? 1 : -1));
+      const next = { ...prev };
+      if (n > 0) next[questionId] = n; else delete next[questionId];
+      return next;
+    });
+  };
+  const liveQuestionIds = new Set((exam.sections || []).flatMap(s => (s.questions || []).map(q => q.examQuestionId)));
+  const mediaPending = Object.keys(pendingMedia).some(id => liveQuestionIds.has(id));
+  const MEDIA_WAIT = "انتظر انتهاء معالجة الصور قبل الحفظ.";
   const sectionOptions = (exam.sections || []).map(s => ({ id: s.id, title: s.title }));
   const issues = useMemo(() => validateStructuredExam(exam), [exam]);
   const errors = issues.filter(i => i.severity === "error");
@@ -85,8 +106,9 @@ export default function StructuredExamBuilder({ exam, onChange, onSave, onExit, 
         <div className="sb-toolbar-actions">
           {exam.status === "final" && <span className="sb-stat sb-stat-final">معتمد نهائيًا</span>}
           <button type="button" className="sb-btn" onClick={() => setPreview(exam)}>👁 معاينة الامتحان</button>
-          {onSave && <button type="button" className="sb-btn" onClick={() => onSave("draft")} disabled={saving}>{saving ? "⏳ جارٍ الحفظ…" : "💾 حفظ مسودة"}</button>}
-          {onSave && <button type="button" className="sb-btn sb-btn-primary" onClick={() => onSave("final")} disabled={saving || hasBlockingErrors(errors)} title={hasBlockingErrors(errors) ? "يجب إصلاح الأخطاء قبل الاعتماد النهائي" : "اعتماد الامتحان نهائيًا"}>✓ اعتماد نهائي</button>}
+          {onSave && mediaPending && <span className="sb-stat sb-media-wait" role="status">{MEDIA_WAIT}</span>}
+          {onSave && <button type="button" className="sb-btn" onClick={() => onSave("draft")} disabled={saving || mediaPending} title={mediaPending ? MEDIA_WAIT : undefined}>{saving ? "⏳ جارٍ الحفظ…" : "💾 حفظ مسودة"}</button>}
+          {onSave && <button type="button" className="sb-btn sb-btn-primary" onClick={() => onSave("final")} disabled={saving || mediaPending || hasBlockingErrors(errors)} title={mediaPending ? MEDIA_WAIT : hasBlockingErrors(errors) ? "يجب إصلاح الأخطاء قبل الاعتماد النهائي" : "اعتماد الامتحان نهائيًا"}>✓ اعتماد نهائي</button>}
         </div>
       </header>
 
@@ -135,6 +157,7 @@ export default function StructuredExamBuilder({ exam, onChange, onSave, onExit, 
             onQuestionMoveToSection={(qid, to) => setSections(s => movQTo(s, section.id, qid, to))}
             onPreviewQuestion={q => setPreview(singleQuestionExam(exam, section, q))}
             requestQuestionImage={requestQuestionImage}
+            onMediaBusyChange={onMediaBusyChange}
             disabled={saving}
           />
         ))}

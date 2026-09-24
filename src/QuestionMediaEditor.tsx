@@ -21,9 +21,14 @@ type Props = {
   // Authenticated AI image callback (App.tsx). Receives the SAFE request shape (no answer key) and resolves
   // to the generated asset. Absent → the AI button is not offered (e.g. a test render without the callback).
   requestQuestionImage?: (q: AiImageRequestQuestion) => Promise<BuilderImageAsset>;
+  // Reports an async media operation (upload read / AI generation) as pending (true) from before its work
+  // starts until it has fully settled (false, in finally) — the builder blocks saving meanwhile so a save can
+  // never persist a snapshot that a still-running operation is about to change. Reported per operation even
+  // if this editor unmounts (collapse) while pending: the result still lands, so the pending state must hold.
+  onBusyChange?: (busy: boolean) => void;
 };
 
-export default function QuestionMediaEditor({ question, onChange, disabled, requestQuestionImage }: Props) {
+export default function QuestionMediaEditor({ question, onChange, disabled, requestQuestionImage, onBusyChange }: Props) {
   const [busy, setBusy] = useState(false);
   const [notice, setNotice] = useState("");
   const [error, setError] = useState("");
@@ -46,6 +51,7 @@ export default function QuestionMediaEditor({ question, onChange, disabled, requ
     if (fileRef.current) fileRef.current.value = ""; // allow re-selecting the same file next time
     if (!file || disabled || inFlight.current) return;
     inFlight.current = true;
+    onBusyChange?.(true);
     const token = nextOp();
     setBusy(true); setError(""); setNotice(MEDIA_MSG.uploading);
     try {
@@ -59,6 +65,7 @@ export default function QuestionMediaEditor({ question, onChange, disabled, requ
     } finally {
       inFlight.current = false;
       setBusy(false);
+      onBusyChange?.(false);
     }
   }
 
@@ -67,6 +74,7 @@ export default function QuestionMediaEditor({ question, onChange, disabled, requ
     // An existing image is NEVER silently overwritten — require explicit replacement intent.
     if (present && !window.confirm("سيتم إنشاء صورة جديدة واستبدال الصورة الحالية لهذا السؤال. هل تريد المتابعة؟")) return;
     inFlight.current = true;
+    onBusyChange?.(true);
     const token = nextOp();
     setBusy(true); setError(""); setNotice(MEDIA_MSG.generating);
     try {
@@ -84,6 +92,7 @@ export default function QuestionMediaEditor({ question, onChange, disabled, requ
     } finally {
       inFlight.current = false;
       setBusy(false);
+      onBusyChange?.(false);
     }
   }
 

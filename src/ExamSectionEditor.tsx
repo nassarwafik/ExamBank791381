@@ -28,11 +28,12 @@ type Props = {
   onQuestionMoveToSection: (questionId: string, toSectionId: string) => void;
   onPreviewQuestion: (question: BuilderQuestion) => void;
   requestQuestionImage?: (q: AiImageRequestQuestion) => Promise<BuilderImageAsset>;
+  onMediaBusyChange?: (questionId: string, busy: boolean) => void;
   disabled?: boolean;
 };
 
 export default function ExamSectionEditor(props: Props) {
-  const { section, index, total, sectionOptions, patch, onDelete, onMove, onAddQuestion, onQuestionChange, onQuestionDelete, onQuestionMove, onQuestionDuplicate, onQuestionMoveToSection, onPreviewQuestion, requestQuestionImage, disabled } = props;
+  const { section, index, total, sectionOptions, patch, onDelete, onMove, onAddQuestion, onQuestionChange, onQuestionDelete, onQuestionMove, onQuestionDuplicate, onQuestionMoveToSection, onPreviewQuestion, requestQuestionImage, onMediaBusyChange, disabled } = props;
   const groupOptions = Object.entries(section.stimuli || {}).map(([id, s]) => ({ id, label: s.title ? s.title + " (" + id + ")" : id }));
 
   return (
@@ -118,6 +119,7 @@ export default function ExamSectionEditor(props: Props) {
             onMoveToSection={to => onQuestionMoveToSection(q.examQuestionId, to)}
             onPreview={() => onPreviewQuestion(q)}
             requestQuestionImage={requestQuestionImage}
+            onMediaBusyChange={onMediaBusyChange ? busy => onMediaBusyChange(q.examQuestionId, busy) : undefined}
             disabled={disabled}
           />
         ))}

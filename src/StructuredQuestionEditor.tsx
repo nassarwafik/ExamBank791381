@@ -27,11 +27,13 @@ type Props = {
   // Phase 5B — authenticated AI image callback (App.tsx). Optional so existing renders/tests without media
   // still work; when absent the media editor simply does not offer AI generation.
   requestQuestionImage?: (q: AiImageRequestQuestion) => Promise<BuilderImageAsset>;
+  // Phase 5B — pending media operation on THIS question (see QuestionMediaEditor.onBusyChange).
+  onMediaBusyChange?: (busy: boolean) => void;
   disabled?: boolean;
 };
 
 export default function StructuredQuestionEditor(props: Props) {
-  const { question: q, index, total, sectionOptions, currentSectionId, groupOptions, onChange, onDelete, onMove, onDuplicate, onMoveToSection, onPreview, requestQuestionImage, disabled } = props;
+  const { question: q, index, total, sectionOptions, currentSectionId, groupOptions, onChange, onDelete, onMove, onDuplicate, onMoveToSection, onPreview, requestQuestionImage, onMediaBusyChange, disabled } = props;
   const [open, setOpen] = useState(true);
 
   return (
@@ -70,7 +72,7 @@ export default function StructuredQuestionEditor(props: Props) {
           </div>
 
           <QuestionComposer question={q} onChange={onChange} disabled={disabled} />
-          <QuestionMediaEditor question={q} onChange={onChange} disabled={disabled} requestQuestionImage={requestQuestionImage} />
+          <QuestionMediaEditor question={q} onChange={onChange} disabled={disabled} requestQuestionImage={requestQuestionImage} onBusyChange={onMediaBusyChange} />
         </div>
       )}
     </div>
