@@ -1,5 +1,6 @@
-import { useId } from "react";
+import { useId, useLayoutEffect, useRef } from "react";
 import { MAX_MESSAGE_LENGTH, formatMessageTime, type MessageView } from "./messagesClient";
+import { isNearBottom, shouldScrollToNewest } from "./messagesLayout";
 
 // Phase 5C — presentational pieces shared by the teacher and student messaging pages. Message bodies are rendered as
 // ordinary React TEXT nodes (never dangerouslySetInnerHTML, never Markdown/HTML/link interpretation); the CSS keeps
@@ -14,12 +15,42 @@ type ThreadProps = {
   isMine: (m: MessageView) => boolean;
   emptyText: string;
   ariaLabel: string;
+  /**
+   * Phase 5E (opt-in): the identity of the thread on screen. When given, the list is a scroll region that opens at
+   * the newest message, follows new messages while the reader is at the bottom, jumps to the viewer's own newly
+   * sent message, and never pulls a reader who scrolled up to older history back down on a poll.
+   */
+  followKey?: string;
 };
 
-export function MessageThread({ messages, labelFor, isMine, emptyText, ariaLabel }: ThreadProps) {
+export function MessageThread({ messages, labelFor, isMine, emptyText, ariaLabel, followKey }: ThreadProps) {
+  const listRef = useRef<HTMLOListElement>(null);
+  const nearBottom = useRef(true);                                   // "following" until the reader scrolls up
+  const last = useRef<{ key: string | undefined; newestId: string }>({ key: undefined, newestId: "" });
+  const newest = messages.length ? messages[messages.length - 1] : null;
+  useLayoutEffect(() => {
+    if (followKey === undefined) return;
+    const threadChanged = last.current.key !== followKey;
+    const newestId = newest ? newest.messageId : "";
+    const newestChanged = newestId !== last.current.newestId;
+    last.current = { key: followKey, newestId };
+    if (threadChanged) nearBottom.current = true;
+    const el = listRef.current;
+    if (!el) return;
+    if (shouldScrollToNewest({ threadChanged, wasNearBottom: nearBottom.current, newestChanged, newestIsMine: !!newest && isMine(newest) })) {
+      el.scrollTop = el.scrollHeight;
+      nearBottom.current = true;
+    }
+  });
   if (!messages.length) return <p className="eb-msg-empty">{emptyText}</p>;
   return (
-    <ol className="eb-msg-thread" aria-label={ariaLabel}>
+    <ol
+      ref={listRef}
+      className="eb-msg-thread"
+      aria-label={ariaLabel}
+      tabIndex={followKey !== undefined ? 0 : undefined}
+      onScroll={followKey !== undefined ? e => { nearBottom.current = isNearBottom(e.currentTarget); } : undefined}
+    >
       {messages.map(m => (
         <li key={m.messageId} className={"eb-msg" + (isMine(m) ? " is-mine" : " is-theirs")}>
           <div className="eb-msg-meta">
