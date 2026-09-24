@@ -1,7 +1,7 @@
 import { describe, it, expect } from "vitest";
 import {
   teacherActorKey, teacherDirectStateName, studentDirectStateName, studentAnnouncementStateName, READ_STATE_PREFIX,
-  messageIdMs, isReadBy, advanceMarker, markStreamRead, countUnread, loadMarker, teacherDirectUnread, MarkReadError, UNREAD_DISPLAY_CAP
+  messageIdMs, isReadBy, advanceBoundary, markStreamRead, countUnread, loadMarker, teacherDirectUnread, MarkReadError, UNREAD_DISPLAY_CAP
 } from "../src/lib/message-read-state.js";
 import { directPrefix, announcementPrefix } from "../src/lib/message-store.js";
 import { createMemoryContainer } from "./fixtures/memory-container.js";
@@ -65,8 +65,8 @@ describe("boundary", () => {
     const C = id(T, "1");                                                // later, same ms, sorts BELOW A and B
     putDirect(ctx, S1, C);
     const m = await loadMarker(ctx.container, teacherDirectStateName("builder-1", S1));
-    expect(m.boundaryMs).toBe(T);
-    expect(m.seenIdsAtBoundary).toEqual([A, B]);
+    expect(m.legacy.boundaryMs).toBe(T);
+    expect(m.legacy.seenIdsAtBoundary).toEqual([A, B]);
     expect(isReadBy(m, C)).toBe(false);
     expect(await teacherCount(ctx, S1)).toEqual({ unread: 1, capped: false });
     // a naive "last read id" would have hidden C:
@@ -76,10 +76,10 @@ describe("boundary", () => {
   it("the boundary never moves backwards; an equal boundary unions its ids", () => {
     const t = 1800000000000;
     const cur = { boundaryMs: t + 5, seenIdsAtBoundary: [id(t + 5, "a")] };
-    expect(advanceMarker(cur, { boundaryMs: t + 1, seenIdsAtBoundary: [id(t + 1, "b")] })).toEqual({ changed: false, marker: cur });
-    expect(advanceMarker(cur, { boundaryMs: t + 5, seenIdsAtBoundary: [id(t + 5, "a")] }).changed).toBe(false);
-    expect(advanceMarker(cur, { boundaryMs: t + 5, seenIdsAtBoundary: [id(t + 5, "c")] }).marker.seenIdsAtBoundary).toEqual([id(t + 5, "a"), id(t + 5, "c")]);
-    expect(advanceMarker(cur, { boundaryMs: t + 9, seenIdsAtBoundary: [id(t + 9, "d")] }).marker).toEqual({ boundaryMs: t + 9, seenIdsAtBoundary: [id(t + 9, "d")] });
+    expect(advanceBoundary(cur, { boundaryMs: t + 1, seenIdsAtBoundary: [id(t + 1, "b")] })).toEqual({ changed: false, marker: cur });
+    expect(advanceBoundary(cur, { boundaryMs: t + 5, seenIdsAtBoundary: [id(t + 5, "a")] }).changed).toBe(false);
+    expect(advanceBoundary(cur, { boundaryMs: t + 5, seenIdsAtBoundary: [id(t + 5, "c")] }).marker.seenIdsAtBoundary).toEqual([id(t + 5, "a"), id(t + 5, "c")]);
+    expect(advanceBoundary(cur, { boundaryMs: t + 9, seenIdsAtBoundary: [id(t + 9, "d")] }).marker).toEqual({ boundaryMs: t + 9, seenIdsAtBoundary: [id(t + 9, "d")] });
     expect(messageIdMs("nope")).toBeNaN();
   });
 
@@ -89,8 +89,8 @@ describe("boundary", () => {
     putDirect(ctx, S1, X); putDirect(ctx, S1, Z);
     await markTeacher(ctx, S1, Z);
     const r = await markTeacher(ctx, S1, X);
-    expect(r.marker.boundaryMs).toBe(1800000000003);
-    expect((await loadMarker(ctx.container, teacherDirectStateName("builder-1", S1))).boundaryMs).toBe(1800000000003);
+    expect(r.marker.legacy.boundaryMs).toBe(1800000000003);
+    expect((await loadMarker(ctx.container, teacherDirectStateName("builder-1", S1))).legacy.boundaryMs).toBe(1800000000003);
   });
 
   it("CAS: a concurrent NEWER marker written between read and write wins; the retry re-evaluates the freshest state", async () => {
@@ -108,7 +108,7 @@ describe("boundary", () => {
     ctx.setJson(name, { schemaVersion: 1, boundaryMs: 1700000000000, seenIdsAtBoundary: [] });         // existing older marker → CAS path
     await markTeacher(ctx, S1, X);
     expect(fired).toBe(true);
-    expect((await loadMarker(ctx.container, name)).boundaryMs).toBe(1800000000003);
+    expect((await loadMarker(ctx.container, name)).legacy.boundaryMs).toBe(1800000000003);
   });
 });
 
@@ -218,7 +218,7 @@ describe("snapshot acknowledgement (review follow-up) — the viewed snapshot, n
     putDirect(ctx, S1, C);                                               // after the snapshot, between A and B by suffix
     await markTeacher(ctx, S1, B, [B, A, A]);                            // order + duplicates don't matter
     const m = await loadMarker(ctx.container, teacherDirectStateName("builder-1", S1));
-    expect(m.seenIdsAtBoundary).toEqual([A, B]);
+    expect(m.legacy.seenIdsAtBoundary).toEqual([A, B]);
     expect([isReadBy(m, A), isReadBy(m, B), isReadBy(m, C)]).toEqual([true, true, false]);
   });
 

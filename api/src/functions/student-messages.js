@@ -2,7 +2,7 @@
 //   GET  /api/student-messages                      → { direct, announcements, classroom, canSend, ... }
 //   POST /api/student-messages { action: "sendDirect", body }
 //   GET  /api/student-messages?view=unread          → Phase 5D: { directUnread, announcementUnread, totalUnread, ... }
-//   POST /api/student-messages { action: "markRead", stream: "direct" | "announcements", throughMessageId, seenIdsAtBoundary }
+//   POST /api/student-messages { action: "markRead", stream: "direct" | "announcements", throughMessageId, seenIdsAtBoundary[, legacyThroughMessageId, legacySeenIdsAtBoundary] }
 //        (a snapshot acknowledgement: the latest unread-relevant message shown — TEACHER messages for direct, any
 //        announcement — plus the relevant ids at its millisecond in THAT snapshot; validated server-side)
 // Phase 5D read state: the student's OWN direct stream and the CURRENT class's announcements only (both derived from the
@@ -103,6 +103,7 @@ async function handler(request, deps = {}, obs = null) {
         const { marker } = await markStreamRead(container, {
           stateName: s.stateName, streamPrefix: s.streamPrefix, expected: s.expected, include: s.include,
           throughMessageId: body.throughMessageId, seenIdsAtBoundary: body.seenIdsAtBoundary,
+          legacyThroughMessageId: body.legacyThroughMessageId, legacySeenIdsAtBoundary: body.legacySeenIdsAtBoundary,
           meta: { principalRole: "student", streamKind: which === "direct" ? "direct" : "announcement", streamId: which === "direct" ? studentId : String(student.classId) }
         }, deps);
         // FRESH listing (no `ids`): a message that arrived after validation is still counted.

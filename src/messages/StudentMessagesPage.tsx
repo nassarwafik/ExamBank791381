@@ -3,7 +3,7 @@ import { IconChevronBack } from "../icons";
 import { useAutoRefresh } from "../ui/useAutoRefresh";
 import { MessageComposer, MessageThread } from "./MessageParts";
 import {
-  MESSAGES_POLL_MS, UNREAD_POLL_MS, MessagesHttpError, createStudentMessagesClient, mergeMessage, formatUnread, readAckFromSnapshot,
+  MESSAGES_POLL_MS, UNREAD_POLL_MS, MessagesHttpError, createStudentMessagesClient, mergeMessage, formatUnread, readAckFromSnapshot, ackKey,
   type MessageView, type StudentMessagesClient, type StudentMessagesData, type StudentUnread
 } from "./messagesClient";
 import "./messages.css";
@@ -89,7 +89,7 @@ export default function StudentMessagesPage({ token, onBack, client: injected, o
       ? readAckFromSnapshot(d.direct, m => m.senderRole === "teacher")
       : readAckFromSnapshot(d.announcements, () => true);
     if (!ack) return;                                                 // no incoming message shown → nothing to mark
-    const through = ack.throughMessageId + "|" + ack.seenIdsAtBoundary.join(",");
+    const through = ackKey(ack);
     if (marked.current[stream] === through || marking.current[stream] === through) return;
     marking.current[stream] = through;
     const seq = ++markSeq.current;

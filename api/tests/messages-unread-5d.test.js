@@ -88,7 +88,7 @@ describe("teacher markDirectRead", () => {
     expect(r2.jsonBody.unread).toBe(0);
     const r3 = await tPost(T(ctx), { action: "markDirectRead", studentId: S1, throughMessageId: X, seenIdsAtBoundary: [X] });   // stale/slow older mark
     expect(r3.jsonBody.unread).toBe(0);
-    expect(ctx.getJson(teacherDirectStateName("builder-1", S1)).boundaryMs).toBe(1800000000005);
+    expect(ctx.getJson(teacherDirectStateName("builder-1", S1)).legacy.boundaryMs).toBe(1800000000005);
     expect(snapshot(ctx, directPrefix(S1))).toBe(before);
     expect(audits).toEqual([]);
     expect((await tGet(T(ctx), "?kind=unread-summary")).jsonBody.totalUnread).toBe(0);
@@ -160,7 +160,7 @@ describe("student markRead", () => {
     expect((await sPost(ST(ctx, S1), { action: "markRead", stream: "direct", throughMessageId: X, seenIdsAtBoundary: [X] })).jsonBody.unread).toBe(1);
     await sPost(ST(ctx, S1), { action: "markRead", stream: "direct", throughMessageId: Y, seenIdsAtBoundary: [Y] });
     expect((await sPost(ST(ctx, S1), { action: "markRead", stream: "direct", throughMessageId: X, seenIdsAtBoundary: [X] })).jsonBody.unread).toBe(0);
-    expect(ctx.getJson(studentDirectStateName(S1)).boundaryMs).toBe(1800000000002);
+    expect(ctx.getJson(studentDirectStateName(S1)).legacy.boundaryMs).toBe(1800000000002);
   });
 
   it("SAME-MS at the API: a later same-millisecond teacher message with a lower suffix stays unread", async () => {
@@ -262,7 +262,7 @@ describe("mark response uses a FRESH listing (validation listing is never reused
     expect(r.status).toBe(200);
     expect(hook.seen[0].some(n => n.includes(B))).toBe(false);                 // validation never saw B
     expect(r.jsonBody).toEqual({ ok: true, studentId: S1, unread: 1, capped: false });
-    expect(ctx.getJson(teacherDirectStateName("builder-1", S1))).toMatchObject({ boundaryMs: 1800000000001, seenIdsAtBoundary: [A] });
+    expect(ctx.getJson(teacherDirectStateName("builder-1", S1))).toMatchObject({ legacy: { boundaryMs: 1800000000001, seenIdsAtBoundary: [A] }, sequenced: null });
     expect((await tGet(T(ctx), "?kind=unread-summary")).jsonBody.totalUnread).toBe(1);
   });
 
@@ -275,7 +275,7 @@ describe("mark response uses a FRESH listing (validation listing is never reused
     expect(r.status).toBe(200);
     expect(hook.seen[0].some(n => n.includes(B))).toBe(false);
     expect(r.jsonBody).toMatchObject({ stream: "direct", unread: 1, directUnread: { unread: 1, capped: false }, totalUnread: 1 });
-    expect(ctx.getJson(studentDirectStateName(S1))).toMatchObject({ boundaryMs: 1800000000001, seenIdsAtBoundary: [A] });
+    expect(ctx.getJson(studentDirectStateName(S1))).toMatchObject({ legacy: { boundaryMs: 1800000000001, seenIdsAtBoundary: [A] }, sequenced: null });
   });
 
   it("STUDENT announcements: B posted after validation → unread === 1", async () => {
@@ -294,6 +294,6 @@ describe("mark response uses a FRESH listing (validation listing is never reused
     putDirect(ctx, S1, A, "student");
     const r = await tPost(T(ctx), { action: "markDirectRead", studentId: S1, throughMessageId: A, seenIdsAtBoundary: [A, A, A] });
     expect(r.jsonBody).toMatchObject({ unread: 0 });
-    expect(ctx.getJson(teacherDirectStateName("builder-1", S1)).seenIdsAtBoundary).toEqual([A]);
+    expect(ctx.getJson(teacherDirectStateName("builder-1", S1)).legacy.seenIdsAtBoundary).toEqual([A]);
   });
 });

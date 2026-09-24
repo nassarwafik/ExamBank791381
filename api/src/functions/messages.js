@@ -7,7 +7,7 @@
 //   GET  /api/messages?kind=unread-summary[&classId=<id>]  → Phase 5D: THIS teacher's unread STUDENT replies (global
 //                                                           badge; with classId also per student — membership from the
 //                                                           CURRENT student documents)
-//   POST /api/messages { action: "markDirectRead", studentId, throughMessageId, seenIdsAtBoundary }  → Phase 5D: THIS
+//   POST /api/messages { action: "markDirectRead", studentId, throughMessageId, seenIdsAtBoundary[, legacyThroughMessageId, legacySeenIdsAtBoundary] }  → Phase 5D: THIS
 //                                                           teacher's snapshot acknowledgement (latest STUDENT message
 //                                                           shown + the student ids at its ms in that snapshot), validated
 //                                                           against that student's stream; monotonic. Not audited.
@@ -172,6 +172,7 @@ async function handler(request, deps = {}, obs = null) {
         const { marker } = await markStreamRead(container, {
           stateName: teacherDirectStateName(teacherId, studentId), ...stream,
           throughMessageId: body.throughMessageId, seenIdsAtBoundary: body.seenIdsAtBoundary,
+          legacyThroughMessageId: body.legacyThroughMessageId, legacySeenIdsAtBoundary: body.legacySeenIdsAtBoundary,
           meta: { principalRole: "teacher", streamKind: "direct", streamId: studentId, teacherId }
         }, deps);
         // FRESH listing (no `ids`): a student message that arrived after validation is still counted.

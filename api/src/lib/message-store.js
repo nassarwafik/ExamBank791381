@@ -144,8 +144,9 @@ function normalizeStoredMessage(doc, expected) {
 }
 
 /**
- * The most recent `limit` messages under ONE prefix, oldest → newest. Lists names only, sorts them (ids are
- * chronological), downloads just the bounded tail. `expected` pins kind + studentId/classId for validation.
+ * The most recent `limit` messages under ONE prefix, oldest → newest (by id: legacy ids first), plus the newest legacy
+ * group when the tail does not reach it (see below). Lists names only, sorts them, downloads just the bounded page.
+ * `expected` pins kind + studentId/classId for validation.
  */
 async function listRecentMessages(container, prefix, expected, limit, deps = {}) {
   const list = deps.listBlobNames || listBlobNames;
@@ -167,7 +168,17 @@ async function listRecentMessages(container, prefix, expected, limit, deps = {})
     nextPosition++;
     return true;
   });
-  const page = visible.slice(-limit);
+  let page = visible.slice(-limit);
+  // The NEWEST LEGACY group (the latest legacy millisecond) always rides along: legacy ids sort before every sequenced
+  // id, so in a long stream a legacy message published late (by a still-running Phase 5C writer) — or the end of the
+  // archived 5C history — would otherwise never be in any page, never be acknowledgeable and stay unread for good.
+  // Display order (by id) and the sequenced page are unchanged; this only adds entries, bounded by the group size.
+  const legacy = visible.filter(e => messagePosition(e.messageId, prefix) === 0);
+  const newestLegacy = legacy[legacy.length - 1];
+  if (newestLegacy && !page.includes(newestLegacy)) {
+    const key = newestLegacy.messageId.slice(0, 13);
+    page = legacy.filter(e => e.messageId.slice(0, 13) === key).slice(-MAX_HISTORY_LIMIT).concat(page);
+  }
   const docs = await many(container, page.map(e => e.name), getReadConcurrency());
   const out = [];
   for (let i = 0; i < page.length; i++) {

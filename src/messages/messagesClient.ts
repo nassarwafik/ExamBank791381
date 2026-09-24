@@ -14,21 +14,49 @@ export type TeacherUnreadSummary = { totalUnread: number; capped: boolean; byStu
 export type StudentUnread = { directUnread: UnreadCount; announcementUnread: UnreadCount; totalUnread: number; totalCapped: boolean };
 export const NO_UNREAD: UnreadCount = { unread: 0, capped: false };
 
-/** A mark-read request built from the EXACT applied snapshot (Phase 5D review follow-up). */
-export type ReadAck = { throughMessageId: string; seenIdsAtBoundary: string[] };
+/** A mark-read request built from the EXACT applied snapshot (Phase 5D review follow-up). The optional LEGACY part
+ *  acknowledges the displayed Phase 5C ids, which are a separate read domain on the server. */
+export type ReadAck = { throughMessageId: string; seenIdsAtBoundary: string[]; legacyThroughMessageId?: string; legacySeenIdsAtBoundary?: string[] };
+
+/** Order keys below this are legacy (Phase 5C "<ms>-<random>") ids; from it on, publication positions (server rule). */
+export const SEQUENCE_KEY_BASE = 9000000000000;
+const isLegacyId = (id: string) => Number(id.slice(0, 13)) < SEQUENCE_KEY_BASE;
 
 /**
  * The snapshot acknowledgement for one stream: X = the latest unread-RELEVANT message in the applied snapshot, and
- * seenIdsAtBoundary = every relevant snapshot id in X's millisecond. Never derived from later state, so a message the
- * server created after this snapshot (even in the same millisecond) cannot be acknowledged. null when the snapshot has
- * no relevant (incoming) message — then nothing is marked.
+ * seenIdsAtBoundary = every relevant snapshot id at X's order key. When X is sequenced and the snapshot ALSO showed
+ * relevant legacy ids, the legacy part names the latest of those + its same-millisecond ids — legacy and sequenced
+ * read progress are separate domains, so a sequenced X never acknowledges a legacy message. Never derived from later
+ * state, so a message the server created after this snapshot (even in the same millisecond) cannot be acknowledged.
+ * null when the snapshot has no relevant (incoming) message — then nothing is marked.
  */
 export function readAckFromSnapshot(messages: MessageView[], isRelevant: (m: MessageView) => boolean): ReadAck | null {
   const ids = messages.filter(isRelevant).map(m => m.messageId).filter(id => /^\d{13}-/.test(id)).sort();
   if (!ids.length) return null;
-  const throughMessageId = ids[ids.length - 1];
-  const ms = throughMessageId.slice(0, 13);
-  return { throughMessageId, seenIdsAtBoundary: ids.filter(id => id.slice(0, 13) === ms) };
+  const through = (list: string[]) => {
+    const x = list[list.length - 1];
+    return { x, seen: list.filter(id => id.slice(0, 13) === x.slice(0, 13)) };
+  };
+  const primary = through(ids);
+  const ack: ReadAck = { throughMessageId: primary.x, seenIdsAtBoundary: primary.seen };
+  const legacy = ids.filter(isLegacyId);
+  if (!isLegacyId(primary.x) && legacy.length) {
+    const l = through(legacy);
+    ack.legacyThroughMessageId = l.x;
+    ack.legacySeenIdsAtBoundary = l.seen;
+  }
+  return ack;
+}
+
+/** Identity of an acknowledgement (dedupes repeated marks of the same snapshot), covering BOTH domains' parts. */
+export function ackKey(ack: ReadAck): string {
+  return [ack.throughMessageId, ack.seenIdsAtBoundary.join(","), ack.legacyThroughMessageId || "", (ack.legacySeenIdsAtBoundary || []).join(",")].join("|");
+}
+/** The request fields of an acknowledgement (the legacy part only when present). */
+function ackBody(ack: ReadAck) {
+  return ack.legacyThroughMessageId
+    ? { throughMessageId: ack.throughMessageId, seenIdsAtBoundary: ack.seenIdsAtBoundary, legacyThroughMessageId: ack.legacyThroughMessageId, legacySeenIdsAtBoundary: ack.legacySeenIdsAtBoundary }
+    : { throughMessageId: ack.throughMessageId, seenIdsAtBoundary: ack.seenIdsAtBoundary };
 }
 
 /** Badge text: 1..99, or "99+" when the server capped the count. */
@@ -120,7 +148,7 @@ export function createTeacherMessagesClient(token: string): TeacherMessagesClien
       return { totalUnread: Math.max(0, Number(j.totalUnread) || 0), capped: j.capped === true, byStudent: by };
     },
     async markDirectRead(studentId, ack) {
-      const r = await fetch("/api/messages", { method: "POST", headers, body: JSON.stringify({ action: "markDirectRead", studentId, throughMessageId: ack.throughMessageId, seenIdsAtBoundary: ack.seenIdsAtBoundary }) });
+      const r = await fetch("/api/messages", { method: "POST", headers, body: JSON.stringify({ action: "markDirectRead", studentId, ...ackBody(ack) }) });
       const j = await readJson(r);
       if (!r.ok || !j.ok) fail(j, r.status, "تعذر تحديث حالة القراءة.");
       return unreadOf(j);
@@ -161,7 +189,7 @@ export function createStudentMessagesClient(token: string): StudentMessagesClien
       return studentUnreadOf(j);
     },
     async markRead(stream, ack) {
-      const r = await fetch("/api/student-messages", { method: "POST", headers, body: JSON.stringify({ action: "markRead", stream, throughMessageId: ack.throughMessageId, seenIdsAtBoundary: ack.seenIdsAtBoundary }) });
+      const r = await fetch("/api/student-messages", { method: "POST", headers, body: JSON.stringify({ action: "markRead", stream, ...ackBody(ack) }) });
       const j = await readJson(r);
       if (!r.ok || !j.ok) fail(j, r.status, "تعذر تحديث حالة القراءة.");
       return studentUnreadOf(j);

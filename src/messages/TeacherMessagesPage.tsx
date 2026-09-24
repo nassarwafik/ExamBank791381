@@ -5,7 +5,7 @@ import { normalizeClassStatus } from "../classLifecycle";
 import type { Classroom, Student } from "../students/types";
 import { MessageComposer, MessageThread } from "./MessageParts";
 import {
-  MESSAGES_POLL_MS, UNREAD_POLL_MS, createTeacherMessagesClient, mergeMessage, formatUnread, readAckFromSnapshot,
+  MESSAGES_POLL_MS, UNREAD_POLL_MS, createTeacherMessagesClient, mergeMessage, formatUnread, readAckFromSnapshot, ackKey,
   type MessageView, type TeacherMessagesClient, type ThreadState, type UnreadCount, type ReadAck
 } from "./messagesClient";
 import "./messages.css";
@@ -102,7 +102,7 @@ export default function TeacherMessagesPage({ token, client: injected, onUnreadC
   async function markThreadRead(key: string, ack: ReadAck) {
     if (activeKey.current !== key) return;
     if (typeof document !== "undefined" && document.visibilityState !== "visible") return;
-    const throughMessageId = ack.throughMessageId + "|" + ack.seenIdsAtBoundary.join(",");
+    const throughMessageId = ackKey(ack);
     if (marked.current[key] === throughMessageId || marking.current[key] === throughMessageId) return;
     marking.current[key] = throughMessageId;
     const seq = (markSeq.current[key] = (markSeq.current[key] || 0) + 1);

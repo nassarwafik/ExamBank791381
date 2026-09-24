@@ -16,6 +16,21 @@
 // marker is therefore { boundaryMs, seenIdsAtBoundary[] } (boundaryMs = an order key):
 //   key <  boundaryMs → read;  key > boundaryMs → unread;  key == boundaryMs → read ONLY if listed in seenIdsAtBoundary.
 // (A sequenced key is unique per stream, so for sequenced ids seenIdsAtBoundary is just [X].)
+// TWO READ DOMAINS (review follow-up, late legacy). Legacy and sequenced keys are two INDEPENDENT order domains: a
+// Phase 5C writer that is still running (an instance draining during a deploy, or a rollback new → old → new) keeps
+// creating "<ms>-<random>" ids whose key is BELOW every sequenced key, however late they are published. So a marker
+// holds one boundary PER DOMAIN — { legacy: {boundaryMs, seenIdsAtBoundary} | null, sequenced: {…} | null } — and an
+// id is only ever compared with the boundary of ITS OWN domain. No message is read merely because its domain sorts
+// below a boundary of the other domain: a late legacy message is read only once a legacy acknowledgement covers it.
+// The acknowledgement carries the snapshot's latest relevant id (primary part) and, when that is sequenced and the
+// snapshot also displayed relevant legacy ids, a LEGACY part (legacyThroughMessageId + legacySeenIdsAtBoundary) with
+// the same rules; both parts advance in ONE CAS, each domain monotonically and independently.
+// STORED FORMAT. schemaVersion 2 = { legacy, sequenced } (each null or a boundary). A schemaVersion-1 marker (a single
+// { boundaryMs, seenIdsAtBoundary }) is read in place, never migrated: a legacy-key boundary is the legacy domain (no
+// sequenced progress); a sequenced-key boundary is the sequenced domain, and — because its old semantics covered every
+// legacy id — its legacy progress is "every legacy id created before the marker was written" (legacy boundary =
+// updatedAt, nothing seen at it; an unparsable updatedAt → no legacy progress, fail-safe). The next write stores v2.
+// Anything malformed reads as no progress in that domain (unread — fails safe), never as read.
 // Marking read is a SNAPSHOT ACKNOWLEDGEMENT: the client sends X (the latest unread-RELEVANT message it actually
 // displayed) and seenIdsAtBoundary — the relevant ids at X's millisecond that were in THAT applied snapshot. The boundary
 // ids are NEVER re-derived from a fresh listing: a message created in the same millisecond after the reader's GET (on
@@ -32,13 +47,14 @@
 // sender role/kind/owner — stopping once the display cap (99 → "99+") is exceeded.
 const crypto = require("crypto");
 const { listBlobNames, downloadManyJson, downloadJsonOrNull, mutateJsonWithRetry, getReadConcurrency } = require("./platform-storage");
-const { MESSAGE_PREFIX, DIRECT_PREFIX, MESSAGE_ID_RE, isSafeId, directPrefix, normalizeStoredMessage, blobMessageId } = require("./message-store");
+const { MESSAGE_PREFIX, DIRECT_PREFIX, MESSAGE_ID_RE, SEQUENCE_KEY_BASE, isSafeId, directPrefix, normalizeStoredMessage, blobMessageId } = require("./message-store");
 
 const READ_STATE_PREFIX = MESSAGE_PREFIX + "read-state/";
 const USER_PREFIX = "platform/users/";
 const UNREAD_DISPLAY_CAP = 99;
 // Upper bound on a snapshot acknowledgement's boundary ids (a snapshot page never exceeds the history cap).
 const MAX_BOUNDARY_IDS = 200;
+const DOMAINS = ["legacy", "sequenced"];
 
 class MarkReadError extends Error {
   constructor(message) { super(message || "Invalid message reference."); this.name = "MarkReadError"; this.httpStatus = 400; }
@@ -71,33 +87,70 @@ function messageIdMs(id) {
   return typeof id === "string" && MESSAGE_ID_RE.test(id) ? Number(id.slice(0, 13)) : NaN;
 }
 
-/** A stored marker, validated; anything malformed reads as "no marker" (everything unread — fails safe). */
-function normalizeMarker(doc) {
+/** The read domain of an order key: "legacy" (Phase 5C millisecond ids) or "sequenced" (publication positions). */
+function keyDomain(key) {
+  return key < SEQUENCE_KEY_BASE ? "legacy" : "sequenced";
+}
+
+/** One domain's boundary, validated: its key must lie IN that domain; seen ids must share the key. Else null. */
+function normalizeBoundary(doc, domain) {
   if (!doc || typeof doc !== "object") return null;
   const boundaryMs = Number(doc.boundaryMs);
-  if (!Number.isInteger(boundaryMs) || boundaryMs < 0) return null;
+  if (!Number.isInteger(boundaryMs) || boundaryMs < 0 || keyDomain(boundaryMs) !== domain) return null;
   const seen = Array.isArray(doc.seenIdsAtBoundary) ? doc.seenIdsAtBoundary.filter(id => messageIdMs(id) === boundaryMs) : [];
   return { boundaryMs, seenIdsAtBoundary: Array.from(new Set(seen)).sort() };
 }
 
-/** Whether a message id is covered (read) by a marker. */
-function isReadBy(marker, id) {
-  if (!marker) return false;
-  const ms = messageIdMs(id);
-  if (!Number.isFinite(ms)) return false;
-  if (ms < marker.boundaryMs) return true;
-  if (ms > marker.boundaryMs) return false;
-  return marker.seenIdsAtBoundary.includes(id);
+/** A stored marker (v2, or v1 read in place — see STORED FORMAT), as { legacy, sequenced }; null when it carries no
+ *  valid progress at all (everything unread — fails safe). */
+function normalizeMarker(doc) {
+  if (!doc || typeof doc !== "object") return null;
+  if (Number(doc.schemaVersion) >= 2) {
+    const legacy = normalizeBoundary(doc.legacy, "legacy"), sequenced = normalizeBoundary(doc.sequenced, "sequenced");
+    return legacy || sequenced ? { legacy, sequenced } : null;
+  }
+  const key = Number(doc.boundaryMs);
+  const single = Number.isInteger(key) ? normalizeBoundary(doc, keyDomain(key)) : null;
+  if (!single) return null;
+  if (keyDomain(single.boundaryMs) === "legacy") return { legacy: single, sequenced: null };
+  const writtenAt = Date.parse(doc.updatedAt);
+  const legacy = Number.isFinite(writtenAt) && writtenAt >= 0 ? { boundaryMs: Math.min(writtenAt, SEQUENCE_KEY_BASE - 1), seenIdsAtBoundary: [] } : null;
+  return { legacy, sequenced: single };
 }
 
-/** Monotonic merge: never moves backwards; an equal boundary unions its ids. Returns { changed, marker }. */
-function advanceMarker(current, incoming) {
+/** Whether a message id is covered (read) by a marker — ONLY ever against the boundary of the id's own domain. */
+function isReadBy(marker, id) {
+  if (!marker) return false;
+  const key = messageIdMs(id);
+  if (!Number.isFinite(key)) return false;
+  const boundary = marker[keyDomain(key)];
+  if (!boundary) return false;
+  if (key < boundary.boundaryMs) return true;
+  if (key > boundary.boundaryMs) return false;
+  return boundary.seenIdsAtBoundary.includes(id);
+}
+
+/** Monotonic merge of ONE domain's boundary: never moves backwards; an equal boundary unions its ids. */
+function advanceBoundary(current, incoming) {
   const next = { boundaryMs: incoming.boundaryMs, seenIdsAtBoundary: Array.from(new Set(incoming.seenIdsAtBoundary)).sort() };
   if (!current || next.boundaryMs > current.boundaryMs) return { changed: true, marker: next };
   if (next.boundaryMs < current.boundaryMs) return { changed: false, marker: current };
   const union = Array.from(new Set([...current.seenIdsAtBoundary, ...next.seenIdsAtBoundary])).sort();
   if (union.length === current.seenIdsAtBoundary.length) return { changed: false, marker: current };
   return { changed: true, marker: { boundaryMs: current.boundaryMs, seenIdsAtBoundary: union } };
+}
+
+/** Per-domain monotonic merge: each domain in `incoming` ({ legacy?, sequenced? }) advances independently; a domain
+ *  not acknowledged is left exactly as it is. Returns { changed, marker: { legacy, sequenced } }. */
+function advanceMarker(current, incoming) {
+  const marker = { legacy: current ? current.legacy : null, sequenced: current ? current.sequenced : null };
+  let changed = false;
+  for (const domain of DOMAINS) {
+    if (!incoming[domain]) continue;
+    const r = advanceBoundary(marker[domain], incoming[domain]);
+    if (r.changed) { marker[domain] = r.marker; changed = true; }
+  }
+  return { changed, marker };
 }
 
 /** Valid message ids listed under ONE stream prefix (names only — nothing is downloaded). */
@@ -115,45 +168,59 @@ async function loadMarker(container, stateName, deps = {}) {
   return normalizeMarker(await (deps.downloadJsonOrNull || downloadJsonOrNull)(container, stateName));
 }
 
-/**
- * Validate a snapshot acknowledgement. Duplicate ids are allowed and deduplicated. Returns { boundaryMs,
- * seenIdsAtBoundary } (deduplicated, sorted); throws MarkReadError (400) when X is malformed, the list is
- * missing/oversized/malformed, an id has another millisecond, X is not in the list, or any id does not exist in this
- * stream / does not validate / is not unread-relevant (`include`) for this reader. The validation listing is
- * deliberately NOT returned: it is stale once the marker is written and must never feed a remaining count.
- */
-async function validateAcknowledgement(container, { streamPrefix, expected, include, throughMessageId, seenIdsAtBoundary }, deps = {}) {
+/** One acknowledgement part's shape: X well-formed; 1..200 ids (duplicates deduplicated), all at X's key, X included. */
+function parseAcknowledgementPart(throughMessageId, seenIdsAtBoundary) {
   if (typeof throughMessageId !== "string" || !MESSAGE_ID_RE.test(throughMessageId)) throw new MarkReadError();
   if (!Array.isArray(seenIdsAtBoundary) || !seenIdsAtBoundary.length || seenIdsAtBoundary.length > MAX_BOUNDARY_IDS) throw new MarkReadError();
   const boundaryMs = messageIdMs(throughMessageId);
   const seen = Array.from(new Set(seenIdsAtBoundary));
   for (const id of seen) if (typeof id !== "string" || messageIdMs(id) !== boundaryMs) throw new MarkReadError();
   if (!seen.includes(throughMessageId)) throw new MarkReadError();
-  const ids = await listStreamIds(container, streamPrefix, deps);
-  const listed = new Set(ids);
+  return { domain: keyDomain(boundaryMs), boundary: { boundaryMs, seenIdsAtBoundary: seen.sort() } };
+}
+
+/**
+ * Validate a snapshot acknowledgement: the primary part (throughMessageId + seenIdsAtBoundary) and, optionally, a
+ * LEGACY part (legacyThroughMessageId + legacySeenIdsAtBoundary) — allowed only when the primary part is sequenced,
+ * and it must lie in the legacy domain. Returns { [domain]: boundary } for each part. Throws MarkReadError (400) when
+ * a part is malformed (see parseAcknowledgementPart), is in the wrong domain, or any id does not exist in this stream /
+ * does not validate / is not unread-relevant (`include`) for this reader. The validation listing is deliberately NOT
+ * returned: it is stale once the marker is written and must never feed a remaining count.
+ */
+async function validateAcknowledgement(container, { streamPrefix, expected, include, throughMessageId, seenIdsAtBoundary, legacyThroughMessageId, legacySeenIdsAtBoundary }, deps = {}) {
+  const parts = [parseAcknowledgementPart(throughMessageId, seenIdsAtBoundary)];
+  if (legacyThroughMessageId != null || legacySeenIdsAtBoundary != null) {
+    if (parts[0].domain !== "sequenced") throw new MarkReadError();
+    const legacy = parseAcknowledgementPart(legacyThroughMessageId, legacySeenIdsAtBoundary);
+    if (legacy.domain !== "legacy") throw new MarkReadError();
+    parts.push(legacy);
+  }
+  const seen = parts.flatMap(p => p.boundary.seenIdsAtBoundary);
+  const listed = new Set(await listStreamIds(container, streamPrefix, deps));
   if (!seen.every(id => listed.has(id))) throw new MarkReadError();
   const docs = await (deps.downloadManyJson || downloadManyJson)(container, seen.map(id => streamPrefix + id + ".json"), getReadConcurrency());
   for (let i = 0; i < seen.length; i++) {
     const doc = normalizeStoredMessage(docs[i], { ...expected, messageId: seen[i] });
     if (!doc || !include(doc)) throw new MarkReadError();
   }
-  return { boundaryMs, seenIdsAtBoundary: seen.sort() };
+  return Object.fromEntries(parts.map(p => [p.domain, p.boundary]));
 }
 
 /**
  * Mark ONE authorized stream read from a validated snapshot acknowledgement (see validateAcknowledgement). Monotonic
- * CAS through mutateJsonWithRetry: every retry re-reads the freshest marker, so an older/slower mark can never regress
- * a newer one. Returns { marker } only — callers count what remains with countUnread WITHOUT `ids`, i.e. from a
- * fresh listing taken after the write.
+ * per-domain CAS through mutateJsonWithRetry: every retry re-reads the freshest marker and merges each domain into it,
+ * so an older/slower mark can never regress a newer one and concurrent legacy / sequenced advances both survive.
+ * Returns { marker } only — callers count what remains with countUnread WITHOUT `ids`, i.e. from a fresh listing
+ * taken after the write.
  */
-async function markStreamRead(container, { stateName, streamPrefix, expected, include, throughMessageId, seenIdsAtBoundary: acknowledged, meta = {} }, deps = {}) {
-  const { boundaryMs, seenIdsAtBoundary } = await validateAcknowledgement(container, { streamPrefix, expected, include, throughMessageId, seenIdsAtBoundary: acknowledged }, deps);
+async function markStreamRead(container, { stateName, streamPrefix, expected, include, throughMessageId, seenIdsAtBoundary, legacyThroughMessageId, legacySeenIdsAtBoundary, meta = {} }, deps = {}) {
+  const incoming = await validateAcknowledgement(container, { streamPrefix, expected, include, throughMessageId, seenIdsAtBoundary, legacyThroughMessageId, legacySeenIdsAtBoundary }, deps);
   const mutate = deps.mutateJsonWithRetry || mutateJsonWithRetry;
   try {
     const written = await mutate(container, stateName, current => {
-      const r = advanceMarker(normalizeMarker(current), { boundaryMs, seenIdsAtBoundary });
+      const r = advanceMarker(normalizeMarker(current), incoming);
       if (!r.changed) throw new NoChange(r.marker);                 // no regression, no redundant write
-      return { schemaVersion: 1, ...meta, boundaryMs: r.marker.boundaryMs, seenIdsAtBoundary: r.marker.seenIdsAtBoundary, updatedAt: new Date().toISOString() };
+      return { schemaVersion: 2, ...meta, legacy: r.marker.legacy, sequenced: r.marker.sequenced, updatedAt: new Date().toISOString() };
     });
     return { marker: normalizeMarker(written) };
   } catch (e) {
@@ -245,6 +312,6 @@ async function teacherDirectUnread(container, teacherId, { classId = "" } = {}, 
 module.exports = {
   READ_STATE_PREFIX, UNREAD_DISPLAY_CAP, MAX_BOUNDARY_IDS, MarkReadError, validateAcknowledgement,
   teacherActorKey, teacherDirectStatePrefix, teacherDirectStateName, studentDirectStateName, studentAnnouncementStateName,
-  messageIdMs, normalizeMarker, isReadBy, advanceMarker, listStreamIds, loadMarker, markStreamRead, countUnread,
+  messageIdMs, keyDomain, normalizeMarker, isReadBy, advanceBoundary, advanceMarker, listStreamIds, loadMarker, markStreamRead, countUnread,
   combineCounts, groupDirectIds, teacherDirectUnread
 };

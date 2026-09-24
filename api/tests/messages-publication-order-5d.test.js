@@ -181,8 +181,11 @@ describe("legacy (Phase 5C) messages — backward compatible, fail-safe", () => 
     const r = await tPost(teacherDeps(ctx), { action: "markDirectRead", studentId: S1, throughMessageId: o1, seenIdsAtBoundary: [o1] });
     expect(r.jsonBody).toMatchObject({ unread: 2 });                                              // old2 + new
     const latest = (await tGet(teacherDeps(ctx), "?studentId=" + S1)).jsonBody.messages.at(-1).messageId;
-    expect((await tPost(teacherDeps(ctx), { action: "markDirectRead", studentId: S1, throughMessageId: latest, seenIdsAtBoundary: [latest] })).jsonBody).toMatchObject({ unread: 0 });
-    expect(ctx.getJson(teacherDirectStateName("builder-1", S1)).seenIdsAtBoundary).toEqual([latest]);
+    // a sequenced acknowledgement alone never covers a legacy id (separate read domains): old2 stays unread …
+    expect((await tPost(teacherDeps(ctx), { action: "markDirectRead", studentId: S1, throughMessageId: latest, seenIdsAtBoundary: [latest] })).jsonBody).toMatchObject({ unread: 1 });
+    // … until the snapshot's legacy part acknowledges it
+    expect((await tPost(teacherDeps(ctx), { action: "markDirectRead", studentId: S1, throughMessageId: latest, seenIdsAtBoundary: [latest], legacyThroughMessageId: o2, legacySeenIdsAtBoundary: [o2] })).jsonBody).toMatchObject({ unread: 0 });
+    expect(ctx.getJson(teacherDirectStateName("builder-1", S1))).toMatchObject({ legacy: { boundaryMs: 1700000000002, seenIdsAtBoundary: [o2] }, sequenced: { seenIdsAtBoundary: [latest] } });
   });
 
   it("archived student's legacy + sequenced history stays readable and markable", async () => {
@@ -193,7 +196,7 @@ describe("legacy (Phase 5C) messages — backward compatible, fail-safe", () => 
     ctx.setJson("platform/users/" + S1 + ".json", { ...u, active: false, archived: true });
     const r = await tGet(teacherDeps(ctx), "?studentId=" + S1);
     expect(r.jsonBody.messages.map(m => m.body)).toEqual(["old1", "new"]);
-    const X = r.jsonBody.messages[1].messageId;
-    expect((await tPost(teacherDeps(ctx), { action: "markDirectRead", studentId: S1, throughMessageId: X, seenIdsAtBoundary: [X] })).jsonBody).toMatchObject({ unread: 0 });
+    const [L, X] = r.jsonBody.messages.map(m => m.messageId);
+    expect((await tPost(teacherDeps(ctx), { action: "markDirectRead", studentId: S1, throughMessageId: X, seenIdsAtBoundary: [X], legacyThroughMessageId: L, legacySeenIdsAtBoundary: [L] })).jsonBody).toMatchObject({ unread: 0 });
   });
 });
