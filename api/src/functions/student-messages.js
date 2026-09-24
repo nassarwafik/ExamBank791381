@@ -24,7 +24,7 @@ const {
   studentDisplayName, DIRECT_HISTORY_LIMIT, ANNOUNCEMENT_HISTORY_LIMIT
 } = require("../lib/message-store");
 const {
-  MarkReadError, markStreamRead, countUnread, loadMarker, combineCounts, studentDirectStateName, studentAnnouncementStateName
+  MarkReadError, markStreamRead, countUnread, loadMarker, isReadBy, combineCounts, studentDirectStateName, studentAnnouncementStateName
 } = require("../lib/message-read-state");
 
 const CLASS_PREFIX = "platform/classes/";
@@ -76,10 +76,12 @@ async function handler(request, deps = {}, obs = null) {
       if (new URL(request.url).searchParams.get("view") === "unread") {
         return { status: 200, jsonBody: { ok: true, ...(await unreadSummary(container, streams, deps)) } };
       }
-      const direct = await listRecentMessages(container, directPrefix(studentId), { kind: "direct", studentId }, DIRECT_HISTORY_LIMIT, deps);
+      // THIS student's legacy read state shapes each page's unread legacy frontier (see listRecentMessages).
+      const legacyReadBy = async s => { const marker = await loadMarker(container, s.stateName, deps); return { isLegacyRead: id => isReadBy(marker, id) }; };
+      const direct = await listRecentMessages(container, directPrefix(studentId), { kind: "direct", studentId }, DIRECT_HISTORY_LIMIT, deps, await legacyReadBy(streams.direct));
       const classId = classroom ? String(student.classId) : "";
       const announcements = classId
-        ? await listRecentMessages(container, announcementPrefix(classId), { kind: "announcement", classId }, ANNOUNCEMENT_HISTORY_LIMIT, deps)
+        ? await listRecentMessages(container, announcementPrefix(classId), { kind: "announcement", classId }, ANNOUNCEMENT_HISTORY_LIMIT, deps, await legacyReadBy(streams.announcements))
         : { messages: [], hasMore: false };
       return { status: 200, jsonBody: {
         ok: true,

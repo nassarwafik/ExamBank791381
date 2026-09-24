@@ -27,7 +27,7 @@ const {
   isSafeId, directPrefix, announcementPrefix, normalizeMessageBody, clampLimit, createMessage, listRecentMessages,
   messageView, studentDisplayName, DIRECT_HISTORY_LIMIT, ANNOUNCEMENT_HISTORY_LIMIT
 } = require("../lib/message-store");
-const { MarkReadError, markStreamRead, countUnread, teacherDirectStateName, teacherDirectUnread } = require("../lib/message-read-state");
+const { MarkReadError, markStreamRead, countUnread, loadMarker, isReadBy, teacherDirectStateName, teacherDirectUnread } = require("../lib/message-read-state");
 
 const USER_PREFIX = "platform/users/";
 const CLASS_PREFIX = "platform/classes/";
@@ -99,7 +99,9 @@ async function handler(request, deps = {}, obs = null) {
         const student = await loadStudent(container, studentId, dl);
         if (!student) return notFound(MSG.studentNotFound);
         const state = await directSendState(container, student, dl);
-        const page = await listRecentMessages(container, directPrefix(studentId), { kind: "direct", studentId }, clampLimit(url.searchParams.get("limit"), DIRECT_HISTORY_LIMIT), deps);
+        // THIS teacher's legacy read state shapes the page's unread legacy frontier (see listRecentMessages).
+        const marker = await loadMarker(container, teacherDirectStateName(teacherId, studentId), deps);
+        const page = await listRecentMessages(container, directPrefix(studentId), { kind: "direct", studentId }, clampLimit(url.searchParams.get("limit"), DIRECT_HISTORY_LIMIT), deps, { isLegacyRead: id => isReadBy(marker, id) });
         return { status: 200, jsonBody: {
           ok: true,
           student: { userId: studentId, displayName: studentDisplayName(student), classId: String(student.classId || ""), active: student.active !== false, archived: student.archived === true },
@@ -111,7 +113,8 @@ async function handler(request, deps = {}, obs = null) {
         const classroom = await loadClass(container, classId, dl);
         if (!classroom) return notFound(MSG.classNotFound);
         const archived = normalizeClassStatus(classroom) === "archived";
-        const page = await listRecentMessages(container, announcementPrefix(classId), { kind: "announcement", classId }, clampLimit(url.searchParams.get("limit"), ANNOUNCEMENT_HISTORY_LIMIT), deps);
+        // The teacher has no read state for announcements (never acknowledged) → no unread legacy frontier.
+        const page = await listRecentMessages(container, announcementPrefix(classId), { kind: "announcement", classId }, clampLimit(url.searchParams.get("limit"), ANNOUNCEMENT_HISTORY_LIMIT), deps, { isLegacyRead: () => true });
         return { status: 200, jsonBody: {
           ok: true, classroom: classSummary(classroom), canSend: !archived, readOnlyCode: archived ? "classArchived" : "", readOnlyReason: archived ? MSG.classArchived : "",
           messages: page.messages.map(m => messageView(m, { includeClassId: true })), hasMore: page.hasMore

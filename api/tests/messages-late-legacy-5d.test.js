@@ -192,12 +192,12 @@ describe("MIXED history", () => {
     expect([isReadBy(m, A), isReadBy(m, B), isReadBy(m, C)]).toEqual([true, true, false]);
   });
 
-  it("a page smaller than the history still carries the newest legacy group, so legacy history never gets stuck unread", async () => {
+  it("a page smaller than the history still carries every unread legacy message, so legacy history never gets stuck unread", async () => {
     const ctx = createMemoryContainer(seed());
     for (const [ms, h] of [[1700000000001, "1"], [1700000000002, "2"], [1700000000003, "3"]]) oldDirect(ctx, S1, legacyId(ms, h), "student", "L" + h);
     for (let i = 1; i <= 4; i++) await sPost(ST(ctx), { action: "sendDirect", body: "S" + i });
     const page = await tGet(T(ctx), "?studentId=" + S1 + "&limit=2");
-    expect(page.jsonBody.messages.map(m => m.body)).toEqual(["L3", "S3", "S4"]);
+    expect(page.jsonBody.messages.map(m => m.body)).toEqual(["L1", "L2", "L3", "S3", "S4"]);   // all unread legacy shown
     expect(page.jsonBody.hasMore).toBe(true);
     const ack = ackFrom(page.jsonBody.messages, m => m.senderRole === "student");
     expect((await tPost(T(ctx), { action: "markDirectRead", studentId: S1, ...ack })).jsonBody.unread).toBe(0);

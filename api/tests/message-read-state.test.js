@@ -160,8 +160,9 @@ describe("role filter + cap", () => {
     });
     expect(r).toEqual({ unread: UNREAD_DISPLAY_CAP, capped: true });
     expect(downloaded).toBeLessThan(150);
-    // read messages are never downloaded
-    await markTeacher(ctx, S2, id(1800000000000 + 399, "b"));
+    // read messages are never downloaded (a marker covering all 400 — written directly: acknowledging 400 unread legacy
+    // ids at once is refused by the legacy frontier, since no page can show them all)
+    ctx.setJson(teacherDirectStateName("builder-1", S2), { schemaVersion: 2, legacy: { boundaryMs: 1800000000000 + 399, seenIdsAtBoundary: [id(1800000000000 + 399, "b")] }, sequenced: null });
     downloaded = 0;
     const r2 = await countUnread(ctx.container, { ...teacherStream(S2), marker: await loadMarker(ctx.container, teacherDirectStateName("builder-1", S2)), include: () => true }, {
       downloadManyJson: async (_c, names) => { downloaded += names.length; return names.map(n => ctx.getJson(n)); }

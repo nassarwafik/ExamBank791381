@@ -31,6 +31,11 @@
 // legacy id — its legacy progress is "every legacy id created before the marker was written" (legacy boundary =
 // updatedAt, nothing seen at it; an unparsable updatedAt → no legacy progress, fail-safe). The next write stores v2.
 // Anything malformed reads as no progress in that domain (unread — fails safe), never as read.
+// LEGACY FRONTIER (review follow-up, multiple late legacy groups). A page carries the reader's unread legacy ids
+// oldest-first up to a bound and omits the unread ones beyond it (message-store.js listRecentMessages), so every
+// unread legacy id below the highest legacy id it shows is shown too. The server enforces the same rule: a legacy
+// boundary may never newly cover an unread legacy id beyond that bound (checked against the marker version being
+// updated, inside the CAS) — such an acknowledgement is rejected (400, no write) and the message stays unread.
 // Marking read is a SNAPSHOT ACKNOWLEDGEMENT: the client sends X (the latest unread-RELEVANT message it actually
 // displayed) and seenIdsAtBoundary — the relevant ids at X's millisecond that were in THAT applied snapshot. The boundary
 // ids are NEVER re-derived from a fresh listing: a message created in the same millisecond after the reader's GET (on
@@ -47,7 +52,7 @@
 // sender role/kind/owner — stopping once the display cap (99 → "99+") is exceeded.
 const crypto = require("crypto");
 const { listBlobNames, downloadManyJson, downloadJsonOrNull, mutateJsonWithRetry, getReadConcurrency } = require("./platform-storage");
-const { MESSAGE_PREFIX, DIRECT_PREFIX, MESSAGE_ID_RE, SEQUENCE_KEY_BASE, isSafeId, directPrefix, normalizeStoredMessage, blobMessageId } = require("./message-store");
+const { MESSAGE_PREFIX, DIRECT_PREFIX, MESSAGE_ID_RE, SEQUENCE_KEY_BASE, isSafeId, directPrefix, normalizeStoredMessage, blobMessageId, unreadLegacyOverflow } = require("./message-store");
 
 const READ_STATE_PREFIX = MESSAGE_PREFIX + "read-state/";
 const USER_PREFIX = "platform/users/";
@@ -187,7 +192,13 @@ function parseAcknowledgementPart(throughMessageId, seenIdsAtBoundary) {
  * does not validate / is not unread-relevant (`include`) for this reader. The validation listing is deliberately NOT
  * returned: it is stale once the marker is written and must never feed a remaining count.
  */
-async function validateAcknowledgement(container, { streamPrefix, expected, include, throughMessageId, seenIdsAtBoundary, legacyThroughMessageId, legacySeenIdsAtBoundary }, deps = {}) {
+async function validateAcknowledgement(container, ack, deps = {}) {
+  return (await checkAcknowledgement(container, ack, deps)).incoming;
+}
+
+/** validateAcknowledgement + the listed LEGACY ids of the validation listing (used only for the legacy frontier
+ *  check against the marker being updated — never for a remaining count). */
+async function checkAcknowledgement(container, { streamPrefix, expected, include, throughMessageId, seenIdsAtBoundary, legacyThroughMessageId, legacySeenIdsAtBoundary }, deps = {}) {
   const parts = [parseAcknowledgementPart(throughMessageId, seenIdsAtBoundary)];
   if (legacyThroughMessageId != null || legacySeenIdsAtBoundary != null) {
     if (parts[0].domain !== "sequenced") throw new MarkReadError();
@@ -196,14 +207,25 @@ async function validateAcknowledgement(container, { streamPrefix, expected, incl
     parts.push(legacy);
   }
   const seen = parts.flatMap(p => p.boundary.seenIdsAtBoundary);
-  const listed = new Set(await listStreamIds(container, streamPrefix, deps));
+  const ids = await listStreamIds(container, streamPrefix, deps);
+  const listed = new Set(ids);
   if (!seen.every(id => listed.has(id))) throw new MarkReadError();
   const docs = await (deps.downloadManyJson || downloadManyJson)(container, seen.map(id => streamPrefix + id + ".json"), getReadConcurrency());
   for (let i = 0; i < seen.length; i++) {
     const doc = normalizeStoredMessage(docs[i], { ...expected, messageId: seen[i] });
     if (!doc || !include(doc)) throw new MarkReadError();
   }
-  return Object.fromEntries(parts.map(p => [p.domain, p.boundary]));
+  return { incoming: Object.fromEntries(parts.map(p => [p.domain, p.boundary])), legacyIds: ids.filter(id => keyDomain(messageIdMs(id)) === "legacy") };
+}
+
+/** Rejects (MarkReadError) a legacy boundary that would newly cover an unread legacy id a page can not carry (beyond
+ *  the unread-legacy bound, see LEGACY FRONTIER) — i.e. a legacy message that was never shown. */
+function assertLegacyFrontier(marker, legacyIds, boundary) {
+  if (!boundary) return;
+  for (const id of unreadLegacyOverflow(legacyIds, x => isReadBy(marker, x))) {
+    const key = messageIdMs(id);
+    if (key < boundary.boundaryMs || (key === boundary.boundaryMs && boundary.seenIdsAtBoundary.includes(id))) throw new MarkReadError();
+  }
 }
 
 /**
@@ -214,11 +236,13 @@ async function validateAcknowledgement(container, { streamPrefix, expected, incl
  * taken after the write.
  */
 async function markStreamRead(container, { stateName, streamPrefix, expected, include, throughMessageId, seenIdsAtBoundary, legacyThroughMessageId, legacySeenIdsAtBoundary, meta = {} }, deps = {}) {
-  const incoming = await validateAcknowledgement(container, { streamPrefix, expected, include, throughMessageId, seenIdsAtBoundary, legacyThroughMessageId, legacySeenIdsAtBoundary }, deps);
+  const { incoming, legacyIds } = await checkAcknowledgement(container, { streamPrefix, expected, include, throughMessageId, seenIdsAtBoundary, legacyThroughMessageId, legacySeenIdsAtBoundary }, deps);
   const mutate = deps.mutateJsonWithRetry || mutateJsonWithRetry;
   try {
     const written = await mutate(container, stateName, current => {
-      const r = advanceMarker(normalizeMarker(current), incoming);
+      const marker = normalizeMarker(current);
+      assertLegacyFrontier(marker, legacyIds, incoming.legacy);   // never cover an unread legacy id no page showed
+      const r = advanceMarker(marker, incoming);
       if (!r.changed) throw new NoChange(r.marker);                 // no regression, no redundant write
       return { schemaVersion: 2, ...meta, legacy: r.marker.legacy, sequenced: r.marker.sequenced, updatedAt: new Date().toISOString() };
     });
