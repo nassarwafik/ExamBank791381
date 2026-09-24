@@ -27,7 +27,9 @@ const {
   isSafeId, directPrefix, announcementPrefix, normalizeMessageBody, clampLimit, createMessage, listRecentMessages,
   messageView, studentDisplayName, DIRECT_HISTORY_LIMIT, ANNOUNCEMENT_HISTORY_LIMIT
 } = require("../lib/message-store");
-const { MarkReadError, markStreamRead, countUnread, loadMarker, isReadBy, teacherDirectStateName, teacherDirectUnread } = require("../lib/message-read-state");
+const {
+  MarkReadError, markStreamRead, countUnread, loadMarker, isReadBy, absorbIrrelevantLegacy, READER_RELEVANCE, teacherDirectStateName, teacherDirectUnread
+} = require("../lib/message-read-state");
 
 const USER_PREFIX = "platform/users/";
 const CLASS_PREFIX = "platform/classes/";
@@ -99,9 +101,14 @@ async function handler(request, deps = {}, obs = null) {
         const student = await loadStudent(container, studentId, dl);
         if (!student) return notFound(MSG.studentNotFound);
         const state = await directSendState(container, student, dl);
-        // THIS teacher's legacy read state shapes the page's unread legacy frontier (see listRecentMessages).
-        const marker = await loadMarker(container, teacherDirectStateName(teacherId, studentId), deps);
-        const page = await listRecentMessages(container, directPrefix(studentId), { kind: "direct", studentId }, clampLimit(url.searchParams.get("limit"), DIRECT_HISTORY_LIMIT), deps, { isLegacyRead: id => isReadBy(marker, id) });
+        // THIS teacher's legacy read state + relevance shape the page's unread legacy frontier (see listRecentMessages).
+        const stateName = teacherDirectStateName(teacherId, studentId);
+        const marker = await loadMarker(container, stateName, deps);
+        const page = await listRecentMessages(container, directPrefix(studentId), { kind: "direct", studentId }, clampLimit(url.searchParams.get("limit"), DIRECT_HISTORY_LIMIT), deps, { isLegacyRead: id => isReadBy(marker, id), include: READER_RELEVANCE.teacherDirect });
+        // A frontier window of only the teacher's own legacy messages is folded into the boundary (never starves it).
+        if (page.absorbable.length) {
+          await absorbIrrelevantLegacy(container, { stateName, legacyIds: page.legacyIds, ids: page.absorbable, meta: { principalRole: "teacher", streamKind: "direct", streamId: studentId, teacherId } }, deps).catch(() => {});
+        }
         return { status: 200, jsonBody: {
           ok: true,
           student: { userId: studentId, displayName: studentDisplayName(student), classId: String(student.classId || ""), active: student.active !== false, archived: student.archived === true },
@@ -171,7 +178,7 @@ async function handler(request, deps = {}, obs = null) {
       if (!student) return notFound(MSG.studentNotFound);
       try {
         // The teacher's unread-relevant messages are the STUDENT's; the acknowledgement must be built from those.
-        const stream = { streamPrefix: directPrefix(studentId), expected: { kind: "direct", studentId }, include: doc => doc.senderRole === "student" };
+        const stream = { streamPrefix: directPrefix(studentId), expected: { kind: "direct", studentId }, include: READER_RELEVANCE.teacherDirect };
         const { marker } = await markStreamRead(container, {
           stateName: teacherDirectStateName(teacherId, studentId), ...stream,
           throughMessageId: body.throughMessageId, seenIdsAtBoundary: body.seenIdsAtBoundary,

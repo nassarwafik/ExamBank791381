@@ -31,11 +31,15 @@
 // legacy id — its legacy progress is "every legacy id created before the marker was written" (legacy boundary =
 // updatedAt, nothing seen at it; an unparsable updatedAt → no legacy progress, fail-safe). The next write stores v2.
 // Anything malformed reads as no progress in that domain (unread — fails safe), never as read.
-// LEGACY FRONTIER (review follow-up, multiple late legacy groups). A page carries the reader's unread legacy ids
-// oldest-first up to a bound and omits the unread ones beyond it (message-store.js listRecentMessages), so every
-// unread legacy id below the highest legacy id it shows is shown too. The server enforces the same rule: a legacy
-// boundary may never newly cover an unread legacy id beyond that bound (checked against the marker version being
-// updated, inside the CAS) — such an acknowledgement is rejected (400, no write) and the message stays unread.
+// LEGACY FRONTIER (review follow-ups, multiple late legacy groups / own-message starvation). A page carries the reader's
+// unread RELEVANT legacy ids oldest-first up to a bound and omits the unread relevant ones beyond it (message-store.js
+// scanLegacyFrontier / listRecentMessages), so every unread relevant legacy id below the highest one it shows is shown
+// too. Relevance is READER_RELEVANCE — the same sender-role rule countUnread counts — so the reader's own messages never
+// spend the bound. The server enforces the same rule with the same scan: a legacy boundary may never newly cover an
+// unread legacy id outside that frontier window (checked against the marker version being updated, inside every CAS
+// attempt) — such an acknowledgement is rejected (400, no write) and the message stays unread. When a window holds only
+// the reader's own messages, a thread GET folds them into the legacy boundary (absorbIrrelevantLegacy): they are never
+// counted unread, so this changes no count, and it guarantees own messages can never permanently starve the frontier.
 // Marking read is a SNAPSHOT ACKNOWLEDGEMENT: the client sends X (the latest unread-RELEVANT message it actually
 // displayed) and seenIdsAtBoundary — the relevant ids at X's millisecond that were in THAT applied snapshot. The boundary
 // ids are NEVER re-derived from a fresh listing: a message created in the same millisecond after the reader's GET (on
@@ -52,7 +56,7 @@
 // sender role/kind/owner — stopping once the display cap (99 → "99+") is exceeded.
 const crypto = require("crypto");
 const { listBlobNames, downloadManyJson, downloadJsonOrNull, mutateJsonWithRetry, getReadConcurrency } = require("./platform-storage");
-const { MESSAGE_PREFIX, DIRECT_PREFIX, MESSAGE_ID_RE, SEQUENCE_KEY_BASE, isSafeId, directPrefix, normalizeStoredMessage, blobMessageId, unreadLegacyOverflow } = require("./message-store");
+const { MESSAGE_PREFIX, DIRECT_PREFIX, MESSAGE_ID_RE, SEQUENCE_KEY_BASE, isSafeId, directPrefix, normalizeStoredMessage, blobMessageId, scanLegacyFrontier } = require("./message-store");
 
 const READ_STATE_PREFIX = MESSAGE_PREFIX + "read-state/";
 const USER_PREFIX = "platform/users/";
@@ -60,6 +64,13 @@ const UNREAD_DISPLAY_CAP = 99;
 // Upper bound on a snapshot acknowledgement's boundary ids (a snapshot page never exceeds the history cap).
 const MAX_BOUNDARY_IDS = 200;
 const DOMAINS = ["legacy", "sequenced"];
+// Which messages a reader must acknowledge (its unread-relevant sender role) — the ONE definition used for counting,
+// acknowledgement validation, the legacy frontier and absorption.
+const READER_RELEVANCE = Object.freeze({
+  teacherDirect: doc => doc.senderRole === "student",     // a teacher acknowledges the student's messages
+  studentDirect: doc => doc.senderRole === "teacher",     // a student acknowledges the teacher's messages
+  announcements: () => true                               // every (validated) announcement
+});
 
 class MarkReadError extends Error {
   constructor(message) { super(message || "Invalid message reference."); this.name = "MarkReadError"; this.httpStatus = 400; }
@@ -218,14 +229,41 @@ async function checkAcknowledgement(container, { streamPrefix, expected, include
   return { incoming: Object.fromEntries(parts.map(p => [p.domain, p.boundary])), legacyIds: ids.filter(id => keyDomain(messageIdMs(id)) === "legacy") };
 }
 
-/** Rejects (MarkReadError) a legacy boundary that would newly cover an unread legacy id a page can not carry (beyond
- *  the unread-legacy bound, see LEGACY FRONTIER) — i.e. a legacy message that was never shown. */
-function assertLegacyFrontier(marker, legacyIds, boundary) {
-  if (!boundary) return;
-  for (const id of unreadLegacyOverflow(legacyIds, x => isReadBy(marker, x))) {
+/** The unread legacy ids (under `marker`) that a legacy `boundary` would newly cover, ascending. */
+function newlyCoveredLegacy(marker, legacyIds, boundary) {
+  return legacyIds.filter(id => {
+    if (isReadBy(marker, id)) return false;
     const key = messageIdMs(id);
-    if (key < boundary.boundaryMs || (key === boundary.boundaryMs && boundary.seenIdsAtBoundary.includes(id))) throw new MarkReadError();
+    return key < boundary.boundaryMs || (key === boundary.boundaryMs && boundary.seenIdsAtBoundary.includes(id));
+  });
+}
+
+/** Rejects (MarkReadError) a legacy boundary that would newly cover an unread legacy id outside the reader's frontier
+ *  window (see LEGACY FRONTIER) — i.e. a relevant legacy message no page could have shown. Runs the SAME scan as the page
+ *  (scanLegacyFrontier, same relevance), against `marker` — the version being updated. */
+async function assertLegacyFrontier(marker, legacyIds, boundary, { expected, include, loadDocs }) {
+  if (!boundary) return;
+  const covered = newlyCoveredLegacy(marker, legacyIds, boundary);
+  if (!covered.length) return;
+  const unread = legacyIds.filter(id => !isReadBy(marker, id));
+  const scan = await scanLegacyFrontier(unread, loadDocs, expected, include, { until: covered[covered.length - 1] });
+  for (const id of covered) {
+    if (!scan.classified.has(id)) throw new MarkReadError();                       // beyond the frontier window
+    if (scan.classified.get(id) && !scan.frontier.has(id)) throw new MarkReadError();
   }
+}
+
+/** Immutable message documents of one stream, downloaded once per request (reused across CAS attempts). */
+function docLoader(container, streamPrefix, deps) {
+  const cache = new Map();
+  return async ids => {
+    const missing = ids.filter(id => !cache.has(id));
+    if (missing.length) {
+      const got = await (deps.downloadManyJson || downloadManyJson)(container, missing.map(id => streamPrefix + id + ".json"), getReadConcurrency());
+      missing.forEach((id, i) => cache.set(id, got[i]));
+    }
+    return ids.map(id => cache.get(id));
+  };
 }
 
 /**
@@ -238,10 +276,12 @@ function assertLegacyFrontier(marker, legacyIds, boundary) {
 async function markStreamRead(container, { stateName, streamPrefix, expected, include, throughMessageId, seenIdsAtBoundary, legacyThroughMessageId, legacySeenIdsAtBoundary, meta = {} }, deps = {}) {
   const { incoming, legacyIds } = await checkAcknowledgement(container, { streamPrefix, expected, include, throughMessageId, seenIdsAtBoundary, legacyThroughMessageId, legacySeenIdsAtBoundary }, deps);
   const mutate = deps.mutateJsonWithRetry || mutateJsonWithRetry;
+  const loadDocs = docLoader(container, streamPrefix, deps);
   try {
-    const written = await mutate(container, stateName, current => {
+    const written = await mutate(container, stateName, async current => {
       const marker = normalizeMarker(current);
-      assertLegacyFrontier(marker, legacyIds, incoming.legacy);   // never cover an unread legacy id no page showed
+      // every attempt: never cover an unread relevant legacy id no page could have shown
+      await assertLegacyFrontier(marker, legacyIds, incoming.legacy, { expected, include, loadDocs });
       const r = advanceMarker(marker, incoming);
       if (!r.changed) throw new NoChange(r.marker);                 // no regression, no redundant write
       return { schemaVersion: 2, ...meta, legacy: r.marker.legacy, sequenced: r.marker.sequenced, updatedAt: new Date().toISOString() };
@@ -250,6 +290,32 @@ async function markStreamRead(container, { stateName, streamPrefix, expected, in
   } catch (e) {
     if (e instanceof NoChange) return { marker: e.marker };
     throw e;
+  }
+}
+
+/**
+ * Fold a run of the reader's OWN / invalid legacy messages (`ids`, ascending — scanLegacyFrontier's `absorbable`,
+ * classified irrelevant by the SAME relevance rule) into its legacy boundary, so they can never keep the frontier from
+ * reaching the relevant messages behind them. Safe by construction: inside the CAS the new boundary may only newly cover
+ * ids of that run (never a relevant or unclassified one) — otherwise nothing is written. Changes no unread count.
+ */
+async function absorbIrrelevantLegacy(container, { stateName, legacyIds, ids, meta = {} }, deps = {}) {
+  if (!ids || !ids.length) return;
+  const run = new Set(ids);
+  const boundaryMs = messageIdMs(ids[ids.length - 1]);
+  const boundary = { boundaryMs, seenIdsAtBoundary: ids.filter(id => messageIdMs(id) === boundaryMs).sort() };
+  if (keyDomain(boundaryMs) !== "legacy") return;
+  const mutate = deps.mutateJsonWithRetry || mutateJsonWithRetry;
+  try {
+    await mutate(container, stateName, current => {
+      const marker = normalizeMarker(current);
+      if (newlyCoveredLegacy(marker, legacyIds, boundary).some(id => !run.has(id))) throw new NoChange(marker);
+      const r = advanceMarker(marker, { legacy: boundary });
+      if (!r.changed) throw new NoChange(r.marker);
+      return { schemaVersion: 2, ...meta, legacy: r.marker.legacy, sequenced: r.marker.sequenced, updatedAt: new Date().toISOString() };
+    });
+  } catch (e) {
+    if (!(e instanceof NoChange)) throw e;
   }
 }
 
@@ -325,7 +391,7 @@ async function teacherDirectUnread(container, teacherId, { classId = "" } = {}, 
   const counts = [];
   for (const r of rows) {
     if (!classId && combineCounts(...counts).capped) break;          // global badge already "99+"
-    const c = await countUnread(container, { streamPrefix: directPrefix(r.sid), expected: { kind: "direct", studentId: r.sid }, marker: r.marker, ids: r.ids, include: doc => doc.senderRole === "student" }, deps);
+    const c = await countUnread(container, { streamPrefix: directPrefix(r.sid), expected: { kind: "direct", studentId: r.sid }, marker: r.marker, ids: r.ids, include: READER_RELEVANCE.teacherDirect }, deps);
     counts.push(c);
     if (c.unread > 0) byStudent[r.sid] = c;
   }
@@ -334,7 +400,8 @@ async function teacherDirectUnread(container, teacherId, { classId = "" } = {}, 
 }
 
 module.exports = {
-  READ_STATE_PREFIX, UNREAD_DISPLAY_CAP, MAX_BOUNDARY_IDS, MarkReadError, validateAcknowledgement,
+  READ_STATE_PREFIX, UNREAD_DISPLAY_CAP, MAX_BOUNDARY_IDS, READER_RELEVANCE, MarkReadError, validateAcknowledgement,
+  absorbIrrelevantLegacy,
   teacherActorKey, teacherDirectStatePrefix, teacherDirectStateName, studentDirectStateName, studentAnnouncementStateName,
   messageIdMs, keyDomain, normalizeMarker, isReadBy, advanceBoundary, advanceMarker, listStreamIds, loadMarker, markStreamRead, countUnread,
   combineCounts, groupDirectIds, teacherDirectUnread

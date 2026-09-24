@@ -37,9 +37,13 @@ const DIRECT_HISTORY_LIMIT = 100;
 const ANNOUNCEMENT_HISTORY_LIMIT = 50;
 const MAX_HISTORY_LIMIT = 200;
 const MAX_CREATE_ATTEMPTS = 5;
-// Unread LEGACY ids a page carries beyond its normal tail (the reader's oldest unread legacy frontier). Bounded so a
-// long unread 5C history never turns a poll into a full-history download; the rest waits for a later page.
+// The reader's unread legacy FRONTIER (see scanLegacyFrontier): at most LEGACY_UNREAD_PAGE_LIMIT unread legacy messages
+// the reader must acknowledge ride along beyond a page's normal tail, and at most LEGACY_FRONTIER_SCAN_LIMIT unread
+// legacy candidates are classified per request — so a long unread 5C history never turns a poll into a full-history
+// download; the rest waits for a later page.
 const LEGACY_UNREAD_PAGE_LIMIT = 100;
+const LEGACY_FRONTIER_SCAN_LIMIT = 400;
+const LEGACY_FRONTIER_BATCH = 50;
 const SENDER_ROLES = new Set(["teacher", "student"]);
 const MESSAGE_ID_RE = /^\d{13}-[a-f0-9]{16}$/;
 // Order key of stream position 1 is SEQUENCE_KEY_BASE + 1. Every legacy millisecond id (< year 2255) sorts below it.
@@ -128,17 +132,6 @@ async function createMessage(container, prefix, buildDoc, deps = {}) {
   throw new Error("Could not publish the message (stream position contention).");
 }
 
-/**
- * The unread legacy ids a page can NOT carry: `legacyIds` ascending, unread per `isRead`, beyond the first
- * LEGACY_UNREAD_PAGE_LIMIT unread ones. A page omits exactly these (wherever they would otherwise appear), and an
- * acknowledgement may never newly cover one of them (message-read-state.js) — so a legacy boundary can only advance
- * over unread legacy messages a page has actually shown. Empty when every unread legacy id fits.
- */
-function unreadLegacyOverflow(legacyIds, isRead) {
-  const unread = legacyIds.filter(id => !isRead(id));
-  return new Set(unread.slice(LEGACY_UNREAD_PAGE_LIMIT));
-}
-
 /** The message id of a stream blob name: a legacy id, or the CANONICAL id of a sequenced position; else "". */
 function blobMessageId(name, prefix) {
   if (!name.startsWith(prefix) || !name.endsWith(".json")) return "";
@@ -157,11 +150,58 @@ function normalizeStoredMessage(doc, expected) {
   return doc;
 }
 
+/** Whether a stored message is one THIS reader must acknowledge: a valid document of this stream (`expected`) that the
+ *  reader's sender-role rule (`include`) accepts — exactly what countUnread counts as unread. */
+function isRelevantMessage(doc, expected, messageId, include) {
+  const valid = normalizeStoredMessage(doc, { ...expected, messageId });
+  return !!valid && include(valid);
+}
+
+/**
+ * The reader's LEGACY FRONTIER. `unreadIds` are the reader's unread legacy ids, ascending (legacy order); `loadDocs(ids)`
+ * returns their documents. Walks them oldest-first, classifying each with isRelevantMessage, and stops after the
+ * LEGACY_UNREAD_PAGE_LIMIT-th RELEVANT one or after LEGACY_FRONTIER_SCAN_LIMIT candidates. The reader's own (irrelevant)
+ * messages never spend the relevant budget. Returns:
+ *   classified  Map id → relevant? for every id walked (the frontier window; ids after it are unknown);
+ *   frontier    the relevant ids of the window — the only unread relevant legacy ids a page may show or an
+ *               acknowledgement may newly cover (message-read-state.js enforces the same rule);
+ *   absorbable  when the window holds NO relevant message (the bound was hit, or no unread legacy is left): its ids, all
+ *               the reader's own / invalid messages — safe to fold into the reader's legacy boundary (they are never
+ *               counted unread), so own messages can never permanently starve the frontier (absorbIrrelevantLegacy).
+ *               When the window holds a relevant message, the reader's own acknowledgement of it covers them instead.
+ * `until` (optional) stops the walk once ids pass it.
+ */
+async function scanLegacyFrontier(unreadIds, loadDocs, expected, include, { until } = {}) {
+  const classified = new Map();
+  const frontier = [];
+  const leading = [];
+  let i = 0;
+  while (i < unreadIds.length && classified.size < LEGACY_FRONTIER_SCAN_LIMIT && frontier.length < LEGACY_UNREAD_PAGE_LIMIT) {
+    if (until !== undefined && unreadIds[i] > until) break;
+    const slice = unreadIds.slice(i, i + Math.min(LEGACY_FRONTIER_BATCH, LEGACY_FRONTIER_SCAN_LIMIT - classified.size));
+    const docs = await loadDocs(slice);
+    for (let j = 0; j < slice.length && frontier.length < LEGACY_UNREAD_PAGE_LIMIT; j++) {
+      if (until !== undefined && slice[j] > until) break;
+      const relevant = isRelevantMessage(docs[j], expected, slice[j], include);
+      classified.set(slice[j], relevant);
+      if (relevant) frontier.push(slice[j]);
+      else if (!frontier.length) leading.push(slice[j]);
+    }
+    i += slice.length;
+  }
+  const exhausted = classified.size === unreadIds.length;
+  const boundHit = classified.size >= LEGACY_FRONTIER_SCAN_LIMIT && frontier.length < LEGACY_UNREAD_PAGE_LIMIT;
+  const absorbable = until === undefined && !frontier.length && (boundHit || exhausted) ? leading : [];
+  return { classified, frontier: new Set(frontier), absorbable };
+}
+
 /**
  * The most recent `limit` messages under ONE prefix, oldest → newest (by id: legacy ids first), plus the reader's unread
  * legacy frontier and the newest legacy group (see below). Lists names only, sorts them, downloads just the bounded
- * page. `expected` pins kind + studentId/classId for validation. `options.isLegacyRead(id)` is the READER's legacy read
- * state (its marker); without it every legacy id counts as unread (fail-safe: nothing is ever skipped).
+ * page (and the bounded frontier window). `expected` pins kind + studentId/classId for validation. Reader options:
+ * `isLegacyRead(id)` — the reader's legacy read state (its marker); `include(doc)` — the reader's sender-role rule.
+ * Without them every legacy id counts as unread and relevant (fail-safe: nothing unread is ever skipped). Returns
+ * { messages, hasMore, legacyIds, absorbable } (see scanLegacyFrontier for `absorbable`).
  */
 async function listRecentMessages(container, prefix, expected, limit, deps = {}, options = {}) {
   const list = deps.listBlobNames || listBlobNames;
@@ -185,29 +225,44 @@ async function listRecentMessages(container, prefix, expected, limit, deps = {},
   });
   // LEGACY FRONTIER. Legacy ids sort before every sequenced id, so in a long stream legacy messages published late (by
   // a still-running Phase 5C writer, e.g. across a rollback) fall outside the tail. A legacy acknowledgement covers
-  // every legacy id below it, so the page must never show a legacy id while hiding an UNREAD one below it:
-  //   • the reader's unread legacy ids ride along oldest-first, up to LEGACY_UNREAD_PAGE_LIMIT;
-  //   • unread legacy ids beyond that bound are omitted everywhere (tail and newest group included) — they stay
-  //     unread and appear once the frontier before them has been acknowledged (a later page);
-  //   • the newest legacy group rides along too (a late message stays visible after it was read); its unread ids
-  //     obey the bound above, its read ids are always safe (they sit at or below the reader's boundary).
+  // every legacy id below it, so the page must never show a RELEVANT legacy id while hiding an unread relevant one below:
+  //   • the reader's unread RELEVANT legacy ids ride along oldest-first, up to LEGACY_UNREAD_PAGE_LIMIT — the reader's
+  //     own messages never spend that budget (scanLegacyFrontier);
+  //   • an unread relevant legacy id outside that frontier is omitted everywhere (tail and newest group included) — it
+  //     stays unread and appears once the frontier before it has been acknowledged (a later page);
+  //   • the reader's own messages keep the normal tail / newest-group display (they are never acknowledged, so showing
+  //     them can never cover anything), and read ids are always safe (at or below the reader's boundary).
   // Display order (by id) and the sequenced tail are unchanged.
   const legacy = visible.filter(e => messagePosition(e.messageId, prefix) === 0);
   const isLegacyRead = typeof options.isLegacyRead === "function" ? options.isLegacyRead : () => false;
-  const overflow = unreadLegacyOverflow(legacy.map(e => e.messageId), isLegacyRead);
-  const chosen = new Set(visible.slice(-limit));
-  const unread = legacy.filter(e => !isLegacyRead(e.messageId) && !overflow.has(e.messageId));
-  for (const e of unread) chosen.add(e);
+  const include = typeof options.include === "function" ? options.include : () => true;
+  const cache = new Map();                                                // name → document (immutable blobs)
+  const load = async names => {
+    const missing = names.filter(n => !cache.has(n));
+    if (missing.length) {
+      const got = await many(container, missing, getReadConcurrency());
+      missing.forEach((n, i) => cache.set(n, got[i]));
+    }
+    return names.map(n => cache.get(n));
+  };
+  const unreadIds = legacy.filter(e => !isLegacyRead(e.messageId)).map(e => e.messageId);
+  const scan = await scanLegacyFrontier(unreadIds, ids => load(ids.map(id => prefix + id + ".json")), expected, include);
+  const chosen = new Set(visible.slice(-limit).map(e => e.messageId));
+  for (const id of scan.frontier) chosen.add(id);
   const newestKey = legacy.length ? legacy[legacy.length - 1].messageId.slice(0, 13) : "";
-  for (const e of legacy.filter(x => x.messageId.slice(0, 13) === newestKey).slice(-MAX_HISTORY_LIMIT)) chosen.add(e);
-  const page = visible.filter(e => chosen.has(e) && !overflow.has(e.messageId));
-  const docs = await many(container, page.map(e => e.name), getReadConcurrency());
+  for (const e of legacy.filter(x => x.messageId.slice(0, 13) === newestKey).slice(-MAX_HISTORY_LIMIT)) chosen.add(e.messageId);
+  const candidates = visible.filter(e => chosen.has(e.messageId));
+  const docs = await load(candidates.map(e => e.name));
   const out = [];
-  for (let i = 0; i < page.length; i++) {
-    const doc = normalizeStoredMessage(docs[i], { ...expected, messageId: page[i].messageId });
-    if (doc) out.push(doc);
+  for (let i = 0; i < candidates.length; i++) {
+    const id = candidates[i].messageId;
+    const doc = normalizeStoredMessage(docs[i], { ...expected, messageId: id });
+    if (!doc) continue;
+    const unreadRelevant = messagePosition(id, prefix) === 0 && !isLegacyRead(id) && include(doc);
+    if (unreadRelevant && !scan.frontier.has(id)) continue;                 // outside the frontier: omitted, stays unread
+    out.push(doc);
   }
-  return { messages: out, hasMore: visible.length > page.length };
+  return { messages: out, hasMore: visible.length > out.length, legacyIds: legacy.map(e => e.messageId), absorbable: scan.absorbable };
 }
 
 /** The public view of a message. Never includes storage paths, sender ids or send-time class metadata unless the
@@ -239,5 +294,6 @@ module.exports = {
   isSafeId, directPrefix, announcementPrefix, sequencedMessageId, messagePosition, normalizeMessageBody, clampLimit,
   createMessage, listRecentMessages, normalizeStoredMessage, messageView, studentDisplayName,
   // Phase 5D — reused by the read-state store (message ids / stream listing), never duplicated there.
-  MESSAGE_ID_RE, SEQUENCE_KEY_BASE, blobMessageId, LEGACY_UNREAD_PAGE_LIMIT, unreadLegacyOverflow
+  MESSAGE_ID_RE, SEQUENCE_KEY_BASE, blobMessageId, LEGACY_UNREAD_PAGE_LIMIT, LEGACY_FRONTIER_SCAN_LIMIT, isRelevantMessage,
+  scanLegacyFrontier
 };
