@@ -286,7 +286,7 @@ describe("Assignments — row ⋯ and toolbar ⋯ open on the first click with t
     fireEvent.click(within(row).getByRole("button", { name: "إجراءات الواجب اختبار الكسور" })); await settle();
     const menu = panelOf("إجراءات الواجب اختبار الكسور") as HTMLElement;
     expect(menu).not.toBeNull();
-    expect(within(menu).getAllByRole("button").map(b => b.textContent)).toEqual(["إيقاف النشر", "تعديل عدد المحاولات", "أرشفة"]);
+    expect(within(menu).getAllByRole("button").map(b => b.textContent)).toEqual(["إيقاف النشر", "تعديل عدد المحاولات", "تعديل الوقت والموعد", "أرشفة"]);
     expect(document.activeElement).toBe(within(menu).getByRole("button", { name: "إيقاف النشر" }));
     expect(openBtn.getAttribute("aria-pressed")).toBe("false");           // no row open/selection side effect
     expect(calls.filter(c => c.method === "POST")).toEqual([]);
@@ -294,7 +294,7 @@ describe("Assignments — row ⋯ and toolbar ⋯ open on the first click with t
     await waitFor(() => expect(panelOf("إجراءات الواجب اختبار الكسور")).toBeNull());
     const draft = screen.getByText("واجب الجبر").closest(".assignment-row") as HTMLElement;
     fireEvent.click(within(draft).getByRole("button", { name: "إجراءات الواجب واجب الجبر" })); await settle();
-    expect(within(panelOf("إجراءات الواجب واجب الجبر") as HTMLElement).getAllByRole("button").map(b => b.textContent)).toEqual(["نشر", "تعديل عدد المحاولات", "أرشفة"]);
+    expect(within(panelOf("إجراءات الواجب واجب الجبر") as HTMLElement).getAllByRole("button").map(b => b.textContent)).toEqual(["نشر", "تعديل عدد المحاولات", "تعديل الوقت والموعد", "أرشفة"]);
     expect(inPanel("إجراءات الواجب واجب الجبر")).toBe(true);
     fireEvent.keyDown(document.activeElement as HTMLElement, { key: "Escape" });
     await waitFor(() => expect(panelOf("إجراءات الواجب واجب الجبر")).toBeNull());

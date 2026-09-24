@@ -10,7 +10,7 @@ import {resolveGradingStatus,type GradingStatus} from "./gradingStatus";
 import {normalizeClassStatus} from "./classLifecycle";
 import ActionMenu from "./ui/ActionMenu";
 import {useConfirm} from "./ui/useConfirm";
-import AssignmentList,{MaxAttemptsDialog} from "./assignments/AssignmentList";
+import AssignmentList,{MaxAttemptsDialog,AssignmentTimingDialog} from "./assignments/AssignmentList";
 import AssignmentDetail from "./assignments/AssignmentDetail";
 import AssignmentComposer from "./assignments/AssignmentComposer";
 import Gradebook from "./assignments/Gradebook";
@@ -55,7 +55,7 @@ export default function AssignmentsPanel({token,classes,currentExam,onCopyLibrar
  const [libraryCatalog,setLibraryCatalog]=useState<LibraryCatalogItem[]>([]),[libraryLoading,setLibraryLoading]=useState(false),[librarySearch,setLibrarySearch]=useState(""),[libraryCategory,setLibraryCategory]=useState(""),[librarySelectedId,setLibrarySelectedId]=useState(""),[libraryExam,setLibraryExam]=useState<Exam|null>(null);
  const [preview,setPreview]=useState<{title:string;exam:Exam}|null>(null),[previewBusyId,setPreviewBusyId]=useState(""),[copyBusyId,setCopyBusyId]=useState("");
  // UX-5 workspace state: list filter (separate from the composer's target class), search, mode, explicit attempts editor.
- const [filterClassId,setFilterClassId]=useState<string|null>(null),[search,setSearch]=useState(""),[mode,setMode]=useState<WorkspaceMode>("list"),[attemptsFor,setAttemptsFor]=useState<Item|null>(null);
+ const [filterClassId,setFilterClassId]=useState<string|null>(null),[search,setSearch]=useState(""),[mode,setMode]=useState<WorkspaceMode>("list"),[attemptsFor,setAttemptsFor]=useState<Item|null>(null),[timingFor,setTimingFor]=useState<Item|null>(null);
  const detailHeadingRef=useRef<HTMLHeadingElement>(null),composerHeadingRef=useRef<HTMLHeadingElement>(null);
  const detailOpenerRef=useRef<HTMLElement|null>(null),composerOpenerRef=useRef<HTMLElement|null>(null),focusDetailPending=useRef(false),focusComposerOpenerPending=useRef(false),focusWorkspacePending=useRef(false);
  const toolbarRef=useRef<HTMLDivElement|null>(null),scopeRef=useRef<MasterScope>({classId:"",showArchived:false,q:""});
@@ -167,6 +167,16 @@ export default function AssignmentsPanel({token,classes,currentExam,onCopyLibrar
  }
  async function action(item:Item,body:any){setBusy(true);try{const r=await api<{assignment:Item}>("/api/assignments",{method:"POST",body:JSON.stringify({assignmentId:item.assignmentId,...body})});reconcileMutated(r.assignment)}catch(e){setError(e instanceof Error?e.message:"تعذر تنفيذ العملية.")}finally{setBusy(false)}}
  async function saveMaxAttempts(item:Item,value:number){await action(item,{action:"setMaxAttempts",maxAttempts:value});setAttemptsFor(null)}
+ // Phase 5A — class-wide time & deadline update. One authoritative request; reconcile the returned summary
+ // into the list (and the open gradebook if it points here) WITHOUT a page reload, then a clear success notice.
+ // Availability/eligibility is re-derived server-side, so an eligible student reopens and an exhausted one does not.
+ async function saveTiming(item:Item,dueAtIso:string,durationMinutes:number){
+  setBusy(true);setError("");setNotice("");
+  try{
+   const r=await api<{assignment:Item}>("/api/assignments",{method:"POST",body:JSON.stringify({action:"updateTiming",assignmentId:item.assignmentId,dueAt:dueAtIso,durationMinutes})});
+   reconcileMutated(r.assignment);setTimingFor(null);setNotice("✓ تم تحديث وقت الواجب وموعد التسليم.");
+  }catch(e){setError(e instanceof Error?e.message:"تعذر تحديث وقت الواجب.")}finally{setBusy(false)}
+ }
  // Roadmap #7 — archive-first deletion. The normal destructive action ARCHIVES (never physically deletes)
  // and always checks authoritative impact first so an active-attempt archive is confirmed explicitly.
  async function fetchImpact(item:Item):Promise<Impact|null>{try{const r=await api<{impact:Impact}>("/api/assignments",{method:"POST",body:JSON.stringify({action:"deleteImpact",assignmentId:item.assignmentId})});return r.impact}catch(e){setError(e instanceof Error?e.message:"تعذر حساب أثر العملية.");return null}}
@@ -329,7 +339,7 @@ export default function AssignmentsPanel({token,classes,currentExam,onCopyLibrar
   <div className={"eb-assign-layout"+(showDetailArea?" has-detail":"")}>
    <AssignmentList items={visible} showArchived={showArchived} hasAnyInScope={scoped.length>0} selectedId={mode==="list"&&resultsFor?resultsFor.assignmentId:""} busy={busy} loading={loading}
     onOpen={(item,trigger)=>void loadResults(item,trigger)} onPublish={item=>void action(item,{action:"setStatus",status:"published"})} onUnpublish={item=>void action(item,{action:"setStatus",status:"draft"})}
-    onEditAttempts={setAttemptsFor} onArchive={item=>void archiveItem(item)} onRestore={item=>void restoreItem(item)} onPurge={item=>void openPurge(item)} onCreate={openComposer} fmt={fmt}/>
+    onEditAttempts={setAttemptsFor} onEditTiming={setTimingFor} onArchive={item=>void archiveItem(item)} onRestore={item=>void restoreItem(item)} onPurge={item=>void openPurge(item)} onCreate={openComposer} fmt={fmt}/>
    {mode==="composer"&&<AssignmentComposer headingRef={composerHeadingRef} onClose={closeComposer} busy={busy} examLoading={examLoading}
     sourceMode={sourceMode} onSourceMode={m=>void switchSourceMode(m)} sourceExam={sourceExam} sourceCount={sourceCount} currentExam={current} hasCurrent={!!(current&&examHasQuestions(current))}
     savedExams={savedExams} examSource={examSource} onChooseExam={v=>void chooseExam(v)}
@@ -346,6 +356,7 @@ export default function AssignmentsPanel({token,classes,currentExam,onCopyLibrar
   </div>
 
   <MaxAttemptsDialog item={attemptsFor} busy={busy} onSave={(item,value)=>void saveMaxAttempts(item,value)} onClose={()=>setAttemptsFor(null)}/>
+  <AssignmentTimingDialog item={timingFor} busy={busy} onSave={(item,dueAtIso,durationMinutes)=>void saveTiming(item,dueAtIso,durationMinutes)} onClose={()=>setTimingFor(null)} fmt={fmt}/>
   <DeadlineDialog student={deadlineStudent} assignment={resultsFor} busy={busy} value={deadlineValue} onValue={setDeadlineValue} onClose={()=>setDeadlineFor(null)} onSave={s=>void saveDeadline(s)} onClear={s=>void clearDeadline(s)} fmt={fmt}/>
   <ReopenDialog student={reopenStudent} assignment={resultsFor} busy={busy} value={reopenValue} onValue={setReopenValue} onClose={()=>setReopenFor(null)} onSave={s=>void saveReopen(s)} fmt={fmt}/>
   <ExtendDialog student={extendStudent} assignment={resultsFor} busy={busy} value={extendValue} onValue={setExtendValue} onClose={()=>setExtendFor(null)} onSave={s=>void saveExtend(s)} willClip={willClip} fmt={fmt}/>

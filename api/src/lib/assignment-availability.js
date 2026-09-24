@@ -21,10 +21,23 @@ function toMs(value) {
   return Number.isFinite(t) ? t : 0;
 }
 
-// The effective due date for THIS student: a per-student dueAtOverride wins over the assignment dueAt.
+// The effective due date for THIS student. Per-student dueAtOverride is EXTENSION-ONLY by contract, so the
+// effective deadline is the LATER of the (valid) assignment dueAt and the (valid) override — NOT a blind
+// `override || dueAt`. Consequences (Phase 5A):
+//   • a class-wide dueAt extension raises EVERY student's effective deadline (global 15 / override 12 → 15),
+//     so extending the class can never be silently undercut by an older, shorter override;
+//   • a longer per-student accommodation still wins (global 15 / override 18 → 18);
+//   • no override (or an invalid one) → the global dueAt (global 15 / none → 15);
+//   • no global (or an invalid one) → the override;
+//   • malformed values parse to 0 (toMs) and never throw — the safe/fail-open string is preserved.
 function effectiveDueAt(assignment, submission) {
-  if (submission && submission.dueAtOverride) return submission.dueAtOverride;
-  return (assignment && assignment.dueAt) || "";
+  const globalDue = (assignment && assignment.dueAt) || "";
+  const override = (submission && submission.dueAtOverride) || "";
+  const gMs = toMs(globalDue);
+  const oMs = toMs(override);
+  if (gMs && oMs) return oMs > gMs ? override : globalDue;   // both valid → the later timestamp wins
+  if (oMs) return override;                                  // only the override is a valid timestamp
+  return globalDue;                                          // only the global, or neither (safe string)
 }
 
 // The authoritative availability of an assignment for one student at a given instant.

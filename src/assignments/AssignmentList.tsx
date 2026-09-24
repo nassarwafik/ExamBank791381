@@ -3,8 +3,11 @@ import ActionMenu from "../ui/ActionMenu";
 import StatusBadge from "../ui/StatusBadge";
 import EmptyState from "../ui/EmptyState";
 import Dialog from "../ui/Dialog";
-import { IconUpload, IconEyeOff, IconEdit, IconArchive, IconRestore, IconTrash } from "../icons";
+import { IconUpload, IconEyeOff, IconEdit, IconArchive, IconRestore, IconTrash, IconHistory } from "../icons";
 import { STATUS_LABEL, type Item } from "./types";
+
+// ISO → <input type="datetime-local"> value (local wall-clock). Empty/invalid → "" (no crash).
+const toLocalInput = (iso: string) => { if (!iso) return ""; const d = new Date(iso); if (Number.isNaN(d.getTime())) return ""; return new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().slice(0, 16); };
 
 export type AssignmentListProps = {
   items: Item[];                       // rows for the current view (already class-filtered / searched / archived-switched by AssignmentsPanel)
@@ -17,6 +20,7 @@ export type AssignmentListProps = {
   onPublish: (item: Item) => void;
   onUnpublish: (item: Item) => void;
   onEditAttempts: (item: Item) => void;
+  onEditTiming: (item: Item) => void;
   onArchive: (item: Item) => void;
   onRestore: (item: Item) => void;
   onPurge: (item: Item) => void;
@@ -58,6 +62,7 @@ export default function AssignmentList(p: AssignmentListProps) {
                       ? <button type="button" className="eb-menu-item" onClick={() => p.onPublish(item)} disabled={p.busy}><IconUpload size={16} />نشر</button>
                       : <button type="button" className="eb-menu-item" onClick={() => p.onUnpublish(item)} disabled={p.busy}><IconEyeOff size={16} />إيقاف النشر</button>}
                     <button type="button" className="eb-menu-item" onClick={() => p.onEditAttempts(item)} disabled={p.busy}><IconEdit size={16} />تعديل عدد المحاولات</button>
+                    <button type="button" className="eb-menu-item assignment-timing-button" onClick={() => p.onEditTiming(item)} disabled={p.busy}><IconHistory size={16} />تعديل الوقت والموعد</button>
                     <hr className="eb-menu-sep" />
                     <button type="button" className="eb-menu-item" onClick={() => p.onArchive(item)} disabled={p.busy}><IconArchive size={16} />أرشفة</button>
                   </>}
@@ -89,6 +94,50 @@ function MaxAttemptsForm({ item, busy, onSave, onClose }: { item: Item; busy: bo
         <label>عدد المحاولات المسموح بها<select value={value} onChange={e => setValue(Number(e.target.value))}>{[1, 2, 3, 4, 5].map(n => <option key={n} value={n}>{n} {n === 1 ? "محاولة" : "محاولات"}</option>)}</select></label>
       </div>
       <div className="eb-dialog-foot eb-dialog-foot-inline"><button type="button" className="eb-button" onClick={onClose}>إلغاء</button><button type="button" className="eb-button is-primary" onClick={() => onSave(item, value)} disabled={busy || value === (item.maxAttempts || 1)}>حفظ</button></div>
+    </>
+  );
+}
+
+/**
+ * Phase 5A — class-wide time & deadline editor. A focused dialog (not the full assignment editor): it moves
+ * the submission deadline (primarily an EXTENSION of an expired assignment) and optionally the default attempt
+ * duration. It changes TIME AVAILABILITY only — it never resets attempts or grants an exhausted student a new
+ * attempt; that is decided entirely by the server-authoritative attempt lifecycle. cancel → no request; save →
+ * exactly one updateTiming request (owned by AssignmentsPanel). Keyed by assignment → fresh fields per item.
+ */
+export function AssignmentTimingDialog({ item, busy, onSave, onClose, fmt }: { item: Item | null; busy: boolean; onSave: (item: Item, dueAtIso: string, durationMinutes: number) => void; onClose: () => void; fmt: (value: string) => string }) {
+  return (
+    <Dialog open={item !== null} title="تعديل الوقت والموعد" onClose={onClose} size="sm" className="assignment-timing-dialog" hideClose>
+      {item && <AssignmentTimingForm key={item.assignmentId} item={item} busy={busy} onSave={onSave} onClose={onClose} fmt={fmt} />}
+    </Dialog>
+  );
+}
+function AssignmentTimingForm({ item, busy, onSave, onClose, fmt }: { item: Item; busy: boolean; onSave: (item: Item, dueAtIso: string, durationMinutes: number) => void; onClose: () => void; fmt: (value: string) => string }) {
+  const [dueLocal, setDueLocal] = useState(toLocalInput(item.dueAt));   // keyed by assignment → fresh per item
+  const [duration, setDuration] = useState<number>(item.durationMinutes || 0);
+  const dueMs = dueLocal ? new Date(dueLocal).getTime() : 0;
+  const validDate = !!dueMs && Number.isFinite(dueMs);
+  const inFuture = validDate && dueMs > Date.now();
+  const dueIso = validDate ? new Date(dueLocal).toISOString() : "";
+  return (
+    <>
+      <p className="eb-dialog-lead">الواجب: <strong>{item.title}</strong></p>
+      <dl className="eb-dl">
+        <div><dt>موعد التسليم الحالي</dt><dd>{fmt(item.dueAt)}</dd></div>
+        <div><dt>مدة المحاولة الحالية</dt><dd>{item.durationMinutes ? item.durationMinutes + " دقيقة" : "بدون مؤقت"}</dd></div>
+      </dl>
+      <div className="eb-form-grid">
+        <label>موعد التسليم الجديد<input type="datetime-local" className="assignment-timing-due" value={dueLocal} onChange={e => setDueLocal(e.target.value)} /></label>
+        <label>مدة المحاولة الجديدة (دقائق · 0 = بدون مؤقت)<input type="number" min={0} max={1440} step={1} className="assignment-timing-duration" value={duration} onChange={e => setDuration(Math.max(0, Math.min(1440, Math.floor(Number(e.target.value) || 0))))} /></label>
+      </div>
+      {dueLocal && !inFuture && <p className="platform-warning assignment-timing-future-warning" role="status">يجب أن يكون موعد التسليم الجديد في المستقبل.</p>}
+      <p className="eb-muted assignment-timing-eligibility-hint">تمديد الموعد يعيد إتاحة الواجب فقط للطلاب الذين ما زالت لديهم محاولات متبقية.</p>
+      <p className="eb-muted assignment-timing-exhausted-hint">الطلاب الذين استنفدوا جميع المحاولات لن يحصلوا على محاولة إضافية.</p>
+      <p className="eb-muted assignment-timing-active-hint">تغيير مدة المحاولة يسري على المحاولات الجديدة فقط، ولا يعيد ضبط محاولة مؤقتة بدأت بالفعل.</p>
+      <div className="eb-dialog-foot eb-dialog-foot-inline">
+        <button type="button" className="eb-button" onClick={onClose}>إلغاء</button>
+        <button type="button" className="eb-button is-primary assignment-timing-save" onClick={() => onSave(item, dueIso, duration)} disabled={busy || !inFuture}>حفظ</button>
+      </div>
     </>
   );
 }

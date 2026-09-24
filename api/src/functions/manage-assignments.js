@@ -109,6 +109,55 @@ async function handler(request,deps={},obs=null){
    return {status:200,jsonBody:{ok:true,assignment:summary(updated)}};
   }
 
+  // ── updateTiming (Phase 5A) — class-wide TIME AVAILABILITY edit: move the submission dueAt (primarily an
+  // EXTENSION of an expired/near assignment) and optionally the default per-attempt durationMinutes. It
+  // changes ONLY timing on the assignment blob — never status, maxAttempts, examSnapshot, submissions,
+  // attempts, drafts, grades or results — so the server-authoritative attempt lifecycle stays the sole
+  // authority: an extension reopens the assignment for students who still have attempts left and gives an
+  // EXHAUSTED student nothing. Assignment-blob-only, so it uses plain ETag CAS (like setmaxattempts) and
+  // does NOT take the per-assignment lifecycle lock — unrelated students are never serialized. Changing the
+  // default duration affects only FUTURE attempts: an already-started attempt keeps its stored
+  // startedAt/endsAt/extendedEndsAt (timerState never recomputes a live attempt from the new duration). ──
+  if(action==="updatetiming"){
+   const id=String(b.assignmentId||"");if(!id)return {status:400,jsonBody:{ok:false,error:"assignmentId is required."}};
+   // New class-wide submission deadline. Must be a valid timestamp and in the FUTURE (this is an extension).
+   let newDueAt;try{newDueAt=iso(b.dueAt)}catch{return {status:400,jsonBody:{ok:false,error:"صيغة موعد التسليم غير صحيحة."}}}
+   if(!newDueAt)return {status:400,jsonBody:{ok:false,error:"موعد التسليم الجديد مطلوب."}};
+   const newDueMs=new Date(newDueAt).getTime();
+   if(!(newDueMs>Date.now()))return {status:400,jsonBody:{ok:false,error:"يجب أن يكون موعد التسليم الجديد في المستقبل."}};
+   // Optional duration edit — the SAME validator as create (integer 1..1440, or 0/"" untimed). When the key
+   // is omitted entirely the stored duration is left unchanged.
+   const durationProvided=b.durationMinutes!==undefined;
+   let durValue=0;
+   if(durationProvided){const dur=parseDurationMinutes(b.durationMinutes);if(!dur.ok)return {status:400,jsonBody:{ok:false,error:"مدة المحاولة يجب أن تكون رقمًا صحيحًا بين 1 و1440 دقيقة، أو بدون مؤقت."}};durValue=dur.value;}
+   let prevDueAt="",prevDuration=0,newDuration=0,auditTitle="";
+   let updated=null;
+   try{
+    updated=await mut(c,PREFIX+id+".json",current=>{
+     if(!current){const err=new Error("الواجب غير موجود.");err.httpStatus=404;throw err}
+     // An archived assignment must be restored before any timing change (never bypass restore).
+     if(normalizeAssignmentStatus(current)==="archived"){const err=new Error("الواجب مؤرشف. استعده أولًا قبل تعديل الوقت والموعد.");err.httpStatus=409;throw err}
+     // Extension-only guard (authoritative, read under CAS): never silently SHORTEN an existing deadline.
+     // Equal is allowed (e.g. a duration-only edit that keeps the same deadline); strictly earlier is rejected.
+     const curDueMs=(()=>{const t=new Date(String(current.dueAt||"")).getTime();return Number.isFinite(t)?t:0})();
+     if(curDueMs&&newDueMs<curDueMs){const err=new Error("لا يمكن تقليص موعد التسليم. أدخل موعدًا لاحقًا لتمديد الواجب.");err.httpStatus=400;throw err}
+     prevDueAt=String(current.dueAt||"");prevDuration=Number(current.durationMinutes||0);auditTitle=String(current.title||"");
+     current.dueAt=newDueAt;
+     if(durationProvided)current.durationMinutes=durValue;
+     newDuration=Number(current.durationMinutes||0);
+     current.updatedAt=new Date().toISOString();
+     return current;   // status / maxAttempts / examSnapshot / submissions / attempts intentionally untouched
+    });
+   }catch(e){
+    if(e instanceof StorageConflictError)return {status:503,jsonBody:{ok:false,error:CONFLICT_MESSAGE}};
+    if(e?.httpStatus)return {status:e.httpStatus,jsonBody:{ok:false,error:e.message}};
+    throw e;
+   }
+   // Safe audit metadata only — timing values, never student/exam content. Emitted once on success.
+   await rec(c,{actor:auth.user?.sub,action:"assignment.updateTiming",targetType:"assignment",targetId:id,targetLabel:auditTitle,details:{assignmentId:id,previousDueAt:prevDueAt,newDueAt,previousDurationMinutes:prevDuration,newDurationMinutes:newDuration}});
+   return {status:200,jsonBody:{ok:true,assignment:summary(updated)}};
+  }
+
   // ── deleteImpact — read-only impact report used by the teacher UI before archive/purge (Roadmap #7). ──
   if(action==="deleteimpact"){
    const id=String(b.assignmentId||"");if(!id)return {status:400,jsonBody:{ok:false,error:"assignmentId is required."}};
