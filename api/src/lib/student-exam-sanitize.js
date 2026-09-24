@@ -17,10 +17,11 @@
 const FLAG_SECRET_KEYS = ["correct", "isCorrect", "correctText", "correctOptionIndex", "correctOptionValue", "correctOptionLabel", "solution", "expectedAnswer", "answerKey"];
 // Teacher-side / secret keys that may appear on a question or a compound part.
 const NODE_SECRET_KEYS = ["teacherNote", "aiInstruction", "hint", "history", "redoStack", "explanation", "rationale", ...FLAG_SECRET_KEYS];
-// Import-only, teacher-review keys that must never reach a student (e.g. the original URL of an external
-// image the importer refused to embed). Stripped from every image object/asset (defense in depth — the
-// importer already avoids persisting these on the exam).
-const IMPORT_ONLY_IMAGE_KEYS = ["externalUrl"];
+// Import-only / teacher-only image keys that must never reach a student: the original URL of an external
+// image the importer refused to embed, and the AI-generation `prompt` (Phase 5B never persists it on a
+// structured question, but the legacy builder stores it on image objects — strip it here so it can never
+// reach a student). Stripped from every image object AND asset (defense in depth).
+const IMPORT_ONLY_IMAGE_KEYS = ["externalUrl", "prompt"];
 
 function stripKeys(obj, keys) {
   for (const k of keys) if (k in obj) delete obj[k];

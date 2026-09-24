@@ -14,8 +14,9 @@ const StructuredExamBuilder = lazy(() => import("./StructuredExamBuilder"));
 const SmartStructuredExamImportWizard = lazy(() => import("./SmartStructuredExamImportWizard"));
 import { withTrackingCode } from "./lib/requestTrace";
 import { isStructuredExam } from "./examTypes";
-import type { StructuredExam } from "./examTypes";
-import { legacyToStructured, toSavedStructuredExam, newSection, newQuestion } from "./examBuilderState";
+import type { StructuredExam, BuilderImageAsset } from "./examTypes";
+import type { AiImageRequestQuestion } from "./questionMedia";
+import { legacyToStructured, toSavedStructuredExam, newSection, newQuestion, applyStructuredExamUpdate, reconcileSavedStructuredExam, type StructuredExamUpdater } from "./examBuilderState";
 import "./project794589.css";
 import TeacherPlatform from "./TeacherPlatform";
 import ImportQuestionsPanel, { createEmptyImportSession } from "./ImportQuestionsPanel";
@@ -2679,6 +2680,21 @@ function App() {
   }
 
 
+  // Phase 5B — authenticated per-question AI image callback for the Structured Exam Builder. Sends only the
+  // SAFE question shape built by aiRequestQuestion (examQuestionId / text / options / topic — never `answer`)
+  // through the existing teacher apiRequest to the EXISTING /api/generate-question-image endpoint, and returns
+  // just the asset. The endpoint's `prompt` is intentionally discarded (never persisted on the question).
+  async function requestStructuredQuestionImage(
+    question: AiImageRequestQuestion
+  ): Promise<BuilderImageAsset> {
+    const result = await apiRequest<{ ok: true; asset: { id?: string; contentType?: string; dataUrl?: string } }>(
+      "/api/generate-question-image",
+      { method: "POST", body: JSON.stringify({ question }) }
+    );
+    const asset = result.asset || {};
+    return { id: asset.id, origin: "ai-generated", contentType: asset.contentType || "image/png", dataUrl: asset.dataUrl };
+  }
+
   async function saveExamArtifact(
     kind:
       "exam" |
@@ -3773,15 +3789,22 @@ function App() {
   // stores the object (sections canonical) untouched. No second saved-exam system. Draft saves always
   // succeed; a "final" save is only reached when the builder's validation has no blocking errors, and
   // stamps status accordingly (a draft save demotes a previously-final exam back to draft).
+  // Builder edits arrive as functional updaters applied to the LATEST structured exam (Phase 5B follow-up),
+  // so a slow AI image / upload result merges with newer edits instead of reverting them.
+  function updateStructuredExam(updater: StructuredExamUpdater) {
+    setStructuredExam(prev => applyStructuredExamUpdate(prev, updater));
+  }
   async function saveStructuredExam(mode: "draft" | "final") {
     if (!structuredExam) return;
+    const snapshot = structuredExam;
     setStructuredSaving(true);
     setStructuredError("");
     setStructuredNotice("");
     try {
-      const payload = { ...toSavedStructuredExam(structuredExam), status: mode };
+      const payload = { ...toSavedStructuredExam(snapshot), status: mode };
       await apiRequest<{ ok: true }>("/api/save-exam-artifact", { method: "POST", body: JSON.stringify({ kind: "exam", exam: payload }) });
-      setStructuredExam(payload);
+      // Reconcile against the latest exam: an image that arrived DURING the save is kept (not rolled back).
+      setStructuredExam(prev => reconcileSavedStructuredExam(prev, snapshot, payload));
       setStructuredNotice(mode === "final" ? "✓ تم اعتماد الامتحان المنظّم نهائيًا وحفظه." : "✓ تم حفظ مسودة الامتحان المنظّم.");
       await loadSavedExams();
     }
@@ -7592,12 +7615,13 @@ function App() {
           <Suspense fallback={<div className="platform-loading">⏳ جارٍ تحميل مبنى الامتحان…</div>}>
             <StructuredExamBuilder
               exam={structuredExam}
-              onChange={setStructuredExam}
+              onChange={updateStructuredExam}
               onSave={saveStructuredExam}
               onExit={() => { setStructuredBuilderOpen(false); }}
               saving={structuredSaving}
               notice={structuredNotice}
               error={structuredError}
+              requestQuestionImage={requestStructuredQuestionImage}
             />
           </Suspense>
         </div>

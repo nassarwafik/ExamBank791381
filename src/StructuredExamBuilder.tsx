@@ -1,7 +1,8 @@
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import type { StructuredExam, BuilderQuestion, BuilderSection } from "./examTypes";
+import type { StructuredExam, BuilderQuestion, BuilderSection, BuilderImageAsset } from "./examTypes";
+import type { AiImageRequestQuestion } from "./questionMedia";
 import {
   addSection,
   deleteSection,
@@ -15,7 +16,8 @@ import {
   moveQuestionToSection as movQTo,
   newSection,
   computeTotalMarks,
-  countQuestions
+  countQuestions,
+  type StructuredExamUpdater
 } from "./examBuilderState";
 import { validateStructuredExam, hasBlockingErrors, type StructuredIssue } from "./examQuality";
 import ExamSectionEditor from "./ExamSectionEditor";
@@ -28,7 +30,8 @@ import "./structured-builder.css";
 export { default as ExamPreview } from "./ExamPreview";
 
 // Top-level Structured Exam Builder. It is a CONTROLLED component: the exam lives in the parent
-// (App.tsx) and every edit flows back through onChange, applying the pure examBuilderState helpers.
+// (App.tsx) and every edit flows back through onChange as a FUNCTIONAL updater that the parent applies to
+// its LATEST exam (never a full exam captured at render time), applying the pure examBuilderState helpers.
 // The parent owns persistence (save / assignment) and mode switching; this component owns the editing
 // UI, validation summary, and student preview (full exam and single question) rendered through the
 // SAME components students use, fed a scrubbed copy so no answer key is shown.
@@ -36,19 +39,58 @@ export { default as ExamPreview } from "./ExamPreview";
 export type SaveMode = "draft" | "final";
 type Props = {
   exam: StructuredExam;
-  onChange: (exam: StructuredExam) => void;
+  // Receives an updater, not a full exam: the state owner applies it to its latest exam, so an async result
+  // (AI image / upload) that resolves after other edits merges instead of reverting them.
+  onChange: (updater: StructuredExamUpdater) => void;
   onSave?: (mode: SaveMode) => void;
   onExit?: () => void;
   saving?: boolean;
   notice?: string;
   error?: string;
+  // Phase 5B — authenticated per-question AI image callback (App.tsx owns auth). Optional/back-compatible.
+  requestQuestionImage?: (q: AiImageRequestQuestion) => Promise<BuilderImageAsset>;
 };
 
-export default function StructuredExamBuilder({ exam, onChange, onSave, onExit, saving, notice, error }: Props) {
+export default function StructuredExamBuilder({ exam, onChange, onSave, onExit, saving, notice, error, requestQuestionImage }: Props) {
   const [preview, setPreview] = useState<StructuredExam | null>(null);
   const [showIssues, setShowIssues] = useState(true);
 
-  const setSections = (updater: (s: BuilderSection[]) => BuilderSection[]) => onChange({ ...exam, sections: updater(exam.sections || []) });
+  // Lifecycle + identity guard for late async results: once this builder has closed (unmounted), or the
+  // state owner now holds a DIFFERENT exam than the one this render edited, an update is dropped — a late
+  // image can never modify an exam after the editor closed or land in another exam.
+  const alive = useRef(true);
+  useEffect(() => { alive.current = true; return () => { alive.current = false; }; }, []);
+  const sourceExamId = exam.examId;
+  const update = (fn: StructuredExamUpdater) => {
+    if (!alive.current) return;
+    onChange(prev => (prev.examId === sourceExamId ? fn(prev) : prev));
+  };
+  const setSections = (updater: (s: BuilderSection[]) => BuilderSection[]) => update(prev => ({ ...prev, sections: updater(prev.sections || []) }));
+
+  // Pending media operations (upload read / AI generation), counted per question id. While any operation on
+  // a question that still exists is pending, BOTH save buttons are disabled: a save snapshot taken now would
+  // miss the image the operation is about to apply, yet the UI would report the exam as saved/final. Editing
+  // and concurrent generation on other questions stay allowed. A count (not a boolean) per id so overlapping
+  // operations never clear each other; every registration is released when its operation settles; a deleted
+  // question's pending result is a no-op (updateQuestion by id), so it no longer blocks saving; after this
+  // builder unmounts no state is updated.
+  const [pendingMedia, setPendingMedia] = useState<Record<string, number>>({});
+  const onMediaBusyChange = (questionId: string, busy: boolean) => {
+    if (!alive.current) return;
+    setPendingMedia(prev => {
+      const n = Math.max(0, (prev[questionId] || 0) + (busy ? 1 : -1));
+      const next = { ...prev };
+      if (n > 0) next[questionId] = n; else delete next[questionId];
+      return next;
+    });
+  };
+  const liveQuestionIds = new Set((exam.sections || []).flatMap(s => (s.questions || []).map(q => q.examQuestionId)));
+  const mediaPending = Object.keys(pendingMedia).some(id => liveQuestionIds.has(id));
+  // Per-question view of the same authority: locks that question's media controls across remounts and its
+  // move-to-section (a pending result is patched into the question's CURRENT section; moving it away would
+  // silently drop the image).
+  const pendingMediaIds: ReadonlySet<string> = new Set(Object.keys(pendingMedia));
+  const MEDIA_WAIT = "انتظر انتهاء معالجة الصور قبل الحفظ.";
   const sectionOptions = (exam.sections || []).map(s => ({ id: s.id, title: s.title }));
   const issues = useMemo(() => validateStructuredExam(exam), [exam]);
   const errors = issues.filter(i => i.severity === "error");
@@ -60,7 +102,7 @@ export default function StructuredExamBuilder({ exam, onChange, onSave, onExit, 
       <header className="sb-toolbar">
         <div className="sb-toolbar-main">
           {onExit && <button type="button" className="sb-btn" onClick={onExit} disabled={saving}>→ رجوع</button>}
-          <input className="sb-input sb-exam-title" value={exam.title ?? ""} placeholder="عنوان الامتحان المنظّم" onChange={e => onChange({ ...exam, title: e.target.value })} disabled={saving} />
+          <input className="sb-input sb-exam-title" value={exam.title ?? ""} placeholder="عنوان الامتحان المنظّم" onChange={e => { const title = e.target.value; update(prev => ({ ...prev, title })); }} disabled={saving} />
           <span className="sb-stat">{(exam.sections || []).length} أقسام</span>
           <span className="sb-stat">{countQuestions(exam)} أسئلة</span>
           <span className="sb-stat">{totalMarks} علامة</span>
@@ -68,8 +110,9 @@ export default function StructuredExamBuilder({ exam, onChange, onSave, onExit, 
         <div className="sb-toolbar-actions">
           {exam.status === "final" && <span className="sb-stat sb-stat-final">معتمد نهائيًا</span>}
           <button type="button" className="sb-btn" onClick={() => setPreview(exam)}>👁 معاينة الامتحان</button>
-          {onSave && <button type="button" className="sb-btn" onClick={() => onSave("draft")} disabled={saving}>{saving ? "⏳ جارٍ الحفظ…" : "💾 حفظ مسودة"}</button>}
-          {onSave && <button type="button" className="sb-btn sb-btn-primary" onClick={() => onSave("final")} disabled={saving || hasBlockingErrors(errors)} title={hasBlockingErrors(errors) ? "يجب إصلاح الأخطاء قبل الاعتماد النهائي" : "اعتماد الامتحان نهائيًا"}>✓ اعتماد نهائي</button>}
+          {onSave && mediaPending && <span className="sb-stat sb-media-wait" role="status">{MEDIA_WAIT}</span>}
+          {onSave && <button type="button" className="sb-btn" onClick={() => onSave("draft")} disabled={saving || mediaPending} title={mediaPending ? MEDIA_WAIT : undefined}>{saving ? "⏳ جارٍ الحفظ…" : "💾 حفظ مسودة"}</button>}
+          {onSave && <button type="button" className="sb-btn sb-btn-primary" onClick={() => onSave("final")} disabled={saving || mediaPending || hasBlockingErrors(errors)} title={mediaPending ? MEDIA_WAIT : hasBlockingErrors(errors) ? "يجب إصلاح الأخطاء قبل الاعتماد النهائي" : "اعتماد الامتحان نهائيًا"}>✓ اعتماد نهائي</button>}
         </div>
       </header>
 
@@ -94,7 +137,7 @@ export default function StructuredExamBuilder({ exam, onChange, onSave, onExit, 
 
       <ExamCoverEditor
         cover={exam.coverPage}
-        onChange={cover => onChange({ ...exam, coverPage: cover })}
+        onChange={cover => update(prev => ({ ...prev, coverPage: cover }))}
         onPreviewCover={() => setPreview(exam)}
         disabled={saving}
       />
@@ -117,6 +160,9 @@ export default function StructuredExamBuilder({ exam, onChange, onSave, onExit, 
             onQuestionDuplicate={qid => setSections(s => dupQ(s, section.id, qid))}
             onQuestionMoveToSection={(qid, to) => setSections(s => movQTo(s, section.id, qid, to))}
             onPreviewQuestion={q => setPreview(singleQuestionExam(exam, section, q))}
+            requestQuestionImage={requestQuestionImage}
+            onMediaBusyChange={onMediaBusyChange}
+            pendingMediaIds={pendingMediaIds}
             disabled={saving}
           />
         ))}

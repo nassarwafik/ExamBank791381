@@ -413,6 +413,30 @@ export function toSavedStructuredExam(exam: StructuredExam): StructuredExam {
   return out;
 }
 
+// ── State authority for asynchronous edits (Phase 5B follow-up) ──
+// The builder never sends a full exam captured at render time; it sends a FUNCTIONAL updater that the state
+// owner (App.tsx) applies to its LATEST exam. A slow AI image / upload result therefore merges into whatever
+// the teacher edited meanwhile, and two concurrent results on different questions both land.
+export type StructuredExamUpdater = (prev: StructuredExam) => StructuredExam;
+/** Apply a builder updater to the latest exam. A cleared (null) exam is never recreated by a late result. */
+export function applyStructuredExamUpdate(prev: StructuredExam | null, updater: StructuredExamUpdater): StructuredExam | null {
+  return prev ? updater(prev) : prev;
+}
+/** Reconcile the latest exam with a save that just resolved. `snapshot` is the exam object the save was
+ *  built from, `saved` the persisted payload.
+ *  - Unchanged since the snapshot → adopt the saved payload (what is shown IS what was persisted).
+ *  - Changed meanwhile → the newer content was NOT persisted, so it must never be labelled as saved: keep the
+ *    newer content (no rollback) but do NOT stamp the save's updatedAt, and never mark it final (status is
+ *    "draft" — not yet persisted as final). Only createdAt, a creation fact, is adopted if missing. The builder
+ *    blocks saving while media is pending, so this branch is defense in depth.
+ *  - A cleared exam is not recreated and a different exam is never touched. */
+export function reconcileSavedStructuredExam(prev: StructuredExam | null, snapshot: StructuredExam, saved: StructuredExam): StructuredExam | null {
+  if (!prev) return prev;
+  if (prev === snapshot) return saved;
+  if (prev.examId !== saved.examId) return prev;
+  return { ...prev, status: "draft", createdAt: prev.createdAt || saved.createdAt };
+}
+
 // A copy for the "duplicate exam" flow: new examId, fresh question/part/field ids, preserved section
 // ids (they are not global storage keys), preserved everything else.
 export function structuredExamCopy(exam: StructuredExam): StructuredExam {
