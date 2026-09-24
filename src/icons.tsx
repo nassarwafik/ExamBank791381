@@ -365,6 +365,15 @@ export function IconBook(props: IconProps) {
     </svg>
   );
 }
+/* Phase 5C — messages (envelope). */
+export function IconMail(props: IconProps) {
+  return (
+    <svg {...base(props)}>
+      <rect x="2.5" y="4.5" width="15" height="11" rx="2" />
+      <path d="m3 5.5 7 5.5 7-5.5" />
+    </svg>
+  );
+}
 /* Points toward "back" in LTR; the shell flips it under dir="rtl" through the eb-flip-rtl class. */
 export function IconChevronBack(props: IconProps) {
   return (
