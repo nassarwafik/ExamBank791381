@@ -123,6 +123,30 @@ describe("TeacherMessagesPage — roster unread + mark read", () => {
     await waitFor(() => expect(row(roster, /ليلى/).textContent).not.toContain("جديدة"));
   });
 
+  it("RACE: mark A pending → poll starts mark B → B returns 1 → stale A returns 0 LAST → the badge stays 1", async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    const onUnreadChanged = vi.fn();
+    const A = msg("أ", "student"), B = msg("ب", "student");
+    const snapshots = [thread([A]), thread([A, B])];
+    const markA = deferred<UnreadCount>(), markB = deferred<UnreadCount>();
+    const client = makeClient({
+      getDirect: vi.fn(async () => snapshots.length > 1 ? snapshots.shift()! : snapshots[0]),
+      markDirectRead: vi.fn((_s: string, ack: { throughMessageId: string }) => (ack.throughMessageId === A.messageId ? markA.promise : markB.promise))
+    });
+    render(<TeacherMessagesPage token="t" client={client} onUnreadChanged={onUnreadChanged} />);
+    const roster = await openClass();
+    await waitFor(() => expect(row(roster, /سارة/).textContent).toContain("3 جديدة"));
+    fireEvent.click(row(roster, /سارة/));
+    await waitFor(() => expect(client.markDirectRead).toHaveBeenCalledWith("s1", { throughMessageId: A.messageId, seenIdsAtBoundary: [A.messageId] }));
+    await act(async () => { await vi.advanceTimersByTimeAsync(5000); });          // the 5s poll shows B → mark B starts
+    await waitFor(() => expect(client.markDirectRead).toHaveBeenCalledWith("s1", { throughMessageId: B.messageId, seenIdsAtBoundary: [B.messageId] }));
+    await act(async () => { markB.resolve({ unread: 1, capped: false }); });      // newest mark: C arrived after B
+    expect(row(roster, /سارة/).textContent).toContain("1 جديدة");
+    await act(async () => { markA.resolve({ unread: 0, capped: false }); });      // older mark resolves LAST (succeeded server-side)
+    expect(row(roster, /سارة/).textContent).toContain("1 جديدة");                // ignored: no regression to 0
+    expect(onUnreadChanged).toHaveBeenCalledTimes(1);
+  });
+
   it("the class summary refreshes every ~15s while a class is selected, and stops on unmount", async () => {
     vi.useFakeTimers({ shouldAdvanceTime: true });
     const client = makeClient();

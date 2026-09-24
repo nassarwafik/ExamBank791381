@@ -28,7 +28,9 @@ import "./messages.css";
  * is acknowledged from THAT GET snapshot only: the latest STUDENT message shown + the student ids at its millisecond
  * (the teacher's own messages never move the boundary; nothing is marked when no student message was shown). The badge
  * only changes from the server's response, never optimistically. A stale response for a previous student returns before this point, so it can never
- * mark the wrong thread; a failed mark leaves the badge until a later successful one.
+ * mark the wrong thread; a failed mark leaves the badge until a later successful one. Mark responses are ordered per
+ * thread (`markSeq`): only the NEWEST mark request started for a thread may apply its count — an older request that
+ * resolves later (even successfully) is ignored for the UI, so a stale count can never overwrite a fresher one.
  */
 type Tab = "direct" | "announcements";
 const ARCHIVED_CLASS_TEXT = "هذا الصف مؤرشف. الرسائل السابقة متاحة للقراءة فقط.";
@@ -66,6 +68,7 @@ export default function TeacherMessagesPage({ token, client: injected, onUnreadC
   const summaryClass = useRef("");
   const marked = useRef<Record<string, string>>({});        // thread key → last id successfully marked read
   const marking = useRef<Record<string, string>>({});       // thread key → id currently being marked (single-flight)
+  const markSeq = useRef<Record<string, number>>({});       // thread key → sequence of the newest STARTED mark request
 
   useEffect(() => {
     let alive = true;
@@ -102,9 +105,11 @@ export default function TeacherMessagesPage({ token, client: injected, onUnreadC
     const throughMessageId = ack.throughMessageId + "|" + ack.seenIdsAtBoundary.join(",");
     if (marked.current[key] === throughMessageId || marking.current[key] === throughMessageId) return;
     marking.current[key] = throughMessageId;
+    const seq = (markSeq.current[key] = (markSeq.current[key] || 0) + 1);
     const sid = key.slice(3);
     try {
       const remaining = await client.markDirectRead(sid, ack);
+      if (seq !== markSeq.current[key]) return;                      // a newer mark for this thread started → its count wins
       marked.current[key] = throughMessageId;
       summaryGen.current += 1;                                        // an older in-flight class summary can't restore the old count
       setUnreadByStudent(prev => ({ ...prev, [sid]: remaining }));

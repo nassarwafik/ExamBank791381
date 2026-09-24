@@ -26,6 +26,9 @@ import "./messages.css";
  * snapshot only — direct: the latest TEACHER message shown + teacher ids at its millisecond (own replies never move the
  * boundary); announcements: the latest announcement + announcements at its millisecond. Counts change only from
  * the server's mark response (a message that arrived after the marked id stays unread) — never optimistically.
+ * Mark responses are ordered: every mark request gets a sequence number, and only the NEWEST mark started for its stream
+ * may apply — an older request resolving later (even successfully) is ignored entirely. A response also never
+ * overwrites the OTHER stream's count when a mark for that stream started after it (that newer mark owns its count).
  */
 type Tab = "direct" | "announcements";
 
@@ -49,9 +52,13 @@ export default function StudentMessagesPage({ token, onBack, client: injected, o
   const alive = useRef(true);
   const marked = useRef<Record<Tab, string>>({ direct: "", announcements: "" });
   const marking = useRef<Record<Tab, string>>({ direct: "", announcements: "" });
+  const markSeq = useRef(0);                                  // global start order of mark requests
+  const latestMark = useRef<Record<Tab, number>>({ direct: 0, announcements: 0 });   // newest STARTED mark per stream
+  const unreadRef = useRef<StudentUnread | null>(null);       // the last applied counts (for per-stream merging)
   useEffect(() => { alive.current = true; return () => { alive.current = false; }; }, []);
 
   function applyUnread(u: StudentUnread) {
+    unreadRef.current = u;
     setUnread(u);
     onUnreadChange?.(u);
   }
@@ -62,6 +69,16 @@ export default function StudentMessagesPage({ token, onBack, client: injected, o
       if (mine !== unreadGen.current || !alive.current) return;       // a mark response is fresher → keep it
       applyUnread(u);
     } catch { /* keep the last-good counts */ }
+  }
+  /** A mark response owns ITS stream's count; the other stream's count is kept when a newer mark for it started. */
+  function mergeMarkResponse(stream: Tab, seq: number, u: StudentUnread): StudentUnread {
+    const other: Tab = stream === "direct" ? "announcements" : "direct";
+    const cur = unreadRef.current;
+    if (!cur || latestMark.current[other] < seq) return u;
+    const d = stream === "direct" ? u.directUnread : cur.directUnread;
+    const a = stream === "announcements" ? u.announcementUnread : cur.announcementUnread;
+    const sum = d.unread + a.unread;
+    return { directUnread: d, announcementUnread: a, totalUnread: Math.min(99, sum), totalCapped: d.capped || a.capped || sum > 99 };
   }
   /** Mark ONE stream read through the latest id of the last applied snapshot — only while it is the visible tab. */
   async function markVisible(stream: Tab) {
@@ -75,11 +92,14 @@ export default function StudentMessagesPage({ token, onBack, client: injected, o
     const through = ack.throughMessageId + "|" + ack.seenIdsAtBoundary.join(",");
     if (marked.current[stream] === through || marking.current[stream] === through) return;
     marking.current[stream] = through;
+    const seq = ++markSeq.current;
+    latestMark.current[stream] = seq;
     try {
       const u = await client.markRead(stream, ack);
+      if (seq !== latestMark.current[stream]) return;                // a newer mark for this stream started → ignore
       marked.current[stream] = through;
       unreadGen.current += 1;
-      if (alive.current) applyUnread(u);
+      if (alive.current) applyUnread(mergeMarkResponse(stream, seq, u));
     } catch {
       /* the badge stays until a later successful mark */
     } finally {

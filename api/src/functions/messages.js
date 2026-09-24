@@ -169,12 +169,13 @@ async function handler(request, deps = {}, obs = null) {
       try {
         // The teacher's unread-relevant messages are the STUDENT's; the acknowledgement must be built from those.
         const stream = { streamPrefix: directPrefix(studentId), expected: { kind: "direct", studentId }, include: doc => doc.senderRole === "student" };
-        const { marker, ids } = await markStreamRead(container, {
+        const { marker } = await markStreamRead(container, {
           stateName: teacherDirectStateName(teacherId, studentId), ...stream,
           throughMessageId: body.throughMessageId, seenIdsAtBoundary: body.seenIdsAtBoundary,
           meta: { principalRole: "teacher", streamKind: "direct", streamId: studentId, teacherId }
         }, deps);
-        const remaining = await countUnread(container, { ...stream, marker, ids }, deps);
+        // FRESH listing (no `ids`): a student message that arrived after validation is still counted.
+        const remaining = await countUnread(container, { ...stream, marker }, deps);
         return { status: 200, jsonBody: { ok: true, studentId, ...remaining } };
       } catch (e) {
         if (e instanceof MarkReadError) return bad("الرسالة المحددة غير صالحة.");

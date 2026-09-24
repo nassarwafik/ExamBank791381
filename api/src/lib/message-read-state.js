@@ -15,7 +15,10 @@
 // another instance, possibly sorting below X) was never shown, so it must stay unread. Every supplied id must exist
 // in the server-authorized stream, share X's millisecond, and validate for the stream AND its unread-relevant sender
 // role (a teacher acknowledges student messages, a student acknowledges teacher messages, any announcement) — anything
-// else is rejected with no write. It is a monotonic CAS: a boundary never moves backwards; an equal boundary unions.
+// else is rejected with no write. Duplicate ids in seenIdsAtBoundary are ALLOWED and deduplicated (the list is a set;
+// the 200-entry bound applies to the raw list). It is a monotonic CAS: a boundary never moves backwards; an equal
+// boundary unions. The remaining count returned by a mark is computed AFTER the marker write from a FRESH stream
+// listing — never from the listing used during validation — so a message that arrived meanwhile is counted.
 //
 // Unread counts derive from immutable messages + the marker: names are listed (no download), ids already covered by
 // the marker are dropped, and only the remaining CANDIDATES are downloaded (newest first, bounded concurrency) to check
@@ -105,9 +108,11 @@ async function loadMarker(container, stateName, deps = {}) {
 }
 
 /**
- * Validate a snapshot acknowledgement. Returns the deduplicated, sorted boundary ids; throws MarkReadError (400) when
- * X is malformed, the list is missing/oversized/malformed, an id has another millisecond, X is not in the list, or any
- * id does not exist in this stream / does not validate / is not unread-relevant (`include`) for this reader.
+ * Validate a snapshot acknowledgement. Duplicate ids are allowed and deduplicated. Returns { boundaryMs,
+ * seenIdsAtBoundary } (deduplicated, sorted); throws MarkReadError (400) when X is malformed, the list is
+ * missing/oversized/malformed, an id has another millisecond, X is not in the list, or any id does not exist in this
+ * stream / does not validate / is not unread-relevant (`include`) for this reader. The validation listing is
+ * deliberately NOT returned: it is stale once the marker is written and must never feed a remaining count.
  */
 async function validateAcknowledgement(container, { streamPrefix, expected, include, throughMessageId, seenIdsAtBoundary }, deps = {}) {
   if (typeof throughMessageId !== "string" || !MESSAGE_ID_RE.test(throughMessageId)) throw new MarkReadError();
@@ -124,16 +129,17 @@ async function validateAcknowledgement(container, { streamPrefix, expected, incl
     const doc = normalizeStoredMessage(docs[i], { ...expected, messageId: seen[i] });
     if (!doc || !include(doc)) throw new MarkReadError();
   }
-  return { boundaryMs, seenIdsAtBoundary: seen.sort(), ids };
+  return { boundaryMs, seenIdsAtBoundary: seen.sort() };
 }
 
 /**
  * Mark ONE authorized stream read from a validated snapshot acknowledgement (see validateAcknowledgement). Monotonic
  * CAS through mutateJsonWithRetry: every retry re-reads the freshest marker, so an older/slower mark can never regress
- * a newer one. Returns { marker, ids } (ids = the stream's listed ids, reusable for counting).
+ * a newer one. Returns { marker } only — callers count what remains with countUnread WITHOUT `ids`, i.e. from a
+ * fresh listing taken after the write.
  */
 async function markStreamRead(container, { stateName, streamPrefix, expected, include, throughMessageId, seenIdsAtBoundary: acknowledged, meta = {} }, deps = {}) {
-  const { boundaryMs, seenIdsAtBoundary, ids } = await validateAcknowledgement(container, { streamPrefix, expected, include, throughMessageId, seenIdsAtBoundary: acknowledged }, deps);
+  const { boundaryMs, seenIdsAtBoundary } = await validateAcknowledgement(container, { streamPrefix, expected, include, throughMessageId, seenIdsAtBoundary: acknowledged }, deps);
   const mutate = deps.mutateJsonWithRetry || mutateJsonWithRetry;
   try {
     const written = await mutate(container, stateName, current => {
@@ -141,9 +147,9 @@ async function markStreamRead(container, { stateName, streamPrefix, expected, in
       if (!r.changed) throw new NoChange(r.marker);                 // no regression, no redundant write
       return { schemaVersion: 1, ...meta, boundaryMs: r.marker.boundaryMs, seenIdsAtBoundary: r.marker.seenIdsAtBoundary, updatedAt: new Date().toISOString() };
     });
-    return { marker: normalizeMarker(written), ids };
+    return { marker: normalizeMarker(written) };
   } catch (e) {
-    if (e instanceof NoChange) return { marker: e.marker, ids };
+    if (e instanceof NoChange) return { marker: e.marker };
     throw e;
   }
 }

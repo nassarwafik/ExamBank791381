@@ -125,6 +125,45 @@ describe("StudentMessagesPage — per-tab unread + visible-only marking", () => 
     expect(c.markRead).not.toHaveBeenCalledWith("direct", expect.anything());
   });
 
+  it("RACE: mark A pending → poll starts mark B → B returns 1 → stale A returns 0 LAST → applyUnread ignores A", async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    const onUnreadChange = vi.fn();
+    const D4 = msg("د4", "teacher");
+    const snapshots = [data(), { ...data(), direct: [...DIRECT, D4] }];
+    const markA = deferred<StudentUnread>(), markB = deferred<StudentUnread>();
+    const c = client({
+      load: vi.fn(async () => snapshots.length > 1 ? snapshots.shift()! : snapshots[0]),
+      markRead: vi.fn((_s: "direct" | "announcements", ack: { throughMessageId: string }) => (ack.throughMessageId === DIRECT[2].messageId ? markA.promise : markB.promise))
+    });
+    render(<StudentMessagesPage token="t" onBack={() => {}} client={c} onUnreadChange={onUnreadChange} />);
+    await screen.findByText("د3");
+    await waitFor(() => expect(tab(/المحادثة مع المعلم/).textContent).toContain("3 غير مقروءة"));
+    await act(async () => { await vi.advanceTimersByTimeAsync(5000); });          // the 5s poll shows D4 → mark B starts
+    await waitFor(() => expect(c.markRead).toHaveBeenCalledWith("direct", { throughMessageId: D4.messageId, seenIdsAtBoundary: [D4.messageId] }));
+    await act(async () => { markB.resolve(U(1, 2)); });                          // newest mark: another message arrived
+    expect(tab(/المحادثة مع المعلم/).textContent).toContain("1 غير مقروءة");
+    await act(async () => { markA.resolve(U(0, 2)); });                          // older mark resolves LAST
+    expect(tab(/المحادثة مع المعلم/).textContent).toContain("1 غير مقروءة");
+    expect(onUnreadChange).toHaveBeenLastCalledWith(U(1, 2));
+    expect(onUnreadChange).not.toHaveBeenCalledWith(U(0, 2));
+  });
+
+  it("CROSS-STREAM: a slower direct mark never restores the announcement count a NEWER announcements mark cleared", async () => {
+    const markD = deferred<StudentUnread>();
+    const onUnreadChange = vi.fn();
+    const c = client({ markRead: vi.fn((stream: "direct" | "announcements") => (stream === "direct" ? markD.promise : Promise.resolve(U(3, 0)))) });
+    render(<StudentMessagesPage token="t" onBack={() => {}} client={c} onUnreadChange={onUnreadChange} />);
+    await screen.findByText("د3");
+    await waitFor(() => expect(c.markRead).toHaveBeenCalledWith("direct", expect.anything()));
+    await waitFor(() => expect(tab(/إعلانات الصف/).textContent).toContain("2 غير مقروءة"));
+    fireEvent.click(tab(/إعلانات الصف/));                                      // announcements mark starts AFTER the direct one
+    await waitFor(() => expect(tab(/إعلانات الصف/).textContent).not.toContain("غير مقروءة"));
+    await act(async () => { markD.resolve(U(0, 2)); });                         // its announcement part predates the newer mark
+    expect(tab(/المحادثة مع المعلم/).textContent).not.toContain("غير مقروءة"); // its OWN stream still applies
+    expect(tab(/إعلانات الصف/).textContent).not.toContain("غير مقروءة");        // no regression to 2
+    expect(onUnreadChange).toHaveBeenLastCalledWith(U(0, 0));
+  });
+
   it("after unmount (back) no further load or mark fires", async () => {
     vi.useFakeTimers({ shouldAdvanceTime: true });
     const c = client();

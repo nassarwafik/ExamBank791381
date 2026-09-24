@@ -100,12 +100,13 @@ async function handler(request, deps = {}, obs = null) {
       const s = which ? streams[which] : null;
       if (!s) return { status: 400, jsonBody: { ok: false, error: "القسم المحدد غير صالح." } };
       try {
-        const { marker, ids } = await markStreamRead(container, {
+        const { marker } = await markStreamRead(container, {
           stateName: s.stateName, streamPrefix: s.streamPrefix, expected: s.expected, include: s.include,
           throughMessageId: body.throughMessageId, seenIdsAtBoundary: body.seenIdsAtBoundary,
           meta: { principalRole: "student", streamKind: which === "direct" ? "direct" : "announcement", streamId: which === "direct" ? studentId : String(student.classId) }
         }, deps);
-        const own = await countUnread(container, { streamPrefix: s.streamPrefix, expected: s.expected, include: s.include, marker, ids }, deps);
+        // FRESH listing (no `ids`): a message that arrived after validation is still counted.
+        const own = await countUnread(container, { streamPrefix: s.streamPrefix, expected: s.expected, include: s.include, marker }, deps);
         return { status: 200, jsonBody: { ok: true, stream: which, ...own, ...(await unreadSummary(container, streams, deps)) } };
       } catch (e) {
         if (e instanceof MarkReadError) return { status: 400, jsonBody: { ok: false, error: "الرسالة المحددة غير صالحة." } };

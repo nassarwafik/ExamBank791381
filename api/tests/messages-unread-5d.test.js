@@ -4,6 +4,7 @@ import { handler as studentApi } from "../src/functions/student-messages.js";
 import { directPrefix, announcementPrefix } from "../src/lib/message-store.js";
 import { READ_STATE_PREFIX, teacherDirectStateName, studentDirectStateName, studentAnnouncementStateName } from "../src/lib/message-read-state.js";
 import { createMemoryContainer } from "./fixtures/memory-container.js";
+import { listBlobNames } from "../src/lib/platform-storage.js";
 
 // Phase 5D — unread summaries + mark-read through the REAL handlers (teacher builder auth / hardened student session).
 
@@ -234,5 +235,65 @@ describe("snapshot acknowledgement at the API (review follow-up)", () => {
     putAnn(ctx, CA, a1); putAnn(ctx, CA, a2); putDirect(ctx, S1, dm, "teacher");
     expect((await sPost(ST(ctx, S1), { action: "markRead", stream: "announcements", throughMessageId: dm, seenIdsAtBoundary: [dm] })).status).toBe(400);
     expect((await sPost(ST(ctx, S1), { action: "markRead", stream: "announcements", throughMessageId: a2, seenIdsAtBoundary: [a2] })).jsonBody.announcementUnread.unread).toBe(0);
+  });
+});
+
+// Second review follow-up — the remaining count returned by a mark must come from a FRESH listing taken after the
+// marker write, never from the listing used to validate the acknowledgement.
+describe("mark response uses a FRESH listing (validation listing is never reused)", () => {
+  // listBlobNames wrapper: the FIRST listing of `prefix` (the acknowledgement validation) returns what exists, THEN
+  // `arrive()` inserts a new message — i.e. B lands after validation and before the remaining count.
+  function arriveAfterFirstListing(prefix, arrive) {
+    const seen = [];
+    const list = async (container, p) => {
+      const names = await listBlobNames(container, p);
+      if (p === prefix) { seen.push(names); if (seen.length === 1) arrive(); }
+      return names;
+    };
+    return { list, seen };
+  }
+
+  it("TEACHER: snapshot [A] → POST mark A → validation lists A → student message B arrives → response unread === 1", async () => {
+    const ctx = createMemoryContainer(seed());
+    const A = mid(1800000000001, "a"), B = mid(1800000000002, "b");
+    putDirect(ctx, S1, A, "student");
+    const hook = arriveAfterFirstListing(directPrefix(S1), () => putDirect(ctx, S1, B, "student"));
+    const r = await tPost({ ...T(ctx), listBlobNames: hook.list }, { action: "markDirectRead", studentId: S1, throughMessageId: A, seenIdsAtBoundary: [A] });
+    expect(r.status).toBe(200);
+    expect(hook.seen[0].some(n => n.includes(B))).toBe(false);                 // validation never saw B
+    expect(r.jsonBody).toEqual({ ok: true, studentId: S1, unread: 1, capped: false });
+    expect(ctx.getJson(teacherDirectStateName("builder-1", S1))).toMatchObject({ boundaryMs: 1800000000001, seenIdsAtBoundary: [A] });
+    expect((await tGet(T(ctx), "?kind=unread-summary")).jsonBody.totalUnread).toBe(1);
+  });
+
+  it("STUDENT direct: snapshot [T-A] → POST mark A → teacher message B arrives after validation → unread === 1 (own + summary agree)", async () => {
+    const ctx = createMemoryContainer(seed());
+    const A = mid(1800000000001, "a"), B = mid(1800000000002, "b");
+    putDirect(ctx, S1, A, "teacher");
+    const hook = arriveAfterFirstListing(directPrefix(S1), () => putDirect(ctx, S1, B, "teacher"));
+    const r = await sPost({ ...ST(ctx, S1), listBlobNames: hook.list }, { action: "markRead", stream: "direct", throughMessageId: A, seenIdsAtBoundary: [A] });
+    expect(r.status).toBe(200);
+    expect(hook.seen[0].some(n => n.includes(B))).toBe(false);
+    expect(r.jsonBody).toMatchObject({ stream: "direct", unread: 1, directUnread: { unread: 1, capped: false }, totalUnread: 1 });
+    expect(ctx.getJson(studentDirectStateName(S1))).toMatchObject({ boundaryMs: 1800000000001, seenIdsAtBoundary: [A] });
+  });
+
+  it("STUDENT announcements: B posted after validation → unread === 1", async () => {
+    const ctx = createMemoryContainer(seed());
+    const A = mid(1800000000001, "a"), B = mid(1800000000002, "b");
+    putAnn(ctx, CA, A);
+    const hook = arriveAfterFirstListing(announcementPrefix(CA), () => putAnn(ctx, CA, B));
+    const r = await sPost({ ...ST(ctx, S1), listBlobNames: hook.list }, { action: "markRead", stream: "announcements", throughMessageId: A, seenIdsAtBoundary: [A] });
+    expect(r.status).toBe(200);
+    expect(r.jsonBody).toMatchObject({ stream: "announcements", unread: 1, announcementUnread: { unread: 1 } });
+  });
+
+  it("duplicate ids in seenIdsAtBoundary are ALLOWED and deduplicated (stored once)", async () => {
+    const ctx = createMemoryContainer(seed());
+    const A = mid(1800000000001, "a");
+    putDirect(ctx, S1, A, "student");
+    const r = await tPost(T(ctx), { action: "markDirectRead", studentId: S1, throughMessageId: A, seenIdsAtBoundary: [A, A, A] });
+    expect(r.jsonBody).toMatchObject({ unread: 0 });
+    expect(ctx.getJson(teacherDirectStateName("builder-1", S1)).seenIdsAtBoundary).toEqual([A]);
   });
 });
