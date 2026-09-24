@@ -5,7 +5,8 @@ import { SECTION_PRESETS, gradingRuleExplanation, newQuestion, changeSectionPoli
 import { SECTION_INSTRUCTION_TEMPLATES, findSectionInstructionTemplate } from "./instructionTemplates";
 import StructuredQuestionEditor from "./StructuredQuestionEditor";
 import StimulusEditor from "./StimulusEditor";
-import type { BuilderQuestion } from "./examTypes";
+import type { BuilderQuestion, BuilderImageAsset } from "./examTypes";
+import type { AiImageRequestQuestion } from "./questionMedia";
 
 // One section: its settings (title / instructions / grading policy + policy-specific inputs / preset),
 // its shared stimuli, and its questions. Question-level mutations are delegated up via `mutateQuestions`
@@ -26,11 +27,12 @@ type Props = {
   onQuestionDuplicate: (questionId: string) => void;
   onQuestionMoveToSection: (questionId: string, toSectionId: string) => void;
   onPreviewQuestion: (question: BuilderQuestion) => void;
+  requestQuestionImage?: (q: AiImageRequestQuestion) => Promise<BuilderImageAsset>;
   disabled?: boolean;
 };
 
 export default function ExamSectionEditor(props: Props) {
-  const { section, index, total, sectionOptions, patch, onDelete, onMove, onAddQuestion, onQuestionChange, onQuestionDelete, onQuestionMove, onQuestionDuplicate, onQuestionMoveToSection, onPreviewQuestion, disabled } = props;
+  const { section, index, total, sectionOptions, patch, onDelete, onMove, onAddQuestion, onQuestionChange, onQuestionDelete, onQuestionMove, onQuestionDuplicate, onQuestionMoveToSection, onPreviewQuestion, requestQuestionImage, disabled } = props;
   const groupOptions = Object.entries(section.stimuli || {}).map(([id, s]) => ({ id, label: s.title ? s.title + " (" + id + ")" : id }));
 
   return (
@@ -115,6 +117,7 @@ export default function ExamSectionEditor(props: Props) {
             onDuplicate={() => onQuestionDuplicate(q.examQuestionId)}
             onMoveToSection={to => onQuestionMoveToSection(q.examQuestionId, to)}
             onPreview={() => onPreviewQuestion(q)}
+            requestQuestionImage={requestQuestionImage}
             disabled={disabled}
           />
         ))}

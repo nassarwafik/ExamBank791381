@@ -1,7 +1,9 @@
 
 import { useState } from "react";
-import type { BuilderQuestion } from "./examTypes";
+import type { BuilderQuestion, BuilderImageAsset } from "./examTypes";
 import QuestionComposer from "./QuestionComposer";
+import QuestionMediaEditor from "./QuestionMediaEditor";
+import type { AiImageRequestQuestion } from "./questionMedia";
 
 // Exam-specific chrome around a question: collapse, the displayed-number badge, and the row actions (preview, move,
 // duplicate, delete), plus the exam-only metadata (display number, marks, shared stimulus/group, move-to-section).
@@ -22,11 +24,14 @@ type Props = {
   onDuplicate: () => void;
   onMoveToSection: (toSectionId: string) => void;
   onPreview: () => void;
+  // Phase 5B — authenticated AI image callback (App.tsx). Optional so existing renders/tests without media
+  // still work; when absent the media editor simply does not offer AI generation.
+  requestQuestionImage?: (q: AiImageRequestQuestion) => Promise<BuilderImageAsset>;
   disabled?: boolean;
 };
 
 export default function StructuredQuestionEditor(props: Props) {
-  const { question: q, index, total, sectionOptions, currentSectionId, groupOptions, onChange, onDelete, onMove, onDuplicate, onMoveToSection, onPreview, disabled } = props;
+  const { question: q, index, total, sectionOptions, currentSectionId, groupOptions, onChange, onDelete, onMove, onDuplicate, onMoveToSection, onPreview, requestQuestionImage, disabled } = props;
   const [open, setOpen] = useState(true);
 
   return (
@@ -65,6 +70,7 @@ export default function StructuredQuestionEditor(props: Props) {
           </div>
 
           <QuestionComposer question={q} onChange={onChange} disabled={disabled} />
+          <QuestionMediaEditor question={q} onChange={onChange} disabled={disabled} requestQuestionImage={requestQuestionImage} />
         </div>
       )}
     </div>

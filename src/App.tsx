@@ -14,7 +14,8 @@ const StructuredExamBuilder = lazy(() => import("./StructuredExamBuilder"));
 const SmartStructuredExamImportWizard = lazy(() => import("./SmartStructuredExamImportWizard"));
 import { withTrackingCode } from "./lib/requestTrace";
 import { isStructuredExam } from "./examTypes";
-import type { StructuredExam } from "./examTypes";
+import type { StructuredExam, BuilderImageAsset } from "./examTypes";
+import type { AiImageRequestQuestion } from "./questionMedia";
 import { legacyToStructured, toSavedStructuredExam, newSection, newQuestion } from "./examBuilderState";
 import "./project794589.css";
 import TeacherPlatform from "./TeacherPlatform";
@@ -2678,6 +2679,21 @@ function App() {
     }
   }
 
+
+  // Phase 5B — authenticated per-question AI image callback for the Structured Exam Builder. Sends only the
+  // SAFE question shape built by aiRequestQuestion (examQuestionId / text / options / topic — never `answer`)
+  // through the existing teacher apiRequest to the EXISTING /api/generate-question-image endpoint, and returns
+  // just the asset. The endpoint's `prompt` is intentionally discarded (never persisted on the question).
+  async function requestStructuredQuestionImage(
+    question: AiImageRequestQuestion
+  ): Promise<BuilderImageAsset> {
+    const result = await apiRequest<{ ok: true; asset: { id?: string; contentType?: string; dataUrl?: string } }>(
+      "/api/generate-question-image",
+      { method: "POST", body: JSON.stringify({ question }) }
+    );
+    const asset = result.asset || {};
+    return { id: asset.id, origin: "ai-generated", contentType: asset.contentType || "image/png", dataUrl: asset.dataUrl };
+  }
 
   async function saveExamArtifact(
     kind:
@@ -7598,6 +7614,7 @@ function App() {
               saving={structuredSaving}
               notice={structuredNotice}
               error={structuredError}
+              requestQuestionImage={requestStructuredQuestionImage}
             />
           </Suspense>
         </div>

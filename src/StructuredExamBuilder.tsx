@@ -1,7 +1,8 @@
 
 import { useMemo, useState } from "react";
 import { createPortal } from "react-dom";
-import type { StructuredExam, BuilderQuestion, BuilderSection } from "./examTypes";
+import type { StructuredExam, BuilderQuestion, BuilderSection, BuilderImageAsset } from "./examTypes";
+import type { AiImageRequestQuestion } from "./questionMedia";
 import {
   addSection,
   deleteSection,
@@ -42,9 +43,11 @@ type Props = {
   saving?: boolean;
   notice?: string;
   error?: string;
+  // Phase 5B — authenticated per-question AI image callback (App.tsx owns auth). Optional/back-compatible.
+  requestQuestionImage?: (q: AiImageRequestQuestion) => Promise<BuilderImageAsset>;
 };
 
-export default function StructuredExamBuilder({ exam, onChange, onSave, onExit, saving, notice, error }: Props) {
+export default function StructuredExamBuilder({ exam, onChange, onSave, onExit, saving, notice, error, requestQuestionImage }: Props) {
   const [preview, setPreview] = useState<StructuredExam | null>(null);
   const [showIssues, setShowIssues] = useState(true);
 
@@ -117,6 +120,7 @@ export default function StructuredExamBuilder({ exam, onChange, onSave, onExit, 
             onQuestionDuplicate={qid => setSections(s => dupQ(s, section.id, qid))}
             onQuestionMoveToSection={(qid, to) => setSections(s => movQTo(s, section.id, qid, to))}
             onPreviewQuestion={q => setPreview(singleQuestionExam(exam, section, q))}
+            requestQuestionImage={requestQuestionImage}
             disabled={saving}
           />
         ))}
