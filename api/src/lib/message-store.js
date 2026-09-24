@@ -7,9 +7,22 @@
 // moment can never overwrite each other, there is no whole-thread CAS / lost update, history is immutable, and one
 // failed send cannot corrupt older history. There is no edit / delete / unsend in Phase 5C.
 //
-// Message ids are generated HERE (server side): a 13-digit Date.now() prefix + cryptographic randomness, so blob
-// names sort chronologically. A create collision regenerates the id and retries — an existing blob is NEVER
-// overwritten. Nothing the browser sends (messageId, createdAt, sender*) is ever authority.
+// PUBLICATION ORDER (Phase 5D third review). A message id is assigned BY ITS PUBLICATION, not by a clock: each stream
+// is a dense sequence of positions 1, 2, 3, … and a message is published by the create-only write (If-None-Match:"*")
+// of the blob for the NEXT position. That single atomic write is both the commit and the ordering authority:
+//   • a writer only attempts position p after observing p-1 exist (the listing max, or a create conflict at p-1),
+//     so positions become visible strictly in order and the visible sequenced set is always a prefix 1..n;
+//   • two concurrent writers race for the SAME blob name — exactly one wins, the other gets 409 and moves to p+1;
+//   • there is no second write, so a crash leaves either a published message or nothing (never a half-state).
+// A message that is slow to upload therefore cannot appear "below" a message published after it: if it loses the race
+// it is published at a LATER position. Wall clocks (Date.now / per-process monotonic ms) are only the display time
+// (createdAt) and never ordering authority — a process-local monotonic clock orders id ALLOCATION, not publication.
+// The id keeps the public format "<13 digits>-<16 hex>": the 13 digits are the ORDER KEY SEQUENCE_KEY_BASE + position
+// (above every legacy millisecond id) and the hex is a deterministic digest of (stream, position), so the blob name
+// for a position is fixed (the create-only race is on the same name) and ids stay distinct across streams.
+// LEGACY ids (Phase 5C, "<ms>-<random hex>", order key < SEQUENCE_KEY_BASE) stay readable and sort before every
+// sequenced id; they are never written by this code. Nothing the browser sends (messageId, createdAt, sender*) is
+// ever authority.
 //
 // Reads are always NARROW: one student's direct prefix or one class's announcement prefix — never a scan of all
 // messages. Names are listed (cheap, no download), sorted, and only the bounded most-recent page is downloaded.
@@ -26,6 +39,9 @@ const MAX_HISTORY_LIMIT = 200;
 const MAX_CREATE_ATTEMPTS = 5;
 const SENDER_ROLES = new Set(["teacher", "student"]);
 const MESSAGE_ID_RE = /^\d{13}-[a-f0-9]{16}$/;
+// Order key of stream position 1 is SEQUENCE_KEY_BASE + 1. Every legacy millisecond id (< year 2255) sorts below it.
+const SEQUENCE_KEY_BASE = 9000000000000;
+const MAX_POSITION = 999999999999;
 
 /** A storage-safe id segment (class ids / user ids are UUIDs). Anything else — "../", "/", "%", empty, oversized —
  *  is REJECTED (never rewritten, so two different ids can never map to the same prefix). */
@@ -41,10 +57,21 @@ function announcementPrefix(classId) {
   return ANNOUNCEMENT_PREFIX + classId + "/";
 }
 
-/** Server-generated, chronologically sortable message id: <13-digit ms>-<16 hex chars of crypto randomness>. */
-function generateMessageId(nowMs = Date.now(), randomBytes = crypto.randomBytes) {
-  const ms = Math.max(0, Math.floor(Number(nowMs) || 0));
-  return String(ms).padStart(13, "0").slice(-13) + "-" + randomBytes(8).toString("hex");
+/** The id (and blob name) of stream position `position`: "<SEQUENCE_KEY_BASE + position>-<digest(stream, position)>". */
+function sequencedMessageId(prefix, position) {
+  if (!Number.isInteger(position) || position < 1 || position > MAX_POSITION) throw new Error("Invalid message position.");
+  const digest = crypto.createHash("sha256").update("message-position\n" + prefix + "\n" + position).digest("hex");
+  return String(SEQUENCE_KEY_BASE + position) + "-" + digest.slice(0, 16);
+}
+
+/** The stream position of a sequenced id under `prefix`; 0 for a legacy (millisecond) id; -1 when the id claims a
+ *  sequenced order key but is not the canonical id of that position in THIS stream (never trusted). */
+function messagePosition(id, prefix) {
+  if (typeof id !== "string" || !MESSAGE_ID_RE.test(id)) return -1;
+  const key = Number(id.slice(0, 13));
+  if (key <= SEQUENCE_KEY_BASE) return key < SEQUENCE_KEY_BASE ? 0 : -1;
+  const position = key - SEQUENCE_KEY_BASE;
+  return sequencedMessageId(prefix, position) === id ? position : -1;
 }
 
 /** Plain-text body contract: a string; CRLF → LF; control characters (except newline/tab) removed; outer whitespace
@@ -64,43 +91,45 @@ function clampLimit(value, fallback) {
   return Math.min(n, MAX_HISTORY_LIMIT);
 }
 
-/**
- * Create-only write of ONE new message under `prefix`. `buildDoc(messageId, createdAt)` returns the full document.
- * A blob-name collision (If-None-Match conflict) regenerates the id and retries; an existing message is never
- * overwritten. Returns the stored document.
- */
-// Last issued id timestamp in THIS process. Ids are ordered by their time prefix, so two sends within the same
-// millisecond would otherwise order by their random suffix; issuing strictly increasing milliseconds per process keeps
-// rapid consecutive sends (e.g. a teacher's quick follow-ups) in send order. Across instances, order is by clock.
-let lastIssuedMs = 0;
-function nextMonotonicMs(nowMs) {
-  const ms = Math.max(Math.floor(Number(nowMs) || 0), lastIssuedMs + 1);
-  lastIssuedMs = ms;
-  return ms;
+/** Highest stream position visible in a listing (0 when the stream has no sequenced message yet). */
+function maxListedPosition(names, prefix) {
+  let max = 0;
+  for (const name of names) {
+    const id = blobMessageId(name, prefix);
+    if (id) max = Math.max(max, messagePosition(id, prefix));
+  }
+  return max;
 }
 
+/**
+ * PUBLISH one new message under `prefix` at the next stream position (see PUBLICATION ORDER above).
+ * `buildDoc(messageId, createdAt)` returns the full document. The position is the listed maximum + 1; a create
+ * conflict means another writer published that position first, so the next position is tried — an existing message is
+ * never overwritten and a message is never published below one that became visible before it. Returns the document.
+ */
 async function createMessage(container, prefix, buildDoc, deps = {}) {
   const upload = deps.uploadJsonConditional || uploadJsonConditional;
+  const list = deps.listBlobNames || listBlobNames;
   const now = deps.now || (() => Date.now());
-  const newId = deps.generateMessageId || generateMessageId;
-  for (let attempt = 0; attempt < MAX_CREATE_ATTEMPTS; attempt++) {
-    const ms = nextMonotonicMs(now());
-    const messageId = newId(ms);
-    const doc = buildDoc(messageId, new Date(ms).toISOString());
+  let position = maxListedPosition(await list(container, prefix), prefix) + 1;
+  for (let attempt = 0; attempt < MAX_CREATE_ATTEMPTS; attempt++, position++) {
+    const messageId = sequencedMessageId(prefix, position);
+    const doc = buildDoc(messageId, new Date(now()).toISOString());   // createdAt = display time only
     try {
-      await upload(container, prefix + messageId + ".json", doc, null);   // etag=null → create-only
+      await upload(container, prefix + messageId + ".json", doc, null);   // etag=null → create-only = the commit
       return doc;
     } catch (e) {
-      if (!isConcurrencyConflict(e)) throw e;                             // only an id collision is retried
+      if (!isConcurrencyConflict(e)) throw e;                             // only "position already published" retries
     }
   }
-  throw new Error("Could not allocate a unique message id.");
+  throw new Error("Could not publish the message (stream position contention).");
 }
 
+/** The message id of a stream blob name: a legacy id, or the CANONICAL id of a sequenced position; else "". */
 function blobMessageId(name, prefix) {
   if (!name.startsWith(prefix) || !name.endsWith(".json")) return "";
   const id = name.slice(prefix.length, -".json".length);
-  return MESSAGE_ID_RE.test(id) ? id : "";
+  return messagePosition(id, prefix) >= 0 ? id : "";
 }
 
 /** A stored document is accepted only when it matches where it was read from; anything malformed is skipped. */
@@ -127,14 +156,25 @@ async function listRecentMessages(container, prefix, expected, limit, deps = {})
     if (messageId) entries.push({ name, messageId });
   }
   entries.sort((a, b) => (a.messageId < b.messageId ? -1 : a.messageId > b.messageId ? 1 : 0));
-  const page = entries.slice(-limit);
+  // Only the CONTIGUOUS published prefix 1..n is shown: a listing is not an atomic snapshot, so a position seen after
+  // a gap (its predecessor was missed by this listing) waits for the next read — a reader can never be shown, and so
+  // acknowledge, a position whose predecessor it did not see. Legacy ids are unaffected.
+  let nextPosition = 1;
+  const visible = entries.filter(e => {
+    const position = messagePosition(e.messageId, prefix);
+    if (position === 0) return true;
+    if (position !== nextPosition) return false;
+    nextPosition++;
+    return true;
+  });
+  const page = visible.slice(-limit);
   const docs = await many(container, page.map(e => e.name), getReadConcurrency());
   const out = [];
   for (let i = 0; i < page.length; i++) {
     const doc = normalizeStoredMessage(docs[i], { ...expected, messageId: page[i].messageId });
     if (doc) out.push(doc);
   }
-  return { messages: out, hasMore: entries.length > page.length };
+  return { messages: out, hasMore: visible.length > page.length };
 }
 
 /** The public view of a message. Never includes storage paths, sender ids or send-time class metadata unless the
@@ -163,8 +203,8 @@ function studentDisplayName(student) {
 module.exports = {
   MESSAGE_PREFIX, DIRECT_PREFIX, ANNOUNCEMENT_PREFIX, MAX_BODY_LENGTH, DIRECT_HISTORY_LIMIT, ANNOUNCEMENT_HISTORY_LIMIT,
   MAX_HISTORY_LIMIT, MAX_CREATE_ATTEMPTS,
-  isSafeId, directPrefix, announcementPrefix, generateMessageId, normalizeMessageBody, clampLimit,
+  isSafeId, directPrefix, announcementPrefix, sequencedMessageId, messagePosition, normalizeMessageBody, clampLimit,
   createMessage, listRecentMessages, normalizeStoredMessage, messageView, studentDisplayName,
   // Phase 5D — reused by the read-state store (message ids / stream listing), never duplicated there.
-  MESSAGE_ID_RE, blobMessageId
+  MESSAGE_ID_RE, SEQUENCE_KEY_BASE, blobMessageId
 };

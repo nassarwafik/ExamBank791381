@@ -5,10 +5,17 @@
 //   platform/messages/read-state/student/<studentId>/direct.json                        a student's direct conversation
 //   platform/messages/read-state/student/<studentId>/announcements/<classId>.json       a student's view of one class
 //
-// READ BOUNDARY (same-millisecond safe). Message ids are "<13-digit ms>-<random>", and ids created in the SAME
-// millisecond on different instances order by their random suffix — so a single "last read id" would wrongly hide a
-// later same-ms message whose suffix sorts lower. The marker is therefore { boundaryMs, seenIdsAtBoundary[] }:
-//   ms <  boundaryMs → read;  ms > boundaryMs → unread;  ms == boundaryMs → read ONLY if its id is in seenIdsAtBoundary.
+// ORDER KEY. The 13-digit id prefix is the message's ORDER KEY ("ms" in the names below, kept for the stored marker
+// format). New messages are SEQUENCED (message-store.js): key = SEQUENCE_KEY_BASE + the stream position assigned by the
+// create-only publication write itself, so key order IS publication order — a message that becomes visible later
+// always has a larger key, and "key < boundary → read" can never cover a message published after the acknowledged
+// one. Legacy Phase 5C ids ("<ms>-<random>", key < SEQUENCE_KEY_BASE) keep their millisecond key and sort below every
+// sequenced id.
+// READ BOUNDARY (same-key safe). Legacy ids created in the SAME millisecond on different instances order by their
+// random suffix — so a single "last read id" would wrongly hide a later same-ms message whose suffix sorts lower. The
+// marker is therefore { boundaryMs, seenIdsAtBoundary[] } (boundaryMs = an order key):
+//   key <  boundaryMs → read;  key > boundaryMs → unread;  key == boundaryMs → read ONLY if listed in seenIdsAtBoundary.
+// (A sequenced key is unique per stream, so for sequenced ids seenIdsAtBoundary is just [X].)
 // Marking read is a SNAPSHOT ACKNOWLEDGEMENT: the client sends X (the latest unread-RELEVANT message it actually
 // displayed) and seenIdsAtBoundary — the relevant ids at X's millisecond that were in THAT applied snapshot. The boundary
 // ids are NEVER re-derived from a fresh listing: a message created in the same millisecond after the reader's GET (on
@@ -58,7 +65,8 @@ function studentAnnouncementStateName(studentId, classId) {
   return READ_STATE_PREFIX + "student/" + studentId + "/announcements/" + classId + ".json";
 }
 
-/** The 13-digit millisecond prefix of a message id (NaN when it is not a message id). */
+/** The 13-digit ORDER KEY of a message id (legacy: its millisecond; sequenced: SEQUENCE_KEY_BASE + position); NaN when
+ *  it is not a message id. */
 function messageIdMs(id) {
   return typeof id === "string" && MESSAGE_ID_RE.test(id) ? Number(id.slice(0, 13)) : NaN;
 }
