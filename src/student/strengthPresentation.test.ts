@@ -57,6 +57,11 @@ describe("isServerStrength / strengthAuthority — the acceptance rule", () => {
     // an older payload without rawTotalPoints / legacyRank / studyPoints still normalizes (totalPoints is the raw total)
     const older = normalizeStrength({ ...SERVER, rawTotalPoints: undefined, legacyRank: undefined, studyPoints: undefined, pointsToMaximum: undefined })!;
     expect(older).toMatchObject({ rawTotalPoints: 510, studyPoints: 0, legacyRank: null, pointsToMaximum: 1490 });
+    // Phase 4E — gamePoints is optional (backward compatible): absent → 0, present → shaped to a non-negative integer.
+    expect(normalizeStrength(SERVER)!.gamePoints).toBe(0);
+    expect(normalizeStrength({ ...SERVER, gamePoints: 18 })!.gamePoints).toBe(18);
+    expect(normalizeStrength({ ...SERVER, gamePoints: 12.7 })!.gamePoints).toBe(12);
+    expect(normalizeStrength({ ...SERVER, gamePoints: -5 })!.gamePoints).toBe(0);
   });
   it("INCONSISTENT server values are shown as given — 900 points but stage 17 / 11 / 14% is presented as stage 17, 11 / 80, 14% (no recomputation from 900)", () => {
     const s = normalizeStrength({ ...SERVER, rawTotalPoints: 900, totalPoints: 900, stagePoints: 900, stageNumber: 17, withinStagePoints: 11, stagePercent: 14, nextStageNumber: 18, nextStageRemaining: 69 })!;

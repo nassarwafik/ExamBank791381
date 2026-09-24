@@ -11,6 +11,9 @@ const {
 } = require("../lib/live-challenge-session-store");
 // Phase 4D — persistent Top-3 recognition medals, recorded ONLY after a successful finish CAS (best-effort/secondary).
 const { recordLiveChallengePodiumMedals } = require("../lib/live-challenge-recognition");
+// Phase 4E — assigned-game Strength result (best performance %), recorded alongside medals (best-effort/secondary,
+// recognition-independent: it reads the game percentage, never a medal or placement).
+const { recordLiveChallengeGameResults } = require("../lib/live-challenge-game-results");
 
 // Live Challenge — TEACHER live-session API (Phase 4A lobby + Phase 4B live round engine).
 //   POST /api/game-live-session/create  { challengeId, classId, studentIds } → snapshot a saved challenge into a new
@@ -179,6 +182,9 @@ async function handler(request, deps = {}, obs = null) {
       if (session.status === "finished") {
         const record = deps.recordLiveChallengePodiumMedals || recordLiveChallengePodiumMedals;
         try { await record(container, session, deps); } catch (e) { obs?.logError("game.live-session.recognition", e); }
+        // Phase 4E: reconcile the assigned-game Strength result too (best-only, idempotent, secondary/isolated).
+        const recordGame = deps.recordLiveChallengeGameResults || recordLiveChallengeGameResults;
+        try { await recordGame(container, session, deps); } catch (e) { obs?.logError("game.live-session.game-strength", e); }
       }
       return { status: 200, jsonBody: { ok: true, session: teacherView(session) } };
     }
@@ -208,6 +214,10 @@ async function handler(request, deps = {}, obs = null) {
         if (action === "finish" && updated && updated.status === "finished") {
           const record = deps.recordLiveChallengePodiumMedals || recordLiveChallengePodiumMedals;
           try { await record(container, updated, deps); } catch (e) { obs?.logError("game.live-session.recognition", e); }
+          // Phase 4E: record the assigned-game Strength result (best performance %). Same secondary/best-effort
+          // contract as the medal write — a failure here never turns a successful finish into an HTTP failure.
+          const recordGame = deps.recordLiveChallengeGameResults || recordLiveChallengeGameResults;
+          try { await recordGame(container, updated, deps); } catch (e) { obs?.logError("game.live-session.game-strength", e); }
         }
         return { status: 200, jsonBody: { ok: true, session: teacherView(updated) } };
       } catch (e) {

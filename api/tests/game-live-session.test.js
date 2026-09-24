@@ -3,6 +3,7 @@ import { handler, createWithUniqueCode } from "../src/functions/game-live-sessio
 import { uploadJsonConditional } from "../src/lib/platform-storage.js";
 import { sessionDocName } from "../src/lib/live-challenge-session-store.js";
 import { FEED_PREFIX, feedBlobName, recordAchievementEvent as realRecordAchievementEvent } from "../src/lib/achievement-feed.js";
+import { gameResultsDocName, eligibleGamePercentages } from "../src/lib/game-results-store.js";
 import { createMemoryContainer } from "./fixtures/memory-container.js";
 
 // Phase 4A — TEACHER live-session API through the REAL handler + REAL platform-storage CAS against the in-memory
@@ -531,5 +532,63 @@ describe("teacher finish — Phase 4D podium recognition medals", () => {
     expect(g.status).toBe(404);
     expect(called).toBe(0);                                          // foreign teacher never triggers reconciliation
     expect(gameBlobs(ctx)).toHaveLength(0);
+  });
+});
+
+// ── Phase 4E — finish + owned finished GET record the ASSIGNED-game Strength result (best performance %) ───────────
+describe("teacher finish — Phase 4E game-strength result recording", () => {
+  const CODE = "GAME4E";
+  const gUser = id => ({ userId: id, role: "student", active: true, archived: false, classId: "cl1", displayName: "طالب " + id, shareAchievements: true });
+  // seed an ACTIVE session on the LAST round with graded answers so finish produces a finished session to derive from.
+  function seedFinishable(ctx, players, qCount = 3, over = {}) {
+    const participants = players.map(p => {
+      const answers = []; for (let i = 0; i < qCount; i++) answers.push({ roundVersion: i + 1, questionIndex: i, response: { kind: "choice", index: 0 }, submittedAt: "t", grade: { score: i < p.correct ? 1 : 0, maxMarks: 1, correct: i < p.correct } });
+      return { studentId: p.id, displayName: p.name, joinedAt: "j", readyAt: null, answers };
+    });
+    ctx.setJson(sessionDocName(CODE), {
+      kind: "live-challenge-session", schemaVersion: 2, sessionId: CODE, joinCode: CODE, teacherId: "t1",
+      challengeId: "c9", challengeTitle: "شبكات", classId: "cl1", status: "active",
+      currentQuestionIndex: qCount - 1, roundVersion: qCount, startedAt: "s", questionStartedAt: "s", finishedAt: null,
+      participants, challengeSnapshot: { questions: Array.from({ length: qCount }, () => ({ question: { examQuestionId: "q" } })) },
+      createdAt: "c", updatedAt: "u", closedAt: null, ...over,
+    });
+  }
+  const usersSchool = () => school({ "platform/users/A.json": gUser("A"), "platform/users/B.json": gUser("B") });
+  const best = (ctx, id) => eligibleGamePercentages(ctx.getJson(gameResultsDocName(id)));
+
+  it("a successful finish records each playing participant's best game percentage", async () => {
+    const ctx = usersSchool();
+    seedFinishable(ctx, [{ id: "A", name: "أحمد", correct: 3 }, { id: "B", name: "بلال", correct: 2 }]);
+    const r = await act(ctx, "finish", { joinCode: CODE, roundVersion: 3 });
+    expect(r.status).toBe(200);
+    expect(best(ctx, "A")).toEqual([100]);   // 3/3
+    expect(best(ctx, "B")).toEqual([67]);    // 2/3
+  });
+
+  it("an owned FINISHED GET reconciles a missing game result (best-effort recovery), and repeated GET never accumulates", async () => {
+    const ctx = usersSchool();
+    // craft an already-finished session with NO game-results recorded (simulating a missed finish-time write)
+    ctx.setJson(sessionDocName(CODE), {
+      kind: "live-challenge-session", schemaVersion: 2, sessionId: CODE, joinCode: CODE, teacherId: "t1",
+      challengeId: "c9", challengeTitle: "شبكات", classId: "cl1", status: "finished", currentQuestionIndex: 2,
+      participants: [{ studentId: "A", displayName: "أحمد", joinedAt: "j", readyAt: null, answers: [{ roundVersion: 1, questionIndex: 0, grade: { score: 1, maxMarks: 1, correct: true } }, { roundVersion: 2, questionIndex: 1, grade: { score: 1, maxMarks: 1, correct: true } }, { roundVersion: 3, questionIndex: 2, grade: { score: 0, maxMarks: 1, correct: false } }] }],
+      challengeSnapshot: { questions: [{ question: {} }, { question: {} }, { question: {} }] }, finishedAt: "z", createdAt: "c", updatedAt: "u", closedAt: null,
+    });
+    expect(ctx.getJson(gameResultsDocName("A"))).toBeNull();
+    await act(ctx, "get", { joinCode: CODE });
+    expect(best(ctx, "A")).toEqual([67]);    // 2/3 reconciled on GET
+    for (let i = 0; i < 3; i++) await act(ctx, "get", { joinCode: CODE });
+    expect(best(ctx, "A")).toEqual([67]);    // repeated GET never accumulates (best-only, no churn)
+  });
+
+  it("a stale finish and a foreign GET record NO game result", async () => {
+    const ctx = usersSchool();
+    seedFinishable(ctx, [{ id: "A", name: "أحمد", correct: 3 }]);
+    expect((await act(ctx, "finish", { joinCode: CODE, roundVersion: 99 })).status).toBe(409);   // stale
+    expect(ctx.getJson(gameResultsDocName("A"))).toBeNull();
+    // now finish it properly, then a FOREIGN teacher GET must not re-touch anything (404, no writes it owns)
+    await act(ctx, "finish", { joinCode: CODE, roundVersion: 3 });
+    expect(best(ctx, "A")).toEqual([100]);
+    expect((await act(ctx, "get", { joinCode: CODE }, "t2")).status).toBe(404);   // foreign teacher → 404
   });
 });

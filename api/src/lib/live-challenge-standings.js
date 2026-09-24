@@ -100,4 +100,28 @@ function buildLiveStandings(session) {
   }));
 }
 
-module.exports = { competitionPointsForGrade, completedRoundsCount, buildLiveStandings };
+/**
+ * Phase 4E — per playing participant's PERFORMANCE percentage for a FINISHED session, for educational-game Strength.
+ * This is the student's academic performance in the game, NOT their placement/medal: for each of their answers the
+ * SERVER-stored grade fraction clamp(score/maxMarks,0,1) is summed and divided by the total question count, then × 100
+ * (unanswered rounds contribute 0). Returns `{ studentId, displayName, challengeId, percentage }[]` (percentage 0..100).
+ * A non-finished session returns [] (only a finished game has an authoritative result to award Strength from).
+ */
+function liveChallengeGamePercentages(session) {
+  if (!session || session.status !== "finished") return [];
+  const qCount = questionCountOf(session);
+  const challengeId = String(session.challengeId || "");
+  return playingParticipants(session).map(p => {
+    let fractionSum = 0;
+    for (const a of answersOf(p)) {
+      if (!a || !Number.isInteger(a.questionIndex) || a.questionIndex < 0 || a.questionIndex >= qCount) continue;
+      const g = a.grade && typeof a.grade === "object" ? a.grade : {};
+      const max = Number(g.maxMarks), score = Number(g.score);
+      if (max > 0 && Number.isFinite(score)) fractionSum += clamp01(score / max);
+    }
+    const percentage = qCount > 0 ? Math.round(fractionSum / qCount * 100) : 0;
+    return { studentId: String(p.studentId || ""), displayName: String(p.displayName || ""), challengeId, percentage: Math.min(100, Math.max(0, percentage)) };
+  });
+}
+
+module.exports = { competitionPointsForGrade, completedRoundsCount, buildLiveStandings, liveChallengeGamePercentages };

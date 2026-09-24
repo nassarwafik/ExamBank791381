@@ -14,7 +14,7 @@ const stats = { assigned: 3, completed: 3, average: 80, pendingReview: 0, finali
 /** A SERVER-shaped payload for a raw total (mirrors the API formula only to build mocks; the component reads the fields verbatim). */
 function serverStrength(raw: number): StudentStrength {
   const stagePoints = Math.min(raw, 2000), max = stagePoints >= 1920, stageNumber = max ? 25 : Math.floor(stagePoints / 80) + 1, stageFloor = (stageNumber - 1) * 80, within = Math.min(80, stagePoints - stageFloor);
-  return { rawTotalPoints: raw, totalPoints: raw, examPoints: raw, practicePoints: 0, studyPoints: 0, projectPoints: 0, stagePoints, stageMaxPoints: 2000, stageNumber, stageCount: 25, stageBlockSize: 80, stageFloor, withinStagePoints: within, stagePercent: Math.round(within * 100 / 80), nextStageNumber: max ? null : stageNumber + 1, nextStageRemaining: max ? 0 : 80 - within, pointsToMaximum: 2000 - stagePoints, isMaximumStage: max, pathComplete: stagePoints >= 2000, legacyRank: null, projects: [] };
+  return { rawTotalPoints: raw, totalPoints: raw, examPoints: raw, practicePoints: 0, studyPoints: 0, gamePoints: 0, projectPoints: 0, stagePoints, stageMaxPoints: 2000, stageNumber, stageCount: 25, stageBlockSize: 80, stageFloor, withinStagePoints: within, stagePercent: Math.round(within * 100 / 80), nextStageNumber: max ? null : stageNumber + 1, nextStageRemaining: max ? 0 : 80 - within, pointsToMaximum: 2000 - stagePoints, isMaximumStage: max, pathComplete: stagePoints >= 2000, legacyRank: null, projects: [] };
 }
 const draw = (raw: number) => { render(<StudentProgressSection stats={stats} medals={[]} strength={serverStrength(raw)} recognition={null} averageFinalized={80} />); return within(screen.getByRole("region", { name: /تقدّمي/ })); };
 

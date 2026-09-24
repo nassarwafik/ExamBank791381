@@ -17,9 +17,14 @@
 //                        28 × 20 = 560. Completion STATE, never a counter (see learning-study.js); a module without
 //                        eligible exercises contributes 0. Library-training blocks embedded in a module are NOT study
 //                        exercises — they belong only to their canonical 40-point Learning-Practice bucket.
+//   EDUCATIONAL GAMES  — each teacher-ASSIGNED game's BEST performance percentage  = round(best × 20 / 100)  (≤ 20 each)
+//                        (Phase 4E). Free play / unassigned sessions are never recorded and contribute 0. Best-result
+//                        only per assigned game (non-additive, enforced by the per-student game-results store); NO
+//                        global gamePoints cap — only each game's individual 0..20 cap. Game MEDALS / podium placement
+//                        remain recognition only and contribute 0 here (Strength never reads a medal or a rank).
 //   PROJECTS           — each enrolled project's authoritative progress         = round(overallProgress × 4)  (≤ 400 each)
 //
-//   rawTotalPoints = examPoints + practicePoints + studyPoints + projectPoints           (never capped, never lost)
+//   rawTotalPoints = examPoints + practicePoints + studyPoints + gamePoints + projectPoints   (never capped, never lost)
 //   stagePoints    = min(rawTotalPoints, 2000)                                           (the VISIBLE path only)
 //   stageNumber    = stagePoints ≥ 2000 ? 25 : floor(stagePoints / 80) + 1                (1..25 — there is NO stage 26)
 //
@@ -52,6 +57,15 @@ const STUDY_MAX_TOTAL = STUDY_MODULE_COUNT * STUDY_MODULE_MAX_POINTS;           
 
 // ── Projects ────────────────────────────────────────────────────────────────────────────────────────────────
 const PROJECT_MAX_STRENGTH_POINTS = 400;
+
+// ── Educational games (Phase 4E) ────────────────────────────────────────────────────────────────────────────
+// A teacher-ASSIGNED educational game contributes from the student's BEST valid finalized PERFORMANCE percentage:
+//   gameStrength = round(clamp(pct,0,100) × 20 / 100), clamped 0..20.  100% → 20, 90% → 18, 75% → 15, 50% → 10, 0 → 0.
+// gamePoints = Σ best-per-assigned-game (each 0..20). There is intentionally NO global gamePoints cap. Only ASSIGNED
+// games are ever passed in (free play / unassigned sessions are never recorded, so contribute 0), the percentage is
+// the SERVER-authoritative game performance (never placement, medal tier, or a client value), and BEST-only is enforced
+// upstream by the per-student game-results store (this module just sums the best percentages it is given).
+const GAME_MAX_STRENGTH_POINTS = 20;
 
 // ── The visible 25-stage path ───────────────────────────────────────────────────────────────────────────────
 const STRENGTH_STAGE_COUNT = 25;
@@ -112,6 +126,26 @@ function strengthFromTrainingResult(trainingId, bestPercentage) {
 /** Project contribution from authoritative overallProgress: 0 → 0, 1 → 4, 25 → 100, 50 → 200, 75 → 300, 100 → 400. */
 function strengthFromProjectProgress(overallProgress) {
   return roundPoints(clampPercent(overallProgress) * PROJECT_MAX_STRENGTH_POINTS / 100);
+}
+/** Game contribution of ONE assigned game from its best performance percentage: round(clamp(pct,0,100) × 20 / 100),
+ *  hard-clamped to 0..20 (100 → 20, 90 → 18, 75 → 15, 50 → 10, 25 → 5, 0 → 0; NaN / <0 / >100 → safe 0..20). Never a
+ *  placement, medal tier, or client value. */
+function gameStrengthFromPercentage(bestPercentage) {
+  const pts = roundPoints(clampPercent(bestPercentage) * GAME_MAX_STRENGTH_POINTS / 100);
+  return Math.min(GAME_MAX_STRENGTH_POINTS, Math.max(0, pts));
+}
+/** Game total: Σ over each ELIGIBLE ASSIGNED game of its best-percentage contribution (each 0..20). Accepts a list of
+ *  best percentages (numbers) or of `{ bestPercentage }` / `{ percentage }` entries. There is NO global cap: only each
+ *  game's individual 0..20 cap applies. A non-array (older caller / no games) → 0. The caller supplies ONLY assigned
+ *  games' BEST results (free play is never included), so nothing here needs to know about assignment or attempts. */
+function gamePointsFromGames(games) {
+  if (!Array.isArray(games)) return 0;
+  let total = 0;
+  for (const g of games) {
+    const pct = g && typeof g === "object" ? (g.bestPercentage != null ? g.bestPercentage : g.percentage) : g;
+    total += gameStrengthFromPercentage(pct);
+  }
+  return total;
 }
 /** Practice total from a trainings map { T01: { bestPercentage } … }: ONE bucket per id, stored bestPoints are never
  *  trusted (re-derived from bestPercentage), and an entry under an unknown id adds 0 whatever it contains. */
@@ -207,29 +241,33 @@ function legacyRankProgress(totalPoints) {
  *            projects: [{ projectCode, overallProgress, strengthPoints }] }
  *   `study` absent (a student with no study document, an older caller) → studyPoints 0.
  */
-function buildStrengthSummary({ finalizedPercentages, trainings, projects, study } = {}) {
+function buildStrengthSummary({ finalizedPercentages, trainings, projects, study, games } = {}) {
   const examPoints = examPointsFromFinalizedResults(finalizedPercentages);
   const practicePoints = practicePointsFromTrainings(trainings);
   const studyPoints = studyPointsFromModules(study);
+  // Phase 4E — educational games: Σ best-per-assigned-game (each 0..20; no global cap). `games` absent (older caller /
+  // a student with no assigned-game result) → 0, so every existing account keeps its exact previous totals.
+  const gamePoints = gamePointsFromGames(games);
   const projectRows = (Array.isArray(projects) ? projects : []).map(p => {
     const overallProgress = Math.round(clampPercent(p && p.overallProgress));
     return { projectCode: String((p && p.projectCode) || ""), overallProgress, strengthPoints: strengthFromProjectProgress(overallProgress) };
   });
   const projectPoints = projectRows.reduce((sum, p) => sum + p.strengthPoints, 0);
-  const rawTotalPoints = examPoints + practicePoints + studyPoints + projectPoints;
+  const rawTotalPoints = examPoints + practicePoints + studyPoints + gamePoints + projectPoints;
   const stage = strengthStageProgress(rawTotalPoints);
-  return { ...stage, totalPoints: rawTotalPoints, examPoints, practicePoints, studyPoints, projectPoints, legacyRank: legacyRankProgress(rawTotalPoints), projects: projectRows };
+  return { ...stage, totalPoints: rawTotalPoints, examPoints, practicePoints, studyPoints, gamePoints, projectPoints, legacyRank: legacyRankProgress(rawTotalPoints), projects: projectRows };
 }
 
 module.exports = {
   FINALIZED_EXAM_MAX_POINTS,
   LEARNING_PRACTICE_MAX_POINTS, LEARNING_PRACTICE_ITEM_ID, LEARNING_PRACTICE_ITEM_COUNT, LEARNING_PRACTICE_MAX_TOTAL,
   STUDY_MODULE_MAX_POINTS, STUDY_MODULE_COUNT, STUDY_MAX_TOTAL,
-  PROJECT_MAX_STRENGTH_POINTS,
+  PROJECT_MAX_STRENGTH_POINTS, GAME_MAX_STRENGTH_POINTS,
   STRENGTH_STAGE_COUNT, STRENGTH_STAGE_POINTS, STRENGTH_STAGE_MAX_POINTS,
   RANK_STEP_STRENGTH_POINTS, RANK_ORDER,
   clampPercent, examStrengthFromPercentage, examPointsFromFinalizedResults, isLearningPracticeItem, strengthFromTrainingBest, trainingMaxStrengthPoints,
   strengthFromTrainingResult, strengthFromProjectProgress, practicePointsFromTrainings,
   studyPointsForModule, studyPointsFromModules,
+  gameStrengthFromPercentage, gamePointsFromGames,
   strengthStageProgress, rankTierFromStrength, legacyRankProgress, buildStrengthSummary
 };

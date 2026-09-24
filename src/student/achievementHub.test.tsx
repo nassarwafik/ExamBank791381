@@ -16,7 +16,7 @@ afterEach(() => { cleanup(); vi.restoreAllMocks(); });
 
 const stats = { assigned: 5, completed: 4, average: 80, pendingReview: 0, finalized: 4, inProgress: 1, averageFinalized: 82 };
 // 1888 raw points → the SERVER says stage 24 (1840–1919), 48 / 80, 60%, 32 to stage 25.
-const strength = { rawTotalPoints: 1888, totalPoints: 1888, examPoints: 1200, practicePoints: 88, studyPoints: 0, projectPoints: 600, stagePoints: 1888, stageMaxPoints: 2000, stageNumber: 24, stageCount: 25, stageBlockSize: 80, stageFloor: 1840, withinStagePoints: 48, stagePercent: 60, nextStageNumber: 25, nextStageRemaining: 32, pointsToMaximum: 112, isMaximumStage: false, pathComplete: false, legacyRank: null, projects: [] };
+const strength = { rawTotalPoints: 1888, totalPoints: 1888, examPoints: 1200, practicePoints: 88, studyPoints: 0, gamePoints: 0, projectPoints: 600, stagePoints: 1888, stageMaxPoints: 2000, stageNumber: 24, stageCount: 25, stageBlockSize: 80, stageFloor: 1840, withinStagePoints: 48, stagePercent: 60, nextStageNumber: 25, nextStageRemaining: 32, pointsToMaximum: 112, isMaximumStage: false, pathComplete: false, legacyRank: null, projects: [] };
 const recognition: StudentRecognition = { medals: { total: 12, gold: 5, silver: 4, bronze: 3 }, reactionsReceived: { total: 36, byType: { heart: 18, clap: 10, cheer: 5, fire: 3 } }, achievements: { total: 7, byType: { global_rank_up: 4, project_rank_up: 2, project_complete: 1 } } };
 
 describe("Achievement Hub — تقدّمي وقوتي", () => {
@@ -27,7 +27,7 @@ describe("Achievement Hub — تقدّمي وقوتي", () => {
     expect(screen.getByText("المرحلة 24 من 25")).toBeTruthy();
     expect(screen.getByText(/نقاط القوة:/).textContent).toBe("نقاط القوة: 1888 / 2000");
     const breakdown = screen.getByText("الواجبات النهائية").closest("ul") as HTMLElement;
-    expect(breakdown.textContent).toBe("الواجبات النهائية1200التدريبات والامتحانات التدريبية88تمارين الدراسة0المشاريع600");
+    expect(breakdown.textContent).toBe("الواجبات النهائية1200التدريبات والامتحانات التدريبية88تمارين الدراسة0الألعاب التعليمية0المشاريع600");
     const tiles = within(screen.getByRole("list", { name: "التقدير" })).getAllByRole("listitem");
     expect(tiles.map(t => t.querySelector(".eb-sp-recognition-label")?.textContent)).toEqual(["الميداليات", "التفاعلات", "الإنجازات"]);
     expect(tiles.map(t => t.querySelector(".eb-sp-recognition-count")?.textContent)).toEqual(["12", "36", "7"]);   // server values, never medalsFor()

@@ -16,6 +16,7 @@ const {studyDocName,studyModulesForStrength}=require("../lib/learning-study");
 const {listLearningCourses}=require("../lib/learning-materials-registry");
 const {loadStudentProjects}=require("../lib/project-tracker/student-projects");
 const {aggregateRecognition,medalTierFromPercentage,emptyRecognition}=require("../lib/achievement-feed");
+const {gameResultsDocName,eligibleGamePercentages}=require("../lib/game-results-store");
 const {recordGlobalRankMilestone}=require("../lib/achievement-milestones");
 const AP="platform/assignments/",SP="platform/submissions/",LP="platform/learning-practice/";
 // Roadmap #12 — a single server-derived presentation state for a dashboard assignment card. It COMBINES
@@ -89,7 +90,11 @@ async function handler(request,deps={},obs=null){
   const studyDoc=await dl(c,studyDocName(student.userId));
   const study=studyModulesForStrength(studyDoc,listLearningCourses().map(x=>x.courseId));
   const projects=classroom?await loadStudentProjects(c,classroom,String(student.classId||""),student.userId,now,{...deps,downloadJsonOrNull:dl,mapConcurrent:mc,getReadConcurrency:readConcurrency}):[];
-  const strength=buildStrengthSummary({finalizedPercentages,trainings:practiceDoc&&practiceDoc.trainings,study,projects:projects.map(p=>({projectCode:p.projectCode,overallProgress:p.summary.overallProgress}))});
+  // Phase 4E — educational-game Strength: ONE read of the per-student ASSIGNED-game results store; gamePoints is the sum
+  // of each recorded game's best-percentage contribution (≤20 each). A missing/corrupt doc fails safe to [] → 0, so a
+  // student with no assigned-game result keeps their exact previous Strength.
+  const gameResultsDoc=await dl(c,gameResultsDocName(student.userId));
+  const strength=buildStrengthSummary({finalizedPercentages,trainings:practiceDoc&&practiceDoc.trainings,study,games:eligibleGamePercentages(gameResultsDoc),projects:projects.map(p=>({projectCode:p.projectCode,overallProgress:p.summary.overallProgress}))});
   // Recognition (never Strength): the global stage-up milestone is observed HERE — the one place the total Strength is
   // built — against the persisted last-seen stage (create-only event ids, baseline on first sight); the summary counts
   // medals (the same finalized-only authority as the portal), reactions RECEIVED and non-medal achievements lifetime.
