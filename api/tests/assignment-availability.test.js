@@ -31,10 +31,23 @@ describe("getAssignmentAvailability — boundary semantics (deterministic nowMs)
     expect(getAssignmentAvailability(a, s, NOW + 2000).availability).toBe("closed"); // override expired
     expect(effectiveDueAt(a, s)).toBe(iso(NOW + 1000));
   });
-  it("H: dueAtOverride SHORTENS a future due date => closed per override", () => {
-    const a = pub({ dueAt: iso(NOW + 1000) }); // would be open
-    const s = { dueAtOverride: iso(NOW - 1000) };
-    expect(getAssignmentAvailability(a, s, NOW).availability).toBe("closed");
+  it("H: an OLDER dueAtOverride never SHORTENS a later class dueAt (extension-only) => the class dueAt wins", () => {
+    // Phase 5A: effectiveDueAt = max(valid dueAt, valid override). Per-student overrides are extension-only,
+    // so an override EARLIER than the class deadline can never pull the effective deadline back before it.
+    const a = pub({ dueAt: iso(NOW + 1000) });     // class deadline in the future
+    const s = { dueAtOverride: iso(NOW - 1000) };  // an older/expired override
+    expect(effectiveDueAt(a, s)).toBe(iso(NOW + 1000));               // the later class deadline
+    expect(getAssignmentAvailability(a, s, NOW).availability).toBe("open");
+  });
+  it("H2 (Phase 5A): effectiveDueAt is max(dueAt, override) — global overtakes an older override, a longer accommodation survives", () => {
+    const G15 = iso(NOW + 15000), O12 = iso(NOW + 12000), O18 = iso(NOW + 18000);
+    expect(effectiveDueAt(pub({ dueAt: G15 }), { dueAtOverride: O12 })).toBe(G15); // 15 vs 12 → 15
+    expect(effectiveDueAt(pub({ dueAt: G15 }), { dueAtOverride: O18 })).toBe(O18); // 15 vs 18 → 18
+    expect(effectiveDueAt(pub({ dueAt: G15 }), null)).toBe(G15);                    // 15 / none → 15
+    expect(effectiveDueAt(pub({ dueAt: "" }), { dueAtOverride: O12 })).toBe(O12);   // none / 12 → 12
+    // malformed values never throw and fall back safely (no constraint)
+    expect(effectiveDueAt(pub({ dueAt: "not-a-date" }), { dueAtOverride: "bad" })).toBe("not-a-date");
+    expect(getAssignmentAvailability(pub({ dueAt: "not-a-date" }), { dueAtOverride: "bad" }, NOW).availability).toBe("open");
   });
   it("I: invalid / missing optional dates do not crash and default to open", () => {
     expect(getAssignmentAvailability(pub({ openAt: "not-a-date", dueAt: "" }), null, NOW).availability).toBe("open");
