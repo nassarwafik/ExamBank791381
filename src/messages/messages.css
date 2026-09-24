@@ -1,29 +1,14 @@
 /* Phase 5C — Messaging & Class Announcements (teacher page + student dedicated view). RTL-first, token-only. Message
    bodies keep their newlines (pre-wrap) and always wrap long words; sender identity is a text label, not colour. */
-.eb-msg-page{ display:flex; flex-direction:column; gap:var(--eb-space-4); min-width:0; }
-@media (min-width: 1024px){ .eb-msg-page{ padding-inline-start:var(--eb-space-4); } }
 
-.eb-msg-toolbar{ display:flex; flex-wrap:wrap; align-items:flex-end; gap:var(--eb-space-3); }
-.eb-msg-field{ display:flex; flex-direction:column; gap:var(--eb-space-1); font-size:var(--eb-fs-13); color:var(--eb-text-secondary); min-width:220px; }
-.eb-msg-field select{ font:inherit; padding:var(--eb-space-1) var(--eb-space-2); border:1px solid var(--eb-line-2); border-radius:var(--eb-r-sm); background:var(--eb-surface); color:var(--eb-text); }
-.eb-msg-class-state{ font-size:var(--eb-fs-12); font-weight:var(--eb-fw-semibold); padding:2px var(--eb-space-2); border-radius:var(--eb-pill); background:var(--eb-primary-050); color:var(--eb-primary-strong); }
-.eb-msg-class-state.is-archived{ background:var(--eb-surface-2, #f1f5f9); color:var(--eb-muted); }
-
+/* ---------- Shared basics (teacher + student) ---------- */
 .eb-msg-tabs{ display:flex; gap:var(--eb-space-2); border-block-end:1px solid var(--eb-line); }
 .eb-msg-tab{ font:inherit; background:transparent; border:0; border-block-end:3px solid transparent; padding:var(--eb-space-2) var(--eb-space-3); color:var(--eb-text-secondary); cursor:pointer; }
 .eb-msg-tab[aria-selected="true"]{ border-block-end-color:var(--eb-primary); color:var(--eb-text-heading); font-weight:var(--eb-fw-semibold); }
 .eb-msg-tab:focus-visible,.eb-msg-roster-item:focus-visible{ outline:2px solid var(--eb-primary); outline-offset:2px; }
 
 .eb-msg-panel{ min-width:0; }
-.eb-msg-direct{ display:grid; grid-template-columns:1fr; gap:var(--eb-space-4); min-width:0; }
-@media (min-width: 900px){ .eb-msg-direct{ grid-template-columns:minmax(220px, 280px) 1fr; } }
 .eb-msg-subtitle{ margin:0 0 var(--eb-space-2); font-size:var(--eb-fs-15, 15px); color:var(--eb-text-heading); }
-.eb-msg-roster-list{ list-style:none; margin:0; padding:0; display:flex; flex-direction:column; gap:var(--eb-space-1); max-height:60vh; overflow:auto; }
-.eb-msg-roster-item{ width:100%; display:flex; justify-content:space-between; gap:var(--eb-space-2); font:inherit; text-align:start; padding:var(--eb-space-2); border:1px solid var(--eb-line); border-radius:var(--eb-r-sm); background:var(--eb-surface); color:var(--eb-text); cursor:pointer; }
-.eb-msg-roster-item[aria-pressed="true"]{ border-color:var(--eb-primary); background:var(--eb-primary-050); }
-.eb-msg-roster-name{ overflow-wrap:anywhere; }
-.eb-msg-roster-status{ font-size:var(--eb-fs-12); color:var(--eb-muted); white-space:nowrap; }
-.eb-msg-roster-item.is-archived .eb-msg-roster-name,.eb-msg-roster-item.is-disabled .eb-msg-roster-name{ color:var(--eb-muted); }
 
 .eb-msg-conversation,.eb-msg-announcements{ display:flex; flex-direction:column; gap:var(--eb-space-3); min-width:0; }
 .eb-msg-thread{ list-style:none; margin:0; padding:0; display:flex; flex-direction:column; gap:var(--eb-space-2); max-height:60vh; overflow:auto; }
@@ -44,7 +29,7 @@
 .eb-msg-count{ font-size:var(--eb-fs-12); color:var(--eb-muted); }
 .eb-msg-error{ margin:0; color:var(--eb-danger-tx); font-size:var(--eb-fs-13); }
 
-/* Student dedicated view (full-view swap over the portal, like Educational Games). */
+/* ---------- Student dedicated view (full-view swap over the portal, like Educational Games) ---------- */
 .eb-msg-surface{ display:flex; flex-direction:column; gap:var(--eb-space-4); padding:var(--eb-space-4); min-height:100dvh; }
 .eb-msg-surface-bar{ display:flex; }
 .eb-msg-student{ display:flex; flex-direction:column; gap:var(--eb-space-3); max-width:880px; width:100%; margin-inline:auto; min-width:0; }
@@ -55,3 +40,156 @@
 .eb-msg-tab-badge{ margin-inline-start:var(--eb-space-1); }
 /* The student top-bar reuses the shell's .eb-nav-badge look but never its compact-rail absolute positioning. */
 .student-topbar-link .eb-nav-badge{ position:static; min-width:22px; line-height:22px; font-size:var(--eb-fs-12); margin-inline-start:var(--eb-space-1); }
+
+/* =====================================================================================================================
+   Phase 5E — teacher messaging workspace (responsive chat layout). Everything below is scoped to the teacher page
+   (.eb-msg-page / .eb-msg-workspace), so the student view above is unchanged. Logical properties only (RTL-first).
+   Wide (≥900px): one card, roster on the inline-START side (visually RIGHT in RTL) + conversation filling the rest,
+   each scrolling on its own. Narrow (<900px): the page shows ONE pane at a time (see messagesLayout.ts).
+   ===================================================================================================================== */
+.eb-msg-page{
+  box-sizing:border-box; width:100%; max-width:1440px; min-width:0; margin-inline:auto;
+  display:flex; flex-direction:column; gap:var(--eb-space-4);
+  padding-block:var(--eb-space-2) var(--eb-space-4); padding-inline:var(--eb-space-3);
+}
+@media (min-width: 600px){ .eb-msg-page{ padding-inline:var(--eb-space-5); } }
+@media (min-width: 1200px){ .eb-msg-page{ padding-inline:var(--eb-space-6); } }
+
+/* The shell's top bar already shows «الرسائل» as the page h1: the section h2 stays for assistive tech (it labels the
+   section) but is not drawn twice; the one-line description remains as the page intro. */
+.eb-msg-head .eb-section-title{ position:absolute; inline-size:1px; block-size:1px; overflow:hidden; clip-path:inset(50%); white-space:nowrap; }
+.eb-msg-head .eb-section-description{ margin:0; }
+.eb-msg-page{ position:relative; }
+
+/* Class selector + state + tabs: one grouped control block (one row on wide screens, stacked on phones). */
+.eb-msg-controls{ display:flex; flex-direction:column; gap:var(--eb-space-3); min-width:0; }
+@media (min-width: 900px){
+  .eb-msg-controls{ flex-direction:row; flex-wrap:wrap; align-items:flex-end; justify-content:space-between; column-gap:var(--eb-space-5); border-block-end:1px solid var(--eb-line); }
+  .eb-msg-controls .eb-msg-toolbar{ flex:1 1 auto; flex-wrap:nowrap; padding-block-end:var(--eb-space-2); }
+  .eb-msg-page .eb-msg-controls .eb-msg-tabs{ border-block-end:0; margin-block-end:-1px; }
+}
+.eb-msg-toolbar{ display:flex; flex-wrap:wrap; align-items:flex-end; gap:var(--eb-space-3); min-width:0; }
+.eb-msg-field{ display:flex; flex-direction:column; gap:var(--eb-space-1); font-size:var(--eb-fs-13); color:var(--eb-text-secondary); flex:1 1 220px; max-width:360px; min-width:0; }
+.eb-msg-field select{ box-sizing:border-box; width:100%; min-height:40px; font:inherit; padding:var(--eb-space-1) var(--eb-space-2); border:1px solid var(--eb-line-2); border-radius:var(--eb-r-sm); background:var(--eb-surface); color:var(--eb-text); }
+.eb-msg-field select:focus-visible{ outline:2px solid var(--eb-primary); outline-offset:1px; }
+.eb-msg-class-state{ font-size:var(--eb-fs-12); font-weight:var(--eb-fw-semibold); padding:2px var(--eb-space-2); border-radius:var(--eb-pill); background:var(--eb-primary-050); color:var(--eb-primary-strong); margin-block-end:var(--eb-space-2); }
+.eb-msg-class-state.is-archived{ background:var(--eb-surface-2, #f1f5f9); color:var(--eb-muted); }
+.eb-msg-page .eb-msg-tabs{ overflow-x:auto; scrollbar-width:none; }
+.eb-msg-page .eb-msg-tab{ flex:0 0 auto; min-height:44px; }
+
+/* ---------- The workspace card ---------- */
+.eb-msg-workspace{
+  box-sizing:border-box; min-width:0; display:flex; flex-direction:column; overflow:hidden;
+  background:var(--eb-surface); border:1px solid var(--eb-line); border-radius:var(--eb-r-xl); box-shadow:var(--eb-sh-xs);
+}
+@media (min-width: 900px){
+  /* A bounded height is what lets the roster and the thread scroll independently: the space left under the shell
+     header + controls, clamped so it never becomes a huge fixed panel nor collapses on short screens. */
+  .eb-msg-workspace{ block-size:clamp(520px, calc(100dvh - 232px), 860px); }
+  .eb-msg-workspace.is-split{ display:grid; grid-template-columns:clamp(260px, 26%, 320px) minmax(0, 1fr); }
+}
+/* Narrow: a conversation (or the announcements) is a full-width chat card sized to the viewport so the header,
+   thread and composer stay together; the roster pane simply flows with the page. */
+@media (max-width: 899.98px){
+  .eb-msg-workspace.is-conversation,.eb-msg-workspace.is-announcements{ block-size:max(440px, calc(100svh - 96px)); border-radius:var(--eb-r-lg); }
+}
+
+/* Narrow screens: the inactive pane stays mounted but is not displayed (see TeacherMessagesPage). */
+.eb-msg-workspace .is-offscreen{ display:none; }
+
+/* ---------- Roster pane ---------- */
+.eb-msg-roster{ display:flex; flex-direction:column; min-width:0; min-height:0; background:var(--eb-surface); }
+.eb-msg-workspace.is-split .eb-msg-roster{ border-inline-end:1px solid var(--eb-line); }
+.eb-msg-pane-head{ display:flex; align-items:center; justify-content:space-between; gap:var(--eb-space-2); min-height:56px; box-sizing:border-box; padding-inline:var(--eb-space-4); border-block-end:1px solid var(--eb-line); }
+.eb-msg-pane-head .eb-msg-subtitle{ margin:0; font-size:var(--eb-fs-16); font-weight:var(--eb-fw-semibold); }
+.eb-msg-pane-count{ font-size:var(--eb-fs-12); color:var(--eb-muted); font-variant-numeric:tabular-nums; }
+.eb-msg-roster-body{ flex:1 1 auto; min-height:0; overflow-y:auto; overscroll-behavior:contain; }
+.eb-msg-pane-note{ padding:var(--eb-space-3) var(--eb-space-4); }
+.eb-msg-roster-list{ list-style:none; margin:0; padding:0; display:flex; flex-direction:column; }
+.eb-msg-roster-list > li + li{ border-block-start:1px solid var(--eb-line); }
+.eb-msg-roster-item{
+  position:relative; box-sizing:border-box; width:100%; min-height:56px;
+  display:grid; grid-template-columns:minmax(0, 1fr) auto; grid-template-areas:"name badge" "status badge"; align-items:center; column-gap:var(--eb-space-2); row-gap:2px;
+  padding-block:var(--eb-space-2); padding-inline:var(--eb-space-4);
+  font:inherit; text-align:start; border:0; border-radius:0; background:var(--eb-surface); color:var(--eb-text); cursor:pointer;
+  transition:background var(--eb-dur, .15s) var(--eb-ease, ease);
+}
+.eb-msg-roster-item:hover{ background:var(--eb-surface-2); }
+.eb-msg-roster-item:focus-visible{ outline-offset:-2px; }
+.eb-msg-roster-item:disabled{ cursor:default; opacity:.7; }
+.eb-msg-roster-name{ grid-area:name; overflow-wrap:anywhere; font-size:var(--eb-fs-14); line-height:var(--eb-lh-tight); color:var(--eb-text-heading); }
+.eb-msg-roster-status{ grid-area:status; font-size:var(--eb-fs-12); color:var(--eb-muted); white-space:nowrap; }
+.eb-msg-roster-item .eb-msg-unread{ grid-area:badge; }
+.eb-msg-roster-item.is-archived .eb-msg-roster-name,.eb-msg-roster-item.is-disabled .eb-msg-roster-name{ color:var(--eb-muted); }
+/* Selected: tint + weight + an inline-start accent bar (never colour alone; aria-pressed carries the state). */
+.eb-msg-roster-item[aria-pressed="true"]{ background:var(--eb-primary-050); }
+.eb-msg-roster-item[aria-pressed="true"] .eb-msg-roster-name{ font-weight:var(--eb-fw-semibold); }
+.eb-msg-roster-item[aria-pressed="true"]::before{ content:""; position:absolute; inset-block:var(--eb-space-2); inset-inline-start:0; inline-size:3px; border-radius:var(--eb-pill); background:var(--eb-primary); }
+
+/* ---------- Conversation pane ---------- */
+.eb-msg-workspace .eb-msg-conversation{ gap:0; min-height:0; flex:1 1 auto; background:var(--eb-surface); }
+.eb-msg-placeholder{ flex:1 1 auto; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:var(--eb-space-2); padding:var(--eb-space-6) var(--eb-space-4); color:var(--eb-muted); text-align:center; }
+.eb-msg-placeholder p{ margin:0; font-size:var(--eb-fs-14); }
+.eb-msg-convo-head{ flex:0 0 auto; display:flex; align-items:center; gap:var(--eb-space-2); min-height:56px; box-sizing:border-box; padding-block:var(--eb-space-2); padding-inline:var(--eb-space-4); background:var(--eb-surface); border-block-end:1px solid var(--eb-line); }
+.eb-msg-convo-id{ display:flex; flex-direction:column; gap:2px; min-width:0; }
+.eb-msg-convo-name{ margin:0; font-size:var(--eb-fs-16); font-weight:var(--eb-fw-semibold); line-height:var(--eb-lh-tight); color:var(--eb-text-heading); overflow-wrap:anywhere; }
+.eb-msg-convo-status{ font-size:var(--eb-fs-12); color:var(--eb-muted); }
+.eb-msg-convo-status.is-active::before{ content:""; display:inline-block; inline-size:6px; block-size:6px; border-radius:50%; background:var(--eb-success, #16a34a); margin-inline-end:var(--eb-space-1); vertical-align:middle; }
+.eb-msg-back{
+  flex:0 0 auto; display:inline-flex; align-items:center; justify-content:center; inline-size:44px; block-size:44px; margin-inline-start:calc(-1 * var(--eb-space-2));
+  border:0; border-radius:var(--eb-pill); background:transparent; color:var(--eb-text-heading); cursor:pointer;
+}
+.eb-msg-back:hover{ background:var(--eb-surface-2); }
+.eb-msg-back:focus-visible{ outline:2px solid var(--eb-primary); outline-offset:1px; }
+.eb-msg-convo-body{ flex:1 1 auto; min-height:0; display:flex; flex-direction:column; }
+.eb-msg-convo-body > .eb-msg-empty{ margin:auto; padding:var(--eb-space-5) var(--eb-space-4); text-align:center; }
+.eb-msg-workspace .eb-msg-thread{
+  flex:1 1 auto; min-height:0; max-height:none; overflow-y:auto; overscroll-behavior:contain;
+  gap:var(--eb-space-2); padding-block:var(--eb-space-4); padding-inline:var(--eb-space-4);
+}
+@media (min-width: 900px){ .eb-msg-workspace .eb-msg-thread{ padding-inline:var(--eb-space-5); } }
+.eb-msg-workspace .eb-msg-thread:focus-visible{ outline:2px solid var(--eb-primary); outline-offset:-2px; }
+
+/* Bubbles: the viewer's own messages on the inline-start side (RIGHT in RTL), the other party opposite. The sender
+   label stays visible text; colours are soft accents only. */
+.eb-msg-workspace .eb-msg{ box-sizing:border-box; max-width:min(72%, 640px); padding-block:var(--eb-space-2); padding-inline:var(--eb-space-3); border-radius:var(--eb-r-lg); box-shadow:var(--eb-sh-xs); }
+.eb-msg-workspace .eb-msg.is-mine{ background:var(--eb-primary-050); border-color:var(--eb-primary-100); border-start-start-radius:var(--eb-r-xs); }
+.eb-msg-workspace .eb-msg.is-theirs{ background:var(--eb-surface); border-color:var(--eb-line-2); border-start-end-radius:var(--eb-r-xs); }
+.eb-msg-workspace .eb-msg-meta{ gap:var(--eb-space-2); font-size:var(--eb-fs-12); }
+.eb-msg-workspace .eb-msg-time{ font-size:11px; color:var(--eb-muted); font-variant-numeric:tabular-nums; }
+.eb-msg-workspace .eb-msg-body{ font-size:var(--eb-fs-14); }
+
+/* ---------- Footer: composer or the server's read-only explanation ---------- */
+.eb-msg-convo-foot{ flex:0 0 auto; box-sizing:border-box; padding-block:var(--eb-space-3); padding-inline:var(--eb-space-3); background:var(--eb-surface); border-block-start:1px solid var(--eb-line); }
+@media (min-width: 900px){ .eb-msg-convo-foot{ padding-inline:var(--eb-space-4); } }
+.eb-msg-convo-foot .eb-msg-readonly{ display:flex; align-items:center; gap:var(--eb-space-2); padding-block:var(--eb-space-3); padding-inline:var(--eb-space-3); border:1px dashed var(--eb-line-2); border-radius:var(--eb-r); text-align:start; }
+
+/* Compact chat composer (same markup as the shared MessageComposer): textarea grows, send button beside it. */
+.eb-msg-workspace .eb-msg-composer{
+  position:relative; display:grid; grid-template-columns:minmax(0, 1fr) auto; grid-template-areas:"label label" "input actions" "error error";
+  align-items:end; column-gap:var(--eb-space-2); row-gap:var(--eb-space-1);
+}
+.eb-msg-workspace .eb-msg-composer-label{
+  grid-area:label; position:absolute; inline-size:1px; block-size:1px; overflow:hidden; clip-path:inset(50%); white-space:nowrap;
+}
+.eb-msg-workspace .eb-msg-input{
+  grid-area:input; min-height:44px; height:auto; max-height:160px; resize:none; field-sizing:content;
+  padding-block:10px; padding-inline:var(--eb-space-3); border-radius:var(--eb-r-lg); background:var(--eb-surface-2); border-color:var(--eb-line-2); line-height:1.5;
+}
+.eb-msg-workspace .eb-msg-input:focus-visible{ background:var(--eb-surface); }
+.eb-msg-workspace .eb-msg-composer-row{ grid-area:actions; flex-direction:column; align-items:stretch; justify-content:flex-end; gap:2px; }
+.eb-msg-workspace .eb-msg-composer-row .eb-button{ order:1; min-height:44px; border-radius:var(--eb-r-lg); padding-inline:var(--eb-space-4); white-space:nowrap; }
+.eb-msg-workspace .eb-msg-count{ order:2; font-size:11px; text-align:center; font-variant-numeric:tabular-nums; }
+.eb-msg-workspace .eb-msg-error{ grid-area:error; }
+
+/* ---------- Narrow screens ---------- */
+@media (max-width: 899.98px){
+  .eb-msg-workspace .eb-msg{ max-width:86%; }
+  .eb-msg-roster-item{ min-height:60px; padding-inline:var(--eb-space-4); }
+  .eb-msg-roster-name{ font-size:var(--eb-fs-16); }
+  .eb-msg-convo-head{ padding-inline:var(--eb-space-3); }
+}
+@media (max-width: 380px){
+  .eb-msg-workspace .eb-msg{ max-width:90%; }
+  .eb-msg-workspace .eb-msg-composer-row .eb-button{ padding-inline:var(--eb-space-3); }
+}
