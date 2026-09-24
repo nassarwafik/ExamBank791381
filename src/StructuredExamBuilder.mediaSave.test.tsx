@@ -44,8 +44,8 @@ function deferredAI() {
 
 // Mirrors App.tsx: functional updates on the latest exam; onSave snapshots → persists → reconciles.
 const h = { latest: null as StructuredExam | null, saves: [] as StructuredExam[], setOpen: (_v: boolean) => {} };
-function Host({ req }: { req: (q: never) => Promise<BuilderImageAsset> }) {
-  const [exam, setExam] = useState<StructuredExam | null>(makeExam());
+function Host({ req, initial }: { req: (q: never) => Promise<BuilderImageAsset>; initial?: StructuredExam }) {
+  const [exam, setExam] = useState<StructuredExam | null>(initial ?? makeExam());
   const [open, setOpen] = useState(true);
   const [saving, setSaving] = useState(false);
   useEffect(() => { Object.assign(h, { latest: exam, setOpen }); }, [exam]);
@@ -154,23 +154,6 @@ describe("Phase 5B — pending registrations never leak", () => {
     expect(imgIn(h.saves[0], "qA")).toBe(IMG_A);
   });
 
-  it("E4: two overlapping operations on the SAME question (collapse → re-open → start again) — the first settling does not release the second", async () => {
-    const calls: ((a: BuilderImageAsset) => void)[] = [];
-    const req = vi.fn(() => new Promise<BuilderImageAsset>(r => { calls.push(r); }));
-    render(<Host req={req as never} />);
-    fireEvent.click(screen.getAllByRole("button", { name: AI_BTN })[0]);        // op 1 on qA
-    fireEvent.click(screen.getAllByTitle("طيّ")[0]);                            // collapse qA (op 1 keeps running)
-    fireEvent.click(screen.getAllByTitle("فتح")[0]);                            // re-open → fresh media editor
-    fireEvent.click(screen.getAllByRole("button", { name: AI_BTN })[0]);        // op 2 on qA
-    expect(req).toHaveBeenCalledTimes(2);
-    await act(async () => { calls[0]({ dataUrl: IMG_A }); });
-    expect(saveBlocked()).toBe(true);                                           // op 2 still pending on qA
-    await act(async () => { calls[1]({ dataUrl: IMG_B }); });
-    expect(saveBlocked()).toBe(false);
-    await clickSave(DRAFT);
-    expect(imgIn(h.saves[0], "qA")).toBe(IMG_B);                                // latest result persisted
-  });
-
   it("E3: builder unmounted while pending → the settle neither errors nor updates state", async () => {
     const ai = deferredAI();
     const errSpy = vi.spyOn(console, "error").mockImplementation(() => {});
@@ -181,5 +164,94 @@ describe("Phase 5B — pending registrations never leak", () => {
     await ai.resolve("qA", IMG_A);
     expect(h.latest).toBe(before);
     expect(errSpy).not.toHaveBeenCalled();
+  });
+});
+
+describe("Phase 5B — single-flight PER QUESTION survives collapse/remount", () => {
+  it("R1: after collapse → re-open, a second request on the same question cannot start while #1 is pending; other questions stay usable; after #1 settles a new request works", async () => {
+    const calls: ((a: BuilderImageAsset) => void)[] = [];
+    const req = vi.fn(() => new Promise<BuilderImageAsset>(r => { calls.push(r); }));
+    render(<Host req={req as never} />);
+    fireEvent.click(screen.getAllByRole("button", { name: AI_BTN })[0]);        // #1 on qA
+    fireEvent.click(screen.getAllByTitle("طيّ")[0]);                            // collapse qA (#1 keeps running)
+    fireEvent.click(screen.getAllByTitle("فتح")[0]);                            // re-open → NEW media editor instance
+    const [aiA, aiB] = screen.getAllByRole("button", { name: AI_BTN });
+    expect((aiA as HTMLButtonElement).disabled).toBe(true);                      // locked by the builder authority
+    expect((screen.getAllByLabelText("رفع صورة السؤال")[0] as HTMLInputElement).disabled).toBe(true);
+    expect(screen.getByText("معالجة الصورة جارية…")).toBeTruthy();
+    expect((aiB as HTMLButtonElement).disabled).toBe(false);                     // qB NOT blocked
+    fireEvent.click(aiA);
+    expect(req).toHaveBeenCalledTimes(1);                                        // no second request on qA
+    await act(async () => { calls[0]({ dataUrl: IMG_A }); });                    // #1 settles
+    expect(imgIn(h.latest, "qA")).toBe(IMG_A);
+    const again = screen.getByRole("button", { name: "✨ إنشاء صورة جديدة" }) as HTMLButtonElement;
+    expect(again.disabled).toBe(false);                                          // controls available again
+    fireEvent.click(again);                                                      // #2 starts normally
+    expect(req).toHaveBeenCalledTimes(2);
+    await act(async () => { calls[1]({ dataUrl: IMG_B }); });
+    expect(imgIn(h.latest, "qA")).toBe(IMG_B);                                   // newest result is final
+  });
+
+  it("R2: existing image + pending replacement → after collapse/re-open, remove / replace / hide / AI are all locked, so the older request cannot undo a newer explicit choice", async () => {
+    const calls: ((a: BuilderImageAsset) => void)[] = [];
+    const req = vi.fn(() => new Promise<BuilderImageAsset>(r => { calls.push(r); }));
+    const withImg = makeExam();
+    withImg.sections[0].questions[0] = { ...withImg.sections[0].questions[0], image: { exists: true, visible: true, assets: [{ dataUrl: IMG_B }] } };
+    render(<Host req={req as never} initial={withImg} />);
+    fireEvent.click(screen.getByRole("button", { name: "✨ إنشاء صورة جديدة" })); // replacement pending on qA
+    fireEvent.click(screen.getAllByTitle("طيّ")[0]);
+    fireEvent.click(screen.getAllByTitle("فتح")[0]);
+    for (const name of ["🗑 إزالة الصورة", "🔄 استبدال صورة", "👁 إخفاء الصورة", "✨ إنشاء صورة جديدة"]) {
+      expect((screen.getByRole("button", { name }) as HTMLButtonElement).disabled).toBe(true);
+    }
+    fireEvent.click(screen.getByRole("button", { name: "🗑 إزالة الصورة" }));    // attempted conflicting remove
+    expect(imgIn(h.latest, "qA")).toBe(IMG_B);                                   // no change applied
+    await act(async () => { calls[0]({ dataUrl: IMG_A }); });
+    expect(imgIn(h.latest, "qA")).toBe(IMG_A);                                   // replacement landed
+    fireEvent.click(screen.getByRole("button", { name: "🗑 إزالة الصورة" }));    // now allowed
+    expect(h.latest!.sections[0].questions[0].image?.exists).toBe(false);        // and nothing can undo it
+  });
+});
+
+describe("Phase 5B — the SAME editor instance keeps its approved stale-guard behavior", () => {
+  it("R3: without a remount, an explicit remove during this editor's own pending request is allowed and the late result cannot undo it", async () => {
+    const calls: ((a: BuilderImageAsset) => void)[] = [];
+    const req = vi.fn(() => new Promise<BuilderImageAsset>(r => { calls.push(r); }));
+    const withImg = makeExam();
+    withImg.sections[0].questions[0] = { ...withImg.sections[0].questions[0], image: { exists: true, visible: true, assets: [{ dataUrl: IMG_B }] } };
+    render(<Host req={req as never} initial={withImg} />);
+    fireEvent.click(screen.getByRole("button", { name: "✨ إنشاء صورة جديدة" })); // own request pending
+    const remove = screen.getByRole("button", { name: "🗑 إزالة الصورة" }) as HTMLButtonElement;
+    expect(remove.disabled).toBe(false);                                         // own op → not locked
+    fireEvent.click(remove);
+    expect(h.latest!.sections[0].questions[0].image?.exists).toBe(false);
+    await act(async () => { calls[0]({ dataUrl: IMG_A }); });                    // stale own result
+    expect(h.latest!.sections[0].questions[0].image?.exists).toBe(false);        // discarded (opSeq)
+    expect(saveBlocked()).toBe(false);                                           // registration released
+  });
+});
+
+describe("Phase 5B — move-to-section while an image is pending", () => {
+  const twoSections = (): StructuredExam => {
+    const e = makeExam();
+    return { ...e, sections: [e.sections[0], { id: "s2", title: "S2", gradingPolicy: "all", stimuli: {}, questions: [{ examQuestionId: "qC", presentationType: "shortAnswer", text: "C", marks: 2, answer: { text: "z" } }] }] } as StructuredExam;
+  };
+  const moveSelects = () => screen.getAllByRole("combobox").filter(el => Array.from((el as HTMLSelectElement).options).some(o => o.value === "s2")) as HTMLSelectElement[];
+
+  it("M: 'نقل إلى قسم' is disabled only for the pending question; after the image lands, moving it keeps the image", async () => {
+    const ai = deferredAI();
+    render(<Host req={ai.fn as never} initial={twoSections()} />);
+    fireEvent.click(screen.getAllByRole("button", { name: AI_BTN })[0]);        // qA pending
+    const [moveA, moveB] = moveSelects();                                        // qA, qB (section s1)
+    expect(moveA.disabled).toBe(true);
+    expect(moveB.disabled).toBe(false);                                          // other questions unaffected
+    fireEvent.change(moveA, { target: { value: "s2" } });                        // attempted move is inert
+    expect(h.latest!.sections[0].questions.map(x => x.examQuestionId)).toEqual(["qA", "qB"]);
+    await ai.resolve("qA", IMG_A);
+    expect(imgIn(h.latest, "qA")).toBe(IMG_A);
+    expect(moveSelects()[0].disabled).toBe(false);                               // re-enabled after settle
+    fireEvent.change(moveSelects()[0], { target: { value: "s2" } });
+    const movedA = h.latest!.sections[1].questions.find(x => x.examQuestionId === "qA");
+    expect(movedA?.image?.assets?.[0].dataUrl).toBe(IMG_A);                      // no silent image loss
   });
 });

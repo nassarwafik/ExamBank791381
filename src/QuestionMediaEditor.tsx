@@ -26,15 +26,26 @@ type Props = {
   // never persist a snapshot that a still-running operation is about to change. Reported per operation even
   // if this editor unmounts (collapse) while pending: the result still lands, so the pending state must hold.
   onBusyChange?: (busy: boolean) => void;
+  // The builder's authoritative per-question pending state (count by examQuestionId). It survives this editor
+  // unmounting (collapse), so it keeps single-flight PER QUESTION across remounts: when a pending operation on
+  // this question was started by an EARLIER instance of this editor, every conflicting control (upload /
+  // replace / AI / hide-show / remove) is locked until it settles, so that older result can never undo a
+  // newer choice made here. This instance's own operation keeps its approved local behavior (opSeq).
+  mediaPending?: boolean;
 };
 
-export default function QuestionMediaEditor({ question, onChange, disabled, requestQuestionImage, onBusyChange }: Props) {
+export default function QuestionMediaEditor({ question, onChange, disabled, requestQuestionImage, onBusyChange, mediaPending }: Props) {
   const [busy, setBusy] = useState(false);
   const [notice, setNotice] = useState("");
   const [error, setError] = useState("");
   const opSeq = useRef(0);
   const inFlight = useRef(false); // synchronous single-flight (a same-tick double-click can't start two requests)
   const fileRef = useRef<HTMLInputElement | null>(null);
+
+  // Pending on this question but NOT owned by this instance (its local `busy` is false) → an operation from a
+  // previous mount is still running: lock everything until the builder reports it settled.
+  const foreignPending = !!mediaPending && !busy;
+  const locked = !!disabled || foreignPending;
 
   const asset = currentAsset(question);
   const present = hasImage(question);
@@ -44,12 +55,12 @@ export default function QuestionMediaEditor({ question, onChange, disabled, requ
   // in-flight async result whose captured token is no longer current is discarded (stale-response guard).
   const nextOp = () => (opSeq.current += 1);
 
-  function pickFile() { if (!disabled && !busy && fileRef.current) fileRef.current.click(); }
+  function pickFile() { if (!locked && !busy && fileRef.current) fileRef.current.click(); }
 
   async function onFile(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files && e.target.files[0];
     if (fileRef.current) fileRef.current.value = ""; // allow re-selecting the same file next time
-    if (!file || disabled || inFlight.current) return;
+    if (!file || locked || inFlight.current) return;
     inFlight.current = true;
     onBusyChange?.(true);
     const token = nextOp();
@@ -70,7 +81,7 @@ export default function QuestionMediaEditor({ question, onChange, disabled, requ
   }
 
   async function onGenerate() {
-    if (disabled || inFlight.current || !requestQuestionImage) return; // synchronous single-flight
+    if (locked || inFlight.current || !requestQuestionImage) return; // synchronous single-flight (incl. across remounts)
     // An existing image is NEVER silently overwritten — require explicit replacement intent.
     if (present && !window.confirm("سيتم إنشاء صورة جديدة واستبدال الصورة الحالية لهذا السؤال. هل تريد المتابعة؟")) return;
     inFlight.current = true;
@@ -97,7 +108,7 @@ export default function QuestionMediaEditor({ question, onChange, disabled, requ
   }
 
   function onRemove() {
-    if (disabled || !present) return;
+    if (locked || !present) return;
     if (!window.confirm("سيتم إزالة صورة هذا السؤال. هل تريد المتابعة؟")) return;
     nextOp(); // supersede any in-flight AI/upload so a late result cannot re-add the removed image
     onChange(removeImagePatch());
@@ -105,7 +116,7 @@ export default function QuestionMediaEditor({ question, onChange, disabled, requ
   }
 
   function onToggleVisible() {
-    if (disabled || busy || !asset) return;
+    if (locked || busy || !asset) return;
     nextOp();
     onChange(setVisibilityPatch(question, hidden)); // hidden → show, visible → hide
     setError("");
@@ -116,11 +127,12 @@ export default function QuestionMediaEditor({ question, onChange, disabled, requ
       <div className="sb-media-head">
         <span className="sb-media-title">صورة السؤال</span>
         {busy && <span className="sb-media-busy" role="status">{notice || MEDIA_MSG.generating}</span>}
+        {foreignPending && <span className="sb-media-busy" role="status">معالجة الصورة جارية…</span>}
       </div>
 
       <input
         ref={fileRef} type="file" className="sb-media-file" accept={IMAGE_ACCEPT_ATTR}
-        aria-label="رفع صورة السؤال" onChange={onFile} disabled={disabled || busy}
+        aria-label="رفع صورة السؤال" onChange={onFile} disabled={locked || busy}
       />
 
       {present && asset && (
@@ -132,23 +144,23 @@ export default function QuestionMediaEditor({ question, onChange, disabled, requ
 
       <div className="sb-media-actions">
         {!present && (
-          <button type="button" className="sb-btn sb-media-upload" onClick={pickFile} disabled={disabled || busy}>⬆ رفع صورة</button>
+          <button type="button" className="sb-btn sb-media-upload" onClick={pickFile} disabled={locked || busy}>⬆ رفع صورة</button>
         )}
         {present && (
-          <button type="button" className="sb-btn sb-media-replace" onClick={pickFile} disabled={disabled || busy}>🔄 استبدال صورة</button>
+          <button type="button" className="sb-btn sb-media-replace" onClick={pickFile} disabled={locked || busy}>🔄 استبدال صورة</button>
         )}
         {requestQuestionImage && (
-          <button type="button" className="sb-btn sb-media-ai" onClick={() => void onGenerate()} disabled={disabled || busy}>
+          <button type="button" className="sb-btn sb-media-ai" onClick={() => void onGenerate()} disabled={locked || busy}>
             {present ? "✨ إنشاء صورة جديدة" : "✨ إنشاء صورة بالذكاء الاصطناعي"}
           </button>
         )}
         {present && (
-          <button type="button" className="sb-btn sb-media-visible" onClick={onToggleVisible} disabled={disabled || busy}>
+          <button type="button" className="sb-btn sb-media-visible" onClick={onToggleVisible} disabled={locked || busy}>
             {hidden ? "👁 إظهار الصورة" : "👁 إخفاء الصورة"}
           </button>
         )}
         {present && (
-          <button type="button" className="sb-btn sb-danger sb-media-remove" onClick={onRemove} disabled={disabled}>🗑 إزالة الصورة</button>
+          <button type="button" className="sb-btn sb-danger sb-media-remove" onClick={onRemove} disabled={locked}>🗑 إزالة الصورة</button>
         )}
       </div>
 

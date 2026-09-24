@@ -86,6 +86,10 @@ export default function StructuredExamBuilder({ exam, onChange, onSave, onExit, 
   };
   const liveQuestionIds = new Set((exam.sections || []).flatMap(s => (s.questions || []).map(q => q.examQuestionId)));
   const mediaPending = Object.keys(pendingMedia).some(id => liveQuestionIds.has(id));
+  // Per-question view of the same authority: locks that question's media controls across remounts and its
+  // move-to-section (a pending result is patched into the question's CURRENT section; moving it away would
+  // silently drop the image).
+  const pendingMediaIds: ReadonlySet<string> = new Set(Object.keys(pendingMedia));
   const MEDIA_WAIT = "انتظر انتهاء معالجة الصور قبل الحفظ.";
   const sectionOptions = (exam.sections || []).map(s => ({ id: s.id, title: s.title }));
   const issues = useMemo(() => validateStructuredExam(exam), [exam]);
@@ -158,6 +162,7 @@ export default function StructuredExamBuilder({ exam, onChange, onSave, onExit, 
             onPreviewQuestion={q => setPreview(singleQuestionExam(exam, section, q))}
             requestQuestionImage={requestQuestionImage}
             onMediaBusyChange={onMediaBusyChange}
+            pendingMediaIds={pendingMediaIds}
             disabled={saving}
           />
         ))}
