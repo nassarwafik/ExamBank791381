@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import {
   createPushClient, enableMessagePush, isPushSupported, notificationPermission, syncExistingPush,
-  type PushClient, type PushConfig
+  type ExistingPushState, type PushClient, type PushConfig
 } from "./pushNotifications";
 import { isAppleMobile, isStandalone, isTouchFirst } from "./installPrompt";
 import "./pwa.css";
@@ -14,7 +14,10 @@ import "./pwa.css";
 // students expect notifications and can act on it (iPhone/iPad: the home-screen app, iOS 16.4+; Android in-app
 // browsers: open in the browser) — and after a click that finds no support; a desktop page stays unchanged otherwise.
 
-type View = "checking" | "hidden" | "unsupported" | "default" | "enabled" | "denied";
+// "enabled" = permission granted AND this browser's subscription was made with the server's CURRENT VAPID key AND it is
+// registered with the server. "repair" = permission granted but the subscription belongs to an old/other key (the server
+// key was rotated): it can never receive a push, so the card offers «إعادة تفعيل الإشعارات» instead of claiming success.
+type View = "checking" | "hidden" | "unsupported" | "default" | "enabled" | "repair" | "denied";
 
 // Per-device convenience memory: only «the student hid the "not supported" note» (never credentials or personal data).
 const UNSUPPORTED_HIDDEN_KEY = "examBankPushUnsupportedHidden";
@@ -55,9 +58,9 @@ export default function MessagePushCard({ token, win = window, client }: { token
       setConfig(cfg);
       const permission = notificationPermission(win);
       if (permission === "denied") { setView("denied"); return; }
-      let active = false;
-      if (permission === "granted") { try { active = await syncExistingPush(api, win); } catch { active = false; } }
-      if (alive) setView(active ? "enabled" : "default");
+      let state: ExistingPushState = "none";
+      if (permission === "granted") { try { state = await syncExistingPush(api, cfg, win); } catch { state = "none"; } }
+      if (alive) setView(state === "enabled" ? "enabled" : state === "repair" ? "repair" : "default");
     })();
     return () => { alive = false; };
   }, [api, supported, win]);
@@ -66,16 +69,17 @@ export default function MessagePushCard({ token, win = window, client }: { token
 
   const onEnable = async () => {
     if (!config || busy) return;
+    const repairing = view === "repair";
     setBusy(true);
     setNotice("");
     const result = await enableMessagePush(api, config, win);
     setBusy(false);
-    if (result === "enabled") { setView("enabled"); setNotice("تم تفعيل الإشعارات على هذا الجهاز."); }
+    if (result === "enabled") { setView("enabled"); setNotice(repairing ? "تمت إعادة تفعيل الإشعارات على هذا الجهاز." : "تم تفعيل الإشعارات على هذا الجهاز."); }
     else if (result === "denied") setView("denied");
     else if (result === "unsupported") setView("unsupported");                       // the student asked → always answer
     else if (result === "unavailable") setView("hidden");
-    else if (result === "default") setNotice("لم يتم التفعيل. يمكنك المحاولة لاحقًا.");
-    else setNotice("تعذر تفعيل الإشعارات حاليًا. حاول مرة أخرى.");
+    else if (result === "default") { setView("default"); setNotice("لم يتم التفعيل. يمكنك المحاولة لاحقًا."); }
+    else setNotice(repairing ? "تعذرت إعادة تفعيل الإشعارات حاليًا. حاول مرة أخرى." : "تعذر تفعيل الإشعارات حاليًا. حاول مرة أخرى.");
   };
 
   return (
@@ -86,6 +90,7 @@ export default function MessagePushCard({ token, win = window, client }: { token
           <h2 id="eb-push-title" className="eb-install-title">إشعارات الرسائل</h2>
           <p className="eb-install-desc">
             {view === "enabled" && "الإشعارات مفعلة"}
+            {view === "repair" && "تحتاج الإشعارات على هذا الجهاز إلى إعادة تفعيل حتى تصلك تنبيهات الرسائل الجديدة."}
             {view === "default" && "استقبل تنبيهًا على هذا الجهاز عندما يرسل لك المعلم رسالة جديدة، حتى لو كان التطبيق مغلقًا."}
             {view === "denied" && "الإشعارات مرفوضة من المتصفح. لتفعيلها، اسمح بالإشعارات لهذا الموقع من إعدادات المتصفح ثم أعد فتح الصفحة."}
             {view === "unsupported" && unsupportedText(win)}
@@ -97,6 +102,14 @@ export default function MessagePushCard({ token, win = window, client }: { token
         <div className="eb-install-actions">
           <button type="button" className="eb-button is-primary eb-install-button" disabled={busy} onClick={() => void onEnable()}>
             {busy ? "جارٍ التفعيل..." : "تفعيل الإشعارات"}
+          </button>
+        </div>
+      )}
+
+      {view === "repair" && (
+        <div className="eb-install-actions">
+          <button type="button" className="eb-button is-primary eb-install-button" disabled={busy} onClick={() => void onEnable()}>
+            {busy ? "جارٍ إعادة التفعيل..." : "إعادة تفعيل الإشعارات"}
           </button>
         </div>
       )}

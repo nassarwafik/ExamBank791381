@@ -73,10 +73,43 @@ export function applicationServerKey(publicKey: string): Uint8Array {
   return out;
 }
 
-function sameKey(a: ArrayBuffer | null | undefined, b: Uint8Array): boolean {
-  if (!a) return false;
-  const x = new Uint8Array(a);
-  return x.length === b.length && x.every((v, i) => v === b[i]);
+/** base64url (padding optional) → bytes, or null when it is not valid base64url. */
+export function decodeBase64Url(value: string): Uint8Array | null {
+  if (typeof value !== "string" || !/^[A-Za-z0-9_-]*={0,2}$/.test(value)) return null;
+  try { return applicationServerKey(value.replace(/=+$/, "")); } catch { return null; }
+}
+
+/** The raw bytes of a PushSubscriptionOptions.applicationServerKey: an ArrayBuffer per spec; typed-array/DataView
+ *  views are tolerated. Checked by tag (not instanceof) so a buffer from another realm is still recognised. */
+function keyBytes(value: unknown): Uint8Array | null {
+  if (!value || typeof value !== "object") return null;
+  if (Object.prototype.toString.call(value) === "[object ArrayBuffer]") return new Uint8Array(value as ArrayBuffer);
+  if (ArrayBuffer.isView(value)) return new Uint8Array(value.buffer, value.byteOffset, value.byteLength);
+  return null;
+}
+
+/** Byte-for-byte comparison of a subscription's applicationServerKey with the server's base64url VAPID public key. */
+export function sameApplicationServerKey(subscriptionKey: unknown, serverPublicKey: string): boolean {
+  const a = keyBytes(subscriptionKey);
+  const b = decodeBase64Url(serverPublicKey);
+  if (!a || !b || a.length === 0 || a.length !== b.length) return false;
+  let diff = 0;
+  for (let i = 0; i < a.length; i++) diff |= a[i] ^ b[i];
+  return diff === 0;
+}
+
+/**
+ * Does this browser subscription belong to the server's CURRENT VAPID key?
+ *  - "match": created with the current key → it can receive pushes.
+ *  - "mismatch": created with another key (the server key was rotated) or without one → the push service rejects every
+ *    push signed with the current key (401/403), so it must be replaced.
+ *  - "unknown": the browser does not expose PushSubscription.options at all → cannot be verified (kept as before).
+ */
+export type SubscriptionKeyState = "match" | "mismatch" | "unknown";
+export function subscriptionKeyState(sub: PushSubscription, serverPublicKey: string): SubscriptionKeyState {
+  const options = (sub as unknown as { options?: { applicationServerKey?: unknown } | null }).options;
+  if (!options) return "unknown";
+  return sameApplicationServerKey(options.applicationServerKey, serverPublicKey) ? "match" : "mismatch";
 }
 
 /** The already-registered service worker (never waits for one to install). */
@@ -101,30 +134,38 @@ const synced = new Set<string>();
 const syncKey = (client: PushClient, endpoint: string) => (client.sessionKey || "") + "|" + endpoint;
 export function __resetPushSyncForTests() { synced.clear(); }
 
+/** Result of the page-load check: healthy and registered, nothing to do, or a subscription that needs repair. */
+export type ExistingPushState = "enabled" | "none" | "repair";
+
 /**
- * On load, WITHOUT prompting: if permission is already granted and this browser already has a subscription, make sure
- * the server has it. Returns true when an existing subscription is active for this student.
+ * On load, WITHOUT prompting: if permission is already granted and this browser already has a subscription made with
+ * the server's CURRENT VAPID key, make sure the server has it ("enabled"). A subscription made with another key (the
+ * server key was rotated) is NOT registered — it can never receive a push — and is reported as "repair" so the page can
+ * offer «إعادة تفعيل الإشعارات». Nothing here asks for permission or replaces a subscription.
  */
-export async function syncExistingPush(client: PushClient, win: Window = window): Promise<boolean> {
-  if (!isPushSupported(win) || notificationPermission(win) !== "granted") return false;
+export async function syncExistingPush(client: PushClient, config: PushConfig, win: Window = window): Promise<ExistingPushState> {
+  if (!config.available || !isPushSupported(win) || notificationPermission(win) !== "granted") return "none";
   const reg = await currentRegistration(win);
   const sub = reg ? await reg.pushManager.getSubscription().catch(() => null) : null;
-  if (!sub) return false;
+  if (!sub) return "none";
   const json = sub.toJSON();
-  if (!json.endpoint) return false;
+  if (!json.endpoint) return "none";
+  if (subscriptionKeyState(sub, config.publicKey) === "mismatch") return "repair";
   const key = syncKey(client, json.endpoint);
   if (!synced.has(key)) {
     await client.subscribe(json);
     synced.add(key);
   }
-  return true;
+  return "enabled";
 }
 
 export type EnableResult = "enabled" | "default" | "denied" | "unsupported" | "unavailable" | "error";
 
 /**
- * The student clicked «تفعيل الإشعارات». Permission is requested FIRST (still inside the click), then this browser is
- * subscribed with the server's VAPID key and the subscription is stored for the signed-in student.
+ * The student clicked «تفعيل الإشعارات» or «إعادة تفعيل الإشعارات». Permission is requested FIRST (still inside the click)
+ * and only when it is not already granted; then this browser is subscribed with the server's CURRENT VAPID key and the
+ * subscription is stored for the signed-in student. A subscription made with another key is removed and replaced;
+ * "enabled" is returned only when a subscription with the current key has been registered with the server.
  */
 export async function enableMessagePush(client: PushClient, config: PushConfig, win: Window = window): Promise<EnableResult> {
   if (!isPushSupported(win)) return "unsupported";
@@ -141,12 +182,14 @@ export async function enableMessagePush(client: PushClient, config: PushConfig, 
     if (!reg) return "unsupported";                                  // no service worker (e.g. not a production build)
     const key = applicationServerKey(config.publicKey);
     let sub = await reg.pushManager.getSubscription();
-    if (sub && !sameKey(sub.options?.applicationServerKey, key)) {   // server key rotated → replace this subscription
-      await client.unsubscribe(sub.endpoint).catch(() => {});
-      await sub.unsubscribe().catch(() => false);
+    if (sub && subscriptionKeyState(sub, config.publicKey) === "mismatch") {   // server key rotated → replace it
+      await client.unsubscribe(sub.endpoint).catch(() => {});                  // best effort: stop sends to the dead one
+      const removed = await sub.unsubscribe().catch(() => false);
+      if (!removed) return "error";                                           // still bound to the old key → retry later
       sub = null;
     }
     if (!sub) sub = await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: key as BufferSource });
+    if (subscriptionKeyState(sub, config.publicKey) === "mismatch") return "error";   // never report a stale key as enabled
     const json = sub.toJSON();
     await client.subscribe(json);
     if (json.endpoint) synced.add(syncKey(client, json.endpoint));

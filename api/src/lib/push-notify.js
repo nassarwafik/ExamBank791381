@@ -7,6 +7,10 @@
 //  - The notification carries NO message content (lock screens are shared/visible): a fixed Arabic title/body.
 //  - Every stored subscription of the student is tried independently (Promise.allSettled). 404/410 from the push
 //    service = the browser unsubscribed → the subscription is removed. Any other failure is kept (may be transient).
+//    401/403 are deliberately KEPT too: besides a subscription made with an old VAPID key (rotation), they are also what
+//    every device returns when the SERVER's own VAPID configuration is wrong (bad/expired JWT, wrong subject, clock
+//    skew) — deleting on them would wipe all students' devices on a server misconfiguration. Rotation is repaired on
+//    the device instead: the page detects a subscription made with another key and offers «إعادة تفعيل الإشعارات».
 //  - FAIL-CLOSED ownership: a device is used only when its owner record explicitly names this student. A missing,
 //    released or foreign owner record means no send (the stale list entry is cleaned up by claim, never blindly).
 //  - Only the canonical endpoint (push-subscriptions.canonicalEndpoint, the value validated at subscribe time) is ever

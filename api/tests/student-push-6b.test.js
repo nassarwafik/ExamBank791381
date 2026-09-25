@@ -277,6 +277,18 @@ describe("sendDirect → push (the only trigger)", () => {
     }
   });
 
+  it("401 / 403 (e.g. a subscription made with a rotated VAPID key — or a server-side VAPID misconfiguration) are NOT treated as expired: the registration and its owner record are kept", async () => {
+    for (const statusCode of [401, 403]) {
+      const ctx = createMemoryContainer(seed());
+      await subscribe(ctx, S1, sub(1));
+      const push = pushService(() => ({ statusCode }));
+      const r = await notifyStudentOfNewMessage(ctx.container, S1, { pushConfig: () => CONFIG, sendNotification: push.send }, log());
+      expect(r).toMatchObject({ attempted: 1, delivered: 0, expired: 0, failed: 1 });
+      expect(stored(ctx, S1)).toHaveLength(1);
+      expect(owner(ctx, sub(1).endpoint)).toBe(S1);
+    }
+  });
+
   it("11. several devices are pushed independently: one gone, one failing, one delivered", async () => {
     const ctx = createMemoryContainer(seed());
     for (const n of [1, 2, 3]) await subscribe(ctx, S1, sub(n));

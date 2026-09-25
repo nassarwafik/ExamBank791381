@@ -172,7 +172,7 @@ describe("6 — granted + existing subscription: re-registered once, never dupli
     expect(w.pushManager.subscribe).not.toHaveBeenCalled();             // never a second browser subscription
     expect(w.Notification.requestPermission).not.toHaveBeenCalled();
     // A remount / refresh of the portal in the same page session does not POST again.
-    expect(await syncExistingPush(client, w.win)).toBe(true);
+    expect(await syncExistingPush(client, { available: true, publicKey: KEY }, w.win)).toBe("enabled");
     expect(client.subscribe).toHaveBeenCalledTimes(1);
   });
 

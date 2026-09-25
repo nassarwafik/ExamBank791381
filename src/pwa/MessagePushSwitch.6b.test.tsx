@@ -23,11 +23,12 @@ const TOKENS: Record<string, string> = { "token-A": A, "token-B": B };
 const b64url = (bytes: Uint8Array) => btoa(String.fromCharCode(...bytes)).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
 const KEY = b64url(new Uint8Array(65).fill(4));
 const ENDPOINT = "https://fcm.googleapis.com/fcm/send/shared-family-tablet";
+const REPAIRED = "https://fcm.googleapis.com/fcm/send/shared-family-tablet-after-rotation";
 const BROWSER_KEYS = { p256dh: b64url(new Uint8Array(65).fill(7)), auth: b64url(new Uint8Array(16).fill(8)) };
 
 type Post = { token: string; body: { action?: string; subscription?: { endpoint?: string } } };
 
-function setUp() {
+function setUp({ browserKey = KEY }: { browserKey?: string } = {}) {
   const student = (userId: string, name: string) => ({ schemaVersion: 3, role: "student", userId, displayName: name, code: "C-" + name, classId: "c1", active: true, archived: false, authVersion: 1 });
   const ctx = createMemoryContainer({ ["platform/users/" + A + ".json"]: student(A, "أحمد"), ["platform/users/" + B + ".json"]: student(B, "بسمة") });
   const posts: Post[] = [];
@@ -56,11 +57,19 @@ function setUp() {
 
   // A push-capable browser that ALREADY holds a subscription with the server key (permission granted earlier).
   const Notification = { permission: "granted", requestPermission: vi.fn(async () => "granted") };
-  const subscription = {
-    endpoint: ENDPOINT, options: { applicationServerKey: applicationServerKey(KEY).buffer.slice(0) },
-    toJSON: () => ({ endpoint: ENDPOINT, expirationTime: null, keys: BROWSER_KEYS }), unsubscribe: vi.fn(async () => true)
+  // The browser's current subscription (made with `browserKey`); unsubscribe/subscribe behave like a real PushManager.
+  const makeSub = (endpoint: string, key: string) => ({
+    endpoint, options: { applicationServerKey: applicationServerKey(key).buffer.slice(0) },
+    toJSON: () => ({ endpoint, expirationTime: null, keys: BROWSER_KEYS }),
+    unsubscribe: vi.fn(async () => { current = null; return true; })
+  });
+  let current: ReturnType<typeof makeSub> | null = makeSub(ENDPOINT, browserKey);
+  const registration = {
+    pushManager: {
+      getSubscription: vi.fn(async () => current),
+      subscribe: vi.fn(async (opts: { applicationServerKey: Uint8Array }) => { current = makeSub(REPAIRED, b64url(opts.applicationServerKey)); return current; })
+    }
   };
-  const registration = { pushManager: { getSubscription: vi.fn(async () => subscription), subscribe: vi.fn() } };
   const g = window as unknown as Record<string, unknown>;
   const saved = { PushManager: g.PushManager, Notification: g.Notification, sw: Object.getOwnPropertyDescriptor(window.navigator, "serviceWorker") };
   g.PushManager = function PushManager() {};
@@ -72,7 +81,8 @@ function setUp() {
   };
   const owner = () => (ctx.getJson(endpointDocName(endpointId(ENDPOINT))) || {}).studentId;
   const listed = (id: string) => ((ctx.getJson(studentDocName(id)) || {}).subscriptions || []).map((s: { endpoint: string }) => s.endpoint);
-  return { posts, Notification, registration, restore, owner, listed };
+  const ownerOf = (endpoint: string) => (ctx.getJson(endpointDocName(endpointId(endpoint))) || {}).studentId;
+  return { posts, Notification, registration, restore, owner, listed, ownerOf };
 }
 
 /** Like App: one tab, the token swaps on logout, no page reload (module state survives). */
@@ -91,6 +101,7 @@ function Tab({ first, next, onRender }: { first: string; next: string; onRender?
 let env: ReturnType<typeof setUp>;
 beforeEach(() => { __resetPushSyncForTests(); env = setUp(); });
 afterEach(() => { cleanup(); env.restore(); vi.restoreAllMocks(); });
+const useRotatedBrowser = () => { env.restore(); env = setUp({ browserKey: b64url(new Uint8Array(65).fill(1)) }); };   // made with an OLD key
 
 const postsFor = (token: string) => env.posts.filter(p => p.token === token && p.body.action === "subscribe");
 
@@ -129,5 +140,36 @@ describe("shared tab: A → logout (no reload) → B", () => {
     expect(String(client.sessionKey)).not.toContain("secret");
     expect(createPushClient("token-B").sessionKey).not.toBe(createPushClient("token-A").sessionKey);
     expect(createPushClient("token-A").sessionKey).toBe(createPushClient("token-A").sessionKey);
+  });
+});
+
+describe("VAPID rotation in a shared tab (real StudentPortal + real student-push handler)", () => {
+  it("A sees «إعادة تفعيل الإشعارات» (old-key subscription never registered), repairs without a prompt, then B signs in and takes the REPAIRED device once", async () => {
+    useRotatedBrowser();
+    render(<StrictMode><Tab first="token-A" next="token-B" /></StrictMode>);
+    await screen.findByText(/مرحبًا أحمد/);
+    const repair = await screen.findByRole("button", { name: "إعادة تفعيل الإشعارات" });
+    expect(screen.getByRole("region", { name: "إشعارات الرسائل" }).textContent).not.toContain("الإشعارات مفعلة");
+    expect(env.posts).toEqual([]);                                             // the stale subscription was never POSTed
+    expect(env.ownerOf(ENDPOINT)).toBeUndefined();
+
+    fireEvent.click(repair);
+    await waitFor(() => expect(env.ownerOf(REPAIRED)).toBe(A));
+    expect(postsFor("token-A").map(p => p.body.subscription?.endpoint)).toEqual([REPAIRED]);
+    expect(env.registration.pushManager.subscribe).toHaveBeenCalledTimes(1);
+    expect(b64url(env.registration.pushManager.subscribe.mock.calls[0][0].applicationServerKey)).toBe(KEY);
+    await waitFor(() => expect(screen.getByRole("region", { name: "إشعارات الرسائل" }).textContent).toContain("الإشعارات مفعلة"));
+
+    fireEvent.click(screen.getByRole("button", { name: /تسجيل الخروج/ }));    // same tab, no reload
+    await screen.findByText(/مرحبًا بسمة/);
+    await waitFor(() => expect(env.ownerOf(REPAIRED)).toBe(B));
+    expect(postsFor("token-B").map(p => p.body.subscription?.endpoint)).toEqual([REPAIRED]);
+    expect(env.listed(A)).toEqual([]);
+    for (let i = 0; i < 3; i++) fireEvent.click(screen.getByRole("button", { name: /^rerender/ }));
+    await new Promise(r => setTimeout(r, 0));
+    expect(postsFor("token-A")).toHaveLength(1);
+    expect(postsFor("token-B")).toHaveLength(1);
+    expect(env.Notification.requestPermission).not.toHaveBeenCalled();
+    expect(env.registration.pushManager.subscribe).toHaveBeenCalledTimes(1);
   });
 });
