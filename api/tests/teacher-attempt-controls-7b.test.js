@@ -2,7 +2,7 @@ import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 import { handler as manageHandler } from "../src/functions/manage-assignments.js";
 import { handler as submissionHandler } from "../src/functions/student-submission.js";
 import { handler as resultsHandler } from "../src/functions/assignment-results.js";
-import { mutateJsonWithRetry } from "../src/lib/platform-storage.js";
+import { mutateJsonWithRetry, downloadJsonOrNull } from "../src/lib/platform-storage.js";
 import { normalizeEndReason, deriveAttemptStatus } from "../src/lib/assignment-availability.js";
 import { createMemoryContainer } from "./fixtures/memory-container.js";
 
@@ -36,11 +36,11 @@ afterEach(() => { vi.useRealTimers(); });
 const at = ms => vi.setSystemTime(ms);
 
 // Teacher deps. `teacherMut` lets a race test interleave a competing writer inside the teacher's CAS.
-let teacherMut = null;
-const T = () => ({ requireBuilderAuth: () => ({ ok: true, user: { sub: "teacher-1" } }), getContainer: () => ctx.container, recordAuditEvent: async (_c, ev) => { audits.push(ev); }, ...(teacherMut ? { mutateJsonWithRetry: teacherMut } : {}) });
+let teacherMut = null, teacherDl = null;
+const T = () => ({ requireBuilderAuth: () => ({ ok: true, user: { sub: "teacher-1" } }), getContainer: () => ctx.container, recordAuditEvent: async (_c, ev) => { audits.push(ev); }, ...(teacherMut ? { mutateJsonWithRetry: teacherMut } : {}), ...(teacherDl ? { downloadJsonOrNull: teacherDl } : {}) });
 let studentMut = null;
 const SD = () => ({ container: ctx.container, requireStudentAuth: () => ({ ok: true, user: { sub: S1, sv: 1, role: "student" } }), recordAchievementIfEligible: async () => {}, ...(studentMut ? { mutateJsonWithRetry: studentMut } : {}) });
-beforeEach(() => { teacherMut = null; studentMut = null; });
+beforeEach(() => { teacherMut = null; teacherDl = null; studentMut = null; });
 
 const manage = body => manageHandler({ method: "POST", url: "https://x/api/assignments", json: async () => body }, T());
 const results = (aid, body, studentId = S1) => resultsHandler({ method: "POST", url: "https://x/api/assignment-results", json: async () => ({ assignmentId: aid, studentId, ...body }) }, T());
@@ -398,6 +398,75 @@ describe("timer semantics", () => {
     expect(f.jsonBody.alreadyFinalized).toBe(true);
     expect(doc(aid).attempts).toHaveLength(1);
     expect(doc(aid).attempts[0].endReason).toBe("teacherEnded");
+  });
+});
+
+// Review fix — the teacher-end CAS must judge the attempt against the LIVE assignment, never the copy loadTarget read before
+// it. A class-wide updateTiming is an assignment-blob CAS independent of the submission CAS, so it can commit in between.
+describe("concurrent updateTiming — the live assignment is authoritative inside the CAS", () => {
+  // Commit `competitor` right AFTER the handler's first (outer, loadTarget) read of the assignment blob returns, and
+  // hand the handler that now-stale copy — exactly the window between the outer read and the CAS decision.
+  function afterOuterAssignmentRead(aid, competitor) {
+    let fired = false;
+    teacherDl = async (c, name) => {
+      const v = await downloadJsonOrNull(c, name);
+      if (!fired && name === "platform/assignments/" + aid + ".json") { fired = true; await competitor(); }
+      return v;
+    };
+  }
+  const extendDue = async (aid, dueMs) => {
+    const r = await manage({ action: "updateTiming", assignmentId: aid, dueAt: iso(dueMs) });
+    expect(r.status, JSON.stringify(r.jsonBody)).toBe(200);
+  };
+
+  it("the old due date had expired the attempt, a concurrent extension revives it → teacherEnded at server now (not timedOut)", async () => {
+    const due = T0 + 60 * MIN;
+    const aid = await create({ durationMinutes: 120, maxAttempts: 2, dueAt: iso(due) });   // duration outlives the due date
+    const st = await start(aid);
+    await save(aid, st, RIGHT);
+    const endAt = T0 + 70 * MIN;
+    at(endAt);
+    // Precondition: under the OLD assignment the attempt is expired by the due date (would be closed as timedOut).
+    expect((await getState(aid)).attemptExpired).toBe(true);
+    afterOuterAssignmentRead(aid, () => extendDue(aid, T0 + 180 * MIN));
+    const r = await end(aid, idOf(st));
+    expect(r.status, JSON.stringify(r.jsonBody)).toBe(200);
+    expect(ctx.getJson("platform/assignments/" + aid + ".json").dueAt).toBe(iso(T0 + 180 * MIN));   // the extension committed
+    const d = doc(aid);
+    expect(d.attempts).toHaveLength(1);
+    expect(d.attempts[0]).toMatchObject({ endReason: "teacherEnded", timedOut: false, endedAt: iso(endAt), score: 10, answers: RIGHT });
+    expectCleared(d);
+    expect(audits.filter(x => x.action === "assignment.endActiveAttempt")).toHaveLength(1);
+    expect(audits.find(x => x.action === "assignment.endActiveAttempt").details).toMatchObject({ endReason: "teacherEnded", endedAt: iso(endAt) });
+    // The returned lifecycle reflects the CURRENT assignment: open again, one attempt left → the student may start #2.
+    // (Judged against the stale copy — due passed — canStartAttempt would be false.)
+    expect(r.jsonBody).toMatchObject({ attemptStatus: "teacherEnded", activeAttempt: null, attemptsUsed: 1, allowedAttempts: 2, canStartAttempt: true });
+    const row = (await gradebook(aid)).students.find(x => x.studentId === S1);
+    expect(row.canStartAttempt).toBe(true);
+  });
+
+  it("complement: the live assignment still has the attempt expired (its own duration ran out) → timedOut at its deadline", async () => {
+    const aid = await create({ durationMinutes: 30, maxAttempts: 2, dueAt: iso(T0 + 60 * MIN) });
+    const st = await start(aid);
+    await save(aid, st, RIGHT);
+    at(T0 + 45 * MIN);
+    afterOuterAssignmentRead(aid, () => extendDue(aid, T0 + 180 * MIN));                     // a due extension never revives a spent duration
+    const r = await end(aid, idOf(st));
+    expect(r.status).toBe(200);
+    expect(doc(aid).attempts).toHaveLength(1);
+    expect(doc(aid).attempts[0]).toMatchObject({ endReason: "timedOut", timedOut: true, endedAt: iso(T0 + 30 * MIN) });
+    expectCleared(doc(aid));
+    expect(audits.find(x => x.action === "assignment.endActiveAttempt").details).toMatchObject({ endReason: "timedOut", endedAt: iso(T0 + 30 * MIN) });
+    expect(r.jsonBody).toMatchObject({ attemptStatus: "timedOut", canStartAttempt: true });  // live due is in the future
+  });
+
+  it("complement: no concurrent change and the due date passed → timedOut at the due date", async () => {
+    const due = T0 + 60 * MIN;
+    const aid = await create({ durationMinutes: 120, dueAt: iso(due) });
+    const st = await start(aid);
+    at(T0 + 70 * MIN);
+    expect((await end(aid, idOf(st))).status).toBe(200);
+    expect(doc(aid).attempts[0]).toMatchObject({ endReason: "timedOut", endedAt: iso(due) });
   });
 });
 

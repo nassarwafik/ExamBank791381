@@ -212,30 +212,35 @@ async function handler(request,deps={},obs=null){
    const ALREADY={};let snap=null,auditDetails=null;
    try{
     await mut(c,name,async current=>{
-     // Race backstop: the assignment may have been archived after loadTarget read it.
+     // The LIVE assignment, re-read on every CAS attempt, is the ONLY authority for every decision below (archived
+     // status, timing/expiry → end reason, policy, model/epoch rules, the returned lifecycle). The outer `a` from
+     // loadTarget is kept only for immutable identifiers: a concurrent updateTiming (assignment-blob CAS, independent of
+     // this submission CAS) may have moved dueAt/duration since, and must not be judged against the stale copy.
      const fa=await dl(c,AP+a.assignmentId+".json");
      if(!fa)throw httpError(404,"الواجب غير موجود.");
      if(normalizeAssignmentStatus(fa)==="archived")throw httpError(409,"الواجب مؤرشف. استعد الواجب أولًا قبل تعديل محاولات الطلاب.");
+     const live=teacherEndIdentity(fa,b);                                   // model/epoch rule of the LIVE assignment (fail closed)
+     if(!live)throw httpError(400,"بيانات المحاولة المطلوب إنهاؤها ناقصة. حدّث القائمة ثم حاول مرة أخرى.");
      const doc=current,active=activeAttemptOf(doc);
      const same=!!active&&Number(active.attemptNumber)===want.attemptNumber&&String(active.startedAt||"")===want.startedAt;
      if(!same){
       // The asserted attempt is no longer live. A duplicate of this very teacher end finds it completed as teacherEnded →
       // idempotent (no write). Anything else (the student submitted, it timed out, a newer attempt started) → 409.
       const done=(Array.isArray(doc?.attempts)?doc.attempts:[]).find(x=>Number(x.attemptNumber)===want.attemptNumber&&String(x.startedAt||"")===want.startedAt);
-      if(done&&normalizeEndReason(done)==="teacherEnded"){snap={...lifecycle(a,doc),...resultFields(doc)};throw ALREADY}
+      if(done&&normalizeEndReason(done)==="teacherEnded"){snap={...lifecycle(fa,doc),...resultFields(doc)};throw ALREADY}
       throw httpError(409,done?"انتهت هذه المحاولة بالفعل. حدّث القائمة.":"تغيّرت محاولة الطالب. حدّث القائمة ثم حاول مرة أخرى.");
      }
-     if(want.attemptEpoch!==undefined&&attemptEpochOf(active)!==want.attemptEpoch)throw httpError(409,"تغيّرت حالة محاولة الطالب (حفظ مؤقت أو استئناف). حدّث القائمة ثم حاول مرة أخرى.");
-     const nowMs=Date.now(),now=new Date(nowMs).toISOString(),ts=timerState(a,doc,nowMs);
+     if(live.attemptEpoch!==undefined&&attemptEpochOf(active)!==live.attemptEpoch)throw httpError(409,"تغيّرت حالة محاولة الطالب (حفظ مؤقت أو استئناف). حدّث القائمة ثم حاول مرة أخرى.");
+     const nowMs=Date.now(),now=new Date(nowMs).toISOString(),ts=timerState(fa,doc,nowMs);
      const previousStatus=ts.activeAttempt?ts.activeAttempt.status:"started",timedOut=!!ts.attemptExpired;
      const serverAnswers=doc.draftAnswers&&typeof doc.draftAnswers==="object"?doc.draftAnswers:{};
-     const g=gradeFn(a.examSnapshot,serverAnswers),endReason=timedOut?"timedOut":"teacherEnded",endedAt=timedOut?(ts.effectiveAttemptEndsAt||now):now;
-     const attempt={attemptNumber:active.attemptNumber,submittedAt:now,score:g.score,totalMarks:g.totalMarks,percentage:g.percentage,manualReviewMarks:g.manualReviewMarks,finalized:g.finalized,questionGrades:g.questions,sections:g.sections,answers:serverAnswers,manualOverrides:{},teacherFeedback:"",timedOut,startedAt:active.startedAt,endsAt:active.endsAt||"",extendedEndsAt:active.extendedEndsAt?String(active.extendedEndsAt):"",endedAt,endReason,...(attemptModelVersion(a)>=3?{pauseCount:Math.max(0,Number(active.pauseCount)||0)}:{})};
+     const g=gradeFn(fa.examSnapshot,serverAnswers),endReason=timedOut?"timedOut":"teacherEnded",endedAt=timedOut?(ts.effectiveAttemptEndsAt||now):now;
+     const attempt={attemptNumber:active.attemptNumber,submittedAt:now,score:g.score,totalMarks:g.totalMarks,percentage:g.percentage,manualReviewMarks:g.manualReviewMarks,finalized:g.finalized,questionGrades:g.questions,sections:g.sections,answers:serverAnswers,manualOverrides:{},teacherFeedback:"",timedOut,startedAt:active.startedAt,endsAt:active.endsAt||"",extendedEndsAt:active.extendedEndsAt?String(active.extendedEndsAt):"",endedAt,endReason,...(attemptModelVersion(fa)>=3?{pauseCount:Math.max(0,Number(active.pauseCount)||0)}:{})};
      doc.attempts=Array.isArray(doc.attempts)?doc.attempts:[];doc.attempts.push(attempt);
      doc.draftAnswers={};doc.draftSavedAt="";doc.activeAttempt=null;doc.updatedAt=now;
-     snap={...lifecycle(a,doc),...resultFields(doc)};
+     snap={...lifecycle(fa,doc),...resultFields(doc)};
      // Audit: identity + timing + policy only — NEVER answers, grades of questions, tokens or exam content.
-     auditDetails={assignmentId:a.assignmentId,attemptNumber:attempt.attemptNumber,startedAt:String(attempt.startedAt),endedAt,endReason,attemptPolicy:attemptPolicyOf(a),pauseCount:Math.max(0,Number(active.pauseCount)||0),previousStatus,timed:!!ts.timed};
+     auditDetails={assignmentId:a.assignmentId,attemptNumber:attempt.attemptNumber,startedAt:String(attempt.startedAt),endedAt,endReason,attemptPolicy:attemptPolicyOf(fa),pauseCount:Math.max(0,Number(active.pauseCount)||0),previousStatus,timed:!!ts.timed};
      return doc;
     });
    }catch(e){
