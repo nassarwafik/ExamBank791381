@@ -44,10 +44,10 @@ const react = (ctx, classId, postId, reaction) => teacherFeed({ method: "POST", 
 const note = (ctx, classId, postId, text) => teacherFeed({ method: "POST", url: "https://x/api/teacher-achievement-feed", json: async () => ({ action: "setNote", classId, postId, note: text }) }, deps(ctx));
 
 describe("GET scope", () => {
-  it("1. no params → every class, newest first (unchanged behavior)", async () => {
+  it("1. no params → every CURRENT class, newest first (Phase 8A: the archived class H is not part of the global scope)", async () => {
     const r = await get(school());
     expect(r.status).toBe(200);
-    expect(ids(r)).toEqual(["a1y_A1", "b1x_B1", "a2x_A2", "a1x_A1", "old_A1"]);
+    expect(ids(r)).toEqual(["a1y_A1", "b1x_B1", "a2x_A2", "a1x_A1"]);
     expect(r.jsonBody.posts.find(p => p.postId === "b1x_B1")).toMatchObject({ classId: "B", className: "صف B" });
   });
 

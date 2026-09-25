@@ -37,6 +37,9 @@
   font-weight: var(--eb-fw-semibold);
   line-height: var(--eb-lh-tight);
 }
+/* Phase 8A — optional decorative page icon beside the title (the dashboard). */
+.eb-page-header h1:has(> .eb-page-header-icon) { display: flex; align-items: center; gap: var(--eb-space-2); }
+.eb-page-header-icon { display: inline-flex; flex: none; color: var(--eb-primary); }
 
 .eb-breadcrumb ol {
   display: flex; flex-wrap: wrap; align-items: center; gap: var(--eb-space-1);

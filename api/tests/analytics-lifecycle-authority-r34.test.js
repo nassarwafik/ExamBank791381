@@ -138,7 +138,7 @@ describe("C. an EXPLICITLY requested archived class stays a historical view (unc
       expect(d.students.map(s => s.userId).sort()).toEqual(["zA", "zB"]);
       expect(d.assignmentTrend.map(a => a.assignmentId)).toEqual(["z1", "z2"]);
       expect(d.followUp.map(s => s.userId)).toContain("zB");
-      expect(d.classComparison.map(c => c.classId)).toEqual(["cA"]);           // comparison stays canonical-active (unchanged rule)
+      expect(d.classComparison).toEqual([]);                                   // Phase 8A: comparison is a global-only view
       expect(d.kpis.activeClasses).toBe(1);
       const detail = await computeTeacherAnalytics(twoClassSeed(life).container, { classId: "cZ", studentId: "zB" });
       expect(detail.studentDetail).toMatchObject({ userId: "zB", completed: 1, missing: 1 });
@@ -167,7 +167,9 @@ describe("D. student membership matrix — canonical isStudentClassMember semant
     const d = await computeTeacherAnalytics(ctx.container, { classId: "cA" });
     expect(d.students.map(s => s.userId).sort()).toEqual(["sA", "sB", "sG"]);
     expect(d.kpis).toMatchObject({ activeStudents: 3, expectedSubmissions: 3, submissions: 3, average: 80 });
-    expect(d.classComparison.find(c => c.classId === "cA")).toMatchObject({ students: 3, submitted: 3 });
+    expect(d.classComparison).toEqual([]);                                     // Phase 8A: class scope carries no comparison
+    const g0 = await computeTeacherAnalytics(ctx.container);
+    expect(g0.classComparison.find(c => c.classId === "cA")).toMatchObject({ students: 3, submitted: 3 });
     const gb = (await resultsHandler(GET("/api/assignment-results?assignmentId=aA"), deps(ctx))).jsonBody;
     expect(gb.students.map(s => s.studentId).sort()).toEqual(["sA", "sB", "sG"]); expect(gb.stats).toMatchObject({ students: 3, submitted: 3 });
     const ia = (await itemAnalysisHandler(GET("/api/assignment-item-analysis?assignmentId=aA"), deps(ctx))).jsonBody;

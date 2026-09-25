@@ -41,6 +41,7 @@ function teacherEndIdentity(a,b){
  if(typeof ee!=="number"||!Number.isInteger(ee)||ee<1)return null;
  return {attemptNumber:en,startedAt:es,attemptEpoch:ee};
 }
+const SAFE_ID=/^[A-Za-z0-9_-]{1,128}$/;
 function httpError(status,message){const err=new Error(message);err.httpStatus=status;return err}
 function defaultSub(id,studentId,a,student){return {schemaVersion:1,assignmentId:id,studentId,classId:a.classId,studentCode:String(student.code||""),studentName:String(student.displayName||""),allowedAttempts:null,draftAnswers:{},attempts:[],activeAttempt:null,createdAt:new Date().toISOString(),updatedAt:new Date().toISOString()}}
 // Validate teacher + assignment + that the student belongs to the assignment's class. Returns
@@ -61,9 +62,21 @@ async function handler(request,deps={},obs=null){
  try{const auth=authFn(request);if(!auth.ok)return auth.response;const c=getC();
   if(request.method==="GET"){
    const u=new URL(request.url),id=String(u.searchParams.get("assignmentId")||"");if(!id)return {status:400,jsonBody:{ok:false,error:"assignmentId is required."}};const a=await dl(c,AP+id+".json");if(!a)return {status:404,jsonBody:{ok:false,error:"الواجب غير موجود."}};
+   // Phase 8A: an optional STUDENT scope (the dashboard's student drill). When `studentId` is present the population is
+   // exactly that one student — who must exist, be a student and be a canonical member of the assignment's class — so
+   // no other student's row, marks, attempts or aggregate can appear; stats are that student's own. A malformed,
+   // unknown or foreign id is rejected (never a silent fallback to the whole class). Without it: unchanged.
+   const scopedStudentId=u.searchParams.has("studentId")?String(u.searchParams.get("studentId")||"").trim():null;
+   let scopedStudent=null;
+   if(scopedStudentId!==null){
+    if(!SAFE_ID.test(scopedStudentId))return {status:400,jsonBody:{ok:false,error:"studentId غير صالح."}};
+    scopedStudent=await dl(c,UP+scopedStudentId+".json");
+    if(!scopedStudent||scopedStudent.role!=="student"||String(scopedStudent.userId||"")!==scopedStudentId)return {status:404,jsonBody:{ok:false,error:"الطالب غير موجود."}};
+    if(!isStudentClassMember(scopedStudent,a.classId))return {status:403,jsonBody:{ok:false,error:"الطالب لا ينتمي إلى صف هذا الواجب."}};
+   }
    // Roadmap #24: the gradebook population is CLASS MEMBERSHIP (canonical predicate) — a login-disabled
    // (active:false, non-archived) student keeps their row, results and pending-review visibility.
-   const users=(await ls(c,UP)).filter(x=>isStudentClassMember(x,a.classId)),out=[];
+   const users=scopedStudent?[scopedStudent]:(await ls(c,UP)).filter(x=>isStudentClassMember(x,a.classId)),out=[];
    let submitted=0,pending=0,finalizedCount=0,notSubmitted=0,active=0,sum=0,highest=null,lowest=null;
    // Roadmap #27: fetch every member's submission with bounded concurrency (aligned with `users`), then aggregate in order.
    const submissionsByIndex=await mapConcurrent(users,getReadConcurrency(),student=>dl(c,SP+id+"/"+student.userId+".json"));
@@ -75,7 +88,7 @@ async function handler(request,deps={},obs=null){
     else notSubmitted++;
     if(activeAttemptOf(s))active++;                                         // active attempt is INDEPENDENT of grading status
     out.push({studentId:student.userId,studentName:student.displayName,studentCode:student.code,...lifecycle(a,s),...rf})}
-   out.sort((x,y)=>String(x.studentName).localeCompare(String(y.studentName),"ar"));return {status:200,jsonBody:{ok:true,assignment:{assignmentId:a.assignmentId,title:a.title,dueAt:String(a.dueAt||""),durationMinutes:Number(a.durationMinutes||0),maxAttempts:Math.max(1,Number(a.maxAttempts||1)),totalMarks:Number(a.totalMarks||0),attemptPolicy:attemptPolicyOf(a)},stats:{students:users.length,submitted,pendingReview:pending,finalized:finalizedCount,notSubmitted,active,average:submitted?Number((sum/submitted).toFixed(1)):null,highest,lowest},students:out}};
+   out.sort((x,y)=>String(x.studentName).localeCompare(String(y.studentName),"ar"));return {status:200,jsonBody:{ok:true,assignment:{assignmentId:a.assignmentId,title:a.title,dueAt:String(a.dueAt||""),durationMinutes:Number(a.durationMinutes||0),maxAttempts:Math.max(1,Number(a.maxAttempts||1)),totalMarks:Number(a.totalMarks||0),attemptPolicy:attemptPolicyOf(a)},stats:{students:users.length,submitted,pendingReview:pending,finalized:finalizedCount,notSubmitted,active,average:submitted?Number((sum/submitted).toFixed(1)):null,highest,lowest},students:out,...(scopedStudent?{scope:{mode:"student",studentId:scopedStudentId}}:{})}};
   }
   let b={};try{b=await request.json()}catch{}const resultAction=String(b.action||"");
 
