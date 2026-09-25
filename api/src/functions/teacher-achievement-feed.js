@@ -1,13 +1,43 @@
 const { app } = require("@azure/functions");
 const { withObservability } = require("../lib/observability");
 const { requireBuilderAuth } = require("../lib/builder-auth");
-const { getContainer, listJson, mutateJsonWithRetry, StorageConflictError } = require("../lib/platform-storage");
+const { getContainer, listJson, downloadJsonOrNull, mutateJsonWithRetry, StorageConflictError } = require("../lib/platform-storage");
 const { FEED_PREFIX, REACTIONS, feedBlobName, publicPost } = require("../lib/achievement-feed");
+const { isSafeId } = require("../lib/message-store");
+const { isStudentClassMember } = require("../lib/class-membership");
 
 const CLASS_PREFIX = "platform/classes/";
 const CONFLICT_MESSAGE = "حدث تعارض مؤقت أثناء حفظ البيانات. حاول مرة أخرى.";
 const MAX_POSTS = 50;
 const MAX_NOTE_LENGTH = 200;
+
+const newestFirst = (a, b) => String(b.createdAt || "").localeCompare(String(a.createdAt || ""));
+
+/**
+ * The dashboard scope of a GET: none (every class), ?classId=<id> (that class), or ?classId=<id>&studentId=<id>
+ * (that student inside that class — AND semantics on the posts' stored classId/studentId, never on display names).
+ * Malformed ids → 400; a studentId without a classId → 400; an unknown class, or a student who is not currently a
+ * member of that class → 404 (the same authority the dashboard's own student picker is built from).
+ */
+async function readScope(request, container) {
+  let url;
+  try { url = new URL(request.url); } catch { return { ok: true, classId: "", studentId: "" }; }
+  const classId = String(url.searchParams.get("classId") || "").trim();
+  const studentId = String(url.searchParams.get("studentId") || "").trim();
+  const bad = error => ({ ok: false, response: { status: 400, jsonBody: { ok: false, error } } });
+  const missing = error => ({ ok: false, response: { status: 404, jsonBody: { ok: false, error } } });
+  if (!classId && !studentId) return { ok: true, classId: "", studentId: "" };
+  if (!classId) return bad("studentId requires classId.");
+  if (!isSafeId(classId)) return bad("Invalid classId.");
+  if (studentId && !isSafeId(studentId)) return bad("Invalid studentId.");
+  const classroom = await downloadJsonOrNull(container, CLASS_PREFIX + classId + ".json");
+  if (!classroom) return missing("الصف غير موجود.");
+  if (studentId) {
+    const student = await downloadJsonOrNull(container, "platform/users/" + studentId + ".json");
+    if (!isStudentClassMember(student, classId)) return missing("الطالب غير موجود في هذا الصف.");
+  }
+  return { ok: true, classId, studentId, classroom };
+}
 
 // `deps` is an optional dependency-injection seam for unit tests (production passes nothing, so the real
 // implementations are used); `obs` is the request context withObservability passes as the third argument.
@@ -19,13 +49,20 @@ async function handler(request, deps = {}, obs = null) {
       const container = deps.container || (deps.getContainer || getContainer)();
 
       if (request.method === "GET") {
-        const [posts, classes] = await Promise.all([
-          listJson(container, FEED_PREFIX),
-          listJson(container, CLASS_PREFIX)
-        ]);
+        const scope = await readScope(request, container);
+        if (!scope.ok) return scope.response;
+        // Scoped: only that class's feed folder is read, and posts are kept by their STORED classId (+ studentId) —
+        // filtered BEFORE the newest-first slice, so a class's older posts are never crowded out by other classes.
+        const [posts, classes] = scope.classId
+          ? [
+              (await listJson(container, FEED_PREFIX + scope.classId + "/"))
+                .filter(post => String(post?.classId || "") === scope.classId && (!scope.studentId || String(post?.studentId || "") === scope.studentId)),
+              [{ ...scope.classroom, classId: scope.classId }]
+            ]
+          : await Promise.all([listJson(container, FEED_PREFIX), listJson(container, CLASS_PREFIX)]);
         const classNameById = new Map(classes.map(c => [String(c.classId || ""), String(c.name || "")]));
         const sorted = posts
-          .sort((a, b) => String(b.createdAt || "").localeCompare(String(a.createdAt || "")))
+          .sort(newestFirst)
           .slice(0, MAX_POSTS)
           // The teacher sees every educational achievement event of managed students (shared or not).
           .map(post => ({
