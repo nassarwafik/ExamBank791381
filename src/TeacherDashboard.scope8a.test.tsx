@@ -54,6 +54,24 @@ function payload(mode: "global" | "class" | "student", over: Record<string, unkn
     students: [{ userId: "u1", displayName: S1 }, { userId: "u2", displayName: S2 }],
     studentDetail: { userId: "u1", displayName: S1, classId: "cA", className: "صف ألف", average: 90, assigned: 2, completed: 2, missing: 0, completionRate: 100, trendDelta: 0, trend: "stable", lastLoginAt: "2026-09-01T00:00:00.000Z", needsFollowUp: false, reasons: [], scoreTrend: [{ assignmentId: "a1", title: "واجب a1", date: "", percentage: 90 }, { assignmentId: "a2", title: "واجب a2", date: "", percentage: 90 }], topicAnalytics: [{ topic: "جبر", average: 90, gradedQuestions: 2 }] }, ...over };
 }
+/** The second student's own STUDENT-scope payload (server-computed from u2's records only). */
+function studentU2() {
+  const p = payload("student") as Record<string, unknown> & { studentDetail: Record<string, unknown>; kpis: Record<string, unknown> };
+  return { ...p, scope: { ...(p.scope as object), studentId: "u2", studentName: S2 }, kpis: { ...p.kpis, average: 20, highest: 20, lowest: 20 },
+    assignmentTrend: [trend("a1", "cA", "صف ألف", 20, 1), trend("a2", "cA", "صف ألف", 20, 1)], studentDetail: { ...p.studentDetail, userId: "u2", displayName: S2, average: 20 } };
+}
+// assignment-results as the server answers it: the whole class without studentId, exactly one student with it.
+const ROW = (studentId: string, studentName: string, pct: number) => {
+  const attempt = { attemptNumber: 1, score: pct / 10, totalMarks: 10, percentage: pct, submittedAt: "2026-09-01T00:00:00.000Z", gradingStatus: "final", finalized: true };
+  return { studentId, studentName, studentCode: "C" + studentId, attemptsUsed: 1, allowedAttempts: 2, attempts: [attempt], latestResult: attempt };
+};
+function resultsFor(q: URLSearchParams) {
+  const assignment = { assignmentId: q.get("assignmentId"), title: "واجب " + q.get("assignmentId"), maxAttempts: 2, totalMarks: 10 };
+  const sid = q.get("studentId");
+  if (sid === "u1") return { ok: true, assignment, stats: { students: 1, submitted: 1, pendingReview: 0, average: 90, highest: 90, lowest: 90 }, students: [ROW("u1", S1, 90)], scope: { mode: "student", studentId: "u1" } };
+  if (sid === "u2") return { ok: true, assignment, stats: { students: 1, submitted: 1, pendingReview: 0, average: 20, highest: 20, lowest: 20 }, students: [ROW("u2", S2, 20)], scope: { mode: "student", studentId: "u2" } };
+  return { ok: true, assignment, stats: { students: 2, submitted: 2, pendingReview: 0, average: 55, highest: 90, lowest: 20 }, students: [ROW("u1", S1, 90), ROW("u2", S2, 20)] };
+}
 const modeOf = (query: string) => query.includes("studentId=") ? "student" : query.includes("classId=") ? "class" : "global";
 
 type Call = { url: string; init?: RequestInit };
@@ -72,9 +90,9 @@ function server() {
   globalThis.fetch = vi.fn((input: RequestInfo | URL, init?: RequestInit) => {
     const url = String(input); calls.push({ url, init });
     if (url.startsWith("/api/teacher-analytics-ai")) { const answer = aiAnswer; return deferred("ai", () => res(200, { ok: true, advice: answer })); }
-    if (url.startsWith("/api/teacher-analytics")) { const q = url.split("?")[1] || ""; return deferred("analytics:" + q, () => res(200, payload(modeOf(q)))); }
+    if (url.startsWith("/api/teacher-analytics")) { const q = url.split("?")[1] || ""; return deferred("analytics:" + q, () => res(200, q.includes("studentId=u2") ? studentU2() : payload(modeOf(q)))); }
     if (url.startsWith("/api/teacher-achievement-feed")) return Promise.resolve(res(200, { ok: true, posts: [] }));
-    if (url.startsWith("/api/assignment-results")) return Promise.resolve(res(200, { ok: true, assignment: { assignmentId: "a1", title: "واجب a1", maxAttempts: 1, totalMarks: 10 }, stats: { students: 2, submitted: 2, pendingReview: 0, average: 55, highest: 90, lowest: 20 }, students: [] }));
+    if (url.startsWith("/api/assignment-results")) { const q = url.split("?")[1] || ""; return deferred("results:" + q, () => res(200, resultsFor(new URLSearchParams(q)))); }
     return Promise.resolve(res(404, { ok: false, error: "unexpected " + url }));
   }) as unknown as typeof fetch;
   return {
@@ -317,5 +335,101 @@ describe("8A — dashboard page icon", () => {
     expect(icon?.querySelector("svg")).toBeTruthy();
     rerender(<TeacherAppShell nav={nav("students")} projectReadyTotal={0} displayName="م" onNavigate={() => {}} onLogout={() => {}}><p>x</p></TeacherAppShell>);
     expect(screen.getByRole("heading", { level: 1 }).querySelector(".eb-page-header-icon")).toBeNull();
+  });
+});
+
+describe("8A review fix — the assignment drill follows the scope", () => {
+  const openA1 = () => fireEvent.click(within(screen.getByRole("heading", { level: 2, name: /^(متابعة الواجبات|واجبات الطالب)$/ }).closest("section")!.querySelector("table")!).getByRole("button", { name: "واجب a1" }));
+  const results = (srv: ReturnType<typeof server>) => srv.calls.filter(c => c.url.startsWith("/api/assignment-results")).map(c => c.url);
+  it("STUDENT scope: the drill request carries assignmentId + studentId and shows only that student's own result", async () => {
+    const srv = await boot();
+    await toClass("cA");
+    await toStudent("u1");
+    expect(screen.getByText("افتح أي واجب لعرض نتيجة الطالب ومحاولاته")).toBeTruthy();
+    openA1();
+    const panel = await screen.findByRole("complementary", { name: "واجب a1" });
+    expect(results(srv).at(-1)).toBe("/api/assignment-results?assignmentId=a1&studentId=u1");
+    expect(panel.textContent).toContain("نتيجة الطالب ومحاولاته · " + S1);
+    expect(panel.textContent).toContain("علامة الطالب 90%");
+    expect(panel.textContent).toContain("محاولة #1 · 90%");
+    for (const classLabel of ["المتوسط", "سلّموا", "أعلى", "20%"]) expect(panel.textContent).not.toContain(classLabel);
+    expect(panel.textContent).not.toContain(S2);
+    expect(panel.querySelector("table")).toBeNull();                                     // no roster table
+  });
+  it("STUDENT scope: a class-wide answer is refused — no classmate name or attempt is ever rendered", async () => {
+    const srv = await boot();
+    await toClass("cA");
+    await toStudent("u1");
+    const realFetch = globalThis.fetch;
+    globalThis.fetch = ((input: RequestInfo | URL, init?: RequestInit) => String(input).startsWith("/api/assignment-results")
+      ? Promise.resolve(res(200, resultsFor(new URLSearchParams("assignmentId=a1"))))       // a forged / legacy class response
+      : realFetch(input, init)) as typeof fetch;
+    openA1();
+    await screen.findByText("تعذر فتح نتيجة الطالب لهذا الواجب.");
+    expect(screen.queryByRole("complementary")).toBeNull();
+    expect(document.body.textContent).not.toContain("20%");
+    expect(main()!.textContent).not.toContain(S2);
+    void srv;
+  });
+  it("CLASS scope: the drill is the whole class exactly as before (no studentId)", async () => {
+    const srv = await boot();
+    await toClass("cA");
+    expect(screen.getByText("افتح أي واجب لعرض نتائج طلابه ومحاولاتهم")).toBeTruthy();
+    openA1();
+    const panel = await screen.findByRole("complementary", { name: "واجب a1" });
+    expect(results(srv).at(-1)).toBe("/api/assignment-results?assignmentId=a1");
+    expect(panel.textContent).toContain("المتوسط 55%");
+    expect(panel.textContent).toContain("سلّموا 2/2");
+    expect(within(panel).getAllByRole("row").slice(1).map(r => r.firstElementChild?.textContent)).toEqual([S1, S2]);
+  });
+  it("GLOBAL scope: unchanged whole-class drill", async () => {
+    const srv = await boot();
+    openA1();
+    const panel = await screen.findByRole("complementary", { name: "واجب a1" });
+    expect(results(srv).at(-1)).toBe("/api/assignment-results?assignmentId=a1");
+    expect(panel.textContent).toContain(S2);
+  });
+  it("switching student A → B while A's drill is in flight never shows A's drill under B", async () => {
+    const srv = await boot();
+    await toClass("cA");
+    await toStudent("u1");
+    srv.hold("results:assignmentId=a1&studentId=u1");
+    openA1();
+    await pickStudent("u2");
+    await waitFor(() => expect(caption()).toBe("الطالب: " + S2 + " · الصف: صف ألف"));
+    await screen.findByRole("heading", { level: 2, name: "يحتاج إلى انتباهك" });
+    srv.release("results:assignmentId=a1&studentId=u1");
+    await new Promise(r => setTimeout(r, 0));
+    expect(screen.queryByRole("complementary")).toBeNull();
+    expect(document.body.textContent).not.toContain("محاولة #1 · 90%");
+    // B's own drill is B's result only
+    openA1();
+    const panel = await screen.findByRole("complementary", { name: "واجب a1" });
+    expect(results(srv).at(-1)).toBe("/api/assignment-results?assignmentId=a1&studentId=u2");
+    expect(panel.textContent).toContain("نتيجة الطالب ومحاولاته · " + S2);
+    expect(panel.textContent).not.toContain(S1);
+  });
+  it("returning to the class scope invalidates an in-flight student drill", async () => {
+    const srv = await boot();
+    await toClass("cA");
+    await toStudent("u1");
+    srv.hold("results:assignmentId=a1&studentId=u1");
+    openA1();
+    await pickStudent("");
+    await waitFor(() => expect(caption()).toBe("الصف: صف ألف · جميع طلاب الصف"));
+    await screen.findByRole("heading", { level: 2, name: "يحتاج إلى انتباهك" });
+    srv.release("results:assignmentId=a1&studentId=u1");
+    await new Promise(r => setTimeout(r, 0));
+    expect(screen.queryByRole("complementary")).toBeNull();
+    expect(screen.queryByRole("status", { name: /تفاصيل الواجب/ })).toBeNull();
+  });
+  it("an open student drill closes when the student changes", async () => {
+    await boot();
+    await toClass("cA");
+    await toStudent("u1");
+    openA1();
+    await screen.findByRole("complementary", { name: "واجب a1" });
+    await pickStudent("u2");
+    expect(screen.queryByRole("complementary")).toBeNull();
   });
 });

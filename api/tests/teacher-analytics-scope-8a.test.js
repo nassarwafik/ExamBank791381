@@ -2,6 +2,7 @@ import { describe, it, expect } from "vitest";
 import { computeTeacherAnalytics, AnalyticsScopeError, missingAssignmentsPhrase } from "../src/lib/teacher-analytics-core.js";
 import { handler as analyticsHandler } from "../src/functions/teacher-analytics.js";
 import { handler as aiHandler } from "../src/functions/teacher-analytics-ai.js";
+import { handler as resultsHandler } from "../src/functions/assignment-results.js";
 import { createMemoryContainer } from "./fixtures/memory-container.js";
 
 // Phase 8A — ONE authoritative analytics scope per response (GLOBAL / CLASS / STUDENT). Before 8A a studentId only
@@ -307,5 +308,78 @@ describe("8A-6 AI — the prompt is the server's recomputation of exactly the re
     const deps = { requireBuilderAuth: () => ({ ok: true }), container: ctx.container, createAiClient: async () => { throw new Error("boom"); } };
     const r = await aiHandler({ method: "POST", url: "https://x/api/teacher-analytics-ai", json: async () => ({ classId: "A" }) }, deps);
     expect(r).toMatchObject({ status: 500, jsonBody: { ok: false } });
+  });
+});
+
+// ---------------------------------------------------------------------------------------------------------------
+// Phase 8A review fix — the dashboard's assignment drill in STUDENT scope calls
+// GET /api/assignment-results?assignmentId=…&studentId=…, which must describe that one student only.
+function resultsGet(ctx, query) {
+  let userListings = 0;
+  const deps = {
+    requireBuilderAuth: () => ({ ok: true, user: { sub: "teacher-1" } }),
+    getContainer: () => ctx.container,
+    listJson: async (container, prefix) => { if (prefix === UP) userListings += 1; const { listJson } = await import("../src/lib/platform-storage.js"); return listJson(container, prefix); }
+  };
+  return resultsHandler({ method: "GET", url: "https://x/api/assignment-results?" + query, json: async () => ({}) }, deps).then(r => ({ ...r, userListings }));
+}
+const classmateNames = [NAMES.S2, NAMES.S3, NAMES.S4, NAMES.B1];
+
+describe("8A-7 assignment-results GET — student-scoped drill", () => {
+  it("CLASS / GLOBAL drill (no studentId) is unchanged: every current member, class-wide stats, no scope field", async () => {
+    const r = await resultsGet(school(), "assignmentId=a1");
+    expect(r.status).toBe(200);
+    expect(r.jsonBody.students.map(x => x.studentId).sort()).toEqual(["S1", "S2", "S3"]);   // archived S4 / teacher / class B excluded
+    expect(r.jsonBody.stats).toMatchObject({ students: 3, submitted: 2, notSubmitted: 1, average: 55, highest: 90, lowest: 20 });
+    expect(r.jsonBody.scope).toBeUndefined();
+    expect(r.userListings).toBe(1);
+  });
+  it("student scope returns exactly one student, and stats are that student's own", async () => {
+    const r = await resultsGet(school(), "assignmentId=a1&studentId=S1");
+    expect(r.status).toBe(200);
+    expect(r.jsonBody.students).toHaveLength(1);
+    expect(r.jsonBody.students[0]).toMatchObject({ studentId: "S1", studentName: NAMES.S1 });
+    expect(r.jsonBody.stats).toEqual({ students: 1, submitted: 1, pendingReview: 0, finalized: 1, notSubmitted: 0, active: 0, average: 90, highest: 90, lowest: 90 });
+    expect(r.jsonBody.scope).toEqual({ mode: "student", studentId: "S1" });
+    expect(r.userListings).toBe(0);                                                   // the class roster is never read
+  });
+  it("no classmate name, attempt or mark can appear in the student drill", async () => {
+    const r = await resultsGet(school(), "assignmentId=a1&studentId=S1");
+    const body = JSON.stringify(r.jsonBody);
+    for (const name of classmateNames) expect(body).not.toContain(name);
+    for (const id of ["\"S2\"", "\"S3\"", "\"S4\""]) expect(body).not.toContain(id);
+    const attempts = r.jsonBody.students.flatMap(x => x.attempts);
+    expect(attempts.map(a => a.percentage)).toEqual([90]);                             // never S2's 20 or S4's 5
+  });
+  it("a student with no submission: one row, not submitted, null marks (no class figures)", async () => {
+    const r = await resultsGet(school(), "assignmentId=a1&studentId=S3");
+    expect(r.jsonBody.students).toHaveLength(1);
+    expect(r.jsonBody.students[0]).toMatchObject({ studentId: "S3", latestResult: null });
+    expect(r.jsonBody.stats).toMatchObject({ students: 1, submitted: 0, notSubmitted: 1, average: null, highest: null, lowest: null });
+  });
+  it("pending review is the student's own", async () => {
+    const r = await resultsGet(school(), "assignmentId=a3&studentId=S1");
+    expect(r.jsonBody.stats).toMatchObject({ students: 1, submitted: 1, pendingReview: 1, finalized: 0 });
+  });
+  it("mismatched / forged / unknown / malformed student ids are rejected, never widened to the class", async () => {
+    const cases = [["B1", 403], ["S4", 403], ["Z1", 403], ["T1", 404], ["NOPE", 404], ["..%2FS1", 400], ["", 400], ["S1%20S2", 400]];
+    for (const [sid, status] of cases) {
+      const r = await resultsGet(school(), "assignmentId=a1&studentId=" + sid);
+      expect([sid, r.status]).toEqual([sid, status]);
+      expect(r.jsonBody.ok).toBe(false);
+      expect(r.jsonBody.students).toBeUndefined();
+    }
+  });
+  it("a student who moved classes is only valid for their new class's assignments", async () => {
+    const ctx = school({ [UP + "S2.json"]: usr("S2", "B", NAMES.S2) });
+    expect((await resultsGet(ctx, "assignmentId=a1&studentId=S2")).status).toBe(403);   // old class-A submission never exposed
+    const r = await resultsGet(ctx, "assignmentId=b1&studentId=S2");
+    expect(r.status).toBe(200);
+    expect(r.jsonBody.students.map(x => x.studentId)).toEqual(["S2"]);
+    expect(JSON.stringify(r.jsonBody)).not.toContain(NAMES.B1);
+  });
+  it("an unknown assignment is still 404 in either mode", async () => {
+    expect((await resultsGet(school(), "assignmentId=nope&studentId=S1")).status).toBe(404);
+    expect((await resultsGet(school(), "assignmentId=nope")).status).toBe(404);
   });
 });

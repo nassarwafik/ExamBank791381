@@ -211,6 +211,9 @@ function TeacherDashboard({token}:DashboardProps){
  const [aiBusy,setAiBusy]=useState(false);
  const [aiError,setAiError]=useState("");
  const [assignmentResults,setAssignmentResults]=useState<AssignmentResults|null>(null);
+ // Phase 8A: the student the open assignment drill was requested for ("" = the whole class). A drill is rendered only
+ // for the student it belongs to, so a class drill can never appear under a student scope (or the other way round).
+ const [assignmentFor,setAssignmentFor]=useState("");
  const [assignmentBusy,setAssignmentBusy]=useState(false);
  const [profile,setProfile]=useState<StudentProfile|null>(null);
  const [profileBusy,setProfileBusy]=useState(false);
@@ -353,10 +356,16 @@ function TeacherDashboard({token}:DashboardProps){
  async function openAssignment(item:AssignmentTrend){
   rememberTrigger("assignment");
   const gen=drillGen.current;
+  // STUDENT scope: the drill asks the server for this one student only (never the class gradebook).
+  const forStudent=classId&&studentId?studentId:"";
   setAssignmentBusy(true);setError("");setReview(null);
   try{
-   const result=await teacherApi<{ok:true}&AssignmentResults>("/api/assignment-results?assignmentId="+encodeURIComponent(item.assignmentId));
-   if(gen===drillGen.current)setAssignmentResults(result);
+   const params=new URLSearchParams({assignmentId:item.assignmentId});
+   if(forStudent)params.set("studentId",forStudent);
+   const result=await teacherApi<{ok:true}&AssignmentResults>("/api/assignment-results?"+params.toString());
+   if(gen!==drillGen.current)return;
+   if(forStudent&&(result.students.length!==1||result.students[0].studentId!==forStudent))throw new Error("تعذر فتح نتيجة الطالب لهذا الواجب.");
+   setAssignmentResults(result);setAssignmentFor(forStudent);
   }catch(e){if(gen===drillGen.current)setError(e instanceof Error?e.message:"تعذر فتح تفاصيل الواجب.");}
   finally{if(gen===drillGen.current)setAssignmentBusy(false)}
  }
@@ -530,7 +539,7 @@ function TeacherDashboard({token}:DashboardProps){
   </section>}
 
   <section className="eb-dash-section" aria-labelledby="eb-assignments-title">
-   <SectionHeader level={2} id="eb-assignments-title" title={isStudent?"واجبات الطالب":"متابعة الواجبات"} description="افتح أي واجب لعرض نتائج طلابه ومحاولاتهم"/>
+   <SectionHeader level={2} id="eb-assignments-title" title={isStudent?"واجبات الطالب":"متابعة الواجبات"} description={isStudent?"افتح أي واجب لعرض نتيجة الطالب ومحاولاته":"افتح أي واجب لعرض نتائج طلابه ومحاولاتهم"}/>
    <article className="analytics-card"><div className="students-table-wrap"><table className="students-table analytics-table"><thead><tr><th>الواجب</th><th>الصف</th><th>{isStudent?"العلامة":"المتوسط"}</th><th>{isStudent?"الحالة":"التسليم"}</th>{!isStudent&&<th>غير مسلّم</th>}<th>مراجعة</th><th>الموعد</th></tr></thead><tbody>{[...data.assignmentTrend].reverse().map(item=><tr key={item.assignmentId}><td><button type="button" className="analytics-link" onClick={()=>void openAssignment(item)}>{item.title}</button></td><td>{item.className}</td><td>{fmtPct(item.average)}</td><td>{isStudent?(item.submitted?"تم التسليم":"لم يُسلّم"):fmtPct(item.completionRate)}</td>{!isStudent&&<td>{item.missing}</td>}<td>{isStudent?(item.pendingReview?"بانتظار التصحيح":"—"):item.pendingReview}</td><td>{item.dueAt?fmtDate(item.dueAt):"—"}</td></tr>)}{!data.assignmentTrend.length&&<tr><td colSpan={isStudent?6:7}>لا توجد واجبات منشورة ضمن النطاق الحالي.</td></tr>}</tbody></table></div></article>
   </section>
 
@@ -553,10 +562,21 @@ function TeacherDashboard({token}:DashboardProps){
 
   {hasDrill&&<div className="eb-drill-dock" aria-label="التفاصيل">
    {assignmentBusy&&<div className="analytics-loading" role="status">جارٍ تحميل تفاصيل الواجب...</div>}
-   {assignmentResults&&<DashboardDrillPanel kind="assignment" title={assignmentResults.assignment.title} subtitle="من الواجب إلى الطالب إلى المحاولة إلى السؤال" onClose={closeAssignment}>
+   {assignmentResults&&!isStudent&&assignmentFor===""&&<DashboardDrillPanel kind="assignment" title={assignmentResults.assignment.title} subtitle="من الواجب إلى الطالب إلى المحاولة إلى السؤال" onClose={closeAssignment}>
     <div className="analytics-mini-kpis"><span>المتوسط <b>{fmtPct(assignmentResults.stats.average)}</b></span><span>سلّموا <b>{assignmentResults.stats.submitted}/{assignmentResults.stats.students}</b></span><span>مراجعة <b>{assignmentResults.stats.pendingReview}</b></span><span>أعلى <b>{fmtPct(assignmentResults.stats.highest)}</b></span></div>
     <div className="students-table-wrap"><table className="students-table analytics-table"><thead><tr><th>الطالب</th><th>المحاولات</th><th>آخر علامة</th><th>الحالة</th><th>فتح محاولة</th></tr></thead><tbody>{assignmentResults.students.map(student=><tr key={student.studentId}><td><button type="button" className="analytics-link" onClick={()=>void openProfile(student.studentId)}>{student.studentName}</button></td><td>{student.attemptsUsed}/{student.allowedAttempts}</td><td>{student.latestResult?fmtPct(student.latestResult.percentage):"—"}</td><td>{!student.latestResult?"لم يسلّم":resolveGradingStatus(student.latestResult)==="final"?"مصحح":"يحتاج مراجعة"}</td><td><div className="analytics-attempt-buttons">{student.attempts.map(attempt=><button type="button" key={attempt.attemptNumber} onClick={()=>void openAttempt(assignmentResults.assignment.assignmentId,student.studentId,attempt.attemptNumber)}>#{attempt.attemptNumber} · {fmtPct(attempt.percentage)}</button>)}</div></td></tr>)}</tbody></table></div>
    </DashboardDrillPanel>}
+   {assignmentResults&&isStudent&&assignmentFor===studentId&&(()=>{
+    // STUDENT scope: the selected student's own result and attempts — no classmates, no class aggregates.
+    const row=assignmentResults.students.find(item=>item.studentId===studentId);
+    const status=!row?.latestResult?"لم يسلّم":resolveGradingStatus(row.latestResult)==="final"?"مصحح":"يحتاج مراجعة";
+    return <DashboardDrillPanel kind="assignment" title={assignmentResults.assignment.title} subtitle={"نتيجة الطالب ومحاولاته · "+(row?.studentName||"")} onClose={closeAssignment}>
+     <div className="analytics-mini-kpis"><span>علامة الطالب <b>{row?.latestResult?fmtPct(row.latestResult.percentage):"—"}</b></span><span>المحاولات <b>{row?row.attemptsUsed+"/"+row.allowedAttempts:"—"}</b></span><span>الحالة <b>{status}</b></span></div>
+     {row&&row.attempts.length>0
+      ?<div className="analytics-attempt-buttons">{row.attempts.map(attempt=><button type="button" key={attempt.attemptNumber} onClick={()=>void openAttempt(assignmentResults.assignment.assignmentId,row.studentId,attempt.attemptNumber)}>محاولة #{attempt.attemptNumber} · {fmtPct(attempt.percentage)}</button>)}</div>
+      :<p className="analytics-empty-chart">لم يسلّم الطالب هذا الواجب بعد.</p>}
+    </DashboardDrillPanel>;
+   })()}
 
    {profileBusy&&<div className="analytics-loading" role="status">جارٍ فتح ملف الطالب...</div>}
    {profile&&<DashboardDrillPanel kind="profile" title={profile.student.displayName} subtitle={(profile.classroom?.name||"—")+" · "+maskIdentity(profile.student.identityNumber)} onClose={closeProfile}>
