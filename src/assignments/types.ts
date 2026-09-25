@@ -24,5 +24,6 @@ export type SourceMode = "mine" | "library";
 export type WorkspaceMode = "list" | "composer";
 // Lightweight lifecycle labels for the gradebook (B2A #22): لم يبدأ / قيد المحاولة / مسودة / تم التسليم / انتهى الوقت.
 // Phase 7A adds «متوقفة مؤقتًا» (a paused save-&-resume attempt) and «غادر صفحة الامتحان» (a strict attempt ended by leaving).
-export const LIFECYCLE_LABEL: Record<string, string> = { notStarted: "لم يبدأ", started: "قيد المحاولة", draft: "مسودة", paused: "متوقفة مؤقتًا", submitted: "تم التسليم", timedOut: "انتهى الوقت", integrityExit: "غادر صفحة الامتحان" };
+// Phase 7B adds «أنهى المعلم المحاولة» (the teacher ended the student's current attempt from the gradebook).
+export const LIFECYCLE_LABEL: Record<string, string> = { notStarted: "لم يبدأ", started: "قيد المحاولة", draft: "مسودة", paused: "متوقفة مؤقتًا", submitted: "تم التسليم", timedOut: "انتهى الوقت", integrityExit: "غادر صفحة الامتحان", teacherEnded: "أنهى المعلم المحاولة" };
 export const STATUS_LABEL: Record<Item["status"], string> = { published: "منشور", draft: "مسودة", archived: "مؤرشف" };

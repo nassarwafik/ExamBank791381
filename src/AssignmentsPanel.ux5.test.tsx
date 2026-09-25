@@ -381,7 +381,7 @@ describe("UX-5 gradebook — filters, sorts, grading labels, review action, life
     await mount();
     const { detail } = await openDetail();
     let menu = await studentMenu(detail, "عمر");
-    expect(within(menu).getAllByRole("button").map(b => b.textContent)).toEqual(["منح محاولة إضافية", "إعادة فتح للطالب", "تمديد وقت المحاولة", "تمديد الموعد"]);
+    expect(within(menu).getAllByRole("button").map(b => b.textContent)).toEqual(["منح محاولة إضافية", "إعادة فتح للطالب", "تمديد وقت المحاولة", "تمديد الموعد", "إنهاء المحاولة الحالية"]);   // Phase 7B: danger item last
     expect((within(menu).getByRole("button", { name: "إعادة فتح للطالب" }) as HTMLButtonElement).disabled).toBe(true);   // active attempt → reopen disabled (as before)
     fireEvent.keyDown(document, { key: "Escape" });
     menu = await studentMenu(detail, "زيد");

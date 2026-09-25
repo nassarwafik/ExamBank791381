@@ -186,6 +186,34 @@ describe("strict", () => {
   });
 });
 
+// Phase 7B — the teacher ends the attempt while the student is still on the exam page: the student's next write is refused
+// by the server (stale identity) and the page lands on the result card with «أنهى المعلم المحاولة» — never the questions.
+describe("teacher ended the attempt (Phase 7B)", () => {
+  const { handler: resultsHandler } = nodeRequire("../api/src/functions/assignment-results.js");
+  const teacherEnd = async () => {
+    const act = doc().activeAttempt;
+    const r = await resultsHandler({ method: "POST", url: "https://x/api/assignment-results", json: async () => ({ action: "endActiveAttempt", assignmentId: AID, studentId: S1, expectedAttemptNumber: act.attemptNumber, expectedStartedAt: act.startedAt, ...(act.attemptEpoch ? { expectedAttemptEpoch: act.attemptEpoch } : {}) }) }, { requireBuilderAuth: () => ({ ok: true, user: { sub: "t1" } }), getContainer: () => ctx.container, recordAuditEvent: async () => {} });
+    expect(r.status, JSON.stringify(r.jsonBody)).toBe(200);
+  };
+  for (const policy of ["continuous", "pausable"]) {
+    it(policy + ": a submit after the teacher ended the attempt shows the teacherEnded result and no second attempt", async () => {
+      seed(policy);
+      await mount();
+      await startAttempt();
+      await teacherEnd();
+      await type("حل متأخر");
+      fireEvent.click(screen.getAllByRole("button", { name: /مراجعة|المراجعة/ })[0]);
+      fireEvent.click(await screen.findByRole("button", { name: /تسليم/ }));
+      fireEvent.click(await screen.findByRole("button", { name: "تسليم الآن" }));
+      expect((await screen.findAllByText(/أنهى المعلم المحاولة/)).length).toBeGreaterThan(0);
+      expect(screen.queryByText("سؤال الاختبار السري")).toBeNull();
+      expect(doc().attempts).toHaveLength(1);
+      expect(doc().attempts[0].endReason).toBe("teacherEnded");
+      expect(doc().activeAttempt).toBeNull();
+    });
+  }
+});
+
 describe("continuous", () => {
   it("no warning, no badge, no pause button; hiding the page ends nothing", async () => {
     seed("continuous");

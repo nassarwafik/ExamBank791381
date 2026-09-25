@@ -267,6 +267,21 @@ export default function AssignmentsPanel({token,classes,currentExam,onCopyLibrar
   setBusy(true);setError("");
   try{const r=await api<LifecycleSnap>("/api/assignment-results",{method:"POST",body:JSON.stringify({action:"extendActiveAttempt",assignmentId:resultsFor.assignmentId,studentId:s.studentId,newEndsAt:new Date(extendValue).toISOString()})});mergeSnap(s.studentId,r);setExtendFor(null);setNotice("✓ تم تمديد وقت المحاولة للطالب "+s.studentName)}catch(e){setError(e instanceof Error?e.message:"تعذر تمديد وقت المحاولة.")}finally{setBusy(false)}
  }
+ // Phase 7B — end the student's CURRENT attempt. Sends ONLY the identity of the attempt shown in this row (attemptNumber +
+ // startedAt, + attemptEpoch for a model-3 attempt) and never any answers: the server grades its own saved draft. The
+ // response is the authoritative row (lifecycle + results) and is merged in place; a 409 (the attempt changed meanwhile —
+ // submitted, paused, resumed, or a newer attempt) only shows the error and leaves the local row untouched.
+ async function endAttempt(s:StudentResult){
+  const act=s.activeAttempt;
+  if(!resultsFor||!act)return;
+  if(!(await confirm({message:"سيتم إنهاء المحاولة الحالية وتصحيح آخر إجابات محفوظة على الخادم. لن يستطيع الطالب متابعة هذه المحاولة بعد ذلك.",title:"إنهاء محاولة الطالب",confirmLabel:"إنهاء المحاولة",tone:"danger"})))return;
+  setBusy(true);setError("");
+  try{
+   const body={action:"endActiveAttempt",assignmentId:resultsFor.assignmentId,studentId:s.studentId,expectedAttemptNumber:act.attemptNumber,expectedStartedAt:act.startedAt,...(typeof act.attemptEpoch==="number"?{expectedAttemptEpoch:act.attemptEpoch}:{})};
+   const r=await api<LifecycleSnap>("/api/assignment-results",{method:"POST",body:JSON.stringify(body)});
+   mergeSnap(s.studentId,r);setExtendFor(x=>x===s.studentId?null:x);setNotice("✓ تم إنهاء محاولة الطالب "+s.studentName);
+  }catch(e){setError(e instanceof Error?e.message:"تعذر إنهاء المحاولة.")}finally{setBusy(false)}
+ }
  function openDeadline(s:StudentResult){setError("");setReopenFor(null);setExtendFor(null);setDeadlineFor(s.studentId);setDeadlineValue(s.dueAtOverride?toLocalInput(s.dueAtOverride):"")}
  async function saveDeadline(s:StudentResult){if(!resultsFor||!deadlineValue)return;setBusy(true);setError("");try{const r=await api<LifecycleSnap&{dueAtOverride:string|null}>("/api/assignment-results",{method:"POST",body:JSON.stringify({action:"setDueAtOverride",assignmentId:resultsFor.assignmentId,studentId:s.studentId,dueAtOverride:new Date(deadlineValue).toISOString()})});mergeSnap(s.studentId,r);setDeadlineFor(null);setNotice("✓ تم تمديد الموعد للطالب "+s.studentName)}catch(e){setError(e instanceof Error?e.message:"تعذر حفظ التمديد.")}finally{setBusy(false)}}
  async function clearDeadline(s:StudentResult){if(!resultsFor)return;setBusy(true);setError("");try{const r=await api<LifecycleSnap&{dueAtOverride:string|null}>("/api/assignment-results",{method:"POST",body:JSON.stringify({action:"setDueAtOverride",assignmentId:resultsFor.assignmentId,studentId:s.studentId,dueAtOverride:null})});mergeSnap(s.studentId,r);setDeadlineFor(null);setNotice("✓ تم إلغاء تمديد الطالب "+s.studentName)}catch(e){setError(e instanceof Error?e.message:"تعذر إلغاء التمديد.")}finally{setBusy(false)}}
@@ -352,7 +367,7 @@ export default function AssignmentsPanel({token,classes,currentExam,onCopyLibrar
     analysis={analysis} analysisBusy={analysisBusy} analysisSort={analysisSort} onAnalysisSort={setAnalysisSort} onToggleAnalysis={()=>{if(analysis)setAnalysis(null);else void loadItemAnalysis()}} sortedQuestions={sortedQuestions} analysisSummary={analysisSummary} fmt={fmt}>
     <Gradebook assignment={resultsFor} rows={visibleResults} totalRows={results.length} gradingOf={rowGrading} busy={busy}
      search={gbSearch} onSearch={setGbSearch} filter={gbFilter} onFilter={setGbFilter} sort={gbSort} onSort={setGbSort}
-     onReview={openReview} onGrant={s=>void grantAttempt(s)} onReopen={openReopen} onExtend={openExtend} onDeadline={openDeadline} fmt={fmt}/>
+     onReview={openReview} onGrant={s=>void grantAttempt(s)} onReopen={openReopen} onExtend={openExtend} onDeadline={openDeadline} onEndAttempt={s=>void endAttempt(s)} fmt={fmt}/>
    </AssignmentDetail>}
   </div>
 
