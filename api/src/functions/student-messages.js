@@ -2,6 +2,8 @@
 //   GET  /api/student-messages                      → { direct, announcements, classroom, canSend, ... }
 //   POST /api/student-messages { action: "sendDirect", body }
 //   GET  /api/student-messages?view=unread          → Phase 5D: { directUnread, announcementUnread, totalUnread, ... }
+//   GET  /api/student-messages?view=notifications   → Phase 6C: { items[], ...the same unread summary } (READ-ONLY; see
+//        lib/student-notifications.js — never marks anything read, never absorbs legacy ids)
 //   POST /api/student-messages { action: "markRead", stream: "direct" | "announcements", throughMessageId, seenIdsAtBoundary[, legacyThroughMessageId, legacySeenIdsAtBoundary] }
 //        (a snapshot acknowledgement: the latest unread-relevant message shown — TEACHER messages for direct, any
 //        announcement — plus the relevant ids at its millisecond in THAT snapshot; validated server-side)
@@ -27,6 +29,7 @@ const {
   MarkReadError, markStreamRead, countUnread, loadMarker, isReadBy, absorbIrrelevantLegacy, READER_RELEVANCE, combineCounts,
   studentDirectStateName, studentAnnouncementStateName
 } = require("../lib/message-read-state");
+const { recentNotifications } = require("../lib/student-notifications");
 
 const CLASS_PREFIX = "platform/classes/";
 const CLASS_ARCHIVED = "هذا الصف مؤرشف. الرسائل السابقة متاحة للقراءة فقط.";
@@ -53,10 +56,20 @@ function studentStreams(studentId, classId) {
   };
 }
 
-async function unreadSummary(container, streams, deps) {
-  const count = async s => s ? countUnread(container, { streamPrefix: s.streamPrefix, expected: s.expected, include: s.include, marker: await loadMarker(container, s.stateName, deps) }, deps) : { unread: 0, capped: false };
-  const directUnread = await count(streams.direct);
-  const announcementUnread = await count(streams.announcements);
+/** Both streams' stored read markers (announcements: null when the student has no current class). */
+async function loadStreamMarkers(container, streams, deps) {
+  return {
+    direct: await loadMarker(container, streams.direct.stateName, deps),
+    announcements: streams.announcements ? await loadMarker(container, streams.announcements.stateName, deps) : null
+  };
+}
+
+/** `markers` (optional) = markers already loaded in this request, so a notifications read counts from the SAME state. */
+async function unreadSummary(container, streams, deps, markers = null) {
+  const m = markers || await loadStreamMarkers(container, streams, deps);
+  const count = async (s, marker) => s ? countUnread(container, { streamPrefix: s.streamPrefix, expected: s.expected, include: s.include, marker }, deps) : { unread: 0, capped: false };
+  const directUnread = await count(streams.direct, m.direct);
+  const announcementUnread = await count(streams.announcements, m.announcements);
   const total = combineCounts(directUnread, announcementUnread);
   return { directUnread, announcementUnread, totalUnread: total.unread, totalCapped: total.capped };
 }
@@ -74,8 +87,15 @@ async function handler(request, deps = {}, obs = null) {
     const streams = studentStreams(studentId, classroom ? String(student.classId) : "");
 
     if (request.method === "GET") {
-      if (new URL(request.url).searchParams.get("view") === "unread") {
+      const view = new URL(request.url).searchParams.get("view");
+      if (view === "unread") {
         return { status: 200, jsonBody: { ok: true, ...(await unreadSummary(container, streams, deps)) } };
+      }
+      if (view === "notifications") {
+        // Phase 6C — items and counts from ONE set of loaded markers, so the panel and the badge agree.
+        const markers = await loadStreamMarkers(container, streams, deps);
+        const items = await recentNotifications(container, streams, markers, deps);
+        return { status: 200, jsonBody: { ok: true, items, ...(await unreadSummary(container, streams, deps, markers)) } };
       }
       // THIS student's legacy read state + relevance shape each page's unread legacy frontier (see listRecentMessages);
       // a frontier window of only the student's own legacy messages is folded into the boundary (never starves it).

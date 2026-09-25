@@ -18,7 +18,8 @@ import AvatarPickerDialog from "./student/AvatarPickerDialog";
 import InstallAppCard from "./pwa/InstallAppCard";
 import MessagePushCard from "./pwa/MessagePushCard";
 import StudentGamesPage from "./games/StudentGamesPage";
-import StudentMessagesPage from "./messages/StudentMessagesPage";
+import StudentMessagesPage, { type StudentMessagesTab } from "./messages/StudentMessagesPage";
+import { fetchStudentNotifications, type NotificationItem } from "./messages/messagesClient";
 import { FILTERS, matchesFilter, medalsFor, nowItems, sortTaskFirst, type PortalFilter } from "./student/portalPresentation";
 import { normalizeStrength } from "./student/strengthPresentation";
 import { stageVisual } from "./studentStageVisuals";
@@ -54,6 +55,24 @@ export default function StudentPortal({ token, displayName, onLogout }: Props) {
   // Phase 5D — unread messages badge (AUXILIARY: its failure, including a 401, never logs out — the dashboard stays the
   // only session authority; a failure keeps the last-good badge). Rides the portal's silent refresh cycle.
   const [messagesUnread, setMessagesUnread] = useState<{ total: number; capped: boolean }>({ total: 0, capped: false });
+  // Phase 6C — the tab the Messages view opens on («الرسائل» → direct; a notification → its own stream).
+  const [messagesTab, setMessagesTab] = useState<StudentMessagesTab>("direct");
+  // Phase 6C — the notification center's preview data (AUXILIARY like the badge: a failure keeps the last-good items and
+  // never logs out). `items: null` = not loaded yet / invalidated. The COUNT is never stored here: the bell shows
+  // `messagesUnread`, the one unread state of this portal.
+  const [notif, setNotif] = useState<{ items: NotificationItem[] | null; loading: boolean; error: string }>({ items: null, loading: false, error: "" });
+  const [notifOpen, setNotifOpen] = useState(false);
+  // ONE ordering for every unread snapshot — the badge poll, the notification read (items + count from one server
+  // snapshot) and the Messages page's counts: each takes the next sequence number when it STARTS, and a snapshot is
+  // applied only if nothing that started later has already been applied. So a slow/stale response can never resurrect
+  // an older count, and a preview becomes current ONLY together with its own count: once a newer snapshot applied,
+  // an older preview (count AND items) is dropped. A newer count-only snapshot also drops the cached preview items,
+  // which it has made stale (the next open loads fresh ones; they are never shown as current meanwhile).
+  // `notifSeq` additionally invalidates in-flight previews (return from Messages, session change); `alive` drops
+  // everything after unmount (logout).
+  const unreadSeq = useRef(0), unreadApplied = useRef(0), notifSeq = useRef(0), alive = useRef(true), notifOpenRef = useRef(false);
+  useEffect(() => { alive.current = true; return () => { alive.current = false; }; }, []);
+  useEffect(() => { notifOpenRef.current = notifOpen; }, [notifOpen]);
   const headers = { "x-student-token": token, Authorization: "Bearer " + token };
   const strengthDirtyRef = useRef(false);
 
@@ -90,17 +109,63 @@ export default function StudentPortal({ token, displayName, onLogout }: Props) {
       setFeed(j.posts || []); setFeedError("");
     } catch { if (!silent) setFeed([]); console.warn("[student-portal] achievement feed request failed"); }
   }
+  /**
+   * Apply the unread snapshot of request `seq` — only when no later-started snapshot was applied already. Returns
+   * whether it applied. A count-only snapshot (`withItems` false) makes the cached preview items stale → they are
+   * dropped (an in-flight newer preview still applies when it lands; loading state is left to it).
+   */
+  function applyUnread(seq: number, u: { total: number; capped: boolean }, withItems = false): boolean {
+    if (!alive.current || seq <= unreadApplied.current) return false;
+    unreadApplied.current = seq;
+    setMessagesUnread(u);
+    if (!withItems) setNotif(prev => (prev.items === null && !prev.error ? prev : { ...prev, items: null, error: "" }));
+    return true;
+  }
   async function loadMessagesUnread() {
+    const seq = ++unreadSeq.current;
     try {
       const r = await fetch("/api/student-messages?view=unread", { headers });
       if (!r.ok) return;                                                   // incl. 401 → never a logout here
       const j = await r.json() as any;
       if (!j || !j.ok) return;
-      setMessagesUnread({ total: Math.max(0, Number(j.totalUnread) || 0), capped: j.totalCapped === true });
+      applyUnread(seq, { total: Math.max(0, Number(j.totalUnread) || 0), capped: j.totalCapped === true });
     } catch { /* keep the last-good badge */ }
   }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  useEffect(() => { void load(); void loadFeed(); void loadMessagesUnread(); }, [token]);
+  // Phase 6C — the notification center's read: recent items + the SAME server unread summary (one request). READ-ONLY
+  // (never marks anything read). A failure — including a 401 — keeps the last-good items and shows a small error in the
+  // panel; the dashboard stays the only session authority.
+  async function loadNotifications() {
+    const seq = ++unreadSeq.current, mine = ++notifSeq.current;
+    setNotif(prev => ({ ...prev, loading: true }));
+    try {
+      const n = await fetchStudentNotifications(token);
+      if (!alive.current || mine !== notifSeq.current) return;           // a newer read (or an invalidation) owns the panel
+      if (!applyUnread(seq, { total: n.unread.totalUnread, capped: n.unread.totalCapped }, true)) {
+        // A newer authoritative snapshot applied after this read started: its items are stale and never become current.
+        setNotif(prev => ({ ...prev, loading: false }));
+        if (notifOpenRef.current) void loadNotifications();               // an open panel reloads (bounded: needs a newer writer)
+        return;
+      }
+      setNotif({ items: n.items, loading: false, error: "" });
+    } catch {
+      if (!alive.current || mine !== notifSeq.current) return;
+      setNotif(prev => ({ ...prev, loading: false, error: "تعذر تحديث الإشعارات حاليًا." }));
+    }
+  }
+  /** The preview no longer matches the server's read state (the student read messages): drop it and any in-flight read. */
+  function invalidateNotifications() {
+    notifSeq.current += 1;
+    setNotif({ items: null, loading: false, error: "" });
+  }
+  // A new session (token) starts clean: every in-flight count/preview of the previous one is dropped.
+  useEffect(() => {
+    unreadApplied.current = unreadSeq.current;
+    notifSeq.current += 1;
+    setMessagesUnread({ total: 0, capped: false });
+    setNotif({ items: null, loading: false, error: "" });
+    void load(); void loadFeed(); void loadMessagesUnread();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [token]);
   // Phase 1 auto-refresh: while the student sits on the MAIN portal, silently re-pull the dashboard (the single
   // source of teacher-controlled state) every 15s, and immediately on window focus / return to a visible tab, so
   // teacher-side changes appear without logout/login and without a full reload. DISABLED inside any sub-view that
@@ -108,7 +173,17 @@ export default function StudentPortal({ token, displayName, onLogout }: Props) {
   // (`avatarPickerOpen`), so a background swap never disturbs them; on returning to the main view it re-enables.
   // The lightweight, session-neutral achievement feed rides the same cycle (its 401 is already swallowed).
   const autoRefreshEnabled = !readerCourse && !detail && !avatarPickerOpen && !gamesOpen && !messagesOpen;
-  useAutoRefresh(() => { void loadFeed({ silent: true }); void loadMessagesUnread(); return load({ silent: true }); }, { intervalMs: 15000, enabled: autoRefreshEnabled });
+  // Same cadence for the bell: while its panel is open the notification read (items + the same counts) replaces the
+  // badge-only read — never both, and nothing extra while it is closed.
+  useAutoRefresh(() => { void loadFeed({ silent: true }); void (notifOpen ? loadNotifications() : loadMessagesUnread()); return load({ silent: true }); }, { intervalMs: 15000, enabled: autoRefreshEnabled });
+
+  /** Open the dedicated Messages view on `tab` (the ordinary «الرسائل» entry → the default direct conversation). */
+  function openMessages(tab: StudentMessagesTab) {
+    setNotifOpen(false);
+    setMessagesTab(tab);
+    setMessagesOpen(true);
+    window.scrollTo({ top: 0, behavior: reducedMotion ? "auto" : "smooth" });
+  }
 
   async function pickAvatar(avatarId: string) {
     if (avatarSaving) return;
@@ -183,7 +258,9 @@ export default function StudentPortal({ token, displayName, onLogout }: Props) {
   // Dedicated Educational Games destination (full-view swap, same pattern as the Reader/exam); back returns to the portal.
   // Dedicated Messages destination (Phase 5C): a messaging failure degrades inside that view; this portal's
   // /api/student-dashboard refresh stays the only session authority when the student comes back.
-  if (messagesOpen) return <StudentMessagesPage token={token} onUnreadChange={u => setMessagesUnread({ total: u.totalUnread, capped: u.totalCapped })} onBack={() => { setMessagesOpen(false); void loadMessagesUnread(); window.scrollTo({ top: 0, behavior: reducedMotion ? "auto" : "smooth" }); }} />;
+  // Phase 6C — the Messages view's counts (its own polls and mark responses) are fresher than anything the portal
+  // started before: they take a new sequence number, so an older in-flight portal read can never overwrite them.
+  if (messagesOpen) return <StudentMessagesPage token={token} initialTab={messagesTab} onUnreadChange={u => applyUnread(++unreadSeq.current, { total: u.totalUnread, capped: u.totalCapped })} onBack={() => { setMessagesOpen(false); invalidateNotifications(); void loadMessagesUnread(); window.scrollTo({ top: 0, behavior: reducedMotion ? "auto" : "smooth" }); }} />;
   if (gamesOpen) return <StudentGamesPage token={token} onBack={() => { setGamesOpen(false); window.scrollTo({ top: 0, behavior: reducedMotion ? "auto" : "smooth" }); }} />;
 
   const stats = data?.stats;
@@ -200,7 +277,13 @@ export default function StudentPortal({ token, displayName, onLogout }: Props) {
   const now = Date.now();
 
   return (
-    <StudentShell studentName={data?.student.displayName || displayName} className={data?.classroom?.name || ""} onLogout={onLogout} onOpenGames={() => { setGamesOpen(true); window.scrollTo({ top: 0, behavior: reducedMotion ? "auto" : "smooth" }); }} onOpenMessages={() => { setMessagesOpen(true); window.scrollTo({ top: 0, behavior: reducedMotion ? "auto" : "smooth" }); }} messagesUnread={messagesUnread}>
+    <StudentShell studentName={data?.student.displayName || displayName} className={data?.classroom?.name || ""} onLogout={onLogout} onOpenGames={() => { setGamesOpen(true); window.scrollTo({ top: 0, behavior: reducedMotion ? "auto" : "smooth" }); }} onOpenMessages={() => openMessages("direct")} messagesUnread={messagesUnread} notifications={{
+      items: notif.items, loading: notif.loading, error: notif.error,
+      onOpenChange: next => { setNotifOpen(next); if (next) void loadNotifications(); },
+      onSelect: item => openMessages(item.type === "announcement" ? "announcements" : "direct"),
+      onOpenMessages: () => openMessages("direct"),
+      onRetry: () => void loadNotifications()
+    }}>
       <div className="eb-sp">
         {loading && <p className="eb-muted eb-sp-status" role="status">جارٍ تحميل حسابك...</p>}
         {busy && <p className="eb-muted eb-sp-status" role="status">جارٍ فتح الواجب...</p>}
