@@ -48,6 +48,12 @@
 
 .eb-notif-icon{ flex:0 0 auto; width:36px; height:36px; display:inline-flex; align-items:center; justify-content:center; border-radius:var(--eb-pill); background:var(--eb-surface-2); color:var(--eb-primary-strong); border:1px solid var(--eb-line); }
 .eb-notif-icon.is-announcement{ color:var(--eb-navy); }
+/* Phase 6D — one accent per source kind (tokens only; the title text still carries the meaning). */
+.eb-notif-icon.is-assignment{ color:var(--eb-primary-strong); }
+.eb-notif-icon.is-deadline{ color:var(--eb-warn-tx); }
+.eb-notif-icon.is-material{ color:var(--eb-success-tx); }
+.eb-notif-icon.is-review{ color:var(--eb-success-tx); }
+.eb-notif-icon.is-recognition{ color:var(--eb-warn-tx); }
 .eb-notif-item.is-unread .eb-notif-icon{ background:var(--eb-surface); }
 
 .eb-notif-text{ display:flex; flex-direction:column; gap:2px; min-width:0; flex:1 1 auto; }

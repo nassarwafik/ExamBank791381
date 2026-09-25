@@ -14,7 +14,9 @@ const DIRECT: NotificationItem = { id: "1800000000002-aaaaaaaaaaaaaaaa", type: "
 const ANN: NotificationItem = { id: "1800000000001-bbbbbbbbbbbbbbbb", type: "announcement", senderDisplayName: "أ. أحمد", preview: "لا توجد حصة غدًا", createdAt: "2026-08-30T08:00:00.000Z", unread: false };
 
 function mount(over: Partial<NotificationCenterProps> = {}, unread?: { total: number; capped: boolean }, withBell = true) {
-  const props: NotificationCenterProps = { items: [DIRECT, ANN], loading: false, error: "", onOpenChange: vi.fn(), onSelect: vi.fn(), onOpenMessages: vi.fn(), onRetry: vi.fn(), ...over };
+  // Phase 6D — the bell's counts are its own prop (the server's unified snapshot); with no events, bell = messages.
+  const counts = unread ? { bell: unread, messages: unread, events: { total: 0, capped: false } } : null;
+  const props: NotificationCenterProps = { items: [DIRECT, ANN], counts, loading: false, error: "", onOpenChange: vi.fn(), onSelect: vi.fn(), onOpenMessages: vi.fn(), onRetry: vi.fn(), ...over };
   const view = render(
     <StudentShell studentName="أحمد" onLogout={() => {}} onOpenGames={() => {}} onOpenMessages={() => {}} messagesUnread={unread} notifications={withBell ? props : undefined}>
       <p>محتوى البوابة</p>

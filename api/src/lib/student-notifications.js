@@ -11,8 +11,10 @@
 // Work stays narrow: names are listed per stream (no download), then only the newest candidates are downloaded in
 // small batches until enough relevant messages were found or the scan bound is reached.
 const { downloadManyJson, getReadConcurrency } = require("./platform-storage");
-const { normalizeStoredMessage } = require("./message-store");
-const { listStreamIds, isReadBy } = require("./message-read-state");
+const { normalizeStoredMessage, directPrefix, announcementPrefix } = require("./message-store");
+const {
+  listStreamIds, isReadBy, loadMarker, countUnread, combineCounts, READER_RELEVANCE, studentDirectStateName, studentAnnouncementStateName
+} = require("./message-read-state");
 
 const NOTIFICATION_LIMIT = 15;
 // Upper bound on downloaded candidates per stream (a thread of mostly own replies can never make this unbounded).
@@ -58,6 +60,35 @@ function notificationItem({ doc, unread }) {
   };
 }
 
+// ── The student's message streams and their Phase 5D unread summary (the ONE message unread authority; shared by
+// /api/student-messages and the Phase 6D unified notification center). ──
+/** The authorized streams for this student: own direct thread + the CURRENT class's announcements (if it exists). */
+function studentStreams(studentId, classId) {
+  return {
+    direct: { stateName: studentDirectStateName(studentId), streamPrefix: directPrefix(studentId), expected: { kind: "direct", studentId }, include: READER_RELEVANCE.studentDirect },
+    announcements: classId ? { stateName: studentAnnouncementStateName(studentId, classId), streamPrefix: announcementPrefix(classId), expected: { kind: "announcement", classId }, include: READER_RELEVANCE.announcements } : null
+  };
+}
+
+/** Both streams' stored read markers (announcements: null when the student has no current class). */
+async function loadStreamMarkers(container, streams, deps) {
+  return {
+    direct: await loadMarker(container, streams.direct.stateName, deps),
+    announcements: streams.announcements ? await loadMarker(container, streams.announcements.stateName, deps) : null
+  };
+}
+
+/** `markers` (optional) = markers already loaded in this request, so a notifications read counts from the SAME state. */
+async function unreadSummary(container, streams, deps, markers = null) {
+  const m = markers || await loadStreamMarkers(container, streams, deps);
+  const count = async (s, marker) => s ? countUnread(container, { streamPrefix: s.streamPrefix, expected: s.expected, include: s.include, marker }, deps) : { unread: 0, capped: false };
+  const directUnread = await count(streams.direct, m.direct);
+  const announcementUnread = await count(streams.announcements, m.announcements);
+  const total = combineCounts(directUnread, announcementUnread);
+  return { directUnread, announcementUnread, totalUnread: total.unread, totalCapped: total.capped };
+}
+
+
 const timeOf = item => { const t = Date.parse(item.createdAt); return Number.isFinite(t) ? t : 0; };
 
 /**
@@ -74,4 +105,4 @@ async function recentNotifications(container, streams, markers, deps = {}, limit
     .slice(0, limit);
 }
 
-module.exports = { NOTIFICATION_LIMIT, NOTIFICATION_SCAN_LIMIT, PREVIEW_LENGTH, previewOf, recentIncoming, recentNotifications };
+module.exports = { NOTIFICATION_LIMIT, NOTIFICATION_SCAN_LIMIT, PREVIEW_LENGTH, previewOf, recentIncoming, recentNotifications, studentStreams, loadStreamMarkers, unreadSummary };

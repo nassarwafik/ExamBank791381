@@ -124,7 +124,7 @@ describe("UX-7a StudentPortal — task-first home", () => {
     const { calls, onLogout } = mount({ student, classroom, assignments: [], stats: baseStats });
     await screen.findByText(/مرحبًا أحمد/);
     await waitFor(() => expect(gets(calls).length).toBe(5));
-    expect(gets(calls).sort()).toEqual(["/api/achievement-feed", "/api/student-dashboard", "/api/student-learning-materials", "/api/student-messages", "/api/student-project-tracker"]);
+    expect(gets(calls).sort()).toEqual(["/api/achievement-feed", "/api/student-dashboard", "/api/student-learning-materials", "/api/student-notifications", "/api/student-project-tracker"]);   // Phase 6D: the unified counts GET
     expect(posts(calls)).toEqual([]);
     expect(onLogout).not.toHaveBeenCalled();
     // the empty state keeps the list container (shell contract) and uses the shared EmptyState

@@ -8,6 +8,21 @@ const {recordAchievementIfEligible}=require("../lib/achievement-feed");
 const {flattenQuestions,sectionCappedScore,effectiveMaxMarks}=require("../lib/exam-structure");
 const {normalizeEndReason}=require("../lib/assignment-availability");
 const {deriveGradingStatus}=require("../lib/grading-status");
+const {recordEventSafely}=require("../lib/notification-events");
+// Phase 6D — the student-facing meaning of an attempt's review state: finalized, the score, the overall feedback and the
+// per-question teacher comments (never reviewedAt timestamps, which change on every save).
+function reviewFacts(attempt){
+ const comments={};const o=attempt&&attempt.manualOverrides&&typeof attempt.manualOverrides==="object"?attempt.manualOverrides:{};
+ for(const [id,v] of Object.entries(o))if(v&&String(v.comment||"").trim())comments[id]=String(v.comment).trim();
+ return {finalized:!!(attempt&&attempt.finalized),score:round(attempt&&attempt.score),feedback:String(attempt&&attempt.teacherFeedback||"").trim(),comments};
+}
+function reviewChange(before,after){
+ const becameFinal=!before.finalized&&after.finalized;
+ const scoreChanged=before.score!==after.score;
+ const newComment=Object.entries(after.comments).some(([id,c])=>before.comments[id]!==c);
+ const feedbackChanged=(!!after.feedback&&after.feedback!==before.feedback)||newComment;
+ return {becameFinal,scoreChanged,feedbackChanged,meaningful:becameFinal||scoreChanged||feedbackChanged};
+}
 const AP="platform/assignments/",SP="platform/submissions/",UP="platform/users/";
 const CONFLICT_MESSAGE="حدث تعارض مؤقت أثناء حفظ البيانات. حاول مرة أخرى.";
 // Additive lifecycle audit view for a completed attempt (B2A #21 / B2B #16). Read-time normalization only.
@@ -69,17 +84,19 @@ async function handler(request,deps={},obs=null){
   const reviewSameClass=String(reviewStudent.classId||"")===String(reviewAssignment.classId||"");
   if(!reviewSameClass&&!historicalSubmissionProvesOwnership(existingSubmission,assignmentId,studentId,String(reviewAssignment.classId||"")))return {status:403,jsonBody:{ok:false,error:"الطالب لا ينتمي إلى صف هذا الواجب."}};
   const incoming=b.overrides&&typeof b.overrides==="object"?b.overrides:{},teacherFeedback=String(b.teacherFeedback||"").trim(),reviewedAt=new Date().toISOString();
-  let resultOut=null,appliedCount=0;
+  let resultOut=null,appliedCount=0,change=null;
   try{
    await mut(c,name,current=>{
     if(!current){const err=new Error("التسليم غير موجود.");err.httpStatus=404;throw err}
     const attempts=Array.isArray(current.attempts)?current.attempts:[],index=attempts.findIndex(x=>Number(x.attemptNumber)===attemptNumber);
     if(index<0){const err=new Error("المحاولة غير موجودة.");err.httpStatus=404;throw err}
     const attempt=attempts[index];
+    const factsBefore=reviewFacts(attempt);                     // of the attempt version this CAS attempt commits over
     attempt.manualOverrides=attempt.manualOverrides&&typeof attempt.manualOverrides==="object"?attempt.manualOverrides:{};
     appliedCount=0;
     for(const [questionId,value] of Object.entries(incoming)){if(!value||typeof value!=="object")continue;const grade=(attempt.questionGrades||[]).find(g=>String(g.questionId)===String(questionId));if(!grade)continue;attempt.manualOverrides[String(questionId)]={score:round(clamp(value.score,0,effectiveMaxMarks(grade))),comment:String(value.comment||"").trim(),reviewedAt};appliedCount++}
     attempt.teacherFeedback=teacherFeedback;attempt.reviewedAt=reviewedAt;rebuildAttempt(attempt);
+    change=reviewChange(factsBefore,reviewFacts(attempt));
     attempts[index]=attempt;current.attempts=attempts;current.updatedAt=reviewedAt;
     resultOut={attemptNumber:attempt.attemptNumber,score:attempt.score,totalMarks:attempt.totalMarks,percentage:attempt.percentage,manualReviewMarks:attempt.manualReviewMarks,finalized:attempt.finalized,gradingStatus:deriveGradingStatus(attempt),teacherFeedback:attempt.teacherFeedback};
     return current;
@@ -92,6 +109,11 @@ async function handler(request,deps={},obs=null){
   }
   if(appliedCount>0){
    await rec(c,{actor:auth.user?.sub,action:"assignment.manualGradeOverride",targetType:"student",targetId:studentId,targetLabel:String(reviewStudent.displayName||reviewStudent.code||""),details:{assignmentId,attemptNumber,overriddenQuestions:appliedCount,newScore:resultOut?.score}});
+  }
+  // Phase 6D — ONE coalesced personal notification per meaningful save (became final / score changed / new feedback);
+  // an identical re-save changes nothing and notifies nothing. Secondary: never fails the review.
+  if(change&&change.meaningful&&resultOut){
+   await recordEventSafely(c,{scope:"student",studentId,type:"assignment_reviewed",dedupeKey:"review:"+assignmentId+":"+attemptNumber+":"+reviewedAt,data:{assignmentId,assignmentTitle:reviewAssignment.title,attemptNumber,becameFinal:change.becameFinal,scoreChanged:change.scoreChanged,feedbackChanged:change.feedbackChanged,finalized:!!resultOut.finalized,percentage:resultOut.percentage}},deps,obs);
   }
   if(resultOut?.finalized){
    await ach(c,{classId:reviewAssignment.classId,studentId,studentDisplayName:reviewStudent.displayName,assignmentId,assignmentTitle:reviewAssignment.title,percentage:resultOut.percentage,shareAchievements:reviewStudent.shareAchievements});

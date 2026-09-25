@@ -11,8 +11,9 @@ import "../shell.css";
 // opens the dedicated Games destination — the games cards are NOT a permanent dashboard section. Phase 5C adds the
 // «الرسائل» entry (when `onOpenMessages` is given) with the same dedicated-destination pattern.
 // Phase 5D — `messagesUnread` (server-derived, owned by StudentPortal) badges the «الرسائل» entry; hidden at 0.
-// Phase 6C — `notifications` (when given) adds the «الإشعارات» bell first in the bar; its badge is the SAME
-// `messagesUnread` (no second count), and its panel data/navigation belong to StudentPortal.
+// Phase 6C/6D — `notifications` (when given) adds the «الإشعارات» bell first in the bar. Its badge is the server's
+// UNIFIED count (`notifications.counts.bell` = messages + events); the «الرسائل» badge stays `messagesUnread`
+// (message-only). Panel data/counts/navigation belong to StudentPortal.
 type Props = { studentName: string; className?: string; onLogout: () => void; onOpenGames?: () => void; onOpenMessages?: () => void; messagesUnread?: { total: number; capped: boolean }; notifications?: NotificationCenterProps; children: ReactNode };
 
 export default function StudentShell({ studentName, className, onLogout, onOpenGames, onOpenMessages, messagesUnread, notifications, children }: Props) {
@@ -30,7 +31,7 @@ export default function StudentShell({ studentName, className, onLogout, onOpenG
           </div>
         )}
         <div className="student-topbar-actions">
-          {notifications && <NotificationBell unread={messagesUnread} {...notifications} />}
+          {notifications && <NotificationBell {...notifications} />}
           {onOpenMessages && (
             <button type="button" className="student-topbar-link eb-student-messages-entry" onClick={onOpenMessages}>
               <IconMail size={16} />الرسائل

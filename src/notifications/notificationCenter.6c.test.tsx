@@ -10,9 +10,12 @@ import StudentPortal from "../StudentPortal";
 
 const nodeRequire = createRequire(import.meta.url);
 const { handler: studentApi } = nodeRequire("../../api/src/functions/student-messages.js");
+// Phase 6D — the portal's bell/badge reads are the UNIFIED endpoint, served by its REAL handler on the same store.
+const { handler: notificationsApi } = nodeRequire("../../api/src/functions/student-notifications.js");
 const { handler: teacherApi } = nodeRequire("../../api/src/functions/messages.js");
 const { createMemoryContainer } = nodeRequire("../../api/tests/fixtures/memory-container.js");
 const { READ_STATE_PREFIX } = nodeRequire("../../api/src/lib/message-read-state.js");
+const { CENTER_LIMIT } = nodeRequire("../../api/src/lib/notification-center.js");
 
 const S1 = "11111111-1111-1111-1111-111111111111";
 const CA = "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa";
@@ -45,11 +48,12 @@ beforeEach(() => {
     const url = String(input), method = (init?.method || "GET").toUpperCase();
     const headers = (init?.headers || {}) as Record<string, string>;
     if (url.includes("/api/student-dashboard")) return res(200, { student, classroom: { classId: CA, name: "الصف", grade: "11", schoolYear: "2026" }, assignments: [], stats });
-    if (url.includes("/api/student-messages")) {
+    if (url.includes("/api/student-messages") || url.includes("/api/student-notifications")) {
       const body = init?.body ? JSON.parse(String(init.body)) : {};
       calls.push({ method, url, body });
       const token = headers["x-student-token"] || "";
-      const r = await studentApi({ method, url: "https://x" + url, headers: { get: () => null }, json: async () => body }, {
+      const api = url.includes("/api/student-notifications") ? notificationsApi : studentApi;
+      const r = await api({ method, url: "https://x" + url, headers: { get: () => null }, json: async () => body }, {
         container: ctx.container,
         requireStudentAuth: () => (TOKENS[token] ? { ok: true, user: { sub: TOKENS[token], sv: 1, role: "student" } } : { ok: false, response: { status: 401, jsonBody: { ok: false } } })
       });
@@ -138,12 +142,12 @@ describe("read-state integrity", () => {
   });
 
   it("19. the bell count is the SERVER's: it follows the server even when the list shows fewer items", async () => {
-    for (let i = 1; i <= 20; i++) await teacherSend({ action: "sendDirect", studentId: S1, body: "رسالة " + i });
+    for (let i = 1; i <= CENTER_LIMIT + 5; i++) await teacherSend({ action: "sendDirect", studentId: S1, body: "رسالة " + i });
     await mountPortal();
-    await waitFor(() => expect(bellCount()).toBe("20"));
+    await waitFor(() => expect(bellCount()).toBe(String(CENTER_LIMIT + 5)));
     await openPanel();
-    expect(items()).toHaveLength(15);                                              // a bounded preview…
-    expect(bellCount()).toBe("20");                                                // …never a client-side recount
+    expect(items()).toHaveLength(CENTER_LIMIT);                                    // a bounded preview (Phase 6D: the unified bound)…
+    expect(bellCount()).toBe(String(CENTER_LIMIT + 5));                            // …never a client-side recount
     expect(panel().textContent).toContain("توجد رسائل غير مقروءة أخرى لا تظهر هنا (5).");   // …and the rest is announced
     expect(notificationReads().length).toBe(1);
   });

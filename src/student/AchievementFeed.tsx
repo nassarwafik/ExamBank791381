@@ -18,6 +18,7 @@ import { isRecent } from "./portalPresentation";
 type Props = {
   posts: FeedPost[]; error: string; shareOn: boolean; shareSaving: boolean; now: number;
   onToggleShare: () => void; onReact: (postId: string, reaction: ReactionId) => void;
+  highlightPostId?: string;   // Phase 6D — a teacher-recognition notification points at this post (focused + marked)
 };
 
 // Labels: the 25-stage title for stage-era global events; the LEGACY six-rank titles for historical global events
@@ -41,7 +42,7 @@ function EventIcon({ post }: { post: FeedPost }) {
   return <img className={"eb-sp-feed-rank-art is-" + type} src={v.image} alt="" aria-hidden="true" width={40} height={40} loading="lazy" decoding="async" />;
 }
 
-export default function AchievementFeed({ posts, error, shareOn, shareSaving, now, onToggleShare, onReact }: Props) {
+export default function AchievementFeed({ posts, error, shareOn, shareSaving, now, onToggleShare, onReact, highlightPostId }: Props) {
   return (
     <section className="eb-sp-panel eb-sp-feed" aria-labelledby="eb-sp-feed-title">
       <SectionHeader level={2} id="eb-sp-feed-title" title="إنجازات الصف" description="أحدث الإنجازات والتقدّم في صفك"
@@ -53,7 +54,7 @@ export default function AchievementFeed({ posts, error, shareOn, shareSaving, no
             const teacher = post.teacherReaction ? REACTIONS.find(r => r.id === post.teacherReaction) : null;
             return (
               <li key={post.postId}>
-                <article className={"eb-sp-feed-item is-" + eventTypeOf(post) + (post.isOwnPost ? " is-own" : "")} data-event-type={eventTypeOf(post)}>
+                <article id={"eb-sp-post-" + post.postId} tabIndex={-1} data-post-id={post.postId} className={"eb-sp-feed-item is-" + eventTypeOf(post) + (post.isOwnPost ? " is-own" : "") + (highlightPostId === post.postId ? " is-highlighted" : "")} data-event-type={eventTypeOf(post)}>
                   <EventIcon post={post} />
                   <div className="eb-sp-feed-body">
                     <p className="eb-sp-feed-text">{feedEventParts(post, LABELS).map((part, i) => part.strong ? <strong key={i}>{part.text}</strong> : <span key={i}>{part.text}</span>)}</p>

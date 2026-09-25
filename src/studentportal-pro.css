@@ -144,6 +144,10 @@
 .eb-sp-share input{ margin:0; }
 .eb-sp-feed-list{ list-style:none; margin:0; padding:0; display:flex; flex-direction:column; gap:var(--eb-space-3); }
 .eb-sp-feed-item{ display:flex; gap:var(--eb-space-3); min-width:0; padding:var(--eb-space-3); background:var(--eb-surface-2); border:1px solid var(--eb-line); border-radius:var(--eb-r); }
+/* Phase 6D — the post a teacher-recognition notification pointed at (focus target; tokens only). */
+.eb-sp-feed-item.is-highlighted{ border-color:var(--eb-primary); box-shadow:0 0 0 2px var(--eb-primary-050); }
+.eb-sp-feed-item:focus-visible{ outline:2px solid var(--eb-primary); outline-offset:2px; }
+.eb-sp-tasks > li:focus-visible{ outline:2px solid var(--eb-primary); outline-offset:2px; border-radius:var(--eb-r); }
 .eb-sp-feed-item.is-own{ background:var(--eb-success-bg); border-color:var(--eb-success); }
 .eb-sp-medal-icon{ display:inline-flex; flex:0 0 auto; align-items:center; justify-content:center; width:40px; height:40px; border-radius:50%; background:var(--eb-surface); }
 .eb-sp-medal-icon.is-gold{ color:var(--eb-medal-gold); }

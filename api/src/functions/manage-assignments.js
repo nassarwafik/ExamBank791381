@@ -9,6 +9,7 @@ const {normalizeAssignmentStatus,applyAssignmentArchive,applyAssignmentRestore}=
 const {normalizeClassStatus}=require("../lib/class-lifecycle");
 const {activeAttemptOf,attemptPolicyOf,ATTEMPT_POLICIES}=require("../lib/assignment-availability");
 const {withAssignmentLock,AssignmentLockBusyError}=require("../lib/assignment-lock");
+const {recordEventSafely}=require("../lib/notification-events");
 const PREFIX="platform/assignments/",CLASS_PREFIX="platform/classes/",SUB_PREFIX="platform/submissions/";
 const CONFLICT_MESSAGE="حدث تعارض مؤقت أثناء حفظ البيانات. حاول مرة أخرى.";
 // Read-only impact of deleting/archiving an assignment (Roadmap #7). submissionDocuments is the count of
@@ -80,7 +81,11 @@ async function handler(request,deps={},obs=null){
    // stays on model 2, i.e. EXACTLY the pre-7A lifecycle. The policy is persisted on the document and never changed
    // afterwards (there is no edit action — historical assignments keep theirs).
    const a={schemaVersion:2,attemptModelVersion:attemptPolicy==="continuous"?2:3,attemptPolicy,assignmentId,classId,className:String(classroom.name||""),title,instructions,status:b.publish===true?"published":"draft",openAt,dueAt,maxAttempts,durationMinutes:dur.value,sourceExamId:String(exam.examId||""),sourceExamTitle:String(exam.title||title),questionCount:stats.questionCount,totalMarks:stats.totalMarks,examSnapshot:exam,createdBy:String(auth.user?.sub||"teacher"),createdAt:now,updatedAt:now};
-   await up(c,PREFIX+assignmentId+".json",a);return {status:200,jsonBody:{ok:true,assignment:summary(a)}};
+   await up(c,PREFIX+assignmentId+".json",a);
+   // Phase 6D — a NEW assignment created directly as published is a real publication → one class notification
+   // (secondary: a notification failure never fails the create). A draft notifies nothing until it is published.
+   if(a.status==="published")await recordEventSafely(c,{scope:"class",classId,type:"assignment_published",dedupeKey:"published:create:"+assignmentId+":"+a.createdAt,data:{assignmentId,assignmentTitle:title}},deps,obs);
+   return {status:200,jsonBody:{ok:true,assignment:summary(a)}};
   }
   if(action==="setstatus"||action==="setmaxattempts"){
    const id=String(b.assignmentId||""),name=PREFIX+id+".json";
@@ -92,10 +97,11 @@ async function handler(request,deps={},obs=null){
    }else{
     nextMaxAttempts=Math.min(10,Math.max(1,Number(b.maxAttempts||1)));
    }
-   let updated=null;
+   let updated=null,prevStatus="";
    try{
     updated=await mut(c,name,async current=>{
      if(!current){const err=new Error("الواجب غير موجود.");err.httpStatus=404;throw err}
+     prevStatus=String(current.status||"");     // of the attempt that COMMITS (re-set on every CAS retry)
      // An archived assignment must be restored before any status/attempt change (never bypass restore).
      if(normalizeAssignmentStatus(current)==="archived"){const err=new Error(action==="setstatus"?"الواجب مؤرشف. استعد الواجب أولًا.":"الواجب مؤرشف. استعده أولًا قبل تعديل عدد المحاولات.");err.httpStatus=409;throw err}
      // Roadmap #20 class-lifecycle gate: PUBLISHING is new active school work, so it must target an ACTIVE
@@ -113,6 +119,12 @@ async function handler(request,deps={},obs=null){
     if(e instanceof StorageConflictError)return {status:503,jsonBody:{ok:false,error:CONFLICT_MESSAGE}};
     if(e?.httpStatus)return {status:e.httpStatus,jsonBody:{ok:false,error:e.message}};
     throw e;
+   }
+   // Phase 6D — only a REAL draft→published transition of the committed document notifies the class; re-publishing an
+   // already published assignment (a retry) changes nothing and notifies nothing. The dedupe key is the committed
+   // transition (its updatedAt), so a retried event write never duplicates it.
+   if(action==="setstatus"&&nextStatus==="published"&&prevStatus!=="published"&&updated&&updated.status==="published"){
+    await recordEventSafely(c,{scope:"class",classId:String(updated.classId||""),type:"assignment_published",dedupeKey:"published:status:"+id+":"+updated.updatedAt,data:{assignmentId:id,assignmentTitle:updated.title}},deps,obs);
    }
    return {status:200,jsonBody:{ok:true,assignment:summary(updated)}};
   }
@@ -160,6 +172,12 @@ async function handler(request,deps={},obs=null){
     if(e instanceof StorageConflictError)return {status:503,jsonBody:{ok:false,error:CONFLICT_MESSAGE}};
     if(e?.httpStatus)return {status:e.httpStatus,jsonBody:{ok:false,error:e.message}};
     throw e;
+   }
+   // Phase 6D — notify the class only when the committed deadline really moved LATER on a published assignment (an
+   // equal deadline, a duration-only edit, a first deadline on an undated assignment or a failed mutation notify nothing).
+   const prevDueMsForNotice=Date.parse(prevDueAt);
+   if(updated&&updated.status==="published"&&Number.isFinite(prevDueMsForNotice)&&newDueMs>prevDueMsForNotice){
+    await recordEventSafely(c,{scope:"class",classId:String(updated.classId||""),type:"assignment_deadline_extended",dedupeKey:"due:"+id+":"+newDueAt,data:{assignmentId:id,assignmentTitle:updated.title,dueAt:newDueAt}},deps,obs);
    }
    // Safe audit metadata only — timing values, never student/exam content. Emitted once on success.
    await rec(c,{actor:auth.user?.sub,action:"assignment.updateTiming",targetType:"assignment",targetId:id,targetLabel:auditTitle,details:{assignmentId:id,previousDueAt:prevDueAt,newDueAt,previousDurationMinutes:prevDuration,newDurationMinutes:newDuration}});
