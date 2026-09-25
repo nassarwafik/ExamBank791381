@@ -1,10 +1,12 @@
 const { app } = require("@azure/functions");
+const crypto = require("crypto");
 const { withObservability } = require("../lib/observability");
 const { requireBuilderAuth } = require("../lib/builder-auth");
 const { getContainer, listJson, downloadJsonOrNull, mutateJsonWithRetry, StorageConflictError } = require("../lib/platform-storage");
 const { FEED_PREFIX, REACTIONS, feedBlobName, publicPost } = require("../lib/achievement-feed");
 const { isSafeId } = require("../lib/message-store");
 const { isStudentClassMember } = require("../lib/class-membership");
+const { recordEventSafely } = require("../lib/notification-events");
 
 const CLASS_PREFIX = "platform/classes/";
 const CONFLICT_MESSAGE = "حدث تعارض مؤقت أثناء حفظ البيانات. حاول مرة أخرى.";
@@ -83,10 +85,12 @@ async function handler(request, deps = {}, obs = null) {
       if (action === "react") {
         const reaction = String(body?.reaction || "").trim();
         if (!REACTIONS.includes(reaction)) return { status: 400, jsonBody: { ok: false, error: "ردّ الفعل غير صالح." } };
-        let updated = null;
+        let updated = null, previousReaction = null, committedAt = "";
         try {
           updated = await mutateJsonWithRetry(container, feedBlobName(classId, postId), current => {
             if (!current) { const err = new Error("المنشور غير موجود."); err.httpStatus = 404; throw err; }
+            previousReaction = REACTIONS.includes(current.teacherReaction) ? current.teacherReaction : null;
+            committedAt = new Date().toISOString();
             current.teacherReaction = current.teacherReaction === reaction ? null : reaction;
             return current;
           });
@@ -95,15 +99,23 @@ async function handler(request, deps = {}, obs = null) {
           if (e?.httpStatus) return { status: e.httpStatus, jsonBody: { ok: false, error: e.message } };
           throw e;
         }
+        // Phase 6D — the post OWNER (from the stored post, never the request) is notified when a reaction is ADDED or
+        // CHANGED; removing it (→ null) notifies nothing; classmates are never notified.
+        const owner = String(updated.studentId || "");
+        if (updated.teacherReaction && updated.teacherReaction !== previousReaction && isSafeId(owner)) {
+          await recordEventSafely(container, { scope: "student", studentId: owner, type: "teacher_reaction", dedupeKey: "reaction:" + postId + ":" + updated.teacherReaction + ":" + committedAt, data: { postId, reaction: updated.teacherReaction } }, deps, obs);
+        }
         return { status: 200, jsonBody: { ok: true, teacherReaction: updated.teacherReaction || null } };
       }
 
       if (action === "setNote") {
         const note = String(body?.note || "").trim().slice(0, MAX_NOTE_LENGTH);
-        let updated = null;
+        let updated = null, previousNote = "", committedAt = "";
         try {
           updated = await mutateJsonWithRetry(container, feedBlobName(classId, postId), current => {
             if (!current) { const err = new Error("المنشور غير موجود."); err.httpStatus = 404; throw err; }
+            previousNote = String(current.teacherNote || "").trim();
+            committedAt = new Date().toISOString();
             current.teacherNote = note;
             return current;
           });
@@ -111,6 +123,12 @@ async function handler(request, deps = {}, obs = null) {
           if (e instanceof StorageConflictError) return { status: 503, jsonBody: { ok: false, error: CONFLICT_MESSAGE } };
           if (e?.httpStatus) return { status: e.httpStatus, jsonBody: { ok: false, error: e.message } };
           throw e;
+        }
+        // Phase 6D — a non-empty note that is NEW or CHANGED notifies the post owner; the same note again or a cleared
+        // note notifies nothing.
+        const owner = String(updated.studentId || "");
+        if (note && note !== previousNote && isSafeId(owner)) {
+          await recordEventSafely(container, { scope: "student", studentId: owner, type: "teacher_note", dedupeKey: "note:" + postId + ":" + crypto.createHash("sha256").update(note).digest("hex").slice(0, 16) + ":" + committedAt, data: { postId, notePreview: note } }, deps, obs);
         }
         return { status: 200, jsonBody: { ok: true, teacherNote: updated.teacherNote || "" } };
       }

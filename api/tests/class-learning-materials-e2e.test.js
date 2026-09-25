@@ -80,7 +80,17 @@ describe("E2E — progressive release journey for class 11-3 / student A", () =>
     expect(snapshot()).toBe(baseline);                                                         // every other class field byte-identical
     expect(ctx.getJson(USER).classId).toBe("11-3");
     expect(ctx.names("platform/assignments/")).toEqual(["platform/assignments/a1.json"]);
-    expect(ctx.names("platform/").filter(n => !/^platform\/(classes|users|assignments)\//.test(n))).toEqual([]);   // no content blob ever written/deleted
+    expect(ctx.names("platform/").filter(n => !/^platform\/(classes|users|assignments|notifications)\//.test(n))).toEqual([]);   // no content blob ever written/deleted
+    // Phase 6D — the only other writes are the class's module-publication NOTIFICATION events: ids only (no titles,
+    // pages, lesson bodies or answers), one per newly published module, all in this class's own event stream.
+    const notificationBlobs = ctx.names("platform/notifications/");
+    expect(notificationBlobs.length).toBeGreaterThan(0);
+    for (const n of notificationBlobs) {
+      expect(n.startsWith("platform/notifications/class/11-3/")).toBe(true);
+      const ev = ctx.getJson(n);
+      expect(ev.type).toBe("learning_module_published");
+      expect(Object.keys(ev).sort()).toEqual(["courseId", "createdAt", "dedupeKey", "eventId", "moduleId", "schemaVersion", "scope", "type"]);
+    }
 
     // Audit trail: one event per teacher step (5 sets + 1 remove), actor + class + course, no student PII.
     expect(events.map(e => e.action)).toEqual([...Array(5).fill("class.learningMaterials.setModules"), "class.learningMaterials.removeCourse"]);

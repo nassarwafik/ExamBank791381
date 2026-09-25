@@ -22,14 +22,15 @@ const { requireActiveStudentSession } = require("../lib/student-auth");
 const { downloadJsonOrNull } = require("../lib/platform-storage");
 const { normalizeClassStatus } = require("../lib/class-lifecycle");
 const {
-  isSafeId, directPrefix, announcementPrefix, normalizeMessageBody, createMessage, listRecentMessages, messageView,
+  isSafeId, directPrefix, normalizeMessageBody, createMessage, listRecentMessages, messageView,
   studentDisplayName, DIRECT_HISTORY_LIMIT, ANNOUNCEMENT_HISTORY_LIMIT
 } = require("../lib/message-store");
 const {
-  MarkReadError, markStreamRead, countUnread, loadMarker, isReadBy, absorbIrrelevantLegacy, READER_RELEVANCE, combineCounts,
-  studentDirectStateName, studentAnnouncementStateName
+  MarkReadError, markStreamRead, countUnread, loadMarker, isReadBy, absorbIrrelevantLegacy
 } = require("../lib/message-read-state");
-const { recentNotifications } = require("../lib/student-notifications");
+// Phase 6D: the stream/summary helpers moved (unchanged) into the shared lib so the unified notification center reuses
+// the SAME message unread authority instead of re-implementing it.
+const { recentNotifications, studentStreams, loadStreamMarkers, unreadSummary } = require("../lib/student-notifications");
 
 const CLASS_PREFIX = "platform/classes/";
 const CLASS_ARCHIVED = "هذا الصف مؤرشف. الرسائل السابقة متاحة للقراءة فقط.";
@@ -46,32 +47,6 @@ function sendState(classroom) {
   if (!classroom) return { canSend: false, code: "noClass", error: NO_CLASS };
   if (normalizeClassStatus(classroom) === "archived") return { canSend: false, code: "classArchived", error: CLASS_ARCHIVED };
   return { canSend: true, code: "", error: "" };
-}
-
-/** The authorized streams for this student: own direct thread + the CURRENT class's announcements (if it exists). */
-function studentStreams(studentId, classId) {
-  return {
-    direct: { stateName: studentDirectStateName(studentId), streamPrefix: directPrefix(studentId), expected: { kind: "direct", studentId }, include: READER_RELEVANCE.studentDirect },
-    announcements: classId ? { stateName: studentAnnouncementStateName(studentId, classId), streamPrefix: announcementPrefix(classId), expected: { kind: "announcement", classId }, include: READER_RELEVANCE.announcements } : null
-  };
-}
-
-/** Both streams' stored read markers (announcements: null when the student has no current class). */
-async function loadStreamMarkers(container, streams, deps) {
-  return {
-    direct: await loadMarker(container, streams.direct.stateName, deps),
-    announcements: streams.announcements ? await loadMarker(container, streams.announcements.stateName, deps) : null
-  };
-}
-
-/** `markers` (optional) = markers already loaded in this request, so a notifications read counts from the SAME state. */
-async function unreadSummary(container, streams, deps, markers = null) {
-  const m = markers || await loadStreamMarkers(container, streams, deps);
-  const count = async (s, marker) => s ? countUnread(container, { streamPrefix: s.streamPrefix, expected: s.expected, include: s.include, marker }, deps) : { unread: 0, capped: false };
-  const directUnread = await count(streams.direct, m.direct);
-  const announcementUnread = await count(streams.announcements, m.announcements);
-  const total = combineCounts(directUnread, announcementUnread);
-  return { directUnread, announcementUnread, totalUnread: total.unread, totalCapped: total.capped };
 }
 
 async function handler(request, deps = {}, obs = null) {

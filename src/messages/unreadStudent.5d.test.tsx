@@ -35,6 +35,10 @@ describe("StudentShell — «الرسائل» badge", () => {
 
 describe("StudentPortal — auxiliary unread summary", () => {
   const res = (status: number, body: unknown) => Promise.resolve({ status, ok: status >= 200 && status < 300, json: async () => body } as Response);
+  const unified = (b: unknown) => {
+    const o = b as { ok?: boolean; totalUnread?: number; totalCapped?: boolean };
+    return o && o.ok ? { ok: true, messages: { ...o, directUnread: { unread: o.totalUnread, capped: false }, announcementUnread: { unread: 0, capped: false } }, events: { unread: 0, capped: false }, bell: { unread: o.totalUnread, capped: o.totalCapped === true } } : b;
+  };
   const student = { userId: "u1", code: "C1", displayName: "أحمد", classId: "c1", avatarId: "a1", shareAchievements: true };
   const stats = { assigned: 0, completed: 0, average: null, pendingReview: 0, finalized: 0, inProgress: 0, averageFinalized: null };
   function mount(unreadReplies: Array<[number, unknown]>) {
@@ -42,7 +46,9 @@ describe("StudentPortal — auxiliary unread summary", () => {
     globalThis.fetch = vi.fn((input: RequestInfo | URL) => {
       const url = String(input);
       if (url.includes("/api/student-dashboard")) return res(200, { student, classroom: { classId: "c1", name: "الصف", grade: "11", schoolYear: "2026" }, assignments: [], stats });
-      if (url.includes("/api/student-messages?view=unread")) { const [s, b] = unreadReplies.length > 1 ? unreadReplies.shift()! : unreadReplies[0]; return res(s, b); }
+      // Phase 6D — the portal's badge poll is the UNIFIED counts read; its `messages` part is exactly the Phase 5D summary
+      // (no non-message events here, so the bell total equals it).
+      if (url.includes("/api/student-notifications?view=unread")) { const [s, b] = unreadReplies.length > 1 ? unreadReplies.shift()! : unreadReplies[0]; return res(s, unified(b)); }
       if (url.includes("/api/achievement-feed")) return res(200, { ok: true, posts: [] });
       if (url.includes("/api/student-project-tracker")) return res(200, { ok: true, enrolled: false, projects: [] });
       if (url.includes("/api/student-learning-materials")) return res(200, { ok: true, materials: [] });

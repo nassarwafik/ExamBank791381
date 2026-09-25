@@ -14,7 +14,13 @@ function deferred<T>() {
 type Body = Record<string, unknown>;
 type Reply = Body | Promise<Body>;
 const res = (body: Body) => ({ status: body.__status ? Number(body.__status) : 200, ok: !body.__status, json: async () => body }) as Response;
-const summary = (total: number) => ({ ok: true, directUnread: { unread: total, capped: false }, announcementUnread: { unread: 0, capped: false }, totalUnread: total, totalCapped: false });
+// Phase 6D — every canned count reply carries BOTH shapes: the Phase 5D message summary (what StudentMessagesPage reads
+// from /api/student-messages?view=unread) and the unified counts (what the portal reads from /api/student-notifications);
+// no non-message events here, so the bell total equals the message total.
+const summary = (total: number) => {
+  const messages = { directUnread: { unread: total, capped: false }, announcementUnread: { unread: 0, capped: false }, totalUnread: total, totalCapped: false };
+  return { ok: true, ...messages, messages, events: { unread: 0, capped: false }, bell: { unread: total, capped: false } };
+};
 const item = (id: string, preview: string, unread = true) => ({ id: "18000000000" + id + "-aaaaaaaaaaaaaaaa", type: "direct", senderDisplayName: "أ. أحمد", preview, createdAt: "2026-09-01T08:00:00.000Z", unread });
 const notifications = (total: number, previews: string[]) => ({ ...summary(total), items: previews.map((p, i) => item(String(10 + i), p)) });
 

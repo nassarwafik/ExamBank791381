@@ -6,6 +6,7 @@ const {getContainer,downloadJsonOrNull,listJson,mutateJsonWithRetry,StorageConfl
 const {recordAuditEvent}=require("../lib/audit-log");
 const {timerState,normalizeEndReason,extendRejection,activeAttemptOf,toMs,attemptPolicyOf,attemptModelVersion,attemptEpochOf}=require("../lib/assignment-availability");
 const {gradeExam}=require("../lib/assignment-grading");
+const {recordEventSafely}=require("../lib/notification-events");
 const {normalizeAssignmentStatus}=require("../lib/assignment-lifecycle");
 const {deriveGradingStatus}=require("../lib/grading-status");
 const {isStudentClassMember}=require("../lib/class-membership");
@@ -82,20 +83,25 @@ async function handler(request,deps={},obs=null){
   // completed attempt, never overwrites grades, never touches an active attempt (B2B #1/#2). ──
   if(resultAction==="allowRetry"){
    const t=await loadTarget(dl,c,String(b.assignmentId||""),String(b.studentId||""));if(t.error)return {status:t.error.status,jsonBody:{ok:false,error:t.error.error}};
-   const {a,student,name}=t;let snap=null,finalAllowed=null;
+   const {a,student,name}=t;let snap=null,finalAllowed=null,retryGranted=false;
    try{
     await mut(c,name,current=>{
      const doc=current||defaultSub(a.assignmentId,student.userId,a,student);
      const used=Array.isArray(doc.attempts)?doc.attempts.length:0,base=Math.max(1,Number(a.maxAttempts||1));
+     const allowedBefore=timerState(a,doc).allowedAttempts;                  // effective allowance before this commit
      // An active attempt already occupies the next slot (it is not yet in attempts.length), so to grant a
      // genuinely FUTURE unused attempt we must reserve one BEYOND it (B2B blocker-1). No active => used+1.
      const hasActive=!!activeAttemptOf(doc);
      doc.allowedAttempts=Math.max(base,Number(doc.allowedAttempts||0),used+(hasActive?2:1));
      doc.updatedAt=new Date().toISOString();
      finalAllowed=doc.allowedAttempts;snap=lifecycle(a,doc);
+     retryGranted=snap.allowedAttempts>allowedBefore;                        // a real new attempt for the student
      return doc;
     });
    }catch(e){if(e instanceof StorageConflictError){obs?.logWarn("assignment.lifecycle.conflict",{action:resultAction,assignmentId:String(b.assignmentId||""),retryable:true});return {status:503,jsonBody:{ok:false,error:CONFLICT_MESSAGE}}}obs?.logWarn("assignment.lifecycle.failed",{action:resultAction,assignmentId:String(b.assignmentId||"")});throw e}
+   // Phase 6D — personal notification only when the student really gained an attempt (a repeated grant that changes
+   // nothing notifies nothing); secondary — never fails the grant.
+   if(retryGranted&&a.status==="published")await recordEventSafely(c,{scope:"student",studentId:student.userId,type:"assignment_retry_granted",dedupeKey:"retry:"+a.assignmentId+":"+finalAllowed,data:{assignmentId:a.assignmentId,assignmentTitle:a.title}},deps,obs);
    await rec(c,{actor:auth.user?.sub,action:"assignment.allowRetry",targetType:"student",targetId:student.userId,targetLabel:String(student.displayName||student.code||""),details:{assignmentId:a.assignmentId,allowedAttempts:finalAllowed}});
    obs?.logInfo("assignment.lifecycle.completed",{action:resultAction,assignmentId:a.assignmentId});
    return {status:200,jsonBody:{ok:true,allowedAttempts:finalAllowed,...snap}};
@@ -118,14 +124,21 @@ async function handler(request,deps={},obs=null){
     }
     nextOverride=new Date(ms).toISOString();
    }
-   let snap=null;
+   let snap=null,prevOverride=null;
    try{
     await mut(c,name,current=>{
      const doc=current||defaultSub(a.assignmentId,student.userId,a,student);
+     prevOverride=doc.dueAtOverride?String(doc.dueAtOverride):null;
      doc.dueAtOverride=nextOverride;doc.updatedAt=new Date().toISOString();snap=lifecycle(a,doc);
      return doc;
     });
    }catch(e){if(e instanceof StorageConflictError){obs?.logWarn("assignment.lifecycle.conflict",{action:resultAction,assignmentId:String(b.assignmentId||""),retryable:true});return {status:503,jsonBody:{ok:false,error:CONFLICT_MESSAGE}}}obs?.logWarn("assignment.lifecycle.failed",{action:resultAction,assignmentId:String(b.assignmentId||"")});throw e}
+   // Phase 6D — a GENUINE personal extension: a new override later than the student's previous effective deadline
+   // (the previous override, else the class deadline). Clearing / re-saving the same / an earlier value notifies nothing.
+   const prevEffectiveMs=Date.parse(prevOverride||String(a.dueAt||""));
+   if(nextOverride&&a.status==="published"&&(!Number.isFinite(prevEffectiveMs)||Date.parse(nextOverride)>prevEffectiveMs)){
+    await recordEventSafely(c,{scope:"student",studentId:student.userId,type:"assignment_deadline_extended",dedupeKey:"override:"+a.assignmentId+":"+nextOverride,data:{assignmentId:a.assignmentId,assignmentTitle:a.title,dueAt:nextOverride}},deps,obs);
+   }
    await rec(c,{actor:auth.user?.sub,action:"assignment.setDueAtOverride",targetType:"student",targetId:student.userId,targetLabel:String(student.displayName||student.code||""),details:{assignmentId:a.assignmentId,dueAtOverride:nextOverride}});
    obs?.logInfo("assignment.lifecycle.completed",{action:resultAction,assignmentId:a.assignmentId});
    return {status:200,jsonBody:{ok:true,dueAtOverride:nextOverride,...snap}};
@@ -149,19 +162,25 @@ async function handler(request,deps={},obs=null){
    }else if(stNow.availability==="closed"){
     return {status:400,jsonBody:{ok:false,error:"الواجب مغلق: يجب تحديد موعد إعادة الفتح (reopenUntil)."}};
    }
-   let snap=null,finalAllowed=null;
+   let snap=null,finalAllowed=null,reopenChanged=false;
    try{
     await mut(c,name,current=>{
      const doc=current||defaultSub(a.assignmentId,student.userId,a,student);
      if(activeAttemptOf(doc)){const err=new Error("لا يمكن إعادة الفتح أثناء وجود محاولة نشطة للطالب.");err.httpStatus=409;throw err} // race backstop
+     const before=timerState(a,doc,Date.now());                               // student-facing state before this commit
      const used=Array.isArray(doc.attempts)?doc.attempts.length:0,base=Math.max(1,Number(a.maxAttempts||1));
      doc.allowedAttempts=Math.max(base,Number(doc.allowedAttempts||0),used+1);
      if(hasReopen)doc.dueAtOverride=nextOverride;
      doc.updatedAt=new Date().toISOString();
      finalAllowed=doc.allowedAttempts;snap=lifecycle(a,doc);
+     // Real reopen = the student can now start an attempt they could not start before, or gained an allowance / a later
+     // personal deadline. A repeated reopen that changes nothing notifies nothing.
+     const after=timerState(a,doc,Date.now());
+     reopenChanged=(after.canStartAttempt&&!before.canStartAttempt)||after.allowedAttempts>before.allowedAttempts||(hasReopen&&String(before.effectiveDueAt||"")!==String(after.effectiveDueAt||""));
      return doc;
     });
    }catch(e){if(e instanceof StorageConflictError){obs?.logWarn("assignment.lifecycle.conflict",{action:resultAction,assignmentId:String(b.assignmentId||""),retryable:true});return {status:503,jsonBody:{ok:false,error:CONFLICT_MESSAGE}}}if(e?.httpStatus){obs?.logWarn(e.httpStatus===409?"assignment.lifecycle.conflict":"assignment.lifecycle.failed",{action:resultAction,assignmentId:String(b.assignmentId||""),status:e.httpStatus});return {status:e.httpStatus,jsonBody:{ok:false,error:e.message}}}obs?.logWarn("assignment.lifecycle.failed",{action:resultAction,assignmentId:String(b.assignmentId||"")});throw e}
+   if(reopenChanged&&a.status==="published")await recordEventSafely(c,{scope:"student",studentId:student.userId,type:"assignment_reopened",dedupeKey:"reopen:"+a.assignmentId+":"+finalAllowed+":"+String(nextOverride||""),data:{assignmentId:a.assignmentId,assignmentTitle:a.title,dueAt:nextOverride||String(a.dueAt||"")}},deps,obs);
    await rec(c,{actor:auth.user?.sub,action:"assignment.reopenStudent",targetType:"student",targetId:student.userId,targetLabel:String(student.displayName||student.code||""),details:{assignmentId:a.assignmentId,allowedAttempts:finalAllowed,dueAtOverride:nextOverride}});
    obs?.logInfo("assignment.lifecycle.completed",{action:resultAction,assignmentId:a.assignmentId});
    return {status:200,jsonBody:{ok:true,allowedAttempts:finalAllowed,dueAtOverride:nextOverride,...snap}};
@@ -190,6 +209,8 @@ async function handler(request,deps={},obs=null){
      return doc;
     });
    }catch(e){if(e instanceof StorageConflictError){obs?.logWarn("assignment.lifecycle.conflict",{action:resultAction,assignmentId:String(b.assignmentId||""),retryable:true});return {status:503,jsonBody:{ok:false,error:CONFLICT_MESSAGE}}}if(e?.httpStatus){obs?.logWarn(e.httpStatus===409?"assignment.lifecycle.conflict":"assignment.lifecycle.failed",{action:resultAction,assignmentId:String(b.assignmentId||""),status:e.httpStatus});return {status:e.httpStatus,jsonBody:{ok:false,error:e.message}}}obs?.logWarn("assignment.lifecycle.failed",{action:resultAction,assignmentId:String(b.assignmentId||"")});throw e}
+   // Phase 6D — extendRejection guarantees a strictly later deadline, so every committed extension is a real change.
+   if(a.status==="published")await recordEventSafely(c,{scope:"student",studentId:student.userId,type:"attempt_time_extended",dedupeKey:"attemptExt:"+a.assignmentId+":"+auditDetails.newExtendedEndsAt,data:{assignmentId:a.assignmentId,assignmentTitle:a.title,attemptNumber:Number(snap&&snap.activeAttempt&&snap.activeAttempt.attemptNumber)||0}},deps,obs);
    await rec(c,{actor:auth.user?.sub,action:"assignment.extendActiveAttempt",targetType:"student",targetId:student.userId,targetLabel:String(student.displayName||student.code||""),details:auditDetails});
    obs?.logInfo("assignment.lifecycle.completed",{action:resultAction,assignmentId:a.assignmentId});
    return {status:200,jsonBody:{ok:true,...snap}};

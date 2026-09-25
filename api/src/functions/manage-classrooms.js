@@ -14,7 +14,8 @@ const { getClassProgramCodes, validateProgramCodes } = require("../lib/project-t
 // Class Learning Materials — an INDEPENDENT domain from projects (programCodes): which book/course a class uses
 // and which of its modules are currently published to students. Normalization + validation live in the lib; the
 // handler only wires auth, lifecycle, CAS persistence and audit.
-const { getClassLearningMaterials, setClassLearningCourseModules, removeClassLearningCourse } = require("../lib/class-learning-materials");
+const { getClassLearningMaterials, setClassLearningCourseModules, removeClassLearningCourse, getVisibleLearningModuleIds } = require("../lib/class-learning-materials");
+const { recordEventSafely } = require("../lib/notification-events");
 const { validateLearningModuleIds, findLearningCourse } = require("../lib/learning-materials-registry");
 
 // A class's programCode is valid only when it is empty (no project) or a project the registry knows.
@@ -224,13 +225,23 @@ async function handler(request, deps = {}, obs = null) {
         return { status: e.httpStatus || 400, jsonBody: { ok: false, error: e.message } };
       }
       try {
+        let newlyPublished = [];
         const updated = await mut(container, CLASS_PREFIX + classId + ".json", current => {
           if (!current) { const notFound = new Error("الصف غير موجود."); notFound.httpStatus = 404; throw notFound; }
           if (!learningMaterialsChangeAllowed(current)) { const blocked = new Error("الصف مؤرشف — لا يمكن تعديل مواده التعليمية."); blocked.httpStatus = 403; throw blocked; }
+          // Phase 6D — the AUTHORITATIVE previous publication (of the version this CAS attempt commits over) vs the next.
+          const before = new Set(getVisibleLearningModuleIds(current, courseId));
           const next = setClassLearningCourseModules(current, courseId, moduleIds);
+          newlyPublished = getVisibleLearningModuleIds(next, courseId).filter(id => !before.has(id));
           next.updatedAt = new Date().toISOString();
           return next;
         });
+        // Phase 6D — one class notification per module NEWLY added to the published set (already-published, hidden or
+        // unchanged modules notify nothing). Only ids are stored; titles come from the registry at read time and a module
+        // hidden again drops out of the students' projection. Secondary: never fails the publication.
+        for (const moduleId of newlyPublished) {
+          await recordEventSafely(container, { scope: "class", classId, type: "learning_module_published", dedupeKey: "module:" + courseId + ":" + moduleId + ":" + updated.updatedAt, data: { courseId, moduleId } }, deps, obs);
+        }
         const learningMaterials = getClassLearningMaterials(updated);
         await rec(container, { actor: auth.user?.sub, action: "class.learningMaterials.setModules", targetType: "class", targetId: classId, targetLabel: String(updated.name || ""), details: { courseId, moduleIds } });
         return { status: 200, jsonBody: { ok: true, classId, learningMaterials } };

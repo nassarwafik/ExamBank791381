@@ -19,7 +19,8 @@ import InstallAppCard from "./pwa/InstallAppCard";
 import MessagePushCard from "./pwa/MessagePushCard";
 import StudentGamesPage from "./games/StudentGamesPage";
 import StudentMessagesPage, { type StudentMessagesTab } from "./messages/StudentMessagesPage";
-import { fetchStudentNotifications, type NotificationItem } from "./messages/messagesClient";
+import { fetchNotificationCenter, fetchNotificationCounts, markNotificationEventRead, isMessageNotification, isAssignmentRoute, type NotificationItem, type NotificationCounts } from "./notifications/notificationsClient";
+import type { NotificationCounts as BellCounts } from "./notifications/NotificationBell";
 import { FILTERS, matchesFilter, medalsFor, nowItems, sortTaskFirst, type PortalFilter } from "./student/portalPresentation";
 import { normalizeStrength } from "./student/strengthPresentation";
 import { stageVisual } from "./studentStageVisuals";
@@ -57,11 +58,17 @@ export default function StudentPortal({ token, displayName, onLogout }: Props) {
   const [messagesUnread, setMessagesUnread] = useState<{ total: number; capped: boolean }>({ total: 0, capped: false });
   // Phase 6C — the tab the Messages view opens on («الرسائل» → direct; a notification → its own stream).
   const [messagesTab, setMessagesTab] = useState<StudentMessagesTab>("direct");
-  // Phase 6C — the notification center's preview data (AUXILIARY like the badge: a failure keeps the last-good items and
-  // never logs out). `items: null` = not loaded yet / invalidated. The COUNT is never stored here: the bell shows
-  // `messagesUnread`, the one unread state of this portal.
+  // Phase 6C/6D — the notification center's preview data (AUXILIARY like the badges: a failure keeps the last-good items
+  // and never logs out). `items: null` = not loaded yet / invalidated.
   const [notif, setNotif] = useState<{ items: NotificationItem[] | null; loading: boolean; error: string }>({ items: null, loading: false, error: "" });
   const [notifOpen, setNotifOpen] = useState(false);
+  // Phase 6D — TWO counts, both server snapshots: `messagesUnread` («الرسائل», message-only — Phase 5D) above, and the bell's
+  // UNIFIED counts («الإشعارات» = messages + non-message events) here. The bell count is only ever set from a unified server
+  // snapshot (/api/student-notifications) — never from the Messages page's message-only counts, never by arithmetic.
+  const [bellCounts, setBellCounts] = useState<BellCounts | null>(null);
+  // A small, non-fatal message after a notification could not be routed (e.g. «لم تعد هذه المادة متاحة»).
+  const [notice, setNotice] = useState("");
+  const [highlightPostId, setHighlightPostId] = useState("");
   // ONE ordering for every unread snapshot — the badge poll, the notification read (items + count from one server
   // snapshot) and the Messages page's counts: each takes the next sequence number when it STARTS, and a snapshot is
   // applied only if nothing that started later has already been applied. So a slow/stale response can never resurrect
@@ -114,33 +121,37 @@ export default function StudentPortal({ token, displayName, onLogout }: Props) {
    * whether it applied. A count-only snapshot (`withItems` false) makes the cached preview items stale → they are
    * dropped (an in-flight newer preview still applies when it lands; loading state is left to it).
    */
-  function applyUnread(seq: number, u: { total: number; capped: boolean }, withItems = false): boolean {
+  // `unified` = the server's unified counts of the SAME snapshot (absent for the Messages page's message-only counts: the
+  // «الرسائل» badge updates at once, the bell keeps its last server total until the next unified snapshot — never a guess).
+  function applyUnread(seq: number, u: { total: number; capped: boolean }, withItems = false, unified: NotificationCounts | null = null): boolean {
     if (!alive.current || seq <= unreadApplied.current) return false;
     unreadApplied.current = seq;
     setMessagesUnread(u);
+    if (unified) setBellCounts({ bell: unified.bell, events: unified.events, messages: u });
+    else setBellCounts(prev => (prev ? { ...prev, messages: u } : prev));
     if (!withItems) setNotif(prev => (prev.items === null && !prev.error ? prev : { ...prev, items: null, error: "" }));
     return true;
   }
+  const messageCount = (c: NotificationCounts) => ({ total: c.messages.totalUnread, capped: c.messages.totalCapped });
+  // Phase 6D — ONE lightweight unified count read (both badges from one server snapshot). A failure — including a 401 —
+  // keeps the last-good badges and never logs out.
   async function loadMessagesUnread() {
     const seq = ++unreadSeq.current;
     try {
-      const r = await fetch("/api/student-messages?view=unread", { headers });
-      if (!r.ok) return;                                                   // incl. 401 → never a logout here
-      const j = await r.json() as any;
-      if (!j || !j.ok) return;
-      applyUnread(seq, { total: Math.max(0, Number(j.totalUnread) || 0), capped: j.totalCapped === true });
-    } catch { /* keep the last-good badge */ }
+      const c = await fetchNotificationCounts(token);
+      applyUnread(seq, messageCount(c), false, c);
+    } catch { /* keep the last-good badges */ }
   }
-  // Phase 6C — the notification center's read: recent items + the SAME server unread summary (one request). READ-ONLY
-  // (never marks anything read). A failure — including a 401 — keeps the last-good items and shows a small error in the
-  // panel; the dashboard stays the only session authority.
+  // Phase 6C/6D — the notification center's read: recent unified items + the SAME server counts (one request).
+  // READ-ONLY (never marks anything read). A failure — including a 401 — keeps the last-good items and shows a small
+  // error in the panel; the dashboard stays the only session authority.
   async function loadNotifications() {
     const seq = ++unreadSeq.current, mine = ++notifSeq.current;
     setNotif(prev => ({ ...prev, loading: true }));
     try {
-      const n = await fetchStudentNotifications(token);
+      const n = await fetchNotificationCenter(token);
       if (!alive.current || mine !== notifSeq.current) return;           // a newer read (or an invalidation) owns the panel
-      if (!applyUnread(seq, { total: n.unread.totalUnread, capped: n.unread.totalCapped }, true)) {
+      if (!applyUnread(seq, messageCount(n.counts), true, n.counts)) {
         // A newer authoritative snapshot applied after this read started: its items are stale and never become current.
         setNotif(prev => ({ ...prev, loading: false }));
         if (notifOpenRef.current) void loadNotifications();               // an open panel reloads (bounded: needs a newer writer)
@@ -157,11 +168,69 @@ export default function StudentPortal({ token, displayName, onLogout }: Props) {
     notifSeq.current += 1;
     setNotif({ items: null, loading: false, error: "" });
   }
+  /**
+   * Phase 6D — acknowledge ONE non-message event server-side (never a message: those are acknowledged by the Messages
+   * page). The response carries FRESH server counts (never `total - 1`), applied under the same ordering as every other
+   * snapshot. A failure keeps the last-good badges (the event simply stays unread).
+   */
+  async function acknowledgeEvent(id: string) {
+    const seq = ++unreadSeq.current;
+    try {
+      const c = await markNotificationEventRead(token, id);
+      applyUnread(seq, messageCount(c), false, c);
+    } catch { /* keep the last-good badges */ }
+  }
+  /** Route an assignment-related notification through the dashboard's server-validated assignment list. */
+  function routeAssignment(assignmentId: string) {
+    const summary = data?.assignments.find(a => a.assignmentId === assignmentId);
+    if (!summary) { setNotice("هذا الواجب لم يعد متاحًا."); return; }
+    if (summary.availability === "scheduled") {
+      setNotice("لم يُفتح هذا الواجب بعد. سيظهر في «المهام والواجبات» عند موعد فتحه.");
+      setFilter("all");
+      window.setTimeout(() => { const el = document.getElementById("eb-sp-task-" + assignmentId); el?.scrollIntoView?.({ block: "center", behavior: reducedMotion ? "auto" : "smooth" }); el?.focus?.(); }, 0);
+      return;
+    }
+    void open(summary);                                                  // /api/student-assignment stays the authority
+  }
+  /** Re-validate a learning-material notification against the CURRENT entitlement before opening the Reader. */
+  async function routeMaterial(courseId: string, moduleId: string) {
+    try {
+      const r = await fetch("/api/student-learning-materials", { headers });
+      const j = await r.json().catch(() => ({})) as { ok?: boolean; materials?: StudentLearningCourse[] };
+      if (!r.ok || !j.ok) { setNotice("تعذر فتح المادة التعليمية حاليًا."); return; }      // incl. 401 → never a logout here
+      const course = (j.materials || []).find(c => c.courseId === courseId && c.modules.some(m => m.moduleId === moduleId));
+      if (!course) { setNotice("لم تعد هذه المادة متاحة."); return; }
+      setReaderCourse(course);
+      window.scrollTo({ top: 0, behavior: reducedMotion ? "auto" : "smooth" });
+    } catch { setNotice("تعذر فتح المادة التعليمية حاليًا."); }
+  }
+  /** Bring the student to their achievement and focus the post the teacher recognized (no second achievement model). */
+  function routeRecognition(postId: string) {
+    setHighlightPostId(postId);
+    window.setTimeout(() => {
+      const post = document.getElementById("eb-sp-post-" + postId);
+      const target = post || document.getElementById("eb-sp-feed-title");
+      target?.scrollIntoView?.({ block: "center", behavior: reducedMotion ? "auto" : "smooth" });
+      post?.focus?.();
+    }, 0);
+  }
+  /** A bell selection: messages → the Messages page (it acknowledges); an event → acknowledged here, then routed. */
+  function selectNotification(item: NotificationItem) {
+    setNotice("");
+    if (isMessageNotification(item)) { openMessages(item.type === "announcement" ? "announcements" : "direct"); return; }
+    setNotifOpen(false);
+    if (item.unread) void acknowledgeEvent(item.id);
+    if (item.type === "learning_module_published") { void routeMaterial(item.courseId, item.moduleId); return; }
+    if (item.type === "teacher_reaction" || item.type === "teacher_note") { routeRecognition(item.postId); return; }
+    if (isAssignmentRoute(item)) routeAssignment(item.assignmentId);
+  }
   // A new session (token) starts clean: every in-flight count/preview of the previous one is dropped.
   useEffect(() => {
     unreadApplied.current = unreadSeq.current;
     notifSeq.current += 1;
     setMessagesUnread({ total: 0, capped: false });
+    setBellCounts(null);
+    setNotice("");
     setNotif({ items: null, loading: false, error: "" });
     void load(); void loadFeed(); void loadMessagesUnread();
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -278,9 +347,9 @@ export default function StudentPortal({ token, displayName, onLogout }: Props) {
 
   return (
     <StudentShell studentName={data?.student.displayName || displayName} className={data?.classroom?.name || ""} onLogout={onLogout} onOpenGames={() => { setGamesOpen(true); window.scrollTo({ top: 0, behavior: reducedMotion ? "auto" : "smooth" }); }} onOpenMessages={() => openMessages("direct")} messagesUnread={messagesUnread} notifications={{
-      items: notif.items, loading: notif.loading, error: notif.error,
+      items: notif.items, counts: bellCounts, loading: notif.loading, error: notif.error,
       onOpenChange: next => { setNotifOpen(next); if (next) void loadNotifications(); },
-      onSelect: item => openMessages(item.type === "announcement" ? "announcements" : "direct"),
+      onSelect: selectNotification,
       onOpenMessages: () => openMessages("direct"),
       onRetry: () => void loadNotifications()
     }}>
@@ -288,6 +357,7 @@ export default function StudentPortal({ token, displayName, onLogout }: Props) {
         {loading && <p className="eb-muted eb-sp-status" role="status">جارٍ تحميل حسابك...</p>}
         {busy && <p className="eb-muted eb-sp-status" role="status">جارٍ فتح الواجب...</p>}
         {error && <div className="platform-error" role="alert">{error}</div>}
+        {notice && <div className="platform-notice eb-sp-notice" role="status">{notice}<button type="button" className="eb-notif-retry" onClick={() => setNotice("")}>إغلاق</button></div>}
         {!loading && data && stats && (
           <>
             <StudentIdentityCard student={data.student} classroom={data.classroom} displayName={displayName} stageGroup={stageGroup} token={token} onChangeAvatar={() => setAvatarPickerOpen(true)} />
@@ -305,7 +375,7 @@ export default function StudentPortal({ token, displayName, onLogout }: Props) {
               <div className="student-assignment-list">
                 {visible.length > 0 && (
                   <ul className="eb-sp-tasks">
-                    {visible.map(item => <li key={item.assignmentId}><StudentAssignmentCard item={item} busy={busy} onOpen={open} /></li>)}
+                    {visible.map(item => <li key={item.assignmentId} id={"eb-sp-task-" + item.assignmentId} tabIndex={-1}><StudentAssignmentCard item={item} busy={busy} onOpen={open} /></li>)}
                   </ul>
                 )}
                 {!data.assignments.length && <EmptyState title="لا توجد مهام منشورة الآن" description="عندما يرسل المعلم واجبًا إلى صفك سيظهر هنا تلقائيًا." />}
@@ -313,7 +383,7 @@ export default function StudentPortal({ token, displayName, onLogout }: Props) {
               </div>
             </section>
             <StudentProjectPanel token={token} contributions={strength?.projects ?? []} />
-            <AchievementFeed posts={feed} error={feedError} shareOn={data.student.shareAchievements !== false} shareSaving={shareSaving} now={now} onToggleShare={toggleShareAchievements} onReact={(postId, reaction) => void react(postId, reaction)} />
+            <AchievementFeed highlightPostId={highlightPostId} posts={feed} error={feedError} shareOn={data.student.shareAchievements !== false} shareSaving={shareSaving} now={now} onToggleShare={toggleShareAchievements} onReact={(postId, reaction) => void react(postId, reaction)} />
           </>
         )}
       </div>

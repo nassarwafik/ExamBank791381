@@ -198,7 +198,10 @@ export function createStudentMessagesClient(token: string): StudentMessagesClien
 }
 
 /** Phase 6C — one in-app notification: a recent INCOMING message of the student's own streams (server projection). */
-export type NotificationItem = {
+// Phase 6D — the unified union lives in notifications/notificationsClient.ts; this legacy (Phase 6C, message-only)
+// read of /api/student-messages?view=notifications keeps returning message items only.
+export type { NotificationItem } from "../notifications/notificationsClient";
+export type MessageNotificationItem = {
   id: string;
   type: "direct" | "announcement";
   senderDisplayName: string;
@@ -206,9 +209,9 @@ export type NotificationItem = {
   createdAt: string;
   unread: boolean;
 };
-export type StudentNotifications = { items: NotificationItem[]; unread: StudentUnread };
+export type StudentNotifications = { items: MessageNotificationItem[]; unread: StudentUnread };
 
-const notificationOf = (v: unknown): NotificationItem | null => {
+const notificationOf = (v: unknown): MessageNotificationItem | null => {
   if (!v || typeof v !== "object") return null;
   const o = v as Record<string, unknown>;
   if (typeof o.id !== "string" || !o.id || (o.type !== "direct" && o.type !== "announcement")) return null;
@@ -224,7 +227,7 @@ export async function fetchStudentNotifications(token: string): Promise<StudentN
   const r = await fetch("/api/student-messages?view=notifications", { headers: { "x-student-token": token, Authorization: "Bearer " + token } });
   const j = await readJson(r);
   if (!r.ok || !j.ok) fail(j, r.status, "تعذر تحميل الإشعارات.");
-  const items = (Array.isArray(j.items) ? j.items : []).map(notificationOf).filter((i): i is NotificationItem => i !== null);
+  const items = (Array.isArray(j.items) ? j.items : []).map(notificationOf).filter((i): i is MessageNotificationItem => i !== null);
   return { items, unread: studentUnreadOf(j) };
 }
 

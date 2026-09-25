@@ -1,21 +1,28 @@
 import { useEffect, useId, useRef, useState } from "react";
-import { IconBell, IconMail, IconMegaphone } from "../icons";
+import type { ReactNode } from "react";
+import { IconAssignments, IconBell, IconBook, IconCheck, IconHistory, IconMail, IconMedal, IconMegaphone } from "../icons";
 import VisuallyHidden from "../ui/VisuallyHidden";
-import { formatNotificationTime, formatUnread, type NotificationItem } from "../messages/messagesClient";
+import { formatNotificationTime, formatUnread } from "../messages/messagesClient";
+import { isMessageNotification, type BadgeCount, type NotificationItem } from "./notificationsClient";
+import { presentNotification, type NotificationIconKind } from "./notificationPresentation";
 import "./notifications.css";
 
 /**
- * Phase 6C — the student's in-app notification center: a «الإشعارات» bell in the StudentShell top bar + a compact
- * panel of recent teacher messages and class announcements. It is a PREVIEW / NAVIGATION surface only:
- *  • the badge is the portal's existing `messagesUnread` (Phase 5D server state) — this component owns no count;
- *  • opening the panel, hovering or seeing an item marks NOTHING read — selecting an item only navigates to the
- *    Student Messages page (direct conversation / «إعلانات الصف»), whose existing logic acknowledges what it shows;
- *  • data (items / loading / error) belongs to StudentPortal; a failed refresh keeps the last-good items.
+ * Phase 6C/6D — the student's UNIFIED in-app notification center: a «الإشعارات» bell in the StudentShell top bar + a
+ * compact panel of recent teacher messages, class announcements AND non-message events (assignments, deadlines,
+ * learning materials, reviews, teacher recognition). It is a PREVIEW / NAVIGATION surface only:
+ *  • the badge is the server's UNIFIED count (`counts.bell` = messages + events) — never the ✉️ message-only count;
+ *  • opening the panel, hovering or seeing an item marks NOTHING read — selecting an item hands it to the portal,
+ *    which routes it (messages → the Student Messages page, which acknowledges what it shows; an event → acknowledged
+ *    server-side, then routed);
+ *  • data (items / counts / loading / error) belongs to StudentPortal; a failed refresh keeps the last-good items.
  * Independent of browser notification permission (Phase 6B OS push is a separate, complementary channel).
  * Closing: the bell again, Escape (focus returns to the bell), a click/tap outside, or selecting an item.
  */
+export type NotificationCounts = { bell: BadgeCount; messages: BadgeCount; events: BadgeCount };
 export type NotificationCenterProps = {
   items: NotificationItem[] | null;           // null = never loaded (or invalidated) yet
+  counts?: NotificationCounts | null;         // the server's unified counts (null/absent = none yet → no badge)
   loading: boolean;
   error: string;
   onOpenChange?: (open: boolean) => void;
@@ -24,12 +31,18 @@ export type NotificationCenterProps = {
   onRetry?: () => void;
 };
 
-const TITLES = {
-  direct: { unread: "رسالة جديدة من المعلم", read: "رسالة من المعلم" },
-  announcement: { unread: "إعلان جديد للصف", read: "إعلان للصف" }
-} as const;
+const ICONS: Record<NotificationIconKind, ReactNode> = {
+  message: <IconMail size={18} />,
+  announcement: <IconMegaphone size={18} />,
+  assignment: <IconAssignments size={18} />,
+  deadline: <IconHistory size={18} />,
+  material: <IconBook size={18} />,
+  review: <IconCheck size={18} />,
+  recognition: <IconMedal size={18} />
+};
 
-export default function NotificationBell({ unread, items, loading, error, onOpenChange, onSelect, onOpenMessages, onRetry }: NotificationCenterProps & { unread?: { total: number; capped: boolean } }) {
+export default function NotificationBell({ counts, items, loading, error, onOpenChange, onSelect, onOpenMessages, onRetry }: NotificationCenterProps) {
+  const unread = counts ? counts.bell : undefined;
   const [open, setOpen] = useState(false);
   const wrapRef = useRef<HTMLDivElement>(null);
   const buttonRef = useRef<HTMLButtonElement>(null);
@@ -74,12 +87,16 @@ export default function NotificationBell({ unread, items, loading, error, onOpen
   const now = new Date();
   const list = items || [];
   const unreadInList = list.filter(i => i.unread).length;
-  // The preview is BOUNDED (the newest messages only), the badge is the server's full count: when the authoritative
-  // count exceeds the unread items shown, more unread messages exist outside the preview (reachable via «فتح الرسائل»).
-  // A capped count ("99+") always exceeds a preview; its exact remainder is unknown, so no number is claimed then.
-  const total = unread ? unread.total : 0, capped = unread ? unread.capped : false;
-  const outside = items !== null && (capped || total > unreadInList);
-  const outsideCount = capped ? 0 : total - unreadInList;
+  // The preview is BOUNDED (the newest items only); the counts are the server's full counts. Per SOURCE: when a count
+  // exceeds the unread items of that source shown, more unread items exist outside the preview — older messages are
+  // reachable via «فتح الرسائل». A capped count ("99+") always exceeds a preview (no number is claimed then).
+  const unreadMessagesInList = list.filter(i => i.unread && isMessageNotification(i)).length;
+  const unreadEventsInList = unreadInList - unreadMessagesInList;
+  const msg = counts ? counts.messages : { total: 0, capped: false }, ev = counts ? counts.events : { total: 0, capped: false };
+  const outsideMessages = items !== null && (msg.capped || msg.total > unreadMessagesInList);
+  const outsideMessagesCount = msg.capped ? 0 : msg.total - unreadMessagesInList;
+  const outsideEvents = items !== null && (ev.capped || ev.total > unreadEventsInList);
+  const outside = outsideMessages || outsideEvents;
   // `items === null` = not loaded yet or dropped as stale: a fresh read is on its way — never an empty/blank box.
   const pending = items === null && !error;
 
@@ -124,20 +141,24 @@ export default function NotificationBell({ unread, items, loading, error, onOpen
             {items && list.length === 0 && outside && (
               <div className="eb-notif-empty is-outside" role="status">
                 <IconMail size={22} aria-hidden="true" />
-                <p>لديك رسائل غير مقروءة أقدم من المعاينة. افتح الرسائل لعرضها.</p>
+                <p>{outsideMessages ? "لديك رسائل غير مقروءة أقدم من المعاينة. افتح الرسائل لعرضها." : "لديك إشعارات غير مقروءة أقدم من المعاينة."}</p>
               </div>
             )}
-            {list.length > 0 && outside && (
+            {list.length > 0 && outsideMessages && (
               <p className="eb-notif-more" role="status">
-                {outsideCount > 0 ? "توجد رسائل غير مقروءة أخرى لا تظهر هنا (" + outsideCount + "). افتح الرسائل لعرضها." : "توجد رسائل غير مقروءة أخرى لا تظهر هنا. افتح الرسائل لعرضها."}
+                {outsideMessagesCount > 0 ? "توجد رسائل غير مقروءة أخرى لا تظهر هنا (" + outsideMessagesCount + "). افتح الرسائل لعرضها." : "توجد رسائل غير مقروءة أخرى لا تظهر هنا. افتح الرسائل لعرضها."}
               </p>
+            )}
+            {list.length > 0 && outsideEvents && !outsideMessages && (
+              <p className="eb-notif-more" role="status">توجد إشعارات أخرى غير مقروءة أقدم من المعاينة.</p>
             )}
 
             {list.length > 0 && (
               <ul className="eb-notif-list" aria-label={unreadInList ? "أحدث الإشعارات، " + unreadInList + " غير مقروءة" : "أحدث الإشعارات"}>
                 {list.map(item => {
-                  const title = TITLES[item.type][item.unread ? "unread" : "read"];
-                  const sender = item.senderDisplayName && item.senderDisplayName !== "المعلم" ? item.senderDisplayName : "";
+                  const view = presentNotification(item);
+                  const title = view.title;
+                  const sender = view.sender && view.sender !== "المعلم" ? view.sender : "";
                   const time = formatNotificationTime(item.createdAt, now);
                   return (
                     <li key={item.type + ":" + item.id}>
@@ -145,10 +166,11 @@ export default function NotificationBell({ unread, items, loading, error, onOpen
                         type="button"
                         className={"eb-notif-item" + (item.unread ? " is-unread" : "")}
                         data-unread={item.unread ? "true" : "false"}
+                        data-type={item.type}
                         onClick={() => { setOpenState(false); onSelect(item); }}
                       >
-                        <span className={"eb-notif-icon is-" + item.type} aria-hidden="true">
-                          {item.type === "announcement" ? <IconMegaphone size={18} /> : <IconMail size={18} />}
+                        <span className={"eb-notif-icon is-" + item.type + (view.icon !== item.type ? " is-" + view.icon : "")} aria-hidden="true">
+                          {ICONS[view.icon]}
                         </span>
                         <span className="eb-notif-text">
                           <span className="eb-notif-row">
@@ -156,7 +178,7 @@ export default function NotificationBell({ unread, items, loading, error, onOpen
                             {item.unread ? <span className="eb-notif-new">جديد</span> : <VisuallyHidden>، مقروء</VisuallyHidden>}
                           </span>
                           {sender && <span className="eb-notif-sender">{sender}</span>}
-                          {item.preview && <span className="eb-notif-preview">{item.preview}</span>}
+                          {view.preview && <span className="eb-notif-preview">{view.preview}</span>}
                           {time && <time className="eb-notif-time" dateTime={item.createdAt}>{time}</time>}
                         </span>
                       </button>
