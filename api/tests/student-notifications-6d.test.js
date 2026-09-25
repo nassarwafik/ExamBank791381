@@ -369,12 +369,15 @@ describe("aggregation", () => {
     const times = r.jsonBody.items.map(i => Date.parse(i.createdAt));
     expect(times).toEqual([...times].sort((a, b) => b - a));
     // 120 personal events → events capped at 99+, bell capped too; the preview stays bounded.
-    for (let i = 0; i < 120; i++) await recordEvent(ctx.container, { scope: "student", studentId: S1, type: "assignment_retry_granted", dedupeKey: "bulk-" + i, data: { assignmentId: "bulk" + i, assignmentTitle: "واجب " + i } });
+    for (let i = 0; i < 120; i++) {
+      ctx.setJson("platform/assignments/bulk" + i + ".json", { assignmentId: "bulk" + i, classId: CA, status: "published", title: "واجب " + i });
+      await recordEvent(ctx.container, { scope: "student", studentId: S1, type: "assignment_retry_granted", dedupeKey: "bulk-" + i, data: { assignmentId: "bulk" + i, assignmentTitle: "واجب " + i } });
+    }
     const big = await nGet(S1);
     expect(big.jsonBody.events).toEqual({ unread: 99, capped: true });
     expect(big.jsonBody.bell).toEqual({ unread: 99, capped: true });
     expect(big.jsonBody.messages.totalUnread).toBe(1);
-    expect(big.jsonBody.items.length).toBeLessThanOrEqual(25);
+    expect(big.jsonBody.items.length).toBe(10);                                                 // the bounded preview
   }, 30000);
 
   it("dedupe: re-recording the same transition publishes nothing new; recordEventSafely never throws", async () => {
@@ -399,4 +402,89 @@ describe("aggregation", () => {
     const r = await notificationsHandler({ method: "GET", url: "https://x/api/student-notifications", headers: { get: () => null } }, { container: ctx.container, requireStudentAuth: () => ({ ok: false, response: { status: 401, jsonBody: { ok: false } } }) });
     expect(r.status).toBe(401);
   });
+});
+
+// ── Review fix (PR #186) — personal assignment events are re-validated; hidden events never starve the scan. ──
+describe("personal assignment events are re-validated against the CURRENT assignment", () => {
+  const A = "rev-assignment";
+  const seedAssignment = (over = {}) => ctx.setJson("platform/assignments/" + A + ".json", { assignmentId: A, classId: CA, status: "published", title: "العنوان الحالي", ...over });
+  const recordReview = () => recordEvent(ctx.container, { scope: "student", studentId: S1, type: "assignment_reviewed", dedupeKey: "rv-" + Math.random(), data: { assignmentId: A, assignmentTitle: "عنوان قديم مخزّن", attemptNumber: 1, becameFinal: true, scoreChanged: true, feedbackChanged: false, finalized: true, percentage: 70 } });
+  const reviewed = async () => (await eventItems(S1)).filter(i => i.type === "assignment_reviewed");
+
+  it("5. the title shown is the CURRENT assignment title, never the stored one", async () => {
+    seedAssignment();
+    await recordReview();
+    const got = await reviewed();
+    expect(got).toHaveLength(1);
+    expect(got[0].assignmentTitle).toBe("العنوان الحالي");
+    expect(JSON.stringify(await nGet(S1))).not.toContain("عنوان قديم مخزّن");
+    seedAssignment({ title: "عنوان معدّل" });
+    expect((await reviewed())[0].assignmentTitle).toBe("عنوان معدّل");
+  });
+
+  for (const [label, change] of [
+    ["1. draft", () => seedAssignment({ status: "draft" })],
+    ["2. archived", () => seedAssignment({ status: "archived" })],
+    ["3. deleted", () => ctx.store.delete("platform/assignments/" + A + ".json")],
+    ["4. the student moved to another class", () => ctx.setJson("platform/users/" + S1 + ".json", { ...ctx.getJson("platform/users/" + S1 + ".json"), classId: CB })]
+  ]) {
+    it(label + " → the personal review disappears: not shown, not counted, not acknowledgeable", async () => {
+      seedAssignment();
+      await recordReview();
+      const before = await reviewed();
+      expect(before).toHaveLength(1);
+      expect((await nGet(S1, "?view=unread")).jsonBody.events.unread).toBe(1);
+      change();
+      expect(await reviewed()).toEqual([]);
+      const counts = (await nGet(S1, "?view=unread")).jsonBody;
+      expect(counts.events).toEqual({ unread: 0, capped: false });
+      expect(counts.bell).toEqual({ unread: 0, capped: false });
+      // 6. an old / forged acknowledgement of the no-longer-valid event is refused with no write
+      const tag = everything();
+      expect((await nPost(S1, { action: "markEventRead", eventId: before[0].id })).status).toBe(400);
+      expect(everything()).toBe(tag);
+    });
+  }
+
+  it("every personal assignment type is re-validated (deadline / reopen / retry / attempt time); recognition is not", async () => {
+    seedAssignment({ status: "draft" });
+    for (const [type, extra] of [["assignment_deadline_extended", { dueAt: iso(Date.now() + MIN) }], ["assignment_reopened", {}], ["assignment_retry_granted", {}], ["attempt_time_extended", { attemptNumber: 1 }]]) {
+      await recordEvent(ctx.container, { scope: "student", studentId: S1, type, dedupeKey: "t-" + type, data: { assignmentId: A, assignmentTitle: "قديم", ...extra } });
+    }
+    await recordEvent(ctx.container, { scope: "student", studentId: S1, type: "teacher_note", dedupeKey: "note", data: { postId: "p1", notePreview: "ملاحظة" } });
+    expect(await types(S1)).toEqual(["teacher_note"]);
+    seedAssignment();
+    expect((await types(S1)).sort()).toEqual(["assignment_deadline_extended", "assignment_reopened", "assignment_retry_granted", "attempt_time_extended", "teacher_note"]);
+  });
+});
+
+describe("hidden events never starve the visible scan / preview limit", () => {
+  it("7/10. more than 150 newer hidden events do not hide an older valid unread one, and never count", async () => {
+    ctx.setJson("platform/assignments/valid.json", { assignmentId: "valid", classId: CA, status: "published", title: "الواجب الصالح" });
+    ctx.setJson("platform/assignments/hidden.json", { assignmentId: "hidden", classId: CA, status: "draft", title: "مخفي" });
+    await recordEvent(ctx.container, { scope: "student", studentId: S1, type: "assignment_retry_granted", dedupeKey: "old-valid", data: { assignmentId: "valid", assignmentTitle: "x" } });
+    for (let i = 0; i < 200; i++) await recordEvent(ctx.container, { scope: "student", studentId: S1, type: "assignment_retry_granted", dedupeKey: "hidden-" + i, data: { assignmentId: "hidden", assignmentTitle: "مخفي" } });
+    const r = await nGet(S1);
+    expect(r.jsonBody.items.map(i => i.assignmentTitle)).toEqual(["الواجب الصالح"]);
+    expect(r.jsonBody.events).toEqual({ unread: 1, capped: false });
+    expect(r.jsonBody.bell).toEqual({ unread: 1, capped: false });
+    expect((await nGet(S1, "?view=unread")).jsonBody.events).toEqual({ unread: 1, capped: false });
+    expect(JSON.stringify(r.jsonBody)).not.toContain("مخفي");
+    // …and it can still be acknowledged.
+    expect((await nPost(S1, { action: "markEventRead", eventId: r.jsonBody.items[0].id })).jsonBody.events).toEqual({ unread: 0, capped: false });
+  }, 60000);
+
+  it("8/9. 30 valid notifications: the preview shows the newest 10, the bell still reports all 30", async () => {
+    for (let i = 0; i < 30; i++) {
+      tick();
+      ctx.setJson("platform/assignments/v" + i + ".json", { assignmentId: "v" + i, classId: CA, status: "published", title: "واجب " + i });
+      await recordEvent(ctx.container, { scope: "student", studentId: S1, type: "assignment_retry_granted", dedupeKey: "v-" + i, data: { assignmentId: "v" + i, assignmentTitle: "x" } });
+    }
+    const r = await nGet(S1);
+    expect(r.jsonBody.items).toHaveLength(10);
+    expect(r.jsonBody.items.map(i => i.assignmentTitle)).toEqual(Array.from({ length: 10 }, (_, k) => "واجب " + (29 - k)));
+    expect(r.jsonBody.events).toEqual({ unread: 30, capped: false });
+    expect(r.jsonBody.bell).toEqual({ unread: 30, capped: false });
+    expect((await nGet(S1, "?view=unread")).jsonBody.bell).toEqual({ unread: 30, capped: false });
+  }, 30000);
 });

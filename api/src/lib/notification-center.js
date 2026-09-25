@@ -11,13 +11,18 @@
 //     archived / deleted assignment silently drops out — its title is never shown and it never counts unread);
 //   • a module event is shown only while the module is still published for the class (classCanSeeLearningModule); its
 //     titles come from the canonical registry at read time, so a module hidden again never leaks its title;
-//   • personal events belong to this student alone (the stream is keyed by the persisted student id).
+//   • personal events belong to this student alone (the stream is keyed by the persisted student id); a personal
+//     ASSIGNMENT event is re-validated exactly like a class one (published, in the student's CURRENT class — so a student
+//     who moved class stops seeing it); recognition events (reaction / note) are the post owner's own.
 // A class event created before the student's account existed, or older than CLASS_UNREAD_WINDOW_DAYS, never counts as
 // unread (a student moved into a class does not inherit its whole history as "new"); it may still appear as read.
 //
 // COST per poll (?view=unread): the Phase 5D message summary (2 listings + unread candidates) + 1 read-state doc +
-// 2 event-stream listings + at most EVENT_SCAN_LIMIT unread candidates per stream (in batches, stopping past 99) + one
-// assignment doc per DISTINCT assignment among the class candidates (cached per request). No user/class/assignment scan.
+// 2 event-stream listings + the UNREAD candidates of each stream classified newest first in batches of EVENT_BATCH,
+// stopping once the visible count is past 99 (typical: a handful) — hidden events never stop the scan early, the hard
+// safety bound is EVENT_SCAN_LIMIT classified docs per stream — + one assignment doc per DISTINCT assignment among the
+// classified candidates (cached per request). The preview (?view=notifications) scans newest first until CENTER_LIMIT
+// visible events per stream, same hard bound. No user/class/assignment scan.
 const { downloadJsonOrNull } = require("./platform-storage");
 const { listStreamIds, combineCounts, UNREAD_DISPLAY_CAP } = require("./message-read-state");
 const { classCanSeeLearningModule } = require("./class-learning-materials");
@@ -26,8 +31,13 @@ const { normalizeClassStatus } = require("./class-lifecycle");
 const { recentNotifications, studentStreams, loadStreamMarkers, unreadSummary } = require("./student-notifications");
 const { classEventPrefix, studentEventPrefix, normalizeStoredEvent, loadEventReadState, isPositionRead, eventPosition, loadEventDocs } = require("./notification-events");
 
-const CENTER_LIMIT = 20;
-const EVENT_SCAN_LIMIT = 150;
+// The bell preview: the newest CENTER_LIMIT VISIBLE unified notifications (product decision: 10).
+const CENTER_LIMIT = 10;
+// Hard safety bound on event documents CLASSIFIED per stream per request. Hidden / no-longer-valid events do NOT consume
+// the visible-result budget (the preview keeps scanning older events until it has CENTER_LIMIT visible ones; a count
+// keeps scanning until it is past the 99 display cap) — this bound only stops a pathological history from turning a
+// poll into an all-history read. Read events are skipped without a download when counting.
+const EVENT_SCAN_LIMIT = 1000;
 const EVENT_BATCH = 20;
 const CLASS_UNREAD_WINDOW_DAYS = 30;
 const AP = "platform/assignments/";
@@ -79,18 +89,22 @@ async function projectEvent(container, ctx, stream, ev, unread, deps) {
       if (!course || !mod) return null;
       return { ...base, courseId: ev.courseId, courseTitle: String(course.title || ""), moduleId: ev.moduleId, moduleTitle: String(mod.title || "") };
     }
-    const a = await assignmentOf(container, ctx, ev.assignmentId, deps);
-    if (!a || a.status !== "published" || String(a.classId || "") !== ctx.classId) return null;
-    return { ...base, assignmentId: ev.assignmentId, assignmentTitle: String(a.title || ev.assignmentTitle || ""), ...(ev.type === "assignment_deadline_extended" ? { dueAt: ev.dueAt } : {}) };
   }
+  // Recognition events belong to the post's owner (their personal stream); they are not assignment events.
+  if (ev.type === "teacher_reaction") return { ...base, postId: ev.postId, reaction: ev.reaction };
+  if (ev.type === "teacher_note") return { ...base, postId: ev.postId, notePreview: ev.notePreview };
+  // EVERY assignment event — class-wide or personal — is re-validated against the CURRENT assignment: it must exist, be
+  // published, and belong to the student's CURRENT class (a student who moved class no longer sees the old class's
+  // assignment notifications). The title shown is the current authoritative title, never the stored one.
+  const a = await assignmentOf(container, ctx, ev.assignmentId, deps);
+  if (!a || a.status !== "published" || !ctx.classId || String(a.classId || "") !== ctx.classId) return null;
+  const assignment = { assignmentId: ev.assignmentId, assignmentTitle: String(a.title || "") };
   switch (ev.type) {
-    case "teacher_reaction": return { ...base, postId: ev.postId, reaction: ev.reaction };
-    case "teacher_note": return { ...base, postId: ev.postId, notePreview: ev.notePreview };
-    case "assignment_reviewed": return { ...base, assignmentId: ev.assignmentId, assignmentTitle: ev.assignmentTitle, becameFinal: ev.becameFinal, scoreChanged: ev.scoreChanged, feedbackChanged: ev.feedbackChanged, finalized: ev.finalized, percentage: ev.percentage };
+    case "assignment_reviewed": return { ...base, ...assignment, becameFinal: ev.becameFinal, scoreChanged: ev.scoreChanged, feedbackChanged: ev.feedbackChanged, finalized: ev.finalized, percentage: ev.percentage };
     case "assignment_deadline_extended":
-    case "assignment_reopened": return { ...base, assignmentId: ev.assignmentId, assignmentTitle: ev.assignmentTitle, dueAt: ev.dueAt };
-    case "attempt_time_extended": return { ...base, assignmentId: ev.assignmentId, assignmentTitle: ev.assignmentTitle, attemptNumber: ev.attemptNumber };
-    default: return { ...base, assignmentId: ev.assignmentId, assignmentTitle: ev.assignmentTitle };
+    case "assignment_reopened": return { ...base, ...assignment, dueAt: ev.dueAt };
+    case "attempt_time_extended": return { ...base, ...assignment, attemptNumber: ev.attemptNumber };
+    default: return { ...base, ...assignment };
   }
 }
 
@@ -114,27 +128,36 @@ function countsUnread(ctx, stream, state, id, ev) {
 }
 function streamState(readState, stream) { return stream.scope === "student" ? readState.personal : (readState.classes[stream.key] || { through: 0, read: [] }); }
 
-/** Unread non-message events of one stream (newest candidates first, bounded, stopping once past the display cap). */
+/**
+ * Unread VISIBLE non-message events of one stream. Read events are skipped without a download; the unread candidates are
+ * classified newest first in batches and a hidden / invalid one simply does not count — scanning continues until the
+ * count is past the 99 display cap or the candidates are exhausted (hard bound: EVENT_SCAN_LIMIT classified per stream).
+ */
 async function countStream(container, ctx, stream, readState, ids, deps) {
   const state = streamState(readState, stream);
-  const candidates = ids.filter(id => !isPositionRead(state, eventPosition(id, stream.prefix))).reverse().slice(0, EVENT_SCAN_LIMIT);
+  const candidates = ids.filter(id => !isPositionRead(state, eventPosition(id, stream.prefix))).reverse();
+  const bound = Math.min(candidates.length, EVENT_SCAN_LIMIT);
   let count = 0;
-  for (let i = 0; i < candidates.length && count <= UNREAD_DISPLAY_CAP; i += EVENT_BATCH) {
-    for (const { id, ev } of await eventsOf(container, ctx, stream, candidates.slice(i, i + EVENT_BATCH), deps)) {
+  for (let i = 0; i < bound && count <= UNREAD_DISPLAY_CAP; i += EVENT_BATCH) {
+    for (const { id, ev } of await eventsOf(container, ctx, stream, candidates.slice(i, Math.min(i + EVENT_BATCH, bound)), deps)) {
       if (ev && countsUnread(ctx, stream, state, id, ev) && await projectEvent(container, ctx, stream, ev, true, deps)) count++;
     }
   }
-  // At most EVENT_SCAN_LIMIT unread candidates are classified per stream per request (> the 99 display cap).
   return count > UNREAD_DISPLAY_CAP ? { unread: UNREAD_DISPLAY_CAP, capped: true } : { unread: count, capped: false };
 }
 
-/** The newest `limit` VISIBLE events of one stream (read or unread), scanning a bounded window. */
+/**
+ * The newest `limit` VISIBLE events of one stream (read or unread). Hidden / invalid events never take a slot: older
+ * events keep being scanned in batches until `limit` visible ones are found or the stream (hard bound EVENT_SCAN_LIMIT
+ * classified per stream) is exhausted.
+ */
 async function recentStream(container, ctx, stream, readState, ids, limit, deps) {
   const state = streamState(readState, stream);
-  const newest = ids.slice().reverse().slice(0, EVENT_SCAN_LIMIT);
+  const newest = ids.slice().reverse();
+  const bound = Math.min(newest.length, EVENT_SCAN_LIMIT);
   const out = [];
-  for (let i = 0; i < newest.length && out.length < limit; i += EVENT_BATCH) {
-    for (const { id, ev } of await eventsOf(container, ctx, stream, newest.slice(i, i + EVENT_BATCH), deps)) {
+  for (let i = 0; i < bound && out.length < limit; i += EVENT_BATCH) {
+    for (const { id, ev } of await eventsOf(container, ctx, stream, newest.slice(i, Math.min(i + EVENT_BATCH, bound)), deps)) {
       if (!ev || out.length >= limit) continue;
       const item = await projectEvent(container, ctx, stream, ev, countsUnread(ctx, stream, state, id, ev), deps);
       if (item) out.push({ item, position: eventPosition(id, stream.prefix) });
