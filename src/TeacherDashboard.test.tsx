@@ -63,7 +63,7 @@ const REVIEW = { ok: true, assignment: { assignmentId: "a1", title: "واجب 1"
 
 type Call = { url: string; init?: RequestInit };
 const res = (status: number, body: unknown) => Promise.resolve({ status, ok: status >= 200 && status < 300, json: async () => body } as Response);
-function installFetch(overrides: { analytics?: () => unknown; analyticsStatus?: number; feed?: unknown } = {}) {
+function installFetch(overrides: { analytics?: () => unknown; analyticsStatus?: number; feed?: unknown; feedGet?: (url: string) => Promise<Response> } = {}) {
   const calls: Call[] = [];
   const fn = vi.fn((input: RequestInfo | URL, init?: RequestInit) => {
     const url = String(input); calls.push({ url, init });
@@ -71,6 +71,7 @@ function installFetch(overrides: { analytics?: () => unknown; analyticsStatus?: 
     if (url.startsWith("/api/teacher-analytics")) return res(overrides.analyticsStatus ?? 200, overrides.analyticsStatus ? { ok: false, error: "فشل التحميل" } : (overrides.analytics ?? analyticsFixture)());
     if (url.startsWith("/api/teacher-achievement-feed")) {
       if (init?.method === "POST") { const body = JSON.parse(String(init.body)); return res(200, body.action === "react" ? { ok: true, teacherReaction: body.reaction } : { ok: true, teacherNote: body.note }); }
+      if (overrides.feedGet) return overrides.feedGet(url);
       return res(200, overrides.feed ?? { ok: true, posts: [] });
     }
     if (url.startsWith("/api/assignment-results")) { const id = new URL("http://x" + url).searchParams.get("assignmentId") || "a1"; return res(200, { ...RESULTS, assignment: { ...RESULTS.assignment, assignmentId: id, title: "واجب " + id.slice(1) } }); }
@@ -363,5 +364,149 @@ describe("UX-3 dashboard — states and source guards", () => {
     expect(src).not.toMatch(/from "\.\/ui\/Modal"/);
     // the four locked empty strings
     for (const s of ["لا توجد تسليمات بانتظار التصحيح", "لا توجد حالات عاجلة", "لا توجد تسليمات ناقصة", "جميع الطلاب سجّلوا الدخول"]) expect(src).toContain(s);
+  });
+});
+
+describe("achievements follow the dashboard scope (class / class + student), server-filtered, stale-safe", () => {
+  const feedPost = (postId: string, classId: string, name: string, className: string) => ({ postId, classId, className, studentDisplayName: name, assignmentTitle: "واجب", tier: "gold", createdAt: "2026-09-01T00:00:00.000Z", reactionCounts: { heart: 0, clap: 0, cheer: 0, fire: 0 }, teacherReaction: null, teacherNote: "" });
+  const A1 = feedPost("pA1", "c1", "سارة خالد", "الحادي عشر"), A2 = feedPost("pA2", "c1", "عمر سعيد", "الحادي عشر"), B1 = feedPost("pB1", "c2", "ليان أحمد", "العاشر");
+  // What the (server-filtered) endpoint returns for each scope.
+  const SERVER: Record<string, unknown[]> = { "": [A1, A2, B1], "classId=c1": [A1, A2], "classId=c2": [B1], "classId=c1&studentId=u1": [A1], "classId=c1&studentId=u2": [A2] };
+  const queryOf = (url: string) => url.split("?")[1] ?? "";
+  type Deferred = { resolve: () => void };
+  function scopedFetch(hold: string[] = []) {
+    const pending = new Map<string, Deferred>();
+    const feedGet = (url: string) => {
+      const q = queryOf(url);
+      const answer = () => res(200, { ok: true, posts: SERVER[q] ?? [] });
+      if (!hold.includes(q)) return answer();
+      return new Promise<Response>(resolve => { pending.set(q, { resolve: () => void answer().then(resolve) }); });
+    };
+    return { feedGet, release: (q: string) => pending.get(q)!.resolve(), isPending: (q: string) => pending.has(q) };
+  }
+  const feedGets = (calls: Call[]) => calls.filter(c => c.url.startsWith("/api/teacher-achievement-feed") && c.init?.method !== "POST").map(c => c.url);
+  const section = () => heading2(/^إنجازات الطلاب الأخيرة/).closest("section")!;
+  const names = () => Array.from(section().querySelectorAll(".achievement-notify-item")).map(el => el.textContent || "").map(t => ["سارة خالد", "عمر سعيد", "ليان أحمد"].find(n => t.includes(n)));
+  const count = () => heading2(/^إنجازات الطلاب الأخيرة/).textContent!.replace("إنجازات الطلاب الأخيرة", "").trim();
+
+  it("no scope → every class (unchanged first request); class c1 → ?classId=c1 and only c1; class c2 → only c2", async () => {
+    const f = scopedFetch();
+    const calls = await mount({ feedGet: f.feedGet });
+    await waitFor(() => expect(names()).toEqual(["سارة خالد", "عمر سعيد", "ليان أحمد"]));
+    expect(feedGets(calls)).toEqual(["/api/teacher-achievement-feed"]);
+    fireEvent.change(screen.getByLabelText("الصف"), { target: { value: "c1" } });
+    await waitFor(() => expect(names()).toEqual(["سارة خالد", "عمر سعيد"]));
+    expect(feedGets(calls).at(-1)).toBe("/api/teacher-achievement-feed?classId=c1");
+    expect(count()).toBe("2");
+    fireEvent.change(screen.getByLabelText("الصف"), { target: { value: "c2" } });
+    await waitFor(() => expect(names()).toEqual(["ليان أحمد"]));
+    expect(feedGets(calls).at(-1)).toBe("/api/teacher-achievement-feed?classId=c2");
+    expect(count()).toBe("1");
+    expect(section().textContent).not.toContain("سارة خالد");
+  });
+
+  it("student scope: u1 → ?classId=c1&studentId=u1 (only u1); u2 → only u2; «كل طلاب الصف» → the whole class again", async () => {
+    const f = scopedFetch();
+    const calls = await mount({ feedGet: f.feedGet });
+    fireEvent.change(screen.getByLabelText("الصف"), { target: { value: "c1" } });
+    await waitFor(() => expect(names()).toEqual(["سارة خالد", "عمر سعيد"]));
+    fireEvent.change(await screen.findByLabelText("الطالب"), { target: { value: "u1" } });
+    await waitFor(() => expect(names()).toEqual(["سارة خالد"]));
+    expect(feedGets(calls).at(-1)).toBe("/api/teacher-achievement-feed?classId=c1&studentId=u1");
+    fireEvent.change(screen.getByLabelText("الطالب"), { target: { value: "u2" } });
+    await waitFor(() => expect(names()).toEqual(["عمر سعيد"]));
+    expect(feedGets(calls).at(-1)).toBe("/api/teacher-achievement-feed?classId=c1&studentId=u2");
+    fireEvent.change(screen.getByLabelText("الطالب"), { target: { value: "" } });
+    await waitFor(() => expect(names()).toEqual(["سارة خالد", "عمر سعيد"]));
+    expect(feedGets(calls).at(-1)).toBe("/api/teacher-achievement-feed?classId=c1");
+  });
+
+  it("changing the class from a student scope drops the student (selectClass) and loads the new class", async () => {
+    const f = scopedFetch();
+    const calls = await mount({ feedGet: f.feedGet });
+    fireEvent.change(screen.getByLabelText("الصف"), { target: { value: "c1" } });
+    fireEvent.change(await screen.findByLabelText("الطالب"), { target: { value: "u1" } });
+    await waitFor(() => expect(names()).toEqual(["سارة خالد"]));
+    fireEvent.change(screen.getByLabelText("الصف"), { target: { value: "c2" } });
+    await waitFor(() => expect(names()).toEqual(["ليان أحمد"]));
+    expect(feedGets(calls).at(-1)).toBe("/api/teacher-achievement-feed?classId=c2");
+  });
+
+  it("the range buttons do not reload achievements (range stays analytics-only)", async () => {
+    const f = scopedFetch();
+    const calls = await mount({ feedGet: f.feedGet });
+    await waitFor(() => expect(names()).toHaveLength(3));
+    const n = feedGets(calls).length;
+    fireEvent.click(within(screen.getByRole("group", { name: "الفترة" })).getByRole("button", { name: "30 يومًا" }));
+    await waitFor(() => expect(analyticsCalls(calls).at(-1)?.url).toMatch(/from=/));
+    expect(feedGets(calls)).toHaveLength(n);
+  });
+
+  it("a scope with no achievements shows «لا توجد إنجازات بعد.» and never another scope's posts", async () => {
+    const empty = { ...SERVER };
+    const calls = await mount({ feedGet: url => res(200, { ok: true, posts: queryOf(url) === "classId=c2" ? [] : empty[queryOf(url)] ?? [] }) });
+    await waitFor(() => expect(names()).toHaveLength(3));
+    fireEvent.change(screen.getByLabelText("الصف"), { target: { value: "c2" } });
+    await waitFor(() => expect(section().textContent).toContain("لا توجد إنجازات بعد."));
+    expect(names()).toEqual([]);
+    expect(count()).toBe("");
+    expect(feedGets(calls).at(-1)).toBe("/api/teacher-achievement-feed?classId=c2");
+  });
+
+  it("while the new scope loads, the previous scope's posts are not shown", async () => {
+    const f = scopedFetch(["classId=c1"]);
+    await mount({ feedGet: f.feedGet });
+    await waitFor(() => expect(names()).toHaveLength(3));
+    fireEvent.change(screen.getByLabelText("الصف"), { target: { value: "c1" } });
+    await waitFor(() => expect(f.isPending("classId=c1")).toBe(true));
+    expect(names()).toEqual([]);
+    expect(section().textContent).toContain("جارٍ تحميل الإنجازات...");
+    expect(section().textContent).not.toContain("لا توجد إنجازات بعد.");
+    f.release("classId=c1");
+    await waitFor(() => expect(names()).toEqual(["سارة خالد", "عمر سعيد"]));
+  });
+
+  it("STALE RESPONSE (class): A pending → switch to B → B resolves first → A resolves last → the UI stays on B", async () => {
+    const f = scopedFetch(["classId=c1"]);
+    await mount({ feedGet: f.feedGet });
+    fireEvent.change(screen.getByLabelText("الصف"), { target: { value: "c1" } });
+    await waitFor(() => expect(f.isPending("classId=c1")).toBe(true));
+    fireEvent.change(screen.getByLabelText("الصف"), { target: { value: "c2" } });
+    await waitFor(() => expect(names()).toEqual(["ليان أحمد"]));
+    f.release("classId=c1");                                           // the slow, older response lands last
+    await new Promise(r => setTimeout(r, 20));
+    expect(names()).toEqual(["ليان أحمد"]);
+    expect(count()).toBe("1");
+  });
+
+  it("STALE RESPONSE (student): u1 pending → switch to u2 → u2 shows → u1 lands last and is ignored", async () => {
+    const f = scopedFetch(["classId=c1&studentId=u1"]);
+    await mount({ feedGet: f.feedGet });
+    fireEvent.change(screen.getByLabelText("الصف"), { target: { value: "c1" } });
+    await waitFor(() => expect(names()).toEqual(["سارة خالد", "عمر سعيد"]));
+    fireEvent.change(await screen.findByLabelText("الطالب"), { target: { value: "u1" } });
+    await waitFor(() => expect(f.isPending("classId=c1&studentId=u1")).toBe(true));
+    fireEvent.change(screen.getByLabelText("الطالب"), { target: { value: "u2" } });
+    await waitFor(() => expect(names()).toEqual(["عمر سعيد"]));
+    f.release("classId=c1&studentId=u1");
+    await new Promise(r => setTimeout(r, 20));
+    expect(names()).toEqual(["عمر سعيد"]);
+  });
+
+  it("reactions and notes on a scoped list update that post in place without reloading the feed", async () => {
+    const f = scopedFetch();
+    const calls = await mount({ feedGet: f.feedGet });
+    fireEvent.change(screen.getByLabelText("الصف"), { target: { value: "c1" } });
+    await waitFor(() => expect(names()).toEqual(["سارة خالد", "عمر سعيد"]));
+    const gets = feedGets(calls).length;
+    const item = Array.from(section().querySelectorAll(".achievement-notify-item")).find(el => el.textContent!.includes("عمر سعيد")) as HTMLElement;
+    fireEvent.click(within(item).getByRole("button", { name: "أحسنت" }));
+    await waitFor(() => expect(within(item).getByRole("button", { name: "أحسنت" }).getAttribute("aria-pressed")).toBe("true"));
+    expect(JSON.parse(String(calls.filter(c => c.init?.method === "POST").at(-1)!.init?.body))).toEqual({ action: "react", classId: "c1", postId: "pA2", reaction: "clap" });
+    fireEvent.change(within(item).getByLabelText("كلمة تشجيع"), { target: { value: "ممتاز" } });
+    fireEvent.click(within(item).getByRole("button", { name: "إرسال" }));
+    await waitFor(() => expect(calls.filter(c => c.init?.method === "POST")).toHaveLength(2));
+    expect(feedGets(calls)).toHaveLength(gets);                          // no reload after react / note
+    expect(names()).toEqual(["سارة خالد", "عمر سعيد"]);
   });
 });

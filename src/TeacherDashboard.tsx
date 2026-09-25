@@ -252,11 +252,25 @@ function TeacherDashboard({token}:DashboardProps){
  const [noteDrafts,setNoteDrafts]=useState<Record<string,string>>({});
  const [noteBusy,setNoteBusy]=useState<string>("");
 
- async function loadAchievements(){
-  try{const result=await teacherApi<{ok:true;posts:AchievementPost[]}>("/api/teacher-achievement-feed");setAchievements(result.posts||[]);}
-  catch(e){setAchievementsError(e instanceof Error?e.message:"تعذر تحميل إشعارات الإنجازات.");}
+ const [achievementsLoading,setAchievementsLoading]=useState(false);
+ // Only the newest scope may apply its result: a slower response for an earlier class/student is dropped.
+ const achievementsGen=useRef(0);
+
+ // «إنجازات الطلاب الأخيرة» follows the dashboard scope (class, or class + student). The server filters BEFORE its
+ // newest-first cap, so a class's older achievements are not crowded out by other classes. `range` stays analytics-only.
+ async function loadAchievements(scope:{classId:string;studentId:string}){
+  const gen=++achievementsGen.current;
+  setAchievements([]);setAchievementsError("");setAchievementsLoading(true);   // never show the previous scope's posts
+  const params=new URLSearchParams();
+  if(scope.classId){params.set("classId",scope.classId);if(scope.studentId)params.set("studentId",scope.studentId);}
+  const query=params.toString();
+  try{
+   const result=await teacherApi<{ok:true;posts:AchievementPost[]}>("/api/teacher-achievement-feed"+(query?"?"+query:""));
+   if(gen===achievementsGen.current)setAchievements(result.posts||[]);
+  }catch(e){if(gen===achievementsGen.current)setAchievementsError(e instanceof Error?e.message:"تعذر تحميل إشعارات الإنجازات.");}
+  finally{if(gen===achievementsGen.current)setAchievementsLoading(false);}
  }
- useEffect(()=>{void loadAchievements()},[]);
+ useEffect(()=>{void loadAchievements({classId,studentId})},[classId,studentId]);
 
  async function teacherReact(post:AchievementPost,reaction:ReactionId){
   try{
@@ -479,7 +493,7 @@ function TeacherDashboard({token}:DashboardProps){
 
   <section className="eb-dash-section" aria-labelledby="eb-achievements-title">
    <SectionHeader level={2} id="eb-achievements-title" title="إنجازات الطلاب الأخيرة" count={achievements.length>0?achievements.length:undefined}/>
-   <article className="analytics-card achievement-notify-card">{achievementsError&&<div className="platform-error" role="alert">{achievementsError}</div>}<div className="achievement-notify-list">{achievements.map(post=><article key={post.postId} className="achievement-notify-item" data-event-type={eventTypeOf(post)}><AchievementIcon post={post}/><div className="achievement-notify-body"><AchievementText post={post}/><div className="achievement-reaction-row">{REACTIONS.map(r=><button key={r.id} type="button" className={"achievement-reaction"+(post.teacherReaction===r.id?" active":"")} title={r.label} aria-label={r.label} aria-pressed={post.teacherReaction===r.id} onClick={()=>void teacherReact(post,r.id)}>{r.emoji} {post.reactionCounts[r.id]>0?post.reactionCounts[r.id]:""}</button>)}</div><div className="achievement-note-row"><input type="text" aria-label="كلمة تشجيع" placeholder="اكتب كلمة تشجيع..." maxLength={200} value={noteDrafts[post.postId]??post.teacherNote} onChange={e=>setNoteDrafts(prev=>({...prev,[post.postId]:e.target.value}))}/><button type="button" onClick={()=>void saveNote(post)} disabled={noteBusy===post.postId}>{noteBusy===post.postId?"جارٍ الإرسال...":"إرسال"}</button></div></div></article>)}{!achievements.length&&<div className="analytics-empty-chart">لا توجد إنجازات بعد.</div>}</div></article>
+   <article className="analytics-card achievement-notify-card">{achievementsError&&<div className="platform-error" role="alert">{achievementsError}</div>}<div className="achievement-notify-list">{achievements.map(post=><article key={post.postId} className="achievement-notify-item" data-event-type={eventTypeOf(post)}><AchievementIcon post={post}/><div className="achievement-notify-body"><AchievementText post={post}/><div className="achievement-reaction-row">{REACTIONS.map(r=><button key={r.id} type="button" className={"achievement-reaction"+(post.teacherReaction===r.id?" active":"")} title={r.label} aria-label={r.label} aria-pressed={post.teacherReaction===r.id} onClick={()=>void teacherReact(post,r.id)}>{r.emoji} {post.reactionCounts[r.id]>0?post.reactionCounts[r.id]:""}</button>)}</div><div className="achievement-note-row"><input type="text" aria-label="كلمة تشجيع" placeholder="اكتب كلمة تشجيع..." maxLength={200} value={noteDrafts[post.postId]??post.teacherNote} onChange={e=>setNoteDrafts(prev=>({...prev,[post.postId]:e.target.value}))}/><button type="button" onClick={()=>void saveNote(post)} disabled={noteBusy===post.postId}>{noteBusy===post.postId?"جارٍ الإرسال...":"إرسال"}</button></div></div></article>)}{!achievements.length&&!achievementsLoading&&!achievementsError&&<div className="analytics-empty-chart">لا توجد إنجازات بعد.</div>}{achievementsLoading&&<div className="analytics-empty-chart" role="status">جارٍ تحميل الإنجازات...</div>}</div></article>
   </section>
 
   <section className="eb-dash-section" aria-labelledby="eb-ai-title">
