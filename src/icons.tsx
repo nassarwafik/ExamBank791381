@@ -374,6 +374,24 @@ export function IconMail(props: IconProps) {
     </svg>
   );
 }
+/* Phase 6C — the student's in-app notification center (bell) and class announcements (megaphone). */
+export function IconBell(props: IconProps) {
+  return (
+    <svg {...base(props)}>
+      <path d="M5 8.5a5 5 0 0 1 10 0c0 3.2 1.2 4.6 2 5.5H3c.8-.9 2-2.3 2-5.5Z" />
+      <path d="M8.2 16.5a2 2 0 0 0 3.6 0" />
+    </svg>
+  );
+}
+export function IconMegaphone(props: IconProps) {
+  return (
+    <svg {...base(props)}>
+      <path d="M3 8.5v3a1 1 0 0 0 1 1h2.5L14 16V4L6.5 7.5H4a1 1 0 0 0-1 1Z" />
+      <path d="M6.5 12.5 7.5 16.5" />
+      <path d="M16.5 8.5v3" />
+    </svg>
+  );
+}
 /* Points toward "back" in LTR; the shell flips it under dir="rtl" through the eb-flip-rtl class. */
 export function IconChevronBack(props: IconProps) {
   return (

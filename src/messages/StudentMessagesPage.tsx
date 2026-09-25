@@ -29,14 +29,18 @@ import "./messages.css";
  * Mark responses are ordered: every mark request gets a sequence number, and only the NEWEST mark started for its stream
  * may apply — an older request resolving later (even successfully) is ignored entirely. A response also never
  * overwrites the OTHER stream's count when a mark for that stream started after it (that newer mark owns its count).
+ * Phase 6C — `initialTab` (default "direct") lets the notification center open «إعلانات الصف» directly. It only
+ * chooses the VISIBLE tab the view opens on: the same rule then acknowledges that tab once its snapshot loaded (the
+ * other stream stays untouched until it is actually selected). The ordinary «الرسائل» entry keeps the default.
  */
-type Tab = "direct" | "announcements";
+export type StudentMessagesTab = "direct" | "announcements";
+type Tab = StudentMessagesTab;
 
-export default function StudentMessagesPage({ token, onBack, client: injected, onUnreadChange }: { token: string; onBack: () => void; client?: StudentMessagesClient; onUnreadChange?: (u: StudentUnread) => void }) {
+export default function StudentMessagesPage({ token, onBack, client: injected, onUnreadChange, initialTab = "direct" }: { token: string; onBack: () => void; client?: StudentMessagesClient; onUnreadChange?: (u: StudentUnread) => void; initialTab?: StudentMessagesTab }) {
   const client = useMemo(() => injected || createStudentMessagesClient(token), [injected, token]);
   const [data, setData] = useState<StudentMessagesData | null>(null);
   const [error, setError] = useState("");
-  const [tab, setTab] = useState<Tab>("direct");
+  const [tab, setTab] = useState<Tab>(initialTab);
   const [draft, setDraft] = useState("");
   const [sending, setSending] = useState(false);
   const [sendError, setSendError] = useState("");
@@ -46,7 +50,7 @@ export default function StudentMessagesPage({ token, onBack, client: injected, o
   const confirmed = useRef<MessageView[]>([]);
   // Phase 5D — unread counts + mark-read bookkeeping.
   const [unread, setUnread] = useState<StudentUnread | null>(null);
-  const tabRef = useRef<Tab>("direct");                      // the VISIBLE tab (set in the tab handler)
+  const tabRef = useRef<Tab>(initialTab);                    // the VISIBLE tab (set in the tab handler)
   const dataRef = useRef<StudentMessagesData | null>(null);  // the last applied GET snapshot (never locally merged state)
   const unreadGen = useRef(0);
   const alive = useRef(true);

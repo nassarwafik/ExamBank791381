@@ -197,6 +197,47 @@ export function createStudentMessagesClient(token: string): StudentMessagesClien
   };
 }
 
+/** Phase 6C — one in-app notification: a recent INCOMING message of the student's own streams (server projection). */
+export type NotificationItem = {
+  id: string;
+  type: "direct" | "announcement";
+  senderDisplayName: string;
+  preview: string;
+  createdAt: string;
+  unread: boolean;
+};
+export type StudentNotifications = { items: NotificationItem[]; unread: StudentUnread };
+
+const notificationOf = (v: unknown): NotificationItem | null => {
+  if (!v || typeof v !== "object") return null;
+  const o = v as Record<string, unknown>;
+  if (typeof o.id !== "string" || !o.id || (o.type !== "direct" && o.type !== "announcement")) return null;
+  return { id: o.id, type: o.type, senderDisplayName: String(o.senderDisplayName || ""), preview: String(o.preview || ""), createdAt: String(o.createdAt || ""), unread: o.unread === true };
+};
+
+/**
+ * Phase 6C — the notification center's read (GET /api/student-messages?view=notifications): recent incoming items plus
+ * the SAME unread summary as ?view=unread, computed by the server from the same read markers. Read-only: it never
+ * marks anything read. Throws MessagesHttpError on failure (the caller keeps its last-good data; never a logout).
+ */
+export async function fetchStudentNotifications(token: string): Promise<StudentNotifications> {
+  const r = await fetch("/api/student-messages?view=notifications", { headers: { "x-student-token": token, Authorization: "Bearer " + token } });
+  const j = await readJson(r);
+  if (!r.ok || !j.ok) fail(j, r.status, "تعذر تحميل الإشعارات.");
+  const items = (Array.isArray(j.items) ? j.items : []).map(notificationOf).filter((i): i is NotificationItem => i !== null);
+  return { items, unread: studentUnreadOf(j) };
+}
+
+/** Compact Arabic time for a notification: the time today, otherwise day + month (+ year when not this year). */
+export function formatNotificationTime(iso: string, now: Date = new Date()): string {
+  const d = new Date(iso);
+  if (!iso || Number.isNaN(d.getTime())) return "";
+  try {
+    if (d.toDateString() === now.toDateString()) return d.toLocaleTimeString("ar", { hour: "numeric", minute: "2-digit" });
+    return d.toLocaleDateString("ar", d.getFullYear() === now.getFullYear() ? { day: "numeric", month: "short" } : { day: "numeric", month: "short", year: "numeric" });
+  } catch { return d.toISOString().slice(0, 10); }
+}
+
 /** Insert a server-confirmed message into a thread (id-deduplicated, chronological by the sortable server id). */
 export function mergeMessage(list: MessageView[], message: MessageView): MessageView[] {
   if (list.some(m => m.messageId === message.messageId)) return list;
