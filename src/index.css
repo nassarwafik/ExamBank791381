@@ -24,6 +24,14 @@ body {
   min-height: 100vh;
 }
 
+/* Mobile session safety — no NATIVE pull-to-refresh / overscroll navigation on the root scroller (Android Chrome and
+   the installed PWA): an accidental downward drag must never reload the app mid-exam. Scrolling itself is unchanged
+   (no overflow / touch-action here); main.tsx applies the same guard inline at startup (pwa/pullToRefreshGuard.ts). */
+html,
+body {
+  overscroll-behavior-y: none;
+}
+
 button,
 input,
 textarea {
