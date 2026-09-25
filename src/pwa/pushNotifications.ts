@@ -9,6 +9,8 @@
 export type PushConfig = { available: boolean; publicKey: string };
 
 export interface PushClient {
+  /** A non-reversible fingerprint of the signed-in session (never the token itself); scopes the per-tab dedupe. */
+  readonly sessionKey?: string;
   getConfig(): Promise<PushConfig>;
   subscribe(subscription: PushSubscriptionJSON): Promise<void>;
   unsubscribe(endpoint: string): Promise<void>;
@@ -20,6 +22,13 @@ export class PushHttpError extends Error {
   constructor(message: string, status: number, code = "") { super(message); this.status = status; this.code = code; }
 }
 
+/** FNV-1a (32-bit) of the token: enough to tell sessions apart in memory, and the token itself is not kept. */
+export function sessionFingerprint(token: string): string {
+  let h = 0x811c9dc5;
+  for (let i = 0; i < token.length; i++) { h ^= token.charCodeAt(i); h = Math.imul(h, 0x01000193) >>> 0; }
+  return h.toString(16).padStart(8, "0") + ":" + token.length.toString(36);
+}
+
 export function createPushClient(token: string): PushClient {
   const headers = { "x-student-token": token, Authorization: "Bearer " + token, "content-type": "application/json" };
   const post = async (body: unknown) => {
@@ -28,6 +37,7 @@ export function createPushClient(token: string): PushClient {
     if (!r.ok || !j.ok) throw new PushHttpError(j.error || "تعذر حفظ إعداد الإشعارات.", r.status, j.code || "");
   };
   return {
+    sessionKey: sessionFingerprint(token),
     async getConfig() {
       const r = await fetch("/api/student-push", { headers });
       const j = await r.json().catch(() => ({})) as { ok?: boolean; available?: boolean; publicKey?: string };
@@ -84,8 +94,11 @@ async function readyRegistration(win: Window, ms = 8000): Promise<ServiceWorkerR
   } catch { return null; } finally { if (timer) clearTimeout(timer); }
 }
 
-// One re-registration per endpoint per page session (React StrictMode mounts effects twice).
+// One re-registration per (signed-in session, endpoint) per page lifetime: React StrictMode / remounts do not POST
+// again, but a DIFFERENT student signing in on the same tab (logout does not reload the page) registers the device
+// for themself. Keyed by a session fingerprint — the token is never stored here.
 const synced = new Set<string>();
+const syncKey = (client: PushClient, endpoint: string) => (client.sessionKey || "") + "|" + endpoint;
 export function __resetPushSyncForTests() { synced.clear(); }
 
 /**
@@ -99,9 +112,10 @@ export async function syncExistingPush(client: PushClient, win: Window = window)
   if (!sub) return false;
   const json = sub.toJSON();
   if (!json.endpoint) return false;
-  if (!synced.has(json.endpoint)) {
+  const key = syncKey(client, json.endpoint);
+  if (!synced.has(key)) {
     await client.subscribe(json);
-    synced.add(json.endpoint);
+    synced.add(key);
   }
   return true;
 }
@@ -135,7 +149,7 @@ export async function enableMessagePush(client: PushClient, config: PushConfig, 
     if (!sub) sub = await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: key as BufferSource });
     const json = sub.toJSON();
     await client.subscribe(json);
-    if (json.endpoint) synced.add(json.endpoint);
+    if (json.endpoint) synced.add(syncKey(client, json.endpoint));
     return "enabled";
   } catch {
     return "error";

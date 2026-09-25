@@ -4,7 +4,8 @@
 //   POST /api/student-push { action: "unsubscribe", endpoint }     → remove THIS browser's subscription
 // The student is ALWAYS the verified session subject (requireActiveStudentSession): a body studentId / userId is never
 // read, so a student can only add or remove their OWN subscriptions and can never list anyone's. The subscription must
-// be a real browser push endpoint (https on a known push service) with valid P-256 keys. When the server has no VAPID
+// be a real browser push endpoint (https on a known push service, stored in its canonical form) with valid P-256 keys.
+// Ownership changes are compare-and-set guarded (push-subscriptions). When the server has no VAPID
 // configuration the feature reports available:false and subscribe answers 503 — messaging is unaffected either way.
 const { app } = require("@azure/functions");
 const { withObservability } = require("../lib/observability");

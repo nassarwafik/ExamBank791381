@@ -83,7 +83,8 @@ describe("student-push API — subscriptions belong to the authenticated student
     expect(r.jsonBody).toEqual({ ok: true, subscribed: true, created: true });
     expect(stored(ctx, S1)).toHaveLength(1);
     expect(stored(ctx, S1)[0]).toMatchObject({ id: endpointId(sub(1).endpoint), endpoint: sub(1).endpoint, keys: sub(1).keys });
-    expect(Object.keys(stored(ctx, S1)[0]).sort()).toEqual(["createdAt", "endpoint", "id", "keys", "updatedAt"]);   // nothing else stored
+    expect(Object.keys(stored(ctx, S1)[0]).sort()).toEqual(["claim", "createdAt", "endpoint", "id", "keys", "updatedAt"]);   // nothing else stored
+    expect(stored(ctx, S1)[0].claim).toBe(ctx.getJson(endpointDocName(endpointId(sub(1).endpoint))).claim);             // registration claim on both
     expect(owner(ctx, sub(1).endpoint)).toBe(S1);
     expect(ctx.getJson(studentDocName(S2))).toBeNull();
   });
@@ -113,7 +114,7 @@ describe("student-push API — subscriptions belong to the authenticated student
     // The student can remove their own.
     expect((await pPost(SESSION(ctx, S1), { action: "unsubscribe", endpoint: sub(1).endpoint })).jsonBody).toEqual({ ok: true, removed: 1 });
     expect(stored(ctx, S1)).toEqual([]);
-    expect(ctx.has(endpointDocName(endpointId(sub(1).endpoint)))).toBe(false);
+    expect(owner(ctx, sub(1).endpoint)).toBe("");                         // owner record RELEASED (CAS), never blindly deleted
   });
 
   it("3. the same subscription registered again (refresh / StrictMode / another tab) is stored ONCE", async () => {
@@ -251,8 +252,8 @@ describe("sendDirect → push (the only trigger)", () => {
     const deps = TEACHER(ctx, { pushConfig: () => CONFIG, sendNotification: gone.send });
     expect((await tPost(deps, { action: "sendDirect", studentId: S1, body: "x" })).status).toBe(200);
     expect(stored(ctx, S1).map(s => s.endpoint)).toEqual([sub(3).endpoint]);
-    expect(ctx.has(endpointDocName(endpointId(sub(1).endpoint)))).toBe(false);
-    expect(ctx.has(endpointDocName(endpointId(sub(2).endpoint)))).toBe(false);
+    expect(owner(ctx, sub(1).endpoint)).toBe("");                         // released, so it can never be delivered again
+    expect(owner(ctx, sub(2).endpoint)).toBe("");
     gone.send.mockClear();
     await tPost(deps, { action: "sendDirect", studentId: S1, body: "y" });
     expect(gone.send).toHaveBeenCalledTimes(1);
@@ -361,5 +362,51 @@ describe("pushConfig — environment only, fail-closed", () => {
     expect(pushConfig({ ...ok, WEB_PUSH_VAPID_PUBLIC_KEY: "abc" }).reason).toBe("invalidPublicKey");
     expect(pushConfig({ ...ok, WEB_PUSH_VAPID_PRIVATE_KEY: DUMMY_PUBLIC }).reason).toBe("invalidPrivateKey");
     expect(pushConfig({ ...ok, WEB_PUSH_VAPID_PRIVATE_KEY: "" }).reason).toBe("unconfigured");
+  });
+});
+
+describe("trigger order — the push can only follow a SUCCESSFUL save", () => {
+  const storage = createRequire(import.meta.url)("../src/lib/platform-storage.js");
+
+  it("the notifier runs strictly after the message blob is committed, and sees it persisted", async () => {
+    const ctx = createMemoryContainer(seed());
+    const events = [];
+    let seenAtNotify = null;
+    const deps = TEACHER(ctx, {
+      uploadJsonConditional: async (c, name, value, etag) => {
+        const r = await storage.uploadJsonConditional(c, name, value, etag);
+        if (name.startsWith(directPrefix(S1))) events.push("saved");
+        return r;
+      },
+      notifyStudentOfNewMessage: async (_c, studentId) => {
+        events.push("notify");
+        seenAtNotify = ctx.names(directPrefix(studentId)).map(n => ctx.getJson(n).body);
+        return { status: "sent" };
+      }
+    });
+    const r = await tPost(deps, { action: "sendDirect", studentId: S1, body: "محفوظة أولًا" });
+    expect(r.status).toBe(200);
+    expect(events).toEqual(["saved", "notify"]);
+    expect(seenAtNotify).toEqual(["محفوظة أولًا"]);
+  });
+
+  it("if the save fails, the notifier is NEVER invoked (and nothing is persisted)", async () => {
+    const ctx = createMemoryContainer(seed());
+    const notify = vi.fn(async () => ({ status: "sent" }));
+    for (const failure of [new Error("storage unavailable"), Object.assign(new Error("conflict"), { statusCode: 409 })]) {
+      const deps = TEACHER(ctx, { uploadJsonConditional: async () => { throw failure; }, notifyStudentOfNewMessage: notify });
+      const r = await tPost(deps, { action: "sendDirect", studentId: S1, body: "x" });
+      expect(r.status).toBe(500);
+    }
+    expect(notify).not.toHaveBeenCalled();
+    expect(ctx.names(directPrefix(S1))).toEqual([]);
+  });
+
+  it("validation / read-only failures never notify", async () => {
+    const ctx = createMemoryContainer(seed({ ["platform/users/" + S2 + ".json"]: student(S2, { archived: true }) }));
+    const notify = vi.fn(async () => ({ status: "sent" }));
+    expect((await tPost(TEACHER(ctx, { notifyStudentOfNewMessage: notify }), { action: "sendDirect", studentId: S1, body: "" })).status).toBe(400);
+    expect((await tPost(TEACHER(ctx, { notifyStudentOfNewMessage: notify }), { action: "sendDirect", studentId: S2, body: "x" })).status).toBe(403);
+    expect(notify).not.toHaveBeenCalled();
   });
 });

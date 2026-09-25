@@ -10,7 +10,7 @@ const ORIGIN = "https://white-grass-0ce642c10.7.azurestaticapps.net";
 const SCOPE = ORIGIN + "/";
 
 type Handler = (event: Record<string, unknown>) => void;
-type Client = { url: string; focus: ReturnType<typeof vi.fn> };
+type Client = { url: string; focus: ReturnType<typeof vi.fn>; navigate?: ReturnType<typeof vi.fn>; postMessage?: ReturnType<typeof vi.fn> };
 
 function loadWorker(opts: { windows?: Client[]; noOpenWindow?: boolean } = {}) {
   const handlers: Record<string, Handler[]> = {};
@@ -100,6 +100,18 @@ describe("service worker — notification click (Phase 6B)", () => {
     expect(app.focus).toHaveBeenCalledTimes(1);
     expect(other.focus).not.toHaveBeenCalled();
     expect(w.openWindow).not.toHaveBeenCalled();
+  });
+
+  it("a student solving an exam: the open ExamBank window is ONLY focused — never navigated, messaged or duplicated", async () => {
+    const exam: Client = { url: SCOPE + "#exam", focus: vi.fn(async () => {}), navigate: vi.fn(async () => {}), postMessage: vi.fn() };
+    const w = loadWorker({ windows: [exam] });
+    // The notification points somewhere else in the app on purpose: even then the open window must not be moved.
+    await w.dispatch("notificationclick", { notification: notification(SCOPE + "?view=messages") });
+    expect(exam.focus).toHaveBeenCalledTimes(1);
+    expect(exam.navigate).not.toHaveBeenCalled();
+    expect(exam.postMessage).not.toHaveBeenCalled();
+    expect(w.openWindow).not.toHaveBeenCalled();
+    expect(exam.url).toBe(SCOPE + "#exam");
   });
 
   it("no open window → opens the app (the notification's same-origin URL)", async () => {
