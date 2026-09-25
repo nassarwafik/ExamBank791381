@@ -73,7 +73,7 @@ describe("labels — Arabic only, historical values unchanged", () => {
 describe("gradebook — paused / integrity-exit rows", () => {
   const item = { assignmentId: "a1", title: "امتحان", status: "published", attemptPolicy: "pausable", maxAttempts: 1, questionCount: 1, totalMarks: 10 } as unknown as Item;
   const row = (over: Partial<StudentResult>): StudentResult => ({ studentId: "s1", studentName: "أحمد", studentCode: "S1", attemptsUsed: 0, allowedAttempts: 1, dueAtOverride: null, attempts: [], latestResult: null, timed: true, ...over });
-  const mountRows = (rows: StudentResult[]) => render(<Gradebook assignment={item} rows={rows} totalRows={rows.length} gradingOf={() => "notSubmitted"} busy={false} search="" onSearch={() => {}} filter="all" onFilter={() => {}} sort="name" onSort={() => {}} onReview={() => {}} onGrant={() => {}} onReopen={() => {}} onExtend={() => {}} onDeadline={() => {}} fmt={v => v} />);
+  const mountRows = (rows: StudentResult[]) => render(<Gradebook assignment={item} rows={rows} totalRows={rows.length} gradingOf={() => "notSubmitted"} busy={false} search="" onSearch={() => {}} filter="all" onFilter={() => {}} sort="name" onSort={() => {}} onReview={() => {}} onGrant={() => {}} onReopen={() => {}} onExtend={() => {}} onDeadline={() => {}} onEndAttempt={() => {}} fmt={v => v} />);
 
   it("a paused attempt: «متوقفة مؤقتًا» with its remaining budget, no running end time, and no timer extension offered", () => {
     mountRows([row({ attemptStatus: "paused", effectiveAttemptEndsAt: "", activeAttempt: { attemptNumber: 1, startedAt: "S", endsAt: "E", status: "paused", pausedAt: "P", pausedRemainingMs: 38 * 60000 } })]);

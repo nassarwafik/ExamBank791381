@@ -38,6 +38,7 @@ export function attemptPolicyLabel(value: unknown): string {
 export function endReasonLabel(reason?: string): string {
   if (reason === "timedOut") return "انتهى الوقت";
   if (reason === "integrityExit") return "غادر صفحة الامتحان";
+  if (reason === "teacherEnded") return "أنهى المعلم المحاولة";
   if (reason === "submitted") return "تسليم";
   return "—";
 }

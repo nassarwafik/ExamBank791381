@@ -150,11 +150,13 @@ function activeAttemptOf(submission) {
 // Normalize a completed attempt's end reason. New attempts persist endReason explicitly; a legacy
 // attempt missing it maps timedOut===true => "timedOut", otherwise "submitted". PURE — never mutates.
 function normalizeEndReason(attempt) {
-  // Phase 7A adds "integrityExit" (a strict attempt ended because the student left the exam page).
-  if (attempt && (attempt.endReason === "submitted" || attempt.endReason === "timedOut" || attempt.endReason === "integrityExit")) return attempt.endReason;
+  // Phase 7A adds "integrityExit" (a strict attempt ended because the student left the exam page); Phase 7B adds
+  // "teacherEnded" (the teacher ended the student's active attempt from the gradebook).
+  if (attempt && (attempt.endReason === "submitted" || attempt.endReason === "timedOut" || attempt.endReason === "integrityExit" || attempt.endReason === "teacherEnded")) return attempt.endReason;
   return attempt && attempt.timedOut === true ? "timedOut" : "submitted";
 }
-// Derived lifecycle status: "notStarted" | "started" | "draft" | "paused" | "submitted" | "timedOut" | "integrityExit".
+// Derived lifecycle status: "notStarted" | "started" | "draft" | "paused" | "submitted" | "timedOut" | "integrityExit" |
+// "teacherEnded".
 // An ACTIVE attempt ALWAYS wins over a historical completed result (B1 rule #15: attempt 2 active while
 // attempt 1 completed => "started"/"draft"). This is a DISPLAY value only — canStartAttempt / canWrite /
 // attemptExpired remain the authoritative authorization gates (it must never be the sole gate).
@@ -164,7 +166,7 @@ function deriveAttemptStatus(submission) {
   const attempts = Array.isArray(submission && submission.attempts) ? submission.attempts : [];
   if (!attempts.length) return "notStarted";
   const reason = normalizeEndReason(attempts[attempts.length - 1]);
-  return reason === "timedOut" || reason === "integrityExit" ? reason : "submitted";
+  return reason === "timedOut" || reason === "integrityExit" || reason === "teacherEnded" ? reason : "submitted";
 }
 
 // Full timer + attempt state for one student at nowMs. Extends attemptState() with timer fields.
