@@ -19,13 +19,14 @@ const item = (id: string, preview: string, unread = true) => ({ id: "18000000000
 const notifications = (total: number, previews: string[]) => ({ ...summary(total), items: previews.map((p, i) => item(String(10 + i), p)) });
 
 let unreadQueue: Reply[], notifQueue: Reply[], unreadDefault: Body, notifDefault: Body;
+let holdB: Promise<unknown> | null;                 // while set, the SECOND session's unread reads wait for it
 let marks: Body[];
 const tokenOf = (init?: RequestInit) => ((init?.headers || {}) as Record<string, string>)["x-student-token"] || "";
 let requests: Array<{ url: string; token: string }>;
 
 beforeEach(() => {
   (window as unknown as { scrollTo: () => void }).scrollTo = () => {};
-  unreadQueue = []; notifQueue = []; marks = []; requests = [];
+  unreadQueue = []; notifQueue = []; marks = []; requests = []; holdB = null;
   unreadDefault = summary(0); notifDefault = notifications(0, []);
   globalThis.fetch = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
     const url = String(input), method = (init?.method || "GET").toUpperCase();
@@ -36,6 +37,7 @@ beforeEach(() => {
     }
     // The queues belong to the FIRST session (tok-A); a second session (tok-B) always gets the defaults.
     const first = tokenOf(init) !== "tok-B";
+    if (!first && holdB && url.includes("view=unread")) await holdB;
     if (url.includes("view=unread")) return res(await ((first && unreadQueue.shift()) || unreadDefault));
     if (url.includes("view=notifications")) return res(await ((first && notifQueue.shift()) || notifDefault));
     if (url.includes("/api/student-messages") && method === "POST") { const b = JSON.parse(String(init?.body)); marks.push(b); return res({ ...summary(0), stream: b.stream, unread: 0, capped: false }); }
@@ -90,22 +92,78 @@ describe("notification center — stale responses never win", () => {
     expect(bellCount()).toBe("1");
   });
 
-  it("…and the reverse: a newer badge poll wins over an older preview's count (the preview's items still apply)", async () => {
+  // Review follow-up (finding 1): a preview that STARTED before a newer authoritative unread snapshot applied can never
+  // become the current cached preview — neither its count nor its items — and the next open never shows it.
+  async function stalePreviewAfterNewerPoll(pollTotal: number) {
     vi.useFakeTimers({ shouldAdvanceTime: true });
     await mount();
     const preview = deferred<Body>(), poll = deferred<Body>();
     notifQueue.push(preview.promise);
     unreadQueue.push(poll.promise);
-    fireEvent.click(bell());                                                // preview starts first
+    fireEvent.click(bell());                                                // old preview starts (M unread, count 1)
     fireEvent.click(bell());                                                // closed → the next tick is a badge poll
-    await act(async () => { await vi.advanceTimersByTimeAsync(15000); });
-    await act(async () => { poll.resolve(summary(2)); });
-    await waitFor(() => expect(bellCount()).toBe("2"));
-    await act(async () => { preview.resolve(notifications(7, ["أ", "ب"])); });
+    await act(async () => { await vi.advanceTimersByTimeAsync(15000); });   // NEWER badge poll starts
+    await act(async () => { poll.resolve(summary(pollTotal)); });
+    await waitFor(() => expect(bellCount()).toBe(pollTotal ? String(pollTotal) : ""));
+    await act(async () => { preview.resolve(notifications(1, ["M"])); });   // the old preview resolves LAST
     await flush();
-    expect(bellCount()).toBe("2");
+    expect(bellCount()).toBe(pollTotal ? String(pollTotal) : "");           // its count is rejected…
+    const fresh = deferred<Body>();
+    notifQueue.push(fresh.promise);
     fireEvent.click(bell());
-    expect(previews()).toEqual(["أ", "ب"]);
+    expect(previews()).toEqual([]);                                         // …and so are its items: never shown as current
+    expect(within(panel()).getByRole("status").textContent).toBe("جارٍ تحميل الإشعارات...");
+    return fresh;
+  }
+
+  it("A. old preview → newer poll reports a LOWER / read state → the old preview never restores its stale unread items", async () => {
+    const fresh = await stalePreviewAfterNewerPoll(0);
+    await act(async () => { fresh.resolve({ ...notifications(0, []), items: [item("30", "M", false)] }); });
+    await waitFor(() => expect(previews()).toEqual(["M"]));
+    expect(within(panel()).queryByText("جديد")).toBeNull();                 // M is read now — never «جديد»
+    expect(bellCount()).toBe("");
+  });
+
+  it("B. old preview → newer poll reports a HIGHER / new-message state → the old preview never becomes the cached preview", async () => {
+    const fresh = await stalePreviewAfterNewerPoll(3);
+    await act(async () => { fresh.resolve(notifications(3, ["ن1", "ن2", "ن3"])); });
+    await waitFor(() => expect(previews()).toEqual(["ن1", "ن2", "ن3"]));
+    expect(bellCount()).toBe("3");
+  });
+
+  it("a cached preview made stale by a newer badge snapshot is not kept as «last-good» when the next refresh fails", async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    await mount();
+    notifQueue.push(notifications(1, ["M"]));
+    fireEvent.click(bell());
+    await waitFor(() => expect(previews()).toEqual(["M"]));
+    fireEvent.click(bell());                                                // close
+    unreadQueue.push(summary(0));
+    await act(async () => { await vi.advanceTimersByTimeAsync(15000); });   // M was read elsewhere
+    await waitFor(() => expect(bellCount()).toBe(""));
+    notifQueue.push({ __status: 500, ok: false });
+    fireEvent.click(bell());
+    await waitFor(() => expect(panel().textContent).toContain("تعذر تحديث الإشعارات حاليًا."));
+    expect(previews()).toEqual([]);                                         // never the contradicting «M جديد»
+    expect(panel().textContent).not.toContain("تظهر آخر إشعارات تم تحميلها");
+  });
+
+  it("a failed badge poll never erases the (still current) cached preview", async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    await mount();
+    notifQueue.push(notifications(1, ["M"]));
+    fireEvent.click(bell());
+    await waitFor(() => expect(previews()).toEqual(["M"]));
+    fireEvent.click(bell());
+    unreadQueue.push({ __status: 500, ok: false });
+    await act(async () => { await vi.advanceTimersByTimeAsync(15000); });
+    await flush();
+    expect(bellCount()).toBe("1");
+    const next = deferred<Body>();
+    notifQueue.push(next.promise);
+    fireEvent.click(bell());
+    expect(previews()).toEqual(["M"]);                                      // last-good kept while refreshing
+    await act(async () => { next.resolve(notifications(1, ["M"])); });
   });
 
   it("opening and closing the panel during a request: no error, the result is kept for the next open, nothing is marked", async () => {
@@ -170,15 +228,17 @@ describe("notification center — stale responses never win", () => {
   it("session change while a request is in flight: the previous student's count and items never appear", async () => {
     vi.useFakeTimers({ shouldAdvanceTime: true });
     const view = await mount("tok-A");
-    const a = deferred<Body>(), aPoll = deferred<Body>();
+    const a = deferred<Body>(), aPoll = deferred<Body>(), releaseB = deferred<void>();
     unreadQueue.push(aPoll.promise);
     await act(async () => { await vi.advanceTimersByTimeAsync(15000); });   // A's badge poll in flight
     notifQueue.push(a.promise);
     fireEvent.click(bell());                                                // A's preview in flight
     expect(requests.filter(r => r.token === "tok-A" && /view=(unread|notifications)/.test(r.url)).length).toBeGreaterThanOrEqual(3);
+    holdB = releaseB.promise;                                               // B's first unread read stays pending…
     view.rerender(<StudentPortal token="tok-B" displayName="بسمة" onLogout={() => {}} />);   // same component, new session
     await screen.findByText(/مرحبًا بسمة/);
     await flush();
+    // …so A's responses land FIRST, before the new session applied anything (the dangerous order).
     await act(async () => { a.resolve(notifications(7, ["رسالة أحمد"])); aPoll.resolve(summary(7)); });
     await flush();
     expect(bellCount()).toBe("");
@@ -186,6 +246,9 @@ describe("notification center — stale responses never win", () => {
     if (bell().getAttribute("aria-expanded") !== "true") fireEvent.click(bell());
     expect(previews()).toEqual([]);
     expect(screen.queryByText("رسالة أحمد")).toBeNull();
+    await act(async () => { releaseB.resolve(); });
+    await flush();
+    expect(bellCount()).toBe("");                                          // B's own (zero) count
   });
 
   it("logout (unmount) with requests in flight: late responses are ignored without errors", async () => {

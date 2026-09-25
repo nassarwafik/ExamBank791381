@@ -171,6 +171,68 @@ describe("notification panel contents", () => {
     expect(screen.getByText("محتوى البوابة")).toBeTruthy();                   // the portal is untouched
   });
 
+  // Review follow-up (finding 2): the preview is bounded, the badge is the server's full count — the panel must never
+  // say «لا توجد إشعارات جديدة.» while the bell counts unread messages.
+  const unreadItem = (n: number): NotificationItem => ({ ...DIRECT, id: "18000000000" + (10 + n) + "-cccccccccccccccc", preview: "رسالة " + n, unread: true });
+  const OLDER = "لديك رسائل غير مقروءة أقدم من المعاينة. افتح الرسائل لعرضها.";
+  const open = () => { fireEvent.click(bell()); return panel(); };
+
+  it("F2-1. unread total 0 + no items → the normal empty state (no «more unread» notice)", () => {
+    mount({ items: [] }, { total: 0, capped: false });
+    const p = open();
+    expect(within(p).getByText("لا توجد إشعارات جديدة.")).toBeTruthy();
+    expect(p.textContent).not.toContain("غير مقروءة");
+  });
+
+  it("F2-2. unread total 1 + no items (older than the bounded preview) → NOT the empty state: the older-unread notice", () => {
+    mount({ items: [] }, { total: 1, capped: false });
+    const p = open();
+    expect(within(p).queryByText("لا توجد إشعارات جديدة.")).toBeNull();
+    expect(within(p).getByText(OLDER)).toBeTruthy();
+    expect(within(p).getByRole("button", { name: "فتح الرسائل" })).toBeTruthy();   // the way to reach them
+  });
+
+  it("F2-3. unread total 20 + 15 unread preview items → «5 more» notice", () => {
+    mount({ items: Array.from({ length: 15 }, (_, i) => unreadItem(i)) }, { total: 20, capped: false });
+    const p = open();
+    expect(within(p).getAllByRole("listitem")).toHaveLength(15);
+    expect(p.textContent).toContain("توجد رسائل غير مقروءة أخرى لا تظهر هنا (5). افتح الرسائل لعرضها.");
+    expect(within(p).queryByText("لا توجد إشعارات جديدة.")).toBeNull();
+  });
+
+  it("F2-4. a capped «99+» count: the notice claims no exact number (with and without preview items)", () => {
+    const a = mount({ items: Array.from({ length: 15 }, (_, i) => unreadItem(i)) }, { total: 99, capped: true });
+    let p = open();
+    expect(p.textContent).toContain("توجد رسائل غير مقروءة أخرى لا تظهر هنا. افتح الرسائل لعرضها.");
+    expect(p.textContent).not.toMatch(/\(\d+\)/);
+    a.unmount();
+    mount({ items: [] }, { total: 99, capped: true });
+    p = open();
+    expect(within(p).getByText(OLDER)).toBeTruthy();
+    expect(within(p).queryByText("لا توجد إشعارات جديدة.")).toBeNull();
+  });
+
+  it("F2-5. only READ historical items in the preview + unread outside it → items shown AND the «more unread» notice", () => {
+    mount({ items: [{ ...DIRECT, unread: false }, ANN] }, { total: 2, capped: false });
+    const p = open();
+    expect(within(p).getAllByRole("listitem")).toHaveLength(2);
+    expect(within(p).queryByText("جديد")).toBeNull();
+    expect(p.textContent).toContain("توجد رسائل غير مقروءة أخرى لا تظهر هنا (2).");
+  });
+
+  it("F2-6. when every unread message is in the preview, no «more» notice is shown", () => {
+    mount({ items: [DIRECT, ANN] }, { total: 1, capped: false });
+    expect(open().textContent).not.toContain("لا تظهر هنا");
+  });
+
+  it("items not loaded / dropped as stale (null) → a loading line, never a blank box or the empty state", () => {
+    mount({ items: null, loading: false }, { total: 3, capped: false });
+    const p = open();
+    expect(within(p).getByRole("status").textContent).toBe("جارٍ تحميل الإشعارات...");
+    expect(within(p).queryByText("لا توجد إشعارات جديدة.")).toBeNull();
+    expect(within(p).queryByText(OLDER)).toBeNull();
+  });
+
   it("selecting an item closes the panel and hands the item to the portal; «فتح الرسائل» opens the messages view", () => {
     const { props } = mount();
     fireEvent.click(bell());

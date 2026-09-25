@@ -62,12 +62,17 @@ export default function StudentPortal({ token, displayName, onLogout }: Props) {
   // `messagesUnread`, the one unread state of this portal.
   const [notif, setNotif] = useState<{ items: NotificationItem[] | null; loading: boolean; error: string }>({ items: null, loading: false, error: "" });
   const [notifOpen, setNotifOpen] = useState(false);
-  // Ordering of every writer of `messagesUnread` (badge poll, notification read, the Messages page's mark responses):
-  // each takes the next sequence number when it STARTS, and a result is applied only if nothing that started later
-  // has already been applied — so a slow/stale response can never resurrect an older count. `notifSeq` does the same
-  // for the preview items. `alive` drops everything after unmount (logout).
-  const unreadSeq = useRef(0), unreadApplied = useRef(0), notifSeq = useRef(0), alive = useRef(true);
+  // ONE ordering for every unread snapshot — the badge poll, the notification read (items + count from one server
+  // snapshot) and the Messages page's counts: each takes the next sequence number when it STARTS, and a snapshot is
+  // applied only if nothing that started later has already been applied. So a slow/stale response can never resurrect
+  // an older count, and a preview becomes current ONLY together with its own count: once a newer snapshot applied,
+  // an older preview (count AND items) is dropped. A newer count-only snapshot also drops the cached preview items,
+  // which it has made stale (the next open loads fresh ones; they are never shown as current meanwhile).
+  // `notifSeq` additionally invalidates in-flight previews (return from Messages, session change); `alive` drops
+  // everything after unmount (logout).
+  const unreadSeq = useRef(0), unreadApplied = useRef(0), notifSeq = useRef(0), alive = useRef(true), notifOpenRef = useRef(false);
   useEffect(() => { alive.current = true; return () => { alive.current = false; }; }, []);
+  useEffect(() => { notifOpenRef.current = notifOpen; }, [notifOpen]);
   const headers = { "x-student-token": token, Authorization: "Bearer " + token };
   const strengthDirtyRef = useRef(false);
 
@@ -104,11 +109,17 @@ export default function StudentPortal({ token, displayName, onLogout }: Props) {
       setFeed(j.posts || []); setFeedError("");
     } catch { if (!silent) setFeed([]); console.warn("[student-portal] achievement feed request failed"); }
   }
-  /** Apply a count that belongs to request `seq` — only when no later-started writer was applied already. */
-  function applyUnread(seq: number, u: { total: number; capped: boolean }) {
-    if (!alive.current || seq <= unreadApplied.current) return;
+  /**
+   * Apply the unread snapshot of request `seq` — only when no later-started snapshot was applied already. Returns
+   * whether it applied. A count-only snapshot (`withItems` false) makes the cached preview items stale → they are
+   * dropped (an in-flight newer preview still applies when it lands; loading state is left to it).
+   */
+  function applyUnread(seq: number, u: { total: number; capped: boolean }, withItems = false): boolean {
+    if (!alive.current || seq <= unreadApplied.current) return false;
     unreadApplied.current = seq;
     setMessagesUnread(u);
+    if (!withItems) setNotif(prev => (prev.items === null && !prev.error ? prev : { ...prev, items: null, error: "" }));
+    return true;
   }
   async function loadMessagesUnread() {
     const seq = ++unreadSeq.current;
@@ -129,8 +140,13 @@ export default function StudentPortal({ token, displayName, onLogout }: Props) {
     try {
       const n = await fetchStudentNotifications(token);
       if (!alive.current || mine !== notifSeq.current) return;           // a newer read (or an invalidation) owns the panel
+      if (!applyUnread(seq, { total: n.unread.totalUnread, capped: n.unread.totalCapped }, true)) {
+        // A newer authoritative snapshot applied after this read started: its items are stale and never become current.
+        setNotif(prev => ({ ...prev, loading: false }));
+        if (notifOpenRef.current) void loadNotifications();               // an open panel reloads (bounded: needs a newer writer)
+        return;
+      }
       setNotif({ items: n.items, loading: false, error: "" });
-      applyUnread(seq, { total: n.unread.totalUnread, capped: n.unread.totalCapped });
     } catch {
       if (!alive.current || mine !== notifSeq.current) return;
       setNotif(prev => ({ ...prev, loading: false, error: "تعذر تحديث الإشعارات حاليًا." }));

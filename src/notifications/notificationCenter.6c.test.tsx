@@ -74,7 +74,7 @@ const unreadReads = () => calls.filter(c => c.url.includes("view=unread"));
 const marks = () => calls.filter(c => c.method === "POST" && c.body.action === "markRead");
 async function openPanel() {
   fireEvent.click(bell());
-  await waitFor(() => expect(items().length + within(panel()).queryAllByText("لا توجد إشعارات جديدة.").length).toBeGreaterThan(0));
+  await waitFor(() => expect(items().length + panel().querySelectorAll(".eb-notif-empty").length).toBeGreaterThan(0));   // items, empty state or older-unread notice
 }
 async function seedTwoAndOne() {
   await teacherSend({ action: "sendDirect", studentId: S1, body: "راجع الواجب الثاني" });
@@ -144,7 +144,24 @@ describe("read-state integrity", () => {
     await openPanel();
     expect(items()).toHaveLength(15);                                              // a bounded preview…
     expect(bellCount()).toBe("20");                                                // …never a client-side recount
+    expect(panel().textContent).toContain("توجد رسائل غير مقروءة أخرى لا تظهر هنا (5).");   // …and the rest is announced
     expect(notificationReads().length).toBe(1);
+  });
+
+  it("F2 (real backend). an old unread message beyond the bounded preview scan: bell «1», panel says so — never «no notifications»", async () => {
+    await teacherSend({ action: "sendDirect", studentId: S1, body: "رسالة قديمة غير مقروءة" });
+    for (let i = 1; i <= 70; i++) {
+      const r = await studentApi({ method: "POST", url: "https://x/api/student-messages", headers: { get: () => null }, json: async () => ({ action: "sendDirect", body: "رد " + i }) }, { container: ctx.container, requireStudentAuth: () => ({ ok: true, user: { sub: S1, sv: 1, role: "student" } }) });
+      expect(r.status).toBe(200);
+    }
+    await mountPortal();
+    await waitFor(() => expect(bellCount()).toBe("1"));
+    await openPanel();
+    expect(items()).toHaveLength(0);
+    expect(within(panel()).queryByText("لا توجد إشعارات جديدة.")).toBeNull();
+    expect(within(panel()).getByText("لديك رسائل غير مقروءة أقدم من المعاينة. افتح الرسائل لعرضها.")).toBeTruthy();
+    fireEvent.click(within(panel()).getByRole("button", { name: "فتح الرسائل" }));
+    expect(await screen.findByText("رسالة قديمة غير مقروءة")).toBeTruthy();       // reachable through «فتح الرسائل»
   });
 
   it("20/22. opening the real tab uses the EXISTING mark-read path; back in the portal the bell shows the server's remainder", async () => {

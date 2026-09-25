@@ -74,6 +74,14 @@ export default function NotificationBell({ unread, items, loading, error, onOpen
   const now = new Date();
   const list = items || [];
   const unreadInList = list.filter(i => i.unread).length;
+  // The preview is BOUNDED (the newest messages only), the badge is the server's full count: when the authoritative
+  // count exceeds the unread items shown, more unread messages exist outside the preview (reachable via «فتح الرسائل»).
+  // A capped count ("99+") always exceeds a preview; its exact remainder is unknown, so no number is claimed then.
+  const total = unread ? unread.total : 0, capped = unread ? unread.capped : false;
+  const outside = items !== null && (capped || total > unreadInList);
+  const outsideCount = capped ? 0 : total - unreadInList;
+  // `items === null` = not loaded yet or dropped as stale: a fresh read is on its way — never an empty/blank box.
+  const pending = items === null && !error;
 
   return (
     <div className="eb-notif" ref={wrapRef}>
@@ -99,7 +107,7 @@ export default function NotificationBell({ unread, items, loading, error, onOpen
               <button type="button" className="eb-notif-head-action" onClick={() => { setOpenState(false); onOpenMessages(); }}>فتح الرسائل</button>
             </header>
 
-            {loading && <p className="eb-notif-status" role="status">{items ? "جارٍ تحديث الإشعارات..." : "جارٍ تحميل الإشعارات..."}</p>}
+            {(loading || pending) && <p className="eb-notif-status" role="status">{items ? "جارٍ تحديث الإشعارات..." : "جارٍ تحميل الإشعارات..."}</p>}
             {error && (
               <p className="eb-notif-error" role="status">
                 {error}{items && items.length > 0 ? " تظهر آخر إشعارات تم تحميلها." : ""}
@@ -107,11 +115,22 @@ export default function NotificationBell({ unread, items, loading, error, onOpen
               </p>
             )}
 
-            {items && list.length === 0 && !loading && !error && (
+            {items && list.length === 0 && !outside && !loading && !error && (
               <div className="eb-notif-empty" role="status">
                 <IconBell size={22} aria-hidden="true" />
                 <p>لا توجد إشعارات جديدة.</p>
               </div>
+            )}
+            {items && list.length === 0 && outside && (
+              <div className="eb-notif-empty is-outside" role="status">
+                <IconMail size={22} aria-hidden="true" />
+                <p>لديك رسائل غير مقروءة أقدم من المعاينة. افتح الرسائل لعرضها.</p>
+              </div>
+            )}
+            {list.length > 0 && outside && (
+              <p className="eb-notif-more" role="status">
+                {outsideCount > 0 ? "توجد رسائل غير مقروءة أخرى لا تظهر هنا (" + outsideCount + "). افتح الرسائل لعرضها." : "توجد رسائل غير مقروءة أخرى لا تظهر هنا. افتح الرسائل لعرضها."}
+              </p>
             )}
 
             {list.length > 0 && (

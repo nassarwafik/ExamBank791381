@@ -31,6 +31,8 @@
 
 .eb-notif-empty{ display:flex; flex-direction:column; align-items:center; gap:var(--eb-space-2); padding:var(--eb-space-6, 28px) var(--eb-space-4); color:var(--eb-muted); text-align:center; }
 .eb-notif-empty p{ margin:0; font-size:var(--eb-fs-14); }
+.eb-notif-empty.is-outside{ color:var(--eb-text-secondary); }
+.eb-notif-more{ margin:0; padding:var(--eb-space-2) var(--eb-space-4); font-size:var(--eb-fs-13); color:var(--eb-primary-strong); background:var(--eb-primary-050); border-block-end:1px solid var(--eb-line); }
 
 .eb-notif-list{ list-style:none; margin:0; padding:var(--eb-space-1); overflow-y:auto; overscroll-behavior:contain; min-height:0; }
 .eb-notif-list > li + li{ margin-block-start:2px; }
