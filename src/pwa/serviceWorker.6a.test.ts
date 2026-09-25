@@ -100,10 +100,11 @@ describe("service worker — installation only, never stale, never private data"
     expect(err.responded!.status).toBe(500);
   });
 
-  it("no push, notification, sync or message handling; no tokens in the worker", () => {
+  it("no sync, message or badge handling; never subscribes or asks permission; no tokens in the worker", () => {
     const w = loadWorker();
-    expect(Object.keys(w.handlers).sort()).toEqual(["activate", "fetch", "install"]);
-    expect(SW_SOURCE).not.toMatch(/pushManager|showNotification|requestPermission|Notification\(|setAppBadge|examBankBuilderToken|Authorization|localStorage|sessionStorage|indexedDB/);
+    // Phase 6B adds ONLY push → notification and its click (tested in serviceWorker.6b.test.ts).
+    expect(Object.keys(w.handlers).sort()).toEqual(["activate", "fetch", "install", "notificationclick", "push"]);
+    expect(SW_SOURCE).not.toMatch(/pushManager|requestPermission|new Notification\(|setAppBadge|examBankBuilderToken|Authorization|localStorage|sessionStorage|indexedDB/);
     expect(SW_SOURCE).not.toMatch(/cache\.put|cache\.addAll|importScripts/);
   });
 });
