@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { attemptPolicyLabel } from "./attemptPolicy";
 import ActionMenu from "../ui/ActionMenu";
 import StatusBadge from "../ui/StatusBadge";
 import EmptyState from "../ui/EmptyState";
@@ -47,7 +48,7 @@ export default function AssignmentList(p: AssignmentListProps) {
             <li key={item.assignmentId} className={"assignment-row eb-assign-row" + (selected ? " selected" : "") + (archived ? " archived" : "")}>
               <div className="eb-assign-row-main">
                 <div className="eb-assign-row-title"><strong>{item.title}</strong><StatusBadge tone={item.status === "published" ? "success" : item.status === "archived" ? "neutral" : "warn"} className={"assignment-status " + item.status}>{STATUS_LABEL[item.status]}</StatusBadge></div>
-                <span className="eb-assign-row-meta">{item.className}{item.className ? " · " : ""}{item.questionCount} سؤال · {item.totalMarks} علامة · {item.maxAttempts || 1} محاولة · {item.durationMinutes ? item.durationMinutes + " دقيقة" : "بدون مؤقت"}</span>
+                <span className="eb-assign-row-meta">{item.className}{item.className ? " · " : ""}{item.questionCount} سؤال · {item.totalMarks} علامة · {item.maxAttempts || 1} محاولة · {item.durationMinutes ? item.durationMinutes + " دقيقة" : "بدون مؤقت"}{item.attemptPolicy && item.attemptPolicy !== "continuous" ? " · " + attemptPolicyLabel(item.attemptPolicy) : ""}</span>
                 <small className="eb-assign-row-due">التسليم: {p.fmt(item.dueAt)}{archived && item.archivedAt ? " · أُرشف: " + p.fmt(item.archivedAt) : ""}</small>
               </div>
               <div className="eb-assign-row-actions">

@@ -4,7 +4,7 @@ const {withObservability}=require("../lib/observability");
 const {requireBuilderAuth}=require("../lib/builder-auth");
 const {getContainer,downloadJsonOrNull,listJson,mutateJsonWithRetry,StorageConflictError,mapConcurrent,getReadConcurrency}=require("../lib/platform-storage");
 const {recordAuditEvent}=require("../lib/audit-log");
-const {timerState,normalizeEndReason,extendRejection,activeAttemptOf,toMs}=require("../lib/assignment-availability");
+const {timerState,normalizeEndReason,extendRejection,activeAttemptOf,toMs,attemptPolicyOf}=require("../lib/assignment-availability");
 const {normalizeAssignmentStatus}=require("../lib/assignment-lifecycle");
 const {deriveGradingStatus}=require("../lib/grading-status");
 const {isStudentClassMember}=require("../lib/class-membership");
@@ -12,7 +12,7 @@ const AP="platform/assignments/",SP="platform/submissions/",UP="platform/users/"
 const CONFLICT_MESSAGE="حدث تعارض مؤقت أثناء حفظ البيانات. حاول مرة أخرى.";
 // Additive audit view of a completed attempt for the teacher gradebook (B2A #20 / B2B #16). startedAt/
 // endsAt/extendedEndsAt/endedAt are "" for legacy attempts; endReason is normalized (never mutates data).
-function attemptAudit(x){return {startedAt:String(x.startedAt||""),endsAt:String(x.endsAt||""),extendedEndsAt:String(x.extendedEndsAt||""),endedAt:String(x.endedAt||""),endReason:normalizeEndReason(x),timedOut:!!x.timedOut}}
+function attemptAudit(x){return {startedAt:String(x.startedAt||""),endsAt:String(x.endsAt||""),extendedEndsAt:String(x.extendedEndsAt||""),endedAt:String(x.endedAt||""),endReason:normalizeEndReason(x),timedOut:!!x.timedOut,...(x.pauseCount!==undefined?{pauseCount:Math.max(0,Number(x.pauseCount)||0)}:{})}}
 // One authoritative per-student lifecycle snapshot (B2B #18) derived from the shared timerState. Given to
 // the teacher GET row AND returned by every mutating action so the UI never has to guess.
 function lifecycle(a,s){
@@ -55,7 +55,7 @@ async function handler(request,deps={},obs=null){
     else notSubmitted++;
     if(activeAttemptOf(s))active++;                                         // active attempt is INDEPENDENT of grading status
     out.push({studentId:student.userId,studentName:student.displayName,studentCode:student.code,...lifecycle(a,s),gradingStatus:latestGrading,attempts:attempts.map(x=>({attemptNumber:x.attemptNumber,score:x.score,totalMarks:x.totalMarks,percentage:x.percentage,submittedAt:x.submittedAt,finalized:x.finalized,manualReviewMarks:x.manualReviewMarks,gradingStatus:deriveGradingStatus(x),...attemptAudit(x)})),latestResult:latest?{attemptNumber:latest.attemptNumber,score:latest.score,totalMarks:latest.totalMarks,percentage:latest.percentage,submittedAt:latest.submittedAt,finalized:latest.finalized,manualReviewMarks:latest.manualReviewMarks,gradingStatus:latestGrading,teacherFeedback:String(latest.teacherFeedback||""),...attemptAudit(latest)}:null})}
-   out.sort((x,y)=>String(x.studentName).localeCompare(String(y.studentName),"ar"));return {status:200,jsonBody:{ok:true,assignment:{assignmentId:a.assignmentId,title:a.title,dueAt:String(a.dueAt||""),durationMinutes:Number(a.durationMinutes||0),maxAttempts:Math.max(1,Number(a.maxAttempts||1)),totalMarks:Number(a.totalMarks||0)},stats:{students:users.length,submitted,pendingReview:pending,finalized:finalizedCount,notSubmitted,active,average:submitted?Number((sum/submitted).toFixed(1)):null,highest,lowest},students:out}};
+   out.sort((x,y)=>String(x.studentName).localeCompare(String(y.studentName),"ar"));return {status:200,jsonBody:{ok:true,assignment:{assignmentId:a.assignmentId,title:a.title,dueAt:String(a.dueAt||""),durationMinutes:Number(a.durationMinutes||0),maxAttempts:Math.max(1,Number(a.maxAttempts||1)),totalMarks:Number(a.totalMarks||0),attemptPolicy:attemptPolicyOf(a)},stats:{students:users.length,submitted,pendingReview:pending,finalized:finalizedCount,notSubmitted,active,average:submitted?Number((sum/submitted).toFixed(1)):null,highest,lowest},students:out}};
   }
   let b={};try{b=await request.json()}catch{}const resultAction=String(b.action||"");
 

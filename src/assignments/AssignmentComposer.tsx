@@ -1,4 +1,5 @@
 import type { RefObject } from "react";
+import { ATTEMPT_POLICY_OPTIONS, type AttemptPolicy } from "./attemptPolicy";
 import IconButton from "../ui/IconButton";
 import EmptyState from "../ui/EmptyState";
 import { IconClose, IconEye, IconBuilder, IconPlus } from "../icons";
@@ -31,6 +32,7 @@ export type AssignmentComposerProps = {
   dueAt: string; onDueAt: (v: string) => void;
   maxAttempts: number; onMaxAttempts: (v: number) => void;
   durationMinutes: number; onDurationMinutes: (v: number) => void;
+  attemptPolicy: AttemptPolicy; onAttemptPolicy: (v: AttemptPolicy) => void;
   publish: boolean; onPublish: (v: boolean) => void;
   canCreate: boolean; onCreate: () => void;
 };
@@ -105,6 +107,24 @@ export default function AssignmentComposer({ headingRef, ...p }: AssignmentCompo
           <label>مدة المحاولة (بالدقائق)<select value={p.durationMinutes} onChange={e => p.onDurationMinutes(Number(e.target.value))}><option value={0}>بدون مؤقت</option>{[15, 30, 45, 60, 90, 120, 180].map(n => <option key={n} value={n}>{n} دقيقة</option>)}</select></label>
           <label className="assignment-publish-toggle eb-check-inline"><input type="checkbox" checked={p.publish} onChange={e => p.onPublish(e.target.checked)} /><span>نشر مباشرة</span></label>
         </div>
+        {/* Phase 7A — assignment-level attempt policy: chosen explicitly here, persisted on the assignment, never
+            changed afterwards (the same exam can be homework, a controlled exam or save-&-resume work). */}
+        <fieldset className="eb-policy-group">
+          <legend className="eb-subheading">طريقة المحاولة</legend>
+          <p className="eb-policy-hint">تحدد ما يحدث إذا غادر الطالب صفحة الامتحان أثناء محاولته. لا يمكن تغييرها بعد إنشاء الواجب.</p>
+          <div className="eb-policy-options">
+            {ATTEMPT_POLICY_OPTIONS.map(o => (
+              <label key={o.value} className={"eb-policy-option" + (p.attemptPolicy === o.value ? " is-selected" : "")}>
+                <input type="radio" name="eb-attempt-policy" value={o.value} checked={p.attemptPolicy === o.value} onChange={() => p.onAttemptPolicy(o.value)} />
+                <span className="eb-policy-text">
+                  <strong>{o.label}</strong>
+                  <span className="eb-policy-summary">{o.summary}</span>
+                  <small className="eb-policy-detail">{o.detail}</small>
+                </span>
+              </label>
+            ))}
+          </div>
+        </fieldset>
       </div>
 
       <div className="eb-composer-foot">

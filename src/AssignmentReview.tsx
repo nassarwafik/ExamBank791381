@@ -1,5 +1,6 @@
 
 import {useCallback,useEffect,useId,useMemo,useRef,useState} from "react";
+import {endReasonLabel as sharedEndReasonLabel} from "./assignments/attemptPolicy";
 import useFocusTrap from "./ui/useFocusTrap";
 import useBodyScrollLock from "./ui/useBodyScrollLock";
 import {IconClose,IconCheck} from "./icons";
@@ -8,7 +9,8 @@ import {gradingClass,resolveGradingStatus,type GradingStatus} from "./gradingSta
 type A={attemptNumber:number;submittedAt:string;score:number;totalMarks:number;percentage:number;manualReviewMarks:number;finalized:boolean;gradingStatus?:GradingStatus;startedAt?:string;endedAt?:string;endReason?:string;timedOut?:boolean};
 // Server-authoritative gradingStatus via the SHARED resolver (never from score/percentage). No local copy.
 const gsOf=(a:{gradingStatus?:GradingStatus;manualReviewMarks:number;finalized:boolean}):GradingStatus=>resolveGradingStatus(a);
-const endReasonLabel=(r?:string)=>r==="timedOut"?"انتهى الوقت":r==="submitted"?"تسليم":"—";
+// Phase 7A: the shared Arabic end-reason labels (incl. «غادر صفحة الامتحان» for a strict integrity exit).
+const endReasonLabel=sharedEndReasonLabel;
 type Q={questionId:string;questionNumber:number;text:string;marks:number;studentAnswer:any;expectedAnswer:any;autoGrade:{score?:number;manualReview?:boolean}|null;manualScore:number|null;teacherComment:string};
 type Data={assignment:{assignmentId:string;title:string;totalMarks:number};student:{studentId:string;studentName:string;studentCode:string};attempt:A&{teacherFeedback:string};attempts:A[];questions:Q[]};
 type Props={token:string;assignmentId:string;studentId:string;initialAttempt:number;onClose:()=>void;onSaved:()=>void};

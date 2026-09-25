@@ -186,7 +186,7 @@ describe("UX-5 composer — non-modal, both sources, exact create body", () => {
     expect(createBtn.disabled).toBe(false);
     fireEvent.click(createBtn);
     await screen.findByText("✓ تم إنشاء الواجب من الامتحان المختار.");
-    expect(posts("/api/assignments")).toEqual([{ action: "create", classId: "c1", title: "امتحان محفوظ", instructions: "أجب عن جميع الأسئلة واقرأ التعليمات جيدًا قبل البدء.", openAt: new Date("2026-04-01T08:00").toISOString(), dueAt: new Date("2026-04-05T10:00").toISOString(), maxAttempts: 2, durationMinutes: 45, publish: false, examSnapshot: SAVED_EXAM }]);
+    expect(posts("/api/assignments")).toEqual([{ action: "create", classId: "c1", title: "امتحان محفوظ", instructions: "أجب عن جميع الأسئلة واقرأ التعليمات جيدًا قبل البدء.", openAt: new Date("2026-04-01T08:00").toISOString(), dueAt: new Date("2026-04-05T10:00").toISOString(), maxAttempts: 2, durationMinutes: 45, attemptPolicy: "continuous", publish: false, examSnapshot: SAVED_EXAM }]);
     expect(screen.queryByRole("region", { name: "إنشاء واجب جديد" })).toBeNull();                   // closed after create
     await waitFor(() => expect(document.activeElement).toBe(opener));                                // focus returns in the post-flip effect
     expect(rowTitles()[0]).toBe("امتحان محفوظ");

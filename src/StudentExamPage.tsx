@@ -27,22 +27,30 @@ import {countdownTone} from "./examTimer";
 import {isUnexpectedStatus,trackingSuffix} from "./lib/requestTrace";
 import {deriveSaveState,shouldWarnBeforeUnload} from "./studentSaveState";
 import {scoreLabel,gradingClass,resolveGradingStatus,type GradingStatus} from "./gradingStatus";
+import {normalizeAttemptPolicy,formatRemaining} from "./assignments/attemptPolicy";
+import {rememberStrictExit,pendingStrictExit,clearStrictExit} from "./student/exam/strictExitMarker";
 
 type ExamBody={title?:string;metadata?:{school?:string;subject?:string;grade?:string;className?:string;generalInstructions?:string};presentationTheme?:string;coverPage?:ExamCoverPage;questions?:Question[];sections?:ExamSection[]};
-type Assignment={assignmentId:string;title:string;instructions:string;openAt:string;dueAt:string;effectiveDueAt?:string;maxAttempts:number;questionCount:number;totalMarks:number;durationMinutes?:number;requiresStart?:boolean;timed?:boolean;marksDistribution?:MarksDistribution;exam:ExamBody};
+type Assignment={assignmentId:string;title:string;instructions:string;openAt:string;dueAt:string;effectiveDueAt?:string;maxAttempts:number;questionCount:number;totalMarks:number;durationMinutes?:number;requiresStart?:boolean;timed?:boolean;attemptPolicy?:string;marksDistribution?:MarksDistribution;exam:ExamBody};
 type Answers=Record<string,Answer>;
 type Result={attemptNumber:number;submittedAt:string;score:number;totalMarks:number;percentage:number;manualReviewMarks:number;finalized:boolean;gradingStatus?:GradingStatus;teacherFeedback?:string;timedOut?:boolean;startedAt?:string;endedAt?:string;endReason?:string;questionGrades?:Array<{questionId:string;score:number;maxMarks:number;correct:boolean;manualReview:boolean}>};
 // Grading status is server-authoritative (result.gradingStatus). For an older cached result the SHARED
 // resolver derives it from manualReviewMarks/finalized — never from score/percentage. No local copy.
 const resultGradingStatus=(r:Result):GradingStatus=>resolveGradingStatus(r);
-type ActiveAttempt={attemptNumber:number;startedAt:string;endsAt:string;status?:string;lastSavedAt?:string};
-type State={attemptsUsed:number;allowedAttempts:number;canAttempt:boolean;dueClosed:boolean;draftAnswers:Answers;draftSavedAt:string;latestResult:Result|null;attempts:Array<Result>;durationMinutes?:number;timed?:boolean;attemptModelVersion?:number;requiresStart?:boolean;attemptStatus?:string;serverNow?:string;activeAttempt?:ActiveAttempt|null;effectiveAttemptEndsAt?:string;attemptExpired?:boolean;canStartAttempt?:boolean;canWrite?:boolean};
+// Phase 7A (model 3): attemptEpoch advances on pause/resume; a paused attempt carries its stopped budget.
+type ActiveAttempt={attemptNumber:number;startedAt:string;endsAt:string;status?:string;lastSavedAt?:string;attemptEpoch?:number;pausedAt?:string;pausedRemainingMs?:number|null;pauseCount?:number};
+type State={attemptsUsed:number;allowedAttempts:number;canAttempt:boolean;dueClosed:boolean;draftAnswers:Answers;draftSavedAt:string;latestResult:Result|null;attempts:Array<Result>;durationMinutes?:number;timed?:boolean;attemptModelVersion?:number;attemptPolicy?:string;effectiveDueAt?:string;requiresStart?:boolean;attemptStatus?:string;serverNow?:string;activeAttempt?:ActiveAttempt|null;effectiveAttemptEndsAt?:string;attemptExpired?:boolean;canStartAttempt?:boolean;canWrite?:boolean};
 type Props={token:string;assignment:Assignment;studentName:string;className:string;onBack:()=>void;onLogout:()=>void};
 // Roadmap #10/#11 — a stable identity for the attempt a local dirty snapshot was produced under, so a
 // reconnect/late write can never land on a DIFFERENT (newer) attempt.
-type AttemptCtx={attemptNumber:number;startedAt:string}|null;
-const attemptId=(st:State|null):AttemptCtx=>st&&st.activeAttempt?{attemptNumber:Number(st.activeAttempt.attemptNumber),startedAt:String(st.activeAttempt.startedAt||"")}:null;
-const sameAttempt=(a:AttemptCtx,b:AttemptCtx):boolean=>!!a&&!!b&&a.attemptNumber===b.attemptNumber&&a.startedAt===b.startedAt;
+// Phase 7A: a model-3 attempt also carries its EPOCH (pause/resume boundary). A snapshot produced before a pause is a
+// DIFFERENT context from the resumed attempt even though number and startedAt are equal.
+type AttemptCtx={attemptNumber:number;startedAt:string;attemptEpoch?:number}|null;
+const attemptId=(st:State|null):AttemptCtx=>st&&st.activeAttempt?{attemptNumber:Number(st.activeAttempt.attemptNumber),startedAt:String(st.activeAttempt.startedAt||""),...(typeof st.activeAttempt.attemptEpoch==="number"?{attemptEpoch:st.activeAttempt.attemptEpoch}:{})}:null;
+const sameAttempt=(a:AttemptCtx,b:AttemptCtx):boolean=>!!a&&!!b&&a.attemptNumber===b.attemptNumber&&a.startedAt===b.startedAt&&a.attemptEpoch===b.attemptEpoch;
+// The identity a write/lifecycle request asserts (the server re-checks every field against the live attempt).
+const identityOf=(ctx:AttemptCtx)=>ctx?{expectedAttemptNumber:ctx.attemptNumber,expectedStartedAt:ctx.startedAt,...(typeof ctx.attemptEpoch==="number"?{expectedAttemptEpoch:ctx.attemptEpoch}:{})}:{};
+
 
 class ApiError extends Error{
  status:number;
@@ -75,6 +83,9 @@ export default function StudentExamPage({token,assignment,studentName,className,
  // attempt starts. A same-attempt resync (timer/state refresh, clean draft adoption) never moves the student.
  const resetPager=useCallback(()=>{setPageIndex(0);setView("answer");setNavOpen(false)},[]);
  const [starting,setStarting]=useState(false),[expired,setExpired]=useState(false),[remainingMs,setRemainingMs]=useState<number|null>(null);
+ // Phase 7A — pausable «حفظ مؤقت والخروج» in flight; strict attempt ended because the student left the page.
+ const [pausing,setPausing]=useState(false),[strictEnded,setStrictEnded]=useState(false);
+ const exitSentRef=useRef(false),strictArmedRef=useRef(false),pendingExitRef=useRef<AttemptCtx>(null);
  // UX-7b-1 — shared confirmation (replaces window.confirm with identical texts/gating) and reduced-motion aware scrolling.
  const {confirm,confirmDialog}=useConfirm();
  const reducedMotion=usePrefersReducedMotion();
@@ -121,7 +132,10 @@ export default function StudentExamPage({token,assignment,studentName,className,
  // body has not loaded (so the compact button is never permanently disabled just because canStartAttempt
  // is false once an activeAttempt exists).
  const canStartOrResume=!!(state?.canStartAttempt||state?.activeAttempt);
- const writable=!!state?.canWrite&&!expired;
+ const writable=!!state?.canWrite&&!expired&&!strictEnded;
+ // Phase 7A — the assignment's attempt policy (server-authoritative; a missing field is "continuous").
+ const policy=normalizeAttemptPolicy(state?.attemptPolicy??assignment.attemptPolicy);
+ const paused=state?.activeAttempt?.status==="paused";
 
  async function subApi<T>(options:RequestInit={}):Promise<T>{const h=new Headers(options.headers||{});h.set("Content-Type","application/json");h.set("x-student-token",token);h.set("Authorization","Bearer "+token);const r=await fetch("/api/student-submission/"+encodeURIComponent(assignment.assignmentId),{...options,headers:h}),j=await r.json() as T&{error?:string};if(r.status===401){onLogout();throw new ApiError(401,"انتهت الجلسة.")}if(!r.ok)throw new ApiError(r.status,j.error||"حدث خطأ.",r.headers?.get?.("x-request-id")||"");return j}
  const api=subApi;
@@ -152,7 +166,7 @@ export default function StudentExamPage({token,assignment,studentName,className,
   if(mountedRef.current)setSaveError(false);
   // The request carries the attempt identity the snapshot was produced under so the SERVER rejects a late
   // write that would land on a DIFFERENT (newer) attempt (stale-attempt guard).
-  const identity=attemptCtx?{expectedAttemptNumber:attemptCtx.attemptNumber,expectedStartedAt:attemptCtx.startedAt}:{};
+  const identity=attemptCtx?{expectedAttemptNumber:attemptCtx.attemptNumber,expectedStartedAt:attemptCtx.startedAt,...(typeof attemptCtx.attemptEpoch==="number"?{expectedAttemptEpoch:attemptCtx.attemptEpoch}:{})}:{};
   try{
    for(let attempt=0;attempt<=3;attempt++){
     if(myRevision<latestTargetRevision.current)return;
@@ -218,8 +232,16 @@ export default function StudentExamPage({token,assignment,studentName,className,
     // attempt 2 active while attempt 1 already has a result). Otherwise the stale result would silently
     // suppress the countdown, timeout firing and resync during the active attempt.
     setResult(null);setStarted(true);
-    if(st.timed&&st.attemptExpired){void triggerTimeout()}else{setExpired(false)}
-   }else{setResult(st.latestResult);setStarted(false)}
+    if((st.timed||st.activeAttempt.status==="paused")&&st.attemptExpired){void triggerTimeout()}
+    else{
+     setExpired(false);
+     // Phase 7A strict: an exit that was sent while this page went away (possibly lost) is completed now, before any
+     // question is shown again — the same attempt is never continued. Only for the SAME attempt identity.
+     const pending=pendingStrictExit(assignment.assignmentId);
+     if(normalizeAttemptPolicy(st.attemptPolicy)==="strict"&&pending&&sameAttempt(pending,attemptId(st))){pendingExitRef.current=pending;exitSentRef.current=true;setStrictEnded(true)}
+     else if(pending)clearStrictExit(assignment.assignmentId);
+    }
+   }else{setResult(st.latestResult);setStarted(false);clearStrictExit(assignment.assignmentId)}
   }else{setResult(st.latestResult);setStarted(st.attemptsUsed===0||Object.keys(st.draftAnswers||{}).length>0)}
   loaded.current=true}catch(e){if(!cancelled)setError(e instanceof Error?e.message:"تعذر تحميل المحاولة.")}finally{if(!cancelled)setLoading(false)}})();return()=>{cancelled=true;if(timer.current)window.clearTimeout(timer.current)}},[assignment.assignmentId,token]);
  useEffect(()=>{if(!loaded.current||!started||!writable||!examBodyLoaded||submittingRef.current)return;if(answers===hydrationRef.current)return;/* server hydration, not a user edit */revision.current+=1;latestTargetRevision.current=revision.current;setDirty(true);const myRevision=revision.current,snapshot=answers,ctx=attemptId(stateRef.current),epoch=saveEpoch.current;dirtyAttemptRef.current=ctx;dirtyGenerationRef.current=Number(stateRef.current?.attemptsUsed||0);if(timer.current)window.clearTimeout(timer.current);timer.current=window.setTimeout(()=>{if(submittingRef.current)return;if(epoch!==saveEpoch.current)return;/* context replaced before debounce fired */saveQueue.current=saveQueue.current.catch(()=>{}).then(()=>saveDraftSnapshot(snapshot,myRevision,ctx,epoch))},800);return()=>{if(timer.current)window.clearTimeout(timer.current)}},[answers,started,writable]);
@@ -262,7 +284,7 @@ export default function StudentExamPage({token,assignment,studentName,className,
  // Resync AUTHORITATIVE server state. Returns the fresh State on success, or null on failure (so callers
  // never act on stale state). SAME active attempt → update timer/state only, PRESERVING legitimate unsaved
  // local answers. DIFFERENT attempt → adopt it via applyServerAttemptState (never keep a cross-attempt snapshot).
- const resync=useCallback(async():Promise<State|null>=>{if(!mountedRef.current||submittingRef.current||finalizingRef.current)return null;try{const st=(await api<{state:State}>()).state;if(!mountedRef.current)return st;const rs=!!st.timed||Number(st.attemptModelVersion||0)>=2||!!st.requiresStart;if(rs){if(st.activeAttempt){adoptOrKeepActive(st);anchorClock(st);setResult(null);setStarted(true);if(st.timed&&st.attemptExpired){void triggerTimeout()}else{setExpired(false)}}else{applyServerAttemptState(st);anchorClock(st);setResult(st.latestResult);setStarted(false);setExpired(false)}}else{
+ const resync=useCallback(async():Promise<State|null>=>{if(!mountedRef.current||submittingRef.current||finalizingRef.current)return null;try{const st=(await api<{state:State}>()).state;if(!mountedRef.current)return st;const rs=!!st.timed||Number(st.attemptModelVersion||0)>=2||!!st.requiresStart;if(rs){if(st.activeAttempt){adoptOrKeepActive(st);anchorClock(st);setResult(null);setStarted(true);if((st.timed||st.activeAttempt.status==="paused")&&st.attemptExpired){void triggerTimeout()}else{setExpired(false)}}else{applyServerAttemptState(st);anchorClock(st);setResult(st.latestResult);setStarted(false);setExpired(false)}}else{
   // LEGACY untimed (no attempt identity — activeAttempt is created lazily). Bind to the GENERATION
   // (attemptsUsed): if it advanced, the attempt we were editing was submitted elsewhere → discard the local
   // snapshot and adopt authoritative server state (result/next attempt). Same generation keeps clean-vs-dirty
@@ -326,6 +348,7 @@ export default function StudentExamPage({token,assignment,studentName,className,
    // bookkeeping (revision/savedRevision/lastSavedAt/save flags) so attempt N+1 never inherits attempt N's
    // state, and no autosave is scheduled by the hydration (ref-marker).
    setExam(body);applyServerAttemptState(r.state);anchorClock(r.state);setExpired(false);finalizingRef.current=false;setResult(null);setStarted(true);setCoverStarted(true);
+   exitSentRef.current=false;setStrictEnded(false); // Phase 7A: a NEW strict attempt starts un-exited
    resetPager(); // new attempt → first question (presentation only)
    scrollTop();
   }catch(e){
@@ -359,7 +382,7 @@ export default function StudentExamPage({token,assignment,studentName,className,
    // attempt (another tab submitted / it timed out) → full authoritative closed-state adoption via
    // applyServerAttemptState: obsolete local answers discarded, revision/savedRevision/dirtyAttempt reset,
    // lastSavedAt from server, no delayed save, beforeunload no longer warns. Then show the latest result.
-   if(rs&&st.activeAttempt&&st.timed&&st.attemptExpired){adoptOrKeepActive(st);anchorClock(st);setResult(null);setStarted(true);void triggerTimeout();return "finalized"}
+   if(rs&&st.activeAttempt&&(st.timed||st.activeAttempt.status==="paused")&&st.attemptExpired){adoptOrKeepActive(st);anchorClock(st);setResult(null);setStarted(true);void triggerTimeout();return "finalized"}
    if(rs&&st.activeAttempt){adoptOrKeepActive(st);anchorClock(st);setResult(null);setStarted(true);setExpired(false);finalizingRef.current=false;submittingRef.current=false;setError("");return "resumed"}
    if(rs&&!st.activeAttempt){applyServerAttemptState(st);setResult(st.latestResult);setStarted(false);setExpired(false);setError("");return "stopped"}
   }catch{/* ignore */}
@@ -414,6 +437,99 @@ export default function StudentExamPage({token,assignment,studentName,className,
    }
   }finally{submittingRef.current=false}
  }
+
+ // ── Phase 7A — STRICT: leaving the exam page ends the running attempt (server action finalizeIntegrityExit). ──
+ // Armed ONLY once the attempt is really running with its questions on screen (never before startAttempt succeeds,
+ // never while paused, never after a result/expiry). Exit signals: visibilitychange→hidden, pagehide, leaving this
+ // page inside the app (unmount) and the explicit back button. `blur` is deliberately NOT used (a select, the keyboard
+ // or an accessibility tool must never end an exam). Duplicate signals are idempotent (exitSentRef + the server).
+ const strictArmed=policy==="strict"&&started&&examBodyLoaded&&hasActive&&!paused&&!result&&!expired;
+ useEffect(()=>{strictArmedRef.current=strictArmed},[strictArmed]);
+ // Best-effort delivery while the page is going away: an authenticated keepalive fetch carrying ONLY the attempt
+ // identity (the server grades its own saved draft). A per-tab marker lets the next load finish it if it was lost.
+ function sendIntegrityExitBeacon(){
+  if(exitSentRef.current||!strictArmedRef.current||submittingRef.current||finalizingRef.current)return;
+  const ctx=attemptId(stateRef.current);if(!ctx)return;
+  exitSentRef.current=true;rememberStrictExit(assignment.assignmentId,ctx);
+  if(mountedRef.current)setStrictEnded(true);
+  // The page's single authenticated submission client, with keepalive so the request outlives the page.
+  void api<{result?:Result|null;state?:State}>({method:"POST",keepalive:true,body:JSON.stringify({action:"finalizeIntegrityExit",...identityOf(ctx)})})
+   .then(j=>{clearStrictExit(assignment.assignmentId);if(mountedRef.current&&j.state){applyServerAttemptState(j.state);setResult(j.result||j.state.latestResult);setStarted(false)}})
+   .catch(e=>{if(e instanceof ApiError&&e.status===409)clearStrictExit(assignment.assignmentId)/* else: best effort — completed on return (confirmStrictExit) */});
+ }
+ // The awaited form (explicit back, return to a visible page, next load with a pending marker). Idempotent on the server.
+ async function confirmStrictExit(target?:AttemptCtx){
+  const ctx=target||attemptId(stateRef.current)||pendingStrictExit(assignment.assignmentId);
+  if(!ctx)return;
+  exitSentRef.current=true;if(mountedRef.current)setStrictEnded(true);
+  try{
+   const r=await api<{result:Result|null;state:State}>({method:"POST",body:JSON.stringify({action:"finalizeIntegrityExit",...identityOf(ctx)})});
+   clearStrictExit(assignment.assignmentId);
+   if(mountedRef.current){applyServerAttemptState(r.state);setResult(r.result||r.state.latestResult);setStarted(false);setError("")}
+  }catch(e){
+   // 409 = that attempt is not the live one any more (a newer attempt): never end it — adopt the server state instead.
+   if(e instanceof ApiError&&e.status===409){clearStrictExit(assignment.assignmentId);exitSentRef.current=false;if(mountedRef.current){setStrictEnded(false);void resync()}return}
+   if(mountedRef.current)setError(errText(e,"تعذر تأكيد إنهاء المحاولة. سيُعاد إرسال الطلب عند عودة الاتصال."));
+  }
+ }
+ // Event handlers read the latest closures through refs (no re-subscription on every render).
+ const exitBeaconRef=useRef(sendIntegrityExitBeacon),confirmExitRef=useRef(confirmStrictExit);
+ useEffect(()=>{exitBeaconRef.current=sendIntegrityExitBeacon;confirmExitRef.current=confirmStrictExit});
+ useEffect(()=>{
+  if(!strictArmed)return;
+  const onVis=()=>{if(document.visibilityState==="hidden")exitBeaconRef.current()};
+  const onHide=()=>exitBeaconRef.current();
+  document.addEventListener("visibilitychange",onVis);window.addEventListener("pagehide",onHide);
+  return()=>{document.removeEventListener("visibilitychange",onVis);window.removeEventListener("pagehide",onHide)};
+ },[strictArmed]);
+ // Leaving the exam page inside the app (unmount while still armed) is also an exit.
+ useEffect(()=>()=>{if(strictArmedRef.current)exitBeaconRef.current()},[]);
+ // Back on the page after an exit was sent: make sure the server has it (idempotent) and show the result.
+ useEffect(()=>{
+  if(!strictEnded||result)return;
+  // An exit remembered from a previous page (lost keepalive) is completed right away, for that exact identity.
+  if(pendingExitRef.current){const target=pendingExitRef.current;pendingExitRef.current=null;void confirmExitRef.current(target)}
+  const onVis=()=>{if(document.visibilityState==="visible")void confirmExitRef.current()};
+  document.addEventListener("visibilitychange",onVis);window.addEventListener("online",onVis);
+  return()=>{document.removeEventListener("visibilitychange",onVis);window.removeEventListener("online",onVis)};
+ },[strictEnded,result]);
+
+ // ── Phase 7A — PAUSABLE: explicit «حفظ مؤقت والخروج» and «متابعة المحاولة». The server stores the answers and the
+ // remaining budget atomically; the page leaves ONLY after the server confirmed the pause. ──
+ async function pauseAndExit(){
+  if(!writable||submitBusy||pausing||policy!=="pausable")return;
+  if(!onlineRef.current){setError("لا يمكن الحفظ المؤقت دون اتصال بالإنترنت. تحقق من الاتصال وحاول مرة أخرى.");return}
+  const ok=await confirm({title:"حفظ مؤقت والخروج",message:timed?"سيتم حفظ إجاباتك وإيقاف المؤقت. يمكنك متابعة المحاولة نفسها لاحقًا بالوقت المتبقي، قبل آخر موعد للواجب.":"سيتم حفظ إجاباتك. يمكنك متابعة المحاولة نفسها لاحقًا قبل آخر موعد للواجب.",confirmLabel:"حفظ والخروج",cancelLabel:"متابعة الحل"});
+  if(!ok)return;
+  submittingRef.current=true;setPausing(true);setError("");
+  if(timer.current){window.clearTimeout(timer.current);timer.current=null}
+  try{
+   await saveQueue.current.catch(()=>{});
+   const snapshot=answersRef.current,ctx=attemptId(stateRef.current);
+   const r=await api<{state:State}>({method:"POST",body:JSON.stringify({action:"pauseAttempt",answers:snapshot,...identityOf(ctx)})});
+   applyServerAttemptState(r.state);                                // paused: bookkeeping reset → no unsaved-changes warning
+   onBack();
+  }catch(e){
+   submittingRef.current=false;
+   if(e instanceof ApiError&&e.status===409){await reconcileTimed409()}
+   setError(errText(e,"تعذر الحفظ المؤقت."));
+  }finally{if(mountedRef.current)setPausing(false);submittingRef.current=false}
+ }
+ async function resumePausedAttempt(){
+  if(startingRef.current)return;startingRef.current=true;setStarting(true);setError("");
+  try{
+   const r=await api<{state:State}>({method:"POST",body:JSON.stringify({action:"resumeAttempt",...identityOf(attemptId(stateRef.current))})});
+   // The attempt is running again on the server: adopt it FIRST (a failed body fetch then leaves the ordinary
+   // «متابعة المحاولة» gate, which only reloads the questions — it never restarts or re-pauses anything).
+   applyServerAttemptState(r.state);anchorClock(r.state);setExpired(false);finalizingRef.current=false;
+   const body=await fetchExamBody();
+   setExam(body);setResult(null);setStarted(true);setCoverStarted(true);resetPager();scrollTop();
+  }catch(e){
+   if(e instanceof ApiError&&e.status===409){await reconcileTimed409()}
+   setError(errText(e,"تعذر متابعة المحاولة."));
+  }finally{setStarting(false);startingRef.current=false}
+ }
+
  const norm=useMemo(()=>normalizeExamStructure(exam),[exam]);
  const structured=norm.structured;
  const cover=useMemo<ExamCoverPage|undefined>(()=>normalizeCoverPage(exam.coverPage),[exam.coverPage]);
@@ -476,7 +592,7 @@ export default function StudentExamPage({token,assignment,studentName,className,
   // result, the epoch changed: leave that authoritative reconciled UI intact — do NOT submit attempt 1's
   // answers and do NOT stamp a stale "couldn't save" message onto the new context.
   if(submitEpoch!==saveEpoch.current)return;
-  if(savedRevision.current<submitRevision){setError("تعذر حفظ إجاباتك بسبب مشكلة في الاتصال. تحقق من الإنترنت وحاول التسليم مرة أخرى.");return}const identity=submitCtx?{expectedAttemptNumber:submitCtx.attemptNumber,expectedStartedAt:submitCtx.startedAt}:{};if(submitEpoch!==saveEpoch.current)return;const r=await api<{result:Result;state:State}>({method:"POST",body:JSON.stringify({action:"submit",answers:submitSnapshot,...identity})});setResult(r.result);setState(r.state);setStarted(false);setAnswers({});savedRevision.current=revision.current;scrollTop()}catch(e){
+  if(savedRevision.current<submitRevision){setError("تعذر حفظ إجاباتك بسبب مشكلة في الاتصال. تحقق من الإنترنت وحاول التسليم مرة أخرى.");return}const identity=identityOf(submitCtx);if(submitEpoch!==saveEpoch.current)return;const r=await api<{result:Result;state:State}>({method:"POST",body:JSON.stringify({action:"submit",answers:submitSnapshot,...identity})});setResult(r.result);setState(r.state);setStarted(false);setAnswers({});savedRevision.current=revision.current;scrollTop()}catch(e){
   // Race at the deadline: a 409 may be an expired attempt (duration OR due-clipped => finalize) or a
   // still-live one (=> resume). Decide from AUTHORITATIVE server state, not the Arabic message text.
   if(requiresStart&&e instanceof ApiError&&e.status===409){submittingRef.current=false;const res=await reconcileTimed409();if(res==="other")setError(e.message)}
@@ -496,13 +612,55 @@ export default function StudentExamPage({token,assignment,studentName,className,
   dirtyAttemptRef.current=null;dirtyGenerationRef.current=Number(state.attemptsUsed||0);
   setLastSavedAt("");setSaveError(false);setRetrying(false);setSaving(false);setDirty(false);setError("");
   setResult(state.latestResult);setStarted(true);setCoverStarted(false);resetPager();scrollTop()}
- async function backWithoutSubmit(){if(revision.current>savedRevision.current&&!(await confirm({title:"مغادرة بدون تسليم",message:"توجد إجابات لم تُحفظ بعد. هل تريد المغادرة على أي حال؟",confirmLabel:"المغادرة",cancelLabel:"البقاء",tone:"danger"})))return;onBack()}
+ async function backWithoutSubmit(){
+  // Phase 7A strict: the explicit back action ends the running attempt — after a clear confirmation, the latest edit is
+  // saved, then the attempt is closed on the server and its result shown (never continued).
+  if(strictArmedRef.current){
+   if(!(await confirm({title:"مغادرة الامتحان",message:"هذا امتحان بوضع صارم: مغادرة صفحة الامتحان تنهي هذه المحاولة وتُصحَّح إجاباتك المحفوظة، ولا يمكن متابعتها. هل تريد المغادرة؟",confirmLabel:"إنهاء المحاولة والمغادرة",cancelLabel:"البقاء",tone:"danger"})))return;
+   exitSentRef.current=true;
+   if(timer.current){window.clearTimeout(timer.current);timer.current=null}
+   if(revision.current>savedRevision.current){const snap=answersRef.current,rev=revision.current,ctx=attemptId(stateRef.current),ep=saveEpoch.current;saveQueue.current=saveQueue.current.catch(()=>{}).then(()=>saveDraftSnapshot(snap,rev,ctx,ep))}
+   await saveQueue.current.catch(()=>{});
+   await confirmStrictExit();
+   return;
+  }
+  if(revision.current>savedRevision.current&&!(await confirm({title:"مغادرة بدون تسليم",message:"توجد إجابات لم تُحفظ بعد. هل تريد المغادرة على أي حال؟",confirmLabel:"المغادرة",cancelLabel:"البقاء",tone:"danger"})))return;onBack()}
  if(loading)return <main className="interactive-exam-page" dir="rtl"><div className="iex-wrap"><p className="iex-loading" role="status">جارٍ تجهيز صفحة الامتحان...</p></div></main>;
- if(!started&&result)return <main className={"interactive-exam-page exam-theme-"+theme} dir="rtl"><div className="iex-wrap"><section className="iex-result-card"><span className="iex-eyebrow">النتيجة</span><h1>تم تسليم المحاولة {result.attemptNumber}{result.timedOut?" (انتهى الوقت)":""}</h1>{error&&<div className="platform-error iex-error">{error}</div>}<div className="iex-score">{result.score}<small> / {result.totalMarks}</small></div><strong>{result.percentage}%</strong>{(()=>{const gs=resultGradingStatus(result);return <><span className={"iex-grade-badge iex-grade-"+gradingClass(gs)}>{scoreLabel(gs)}</span>{result.timedOut&&<p className="iex-timeout-note">تم إنهاء هذه المحاولة تلقائيًا عند انتهاء الوقت، وصُحّحت الإجابات المحفوظة.</p>}{gs==="pendingReview"?<p className="iex-provisional">العلامة مؤقتة — بانتظار مراجعة المعلم{result.manualReviewMarks>0?" ("+result.manualReviewMarks+" علامة قيد المراجعة)":""}.</p>:<p className="iex-finalized"><IconCheck size={14} aria-hidden="true"/>العلامة النهائية معتمدة.</p>}</>})()}{result.teacherFeedback&&<div className="iex-teacher-feedback"><strong>ملاحظة المعلم</strong><span>{result.teacherFeedback}</span></div>}<p className="iex-result-when">تم الحفظ في حسابك بتاريخ {formatDateTimeLatn(result.submittedAt)}</p><div className="iex-result-actions"><button type="button" className="eb-button" onClick={onBack}>العودة إلى المهام</button>{(requiresStart?state?.canStartAttempt:state?.canAttempt)&&<button type="button" className="eb-button is-primary primary" onClick={startNext} disabled={starting}>{starting?"جارٍ البدء...":"بدء محاولة جديدة ("+((state?.attemptsUsed||0)+1)+" من "+(state?.allowedAttempts||assignment.maxAttempts)+")"}</button>}</div>{!(requiresStart?state?.canStartAttempt:state?.canAttempt)&&<div className="iex-no-retry">لا توجد محاولة إضافية متاحة. يستطيع المعلم السماح بمحاولة أخرى من صفحة النتائج.</div>}</section></div></main>;
+ if(!started&&result)return <main className={"interactive-exam-page exam-theme-"+theme} dir="rtl"><div className="iex-wrap"><section className="iex-result-card"><span className="iex-eyebrow">النتيجة</span><h1>تم تسليم المحاولة {result.attemptNumber}{result.endReason==="integrityExit"?" (غادرت صفحة الامتحان)":result.timedOut?" (انتهى الوقت)":""}</h1>{error&&<div className="platform-error iex-error">{error}</div>}<div className="iex-score">{result.score}<small> / {result.totalMarks}</small></div><strong>{result.percentage}%</strong>{(()=>{const gs=resultGradingStatus(result);return <><span className={"iex-grade-badge iex-grade-"+gradingClass(gs)}>{scoreLabel(gs)}</span>{result.timedOut&&<p className="iex-timeout-note">تم إنهاء هذه المحاولة تلقائيًا عند انتهاء الوقت، وصُحّحت الإجابات المحفوظة.</p>}{result.endReason==="integrityExit"&&<p className="iex-timeout-note">تم إنهاء هذه المحاولة لأنك غادرت صفحة الامتحان في الوضع الصارم، وصُحّحت الإجابات المحفوظة.</p>}{gs==="pendingReview"?<p className="iex-provisional">العلامة مؤقتة — بانتظار مراجعة المعلم{result.manualReviewMarks>0?" ("+result.manualReviewMarks+" علامة قيد المراجعة)":""}.</p>:<p className="iex-finalized"><IconCheck size={14} aria-hidden="true"/>العلامة النهائية معتمدة.</p>}</>})()}{result.teacherFeedback&&<div className="iex-teacher-feedback"><strong>ملاحظة المعلم</strong><span>{result.teacherFeedback}</span></div>}<p className="iex-result-when">تم الحفظ في حسابك بتاريخ {formatDateTimeLatn(result.submittedAt)}</p><div className="iex-result-actions"><button type="button" className="eb-button" onClick={onBack}>العودة إلى المهام</button>{(requiresStart?state?.canStartAttempt:state?.canAttempt)&&<button type="button" className="eb-button is-primary primary" onClick={startNext} disabled={starting}>{starting?"جارٍ البدء...":"بدء محاولة جديدة ("+((state?.attemptsUsed||0)+1)+" من "+(state?.allowedAttempts||assignment.maxAttempts)+")"}</button>}</div>{!(requiresStart?state?.canStartAttempt:state?.canAttempt)&&<div className="iex-no-retry">لا توجد محاولة إضافية متاحة. يستطيع المعلم السماح بمحاولة أخرى من صفحة النتائج.</div>}</section></div></main>;
  // START GATE (B2A) — questions are NOT delivered by the server until startAttempt succeeds, for TIMED
  // and UNTIMED v2 assignments alike. Shows the structured cover (when enabled) or a compact start card;
  // pressing start calls the server, refetches the exam and reveals the questions. TIMED also anchors the
  // countdown; UNTIMED never shows a countdown.
+ // Phase 7A — a strict attempt that ended because the student left: never show its questions again.
+ if(strictEnded&&!result){
+  return <main className={"interactive-exam-page exam-theme-"+theme} dir="rtl"><div className="iex-wrap">
+   <section className="iex-start-card iex-strict-ended" role="status"><span className="iex-eyebrow">وضع صارم</span><h1>انتهت المحاولة</h1>
+    <p>تم إنهاء هذه المحاولة لأنك غادرت صفحة الامتحان. ستُصحَّح الإجابات المحفوظة وتظهر النتيجة هنا.</p>
+    {error&&<div className="platform-error iex-error">{error}</div>}
+    <div className="iex-start-actions"><button type="button" className="eb-button" onClick={onBack}>العودة إلى المهام</button><button type="button" className="eb-button is-primary primary" onClick={()=>{void confirmStrictExit()}}>عرض النتيجة</button></div>
+   </section>
+  </div></main>;
+ }
+ // Phase 7A — a PAUSED (save & resume) attempt: its questions stay hidden and its clock stopped until «متابعة المحاولة».
+ if(paused&&!result&&state?.activeAttempt){
+  const aa=state.activeAttempt;
+  const rem=typeof aa.pausedRemainingMs==="number"?aa.pausedRemainingMs:null;
+  return <main className={"interactive-exam-page exam-theme-"+theme} dir="rtl"><div className="iex-wrap">
+   {error&&<div className="platform-error iex-error" role="alert">{error}</div>}
+   <section className="iex-start-card iex-paused-card" aria-labelledby="iex-paused-title"><span className="iex-eyebrow">حفظ مؤقت</span>
+    <h1 id="iex-paused-title">لديك محاولة محفوظة مؤقتًا</h1>
+    <p>{assignment.title}</p>
+    <dl className="iex-paused-meta">
+     <div><dt>المحاولة</dt><dd>{aa.attemptNumber} / {state.allowedAttempts||assignment.maxAttempts}</dd></div>
+     <div><dt>آخر حفظ</dt><dd>{formatDateTimeLatn(aa.lastSavedAt||aa.pausedAt||"")}</dd></div>
+     {rem!==null&&<div><dt>الوقت المتبقي</dt><dd>{formatRemaining(rem)}</dd></div>}
+     <div><dt>آخر موعد للواجب</dt><dd>{formatDateTimeLatn(state.effectiveDueAt||assignment.effectiveDueAt||assignment.dueAt)}</dd></div>
+    </dl>
+    <p className="iex-start-hint">{rem!==null?"إجاباتك محفوظة. عند المتابعة يُستأنف المؤقت بالوقت المتبقي فقط، ولا يتجاوز آخر موعد للواجب.":"إجاباتك محفوظة. ستتابع المحاولة نفسها قبل آخر موعد للواجب."}</p>
+    <div className="iex-start-actions"><button type="button" className="eb-button" onClick={onBack}>العودة</button><button type="button" className="eb-button is-primary primary" onClick={()=>{void resumePausedAttempt()}} disabled={starting}>{starting?"جارٍ المتابعة...":"متابعة المحاولة"}</button></div>
+   </section>
+  </div></main>;
+ }
  if(needsStart){
   const rawDate=assignment.openAt||assignment.effectiveDueAt||assignment.dueAt;
   const examDate=formatDateLatn(rawDate);
@@ -513,9 +671,12 @@ export default function StudentExamPage({token,assignment,studentName,className,
   const startLabel=starting?"جارٍ البدء...":(resumeMode?"متابعة المحاولة":"بدء المحاولة");
   // Pre-start, the server deliberately omits sections/questions, so `structured` is false here. Cover
   // selection must therefore depend only on the (safe) coverPage config, never on the hidden structure.
+  // Phase 7A — the strict warning is shown BEFORE the student starts (nothing is armed until the attempt runs).
+  const strictWarning=policy==="strict"&&!resumeMode?<div className="iex-strict-warning" role="note"><strong>تنبيه:</strong> هذا امتحان بوضع صارم. بعد بدء المحاولة، مغادرة صفحة الامتحان أو الانتقال إلى تطبيق أو تبويب آخر ستؤدي إلى إنهاء المحاولة.</div>:null;
   if(cover?.enabled){
    return <main className={"interactive-exam-page exam-theme-"+theme} dir="rtl"><div className="iex-wrap">
     {error&&<div className="platform-error iex-error">{error}</div>}
+    {strictWarning}
     <StructuredExamCover cover={cover} title={assignment.title||exam.title||"امتحان"} distribution={coverDistribution}
      runtime={{studentName,className:className||exam.metadata?.className||"",examDate,duration:timed?dur:""}}
      starting={starting} onStart={()=>{void startTimedAttempt()}}/>
@@ -524,6 +685,7 @@ export default function StudentExamPage({token,assignment,studentName,className,
   return <main className={"interactive-exam-page exam-theme-"+theme} dir="rtl"><div className="iex-wrap">
    {error&&<div className="platform-error iex-error">{error}</div>}
    <section className="iex-start-card"><span className="iex-eyebrow">{timed?"محاولة مؤقتة":"محاولة"}</span><h1>{assignment.title}</h1><p>{assignment.instructions}</p>
+    {strictWarning}
     <div className="iex-start-meta">{timed&&<span>مدة المحاولة: <strong>{dur}</strong></span>}<span>{assignment.questionCount} سؤال · {assignment.totalMarks} علامة</span><span>المحاولة {(state?.attemptsUsed||0)+1} / {state?.allowedAttempts||assignment.maxAttempts}</span></div>
     <p className="iex-start-hint">{resumeMode?(timed?"محاولتك جارية على الخادم — اضغط لمتابعة تحميل الأسئلة. لن يُعاد ضبط العدّاد.":"محاولتك جارية على الخادم — اضغط لمتابعة تحميل الأسئلة."):(timed?"لن تظهر الأسئلة إلا بعد بدء المحاولة، وسيبدأ العدّاد فور الضغط على الزر.":"لن تظهر الأسئلة إلا بعد بدء المحاولة.")}</p>
     <div className="iex-start-actions"><button type="button" className="eb-button" onClick={onBack}>العودة</button><button type="button" className="eb-button is-primary primary" onClick={()=>{void startTimedAttempt()}} disabled={starting||!canStartOrResume}>{startLabel}</button></div>
@@ -542,7 +704,7 @@ export default function StudentExamPage({token,assignment,studentName,className,
     onStart={()=>{setCoverStarted(true);scrollTop()}}/>
   </div></main>;
  }
- const inputsDisabled=submitBusy||expired;
+ const inputsDisabled=submitBusy||expired||strictEnded||pausing;
  // Roadmap #10/#11 — ONE authoritative derived save state for rendering; server-confirmed lastSavedAt only.
  const saveKind=deriveSaveState({localRevision:revision.current,savedRevision:savedRevision.current,saving,retrying,errorExhausted:saveError,online});
  const attemptLine="المحاولة "+((state?.attemptsUsed||0)+1)+" / "+(state?.allowedAttempts||assignment.maxAttempts);
@@ -553,6 +715,7 @@ export default function StudentExamPage({token,assignment,studentName,className,
  return <main className={"interactive-exam-page exam-theme-"+theme} dir="rtl"><div className="iex-wrap">
   <ExamTopBar title={assignment.title} context={classLine+" · "+attemptLine} onBack={()=>{void backWithoutSubmit()}} timer={timed&&hasActive&&remainingMs!==null?{remainingMs,tone:countdownTone(remainingMs)}:null}/>
   {error&&<div className="platform-error iex-error" role="alert">{error}</div>}
+  {policy==="strict"&&hasActive&&<div className="iex-strict-badge" role="note"><strong>وضع صارم</strong><span>مغادرة هذه الصفحة أو التبديل إلى تطبيق أو تبويب آخر تنهي المحاولة.</span></div>}
   {expired&&!result&&<div className="platform-notice iex-error" role="status">انتهى وقت المحاولة — لم يعد بالإمكان تعديل الإجابات، ويجري إنهاء المحاولة وتصحيح ما تم حفظه.</div>}
   <div className="iex-progress">
    <div className="iex-position">
@@ -564,6 +727,10 @@ export default function StudentExamPage({token,assignment,studentName,className,
    </div>
    <div className="iex-progress-bar"><ProgressBar label="تقدّمك" value={pct} showValue={false} size="sm"/><strong className="iex-progress-count">{done} / {total}</strong></div>
    <SaveStatus kind={saveKind} lastSavedAt={lastSavedAt} onRetry={()=>{void manualSave()}}/>
+   {policy==="pausable"&&writable&&<div className="iex-pause-row">
+    <button type="button" className="eb-button is-small iex-pause-button" onClick={()=>{void pauseAndExit()}} disabled={pausing||submitBusy}>{pausing?"جارٍ الحفظ المؤقت...":"حفظ مؤقت والخروج"}</button>
+    <small>{timed?"يحفظ إجاباتك ويوقف المؤقت حتى تعود. مغادرة الصفحة دون حفظ مؤقت لا توقف المؤقت.":"يحفظ إجاباتك لتتابع المحاولة نفسها لاحقًا."}</small>
+   </div>}
   </div>
   <ExamDetailsDisclosure summary={questionTotal+" أسئلة · "+assignment.totalMarks+" علامة"} defaultOpen={hasGeneralInstructions}>
    {assignment.instructions&&<p className="iex-details-instructions">{assignment.instructions}</p>}

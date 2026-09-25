@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import { formatRemaining } from "./attemptPolicy";
 import ActionMenu from "../ui/ActionMenu";
 import StatusBadge from "../ui/StatusBadge";
 import EmptyState from "../ui/EmptyState";
@@ -65,12 +66,13 @@ export default function Gradebook(p: GradebookProps) {
                 <td><strong>{s.studentName}</strong><small className="result-code">{s.studentCode}</small></td>
                 <td>
                   <div className="eb-status-stack">
-                    {s.attemptStatus && <StatusBadge tone={s.attemptStatus === "started" ? "info" : s.attemptStatus === "submitted" ? "neutral" : "neutral"} className={"lifecycle-badge lifecycle-" + s.attemptStatus}>{LIFECYCLE_LABEL[s.attemptStatus] || s.attemptStatus}</StatusBadge>}
+                    {s.attemptStatus && <StatusBadge tone={s.attemptStatus === "started" ? "info" : s.attemptStatus === "paused" || s.attemptStatus === "integrityExit" ? "warn" : "neutral"} className={"lifecycle-badge lifecycle-" + s.attemptStatus}>{LIFECYCLE_LABEL[s.attemptStatus] || s.attemptStatus}</StatusBadge>}
                     {gs === "notSubmitted"
                       ? <StatusBadge tone="neutral" className="review-state none">{gradingLabel(gs)}</StatusBadge>
                       : <StatusBadge tone={gs === "final" ? "success" : "warn"} className={"review-state " + gradingClass(gs)}>{gradingLabel(gs)}{pending && s.latestResult && s.latestResult.manualReviewMarks > 0 ? " (" + s.latestResult.manualReviewMarks + " ع.)" : ""}</StatusBadge>}
                     {s.activeAttempt?.startedAt && <small className="lifecycle-started">بدأ: {p.fmt(s.activeAttempt.startedAt)}</small>}
-                    {s.timed && s.activeAttempt && s.effectiveAttemptEndsAt && <small className="lifecycle-ends">ينتهي فعليًا: {p.fmt(s.effectiveAttemptEndsAt)}</small>}
+                    {s.timed && s.activeAttempt && s.effectiveAttemptEndsAt && s.activeAttempt.status !== "paused" && <small className="lifecycle-ends">ينتهي فعليًا: {p.fmt(s.effectiveAttemptEndsAt)}</small>}
+                    {s.activeAttempt?.status === "paused" && <small className="lifecycle-paused">محفوظة مؤقتًا{s.activeAttempt.pausedAt ? " منذ " + p.fmt(s.activeAttempt.pausedAt) : ""}{typeof s.activeAttempt.pausedRemainingMs === "number" ? " · المتبقي " + formatRemaining(s.activeAttempt.pausedRemainingMs) : ""}</small>}
                     {s.activeAttempt?.extendedEndsAt && <small className="lifecycle-extended-badge">تم تمديد وقت المحاولة</small>}
                     {s.dueAtOverride && <small className="deadline-extended-badge">تمديد حتى: {p.fmt(s.dueAtOverride)}</small>}
                   </div>
@@ -83,7 +85,7 @@ export default function Gradebook(p: GradebookProps) {
                     <ActionMenu label={"إجراءات " + s.studentName}>
                       <button type="button" className="eb-menu-item" onClick={() => p.onGrant(s)} disabled={p.busy}><IconPlus size={16} />منح محاولة إضافية</button>
                       <button type="button" className="eb-menu-item" onClick={() => p.onReopen(s)} disabled={p.busy || !!s.activeAttempt}><IconRestore size={16} />إعادة فتح للطالب</button>
-                      {s.timed && s.activeAttempt && <button type="button" className="eb-menu-item" onClick={() => p.onExtend(s)} disabled={p.busy}><IconEdit size={16} />تمديد وقت المحاولة</button>}
+                      {s.timed && s.activeAttempt && s.activeAttempt.status !== "paused" && <button type="button" className="eb-menu-item" onClick={() => p.onExtend(s)} disabled={p.busy}><IconEdit size={16} />تمديد وقت المحاولة</button>}
                       <button type="button" className="eb-menu-item" onClick={() => p.onDeadline(s)} disabled={p.busy}><IconEdit size={16} />تمديد الموعد</button>
                     </ActionMenu>
                   )}

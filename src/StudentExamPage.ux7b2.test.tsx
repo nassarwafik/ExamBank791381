@@ -518,8 +518,8 @@ describe("UX-7b-2 — source and authority guards", () => {
     expect(p).not.toMatch(/focusIndex|previousFocusIndex|nextFocusIndex|focusProgressPercent/);
     expect(p).not.toContain("<StructuredExamSection"); expect(p).not.toContain('className="iex-flow"');
     expect(p).not.toMatch(/markedForReview|window\.confirm|localStorage|sessionStorage|toLocaleString\(|toLocaleDateString\(/);
-    // requests: exactly the pre-existing four actions and the two endpoints
-    expect([...p.matchAll(/action:"([a-zA-Z]+)"/g)].map(m => m[1]).sort()).toEqual(["finalizeTimedOutAttempt", "saveDraft", "startAttempt", "submit"]);
+    // requests: exactly the pre-existing four actions + the three Phase 7A attempt-policy actions, and the two endpoints
+    expect([...p.matchAll(/action:"([a-zA-Z]+)"/g)].map(m => m[1]).sort()).toEqual(["finalizeIntegrityExit", "finalizeIntegrityExit", "finalizeTimedOutAttempt", "pauseAttempt", "resumeAttempt", "saveDraft", "startAttempt", "submit"]);
     expect([...p.matchAll(/fetch\("\/api\/([a-z-]+)\//g)].map(m => m[1]).sort()).toEqual(["student-assignment", "student-submission"]);
     expect(p.match(/setInterval\(/g)?.length).toBe(1);                                                   // the single pre-existing countdown tick
     expect(p.match(/Date\.now\(\)/g)?.length).toBe(1);                                                   // the pre-existing serverNow fallback only

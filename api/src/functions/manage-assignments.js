@@ -7,7 +7,7 @@ const {recordAuditEvent}=require("../lib/audit-log");
 const {examOfficialStats}=require("../lib/exam-structure");
 const {normalizeAssignmentStatus,applyAssignmentArchive,applyAssignmentRestore}=require("../lib/assignment-lifecycle");
 const {normalizeClassStatus}=require("../lib/class-lifecycle");
-const {activeAttemptOf}=require("../lib/assignment-availability");
+const {activeAttemptOf,attemptPolicyOf,ATTEMPT_POLICIES}=require("../lib/assignment-availability");
 const {withAssignmentLock,AssignmentLockBusyError}=require("../lib/assignment-lock");
 const PREFIX="platform/assignments/",CLASS_PREFIX="platform/classes/",SUB_PREFIX="platform/submissions/";
 const CONFLICT_MESSAGE="حدث تعارض مؤقت أثناء حفظ البيانات. حاول مرة أخرى.";
@@ -38,7 +38,7 @@ function parseDurationMinutes(v){
  if(n<1||n>1440)return {ok:false};
  return {ok:true,value:n};
 }
-function summary(a){return {assignmentId:a.assignmentId,classId:a.classId,className:a.className,title:a.title,instructions:a.instructions,status:a.status,openAt:a.openAt||"",dueAt:a.dueAt||"",sourceExamId:a.sourceExamId||"",sourceExamTitle:a.sourceExamTitle||"",questionCount:Number(a.questionCount||0),totalMarks:Number(a.totalMarks||0),maxAttempts:Math.max(1,Number(a.maxAttempts||1)),durationMinutes:Number(a.durationMinutes||0),attemptModelVersion:Number(a.attemptModelVersion||0),archivedAt:String(a.archivedAt||""),archivedBy:String(a.archivedBy||""),archivedFromStatus:String(a.archivedFromStatus||""),archiveReason:String(a.archiveReason||""),createdAt:a.createdAt||"",updatedAt:a.updatedAt||""}}
+function summary(a){return {assignmentId:a.assignmentId,classId:a.classId,className:a.className,title:a.title,instructions:a.instructions,status:a.status,openAt:a.openAt||"",dueAt:a.dueAt||"",sourceExamId:a.sourceExamId||"",sourceExamTitle:a.sourceExamTitle||"",questionCount:Number(a.questionCount||0),totalMarks:Number(a.totalMarks||0),maxAttempts:Math.max(1,Number(a.maxAttempts||1)),durationMinutes:Number(a.durationMinutes||0),attemptModelVersion:Number(a.attemptModelVersion||0),attemptPolicy:attemptPolicyOf(a),archivedAt:String(a.archivedAt||""),archivedBy:String(a.archivedBy||""),archivedFromStatus:String(a.archivedFromStatus||""),archiveReason:String(a.archiveReason||""),createdAt:a.createdAt||"",updatedAt:a.updatedAt||""}}
 // `deps` is an optional dependency-injection seam for unit tests (production passes nothing, so the
 // real implementations are used). It does not change runtime behavior.
 async function handler(request,deps={},obs=null){
@@ -64,6 +64,11 @@ async function handler(request,deps={},obs=null){
    // Optional server-authoritative per-attempt timer (B1). 0 => untimed (unchanged behavior).
    const dur=parseDurationMinutes(b.durationMinutes);
    if(!dur.ok)return {status:400,jsonBody:{ok:false,error:"مدة المحاولة يجب أن تكون رقمًا صحيحًا بين 1 و1440 دقيقة، أو بدون مؤقت."}};
+   // Phase 7A — the teacher's explicit attempt policy (طريقة المحاولة). Omitted → "continuous" (today's behaviour);
+   // anything else that is not one of the three values is a client error and is REJECTED (never silently coerced).
+   const policyRaw=b.attemptPolicy===undefined||b.attemptPolicy===null||b.attemptPolicy===""?"continuous":b.attemptPolicy;
+   if(!ATTEMPT_POLICIES.includes(policyRaw))return {status:400,jsonBody:{ok:false,error:"طريقة المحاولة غير صالحة."}};
+   const attemptPolicy=policyRaw;
    const classroom=await dl(c,CLASS_PREFIX+classId+".json");if(!classroom||normalizeClassStatus(classroom)==="archived")return {status:400,jsonBody:{ok:false,error:"الصف غير موجود أو مؤرشف."}};
    const openAt=iso(b.openAt),dueAt=iso(b.dueAt);if(openAt&&dueAt&&new Date(dueAt)<new Date(openAt))return {status:400,jsonBody:{ok:false,error:"موعد التسليم يجب أن يكون بعد موعد الفتح."}};
    const now=new Date().toISOString(),assignmentId=crypto.randomUUID(),maxAttempts=Math.min(10,Math.max(1,Number(b.maxAttempts||1)));
@@ -71,7 +76,10 @@ async function handler(request,deps={},obs=null){
    // UNTIMED assignment now requires an explicit server startAttempt (opening != starting). Assignments
    // created before B2A lack this flag and are treated as LEGACY (version 0) — there is NO bulk migration
    // and those documents keep their exact historical untimed behavior.
-   const a={schemaVersion:2,attemptModelVersion:2,assignmentId,classId,className:String(classroom.name||""),title,instructions,status:b.publish===true?"published":"draft",openAt,dueAt,maxAttempts,durationMinutes:dur.value,sourceExamId:String(exam.examId||""),sourceExamTitle:String(exam.title||title),questionCount:stats.questionCount,totalMarks:stats.totalMarks,examSnapshot:exam,createdBy:String(auth.user?.sub||"teacher"),createdAt:now,updatedAt:now};
+   // Phase 7A: strict / pausable attempts need the per-attempt epoch → attemptModelVersion 3. A continuous assignment
+   // stays on model 2, i.e. EXACTLY the pre-7A lifecycle. The policy is persisted on the document and never changed
+   // afterwards (there is no edit action — historical assignments keep theirs).
+   const a={schemaVersion:2,attemptModelVersion:attemptPolicy==="continuous"?2:3,attemptPolicy,assignmentId,classId,className:String(classroom.name||""),title,instructions,status:b.publish===true?"published":"draft",openAt,dueAt,maxAttempts,durationMinutes:dur.value,sourceExamId:String(exam.examId||""),sourceExamTitle:String(exam.title||title),questionCount:stats.questionCount,totalMarks:stats.totalMarks,examSnapshot:exam,createdBy:String(auth.user?.sub||"teacher"),createdAt:now,updatedAt:now};
    await up(c,PREFIX+assignmentId+".json",a);return {status:200,jsonBody:{ok:true,assignment:summary(a)}};
   }
   if(action==="setstatus"||action==="setmaxattempts"){
