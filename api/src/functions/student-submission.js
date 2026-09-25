@@ -6,7 +6,7 @@ const {getContainer,downloadJsonOrNull,mutateJsonWithRetry,StorageConflictError}
 const {gradeExam}=require("../lib/assignment-grading");
 const {recordAchievementIfEligible}=require("../lib/achievement-feed");
 const {normalizeClassStatus}=require("../lib/class-lifecycle");
-const {timerState,startRejection,writeRejection,normalizeDurationMinutes,activeAttemptOf,normalizeEndReason,attemptModelVersion}=require("../lib/assignment-availability");
+const {timerState,startRejection,writeRejection,normalizeDurationMinutes,activeAttemptOf,normalizeEndReason,attemptModelVersion,attemptPolicyOf,attemptEpochOf,pauseRejection,resumeRejection,toMs}=require("../lib/assignment-availability");
 const {deriveGradingStatus}=require("../lib/grading-status");
 const {withAssignmentLock,AssignmentLockBusyError}=require("../lib/assignment-lock");
 const AP="platform/assignments/",SP="platform/submissions/";
@@ -15,7 +15,7 @@ const CONFLICT_MESSAGE="حدث تعارض مؤقت أثناء حفظ البيا�
 // fields; they are "" / false / normalized for legacy/untimed attempts (backward compatible). endReason
 // is normalized from a legacy attempt's timedOut flag when the explicit field is absent (never mutates
 // stored data — normalization is read-time only).
-function pub(x){return {attemptNumber:x.attemptNumber,submittedAt:x.submittedAt,score:x.score,totalMarks:x.totalMarks,percentage:x.percentage,manualReviewMarks:x.manualReviewMarks,finalized:x.finalized,gradingStatus:deriveGradingStatus(x),teacherFeedback:String(x.teacherFeedback||""),timedOut:!!x.timedOut,startedAt:String(x.startedAt||""),endsAt:String(x.endsAt||""),extendedEndsAt:String(x.extendedEndsAt||""),endedAt:String(x.endedAt||""),endReason:normalizeEndReason(x)}}
+function pub(x){return {attemptNumber:x.attemptNumber,submittedAt:x.submittedAt,score:x.score,totalMarks:x.totalMarks,percentage:x.percentage,manualReviewMarks:x.manualReviewMarks,finalized:x.finalized,gradingStatus:deriveGradingStatus(x),teacherFeedback:String(x.teacherFeedback||""),timedOut:!!x.timedOut,startedAt:String(x.startedAt||""),endsAt:String(x.endsAt||""),extendedEndsAt:String(x.extendedEndsAt||""),endedAt:String(x.endedAt||""),endReason:normalizeEndReason(x),...(x.pauseCount!==undefined?{pauseCount:Math.max(0,Number(x.pauseCount)||0)}:{})}}
 // Unified state from the shared timer/availability helper, so this endpoint agrees with the
 // dashboard/assignment endpoints. `canAttempt` keeps its historical (untimed) meaning; `canWrite`
 // (save/submit gate) and `canStartAttempt` (timed start gate) are explicit and separate. serverNow +
@@ -23,7 +23,7 @@ function pub(x){return {attemptNumber:x.attemptNumber,submittedAt:x.submittedAt,
 function state(a,s,nowMs=Date.now()){
  const ts=timerState(a,s,nowMs),attempts=Array.isArray(s?.attempts)?s.attempts:[],latest=attempts.length?attempts[attempts.length-1]:null;
  return {attemptsUsed:ts.attemptsUsed,allowedAttempts:ts.allowedAttempts,canAttempt:ts.canAttempt,dueClosed:ts.isClosed,availability:ts.availability,openAt:ts.openAt,effectiveDueAt:ts.effectiveDueAt,
-  durationMinutes:ts.durationMinutes,timed:ts.timed,attemptModelVersion:ts.attemptModelVersion,requiresStart:ts.requiresStart,attemptStatus:ts.attemptStatus,serverNow:new Date(nowMs).toISOString(),activeAttempt:ts.activeAttempt,effectiveAttemptEndsAt:ts.effectiveAttemptEndsAt,attemptExpired:ts.attemptExpired,canStartAttempt:ts.canStartAttempt,canWrite:ts.canWrite,
+  durationMinutes:ts.durationMinutes,timed:ts.timed,attemptModelVersion:ts.attemptModelVersion,attemptPolicy:ts.attemptPolicy,requiresStart:ts.requiresStart,attemptStatus:ts.attemptStatus,serverNow:new Date(nowMs).toISOString(),activeAttempt:ts.activeAttempt,effectiveAttemptEndsAt:ts.effectiveAttemptEndsAt,attemptExpired:ts.attemptExpired,canStartAttempt:ts.canStartAttempt,canWrite:ts.canWrite,
   draftAnswers:s?.draftAnswers||{},draftSavedAt:s?.draftSavedAt||"",latestResult:latest?pub(latest):null,attempts:attempts.map(pub)}}
 function defaultSubmission(id,student){return {schemaVersion:1,assignmentId:id,studentId:student.userId,classId:student.classId,studentCode:student.code,studentName:student.displayName,allowedAttempts:null,draftAnswers:{},attempts:[],activeAttempt:null,createdAt:new Date().toISOString(),updatedAt:new Date().toISOString()}}
 // Roadmap #10/#11 stale-attempt guard. For a MODERN attempt (timed OR attemptModelVersion>=2) a write MUST
@@ -45,6 +45,20 @@ function attemptIdentityOk(doc,b){
  if(!act)return false;                                                           // asserted attempt no longer exists
  return Number(act.attemptNumber)===en&&String(act.startedAt||"")===es;
 }
+// Phase 7A — model-3 EPOCH guard, IN ADDITION to the identity above: a write must also assert the attempt epoch it was
+// composed under (expectedAttemptEpoch). An autosave sent before a pause keeps the same attemptNumber/startedAt as the
+// resumed attempt; only the epoch tells them apart. Strict integer >= 1, fail closed. Model < 3 is never checked.
+function attemptEpochOk(a,doc,b){
+ if(attemptModelVersion(a)<3)return true;
+ const ee=b&&b.expectedAttemptEpoch;
+ if(typeof ee!=="number"||!Number.isInteger(ee)||ee<1)return false;
+ const act=doc&&doc.activeAttempt;
+ return !!act&&attemptEpochOf(act)===ee;
+}
+// The epoch a lifecycle request was composed under (validated), or 0 when missing/malformed.
+function expectedEpoch(b){const ee=b&&b.expectedAttemptEpoch;return typeof ee==="number"&&Number.isInteger(ee)&&ee>=1?ee:0}
+// Phase 7A audit on a completed model-3 attempt: how many times it was paused (additive; never on older models).
+function modelThreeAudit(a,active){return attemptModelVersion(a)>=3?{pauseCount:Math.max(0,Number(active&&active.pauseCount)||0)}:{}}
 // `deps` is an optional dependency-injection seam for unit tests (production passes nothing, so the real
 // implementations are used). It does not change runtime behavior.
 async function handler(request,deps={},obs=null){
@@ -103,6 +117,8 @@ async function handler(request,deps={},obs=null){
      const startMs=Date.now(),attemptNumber=(Array.isArray(doc.attempts)?doc.attempts.length:0)+1;
      // UNTIMED v2: endsAt "" (no deadline). TIMED: endsAt = startedAt + durationMinutes (server time only).
      doc.activeAttempt={attemptNumber,startedAt:new Date(startMs).toISOString(),endsAt:timed?new Date(startMs+durationMs).toISOString():"",status:"started"};
+     // Phase 7A: a model-3 attempt starts at epoch 1 (pause/resume advance it) with no pauses yet.
+     if(attemptModelVersion(a)>=3){doc.activeAttempt.attemptEpoch=1;doc.activeAttempt.pauseCount=0}
      doc.updatedAt=new Date(startMs).toISOString();
      resultState=state(a,doc,startMs);
      return doc;
@@ -131,8 +147,9 @@ async function handler(request,deps={},obs=null){
      const fa=await dl(c,AP+id+".json");if(!fa||fa.status!=="published"){const err=new Error("الواجب غير متاح حاليًا.");err.httpStatus=403;throw err}
      const doc=current||defaultSubmission(id,student);
      if(isModernAttempt(a)&&!attemptIdentityOk(doc,b)){const err=new Error("تم بدء محاولة جديدة لهذا الواجب. حدّث الصفحة.");err.httpStatus=409;throw err}
+     if(!attemptEpochOk(a,doc,b)){const err=new Error("تغيّرت حالة المحاولة (حفظ مؤقت أو استئناف). حدّث الصفحة.");err.httpStatus=409;throw err}
      const ts=timerState(a,doc,Date.now());
-     if(!ts.canWrite){const err=new Error(ts.timed?(ts.attemptExpired?"انتهى وقت المحاولة.":"ابدأ المحاولة أولاً."):(ts.attemptModelVersion>=2&&!ts.activeAttempt?"ابدأ المحاولة أولاً.":"لا توجد محاولة متاحة للحفظ."));err.httpStatus=409;throw err}
+     if(!ts.canWrite){const err=new Error(ts.activeAttempt&&ts.activeAttempt.status==="paused"?"المحاولة محفوظة مؤقتًا. تابع المحاولة أولًا.":ts.timed?(ts.attemptExpired?"انتهى وقت المحاولة.":"ابدأ المحاولة أولاً."):(ts.attemptModelVersion>=2&&!ts.activeAttempt?"ابدأ المحاولة أولاً.":"لا توجد محاولة متاحة للحفظ."));err.httpStatus=409;throw err}
      savedAt=new Date().toISOString();
      doc.draftAnswers=answers;doc.draftSavedAt=savedAt;doc.updatedAt=savedAt;
      // Lifecycle (B2A #10): a timed or untimed-v2 active attempt is marked "draft" and stamped with a
@@ -170,15 +187,16 @@ async function handler(request,deps={},obs=null){
      const fa=await dl(c,AP+id+".json");if(!fa||fa.status!=="published"){const err=new Error("الواجب غير متاح حاليًا.");err.httpStatus=403;throw err}
      const doc=current||defaultSubmission(id,student);
      if(isModernAttempt(a)&&!attemptIdentityOk(doc,b)){const err=new Error("تم بدء محاولة جديدة لهذا الواجب. حدّث الصفحة.");err.httpStatus=409;throw err}
+     if(!attemptEpochOk(a,doc,b)){const err=new Error("تغيّرت حالة المحاولة (حفظ مؤقت أو استئناف). حدّث الصفحة.");err.httpStatus=409;throw err}
      const ts=timerState(a,doc,Date.now());
-     if(!ts.canWrite){const err=new Error(ts.timed?(ts.attemptExpired?"انتهى وقت المحاولة.":"ابدأ المحاولة أولاً."):(ts.isClosed?"انتهى موعد التسليم.":"لا توجد محاولة إضافية متاحة."));err.httpStatus=409;throw err}
+     if(!ts.canWrite){const err=new Error(ts.activeAttempt&&ts.activeAttempt.status==="paused"?"المحاولة محفوظة مؤقتًا. تابع المحاولة أولًا.":ts.timed?(ts.attemptExpired?"انتهى وقت المحاولة.":"ابدأ المحاولة أولاً."):(ts.isClosed?"انتهى موعد التسليم.":"لا توجد محاولة إضافية متاحة."));err.httpStatus=409;throw err}
      // Grade ONLY after the published/identity/canWrite guards pass, so a stale or missing-identity submit
      // (409 above) never calls gradeExam or mutates anything.
      const g=gradeFn(a.examSnapshot,answers);
      const active=activeAttemptOf(doc),attemptNumber=active?active.attemptNumber:(doc.attempts?.length||0)+1;
      // Audit (B2A #12 / B2B #16): a normal submit records endReason "submitted", endedAt = server
      // submission time, and preserves any teacher timer extension (extendedEndsAt) on the completed attempt.
-     const attempt={attemptNumber,submittedAt:now,score:g.score,totalMarks:g.totalMarks,percentage:g.percentage,manualReviewMarks:g.manualReviewMarks,finalized:g.finalized,questionGrades:g.questions,sections:g.sections,answers,manualOverrides:{},teacherFeedback:"",timedOut:false,startedAt:active?active.startedAt:"",endsAt:active?active.endsAt||"":"",extendedEndsAt:active&&active.extendedEndsAt?String(active.extendedEndsAt):"",endedAt:now,endReason:"submitted"};
+     const attempt={attemptNumber,submittedAt:now,score:g.score,totalMarks:g.totalMarks,percentage:g.percentage,manualReviewMarks:g.manualReviewMarks,finalized:g.finalized,questionGrades:g.questions,sections:g.sections,answers,manualOverrides:{},teacherFeedback:"",timedOut:false,startedAt:active?active.startedAt:"",endsAt:active?active.endsAt||"":"",extendedEndsAt:active&&active.extendedEndsAt?String(active.extendedEndsAt):"",endedAt:now,endReason:"submitted",...modelThreeAudit(a,active)};
      doc.attempts=Array.isArray(doc.attempts)?doc.attempts:[];doc.attempts.push(attempt);
      doc.draftAnswers={};doc.draftSavedAt="";doc.activeAttempt=null;doc.updatedAt=now;
      resultAttempt=attempt;finalState=state(a,doc,Date.now());
@@ -221,7 +239,7 @@ async function handler(request,deps={},obs=null){
      // extendedEndsAt), NOT this offline finalization moment. submittedAt stays the real server
      // finalization timestamp. The teacher extension is preserved on the completed attempt (extendedEndsAt).
      const endedAt=ts.effectiveAttemptEndsAt||active.endsAt||now;
-     const attempt={attemptNumber:active.attemptNumber,submittedAt:now,score:g.score,totalMarks:g.totalMarks,percentage:g.percentage,manualReviewMarks:g.manualReviewMarks,finalized:g.finalized,questionGrades:g.questions,sections:g.sections,answers:serverAnswers,manualOverrides:{},teacherFeedback:"",timedOut:true,startedAt:active.startedAt,endsAt:active.endsAt,extendedEndsAt:active.extendedEndsAt?String(active.extendedEndsAt):"",endedAt,endReason:"timedOut"};
+     const attempt={attemptNumber:active.attemptNumber,submittedAt:now,score:g.score,totalMarks:g.totalMarks,percentage:g.percentage,manualReviewMarks:g.manualReviewMarks,finalized:g.finalized,questionGrades:g.questions,sections:g.sections,answers:serverAnswers,manualOverrides:{},teacherFeedback:"",timedOut:true,startedAt:active.startedAt,endsAt:active.endsAt,extendedEndsAt:active.extendedEndsAt?String(active.extendedEndsAt):"",endedAt,endReason:"timedOut",...modelThreeAudit(a,active)};
      doc.attempts=Array.isArray(doc.attempts)?doc.attempts:[];doc.attempts.push(attempt);
      doc.draftAnswers={};doc.draftSavedAt="";doc.activeAttempt=null;doc.updatedAt=now;
      resultAttempt=attempt;finalState=state(a,doc,Date.now());
@@ -239,6 +257,119 @@ async function handler(request,deps={},obs=null){
     await recFn(c,{classId:student.classId,studentId:student.userId,studentDisplayName:student.displayName,assignmentId:id,assignmentTitle:a.title,percentage:resultAttempt.percentage,shareAchievements:student.shareAchievements});
    }
    if(!already)obs?.logInfo("student.submission.completed",{action:"finalizeTimedOutAttempt",assignmentId:id,timedOut:true});
+   return {status:200,jsonBody:{ok:true,result:resultAttempt?pub(resultAttempt):(finalState?finalState.latestResult:null),state:finalState,alreadyFinalized:already}};
+  }
+
+  // Shared failure mapping for the Phase 7A lifecycle actions (same contract as the actions above): safe technical event
+  // (action + assignmentId + retryability only — NEVER answers), 503 for lock/storage conflicts, domain status otherwise.
+  const lifecycleFailure=e=>{
+   const retryable=e instanceof AssignmentLockBusyError||e instanceof StorageConflictError;
+   obs?.logWarn("student.submission.failed",{action,assignmentId:id,retryable,errorClass:retryable?"conflict":(e?.httpStatus?undefined:"internal_error")});
+   if(retryable)return {status:503,jsonBody:{ok:false,error:CONFLICT_MESSAGE}};
+   if(e?.httpStatus)return {status:e.httpStatus,jsonBody:{ok:false,error:e.message}};
+   throw e;
+  };
+  const stale=()=>{const err=new Error("تغيّرت حالة المحاولة في نافذة أخرى. حدّث الصفحة.");err.httpStatus=409;return err};
+  const reread=async()=>{const fa=await dl(c,AP+id+".json");if(!fa||fa.status!=="published"){const err=new Error("الواجب غير متاح حاليًا.");err.httpStatus=403;throw err}};
+
+  // ── pauseAttempt (Phase 7A, PAUSABLE only) — the explicit «حفظ مؤقت والخروج». ATOMICALLY (one CAS): saves the
+  // student's latest answers, stops the duration clock and records the REMAINING budget computed from SERVER time only
+  // (the current authoritative duration deadline − now; never from the device clock), keeps the SAME attemptNumber and
+  // startedAt, and advances the epoch. Asserts identity + epoch; a retry of this very request (already paused at
+  // epoch+1) is idempotent. Never pauses an expired attempt (that one is finalized instead). ──
+  if(action==="pauseAttempt"){
+   const rej=pauseRejection(a,s,Date.now());
+   if(rej)return {status:rej.status,jsonBody:{ok:false,error:rej.error}};
+   const answers=b.answers&&typeof b.answers==="object"?b.answers:null;
+   let finalState=null,already=false;
+   try{
+    await maybeLock(()=>mut(c,name,async current=>{
+     await reread();
+     const doc=current||defaultSubmission(id,student);
+     if(!attemptIdentityOk(doc,b))throw stale();
+     const act=doc.activeAttempt,ep=attemptEpochOf(act),exp=expectedEpoch(b);
+     if(!exp)throw stale();
+     if(act.status==="paused"&&ep===exp+1){already=true;finalState=state(a,doc,Date.now());return doc}   // idempotent retry
+     if(act.status==="paused"||ep!==exp)throw stale();
+     const nowMs=Date.now(),rj=pauseRejection(a,doc,nowMs);
+     if(rj){const err=new Error(rj.error);err.httpStatus=rj.status;throw err}
+     const ts=timerState(a,doc,nowMs),nowIso=new Date(nowMs).toISOString();
+     if(answers){doc.draftAnswers=answers;doc.draftSavedAt=nowIso;act.lastSavedAt=nowIso}
+     if(ts.timed)act.pausedRemainingMs=Math.max(0,toMs(ts.attemptDurationEndsAt)-nowMs);   // server budget, unclipped by due
+     act.status="paused";act.pausedAt=nowIso;act.attemptEpoch=ep+1;act.pauseCount=Math.max(0,Number(act.pauseCount)||0)+1;
+     doc.updatedAt=nowIso;
+     finalState=state(a,doc,nowMs);
+     return doc;
+    }));
+   }catch(e){return lifecycleFailure(e)}
+   if(!already)obs?.logInfo("student.submission.completed",{action,assignmentId:id});
+   return {status:200,jsonBody:{ok:true,state:finalState,alreadyPaused:already}};
+  }
+
+  // ── resumeAttempt (Phase 7A, PAUSABLE only) — continue the SAME paused attempt: same attemptNumber, same startedAt,
+  // same answers, never a new attempt. The new running deadline is SERVER now + the stored remaining budget (never the
+  // original full duration); the due date still caps it (timerState). Refused once the due date has passed. Asserts
+  // identity + the PAUSED epoch; a retry of this very request (already running at epoch+1) is idempotent. ──
+  if(action==="resumeAttempt"){
+   const rej=resumeRejection(a,s,Date.now());
+   if(rej)return {status:rej.status,jsonBody:{ok:false,error:rej.error}};
+   let finalState=null,already=false;
+   try{
+    await maybeLock(()=>mut(c,name,async current=>{
+     await reread();
+     const doc=current||defaultSubmission(id,student);
+     if(!attemptIdentityOk(doc,b))throw stale();
+     const act=doc.activeAttempt,ep=attemptEpochOf(act),exp=expectedEpoch(b);
+     if(!exp)throw stale();
+     if(act.status!=="paused"&&ep===exp+1){already=true;finalState=state(a,doc,Date.now());return doc}   // idempotent retry
+     if(act.status!=="paused"||ep!==exp)throw stale();
+     const nowMs=Date.now(),rj=resumeRejection(a,doc,nowMs);
+     if(rj){const err=new Error(rj.error);err.httpStatus=rj.status;throw err}
+     if(normalizeDurationMinutes(a.durationMinutes)>0){
+      const remaining=Math.max(0,Number(act.pausedRemainingMs)||0);                    // corrupt/missing → 0 (fails closed)
+      act.runEndsAt=new Date(nowMs+remaining).toISOString();
+     }
+     act.status=act.lastSavedAt?"draft":"started";act.attemptEpoch=ep+1;
+     delete act.pausedAt;delete act.pausedRemainingMs;
+     doc.updatedAt=new Date(nowMs).toISOString();
+     finalState=state(a,doc,nowMs);
+     return doc;
+    }));
+   }catch(e){return lifecycleFailure(e)}
+   if(!already)obs?.logInfo("student.submission.completed",{action,assignmentId:id});
+   return {status:200,jsonBody:{ok:true,state:finalState,alreadyResumed:already}};
+  }
+
+  // ── finalizeIntegrityExit (Phase 7A, STRICT only) — the student left the exam page of a running strict attempt.
+  // Closes THAT attempt exactly once (identity + epoch asserted, so a late/duplicated exit can never end a newer
+  // attempt): grades ONLY the server's saved draft (any client answers are ignored), consumes the attempt, clears it and
+  // records endReason "integrityExit" (endedAt = now). If the attempt had already expired by time, it is closed as
+  // "timedOut" instead (the time ran out first). No active attempt → idempotent no-op (a duplicate exit, or a submit
+  // that won the race): never a second result. ──
+  if(action==="finalizeIntegrityExit"){
+   if(attemptPolicyOf(a)!=="strict")return {status:400,jsonBody:{ok:false,error:"هذا الواجب ليس بوضع صارم."}};
+   let resultAttempt=null,finalState=null,already=false;
+   try{
+    await maybeLock(()=>mut(c,name,async current=>{
+     await reread();
+     const doc=current||defaultSubmission(id,student);
+     const active=activeAttemptOf(doc);
+     if(!active){already=true;finalState=state(a,doc,Date.now());return doc}
+     if(!attemptIdentityOk(doc,b)||!attemptEpochOk(a,doc,b))throw stale();
+     const nowMs=Date.now(),ts=timerState(a,doc,nowMs),now=new Date(nowMs).toISOString();
+     const serverAnswers=doc.draftAnswers&&typeof doc.draftAnswers==="object"?doc.draftAnswers:{};
+     const g=gradeFn(a.examSnapshot,serverAnswers),timedOut=!!ts.attemptExpired;
+     const attempt={attemptNumber:active.attemptNumber,submittedAt:now,score:g.score,totalMarks:g.totalMarks,percentage:g.percentage,manualReviewMarks:g.manualReviewMarks,finalized:g.finalized,questionGrades:g.questions,sections:g.sections,answers:serverAnswers,manualOverrides:{},teacherFeedback:"",timedOut,startedAt:active.startedAt,endsAt:active.endsAt||"",extendedEndsAt:active.extendedEndsAt?String(active.extendedEndsAt):"",endedAt:timedOut?(ts.effectiveAttemptEndsAt||now):now,endReason:timedOut?"timedOut":"integrityExit",...modelThreeAudit(a,active)};
+     doc.attempts=Array.isArray(doc.attempts)?doc.attempts:[];doc.attempts.push(attempt);
+     doc.draftAnswers={};doc.draftSavedAt="";doc.activeAttempt=null;doc.updatedAt=now;
+     resultAttempt=attempt;finalState=state(a,doc,nowMs);
+     return doc;
+    }));
+   }catch(e){return lifecycleFailure(e)}
+   if(!already&&resultAttempt&&resultAttempt.finalized){
+    await recFn(c,{classId:student.classId,studentId:student.userId,studentDisplayName:student.displayName,assignmentId:id,assignmentTitle:a.title,percentage:resultAttempt.percentage,shareAchievements:student.shareAchievements});
+   }
+   if(!already)obs?.logInfo("student.submission.completed",{action,assignmentId:id,endReason:resultAttempt?resultAttempt.endReason:""});
    return {status:200,jsonBody:{ok:true,result:resultAttempt?pub(resultAttempt):(finalState?finalState.latestResult:null),state:finalState,alreadyFinalized:already}};
   }
 

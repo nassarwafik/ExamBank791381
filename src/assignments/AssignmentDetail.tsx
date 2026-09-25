@@ -1,4 +1,5 @@
 import type { ReactNode, RefObject } from "react";
+import { attemptPolicyLabel } from "./attemptPolicy";
 import StatCard from "../ui/StatCard";
 import StatusBadge from "../ui/StatusBadge";
 import EmptyState from "../ui/EmptyState";
@@ -42,6 +43,7 @@ export default function AssignmentDetail({ headingRef, ...p }: AssignmentDetailP
             <span>التسليم: {p.fmt(item.dueAt)}</span>
             <span>{item.maxAttempts || 1} محاولة</span>
             <span>{item.durationMinutes ? "مؤقّت · " + item.durationMinutes + " دقيقة" : "بدون مؤقت"}</span>
+            <span>طريقة المحاولة: {attemptPolicyLabel(item.attemptPolicy)}</span>
           </div>
         </div>
         <div className="eb-assign-detail-actions">

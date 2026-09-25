@@ -327,3 +327,14 @@
 .exam-theme-preview-head{ position:sticky; inset-block-start:0; z-index:1; display:flex; align-items:center; justify-content:space-between; gap:var(--eb-space-3); padding:var(--eb-space-3) var(--eb-space-5); background:var(--eb-navy); color:var(--eb-nav-text); }
 .exam-theme-preview-head button{ min-height:40px; padding:0 var(--eb-space-4); border:1px solid var(--eb-nav-border); border-radius:var(--eb-r-sm); background:transparent; color:var(--eb-nav-text); font:inherit; font-weight:var(--eb-fw-semibold); cursor:pointer; }
 .exam-theme-preview-note{ padding:var(--eb-space-2) var(--eb-space-3); border-radius:var(--eb-r-sm); background:var(--eb-primary-050); border:1px solid var(--eb-primary-100); color:var(--eb-primary-strong); font-size:var(--eb-fs-13); font-weight:var(--eb-fw-semibold); }
+
+/* ---------- Phase 7A — attempt policy (strict / save & resume) ---------- */
+.iex-strict-warning{ margin:var(--eb-space-2) 0; padding:var(--eb-space-3); border:1px solid var(--eb-warn); border-radius:var(--eb-r-sm); background:var(--eb-warn-bg); color:var(--eb-warn-tx); line-height:1.7; font-size:var(--eb-fs-13); }
+.iex-strict-badge{ display:flex; flex-wrap:wrap; align-items:center; gap:var(--eb-space-2); margin:var(--eb-space-2) 0; padding:var(--eb-space-2) var(--eb-space-3); border:1px solid var(--eb-warn); border-radius:var(--eb-r-sm); background:var(--eb-warn-bg); color:var(--eb-warn-tx); font-size:var(--eb-fs-13); }
+.iex-strict-badge strong{ padding:0 var(--eb-space-2); border-radius:var(--eb-pill); background:var(--eb-warn-tx); color:var(--eb-surface); font-size:var(--eb-fs-12); }
+.iex-pause-row{ display:flex; flex-wrap:wrap; align-items:center; gap:var(--eb-space-2); }
+.iex-pause-row small{ color:var(--eb-muted); font-size:var(--eb-fs-12); min-width:0; }
+.iex-paused-meta{ display:grid; grid-template-columns:repeat(auto-fit,minmax(140px,1fr)); gap:var(--eb-space-2); margin:var(--eb-space-2) 0; }
+.iex-paused-meta div{ padding:var(--eb-space-2) var(--eb-space-3); border:1px solid var(--eb-line); border-radius:var(--eb-r-sm); background:var(--eb-surface-2); min-width:0; }
+.iex-paused-meta dt{ color:var(--eb-muted); font-size:var(--eb-fs-12); }
+.iex-paused-meta dd{ margin:2px 0 0; color:var(--eb-text-heading); font-weight:var(--eb-fw-semibold); overflow-wrap:anywhere; }

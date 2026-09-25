@@ -25,12 +25,14 @@ function safeMarksDistribution(exam){
 // answerable exam body. The exam.questions/exam.sections are intentionally omitted. Applies to BOTH a
 // TIMED assignment and an UNTIMED attemptModelVersion>=2 assignment (opening != starting). `timed` tells
 // the client whether to show a countdown; UNTIMED reports durationMinutes 0 and never a deadline.
-function preStartAssignment(a,timed){
+// Phase 7A: also served while the active attempt is PAUSED — a paused attempt's clock is stopped, so its questions stay
+// hidden until resumeAttempt (otherwise "pause" would be free reading time).
+function preStartAssignment(a,timed,attemptPolicy){
  const snap=a.examSnapshot||{};
  return {assignmentId:a.assignmentId,title:a.title,instructions:a.instructions,openAt:a.openAt||"",dueAt:a.dueAt||"",
   effectiveDueAt:"",maxAttempts:Math.max(1,Number(a.maxAttempts||1)),durationMinutes:timed?Number(a.durationMinutes||0):0,
   sourceExamTitle:a.sourceExamTitle||"",questionCount:Number(a.questionCount||0),totalMarks:Number(a.totalMarks||0),
-  requiresStart:true,timed:!!timed,marksDistribution:safeMarksDistribution(snap),
+  requiresStart:true,timed:!!timed,attemptPolicy:attemptPolicy||"continuous",marksDistribution:safeMarksDistribution(snap),
   exam:{title:snap.title||a.title,metadata:snap.metadata||{},presentationTheme:snap.presentationTheme||"",coverPage:snap.coverPage||null}};
 }
 // `deps` is an optional dependency-injection seam for unit tests (production passes nothing).
@@ -52,9 +54,9 @@ async function handler(request,deps={},obs=null){
   // the student could read the questions in DevTools before pressing Start). Only after startAttempt
   // (activeAttempt exists — live or expired) is the full student-sanitized exam returned. Legacy untimed
   // (requiresStart false) keeps its historical behavior and receives the full exam immediately.
-  if(ts.requiresStart&&!ts.activeAttempt){return {status:200,jsonBody:{ok:true,assignment:preStartAssignment(a,ts.timed)}}}
+  if(ts.requiresStart&&(!ts.activeAttempt||ts.activeAttempt.status==="paused")){return {status:200,jsonBody:{ok:true,assignment:preStartAssignment(a,ts.timed,ts.attemptPolicy)}}}
   const effectiveDueAt=av.effectiveDueAt;
-  return {status:200,jsonBody:{ok:true,assignment:{assignmentId:a.assignmentId,title:a.title,instructions:a.instructions,openAt:a.openAt||"",dueAt:a.dueAt||"",effectiveDueAt,maxAttempts:Math.max(1,Number(a.maxAttempts||1)),durationMinutes:Number(a.durationMinutes||0),sourceExamTitle:a.sourceExamTitle||"",questionCount:Number(a.questionCount||0),totalMarks:Number(a.totalMarks||0),exam:studentExam(a.examSnapshot)}}};
+  return {status:200,jsonBody:{ok:true,assignment:{assignmentId:a.assignmentId,title:a.title,instructions:a.instructions,openAt:a.openAt||"",dueAt:a.dueAt||"",effectiveDueAt,maxAttempts:Math.max(1,Number(a.maxAttempts||1)),durationMinutes:Number(a.durationMinutes||0),sourceExamTitle:a.sourceExamTitle||"",questionCount:Number(a.questionCount||0),totalMarks:Number(a.totalMarks||0),attemptPolicy:ts.attemptPolicy,exam:studentExam(a.examSnapshot)}}};
  }catch(e){obs?.logError("student.assignment.error",e);return {status:500,jsonBody:{ok:false,error:"تعذر فتح الواجب حاليًا."}}}
 }
 app.http("studentAssignment",{methods:["GET"],authLevel:"anonymous",route:"student-assignment/{assignmentId}",handler:withObservability("student-assignment",handler)});
