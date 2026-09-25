@@ -16,6 +16,10 @@
 // createdAt are ignored. A NEW message requires an active, non-archived student whose CURRENT class (from the
 // persisted student document — never a browser classId) is active; announcements require an active class. Archived
 // history stays readable. Messages are append-only (message-store), never edited or deleted.
+// Phase 6B — after a NEW teacher → student direct message is SAVED (createMessage committed), the student's opted-in
+// devices get a Web Push notification (no message content). It is a best-effort side effect with a time budget: a push
+// failure, timeout, missing VAPID configuration or no subscription never changes the send response. Nothing else here
+// (reads, polling, mark-read, announcements) triggers a push.
 const { app } = require("@azure/functions");
 const { withObservability } = require("../lib/observability");
 const { requireBuilderAuth } = require("../lib/builder-auth");
@@ -23,6 +27,7 @@ const { getContainer, downloadJsonOrNull } = require("../lib/platform-storage");
 const { normalizeClassStatus } = require("../lib/class-lifecycle");
 const { recordAuditEvent } = require("../lib/audit-log");
 const { resolveTeacherDisplayName } = require("../lib/teacher-profile");
+const { notifyStudentOfNewMessage, notifyWithTimeout } = require("../lib/push-notify");
 const {
   isSafeId, directPrefix, announcementPrefix, normalizeMessageBody, clampLimit, createMessage, listRecentMessages,
   messageView, studentDisplayName, DIRECT_HISTORY_LIMIT, ANNOUNCEMENT_HISTORY_LIMIT
@@ -151,6 +156,9 @@ async function handler(request, deps = {}, obs = null) {
         body: text.body, createdAt, classIdAtSend
       }), deps);
       await rec(container, { actor: teacherId, action: "message.sendDirect", targetType: "student", targetId: studentId, targetLabel: studentDisplayName(student), details: { classId: classIdAtSend } });
+      // Push is secondary to the saved message: bounded in time and never able to fail the send.
+      try { await notifyWithTimeout((deps.notifyStudentOfNewMessage || notifyStudentOfNewMessage)(container, studentId, deps, obs)); }
+      catch { /* never reached: notify is total; kept as a last guard */ }
       return { status: 200, jsonBody: { ok: true, message: messageView(doc, { includeStudentId: true }) } };
     }
 
