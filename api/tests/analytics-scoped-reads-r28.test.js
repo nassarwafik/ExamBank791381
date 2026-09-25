@@ -119,7 +119,7 @@ async function compare(seed, scope) {
   return { ref: strip(ref), out: strip(out), st };
 }
 const folders = names => [...new Set(names.map(n => n.slice(SUB.length).split("/")[0]))].sort();
-const SCOPES = { global: {}, class: { classId: "c1" }, student: { classId: "c1", studentId: "s02" }, range: { fromMs: FROM, toMs: TO }, rangeClass: { classId: "c2", fromMs: FROM, toMs: TO }, studentGlobal: { studentId: "s11" } };
+const SCOPES = { global: {}, class: { classId: "c1" }, student: { classId: "c1", studentId: "s02" }, range: { fromMs: FROM, toMs: TO }, rangeClass: { classId: "c2", fromMs: FROM, toMs: TO }, studentRange: { classId: "c2", studentId: "s11", fromMs: FROM, toMs: TO } };  // Phase 8A: a studentId always carries its classId
 
 describe("A. selector — conservative name prefilter (pure)", () => {
   it("A1 keeps names whose folder segment is a candidate id, drops other folders, preserves listing order", () => {

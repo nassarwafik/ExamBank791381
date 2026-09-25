@@ -2,7 +2,7 @@ const { app } = require("@azure/functions");
 const { withObservability } = require("../lib/observability");
 const { requireBuilderAuth } = require("../lib/builder-auth");
 const { getContainer } = require("../lib/platform-storage");
-const { computeTeacherAnalytics } = require("../lib/teacher-analytics-core");
+const { computeTeacherAnalytics, AnalyticsScopeError } = require("../lib/teacher-analytics-core");
 
 function timestamp(value) {
   if (!value) return 0;
@@ -37,6 +37,8 @@ async function handler(request, deps = {}, obs = null) {
         jsonBody: { ok: true, ...result }
       };
     } catch (e) {
+      // Phase 8A: a rejected scope (student without class / unknown / not a member) is a safe, explicit client error.
+      if (e instanceof AnalyticsScopeError) return { status: e.httpStatus, jsonBody: { ok: false, error: e.message } };
       obs?.logError("teacher.analytics.error", e);
       return {
         status: 500,

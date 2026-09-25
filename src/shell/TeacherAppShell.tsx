@@ -150,6 +150,7 @@ export default function TeacherAppShell({ nav, projectReadyTotal, messageUnread,
       <div className="app-shell-main eb-shell-main">
         <PageHeader
           title={pageTitleFor(nav)}
+          icon={active === "dashboard" ? <IconDashboard size={22} /> : undefined}
           breadcrumb={crumbs}
           leading={
             <IconButton

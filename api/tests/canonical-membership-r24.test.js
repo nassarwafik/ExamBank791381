@@ -147,8 +147,8 @@ describe("R24 #7–#9 — teacher analytics population is canonical membership (
     expect(d.students.map(s => s.userId)).not.toContain("sE");
     expect(d.assignmentTrend[0]).toMatchObject({ students: 3, submitted: 3, missing: 0, pendingReview: 1 });
     expect(d.studentDetail).toBeNull();
-    const detail = await computeTeacherAnalytics(seed().container, { classId: "c1", studentId: "sC" });
-    expect(detail.studentDetail).toBeNull();                          // archived student is not a member → no detail
+    // Phase 8A: an archived student is not a member → the student scope is REJECTED (never a silent class fallback).
+    await expect(computeTeacherAnalytics(seed().container, { classId: "c1", studentId: "sC" })).rejects.toMatchObject({ name: "AnalyticsScopeError", httpStatus: 400 });
   });
   it("#9 analytics class population equals reports/project-tracker membership (listClassStudents) for the same data", async () => {
     const ctx = seed();

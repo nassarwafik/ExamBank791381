@@ -48,6 +48,21 @@ function selectSubmissionNames(names, candidateAssignmentIds) {
   return out;
 }
 
+// Phase 8A — ONE authoritative analytics scope per request. A rejected scope (a student without a class, an unknown
+// student, a student who is not a current member of the requested class) is an explicit error — never a silent
+// fallback that would mix another scope's numbers into the response.
+class AnalyticsScopeError extends Error {
+  constructor(status, message) { super(message); this.name = "AnalyticsScopeError"; this.httpStatus = status; }
+}
+
+/** Arabic count phrase for "N unsubmitted assignments" (1 / 2 / 3–10 / 11+), used by student-scope insights. */
+function missingAssignmentsPhrase(n) {
+  if (n === 1) return "واجب واحد غير مسلّم";
+  if (n === 2) return "واجبان غير مسلّمين";
+  if (n <= 10) return n + " واجبات غير مسلّمة";
+  return n + " واجبًا غير مسلّم";
+}
+
 function number(value) {
   const n = Number(value);
   return Number.isFinite(n) ? n : 0;
@@ -173,6 +188,74 @@ function topicBreakdown(records) {
     .sort((a, b) => (a.average ?? 101) - (b.average ?? 101));
 }
 
+// Phase 8A — insights speak about the CURRENT scope only. GLOBAL: every current class ("عام"); CLASS: "في الصف …";
+// STUDENT: the one selected student — never "طلاب يحتاجون متابعة" or any classmate-derived figure.
+function buildInsights({ mode, className, performanceChange, trendCount, topicAnalytics, followUp, missing, pendingReview, neverLogged, student }) {
+  const insights = [];
+  const weakestTopic = topicAnalytics.find(item => item.average !== null && item.average < 70);
+  const strongestTopic = [...topicAnalytics].reverse().find(item => item.average !== null && item.average >= 85);
+
+  if (mode === "student") {
+    if (performanceChange >= 3) {
+      insights.push({ tone: "success", title: "أداء الطالب يتحسن", text: "ارتفعت علامات الطالب " + Math.abs(performanceChange) + "% في آخر الواجبات." });
+    } else if (performanceChange <= -3) {
+      insights.push({ tone: "warning", title: "تراجع في أداء الطالب", text: "انخفضت علامات الطالب " + Math.abs(performanceChange) + "% في آخر الواجبات؛ يفضّل مراجعة الواجبات الأخيرة معه." });
+    } else if (trendCount >= 2) {
+      insights.push({ tone: "info", title: "أداء الطالب مستقر", text: "لا يوجد تغير كبير في علامات الطالب بين آخر الواجبات." });
+    }
+    if (weakestTopic) {
+      insights.push({ tone: "warning", title: "موضوع يحتاج مراجعة", text: "أداء الطالب في موضوع " + weakestTopic.topic + " يحتاج مراجعة (" + weakestTopic.average + "%)." });
+    }
+    if (strongestTopic) {
+      insights.push({ tone: "success", title: "نقطة قوة", text: "أداء الطالب في موضوع " + strongestTopic.topic + " قوي بمتوسط " + strongestTopic.average + "%." });
+    }
+    if (missing) {
+      insights.push({ tone: "warning", title: "واجبات غير مسلّمة", text: "لدى الطالب " + missingAssignmentsPhrase(missing) + " ضمن النطاق الحالي." });
+    }
+    if (pendingReview) {
+      insights.push({ tone: "info", title: "مراجعة يدوية مطلوبة", text: "للطالب " + pendingReview + " تسليم يحتاج مراجعة أو تصحيحًا يدويًا." });
+    }
+    if (student && student.needsFollowUp) {
+      insights.push({ tone: "warning", title: "الطالب يحتاج متابعة", text: "مؤشرات المتابعة: " + student.reasons.join("، ") + "." });
+    } else if (neverLogged) {
+      insights.push({ tone: "warning", title: "الطالب لم يدخل بعد", text: "لم يسجل الطالب الدخول إلى المنصة بعد." });
+    }
+  } else {
+    const where = mode === "class" ? "في الصف " + (className || "المحدد") : "";
+    const lead = text => (where ? where + "، " + text : text);
+    if (performanceChange >= 3) {
+      insights.push({ tone: "success", title: mode === "class" ? "اتجاه أداء الصف إيجابي" : "يوجد تحسن عام في الأداء", text: lead("ارتفع متوسط الأداء " + Math.abs(performanceChange) + "% مقارنة بالفترة السابقة من الواجبات.") });
+    } else if (performanceChange <= -3) {
+      insights.push({ tone: "warning", title: mode === "class" ? "يوجد تراجع في أداء الصف" : "يوجد تراجع عام في الأداء", text: lead("انخفض متوسط الأداء " + Math.abs(performanceChange) + "%؛ يفضّل مراجعة آخر الواجبات والموضوعات الأضعف.") });
+    } else if (trendCount >= 2) {
+      insights.push({ tone: "info", title: "الأداء مستقر", text: lead("لا يوجد تغير كبير في متوسط النتائج بين آخر الواجبات.") });
+    }
+    if (weakestTopic) {
+      insights.push({ tone: "warning", title: "موضوع يحتاج مراجعة", text: lead("متوسط الأداء في " + weakestTopic.topic + " هو " + weakestTopic.average + "%، وهو من أضعف الموضوعات حاليًا.") });
+    }
+    if (strongestTopic) {
+      insights.push({ tone: "success", title: "نقطة قوة", text: lead("الأداء في " + strongestTopic.topic + " قوي بمتوسط " + strongestTopic.average + "%.") });
+    }
+    if (followUp.length) {
+      insights.push({ tone: "warning", title: "طلاب يحتاجون متابعة", text: lead(followUp.length + " طالبًا لديهم مؤشر متابعة مثل انخفاض المعدل أو واجبات ناقصة أو تراجع في الأداء.") });
+    }
+    if (missing) {
+      insights.push({ tone: "info", title: "تسليمات ناقصة", text: lead("يوجد " + missing + " حالة عدم تسليم ضمن النطاق الحالي.") });
+    }
+    if (pendingReview) {
+      insights.push({ tone: "info", title: "مراجعة يدوية مطلوبة", text: lead("هناك " + pendingReview + " تسليمًا يحتوي أسئلة تحتاج مراجعة أو تصحيحًا يدويًا.") });
+    }
+    if (neverLogged) {
+      insights.push({ tone: "warning", title: "طلاب لم يدخلوا بعد", text: lead(neverLogged + " طالبًا فعّالًا لم يسجلوا الدخول إلى المنصة بعد.") });
+    }
+  }
+
+  if (!insights.length) {
+    insights.push({ tone: "success", title: "الوضع مستقر", text: mode === "student" ? "لا توجد مؤشرات تنبيه بارزة في بيانات الطالب الحالية." : "لا توجد مؤشرات تنبيه بارزة في البيانات الحالية." });
+  }
+  return insights;
+}
+
 // Extracted verbatim from the original teacherAnalytics HTTP handler so both the dashboard
 // endpoint and the new AI-insight endpoint compute numbers exactly one way — the AI's advice
 // must always be describing the same figures the teacher sees on screen, never a second,
@@ -221,9 +304,23 @@ async function computeTeacherAnalytics(container, { classId: requestedClassId = 
   // Roadmap #34 (C1): the GLOBAL scope is current/operational — only canonical-active classes populate it. An explicit
   // classId keeps the historical class-scoped behavior (an archived class requested on purpose is still served).
   const activeClassIds = new Set(classes.filter(item => item.active).map(item => item.classId));
+  // Phase 8A — the effective scope. GLOBAL: no class, no student → every canonical-active class. CLASS: one class (an
+  // explicitly requested archived class stays a historical view, R34). STUDENT: exactly ONE student who must be a
+  // current canonical member of the requested class. EVERY figure below derives from this one population.
+  const mode = requestedStudentId ? "student" : requestedClassId ? "class" : "global";
+  let targetStudent = null;
+  if (mode === "student") {
+    if (!requestedClassId) throw new AnalyticsScopeError(400, "اختر الصف قبل اختيار الطالب.");
+    targetStudent = students.find(item => String(item.userId || "") === requestedStudentId) || null;
+    if (!targetStudent) throw new AnalyticsScopeError(404, "الطالب غير موجود.");
+    if (!isStudentClassMember(targetStudent, requestedClassId)) throw new AnalyticsScopeError(400, "الطالب المحدد لا ينتمي إلى الصف المحدد.");
+  }
   const inScope = classId => requestedClassId ? classId === requestedClassId : activeClassIds.has(classId);
   const scopedAssignments = scopedByDate.filter(item => inScope(String(item.classId || "")));
-  const scopedStudents = activeStudents.filter(item => inScope(String(item.classId || "")));
+  // The class ROSTER of the scope (class/global) — the student picker's list; in STUDENT mode it stays the selected
+  // class's roster for the picker only and never feeds a single analytics figure.
+  const rosterStudents = activeStudents.filter(item => inScope(String(item.classId || "")));
+  const scopedStudents = mode === "student" ? [targetStudent] : rosterStudents;
 
   const submissionMap = new Map();
   for (const submission of submissionsRaw) {
@@ -327,12 +424,14 @@ async function computeTeacherAnalytics(container, { classId: requestedClassId = 
     })
     .slice(0, 20);
 
-  const topImprovers = studentSummaries
+  // A multi-student ranking is not meaningful for one student (and must never list classmates).
+  const topImprovers = mode === "student" ? [] : studentSummaries
     .filter(item => item.completed >= 2 && item.trendDelta > 0)
     .sort((a, b) => b.trendDelta - a.trendDelta)
     .slice(0, 8);
 
-  const classComparison = classes
+  // A comparison of classes is a GLOBAL view only: a class or student scope never carries other classes' aggregates.
+  const classComparison = mode !== "global" ? [] : classes
     .filter(item => item.active)
     .map(classroom => ({
       classId: classroom.classId,
@@ -388,76 +487,44 @@ async function computeTeacherAnalytics(container, { classId: requestedClassId = 
 
   const topicAnalytics = topicBreakdown(submittedRecords).slice(0, 14);
 
-  const insights = [];
-  if (performanceChange >= 3) {
-    insights.push({ tone: "success", title: "اتجاه الأداء إيجابي", text: "متوسط الأداء ارتفع " + Math.abs(performanceChange) + "% مقارنة بالفترة السابقة من الواجبات." });
-  } else if (performanceChange <= -3) {
-    insights.push({ tone: "warning", title: "يوجد تراجع في الأداء", text: "متوسط الأداء انخفض " + Math.abs(performanceChange) + "%؛ يفضّل مراجعة آخر الواجبات والموضوعات الأضعف." });
-  } else if (trendAverages.length >= 2) {
-    insights.push({ tone: "info", title: "الأداء مستقر", text: "لا يوجد تغير كبير في متوسط النتائج بين آخر الواجبات." });
-  }
-
-  const weakestTopic = topicAnalytics.find(item => item.average !== null && item.average < 70);
-  if (weakestTopic) {
-    insights.push({ tone: "warning", title: "موضوع يحتاج مراجعة", text: "متوسط الأداء في " + weakestTopic.topic + " هو " + weakestTopic.average + "%، وهو من أضعف الموضوعات حاليًا." });
-  }
-
-  const strongestTopic = [...topicAnalytics].reverse().find(item => item.average !== null && item.average >= 85);
-  if (strongestTopic) {
-    insights.push({ tone: "success", title: "نقطة قوة", text: "الأداء في " + strongestTopic.topic + " قوي بمتوسط " + strongestTopic.average + "% ." });
-  }
-
-  if (followUp.length) {
-    insights.push({ tone: "warning", title: "طلاب يحتاجون متابعة", text: followUp.length + " طالبًا لديهم مؤشر متابعة مثل انخفاض المعدل أو واجبات ناقصة أو تراجع في الأداء." });
-  }
-  if (missing) {
-    insights.push({ tone: "info", title: "تسليمات ناقصة", text: "يوجد " + missing + " حالة عدم تسليم ضمن النطاق الحالي." });
-  }
-  if (pendingReview) {
-    insights.push({ tone: "info", title: "مراجعة يدوية مطلوبة", text: "هناك " + pendingReview + " تسليمًا يحتوي أسئلة تحتاج مراجعة أو تصحيحًا يدويًا." });
-  }
-
   const neverLogged = scopedStudents.filter(student => !student.lastLoginAt).length;
-  if (neverLogged) {
-    insights.push({ tone: "warning", title: "طلاب لم يدخلوا بعد", text: neverLogged + " طالبًا فعّالًا لم يسجلوا الدخول إلى المنصة بعد." });
-  }
+  const scopeClassName = classMap.get(requestedClassId)?.name || "";
+  const insights = buildInsights({ mode, className: scopeClassName, performanceChange, trendCount: trendAverages.length, topicAnalytics, followUp, missing, pendingReview, neverLogged, student: mode === "student" ? studentSummaries[0] || null : null });
 
-  if (!insights.length) {
-    insights.push({ tone: "success", title: "الوضع مستقر", text: "لا توجد مؤشرات تنبيه بارزة في البيانات الحالية." });
-  }
-
-  // Additive: per-student detail, only computed when a specific student is requested. Reuses
-  // the same studentMap entry (already sorted/aggregated above) plus a topic breakdown scoped
-  // to just this student's graded questions.
+  // Phase 8A — the student view has ONE authority: in STUDENT mode the whole response is already that student's records,
+  // so studentDetail is a projection of the SAME summary / trend / topics as the main KPIs (never a second computation).
   let studentDetail = null;
-  if (requestedStudentId) {
-    const target = studentMap.get(requestedStudentId);
-    if (target) {
-      const studentRecords = submittedRecords.filter(record => String(record.student.userId) === requestedStudentId);
-      studentDetail = {
-        userId: target.userId,
-        displayName: target.displayName,
-        classId: target.classId,
-        className: target.className,
-        average: average(target.scores),
-        assigned: target.assigned,
-        completed: target.completed,
-        missing: target.missing,
-        completionRate: target.assigned ? round(target.completed / target.assigned * 100, 1) : 0,
-        trendDelta: trendDelta(target.points),
-        trend: trendLabel(trendDelta(target.points)),
-        lastLoginAt: target.lastLoginAt,
-        scoreTrend: target.points,
-        topicAnalytics: topicBreakdown(studentRecords)
-      };
-    }
+  if (mode === "student") {
+    const summary = studentSummaries[0];
+    const entry = studentMap.get(requestedStudentId);
+    studentDetail = {
+      userId: summary.userId,
+      displayName: summary.displayName,
+      classId: summary.classId,
+      className: summary.className,
+      average: summary.average,
+      assigned: summary.assigned,
+      completed: summary.completed,
+      missing: summary.missing,
+      completionRate: summary.completionRate,
+      trendDelta: summary.trendDelta,
+      trend: summary.trend,
+      lastLoginAt: summary.lastLoginAt,
+      needsFollowUp: summary.needsFollowUp,
+      reasons: summary.reasons,
+      scoreTrend: entry ? entry.points : [],
+      topicAnalytics
+    };
   }
 
   return {
     generatedAt: new Date().toISOString(),
     scope: {
+      mode,
       classId: requestedClassId,
       className: classMap.get(requestedClassId)?.name || "كل الصفوف",
+      studentId: mode === "student" ? requestedStudentId : "",
+      studentName: mode === "student" ? studentName(targetStudent) : "",
       from: fromMs ? new Date(fromMs).toISOString() : "",
       to: toMs ? new Date(toMs).toISOString() : ""
     },
@@ -495,11 +562,12 @@ async function computeTeacherAnalytics(container, { classId: requestedClassId = 
     followUp,
     topImprovers,
     insights: insights.slice(0, 7),
-    students: studentSummaries
-      .map(item => ({ userId: item.userId, displayName: item.displayName }))
+    // The student PICKER's roster (the scope's class members) — selector metadata, not analytics.
+    students: rosterStudents
+      .map(item => ({ userId: String(item.userId), displayName: studentName(item) }))
       .sort((a, b) => a.displayName.localeCompare(b.displayName, "ar")),
     studentDetail
   };
 }
 
-module.exports = { computeTeacherAnalytics, selectSubmissionNames, submissionPathAssignmentId, round, average, trendDelta, trendLabel };
+module.exports = { computeTeacherAnalytics, AnalyticsScopeError, buildInsights, selectSubmissionNames, submissionPathAssignmentId, round, average, trendDelta, trendLabel, missingAssignmentsPhrase };

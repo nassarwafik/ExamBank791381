@@ -141,7 +141,9 @@ describe("UX-3 dashboard — request contract", () => {
     fireEvent.click(btn);
     await waitFor(() => expect(analyticsCalls(calls).at(-1)?.url).toBe("/api/teacher-analytics?classId=c2"));
     expect((screen.getByLabelText("الصف") as HTMLSelectElement).value).toBe("c2");
-    expect(within(screen.getByRole("list", { name: "اختيار صف لعرض تفاصيله" })).getByRole("button", { name: /العاشر/ }).getAttribute("aria-pressed")).toBe("true");
+    // Phase 8A: the class comparison is a GLOBAL-only view — once a class is selected it is not rendered at all.
+    await screen.findByRole("heading", { level: 2, name: "يحتاج إلى انتباهك" });
+    expect(screen.queryByRole("list", { name: "اختيار صف لعرض تفاصيله" })).toBeNull();
   });
 });
 
@@ -243,7 +245,7 @@ describe("UX-3 dashboard — charts (react-chartjs-2 mocked)", () => {
 });
 
 describe("UX-3 dashboard — CSV, AI, achievements (payload parity)", () => {
-  it("CSV export writes byte-identical content to the pre-UX-3 format", async () => {
+  it("CSV export (global scope): the pre-UX-3 rows with the Phase 8A scope line, plus the global-only comparison / improvers blocks", async () => {
     await mount();
     let captured: Blob | null = null;
     URL.createObjectURL = vi.fn((b: Blob) => { captured = b; return "blob:x"; }) as unknown as typeof URL.createObjectURL;
@@ -258,36 +260,48 @@ describe("UX-3 dashboard — CSV, AI, achievements (payload parity)", () => {
     const pct = (v: number | null) => v === null ? "—" : v.toFixed(1).replace(/\.0$/, "") + "%";
     const trendText = (d: number) => d >= 5 ? "يتحسن" : d <= -5 ? "يتراجع" : "مستقر";
     const rows: string[][] = [
-      ["ExamBank - Teacher Analytics"], ["النطاق", f.scope.className], ["تاريخ التقرير", new Date(GENERATED_AT).toLocaleString("ar", { dateStyle: "medium", timeStyle: "short" })], [],
+      ["ExamBank - Teacher Analytics"], ["النطاق", "كل الصفوف / جميع الطلاب"], ["تاريخ التقرير", new Date(GENERATED_AT).toLocaleString("ar", { dateStyle: "medium", timeStyle: "short" })], [],
       ["المؤشر", "القيمة"], ["الطلاب", "38"], ["متوسط العلامات", "72.4%"], ["نسبة التسليم", "85%"], ["يحتاجون متابعة", "5"], ["واجبات منشورة", "7"], ["تسليمات ناقصة", "9"], [],
       ["الواجب", "الصف", "المتوسط", "التسليم", "لم يسلم", "مراجعة"],
       ...f.assignmentTrend.map(i => [i.title, i.className, pct(i.average as number | null), pct(i.completionRate), String(i.missing), String(i.pendingReview)]), [],
       ["طلاب يحتاجون متابعة", "الصف", "المعدل", "ناقص", "الاتجاه", "السبب"],
       ...f.followUp.map(i => [i.displayName, i.className, pct(i.average), String(i.missing), trendText(i.trendDelta), i.reasons.join("، ")]), [],
-      ["الموضوع", "المتوسط", "إجابات مصححة"], ...f.topicAnalytics.map(i => [i.topic, pct(i.average), String(i.gradedQuestions)])
+      ["الموضوع", "المتوسط", "إجابات مصححة"], ...f.topicAnalytics.map(i => [i.topic, pct(i.average), String(i.gradedQuestions)]), [],
+      ["مقارنة الصفوف", "الطلاب", "المتوسط", "نسبة التسليم"], ...f.classComparison.map(i => [i.name, String(i.students), pct(i.average), pct(i.completionRate)]), [],
+      ["أفضل تحسن", "الصف", "التحسن"], ...f.topImprovers.map(i => [i.displayName, i.className, "+" + i.trendDelta + "%"])
     ];
     expect(text).toBe("\ufeff" + rows.map(r => r.map(q).join(",")).join("\r\n"));
     expect((captured as unknown as Blob).type).toBe("text/csv;charset=utf-8");
   });
-  it("AI analysis posts {classId} for the class scope and {classId, studentId} for the student scope, rendering the advice lines", async () => {
+  it("AI analysis posts exactly the scope: {} globally, {classId} for a class, {classId, studentId} for a student — one button, rendering the advice lines", async () => {
     const calls = await mount();
     fireEvent.click(screen.getByRole("button", { name: /تحليل البيانات العامة واستخلاص العبر/ }));
     await screen.findByText("سطر ثانٍ");
     let ai = calls.filter(c => c.url === "/api/teacher-analytics-ai");
-    expect(ai).toHaveLength(1); expect(ai[0].init?.method).toBe("POST"); expect(JSON.parse(String(ai[0].init?.body))).toEqual({ classId: "" });
+    expect(ai).toHaveLength(1); expect(ai[0].init?.method).toBe("POST"); expect(JSON.parse(String(ai[0].init?.body))).toEqual({});
     expect((ai[0].init!.headers as Record<string, string>)["x-builder-token"]).toBe("tkn-1");
-    // student scope: needs a class + student + studentDetail in the payload
+    // class scope: the advice of the global scope is cleared at once; the button follows the scope
+    fireEvent.change(screen.getByLabelText("الصف"), { target: { value: "c1" } });
+    expect(screen.queryByText("سطر ثانٍ")).toBeNull();
+    fireEvent.click(await screen.findByRole("button", { name: /تحليل بيانات الصف واستخلاص العبر/ }));
+    await screen.findByText("سطر ثانٍ");
+    ai = calls.filter(c => c.url === "/api/teacher-analytics-ai");
+    expect(JSON.parse(String(ai[1].init?.body))).toEqual({ classId: "c1" });
+    // student scope: one AI button (no separate per-student button), carrying class + student
+    const detail = { userId: "u1", displayName: "سارة خالد", classId: "c1", className: "الحادي عشر", average: 42, assigned: 5, completed: 2, missing: 3, completionRate: 40, trendDelta: -16, trend: "declining", lastLoginAt: "", needsFollowUp: true, reasons: ["معدل منخفض"], scoreTrend: [{ assignmentId: "a1", title: "واجب 1", date: "", percentage: 50 }, { assignmentId: "a2", title: "واجب 2", date: "", percentage: 34 }], topicAnalytics: [{ topic: "كسور", average: 40, gradedQuestions: 3 }] };
     cleanup();
-    const detail = { userId: "u1", displayName: "سارة خالد", classId: "c1", className: "الحادي عشر", average: 42, assigned: 5, completed: 2, missing: 3, completionRate: 40, trendDelta: -16, trend: "declining", lastLoginAt: "", scoreTrend: [{ assignmentId: "a1", title: "واجب 1", date: "", percentage: 50 }, { assignmentId: "a2", title: "واجب 2", date: "", percentage: 34 }], topicAnalytics: [{ topic: "كسور", average: 40, gradedQuestions: 3 }] };
     const calls2 = await mount({ analytics: () => ({ ...analyticsFixture(), studentDetail: detail }) });
     fireEvent.change(screen.getByLabelText("الصف"), { target: { value: "c1" } });
     fireEvent.change(await screen.findByLabelText("الطالب"), { target: { value: "u1" } });
     await waitFor(() => expect(analyticsCalls(calls2).at(-1)?.url).toBe("/api/teacher-analytics?classId=c1&studentId=u1"));
     const focus = await screen.findByRole("region", { name: "سارة خالد" });
     expect(focus.textContent).toContain("تركيز على طالب واحد");
-    expect(within(focus).getByRole("heading", { level: 3, name: "حركة علامات الطالب" })).toBeTruthy();
-    fireEvent.click(within(focus).getByRole("button", { name: /تحليل بيانات هذا الطالب/ }));
-    await within(focus).findByText("سطر ثانٍ");
+    expect(focus.textContent).toContain("مؤشرات المتابعة: معدل منخفض");
+    expect(within(focus).queryByRole("button")).toBeNull();
+    expect(screen.getByRole("heading", { level: 3, name: "حركة علامات الطالب" })).toBeTruthy();
+    expect(screen.getAllByRole("button", { name: /بالذكاء الاصطناعي|واستخلاص العبر/ })).toHaveLength(1);
+    fireEvent.click(screen.getByRole("button", { name: /تحليل بيانات الطالب واستخلاص العبر/ }));
+    await screen.findByText("سطر ثانٍ");
     ai = calls2.filter(c => c.url === "/api/teacher-analytics-ai");
     expect(JSON.parse(String(ai[0].init?.body))).toEqual({ classId: "c1", studentId: "u1" });
   });
@@ -315,7 +329,8 @@ describe("UX-3 dashboard — drill-down panel", () => {
     fireEvent.click(trigger);
     const panel = await screen.findByRole("complementary", { name: "واجب 1" });
     expect(calls.some(c => c.url === "/api/assignment-results?assignmentId=a1")).toBe(true);
-    expect(document.activeElement).toBe(within(panel).getByRole("heading", { level: 2, name: "واجب 1" }));
+    // The panel focuses its heading in a mount effect — wait for it instead of asserting synchronously after findByRole.
+    await waitFor(() => expect(document.activeElement).toBe(within(panel).getByRole("heading", { level: 2, name: "واجب 1" })));
     expect(panel.textContent).toContain("مصحح");
     fireEvent.click(within(panel).getByRole("button", { name: "#1 · 65%" }));
     const review = await screen.findByRole("complementary", { name: /المحاولة #1/ });

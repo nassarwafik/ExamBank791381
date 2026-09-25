@@ -154,10 +154,11 @@ describe("R23 E — class-level pending counts (classComparison) are canonical",
     expect(classRow(data, "c1").submitted).toBe(4);
     expect(classRow(data, "c2").submitted).toBe(1);
   });
-  it("classComparison is computed over ALL classes regardless of the requested classId scope (unchanged), still canonical", async () => {
+  // Phase 8A: classComparison is a GLOBAL-scope view only — a class scope never carries other classes' aggregates.
+  it("classComparison is a global-only view (Phase 8A): a classId scope returns no comparison rows; its own KPIs stay canonical", async () => {
     const data = await computeTeacherAnalytics(seedMixed().container, { classId: "c2" });
-    expect(classRow(data, "c1").pendingReview).toBe(3);
-    expect(classRow(data, "c2").pendingReview).toBe(0);
+    expect(data.classComparison).toEqual([]);
+    expect(data.kpis.pendingReview).toBe(0);
   });
 });
 
@@ -179,14 +180,14 @@ describe("R23 F — student-scope / global pending counts (kpis + submissionStat
     const data = await computeTeacherAnalytics(seedMixed().container);
     expect(pendingInsight(data)?.text).toContain("3 ");
   });
-  it("studentId scope: studentDetail.completed counts submissions independent of grading state (unchanged), pending KPI still canonical", async () => {
+  it("studentId scope: studentDetail.completed counts submissions independent of grading state (unchanged), pending KPI is the student's own (Phase 8A), canonical", async () => {
     const data = await computeTeacherAnalytics(seedMixed().container, { classId: "c1", studentId: "s3" });
     expect(data.studentDetail).not.toBeNull();
     expect(data.studentDetail.userId).toBe("s3");
     expect(data.studentDetail.assigned).toBe(2);      // a1 + a2
     expect(data.studentDetail.completed).toBe(1);     // only a2 submitted (legacy pending) — still "completed" (submitted)
     expect(data.studentDetail.missing).toBe(1);
-    expect(data.kpis.pendingReview).toBe(3);          // scope KPI unaffected by studentId (unchanged), canonical
+    expect(data.kpis.pendingReview).toBe(1);          // Phase 8A: s3's own a2 (legacy manual → canonical pending), not the class's 3
   });
 });
 
@@ -259,11 +260,11 @@ describe("R23 J — AI-insight inputs receive the corrected counts (teacher-anal
     const ctx = seedMixed();
     const classScope = await computeTeacherAnalytics(ctx.container, { classId: "c1", studentId: "" });
     expect(classScope.kpis.pendingReview).toBe(3);
-    expect(classRow(classScope, "c1").pendingReview).toBe(3);
+    expect(classScope.submissionStatus.pendingReview).toBe(3);
     expect(classScope.studentDetail).toBeNull();
     const studentScope = await computeTeacherAnalytics(ctx.container, { classId: "c1", studentId: "s4" });
     expect(studentScope.studentDetail?.userId).toBe("s4");
-    expect(studentScope.kpis.pendingReview).toBe(3);
+    expect(studentScope.kpis.pendingReview).toBe(1);   // Phase 8A: s4's own a2 (manual marks override final → pending)
   });
   it("both analytics endpoints contain NO grading interpretation of their own (no finalized / manualReviewMarks reads) — they only consume computeTeacherAnalytics", () => {
     for (const file of ["teacher-analytics.js", "teacher-analytics-ai.js"]) {

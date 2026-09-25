@@ -6,6 +6,7 @@ const { getContainer, listJson, downloadJsonOrNull, mutateJsonWithRetry, Storage
 const { FEED_PREFIX, REACTIONS, feedBlobName, publicPost } = require("../lib/achievement-feed");
 const { isSafeId } = require("../lib/message-store");
 const { isStudentClassMember } = require("../lib/class-membership");
+const { normalizeClassStatus } = require("../lib/class-lifecycle");
 const { recordEventSafely } = require("../lib/notification-events");
 
 const CLASS_PREFIX = "platform/classes/";
@@ -14,6 +15,14 @@ const MAX_POSTS = 50;
 const MAX_NOTE_LENGTH = 200;
 
 const newestFirst = (a, b) => String(b.createdAt || "").localeCompare(String(a.createdAt || ""));
+
+/** Phase 8A — the GLOBAL scope is the dashboard's: every CURRENT (canonical-active) class. An archived class's posts
+ *  stay readable when that class is requested explicitly (historical view), exactly like teacher analytics. */
+async function globalFeed(container) {
+  const [posts, classes] = await Promise.all([listJson(container, FEED_PREFIX), listJson(container, CLASS_PREFIX)]);
+  const current = new Set(classes.filter(c => c?.classId && normalizeClassStatus(c) === "active").map(c => String(c.classId)));
+  return [posts.filter(post => current.has(String(post?.classId || ""))), classes];
+}
 
 /**
  * The dashboard scope of a GET: none (every class), ?classId=<id> (that class), or ?classId=<id>&studentId=<id>
@@ -61,7 +70,7 @@ async function handler(request, deps = {}, obs = null) {
                 .filter(post => String(post?.classId || "") === scope.classId && (!scope.studentId || String(post?.studentId || "") === scope.studentId)),
               [{ ...scope.classroom, classId: scope.classId }]
             ]
-          : await Promise.all([listJson(container, FEED_PREFIX), listJson(container, CLASS_PREFIX)]);
+          : await globalFeed(container);
         const classNameById = new Map(classes.map(c => [String(c.classId || ""), String(c.name || "")]));
         const sorted = posts
           .sort(newestFirst)
