@@ -153,7 +153,9 @@ describe("B/C/D. StudentPortal is NOT loaded before an AUTHORITATIVE student ses
   });
 });
 
-describe("E/F/G. the student transition — fallback only, then the portal with the unchanged props; re-entry", () => {
+// C3 is the ONLY test that observes the cold, suspended transition (it releases the shared gate itself); E/F and G release the
+// gate up front, so every test in this block passes on its own and in any order.
+describe("E/F/G. the student transition — C3: cold fallback then the portal; E/F: unchanged props; G: re-entry", () => {
   it("C3 (inverse) stored role \"teacher\" but the server authoritatively answers STUDENT: nothing loads while pending; the portal loads only after that response", async () => {
     let resolveSession: (r: Response) => void = () => {};
     const pending = new Promise<Response>(r => { resolveSession = r; });
@@ -174,10 +176,12 @@ describe("E/F/G. the student transition — fallback only, then the portal with 
     expect(screen.queryByText(FALLBACK)).toBeNull();
     expect(gate.seen.at(-1)!.displayName).toBe("أحمد محمد");                                                  // the SERVER's name, never the stale stored one
   });
-  it("E/F fresh student login: after the authoritative login response only the local fallback shows (no teacher shell, no login form), then the portal renders with exactly {token, displayName, onLogout}", async () => {
+  it("E/F fresh student login: the portal renders after the authoritative login response with exactly {token, displayName, onLogout}; no teacher shell, no login form (the cold Suspense transition itself is C3's proof)", async () => {
+    // Independent of test order: this test releases the module gate itself (resolving an already-resolved promise is a
+    // no-op), so it proves the props/contract of a student session, not the cold fallback.
+    gate.release();
     installFetch("student");
     render(<App />); await login("S-1");
-    // The module is already resolved from C3 (module cache) — the portal renders directly, exactly like a returning student.
     expect(await screen.findByTestId("portal-stub")).toBeTruthy();
     expect(teacherShell()).toBeNull(); expect(document.querySelector("form.auth-form")).toBeNull();
     expect(calls.some(u => u.includes("/api/project-tracker"))).toBe(false);
@@ -186,16 +190,18 @@ describe("E/F/G. the student transition — fallback only, then the portal with 
     expect(Object.keys(props).sort()).toEqual(["displayName", "onLogout", "token"]);
   });
   it("G re-entry: logout from the portal → login form (module stays cached) → student login again re-mounts ONE portal, no duplicate login/session request, no teacher shell", async () => {
+    gate.release();                                                                                          // order-independent (see E/F)
+    const mountsBefore = gate.mounts;                                                                        // cumulative across the file → relative counts
     installFetch("student");
     render(<App />); await login("S-1");
     await screen.findByTestId("portal-stub");
-    const mountsAfterFirst = gate.mounts;
+    await waitFor(() => expect(gate.mounts).toBe(mountsBefore + 1));                                        // the mount effect has flushed (not a race with the DOM query)
     await act(async () => { (gate.seen.at(-1)!.onLogout as () => void)(); });
     await waitFor(() => expect(document.querySelector("form.auth-form")).toBeTruthy());
     expect(screen.queryByTestId("portal-stub")).toBeNull(); expect(sessionStorage.getItem("examBankBuilderToken")).toBeNull();
     await login("S-1");
     await screen.findByTestId("portal-stub");
-    expect(gate.mounts).toBe(mountsAfterFirst + 1);                                                          // one portal mount per session entry
+    await waitFor(() => expect(gate.mounts).toBe(mountsBefore + 2));                                        // exactly one portal mount per session entry
     expect(document.querySelectorAll('[data-testid="portal-stub"]')).toHaveLength(1);
     expect(calls.filter(u => u.includes("/api/platform-login"))).toHaveLength(2);                            // one login request per entry
     expect(calls.filter(u => u.includes("/api/platform-session"))).toHaveLength(0);                          // a fresh login never re-probes
