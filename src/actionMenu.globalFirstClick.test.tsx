@@ -349,7 +349,7 @@ describe("Projects — stage status ⋯ and toolbar ⋯ open on the first click;
     fireEvent.click(within(screen.getByText("زيد صالح").closest(".eb-student-card") as HTMLElement).getByRole("button", { name: "فتح ملف الطالب" }));
     const heading = await screen.findByRole("heading", { level: 2, name: "ملف المشروع: زيد صالح" });
     const profile = heading.closest(".eb-student-profile") as HTMLElement;
-    fireEvent.click(within(profile).getByRole("button", { name: /B01/ }));
+    // Phase 8C: the stage status ⋯ sits on the row itself — no stage disclosure to open first.
     return { profile, toolbar };
   }
   it("stage ⋯ (تغيير الحالة): one click → the three non-approved statuses, current one disabled, first enabled focused, no scroll; activation posts the unchanged progress.update body once", async () => {

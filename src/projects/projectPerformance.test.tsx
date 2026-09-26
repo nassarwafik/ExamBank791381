@@ -134,15 +134,16 @@ describe("ProjectStudentDetail (teacher) — hero, score control through progres
     render(<ProjectStudentDetail token="t" projectCode="AQ" classId="c1" studentId="s1" tracks={TRACKS} onBack={() => {}} />);
     await screen.findByRole("heading", { level: 2, name: "ملف المشروع: ليان" });
     expect(strengthLine()).toBe("قوة المشروع: 240 / 600");
-    fireEvent.click(screen.getByRole("button", { name: /S01/ }));
-    const input = screen.getByRole("spinbutton", { name: "علامة المرحلة S01 من 100" }) as HTMLInputElement;
+    // Phase 8C: the score field and its save are on the stage row itself (no disclosure needed)
+    const input = screen.getByRole("spinbutton", { name: "علامة المرحلة S01 — المقدمة من 100" }) as HTMLInputElement;
     expect(input.value).toBe("");
     fireEvent.change(input, { target: { value: "85" } });
-    fireEvent.click(screen.getByRole("button", { name: "حفظ العلامة" }));
+    fireEvent.click(screen.getByRole("button", { name: "حفظ علامة المرحلة S01" }));
     await screen.findByText("تم حفظ العلامة.");
     expect(calls.at(-1)?.body).toEqual({ action: "progress.update", projectCode: "AQ", classId: "c1", studentId: "s1", stageId: "S01", score: "85" });
     expect(strengthLine()).toBe("قوة المشروع: 450 / 600");
     expect(screen.getByRole("img", { name: "رتبة المشروع: تنين النار — المستوى 5" })).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: "تفاصيل وملاحظة المرحلة S01" }));
     const panel = document.getElementById("eb-stage-S01") as HTMLElement;
     expect(within(panel).getByText(/القيمة في المشروع:/).textContent).toBe("القيمة في المشروع: 8.5 / 10");
     expect(within(panel).getByText(/^العلامة:/).textContent).toBe("العلامة: 85 / 100");
@@ -155,8 +156,8 @@ describe("ProjectStudentDetail (teacher) — hero, score control through progres
     globalThis.fetch = vi.fn(async () => ({ ok: true, status: 200, json: async () => ({ ...detail("s1", perfA, 80, 85), readOnly: true }) })) as unknown as typeof fetch;
     render(<ProjectStudentDetail token="t" projectCode="AQ" classId="c1" studentId="s1" tracks={TRACKS} onBack={() => {}} />);
     await screen.findByRole("heading", { level: 2, name: "ملف المشروع: ليان" });
-    fireEvent.click(screen.getByRole("button", { name: /S01/ }));
     expect(screen.queryByRole("spinbutton")).toBeNull();
+    fireEvent.click(screen.getByRole("button", { name: "تفاصيل وملاحظة المرحلة S01" }));
     expect(screen.getByText(/^العلامة:/).textContent).toBe("العلامة: 85 / 100");
   });
   it("a slow response for the previous student never overwrites the current one (stale-selection guard)", async () => {

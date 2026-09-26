@@ -121,6 +121,48 @@
 .eb-stage-note-edit textarea{ width:100%; min-width:0; padding:var(--eb-space-2) var(--eb-space-3); border:1px solid var(--eb-border-strong); border-radius:var(--eb-r); background:var(--eb-surface); color:var(--eb-text); font:inherit; font-weight:var(--eb-fw-regular); resize:vertical; }
 .eb-stage-note-view{ margin:0; padding:var(--eb-space-2) var(--eb-space-3); background:var(--eb-primary-050); border-radius:var(--eb-r); font-size:var(--eb-fs-13); }
 .eb-stage-note-actions{ display:flex; }
+/* ---------- Phase 8C — inline stage grading (every row is gradeable; no stage disclosure needed) ----------
+   Desktop: one compact grid row per stage — المرحلة | الحالة | العلامة | القيمة | إجراء — with fixed column widths so
+   the columns line up down the list. Below 768px the row becomes a two-line card (stage on top; status + value, then
+   score, then actions), no horizontal overflow, 44px touch targets. Logical properties and tokens only. */
+.eb-stage-grade-hint{ margin:0; font-size:var(--eb-fs-12); }
+.eb-stage-grade-row{ background:var(--eb-surface); }
+.eb-stage-grade-row.is-busy{ background:var(--eb-surface-2); }
+.eb-stage-grade-grid{
+  display:grid; align-items:center; column-gap:var(--eb-space-3); row-gap:var(--eb-space-2);
+  grid-template-columns:minmax(0,1fr) 8.5rem 12.5rem 5.5rem minmax(13rem,auto);
+  grid-template-areas:"stage status score value actions";
+  min-height:52px; padding-block:var(--eb-space-2); padding-inline:var(--eb-space-3);
+}
+.eb-stage-cell-stage{ grid-area:stage; display:flex; flex-wrap:wrap; align-items:baseline; gap:var(--eb-space-1) var(--eb-space-2); min-width:0; }
+.eb-stage-cell-stage .eb-stage-title{ flex:1 1 12rem; }
+.eb-stage-cell-status{ grid-area:status; min-width:0; }
+.eb-stage-cell-score{ grid-area:score; display:flex; align-items:center; gap:var(--eb-space-1); min-width:0; }
+.eb-stage-cell-value{ grid-area:value; display:flex; flex-direction:column; font-variant-numeric:tabular-nums; font-size:var(--eb-fs-13); min-width:0; }
+.eb-stage-cell-actions{ grid-area:actions; display:flex; flex-wrap:wrap; align-items:center; justify-content:flex-end; gap:var(--eb-space-1); min-width:0; }
+.eb-stage-cell-actions .eb-button{ display:inline-flex; align-items:center; gap:var(--eb-space-1); }
+.eb-stage-score-input{
+  box-sizing:border-box; inline-size:5.25rem; min-height:36px; padding-block:0; padding-inline:var(--eb-space-2);
+  border:1px solid var(--eb-border-strong); border-radius:var(--eb-r-sm); background:var(--eb-surface); color:var(--eb-text);
+  font:inherit; font-variant-numeric:tabular-nums; text-align:center;
+}
+.eb-stage-score-input:focus-visible{ outline:var(--eb-focus-ring); outline-offset:var(--eb-focus-offset); border-color:var(--eb-primary); }
+.eb-stage-score-input[aria-invalid="true"]{ border-color:var(--eb-danger); }
+.eb-stage-score-max{ color:var(--eb-muted); font-size:var(--eb-fs-12); }
+.eb-stage-score-text{ font-variant-numeric:tabular-nums; }
+.eb-stage-note-flag{ padding-inline:var(--eb-space-2); border-radius:var(--eb-pill); background:var(--eb-primary-050); color:var(--eb-primary-strong); font-size:var(--eb-fs-12); }
+.eb-stage-row-error{ margin:0; padding-block:var(--eb-space-2); padding-inline:var(--eb-space-3); border-block-start:1px solid var(--eb-line); background:var(--eb-danger-bg); color:var(--eb-danger-tx); font-size:var(--eb-fs-13); }
+@media (max-width:1279px){
+  .eb-stage-grade-grid{ grid-template-columns:minmax(0,1fr) 8rem 12rem 5rem; grid-template-areas:"stage status score value" "actions actions actions actions"; }
+}
+@media (max-width:767px){
+  .eb-stage-grade-grid{ grid-template-columns:minmax(0,1fr) auto; grid-template-areas:"stage stage" "status value" "score score" "actions actions"; }
+  .eb-stage-cell-value{ align-items:flex-end; }
+  .eb-stage-cell-actions{ justify-content:flex-start; }
+  .eb-stage-score-input{ flex:1 1 auto; min-height:44px; }
+  .eb-stage-cell-score .eb-button,.eb-stage-cell-actions .eb-button,.eb-stage-cell-actions .eb-icon-button{ min-height:44px; }
+}
+
 .eb-stage-timeline{ display:flex; flex-direction:column; gap:var(--eb-space-2); padding:var(--eb-space-4); background:var(--eb-surface); border:1px solid var(--eb-line); border-radius:var(--eb-r-lg); box-shadow:var(--eb-sh-xs); }
 .eb-timeline{ list-style:none; margin:0; padding:0; display:flex; flex-direction:column; gap:var(--eb-space-2); }
 .eb-timeline li{ display:flex; flex-wrap:wrap; gap:var(--eb-space-3); align-items:baseline; font-size:var(--eb-fs-13); }

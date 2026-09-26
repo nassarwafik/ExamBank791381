@@ -83,9 +83,10 @@ async function openProjectStudents() {
   await screen.findByText("زيد صالح");
   fireEvent.click(screen.getByRole("button", { name: "فتح ملف الطالب" }));
   await screen.findByRole("heading", { level: 2, name: "ملف المشروع: زيد صالح" });
-  const stage = screen.getByRole("button", { name: /^B01\b/ });
-  fireEvent.click(stage);
-  return document.getElementById(stage.getAttribute("aria-controls") || "") as HTMLElement;
+  // Phase 8C: the B01 row carries the grading controls inline; open its details / note disclosure too.
+  const row = document.querySelector('[data-stage-id="B01"]') as HTMLElement;
+  fireEvent.click(within(row).getByRole("button", { name: "تفاصيل وملاحظة المرحلة B01" }));
+  return row;
 }
 function backToHub() {
   const crumbs = screen.getByRole("navigation", { name: "مسار الصفحة" });
@@ -111,7 +112,7 @@ describe("UX-6a review — App-owned ready summary invalidation", () => {
     // below is measured against that baseline — opening the project, a view or a student adds nothing.
     const base = summaryReads();
     expect(base).toBe(2);
-    fireEvent.click(within(panel).getByRole("button", { name: "اعتماد المرحلة" }));
+    fireEvent.click(within(panel).getByRole("button", { name: "اعتماد المرحلة B01" }));
     await waitFor(() => expect(posts()).toEqual([{ projectCode: "794589", action: "progress.update", classId: "c1", studentId: "s1", stageId: "B01", status: "approved" }]));
     await waitFor(() => expect(summaryReads()).toBe(base + 1));                                       // exactly one refresh
     await waitFor(() => expect(projectsNav().textContent).toMatch(/1\s*مراحل بانتظار الفحص/));         // sidebar badge updated
@@ -131,7 +132,7 @@ describe("UX-6a review — App-owned ready summary invalidation", () => {
     expect(posts()).toEqual([{ projectCode: "794589", action: "progress.update", classId: "c1", studentId: "s1", stageId: "B01", note: "أحسنت" }]);
     expect(summaryReads()).toBe(base);
     failProgress = true;
-    fireEvent.click(within(panel).getByRole("button", { name: "اعتماد المرحلة" }));
+    fireEvent.click(within(panel).getByRole("button", { name: "اعتماد المرحلة B01" }));
     await screen.findByText(/تعارض مؤقت/);
     expect(posts()).toHaveLength(2);
     expect(summaryReads()).toBe(base);

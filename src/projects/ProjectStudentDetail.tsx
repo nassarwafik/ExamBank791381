@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState, type KeyboardEvent } from "react";
 import { trackerGet, trackerPost } from "./api";
 import { fmtDate, stagesByGroup } from "./helpers";
 import { STAGE_STATUS_ORDER, STAGE_STATUS_TONE, STAGE_STATUS_CLASS, stageStatusLabel, normalizeStageStatus, toneForTrack } from "./teacherPresentation";
@@ -32,11 +32,30 @@ type UpdateResponse = {
   history: HistoryEvent[];
 };
 
+type Patch = { status?: StageStatus; note?: string; score?: number | string | null };
+type MutationKind = "score" | "status" | "note";
+const kindOf = (patch: Patch): MutationKind => (patch.status !== undefined ? "status" : patch.note !== undefined ? "note" : "score");
+const canonicalScore = (entry: StageProgressEntry | undefined) => (typeof entry?.score === "number" ? String(entry.score) : "");
+
 /**
  * Non-modal student profile for one project. Same single `student` read and the same `progress.update`
- * POST (status or note) as before; focus moves to the heading on open and the workspace returns it to the
- * opener on back. Editable classes get ONE primary action per stage (اعتماد المرحلة) with the other
- * statuses in an ActionMenu; archived classes expose no mutation controls at all.
+ * POST (status, note or score) as before; focus moves to the heading on open and the workspace returns it to the
+ * opener on back. Archived classes expose no mutation controls at all.
+ *
+ * Phase 8C — inline grading. Every stage row IS the grading workspace: score input (0–100) + save, the primary
+ * «اعتماد المرحلة» and the other statuses in an ActionMenu are on the row itself, with the stage value from the
+ * server's performance model. Only the description, the score details / clear action and the teacher note live
+ * under an optional per-row «تفاصيل» disclosure — grading never depends on it.
+ *   • Drafts are PER STAGE (scoreDrafts[stageId] / noteDrafts[stageId], holding only what the teacher typed): the
+ *     input shows the draft if any, else the canonical saved score; a successful save drops that stage's draft so
+ *     the canonical server value shows; a failed save keeps it for a retry. Drafts are keyed by stageId, so a track
+ *     or group switch can never apply one stage's draft to another, and they are cleared whenever the project,
+ *     class or student changes.
+ *   • Writes stay the canonical `progress.update` and are SERIALIZED through one queue (a later write starts only
+ *     after the earlier one settled), so responses apply in order and an older response can never overwrite a
+ *     newer canonical state. The same operation on the same stage cannot be queued twice (double-submit guard).
+ *     Each job carries its (project, class, student) context; a job or response for a previous selection is dropped.
+ *   • Saving a score never changes the status and approving never sends a score: they remain separate decisions.
  */
 export default function ProjectStudentDetail({ token, projectCode, classId, studentId, tracks, onBack, onChanged, onReadyChanged }: Props) {
   const [detail, setDetail] = useState<StudentDetail | null>(null);
@@ -44,12 +63,20 @@ export default function ProjectStudentDetail({ token, projectCode, classId, stud
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
   const [track, setTrack] = useState<string>(tracks[0]?.trackId || "");
-  const [openStageId, setOpenStageId] = useState("");
+  const [openStageId, setOpenStageId] = useState("");                           // the optional details / note disclosure
   const [openGroups, setOpenGroups] = useState<Record<string, boolean>>({});
-  const [noteDraft, setNoteDraft] = useState("");
-  const [scoreDraft, setScoreDraft] = useState("");
-  const [busy, setBusy] = useState(false);
+  const [scoreDrafts, setScoreDrafts] = useState<Record<string, string>>({});
+  const [noteDrafts, setNoteDrafts] = useState<Record<string, string>>({});
+  const [pending, setPending] = useState<Record<string, true>>({});           // "stageId:kind" queued or in flight
+  const [rowErrors, setRowErrors] = useState<Record<string, string>>({});
   const headingRef = useRef<HTMLHeadingElement | null>(null);
+  const listRef = useRef<HTMLDivElement | null>(null);
+  // The selection every queued write belongs to; a write or response for another selection is dropped.
+  const contextKey = projectCode + "|" + classId + "|" + studentId;
+  const contextRef = useRef(contextKey);
+  contextRef.current = contextKey;
+  const queue = useRef<Promise<void>>(Promise.resolve());
+  const pendingRef = useRef<Set<string>>(new Set());
   // Stale-selection guard: only the LATEST requested (project, class, student) may populate the view — a slow
   // response for a previously selected student can never overwrite the current one's grade / rank / stages.
   const requestSeq = useRef(0);
@@ -64,8 +91,13 @@ export default function ProjectStudentDetail({ token, projectCode, classId, stud
     } catch (e) { if (seq === requestSeq.current) setError(e instanceof Error ? e.message : "تعذر تحميل ملف الطالب."); }
     finally { if (seq === requestSeq.current) setLoading(false); }
   }
+  // A new (project, class, student) starts clean: no detail, no disclosure, no drafts, no row errors, no queued busy state.
+  function resetSelection() {
+    setDetail(null); setOpenStageId(""); setScoreDrafts({}); setNoteDrafts({}); setRowErrors({}); setPending({}); setNotice(""); setError("");
+    pendingRef.current = new Set();
+  }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  useEffect(() => { setDetail(null); setOpenStageId(""); void load(); }, [classId, studentId, projectCode]);
+  useEffect(() => { resetSelection(); void load(); }, [classId, studentId, projectCode]);
   useEffect(() => { headingRef.current?.focus(); }, [studentId]);
 
   const groups = useMemo(() => detail ? (detail.groups || []).filter(g => g.track === track).sort((a, b) => a.order - b.order) : [], [detail, track]);
@@ -73,20 +105,58 @@ export default function ProjectStudentDetail({ token, projectCode, classId, stud
 
   // status (workflow), note and score (quality, 0–100, teacher-only) all go through the SAME progress.update write;
   // the server validates the score and returns the recomputed performance (grade / project Strength / stage values).
-  async function updateStage(stage: ProjectStage, patch: { status?: StageStatus; note?: string; score?: number | string | null }) {
-    if (!detail || detail.readOnly || busy) return;
-    setBusy(true); setError(""); setNotice("");
-    try {
-      const res = await trackerPost<UpdateResponse>(token, projectCode, { action: "progress.update", classId, studentId, stageId: stage.stageId, ...patch });
-      if (!res.noChange) {
-        const { stageId: sid, ...entry } = res.stage;
-        setDetail(prev => prev ? { ...prev, summary: res.summary, performance: res.performance ?? prev.performance, progress: { ...prev.progress, [sid]: entry }, nextStages: res.nextStages, balance: res.balance, history: res.history } : prev);
-        onChanged?.();
-        if (patch.status !== undefined) onReadyChanged?.();
+  function updateStage(stage: ProjectStage, patch: Patch, opts: { advanceFrom?: HTMLInputElement; refocus?: { trigger: HTMLElement; input: HTMLInputElement | null } } = {}) {
+    if (!detail || detail.readOnly) return;
+    const key = stage.stageId + ":" + kindOf(patch);
+    if (pendingRef.current.has(key)) return;                                   // double-submit guard (same operation)
+    const context = contextRef.current;
+    pendingRef.current.add(key);
+    setPending(prev => ({ ...prev, [key]: true }));
+    setRowErrors(prev => { const next = { ...prev }; delete next[stage.stageId]; return next; });
+    const run = async () => {
+      if (context !== contextRef.current) return;                              // selection changed while queued
+      setNotice("");
+      try {
+        const res = await trackerPost<UpdateResponse>(token, projectCode, { action: "progress.update", classId, studentId, stageId: stage.stageId, ...patch });
+        if (context !== contextRef.current) return;                            // stale response for another student
+        if (!res.noChange) {
+          const { stageId: sid, ...entry } = res.stage;
+          setDetail(prev => prev ? { ...prev, summary: res.summary, performance: res.performance ?? prev.performance, progress: { ...prev.progress, [sid]: entry }, nextStages: res.nextStages, balance: res.balance, history: res.history } : prev);
+          onChanged?.();
+          if (patch.status !== undefined) onReadyChanged?.();
+        }
+        if (patch.score !== undefined) setScoreDrafts(prev => { const next = { ...prev }; delete next[stage.stageId]; return next; });
+        if (patch.note !== undefined) setNoteDrafts(prev => { const next = { ...prev }; delete next[stage.stageId]; return next; });
+        setNotice(patch.score !== undefined ? "تم حفظ العلامة." : patch.note !== undefined ? "تم حفظ الملاحظة." : "تم تحديث حالة المرحلة.");
+        // Keyboard flow: Enter-save moves on to the next stage's score field — only if focus did not move meanwhile.
+        const from = opts.advanceFrom;
+        if (from && document.activeElement === from) {
+          const inputs = Array.from(listRef.current?.querySelectorAll<HTMLInputElement>("input[data-stage-score]") || []);
+          const next = inputs[inputs.indexOf(from) + 1];
+          next?.focus();
+        }
+        // Button-save: the save button becomes disabled once the draft equals the saved score — keep focus on this
+        // stage's score field instead of losing it (only if the teacher did not move focus elsewhere meanwhile).
+        const back = opts.refocus;
+        if (back && (document.activeElement === back.trigger || document.activeElement === document.body)) back.input?.focus();
+      } catch (e) {
+        if (context !== contextRef.current) return;
+        // The typed draft is kept (never erased on failure) and the error stays attached to this stage's row.
+        setRowErrors(prev => ({ ...prev, [stage.stageId]: e instanceof Error ? e.message : "تعذر حفظ التغيير." }));
+      } finally {
+        if (context === contextRef.current) {
+          pendingRef.current.delete(key);
+          setPending(prev => { const next = { ...prev }; delete next[key]; return next; });
+        }
       }
-      setNotice(patch.score !== undefined ? "تم حفظ العلامة." : patch.note !== undefined ? "تم حفظ الملاحظة." : "تم تحديث حالة المرحلة.");
-    } catch (e) { setError(e instanceof Error ? e.message : "تعذر حفظ التغيير."); }
-    finally { setBusy(false); }
+    };
+    // Serialized: each write starts after the previous one settled (responses therefore apply in order).
+    queue.current = queue.current.then(run, run);
+  }
+
+  function saveScore(stage: ProjectStage, draft: string, opts: { advanceFrom?: HTMLInputElement; refocus?: { trigger: HTMLElement; input: HTMLInputElement | null } } = {}) {
+    if (draft.trim() === "") return;
+    updateStage(stage, { score: draft.trim() }, opts);
   }
 
   const name = detail?.student.displayName || studentId;
@@ -147,7 +217,8 @@ export default function ProjectStudentDetail({ token, projectCode, classId, stud
         {tracks.map(t => <button key={t.trackId} type="button" aria-pressed={track === t.trackId} onClick={() => { setTrack(t.trackId); setOpenStageId(""); }}>{t.title}</button>)}
       </div>
 
-      <div className="eb-stage-groups">
+      {!readOnly && <p className="eb-muted eb-stage-grade-hint">أدخل العلامة واضغط Enter أو «حفظ»، ثم «اعتماد» لاعتماد المرحلة. تُحفظ التغييرات بالتتابع.</p>}
+      <div className="eb-stage-groups" ref={listRef}>
         {!groups.length && <EmptyState compact title="لا توجد مراحل في هذا المسار." />}
         {groups.map(g => {
           const stages = (byGroup.get(g.groupId) || []) as ProjectStage[];
@@ -168,55 +239,93 @@ export default function ProjectStudentDetail({ token, projectCode, classId, stud
                     const status = normalizeStageStatus(entry?.status);
                     const isOpen = openStageId === stage.stageId;
                     const stagePanelId = "eb-stage-" + stage.stageId;
+                    const saved = canonicalScore(entry);
+                    const draft = scoreDrafts[stage.stageId] ?? saved;
+                    const noteDraft = noteDrafts[stage.stageId] ?? (entry?.note || "");
+                    const scoreBusy = !!pending[stage.stageId + ":score"];
+                    const statusBusy = !!pending[stage.stageId + ":status"];
+                    const noteBusy = !!pending[stage.stageId + ":note"];
+                    const rowBusy = scoreBusy || statusBusy || noteBusy;
+                    const scoreChanged = draft.trim() !== "" && (saved === "" || Number(draft) !== entry?.score);
+                    const value = perf ? stageValueOf(perf, stage.stageId) : null;
+                    const label = stage.stageId + " — " + stage.title;
+                    const rowError = rowErrors[stage.stageId];
+                    const onScoreKey = (e: KeyboardEvent<HTMLInputElement>) => {
+                      if (e.key !== "Enter") return;
+                      e.preventDefault();
+                      if (scoreChanged && !scoreBusy) saveScore(stage, draft, { advanceFrom: e.currentTarget });
+                    };
                     return (
-                      <li key={stage.stageId} className={"eb-stage-row " + STAGE_STATUS_CLASS[status]}>
-                        <button type="button" className="eb-stage-row-main" aria-expanded={isOpen} aria-controls={stagePanelId} onClick={() => { setOpenStageId(isOpen ? "" : stage.stageId); setNoteDraft(entry?.note || ""); setScoreDraft(typeof entry?.score === "number" ? String(entry.score) : ""); }}>
-                          <IconChevronDown size={16} className={"eb-disclosure-chevron" + (isOpen ? " is-open" : "")} aria-hidden="true" />
-                          <span className="eb-stage-code">{stage.stageId}</span>
-                          <span className="eb-stage-title">{stage.title}{stage.required === false ? <em className="eb-stage-optional"> (اختياري)</em> : null}</span>
-                          <StatusBadge tone={STAGE_STATUS_TONE[status]}>{stageStatusLabel(status)}</StatusBadge>
-                          {typeof entry?.score === "number" ? <small className="eb-muted eb-stage-row-score" dir="ltr">{fmtContribution(entry.score)} / 100</small> : null}
-                          {entry?.note ? <small className="eb-muted">ملاحظة</small> : null}
-                          <small className="eb-muted eb-stage-date">{fmtDate(entry?.updatedAt || "")}</small>
-                        </button>
+                      <li key={stage.stageId} className={"eb-stage-row eb-stage-grade-row " + STAGE_STATUS_CLASS[status] + (rowBusy ? " is-busy" : "")} data-stage-id={stage.stageId} aria-busy={rowBusy || undefined}>
+                        <div className="eb-stage-grade-grid">
+                          <div className="eb-stage-cell-stage">
+                            <span className="eb-stage-code">{stage.stageId}</span>
+                            <span className="eb-stage-title">{stage.title}{stage.required === false ? <em className="eb-stage-optional"> (اختياري)</em> : null}</span>
+                            {entry?.note ? <small className="eb-stage-note-flag">ملاحظة</small> : null}
+                            <small className="eb-muted eb-stage-date">{fmtDate(entry?.updatedAt || "")}</small>
+                          </div>
+                          <div className="eb-stage-cell-status"><StatusBadge tone={STAGE_STATUS_TONE[status]}>{stageStatusLabel(status)}</StatusBadge></div>
+                          <div className="eb-stage-cell-score">
+                            {readOnly ? (
+                              <span className="eb-stage-score-text" dir="ltr">{saved === "" ? "—" : fmtContribution(entry!.score as number)} / 100</span>
+                            ) : (
+                              <>
+                                <input type="number" inputMode="decimal" min={0} max={100} step={0.5} dir="ltr" className="eb-stage-score-input" data-stage-score=""
+                                  value={draft} onChange={e => { const v = e.target.value; setScoreDrafts(prev => ({ ...prev, [stage.stageId]: v })); }} onKeyDown={onScoreKey}
+                                  aria-label={"علامة المرحلة " + label + " من 100"} placeholder="0–100" aria-invalid={rowError ? true : undefined} />
+                                <span className="eb-stage-score-max" aria-hidden="true">/100</span>
+                                <button type="button" className="eb-button is-small" disabled={scoreBusy || !scoreChanged} onClick={e => { const trigger = e.currentTarget; saveScore(stage, draft, { refocus: { trigger, input: trigger.closest("li")?.querySelector<HTMLInputElement>("input[data-stage-score]") ?? null } }); }} aria-label={"حفظ علامة المرحلة " + stage.stageId}>{scoreBusy ? "جارٍ الحفظ…" : "حفظ"}</button>
+                              </>
+                            )}
+                          </div>
+                          <div className="eb-stage-cell-value">
+                            {value
+                              ? <span dir="ltr" title="القيمة في المشروع">{fmtContribution(value.contribution)}/{fmtContribution(value.maxContribution)}</span>
+                              : <span className="eb-muted">—</span>}
+                            {value && !value.counted && saved !== "" && <small className="eb-muted">عند الاعتماد</small>}
+                          </div>
+                          <div className="eb-stage-cell-actions">
+                            {!readOnly && (
+                              <>
+                                <button type="button" className="eb-button is-primary is-small" disabled={statusBusy || status === "approved"} onClick={() => updateStage(stage, { status: "approved" })} aria-label={"اعتماد المرحلة " + stage.stageId}><IconCheck size={16} />اعتماد</button>
+                                <ActionMenu label={"تغيير حالة المرحلة " + stage.stageId} text="الحالة" disabled={statusBusy}>
+                                  {STAGE_STATUS_ORDER.filter(st => st !== "approved").map(st => (
+                                    <button key={st} type="button" className="eb-menu-item" disabled={statusBusy || status === st} onClick={() => updateStage(stage, { status: st })}>{stageStatusLabel(st)}</button>
+                                  ))}
+                                </ActionMenu>
+                              </>
+                            )}
+                            <button type="button" className="eb-button is-quiet is-small eb-stage-details-toggle" aria-expanded={isOpen} aria-controls={stagePanelId}
+                              aria-label={"تفاصيل وملاحظة المرحلة " + stage.stageId} onClick={() => setOpenStageId(isOpen ? "" : stage.stageId)}>
+                              <IconChevronDown size={16} className={"eb-disclosure-chevron" + (isOpen ? " is-open" : "")} aria-hidden="true" />تفاصيل
+                            </button>
+                          </div>
+                        </div>
+                        {rowError && <p className="eb-stage-row-error" role="alert">{stage.stageId}: {rowError}</p>}
                         {isOpen && (
                           <div id={stagePanelId} className="eb-stage-detail">
                             {stage.description ? <p className="eb-muted">{stage.description}</p> : null}
-                            {perf && (() => {
-                              const value = stageValueOf(perf, stage.stageId);
-                              return (
-                                <p className="eb-stage-score">
-                                  <span>العلامة: <strong dir="ltr">{fmtStageScore(entry)}</strong></span>
-                                  {value && <span>القيمة في المشروع: <strong dir="ltr">{fmtContribution(value.contribution)} / {fmtContribution(value.maxContribution)}</strong></span>}
-                                  {value && !value.counted && typeof entry?.score === "number" && <small className="eb-muted">تُحتسب عند اعتماد المرحلة</small>}
-                                </p>
-                              );
-                            })()}
+                            {perf && (
+                              <p className="eb-stage-score">
+                                <span>العلامة: <strong dir="ltr">{fmtStageScore(entry)}</strong></span>
+                                {value && <span>القيمة في المشروع: <strong dir="ltr">{fmtContribution(value.contribution)} / {fmtContribution(value.maxContribution)}</strong></span>}
+                                {value && !value.counted && typeof entry?.score === "number" && <small className="eb-muted">تُحتسب عند اعتماد المرحلة</small>}
+                              </p>
+                            )}
                             {readOnly ? (
                               entry?.note ? <p className="eb-stage-note-view">ملاحظة المعلم: {entry.note}</p> : <small className="eb-muted">لا توجد ملاحظة.</small>
                             ) : (
                               <>
-                                <div className="eb-stage-actions">
-                                  <button type="button" className="eb-button is-primary" disabled={busy || status === "approved"} onClick={() => void updateStage(stage, { status: "approved" })}><IconCheck size={16} />اعتماد المرحلة</button>
-                                  <ActionMenu label={"تغيير حالة المرحلة " + stage.stageId} text="تغيير الحالة" disabled={busy}>
-                                    {STAGE_STATUS_ORDER.filter(st => st !== "approved").map(st => (
-                                      <button key={st} type="button" className="eb-menu-item" disabled={busy || status === st} onClick={() => void updateStage(stage, { status: st })}>{stageStatusLabel(st)}</button>
-                                    ))}
-                                  </ActionMenu>
-                                </div>
-                                <div className="eb-stage-score-edit">
-                                  <label>العلامة
-                                    <input type="number" inputMode="decimal" min={0} max={100} step={0.5} dir="ltr" value={scoreDraft} onChange={e => setScoreDraft(e.target.value)} aria-label={"علامة المرحلة " + stage.stageId + " من 100"} placeholder="0–100" disabled={busy} />
-                                    <span aria-hidden="true">/ 100</span>
-                                  </label>
-                                  <button type="button" className="eb-button is-small" disabled={busy || scoreDraft.trim() === "" || Number(scoreDraft) === entry?.score} onClick={() => void updateStage(stage, { score: scoreDraft.trim() })}>حفظ العلامة</button>
-                                  {typeof entry?.score === "number" && <button type="button" className="eb-button is-quiet is-small" disabled={busy} onClick={() => { setScoreDraft(""); void updateStage(stage, { score: null }); }}>مسح العلامة</button>}
-                                </div>
+                                {typeof entry?.score === "number" && (
+                                  <div className="eb-stage-actions">
+                                    <button type="button" className="eb-button is-quiet is-small" disabled={scoreBusy} onClick={() => { setScoreDrafts(prev => { const next = { ...prev }; delete next[stage.stageId]; return next; }); updateStage(stage, { score: null }); }}>مسح العلامة</button>
+                                  </div>
+                                )}
                                 <label className="eb-field eb-stage-note-edit">ملاحظة المعلم
-                                  <textarea value={noteDraft} onChange={e => setNoteDraft(e.target.value)} placeholder="اكتب ملاحظة للطالب..." rows={3} />
+                                  <textarea value={noteDraft} onChange={e => { const v = e.target.value; setNoteDrafts(prev => ({ ...prev, [stage.stageId]: v })); }} placeholder="اكتب ملاحظة للطالب..." rows={3} />
                                 </label>
                                 <div className="eb-stage-note-actions">
-                                  <button type="button" className="eb-button is-small" disabled={busy || noteDraft === (entry?.note || "")} onClick={() => void updateStage(stage, { note: noteDraft })}>حفظ الملاحظة</button>
+                                  <button type="button" className="eb-button is-small" disabled={noteBusy || noteDraft === (entry?.note || "")} onClick={() => updateStage(stage, { note: noteDraft })}>حفظ الملاحظة</button>
                                 </div>
                               </>
                             )}
