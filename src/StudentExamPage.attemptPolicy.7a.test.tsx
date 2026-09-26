@@ -68,6 +68,11 @@ async function mount(onBack = vi.fn()) {
 async function startAttempt() {
   fireEvent.click(await screen.findByRole("button", { name: "بدء المحاولة" }));
   await screen.findByText("سؤال الاختبار السري");
+  // The strict-exit listeners (visibilitychange / pagehide) and the armed flag are attached in a PASSIVE effect of the
+  // same commit that shows the questions; findByText can resolve from the DOM mutation before React flushed it. Drain
+  // React's pending effects deterministically (no wait, no sleep) so a synchronous hide() right after start is
+  // observed by an armed page — exactly as it is in a real browser, where no event fits between commit and flush.
+  await act(async () => {});
 }
 function hide() { vis = "hidden"; act(() => { document.dispatchEvent(new Event("visibilitychange")); }); }
 function show() { vis = "visible"; act(() => { document.dispatchEvent(new Event("visibilitychange")); }); }
