@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "react";
+import { Suspense, useEffect, useRef } from "react";
 import { usePrefersReducedMotion } from "../../ui/usePrefersReducedMotion";
 import type { VisualBlock } from "../content/types";
 import { resolveVisual } from "./registry";
@@ -18,13 +18,16 @@ const VISIBLE_RATIO = 0.25;
  * seamlessly, so it is safe to apply uniformly. Fully guarded: `setCurrentTime` exists only on real SVG SMIL engines
  * (a no-op/throw-safe elsewhere), so the still frame always stands when SMIL is unavailable.
  */
-function restartVisualMotion(frame: HTMLElement): void {
+function restartVisualMotion(frame: HTMLElement): boolean {
   const svgs = frame.querySelectorAll<SVGSVGElement>("svg");
   svgs.forEach(svg => {
     if (typeof svg.setCurrentTime !== "function") return;
     if (!svg.querySelector("animate, animateMotion, animateTransform")) return;
     try { svg.setCurrentTime(0); } catch { /* SMIL not driveable here — the authored still frame stands */ }
   });
+  // Phase 8E-6: the visual is a LAZY chunk — while it is still loading the frame holds only the status line and there is
+  // no SVG to restart. Report whether the illustration was present so the observer knows the one-shot was delivered.
+  return svgs.length > 0;
 }
 
 /**
@@ -51,13 +54,18 @@ export default function VisualBlockView({ block }: { block: VisualBlock }) {
   // component remount. Never runs under reduced motion (the components render no animation at all), and it degrades to
   // nothing where IntersectionObserver is unavailable (SSR/tests): the animation then plays at mount as before, and
   // the still frame is always correct.
+  // Phase 8E-6 (lazy chunk): the observer watches the FRAME, which exists from the first render, so it stays valid
+  // while the visual's chunk is still loading. If the frame becomes visible before the SVG has arrived there is nothing
+  // to restart yet — the observer then stays connected (no disconnect) so the first qualifying visibility AFTER the SVG
+  // mounts still replays once; an SVG that mounts while already visible simply plays its authored timeline from mount.
+  // Still exactly one observer per figure, none for static or reduced-motion visuals, and never a replay on every scroll.
   useEffect(() => {
     if (reducedMotion || !entry || !entry.motion) return;
     const frame = frameRef.current;
     if (!frame || typeof IntersectionObserver === "undefined") return;
     const io = new IntersectionObserver((entries, obs) => {
       for (const e of entries) {
-        if (e.isIntersecting && e.intersectionRatio >= VISIBLE_RATIO) { restartVisualMotion(frame); obs.disconnect(); return; }
+        if (e.isIntersecting && e.intersectionRatio >= VISIBLE_RATIO) { if (restartVisualMotion(frame)) obs.disconnect(); return; }
       }
     }, { threshold: VISIBLE_RATIO });
     io.observe(frame);
@@ -69,7 +77,13 @@ export default function VisualBlockView({ block }: { block: VisualBlock }) {
       {block.title && <p className="eb-visual-title">{block.title}</p>}
       <div className="eb-visual-frame" ref={frameRef}>
         {entry
-          ? <entry.component ariaLabel={block.alt} reducedMotion={reducedMotion} />
+          ? (
+            // Phase 8E-6 — the visual is a lazy chunk; the boundary lives INSIDE the frame so the figure, title, caption,
+            // the page and the Reader chrome stay put and only the illustration area shows a quiet status line meanwhile.
+            <Suspense fallback={<p className="eb-visual-loading eb-muted" role="status">جارٍ تحميل الرسم التوضيحي...</p>}>
+              <entry.component ariaLabel={block.alt} reducedMotion={reducedMotion} />
+            </Suspense>
+          )
           : (
             <div className="eb-visual-missing" role="img" aria-label={block.alt}>
               <IconWarning size={18} aria-hidden="true" />

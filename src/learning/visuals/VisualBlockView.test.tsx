@@ -3,6 +3,8 @@
 // SVG, quiet title/caption chrome, a faithful fallback for an unknown key, reduced-motion gating, and NO network.
 import { describe, it, expect, afterEach, vi } from "vitest";
 import { render, cleanup, screen } from "@testing-library/react";
+// Phase 8E-6: the registered visual is a LAZY chunk — the figure, title and caption render immediately, the SVG once its
+// module resolves; every test therefore awaits the illustration (findByRole) before asserting on it.
 import VisualBlockView from "./VisualBlockView";
 import type { VisualBlock } from "../content/types";
 
@@ -23,13 +25,13 @@ function setMatchMedia(reduced: boolean) {
 }
 
 describe("VisualBlockView", () => {
-  it("renders a figure with title, caption, and an SVG carrying the accessible name; no network", () => {
+  it("renders a figure with title, caption, and an SVG carrying the accessible name; no network", async () => {
     setMatchMedia(false);
     const fetchSpy = vi.spyOn(globalThis, "fetch");
     const { container } = render(<VisualBlockView block={base} />);
     expect(screen.getByText("رسم توضيحي: الشبكة أجهزة متصلة")).toBeTruthy();
     expect(screen.getByText("تتبادل الأجهزة المعلومات عبر الشبكة.")).toBeTruthy();
-    const img = screen.getByRole("img", { name: base.alt });
+    const img = await screen.findByRole("img", { name: base.alt });
     expect(img.tagName.toLowerCase()).toBe("svg");
     expect(img.getAttribute("viewBox")).toBeTruthy();
     // no external asset references
@@ -40,9 +42,10 @@ describe("VisualBlockView", () => {
     expect(fetchSpy).not.toHaveBeenCalled();
   });
 
-  it("figure semantics: with both title and caption, exactly ONE <figcaption> exists (title is a <p>), both render, and the SVG keeps the alt as its accessible name", () => {
+  it("figure semantics: with both title and caption, exactly ONE <figcaption> exists (title is a <p>), both render, and the SVG keeps the alt as its accessible name", async () => {
     setMatchMedia(false);
     const { container } = render(<VisualBlockView block={base} />);
+    await screen.findByRole("img", { name: base.alt });
     const fig = container.querySelector("figure")!;
     expect(fig.querySelectorAll("figcaption").length).toBe(1);
     // the single figcaption is the bottom explanatory caption
@@ -55,16 +58,17 @@ describe("VisualBlockView", () => {
     expect(screen.getByRole("img", { name: base.alt }).tagName.toLowerCase()).toBe("svg");
   });
 
-  it("motion ON: renders the traveling SMIL pulses", () => {
+  it("motion ON: renders the traveling SMIL pulses", async () => {
     setMatchMedia(false);
     const { container } = render(<VisualBlockView block={base} />);
+    await screen.findByRole("img", { name: base.alt });
     expect(container.querySelectorAll("animateMotion").length).toBeGreaterThan(0);
   });
 
-  it("reduced motion: still renders the SVG + labels but omits ALL animateMotion (no broken frame)", () => {
+  it("reduced motion: still renders the SVG + labels but omits ALL animateMotion (no broken frame)", async () => {
     setMatchMedia(true);
     const { container } = render(<VisualBlockView block={base} />);
-    expect(screen.getByRole("img", { name: base.alt })).toBeTruthy();
+    expect(await screen.findByRole("img", { name: base.alt })).toBeTruthy();
     expect(container.querySelectorAll("animateMotion").length).toBe(0);
     // structural labels survive the still frame
     expect(container.textContent).toContain("شبكة");
@@ -81,12 +85,12 @@ describe("VisualBlockView", () => {
     expect(img.querySelector("svg.eb-visual")).toBeNull();
   });
 
-  it("optional chrome: title and caption are omitted cleanly when absent", () => {
+  it("optional chrome: title and caption are omitted cleanly when absent", async () => {
     setMatchMedia(false);
     const bare: VisualBlock = { id: "v2", type: "visual", origin: "teacher-enrichment", visualId: base.visualId, alt: base.alt };
     const { container } = render(<VisualBlockView block={bare} />);
     expect(container.querySelector(".eb-visual-title")).toBeNull();
     expect(container.querySelector(".eb-visual-caption")).toBeNull();
-    expect(screen.getByRole("img", { name: base.alt })).toBeTruthy();
+    expect(await screen.findByRole("img", { name: base.alt })).toBeTruthy();
   });
 });
