@@ -78,9 +78,11 @@ describe("visuals — motion always respects reduced motion", () => {
   const motionMarks = (root: Element) =>
     MOTION_SELECTORS.reduce((n, sel) => n + root.querySelectorAll(sel).length, 0);
 
-  it("each component omits ALL motion markers (SMIL + every CSS animation class) when reducedMotion is true, and renders a valid still SVG", () => {
+  // Phase 8E-6: components are lazy chunks — the guards deliberately load ALL of them through the trusted loaders
+  // (production never does; see registry.lazy.8e.test.ts + the bundle guard).
+  it("each component omits ALL motion markers (SMIL + every CSS animation class) when reducedMotion is true, and renders a valid still SVG", async () => {
     for (const id of REGISTERED_VISUAL_IDS) {
-      const Comp = resolveVisual(id)!.component;
+      const Comp = (await resolveVisual(id)!.load()).default;
       const still = render(<Comp ariaLabel="x" reducedMotion={true} />);
       for (const sel of MOTION_SELECTORS) {
         expect(still.container.querySelectorAll(sel).length, `${id} ${sel}`).toBe(0);
@@ -91,11 +93,11 @@ describe("visuals — motion always respects reduced motion", () => {
     }
   });
 
-  it("each motion:true component renders some motion when reducedMotion is false", () => {
+  it("each motion:true component renders some motion when reducedMotion is false", async () => {
     for (const id of REGISTERED_VISUAL_IDS) {
       const entry = resolveVisual(id)!;
       if (!entry.motion) continue;
-      const Comp = entry.component;
+      const Comp = (await entry.load()).default;
       const moving = render(<Comp ariaLabel="x" reducedMotion={false} />);
       expect(motionMarks(moving.container), id).toBeGreaterThan(0);
       cleanup();

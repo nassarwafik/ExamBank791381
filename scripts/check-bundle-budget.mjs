@@ -10,7 +10,11 @@
 //   4. (Phase 8E-4) the Teacher Platform is not emitted as its own lazy chunk (TeacherPlatform-*.js outside the
 //      initial graph), or any initial file carries the Platform payload;
 //   5. (Phase 8E-5) the Student Portal is not emitted as its own lazy chunk (StudentPortal-*.js outside the initial
-//      graph), or any initial file carries the Portal payload.
+//      graph), or any initial file carries the Portal payload;
+//   6. (Phase 8E-6) the Learning Reader's first chunk graph (LearningReaderWithTraining-*.js + its static imports) or
+//      the initial graph carries any registered SVG visual implementation, the visuals are not emitted behind lazy
+//      edges of the Reader in several small trusted group chunks, or fewer than the registered 122 implementations
+//      are shipped (signature: the `preserveAspectRatio:` prop every registered visual sets on its root <svg>).
 // No hashed filename is hard-coded: chunks are recognised by their un-hashed stem and by content signatures that
 // are stable across minification (Chart.js registry ids, dashboard-only / platform-only class names and copy).
 import fs from "node:fs";
@@ -28,6 +32,12 @@ const PLATFORM_SIGNATURES = ["eb-students-workspace", "eb-students-layout", "ج�
 // StudentPortal-only: its task-list / notice / assignment-list class names and the task-filter group label (each
 // occurs in no other source file and, in the real build, in no other chunk). Two of four are required.
 const PORTAL_SIGNATURES = ["eb-sp-tasks", "eb-sp-notice", "student-assignment-list", "تصفية المهام"];
+// Phase 8E-6 — learning visuals. Every registered SVG visual root sets `preserveAspectRatio`, so the count of that prop in
+// a chunk is the number of visual implementations it carries (0 everywhere on the startup + first-Reader path).
+const VISUAL_IMPL_SIGNATURE = /preserveAspectRatio:/g;
+const REGISTERED_VISUALS_MIN = 122;            // registry.test.ts pins the exact count; the guard only refuses to ship fewer
+const VISUAL_GROUP_MAX_IMPLS = 40;             // a single chunk carrying (nearly) every visual would be the eager design again
+const VISUAL_GROUP_MIN_CHUNKS = 10;
 
 const dist = process.argv[2] || "dist";
 const assets = path.join(dist, "assets");
@@ -38,7 +48,12 @@ export function initialGraph(distDir) {
   const html = fs.readFileSync(path.join(distDir, "index.html"), "utf8");
   const entries = [...html.matchAll(/<script[^>]+type="module"[^>]+src="\/assets\/([^"]+\.js)"/g)].map(m => m[1]);
   if (!entries.length) throw new Error("no module entry script found in " + path.join(distDir, "index.html"));
-  const reached = new Set(entries), queue = [...entries];
+  return staticClosure(distDir, entries);
+}
+
+// The chunks reached from `roots` through STATIC import edges (the files a browser fetches together with the roots).
+export function staticClosure(distDir, roots) {
+  const reached = new Set(roots), queue = [...roots];
   while (queue.length) {
     const file = queue.pop();
     const source = fs.readFileSync(path.join(distDir, "assets", file), "utf8");
@@ -49,6 +64,12 @@ export function initialGraph(distDir) {
     }
   }
   return [...reached];
+}
+
+// The chunks a file reaches through DYNAMIC `import()` edges (Vite emits them as import("./x.js") / import(`./x.js`)).
+export function dynamicEdges(distDir, file) {
+  const source = fs.readFileSync(path.join(distDir, "assets", file), "utf8");
+  return [...new Set([...source.matchAll(/import\([`"']\.\/([^`"']+\.js)[`"']\)/g)].map(m => m[1]))];
 }
 
 function main() {
@@ -87,6 +108,27 @@ function main() {
   console.log(`Teacher Dashboard chunk: ${dashboardChunks.join(", ") || "(missing)"}`);
   console.log(`Teacher Platform chunk: ${platformChunks.join(", ") || "(missing)"}`);
   console.log(`Student Portal chunk: ${portalChunks.join(", ") || "(missing)"}`);
+
+  // Phase 8E-6 — learning visuals stay OUT of the startup graph and out of the Reader's first chunk graph, and ship as
+  // several small lazy group chunks reachable only through the Reader's dynamic edges.
+  const implCount = f => (read(f).match(VISUAL_IMPL_SIGNATURE) || []).length;
+  const readerRoots = all.filter(f => /^LearningReaderWithTraining-[^.]+\.js$/.test(f));
+  if (!readerRoots.length) failures.push("no LearningReaderWithTraining-*.js lazy chunk was emitted (is the Learning Reader imported statically?)");
+  const readerClosure = readerRoots.length ? staticClosure(dist, readerRoots) : [];
+  for (const f of initial) if (implCount(f)) failures.push(`${f} (initial) carries ${implCount(f)} learning visual implementation(s)`);
+  for (const f of readerClosure) if (implCount(f)) failures.push(`${f} (first Reader load) carries ${implCount(f)} learning visual implementation(s) — the registry must stay lazy`);
+  const visualChunks = all.filter(f => implCount(f) > 0 && !initial.includes(f) && !readerClosure.includes(f));
+  const shipped = visualChunks.reduce((n, f) => n + implCount(f), 0);
+  const readerDynamic = new Set(readerRoots.flatMap(f => dynamicEdges(dist, f)));
+  const unreachable = visualChunks.filter(f => !readerDynamic.has(f));
+  const biggest = Math.max(0, ...visualChunks.map(implCount));
+  if (shipped < REGISTERED_VISUALS_MIN) failures.push(`only ${shipped} learning visual implementations are shipped in lazy chunks (registry has ${REGISTERED_VISUALS_MIN})`);
+  if (visualChunks.length < VISUAL_GROUP_MIN_CHUNKS) failures.push(`learning visuals are packed into ${visualChunks.length} chunk(s) — the trusted per-module grouping emits ≥ ${VISUAL_GROUP_MIN_CHUNKS}`);
+  if (biggest > VISUAL_GROUP_MAX_IMPLS) failures.push(`a learning visual chunk carries ${biggest} implementations (max ${VISUAL_GROUP_MAX_IMPLS}) — that is the eager all-visuals design again`);
+  if (unreachable.length) failures.push(`learning visual chunk(s) not behind a dynamic edge of the Reader chunk: ${unreachable.join(", ")}`);
+  const readerGz = readerClosure.filter(f => !initial.includes(f)).reduce((n, f) => n + zlib.gzipSync(fs.readFileSync(path.join(assets, f)), { level: 9 }).length, 0);
+  console.log(`Learning Reader first-load graph (beyond the initial graph): ${readerClosure.filter(f => !initial.includes(f)).length} files, ${kb(readerGz)} KB gzip, 0 visual implementations required`);
+  console.log(`Learning visuals: ${shipped} implementations in ${visualChunks.length} lazy group chunks (largest ${biggest}), all behind Reader dynamic edges`);
 
   if (failures.length) { console.error("\nBUNDLE GUARD FAILED:\n - " + failures.join("\n - ")); process.exit(1); }
   console.log("bundle guard passed");

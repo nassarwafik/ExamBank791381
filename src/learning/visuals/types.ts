@@ -9,7 +9,7 @@
 // Reduced motion is a first-class prop: every registered visual MUST render a correct STILL frame when
 // `reducedMotion` is true (the CSS also disables animation under prefers-reduced-motion as defense-in-depth).
 
-import type { ComponentType } from "react";
+import type { ComponentType, LazyExoticComponent } from "react";
 
 /** Props every registered visual SVG component receives. All presentational; no data flows back out. */
 export interface LearningVisualProps {
@@ -22,13 +22,18 @@ export interface LearningVisualProps {
 }
 
 export type LearningVisualComponent = ComponentType<LearningVisualProps>;
+/** The module shape of a registered visual file (a default-exported component). */
+export type LearningVisualModule = { default: LearningVisualComponent };
 
 /** One trusted, registered SVG illustration. Authored in this repo and registered by data — never named by content. */
 export interface RegisteredVisual {
   /** The registry key content matches against (`VisualBlock.visualId`). */
   id: string;
-  /** The trusted repo component (eager — SVGs are tiny; no code-split needed). */
-  component: LearningVisualComponent;
+  /** The trusted repo component as a LAZY chunk (Phase 8E-6): rendered inside the figure's local Suspense boundary. */
+  component: LazyExoticComponent<LearningVisualComponent>;
+  /** The same trusted loader (literal repo path + one-shot stale-chunk recovery) for tests/guards that need the raw
+   *  component; production renders `component`. Never derived from content. */
+  load: () => Promise<LearningVisualModule>;
   /** Whether this visual animates (documentation/guards only; motion still respects reduced-motion at runtime). */
   motion: boolean;
 }

@@ -175,12 +175,14 @@ describe("visuals registry", () => {
     for (const id of REGISTERED_VISUAL_IDS) expect(id).toMatch(/^791381\/(ch1|m\d{2})\/[a-z0-9-]+$/);
   });
 
-  it("resolves each registered id to a component with a motion flag", () => {
+  it("resolves each registered id to a lazy component + its trusted loader + a motion flag (Phase 8E-6: the component is a React.lazy chunk)", async () => {
     for (const id of REGISTERED_VISUAL_IDS) {
       const entry = resolveVisual(id);
       expect(entry).not.toBeNull();
-      expect(typeof entry!.component).toBe("function");
+      expect(typeof entry!.component).toBe("object");                       // React.lazy exotic component
+      expect(typeof entry!.load).toBe("function");
       expect(typeof entry!.motion).toBe("boolean");
+      expect(typeof (await entry!.load()).default, id).toBe("function");    // the trusted repo SVG component behind it
     }
   });
 

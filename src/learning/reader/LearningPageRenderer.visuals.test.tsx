@@ -21,13 +21,14 @@ const page: ContentPage = {
 const header = { courseId: "791381", pageTitle: "ما هي الشبكة؟", moduleTitle: "m", lessonTitle: "l", position: { index: 0, total: 1 } };
 
 describe("Reader — visual block", () => {
-  it("renders the visual inside a teacher-enrichment section labelled رسم توضيحي, with the SVG and caption", () => {
+  it("renders the visual inside a teacher-enrichment section labelled رسم توضيحي, with the SVG and caption", async () => {
     const { container } = render(<LearningPageRenderer header={header} body={{ kind: "ready", page }} />);
     expect(screen.getByText("الشبكة هي مجموعة أجهزة متصلة.")).toBeTruthy();
     const section = container.querySelector("section.is-enrichment.kind-visual");
     expect(section).not.toBeNull();
     expect(section!.textContent).toContain("رسم توضيحي");
-    expect(screen.getByRole("img", { name: "رسم يبيّن أجهزة متصلة بشبكة مركزية." }).tagName.toLowerCase()).toBe("svg");
+    // Phase 8E-6: the SVG is a lazy chunk — the section/caption are immediate, the illustration arrives once it resolves.
+    expect((await screen.findByRole("img", { name: "رسم يبيّن أجهزة متصلة بشبكة مركزية." })).tagName.toLowerCase()).toBe("svg");
     expect(screen.getByText("الأجهزة المتصلة تتبادل المعلومات.")).toBeTruthy();
   });
 
