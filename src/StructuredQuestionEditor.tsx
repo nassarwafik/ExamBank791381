@@ -41,14 +41,14 @@ export default function StructuredQuestionEditor(props: Props) {
   return (
     <div className="sb-question">
       <div className="sb-q-head">
-        <button type="button" className="sb-collapse" onClick={() => setOpen(o => !o)} title={open ? "طيّ" : "فتح"}>{open ? "▾" : "▸"}</button>
+        <button type="button" className="sb-collapse" onClick={() => setOpen(o => !o)} title={open ? "طيّ" : "فتح"} aria-label={open ? "طيّ" : "فتح"} aria-expanded={open}>{open ? "▾" : "▸"}</button>
         <span className="sb-q-badge">{q.displayNumber?.trim() ? q.displayNumber : index + 1}</span>
         <span className="sb-spacer" />
-        <button type="button" className="sb-icon-btn" title="معاينة الطالب" onClick={onPreview} disabled={disabled}>👁</button>
-        <button type="button" className="sb-icon-btn" title="أعلى" onClick={() => onMove(-1)} disabled={disabled || index === 0}>↑</button>
-        <button type="button" className="sb-icon-btn" title="أسفل" onClick={() => onMove(1)} disabled={disabled || index === total - 1}>↓</button>
-        <button type="button" className="sb-icon-btn" title="تكرار" onClick={onDuplicate} disabled={disabled}>⧉</button>
-        <button type="button" className="sb-icon-btn sb-danger" title="حذف" onClick={onDelete} disabled={disabled}>×</button>
+        <button type="button" className="sb-icon-btn" title="معاينة الطالب" aria-label="معاينة الطالب" onClick={onPreview} disabled={disabled}>👁</button>
+        <button type="button" className="sb-icon-btn" title="أعلى" aria-label="أعلى" onClick={() => onMove(-1)} disabled={disabled || index === 0}>↑</button>
+        <button type="button" className="sb-icon-btn" title="أسفل" aria-label="أسفل" onClick={() => onMove(1)} disabled={disabled || index === total - 1}>↓</button>
+        <button type="button" className="sb-icon-btn" title="تكرار" aria-label="تكرار" onClick={onDuplicate} disabled={disabled}>⧉</button>
+        <button type="button" className="sb-icon-btn sb-danger" title="حذف" aria-label="حذف" onClick={onDelete} disabled={disabled}>×</button>
       </div>
 
       {open && (

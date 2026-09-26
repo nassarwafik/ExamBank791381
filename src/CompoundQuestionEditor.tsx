@@ -36,10 +36,10 @@ export default function CompoundQuestionEditor({ question, onChange, disabled }:
             <input className="sb-input sb-input-sm" value={p.label ?? ""} placeholder="التسمية (أ، ب...)" onChange={e => patchPart(p.id, { label: e.target.value })} disabled={disabled} />
             <input className="sb-input sb-input-xs" type="number" step="0.25" value={p.marks ?? ""} placeholder="علامة" onChange={e => patchPart(p.id, { marks: e.target.value === "" ? undefined : Number(e.target.value) })} disabled={disabled} />
             <span className="sb-spacer" />
-            <button type="button" className="sb-icon-btn" title="أعلى" onClick={() => setParts(movePart(parts, p.id, -1))} disabled={disabled}>↑</button>
-            <button type="button" className="sb-icon-btn" title="أسفل" onClick={() => setParts(movePart(parts, p.id, 1))} disabled={disabled}>↓</button>
-            <button type="button" className="sb-icon-btn" title="تكرار" onClick={() => setParts(duplicatePart(parts, p.id))} disabled={disabled}>⧉</button>
-            <button type="button" className="sb-icon-btn sb-danger" title="حذف" onClick={() => setParts(deletePart(parts, p.id))} disabled={disabled}>×</button>
+            <button type="button" className="sb-icon-btn" title="أعلى" aria-label="أعلى" onClick={() => setParts(movePart(parts, p.id, -1))} disabled={disabled}>↑</button>
+            <button type="button" className="sb-icon-btn" title="أسفل" aria-label="أسفل" onClick={() => setParts(movePart(parts, p.id, 1))} disabled={disabled}>↓</button>
+            <button type="button" className="sb-icon-btn" title="تكرار" aria-label="تكرار" onClick={() => setParts(duplicatePart(parts, p.id))} disabled={disabled}>⧉</button>
+            <button type="button" className="sb-icon-btn sb-danger" title="حذف" aria-label="حذف" onClick={() => setParts(deletePart(parts, p.id))} disabled={disabled}>×</button>
           </div>
           <textarea className="sb-input sb-textarea sb-part-text" value={p.text ?? ""} placeholder="نص البند" onChange={e => patchPart(p.id, { text: e.target.value })} disabled={disabled} />
           <QuestionBodyEditor node={p} type={p.type} onChange={patch => patchPart(p.id, patch)} disabled={disabled} />

@@ -6744,6 +6744,7 @@ function App() {
                         <div className="question-order-actions">
                           <button
                             title="نقل للأعلى"
+                            aria-label="نقل للأعلى"
                             onClick={() =>
                               moveQuestion(
                                 index,
@@ -6759,6 +6760,7 @@ function App() {
 
                           <button
                             title="نقل للأسفل"
+                            aria-label="نقل للأسفل"
                             onClick={() =>
                               moveQuestion(
                                 index,
@@ -6776,6 +6778,7 @@ function App() {
 
                           <button
                             title="نسخ السؤال"
+                            aria-label="نسخ السؤال"
                             onClick={() =>
                               duplicateQuestion(
                                 question,
@@ -6789,6 +6792,7 @@ function App() {
                           <button
                             className="question-delete-mini"
                             title="حذف السؤال"
+                            aria-label="حذف السؤال"
                             onClick={() =>
                               deleteExamQuestion(
                                 question,

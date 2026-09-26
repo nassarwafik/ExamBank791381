@@ -30,9 +30,9 @@ export default function QuestionBodyEditor({ node, type, onChange, disabled }: P
           <div className="sb-option-row" key={i}>
             <label className="sb-radio"><input type="radio" name={"mcq-" + groupId} checked={correct === i} onChange={() => onChange({ answer: { correctOptionIndex: i } })} disabled={disabled} /> الصحيح</label>
             <input className="sb-input" value={optText(o)} placeholder={"الخيار " + (i + 1)} onChange={e => setOption(i, e.target.value)} disabled={disabled} />
-            <button type="button" className="sb-icon-btn" title="أعلى" onClick={() => onChange(moveMcqOption(node, i, -1))} disabled={disabled}>↑</button>
-            <button type="button" className="sb-icon-btn" title="أسفل" onClick={() => onChange(moveMcqOption(node, i, 1))} disabled={disabled}>↓</button>
-            {options.length > 2 && <button type="button" className="sb-icon-btn sb-danger" title="حذف" onClick={() => onChange(deleteMcqOption(node, i))} disabled={disabled}>×</button>}
+            <button type="button" className="sb-icon-btn" title="أعلى" aria-label="أعلى" onClick={() => onChange(moveMcqOption(node, i, -1))} disabled={disabled}>↑</button>
+            <button type="button" className="sb-icon-btn" title="أسفل" aria-label="أسفل" onClick={() => onChange(moveMcqOption(node, i, 1))} disabled={disabled}>↓</button>
+            {options.length > 2 && <button type="button" className="sb-icon-btn sb-danger" title="حذف" aria-label="حذف" onClick={() => onChange(deleteMcqOption(node, i))} disabled={disabled}>×</button>}
           </div>
         ))}
         {!hasCorrect && <p className="sb-hint sb-warn-text">حدّد الإجابة الصحيحة.</p>}
@@ -86,7 +86,7 @@ export default function QuestionBodyEditor({ node, type, onChange, disabled }: P
             <input className="sb-input" value={p.left} placeholder="العنصر" onChange={e => apply(list.map((x, k) => (k === i ? { ...x, left: e.target.value } : x)))} disabled={disabled} />
             <span className="sb-arrow">←</span>
             <input className="sb-input" value={p.right} placeholder="الإجابة الصحيحة" onChange={e => apply(list.map((x, k) => (k === i ? { ...x, right: e.target.value } : x)))} disabled={disabled} />
-            {list.length > 1 && <button type="button" className="sb-icon-btn sb-danger" title="حذف" onClick={() => apply(list.filter((_, k) => k !== i))} disabled={disabled}>×</button>}
+            {list.length > 1 && <button type="button" className="sb-icon-btn sb-danger" title="حذف" aria-label="حذف" onClick={() => apply(list.filter((_, k) => k !== i))} disabled={disabled}>×</button>}
           </div>
         ))}
         <button type="button" className="sb-mini-btn" onClick={() => apply([...list, { left: "", right: "" }])} disabled={disabled}>+ إضافة زوج</button>

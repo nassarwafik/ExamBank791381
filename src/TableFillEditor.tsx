@@ -27,7 +27,7 @@ export default function TableFillEditor({ question, onChange, disabled }: Props)
               {headers.map((h, c) => (
                 <th key={c}>
                   <input className="sb-input sb-input-sm" value={h} placeholder={"العمود " + (c + 1)} onChange={e => setHeader(c, e.target.value)} disabled={disabled} />
-                  {cols > 1 && <button type="button" className="sb-icon-btn sb-danger" title="حذف العمود" onClick={() => onChange(deleteTableColumn(question, c))} disabled={disabled}>×</button>}
+                  {cols > 1 && <button type="button" className="sb-icon-btn sb-danger" title="حذف العمود" aria-label="حذف العمود" onClick={() => onChange(deleteTableColumn(question, c))} disabled={disabled}>×</button>}
                 </th>
               ))}
               <th className="sb-grid-actions"><button type="button" className="sb-mini-btn" onClick={() => onChange(addTableColumn(question))} disabled={disabled}>+ عمود</button></th>
@@ -48,7 +48,7 @@ export default function TableFillEditor({ question, onChange, disabled }: Props)
                               <option value="select">قائمة</option>
                               <option value="boolean">صح/خطأ</option>
                             </select>
-                            <button type="button" className="sb-icon-btn" title="إلغاء كخلية جواب" onClick={() => onChange(toggleTableCell(question, r, c))} disabled={disabled}>↩</button>
+                            <button type="button" className="sb-icon-btn" title="إلغاء كخلية جواب" aria-label="إلغاء كخلية جواب" onClick={() => onChange(toggleTableCell(question, r, c))} disabled={disabled}>↩</button>
                           </div>
                           {field.kind === "boolean" ? (
                             <select className="sb-input sb-input-sm" value={String(field.correct === true ? "true" : field.correct === false ? "false" : "")} onChange={e => patchField(field.id, { correct: e.target.value === "" ? undefined : e.target.value === "true" })} disabled={disabled}>
@@ -72,7 +72,7 @@ export default function TableFillEditor({ question, onChange, disabled }: Props)
                     </td>
                   );
                 })}
-                <td className="sb-grid-actions">{rows.length > 1 && <button type="button" className="sb-icon-btn sb-danger" title="حذف الصف" onClick={() => onChange(deleteTableRow(question, r))} disabled={disabled}>×</button>}</td>
+                <td className="sb-grid-actions">{rows.length > 1 && <button type="button" className="sb-icon-btn sb-danger" title="حذف الصف" aria-label="حذف الصف" onClick={() => onChange(deleteTableRow(question, r))} disabled={disabled}>×</button>}</td>
               </tr>
             ))}
           </tbody>

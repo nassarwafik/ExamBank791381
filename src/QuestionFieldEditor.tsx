@@ -29,9 +29,9 @@ export default function QuestionFieldEditor({ node, type, onChange, disabled }: 
               <option value="true">صحيح</option>
               <option value="false">غير صحيح</option>
             </select>
-            <button type="button" className="sb-icon-btn" title="أعلى" onClick={() => move(f.id, -1)} disabled={disabled}>↑</button>
-            <button type="button" className="sb-icon-btn" title="أسفل" onClick={() => move(f.id, 1)} disabled={disabled}>↓</button>
-            <button type="button" className="sb-icon-btn sb-danger" title="حذف" onClick={() => removeField(f.id)} disabled={disabled}>×</button>
+            <button type="button" className="sb-icon-btn" title="أعلى" aria-label="أعلى" onClick={() => move(f.id, -1)} disabled={disabled}>↑</button>
+            <button type="button" className="sb-icon-btn" title="أسفل" aria-label="أسفل" onClick={() => move(f.id, 1)} disabled={disabled}>↓</button>
+            <button type="button" className="sb-icon-btn sb-danger" title="حذف" aria-label="حذف" onClick={() => removeField(f.id)} disabled={disabled}>×</button>
           </div>
         ))}
         <button type="button" className="sb-mini-btn" onClick={() => setFields([...fields, newField({ statement: "", kind: "boolean", correct: true })])} disabled={disabled}>+ إضافة بند</button>
@@ -65,9 +65,9 @@ export default function QuestionFieldEditor({ node, type, onChange, disabled }: 
             ) : (
               <input className="sb-input sb-input-sm" value={String(f.correct ?? "")} placeholder="الإجابة الصحيحة" onChange={e => patchField(f.id, { correct: e.target.value }, true)} disabled={disabled} />
             )}
-            <button type="button" className="sb-icon-btn" title="أعلى" onClick={() => move(f.id, -1, true)} disabled={disabled}>↑</button>
-            <button type="button" className="sb-icon-btn" title="أسفل" onClick={() => move(f.id, 1, true)} disabled={disabled}>↓</button>
-            <button type="button" className="sb-icon-btn sb-danger" title="حذف" onClick={() => removeField(f.id, true)} disabled={disabled}>×</button>
+            <button type="button" className="sb-icon-btn" title="أعلى" aria-label="أعلى" onClick={() => move(f.id, -1, true)} disabled={disabled}>↑</button>
+            <button type="button" className="sb-icon-btn" title="أسفل" aria-label="أسفل" onClick={() => move(f.id, 1, true)} disabled={disabled}>↓</button>
+            <button type="button" className="sb-icon-btn sb-danger" title="حذف" aria-label="حذف" onClick={() => removeField(f.id, true)} disabled={disabled}>×</button>
           </div>
         ))}
       </div>
