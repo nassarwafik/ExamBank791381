@@ -1,7 +1,11 @@
 import { useEffect, useMemo, useRef, useState, lazy, Suspense } from "react";
 import type { FormEvent } from "react";
-import StudentPortal from "./StudentPortal";
 import { lazyWithRetry } from "./lazyWithRetry";
+// Phase 8E-5 — the STUDENT PORTAL is a LAZY chunk: the login page, the session-validation boot and every teacher
+// session never download it. It is rendered — and therefore fetched — only once the session is AUTHORITATIVELY
+// validated as a student (sessionValidated && sessionRole === "student"); a stored/stale role never decides this.
+// lazyWithRetry keeps the one-shot stale-chunk deployment recovery. Guarded by scripts/check-bundle-budget.mjs.
+const StudentPortal = lazy(lazyWithRetry(() => import("./StudentPortal"), "student-portal"));
 // Heavy, chart-bearing modules are code-split so they load only when opened (keeps the main bundle down).
 const ProjectTracker = lazy(() => import("./projects/ProjectTracker"));
 const ProjectHub = lazy(() => import("./projects/ProjectHub"));
@@ -5579,16 +5583,20 @@ function App() {
     sessionRole ===
     "student"
   ) {
+    // Phase 8E-5 — the boundary wraps ONLY the authenticated student portal body (this branch is reached only after
+    // the authoritative session validation above); the fallback is a local status line, never an app-level takeover.
     return (
-      <StudentPortal
-        token={token}
-        displayName={
-          sessionDisplayName
-        }
-        onLogout={
-          handleLogout
-        }
-      />
+      <Suspense fallback={<p className="eb-muted" role="status" dir="rtl">جارٍ تحميل بوابة الطالب...</p>}>
+        <StudentPortal
+          token={token}
+          displayName={
+            sessionDisplayName
+          }
+          onLogout={
+            handleLogout
+          }
+        />
+      </Suspense>
     );
   }
 

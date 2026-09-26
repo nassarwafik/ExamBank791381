@@ -7,6 +7,11 @@
 // its suspended frame (shell mounted, local status fallback only) before the module is released.
 import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 import { render, cleanup, screen, waitFor, fireEvent, within, act } from "@testing-library/react";
+import { configure } from "@testing-library/react";
+// Phase 8E-5 — StudentPortal is a lazy chunk: the FIRST student render in a test file also performs its dynamic import,
+// and vitest transforms the whole portal module tree at that moment (regularly > 1 s in a cold worker), while production
+// shows the local status fallback. Give the async queries the headroom that first import needs.
+configure({ asyncUtilTimeout: 5000 });
 import { readFileSync } from "fs";
 import path from "path";
 import App from "./App";
@@ -196,7 +201,8 @@ describe("G. Phase 8E-2 protection stays intact", () => {
     expect(guard).toMatch(/\/\^TeacherDashboard-\[\^\.\]\+\\\.js\$\//); expect(guard).toMatch(/\/\^TeacherPlatform-\[\^\.\]\+\\\.js\$\//);
     expect(guard).toMatch(/platform\.length >= 2/);
     const budget = Number((guard.match(/INITIAL_JS_GZIP_BUDGET_KB = (\d+)/) || [])[1]);
-    expect(budget).toBeLessThanOrEqual(175); expect(budget).toBeGreaterThanOrEqual(160);
+    // Phase 8E-5 tightened the budget again (125 KB after lazy StudentPortal): never looser than 175, never absurdly low.
+    expect(budget).toBeLessThanOrEqual(175); expect(budget).toBeGreaterThanOrEqual(100);
     expect(SRC("package.json")).toMatch(/"build": "tsc -b && vite build && npm run check:bundle"/);
   });
 });
