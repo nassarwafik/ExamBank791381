@@ -86,7 +86,7 @@ describe("A. source contract — App.tsx", () => {
   it("A2 a LOCAL Suspense boundary with the role=status fallback wraps only the platform body, INSIDE TeacherAppShell", () => {
     const boundary = src.indexOf('<Suspense fallback={<p className="eb-muted" role="status">' + FALLBACK + "</p>}>");
     expect(boundary).toBeGreaterThan(0);
-    expect(src.slice(boundary, boundary + 500)).toMatch(/<\/p>\}>\s*<TeacherPlatform\s+token=\{token\}\s+projects=\{projectList\}\s+currentExam=\{structuredExam \?\? exam\}\s+workspaceTab=\{workspaceTab\}\s+onCopyLibraryExamToBuilder=\{handleCopyLibraryExamToBuilder\}\s*\/>\s*<\/Suspense>/);
+    expect(src.slice(boundary, boundary + 500)).toMatch(/<\/p>\}>\s*<TeacherPlatform\s+token=\{token\}\s+projects=\{projectList\}\s+currentExam=\{structuredExam \?\? exam\}\s+workspaceTab=\{workspaceTab\}\s+onCopyLibraryExamToBuilder=\{handleCopyLibraryExamToBuilder\}\s+onNavigate=\{navigateTeacher\}\s*\/>\s*<\/Suspense>/);   // 9A: + the shell navigation for the Today Hub
     const shellOpen = src.indexOf("<TeacherAppShell"), shellClose = src.indexOf("</TeacherAppShell>");
     expect(shellOpen).toBeGreaterThan(0); expect(boundary).toBeGreaterThan(shellOpen); expect(boundary).toBeLessThan(shellClose);
     expect(src.slice(shellOpen, boundary)).toMatch(/\{teacherView ===\s*"platform" && \(/);            // gated by the same teacherView authority as before
@@ -163,7 +163,7 @@ describe("E/F. the platform transition — shell stays mounted, only the body su
     expect(props.currentExam).toBeNull();
     expect(props.workspaceTab).toBe("dashboard");
     expect(typeof props.onCopyLibraryExamToBuilder).toBe("function");
-    expect(Object.keys(props).sort()).toEqual(["currentExam", "onCopyLibraryExamToBuilder", "projects", "token", "workspaceTab"]);
+    expect(Object.keys(props).sort()).toEqual(["currentExam", "onCopyLibraryExamToBuilder", "onNavigate", "projects", "token", "workspaceTab"]);   // 9A: onNavigate
   });
   it("F leaving unmounts the platform (as before); returning re-mounts it from the module cache with no fallback and the new workspaceTab", async () => {
     installFetch("teacher");

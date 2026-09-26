@@ -12,7 +12,7 @@ const {deriveGradingStatus}=require("../lib/grading-status");
 // the visible 25-stage path (80 points per stage, 2000 max) — every stage field is decided HERE by student-strength.js;
 // the browser never derives a stage. Project progress comes from the SAME loader as /api/student-project-tracker.
 const {buildStrengthSummary}=require("../lib/student-strength");
-const {studyDocName,studyModulesForStrength}=require("../lib/learning-study");
+const {studyDocName,studyModulesForStrength,latestStudyActivity}=require("../lib/learning-study");
 const {listLearningCourses}=require("../lib/learning-materials-registry");
 const {loadStudentProjects}=require("../lib/project-tracker/student-projects");
 const {aggregateRecognition,medalTierFromPercentage,emptyRecognition}=require("../lib/achievement-feed");
@@ -111,7 +111,11 @@ async function handler(request,deps={},obs=null){
   const g=rec.gameMedals||{total:0,gold:0,silver:0,bronze:0};
   medals.total+=g.total;medals.gold+=g.gold;medals.silver+=g.silver;medals.bronze+=g.bronze;
   const recognition={medals,reactionsReceived:{total:rec.receivedReactionCount,byType:rec.receivedReactionByType},achievements:{total:rec.achievementCount,byType:rec.achievementByType}};
-  return {status:200,jsonBody:{ok:true,student:{userId:student.userId,code:student.code,displayName:student.displayName,classId:student.classId,avatarId:String(student.avatarId||""),shareAchievements:student.shareAchievements!==false,profilePhoto:student.profilePhoto&&typeof student.profilePhoto==="object"&&Number(student.profilePhoto.version)>0?{version:Number(student.profilePhoto.version),updatedAt:String(student.profilePhoto.updatedAt||"")}:null},classroom:classroom?{classId:classroom.classId,name:classroom.name,grade:classroom.grade,schoolYear:classroom.schoolYear}:null,assignments,stats:{assigned:assignments.length,completed,average:completed?Number((sum/completed).toFixed(1)):null,submitted,inProgress,pendingReview,finalized,scheduled,available,closedUnsubmitted,averageFinalized:finalCount?Number((finalSum/finalCount).toFixed(1)):null},strength,recognition,phase:"2.0C"}};
+  // Phase 9A — Today Hub: the most recent study completion (course / module / page) from the SAME study document read
+  // above (zero extra reads; purely additive). The portal only offers it as a "continue reading" point when the course
+  // and module are still among the class's released materials.
+  const todayStudy={lastActivity:latestStudyActivity(studyDoc)};
+  return {status:200,jsonBody:{ok:true,study:todayStudy,student:{userId:student.userId,code:student.code,displayName:student.displayName,classId:student.classId,avatarId:String(student.avatarId||""),shareAchievements:student.shareAchievements!==false,profilePhoto:student.profilePhoto&&typeof student.profilePhoto==="object"&&Number(student.profilePhoto.version)>0?{version:Number(student.profilePhoto.version),updatedAt:String(student.profilePhoto.updatedAt||"")}:null},classroom:classroom?{classId:classroom.classId,name:classroom.name,grade:classroom.grade,schoolYear:classroom.schoolYear}:null,assignments,stats:{assigned:assignments.length,completed,average:completed?Number((sum/completed).toFixed(1)):null,submitted,inProgress,pendingReview,finalized,scheduled,available,closedUnsubmitted,averageFinalized:finalCount?Number((finalSum/finalCount).toFixed(1)):null},strength,recognition,phase:"2.0C"}};
  }catch(e){obs?.logError("student.dashboard.error",e);return {status:500,jsonBody:{ok:false,error:"تعذر تحميل لوحة الطالب حاليًا."}}}
 }
 app.http("studentDashboard",{methods:["GET"],authLevel:"anonymous",route:"student-dashboard",handler:withObservability("student-dashboard",handler)});

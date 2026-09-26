@@ -9,6 +9,8 @@ import {lazyWithRetry} from "./lazyWithRetry";
 // served from the module cache on every return to the tab. The chunk is guarded by scripts/check-bundle-budget.mjs.
 const TeacherDashboard=lazy(lazyWithRetry(()=>import("./TeacherDashboard"),"teacher-dashboard"));
 import AuditHistoryPanel from "./AuditHistoryPanel";
+import TeacherTodayHub from "./teacher/TeacherTodayHub";
+import type {TeacherNavId} from "./shell/teacherNav";
 import {parseBulkStudents} from "./bulkStudentsParse";
 import {normalizeClassStatus} from "./classLifecycle";
 import {getClassProgramCodes} from "./projects/classPrograms";
@@ -28,7 +30,9 @@ type WorkspaceTab="dashboard"|"students"|"assignments"|"audit";
 // here (App owns the real ExamDraft type) to avoid a value/type import coupling to App.tsx.
 type TeacherPlatformProps={token:string;currentExam:unknown|null;workspaceTab:WorkspaceTab;onCopyLibraryExamToBuilder?:(examSnapshot:any,title:string)=>void;
  /** UX-6a: the project catalog App already loaded at boot. When provided, this panel issues NO catalog request of its own. */
- projects?:ProjectOption[]};
+ projects?:ProjectOption[];
+ /** Phase 9A — the shell's navigation (App owns the state): the Today Hub's quick actions go through it, never a second router. */
+ onNavigate?:(id:TeacherNavId)=>void};
 type ApiError={ok?:boolean;error?:string};
 type WorkspaceDialog="none"|"createClass"|"addStudent"|"import";
 
@@ -728,7 +732,9 @@ function TeacherPlatform(props:TeacherPlatformProps){
 
  // The Suspense boundary wraps ONLY the dashboard body: the teacher shell, sidebar and this workspace wrapper stay mounted
  // while the chunk loads, and the fallback is a local status line inside the same inner container (never a blank page).
- if(workspaceTab==="dashboard")return <section className="teacher-platform" dir="rtl"><div className="teacher-platform-inner"><Suspense fallback={<p className="eb-muted" role="status">جارٍ تحميل لوحة المتابعة...</p>}><TeacherDashboard token={token}/></Suspense></div></section>;
+ // Phase 9A — the Today Hub (command center) is the FIRST thing on the teacher's home, above the analytics dashboard; it is
+ // part of this chunk (one small read of its own), so the lazy Dashboard boundary below is unchanged.
+ if(workspaceTab==="dashboard")return <section className="teacher-platform" dir="rtl"><div className="teacher-platform-inner"><TeacherTodayHub token={token} onNavigate={props.onNavigate}/><Suspense fallback={<p className="eb-muted" role="status">جارٍ تحميل لوحة المتابعة...</p>}><TeacherDashboard token={token}/></Suspense></div></section>;
  if(workspaceTab==="audit")return <AuditHistoryPanel token={token}/>;
  if(workspaceTab==="assignments")return <section className="teacher-platform" dir="rtl"><div className="teacher-platform-inner"><AssignmentsPanel token={token} classes={classes} currentExam={currentExam} onCopyLibraryExamToBuilder={onCopyLibraryExamToBuilder}/></div></section>;
 

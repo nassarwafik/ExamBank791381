@@ -11,7 +11,7 @@ import { createStudyClient } from "../learning/study/studyClient";
  * StudentPortal: opening the portal loads neither this file nor any book body; the module bodies remain the
  * Reader's own lazy chunks and the runner is a further lazy chunk.
  */
-export default function StudentReader({ courseId, allowedModuleIds, token, onExit, onTrainingSubmitted, onStudyPointsEarned }: {
+export default function StudentReader({ courseId, allowedModuleIds, token, onExit, onTrainingSubmitted, onStudyPointsEarned, initialPageId, onPageChange }: {
   courseId: string;
   allowedModuleIds: string[];
   token: string;
@@ -19,6 +19,11 @@ export default function StudentReader({ courseId, allowedModuleIds, token, onExi
   onTrainingSubmitted?: () => void;
   /** Fired when the server awarded Study-Practice points (the portal refreshes Strength once on exit). */
   onStudyPointsEarned?: () => void;
+  /** Phase 9A — «أكمل من حيث توقفت»: the page to open on first mount (validated by the Reader against the restricted
+   *  manifest; unknown / unreleased → the book's first page). Absent → the book's beginning, exactly as before. */
+  initialPageId?: string;
+  /** Phase 9A — the Reader's page-change signal (the portal remembers this student's page on this device). */
+  onPageChange?: (pageId: string) => void;
 }) {
   const key = allowedModuleIds.join("|");
   const api = useMemo(() => createRestrictedReaderContentApi(courseId, allowedModuleIds), [courseId, key]);   // eslint-disable-line react-hooks/exhaustive-deps
@@ -35,6 +40,8 @@ export default function StudentReader({ courseId, allowedModuleIds, token, onExi
       onTrainingSubmitted={onTrainingSubmitted}
       study={study}
       onStudyPointsEarned={onStudyPointsEarned}
+      initialPageId={initialPageId}
+      onPageChange={onPageChange}
     />
   );
 }

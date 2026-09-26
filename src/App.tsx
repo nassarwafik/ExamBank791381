@@ -5622,6 +5622,7 @@ function App() {
             currentExam={structuredExam ?? exam}
             workspaceTab={workspaceTab}
             onCopyLibraryExamToBuilder={handleCopyLibraryExamToBuilder}
+            onNavigate={navigateTeacher}
           />
         </Suspense>
       )}

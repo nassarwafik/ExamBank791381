@@ -26,6 +26,9 @@ import { normalizeStrength } from "./student/strengthPresentation";
 import { stageVisual } from "./studentStageVisuals";
 import { normalizeRecognition } from "./student/recognitionPresentation";
 import type { Dashboard, Detail, Summary } from "./student/types";
+import StudentTodayHub from "./student/today/StudentTodayHub";
+import { selectTodayContinue, type TodayContinue } from "./student/today/todayPriority";
+import { loadReaderPosition, saveReaderPosition } from "./student/today/readerPosition";
 
 type Props = { token: string; displayName: string; onLogout: () => void };
 
@@ -49,6 +52,10 @@ export default function StudentPortal({ token, displayName, onLogout }: Props) {
   const [filter, setFilter] = useState<PortalFilter>("all");
   // The learning course currently open in the Reader (its published module ids as re-validated at open time).
   const [readerCourse, setReaderCourse] = useState<StudentLearningCourse | null>(null);
+  // Phase 9A — «أكمل من حيث توقفت»: the page the Reader opens on (only when the hub continues a reading position;
+  // every other open starts the book as before), and the released courses the materials panel reported (its one read).
+  const [readerInitialPageId, setReaderInitialPageId] = useState<string | undefined>(undefined);
+  const [courses, setCourses] = useState<StudentLearningCourse[] | null>(null);
   // The dedicated Educational Games destination (a full-view swap, like the Reader/exam) — opened from the shell.
   const [gamesOpen, setGamesOpen] = useState(false);
   // Phase 5C — the dedicated «الرسائل» destination (same full-view swap); it owns its own small polling lifecycle.
@@ -96,7 +103,7 @@ export default function StudentPortal({ token, displayName, onLogout }: Props) {
       const r = await fetch("/api/student-dashboard", { headers }), j = await r.json() as any;
       if (r.status === 401) { onLogout(); return; }
       if (!r.ok || !j.student || !j.stats) throw new Error(j.error || "تعذر تحميل صفحة الطالب.");
-      setData({ student: j.student, classroom: j.classroom || null, assignments: j.assignments || [], stats: j.stats, strength: normalizeStrength(j.strength), recognition: normalizeRecognition(j.recognition) });
+      setData({ student: j.student, classroom: j.classroom || null, assignments: j.assignments || [], stats: j.stats, strength: normalizeStrength(j.strength), recognition: normalizeRecognition(j.recognition), study: j.study && typeof j.study === "object" ? { lastActivity: j.study.lastActivity || null } : undefined });
       if (silent) setError("");   // a successful background refresh clears any stale error banner
     } catch (e) { if (!silent) setError(e instanceof Error ? e.message : "تعذر تحميل الصفحة."); }   // silent failure: keep last-good data, no flicker
     finally { if (!silent) setLoading(false); }
@@ -192,17 +199,30 @@ export default function StudentPortal({ token, displayName, onLogout }: Props) {
     }
     void open(summary);                                                  // /api/student-assignment stays the authority
   }
-  /** Re-validate a learning-material notification against the CURRENT entitlement before opening the Reader. */
-  async function routeMaterial(courseId: string, moduleId: string) {
+  /** Re-validate a learning-material notification against the CURRENT entitlement before opening the Reader.
+   *  Phase 9A: with `pageId` (the Today Hub's continuation) the Reader opens on that page; otherwise as before. */
+  async function routeMaterial(courseId: string, moduleId: string, pageId?: string) {
     try {
       const r = await fetch("/api/student-learning-materials", { headers });
       const j = await r.json().catch(() => ({})) as { ok?: boolean; materials?: StudentLearningCourse[] };
       if (!r.ok || !j.ok) { setNotice("تعذر فتح المادة التعليمية حاليًا."); return; }      // incl. 401 → never a logout here
       const course = (j.materials || []).find(c => c.courseId === courseId && c.modules.some(m => m.moduleId === moduleId));
       if (!course) { setNotice("لم تعد هذه المادة متاحة."); return; }
+      setCourses(j.materials || []);
+      setReaderInitialPageId(pageId || undefined);
       setReaderCourse(course);
       window.scrollTo({ top: 0, behavior: reducedMotion ? "auto" : "smooth" });
     } catch { setNotice("تعذر فتح المادة التعليمية حاليًا."); }
+  }
+  /** Phase 9A — the hero's ONE action hands the chosen continuation to the portal's EXISTING flows (nothing new). */
+  function continueToday(item: TodayContinue) {
+    setNotice("");
+    if (item.assignmentId) { routeAssignment(item.assignmentId); return; }              // live attempt / assignment → the exam page
+    if ((item.type === "reader" || item.type === "study") && item.courseId && item.moduleId) { void routeMaterial(item.courseId, item.moduleId, item.pageId); return; }
+    if (item.type === "project") scrollToSection("eb-sp-projects-title");
+  }
+  function scrollToSection(id: string) {
+    window.setTimeout(() => { const el = document.getElementById(id); el?.scrollIntoView?.({ block: "start", behavior: reducedMotion ? "auto" : "smooth" }); el?.focus?.(); }, 0);
   }
   /** Bring the student to their achievement and focus the post the teacher recognized (no second achievement model). */
   function routeRecognition(postId: string) {
@@ -232,6 +252,7 @@ export default function StudentPortal({ token, displayName, onLogout }: Props) {
     setBellCounts(null);
     setNotice("");
     setNotif({ items: null, loading: false, error: "" });
+    setCourses(null); setReaderInitialPageId(undefined);                                  // Phase 9A: no hub state crosses sessions
     void load(); void loadFeed(); void loadMessagesUnread();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [token]);
@@ -309,10 +330,12 @@ export default function StudentPortal({ token, displayName, onLogout }: Props) {
           courseId={readerCourse.courseId}
           allowedModuleIds={readerCourse.modules.map(m => m.moduleId)}
           token={token}
+          initialPageId={readerInitialPageId}
+          onPageChange={pageId => saveReaderPosition(data.student.userId, { courseId: readerCourse.courseId, pageId })}
           onTrainingSubmitted={() => { strengthDirtyRef.current = true; }}
           onStudyPointsEarned={() => { strengthDirtyRef.current = true; }}
           onExit={() => {
-            setReaderCourse(null);
+            setReaderCourse(null); setReaderInitialPageId(undefined);
             window.scrollTo({ top: 0, behavior: reducedMotion ? "auto" : "smooth" });
             // A graded training (T/F — the SAME bucket as the Training Library) or a study point inside the Reader changes
             // the server's Strength → ONE silent authoritative dashboard reload on return (never per page, never a full
@@ -344,6 +367,11 @@ export default function StudentPortal({ token, displayName, onLogout }: Props) {
   const visible = ordered.filter(item => matchesFilter(item, filter));
   const now_ = data ? nowItems(data.assignments) : { actionable: [], upcoming: [] };
   const now = Date.now();
+  // Phase 9A — the ONE continuation for the hero (pure, deterministic; see todayPriority.ts). The Reader marker is read
+  // for THIS student's server-issued userId only, so another student's page on the same device is never offered.
+  const todayContinue = data ? selectTodayContinue({ assignments: data.assignments, now, readerPosition: loadReaderPosition(data.student.userId), studyLastActivity: data.study?.lastActivity ?? null, courses, projects: strength?.projects ?? [] }) : null;
+  const latestFinal = data ? data.assignments.filter(a => a.latestResult && (a.gradingStatus || a.latestResult.gradingStatus) === "final").sort((a, b) => Date.parse(b.latestResult!.submittedAt) - Date.parse(a.latestResult!.submittedAt))[0] : undefined;
+  const todayProgress = { stageNumber: strength ? strength.stageNumber : null, stageCount: strength ? strength.stageCount : 25, medals: data?.recognition ? data.recognition.medals.total : medals.length, finalized: stats ? Number(stats.finalized || 0) : 0, latest: latestFinal && latestFinal.latestResult ? { title: latestFinal.title, percentage: Number(latestFinal.latestResult.percentage) } : null };
 
   return (
     <StudentShell studentName={data?.student.displayName || displayName} className={data?.classroom?.name || ""} onLogout={onLogout} onOpenGames={() => { setGamesOpen(true); window.scrollTo({ top: 0, behavior: reducedMotion ? "auto" : "smooth" }); }} onOpenMessages={() => openMessages("direct")} messagesUnread={messagesUnread} notifications={{
@@ -362,10 +390,11 @@ export default function StudentPortal({ token, displayName, onLogout }: Props) {
           <>
             <StudentIdentityCard student={data.student} classroom={data.classroom} displayName={displayName} stageGroup={stageGroup} token={token} onChangeAvatar={() => setAvatarPickerOpen(true)} />
             <AvatarPickerDialog open={avatarPickerOpen} current={data.student.avatarId} saving={avatarSaving} photoManaged={!!data.student.profilePhoto} onPick={pickAvatar} onClose={() => setAvatarPickerOpen(false)} />
+            <StudentTodayHub continueItem={todayContinue} busy={busy} onContinue={continueToday} messagesUnread={messagesUnread} onOpenMessages={() => openMessages("direct")} progress={todayProgress} onOpenProgress={() => scrollToSection("eb-sp-progress-title")} onOpenTasks={() => scrollToSection("eb-sp-tasks-title")} />
             <NowSection actionable={now_.actionable} upcoming={now_.upcoming} busy={busy} onOpen={open} />
             <InstallAppCard />
             <MessagePushCard token={token} />
-            <StudentLearningMaterials token={token} onOpen={course => { setReaderCourse(course); window.scrollTo({ top: 0, behavior: reducedMotion ? "auto" : "smooth" }); }} />
+            <StudentLearningMaterials token={token} onCoursesChange={setCourses} onOpen={course => { setReaderInitialPageId(undefined); setReaderCourse(course); window.scrollTo({ top: 0, behavior: reducedMotion ? "auto" : "smooth" }); }} />
             <StudentProgressSection stats={stats} medals={medals} strength={strength} recognition={data?.recognition ?? null} averageFinalized={averageFinalized} />
             <section className="eb-sp-panel" aria-labelledby="eb-sp-tasks-title">
               <SectionHeader level={2} id="eb-sp-tasks-title" title="المهام والواجبات" count={visible.length} description="كل واجباتك ونتائجك؛ ما يحتاج إجراءً يظهر أولًا." />

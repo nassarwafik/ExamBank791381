@@ -30,6 +30,8 @@ beforeEach(() => {
     if (url.includes("/api/teacher-analytics")) return json({ ok: false, error: "خادم التحليلات غير متاح للاختبار" }, 500);
     if (url.includes("/api/teacher-achievement-feed")) return json({ ok: true, posts: [] });
     if (url.includes("/api/classrooms")) return json({ ok: true, classes: [] });
+    // Phase 9A — the Today Hub sits above the lazy Dashboard; its own small read is not an analytics read.
+    if (url.includes("/api/teacher-today")) return json({ ok: true, generatedAt: "", scope: { activeClasses: 0, students: 0, publishedAssignments: 0 }, attention: { activeAttempts: { count: 0, items: [] }, notStarted: { count: 0, assignments: 0, items: [] }, pendingReview: { count: 0, assignments: 0, items: [] }, unreadMessages: { total: 0, capped: false } }, recent: [], partial: [] });
     return json({ ok: true, projects: PROJECTS, students: [], assignments: [], exams: [] });
   }) as unknown as typeof fetch;
   vi.spyOn(console, "warn").mockImplementation(() => {});
@@ -43,8 +45,8 @@ const dashboardSurface = () => document.querySelector(".analytics-loading, .anal
 describe("8E-2 — the lazy Dashboard boundary inside TeacherPlatform", () => {
   it("first render shows ONLY the local status fallback inside the workspace wrapper; the Dashboard then loads with one analytics read + one feed read", async () => {
     render(mount("dashboard"));
-    const status = screen.getByRole("status");
-    expect(status.textContent).toBe("جارٍ تحميل لوحة المتابعة...");
+    const status = screen.getAllByRole("status").find(s => s.textContent === "جارٍ تحميل لوحة المتابعة...") as HTMLElement;   // 9A: the hub has its own status while it loads
+    expect(status).toBeTruthy();
     expect(status.closest(".teacher-platform-inner")).toBeTruthy();                                  // inside the workspace, not a page-level blank
     expect(analyticsReads()).toBe(0);                                                                // nothing fetched before the module resolves
     // The real Dashboard module resolves → its own surface (here the server-error alert) replaces the fallback.

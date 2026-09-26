@@ -5,7 +5,12 @@ import { IconBook } from "../icons";
 
 /** One released course as GET /api/student-learning-materials returns it (published modules only). */
 export type StudentLearningCourse = { courseId: string; title: string; modules: { moduleId: string; title: string; order: number }[] };
-type Props = { token: string; onOpen: (course: StudentLearningCourse) => void };
+type Props = {
+  token: string;
+  onOpen: (course: StudentLearningCourse) => void;
+  /** Phase 9A — the courses this panel loaded (its ONE read), for the Today Hub; null = unavailable / not loaded. */
+  onCoursesChange?: (courses: StudentLearningCourse[] | null) => void;
+};
 
 /**
  * «موادي التعليمية» — the student's released learning materials (Class Learning Materials, phase 1).
@@ -15,7 +20,7 @@ type Props = { token: string; onOpen: (course: StudentLearningCourse) => void };
  * entitlement (a fresh read) so the Reader always receives the latest published module ids, even from stale
  * portal state. Realtime updates are out of scope: changes appear on the next portal load / refresh / re-open.
  */
-export default function StudentLearningMaterials({ token, onOpen }: Props) {
+export default function StudentLearningMaterials({ token, onOpen, onCoursesChange }: Props) {
   const [courses, setCourses] = useState<StudentLearningCourse[] | null>(null);
   const [error, setError] = useState("");
   const [opening, setOpening] = useState("");
@@ -40,8 +45,8 @@ export default function StudentLearningMaterials({ token, onOpen }: Props) {
     (async () => {
       const list = await fetchMaterials();
       if (cancelled) return;
-      if (list === null) { setCourses([]); setError("تعذر تحميل موادك التعليمية الآن."); }
-      else { setCourses(list); setError(""); }
+      if (list === null) { setCourses([]); setError("تعذر تحميل موادك التعليمية الآن."); onCoursesChange?.(null); }
+      else { setCourses(list); setError(""); onCoursesChange?.(list); }
     })();
     return () => { cancelled = true; };
   }, [token]);   // eslint-disable-line react-hooks/exhaustive-deps
@@ -53,7 +58,7 @@ export default function StudentLearningMaterials({ token, onOpen }: Props) {
     const fresh = await fetchMaterials();
     setOpening("");
     if (fresh === null) { setError("تعذر التحقق من موادك التعليمية الآن. حاول مرة أخرى."); return; }
-    setCourses(fresh);
+    setCourses(fresh); onCoursesChange?.(fresh);
     const current = fresh.find(c => c.courseId === course.courseId);
     if (!current) { setError("لم تعد هذه المادة متاحة لصفك حاليًا."); return; }
     onOpen(current);

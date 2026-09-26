@@ -160,6 +160,27 @@ function studyStateOf(doc, index) {
   return { modules, pages, moduleViews, totalPoints: studyPointsFromModules(modules) };
 }
 
+/**
+ * Phase 9A — the student's MOST RECENT study activity: the latest completion timestamp across every page of the
+ * document → { courseId, moduleId, pageId, completedAt } or null (no completion, or no parseable timestamp). Pure and
+ * read-only: derived from the same document the Strength summary already reads (no new store, no extra read). The
+ * Today Hub uses it as the cross-device "continue reading" fallback; the caller still validates the course/module
+ * against what the class currently has published.
+ */
+function latestStudyActivity(doc) {
+  const normalized = normalizeStudyDoc(doc);
+  let best = null, bestMs = -Infinity;
+  for (const [pageId, entry] of Object.entries(normalized.pages)) {
+    for (const at of Object.values(entry.completed)) {
+      const ms = Date.parse(String(at || ""));
+      if (!Number.isFinite(ms) || ms <= bestMs) continue;
+      bestMs = ms;
+      best = { courseId: entry.courseId, moduleId: entry.moduleId, pageId, completedAt: new Date(ms).toISOString() };
+    }
+  }
+  return best;
+}
+
 /** The study contribution of a student across every course that has an index (the dashboard / profile path). */
 function studyModulesForStrength(doc, courseIds) {
   const modules = {};
@@ -180,4 +201,5 @@ function studyAllowedForClass(classroom, courseId, moduleId) {
 module.exports = {
   STUDY_PREFIX, studyDocName, loadStudyIndex, findStudyPage, pageEligibleCount, moduleEligibleCounts, findStudyActivity, evaluateStudyResponse,
   normalizeStudyDoc, applyStudyCompletion, eligibleCompletedCount, studyStateOf, studyModulesForStrength, studyAllowedForClass,
+  latestStudyActivity,
 };
