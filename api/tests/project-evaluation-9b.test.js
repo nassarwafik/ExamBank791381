@@ -105,6 +105,57 @@ describe("9B-F pure evaluation summary — buildProjectEvaluation", () => {
   });
 });
 
+describe("9B-F7 review fix — evaluation.updatedAt is the newest score MUTATION (set / change / clear)", () => {
+  const T1 = "2026-03-01T10:00:00.000Z", T2 = "2026-03-01T11:00:00.000Z", T3 = "2026-03-01T12:00:00.000Z";
+  const ev = (stageId, fromScore, toScore, createdAt, extra = {}) => ({ eventId: stageId + createdAt, stageId, type: "score", fromScore, toScore, actor: "t", createdAt, ...extra });
+  it("R1 one score.set → updatedAt = the set timestamp", () => {
+    const e = buildProjectEvaluation(DEF, doc({ X: { status: "not_started", score: 70, updatedAt: T1 } }, [ev("X", null, 70, T1)]));
+    expect(e.updatedAt).toBe(T1); expect(e.stages.find(s => s.stageId === "X")).toMatchObject({ scoredAt: T1, scoredBy: "t" });
+  });
+  it("R2 score.set then score.clear on the same stage → updatedAt = the clear timestamp; the stage is ungraded", () => {
+    const e = buildProjectEvaluation(DEF, doc({ X: { status: "not_started", updatedAt: T2 } }, [ev("X", null, 70, T1), ev("X", 70, null, T2)]));
+    expect(e.updatedAt).toBe(T2); expect(e.gradedStages).toBe(0); expect(e.projectScore).toBeNull();
+    expect(e.stages.find(s => s.stageId === "X")).toMatchObject({ score: null, graded: false, scoredAt: "", scoredBy: "" });
+  });
+  it("R3 older current score on X + newer clear on Y → the clear wins (the reviewer's 10:00 / 11:00 / 12:00 example)", () => {
+    const e = buildProjectEvaluation(DEF, doc({ X: { status: "in_progress", score: 60, updatedAt: T1 }, Y: { status: "in_progress", updatedAt: T3 } }, [ev("X", null, 60, T1), ev("Y", null, 80, T2), ev("Y", 80, null, T3)]));
+    expect(e.updatedAt).toBe(T3);
+    expect(e).toMatchObject({ gradedStages: 1, projectScore: 60 });                                      // score math unchanged
+    expect(e.stages.find(s => s.stageId === "X")).toMatchObject({ scoredAt: T1, scoredBy: "t" });        // the row keeps its own stamp
+  });
+  it("R4 clearing the final remaining grade → gradedStages 0, projectScore null, updatedAt = the clear timestamp (never empty)", () => {
+    const e = buildProjectEvaluation(DEF, doc({ X: { status: "approved", updatedAt: T2 } }, [ev("X", null, 95, T1), ev("X", 95, null, T2)]));
+    expect(e).toMatchObject({ gradedStages: 0, ungradedStages: 4, evaluationProgress: 0, projectScore: null, projectScorePrecise: null, updatedAt: T2 });
+  });
+  it("R5 legacy scored document without score history → safe fallback: the newest updatedAt among the graded entries", () => {
+    const e = buildProjectEvaluation(DEF, doc({ X: { status: "approved", score: 50, updatedAt: T1 }, Y: { status: "approved", score: 60, updatedAt: T2 }, Z: { status: "approved", updatedAt: T3 } }, []));
+    expect(e.updatedAt).toBe(T2);                                                                        // Z has no score → not a graded entry
+    expect(buildProjectEvaluation(DEF, doc({ X: { status: "approved", score: 50, updatedAt: T1 } }, [{ eventId: "s", stageId: "X", type: "status", createdAt: T3 }])).updatedAt).toBe(T1);
+    expect(buildProjectEvaluation(DEF, doc({ X: { status: "approved" } }, undefined)).updatedAt).toBe("");
+  });
+  it("R6 a malformed history timestamp neither crashes nor beats a valid one; all-malformed history falls back to the entries", () => {
+    const e = buildProjectEvaluation(DEF, doc({ X: { status: "in_progress", score: 40, updatedAt: T1 } }, [ev("X", null, 40, T1), ev("Y", null, 10, "not-a-date"), ev("Y", 10, null, undefined), { type: "score" }]));
+    expect(e.updatedAt).toBe(T1);
+    const f = buildProjectEvaluation(DEF, doc({ X: { status: "in_progress", score: 40, updatedAt: T2 } }, [ev("X", null, 40, "garbage")]));
+    expect(f.updatedAt).toBe(T2);
+    expect(f.stages.find(s => s.stageId === "X")).toMatchObject({ scoredAt: "garbage", scoredBy: "t" });   // the row reports its own event as stored
+  });
+  it("R7 through the real handler: set B01, set B02, clear B02 → updatedAt follows the clear; clearing the last grade keeps it", async () => {
+    const ctx = school();
+    await setScore(ctx, { stageId: "B01", score: 10 });
+    const afterSet = (await evalOf(ctx)).evaluation;
+    await setScore(ctx, { stageId: "B02", score: 20 });
+    const r = await clearScore(ctx, { stageId: "B02" });
+    const clearAt = ctx.getJson(NS.A.progressName("c1", "s1")).history.at(-1).createdAt;
+    expect(r.jsonBody.evaluation.updatedAt).toBe(clearAt);
+    expect(Date.parse(clearAt)).toBeGreaterThanOrEqual(Date.parse(afterSet.updatedAt));
+    const last = await clearScore(ctx, { stageId: "B01" });
+    expect(last.jsonBody.evaluation).toMatchObject({ gradedStages: 0, projectScore: null });
+    expect(last.jsonBody.evaluation.updatedAt).toBe(ctx.getJson(NS.A.progressName("c1", "s1")).history.at(-1).createdAt);
+    expect(last.jsonBody.evaluation.updatedAt).not.toBe("");
+  });
+});
+
 describe("9B-D/E teacher score actions — narrow, validated, CAS-merged, audited", () => {
   it("L1 read of a student with no document → empty evaluation (legacy-safe); teacher `student` detail carries `evaluation` too", async () => {
     const ctx = school();

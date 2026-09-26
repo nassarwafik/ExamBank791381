@@ -188,6 +188,21 @@ describe("9B teacher editor — the summary card over the real handler", () => {
     expect(srv.posts.map(p => [p.stageId, p.score])).toEqual([["B01", "50"], ["B02", "90"]]);
     expect(fact("التقييم العام")).toBe("70 / 100");
   });
+  it("G6 (review fix) clearing the only grade: the card returns to «لم تُقيّم بعد» / 0 graded but keeps «آخر تحديث للتقييم» — never «لم يُسجَّل أي تقييم بعد.»", async () => {
+    const srv = server();
+    await mountTeacher();
+    expect(card().textContent).toContain("لم يُسجَّل أي تقييم بعد.");                                     // truly nothing recorded yet
+    type("B01", "64"); fireEvent.click(saveBtn("B01")); await screen.findByText("تم حفظ العلامة.");
+    expect(card().textContent).toContain("آخر تحديث للتقييم:");
+    fireEvent.click(within(row("B01")).getByRole("button", { name: "تفاصيل وملاحظة المرحلة B01" }));
+    fireEvent.click(screen.getByRole("button", { name: "مسح العلامة" }));
+    await waitFor(() => expect(fact("المراحل المقيّمة")).toContain("0 /"));
+    expect(srv.posts.at(-1)).toMatchObject({ action: "score.clear", stageId: "B01" });
+    expect(fact("التقييم العام")).toBe(NOT_GRADED_LABEL);
+    expect(card().textContent).toContain("آخر تحديث للتقييم:");
+    expect(card().textContent).not.toContain("لم يُسجَّل أي تقييم بعد.");
+    expect(card().getAttribute("data-graded")).toBe("0");
+  });
   it("G5 the wording for an unscored stage is the shared «لم تُقيّم بعد» in the stage details; the card carries no reload button or prompt", async () => {
     server();
     await mountTeacher();

@@ -18,7 +18,10 @@
 //   orphanStageIds[]    — stage ids that carry a score in the document but are no longer active in the snapshot
 //                         (deleted / retired / deactivated stage): IGNORED by every count, surfaced only as ids so a
 //                         teacher-side UI may mention them; they never crash and are never counted as ungraded;
-//   updatedAt           — the newest score change (history "score" event, else the entry's updatedAt), "" when none.
+//   updatedAt           — the newest score MUTATION of the whole evaluation: a set, a change OR a clear (every history
+//                         event of type "score", a clear being `toScore: null`), so clearing a grade is an update too.
+//                         Legacy fallback for documents without score history: the newest `updatedAt` among the graded
+//                         entries. "" only when no score was ever recorded. A malformed timestamp never beats a valid one.
 //
 // This is deliberately DIFFERENT from the existing `performance` model (performance.js): there, `grade` is the
 // weighted sum of scores counted ONLY while a stage is approved and feeds the project Strength / tier. The evaluation
@@ -33,16 +36,31 @@ const STATUSES = ["not_started", "in_progress", "ready_for_review", "approved"];
 const isActiveStage = stage => !!stage && stage.active === true && typeof stage.stageId === "string" && stage.stageId !== "";
 const stampOf = value => { const t = Date.parse(String(value || "")); return Number.isFinite(t) ? t : 0; };
 
+const scoreHistory = progressDoc => (progressDoc && Array.isArray(progressDoc.history) ? progressDoc.history : []).filter(ev => ev && ev.type === "score");
+
 /** The latest history event of type "score" per stageId (a legacy document without history → empty map). */
 function latestScoreEvents(progressDoc) {
   const out = new Map();
-  const history = progressDoc && Array.isArray(progressDoc.history) ? progressDoc.history : [];
-  for (const ev of history) {
-    if (!ev || ev.type !== "score" || typeof ev.stageId !== "string") continue;
+  for (const ev of scoreHistory(progressDoc)) {
+    if (typeof ev.stageId !== "string") continue;
     const prev = out.get(ev.stageId);
     if (!prev || stampOf(ev.createdAt) >= stampOf(prev.createdAt)) out.set(ev.stageId, ev);
   }
   return out;
+}
+
+/**
+ * The newest score mutation of the document — set, change or CLEAR (`toScore: null`) — from the score history (the
+ * authority). Only parseable timestamps compete, so a malformed `createdAt` can neither win nor crash. "" when the
+ * history carries no usable score event (legacy documents: the caller falls back to the graded entries' updatedAt).
+ */
+function newestScoreMutation(progressDoc) {
+  let best = "", bestMs = 0;
+  for (const ev of scoreHistory(progressDoc)) {
+    const ms = stampOf(ev.createdAt);
+    if (ms > bestMs) { bestMs = ms; best = String(ev.createdAt); }
+  }
+  return best;
 }
 
 /**
@@ -54,7 +72,7 @@ function buildProjectEvaluation(definition, progressDoc) {
   const entries = progressDoc && progressDoc.stages && typeof progressDoc.stages === "object" ? progressDoc.stages : {};
   const scoreEvents = latestScoreEvents(progressDoc);
   const rows = [];
-  let graded = 0, sum = 0, newest = "";
+  let graded = 0, sum = 0, newestGradedEntry = "";
   for (const stage of stages) {                                  // snapshot order (order is per track; the UI groups by track)
     const entry = entries[stage.stageId] && typeof entries[stage.stageId] === "object" ? entries[stage.stageId] : null;
     const score = normalizeScore(entry ? entry.score : null);
@@ -64,7 +82,8 @@ function buildProjectEvaluation(definition, progressDoc) {
     const scoredBy = isGraded ? String((ev && ev.actor) || "") : "";
     if (isGraded) {
       graded += 1; sum += score;
-      if (stampOf(scoredAt) > stampOf(newest)) newest = scoredAt;
+      const entryAt = String((entry && entry.updatedAt) || "");                             // legacy fallback only (no score history)
+      if (stampOf(entryAt) > stampOf(newestGradedEntry)) newestGradedEntry = entryAt;
     }
     rows.push({
       stageId: stage.stageId, track: stage.track, groupId: stage.groupId, title: stage.title || "", order: Number(stage.order) || 0,
@@ -86,7 +105,9 @@ function buildProjectEvaluation(definition, progressDoc) {
     projectScorePrecise: precise,
     stages: rows,
     orphanStageIds,
-    updatedAt: newest
+    // Score history first (a clear IS an evaluation update); the graded entries' newest updatedAt only for legacy
+    // documents that carry no score history.
+    updatedAt: newestScoreMutation(progressDoc) || newestGradedEntry
   };
 }
 
