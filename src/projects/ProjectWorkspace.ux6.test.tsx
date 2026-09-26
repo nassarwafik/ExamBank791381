@@ -292,16 +292,18 @@ describe("UX-6a student profile — non-modal, focus, disclosures, actions, exac
     expect(group.getAttribute("aria-expanded")).toBe("false");
     expect(screen.queryByText("مقدمة الشبكات")).toBeNull();
     fireEvent.click(group);
-    // stage disclosure + status badge text
-    const stage = within(profile).getByRole("button", { name: /B01/ });
-    expect(stage.getAttribute("aria-expanded")).toBe("false");
-    expect(stage.textContent).toContain("جاهز للفحص");
-    fireEvent.click(stage);
-    expect(stage.getAttribute("aria-expanded")).toBe("true");
-    const panel = document.getElementById(stage.getAttribute("aria-controls") || "") as HTMLElement;
-    expect(panel.textContent).toContain("اقرأ الفصل الأول");
-    // exactly one primary action + one menu (no four equal buttons)
-    expect(within(panel).getAllByRole("button").map(b => b.textContent)).toEqual(["اعتماد المرحلة", "تغيير الحالة", "حفظ العلامة", "حفظ الملاحظة"]);   // + the Project-Performance score control
+    // Phase 8C: the stage ROW is the grading workspace — status text + score field + save + ONE primary approve +
+    // the status menu are on the row itself; only description / note sit under the optional «تفاصيل» disclosure.
+    const panel = profile.querySelector('[data-stage-id="B01"]') as HTMLElement;
+    expect(panel.textContent).toContain("جاهز للفحص");
+    expect(within(panel).getByRole("spinbutton", { name: "علامة المرحلة B01 — مقدمة الشبكات من 100" })).toBeTruthy();
+    expect(within(panel).getAllByRole("button").map(b => b.textContent)).toEqual(["حفظ", "اعتماد", "الحالة", "تفاصيل"]);   // one primary action + one menu
+    const details = within(panel).getByRole("button", { name: "تفاصيل وملاحظة المرحلة B01" });
+    expect(details.getAttribute("aria-expanded")).toBe("false");
+    fireEvent.click(details);
+    expect(details.getAttribute("aria-expanded")).toBe("true");
+    const detailsPanel = document.getElementById(details.getAttribute("aria-controls") || "") as HTMLElement;
+    expect(detailsPanel.textContent).toContain("اقرأ الفصل الأول");
     fireEvent.click(within(panel).getByRole("button", { name: "تغيير حالة المرحلة B01" }));
     const menu = await screen.findByRole("group", { name: "تغيير حالة المرحلة B01" });
     const items = within(menu).getAllByRole("button");
@@ -312,10 +314,10 @@ describe("UX-6a student profile — non-modal, focus, disclosures, actions, exac
     await screen.findByText("تم تحديث حالة المرحلة.");
     await waitFor(() => expect(within(profile).getByRole("progressbar", { name: "التقدم العام" }).getAttribute("aria-valuenow")).toBe("50"));
     // approve = primary
-    fireEvent.click(within(panel).getByRole("button", { name: "اعتماد المرحلة" }));
+    fireEvent.click(within(panel).getByRole("button", { name: "اعتماد المرحلة B01" }));
     await waitFor(() => expect(posts()).toHaveLength(2));
     expect(posts()[1]).toEqual({ projectCode: "794589", action: "progress.update", classId: "c1", studentId: "s1", stageId: "B01", status: "approved" });
-    await waitFor(() => expect((within(panel).getByRole("button", { name: "اعتماد المرحلة" }) as HTMLButtonElement).disabled).toBe(true));
+    await waitFor(() => expect((within(panel).getByRole("button", { name: "اعتماد المرحلة B01" }) as HTMLButtonElement).disabled).toBe(true));
     // note save (exact body)
     const note = within(panel).getByLabelText("ملاحظة المعلم") as HTMLTextAreaElement;
     expect(note.value).toBe("راجع القسم 2");
@@ -352,8 +354,9 @@ describe("UX-6a student profile — non-modal, focus, disclosures, actions, exac
     await openStudents();
     const { profile } = await openStudent();
     expect(within(profile).getByText("مؤرشف — للقراءة فقط")).toBeTruthy();
-    fireEvent.click(within(profile).getByRole("button", { name: /B01/ }));
-    expect(within(profile).queryByRole("button", { name: "اعتماد المرحلة" })).toBeNull();
+    fireEvent.click(within(profile).getByRole("button", { name: "تفاصيل وملاحظة المرحلة B01" }));
+    expect(within(profile).queryByRole("button", { name: /^اعتماد المرحلة/ })).toBeNull();
+    expect(within(profile).queryByRole("spinbutton")).toBeNull();
     expect(within(profile).queryByRole("button", { name: /تغيير حالة/ })).toBeNull();
     expect(within(profile).queryByLabelText("ملاحظة المعلم")).toBeNull();
     expect(within(profile).getByText("ملاحظة المعلم: راجع القسم 2")).toBeTruthy();
@@ -521,18 +524,19 @@ describe("UX-6a review — global ready-summary invalidation contract (onReadyCh
     await screen.findByRole("heading", { level: 2, name: "لوحة المشروع" });
     return onReadyChanged;
   }
+  // Phase 8C: the B01 row (grading controls inline) with its details / note disclosure opened.
   async function openStagePanel() {
     await openStudents();
     const { profile } = await openStudent();
-    const stage = within(profile).getByRole("button", { name: /^B01\b/ });
-    fireEvent.click(stage);
-    return document.getElementById(stage.getAttribute("aria-controls") || "") as HTMLElement;
+    const row = profile.querySelector('[data-stage-id="B01"]') as HTMLElement;
+    fireEvent.click(within(row).getByRole("button", { name: "تفاصيل وملاحظة المرحلة B01" }));
+    return row;
   }
   it("a successful STATUS mutation fires it exactly once; a note-only update never does", async () => {
     const spy = await mountWithSpy();
     const panel = await openStagePanel();
     expect(spy).toHaveBeenCalledTimes(0);
-    fireEvent.click(within(panel).getByRole("button", { name: "اعتماد المرحلة" }));
+    fireEvent.click(within(panel).getByRole("button", { name: "اعتماد المرحلة B01" }));
     await waitFor(() => expect(posts()).toHaveLength(1));
     await screen.findByText("تم تحديث حالة المرحلة.");
     expect(spy).toHaveBeenCalledTimes(1);
@@ -547,12 +551,12 @@ describe("UX-6a review — global ready-summary invalidation contract (onReadyCh
     failProgress = true;
     const spy = await mountWithSpy();
     const panel = await openStagePanel();
-    fireEvent.click(within(panel).getByRole("button", { name: "اعتماد المرحلة" }));
+    fireEvent.click(within(panel).getByRole("button", { name: "اعتماد المرحلة B01" }));
     await screen.findByText(/تعارض مؤقت/);
     expect(posts()).toHaveLength(1);
     expect(spy).toHaveBeenCalledTimes(0);
     failProgress = false; noChangeProgress = true;
-    fireEvent.click(within(panel).getByRole("button", { name: "اعتماد المرحلة" }));
+    fireEvent.click(within(panel).getByRole("button", { name: "اعتماد المرحلة B01" }));
     await waitFor(() => expect(posts()).toHaveLength(2));
     await screen.findByText("تم تحديث حالة المرحلة.");
     expect(spy).toHaveBeenCalledTimes(0);
