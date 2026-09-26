@@ -326,15 +326,19 @@ describe("8A — CSV and achievements follow the scope", () => {
 
 describe("8A — dashboard page icon", () => {
   const nav = (workspaceTab: string) => ({ teacherView: "platform", workspaceTab, projectCode: "", projectList: [] }) as never;
-  it("the «لوحة المتابعة» title carries the existing dashboard SVG icon (decorative, no emoji); other pages carry none", () => {
+  it("the «لوحة المتابعة» title carries the existing dashboard SVG icon (decorative, no emoji); other pages carry their own (Phase 8B)", () => {
     const { rerender } = render(<TeacherAppShell nav={nav("dashboard")} projectReadyTotal={0} displayName="م" onNavigate={() => {}} onLogout={() => {}}><p>x</p></TeacherAppShell>);
     const h1 = screen.getByRole("heading", { level: 1 });
     expect(h1.textContent).toBe("لوحة المتابعة");
     const icon = h1.querySelector(".eb-page-header-icon");
     expect(icon?.getAttribute("aria-hidden")).toBe("true");
     expect(icon?.querySelector("svg")).toBeTruthy();
+    const dashboardSvg = icon?.querySelector("svg")?.outerHTML;
     rerender(<TeacherAppShell nav={nav("students")} projectReadyTotal={0} displayName="م" onNavigate={() => {}} onLogout={() => {}}><p>x</p></TeacherAppShell>);
-    expect(screen.getByRole("heading", { level: 1 }).querySelector(".eb-page-header-icon")).toBeNull();
+    const students = screen.getByRole("heading", { level: 1 });
+    expect(students.textContent).toBe("الصفوف والطلاب");
+    expect(students.querySelector(".eb-page-header-icon")?.getAttribute("aria-hidden")).toBe("true");
+    expect(students.querySelector(".eb-page-header-icon svg")?.outerHTML).not.toBe(dashboardSvg);
   });
 });
 

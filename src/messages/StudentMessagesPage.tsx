@@ -168,11 +168,15 @@ export default function StudentMessagesPage({ token, onBack, client: injected, o
         </button>
       </div>
       <section className="eb-msg-student" aria-labelledby="eb-msg-student-title">
-        <h1 id="eb-msg-student-title" className="eb-msg-title">الرسائل</h1>
-        {data?.classroom && <p className="eb-muted">{data.classroom.name}{data.classroom.archived ? " — مؤرشف" : ""}</p>}
+        <header className="eb-msg-student-head">
+          <h1 id="eb-msg-student-title" className="eb-msg-title">الرسائل</h1>
+          {data?.classroom && <p className="eb-muted eb-msg-student-class">{data.classroom.name}{data.classroom.archived ? " — مؤرشف" : ""}</p>}
+        </header>
         {error && <p className="platform-error" role="alert">{error}</p>}
         {!data && !error && <p className="eb-muted" role="status">جارٍ تحميل الرسائل...</p>}
 
+        {/* Phase 8B — one light card: tabs on top, the conversation with inner gutters, the composer as its footer. */}
+        <div className="eb-msg-student-card">
         <div className="eb-msg-tabs" role="tablist" aria-label="أقسام الرسائل">
           <button type="button" role="tab" id="eb-smsg-tab-direct" aria-selected={tab === "direct"} aria-controls="eb-smsg-panel" className="eb-msg-tab" onClick={() => selectTab("direct")}>المحادثة مع المعلم{unread && unread.directUnread.unread > 0 && <span className="eb-msg-tab-badge">{formatUnread(unread.directUnread.unread, unread.directUnread.capped)} غير مقروءة</span>}</button>
           <button type="button" role="tab" id="eb-smsg-tab-ann" aria-selected={tab === "announcements"} aria-controls="eb-smsg-panel" className="eb-msg-tab" onClick={() => selectTab("announcements")}>إعلانات الصف{unread && unread.announcementUnread.unread > 0 && <span className="eb-msg-tab-badge">{formatUnread(unread.announcementUnread.unread, unread.announcementUnread.capped)} غير مقروءة</span>}</button>
@@ -181,6 +185,7 @@ export default function StudentMessagesPage({ token, onBack, client: injected, o
         <div id="eb-smsg-panel" role="tabpanel" aria-labelledby={tab === "direct" ? "eb-smsg-tab-direct" : "eb-smsg-tab-ann"} className="eb-msg-panel">
           {data && tab === "direct" && (
             <div className="eb-msg-conversation">
+              <div className="eb-msg-student-thread">
               <MessageThread
                 messages={data.direct}
                 ariaLabel="المحادثة مع المعلم"
@@ -188,13 +193,17 @@ export default function StudentMessagesPage({ token, onBack, client: injected, o
                 isMine={m => m.senderRole === "student"}
                 labelFor={m => (m.senderRole === "student" ? "أنت" : "المعلم" + (m.senderDisplayName && m.senderDisplayName !== "المعلم" ? " — " + m.senderDisplayName : ""))}
               />
+              </div>
+              <div className="eb-msg-student-foot">
               {data.canSend
                 ? <MessageComposer label="رسالتك إلى المعلم" buttonLabel="إرسال" value={draft} onChange={setDraft} onSend={() => void send()} sending={sending} error={sendError} />
                 : <p className="eb-msg-readonly" role="note">{data.readOnlyReason || "المحادثة متاحة للقراءة فقط."}</p>}
+              </div>
             </div>
           )}
           {data && tab === "announcements" && (
             <div className="eb-msg-announcements">
+              <div className="eb-msg-student-thread">
               <MessageThread
                 messages={data.announcements}
                 ariaLabel="إعلانات الصف"
@@ -202,9 +211,11 @@ export default function StudentMessagesPage({ token, onBack, client: injected, o
                 isMine={() => false}
                 labelFor={m => m.senderDisplayName || "المعلم"}
               />
-              <p className="eb-muted">الإعلانات للقراءة فقط. للرد على المعلم استخدم «المحادثة مع المعلم».</p>
+              </div>
+              <p className="eb-muted eb-msg-student-note">الإعلانات للقراءة فقط. للرد على المعلم استخدم «المحادثة مع المعلم».</p>
             </div>
           )}
+        </div>
         </div>
       </section>
     </main>
