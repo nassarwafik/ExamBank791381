@@ -1,4 +1,4 @@
-const { listJson, listBlobNames, downloadManyJson } = require("./platform-storage");
+const { listJson, listBlobNames, downloadManyJson, mapConcurrent, getReadConcurrency } = require("./platform-storage");
 // Roadmap #23 — teacher analytics must interpret grading state through the ONE canonical R14 helper
 // (deriveGradingStatus), never a raw `finalized === false` check, so its pending-review counts agree with
 // the gradebook (assignment-results), assignment-review and the student dashboard. The canonical rule also
@@ -46,6 +46,29 @@ function selectSubmissionNames(names, candidateAssignmentIds) {
     if (pathId === null || candidateAssignmentIds.has(pathId)) out.push(name);
   }
   return out;
+}
+
+// Phase 8E-3 — scope-aware submission READS. The GLOBAL scope keeps the R28 pipeline above (one listing of the
+// whole submissions prefix, prefiltered by candidate folder). A CLASS or STUDENT scope never needs another class's
+// submissions (classComparison is a GLOBAL-only view), so:
+//   • CLASS: only the selected class's candidate assignment FOLDERS are listed ("platform/submissions/{assignmentId}/"),
+//     never the whole prefix, and only those blobs are downloaded (bounded concurrency, R27). Listing order is the
+//     scoped-assignment order then the folder's own order; the same 404 → null / first-failure-rejects semantics apply.
+//   • STUDENT: no submission listing at all. After the Phase 8A scope validation, exactly ONE blob per scoped
+//     assignment is requested at its canonical path "platform/submissions/{assignmentId}/{studentId}.json" (the only
+//     path every writer ever uses); a missing blob is null = "not submitted" — there is no fallback scan.
+// In every mode the blob NAME stays a prefilter: after download the document's own assignmentId / studentId key the
+// map exactly as before. (Boundary, as with R28: a hand-edited blob stored outside its assignment folder — or a flat
+// blob directly under the prefix — is not seen by a class/student scope.)
+function submissionFolder(assignmentId) {
+  return SUBMISSION_PREFIX + String(assignmentId) + "/";
+}
+function submissionPath(assignmentId, studentId) {
+  return submissionFolder(assignmentId) + String(studentId) + ".json";
+}
+async function listScopedSubmissionNames(container, assignments) {
+  const lists = await mapConcurrent(assignments.map(item => submissionFolder(item.assignmentId)), getReadConcurrency(), prefix => listBlobNames(container, prefix));
+  return lists.flat();
 }
 
 // Phase 8A — ONE authoritative analytics scope per request. A rejected scope (a student without a class, an unknown
@@ -261,16 +284,22 @@ function buildInsights({ mode, className, performanceChange, trendCount, topicAn
 // must always be describing the same figures the teacher sees on screen, never a second,
 // independently-computed set that could quietly drift out of sync.
 // `deps` is an optional test seam (production passes nothing): `selectSubmissionNames` lets the equivalence tests
-// run the exact same pipeline with the prefilter disabled (download every listed submission = the pre-R28 scan).
+// run the exact same pipeline with the prefilter disabled (download every listed submission = the pre-R28 scan);
+// `scopedSubmissionReads: false` (Phase 8E-3) runs a CLASS / STUDENT scope through the GLOBAL read path (one
+// whole-prefix listing + candidate prefilter = the pre-8E-3 pipeline) so the scoped reads can be proven equivalent.
 async function computeTeacherAnalytics(container, { classId: requestedClassId = "", studentId: requestedStudentId = "", fromMs = 0, toMs = 0 } = {}, deps = {}) {
   const selectNames = deps.selectSubmissionNames || selectSubmissionNames;
-  // Roadmap #28: the submissions prefix is LISTED once (as before) but downloaded only after the candidate
-  // assignment population is known, so the assignment documents are read first (with the submission listing),
-  // and the selected submission downloads then overlap the classes/users reads. Classes/users/assignments are
-  // still read in full (users remain the sole membership authority; the roster index is never consulted).
+  // Phase 8A — ONE authoritative analytics scope per request (validated below, once the users are loaded).
+  const mode = requestedStudentId ? "student" : requestedClassId ? "class" : "global";
+  // Phase 8E-3 — which submission READ path serves this request (see listScopedSubmissionNames above).
+  const globalReads = mode === "global" || deps.scopedSubmissionReads === false;
+  // Roadmap #28: in the GLOBAL path the submissions prefix is LISTED once (as before) but downloaded only after the
+  // candidate assignment population is known, so the assignment documents are read first (with the submission
+  // listing), and the selected submission downloads then overlap the classes/users reads. Classes/users/assignments
+  // are still read in full (users remain the sole membership authority; the roster index is never consulted).
   const [assignmentsRaw, submissionNames] = await Promise.all([
     listJson(container, ASSIGNMENT_PREFIX),
-    listBlobNames(container, SUBMISSION_PREFIX)
+    globalReads ? listBlobNames(container, SUBMISSION_PREFIX) : Promise.resolve([])
   ]);
   const publishedAll = assignmentsRaw.filter(item => item?.assignmentId && normalizeAssignmentStatus(item) === "published");
   const scopedByDate = publishedAll.filter(item => inRange(assignmentDate(item), fromMs, toMs));
@@ -279,12 +308,17 @@ async function computeTeacherAnalytics(container, { classId: requestedClassId = 
   // (a subsequence of the single listing), so last-write-wins for duplicate keys is unchanged, and the same
   // null/404 and error semantics as listJson apply (first failure rejects; nothing partial is returned).
   const candidateAssignmentIds = new Set(scopedByDate.map(item => String(item.assignmentId)));
-  const [classesRaw, usersRaw, submissionDocs] = await Promise.all([
+  // Phase 8E-3 (CLASS): the selected class's candidate assignments are known from the assignment documents alone
+  // (the same canonical publication / date / class rules as `scopedAssignments` below), so only their folders are
+  // listed and downloaded — overlapping the classes/users reads exactly like the global path's downloads.
+  const classCandidates = requestedClassId ? scopedByDate.filter(item => String(item.classId || "") === requestedClassId) : [];
+  const [classesRaw, usersRaw, submissionDocsEarly] = await Promise.all([
     listJson(container, CLASS_PREFIX),
     listJson(container, USER_PREFIX),
-    downloadManyJson(container, selectNames(submissionNames, candidateAssignmentIds))
+    globalReads ? downloadManyJson(container, selectNames(submissionNames, candidateAssignmentIds))
+      : mode === "class" ? listScopedSubmissionNames(container, classCandidates).then(names => downloadManyJson(container, names))
+      : Promise.resolve(null)                                            // STUDENT: exact reads only after scope validation
   ]);
-  const submissionsRaw = submissionDocs.filter(Boolean);
 
   const classes = classesRaw
     .filter(item => item?.classId)
@@ -307,7 +341,6 @@ async function computeTeacherAnalytics(container, { classId: requestedClassId = 
   // Phase 8A — the effective scope. GLOBAL: no class, no student → every canonical-active class. CLASS: one class (an
   // explicitly requested archived class stays a historical view, R34). STUDENT: exactly ONE student who must be a
   // current canonical member of the requested class. EVERY figure below derives from this one population.
-  const mode = requestedStudentId ? "student" : requestedClassId ? "class" : "global";
   let targetStudent = null;
   if (mode === "student") {
     if (!requestedClassId) throw new AnalyticsScopeError(400, "اختر الصف قبل اختيار الطالب.");
@@ -317,6 +350,11 @@ async function computeTeacherAnalytics(container, { classId: requestedClassId = 
   }
   const inScope = classId => requestedClassId ? classId === requestedClassId : activeClassIds.has(classId);
   const scopedAssignments = scopedByDate.filter(item => inScope(String(item.classId || "")));
+  // Phase 8E-3 (STUDENT): the scope is validated (a rejected student never widens to the class), so exactly one
+  // canonical blob per scoped assignment is requested — bounded concurrency, missing = null = not submitted.
+  const submissionDocs = submissionDocsEarly !== null ? submissionDocsEarly
+    : await downloadManyJson(container, scopedAssignments.map(item => submissionPath(item.assignmentId, requestedStudentId)));
+  const submissionsRaw = submissionDocs.filter(Boolean);
   // The class ROSTER of the scope (class/global) — the student picker's list; in STUDENT mode it stays the selected
   // class's roster for the picker only and never feeds a single analytics figure.
   const rosterStudents = activeStudents.filter(item => inScope(String(item.classId || "")));
@@ -570,4 +608,4 @@ async function computeTeacherAnalytics(container, { classId: requestedClassId = 
   };
 }
 
-module.exports = { computeTeacherAnalytics, AnalyticsScopeError, buildInsights, selectSubmissionNames, submissionPathAssignmentId, round, average, trendDelta, trendLabel, missingAssignmentsPhrase };
+module.exports = { computeTeacherAnalytics, AnalyticsScopeError, buildInsights, selectSubmissionNames, submissionPathAssignmentId, submissionFolder, submissionPath, round, average, trendDelta, trendLabel, missingAssignmentsPhrase };
