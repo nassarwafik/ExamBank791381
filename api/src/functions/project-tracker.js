@@ -17,6 +17,8 @@ const { isSupportedProject, getProjectDefinition, getStorageNamespace, getProjec
 const svc = require("../lib/project-tracker/service");
 const core = require("../lib/project-tracker/core");
 const performance = require("../lib/project-tracker/performance");
+const { buildProjectEvaluation } = require("../lib/project-tracker/evaluation");
+const { SCORE_ERROR } = require("../lib/project-tracker/score");
 const analytics = require("../lib/project-tracker/analytics");
 const { countReadyStages } = require("../lib/project-tracker/ready-count");
 const { classHasProject } = require("../lib/project-tracker/class-programs");
@@ -33,6 +35,9 @@ function studentDetailBody(projectCode, workDef, config, readOnly, student, prog
     summary,
     // Project performance (grade / project Strength / per-stage value) from the ONE calculator — display-only downstream.
     performance: performance.buildProjectPerformanceSummary(workDef, progress, now, summary),
+    // Phase 9B — the EVALUATION axis (graded / ungraded active stages, average of graded scores): derived from the
+    // same document, additive to the response, never fed into progress / grade / Strength.
+    evaluation: buildProjectEvaluation(workDef, progress),
     stages: config.stages,
     groups: config.groups,
     trackWeights: config.trackWeights,
@@ -42,6 +47,21 @@ function studentDetailBody(projectCode, workDef, config, readOnly, student, prog
     nextStages: core.getNextStages(workDef, progress),
     balance: core.getBalanceInsight(summary.trackProgress, workDef)
   };
+}
+
+// Phase 9B — narrow score mutations: `score.set` / `score.clear` carry ONLY (studentId, stageId[, score]) and run
+// through the SAME canonical pipeline as progress.update (membership → snapshot → active stage → CAS merge of ONE
+// stage entry via applyProgressUpdate — the document is never replaced as a whole). A body that also tries to change
+// the status or the note is refused (400): a score action never changes the workflow.
+const SCORE_ACTIONS = { "score.set": "set", "score.clear": "clear" };
+function scoreActionInput(action, body) {
+  const studentId = String(body.studentId || "").trim();
+  const stageId = String(body.stageId || "").trim();
+  if (!studentId || !stageId) return { error: "studentId وstageId مطلوبان." };
+  if (body.status !== undefined || body.note !== undefined) return { error: "هذا الإجراء يقبل العلامة فقط." };
+  if (SCORE_ACTIONS[action] === "clear") return { studentId, stageId, score: null };
+  if (body.score === undefined || body.score === null || body.score === "") return { error: SCORE_ERROR };
+  return { studentId, stageId, score: body.score };
 }
 
 // `deps` is an optional dependency-injection seam for unit tests (production passes nothing, so the real
@@ -131,6 +151,15 @@ async function handler(request, deps = {}, obs = null) {
           if (!membership.ok) return { status: 404, jsonBody: { ok: false, error: "الطالب غير موجود في هذا الصف." } };
           const progress = await svc.loadStudentProgress(container, projectCode, classId, studentId);
           return { status: 200, jsonBody: studentDetailBody(projectCode, workDef, config, readOnly, membership.student, progress, now) };
+        }
+        // Phase 9B — the evaluation of ONE student in ONE project (narrow read; same membership gate as `student`).
+        if (resource === "evaluation") {
+          const studentId = String(url.searchParams.get("studentId") || "").trim();
+          if (!studentId) return { status: 400, jsonBody: { ok: false, error: "studentId مطلوب." } };
+          const membership = await svc.requireStudentInClass(container, studentId, classId);
+          if (!membership.ok) return { status: 404, jsonBody: { ok: false, error: "الطالب غير موجود في هذا الصف." } };
+          const progress = await svc.loadStudentProgress(container, projectCode, classId, studentId);
+          return { status: 200, jsonBody: { ok: true, projectCode, classId, readOnly, student: membership.student, evaluation: buildProjectEvaluation(workDef, progress) } };
         }
 
         const students = await svc.listClassStudents(container, classId);
@@ -229,6 +258,7 @@ async function handler(request, deps = {}, obs = null) {
               ok: true, projectCode,
               summary,
               performance: performance.buildProjectPerformanceSummary(workDef, written, now, summary),
+              evaluation: buildProjectEvaluation(workDef, written),
               stage: { stageId, ...written.stages[stageId] },
               nextStages: core.getNextStages(workDef, written),
               balance: core.getBalanceInsight(summary.trackProgress, workDef),
@@ -237,6 +267,42 @@ async function handler(request, deps = {}, obs = null) {
           };
         } catch (e) {
           if (e && e.code === "NO_CHANGE") return { status: 200, jsonBody: { ok: true, noChange: true } };
+          if (e instanceof StorageConflictError) return { status: 503, jsonBody: { ok: false, error: CONFLICT_MESSAGE } };
+          if (e && e.httpStatus) return { status: e.httpStatus, jsonBody: { ok: false, error: e.message } };
+          throw e;
+        }
+      }
+
+      if (SCORE_ACTIONS[action]) {
+        const input = scoreActionInput(action, body);
+        if (input.error) return { status: 400, jsonBody: { ok: false, error: input.error } };
+        try {
+          const result = await svc.updateStudentProgress(container, projectCode, classroom, { studentId: input.studentId, stageId: input.stageId, score: input.score, actor: auth.user?.sub, now });
+          if (!result.ok && result.reason === "not_member") return { status: 404, jsonBody: { ok: false, error: "الطالب غير موجود في هذا الصف." } };
+          if (!result.ok) return { status: 400, jsonBody: { ok: false, error: "المرحلة غير موجودة أو غير مفعّلة." } };
+          const { workDef, stage, written, previous, outcome } = result;
+          const summary = core.buildStudentSummary(workDef, written, now);
+          // The SAME best-effort project-milestone hook progress.update already runs for a score change (a score
+          // moves the existing project Strength); no new achievement event type is introduced here.
+          await (deps.recordProjectMilestones || recordProjectMilestones)(container, { classId, student: { ...result.student, shareAchievements: result.shareAchievements }, projectCode, projectTitle: definition.title, workDef, before: previous, after: written, now });
+          await rec(container, {
+            actor: auth.user?.sub, action: "project.stage.score",
+            targetType: "project-stage", targetId: projectCode + "/" + classId + "/" + input.studentId + "/" + input.stageId, targetLabel: stage.title,
+            details: { projectCode, classId, studentId: input.studentId, stageId: input.stageId, oldScore: outcome.fromScore, newScore: outcome.toScore, via: action }
+          });
+          return {
+            status: 200,
+            jsonBody: {
+              ok: true, projectCode, action,
+              stage: { stageId: input.stageId, ...written.stages[input.stageId] },
+              evaluation: buildProjectEvaluation(workDef, written),
+              summary,
+              performance: performance.buildProjectPerformanceSummary(workDef, written, now, summary),
+              history: (written.history || []).slice(-20)
+            }
+          };
+        } catch (e) {
+          if (e && e.code === "NO_CHANGE") return { status: 200, jsonBody: { ok: true, noChange: true, action } };
           if (e instanceof StorageConflictError) return { status: 503, jsonBody: { ok: false, error: CONFLICT_MESSAGE } };
           if (e && e.httpStatus) return { status: e.httpStatus, jsonBody: { ok: false, error: e.message } };
           throw e;

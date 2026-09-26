@@ -45,7 +45,7 @@ function installFetch() {
     if (url.includes("/api/student-")) return res(200, { ok: true, enrolled: false, materials: [], items: [], messages: { totalUnread: 0, totalCapped: false, directUnread: { unread: 0, capped: false }, announcementUnread: { unread: 0, capped: false } }, events: { unread: 0, capped: false }, bell: { unread: 0, capped: false } });
     if (url.includes("/api/project-tracker")) {
       if (method === "POST") {
-        if (body?.action === "progress.update") {
+        if (body?.action === "progress.update" || body?.action === "score.set" || body?.action === "score.clear") {   // Phase 9B: a score is the narrow score action
           if (body.status !== undefined) ready -= 1;                                           // server-side truth after the approval
           return res(200, { ok: true, summary: { ...CARD, readyForReviewCount: 0 }, stage: { stageId: "B01", status: body.status ?? "ready_for_review", score: body.score !== undefined ? Number(body.score) : undefined, note: body.note ?? "", updatedAt: "2026-03-05T10:00:00.000Z" }, nextStages: { book: null }, performance: null, balance: null, history: [] });
         }
@@ -161,7 +161,7 @@ describe("8E-1 D/E — mutations: a status change refreshes once, a score-only s
     fireEvent.change(within(row).getByRole("spinbutton"), { target: { value: "88" } });
     fireEvent.click(within(row).getByRole("button", { name: "حفظ علامة المرحلة B01" }));
     await screen.findByText("تم حفظ العلامة.");
-    expect(posts()).toEqual([{ projectCode: "794589", action: "progress.update", classId: "c1", studentId: "s1", stageId: "B01", score: "88" }]);
+    expect(posts()).toEqual([{ projectCode: "794589", action: "score.set", classId: "c1", studentId: "s1", stageId: "B01", score: "88" }]);
     await settle();
     expect(summaryReads()).toBe(base);                                                               // score-only: no refresh
     fireEvent.click(within(row).getByRole("button", { name: "اعتماد المرحلة B01" }));

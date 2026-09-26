@@ -1,6 +1,7 @@
-import { IconMail, IconSparkles } from "../../icons";
+import { IconMail, IconSparkles, IconProjects } from "../../icons";
 import SectionHeader from "../../ui/SectionHeader";
 import type { TodayContinue } from "./todayPriority";
+import { projectEvaluationText } from "../../projects/projectEvaluation";
 import "./today.css";
 
 /**
@@ -22,11 +23,15 @@ type Props = {
   onOpenProgress: () => void;
   /** The empty state's action («المهام والواجبات» — the full list). */
   onOpenTasks: () => void;
+  /** Phase 9B (optional, cheap): «مشروعك: 5/7 مراحل مقيّمة» from the project panel's own single read; absent → no chip. */
+  projectEvaluation?: { projectCode: string; title: string; gradedStages: number; totalStages: number }[] | null;
+  onOpenProjects?: () => void;
 };
 
 const KICKER: Record<TodayContinue["type"], string> = { activeAttempt: "محاولة جارية", assignment: "موعد قريب", reader: "متابعة القراءة", project: "مشروعك", study: "ابدأ الآن" };
 
-export default function StudentTodayHub({ continueItem, busy, onContinue, messagesUnread, onOpenMessages, progress, onOpenProgress, onOpenTasks }: Props) {
+export default function StudentTodayHub({ continueItem, busy, onContinue, messagesUnread, onOpenMessages, progress, onOpenProgress, onOpenTasks, projectEvaluation, onOpenProjects }: Props) {
+  const evalText = projectEvaluationText(projectEvaluation);
   const unread = messagesUnread.total > 0 ? (messagesUnread.capped ? "99+" : String(messagesUnread.total)) : "";
   const progressText = [
     progress.stageNumber ? "المرحلة " + progress.stageNumber + " من " + progress.stageCount : "",
@@ -61,6 +66,13 @@ export default function StudentTodayHub({ continueItem, busy, onContinue, messag
           <span className="eb-sp-today-chip-text">{progressText || "تقدمك يظهر هنا بعد أول نشاط"}</span>
           <button type="button" className="eb-button is-quiet is-small eb-sp-today-chip-action" onClick={onOpenProgress}>تقدمك</button>
         </li>
+        {evalText && (
+          <li className="eb-sp-today-chip is-project-eval">
+            <IconProjects size={18} aria-hidden="true" />
+            <span className="eb-sp-today-chip-text">{evalText}</span>
+            {onOpenProjects && <button type="button" className="eb-button is-quiet is-small eb-sp-today-chip-action" onClick={onOpenProjects}>مشاريعي</button>}
+          </li>
+        )}
       </ul>
     </section>
   );
