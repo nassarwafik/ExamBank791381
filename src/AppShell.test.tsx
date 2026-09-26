@@ -5,6 +5,11 @@
 // sees the teacher shell or teacher endpoints, and the shell adds NO API requests.
 import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 import { render, cleanup, screen, waitFor, fireEvent, within } from "@testing-library/react";
+import { configure } from "@testing-library/react";
+// Phase 8E-5 — StudentPortal is a lazy chunk: the FIRST student render in a test file also performs its dynamic import,
+// and vitest transforms the whole portal module tree at that moment (regularly > 1 s in a cold worker), while production
+// shows the local status fallback. Give the async queries the headroom that first import needs.
+configure({ asyncUtilTimeout: 5000 });
 import App from "./App";
 
 const DASHBOARD_OK = {

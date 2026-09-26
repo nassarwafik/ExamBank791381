@@ -9,6 +9,11 @@
 // a logout. The full App is rendered against a mocked fetch (the same harness as AppProjectsReady.ux6.test.tsx).
 import { describe, it, expect, afterEach, beforeEach, vi } from "vitest";
 import { render, cleanup, screen, fireEvent, waitFor, within, act } from "@testing-library/react";
+import { configure } from "@testing-library/react";
+// Phase 8E-5 — StudentPortal is a lazy chunk: the FIRST student render in a test file also performs its dynamic import,
+// and vitest transforms the whole portal module tree at that moment (regularly > 1 s in a cold worker), while production
+// shows the local status fallback. Give the async queries the headroom that first import needs.
+configure({ asyncUtilTimeout: 5000 });
 import App from "./App";
 
 const TRACKS = [{ trackId: "book", title: "الكتاب", icon: "📘" }];

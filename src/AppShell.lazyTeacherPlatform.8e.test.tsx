@@ -7,6 +7,11 @@
 // its suspended frame (shell mounted, local status fallback only) before the module is released.
 import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 import { render, cleanup, screen, waitFor, fireEvent, within, act } from "@testing-library/react";
+import { configure } from "@testing-library/react";
+// Phase 8E-5 — StudentPortal is a lazy chunk: the FIRST student render in a test file also performs its dynamic import,
+// and vitest transforms the whole portal module tree at that moment (regularly > 1 s in a cold worker), while production
+// shows the local status fallback. Give the async queries the headroom that first import needs.
+configure({ asyncUtilTimeout: 5000 });
 import { readFileSync } from "fs";
 import path from "path";
 import App from "./App";
