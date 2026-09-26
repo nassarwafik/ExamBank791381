@@ -104,6 +104,18 @@ describe("9A Student Today Hub — the hero's one continuation", () => {
     expect((await cta()).textContent).toBe("ابدأ القراءة");
   });
 
+  it("review fix: a STALE device marker never hides a newer server study activity (and vice versa) — the newer valid continuation wins in the real portal", async () => {
+    saveReaderPosition("u1", { courseId: "791381", pageId: "791381-m01-l01-p02" }, "2026-09-01T10:00:00.000Z");        // old device page (m01)
+    mount({}, { study: { lastActivity: { courseId: "791381", moduleId: "791381-m02", pageId: "791381-m02-l00-p01", completedAt: "2026-09-25T10:00:00.000Z" } } });
+    await waitFor(async () => expect((await hero()).getAttribute("data-continue-type")).toBe("reader"));
+    expect(within(await hero()).getByRole("heading", { level: 3 }).textContent).toBe("الأعداد والموازين");                 // the server's newer m02
+    cleanup();
+    saveReaderPosition("u1", { courseId: "791381", pageId: "791381-m01-l01-p02" }, "2026-09-26T10:00:00.000Z");        // newer device page (m01)
+    mount({}, { study: { lastActivity: { courseId: "791381", moduleId: "791381-m02", pageId: "791381-m02-l00-p01", completedAt: "2026-09-25T10:00:00.000Z" } } });
+    await waitFor(async () => expect((await hero()).getAttribute("data-continue-type")).toBe("reader"));
+    expect(within(await hero()).getByRole("heading", { level: 3 }).textContent).toBe("أساسيات الشبكات");                  // the device's newer m01
+  });
+
   it("remaining-attempt eligibility: a final result WITH a remaining attempt → «ابدأ محاولة جديدة»; exhausted / awaiting review / closed → never", async () => {
     mount({ assignments: [asg("AGAIN", { dashboardState: "completed", gradingStatus: "final", latestResult: finalLR(70), attemptsUsed: 1, allowedAttempts: 2, canAttempt: true, dueAt: iso(NOW + 3 * H) })] }, { materials: [] });
     expect((await cta()).textContent).toBe("ابدأ محاولة جديدة");

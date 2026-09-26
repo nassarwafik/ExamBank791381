@@ -8,8 +8,12 @@
 //   1 activeAttempt  — a live/resumable attempt (started / draft / paused). ALWAYS wins.
 //   2 assignment     — an attemptable assignment (server canAttempt, open) whose deadline is within DUE_SOON_MS,
 //                       including a remaining attempt after a final result («محاولة جديدة»).
-//   3 reader         — the Reader continuation: this device's saved page for this student, else the server's most
-//                       recent study activity — both only when the course AND module are still released.
+//   3 reader         — the Reader continuation: this device's saved page for this student and the server's most
+//                       recent study activity are BOTH validated against the released materials first; when both are
+//                       valid the one with the NEWER timestamp wins (readerPosition.at vs studyLastActivity.completedAt;
+//                       an unparseable timestamp loses to a parseable one; neither parseable → the server's, the
+//                       cross-device authority). A stale device page never hides a newer study activity, and an
+//                       unreleased device page never defeats a valid server continuation.
 //   4 project        — a class project with progress strictly between 0 and 100.
 //   5 study          — the next thing to start: an attemptable assignment without a near deadline, else the first
 //                       released course («ابدأ القراءة»).
@@ -109,6 +113,25 @@ function readerCandidate(courses: StudentLearningCourse[], courseId: string, pag
   };
 }
 
+/** A parseable timestamp in ms, or null (missing / malformed). */
+const stampOf = (value: string): number | null => { const t = Date.parse(String(value || "")); return Number.isFinite(t) ? t : null; };
+
+/**
+ * Which valid Reader candidate to continue from. Only one valid → that one. Both valid → the newer timestamp wins;
+ * a candidate whose timestamp cannot be parsed loses to one whose can; when NEITHER timestamp can establish recency
+ * the SERVER candidate wins (deterministic fallback: the server's study document is the cross-device authority,
+ * the device marker is only a convenience). Exported for the unit tests.
+ */
+export function newestReader(device: TodayContinue | null, deviceAt: string, server: TodayContinue | null, serverAt: string): TodayContinue | null {
+  if (!device) return server;
+  if (!server) return device;
+  const d = stampOf(deviceAt), s = stampOf(serverAt);
+  if (d !== null && s !== null) return d > s ? device : server;      // equal → server (the authority)
+  if (d !== null) return device;
+  if (s !== null) return server;
+  return server;
+}
+
 /** Deterministic: same input → same output. Exported constants document the exact rules (see the header). */
 export function selectTodayContinue(input: TodayInput): TodayContinue | null {
   const { assignments, now, readerPosition, studyLastActivity, courses, projects } = input;
@@ -123,12 +146,12 @@ export function selectTodayContinue(input: TodayInput): TodayContinue | null {
   // 2 — an attemptable assignment due within 48h.
   const soon = pickAssignment(assignments, item => isAttemptable(item) && isDueSoon(item, now));
   if (soon) return assignmentCandidate(soon, "assignment");
-  // 3 — the Reader continuation (device marker first, then the server's latest study page), only for released content.
+  // 3 — the Reader continuation: validate BOTH candidates against the released content, then take the newer one.
   if (courses && courses.length) {
     const fromDevice = readerPosition ? readerCandidate(courses, readerPosition.courseId, readerPosition.pageId, "", "device") : null;
-    if (fromDevice) return fromDevice;
     const fromServer = studyLastActivity ? readerCandidate(courses, studyLastActivity.courseId, studyLastActivity.pageId, studyLastActivity.moduleId, "server") : null;
-    if (fromServer) return fromServer;
+    const reader = newestReader(fromDevice, readerPosition ? readerPosition.at : "", fromServer, studyLastActivity ? studyLastActivity.completedAt : "");
+    if (reader) return reader;
   }
   // 4 — a project in progress.
   const project = projects.find(p => Number(p.overallProgress) > 0 && Number(p.overallProgress) < 100);

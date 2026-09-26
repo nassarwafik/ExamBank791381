@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { selectTodayContinue, isAttemptable, isDueSoon, moduleOfPage, DUE_SOON_MS, TODAY_PRIORITY, type TodayInput } from "./todayPriority";
+import { selectTodayContinue, newestReader, isAttemptable, isDueSoon, moduleOfPage, DUE_SOON_MS, TODAY_PRIORITY, type TodayInput, type TodayContinue } from "./todayPriority";
 import type { Summary } from "../types";
 import type { StudentLearningCourse } from "../StudentLearningMaterials";
 
@@ -37,7 +37,8 @@ describe("9A priority — rules", () => {
     expect(isDueSoon(asg("X", { dueAt: iso(NOW - 1) }), NOW)).toBe(false);                     // past deadline is never "soon"
   });
 
-  it("3 Reader continuation: this device's page first (module title from the released list), else the server's latest study page; unreleased content never", () => {
+  it("3 Reader continuation: the NEWER of this device's page and the server's latest study page (module title from the released list); unreleased content never", () => {
+    // device (now) newer than server (an hour ago) → device.
     const device = selectTodayContinue(base({ readerPosition: { courseId: "791381", pageId: "791381-m03-l01-p02", at: iso(NOW) }, studyLastActivity: { courseId: "791381", moduleId: "791381-m01", pageId: "791381-m01-l00-p01", completedAt: iso(NOW - H) } }));
     expect(device).toMatchObject({ type: "reader", priority: 3, courseId: "791381", moduleId: "791381-m03", pageId: "791381-m03-l01-p02", title: "الطبقات", label: "تابع القراءة" });
     const server = selectTodayContinue(base({ studyLastActivity: { courseId: "791381", moduleId: "791381-m01", pageId: "791381-m01-l00-p01", completedAt: iso(NOW - H) } }));
@@ -49,6 +50,53 @@ describe("9A priority — rules", () => {
     expect(selectTodayContinue(base({ courses: null, readerPosition: { courseId: "791381", pageId: "791381-m03-l01-p02", at: iso(NOW) } }))).toBeNull();
     expect(moduleOfPage(COURSE, "791381-m03-l01-p02")).toBe("791381-m03");
     expect(moduleOfPage(COURSE, "791381-m09-l01-p02")).toBe("");
+  });
+
+  describe("3b Reader recency — the newest VALID continuation wins (review fix)", () => {
+    const DEV = { courseId: "791381", pageId: "791381-m03-l01-p02" };                       // module m03 (released)
+    const SRV = { courseId: "791381", moduleId: "791381-m01", pageId: "791381-m01-l00-p01" }; // module m01 (released)
+    const pick = (deviceAt: string, serverAt: string, over: Partial<TodayInput> = {}) =>
+      selectTodayContinue(base({ readerPosition: { ...DEV, at: deviceAt }, studyLastActivity: { ...SRV, completedAt: serverAt }, ...over }));
+
+    it("newer device marker wins", () => {
+      expect(pick(iso(NOW), iso(NOW - 24 * H))).toMatchObject({ type: "reader", pageId: DEV.pageId, moduleId: "791381-m03" });
+    });
+    it("newer server activity wins (the review's case: device Sep 1 / module 3, server Sep 25 / module 8-equivalent)", () => {
+      expect(pick("2026-09-01T10:00:00.000Z", "2026-09-25T10:00:00.000Z")).toMatchObject({ type: "reader", pageId: SRV.pageId, moduleId: "791381-m01" });
+    });
+    it("malformed / empty device timestamp loses to a valid server activity", () => {
+      expect(pick("", iso(NOW - 30 * 24 * H))).toMatchObject({ pageId: SRV.pageId });
+      expect(pick("not-a-date", iso(NOW - 30 * 24 * H))).toMatchObject({ pageId: SRV.pageId });
+    });
+    it("malformed server timestamp loses to a valid device marker", () => {
+      expect(pick(iso(NOW - 30 * 24 * H), "")).toMatchObject({ pageId: DEV.pageId });
+    });
+    it("an UNRELEASED device page falls back to the valid server activity even when the device marker is newer", () => {
+      const r = selectTodayContinue(base({ readerPosition: { courseId: "791381", pageId: "791381-m07-l01-p01", at: iso(NOW) }, studyLastActivity: { ...SRV, completedAt: iso(NOW - 24 * H) } }));
+      expect(r).toMatchObject({ type: "reader", pageId: SRV.pageId });
+    });
+    it("an UNRELEASED server activity falls back to the valid device marker even when the server one is newer", () => {
+      const r = selectTodayContinue(base({ readerPosition: { ...DEV, at: iso(NOW - 24 * H) }, studyLastActivity: { courseId: "791381", moduleId: "791381-m07", pageId: "791381-m07-l01-p01", completedAt: iso(NOW) } }));
+      expect(r).toMatchObject({ type: "reader", pageId: DEV.pageId });
+    });
+    it("both invalid (unreleased) fall through safely to the next rule; both timestamps unparseable → the server (documented fallback)", () => {
+      const r = selectTodayContinue(base({ readerPosition: { courseId: "791381", pageId: "791381-m07-l01-p01", at: iso(NOW) }, studyLastActivity: { courseId: "791381", moduleId: "791381-m09", pageId: "791381-m09-l01-p01", completedAt: iso(NOW) } }));
+      expect(r?.type).toBe("study");
+      expect(pick("", "")).toMatchObject({ pageId: SRV.pageId });
+      expect(pick("x", "y")).toMatchObject({ pageId: SRV.pageId });
+      // Equal timestamps → the server (the authority), deterministically.
+      expect(pick(iso(NOW), iso(NOW))).toMatchObject({ pageId: SRV.pageId });
+    });
+    it("newestReader is total and deterministic over the four candidate shapes", () => {
+      const d: TodayContinue = { type: "reader", priority: 3, title: "d", label: "", reason: "", pageId: "d" };
+      const s: TodayContinue = { type: "reader", priority: 3, title: "s", label: "", reason: "", pageId: "s" };
+      expect(newestReader(null, "", null, "")).toBeNull();
+      expect(newestReader(d, "", null, "")).toBe(d);
+      expect(newestReader(null, "", s, iso(NOW))).toBe(s);
+      expect(newestReader(d, iso(NOW), s, iso(NOW - 1))).toBe(d);
+      expect(newestReader(d, iso(NOW - 1), s, iso(NOW))).toBe(s);
+      for (let i = 0; i < 5; i++) expect(pick("2026-09-01T10:00:00.000Z", "2026-09-25T10:00:00.000Z")).toEqual(pick("2026-09-01T10:00:00.000Z", "2026-09-25T10:00:00.000Z"));
+    });
   });
 
   it("4 a project in progress (0 < progress < 100) comes after the Reader and before «start something»", () => {
