@@ -315,6 +315,96 @@ describe("8C-2 per-stage drafts, failures and double submits", () => {
 });
 
 // ---------------------------------------------------------------------------------------------------------------
+// Review fix: the inputs stay editable while a write is in flight — a draft edited AFTER submission is newer, unsaved
+// work and must survive the earlier request's success (or noChange); an unchanged draft still clears normally.
+describe("8C-2b in-flight edits are never erased by an earlier request's response", () => {
+  it("score: type 70, hold the save, edit to 82, release → canonical 70 on the server, the input keeps 82; saving again stores 82", async () => {
+    const srv = server();
+    await mount("899373");
+    type("B01", "70");
+    srv.control.hold = true;
+    fireEvent.click(saveBtn("B01"));
+    await waitFor(() => expect(srv.posts).toHaveLength(1));
+    type("B01", "82");                                                                   // newer edit while in flight
+    expect(saveBtn("B01").disabled).toBe(true);                                          // same op still pending
+    srv.control.release();
+    await screen.findByText("تم حفظ العلامة.");
+    expect((await srv.progressOf("899373", "s1")).progress.B01.score).toBe(70);
+    expect(scoreInput("B01").value).toBe("82");                                          // preserved, not lost
+    await waitFor(() => expect(saveBtn("B01").disabled).toBe(false));                  // save available again
+    fireEvent.click(saveBtn("B01"));
+    await waitFor(() => expect(srv.posts).toHaveLength(2));
+    await waitFor(() => expect(scoreInput("B01").value).toBe("82"));
+    expect(srv.posts.map(p => p.score)).toEqual(["70", "82"]);
+    await waitFor(async () => expect((await srv.progressOf("899373", "s1")).progress.B01.score).toBe(82));
+  });
+  it("note: the first note saves; a newer in-flight edit stays visible, unsaved and savable", async () => {
+    const srv = server();
+    await mount("899373");
+    fireEvent.click(within(row("B02")).getByRole("button", { name: "تفاصيل وملاحظة المرحلة B02" }));
+    const panel = document.getElementById("eb-stage-B02") as HTMLElement;
+    const note = () => within(panel).getByLabelText("ملاحظة المعلم") as HTMLTextAreaElement;
+    const saveNote = () => within(panel).getByRole("button", { name: "حفظ الملاحظة" }) as HTMLButtonElement;
+    fireEvent.change(note(), { target: { value: "أولى" } });
+    srv.control.hold = true;
+    fireEvent.click(saveNote());
+    await waitFor(() => expect(srv.posts).toHaveLength(1));
+    fireEvent.change(note(), { target: { value: "أولى ثم تعديل" } });
+    srv.control.release();
+    await screen.findByText("تم حفظ الملاحظة.");
+    expect((await srv.progressOf("899373", "s1")).progress.B02.note).toBe("أولى");
+    expect(note().value).toBe("أولى ثم تعديل");                                          // newer edit preserved
+    await waitFor(() => expect(saveNote().disabled).toBe(false));
+    fireEvent.click(saveNote());
+    await waitFor(() => expect(srv.posts).toHaveLength(2));
+    expect(srv.posts[1]).toMatchObject({ stageId: "B02", note: "أولى ثم تعديل" });
+    await waitFor(async () => expect((await srv.progressOf("899373", "s1")).progress.B02.note).toBe("أولى ثم تعديل"));
+  });
+  it("an unchanged draft still clears normally on success and the canonical value shows", async () => {
+    const srv = server();
+    await mount("899373");
+    type("B03", "64.5");
+    srv.control.hold = true;
+    fireEvent.click(saveBtn("B03"));
+    await waitFor(() => expect(srv.posts).toHaveLength(1));
+    srv.control.release();
+    await screen.findByText("تم حفظ العلامة.");
+    expect(scoreInput("B03").value).toBe("64.5");                                        // canonical, no draft left
+    expect(saveBtn("B03").disabled).toBe(true);                                          // nothing unsaved
+    type("B03", "");                                                                     // clearing the field shows the draft path still works
+    expect(saveBtn("B03").disabled).toBe(true);
+  });
+  it("a noChange response can never erase a newer score or note draft", async () => {
+    const srv = server();
+    await mount("899373");
+    type("B04", "50");
+    srv.control.hold = true; srv.control.fakeNoChange = false;
+    fireEvent.click(saveBtn("B04"));
+    await waitFor(() => expect(srv.posts).toHaveLength(1));
+    srv.control.release();
+    await screen.findByText("تم حفظ العلامة.");
+    // re-saving the SAME value → the server answers noChange; meanwhile the teacher edits again
+    type("B04", "51"); type("B04", "50");
+    expect(saveBtn("B04").disabled).toBe(true);                                          // equals canonical → not savable
+    srv.control.fakeNoChange = true; srv.control.hold = false;
+    fireEvent.click(within(row("B04")).getByRole("button", { name: "تفاصيل وملاحظة المرحلة B04" }));
+    const panel = document.getElementById("eb-stage-B04") as HTMLElement;
+    const note = within(panel).getByLabelText("ملاحظة المعلم") as HTMLTextAreaElement;
+    fireEvent.change(note, { target: { value: "ن" } });
+    srv.control.hold = true;
+    fireEvent.click(within(panel).getByRole("button", { name: "حفظ الملاحظة" }));
+    await waitFor(() => expect(srv.posts).toHaveLength(2));
+    fireEvent.change(note, { target: { value: "ن جديدة" } });
+    type("B04", "77");                                                                   // a newer score draft during the note write
+    srv.control.release();
+    await screen.findByText("تم حفظ الملاحظة.");                                          // the held request got the fake noChange
+    expect(srv.responses).toHaveLength(1);                                               // (real handler saw only the first write)
+    expect(note.value).toBe("ن جديدة");
+    expect(scoreInput("B04").value).toBe("77");
+  });
+});
+
+// ---------------------------------------------------------------------------------------------------------------
 describe("8C-3 selection changes never carry drafts or stale responses", () => {
   it("switching student clears every draft (the new student shows only their canonical values)", async () => {
     server();

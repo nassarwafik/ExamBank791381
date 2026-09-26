@@ -36,6 +36,7 @@ type Patch = { status?: StageStatus; note?: string; score?: number | string | nu
 type MutationKind = "score" | "status" | "note";
 const kindOf = (patch: Patch): MutationKind => (patch.status !== undefined ? "status" : patch.note !== undefined ? "note" : "score");
 const canonicalScore = (entry: StageProgressEntry | undefined) => (typeof entry?.score === "number" ? String(entry.score) : "");
+const dropKey = <T,>(map: Record<string, T>, key: string): Record<string, T> => { const next = { ...map }; delete next[key]; return next; };
 
 /**
  * Non-modal student profile for one project. Same single `student` read and the same `progress.update`
@@ -110,6 +111,9 @@ export default function ProjectStudentDetail({ token, projectCode, classId, stud
     const key = stage.stageId + ":" + kindOf(patch);
     if (pendingRef.current.has(key)) return;                                   // double-submit guard (same operation)
     const context = contextRef.current;
+    // The exact values this mutation submits (compared against the live drafts when the response arrives).
+    const submittedScore = patch.score === null ? "" : patch.score === undefined ? undefined : String(patch.score).trim();
+    const submittedNote = patch.note;
     pendingRef.current.add(key);
     setPending(prev => ({ ...prev, [key]: true }));
     setRowErrors(prev => { const next = { ...prev }; delete next[stage.stageId]; return next; });
@@ -125,8 +129,11 @@ export default function ProjectStudentDetail({ token, projectCode, classId, stud
           onChanged?.();
           if (patch.status !== undefined) onReadyChanged?.();
         }
-        if (patch.score !== undefined) setScoreDrafts(prev => { const next = { ...prev }; delete next[stage.stageId]; return next; });
-        if (patch.note !== undefined) setNoteDrafts(prev => { const next = { ...prev }; delete next[stage.stageId]; return next; });
+        // The inputs stay editable while a write is in flight, so a draft is dropped ONLY if it still equals the value this
+        // request submitted; an edit the teacher made after clicking save is newer, unsaved work and is preserved (its
+        // save button re-enables once this write settles). The same rule applies to a noChange response.
+        if (patch.score !== undefined) setScoreDrafts(prev => (prev[stage.stageId] === undefined || prev[stage.stageId].trim() !== submittedScore ? prev : dropKey(prev, stage.stageId)));
+        if (patch.note !== undefined) setNoteDrafts(prev => (prev[stage.stageId] === undefined || prev[stage.stageId] !== submittedNote ? prev : dropKey(prev, stage.stageId)));
         setNotice(patch.score !== undefined ? "تم حفظ العلامة." : patch.note !== undefined ? "تم حفظ الملاحظة." : "تم تحديث حالة المرحلة.");
         // Keyboard flow: Enter-save moves on to the next stage's score field — only if focus did not move meanwhile.
         const from = opts.advanceFrom;
