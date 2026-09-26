@@ -691,18 +691,30 @@ function App() {
     return () => { cancelled = true; };
   }, [token, sessionRole, sessionValidated, projectCatalogNonce]);
 
-  // Ready-for-review badge (global, not tied to the selected class). Re-checked when returning to the
-  // projects view so approving a stage there refreshes the count. TEACHER-ONLY (builder-auth endpoint):
+  // Ready-for-review badge (global, not tied to the selected class). TEACHER-ONLY (builder-auth endpoint):
   // gated by sessionRole so a student session never calls it (which would 401 → logout).
+  // Phase 8E-1 — the aggregated summary is expensive on the server (it scans every active class of every project), so
+  // it is read on exactly THREE triggers and never because of unrelated navigation:
+  //   1. the teacher session becoming ready (token / role / validation);
+  //   2. a ready-changing project mutation (refreshProjectReady → projectReadyNonce: status change, template update, reset);
+  //   3. ENTERING the Projects destination from another view — the pre-existing "re-check on return" contract, which is
+  //      what keeps the hub/badge fresh for changes made on another device or by another teacher.
+  // Leaving Projects, moving inside it (hub ↔ project, tabs, classes, students) and moving among the other destinations
+  // issue no read. Every run still cancels the previous in-flight read, so a stale response can never repopulate the badge
+  // after a logout / role change (the gate above resets it to zero).
+  const inProjectsView = teacherView === "project";
+  const wasInProjectsView = useRef(inProjectsView);
   useEffect(() => {
     // §2/§6 — also gated on AUTHORITATIVE validation (no teacher request during boot or a transient-failure retry state).
-    if (!sessionValidated || !token || sessionRole !== "teacher") { setProjectReady({ total: 0, byProject: {} }); return; }
+    if (!sessionValidated || !token || sessionRole !== "teacher") { wasInProjectsView.current = inProjectsView; setProjectReady({ total: 0, byProject: {} }); return; }
+    if (!inProjectsView && wasInProjectsView.current) { wasInProjectsView.current = false; return; }   // leaving Projects: no read
+    wasInProjectsView.current = inProjectsView;
     let cancelled = false;
     apiRequest<{ totalReadyForReview?: number; byProject?: Record<string, number> }>("/api/project-tracker?resource=projects-summary")
       .then(r => { if (!cancelled) setProjectReady({ total: Number(r.totalReadyForReview) || 0, byProject: r.byProject || {} }); })
       .catch(() => { if (!cancelled) setProjectReady({ total: 0, byProject: {} }); });
     return () => { cancelled = true; };
-  }, [token, sessionRole, teacherView, sessionValidated, projectReadyNonce]);
+  }, [token, sessionRole, inProjectsView, sessionValidated, projectReadyNonce]);
 
   // Phase 5D — the teacher's unread STUDENT replies (sidebar «الرسائل» badge). App owns it like the project-ready
   // badge: TEACHER-ONLY and gated on authoritative session validation; refreshed silently every 15s (the shared
