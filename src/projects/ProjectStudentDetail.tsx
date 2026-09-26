@@ -9,8 +9,10 @@ import IconButton from "../ui/IconButton";
 import EmptyState from "../ui/EmptyState";
 import { IconChevronBack, IconChevronDown, IconCheck } from "../icons";
 import ProjectRankHero from "./ProjectRankHero";
+import ProjectEvaluationCard from "./ProjectEvaluationCard";
 import { fmtContribution, fmtStageScore, normalizeProjectPerformance, stageValueOf } from "./projectPerformance";
-import type { StudentDetail, StageStatus, ProjectStage, StudentCard, StageProgressEntry, HistoryEvent, BalanceInsight, TrackMeta, ProjectPerformance } from "./types";
+import { kindOfPatch, mutationBody, normalizeProjectEvaluation, type StagePatch } from "./projectEvaluation";
+import type { StudentDetail, ProjectStage, StudentCard, StageProgressEntry, HistoryEvent, BalanceInsight, TrackMeta, ProjectPerformance, ProjectEvaluation } from "./types";
 
 type Props = {
   token: string; projectCode: string; classId: string; studentId: string; tracks: TrackMeta[];
@@ -26,15 +28,17 @@ type UpdateResponse = {
   ok: true; noChange?: boolean;
   summary: StudentCard;
   performance?: ProjectPerformance;
+  /** Phase 9B — the recomputed evaluation summary (additive). */
+  evaluation?: ProjectEvaluation;
   stage: StageProgressEntry & { stageId: string };
-  nextStages: Record<string, ProjectStage | null>;
-  balance: BalanceInsight;
+  /** Absent on the narrow score actions (a score never changes the workflow, so nextStages / balance are unchanged). */
+  nextStages?: Record<string, ProjectStage | null>;
+  balance?: BalanceInsight;
   history: HistoryEvent[];
 };
 
-type Patch = { status?: StageStatus; note?: string; score?: number | string | null };
-type MutationKind = "score" | "status" | "note";
-const kindOf = (patch: Patch): MutationKind => (patch.status !== undefined ? "status" : patch.note !== undefined ? "note" : "score");
+type Patch = StagePatch;
+const kindOf = kindOfPatch;
 const canonicalScore = (entry: StageProgressEntry | undefined) => (typeof entry?.score === "number" ? String(entry.score) : "");
 const dropKey = <T,>(map: Record<string, T>, key: string): Record<string, T> => { const next = { ...map }; delete next[key]; return next; };
 
@@ -52,7 +56,8 @@ const dropKey = <T,>(map: Record<string, T>, key: string): Record<string, T> => 
  *     the canonical server value shows; a failed save keeps it for a retry. Drafts are keyed by stageId, so a track
  *     or group switch can never apply one stage's draft to another, and they are cleared whenever the project,
  *     class or student changes.
- *   • Writes stay the canonical `progress.update` and are SERIALIZED through one queue (a later write starts only
+ *   • Status / note writes stay the canonical `progress.update`; a score write is the narrow `score.set` / `score.clear`
+ *     (Phase 9B). Every write is SERIALIZED through one queue (a later write starts only
  *     after the earlier one settled), so responses apply in order and an older response can never overwrite a
  *     newer canonical state. The same operation on the same stage cannot be queued twice (double-submit guard).
  *     Each job carries its (project, class, student) context; a job or response for a previous selection is dropped.
@@ -121,11 +126,11 @@ export default function ProjectStudentDetail({ token, projectCode, classId, stud
       if (context !== contextRef.current) return;                              // selection changed while queued
       setNotice("");
       try {
-        const res = await trackerPost<UpdateResponse>(token, projectCode, { action: "progress.update", classId, studentId, stageId: stage.stageId, ...patch });
+        const res = await trackerPost<UpdateResponse>(token, projectCode, mutationBody(classId, studentId, stage.stageId, patch));
         if (context !== contextRef.current) return;                            // stale response for another student
         if (!res.noChange) {
           const { stageId: sid, ...entry } = res.stage;
-          setDetail(prev => prev ? { ...prev, summary: res.summary, performance: res.performance ?? prev.performance, progress: { ...prev.progress, [sid]: entry }, nextStages: res.nextStages, balance: res.balance, history: res.history } : prev);
+          setDetail(prev => prev ? { ...prev, summary: res.summary, performance: res.performance ?? prev.performance, evaluation: res.evaluation ?? prev.evaluation, progress: { ...prev.progress, [sid]: entry }, nextStages: res.nextStages ?? prev.nextStages, balance: res.balance === undefined ? prev.balance : res.balance, history: res.history } : prev);
           onChanged?.();
           if (patch.status !== undefined) onReadyChanged?.();
         }
@@ -190,6 +195,7 @@ export default function ProjectStudentDetail({ token, projectCode, classId, stud
 
   const s = detail.summary;
   const perf = normalizeProjectPerformance(detail.performance);
+  const evaluation = normalizeProjectEvaluation(detail.evaluation);
   const timeline = [...detail.history].reverse().slice(0, 20);
   const readOnly = detail.readOnly;
 
@@ -219,6 +225,8 @@ export default function ProjectStudentDetail({ token, projectCode, classId, stud
           })}
         </p>
       </div>
+
+      {evaluation && <ProjectEvaluationCard id="eb-student-profile-eval" variant="teacher" evaluation={evaluation} />}
 
       <div className="eb-segmented eb-student-profile-tracks" role="group" aria-label="مسارات المشروع">
         {tracks.map(t => <button key={t.trackId} type="button" aria-pressed={track === t.trackId} onClick={() => { setTrack(t.trackId); setOpenStageId(""); }}>{t.title}</button>)}

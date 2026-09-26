@@ -25,10 +25,12 @@ export function fmtGrade(grade: number): string {
   return fmtContribution(grade) + " / 100";
 }
 
-/** «85 / 100» or «لم تُرصد بعد» for a stage's score. */
+/** The one wording for a stage without a teacher score (Phase 9B: shared by every project surface). */
+export const NOT_GRADED_LABEL = "لم تُقيّم بعد";
+/** «85 / 100» («0 / 100» for a zero — 0 IS a grade) or «لم تُقيّم بعد» for a stage's score. */
 export function fmtStageScore(entry: { score?: number | null } | null | undefined): string {
   const s = entry?.score;
-  return typeof s === "number" && Number.isFinite(s) ? fmtContribution(s) + " / 100" : "لم تُرصد بعد";
+  return typeof s === "number" && Number.isFinite(s) ? fmtContribution(s) + " / 100" : NOT_GRADED_LABEL;
 }
 
 /** The stage's project value row from the server's performance (null when the stage carries no project value). */

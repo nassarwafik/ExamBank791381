@@ -3,6 +3,7 @@ import { useAutoRefresh } from "./ui/useAutoRefresh";
 import StudentExamPage from "./StudentExamPage";
 import StudentShell from "./shell/StudentShell";
 import StudentProjectPanel from "./projects/StudentProjectPanel";
+import type { ProjectEvaluationBrief } from "./projects/projectEvaluation";
 import type { FeedPost, ReactionId } from "./achievements";
 import SectionHeader from "./ui/SectionHeader";
 import { lazyWithRetry } from "./lazyWithRetry";
@@ -56,6 +57,8 @@ export default function StudentPortal({ token, displayName, onLogout }: Props) {
   // every other open starts the book as before), and the released courses the materials panel reported (its one read).
   const [readerInitialPageId, setReaderInitialPageId] = useState<string | undefined>(undefined);
   const [courses, setCourses] = useState<StudentLearningCourse[] | null>(null);
+  // Phase 9B — the projects' evaluation brief for the Today Hub chip (from the project panel's own single read).
+  const [projectEvaluation, setProjectEvaluation] = useState<ProjectEvaluationBrief[] | null>(null);
   // The dedicated Educational Games destination (a full-view swap, like the Reader/exam) — opened from the shell.
   const [gamesOpen, setGamesOpen] = useState(false);
   // Phase 5C — the dedicated «الرسائل» destination (same full-view swap); it owns its own small polling lifecycle.
@@ -390,7 +393,8 @@ export default function StudentPortal({ token, displayName, onLogout }: Props) {
           <>
             <StudentIdentityCard student={data.student} classroom={data.classroom} displayName={displayName} stageGroup={stageGroup} token={token} onChangeAvatar={() => setAvatarPickerOpen(true)} />
             <AvatarPickerDialog open={avatarPickerOpen} current={data.student.avatarId} saving={avatarSaving} photoManaged={!!data.student.profilePhoto} onPick={pickAvatar} onClose={() => setAvatarPickerOpen(false)} />
-            <StudentTodayHub continueItem={todayContinue} busy={busy} onContinue={continueToday} messagesUnread={messagesUnread} onOpenMessages={() => openMessages("direct")} progress={todayProgress} onOpenProgress={() => scrollToSection("eb-sp-progress-title")} onOpenTasks={() => scrollToSection("eb-sp-tasks-title")} />
+            <StudentTodayHub continueItem={todayContinue} busy={busy} onContinue={continueToday} messagesUnread={messagesUnread} onOpenMessages={() => openMessages("direct")} progress={todayProgress} onOpenProgress={() => scrollToSection("eb-sp-progress-title")} onOpenTasks={() => scrollToSection("eb-sp-tasks-title")}
+              projectEvaluation={projectEvaluation} onOpenProjects={() => scrollToSection("eb-sp-projects-title")} />
             <NowSection actionable={now_.actionable} upcoming={now_.upcoming} busy={busy} onOpen={open} />
             <InstallAppCard />
             <MessagePushCard token={token} />
@@ -411,7 +415,7 @@ export default function StudentPortal({ token, displayName, onLogout }: Props) {
                 {!!data.assignments.length && !visible.length && <EmptyState compact title="لا توجد مهام في هذا التصنيف" description="جرّب تصنيفًا آخر." />}
               </div>
             </section>
-            <StudentProjectPanel token={token} contributions={strength?.projects ?? []} />
+            <StudentProjectPanel token={token} contributions={strength?.projects ?? []} onEvaluationChange={setProjectEvaluation} />
             <AchievementFeed highlightPostId={highlightPostId} posts={feed} error={feedError} shareOn={data.student.shareAchievements !== false} shareSaving={shareSaving} now={now} onToggleShare={toggleShareAchievements} onReact={(postId, reaction) => void react(postId, reaction)} />
           </>
         )}

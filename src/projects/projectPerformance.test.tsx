@@ -2,7 +2,7 @@
 // Project Performance (frontend): presentation helpers over the server's `performance`, the grade/progress circle,
 // the student project cards → detail (hero + stage scores, read-only) with multi-project switching that never shows
 // a previous project's values, the legacy payload without `performance`, and the teacher's score control through
-// the canonical progress.update write (plus the stale-selection guard on the teacher detail).
+// the narrow score.set / score.clear writes (Phase 9B) (plus the stale-selection guard on the teacher detail).
 import { describe, it, expect, afterEach, vi } from "vitest";
 import { render, cleanup, screen, fireEvent, within, waitFor } from "@testing-library/react";
 import { fmtContribution, fmtGrade, fmtStageScore, normalizeProjectPerformance, projectRankVisual } from "./projectPerformance";
@@ -39,7 +39,7 @@ describe("presentation helpers — format only, tier → the SAME six artworks",
   it("formats contributions/grades/scores and maps tiers to the existing rank images", () => {
     expect(fmtContribution(8.5)).toBe("8.5"); expect(fmtContribution(10)).toBe("10"); expect(fmtContribution(2.125)).toBe("2.1"); expect(fmtContribution(Number.NaN)).toBe("0");
     expect(fmtGrade(81)).toBe("81 / 100");
-    expect(fmtStageScore({ score: 85 })).toBe("85 / 100"); expect(fmtStageScore({ score: 0 })).toBe("0 / 100"); expect(fmtStageScore({})).toBe("لم تُرصد بعد"); expect(fmtStageScore(null)).toBe("لم تُرصد بعد");
+    expect(fmtStageScore({ score: 85 })).toBe("85 / 100"); expect(fmtStageScore({ score: 0 })).toBe("0 / 100"); expect(fmtStageScore({})).toBe("لم تُقيّم بعد"); expect(fmtStageScore(null)).toBe("لم تُقيّم بعد");
     expect(projectRankVisual("silver")).toBe(RANK_VISUALS.silver);
     expect(projectRankVisual("diamond").title).toBe("تنين النار");
   });
@@ -77,10 +77,10 @@ describe("StudentProjectPanel — cards → detail, multi-project switching, leg
     expect(r.getByRole("img", { name: "رتبة المشروع: تنين النار — المستوى 5" })).toBeTruthy();
     expect(r.getByRole("progressbar", { name: "التقدم في المشروع" }).getAttribute("aria-valuenow")).toBe("80");
     expect(r.getByText("العلامة 70 من 100، والتقدم في المشروع 80 بالمئة.")).toBeTruthy();
-    // stage rows: teacher score + project value, read-only (no inputs), unscored stage says لم تُرصد بعد
+    // stage rows: teacher score + project value, read-only (no inputs), unscored stage says لم تُقيّم بعد
     const rows = r.getAllByRole("listitem").filter(li => li.classList.contains("eb-sp-stage"));
     expect(rows[0].textContent).toContain("العلامة: 85 / 100"); expect(rows[0].textContent).toContain("القيمة في المشروع: 8.5 / 10"); expect(rows[0].textContent).toContain("ملاحظة من المعلم: ممتاز");
-    expect(rows[1].textContent).toContain("العلامة: لم تُرصد بعد"); expect(rows[1].textContent).toContain("القيمة في المشروع: 0 / 10");
+    expect(rows[1].textContent).toContain("العلامة: لم تُقيّم بعد"); expect(rows[1].textContent).toContain("القيمة في المشروع: 0 / 10");
     expect(document.querySelector("input, select, textarea")).toBeNull();
     expect(r.queryByText(/SecureBank|شعلة صغيرة|105 \/ 600/)).toBeNull();                               // nothing of B while A is open
     // back → cards; open B → only B's values (no stale A numbers)
@@ -111,7 +111,7 @@ describe("StudentProjectPanel — cards → detail, multi-project switching, leg
   });
 });
 
-describe("ProjectStudentDetail (teacher) — hero, score control through progress.update, stale-selection guard", () => {
+describe("ProjectStudentDetail (teacher) — hero, score control through score.set / score.clear, stale-selection guard", () => {
   const detail = (studentId: string, perf: unknown, overall: number, score?: number) => ({
     ok: true, readOnly: false, projectCode: "AQ", student: { studentId, displayName: studentId === "s1" ? "ليان" : "كريم", code: studentId.toUpperCase() },
     tracks: TRACKS, summary: { ...summary(overall), studentId }, stages: STAGES, groups: GROUPS, trackWeights: { book: 50, lab: 50 }, config: { staleDays: 7, lateThreshold: 40, balanceWarningThreshold: 30 },
@@ -124,7 +124,7 @@ describe("ProjectStudentDetail (teacher) — hero, score control through progres
       const url = String(input); const body = init?.body ? JSON.parse(String(init.body)) : undefined;
       calls.push({ url, body });
       if (init?.method === "POST") {
-        const score = body.score === null ? null : Number(body.score);
+        const score = body.action === "score.clear" ? null : Number(body.score);
         const perf = score === null ? current.performance : { ...perfA, projectStrength: 450, tier: "diamond", level: 5 };
         current = { ...current, performance: perf, progress: { S01: { status: "approved", ...(score === null ? {} : { score }) } } };
         return { ok: true, status: 200, json: async () => ({ ok: true, summary: current.summary, performance: perf, stage: { stageId: "S01", status: "approved", ...(score === null ? {} : { score }) }, nextStages: current.nextStages, balance: null, history: [{ eventId: "h1", stageId: "S01", type: "score", fromScore: null, toScore: score, actor: "t", createdAt: "2026-03-02T10:00:00.000Z" }] }) } as Response;
@@ -140,7 +140,7 @@ describe("ProjectStudentDetail (teacher) — hero, score control through progres
     fireEvent.change(input, { target: { value: "85" } });
     fireEvent.click(screen.getByRole("button", { name: "حفظ علامة المرحلة S01" }));
     await screen.findByText("تم حفظ العلامة.");
-    expect(calls.at(-1)?.body).toEqual({ action: "progress.update", projectCode: "AQ", classId: "c1", studentId: "s1", stageId: "S01", score: "85" });
+    expect(calls.at(-1)?.body).toEqual({ action: "score.set", projectCode: "AQ", classId: "c1", studentId: "s1", stageId: "S01", score: "85" });
     expect(strengthLine()).toBe("قوة المشروع: 450 / 600");
     expect(screen.getByRole("img", { name: "رتبة المشروع: تنين النار — المستوى 5" })).toBeTruthy();
     fireEvent.click(screen.getByRole("button", { name: "تفاصيل وملاحظة المرحلة S01" }));
@@ -149,7 +149,8 @@ describe("ProjectStudentDetail (teacher) — hero, score control through progres
     expect(within(panel).getByText(/^العلامة:/).textContent).toBe("العلامة: 85 / 100");
     expect(screen.getByText("علامة 85 / 100 — S01")).toBeTruthy();
     fireEvent.click(screen.getByRole("button", { name: "مسح العلامة" }));
-    await waitFor(() => expect(calls.at(-1)?.body?.score).toBeNull());
+    await waitFor(() => expect(calls.at(-1)?.body?.action).toBe("score.clear"));
+    expect(calls.at(-1)?.body).toEqual({ action: "score.clear", projectCode: "AQ", classId: "c1", studentId: "s1", stageId: "S01" });
     expect(calls.filter(c => c.body).length).toBe(2);
   });
   it("read-only (archived) shows the score and value as text with no input", async () => {

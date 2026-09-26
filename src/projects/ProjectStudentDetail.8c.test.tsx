@@ -2,8 +2,8 @@
 /// <reference types="node" />
 // Phase 8C — fast inline project stage grading. Every stage row of ProjectStudentDetail is directly gradeable (score
 // field + save, the primary «اعتماد», the status menu, the stage value) with no stage disclosure; drafts are per stage;
-// writes stay the canonical `progress.update`, serialized and bound to the (project, class, student) they were made
-// for. The browser talks to the REAL project-tracker handler (in-memory container), so the server keeps its full
+// status / note writes stay the canonical `progress.update` and a score goes through the narrow `score.set` / `score.clear`
+// (Phase 9B); every write is serialized and bound to the (project, class, student) it was made for. The browser talks to the REAL project-tracker handler (in-memory container), so the server keeps its full
 // authority: score validation, status transitions, recomputed summary / performance / stage values and history.
 import { createRequire } from "node:module";
 import { readFileSync } from "fs";
@@ -116,14 +116,14 @@ describe("8C-1 the Access project (899373) — every row is gradeable without op
       expect(rows.length, t.trackId).toBe(expected.length);
     }
   });
-  it("saving stage A sends exactly {action: progress.update, classId, studentId, stageId, score}; stage B is untouched; the server's value, summary and history show", async () => {
+  it("saving stage A sends exactly {action: score.set, classId, studentId, stageId, score}; stage B is untouched; the server's value, summary and history show", async () => {
     const srv = server();
     const spies = await mount("899373");
     type("B02", "70");                                                               // an unsaved draft on B02
     type("B01", "85");
     fireEvent.click(saveBtn("B01"));
     await screen.findByText("تم حفظ العلامة.");
-    expect(srv.posts).toEqual([{ projectCode: "899373", action: "progress.update", classId: "c1", studentId: "s1", stageId: "B01", score: "85" }]);
+    expect(srv.posts).toEqual([{ projectCode: "899373", action: "score.set", classId: "c1", studentId: "s1", stageId: "B01", score: "85" }]);
     expect(scoreInput("B01").value).toBe("85");                                          // canonical saved value
     expect(scoreInput("B02").value).toBe("70");                                          // B's draft untouched
     const saved = await srv.progressOf("899373", "s1");
@@ -179,7 +179,7 @@ describe("8C-1 the Access project (899373) — every row is gradeable without op
     type("B01", "77");
     fireEvent.keyDown(scoreInput("B01"), { key: "Enter" });
     await screen.findByText("تم حفظ العلامة.");
-    expect(srv.posts).toEqual([{ projectCode: "899373", action: "progress.update", classId: "c1", studentId: "s1", stageId: "B01", score: "77" }]);
+    expect(srv.posts).toEqual([{ projectCode: "899373", action: "score.set", classId: "c1", studentId: "s1", stageId: "B01", score: "77" }]);
     await waitFor(() => expect(document.activeElement).toBe(scoreInput("B02")));
     fireEvent.keyDown(scoreInput("B02"), { key: "Enter" });                             // empty draft → nothing sent
     await flush();
@@ -281,7 +281,7 @@ describe("8C-2 per-stage drafts, failures and double submits", () => {
     const btn = saveBtn("B01");
     act(() => { btn.click(); btn.click(); });                                            // one batch: no re-render between
     await screen.findByText("تم حفظ العلامة.");
-    expect(srv.posts).toEqual([{ projectCode: "899373", action: "progress.update", classId: "c1", studentId: "s1", stageId: "B01", score: "73" }]);
+    expect(srv.posts).toEqual([{ projectCode: "899373", action: "score.set", classId: "c1", studentId: "s1", stageId: "B01", score: "73" }]);
     const approve = approveBtn("B01");
     act(() => { approve.click(); approve.click(); });
     await screen.findByText("تم تحديث حالة المرحلة.");
@@ -491,7 +491,7 @@ describe("8C-5 structurally different projects use the SAME generic component", 
     fireEvent.click(approveBtn("V02"));
     await screen.findByText("تم تحديث حالة المرحلة.");
     expect(srv.posts).toEqual([
-      { projectCode: "883589", action: "progress.update", classId: "c1", studentId: "s1", stageId: "V02", score: "64" },
+      { projectCode: "883589", action: "score.set", classId: "c1", studentId: "s1", stageId: "V02", score: "64" },
       { projectCode: "883589", action: "progress.update", classId: "c1", studentId: "s1", stageId: "V02", status: "approved" }
     ]);
     expect((await srv.progressOf("883589", "s1")).progress.V02).toMatchObject({ status: "approved", score: 64 });
@@ -505,7 +505,7 @@ describe("8C-5 structurally different projects use the SAME generic component", 
     type("P01", "72");
     fireEvent.click(saveBtn("P01"));
     await screen.findByText("تم حفظ العلامة.");
-    expect(srv.posts).toEqual([{ projectCode: "794589", action: "progress.update", classId: "c1", studentId: "s1", stageId: "P01", score: "72" }]);
+    expect(srv.posts).toEqual([{ projectCode: "794589", action: "score.set", classId: "c1", studentId: "s1", stageId: "P01", score: "72" }]);
   });
 });
 
@@ -515,7 +515,11 @@ describe("8C-6 source / CSS guards", () => {
   it("no project, track, group or stage is hard-coded in the grading component", () => {
     const src = read("./ProjectStudentDetail.tsx").replace(/\/\*[\s\S]*?\*\/|\/\/.*$/gm, "");
     for (const literal of ["899373", "883589", "794589", "\"book\"", "\"access\"", "\"packetTracer\"", "\"visualStudio\"", "\"B01\"", "\"A01\"", "_g1"]) expect(src, literal).not.toContain(literal);
-    expect(src).toContain('action: "progress.update"');
+    // Phase 9B: the request bodies are built by ONE helper (projectEvaluation.mutationBody): status / note stay progress.update,
+    // a score is the narrow score.set / score.clear; the component itself carries no action literal.
+    const bodies = read("./projectEvaluation.ts");
+    expect(bodies).toContain('action: "progress.update"'); expect(bodies).toContain('action: "score.set"'); expect(bodies).toContain('action: "score.clear"');
+    expect(src).toContain("mutationBody(");
     expect(src).not.toMatch(/projectGrade|calculate[A-Z]\w*\(/);                          // no browser-side grading formulas
   });
   it("the 8C row styles: logical properties only, tokens only, a two-line card below 768px with 44px targets and no overflow-prone fixed widths", () => {

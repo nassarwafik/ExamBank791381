@@ -3,11 +3,13 @@ import { stagesByGroup, statusLabel } from "./helpers";
 import { STAGE_STATUS_CLASS, STAGE_STATUS_TONE, normalizeStageStatus, toneForTrack } from "./teacherPresentation";
 import { fmtContribution, fmtGrade, fmtStageScore, normalizeProjectPerformance, projectRankVisual, stageValueOf } from "./projectPerformance";
 import ProjectRankHero from "./ProjectRankHero";
+import ProjectEvaluationCard from "./ProjectEvaluationCard";
+import { evaluationBriefs, fmtProjectScore, normalizeProjectEvaluation, type ProjectEvaluationBrief } from "./projectEvaluation";
 import ProgressBar from "../ui/ProgressBar";
 import SectionHeader from "../ui/SectionHeader";
 import StatusBadge from "../ui/StatusBadge";
 import { IconChevronBack } from "../icons";
-import type { ProjectStage, ProjectGroup, ProjectPerformance, StageProgressEntry, StudentCard, TrackMeta } from "./types";
+import type { ProjectStage, ProjectGroup, ProjectPerformance, ProjectEvaluation, StageProgressEntry, StudentCard, TrackMeta } from "./types";
 import type { ProjectStrength } from "../student/types";
 
 type StudentProject = {
@@ -17,6 +19,8 @@ type StudentProject = {
   summary: StudentCard;
   /** Additive server field (absent on older payloads) — the project grade / project Strength authority. */
   performance?: ProjectPerformance | null;
+  /** Phase 9B — additive server field (absent on older payloads): the student's own evaluation summary. */
+  evaluation?: ProjectEvaluation | null;
   stages: ProjectStage[];
   groups: ProjectGroup[];
   progress: Record<string, StageProgressEntry>;
@@ -30,6 +34,7 @@ const PROJECT_MAX_STRENGTH_POINTS = 400;
 /** One project card: progress, grade, project rank (the SAME six artworks) and the open action. */
 function ProjectCard({ project, contribution, onOpen }: { project: StudentProject; contribution: ProjectStrength | null; onOpen: () => void }) {
   const perf = normalizeProjectPerformance(project.performance);
+  const evaluation = normalizeProjectEvaluation(project.evaluation);
   const rank = perf ? projectRankVisual(perf.tier) : null;
   const headingId = "eb-sp-project-card-" + project.projectCode;
   return (
@@ -40,6 +45,7 @@ function ProjectCard({ project, contribution, onOpen }: { project: StudentProjec
         <dl className="eb-sp-project-card-facts">
           <div><dt>التقدم</dt><dd dir="ltr">{project.summary.overallProgress}%</dd></div>
           {perf && <div><dt>العلامة</dt><dd dir="ltr">{fmtGrade(perf.grade)}</dd></div>}
+          {evaluation && <div><dt>التقييم</dt><dd dir={evaluation.projectScore === null ? undefined : "ltr"}>{fmtProjectScore(evaluation.projectScore)} · {evaluation.gradedStages}/{evaluation.totalStages}</dd></div>}
           {rank && <div><dt>القوة</dt><dd>{rank.title}</dd></div>}
         </dl>
         {contribution && <p className="eb-sp-project-strength">مساهمته في قوتك العامة: <strong dir="ltr">{contribution.strengthPoints} / {PROJECT_MAX_STRENGTH_POINTS}</strong></p>}
@@ -57,6 +63,7 @@ function OneProject({ project, contribution, onBack }: { project: StudentProject
   const groups = useMemo(() => project.groups.filter(g => g.track === track).sort((a, b) => a.order - b.order), [project, track]);
   const byGroup = useMemo(() => stagesByGroup(project.stages.filter(s => s.active !== false), track), [project, track]);
   const perf = normalizeProjectPerformance(project.performance);
+  const evaluation = normalizeProjectEvaluation(project.evaluation);
   const s = project.summary;
   const next = project.nextStages ? project.nextStages[track] : null;
   const trackMeta = project.tracks.find(t => t.trackId === track);
@@ -70,6 +77,8 @@ function OneProject({ project, contribution, onBack }: { project: StudentProject
       {contribution && (
         <p className="eb-sp-project-strength">تقدم المشروع: <strong>{contribution.overallProgress}%</strong> · نقاط القوة من المشروع: <strong>{contribution.strengthPoints} / {PROJECT_MAX_STRENGTH_POINTS}</strong></p>
       )}
+      {/* Phase 9B — the EVALUATION axis (graded / ungraded stages, average of graded scores), read-only, server-derived. */}
+      {evaluation && <ProjectEvaluationCard id={"eb-sp-eval-" + project.projectCode} variant="student" evaluation={evaluation} />}
       <ul className="eb-sp-project-tracks" aria-label="تقدم المسارات">
         {project.tracks.map((t, i) => <li key={t.trackId}><ProgressBar size="sm" label={t.title} value={s.trackProgress[t.trackId] || 0} tone={toneForTrack(i)} /></li>)}
       </ul>
@@ -118,7 +127,7 @@ function OneProject({ project, contribution, onBack }: { project: StudentProject
 // project rank) → one project's detail (hero + circle + stages) → back. OPTIONAL secondary panel: ONE read; on
 // any failure (or when the class runs no project) it renders nothing and NEVER logs the student out. Every
 // project's metrics come from the same single response, so switching never shows a previous project's values.
-export default function StudentProjectPanel({ token, contributions = [] }: { token: string; contributions?: ProjectStrength[] }) {
+export default function StudentProjectPanel({ token, contributions = [], onEvaluationChange }: { token: string; contributions?: ProjectStrength[]; onEvaluationChange?: (briefs: ProjectEvaluationBrief[]) => void }) {
   const [data, setData] = useState<ProjectData | null>(null);
   const [openCode, setOpenCode] = useState<string>("");
 
@@ -129,10 +138,11 @@ export default function StudentProjectPanel({ token, contributions = [] }: { tok
         const r = await fetch("/api/student-project-tracker", { headers: { "x-student-token": token, Authorization: "Bearer " + token } });
         if (!r.ok) return;
         const j = await r.json();
-        if (j && j.ok && !cancelled) setData(j);
+        if (j && j.ok && !cancelled) { setData(j); onEvaluationChange?.(evaluationBriefs((j as ProjectData).projects)); }
       } catch { /* ignore — panel just won't show */ }
     })();
     return () => { cancelled = true; };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [token]);
 
   if (!data || !data.enrolled || !data.projects || !data.projects.length) return null;
