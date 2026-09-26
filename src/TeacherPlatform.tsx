@@ -32,7 +32,9 @@ type TeacherPlatformProps={token:string;currentExam:unknown|null;workspaceTab:Wo
  /** UX-6a: the project catalog App already loaded at boot. When provided, this panel issues NO catalog request of its own. */
  projects?:ProjectOption[];
  /** Phase 9A — the shell's navigation (App owns the state): the Today Hub's quick actions go through it, never a second router. */
- onNavigate?:(id:TeacherNavId)=>void};
+ onNavigate?:(id:TeacherNavId)=>void;
+ /** Phase 9C — App's existing project navigation (goToProjects) for the Today Hub's project-evaluation rows. */
+ onOpenProject?:(projectCode:string)=>void};
 type ApiError={ok?:boolean;error?:string};
 type WorkspaceDialog="none"|"createClass"|"addStudent"|"import";
 
@@ -734,7 +736,7 @@ function TeacherPlatform(props:TeacherPlatformProps){
  // while the chunk loads, and the fallback is a local status line inside the same inner container (never a blank page).
  // Phase 9A — the Today Hub (command center) is the FIRST thing on the teacher's home, above the analytics dashboard; it is
  // part of this chunk (one small read of its own), so the lazy Dashboard boundary below is unchanged.
- if(workspaceTab==="dashboard")return <section className="teacher-platform" dir="rtl"><div className="teacher-platform-inner"><TeacherTodayHub token={token} onNavigate={props.onNavigate}/><Suspense fallback={<p className="eb-muted" role="status">جارٍ تحميل لوحة المتابعة...</p>}><TeacherDashboard token={token}/></Suspense></div></section>;
+ if(workspaceTab==="dashboard")return <section className="teacher-platform" dir="rtl"><div className="teacher-platform-inner"><TeacherTodayHub token={token} onNavigate={props.onNavigate} onOpenProject={props.onOpenProject}/><Suspense fallback={<p className="eb-muted" role="status">جارٍ تحميل لوحة المتابعة...</p>}><TeacherDashboard token={token}/></Suspense></div></section>;
  if(workspaceTab==="audit")return <AuditHistoryPanel token={token}/>;
  if(workspaceTab==="assignments")return <section className="teacher-platform" dir="rtl"><div className="teacher-platform-inner"><AssignmentsPanel token={token} classes={classes} currentExam={currentExam} onCopyLibraryExamToBuilder={onCopyLibraryExamToBuilder}/></div></section>;
 

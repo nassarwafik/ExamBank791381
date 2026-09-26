@@ -5623,6 +5623,7 @@ function App() {
             workspaceTab={workspaceTab}
             onCopyLibraryExamToBuilder={handleCopyLibraryExamToBuilder}
             onNavigate={navigateTeacher}
+            onOpenProject={goToProjects}
           />
         </Suspense>
       )}
