@@ -291,3 +291,8 @@
 .eb-teacher-profile-name label{ display:flex; flex-direction:column; gap:var(--eb-space-1); flex:1 1 200px; color:var(--eb-muted); font-size:var(--eb-fs-13); font-weight:var(--eb-fw-semibold); }
 .eb-teacher-profile-name input{ min-height:40px; padding:var(--eb-space-2) var(--eb-space-3); border:1px solid var(--eb-border-strong); border-radius:var(--eb-r); background:var(--eb-surface); color:var(--eb-text); font:inherit; font-weight:var(--eb-fw-regular); }
 .eb-teacher-profile-notice{ margin:0; color:var(--eb-success-tx); font-size:var(--eb-fs-13); }
+
+/* Phase 8B — سجل النشاط: «عرض المزيد» under the table (reveals the next 30 already-loaded records). */
+.audit-history-more{ display:flex; justify-content:center; padding-block-start:var(--eb-space-3); }
+.audit-history-more .eb-button{ min-height:44px; }
+.audit-history-table tbody tr:focus-visible{ outline:var(--eb-focus-ring); outline-offset:-2px; }

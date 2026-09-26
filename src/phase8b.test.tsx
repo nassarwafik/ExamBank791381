@@ -178,31 +178,99 @@ describe("8B-B activity — the newest 30 records", () => {
     expect(out.map(e => e.eventId)).toEqual(Array.from({ length: 30 }, (_, i) => "e" + (47 - i)));
     expect(shuffled.map(e => e.eventId)).toEqual(before);
   });
-  it("the سجل النشاط table renders exactly the newest 30 of 45 loaded records (the loaded window and API are unchanged)", async () => {
-    const events = Array.from({ length: 45 }, (_, i) => auditEvent(45 - i));                        // server order: newest first
+  // Paging fixture: `n` events in SERVER order (newest first). Odd ids are student archives, even ids class creations;
+  // every label is unique ("سجل-007") so a search hits exactly one record.
+  const pad = (i: number) => String(i).padStart(3, "0");
+  const mixedEvent = (i: number): AuditEvent => ({ eventId: "e" + i, timestamp: new Date(Date.parse("2026-01-01T00:00:00.000Z") + i * 3600000).toISOString(), actor: "t",
+    action: i % 2 ? "student.archive" : "class.create", targetType: i % 2 ? "student" : "class", targetId: "t" + i, targetLabel: "سجل-" + pad(i), details: {} }) as AuditEvent;
+  const serverWindow = (newest: number, n = 100) => Array.from({ length: n }, (_, k) => mixedEvent(newest - k));
+  function auditServer(initial: AuditEvent[]) {
+    let events = initial;
     const calls: string[] = [];
     globalThis.fetch = vi.fn(async (input: RequestInfo | URL) => { calls.push(String(input)); return res(200, { ok: true, events, count: events.length, limit: 100 }); }) as unknown as typeof fetch;
+    return { calls, set: (next: AuditEvent[]) => { events = next; } };
+  }
+  const rowLabels = (c: HTMLElement) => Array.from(c.querySelectorAll(".audit-history-table tbody tr")).map(r => r.children[3].textContent);
+  /** The expected newest-first labels among `ids` (descending), first `k`. */
+  const newestLabels = (ids: number[], k: number) => [...ids].sort((a, b) => b - a).slice(0, k).map(i => "سجل-" + pad(i));
+  const range = (from: number, to: number) => Array.from({ length: to - from + 1 }, (_, k) => from + k);
+  const more = () => screen.queryByRole("button", { name: "عرض المزيد" });
+  const note = () => screen.queryByRole("note")?.textContent;
+
+  it("100 loaded → 30 newest; «عرض المزيد» 30 → 60 → 90 → 100 from the loaded data (no fetch), newest-first at every step, focus on the first new row", async () => {
+    const srv = auditServer(serverWindow(100));
     const { container } = render(<AuditHistoryPanel token="t" />);
-    await screen.findByText("صف رقم 45");
-    const rows = Array.from(container.querySelectorAll(".audit-history-table tbody tr"));
-    expect(rows).toHaveLength(30);
-    expect(rows.map(r => r.children[3].textContent)).toEqual(Array.from({ length: 30 }, (_, i) => "صف رقم " + (45 - i)));
-    expect(screen.queryByText("صف رقم 15")).toBeNull();                                              // the 31st newest is not shown
-    expect(screen.getByRole("note").textContent).toBe("يُعرض أحدث 30 من 45 سجلًا مطابقًا.");
-    expect(calls).toEqual(["/api/audit-history?limit=100"]);
-    // search still reaches the whole loaded window (an older record is findable)
-    fireEvent.change(screen.getByLabelText("ابحث في سجل النشاط"), { target: { value: "صف رقم 3" } });
-    const found = Array.from(container.querySelectorAll(".audit-history-table tbody tr")).map(r => r.children[3].textContent);
-    expect(found).toContain("صف رقم 3");
-    expect(calls).toHaveLength(1);
+    await screen.findByText("سجل-100");
+    const all = range(1, 100);
+    expect(rowLabels(container)).toEqual(newestLabels(all, 30));
+    expect(note()).toBe("يُعرض أحدث 30 من 100 سجلًا مطابقًا.");
+    for (const [shown, firstNew] of [[60, 70], [90, 40], [100, 10]] as const) {
+      fireEvent.click(more()!);
+      expect(rowLabels(container)).toEqual(newestLabels(all, shown));
+      const focused = document.activeElement as HTMLElement;
+      expect(focused.tagName).toBe("TR");
+      expect(focused.children[3].textContent).toBe("سجل-" + pad(firstNew));
+      if (shown < 100) expect(note()).toBe("يُعرض أحدث " + shown + " من 100 سجلًا مطابقًا.");
+    }
+    expect(more()).toBeNull();                                                                       // everything visible
+    expect(note()).toBeUndefined();
+    expect(srv.calls).toEqual(["/api/audit-history?limit=100"]);                                     // the ONE bounded request
   });
-  it("30 or fewer records → all shown, no truncation note", async () => {
-    const events = Array.from({ length: 12 }, (_, i) => auditEvent(12 - i));
-    globalThis.fetch = vi.fn(async () => res(200, { ok: true, events })) as unknown as typeof fetch;
+  it("search / action / type filters reset the window to 30", async () => {
+    auditServer(serverWindow(100));
     const { container } = render(<AuditHistoryPanel token="t" />);
-    await screen.findByText("صف رقم 12");
-    expect(container.querySelectorAll(".audit-history-table tbody tr")).toHaveLength(12);
-    expect(screen.queryByRole("note")).toBeNull();
+    await screen.findByText("سجل-100");
+    fireEvent.click(more()!);
+    expect(rowLabels(container)).toHaveLength(60);
+    // type filter → the 50 student records, newest 30 first
+    fireEvent.change(screen.getByLabelText("تصفية حسب النوع"), { target: { value: "student" } });
+    const odd = range(1, 100).filter(i => i % 2);
+    expect(rowLabels(container)).toEqual(newestLabels(odd, 30));
+    expect(note()).toBe("يُعرض أحدث 30 من 50 سجلًا مطابقًا.");
+    fireEvent.click(more()!);
+    expect(rowLabels(container)).toEqual(newestLabels(odd, 50));
+    expect(more()).toBeNull();
+    // action filter → reset again
+    fireEvent.change(screen.getByLabelText("تصفية حسب النوع"), { target: { value: "" } });
+    expect(rowLabels(container)).toHaveLength(30);
+    fireEvent.click(more()!);
+    fireEvent.change(screen.getByLabelText("تصفية حسب العملية"), { target: { value: "class.create" } });
+    expect(rowLabels(container)).toEqual(newestLabels(range(1, 100).filter(i => i % 2 === 0), 30));
+    // search → reset again
+    fireEvent.change(screen.getByLabelText("تصفية حسب العملية"), { target: { value: "" } });
+    fireEvent.click(more()!);
+    expect(rowLabels(container)).toHaveLength(60);
+    fireEvent.change(screen.getByLabelText("ابحث في سجل النشاط"), { target: { value: "سجل-0" } });   // 1..99 match
+    expect(rowLabels(container)).toEqual(newestLabels(range(1, 99), 30));
+  });
+  it("searching for an older record (beyond the first 30) finds it without a fetch", async () => {
+    const srv = auditServer(serverWindow(100));
+    const { container } = render(<AuditHistoryPanel token="t" />);
+    await screen.findByText("سجل-100");
+    expect(screen.queryByText("سجل-007")).toBeNull();
+    fireEvent.change(screen.getByLabelText("ابحث في سجل النشاط"), { target: { value: "سجل-007" } });
+    expect(rowLabels(container)).toEqual(["سجل-007"]);
+    expect(more()).toBeNull();
+    expect(srv.calls).toHaveLength(1);
+  });
+  it("a reload keeps the expansion but always shows the NEWEST records first (never older instead of newer)", async () => {
+    const srv = auditServer(serverWindow(100));
+    const { container } = render(<AuditHistoryPanel token="t" />);
+    await screen.findByText("سجل-100");
+    fireEvent.click(more()!);
+    srv.set(serverWindow(105));                                                                      // 5 newer events arrived
+    fireEvent.click(screen.getByRole("button", { name: /تحديث/ }));
+    await screen.findByText("سجل-105");
+    expect(rowLabels(container)).toEqual(newestLabels(range(6, 105), 60));
+    expect(srv.calls).toHaveLength(2);
+  });
+  it("30 or fewer records → all shown, no truncation note and no «عرض المزيد»", async () => {
+    auditServer(serverWindow(30, 30));
+    const { container } = render(<AuditHistoryPanel token="t" />);
+    await screen.findByText("سجل-030");
+    expect(rowLabels(container)).toEqual(newestLabels(range(1, 30), 30));
+    expect(note()).toBeUndefined();
+    expect(more()).toBeNull();
   });
 });
 

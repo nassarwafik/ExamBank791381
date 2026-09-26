@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { IconSearch } from "./icons";
 import { type AuditEvent, AUDIT_VISIBLE_LIMIT, auditActionLabel, auditTargetTypeLabel, filterAuditEvents, newestAuditEvents } from "./auditLog";
 
@@ -31,6 +31,11 @@ function AuditHistoryPanel({ token }: Props) {
   const [q, setQ] = useState("");
   const [actionFilter, setActionFilter] = useState("");
   const [typeFilter, setTypeFilter] = useState("");
+  // Phase 8B — presentation paging over the already-loaded window: the newest 30 first, «عرض المزيد» reveals the next
+  // 30 (30 → 60 → 90 → 100). A reload keeps the expansion; a search/filter change starts again at 30.
+  const [requested, setRequested] = useState(AUDIT_VISIBLE_LIMIT);
+  const bodyRef = useRef<HTMLTableSectionElement>(null);
+  const focusRow = useRef<number | null>(null);
 
   async function load() {
     setLoading(true); setError("");
@@ -59,7 +64,19 @@ function AuditHistoryPanel({ token }: Props) {
   );
   // Phase 8B — the table shows the newest 30 matches (the loaded window stays the server's bounded 100 so search and
   // filters still reach within it; nothing is deleted or re-fetched).
-  const visible = useMemo(() => newestAuditEvents(filtered, AUDIT_VISIBLE_LIMIT), [filtered]);
+  const visible = useMemo(() => newestAuditEvents(filtered, requested), [filtered, requested]);
+  // After «عرض المزيد», keyboard focus moves to the first newly revealed row (never lost on the removed button).
+  useEffect(() => {
+    if (focusRow.current === null) return;
+    const row = bodyRef.current?.children.item(focusRow.current) as HTMLElement | null | undefined;
+    focusRow.current = null;
+    row?.focus();
+  });
+  function showMore() {
+    focusRow.current = visible.length;
+    setRequested(visible.length + AUDIT_VISIBLE_LIMIT);
+  }
+  function resetWindow() { setRequested(AUDIT_VISIBLE_LIMIT); }
 
   return (
     <section className="teacher-platform" dir="rtl"><div className="teacher-platform-inner">
@@ -74,13 +91,13 @@ function AuditHistoryPanel({ token }: Props) {
         <div className="student-toolbar-pro">
           <div className="student-search-field eb-search-field">
             <IconSearch size={16} aria-hidden="true" />
-            <input value={q} onChange={e => setQ(e.target.value)} placeholder="ابحث بالهدف أو نوع العملية" aria-label="ابحث في سجل النشاط" />
+            <input value={q} onChange={e => { setQ(e.target.value); resetWindow(); }} placeholder="ابحث بالهدف أو نوع العملية" aria-label="ابحث في سجل النشاط" />
           </div>
-          <select className="student-status-select" value={actionFilter} onChange={e => setActionFilter(e.target.value)} aria-label="تصفية حسب العملية">
+          <select className="student-status-select" value={actionFilter} onChange={e => { setActionFilter(e.target.value); resetWindow(); }} aria-label="تصفية حسب العملية">
             <option value="">كل العمليات</option>
             {actionsPresent.map(a => <option key={a} value={a}>{auditActionLabel(a)}</option>)}
           </select>
-          <select className="student-status-select" value={typeFilter} onChange={e => setTypeFilter(e.target.value)} aria-label="تصفية حسب النوع">
+          <select className="student-status-select" value={typeFilter} onChange={e => { setTypeFilter(e.target.value); resetWindow(); }} aria-label="تصفية حسب النوع">
             <option value="">كل الأنواع</option>
             <option value="class">صف</option>
             <option value="student">طالب</option>
@@ -93,9 +110,9 @@ function AuditHistoryPanel({ token }: Props) {
         {!loading && (
           <div className="students-table-wrap"><table className="students-table audit-history-table">
             <thead><tr><th>التاريخ والوقت</th><th>العملية</th><th>النوع</th><th>الهدف</th><th>تفاصيل</th></tr></thead>
-            <tbody>
+            <tbody ref={bodyRef}>
               {visible.map(ev => (
-                <tr key={ev.eventId}>
+                <tr key={ev.eventId} tabIndex={-1}>
                   <td dir="ltr">{fmtDate(ev.timestamp)}</td>
                   <td>{auditActionLabel(ev.action)}</td>
                   <td>{auditTargetTypeLabel(ev.targetType)}</td>
@@ -106,6 +123,11 @@ function AuditHistoryPanel({ token }: Props) {
               {!visible.length && <tr><td colSpan={5}>لا توجد أحداث مطابقة.</td></tr>}
             </tbody>
           </table></div>
+        )}
+        {!loading && filtered.length > visible.length && (
+          <div className="audit-history-more">
+            <button type="button" className="eb-button is-quiet" onClick={showMore}>عرض المزيد</button>
+          </div>
         )}
       </section>
     </div></section>
