@@ -40,8 +40,10 @@ describe("8E-2 — the teacher shell stays mounted while the Dashboard chunk is 
     const sidebar = screen.getByRole("complementary", { name: "التنقل الرئيسي" });
     fireEvent.click(within(sidebar).getByRole("button", { name: /^لوحة المتابعة/ }));
     // Suspended frame: the shell is fully mounted, the Dashboard body is only its status line.
-    const status = await screen.findByRole("status");
-    expect(status.textContent).toBe("جارٍ تحميل لوحة المتابعة...");
+    // Phase 8E-4: TeacherPlatform itself is a lazy chunk now, so the FIRST status line is the platform's; wait for the
+    // Dashboard's own fallback (rendered by the real TeacherPlatform once its chunk resolves).
+    const status = await screen.findByText("جارٍ تحميل لوحة المتابعة...");
+    expect(status.getAttribute("role")).toBe("status");
     expect(status.closest(".teacher-platform-inner")).toBeTruthy();
     expect(within(sidebar).getByRole("button", { name: /^لوحة المتابعة/ })).toBeTruthy();
     expect(document.querySelector(".app-sidebar-logout")).toBeTruthy();
