@@ -196,7 +196,8 @@ describe("G. Phase 8E-2 protection stays intact", () => {
     expect(guard).toMatch(/\/\^TeacherDashboard-\[\^\.\]\+\\\.js\$\//); expect(guard).toMatch(/\/\^TeacherPlatform-\[\^\.\]\+\\\.js\$\//);
     expect(guard).toMatch(/platform\.length >= 2/);
     const budget = Number((guard.match(/INITIAL_JS_GZIP_BUDGET_KB = (\d+)/) || [])[1]);
-    expect(budget).toBeLessThanOrEqual(175); expect(budget).toBeGreaterThanOrEqual(160);
+    // Phase 8E-5 tightened the budget again (125 KB after lazy StudentPortal): never looser than 175, never absurdly low.
+    expect(budget).toBeLessThanOrEqual(175); expect(budget).toBeGreaterThanOrEqual(100);
     expect(SRC("package.json")).toMatch(/"build": "tsc -b && vite build && npm run check:bundle"/);
   });
 });

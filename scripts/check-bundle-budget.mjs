@@ -8,20 +8,26 @@
 //   2. the Teacher Dashboard is not emitted as its own lazy chunk (TeacherDashboard-*.js outside the initial graph);
 //   3. any initial file carries the Dashboard or the Chart.js payload (content signatures, not filenames);
 //   4. (Phase 8E-4) the Teacher Platform is not emitted as its own lazy chunk (TeacherPlatform-*.js outside the
-//      initial graph), or any initial file carries the Platform payload.
+//      initial graph), or any initial file carries the Platform payload;
+//   5. (Phase 8E-5) the Student Portal is not emitted as its own lazy chunk (StudentPortal-*.js outside the initial
+//      graph), or any initial file carries the Portal payload.
 // No hashed filename is hard-coded: chunks are recognised by their un-hashed stem and by content signatures that
 // are stable across minification (Chart.js registry ids, dashboard-only / platform-only class names and copy).
 import fs from "node:fs";
 import path from "node:path";
 import zlib from "node:zlib";
 
-// Phase 8E-2 measured 193.5 KB (budget 205); Phase 8E-4 measured 159.2 KB → budget tightened to 175 (≈ +16 KB tolerance).
-export const INITIAL_JS_GZIP_BUDGET_KB = 175;
+// Phase 8E-2 measured 193.5 KB (budget 205); Phase 8E-4 measured 159.2 KB (budget 175); Phase 8E-5 measured 111.5 KB →
+// budget tightened to 125 (≈ +13 KB regression tolerance).
+export const INITIAL_JS_GZIP_BUDGET_KB = 125;
 const CHART_SIGNATURES = ["radialLinear", "doughnut", "getDatasetMeta", "skipNull"]; // Chart.js registry / option ids
 const DASHBOARD_SIGNATURES = ["analytics-chart-canvas", "analytics-insight"];      // TeacherDashboard-only class names
 // TeacherPlatform-only: its students-workspace layout class names (used nowhere else in src/) and the Phase 8E-2
 // Dashboard fallback copy that lives in TeacherPlatform.tsx. Two of three are required (no single-string false positive).
 const PLATFORM_SIGNATURES = ["eb-students-workspace", "eb-students-layout", "جارٍ تحميل لوحة المتابعة"];
+// StudentPortal-only: its task-list / notice / assignment-list class names and the task-filter group label (each
+// occurs in no other source file and, in the real build, in no other chunk). Two of four are required.
+const PORTAL_SIGNATURES = ["eb-sp-tasks", "eb-sp-notice", "student-assignment-list", "تصفية المهام"];
 
 const dist = process.argv[2] || "dist";
 const assets = path.join(dist, "assets");
@@ -61,20 +67,26 @@ function main() {
   const platformChunks = all.filter(f => /^TeacherPlatform-[^.]+\.js$/.test(f));
   if (!platformChunks.length) failures.push("no TeacherPlatform-*.js lazy chunk was emitted (is TeacherPlatform imported statically again in App.tsx?)");
   for (const f of platformChunks) if (initial.includes(f)) failures.push(`${f} is part of the initial graph`);
+  const portalChunks = all.filter(f => /^StudentPortal-[^.]+\.js$/.test(f));
+  if (!portalChunks.length) failures.push("no StudentPortal-*.js lazy chunk was emitted (is StudentPortal imported statically again in App.tsx?)");
+  for (const f of portalChunks) if (initial.includes(f)) failures.push(`${f} is part of the initial graph`);
 
   for (const f of initial) {
     const src = read(f);
     const chart = CHART_SIGNATURES.filter(s => src.includes(s));
     const dash = DASHBOARD_SIGNATURES.filter(s => src.includes(s));
     const platform = PLATFORM_SIGNATURES.filter(s => src.includes(s));
+    const portal = PORTAL_SIGNATURES.filter(s => src.includes(s));
     if (chart.length >= 3) failures.push(`${f} (initial) contains the Chart.js payload (${chart.join(", ")})`);
     if (dash.length) failures.push(`${f} (initial) contains the Teacher Dashboard payload (${dash.join(", ")})`);
     if (platform.length >= 2) failures.push(`${f} (initial) contains the Teacher Platform payload (${platform.join(", ")})`);
+    if (portal.length >= 2) failures.push(`${f} (initial) contains the Student Portal payload (${portal.join(", ")})`);
   }
   const chartChunks = all.filter(f => CHART_SIGNATURES.filter(s => read(f).includes(s)).length >= 3);
   console.log(`Chart.js payload found in: ${chartChunks.join(", ") || "(none)"} — ${chartChunks.every(f => !initial.includes(f)) ? "all lazy" : "IN THE INITIAL GRAPH"}`);
   console.log(`Teacher Dashboard chunk: ${dashboardChunks.join(", ") || "(missing)"}`);
   console.log(`Teacher Platform chunk: ${platformChunks.join(", ") || "(missing)"}`);
+  console.log(`Student Portal chunk: ${portalChunks.join(", ") || "(missing)"}`);
 
   if (failures.length) { console.error("\nBUNDLE GUARD FAILED:\n - " + failures.join("\n - ")); process.exit(1); }
   console.log("bundle guard passed");
