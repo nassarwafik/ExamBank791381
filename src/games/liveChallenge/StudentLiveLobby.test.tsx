@@ -1,6 +1,6 @@
 // @vitest-environment happy-dom
 import { describe, it, expect, afterEach, vi } from "vitest";
-import { render, cleanup, screen, fireEvent, waitFor, within } from "@testing-library/react";
+import { render, cleanup, screen, fireEvent, waitFor, within, act } from "@testing-library/react";
 import StudentLiveLobby from "./StudentLiveLobby";
 import type { StudentLiveSessionClient, StudentLobby, StudentLiveSessionResult } from "./liveSessionClient";
 import type { Question } from "../../StudentQuestionCard";
@@ -139,6 +139,11 @@ describe("StudentLiveLobby — live round (Phase 4B)", () => {
     fireEvent.change(screen.getByLabelText("رمز الغرفة"), { target: { value: "K7MX4P" } });
     fireEvent.click(screen.getByRole("button", { name: "انضمام" }));
     await screen.findByText("عاصمة الأردن؟");                     // poll delivered the active round question
+    // The round's draft-hydration effect (setAnswer(undefined) for a fresh round) is a PASSIVE effect of that same
+    // commit; findByText can resolve from the DOM mutation before React has flushed it. Interacting in that window
+    // lets the late effect wipe the answer the test just chose (submit then never enables). Flush React's pending
+    // effects for the delivered round before the test acts — a deterministic drain, not a wait.
+    await act(async () => {});
   }
   it("teacher starts → the current question appears → إرسال locks the answer and shows the waiting message", async () => {
     // Realistic server: once answered, get() reflects the locked state (an always-unanswered mock would let the next
@@ -150,7 +155,9 @@ describe("StudentLiveLobby — live round (Phase 4B)", () => {
     // submit disabled until an answer is chosen
     expect((screen.getByRole("button", { name: "إرسال الإجابة" }) as HTMLButtonElement).disabled).toBe(true);
     fireEvent.click(screen.getAllByRole("radio")[0]);            // choose عمّان (index 0)
-    expect((screen.getByRole("button", { name: "إرسال الإجابة" }) as HTMLButtonElement).disabled).toBe(false);
+    // Selecting an answer enables submit through a React state update; wait for that observable UI state (a
+    // synchronous read right after the click occasionally ran before React committed it on a loaded CI runner).
+    await waitFor(() => expect((screen.getByRole("button", { name: "إرسال الإجابة" }) as HTMLButtonElement).disabled).toBe(false));
     fireEvent.click(screen.getByRole("button", { name: "إرسال الإجابة" }));
     expect(await screen.findByText("تم تسجيل إجابتك — بانتظار السؤال التالي.")).toBeTruthy();
     expect(answer).toHaveBeenLastCalledWith("K7MX4P", 1, { kind: "choice", index: 0 });   // server-authoritative round + response

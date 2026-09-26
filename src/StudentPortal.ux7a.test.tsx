@@ -109,6 +109,10 @@ describe("UX-7a StudentPortal — task-first home", () => {
     expect(screen.queryByRole("tablist")).toBeNull();
     const all = within(group).getByRole("button", { name: "الكل" });
     expect(all.getAttribute("aria-pressed")).toBe("true");
+    // The portal's independent mount effects issue the documented initial read set; on a loaded runner some of those
+    // GETs start after the task list is already rendered. Settle the exact canonical set FIRST, so the baseline below
+    // cannot mistake a late initial GET for a request caused by browsing the filters.
+    await waitFor(() => expect(gets(calls).sort()).toEqual(["/api/achievement-feed", "/api/student-dashboard", "/api/student-learning-materials", "/api/student-notifications", "/api/student-project-tracker"]));
     const before = calls.length;
     fireEvent.click(within(group).getByRole("button", { name: "مكتملة" }));
     expect(within(group).getByRole("button", { name: "مكتملة" }).getAttribute("aria-pressed")).toBe("true");
