@@ -36,3 +36,18 @@
   .eb-prh{ flex-direction:row; justify-content:space-between; }
   .eb-prh-facts{ flex-direction:column; }
 }
+
+/* ---------- Phase 9B — evaluation summary card (teacher profile + student project view) ---------- */
+.eb-eval-card{ display:flex; flex-direction:column; gap:var(--eb-space-2); padding:var(--eb-space-3) var(--eb-space-4); background:var(--eb-surface); border:1px solid var(--eb-line); border-radius:var(--eb-r-lg); min-width:0; }
+.eb-eval-title{ margin:0; font-size:var(--eb-fs-15); font-weight:var(--eb-fw-semibold); color:var(--eb-text-heading); }
+.eb-eval-summary{ margin:0; color:var(--eb-text); font-size:var(--eb-fs-13); font-variant-numeric:tabular-nums; overflow-wrap:anywhere; }
+.eb-eval-facts{ display:grid; grid-template-columns:repeat(auto-fit, minmax(120px, 1fr)); gap:var(--eb-space-2); margin:0; }
+.eb-eval-facts > div{ display:flex; flex-direction:column; gap:2px; padding:var(--eb-space-2); background:var(--eb-surface-2); border-radius:var(--eb-r-sm); min-width:0; }
+.eb-eval-facts dt{ font-size:var(--eb-fs-12); color:var(--eb-text-secondary); }
+.eb-eval-facts dd{ margin:0; font-size:var(--eb-fs-17); font-weight:var(--eb-fw-semibold); color:var(--eb-text-heading); font-variant-numeric:tabular-nums; }
+.eb-eval-facts dd.is-empty{ font-size:var(--eb-fs-13); font-weight:var(--eb-fw-regular); color:var(--eb-text-secondary); }
+.eb-eval-bar{ height:8px; border-radius:999px; background:var(--eb-surface-2); overflow:hidden; }
+.eb-eval-bar > span{ display:block; height:100%; background:var(--eb-primary); border-radius:inherit; }
+.eb-eval-note{ margin:0; font-size:var(--eb-fs-13); overflow-wrap:anywhere; }
+.eb-eval-ungraded{ font-variant-numeric:tabular-nums; }
+.eb-eval-updated{ margin:0; font-size:var(--eb-fs-12); }

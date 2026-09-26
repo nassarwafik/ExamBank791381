@@ -13,6 +13,7 @@ const { getSupportedClassProgramCodes } = require("../lib/project-tracker/class-
 const { loadStudentProjects } = require("../lib/project-tracker/student-projects");
 const core = require("../lib/project-tracker/core");
 const performance = require("../lib/project-tracker/performance");
+const { buildProjectEvaluation } = require("../lib/project-tracker/evaluation");
 
 const CLASS_PREFIX = "platform/classes/";
 const USER_PREFIX = "platform/users/";
@@ -45,6 +46,8 @@ async function handler(request, deps = {}, obs = null) {
         summary,
         // Project performance (grade / project-specific Strength + rank / per-stage value) — the ONE calculator's output.
         performance: performance.buildProjectPerformanceSummary(workDef, progress, now, summary),
+        // Phase 9B — the student's OWN evaluation (graded / ungraded stages, average of graded scores), read-only.
+        evaluation: buildProjectEvaluation(workDef, progress),
         stages: snapshot.stages,
         groups: snapshot.groups,
         progress: progress ? progress.stages : {},

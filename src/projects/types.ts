@@ -82,6 +82,20 @@ export type ProjectPerformance = {
 };
 export type ProjectRankTier = "beginner" | "bronze" | "silver" | "gold" | "diamond" | "legendary";
 
+/** Phase 9B — one ACTIVE stage of the evaluation axis: its teacher score (null = «لم تُقيّم بعد»; 0 IS a grade). */
+export type EvaluationStage = { stageId: string; track: string; groupId: string; title: string; order: number; required: boolean; status: StageStatus; score: number | null; graded: boolean; scoredAt: string; scoredBy: string };
+/**
+ * Phase 9B — the server's `evaluation` (api/src/lib/project-tracker/evaluation.js): graded / ungraded ACTIVE stages,
+ * evaluationProgress = graded / total × 100, projectScore = the average of the graded stages (null while none is
+ * graded). Distinct from `performance.grade` (approved-only, weighted, feeds Strength) and from `summary.overallProgress`
+ * (workflow). Display-only on the client; nothing is recomputed here.
+ */
+export type ProjectEvaluation = {
+  totalStages: number; gradedStages: number; ungradedStages: number; evaluationProgress: number;
+  projectScore: number | null; projectScorePrecise: number | null;
+  stages: EvaluationStage[]; orphanStageIds: string[]; updatedAt: string;
+};
+
 export type BalanceInsight = { leadingTrackId: string; leadingTrackTitle: string; laggingTrackId: string; laggingTrackTitle: string; diff: number } | null;
 
 export type StudentDetail = {
@@ -101,6 +115,8 @@ export type StudentDetail = {
   balance: BalanceInsight;
   /** Additive: absent on older payloads. */
   performance?: ProjectPerformance;
+  /** Phase 9B — additive: absent on older payloads. */
+  evaluation?: ProjectEvaluation;
 };
 
 export type ProjectAnalytics = {
