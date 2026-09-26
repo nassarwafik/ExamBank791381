@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState, lazy, Suspense } from "react";
 import type { FormEvent } from "react";
 import StudentPortal from "./StudentPortal";
+import { lazyWithRetry } from "./lazyWithRetry";
 // Heavy, chart-bearing modules are code-split so they load only when opened (keeps the main bundle down).
 const ProjectTracker = lazy(() => import("./projects/ProjectTracker"));
 const ProjectHub = lazy(() => import("./projects/ProjectHub"));
@@ -21,7 +22,11 @@ import { useAutoRefresh } from "./ui/useAutoRefresh";
 import type { AiImageRequestQuestion } from "./questionMedia";
 import { legacyToStructured, toSavedStructuredExam, newSection, newQuestion, applyStructuredExamUpdate, reconcileSavedStructuredExam, type StructuredExamUpdater } from "./examBuilderState";
 import "./project794589.css";
-import TeacherPlatform from "./TeacherPlatform";
+// Phase 8E-4 — the teacher PLATFORM (classes / students / assignments / audit / dashboard workspace) is a LAZY chunk:
+// students, the login page, the session-validation boot and the other teacher destinations never download it; it
+// is fetched the first time teacherView === "platform" renders and then served from the module cache. lazyWithRetry
+// keeps the one-shot stale-chunk deployment recovery. Guarded by scripts/check-bundle-budget.mjs (npm run build).
+const TeacherPlatform = lazy(lazyWithRetry(() => import("./TeacherPlatform"), "teacher-platform"));
 import ImportQuestionsPanel, { createEmptyImportSession } from "./ImportQuestionsPanel";
 import type { ImportSessionState } from "./ImportQuestionsPanel";
 import { IconUser, IconLock, IconWarning, IconChevronDown, IconImage, IconSparkles, IconGraduation } from "./icons";
@@ -5600,13 +5605,17 @@ function App() {
 
       {teacherView ===
         "platform" && (
-        <TeacherPlatform
-          token={token}
-          projects={projectList}
-          currentExam={structuredExam ?? exam}
-          workspaceTab={workspaceTab}
-          onCopyLibraryExamToBuilder={handleCopyLibraryExamToBuilder}
-        />
+        // Phase 8E-4 — the boundary wraps ONLY the platform body: TeacherAppShell (sidebar, identity, header, logout)
+        // stays mounted while the chunk loads; the fallback is a local status line, never a full-app takeover.
+        <Suspense fallback={<p className="eb-muted" role="status">جارٍ تحميل منصة المعلم...</p>}>
+          <TeacherPlatform
+            token={token}
+            projects={projectList}
+            currentExam={structuredExam ?? exam}
+            workspaceTab={workspaceTab}
+            onCopyLibraryExamToBuilder={handleCopyLibraryExamToBuilder}
+          />
+        </Suspense>
       )}
 
       {teacherView === "import" && (

@@ -6,16 +6,22 @@
 // edges are lazy and excluded) — and fails the build when:
 //   1. the gzip size of that initial graph exceeds the agreed budget (INITIAL_JS_GZIP_BUDGET_KB);
 //   2. the Teacher Dashboard is not emitted as its own lazy chunk (TeacherDashboard-*.js outside the initial graph);
-//   3. any initial file carries the Dashboard or the Chart.js payload (content signatures, not filenames).
+//   3. any initial file carries the Dashboard or the Chart.js payload (content signatures, not filenames);
+//   4. (Phase 8E-4) the Teacher Platform is not emitted as its own lazy chunk (TeacherPlatform-*.js outside the
+//      initial graph), or any initial file carries the Platform payload.
 // No hashed filename is hard-coded: chunks are recognised by their un-hashed stem and by content signatures that
-// are stable across Chart.js / Dashboard minification (registry ids and dashboard-only class names).
+// are stable across minification (Chart.js registry ids, dashboard-only / platform-only class names and copy).
 import fs from "node:fs";
 import path from "node:path";
 import zlib from "node:zlib";
 
-export const INITIAL_JS_GZIP_BUDGET_KB = 205;                   // Phase 8E budget after the Dashboard / Chart.js split
+// Phase 8E-2 measured 193.5 KB (budget 205); Phase 8E-4 measured 159.2 KB → budget tightened to 175 (≈ +16 KB tolerance).
+export const INITIAL_JS_GZIP_BUDGET_KB = 175;
 const CHART_SIGNATURES = ["radialLinear", "doughnut", "getDatasetMeta", "skipNull"]; // Chart.js registry / option ids
 const DASHBOARD_SIGNATURES = ["analytics-chart-canvas", "analytics-insight"];      // TeacherDashboard-only class names
+// TeacherPlatform-only: its students-workspace layout class names (used nowhere else in src/) and the Phase 8E-2
+// Dashboard fallback copy that lives in TeacherPlatform.tsx. Two of three are required (no single-string false positive).
+const PLATFORM_SIGNATURES = ["eb-students-workspace", "eb-students-layout", "جارٍ تحميل لوحة المتابعة"];
 
 const dist = process.argv[2] || "dist";
 const assets = path.join(dist, "assets");
@@ -52,17 +58,23 @@ function main() {
   const dashboardChunks = all.filter(f => /^TeacherDashboard-[^.]+\.js$/.test(f));
   if (!dashboardChunks.length) failures.push("no TeacherDashboard-*.js lazy chunk was emitted (is the Dashboard imported statically again?)");
   for (const f of dashboardChunks) if (initial.includes(f)) failures.push(`${f} is part of the initial graph`);
+  const platformChunks = all.filter(f => /^TeacherPlatform-[^.]+\.js$/.test(f));
+  if (!platformChunks.length) failures.push("no TeacherPlatform-*.js lazy chunk was emitted (is TeacherPlatform imported statically again in App.tsx?)");
+  for (const f of platformChunks) if (initial.includes(f)) failures.push(`${f} is part of the initial graph`);
 
   for (const f of initial) {
     const src = read(f);
     const chart = CHART_SIGNATURES.filter(s => src.includes(s));
     const dash = DASHBOARD_SIGNATURES.filter(s => src.includes(s));
+    const platform = PLATFORM_SIGNATURES.filter(s => src.includes(s));
     if (chart.length >= 3) failures.push(`${f} (initial) contains the Chart.js payload (${chart.join(", ")})`);
     if (dash.length) failures.push(`${f} (initial) contains the Teacher Dashboard payload (${dash.join(", ")})`);
+    if (platform.length >= 2) failures.push(`${f} (initial) contains the Teacher Platform payload (${platform.join(", ")})`);
   }
   const chartChunks = all.filter(f => CHART_SIGNATURES.filter(s => read(f).includes(s)).length >= 3);
   console.log(`Chart.js payload found in: ${chartChunks.join(", ") || "(none)"} — ${chartChunks.every(f => !initial.includes(f)) ? "all lazy" : "IN THE INITIAL GRAPH"}`);
   console.log(`Teacher Dashboard chunk: ${dashboardChunks.join(", ") || "(missing)"}`);
+  console.log(`Teacher Platform chunk: ${platformChunks.join(", ") || "(missing)"}`);
 
   if (failures.length) { console.error("\nBUNDLE GUARD FAILED:\n - " + failures.join("\n - ")); process.exit(1); }
   console.log("bundle guard passed");
