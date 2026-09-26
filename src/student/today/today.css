@@ -1,0 +1,33 @@
+/* Phase 9A — Student Today Hub (hero + two strips). Mobile-first, token-only, RTL through logical properties.
+   Lives with the portal chunk (imported by StudentTodayHub) — nothing here reaches the initial graph. */
+.eb-sp-today{ gap:var(--eb-space-3); }
+.eb-sp-today-hero{
+  display:flex; flex-direction:column; gap:var(--eb-space-2); min-width:0;
+  padding:var(--eb-space-4); border:1px solid var(--eb-line); border-inline-start:5px solid var(--eb-primary); border-radius:var(--eb-r-lg);
+  background:linear-gradient(180deg, var(--eb-primary-050), var(--eb-surface));
+}
+.eb-sp-today-hero.is-activeAttempt{ border-inline-start-color:var(--eb-warn); background:linear-gradient(180deg, var(--eb-warn-bg), var(--eb-surface)); }
+.eb-sp-today-hero.is-assignment{ border-inline-start-color:var(--eb-danger); }
+.eb-sp-today-hero.is-reader, .eb-sp-today-hero.is-study{ border-inline-start-color:var(--eb-success); background:linear-gradient(180deg, var(--eb-success-bg), var(--eb-surface)); }
+.eb-sp-today-hero.is-project{ border-inline-start-color:var(--eb-info); }
+.eb-sp-today-hero.is-empty{ border-inline-start-color:var(--eb-line-2); background:var(--eb-surface-2); }
+.eb-sp-today-kicker{ margin:0; color:var(--eb-text-secondary); font-size:var(--eb-fs-12); font-weight:var(--eb-fw-semibold); letter-spacing:.01em; }
+.eb-sp-today-hero-title{ margin:0; color:var(--eb-text-heading); font-size:var(--eb-fs-20); font-weight:var(--eb-fw-bold); line-height:var(--eb-lh-tight); overflow-wrap:anywhere; }
+.eb-sp-today-reason{ margin:0; color:var(--eb-text-secondary); font-size:var(--eb-fs-14); line-height:var(--eb-lh-body); font-variant-numeric:tabular-nums; overflow-wrap:anywhere; }
+.eb-sp-today-cta{ width:100%; min-height:48px; font-size:var(--eb-fs-16); margin-block-start:var(--eb-space-1); }
+
+.eb-sp-today-strip{ list-style:none; margin:0; padding:0; display:flex; flex-direction:column; gap:var(--eb-space-2); }
+.eb-sp-today-chip{
+  display:flex; flex-wrap:wrap; align-items:center; gap:var(--eb-space-2) var(--eb-space-3); min-width:0;
+  padding:var(--eb-space-2) var(--eb-space-3); border:1px solid var(--eb-line); border-radius:var(--eb-r); background:var(--eb-surface-2); color:var(--eb-text-secondary);
+}
+.eb-sp-today-chip.has-unread{ background:var(--eb-primary-050); border-color:var(--eb-primary); color:var(--eb-text-heading); }
+.eb-sp-today-chip > svg{ flex:0 0 auto; color:var(--eb-primary-strong); }
+.eb-sp-today-chip-text{ flex:1 1 160px; min-width:0; font-size:var(--eb-fs-13); line-height:var(--eb-lh-body); font-variant-numeric:tabular-nums; overflow-wrap:anywhere; }
+.eb-sp-today-chip-action{ flex:0 0 auto; }
+
+@media (min-width: 768px){
+  .eb-sp-today-cta{ width:auto; align-self:flex-start; min-width:200px; }
+  .eb-sp-today-strip{ flex-direction:row; }
+  .eb-sp-today-chip{ flex:1 1 0; }
+}

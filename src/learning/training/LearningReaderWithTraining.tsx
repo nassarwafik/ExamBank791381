@@ -21,7 +21,7 @@ type View = { kind: "reader"; pageId?: string; presentation?: boolean } | { kind
  *
  * `client === null` → no session → the Reader renders with no training host (generic cards, zero requests).
  */
-export default function LearningReaderWithTraining({ courseId, api, onExit, exitLabel, client, actor, onTrainingSubmitted, study = null, onStudyPointsEarned, initialPageId, embedded = false }: {
+export default function LearningReaderWithTraining({ courseId, api, onExit, exitLabel, client, actor, onTrainingSubmitted, study = null, onStudyPointsEarned, initialPageId, onPageChange: onPageChangeProp, embedded = false }: {
   courseId: string;
   api?: ReaderContentApi;
   onExit: () => void;
@@ -39,6 +39,9 @@ export default function LearningReaderWithTraining({ courseId, api, onExit, exit
    *  Reader's existing controlled fallback. A remount with no value opens the book from its canonical beginning
    *  (so «بدء القراءة» never inherits a section shortcut). Never re-read after mount. */
   initialPageId?: string;
+  /** Phase 9A — the Reader's own page-change signal, forwarded to the host (the student portal remembers the page for
+   *  «أكمل من حيث توقفت»). Read through a ref: a new callback identity never re-arms anything in the Reader. */
+  onPageChange?: (pageId: string) => void;
   /** SEMANTICS only, forwarded verbatim to LearningReader: the host already owns the page's <main> (the teacher app
    *  shell), so the Reader's content column renders as a <div>. Default false (the student's full-screen Reader). */
   embedded?: boolean;
@@ -112,7 +115,9 @@ export default function LearningReaderWithTraining({ courseId, api, onExit, exit
     };
   }, [study, courseId, studyState]);
 
-  const onPageChange = useCallback((pageId: string) => { pageRef.current = pageId; }, []);
+  const onPageChangePropRef = useRef(onPageChangeProp);
+  useEffect(() => { onPageChangePropRef.current = onPageChangeProp; }, [onPageChangeProp]);
+  const onPageChange = useCallback((pageId: string) => { pageRef.current = pageId; onPageChangePropRef.current?.(pageId); }, []);
   const onPresentationChange = useCallback((on: boolean) => { presentationRef.current = on; }, []);
   const refreshList = useCallback(() => { setList({ kind: "loading" }); setListNonce(n => n + 1); }, []);
 

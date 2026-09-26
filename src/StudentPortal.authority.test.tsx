@@ -50,7 +50,7 @@ describe("StudentPortal grading authority — never infer final from a score", (
   it("legacy final (finalized ABSENT, manualReviewMarks 0, no gradingStatus) resolves final", async () => {
     const legacyFinal = { attemptNumber: 1, score: 90, totalMarks: 100, percentage: 90, submittedAt: "2026-03-01T10:00:00.000Z", manualReviewMarks: 0, teacherFeedback: "" };
     mount({ student, classroom, assignments: [asg("A1", { latestScore: 90, latestPercentage: 90, latestResult: legacyFinal })], stats: { assigned: 1, completed: 1, average: 90 } });
-    const card = (await screen.findByText("A1")).closest(".student-assignment-card") as HTMLElement;
+    const card = (await screen.findByText("A1", { selector: ".eb-sp-task-title" })).closest(".student-assignment-card") as HTMLElement;   // 9A: the hub hero may show the title too
     expect(within(card).getByText(/العلامة النهائية/)).toBeTruthy();
     expect(within(card).queryByText(/علامة مؤقتة/)).toBeNull();
   });

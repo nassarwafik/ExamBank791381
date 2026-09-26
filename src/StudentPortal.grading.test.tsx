@@ -42,7 +42,7 @@ describe("R12 StudentPortal grading display", () => {
 
   it("X: a final result card shows العلامة النهائية", async () => {
     mount({ student, classroom, assignments: [asg("A1", { dashboardState: "completed", gradingStatus: "final", latestResult: finalLR })], stats: { assigned: 1, completed: 1, average: 84, pendingReview: 0, finalized: 1, inProgress: 0, averageFinalized: 84 } });
-    const card = (await screen.findByText("A1")).closest(".student-assignment-card") as HTMLElement;
+    const card = (await screen.findByText("A1", { selector: ".eb-sp-task-title" })).closest(".student-assignment-card") as HTMLElement;   // 9A: the hub hero may show the title too
     expect(within(card).getByText(/العلامة النهائية/)).toBeTruthy();
   });
 
@@ -82,8 +82,8 @@ describe("R12 StudentPortal grading display", () => {
 
   it("AB: teacherFeedback shows only when present", async () => {
     mount({ student, classroom, assignments: [asg("WithFb", { dashboardState: "completed", gradingStatus: "final", latestResult: finalLR }), asg("NoFb", { dashboardState: "completed", gradingStatus: "final", latestResult: { ...finalLR, teacherFeedback: "" } })], stats: { assigned: 2, completed: 2, average: 84, pendingReview: 0, finalized: 2, inProgress: 0, averageFinalized: 84 } });
-    const withFb = (await screen.findByText("WithFb")).closest(".student-assignment-card") as HTMLElement;
-    const noFb = (await screen.findByText("NoFb")).closest(".student-assignment-card") as HTMLElement;
+    const withFb = (await screen.findByText("WithFb", { selector: ".eb-sp-task-title" })).closest(".student-assignment-card") as HTMLElement;
+    const noFb = (await screen.findByText("NoFb", { selector: ".eb-sp-task-title" })).closest(".student-assignment-card") as HTMLElement;
     expect(within(withFb).getByText(/ملاحظة المعلم: راجع الوحدة 3/)).toBeTruthy();
     expect(within(noFb).queryByText(/ملاحظة المعلم/)).toBeNull();
   });

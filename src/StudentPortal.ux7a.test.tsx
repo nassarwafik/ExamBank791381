@@ -153,7 +153,8 @@ describe("UX-7a StudentPortal — hierarchy and the primary section", () => {
     expect(document.querySelectorAll("h1").length).toBe(1);                                         // the shell's brand title only
     expect(document.querySelector(".eb-sp h1")).toBeNull();
     const h2s = Array.from(document.querySelectorAll(".eb-sp h2")).map(h => h.textContent?.replace(/\d+$/, "").trim());
-    expect(h2s).toEqual(["مرحبًا أحمد", "ماذا عليّ أن أفعل الآن؟", "موادي التعليمية", "تقدّمي وقوتي", "المهام والواجبات", "مشاريعي", "إنجازات الصف"]);   // the games cards are NOT a permanent dashboard section
+    // Phase 9A — the Today Hub («أكمل من حيث توقفت») sits right after the identity card, before the actionable list.
+    expect(h2s).toEqual(["مرحبًا أحمد", "أكمل من حيث توقفت", "ماذا عليّ أن أفعل الآن؟", "موادي التعليمية", "تقدّمي وقوتي", "المهام والواجبات", "مشاريعي", "إنجازات الصف"]);   // the games cards are NOT a permanent dashboard section
     expect(document.querySelector(".eb-sp .eb-games-hub, .eb-sp .eb-game-cards")).toBeNull();       // no inline games grid on the dashboard
     expect(screen.getByLabelText(/مرحبًا أحمد/).textContent).toContain("الصف · 11 · 2026");          // identity: class · grade · school year
     expect(screen.getByLabelText(/مرحبًا أحمد/).textContent).toContain("C1");
