@@ -43,9 +43,9 @@ const topLevelRule = (css: string, selector: string): string => {
 const hasDesktopGutter = (css: string, selector: string): boolean =>
   new RegExp(`@media\\(min-width:1024px\\)\\{[^{}]*${escapeRe(selector)}[^{}]*\\{[^}]*padding-inline-start:var\\(--eb-space-4\\);`).test(norm(css));
 
+// Phase 8B moved the two PROJECT roots to a symmetric gutter (see the dedicated describe block below); the hub pages
+// that were not in 8B's scope keep this original inline-start-only policy unchanged.
 const CASES = [
-  { name: "Projects hub", file: "../projects-pro.css", selector: ".eb-projects-hub" },
-  { name: "Project workspace (opened project)", file: "../projects-pro.css", selector: ".eb-project-workspace" },
   { name: "Reports", file: "../reports-pro.css", selector: ".eb-reports-hub" },
   { name: "Question Bank", file: "../bank-pro.css", selector: ".eb-bank" },
 ] as const;
@@ -79,15 +79,6 @@ describe("sidebar ↔ content spacing — hubs + opened project workspace", () =
     });
   }
 
-  it("the projects hub and the opened project workspace share ONE desktop media rule (extended, not duplicated)", () => {
-    const css = read("../projects-pro.css");
-    // exactly one min-width:1024px media query in the file
-    expect((norm(css).match(/@media\(min-width:1024px\)/g) || []).length).toBe(1);
-    // and that single block lists both selectors with the same inline-start gutter
-    expect(hasDesktopGutter(css, ".eb-projects-hub")).toBe(true);
-    expect(hasDesktopGutter(css, ".eb-project-workspace")).toBe(true);
-  });
-
   it("uses an existing spacing token (12–24px range), not an arbitrary pixel value", () => {
     const tokens = read("../design-tokens.css");
     expect(norm(tokens)).toContain("--eb-space-4:16px");   // 16px, within 12–24px
@@ -97,6 +88,40 @@ describe("sidebar ↔ content spacing — hubs + opened project workspace", () =
     const shell = read("../shell.css");
     expect(norm(shell)).toContain("width:var(--eb-sidebar-w)");
     expect(norm(shell)).toContain(norm(".eb-shell-content{flex:1 1 auto;min-width:0;}"));
+  });
+});
+
+// Phase 8B — Projects (hub + opened workspace / detail). Deliberately changed from the inline-start-only desktop inset:
+// the projects pages must never sit flush against the sidebar rail (expanded or compact) NOR against the screen edge
+// (mobile drawer), so both roots own an equal logical gutter on both inline sides at every width, aligned with the
+// page header's inline padding (16px below 768px, 24px from 768px). The shell content wrapper stays padding-free,
+// so this is never double spacing.
+describe("sidebar ↔ content spacing — Projects hub + opened project workspace (Phase 8B)", () => {
+  const css = read("../projects-pro.css");
+  const group = ".eb-projects-hub,.eb-project-workspace";
+  it("both roots share ONE top-level rule with a symmetric logical gutter (mobile drawer included)", () => {
+    const bare = norm(stripAtMedia(css));
+    const i = bare.indexOf(group + "{");
+    expect(i).toBeGreaterThanOrEqual(0);
+    const base = bare.slice(i, bare.indexOf("}", i) + 1);
+    expect(base).toContain("padding-inline:var(--eb-space-4);");
+    expect(base).toContain("box-sizing:border-box;");
+    expect(base).toContain("min-width:0;");
+  });
+  it("from 768px the SAME grouped rule widens the gutter to the page-header inset (--eb-space-5)", () => {
+    expect(norm(css)).toContain("@media(min-width:768px){" + group + "{padding-inline:var(--eb-space-5);}}");
+  });
+  it("no inline-start-only / inline-end-only / physical side paddings or margins remain for the project roots", () => {
+    expect(css).not.toMatch(/padding-inline-(?:start|end)\s*:/);
+    expect(css).not.toMatch(/margin-(?:left|right)\s*:/);
+    expect(css).not.toMatch(/padding-(?:left|right)\s*:/);
+    expect(norm(css)).not.toContain("@media(min-width:1024px){.eb-projects-hub");
+  });
+  it("does not touch the sidebar, the navigation or the shell wrapper (so no double spacing)", () => {
+    expect(css).not.toContain(".eb-sidebar");
+    expect(css).not.toContain(".eb-nav");
+    expect(css).not.toContain("--eb-sidebar-w");
+    expect(css).not.toContain(".eb-shell-content");
   });
 });
 

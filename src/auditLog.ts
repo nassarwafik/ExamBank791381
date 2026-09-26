@@ -70,3 +70,20 @@ export function filterAuditEvents(events: AuditEvent[], filter: AuditFilter = {}
     return true;
   });
 }
+
+/** Phase 8B — the activity surface shows the NEWEST 30 records by default. */
+export const AUDIT_VISIBLE_LIMIT = 30;
+
+/**
+ * The newest `limit` events, newest first (the existing display order). Sorted by timestamp DESCENDING before the cut, so
+ * an older record can never take the place of a newer one whatever order the input arrives in; events with equal (or
+ * unparseable) timestamps keep their incoming relative order. Pure: the loaded history itself is never modified.
+ */
+export function newestAuditEvents(events: AuditEvent[], limit: number = AUDIT_VISIBLE_LIMIT): AuditEvent[] {
+  const time = (ev: AuditEvent) => { const t = Date.parse(String(ev.timestamp || "")); return Number.isFinite(t) ? t : -Infinity; };
+  return (Array.isArray(events) ? events : [])
+    .map((ev, index) => ({ ev, index, t: time(ev) }))
+    .sort((a, b) => (b.t - a.t) || (a.index - b.index))
+    .slice(0, Math.max(0, limit))
+    .map(x => x.ev);
+}

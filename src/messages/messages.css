@@ -35,6 +35,40 @@
 .eb-msg-student{ display:flex; flex-direction:column; gap:var(--eb-space-3); max-width:880px; width:100%; margin-inline:auto; min-width:0; }
 .eb-msg-title{ margin:0; color:var(--eb-text-heading); font-size:var(--eb-fs-24); font-weight:var(--eb-fw-bold); }
 
+/* ---------- Phase 8B — student messages: one light, well-spaced card (scoped to .eb-msg-student) ----------
+   A light page, a white card with inner gutters so nothing touches the page edges, clear but soft bubbles (the
+   student's own on the inline-start side = RIGHT in RTL; the teacher's opposite), the composer as the card footer.
+   Presentation only: the same tabs / tabpanel / thread / composer markup, roles and labels as before. */
+.eb-msg-surface{ background:var(--eb-surface-2); box-sizing:border-box; padding-inline:var(--eb-space-3); padding-block:var(--eb-space-3) var(--eb-space-6); }
+@media (min-width: 600px){ .eb-msg-surface{ padding-inline:var(--eb-space-5); padding-block-start:var(--eb-space-4); } }
+.eb-msg-surface-bar{ max-width:880px; width:100%; margin-inline:auto; }
+.eb-msg-student-head{ display:flex; flex-wrap:wrap; align-items:baseline; justify-content:space-between; gap:var(--eb-space-1) var(--eb-space-3); }
+.eb-msg-student-class{ margin:0; }
+.eb-msg-student-card{
+  box-sizing:border-box; min-width:0; display:flex; flex-direction:column; overflow:hidden;
+  background:var(--eb-surface); border:1px solid var(--eb-line); border-radius:var(--eb-r-xl); box-shadow:var(--eb-sh-xs);
+}
+.eb-msg-student-card .eb-msg-tabs{ padding-inline:var(--eb-space-3); overflow-x:auto; scrollbar-width:none; }
+.eb-msg-student-card .eb-msg-tab{ flex:0 0 auto; min-height:44px; }
+.eb-msg-student-card .eb-msg-panel{ display:flex; flex-direction:column; }
+.eb-msg-student-card .eb-msg-conversation,.eb-msg-student-card .eb-msg-announcements{ gap:0; }
+.eb-msg-student-thread{ padding-block:var(--eb-space-4); padding-inline:var(--eb-space-3); background:var(--eb-surface); }
+@media (min-width: 600px){ .eb-msg-student-thread{ padding-inline:var(--eb-space-5); } }
+.eb-msg-student-thread > .eb-msg-empty{ padding-block:var(--eb-space-5); text-align:center; }
+.eb-msg-student .eb-msg{ box-sizing:border-box; max-width:min(78%, 620px); padding-block:var(--eb-space-2); padding-inline:var(--eb-space-3); border-radius:var(--eb-r-lg); box-shadow:var(--eb-sh-xs); }
+.eb-msg-student .eb-msg.is-mine{ background:var(--eb-primary-050); border-color:var(--eb-primary-100); border-start-start-radius:var(--eb-r-xs); }
+.eb-msg-student .eb-msg.is-theirs{ background:var(--eb-surface-2); border-color:var(--eb-line-2); border-start-end-radius:var(--eb-r-xs); }
+.eb-msg-student .eb-msg-time{ font-variant-numeric:tabular-nums; }
+.eb-msg-student .eb-msg-body{ font-size:var(--eb-fs-14); }
+.eb-msg-student-foot{ box-sizing:border-box; padding-block:var(--eb-space-3); padding-inline:var(--eb-space-3); border-block-start:1px solid var(--eb-line); background:var(--eb-surface); }
+@media (min-width: 600px){ .eb-msg-student-foot{ padding-inline:var(--eb-space-5); } }
+.eb-msg-student-foot .eb-msg-input{ border-radius:var(--eb-r-lg); background:var(--eb-surface-2); padding-inline:var(--eb-space-3); }
+.eb-msg-student-foot .eb-msg-input:focus-visible{ background:var(--eb-surface); }
+.eb-msg-student-foot .eb-msg-composer-row .eb-button{ min-height:44px; padding-inline:var(--eb-space-4); }
+.eb-msg-student-note{ margin:0; padding-block:var(--eb-space-3); padding-inline:var(--eb-space-3); border-block-start:1px solid var(--eb-line); font-size:var(--eb-fs-13); }
+@media (min-width: 600px){ .eb-msg-student-note{ padding-inline:var(--eb-space-5); } }
+@media (max-width: 599.98px){ .eb-msg-student .eb-msg{ max-width:88%; } .eb-msg-student-card{ border-radius:var(--eb-r-lg); } }
+
 /* Phase 5D — unread indicators (always a TEXT count; colour is only an accent). */
 .eb-msg-unread,.eb-msg-tab-badge{ display:inline-flex; align-items:center; white-space:nowrap; font-size:var(--eb-fs-12); font-weight:var(--eb-fw-semibold); padding:0 var(--eb-space-2); border-radius:var(--eb-pill); background:var(--eb-primary-050); color:var(--eb-primary-strong); border:1px solid var(--eb-primary); }
 .eb-msg-tab-badge{ margin-inline-start:var(--eb-space-1); }

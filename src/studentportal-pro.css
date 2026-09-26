@@ -143,6 +143,9 @@
 .eb-sp-share{ display:inline-flex; align-items:center; gap:var(--eb-space-2); color:var(--eb-text-secondary); font-size:var(--eb-fs-13); cursor:pointer; }
 .eb-sp-share input{ margin:0; }
 .eb-sp-feed-list{ list-style:none; margin:0; padding:0; display:flex; flex-direction:column; gap:var(--eb-space-3); }
+/* Phase 8B — the feed opens on the newest 10; «عرض المزيد» reveals the next 10 already loaded. */
+.eb-sp-feed-more{ display:flex; flex-wrap:wrap; align-items:center; justify-content:space-between; gap:var(--eb-space-2); padding-block-start:var(--eb-space-3); border-block-start:1px solid var(--eb-line); }
+.eb-sp-feed-more .eb-button{ min-height:44px; }
 .eb-sp-feed-item{ display:flex; gap:var(--eb-space-3); min-width:0; padding:var(--eb-space-3); background:var(--eb-surface-2); border:1px solid var(--eb-line); border-radius:var(--eb-r); }
 /* Phase 6D — the post a teacher-recognition notification pointed at (focus target; tokens only). */
 .eb-sp-feed-item.is-highlighted{ border-color:var(--eb-primary); box-shadow:0 0 0 2px var(--eb-primary-050); }

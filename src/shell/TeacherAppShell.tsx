@@ -23,6 +23,12 @@ const ICONS: Record<TeacherNavId, (p: { size?: number }) => ReactNode> = {
   dashboard: IconDashboard, learning: IconBook, students: IconStudents, assignments: IconAssignments, messages: IconMail, projects: IconProjects,
   reports: IconReports, games: IconSparkles, bank: IconBank, builder: IconBuilder, import: IconUpload, audit: IconAudit
 };
+/** Phase 8B — every teacher page title carries its destination's sidebar icon (the ONE central ICONS mapping; the
+ *  icon is decorative — PageHeader hides it from assistive technology, so the <h1> text stays the only name). */
+function pageIcon(id: TeacherNavId): ReactNode {
+  const Icon = ICONS[id];
+  return <Icon size={22} />;
+}
 const DESKTOP_QUERY = "(min-width: 1024px)";
 
 type Props = {
@@ -150,7 +156,7 @@ export default function TeacherAppShell({ nav, projectReadyTotal, messageUnread,
       <div className="app-shell-main eb-shell-main">
         <PageHeader
           title={pageTitleFor(nav)}
-          icon={active === "dashboard" ? <IconDashboard size={22} /> : undefined}
+          icon={pageIcon(active)}
           breadcrumb={crumbs}
           leading={
             <IconButton

@@ -1,3 +1,4 @@
+import { useEffect, useRef, useState } from "react";
 import { REACTIONS, eventTypeOf, feedEventParts, type FeedPost, type ReactionId } from "../achievements";
 import { IconMedal } from "../icons";
 import { MEDAL_LABELS } from "../medals";
@@ -9,6 +10,7 @@ import SectionHeader from "../ui/SectionHeader";
 import StatusBadge from "../ui/StatusBadge";
 import VisuallyHidden from "../ui/VisuallyHidden";
 import { isRecent } from "./portalPresentation";
+import { FEED_PAGE, visiblePostCount } from "./achievementFeedPaging";
 
 /**
  * Class achievement feed (UX-7): newest first (server order), "جديد" for posts of the last 7 days, the student's
@@ -43,14 +45,36 @@ function EventIcon({ post }: { post: FeedPost }) {
 }
 
 export default function AchievementFeed({ posts, error, shareOn, shareSaving, now, onToggleShare, onReact, highlightPostId }: Props) {
+  // Owned by this panel, so a silent refresh (new `posts` array) keeps whatever the student expanded.
+  const [requested, setRequested] = useState(FEED_PAGE);
+  const highlightIndex = highlightPostId ? posts.findIndex(p => p.postId === highlightPostId) : -1;
+  const count = visiblePostCount(posts.length, requested, highlightIndex);
+  const shown = posts.slice(0, count);
+  // Once a notification revealed a post, keep it revealed even after the highlight is cleared (no sudden collapse).
+  // Adjusting state while rendering (React's "store information from previous renders" pattern) — no extra effect pass.
+  if (count > requested) setRequested(count);
+  const remaining = posts.length - count;
+  // After «عرض المزيد», keyboard focus moves to the first newly revealed post (never lost on the removed button).
+  const focusFrom = useRef<number | null>(null);
+  useEffect(() => {
+    if (focusFrom.current === null) return;
+    const post = shown[focusFrom.current];
+    focusFrom.current = null;
+    if (post) document.getElementById("eb-sp-post-" + post.postId)?.focus();
+  });
+  function showMore() {
+    focusFrom.current = count;
+    setRequested(count + FEED_PAGE);
+  }
   return (
     <section className="eb-sp-panel eb-sp-feed" aria-labelledby="eb-sp-feed-title">
       <SectionHeader level={2} id="eb-sp-feed-title" title="إنجازات الصف" description="أحدث الإنجازات والتقدّم في صفك"
         actions={<label className="eb-sp-share"><input type="checkbox" checked={shareOn} disabled={shareSaving} onChange={onToggleShare} />شارك إنجازاتي مع الصف</label>} />
       {error && <div className="platform-error" role="alert">{error}</div>}
       {posts.length ? (
+        <>
         <ul className="eb-sp-feed-list">
-          {posts.map(post => {
+          {shown.map(post => {
             const teacher = post.teacherReaction ? REACTIONS.find(r => r.id === post.teacherReaction) : null;
             return (
               <li key={post.postId}>
@@ -84,6 +108,13 @@ export default function AchievementFeed({ posts, error, shareOn, shareSaving, no
             );
           })}
         </ul>
+        {remaining > 0 && (
+          <div className="eb-sp-feed-more">
+            <span className="eb-muted">يُعرض {count} من {posts.length}</span>
+            <button type="button" className="eb-button is-quiet" onClick={showMore}>عرض المزيد</button>
+          </div>
+        )}
+        </>
       ) : (
         <EmptyState compact title="لا توجد إنجازات بعد" description="عندما يحقق أحد طلاب الصف إنجازًا سيظهر هنا." />
       )}
