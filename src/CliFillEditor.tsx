@@ -41,7 +41,7 @@ export default function CliFillEditor({ question, onChange, disabled }: Props) {
           <div className="sb-cli-field-row" key={f.id}>
             <code className="sb-code-chip">[[{f.id}]]</code>
             <input className="sb-input sb-input-sm" value={f.correct === undefined ? "" : String(f.correct)} placeholder="الإجابة الصحيحة" onChange={e => patchField(f.id, { correct: e.target.value })} disabled={disabled} />
-            <button type="button" className="sb-icon-btn sb-danger" title="حذف الحقل" onClick={() => removeField(f.id)} disabled={disabled}>×</button>
+            <button type="button" className="sb-icon-btn sb-danger" title="حذف الحقل" aria-label="حذف الحقل" onClick={() => removeField(f.id)} disabled={disabled}>×</button>
           </div>
         ))}
       </div>

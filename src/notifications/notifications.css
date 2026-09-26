@@ -21,13 +21,16 @@
 
 .eb-notif-head{ display:flex; align-items:center; justify-content:space-between; gap:var(--eb-space-2); padding:var(--eb-space-3) var(--eb-space-4); border-block-end:1px solid var(--eb-line); }
 .eb-notif-title{ margin:0; font-size:var(--eb-fs-16); font-weight:var(--eb-fw-bold); color:var(--eb-text-heading); }
-.eb-notif-head-action{ font:inherit; font-size:var(--eb-fs-13); font-weight:var(--eb-fw-semibold); color:var(--eb-primary-strong); background:transparent; border:0; border-radius:var(--eb-r-sm); padding:var(--eb-space-1) var(--eb-space-2); cursor:pointer; }
+/* Phase 8E-7 — the header action measured 23px tall: ≥36px hit area whose extra block size is absorbed by negative
+   block margins, so the header keeps its height and the type size is unchanged. */
+.eb-notif-head-action{ font:inherit; font-size:var(--eb-fs-13); font-weight:var(--eb-fw-semibold); color:var(--eb-primary-strong); background:transparent; border:0; border-radius:var(--eb-r-sm); padding:var(--eb-space-1) var(--eb-space-2); min-height:36px; margin-block:calc(-1 * var(--eb-space-2)); cursor:pointer; }
 .eb-notif-head-action:hover{ background:var(--eb-primary-050); }
 .eb-notif-head-action:focus-visible,.eb-notif-item:focus-visible,.eb-notif-retry:focus-visible{ outline:2px solid var(--eb-primary); outline-offset:-2px; }
 
 .eb-notif-status,.eb-notif-error{ margin:0; padding:var(--eb-space-2) var(--eb-space-4); font-size:var(--eb-fs-13); color:var(--eb-muted); }
 .eb-notif-error{ display:flex; flex-wrap:wrap; align-items:center; gap:var(--eb-space-2); color:var(--eb-danger-tx); background:var(--eb-danger-bg); }
-.eb-notif-retry{ font:inherit; font-size:var(--eb-fs-12); background:var(--eb-surface); color:var(--eb-text); border:1px solid var(--eb-line-2); border-radius:var(--eb-pill); padding:0 var(--eb-space-2); cursor:pointer; }
+/* Phase 8E-7 — the retry pill measured 16px tall: ≥36px hit area (the error strip grows accordingly). */
+.eb-notif-retry{ font:inherit; font-size:var(--eb-fs-12); background:var(--eb-surface); color:var(--eb-text); border:1px solid var(--eb-line-2); border-radius:var(--eb-pill); padding:0 var(--eb-space-3); min-height:36px; cursor:pointer; }
 
 .eb-notif-empty{ display:flex; flex-direction:column; align-items:center; gap:var(--eb-space-2); padding:var(--eb-space-6, 28px) var(--eb-space-4); color:var(--eb-muted); text-align:center; }
 .eb-notif-empty p{ margin:0; font-size:var(--eb-fs-14); }
@@ -66,6 +69,12 @@
 .eb-notif-time{ font-size:var(--eb-fs-12); color:var(--eb-faint, var(--eb-muted)); }
 
 /* Phones (the top bar stacks): the bell keeps its icon + badge only, the panel becomes a full-width sheet. */
+/* Phase 8E-7 — phone touch targets (≥ 44 px) for the panel's two text actions (same breakpoint as UX-8a). */
+@media (max-width: 767px){
+  .eb-notif-head-action,
+  .eb-notif-retry{ min-height:44px; }
+}
+
 @media (max-width: 720px){
   .eb-notif-bell-label{ position:absolute; width:1px; height:1px; margin:-1px; overflow:hidden; clip:rect(0 0 0 0); clip-path:inset(50%); white-space:nowrap; }
   .eb-notif-panel{ inset-inline:16px; width:auto; max-height:min(70vh, 520px); max-height:min(70dvh, 520px); }

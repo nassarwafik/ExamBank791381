@@ -351,6 +351,15 @@
   cursor: pointer;
 }
 
+/* Phase 8E-7 — phone touch targets (≥ 44 px) for the student top bar controls (bell / messages / games entries and
+   logout). Measured 30–39 px on the baseline; desktop density is unchanged (same rule shape as UX-8a in ui.css). */
+@media (max-width: 767px) {
+  .student-topbar-link,
+  .student-logout {
+    min-height: 44px;
+  }
+}
+
 .student-shell {
   padding: 28px 18px 60px;
   box-sizing: border-box;

@@ -30,7 +30,7 @@ export default function StimulusEditor({ stimuli, onChange, disabled }: Props) {
         <div className="sb-stimulus" key={id}>
           <div className="sb-row-between">
             <code className="sb-code-chip">{id}</code>
-            <button type="button" className="sb-icon-btn sb-danger" title="حذف" onClick={() => remove(id)} disabled={disabled}>×</button>
+            <button type="button" className="sb-icon-btn sb-danger" title="حذف" aria-label="حذف" onClick={() => remove(id)} disabled={disabled}>×</button>
           </div>
           <input className="sb-input" value={stim.title ?? ""} placeholder="عنوان المادة المشتركة" onChange={e => patch(id, { title: e.target.value })} disabled={disabled} />
           <textarea className="sb-input sb-textarea" value={stim.text ?? ""} placeholder="نص المادة المشتركة (مثال: اعتمد على المخطط التالي للإجابة عن الأسئلة ١١–١٤)" onChange={e => patch(id, { text: e.target.value })} disabled={disabled} />
