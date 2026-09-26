@@ -1,8 +1,13 @@
-import {useEffect,useMemo,useRef,useState} from "react";
+import {lazy,Suspense,useEffect,useMemo,useRef,useState} from "react";
 import {validIdentity} from "./students/identity";
 import AssignmentsPanel from "./AssignmentsPanel";
 import AssignmentReview from "./AssignmentReview";
-import TeacherDashboard from "./TeacherDashboard";
+import {lazyWithRetry} from "./lazyWithRetry";
+// Phase 8E-2 — the Dashboard (and with it the whole Chart.js graph) is a LAZY chunk: it is the only initial-graph consumer
+// of chart.js, so a static import shipped ~186 KB of charting code to every user (students included) before first paint.
+// lazyWithRetry keeps the one-shot stale-chunk deployment recovery; the module is fetched once per page load and then
+// served from the module cache on every return to the tab. The chunk is guarded by scripts/check-bundle-budget.mjs.
+const TeacherDashboard=lazy(lazyWithRetry(()=>import("./TeacherDashboard"),"teacher-dashboard"));
 import AuditHistoryPanel from "./AuditHistoryPanel";
 import {parseBulkStudents} from "./bulkStudentsParse";
 import {normalizeClassStatus} from "./classLifecycle";
@@ -721,7 +726,9 @@ function TeacherPlatform(props:TeacherPlatformProps){
  function toggleSort(key:SortKey){if(sortKey===key)setSortAsc(x=>!x);else{setSortKey(key);setSortAsc(true)}}
  function openImportDialog(){setBulkStudents([]);setBulkErrors([]);setImportPreview([]);setBulkFileName("");setDialog("import")}
 
- if(workspaceTab==="dashboard")return <section className="teacher-platform" dir="rtl"><div className="teacher-platform-inner"><TeacherDashboard token={token}/></div></section>;
+ // The Suspense boundary wraps ONLY the dashboard body: the teacher shell, sidebar and this workspace wrapper stay mounted
+ // while the chunk loads, and the fallback is a local status line inside the same inner container (never a blank page).
+ if(workspaceTab==="dashboard")return <section className="teacher-platform" dir="rtl"><div className="teacher-platform-inner"><Suspense fallback={<p className="eb-muted" role="status">جارٍ تحميل لوحة المتابعة...</p>}><TeacherDashboard token={token}/></Suspense></div></section>;
  if(workspaceTab==="audit")return <AuditHistoryPanel token={token}/>;
  if(workspaceTab==="assignments")return <section className="teacher-platform" dir="rtl"><div className="teacher-platform-inner"><AssignmentsPanel token={token} classes={classes} currentExam={currentExam} onCopyLibraryExamToBuilder={onCopyLibraryExamToBuilder}/></div></section>;
 

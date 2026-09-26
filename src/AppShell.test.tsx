@@ -78,7 +78,8 @@ describe("UX-2 App + TeacherAppShell integration", () => {
     fireEvent.click(nav("سجل النشاط"));
     expect(h1()).toBe("سجل النشاط"); expect(await screen.findByRole("heading", { level: 2, name: "سجل النشاط" })).toBeTruthy();
     fireEvent.click(nav("لوحة المتابعة"));
-    expect(h1()).toBe("لوحة المتابعة"); expect(document.querySelector(".analytics-loading, .analytics-dashboard, .platform-error")).toBeTruthy();
+    // Phase 8E-2: the Dashboard body is a lazy chunk — the shell title is immediate, the surface arrives once it resolves.
+    expect(h1()).toBe("لوحة المتابعة"); await waitFor(() => expect(document.querySelector(".analytics-loading, .analytics-dashboard, .platform-error")).toBeTruthy());
     fireEvent.click(nav("التقارير"));
     expect(h1()).toBe("التقارير"); expect(await screen.findByRole("group", { name: "تصنيف التقارير" })).toBeTruthy(); // ReportsCenter hub (no hero)
     fireEvent.click(nav("استيراد من ملف"));
