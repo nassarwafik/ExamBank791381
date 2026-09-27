@@ -115,7 +115,7 @@ export default function StudentPortal({ token, displayName, onLogout }: Props) {
       dashApplied.current = seq;
       setData({ student: j.student, classroom: j.classroom || null, assignments: j.assignments || [], stats: j.stats, strength: normalizeStrength(j.strength), recognition: normalizeRecognition(j.recognition), study: j.study && typeof j.study === "object" ? { lastActivity: j.study.lastActivity || null } : undefined });
       if (silent) setError("");   // a successful background refresh clears any stale error banner
-    } catch (e) { if (!silent) setError(e instanceof Error ? e.message : "تعذر تحميل الصفحة."); }   // silent failure: keep last-good data, no flicker
+    } catch (e) { if (!silent && seq >= dashApplied.current) setError(e instanceof Error ? e.message : "تعذر تحميل الصفحة."); }   // silent failure: keep last-good data, no flicker; a superseded load's failure is not reported over newer data
     finally { if (!silent) setLoading(false); }
   }
   // OPTIONAL/auxiliary panel. Its failure — including a 401 — must NEVER end the authenticated session:

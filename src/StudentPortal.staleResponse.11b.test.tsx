@@ -54,6 +54,35 @@ describe("StudentPortal — an older dashboard response never overwrites a newer
     expect(screen.queryByText(/جارٍ تحميل حسابك/)).toBeNull();                     // A's loading flag still cleared
     expect(onLogout).not.toHaveBeenCalled();
   });
+  it("an OLDER load that REJECTS (network / unreadable body) after a newer one was applied leaves no error banner over the newer data", async () => {
+    let fail!: () => void;
+    const gate = new Promise<void>(r => { fail = r; });
+    script = [() => gate.then(() => { throw new TypeError("Failed to fetch"); }), () => Promise.resolve(res(200, dash("صف-جديد")))];
+    render(<StudentPortal token="valid" displayName="أحمد" onLogout={vi.fn()} />);
+    await vi.waitFor(() => expect(dashboardCalls).toBe(1));                       // A (the initial, non-silent load) in flight
+    await act(async () => { window.dispatchEvent(new Event("focus")); });        // B starts beside A and wins
+    expect((await screen.findAllByText(/صف-جديد/)).length).toBeGreaterThan(0);
+    await act(async () => { fail(); await new Promise(r => setTimeout(r, 30)); });
+    expect(screen.queryByRole("alert")).toBeNull();                                // the stale failure is not reported over newer data
+    expect(screen.getAllByText(/صف-جديد/).length).toBeGreaterThan(0);
+    expect(screen.queryByText(/جارٍ تحميل حسابك/)).toBeNull();                     // its loading flag is still cleared
+  });
+  it("a failing load that is NOT stale still shows its error (the banner is only suppressed for superseded loads)", async () => {
+    script = [() => Promise.reject(new TypeError("Failed to fetch"))];
+    render(<StudentPortal token="valid" displayName="أحمد" onLogout={vi.fn()} />);
+    expect(await screen.findByRole("alert")).toBeTruthy();
+  });
+  it("the NEWER load fails and the older one succeeds → the older data is shown (last-good), no banner from the silent failure", async () => {
+    const A = held(() => res(200, dash("صف-أقدم")));
+    script = [A.responder, () => Promise.resolve(res(500, { ok: false, error: "خطأ مؤقت" }))];
+    render(<StudentPortal token="valid" displayName="أحمد" onLogout={vi.fn()} />);
+    await vi.waitFor(() => expect(dashboardCalls).toBe(1));
+    await act(async () => { window.dispatchEvent(new Event("focus")); });
+    await vi.waitFor(() => expect(dashboardCalls).toBe(2));
+    await act(async () => { A.release(); await new Promise(r => setTimeout(r, 30)); });
+    expect((await screen.findAllByText(/صف-أقدم/)).length).toBeGreaterThan(0);
+    expect(screen.queryByRole("alert")).toBeNull();
+  });
   it("the in-order case is unchanged: a later response that arrives last is applied", async () => {
     script = [() => Promise.resolve(res(200, dash("صف-أول"))), () => Promise.resolve(res(200, dash("صف-ثانٍ")))];
     render(<StudentPortal token="valid" displayName="أحمد" onLogout={vi.fn()} />);
