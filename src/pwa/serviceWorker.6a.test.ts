@@ -131,13 +131,16 @@ describe("Web App Manifest + icons + Apple metadata", () => {
     expect(JSON.stringify(manifest)).not.toMatch(/"\/|https?:/);                  // no absolute paths or hosts
   });
 
-  it("icons: 192 + 512 (any) and 192 + 512 (maskable), real PNGs of the declared size, small", () => {
+  it("icons: 192 + 512 (any) and 192 + 512 (maskable), real PNGs of the declared size, bounded in weight", () => {
     const want = [["192x192", "any"], ["512x512", "any"], ["192x192", "maskable"], ["512x512", "maskable"]];
     expect(manifest.icons.map((i: { sizes: string; purpose: string }) => [i.sizes, i.purpose])).toEqual(want);
+    // Phase 10B — the official app icon is a rich raster (gradients, glow), so the per-file budget is per size instead of
+    // the old flat 20 KB: 192px ≤ 96 KB (also the in-app brand mark, fetched once and cached), 512px ≤ 360 KB (install only).
+    const budget = (sizes: string) => (sizes === "512x512" ? 360000 : 96000);
     for (const icon of manifest.icons) {
       expect(icon.type).toBe("image/png");
       expect(pngSize(icon.src).join("x")).toBe(icon.sizes);
-      expect(readFileSync(resolve(ROOT, "public", icon.src)).length).toBeLessThan(20000);
+      expect(readFileSync(resolve(ROOT, "public", icon.src)).length, icon.src).toBeLessThan(budget(icon.sizes));
     }
     expect(pngSize("pwa/apple-touch-icon.png")).toEqual([180, 180]);
   });

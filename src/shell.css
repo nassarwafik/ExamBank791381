@@ -49,7 +49,7 @@
 .eb-brand { display: flex; align-items: center; gap: var(--eb-space-2); min-width: 0; }
 /* Phase 10A — the brand mark is the shared BrandMark SVG (its own tile + colours), so the wrapper only sizes it. */
 .eb-brand-mark { flex: 0 0 auto; width: 36px; height: 36px; display: inline-flex; border-radius: var(--eb-r-sm); overflow: hidden; }
-.eb-brand-mark svg { display: block; width: 100%; height: 100%; }
+.eb-brand-mark img { display: block; width: 100%; height: 100%; object-fit: cover; }
 .eb-brand-text { display: flex; flex-direction: column; font-weight: var(--eb-fw-semibold); font-size: var(--eb-fs-14); line-height: var(--eb-lh-tight); white-space: nowrap; }
 .eb-brand-text small { color: var(--eb-nav-text-muted); font-weight: var(--eb-fw-medium); font-size: var(--eb-fs-12); }
 

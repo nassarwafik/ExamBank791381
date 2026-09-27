@@ -3,10 +3,12 @@
    Teacher-only. Token-only (--eb-*), RTL-first, no logic.
    Breakpoints align with the shell: 768 / 1024 / 1280.
    ============================================================ */
+/* Phase 10B — the bank never sits flush against the sidebar rail NOR the screen edge: ONE symmetric logical gutter on
+   both inline sides at every width (16px, 24px from 768px), the same policy Projects (8B) and Reports (10A) use. The
+   shell content wrapper stays padding-free, so this is never double spacing. Logical properties only (RTL-safe). */
+.eb-bank{ padding-inline:var(--eb-space-4); box-sizing:border-box; min-width:0; }
+@media (min-width:768px){ .eb-bank{ padding-inline:var(--eb-space-5); } }
 .eb-bank{ display:flex; flex-direction:column; gap:var(--eb-space-5); min-width:0; }
-/* Desktop: keep the page content clear of the fixed sidebar rail (RTL-safe logical padding). Below 1024px the
-   sidebar is an off-canvas drawer, so no side gutter is added there. */
-@media (min-width:1024px){ .eb-bank{ padding-inline-start:var(--eb-space-4); } }
 .eb-bank-intro{ margin:0; color:var(--eb-muted); font-size:var(--eb-fs-13); line-height:var(--eb-lh-body); }
 .eb-bank-actions{ display:flex; flex-wrap:wrap; gap:var(--eb-space-2); }
 .eb-bank-stats{ display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:var(--eb-space-3); }

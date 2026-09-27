@@ -42,7 +42,7 @@
   flex:0 0 auto; width:52px; height:52px; display:inline-flex; border-radius:16px; overflow:hidden;
   box-shadow:0 14px 28px -14px rgba(37,99,235,.9);
 }
-.auth-logo svg{ display:block; width:100%; height:100%; }
+.auth-logo img{ display:block; width:100%; height:100%; object-fit:cover; }
 .auth-logo-text{ font-weight:800; font-size:15px; letter-spacing:.3px; line-height:1.25; }
 .auth-logo-text small{ display:block; color:#9fb4d8; font-weight:600; font-size:12px; }
 

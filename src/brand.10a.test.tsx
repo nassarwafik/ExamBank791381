@@ -1,9 +1,9 @@
 // @vitest-environment happy-dom
 /// <reference types="node" />
-// Phase 10A — login hero redesign, brand icon refresh, reports spacing polish.
-//  • BrandMark: one shared SVG mark (decorative, sized by prop, unique gradient id per instance, tile optional).
-//  • Icon set: favicon.svg + public/pwa PNGs carry the SAME artwork; index.html links the SVG and a 32px PNG fallback;
-//    the manifest keeps its four icons; every PNG is real, of the declared size and under the 6A size budget.
+// Phase 10A — login hero redesign, brand icon refresh, reports spacing polish; Phase 10B — the OFFICIAL raster icon.
+//  • BrandMark: the shared official icon file (decorative <img>, sized by prop, square on demand).
+//  • Icon set: public/pwa PNGs rendered from the one approved artwork; index.html links PNG favicons (32/16/192) and the
+//    Apple touch icon; the manifest keeps its four icons; every PNG is real, of the declared size and within its budget.
 //  • Brand mark wiring: the teacher sidebar, the student top bar and the login hero render BrandMark — no "EB" text tile.
 //  • Login hero: masked (fading) constellation, brand row, kicker / headline / lead / three points, the two role chips
 //    (their accessible text unchanged), the form untouched; CSS stays RTL-safe, no animation added, phone banner compact.
@@ -13,7 +13,7 @@ import { render, cleanup, screen, within } from "@testing-library/react";
 import { readFileSync, existsSync } from "fs";
 import { resolve, dirname } from "path";
 import { fileURLToPath } from "url";
-import BrandMark from "./ui/BrandMark";
+import BrandMark, { BRAND_ICON_SRC } from "./ui/BrandMark";
 import App from "./App";
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "..");
@@ -22,56 +22,57 @@ const png = (rel: string) => { const b = readFileSync(resolve(ROOT, rel)); expec
 
 afterEach(() => { cleanup(); vi.restoreAllMocks(); });
 
-describe("BrandMark", () => {
-  it("is decorative, sized by prop, and two instances never share a gradient id", () => {
+describe("BrandMark (Phase 10B — the official raster icon)", () => {
+  it("renders the shared /pwa/icon-192.png as a decorative image, sized by prop, square on demand", () => {
     const { container } = render(<div><BrandMark size={36} /><BrandMark size={52} rounded={false} className="x" /></div>);
-    const svgs = container.querySelectorAll("svg");
-    expect(svgs.length).toBe(2);
-    for (const s of svgs) { expect(s.getAttribute("aria-hidden")).toBe("true"); expect(s.getAttribute("focusable")).toBe("false"); expect(s.getAttribute("viewBox")).toBe("0 0 512 512"); }
-    expect(svgs[0].getAttribute("width")).toBe("36"); expect(svgs[1].getAttribute("height")).toBe("52");
-    expect(svgs[1].getAttribute("class")).toBe("x");
-    const tiles = container.querySelectorAll("rect[width='512']");
-    expect(tiles[0].getAttribute("rx")).toBe("112"); expect(tiles[1].getAttribute("rx")).toBe("0");
-    const ids = Array.from(container.querySelectorAll("linearGradient")).map(g => g.id);
-    expect(new Set(ids).size).toBe(2);
-    expect(tiles[0].getAttribute("fill")).toBe("url(#" + ids[0] + ")"); expect(tiles[1].getAttribute("fill")).toBe("url(#" + ids[1] + ")");
-    expect(container.querySelectorAll("circle").length).toBe(8);                                      // (three nodes + one satellite) × 2 marks
-    expect(container.querySelectorAll("rect[rx='24']").length).toBe(6);                                // three bars per mark
-    expect(container.textContent).toBe("");                                                            // no "EB" text
+    const imgs = container.querySelectorAll("img");
+    expect(imgs.length).toBe(2);
+    for (const i of imgs) { expect(i.getAttribute("src")).toBe(BRAND_ICON_SRC); expect(i.getAttribute("alt")).toBe(""); expect(i.getAttribute("aria-hidden")).toBe("true"); }
+    expect(BRAND_ICON_SRC).toBe("/pwa/icon-192.png");
+    expect(imgs[0].getAttribute("width")).toBe("36"); expect(imgs[1].getAttribute("height")).toBe("52");
+    expect(imgs[0].className).toBe("eb-brand-icon"); expect(imgs[1].className).toBe("eb-brand-icon is-square x");
+    expect(container.querySelector("svg")).toBeNull();                                                 // no drawn fallback: one artwork everywhere
+    expect(container.textContent).toBe("");
   });
 });
 
-describe("icon set + wiring", () => {
-  it("favicon.svg carries the BrandMark artwork (tile, three bars, four nodes) and index.html links it plus a 32px PNG fallback", () => {
-    const svg = read("public/favicon.svg");
-    expect(svg).toContain('rx="112"');
-    expect((svg.match(/<rect x="198" /g) || []).length).toBe(3);
-    expect((svg.match(/<circle /g) || []).length).toBe(4);
-    expect(svg).not.toMatch(/EB|<text/);
+describe("icon set + wiring (Phase 10B)", () => {
+  it("index.html links the PNG favicons (32 / 16 / 192) and the Apple touch icon; the SVG favicon is gone", () => {
     const html = read("index.html");
-    expect(html).toContain('<link rel="icon" type="image/svg+xml" href="/favicon.svg" />');
     expect(html).toContain('<link rel="icon" type="image/png" sizes="32x32" href="/pwa/favicon-32.png" />');
+    expect(html).toContain('<link rel="icon" type="image/png" sizes="16x16" href="/pwa/favicon-16.png" />');
+    expect(html).toContain('<link rel="icon" type="image/png" sizes="192x192" href="/pwa/icon-192.png" />');
     expect(html).toContain('<link rel="apple-touch-icon" href="/pwa/apple-touch-icon.png" />');
+    expect(html).not.toContain("favicon.svg");
+    expect(existsSync(resolve(ROOT, "public/favicon.svg"))).toBe(false);
   });
-  it("public/pwa holds the full refreshed set at the declared sizes, each under the 6A budget; the manifest still lists its four icons", () => {
-    const want: Record<string, number> = { "icon-192.png": 192, "icon-512.png": 512, "icon-maskable-192.png": 192, "icon-maskable-512.png": 512, "apple-touch-icon.png": 180, "favicon-32.png": 32 };
-    for (const [name, size] of Object.entries(want)) {
+  it("public/pwa holds the full official set at the declared sizes, every file a real PNG within its budget; the manifest still lists its four icons", () => {
+    const want: Record<string, [number, number]> = { "icon-192.png": [192, 96000], "icon-512.png": [512, 360000], "icon-maskable-192.png": [192, 96000], "icon-maskable-512.png": [512, 360000], "apple-touch-icon.png": [180, 96000], "favicon-32.png": [32, 8000], "favicon-16.png": [16, 3000] };
+    for (const [name, [size, budget]] of Object.entries(want)) {
       const p = png("public/pwa/" + name);
       expect([p.w, p.h], name).toEqual([size, size]);
-      expect(p.bytes, name).toBeLessThan(20000);
+      expect(p.bytes, name).toBeLessThan(budget);
     }
     const manifest = JSON.parse(read("public/manifest.webmanifest"));
     expect(manifest.icons.map((i: { src: string }) => i.src)).toEqual(["pwa/icon-192.png", "pwa/icon-512.png", "pwa/icon-maskable-192.png", "pwa/icon-maskable-512.png"]);
     for (const i of manifest.icons) expect(existsSync(resolve(ROOT, "public", i.src))).toBe(true);
+    expect(read("public/sw.js")).toContain('"pwa/icon-192.png"');                                      // push notifications keep the same file
   });
-  it("the teacher sidebar, the student top bar and the login hero render BrandMark instead of an 'EB' text tile", () => {
+  it("the 'any' icons and favicons have transparent rounded corners; the maskable icons are full-bleed opaque", () => {
+    // colour type 6 = RGBA (transparent corners around the tile), 2 = RGB (full-bleed, safe-zone padding baked in)
+    const colourType = (rel: string) => readFileSync(resolve(ROOT, rel))[25];
+    for (const f of ["icon-192.png", "icon-512.png", "favicon-32.png", "favicon-16.png"]) expect(colourType("public/pwa/" + f), f).toBe(6);
+    for (const f of ["icon-maskable-192.png", "icon-maskable-512.png", "apple-touch-icon.png"]) expect(colourType("public/pwa/" + f), f).toBe(2);
+  });
+  it("the teacher sidebar, the student top bar and the login hero render BrandMark (the same file) instead of an 'EB' text tile", () => {
     for (const f of ["src/shell/TeacherAppShell.tsx", "src/shell/StudentShell.tsx", "src/App.tsx"]) {
       const src = read(f);
       expect(src, f).toContain("<BrandMark size={");
       expect(src, f).not.toMatch(/aria-hidden="true">EB</);
     }
-    expect(read("src/shell.css")).toContain(".eb-brand-mark svg { display: block; width: 100%; height: 100%; }");
-    expect(read("src/platform.css")).toContain(".student-logo svg { display: block; width: 100%; height: 100%; }");
+    expect(read("src/shell.css")).toContain(".eb-brand-mark img { display: block; width: 100%; height: 100%; object-fit: cover; }");
+    expect(read("src/platform.css")).toContain(".student-logo img { display: block; width: 100%; height: 100%; object-fit: cover; }");
+    expect(read("src/login-pro.css").replace(/\s+/g, "")).toContain(".auth-logoimg{display:block;width:100%;height:100%;object-fit:cover;}");
   });
 });
 
@@ -87,7 +88,7 @@ describe("login hero (Phase 10A)", () => {
     expect(document.querySelector('input[type="password"]')).toBeTruthy();
     const hero = document.querySelector(".auth-brand") as HTMLElement;
     expect(hero).toBeTruthy();
-    expect(hero.querySelector(".auth-logo svg[aria-hidden='true']")).toBeTruthy();                     // BrandMark, decorative
+    expect((hero.querySelector(".auth-logo img[aria-hidden='true']") as HTMLImageElement).getAttribute("src")).toBe(BRAND_ICON_SRC);   // BrandMark, decorative
     expect(hero.textContent).not.toMatch(/\bEB\b/);
     const net = hero.querySelector("svg.auth-net") as SVGSVGElement;
     expect(net.getAttribute("aria-hidden")).toBe("true");
