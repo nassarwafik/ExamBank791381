@@ -249,3 +249,10 @@
 @media (min-width: 768px){
   .eb-eval-focus-next{ min-height:38px; }
 }
+
+/* ---------- Phase 9F — evaluation queue navigation inside the focus banner ---------- */
+.eb-eval-queue-nav{ display:inline-flex; flex-wrap:wrap; gap:var(--eb-space-2); margin-inline-start:auto; }
+.eb-eval-queue-nav .eb-button{ min-height:44px; }
+@media (min-width: 768px){
+  .eb-eval-queue-nav .eb-button{ min-height:38px; }
+}
