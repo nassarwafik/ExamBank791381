@@ -154,7 +154,9 @@ describe("UX-7a StudentPortal — hierarchy and the primary section", () => {
     expect(document.querySelector(".eb-sp h1")).toBeNull();
     const h2s = Array.from(document.querySelectorAll(".eb-sp h2")).map(h => h.textContent?.replace(/\d+$/, "").trim());
     // Phase 9A — the Today Hub («أكمل من حيث توقفت») sits right after the identity card, before the actionable list.
-    expect(h2s).toEqual(["مرحبًا أحمد", "أكمل من حيث توقفت", "ماذا عليّ أن أفعل الآن؟", "موادي التعليمية", "تقدّمي وقوتي", "المهام والواجبات", "مشاريعي", "إنجازات الصف"]);   // the games cards are NOT a permanent dashboard section
+    // Phase 10C — the quiet «تثبيت ExamBank» card is present in a browser with no native install prompt (this test
+    // browser) and sits in the 6A slot after the actionable list; it is optional UI, not a dashboard section.
+    expect(h2s).toEqual(["مرحبًا أحمد", "أكمل من حيث توقفت", "ماذا عليّ أن أفعل الآن؟", "تثبيت ExamBank", "موادي التعليمية", "تقدّمي وقوتي", "المهام والواجبات", "مشاريعي", "إنجازات الصف"]);   // the games cards are NOT a permanent dashboard section
     expect(document.querySelector(".eb-sp .eb-games-hub, .eb-sp .eb-game-cards")).toBeNull();       // no inline games grid on the dashboard
     expect(screen.getByLabelText(/مرحبًا أحمد/).textContent).toContain("الصف · 11 · 2026");          // identity: class · grade · school year
     expect(screen.getByLabelText(/مرحبًا أحمد/).textContent).toContain("C1");
@@ -251,7 +253,8 @@ describe("UX-7a StudentPortal — projects (read-only, presentation on the share
     const logout = vi.fn();
     render(<StudentPortal token="t" displayName="أحمد" onLogout={logout} />);
     await screen.findByText(/مرحبًا أحمد/);
-    await waitFor(() => expect(screen.queryByRole("status")).toBeNull());
+    // no lingering status message (the install card's always-present, EMPTY live region is not a message — Phase 10C)
+    await waitFor(() => expect(screen.queryAllByRole("status").filter(el => el.textContent !== "")).toEqual([]));
     expect(screen.queryByRole("region", { name: "مشاريعي" })).toBeNull();
     expect(logout).not.toHaveBeenCalled();
   });
