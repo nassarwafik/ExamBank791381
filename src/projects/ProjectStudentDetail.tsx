@@ -35,6 +35,9 @@ type Props = {
   onEvaluationComplete?: () => void;
   /** Phase 9G — «العودة إلى لوحة اليوم» from the final-session panel (App ends the session; never automatic). */
   onEvaluationQueueFinish?: () => void;
+  /** 9G review — «العودة إلى آخر طالب في الجلسة»: shown only when this item is NOT the terminal one, the terminal item
+   * is completed, and no next item is eligible (skip-completed left nothing after us). Never changes next/previous. */
+  onEvaluationQueueReturnToTerminal?: () => void;
 };
 
 type UpdateResponse = {
@@ -87,7 +90,7 @@ const studentsWord = (n: number) => (n === 1 ? "طالب واحد" : n === 2 ? "
 const sessionDoneText = (completed: number, total: number) => "تم تقييم " + completed + " من " + total + " " + (total === 1 ? "طالب" : "طلاب") + " في هذه الجلسة.";
 const sessionRemainingText = (remaining: number) => (remaining === 0 ? "اكتمل تقييم جميع الطلاب في قائمة هذه الجلسة." : "بقي " + studentsWord(remaining) + " في القائمة لم يُسجَّل اكتمال تقييمهم خلال هذه الجلسة.");
 
-export default function ProjectStudentDetail({ token, projectCode, classId, studentId, tracks, onBack, onChanged, onReadyChanged, evaluationFocusSeq = 0, evaluationQueue = null, onEvaluationQueueMove, onEvaluationComplete, onEvaluationQueueFinish }: Props) {
+export default function ProjectStudentDetail({ token, projectCode, classId, studentId, tracks, onBack, onChanged, onReadyChanged, evaluationFocusSeq = 0, evaluationQueue = null, onEvaluationQueueMove, onEvaluationComplete, onEvaluationQueueFinish, onEvaluationQueueReturnToTerminal }: Props) {
   const [detail, setDetail] = useState<StudentDetail | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -316,15 +319,21 @@ export default function ProjectStudentDetail({ token, projectCode, classId, stud
             <span className="eb-eval-queue-nav" role="group" aria-label="التنقل في قائمة التقييم">
               {evaluationQueue.previous && <button type="button" className="eb-button is-quiet is-small eb-eval-queue-prev" aria-label={"الطالب السابق في قائمة التقييم: " + evaluationQueue.previous.displayName} onClick={() => onEvaluationQueueMove?.(-1)}>الطالب السابق</button>}
               {evaluationQueue.next && <button type="button" className={"eb-button is-small eb-eval-queue-next" + (evaluation.ungradedStages === 0 ? " is-primary" : " is-quiet")} aria-label={"الطالب التالي في قائمة التقييم: " + evaluationQueue.next.displayName} onClick={() => onEvaluationQueueMove?.(1)}>{evaluation.ungradedStages === 0 ? "انتقل إلى الطالب التالي: " + evaluationQueue.next.displayName : "الطالب التالي"}</button>}
+              {evaluationQueue.next === null && !evaluationQueue.isTerminalItem && evaluationQueue.terminalCompleted && (
+                // 9G review — the completed terminal item is skipped by next/previous, so it needs its own way back.
+                <button type="button" className={"eb-button is-small eb-eval-queue-terminal" + (evaluation.ungradedStages === 0 ? " is-primary" : " is-quiet")} aria-label={"العودة إلى آخر طالب في الجلسة: " + evaluationQueue.terminal.displayName} onClick={() => onEvaluationQueueReturnToTerminal?.()}>العودة إلى آخر طالب في الجلسة</button>
+              )}
             </span>
           )}
         </div>
       )}
-      {focusMode && evaluation && evaluationQueue && evaluationQueue.next === null && evaluation.ungradedStages === 0 && (
-        // Phase 9G — the end of the session: derived (focus mode + no next item + THIS student fully graded per the
-        // server), never stored, never automatic, reversible until the return button is pressed («الطالب السابق»
-        // above still works and hides this panel). The summary is the session's own record (queue.completed), so it
-        // never predicts students this session did not open. No autofocus here.
+      {focusMode && evaluation && evaluationQueue && evaluationQueue.isTerminalItem && evaluationQueue.currentCompleted && evaluation.ungradedStages === 0 && (
+        // Phase 9G — the end of the session: derived (focus mode + THIS item is the queue's TERMINAL item by index —
+        // never `next === null`, which only means the completed items after us were skipped — + the session has
+        // recorded this item as completed + the server says it is fully graded), never stored, never automatic,
+        // reversible until the return button is pressed («الطالب السابق» above still works and hides this panel).
+        // `currentCompleted` also keeps the counts honest: right after the last save the panel waits for App to
+        // record the completion, so it never flashes the previous total. No autofocus here.
         <section className="eb-eval-finish" role="status" aria-labelledby="eb-eval-finish-title" data-completed={evaluationQueue.summary.completed} data-total={evaluationQueue.summary.total} data-remaining={evaluationQueue.summary.remaining}>
           <h3 id="eb-eval-finish-title" className="eb-eval-finish-title">اكتملت جلسة تقييم المشاريع.</h3>
           <p className="eb-eval-finish-text">{sessionDoneText(evaluationQueue.summary.completed, evaluationQueue.summary.total)}</p>

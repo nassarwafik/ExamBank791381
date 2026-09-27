@@ -38,13 +38,15 @@ function server(seed: Record<string, unknown>) {
   }) as unknown as typeof fetch;
 }
 const item = (studentId: string, displayName = "طالب " + studentId) => ({ projectCode: "899373", classId: "c1", studentId, displayName });
-const view = (over: Partial<ProjectEvaluationQueueView> = {}): ProjectEvaluationQueueView => ({ position: 5, total: 5, previous: item("s0", "أحمد"), next: null, summary: { total: 5, completed: 3, remaining: 2 }, ...over });
+// Default: the profile IS the queue's terminal item (index-based), already recorded complete by the session.
+const view = (over: Partial<ProjectEvaluationQueueView> = {}): ProjectEvaluationQueueView => ({ position: 5, total: 5, previous: item("s0", "أحمد"), next: null, summary: { total: 5, completed: 3, remaining: 2 }, isTerminalItem: true, terminal: item("s1"), currentCompleted: true, terminalCompleted: true, ...over });
+const returnBtn = () => within(banner()!).queryByRole("button", { name: /^العودة إلى آخر طالب في الجلسة/ });
 const finish = () => document.querySelector(".eb-eval-finish") as HTMLElement | null;
 const banner = () => document.querySelector(".eb-eval-focus") as HTMLElement | null;
 const heading = (sid = "s1") => screen.findByRole("heading", { level: 2, name: "ملف المشروع: طالب " + sid });
 const flush = () => act(async () => { await new Promise(r => setTimeout(r, 0)); });
-const el = (seq: number, queue: ProjectEvaluationQueueView | null, over: Partial<{ onMove: (d: -1 | 1) => void; onComplete: () => void; onFinish: () => void; sid: string; cid: string }> = {}) =>
-  <ProjectStudentDetail token="t" projectCode="899373" classId={over.cid || "c1"} studentId={over.sid || "s1"} tracks={DEF.tracks} onBack={() => {}} evaluationFocusSeq={seq} evaluationQueue={queue} onEvaluationQueueMove={over.onMove} onEvaluationComplete={over.onComplete} onEvaluationQueueFinish={over.onFinish} />;
+const el = (seq: number, queue: ProjectEvaluationQueueView | null, over: Partial<{ onMove: (d: -1 | 1) => void; onComplete: () => void; onFinish: () => void; onTerminal: () => void; sid: string; cid: string }> = {}) =>
+  <ProjectStudentDetail token="t" projectCode="899373" classId={over.cid || "c1"} studentId={over.sid || "s1"} tracks={DEF.tracks} onBack={() => {}} evaluationFocusSeq={seq} evaluationQueue={queue} onEvaluationQueueMove={over.onMove} onEvaluationComplete={over.onComplete} onEvaluationQueueFinish={over.onFinish} onEvaluationQueueReturnToTerminal={over.onTerminal} />;
 
 beforeEach(() => {
   window.matchMedia = ((q: string) => ({ matches: false, media: q, addEventListener() {}, removeEventListener() {}, onchange: null, addListener() {}, removeListener() {}, dispatchEvent: () => false })) as unknown as typeof window.matchMedia;
@@ -60,6 +62,12 @@ describe("G1 queueSummary — pure, validated, order-free", () => {
     expect(queueSummary({ ...q, completed: [] })).toEqual({ total: 5, completed: 0, remaining: 5 });
     expect(queueSummary({ ...q, completed: items.map(i => "899373|c1|" + i.studentId) })).toEqual({ total: 5, completed: 5, remaining: 0 });
     expect(queueView(q)!.summary).toEqual({ total: 5, completed: 2, remaining: 3 });
+    // 9G review — explicit end-of-queue facts, derived from the REAL queue (index + completed), independent of next/previous.
+    expect(queueView(q)).toMatchObject({ isTerminalItem: true, terminal: item("e"), currentCompleted: false, terminalCompleted: false, next: null });
+    const q3: ProjectEvaluationQueue = { id: 1, items, index: 2, completed: ["899373|c1|c", "899373|c1|d", "899373|c1|e"] };
+    expect(queueView(q3)).toMatchObject({ position: 3, next: null, isTerminalItem: false, terminal: item("e"), currentCompleted: true, terminalCompleted: true });   // next === null but NOT terminal
+    expect(queueView({ ...q3, completed: ["899373|c1|d"] })).toMatchObject({ next: item("e"), isTerminalItem: false, currentCompleted: false, terminalCompleted: false });   // skip-completed unchanged
+    expect(queueView({ ...q3, index: 4, completed: ["899373|c1|e"] })).toMatchObject({ isTerminalItem: true, currentCompleted: true, terminalCompleted: true, previous: item("d") });
     expect(q.items.map(i => i.studentId)).toEqual(["a", "b", "c", "d", "e"]);                        // never re-ordered
   });
 });
@@ -67,18 +75,18 @@ describe("G1 queueSummary — pure, validated, order-free", () => {
 describe("9G final-session panel", () => {
   it("G2 the LAST student still has ungraded stages → normal focus, no final panel, no return button", async () => {
     server({ [NS.progressName("c1", "s1")]: progress("c1", "s1", allButLast()) });
-    render(el(1, view()));
+    render(el(1, view({ currentCompleted: false, terminalCompleted: false })));                         // terminal item, NOT completed
     await heading();
     await waitFor(() => expect(banner()).toBeTruthy());
     await flush();
-    expect(finish()).toBeNull();
+    expect(finish()).toBeNull(); expect(returnBtn()).toBeNull();
     expect(screen.queryByRole("button", { name: /العودة إلى لوحة اليوم/ })).toBeNull();
     expect(banner()!.textContent).toContain("الطالب 5 من 5 — بقيت مرحلة واحدة بدون علامة.");
   });
   it("G3 saving the last ungraded score completes the LAST student → the final panel appears, nothing navigates, no autofocus on the return button", async () => {
     server({ [NS.progressName("c1", "s1")]: progress("c1", "s1", allButLast()) });
     const onFinish = vi.fn(), onMove = vi.fn(), onComplete = vi.fn();
-    render(el(1, view({ summary: { total: 5, completed: 4, remaining: 1 } }), { onFinish, onMove, onComplete }));
+    const v = render(el(1, view({ summary: { total: 5, completed: 4, remaining: 1 }, currentCompleted: false, terminalCompleted: false }), { onFinish, onMove, onComplete }));
     await heading();
     const last = active[active.length - 1];
     await waitFor(() => expect(document.activeElement).toBe(within(document.querySelector('[data-stage-id="' + last + '"]') as HTMLElement).getByRole("spinbutton")));
@@ -86,7 +94,12 @@ describe("9G final-session panel", () => {
     fireEvent.change(document.activeElement as HTMLInputElement, { target: { value: "80" } });
     fireEvent.click(within(document.querySelector('[data-stage-id="' + last + '"]') as HTMLElement).getByRole("button", { name: "حفظ علامة المرحلة " + last }));
     await screen.findByText("تم حفظ العلامة.");
+    await waitFor(() => expect(onComplete).toHaveBeenCalledTimes(1));                                   // the server said ungraded 0 → reported…
+    await flush();
+    expect(finish()).toBeNull();                                                                         // …but the panel WAITS for App's record (no flash of «4 من 5»)
+    v.rerender(el(1, view({ summary: { total: 5, completed: 5, remaining: 0 }, currentCompleted: true, terminalCompleted: true }), { onFinish, onMove, onComplete }));   // App recorded it
     await waitFor(() => expect(finish()).toBeTruthy());
+    expect(finish()!.textContent).toContain("تم تقييم 5 من 5 طلاب في هذه الجلسة.");
     expect(finish()!.getAttribute("role")).toBe("status");
     expect(within(finish()!).getByRole("heading", { level: 3, name: "اكتملت جلسة تقييم المشاريع." })).toBeTruthy();
     expect(onComplete).toHaveBeenCalledTimes(1);
@@ -124,11 +137,50 @@ describe("9G final-session panel", () => {
     const prev = within(banner()!).getByRole("button", { name: "الطالب السابق في قائمة التقييم: أحمد" });
     fireEvent.click(prev);
     expect(onMove).toHaveBeenCalledWith(-1);
-    v.rerender(el(1, view({ position: 4, next: item("s5", "ليان") }), { onMove }));                     // App moved: no longer the last item
-    expect(finish()).toBeNull();
+    v.rerender(el(1, view({ position: 4, next: item("s5", "ليان"), isTerminalItem: false, currentCompleted: false, terminalCompleted: false }), { onMove }));   // App moved: no longer the last item
+    expect(finish()).toBeNull(); expect(returnBtn()).toBeNull();
     expect(within(banner()!).getByRole("button", { name: "الطالب التالي في قائمة التقييم: ليان" })).toBeTruthy();
     v.rerender(el(1, view(), { onMove }));                                                             // back to the last item → the panel returns
     expect(finish()).toBeTruthy();
+  });
+  it("G6b NOT the terminal item, fully graded, next === null because the completed terminal item is skipped → NO final panel; «العودة إلى آخر طالب في الجلسة» is offered and calls App; 9F next/previous untouched", async () => {
+    server({ [NS.progressName("c1", "s1")]: progress("c1", "s1", allGraded()) });
+    const onMove = vi.fn(), onTerminal = vi.fn(), onFinish = vi.fn();
+    const nonTerminal = view({ position: 3, total: 4, previous: item("s0", "أحمد"), next: null, summary: { total: 4, completed: 2, remaining: 2 }, isTerminalItem: false, terminal: item("s4", "ياسر"), currentCompleted: true, terminalCompleted: true });
+    const v = render(el(1, nonTerminal, { onMove, onTerminal, onFinish }));
+    await heading();
+    await waitFor(() => expect(banner()!.textContent).toContain("اكتمل تقييم هذا الطالب — لا يوجد طالب آخر في قائمة التقييم."));   // 9F text unchanged
+    await flush();
+    expect(finish()).toBeNull();                                                                         // never on a non-terminal item
+    expect(screen.queryByRole("button", { name: /العودة إلى لوحة اليوم/ })).toBeNull();
+    expect(within(banner()!).queryByRole("button", { name: /التالي في قائمة التقييم|الطالب التالي:/ })).toBeNull();   // skip-completed: no next
+    const back = within(banner()!).getByRole("button", { name: "العودة إلى آخر طالب في الجلسة: ياسر" });
+    expect(back.textContent).toBe("العودة إلى آخر طالب في الجلسة");
+    expect(document.activeElement).not.toBe(back);
+    fireEvent.click(back);
+    expect(onTerminal).toHaveBeenCalledTimes(1); expect(onMove).not.toHaveBeenCalled(); expect(onFinish).not.toHaveBeenCalled();
+    fireEvent.click(within(banner()!).getByRole("button", { name: "الطالب السابق في قائمة التقييم: أحمد" }));
+    expect(onMove).toHaveBeenCalledWith(-1);
+    // the affordance is gated on all three facts: a next item, a terminal item, or an uncompleted terminal item removes it
+    v.rerender(el(1, { ...nonTerminal, next: item("s4", "ياسر"), terminalCompleted: false }, { onMove, onTerminal }));
+    expect(returnBtn()).toBeNull(); expect(within(banner()!).getByRole("button", { name: "الطالب التالي في قائمة التقييم: ياسر" })).toBeTruthy();
+    v.rerender(el(1, { ...nonTerminal, terminalCompleted: false }, { onMove, onTerminal }));
+    expect(returnBtn()).toBeNull();
+    v.rerender(el(1, view({ position: 4, total: 4, terminal: item("s4", "ياسر") }), { onMove, onTerminal }));   // now ON the terminal item → panel, no affordance
+    expect(returnBtn()).toBeNull(); expect(finish()).toBeTruthy();
+    expect(onTerminal).toHaveBeenCalledTimes(1);
+  });
+  it("G9 the terminal item is complete on the server at load but the session has not recorded it yet → no panel until `currentCompleted`; the completion is reported once", async () => {
+    server({ [NS.progressName("c1", "s1")]: progress("c1", "s1", allGraded()) });
+    const onComplete = vi.fn();
+    const v = render(el(1, view({ summary: { total: 5, completed: 2, remaining: 3 }, currentCompleted: false, terminalCompleted: false }), { onComplete }));
+    await heading();
+    await waitFor(() => expect(onComplete).toHaveBeenCalledTimes(1));
+    await flush();
+    expect(finish()).toBeNull(); expect(banner()!.textContent).toContain("لا يوجد طالب آخر في قائمة التقييم.");
+    v.rerender(el(1, view({ summary: { total: 5, completed: 3, remaining: 2 }, currentCompleted: true, terminalCompleted: true }), { onComplete }));
+    expect(finish()).toBeTruthy(); expect(finish()!.textContent).toContain("تم تقييم 3 من 5 طلاب في هذه الجلسة.");
+    await flush(); expect(onComplete).toHaveBeenCalledTimes(1);
   });
   it("G8 read-only (archived) last student, fully graded → summary + return button, no mutation control; without a queue or outside focus mode → no panel", async () => {
     server({ [NS.progressName("c9", "s9")]: progress("c9", "s9", allGraded()) });

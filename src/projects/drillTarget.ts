@@ -20,7 +20,15 @@ export type ProjectEvaluationQueue = { id: number; items: ProjectEvaluationQueue
 // by length); `remaining` = total − completed = the items THIS session did not record as completed (they are not
 // necessarily ungraded in the database right now — the summary never predicts unopened students).
 export type ProjectEvaluationSessionSummary = { total: number; completed: number; remaining: number };
-export type ProjectEvaluationQueueView = { position: number; total: number; previous: ProjectEvaluationQueueItem | null; next: ProjectEvaluationQueueItem | null; summary: ProjectEvaluationSessionSummary };
+// 9G review — the REAL end of the queue is explicit, never inferred from `next === null` (which only means «no
+// not-yet-completed neighbour after me», because queueNeighbour skips completed items): `isTerminalItem` is the last
+// item by INDEX, `terminal` is that item, `currentCompleted` / `terminalCompleted` read the session's own record.
+export type ProjectEvaluationQueueView = {
+  position: number; total: number;
+  previous: ProjectEvaluationQueueItem | null; next: ProjectEvaluationQueueItem | null;
+  summary: ProjectEvaluationSessionSummary;
+  isTerminalItem: boolean; terminal: ProjectEvaluationQueueItem; currentCompleted: boolean; terminalCompleted: boolean;
+};
 export const queueItemKey = (i: { projectCode: string; classId: string; studentId: string }) => i.projectCode + "|" + i.classId + "|" + i.studentId;
 /** The nearest not-yet-completed item in `dir` (−1 previous, +1 next), or null at the end of the queue. Pure. */
 export function queueNeighbour(queue: ProjectEvaluationQueue, dir: -1 | 1): { index: number; item: ProjectEvaluationQueueItem } | null {
@@ -38,5 +46,11 @@ export function queueSummary(queue: ProjectEvaluationQueue): ProjectEvaluationSe
 }
 export function queueView(queue: ProjectEvaluationQueue | null): ProjectEvaluationQueueView | null {
   if (!queue || !queue.items.length) return null;
-  return { position: queue.index + 1, total: queue.items.length, previous: queueNeighbour(queue, -1)?.item ?? null, next: queueNeighbour(queue, 1)?.item ?? null, summary: queueSummary(queue) };
+  const done = new Set(queue.completed), last = queue.items.length - 1, terminal = queue.items[last];
+  return {
+    position: queue.index + 1, total: queue.items.length,
+    previous: queueNeighbour(queue, -1)?.item ?? null, next: queueNeighbour(queue, 1)?.item ?? null,
+    summary: queueSummary(queue),
+    isTerminalItem: queue.index === last, terminal, currentCompleted: done.has(queueItemKey(queue.items[queue.index])), terminalCompleted: done.has(queueItemKey(terminal))
+  };
 }

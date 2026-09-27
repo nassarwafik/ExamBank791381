@@ -47,7 +47,9 @@ function server(seed: Record<string, unknown>) {
 }
 const item = (studentId: string, displayName: string) => ({ projectCode: "899373", classId: "c1", studentId, displayName });
 const SUM = (total: number, completed = 0) => ({ total, completed, remaining: total - completed });   // 9G: additive summary on the view
-const Q: ProjectEvaluationQueueView = { position: 2, total: 5, previous: item("s0", "أحمد"), next: item("s2", "ليان"), summary: SUM(5) };
+// 9G review: additive explicit end-of-queue fields (the last item by INDEX, never inferred from next === null).
+const END = (isTerminalItem = false, over: Partial<Pick<ProjectEvaluationQueueView, "terminal" | "currentCompleted" | "terminalCompleted">> = {}) => ({ isTerminalItem, terminal: item("s9", "آخر"), currentCompleted: false, terminalCompleted: false, ...over });
+const Q: ProjectEvaluationQueueView = { position: 2, total: 5, previous: item("s0", "أحمد"), next: item("s2", "ليان"), summary: SUM(5), ...END() };
 const banner = () => document.querySelector(".eb-eval-focus") as HTMLElement | null;
 const heading = (sid = "s1") => screen.findByRole("heading", { level: 2, name: "ملف المشروع: طالب " + sid });
 const flush = () => act(async () => { await new Promise(r => setTimeout(r, 0)); });
@@ -67,7 +69,7 @@ describe("9F queue helpers — pure, server order preserved", () => {
     expect(queueNeighbour(q, 1)).toEqual({ index: 3, item: item("d", "د") });
     expect(queueNeighbour({ ...q, index: 3 }, 1)).toBeNull();
     expect(queueNeighbour({ ...q, index: 0 }, -1)).toBeNull();
-    expect(queueView(q)).toEqual({ position: 3, total: 4, previous: item("a", "أ"), next: item("d", "د"), summary: { total: 4, completed: 1, remaining: 3 } });
+    expect(queueView(q)).toEqual({ position: 3, total: 4, previous: item("a", "أ"), next: item("d", "د"), summary: { total: 4, completed: 1, remaining: 3 }, isTerminalItem: false, terminal: item("d", "د"), currentCompleted: false, terminalCompleted: false });
     expect(queueView(null)).toBeNull(); expect(queueView({ id: 1, items: [], index: 0, completed: [] })).toBeNull();
   });
 });
@@ -80,7 +82,7 @@ describe("9F review fix — a previous student's detail can never act as the cur
       [NS.progressName("c1", "s3")]: progress("c1", "s3", { [active[0]]: 50, [active[1]]: 0 })   // C: first ungraded = active[2] (0 IS graded)
     });
     const onComplete = vi.fn(), onMove = vi.fn();
-    const queueAt = (pos: number, prev: string | null, next: string | null): ProjectEvaluationQueueView => ({ position: pos, total: 3, previous: prev ? item(prev, "طالب " + prev) : null, next: next ? item(next, "طالب " + next) : null, summary: SUM(3) });
+    const queueAt = (pos: number, prev: string | null, next: string | null): ProjectEvaluationQueueView => ({ position: pos, total: 3, previous: prev ? item(prev, "طالب " + prev) : null, next: next ? item(next, "طالب " + next) : null, summary: SUM(3), ...END(pos === 3) });
     const view = render(el(1, queueAt(1, null, "s2"), { sid: "s1", onComplete, onMove }));
     await heading("s1");
     await waitFor(() => expect(document.activeElement).toBe(within(document.querySelector('[data-stage-id="' + active[1] + '"]') as HTMLElement).getByRole("spinbutton")));
@@ -129,11 +131,11 @@ describe("9F ProjectStudentDetail — queue context in the focus banner", () => 
   });
   it("D2 ends of the queue: no previous at the first item, no next at the last; no queue → the plain 9E banner", async () => {
     server({ [NS.progressName("c1", "s1")]: progress("c1", "s1", {}) });
-    const view = render(el(1, { position: 1, total: 3, previous: null, next: item("s2", "ليان"), summary: SUM(3) }));
+    const view = render(el(1, { position: 1, total: 3, previous: null, next: item("s2", "ليان"), summary: SUM(3), ...END() }));
     await heading(); await waitFor(() => expect(banner()).toBeTruthy());
     expect(within(banner()!).queryByRole("button", { name: /السابق/ })).toBeNull();
     expect(within(banner()!).getByRole("button", { name: /التالي في قائمة التقييم/ })).toBeTruthy();
-    view.rerender(el(1, { position: 3, total: 3, previous: item("s2", "ليان"), next: null, summary: SUM(3) }));
+    view.rerender(el(1, { position: 3, total: 3, previous: item("s2", "ليان"), next: null, summary: SUM(3), ...END(true) }));
     expect(within(banner()!).queryByRole("button", { name: /التالي في قائمة التقييم/ })).toBeNull();
     expect(within(banner()!).getByRole("button", { name: /السابق/ })).toBeTruthy();
     view.rerender(el(1, null));
@@ -156,7 +158,7 @@ describe("9F ProjectStudentDetail — queue context in the focus banner", () => 
     expect(onComplete).toHaveBeenCalledTimes(1);                                                        // never re-reported for the same selection
     expect(Element.prototype.scrollIntoView).not.toHaveBeenCalled();                                     // nothing to focus
     fireEvent.click(next); expect(onMove).toHaveBeenCalledWith(1);
-    view.rerender(el(1, { position: 5, total: 5, previous: item("s0", "أحمد"), next: null, summary: SUM(5, 5) }, { onComplete, onMove }));
+    view.rerender(el(1, { position: 5, total: 5, previous: item("s0", "أحمد"), next: null, summary: SUM(5, 5), ...END(true, { currentCompleted: true, terminalCompleted: true }) }, { onComplete, onMove }));
     expect(banner()!.textContent).toContain("اكتمل تقييم هذا الطالب — لا يوجد طالب آخر في قائمة التقييم.");
     expect(within(banner()!).queryByRole("button", { name: /التالي/ })).toBeNull();
   });

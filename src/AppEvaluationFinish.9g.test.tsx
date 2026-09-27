@@ -132,38 +132,59 @@ describe("9G App — final-session panel and «العودة إلى لوحة ال
     expect(finish()).toBeNull();                                                                         // last item but still ungraded → no finish
     fireEvent.change(scoreInput("B01"), { target: { value: "90" } });
     fireEvent.click(within(document.querySelector('[data-stage-id="B01"]') as HTMLElement).getByRole("button", { name: "حفظ علامة المرحلة B01" }));
+    const seen: string[] = []; const mo = new MutationObserver(() => { const f = finish(); if (f && !seen.includes(f.textContent!)) seen.push(f.textContent!); });
+    mo.observe(document.body, { subtree: true, childList: true, characterData: true });
     await screen.findByText("تم حفظ العلامة.");
     await waitFor(() => expect(finish()).toBeTruthy());
+    mo.disconnect();
+    expect(seen.every(t => t.includes("تم تقييم 2 من 4 طلاب"))).toBe(true);                             // never rendered with the pre-record «1 من 4»
     expect(finish()!.textContent).toContain("تم تقييم 2 من 4 طلاب في هذه الجلسة.");                    // s2 + s4 (s1, s3 never recorded complete)
     expect(finish()!.textContent).toContain("بقي طالبان في القائمة لم يُسجَّل اكتمال تقييمهم خلال هذه الجلسة.");
     await settle();
     expect(screen.getByRole("heading", { level: 2, name: "ملف المشروع: " + NAMES.s4 })).toBeTruthy();  // still here: nothing navigated
     expect(studentReads()).toEqual(["899373/c1/s2", "883589/c2/s3", "883589/c9/s4"]);
   });
-  it("G6 previous from the final state → the previous (ungraded) student opens, the panel disappears, the session stays; when that student becomes complete with no next left → the panel returns with the updated count", async () => {
+  it("G6 (review) queue s1→s2→s3→s4, s4 complete: open s4 → panel; previous → s3 → panel gone; complete s3 → STILL no panel (s3 is not terminal); «العودة إلى آخر طالب في الجلسة» → s4 reopens → panel only there, counts 2 من 4 with no stale flash", async () => {
     fullyGraded.add("s4");
-    render(<App />); await login();
-    await startAt("s3");
-    await waitFor(() => expect(document.activeElement).toBe(scoreInput("B01")));
-    fireEvent.click(nextBtn()); await profileOf("s4");
-    await waitFor(() => expect(finish()).toBeTruthy());
-    expect(finish()!.textContent).toContain("تم تقييم 1 من 4 طلاب في هذه الجلسة.");                    // s4 only
-    fireEvent.click(prevBtn()); await profileOf("s3");
-    await waitFor(() => expect(banner()).toBeTruthy());
-    expect(finish()).toBeNull();                                                                         // s3 ungraded → no summary
-    expect(banner()!.textContent).toContain("الطالب 3 من 4");                                          // session still active
-    // 9F semantics unchanged: s4 was recorded complete, so it is skipped → no «next» from s3; the session did not end.
-    expect(within(banner()!).queryByRole("button", { name: /^(الطالب التالي في قائمة التقييم|الطالب التالي:)/ })).toBeNull();
-    expect(prevBtn()).toBeTruthy();
-    expect(document.querySelector('[data-stage-id="B01"]')).toBeTruthy();                             // still a normal, editable profile
-    fireEvent.change(scoreInput("B01"), { target: { value: "85" } });
-    fireEvent.click(within(document.querySelector('[data-stage-id="B01"]') as HTMLElement).getByRole("button", { name: "حفظ علامة المرحلة B01" }));
-    await screen.findByText("تم حفظ العلامة.");
-    await waitFor(() => expect(finish()).toBeTruthy());                                                  // s3 now the last incomplete → complete → panel returns
-    expect(finish()!.textContent).toContain("تم تقييم 2 من 4 طلاب في هذه الجلسة.");                    // s4 + s3
-    expect(finish()!.textContent).toContain("بقي طالبان في القائمة");
-    await settle();
-    expect(screen.getByRole("heading", { level: 2, name: "ملف المشروع: " + NAMES.s3 })).toBeTruthy();  // nothing navigated
+    // every text the final panel ever shows, recorded synchronously by a MutationObserver → a stale count would be caught here
+    const seen: string[] = []; const record = () => { const f = finish(); if (f && !seen.includes(f.textContent!)) seen.push(f.textContent!); };
+    const mo = new MutationObserver(record); mo.observe(document.body, { subtree: true, childList: true, characterData: true });
+    try {
+      render(<App />); await login();
+      await startAt("s4");                                                                               // the hub row for the LAST student
+      await waitFor(() => expect(finish()).toBeTruthy());
+      expect(finish()!.textContent).toContain("تم تقييم 1 من 4 طلاب في هذه الجلسة.");                  // s4 only
+      expect(banner()!.getAttribute("data-queue-position")).toBe("4");
+      fireEvent.click(prevBtn()); await profileOf("s3");
+      await waitFor(() => expect(document.activeElement).toBe(scoreInput("B01")));
+      expect(finish()).toBeNull();                                                                       // s3 ungraded → nothing
+      expect(banner()!.textContent).toContain("الطالب 3 من 4");                                        // session still active
+      expect(within(banner()!).queryByRole("button", { name: /^(الطالب التالي في قائمة التقييم|الطالب التالي:)/ })).toBeNull();   // s4 completed → skipped (9F)
+      expect(within(banner()!).queryByRole("button", { name: /^العودة إلى آخر طالب في الجلسة/ })).toBeTruthy();   // …but reachable
+      fireEvent.change(scoreInput("B01"), { target: { value: "85" } });
+      fireEvent.click(within(document.querySelector('[data-stage-id="B01"]') as HTMLElement).getByRole("button", { name: "حفظ علامة المرحلة B01" }));
+      await screen.findByText("تم حفظ العلامة.");
+      await waitFor(() => expect(banner()!.textContent).toContain("اكتمل تقييم هذا الطالب — لا يوجد طالب آخر في قائمة التقييم."));
+      await settle();
+      expect(finish()).toBeNull();                                                                       // s3 complete, next === null, but NOT the terminal item → no panel
+      expect(screen.queryByRole("button", { name: /العودة إلى لوحة اليوم/ })).toBeNull();
+      expect(within(banner()!).queryByRole("button", { name: /^(الطالب التالي في قائمة التقييم|الطالب التالي:)/ })).toBeNull();   // queueNeighbour unchanged
+      const back = within(banner()!).getByRole("button", { name: "العودة إلى آخر طالب في الجلسة: " + NAMES.s4 });
+      expect(back.className).toContain("is-primary");
+      fireEvent.click(back); await profileOf("s4");
+      await waitFor(() => expect(finish()).toBeTruthy());
+      expect(finish()!.textContent).toContain("تم تقييم 2 من 4 طلاب في هذه الجلسة.");                  // s4 + s3
+      expect(finish()!.textContent).toContain("بقي طالبان في القائمة");
+      expect(banner()!.getAttribute("data-queue-position")).toBe("4");
+      expect(within(banner()!).queryByRole("button", { name: /^العودة إلى آخر طالب في الجلسة/ })).toBeNull();   // on the terminal item itself: no affordance
+      expect(prevBtn()).toBeTruthy();                                                                    // 9F previous still there
+      await settle();
+      record();
+      expect(seen.filter(t => t.includes("1 من 4")).length).toBe(1);                                     // the first visit's honest count…
+      expect(seen.filter(t => t.includes("2 من 4")).length).toBe(1);                                     // …then the updated one, nothing else
+      expect(seen.some(t => t.includes("0 من 4") || t.includes("3 من 4"))).toBe(false);                  // never a stale or predicted count
+      expect(studentReads()).toEqual(["883589/c9/s4", "883589/c2/s3", "883589/c9/s4"]);                // s4 was opened again through the drill path
+    } finally { mo.disconnect(); }
   });
   it("G7 «العودة إلى لوحة اليوم» ends the session and shows the Today Hub through the existing dashboard navigation (its normal mount read, no extra fetch); a manual project/student open afterwards shows no queue UI", async () => {
     fullyGraded.add("s4");
