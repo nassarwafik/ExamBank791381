@@ -33,6 +33,11 @@ type Props = {
   onEvaluationQueueMove?: (dir: -1 | 1) => void;
   /** Reported once per loaded detail whose server `evaluation.ungradedStages === 0` (App marks the item completed). */
   onEvaluationComplete?: () => void;
+  /** Phase 9G — «العودة إلى لوحة اليوم» from the final-session panel (App ends the session; never automatic). */
+  onEvaluationQueueFinish?: () => void;
+  /** 9G review — «العودة إلى آخر طالب في الجلسة»: shown only when this item is NOT the terminal one, the terminal item
+   * is completed, and no next item is eligible (skip-completed left nothing after us). Never changes next/previous. */
+  onEvaluationQueueReturnToTerminal?: () => void;
 };
 
 type UpdateResponse = {
@@ -79,8 +84,13 @@ function firstUngraded(evaluation: ProjectEvaluation | null): ProjectEvaluation[
   return evaluation ? evaluation.stages.find(s => !s.graded) ?? null : null;
 }
 const remainingText = (n: number) => (n === 1 ? "بقيت مرحلة واحدة بدون علامة." : n === 2 ? "بقيت مرحلتان بدون علامة." : "بقيت " + n + " مراحل بدون علامة.");
+// Phase 9G — session-summary wording. «تم تقييم» counts the students THIS session saw the server declare complete;
+// «لم يُسجَّل اكتمال تقييمهم خلال هذه الجلسة» deliberately says "not recorded in this session", never "ungraded now".
+const studentsWord = (n: number) => (n === 1 ? "طالب واحد" : n === 2 ? "طالبان" : n + " طلاب");
+const sessionDoneText = (completed: number, total: number) => "تم تقييم " + completed + " من " + total + " " + (total === 1 ? "طالب" : "طلاب") + " في هذه الجلسة.";
+const sessionRemainingText = (remaining: number) => (remaining === 0 ? "اكتمل تقييم جميع الطلاب في قائمة هذه الجلسة." : "بقي " + studentsWord(remaining) + " في القائمة لم يُسجَّل اكتمال تقييمهم خلال هذه الجلسة.");
 
-export default function ProjectStudentDetail({ token, projectCode, classId, studentId, tracks, onBack, onChanged, onReadyChanged, evaluationFocusSeq = 0, evaluationQueue = null, onEvaluationQueueMove, onEvaluationComplete }: Props) {
+export default function ProjectStudentDetail({ token, projectCode, classId, studentId, tracks, onBack, onChanged, onReadyChanged, evaluationFocusSeq = 0, evaluationQueue = null, onEvaluationQueueMove, onEvaluationComplete, onEvaluationQueueFinish, onEvaluationQueueReturnToTerminal }: Props) {
   const [detail, setDetail] = useState<StudentDetail | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -309,9 +319,27 @@ export default function ProjectStudentDetail({ token, projectCode, classId, stud
             <span className="eb-eval-queue-nav" role="group" aria-label="التنقل في قائمة التقييم">
               {evaluationQueue.previous && <button type="button" className="eb-button is-quiet is-small eb-eval-queue-prev" aria-label={"الطالب السابق في قائمة التقييم: " + evaluationQueue.previous.displayName} onClick={() => onEvaluationQueueMove?.(-1)}>الطالب السابق</button>}
               {evaluationQueue.next && <button type="button" className={"eb-button is-small eb-eval-queue-next" + (evaluation.ungradedStages === 0 ? " is-primary" : " is-quiet")} aria-label={"الطالب التالي في قائمة التقييم: " + evaluationQueue.next.displayName} onClick={() => onEvaluationQueueMove?.(1)}>{evaluation.ungradedStages === 0 ? "انتقل إلى الطالب التالي: " + evaluationQueue.next.displayName : "الطالب التالي"}</button>}
+              {evaluationQueue.next === null && !evaluationQueue.isTerminalItem && evaluationQueue.terminalCompleted && (
+                // 9G review — the completed terminal item is skipped by next/previous, so it needs its own way back.
+                <button type="button" className={"eb-button is-small eb-eval-queue-terminal" + (evaluation.ungradedStages === 0 ? " is-primary" : " is-quiet")} aria-label={"العودة إلى آخر طالب في الجلسة: " + evaluationQueue.terminal.displayName} onClick={() => onEvaluationQueueReturnToTerminal?.()}>العودة إلى آخر طالب في الجلسة</button>
+              )}
             </span>
           )}
         </div>
+      )}
+      {focusMode && evaluation && evaluationQueue && evaluationQueue.isTerminalItem && evaluationQueue.currentCompleted && evaluation.ungradedStages === 0 && (
+        // Phase 9G — the end of the session: derived (focus mode + THIS item is the queue's TERMINAL item by index —
+        // never `next === null`, which only means the completed items after us were skipped — + the session has
+        // recorded this item as completed + the server says it is fully graded), never stored, never automatic,
+        // reversible until the return button is pressed («الطالب السابق» above still works and hides this panel).
+        // `currentCompleted` also keeps the counts honest: right after the last save the panel waits for App to
+        // record the completion, so it never flashes the previous total. No autofocus here.
+        <section className="eb-eval-finish" role="status" aria-labelledby="eb-eval-finish-title" data-completed={evaluationQueue.summary.completed} data-total={evaluationQueue.summary.total} data-remaining={evaluationQueue.summary.remaining}>
+          <h3 id="eb-eval-finish-title" className="eb-eval-finish-title">اكتملت جلسة تقييم المشاريع.</h3>
+          <p className="eb-eval-finish-text">{sessionDoneText(evaluationQueue.summary.completed, evaluationQueue.summary.total)}</p>
+          <p className="eb-eval-finish-text">{sessionRemainingText(evaluationQueue.summary.remaining)}</p>
+          <button type="button" className="eb-button is-primary eb-eval-finish-return" aria-label="إنهاء جلسة التقييم والعودة إلى لوحة اليوم" onClick={() => onEvaluationQueueFinish?.()}>العودة إلى لوحة اليوم</button>
+        </section>
       )}
 
       <div className="eb-segmented eb-student-profile-tracks" role="group" aria-label="مسارات المشروع">

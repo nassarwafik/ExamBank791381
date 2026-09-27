@@ -655,6 +655,21 @@ function App() {
   }
   /** A manual student open / view / class change inside the tracker leaves the drill flow: the session ends. */
   function exitEvaluationQueue() { setEvaluationQueue(null); }
+  /** Phase 9G — «العودة إلى لوحة اليوم» from the final-session panel: end the session and the drill target, then show
+   * the dashboard through the EXISTING workspace navigation; the Today Hub re-reads on its own mount (no forced fetch). */
+  function finishEvaluationQueue() {
+    setEvaluationQueue(null);
+    setProjectDrill(null);
+    goToWorkspace("dashboard");
+  }
+  /** 9G review — «العودة إلى آخر طالب في الجلسة»: jump straight to the queue's TERMINAL item (next/previous skip
+   * completed items, so a completed last student is otherwise unreachable). Same drill path, fresh sequence. */
+  function returnToEvaluationQueueTerminal() {
+    if (!evaluationQueue || !evaluationQueue.items.length) return;
+    const index = evaluationQueue.items.length - 1;
+    setEvaluationQueue({ ...evaluationQueue, index });
+    openProjectStudent(evaluationQueue.items[index]);
+  }
 
   // UX-2 — the shell asks for a destination by id; every id maps onto the EXISTING setters above
   // (teacherView / workspaceTab / projectCode stay the only navigation authority).
@@ -5687,7 +5702,7 @@ function App() {
         <Suspense fallback={<p className="eb-muted" role="status">جارٍ التحميل...</p>}>
           {projectCode
             ? <ProjectTracker token={token} projectCode={projectCode} onReadyChanged={refreshProjectReady} drillTarget={projectDrill}
-                evaluationQueue={queueView(evaluationQueue)} onEvaluationQueueMove={moveEvaluationQueue} onEvaluationQueueComplete={completeEvaluationQueueItem} onEvaluationFocusExit={exitEvaluationQueue} />
+                evaluationQueue={queueView(evaluationQueue)} onEvaluationQueueMove={moveEvaluationQueue} onEvaluationQueueComplete={completeEvaluationQueueItem} onEvaluationFocusExit={exitEvaluationQueue} onEvaluationQueueFinish={finishEvaluationQueue} onEvaluationQueueReturnToTerminal={returnToEvaluationQueueTerminal} />
             : <ProjectHub projects={projectList} status={projectCatalogStatus} readyByProject={projectReady.byProject} onRetry={() => setProjectCatalogNonce(n => n + 1)} onOpenProject={goToProjects} />}
         </Suspense>
       )}

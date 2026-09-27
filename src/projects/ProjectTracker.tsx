@@ -29,6 +29,10 @@ type Props = {
   onEvaluationQueueComplete?: (ref: ProjectStudentRef) => void;
   /** A manual student open / view change / class change left the drill flow (App ends the session). */
   onEvaluationFocusExit?: () => void;
+  /** Phase 9G — the final-session panel's «العودة إلى لوحة اليوم» (App ends the session and shows the dashboard). */
+  onEvaluationQueueFinish?: () => void;
+  /** 9G review — «العودة إلى آخر طالب في الجلسة»: open the queue's terminal item directly (App, fresh drill seq). */
+  onEvaluationQueueReturnToTerminal?: () => void;
 };
 
 const VIEWS: { key: ProjectView; label: string; icon: (size: number) => React.ReactNode }[] = [
@@ -45,7 +49,7 @@ const VIEWS: { key: ProjectView; label: string; icon: (size: number) => React.Re
  * per project, then the resource of the current view for the selected class; the student list stays mounted
  * (hidden) while a student profile is open, so returning re-reads it only after a mutation.
  */
-export default function ProjectTracker({ token, projectCode, onReadyChanged, drillTarget = null, evaluationQueue = null, onEvaluationQueueMove, onEvaluationQueueComplete, onEvaluationFocusExit }: Props) {
+export default function ProjectTracker({ token, projectCode, onReadyChanged, drillTarget = null, evaluationQueue = null, onEvaluationQueueMove, onEvaluationQueueComplete, onEvaluationFocusExit, onEvaluationQueueFinish, onEvaluationQueueReturnToTerminal }: Props) {
   const [classes, setClasses] = useState<ProjectClass[]>([]);
   // The project whose class list `classes` currently holds ("" until the first successful read). A drill target is
   // validated ONLY against a list loaded for the SAME project, and a stale classes response (an earlier project) is
@@ -187,7 +191,7 @@ export default function ProjectTracker({ token, projectCode, onReadyChanged, dri
               {openStudentId && (
                 <ProjectStudentDetail token={token} projectCode={projectCode} classId={classId} studentId={openStudentId} tracks={tracks}
                   onBack={closeStudent} onChanged={() => { studentsDirty.current = true; }} onReadyChanged={onReadyChanged} evaluationFocusSeq={evaluationFocusSeq}
-                  evaluationQueue={evaluationFocusSeq ? evaluationQueue : null} onEvaluationQueueMove={onEvaluationQueueMove}
+                  evaluationQueue={evaluationFocusSeq ? evaluationQueue : null} onEvaluationQueueMove={onEvaluationQueueMove} onEvaluationQueueFinish={onEvaluationQueueFinish} onEvaluationQueueReturnToTerminal={onEvaluationQueueReturnToTerminal}
                   onEvaluationComplete={onEvaluationQueueComplete ? () => onEvaluationQueueComplete({ projectCode, classId, studentId: openStudentId }) : undefined} />
               )}
             </>
