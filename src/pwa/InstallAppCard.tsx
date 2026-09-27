@@ -12,7 +12,9 @@ import "./pwa.css";
 // permission is involved.
 // Phase 10C — (1) «ليس الآن» hides the card for 7 days on this device, never for good; (2) a browser that has not
 // fired `beforeinstallprompt` gets a quiet «تثبيت ExamBank» card with the browser-menu path instead of nothing;
-// (3) the mark is the official app icon (BrandMark), the same file as the installed icon.
+// (3) the mark is the official app icon (BrandMark), the same file as the installed icon; (4) installed / standalone
+// — including the moment a native install is ACCEPTED — renders nothing at all; a declined or consumed native prompt
+// falls back to the manual guidance (never hidden behind a notice).
 
 export default function InstallAppCard({ win = window }: { win?: Window }) {
   const install = useSyncExternalStore(subscribeInstallState, getInstallState, getInstallState);
@@ -22,17 +24,17 @@ export default function InstallAppCard({ win = window }: { win?: Window }) {
   const guidance = installGuidance(win, install);
 
   if (dismissed) return null;
-  if (guidance.kind === "installed" && !notice) return null;
+  if (guidance.kind === "installed") return null;                              // no install UI once installed — ever
 
   const close = () => { rememberCardDismissed(); setDismissed(true); };
   const onInstall = async () => {
     setBusy(true);
     const outcome = await promptInstall();
     setBusy(false);
-    if (outcome === "accepted") setNotice("تم تثبيت التطبيق. افتحه من أيقونة ExamBank على الشاشة الرئيسية.");
-    else setNotice("لم يتم التثبيت. يمكنك تثبيت التطبيق لاحقًا من قائمة المتصفح.");
+    // accepted → `installedNow` re-renders this card as null; anything else → the manual guidance takes over below.
+    if (outcome !== "accepted") setNotice("لم يتم التثبيت.");
   };
-  const manual = guidance.kind === "manual" && !notice;
+  const manual = guidance.kind === "manual";
 
   return (
     <section className={"eb-sp-panel eb-install-card" + (manual ? " is-manual" : "")} aria-labelledby="eb-install-title">
@@ -71,13 +73,8 @@ export default function InstallAppCard({ win = window }: { win?: Window }) {
         </>
       )}
 
-      {/* Always present while the card is shown, so the outcome is announced when it changes. */}
+      {/* Always present while the card is shown, so a declined prompt is announced when it happens. */}
       <p className="eb-install-notice" role="status">{notice}</p>
-      {notice && guidance.kind !== "prompt" && guidance.kind !== "ios" && (
-        <div className="eb-install-actions">
-          <button type="button" className="eb-button is-quiet" onClick={close}>إخفاء</button>
-        </div>
-      )}
     </section>
   );
 }

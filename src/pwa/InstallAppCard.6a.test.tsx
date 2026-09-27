@@ -74,29 +74,47 @@ describe("Android / Chromium — install prompt", () => {
     expect(screen.queryByText(/إضافة إلى الشاشة الرئيسية/)).toBeNull();          // never iOS steps on Android
   });
 
-  it("the prompt opens ONLY on click; accepted → confirmation, no further install asks", async () => {
+  it("the prompt opens ONLY on click; accepted → the card DISAPPEARS (installed = no install UI, no notice, no status)", async () => {
     const win = fakeWin({ ua: UA.samsung, touch: 5, coarse: true });
-    render(<InstallAppCard win={win} />);
+    const { container } = render(<InstallAppCard win={win} />);
     const { prompt } = firePrompt("accepted");
     expect(prompt).not.toHaveBeenCalled();
     fireEvent.click(screen.getByRole("button", { name: "تثبيت التطبيق على الهاتف" }));
     expect(prompt).toHaveBeenCalledTimes(1);
-    expect(await screen.findByText(/تم تثبيت التطبيق/)).toBeTruthy();
-    expect(screen.queryByRole("button", { name: /تثبيت التطبيق/ })).toBeNull();
-    expect(screen.getByRole("status").textContent).toMatch(/تم تثبيت التطبيق/);
+    await waitFor(() => expect(container.innerHTML).toBe(""));
+    expect(screen.queryByRole("status")).toBeNull();
+    expect(screen.queryByRole("button", { name: /تثبيت/ })).toBeNull();
+    expect(screen.queryByText(/قائمة المتصفح/)).toBeNull();
   });
 
-  it("dismissed → a calm note, no broken state, the card can be hidden; a later prompt works again", async () => {
+  it("declined → the calm note AND the manual guidance (never masked); can be hidden; a later prompt works again", async () => {
     const win = fakeWin({ ua: UA.android, touch: 5, coarse: true });
     render(<InstallAppCard win={win} />);
     firePrompt("dismissed");
     fireEvent.click(screen.getByRole("button", { name: "تثبيت التطبيق على الهاتف" }));
     expect(await screen.findByText(/لم يتم التثبيت/)).toBeTruthy();
+    expect(screen.getByRole("status").textContent).toBe("لم يتم التثبيت.");
     expect(screen.queryByRole("button", { name: "تثبيت التطبيق على الهاتف" })).toBeNull();
+    const region = manualCard()!;                                                 // the consumed prompt falls back to the manual path
+    expect(region).toBeTruthy();
+    expect(within(region).getByText("يمكنك تثبيت ExamBank من قائمة المتصفح واستخدامه كتطبيق مستقل.")).toBeTruthy();
+    expect(within(region).getByText("افتح قائمة المتصفح واختر «تثبيت التطبيق» أو «إضافة إلى الشاشة الرئيسية».")).toBeTruthy();
+    expect(within(region).getAllByRole("button").map(b => b.textContent)).toEqual(["ليس الآن"]);   // one dismiss control, no extra «إخفاء»
     const again = firePrompt("accepted");                                         // Chromium may offer it again later
     fireEvent.click(screen.getByRole("button", { name: "تثبيت التطبيق على الهاتف" }));
     expect(again.prompt).toHaveBeenCalledTimes(1);
-    expect(await screen.findByText(/تم تثبيت التطبيق/)).toBeTruthy();
+    await waitFor(() => expect(card()).toBeNull());                              // accepted → gone
+  });
+
+  it("declined on desktop → desktop-worded manual guidance under the note; «ليس الآن» hides it for 7 days", async () => {
+    render(<InstallAppCard win={fakeWin({ ua: UA.desktopChrome })} />);
+    firePrompt("dismissed");
+    fireEvent.click(screen.getByRole("button", { name: "تثبيت التطبيق على هذا الجهاز" }));
+    await screen.findByText(/لم يتم التثبيت/);
+    expect(screen.getByText("افتح قائمة المتصفح واختر «تثبيت ExamBank» أو «تثبيت التطبيق».")).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: "ليس الآن" }));
+    expect(card()).toBeNull();
+    expect(localStorage.getItem(DISMISSED_AT_KEY)).toMatch(/^\d+$/);
   });
 
   it("appinstalled (installed from the browser menu) → the card disappears", () => {
@@ -352,10 +370,10 @@ describe("no notification permission — ever", () => {
     await screen.findByRole("dialog");
     cleanup(); localStorage.clear();
     __resetInstallPromptForTests(); initInstallPrompt(window);
-    render(<InstallAppCard win={fakeWin({ ua: UA.android, touch: 5, coarse: true })} />);
+    const accepted = render(<InstallAppCard win={fakeWin({ ua: UA.android, touch: 5, coarse: true })} />);
     firePrompt("accepted");
     fireEvent.click(screen.getByRole("button", { name: "تثبيت التطبيق على الهاتف" }));
-    await screen.findByText(/تم تثبيت التطبيق/);
+    await waitFor(() => expect(accepted.container.innerHTML).toBe(""));
     cleanup();
     __resetInstallPromptForTests(); initInstallPrompt(window);                     // a fresh page on an iPhone
     render(<InstallAppCard win={fakeWin({ ua: UA.iphone, touch: 5, coarse: true })} />);
