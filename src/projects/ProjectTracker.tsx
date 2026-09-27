@@ -10,7 +10,7 @@ import EmptyState from "../ui/EmptyState";
 import StatusBadge from "../ui/StatusBadge";
 import { IconDashboard, IconStudents, IconReports, IconEdit, IconRefresh, IconLock } from "../icons";
 import type { ProjectClass, TrackMeta } from "./types";
-import type { ProjectDrillTarget } from "./drillTarget";
+import type { ProjectDrillTarget, ProjectEvaluationQueueView, ProjectStudentRef } from "./drillTarget";
 import "../projects-pro.css";
 
 export type ProjectView = "dashboard" | "students" | "analytics" | "settings";
@@ -22,6 +22,13 @@ type Props = {
   /** Phase 9D — App's transient drill target (a Today Hub evaluation row). Applied ONLY after this project's class list
    * has loaded and the class exists in it; a target for another project is ignored; null = normal tracker. */
   drillTarget?: ProjectDrillTarget | null;
+  /** Phase 9F — App's evaluation queue session view (position + neighbours); shown ONLY while the open student is in
+   * Evaluation Focus Mode. Moves and completion reports go back to App (the single owner of the session). */
+  evaluationQueue?: ProjectEvaluationQueueView | null;
+  onEvaluationQueueMove?: (dir: -1 | 1) => void;
+  onEvaluationQueueComplete?: (ref: ProjectStudentRef) => void;
+  /** A manual student open / view change / class change left the drill flow (App ends the session). */
+  onEvaluationFocusExit?: () => void;
 };
 
 const VIEWS: { key: ProjectView; label: string; icon: (size: number) => React.ReactNode }[] = [
@@ -38,7 +45,7 @@ const VIEWS: { key: ProjectView; label: string; icon: (size: number) => React.Re
  * per project, then the resource of the current view for the selected class; the student list stays mounted
  * (hidden) while a student profile is open, so returning re-reads it only after a mutation.
  */
-export default function ProjectTracker({ token, projectCode, onReadyChanged, drillTarget = null }: Props) {
+export default function ProjectTracker({ token, projectCode, onReadyChanged, drillTarget = null, evaluationQueue = null, onEvaluationQueueMove, onEvaluationQueueComplete, onEvaluationFocusExit }: Props) {
   const [classes, setClasses] = useState<ProjectClass[]>([]);
   // The project whose class list `classes` currently holds ("" until the first successful read). A drill target is
   // validated ONLY against a list loaded for the SAME project, and a stale classes response (an earlier project) is
@@ -98,12 +105,15 @@ export default function ProjectTracker({ token, projectCode, onReadyChanged, dri
     setEvaluationFocusSeq(drillTarget.seq);                                    // 9E: this student was opened for evaluation
   }, [drillTarget, projectCode, classesFor, classes]);
 
-  function changeClass(next: string) { setClassId(next); setOpenStudentId(""); setEvaluationFocusSeq(0); studentsDirty.current = false; }
-  function changeView(next: ProjectView) { setView(next); setOpenStudentId(""); setEvaluationFocusSeq(0); studentsDirty.current = false; }
+  // 9E/9F — leaving the drill flow by hand: no focus mode for what follows, and App ends the evaluation session.
+  function leaveFocusFlow() { if (evaluationFocusSeq) onEvaluationFocusExit?.(); setEvaluationFocusSeq(0); }
+  function changeClass(next: string) { setClassId(next); setOpenStudentId(""); leaveFocusFlow(); studentsDirty.current = false; }
+  function changeView(next: ProjectView) { setView(next); setOpenStudentId(""); leaveFocusFlow(); studentsDirty.current = false; }
   function openStudent(studentId: string, trigger?: HTMLElement | null) {
     studentOpener.current = trigger instanceof HTMLElement ? trigger : null;
     studentsDirty.current = false;
-    setEvaluationFocusSeq(0);                                                  // a manual open is never Evaluation Focus Mode
+    onEvaluationFocusExit?.();                                                 // a manual open is never Evaluation Focus Mode → the session ends
+    setEvaluationFocusSeq(0);
     setOpenStudentId(studentId);
   }
   function closeStudent() {
@@ -176,7 +186,9 @@ export default function ProjectTracker({ token, projectCode, onReadyChanged, dri
               </div>
               {openStudentId && (
                 <ProjectStudentDetail token={token} projectCode={projectCode} classId={classId} studentId={openStudentId} tracks={tracks}
-                  onBack={closeStudent} onChanged={() => { studentsDirty.current = true; }} onReadyChanged={onReadyChanged} evaluationFocusSeq={evaluationFocusSeq} />
+                  onBack={closeStudent} onChanged={() => { studentsDirty.current = true; }} onReadyChanged={onReadyChanged} evaluationFocusSeq={evaluationFocusSeq}
+                  evaluationQueue={evaluationFocusSeq ? evaluationQueue : null} onEvaluationQueueMove={onEvaluationQueueMove}
+                  onEvaluationComplete={onEvaluationQueueComplete ? () => onEvaluationQueueComplete({ projectCode, classId, studentId: openStudentId }) : undefined} />
               )}
             </>
           )}

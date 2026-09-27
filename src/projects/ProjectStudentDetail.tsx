@@ -13,6 +13,7 @@ import ProjectEvaluationCard from "./ProjectEvaluationCard";
 import { fmtContribution, fmtStageScore, normalizeProjectPerformance, stageValueOf } from "./projectPerformance";
 import { kindOfPatch, mutationBody, normalizeProjectEvaluation, type StagePatch } from "./projectEvaluation";
 import type { StudentDetail, ProjectStage, StudentCard, StageProgressEntry, HistoryEvent, BalanceInsight, TrackMeta, ProjectPerformance, ProjectEvaluation } from "./types";
+import type { ProjectEvaluationQueueView } from "./drillTarget";
 
 type Props = {
   token: string; projectCode: string; classId: string; studentId: string; tracks: TrackMeta[];
@@ -27,6 +28,11 @@ type Props = {
    * THIS selection's detail has loaded, the first ungraded active stage (server `evaluation.stages` order) gets its
    * track selected, its group opened and its score input focused. */
   evaluationFocusSeq?: number;
+  /** Phase 9F — the evaluation queue session around this student (only in focus mode): position and neighbours. */
+  evaluationQueue?: ProjectEvaluationQueueView | null;
+  onEvaluationQueueMove?: (dir: -1 | 1) => void;
+  /** Reported once per loaded detail whose server `evaluation.ungradedStages === 0` (App marks the item completed). */
+  onEvaluationComplete?: () => void;
 };
 
 type UpdateResponse = {
@@ -74,7 +80,7 @@ function firstUngraded(evaluation: ProjectEvaluation | null): ProjectEvaluation[
 }
 const remainingText = (n: number) => (n === 1 ? "بقيت مرحلة واحدة بدون علامة." : n === 2 ? "بقيت مرحلتان بدون علامة." : "بقيت " + n + " مراحل بدون علامة.");
 
-export default function ProjectStudentDetail({ token, projectCode, classId, studentId, tracks, onBack, onChanged, onReadyChanged, evaluationFocusSeq = 0 }: Props) {
+export default function ProjectStudentDetail({ token, projectCode, classId, studentId, tracks, onBack, onChanged, onReadyChanged, evaluationFocusSeq = 0, evaluationQueue = null, onEvaluationQueueMove, onEvaluationComplete }: Props) {
   const [detail, setDetail] = useState<StudentDetail | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -140,6 +146,16 @@ export default function ProjectStudentDetail({ token, projectCode, classId, stud
     if (stage && !detail.readOnly) focusStage(stage);
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [evaluationFocusSeq, detail]);
+  // Phase 9F — tell the session owner when the SERVER says this student is fully graded (after load or after a save);
+  // reported at most once per selection, never triggers navigation (the teacher moves on by pressing the CTA).
+  const completeReported = useRef("");
+  useEffect(() => {
+    if (!focusMode || !evaluation || !detail || evaluation.ungradedStages !== 0) return;
+    if (completeReported.current === contextKey) return;
+    completeReported.current = contextKey;
+    onEvaluationComplete?.();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [focusMode, evaluation, detail, contextKey]);
   // The requested input exists only after the track / group state above has rendered; focus + reveal it then, once.
   useEffect(() => {
     if (!focusStageId || !detail) return;
@@ -274,13 +290,20 @@ export default function ProjectStudentDetail({ token, projectCode, classId, stud
       {focusMode && evaluation && (
         // Phase 9E — Evaluation Focus Mode banner: the LATEST evaluation (updated by every score response), never the
         // one from the moment the profile opened. The next-stage action re-aims at the first stage still ungraded now.
-        <div className={"eb-eval-focus" + (evaluation.ungradedStages === 0 ? " is-complete" : "")} role="status" data-ungraded={evaluation.ungradedStages}>
+        <div className={"eb-eval-focus" + (evaluation.ungradedStages === 0 ? " is-complete" : "")} role="status" data-ungraded={evaluation.ungradedStages} data-queue-position={evaluationQueue ? evaluationQueue.position : undefined}>
           {evaluation.ungradedStages === 0
-            ? <span className="eb-eval-focus-text">اكتمل تقييم جميع مراحل المشروع لهذا الطالب.</span>
+            ? <span className="eb-eval-focus-text">{evaluationQueue ? (evaluationQueue.next ? "اكتمل تقييم هذا الطالب — انتقل إلى الطالب التالي." : "اكتمل تقييم هذا الطالب — لا يوجد طالب آخر في قائمة التقييم.") : "اكتمل تقييم جميع مراحل المشروع لهذا الطالب."}</span>
             : <>
-              <span className="eb-eval-focus-text">وضع التقييم — {remainingText(evaluation.ungradedStages)}</span>
+              <span className="eb-eval-focus-text">وضع التقييم — {evaluationQueue ? "الطالب " + evaluationQueue.position + " من " + evaluationQueue.total + " — " : ""}{remainingText(evaluation.ungradedStages)}</span>
               {!readOnly && <button type="button" className="eb-button is-small eb-eval-focus-next" onClick={() => { const next = firstUngraded(evaluation); if (next) focusStage(next); }}>المرحلة التالية غير المقيّمة</button>}
             </>}
+          {evaluationQueue && (
+            // 9F — queue navigation (never automatic): the nearest not-yet-completed neighbours; omitted at the ends.
+            <span className="eb-eval-queue-nav" role="group" aria-label="التنقل في قائمة التقييم">
+              {evaluationQueue.previous && <button type="button" className="eb-button is-quiet is-small eb-eval-queue-prev" aria-label={"الطالب السابق في قائمة التقييم: " + evaluationQueue.previous.displayName} onClick={() => onEvaluationQueueMove?.(-1)}>الطالب السابق</button>}
+              {evaluationQueue.next && <button type="button" className={"eb-button is-small eb-eval-queue-next" + (evaluation.ungradedStages === 0 ? " is-primary" : " is-quiet")} aria-label={"الطالب التالي في قائمة التقييم: " + evaluationQueue.next.displayName} onClick={() => onEvaluationQueueMove?.(1)}>{evaluation.ungradedStages === 0 ? "انتقل إلى الطالب التالي: " + evaluationQueue.next.displayName : "الطالب التالي"}</button>}
+            </span>
+          )}
         </div>
       )}
 

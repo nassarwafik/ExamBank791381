@@ -4,7 +4,7 @@ import SectionHeader from "../ui/SectionHeader";
 import { useAutoRefresh } from "../ui/useAutoRefresh";
 import type { TeacherNavId } from "../shell/teacherNav";
 import { parseProjectEvaluation, type ProjectEvaluationAttention, type ProjectEvaluationAttentionRow } from "./teacherTodayEvaluation";
-import type { ProjectStudentRef } from "../projects/drillTarget";
+import type { ProjectEvaluationQueueItem, ProjectStudentRef } from "../projects/drillTarget";
 import "./teacherToday.css";
 export type { ProjectEvaluationAttention, ProjectEvaluationAttentionRow } from "./teacherTodayEvaluation";
 
@@ -38,6 +38,9 @@ type Props = {
   /** Phase 9D — opens the exact project + class + student of an evaluation row (App's drill-in). Preferred over
    * onOpenProject for rows when present; the «المشاريع» card action never uses it. */
   onOpenProjectStudent?: (ref: ProjectStudentRef) => void;
+  /** Phase 9F — starts an evaluation queue session from the card's rows (server order, the clicked row first). Preferred
+   * over onOpenProjectStudent for rows when present; the «المشاريع» card action never uses it. */
+  onStartEvaluationQueue?: (items: ProjectEvaluationQueueItem[], startIndex: number) => void;
 };
 
 export const TEACHER_TODAY_REFRESH_MS = 60000;
@@ -111,7 +114,7 @@ function Card({ id, title, count, tone, items, empty, actionLabel, onAction }: {
   );
 }
 
-export default function TeacherTodayHub({ token, onNavigate, onOpenProject, onOpenProjectStudent }: Props) {
+export default function TeacherTodayHub({ token, onNavigate, onOpenProject, onOpenProjectStudent, onStartEvaluationQueue }: Props) {
   const [data, setData] = useState<TeacherToday | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -143,7 +146,10 @@ export default function TeacherTodayHub({ token, onNavigate, onOpenProject, onOp
   const quiet = !!a && total === 0 && !a.unreadMessages?.total;
   // A row: the exact student (9D) when App offers it, else the project (9C), else the Projects destination.
   const openRow = (r: ProjectEvaluationAttentionRow) => {
-    if (onOpenProjectStudent) onOpenProjectStudent({ projectCode: r.projectCode, classId: r.classId, studentId: r.studentId });
+    const rows = projectEval ? projectEval.attention : [];
+    const index = rows.findIndex(x => x.studentId === r.studentId && x.projectCode === r.projectCode && x.classId === r.classId);
+    if (onStartEvaluationQueue && index >= 0) onStartEvaluationQueue(rows.map(x => ({ projectCode: x.projectCode, classId: x.classId, studentId: x.studentId, displayName: x.displayName })), index);
+    else if (onOpenProjectStudent) onOpenProjectStudent({ projectCode: r.projectCode, classId: r.classId, studentId: r.studentId });
     else if (onOpenProject) onOpenProject(r.projectCode);
     else go("projects");
   };

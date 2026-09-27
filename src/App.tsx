@@ -36,7 +36,7 @@ import type { ImportSessionState } from "./ImportQuestionsPanel";
 import { IconUser, IconLock, IconWarning, IconChevronDown, IconImage, IconSparkles, IconGraduation } from "./icons";
 import TeacherAppShell from "./shell/TeacherAppShell";
 import type { TeacherNavId } from "./shell/teacherNav";
-import type { ProjectDrillTarget, ProjectStudentRef } from "./projects/drillTarget";
+import { queueItemKey, queueNeighbour, queueView, type ProjectDrillTarget, type ProjectEvaluationQueue, type ProjectEvaluationQueueItem, type ProjectStudentRef } from "./projects/drillTarget";
 import { QuestionTextBlock, parseTable } from "./questionContent";
 import { normalizeExamTheme, EXAM_THEMES, THEME_LABELS } from "./examTheme";
 import type { ExamTheme } from "./examTheme";
@@ -618,20 +618,48 @@ function App() {
   // twice (or another student of the same project) is always observable by the mounted tracker.
   const [projectDrill, setProjectDrill] = useState<ProjectDrillTarget | null>(null);
   const projectDrillSeq = useRef(0);
+  // Phase 9F — the evaluation queue session (transient App state only): the hub's server-ordered attention rows, the
+  // current index and the items this session saw fully graded. Ordinary navigation (goToProjects, the sidebar, a manual
+  // student open / view / class change inside the tracker) ends it; every queue move is a fresh 9D drill (new seq).
+  const [evaluationQueue, setEvaluationQueue] = useState<ProjectEvaluationQueue | null>(null);
+  const evaluationQueueId = useRef(0);
   function goToProjects(code: string) {
     setTeacherView("project");
     setProjectCode(code);
     setProjectDrill(null);
+    setEvaluationQueue(null);
   }
   function openProjectStudent(ref: ProjectStudentRef) {
     setTeacherView("project");
     setProjectCode(ref.projectCode);
     setProjectDrill({ projectCode: ref.projectCode, classId: ref.classId, studentId: ref.studentId, seq: ++projectDrillSeq.current });
   }
+  /** A Today Hub row: start the session at the clicked row (its rows, its order) and drill into that student. */
+  function startEvaluationQueue(items: ProjectEvaluationQueueItem[], startIndex: number) {
+    const index = Math.max(0, Math.min(items.length - 1, startIndex));
+    if (!items.length) return;
+    setEvaluationQueue({ id: ++evaluationQueueId.current, items, index, completed: [] });
+    openProjectStudent(items[index]);
+  }
+  /** «الطالب السابق» / «الطالب التالي»: the nearest not-yet-completed neighbour, opened through the same drill path. */
+  function moveEvaluationQueue(dir: -1 | 1) {
+    if (!evaluationQueue) return;
+    const target = queueNeighbour(evaluationQueue, dir);
+    if (!target) return;
+    setEvaluationQueue({ ...evaluationQueue, index: target.index });
+    openProjectStudent(target.item);
+  }
+  /** The open profile reported the server's `ungradedStages === 0` for this item: remember it for this session only. */
+  function completeEvaluationQueueItem(ref: ProjectStudentRef) {
+    setEvaluationQueue(q => { if (!q) return q; const key = queueItemKey(ref); return q.completed.includes(key) || !q.items.some(i => queueItemKey(i) === key) ? q : { ...q, completed: [...q.completed, key] }; });
+  }
+  /** A manual student open / view / class change inside the tracker leaves the drill flow: the session ends. */
+  function exitEvaluationQueue() { setEvaluationQueue(null); }
 
   // UX-2 — the shell asks for a destination by id; every id maps onto the EXISTING setters above
   // (teacherView / workspaceTab / projectCode stay the only navigation authority).
   function navigateTeacher(id: TeacherNavId) {
+    setEvaluationQueue(null);                                                   // 9F: any shell navigation ends the evaluation session
     if (id === "dashboard" || id === "students" || id === "assignments" || id === "audit") { goToWorkspace(id); return; }
     if (id === "learning") { setTeacherView("learning"); return; }
     if (id === "games") { setTeacherView("games"); return; }
@@ -5637,6 +5665,7 @@ function App() {
             onNavigate={navigateTeacher}
             onOpenProject={goToProjects}
             onOpenProjectStudent={openProjectStudent}
+            onStartEvaluationQueue={startEvaluationQueue}
           />
         </Suspense>
       )}
@@ -5657,7 +5686,8 @@ function App() {
       {teacherView === "project" && (
         <Suspense fallback={<p className="eb-muted" role="status">جارٍ التحميل...</p>}>
           {projectCode
-            ? <ProjectTracker token={token} projectCode={projectCode} onReadyChanged={refreshProjectReady} drillTarget={projectDrill} />
+            ? <ProjectTracker token={token} projectCode={projectCode} onReadyChanged={refreshProjectReady} drillTarget={projectDrill}
+                evaluationQueue={queueView(evaluationQueue)} onEvaluationQueueMove={moveEvaluationQueue} onEvaluationQueueComplete={completeEvaluationQueueItem} onEvaluationFocusExit={exitEvaluationQueue} />
             : <ProjectHub projects={projectList} status={projectCatalogStatus} readyByProject={projectReady.byProject} onRetry={() => setProjectCatalogNonce(n => n + 1)} onOpenProject={goToProjects} />}
         </Suspense>
       )}
