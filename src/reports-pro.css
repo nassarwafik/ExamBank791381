@@ -4,11 +4,16 @@
    Breakpoints align with the shell: 768 / 1024 / 1280.
    ============================================================ */
 
+/* ---------- Page gutter (Phase 10A) ---------- */
+/* Reports never sit flush against the sidebar rail NOR against the screen edge: the hub (report cards) and the OPENED
+   report workspace own ONE symmetric logical gutter on both inline sides at every width — 16px, widening to the page
+   header's 24px inset from 768px — the same policy Phase 8B gave the Projects pages. The shell content wrapper stays
+   padding-free, so this is never double spacing. Logical properties only (RTL-safe). */
+.eb-reports-hub,.eb-report-workspace{ padding-inline:var(--eb-space-4); box-sizing:border-box; min-width:0; }
+@media (min-width:768px){ .eb-reports-hub,.eb-report-workspace{ padding-inline:var(--eb-space-5); } }
+
 /* ---------- Hub ---------- */
 .eb-reports-hub{ display:flex; flex-direction:column; gap:var(--eb-space-5); }
-/* Desktop: keep the page content clear of the fixed sidebar rail (RTL-safe logical padding). Below 1024px the
-   sidebar is an off-canvas drawer, so no side gutter is added there. */
-@media (min-width:1024px){ .eb-reports-hub{ padding-inline-start:var(--eb-space-4); } }
 .eb-reports-group{ display:flex; flex-direction:column; gap:var(--eb-space-3); }
 .eb-reports-group-head{ display:flex; flex-direction:column; gap:2px; }
 .eb-report-cards{ list-style:none; margin:0; padding:0; display:grid; grid-template-columns:repeat(auto-fill,minmax(260px,1fr)); gap:var(--eb-space-3); }
@@ -92,6 +97,7 @@
 
 /* ---------- Print: report identity + result only ---------- */
 @media print{
+  .eb-report-workspace{ padding-inline:0; }
   .eb-report-noprint{ display:none !important; }
   .eb-report-print-title{ display:block; }
   .eb-report-table-scroll{ overflow:visible; border:0; }

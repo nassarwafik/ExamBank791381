@@ -47,12 +47,9 @@
 }
 .eb-sidebar-top { display: flex; align-items: center; justify-content: space-between; gap: var(--eb-space-2); padding-block-end: var(--eb-space-3); border-block-end: 1px solid var(--eb-nav-border); }
 .eb-brand { display: flex; align-items: center; gap: var(--eb-space-2); min-width: 0; }
-.eb-brand-mark {
-  flex: 0 0 auto; width: 36px; height: 36px; border-radius: var(--eb-r-sm);
-  display: inline-flex; align-items: center; justify-content: center;
-  background: var(--eb-primary); color: var(--eb-surface);
-  font-weight: var(--eb-fw-bold); font-size: var(--eb-fs-14);
-}
+/* Phase 10A — the brand mark is the shared BrandMark SVG (its own tile + colours), so the wrapper only sizes it. */
+.eb-brand-mark { flex: 0 0 auto; width: 36px; height: 36px; display: inline-flex; border-radius: var(--eb-r-sm); overflow: hidden; }
+.eb-brand-mark svg { display: block; width: 100%; height: 100%; }
 .eb-brand-text { display: flex; flex-direction: column; font-weight: var(--eb-fw-semibold); font-size: var(--eb-fs-14); line-height: var(--eb-lh-tight); white-space: nowrap; }
 .eb-brand-text small { color: var(--eb-nav-text-muted); font-weight: var(--eb-fw-medium); font-size: var(--eb-fs-12); }
 

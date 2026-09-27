@@ -33,7 +33,8 @@ import "./project794589.css";
 const TeacherPlatform = lazy(lazyWithRetry(() => import("./TeacherPlatform"), "teacher-platform"));
 import ImportQuestionsPanel, { createEmptyImportSession } from "./ImportQuestionsPanel";
 import type { ImportSessionState } from "./ImportQuestionsPanel";
-import { IconUser, IconLock, IconWarning, IconChevronDown, IconImage, IconSparkles, IconGraduation } from "./icons";
+import { IconUser, IconLock, IconWarning, IconChevronDown, IconImage, IconSparkles, IconGraduation, IconAssignments, IconProjects } from "./icons";
+import BrandMark from "./ui/BrandMark";
 import TeacherAppShell from "./shell/TeacherAppShell";
 import type { TeacherNavId } from "./shell/teacherNav";
 import { queueItemKey, queueNeighbour, queueView, type ProjectDrillTarget, type ProjectEvaluationQueue, type ProjectEvaluationQueueItem, type ProjectStudentRef } from "./projects/drillTarget";
@@ -5498,24 +5499,46 @@ function App() {
     return (
       <main className="auth" dir="rtl">
         <section className="auth-brand">
-          <svg className="auth-net" viewBox="0 0 400 300" aria-hidden="true" focusable="false">
-            <g fill="none" stroke="#fff" strokeWidth="1">
-              <path d="M40 60 L160 110 L120 220 L280 190 L340 90" />
-              <path d="M160 110 L280 190" />
-              <path d="M120 220 L40 260" />
-            </g>
-            <g fill="#fff">
-              <circle cx="40" cy="60" r="4" />
-              <circle cx="160" cy="110" r="5" />
-              <circle cx="120" cy="220" r="4" />
-              <circle cx="280" cy="190" r="5" />
-              <circle cx="340" cy="90" r="4" />
-              <circle cx="40" cy="260" r="4" />
+          {/* Phase 10A — hero illustration: a network constellation + signal rings that FADE OUT before the lower third
+              (mask), so nothing draws across the bottom of the panel; decorative only. Sized by CSS (width 100%, intrinsic
+              aspect, clipped by the panel) — deliberately NO preserveAspectRatio: that attribute is the bundle guard's
+              signature for lazy learning visuals and must never appear in the initial chunk. */}
+          <svg className="auth-net" viewBox="0 0 640 800" aria-hidden="true" focusable="false">
+            <defs>
+              <linearGradient id="auth-net-fade" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0" stopColor="#fff" stopOpacity="1" />
+                <stop offset=".5" stopColor="#fff" stopOpacity=".6" />
+                <stop offset=".82" stopColor="#fff" stopOpacity="0" />
+              </linearGradient>
+              <mask id="auth-net-mask"><rect width="640" height="800" fill="url(#auth-net-fade)" /></mask>
+              <radialGradient id="auth-net-glow"><stop offset="0" stopColor="#60a5fa" stopOpacity=".5" /><stop offset="1" stopColor="#60a5fa" stopOpacity="0" /></radialGradient>
+            </defs>
+            <circle cx="520" cy="110" r="280" fill="url(#auth-net-glow)" />
+            <g mask="url(#auth-net-mask)">
+              <g fill="none" stroke="#fff" strokeOpacity=".07" strokeWidth="1.25">
+                <circle cx="520" cy="110" r="90" /><circle cx="520" cy="110" r="165" /><circle cx="520" cy="110" r="240" />
+              </g>
+              <g fill="none" stroke="#93c5fd" strokeOpacity=".38" strokeWidth="1.5" strokeLinecap="round">
+                <path d="M92 150 L212 218 L332 156 L452 236 L560 176" />
+                <path d="M212 218 L184 366 L322 424 L452 236" />
+                <path d="M332 156 L322 424" />
+                <path d="M92 150 L62 306 L184 366" />
+                <path d="M560 176 L598 336 L452 236" />
+              </g>
+              <g fill="#bfdbfe" fillOpacity=".16">
+                <circle cx="92" cy="150" r="16" /><circle cx="212" cy="218" r="20" /><circle cx="332" cy="156" r="16" /><circle cx="452" cy="236" r="20" />
+                <circle cx="560" cy="176" r="16" /><circle cx="184" cy="366" r="14" /><circle cx="322" cy="424" r="16" /><circle cx="62" cy="306" r="12" /><circle cx="598" cy="336" r="12" />
+              </g>
+              <g fill="#dbeafe">
+                <circle cx="92" cy="150" r="5" /><circle cx="332" cy="156" r="5" /><circle cx="560" cy="176" r="5" /><circle cx="184" cy="366" r="4.5" />
+                <circle cx="322" cy="424" r="5" /><circle cx="62" cy="306" r="4" /><circle cx="598" cy="336" r="4" />
+              </g>
+              <g fill="#7dd3fc"><circle cx="212" cy="218" r="6.5" /><circle cx="452" cy="236" r="6.5" /></g>
             </g>
           </svg>
 
           <div className="auth-brand-top">
-            <div className="auth-logo brand-mark">EB</div>
+            <span className="auth-logo" aria-hidden="true"><BrandMark size={52} /></span>
             <div className="auth-logo-text">
               ExamBank
               <small>791381</small>
@@ -5523,17 +5546,23 @@ function App() {
           </div>
 
           <div className="auth-hero">
+            <p className="auth-kicker">شبكات الاتصال · تعلّم رقمي · للمعلم والطالب</p>
             <h2>منصة الامتحانات والتدريب الذكي لشبكات الاتصال</h2>
-          </div>
+            <p className="auth-lead">امتحانات وواجبات، مشاريع صفية ومتابعة، وتدريب تفاعلي يتابع تقدّم كل طالب — في مساحة واحدة.</p>
+            <ul className="auth-points" aria-label="ما تقدّمه المنصة">
+              <li><IconAssignments size={16} aria-hidden="true" /><span>امتحانات وواجبات بتصحيح فوري</span></li>
+              <li><IconProjects size={16} aria-hidden="true" /><span>مشاريع صفية ومتابعة تقدّم الطلاب</span></li>
+              <li><IconSparkles size={16} aria-hidden="true" /><span>تدريب ذكي وتحديات مباشرة</span></li>
+            </ul>
+            <div className="auth-features login-role-note">
+              <span className="auth-feature">
+                <IconUser size={16} aria-hidden="true" /> معلم
+              </span>
 
-          <div className="auth-features login-role-note">
-            <span className="auth-feature">
-              <IconUser size={16} aria-hidden="true" /> معلم
-            </span>
-
-            <span className="auth-feature">
-              <IconGraduation size={16} aria-hidden="true" /> طالب
-            </span>
+              <span className="auth-feature">
+                <IconGraduation size={16} aria-hidden="true" /> طالب
+              </span>
+            </div>
           </div>
         </section>
 

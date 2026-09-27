@@ -43,10 +43,10 @@ const topLevelRule = (css: string, selector: string): string => {
 const hasDesktopGutter = (css: string, selector: string): boolean =>
   new RegExp(`@media\\(min-width:1024px\\)\\{[^{}]*${escapeRe(selector)}[^{}]*\\{[^}]*padding-inline-start:var\\(--eb-space-4\\);`).test(norm(css));
 
-// Phase 8B moved the two PROJECT roots to a symmetric gutter (see the dedicated describe block below); the hub pages
-// that were not in 8B's scope keep this original inline-start-only policy unchanged.
+// Phase 8B moved the two PROJECT roots to a symmetric gutter, and Phase 10A moved the two REPORTS roots to the same
+// policy (see the dedicated describe blocks below); the hub page that was in neither scope keeps this original
+// inline-start-only policy unchanged.
 const CASES = [
-  { name: "Reports", file: "../reports-pro.css", selector: ".eb-reports-hub" },
   { name: "Question Bank", file: "../bank-pro.css", selector: ".eb-bank" },
 ] as const;
 
@@ -116,6 +116,44 @@ describe("sidebar ↔ content spacing — Projects hub + opened project workspac
     expect(css).not.toMatch(/margin-(?:left|right)\s*:/);
     expect(css).not.toMatch(/padding-(?:left|right)\s*:/);
     expect(norm(css)).not.toContain("@media(min-width:1024px){.eb-projects-hub");
+  });
+  it("does not touch the sidebar, the navigation or the shell wrapper (so no double spacing)", () => {
+    expect(css).not.toContain(".eb-sidebar");
+    expect(css).not.toContain(".eb-nav");
+    expect(css).not.toContain("--eb-sidebar-w");
+    expect(css).not.toContain(".eb-shell-content");
+  });
+});
+
+// Phase 10A — Reports (hub + OPENED report workspace). Same deliberate change as 8B's Projects pages: the report
+// cards and an opened report must never sit flush against the sidebar rail NOR against the screen edge (the two
+// complaints this phase fixes), so BOTH roots own an equal logical gutter on both inline sides at every width,
+// aligned with the page header's inline padding (16px below 768px, 24px from 768px). The shell content wrapper stays
+// padding-free, so this is never double spacing; print drops the gutter.
+describe("sidebar ↔ content spacing — Reports hub + opened report workspace (Phase 10A)", () => {
+  const css = read("../reports-pro.css");
+  const group = ".eb-reports-hub,.eb-report-workspace";
+  it("both roots share ONE top-level rule with a symmetric logical gutter (mobile drawer included)", () => {
+    const bare = norm(stripAtMedia(css));
+    const i = bare.indexOf(group + "{");
+    expect(i).toBeGreaterThanOrEqual(0);
+    const base = bare.slice(i, bare.indexOf("}", i) + 1);
+    expect(base).toContain("padding-inline:var(--eb-space-4);");
+    expect(base).toContain("box-sizing:border-box;");
+    expect(base).toContain("min-width:0;");
+  });
+  it("from 768px the SAME grouped rule widens the gutter to the page-header inset (--eb-space-5)", () => {
+    expect(norm(css)).toContain("@media(min-width:768px){" + group + "{padding-inline:var(--eb-space-5);}}");
+  });
+  it("the opened report workspace is covered too (it is a separate root when a report is open)", () => {
+    expect(norm(css)).toContain(".eb-report-workspace{display:flex;flex-direction:column;gap:var(--eb-space-4);min-width:0;}");
+    expect(norm(css)).toContain("@mediaprint{.eb-report-workspace{padding-inline:0;}");
+  });
+  it("no inline-start-only / inline-end-only / physical side paddings or margins remain for the report roots", () => {
+    expect(css).not.toMatch(/padding-inline-(?:start|end)\s*:/);
+    expect(css).not.toMatch(/margin-(?:left|right)\s*:/);
+    expect(css).not.toMatch(/padding-(?:left|right)\s*:/);
+    expect(norm(css)).not.toContain("@media(min-width:1024px){.eb-reports-hub");
   });
   it("does not touch the sidebar, the navigation or the shell wrapper (so no double spacing)", () => {
     expect(css).not.toContain(".eb-sidebar");

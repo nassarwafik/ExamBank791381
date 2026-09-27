@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import BrandMark from "../ui/BrandMark";
 import { IconLogout, IconMail, IconSparkles } from "../icons";
 import VisuallyHidden from "../ui/VisuallyHidden";
 import NotificationBell, { type NotificationCenterProps } from "../notifications/NotificationBell";
@@ -21,7 +22,7 @@ export default function StudentShell({ studentName, className, onLogout, onOpenG
     <main className="student-portal eb-student-shell" dir="rtl">
       <header className="student-topbar">
         <div className="student-brand">
-          <span className="student-logo" aria-hidden="true">EB</span>
+          <span className="student-logo" aria-hidden="true"><BrandMark size={43} /></span>
           <div><h1>ExamBank 2.0</h1><p>بوابة الطالب للتدريب والواجبات</p></div>
         </div>
         {studentName && (
