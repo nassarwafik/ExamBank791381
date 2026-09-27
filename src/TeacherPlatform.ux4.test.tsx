@@ -455,6 +455,25 @@ describe("UX-4 CSV parity", () => {
       expect((captured as unknown as Blob).type).toBe("text/csv;charset=utf-8");
     } finally { ROSTERS.c1 = saved; }
   });
+  it("Phase 11B — a leading-space formula in a student field is exported quote-prefixed with its spacing intact", async () => {
+    const saved = ROSTERS.c1;
+    ROSTERS.c1 = [stu("x1", " =cmd|' /C calc'!A0", "\t @SUM(1)", "  +972500000", "c1"), stu("x2", "  زيد", "عادي", " 123", "c1")];
+    try {
+      render(<TeacherPlatform token="t" currentExam={null} workspaceTab="students" />);
+      await screen.findByText("عادي");
+      let captured: Blob | null = null;
+      URL.createObjectURL = vi.fn((b: Blob) => { captured = b; return "blob:x"; }) as unknown as typeof URL.createObjectURL;
+      URL.revokeObjectURL = vi.fn();
+      vi.spyOn(HTMLAnchorElement.prototype, "click").mockImplementation(() => {});
+      fireEvent.click(screen.getByRole("button", { name: "المزيد من إجراءات الصف" }));
+      fireEvent.click(within(await screen.findByRole("group", { name: "المزيد من إجراءات الصف" })).getByRole("button", { name: "تصدير CSV" }));
+      const text = await (captured as unknown as Blob).text();
+      expect(text.startsWith("\ufeff" + '"الاسم","اسم العائلة","رقم الهوية","الصف","الحالة","آخر دخول"')).toBe(true);
+      expect(text).toContain(`"' =cmd|' /C calc'!A0","'\t @SUM(1)","'  +972500000"`);
+      expect(text).toContain(`"  زيد","عادي"," 123"`);                                   // safe text with leading spaces is untouched
+      expect((captured as unknown as Blob).type).toBe("text/csv;charset=utf-8");
+    } finally { ROSTERS.c1 = saved; }
+  });
 });
 
 describe("UX-4 accessibility source guards", () => {

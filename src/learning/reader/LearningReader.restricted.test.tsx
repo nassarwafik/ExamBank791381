@@ -35,7 +35,12 @@ describe("student Reader — m07 hidden (released m01 + m02)", () => {
     const { loads } = mount([M01, M02]);
     await heading("أساسيات الشبكات");
     const total = pagesOf(M01) + pagesOf(M02);
-    expect(screen.getByText("صفحة 1 من " + total)).toBeTruthy();
+    // Phase 11B — page 1 is the m01 OPENER. Its manifest header («صفحة 1 من N») shows only WHILE the body loads; the
+    // settled opener hero has no such line, so asserting it right after the heading raced the body load (it failed
+    // whenever the body was already in by the first heading check). Wait for the settled opener, then read the total
+    // from the pager position, which is the same in both states — the exact released total, not weakened.
+    await waitFor(() => expect(document.querySelector(".learning-reader-page.is-opener")).toBeTruthy(), SLOW);
+    expect(document.querySelector(".learning-reader-navpos")!.textContent).toBe("1 / " + total);
     const toc = within(screen.getByRole("complementary", { name: "فهرس الكتاب (سطح المكتب)" }));
     expect(toc.getAllByText("أساسيات الشبكات").length).toBeGreaterThan(0); expect(toc.getAllByText("الأعداد والموازين").length).toBeGreaterThan(0);
     expect(toc.queryByText("عناوين IP")).toBeNull();

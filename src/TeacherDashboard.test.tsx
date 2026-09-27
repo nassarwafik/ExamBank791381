@@ -303,6 +303,26 @@ describe("UX-3 dashboard — CSV, AI, achievements (payload parity)", () => {
     expect(text.startsWith("\ufeff")).toBe(true);                                         // BOM kept
     expect((captured as unknown as Blob).type).toBe("text/csv;charset=utf-8");            // download flow unchanged
   });
+  it("Phase 11B — formula-shaped text behind leading spaces/tabs is exported quote-prefixed with its spacing intact", async () => {
+    const f = analyticsFixture();
+    f.assignmentTrend[0] = { ...f.assignmentTrend[0], title: " =SUM(1,1)", className: "   +1+1" };
+    f.followUp[0] = { ...f.followUp[0], displayName: "    @cmd", reasons: [" \t-2+3"] };
+    await mount({ analytics: () => f });
+    let captured: Blob | null = null;
+    URL.createObjectURL = vi.fn((b: Blob) => { captured = b; return "blob:x"; }) as unknown as typeof URL.createObjectURL;
+    URL.revokeObjectURL = vi.fn();
+    vi.spyOn(HTMLAnchorElement.prototype, "click").mockImplementation(() => {});
+    fireEvent.click(screen.getByRole("button", { name: "تصدير CSV" }));
+    const text = await (captured as unknown as Blob).text();
+    expect(text).toContain(`"' =SUM(1,1)"`);
+    expect(text).toContain(`"'   +1+1"`);
+    expect(text).toContain(`"'    @cmd"`);
+    expect(text).toContain(`"' \t-2+3"`);
+    const cells = text.replace(/^\ufeff/, "").split(/,(?=")|\r\n(?=")/);
+    expect(cells.filter(c => /^"[\s]*[=+\-@]/.test(c))).toEqual([]);                    // no cell opens with (spaces +) a bare trigger
+    expect(text.startsWith("\ufeff")).toBe(true);
+    expect((captured as unknown as Blob).type).toBe("text/csv;charset=utf-8");
+  });
   it("AI analysis posts exactly the scope: {} globally, {classId} for a class, {classId, studentId} for a student — one button, rendering the advice lines", async () => {
     const calls = await mount();
     fireEvent.click(screen.getByRole("button", { name: /تحليل البيانات العامة واستخلاص العبر/ }));

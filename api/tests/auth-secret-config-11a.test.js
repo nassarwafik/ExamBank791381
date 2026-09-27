@@ -1,12 +1,18 @@
 import { describe, it, expect, beforeEach, afterEach } from "vitest";
+import { createRequire } from "module";
+
+// Loaded with require (Phase 11B): health.js requires auth-config-status / observability through Node's CommonJS
+// cache, which is a DIFFERENT instance from a vitest `import()` of the same file. Sharing health's instances is what
+// makes __resetAuthSecretReportForTests() and setSink() reach the code under test.
+const require = createRequire(import.meta.url);
 
 // Phase 11A — secret-configuration diagnostic. It classifies WHICH variable of each auth fallback chain is in use
 // (by name, never by value), reports a once-per-process server-log warning when a dedicated secret is missing, and
 // never places anything about secrets in a response. Authentication itself is untouched.
 
-const { authSecretConfiguration, reportAuthSecretConfiguration, __resetAuthSecretReportForTests } = await import("../src/lib/auth-config-status.js");
-const observability = await import("../src/lib/observability.js");
-const { handler: healthHandler } = await import("../src/functions/health.js");
+const { authSecretConfiguration, reportAuthSecretConfiguration, __resetAuthSecretReportForTests } = require("../src/lib/auth-config-status.js");
+const observability = require("../src/lib/observability.js");
+const { handler: healthHandler } = require("../src/functions/health.js");
 const builderAuth = await import("../src/lib/builder-auth.js");
 const studentAuth = await import("../src/lib/student-auth.js");
 

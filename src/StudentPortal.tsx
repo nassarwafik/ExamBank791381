@@ -100,12 +100,19 @@ export default function StudentPortal({ token, displayName, onLogout }: Props) {
   // omitted → false) keeps its exact previous behaviour. The 401 → onLogout session authority is preserved in BOTH
   // modes: /api/student-dashboard is still the only session authority, so a revoked session logs out even in the
   // background (never a silent zombie session).
+  // Phase 11B — every load takes a sequence number when it STARTS; a response is applied only if no later-started load
+  // has already applied one (the initial/manual load and the Reader-return reload run beside the auto-refresh, whose
+  // single-flight guard only covers its own triggers). A 401 is honoured whatever its order: session authority first.
+  const dashSeq = useRef(0), dashApplied = useRef(0);
   async function load({ silent = false }: { silent?: boolean } = {}) {
+    const seq = ++dashSeq.current;
     if (!silent) { setLoading(true); setError(""); }
     try {
       const r = await fetch("/api/student-dashboard", { headers }), j = await r.json() as any;
       if (r.status === 401) { onLogout(); return; }
+      if (seq < dashApplied.current) return;                                         // an older response: a newer one is shown
       if (!r.ok || !j.student || !j.stats) throw new Error(j.error || "تعذر تحميل صفحة الطالب.");
+      dashApplied.current = seq;
       setData({ student: j.student, classroom: j.classroom || null, assignments: j.assignments || [], stats: j.stats, strength: normalizeStrength(j.strength), recognition: normalizeRecognition(j.recognition), study: j.study && typeof j.study === "object" ? { lastActivity: j.study.lastActivity || null } : undefined });
       if (silent) setError("");   // a successful background refresh clears any stale error banner
     } catch (e) { if (!silent) setError(e instanceof Error ? e.message : "تعذر تحميل الصفحة."); }   // silent failure: keep last-good data, no flicker
