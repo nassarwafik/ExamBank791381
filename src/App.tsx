@@ -36,6 +36,7 @@ import type { ImportSessionState } from "./ImportQuestionsPanel";
 import { IconUser, IconLock, IconWarning, IconChevronDown, IconImage, IconSparkles, IconGraduation } from "./icons";
 import TeacherAppShell from "./shell/TeacherAppShell";
 import type { TeacherNavId } from "./shell/teacherNav";
+import type { ProjectDrillTarget, ProjectStudentRef } from "./projects/drillTarget";
 import { QuestionTextBlock, parseTable } from "./questionContent";
 import { normalizeExamTheme, EXAM_THEMES, THEME_LABELS } from "./examTheme";
 import type { ExamTheme } from "./examTheme";
@@ -612,9 +613,20 @@ function App() {
   const [projectReadyNonce, setProjectReadyNonce] = useState(0);
   function refreshProjectReady() { setProjectReadyNonce(n => n + 1); }
 
+  // Phase 9D — the transient drill target for the Today Hub's evaluation rows (project + class + student + seq).
+  // Normal project navigation clears it; openProjectStudent publishes a fresh sequence every time so the same row
+  // twice (or another student of the same project) is always observable by the mounted tracker.
+  const [projectDrill, setProjectDrill] = useState<ProjectDrillTarget | null>(null);
+  const projectDrillSeq = useRef(0);
   function goToProjects(code: string) {
     setTeacherView("project");
     setProjectCode(code);
+    setProjectDrill(null);
+  }
+  function openProjectStudent(ref: ProjectStudentRef) {
+    setTeacherView("project");
+    setProjectCode(ref.projectCode);
+    setProjectDrill({ projectCode: ref.projectCode, classId: ref.classId, studentId: ref.studentId, seq: ++projectDrillSeq.current });
   }
 
   // UX-2 — the shell asks for a destination by id; every id maps onto the EXISTING setters above
@@ -5624,6 +5636,7 @@ function App() {
             onCopyLibraryExamToBuilder={handleCopyLibraryExamToBuilder}
             onNavigate={navigateTeacher}
             onOpenProject={goToProjects}
+            onOpenProjectStudent={openProjectStudent}
           />
         </Suspense>
       )}
@@ -5644,7 +5657,7 @@ function App() {
       {teacherView === "project" && (
         <Suspense fallback={<p className="eb-muted" role="status">جارٍ التحميل...</p>}>
           {projectCode
-            ? <ProjectTracker token={token} projectCode={projectCode} onReadyChanged={refreshProjectReady} />
+            ? <ProjectTracker token={token} projectCode={projectCode} onReadyChanged={refreshProjectReady} drillTarget={projectDrill} />
             : <ProjectHub projects={projectList} status={projectCatalogStatus} readyByProject={projectReady.byProject} onRetry={() => setProjectCatalogNonce(n => n + 1)} onOpenProject={goToProjects} />}
         </Suspense>
       )}

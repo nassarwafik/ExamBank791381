@@ -4,6 +4,7 @@ import SectionHeader from "../ui/SectionHeader";
 import { useAutoRefresh } from "../ui/useAutoRefresh";
 import type { TeacherNavId } from "../shell/teacherNav";
 import { parseProjectEvaluation, type ProjectEvaluationAttention, type ProjectEvaluationAttentionRow } from "./teacherTodayEvaluation";
+import type { ProjectStudentRef } from "../projects/drillTarget";
 import "./teacherToday.css";
 export type { ProjectEvaluationAttention, ProjectEvaluationAttentionRow } from "./teacherTodayEvaluation";
 
@@ -34,6 +35,9 @@ type Props = {
   token: string; onNavigate?: (id: TeacherNavId) => void;
   /** Phase 9C — opens ONE project's tracker (App's existing goToProjects); without it a row falls back to «المشاريع». */
   onOpenProject?: (projectCode: string) => void;
+  /** Phase 9D — opens the exact project + class + student of an evaluation row (App's drill-in). Preferred over
+   * onOpenProject for rows when present; the «المشاريع» card action never uses it. */
+  onOpenProjectStudent?: (ref: ProjectStudentRef) => void;
 };
 
 export const TEACHER_TODAY_REFRESH_MS = 60000;
@@ -61,7 +65,7 @@ const studentsNeeding = (n: number) => (n === 1 ? "طالب واحد لديه م
  * nothing recomputed here). Each row opens that project's tracker through App's EXISTING navigation (no new router);
  * the positive empty state says nothing waits. Rendered only when the payload carries the block.
  */
-function ProjectEvaluationCard({ data, onOpen, onOpenAll }: { data: ProjectEvaluationAttention | null; onOpen: (projectCode: string) => void; onOpenAll: () => void }) {
+function ProjectEvaluationCard({ data, onOpen, onOpenAll }: { data: ProjectEvaluationAttention | null; onOpen: (row: ProjectEvaluationAttentionRow) => void; onOpenAll: () => void }) {
   const id = "eb-today-project-eval";
   let body: ReactNode;
   if (data === null) body = <p className="eb-attention-partial">تعذر قراءة تقييم المشاريع الآن؛ بقية الملخص محدّثة.</p>;
@@ -72,7 +76,7 @@ function ProjectEvaluationCard({ data, onOpen, onOpenAll }: { data: ProjectEvalu
       <ul className="eb-attention-list" aria-label="طلاب بانتظار تقييم مراحل المشروع">
         {data.attention.slice(0, PREVIEW * 2).map(r => (
           <li key={r.studentId + ":" + r.projectCode}>
-            <button type="button" className="eb-attention-item" onClick={() => onOpen(r.projectCode)} aria-label={"افتح مشروع " + r.projectTitle + " لتقييم " + r.displayName + " — " + stagesText(r)}>
+            <button type="button" className="eb-attention-item" onClick={() => onOpen(r)} aria-label={"افتح مشروع " + r.projectTitle + " لتقييم " + r.displayName + " — " + stagesText(r)}>
               <span className="eb-attention-item-label">{r.displayName} — {r.projectTitle}</span>
               <span className="eb-attention-item-meta" dir="auto">{stagesText(r)}{r.className ? " · " + r.className : ""}</span>
             </button>
@@ -107,7 +111,7 @@ function Card({ id, title, count, tone, items, empty, actionLabel, onAction }: {
   );
 }
 
-export default function TeacherTodayHub({ token, onNavigate, onOpenProject }: Props) {
+export default function TeacherTodayHub({ token, onNavigate, onOpenProject, onOpenProjectStudent }: Props) {
   const [data, setData] = useState<TeacherToday | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -137,7 +141,12 @@ export default function TeacherTodayHub({ token, onNavigate, onOpenProject }: Pr
   const projectEval = data?.projectEvaluation;                                 // undefined = older payload (no card)
   const total = a ? a.activeAttempts.count + a.notStarted.count + a.pendingReview.count + (a.unreadMessages ? a.unreadMessages.total : 0) + (projectEval ? projectEval.studentsWithUngradedStages : 0) : 0;
   const quiet = !!a && total === 0 && !a.unreadMessages?.total;
-  const openProject = (code: string) => { if (onOpenProject) onOpenProject(code); else go("projects"); };
+  // A row: the exact student (9D) when App offers it, else the project (9C), else the Projects destination.
+  const openRow = (r: ProjectEvaluationAttentionRow) => {
+    if (onOpenProjectStudent) onOpenProjectStudent({ projectCode: r.projectCode, classId: r.classId, studentId: r.studentId });
+    else if (onOpenProject) onOpenProject(r.projectCode);
+    else go("projects");
+  };
 
   return (
     <section className="eb-today-teacher" aria-labelledby="eb-today-title">
@@ -161,7 +170,7 @@ export default function TeacherTodayHub({ token, onNavigate, onOpenProject }: Pr
               : <p className="eb-today-note">{a.unreadMessages.capped ? "أكثر من 99 رسالة" : a.unreadMessages.total + " رسالة"} من طلابك بانتظار الرد.</p>}
             <button type="button" className="eb-button is-quiet is-small eb-today-card-action" onClick={() => go("messages")}>فتح الرسائل</button>
           </article>
-          {projectEval !== undefined && <ProjectEvaluationCard data={projectEval} onOpen={openProject} onOpenAll={() => go("projects")} />}
+          {projectEval !== undefined && <ProjectEvaluationCard data={projectEval} onOpen={openRow} onOpenAll={() => go("projects")} />}
         </div>
       )}
       <div className="eb-today-actions" role="group" aria-label="إجراءات سريعة">
