@@ -18,3 +18,10 @@
 @media (min-width: 768px){
   .eb-today-actions .eb-button{ min-height:38px; }
 }
+/* Phase 9C — project-evaluation attention rows (buttons on the shared attention-item tokens). */
+.eb-today-project-eval .eb-attention-list li{ min-width:0; }
+.eb-today-project-eval .eb-attention-item{ min-height:44px; }
+.eb-today-project-eval .eb-attention-item-meta{ font-variant-numeric:tabular-nums; }
+@media (min-width: 768px){
+  .eb-today-project-eval .eb-attention-item{ min-height:38px; }
+}

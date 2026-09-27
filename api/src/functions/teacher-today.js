@@ -24,6 +24,9 @@ const {isStudentClassMember}=require("../lib/class-membership");
 const {attemptState,activeAttemptOf,deriveAttemptStatus,normalizeEndReason}=require("../lib/assignment-availability");
 const {deriveGradingStatus}=require("../lib/grading-status");
 const {teacherDirectUnread}=require("../lib/message-read-state");
+// Phase 9C — project evaluation attention (students with ungraded project stages), derived from the classes/users the
+// hub already loaded + one snapshot read and one progress-folder listing per active class × enrolled project.
+const {loadProjectEvaluationSources,deriveProjectEvaluationAttention}=require("../lib/project-tracker/evaluation-attention");
 
 const AP="platform/assignments/",CP="platform/classes/",UP="platform/users/",SP="platform/submissions/";
 const ITEM_CAP=8,RECENT_CAP=10;
@@ -93,14 +96,21 @@ async function handler(request,deps={},obs=null){
   const published=assignments.filter(a=>a&&a.assignmentId&&normalizeAssignmentStatus(a)==="published"&&activeIds.has(String(a.classId||"")));
   // One folder listing + its blobs per published assignment of an active class — the SAME scoped read shape as the
   // class-scoped analytics path (8E-3): drafts, archived assignments and archived classes are never read.
-  const folders=await Promise.all(published.map(a=>loadFolder(container,String(a.assignmentId),deps)));
+  // The submission folders and the project-evaluation sources are independent reads → issued together (each bounded).
+  const [folders,projectSources]=await Promise.all([
+   Promise.all(published.map(a=>loadFolder(container,String(a.assignmentId),deps))),
+   (deps.loadProjectEvaluationSources||loadProjectEvaluationSources)(container,classes,deps).then(v=>({ok:true,value:v}),e=>({ok:false,error:e}))
+  ]);
   const submissionsByAssignment=new Map(published.map((a,i)=>[String(a.assignmentId),folders[i]]));
   const derived=deriveTeacherToday({assignments,classes,users,submissionsByAssignment,nowMs});
-  // Optional source: a messaging failure degrades THIS card only (explicit `partial`), never the whole hub.
-  const partial=[];let unreadMessages=null;
+  // Optional sources: a messaging (or project-storage) failure degrades THAT block only (explicit `partial`), never the hub.
+  const partial=[];let unreadMessages=null,projectEvaluation=null;
   try{const u=await (deps.teacherDirectUnread||teacherDirectUnread)(container,teacherId,{},deps);unreadMessages={total:Math.max(0,Number(u.totalUnread)||0),capped:u.capped===true}}
   catch(e){partial.push("messages");obs?.logError("teacher.today.messages",e)}
-  return {status:200,jsonBody:{ok:true,generatedAt:new Date(nowMs).toISOString(),...derived,attention:{...derived.attention,unreadMessages},partial}};
+  // Phase 9C — additive block: students with ungraded project stages (Phase 9B evaluation semantics, one authority).
+  if(projectSources.ok){try{projectEvaluation=deriveProjectEvaluationAttention({users,sources:projectSources.value})}catch(e){partial.push("projectEvaluation");obs?.logError("teacher.today.projectEvaluation",e)}}
+  else{partial.push("projectEvaluation");obs?.logError("teacher.today.projectEvaluation",projectSources.error)}
+  return {status:200,jsonBody:{ok:true,generatedAt:new Date(nowMs).toISOString(),...derived,attention:{...derived.attention,unreadMessages},projectEvaluation,partial}};
  }catch(e){obs?.logError("teacher.today.error",e);return {status:500,jsonBody:{ok:false,error:"تعذر تحميل ملخص اليوم حاليًا."}}}
 }
 app.http("teacherToday",{methods:["GET"],authLevel:"anonymous",route:"teacher-today",handler:withObservability("teacher-today",handler)});

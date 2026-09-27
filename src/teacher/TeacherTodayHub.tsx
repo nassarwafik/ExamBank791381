@@ -3,7 +3,9 @@ import { IconMail, IconAssignments, IconStudents, IconReports, IconProjects, Ico
 import SectionHeader from "../ui/SectionHeader";
 import { useAutoRefresh } from "../ui/useAutoRefresh";
 import type { TeacherNavId } from "../shell/teacherNav";
+import { parseProjectEvaluation, type ProjectEvaluationAttention, type ProjectEvaluationAttentionRow } from "./teacherTodayEvaluation";
 import "./teacherToday.css";
+export type { ProjectEvaluationAttention, ProjectEvaluationAttentionRow } from "./teacherTodayEvaluation";
 
 /**
  * Phase 9A — the teacher's Today Hub / Command Center: «ما الذي يحتاج انتباهي الآن؟». ONE read of the derived
@@ -24,8 +26,15 @@ export type TeacherToday = {
   };
   recent: { kind: string; at: string; assignmentId: string; title: string; className: string; studentId: string; studentName: string; percentage?: number | null }[];
   partial: string[];
+  /** Phase 9C — additive: students with ungraded project stages (Phase 9B evaluation semantics). Absent on older
+   * payloads (no card), null when the source failed this round ("projectEvaluation" in `partial`). */
+  projectEvaluation?: ProjectEvaluationAttention | null;
 };
-type Props = { token: string; onNavigate?: (id: TeacherNavId) => void };
+type Props = {
+  token: string; onNavigate?: (id: TeacherNavId) => void;
+  /** Phase 9C — opens ONE project's tracker (App's existing goToProjects); without it a row falls back to «المشاريع». */
+  onOpenProject?: (projectCode: string) => void;
+};
 
 export const TEACHER_TODAY_REFRESH_MS = 60000;
 const PREVIEW = 4;
@@ -38,7 +47,48 @@ const KIND: Record<string, string> = { submitted: "سلّم", started: "بدأ �
 function parse(j: unknown): TeacherToday | null {
   const o = j as Partial<TeacherToday> | null;
   if (!o || typeof o !== "object" || !o.attention || !o.attention.activeAttempts || !o.attention.notStarted || !o.attention.pendingReview) return null;
-  return { generatedAt: String(o.generatedAt || ""), scope: o.scope || { activeClasses: 0, students: 0, publishedAssignments: 0 }, attention: { ...o.attention, unreadMessages: o.attention.unreadMessages ?? null }, recent: Array.isArray(o.recent) ? o.recent : [], partial: Array.isArray(o.partial) ? o.partial : [] };
+  const projectEvaluation = parseProjectEvaluation((o as Record<string, unknown>).projectEvaluation);
+  return { generatedAt: String(o.generatedAt || ""), scope: o.scope || { activeClasses: 0, students: 0, publishedAssignments: 0 }, attention: { ...o.attention, unreadMessages: o.attention.unreadMessages ?? null }, recent: Array.isArray(o.recent) ? o.recent : [], partial: Array.isArray(o.partial) ? o.partial : [], ...(projectEvaluation === undefined ? {} : { projectEvaluation }) };
+}
+
+/** «3/7 مراحل مقيّمة» — the row's evaluation state in the Phase 9B wording (0 IS a grade: it is counted as graded by the server). */
+const stagesText = (r: ProjectEvaluationAttentionRow) => r.gradedStages + "/" + r.totalStages + " مراحل مقيّمة";
+const stagesWaiting = (n: number) => (n === 1 ? "مرحلة واحدة تنتظر التقييم" : n === 2 ? "مرحلتان تنتظران التقييم" : n + " مراحل تنتظر التقييم");
+const studentsNeeding = (n: number) => (n === 1 ? "طالب واحد لديه مراحل مشروع غير مقيّمة" : n === 2 ? "طالبان لديهما مراحل مشروع غير مقيّمة" : n + " طلاب لديهم مراحل مشروع غير مقيّمة");
+
+/**
+ * Phase 9C — «تقييم المشاريع»: students with ungraded project stages (the server's Phase 9B evaluation, one authority;
+ * nothing recomputed here). Each row opens that project's tracker through App's EXISTING navigation (no new router);
+ * the positive empty state says nothing waits. Rendered only when the payload carries the block.
+ */
+function ProjectEvaluationCard({ data, onOpen, onOpenAll }: { data: ProjectEvaluationAttention | null; onOpen: (projectCode: string) => void; onOpenAll: () => void }) {
+  const id = "eb-today-project-eval";
+  let body: ReactNode;
+  if (data === null) body = <p className="eb-attention-partial">تعذر قراءة تقييم المشاريع الآن؛ بقية الملخص محدّثة.</p>;
+  else if (data.studentsWithUngradedStages === 0) body = <p className="eb-attention-empty">لا توجد مراحل مشروع بانتظار التقييم.</p>;
+  else body = (
+    <>
+      <p className="eb-today-note">{studentsNeeding(data.studentsWithUngradedStages)} · {stagesWaiting(data.totalUngradedStages)}</p>
+      <ul className="eb-attention-list" aria-label="طلاب بانتظار تقييم مراحل المشروع">
+        {data.attention.slice(0, PREVIEW * 2).map(r => (
+          <li key={r.studentId + ":" + r.projectCode}>
+            <button type="button" className="eb-attention-item" onClick={() => onOpen(r.projectCode)} aria-label={"افتح مشروع " + r.projectTitle + " لتقييم " + r.displayName + " — " + stagesText(r)}>
+              <span className="eb-attention-item-label">{r.displayName} — {r.projectTitle}</span>
+              <span className="eb-attention-item-meta" dir="auto">{stagesText(r)}{r.className ? " · " + r.className : ""}</span>
+            </button>
+          </li>
+        ))}
+      </ul>
+      {data.attentionTotal > Math.min(data.attention.length, PREVIEW * 2) && <p className="eb-attention-more">و{data.attentionTotal - Math.min(data.attention.length, PREVIEW * 2)} أخرى</p>}
+    </>
+  );
+  return (
+    <article className="eb-attention-card tone-info eb-today-project-eval" aria-labelledby={id}>
+      <h3 id={id} className="eb-attention-title"><span>تقييم المشاريع</span><span className="eb-attention-count">{data === null ? "—" : data.studentsWithUngradedStages}</span></h3>
+      {body}
+      <button type="button" className="eb-button is-quiet is-small eb-today-card-action" onClick={onOpenAll}>المشاريع</button>
+    </article>
+  );
 }
 
 function Card({ id, title, count, tone, items, empty, actionLabel, onAction }: { id: string; title: string; count: number; tone: "danger" | "attention" | "info"; items: { key: string; label: string; meta: string }[]; empty: string; actionLabel: string; onAction?: () => void }) {
@@ -57,7 +107,7 @@ function Card({ id, title, count, tone, items, empty, actionLabel, onAction }: {
   );
 }
 
-export default function TeacherTodayHub({ token, onNavigate }: Props) {
+export default function TeacherTodayHub({ token, onNavigate, onOpenProject }: Props) {
   const [data, setData] = useState<TeacherToday | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -84,8 +134,10 @@ export default function TeacherTodayHub({ token, onNavigate }: Props) {
   const go = (id: TeacherNavId) => onNavigate?.(id);
   const scrollToFeed = () => { const el = document.getElementById("eb-achievements-title"); el?.scrollIntoView?.({ block: "start" }); el?.focus?.(); };
   const a = data?.attention;
-  const total = a ? a.activeAttempts.count + a.notStarted.count + a.pendingReview.count + (a.unreadMessages ? a.unreadMessages.total : 0) : 0;
+  const projectEval = data?.projectEvaluation;                                 // undefined = older payload (no card)
+  const total = a ? a.activeAttempts.count + a.notStarted.count + a.pendingReview.count + (a.unreadMessages ? a.unreadMessages.total : 0) + (projectEval ? projectEval.studentsWithUngradedStages : 0) : 0;
   const quiet = !!a && total === 0 && !a.unreadMessages?.total;
+  const openProject = (code: string) => { if (onOpenProject) onOpenProject(code); else go("projects"); };
 
   return (
     <section className="eb-today-teacher" aria-labelledby="eb-today-title">
@@ -109,6 +161,7 @@ export default function TeacherTodayHub({ token, onNavigate }: Props) {
               : <p className="eb-today-note">{a.unreadMessages.capped ? "أكثر من 99 رسالة" : a.unreadMessages.total + " رسالة"} من طلابك بانتظار الرد.</p>}
             <button type="button" className="eb-button is-quiet is-small eb-today-card-action" onClick={() => go("messages")}>فتح الرسائل</button>
           </article>
+          {projectEval !== undefined && <ProjectEvaluationCard data={projectEval} onOpen={openProject} onOpenAll={() => go("projects")} />}
         </div>
       )}
       <div className="eb-today-actions" role="group" aria-label="إجراءات سريعة">
