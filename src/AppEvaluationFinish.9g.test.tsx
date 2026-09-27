@@ -210,3 +210,66 @@ describe("9G App — final-session panel and «العودة إلى لوحة ال
     expect(banner()).toBeNull(); expect(finish()).toBeNull(); expect(document.querySelector(".eb-eval-queue-nav")).toBeNull();
   });
 });
+
+// Phase 11A hotfix — the profile reports «fully graded» to App from a PASSIVE EFFECT, so App's record of that completion
+// is a queued functional update that lands one scheduler task after the CTA is already on screen. A queue move made in
+// that gap must not overwrite the queued completion with its render-time copy of the queue (the post-merge CI failure
+// of G3/G5: s2 was dropped and the final panel read «1 من 4»). Each case presses the button at a different scheduler
+// point right after the CTA commits; setImmediate is the React scheduler's own task source in this environment, so the
+// first case lands exactly between the effect and App's re-render.
+describe("9G App — a queue move right after the CTA keeps the completion the profile just reported", () => {
+  const finish = () => document.querySelector(".eb-eval-finish") as HTMLElement | null;
+  const TIMINGS: Record<string, (fn: () => void) => void> = {
+    "one scheduler task later": fn => { setImmediate(fn); },
+    "two scheduler tasks later": fn => { setImmediate(() => setImmediate(fn)); },
+    "a timer later": fn => { setTimeout(fn, 0); },
+    "two timers later": fn => { setTimeout(() => setTimeout(fn, 0), 0); }
+  };
+  /** Press `button()` once, at `when`, after the first commit whose banner contains `ctaText`. */
+  function pressAfterCta(ctaText: string, button: () => HTMLElement, when: (fn: () => void) => void) {
+    let armed = true;
+    const mo = new MutationObserver(() => {
+      const b = banner();
+      if (!armed || !b || !b.textContent!.includes(ctaText)) return;
+      armed = false; mo.disconnect();
+      when(() => fireEvent.click(button()));
+    });
+    mo.observe(document.body, { subtree: true, childList: true, characterData: true });
+    return () => mo.disconnect();
+  }
+  for (const [label, when] of Object.entries(TIMINGS)) {
+    it("«الطالب التالي» " + label + " → s2 stays recorded; the final panel reads 2 من 4", async () => {
+      render(<App />); await login();
+      const stop = pressAfterCta("انتقل إلى الطالب التالي", nextBtn, when);
+      try {
+        await startAt("s2");
+        await profileOf("s3");
+      } finally { stop(); }
+      await waitFor(() => expect(document.activeElement).toBe(scoreInput("B01")));
+      fireEvent.click(nextBtn()); await profileOf("s4");
+      await waitFor(() => expect(document.activeElement).toBe(scoreInput("B01")));
+      fireEvent.change(scoreInput("B01"), { target: { value: "90" } });
+      fireEvent.click(within(document.querySelector('[data-stage-id="B01"]') as HTMLElement).getByRole("button", { name: "حفظ علامة المرحلة B01" }));
+      await waitFor(() => expect(finish()).toBeTruthy());
+      expect(finish()!.getAttribute("data-completed")).toBe("2");
+      expect(finish()!.textContent).toContain("تم تقييم 2 من 4 طلاب في هذه الجلسة.");
+    });
+  }
+  it("«العودة إلى آخر طالب في الجلسة» one scheduler task after s3's CTA → s3 stays recorded; the panel reads 2 من 4", async () => {
+    fullyGraded.add("s4");
+    render(<App />); await login();
+    await startAt("s4");
+    await waitFor(() => expect(finish()).toBeTruthy());
+    fireEvent.click(prevBtn()); await profileOf("s3");
+    await waitFor(() => expect(document.activeElement).toBe(scoreInput("B01")));
+    const stop = pressAfterCta("لا يوجد طالب آخر في قائمة التقييم", () => within(banner()!).getByRole("button", { name: "العودة إلى آخر طالب في الجلسة: " + NAMES.s4 }), TIMINGS["one scheduler task later"]);
+    try {
+      fireEvent.change(scoreInput("B01"), { target: { value: "85" } });
+      fireEvent.click(within(document.querySelector('[data-stage-id="B01"]') as HTMLElement).getByRole("button", { name: "حفظ علامة المرحلة B01" }));
+      await profileOf("s4");
+    } finally { stop(); }
+    await waitFor(() => expect(finish()).toBeTruthy());
+    expect(finish()!.getAttribute("data-completed")).toBe("2");
+    expect(finish()!.textContent).toContain("تم تقييم 2 من 4 طلاب في هذه الجلسة.");
+  });
+});

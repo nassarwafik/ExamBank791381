@@ -647,7 +647,10 @@ function App() {
     if (!evaluationQueue) return;
     const target = queueNeighbour(evaluationQueue, dir);
     if (!target) return;
-    setEvaluationQueue({ ...evaluationQueue, index: target.index });
+    // Functional update: the open profile reports «fully graded» from a passive effect, so a completion can be queued
+    // after THIS render; spreading the closure's queue would overwrite it and drop that student from the session count.
+    const id = evaluationQueue.id;
+    setEvaluationQueue(q => q && q.id === id ? { ...q, index: target.index } : q);
     openProjectStudent(target.item);
   }
   /** The open profile reported the server's `ungradedStages === 0` for this item: remember it for this session only. */
@@ -668,7 +671,8 @@ function App() {
   function returnToEvaluationQueueTerminal() {
     if (!evaluationQueue || !evaluationQueue.items.length) return;
     const index = evaluationQueue.items.length - 1;
-    setEvaluationQueue({ ...evaluationQueue, index });
+    const id = evaluationQueue.id;
+    setEvaluationQueue(q => q && q.id === id ? { ...q, index } : q);      // functional: keep a just-recorded completion
     openProjectStudent(evaluationQueue.items[index]);
   }
 
