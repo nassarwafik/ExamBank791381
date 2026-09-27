@@ -4929,7 +4929,7 @@ function App() {
     await loadTemplates();
   }
 
-  async function useTemplate(
+  async function applyTemplate(
     item:
       SavedTemplateListItem
   ) {
@@ -6252,7 +6252,7 @@ function App() {
                         <button
                           className="saved-open-button"
                           onClick={() =>
-                            useTemplate(
+                            applyTemplate(
                               item
                             )
                           }

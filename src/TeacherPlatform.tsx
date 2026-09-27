@@ -25,6 +25,8 @@ import {CreateClassDialog,AddStudentDialog,ImportStudentsDialog,EditStudentDialo
 import type {ClassArchiveView,Classroom,ClassLearningMaterial,LearningCatalogCourse,ProjectOption,Student,Credential,BulkStudent,BulkError,ImportPreviewRow,SubmittedAssignment,StudentProfile,SortKey,StatusFilter,ProfileSection} from "./students/types";
 import {type CredentialBatch,openCredentialBatch,toggleCredentialBatchCollapsed,credentialBatchVisible,buildCredentialsDownload} from "./credentialBatch";
 import {appendStudentRow,mergeStudentRow,removeStudentRow,pruneSelectedIds,needsAuthoritativeReload} from "./rosterPatch";
+// Phase 11A — the ONE trusted CSV cell encoder (quotes + formula-injection guard), shared with the Reports Center.
+import {csvCell} from "./reports/csv";
 
 type WorkspaceTab="dashboard"|"students"|"assignments"|"audit";
 // onCopyLibraryExamToBuilder: forwarded straight to AssignmentsPanel; the snapshot is typed loosely
@@ -63,10 +65,6 @@ function statusLabel(student:Student){
 const ROSTER_SYNC_NOTE=" تم تنفيذ العملية، وسيتم تحديث عداد الصف تلقائيًا.";
 function withRosterNote(result:{rosterSynced?:boolean}|null|undefined,message:string):string{
  return result&&result.rosterSynced===false?message+ROSTER_SYNC_NOTE:message;
-}
-function csvCell(value:unknown){
- const text=String(value??"");
- return `"${text.replace(/"/g,'""')}"`;
 }
 
 function TeacherPlatform(props:TeacherPlatformProps){

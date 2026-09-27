@@ -19,6 +19,7 @@ vi.mock("react-chartjs-2", () => {
 });
 
 import TeacherDashboard from "./TeacherDashboard";
+import { csvCell } from "./reports/csv";
 
 const SRC = import.meta.glob("./TeacherDashboard.tsx", { query: "?raw", import: "default", eager: true }) as Record<string, string>;
 const dashboardSource = () => SRC["./TeacherDashboard.tsx"];
@@ -256,7 +257,8 @@ describe("UX-3 dashboard — CSV, AI, achievements (payload parity)", () => {
     expect(captured).toBeTruthy();
     const text = await (captured as unknown as Blob).text();
     const f = analyticsFixture();
-    const q = (v: unknown) => `"${String(v ?? "").replace(/"/g, '""')}"`;
+    // Phase 11A — cells are encoded by the ONE trusted encoder (quotes + formula-injection guard, reports/csv.ts).
+    const q = csvCell;
     const pct = (v: number | null) => v === null ? "—" : v.toFixed(1).replace(/\.0$/, "") + "%";
     const trendText = (d: number) => d >= 5 ? "يتحسن" : d <= -5 ? "يتراجع" : "مستقر";
     const rows: string[][] = [
@@ -272,6 +274,34 @@ describe("UX-3 dashboard — CSV, AI, achievements (payload parity)", () => {
     ];
     expect(text).toBe("\ufeff" + rows.map(r => r.map(q).join(",")).join("\r\n"));
     expect((captured as unknown as Blob).type).toBe("text/csv;charset=utf-8");
+    // the signed «+N%» improvement cells are inert text now (same rule the Reports Center already applies to «+1»)
+    for (const i of f.topImprovers) expect(text).toContain(`"'+${i.trendDelta}%"`);
+  });
+  it("Phase 11A — formula-shaped text in any data column is exported as inert text (=, +, -, @, tab, CR are quote-prefixed)", async () => {
+    const f = analyticsFixture();
+    f.assignmentTrend[0] = { ...f.assignmentTrend[0], title: '=HYPERLINK("http://evil.example","x")', className: "+SUM(1,1)" };
+    f.followUp[0] = { ...f.followUp[0], displayName: "@cmd", reasons: ["-2+3"] };
+    f.topicAnalytics[0] = { ...f.topicAnalytics[0], topic: "\t=1+1" };
+    f.classComparison[0] = { ...f.classComparison[0], name: "\r=2" };
+    await mount({ analytics: () => f });
+    let captured: Blob | null = null;
+    URL.createObjectURL = vi.fn((b: Blob) => { captured = b; return "blob:x"; }) as unknown as typeof URL.createObjectURL;
+    URL.revokeObjectURL = vi.fn();
+    vi.spyOn(HTMLAnchorElement.prototype, "click").mockImplementation(() => {});
+    fireEvent.click(screen.getByRole("button", { name: "تصدير CSV" }));
+    const text = await (captured as unknown as Blob).text();
+    expect(text).toContain(`"'=HYPERLINK(""http://evil.example"",""x"")"`);
+    expect(text).toContain(`"'+SUM(1,1)"`);
+    expect(text).toContain(`"'@cmd"`);
+    expect(text).toContain(`"'-2+3"`);
+    expect(text).toContain(`"'\t=1+1"`);
+    expect(text).toContain(`"'\r=2"`);
+    // no cell of the file starts with a formula trigger: every cell opens with a quote, and none opens with a bare trigger
+    const cells = text.replace(/^\ufeff/, "").split(/,(?=")|\r\n(?=")/);
+    for (const c of cells) if (c) expect(c.startsWith('"'), c).toBe(true);
+    expect(cells.filter(c => /^"[=+\-@\t\r]/.test(c))).toEqual([]);
+    expect(text.startsWith("\ufeff")).toBe(true);                                         // BOM kept
+    expect((captured as unknown as Blob).type).toBe("text/csv;charset=utf-8");            // download flow unchanged
   });
   it("AI analysis posts exactly the scope: {} globally, {classId} for a class, {classId, studentId} for a student — one button, rendering the advice lines", async () => {
     const calls = await mount();
