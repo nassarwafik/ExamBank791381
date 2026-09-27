@@ -436,6 +436,25 @@ describe("UX-4 CSV parity", () => {
     expect(text).toBe("﻿" + rows.map(r => r.map(q).join(",")).join("\r\n"));
     expect((captured as unknown as Blob).type).toBe("text/csv;charset=utf-8");
   });
+  it("Phase 11A — formula-shaped student fields are exported as inert text; header, order, BOM and download flow unchanged", async () => {
+    const saved = ROSTERS.c1;
+    ROSTERS.c1 = [stu("x1", "=cmd|' /C calc'!A0", "@SUM(1)", "+972500000", "c1"), stu("x2", "-2+3", "عادي", "123", "c1")];
+    try {
+      render(<TeacherPlatform token="t" currentExam={null} workspaceTab="students" />);
+      await screen.findByText("-2+3");
+      let captured: Blob | null = null;
+      URL.createObjectURL = vi.fn((b: Blob) => { captured = b; return "blob:x"; }) as unknown as typeof URL.createObjectURL;
+      URL.revokeObjectURL = vi.fn();
+      vi.spyOn(HTMLAnchorElement.prototype, "click").mockImplementation(() => {});
+      fireEvent.click(screen.getByRole("button", { name: "المزيد من إجراءات الصف" }));
+      fireEvent.click(within(await screen.findByRole("group", { name: "المزيد من إجراءات الصف" })).getByRole("button", { name: "تصدير CSV" }));
+      const text = await (captured as unknown as Blob).text();
+      expect(text.startsWith("\ufeff" + '"الاسم","اسم العائلة","رقم الهوية","الصف","الحالة","آخر دخول"')).toBe(true);
+      expect(text).toContain(`"'=cmd|' /C calc'!A0","'@SUM(1)","'+972500000"`);
+      expect(text).toContain(`"'-2+3","عادي","123"`);
+      expect((captured as unknown as Blob).type).toBe("text/csv;charset=utf-8");
+    } finally { ROSTERS.c1 = saved; }
+  });
 });
 
 describe("UX-4 accessibility source guards", () => {

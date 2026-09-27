@@ -6,6 +6,8 @@ import {MEDAL_COLORS,MEDAL_LABELS} from "./medals";
 import {QuestionTextBlock} from "./questionContent";
 import {REACTIONS,eventTypeOf,feedEventParts,type ReactionId,type FeedMedal,type FeedRank,type FeedProject,type FeedStage} from "./achievements";
 import {RANK_VISUALS} from "./studentRankVisuals";
+// Phase 11A — the ONE trusted CSV cell encoder (quotes + formula-injection guard), shared with the Reports Center.
+import {csvCell} from "./reports/csv";
 import {stageVisual} from "./studentStageVisuals";
 import type {RankTier} from "./studentRank";
 import {resolveGradingStatus,type GradingStatus} from "./gradingStatus";
@@ -83,7 +85,6 @@ const clampPct=(value:number|null)=>Math.max(0,Math.min(100,Number(value??0)));
 const maskIdentity=(value:string)=>value?"•••••"+value.slice(-4):"—";
 const trendText=(delta:number)=>delta>=5?"يتحسن":delta<=-5?"يتراجع":"مستقر";
 const trendIcon=(delta:number)=>delta>=5?"↑":delta<=-5?"↓":"→";
-const csvCell=(value:unknown)=>`"${String(value??"").replace(/"/g,'""')}"`;
 const REDUCED_MOTION_QUERY="(prefers-reduced-motion: reduce)";
 const GRID_COLOR="rgba(148,163,184,.18)";
 const ATTENTION_PREVIEW=5;
