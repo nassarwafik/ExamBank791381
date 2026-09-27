@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState, type ReactNode } from "react"
 import PageHeader from "../ui/PageHeader";
 import IconButton from "../ui/IconButton";
 import VisuallyHidden from "../ui/VisuallyHidden";
+import BrandMark from "../ui/BrandMark";
 import useFocusTrap from "../ui/useFocusTrap";
 import {
   IconDashboard, IconStudents, IconAssignments, IconProjects, IconReports, IconBuilder, IconUpload, IconAudit,
@@ -120,7 +121,7 @@ export default function TeacherAppShell({ nav, projectReadyTotal, messageUnread,
       >
         <div className="eb-sidebar-top">
           <div className="eb-brand">
-            <span className="eb-brand-mark" aria-hidden="true">EB</span>
+            <span className="eb-brand-mark" aria-hidden="true"><BrandMark size={36} /></span>
             <span className="eb-brand-text">ExamBank<small>791381</small></span>
           </div>
           {drawerOpen ? (

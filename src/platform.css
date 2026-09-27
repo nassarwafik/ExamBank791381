@@ -330,17 +330,16 @@
   color: #dce2ec;
 }
 
+/* Phase 10A — the shared BrandMark SVG draws its own tile; the wrapper only sizes it. */
 .student-logo {
   width: 43px;
   height: 43px;
+  flex: 0 0 auto;
   display: inline-flex;
-  align-items: center;
-  justify-content: center;
   border-radius: 12px;
-  background: #2563eb;
-  color: white;
-  font-weight: 950;
+  overflow: hidden;
 }
+.student-logo svg { display: block; width: 100%; height: 100%; }
 
 .student-logout {
   border: 1px solid rgba(255,255,255,0.22);
