@@ -356,7 +356,10 @@ describe("9/10 — the student portal: never an automatic prompt; unchanged when
       expect(await screen.findByText(/مرحبًا سارة/)).toBeTruthy();
       expect(await screen.findByRole("button", { name: "تفعيل الإشعارات" })).toBeTruthy();
       const region = card()!;
-      expect(region.previousElementSibling?.getAttribute("aria-labelledby")).toBe("eb-sp-now-title");
+      // after the «now» section — Phase 10C's optional install card may sit between the two (it does in this test browser)
+      expect(["eb-sp-now-title", "eb-install-title"]).toContain(region.previousElementSibling?.getAttribute("aria-labelledby"));
+      const now = document.getElementById("eb-sp-now-title")!.closest("section")!;
+      expect(now.compareDocumentPosition(region) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
       await flush();
       expect(w.Notification.requestPermission).not.toHaveBeenCalled();
       expect(w.pushManager.subscribe).not.toHaveBeenCalled();

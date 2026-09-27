@@ -1,12 +1,14 @@
 // Phase 6A — optional installation of the web app (Android/Chromium install prompt, iOS/iPadOS guidance).
+// Phase 10C — reliable access: the «ليس الآن» dismissal expires (7 days), and a browser that never fires
+// `beforeinstallprompt` still gets a quiet manual-install path instead of nothing.
 //
 // The browser fires `beforeinstallprompt` early (often before any React view that could show a button exists), so
 // the event is captured ONCE at startup (`initInstallPrompt`, called from main.tsx) and kept here. The browser's
 // own mini-infobar is suppressed (preventDefault) so installation is offered only by the app's small, dismissible
-// card and the prompt opens only after an explicit user click.
+// card / the permanent top-bar entry, and the prompt opens only after an explicit user click.
 //
 // Nothing here touches authentication, sessions, the API or notification permission. Environment detection is
-// used ONLY to pick which install guidance to show — never for application behaviour.
+// used ONLY to pick which install guidance / wording to show — never for application behaviour.
 
 export type InstallOutcome = "accepted" | "dismissed" | "unavailable";
 
@@ -28,24 +30,43 @@ let state: InstallState = { promptAvailable: false, installedNow: false };
 const listeners = new Set<() => void>();
 let initialisedFor: Window | null = null;
 
-// Per-device convenience memory: only «the student closed the install card» (never credentials or personal data).
-// Storage may be unavailable → the card simply shows again.
-const DISMISSED_KEY = "examBankPwaInstallCardDismissed";
+// Per-device convenience memory: only WHEN the student closed the install card (a timestamp — never credentials or
+// personal data). Phase 10C: the dismissal is temporary (7 days), so «ليس الآن» can never hide installation for
+// good; a missing / unreadable / malformed / future-dated value simply means «not dismissed». Storage may be
+// unavailable → the card simply shows again.
+export const INSTALL_DISMISS_TTL_MS = 7 * 24 * 60 * 60 * 1000;
+/** A stored timestamp this far in the future is a clock anomaly (device clock moved back) → not a valid dismissal. */
+const CLOCK_SKEW_TOLERANCE_MS = 24 * 60 * 60 * 1000;
+export const DISMISSED_AT_KEY = "examBankPwaInstallCardDismissedAt";
+/** Phase 6A's permanent boolean flag — no longer read (it could hide the card forever); removed when we next write. */
+const LEGACY_DISMISSED_KEY = "examBankPwaInstallCardDismissed";
 
 function emit(next: InstallState) {
   state = next;
   listeners.forEach(l => l());
 }
 
-function remember(key: string) {
-  try { localStorage.setItem(key, "1"); } catch { /* storage unavailable */ }
+export function rememberCardDismissed(now: number = Date.now()) {
+  try {
+    localStorage.setItem(DISMISSED_AT_KEY, String(Math.floor(now)));
+    localStorage.removeItem(LEGACY_DISMISSED_KEY);
+  } catch { /* storage unavailable */ }
 }
-function recalled(key: string): boolean {
-  try { return localStorage.getItem(key) === "1"; } catch { return false; }
+/** Pure: is a stored dismissal timestamp still in force at `now`? Anything not a plain positive integer, or dated more
+ *  than a day in the future, is treated as «not dismissed» (never as «hidden»). */
+export function isDismissalActive(raw: string | null | undefined, now: number = Date.now()): boolean {
+  if (raw === null || raw === undefined) return false;
+  const text = String(raw).trim();
+  if (!/^\d{1,16}$/.test(text)) return false;
+  const at = Number(text);
+  if (!Number.isFinite(at) || at <= 0) return false;
+  const age = now - at;
+  if (age < -CLOCK_SKEW_TOLERANCE_MS) return false;
+  return age < INSTALL_DISMISS_TTL_MS;
 }
-
-export function rememberCardDismissed() { remember(DISMISSED_KEY); }
-export function wasCardDismissed() { return recalled(DISMISSED_KEY); }
+export function wasCardDismissed(now: number = Date.now()): boolean {
+  try { return isDismissalActive(localStorage.getItem(DISMISSED_AT_KEY), now); } catch { return false; }
+}
 
 /** Capture the install prompt for this window. Idempotent per window. */
 export function initInstallPrompt(win: Window = window): void {
@@ -110,6 +131,11 @@ export function isAppleMobile(win: Window = window): boolean {
   return /Macintosh/.test(ua) && (nav.maxTouchPoints || 0) > 1;
 }
 
+/** Android — used ONLY to word the manual-install hint (menu item names differ from desktop). */
+export function isAndroid(win: Window = window): boolean {
+  return /Android/i.test(win.navigator.userAgent || "");
+}
+
 /** A touch-first (phone/tablet) device — used only to word the install button. */
 export function isTouchFirst(win: Window = window): boolean {
   try { return typeof win.matchMedia === "function" && win.matchMedia("(pointer: coarse)").matches; } catch { return false; }
@@ -117,15 +143,24 @@ export function isTouchFirst(win: Window = window): boolean {
 
 export type InstallGuidance =
   | { kind: "installed" }          // standalone, or installed in this page's lifetime → never ask again
-  | { kind: "prompt" }             // Chromium install prompt captured → install button
+  | { kind: "prompt" }             // Chromium install prompt captured → install button (native prompt on click)
   | { kind: "ios" }                // iPhone/iPad → Share → Add to Home Screen steps
-  | { kind: "none" };              // desktop / non-installable / unknown → show nothing
+  | { kind: "manual" };            // not installed, no native prompt right now → quiet browser-menu guidance
 
 export function installGuidance(win: Window, s: InstallState): InstallGuidance {
   if (s.installedNow || isStandalone(win)) return { kind: "installed" };
   if (s.promptAvailable) return { kind: "prompt" };
   if (isAppleMobile(win)) return { kind: "ios" };
-  return { kind: "none" };
+  return { kind: "manual" };
+}
+
+/** The one sentence that always applies when the native prompt is not available. */
+export const MANUAL_INSTALL_MESSAGE = "يمكنك تثبيت ExamBank من قائمة المتصفح واستخدامه كتطبيق مستقل.";
+/** The device-specific menu hint (wording only — behaviour never depends on it). */
+export function manualInstallHint(win: Window): string {
+  return isAndroid(win)
+    ? "افتح قائمة المتصفح واختر «تثبيت التطبيق» أو «إضافة إلى الشاشة الرئيسية»."
+    : "افتح قائمة المتصفح واختر «تثبيت ExamBank» أو «تثبيت التطبيق».";
 }
 
 /** Test-only: forget the captured prompt and listeners' state. */

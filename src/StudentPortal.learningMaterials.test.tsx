@@ -46,7 +46,8 @@ describe("placement, card, empty state, degrade", () => {
   it("sits right after «ماذا عليّ أن أفعل الآن؟» and before «تقدّمي»; the card shows ONLY the released titles and count (m07 hidden, no hidden count)", async () => {
     mount();
     const s = await section();
-    expect(s.previousElementSibling?.getAttribute("aria-labelledby")).toBe("eb-sp-now-title");
+    expect(["eb-sp-now-title", "eb-install-title"]).toContain(s.previousElementSibling?.getAttribute("aria-labelledby"));   // Phase 10C: the optional install card may sit between
+    expect(document.getElementById("eb-sp-now-title")!.closest("section")!.compareDocumentPosition(s) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
     expect(s.nextElementSibling?.textContent).toContain("تقدّمي");
     const card = await within(s).findByRole("article", { name: "شبكات الاتصال" });
     expect(within(card).getByText("كتاب 791381")).toBeTruthy();

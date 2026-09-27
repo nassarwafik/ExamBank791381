@@ -2,31 +2,27 @@ import { useState, useSyncExternalStore } from "react";
 import {
   getInstallState, installGuidance, isTouchFirst, promptInstall, rememberCardDismissed, subscribeInstallState, wasCardDismissed
 } from "./installPrompt";
+import { IosInstallSteps, ManualInstallGuidance } from "./InstallGuidanceViews";
+import BrandMark from "../ui/BrandMark";
 import "./pwa.css";
 
 // Phase 6A — a small, optional «install the app» card for the student portal. It never opens anything by itself:
 // Android/Chromium → a button that opens the browser's own install prompt on click; iPhone/iPad → three short
-// Add-to-Home-Screen steps (iOS has no install API). Already installed, desktop without a prompt, or closed by the
-// student («ليس الآن», remembered on this device) → nothing is rendered. No notification permission is involved.
-
-function ShareIcon() {
-  return (
-    <svg className="eb-install-share" viewBox="0 0 24 24" width="18" height="18" aria-hidden="true" focusable="false">
-      <path d="M12 3v11M8 7l4-4 4 4" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-      <path d="M6 11H5v10h14V11h-1" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-    </svg>
-  );
-}
+// Add-to-Home-Screen steps (iOS has no install API). Already installed → nothing is rendered. No notification
+// permission is involved.
+// Phase 10C — (1) «ليس الآن» hides the card for 7 days on this device, never for good; (2) a browser that has not
+// fired `beforeinstallprompt` gets a quiet «تثبيت ExamBank» card with the browser-menu path instead of nothing;
+// (3) the mark is the official app icon (BrandMark), the same file as the installed icon.
 
 export default function InstallAppCard({ win = window }: { win?: Window }) {
   const install = useSyncExternalStore(subscribeInstallState, getInstallState, getInstallState);
-  const [dismissed, setDismissed] = useState(wasCardDismissed);
+  const [dismissed, setDismissed] = useState(() => wasCardDismissed());
   const [notice, setNotice] = useState("");
   const [busy, setBusy] = useState(false);
   const guidance = installGuidance(win, install);
 
   if (dismissed) return null;
-  if ((guidance.kind === "none" || guidance.kind === "installed") && !notice) return null;
+  if (guidance.kind === "installed" && !notice) return null;
 
   const close = () => { rememberCardDismissed(); setDismissed(true); };
   const onInstall = async () => {
@@ -36,14 +32,15 @@ export default function InstallAppCard({ win = window }: { win?: Window }) {
     if (outcome === "accepted") setNotice("تم تثبيت التطبيق. افتحه من أيقونة ExamBank على الشاشة الرئيسية.");
     else setNotice("لم يتم التثبيت. يمكنك تثبيت التطبيق لاحقًا من قائمة المتصفح.");
   };
+  const manual = guidance.kind === "manual" && !notice;
 
   return (
-    <section className="eb-sp-panel eb-install-card" aria-labelledby="eb-install-title">
+    <section className={"eb-sp-panel eb-install-card" + (manual ? " is-manual" : "")} aria-labelledby="eb-install-title">
       <div className="eb-install-head">
-        <span className="eb-install-mark" aria-hidden="true">EB</span>
+        <span className="eb-install-mark" aria-hidden="true"><BrandMark size={40} /></span>
         <div>
-          <h2 id="eb-install-title" className="eb-install-title">تثبيت التطبيق</h2>
-          <p className="eb-install-desc">افتح ExamBank من أيقونة على الشاشة الرئيسية مثل أي تطبيق. التثبيت اختياري.</p>
+          <h2 id="eb-install-title" className="eb-install-title">{manual ? "تثبيت ExamBank" : "تثبيت التطبيق"}</h2>
+          {!manual && <p className="eb-install-desc">افتح ExamBank من أيقونة على الشاشة الرئيسية مثل أي تطبيق. التثبيت اختياري.</p>}
         </div>
       </div>
 
@@ -58,13 +55,18 @@ export default function InstallAppCard({ win = window }: { win?: Window }) {
 
       {guidance.kind === "ios" && (
         <>
-          <ol className="eb-install-steps" aria-label="خطوات الإضافة إلى الشاشة الرئيسية">
-            <li>افتح قائمة المشاركة <ShareIcon /> <span className="eb-install-hint">(زر المشاركة في شريط المتصفح)</span></li>
-            <li>اختر «إضافة إلى الشاشة الرئيسية»</li>
-            <li>اضغط «إضافة»</li>
-          </ol>
+          <IosInstallSteps />
           <div className="eb-install-actions">
             <button type="button" className="eb-button is-quiet" onClick={close}>إخفاء</button>
+          </div>
+        </>
+      )}
+
+      {manual && (
+        <>
+          <ManualInstallGuidance win={win} />
+          <div className="eb-install-actions">
+            <button type="button" className="eb-button is-quiet is-small" onClick={close}>ليس الآن</button>
           </div>
         </>
       )}

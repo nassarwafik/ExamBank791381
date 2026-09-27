@@ -3,6 +3,7 @@ import BrandMark from "../ui/BrandMark";
 import { IconLogout, IconMail, IconSparkles } from "../icons";
 import VisuallyHidden from "../ui/VisuallyHidden";
 import NotificationBell, { type NotificationCenterProps } from "../notifications/NotificationBell";
+import InstallAppEntry from "../pwa/InstallAppEntry";
 import "../ui/ui.css";
 import "../shell.css";
 
@@ -15,6 +16,8 @@ import "../shell.css";
 // Phase 6C/6D — `notifications` (when given) adds the «الإشعارات» bell first in the bar. Its badge is the server's
 // UNIFIED count (`notifications.counts.bell` = messages + events); the «الرسائل» badge stays `messagesUnread`
 // (message-only). Panel data/counts/navigation belong to StudentPortal.
+// Phase 10C — the permanent «تثبيت التطبيق» entry (InstallAppEntry) renders itself only while the app is not
+// installed; it is independent of the dashboard install card and of that card's temporary dismissal.
 type Props = { studentName: string; className?: string; onLogout: () => void; onOpenGames?: () => void; onOpenMessages?: () => void; messagesUnread?: { total: number; capped: boolean }; notifications?: NotificationCenterProps; children: ReactNode };
 
 export default function StudentShell({ studentName, className, onLogout, onOpenGames, onOpenMessages, messagesUnread, notifications, children }: Props) {
@@ -49,6 +52,7 @@ export default function StudentShell({ studentName, className, onLogout, onOpenG
               <IconSparkles size={16} />الألعاب التعليمية
             </button>
           )}
+          <InstallAppEntry />
           <button type="button" className="student-logout" onClick={onLogout}><IconLogout size={16} />تسجيل الخروج</button>
         </div>
       </header>
