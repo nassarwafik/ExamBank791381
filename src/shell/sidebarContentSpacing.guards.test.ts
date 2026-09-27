@@ -43,42 +43,9 @@ const topLevelRule = (css: string, selector: string): string => {
 const hasDesktopGutter = (css: string, selector: string): boolean =>
   new RegExp(`@media\\(min-width:1024px\\)\\{[^{}]*${escapeRe(selector)}[^{}]*\\{[^}]*padding-inline-start:var\\(--eb-space-4\\);`).test(norm(css));
 
-// Phase 8B moved the two PROJECT roots to a symmetric gutter, and Phase 10A moved the two REPORTS roots to the same
-// policy (see the dedicated describe blocks below); the hub page that was in neither scope keeps this original
-// inline-start-only policy unchanged.
-const CASES = [
-  { name: "Question Bank", file: "../bank-pro.css", selector: ".eb-bank" },
-] as const;
-
-describe("sidebar ↔ content spacing — hubs + opened project workspace", () => {
-  for (const c of CASES) {
-    const css = read(c.file);
-    describe(c.name, () => {
-      it("adds a desktop-only inline-start gutter (padding-inline-start: var(--eb-space-4)) at ≥1024px", () => {
-        expect(hasDesktopGutter(css, c.selector)).toBe(true);
-      });
-      it("does NOT add side padding at the top-level (mobile/drawer) rule — no leftover side space when the sidebar is a drawer", () => {
-        const base = topLevelRule(css, c.selector);
-        expect(base).not.toBe("");
-        expect(base).not.toContain("padding-inline");
-        expect(base).not.toContain("padding:");
-      });
-      it("insets only the sidebar side — no symmetric padding-inline and no inline-end gutter for this selector", () => {
-        expect(norm(css)).not.toContain(`${c.selector}{padding-inline:`);
-        expect(css).not.toMatch(/padding-inline-end\s*:/);
-      });
-      it("uses RTL-safe logical properties only — no margin-left/right or padding-left/right hacks", () => {
-        expect(css).not.toMatch(/margin-(?:left|right)\s*:/);
-        expect(css).not.toMatch(/padding-(?:left|right)\s*:/);
-      });
-      it("does not touch the sidebar or the navigation", () => {
-        expect(css).not.toContain(".eb-sidebar");
-        expect(css).not.toContain(".eb-nav");
-        expect(css).not.toContain("--eb-sidebar-w");
-      });
-    });
-  }
-
+// Phase 8B moved the two PROJECT roots, Phase 10A the two REPORTS roots and Phase 10B the QUESTION BANK root to the
+// symmetric gutter (dedicated describe blocks below); no page keeps the original inline-start-only policy any more.
+describe("sidebar ↔ content spacing — shared policy", () => {
   it("uses an existing spacing token (12–24px range), not an arbitrary pixel value", () => {
     const tokens = read("../design-tokens.css");
     expect(norm(tokens)).toContain("--eb-space-4:16px");   // 16px, within 12–24px
@@ -154,6 +121,34 @@ describe("sidebar ↔ content spacing — Reports hub + opened report workspace 
     expect(css).not.toMatch(/margin-(?:left|right)\s*:/);
     expect(css).not.toMatch(/padding-(?:left|right)\s*:/);
     expect(norm(css)).not.toContain("@media(min-width:1024px){.eb-reports-hub");
+  });
+  it("does not touch the sidebar, the navigation or the shell wrapper (so no double spacing)", () => {
+    expect(css).not.toContain(".eb-sidebar");
+    expect(css).not.toContain(".eb-nav");
+    expect(css).not.toContain("--eb-sidebar-w");
+    expect(css).not.toContain(".eb-shell-content");
+  });
+});
+
+// Phase 10B — Question Bank (.eb-bank, the ExamBankPage root that wraps the overview, the question table and the opened
+// question/preview panels). Same policy as Projects (8B) and Reports (10A): never flush against the sidebar rail nor
+// the screen edge, ONE symmetric logical gutter at every width (16px below 768px, 24px from 768px), shell wrapper
+// padding-free (no double spacing). The list-indent `padding-inline-start` on .eb-bank-options is content, not a gutter.
+describe("sidebar ↔ content spacing — Question Bank (Phase 10B)", () => {
+  const css = read("../bank-pro.css");
+  it("the root owns ONE top-level rule with a symmetric logical gutter (mobile drawer included)", () => {
+    const bare = norm(stripAtMedia(css));
+    expect(bare).toContain(".eb-bank{padding-inline:var(--eb-space-4);box-sizing:border-box;min-width:0;}");
+  });
+  it("from 768px the SAME root widens the gutter to the page-header inset (--eb-space-5)", () => {
+    expect(norm(css)).toContain("@media(min-width:768px){.eb-bank{padding-inline:var(--eb-space-5);}}");
+  });
+  it("the old inline-start-only desktop rule is gone; no physical side paddings or margins", () => {
+    expect(norm(css)).not.toContain("@media(min-width:1024px){.eb-bank");
+    expect(norm(css)).not.toContain(".eb-bank{padding-inline-start");
+    expect(css).not.toMatch(/padding-inline-end\s*:/);
+    expect(css).not.toMatch(/margin-(?:left|right)\s*:/);
+    expect(css).not.toMatch(/padding-(?:left|right)\s*:/);
   });
   it("does not touch the sidebar, the navigation or the shell wrapper (so no double spacing)", () => {
     expect(css).not.toContain(".eb-sidebar");
