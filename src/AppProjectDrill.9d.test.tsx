@@ -87,7 +87,7 @@ describe("9D App — drill navigation from the Today Hub", () => {
     expect(studentReads()).toEqual([["883589", "c2", "s3"]]);
     expect((within(screen.getByRole("region", { name: "مساحة عمل المشروع" })).getByRole("combobox") as HTMLSelectElement).value).toBe("c2");
     expect(screen.queryByRole("button", { name: "فتح المشروع" })).toBeNull();          // not the hub
-    expect(document.activeElement).toBe(heading);
+    expect(heading.closest(".eb-student-profile")!.contains(document.activeElement)).toBe(true);     // 9E: focus lands inside the profile (heading, or the first ungraded stage's input when the detail carries `evaluation`)
   });
   it("B2 ordinary Projects navigation clears the target: hub → open the same project by hand → dashboard view, no student read", async () => {
     render(<App />); await login();

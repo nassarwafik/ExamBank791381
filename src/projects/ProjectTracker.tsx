@@ -53,6 +53,9 @@ export default function ProjectTracker({ token, projectCode, onReadyChanged, dri
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [openStudentId, setOpenStudentId] = useState("");
+  // Phase 9E — Evaluation Focus Mode: the drill `seq` that opened the current student (0 = the student was opened by
+  // hand, or the focus was cleared by ordinary navigation: class / view / project change, manual open, back).
+  const [evaluationFocusSeq, setEvaluationFocusSeq] = useState(0);
   const [viewNonce, setViewNonce] = useState(0);
   const [studentsNonce, setStudentsNonce] = useState(0);
   const studentsDirty = useRef(false);
@@ -77,7 +80,7 @@ export default function ProjectTracker({ token, projectCode, onReadyChanged, dri
     finally { if (seq === classesSeq.current) setLoading(false); }
   }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  useEffect(() => { setView("dashboard"); setOpenStudentId(""); void loadClasses(); }, [projectCode]);
+  useEffect(() => { setView("dashboard"); setOpenStudentId(""); setEvaluationFocusSeq(0); void loadClasses(); }, [projectCode]);
   // Forward transition (hub → workspace): focus lands on the workspace context.
   useEffect(() => { contextRef.current?.focus(); }, [projectCode]);
   // Phase 9D — apply App's drill target exactly once per `seq`, and only when: it names THIS project, the class list
@@ -92,17 +95,19 @@ export default function ProjectTracker({ token, projectCode, onReadyChanged, dri
     if (!classes.some(c => c.classId === drillTarget.classId)) return;
     studentsDirty.current = false; studentOpener.current = null;
     setClassId(drillTarget.classId); setView("students"); setOpenStudentId(drillTarget.studentId);
+    setEvaluationFocusSeq(drillTarget.seq);                                    // 9E: this student was opened for evaluation
   }, [drillTarget, projectCode, classesFor, classes]);
 
-  function changeClass(next: string) { setClassId(next); setOpenStudentId(""); studentsDirty.current = false; }
-  function changeView(next: ProjectView) { setView(next); setOpenStudentId(""); studentsDirty.current = false; }
+  function changeClass(next: string) { setClassId(next); setOpenStudentId(""); setEvaluationFocusSeq(0); studentsDirty.current = false; }
+  function changeView(next: ProjectView) { setView(next); setOpenStudentId(""); setEvaluationFocusSeq(0); studentsDirty.current = false; }
   function openStudent(studentId: string, trigger?: HTMLElement | null) {
     studentOpener.current = trigger instanceof HTMLElement ? trigger : null;
     studentsDirty.current = false;
+    setEvaluationFocusSeq(0);                                                  // a manual open is never Evaluation Focus Mode
     setOpenStudentId(studentId);
   }
   function closeStudent() {
-    setOpenStudentId("");
+    setOpenStudentId(""); setEvaluationFocusSeq(0);
     focusStudentsPending.current = true;
     if (studentsDirty.current) { studentsDirty.current = false; setStudentsNonce(n => n + 1); }
   }
@@ -171,7 +176,7 @@ export default function ProjectTracker({ token, projectCode, onReadyChanged, dri
               </div>
               {openStudentId && (
                 <ProjectStudentDetail token={token} projectCode={projectCode} classId={classId} studentId={openStudentId} tracks={tracks}
-                  onBack={closeStudent} onChanged={() => { studentsDirty.current = true; }} onReadyChanged={onReadyChanged} />
+                  onBack={closeStudent} onChanged={() => { studentsDirty.current = true; }} onReadyChanged={onReadyChanged} evaluationFocusSeq={evaluationFocusSeq} />
               )}
             </>
           )}

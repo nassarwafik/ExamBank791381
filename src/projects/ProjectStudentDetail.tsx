@@ -22,6 +22,11 @@ type Props = {
   /** Called only after a successful STATUS mutation (never note-only, noChange, cancel or failure): a status
    * change can alter the global ready-for-review counts App owns. */
   onReadyChanged?: () => void;
+  /** Phase 9E — Evaluation Focus Mode: the drill `seq` that opened this student from the Today Hub («تقييم المشاريع»).
+   * 0 / undefined = a normal opening (heading focus, no banner, no highlight). Each seq is applied exactly once: after
+   * THIS selection's detail has loaded, the first ungraded active stage (server `evaluation.stages` order) gets its
+   * track selected, its group opened and its score input focused. */
+  evaluationFocusSeq?: number;
 };
 
 type UpdateResponse = {
@@ -63,7 +68,13 @@ const dropKey = <T,>(map: Record<string, T>, key: string): Record<string, T> => 
  *     Each job carries its (project, class, student) context; a job or response for a previous selection is dropped.
  *   • Saving a score never changes the status and approving never sends a score: they remain separate decisions.
  */
-export default function ProjectStudentDetail({ token, projectCode, classId, studentId, tracks, onBack, onChanged, onReadyChanged }: Props) {
+/** The first ungraded ACTIVE stage in the server's canonical order (Phase 9B `evaluation.stages`); null when none. */
+function firstUngraded(evaluation: ProjectEvaluation | null): ProjectEvaluation["stages"][number] | null {
+  return evaluation ? evaluation.stages.find(s => !s.graded) ?? null : null;
+}
+const remainingText = (n: number) => (n === 1 ? "بقيت مرحلة واحدة بدون علامة." : n === 2 ? "بقيت مرحلتان بدون علامة." : "بقيت " + n + " مراحل بدون علامة.");
+
+export default function ProjectStudentDetail({ token, projectCode, classId, studentId, tracks, onBack, onChanged, onReadyChanged, evaluationFocusSeq = 0 }: Props) {
   const [detail, setDetail] = useState<StudentDetail | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -86,6 +97,10 @@ export default function ProjectStudentDetail({ token, projectCode, classId, stud
   // Stale-selection guard: only the LATEST requested (project, class, student) may populate the view — a slow
   // response for a previously selected student can never overwrite the current one's grade / rank / stages.
   const requestSeq = useRef(0);
+  // Phase 9E — the focus request: which stage's score input to focus once it is rendered, and which drill seq was
+  // already consumed (a seq is applied once; the same seq never re-focuses, a new seq for the same student does).
+  const [focusStageId, setFocusStageId] = useState("");
+  const appliedFocusSeq = useRef(0);
 
   async function load() {
     const seq = ++requestSeq.current;
@@ -100,11 +115,40 @@ export default function ProjectStudentDetail({ token, projectCode, classId, stud
   // A new (project, class, student) starts clean: no detail, no disclosure, no drafts, no row errors, no queued busy state.
   function resetSelection() {
     setDetail(null); setOpenStageId(""); setScoreDrafts({}); setNoteDrafts({}); setRowErrors({}); setPending({}); setNotice(""); setError("");
+    setFocusStageId("");                                                       // a pending focus never carries over to another selection
     pendingRef.current = new Set();
   }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => { resetSelection(); void load(); }, [classId, studentId, projectCode]);
   useEffect(() => { headingRef.current?.focus(); }, [studentId]);
+
+  const focusMode = evaluationFocusSeq > 0;
+  const evaluation = useMemo(() => normalizeProjectEvaluation(detail?.evaluation), [detail]);
+  /** Select the stage's track, open its group and request the focus of its score input (rendered next). */
+  function focusStage(stage: ProjectEvaluation["stages"][number]) {
+    setTrack(stage.track);
+    setOpenGroups(prev => (prev[stage.groupId] === false ? { ...prev, [stage.groupId]: true } : prev));
+    setFocusStageId(stage.stageId);
+  }
+  // Phase 9E — apply the drill seq ONCE, only after THIS selection's detail arrived (`detail` is set solely by the
+  // latest request, so a stale student response can never aim the focus at the new student). Read-only profiles have
+  // no input to focus; a fully graded project has nothing to focus (the banner says so).
+  useEffect(() => {
+    if (!focusMode || evaluationFocusSeq === appliedFocusSeq.current || !detail) return;
+    appliedFocusSeq.current = evaluationFocusSeq;
+    const stage = firstUngraded(evaluation);
+    if (stage && !detail.readOnly) focusStage(stage);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [evaluationFocusSeq, detail]);
+  // The requested input exists only after the track / group state above has rendered; focus + reveal it then, once.
+  useEffect(() => {
+    if (!focusStageId || !detail) return;
+    const input = listRef.current?.querySelector<HTMLInputElement>('[data-stage-id="' + focusStageId + '"] input[data-stage-score]');
+    if (!input) return;
+    input.focus();
+    input.scrollIntoView?.({ block: "center" });
+    setFocusStageId("");
+  }, [focusStageId, detail, track, openGroups]);
 
   const groups = useMemo(() => detail ? (detail.groups || []).filter(g => g.track === track).sort((a, b) => a.order - b.order) : [], [detail, track]);
   const byGroup = useMemo(() => detail ? stagesByGroup(detail.stages.filter(s => s.active !== false), track) : new Map(), [detail, track]);
@@ -195,7 +239,6 @@ export default function ProjectStudentDetail({ token, projectCode, classId, stud
 
   const s = detail.summary;
   const perf = normalizeProjectPerformance(detail.performance);
-  const evaluation = normalizeProjectEvaluation(detail.evaluation);
   const timeline = [...detail.history].reverse().slice(0, 20);
   const readOnly = detail.readOnly;
 
@@ -227,6 +270,19 @@ export default function ProjectStudentDetail({ token, projectCode, classId, stud
       </div>
 
       {evaluation && <ProjectEvaluationCard id="eb-student-profile-eval" variant="teacher" evaluation={evaluation} />}
+
+      {focusMode && evaluation && (
+        // Phase 9E — Evaluation Focus Mode banner: the LATEST evaluation (updated by every score response), never the
+        // one from the moment the profile opened. The next-stage action re-aims at the first stage still ungraded now.
+        <div className={"eb-eval-focus" + (evaluation.ungradedStages === 0 ? " is-complete" : "")} role="status" data-ungraded={evaluation.ungradedStages}>
+          {evaluation.ungradedStages === 0
+            ? <span className="eb-eval-focus-text">اكتمل تقييم جميع مراحل المشروع لهذا الطالب.</span>
+            : <>
+              <span className="eb-eval-focus-text">وضع التقييم — {remainingText(evaluation.ungradedStages)}</span>
+              {!readOnly && <button type="button" className="eb-button is-small eb-eval-focus-next" onClick={() => { const next = firstUngraded(evaluation); if (next) focusStage(next); }}>المرحلة التالية غير المقيّمة</button>}
+            </>}
+        </div>
+      )}
 
       <div className="eb-segmented eb-student-profile-tracks" role="group" aria-label="مسارات المشروع">
         {tracks.map(t => <button key={t.trackId} type="button" aria-pressed={track === t.trackId} onClick={() => { setTrack(t.trackId); setOpenStageId(""); }}>{t.title}</button>)}
@@ -265,13 +321,14 @@ export default function ProjectStudentDetail({ token, projectCode, classId, stud
                     const value = perf ? stageValueOf(perf, stage.stageId) : null;
                     const label = stage.stageId + " — " + stage.title;
                     const rowError = rowErrors[stage.stageId];
+                    const evaluationPending = focusMode && !!evaluation && evaluation.stages.some(es => es.stageId === stage.stageId && !es.graded);
                     const onScoreKey = (e: KeyboardEvent<HTMLInputElement>) => {
                       if (e.key !== "Enter") return;
                       e.preventDefault();
                       if (scoreChanged && !scoreBusy) saveScore(stage, draft, { advanceFrom: e.currentTarget });
                     };
                     return (
-                      <li key={stage.stageId} className={"eb-stage-row eb-stage-grade-row " + STAGE_STATUS_CLASS[status] + (rowBusy ? " is-busy" : "")} data-stage-id={stage.stageId} aria-busy={rowBusy || undefined}>
+                      <li key={stage.stageId} className={"eb-stage-row eb-stage-grade-row " + STAGE_STATUS_CLASS[status] + (rowBusy ? " is-busy" : "") + (evaluationPending ? " is-evaluation-pending" : "")} data-stage-id={stage.stageId} aria-busy={rowBusy || undefined}>
                         <div className="eb-stage-grade-grid">
                           <div className="eb-stage-cell-stage">
                             <span className="eb-stage-code">{stage.stageId}</span>
