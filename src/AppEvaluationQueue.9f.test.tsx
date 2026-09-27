@@ -42,6 +42,8 @@ const GENERIC = { ok: true, classes: [], students: [], assignments: [], exams: [
 
 type Call = { method: string; url: string; body?: Record<string, unknown> };
 let calls: Call[] = [];
+/** Hold the NEXT `student` read of this studentId until release() — a deferred promise, never a timer. */
+const hold: { studentId: string; release: () => void; pending: boolean } = { studentId: "", release: () => {}, pending: false };
 const res = (status: number, body: unknown) => Promise.resolve({ status, ok: status >= 200 && status < 300, json: async () => body } as Response);
 function installFetch() {
   calls = [];
@@ -65,7 +67,11 @@ function installFetch() {
       if (resource === "classes") return res(200, { ok: true, projectCode: code, title: "مشروع " + code, tracks: TRACKS, classes: CLASSES[code] || [] });
       if (resource === "summary") return res(200, { ok: true, summary: { studentCount: 2, avgOverall: 20, trackAverages: { book: 20 }, completedCount: 0, studentsReadyForReview: 0, totalReadyStages: 0, staleCount: 0, trackWeights: { book: 1 }, staleDays: 7 } });
       if (resource === "students") { const cid = u.searchParams.get("classId"); const ids = cid === "c1" ? ["s1", "s2"] : cid === "c2" ? ["s3"] : ["s4"]; return res(200, { ok: true, students: ids.map(card), tracks: TRACKS, config: { lateThreshold: 40 } }); }
-      if (resource === "student") return res(200, detail(code, String(u.searchParams.get("classId")), String(u.searchParams.get("studentId"))));
+      if (resource === "student") {
+        const sid = String(u.searchParams.get("studentId"));
+        if (hold.studentId === sid) { hold.studentId = ""; hold.pending = true; await new Promise<void>(r => { hold.release = () => { hold.pending = false; r(); }; }); }
+        return res(200, detail(code, String(u.searchParams.get("classId")), sid));
+      }
       return res(200, { ok: true });
     }
     if (url.includes("/api/teacher-analytics")) return res(500, { ok: false, error: "x" });
@@ -103,7 +109,7 @@ async function startAt(sid: string) {
 }
 
 beforeEach(() => {
-  fullyGraded = new Set(["s2"]);
+  fullyGraded = new Set(["s2"]); hold.studentId = ""; hold.pending = false;
   try { sessionStorage.clear(); } catch { /* ignore */ }
   window.matchMedia = ((q: string) => ({ matches: false, media: q, addEventListener() {}, removeEventListener() {}, onchange: null, addListener() {}, removeListener() {}, dispatchEvent: () => false })) as unknown as typeof window.matchMedia;
   Element.prototype.scrollIntoView = vi.fn();
@@ -181,6 +187,27 @@ describe("9F App — the evaluation queue session", () => {
     await settle();
     expect(studentReads()).toEqual(["883589/c9/s4"]);                                                   // no automatic navigation
     expect(screen.getByRole("heading", { level: 2, name: "ملف المشروع: " + NAMES.s4 })).toBeTruthy();
+  });
+  it("Q12 (review fix) B completed → CTA → C with a DEFERRED student response: C is never marked completed from B's detail, C's focus runs on C's own detail, and C stays in the queue (previous from s4 returns to C, not skipping it)", async () => {
+    render(<App />); await login();
+    await startAt("s2");                                                                                 // B: fully graded on the server
+    await waitFor(() => expect(banner()!.textContent).toContain("اكتمل تقييم هذا الطالب — انتقل إلى الطالب التالي."));
+    hold.studentId = "s3";                                                                               // C's read will be held
+    fireEvent.click(nextBtn());
+    await waitFor(() => expect(hold.pending).toBe(true));
+    await settle();
+    expect(screen.queryByRole("heading", { level: 2, name: /ملف المشروع: / })).toBeNull();              // C not loaded yet (loading head only); nothing of B shown
+    expect(banner()).toBeNull();
+    await act(async () => { hold.release(); });
+    await profileOf("s3");
+    await waitFor(() => expect(document.activeElement).toBe(scoreInput("B01")));                        // C's own ungraded stage
+    expect(banner()!.textContent).toContain("الطالب 3 من 4 — بقيت مرحلة واحدة بدون علامة.");            // C is NOT completed
+    fireEvent.click(nextBtn());                                                                          // → s4
+    await profileOf("s4");
+    fireEvent.click(prevBtn());                                                                          // previous must return to C (not skipped)
+    await profileOf("s3");
+    expect(banner()!.getAttribute("data-queue-position")).toBe("3");
+    expect(studentReads()).toEqual(["899373/c1/s2", "883589/c2/s3", "883589/c9/s4", "883589/c2/s3"]);
   });
   it("Q10 a manual student open ends the session (no queue, no banner); Q11 ordinary Projects navigation ends it too (opening the project by hand reads no student)", async () => {
     render(<App />); await login();

@@ -107,20 +107,24 @@ export default function ProjectStudentDetail({ token, projectCode, classId, stud
   // already consumed (a seq is applied once; the same seq never re-focuses, a new seq for the same student does).
   const [focusStageId, setFocusStageId] = useState("");
   const appliedFocusSeq = useRef(0);
+  // The (project, class, student) `detail` was actually fetched for. Between a selection change and the effect that
+  // resets the view, React renders once with the NEW ids and the OLD detail; every 9E/9F decision below therefore
+  // requires `loadedContextKey === contextKey`, so a previous student's evaluation can never be read as the current one.
+  const [loadedContextKey, setLoadedContextKey] = useState("");
 
   async function load() {
-    const seq = ++requestSeq.current;
+    const seq = ++requestSeq.current, requestedContextKey = contextKey;
     setLoading(true); setError("");
     try {
       const r = await trackerGet<StudentDetail>(token, projectCode, "student", { classId, studentId });
-      if (seq !== requestSeq.current) return;
-      setDetail(r);
+      if (seq !== requestSeq.current || requestedContextKey !== contextRef.current) return;
+      setDetail(r); setLoadedContextKey(requestedContextKey);
     } catch (e) { if (seq === requestSeq.current) setError(e instanceof Error ? e.message : "تعذر تحميل ملف الطالب."); }
     finally { if (seq === requestSeq.current) setLoading(false); }
   }
   // A new (project, class, student) starts clean: no detail, no disclosure, no drafts, no row errors, no queued busy state.
   function resetSelection() {
-    setDetail(null); setOpenStageId(""); setScoreDrafts({}); setNoteDrafts({}); setRowErrors({}); setPending({}); setNotice(""); setError("");
+    setDetail(null); setLoadedContextKey(""); setOpenStageId(""); setScoreDrafts({}); setNoteDrafts({}); setRowErrors({}); setPending({}); setNotice(""); setError("");
     setFocusStageId("");                                                       // a pending focus never carries over to another selection
     pendingRef.current = new Set();
   }
@@ -129,7 +133,10 @@ export default function ProjectStudentDetail({ token, projectCode, classId, stud
   useEffect(() => { headingRef.current?.focus(); }, [studentId]);
 
   const focusMode = evaluationFocusSeq > 0;
-  const evaluation = useMemo(() => normalizeProjectEvaluation(detail?.evaluation), [detail]);
+  // `detailIsCurrent`: the detail on screen belongs to the CURRENT selection (not the one-render-old detail of the
+  // previous student). The evaluation is exposed only then — an older evaluation is never treated as current.
+  const detailIsCurrent = !!detail && loadedContextKey === contextKey;
+  const evaluation = useMemo(() => (loadedContextKey === contextKey ? normalizeProjectEvaluation(detail?.evaluation) : null), [detail, loadedContextKey, contextKey]);
   /** Select the stage's track, open its group and request the focus of its score input (rendered next). */
   function focusStage(stage: ProjectEvaluation["stages"][number]) {
     setTrack(stage.track);
@@ -140,22 +147,22 @@ export default function ProjectStudentDetail({ token, projectCode, classId, stud
   // latest request, so a stale student response can never aim the focus at the new student). Read-only profiles have
   // no input to focus; a fully graded project has nothing to focus (the banner says so).
   useEffect(() => {
-    if (!focusMode || evaluationFocusSeq === appliedFocusSeq.current || !detail) return;
-    appliedFocusSeq.current = evaluationFocusSeq;
+    if (!focusMode || evaluationFocusSeq === appliedFocusSeq.current || !detail || !detailIsCurrent) return;
+    appliedFocusSeq.current = evaluationFocusSeq;                              // consumed ONLY against this selection's own detail
     const stage = firstUngraded(evaluation);
     if (stage && !detail.readOnly) focusStage(stage);
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [evaluationFocusSeq, detail]);
+  }, [evaluationFocusSeq, detail, detailIsCurrent]);
   // Phase 9F — tell the session owner when the SERVER says this student is fully graded (after load or after a save);
   // reported at most once per selection, never triggers navigation (the teacher moves on by pressing the CTA).
   const completeReported = useRef("");
   useEffect(() => {
-    if (!focusMode || !evaluation || !detail || evaluation.ungradedStages !== 0) return;
+    if (!focusMode || !detailIsCurrent || !evaluation || !detail || evaluation.ungradedStages !== 0) return;
     if (completeReported.current === contextKey) return;
-    completeReported.current = contextKey;
+    completeReported.current = contextKey;                                     // never from a previous selection's detail
     onEvaluationComplete?.();
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [focusMode, evaluation, detail, contextKey]);
+  }, [focusMode, evaluation, detail, detailIsCurrent, contextKey]);
   // The requested input exists only after the track / group state above has rendered; focus + reveal it then, once.
   useEffect(() => {
     if (!focusStageId || !detail) return;

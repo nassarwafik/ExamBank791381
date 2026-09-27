@@ -26,15 +26,24 @@ const active = DEF.stages.filter(s => s.active === true).map(s => s.stageId);
 const progress = (cid: string, sid: string, scores: Record<string, number>) => ({ schemaVersion: 1, programCode: "899373", classId: cid, studentId: sid, stages: Object.fromEntries(Object.entries(scores).map(([id, v]) => [id, { status: "in_progress", score: v, updatedAt: NOW }])), history: [], updatedAt: NOW });
 const allButLast = () => Object.fromEntries(active.slice(0, -1).map(id => [id, 60]));
 const allGraded = () => Object.fromEntries(active.map(id => [id, 60]));
+/** Test control: hold the NEXT `student` read of the given studentId until `release()` (a deferred promise, never a timer). */
+const hold: { studentId: string; release: () => void; pending: boolean } = { studentId: "", release: () => {}, pending: false };
 function server(seed: Record<string, unknown>) {
-  const ctx = createMemoryContainer({ "platform/classes/c1.json": room("c1"), "platform/users/s1.json": user("s1", "c1"), "platform/classes/c9.json": room("c9", { status: "archived", active: false }), "platform/users/s9.json": user("s9", "c9"), ...seed });
+  const ctx = createMemoryContainer({ "platform/classes/c1.json": room("c1"), "platform/users/s1.json": user("s1", "c1"), "platform/users/s2.json": user("s2", "c1"), "platform/users/s3.json": user("s3", "c1"), "platform/classes/c9.json": room("c9", { status: "archived", active: false }), "platform/users/s9.json": user("s9", "c9"), ...seed });
   const deps = { requireBuilderAuth: () => ({ ok: true, user: { sub: "teacher-1" } }), container: ctx.container, getContainer: () => ctx.container, recordAuditEvent: async () => {}, recordProjectMilestones: async () => {} };
+  const reads: string[] = [];
   globalThis.fetch = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
     const url = String(input), method = init?.method || "GET";
     const body = init?.body ? JSON.parse(String(init.body)) as Body : undefined;
+    if (method === "GET" && url.includes("resource=student&")) {
+      const sid = new URL(url, "http://x").searchParams.get("studentId") || "";
+      reads.push(sid);
+      if (hold.studentId === sid) { hold.studentId = ""; hold.pending = true; await new Promise<void>(r => { hold.release = () => { hold.pending = false; r(); }; }); }
+    }
     const r = await tracker({ method, url: "https://x" + url, json: async () => body ?? {} }, deps);
     return { ok: r.status < 400, status: r.status, json: async () => r.jsonBody } as Response;
   }) as unknown as typeof fetch;
+  return { reads };
 }
 const item = (studentId: string, displayName: string) => ({ projectCode: "899373", classId: "c1", studentId, displayName });
 const Q: ProjectEvaluationQueueView = { position: 2, total: 5, previous: item("s0", "أحمد"), next: item("s2", "ليان") };
@@ -59,6 +68,47 @@ describe("9F queue helpers — pure, server order preserved", () => {
     expect(queueNeighbour({ ...q, index: 0 }, -1)).toBeNull();
     expect(queueView(q)).toEqual({ position: 3, total: 4, previous: item("a", "أ"), next: item("d", "د") });
     expect(queueView(null)).toBeNull(); expect(queueView({ id: 1, items: [], index: 0, completed: [] })).toBeNull();
+  });
+});
+
+describe("9F review fix — a previous student's detail can never act as the current student's", () => {
+  it("R1 A (ungraded) → B (fully graded, reported) → C (ungraded, response DEFERRED): while C is pending nothing is reported, C's focus seq is not consumed against B, C is not completed; on release C's own first ungraded stage is focused", async () => {
+    const srv = server({
+      [NS.progressName("c1", "s1")]: progress("c1", "s1", { [active[0]]: 70 }),          // A: first ungraded = active[1]
+      [NS.progressName("c1", "s2")]: progress("c1", "s2", allGraded()),                   // B: fully graded on the server
+      [NS.progressName("c1", "s3")]: progress("c1", "s3", { [active[0]]: 50, [active[1]]: 0 })   // C: first ungraded = active[2] (0 IS graded)
+    });
+    const onComplete = vi.fn(), onMove = vi.fn();
+    const queueAt = (pos: number, prev: string | null, next: string | null): ProjectEvaluationQueueView => ({ position: pos, total: 3, previous: prev ? item(prev, "طالب " + prev) : null, next: next ? item(next, "طالب " + next) : null });
+    const view = render(el(1, queueAt(1, null, "s2"), { sid: "s1", onComplete, onMove }));
+    await heading("s1");
+    await waitFor(() => expect(document.activeElement).toBe(within(document.querySelector('[data-stage-id="' + active[1] + '"]') as HTMLElement).getByRole("spinbutton")));
+    expect(onComplete).not.toHaveBeenCalled();
+    // → B (a fresh seq, as App does): completion is reported exactly once, for B
+    view.rerender(el(2, queueAt(2, "s1", "s3"), { sid: "s2", onComplete, onMove }));
+    await heading("s2");
+    await waitFor(() => expect(banner()!.textContent).toContain("اكتمل تقييم هذا الطالب — انتقل إلى الطالب التالي."));
+    await flush();
+    expect(onComplete).toHaveBeenCalledTimes(1);
+    // CTA → C, whose `student` read is held (deferred promise)
+    hold.studentId = "s3";
+    fireEvent.click(within(banner()!).getByRole("button", { name: "الطالب التالي في قائمة التقييم: طالب s3" }));
+    expect(onMove).toHaveBeenCalledWith(1);
+    view.rerender(el(3, queueAt(3, "s2", null), { sid: "s3", onComplete, onMove }));   // App moved: new ids, new seq, B's detail still in memory for one render
+    await flush(); await flush();
+    expect(hold.pending).toBe(true);                                                     // C's response is still pending
+    expect(onComplete).toHaveBeenCalledTimes(1);                                         // NO new completion report from B's stale detail
+    expect(document.querySelector(".eb-eval-focus")).toBeNull();                         // nothing of B is shown as C (view was reset)
+    expect(screen.queryByRole("heading", { level: 2, name: "ملف المشروع: طالب s2" })).toBeNull();
+    expect(Element.prototype.scrollIntoView).toHaveBeenCalledTimes(1);                   // only A's focus so far — C's seq was NOT consumed against B
+    // release C: its own detail arrives → its own first ungraded stage (active[2]) is focused, C is not completed
+    await act(async () => { hold.release(); });
+    await heading("s3");
+    await waitFor(() => expect(document.activeElement).toBe(within(document.querySelector('[data-stage-id="' + active[2] + '"]') as HTMLElement).getByRole("spinbutton")));
+    expect(Element.prototype.scrollIntoView).toHaveBeenCalledTimes(2);
+    expect(onComplete).toHaveBeenCalledTimes(1);
+    expect(banner()!.textContent).toContain("الطالب 3 من 3 — بقيت");
+    expect(srv.reads).toEqual(["s1", "s2", "s3"]);
   });
 });
 
