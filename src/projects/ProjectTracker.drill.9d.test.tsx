@@ -60,7 +60,7 @@ beforeEach(() => {
 afterEach(() => { cleanup(); vi.restoreAllMocks(); });
 
 describe("9D ProjectTracker — drill target application", () => {
-  it("C1 a valid target: classes first, then the exact class is selected, the view is «تقدّم الطلاب», the exact student is open (one student read, heading focused)", async () => {
+  it("C1 a valid target: classes first, then the exact class is selected, the view is «تقدّم الطلاب», the exact student is open (one student read, focus inside the profile)", async () => {
     render(<ProjectTracker token="t" projectCode="899373" drillTarget={target("899373", "c2", "s3")} />);
     const heading = await screen.findByRole("heading", { level: 2, name: "ملف المشروع: نور علي" });
     expect(selectedClass()).toBe("c2");
@@ -68,7 +68,9 @@ describe("9D ProjectTracker — drill target application", () => {
     expect(studentReads().map(c => [c.projectCode, c.classId, c.studentId])).toEqual([["899373", "c2", "s3"]]);
     expect(classReads().length).toBe(1);
     expect(calls.findIndex(c => c.resource === "student")).toBeGreaterThan(calls.findIndex(c => c.resource === "classes"));
-    expect(document.activeElement).toBe(heading);                           // the existing heading-focus behaviour still runs
+    // Phase 9E: a drill opening is Evaluation Focus Mode — the focus lands on the first ungraded stage's score input (the
+    // detail has no `evaluation` in this mock → no ungraded stage is known → the 8C heading focus stays). Both are inside the profile.
+    expect(heading.closest(".eb-student-profile")!.contains(document.activeElement)).toBe(true);
     expect(screen.queryByRole("dialog")).toBeNull();                       // no modal, no duplicate view
   });
   it("C2 no student request before the classes validate the class: while the classes read is held nothing else is read; release → the student opens", async () => {

@@ -237,3 +237,15 @@
 @media print{
   .eb-project-toolbar,.eb-project-views,.eb-stage-settings-bar{ display:none !important; }
 }
+
+/* ---------- Phase 9E — Evaluation Focus Mode (teacher arrived from «تقييم المشاريع»): banner + pending highlight ----------
+   Additive only: `is-evaluation-pending` marks a stage whose SCORE is still missing (evaluation axis), never a workflow status. */
+.eb-eval-focus{ display:flex; flex-wrap:wrap; align-items:center; justify-content:space-between; gap:var(--eb-space-2) var(--eb-space-3); padding:var(--eb-space-2) var(--eb-space-3); border:1px solid var(--eb-warn); border-inline-start:3px solid var(--eb-warn); border-radius:var(--eb-r-sm); background:var(--eb-warn-bg); color:var(--eb-warn-tx); font-size:var(--eb-fs-13); }
+.eb-eval-focus.is-complete{ border-color:var(--eb-success); background:var(--eb-success-bg); color:var(--eb-success-tx); }
+.eb-eval-focus-text{ font-weight:var(--eb-fw-semibold); }
+.eb-eval-focus-next{ min-height:44px; }
+.eb-stage-grade-row.is-evaluation-pending{ background:var(--eb-warn-bg); box-shadow:inset 3px 0 0 var(--eb-warn); }
+.eb-stage-grade-row.is-evaluation-pending .eb-stage-score-input{ border-color:var(--eb-warn); }
+@media (min-width: 768px){
+  .eb-eval-focus-next{ min-height:38px; }
+}
