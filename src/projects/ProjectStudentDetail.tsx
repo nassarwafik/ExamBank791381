@@ -33,6 +33,8 @@ type Props = {
   onEvaluationQueueMove?: (dir: -1 | 1) => void;
   /** Reported once per loaded detail whose server `evaluation.ungradedStages === 0` (App marks the item completed). */
   onEvaluationComplete?: () => void;
+  /** Phase 9G — «العودة إلى لوحة اليوم» from the final-session panel (App ends the session; never automatic). */
+  onEvaluationQueueFinish?: () => void;
 };
 
 type UpdateResponse = {
@@ -79,8 +81,13 @@ function firstUngraded(evaluation: ProjectEvaluation | null): ProjectEvaluation[
   return evaluation ? evaluation.stages.find(s => !s.graded) ?? null : null;
 }
 const remainingText = (n: number) => (n === 1 ? "بقيت مرحلة واحدة بدون علامة." : n === 2 ? "بقيت مرحلتان بدون علامة." : "بقيت " + n + " مراحل بدون علامة.");
+// Phase 9G — session-summary wording. «تم تقييم» counts the students THIS session saw the server declare complete;
+// «لم يُسجَّل اكتمال تقييمهم خلال هذه الجلسة» deliberately says "not recorded in this session", never "ungraded now".
+const studentsWord = (n: number) => (n === 1 ? "طالب واحد" : n === 2 ? "طالبان" : n + " طلاب");
+const sessionDoneText = (completed: number, total: number) => "تم تقييم " + completed + " من " + total + " " + (total === 1 ? "طالب" : "طلاب") + " في هذه الجلسة.";
+const sessionRemainingText = (remaining: number) => (remaining === 0 ? "اكتمل تقييم جميع الطلاب في قائمة هذه الجلسة." : "بقي " + studentsWord(remaining) + " في القائمة لم يُسجَّل اكتمال تقييمهم خلال هذه الجلسة.");
 
-export default function ProjectStudentDetail({ token, projectCode, classId, studentId, tracks, onBack, onChanged, onReadyChanged, evaluationFocusSeq = 0, evaluationQueue = null, onEvaluationQueueMove, onEvaluationComplete }: Props) {
+export default function ProjectStudentDetail({ token, projectCode, classId, studentId, tracks, onBack, onChanged, onReadyChanged, evaluationFocusSeq = 0, evaluationQueue = null, onEvaluationQueueMove, onEvaluationComplete, onEvaluationQueueFinish }: Props) {
   const [detail, setDetail] = useState<StudentDetail | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -312,6 +319,18 @@ export default function ProjectStudentDetail({ token, projectCode, classId, stud
             </span>
           )}
         </div>
+      )}
+      {focusMode && evaluation && evaluationQueue && evaluationQueue.next === null && evaluation.ungradedStages === 0 && (
+        // Phase 9G — the end of the session: derived (focus mode + no next item + THIS student fully graded per the
+        // server), never stored, never automatic, reversible until the return button is pressed («الطالب السابق»
+        // above still works and hides this panel). The summary is the session's own record (queue.completed), so it
+        // never predicts students this session did not open. No autofocus here.
+        <section className="eb-eval-finish" role="status" aria-labelledby="eb-eval-finish-title" data-completed={evaluationQueue.summary.completed} data-total={evaluationQueue.summary.total} data-remaining={evaluationQueue.summary.remaining}>
+          <h3 id="eb-eval-finish-title" className="eb-eval-finish-title">اكتملت جلسة تقييم المشاريع.</h3>
+          <p className="eb-eval-finish-text">{sessionDoneText(evaluationQueue.summary.completed, evaluationQueue.summary.total)}</p>
+          <p className="eb-eval-finish-text">{sessionRemainingText(evaluationQueue.summary.remaining)}</p>
+          <button type="button" className="eb-button is-primary eb-eval-finish-return" aria-label="إنهاء جلسة التقييم والعودة إلى لوحة اليوم" onClick={() => onEvaluationQueueFinish?.()}>العودة إلى لوحة اليوم</button>
+        </section>
       )}
 
       <div className="eb-segmented eb-student-profile-tracks" role="group" aria-label="مسارات المشروع">

@@ -15,7 +15,12 @@ export type ProjectStudentRef = { projectCode: string; classId: string; studentI
 export type ProjectEvaluationQueueItem = { projectCode: string; classId: string; studentId: string; displayName: string };
 export type ProjectEvaluationQueue = { id: number; items: ProjectEvaluationQueueItem[]; index: number; completed: string[] };
 /** What the open profile sees of the session: its position, and the neighbours it may move to (null at the ends). */
-export type ProjectEvaluationQueueView = { position: number; total: number; previous: ProjectEvaluationQueueItem | null; next: ProjectEvaluationQueueItem | null };
+// Phase 9G — the session summary shown when the queue reaches its end. `completed` counts only the UNIQUE keys of
+// `completed[]` that still name an item of this queue (the list holds string keys, so it is validated, never trusted
+// by length); `remaining` = total − completed = the items THIS session did not record as completed (they are not
+// necessarily ungraded in the database right now — the summary never predicts unopened students).
+export type ProjectEvaluationSessionSummary = { total: number; completed: number; remaining: number };
+export type ProjectEvaluationQueueView = { position: number; total: number; previous: ProjectEvaluationQueueItem | null; next: ProjectEvaluationQueueItem | null; summary: ProjectEvaluationSessionSummary };
 export const queueItemKey = (i: { projectCode: string; classId: string; studentId: string }) => i.projectCode + "|" + i.classId + "|" + i.studentId;
 /** The nearest not-yet-completed item in `dir` (−1 previous, +1 next), or null at the end of the queue. Pure. */
 export function queueNeighbour(queue: ProjectEvaluationQueue, dir: -1 | 1): { index: number; item: ProjectEvaluationQueueItem } | null {
@@ -25,7 +30,13 @@ export function queueNeighbour(queue: ProjectEvaluationQueue, dir: -1 | 1): { in
   }
   return null;
 }
+/** Pure: total items, unique completed keys that exist in the queue, and the remainder. Never re-orders anything. */
+export function queueSummary(queue: ProjectEvaluationQueue): ProjectEvaluationSessionSummary {
+  const keys = new Set(queue.items.map(queueItemKey));
+  const completed = new Set(queue.completed.filter(k => keys.has(k))).size;
+  return { total: queue.items.length, completed, remaining: queue.items.length - completed };
+}
 export function queueView(queue: ProjectEvaluationQueue | null): ProjectEvaluationQueueView | null {
   if (!queue || !queue.items.length) return null;
-  return { position: queue.index + 1, total: queue.items.length, previous: queueNeighbour(queue, -1)?.item ?? null, next: queueNeighbour(queue, 1)?.item ?? null };
+  return { position: queue.index + 1, total: queue.items.length, previous: queueNeighbour(queue, -1)?.item ?? null, next: queueNeighbour(queue, 1)?.item ?? null, summary: queueSummary(queue) };
 }

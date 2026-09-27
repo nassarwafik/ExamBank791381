@@ -256,3 +256,12 @@
 @media (min-width: 768px){
   .eb-eval-queue-nav .eb-button{ min-height:38px; }
 }
+
+/* ---------- Phase 9G — final-session panel (end of the evaluation queue) ---------- */
+.eb-eval-finish{ display:flex; flex-direction:column; gap:var(--eb-space-2); padding:var(--eb-space-3) var(--eb-space-4); border:1px solid var(--eb-success); border-inline-start:3px solid var(--eb-success); border-radius:var(--eb-r-sm); background:var(--eb-success-bg); color:var(--eb-success-tx); }
+.eb-eval-finish-title{ margin:0; font-size:var(--eb-fs-15); font-weight:var(--eb-fw-semibold); color:inherit; }
+.eb-eval-finish-text{ margin:0; font-size:var(--eb-fs-13); font-variant-numeric:tabular-nums; }
+.eb-eval-finish-return{ align-self:flex-start; min-height:44px; }
+@media (min-width: 768px){
+  .eb-eval-finish-return{ min-height:38px; }
+}
