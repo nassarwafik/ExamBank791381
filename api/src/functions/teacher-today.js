@@ -27,6 +27,7 @@ const {teacherDirectUnread}=require("../lib/message-read-state");
 // Phase 9C — project evaluation attention (students with ungraded project stages), derived from the classes/users the
 // hub already loaded + one snapshot read and one progress-folder listing per active class × enrolled project.
 const {loadProjectEvaluationSources,deriveProjectEvaluationAttention}=require("../lib/project-tracker/evaluation-attention");
+const {logReadCost}=require("../lib/read-cost-log");
 
 const AP="platform/assignments/",CP="platform/classes/",UP="platform/users/",SP="platform/submissions/";
 const ITEM_CAP=8,RECENT_CAP=10;
@@ -34,10 +35,11 @@ const ms=v=>{const t=Date.parse(String(v||""));return Number.isFinite(t)?t:0};
 const studentName=u=>String(u.displayName||[u.firstName,u.familyName].filter(Boolean).join(" ")||u.code||u.userId||"");
 
 /** The submission documents of ONE assignment folder, keyed by the student id THE DOCUMENT names (never the file name). */
-async function loadFolder(container,assignmentId,deps){
+async function loadFolder(container,assignmentId,deps,tally){
  const list=deps.listBlobNames||listBlobNames,many=deps.downloadManyJson||downloadManyJson;
  const names=(await list(container,SP+assignmentId+"/")).filter(n=>n.endsWith(".json"));
  const docs=await many(container,names,getReadConcurrency());
+ if(tally)tally.submissionDocsLoaded+=names.length;                                   // Phase 12E-A: count only
  const byStudent=new Map();
  for(const d of docs){if(d&&typeof d==="object"&&String(d.assignmentId||"")===assignmentId&&d.studentId)byStudent.set(String(d.studentId),d)}
  return byStudent;
@@ -94,11 +96,12 @@ async function handler(request,deps={},obs=null){
   const [assignments,classes,users]=await Promise.all([lj(container,AP),lj(container,CP),lj(container,UP)]);
   const activeIds=new Set(classes.filter(c=>c&&c.classId&&normalizeClassStatus(c)==="active").map(c=>String(c.classId)));
   const published=assignments.filter(a=>a&&a.assignmentId&&normalizeAssignmentStatus(a)==="published"&&activeIds.has(String(a.classId||"")));
+  const tally={submissionDocsLoaded:0};
   // One folder listing + its blobs per published assignment of an active class — the SAME scoped read shape as the
   // class-scoped analytics path (8E-3): drafts, archived assignments and archived classes are never read.
   // The submission folders and the project-evaluation sources are independent reads → issued together (each bounded).
   const [folders,projectSources]=await Promise.all([
-   Promise.all(published.map(a=>loadFolder(container,String(a.assignmentId),deps))),
+   Promise.all(published.map(a=>loadFolder(container,String(a.assignmentId),deps,tally))),
    (deps.loadProjectEvaluationSources||loadProjectEvaluationSources)(container,classes,deps).then(v=>({ok:true,value:v}),e=>({ok:false,error:e}))
   ]);
   const submissionsByAssignment=new Map(published.map((a,i)=>[String(a.assignmentId),folders[i]]));
@@ -110,6 +113,8 @@ async function handler(request,deps={},obs=null){
   // Phase 9C — additive block: students with ungraded project stages (Phase 9B evaluation semantics, one authority).
   if(projectSources.ok){try{projectEvaluation=deriveProjectEvaluationAttention({users,sources:projectSources.value})}catch(e){partial.push("projectEvaluation");obs?.logError("teacher.today.projectEvaluation",e)}}
   else{partial.push("projectEvaluation");obs?.logError("teacher.today.projectEvaluation",projectSources.error)}
+  // Phase 12E-A — count-only read-cost telemetry (the scans' own sizes; never an id/name/title/mark).
+  logReadCost(obs,"teacher.today.read_cost",{assignmentDocsScanned:assignments.length,classDocsScanned:classes.length,userDocsScanned:users.length,publishedActiveAssignments:published.length,submissionFolderListings:published.length,submissionDocsLoaded:tally.submissionDocsLoaded});
   return {status:200,jsonBody:{ok:true,generatedAt:new Date(nowMs).toISOString(),...derived,attention:{...derived.attention,unreadMessages},projectEvaluation,partial}};
  }catch(e){obs?.logError("teacher.today.error",e);return {status:500,jsonBody:{ok:false,error:"تعذر تحميل ملخص اليوم حاليًا."}}}
 }
