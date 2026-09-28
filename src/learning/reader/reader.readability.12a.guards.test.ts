@@ -124,13 +124,160 @@ describe("desktop measure and presentation minimums", () => {
     expect(base).toContain("--eb-read-measure-wide:92ch");
     expect(rule(desktop, ".learning-reader-text")).toContain("max-inline-size:var(--eb-measure,72ch)");   // the prose measure contract is untouched
   });
-  it("presentation mode never reads smaller than the normal Reader (its clamps start at the base sizes)", () => {
-    const P = ".learning-reader.is-presentation";
-    const min = (body: string) => Number(body.match(/clamp\((\d+)px/)?.[1]);
-    expect(min(rule(css, P + " .learning-reader-text"))).toBeGreaterThanOrEqual(px(base, "--eb-read-fs-body"));
-    expect(min(rule(css, P + " .learning-reader-heading"))).toBeGreaterThanOrEqual(px(base, "--eb-read-fs-h4"));
-    expect(min(rule(css, P + " .learning-reader-page-title"))).toBeGreaterThanOrEqual(px(base, "--eb-read-fs-title"));
-    expect(min(rule(css, P + " .learning-reader-code code"))).toBeGreaterThanOrEqual(px(base, "--eb-read-fs-code"));
+  // (The presentation typography contract is verified numerically, per category and per width, in the next describe.)
+});
+
+// ── Presentation typography contract (independent-review fix) ─────────────────────────────────────────────────────
+// "Presentation never reads smaller than normal reading" is checked the way a browser would decide it, not by reading
+// the first number of a clamp(): a mini-cascade parses reader.css into rules (with their @media conditions), picks the
+// WINNING font-size for each text category (highest specificity, then last in source order — so a grouped or generic
+// presentation selector is judged exactly like a per-category one), resolves var() against the Reader tokens as they
+// stand at that width (the ≥1024px block steps them up), and evaluates clamp()/max()/min()/calc() with px and vw at many
+// viewport widths. Each category is compared with ITSELF in normal mode at the same width.
+type CssRule = { selectors: string[]; decls: Map<string, string>; minWidth: number; applies: boolean; order: number };
+function parseRules(text: string): CssRule[] {
+  const src = text.replace(/\/\*[\s\S]*?\*\//g, "");
+  const out: CssRule[] = [];
+  let order = 0;
+  const walk = (s: string, minWidth: number, applies: boolean) => {
+    let i = 0;
+    while (i < s.length) {
+      const open = s.indexOf("{", i);
+      if (open < 0) break;
+      const header = s.slice(i, open).trim();
+      let depth = 0, close = open;
+      for (; close < s.length; close++) { if (s[close] === "{") depth++; else if (s[close] === "}" && --depth === 0) break; }
+      const body = s.slice(open + 1, close);
+      if (header.startsWith("@media")) {
+        const mw = header.match(/^@media\s*\(min-width:\s*(\d+)px\)$/);
+        walk(body, mw ? Number(mw[1]) : minWidth, applies && !!mw);   // any other media feature (reduced-motion…) is not typography
+      } else if (header.startsWith("@")) {
+        /* @keyframes etc. — no font sizes */
+      } else {
+        const decls = new Map<string, string>();
+        for (const d of body.split(";")) { const c = d.indexOf(":"); if (c > 0) decls.set(d.slice(0, c).trim(), d.slice(c + 1).trim()); }
+        out.push({ selectors: header.split(",").map(x => x.trim().replace(/\s+/g, " ")), decls, minWidth, applies, order: order++ });
+      }
+      i = close + 1;
+    }
+  };
+  walk(src, 0, true);
+  return out;
+}
+const specificity = (sel: string) => sel.split(" ").reduce((n, part) => n + (part.match(/\.[\w-]+/g)?.length ?? 0) * 100 + (/^[a-z]/.test(part) ? 1 : 0), 0);
+/** The winning value of `prop` among rules that match one of `selectors` and apply at width `w` (cascade order). */
+function winning(rules: CssRule[], selectors: string[], prop: string, w: number): string | undefined {
+  let best: { spec: number; order: number; value: string } | undefined;
+  for (const r of rules) {
+    if (!r.applies || w < r.minWidth || !r.decls.has(prop)) continue;
+    for (const sel of r.selectors) {
+      if (!selectors.includes(sel)) continue;
+      const cand = { spec: specificity(sel), order: r.order, value: r.decls.get(prop)! };
+      if (!best || cand.spec > best.spec || (cand.spec === best.spec && cand.order > best.order)) best = cand;
+    }
+  }
+  return best?.value;
+}
+const globalTokens = new Map<string, string>();
+for (const m of readFileSync(fileURLToPath(new URL("../../design-tokens.css", import.meta.url)), "utf8").matchAll(/(--eb-[\w-]+)\s*:\s*([^;]+);/g)) globalTokens.set(m[1], m[2].trim());
+/** Evaluate a CSS length expression to px at viewport width `w`; var() resolves against the Reader root at `w`. */
+function evalPx(rules: CssRule[], expr: string, w: number, roots: string[]): number {
+  let e = expr, guard = 0;
+  while (/var\(/.test(e)) {
+    if (++guard > 50) throw new Error("var() cycle in " + expr);
+    e = e.replace(/var\(\s*(--[\w-]+)\s*(?:,\s*([^()]+))?\)/, (_, name: string, fallback?: string) => {
+      const v = winning(rules, roots, name, w) ?? globalTokens.get(name) ?? fallback;
+      if (v === undefined) throw new Error("unresolved " + name + " in " + expr);
+      return v;
+    });
+  }
+  const js = e
+    .replace(/\bcalc\(/g, "(")
+    .replace(/\bclamp\(/g, "__clamp(")
+    .replace(/\b(max|min)\(/g, "Math.$1(")
+    .replace(/(\d*\.?\d+)vw\b/g, (_, n: string) => `(${n}*${w / 100})`)
+    .replace(/(\d*\.?\d+)px\b/g, "$1");
+  if (!/^[\d\s.+\-*/(),]*$/.test(js.replace(/Math\.(max|min)|__clamp/g, ""))) throw new Error("unsupported CSS expression: " + expr + " → " + js);
+  return new Function("__clamp", "return " + js)((lo: number, v: number, hi: number) => Math.max(lo, Math.min(v, hi))) as number;
+}
+const P = ".learning-reader.is-presentation";
+/** Text categories Phase 12A enlarged, with the selectors that can set their size in NORMAL mode. */
+const CATEGORIES: Record<string, string[]> = {
+  "page title": [".learning-reader-page-title"],
+  "paragraph": [".learning-reader-text"],
+  "heading level 2": [".learning-reader-heading", ".learning-reader-heading.is-level-2"],
+  "heading level 3": [".learning-reader-heading", ".learning-reader-heading.is-level-3"],
+  "heading level 4": [".learning-reader-heading", ".learning-reader-heading.is-level-4"],
+  "callout body": [".learning-reader-callout-body"],
+  "list text": [".learning-reader-list-text"],
+  "table": [".learning-reader-table"],
+  "code": [".learning-reader-code code"],
+};
+const WIDTHS = [320, 390, 600, 768, 1000, 1023, 1024, 1100, 1280, 1366, 1440, 1920, 2560, 3840];
+/** Font size (px) of a category at width `w`, normal or presentation. Presentation adds the prefixed selectors. */
+function sizeOf(rules: CssRule[], category: string, w: number, presentation: boolean): number {
+  const sels = CATEGORIES[category];
+  const all = presentation ? [...sels, ...sels.map(s => P + " " + s)] : sels;
+  const v = winning(rules, all, "font-size", w);
+  if (!v) throw new Error("no font-size for " + category);
+  return evalPx(rules, v, w, presentation ? [".learning-reader", P] : [".learning-reader"]);
+}
+const RULES = parseRules(css);
+const shrinks = (rules: CssRule[], category: string) =>
+  WIDTHS.filter(w => sizeOf(rules, category, w, true) < sizeOf(rules, category, w, false) - 1e-9)
+    .map(w => `${w}px: ${sizeOf(rules, category, w, true).toFixed(2)} < ${sizeOf(rules, category, w, false).toFixed(2)}`);
+
+describe("presentation typography — never smaller than normal reading, per category, at every width", () => {
+  it("the checker itself is sound: it evaluates clamp/max/vw/var, honours the ≥1024px token step and picks the cascade winner", () => {
+    const tiny = parseRules(".learning-reader{ --x:18px; } .a{ font-size:clamp(20px, 0.8vw + 14px, 30px); } .b.c{ font-size:max(var(--x), 1vw); } .b{ font-size:99px; } @media (min-width: 1024px){ .learning-reader{ --x:19px; } }");
+    expect(evalPx(tiny, winning(tiny, [".a"], "font-size", 390)!, 390, [".learning-reader"])).toBe(20);
+    expect(evalPx(tiny, winning(tiny, [".a"], "font-size", 1920)!, 1920, [".learning-reader"])).toBeCloseTo(29.36, 5);
+    expect(evalPx(tiny, winning(tiny, [".b", ".b.c"], "font-size", 390)!, 390, [".learning-reader"])).toBe(18);     // .b.c beats a later .b
+    expect(evalPx(tiny, winning(tiny, [".b", ".b.c"], "font-size", 1024)!, 1024, [".learning-reader"])).toBe(19);   // token stepped at 1024
+    expect(evalPx(tiny, winning(tiny, [".b", ".b.c"], "font-size", 2560)!, 2560, [".learning-reader"])).toBeCloseTo(25.6, 5);
+  });
+
+  it("the Reader tokens really do step up at ≥1024px, so the widths above AND below the step are both exercised", () => {
+    for (const t of ["--eb-read-fs-body", "--eb-read-fs-card", "--eb-read-fs-h3", "--eb-read-fs-h4", "--eb-read-fs-h5", "--eb-read-fs-table", "--eb-read-fs-title"]) {
+      const below = evalPx(RULES, `var(${t})`, 1023, [".learning-reader"]), above = evalPx(RULES, `var(${t})`, 1024, [".learning-reader"]);
+      expect(above, t).toBeGreaterThan(below);
+    }
+    // and normal-mode sizes follow them (the checker compares against these, not against base-only values)
+    expect(sizeOf(RULES, "paragraph", 1024, false)).toBeGreaterThan(sizeOf(RULES, "paragraph", 1023, false));
+    expect(sizeOf(RULES, "page title", 1024, false)).toBe(32);
+    expect(sizeOf(RULES, "heading level 2", 1024, false)).toBe(24);
+  });
+
+  for (const category of Object.keys(CATEGORIES)) {
+    it(`${category}: presentation ≥ normal at every width from 320 to 3840px`, () => {
+      expect(shrinks(RULES, category)).toEqual([]);
+    });
+  }
+
+  it("presentation keeps the three heading levels DISTINCT and ordered (title > level 2 > level 3 > level 4) at every width", () => {
+    for (const w of WIDTHS) {
+      const [t, l2, l3, l4] = ["page title", "heading level 2", "heading level 3", "heading level 4"].map(c => sizeOf(RULES, c, w, true));
+      expect(t, `${w}px title>L2`).toBeGreaterThan(l2);
+      expect(l2, `${w}px L2>L3`).toBeGreaterThan(l3);
+      expect(l3, `${w}px L3>L4`).toBeGreaterThan(l4);
+      expect(l4, `${w}px L4≥paragraph`).toBeGreaterThanOrEqual(sizeOf(RULES, "paragraph", w, true));
+    }
+  });
+
+  it("presentation still GROWS with the screen (a projector-sized page reads larger than normal reading in every category)", () => {
+    for (const category of Object.keys(CATEGORIES)) expect(sizeOf(RULES, category, 1920, true), category).toBeGreaterThan(sizeOf(RULES, category, 1920, false));
+  });
+
+  it("regression fixture: the reviewed-HEAD presentation rules (one generic heading clamp, a 17px callout floor) are caught", () => {
+    const reviewed = css.slice(0, css.indexOf("/* ---------- Presentation mode")) +
+      `${P} .learning-reader-heading{ font-size:clamp(20px, 0.8vw + 14px, 30px); }
+       ${P} .learning-reader-callout-body, ${P} .learning-reader-list-text, ${P} .learning-reader-table{ font-size:clamp(17px, 0.5vw + 13px, 21px); }` +
+      css.slice(css.indexOf("@media (min-width: 1024px)"));
+    const old = parseRules(reviewed);
+    expect(shrinks(old, "heading level 2")).toContain("390px: 20.00 < 22.00");
+    expect(shrinks(old, "callout body")).toContain("390px: 17.00 < 18.00");
+    // and the generic clamp flattens the levels on a wide screen
+    expect(sizeOf(old, "heading level 2", 1920, true)).toBe(sizeOf(old, "heading level 4", 1920, true));
   });
 });
 

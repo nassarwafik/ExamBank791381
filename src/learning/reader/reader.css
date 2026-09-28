@@ -338,14 +338,21 @@
   box-sizing:border-box; inline-size:100%; min-inline-size:0; max-inline-size:none; margin:0 auto;
   flex:0 0 auto; block-size:auto; min-block-size:100%; padding:clamp(16px, 3vw, 48px);
 }
-/* Phase 12A — presentation never reads SMALLER than the normal Reader: the clamps start at the new base sizes. */
-.learning-reader.is-presentation .learning-reader-page-title{ font-size:clamp(26px, 2vw + 12px, 42px); }
-.learning-reader.is-presentation .learning-reader-text{ max-inline-size:88ch; font-size:clamp(19px, 0.6vw + 15px, 24px); }
-.learning-reader.is-presentation .learning-reader-heading{ font-size:clamp(20px, 0.8vw + 14px, 30px); }
-.learning-reader.is-presentation .learning-reader-callout-body,
-.learning-reader.is-presentation .learning-reader-list-text,
-.learning-reader.is-presentation .learning-reader-table{ font-size:clamp(17px, 0.5vw + 13px, 21px); }
-.learning-reader.is-presentation .learning-reader-code code{ font-size:clamp(15px, 0.4vw + 12px, 18px); }
+/* Phase 12A — presentation never reads SMALLER than the normal Reader. Each category keeps its responsive projector
+   growth (the clamp) but is FLOORED at its own normal Reader token with max(): the tokens step up at ≥1024px, so the
+   floor follows them at every width. The three heading levels have their own rules (a single generic heading clamp
+   would put level 2 below its normal size and flatten all levels to one size on a wide screen); their clamps are
+   strictly ordered, so title > level 2 > level 3 > level 4 ≥ paragraph holds at every width. Guarded numerically by
+   reader.readability.12a.guards.test.ts. */
+.learning-reader.is-presentation .learning-reader-page-title{ font-size:max(var(--eb-read-fs-title), clamp(26px, 2vw + 12px, 42px)); }
+.learning-reader.is-presentation .learning-reader-text{ max-inline-size:88ch; font-size:max(var(--eb-read-fs-body), clamp(19px, 0.6vw + 15px, 24px)); }
+.learning-reader.is-presentation .learning-reader-heading.is-level-2{ font-size:max(var(--eb-read-fs-h3), clamp(22px, 0.8vw + 17px, 32px)); }
+.learning-reader.is-presentation .learning-reader-heading.is-level-3{ font-size:max(var(--eb-read-fs-h4), clamp(20px, 0.7vw + 16px, 28px)); }
+.learning-reader.is-presentation .learning-reader-heading.is-level-4{ font-size:max(var(--eb-read-fs-h5), clamp(19px, 0.6vw + 15px, 25px)); }
+.learning-reader.is-presentation .learning-reader-callout-body{ font-size:max(var(--eb-read-fs-body), clamp(19px, 0.6vw + 15px, 24px)); }
+.learning-reader.is-presentation .learning-reader-list-text{ font-size:max(var(--eb-read-fs-card), clamp(17px, 0.5vw + 13px, 21px)); }
+.learning-reader.is-presentation .learning-reader-table{ font-size:max(var(--eb-read-fs-table), clamp(17px, 0.5vw + 13px, 21px)); }
+.learning-reader.is-presentation .learning-reader-code code{ font-size:max(var(--eb-read-fs-code), clamp(15px, 0.4vw + 12px, 18px)); }
 .learning-reader.is-presentation .learning-reader-list.variant-cards .learning-reader-list-items{ grid-template-columns:repeat(auto-fit, minmax(220px, 1fr)); }
 /* Control bar: static flex item at the bottom (never overlaps content), large hit areas, page-number field. */
 .learning-reader.is-presentation .learning-reader-nav{
@@ -403,8 +410,9 @@
 @media (prefers-reduced-motion: reduce){ .learning-reader-practice.is-interactive .learning-reader-practice-option{ transition:none; } }
 
 @media (min-width: 1024px){
-  /* Phase 12A — the reading scale steps up on the wide canvas (body 19px, title 32px, roomier block gap). */
-  .learning-reader{ --eb-read-fs-body:19px; --eb-read-fs-card:18px; --eb-read-fs-small:16px; --eb-read-fs-h3:24px; --eb-read-fs-h4:21px; --eb-read-fs-h5:19px; --eb-read-fs-label:17px; --eb-read-fs-table:16px; --eb-read-gap:var(--eb-space-5); }
+  /* Phase 12A — the reading scale steps up on the wide canvas (body 19px, title 32px, roomier block gap). The title
+     token itself steps too, so anything floored at it (the presentation title) follows the desktop title size. */
+  .learning-reader{ --eb-read-fs-body:19px; --eb-read-fs-card:18px; --eb-read-fs-small:16px; --eb-read-fs-h3:24px; --eb-read-fs-h4:21px; --eb-read-fs-h5:19px; --eb-read-fs-label:17px; --eb-read-fs-table:16px; --eb-read-fs-title:var(--eb-read-fs-title-desktop); --eb-read-gap:var(--eb-space-5); }
   .learning-reader-toc-toggle{ display:none; }
   .learning-reader-layout{ display:grid; grid-template-columns:minmax(240px, 300px) minmax(0, 1fr); gap:var(--eb-space-5); align-items:start; }
   .learning-reader-sidebar{ display:block; position:sticky; inset-block-start:var(--eb-space-3); max-block-size:calc(100vh - var(--eb-space-6, 48px)); overflow-y:auto; padding:var(--eb-space-2); background:var(--eb-surface); border:1px solid var(--eb-line); border-radius:var(--eb-r-lg); box-shadow:var(--eb-sh-xs); }
