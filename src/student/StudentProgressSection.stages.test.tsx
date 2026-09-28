@@ -25,11 +25,11 @@ describe("StudentProgressSection — every stage of the path", () => {
       expect(region.getByText(v.title).className, v.title).toContain("eb-sp-stage-title");
       expect(region.getByText("المرحلة " + v.stageNumber + " من 25"), v.title).toBeTruthy();
       expect(region.getByText(v.group.label), v.title).toBeTruthy();
-      expect((region.getByRole("img", { name: v.alt }) as HTMLImageElement).getAttribute("src"), v.title).toBe(v.image);
+      expect((region.getByRole("img", { name: v.alt }) as HTMLImageElement).getAttribute("src"), v.title).toBe(v.images[256]);
       expect(region.getByText("0 / 80"), v.title).toBeTruthy(); expect(region.getByText("0%"), v.title).toBeTruthy();
       expect(region.getByText(/نقاط القوة:/).textContent, v.title).toBe("نقاط القوة: " + (v.stageNumber - 1) * 80 + " / 2000");
       const next = document.querySelector(".eb-sp-rank-next-art") as HTMLImageElement | null;
-      if (v.stageNumber < 25) { expect(next?.getAttribute("src"), v.title).toBe(stageVisual(v.stageNumber + 1).image); expect(region.getByText("بقي 80 نقطة قوة للوصول إلى المرحلة " + (v.stageNumber + 1) + " — " + stageVisual(v.stageNumber + 1).title), v.title).toBeTruthy(); }
+      if (v.stageNumber < 25) { expect(next?.getAttribute("src"), v.title).toBe(stageVisual(v.stageNumber + 1).images[96]); expect(region.getByText("بقي 80 نقطة قوة للوصول إلى المرحلة " + (v.stageNumber + 1) + " — " + stageVisual(v.stageNumber + 1).title), v.title).toBeTruthy(); }
       else { expect(next, v.title).toBeNull(); expect(region.getByText("بقي 80 نقطة قوة لإكمال مسار القوة"), v.title).toBeTruthy(); }
       cleanup();
     }
@@ -75,7 +75,7 @@ describe("StudentProgressSection — every stage of the path", () => {
     expect(ring.getAttribute("aria-valuemin")).toBe("0"); expect(ring.getAttribute("aria-valuemax")).toBe("80"); expect(ring.getAttribute("aria-valuenow")).toBe("30"); expect(ring.getAttribute("aria-valuetext")).toBe("30 من 80 نقطة قوة");
     expect(document.querySelector(".eb-sp-rankring-svg")?.getAttribute("aria-hidden")).toBe("true");
     const current = region.getByRole("img", { name: "المرحلة 7 — ذئب الرياح" }) as HTMLImageElement;
-    expect(current.className).toContain("eb-sp-rankring-art"); expect(current.getAttribute("src")).toBe(stageVisual(7).image);
+    expect(current.className).toContain("eb-sp-rankring-art"); expect(current.getAttribute("src")).toBe(stageVisual(7).images[256]);
     const next = document.querySelector(".eb-sp-rank-next-art") as HTMLImageElement;
     expect(next.getAttribute("alt")).toBe(""); expect(next.getAttribute("aria-hidden")).toBe("true");
     expect(region.queryByRole("img", { name: /سيد الأمواج/ })).toBeNull();

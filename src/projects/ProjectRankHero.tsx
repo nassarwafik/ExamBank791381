@@ -2,6 +2,7 @@ import ProjectPerformanceCircle from "./ProjectPerformanceCircle";
 import "./performance.css";
 import { PROJECT_STRENGTH_MAX, projectRankVisual } from "./projectPerformance";
 import type { ProjectPerformance } from "./types";
+import { visualImgProps } from "../studentVisualSizes";
 
 /**
  * The project detail hero: the project's rank artwork (the SAME six images as the global rank), its title and
@@ -13,7 +14,7 @@ export default function ProjectRankHero({ title, performance, compact }: { title
   return (
     <div className={"eb-prh" + (compact ? " is-compact" : "")}>
       <div className="eb-prh-rank">
-        <img className="eb-prh-art" src={v.image} alt={"رتبة المشروع: " + v.title + " — المستوى " + v.level} width={compact ? 72 : 96} height={compact ? 72 : 96} loading="lazy" decoding="async" />
+        <img className="eb-prh-art" {...visualImgProps(v.images, compact ? 72 : 96)} alt={"رتبة المشروع: " + v.title + " — المستوى " + v.level} width={compact ? 72 : 96} height={compact ? 72 : 96} loading="lazy" decoding="async" />
         <div className="eb-prh-text">
           <p className="eb-prh-title">{title}</p>
           <p className="eb-prh-rank-title">{v.title}<span className="eb-prh-level">المستوى {v.level}</span></p>

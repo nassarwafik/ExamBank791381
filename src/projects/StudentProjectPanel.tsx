@@ -11,6 +11,7 @@ import StatusBadge from "../ui/StatusBadge";
 import { IconChevronBack } from "../icons";
 import type { ProjectStage, ProjectGroup, ProjectPerformance, ProjectEvaluation, StageProgressEntry, StudentCard, TrackMeta } from "./types";
 import type { ProjectStrength } from "../student/types";
+import { visualImgProps } from "../studentVisualSizes";
 
 type StudentProject = {
   projectCode: string;
@@ -39,7 +40,7 @@ function ProjectCard({ project, contribution, onOpen }: { project: StudentProjec
   const headingId = "eb-sp-project-card-" + project.projectCode;
   return (
     <article className="eb-sp-project-card" aria-labelledby={headingId}>
-      {rank && <img className="eb-sp-project-card-art" src={rank.image} alt="" aria-hidden="true" width={48} height={48} loading="lazy" decoding="async" />}
+      {rank && <img className="eb-sp-project-card-art" {...visualImgProps(rank.images, 48)} alt="" aria-hidden="true" width={48} height={48} loading="lazy" decoding="async" />}
       <div className="eb-sp-project-card-body">
         <h3 id={headingId} className="eb-sp-project-card-title">{project.title}</h3>
         <dl className="eb-sp-project-card-facts">

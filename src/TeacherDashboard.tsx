@@ -10,6 +10,7 @@ import {RANK_VISUALS} from "./studentRankVisuals";
 import {csvCell} from "./reports/csv";
 import {stageVisual} from "./studentStageVisuals";
 import type {RankTier} from "./studentRank";
+import {visualImgProps} from "./studentVisualSizes";
 import {resolveGradingStatus,type GradingStatus} from "./gradingStatus";
 import StatCard from "./ui/StatCard";
 import SectionHeader from "./ui/SectionHeader";
@@ -69,9 +70,9 @@ function AchievementIcon({post}:{post:AchievementPost}){
  const type=eventTypeOf(post);
  if(type==="medal"){const tier=post.medal?.tier||post.tier||"bronze";return <IconMedal size={22} style={{color:MEDAL_COLORS[tier]}}/>;}
  const stageNumber=Number(post.stage?.stageNumber);
- if(type==="global_rank_up"&&Number.isInteger(stageNumber)&&stageNumber>=1) return <img className="achievement-rank-art is-stage" src={stageVisual(stageNumber).image} alt="" aria-hidden="true" width={32} height={32} loading="lazy" decoding="async"/>;
+ if(type==="global_rank_up"&&Number.isInteger(stageNumber)&&stageNumber>=1) return <img className="achievement-rank-art is-stage" {...visualImgProps(stageVisual(stageNumber).images,32)} alt="" aria-hidden="true" width={32} height={32} loading="lazy" decoding="async"/>;
  const tier=(type==="global_rank_up"?post.rank?.tier:post.project?.tier)||"beginner";
- return <img className="achievement-rank-art" src={(RANK_VISUALS[tier as RankTier]||RANK_VISUALS.beginner).image} alt="" aria-hidden="true" width={32} height={32} loading="lazy" decoding="async"/>;
+ return <img className="achievement-rank-art" {...visualImgProps((RANK_VISUALS[tier as RankTier]||RANK_VISUALS.beginner).images,32)} alt="" aria-hidden="true" width={32} height={32} loading="lazy" decoding="async"/>;
 }
 function AchievementText({post}:{post:AchievementPost}){
  const parts=feedEventParts(post,FEED_LABELS);

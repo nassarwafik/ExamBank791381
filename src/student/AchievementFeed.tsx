@@ -11,6 +11,7 @@ import StatusBadge from "../ui/StatusBadge";
 import VisuallyHidden from "../ui/VisuallyHidden";
 import { isRecent } from "./portalPresentation";
 import { FEED_PAGE, visiblePostCount } from "./achievementFeedPaging";
+import { visualImgProps } from "../studentVisualSizes";
 
 /**
  * Class achievement feed (UX-7): newest first (server order), "جديد" for posts of the last 7 days, the student's
@@ -37,11 +38,11 @@ function EventIcon({ post }: { post: FeedPost }) {
   }
   const stageNumber = Number(post.stage?.stageNumber);
   if (type === "global_rank_up" && Number.isInteger(stageNumber) && stageNumber >= 1) {
-    return <img className="eb-sp-feed-rank-art is-global_rank_up is-stage" src={stageVisual(stageNumber).image} alt="" aria-hidden="true" width={40} height={40} loading="lazy" decoding="async" />;
+    return <img className="eb-sp-feed-rank-art is-global_rank_up is-stage" {...visualImgProps(stageVisual(stageNumber).images, 40)} alt="" aria-hidden="true" width={40} height={40} loading="lazy" decoding="async" />;
   }
   const tier = (type === "global_rank_up" ? post.rank?.tier : post.project?.tier) || "beginner";
   const v = RANK_VISUALS[tier as RankTier] || RANK_VISUALS.beginner;
-  return <img className={"eb-sp-feed-rank-art is-" + type} src={v.image} alt="" aria-hidden="true" width={40} height={40} loading="lazy" decoding="async" />;
+  return <img className={"eb-sp-feed-rank-art is-" + type} {...visualImgProps(v.images, 40)} alt="" aria-hidden="true" width={40} height={40} loading="lazy" decoding="async" />;
 }
 
 export default function AchievementFeed({ posts, error, shareOn, shareSaving, now, onToggleShare, onReact, highlightPostId }: Props) {
