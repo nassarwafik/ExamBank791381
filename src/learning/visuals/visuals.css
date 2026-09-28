@@ -64,6 +64,10 @@
   background:var(--eb-surface); border:1px dashed var(--eb-line-2); border-radius:var(--eb-r);
 }
 
+/* Phase 11D — a visual that failed to load/render (local VisualErrorBoundary): same calm frame, room for the note and
+   the optional user-pressed reload button; wraps on narrow screens. */
+.eb-visual-failed{ flex-wrap:wrap; text-align:center; padding:var(--eb-space-3); }
+
 /* ---------- calm but PERCEPTIBLE motion (CSS-driven) ----------
    Opacity-only pulses around .85–.90 → 1 read as static to a learner. Every looping pulse therefore combines a
    deeper opacity swing with a small transform (scale / translate) so the movement is actually noticeable while

@@ -3,6 +3,7 @@ import { usePrefersReducedMotion } from "../../ui/usePrefersReducedMotion";
 import type { VisualBlock } from "../content/types";
 import { resolveVisual } from "./registry";
 import { IconWarning } from "../../icons";
+import VisualErrorBoundary from "./VisualErrorBoundary";
 import "./visuals.css";
 
 /** A visual must be at least this fraction on screen before its one-shot motion is (re)started — a bare edge (a
@@ -80,9 +81,13 @@ export default function VisualBlockView({ block }: { block: VisualBlock }) {
           ? (
             // Phase 8E-6 — the visual is a lazy chunk; the boundary lives INSIDE the frame so the figure, title, caption,
             // the page and the Reader chrome stay put and only the illustration area shows a quiet status line meanwhile.
-            <Suspense fallback={<p className="eb-visual-loading eb-muted" role="status">جارٍ تحميل الرسم التوضيحي...</p>}>
-              <entry.component ariaLabel={block.alt} reducedMotion={reducedMotion} />
-            </Suspense>
+            // Phase 11D — the local error boundary sits in the same place: a visual that still fails after lazyWithRetry's
+            // one reload (or throws while rendering) degrades inside this frame only, never to the global boundary.
+            <VisualErrorBoundary key={block.visualId}>
+              <Suspense fallback={<p className="eb-visual-loading eb-muted" role="status">جارٍ تحميل الرسم التوضيحي...</p>}>
+                <entry.component ariaLabel={block.alt} reducedMotion={reducedMotion} />
+              </Suspense>
+            </VisualErrorBoundary>
           )
           : (
             <div className="eb-visual-missing" role="img" aria-label={block.alt}>
