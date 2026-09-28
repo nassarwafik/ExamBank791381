@@ -88,7 +88,7 @@ describe("A — deployment window: a legacy (pre-index) publish after a 12E-B re
 // writer can publish any more; every activation mints a fresh epoch.
 import { CONTROL_NAME, activateAssignmentIndex, deactivateAssignmentIndex, loadPublishedAssignmentsForClasses, readIndexControl } from "../src/lib/class-assignment-index.js";
 import { handler as control } from "../src/functions/assignment-index-control.js";
-import { listJson } from "../src/lib/platform-storage.js";
+import { listJson, downloadJsonOrNull } from "../src/lib/platform-storage.js";
 
 let epochSeq = 0;
 const epochDeps = () => ({ newEpoch: () => "E" + (++epochSeq) });
@@ -170,18 +170,19 @@ describe("C — races, crashes, malformed metadata, CAS exhaustion", () => {
     let x = null, e2 = null;
     const racingList = async (c, prefix) => {
       const docs = await listJson(c, prefix);                                       // the reconcile's scan …
-      x = await legacyCreate(w, "بين المسح والتفعيل");                              // … a legacy publish lands after it …
-      e2 = (await activate(w)).epoch;                                               // … then the authority transition
+      if (x === null) {
+        x = await legacyCreate(w, "بين المسح والتفعيل");                            // … a legacy publish lands after it …
+        e2 = (await activate(w)).epoch;                                             // … then the authority transition
+      }
       return docs;
     };
     const first = await loadIds(w, { listJson: racingList });
-    expect(first.ids).toEqual(["a0"]);                                              // that one request may miss it
-    expect(w.ctx.getJson(indexName("c1")).epoch).not.toBe(e2);                      // stamped with the PRE-scan epoch
+    expect(first.ids).toEqual(["a0", x].sort());                                    // THE SAME request: final validation saw E(n+1) → retried
+    expect(first.stats).toMatchObject({ authoritative: 1, authorityChanges: 1 });
+    expect(w.ctx.getJson(indexName("c1")).epoch).toBe(e2);                          // the retry reconciled under the new epoch
     const next = await loadIds(w);
-    expect(next.ids).toEqual(["a0", x].sort());                                     // never trusted under e2 → reconciled
-    expect(next.stats.globalScans).toBe(1);
-    expect(w.ctx.getJson(indexName("c1")).epoch).toBe(e2);
-    expect((await loadIds(w)).stats.globalScans).toBe(0);
+    expect(next.ids).toEqual(["a0", x].sort());
+    expect(next.stats.globalScans).toBe(0);
   });
 
   it("(D · union) a 12E-B publish racing the reconcile (after its scan, before its CAS) is kept by the union", async () => {
@@ -274,5 +275,134 @@ describe("C — the activation endpoint (builder only, explicit confirmation, au
     w.hooks.beforeConditionalUpload = (blob, api) => { if (blob === CONTROL_NAME) api.setJson(blob, api.getJson(blob)); };
     expect((await call(w, "POST", { operation: "activate", confirm: "no-pre-index-writers" })).status).toBe(503);
     expect((await readIndexControl(w.ctx.container)).authoritative).toBe(false);
+  });
+});
+
+// ── E — SAME-REQUEST authority transitions (review blocker 2) ─────────────────────────────────────────────────────
+// A result derived from authoritative epoch E is returned only if a FINAL control read — after all index / scan work —
+// still says authoritative with the SAME epoch E (epochs are random and never reused, so "same E" means no transition
+// happened in between). Otherwise the work is discarded and redone under the new state, at most AUTHORITY_ATTEMPTS
+// times; then the request falls back to ONE legacy global scan.
+// Linearization: a publish (or transition) that completes AFTER the final validation may be missed by this request —
+// the GET linearizes before it. One that completed BEFORE the final validation can never be hidden by a superseded epoch.
+/** Runs `onRead` right AFTER a download returned (the reader already holds the value). */
+const readHook = onRead => async (c, name) => { const v = await downloadJsonOrNull(c, name); await onRead(name, v); return v; };
+/** Runs `onBefore` right BEFORE a download (a transition that the read must observe). */
+const beforeHook = onBefore => async (c, name) => { await onBefore(name); return downloadJsonOrNull(c, name); };
+const controlReads = log => log.filter(n => n === CONTROL_NAME).length;
+
+describe("E — same-request authority transitions", () => {
+  it("(E1) RE-ACTIVATION during an in-flight TRUSTED read: a publish commits, E1 → E2 before the reader returns → the same request includes it", async () => {
+    const w = world();
+    await activate(w);
+    await loadIds(w);                                                               // index trusted under E1
+    let x = null, fired = false; const log = [];
+    const dl = readHook(async name => {
+      log.push(name);
+      if (name === indexName("c1") && !fired) { fired = true; x = await legacyCreate(w, "أثناء القراءة"); await activate(w); }
+    });
+    const r = await loadIds(w, { downloadJsonOrNull: dl });
+    expect(r.ids).toEqual(["a0", x].sort());
+    expect(r.stats).toMatchObject({ authoritative: 1, authorityChanges: 1, globalScans: 1 });   // retried under E2 → reconciled
+    expect(controlReads(log)).toBe(3);                                              // E1 · final E2 (mismatch) · final E2 (ok)
+  });
+
+  it("(E2) DEACTIVATION during an in-flight TRUSTED read: → migrating, a legacy publish commits → the same request does not trust E", async () => {
+    const w = world();
+    await activate(w);
+    await loadIds(w);
+    let x = null, fired = false;
+    const dl = readHook(async name => {
+      if (name === indexName("c1") && !fired) { fired = true; await deactivateAssignmentIndex(w.ctx.container); x = await legacyCreate(w, "بعد الإيقاف"); }
+    });
+    const r = await loadIds(w, { downloadJsonOrNull: dl });
+    expect(r.ids).toEqual(["a0", x].sort());
+    expect(r.stats).toMatchObject({ authoritative: 0, authorityChanges: 1, globalScans: 1 });   // fell back to the scan
+  });
+
+  it("(E3) DEACTIVATION during an in-flight RECONCILE (after its scan): the same request re-reads under migrating", async () => {
+    const w = world();
+    await activate(w);
+    let x = null, fired = false;
+    const racingList = async (c, prefix) => {
+      const docs = await listJson(c, prefix);
+      if (!fired) { fired = true; await deactivateAssignmentIndex(w.ctx.container); x = await legacyCreate(w, "بعد الإيقاف"); }
+      return docs;
+    };
+    const r = await loadIds(w, { listJson: racingList });
+    expect(r.ids).toEqual(["a0", x].sort());
+    expect(r.stats).toMatchObject({ authoritative: 0, authorityChanges: 1, globalScans: 2 });
+  });
+
+  it("(E4) real handlers: student dashboard (deactivation mid-read) and Teacher Today (re-activation mid-reconcile) include the publish in the SAME response", async () => {
+    const w = world();
+    await activate(w);
+    await studentIds(w);
+    let x = null, fired = false;
+    const r = await dashboard({ method: "GET", url: "http://x/api/student-dashboard", headers: { get: () => null } },
+      { container: w.ctx.container, requireStudentAuth: () => ({ ok: true, user: { sub: "u1", sv: 1 } }), recordGlobalRankMilestone: async () => {}, aggregateRecognition: async () => new Map(),
+        downloadJsonOrNull: readHook(async name => { if (name === indexName("c1") && !fired) { fired = true; await deactivateAssignmentIndex(w.ctx.container); x = await legacyCreate(w, "طالب"); } }) }, OBS);
+    expect(r.jsonBody.assignments.map(a => a.assignmentId).sort()).toEqual(["a0", x].sort());
+
+    const t = world();
+    await activate(t);
+    let y = null, fired2 = false;
+    const t1 = await today({ method: "GET", url: "http://x/api/teacher-today", headers: { get: () => null } },
+      { requireBuilderAuth: () => ({ ok: true, user: { sub: "teacher-1" } }), container: t.ctx.container, nowMs: NOW, teacherDirectUnread: async () => ({ totalUnread: 0, capped: false }), loadProjectEvaluationSources: async () => [],
+        listJson: async (c, prefix) => { const docs = await listJson(c, prefix); if (prefix === AP && !fired2) { fired2 = true; y = await legacyCreate(t, "معلم"); await activate(t); } return docs; } }, OBS);
+    expect(t1.jsonBody.scope.publishedAssignments).toBe(2);
+    expect(y).not.toBeNull();
+  });
+
+  it("(E5) bounded: authority churning on EVERY validation → at most 3 authoritative attempts, then ONE legacy scan that includes every publish", async () => {
+    const w = world();
+    await activate(w);
+    await loadIds(w);
+    const created = []; const log = [];
+    const dl = beforeHook(async name => {                                           // before EVERY final validation:
+      log.push(name);                                                               // a publish, then a re-activation
+      if (name === CONTROL_NAME && controlReads(log) > 1 && controlReads(log) <= 50) { created.push(await legacyCreate(w, "churn")); await activate(w); }
+    });
+    const r = await loadIds(w, { downloadJsonOrNull: dl });
+    expect(controlReads(log)).toBe(4);                                              // initial + 3 final validations — never more
+    expect(r.stats).toMatchObject({ authoritative: 0, authorityChanges: 3 });
+    expect(r.ids).toEqual(["a0", ...created].sort());                               // the fail-safe scan sees all three
+    expect(created).toHaveLength(3);
+  });
+
+  it("(E6) bounded: authority toggling authoritative ⇄ migrating ends in the scan path too (never loops)", async () => {
+    const w = world();
+    await activate(w);
+    const log = []; let x = null;
+    const dl = beforeHook(async name => {
+      log.push(name);
+      if (name === CONTROL_NAME && controlReads(log) === 2) { await deactivateAssignmentIndex(w.ctx.container); x = await legacyCreate(w, "toggle"); }
+    });
+    const r = await loadIds(w, { downloadJsonOrNull: dl });
+    expect(r.ids).toEqual(["a0", x].sort());
+    expect(r.stats.authoritative).toBe(0);
+    expect(controlReads(log)).toBe(2);
+  });
+
+  it("(E7) linearization: a publish that commits AFTER the final validation may be absent from this response, and is present in the next", async () => {
+    const w = world();
+    await activate(w);
+    await loadIds(w);
+    const log = []; let y = null;
+    const dl = readHook(async name => { log.push(name); if (name === CONTROL_NAME && controlReads(log) === 2) y = await newCreate(w, "بعد التحقق"); });
+    const r = await loadIds(w, { downloadJsonOrNull: dl });
+    expect(r.ids).toEqual(["a0"]);                                                  // linearized before that publish
+    expect(r.stats).toMatchObject({ authoritative: 1, authorityChanges: 0 });
+    expect((await loadIds(w)).ids).toEqual(["a0", y].sort());
+  });
+
+  it("(E8) stable authority: exactly two control reads (before + final), no scan, one index read", async () => {
+    const w = world();
+    await activate(w);
+    await loadIds(w);
+    const log = [];
+    const r = await loadIds(w, { downloadJsonOrNull: readHook(async name => { log.push(name); }) });
+    expect(controlReads(log)).toBe(2);
+    expect(r.stats).toMatchObject({ authoritative: 1, authorityChanges: 0, globalScans: 0, indexReads: 1 });
   });
 });

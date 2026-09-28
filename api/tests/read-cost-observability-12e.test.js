@@ -20,17 +20,17 @@ const COUNT_EXPR = /^(?:[A-Za-z_$][\w$]*\.length|tally\.[A-Za-z]+|idxStats\.[A-Z
 const FORBIDDEN = /(id|Id|ID|name|Name|title|Title|mark|score|percentage|token|studentId|classId|assignmentId|displayName)\b/;
 
 describe("12E-A read-cost observability — source guard", () => {
-  it("student-dashboard emits exactly one count-only event with the seven documented fields", () => {
+  it("student-dashboard emits exactly one count-only event with the eight documented fields", () => {
     const calls = readCostCalls(src("functions/student-dashboard.js"));
     expect(calls.map(c => c.event)).toEqual(["student.dashboard.read_cost"]);
-    expect(calls[0].fields.map(f => f[0])).toEqual(["assignmentDocsScanned", "publishedClassAssignments", "submissionReads", "assignmentIndexReads", "assignmentIndexesBootstrapped", "globalAssignmentScans", "assignmentIndexAuthoritative"]);
+    expect(calls[0].fields.map(f => f[0])).toEqual(["assignmentDocsScanned", "publishedClassAssignments", "submissionReads", "assignmentIndexReads", "assignmentIndexesBootstrapped", "globalAssignmentScans", "assignmentIndexAuthoritative", "assignmentIndexAuthorityChanges"]);
     for (const [, expr] of calls[0].fields) { expect(expr).toMatch(COUNT_EXPR); expect(expr.replace(/\.length$/, "")).not.toMatch(FORBIDDEN); }
   });
 
-  it("teacher-today emits exactly one count-only event with the ten documented fields", () => {
+  it("teacher-today emits exactly one count-only event with the eleven documented fields", () => {
     const calls = readCostCalls(src("functions/teacher-today.js"));
     expect(calls.map(c => c.event)).toEqual(["teacher.today.read_cost"]);
-    expect(calls[0].fields.map(f => f[0])).toEqual(["assignmentDocsScanned", "classDocsScanned", "userDocsScanned", "publishedActiveAssignments", "submissionFolderListings", "submissionDocsLoaded", "assignmentIndexReads", "assignmentIndexesBootstrapped", "globalAssignmentScans", "assignmentIndexAuthoritative"]);
+    expect(calls[0].fields.map(f => f[0])).toEqual(["assignmentDocsScanned", "classDocsScanned", "userDocsScanned", "publishedActiveAssignments", "submissionFolderListings", "submissionDocsLoaded", "assignmentIndexReads", "assignmentIndexesBootstrapped", "globalAssignmentScans", "assignmentIndexAuthoritative", "assignmentIndexAuthorityChanges"]);
     for (const [, expr] of calls[0].fields) { expect(expr).toMatch(COUNT_EXPR); expect(expr.replace(/\.length$/, "")).not.toMatch(FORBIDDEN); }
   });
 

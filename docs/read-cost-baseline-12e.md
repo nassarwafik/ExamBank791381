@@ -180,54 +180,70 @@ The contract that closes the window:
    activation. The union keeps every pointer a 12E-B writer ensured concurrently.
 4. **Deactivation** (back to migrating) is always safe. Do it before any rollback to pre-index code. Re-activating
    afterwards mints a new epoch, so every class index is reconciled again before it is trusted.
+5. **Final authority validation (per request).** A result derived from epoch E is returned only if a control read
+   taken **after** all of its index and scan work still says authoritative with the **same** epoch E. Epochs are
+   random and never reused, so an equal epoch means the authority did not change at any point in between. Otherwise
+   the result is discarded and the work is redone under the state that final read returned: migrating means one
+   legacy scan, and a new epoch means a new authoritative attempt. After 3 superseded attempts
+   (`AUTHORITY_ATTEMPTS`), the request fails safe to ONE legacy scan, so authority churn can never loop.
 
-**Invariant.** A reader skips the scan for class C only if control is authoritative with epoch E and C's index is
-ready with epoch E. That index was produced by a reconcile whose scan started after activation E. The scan therefore
+**Linearization rule.**
+- A publish or authority transition that completes **after** the final validation may be missing from this
+  response: the GET is ordered before it.
+- A transition that completed **before** the final validation can never leave this response on a superseded epoch.
+  That covers a legacy publish after a deactivation, or a publish followed by a re-activation.
+- A migrating or fail-safe response is the legacy scan, ordered at its scan.
+
+**Invariant.** A reader skips the scan for class C only if control is authoritative with epoch E both before and after
+its work (the final validation), and C's index is ready with epoch E. That index was produced by a reconcile whose scan started after activation E. The scan therefore
 contains every assignment that a pre-index writer published, because all such publishes happened before activation E.
 The index then only grows by union: every pointer that a 12E-B writer ensured before committing a publish is kept.
 So every successfully published assignment of C is in the index, or C is served from a scan.
 
 ## Student dashboard — `GET /api/student-dashboard` (AFTER)
 
-Every request reads the control document once (1 download).
+Every request reads the control document first. An authoritative result also needs the final validation read, so it
+takes 2 control reads in total. A migrating result takes 1.
 
     MIGRATING             lists = 1   downloads = K + 1 + A_total + P_class                  uploads = 0
-    AUTHORITATIVE, WARM   lists = 0   downloads = K + 1 + 1 index + P_class + P_class        uploads = 0
-    AUTHORITATIVE, COLD   lists = 1   downloads = K + 1 + 1 index + A_total + 1 CAS read + P_class
+    AUTHORITATIVE, WARM   lists = 0   downloads = K + 2 + 1 index + P_class + P_class        uploads = 0
+    AUTHORITATIVE, COLD   lists = 1   downloads = K + 2 + 1 index + A_total + 1 CAS read + P_class
                                                                                             uploads = 1 (the class index)
 
 | Fixture | A_total | P_class | BEFORE (12E-A) lists / downloads | MIGRATING lists / downloads | COLD lists / downloads / uploads | WARM lists / downloads |
 |---|---|---|---|---|---|---|
-| S0 | 0 | 0 | 1 / 5 | 1 / 6 | 1 / 8 / 1 | 0 / 7 |
-| S1 | 1 | 1 | 1 / 7 | 1 / 8 | 1 / 10 / 1 | 0 / 9 |
-| S10 | 10 | 10 | 1 / 25 | 1 / 26 | 1 / 28 / 1 | 0 / 27 |
-| S50 | 50 | 50 | 1 / 105 | 1 / 106 | 1 / 108 / 1 | 0 / 107 |
-| S-OTHER (3 own + 100 other class + 5 drafts + 5 archived) | 113 | 3 | 1 / 121 | 1 / 122 | 1 / 124 / 1 | 0 / 13 |
-| P_class=1, A_total = 1 / 10 / 100 / 1000 | 1 … 1000 | 1 | 1 / 7, 16, 106, — | 1 / 8, 17, 107, 1007 | 1 / 10, 19, 109, 1009 / 1 | **0 / 9 each** |
-| 1 published + 100 drafts/archived in the **same** class | 101 | 1 | — | 1 / 108 | 1 / 110 / 1 | **0 / 9** |
+| S0 | 0 | 0 | 1 / 5 | 1 / 6 | 1 / 9 / 1 | 0 / 8 |
+| S1 | 1 | 1 | 1 / 7 | 1 / 8 | 1 / 11 / 1 | 0 / 10 |
+| S10 | 10 | 10 | 1 / 25 | 1 / 26 | 1 / 29 / 1 | 0 / 28 |
+| S50 | 50 | 50 | 1 / 105 | 1 / 106 | 1 / 109 / 1 | 0 / 108 |
+| S-OTHER (3 own + 100 other class + 5 drafts + 5 archived) | 113 | 3 | 1 / 121 | 1 / 122 | 1 / 125 / 1 | 0 / 14 |
+| P_class=1, A_total = 1 / 10 / 100 / 1000 | 1 … 1000 | 1 | 1 / 7, 16, 106, — | 1 / 8, 17, 107, 1007 | 1 / 11, 20, 110, 1010 / 1 | **0 / 10 each** |
+| 1 published + 100 drafts/archived in the **same** class | 101 | 1 | — | 1 / 108 | 1 / 111 / 1 | **0 / 10** |
 
 **In the authoritative steady state, assignment metadata reads no longer depend on `A_total`.** They equal `P_class`.
 Drafts and archived assignments of the same class also cost nothing, because only published ids are indexed.
-Migrating costs exactly the 12E-A path plus the one control read.
+Migrating costs exactly the 12E-A path plus the one control read. The authoritative steady state pays two control reads,
+the one before the work and the final validation.
 
 ## Teacher Today — `GET /api/teacher-today` (AFTER)
 
-With at least one active class, the control is read once. Let `X = 1` if there is an active class, else `0`.
+Let `X = 1` if there is an active class, else `0`. With at least one active class, the control is read first. An
+authoritative result is confirmed by the final validation read, so it takes `2X` control reads.
 
-    MIGRATING             lists = 2 + X + P_active   downloads = C + U + X + X·A_total + S_active                    uploads = 0
-    AUTHORITATIVE, WARM   lists = 2 + P_active       downloads = C + U + X + C_active + P_active + S_active           uploads = 0
-    AUTHORITATIVE, COLD   lists = 2 + X + P_active   downloads = C + U + X + 2·C_active + X·A_total + S_active        uploads = C_active
+    MIGRATING             lists = 2 + X + P_active   downloads = C + U + X + X·A_total + S_active                     uploads = 0
+    AUTHORITATIVE, WARM   lists = 2 + P_active       downloads = C + U + 2X + C_active + P_active + S_active           uploads = 0
+    AUTHORITATIVE, COLD   lists = 2 + X + P_active   downloads = C + U + 2X + 2·C_active + X·A_total + S_active        uploads = C_active
 
 A cold request runs ONE legacy scan for every cold class. Archived classes are never reconciled.
 
 | Fixture | BEFORE lists / downloads | MIGRATING lists / downloads | COLD lists / downloads / uploads | WARM lists / downloads | Warm assignment docs |
 |---|---|---|---|---|---|
 | T0 (empty) | 3 / 0 | 2 / 0 | 2 / 0 / 0 | 2 / 0 | 0 |
-| T1 | 4 / 7 | 4 / 8 | 4 / 10 / 1 | 3 / 9 | 1 |
-| T10 (10 × 3 submissions) | 13 / 44 | 13 / 45 | 13 / 47 / 1 | 12 / 46 | 10 |
-| T-MANY-ARCHIVED (1 published + 30 archived + 10 drafts) | 4 / 47 | 4 / 48 | 4 / 50 / 1 | 3 / 9 | 1 |
-| T-MANY-OTHER/INACTIVE (1 active + 40 in an archived class) | 4 / 51 | 4 / 52 | 4 / 54 / 1 | 3 / 13 | 1 |
-| Fixed relevant set + 0 / 10 / 100 historical | 4 / 7, 17, 107 | 4 / 8, 18, 108 | — | **3 / 9 each** | **1 each** |
+| T1 | 4 / 7 | 4 / 8 | 4 / 11 / 1 | 3 / 10 | 1 |
+| T10 (10 × 3 submissions) | 13 / 44 | 13 / 45 | 13 / 48 / 1 | 12 / 47 | 10 |
+| T-MANY-ARCHIVED (1 published + 30 archived + 10 drafts) | 4 / 47 | 4 / 48 | 4 / 51 / 1 | 3 / 10 | 1 |
+| T-MANY-OTHER/INACTIVE (1 active + 40 in an archived class) | 4 / 51 | 4 / 52 | 4 / 55 / 1 | 3 / 14 | 1 |
+| Fixed relevant set + 0 / 10 / 100 historical | 4 / 7, 17, 107 | 4 / 8, 18, 108 | — | **3 / 10 each** | **1 each** |
 
 **Teacher Today still scans classes and users in Phase 12E-B.** `C_total` and `U_total` remain linear terms of every
 request. Only the global assignment scan was removed, and only from its authoritative steady state.
@@ -264,9 +280,10 @@ and it never triggers a fallback scan.
 The events stay count-only and best-effort. The response bodies are unchanged: no new response field.
 
 - `student.dashboard.read_cost` adds these fields: `assignmentIndexReads`, `assignmentIndexesBootstrapped`,
-  `globalAssignmentScans` and `assignmentIndexAuthoritative` (0 or 1). `assignmentDocsScanned` counts the assignment
+  `globalAssignmentScans`, `assignmentIndexAuthoritative` (0 or 1) and `assignmentIndexAuthorityChanges` (superseded
+  attempts in this request). `assignmentDocsScanned` counts the assignment
   documents actually loaded.
-- `teacher.today.read_cost` adds the same four fields.
+- `teacher.today.read_cost` adds the same five fields.
 - An authority change logs `assignment.index.control_changed` (operation and state only) and records an audit event.
 
 ## Notification Center (AFTER)

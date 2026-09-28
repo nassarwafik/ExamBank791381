@@ -13,10 +13,11 @@ import { instrumentReadCost } from "./helpers/read-cost.js";
 // assignment of every class was downloaded on every request.
 //
 // 12E-B AFTER (measured here, deliberately replacing the 12E-A BASELINE guards). Every request first reads the index
-// AUTHORITY control document (1 download):
+// AUTHORITY control document; an AUTHORITATIVE result is returned only after a FINAL control read confirms the same
+// epoch (2 control reads in total):
 //   MIGRATING (not activated) lists = 1 (legacy) downloads = K + 1 control + A_total + P_class          uploads = 0
-//   AUTHORITATIVE, WARM       lists = 0          downloads = K + 1 control + 1 index + P_class + P_class uploads = 0
-//   AUTHORITATIVE, COLD       lists = 1 (legacy) downloads = K + 1 control + 1 index + A_total + 1 reconcile CAS read
+//   AUTHORITATIVE, WARM       lists = 0          downloads = K + 2 control + 1 index + P_class + P_class uploads = 0
+//   AUTHORITATIVE, COLD       lists = 1 (legacy) downloads = K + 2 control + 1 index + A_total + 1 reconcile CAS read
 //     (first request per class                   + P_class;  uploads = 1 (the class index, ready:true, epoch)
 //      after activation)
 //   K = 5 fixed documents (user, class, practice, study, games) for a class without projects.
@@ -55,8 +56,8 @@ function cost(s, snap) {
     fixed: snap.downloads - s.rc.downloadsExact(CONTROL) - s.rc.downloadsOf(IX) - s.rc.downloadsOf(AP) - s.rc.downloadsOf(SP), indexWrites: s.rc.uploadsOf(IX), otherUploads: snap.uploads - s.rc.uploadsOf(IX)
   };
 }
-const warmCost = P => ({ globalAssignmentLists: 0, otherLists: 0, controlReads: 1, indexReads: 1, assignmentDocs: P, submissionReads: P, fixed: K, indexWrites: 0, otherUploads: 0 });
-const coldCost = (A, P) => ({ globalAssignmentLists: 1, otherLists: 0, controlReads: 1, indexReads: 2, assignmentDocs: A, submissionReads: P, fixed: K, indexWrites: 1, otherUploads: 0 });
+const warmCost = P => ({ globalAssignmentLists: 0, otherLists: 0, controlReads: 2, indexReads: 1, assignmentDocs: P, submissionReads: P, fixed: K, indexWrites: 0, otherUploads: 0 });
+const coldCost = (A, P) => ({ globalAssignmentLists: 1, otherLists: 0, controlReads: 2, indexReads: 2, assignmentDocs: A, submissionReads: P, fixed: K, indexWrites: 1, otherUploads: 0 });
 const migratingCost = (A, P) => ({ globalAssignmentLists: 1, otherLists: 0, controlReads: 1, indexReads: 0, assignmentDocs: A, submissionReads: P, fixed: K, indexWrites: 0, otherUploads: 0 });
 const mineIds = n => Array.from({ length: n }, (_, i) => "m" + i).sort();
 
@@ -138,18 +139,18 @@ describe("12E-B student dashboard — steady-state guards (replace the 12E-A BAS
 });
 
 describe("12E-B student dashboard — count-only observability + response parity", () => {
-  it("emits ONE student.dashboard.read_cost event with exactly the seven numeric fields (cold, warm, migrating)", async () => {
+  it("emits ONE student.dashboard.read_cost event with exactly the eight numeric fields (cold, warm, migrating)", async () => {
     const s = scenario({ mine: 3, other: 7, drafts: 2, withSubmission: 1 });
     await run(s);
     const cold = logs.filter(l => l.event === "student.dashboard.read_cost");
     expect(cold).toHaveLength(1);
-    expect(cold[0].fields).toEqual({ assignmentDocsScanned: 12, publishedClassAssignments: 3, submissionReads: 3, assignmentIndexReads: 1, assignmentIndexesBootstrapped: 1, globalAssignmentScans: 1, assignmentIndexAuthoritative: 1 });
+    expect(cold[0].fields).toEqual({ assignmentDocsScanned: 12, publishedClassAssignments: 3, submissionReads: 3, assignmentIndexReads: 1, assignmentIndexesBootstrapped: 1, globalAssignmentScans: 1, assignmentIndexAuthoritative: 1, assignmentIndexAuthorityChanges: 0 });
     await run(s);
     const warm = logs.filter(l => l.event === "student.dashboard.read_cost");
-    expect(warm[0].fields).toEqual({ assignmentDocsScanned: 3, publishedClassAssignments: 3, submissionReads: 3, assignmentIndexReads: 1, assignmentIndexesBootstrapped: 0, globalAssignmentScans: 0, assignmentIndexAuthoritative: 1 });
+    expect(warm[0].fields).toEqual({ assignmentDocsScanned: 3, publishedClassAssignments: 3, submissionReads: 3, assignmentIndexReads: 1, assignmentIndexesBootstrapped: 0, globalAssignmentScans: 0, assignmentIndexAuthoritative: 1, assignmentIndexAuthorityChanges: 0 });
     const m = scenario({ mine: 3, other: 7, drafts: 2, withSubmission: 1, authoritative: false });
     await run(m);
-    expect(logs.filter(l => l.event === "student.dashboard.read_cost")[0].fields).toEqual({ assignmentDocsScanned: 12, publishedClassAssignments: 3, submissionReads: 3, assignmentIndexReads: 0, assignmentIndexesBootstrapped: 0, globalAssignmentScans: 1, assignmentIndexAuthoritative: 0 });
+    expect(logs.filter(l => l.event === "student.dashboard.read_cost")[0].fields).toEqual({ assignmentDocsScanned: 12, publishedClassAssignments: 3, submissionReads: 3, assignmentIndexReads: 0, assignmentIndexesBootstrapped: 0, globalAssignmentScans: 1, assignmentIndexAuthoritative: 0, assignmentIndexAuthorityChanges: 0 });
     const text = JSON.stringify(logs);
     for (const leak of ["u1", "c1", "m0", "واجب", "علي", "S1", "platform/"]) expect(text).not.toContain(leak);
   });

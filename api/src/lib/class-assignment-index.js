@@ -171,6 +171,9 @@ async function bootstrapClassIndex(container, classId, discoveredIds, epoch, dep
 
 const isPublishedIn = (doc, classId) => !!doc && typeof doc === "object" && !Array.isArray(doc) && normalizeAssignmentStatus(doc) === "published" && String(doc.classId || "") === classId && isSafeId(String(doc.assignmentId || ""));
 
+/** Authoritative attempts per request before failing safe to one legacy scan (bounded under authority churn). */
+const AUTHORITY_ATTEMPTS = 3;
+
 /**
  * The currently-published assignments of each requested class, re-validated from the assignment documents.
  *
@@ -179,12 +182,22 @@ const isPublishedIn = (doc, classId) => !!doc && typeof doc === "object" && !Arr
  *
  * AUTHORITATIVE (control epoch E):
  *   • trusted classes (index ready AND epoch === E): one index read per class + one download per pointer — NO listing;
- *   • every other class (missing / malformed / not ready / older epoch) shares AT MOST ONE legacy scan for the whole
- *     call; its result comes from that scan and its index is reconciled (CAS union, ready, epoch E — E was read BEFORE
- *     the scan). A failed reconcile is logged and retried by the next request.
+ *   • every other class (missing / malformed / not ready / older epoch) shares AT MOST ONE legacy scan per attempt;
+ *     its result comes from that scan and its index is reconciled (CAS union, ready, epoch E — E was read BEFORE the
+ *     scan). A failed reconcile is logged and retried by the next request.
  *
- * Returns { byClass: Map<classId, doc[]>, stats: { authoritative, indexReads, globalScans, bootstrapped,
- * bootstrapFailures, assignmentDocsLoaded } }. Every list is in blob-name order (the legacy listing order).
+ * FINAL AUTHORITY VALIDATION. A result derived from epoch E is returned only if a control read taken AFTER all of its
+ * index / scan work still says authoritative with the SAME epoch E. Epochs are random and never reused, so an equal
+ * epoch means the authority did not change at any point in between: no deactivation (which must precede any pre-index
+ * writer resuming) and no re-activation. Otherwise the result is discarded and the work is redone under the state that
+ * final read returned (migrating → one legacy scan; a new epoch → a new authoritative attempt). After
+ * AUTHORITY_ATTEMPTS superseded attempts the request fails safe to ONE legacy scan. Linearization: a publish or
+ * authority transition that completes after the final validation may be missed by this request (it is ordered after
+ * it); one that completed before it cannot be hidden by a superseded epoch.
+ *
+ * Returns { byClass: Map<classId, doc[]>, stats: { authoritative, authorityChanges, indexReads, globalScans,
+ * bootstrapped, bootstrapFailures, assignmentDocsLoaded } }. Every list is in blob-name order (the legacy listing
+ * order).
  */
 async function loadPublishedAssignmentsForClasses(container, classIds, deps = {}, obs = null) {
   const dl = deps.downloadJsonOrNull || downloadJsonOrNull;
@@ -192,58 +205,70 @@ async function loadPublishedAssignmentsForClasses(container, classIds, deps = {}
   const mc = deps.mapConcurrent || mapConcurrent;
   const limit = (deps.getReadConcurrency || getReadConcurrency)();
   const requested = [...new Set((Array.isArray(classIds) ? classIds : []).map(v => String(v || "")).filter(Boolean))];
-  const stats = { authoritative: 0, indexReads: 0, globalScans: 0, bootstrapped: 0, bootstrapFailures: 0, assignmentDocsLoaded: 0 };
-  const byClass = new Map(requested.map(id => [id, []]));
-  const sorted = () => { for (const [classId, list] of byClass) byClass.set(classId, list.slice().sort((a, b) => byBlobName(String(a.assignmentId), String(b.assignmentId)))); return { byClass, stats }; };
-  if (!requested.length) return { byClass, stats };
-  const legacyFilter = (all, classId) => all.filter(d => d && typeof d === "object" && !Array.isArray(d) && normalizeAssignmentStatus(d) === "published" && String(d.classId || "") === classId);
+  const stats = { authoritative: 0, authorityChanges: 0, indexReads: 0, globalScans: 0, bootstrapped: 0, bootstrapFailures: 0, assignmentDocsLoaded: 0 };
+  const done = byClass => { for (const [classId, list] of byClass) byClass.set(classId, list.slice().sort((a, b) => byBlobName(String(a.assignmentId), String(b.assignmentId)))); return { byClass, stats }; };
+  if (!requested.length) return { byClass: new Map(), stats };
+  const readControl = () => readIndexControl(container, { ...deps, downloadJsonOrNull: dl });
 
-  // 1. Authority FIRST: its epoch must be known before any scan this call may run (see the header).
-  const control = await readIndexControl(container, { ...deps, downloadJsonOrNull: dl });
-  if (!control.authoritative) {
+  // Legacy path (migrating, or the fail-safe): one scan serves every class; valid whatever the authority does.
+  const legacy = async () => {
     const all = await ls(container, ASSIGNMENT_PREFIX);
-    stats.globalScans = 1;
-    stats.assignmentDocsLoaded = all.length;
-    for (const classId of requested) byClass.set(classId, legacyFilter(all, classId));
-    return sorted();
-  }
-  stats.authoritative = 1;
-  const ids = requested.filter(isSafeId), scanOnly = requested.filter(id => !isSafeId(id));   // unsafe ids: never indexed
-
-  // 2. An unreadable index (e.g. a corrupt document) is treated like a missing one: served from the scan, never trusted.
-  const indexes = await mc(ids, limit, id => readClassIndex(container, id, { ...deps, downloadJsonOrNull: dl }).catch(() => null));
-  stats.indexReads = ids.length;
-  const trusted = [], cold = [];
-  ids.forEach((id, i) => (indexes[i] && indexes[i].ready && indexes[i].epoch === control.epoch ? trusted : cold).push({ classId: id, index: indexes[i] }));
-
-  // 3. Trusted classes: download only the named pointers and re-validate every document.
-  const pointers = [];
-  for (const r of trusted) for (const aid of r.index.publishedAssignmentIds) pointers.push({ classId: r.classId, assignmentId: aid });
-  const docs = await mc(pointers, limit, p => dl(container, ASSIGNMENT_PREFIX + p.assignmentId + ".json"));
-  stats.assignmentDocsLoaded += pointers.length;
-  pointers.forEach((p, i) => { const d = docs[i]; if (isPublishedIn(d, p.classId) && String(d.assignmentId) === p.assignmentId) byClass.get(p.classId).push(d); });
-
-  // 4. Everything else: ONE legacy scan (started after the authoritative control was read), then a best-effort
-  //    reconcile per class stamped with THAT epoch.
-  if (cold.length || scanOnly.length) {
-    const all = await ls(container, ASSIGNMENT_PREFIX);
-    stats.globalScans = 1;
+    stats.globalScans += 1;
     stats.assignmentDocsLoaded += all.length;
-    for (const classId of scanOnly) byClass.set(classId, legacyFilter(all, classId));
-    for (const { classId } of cold) {
-      const found = all.filter(d => isPublishedIn(d, classId));
-      byClass.set(classId, found);
-      try { await bootstrapClassIndex(container, classId, found.map(d => String(d.assignmentId)), control.epoch, deps); stats.bootstrapped += 1; }
-      catch {
-        stats.bootstrapFailures += 1;
-        try { obs?.logWarn("assignment.index.bootstrap_failed", { retryable: true }); } catch { /* inert */ }
+    stats.authoritative = 0;
+    const byClass = new Map(requested.map(classId => [classId, all.filter(d => d && typeof d === "object" && !Array.isArray(d) && normalizeAssignmentStatus(d) === "published" && String(d.classId || "") === classId)]));
+    return done(byClass);
+  };
+
+  // One authoritative pass under `control` (whose epoch was read BEFORE any scan of this pass).
+  const authoritativePass = async control => {
+    const byClass = new Map(requested.map(id => [id, []]));
+    const ids = requested.filter(isSafeId), scanOnly = requested.filter(id => !isSafeId(id));   // unsafe ids: never indexed
+    // An unreadable index (e.g. a corrupt document) is treated like a missing one: served from the scan, never trusted.
+    const indexes = await mc(ids, limit, id => readClassIndex(container, id, { ...deps, downloadJsonOrNull: dl }).catch(() => null));
+    stats.indexReads += ids.length;
+    const trusted = [], cold = [];
+    ids.forEach((id, i) => (indexes[i] && indexes[i].ready && indexes[i].epoch === control.epoch ? trusted : cold).push({ classId: id, index: indexes[i] }));
+    // Trusted classes: download only the named pointers and re-validate every document.
+    const pointers = [];
+    for (const r of trusted) for (const aid of r.index.publishedAssignmentIds) pointers.push({ classId: r.classId, assignmentId: aid });
+    const docs = await mc(pointers, limit, p => dl(container, ASSIGNMENT_PREFIX + p.assignmentId + ".json"));
+    stats.assignmentDocsLoaded += pointers.length;
+    pointers.forEach((p, i) => { const d = docs[i]; if (isPublishedIn(d, p.classId) && String(d.assignmentId) === p.assignmentId) byClass.get(p.classId).push(d); });
+    // Everything else: ONE legacy scan (started after `control` was read), then a best-effort reconcile per class
+    // stamped with THAT epoch.
+    if (cold.length || scanOnly.length) {
+      const all = await ls(container, ASSIGNMENT_PREFIX);
+      stats.globalScans += 1;
+      stats.assignmentDocsLoaded += all.length;
+      for (const classId of scanOnly) byClass.set(classId, all.filter(d => d && typeof d === "object" && !Array.isArray(d) && normalizeAssignmentStatus(d) === "published" && String(d.classId || "") === classId));
+      for (const { classId } of cold) {
+        const found = all.filter(d => isPublishedIn(d, classId));
+        byClass.set(classId, found);
+        try { await bootstrapClassIndex(container, classId, found.map(d => String(d.assignmentId)), control.epoch, deps); stats.bootstrapped += 1; }
+        catch {
+          stats.bootstrapFailures += 1;
+          try { obs?.logWarn("assignment.index.bootstrap_failed", { retryable: true }); } catch { /* inert */ }
+        }
       }
     }
+    return byClass;
+  };
+
+  // Authority FIRST (its epoch must be known before any scan), then the work, then the FINAL validation.
+  let control = await readControl();
+  for (let attempt = 0; attempt < AUTHORITY_ATTEMPTS; attempt++) {
+    if (!control.authoritative) return legacy();
+    const byClass = await authoritativePass(control);
+    const final = await readControl();
+    if (final.authoritative && final.epoch === control.epoch) { stats.authoritative = 1; return done(byClass); }
+    stats.authorityChanges += 1;          // superseded: discard this result, redo under the state just read
+    control = final;
   }
-  return sorted();
+  return legacy();                        // authority churned AUTHORITY_ATTEMPTS times: fail safe to one scan
 }
 
 module.exports = {
   INDEX_PREFIX, CONTROL_NAME, SCHEMA_VERSION, isSafeId, indexName, normalizeIds, normalizeIndex, normalizeControl,
-  readIndexControl, activateAssignmentIndex, deactivateAssignmentIndex, readClassIndex, ensurePublishedAssignmentIndexed, removePublishedAssignmentFromIndex, bootstrapClassIndex, loadPublishedAssignmentsForClasses
+  AUTHORITY_ATTEMPTS, readIndexControl, activateAssignmentIndex, deactivateAssignmentIndex, readClassIndex, ensurePublishedAssignmentIndexed, removePublishedAssignmentFromIndex, bootstrapClassIndex, loadPublishedAssignmentsForClasses
 };
