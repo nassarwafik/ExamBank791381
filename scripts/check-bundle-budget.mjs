@@ -14,12 +14,16 @@
 //   6. (Phase 8E-6) the Learning Reader's first chunk graph (LearningReaderWithTraining-*.js + its static imports) or
 //      the initial graph carries any registered SVG visual implementation, the visuals are not emitted behind lazy
 //      edges of the Reader in several small trusted group chunks, or fewer than the registered 122 implementations
-//      are shipped (signature: the `preserveAspectRatio:` prop every registered visual sets on its root <svg>).
+//      are shipped (signature: the `preserveAspectRatio:` prop every registered visual sets on its root <svg>);
+//   7. (Phase 11C) the student rank / stage artwork breaks its image-weight guard (scripts/check-student-visual-assets.mjs):
+//      a missing / oversized / stale sized derivative, a source import of an owner master, or a master shipped in dist.
 // No hashed filename is hard-coded: chunks are recognised by their un-hashed stem and by content signatures that
 // are stable across minification (Chart.js registry ids, dashboard-only / platform-only class names and copy).
 import fs from "node:fs";
 import path from "node:path";
 import zlib from "node:zlib";
+import { fileURLToPath } from "node:url";
+import { checkStudentVisualAssets } from "./check-student-visual-assets.mjs";
 
 // Phase 8E-2 measured 193.5 KB (budget 205); Phase 8E-4 measured 159.2 KB (budget 175); Phase 8E-5 measured 111.5 KB →
 // budget tightened to 125 (≈ +13 KB regression tolerance).
@@ -129,6 +133,11 @@ function main() {
   const readerGz = readerClosure.filter(f => !initial.includes(f)).reduce((n, f) => n + zlib.gzipSync(fs.readFileSync(path.join(assets, f)), { level: 9 }).length, 0);
   console.log(`Learning Reader first-load graph (beyond the initial graph): ${readerClosure.filter(f => !initial.includes(f)).length} files, ${kb(readerGz)} KB gzip, 0 visual implementations required`);
   console.log(`Learning visuals: ${shipped} implementations in ${visualChunks.length} lazy group chunks (largest ${biggest}), all behind Reader dynamic edges`);
+
+  // Phase 11C — student rank / stage image weight.
+  const visuals = checkStudentVisualAssets({ root: path.join(path.dirname(fileURLToPath(import.meta.url)), ".."), dist });
+  for (const line of visuals.report) console.log(line);
+  failures.push(...visuals.failures);
 
   if (failures.length) { console.error("\nBUNDLE GUARD FAILED:\n - " + failures.join("\n - ")); process.exit(1); }
   console.log("bundle guard passed");

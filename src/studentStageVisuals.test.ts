@@ -1,6 +1,7 @@
 // The 25-stage visual authority: exactly 25 mappings, the owner's approved order and names, five presentation groups,
 // distinct image modules, meaningful alt text, safe accessor — and never a stage 26.
 import { describe, it, expect } from "vitest";
+import { VISUAL_SIZES } from "./studentVisualSizes";
 import { STAGE_COUNT, STAGE_GROUPS, STAGE_VISUALS, stageGroupOf, stageVisual } from "./studentStageVisuals";
 
 const APPROVED = [
@@ -18,12 +19,10 @@ describe("studentStageVisuals — the one central mapping", () => {
     expect(STAGE_VISUALS.map(v => v.stageNumber)).toEqual(Array.from({ length: 25 }, (_, i) => i + 1));
     expect(STAGE_VISUALS.map(v => v.title)).toEqual(APPROVED);
   });
-  it("every stage has its own image module (25 distinct, all stage-NN.png of src/assets/student-stages) and a meaningful alt «المرحلة n — title»", () => {
-    const images = STAGE_VISUALS.map(v => v.image);
-    expect(new Set(images).size).toBe(25);
+  it("every stage has its own sized artwork (25 distinct, stage-NN-<size>.png derivatives of src/assets/student-stages) and a meaningful alt «المرحلة n — title»", () => {
+    expect(new Set(STAGE_VISUALS.map(v => v.images[96])).size).toBe(25);
     STAGE_VISUALS.forEach((v, i) => {
-      expect(typeof v.image).toBe("string"); expect(v.image.length).toBeGreaterThan(0);
-      expect(v.image, v.title).toMatch(new RegExp("stage-" + String(i + 1).padStart(2, "0")));
+      for (const size of VISUAL_SIZES) expect(v.images[size], v.title + " " + size).toMatch(new RegExp("/student-stages/sized/stage-" + String(i + 1).padStart(2, "0") + "-" + size + "(\\.|-)"));
       expect(v.alt).toBe("المرحلة " + (i + 1) + " — " + v.title);
     });
   });

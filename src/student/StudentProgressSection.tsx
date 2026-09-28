@@ -8,6 +8,7 @@ import { stagePresentationFromStrength } from "./strengthPresentation";
 import { countMedals } from "./portalPresentation";
 import { REACTIONS } from "../achievements";
 import type { Stats, StudentRecognition, StudentStrength } from "./types";
+import { visualImgProps, type VisualImageSet } from "../studentVisualSizes";
 
 /**
  * "تقدّمي" (UX-7a): the server's own counts as StatCards, the finalized-only average as a ring (always with a
@@ -79,7 +80,7 @@ function StrengthBreakdown({ strength }: { strength: StudentStrength }) {
 // semantic is a role="progressbar" wrapper carrying the SERVER's within-stage points (aria-valuemin 0,
 // aria-valuemax = the stage block size, aria-valuenow = withinStagePoints). The artwork is shown untouched
 // (object-fit:contain, never cropped) with a meaningful alt («المرحلة 7 — ذئب الرياح»).
-function StageRing({ src, alt, value, max, percent, progressLabel }: { src: string; alt: string; value: number; max: number; percent: number; progressLabel: string }) {
+function StageRing({ images, alt, value, max, percent, progressLabel }: { images: VisualImageSet; alt: string; value: number; max: number; percent: number; progressLabel: string }) {
   const R = 45;
   const C = 2 * Math.PI * R;
   const p = Math.max(0, Math.min(100, Math.round(percent)));
@@ -92,7 +93,8 @@ function StageRing({ src, alt, value, max, percent, progressLabel }: { src: stri
             strokeDasharray={C} strokeDashoffset={C * (1 - p / 100)} transform="rotate(-90 50 50)" />
         </svg>
       </div>
-      <img className="eb-sp-rankring-art" src={src} alt={alt} loading="lazy" decoding="async" />
+      {/* Phase 11C — the art is 78% of the ring: ≈98 px (126 px ring), ≈125 px from 768 px up (160 px ring). */}
+      <img className="eb-sp-rankring-art" {...visualImgProps(images, 125, "(min-width: 768px) 125px, 98px")} alt={alt} loading="lazy" decoding="async" />
     </div>
   );
 }
@@ -103,7 +105,7 @@ function StrengthStage({ strength }: { strength: StudentStrength }) {
   return (
     <div className="eb-sp-rank-progress eb-sp-stage" data-stage={strength.stageNumber}>
       <div className="eb-sp-rank-hero">
-        <StageRing src={stage.current.image} alt={stage.current.alt} value={strength.withinStagePoints} max={strength.stageBlockSize} percent={strength.stagePercent} progressLabel={stage.progressLabel} />
+        <StageRing images={stage.current.images} alt={stage.current.alt} value={strength.withinStagePoints} max={strength.stageBlockSize} percent={strength.stagePercent} progressLabel={stage.progressLabel} />
         <div className="eb-sp-rank-hero-text">
           <p className="eb-sp-rank-title eb-sp-stage-title">{stage.current.title}</p>
           <p className="eb-sp-stage-label">{stage.stageLabel}</p>
@@ -116,7 +118,7 @@ function StrengthStage({ strength }: { strength: StudentStrength }) {
       </div>
       <StrengthBreakdown strength={strength} />
       <p className={"eb-sp-rank-hint" + (stage.next ? " eb-sp-rank-next" : " eb-sp-stage-final")}>
-        {stage.next && <img className="eb-sp-rank-next-art" src={stage.next.image} alt="" aria-hidden="true" width={40} height={40} loading="lazy" decoding="async" />}
+        {stage.next && <img className="eb-sp-rank-next-art" {...visualImgProps(stage.next.images, 40)} alt="" aria-hidden="true" width={40} height={40} loading="lazy" decoding="async" />}
         <span>{stage.remainingText}</span>
       </p>
     </div>

@@ -6,6 +6,7 @@ import { IconKey, IconCopy, IconMedal, IconEye, IconPlus, IconEdit } from "../ic
 import { MEDAL_COLORS, MEDAL_LABELS, medalTier } from "../medals";
 import { resolveGradingStatus } from "../gradingStatus";
 import { stageVisual } from "../studentStageVisuals";
+import { visualImgProps } from "../studentVisualSizes";
 import type { ProfileSection, StudentProfile, SubmittedAssignment } from "./types";
 
 /** Concise Strength / recognition line-up (server values only; nothing recomputed). Absent on older payloads. */
@@ -19,7 +20,7 @@ function StrengthSummary({ profile }: { profile: StudentProfile }) {
     <div className="eb-profile-strength" aria-label="القوة والتقدير">
       {s && (
         <p className="eb-profile-strength-rank">
-          {stage ? <><img src={stage.image} alt="" aria-hidden="true" width={32} height={32} loading="lazy" decoding="async" /><strong>{stage.title}</strong><span className="eb-muted">المرحلة {stage.stageNumber} من {s.stageCount ?? 25}</span></> : null}
+          {stage ? <><img {...visualImgProps(stage.images, 32)} alt="" aria-hidden="true" width={32} height={32} loading="lazy" decoding="async" /><strong>{stage.title}</strong><span className="eb-muted">المرحلة {stage.stageNumber} من {s.stageCount ?? 25}</span></> : null}
           <span className="eb-muted">نقاط القوة: <strong dir="ltr">{s.stagePoints !== undefined && s.stageMaxPoints !== undefined ? s.stagePoints + " / " + s.stageMaxPoints : s.totalPoints}</strong></span>
           {s.rawTotalPoints !== undefined && s.stageMaxPoints !== undefined && s.rawTotalPoints > s.stageMaxPoints && <span className="eb-muted">الإجمالي الفعلي: <strong dir="ltr">{s.rawTotalPoints}</strong></span>}
         </p>

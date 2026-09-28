@@ -311,8 +311,8 @@ describe("UX-7a StudentPortal — identity, medals, average ring and the Strengt
     const ring = region.getByRole("progressbar", { name: "التقدم نحو المرحلة 2 — شعلة صغيرة" });
     expect(ring.getAttribute("aria-valuenow")).toBe("0"); expect(ring.getAttribute("aria-valuemax")).toBe("80");
     const art = region.getByRole("img", { name: "المرحلة 1 — بذرة القوة" }) as HTMLImageElement;
-    expect(art.getAttribute("src")).toBe(stageVisual(1).image); expect(art.className).toContain("eb-sp-rankring-art");
-    expect((document.querySelector(".eb-sp-rank-next-art") as HTMLImageElement).getAttribute("src")).toBe(stageVisual(2).image);
+    expect(art.getAttribute("src")).toBe(stageVisual(1).images[256]); expect(art.className).toContain("eb-sp-rankring-art");
+    expect((document.querySelector(".eb-sp-rank-next-art") as HTMLImageElement).getAttribute("src")).toBe(stageVisual(2).images[96]);
     expect(region.getByText("بقي 80 نقطة قوة للوصول إلى المرحلة 2 — شعلة صغيرة")).toBeTruthy();
     expect(document.body.textContent).not.toMatch(/لا رتبة|الرتبة القادمة|لفتح رتبتك|المستوى \d|من 10 |لفتح الرتبة/);
     expect(document.querySelector(".eb-sp-rankring.is-locked")).toBeNull();
@@ -333,9 +333,9 @@ describe("UX-7a StudentPortal — identity, medals, average ring and the Strengt
     expect(region.getByText("38%")).toBeTruthy();
     const ring = region.getByRole("progressbar", { name: "التقدم نحو المرحلة 8 — سيد الأمواج" });
     expect(ring.getAttribute("aria-valuenow")).toBe("30"); expect(ring.getAttribute("aria-valuemin")).toBe("0"); expect(ring.getAttribute("aria-valuemax")).toBe("80");
-    expect((region.getByRole("img", { name: "المرحلة 7 — ذئب الرياح" }) as HTMLImageElement).getAttribute("src")).toBe(stageVisual(7).image);
+    expect((region.getByRole("img", { name: "المرحلة 7 — ذئب الرياح" }) as HTMLImageElement).getAttribute("src")).toBe(stageVisual(7).images[256]);
     const nextArt = document.querySelector(".eb-sp-rank-next-art") as HTMLImageElement;
-    expect(nextArt.getAttribute("src")).toBe(stageVisual(8).image); expect(nextArt.getAttribute("aria-hidden")).toBe("true"); expect(nextArt.getAttribute("alt")).toBe("");
+    expect(nextArt.getAttribute("src")).toBe(stageVisual(8).images[96]); expect(nextArt.getAttribute("aria-hidden")).toBe("true"); expect(nextArt.getAttribute("alt")).toBe("");
     expect(region.queryByRole("img", { name: /سيد الأمواج/ })).toBeNull();                 // the preview is decorative, not a second labelled image
     expect(region.getByText("بقي 50 نقطة قوة للوصول إلى المرحلة 8 — سيد الأمواج")).toBeTruthy();
     expect(document.querySelector(".eb-sp-avatar-frame.is-stage-group-2")).toBeTruthy();

@@ -628,7 +628,7 @@ describe("Student Strength — the 25 stage images (owner archive strength_25_ic
     expect(manifest.stages.map(s => s.file)).toEqual(APPROVED.map((_, i) => "strength-stage-" + pad(i + 1) + ".png"));
   });
 
-  it("each canonical stage-NN.png is the owner's strength-stage-NN.png byte-for-byte (SHA-256 from the manifest); 25 distinct payloads; nothing else in the folder", () => {
+  it("each canonical stage-NN.png is the owner's strength-stage-NN.png byte-for-byte (SHA-256 from the manifest); 25 distinct payloads; nothing else in the folder but the sized derivatives (Phase 11C)", () => {
     const seen = new Set();
     for (const s of manifest.stages) {
       const bytes = readFileSync(join(STAGES_DIR, "stage-" + pad(s.stage) + ".png"));
@@ -637,7 +637,9 @@ describe("Student Strength — the 25 stage images (owner archive strength_25_ic
       expect(seen.has(actual), s.file + " duplicates another stage's image").toBe(false);
       seen.add(actual);
     }
-    expect(readdirSync(STAGES_DIR).filter(f => !f.startsWith(".")).sort()).toEqual([...manifest.stages.map(s => "stage-" + pad(s.stage) + ".png"), "owner-manifest.json"].sort());
+    expect(readdirSync(STAGES_DIR).filter(f => !f.startsWith(".")).sort()).toEqual([...manifest.stages.map(s => "stage-" + pad(s.stage) + ".png"), "owner-manifest.json", "sized"].sort());
+    // Phase 11C — `sized/` holds exactly the shipped derivatives of these masters (scripts/generate-student-visual-derivatives.mjs)
+    expect(readdirSync(join(STAGES_DIR, "sized")).sort()).toEqual(manifest.stages.flatMap(s => [48, 96, 144, 256].map(z => "stage-" + pad(s.stage) + "-" + z + ".png")).sort());
   });
 
   it("every stage image is a 512×512 8-bit RGBA PNG (transparent canvas preserved, no resize / recompression / conversion)", () => {
@@ -651,10 +653,12 @@ describe("Student Strength — the 25 stage images (owner archive strength_25_ic
     }
   });
 
-  it("src/studentStageVisuals.ts is the ONE import site of the 25 files, in order, with the approved titles; no component imports a stage PNG directly", () => {
+  it("src/studentStageVisuals.ts is the ONE import site of the stage artwork (its sized derivatives, stage n → stage-NN, in order), with the approved titles; no component imports a stage PNG directly", () => {
     const visuals = read("studentStageVisuals.ts");
-    for (let i = 1; i <= 25; i++) expect(visuals, "stage " + i).toContain('from "./assets/student-stages/stage-' + pad(i) + '.png"');
-    expect((visuals.match(/assets\/student-stages\/stage-\d\d\.png/g) || []).length).toBe(25);
+    // Phase 11C — the app ships the sized derivatives only: one glob of `sized/`, stage i+1 bound to its own "stage-NN" stem, no master import
+    expect(visuals).toContain('import.meta.glob<string>("./assets/student-stages/sized/*.png"');
+    expect(visuals).toMatch(/images: sizedImageSet\(SIZED, "stage-" \+ String\(i \+ 1\)\.padStart\(2, "0"\)\)/);
+    expect((visuals.match(/assets\/student-stages\/stage-\d\d\.png/g) || []).length).toBe(0);
     for (const t of APPROVED) expect(visuals).toContain('"' + t + '"');
     const walk = dir => readdirSync(dir, { withFileTypes: true }).flatMap(e => e.isDirectory() ? walk(join(dir, e.name)) : [join(dir, e.name)]);
     const offenders = walk(join(ROOT, "src")).filter(f => /\.(tsx?|css)$/.test(f) && !f.endsWith("studentStageVisuals.ts") && readFileSync(f, "utf8").includes("assets/student-stages/"));
@@ -688,7 +692,9 @@ describe("LEGACY six-rank badge artwork (owner-provided final assets; kept for p
       expect(seen.has(actual), tier + " duplicates another tier's image").toBe(false);
       seen.add(actual);
     }
-    expect(readdirSync(RANKS_DIR).filter(f => !f.startsWith(".")).sort()).toEqual(Object.keys(OWNER_ASSETS).map(t => "rank-" + t + ".png").sort());
+    expect(readdirSync(RANKS_DIR).filter(f => !f.startsWith(".")).sort()).toEqual([...Object.keys(OWNER_ASSETS).map(t => "rank-" + t + ".png"), "sized"].sort());
+    // Phase 11C — `sized/` holds exactly the shipped derivatives of these masters
+    expect(readdirSync(join(RANKS_DIR, "sized")).sort()).toEqual(Object.keys(OWNER_ASSETS).flatMap(t => [48, 96, 144, 256].map(z => "rank-" + t + "-" + z + ".png")).sort());
   });
 
   it("every badge is a 1254×1254 8-bit RGBA PNG (transparent canvas preserved, not flattened)", () => {
@@ -701,9 +707,11 @@ describe("LEGACY six-rank badge artwork (owner-provided final assets; kept for p
     }
   });
 
-  it("the central mapping still imports exactly the six canonical files (single rank-art authority)", () => {
+  it("the central mapping is still the single rank-art authority: each tier bound to its own canonical artwork (Phase 11C: its sized derivatives, never the master)", () => {
     const visuals = read("studentRankVisuals.ts");
-    for (const tier of Object.keys(OWNER_ASSETS)) expect(visuals, tier).toContain('from "./assets/student-ranks/rank-' + tier + '.png"');
+    expect(visuals).toContain('import.meta.glob<string>("./assets/student-ranks/sized/*.png"');
+    for (const tier of Object.keys(OWNER_ASSETS)) expect(visuals, tier).toMatch(new RegExp('tier: "' + tier + '",\\s*images: sizedImageSet\\(SIZED, "rank-' + tier + '"\\)'));
+    expect(visuals).not.toMatch(/assets\/student-ranks\/rank-[a-z]+\.png/);
     expect(read("student/StudentProgressSection.tsx")).not.toMatch(/assets\/student-ranks|RANK_VISUALS/);   // the primary section uses the 25-stage authority; legacy consumers go through RANK_VISUALS
   });
 

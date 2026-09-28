@@ -5,31 +5,8 @@
 // and never an individual stage PNG; nothing here derives a stage from points — the server does that
 // (api/src/lib/student-strength.js): 25 stages × 80 points = 2000 visible points. The order below is the owner's
 // approved order (src/assets/student-stages/owner-manifest.json, the archive's stage-names.json).
-import stage01 from "./assets/student-stages/stage-01.png";
-import stage02 from "./assets/student-stages/stage-02.png";
-import stage03 from "./assets/student-stages/stage-03.png";
-import stage04 from "./assets/student-stages/stage-04.png";
-import stage05 from "./assets/student-stages/stage-05.png";
-import stage06 from "./assets/student-stages/stage-06.png";
-import stage07 from "./assets/student-stages/stage-07.png";
-import stage08 from "./assets/student-stages/stage-08.png";
-import stage09 from "./assets/student-stages/stage-09.png";
-import stage10 from "./assets/student-stages/stage-10.png";
-import stage11 from "./assets/student-stages/stage-11.png";
-import stage12 from "./assets/student-stages/stage-12.png";
-import stage13 from "./assets/student-stages/stage-13.png";
-import stage14 from "./assets/student-stages/stage-14.png";
-import stage15 from "./assets/student-stages/stage-15.png";
-import stage16 from "./assets/student-stages/stage-16.png";
-import stage17 from "./assets/student-stages/stage-17.png";
-import stage18 from "./assets/student-stages/stage-18.png";
-import stage19 from "./assets/student-stages/stage-19.png";
-import stage20 from "./assets/student-stages/stage-20.png";
-import stage21 from "./assets/student-stages/stage-21.png";
-import stage22 from "./assets/student-stages/stage-22.png";
-import stage23 from "./assets/student-stages/stage-23.png";
-import stage24 from "./assets/student-stages/stage-24.png";
-import stage25 from "./assets/student-stages/stage-25.png";
+
+import { sizedImageSet, type VisualImageSet } from "./studentVisualSizes";
 
 /** The number of stages on the visible Strength path (display metadata — the server's `stageCount` is the authority). */
 export const STAGE_COUNT = 25;
@@ -46,7 +23,11 @@ export const STAGE_GROUPS: readonly StageGroup[] = [
 ];
 
 /** The visual metadata of ONE stage. `alt` is the meaningful screen-reader text of the CURRENT stage image. */
-export type StageVisual = { stageNumber: number; title: string; group: StageGroup; image: string; alt: string };
+export type StageVisual = { stageNumber: number; title: string; group: StageGroup; images: VisualImageSet; alt: string };
+
+// Phase 11C — the app ships the SIZED derivatives only (never the 512² masters beside them); `?no-inline` keeps even
+// the smallest file a separate cacheable asset instead of base64 inside the JS chunk.
+const SIZED = import.meta.glob<string>("./assets/student-stages/sized/*.png", { eager: true, query: "?no-inline", import: "default" });
 
 const TITLES: readonly string[] = [
   "بذرة القوة", "شعلة صغيرة", "نمر البرق", "فارس الجليد", "تنين النار",
@@ -54,11 +35,6 @@ const TITLES: readonly string[] = [
   "حارس الغابة", "محارب الظلال", "سيد النجوم", "بطل العناصر", "ملك الصواعق",
   "فارس الشمس", "تنين الجليد", "سيد العواصف", "حامي الأساطير", "العنقاء الملكية",
   "أسد المجرة", "سيد الأكوان", "تنين النور", "ملك السيادة", "أسطورة القوة",
-];
-const IMAGES: readonly string[] = [
-  stage01, stage02, stage03, stage04, stage05, stage06, stage07, stage08, stage09, stage10,
-  stage11, stage12, stage13, stage14, stage15, stage16, stage17, stage18, stage19, stage20,
-  stage21, stage22, stage23, stage24, stage25,
 ];
 
 /** The journey group of a stage number (1..25). */
@@ -69,7 +45,7 @@ export function stageGroupOf(stageNumber: number): StageGroup {
 
 /** The single source of truth: index 0 = stage 1 … index 24 = stage 25. */
 export const STAGE_VISUALS: readonly StageVisual[] = TITLES.map((title, i) => ({
-  stageNumber: i + 1, title, group: stageGroupOf(i + 1), image: IMAGES[i], alt: "المرحلة " + (i + 1) + " — " + title,
+  stageNumber: i + 1, title, group: stageGroupOf(i + 1), images: sizedImageSet(SIZED, "stage-" + String(i + 1).padStart(2, "0")), alt: "المرحلة " + (i + 1) + " — " + title,
 }));
 
 /** A stage number the mapping can serve (a malformed or out-of-range value shows stage 1 / stage 25, never crashes). */

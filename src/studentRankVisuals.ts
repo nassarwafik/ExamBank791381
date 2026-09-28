@@ -14,25 +14,24 @@
 // The keys reuse the existing RankTier union (no second rank enum is introduced), so the mapping stays in lock
 // step with RANK_ORDER: beginner→1 … legendary→6.
 import { type RankTier } from "./studentRank";
-import rankBeginner from "./assets/student-ranks/rank-beginner.png";
-import rankBronze from "./assets/student-ranks/rank-bronze.png";
-import rankSilver from "./assets/student-ranks/rank-silver.png";
-import rankGold from "./assets/student-ranks/rank-gold.png";
-import rankDiamond from "./assets/student-ranks/rank-diamond.png";
-import rankLegendary from "./assets/student-ranks/rank-legendary.png";
+import { sizedImageSet, type VisualImageSet } from "./studentVisualSizes";
 
-/** The custom artwork + Arabic level-name + level number for one rank tier. `alt` is the meaningful Arabic
- *  screen-reader text for the primary (earned) rank image. */
-export type RankVisual = { tier: RankTier; image: string; title: string; level: number; alt: string };
+// Phase 11C — the app ships the SIZED derivatives only (never the 1254² masters beside them); `?no-inline` keeps
+// even the smallest file a separate cacheable asset instead of base64 inside the JS chunk.
+const SIZED = import.meta.glob<string>("./assets/student-ranks/sized/*.png", { eager: true, query: "?no-inline", import: "default" });
+
+/** The custom artwork (its sized derivatives) + Arabic level-name + level number for one rank tier. `alt` is the
+ *  meaningful Arabic screen-reader text for the primary (earned) rank image. */
+export type RankVisual = { tier: RankTier; images: VisualImageSet; title: string; level: number; alt: string };
 
 /** The single source of truth mapping each RankTier to its author-provided image and Arabic level name. */
 export const RANK_VISUALS: Record<RankTier, RankVisual> = {
-  beginner:  { tier: "beginner",  image: rankBeginner,  title: "بذرة القوة",      level: 1, alt: "رتبة بذرة القوة — المستوى 1" },
-  bronze:    { tier: "bronze",    image: rankBronze,    title: "شعلة صغيرة",      level: 2, alt: "رتبة شعلة صغيرة — المستوى 2" },
-  silver:    { tier: "silver",    image: rankSilver,    title: "نمر البرق",       level: 3, alt: "رتبة نمر البرق — المستوى 3" },
-  gold:      { tier: "gold",      image: rankGold,      title: "فارس الجليد",     level: 4, alt: "رتبة فارس الجليد — المستوى 4" },
-  diamond:   { tier: "diamond",   image: rankDiamond,   title: "تنين النار",      level: 5, alt: "رتبة تنين النار — المستوى 5" },
-  legendary: { tier: "legendary", image: rankLegendary, title: "العنقاء الذهبية", level: 6, alt: "رتبة العنقاء الذهبية — المستوى 6" },
+  beginner:  { tier: "beginner",  images: sizedImageSet(SIZED, "rank-beginner"),  title: "بذرة القوة",      level: 1, alt: "رتبة بذرة القوة — المستوى 1" },
+  bronze:    { tier: "bronze",    images: sizedImageSet(SIZED, "rank-bronze"),    title: "شعلة صغيرة",      level: 2, alt: "رتبة شعلة صغيرة — المستوى 2" },
+  silver:    { tier: "silver",    images: sizedImageSet(SIZED, "rank-silver"),    title: "نمر البرق",       level: 3, alt: "رتبة نمر البرق — المستوى 3" },
+  gold:      { tier: "gold",      images: sizedImageSet(SIZED, "rank-gold"),      title: "فارس الجليد",     level: 4, alt: "رتبة فارس الجليد — المستوى 4" },
+  diamond:   { tier: "diamond",   images: sizedImageSet(SIZED, "rank-diamond"),   title: "تنين النار",      level: 5, alt: "رتبة تنين النار — المستوى 5" },
+  legendary: { tier: "legendary", images: sizedImageSet(SIZED, "rank-legendary"), title: "العنقاء الذهبية", level: 6, alt: "رتبة العنقاء الذهبية — المستوى 6" },
 };
 
 /** The visual metadata for a tier (thin, explicit accessor so callers never index the record ad hoc). */

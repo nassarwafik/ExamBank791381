@@ -46,8 +46,8 @@ describe("Strength authority — the portal displays the server's stage, never a
     expect(within(region).getByText("بقي 69 نقطة قوة للوصول إلى المرحلة 18 — سيد العواصف")).toBeTruthy();
     const ring = within(region).getByRole("progressbar", { name: "التقدم نحو المرحلة 18 — سيد العواصف" });
     expect(ring.getAttribute("aria-valuemin")).toBe("0"); expect(ring.getAttribute("aria-valuemax")).toBe("80"); expect(ring.getAttribute("aria-valuenow")).toBe("11");
-    expect((within(region).getByRole("img", { name: "المرحلة 17 — تنين الجليد" }) as HTMLImageElement).getAttribute("src")).toBe(stageVisual(17).image);
-    expect((document.querySelector(".eb-sp-rank-next-art") as HTMLImageElement).getAttribute("src")).toBe(stageVisual(18).image);
+    expect((within(region).getByRole("img", { name: "المرحلة 17 — تنين الجليد" }) as HTMLImageElement).getAttribute("src")).toBe(stageVisual(17).images[256]);
+    expect((document.querySelector(".eb-sp-rank-next-art") as HTMLImageElement).getAttribute("src")).toBe(stageVisual(18).images[96]);
     // what a client-side 80-step rule over 900 would have produced must NOT appear
     expect(region.textContent).not.toMatch(/المرحلة 12 من 25|20 \/ 80|25%|محارب الظلال/);
     // the avatar frame follows the server's stage group (17 → group 4)
