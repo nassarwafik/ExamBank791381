@@ -18,11 +18,13 @@ import "../shell.css";
 // (message-only). Panel data/counts/navigation belong to StudentPortal.
 // Phase 10C — the permanent «تثبيت التطبيق» entry (InstallAppEntry) renders itself only while the app is not
 // installed; it is independent of the dashboard install card and of that card's temporary dismissal.
-type Props = { studentName: string; className?: string; onLogout: () => void; onOpenGames?: () => void; onOpenMessages?: () => void; messagesUnread?: { total: number; capped: boolean }; notifications?: NotificationCenterProps; children: ReactNode };
+// Phase 12C — `quickNav` (the phone bottom bar, StudentMobileNav) is placed after the content ONLY when StudentPortal
+// hands it over (the ordinary main portal); `has-quick-nav` then gives the content its phone-only bottom clearance.
+type Props = { studentName: string; className?: string; onLogout: () => void; onOpenGames?: () => void; onOpenMessages?: () => void; messagesUnread?: { total: number; capped: boolean }; notifications?: NotificationCenterProps; quickNav?: ReactNode; children: ReactNode };
 
-export default function StudentShell({ studentName, className, onLogout, onOpenGames, onOpenMessages, messagesUnread, notifications, children }: Props) {
+export default function StudentShell({ studentName, className, onLogout, onOpenGames, onOpenMessages, messagesUnread, notifications, quickNav, children }: Props) {
   return (
-    <main className="student-portal eb-student-shell" dir="rtl">
+    <main className={"student-portal eb-student-shell" + (quickNav ? " has-quick-nav" : "")} dir="rtl">
       <header className="student-topbar">
         <div className="student-brand">
           <span className="student-logo" aria-hidden="true"><BrandMark size={43} /></span>
@@ -57,6 +59,7 @@ export default function StudentShell({ studentName, className, onLogout, onOpenG
         </div>
       </header>
       <section className="student-shell">{children}</section>
+      {quickNav}
     </main>
   );
 }
