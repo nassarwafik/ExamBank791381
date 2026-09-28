@@ -137,6 +137,11 @@ export default function StudentProjectPanel({ token, contributions = [], onEvalu
   const [load, setLoad] = useState<LoadResult | null>(null);
   const [openCode, setOpenCode] = useState<string>("");
   const [consumed, setConsumed] = useState<{ seq: number; outcome: StudentProjectDrillOutcome } | null>(null);
+  // A drill that resolved as NOT available must not fall back to the legacy single-project auto-open (that would show
+  // ANOTHER project's detail): the list is shown instead until the student opens a project or a valid drill arrives.
+  // Scoped to the session it was set in (the token), so it can never leak into a new session.
+  const [listOnlyFor, setListOnlyFor] = useState<string | null>(null);
+  const listOnly = listOnlyFor === token;
 
   useEffect(() => {
     let cancelled = false;
@@ -164,6 +169,7 @@ export default function StudentProjectPanel({ token, contributions = [], onEvalu
     const list = data && data.enrolled && data.projects ? data.projects : [];
     const hit = list.some(p => p.projectCode === drill.projectCode);
     setOpenCode(hit ? drill.projectCode : "");                                    // a missing code opens nothing else
+    setListOnlyFor(hit ? null : token);                                            // …not even the only remaining project
     setConsumed({ seq: drill.seq, outcome: hit ? "opened" : current.status === "failed" ? "failed" : "unavailable" });
   }
   // Report after commit (the opened detail is in the DOM when the portal scrolls to it).
@@ -173,7 +179,7 @@ export default function StudentProjectPanel({ token, contributions = [], onEvalu
   const projects = data.projects;
   // One project → its detail directly; several → cards first, then the chosen project's detail (never a stale one:
   // every project's metrics come from the same single response and are looked up by code at render time).
-  const open = projects.length === 1 ? projects[0] : openCode ? projects.find(p => p.projectCode === openCode) ?? null : null;
+  const open = projects.length === 1 && !listOnly ? projects[0] : openCode ? projects.find(p => p.projectCode === openCode) ?? null : null;
   const contributionOf = (code: string) => contributions.find(c => c.projectCode === code) ?? null;
 
   return (
@@ -183,7 +189,7 @@ export default function StudentProjectPanel({ token, contributions = [], onEvalu
         <OneProject key={open.projectCode} project={open} contribution={contributionOf(open.projectCode)} onBack={projects.length > 1 ? () => setOpenCode("") : null} />
       ) : (
         <ul className="eb-sp-project-cards" aria-label="المشاريع">
-          {projects.map(p => <li key={p.projectCode}><ProjectCard project={p} contribution={contributionOf(p.projectCode)} onOpen={() => setOpenCode(p.projectCode)} /></li>)}
+          {projects.map(p => <li key={p.projectCode}><ProjectCard project={p} contribution={contributionOf(p.projectCode)} onOpen={() => { setListOnlyFor(null); setOpenCode(p.projectCode); }} /></li>)}
         </ul>
       )}
     </section>

@@ -119,6 +119,19 @@ describe("12D Today «تابع المشروع» → the exact project", () => {
     expect(scrolls.at(-1)?.id).toBe("eb-sp-projects-title");                  // the list is brought into view
   }, T);
 
+  it("(review fix) a stale code with ONE other project: calm notice, the other project is NOT auto-opened, its card shows, one read", async () => {
+    const m = mount({ code: "GONE", tracker: () => res(200, { ok: true, enrolled: true, className: "الصف", projects: [project("P2", "مشروع الشبكة")] }) });
+    await projectsReady();
+    expect(openCode()).toBe("P2");                                              // the ordinary single-project view before the click
+    await clickCta();
+    expect(notice()).toContain("هذا المشروع لم يعد متاحًا.");
+    expect(openCode()).toBeNull();
+    expect(document.querySelector(".eb-sp-project")).toBeNull();
+    expect(cards()).toEqual(["مشروع الشبكة"]);
+    expect(screen.queryByRole("alert")).toBeNull();
+    expect(m.gets("/api/student-project-tracker")).toBe(1);
+  }, T);
+
   it("(9) not enrolled: consumed safely with the calm notice", async () => {
     mount({ tracker: () => res(200, { ok: true, enrolled: false }) });
     await screen.findByRole("region", { name: /المهام والواجبات/ }, SLOW);

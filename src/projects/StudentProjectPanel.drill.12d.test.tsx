@@ -193,3 +193,63 @@ describe("12D panel — once, no snap-back, repeatable", () => {
     expect(urls).toHaveLength(1);                                                // (18) still the panel's one read
   });
 });
+
+describe("12D review fix — a stale drill never auto-opens the ONLY remaining project", () => {
+  const p2Card = () => screen.queryByRole("article", { name: "مشروع الشبكة" });
+
+  it("(A) projects=[P2], drill=GONE → no detail at all (P2 not auto-opened), P2 shown as a card, consumed unavailable, one read", async () => {
+    render(<Panel drill={{ seq: 1, projectCode: "GONE" }} />);
+    await settle(0, 200, ONE);
+    expect(openCode()).toBeNull();
+    expect(document.querySelector(".eb-sp-project")).toBeNull();
+    expect(cards()).toEqual(["مشروع الشبكة"]);
+    expect(within(p2Card()!).getByRole("button", { name: "فتح المشروع" })).toBeTruthy();
+    expect(consumed).toEqual([[1, "unavailable"]]);
+    expect(urls).toHaveLength(1);
+  });
+
+  it("(B) after (A) the student opens P2 from its card → P2's detail, as the ordinary single-project view", async () => {
+    render(<Panel drill={{ seq: 1, projectCode: "GONE" }} />);
+    await settle(0, 200, ONE);
+    fireEvent.click(within(p2Card()!).getByRole("button", { name: "فتح المشروع" }));
+    expect(openCode()).toBe("P2");
+    expect(cards()).toEqual([]);
+    expect(urls).toHaveLength(1);
+  });
+
+  it("(C) after (A) a NEW valid drill to P2 opens it (the list-only state is cleared)", async () => {
+    const { rerender } = render(<Panel drill={{ seq: 1, projectCode: "GONE" }} />);
+    await settle(0, 200, ONE);
+    expect(openCode()).toBeNull();
+    rerender(<Panel drill={{ seq: 2, projectCode: "P2" }} />);
+    expect(openCode()).toBe("P2");
+    expect(consumed).toEqual([[1, "unavailable"], [2, "opened"]]);
+    expect(urls).toHaveLength(1);
+  });
+
+  it("(D) the ordinary single-project panel (no drill) still opens its one project automatically", async () => {
+    render(<Panel />);
+    await settle(0, 200, ONE);
+    expect(openCode()).toBe("P2");
+    expect(cards()).toEqual([]);
+    expect(consumed).toEqual([]);
+  });
+
+  it("(E) a valid drill to the single project is still consumed as opened", async () => {
+    render(<Panel drill={{ seq: 3, projectCode: "P2" }} />);
+    await settle(0, 200, ONE);
+    expect(openCode()).toBe("P2");
+    expect(consumed).toEqual([[3, "opened"]]);
+  });
+
+  it("(session) a stale drill's list-only state never leaks into a new session: the new session's one project auto-opens", async () => {
+    const { rerender } = render(<Panel token="old" drill={{ seq: 1, projectCode: "GONE" }} />);
+    await settle(0, 200, ONE);
+    expect(openCode()).toBeNull();                                               // old session: list only
+    rerender(<Panel token="new" drill={null} />);
+    await settle(1, 200, ONE);
+    expect(openCode()).toBe("P2");                                               // new session: legacy auto-open restored
+    expect(cards()).toEqual([]);
+    expect(urls.map(u => u.split(" ")[1])).toEqual(["old", "new"]);
+  });
+});
