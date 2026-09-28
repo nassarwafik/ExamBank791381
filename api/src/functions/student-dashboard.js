@@ -18,6 +18,7 @@ const {loadStudentProjects}=require("../lib/project-tracker/student-projects");
 const {aggregateRecognition,medalTierFromPercentage,emptyRecognition}=require("../lib/achievement-feed");
 const {gameResultsDocName,eligibleGamePercentages}=require("../lib/game-results-store");
 const {recordGlobalRankMilestone}=require("../lib/achievement-milestones");
+const {logReadCost}=require("../lib/read-cost-log");
 const AP="platform/assignments/",SP="platform/submissions/",LP="platform/learning-practice/";
 // Roadmap #12 — a single server-derived presentation state for a dashboard assignment card. It COMBINES
 // availability + attempt lifecycle + grading status into one value the UI renders directly, but never
@@ -115,6 +116,8 @@ async function handler(request,deps={},obs=null){
   // above (zero extra reads; purely additive). The portal only offers it as a "continue reading" point when the course
   // and module are still among the class's released materials.
   const todayStudy={lastActivity:latestStudyActivity(studyDoc)};
+  // Phase 12E-A — count-only read-cost telemetry (numbers the loop above already knows; never an id/title/mark).
+  logReadCost(obs,"student.dashboard.read_cost",{assignmentDocsScanned:raw.length,publishedClassAssignments:selected.length,submissionReads:submissions.length});
   return {status:200,jsonBody:{ok:true,study:todayStudy,student:{userId:student.userId,code:student.code,displayName:student.displayName,classId:student.classId,avatarId:String(student.avatarId||""),shareAchievements:student.shareAchievements!==false,profilePhoto:student.profilePhoto&&typeof student.profilePhoto==="object"&&Number(student.profilePhoto.version)>0?{version:Number(student.profilePhoto.version),updatedAt:String(student.profilePhoto.updatedAt||"")}:null},classroom:classroom?{classId:classroom.classId,name:classroom.name,grade:classroom.grade,schoolYear:classroom.schoolYear}:null,assignments,stats:{assigned:assignments.length,completed,average:completed?Number((sum/completed).toFixed(1)):null,submitted,inProgress,pendingReview,finalized,scheduled,available,closedUnsubmitted,averageFinalized:finalCount?Number((finalSum/finalCount).toFixed(1)):null},strength,recognition,phase:"2.0C"}};
  }catch(e){obs?.logError("student.dashboard.error",e);return {status:500,jsonBody:{ok:false,error:"تعذر تحميل لوحة الطالب حاليًا."}}}
 }
