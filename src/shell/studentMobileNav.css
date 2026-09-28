@@ -1,0 +1,48 @@
+/* ============================================================
+   Phase 12C — Student mobile quick navigation (StudentMobileNav).
+   PHONE ONLY: the bar exists in the DOM on the ordinary portal but is drawn at ≤767px only; at ≥768px it is
+   display:none (out of the tab order and the accessibility tree) and adds NO space, so the tablet / desktop layout
+   is exactly the previous one. Token-only (--eb-*), RTL through logical properties, safe-area aware.
+   ============================================================ */
+.eb-sp-quicknav{ display:none; }
+
+@media (max-width: 767px){
+  .eb-student-shell{ --eb-sp-quicknav-h: 60px; }
+  .eb-sp-quicknav{
+    display:block;
+    position:fixed; inset-inline:0; inset-block-end:0; z-index:var(--eb-z-nav);
+    padding-block:var(--eb-space-1) calc(var(--eb-space-1) + env(safe-area-inset-bottom, 0px));
+    padding-inline:max(var(--eb-space-1), env(safe-area-inset-right, 0px)) max(var(--eb-space-1), env(safe-area-inset-left, 0px));
+    background:var(--eb-surface); border-block-start:1px solid var(--eb-line); box-shadow:var(--eb-sh-md);
+    box-sizing:border-box;
+  }
+  /* A screen-takeover dialog (the shared Dialog portals .eb-dialog-root into <body>) hides the bar entirely. */
+  .eb-sp-quicknav[hidden],
+  body:has(.eb-dialog-root) .eb-sp-quicknav{ display:none; }
+  .eb-sp-quicknav-list{
+    list-style:none; margin:0; padding:0;
+    display:grid; grid-template-columns:repeat(5, minmax(0, 1fr)); gap:2px;
+  }
+  .eb-sp-quicknav-item{
+    position:relative; width:100%; min-width:0; min-height:max(44px, calc(var(--eb-sp-quicknav-h) - 2 * var(--eb-space-1)));
+    display:flex; flex-direction:column; align-items:center; justify-content:center; gap:2px;
+    padding:var(--eb-space-1) 2px; border:0; border-radius:var(--eb-r-sm);
+    background:transparent; color:var(--eb-text-secondary); font:inherit; font-size:var(--eb-fs-12); line-height:1.2;
+    cursor:pointer; -webkit-tap-highlight-color:transparent;
+  }
+  .eb-sp-quicknav-item svg{ flex:0 0 auto; }
+  .eb-sp-quicknav-label{ max-width:100%; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .eb-sp-quicknav-item:focus-visible{ outline:var(--eb-focus-ring); outline-offset:-2px; }
+  /* Active = the section being read: a top indicator bar + bold label (not colour alone), plus aria-current. */
+  .eb-sp-quicknav-item.is-active{ color:var(--eb-primary); font-weight:var(--eb-fw-bold); }
+  .eb-sp-quicknav-item.is-active::before{
+    content:""; position:absolute; inset-block-start:0; inset-inline:25%; height:3px;
+    border-radius:0 0 var(--eb-r-xs) var(--eb-r-xs); background:currentColor;
+  }
+  .eb-sp-quicknav-item[aria-disabled="true"]{ opacity:.45; cursor:default; }
+
+  /* Bottom clearance: the last portal content can always scroll above the bar (phone only, only with the bar). */
+  .eb-student-shell.has-quick-nav .student-shell{
+    padding-block-end:calc(var(--eb-sp-quicknav-h) + env(safe-area-inset-bottom, 0px) + var(--eb-space-6));
+  }
+}

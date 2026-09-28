@@ -2,6 +2,7 @@ import { lazy, Suspense, useEffect, useRef, useState } from "react";
 import { useAutoRefresh } from "./ui/useAutoRefresh";
 import StudentExamPage from "./StudentExamPage";
 import StudentShell from "./shell/StudentShell";
+import StudentMobileNav from "./shell/StudentMobileNav";
 import StudentProjectPanel from "./projects/StudentProjectPanel";
 import type { ProjectEvaluationBrief } from "./projects/projectEvaluation";
 import type { FeedPost, ReactionId } from "./achievements";
@@ -383,8 +384,13 @@ export default function StudentPortal({ token, displayName, onLogout }: Props) {
   const latestFinal = data ? data.assignments.filter(a => a.latestResult && (a.gradingStatus || a.latestResult.gradingStatus) === "final").sort((a, b) => Date.parse(b.latestResult!.submittedAt) - Date.parse(a.latestResult!.submittedAt))[0] : undefined;
   const todayProgress = { stageNumber: strength ? strength.stageNumber : null, stageCount: strength ? strength.stageCount : 25, medals: data?.recognition ? data.recognition.medals.total : medals.length, finalized: stats ? Number(stats.finalized || 0) : 0, latest: latestFinal && latestFinal.latestResult ? { title: latestFinal.title, percentage: Number(latestFinal.latestResult.percentage) } : null };
 
+  // Phase 12C — the phone quick navigation belongs to the ORDINARY main portal only: it exists once the sections it
+  // points at are rendered, and never on the exam / Reader / Messages / Games views (they return above, without it).
+  // It stays mounted but hidden under the avatar picker (a screen-takeover dialog), keeping its active item.
+  const quickNav = !loading && data && stats ? <StudentMobileNav reducedMotion={reducedMotion} hidden={avatarPickerOpen} /> : undefined;
+
   return (
-    <StudentShell studentName={data?.student.displayName || displayName} className={data?.classroom?.name || ""} onLogout={onLogout} onOpenGames={() => { setGamesOpen(true); window.scrollTo({ top: 0, behavior: reducedMotion ? "auto" : "smooth" }); }} onOpenMessages={() => openMessages("direct")} messagesUnread={messagesUnread} notifications={{
+    <StudentShell quickNav={quickNav} studentName={data?.student.displayName || displayName} className={data?.classroom?.name || ""} onLogout={onLogout} onOpenGames={() => { setGamesOpen(true); window.scrollTo({ top: 0, behavior: reducedMotion ? "auto" : "smooth" }); }} onOpenMessages={() => openMessages("direct")} messagesUnread={messagesUnread} notifications={{
       items: notif.items, counts: bellCounts, loading: notif.loading, error: notif.error,
       onOpenChange: next => { setNotifOpen(next); if (next) void loadNotifications(); },
       onSelect: selectNotification,
