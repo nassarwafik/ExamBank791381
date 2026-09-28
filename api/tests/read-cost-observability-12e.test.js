@@ -14,27 +14,28 @@ function readCostCalls(code) {
     fields: m[2].split(",").map(p => { const i = p.indexOf(":"); return [p.slice(0, i).trim(), p.slice(i + 1).trim()]; })
   }));
 }
-// A count expression: `<identifier>.length` or `tally.<counter>` — nothing that can carry content.
-const COUNT_EXPR = /^(?:[A-Za-z_$][\w$]*\.length|tally\.[A-Za-z]+)$/;
+// A count expression: `<identifier>.length`, `tally.<counter>` or the index loader's stats (`idxStats.<counter>` /
+// `idx.stats.<counter>`, Phase 12E-B) — nothing that can carry content.
+const COUNT_EXPR = /^(?:[A-Za-z_$][\w$]*\.length|tally\.[A-Za-z]+|idxStats\.[A-Za-z]+|idx\.stats\.[A-Za-z]+)$/;
 const FORBIDDEN = /(id|Id|ID|name|Name|title|Title|mark|score|percentage|token|studentId|classId|assignmentId|displayName)\b/;
 
 describe("12E-A read-cost observability — source guard", () => {
-  it("student-dashboard emits exactly one count-only event with the three documented fields", () => {
+  it("student-dashboard emits exactly one count-only event with the six documented fields", () => {
     const calls = readCostCalls(src("functions/student-dashboard.js"));
     expect(calls.map(c => c.event)).toEqual(["student.dashboard.read_cost"]);
-    expect(calls[0].fields.map(f => f[0])).toEqual(["assignmentDocsScanned", "publishedClassAssignments", "submissionReads"]);
+    expect(calls[0].fields.map(f => f[0])).toEqual(["assignmentDocsScanned", "publishedClassAssignments", "submissionReads", "assignmentIndexReads", "assignmentIndexesBootstrapped", "globalAssignmentScans"]);
     for (const [, expr] of calls[0].fields) { expect(expr).toMatch(COUNT_EXPR); expect(expr.replace(/\.length$/, "")).not.toMatch(FORBIDDEN); }
   });
 
-  it("teacher-today emits exactly one count-only event with the six documented fields", () => {
+  it("teacher-today emits exactly one count-only event with the nine documented fields", () => {
     const calls = readCostCalls(src("functions/teacher-today.js"));
     expect(calls.map(c => c.event)).toEqual(["teacher.today.read_cost"]);
-    expect(calls[0].fields.map(f => f[0])).toEqual(["assignmentDocsScanned", "classDocsScanned", "userDocsScanned", "publishedActiveAssignments", "submissionFolderListings", "submissionDocsLoaded"]);
+    expect(calls[0].fields.map(f => f[0])).toEqual(["assignmentDocsScanned", "classDocsScanned", "userDocsScanned", "publishedActiveAssignments", "submissionFolderListings", "submissionDocsLoaded", "assignmentIndexReads", "assignmentIndexesBootstrapped", "globalAssignmentScans"]);
     for (const [, expr] of calls[0].fields) { expect(expr).toMatch(COUNT_EXPR); expect(expr.replace(/\.length$/, "")).not.toMatch(FORBIDDEN); }
   });
 
   it("no other read-cost event exists in the API sources (only the two hot paths are instrumented)", () => {
-    for (const rel of ["functions/student-notifications.js", "lib/notification-center.js", "lib/student-notifications.js", "lib/platform-storage.js"]) {
+    for (const rel of ["functions/student-notifications.js", "lib/notification-center.js", "lib/student-notifications.js", "lib/platform-storage.js", "lib/class-assignment-index.js", "functions/manage-assignments.js"]) {
       expect(src(rel)).not.toContain("logReadCost");
     }
   });

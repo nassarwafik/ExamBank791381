@@ -426,7 +426,8 @@ describe("B2A manage-assignments — new assignments are attemptModelVersion 2",
       requireBuilderAuth: () => ({ ok: true, user: { sub: "t1" } }), getContainer: () => ({}),
       downloadJsonOrNull: async (_c, k) => (s.has(k) ? structuredClone(s.get(k)) : null),
       uploadJson: async (_c, k, v) => { s.set(k, v); uploads.push({ k, v }); },
-      listJson: async () => [], mutateJsonWithRetry: async () => { throw new Error("nope"); }, recordAuditEvent: async () => {}
+      listJson: async () => [], mutateJsonWithRetry: async () => { throw new Error("nope"); }, recordAuditEvent: async () => {},
+      ensurePublishedAssignmentIndexed: async () => {}   // Phase 12E-B index authority (covered by its own suites)
     };
     const req = { method: "POST", url: "http://x/assignments", params: {}, json: async () => ({ action: "create", classId: "c1", title: "واجب", durationMinutes: 0, publish: true, examSnapshot: { title: "ا", sections: [{ id: "s", gradingPolicy: "all", questions: [{ marks: 10 }] }] } }) };
     const r = await manageHandler(req, deps2);
