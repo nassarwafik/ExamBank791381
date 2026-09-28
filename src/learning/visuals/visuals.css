@@ -5,28 +5,35 @@
    disabled under prefers-reduced-motion.
    ============================================================ */
 
+/* Phase 12A — the figure reads as ONE calm card: a little more room, a readable title (the figure's own heading, in the
+   Reader's label size) and a caption in the Reader's small size — both fall back to fixed sizes outside the Reader. */
 .eb-visual-figure{
-  margin:0; display:flex; flex-direction:column; gap:var(--eb-space-2);
-  padding:var(--eb-space-3); background:var(--eb-surface-2);
+  margin:0; display:flex; flex-direction:column; gap:var(--eb-space-3);
+  padding:var(--eb-space-4); background:var(--eb-surface-2);
   border:1px solid var(--eb-line); border-radius:var(--eb-r-lg);
   /* never widen the reading column, and never establish a wide min-content floor from the SVG */
   min-width:0; max-width:100%;
 }
 .eb-visual-title{
   order:-1; margin:0; color:var(--eb-text-heading);
-  font-size:var(--eb-fs-14); font-weight:var(--eb-fw-semibold); line-height:var(--eb-lh-tight);
+  font-size:var(--eb-read-fs-label, 16px); font-weight:var(--eb-fw-bold); line-height:var(--eb-lh-tight);
 }
 .eb-visual-caption{
-  margin:0; color:var(--eb-text-secondary); font-size:var(--eb-fs-13); line-height:var(--eb-lh-body);
+  margin:0; color:var(--eb-text-secondary); font-size:var(--eb-read-fs-small, 15px); line-height:var(--eb-lh-body);
 }
 .eb-visual-frame{ display:flex; justify-content:center; width:100%; min-width:0; }
 
 /* The SVG scales to its container width and never overflows; height follows the viewBox aspect ratio. The explicit
    min-width:0 stops the inline SVG from imposing a min-content floor on a flex ancestor (which would overflow a
-   narrow reading column on mobile). */
+   narrow reading column on mobile). Phase 12A: the cap grows with the screen — a 420px island in a 1400px desktop
+   canvas kept every SVG label at its authored 12–13px, so the illustration read as tiny and its motion as faint. The
+   vector scales its labels with it (a 400-unit viewBox at 640px ≈ 1.6×), still never wider than its frame. */
 .eb-visual{
-  display:block; width:100%; min-width:0; height:auto; max-width:420px;
+  display:block; width:100%; min-width:0; height:auto; max-width:min(100%, 520px);
   overflow:visible;
+}
+@media (min-width: 1024px){
+  .eb-visual{ max-width:640px; }
 }
 
 /* ---------- shared marks ---------- */
@@ -60,7 +67,7 @@
 /* ---------- fallback (unknown visualId) ---------- */
 .eb-visual-missing{
   display:flex; align-items:center; justify-content:center; gap:var(--eb-space-2);
-  min-height:120px; color:var(--eb-text-secondary); font-size:var(--eb-fs-13);
+  min-height:120px; color:var(--eb-text-secondary); font-size:var(--eb-read-fs-small, 15px);
   background:var(--eb-surface); border:1px dashed var(--eb-line-2); border-radius:var(--eb-r);
 }
 
@@ -82,11 +89,14 @@
 @keyframes eb-visual-rise{ 0%,100%{ opacity:.62; transform:translateY(3px); } 50%{ opacity:1; transform:translateY(-3px); } }
 
 /* Reduced motion: neutralize ALL CSS motion. SMIL <animateMotion> dots are additionally gated in the components
-   (they are not rendered at all when the shared prefers-reduced-motion hook reports reduced motion). */
+   (they are not rendered at all when the shared prefers-reduced-motion hook reports reduced motion).
+   Phase 12A: scoped to `:root:not([data-eb-motion="on"])` — the OS hint still wins by default, but a viewer who
+   explicitly turned the visuals' motion ON in the Reader (ui/motionPreference.ts mirrors that choice on <html>) gets
+   the CSS pulses back too, not only the SMIL; an explicit "off" renders no motion class at all, so nothing to gate. */
 @media (prefers-reduced-motion: reduce){
-  .eb-visual-pulse,
-  .eb-visual-leaf-anim,
-  .eb-visual-pillar-anim{ animation:none !important; }
+  :root:not([data-eb-motion="on"]) .eb-visual-pulse,
+  :root:not([data-eb-motion="on"]) .eb-visual-leaf-anim,
+  :root:not([data-eb-motion="on"]) .eb-visual-pillar-anim{ animation:none !important; }
 }
 
 /* ============================================================
@@ -167,8 +177,8 @@
 @keyframes eb-visual-prefix-glow{ 0%,100%{ opacity:.4; transform:scale(1); } 45%{ opacity:1; transform:scale(1.12); } }
 
 @media (prefers-reduced-motion: reduce){
-  .eb-visual-glow-anim,
-  .eb-visual-sweep-anim,
-  .eb-visual-pin-anim,
-  .eb-visual-prefix-anim{ animation:none !important; }
+  :root:not([data-eb-motion="on"]) .eb-visual-glow-anim,
+  :root:not([data-eb-motion="on"]) .eb-visual-sweep-anim,
+  :root:not([data-eb-motion="on"]) .eb-visual-pin-anim,
+  :root:not([data-eb-motion="on"]) .eb-visual-prefix-anim{ animation:none !important; }
 }

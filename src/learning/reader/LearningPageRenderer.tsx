@@ -276,7 +276,9 @@ function renderBlock(block: ContentBlock, ctx: ActivityRenderContext): ReactNode
       return <p className="learning-reader-text" dir={block.dir}><RichTextRenderer spans={block.spans} /></p>;
     case "heading": {
       const Tag = (`h${Math.min(block.level + 1, 6)}`) as "h3" | "h4" | "h5";
-      return <Tag className="learning-reader-heading" dir={block.dir}>{block.text}</Tag>;
+      // Phase 12A — the authored level is also a CLASS so each level carries its own size / colour / accent in reader.css
+      // (level 2 = a section heading, 3 = a sub-heading, 4 = a minor heading); the heading tag itself is unchanged.
+      return <Tag className={"learning-reader-heading is-level-" + block.level} dir={block.dir}>{block.text}</Tag>;
     }
     case "image":
       return (

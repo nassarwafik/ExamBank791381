@@ -130,7 +130,8 @@ const ORDER_SENSITIVE: Array<[string, string, string, string]> = [
   [".learning-reader-main", "max-inline-size", "none", ""],
   [".learning-reader-page", "padding", "var(--eb-space-6)", "var(--eb-space-4)"],
   [".learning-reader-page", "min-block-size", "60vh", ""],
-  [".learning-reader-page-title", "font-size", "var(--eb-fs-28)", "var(--eb-fs-20)"],
+  // Phase 12A: the title reads from the Reader's own typography scale (26px base → 32px desktop), see reader.css.
+  [".learning-reader-page-title", "font-size", "var(--eb-read-fs-title-desktop)", "var(--eb-read-fs-title)"],
 ];
 const declared = (body: string, prop: string): string | undefined => body.match(new RegExp("(?:^|;)" + esc(prop) + ":([^;]*)"))?.[1];
 
