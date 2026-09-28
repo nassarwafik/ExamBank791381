@@ -1,4 +1,4 @@
-import type { ReactNode } from "react";
+import { useEffect, useRef, type ReactNode } from "react";
 import { formatRemaining } from "./attemptPolicy";
 import ActionMenu from "../ui/ActionMenu";
 import StatusBadge from "../ui/StatusBadge";
@@ -24,12 +24,18 @@ export type GradebookProps = {
   onDeadline: (s: StudentResult) => void;
   onEndAttempt: (s: StudentResult) => void;    // Phase 7B — end the student's CURRENT attempt (server-graded draft)
   fmt: (value: string) => string;
+  /** Phase 12B — the student a Today Hub drill asked for (present in the authoritative rows): that row is marked
+   *  (aria-current + highlight) and scrolled into view once. Presentation only; filtering stays the panel's. */
+  focusStudentId?: string;
 };
 
 const FILTERS: Array<[GradebookFilter, string]> = [["all", "الكل"], ["pendingReview", "بانتظار التصحيح"], ["final", "نهائي"], ["notSubmitted", "لم يسلّم"], ["active", "قيد المحاولة"]];
 
 export default function Gradebook(p: GradebookProps) {
   const archived = p.assignment.status === "archived";
+  const focusRow = useRef<HTMLTableRowElement | null>(null);
+  const focusVisible = !!p.focusStudentId && p.rows.some(s => s.studentId === p.focusStudentId);
+  useEffect(() => { if (focusVisible) focusRow.current?.scrollIntoView?.({ block: "nearest" }); }, [p.focusStudentId, focusVisible]);
   const sortTh = (key: GradebookSort, label: string, asc: boolean) => (
     <th scope="col" aria-sort={p.sort === key ? (asc ? "ascending" : "descending") : undefined}>
       <button type="button" className={"eb-th-sort" + (p.sort === key ? " is-active" : "")} onClick={() => p.onSort(key)}>{label}<IconSort size={14} aria-hidden="true" /></button>
@@ -62,9 +68,10 @@ export default function Gradebook(p: GradebookProps) {
           <tbody>{p.rows.map(s => {
             const gs = p.gradingOf(s);
             const pending = gs === "pendingReview";
+            const focused = s.studentId === p.focusStudentId;
             return (
-              <tr key={s.studentId}>
-                <td><strong>{s.studentName}</strong><small className="result-code">{s.studentCode}</small></td>
+              <tr key={s.studentId} className={focused ? "is-drill-focus" : undefined} aria-current={focused ? "true" : undefined} ref={focused ? focusRow : undefined}>
+                <td><strong>{s.studentName}</strong><small className="result-code">{s.studentCode}</small>{focused && <small className="eb-drill-focus-note">الطالب المطلوب</small>}</td>
                 <td>
                   <div className="eb-status-stack">
                     {s.attemptStatus && <StatusBadge tone={s.attemptStatus === "started" ? "info" : s.attemptStatus === "paused" || s.attemptStatus === "integrityExit" || s.attemptStatus === "teacherEnded" ? "warn" : "neutral"} className={"lifecycle-badge lifecycle-" + s.attemptStatus}>{LIFECYCLE_LABEL[s.attemptStatus] || s.attemptStatus}</StatusBadge>}

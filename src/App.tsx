@@ -42,6 +42,7 @@ import BrandMark from "./ui/BrandMark";
 import TeacherAppShell from "./shell/TeacherAppShell";
 import type { TeacherNavId } from "./shell/teacherNav";
 import { queueItemKey, queueNeighbour, queueView, type ProjectDrillTarget, type ProjectEvaluationQueue, type ProjectEvaluationQueueItem, type ProjectStudentRef } from "./projects/drillTarget";
+import type { AssignmentDrill, AssignmentDrillTarget } from "./assignments/drillTarget";
 import { QuestionTextBlock, parseTable } from "./questionContent";
 import { normalizeExamTheme, EXAM_THEMES, THEME_LABELS } from "./examTheme";
 import type { ExamTheme } from "./examTheme";
@@ -595,10 +596,25 @@ function App() {
     );
 
   const [workspaceTab, setWorkspaceTab] = useState<"dashboard" | "students" | "assignments" | "audit">("dashboard");
+  // Phase 12B — the transient assignment drill target (a Today Hub row: exact assignment + gradebook intent + seq). Only
+  // openAssignmentTarget publishes it; ordinary workspace navigation, logout and the panel's own consumption clear it,
+  // so a consumed or abandoned target can never replay. Nothing is persisted.
+  const [assignmentDrill, setAssignmentDrill] = useState<AssignmentDrill | null>(null);
+  const assignmentDrillSeq = useRef(0);
 
   function goToWorkspace(tab: "dashboard" | "students" | "assignments" | "audit") {
     setTeacherView("platform");
     setWorkspaceTab(tab);
+    setAssignmentDrill(null);
+  }
+  /** A Today Hub row → the assignments workspace, scoped to that exact assignment (newest click always wins: fresh seq). */
+  function openAssignmentTarget(target: AssignmentDrillTarget) {
+    goToWorkspace("assignments");
+    setAssignmentDrill({ ...target, seq: ++assignmentDrillSeq.current });
+  }
+  /** The panel applied (or safely declined) this target: forget it, unless a newer one is already waiting. */
+  function consumeAssignmentDrill(seq: number) {
+    setAssignmentDrill(d => (d && d.seq === seq ? null : d));
   }
 
   // Projects navigation. projectCode "" => the projects hub; a specific code => that project's tracker
@@ -684,6 +700,7 @@ function App() {
   // (teacherView / workspaceTab / projectCode stay the only navigation authority).
   function navigateTeacher(id: TeacherNavId) {
     setEvaluationQueue(null);                                                   // 9F: any shell navigation ends the evaluation session
+    setAssignmentDrill(null);                                                   // 12B: … and forgets any unconsumed assignment drill
     if (id === "dashboard" || id === "students" || id === "assignments" || id === "audit") { goToWorkspace(id); return; }
     if (id === "learning") { setTeacherView("learning"); return; }
     if (id === "games") { setTeacherView("games"); return; }
@@ -1159,6 +1176,7 @@ function App() {
     setSessionDisplayName("");
     setSessionValidated(false);
     setTeacherView("builder");
+    setAssignmentDrill(null);                                                   // 12B: a session never inherits a drill
     setUserCode("");
     setPassword("");
     setExamPrompt("");
@@ -5718,6 +5736,9 @@ function App() {
             onOpenProject={goToProjects}
             onOpenProjectStudent={openProjectStudent}
             onStartEvaluationQueue={startEvaluationQueue}
+            onOpenAssignmentTarget={openAssignmentTarget}
+            assignmentDrill={assignmentDrill}
+            onAssignmentDrillConsumed={consumeAssignmentDrill}
           />
         </Suspense>
       )}

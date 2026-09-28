@@ -25,3 +25,19 @@
 @media (min-width: 768px){
   .eb-today-project-eval .eb-attention-item{ min-height:38px; }
 }
+/* Phase 12B — actionable attention rows (active / not started / pending review) reuse the SAME attention-item button
+   tokens as the project-evaluation rows (hover tint, focus ring from index.css); a recent-activity row keeps its exact
+   text + time layout inside one full-width button. ≥44px on phones, 38px from the tablet breakpoint (same as 9C). */
+.eb-today-row-item{ min-width:0; }
+.eb-today-row-action{ min-height:44px; }
+.eb-today-row-action .eb-attention-item-meta{ font-variant-numeric:tabular-nums; }
+.eb-today-recent-entry{ min-width:0; }
+.eb-today-recent-action{
+  width:100%; min-height:44px; align-items:center; margin:0; padding-inline:var(--eb-space-1); text-align:start;
+  background:none; border:0; border-block-end:1px solid var(--eb-line); border-radius:var(--eb-r-sm); color:inherit; font:inherit; font-size:var(--eb-fs-13); cursor:pointer;
+}
+.eb-today-recent-action:hover{ background:var(--eb-primary-050); }
+.eb-today-recent-entry:last-child .eb-today-recent-action{ border-block-end:0; }
+@media (min-width: 768px){
+  .eb-today-row-action, .eb-today-recent-action{ min-height:38px; }
+}

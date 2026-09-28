@@ -17,13 +17,17 @@ import AssignmentComposer from "./assignments/AssignmentComposer";
 import Gradebook from "./assignments/Gradebook";
 import {DeadlineDialog,ReopenDialog,ExtendDialog,PurgeDialog} from "./assignments/GradebookRowEditors";
 import type {Classroom,Item,Impact,Exam,SavedExam,StudentResult,LifecycleSnap,Stats,GradebookFilter,GradebookSort,QuestionStat,ItemAnalysis,AnalysisSort,SourceMode,WorkspaceMode} from "./assignments/types";
+import {gradebookFilterFor,drillStudentId,type AssignmentDrill} from "./assignments/drillTarget";
 
 // Server-authoritative grading status for a student's LATEST result; fall back to the same inputs the
 // server uses (never inferred from percentage). "notSubmitted" when there is no completed attempt.
 // Row-level server gradingStatus wins; otherwise the SHARED resolver derives it from the latest result's
 // manualReviewMarks/finalized (never from score). No local copy of the rule.
 const rowGrading=(s:StudentResult):GradingStatus=>s.gradingStatus?s.gradingStatus:resolveGradingStatus(s.latestResult);
-type Props={token:string;classes:Classroom[];currentExam:unknown|null;onCopyLibraryExamToBuilder?:(examSnapshot:Exam,title:string)=>void};
+type Props={token:string;classes:Classroom[];currentExam:unknown|null;onCopyLibraryExamToBuilder?:(examSnapshot:Exam,title:string)=>void;
+ /** Phase 12B — App's sequenced drill target from a Today Hub row (identifiers + intent). Applied ONCE against this
+  * panel's own authoritative data, then reported through onDrillConsumed; afterwards the teacher owns every control. */
+ drill?:AssignmentDrill|null;onDrillConsumed?:(seq:number)=>void};
 
 const localDate=(h:number)=>{const d=new Date(Date.now()+h*3600000);return new Date(d.getTime()-d.getTimezoneOffset()*60000).toISOString().slice(0,16)};
 const toLocalInput=(iso:string)=>{if(!iso)return "";const d=new Date(iso);return new Date(d.getTime()-d.getTimezoneOffset()*60000).toISOString().slice(0,16)};
@@ -41,7 +45,7 @@ function matchesMasterScope(x:Item,s:MasterScope):boolean{
 }
 const normalizeQuery=(v:string)=>v.trim().toLocaleLowerCase("ar");
 
-export default function AssignmentsPanel({token,classes,currentExam,onCopyLibraryExamToBuilder}:Props){
+export default function AssignmentsPanel({token,classes,currentExam,onCopyLibraryExamToBuilder,drill=null,onDrillConsumed}:Props){
  const current=currentExam&&typeof currentExam==="object"?currentExam as Exam:null;
  const [items,setItems]=useState<Item[]>([]),[classId,setClassId]=useState(""),[title,setTitle]=useState(""),[instructions,setInstructions]=useState("أجب عن جميع الأسئلة واقرأ التعليمات جيدًا قبل البدء."),[openAt,setOpenAt]=useState(localDate(0)),[dueAt,setDueAt]=useState(localDate(72)),[maxAttempts,setMaxAttempts]=useState(1),[durationMinutes,setDurationMinutes]=useState(0),[attemptPolicy,setAttemptPolicy]=useState<AttemptPolicy>("continuous"),[publish,setPublish]=useState(true),[busy,setBusy]=useState(false),[loading,setLoading]=useState(false),[error,setError]=useState(""),[notice,setNotice]=useState(""),[resultsFor,setResultsFor]=useState<Item|null>(null),[results,setResults]=useState<StudentResult[]>([]),[stats,setStats]=useState<Stats|null>(null),[review,setReview]=useState<{studentId:string;attemptNumber:number}|null>(null);
  const [deadlineFor,setDeadlineFor]=useState<string|null>(null),[deadlineValue,setDeadlineValue]=useState("");
@@ -60,6 +64,16 @@ export default function AssignmentsPanel({token,classes,currentExam,onCopyLibrar
  const detailHeadingRef=useRef<HTMLHeadingElement>(null),composerHeadingRef=useRef<HTMLHeadingElement>(null);
  const detailOpenerRef=useRef<HTMLElement|null>(null),composerOpenerRef=useRef<HTMLElement|null>(null),focusDetailPending=useRef(false),focusComposerOpenerPending=useRef(false),focusWorkspacePending=useRef(false);
  const toolbarRef=useRef<HTMLDivElement|null>(null),scopeRef=useRef<MasterScope>({classId:"",showArchived:false,q:""});
+ // Phase 12B — drill-in bookkeeping. listReady: the assignment list has been read successfully at least once (a drill is
+ // never judged against the empty pre-load list). appliedDrillSeq: the newest drill this mount has consumed (never
+ // re-applied). resultsSeq: the newest results read; an older response that resolves later is discarded, so the newest
+ // intent always wins. drillFocus: the student row a drill asked for, shown only while its assignment is open.
+ const [listReady,setListReady]=useState(false);
+ const appliedDrillSeq=useRef(0),resultsSeq=useRef(0);
+ // resultsBusy: the workspace's `busy` is currently held by a results read (so superseding that read may release it —
+ // never a busy state owned by an unrelated mutation).
+ const resultsBusy=useRef(false);
+ const [drillFocus,setDrillFocus]=useState<{assignmentId:string;studentId:string}|null>(null);
  const {confirm,cancelPending,confirmDialog}=useConfirm();
  // Roadmap #34: a class is offered as an assignment target only through the canonical lifecycle helper (status
  // "archived" OR active:false ⇒ archived), never the raw compatibility `active` flag.
@@ -74,7 +88,7 @@ export default function AssignmentsPanel({token,classes,currentExam,onCopyLibrar
   const h=new Headers(options.headers||{});h.set("Content-Type","application/json");h.set("x-builder-token",token);h.set("Authorization","Bearer "+token);
   const r=await fetch(url,{...options,headers:h}),j=await r.json() as T&{error?:string};if(!r.ok)throw new Error(withTrackingCode(j.error||"حدث خطأ.",r.status,r));return j;
  }
- async function load(){setLoading(true);try{const r=await api<{assignments:Item[]}>("/api/assignments");setItems(r.assignments||[])}catch(e){setError(e instanceof Error?e.message:"تعذر تحميل الواجبات.")}finally{setLoading(false)}}
+ async function load(){setLoading(true);try{const r=await api<{assignments:Item[]}>("/api/assignments");setItems(r.assignments||[]);setListReady(true)}catch(e){setError(e instanceof Error?e.message:"تعذر تحميل الواجبات.")}finally{setLoading(false)}}
  async function loadSavedExams(){
   try{const r=await api<{exams:SavedExam[]}>("/api/saved-exams");setSavedExams(r.exams||[])}catch(e){setError(e instanceof Error?e.message:"تعذر تحميل الامتحانات المحفوظة.")}
  }
@@ -204,13 +218,78 @@ export default function AssignmentsPanel({token,classes,currentExam,onCopyLibrar
  async function openPurge(item:Item){setError("");setNotice("");setBusy(true);try{const impact=await fetchImpact(item);if(!impact)return;if(impact.submissionDocuments>0){setError("لا يمكن الحذف النهائي لأن للواجب بيانات طلاب محفوظة. اترك الواجب في الأرشيف للحفاظ على السجل.");return}setPurgeFor(item);setPurgeTitle("")}finally{setBusy(false)}}
  async function confirmPurge(){if(!purgeFor)return;const item=purgeFor;setBusy(true);setError("");try{const r=await api<{purged?:boolean}>("/api/assignments",{method:"POST",body:JSON.stringify({action:"purge",assignmentId:item.assignmentId,confirmAssignmentId:item.assignmentId,confirmTitle:purgeTitle})});if(r.purged){setItems(x=>x.filter(y=>y.assignmentId!==item.assignmentId));if(resultsFor?.assignmentId===item.assignmentId)clearDetail({restoreFocus:false});focusWorkspacePending.current=true;setPurgeFor(null);setNotice("✓ تم حذف الواجب نهائيًا.")}}catch(e){setError(e instanceof Error?e.message:"تعذر الحذف النهائي.")}finally{setBusy(false)}}
  // Opening an assignment = exactly one authoritative results read; the composer yields to the detail area.
- async function loadResults(item=resultsFor,trigger?:HTMLElement|null){if(!item)return;if(trigger!==undefined){detailOpenerRef.current=trigger;focusDetailPending.current=true;setMode("list")}setBusy(true);setDeadlineFor(null);setReopenFor(null);setExtendFor(null);setAnalysis(null);try{const r=await api<{students:StudentResult[];stats:Stats}>("/api/assignment-results?assignmentId="+encodeURIComponent(item.assignmentId));if(!matchesMasterScope(item,scopeRef.current))return;setResultsFor(item);setResults(r.students||[]);setStats(r.stats||null)}catch(e){setError(e instanceof Error?e.message:"تعذر تحميل النتائج.")}finally{setBusy(false)}}
+ // Phase 12B — sequenced: a read that resolves after a NEWER open / drill started is discarded (newest intent wins, never
+ // an older response overwriting a newer selection). A drill applies its gradebook view to the SAME authoritative rows.
+ async function loadResults(item=resultsFor,trigger?:HTMLElement|null,drillTarget?:AssignmentDrill){
+  if(!item)return;
+  if(trigger!==undefined){detailOpenerRef.current=trigger;focusDetailPending.current=true;setMode("list")}
+  if(trigger!==undefined&&!drillTarget)setDrillFocus(null);                        // a manual open: the teacher leaves the drill focus
+  const seq=++resultsSeq.current;
+  resultsBusy.current=true;
+  setBusy(true);setDeadlineFor(null);setReopenFor(null);setExtendFor(null);setAnalysis(null);
+  try{
+   const r=await api<{students:StudentResult[];stats:Stats}>("/api/assignment-results?assignmentId="+encodeURIComponent(item.assignmentId));
+   if(seq!==resultsSeq.current)return;
+   if(!matchesMasterScope(item,scopeRef.current))return;
+   const students=r.students||[];
+   setResultsFor(item);setResults(students);setStats(r.stats||null);
+   if(drillTarget)applyDrillView(drillTarget,item,students);
+  }catch(e){if(seq===resultsSeq.current)setError(e instanceof Error?e.message:"تعذر تحميل النتائج.")}finally{if(seq===resultsSeq.current){resultsBusy.current=false;setBusy(false)}}
+ }
+ // Review fix — the ONE place that retires the current results intent without starting a new read: every older in-flight
+ // read becomes stale (its response and its finally are ignored), and the busy state that read held is released here,
+ // because that read's own finally no longer will. Used when a newer drill turns out to be unavailable.
+ function supersedeResultsIntent(){
+  resultsSeq.current+=1;
+  focusDetailPending.current=false;
+  if(resultsBusy.current){resultsBusy.current=false;setBusy(false)}
+ }
+ // Phase 12B — the drill's gradebook view, decided from the authoritative rows just read (never from the Today summary):
+ // the EXISTING filter the intent maps to; a requested student is focused only if present in these rows, and when that
+ // student no longer matches the intended filter (the attempt ended since Today was read) the gradebook shows every row
+ // so the student's CURRENT state stays visible — with a calm note, never an error.
+ function applyDrillView(d:AssignmentDrill,item:Item,students:StudentResult[]){
+  const wanted=gradebookFilterFor(d.mode),sid=drillStudentId(d);
+  setGbSearch("");
+  if(!sid){setGbFilter(wanted);setDrillFocus(null);return}
+  const row=students.find(s=>s.studentId===sid);
+  if(!row){setGbFilter(wanted);setDrillFocus(null);setNotice("لم يعد هذا الطالب ضمن الواجب؛ تُعرض الحالة الحالية.");return}
+  const matches=wanted==="all"||(wanted==="active"?!!row.activeAttempt:rowGrading(row)===wanted);
+  setGbFilter(matches?wanted:"all");
+  setDrillFocus({assignmentId:item.assignmentId,studentId:sid});
+  if(!matches)setNotice("لم تعد محاولة "+row.studentName+" جارية؛ تُعرض حالته الحالية.");
+ }
+ // Phase 12B — consume a drill ONCE, and only against the authoritative list (never the empty pre-load list). The exact
+ // assignment is brought into the master scope (its class, current view, no search) and opened through the SAME results
+ // read as «فتح». An assignment that no longer exists (or was archived) is never replaced by another: calm note only.
+ function applyDrill(d:AssignmentDrill,list:Item[]){
+  const item=list.find(x=>x.assignmentId===d.assignmentId);
+  if(!item||item.status==="archived"){
+   // A newer intent that cannot be honoured still wins over every older one: retire any in-flight read, drop the open
+   // detail (results, stats, gradebook controls, drill focus), keep the list, select nothing, request nothing.
+   supersedeResultsIntent();
+   clearDetail({restoreFocus:false});
+   setError("");setNotice("تعذر فتح الواجب المطلوب لأنه لم يعد متاحًا (ربما أُرشف أو حُذف). تُعرض قائمة الواجبات.");
+   return;
+  }
+  const scope:MasterScope={classId:item.classId,showArchived:false,q:""};
+  scopeRef.current=scope;setFilterClassId(item.classId);setShowArchived(false);setSearch("");
+  setError("");setNotice("");
+  void loadResults(item,null,d);
+ }
+ useEffect(()=>{
+  if(!drill||!listReady||drill.seq<=appliedDrillSeq.current)return;
+  appliedDrillSeq.current=drill.seq;                                                // marked synchronously: never applied twice
+  const d=drill;
+  onDrillConsumed?.(d.seq);
+  void Promise.resolve().then(()=>applyDrill(d,items));
+ },[drill,listReady]);// eslint-disable-line react-hooks/exhaustive-deps
  // Clears every piece of detail state (results, stats, analysis, gradebook controls, row editors, opener ref).
  // restoreFocus:true = the explicit close button (focus returns to the original "فتح"); restoreFocus:false = the
  // detail left the master scope while the teacher operates a master control or after an authoritative mutation,
  // so the control they are using keeps focus and no detached opener is ever focused.
  function clearDetail({restoreFocus}:{restoreFocus:boolean}){
-  setResultsFor(null);setResults([]);setStats(null);setDeadlineFor(null);setReopenFor(null);setExtendFor(null);setAnalysis(null);setGbSearch("");setGbFilter("all");setGbSort("name");
+  setResultsFor(null);setResults([]);setStats(null);setDeadlineFor(null);setReopenFor(null);setExtendFor(null);setAnalysis(null);setGbSearch("");setGbFilter("all");setGbSort("name");setDrillFocus(null);
   const el=detailOpenerRef.current;detailOpenerRef.current=null;
   if(restoreFocus&&el&&el.isConnected)el.focus();
  }
@@ -365,7 +444,7 @@ export default function AssignmentsPanel({token,classes,currentExam,onCopyLibrar
     maxAttempts={maxAttempts} onMaxAttempts={setMaxAttempts} durationMinutes={durationMinutes} onDurationMinutes={setDurationMinutes} attemptPolicy={attemptPolicy} onAttemptPolicy={setAttemptPolicy} publish={publish} onPublish={setPublish} canCreate={canCreate} onCreate={()=>void create()}/>}
    {mode==="list"&&resultsFor&&<AssignmentDetail item={resultsFor} stats={stats} loading={busy} headingRef={detailHeadingRef} onClose={closeDetail}
     analysis={analysis} analysisBusy={analysisBusy} analysisSort={analysisSort} onAnalysisSort={setAnalysisSort} onToggleAnalysis={()=>{if(analysis)setAnalysis(null);else void loadItemAnalysis()}} sortedQuestions={sortedQuestions} analysisSummary={analysisSummary} fmt={fmt}>
-    <Gradebook assignment={resultsFor} rows={visibleResults} totalRows={results.length} gradingOf={rowGrading} busy={busy}
+    <Gradebook assignment={resultsFor} rows={visibleResults} totalRows={results.length} gradingOf={rowGrading} busy={busy} focusStudentId={drillFocus&&drillFocus.assignmentId===resultsFor.assignmentId?drillFocus.studentId:undefined}
      search={gbSearch} onSearch={setGbSearch} filter={gbFilter} onFilter={setGbFilter} sort={gbSort} onSort={setGbSort}
      onReview={openReview} onGrant={s=>void grantAttempt(s)} onReopen={openReopen} onExtend={openExtend} onDeadline={openDeadline} onEndAttempt={s=>void endAttempt(s)} fmt={fmt}/>
    </AssignmentDetail>}

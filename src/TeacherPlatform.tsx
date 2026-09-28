@@ -11,6 +11,7 @@ const TeacherDashboard=lazy(lazyWithRetry(()=>import("./TeacherDashboard"),"teac
 import AuditHistoryPanel from "./AuditHistoryPanel";
 import TeacherTodayHub from "./teacher/TeacherTodayHub";
 import type { ProjectEvaluationQueueItem, ProjectStudentRef } from "./projects/drillTarget";
+import type { AssignmentDrill, AssignmentDrillTarget } from "./assignments/drillTarget";
 import type {TeacherNavId} from "./shell/teacherNav";
 import {parseBulkStudents} from "./bulkStudentsParse";
 import {normalizeClassStatus} from "./classLifecycle";
@@ -41,7 +42,12 @@ type TeacherPlatformProps={token:string;currentExam:unknown|null;workspaceTab:Wo
  /** Phase 9D — App's drill-in (exact project + class + student) for the Today Hub's evaluation rows. */
  onOpenProjectStudent?:(ref:ProjectStudentRef)=>void;
  /** Phase 9F — App's evaluation queue session (the hub's server-ordered rows, started at the clicked row). */
- onStartEvaluationQueue?:(items:ProjectEvaluationQueueItem[],startIndex:number)=>void};
+ onStartEvaluationQueue?:(items:ProjectEvaluationQueueItem[],startIndex:number)=>void;
+ /** Phase 12B — App's assignment drill-in: the Today Hub hands a typed target (identifiers + intent) to App, App switches to
+  * the assignments workspace and publishes the sequenced drill; AssignmentsPanel applies it once and reports it consumed. */
+ onOpenAssignmentTarget?:(target:AssignmentDrillTarget)=>void;
+ assignmentDrill?:AssignmentDrill|null;
+ onAssignmentDrillConsumed?:(seq:number)=>void};
 type ApiError={ok?:boolean;error?:string};
 type WorkspaceDialog="none"|"createClass"|"addStudent"|"import";
 
@@ -739,9 +745,9 @@ function TeacherPlatform(props:TeacherPlatformProps){
  // while the chunk loads, and the fallback is a local status line inside the same inner container (never a blank page).
  // Phase 9A — the Today Hub (command center) is the FIRST thing on the teacher's home, above the analytics dashboard; it is
  // part of this chunk (one small read of its own), so the lazy Dashboard boundary below is unchanged.
- if(workspaceTab==="dashboard")return <section className="teacher-platform" dir="rtl"><div className="teacher-platform-inner"><TeacherTodayHub token={token} onNavigate={props.onNavigate} onOpenProject={props.onOpenProject} onOpenProjectStudent={props.onOpenProjectStudent} onStartEvaluationQueue={props.onStartEvaluationQueue}/><Suspense fallback={<p className="eb-muted" role="status">جارٍ تحميل لوحة المتابعة...</p>}><TeacherDashboard token={token}/></Suspense></div></section>;
+ if(workspaceTab==="dashboard")return <section className="teacher-platform" dir="rtl"><div className="teacher-platform-inner"><TeacherTodayHub token={token} onNavigate={props.onNavigate} onOpenProject={props.onOpenProject} onOpenProjectStudent={props.onOpenProjectStudent} onStartEvaluationQueue={props.onStartEvaluationQueue} onOpenAssignmentTarget={props.onOpenAssignmentTarget}/><Suspense fallback={<p className="eb-muted" role="status">جارٍ تحميل لوحة المتابعة...</p>}><TeacherDashboard token={token}/></Suspense></div></section>;
  if(workspaceTab==="audit")return <AuditHistoryPanel token={token}/>;
- if(workspaceTab==="assignments")return <section className="teacher-platform" dir="rtl"><div className="teacher-platform-inner"><AssignmentsPanel token={token} classes={classes} currentExam={currentExam} onCopyLibraryExamToBuilder={onCopyLibraryExamToBuilder}/></div></section>;
+ if(workspaceTab==="assignments")return <section className="teacher-platform" dir="rtl"><div className="teacher-platform-inner"><AssignmentsPanel token={token} classes={classes} currentExam={currentExam} onCopyLibraryExamToBuilder={onCopyLibraryExamToBuilder} drill={props.assignmentDrill??null} onDrillConsumed={props.onAssignmentDrillConsumed}/></div></section>;
 
  const classActive=selectedClass?isActiveClass(selectedClass):false;
  const canCreateStudent=Boolean(newFirstName.trim()&&newFamilyName.trim()&&validIdentity(newIdentityNumber));

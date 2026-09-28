@@ -72,6 +72,11 @@
 .eb-gradebook-table th{ background:var(--eb-surface-2); color:var(--eb-muted); font-size:var(--eb-fs-12); font-weight:var(--eb-fw-semibold); white-space:nowrap; }
 .eb-gradebook-table td strong{ display:block; color:var(--eb-text-heading); }
 .eb-gradebook-table td .result-code{ display:block; color:var(--eb-muted); font-size:var(--eb-fs-12); }
+/* Phase 12B — the student a Today Hub row asked for: a tinted row with an inline-start accent and a text tag (never
+   colour-only); purely presentational, the row's controls are unchanged. */
+.eb-gradebook-table tr.is-drill-focus td{ background:var(--eb-primary-050); }
+.eb-gradebook-table tr.is-drill-focus td:first-child{ box-shadow:inset -3px 0 0 var(--eb-primary); }
+.eb-gradebook-table td .eb-drill-focus-note{ display:inline-block; margin-block-start:2px; padding:0 var(--eb-space-2); border-radius:var(--eb-pill); background:var(--eb-surface); color:var(--eb-primary-strong); font-size:var(--eb-fs-12); font-weight:var(--eb-fw-semibold); }
 .eb-status-stack{ display:flex; flex-direction:column; align-items:flex-start; gap:4px; }
 .eb-status-stack small{ color:var(--eb-muted); font-size:var(--eb-fs-12); }
 .lifecycle-extended-badge,.deadline-extended-badge{ display:inline-block; padding:2px var(--eb-space-2); border-radius:var(--eb-pill); background:var(--eb-warn-bg); color:var(--eb-warn-tx); font-size:var(--eb-fs-12); font-weight:var(--eb-fw-semibold); }
