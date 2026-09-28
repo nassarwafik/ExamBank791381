@@ -20,22 +20,22 @@ const COUNT_EXPR = /^(?:[A-Za-z_$][\w$]*\.length|tally\.[A-Za-z]+|idxStats\.[A-Z
 const FORBIDDEN = /(id|Id|ID|name|Name|title|Title|mark|score|percentage|token|studentId|classId|assignmentId|displayName)\b/;
 
 describe("12E-A read-cost observability — source guard", () => {
-  it("student-dashboard emits exactly one count-only event with the six documented fields", () => {
+  it("student-dashboard emits exactly one count-only event with the seven documented fields", () => {
     const calls = readCostCalls(src("functions/student-dashboard.js"));
     expect(calls.map(c => c.event)).toEqual(["student.dashboard.read_cost"]);
-    expect(calls[0].fields.map(f => f[0])).toEqual(["assignmentDocsScanned", "publishedClassAssignments", "submissionReads", "assignmentIndexReads", "assignmentIndexesBootstrapped", "globalAssignmentScans"]);
+    expect(calls[0].fields.map(f => f[0])).toEqual(["assignmentDocsScanned", "publishedClassAssignments", "submissionReads", "assignmentIndexReads", "assignmentIndexesBootstrapped", "globalAssignmentScans", "assignmentIndexAuthoritative"]);
     for (const [, expr] of calls[0].fields) { expect(expr).toMatch(COUNT_EXPR); expect(expr.replace(/\.length$/, "")).not.toMatch(FORBIDDEN); }
   });
 
-  it("teacher-today emits exactly one count-only event with the nine documented fields", () => {
+  it("teacher-today emits exactly one count-only event with the ten documented fields", () => {
     const calls = readCostCalls(src("functions/teacher-today.js"));
     expect(calls.map(c => c.event)).toEqual(["teacher.today.read_cost"]);
-    expect(calls[0].fields.map(f => f[0])).toEqual(["assignmentDocsScanned", "classDocsScanned", "userDocsScanned", "publishedActiveAssignments", "submissionFolderListings", "submissionDocsLoaded", "assignmentIndexReads", "assignmentIndexesBootstrapped", "globalAssignmentScans"]);
+    expect(calls[0].fields.map(f => f[0])).toEqual(["assignmentDocsScanned", "classDocsScanned", "userDocsScanned", "publishedActiveAssignments", "submissionFolderListings", "submissionDocsLoaded", "assignmentIndexReads", "assignmentIndexesBootstrapped", "globalAssignmentScans", "assignmentIndexAuthoritative"]);
     for (const [, expr] of calls[0].fields) { expect(expr).toMatch(COUNT_EXPR); expect(expr.replace(/\.length$/, "")).not.toMatch(FORBIDDEN); }
   });
 
   it("no other read-cost event exists in the API sources (only the two hot paths are instrumented)", () => {
-    for (const rel of ["functions/student-notifications.js", "lib/notification-center.js", "lib/student-notifications.js", "lib/platform-storage.js", "lib/class-assignment-index.js", "functions/manage-assignments.js"]) {
+    for (const rel of ["functions/student-notifications.js", "lib/notification-center.js", "lib/student-notifications.js", "lib/platform-storage.js", "lib/class-assignment-index.js", "functions/manage-assignments.js", "functions/assignment-index-control.js"]) {
       expect(src(rel)).not.toContain("logReadCost");
     }
   });

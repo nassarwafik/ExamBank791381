@@ -120,7 +120,7 @@ async function handler(request,deps={},obs=null){
   if(projectSources.ok){try{projectEvaluation=deriveProjectEvaluationAttention({users,sources:projectSources.value})}catch(e){partial.push("projectEvaluation");obs?.logError("teacher.today.projectEvaluation",e)}}
   else{partial.push("projectEvaluation");obs?.logError("teacher.today.projectEvaluation",projectSources.error)}
   // Phase 12E-A — count-only read-cost telemetry (the scans' own sizes; never an id/name/title/mark).
-  logReadCost(obs,"teacher.today.read_cost",{assignmentDocsScanned:idx.stats.assignmentDocsLoaded,classDocsScanned:classes.length,userDocsScanned:users.length,publishedActiveAssignments:published.length,submissionFolderListings:published.length,submissionDocsLoaded:tally.submissionDocsLoaded,assignmentIndexReads:idx.stats.indexReads,assignmentIndexesBootstrapped:idx.stats.bootstrapped,globalAssignmentScans:idx.stats.globalScans});
+  logReadCost(obs,"teacher.today.read_cost",{assignmentDocsScanned:idx.stats.assignmentDocsLoaded,classDocsScanned:classes.length,userDocsScanned:users.length,publishedActiveAssignments:published.length,submissionFolderListings:published.length,submissionDocsLoaded:tally.submissionDocsLoaded,assignmentIndexReads:idx.stats.indexReads,assignmentIndexesBootstrapped:idx.stats.bootstrapped,globalAssignmentScans:idx.stats.globalScans,assignmentIndexAuthoritative:idx.stats.authoritative});
   return {status:200,jsonBody:{ok:true,generatedAt:new Date(nowMs).toISOString(),...derived,attention:{...derived.attention,unreadMessages},projectEvaluation,partial}};
  }catch(e){obs?.logError("teacher.today.error",e);return {status:500,jsonBody:{ok:false,error:"تعذر تحميل ملخص اليوم حاليًا."}}}
 }

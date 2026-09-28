@@ -1,7 +1,7 @@
 import { describe, it, expect } from "vitest";
 import { handler as manage } from "../src/functions/manage-assignments.js";
 import { handler as dashboard } from "../src/functions/student-dashboard.js";
-import { indexName, loadPublishedAssignmentsForClasses } from "../src/lib/class-assignment-index.js";
+import { CONTROL_NAME, indexName, loadPublishedAssignmentsForClasses } from "../src/lib/class-assignment-index.js";
 import { classEventPrefix } from "../src/lib/notification-events.js";
 import { listJson } from "../src/lib/platform-storage.js";
 import { createMemoryContainer } from "./fixtures/memory-container.js";
@@ -24,6 +24,9 @@ const OBS = { logInfo: () => {}, logWarn: (e, f) => OBS_LOG.push({ e, f }), logE
 function world(extraSeed = {}) {
   const hooks = {};
   const ctx = createMemoryContainer({
+    // the index authority is ACTIVATED (epoch E1): readers below trust a ready E1 index — the mode where a missing
+    // pointer would be a real false negative (the MIGRATING mode is covered by assignment-index-mixed-version-12e-b)
+    [CONTROL_NAME]: { schemaVersion: 1, state: "authoritative", epoch: "E1", updatedAt: "2026-01-01T00:00:00.000Z" },
     "platform/classes/c1.json": { classId: "c1", name: "الصف الأول", status: "active", active: true },
     "platform/users/u1.json": { userId: "u1", role: "student", classId: "c1", active: true, archived: false, authVersion: 1, code: "S1", displayName: "علي" },
     ...extraSeed
@@ -40,7 +43,7 @@ const doc = (w, id) => w.ctx.getJson(AP + id + ".json");
 const events = w => w.ctx.names(classEventPrefix("c1")).filter(n => n.endsWith(".json")).length;   // class "assignment_published" events
 const readerIds = async w => (await loadPublishedAssignmentsForClasses(w.ctx.container, ["c1"])).byClass.get("c1").map(a => a.assignmentId);
 const seededAssignment = (id, over = {}) => ({ schemaVersion: 2, attemptModelVersion: 2, attemptPolicy: "continuous", assignmentId: id, classId: "c1", className: "الصف الأول", title: "واجب " + id, instructions: "", status: "published", openAt: "", dueAt: "", maxAttempts: 1, durationMinutes: 0, questionCount: 1, totalMarks: 10, examSnapshot: EXAM, createdAt: "2026-01-01T00:00:00.000Z", updatedAt: "2026-01-01T00:00:00.000Z", ...over });
-const readyIndex = list => ({ [indexName("c1")]: { schemaVersion: 1, classId: "c1", ready: true, publishedAssignmentIds: list, updatedAt: "2026-01-01T00:00:00.000Z" } });
+const readyIndex = list => ({ [indexName("c1")]: { schemaVersion: 1, classId: "c1", ready: true, epoch: "E1", publishedAssignmentIds: list, updatedAt: "2026-01-01T00:00:00.000Z" } });
 const order = (w, a, b) => { const u = w.rc.ops.uploads; return [u.indexOf(a), u.indexOf(b)]; };
 
 describe("12E-B writers — create", () => {

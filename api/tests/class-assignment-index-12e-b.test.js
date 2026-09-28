@@ -1,7 +1,8 @@
 import { describe, it, expect } from "vitest";
 import {
-  INDEX_PREFIX, indexName, normalizeIds, normalizeIndex, readClassIndex, ensurePublishedAssignmentIndexed,
-  removePublishedAssignmentFromIndex, bootstrapClassIndex, loadPublishedAssignmentsForClasses
+  INDEX_PREFIX, CONTROL_NAME, indexName, normalizeIds, normalizeIndex, normalizeControl, readClassIndex, readIndexControl,
+  activateAssignmentIndex, deactivateAssignmentIndex, ensurePublishedAssignmentIndexed, removePublishedAssignmentFromIndex,
+  bootstrapClassIndex, loadPublishedAssignmentsForClasses
 } from "../src/lib/class-assignment-index.js";
 import { listJson } from "../src/lib/platform-storage.js";
 import { createMemoryContainer } from "./fixtures/memory-container.js";
@@ -13,7 +14,9 @@ import { instrumentReadCost } from "./helpers/read-cost.js";
 
 const AP = "platform/assignments/";
 const pub = (id, classId, status = "published") => ({ assignmentId: id, classId, status, title: "واجب " + id });
-const ready = (classId, ids) => ({ schemaVersion: 1, classId, ready: true, publishedAssignmentIds: ids, updatedAt: "2026-01-01T00:00:00.000Z" });
+const ready = (classId, ids, epoch = "E1") => ({ schemaVersion: 1, classId, ready: true, epoch, publishedAssignmentIds: ids, updatedAt: "2026-01-01T00:00:00.000Z" });
+/** The index authority, activated with epoch E1 (the loader tests below run in AUTHORITATIVE mode unless stated). */
+const AUTH = { [CONTROL_NAME]: { schemaVersion: 1, state: "authoritative", epoch: "E1", updatedAt: "2026-01-01T00:00:00.000Z" } };
 /** Persistent (or N-times) conflict on one blob: every CAS write observes a changed ETag. */
 const conflictOn = (name, times = Infinity) => { let n = 0; return { beforeConditionalUpload: (blob, api) => { if (blob !== name || n >= times) return; n += 1; api.setJson(blob, api.getJson(blob)); } }; };
 const seedAssignments = list => Object.fromEntries(list.map(a => [AP + a.assignmentId + ".json", a]));
@@ -42,12 +45,12 @@ describe("12E-B index — strict add / best-effort remove", () => {
     await ensurePublishedAssignmentIndexed(ctx.container, "c1", "a1");
     expect(ctx.getJson(indexName("c1"))).toMatchObject({ schemaVersion: 1, classId: "c1", ready: false, publishedAssignmentIds: ["a1"] });
   });
-  it("(2 · 4) strict add is idempotent and preserves ready:true (and ready:false)", async () => {
+  it("(2 · 4) strict add is idempotent and preserves ready:true + epoch (and ready:false)", async () => {
     const ctx = createMemoryContainer({ [indexName("c1")]: ready("c1", ["a1"]), [indexName("c2")]: { ...ready("c2", ["x"]), ready: false } });
     await ensurePublishedAssignmentIndexed(ctx.container, "c1", "a2");
     await ensurePublishedAssignmentIndexed(ctx.container, "c1", "a2");
     await ensurePublishedAssignmentIndexed(ctx.container, "c2", "y");
-    expect(ctx.getJson(indexName("c1"))).toMatchObject({ ready: true, publishedAssignmentIds: ["a1", "a2"] });
+    expect(ctx.getJson(indexName("c1"))).toMatchObject({ ready: true, epoch: "E1", publishedAssignmentIds: ["a1", "a2"] });
     expect(ctx.getJson(indexName("c2"))).toMatchObject({ ready: false, publishedAssignmentIds: ["x", "y"] });
   });
   it("(5) remove is idempotent, never creates an index and never writes when the id is absent", async () => {
@@ -80,9 +83,9 @@ describe("12E-B index — strict add / best-effort remove", () => {
   });
 });
 
-describe("12E-B index — bootstrap", () => {
+describe("12E-B index — reconcile (AUTHORITATIVE mode)", () => {
   it("(6) an empty class bootstraps to ready:true with an empty list (one scan), then needs no scan", async () => {
-    const ctx = createMemoryContainer(seedAssignments([pub("o1", "c2")]));
+    const ctx = createMemoryContainer({ ...AUTH, ...seedAssignments([pub("o1", "c2")]) });
     const rc = instrumentReadCost(ctx.container);
     const r = await load(ctx, ["c1"]);
     expect(r.byClass.get("c1")).toEqual([]);
@@ -94,18 +97,18 @@ describe("12E-B index — bootstrap", () => {
     expect(rc.listsOf(AP)).toBe(0);
   });
   it("(7) existing published assignments are discovered (drafts / archived / other classes are not)", async () => {
-    const ctx = createMemoryContainer(seedAssignments([pub("a1", "c1"), pub("a2", "c1"), pub("d1", "c1", "draft"), pub("r1", "c1", "archived"), pub("o1", "c2")]));
+    const ctx = createMemoryContainer({ ...AUTH, ...seedAssignments([pub("a1", "c1"), pub("a2", "c1"), pub("d1", "c1", "draft"), pub("r1", "c1", "archived"), pub("o1", "c2")]) });
     const r = await load(ctx, ["c1"]);
     expect(r.byClass.get("c1").map(a => a.assignmentId)).toEqual(["a1", "a2"]);
     expect(ctx.getJson(indexName("c1"))).toMatchObject({ ready: true, publishedAssignmentIds: ["a1", "a2"] });
   });
   it("(8) bootstrap UNIONS with ids already in a not-ready index (a pre-added publish is kept)", async () => {
-    const ctx = createMemoryContainer({ ...seedAssignments([pub("a1", "c1")]), [indexName("c1")]: { ...ready("c1", ["pNew"]), ready: false } });
+    const ctx = createMemoryContainer({ ...AUTH, ...seedAssignments([pub("a1", "c1")]), [indexName("c1")]: { ...ready("c1", ["pNew"]), ready: false } });
     await load(ctx, ["c1"]);
     expect(ctx.getJson(indexName("c1"))).toMatchObject({ ready: true, publishedAssignmentIds: ["a1", "pNew"] });
   });
   it("(9 · race) a strict add that lands AFTER the legacy scan and BEFORE the bootstrap CAS is never lost; the next read sees it", async () => {
-    const ctx = createMemoryContainer(seedAssignments([pub("a1", "c1")]));
+    const ctx = createMemoryContainer({ ...AUTH, ...seedAssignments([pub("a1", "c1")]) });
     const racingList = async (c, prefix) => {
       const docs = await listJson(c, prefix);                                     // the scan did NOT see pNew
       await ensurePublishedAssignmentIndexed(c, "c1", "pNew");                   // a concurrent publish pre-adds it …
@@ -120,7 +123,7 @@ describe("12E-B index — bootstrap", () => {
     expect(next.stats.globalScans).toBe(0);
   });
   it("(10) several missing classes share ONE global scan; (11) ready classes need none", async () => {
-    const ctx = createMemoryContainer({ ...seedAssignments([pub("a1", "c1"), pub("b1", "c2"), pub("c1x", "c3"), pub("z1", "c9")]), [indexName("c3")]: ready("c3", ["c1x"]) });
+    const ctx = createMemoryContainer({ ...AUTH, ...seedAssignments([pub("a1", "c1"), pub("b1", "c2"), pub("c1x", "c3"), pub("z1", "c9")]), [indexName("c3")]: ready("c3", ["c1x"]) });
     const rc = instrumentReadCost(ctx.container);
     const r = await load(ctx, ["c1", "c2", "c3"]);
     expect(rc.listsOf(AP)).toBe(1);
@@ -132,7 +135,7 @@ describe("12E-B index — bootstrap", () => {
     expect(warm.stats).toMatchObject({ indexReads: 3, globalScans: 0, bootstrapped: 0, assignmentDocsLoaded: 3 });
   });
   it("(12) a malformed / wrong-class / unready / corrupt index is re-bootstrapped (never trusted)", async () => {
-    const ctx = createMemoryContainer({ ...seedAssignments([pub("a1", "c1"), pub("b1", "c2"), pub("d1", "c4")]), [indexName("c1")]: { hello: 1 }, [indexName("c2")]: ready("cX", ["b1"]), [indexName("c3")]: { ...ready("c3", []), ready: false } });
+    const ctx = createMemoryContainer({ ...AUTH, ...seedAssignments([pub("a1", "c1"), pub("b1", "c2"), pub("d1", "c4")]), [indexName("c1")]: { hello: 1 }, [indexName("c2")]: ready("cX", ["b1"]), [indexName("c3")]: { ...ready("c3", []), ready: false } });
     ctx.store.set(indexName("c4"), { content: Buffer.from("{ not json"), etag: "e-bad", contentType: "" });
     const r = await load(ctx, ["c1", "c2", "c3", "c4"]);
     expect(r.stats.globalScans).toBe(1);
@@ -144,7 +147,7 @@ describe("12E-B index — bootstrap", () => {
   });
   it("(18) a bootstrap write failure still serves the scan result; the next request retries and succeeds", async () => {
     const hooks = conflictOn(indexName("c1"));
-    const ctx = createMemoryContainer({ ...seedAssignments([pub("a1", "c1")]), [indexName("c1")]: { ...ready("c1", []), ready: false } }, hooks);
+    const ctx = createMemoryContainer({ ...AUTH, ...seedAssignments([pub("a1", "c1")]), [indexName("c1")]: { ...ready("c1", []), ready: false } }, hooks);
     const warns = [];
     const r = await loadPublishedAssignmentsForClasses(ctx.container, ["c1"], {}, { logWarn: (e, f) => warns.push({ e, f }) });
     expect(r.byClass.get("c1").map(a => a.assignmentId)).toEqual(["a1"]);
@@ -158,14 +161,16 @@ describe("12E-B index — bootstrap", () => {
   });
   it("bootstrapClassIndex is a pure union (never removes an id)", async () => {
     const ctx = createMemoryContainer({ [indexName("c1")]: ready("c1", ["keep"]) });
-    await bootstrapClassIndex(ctx.container, "c1", ["new"]);
-    expect(ctx.getJson(indexName("c1")).publishedAssignmentIds).toEqual(["keep", "new"]);
+    await bootstrapClassIndex(ctx.container, "c1", ["new"], "E2");
+    expect(ctx.getJson(indexName("c1"))).toMatchObject({ ready: true, epoch: "E2", publishedAssignmentIds: ["keep", "new"] });
+    await expect(bootstrapClassIndex(ctx.container, "c1", ["x"])).rejects.toThrow();   // no epoch → no trusted stamp
   });
 });
 
 describe("12E-B index — readers re-validate every pointer", () => {
   it("(13 · 14 · 15) missing, draft, archived and wrong-class pointers are filtered; only the real published one is returned; no fallback scan", async () => {
     const ctx = createMemoryContainer({
+      ...AUTH,
       ...seedAssignments([pub("real", "c1"), pub("dr", "c1", "draft"), pub("ar", "c1", "archived"), pub("other", "c2"), { title: "no id" }]),
       [AP + "bad.json"]: { assignmentId: "bad", classId: "c1" },                    // no status → legacy normalization, not published
       [indexName("c1")]: ready("c1", ["missing", "dr", "ar", "other", "real", "bad"])
@@ -180,5 +185,43 @@ describe("12E-B index — readers re-validate every pointer", () => {
     const ctx = createMemoryContainer({ [indexName("c1")]: ready("c1", ["b", "a"]) });
     expect(await readClassIndex(ctx.container, "c9")).toBeNull();
     expect(await readClassIndex(ctx.container, "c1")).toMatchObject({ ready: true, publishedAssignmentIds: ["a", "b"] });
+  });
+});
+
+describe("12E-B index — authority contract (control.json + epoch)", () => {
+  it("normalizeControl: only a well-formed authoritative document with a safe epoch is authoritative", () => {
+    expect(normalizeControl(AUTH[CONTROL_NAME])).toEqual({ authoritative: true, epoch: "E1" });
+    for (const bad of [null, undefined, [], "x", {}, { schemaVersion: 1, state: "authoritative" }, { schemaVersion: 1, state: "authoritative", epoch: "a/b" }, { schemaVersion: 2, state: "authoritative", epoch: "E1" }, { schemaVersion: 1, state: "migrating", epoch: "E1" }, { schemaVersion: 1, state: "AUTHORITATIVE", epoch: "E1" }]) {
+      expect(normalizeControl(bad)).toEqual({ authoritative: false, epoch: "" });
+    }
+  });
+  it("activation mints a FRESH epoch every time; deactivation returns to migrating; a missing control reads as migrating", async () => {
+    const ctx = createMemoryContainer();
+    expect(await readIndexControl(ctx.container)).toEqual({ authoritative: false, epoch: "" });
+    const a = await activateAssignmentIndex(ctx.container);
+    const b = await activateAssignmentIndex(ctx.container);
+    expect(a.authoritative && b.authoritative).toBe(true);
+    expect(a.epoch).not.toBe(b.epoch);
+    expect(await readIndexControl(ctx.container)).toEqual(b);
+    expect(await deactivateAssignmentIndex(ctx.container)).toEqual({ authoritative: false, epoch: "" });
+    expect(ctx.getJson(CONTROL_NAME)).toMatchObject({ schemaVersion: 1, state: "migrating", epoch: "" });
+  });
+  it("MIGRATING loader: one legacy scan, no index read or write, even over a ready index of the right epoch", async () => {
+    const ctx = createMemoryContainer({ ...seedAssignments([pub("a1", "c1"), pub("a2", "c1")]), [indexName("c1")]: ready("c1", ["a1"]) });
+    const rc = instrumentReadCost(ctx.container);
+    const r = await load(ctx, ["c1"]);
+    expect(r.byClass.get("c1").map(a => a.assignmentId)).toEqual(["a1", "a2"]);
+    expect(r.stats).toMatchObject({ authoritative: 0, indexReads: 0, globalScans: 1, bootstrapped: 0 });
+    expect(rc.downloadsOf(INDEX_PREFIX)).toBe(0);
+    expect(rc.uploadsOf(INDEX_PREFIX)).toBe(0);
+  });
+  it("AUTHORITATIVE loader: an index of another epoch (or none) is reconciled once — union, new epoch — then trusted", async () => {
+    const ctx = createMemoryContainer({ ...AUTH, ...seedAssignments([pub("a1", "c1"), pub("a2", "c1")]), [indexName("c1")]: ready("c1", ["a1", "stale"], "E0") });
+    const first = await load(ctx, ["c1"]);
+    expect(first.stats).toMatchObject({ authoritative: 1, globalScans: 1, bootstrapped: 1 });
+    expect(ctx.getJson(indexName("c1"))).toMatchObject({ ready: true, epoch: "E1", publishedAssignmentIds: ["a1", "a2", "stale"] });
+    const warm = await load(ctx, ["c1"]);
+    expect(warm.stats).toMatchObject({ globalScans: 0, indexReads: 1, assignmentDocsLoaded: 3 });
+    expect(warm.byClass.get("c1").map(a => a.assignmentId)).toEqual(["a1", "a2"]);
   });
 });

@@ -12,14 +12,18 @@ import { instrumentReadCost } from "./helpers/read-cost.js";
 // 12E-A BEFORE (kept in docs/read-cost-baseline-12e.md): lists = 1, downloads = K + A_total + P_class — every stored
 // assignment of every class was downloaded on every request.
 //
-// 12E-B AFTER (measured here, deliberately replacing the 12E-A BASELINE guards):
-//   WARM (ready class index)  lists = 0          downloads = K + 1 index + P_class assignments + P_class submissions
-//   COLD (first request)      lists = 1 (legacy) downloads = K + 1 index + A_total + 1 bootstrap CAS read + P_class
-//                             uploads = 1 (the class index, ready:true)
+// 12E-B AFTER (measured here, deliberately replacing the 12E-A BASELINE guards). Every request first reads the index
+// AUTHORITY control document (1 download):
+//   MIGRATING (not activated) lists = 1 (legacy) downloads = K + 1 control + A_total + P_class          uploads = 0
+//   AUTHORITATIVE, WARM       lists = 0          downloads = K + 1 control + 1 index + P_class + P_class uploads = 0
+//   AUTHORITATIVE, COLD       lists = 1 (legacy) downloads = K + 1 control + 1 index + A_total + 1 reconcile CAS read
+//     (first request per class                   + P_class;  uploads = 1 (the class index, ready:true, epoch)
+//      after activation)
 //   K = 5 fixed documents (user, class, practice, study, games) for a class without projects.
 
 const AP = "platform/assignments/", SP = "platform/submissions/", UP = "platform/users/", CP = "platform/classes/";
-const IX = "platform/assignment-index/classes/";
+const IX = "platform/assignment-index/classes/", CONTROL = "platform/assignment-index/control.json";
+const AUTHORITATIVE = { [CONTROL]: { schemaVersion: 1, state: "authoritative", epoch: "E1", updatedAt: "2026-01-01T00:00:00.000Z" } };
 const FIXED = ["platform/users/u1.json", "platform/classes/c1.json", "platform/learning-practice/u1.json", "platform/learning-study/u1.json", "platform/games/results/u1.json"];
 const K = FIXED.length;
 const req = () => ({ method: "GET", url: "http://x/api/student-dashboard", headers: { get: () => null } });
@@ -30,8 +34,8 @@ const assignment = (id, classId, over = {}) => ({ assignmentId: id, classId, sta
  * mine = published c1 assignments (P_class); other = published c2 assignments; drafts / archived = c1 assignments that
  * are NOT published; withSubmission = how many of `mine` have a stored submission.
  */
-function scenario({ mine = 0, other = 0, drafts = 0, archived = 0, withSubmission = 0 } = {}) {
-  const seed = { [UP + "u1.json"]: student, [CP + "c1.json"]: { classId: "c1", name: "أ", status: "active", active: true }, [CP + "c2.json"]: { classId: "c2", name: "ب", status: "active", active: true } };
+function scenario({ mine = 0, other = 0, drafts = 0, archived = 0, withSubmission = 0, authoritative = true } = {}) {
+  const seed = { ...(authoritative ? AUTHORITATIVE : {}), [UP + "u1.json"]: student, [CP + "c1.json"]: { classId: "c1", name: "أ", status: "active", active: true }, [CP + "c2.json"]: { classId: "c2", name: "ب", status: "active", active: true } };
   for (let i = 0; i < mine; i++) seed[AP + "m" + i + ".json"] = assignment("m" + i, "c1");
   for (let i = 0; i < other; i++) seed[AP + "o" + i + ".json"] = assignment("o" + i, "c2");
   for (let i = 0; i < drafts; i++) seed[AP + "d" + i + ".json"] = assignment("d" + i, "c1", { status: "draft" });
@@ -46,16 +50,32 @@ const deps = ctx => ({ container: ctx.container, requireStudentAuth: () => ({ ok
 async function run(s, obs = OBS) { logs.length = 0; s.rc.reset(); const r = await handler(req(), deps(s.ctx), obs); return { r, snap: s.rc.snapshot() }; }
 function cost(s, snap) {
   return {
-    globalAssignmentLists: s.rc.listsOf(AP), otherLists: snap.lists - s.rc.listsOf(AP),
+    globalAssignmentLists: s.rc.listsOf(AP), otherLists: snap.lists - s.rc.listsOf(AP), controlReads: s.rc.downloadsExact(CONTROL),
     indexReads: s.rc.downloadsOf(IX), assignmentDocs: s.rc.downloadsOf(AP), submissionReads: s.rc.downloadsOf(SP),
-    fixed: snap.downloads - s.rc.downloadsOf(IX) - s.rc.downloadsOf(AP) - s.rc.downloadsOf(SP), indexWrites: s.rc.uploadsOf(IX), otherUploads: snap.uploads - s.rc.uploadsOf(IX)
+    fixed: snap.downloads - s.rc.downloadsExact(CONTROL) - s.rc.downloadsOf(IX) - s.rc.downloadsOf(AP) - s.rc.downloadsOf(SP), indexWrites: s.rc.uploadsOf(IX), otherUploads: snap.uploads - s.rc.uploadsOf(IX)
   };
 }
-const warmCost = P => ({ globalAssignmentLists: 0, otherLists: 0, indexReads: 1, assignmentDocs: P, submissionReads: P, fixed: K, indexWrites: 0, otherUploads: 0 });
-const coldCost = (A, P) => ({ globalAssignmentLists: 1, otherLists: 0, indexReads: 2, assignmentDocs: A, submissionReads: P, fixed: K, indexWrites: 1, otherUploads: 0 });
+const warmCost = P => ({ globalAssignmentLists: 0, otherLists: 0, controlReads: 1, indexReads: 1, assignmentDocs: P, submissionReads: P, fixed: K, indexWrites: 0, otherUploads: 0 });
+const coldCost = (A, P) => ({ globalAssignmentLists: 1, otherLists: 0, controlReads: 1, indexReads: 2, assignmentDocs: A, submissionReads: P, fixed: K, indexWrites: 1, otherUploads: 0 });
+const migratingCost = (A, P) => ({ globalAssignmentLists: 1, otherLists: 0, controlReads: 1, indexReads: 0, assignmentDocs: A, submissionReads: P, fixed: K, indexWrites: 0, otherUploads: 0 });
 const mineIds = n => Array.from({ length: n }, (_, i) => "m" + i).sort();
 
-describe("12E-B student dashboard — cold (bootstrap) then warm (steady state), real handler + real container", () => {
+describe("12E-B student dashboard — MIGRATING (index authority not activated): the pre-12E-B read path, every request", () => {
+  for (const [name, spec] of [["S1", { mine: 1, withSubmission: 1 }], ["S-OTHER", { mine: 3, other: 100, drafts: 5, archived: 5, withSubmission: 3 }]]) {
+    it(name + ": one legacy scan per request, no index read, no index write — even with a stale ready index present", async () => {
+      const s = scenario({ ...spec, authoritative: false });
+      s.ctx.setJson(IX + "c1.json", { schemaVersion: 1, classId: "c1", ready: true, epoch: "OLD", publishedAssignmentIds: [], updatedAt: "2026-01-01T00:00:00.000Z" });
+      for (let i = 0; i < 2; i++) {
+        const { r, snap } = await run(s);
+        expect(r.status).toBe(200);
+        expect(r.jsonBody.assignments.map(a => a.assignmentId).sort()).toEqual(mineIds(s.P_class));
+        expect(cost(s, snap)).toEqual(migratingCost(s.A_total, s.P_class));
+      }
+    });
+  }
+});
+
+describe("12E-B student dashboard — AUTHORITATIVE: cold (reconcile) then warm (steady state), real handler + real container", () => {
   const table = [
     ["S0 — no assignment", { mine: 0 }],
     ["S1 — one published class assignment", { mine: 1, withSubmission: 1 }],
@@ -70,7 +90,7 @@ describe("12E-B student dashboard — cold (bootstrap) then warm (steady state),
       expect(cold.r.status).toBe(200);
       expect(cold.r.jsonBody.assignments.map(a => a.assignmentId).sort()).toEqual(mineIds(s.P_class));
       expect(cost(s, cold.snap)).toEqual(coldCost(s.A_total, s.P_class));
-      expect(s.ctx.getJson(IX + "c1.json")).toMatchObject({ schemaVersion: 1, classId: "c1", ready: true, publishedAssignmentIds: mineIds(s.P_class) });
+      expect(s.ctx.getJson(IX + "c1.json")).toMatchObject({ schemaVersion: 1, classId: "c1", ready: true, epoch: "E1", publishedAssignmentIds: mineIds(s.P_class) });
       const warm = await run(s);
       expect(cost(s, warm.snap)).toEqual(warmCost(s.P_class));
       for (const n of FIXED) expect(s.rc.downloadsExact(n)).toBe(1);
@@ -118,15 +138,18 @@ describe("12E-B student dashboard — steady-state guards (replace the 12E-A BAS
 });
 
 describe("12E-B student dashboard — count-only observability + response parity", () => {
-  it("emits ONE student.dashboard.read_cost event with exactly the six numeric fields (cold, then warm)", async () => {
+  it("emits ONE student.dashboard.read_cost event with exactly the seven numeric fields (cold, warm, migrating)", async () => {
     const s = scenario({ mine: 3, other: 7, drafts: 2, withSubmission: 1 });
     await run(s);
     const cold = logs.filter(l => l.event === "student.dashboard.read_cost");
     expect(cold).toHaveLength(1);
-    expect(cold[0].fields).toEqual({ assignmentDocsScanned: 12, publishedClassAssignments: 3, submissionReads: 3, assignmentIndexReads: 1, assignmentIndexesBootstrapped: 1, globalAssignmentScans: 1 });
+    expect(cold[0].fields).toEqual({ assignmentDocsScanned: 12, publishedClassAssignments: 3, submissionReads: 3, assignmentIndexReads: 1, assignmentIndexesBootstrapped: 1, globalAssignmentScans: 1, assignmentIndexAuthoritative: 1 });
     await run(s);
     const warm = logs.filter(l => l.event === "student.dashboard.read_cost");
-    expect(warm[0].fields).toEqual({ assignmentDocsScanned: 3, publishedClassAssignments: 3, submissionReads: 3, assignmentIndexReads: 1, assignmentIndexesBootstrapped: 0, globalAssignmentScans: 0 });
+    expect(warm[0].fields).toEqual({ assignmentDocsScanned: 3, publishedClassAssignments: 3, submissionReads: 3, assignmentIndexReads: 1, assignmentIndexesBootstrapped: 0, globalAssignmentScans: 0, assignmentIndexAuthoritative: 1 });
+    const m = scenario({ mine: 3, other: 7, drafts: 2, withSubmission: 1, authoritative: false });
+    await run(m);
+    expect(logs.filter(l => l.event === "student.dashboard.read_cost")[0].fields).toEqual({ assignmentDocsScanned: 12, publishedClassAssignments: 3, submissionReads: 3, assignmentIndexReads: 0, assignmentIndexesBootstrapped: 0, globalAssignmentScans: 1, assignmentIndexAuthoritative: 0 });
     const text = JSON.stringify(logs);
     for (const leak of ["u1", "c1", "m0", "واجب", "علي", "S1", "platform/"]) expect(text).not.toContain(leak);
   });

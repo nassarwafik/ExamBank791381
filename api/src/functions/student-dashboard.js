@@ -49,7 +49,7 @@ async function handler(request,deps={},obs=null){
   // state; a not-yet-bootstrapped class is served by ONE legacy scan that also bootstraps the index). Every document is
   // re-validated (published, this class) by the loader and again by `selected` below.
   const idx=student.classId?await loadPublishedAssignmentsForClasses(c,[String(student.classId)],{...deps,downloadJsonOrNull:dl,listJson:ls,mapConcurrent,getReadConcurrency:readConcurrency},obs):null;
-  const raw=idx?idx.byClass.get(String(student.classId))||[]:[],assignments=[],idxStats=idx?idx.stats:{indexReads:0,globalScans:0,bootstrapped:0,assignmentDocsLoaded:0};
+  const raw=idx?idx.byClass.get(String(student.classId))||[]:[],assignments=[],idxStats=idx?idx.stats:{authoritative:0,indexReads:0,globalScans:0,bootstrapped:0,assignmentDocsLoaded:0};
   // Legacy stats (kept for backward compatibility) + Roadmap #12 additive authoritative stats.
   let completed=0,sum=0;                                                     // legacy: any completed latest result
   let submitted=0,inProgress=0,pendingReview=0,finalized=0,scheduled=0,available=0,closedUnsubmitted=0,finalSum=0,finalCount=0;
@@ -122,7 +122,7 @@ async function handler(request,deps={},obs=null){
   // and module are still among the class's released materials.
   const todayStudy={lastActivity:latestStudyActivity(studyDoc)};
   // Phase 12E-A — count-only read-cost telemetry (numbers the loop above already knows; never an id/title/mark).
-  logReadCost(obs,"student.dashboard.read_cost",{assignmentDocsScanned:idxStats.assignmentDocsLoaded,publishedClassAssignments:selected.length,submissionReads:submissions.length,assignmentIndexReads:idxStats.indexReads,assignmentIndexesBootstrapped:idxStats.bootstrapped,globalAssignmentScans:idxStats.globalScans});
+  logReadCost(obs,"student.dashboard.read_cost",{assignmentDocsScanned:idxStats.assignmentDocsLoaded,publishedClassAssignments:selected.length,submissionReads:submissions.length,assignmentIndexReads:idxStats.indexReads,assignmentIndexesBootstrapped:idxStats.bootstrapped,globalAssignmentScans:idxStats.globalScans,assignmentIndexAuthoritative:idxStats.authoritative});
   return {status:200,jsonBody:{ok:true,study:todayStudy,student:{userId:student.userId,code:student.code,displayName:student.displayName,classId:student.classId,avatarId:String(student.avatarId||""),shareAchievements:student.shareAchievements!==false,profilePhoto:student.profilePhoto&&typeof student.profilePhoto==="object"&&Number(student.profilePhoto.version)>0?{version:Number(student.profilePhoto.version),updatedAt:String(student.profilePhoto.updatedAt||"")}:null},classroom:classroom?{classId:classroom.classId,name:classroom.name,grade:classroom.grade,schoolYear:classroom.schoolYear}:null,assignments,stats:{assigned:assignments.length,completed,average:completed?Number((sum/completed).toFixed(1)):null,submitted,inProgress,pendingReview,finalized,scheduled,available,closedUnsubmitted,averageFinalized:finalCount?Number((finalSum/finalCount).toFixed(1)):null},strength,recognition,phase:"2.0C"}};
  }catch(e){obs?.logError("student.dashboard.error",e);return {status:500,jsonBody:{ok:false,error:"تعذر تحميل لوحة الطالب حاليًا."}}}
 }

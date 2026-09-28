@@ -19,14 +19,34 @@
 // document behind it.
 //
 // `ready` exists because assignments created before this index existed are not in it: a missing index, a malformed one
-// or ready:false means "not bootstrapped yet" — never "no published assignments". The first read of such a class runs
-// the legacy global scan ONCE (one scan per request, whatever the number of classes), serves that result and CAS-merges
-// the discovered ids into the index with ready:true. A strict add to a not-yet-bootstrapped class creates / keeps
-// ready:false, which claims nothing about the legacy set.
+// or ready:false means "not reconciled yet" — never "no published assignments". A strict add to a not-yet-reconciled
+// class creates / keeps ready:false, which claims nothing about the legacy set.
+//
+// MIXED-VERSION AUTHORITY (review blocker). A pre-12E-B writer that is still alive publishes WITHOUT touching the index,
+// and nothing in storage lets a reader tell "that writer has finished" from "it is still running": its only trace is
+// the assignment blob, which a reader cannot see without the global scan. So an index is trusted ONLY through an
+// explicit storage-level authority contract:
+//
+//   platform/assignment-index/control.json = { schemaVersion: 1, state: "authoritative" | "migrating", epoch, updatedAt }
+//
+//   • MIGRATING (the default: control missing / malformed / unreadable / state !== "authoritative"): every reader uses
+//     the legacy global scan — exactly the pre-12E-B read path, correct whatever code writes. No index is read or
+//     written by readers. Writers still maintain pointers strictly (ensure before publish).
+//   • AUTHORITATIVE: set by an explicit activation (assignment-index-control) once no pre-index writer can run any more.
+//     Every activation mints a FRESH random epoch. A class index is trusted only if ready === true AND its epoch equals
+//     the control epoch. The epoch is stamped only by a reconcile that read the authoritative control (that epoch)
+//     BEFORE starting its global scan, so the scan began after activation and saw every legacy publish (all of them
+//     committed before activation). A reconcile CAS-UNIONs the scan into the current ids, so a pointer that a new
+//     writer ensured concurrently is never dropped. Indexes built before activation (any epoch, or none — e.g. by an
+//     earlier build of this phase) are never trusted: the first request after activation reconciles them once.
+//   • Deactivation (back to migrating) is always safe; re-activation mints a new epoch, so every index is reconciled
+//     again before it is trusted.
 const { downloadJsonOrNull, listJson, mutateJsonWithRetry, mapConcurrent, getReadConcurrency } = require("./platform-storage");
 const { normalizeAssignmentStatus } = require("./assignment-lifecycle");
+const { randomUUID } = require("node:crypto");
 
 const INDEX_PREFIX = "platform/assignment-index/classes/";
+const CONTROL_NAME = "platform/assignment-index/control.json";
 const ASSIGNMENT_PREFIX = "platform/assignments/";
 const SCHEMA_VERSION = 1;
 
@@ -49,15 +69,44 @@ function normalizeIds(list) {
  * only a well-formed document of THIS class with ready === true counts as bootstrapped.
  */
 function normalizeIndex(doc, classId) {
-  if (!doc || typeof doc !== "object" || Array.isArray(doc)) return { classId, ready: false, publishedAssignmentIds: [], valid: false };
+  if (!doc || typeof doc !== "object" || Array.isArray(doc)) return { classId, ready: false, epoch: "", publishedAssignmentIds: [], valid: false };
   const idsOk = Array.isArray(doc.publishedAssignmentIds);
   const valid = idsOk && String(doc.classId || "") === classId && Number(doc.schemaVersion) === SCHEMA_VERSION;
-  return { classId, ready: valid && doc.ready === true, publishedAssignmentIds: normalizeIds(doc.publishedAssignmentIds), valid };
+  const epoch = valid && isSafeId(doc.epoch) ? doc.epoch : "";
+  return { classId, ready: valid && doc.ready === true, epoch, publishedAssignmentIds: normalizeIds(doc.publishedAssignmentIds), valid };
 }
-function indexDoc(classId, ready, ids, now) {
-  return { schemaVersion: SCHEMA_VERSION, classId, ready: ready === true, publishedAssignmentIds: normalizeIds(ids), updatedAt: now || new Date().toISOString() };
+function indexDoc(classId, ready, ids, now, epoch) {
+  return { schemaVersion: SCHEMA_VERSION, classId, ready: ready === true, epoch: isSafeId(epoch) ? epoch : "", publishedAssignmentIds: normalizeIds(ids), updatedAt: now || new Date().toISOString() };
 }
 const nowIso = deps => (deps.nowIso ? deps.nowIso() : new Date().toISOString());
+const newEpoch = deps => (deps.newEpoch ? deps.newEpoch() : randomUUID());
+
+/** Authority view of the control document: anything but a well-formed "authoritative" doc means MIGRATING. */
+function normalizeControl(doc) {
+  const ok = !!doc && typeof doc === "object" && !Array.isArray(doc) && Number(doc.schemaVersion) === SCHEMA_VERSION && doc.state === "authoritative" && isSafeId(doc.epoch);
+  return ok ? { authoritative: true, epoch: doc.epoch } : { authoritative: false, epoch: "" };
+}
+/** Read the authority state. Missing, malformed or unreadable → migrating (fail-safe: readers scan). */
+async function readIndexControl(container, deps = {}) {
+  const dl = deps.downloadJsonOrNull || downloadJsonOrNull;
+  try { return normalizeControl(await dl(container, CONTROL_NAME)); } catch { return { authoritative: false, epoch: "" }; }
+}
+/**
+ * Explicit activation — to be issued only once no pre-index writer can run against this storage any more. Mints a
+ * FRESH epoch every time (so every class index is reconciled again before it is trusted). ETag CAS; throws
+ * StorageConflictError on exhaustion (the control is then unchanged).
+ */
+async function activateAssignmentIndex(container, deps = {}) {
+  const mut = deps.mutateJsonWithRetry || mutateJsonWithRetry;
+  const next = await mut(container, CONTROL_NAME, () => ({ schemaVersion: SCHEMA_VERSION, state: "authoritative", epoch: newEpoch(deps), updatedAt: nowIso(deps) }));
+  return normalizeControl(next);
+}
+/** Back to MIGRATING (always safe: readers scan again). */
+async function deactivateAssignmentIndex(container, deps = {}) {
+  const mut = deps.mutateJsonWithRetry || mutateJsonWithRetry;
+  const next = await mut(container, CONTROL_NAME, () => ({ schemaVersion: SCHEMA_VERSION, state: "migrating", epoch: "", updatedAt: nowIso(deps) }));
+  return normalizeControl(next);
+}
 
 /** Direct read of one class index (normalized), or null when it does not exist. */
 async function readClassIndex(container, classId, deps = {}) {
@@ -79,7 +128,7 @@ async function ensurePublishedAssignmentIndexed(container, classId, assignmentId
   const mut = deps.mutateJsonWithRetry || mutateJsonWithRetry;
   await mut(container, indexName(classId), current => {
     const cur = normalizeIndex(current, classId);
-    return indexDoc(classId, cur.ready, [...cur.publishedAssignmentIds, assignmentId], nowIso(deps));
+    return indexDoc(classId, cur.ready, [...cur.publishedAssignmentIds, assignmentId], nowIso(deps), cur.epoch);
   });
 }
 
@@ -97,7 +146,7 @@ async function removePublishedAssignmentFromIndex(container, classId, assignment
       if (current === null || current === undefined) throw NOOP;
       const cur = normalizeIndex(current, classId);
       if (!cur.publishedAssignmentIds.includes(assignmentId)) throw NOOP;
-      return indexDoc(classId, cur.ready, cur.publishedAssignmentIds.filter(id => id !== assignmentId), nowIso(deps));
+      return indexDoc(classId, cur.ready, cur.publishedAssignmentIds.filter(id => id !== assignmentId), nowIso(deps), cur.epoch);
     });
     return { removed: true, failed: false };
   } catch (e) {
@@ -107,12 +156,16 @@ async function removePublishedAssignmentFromIndex(container, classId, assignment
   }
 }
 
-/** Bootstrap merge: current ids ∪ discovered ids, ready:true. Only ever adds (a concurrent strict add is never lost). */
-async function bootstrapClassIndex(container, classId, discoveredIds, deps = {}) {
+/**
+ * Reconcile merge: current ids ∪ discovered ids, ready:true, stamped with `epoch` — the AUTHORITATIVE control epoch the
+ * caller read BEFORE the scan that produced `discoveredIds`. Only ever adds (a concurrent strict add is never lost).
+ */
+async function bootstrapClassIndex(container, classId, discoveredIds, epoch, deps = {}) {
+  if (!isSafeId(epoch)) throw new Error("A reconcile needs the authoritative epoch read before its scan.");
   const mut = deps.mutateJsonWithRetry || mutateJsonWithRetry;
   await mut(container, indexName(classId), current => {
     const cur = normalizeIndex(current, classId);
-    return indexDoc(classId, true, [...cur.publishedAssignmentIds, ...discoveredIds], nowIso(deps));
+    return indexDoc(classId, true, [...cur.publishedAssignmentIds, ...discoveredIds], nowIso(deps), epoch);
   });
 }
 
@@ -120,13 +173,18 @@ const isPublishedIn = (doc, classId) => !!doc && typeof doc === "object" && !Arr
 
 /**
  * The currently-published assignments of each requested class, re-validated from the assignment documents.
- * Steady state (ready indexes): one index read per class + one download per pointer — NO global listing.
- * Classes whose index is missing / malformed / not ready share AT MOST ONE legacy `listJson(platform/assignments/)` for
- * the whole call; their result comes from that scan and their index is CAS-merged (best-effort: a failed bootstrap is
- * logged and simply retried by the next request).
  *
- * Returns { byClass: Map<classId, doc[]>, stats: { indexReads, globalScans, bootstrapped, bootstrapFailures,
- * assignmentDocsLoaded } }. Every list is in blob-name order (the legacy listing order).
+ * MIGRATING (no authoritative control): ONE legacy `listJson(platform/assignments/)` serves every class — the
+ * pre-12E-B read path, correct whatever code version publishes. No index is read or written.
+ *
+ * AUTHORITATIVE (control epoch E):
+ *   • trusted classes (index ready AND epoch === E): one index read per class + one download per pointer — NO listing;
+ *   • every other class (missing / malformed / not ready / older epoch) shares AT MOST ONE legacy scan for the whole
+ *     call; its result comes from that scan and its index is reconciled (CAS union, ready, epoch E — E was read BEFORE
+ *     the scan). A failed reconcile is logged and retried by the next request.
+ *
+ * Returns { byClass: Map<classId, doc[]>, stats: { authoritative, indexReads, globalScans, bootstrapped,
+ * bootstrapFailures, assignmentDocsLoaded } }. Every list is in blob-name order (the legacy listing order).
  */
 async function loadPublishedAssignmentsForClasses(container, classIds, deps = {}, obs = null) {
   const dl = deps.downloadJsonOrNull || downloadJsonOrNull;
@@ -134,45 +192,58 @@ async function loadPublishedAssignmentsForClasses(container, classIds, deps = {}
   const mc = deps.mapConcurrent || mapConcurrent;
   const limit = (deps.getReadConcurrency || getReadConcurrency)();
   const requested = [...new Set((Array.isArray(classIds) ? classIds : []).map(v => String(v || "")).filter(Boolean))];
-  const ids = requested.filter(isSafeId), scanOnly = requested.filter(id => !isSafeId(id));   // unsafe ids: never indexed
-  const stats = { indexReads: 0, globalScans: 0, bootstrapped: 0, bootstrapFailures: 0, assignmentDocsLoaded: 0 };
+  const stats = { authoritative: 0, indexReads: 0, globalScans: 0, bootstrapped: 0, bootstrapFailures: 0, assignmentDocsLoaded: 0 };
   const byClass = new Map(requested.map(id => [id, []]));
+  const sorted = () => { for (const [classId, list] of byClass) byClass.set(classId, list.slice().sort((a, b) => byBlobName(String(a.assignmentId), String(b.assignmentId)))); return { byClass, stats }; };
   if (!requested.length) return { byClass, stats };
+  const legacyFilter = (all, classId) => all.filter(d => d && typeof d === "object" && !Array.isArray(d) && normalizeAssignmentStatus(d) === "published" && String(d.classId || "") === classId);
 
-  // An unreadable index (e.g. a corrupt document) is treated like a missing one: served from the scan, never trusted.
+  // 1. Authority FIRST: its epoch must be known before any scan this call may run (see the header).
+  const control = await readIndexControl(container, { ...deps, downloadJsonOrNull: dl });
+  if (!control.authoritative) {
+    const all = await ls(container, ASSIGNMENT_PREFIX);
+    stats.globalScans = 1;
+    stats.assignmentDocsLoaded = all.length;
+    for (const classId of requested) byClass.set(classId, legacyFilter(all, classId));
+    return sorted();
+  }
+  stats.authoritative = 1;
+  const ids = requested.filter(isSafeId), scanOnly = requested.filter(id => !isSafeId(id));   // unsafe ids: never indexed
+
+  // 2. An unreadable index (e.g. a corrupt document) is treated like a missing one: served from the scan, never trusted.
   const indexes = await mc(ids, limit, id => readClassIndex(container, id, { ...deps, downloadJsonOrNull: dl }).catch(() => null));
   stats.indexReads = ids.length;
-  const ready = [], cold = [];
-  ids.forEach((id, i) => (indexes[i] && indexes[i].ready ? ready : cold).push({ classId: id, index: indexes[i] }));
+  const trusted = [], cold = [];
+  ids.forEach((id, i) => (indexes[i] && indexes[i].ready && indexes[i].epoch === control.epoch ? trusted : cold).push({ classId: id, index: indexes[i] }));
 
-  // Ready classes: download only the named pointers and re-validate every document.
+  // 3. Trusted classes: download only the named pointers and re-validate every document.
   const pointers = [];
-  for (const r of ready) for (const aid of r.index.publishedAssignmentIds) pointers.push({ classId: r.classId, assignmentId: aid });
+  for (const r of trusted) for (const aid of r.index.publishedAssignmentIds) pointers.push({ classId: r.classId, assignmentId: aid });
   const docs = await mc(pointers, limit, p => dl(container, ASSIGNMENT_PREFIX + p.assignmentId + ".json"));
   stats.assignmentDocsLoaded += pointers.length;
   pointers.forEach((p, i) => { const d = docs[i]; if (isPublishedIn(d, p.classId) && String(d.assignmentId) === p.assignmentId) byClass.get(p.classId).push(d); });
 
-  // Cold classes: ONE legacy scan for all of them, then a best-effort CAS-merge bootstrap per class.
+  // 4. Everything else: ONE legacy scan (started after the authoritative control was read), then a best-effort
+  //    reconcile per class stamped with THAT epoch.
   if (cold.length || scanOnly.length) {
     const all = await ls(container, ASSIGNMENT_PREFIX);
     stats.globalScans = 1;
     stats.assignmentDocsLoaded += all.length;
-    for (const classId of scanOnly) byClass.set(classId, all.filter(d => d && typeof d === "object" && normalizeAssignmentStatus(d) === "published" && String(d.classId || "") === classId));
+    for (const classId of scanOnly) byClass.set(classId, legacyFilter(all, classId));
     for (const { classId } of cold) {
       const found = all.filter(d => isPublishedIn(d, classId));
       byClass.set(classId, found);
-      try { await bootstrapClassIndex(container, classId, found.map(d => String(d.assignmentId)), deps); stats.bootstrapped += 1; }
+      try { await bootstrapClassIndex(container, classId, found.map(d => String(d.assignmentId)), control.epoch, deps); stats.bootstrapped += 1; }
       catch {
         stats.bootstrapFailures += 1;
         try { obs?.logWarn("assignment.index.bootstrap_failed", { retryable: true }); } catch { /* inert */ }
       }
     }
   }
-  for (const [classId, list] of byClass) byClass.set(classId, list.slice().sort((a, b) => byBlobName(String(a.assignmentId), String(b.assignmentId))));
-  return { byClass, stats };
+  return sorted();
 }
 
 module.exports = {
-  INDEX_PREFIX, SCHEMA_VERSION, isSafeId, indexName, normalizeIds, normalizeIndex,
-  readClassIndex, ensurePublishedAssignmentIndexed, removePublishedAssignmentFromIndex, bootstrapClassIndex, loadPublishedAssignmentsForClasses
+  INDEX_PREFIX, CONTROL_NAME, SCHEMA_VERSION, isSafeId, indexName, normalizeIds, normalizeIndex, normalizeControl,
+  readIndexControl, activateAssignmentIndex, deactivateAssignmentIndex, readClassIndex, ensurePublishedAssignmentIndexed, removePublishedAssignmentFromIndex, bootstrapClassIndex, loadPublishedAssignmentsForClasses
 };
