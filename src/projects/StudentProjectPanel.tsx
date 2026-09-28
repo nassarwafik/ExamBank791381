@@ -12,6 +12,7 @@ import { IconChevronBack } from "../icons";
 import type { ProjectStage, ProjectGroup, ProjectPerformance, ProjectEvaluation, StageProgressEntry, StudentCard, TrackMeta } from "./types";
 import type { ProjectStrength } from "../student/types";
 import { visualImgProps } from "../studentVisualSizes";
+import type { StudentProjectDrill, StudentProjectDrillOutcome } from "./studentProjectDrill";
 
 type StudentProject = {
   projectCode: string;
@@ -128,23 +129,45 @@ function OneProject({ project, contribution, onBack }: { project: StudentProject
 // project rank) → one project's detail (hero + circle + stages) → back. OPTIONAL secondary panel: ONE read; on
 // any failure (or when the class runs no project) it renders nothing and NEVER logs the student out. Every
 // project's metrics come from the same single response, so switching never shows a previous project's values.
-export default function StudentProjectPanel({ token, contributions = [], onEvaluationChange }: { token: string; contributions?: ProjectStrength[]; onEvaluationChange?: (briefs: ProjectEvaluationBrief[]) => void }) {
-  const [data, setData] = useState<ProjectData | null>(null);
+// Phase 12D — an optional one-shot `drill` («تابع المشروع» from the Today Hub) opens that EXACT project, but only
+// against THIS panel's own response for the CURRENT token (never Today's data, never a second read): applied once per
+// `seq`, reported through `onDrillConsumed`, and from then on the cards / back button belong to the student again.
+type LoadResult = { token: string; status: "ready" | "failed"; data: ProjectData | null };
+export default function StudentProjectPanel({ token, contributions = [], onEvaluationChange, drill = null, onDrillConsumed }: { token: string; contributions?: ProjectStrength[]; onEvaluationChange?: (briefs: ProjectEvaluationBrief[]) => void; drill?: StudentProjectDrill | null; onDrillConsumed?: (seq: number, outcome: StudentProjectDrillOutcome) => void }) {
+  const [load, setLoad] = useState<LoadResult | null>(null);
   const [openCode, setOpenCode] = useState<string>("");
+  const [consumed, setConsumed] = useState<{ seq: number; outcome: StudentProjectDrillOutcome } | null>(null);
 
   useEffect(() => {
     let cancelled = false;
     (async () => {
       try {
         const r = await fetch("/api/student-project-tracker", { headers: { "x-student-token": token, Authorization: "Bearer " + token } });
-        if (!r.ok) return;
+        if (!r.ok) { if (!cancelled) setLoad({ token, status: "failed", data: null }); return; }
         const j = await r.json();
-        if (j && j.ok && !cancelled) { setData(j); onEvaluationChange?.(evaluationBriefs((j as ProjectData).projects)); }
-      } catch { /* ignore — panel just won't show */ }
+        if (cancelled) return;
+        if (j && j.ok) { setLoad({ token, status: "ready", data: j }); onEvaluationChange?.(evaluationBriefs((j as ProjectData).projects)); }
+        else setLoad({ token, status: "failed", data: null });
+      } catch { if (!cancelled) setLoad({ token, status: "failed", data: null }); /* panel just won't show */ }
     })();
     return () => { cancelled = true; };
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [token]);
+
+  // Only a result read for the CURRENT token is authoritative (a previous session's list never answers a drill).
+  const current = load && load.token === token ? load : null;
+  const data = current && current.status === "ready" ? current.data : null;
+
+  // Apply the newest drill ONCE, and only when this panel's own result is in: resolved while rendering, so the very
+  // first render with the list already shows the exact project (no flash of the cards or of another project).
+  if (drill && current && drill.seq > (consumed ? consumed.seq : 0)) {
+    const list = data && data.enrolled && data.projects ? data.projects : [];
+    const hit = list.some(p => p.projectCode === drill.projectCode);
+    setOpenCode(hit ? drill.projectCode : "");                                    // a missing code opens nothing else
+    setConsumed({ seq: drill.seq, outcome: hit ? "opened" : current.status === "failed" ? "failed" : "unavailable" });
+  }
+  // Report after commit (the opened detail is in the DOM when the portal scrolls to it).
+  useEffect(() => { if (consumed) onDrillConsumed?.(consumed.seq, consumed.outcome); }, [consumed]);   // eslint-disable-line react-hooks/exhaustive-deps
 
   if (!data || !data.enrolled || !data.projects || !data.projects.length) return null;
   const projects = data.projects;

@@ -3,6 +3,8 @@ import { useAutoRefresh } from "./ui/useAutoRefresh";
 import StudentExamPage from "./StudentExamPage";
 import StudentShell from "./shell/StudentShell";
 import StudentMobileNav from "./shell/StudentMobileNav";
+import { scrollToStudentSection } from "./shell/studentQuickNav";
+import type { StudentProjectDrill, StudentProjectDrillOutcome } from "./projects/studentProjectDrill";
 import StudentProjectPanel from "./projects/StudentProjectPanel";
 import type { ProjectEvaluationBrief } from "./projects/projectEvaluation";
 import type { FeedPost, ReactionId } from "./achievements";
@@ -60,6 +62,11 @@ export default function StudentPortal({ token, displayName, onLogout }: Props) {
   const [courses, setCourses] = useState<StudentLearningCourse[] | null>(null);
   // Phase 9B — the projects' evaluation brief for the Today Hub chip (from the project panel's own single read).
   const [projectEvaluation, setProjectEvaluation] = useState<ProjectEvaluationBrief[] | null>(null);
+  // Phase 12D — the one-shot «open this exact project» intent for the project panel (identifiers only; the panel owns
+  // the project data). Every request takes a new sequence number, so the newest wins and the same project can be asked
+  // for again; it is cleared once the panel reports it, on a new session and whenever the main view is left.
+  const [projectDrill, setProjectDrill] = useState<StudentProjectDrill | null>(null);
+  const projectDrillSeq = useRef(0);
   // The dedicated Educational Games destination (a full-view swap, like the Reader/exam) — opened from the shell.
   const [gamesOpen, setGamesOpen] = useState(false);
   // Phase 5C — the dedicated «الرسائل» destination (same full-view swap); it owns its own small polling lifecycle.
@@ -230,7 +237,21 @@ export default function StudentPortal({ token, displayName, onLogout }: Props) {
     setNotice("");
     if (item.assignmentId) { routeAssignment(item.assignmentId); return; }              // live attempt / assignment → the exam page
     if ((item.type === "reader" || item.type === "study") && item.courseId && item.moduleId) { void routeMaterial(item.courseId, item.moduleId, item.pageId); return; }
-    if (item.type === "project") scrollToSection("eb-sp-projects-title");
+    if (item.type === "project") {
+      if (item.projectCode) routeProject(item.projectCode);                             // Phase 12D: the exact project
+      else scrollToSection("eb-sp-projects-title");                                     // no code: the section, as before
+    }
+  }
+  /** Phase 12D — ask the (already mounted) project panel to open `projectCode` from its OWN response. No read here. */
+  function routeProject(projectCode: string) {
+    setProjectDrill({ seq: ++projectDrillSeq.current, projectCode });
+  }
+  /** The panel resolved drill `seq`. Only the newest request acts (an older report is ignored). */
+  function projectDrillConsumed(seq: number, outcome: StudentProjectDrillOutcome) {
+    if (seq !== projectDrillSeq.current) return;
+    setProjectDrill(prev => (prev && prev.seq === seq ? null : prev));
+    if (outcome !== "opened") setNotice(outcome === "failed" ? "تعذر فتح المشروع حاليًا. حاول مرة أخرى لاحقًا." : "هذا المشروع لم يعد متاحًا.");
+    scrollToStudentSection("eb-sp-projects-title", reducedMotion);                      // the opened detail / the list (no-op if absent)
   }
   function scrollToSection(id: string) {
     window.setTimeout(() => { const el = document.getElementById(id); el?.scrollIntoView?.({ block: "start", behavior: reducedMotion ? "auto" : "smooth" }); el?.focus?.(); }, 0);
@@ -264,6 +285,7 @@ export default function StudentPortal({ token, displayName, onLogout }: Props) {
     setNotice("");
     setNotif({ items: null, loading: false, error: "" });
     setCourses(null); setReaderInitialPageId(undefined);                                  // Phase 9A: no hub state crosses sessions
+    setProjectDrill(null);                                                                // Phase 12D: no drill crosses sessions
     void load(); void loadFeed(); void loadMessagesUnread();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [token]);
@@ -334,6 +356,9 @@ export default function StudentPortal({ token, displayName, onLogout }: Props) {
   }
 
   // Full-screen Reader over the portal (same swap pattern as the exam page); back returns to the portal.
+  // Phase 12D — leaving the main view (Reader / exam / Messages / Games) drops any unconsumed project drill: it never
+  // replays when the student comes back (the panel remounts with a fresh read).
+  if (projectDrill && ((readerCourse && data) || (detail && data) || messagesOpen || gamesOpen)) setProjectDrill(null);
   if (readerCourse && data) {
     return (
       <Suspense fallback={<p className="eb-muted eb-sp-status" role="status">جارٍ فتح المادة التعليمية...</p>}>
@@ -428,7 +453,7 @@ export default function StudentPortal({ token, displayName, onLogout }: Props) {
                 {!!data.assignments.length && !visible.length && <EmptyState compact title="لا توجد مهام في هذا التصنيف" description="جرّب تصنيفًا آخر." />}
               </div>
             </section>
-            <StudentProjectPanel token={token} contributions={strength?.projects ?? []} onEvaluationChange={setProjectEvaluation} />
+            <StudentProjectPanel token={token} contributions={strength?.projects ?? []} onEvaluationChange={setProjectEvaluation} drill={projectDrill} onDrillConsumed={projectDrillConsumed} />
             <AchievementFeed highlightPostId={highlightPostId} posts={feed} error={feedError} shareOn={data.student.shareAchievements !== false} shareSaving={shareSaving} now={now} onToggleShare={toggleShareAchievements} onReact={(postId, reaction) => void react(postId, reaction)} />
           </>
         )}
