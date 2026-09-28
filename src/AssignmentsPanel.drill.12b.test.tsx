@@ -160,6 +160,54 @@ describe("12B AssignmentsPanel — a drill opens the exact assignment in the use
     expect(pressedChip()).toEqual(["بانتظار التصحيح"]);                             // a1's «لم يسلّم» never applied
     expect(screen.queryByRole("alert")).toBeNull();
   });
+  // Review fix — a NEWER target that turns out to be unavailable must still supersede every older results intent: the
+  // older in-flight read is discarded, nothing stays busy, no detail / gradebook / focus survives, no fallback is chosen.
+  const openButtons = () => screen.getAllByRole("button", { name: "فتح" }) as HTMLButtonElement[];
+  const unavailable = /تعذر فتح الواجب المطلوب لأنه لم يعد متاحًا/;
+  async function newerUnavailableBeatsOlderInFlight(newer: string) {
+    resultGates.set("a1", defer(() => ({ ok: true, stats: STATS, students: roster })));
+    const view = mount(drill(1, { assignmentId: "a1", mode: "active", studentId: "s4" }));
+    await waitFor(() => expect(resultsReads("a1")).toBe(1));                     // a1's read started…
+    await waitFor(() => expect(openButtons().every(b => b.disabled)).toBe(true)); // …and the workspace is busy with it
+    view.rerenderDrill(drill(2, { assignmentId: newer, mode: "pendingReview" }));
+    expect(await screen.findByText(unavailable)).toBeTruthy();
+    expect(detailTitle()).toBeNull();
+    expect(document.querySelector(".eb-assign-row.selected")).toBeNull();
+    await waitFor(() => expect(openButtons().every(b => !b.disabled)).toBe(true)); // busy is NOT stuck
+    // the OLD a1 response lands last
+    await act(async () => { resultGates.get("a1")!.resolve(); });
+    await act(async () => { await Promise.resolve(); await Promise.resolve(); });
+    expect(detailTitle()).toBeNull();                                              // a1 never reappears
+    expect(document.querySelector(".eb-assign-row.selected")).toBeNull();
+    expect(document.querySelector(".gradebook-chip")).toBeNull();                  // no stale filter…
+    expect(document.querySelector("tr[aria-current]")).toBeNull();                 // …and no stale focus
+    expect(screen.getByText(unavailable)).toBeTruthy();                            // the calm note stays
+    expect(screen.queryByRole("alert")).toBeNull();
+    expect(openButtons().every(b => !b.disabled)).toBe(true);
+    expect(resultsReads()).toBe(1);                                                // the unavailable target made no request
+    expect(view.onDrillConsumed.mock.calls).toEqual([[1], [2]]);
+  }
+  it("A a NEWER missing target beats an OLDER in-flight valid target (no resurrection, not busy, no stale view)", async () => {
+    await newerUnavailableBeatsOlderInFlight("gone");
+  });
+  it("B a NEWER archived target beats an OLDER in-flight valid target", async () => {
+    await newerUnavailableBeatsOlderInFlight("a3");
+  });
+  it("C an OPEN detail is cleared by a newer missing target — no fallback selection, no new request", async () => {
+    const view = mount(drill(1, { assignmentId: "a1", mode: "active", studentId: "s4" }));
+    await waitFor(() => expect(document.querySelector("tr[aria-current='true']")).toBeTruthy());
+    expect(detailTitle()).toBe("واجب الحادي عشر");
+    const readsBefore = resultsReads();
+    view.rerenderDrill(drill(2, { assignmentId: "gone", mode: "pendingReview" }));
+    expect(await screen.findByText(unavailable)).toBeTruthy();
+    await waitFor(() => expect(detailTitle()).toBeNull());
+    expect(document.querySelector(".eb-assign-row.selected")).toBeNull();
+    expect(document.querySelector(".eb-gradebook")).toBeNull();
+    expect(document.querySelector("tr[aria-current]")).toBeNull();
+    expect(openButtons().every(b => !b.disabled)).toBe(true);
+    expect(resultsReads()).toBe(readsBefore);
+    expect(screen.getByText("واجب الحادي عشر", { selector: "strong" })).toBeTruthy(); // the workspace list stays
+  });
   it("19 after consumption the teacher owns the controls: a manual filter change survives re-renders, a list refresh and the same drill again", async () => {
     const view = mount(drill(1, { assignmentId: "a1", mode: "pendingReview" }));
     await waitFor(() => expect(pressedChip()).toEqual(["بانتظار التصحيح"]));

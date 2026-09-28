@@ -70,6 +70,9 @@ export default function AssignmentsPanel({token,classes,currentExam,onCopyLibrar
  // intent always wins. drillFocus: the student row a drill asked for, shown only while its assignment is open.
  const [listReady,setListReady]=useState(false);
  const appliedDrillSeq=useRef(0),resultsSeq=useRef(0);
+ // resultsBusy: the workspace's `busy` is currently held by a results read (so superseding that read may release it —
+ // never a busy state owned by an unrelated mutation).
+ const resultsBusy=useRef(false);
  const [drillFocus,setDrillFocus]=useState<{assignmentId:string;studentId:string}|null>(null);
  const {confirm,cancelPending,confirmDialog}=useConfirm();
  // Roadmap #34: a class is offered as an assignment target only through the canonical lifecycle helper (status
@@ -222,6 +225,7 @@ export default function AssignmentsPanel({token,classes,currentExam,onCopyLibrar
   if(trigger!==undefined){detailOpenerRef.current=trigger;focusDetailPending.current=true;setMode("list")}
   if(trigger!==undefined&&!drillTarget)setDrillFocus(null);                        // a manual open: the teacher leaves the drill focus
   const seq=++resultsSeq.current;
+  resultsBusy.current=true;
   setBusy(true);setDeadlineFor(null);setReopenFor(null);setExtendFor(null);setAnalysis(null);
   try{
    const r=await api<{students:StudentResult[];stats:Stats}>("/api/assignment-results?assignmentId="+encodeURIComponent(item.assignmentId));
@@ -230,7 +234,15 @@ export default function AssignmentsPanel({token,classes,currentExam,onCopyLibrar
    const students=r.students||[];
    setResultsFor(item);setResults(students);setStats(r.stats||null);
    if(drillTarget)applyDrillView(drillTarget,item,students);
-  }catch(e){if(seq===resultsSeq.current)setError(e instanceof Error?e.message:"تعذر تحميل النتائج.")}finally{if(seq===resultsSeq.current)setBusy(false)}
+  }catch(e){if(seq===resultsSeq.current)setError(e instanceof Error?e.message:"تعذر تحميل النتائج.")}finally{if(seq===resultsSeq.current){resultsBusy.current=false;setBusy(false)}}
+ }
+ // Review fix — the ONE place that retires the current results intent without starting a new read: every older in-flight
+ // read becomes stale (its response and its finally are ignored), and the busy state that read held is released here,
+ // because that read's own finally no longer will. Used when a newer drill turns out to be unavailable.
+ function supersedeResultsIntent(){
+  resultsSeq.current+=1;
+  focusDetailPending.current=false;
+  if(resultsBusy.current){resultsBusy.current=false;setBusy(false)}
  }
  // Phase 12B — the drill's gradebook view, decided from the authoritative rows just read (never from the Today summary):
  // the EXISTING filter the intent maps to; a requested student is focused only if present in these rows, and when that
@@ -252,7 +264,14 @@ export default function AssignmentsPanel({token,classes,currentExam,onCopyLibrar
  // read as «فتح». An assignment that no longer exists (or was archived) is never replaced by another: calm note only.
  function applyDrill(d:AssignmentDrill,list:Item[]){
   const item=list.find(x=>x.assignmentId===d.assignmentId);
-  if(!item||item.status==="archived"){setNotice("تعذر فتح الواجب المطلوب لأنه لم يعد متاحًا (ربما أُرشف أو حُذف). تُعرض قائمة الواجبات.");return}
+  if(!item||item.status==="archived"){
+   // A newer intent that cannot be honoured still wins over every older one: retire any in-flight read, drop the open
+   // detail (results, stats, gradebook controls, drill focus), keep the list, select nothing, request nothing.
+   supersedeResultsIntent();
+   clearDetail({restoreFocus:false});
+   setError("");setNotice("تعذر فتح الواجب المطلوب لأنه لم يعد متاحًا (ربما أُرشف أو حُذف). تُعرض قائمة الواجبات.");
+   return;
+  }
   const scope:MasterScope={classId:item.classId,showArchived:false,q:""};
   scopeRef.current=scope;setFilterClassId(item.classId);setShowArchived(false);setSearch("");
   setError("");setNotice("");
