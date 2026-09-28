@@ -7,18 +7,22 @@ import { lazyWithRetry } from "./lazyWithRetry";
 // lazyWithRetry keeps the one-shot stale-chunk deployment recovery. Guarded by scripts/check-bundle-budget.mjs.
 const StudentPortal = lazy(lazyWithRetry(() => import("./StudentPortal"), "student-portal"));
 // Heavy, chart-bearing modules are code-split so they load only when opened (keeps the main bundle down).
-const ProjectTracker = lazy(() => import("./projects/ProjectTracker"));
-const ProjectHub = lazy(() => import("./projects/ProjectHub"));
-const ReportsCenter = lazy(() => import("./reports/ReportsCenter"));
-const ExamBankPage = lazy(() => import("./bank/ExamBankPage"));
+// Phase 11D — every teacher/builder destination below uses the same one-shot stale-chunk deployment recovery as the
+// Student Portal / Teacher Platform: a tab opened before a deploy that asks for an old chunk reloads ONCE (keyed by the
+// stable literal key; never user data), otherwise the error reaches the ErrorBoundary. Pinned by
+// src/deploymentRecovery.inventory.11d.test.ts.
+const ProjectTracker = lazy(lazyWithRetry(() => import("./projects/ProjectTracker"), "teacher-project-tracker"));
+const ProjectHub = lazy(lazyWithRetry(() => import("./projects/ProjectHub"), "teacher-project-hub"));
+const ReportsCenter = lazy(lazyWithRetry(() => import("./reports/ReportsCenter"), "teacher-reports"));
+const ExamBankPage = lazy(lazyWithRetry(() => import("./bank/ExamBankPage"), "teacher-exam-bank"));
 // Learning Materials (المواد التعليمية) — Phase 1 foundation; code-split so it only loads when opened.
-const LearningMaterialsPage = lazy(() => import("./learning/LearningMaterialsPage"));
-const TeacherGamesPage = lazy(() => import("./games/TeacherGamesPage"));
+const LearningMaterialsPage = lazy(lazyWithRetry(() => import("./learning/LearningMaterialsPage"), "teacher-learning-materials"));
+const TeacherGamesPage = lazy(lazyWithRetry(() => import("./games/TeacherGamesPage"), "teacher-games"));
 // Phase 5C — teacher messaging (direct conversations + class announcements), code-split like the other destinations.
-const TeacherMessagesPage = lazy(() => import("./messages/TeacherMessagesPage"));
+const TeacherMessagesPage = lazy(lazyWithRetry(() => import("./messages/TeacherMessagesPage"), "teacher-messages"));
 // Structured Exam Builder (Phase 2) — code-split so it only loads when a teacher opens it.
-const StructuredExamBuilder = lazy(() => import("./StructuredExamBuilder"));
-const SmartStructuredExamImportWizard = lazy(() => import("./SmartStructuredExamImportWizard"));
+const StructuredExamBuilder = lazy(lazyWithRetry(() => import("./StructuredExamBuilder"), "structured-exam-builder"));
+const SmartStructuredExamImportWizard = lazy(lazyWithRetry(() => import("./SmartStructuredExamImportWizard"), "smart-structured-import"));
 import { withTrackingCode } from "./lib/requestTrace";
 import { isStructuredExam } from "./examTypes";
 import type { StructuredExam, BuilderImageAsset } from "./examTypes";

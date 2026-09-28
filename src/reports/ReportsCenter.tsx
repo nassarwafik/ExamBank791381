@@ -1,4 +1,5 @@
 import { Suspense, lazy, useEffect, useMemo, useRef, useState } from "react";
+import { lazyWithRetry } from "../lazyWithRetry";
 import { reportGet } from "./api";
 import { LoadingState, ErrorState } from "./ui";
 import type { ReportType, Filters } from "./ReportViews";
@@ -12,7 +13,7 @@ import { REPORT_CARDS, CATEGORIES, GROUPS, PERIODS, TIME_AWARE, type Category, t
 import "../reports-pro.css";
 
 // The report views (with Chart.js) are code-split so the charts only load when a report is opened.
-const ReportView = lazy(() => import("./ReportViews"));
+const ReportView = lazy(lazyWithRetry(() => import("./ReportViews"), "teacher-report-views"));   // Phase 11D — one-shot deploy recovery
 
 type ClassOpt = { classId: string; name: string; schoolYear: string; status: string; programCodes: string[] };
 type ProjectOpt = { projectCode: string; title: string };
