@@ -80,11 +80,21 @@ function studentAcademicAverage(submissionsByAssignment) {
 }
 
 // ---- CSV ----
-// Escapes a cell AND neutralizes CSV/formula injection: a value starting with = + - @ (or tab/CR) is
-// prefixed with a single quote so spreadsheets never execute it. Always quoted for safety.
+// Escapes a cell AND neutralizes CSV/formula injection: a value starting with TAB/CR, or whose first meaningful
+// character after leading whitespace / control / zero-width / bidi-mark characters is = + - @, is prefixed with a
+// single quote so spreadsheets never execute it; the original text (spacing included) is kept. Always quoted.
+// Same rule as src/reports/csv.ts (parity-tested in api/tests/csv-guard-parity-11b.test.js).
+const SKIPPABLE = /[\s\u200b-\u200f\u2060\u061c]/;                       // whitespace, zero-width, bidi marks
+const skippable = ch => { const c = ch.charCodeAt(0); return c < 0x20 || c === 0x7f || SKIPPABLE.test(ch); };
+function formulaShaped(s) {
+  if (s[0] === "\t" || s[0] === "\r") return true;
+  let i = 0;
+  while (i < s.length && skippable(s[i])) i++;
+  return i < s.length && "=+-@".includes(s[i]);
+}
 function csvCell(value) {
   let s = value === null || value === undefined ? "" : String(value);
-  if (/^[=+\-@\t\r]/.test(s)) s = "'" + s;
+  if (formulaShaped(s)) s = "'" + s;
   return '"' + s.replace(/"/g, '""') + '"';
 }
 function toCsv(rows) {

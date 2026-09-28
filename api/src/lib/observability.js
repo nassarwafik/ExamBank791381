@@ -150,7 +150,8 @@ function methodOf(request) {
 
 // ── Sink (where events go) ───────────────────────────────────────────────────
 // Default: one JSON object per line to the appropriate console stream. Azure captures these. A test can swap
-// the sink to capture events. The sink is always invoked inside try/catch so a logging failure is inert.
+// the sink to capture events. The sink is always invoked inside try/catch so a logging failure is inert; emit then
+// returns null instead of the record (Phase 11B: lets a caller that must deliver an event once retry later).
 function defaultSink(record) {
   const line = safeStringify(record);
   if (record.level === LEVELS.error) console.error(line);
@@ -185,7 +186,7 @@ function emit(ctx, level, event, fields) {
     record.requestId = ctx ? ctx.requestId : undefined;
     record.route = ctx ? ctx.route : undefined;
     record.method = ctx ? ctx.method : undefined;
-    try { currentSink(record); } catch { /* logging must never break the caller */ }
+    try { currentSink(record); } catch { return null; /* logging must never break the caller; null = not delivered */ }
     return record;
   } catch {
     return null; // observability itself must never throw into a handler

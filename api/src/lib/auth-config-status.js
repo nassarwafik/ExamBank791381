@@ -44,17 +44,20 @@ let reported = false;
 /**
  * Once per process: when the configuration is not the recommended one, write ONE structured warning
  * (`auth.secret_configuration`) through the request's observability logger. Server log only — callers never put
- * this in a response. Any logging failure is swallowed; nothing here can affect the caller.
+ * this in a response. The once-per-process flag is set only after a DELIVERED warning (or when there is nothing
+ * to report): a missing logger, a throwing logger, or a logger that returns null (observability's emit does when its
+ * sink fails) leaves the next request free to retry. Any failure is swallowed; nothing here can affect the caller.
  */
 function reportAuthSecretConfiguration(obs, env = process.env) {
   try {
     if (reported) return null;
-    reported = true;
     const status = authSecretConfiguration(env);
-    if (!status.recommended && obs && typeof obs.logWarn === "function") obs.logWarn("auth.secret_configuration", { ...status });
+    if (status.recommended) { reported = true; return status; }
+    if (!obs || typeof obs.logWarn !== "function") return status;              // no logger here: a later call reports
+    if (obs.logWarn("auth.secret_configuration", { ...status }) !== null) reported = true;
     return status;
   } catch {
-    return null;
+    return null;                                                               // not delivered: a later call retries
   }
 }
 
