@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { IconChevronBack, IconMenu, IconClose, IconMaximize, IconMinimize } from "../../icons";
+import { IconChevronBack, IconMenu, IconClose, IconMaximize, IconMinimize, IconSparkles } from "../../icons";
 import useFocusTrap from "../../ui/useFocusTrap";
 import { usePrefersReducedMotion } from "../../ui/usePrefersReducedMotion";
+import { setMotionOverride } from "../../ui/motionPreference";
 import { flattenPageRefs, findPage, previousPage, nextPage, pagePosition } from "../content/navigation";
 import type { LearningCourseManifest, ContentModule, ContentPage } from "../content/types";
 import LearningReaderToc from "./LearningReaderToc";
@@ -308,6 +309,23 @@ export default function LearningReader({
     </button>
   );
 
+  // Phase 12A — «حركة الرسوم»: the explicit motion choice for this device (see ui/motionPreference.ts). `reducedMotion`
+  // is the EFFECTIVE state (override, else the OS hint), so the control always names the action that changes it and
+  // aria-pressed reflects whether the visuals currently move. Pressing it records an explicit "on" / "off" — a desktop
+  // whose OS hides animations can turn the educational visuals back on, and anyone can switch them off.
+  const motionToggle = (
+    <button
+      key="motion-toggle"
+      type="button"
+      className="eb-button is-quiet is-small learning-reader-motion-toggle"
+      aria-pressed={!reducedMotion}
+      onClick={() => setMotionOverride(reducedMotion ? "on" : "off")}
+    >
+      <IconSparkles size={18} aria-hidden="true" />
+      {reducedMotion ? "تشغيل حركة الرسوم" : "إيقاف حركة الرسوم"}
+    </button>
+  );
+
   return (
     <div
       ref={rootRef}
@@ -329,6 +347,7 @@ export default function LearningReader({
           <IconMenu size={18} aria-hidden="true" />الفهرس
         </button>
         {presentation && <span className="learning-reader-keyhint" aria-hidden="true">← → للتنقل · Esc للخروج</span>}
+        {motionToggle}
         {presentToggle}
       </div>
 

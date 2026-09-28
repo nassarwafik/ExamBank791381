@@ -6,7 +6,24 @@
    distinguished. Tables and code scroll INSIDE their own
    container — never the page.
    ============================================================ */
-.learning-reader{ display:flex; flex-direction:column; gap:var(--eb-space-3); min-width:0; }
+.learning-reader{ display:flex; flex-direction:column; gap:var(--eb-space-3); min-width:0;
+  /* ── Phase 12A: READER TYPOGRAPHY SCALE (school-readability) ──────────────────────────────────────────────────
+     Reader-scoped tokens (--eb-read-*), defined once here for phones/tablets and stepped up in the ≥1024px block at
+     the end of the file. Every text size in the Reader reads from this scale, so the whole material page moves
+     together and a later per-student size control has one place to act. Body 18px (was 16), comfortable 1.85 line
+     height (was 1.65), a clear 3-level heading scale under the page title, and a wide-but-bounded measure for prose-
+     like blocks on desktop. Colours are the app's own tokens: primary blue for the page/section level, deep info blue
+     for sub-sections and list titles, green for examples, amber for warnings — calm, consistent, never colour-only. */
+  --eb-read-fs-body:18px; --eb-read-fs-card:17px; --eb-read-fs-small:15px; --eb-read-fs-meta:14px; --eb-read-fs-tag:13px;
+  --eb-read-fs-title:26px; --eb-read-fs-title-desktop:32px;
+  --eb-read-fs-h3:22px; --eb-read-fs-h4:20px; --eb-read-fs-h5:18px; --eb-read-fs-label:16px;
+  --eb-read-fs-table:15px; --eb-read-fs-code:15px;
+  --eb-read-lh:1.85; --eb-read-lh-heading:1.35;
+  --eb-read-gap:var(--eb-space-4);
+  --eb-read-measure-wide:92ch;
+  --eb-read-accent:var(--eb-primary); --eb-read-accent-strong:var(--eb-primary-strong); --eb-read-accent-bg:var(--eb-primary-050);
+  --eb-read-accent-2:var(--eb-info-tx); --eb-read-accent-2-bg:var(--eb-info-bg);
+}
 
 /* ---------- Top bar ---------- */
 .learning-reader-topbar{ display:flex; align-items:center; flex-wrap:wrap; gap:var(--eb-space-2); justify-content:space-between; }
@@ -14,7 +31,7 @@
 .learning-reader-booktitle{ color:var(--eb-text-heading); font-weight:var(--eb-fw-bold); font-variant-numeric:tabular-nums; }
 .learning-reader-toc-toggle{ display:inline-flex; align-items:center; gap:var(--eb-space-1); }
 .learning-reader-partial{
-  margin:0; padding:var(--eb-space-2) var(--eb-space-3); font-size:var(--eb-fs-13); color:var(--eb-text-secondary);
+  margin:0; padding:var(--eb-space-2) var(--eb-space-3); font-size:var(--eb-read-fs-meta); color:var(--eb-text-secondary);
   background:var(--eb-surface-2); border:1px solid var(--eb-line); border-radius:var(--eb-r);
 }
 
@@ -26,7 +43,7 @@
 
 /* ---------- Jump ---------- */
 .learning-reader-jump{ display:flex; flex-wrap:wrap; align-items:center; gap:var(--eb-space-2); }
-.learning-reader-jump label{ color:var(--eb-text-secondary); font-size:var(--eb-fs-13); font-weight:var(--eb-fw-semibold); }
+.learning-reader-jump label{ color:var(--eb-text-secondary); font-size:var(--eb-read-fs-meta); font-weight:var(--eb-fw-semibold); }
 .learning-reader-jump select{
   flex:1 1 auto; min-width:0; min-height:44px; padding:0 var(--eb-space-3); font:inherit; color:var(--eb-text);
   background:var(--eb-surface); border:1px solid var(--eb-line-2); border-radius:var(--eb-r);
@@ -37,22 +54,31 @@
   display:flex; flex-direction:column; gap:var(--eb-space-3); min-width:0;
   padding:var(--eb-space-4); background:var(--eb-surface); border:1px solid var(--eb-line); border-radius:var(--eb-r-lg); box-shadow:var(--eb-sh-xs);
 }
-.learning-reader-pagehead{ display:flex; flex-direction:column; gap:var(--eb-space-1); padding-block-end:var(--eb-space-3); border-block-end:1px solid var(--eb-line); }
-.learning-reader-kicker{ margin:0; color:var(--eb-muted); font-size:var(--eb-fs-12); font-weight:var(--eb-fw-semibold); font-variant-numeric:tabular-nums; }
-.learning-reader-page-title{ margin:0; color:var(--eb-text-heading); font-size:var(--eb-fs-20); font-weight:var(--eb-fw-bold); line-height:var(--eb-lh-tight); overflow-wrap:anywhere; }
+/* Phase 12A — the page head is the FIRST level of the hierarchy: a coloured kicker, a large title with a primary accent
+   bar (the same bar language the section headings use, thicker), a tinted rule underneath. */
+.learning-reader-pagehead{ display:flex; flex-direction:column; gap:var(--eb-space-2); padding-block-end:var(--eb-space-4); border-block-end:2px solid var(--eb-primary-100); }
+.learning-reader-kicker{ margin:0; color:var(--eb-read-accent-strong); font-size:var(--eb-read-fs-meta); font-weight:var(--eb-fw-bold); font-variant-numeric:tabular-nums; }
+.learning-reader-page-title{ margin:0; color:var(--eb-text-heading); font-size:var(--eb-read-fs-title); font-weight:var(--eb-fw-bold); line-height:var(--eb-lh-tight); overflow-wrap:anywhere; padding-inline-start:var(--eb-space-3); border-inline-start:5px solid var(--eb-read-accent); }
 .learning-reader-page-title:focus-visible{ outline:2px solid var(--eb-primary); outline-offset:3px; border-radius:var(--eb-r-sm); }
-.learning-reader-context{ margin:0; color:var(--eb-text-secondary); font-size:var(--eb-fs-13); overflow-wrap:anywhere; }
+.learning-reader-context{ margin:0; color:var(--eb-text-secondary); font-size:var(--eb-read-fs-small); overflow-wrap:anywhere; }
 .learning-reader-metarow{ display:flex; flex-wrap:wrap; align-items:center; gap:var(--eb-space-2) var(--eb-space-3); margin-block-start:var(--eb-space-1); }
-.learning-reader-position{ color:var(--eb-text); font-size:var(--eb-fs-13); font-weight:var(--eb-fw-semibold); font-variant-numeric:tabular-nums; }
-.learning-reader-frombook{ display:inline-flex; align-items:center; gap:4px; margin:0; padding:2px var(--eb-space-2); border-radius:var(--eb-pill); background:var(--eb-surface-2); color:var(--eb-text-secondary); font-size:var(--eb-fs-12); font-weight:var(--eb-fw-semibold); }
-.learning-reader-source{ display:flex; flex-wrap:wrap; gap:var(--eb-space-1) var(--eb-space-3); margin:0; color:var(--eb-muted); font-size:var(--eb-fs-12); font-variant-numeric:tabular-nums; }
+.learning-reader-position{ color:var(--eb-text); font-size:var(--eb-read-fs-meta); font-weight:var(--eb-fw-semibold); font-variant-numeric:tabular-nums; }
+.learning-reader-frombook{ display:inline-flex; align-items:center; gap:4px; margin:0; padding:2px var(--eb-space-2); border-radius:var(--eb-pill); background:var(--eb-surface-2); color:var(--eb-text-secondary); font-size:var(--eb-read-fs-tag); font-weight:var(--eb-fw-semibold); }
+.learning-reader-source{ display:flex; flex-wrap:wrap; gap:var(--eb-space-1) var(--eb-space-3); margin:0; color:var(--eb-muted); font-size:var(--eb-read-fs-tag); font-variant-numeric:tabular-nums; }
 
 /* ---------- Body / blocks ---------- */
 .learning-reader-pagebody{ min-width:0; }
-.learning-reader-blocks{ display:flex; flex-direction:column; gap:var(--eb-space-3); min-width:0; }
+.learning-reader-blocks{ display:flex; flex-direction:column; gap:var(--eb-read-gap); min-width:0; }
 .learning-reader-block{ min-width:0; }
-.learning-reader-text{ margin:0; color:var(--eb-text); font-size:var(--eb-fs-16); line-height:var(--eb-lh-body); overflow-wrap:anywhere; }
-.learning-reader-heading{ margin:0; color:var(--eb-text-heading); font-weight:var(--eb-fw-bold); line-height:var(--eb-lh-tight); overflow-wrap:anywhere; }
+.learning-reader-text{ margin:0; color:var(--eb-text); font-size:var(--eb-read-fs-body); line-height:var(--eb-read-lh); overflow-wrap:anywhere; }
+/* Phase 12A — authored heading blocks carry their level as a class (is-level-2/3/4) and read as three distinct steps
+   under the page title: a SECTION heading (primary blue, accent bar — the page title's language, smaller), a
+   SUB-heading (deep info blue with a tinted underline) and a MINOR heading (navy, semibold). Never colour-only: size,
+   weight and the bar/underline differ too. */
+.learning-reader-heading{ margin:0; color:var(--eb-text-heading); font-weight:var(--eb-fw-bold); line-height:var(--eb-read-lh-heading); overflow-wrap:anywhere; }
+.learning-reader-heading.is-level-2{ font-size:var(--eb-read-fs-h3); color:var(--eb-read-accent-strong); padding-inline-start:var(--eb-space-3); border-inline-start:4px solid var(--eb-read-accent); margin-block-start:var(--eb-space-2); }
+.learning-reader-heading.is-level-3{ font-size:var(--eb-read-fs-h4); color:var(--eb-read-accent-2); padding-block-end:var(--eb-space-1); border-block-end:2px solid var(--eb-read-accent-2-bg); }
+.learning-reader-heading.is-level-4{ font-size:var(--eb-read-fs-h5); color:var(--eb-text-heading); font-weight:var(--eb-fw-semibold); }
 .learning-reader-term{ font-weight:var(--eb-fw-semibold); }
 .learning-reader-inline-code, .learning-reader-mono{ font-family:ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace; font-size:.95em; }
 .learning-reader-inline-code{ padding:1px 5px; background:var(--eb-surface-2); border:1px solid var(--eb-line); border-radius:var(--eb-r-sm); unicode-bidi:isolate; }
@@ -60,7 +86,7 @@
 /* Enrichment surface — clearly, quietly distinguished (never color-only: it carries a text label). */
 .learning-reader-block.is-enrichment{
   display:flex; flex-direction:column; gap:var(--eb-space-2); min-width:0;
-  padding:var(--eb-space-3); background:var(--eb-primary-050); border:1px solid var(--eb-line); border-inline-start:3px solid var(--eb-primary); border-radius:var(--eb-r);
+  padding:var(--eb-space-4); background:var(--eb-primary-050); border:1px solid var(--eb-primary-100); border-inline-start:4px solid var(--eb-primary); border-radius:var(--eb-r-lg);
 }
 /* Self-framed enrichment (visual, activity, practice, practice-table): the child already draws its own complete
    surface, so the outer tinted box is dropped to avoid nested/stacked blue boxes. The textual enrichment tag stays as
@@ -68,65 +94,78 @@
 .learning-reader-block.is-enrichment.is-selfframed{
   padding:0; background:transparent; border:0;
 }
-.learning-reader-enrichment-tag{ display:inline-flex; align-items:center; gap:4px; align-self:flex-start; margin:0; padding:2px var(--eb-space-2); border-radius:var(--eb-pill); background:var(--eb-surface); color:var(--eb-primary-strong); font-size:var(--eb-fs-12); font-weight:var(--eb-fw-bold); }
+.learning-reader-enrichment-tag{ display:inline-flex; align-items:center; gap:4px; align-self:flex-start; margin:0; padding:3px var(--eb-space-3); border-radius:var(--eb-pill); background:var(--eb-surface); color:var(--eb-primary-strong); font-size:var(--eb-read-fs-tag); font-weight:var(--eb-fw-bold); }
 /* On the flat self-framed layout the tag sits directly on the page, so give it a hairline to keep it legible without
    the tinted box behind it (still token-only, no new color). */
 .learning-reader-block.is-enrichment.is-selfframed > .learning-reader-enrichment-tag{ border:1px solid var(--eb-line); }
 
 /* Callout */
-.learning-reader-callout{ display:flex; flex-direction:column; gap:var(--eb-space-1); padding:var(--eb-space-3); border:1px solid var(--eb-line); border-inline-start:3px solid var(--eb-text-secondary); border-radius:var(--eb-r); background:var(--eb-surface-2); }
+/* Phase 12A — one calm box language for every callout kind: a soft tint, a 4px accent bar and a LABEL in the kind's
+   colour (تذكّر / مهم / تنبيه / نصيحة / الخلاصة) so a student tells them apart at a glance; the body reads at the
+   Reader's body size (it used to be two steps smaller than the prose around it). */
+.learning-reader-callout{ display:flex; flex-direction:column; gap:var(--eb-space-2); padding:var(--eb-space-4); border:1px solid var(--eb-line); border-inline-start:4px solid var(--eb-text-secondary); border-radius:var(--eb-r-lg); background:var(--eb-surface-2); }
+.learning-reader-callout.kind-remember{ border-inline-start-color:var(--eb-info); background:var(--eb-info-bg); }
 .learning-reader-callout.kind-important{ border-inline-start-color:var(--eb-primary); background:var(--eb-primary-050); }
 .learning-reader-callout.kind-warning{ border-inline-start-color:var(--eb-warn); background:var(--eb-warn-bg); }
 .learning-reader-callout.kind-tip{ border-inline-start-color:var(--eb-success); background:var(--eb-success-bg); }
-.learning-reader-callout.kind-summary{ border-inline-start-color:var(--eb-info); background:var(--eb-info-bg); }
-.learning-reader-callout-label{ margin:0; color:var(--eb-text-heading); font-size:var(--eb-fs-13); font-weight:var(--eb-fw-bold); }
-.learning-reader-callout-body{ margin:0; color:var(--eb-text); font-size:var(--eb-fs-14); line-height:var(--eb-lh-body); overflow-wrap:anywhere; }
+.learning-reader-callout.kind-summary{ border-inline-start-color:var(--eb-navy); background:var(--eb-surface-2); }
+.learning-reader-callout-label{ margin:0; color:var(--eb-text-heading); font-size:var(--eb-read-fs-label); font-weight:var(--eb-fw-bold); }
+.learning-reader-callout.kind-remember .learning-reader-callout-label{ color:var(--eb-info-tx); }
+.learning-reader-callout.kind-important .learning-reader-callout-label{ color:var(--eb-primary-strong); }
+.learning-reader-callout.kind-warning .learning-reader-callout-label{ color:var(--eb-warn-tx); }
+.learning-reader-callout.kind-tip .learning-reader-callout-label{ color:var(--eb-success-tx); }
+.learning-reader-callout-body{ margin:0; color:var(--eb-text); font-size:var(--eb-read-fs-body); line-height:var(--eb-read-lh); overflow-wrap:anywhere; }
 
 /* Example */
-.learning-reader-example{ display:flex; flex-direction:column; gap:var(--eb-space-2); min-width:0; }
-.learning-reader-example-kicker{ margin:0; align-self:flex-start; padding:2px var(--eb-space-2); border-radius:var(--eb-pill); background:var(--eb-surface-2); color:var(--eb-text-heading); font-size:var(--eb-fs-12); font-weight:var(--eb-fw-bold); }
-.learning-reader-example-title{ margin:0; color:var(--eb-text-heading); font-weight:var(--eb-fw-semibold); }
-.learning-reader-example-prompt, .learning-reader-example-result{ margin:0; display:flex; flex-wrap:wrap; align-items:baseline; gap:var(--eb-space-2); color:var(--eb-text); font-size:var(--eb-fs-14); line-height:var(--eb-lh-body); }
-.learning-reader-example-tag{ padding:1px var(--eb-space-2); border-radius:var(--eb-r-sm); background:var(--eb-surface-2); color:var(--eb-text-secondary); font-size:var(--eb-fs-12); font-weight:var(--eb-fw-semibold); }
-.learning-reader-example-steps{ margin:0; padding-inline-start:var(--eb-space-4); display:flex; flex-direction:column; gap:var(--eb-space-1); color:var(--eb-text); font-size:var(--eb-fs-14); line-height:var(--eb-lh-body); }
-.learning-reader-step-note{ display:block; color:var(--eb-muted); font-size:var(--eb-fs-12); }
-.learning-reader-example-explain{ margin:0; color:var(--eb-text-secondary); font-size:var(--eb-fs-13); line-height:var(--eb-lh-body); }
+/* Phase 12A — an example is its own GREEN-accented card (مثال محلول / مثال للحل), distinct from callouts (tints + label
+   colours) and from the blue enrichment surface; steps read at body size with roomy numbering. */
+.learning-reader-example{ display:flex; flex-direction:column; gap:var(--eb-space-3); min-width:0; padding:var(--eb-space-4); background:var(--eb-surface); border:1px solid var(--eb-line); border-inline-start:4px solid var(--eb-success); border-radius:var(--eb-r-lg); }
+.learning-reader-example-kicker{ margin:0; align-self:flex-start; padding:3px var(--eb-space-3); border-radius:var(--eb-pill); background:var(--eb-success-bg); color:var(--eb-success-tx); font-size:var(--eb-read-fs-tag); font-weight:var(--eb-fw-bold); }
+.learning-reader-example-title{ margin:0; color:var(--eb-text-heading); font-size:var(--eb-read-fs-h4); font-weight:var(--eb-fw-bold); line-height:var(--eb-read-lh-heading); }
+.learning-reader-example-prompt, .learning-reader-example-result{ margin:0; display:flex; flex-wrap:wrap; align-items:baseline; gap:var(--eb-space-2); color:var(--eb-text); font-size:var(--eb-read-fs-body); line-height:var(--eb-read-lh); }
+.learning-reader-example-tag{ padding:2px var(--eb-space-2); border-radius:var(--eb-r-sm); background:var(--eb-surface-2); color:var(--eb-text-secondary); font-size:var(--eb-read-fs-meta); font-weight:var(--eb-fw-bold); }
+.learning-reader-example-steps{ margin:0; padding-inline-start:var(--eb-space-5); display:flex; flex-direction:column; gap:var(--eb-space-2); color:var(--eb-text); font-size:var(--eb-read-fs-body); line-height:var(--eb-read-lh); }
+.learning-reader-step-note{ display:block; color:var(--eb-muted); font-size:var(--eb-read-fs-small); }
+.learning-reader-example-explain{ margin:0; color:var(--eb-text-secondary); font-size:var(--eb-read-fs-card); line-height:var(--eb-read-lh); }
 
 /* Table — only the wrapper scrolls */
-.learning-reader-tablewrap{ overflow-x:auto; max-width:100%; border:1px solid var(--eb-line); border-radius:var(--eb-r); }
-.learning-reader-table{ border-collapse:collapse; width:100%; font-size:var(--eb-fs-13); }
-.learning-reader-table caption{ padding:var(--eb-space-2); color:var(--eb-text-secondary); font-size:var(--eb-fs-12); text-align:start; }
-.learning-reader-table th, .learning-reader-table td{ padding:var(--eb-space-2) var(--eb-space-3); border:1px solid var(--eb-line); text-align:start; white-space:nowrap; }
-.learning-reader-table th{ background:var(--eb-surface-2); color:var(--eb-text-heading); font-weight:var(--eb-fw-bold); }
+/* Phase 12A — tables: larger cells (15/16px, roomier padding), a tinted primary header row and zebra rows so a
+   student keeps the line while reading across. Still only the wrapper scrolls. */
+.learning-reader-tablewrap{ overflow-x:auto; max-width:100%; border:1px solid var(--eb-line); border-radius:var(--eb-r-lg); }
+.learning-reader-table{ border-collapse:collapse; width:100%; font-size:var(--eb-read-fs-table); line-height:1.5; }
+.learning-reader-table caption{ padding:var(--eb-space-2) var(--eb-space-3); color:var(--eb-text-secondary); font-size:var(--eb-read-fs-meta); font-weight:var(--eb-fw-semibold); text-align:start; }
+.learning-reader-table th, .learning-reader-table td{ padding:var(--eb-space-3) var(--eb-space-4); border:1px solid var(--eb-line); text-align:start; white-space:nowrap; }
+.learning-reader-table th{ background:var(--eb-primary-050); color:var(--eb-primary-strong); font-weight:var(--eb-fw-bold); }
+.learning-reader-table tbody tr:nth-child(even) td{ background:var(--eb-surface-2); }
 
 /* Code — LTR, only the wrapper scrolls. The wrapper itself is LTR so that, inside the RTL reader, a long command line
    starts scrolled at its BEGINNING (the prompt «Switch(config)#»), never at its tail (Batch 6: switch CLI pages). */
 .learning-reader-codewrap{ overflow-x:auto; max-width:100%; background:var(--eb-navy); border-radius:var(--eb-r); direction:ltr; text-align:left; }
 .learning-reader-code{ margin:0; padding:var(--eb-space-3); }
-.learning-reader-code code{ font-family:ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace; font-size:var(--eb-fs-13); line-height:var(--eb-lh-body); color:#e6edf7; white-space:pre; }
+.learning-reader-code code{ font-family:ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace; font-size:var(--eb-read-fs-code); line-height:var(--eb-lh-body); color:#e6edf7; white-space:pre; }
 
 /* Figure / diagram */
 .learning-reader-figure{ margin:0; display:flex; flex-direction:column; gap:var(--eb-space-1); }
 .learning-reader-image{ max-width:100%; height:auto; border-radius:var(--eb-r); }
-.learning-reader-caption{ color:var(--eb-muted); font-size:var(--eb-fs-12); }
-.learning-reader-diagram-missing{ display:flex; align-items:center; gap:var(--eb-space-2); padding:var(--eb-space-4); color:var(--eb-text-secondary); background:var(--eb-surface-2); border:1px dashed var(--eb-line-2); border-radius:var(--eb-r); font-size:var(--eb-fs-13); }
+.learning-reader-caption{ color:var(--eb-muted); font-size:var(--eb-read-fs-small); }
+.learning-reader-diagram-missing{ display:flex; align-items:center; gap:var(--eb-space-2); padding:var(--eb-space-4); color:var(--eb-text-secondary); background:var(--eb-surface-2); border:1px dashed var(--eb-line-2); border-radius:var(--eb-r); font-size:var(--eb-read-fs-small); }
 
 /* Practice (static preview — NO answer key) & simulation placeholder */
-.learning-reader-practice, .learning-reader-simulation{ display:flex; flex-direction:column; gap:var(--eb-space-2); min-width:0; }
-.learning-reader-practice-kicker, .learning-reader-simulation-kicker{ margin:0; align-self:flex-start; padding:2px var(--eb-space-2); border-radius:var(--eb-pill); background:var(--eb-surface); color:var(--eb-primary-strong); font-size:var(--eb-fs-12); font-weight:var(--eb-fw-bold); }
-.learning-reader-practice-prompt, .learning-reader-simulation-title{ margin:0; color:var(--eb-text-heading); font-weight:var(--eb-fw-semibold); font-size:var(--eb-fs-16); }
+.learning-reader-practice, .learning-reader-simulation{ display:flex; flex-direction:column; gap:var(--eb-space-3); min-width:0; font-size:var(--eb-read-fs-body); }
+.learning-reader-practice-kicker, .learning-reader-simulation-kicker{ margin:0; align-self:flex-start; padding:3px var(--eb-space-3); border-radius:var(--eb-pill); background:var(--eb-surface); color:var(--eb-primary-strong); font-size:var(--eb-read-fs-tag); font-weight:var(--eb-fw-bold); }
+.learning-reader-practice-prompt, .learning-reader-simulation-title{ margin:0; color:var(--eb-text-heading); font-weight:var(--eb-fw-bold); font-size:var(--eb-read-fs-h5); line-height:var(--eb-read-lh-heading); }
 .learning-reader-practice-options{ list-style:none; margin:0; padding:0; display:flex; flex-direction:column; gap:var(--eb-space-2); }
 .learning-reader-practice-option{ min-height:44px; display:flex; align-items:center; padding:var(--eb-space-2) var(--eb-space-3); background:var(--eb-surface); border:1px solid var(--eb-line-2); border-radius:var(--eb-r); color:var(--eb-text); }
 .learning-reader-practice-input{ margin:0; font-family:ui-monospace, monospace; color:var(--eb-muted); letter-spacing:.1em; }
-.learning-reader-practice-hint, .learning-reader-simulation-note, .learning-reader-simulation-desc{ margin:0; color:var(--eb-muted); font-size:var(--eb-fs-12); line-height:var(--eb-lh-body); }
+.learning-reader-practice-hint, .learning-reader-simulation-note, .learning-reader-simulation-desc{ margin:0; color:var(--eb-muted); font-size:var(--eb-read-fs-meta); line-height:var(--eb-lh-body); }
 
 /* States */
 .learning-reader-status{ margin:0; color:var(--eb-text-secondary); }
 .learning-reader-state{ display:flex; flex-direction:column; align-items:flex-start; gap:var(--eb-space-2); padding:var(--eb-space-4); background:var(--eb-surface-2); border:1px solid var(--eb-line); border-radius:var(--eb-r); }
 .learning-reader-state.is-error{ background:var(--eb-danger-bg); border-color:var(--eb-danger); }
-.learning-reader-state-title{ margin:0; color:var(--eb-text-heading); font-weight:var(--eb-fw-bold); }
-.learning-reader-state-text{ margin:0; color:var(--eb-text-secondary); font-size:var(--eb-fs-13); line-height:var(--eb-lh-body); }
-.learning-reader-state-meta{ margin:var(--eb-space-1) 0 0; display:grid; gap:2px var(--eb-space-3); font-size:var(--eb-fs-12); }
+.learning-reader-state-title{ margin:0; color:var(--eb-text-heading); font-size:var(--eb-read-fs-h5); font-weight:var(--eb-fw-bold); }
+.learning-reader-state-text{ margin:0; color:var(--eb-text-secondary); font-size:var(--eb-read-fs-small); line-height:var(--eb-lh-body); }
+.learning-reader-state-meta{ margin:var(--eb-space-1) 0 0; display:grid; gap:2px var(--eb-space-3); font-size:var(--eb-read-fs-meta); }
 .learning-reader-state-meta > div{ display:flex; gap:var(--eb-space-1); }
 .learning-reader-state-meta dt{ margin:0; color:var(--eb-muted); }
 .learning-reader-state-meta dt::after{ content:":"; }
@@ -139,7 +178,10 @@
   background:var(--eb-surface); border:1px solid var(--eb-line); border-radius:var(--eb-r-lg); box-shadow:var(--eb-sh-sm);
 }
 .learning-reader-navbtn{ display:inline-flex; align-items:center; gap:var(--eb-space-1); min-height:44px; }
-.learning-reader-navpos{ color:var(--eb-text-secondary); font-size:var(--eb-fs-13); font-weight:var(--eb-fw-semibold); font-variant-numeric:tabular-nums; }
+.learning-reader-navpos{ color:var(--eb-text-secondary); font-size:var(--eb-read-fs-meta); font-weight:var(--eb-fw-semibold); font-variant-numeric:tabular-nums; }
+/* Phase 12A — «حركة الرسوم» (the device-level motion choice) sits beside the presentation toggle. */
+.learning-reader-motion-toggle{ display:inline-flex; align-items:center; gap:var(--eb-space-1); min-height:44px; }
+.learning-reader-motion-toggle[aria-pressed="true"]{ color:var(--eb-primary-strong); }
 
 /* ---------- TOC ---------- */
 .learning-reader-toc{ min-width:0; }
@@ -150,8 +192,8 @@
 .learning-reader-toc-caret.is-open{ transform:rotate(180deg); }
 .learning-reader-toc-modtitle{ min-width:0; overflow-wrap:anywhere; }
 .learning-reader-toc-lessons{ padding-inline-start:var(--eb-space-2); padding-block-end:var(--eb-space-2); }
-.learning-reader-toc-lessontitle{ margin:var(--eb-space-1) 0; color:var(--eb-muted); font-size:var(--eb-fs-12); font-weight:var(--eb-fw-semibold); }
-.learning-reader-toc-page{ width:100%; min-height:44px; display:flex; align-items:center; padding:var(--eb-space-1) var(--eb-space-3); background:none; border:0; border-inline-start:2px solid transparent; cursor:pointer; color:var(--eb-text); font:inherit; font-size:var(--eb-fs-13); text-align:start; overflow-wrap:anywhere; }
+.learning-reader-toc-lessontitle{ margin:var(--eb-space-1) 0; color:var(--eb-muted); font-size:var(--eb-read-fs-tag); font-weight:var(--eb-fw-semibold); }
+.learning-reader-toc-page{ width:100%; min-height:44px; display:flex; align-items:center; padding:var(--eb-space-1) var(--eb-space-3); background:none; border:0; border-inline-start:2px solid transparent; cursor:pointer; color:var(--eb-text); font:inherit; font-size:var(--eb-read-fs-meta); text-align:start; overflow-wrap:anywhere; }
 .learning-reader-toc-page:hover{ background:var(--eb-surface-2); }
 .learning-reader-toc-page.is-active{ color:var(--eb-primary-strong); background:var(--eb-primary-050); border-inline-start-color:var(--eb-primary); font-weight:var(--eb-fw-semibold); }
 
@@ -169,32 +211,33 @@
 }
 
 /* ── Phase 3B: generic list block (uses / benefits / management areas) ─────────────────────────────────────── */
-.learning-reader-list{ display:flex; flex-direction:column; gap:var(--eb-space-2); min-width:0; }
-.learning-reader-list-title{ margin:0; color:var(--eb-text-heading); font-weight:var(--eb-fw-semibold); font-size:var(--eb-fs-16); }
-.learning-reader-list-items{ list-style:none; margin:0; padding:0; display:grid; gap:var(--eb-space-2); min-width:0; }
+.learning-reader-list{ display:flex; flex-direction:column; gap:var(--eb-space-3); min-width:0; }
+/* Phase 12A — a list title is a SUB-heading (same deep-blue language as heading level 3). */
+.learning-reader-list-title{ margin:0; color:var(--eb-read-accent-2); font-weight:var(--eb-fw-bold); font-size:var(--eb-read-fs-h4); line-height:var(--eb-read-lh-heading); }
+.learning-reader-list-items{ list-style:none; margin:0; padding:0; display:grid; gap:var(--eb-space-3); min-width:0; }
 
 /* ---------- Library training (Learning Practice pointer) ---------- */
-.learning-reader-training{ display:flex; flex-direction:column; gap:var(--eb-space-2); min-width:0; padding:var(--eb-space-3) var(--eb-space-4); background:var(--eb-surface); border:1px solid var(--eb-line); border-radius:var(--eb-r); }
-.learning-reader-training.is-available{ border-color:var(--eb-primary-strong); }
+.learning-reader-training{ display:flex; flex-direction:column; gap:var(--eb-space-3); min-width:0; padding:var(--eb-space-4); background:var(--eb-surface); border:1px solid var(--eb-line); border-inline-start:4px solid var(--eb-line-2); border-radius:var(--eb-r-lg); }
+.learning-reader-training.is-available{ border-color:var(--eb-primary-100); border-inline-start-color:var(--eb-primary-strong); }
 .learning-reader-training-head{ margin:0; display:flex; flex-wrap:wrap; align-items:center; gap:var(--eb-space-2); }
-.learning-reader-training-code{ display:inline-block; padding:2px var(--eb-space-2); border-radius:var(--eb-r-sm, 6px); border:1px solid var(--eb-line); background:var(--eb-surface-2, var(--eb-surface)); color:var(--eb-text); font-family:var(--eb-font-mono, ui-monospace, monospace); font-size:var(--eb-fs-12); font-weight:var(--eb-fw-bold); letter-spacing:.02em; }
-.learning-reader-training-label{ margin:0; display:inline-block; padding:2px var(--eb-space-2); border-radius:var(--eb-pill); background:var(--eb-primary-050); color:var(--eb-primary-strong); font-size:var(--eb-fs-12); font-weight:var(--eb-fw-bold); }
-.learning-reader-training-title{ margin:0; color:var(--eb-text-heading); font-weight:var(--eb-fw-semibold); font-size:var(--eb-fs-16); }
-.learning-reader-training-note{ margin:0; display:flex; flex-wrap:wrap; align-items:center; gap:var(--eb-space-2); color:var(--eb-muted); font-size:var(--eb-fs-14); line-height:var(--eb-lh-body); }
-.learning-reader-training-best{ margin:0; color:var(--eb-text); font-size:var(--eb-fs-14); font-variant-numeric:tabular-nums; }
+.learning-reader-training-code{ display:inline-block; padding:2px var(--eb-space-2); border-radius:var(--eb-r-sm, 6px); border:1px solid var(--eb-line); background:var(--eb-surface-2, var(--eb-surface)); color:var(--eb-text); font-family:var(--eb-font-mono, ui-monospace, monospace); font-size:var(--eb-read-fs-tag); font-weight:var(--eb-fw-bold); letter-spacing:.02em; }
+.learning-reader-training-label{ margin:0; display:inline-block; padding:3px var(--eb-space-3); border-radius:var(--eb-pill); background:var(--eb-primary-050); color:var(--eb-primary-strong); font-size:var(--eb-read-fs-meta); font-weight:var(--eb-fw-bold); }
+.learning-reader-training-title{ margin:0; color:var(--eb-text-heading); font-weight:var(--eb-fw-bold); font-size:var(--eb-read-fs-h5); line-height:var(--eb-read-lh-heading); }
+.learning-reader-training-note{ margin:0; display:flex; flex-wrap:wrap; align-items:center; gap:var(--eb-space-2); color:var(--eb-muted); font-size:var(--eb-read-fs-small); line-height:var(--eb-lh-body); }
+.learning-reader-training-best{ margin:0; color:var(--eb-text); font-size:var(--eb-read-fs-small); font-variant-numeric:tabular-nums; }
 .learning-reader-training-cta{ align-self:flex-start; min-height:44px; }
 .learning-reader-list.variant-cards .learning-reader-list-items{ grid-template-columns:repeat(auto-fit, minmax(200px, 1fr)); }
 .learning-reader-list.variant-checklist .learning-reader-list-items,
 .learning-reader-list.variant-plain .learning-reader-list-items{ grid-template-columns:1fr; }
-.learning-reader-list-item{ display:flex; gap:var(--eb-space-2); align-items:flex-start; min-width:0; padding:var(--eb-space-2) var(--eb-space-3);
-  border:1px solid var(--eb-line); border-radius:var(--eb-r); background:var(--eb-surface); }
-.learning-reader-list.variant-cards .learning-reader-list-item{ flex-direction:column; gap:4px; }
-.learning-reader-list-itembody{ display:flex; flex-direction:column; gap:2px; min-width:0; }
-.learning-reader-list-check{ flex:0 0 auto; margin-top:2px; color:var(--eb-success); }
-.learning-reader-list-term{ color:var(--eb-text-heading); font-weight:var(--eb-fw-bold); font-size:var(--eb-fs-14); }
-.learning-reader-list-text{ color:var(--eb-text); font-size:var(--eb-fs-14); line-height:var(--eb-lh-body); overflow-wrap:anywhere; }
-.learning-reader-list-note{ align-self:flex-start; margin-top:4px; padding:1px var(--eb-space-2); border-radius:var(--eb-pill);
-  background:var(--eb-surface-2); color:var(--eb-muted); font-size:var(--eb-fs-12); font-weight:var(--eb-fw-medium); }
+.learning-reader-list-item{ display:flex; gap:var(--eb-space-3); align-items:flex-start; min-width:0; padding:var(--eb-space-3) var(--eb-space-4);
+  border:1px solid var(--eb-line); border-radius:var(--eb-r-lg); background:var(--eb-surface); }
+.learning-reader-list.variant-cards .learning-reader-list-item{ flex-direction:column; gap:var(--eb-space-1); border-block-start:3px solid var(--eb-read-accent-2-bg); }
+.learning-reader-list-itembody{ display:flex; flex-direction:column; gap:var(--eb-space-1); min-width:0; }
+.learning-reader-list-check{ flex:0 0 auto; margin-top:6px; color:var(--eb-success); }
+.learning-reader-list-term{ color:var(--eb-read-accent-2); font-weight:var(--eb-fw-bold); font-size:var(--eb-read-fs-label); }
+.learning-reader-list-text{ color:var(--eb-text); font-size:var(--eb-read-fs-card); line-height:var(--eb-read-lh); overflow-wrap:anywhere; }
+.learning-reader-list-note{ align-self:flex-start; margin-top:4px; padding:2px var(--eb-space-2); border-radius:var(--eb-pill);
+  background:var(--eb-surface-2); color:var(--eb-muted); font-size:var(--eb-read-fs-meta); font-weight:var(--eb-fw-medium); }
 
 /* ── Phase 3B: unit-opener hero ────────────────────────────────────────────────────────────────────────────── */
 .learning-reader-page.is-opener{ display:flex; flex-direction:column; gap:var(--eb-space-3); }
@@ -215,9 +258,9 @@
 .learning-reader-list.variant-ordered .learning-reader-list-items{ grid-template-columns:1fr; counter-reset:eb-step; }
 .learning-reader-list.variant-ordered .learning-reader-list-item{ counter-increment:eb-step; align-items:center; }
 .learning-reader-list.variant-ordered .learning-reader-list-item::before{
-  content:counter(eb-step); flex:0 0 auto; display:inline-grid; place-items:center; min-width:26px; height:26px;
+  content:counter(eb-step); flex:0 0 auto; display:inline-grid; place-items:center; min-width:32px; height:32px;
   border-radius:var(--eb-pill); background:var(--eb-primary-050); color:var(--eb-primary-strong);
-  font-size:var(--eb-fs-13); font-weight:var(--eb-fw-bold); }
+  font-size:var(--eb-read-fs-small); font-weight:var(--eb-fw-bold); }
 
 /* Numeric tables (place-value / conversion) opt into dir="ltr" so columns read MSB→LSB left-to-right (never
    reversed under RTL). The wrapper still scrolls horizontally on small screens instead of the page. */
@@ -236,21 +279,21 @@
 .learning-reader-practice-select:focus-visible{ outline:2px solid var(--eb-primary); outline-offset:2px; }
 .learning-reader-practice-select.is-right{ border-color:var(--eb-success); }
 .learning-reader-practice-select.is-wrong{ border-color:var(--eb-danger); }
-.learning-reader-practice-feedback{ display:flex; align-items:center; gap:4px; margin-block-start:var(--eb-space-1); font-size:var(--eb-fs-12); font-weight:var(--eb-fw-bold); white-space:normal; }
+.learning-reader-practice-feedback{ display:flex; align-items:center; gap:4px; margin-block-start:var(--eb-space-1); font-size:var(--eb-read-fs-meta); font-weight:var(--eb-fw-bold); white-space:normal; }
 .learning-reader-practice-feedback.is-right{ color:var(--eb-success-tx); }
 .learning-reader-practice-feedback.is-wrong{ color:var(--eb-danger-tx); }
 .learning-reader-practice-foot{ display:flex; flex-wrap:wrap; align-items:center; justify-content:space-between; gap:var(--eb-space-2); }
-.learning-reader-practice-hint{ margin:0; color:var(--eb-muted); font-size:var(--eb-fs-12); line-height:var(--eb-lh-body); }
+.learning-reader-practice-hint{ margin:0; color:var(--eb-muted); font-size:var(--eb-read-fs-meta); line-height:var(--eb-lh-body); }
 
 /* ---------- Study Practice Strength (in-page learning exercises) ----------
    One quiet line per page that carries eligible exercises («نقاط الدراسة لهذه الصفحة: 1 / 2», optionally the
    module's «8 / 15») and one quiet outcome line under a right answer («+1 نقطة قوة …»). Never colour-only, never
    animated, never a modal; both work unchanged inside the presentation overlay. */
-.learning-reader-study{ margin:0; display:flex; flex-wrap:wrap; align-items:center; gap:var(--eb-space-1) var(--eb-space-3); padding:var(--eb-space-2) var(--eb-space-3); border:1px solid var(--eb-line); border-radius:var(--eb-r); background:var(--eb-surface-2); color:var(--eb-text); font-size:var(--eb-fs-13); font-weight:var(--eb-fw-semibold); font-variant-numeric:tabular-nums; }
+.learning-reader-study{ margin:0; display:flex; flex-wrap:wrap; align-items:center; gap:var(--eb-space-1) var(--eb-space-3); padding:var(--eb-space-2) var(--eb-space-3); border:1px solid var(--eb-line); border-radius:var(--eb-r); background:var(--eb-surface-2); color:var(--eb-text); font-size:var(--eb-read-fs-small); font-weight:var(--eb-fw-semibold); font-variant-numeric:tabular-nums; }
 .learning-reader-study.is-full{ border-color:var(--eb-success); background:var(--eb-success-bg); color:var(--eb-success-tx, var(--eb-text)); }
 .learning-reader-study.is-loading, .learning-reader-study.is-error{ color:var(--eb-muted); font-weight:var(--eb-fw-medium); }
 .learning-reader-study-module{ color:var(--eb-text-secondary); font-weight:var(--eb-fw-medium); }
-.learning-reader-study-outcome{ margin:0; color:var(--eb-text); font-size:var(--eb-fs-14); font-weight:var(--eb-fw-semibold); line-height:var(--eb-lh-body); }
+.learning-reader-study-outcome{ margin:0; color:var(--eb-text); font-size:var(--eb-read-fs-small); font-weight:var(--eb-fw-semibold); line-height:var(--eb-lh-body); }
 .learning-reader-study-outcome.is-gained{ color:var(--eb-success-tx, var(--eb-text)); }
 .learning-reader-study-outcome.is-repeat, .learning-reader-study-outcome.is-full, .learning-reader-study-outcome.is-module-full{ color:var(--eb-text-secondary); font-weight:var(--eb-fw-medium); }
 
@@ -295,13 +338,14 @@
   box-sizing:border-box; inline-size:100%; min-inline-size:0; max-inline-size:none; margin:0 auto;
   flex:0 0 auto; block-size:auto; min-block-size:100%; padding:clamp(16px, 3vw, 48px);
 }
-.learning-reader.is-presentation .learning-reader-page-title{ font-size:clamp(22px, 2vw + 12px, 40px); }
-.learning-reader.is-presentation .learning-reader-text{ max-inline-size:88ch; font-size:clamp(17px, 0.6vw + 13px, 22px); }
-.learning-reader.is-presentation .learning-reader-heading{ font-size:clamp(18px, 0.8vw + 13px, 28px); }
+/* Phase 12A — presentation never reads SMALLER than the normal Reader: the clamps start at the new base sizes. */
+.learning-reader.is-presentation .learning-reader-page-title{ font-size:clamp(26px, 2vw + 12px, 42px); }
+.learning-reader.is-presentation .learning-reader-text{ max-inline-size:88ch; font-size:clamp(19px, 0.6vw + 15px, 24px); }
+.learning-reader.is-presentation .learning-reader-heading{ font-size:clamp(20px, 0.8vw + 14px, 30px); }
 .learning-reader.is-presentation .learning-reader-callout-body,
 .learning-reader.is-presentation .learning-reader-list-text,
-.learning-reader.is-presentation .learning-reader-table{ font-size:clamp(15px, 0.4vw + 12px, 18px); }
-.learning-reader.is-presentation .learning-reader-code code{ font-size:clamp(14px, 0.4vw + 11px, 17px); }
+.learning-reader.is-presentation .learning-reader-table{ font-size:clamp(17px, 0.5vw + 13px, 21px); }
+.learning-reader.is-presentation .learning-reader-code code{ font-size:clamp(15px, 0.4vw + 12px, 18px); }
 .learning-reader.is-presentation .learning-reader-list.variant-cards .learning-reader-list-items{ grid-template-columns:repeat(auto-fit, minmax(220px, 1fr)); }
 /* Control bar: static flex item at the bottom (never overlaps content), large hit areas, page-number field. */
 .learning-reader.is-presentation .learning-reader-nav{
@@ -340,7 +384,7 @@
 .learning-reader-practice-option.is-picked{ border-color:var(--eb-primary); background:var(--eb-primary-050); }
 .learning-reader-practice-option.is-picked.is-right{ border-color:var(--eb-success); }
 .learning-reader-practice-option.is-picked.is-wrong{ border-color:var(--eb-danger); }
-.learning-reader-practice-radio{ font-size:var(--eb-fs-14); color:var(--eb-primary-strong); flex:0 0 auto; }
+.learning-reader-practice-radio{ font-size:var(--eb-read-fs-small); color:var(--eb-primary-strong); flex:0 0 auto; }
 .learning-reader-practice-optiontext{ flex:1 1 auto; min-width:0; }
 .learning-reader-practice-form{ display:flex; flex-wrap:wrap; align-items:center; gap:var(--eb-space-2); }
 .learning-reader-practice-textinput{ min-height:44px; flex:1 1 12em; min-width:0; padding:var(--eb-space-1) var(--eb-space-2); border:1px solid var(--eb-line-2); border-radius:var(--eb-r); background:var(--eb-surface); color:var(--eb-text); font:inherit; font-family:ui-monospace, monospace; }
@@ -350,15 +394,17 @@
 .learning-reader-practice-verdict{ display:flex; flex-direction:column; gap:var(--eb-space-1); padding:var(--eb-space-2) var(--eb-space-3); border-radius:var(--eb-r); border:1px solid var(--eb-line); background:var(--eb-surface); }
 .learning-reader-practice-verdict.is-right{ border-color:var(--eb-success); }
 .learning-reader-practice-verdict.is-wrong{ border-color:var(--eb-danger); }
-.learning-reader-practice-verdict .learning-reader-practice-feedback{ margin:0; font-size:var(--eb-fs-14); }
-.learning-reader-practice-message, .learning-reader-practice-explain{ margin:0; color:var(--eb-text); font-size:var(--eb-fs-14); line-height:var(--eb-lh-body); }
+.learning-reader-practice-verdict .learning-reader-practice-feedback{ margin:0; font-size:var(--eb-read-fs-label); }
+.learning-reader-practice-message, .learning-reader-practice-explain{ margin:0; color:var(--eb-text); font-size:var(--eb-read-fs-card); line-height:var(--eb-read-lh); }
 .learning-reader-practice-explain{ color:var(--eb-text-secondary); }
-.learning-reader-practice-hints{ margin:0; padding-inline-start:var(--eb-space-4); display:flex; flex-direction:column; gap:4px; color:var(--eb-text); font-size:var(--eb-fs-14); line-height:var(--eb-lh-body); }
-.learning-reader-practice-hintno{ margin-inline-end:var(--eb-space-1); padding:0 var(--eb-space-1); border-radius:var(--eb-r-sm); background:var(--eb-surface-2); color:var(--eb-text-secondary); font-size:var(--eb-fs-12); font-weight:var(--eb-fw-semibold); }
+.learning-reader-practice-hints{ margin:0; padding-inline-start:var(--eb-space-4); display:flex; flex-direction:column; gap:4px; color:var(--eb-text); font-size:var(--eb-read-fs-card); line-height:var(--eb-read-lh); }
+.learning-reader-practice-hintno{ margin-inline-end:var(--eb-space-1); padding:0 var(--eb-space-1); border-radius:var(--eb-r-sm); background:var(--eb-surface-2); color:var(--eb-text-secondary); font-size:var(--eb-read-fs-tag); font-weight:var(--eb-fw-semibold); }
 .learning-reader-practice-actions{ display:flex; flex-wrap:wrap; gap:var(--eb-space-1); }
 @media (prefers-reduced-motion: reduce){ .learning-reader-practice.is-interactive .learning-reader-practice-option{ transition:none; } }
 
 @media (min-width: 1024px){
+  /* Phase 12A — the reading scale steps up on the wide canvas (body 19px, title 32px, roomier block gap). */
+  .learning-reader{ --eb-read-fs-body:19px; --eb-read-fs-card:18px; --eb-read-fs-small:16px; --eb-read-fs-h3:24px; --eb-read-fs-h4:21px; --eb-read-fs-h5:19px; --eb-read-fs-label:17px; --eb-read-fs-table:16px; --eb-read-gap:var(--eb-space-5); }
   .learning-reader-toc-toggle{ display:none; }
   .learning-reader-layout{ display:grid; grid-template-columns:minmax(240px, 300px) minmax(0, 1fr); gap:var(--eb-space-5); align-items:start; }
   .learning-reader-sidebar{ display:block; position:sticky; inset-block-start:var(--eb-space-3); max-block-size:calc(100vh - var(--eb-space-6, 48px)); overflow-y:auto; padding:var(--eb-space-2); background:var(--eb-surface); border:1px solid var(--eb-line); border-radius:var(--eb-r-lg); box-shadow:var(--eb-sh-xs); }
@@ -366,9 +412,15 @@
   .learning-reader-main{ inline-size:100%; max-inline-size:none; min-inline-size:0; }
   /* The page occupies 100% of the main track; slide-like minimum height, more generous (token) padding. */
   .learning-reader-page{ inline-size:100%; min-inline-size:0; box-sizing:border-box; min-block-size:60vh; padding:var(--eb-space-6); }
-  .learning-reader-page-title{ font-size:var(--eb-fs-28); }
+  .learning-reader-page-title{ font-size:var(--eb-read-fs-title-desktop); }
   /* Readability: prose paragraphs alone keep a reading measure; everything else spans the canvas. */
   .learning-reader-text{ max-inline-size:var(--eb-measure, 72ch); }
+  /* Phase 12A — prose-LIKE blocks (callouts, examples, practice, training, plain / checklist / ordered lists and the
+     text-like enrichment box) keep a wide-but-bounded measure too: a single explanatory sentence stretched across a
+     1500px canvas is tiring to follow. Tables, the cards grid, visuals and activities still use the full canvas. */
+  .learning-reader-callout, .learning-reader-example, .learning-reader-practice, .learning-reader-training,
+  .learning-reader-list.variant-plain, .learning-reader-list.variant-checklist, .learning-reader-list.variant-ordered,
+  .learning-reader-block.is-enrichment:not(.is-selfframed){ max-inline-size:var(--eb-read-measure-wide); }
   .learning-reader-jump select{ flex:0 1 auto; max-inline-size:48ch; }
   /* Cards spread across the wide canvas (2–4 columns by available space) instead of stacking in a narrow column. */
   .learning-reader-list.variant-cards .learning-reader-list-items{ grid-template-columns:repeat(auto-fit, minmax(240px, 1fr)); }
