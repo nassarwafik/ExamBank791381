@@ -87,6 +87,11 @@ note?, issues }`.
   cannot silently switch enforcement off). While enforced, policy-level issues and issues on **enabled** rules are
   `policyBlockers`; `canFinalize = blockers.length === 0 && policyBlockers.length === 0`. A disabled policy contributes
   nothing (rules are still listed for the editor; issues stay visible).
+- **Rule `enabled` semantics (Independent Review Fix 1):** only an explicit `enabled: false` is intentional
+  non-enforcement — that rule's issues stay visible but never block. An explicit `enabled: true` triggers and blocks as
+  before. A malformed or absent `enabled` (validator `INVALID_RULE_ENABLED`) never triggers a gate, but while the policy
+  is enforced its issues are `policyBlockers` (fail closed). The validator result is the single authority; the gate
+  engine adds no second interpretation of malformed values, and neither the UI nor `App` special-cases this.
 - Messages are factual: `عنونة IPv4 — الموجود 25%، وسياسة الجودة تمنع الاعتماد النهائي عند «أقل من الحد الأدنى».`,
   `2 أسئلة غير مصنفة — الحد الأقصى المسموح حسب السياسة: 0.`
 

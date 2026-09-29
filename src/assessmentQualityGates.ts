@@ -73,9 +73,13 @@ export function evaluateAssessmentQualityGates(input: { coverage: BlueprintCover
     const ruleId = typeof rule.id === "string" ? rule.id : "";
     const issues = issuesByRule.get(ruleId) ?? [];
     const enabled = rule.enabled === true;
+    // Review Fix 1: only an explicit `false` is intentional non-enforcement. A malformed or absent
+    // `enabled` is reported by the validator (INVALID_RULE_ENABLED) and must fail closed while the
+    // policy is enforced — the validator result is the single authority; no second interpretation here.
+    const intentionallyDisabled = rule.enabled === false;
     const source: QualityRuleSource = rule.source && typeof rule.source === "object" ? rule.source : ({ kind: "unclassified" } as QualityRuleSource);
     const base: QualityGateResult = { ruleId, enabled, source, sourceKey: qualityRuleSourceKey(source), effect: rule.effect, triggered: false, relation: null, actual: null, refLabel: "", expectedText: "", message: "", evidence: [], coverageId: null, ...(rule.note !== undefined ? { note: rule.note } : {}), issues };
-    if (issues.length) { if (enabled) enabledRuleIssues.push(...issues); base.message = "قاعدة غير قابلة للتطبيق: " + issues.map(i => i.code).join("، "); results.push(base); continue; }
+    if (issues.length) { if (!intentionallyDisabled) enabledRuleIssues.push(...issues); base.message = "قاعدة غير قابلة للتطبيق: " + issues.map(i => i.code).join("، "); results.push(base); continue; }
     if (isCoverageQualityRule(rule)) {
       const row = rows.get(base.sourceKey);
       if (!row) { base.message = "لا صف تغطية لهذا المصدر."; results.push(base); continue; }
