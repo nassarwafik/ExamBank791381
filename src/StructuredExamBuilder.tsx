@@ -37,6 +37,8 @@ import ExamQuestionNavigator from "./ExamQuestionNavigator";
 import BulkActionBar from "./BulkActionBar";
 import type { BankPickerService, InsertOutcome } from "./BankQuestionPicker";
 import { withBlueprint, validateBlueprintForExam } from "./assessmentBlueprint";
+import { applyBulkClassification, type BulkClassification } from "./assessmentBulkClassify";
+import { focusKey, type BankPickerFocus } from "./bankPickerFocus";
 import type { AssessmentBlueprintV1 } from "./assessmentTypes";
 import { useMediaQuery } from "./ui/useMediaQuery";
 import "./structured-builder.css";
@@ -50,6 +52,9 @@ export type { BankPickerService } from "./BankQuestionPicker";
 const BankQuestionPicker = lazy(() => import("./BankQuestionPicker"));
 // Phase 13C-A — the Blueprint panel is its own lazy chunk (opened rarely; never in the initial graph).
 const BlueprintPanel = lazy(() => import("./BlueprintPanel"));
+// Phase 13C-B — the live ANALYSIS surface and the bulk classification dialog are lazy too (opened on demand only).
+const BlueprintCoveragePanel = lazy(() => import("./BlueprintCoveragePanel"));
+const BulkClassifyDialog = lazy(() => import("./BulkClassifyDialog"));
 
 // Top-level Structured Exam Builder. It is a CONTROLLED component: the exam lives in the parent
 // (App.tsx) and every edit flows back through onChange as a FUNCTIONAL updater that the parent applies to
@@ -360,6 +365,31 @@ export default function StructuredExamBuilder({ exam, onChange, onSave, onExit, 
   //    an exam without a blueprint dispatches nothing; the first real edit creates the versioned blueprint.
   const [blueprintOpen, setBlueprintOpen] = useState(false);
   const editBlueprint = (fn: (bp: AssessmentBlueprintV1) => AssessmentBlueprintV1) => update(prev => withBlueprint(prev, fn));
+
+  // ── Phase 13C-B · تحليل المخطط الحي + تصنيف المحدد + guided bank discovery ──
+  // The analysis panel derives everything from the canonical `exam` prop (useMemo inside) — no cache, nothing persisted.
+  const [coverageOpen, setCoverageOpen] = useState(false);
+  const [classifyOpen, setClassifyOpen] = useState(false);
+  // Evidence → the EXISTING selection + navigator + card focus (no second navigation system).
+  const revealQuestions = (ids: string[]) => {
+    setCoverageOpen(false);
+    setSelected(() => new Set(ids));
+    if (!ids.length) return;
+    if (!isNarrow) setNavOpen(true);
+    window.setTimeout(() => focusCard(ids[0]), 0);                       // let the dialog release focus first
+  };
+  // Bulk classification: ONE functional updater over the ids selected NOW, applied to the `prev` the authority hands us
+  // (a deleted id is simply absent — never resurrected); an unchanged result returns `prev` → no history entry, not dirty.
+  const bulkClassify = (change: BulkClassification) => {
+    const ids = selectedIds();
+    setClassifyOpen(false);
+    update(prev => { const next = applyBulkClassification(prev.sections || [], ids, change); return next === prev.sections ? prev : { ...prev, sections: next }; });
+  };
+  // Guided discovery: the picker opens with an EXACT prefilled filter; everything else about it (used ids locked, exact
+  // duplicate refusal, latest-authority insertion, races) is the unchanged 13B picker.
+  const [pickerFocus, setPickerFocus] = useState<BankPickerFocus | null>(null);
+  const openBankWithFocus = (focus: BankPickerFocus) => { setCoverageOpen(false); setPickerFocus(focus); setPickerOpenFor(exam.examId); };
+  const closePicker = () => { setPickerOpenFor(""); setPickerFocus(null); };
   const blueprintIssueCount = useMemo(() => (exam.blueprint ? validateBlueprintForExam(exam.blueprint, exam).length : 0), [exam]);   // R4: section refs checked against the real exam
 
   const issues = useMemo(() => validateStructuredExam(exam), [exam]);
@@ -387,7 +417,8 @@ export default function StructuredExamBuilder({ exam, onChange, onSave, onExit, 
           {saveState && <span className={"sb-stat sb-save-state is-" + saveState} role="status" aria-live="polite">{SAVE_STATE_LABEL[saveState]}</span>}
           {exam.status === "final" && <span className="sb-stat sb-stat-final">معتمد نهائيًا</span>}
           <button type="button" className={"sb-btn" + (navOpen ? " is-active" : "")} onClick={() => setNavOpen(v => !v)} aria-pressed={navOpen} aria-controls={navOpen && !isNarrow ? navId : undefined} title="مستكشف الأسئلة">🧭 <span className="sb-btn-label">مستكشف الأسئلة</span></button>
-          {bankPicker && <button type="button" className="sb-btn" onClick={() => setPickerOpenFor(exam.examId)} disabled={saving}>📚 إضافة من بنك الأسئلة</button>}
+          {bankPicker && <button type="button" className="sb-btn" onClick={() => { setPickerFocus(null); setPickerOpenFor(exam.examId); }} disabled={saving}>📚 إضافة من بنك الأسئلة</button>}
+          {exam.blueprint && <button type="button" className={"sb-btn" + (coverageOpen ? " is-active" : "")} onClick={() => setCoverageOpen(true)} aria-haspopup="dialog" title="تحليل المخطط">📊 <span className="sb-btn-label">تحليل المخطط</span></button>}
           <button type="button" className={"sb-btn" + (blueprintOpen ? " is-active" : "")} onClick={() => setBlueprintOpen(true)} aria-haspopup="dialog" title="مخطط الامتحان">📐 <span className="sb-btn-label">مخطط الامتحان</span>{blueprintIssueCount > 0 && <span className="sb-bp-badge" aria-label={blueprintIssueCount + " مشكلات في المخطط"}>{blueprintIssueCount}</span>}</button>
           <button type="button" className="sb-btn" onClick={() => setPreview(exam)}>👁 معاينة الامتحان</button>
           {onSave && mediaPending && <span className="sb-stat sb-media-wait" role="status">{MEDIA_WAIT}</span>}
@@ -426,7 +457,8 @@ export default function StructuredExamBuilder({ exam, onChange, onSave, onExit, 
 
       {selected.size > 0 && (
         <BulkActionBar count={selected.size} sections={sectionOptions} mediaPending={selectedMediaPending} disabled={saving}
-          onMove={bulkMove} onDuplicate={bulkDuplicate} onSetMarks={bulkMarks} onDelete={() => { void bulkDelete(); }} onClear={clearSelection} />
+          onMove={bulkMove} onDuplicate={bulkDuplicate} onSetMarks={bulkMarks} onDelete={() => { void bulkDelete(); }} onClear={clearSelection}
+          onClassify={() => setClassifyOpen(true)} />
       )}
 
       <div className="sb-sections">
@@ -477,8 +509,19 @@ export default function StructuredExamBuilder({ exam, onChange, onSave, onExit, 
 
       {pickerOpen && bankPicker && (
         <Suspense fallback={<p className="sb-hint sb-picker-loading" role="status">جارٍ تحميل أداة بنك الأسئلة…</p>}>
-          <BankQuestionPicker key={exam.examId} open onClose={() => setPickerOpenFor("")} service={bankPicker} sections={sectionOptions}
-            usedBankQuestionIds={usedBankIds} onInsert={insertBankQuestions(exam.examId)} />
+          <BankQuestionPicker key={exam.examId + "|" + focusKey(pickerFocus)} open onClose={closePicker} service={bankPicker} sections={sectionOptions}
+            usedBankQuestionIds={usedBankIds} onInsert={insertBankQuestions(exam.examId)} focus={pickerFocus ?? undefined} />
+        </Suspense>
+      )}
+
+      {coverageOpen && exam.blueprint && (
+        <Suspense fallback={<p className="sb-hint" role="status">جارٍ تحميل تحليل المخطط…</p>}>
+          <BlueprintCoveragePanel open onClose={() => setCoverageOpen(false)} exam={exam} onReveal={revealQuestions} onFindInBank={bankPicker ? openBankWithFocus : undefined} />
+        </Suspense>
+      )}
+      {classifyOpen && selected.size > 0 && (
+        <Suspense fallback={<p className="sb-hint" role="status">جارٍ تحميل أداة التصنيف…</p>}>
+          <BulkClassifyDialog open onClose={() => setClassifyOpen(false)} blueprint={exam.blueprint} count={selected.size} onApply={bulkClassify} />
         </Suspense>
       )}
 

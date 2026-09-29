@@ -1,4 +1,5 @@
 import { useEffect, useId, useMemo, useRef, useState } from "react";
+import { bankFiltersFromFocus, type BankPickerFocus } from "./bankPickerFocus";
 import Dialog from "./ui/Dialog";
 import StatusBadge from "./ui/StatusBadge";
 import {
@@ -28,16 +29,19 @@ type Props = {
    *  exam there. The outcome may be deferred (a promise settled once the updater's decision is committed): "ok" is only
    *  ever reported for a batch the exam authority actually applied. */
   onInsert: (questions: BankExamQuestion[], targetSectionId: string, marks: number) => InsertOutcome | Promise<InsertOutcome>;
+  /** Phase 13C-B — optional EXACT initial filter (topic id / difficulty / bank presentation type) from a live coverage row.
+   *  Only prefills the filters; the teacher edits them freely and nothing is selected or inserted automatically. */
+  focus?: BankPickerFocus;
 };
 
 const NO_ROWS: BankQuestionRow[] = [];
 
-export default function BankQuestionPicker({ open, onClose, service, sections, usedBankQuestionIds, onInsert }: Props) {
+export default function BankQuestionPicker({ open, onClose, service, sections, usedBankQuestionIds, onInsert, focus }: Props) {
   const uid = useId();
   const [rows, setRows] = useState<BankQuestionRow[] | null>(null);
   const [loadError, setLoadError] = useState("");
   const [loadSeq, setLoadSeq] = useState(0);
-  const [filters, setFilters] = useState<BankFilters & { topic: string }>({ ...EMPTY_FILTERS, topic: "" });
+  const [filters, setFilters] = useState<BankFilters & { topic: string }>(() => bankFiltersFromFocus(focus));
   const [selected, setSelected] = useState<Set<string>>(() => new Set());
   const [preview, setPreview] = useState<BankQuestionRow | null>(null);
   const [target, setTarget] = useState(() => sections[0]?.id ?? "");

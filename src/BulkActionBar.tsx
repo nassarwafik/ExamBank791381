@@ -18,9 +18,11 @@ type Props = {
   onSetMarks: (marks: number) => void;
   onDelete: () => void;
   onClear: () => void;
+  /** Phase 13C-B — opens the owner's bulk pedagogical classification dialog (one undoable step). */
+  onClassify?: () => void;
 };
 
-export default function BulkActionBar({ count, sections, mediaPending, disabled, onMove, onDuplicate, onSetMarks, onDelete, onClear }: Props) {
+export default function BulkActionBar({ count, sections, mediaPending, disabled, onMove, onDuplicate, onSetMarks, onDelete, onClear, onClassify }: Props) {
   const [target, setTarget] = useState("");
   const [marks, setMarks] = useState("");
   const [marksError, setMarksError] = useState("");
@@ -47,6 +49,7 @@ export default function BulkActionBar({ count, sections, mediaPending, disabled,
         <input className="sb-input sb-input-xs" type="number" step="0.25" min="0.25" aria-label="العلامة الجديدة" placeholder="العلامة" value={marks} onChange={e => { setMarks(e.target.value); if (marksError) setMarksError(""); }} disabled={disabled} />
         <button type="button" className="sb-btn sb-btn-sm" onClick={applyMarks} disabled={disabled}>تعيين العلامة</button>
       </div>
+      {onClassify && <button type="button" className="sb-btn sb-btn-sm" onClick={onClassify} disabled={disabled}>تصنيف المحدد</button>}
       <button type="button" className="sb-btn sb-btn-sm sb-btn-danger" onClick={onDelete} disabled={blocked} title={mediaPending ? MEDIA_WAIT_SELECTED : undefined}>حذف</button>
       <button type="button" className="sb-btn sb-btn-sm" onClick={onClear} disabled={disabled}>إلغاء التحديد</button>
       {mediaPending && <span className="sb-bulk-wait">{MEDIA_WAIT_SELECTED}</span>}

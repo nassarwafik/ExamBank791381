@@ -280,3 +280,35 @@
 .sb-activity-trust.is-unsafe{color:var(--warning-text,#92400e)}
 .sb-activity-trust.is-safe{color:var(--success-text,#166534)}
 @media (max-width:640px){.sb-bp-item{flex-direction:column;align-items:stretch}.sb-bp-item>.sb-input:first-child{flex:1 1 auto}}
+
+/* Phase 13C-B — تحليل المخطط الحي (analysis surface) */
+.sb-cov{display:flex;flex-direction:column;gap:14px;min-width:0}
+.sb-cov-overview{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:8px;margin:0}
+.sb-cov-stat{border:1px solid var(--line,#e5e9f0);border-radius:10px;padding:8px 10px;display:flex;flex-direction:column;gap:4px}
+.sb-cov-stat dt{font-size:.78rem;color:var(--muted,#64748b)}
+.sb-cov-stat dd{margin:0;font-weight:700;display:flex;flex-wrap:wrap;align-items:center;gap:6px}
+.sb-cov-list{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:8px}
+.sb-cov-row{border:1px solid var(--line,#e5e9f0);border-radius:10px;padding:8px 10px;display:flex;flex-direction:column;gap:6px;min-width:0}
+.sb-cov-head{display:flex;flex-wrap:wrap;align-items:baseline;gap:6px}
+.sb-cov-dim{font-size:.75rem;color:var(--muted,#64748b);border:1px solid var(--line,#e5e9f0);border-radius:6px;padding:0 6px}
+.sb-cov-metric{font-size:.78rem;color:var(--muted,#64748b)}
+.sb-cov-values{display:flex;flex-wrap:wrap;gap:10px;font-size:.92rem}
+.sb-cov-actual{font-weight:700}
+.sb-cov-limits,.sb-cov-denominator{color:var(--muted,#64748b)}
+.sb-cov-bar{position:relative;height:8px;border-radius:4px;background:var(--line,#e5e9f0);overflow:hidden}
+.sb-cov-fill{position:absolute;inset-block:0;inset-inline-start:0;background:var(--primary,#2563eb);border-radius:4px}
+.sb-cov-target{position:absolute;inset-block:-2px;width:2px;background:var(--text,#0f172a)}
+.sb-cov-row.is-below-min .sb-cov-fill,.sb-cov-row.is-above-max .sb-cov-fill{background:var(--danger,#dc2626)}
+.sb-cov-row.is-at-target .sb-cov-fill,.sb-cov-row.is-within-tolerance .sb-cov-fill,.sb-cov-row.is-within-range .sb-cov-fill{background:var(--success,#16a34a)}
+.sb-cov-foot{display:flex;flex-wrap:wrap;align-items:center;gap:8px}
+.sb-cov-relation{font-size:.9rem}
+.sb-cov-relation::before{content:"● ";font-size:.7rem}
+.sb-cov-row.is-unassessable .sb-cov-relation::before{content:"◌ "}
+.sb-cov-delta{font-size:.85rem;color:var(--muted,#64748b)}
+.sb-cov-actions{margin-inline-start:auto;display:flex;flex-wrap:wrap;gap:6px}
+.sb-cov-row .sb-btn:focus-visible,.sb-cov-stat .sb-btn:focus-visible{outline:2px solid var(--primary,#2563eb);outline-offset:2px}
+@media (max-width:640px){.sb-cov-actions{margin-inline-start:0;width:100%}.sb-cov-actions .sb-btn{min-height:40px;flex:1}}
+/* Phase 13C-B — تصنيف المحدد */
+.sb-classify{display:flex;flex-direction:column;gap:10px}
+.sb-classify-list{display:flex;flex-direction:column;gap:6px}
+.sb-classify-actions{display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap}
