@@ -7,6 +7,8 @@ import { genId } from "./examBuilderState";
 // a title, text, and an optional image. The material is stored ONCE on the section; questions only
 // reference it — the image is never duplicated into each question.
 
+import ActivityDescriptorEditor from "./ActivityDescriptorEditor";
+
 type Props = { stimuli: Record<string, Stimulus>; onChange: (next: Record<string, Stimulus>) => void; disabled?: boolean };
 
 export default function StimulusEditor({ stimuli, onChange, disabled }: Props) {
@@ -39,6 +41,8 @@ export default function StimulusEditor({ stimuli, onChange, disabled }: Props) {
             <input type="file" accept="image/*" onChange={e => onFile(id, e.target.files?.[0])} disabled={disabled} />
             {stim.image?.dataUrl && <button type="button" className="sb-mini-btn" onClick={() => patch(id, { image: undefined })} disabled={disabled}>إزالة الصورة</button>}
           </div>
+          {/* Phase 13C-A — ONE interactive context shared by every question of this group (never copied into the questions). */}
+          <ActivityDescriptorEditor value={stim.activity} onChange={activity => patch(id, { activity })} disabled={disabled} />
         </div>
       ))}
     </div>

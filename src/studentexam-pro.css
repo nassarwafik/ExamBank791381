@@ -338,3 +338,9 @@
 .iex-paused-meta div{ padding:var(--eb-space-2) var(--eb-space-3); border:1px solid var(--eb-line); border-radius:var(--eb-r-sm); background:var(--eb-surface-2); min-width:0; }
 .iex-paused-meta dt{ color:var(--eb-muted); font-size:var(--eb-fs-12); }
 .iex-paused-meta dd{ margin:2px 0 0; color:var(--eb-text-heading); font-weight:var(--eb-fw-semibold); overflow-wrap:anywhere; }
+
+/* Phase 13C-A — interactive assessment context (question-level or shared stimulus). Purely a container: the trusted
+   activity host brings its own .learning-activity styles; the fallback is a quiet static note. */
+.iex-activity{ margin-block-end:var(--eb-space-3); border:1px dashed var(--eb-line); border-radius:var(--eb-r); padding:var(--eb-space-2) var(--eb-space-3); background:var(--eb-surface-2); }
+.iex-activity-stimulus{ margin-block-start:var(--eb-space-2); }
+.iex-activity-status,.iex-activity-fallback{ margin:0; color:var(--eb-text-muted); font-size:var(--eb-fs-sm); }

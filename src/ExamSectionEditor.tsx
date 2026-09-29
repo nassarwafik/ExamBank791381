@@ -7,6 +7,7 @@ import StructuredQuestionEditor from "./StructuredQuestionEditor";
 import StimulusEditor from "./StimulusEditor";
 import type { BuilderQuestion, BuilderImageAsset } from "./examTypes";
 import type { AiImageRequestQuestion } from "./questionMedia";
+import type { AssessmentBlueprintV1 } from "./assessmentTypes";
 
 // One section: its settings (title / instructions / grading policy + policy-specific inputs / preset),
 // its shared stimuli, and its questions. Question-level mutations are delegated up via `mutateQuestions`
@@ -37,10 +38,12 @@ type Props = {
   onToggleSelect?: (questionId: string) => void;
   registerQuestionNode?: (questionId: string, el: HTMLDivElement | null) => void;
   flashQuestionId?: string;
+  // Phase 13C-A — the exam's blueprint (passed to each question's classification controls).
+  blueprint?: AssessmentBlueprintV1;
 };
 
 export default function ExamSectionEditor(props: Props) {
-  const { section, index, total, sectionOptions, patch, onDelete, onMove, onAddQuestion, onQuestionChange, onQuestionDelete, onQuestionMove, onQuestionDuplicate, onQuestionMoveToSection, onPreviewQuestion, requestQuestionImage, onMediaBusyChange, pendingMediaIds, disabled, selectedIds, onToggleSelect, registerQuestionNode, flashQuestionId } = props;
+  const { section, index, total, sectionOptions, patch, onDelete, onMove, onAddQuestion, onQuestionChange, onQuestionDelete, onQuestionMove, onQuestionDuplicate, onQuestionMoveToSection, onPreviewQuestion, requestQuestionImage, onMediaBusyChange, pendingMediaIds, disabled, selectedIds, onToggleSelect, registerQuestionNode, flashQuestionId, blueprint } = props;
   const groupOptions = Object.entries(section.stimuli || {}).map(([id, s]) => ({ id, label: s.title ? s.title + " (" + id + ")" : id }));
 
   return (
@@ -133,6 +136,7 @@ export default function ExamSectionEditor(props: Props) {
             onToggleSelect={onToggleSelect ? () => onToggleSelect(q.examQuestionId) : undefined}
             registerNode={registerQuestionNode ? el => registerQuestionNode(q.examQuestionId, el) : undefined}
             flash={flashQuestionId === q.examQuestionId}
+            blueprint={blueprint}
           />
         ))}
       </div>

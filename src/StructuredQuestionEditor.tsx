@@ -4,6 +4,9 @@ import type { BuilderQuestion, BuilderImageAsset } from "./examTypes";
 import QuestionComposer from "./QuestionComposer";
 import QuestionMediaEditor from "./QuestionMediaEditor";
 import type { AiImageRequestQuestion } from "./questionMedia";
+import type { AssessmentBlueprintV1 } from "./assessmentTypes";
+import QuestionClassificationEditor from "./QuestionClassificationEditor";
+import ActivityDescriptorEditor from "./ActivityDescriptorEditor";
 
 // Exam-specific chrome around a question: collapse, the displayed-number badge, and the row actions (preview, move,
 // duplicate, delete), plus the exam-only metadata (display number, marks, shared stimulus/group, move-to-section).
@@ -39,10 +42,12 @@ type Props = {
   registerNode?: (el: HTMLDivElement | null) => void;
   /** Brief non-disruptive highlight after navigating here. */
   flash?: boolean;
+  // Phase 13C-A — the exam's blueprint (vocabulary for the optional classification controls).
+  blueprint?: AssessmentBlueprintV1;
 };
 
 export default function StructuredQuestionEditor(props: Props) {
-  const { question: q, index, total, sectionOptions, currentSectionId, groupOptions, onChange, onDelete, onMove, onDuplicate, onMoveToSection, onPreview, requestQuestionImage, onMediaBusyChange, mediaPending, disabled, selected, onToggleSelect, registerNode, flash } = props;
+  const { question: q, index, total, sectionOptions, currentSectionId, groupOptions, onChange, onDelete, onMove, onDuplicate, onMoveToSection, onPreview, requestQuestionImage, onMediaBusyChange, mediaPending, disabled, selected, onToggleSelect, registerNode, flash, blueprint } = props;
   const [open, setOpen] = useState(true);
 
   return (
@@ -84,6 +89,8 @@ export default function StructuredQuestionEditor(props: Props) {
 
           <QuestionComposer question={q} onChange={onChange} disabled={disabled} />
           <QuestionMediaEditor question={q} onChange={onChange} disabled={disabled} requestQuestionImage={requestQuestionImage} onBusyChange={onMediaBusyChange} mediaPending={mediaPending} />
+          <QuestionClassificationEditor question={q} blueprint={blueprint} onChange={onChange} disabled={disabled} />
+          <ActivityDescriptorEditor value={q.activity} onChange={activity => onChange({ activity })} disabled={disabled} />
         </div>
       )}
     </div>

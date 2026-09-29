@@ -18,6 +18,18 @@
 const FLAG_SECRET_KEYS = ["correct", "isCorrect", "correctText", "correctOptionIndex", "correctOptionValue", "correctOptionLabel", "solution", "expectedAnswer", "answerKey"];
 // Teacher-side / secret keys that may appear on a question or a compound part.
 const NODE_SECRET_KEYS = ["teacherNote", "aiInstruction", "hint", "history", "redoStack", "explanation", "rationale", ...FLAG_SECRET_KEYS];
+// Phase 13C-A — TEACHER PLANNING DATA: the assessment blueprint (exam level) and a question's / part's pedagogical
+// classification are authoring data and never reach a student.
+const PLANNING_KEYS = ["assessmentMeta"];
+// Phase 13C-A — an interactive-context descriptor IS student-visible, but only as DATA: these are the only fields kept.
+// Anything content might use to name code (component / module / src / html …) or to claim trust (assessmentSafe …) is
+// dropped here (the client registry ignores it anyway — defense in depth), and secret-looking keys are removed from the
+// config recursively because the config is rendered in the student's browser.
+const ACTIVITY_FIELDS = ["id", "kind", "key", "version", "title", "description", "config", "placement"];
+// Review Fix 1 / R3: config keys are judged by the CANONICAL secret-key policy (case-insensitive, separators removed,
+// semantic families), mirrored from src/secretKeyPolicy.ts and pinned by src/secretKeyPolicy.parity.test.ts — never an
+// exact-spelling denylist that `correct_answer` / `CorrectAnswer` / `teacherAnswer` could walk past.
+const { isSecretConfigKey } = require("./secret-key-policy.js");
 // Import-only / teacher-only image keys that must never reach a student: the original URL of an external
 // image the importer refused to embed, and the AI-generation `prompt` (Phase 5B never persists it on a
 // structured question, but the legacy builder stores it on image objects — strip it here so it can never
@@ -26,6 +38,30 @@ const IMPORT_ONLY_IMAGE_KEYS = ["externalUrl", "prompt"];
 
 function stripKeys(obj, keys) {
   for (const k of keys) if (k in obj) delete obj[k];
+}
+function stripSecretsDeep(value, depth = 0) {
+  if (depth > 12) return undefined;
+  if (Array.isArray(value)) return value.map(v => stripSecretsDeep(v, depth + 1));
+  if (value && typeof value === "object") {
+    const out = {};
+    for (const [k, v] of Object.entries(value)) if (!isSecretConfigKey(k)) out[k] = stripSecretsDeep(v, depth + 1);
+    return out;
+  }
+  return value;
+}
+// Student copy of an interactive-context descriptor (see ACTIVITY_FIELDS). Returns undefined for anything that is not a
+// plain object, so a malformed value is dropped rather than forwarded.
+function sanitizeActivityForStudent(activity) {
+  if (!activity || typeof activity !== "object" || Array.isArray(activity)) return undefined;
+  const out = {};
+  for (const k of ACTIVITY_FIELDS) if (k in activity && activity[k] !== undefined) out[k] = activity[k];
+  if (out.config && typeof out.config === "object") out.config = stripSecretsDeep(out.config);
+  return out;
+}
+function applyActivityForStudent(node) {
+  if (!("activity" in node)) return;
+  const clean = sanitizeActivityForStudent(node.activity);
+  if (clean) node.activity = clean; else delete node.activity;
 }
 
 // Optional cover/start page: keep ONLY known, safe display fields for the student, and only a banner
@@ -111,6 +147,8 @@ function sanitizePartForStudent(part) {
   const out = { ...part }; // keeps id / label / text / textHtml / marks / type / wordBank / cli / tableHeaders / tableRows / image(s) / groupId
   delete out.answer; // remove part.answer (grading key)
   stripKeys(out, NODE_SECRET_KEYS);
+  stripKeys(out, PLANNING_KEYS);
+  applyActivityForStudent(out);
   if (out.image) out.image = sanitizeImageForStudent(out.image);
   if (Array.isArray(out.images)) out.images = out.images.map(sanitizeImageAssetForStudent);
   applyStudentMediaVisibility(out);
@@ -126,6 +164,8 @@ function sanitizeQuestionForStudent(question) {
   // then strip any additional secret flags and recurse into the new structured children.
   const out = { ...question, answer: {}, hint: "", teacherNote: "", aiInstruction: "", history: [], redoStack: [] };
   stripKeys(out, ["explanation", "rationale", ...FLAG_SECRET_KEYS]);
+  stripKeys(out, PLANNING_KEYS);
+  applyActivityForStudent(out);
   if (out.image) out.image = sanitizeImageForStudent(out.image);
   if (Array.isArray(out.images)) out.images = out.images.map(sanitizeImageAssetForStudent);
   applyStudentMediaVisibility(out);
@@ -142,7 +182,8 @@ function sanitizeSectionForStudent(section) {
   if (out.stimuli && typeof out.stimuli === "object" && !Array.isArray(out.stimuli)) {
     const stimuli = {};
     for (const [key, stim] of Object.entries(out.stimuli)) {
-      stimuli[key] = stim && typeof stim === "object" ? { ...stim, ...(stim.image ? { image: sanitizeImageForStudent(stim.image) } : {}) } : stim;
+      if (stim && typeof stim === "object") { const copy = { ...stim, ...(stim.image ? { image: sanitizeImageForStudent(stim.image) } : {}) }; applyActivityForStudent(copy); stimuli[key] = copy; }
+      else stimuli[key] = stim;
     }
     out.stimuli = stimuli;
   }
@@ -157,6 +198,7 @@ function sanitizeExamForStudent(exam) {
   const x = JSON.parse(JSON.stringify(exam || {}));
   x.revisionHistory = [];
   if (x.metadata && typeof x.metadata === "object" && "import" in x.metadata) delete x.metadata.import;
+  if ("blueprint" in x) delete x.blueprint;                                   // Phase 13C-A: teacher planning data
   if ("coverPage" in x) x.coverPage = sanitizeCoverForStudent(x.coverPage);
   if (Array.isArray(x.questions)) x.questions = x.questions.map(sanitizeQuestionForStudent);
   if (Array.isArray(x.sections)) x.sections = x.sections.map(sanitizeSectionForStudent);

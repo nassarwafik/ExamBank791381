@@ -12,7 +12,7 @@ export type AnswerUnit = "question" | "part";
 
 // Lightweight shared stimulus (a topology image, a command output, a passage) rendered ONCE before
 // the questions that reference it via groupId. Not a page builder — just common material + questions.
-export type Stimulus = { title?: string; text?: string; image?: { dataUrl?: string } };
+export type Stimulus = { title?: string; text?: string; image?: { dataUrl?: string }; activity?: unknown };
 
 export type ExamSection = {
   id?: string;

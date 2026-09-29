@@ -390,14 +390,16 @@ export function questionMaxMarks(q: BuilderQuestion): number {
 // Compute total marks across all sections (each section's maxMarks cap when set, else the sum of its
 // question max marks). Mirrors the backend examOfficialStats()/grader so the saved totalMarks is
 // consistent — including compound questions with explicit part marks.
+// Official max for ONE section — the same rule as the backend sectionOfficialMaxMarks()/grader: "all" sections are
+// never capped; capScore / firstNAnswered use an explicit section maximum when present. Phase 13C-A's assessment
+// profile reuses this (never a third implementation).
+export function sectionMaxMarks(s: BuilderSection): number {
+  const sum = (s.questions || []).reduce((a, q) => a + questionMaxMarks(q), 0);
+  const capped = s.gradingPolicy !== "all" && s.maxMarks != null;
+  return capped ? Number(s.maxMarks) || 0 : sum;
+}
 export function computeTotalMarks(exam: StructuredExam): number {
-  return (exam.sections || []).reduce((total, s) => {
-    const sum = (s.questions || []).reduce((a, q) => a + questionMaxMarks(q), 0);
-    // "all" sections are never capped (mirrors the backend grader); only capScore / firstNAnswered
-    // use an explicit section maximum.
-    const capped = s.gradingPolicy !== "all" && s.maxMarks != null;
-    return total + (capped ? Number(s.maxMarks) || 0 : sum);
-  }, 0);
+  return (exam.sections || []).reduce((total, s) => total + sectionMaxMarks(s), 0);
 }
 export function countQuestions(exam: StructuredExam): number {
   return (exam.sections || []).reduce((n, s) => n + (s.questions || []).length, 0);
