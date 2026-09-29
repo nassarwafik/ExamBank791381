@@ -5,6 +5,8 @@ import type {Answer,FieldValue,Question} from "./StudentQuestionCard";
 import CompoundQuestion from "./CompoundQuestion";
 import {IconCheck} from "./icons";
 import {sectionRuleLine} from "./student/exam/sectionRule";
+// Phase 13C-A — interactive CONTEXT (data descriptor → trusted lazy host). Never a scored response.
+import {AssessmentActivityContext} from "./AssessmentActivityContext";
 import {
  type NormalizedSection,
  type Stimulus,
@@ -20,8 +22,8 @@ import {
 // reference it via groupId. Content comes from section.stimuli[groupId], falling back to a per-question
 // stimulus object. Reuses the existing image support; no page builder, no redesign.
 function StimulusBlock({stimulus}:{stimulus:Stimulus}){
- if(!stimulus||(!stimulus.title&&!stimulus.text&&!stimulus.image?.dataUrl))return null;
- return <div className="iex-stimulus">{stimulus.title&&<strong className="iex-stimulus-title">{stimulus.title}</strong>}{stimulus.text&&<p className="iex-stimulus-text">{stimulus.text}</p>}{stimulus.image?.dataUrl&&<img className="iex-image" src={stimulus.image.dataUrl} alt={stimulus.title||"مادة مشتركة"}/>}</div>;
+ if(!stimulus||(!stimulus.title&&!stimulus.text&&!stimulus.image?.dataUrl&&!stimulus.activity))return null;
+ return <div className="iex-stimulus">{stimulus.title&&<strong className="iex-stimulus-title">{stimulus.title}</strong>}{stimulus.text&&<p className="iex-stimulus-text">{stimulus.text}</p>}{stimulus.image?.dataUrl&&<img className="iex-image" src={stimulus.image.dataUrl} alt={stimulus.title||"مادة مشتركة"}/>}{stimulus.activity!==undefined&&<AssessmentActivityContext descriptor={stimulus.activity} scope="stimulus"/>}</div>;
 }
 
 // Renders one exam SECTION: its header (title, instructions, grading rule, live progress) and its
@@ -95,6 +97,9 @@ export function StructuredSectionQuestion(props:StructuredQuestionProps){
  const id=sectionQuestionId(section,q,questionIndex);
  let stimulusNode:ReactNode=null;
  if(showStimulus&&q.groupId){const stim=(section.stimuli||{})[q.groupId]||q.stimulus;if(stim)stimulusNode=<StimulusBlock stimulus={stim}/>;}
+ // Question-level interactive context: rendered with the question (before its body); the response controls are untouched.
+ const qActivity=(q as {activity?:unknown}).activity;
+ const activityNode:ReactNode=qActivity!==undefined?<AssessmentActivityContext descriptor={qActivity} scope="question"/>:null;
  if(isCompound(q)){
   // Part-level firstN: mark each answered-but-excess part. Question-level: mark whole question.
   let excessPartIds:Set<string>|undefined;
@@ -103,8 +108,8 @@ export function StructuredSectionQuestion(props:StructuredQuestionProps){
    questionParts(q).forEach((p,pi)=>{const pid=partId(p,pi),resp=answers[id];const pAns=resp?.kind==="compound"?resp.parts?.[pid]:undefined;if(answered(pAns)&&!countedKeys.has(id+"::"+pid))excessPartIds!.add(pid);});
   }
   const wholeExcess=section.answerUnit==="question"&&answered(answers[id])&&!countedKeys.has(id);
-  return <>{stimulusNode}{wholeExcess&&<div className="iex-extra-hint iex-extra-hint-block"><IconCheck size={11}/>إجابة إضافية — لن تدخل في التصحيح</div>}<CompoundQuestion q={q} index={globalIndex} id={id} answer={answers[id]} onPart={(pid,ans)=>onPart(id,pid,ans)} disabled={disabled} excessPartIds={excessPartIds}/></>;
+  return <>{stimulusNode}{activityNode}{wholeExcess&&<div className="iex-extra-hint iex-extra-hint-block"><IconCheck size={11}/>إجابة إضافية — لن تدخل في التصحيح</div>}<CompoundQuestion q={q} index={globalIndex} id={id} answer={answers[id]} onPart={(pid,ans)=>onPart(id,pid,ans)} disabled={disabled} excessPartIds={excessPartIds}/></>;
  }
  const excess=answered(answers[id])&&!countedKeys.has(id);
- return <>{stimulusNode}{excess&&<div className="iex-extra-hint iex-extra-hint-block"><IconCheck size={11}/>إجابة إضافية — لن تدخل في التصحيح</div>}<StudentQuestionCard q={q} index={globalIndex} id={id} answer={answers[id]} onChoice={n=>onChoice(id,n)} onSeq={(n,v)=>onSeq(id,n,v)} onTable={(n,v)=>onTable(id,n,v)} onText={v=>onText(id,v)} onField={(fid,v)=>onField(id,fid,v)} disabled={disabled}/></>;
+ return <>{stimulusNode}{activityNode}{excess&&<div className="iex-extra-hint iex-extra-hint-block"><IconCheck size={11}/>إجابة إضافية — لن تدخل في التصحيح</div>}<StudentQuestionCard q={q} index={globalIndex} id={id} answer={answers[id]} onChoice={n=>onChoice(id,n)} onSeq={(n,v)=>onSeq(id,n,v)} onTable={(n,v)=>onTable(id,n,v)} onText={v=>onText(id,v)} onField={(fid,v)=>onField(id,fid,v)} disabled={disabled}/></>;
 }

@@ -36,12 +36,15 @@ import "./activities.css";
  *   - Events flow to the INJECTED sink (default: no-op). No persistence, no network, no progress/grades.
  */
 export default function LearningActivityHost({
-  block, courseId, registry = productionActivityRegistry, emit = noopActivityEventSink,
+  block, courseId, registry = productionActivityRegistry, emit = noopActivityEventSink, builtins = builtinActivityRegistry,
 }: {
   block: ActivityBlock;
   courseId: string;
   registry?: LearningActivityRegistry;
   emit?: LearningActivityEventSink;
+  /** Phase 13C-A — which built-in presenters may resolve (default: the learning built-ins). Assessment context passes an
+   *  EMPTY registry so teaching scaffolding presenters (guided/reveal) are never live inside an exam. */
+  builtins?: LearningActivityRegistry;
 }) {
   const reducedMotion = usePrefersReducedMotion();
   const [fullscreen, setFullscreen] = useState(false);
@@ -57,7 +60,7 @@ export default function LearningActivityHost({
   useEffect(() => { mountedRef.current = true; return () => { mountedRef.current = false; }; }, []);
 
   // Exact {kind, key, version} resolution: trusted built-ins first, then the injected registry.
-  const entry = builtinActivityRegistry.resolve(block) ?? registry.resolve(block);
+  const entry = builtins.resolve(block) ?? registry.resolve(block);
   const lazy = entry?.load;
   // A textual, collision-free identity (no delimiter logic; JSON escapes whatever the free-form key contains).
   const entryKey = entry ? JSON.stringify([entry.kind, entry.key, block.version]) : "";

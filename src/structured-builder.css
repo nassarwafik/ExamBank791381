@@ -255,3 +255,27 @@
 .sb-btn.is-active{background:var(--primary-soft,#e8effc);border-color:var(--primary,#2563eb);color:var(--primary,#2563eb)}
 .sb-picker-loading{margin:8px 0}
 .sb-navigator-dialog-shell .sb-navigator{border:none;padding:0}
+
+/* ── Phase 13C-A · مخطط الامتحان + التصنيف التعليمي + النشاط التفاعلي (سياق) ─────────────────────────────────────── */
+.sb-bp{display:flex;flex-direction:column;gap:14px}
+.sb-bp-section{border:1px solid var(--line,#e5e9f0);border-radius:12px;padding:10px 12px;display:flex;flex-direction:column;gap:8px}
+.sb-bp-h{margin:0;font-size:.95rem}
+.sb-bp-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:8px}
+.sb-bp-field{flex-direction:column;align-items:stretch}
+.sb-bp-list{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:6px}
+.sb-bp-item{display:flex;flex-wrap:wrap;gap:6px;align-items:center;border:1px dashed var(--line,#e5e9f0);border-radius:10px;padding:6px 8px}
+.sb-bp-item>.sb-input:first-child{flex:1 1 180px;min-width:120px}
+.sb-bp-constraint .sb-inline{gap:4px}
+.sb-bp-code{font-family:var(--eb-font-mono,monospace);font-size:.75rem;color:var(--text-muted,#64748b);margin-inline-start:6px}
+.sb-bp-badge{display:inline-flex;min-width:18px;height:18px;padding:0 5px;margin-inline-start:4px;border-radius:9px;background:var(--danger,#dc2626);color:#fff;font-size:.72rem;align-items:center;justify-content:center}
+.sb-class,.sb-activity{border:1px solid var(--line,#e5e9f0);border-radius:10px;padding:8px 10px;margin-top:8px;display:flex;flex-direction:column;gap:6px;min-width:0}
+.sb-class-row{display:flex;flex-wrap:wrap;gap:8px}
+.sb-class-groups{display:flex;flex-wrap:wrap;gap:10px}
+.sb-class-chips{border:none;padding:0;margin:0;display:flex;flex-wrap:wrap;gap:6px}
+.sb-class-chips legend{font-size:.8rem;color:var(--text-muted,#64748b);padding:0;margin-bottom:4px}
+.sb-class-evidence{margin:0}
+.sb-activity-json{font-family:var(--eb-font-mono,monospace);min-height:56px}
+.sb-activity-trust{margin:0;font-size:.85rem}
+.sb-activity-trust.is-unsafe{color:var(--warning-text,#92400e)}
+.sb-activity-trust.is-safe{color:var(--success-text,#166534)}
+@media (max-width:640px){.sb-bp-item{flex-direction:column;align-items:stretch}.sb-bp-item>.sb-input:first-child{flex:1 1 auto}}

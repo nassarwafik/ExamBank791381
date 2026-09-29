@@ -1,3 +1,4 @@
+import type { AssessmentBlueprintV1, AssessmentMeta, AssessmentActivityDescriptor } from "./assessmentTypes";
 // Teacher-side structured-exam types for the Structured Exam Builder (Phase 2).
 //
 // Design contract: a builder object is ALREADY in the engine-native shape that PR #51's student
@@ -106,6 +107,8 @@ export type BuilderPart = {
   tableHeaders?: string[];
   tableRows?: string[][];
   answer?: Record<string, unknown>; // SECRET (e.g. { correctOptionIndex }, { correct }, { text }, { mode, values })
+  assessmentMeta?: AssessmentMeta;
+  activity?: AssessmentActivityDescriptor;
 };
 
 export type BuilderQuestion = {
@@ -125,6 +128,10 @@ export type BuilderQuestion = {
   image?: BuilderImage;
   images?: BuilderImageAsset[];
   answer?: Record<string, unknown>; // SECRET
+  // Phase 13C-A — OPTIONAL, additive, domain-neutral pedagogical metadata (teacher planning data; stripped for students).
+  assessmentMeta?: AssessmentMeta;
+  // Phase 13C-A — OPTIONAL interactive CONTEXT (data descriptor only; never a scored response).
+  activity?: AssessmentActivityDescriptor;
 };
 
 // The type-specific answer body shared by both a question and a compound part, so one set of body
@@ -140,7 +147,8 @@ export type QuestionBody = {
   answer?: Record<string, unknown>;
 };
 
-export type Stimulus = { title?: string; text?: string; image?: { dataUrl?: string } };
+// Phase 13C-A — a shared stimulus may carry ONE interactive context (data descriptor) for every question in its group.
+export type Stimulus = { title?: string; text?: string; image?: { dataUrl?: string }; activity?: AssessmentActivityDescriptor };
 
 export type BuilderSection = {
   id: string;
@@ -168,6 +176,9 @@ export type StructuredExam = {
   updatedAt?: string;
   // OPTIONAL cover/start page, configured post-import. Absent on existing exams (they behave as before).
   coverPage?: ExamCoverPage;
+  // Phase 13C-A — OPTIONAL canonical assessment blueprint (teacher planning data; never delivered to students).
+  // Absent on every existing exam: nothing is inferred or migrated by opening / saving.
+  blueprint?: AssessmentBlueprintV1;
   sections: BuilderSection[];
   // Canonical question tree is sections[].questions[] — a structured exam carries NO top-level
   // questions[] (legacyToStructured / toSavedStructuredExam / the save-exam-artifact cleaner all

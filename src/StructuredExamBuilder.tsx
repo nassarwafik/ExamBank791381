@@ -36,6 +36,8 @@ import {
 import ExamQuestionNavigator from "./ExamQuestionNavigator";
 import BulkActionBar from "./BulkActionBar";
 import type { BankPickerService, InsertOutcome } from "./BankQuestionPicker";
+import { withBlueprint, validateBlueprint } from "./assessmentBlueprint";
+import type { AssessmentBlueprintV1 } from "./assessmentTypes";
 import { useMediaQuery } from "./ui/useMediaQuery";
 import "./structured-builder.css";
 
@@ -46,6 +48,8 @@ export type { BankPickerService } from "./BankQuestionPicker";
 
 // Phase 13B — the Question Bank picker is loaded only when a teacher opens it (its own chunk inside the builder chunk).
 const BankQuestionPicker = lazy(() => import("./BankQuestionPicker"));
+// Phase 13C-A — the Blueprint panel is its own lazy chunk (opened rarely; never in the initial graph).
+const BlueprintPanel = lazy(() => import("./BlueprintPanel"));
 
 // Top-level Structured Exam Builder. It is a CONTROLLED component: the exam lives in the parent
 // (App.tsx) and every edit flows back through onChange as a FUNCTIONAL updater that the parent applies to
@@ -352,6 +356,12 @@ export default function StructuredExamBuilder({ exam, onChange, onSave, onExit, 
       onClearSelection={clearSelection} onNavigate={navigateTo} />
   );
 
+  // ── Phase 13C-A · مخطط الامتحان: every blueprint edit is ONE functional updater (one history step). Opening the panel on
+  //    an exam without a blueprint dispatches nothing; the first real edit creates the versioned blueprint.
+  const [blueprintOpen, setBlueprintOpen] = useState(false);
+  const editBlueprint = (fn: (bp: AssessmentBlueprintV1) => AssessmentBlueprintV1) => update(prev => withBlueprint(prev, fn));
+  const blueprintIssueCount = useMemo(() => (exam.blueprint ? validateBlueprint(exam.blueprint).length : 0), [exam.blueprint]);
+
   const issues = useMemo(() => validateStructuredExam(exam), [exam]);
   const errors = issues.filter(i => i.severity === "error");
   const warnings = issues.filter(i => i.severity === "warning");
@@ -378,6 +388,7 @@ export default function StructuredExamBuilder({ exam, onChange, onSave, onExit, 
           {exam.status === "final" && <span className="sb-stat sb-stat-final">معتمد نهائيًا</span>}
           <button type="button" className={"sb-btn" + (navOpen ? " is-active" : "")} onClick={() => setNavOpen(v => !v)} aria-pressed={navOpen} aria-controls={navOpen && !isNarrow ? navId : undefined} title="مستكشف الأسئلة">🧭 <span className="sb-btn-label">مستكشف الأسئلة</span></button>
           {bankPicker && <button type="button" className="sb-btn" onClick={() => setPickerOpenFor(exam.examId)} disabled={saving}>📚 إضافة من بنك الأسئلة</button>}
+          <button type="button" className={"sb-btn" + (blueprintOpen ? " is-active" : "")} onClick={() => setBlueprintOpen(true)} aria-haspopup="dialog" title="مخطط الامتحان">📐 <span className="sb-btn-label">مخطط الامتحان</span>{blueprintIssueCount > 0 && <span className="sb-bp-badge" aria-label={blueprintIssueCount + " مشكلات في المخطط"}>{blueprintIssueCount}</span>}</button>
           <button type="button" className="sb-btn" onClick={() => setPreview(exam)}>👁 معاينة الامتحان</button>
           {onSave && mediaPending && <span className="sb-stat sb-media-wait" role="status">{MEDIA_WAIT}</span>}
           {onSave && <button type="button" className="sb-btn" onClick={() => onSave("draft")} disabled={saving || mediaPending} title={mediaPending ? MEDIA_WAIT : undefined}>{saving ? "⏳ جارٍ الحفظ…" : "💾 حفظ مسودة"}</button>}
@@ -444,6 +455,7 @@ export default function StructuredExamBuilder({ exam, onChange, onSave, onExit, 
             onToggleSelect={toggleSelect}
             registerQuestionNode={registerQuestionNode}
             flashQuestionId={flashId || undefined}
+            blueprint={exam.blueprint}
           />
         ))}
       </div>
@@ -456,6 +468,12 @@ export default function StructuredExamBuilder({ exam, onChange, onSave, onExit, 
       <Dialog open={navOpen && isNarrow} size="md" title="مستكشف الأسئلة" onClose={() => setNavOpen(false)} className="sb-navigator-dialog-shell">
         {navigator(false)}
       </Dialog>
+
+      {blueprintOpen && (
+        <Suspense fallback={<p className="sb-hint" role="status">جارٍ تحميل مخطط الامتحان…</p>}>
+          <BlueprintPanel open onClose={() => setBlueprintOpen(false)} blueprint={exam.blueprint} sections={sectionOptions} onEdit={editBlueprint} disabled={saving} />
+        </Suspense>
+      )}
 
       {pickerOpen && bankPicker && (
         <Suspense fallback={<p className="sb-hint sb-picker-loading" role="status">جارٍ تحميل أداة بنك الأسئلة…</p>}>

@@ -83,7 +83,10 @@ describe("Phase 3A — no code execution from content", () => {
     expect(host).not.toMatch(/\bBUILTIN\b/);
     expect(host).not.toMatch(/Record<[^>]*ActivityBlock\["type"\][^>]*component/);
     expect(host).not.toMatch(/component\s*:\s*GuidedActivity/);
-    expect(host).toContain("builtinActivityRegistry.resolve(block)");
+    // 13C-A: the built-in registry is an injectable prop (assessment context passes an EMPTY one); its default is the
+    // exact-identity built-in registry and resolution still goes through `.resolve(block)` — never by block type.
+    expect(host).toMatch(/builtins\s*=\s*builtinActivityRegistry\b/);
+    expect(host).toContain("builtins.resolve(block) ?? registry.resolve(block)");
     expect(builtins).toContain("createActivityRegistry(");
     expect(builtins).toMatch(/kind:\s*GUIDED_REVEAL_IDENTITY\.kind/);
   });
