@@ -239,10 +239,19 @@ export type EffectiveAssessmentMeta = {
   unmappedBankTopics: string[];
   bankEvidence: { topic?: string; secondaryTopics: string[]; difficulty?: number; hasCLI: boolean; requiresCalculation: boolean };
 };
-export function effectiveAssessmentMeta(question: BuilderQuestion | BankEvidenceQuestion, blueprint?: AssessmentBlueprintV1 | null): EffectiveAssessmentMeta {
+/** Prepared taxonomy lookup for effectiveAssessmentMeta. Prepare ONCE per evaluation and reuse across every question
+ *  (13C-B Review Fix 1 / R3-C): the semantics are identical to the two-argument call, only the Set is not rebuilt. */
+export type AssessmentMetaContext = { topicIds: ReadonlySet<string> };
+/** Pure diagnostics seam (tests): how many contexts were prepared. Never read by production code. */
+export const assessmentMetaDiagnostics = { contextsPrepared: 0 };
+export function prepareAssessmentMetaContext(blueprint?: AssessmentBlueprintV1 | null): AssessmentMetaContext {
+  assessmentMetaDiagnostics.contextsPrepared += 1;
+  return { topicIds: new Set((blueprint?.topics ?? []).map(t => t.id)) };
+}
+export function effectiveAssessmentMeta(question: BuilderQuestion | BankEvidenceQuestion, blueprint?: AssessmentBlueprintV1 | null, context?: AssessmentMetaContext): EffectiveAssessmentMeta {
   const q = question as BankEvidenceQuestion;
   const meta: AssessmentMeta = q.assessmentMeta && typeof q.assessmentMeta === "object" ? q.assessmentMeta : {};
-  const topicIds = new Set((blueprint?.topics ?? []).map(t => t.id));
+  const topicIds = (context ?? prepareAssessmentMetaContext(blueprint)).topicIds;
   const bankTopic = typeof q.topic === "string" && q.topic.trim() ? q.topic : undefined;
   const bankSecondary = Array.isArray(q.secondaryTopics) ? q.secondaryTopics.filter((t): t is string => typeof t === "string" && !!t.trim()) : [];
   const bankDifficulty = typeof q.difficulty === "number" && Number.isInteger(q.difficulty) ? q.difficulty : (typeof q.difficulty === "string" && /^\d+$/.test(q.difficulty) ? Number(q.difficulty) : undefined);
@@ -320,8 +329,9 @@ export function officialQuestionMarks(q: BuilderQuestion, s: BuilderSection): nu
   return w > 0 ? (questionMaxMarks(q) * sectionMaxMarks(s)) / w : 0;
 }
 const bump = (rec: Record<string, Tally>, key: string, weight: number, official: number) => { const t = rec[key] || (rec[key] = { count: 0, weightMarks: 0, officialMarks: 0 }); t.count += 1; t.weightMarks += weight; t.officialMarks += official; };
-export function buildAssessmentProfile(exam: StructuredExam, blueprint?: AssessmentBlueprintV1 | null): AssessmentProfile {
+export function buildAssessmentProfile(exam: StructuredExam, blueprint?: AssessmentBlueprintV1 | null, context?: AssessmentMetaContext): AssessmentProfile {
   const bp = blueprint === undefined ? exam.blueprint : blueprint;
+  const ctx = context ?? prepareAssessmentMetaContext(bp);
   const p: AssessmentProfile = {
     totalQuestions: countQuestions(exam), totalWeightMarks: 0, totalOfficialMarks: computeTotalMarks(exam), unattributedOfficialMarks: 0,
     byTopic: {}, byObjective: {}, byDifficulty: {}, byType: {}, byCognitiveLevel: {}, byCapability: {}, bySection: {},
@@ -337,7 +347,7 @@ export function buildAssessmentProfile(exam: StructuredExam, blueprint?: Assessm
     for (const q of qs) {
       const weight = questionMaxMarks(q);
       const marks = weightSum > 0 ? (weight * official) / weightSum : 0;
-      const eff = effectiveAssessmentMeta(q, bp ?? undefined);
+      const eff = effectiveAssessmentMeta(q, bp ?? undefined, ctx);
       if (eff.primaryTopicId) bump(p.byTopic, eff.primaryTopicId, weight, marks);
       else { p.unclassifiedQuestions.push(q.examQuestionId); p.unclassified.count += 1; p.unclassified.weightMarks += weight; p.unclassified.officialMarks += marks; }
       if (eff.unmappedBankTopics.length) p.unmappedQuestions.push({ examQuestionId: q.examQuestionId, bankTopics: eff.unmappedBankTopics });

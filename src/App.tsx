@@ -2838,6 +2838,10 @@ function App() {
   const apiRequestRef = useRef(apiRequest);
   useEffect(() => { apiRequestRef.current = apiRequest; });
   const structuredBankPicker = useMemo<BankPickerService>(() => ({
+    // Phase 13C-B Review Fix 1 / R1 — DATA: this bank holds the 791381 networking questions. Guided discovery from a
+    // Blueprint is offered only when the Blueprint's stable subject / course ids match (the canonical Networking fixture
+    // uses subject "networking", course "791381"); the manual picker is unaffected.
+    scope: { subjectId: "networking", courseId: "791381" },
     list: () => apiRequestRef.current<{ questions?: BankQuestionRow[] }>("/api/bank-questions").then(r => r.questions || []),
     select: ids => apiRequestRef.current<{ questions?: BankExamQuestion[] }>("/api/bank-question-select", { method: "POST", body: JSON.stringify({ ids }) }).then(r => r.questions || [])
   }), []);

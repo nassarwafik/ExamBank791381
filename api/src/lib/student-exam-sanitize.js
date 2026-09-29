@@ -21,6 +21,9 @@ const NODE_SECRET_KEYS = ["teacherNote", "aiInstruction", "hint", "history", "re
 // Phase 13C-A — TEACHER PLANNING DATA: the assessment blueprint (exam level) and a question's / part's pedagogical
 // classification are authoring data and never reach a student.
 const PLANNING_KEYS = ["assessmentMeta"];
+// Phase 13C-B — the live Blueprint intelligence (coverage report / evidence index) is runtime-derived teacher data and is
+// never persisted on the exam; should any future path ever do so, it is removed here (defense in depth).
+const TEACHER_ANALYTICS_KEYS = ["coverageReport", "blueprintCoverage", "assessmentIntelligence", "evidenceIndex"];
 // Phase 13C-A — an interactive-context descriptor IS student-visible, but only as DATA: these are the only fields kept.
 // Anything content might use to name code (component / module / src / html …) or to claim trust (assessmentSafe …) is
 // dropped here (the client registry ignores it anyway — defense in depth), and secret-looking keys are removed from the
@@ -199,6 +202,7 @@ function sanitizeExamForStudent(exam) {
   x.revisionHistory = [];
   if (x.metadata && typeof x.metadata === "object" && "import" in x.metadata) delete x.metadata.import;
   if ("blueprint" in x) delete x.blueprint;                                   // Phase 13C-A: teacher planning data
+  for (const k of TEACHER_ANALYTICS_KEYS) if (k in x) delete x[k];             // Phase 13C-B: live intelligence is never student data
   if ("coverPage" in x) x.coverPage = sanitizeCoverForStudent(x.coverPage);
   if (Array.isArray(x.questions)) x.questions = x.questions.map(sanitizeQuestionForStudent);
   if (Array.isArray(x.sections)) x.sections = x.sections.map(sanitizeSectionForStudent);

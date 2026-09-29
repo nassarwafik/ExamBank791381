@@ -1,22 +1,13 @@
 import type { BuilderQuestion } from "./examTypes";
 import type { AssessmentBlueprintV1, AssessmentMeta } from "./assessmentTypes";
 import { blueprintCognitiveLevels, blueprintDifficultyScale, difficultyValues, effectiveAssessmentMeta, orderedTopics } from "./assessmentBlueprint";
+import { normalizeAssessmentMeta as cleaned } from "./assessmentBulkClassify";   // the ONE meta normalizer (13C-B bulk classification shares it)
 
 // Phase 13C-A — compact, OPTIONAL pedagogical classification of one question. Every change is one `onChange({ assessmentMeta })`
 // patch through the existing question update path (one history step). Explicit values are authoritative; legacy bank
 // evidence is shown as evidence and never mapped by guess.
 type Props = { question: BuilderQuestion; blueprint?: AssessmentBlueprintV1; onChange: (patch: Partial<BuilderQuestion>) => void; disabled?: boolean };
 
-function cleaned(meta: AssessmentMeta): AssessmentMeta | undefined {
-  const out: AssessmentMeta = {};
-  if (meta.primaryTopicId) out.primaryTopicId = meta.primaryTopicId;
-  if (meta.secondaryTopicIds && meta.secondaryTopicIds.length) out.secondaryTopicIds = meta.secondaryTopicIds;
-  if (meta.objectiveIds && meta.objectiveIds.length) out.objectiveIds = meta.objectiveIds;
-  if (typeof meta.difficulty === "number" && Number.isFinite(meta.difficulty)) out.difficulty = meta.difficulty;
-  if (meta.cognitiveLevel) out.cognitiveLevel = meta.cognitiveLevel;
-  if (meta.capabilities && meta.capabilities.length) out.capabilities = meta.capabilities;
-  return Object.keys(out).length ? out : undefined;
-}
 
 export default function QuestionClassificationEditor({ question, blueprint, onChange, disabled }: Props) {
   const meta: AssessmentMeta = question.assessmentMeta ?? {};
