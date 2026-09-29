@@ -81,3 +81,20 @@ Outcome contract: the updater records its decision per batch number; the picker'
 COMMIT-phase effect after the render that processed the updater (the builder always commits then: its own batch state
 changed in the same tick, so a parent bail-out cannot skip it). `"ok"` is therefore never reported for a batch the exam
 authority did not apply — the same class of outcome race as R3. An updater that never ran settles as `"stale"`.
+
+## Review fix 3 — bank image URLs are transient delivery data, never persisted state
+
+- **Durable identity vs. credential.** A bank image is stored once in the bank assets container; `blobName` is its durable
+  identity. The `/api/question-image?blob=…&exp=…&sig=…` URL is a signed, 8-hour credential (`createSignedAssetParams` /
+  `verifySignedAssetParams`). Persisted exams and assignment snapshots keep ONLY `{ id, origin: "bank", blobName,
+  contentType }` (`normalizeBankAssetsForStorage` in `save-exam-artifact.cleanQuestion` and `manage-assignments.cleanExam`);
+  the authoring-time URL is never stored as if it were durable. Uploaded / AI-generated embedded rasters are untouched.
+- **One helper, re-signed at delivery.** `api/src/lib/bank-asset-hydrate.js` traverses the canonical media tree
+  (`sections[].questions[]`, legacy `questions[]`, `image.assets[]`, compound `parts[].image.assets[]`), signs only bank
+  assets with a safe `blobName`, keeps every other asset by the same reference, path-copies (never mutates the stored
+  document) and never touches storage. `buildExamQuestion` mints its authoring-time URL through the same helper (one
+  signing implementation). Re-sign points: teacher `POST /api/saved-exams load`, student `GET /api/student-assignment/:id`
+  (hydrate → sanitizer LAST, so hidden media and answer keys can never be reintroduced), student learning-training delivery.
+- **Client.** `bankExamQuestionToBuilderQuestion` keeps the fresh URL for the current authoring session only; a reopened
+  exam receives newly signed URLs from the server. `BuilderImageAsset.blobName` is typed (additive).
+- `/api/question-image` still verifies every request; an expired signature is rejected before any storage access.

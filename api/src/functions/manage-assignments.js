@@ -16,6 +16,8 @@ const {recordEventSafely}=require("../lib/notification-events");
 // setstatus / archive / restore / purge transitions all run under the per-assignment lifecycle lock, so a delayed
 // removal can never erase the pointer of a concurrent re-publish of the same assignment.
 const {ensurePublishedAssignmentIndexed,removePublishedAssignmentFromIndex}=require("../lib/class-assignment-index");
+// Bank image assets are persisted by durable identity only; the signed URL is minted when the student is served (student-assignment).
+const {normalizeBankAssetsForStorage}=require("../lib/bank-asset-hydrate");
 const PREFIX="platform/assignments/",CLASS_PREFIX="platform/classes/",SUB_PREFIX="platform/submissions/";
 const CONFLICT_MESSAGE="حدث تعارض مؤقت أثناء حفظ البيانات. حاول مرة أخرى.";
 // Read-only impact of deleting/archiving an assignment (Roadmap #7). submissionDocuments is the count of
@@ -33,7 +35,7 @@ function computeImpact(a,submissionDocuments,subs){
  return {assignmentId:a.assignmentId,status,submissionDocuments,studentsWithCompletedAttempts,completedAttempts,activeAttempts,draftDocuments,canPurge:status==="archived"&&submissionDocuments===0};
 }
 const iso=v=>{const s=String(v||"").trim();if(!s)return "";const d=new Date(s);if(Number.isNaN(d.getTime()))throw new Error("صيغة التاريخ غير صحيحة.");return d.toISOString()};
-function cleanExam(v){const x=JSON.parse(JSON.stringify(v||{}));if(Array.isArray(x.questions))x.questions=x.questions.map(q=>({...q,history:[],redoStack:[]}));x.revisionHistory=[];return x}
+function cleanExam(v){const x=normalizeBankAssetsForStorage(JSON.parse(JSON.stringify(v||{})));if(Array.isArray(x.questions))x.questions=x.questions.map(q=>({...q,history:[],redoStack:[]}));x.revisionHistory=[];return x}
 // Validate the optional per-attempt duration. null / undefined / "" / 0 => untimed (0). A positive
 // INTEGER 1..1440 => timed. Anything else (negative, fractional, NaN, >1440) is a teacher error and is
 // REJECTED (never silently clamped). Returns { ok, value } | { ok:false }.

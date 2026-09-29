@@ -5,13 +5,16 @@ const {requireActiveStudentSession}=require("../lib/student-auth");
 const {getContainer,downloadJsonOrNull}=require("../lib/platform-storage");
 const {normalizeClassStatus}=require("../lib/class-lifecycle");
 const {sanitizeExamForStudent}=require("../lib/student-exam-sanitize");
+const {hydrateBankAssets}=require("../lib/bank-asset-hydrate");
 const {getAssignmentAvailability,timerState}=require("../lib/assignment-availability");
 const {normalizeExamStructure,sectionOfficialMaxMarks}=require("../lib/exam-structure");
 const PREFIX="platform/assignments/",SUB_PREFIX="platform/submissions/";
 // Delegates to the single recursive student-safe sanitizer so BOTH legacy exam.questions and
 // structured exam.sections[].questions (with compound parts and generalized fields) have every
 // answer key / teacher-side field stripped before the exam is sent to the student's browser.
-function studentExam(v){return sanitizeExamForStudent(v)}
+// Bank image URLs are signed at DELIVERY time (never the authoring-time credential persisted with the snapshot); the
+// sanitizer runs LAST so hidden media / answer keys can never be reintroduced by hydration.
+function studentExam(v){return sanitizeExamForStudent(hydrateBankAssets(v))}
 // Safe, answer-free marks distribution (section titles + official max marks) for the pre-start cover.
 // Contains NO question text/options/fields/parts — only titles and totals, so it can be shown before
 // the student presses Start without leaking the exam body.
