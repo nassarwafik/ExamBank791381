@@ -87,7 +87,7 @@ export type BuilderField = {
 // Phase 5B — optional asset metadata for parity with the AI endpoint's asset shape and local uploads.
 // All optional and additive: existing/imported assets ({ dataUrl } only) remain valid, and the persisted
 // AI prompt is deliberately NOT part of this shape (it is never stored on a structured question).
-export type BuilderImageAsset = { dataUrl?: string; id?: string; origin?: "uploaded" | "ai-generated"; contentType?: string };
+export type BuilderImageAsset = { dataUrl?: string; id?: string; origin?: "uploaded" | "ai-generated" | "bank"; contentType?: string };
 export type BuilderImage = { exists?: boolean; visible?: boolean; assets?: BuilderImageAsset[] };
 
 // A compound question's independent subpart.
