@@ -32,10 +32,15 @@ type Props = {
   // Question ids with a pending media operation (builder authority).
   pendingMediaIds?: ReadonlySet<string>;
   disabled?: boolean;
+  // Phase 13B — selection / navigation plumbing (builder-owned UI state).
+  selectedIds?: ReadonlySet<string>;
+  onToggleSelect?: (questionId: string) => void;
+  registerQuestionNode?: (questionId: string, el: HTMLDivElement | null) => void;
+  flashQuestionId?: string;
 };
 
 export default function ExamSectionEditor(props: Props) {
-  const { section, index, total, sectionOptions, patch, onDelete, onMove, onAddQuestion, onQuestionChange, onQuestionDelete, onQuestionMove, onQuestionDuplicate, onQuestionMoveToSection, onPreviewQuestion, requestQuestionImage, onMediaBusyChange, pendingMediaIds, disabled } = props;
+  const { section, index, total, sectionOptions, patch, onDelete, onMove, onAddQuestion, onQuestionChange, onQuestionDelete, onQuestionMove, onQuestionDuplicate, onQuestionMoveToSection, onPreviewQuestion, requestQuestionImage, onMediaBusyChange, pendingMediaIds, disabled, selectedIds, onToggleSelect, registerQuestionNode, flashQuestionId } = props;
   const groupOptions = Object.entries(section.stimuli || {}).map(([id, s]) => ({ id, label: s.title ? s.title + " (" + id + ")" : id }));
 
   return (
@@ -124,6 +129,10 @@ export default function ExamSectionEditor(props: Props) {
             onMediaBusyChange={onMediaBusyChange ? busy => onMediaBusyChange(q.examQuestionId, busy) : undefined}
             mediaPending={pendingMediaIds?.has(q.examQuestionId) ?? false}
             disabled={disabled}
+            selected={selectedIds?.has(q.examQuestionId) ?? false}
+            onToggleSelect={onToggleSelect ? () => onToggleSelect(q.examQuestionId) : undefined}
+            registerNode={registerQuestionNode ? el => registerQuestionNode(q.examQuestionId, el) : undefined}
+            flash={flashQuestionId === q.examQuestionId}
           />
         ))}
       </div>

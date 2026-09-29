@@ -28,6 +28,9 @@ import { isStructuredExam } from "./examTypes";
 import type { StructuredExam, BuilderImageAsset } from "./examTypes";
 import { useAutoRefresh } from "./ui/useAutoRefresh";
 import type { AiImageRequestQuestion } from "./questionMedia";
+import type { BankPickerService } from "./StructuredExamBuilder";
+import type { BankQuestionRow } from "./bank/bankQuestionModel";
+import type { BankExamQuestion } from "./structuredExamProductivity";
 import { legacyToStructured, toSavedStructuredExam, newSection, newQuestion, type StructuredExamUpdater } from "./examBuilderState";
 // Phase 13A — the structured exam lives in a HISTORY authority (undo / redo / saved checkpoint / recovery).
 import { useStructuredExamHistory } from "./useStructuredExamHistory";
@@ -2826,6 +2829,18 @@ function App() {
     const asset = result.asset || {};
     return { id: asset.id, origin: "ai-generated", contentType: asset.contentType || "image/png", dataUrl: asset.dataUrl };
   }
+
+  // Phase 13B — App-owned Question Bank service for the Structured Exam Builder picker: the EXISTING bank list
+  // projection + the exact-id canonical retrieval endpoint, both through the authenticated teacher apiRequest. The
+  // builder receives callbacks only (never the token); memoized so the picker's lazy load runs once per open.
+  // apiRequest is re-created every render (it reads the current token / session role), so the service reads it through a
+  // ref: stable identity for the picker, always the latest authenticated request helper.
+  const apiRequestRef = useRef(apiRequest);
+  useEffect(() => { apiRequestRef.current = apiRequest; });
+  const structuredBankPicker = useMemo<BankPickerService>(() => ({
+    list: () => apiRequestRef.current<{ questions?: BankQuestionRow[] }>("/api/bank-questions").then(r => r.questions || []),
+    select: ids => apiRequestRef.current<{ questions?: BankExamQuestion[] }>("/api/bank-question-select", { method: "POST", body: JSON.stringify({ ids }) }).then(r => r.questions || [])
+  }), []);
 
   async function saveExamArtifact(
     kind:
@@ -7819,6 +7834,7 @@ function App() {
               saveState={examSaveState(structuredHistory.history, structuredSaving)}
               recoveryScope={teacherProfile?.teacherId || undefined}
               onRecover={structuredHistory.recover}
+              bankPicker={structuredBankPicker}
             />
           </Suspense>
         </div>

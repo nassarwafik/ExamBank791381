@@ -8,6 +8,9 @@ const {
 const {
   requireBuilderAuth
 } = require("../lib/builder-auth");
+const {
+  hydrateBankAssets
+} = require("../lib/bank-asset-hydrate");
 
 const {
   countExamQuestions,
@@ -226,181 +229,65 @@ async function listSavedExams(
   return exams;
 }
 
-app.http(
-  "manageSavedExams",
-  {
-    methods: [
-      "GET",
-      "POST"
-    ],
-
-    authLevel:
-      "anonymous",
-
-    route:
-      "saved-exams",
-
-    handler:
-      async request => {
-        try {
-          const auth =
-            requireBuilderAuth(
-              request
-            );
-
-          if (
-            !auth.ok
-          ) {
-            return auth.response;
-          }
-
-          const container =
-            getContainer();
-
-          if (
-            request.method ===
-            "GET"
-          ) {
-            const exams =
-              await listSavedExams(
-                container
-              );
-
-            return {
-              status: 200,
-
-              jsonBody: {
-                ok: true,
-
-                exams
-              }
-            };
-          }
-
-          let body = {};
-
-          try {
-            body =
-              await request.json();
-          }
-          catch {
-            body = {};
-          }
-
-          const action =
-            String(
-              body?.action ||
-              ""
-            )
-              .trim()
-              .toLowerCase();
-
-          const blobName =
-            String(
-              body?.blobName ||
-              ""
-            );
-
-          if (
-            !isSafeExamBlob(
-              blobName
-            )
-          ) {
-            return {
-              status: 400,
-
-              jsonBody: {
-                ok: false,
-
-                error:
-                  "Invalid saved exam."
-              }
-            };
-          }
-
-          if (
-            action ===
-            "load"
-          ) {
-            const document =
-              await downloadJson(
-                container,
-                blobName
-              );
-
-            if (
-              !document?.exam
-            ) {
-              throw new Error(
-                "Saved exam document is invalid."
-              );
-            }
-
-            return {
-              status: 200,
-
-              jsonBody: {
-                ok: true,
-
-                exam:
-                  document.exam,
-
-                savedAt:
-                  document.savedAt ||
-                  null
-              }
-            };
-          }
-
-          if (
-            action ===
-            "delete"
-          ) {
-            const client =
-              container
-                .getBlockBlobClient(
-                  blobName
-                );
-
-            const result =
-              await client
-                .deleteIfExists();
-
-            return {
-              status: 200,
-
-              jsonBody: {
-                ok: true,
-
-                deleted:
-                  result.succeeded ===
-                  true
-              }
-            };
-          }
-
-          return {
-            status: 400,
-
-            jsonBody: {
-              ok: false,
-
-              error:
-                "Unsupported saved exam action."
-            }
-          };
-        }
-        catch {
-          return {
-            status: 500,
-
-            jsonBody: {
-              ok: false,
-
-              error: "تعذر تنفيذ إجراء الامتحانات المحفوظة حاليًا."
-            }
-          };
-        }
-      }
+// Teacher read of a saved exam. Bank image assets are persisted by durable identity only (save-exam-artifact); the
+// signed /api/question-image URL a browser can load is minted HERE, at read time, through the shared helper — so an
+// exam reopened days after authoring still shows its bank images. The stored document is never rewritten by a read.
+// `deps` is an optional dependency-injection seam for unit tests (production passes nothing).
+async function handler(request, deps = {}) {
+  const auth = (deps.requireBuilderAuth || requireBuilderAuth)(request);
+  if (!auth.ok) {
+    return auth.response;
   }
-);
+  const container = (deps.getContainer || getContainer)();
+  const download = deps.downloadJson || downloadJson;
+
+  try {
+    if (request.method === "GET") {
+      const exams = await (deps.listSavedExams || listSavedExams)(container);
+      return { status: 200, jsonBody: { ok: true, exams } };
+    }
+
+    let body = {};
+    try {
+      body = await request.json();
+    }
+    catch {
+      body = {};
+    }
+
+    const action = String(body?.action || "").trim().toLowerCase();
+    const blobName = String(body?.blobName || "");
+
+    if (!isSafeExamBlob(blobName)) {
+      return { status: 400, jsonBody: { ok: false, error: "Invalid saved exam." } };
+    }
+
+    if (action === "load") {
+      const document = await download(container, blobName);
+      if (!document?.exam) {
+        throw new Error("Saved exam document is invalid.");
+      }
+      return { status: 200, jsonBody: { ok: true, exam: hydrateBankAssets(document.exam), savedAt: document.savedAt || null } };
+    }
+
+    if (action === "delete") {
+      const client = container.getBlockBlobClient(blobName);
+      const result = await client.deleteIfExists();
+      return { status: 200, jsonBody: { ok: true, deleted: result.succeeded === true } };
+    }
+
+    return { status: 400, jsonBody: { ok: false, error: "Unsupported saved exam action." } };
+  }
+  catch {
+    return { status: 500, jsonBody: { ok: false, error: "تعذر تنفيذ إجراء الامتحانات المحفوظة حاليًا." } };
+  }
+}
+
+app.http("manageSavedExams", {
+  methods: ["GET", "POST"],
+  authLevel: "anonymous",
+  route: "saved-exams",
+  handler: request => handler(request)
+});
+
+module.exports = { handler };

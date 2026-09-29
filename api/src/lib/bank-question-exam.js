@@ -17,7 +17,7 @@
 //   open            type "shortAnswer", no options/fields, answer { mode:"anyAccepted", values } or { mode:"manual" }
 //                   → presentationType "open"; textarea; manual review.
 // field.correct and answer are teacher-side keys: student-exam-sanitize strips them before a student sees the exam.
-const { createSignedAssetParams } = require("./builder-auth");
+const { signedBankAsset } = require("./bank-asset-hydrate");
 
 function presentationTypeFromFullQuestion(question) {
   if (question.type === "multipleChoice") return "multipleChoice";
@@ -43,16 +43,11 @@ function isOfficialLikeSource(question) {
   return /^791381-20\d{2}/.test(sourceId) || /^791367-20\d{2}/.test(sourceId) || examCode === "791381" || examCode === "791367";
 }
 
+// The authoring-time delivery copy: durable identity + a TRANSIENT signed URL for the current session. Persistence keeps
+// only the identity (bank-asset-hydrate.normalizeBankAssetsForStorage) and every read path re-signs (hydrateBankAssets).
 function buildAssetData(asset) {
   if (!asset?.blobName) return null;
-  const { exp, sig } = createSignedAssetParams(asset.blobName, 8 * 60 * 60);
-  return {
-    id: asset.id || asset.key || asset.blobName,
-    origin: "bank",
-    blobName: asset.blobName,
-    contentType: asset.contentType || "image/png",
-    dataUrl: "/api/question-image" + "?blob=" + encodeURIComponent(asset.blobName) + "&exp=" + encodeURIComponent(String(exp)) + "&sig=" + encodeURIComponent(sig)
-  };
+  return signedBankAsset({ id: asset.id || asset.key || asset.blobName, origin: "bank", blobName: asset.blobName, contentType: asset.contentType || "image/png" });
 }
 
 function buildExamQuestion(fullQuestion, indexQuestion, currentQuestion) {

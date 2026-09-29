@@ -1,5 +1,5 @@
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { lazy, Suspense, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import type { StructuredExam, BuilderQuestion, BuilderSection, BuilderImageAsset } from "./examTypes";
 import type { AiImageRequestQuestion } from "./questionMedia";
@@ -28,11 +28,24 @@ import { useConfirm } from "./ui/useConfirm";
 import type { ExamSaveState } from "./examHistory";
 import { historyShortcut, isTextEditingTarget } from "./examHistoryShortcuts";
 import { browserBackupStorage, clearExamBackup, isRecoveryCandidate, readExamBackup, writeExamBackup, type BackupStorage, type ExamBackup } from "./examAutosave";
+import {
+  EMPTY_NAVIGATOR_FILTERS, indexExamQuestions, pruneSelection, usedBankQuestionIds as collectUsedBankIds, hasAnyUsedBankQuestion,
+  bulkDeleteQuestions, bulkDuplicateQuestions, bulkMoveQuestions, bulkSetMarks, insertQuestionsIntoSection, bankExamQuestionToBuilderQuestion,
+  type BankExamQuestion, type NavigatorFilters
+} from "./structuredExamProductivity";
+import ExamQuestionNavigator from "./ExamQuestionNavigator";
+import BulkActionBar from "./BulkActionBar";
+import type { BankPickerService, InsertOutcome } from "./BankQuestionPicker";
+import { useMediaQuery } from "./ui/useMediaQuery";
 import "./structured-builder.css";
 
 // The faithful teacher preview now lives in one shared module (Roadmap #15). Re-exported here so existing
 // callers/tests that import { ExamPreview } from "./StructuredExamBuilder" keep working unchanged.
 export { default as ExamPreview } from "./ExamPreview";
+export type { BankPickerService } from "./BankQuestionPicker";
+
+// Phase 13B — the Question Bank picker is loaded only when a teacher opens it (its own chunk inside the builder chunk).
+const BankQuestionPicker = lazy(() => import("./BankQuestionPicker"));
 
 // Top-level Structured Exam Builder. It is a CONTROLLED component: the exam lives in the parent
 // (App.tsx) and every edit flows back through onChange as a FUNCTIONAL updater that the parent applies to
@@ -69,13 +82,21 @@ type Props = {
   /** Storage override for tests; defaults to the browser's localStorage (or none). */
   backupStorage?: BackupStorage | null;
   autosaveDelayMs?: number;
+  // Phase 13B — App-owned, authenticated Question Bank callbacks (list rows / exact-id canonical retrieval). The builder
+  // never receives a token; without a service the "إضافة من بنك الأسئلة" action is simply not offered.
+  bankPicker?: BankPickerService;
 };
 
 const AUTOSAVE_DELAY_MS = 800;
 const SAVE_STATE_LABEL: Record<ExamSaveState, string> = { saved: "✓ محفوظ", dirty: "● تغييرات غير محفوظة", saving: "⏳ جارٍ الحفظ", recovered: "↺ نسخة مسترجعة — غير محفوظة" };
+const EMPTY_IDS: ReadonlySet<string> = new Set<string>();
+const FLASH_MS = 1200;
+// UI-only productivity state (selection ids + navigator filters). Keyed by exam id so it is RESET when another exam opens,
+// and pruned against the live exam so a deleted / undone question never lingers (and is never resurrected by redo).
+type ProductivityUi = { examId: string; ids: ReadonlySet<string>; filters: NavigatorFilters };
 const formatBackupTime = (iso: string) => { const t = Date.parse(iso); return Number.isFinite(t) ? new Date(t).toLocaleString("ar", { dateStyle: "medium", timeStyle: "short" }) : ""; };
 
-export default function StructuredExamBuilder({ exam, onChange, onSave, onExit, saving, notice, error, requestQuestionImage, onUndo, onRedo, canUndo = false, canRedo = false, saveState, recoveryScope, onRecover, backupStorage, autosaveDelayMs = AUTOSAVE_DELAY_MS }: Props) {
+export default function StructuredExamBuilder({ exam, onChange, onSave, onExit, saving, notice, error, requestQuestionImage, onUndo, onRedo, canUndo = false, canRedo = false, saveState, recoveryScope, onRecover, backupStorage, autosaveDelayMs = AUTOSAVE_DELAY_MS, bankPicker }: Props) {
   const [preview, setPreview] = useState<StructuredExam | null>(null);
   const [showIssues, setShowIssues] = useState(true);
   const { confirm, confirmDialog } = useConfirm();
@@ -115,7 +136,7 @@ export default function StructuredExamBuilder({ exam, onChange, onSave, onExit, 
   // Per-question view of the same authority: locks that question's media controls across remounts and its
   // move-to-section (a pending result is patched into the question's CURRENT section; moving it away would
   // silently drop the image).
-  const pendingMediaIds: ReadonlySet<string> = new Set(Object.keys(pendingMedia));
+  const pendingMediaIds: ReadonlySet<string> = useMemo(() => new Set(Object.keys(pendingMedia)), [pendingMedia]);
   const MEDIA_WAIT = "انتظر انتهاء معالجة الصور قبل الحفظ.";
   const sectionOptions = (exam.sections || []).map(s => ({ id: s.id, title: s.title }));
 
@@ -211,6 +232,126 @@ export default function StructuredExamBuilder({ exam, onChange, onSave, onExit, 
     onExit();
   };
 
+  // ── Phase 13B · authoring productivity: navigator, selection, bulk actions, bank picker ──
+  // Selection and filters are UI state only (never exam data, never saved / autosaved / part of history). Adjusted during
+  // render (not in an effect): reset when the exam id changes, pruned when the exam no longer contains a selected id.
+  const [ui, setUi] = useState<ProductivityUi>(() => ({ examId: exam.examId, ids: EMPTY_IDS, filters: EMPTY_NAVIGATOR_FILTERS }));
+  let uiState = ui;
+  if (ui.examId !== exam.examId) {
+    uiState = { examId: exam.examId, ids: EMPTY_IDS, filters: EMPTY_NAVIGATOR_FILTERS };
+    setUi(uiState);
+  } else {
+    const pruned = pruneSelection(ui.ids, exam);
+    if (pruned !== ui.ids) { uiState = { ...ui, ids: pruned }; setUi(uiState); }
+  }
+  const selected = uiState.ids;
+  const navFilters = uiState.filters;
+  const setSelected = (fn: (prev: ReadonlySet<string>) => ReadonlySet<string>) => setUi(prev => ({ ...prev, ids: fn(prev.ids) }));
+  const toggleSelect = (id: string) => setSelected(prev => { const next = new Set(prev); if (next.has(id)) next.delete(id); else next.add(id); return next; });
+  const selectMany = (ids: string[]) => setSelected(prev => { const next = new Set(prev); for (const id of ids) next.add(id); return next; });
+  const clearSelection = () => setSelected(() => EMPTY_IDS);
+  const selectedIds = () => Array.from(selected);
+  // Pending media on a SELECTED question blocks the operations that would move / drop / copy the question the image is
+  // about to be patched into (same rule as the single-card move-to-section lock). Marks never invalidate the callback.
+  const selectedMediaPending = selectedIds().some(id => pendingMediaIds.has(id));
+  const pendingMediaRef = useRef(pendingMediaIds);
+  useEffect(() => { pendingMediaRef.current = pendingMediaIds; }, [pendingMediaIds]);
+
+  const navEntries = useMemo(() => indexExamQuestions(exam), [exam]);
+  const [navOpen, setNavOpen] = useState(false);
+  const isNarrow = useMediaQuery("(max-width: 900px)");
+  const navId = "sb-navigator-" + exam.examId.replace(/[^a-zA-Z0-9_-]/g, "");
+  // Stable DOM anchors by examQuestionId (never display numbers): registered by the real cards.
+  const nodes = useRef(new Map<string, HTMLDivElement>());
+  const registerQuestionNode = (id: string, el: HTMLDivElement | null) => { if (el) nodes.current.set(id, el); else nodes.current.delete(id); };
+  const [flashId, setFlashId] = useState("");
+  useEffect(() => {
+    if (!flashId) return;
+    const t = window.setTimeout(() => setFlashId(""), FLASH_MS);
+    return () => window.clearTimeout(t);
+  }, [flashId]);
+  const focusCard = (id: string) => {
+    const el = nodes.current.get(id);
+    if (!el || !alive.current) return;
+    if (typeof el.scrollIntoView === "function") el.scrollIntoView({ block: "center", behavior: "smooth" });
+    el.focus({ preventScroll: true });
+    setFlashId(id);
+  };
+  const navigateTo = (id: string) => {
+    if (isNarrow) { setNavOpen(false); window.setTimeout(() => focusCard(id), 0); }      // let the dialog release focus first
+    else focusCard(id);
+  };
+
+  // Bulk actions: each is ONE functional updater → ONE history step (a no-op result creates no entry).
+  const bulkMove = (target: string) => { const ids = selectedIds(); if (ids.some(id => pendingMediaRef.current.has(id))) return; update(prev => ({ ...prev, sections: bulkMoveQuestions(prev.sections || [], ids, target) })); };
+  const bulkDuplicate = () => { const ids = selectedIds(); if (ids.some(id => pendingMediaRef.current.has(id))) return; update(prev => ({ ...prev, sections: bulkDuplicateQuestions(prev.sections || [], ids) })); };
+  const bulkMarks = (marks: number) => { const ids = selectedIds(); update(prev => ({ ...prev, sections: bulkSetMarks(prev.sections || [], ids, marks) })); };
+  const bulkDelete = async () => {
+    const ids = selectedIds();
+    if (!ids.length) return;
+    const ok = await confirm({ title: "حذف الأسئلة المحددة", message: "سيتم حذف " + ids.length + " أسئلة من الامتحان.", confirmLabel: "حذف", cancelLabel: "إلغاء", tone: "danger" });
+    if (!ok || !alive.current || ids.some(id => pendingMediaRef.current.has(id))) return;
+    update(prev => ({ ...prev, sections: bulkDeleteQuestions(prev.sections || [], ids) }));
+  };
+
+  // Question Bank picker: opened FOR one exam id (closes and resets when another exam opens — R1 / R2). The insertion is
+  // re-validated against the LATEST exam (id + target section) both before and inside the single updater (R3).
+  const [pickerOpenFor, setPickerOpenFor] = useState("");
+  const pickerOpen = !!bankPicker && pickerOpenFor === exam.examId;
+  // The exam authority read when a pending exact fetch resolves. It is refreshed in the COMMIT phase (layout effect), so it
+  // can never lag one committed render behind: a passive useEffect runs in a later scheduler task, and a resolved fetch's
+  // microtask could land in between — reading the previous exam, reporting "ok" for a target that is already gone (R3 race).
+  const latestExamRef = useRef(exam);
+  useLayoutEffect(() => { latestExamRef.current = exam; }, [exam]);
+  const usedBankIds = useMemo(() => collectUsedBankIds(exam), [exam]);
+  // Outcome contract for a bank batch. A batch the COMMITTED authority already rejects (wrong exam, missing target, an exact
+  // bank id already in the exam) is refused synchronously and never dispatched. Otherwise ONE functional updater is
+  // dispatched; it re-checks the same three invariants against the `prev` it actually receives (all-or-nothing, never a
+  // partial or filtered batch) and records its decision for this batch number. The outcome promise is settled from a
+  // COMMIT-phase effect after the render that processed the updater (the builder always commits then: its own batch state
+  // changed in the same tick), so the picker can never be told "ok" for a batch the exam authority did not apply.
+  const insertBatchSeq = useRef(0);
+  const [insertBatch, setInsertBatch] = useState(0);
+  const insertDecisions = useRef(new Map<number, InsertOutcome>());
+  const insertWaiters = useRef(new Map<number, (outcome: InsertOutcome) => void>());
+  useLayoutEffect(() => {
+    if (!insertBatch) return;
+    const settle = insertWaiters.current.get(insertBatch);
+    if (!settle) return;
+    insertWaiters.current.delete(insertBatch);
+    const decision = insertDecisions.current.get(insertBatch);
+    insertDecisions.current.delete(insertBatch);
+    settle(decision ?? "stale");                                        // an updater that never ran is never a success
+  }, [insertBatch]);
+  const decideInsertion = (candidate: StructuredExam, openedFor: string, targetSectionId: string, bankIds: string[]): InsertOutcome => {
+    if (candidate.examId !== openedFor) return "stale";
+    if (!(candidate.sections || []).some(s => s.id === targetSectionId)) return "missing-target";
+    if (hasAnyUsedBankQuestion(candidate, bankIds)) return "already-used";
+    return "ok";
+  };
+  const insertBankQuestions = (openedFor: string) => (questions: BankExamQuestion[], targetSectionId: string, marks: number): InsertOutcome | Promise<InsertOutcome> => {
+    if (!alive.current) return "stale";
+    const bankIds = questions.map(q => String(q.bankQuestionId || ""));
+    const verdict = decideInsertion(latestExamRef.current, openedFor, targetSectionId, bankIds);
+    if (verdict !== "ok") return verdict;                              // committed authority already rejects: nothing dispatched
+    const converted = questions.map(q => bankExamQuestionToBuilderQuestion(q, marks));
+    const batch = ++insertBatchSeq.current;
+    return new Promise<InsertOutcome>(settle => {
+      insertWaiters.current.set(batch, settle);
+      setInsertBatch(batch);                                           // guarantees a builder commit after the updater ran
+      onChange(prev => {
+        const decision = decideInsertion(prev, openedFor, targetSectionId, bankIds);
+        insertDecisions.current.set(batch, decision);
+        return decision === "ok" ? { ...prev, sections: insertQuestionsIntoSection(prev.sections || [], targetSectionId, converted) } : prev;
+      });
+    });
+  };
+  const navigator = (asPanel: boolean) => (
+    <ExamQuestionNavigator id={asPanel ? navId : undefined} asPanel={asPanel} entries={navEntries} sections={sectionOptions} filters={navFilters}
+      onFilters={f => setUi(prev => ({ ...prev, filters: f }))} selected={selected} onToggle={toggleSelect} onSelectMany={selectMany}
+      onClearSelection={clearSelection} onNavigate={navigateTo} />
+  );
+
   const issues = useMemo(() => validateStructuredExam(exam), [exam]);
   const errors = issues.filter(i => i.severity === "error");
   const warnings = issues.filter(i => i.severity === "warning");
@@ -235,6 +376,8 @@ export default function StructuredExamBuilder({ exam, onChange, onSave, onExit, 
         <div className="sb-toolbar-actions">
           {saveState && <span className={"sb-stat sb-save-state is-" + saveState} role="status" aria-live="polite">{SAVE_STATE_LABEL[saveState]}</span>}
           {exam.status === "final" && <span className="sb-stat sb-stat-final">معتمد نهائيًا</span>}
+          <button type="button" className={"sb-btn" + (navOpen ? " is-active" : "")} onClick={() => setNavOpen(v => !v)} aria-pressed={navOpen} aria-controls={navOpen && !isNarrow ? navId : undefined} title="مستكشف الأسئلة">🧭 <span className="sb-btn-label">مستكشف الأسئلة</span></button>
+          {bankPicker && <button type="button" className="sb-btn" onClick={() => setPickerOpenFor(exam.examId)} disabled={saving}>📚 إضافة من بنك الأسئلة</button>}
           <button type="button" className="sb-btn" onClick={() => setPreview(exam)}>👁 معاينة الامتحان</button>
           {onSave && mediaPending && <span className="sb-stat sb-media-wait" role="status">{MEDIA_WAIT}</span>}
           {onSave && <button type="button" className="sb-btn" onClick={() => onSave("draft")} disabled={saving || mediaPending} title={mediaPending ? MEDIA_WAIT : undefined}>{saving ? "⏳ جارٍ الحفظ…" : "💾 حفظ مسودة"}</button>}
@@ -261,12 +404,19 @@ export default function StructuredExamBuilder({ exam, onChange, onSave, onExit, 
         </div>
       )}
 
+      <div className={"sb-workspace" + (navOpen && !isNarrow ? " has-navigator" : "")}>
+      <div className="sb-workspace-main">
       <ExamCoverEditor
         cover={exam.coverPage}
         onChange={cover => update(prev => ({ ...prev, coverPage: cover }))}
         onPreviewCover={() => setPreview(exam)}
         disabled={saving}
       />
+
+      {selected.size > 0 && (
+        <BulkActionBar count={selected.size} sections={sectionOptions} mediaPending={selectedMediaPending} disabled={saving}
+          onMove={bulkMove} onDuplicate={bulkDuplicate} onSetMarks={bulkMarks} onDelete={() => { void bulkDelete(); }} onClear={clearSelection} />
+      )}
 
       <div className="sb-sections">
         {(exam.sections || []).map((section, index) => (
@@ -290,11 +440,29 @@ export default function StructuredExamBuilder({ exam, onChange, onSave, onExit, 
             onMediaBusyChange={onMediaBusyChange}
             pendingMediaIds={pendingMediaIds}
             disabled={saving}
+            selectedIds={selected}
+            onToggleSelect={toggleSelect}
+            registerQuestionNode={registerQuestionNode}
+            flashQuestionId={flashId || undefined}
           />
         ))}
       </div>
 
       <button type="button" className="sb-add-btn sb-add-section" onClick={() => setSections(s => addSection(s, newSection({ title: "القسم " + ((exam.sections || []).length + 1) })))} disabled={saving}>+ إضافة قسم</button>
+      </div>
+      {navOpen && !isNarrow && navigator(true)}
+      </div>
+
+      <Dialog open={navOpen && isNarrow} size="md" title="مستكشف الأسئلة" onClose={() => setNavOpen(false)} className="sb-navigator-dialog-shell">
+        {navigator(false)}
+      </Dialog>
+
+      {pickerOpen && bankPicker && (
+        <Suspense fallback={<p className="sb-hint sb-picker-loading" role="status">جارٍ تحميل أداة بنك الأسئلة…</p>}>
+          <BankQuestionPicker key={exam.examId} open onClose={() => setPickerOpenFor("")} service={bankPicker} sections={sectionOptions}
+            usedBankQuestionIds={usedBankIds} onInsert={insertBankQuestions(exam.examId)} />
+        </Suspense>
+      )}
 
       {preview && createPortal(<ExamPreview exam={preview} onClose={() => setPreview(null)} />, document.body)}
       {confirmDialog}

@@ -32,17 +32,26 @@ type Props = {
   // True while THIS question has a pending media operation (builder authority, survives collapse/remount).
   mediaPending?: boolean;
   disabled?: boolean;
+  // Phase 13B — selection is UI state owned by the builder (never exam data). The card only shows and toggles it.
+  selected?: boolean;
+  onToggleSelect?: () => void;
+  /** Stable DOM anchor for the navigator (by examQuestionId, never display number). */
+  registerNode?: (el: HTMLDivElement | null) => void;
+  /** Brief non-disruptive highlight after navigating here. */
+  flash?: boolean;
 };
 
 export default function StructuredQuestionEditor(props: Props) {
-  const { question: q, index, total, sectionOptions, currentSectionId, groupOptions, onChange, onDelete, onMove, onDuplicate, onMoveToSection, onPreview, requestQuestionImage, onMediaBusyChange, mediaPending, disabled } = props;
+  const { question: q, index, total, sectionOptions, currentSectionId, groupOptions, onChange, onDelete, onMove, onDuplicate, onMoveToSection, onPreview, requestQuestionImage, onMediaBusyChange, mediaPending, disabled, selected, onToggleSelect, registerNode, flash } = props;
   const [open, setOpen] = useState(true);
 
   return (
-    <div className="sb-question">
+    <div className={"sb-question" + (selected ? " is-selected" : "") + (flash ? " sb-q-flash" : "")} id={"sb-q-" + q.examQuestionId} data-question-id={q.examQuestionId} data-selected={selected ? "true" : undefined} tabIndex={-1} ref={registerNode}>
       <div className="sb-q-head">
+        {onToggleSelect && <input type="checkbox" className="sb-q-select" checked={!!selected} onChange={onToggleSelect} aria-label="تحديد السؤال" />}
         <button type="button" className="sb-collapse" onClick={() => setOpen(o => !o)} title={open ? "طيّ" : "فتح"} aria-label={open ? "طيّ" : "فتح"} aria-expanded={open}>{open ? "▾" : "▸"}</button>
         <span className="sb-q-badge">{q.displayNumber?.trim() ? q.displayNumber : index + 1}</span>
+        {selected && <span className="sb-q-selected-tag">محدد</span>}
         <span className="sb-spacer" />
         <button type="button" className="sb-icon-btn" title="معاينة الطالب" aria-label="معاينة الطالب" onClick={onPreview} disabled={disabled}>👁</button>
         <button type="button" className="sb-icon-btn" title="أعلى" aria-label="أعلى" onClick={() => onMove(-1)} disabled={disabled || index === 0}>↑</button>

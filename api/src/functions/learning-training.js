@@ -6,6 +6,7 @@ const { getContainer, downloadJsonOrNull, mutateJsonWithRetry, StorageConflictEr
 const { normalizeClassStatus } = require("../lib/class-lifecycle");
 const { readLibraryItem } = require("../lib/exam-library-store");
 const { sanitizeExamForStudent } = require("../lib/student-exam-sanitize");
+const { hydrateBankAssets } = require("../lib/bank-asset-hydrate");
 const { gradeExam } = require("../lib/assignment-grading");
 const { listLearningTrainings, findLearningTraining, trainingAllowedForClass } = require("../lib/learning-training-registry");
 const { practiceDocName, normalizePracticeDoc, trainingEntry, applyTrainingResult } = require("../lib/learning-practice");
@@ -99,7 +100,7 @@ async function handler(request, deps = {}, obs = null) {
     if (method === "GET" && !action) {
       const questionCount = Array.isArray(item.examSnapshot.questions) ? item.examSnapshot.questions.length : Number(item.questionCount || 0);
       const entry = actor.kind === "student" ? trainingEntry(practiceDoc, training.trainingId) : null;
-      return { status: 200, jsonBody: { ok: true, actor: actor.kind, training: trainingMeta(training, { title: training.title, questionCount, totalMarks: Number(item.examSnapshot.totalMarks || item.totalMarks || 0), maxPoints: trainingMaxStrengthPoints(training.trainingId) }), exam: sanitizeExamForStudent(item.examSnapshot), ...bestIfAttempted(entry, training.trainingId) } };
+      return { status: 200, jsonBody: { ok: true, actor: actor.kind, training: trainingMeta(training, { title: training.title, questionCount, totalMarks: Number(item.examSnapshot.totalMarks || item.totalMarks || 0), maxPoints: trainingMaxStrengthPoints(training.trainingId) }), exam: sanitizeExamForStudent(hydrateBankAssets(item.examSnapshot)), ...bestIfAttempted(entry, training.trainingId) } };
     }
 
     // ── submit ──

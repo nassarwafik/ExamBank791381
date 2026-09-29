@@ -8,6 +8,7 @@ const {
 const {
   requireBuilderAuth
 } = require("../lib/builder-auth");
+const { normalizeBankAssetsInQuestion } = require("../lib/bank-asset-hydrate");
 
 const BANK_CONTAINER =
   "bank";
@@ -40,8 +41,10 @@ function safeSegment(
 function cleanQuestion(
   question
 ) {
+  // Bank image assets are stored by durable identity only (origin/blobName/id/contentType): the signed URL minted while
+  // the teacher was authoring is a transient credential and is re-signed on every read (bank-asset-hydrate).
   return {
-    ...question,
+    ...normalizeBankAssetsInQuestion(question),
 
     history: [],
 
