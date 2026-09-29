@@ -211,3 +211,62 @@ describe("13A history — local recovery", () => {
     expect(isExamDirty(updateExamHistory(openExamHistory(finalExam), setTitle("X")))).toBe(true);
   });
 });
+
+describe("13A history — review blocker 2: the persisted payload replaces the save snapshot INSIDE history", () => {
+  const persisted = (snap: StructuredExam) => ({ ...snap, status: "final" as const, updatedAt: "2026-05-05T05:05:05.000Z", totalMarks: 1 });
+
+  it("saved T0 → edit A → save(A) starts → edit B → commit A: undo lands on the PERSISTED A (not dirty); redo restores B (dirty)", () => {
+    let h = updateExamHistory(openExamHistory(exam()), setTitle("A"));
+    const snapshotA = h.present!;
+    h = updateExamHistory(h, setTitle("B"));                                        // during the save
+    const payload = persisted(snapshotA);
+    h = commitSavedExamHistory(h, snapshotA, payload);
+    expect(h.present?.title).toBe("B"); expect(isExamDirty(h)).toBe(true);
+    h = undoExamHistory(h);
+    expect(h.present).toBe(payload);                                                // the real saved checkpoint, not pre-save A
+    expect(h.present?.status).toBe("final");
+    expect(h.present?.updatedAt).toBe("2026-05-05T05:05:05.000Z");
+    expect(isExamDirty(h)).toBe(false);
+    expect(examSaveState(h, false)).toBe("saved");
+    h = redoExamHistory(h);
+    expect(h.present?.title).toBe("B"); expect(isExamDirty(h)).toBe(true);
+  });
+
+  it("A deeper than the top of past (two edits after the snapshot) is reconciled too; bounded history is preserved", () => {
+    let h = updateExamHistory(openExamHistory(exam()), setTitle("A"));
+    const snapshotA = h.present!;
+    h = updateExamHistory(updateExamHistory(h, setTitle("B")), setTitle("C"));
+    const payload = persisted(snapshotA);
+    h = commitSavedExamHistory(h, snapshotA, payload);
+    expect(h.past).toContain(payload); expect(h.past).not.toContain(snapshotA);
+    expect(h.past.length).toBeLessThanOrEqual(HISTORY_LIMIT);
+    h = undoExamHistory(undoExamHistory(h));
+    expect(h.present).toBe(payload); expect(isExamDirty(h)).toBe(false);
+    expect(undoExamHistory(h).present?.title).toBe("T0");                           // history before A is intact
+  });
+
+  it("the snapshot sitting in FUTURE (undone before the response) is reconciled as well", () => {
+    let h = updateExamHistory(openExamHistory(exam()), setTitle("A"));
+    const snapshotA = h.present!;
+    h = undoExamHistory(h);                                                         // A now in future
+    const payload = persisted(snapshotA);
+    h = commitSavedExamHistory(h, snapshotA, payload);
+    expect(h.future[0]).toBe(payload);
+    h = redoExamHistory(h);
+    expect(h.present).toBe(payload); expect(isExamDirty(h)).toBe(false);
+  });
+
+  it("only the EXACT snapshot reference is replaced — an equal-looking but distinct state is untouched", () => {
+    let h = updateExamHistory(openExamHistory(exam()), setTitle("A"));
+    const snapshotA = h.present!;
+    h = updateExamHistory(h, setTitle("B"));
+    h = updateExamHistory(h, setTitle("A"));                                        // a NEW object equal to A
+    const lookalike = h.present!;
+    h = updateExamHistory(h, setTitle("C"));
+    h = commitSavedExamHistory(h, snapshotA, persisted(snapshotA));
+    expect(h.past.filter(e => e.title === "A")).toHaveLength(2);
+    expect(h.past).toContain(lookalike);                                            // untouched
+    expect(h.past.some(e => e.status === "final")).toBe(true);                      // exactly the snapshot became the payload
+    expect(h.past.filter(e => e.status === "final")).toHaveLength(1);
+  });
+});

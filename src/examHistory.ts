@@ -101,9 +101,11 @@ export function redoExamHistory(h: ExamHistory): ExamHistory {
 export function commitSavedExamHistory(h: ExamHistory, snapshot: StructuredExam, saved: StructuredExam): ExamHistory {
   if (!h.present || h.present.examId !== saved.examId) return h;
   const present = reconcileSavedStructuredExam(h.present, snapshot, saved);
-  // The reconciled present replaces the top of history in place (it is the SAME logical state, now stamped/demoted),
-  // so undo still returns to the state before the last edit, never to a pre-stamp duplicate.
-  return { ...h, present, savedCheckpoint: saved, recovered: false };
+  // The snapshot that was persisted IS the saved checkpoint, wherever it sits in history. Every occurrence of that EXACT
+  // reference (never a merely equal-looking state) becomes the persisted payload, so navigating back to the saved point
+  // lands on what the server really holds (stamped, not dirty). Stacks keep their length: the bound is untouched.
+  const stamp = (e: StructuredExam) => (e === snapshot ? saved : e);
+  return { ...h, present, past: h.past.map(stamp), future: h.future.map(stamp), savedCheckpoint: saved, recovered: false };
 }
 
 /** Restore a local autosave backup of the SAME exam: present = backup (undoable back to the server copy), still dirty. */

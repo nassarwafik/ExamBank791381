@@ -7817,7 +7817,7 @@ function App() {
               canUndo={structuredHistory.canUndo}
               canRedo={structuredHistory.canRedo}
               saveState={examSaveState(structuredHistory.history, structuredSaving)}
-              recoveryScope={teacherProfile?.teacherId || "teacher"}
+              recoveryScope={teacherProfile?.teacherId || undefined}
               onRecover={structuredHistory.recover}
             />
           </Suspense>

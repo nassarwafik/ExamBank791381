@@ -50,7 +50,7 @@ type Handles = {
   save: (gate?: Promise<void>, mode?: "draft" | "final") => Promise<StructuredExam>; exits: number;
 };
 const h = {} as Handles;
-function Host({ req, initial, source = "saved", storage, scope = SCOPE, delay = 0 }: { req?: (q: never) => Promise<BuilderImageAsset>; initial?: StructuredExam; source?: "saved" | "unsaved"; storage?: BackupStorage | null; scope?: string; delay?: number }) {
+function Host({ req, initial, source = "saved", storage, scope = SCOPE, delay = 0 }: { req?: (q: never) => Promise<BuilderImageAsset>; initial?: StructuredExam; source?: "saved" | "unsaved"; storage?: BackupStorage | null; scope?: string | null; delay?: number }) {
   const hist = useStructuredExamHistory();
   const [mounted, setMounted] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -73,7 +73,7 @@ function Host({ req, initial, source = "saved", storage, scope = SCOPE, delay = 
     <StructuredExamBuilder
       exam={hist.present} onChange={hist.update} onSave={() => { void h.save(); }} onExit={() => { h.exits = (h.exits || 0) + 1; }} saving={saving}
       requestQuestionImage={req as never} onUndo={hist.undo} onRedo={hist.redo} canUndo={hist.canUndo} canRedo={hist.canRedo}
-      saveState={examSaveState(hist.history, saving)} recoveryScope={scope} onRecover={hist.recover} backupStorage={storage === undefined ? null : storage} autosaveDelayMs={delay}
+      saveState={examSaveState(hist.history, saving)} recoveryScope={scope === null ? undefined : scope} onRecover={hist.recover} backupStorage={storage === undefined ? null : storage} autosaveDelayMs={delay}
     />
   );
 }
@@ -450,5 +450,106 @@ describe("G — bounded history through the UI", () => {
     while (!undoBtn().disabled && steps < HISTORY_LIMIT + 50) { fireEvent.click(undoBtn()); steps++; }
     expect(steps).toBe(HISTORY_LIMIT);
     expect(h.latest!.title).toBe("T10");
+  });
+});
+
+// ── Independent review of PR #221 — blockers ──────────────────────────────────────────────────────────────────────
+import { readFileSync } from "node:fs";
+import { resolve } from "node:path";
+
+describe("Review blocker 1 — the recovery scope is a REAL authenticated teacher id or nothing (never a shared namespace)", () => {
+  it("teacher id unavailable (profile not loaded / failed) → no backup is read, written or offered, even when backups exist", async () => {
+    const s = memoryStorage();
+    writeExamBackup(s, "teacher", makeExam("ex1", { title: "SHARED NAMESPACE" }), "2026-03-01T11:00:00.000Z");
+    writeExamBackup(s, "t-9", makeExam("ex1", { title: "SOMEONE ELSE" }), "2026-03-01T11:00:00.000Z");
+    const reads = vi.spyOn(s, "getItem"), writes = vi.spyOn(s, "setItem");
+    render(<Host storage={s} scope={null} />);
+    await tick();
+    expect(screen.queryByRole("dialog")).toBeNull();
+    setTitle("T1"); await tick();
+    expect(h.latest!.title).toBe("T1");
+    expect(reads).not.toHaveBeenCalled(); expect(writes).not.toHaveBeenCalled();
+    expect(s.map.size).toBe(2);                                                      // untouched
+  });
+
+  it("once the real teacher id becomes available → autosave / recovery use THAT scope (offer appears, edits are written under it)", async () => {
+    const s = memoryStorage();
+    writeExamBackup(s, "t-7", makeExam("ex1", { title: "LOCAL WORK" }), "2026-03-01T11:00:00.000Z");
+    const { rerender } = render(<Host storage={s} scope={null} />);
+    await tick();
+    expect(screen.queryByRole("dialog")).toBeNull();
+    rerender(<Host storage={s} scope="t-7" />);                                      // profile loaded
+    await tick();
+    expect(screen.getByRole("dialog", { name: "نسخة غير محفوظة" })).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: "تجاهل النسخة" }));
+    setTitle("MINE"); await tick();
+    expect(readExamBackup(s, "t-7", "ex1")!.exam.title).toBe("MINE");
+    expect([...s.map.keys()].every(k => k.includes(":t-7:"))).toBe(true);
+  });
+
+  it("a backup of teacher A is never offered to teacher B on the same browser, even for the SAME examId", async () => {
+    const s = memoryStorage();
+    render(<Host storage={s} scope="teacher-A" />);
+    await tick();
+    setTitle("A'S ANSWER KEY WORK"); await tick();
+    expect(readExamBackup(s, "teacher-A", "ex1")!.exam.title).toBe("A'S ANSWER KEY WORK");
+    cleanup();
+    render(<Host storage={s} scope="teacher-B" />);                                  // same examId, other teacher
+    await tick();
+    expect(screen.queryByRole("dialog")).toBeNull();
+    expect(h.latest!.title).toBe("OLD TITLE");
+    expect(readExamBackup(s, "teacher-A", "ex1")).not.toBeNull();                    // A's work is still A's
+  });
+
+  it("source guard: App passes only teacherProfile.teacherId (no generic fallback namespace) and never the token", () => {
+    const app = readFileSync(resolve(process.cwd(), "src/App.tsx"), "utf8");
+    const m = app.match(/recoveryScope=\{([^}]*)\}/);
+    expect(m).not.toBeNull();
+    expect(m![1]).toBe("teacherProfile?.teacherId || undefined");
+    expect(m![1]).not.toMatch(/token/i);
+    expect(app).not.toMatch(/recoveryScope=\{[^}]*"teacher"/);
+    const autosave = readFileSync(resolve(process.cwd(), "src/examAutosave.ts"), "utf8");
+    expect(autosave).not.toMatch(/"teacher"/);
+  });
+});
+
+describe("Review blocker 2 — undo after a raced save lands on the PERSISTED checkpoint", () => {
+  it("saved T0 → edit A → save(A) → edit B → response → undo = persisted A (✓ محفوظ) → redo = B (dirty)", async () => {
+    render(<Host />);
+    await tick();
+    setTitle("A");
+    let release!: () => void; let saving!: Promise<StructuredExam>;
+    act(() => { saving = h.save(new Promise<void>(r => { release = r; }), "final"); });
+    act(() => h.update(e => ({ ...e, title: "B" })));
+    await act(async () => { release(); await saving; });
+    const payload = await saving;
+    expect(h.latest!.title).toBe("B"); expect(h.dirty).toBe(true);
+    fireEvent.click(undoBtn());
+    expect(h.latest).toBe(payload);
+    expect(h.latest!.status).toBe("final");
+    expect(h.latest!.updatedAt).toBe(payload.updatedAt);
+    expect(h.dirty).toBe(false);
+    expect(chip()).toBe("✓ محفوظ");
+    fireEvent.click(redoBtn());
+    expect(h.latest!.title).toBe("B"); expect(h.dirty).toBe(true);
+    expect(chip()).toBe("● تغييرات غير محفوظة");
+  });
+
+  it("same, with two edits after the snapshot: two undos reach the persisted A", async () => {
+    render(<Host />);
+    await tick();
+    setTitle("A");
+    let release!: () => void; let saving!: Promise<StructuredExam>;
+    act(() => { saving = h.save(new Promise<void>(r => { release = r; })); });
+    act(() => h.update(e => ({ ...e, title: "B" })));
+    act(() => h.update(e => ({ ...e, title: "C" })));
+    await act(async () => { release(); await saving; });
+    const payload = await saving;
+    fireEvent.click(undoBtn()); fireEvent.click(undoBtn());
+    expect(h.latest).toBe(payload); expect(chip()).toBe("✓ محفوظ");
+    fireEvent.click(undoBtn());
+    expect(h.latest!.title).toBe("OLD TITLE"); expect(chip()).toBe("● تغييرات غير محفوظة");   // T0 is no longer what the server holds
+    fireEvent.click(redoBtn());
+    expect(h.latest).toBe(payload); expect(chip()).toBe("✓ محفوظ");                  // A_saved is the reconciled saved point
   });
 });
