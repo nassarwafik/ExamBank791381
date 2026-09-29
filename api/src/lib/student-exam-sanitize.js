@@ -26,7 +26,10 @@ const PLANNING_KEYS = ["assessmentMeta"];
 // dropped here (the client registry ignores it anyway — defense in depth), and secret-looking keys are removed from the
 // config recursively because the config is rendered in the student's browser.
 const ACTIVITY_FIELDS = ["id", "kind", "key", "version", "title", "description", "config", "placement"];
-const ACTIVITY_CONFIG_SECRET_KEYS = new Set([...NODE_SECRET_KEYS, "answer", "answers", "answerKey", "expectedAnswer", "solution", "solutions", "hints", "teacherSolution", "scoringKey", "gradingKey", "secret", "correct", "isCorrect"]);
+// Review Fix 1 / R3: config keys are judged by the CANONICAL secret-key policy (case-insensitive, separators removed,
+// semantic families), mirrored from src/secretKeyPolicy.ts and pinned by src/secretKeyPolicy.parity.test.ts — never an
+// exact-spelling denylist that `correct_answer` / `CorrectAnswer` / `teacherAnswer` could walk past.
+const { isSecretConfigKey } = require("./secret-key-policy.js");
 // Import-only / teacher-only image keys that must never reach a student: the original URL of an external
 // image the importer refused to embed, and the AI-generation `prompt` (Phase 5B never persists it on a
 // structured question, but the legacy builder stores it on image objects — strip it here so it can never
@@ -41,7 +44,7 @@ function stripSecretsDeep(value, depth = 0) {
   if (Array.isArray(value)) return value.map(v => stripSecretsDeep(v, depth + 1));
   if (value && typeof value === "object") {
     const out = {};
-    for (const [k, v] of Object.entries(value)) if (!ACTIVITY_CONFIG_SECRET_KEYS.has(k)) out[k] = stripSecretsDeep(v, depth + 1);
+    for (const [k, v] of Object.entries(value)) if (!isSecretConfigKey(k)) out[k] = stripSecretsDeep(v, depth + 1);
     return out;
   }
   return value;

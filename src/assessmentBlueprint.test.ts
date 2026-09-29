@@ -59,7 +59,7 @@ describe("F2 — stable hierarchical taxonomy", () => {
     expect(renamed.constraints.find(c => c.id === "c-ip-marks")?.ref).toBe("IP_ADDRESSING");
     expect(validateBlueprint(renamed)).toEqual([]);
     const e = exam([q("q1", 10, { primaryTopicId: "IP_ADDRESSING" })], renamed);
-    expect(buildAssessmentProfile(e, renamed).byTopic["IP_ADDRESSING"]).toEqual({ count: 1, marks: 10 });
+    expect(buildAssessmentProfile(e, renamed).byTopic["IP_ADDRESSING"]).toEqual({ count: 1, weightMarks: 10, officialMarks: 10 });
     expect(networkingBlueprint.topics.find(t => t.id === "IP_ADDRESSING")?.label).toBe("عنونة IPv4");   // input untouched
   });
   it("three-level hierarchies from different subjects order depth-first with depth (Algorithms → Sorting → Merge Sort; Mechanics → Motion → Projectile)", () => {
@@ -142,13 +142,13 @@ describe("F4 — pure assessment profile (fact extraction) and the legacy bank b
   it("primary topic is the EXCLUSIVE attribution source: a 10-mark question with two secondary topics contributes 10 marks once, not 30", () => {
     const e = exam([q("q1", 10, { primaryTopicId: "IP_ADDRESSING", secondaryTopicIds: ["SUBNET_CIDR", "OSI_TCPIP"] })], bp);
     const p = buildAssessmentProfile(e, bp);
-    expect(p.byTopic).toEqual({ IP_ADDRESSING: { count: 1, marks: 10 } });
-    expect(Object.values(p.byTopic).reduce((s, x) => s + x.marks, 0)).toBe(10);
-    expect(p.totalMarks).toBe(10);
+    expect(p.byTopic).toEqual({ IP_ADDRESSING: { count: 1, weightMarks: 10, officialMarks: 10 } });
+    expect(Object.values(p.byTopic).reduce((s, x) => s + x.officialMarks, 0)).toBe(10);
+    expect(p.totalOfficialMarks).toBe(10);
   });
   it("objectives may overlap (one question measures several) — each listed objective receives the question", () => {
     const e = exam([q("q1", 4, { primaryTopicId: "SUBNET_CIDR", objectiveIds: ["obj-subnet", "obj-layers"] })], bp);
-    expect(buildAssessmentProfile(e, bp).byObjective).toEqual({ "obj-subnet": { count: 1, marks: 4 }, "obj-layers": { count: 1, marks: 4 } });
+    expect(buildAssessmentProfile(e, bp).byObjective).toEqual({ "obj-subnet": { count: 1, weightMarks: 4, officialMarks: 4 }, "obj-layers": { count: 1, weightMarks: 4, officialMarks: 4 } });
   });
   it("difficulty / type / cognitive / capability distributions, unclassified and unmapped questions", () => {
     const e = exam([
@@ -159,15 +159,15 @@ describe("F4 — pure assessment profile (fact extraction) and the legacy bank b
       q("q5", 1, undefined)                                                                              // nothing at all
     ], bp);
     const p = buildAssessmentProfile(e, bp);
-    expect(p.totalQuestions).toBe(5); expect(p.totalMarks).toBe(12);
-    expect(p.byTopic).toEqual({ IP_ADDRESSING: { count: 2, marks: 7 }, OSI_TCPIP: { count: 1, marks: 3 } });
-    expect(p.byDifficulty).toEqual({ "3": { count: 2, marks: 5 }, "2": { count: 1, marks: 5 }, "4": { count: 1, marks: 1 }, unspecified: { count: 1, marks: 1 } });
-    expect(p.byType).toEqual({ multipleChoice: { count: 4, marks: 9 }, shortAnswer: { count: 1, marks: 3 } });
-    expect(p.byCognitiveLevel).toEqual({ apply: { count: 1, marks: 2 }, remember: { count: 1, marks: 3 }, unspecified: { count: 3, marks: 7 } });
-    expect(p.byCapability).toEqual({ cli: { count: 2, marks: 7 } });
+    expect(p.totalQuestions).toBe(5); expect(p.totalOfficialMarks).toBe(12);
+    expect(p.byTopic).toEqual({ IP_ADDRESSING: { count: 2, weightMarks: 7, officialMarks: 7 }, OSI_TCPIP: { count: 1, weightMarks: 3, officialMarks: 3 } });
+    expect(p.byDifficulty).toEqual({ "3": { count: 2, weightMarks: 5, officialMarks: 5 }, "2": { count: 1, weightMarks: 5, officialMarks: 5 }, "4": { count: 1, weightMarks: 1, officialMarks: 1 }, unspecified: { count: 1, weightMarks: 1, officialMarks: 1 } });
+    expect(p.byType).toEqual({ multipleChoice: { count: 4, weightMarks: 9, officialMarks: 9 }, shortAnswer: { count: 1, weightMarks: 3, officialMarks: 3 } });
+    expect(p.byCognitiveLevel).toEqual({ apply: { count: 1, weightMarks: 2, officialMarks: 2 }, remember: { count: 1, weightMarks: 3, officialMarks: 3 }, unspecified: { count: 3, weightMarks: 7, officialMarks: 7 } });
+    expect(p.byCapability).toEqual({ cli: { count: 2, weightMarks: 7, officialMarks: 7 } });
     expect(p.unmappedQuestions).toEqual([{ examQuestionId: "q4", bankTopics: ["VLAN_TRUNKING"] }]);
     expect(p.unclassifiedQuestions).toEqual(["q4", "q5"]);
-    expect(p.bySection).toEqual({ s1: { count: 5, marks: 12 } });
+    expect(p.bySection).toEqual({ s1: { count: 5, weightMarks: 12, officialMarks: 12, officialFactor: 1 } });
   });
   it("effective metadata: explicit assessmentMeta is authoritative; bank topic / difficulty / flags are evidence only when the mapping is EXACT; unknown bank topics stay unmapped (never guessed)", () => {
     const bankQ = q("b1", 2, undefined, { origin: "bank", bankQuestionId: "BANK-1", topic: "IP_ADDRESSING", secondaryTopics: ["SUBNET_CIDR", "DHCP"], difficulty: 4, hasCLI: true, requiresCalculation: true });
@@ -192,10 +192,10 @@ describe("F4 — pure assessment profile (fact extraction) and the legacy bank b
       { id: "s2", title: "B", gradingPolicy: "capScore", maxMarks: 6, stimuli: {}, questions: [q("q2", 5, { primaryTopicId: "IP_ADDRESSING" }), q("q3", 5, { primaryTopicId: "IP_ADDRESSING" })] }
     ] };
     const p = buildAssessmentProfile(capped, bp);
-    expect(p.byTopic["SUBNET_CIDR"]).toEqual({ count: 1, marks: 5 });
+    expect(p.byTopic["SUBNET_CIDR"]).toEqual({ count: 1, weightMarks: 5, officialMarks: 5 });
     expect(questionMaxMarks(compound)).toBe(5); expect(serverQuestionMaxMarks(compound)).toBe(5);
-    expect(p.totalMarks).toBe(computeTotalMarks(capped)); expect(p.totalMarks).toBe(examOfficialStats(capped).totalMarks); expect(p.totalMarks).toBe(15);
-    expect(p.bySection).toEqual({ s1: { count: 2, marks: 9 }, s2: { count: 2, marks: 6 } });
+    expect(p.totalOfficialMarks).toBe(computeTotalMarks(capped)); expect(p.totalOfficialMarks).toBe(examOfficialStats(capped).totalMarks); expect(p.totalOfficialMarks).toBe(15);
+    expect(p.bySection).toEqual({ s1: { count: 2, weightMarks: 9, officialMarks: 9, officialFactor: 1 }, s2: { count: 2, weightMarks: 10, officialMarks: 6, officialFactor: 0.6 } });
     expect(p.totalQuestions).toBe(examOfficialStats(capped).questionCount);
   });
   it("profile and bridge never mutate their inputs and profile is single-pass (no deep clone of the exam)", () => {
@@ -204,7 +204,7 @@ describe("F4 — pure assessment profile (fact extraction) and the legacy bank b
     const p = buildAssessmentProfile(e, bp);
     effectiveAssessmentMeta(e.sections[0].questions[1], bp);
     expect(JSON.stringify(e)).toBe(before); expect(JSON.stringify(bp)).toBe(bpBefore);
-    expect(p.byTopic["IP_ADDRESSING"]).toEqual({ count: 1, marks: 10 });
+    expect(p.byTopic["IP_ADDRESSING"]).toEqual({ count: 1, weightMarks: 10, officialMarks: 10 });
     const big = exam(Array.from({ length: 2000 }, (_, i) => q("q" + i, 1, { primaryTopicId: i % 2 ? "IP_ADDRESSING" : "OSI_TCPIP" })), bp);
     const t0 = performance.now(); buildAssessmentProfile(big, bp); expect(performance.now() - t0).toBeLessThan(250);
   });

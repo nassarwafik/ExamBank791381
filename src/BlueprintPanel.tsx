@@ -24,15 +24,23 @@ const issueLabel = (code: string) => code;
 export default function BlueprintPanel({ open, onClose, blueprint, sections, onEdit, disabled }: Props) {
   // View model: the real blueprint or an EMPTY VIEW (never dispatched) so the panel can render before the first edit.
   const bp = blueprint ?? emptyBlueprint();
-  const issues = useMemo(() => (blueprint ? validateBlueprint(blueprint) : []), [blueprint]);
+  const issues = useMemo(() => (blueprint ? validateBlueprint(blueprint, { sectionIds: sections.map(s => s.id) }) : []), [blueprint, sections]);   // R4: real section ids
   const topics = useMemo(() => orderedTopics(bp), [bp]);
   const levels = blueprintCognitiveLevels(bp);
   const scale = blueprintDifficultyScale(bp);
+  // R1: a context identity is authored as an explicit stable id + a display label. Renaming the label never touches the id
+  // (no slugging); clearing both removes the identity; a partial identity is kept as data and reported by the validator.
   const identity = (field: "curriculum" | "course" | "level", label: string) => (
-    <label className="sb-inline sb-bp-field"><span>{label}</span>
-      <input className="sb-input" aria-label={label} value={bp[field]?.label ?? ""} disabled={disabled}
-        onChange={e => { const v = e.target.value; onEdit(b => setContextIdentity(b, field, v ? { id: b[field]?.id ?? "", label: v } : undefined)); }} />
-    </label>
+    <div className="sb-bp-identity">
+      <label className="sb-inline sb-bp-field"><span>{label}</span>
+        <input className="sb-input" aria-label={label} value={bp[field]?.label ?? ""} disabled={disabled}
+          onChange={e => { const v = e.target.value; onEdit(b => setContextIdentity(b, field, { id: b[field]?.id ?? "", label: v })); }} />
+      </label>
+      <label className="sb-inline sb-bp-field"><span>معرّف {label}</span>
+        <input className="sb-input" aria-label={"معرّف " + label} dir="ltr" placeholder="معرّف ثابت" value={bp[field]?.id ?? ""} disabled={disabled}
+          onChange={e => { const v = e.target.value; onEdit(b => setContextIdentity(b, field, { id: v, label: b[field]?.label ?? "" })); }} />
+      </label>
+    </div>
   );
   const refControl = (c: BlueprintConstraint) => {
     const set = (ref: string) => onEdit(b => updateConstraint(b, c.id, { ref }));

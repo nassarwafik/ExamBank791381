@@ -53,7 +53,9 @@ gates, no scores, no new question type, no grading change, no data migration.
    blueprint. There is **no domain-profile framework**, no subject enum, no code branch per subject, no migration of the
    791381 configuration (guard test: the engine source contains no subject-specific branch). `emptyBlueprint()` has NO
    default subject (`{ id: "", label: "" }`); the validator reports `MISSING_SUBJECT_ID / MISSING_SUBJECT_LABEL` instead
-   of inventing one.
+   of inventing one. An OPTIONAL context identity (`curriculum` / `course` / `level`), once present, must be complete
+   (`MISSING_CONTEXT_ID` / `MISSING_CONTEXT_LABEL`): the stable id is the identity, the label is display text, and
+   renaming a label never changes or re-slugs the id (Review Fix 1 / R1).
 2. **Blueprint = canonical contract; `ExamPlan` = legacy generator adapter.** `AssessmentBlueprintV1` is the canonical,
    versioned planning contract stored on the exam (`exam.blueprint`). The legacy `App.ExamPlan` is NOT renamed, removed
    or wrapped; an explicit projection seam (`legacyPlanToBlueprint`, `blueprintToLegacyPlanTargets`) documents the
@@ -90,18 +92,27 @@ notes?
 
 Validation (`validateBlueprint`, pure, `src/assessmentBlueprint.ts`) returns `BlueprintIssue[]` `{ code, severity,
 message, path?, ref? }`; nothing is repaired. Codes: `UNSUPPORTED_SCHEMA_VERSION`, `MISSING_SUBJECT_ID`,
-`MISSING_SUBJECT_LABEL`, `INVALID_IDENTITY`, `INVALID_TOPICS`, `INVALID_TOPIC_ID`, `DUPLICATE_TOPIC_ID`,
+`MISSING_SUBJECT_LABEL`, `INVALID_IDENTITY`, `MISSING_CONTEXT_ID`, `MISSING_CONTEXT_LABEL`, `INVALID_TOPICS`, `INVALID_TOPIC_ID`, `DUPLICATE_TOPIC_ID`,
 `MISSING_TOPIC_LABEL`, `BROKEN_PARENT_REF`, `TOPIC_CYCLE`, `INVALID_OBJECTIVES`, `INVALID_OBJECTIVE_ID`,
 `DUPLICATE_OBJECTIVE_ID`, `MISSING_OBJECTIVE_LABEL`, `BROKEN_OBJECTIVE_TOPIC_REF`, `INVALID_TARGET`,
 `INVALID_DIFFICULTY_SCALE`, `INVALID_COGNITIVE_LEVELS`, `INVALID_CONSTRAINTS`, `INVALID_CONSTRAINT_ID`,
 `DUPLICATE_CONSTRAINT_ID`, `INVALID_DIMENSION`, `INVALID_METRIC`, `INVALID_UNIT`, `MISSING_REF`, `BROKEN_TOPIC_REF`,
-`BROKEN_OBJECTIVE_REF`, `INVALID_DIFFICULTY`, `BROKEN_COGNITIVE_REF`, `INVALID_QUESTION_TYPE`, `INVALID_LIMIT`,
+`BROKEN_OBJECTIVE_REF`, `INVALID_DIFFICULTY`, `BROKEN_COGNITIVE_REF`, `INVALID_QUESTION_TYPE`, `BROKEN_SECTION_REF`, `INVALID_LIMIT`,
 `NEGATIVE_LIMIT`, `PERCENT_OUT_OF_RANGE`, `CONTRADICTORY_LIMITS`, `EMPTY_CONSTRAINT`, `DUPLICATE_EQUIVALENT_CONSTRAINT`.
 A partial blueprint (subject only, or constraints covering only part of a dimension) is valid: 13C-A never demands a
 complete distribution and never emits a coverage score.
 
+**Context-aware validation (Review Fix 1 / R4).** The blueprint stays pure and carries no exam state; the validator takes
+an optional context: `validateBlueprint(bp, { sectionIds })`, and `validateBlueprintForExam(bp, exam)` supplies the
+live exam's section ids. With context, a `section` constraint must reference an existing stable section id
+(`BROKEN_SECTION_REF` when the section was deleted or never existed; renaming or reordering a section keeps the id and
+therefore the constraint). Without context (templates, fixtures, question-free planning) section refs are not judged.
+The Structured Exam Builder uses the context-aware form for both the toolbar badge and the panel's issue list.
+
 Pure editing helpers (all return new objects): `addTopic / updateTopic / renameTopic / setTopicParent / removeTopic`
-(removal re-parents children to the removed topic's parent and clears dangling objective / constraint refs),
+(**removal removes only the topic**: children keep their `parentId`, objectives keep their `topicId`, constraints keep
+their `ref`, and the validator reports them as `BROKEN_PARENT_REF` / `BROKEN_OBJECTIVE_TOPIC_REF` / `BROKEN_TOPIC_REF` —
+academic meaning is never silently rewritten; F1),
 `addObjective / updateObjective / removeObjective`, `upsertConstraint / updateConstraint / removeConstraint`,
 `setSubject / setContextIdentity / setTargets`, `orderedTopics` (depth-first with depth), `withBlueprint(exam, fn)` (the
 single updater shape the builder dispatches).
@@ -149,23 +160,51 @@ UI shows the evidence line ("موضوع البنك: … — غير مربوط ب
 ## 10. Official marks parity
 
 The profile uses `questionMaxMarks` (compound → grader part-mark distribution, never top-level `q.marks`),
-`sectionMaxMarks` (section cap applied) and `computeTotalMarks`. `assessmentBlueprint.test.ts` asserts equality with the
-server's `examOfficialStats` / `sectionOfficialMaxMarks` for a mixed exam (all / capScore / firstNAnswered, compound with
-uneven parts).
+`sectionMaxMarks` (the grader's rule: `all` never capped; capScore / firstNAnswered use `section.maxMarks` when present)
+and `computeTotalMarks`. Tests assert equality with the server's `examOfficialStats` / `sectionOfficialMaxMarks` for
+mixed exams (all / capScore / firstNAnswered, compound with uneven parts). Grading behaviour is untouched.
 
-## 11. Attribution policy
+## 11. Mark semantics and attribution policy (Review Fix 1 / R2 — the contract 13C-B constraints consume)
 
-`buildAssessmentProfile` attributes each question's official marks to its **primary topic only** (exclusive; a 10-mark
-question with two secondary topics contributes 10 marks once). Objectives and capabilities may overlap (a question counts
-once per listed objective / capability). Output: `totalQuestions`, `totalMarks`, `byTopic`, `byObjective`,
-`byDifficulty` (`"unspecified"` bucket), `byType`, `byCognitiveLevel`, `byCapability`, `bySection`, `unmappedQuestions`,
+A capped section (capScore / firstNAnswered with `maxMarks`) makes "marks" ambiguous: the questions' authored marks may
+sum to 10 while the section is officially worth 6. The profile therefore never exposes a bare `marks`; every tally is
+`{ count, weightMarks, officialMarks }` and the two units are defined as:
+
+| Unit | Definition | Sums to | Denominator for |
+|---|---|---|---|
+| `weightMarks` | authored question weight = `questionMaxMarks(q)` (compound: grader part-mark distribution) | `totalWeightMarks` | share of authored weight |
+| `officialMarks` | cap-aware attributable official marks = `weight × sectionOfficial / Σ section weights` (`officialQuestionMarks`) | `totalOfficialMarks − unattributedOfficialMarks` | share of the official total |
+
+`sectionOfficial` is `sectionMaxMarks(section)`; `bySection[id] = { count, weightMarks: Σ weights, officialMarks:
+sectionOfficial, officialFactor: sectionOfficial / Σ weights }`. For an `all` section the factor is 1 and
+`officialMarks === weightMarks` exactly. For capScore / firstNAnswered the proportional rule is the unique deterministic,
+**answer-independent** attribution that sums to the section's official max (firstNAnswered's answer-dependent counting is
+deliberately not modelled: this is structural planning analysis, not student analytics). A capped section whose questions
+carry zero weight contributes its official max to `unattributedOfficialMarks` (counted in `totalOfficialMarks`, attributable
+to nothing).
+
+Invariants (asserted by `assessmentBlueprint.reviewfix1.test.ts`):
+- `totalOfficialMarks = computeTotalMarks(exam) = examOfficialStats(exam).totalMarks = Σ bySection.officialMarks`;
+- `totalWeightMarks = Σ bySection.weightMarks = Σ byTopic.weightMarks + unclassified.weightMarks = Σ byType.weightMarks = …`;
+- for every exclusive dimension (topic + unclassified, difficulty, type, cognitive level):
+  `Σ officialMarks + unattributedOfficialMarks = totalOfficialMarks`;
+- objectives and capabilities may overlap intentionally (a question counts once per listed objective / capability), so
+  their sums are not bounded by the totals.
+
+Attribution: the **primary topic is exclusive** (a 10-mark question with two secondary topics contributes once; questions
+without a primary topic go to `unclassified` and `unclassifiedQuestions`). 13C-B `marks` constraints in `percent` use
+`officialMarks / totalOfficialMarks`; `absolute` constraints compare `officialMarks`. Output: `totalQuestions`,
+`totalWeightMarks`, `totalOfficialMarks`, `unattributedOfficialMarks`, `byTopic`, `byObjective`, `byDifficulty`
+(`"unspecified"` bucket), `byType`, `byCognitiveLevel`, `byCapability`, `bySection`, `unclassified`, `unmappedQuestions`,
 `unclassifiedQuestions`. Pure, single pass, no deep clone, inputs never mutated. **No gates, no scores, no warnings** —
 that is 13C-C.
 
 ## 12. Blueprint UI — "مخطط الامتحان"
 
 `src/BlueprintPanel.tsx` (lazy chunk) opened from the builder toolbar button "📐 مخطط الامتحان" (badge = issue count).
-RTL dialog with labelled inputs (subject id / label, curriculum, course, level, target totals), topic list (add, rename,
+RTL dialog with labelled inputs (subject id / label; curriculum / course / level each as an explicit stable **id + label**
+pair — renaming the label keeps the id, clearing both removes the identity, a partial identity is reported as
+`MISSING_CONTEXT_ID` / `MISSING_CONTEXT_LABEL`; target totals), topic list (add, rename,
 add child, re-parent, remove; depth shown), objectives (add, label, topic link, remove), constraints (dimension, ref,
 metric, unit, min / target / max), live issue list (`aria-label="مشكلات المخطط"`, `data-code`). Every edit is
 `onEdit(fn)` → `update(prev => withBlueprint(prev, fn))` → ONE history entry; opening / closing the panel changes nothing;
@@ -184,9 +223,14 @@ unchanged (byte-identical sanitizer output shape; not dirty on open).
 - exam level: `blueprint` deleted;
 - question / part level: `PLANNING_KEYS = ["assessmentMeta"]` stripped alongside the existing secret keys;
 - activity (question / part / stimulus): rebuilt from the allowlist `id, kind, key, version, title, description, config,
-  placement` (executable / trust-claim fields never copied); `config` recursively stripped of secret-looking keys
-  (answer / answers / answerKey / expectedAnswer / solution(s) / hints / teacherSolution / scoringKey / gradingKey /
-  secret / correct / isCorrect + the node secret keys);
+  placement` (executable / trust-claim fields never copied); `config` recursively stripped (objects and arrays, any
+  depth) of every key the **canonical secret-key policy** rejects (Review Fix 1 / R3): keys are compared in canonical
+  form (lower-case, `_`/`-`/space/`.` removed) against the families answer, correct, solution, hint, teacher, scoring,
+  grading, secret, rationale, explanation, aiInstruction, expected, rubric, markScheme, apiKey, token, password,
+  credential, plus the exact canonical keys `key`, `history`, `redoStack` — so `correct_answer`, `CorrectAnswer`,
+  `teacherAnswer`, `answer_key`, `ExpectedAnswer` are all rejected. The policy lives in
+  `api/src/lib/secret-key-policy.js` (server) and `src/secretKeyPolicy.ts` (frontend validator); the two runtimes
+  cannot share a module, so `src/secretKeyPolicy.parity.test.ts` pins identical families, normalization and verdicts;
 - all existing rules (answer keys, option flags, `field.correct`, `hint`, part answers, hidden media, 13B re-signing
   order hydrate → sanitize) are unchanged and re-tested.
 
@@ -199,8 +243,13 @@ description?, config?, placement?: before | after }`. `validateActivityDescripto
 render / renderer / import / src / srcdoc / html / script / code / eval / path / url / handler / onLoad / onRender),
 `TRUST_CLAIM_IGNORED`. `normalizeActivityDescriptor` returns the allowlisted fields or `null`.
 
+`SECRET_IN_CONFIG` uses the canonical secret-key policy (§14) — spelling, case and separator variants of a secret family
+are rejected at any nesting depth.
+
 Scopes: **question-level** (`BuilderQuestion.activity`, rendered with its question) and **shared-stimulus**
-(`Stimulus.activity`, rendered once with the stimulus for the group). Parts may carry a descriptor (`BuilderPart.activity`)
+(`Stimulus.activity`, rendered once with the stimulus for the group). `placement` is honored (F2): the default / `"before"`
+renders the context before the question body (or before the stimulus content); `"after"` renders it after; the surface
+exposes `data-activity-placement` for tests. Parts may carry a descriptor (`BuilderPart.activity`)
 for future use; the student renderer of 13C-A renders question and stimulus scopes.
 
 ## 16. Trust policy and rendering
@@ -253,6 +302,11 @@ The same model, validator, profile and UI accept all five with zero issues.
 | `src/assessmentPersistence.test.ts` | F3 round trip (real `cleanExam`), M6 / M7, moves, bank bridge, history, autosave |
 | `src/StructuredExamBuilder.blueprint.test.tsx` | Blueprint UI with the real history hook: legacy safety, ONE history step per edit, undo / redo, autosave recovery, classification UI, evidence line, duplicate / move, activity authoring |
 | `api/tests/student-exam-sanitize-13c-a.test.js` | F5 / M10 / M11, activity data-only delivery, hidden media + 13B re-signing, legacy byte-identity |
+| `src/assessmentBlueprint.reviewfix1.test.ts` | Review Fix 1: R1 identity contract, R2 mark semantics (capScore / firstNAnswered / all / compound / invariant), R4 context validation, F1 pin |
+| `src/StructuredExamBuilder.reviewfix1.test.tsx` | Review Fix 1: R1 id + label authoring in the real builder, R4 section constraint vs real sections (rename / delete / undo) |
+| `src/assessmentActivity.reviewfix1.test.tsx` | Review Fix 1: R3 secret-key variants (top level, nested, arrays), F2 placement rendering |
+| `api/tests/student-exam-sanitize-reviewfix1.test.js` | Review Fix 1: R3 sanitizer strips the whole variant class at any depth; safe keys intact |
+| `src/secretKeyPolicy.parity.test.ts` | Review Fix 1: frontend / server secret-key policy parity |
 
 ## 21. Mutation proofs M1–M17
 
@@ -265,7 +319,22 @@ registry = exam registry → M12 test; M13 / M13b executable fields kept (normal
 throw instead of fallback → M14 test; M15 activity click reaches `onChoice` → M15 test; M16 `answer` accepted in config →
 M16 test; M17 eager host import → guards.
 
-## 22. Scope of 13C-B and 13C-C (not in this PR)
+Review Fix 1 mutations: R1-M optional identity accepts an empty id → R1 tests; R2-M capped section attributes raw
+question marks as official → R2 tests; R3-M (frontend) / R3-Mb (server) canonicalization removed (exact, case-sensitive
+again) → R3 validator / sanitizer / parity tests; R4-M missing section ref accepted → R4 pure + builder tests.
+
+## 22. Independent Review Fix 1 (same branch, PR #223)
+
+| Finding | Disposition |
+|---|---|
+| R1 optional context identities could persist `{ id: "", label }` | complete-identity rule (`MISSING_CONTEXT_ID` / `MISSING_CONTEXT_LABEL`), explicit id + label authoring, id never re-slugged (§4, §5, §12) |
+| R2 dimension marks were raw while totals were capped | `weightMarks` vs `officialMarks` with a documented, tested invariant (§11); no bare `marks` field remains |
+| R3 secret filter bypassable by key spelling | canonical secret-key policy mirrored on both runtimes with a parity test (§14, §15) |
+| R4 `section` constraint refs could dangle | context-aware validation seam used by the builder (§5) |
+| F1 docs contradicted `removeTopic` | docs corrected to the non-repairing implementation; behaviour pinned by test (§5) |
+| F2 `placement: "after"` was dead schema | honored in question and stimulus rendering with deterministic before / after tests (§15) |
+
+## 23. Scope of 13C-B and 13C-C (not in this PR)
 
 - **13C-B — Blueprint-driven authoring:** bank selection / generation driven from the canonical blueprint through the
   §6 seam; coverage view in the builder; classification bulk tools; first approved assessment-safe renderer(s).

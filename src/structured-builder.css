@@ -262,6 +262,7 @@
 .sb-bp-h{margin:0;font-size:.95rem}
 .sb-bp-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:8px}
 .sb-bp-field{flex-direction:column;align-items:stretch}
+.sb-bp-identity{display:grid;grid-template-columns:1fr 1fr;gap:6px}
 .sb-bp-list{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:6px}
 .sb-bp-item{display:flex;flex-wrap:wrap;gap:6px;align-items:center;border:1px dashed var(--line,#e5e9f0);border-radius:10px;padding:6px 8px}
 .sb-bp-item>.sb-input:first-child{flex:1 1 180px;min-width:120px}

@@ -21,9 +21,16 @@ import {
 // Shared stimulus (topology / command output / passage) rendered ONCE before the questions that
 // reference it via groupId. Content comes from section.stimuli[groupId], falling back to a per-question
 // stimulus object. Reuses the existing image support; no page builder, no redesign.
+// F2: descriptor placement — only the literal "after" moves the context after the content; anything else means before.
+function activityPlacement(activity:unknown):"before"|"after"{
+ return !!activity&&typeof activity==="object"&&(activity as {placement?:unknown}).placement==="after"?"after":"before";
+}
 function StimulusBlock({stimulus}:{stimulus:Stimulus}){
  if(!stimulus||(!stimulus.title&&!stimulus.text&&!stimulus.image?.dataUrl&&!stimulus.activity))return null;
- return <div className="iex-stimulus">{stimulus.title&&<strong className="iex-stimulus-title">{stimulus.title}</strong>}{stimulus.text&&<p className="iex-stimulus-text">{stimulus.text}</p>}{stimulus.image?.dataUrl&&<img className="iex-image" src={stimulus.image.dataUrl} alt={stimulus.title||"مادة مشتركة"}/>}{stimulus.activity!==undefined&&<AssessmentActivityContext descriptor={stimulus.activity} scope="stimulus"/>}</div>;
+ // F2: `placement` is honored — "after" renders the interactive context after the stimulus content, default before it.
+ const stimActivity=stimulus.activity!==undefined?<AssessmentActivityContext descriptor={stimulus.activity} scope="stimulus"/>:null;
+ const stimAfter=activityPlacement(stimulus.activity)==="after";
+ return <div className="iex-stimulus">{!stimAfter&&stimActivity}{stimulus.title&&<strong className="iex-stimulus-title">{stimulus.title}</strong>}{stimulus.text&&<p className="iex-stimulus-text">{stimulus.text}</p>}{stimulus.image?.dataUrl&&<img className="iex-image" src={stimulus.image.dataUrl} alt={stimulus.title||"مادة مشتركة"}/>}{stimAfter&&stimActivity}</div>;
 }
 
 // Renders one exam SECTION: its header (title, instructions, grading rule, live progress) and its
@@ -100,6 +107,9 @@ export function StructuredSectionQuestion(props:StructuredQuestionProps){
  // Question-level interactive context: rendered with the question (before its body); the response controls are untouched.
  const qActivity=(q as {activity?:unknown}).activity;
  const activityNode:ReactNode=qActivity!==undefined?<AssessmentActivityContext descriptor={qActivity} scope="question"/>:null;
+ // F2: `placement` is honored — "after" renders the context after the question body, default before it.
+ const activityAfter=activityPlacement(qActivity)==="after";
+ const activityBefore:ReactNode=activityAfter?null:activityNode, activityTail:ReactNode=activityAfter?activityNode:null;
  if(isCompound(q)){
   // Part-level firstN: mark each answered-but-excess part. Question-level: mark whole question.
   let excessPartIds:Set<string>|undefined;
@@ -108,8 +118,8 @@ export function StructuredSectionQuestion(props:StructuredQuestionProps){
    questionParts(q).forEach((p,pi)=>{const pid=partId(p,pi),resp=answers[id];const pAns=resp?.kind==="compound"?resp.parts?.[pid]:undefined;if(answered(pAns)&&!countedKeys.has(id+"::"+pid))excessPartIds!.add(pid);});
   }
   const wholeExcess=section.answerUnit==="question"&&answered(answers[id])&&!countedKeys.has(id);
-  return <>{stimulusNode}{activityNode}{wholeExcess&&<div className="iex-extra-hint iex-extra-hint-block"><IconCheck size={11}/>إجابة إضافية — لن تدخل في التصحيح</div>}<CompoundQuestion q={q} index={globalIndex} id={id} answer={answers[id]} onPart={(pid,ans)=>onPart(id,pid,ans)} disabled={disabled} excessPartIds={excessPartIds}/></>;
+  return <>{stimulusNode}{activityBefore}{wholeExcess&&<div className="iex-extra-hint iex-extra-hint-block"><IconCheck size={11}/>إجابة إضافية — لن تدخل في التصحيح</div>}<CompoundQuestion q={q} index={globalIndex} id={id} answer={answers[id]} onPart={(pid,ans)=>onPart(id,pid,ans)} disabled={disabled} excessPartIds={excessPartIds}/>{activityTail}</>;
  }
  const excess=answered(answers[id])&&!countedKeys.has(id);
- return <>{stimulusNode}{activityNode}{excess&&<div className="iex-extra-hint iex-extra-hint-block"><IconCheck size={11}/>إجابة إضافية — لن تدخل في التصحيح</div>}<StudentQuestionCard q={q} index={globalIndex} id={id} answer={answers[id]} onChoice={n=>onChoice(id,n)} onSeq={(n,v)=>onSeq(id,n,v)} onTable={(n,v)=>onTable(id,n,v)} onText={v=>onText(id,v)} onField={(fid,v)=>onField(id,fid,v)} disabled={disabled}/></>;
+ return <>{stimulusNode}{activityBefore}{excess&&<div className="iex-extra-hint iex-extra-hint-block"><IconCheck size={11}/>إجابة إضافية — لن تدخل في التصحيح</div>}<StudentQuestionCard q={q} index={globalIndex} id={id} answer={answers[id]} onChoice={n=>onChoice(id,n)} onSeq={(n,v)=>onSeq(id,n,v)} onTable={(n,v)=>onTable(id,n,v)} onText={v=>onText(id,v)} onField={(fid,v)=>onField(id,fid,v)} disabled={disabled}/>{activityTail}</>;
 }

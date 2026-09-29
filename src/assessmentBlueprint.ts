@@ -15,6 +15,10 @@ import {
 
 // ── construction ─────────────────────────────────────────────────────────────────────────────────────────────────
 /** A new blueprint has NO subject (the teacher names it) — nothing is ever inferred from the repository's origin. */
+/** Context-aware validation against the REAL exam: section constraints must reference existing (stable) section ids. */
+export function validateBlueprintForExam(bp: unknown, exam: Pick<StructuredExam, "sections">): BlueprintIssue[] {
+  return validateBlueprint(bp, { sectionIds: (exam.sections || []).map(s => s.id) });
+}
 export function emptyBlueprint(): AssessmentBlueprintV1 {
   return { schemaVersion: ASSESSMENT_BLUEPRINT_SCHEMA_VERSION, subject: { id: "", label: "" }, topics: [], objectives: [], constraints: [] };
 }
@@ -37,12 +41,12 @@ export function difficultyValues(bp: AssessmentBlueprintV1 | undefined): number[
 
 // ── validation (structured issues; never repairs) ─────────────────────────────────────────────────────────────────
 export type BlueprintIssueCode =
-  | "UNSUPPORTED_SCHEMA_VERSION" | "MISSING_SUBJECT_ID" | "MISSING_SUBJECT_LABEL" | "INVALID_IDENTITY"
+  | "UNSUPPORTED_SCHEMA_VERSION" | "MISSING_SUBJECT_ID" | "MISSING_SUBJECT_LABEL" | "INVALID_IDENTITY" | "MISSING_CONTEXT_ID" | "MISSING_CONTEXT_LABEL"
   | "INVALID_TOPICS" | "INVALID_TOPIC_ID" | "DUPLICATE_TOPIC_ID" | "MISSING_TOPIC_LABEL" | "BROKEN_PARENT_REF" | "TOPIC_CYCLE"
   | "INVALID_OBJECTIVES" | "INVALID_OBJECTIVE_ID" | "DUPLICATE_OBJECTIVE_ID" | "MISSING_OBJECTIVE_LABEL" | "BROKEN_OBJECTIVE_TOPIC_REF"
   | "INVALID_TARGET" | "INVALID_DIFFICULTY_SCALE" | "INVALID_COGNITIVE_LEVELS"
   | "INVALID_CONSTRAINTS" | "INVALID_CONSTRAINT_ID" | "DUPLICATE_CONSTRAINT_ID" | "INVALID_DIMENSION" | "INVALID_METRIC" | "INVALID_UNIT"
-  | "MISSING_REF" | "BROKEN_TOPIC_REF" | "BROKEN_OBJECTIVE_REF" | "INVALID_DIFFICULTY" | "BROKEN_COGNITIVE_REF" | "INVALID_QUESTION_TYPE"
+  | "MISSING_REF" | "BROKEN_TOPIC_REF" | "BROKEN_OBJECTIVE_REF" | "INVALID_DIFFICULTY" | "BROKEN_COGNITIVE_REF" | "INVALID_QUESTION_TYPE" | "BROKEN_SECTION_REF"
   | "INVALID_LIMIT" | "NEGATIVE_LIMIT" | "PERCENT_OUT_OF_RANGE" | "CONTRADICTORY_LIMITS" | "EMPTY_CONSTRAINT" | "DUPLICATE_EQUIVALENT_CONSTRAINT";
 export type BlueprintIssue = { code: BlueprintIssueCode; message: string; path?: string; refId?: string };
 
@@ -51,8 +55,14 @@ const validId = (v: unknown): v is string => typeof v === "string" && v.trim().l
 const validLabel = (v: unknown): v is string => typeof v === "string" && v.trim().length > 0;
 const finiteNum = (v: unknown): v is number => typeof v === "number" && Number.isFinite(v);
 
-export function validateBlueprint(input: unknown): BlueprintIssue[] {
+/** Optional exam context for validation. The blueprint stays pure: section ids are supplied by the caller (the builder
+ *  passes the live exam's sections) so a `section` constraint can be checked against real, stable section ids; without
+ *  context (templates, fixtures, question-free planning) section refs are not judged. */
+export type BlueprintValidationContext = { sectionIds?: Iterable<string> };
+const CONTEXT_LABEL: Record<string, string> = { curriculum: "المنهاج", course: "المقرر", level: "المستوى" };
+export function validateBlueprint(input: unknown, context?: BlueprintValidationContext): BlueprintIssue[] {
   const issues: BlueprintIssue[] = [];
+  const sectionIds = context?.sectionIds ? new Set(context.sectionIds) : undefined;
   const add = (code: BlueprintIssueCode, message: string, path?: string, refId?: string) => issues.push({ code, message, path, refId });
   if (!isPlainObject(input) || input.schemaVersion !== ASSESSMENT_BLUEPRINT_SCHEMA_VERSION) {
     add("UNSUPPORTED_SCHEMA_VERSION", "إصدار مخطط غير مدعوم.", "schemaVersion");
@@ -66,7 +76,12 @@ export function validateBlueprint(input: unknown): BlueprintIssue[] {
     if (required) {
       if (!validId(v.id)) add("MISSING_SUBJECT_ID", "معرّف المادة مطلوب.", path + ".id");
       if (!validLabel(v.label)) add("MISSING_SUBJECT_LABEL", "اسم المادة مطلوب.", path + ".label");
-    } else if ((v.id !== undefined && typeof v.id !== "string") || (v.label !== undefined && typeof v.label !== "string")) add("INVALID_IDENTITY", "هوية غير صالحة.", path);
+    } else {
+      // Review Fix 1 / R1: an OPTIONAL context identity, once present, is a COMPLETE identity — the stable id carries the
+      // identity, the label is display text. A labelled identity with an empty id is an issue, never valid data.
+      if (!validId(v.id)) add("MISSING_CONTEXT_ID", "معرّف " + CONTEXT_LABEL[path] + " مطلوب — الهوية هي المعرّف الثابت لا الاسم.", path + ".id");
+      if (!validLabel(v.label)) add("MISSING_CONTEXT_LABEL", "اسم " + CONTEXT_LABEL[path] + " مطلوب.", path + ".label");
+    }
   };
   identity(bp.subject, "subject", true);
   identity(bp.curriculum, "curriculum", false); identity(bp.course, "course", false); identity(bp.level, "level", false);
@@ -138,7 +153,8 @@ export function validateBlueprint(input: unknown): BlueprintIssue[] {
       case "difficulty": if (!/^-?\d+$/.test(ref) || !scaleValues.has(Number(ref))) add("INVALID_DIFFICULTY", "قيمة صعوبة خارج السلّم: " + ref, path + ".ref", refId); break;
       case "cognitiveLevel": if (!vocabulary.has(ref)) add("BROKEN_COGNITIVE_REF", "مستوى معرفي غير معرّف: " + ref, path + ".ref", refId); break;
       case "questionType": if (!(BUILDER_QUESTION_TYPES as readonly string[]).includes(ref)) add("INVALID_QUESTION_TYPE", "نوع سؤال غير معروف: " + ref, path + ".ref", refId); break;
-      default: break;                                                        // capability / section: any non-empty stable id
+      case "section": if (sectionIds && !sectionIds.has(ref)) add("BROKEN_SECTION_REF", "القيد يشير إلى قسم غير موجود في الامتحان: " + ref, path + ".ref", refId); break;   // Review Fix 1 / R4
+      default: break;                                                        // capability: any non-empty stable id
     }
     const limits: Array<[string, unknown]> = [["min", c.min], ["target", c.target], ["max", c.max], ["tolerance", c.tolerance]];
     for (const [k, v] of limits) {
@@ -252,12 +268,31 @@ export function effectiveAssessmentMeta(question: BuilderQuestion | BankEvidence
 }
 
 // ── profile: single-pass FACT extraction (no targets vs actual, no score, no ranking) ──────────────────────────────
-export type Tally = { count: number; marks: number };
+/**
+ * Review Fix 1 / R2 — MARK SEMANTICS (the contract 13C-B constraints consume; see docs/enterprise-builder-13c-a.md §11).
+ *  • weightMarks   = authored question weight = questionMaxMarks(q) (compound: the grader's part-mark distribution, never
+ *                    q.marks). Sums to totalWeightMarks. Denominator for "share of authored weight".
+ *  • officialMarks = cap-aware ATTRIBUTABLE official marks. Each question receives its section's official max
+ *                    (sectionMaxMarks — the grader's rule: `all` never capped, capScore / firstNAnswered use section.maxMarks
+ *                    when present) in proportion to its weight: weight × sectionOfficial / sectionWeightSum. For `all`
+ *                    sections this equals weightMarks exactly. Sums to totalOfficialMarks (= computeTotalMarks =
+ *                    examOfficialStats.totalMarks) minus unattributedOfficialMarks (official marks of capped sections whose
+ *                    questions carry zero weight — nothing to attach them to). Denominator for "share of the official total".
+ *  Structural / planning only: no student answers are involved (firstNAnswered's answer-dependent counting is deliberately
+ *  NOT modelled; the proportional rule is the unique deterministic, answer-independent attribution that sums to the section's
+ *  official max). Grading behaviour is untouched.
+ */
+export type Tally = { count: number; weightMarks: number; officialMarks: number };
+export type SectionTally = Tally & { /** sectionOfficial / sectionWeightSum (1 for `all`; 0 when the section has no weight). */ officialFactor: number };
 export type AssessmentProfile = {
   totalQuestions: number;
-  /** Official total (section caps applied) — equals computeTotalMarks / examOfficialStats. */
-  totalMarks: number;
-  /** Per-question official max marks attributed to the PRIMARY topic only (exclusive attribution; no double counting). */
+  /** Σ questionMaxMarks over every question (authored weight). */
+  totalWeightMarks: number;
+  /** Official total (section caps applied) — equals computeTotalMarks / examOfficialStats.totalMarks. */
+  totalOfficialMarks: number;
+  /** Official marks of capped sections with zero question weight: counted in totalOfficialMarks, attributable to nothing. */
+  unattributedOfficialMarks: number;
+  /** Per-question marks attributed to the PRIMARY topic only (exclusive attribution; no double counting). */
   byTopic: Record<string, Tally>;
   /** Objectives may overlap: a question counts once for each objective it measures. */
   byObjective: Record<string, Tally>;
@@ -266,28 +301,51 @@ export type AssessmentProfile = {
   byCognitiveLevel: Record<string, Tally>;
   /** Capabilities may overlap (a question may need several skills). */
   byCapability: Record<string, Tally>;
-  /** Section marks are the section's OFFICIAL max (cap applied) — the sum equals totalMarks. */
-  bySection: Record<string, Tally>;
+  /** weightMarks = Σ question weights; officialMarks = the section's OFFICIAL max (cap applied) — Σ equals totalOfficialMarks. */
+  bySection: Record<string, SectionTally>;
+  /** Questions without a primary topic (their marks are NOT in byTopic). */
+  unclassified: Tally;
   unmappedQuestions: { examQuestionId: string; bankTopics: string[] }[];
   unclassifiedQuestions: string[];
 };
-const bump = (rec: Record<string, Tally>, key: string, marks: number) => { const t = rec[key] || (rec[key] = { count: 0, marks: 0 }); t.count += 1; t.marks += marks; };
+const sectionWeightSum = (s: BuilderSection): number => (s.questions || []).reduce((a, q) => a + questionMaxMarks(q), 0);
+/** sectionOfficial / sectionWeightSum — 1 for `all` sections, section.maxMarks / Σweights for capped ones, 0 without weight. */
+export function sectionOfficialFactor(s: BuilderSection): number {
+  const w = sectionWeightSum(s);
+  return w > 0 ? sectionMaxMarks(s) / w : 0;
+}
+/** Cap-aware attributable official marks of ONE question inside its section (weight × official / Σweights; 0 without weight). */
+export function officialQuestionMarks(q: BuilderQuestion, s: BuilderSection): number {
+  const w = sectionWeightSum(s);
+  return w > 0 ? (questionMaxMarks(q) * sectionMaxMarks(s)) / w : 0;
+}
+const bump = (rec: Record<string, Tally>, key: string, weight: number, official: number) => { const t = rec[key] || (rec[key] = { count: 0, weightMarks: 0, officialMarks: 0 }); t.count += 1; t.weightMarks += weight; t.officialMarks += official; };
 export function buildAssessmentProfile(exam: StructuredExam, blueprint?: AssessmentBlueprintV1 | null): AssessmentProfile {
   const bp = blueprint === undefined ? exam.blueprint : blueprint;
-  const p: AssessmentProfile = { totalQuestions: countQuestions(exam), totalMarks: computeTotalMarks(exam), byTopic: {}, byObjective: {}, byDifficulty: {}, byType: {}, byCognitiveLevel: {}, byCapability: {}, bySection: {}, unmappedQuestions: [], unclassifiedQuestions: [] };
+  const p: AssessmentProfile = {
+    totalQuestions: countQuestions(exam), totalWeightMarks: 0, totalOfficialMarks: computeTotalMarks(exam), unattributedOfficialMarks: 0,
+    byTopic: {}, byObjective: {}, byDifficulty: {}, byType: {}, byCognitiveLevel: {}, byCapability: {}, bySection: {},
+    unclassified: { count: 0, weightMarks: 0, officialMarks: 0 }, unmappedQuestions: [], unclassifiedQuestions: []
+  };
   for (const s of exam.sections || []) {
     const qs: BuilderQuestion[] = s.questions || [];
-    p.bySection[s.id] = { count: qs.length, marks: sectionMaxMarks(s as BuilderSection) };
+    const weightSum = sectionWeightSum(s as BuilderSection), official = sectionMaxMarks(s as BuilderSection);
+    const factor = weightSum > 0 ? official / weightSum : 0;
+    p.totalWeightMarks += weightSum;
+    if (weightSum <= 0) p.unattributedOfficialMarks += official;
+    p.bySection[s.id] = { count: qs.length, weightMarks: weightSum, officialMarks: official, officialFactor: factor };
     for (const q of qs) {
-      const marks = questionMaxMarks(q);
+      const weight = questionMaxMarks(q);
+      const marks = weightSum > 0 ? (weight * official) / weightSum : 0;
       const eff = effectiveAssessmentMeta(q, bp ?? undefined);
-      if (eff.primaryTopicId) bump(p.byTopic, eff.primaryTopicId, marks); else p.unclassifiedQuestions.push(q.examQuestionId);
+      if (eff.primaryTopicId) bump(p.byTopic, eff.primaryTopicId, weight, marks);
+      else { p.unclassifiedQuestions.push(q.examQuestionId); p.unclassified.count += 1; p.unclassified.weightMarks += weight; p.unclassified.officialMarks += marks; }
       if (eff.unmappedBankTopics.length) p.unmappedQuestions.push({ examQuestionId: q.examQuestionId, bankTopics: eff.unmappedBankTopics });
-      for (const o of eff.objectiveIds) bump(p.byObjective, o, marks);
-      bump(p.byDifficulty, eff.difficulty === undefined ? "unspecified" : String(eff.difficulty), marks);
-      bump(p.byType, String(q.presentationType || "unspecified"), marks);
-      bump(p.byCognitiveLevel, eff.cognitiveLevel ?? "unspecified", marks);
-      for (const c of eff.capabilities) bump(p.byCapability, c, marks);
+      for (const o of eff.objectiveIds) bump(p.byObjective, o, weight, marks);
+      bump(p.byDifficulty, eff.difficulty === undefined ? "unspecified" : String(eff.difficulty), weight, marks);
+      bump(p.byType, String(q.presentationType || "unspecified"), weight, marks);
+      bump(p.byCognitiveLevel, eff.cognitiveLevel ?? "unspecified", weight, marks);
+      for (const c of eff.capabilities) bump(p.byCapability, c, weight, marks);
     }
   }
   return p;

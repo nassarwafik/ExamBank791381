@@ -36,7 +36,7 @@ import {
 import ExamQuestionNavigator from "./ExamQuestionNavigator";
 import BulkActionBar from "./BulkActionBar";
 import type { BankPickerService, InsertOutcome } from "./BankQuestionPicker";
-import { withBlueprint, validateBlueprint } from "./assessmentBlueprint";
+import { withBlueprint, validateBlueprintForExam } from "./assessmentBlueprint";
 import type { AssessmentBlueprintV1 } from "./assessmentTypes";
 import { useMediaQuery } from "./ui/useMediaQuery";
 import "./structured-builder.css";
@@ -360,7 +360,7 @@ export default function StructuredExamBuilder({ exam, onChange, onSave, onExit, 
   //    an exam without a blueprint dispatches nothing; the first real edit creates the versioned blueprint.
   const [blueprintOpen, setBlueprintOpen] = useState(false);
   const editBlueprint = (fn: (bp: AssessmentBlueprintV1) => AssessmentBlueprintV1) => update(prev => withBlueprint(prev, fn));
-  const blueprintIssueCount = useMemo(() => (exam.blueprint ? validateBlueprint(exam.blueprint).length : 0), [exam.blueprint]);
+  const blueprintIssueCount = useMemo(() => (exam.blueprint ? validateBlueprintForExam(exam.blueprint, exam).length : 0), [exam]);   // R4: section refs checked against the real exam
 
   const issues = useMemo(() => validateStructuredExam(exam), [exam]);
   const errors = issues.filter(i => i.severity === "error");

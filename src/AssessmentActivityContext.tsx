@@ -19,7 +19,7 @@ export function AssessmentActivityContext({ descriptor, scope }: { descriptor: u
   const d = normalizeActivityDescriptor(descriptor);
   const label = d?.title || "نشاط تفاعلي";
   return (
-    <div className={"iex-activity iex-activity-" + scope} data-activity-scope={scope} role="group" aria-label={label}>
+    <div className={"iex-activity iex-activity-" + scope} data-activity-scope={scope} data-activity-placement={d?.placement === "after" ? "after" : "before"} role="group" aria-label={label}>
       {d ? (
         <Suspense fallback={<p className="iex-activity-status" role="status">جارٍ تحضير النشاط التفاعلي…</p>}>
           <AssessmentActivityHost descriptor={d} registry={registry} />

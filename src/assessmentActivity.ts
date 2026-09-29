@@ -10,6 +10,7 @@ import { createActivityRegistry, type LearningActivityRegistry, type RegisteredA
 import type { ActivityBlock } from "./learning/content/types";
 import { ACTIVITY_KIND_LABEL } from "./learning/activities/labels";
 import { ASSESSMENT_ACTIVITY_KINDS, type AssessmentActivityDescriptor, type AssessmentActivityKind } from "./assessmentTypes";
+import { isSecretConfigKey } from "./secretKeyPolicy";
 
 export { ASSESSMENT_ACTIVITY_KINDS };
 export const ACTIVITY_DESCRIPTOR_FIELDS = ["id", "kind", "key", "version", "title", "description", "config", "placement"] as const;
@@ -17,9 +18,9 @@ export const ACTIVITY_DESCRIPTOR_FIELDS = ["id", "kind", "key", "version", "titl
 export const EXECUTABLE_DESCRIPTOR_FIELDS = ["component", "module", "load", "loader", "render", "renderer", "import", "src", "srcdoc", "html", "script", "code", "eval", "path", "url", "handler", "onLoad", "onRender"] as const;
 /** Field names content might use to claim trust. Ignored: the registry owns trust. */
 export const TRUST_CLAIM_FIELDS = ["assessmentSafe", "trusted", "approved", "allowed", "safe", "examSafe"] as const;
-/** Config keys that would put a secret in the STUDENT-VISIBLE config. */
-export const SECRET_CONFIG_KEYS = ["answer", "answers", "answerKey", "expectedAnswer", "correct", "isCorrect", "correctOptionIndex", "correctOptionValue", "correctOptionLabel", "correctText", "solution", "solutions", "hint", "hints", "teacherNote", "teacherSolution", "aiInstruction", "rationale", "explanation", "scoringKey", "gradingKey", "secret"] as const;
-const SECRET_SET = new Set<string>(SECRET_CONFIG_KEYS);
+// Config keys that would put a secret in the STUDENT-VISIBLE config: judged by the canonical secret-key policy (case /
+// separator / spelling variants of the answer, correct, solution, hint, teacher, scoring, grading, secret … families),
+// mirrored by the server sanitizer (api/src/lib/secret-key-policy.js) and pinned by secretKeyPolicy.parity.test.ts.
 const KEY_PATTERN = /^[A-Za-z0-9][A-Za-z0-9._-]{0,80}$/;
 const MAX_DEPTH = 12;
 
@@ -41,7 +42,7 @@ function collectSecretPaths(value: unknown, path: string, out: string[], depth =
   if (depth > MAX_DEPTH) return;
   if (Array.isArray(value)) { value.forEach((v, i) => collectSecretPaths(v, path + "[" + i + "]", out, depth + 1)); return; }
   if (!isPlainObject(value)) return;
-  for (const [k, v] of Object.entries(value)) { const p = path ? path + "." + k : k; if (SECRET_SET.has(k)) out.push(p); collectSecretPaths(v, p, out, depth + 1); }
+  for (const [k, v] of Object.entries(value)) { const p = path ? path + "." + k : k; if (isSecretConfigKey(k)) out.push(p); collectSecretPaths(v, p, out, depth + 1); }
 }
 
 export function validateActivityDescriptor(input: unknown): ActivityIssue[] {
