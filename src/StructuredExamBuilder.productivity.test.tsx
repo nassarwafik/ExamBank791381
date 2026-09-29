@@ -61,7 +61,7 @@ function deferredAI() {
   return { fn, resolve };
 }
 
-type Handles = { latest: StructuredExam | null; dirty: boolean; canUndo: boolean; canRedo: boolean; pastLength: number; open: (e: StructuredExam, source?: "saved" | "unsaved") => void; undo: () => void; redo: () => void; setSaving: (v: boolean) => void };
+type Handles = { latest: StructuredExam | null; dirty: boolean; canUndo: boolean; canRedo: boolean; pastLength: number; open: (e: StructuredExam, source?: "saved" | "unsaved") => void; undo: () => void; redo: () => void; setSaving: (v: boolean) => void; updateCalls: number };
 const h = {} as Handles;
 function Host({ initial, bank, req }: { initial?: StructuredExam; bank?: ReturnType<typeof fakeBank>["picker"]; req?: (q: never) => Promise<BuilderImageAsset> }) {
   const hist = useStructuredExamHistory();
@@ -71,7 +71,7 @@ function Host({ initial, bank, req }: { initial?: StructuredExam; bank?: ReturnT
   useEffect(() => { Object.assign(h, { latest: hist.present, dirty: hist.dirty, canUndo: hist.canUndo, canRedo: hist.canRedo, pastLength: hist.history.past.length, open: hist.open, undo: hist.undo, redo: hist.redo, setSaving }); }, [hist]);
   if (!hist.present) return null;
   return (
-    <StructuredExamBuilder exam={hist.present} onChange={hist.update} onSave={() => {}} saving={saving} requestQuestionImage={req as never}
+    <StructuredExamBuilder exam={hist.present} onChange={u => { h.updateCalls += 1; hist.update(u); }} onSave={() => {}} saving={saving} requestQuestionImage={req as never}
       onUndo={hist.undo} onRedo={hist.redo} canUndo={hist.canUndo} canRedo={hist.canRedo} saveState={examSaveState(hist.history, saving)} backupStorage={null}
       bankPicker={bank as never} />
   );
@@ -94,8 +94,13 @@ const pickerBtn = () => screen.getByRole("button", { name: /إضافة من بن
 const openPicker = async (bank: ReturnType<typeof fakeBank>) => { fireEvent.click(pickerBtn()); await waitFor(() => expect(bank.picker.list).toHaveBeenCalled()); await tick(); return screen.getByRole("dialog", { name: "إضافة من بنك الأسئلة" }); };
 const pick = (dialog: HTMLElement, text: string) => within(dialog).getByRole("checkbox", { name: "اختيار السؤال: " + text }) as HTMLInputElement;
 const insertBtn = (dialog: HTMLElement) => within(dialog).getByRole("button", { name: /^إضافة \d+ أسئلة$/ }) as HTMLButtonElement;
+const bankIdOf = (q: BuilderQuestion) => (q as unknown as { bankQuestionId?: string }).bankQuestionId;
+const bankCount = (id: string) => h.latest!.sections.flatMap(s => s.questions).filter(q => bankIdOf(q) === id).length;
+/** The SAME exam (same examId) after an independent owner update that brought the exact bank question `bankId` into section 0. */
+const withBank = (exam: StructuredExam, bankId: string): StructuredExam => ({ ...exam, sections: exam.sections.map((s, i) => (i === 0 ? { ...s, questions: [...s.questions, mcq("qb-" + bankId, "من البنك " + bankId, { origin: "bank", bankQuestionId: bankId })] } : s)) } as StructuredExam);
+const ALREADY_USED = "أحد الأسئلة المحددة أُضيف إلى الامتحان أثناء العملية. راجع التحديد ثم أعد المحاولة.";
 
-beforeEach(() => { window.confirm = vi.fn(() => true); });
+beforeEach(() => { window.confirm = vi.fn(() => true); h.updateCalls = 0; });
 afterEach(() => { cleanup(); vi.restoreAllMocks(); });
 
 describe("B — navigator: open, search, filters, jump", () => {
@@ -489,6 +494,117 @@ describe("E — Question Bank picker", () => {
     expect(screen.queryByRole("dialog", { name: "إضافة من بنك الأسئلة" })).toBeNull();
     fireEvent.click(undoBtn());
     expect(h.latest!.sections[1].questions).toHaveLength(2);
+  });
+
+  it("D-RACE-1 — a selected bank question becomes used while the picker stays open: the row turns مضاف and is no longer actionable, the effective selection / count / insert label drop it, and inserting cannot create a duplicate", async () => {
+    const bank = fakeBank();
+    render(<Host bank={bank.picker} />);
+    await tick();
+    const dialog = await openPicker(bank);
+    await bank.resolveList();
+    fireEvent.click(pick(dialog, "ما هو IP؟")); fireEvent.click(pick(dialog, "عرّف VLAN"));
+    expect(within(dialog).getByText("2 أسئلة محددة")).toBeTruthy();
+    act(() => { if (h.latest) h.open(withBank(h.latest, "BANK-1")); });                              // independent owner update: BANK-1 is now in the exam
+    await tick();
+    const row = within(dialog).getByRole("row", { name: /ما هو IP؟/ });
+    expect(within(row).getByText("مضاف")).toBeTruthy();
+    expect(pick(dialog, "ما هو IP؟").disabled).toBe(true);
+    expect(pick(dialog, "ما هو IP؟").checked).toBe(false);                                           // not actionable, not counted
+    expect(within(dialog).getByText("1 أسئلة محددة")).toBeTruthy();
+    expect(insertBtn(dialog).textContent).toBe("إضافة 1 أسئلة");
+    fireEvent.click(insertBtn(dialog));
+    expect(bank.picker.select).toHaveBeenCalledWith(["BANK-4"]);                                     // the used id is never submitted
+    await bank.resolveSelect();
+    await tick();
+    expect(bankCount("BANK-1")).toBe(1); expect(bankCount("BANK-4")).toBe(1);
+    expect(h.pastLength).toBe(1);
+    expect(screen.queryByRole("dialog", { name: "إضافة من بنك الأسئلة" })).toBeNull();
+  });
+
+  it("D-RACE-2 — exact fetch pending, the id becomes used before the response: no second BANK-1, no partial batch, no history entry, the picker does not claim success and shows an actionable error; the rejected batch never reaches the history authority", async () => {
+    const bank = fakeBank();
+    render(<Host bank={bank.picker} />);
+    await tick();
+    const dialog = await openPicker(bank);
+    await bank.resolveList();
+    fireEvent.click(pick(dialog, "ما هو IP؟"));
+    fireEvent.click(insertBtn(dialog));
+    expect(bank.picker.select).toHaveBeenCalledWith(["BANK-1"]);
+    act(() => { if (h.latest) h.open(withBank(h.latest, "BANK-1")); });                              // same exam, now contains BANK-1
+    await tick();
+    const calls = h.updateCalls;
+    await bank.resolveSelect();
+    await tick();
+    expect(bankCount("BANK-1")).toBe(1);
+    expect(h.pastLength).toBe(0);
+    expect(h.updateCalls).toBe(calls);                                                               // known-invalid against the committed authority → never dispatched
+    const stillOpen = screen.getByRole("dialog", { name: "إضافة من بنك الأسئلة" });
+    expect(within(stillOpen).getByRole("alert").textContent).toContain(ALREADY_USED);
+    expect(within(stillOpen).getByText("0 أسئلة محددة")).toBeTruthy();                                // BANK-1 is no longer selectable
+    expect(pick(stillOpen, "ما هو IP؟").disabled).toBe(true);
+  });
+
+  it("D-RACE-3 — mixed batch stays atomic: BANK-1 becomes used while the fetch for [BANK-1, BANK-2] is pending → BANK-2 is NOT inserted alone, nothing changes except the independent update, no history entry, BANK-2 stays selected for retry", async () => {
+    const bank = fakeBank();
+    render(<Host bank={bank.picker} />);
+    await tick();
+    const dialog = await openPicker(bank);
+    await bank.resolveList();
+    fireEvent.click(pick(dialog, "ما هو IP؟")); fireEvent.click(pick(dialog, "أكمل القناع ____"));
+    fireEvent.click(insertBtn(dialog));
+    expect(bank.picker.select).toHaveBeenCalledWith(["BANK-1", "BANK-2"]);
+    act(() => { if (h.latest) h.open(withBank(h.latest, "BANK-1")); });
+    await tick();
+    const snapshot = h.latest!;
+    await bank.resolveSelect();
+    await tick();
+    expect(h.latest).toBe(snapshot);                                                                 // untouched (same reference)
+    expect(bankCount("BANK-1")).toBe(1); expect(bankCount("BANK-2")).toBe(0);
+    expect(h.pastLength).toBe(0);
+    const stillOpen = screen.getByRole("dialog", { name: "إضافة من بنك الأسئلة" });
+    expect(within(stillOpen).getByRole("alert").textContent).toContain(ALREADY_USED);
+    expect(pick(stillOpen, "أكمل القناع ____").checked).toBe(true);
+    expect(within(stillOpen).getByText("1 أسئلة محددة")).toBeTruthy();
+    // Retry inserts only the still-valid remainder as ONE step.
+    fireEvent.click(insertBtn(stillOpen));
+    expect(bank.selectCalls[1].ids).toEqual(["BANK-2"]);
+    await bank.resolveSelect();
+    await tick();
+    expect(bankCount("BANK-2")).toBe(1); expect(bankCount("BANK-1")).toBe(1);
+    expect(h.pastLength).toBe(1);
+  });
+
+  it("D-RACE-4 — inner updater guard: the outer check is stale (the update that brings BANK-1 in is ENQUEUED but not yet committed when the fetch resolves) → the functional updater returns prev, no duplicate, no partial insertion, and the picker does NOT claim success", async () => {
+    const bank = fakeBank();
+    render(<Host bank={bank.picker} />);
+    await tick();
+    const dialog = await openPicker(bank);
+    await bank.resolveList();
+    fireEvent.click(pick(dialog, "ما هو IP؟")); fireEvent.click(pick(dialog, "عرّف VLAN"));
+    fireEvent.click(insertBtn(dialog));
+    const before = h.latest!;
+    const g = globalThis as unknown as { IS_REACT_ACT_ENVIRONMENT?: boolean };
+    const prevActEnv = g.IS_REACT_ACT_ENVIRONMENT;
+    g.IS_REACT_ACT_ENVIRONMENT = false;
+    try {
+      // Same synchronous block, outside act: the fetch continuation is a microtask that runs AFTER this block, so when
+      // onInsert runs, the committed authority still lacks BANK-1 (outer check passes) while the owner update that adds
+      // BANK-1 is already queued ahead of the insertion updater → only the updater's own re-check can protect the exam.
+      bank.selectCalls[0].d.resolve(bank.selectCalls[0].ids.map(canonical));
+      h.open(withBank(before, "BANK-1"));
+      for (let i = 0; i < 50 && h.latest === before; i++) await new Promise(r => setImmediate(r));
+      for (let i = 0; i < 5; i++) await new Promise(r => setImmediate(r));
+    } finally {
+      g.IS_REACT_ACT_ENVIRONMENT = prevActEnv;
+    }
+    await tick();
+    expect(bankCount("BANK-1")).toBe(1);                                                             // no duplicate
+    expect(bankCount("BANK-4")).toBe(0);                                                             // no partial insertion
+    expect(h.pastLength).toBe(0);
+    const stillOpen = screen.getByRole("dialog", { name: "إضافة من بنك الأسئلة" });                  // no false success
+    expect(within(stillOpen).getByRole("alert").textContent).toContain(ALREADY_USED);
+    expect(pick(stillOpen, "عرّف VLAN").checked).toBe(true);
+    expect(within(stillOpen).getByText("1 أسئلة محددة")).toBeTruthy();
   });
 
   it("no picker action is offered without an App-owned bank service; a failed bank load shows an error with retry ", async () => {

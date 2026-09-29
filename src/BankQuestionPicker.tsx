@@ -16,15 +16,18 @@ import { isValidQuestionMarks, MAX_BANK_SELECT, type BankExamQuestion } from "./
 // cannot be selected. A failed request leaves the exam untouched and the selection in place for a retry.
 
 export type BankPickerService = { list: () => Promise<BankQuestionRow[]>; select: (ids: string[]) => Promise<BankExamQuestion[]> };
-export type InsertOutcome = "ok" | "missing-target" | "stale";
+export type InsertOutcome = "ok" | "missing-target" | "already-used" | "stale";
+export const ALREADY_USED_MESSAGE = "أحد الأسئلة المحددة أُضيف إلى الامتحان أثناء العملية. راجع التحديد ثم أعد المحاولة.";
 type Props = {
   open: boolean;
   onClose: () => void;
   service: BankPickerService;
   sections: { id: string; title: string }[];
   usedBankQuestionIds: ReadonlySet<string>;
-  /** Owner applies the batch in ONE updater; the target is re-validated against the LATEST exam there. */
-  onInsert: (questions: BankExamQuestion[], targetSectionId: string, marks: number) => InsertOutcome;
+  /** Owner applies the batch in ONE updater; exam id, target and exact bank duplicates are re-validated against the LATEST
+   *  exam there. The outcome may be deferred (a promise settled once the updater's decision is committed): "ok" is only
+   *  ever reported for a batch the exam authority actually applied. */
+  onInsert: (questions: BankExamQuestion[], targetSectionId: string, marks: number) => InsertOutcome | Promise<InsertOutcome>;
 };
 
 const NO_ROWS: BankQuestionRow[] = [];
@@ -63,21 +66,31 @@ export default function BankQuestionPicker({ open, onClose, service, sections, u
   const targetValid = sections.some(s => s.id === target);
   const marksValue = marks.trim() === "" ? NaN : Number(marks);
   const marksValid = isValidQuestionMarks(marksValue);
-  const canInsert = selected.size > 0 && selected.size <= MAX_BANK_SELECT && targetValid && marksValid && !busy;
+  // Effective selection = selected minus the ids the LATEST exam already uses (derived every render, never stored, never
+  // stale): a question that became مضاف while the picker stayed open is not counted, not shown checked, never submitted.
+  const effective = useMemo(() => {
+    let changed = false;
+    const next = new Set<string>();
+    for (const id of selected) { if (usedBankQuestionIds.has(id)) changed = true; else next.add(id); }
+    return changed ? next : selected;
+  }, [selected, usedBankQuestionIds]);
+  const canInsert = effective.size > 0 && effective.size <= MAX_BANK_SELECT && targetValid && marksValid && !busy;
 
   const toggle = (id: string) => setSelected(prev => { const next = new Set(prev); if (next.has(id)) next.delete(id); else if (!usedBankQuestionIds.has(id)) next.add(id); return next; });
   const selectVisible = () => setSelected(prev => { const next = new Set(prev); for (const r of visible) if (!usedBankQuestionIds.has(r.id)) next.add(r.id); return next; });
 
   async function insert() {
     if (!canInsert) return;
-    const ids = list.filter(r => selected.has(r.id)).map(r => r.id);   // list order (deterministic), exact ids only
+    const ids = list.filter(r => effective.has(r.id)).map(r => r.id);  // list order (deterministic), exact ids only, never a used one
     setBusy(true); setInsertError("");
     try {
       const canonical = await service.select(ids);
       if (!mounted.current) return;                                   // the exam changed / picker gone: never apply
-      const outcome = onInsert(canonical, target, marksValue);
+      const outcome = await onInsert(canonical, target, marksValue);   // settled only once the exam authority decided
+      if (!mounted.current) return;
       if (outcome === "ok") { setSelected(new Set()); onClose(); return; }
       if (outcome === "missing-target") { setTarget(""); setInsertError("القسم المستهدف لم يعد موجودًا. اختر قسمًا آخر ثم أعد المحاولة."); return; }
+      if (outcome === "already-used") { setInsertError(ALREADY_USED_MESSAGE); return; }              // selection kept (minus the used ids)
       setInsertError("تغيّر الامتحان المفتوح، أعد المحاولة.");
     } catch (e) {
       if (mounted.current) setInsertError(e instanceof Error ? e.message : "تعذر جلب الأسئلة من البنك.");
@@ -93,7 +106,7 @@ export default function BankQuestionPicker({ open, onClose, service, sections, u
           <>
             {busy && <span className="sb-hint sb-picker-busy" role="status">جارٍ الإدراج…</span>}
             <button type="button" className="eb-button" onClick={onClose} disabled={busy}>إلغاء</button>
-            <button type="button" className="eb-button is-primary" onClick={() => { void insert(); }} disabled={!canInsert} aria-busy={busy || undefined}>{"إضافة " + selected.size + " أسئلة"}</button>
+            <button type="button" className="eb-button is-primary" onClick={() => { void insert(); }} disabled={!canInsert} aria-busy={busy || undefined}>{"إضافة " + effective.size + " أسئلة"}</button>
           </>
         }>
         <div className="sb-picker-body">
@@ -118,9 +131,9 @@ export default function BankQuestionPicker({ open, onClose, service, sections, u
           {!loading && !loadError && list.length > 0 && visible.length === 0 && <p className="sb-nav-empty">لا توجد أسئلة مطابقة.</p>}
 
           <div className="sb-picker-selbar">
-            <span className="sb-stat sb-picker-count">{selected.size} أسئلة محددة</span>
+            <span className="sb-stat sb-picker-count">{effective.size} أسئلة محددة</span>
             <button type="button" className="sb-btn sb-btn-sm" onClick={selectVisible} disabled={!visible.length}>تحديد الظاهر</button>
-            <button type="button" className="sb-btn sb-btn-sm" onClick={() => setSelected(new Set())} disabled={!selected.size}>إلغاء التحديد</button>
+            <button type="button" className="sb-btn sb-btn-sm" onClick={() => setSelected(new Set())} disabled={!effective.size}>إلغاء التحديد</button>
             <span className="sb-hint">الحدّ الأقصى {MAX_BANK_SELECT} سؤالًا في المرة الواحدة.</span>
           </div>
 
@@ -131,7 +144,7 @@ export default function BankQuestionPicker({ open, onClose, service, sections, u
                 <tbody>
                   {visible.map(row => {
                     const used = usedBankQuestionIds.has(row.id);
-                    const checked = selected.has(row.id);
+                    const checked = effective.has(row.id);
                     return (
                       <tr key={row.id} className={(checked ? "is-selected " : "") + (used ? "is-used" : "")}>
                         <td><input type="checkbox" checked={checked} disabled={used || busy} onChange={() => toggle(row.id)} aria-label={"اختيار السؤال: " + row.text} /></td>

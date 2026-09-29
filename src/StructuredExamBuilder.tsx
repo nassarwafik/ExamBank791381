@@ -29,7 +29,7 @@ import type { ExamSaveState } from "./examHistory";
 import { historyShortcut, isTextEditingTarget } from "./examHistoryShortcuts";
 import { browserBackupStorage, clearExamBackup, isRecoveryCandidate, readExamBackup, writeExamBackup, type BackupStorage, type ExamBackup } from "./examAutosave";
 import {
-  EMPTY_NAVIGATOR_FILTERS, indexExamQuestions, pruneSelection, usedBankQuestionIds as collectUsedBankIds,
+  EMPTY_NAVIGATOR_FILTERS, indexExamQuestions, pruneSelection, usedBankQuestionIds as collectUsedBankIds, hasAnyUsedBankQuestion,
   bulkDeleteQuestions, bulkDuplicateQuestions, bulkMoveQuestions, bulkSetMarks, insertQuestionsIntoSection, bankExamQuestionToBuilderQuestion,
   type BankExamQuestion, type NavigatorFilters
 } from "./structuredExamProductivity";
@@ -304,15 +304,47 @@ export default function StructuredExamBuilder({ exam, onChange, onSave, onExit, 
   const latestExamRef = useRef(exam);
   useLayoutEffect(() => { latestExamRef.current = exam; }, [exam]);
   const usedBankIds = useMemo(() => collectUsedBankIds(exam), [exam]);
-  const insertBankQuestions = (openedFor: string) => (questions: BankExamQuestion[], targetSectionId: string, marks: number): InsertOutcome => {
-    const latest = latestExamRef.current;
-    if (!alive.current || latest.examId !== openedFor) return "stale";
-    if (!(latest.sections || []).some(s => s.id === targetSectionId)) return "missing-target";
-    const converted = questions.map(q => bankExamQuestionToBuilderQuestion(q, marks));
-    onChange(prev => (prev.examId === openedFor && (prev.sections || []).some(s => s.id === targetSectionId)
-      ? { ...prev, sections: insertQuestionsIntoSection(prev.sections || [], targetSectionId, converted) }
-      : prev));
+  // Outcome contract for a bank batch. A batch the COMMITTED authority already rejects (wrong exam, missing target, an exact
+  // bank id already in the exam) is refused synchronously and never dispatched. Otherwise ONE functional updater is
+  // dispatched; it re-checks the same three invariants against the `prev` it actually receives (all-or-nothing, never a
+  // partial or filtered batch) and records its decision for this batch number. The outcome promise is settled from a
+  // COMMIT-phase effect after the render that processed the updater (the builder always commits then: its own batch state
+  // changed in the same tick), so the picker can never be told "ok" for a batch the exam authority did not apply.
+  const insertBatchSeq = useRef(0);
+  const [insertBatch, setInsertBatch] = useState(0);
+  const insertDecisions = useRef(new Map<number, InsertOutcome>());
+  const insertWaiters = useRef(new Map<number, (outcome: InsertOutcome) => void>());
+  useLayoutEffect(() => {
+    if (!insertBatch) return;
+    const settle = insertWaiters.current.get(insertBatch);
+    if (!settle) return;
+    insertWaiters.current.delete(insertBatch);
+    const decision = insertDecisions.current.get(insertBatch);
+    insertDecisions.current.delete(insertBatch);
+    settle(decision ?? "stale");                                        // an updater that never ran is never a success
+  }, [insertBatch]);
+  const decideInsertion = (candidate: StructuredExam, openedFor: string, targetSectionId: string, bankIds: string[]): InsertOutcome => {
+    if (candidate.examId !== openedFor) return "stale";
+    if (!(candidate.sections || []).some(s => s.id === targetSectionId)) return "missing-target";
+    if (hasAnyUsedBankQuestion(candidate, bankIds)) return "already-used";
     return "ok";
+  };
+  const insertBankQuestions = (openedFor: string) => (questions: BankExamQuestion[], targetSectionId: string, marks: number): InsertOutcome | Promise<InsertOutcome> => {
+    if (!alive.current) return "stale";
+    const bankIds = questions.map(q => String(q.bankQuestionId || ""));
+    const verdict = decideInsertion(latestExamRef.current, openedFor, targetSectionId, bankIds);
+    if (verdict !== "ok") return verdict;                              // committed authority already rejects: nothing dispatched
+    const converted = questions.map(q => bankExamQuestionToBuilderQuestion(q, marks));
+    const batch = ++insertBatchSeq.current;
+    return new Promise<InsertOutcome>(settle => {
+      insertWaiters.current.set(batch, settle);
+      setInsertBatch(batch);                                           // guarantees a builder commit after the updater ran
+      onChange(prev => {
+        const decision = decideInsertion(prev, openedFor, targetSectionId, bankIds);
+        insertDecisions.current.set(batch, decision);
+        return decision === "ok" ? { ...prev, sections: insertQuestionsIntoSection(prev.sections || [], targetSectionId, converted) } : prev;
+      });
+    });
   };
   const navigator = (asPanel: boolean) => (
     <ExamQuestionNavigator id={asPanel ? navId : undefined} asPanel={asPanel} entries={navEntries} sections={sectionOptions} filters={navFilters}

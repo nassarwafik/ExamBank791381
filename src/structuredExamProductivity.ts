@@ -138,6 +138,14 @@ export function usedBankQuestionIds(exam: StructuredExam | null | undefined): Se
   return out;
 }
 
+/** True when ANY of `bankIds` is already present in the exam as an exact `bankQuestionId` (never text / numbers / examQuestionId). */
+export function hasAnyUsedBankQuestion(exam: StructuredExam | null | undefined, bankIds: Iterable<string>): boolean {
+  const used = usedBankQuestionIds(exam);
+  if (!used.size) return false;
+  for (const id of bankIds) if (used.has(id)) return true;
+  return false;
+}
+
 // ── bank → structured bridge ──────────────────────────────────────────────────────────────────────────────────────
 export const MAX_BANK_SELECT = 50;
 /** The canonical converter names an open-answer question `open` (legacy); the structured Builder authors it as `shortAnswer`. */

@@ -4,7 +4,7 @@ import { openExamHistory, updateExamHistory, undoExamHistory, redoExamHistory } 
 import {
   indexExamQuestions, filterNavigatorEntries, EMPTY_NAVIGATOR_FILTERS, navigatorFiltersActive,
   bulkDeleteQuestions, bulkMoveQuestions, bulkDuplicateQuestions, bulkSetMarks, isValidQuestionMarks,
-  insertQuestionsIntoSection, pruneSelection, usedBankQuestionIds, bankExamQuestionToBuilderQuestion, MAX_BANK_SELECT
+  insertQuestionsIntoSection, pruneSelection, usedBankQuestionIds, hasAnyUsedBankQuestion, bankExamQuestionToBuilderQuestion, MAX_BANK_SELECT
 } from "./structuredExamProductivity";
 
 // Phase 13B — the PURE productivity model: navigator index / search / filters, bulk operations (one exam mutation each,
@@ -221,5 +221,22 @@ describe("13B model — ONE operation = ONE history step (through the real 13A h
     const undone = undoExamHistory(h);
     expect(undone.present!.sections[1].questions).toHaveLength(0);                    // the whole batch gone
     expect(redoExamHistory(undone).present!.sections[1].questions).toHaveLength(10);  // and back
+  });
+});
+
+describe("hasAnyUsedBankQuestion — exact bankQuestionId only", () => {
+  const exam = { examId: "e", title: "", status: "draft", schemaVersion: 2, updatedAt: "", sections: [
+    { id: "s1", title: "", gradingPolicy: "all", stimuli: {}, questions: [
+      { examQuestionId: "q1", presentationType: "multipleChoice", text: "BANK-9", marks: 1, displayNumber: "BANK-9", questionNumber: "9" },
+      { examQuestionId: "BANK-2", presentationType: "shortAnswer", text: "x", marks: 1, origin: "bank", bankQuestionId: "BANK-1" }
+    ] }
+  ] } as unknown as Parameters<typeof usedBankQuestionIds>[0];
+  it("true only when an exact bankQuestionId is already present; text / display number / source number / examQuestionId never count", () => {
+    expect(hasAnyUsedBankQuestion(exam, ["BANK-1"])).toBe(true);
+    expect(hasAnyUsedBankQuestion(exam, ["BANK-7", "BANK-1"])).toBe(true);
+    expect(hasAnyUsedBankQuestion(exam, ["BANK-9"])).toBe(false);          // only in text / displayNumber / questionNumber
+    expect(hasAnyUsedBankQuestion(exam, ["BANK-2"])).toBe(false);          // an examQuestionId, not a bank id
+    expect(hasAnyUsedBankQuestion(exam, [])).toBe(false);
+    expect(hasAnyUsedBankQuestion(null, ["BANK-1"])).toBe(false);
   });
 });

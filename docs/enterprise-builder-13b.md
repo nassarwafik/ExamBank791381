@@ -63,3 +63,21 @@ retrieval, a bank → structured bridge, and any navigator / picker UI.
   another source by scan, the index entry is stale for that id; the question is converted from its OWN stored
   classification (`entryFromStored`), never mixed with the stale entry's section / topic / difficulty. The normal indexed
   path keeps the index classification (the bank UI's projection).
+
+## Review fix 2 — exact bank duplicate invariant at insertion time
+
+The invariant «an exact bank question already present in the exam is never inserted again by the picker» is keyed on
+`bankQuestionId` only (never text, display / source numbers or `examQuestionId`) and is enforced at three layers:
+
+- **Picker** — the actionable selection is DERIVED every render as `selected − usedBankQuestionIds` (never stored, never
+  stale): a question that became `مضاف` while the picker stayed open is not counted, not shown checked and never submitted.
+- **Owner** (`insertBankQuestions`) — decides against the COMMITTED exam authority (exam id, target section, exact bank
+  duplicates via `hasAnyUsedBankQuestion`); a batch the committed authority rejects is refused synchronously and never
+  dispatched. `"already-used"` → `أحد الأسئلة المحددة أُضيف إلى الامتحان أثناء العملية. راجع التحديد ثم أعد المحاولة.`
+- **Updater** — the ONE functional updater re-decides the same three invariants against the `prev` it actually receives;
+  any duplicate rejects the WHOLE batch (`prev` returned) — never a partial or filtered insertion.
+
+Outcome contract: the updater records its decision per batch number; the picker's outcome promise is settled from a
+COMMIT-phase effect after the render that processed the updater (the builder always commits then: its own batch state
+changed in the same tick, so a parent bail-out cannot skip it). `"ok"` is therefore never reported for a batch the exam
+authority did not apply — the same class of outcome race as R3. An updater that never ran settles as `"stale"`.
