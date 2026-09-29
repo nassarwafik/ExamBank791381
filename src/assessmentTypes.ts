@@ -53,7 +53,30 @@ export type AssessmentBlueprintV1 = {
   /** Optional difficulty scale; defaults to DEFAULT_DIFFICULTY_SCALE (1..5) when absent. */
   difficultyScale?: DifficultyScale;
   notes?: string;
+  /** Phase 13C-C — OPTIONAL versioned quality policy: which factual coverage conditions matter for authoring finalization.
+   *  Persisted with the specification; its evaluation result never is. Absent → no policy behaviour at all. */
+  qualityPolicy?: AssessmentQualityPolicyV1;
 };
+
+// ── Phase 13C-C — QUALITY POLICY (policy enforcement, never scoring) ─────────────────────────────────────────────
+export const ASSESSMENT_QUALITY_POLICY_SCHEMA_VERSION = 1 as const;
+export const QUALITY_EFFECTS = ["warning", "block-finalization"] as const;
+export type QualityEffect = typeof QUALITY_EFFECTS[number];
+/** The 13C-B coverage relations a rule may name as triggers (same literals as CoverageRelation; declared here so the
+ *  types module stays the dependency root). */
+export const QUALITY_TRIGGER_RELATIONS = ["below-min", "below-target", "within-tolerance", "at-target", "above-target", "above-max", "within-range", "unassessable"] as const;
+export type QualityTriggerRelation = typeof QUALITY_TRIGGER_RELATIONS[number];
+export type QualityCoverageSource = { kind: "constraint"; constraintId: string } | { kind: "total-questions" } | { kind: "total-marks" };
+export type QualityThresholdSource = { kind: "unclassified" } | { kind: "unmapped-bank" };
+export type QualityRuleSource = QualityCoverageSource | QualityThresholdSource;
+export const QUALITY_THRESHOLD_METRICS = ["count", "officialMarks"] as const;
+export type QualityThresholdMetric = typeof QUALITY_THRESHOLD_METRICS[number];
+/** A rule that reacts to the factual RELATION of a coverage row (constraint / total). Never re-states min / target / max. */
+export type CoverageQualityRule = { id: string; enabled: boolean; source: QualityCoverageSource; relations: QualityTriggerRelation[]; effect: QualityEffect; note?: string };
+/** A rule over the factual unclassified / unmapped-bank figures: triggers when the figure exceeds `max`. */
+export type ThresholdQualityRule = { id: string; enabled: boolean; source: QualityThresholdSource; metric: QualityThresholdMetric; max: number; effect: QualityEffect; note?: string };
+export type AssessmentQualityRule = CoverageQualityRule | ThresholdQualityRule;
+export type AssessmentQualityPolicyV1 = { schemaVersion: typeof ASSESSMENT_QUALITY_POLICY_SCHEMA_VERSION; enabled: boolean; rules: AssessmentQualityRule[] };
 
 /** Optional, additive pedagogical metadata on a question (or part). Absent on every existing question: still valid. */
 export type AssessmentMeta = {

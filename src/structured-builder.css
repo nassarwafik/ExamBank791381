@@ -312,3 +312,33 @@
 .sb-classify{display:flex;flex-direction:column;gap:10px}
 .sb-classify-list{display:flex;flex-direction:column;gap:6px}
 .sb-classify-actions{display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap}
+
+/* Phase 13C-C — سياسات الجودة / فحص الجاهزية للاعتماد */
+.sb-gates-status{font-weight:600}
+.sb-gates-status.has-blockers{border-color:var(--danger,#dc2626)}
+.sb-gates-status.has-blockers::before{content:"⛔ "}
+.sb-gates-status.has-warnings::before{content:"⚠️ "}
+.sb-qp{display:flex;flex-direction:column;gap:12px;min-width:0}
+.sb-qp-enable{font-weight:600}
+.sb-qp-list{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:10px}
+.sb-qp-rule{border:1px solid var(--line,#e5e9f0);border-radius:10px;padding:10px;display:flex;flex-direction:column;gap:8px}
+.sb-qp-rule.has-issues{border-color:var(--danger,#dc2626)}
+.sb-qp-rule-head{display:flex;flex-wrap:wrap;justify-content:space-between;gap:8px;align-items:center}
+.sb-qp-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:8px}
+.sb-qp-relations{grid-column:1/-1}
+.sb-qp-note{grid-column:1/-1}
+.sb-qp-rule-issues{margin:0;padding-inline-start:18px;color:var(--danger,#dc2626);font-size:.88rem}
+.sb-qp-rule-actions,.sb-qp-actions{display:flex;gap:8px;justify-content:flex-end}
+.sb-fin{display:flex;flex-direction:column;gap:12px}
+.sb-fin-status{margin:0;font-weight:600}
+.sb-fin-list{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:8px}
+.sb-fin-item{border:1px solid var(--line,#e5e9f0);border-radius:10px;padding:8px 10px;display:flex;flex-direction:column;gap:4px}
+.sb-fin-item.is-blocker{border-inline-start:4px solid var(--danger,#dc2626)}
+.sb-fin-item.is-warning{border-inline-start:4px solid var(--warning,#d97706)}
+.sb-fin-effect{font-size:.8rem;font-weight:700}
+.sb-fin-item.is-blocker .sb-fin-effect::before{content:"⛔ "}
+.sb-fin-item.is-warning .sb-fin-effect::before{content:"⚠️ "}
+.sb-fin-facts,.sb-fin-note{font-size:.85rem;color:var(--muted,#64748b)}
+.sb-fin-item .sb-btn{align-self:flex-start}
+@media (max-width:640px){.sb-fin-item .sb-btn{align-self:stretch;min-height:40px}.sb-qp-grid{grid-template-columns:1fr}}
+.sb-btn.is-gated{opacity:.7;border-style:dashed}

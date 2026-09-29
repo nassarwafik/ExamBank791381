@@ -23,7 +23,10 @@ const NODE_SECRET_KEYS = ["teacherNote", "aiInstruction", "hint", "history", "re
 const PLANNING_KEYS = ["assessmentMeta"];
 // Phase 13C-B — the live Blueprint intelligence (coverage report / evidence index) is runtime-derived teacher data and is
 // never persisted on the exam; should any future path ever do so, it is removed here (defense in depth).
-const TEACHER_ANALYTICS_KEYS = ["coverageReport", "blueprintCoverage", "assessmentIntelligence", "evidenceIndex"];
+const TEACHER_ANALYTICS_KEYS = ["coverageReport", "blueprintCoverage", "assessmentIntelligence", "evidenceIndex",
+  // Phase 13C-C — quality policy / gate results / finalization data are teacher governance data (the policy itself lives
+  // inside the blueprint, which is already removed; these root keys are defense in depth)
+  "qualityPolicy", "qualityGateReport", "finalizationDecision", "qualityBlockers", "qualityWarnings"];
 // Phase 13C-A — an interactive-context descriptor IS student-visible, but only as DATA: these are the only fields kept.
 // Anything content might use to name code (component / module / src / html …) or to claim trust (assessmentSafe …) is
 // dropped here (the client registry ignores it anyway — defense in depth), and secret-looking keys are removed from the

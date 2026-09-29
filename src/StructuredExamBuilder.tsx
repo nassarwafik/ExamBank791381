@@ -19,7 +19,9 @@ import {
   countQuestions,
   type StructuredExamUpdater
 } from "./examBuilderState";
-import { validateStructuredExam, hasBlockingErrors, type StructuredIssue } from "./examQuality";
+import { hasBlockingErrors, type StructuredIssue } from "./examQuality";
+import { evaluateExamFinalization } from "./examFinalization";
+import { withQualityPolicy } from "./assessmentQualityPolicy";
 import ExamSectionEditor from "./ExamSectionEditor";
 import ExamCoverEditor from "./ExamCoverEditor";
 import ExamPreview from "./ExamPreview";
@@ -55,6 +57,9 @@ const BlueprintPanel = lazy(() => import("./BlueprintPanel"));
 // Phase 13C-B — the live ANALYSIS surface and the bulk classification dialog are lazy too (opened on demand only).
 const BlueprintCoveragePanel = lazy(() => import("./BlueprintCoveragePanel"));
 const BulkClassifyDialog = lazy(() => import("./BulkClassifyDialog"));
+// Phase 13C-C — policy editor and readiness panel are lazy too.
+const QualityPolicyPanel = lazy(() => import("./QualityPolicyPanel"));
+const FinalizationPanel = lazy(() => import("./FinalizationPanel"));
 
 // Top-level Structured Exam Builder. It is a CONTROLLED component: the exam lives in the parent
 // (App.tsx) and every edit flows back through onChange as a FUNCTIONAL updater that the parent applies to
@@ -392,9 +397,25 @@ export default function StructuredExamBuilder({ exam, onChange, onSave, onExit, 
   const closePicker = () => { setPickerOpenFor(""); setPickerFocus(null); };
   const blueprintIssueCount = useMemo(() => (exam.blueprint ? validateBlueprintForExam(exam.blueprint, exam).length : 0), [exam]);   // R4: section refs checked against the real exam
 
-  const issues = useMemo(() => validateStructuredExam(exam), [exam]);
-  const errors = issues.filter(i => i.severity === "error");
-  const warnings = issues.filter(i => i.severity === "warning");
+  // ── Phase 13C-C · ONE canonical finalization decision (structural validity + quality gates), derived from the exam ──
+  const decision = useMemo(() => evaluateExamFinalization(exam), [exam]);
+  const errors = decision.structuralErrors;
+  const warnings = decision.structuralWarnings;
+  const hasPolicy = !!exam.blueprint?.qualityPolicy;
+  const gateBlockers = decision.blockers.filter(b => b.kind !== "structural").length;
+  const gateWarnings = decision.warnings.filter(w => w.kind === "quality").length;
+  const [policyOpen, setPolicyOpen] = useState(false);
+  const [readinessOpen, setReadinessOpen] = useState(false);
+  const editPolicy = (fn: Parameters<typeof withQualityPolicy>[1]) => update(prev => withBlueprint(prev, bp => withQualityPolicy(bp, fn)));
+  // The FINAL action re-checks the LATEST committed exam (never a stale render or a re-enabled button): a refused request
+  // opens the readiness panel instead of calling the owner. The owner (App) applies the same authority again on the exact
+  // snapshot it persists (second-line guard).
+  const requestFinalSave = () => {
+    if (!onSave) return;
+    const latest = evaluateExamFinalization(latestExamRef.current);
+    if (!latest.canFinalize) { setReadinessOpen(true); return; }
+    onSave("final");
+  };
   const totalMarks = computeTotalMarks(exam);
 
   return (
@@ -419,11 +440,17 @@ export default function StructuredExamBuilder({ exam, onChange, onSave, onExit, 
           <button type="button" className={"sb-btn" + (navOpen ? " is-active" : "")} onClick={() => setNavOpen(v => !v)} aria-pressed={navOpen} aria-controls={navOpen && !isNarrow ? navId : undefined} title="مستكشف الأسئلة">🧭 <span className="sb-btn-label">مستكشف الأسئلة</span></button>
           {bankPicker && <button type="button" className="sb-btn" onClick={() => { setPickerFocus(null); setPickerOpenFor(exam.examId); }} disabled={saving}>📚 إضافة من بنك الأسئلة</button>}
           {exam.blueprint && <button type="button" className={"sb-btn" + (coverageOpen ? " is-active" : "")} onClick={() => setCoverageOpen(true)} aria-haspopup="dialog" title="تحليل المخطط">📊 <span className="sb-btn-label">تحليل المخطط</span></button>}
+          {exam.blueprint && <button type="button" className={"sb-btn" + (policyOpen ? " is-active" : "")} onClick={() => setPolicyOpen(true)} aria-haspopup="dialog" title="سياسات الجودة">🛡 <span className="sb-btn-label">سياسات الجودة</span></button>}
           <button type="button" className={"sb-btn" + (blueprintOpen ? " is-active" : "")} onClick={() => setBlueprintOpen(true)} aria-haspopup="dialog" title="مخطط الامتحان">📐 <span className="sb-btn-label">مخطط الامتحان</span>{blueprintIssueCount > 0 && <span className="sb-bp-badge" aria-label={blueprintIssueCount + " مشكلات في المخطط"}>{blueprintIssueCount}</span>}</button>
           <button type="button" className="sb-btn" onClick={() => setPreview(exam)}>👁 معاينة الامتحان</button>
           {onSave && mediaPending && <span className="sb-stat sb-media-wait" role="status">{MEDIA_WAIT}</span>}
           {onSave && <button type="button" className="sb-btn" onClick={() => onSave("draft")} disabled={saving || mediaPending} title={mediaPending ? MEDIA_WAIT : undefined}>{saving ? "⏳ جارٍ الحفظ…" : "💾 حفظ مسودة"}</button>}
-          {onSave && <button type="button" className="sb-btn sb-btn-primary" onClick={() => onSave("final")} disabled={saving || mediaPending || hasBlockingErrors(errors)} title={mediaPending ? MEDIA_WAIT : hasBlockingErrors(errors) ? "يجب إصلاح الأخطاء قبل الاعتماد النهائي" : "اعتماد الامتحان نهائيًا"}>✓ اعتماد نهائي</button>}
+          {/* Structural errors keep the pre-13C-C HTML `disabled`. Quality-gate blockers use aria-disabled so the button stays
+              reachable and its click EXPLAINS the refusal (readiness panel) — the handler re-checks the latest exam either way. */}
+          {onSave && <button type="button" className={"sb-btn sb-btn-primary" + (!decision.canFinalize ? " is-gated" : "")} onClick={requestFinalSave} disabled={saving || mediaPending || hasBlockingErrors(errors)} aria-disabled={!decision.canFinalize || undefined} title={mediaPending ? MEDIA_WAIT : hasBlockingErrors(errors) ? "يجب إصلاح الأخطاء قبل الاعتماد النهائي" : !decision.canFinalize ? "بوابات الجودة تمنع الاعتماد النهائي حاليًا — اضغط لعرض التفاصيل" : "اعتماد الامتحان نهائيًا"}>✓ اعتماد نهائي</button>}
+          {hasPolicy && <button type="button" className={"sb-btn sb-gates-status" + (gateBlockers ? " has-blockers" : gateWarnings ? " has-warnings" : "")} onClick={() => setReadinessOpen(true)} aria-haspopup="dialog" title="فحص الجاهزية للاعتماد">
+            {gateBlockers === 0 && gateWarnings === 0 ? "بوابات الجودة: لا توجد موانع" : "بوابات الجودة: " + gateBlockers + " حاجب • " + gateWarnings + " تنبيهات"}
+          </button>}
         </div>
       </header>
 
@@ -517,6 +544,16 @@ export default function StructuredExamBuilder({ exam, onChange, onSave, onExit, 
       {coverageOpen && exam.blueprint && (
         <Suspense fallback={<p className="sb-hint" role="status">جارٍ تحميل تحليل المخطط…</p>}>
           <BlueprintCoveragePanel open onClose={() => setCoverageOpen(false)} exam={exam} onReveal={revealQuestions} onFindInBank={bankPicker ? openBankWithFocus : undefined} bankScope={bankPicker?.scope} />
+        </Suspense>
+      )}
+      {policyOpen && exam.blueprint && (
+        <Suspense fallback={<p className="sb-hint" role="status">جارٍ تحميل سياسات الجودة…</p>}>
+          <QualityPolicyPanel open onClose={() => setPolicyOpen(false)} blueprint={exam.blueprint} sections={sectionOptions} onEdit={editPolicy} disabled={saving} />
+        </Suspense>
+      )}
+      {readinessOpen && (
+        <Suspense fallback={<p className="sb-hint" role="status">جارٍ تحميل فحص الجاهزية…</p>}>
+          <FinalizationPanel open onClose={() => setReadinessOpen(false)} decision={decision} onReveal={ids => { setReadinessOpen(false); revealQuestions(ids); }} />
         </Suspense>
       )}
       {classifyOpen && selected.size > 0 && (
