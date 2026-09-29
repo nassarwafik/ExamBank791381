@@ -1,5 +1,5 @@
 import { useEffect, useId, useMemo, useRef, useState } from "react";
-import { bankFiltersFromFocus, type BankPickerFocus } from "./bankPickerFocus";
+import { bankFiltersFromFocus, type BankPickerFocus, type BankPickerScope } from "./bankPickerFocus";
 import Dialog from "./ui/Dialog";
 import StatusBadge from "./ui/StatusBadge";
 import {
@@ -16,7 +16,9 @@ import { isValidQuestionMarks, MAX_BANK_SELECT, type BankExamQuestion } from "./
 // applies ONE functional updater. A bank question already used in the exam (exact bankQuestionId) is shown as مضاف and
 // cannot be selected. A failed request leaves the exam untouched and the selection in place for a retry.
 
-export type BankPickerService = { list: () => Promise<BankQuestionRow[]>; select: (ids: string[]) => Promise<BankExamQuestion[]> };
+/** `scope` (Review Fix 1 / R1) is DATA declared by the service owner: guided discovery from Blueprint coverage is offered only
+ *  when the Blueprint is compatible with it; the manual picker never depends on it. */
+export type BankPickerService = { list: () => Promise<BankQuestionRow[]>; select: (ids: string[]) => Promise<BankExamQuestion[]>; scope?: BankPickerScope };
 export type InsertOutcome = "ok" | "missing-target" | "already-used" | "stale";
 export const ALREADY_USED_MESSAGE = "أحد الأسئلة المحددة أُضيف إلى الامتحان أثناء العملية. راجع التحديد ثم أعد المحاولة.";
 type Props = {

@@ -3,7 +3,8 @@ import Dialog from "./ui/Dialog";
 import type { StructuredExam } from "./examTypes";
 import { evaluateBlueprintCoverage, RELATION_LABEL, DIMENSION_LABEL, type CoverageItem } from "./assessmentBlueprintCoverage";
 import { formatActual, formatCoverageNumber, formatDelta, formatPercent } from "./coverageFormat";
-import { bankFocusForCoverageItem, type BankPickerFocus } from "./bankPickerFocus";
+import { guidedBankFocusForCoverageItem, type BankPickerFocus, type BankPickerScope } from "./bankPickerFocus";
+import type { AssessmentBlueprintV1 } from "./assessmentTypes";
 
 // Phase 13C-B — تحليل المخطط الحي: the ANALYSIS surface (مخطط الامتحان stays the EDIT surface). Everything shown is
 // derived with useMemo from the canonical exam prop the builder passes — no cache, no polling, no backend, nothing stored.
@@ -14,6 +15,8 @@ type Props = {
   onReveal: (ids: string[]) => void;
   /** Open the existing Question Bank picker with an EXACT prefilled filter (absent → no bank actions are offered). */
   onFindInBank?: (focus: BankPickerFocus) => void;
+  /** The bank service's DATA-declared scope; guided actions appear only when the exam's Blueprint is compatible with it. */
+  bankScope?: BankPickerScope;
 };
 
 const UNIT_WORD = (unit: "absolute" | "percent") => (unit === "percent" ? " نقاط مئوية" : "");
@@ -43,8 +46,9 @@ function actualText(item: CoverageItem): string {
   return formatCoverageNumber(item.actual) + (item.metric === "marks" ? " علامة رسمية" : " أسئلة");
 }
 
-function Row({ item, onReveal, onFindInBank }: { item: CoverageItem; onReveal: (ids: string[]) => void; onFindInBank?: (focus: BankPickerFocus) => void }) {
-  const focus = onFindInBank ? bankFocusForCoverageItem(item) : null;
+type RowProps = { item: CoverageItem; blueprint: AssessmentBlueprintV1 | undefined; bankScope?: BankPickerScope; onReveal: (ids: string[]) => void; onFindInBank?: (focus: BankPickerFocus) => void };
+function Row({ item, blueprint, bankScope, onReveal, onFindInBank }: RowProps) {
+  const focus = onFindInBank ? guidedBankFocusForCoverageItem(item, blueprint, bankScope) : null;
   const scale = item.actual === null ? 0 : item.unit === "percent" ? 100 : Math.max(item.actual, item.target ?? 0, item.max ?? 0, item.min ?? 0, 1);
   const fill = item.actual === null ? 0 : Math.min(100, (item.actual / scale) * 100);
   const targetMark = item.target !== undefined && item.actual !== null ? Math.min(100, (item.target / scale) * 100) : null;
@@ -78,7 +82,7 @@ function Row({ item, onReveal, onFindInBank }: { item: CoverageItem; onReveal: (
   );
 }
 
-export default function BlueprintCoveragePanel({ open, onClose, exam, onReveal, onFindInBank }: Props) {
+export default function BlueprintCoveragePanel({ open, onClose, exam, onReveal, onFindInBank, bankScope }: Props) {
   const report = useMemo(() => evaluateBlueprintCoverage(exam), [exam]);
   const unmappedCount = report.unmappedBank.questionIds.length;
   return (
@@ -96,13 +100,13 @@ export default function BlueprintCoveragePanel({ open, onClose, exam, onReveal, 
         {report.totals.length > 0 && (
           <section className="sb-cov-section" aria-labelledby="sb-cov-totals">
             <h3 id="sb-cov-totals" className="sb-bp-h">الأهداف الإجمالية</h3>
-            <ul className="sb-cov-list" aria-label="الأهداف الإجمالية">{report.totals.map(item => <Row key={item.id} item={item} onReveal={onReveal} onFindInBank={onFindInBank} />)}</ul>
+            <ul className="sb-cov-list" aria-label="الأهداف الإجمالية">{report.totals.map(item => <Row key={item.id} item={item} blueprint={exam.blueprint} bankScope={bankScope} onReveal={onReveal} onFindInBank={onFindInBank} />)}</ul>
           </section>
         )}
         <section className="sb-cov-section" aria-labelledby="sb-cov-constraints">
           <h3 id="sb-cov-constraints" className="sb-bp-h">قيود المخطط</h3>
           {report.constraints.length === 0 ? <p className="sb-hint">لا قيود في المخطط بعد — أضف قيودًا من «مخطط الامتحان».</p>
-            : <ul className="sb-cov-list" aria-label="قيود المخطط">{report.constraints.map(item => <Row key={item.id} item={item} onReveal={onReveal} onFindInBank={onFindInBank} />)}</ul>}
+            : <ul className="sb-cov-list" aria-label="قيود المخطط">{report.constraints.map(item => <Row key={item.id} item={item} blueprint={exam.blueprint} bankScope={bankScope} onReveal={onReveal} onFindInBank={onFindInBank} />)}</ul>}
         </section>
       </div>
     </Dialog>

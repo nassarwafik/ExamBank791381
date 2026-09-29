@@ -13,8 +13,8 @@ import type { StructuredExam, BuilderQuestion, BuilderSection } from "./examType
 import { QUESTION_TYPE_LABELS } from "./examTypes";
 import type { AssessmentBlueprintV1, BlueprintConstraint, BlueprintDimension, BlueprintMetric, BlueprintUnit } from "./assessmentTypes";
 import {
-  buildAssessmentProfile, effectiveAssessmentMeta, validateBlueprintForExam, blueprintCognitiveLevels, blueprintDifficultyScale,
-  type AssessmentProfile, type BlueprintIssue, type Tally
+  buildAssessmentProfile, effectiveAssessmentMeta, validateBlueprintForExam, blueprintCognitiveLevels, blueprintDifficultyScale, prepareAssessmentMetaContext,
+  type AssessmentProfile, type AssessmentMetaContext, type BlueprintIssue, type Tally
 } from "./assessmentBlueprint";
 
 /** Comparison tolerance for floating official marks / percentages (proportional attribution produces fractions). */
@@ -86,23 +86,27 @@ export type AssessmentEvidenceIndex = {
   byCognitiveLevel: Record<string, string[]>; byCapability: Record<string, string[]>; bySection: Record<string, string[]>;
   unclassified: string[];
   unmappedBankTopics: Record<string, string[]>;
+  /** Questions carrying at least one unmapped bank topic — built in the same pass, global order, one entry per question. */
+  unmappedQuestionIds: string[];
 };
 const push = (rec: Record<string, string[]>, key: string, id: string) => { (rec[key] || (rec[key] = [])).push(id); };
-export function buildAssessmentEvidenceIndex(exam: StructuredExam, blueprint?: AssessmentBlueprintV1 | null): AssessmentEvidenceIndex {
+export function buildAssessmentEvidenceIndex(exam: StructuredExam, blueprint?: AssessmentBlueprintV1 | null, context?: AssessmentMetaContext): AssessmentEvidenceIndex {
   const bp = blueprint === undefined ? exam.blueprint : blueprint;
-  const idx: AssessmentEvidenceIndex = { order: [], byTopic: {}, byObjective: {}, byDifficulty: {}, byType: {}, byCognitiveLevel: {}, byCapability: {}, bySection: {}, unclassified: [], unmappedBankTopics: {} };
+  const ctx = context ?? prepareAssessmentMetaContext(bp);                                       // R3-C: one taxonomy lookup per pass
+  const idx: AssessmentEvidenceIndex = { order: [], byTopic: {}, byObjective: {}, byDifficulty: {}, byType: {}, byCognitiveLevel: {}, byCapability: {}, bySection: {}, unclassified: [], unmappedBankTopics: {}, unmappedQuestionIds: [] };
   for (const s of exam.sections || []) {
     for (const q of (s.questions || []) as BuilderQuestion[]) {
       const id = q.examQuestionId;
       idx.order.push(id);
       push(idx.bySection, s.id, id);
-      const eff = effectiveAssessmentMeta(q, bp ?? undefined);
+      const eff = effectiveAssessmentMeta(q, bp ?? undefined, ctx);
       if (eff.primaryTopicId) push(idx.byTopic, eff.primaryTopicId, id); else idx.unclassified.push(id);
       for (const o of eff.objectiveIds) push(idx.byObjective, o, id);
       push(idx.byDifficulty, eff.difficulty === undefined ? "unspecified" : String(eff.difficulty), id);
       push(idx.byType, String(q.presentationType || "unspecified"), id);
       push(idx.byCognitiveLevel, eff.cognitiveLevel ?? "unspecified", id);
       for (const c of eff.capabilities) push(idx.byCapability, c, id);
+      if (eff.unmappedBankTopics.length) idx.unmappedQuestionIds.push(id);                       // R3-A: in-pass, ordered, once per question
       for (const t of eff.unmappedBankTopics) push(idx.unmappedBankTopics, t, id);
     }
   }
@@ -148,41 +152,66 @@ const structurallyUsable = (bp: unknown, issues: BlueprintIssue[]): bp is Assess
   !!bp && typeof bp === "object" && Array.isArray((bp as AssessmentBlueprintV1).constraints) && Array.isArray((bp as AssessmentBlueprintV1).topics) && Array.isArray((bp as AssessmentBlueprintV1).objectives)
   && !issues.some(i => i.code === "UNSUPPORTED_SCHEMA_VERSION" || i.code === "INVALID_CONSTRAINTS");
 
+// One-time issue index (R3-B): constraint issues are keyed by constraint id AND by the `constraints[i]` path prefix, so a
+// row obtains its issues in O(1) whatever the id looks like (malformed / duplicate ids included); target issues by path.
+type IssueIndex = { byId: Map<string, BlueprintIssue[]>; byIndex: Map<number, BlueprintIssue[]>; byPath: Map<string, BlueprintIssue[]> };
+const addTo = <K,>(m: Map<K, BlueprintIssue[]>, k: K, iss: BlueprintIssue) => { const arr = m.get(k); if (arr) arr.push(iss); else m.set(k, [iss]); };
+function indexIssues(issues: BlueprintIssue[]): IssueIndex {
+  const ix: IssueIndex = { byId: new Map(), byIndex: new Map(), byPath: new Map() };
+  for (const iss of issues) {
+    if (iss.refId !== undefined) addTo(ix.byId, iss.refId, iss);
+    if (iss.path !== undefined) {
+      addTo(ix.byPath, iss.path, iss);
+      const m = /^constraints\[(\d+)\]/.exec(iss.path);
+      if (m) addTo(ix.byIndex, Number(m[1]), iss);
+    }
+  }
+  return ix;
+}
+const uniq = (a: BlueprintIssue[], b: BlueprintIssue[]): BlueprintIssue[] => (b.length === 0 ? a : a.length === 0 ? b : Array.from(new Set([...a, ...b])));
+
 export function evaluateBlueprintCoverage(exam: StructuredExam, blueprint?: AssessmentBlueprintV1 | null): BlueprintCoverageReport {
   const bp = blueprint === undefined ? exam.blueprint : blueprint;
   const issues = bp ? validateBlueprintForExam(bp, exam) : [];
   const usable = structurallyUsable(bp, issues);
-  const profile = buildAssessmentProfile(exam, usable ? bp : null);
-  const evidence = buildAssessmentEvidenceIndex(exam, usable ? bp : null);
+  const ctx = prepareAssessmentMetaContext(usable ? bp : null);                                  // R3-C: prepared ONCE, shared below
+  const profile = buildAssessmentProfile(exam, usable ? bp : null, ctx);
+  const evidence = buildAssessmentEvidenceIndex(exam, usable ? bp : null, ctx);
   const report: BlueprintCoverageReport = {
     totalQuestions: profile.totalQuestions, totalOfficialMarks: profile.totalOfficialMarks,
     totals: [], constraints: [], constraintCount: 0,
     unclassified: { ...profile.unclassified, questionIds: evidence.unclassified },
-    unmappedBank: { questionIds: Object.keys(evidence.unmappedBankTopics).length ? evidence.order.filter(id => Object.values(evidence.unmappedBankTopics).some(ids => ids.includes(id))) : [], byTopic: evidence.unmappedBankTopics },
+    unmappedBank: { questionIds: evidence.unmappedQuestionIds, byTopic: evidence.unmappedBankTopics },
     issues
   };
   if (!usable) return report;
+  const ix = indexIssues(issues);
 
-  // total targets — first-class rows (count → totalQuestions; marks → totalOfficialMarks, never totalWeightMarks)
-  const tq = bp.targets?.totalQuestions, tm = bp.targets?.totalMarks;
-  const totalsBase = { count: profile.totalQuestions, weightMarks: profile.totalWeightMarks, officialMarks: profile.totalOfficialMarks, issues: [] as BlueprintIssue[], evidence: evidence.order };
-  if (typeof tq === "number" && Number.isFinite(tq)) {
-    report.targetTotalQuestions = tq;
-    report.totals.push({ id: "total-questions", kind: "total-questions", refLabel: "إجمالي الأسئلة", metric: "count", unit: "absolute", actual: profile.totalQuestions, target: tq, ...totalsBase, ...evaluateConstraintRelation(profile.totalQuestions, { target: tq }) });
-  }
-  if (typeof tm === "number" && Number.isFinite(tm)) {
-    report.targetTotalMarks = tm;
-    report.totals.push({ id: "total-marks", kind: "total-marks", refLabel: "إجمالي العلامات", metric: "marks", unit: "absolute", actual: profile.totalOfficialMarks, target: tm, ...totalsBase, ...evaluateConstraintRelation(profile.totalOfficialMarks, { target: tm }) });
-  }
+  // total targets — first-class rows (count → totalQuestions; marks → totalOfficialMarks, never totalWeightMarks).
+  // R2: a target the canonical validator rejected (INVALID_TARGET) is an UNASSESSABLE row carrying that issue — never an
+  // authoritative target, never coerced, never repaired, never silently dropped.
+  const totalsBase = { count: profile.totalQuestions, weightMarks: profile.totalWeightMarks, officialMarks: profile.totalOfficialMarks, evidence: evidence.order };
+  const targetsIssues = ix.byPath.get("targets") ?? [];
+  const targetRow = (id: "total-questions" | "total-marks", key: "totalQuestions" | "totalMarks", label: string, metric: BlueprintMetric, actual: number) => {
+    const targets = bp.targets as Record<string, unknown> | undefined;
+    if (!targets || typeof targets !== "object" || !(key in targets)) { if (targetsIssues.length) report.totals.push(unassessable({ id, kind: id, refLabel: label, metric, unit: "absolute", ...totalsBase, issues: targetsIssues }, "blueprint-issue")); return; }
+    const own = uniq(targetsIssues, ix.byPath.get("targets." + key) ?? []);
+    const t = targets[key];
+    if (own.length || typeof t !== "number" || !Number.isFinite(t)) { report.totals.push(unassessable({ id, kind: id, refLabel: label, metric, unit: "absolute", ...totalsBase, issues: own }, "blueprint-issue")); return; }
+    if (id === "total-questions") report.targetTotalQuestions = t; else report.targetTotalMarks = t;
+    report.totals.push({ id, kind: id, refLabel: label, metric, unit: "absolute", actual, target: t, ...totalsBase, issues: [], ...evaluateConstraintRelation(actual, { target: t }) });
+  };
+  targetRow("total-questions", "totalQuestions", "إجمالي الأسئلة", "count", profile.totalQuestions);
+  targetRow("total-marks", "totalMarks", "إجمالي العلامات", "marks", profile.totalOfficialMarks);
 
-  // constraints — blueprint order; one indexed bucket lookup each (O(c) after the O(n) profile / evidence passes)
+  // constraints — blueprint order; one indexed bucket lookup and one indexed issue lookup each (O(c) after the O(n) passes)
   report.constraintCount = bp.constraints.length;
   bp.constraints.forEach((c, i) => {
     const prefix = "constraints[" + i + "]";
-    const own = issues.filter(iss => (typeof c.id === "string" && iss.refId === c.id) || (iss.path !== undefined && (iss.path === prefix || iss.path.startsWith(prefix + "."))));
+    const own = uniq(ix.byIndex.get(i) ?? [], typeof c.id === "string" ? ix.byId.get(c.id) ?? [] : []);
     const { tally, ids } = bucketFor(profile, evidence, c);
     const base = {
-      id: String(c.id ?? prefix), kind: "constraint" as const, dimension: c.dimension, ref: typeof c.ref === "string" ? c.ref : undefined,
+      id: typeof c.id === "string" && c.id ? c.id : prefix, kind: "constraint" as const, dimension: c.dimension, ref: typeof c.ref === "string" ? c.ref : undefined,
       refLabel: refLabelFor(bp, exam, c), metric: c.metric, unit: c.unit, count: tally.count, weightMarks: tally.weightMarks, officialMarks: tally.officialMarks,
       ...limitsOf(c), issues: own, evidence: ids
     };

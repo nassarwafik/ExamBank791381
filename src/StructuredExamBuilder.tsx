@@ -516,7 +516,7 @@ export default function StructuredExamBuilder({ exam, onChange, onSave, onExit, 
 
       {coverageOpen && exam.blueprint && (
         <Suspense fallback={<p className="sb-hint" role="status">جارٍ تحميل تحليل المخطط…</p>}>
-          <BlueprintCoveragePanel open onClose={() => setCoverageOpen(false)} exam={exam} onReveal={revealQuestions} onFindInBank={bankPicker ? openBankWithFocus : undefined} />
+          <BlueprintCoveragePanel open onClose={() => setCoverageOpen(false)} exam={exam} onReveal={revealQuestions} onFindInBank={bankPicker ? openBankWithFocus : undefined} bankScope={bankPicker?.scope} />
         </Suspense>
       )}
       {classifyOpen && selected.size > 0 && (
