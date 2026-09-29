@@ -28,7 +28,10 @@ import { isStructuredExam } from "./examTypes";
 import type { StructuredExam, BuilderImageAsset } from "./examTypes";
 import { useAutoRefresh } from "./ui/useAutoRefresh";
 import type { AiImageRequestQuestion } from "./questionMedia";
-import { legacyToStructured, toSavedStructuredExam, newSection, newQuestion, applyStructuredExamUpdate, reconcileSavedStructuredExam, type StructuredExamUpdater } from "./examBuilderState";
+import { legacyToStructured, toSavedStructuredExam, newSection, newQuestion, type StructuredExamUpdater } from "./examBuilderState";
+// Phase 13A — the structured exam lives in a HISTORY authority (undo / redo / saved checkpoint / recovery).
+import { useStructuredExamHistory } from "./useStructuredExamHistory";
+import { examSaveState } from "./examHistory";
 import "./project794589.css";
 // Phase 8E-4 — the teacher PLATFORM (classes / students / assignments / audit / dashboard workspace) is a LAZY chunk:
 // students, the login page, the session-validation boot and the other teacher destinations never download it; it
@@ -837,7 +840,10 @@ function App() {
   const [exam, setExam] = useState<ExamDraft | null>(null);
   // Structured Exam Builder (Phase 2). When non-null the structured builder overlay is shown; the
   // legacy flat-exam editor is never disturbed and legacy exams are only converted on explicit request.
-  const [structuredExam, setStructuredExam] = useState<StructuredExam | null>(null);
+  // Phase 13A — history authority: present exam + undo / redo stacks + saved checkpoint. `structuredExam` stays the
+  // derived name every existing consumer reads.
+  const structuredHistory = useStructuredExamHistory();
+  const structuredExam = structuredHistory.present;
   // Builder VISIBILITY is separate from exam IDENTITY: closing the builder ("رجوع") keeps the
   // structured exam active (so it stays the assignment source); only opening a legacy exam clears it.
   const [structuredBuilderOpen, setStructuredBuilderOpen] = useState(false);
@@ -1369,7 +1375,7 @@ function App() {
     setBuilderError("");
     setExam(null);
     // A freshly generated legacy exam becomes the active exam — clear any active structured exam.
-    setStructuredExam(null);
+    structuredHistory.clear();
     setStructuredBuilderOpen(false);
 
     try {
@@ -1485,7 +1491,7 @@ function App() {
 
   function handleBuildExamFromImportedQuestions(questions: ExamQuestion[]) {
     setPlan(null);
-    setStructuredExam(null);
+    structuredHistory.clear();
     setStructuredBuilderOpen(false);
     setExam(buildDraftFromImportedQuestions(questions, "امتحان من أسئلة مستوردة"));
     setHasUnsavedChanges(true);
@@ -1509,7 +1515,7 @@ function App() {
     const draftTitle = (title || examSnapshot?.title || "امتحان") + " (نسخة قابلة للتعديل)";
     setPlan(null);
     setExamPrompt("");
-    setStructuredExam(null);
+    structuredHistory.clear();
     setStructuredBuilderOpen(false);
     setExam(buildDraftFromImportedQuestions(questions, draftTitle));
     setHasUnsavedChanges(true);
@@ -3889,25 +3895,25 @@ function App() {
     if (!exam) return;
     setStructuredError("");
     setStructuredNotice("");
-    setStructuredExam(legacyToStructured(exam as unknown as Record<string, unknown>));
+    structuredHistory.open(legacyToStructured(exam as unknown as Record<string, unknown>), "unsaved");
     setStructuredBuilderOpen(true);
   }
   function openNewStructuredExam() {
     setStructuredError("");
     setStructuredNotice("");
-    setStructuredExam({
+    structuredHistory.open({
       examId: "EXAM-" + Date.now(),
       title: "امتحان منظّم جديد",
       status: "draft",
       sections: [newSection({ title: "القسم الأول", questions: [newQuestion("multipleChoice")] })]
-    });
+    }, "unsaved");
     setStructuredBuilderOpen(true);
   }
   // Imported exam (JSON/HTML) becomes the ACTIVE structured exam in memory only — never auto-saved.
   function openImportedStructuredExam(imported: StructuredExam) {
     setStructuredError("");
     setStructuredNotice("✓ تم استيراد الامتحان — راجعه ثم احفظه كمسودة أو اعتمده نهائيًا.");
-    setStructuredExam(imported);
+    structuredHistory.open(imported, "unsaved");
     setStructuredBuilderOpen(true);
     setStructuredImportOpen(false);
   }
@@ -3917,8 +3923,10 @@ function App() {
   // stamps status accordingly (a draft save demotes a previously-final exam back to draft).
   // Builder edits arrive as functional updaters applied to the LATEST structured exam (Phase 5B follow-up),
   // so a slow AI image / upload result merges with newer edits instead of reverting them.
+  // Phase 13A — every edit goes through the history authority (undo entry, dirty tracking); a null present is never
+  // recreated and the builder's own exam-id guard keeps a late result out of another exam.
   function updateStructuredExam(updater: StructuredExamUpdater) {
-    setStructuredExam(prev => applyStructuredExamUpdate(prev, updater));
+    structuredHistory.update(updater);
   }
   async function saveStructuredExam(mode: "draft" | "final") {
     if (!structuredExam) return;
@@ -3929,8 +3937,9 @@ function App() {
     try {
       const payload = { ...toSavedStructuredExam(snapshot), status: mode };
       await apiRequest<{ ok: true }>("/api/save-exam-artifact", { method: "POST", body: JSON.stringify({ kind: "exam", exam: payload }) });
-      // Reconcile against the latest exam: an image that arrived DURING the save is kept (not rolled back).
-      setStructuredExam(prev => reconcileSavedStructuredExam(prev, snapshot, payload));
+      // Reconcile against the latest exam: an image that arrived DURING the save is kept (not rolled back), and the
+      // saved checkpoint is stamped from the snapshot that was ACTUALLY persisted (Phase 13A saved authority).
+      structuredHistory.commitSaved(snapshot, payload);
       setStructuredNotice(mode === "final" ? "✓ تم اعتماد الامتحان المنظّم نهائيًا وحفظه." : "✓ تم حفظ مسودة الامتحان المنظّم.");
       await loadSavedExams();
     }
@@ -3985,7 +3994,7 @@ function App() {
       // A saved STRUCTURED exam (has sections[]) opens in the Structured Exam Builder; a legacy flat
       // exam continues to open in the existing editor exactly as before.
       if (isStructuredExam(loadedExam)) {
-        setStructuredExam(loadedExam as unknown as StructuredExam);
+        structuredHistory.open(loadedExam as unknown as StructuredExam, "saved");
         setStructuredBuilderOpen(true);
         setStructuredError("");
         setStructuredNotice("");
@@ -3995,7 +4004,7 @@ function App() {
       }
 
       // Opening a legacy exam clears any active structured exam so the active source is the legacy one.
-      setStructuredExam(null);
+      structuredHistory.clear();
       setStructuredBuilderOpen(false);
       setExam(
         loadedExam
@@ -7803,6 +7812,13 @@ function App() {
               notice={structuredNotice}
               error={structuredError}
               requestQuestionImage={requestStructuredQuestionImage}
+              onUndo={structuredHistory.undo}
+              onRedo={structuredHistory.redo}
+              canUndo={structuredHistory.canUndo}
+              canRedo={structuredHistory.canRedo}
+              saveState={examSaveState(structuredHistory.history, structuredSaving)}
+              recoveryScope={teacherProfile?.teacherId || "teacher"}
+              onRecover={structuredHistory.recover}
             />
           </Suspense>
         </div>
