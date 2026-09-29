@@ -49,3 +49,17 @@ retrieval, a bank → structured bridge, and any navigator / picker UI.
   clear error and nothing is inserted.
 - Every inserted question receives a fresh `examQuestionId` and fresh nested field / part ids; the bank id lives only in
   `bankQuestionId`. All canonical metadata is preserved on the question.
+
+## Review fix 1 — target-deletion insertion race (R3) and recovery provenance
+
+- The exam authority read when a pending exact fetch resolves (`latestExamRef`) is refreshed in the COMMIT phase
+  (`useLayoutEffect`), never in a passive `useEffect`. React commits a non-discrete update in one scheduler task and runs
+  passive effects in a later task (the commit calls `requestPaint()`, so the scheduler yields); a resolved fetch's microtask
+  can run between the two and would read the previous exam — reporting `"ok"` for a target that is already gone while the
+  functional updater (correctly) inserted nothing. A render-phase ref write was rejected: it is flagged by the project's
+  `react(refs)` lint rule and may run in a discarded render. Layers kept: commit-phase outer check (drives the picker's
+  visible outcome), the updater's own exam-id + target check, and the pure helper's no-fallback guard.
+- `POST /api/bank-question-select`: when an id is not found in the source its index entry names and is recovered from
+  another source by scan, the index entry is stale for that id; the question is converted from its OWN stored
+  classification (`entryFromStored`), never mixed with the stale entry's section / topic / difficulty. The normal indexed
+  path keeps the index classification (the bank UI's projection).

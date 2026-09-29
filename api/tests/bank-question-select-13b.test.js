@@ -108,6 +108,26 @@ describe("13B exact bank selection — source authority, failures, read-only", (
     expect(r.status).toBe(200);
     expect(r.jsonBody.questions[0]).toMatchObject({ bankQuestionId: MANUAL + "-unindexed", topic: "ORPHAN", difficulty: 5, presentationType: "open" });
   });
+  it("source authority on recovery: an index entry whose OWN source no longer holds the id is stale — when the id is recovered from ANOTHER source by scan, the classification comes from the recovered stored question, never from the stale entry", async () => {
+    // Index says MOVED lives in OFFICIAL with topic "T" / difficulty 2 / section BASIC; OFFICIAL does not contain it any more.
+    const MOVED = MANUAL + "-moved";
+    store.get(INDEX_BLOB).questions.push({ id: MOVED, sourceId: OFFICIAL, section: "BASIC", type: "shortAnswer", topic: "T", difficulty: 2, difficultyLabel: "سهل", familyKey: "fam-stale", secondaryTopics: ["STALE"], reviewStatus: "classified" });
+    store.get("sources/" + MANUAL + ".json").questions.push({ id: MOVED, sourceId: MANUAL, section: "INFRASTRUCTURE", type: "shortAnswer", text: "انتقل", answer: { mode: "manual", values: [] }, assets: [], classification: { topic: "REAL", difficulty: 4, difficultyLabel: "صعب", familyKey: "fam-real", secondaryTopics: ["VLAN"] } });
+    const r = await call({ ids: [MOVED] });
+    expect(r.status).toBe(200);
+    expect(r.jsonBody.questions).toHaveLength(1);
+    expect(r.jsonBody.questions[0]).toMatchObject({ bankQuestionId: MOVED, sourceId: MANUAL, section: "INFRASTRUCTURE", topic: "REAL", difficulty: 4, difficultyLabel: "صعب", familyKey: "fam-real", secondaryTopics: ["VLAN"], presentationType: "open" });
+    // Exactly the same output as the explicit source-authority conversion (no mixed provenance).
+    const stored = store.get("sources/" + MANUAL + ".json").questions.find(q => q.id === MOVED);
+    const cls = stored.classification;
+    expect(r.jsonBody.questions[0]).toEqual(buildExamQuestion(stored, { id: MOVED, sourceId: MANUAL, section: stored.section, type: stored.type, topic: cls.topic, difficulty: cls.difficulty, difficultyLabel: cls.difficultyLabel, familyKey: cls.familyKey, secondaryTopics: cls.secondaryTopics, hasImage: false }, { examQuestionId: "", marks: 0 }));
+    expect(writes).toBe(0);
+  });
+  it("source authority on the normal path is unchanged: an id found in its indexed source keeps the index classification (the bank UI's projection)", async () => {
+    const r = await call({ ids: [OFFICIAL + "-q1"] });
+    expect(r.status).toBe(200);
+    expect(r.jsonBody.questions[0]).toMatchObject({ sourceId: OFFICIAL, section: "BASIC", topic: "NETWORK_BASICS", difficulty: 2, secondaryTopics: ["OSI"], familyKey: "fam-a" });
+  });
   it("an unknown id → 404 missing (never a partial 200)", async () => {
     const r = await call({ ids: [OFFICIAL + "-q1", "manual-nope"] });
     expect(r.status).toBe(404); expect(r.jsonBody.missingIds).toEqual(["manual-nope"]);

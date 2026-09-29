@@ -1,5 +1,5 @@
 
-import { lazy, Suspense, useEffect, useMemo, useRef, useState } from "react";
+import { lazy, Suspense, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import type { StructuredExam, BuilderQuestion, BuilderSection, BuilderImageAsset } from "./examTypes";
 import type { AiImageRequestQuestion } from "./questionMedia";
@@ -298,8 +298,11 @@ export default function StructuredExamBuilder({ exam, onChange, onSave, onExit, 
   // re-validated against the LATEST exam (id + target section) both before and inside the single updater (R3).
   const [pickerOpenFor, setPickerOpenFor] = useState("");
   const pickerOpen = !!bankPicker && pickerOpenFor === exam.examId;
+  // The exam authority read when a pending exact fetch resolves. It is refreshed in the COMMIT phase (layout effect), so it
+  // can never lag one committed render behind: a passive useEffect runs in a later scheduler task, and a resolved fetch's
+  // microtask could land in between — reading the previous exam, reporting "ok" for a target that is already gone (R3 race).
   const latestExamRef = useRef(exam);
-  useEffect(() => { latestExamRef.current = exam; }, [exam]);
+  useLayoutEffect(() => { latestExamRef.current = exam; }, [exam]);
   const usedBankIds = useMemo(() => collectUsedBankIds(exam), [exam]);
   const insertBankQuestions = (openedFor: string) => (questions: BankExamQuestion[], targetSectionId: string, marks: number): InsertOutcome => {
     const latest = latestExamRef.current;

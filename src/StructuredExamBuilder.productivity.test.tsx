@@ -439,6 +439,58 @@ describe("E — Question Bank picker", () => {
     expect((within(screen.getByRole("dialog", { name: "إضافة من بنك الأسئلة" })).getByRole("combobox", { name: "القسم الهدف" }) as HTMLSelectElement).value).toBe("");
   });
 
+  it("R3-race — the target disappears in the commit boundary: the exact fetch resolves after the newest exam COMMITTED but before any passive effect ran → still 'missing-target', nothing inserted, selection kept, retry = ONE step", async () => {
+    const bank = fakeBank();
+    render(<Host bank={bank.picker} />);
+    await tick();
+    const dialog = await openPicker(bank);
+    await bank.resolveList();
+    fireEvent.click(pick(dialog, "ما هو IP؟")); fireEvent.click(pick(dialog, "عرّف VLAN"));
+    fireEvent.change(within(dialog).getByRole("combobox", { name: "القسم الهدف" }), { target: { value: "s3" } });
+    fireEvent.click(insertBtn(dialog));
+    expect(bank.picker.select).toHaveBeenCalledTimes(1);
+    const before = h.latest!;
+    const without = { ...before, sections: before.sections.filter(s => s.id !== "s3") } as StructuredExam;
+    // The race window. A NON-discrete update (no event, no act) is rendered and committed by React in a scheduler task;
+    // the commit calls requestPaint(), so the scheduler yields and runs the passive effects (useEffect) in a LATER task.
+    // Microtasks — the resolved exact fetch — run in between: the newest exam is on screen, useEffect has not run yet.
+    const g = globalThis as unknown as { IS_REACT_ACT_ENVIRONMENT?: boolean };
+    const prevActEnv = g.IS_REACT_ACT_ENVIRONMENT;
+    g.IS_REACT_ACT_ENVIRONMENT = false;
+    try {
+      h.open(without);                                                                               // default lane: scheduled, not flushed
+      // React queues its scheduler task from a microtask, so wait immediate-by-immediate until the commit is on screen. The
+      // passive-effects task is queued DURING that commit, i.e. behind the immediate we are resuming from: still pending here.
+      for (let i = 0; i < 50 && document.querySelectorAll(".sb-section").length !== 2; i++) await new Promise(r => setImmediate(r));
+      expect(document.querySelectorAll(".sb-section")).toHaveLength(2);                              // the newest exam IS committed (s3 gone)
+      expect(h.latest).toBe(before);                                                                 // ...and no passive effect has run yet (Host's mirror is stale)
+      bank.selectCalls[0].d.resolve(bank.selectCalls[0].ids.map(canonical));                         // the fetch resolves inside the window
+      await Promise.resolve(); await Promise.resolve(); await Promise.resolve();                     // insert() continues → onInsert(...)
+    } finally {
+      g.IS_REACT_ACT_ENVIRONMENT = prevActEnv;
+    }
+    await tick();                                                                                    // passive effects + any scheduled render
+    expect(h.latest!.sections.map(s => s.id)).toEqual(["s1", "s2"]);
+    expect(allIds()).toEqual(["q1", "q2", "q3", "q4", "q5"]);                                        // nothing inserted anywhere (no fallback)
+    expect(h.pastLength).toBe(0);                                                                    // no partial history entry
+    const stillOpen = screen.getByRole("dialog", { name: "إضافة من بنك الأسئلة" });                  // the picker did NOT report success
+    expect(within(stillOpen).getByRole("alert").textContent).toContain("القسم المستهدف لم يعد موجودًا. اختر قسمًا آخر ثم أعد المحاولة.");
+    expect((within(stillOpen).getByRole("combobox", { name: "القسم الهدف" }) as HTMLSelectElement).value).toBe("");
+    expect(pick(stillOpen, "ما هو IP؟").checked).toBe(true); expect(pick(stillOpen, "عرّف VLAN").checked).toBe(true);   // selection preserved
+    expect(insertBtn(stillOpen).textContent).toBe("إضافة 2 أسئلة");
+    // Retry with a valid target: the full batch lands in ONE history step and the picker closes.
+    fireEvent.change(within(stillOpen).getByRole("combobox", { name: "القسم الهدف" }), { target: { value: "s2" } });
+    fireEvent.click(insertBtn(stillOpen));
+    expect(bank.picker.select).toHaveBeenCalledTimes(2);
+    expect(bank.selectCalls[1].ids).toEqual(["BANK-1", "BANK-4"]);
+    await bank.resolveSelect();
+    expect(h.latest!.sections[1].questions.map(q => (q as unknown as { bankQuestionId?: string }).bankQuestionId)).toEqual([undefined, undefined, "BANK-1", "BANK-4"]);
+    expect(h.pastLength).toBe(1);
+    expect(screen.queryByRole("dialog", { name: "إضافة من بنك الأسئلة" })).toBeNull();
+    fireEvent.click(undoBtn());
+    expect(h.latest!.sections[1].questions).toHaveLength(2);
+  });
+
   it("no picker action is offered without an App-owned bank service; a failed bank load shows an error with retry ", async () => {
     render(<Host />);
     await tick();

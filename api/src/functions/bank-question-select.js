@@ -84,15 +84,19 @@ async function handler(request, deps = {}, obs = null) {
     const missing = [], unsupported = [], questions = [];
     for (const id of ids) {
       const entry = entries.get(id) || null;
-      let stored = null, sourceId = "";
+      let stored = null, sourceId = "", recoveredByScan = false;
       if (entry?.sourceId) { sourceId = String(entry.sourceId); stored = findIn(await readSource(sourceId), id); }
       if (!stored) {
         if (!allSources) allSources = await ls(bank, SOURCES_PREFIX);
-        for (const document of allSources) { const hit = findIn(document, id); if (hit) { stored = hit; sourceId = String(hit.sourceId || document.sourceId || ""); break; } }
+        for (const document of allSources) { const hit = findIn(document, id); if (hit) { stored = hit; sourceId = String(hit.sourceId || document.sourceId || ""); recoveredByScan = true; break; } }
       }
       if (!stored) { missing.push(id); continue; }
       if (isUnsupported(stored)) { unsupported.push(id); continue; }
-      questions.push(buildExamQuestion(stored, entry || entryFromStored(stored, sourceId), { examQuestionId: "", marks: 0 }));
+      // Classification authority: the index entry ONLY when the question was found where the index says it lives (the bank
+      // UI's projection). An entry whose own source no longer holds the id is stale; a question recovered from another source
+      // by scan is converted from its own stored classification — never mixed with the stale entry's provenance.
+      const meta = entry && !recoveredByScan ? entry : entryFromStored(stored, sourceId);
+      questions.push(buildExamQuestion(stored, meta, { examQuestionId: "", marks: 0 }));
     }
     if (missing.length) return bad(404, "بعض الأسئلة لم تعد موجودة في بنك الأسئلة.", { missingIds: missing });
     if (unsupported.length) return bad(422, "بعض الأسئلة المحددة من نوع غير مدعوم للإدراج المباشر في الامتحان المنظّم.", { unsupportedIds: unsupported });
