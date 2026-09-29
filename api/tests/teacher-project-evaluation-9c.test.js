@@ -156,6 +156,7 @@ describe("9C-C reads — bounded, never per student, never a container scan", ()
     s[NS.A.progressName("c1", "s02")] = doc("899373", "c1", "s02", { B01: 5 });
     s[NS.A.progressName("c3", "s21")] = doc("899373", "c3", "s21", {});
     const ctx = createMemoryContainer(s);
+    await todayHandler(req(), deps(ctx));   // Phase 12E-B: the first Today read bootstraps the assignment index (its only write)
     const st = instrument(ctx);
     const r = await todayHandler(req(), deps(ctx));
     expect(r.status).toBe(200);

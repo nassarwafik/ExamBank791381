@@ -10,6 +10,12 @@ const {normalizeClassStatus}=require("../lib/class-lifecycle");
 const {activeAttemptOf,attemptPolicyOf,ATTEMPT_POLICIES}=require("../lib/assignment-availability");
 const {withAssignmentLock,AssignmentLockBusyError}=require("../lib/assignment-lock");
 const {recordEventSafely}=require("../lib/notification-events");
+// Phase 12E-B — the per-class PUBLISHED-assignment index (hot-path discovery). Invariant: a pointer is STRICTLY ensured
+// BEFORE any transition to "published" commits (create-as-published, draft→published, restore-to-published) and removed
+// only AFTER a published assignment stopped being published (best-effort; a stale pointer is filtered by readers). The
+// setstatus / archive / restore / purge transitions all run under the per-assignment lifecycle lock, so a delayed
+// removal can never erase the pointer of a concurrent re-publish of the same assignment.
+const {ensurePublishedAssignmentIndexed,removePublishedAssignmentFromIndex}=require("../lib/class-assignment-index");
 const PREFIX="platform/assignments/",CLASS_PREFIX="platform/classes/",SUB_PREFIX="platform/submissions/";
 const CONFLICT_MESSAGE="حدث تعارض مؤقت أثناء حفظ البيانات. حاول مرة أخرى.";
 // Read-only impact of deleting/archiving an assignment (Roadmap #7). submissionDocuments is the count of
@@ -44,6 +50,7 @@ function summary(a){return {assignmentId:a.assignmentId,classId:a.classId,classN
 // real implementations are used). It does not change runtime behavior.
 async function handler(request,deps={},obs=null){
  const authFn=deps.requireBuilderAuth||requireBuilderAuth,getC=deps.getContainer||getContainer,dl=deps.downloadJsonOrNull||downloadJsonOrNull,up=deps.uploadJson||uploadJson,ls=deps.listJson||listJson,lbn=deps.listBlobNames||listBlobNames,db=deps.deleteBlob||deleteBlob,mut=deps.mutateJsonWithRetry||mutateJsonWithRetry,rec=deps.recordAuditEvent||recordAuditEvent,wl=deps.withAssignmentLock||withAssignmentLock;
+ const ensureIdx=deps.ensurePublishedAssignmentIndexed||ensurePublishedAssignmentIndexed,removeIdx=deps.removePublishedAssignmentFromIndex||removePublishedAssignmentFromIndex;
  try{
   const auth=authFn(request);if(!auth.ok)return auth.response;const c=getC();
   if(request.method==="GET"){const u=new URL(request.url),classId=String(u.searchParams.get("classId")||"");let list=(await ls(c,PREFIX)).map(summary);if(classId)list=list.filter(x=>x.classId===classId);list.sort((a,b)=>String(b.createdAt).localeCompare(String(a.createdAt)));return {status:200,jsonBody:{ok:true,assignments:list}}}
@@ -81,6 +88,13 @@ async function handler(request,deps={},obs=null){
    // stays on model 2, i.e. EXACTLY the pre-7A lifecycle. The policy is persisted on the document and never changed
    // afterwards (there is no edit action — historical assignments keep theirs).
    const a={schemaVersion:2,attemptModelVersion:attemptPolicy==="continuous"?2:3,attemptPolicy,assignmentId,classId,className:String(classroom.name||""),title,instructions,status:b.publish===true?"published":"draft",openAt,dueAt,maxAttempts,durationMinutes:dur.value,sourceExamId:String(exam.examId||""),sourceExamTitle:String(exam.title||title),questionCount:stats.questionCount,totalMarks:stats.totalMarks,examSnapshot:exam,createdBy:String(auth.user?.sub||"teacher"),createdAt:now,updatedAt:now};
+   // Phase 12E-B — STRICT: the published pointer exists BEFORE the published document does. If the index cannot be
+   // updated the assignment is NOT created (retryable); a later failure of the upload below only leaves a harmless
+   // stale pointer (readers ignore a missing document). A draft is never indexed.
+   if(a.status==="published"){
+    try{await ensureIdx(c,classId,assignmentId,deps)}
+    catch(e){obs?.logWarn("assignment.index.ensure_failed",{action:"create",retryable:true});if(e instanceof StorageConflictError)return {status:503,jsonBody:{ok:false,error:CONFLICT_MESSAGE}};throw e}
+   }
    await up(c,PREFIX+assignmentId+".json",a);
    // Phase 6D — a NEW assignment created directly as published is a real publication → one class notification
    // (secondary: a notification failure never fails the create). A draft notifies nothing until it is published.
@@ -98,7 +112,10 @@ async function handler(request,deps={},obs=null){
     nextMaxAttempts=Math.min(10,Math.max(1,Number(b.maxAttempts||1)));
    }
    let updated=null,prevStatus="";
-   try{
+   // Phase 12E-B — a status change runs under the per-assignment lifecycle lock (like archive/restore/purge) so its
+   // index pointer ensure / removal is serialized with every other status transition of the same assignment.
+   // setmaxattempts changes no status and stays lock-free exactly as before.
+   const commit=async()=>{
     updated=await mut(c,name,async current=>{
      if(!current){const err=new Error("الواجب غير موجود.");err.httpStatus=404;throw err}
      prevStatus=String(current.status||"");     // of the attempt that COMMITS (re-set on every CAS retry)
@@ -110,12 +127,21 @@ async function handler(request,deps={},obs=null){
      if(action==="setstatus"&&nextStatus==="published"){
       const cls=await dl(c,CLASS_PREFIX+String(current.classId||"")+".json");
       if(!cls||normalizeClassStatus(cls)==="archived"){const err=new Error("صف الواجب مؤرشف — لا يمكن نشر واجب جديد له. فعّل الصف أولًا.");err.httpStatus=409;throw err}
+      // Phase 12E-B — STRICT: the pointer (for the STORED class) exists before "published" commits; an index failure
+      // aborts this mutation, so the assignment stays as it was. published→published also ensures it (repair).
+      await ensureIdx(c,String(current.classId||""),id,deps);
      }
      if(action==="setstatus")current.status=nextStatus;else current.maxAttempts=nextMaxAttempts;
      current.updatedAt=new Date().toISOString();
      return current;
     });
+    // Phase 12E-B — AFTER published→draft committed: drop the pointer (best-effort; a stale one is filtered by readers).
+    if(action==="setstatus"&&prevStatus==="published"&&updated&&updated.status!=="published")await removeIdx(c,String(updated.classId||""),id,deps,obs,"setstatus");
+   };
+   try{
+    if(action==="setstatus")await wl(c,id,commit);else await commit();
    }catch(e){
+    if(e instanceof AssignmentLockBusyError)return {status:503,jsonBody:{ok:false,error:CONFLICT_MESSAGE}};
     if(e instanceof StorageConflictError)return {status:503,jsonBody:{ok:false,error:CONFLICT_MESSAGE}};
     if(e?.httpStatus)return {status:e.httpStatus,jsonBody:{ok:false,error:e.message}};
     throw e;
@@ -215,11 +241,15 @@ async function handler(request,deps={},obs=null){
      }
      // ETag CAS on the assignment blob keeps this correct against the lock-free setstatus/setmaxattempts
      // (which mutate the same blob without the lifecycle lock).
+     let wasPublished=false;
      const updated=await mut(c,PREFIX+id+".json",current=>{
       if(!current){const err=new Error("الواجب غير موجود.");err.httpStatus=404;throw err}
+      wasPublished=normalizeAssignmentStatus(current)==="published";   // of the attempt that COMMITS
       if(normalizeAssignmentStatus(current)==="archived")return current;
       return applyAssignmentArchive(current,{actor:auth.user?.sub,now:new Date().toISOString(),reason:"manual"});
      });
+     // Phase 12E-B — AFTER the archive committed: drop the published pointer (best-effort; never fails the archive).
+     if(wasPublished)await removeIdx(c,String(updated.classId||""),id,deps,obs,"archive");
      auditImpact=impact;
      return {status:200,jsonBody:{ok:true,archived:true,...(legacyDelete?{legacyDeleteRedirected:true}:{}),assignment:summary(updated)}};
     });
@@ -249,10 +279,13 @@ async function handler(request,deps={},obs=null){
      const a=await dl(c,PREFIX+id+".json");if(!a)return {status:404,jsonBody:{ok:false,error:"الواجب غير موجود."}};
      auditTitle=a.title||"";
      if(normalizeAssignmentStatus(a)!=="archived")return {status:409,jsonBody:{ok:false,error:"الواجب غير مؤرشف."}};
-     const updated=await mut(c,PREFIX+id+".json",current=>{
+     const updated=await mut(c,PREFIX+id+".json",async current=>{
       if(!current){const err=new Error("الواجب غير موجود.");err.httpStatus=404;throw err}
       if(normalizeAssignmentStatus(current)!=="archived"){const err=new Error("الواجب غير مؤرشف.");err.httpStatus=409;throw err}
-      const next=applyAssignmentRestore(current,{now:new Date().toISOString()});restoredStatus=next.status;return next;
+      const next=applyAssignmentRestore(current,{now:new Date().toISOString()});
+      // Phase 12E-B — STRICT: restoring to PUBLISHED needs the pointer first; an index failure keeps it archived.
+      if(normalizeAssignmentStatus(next)==="published")await ensureIdx(c,String(current.classId||""),id,deps);
+      restoredStatus=next.status;return next;
      });
      return {status:200,jsonBody:{ok:true,restored:true,assignment:summary(updated)}};
     });
@@ -298,6 +331,8 @@ async function handler(request,deps={},obs=null){
       return {status:409,jsonBody:{ok:false,blockedByHistory:true,impact:computeImpact(a,names.length,subs),error:"لا يمكن حذف الواجب نهائيًا لأن له بيانات طلاب محفوظة. اتركه مؤرشفًا للحفاظ على السجل."}};
      }
      await db(c,PREFIX+id+".json");
+     // Phase 12E-B — AFTER the physical delete: drop any leftover pointer (best-effort; a missing blob is ignored anyway).
+     await removeIdx(c,String(a.classId||""),id,deps,obs,"purge");
      purgedTitle=a.title||"";
      return {status:200,jsonBody:{ok:true,purged:true,assignmentId:id}};
     });

@@ -20,7 +20,8 @@ function makeDeps() {
       uploadJson: async (_c, key, value) => { store.set(key, value); uploads.push({ key, value }); },
       listJson: async () => [],
       mutateJsonWithRetry: async () => { throw new Error("not used"); },
-      recordAuditEvent: async () => {}
+      recordAuditEvent: async () => {},
+      ensurePublishedAssignmentIndexed: async () => {}   // Phase 12E-B index authority (covered by its own suites)
     }
   };
 }

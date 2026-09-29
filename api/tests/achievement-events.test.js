@@ -8,6 +8,10 @@ import { getProjectDefinition, getStorageNamespace } from "../src/lib/project-tr
 import { FEED_PREFIX, feedBlobName, recordAchievementIfEligible, eventTypeOf, publicPost, aggregateRecognition } from "../src/lib/achievement-feed.js";
 import { recognitionDocName } from "../src/lib/achievement-milestones.js";
 import { createMemoryContainer } from "./fixtures/memory-container.js";
+import { ensurePublishedAssignmentIndexed } from "../src/lib/class-assignment-index.js";
+// Phase 12E-B — a published assignment added AFTER a dashboard read (which bootstraps the class index) is indexed the way
+// the only production writer (manage-assignments) does it.
+const publishDirect = async (ctx, a) => { await ensurePublishedAssignmentIndexed(ctx.container, a.classId, a.assignmentId); ctx.setJson("platform/assignments/" + a.assignmentId + ".json", a); };
 
 // Generic achievement EVENTS: schema + legacy normalization, the global rank-up milestone (one event per newly reached
 // tier, baseline on first sight, retry-safe), project rank-up / completion milestones from real progress writes
@@ -66,7 +70,7 @@ describe("35/103/93. global stage-up milestone (dashboard = the Strength authori
     expect(feedNames(ctx)).toEqual([]);                                 // baseline, no retroactive event
     expect(ctx.getJson(recognitionDocName("s1"))).toMatchObject({ lastGlobalStage: 9, lastGlobalTier: "beginner", lastGlobalPoints: 700 });
     // +1 finalized exam → 800 → stage 11
-    ctx.setJson("platform/assignments/A8.json", assignment("A8", "c1")); ctx.setJson("platform/submissions/A8/s1.json", { attempts: [finalAttempt(100)] });
+    await publishDirect(ctx, assignment("A8", "c1")); ctx.setJson("platform/submissions/A8/s1.json", { attempts: [finalAttempt(100)] });
     r = await dash(ctx);
     expect(r.jsonBody.strength.stageNumber).toBe(11);
     expect(feedNames(ctx)).toEqual([feedBlobName("c1", "global_stage_11_s1")]);
@@ -75,7 +79,7 @@ describe("35/103/93. global stage-up milestone (dashboard = the Strength authori
     await dash(ctx); await dash(ctx);                                    // retries / small changes → still one
     expect(feedNames(ctx).length).toBe(1);
     // jump many stages at once (800 → 1600 = stage 21) → ONE event for the final stage
-    for (let i = 9; i <= 16; i++) { ctx.setJson("platform/assignments/A" + i + ".json", assignment("A" + i, "c1")); ctx.setJson("platform/submissions/A" + i + "/s1.json", { attempts: [finalAttempt(100)] }); }
+    for (let i = 9; i <= 16; i++) { await publishDirect(ctx, assignment("A" + i, "c1")); ctx.setJson("platform/submissions/A" + i + "/s1.json", { attempts: [finalAttempt(100)] }); }
     r = await dash(ctx);
     expect(r.jsonBody.strength.stageNumber).toBe(21);
     expect(feedNames(ctx)).toEqual([feedBlobName("c1", "global_stage_11_s1"), feedBlobName("c1", "global_stage_21_s1")]);
@@ -99,7 +103,7 @@ describe("35/103/93. global stage-up milestone (dashboard = the Strength authori
     await dashboard({ method: "GET", url: "https://x/api/student-dashboard", headers: { get: () => null } }, d());
     await dashboard({ method: "GET", url: "https://x/api/student-dashboard", headers: { get: () => null } }, d());
     expect(writes.length).toBe(1);
-    ctx.setJson("platform/assignments/A8.json", assignment("A8", "c1")); ctx.setJson("platform/submissions/A8/s1.json", { attempts: [finalAttempt(100)] });
+    await publishDirect(ctx, assignment("A8", "c1")); ctx.setJson("platform/submissions/A8/s1.json", { attempts: [finalAttempt(100)] });
     await dashboard({ method: "GET", url: "https://x/api/student-dashboard", headers: { get: () => null } }, d());
     expect(writes.length).toBe(2);
     expect(feedNames(ctx)).toEqual([feedBlobName("c1", "global_stage_11_s1")]);

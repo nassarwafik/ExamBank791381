@@ -28,8 +28,9 @@ const {teacherDirectUnread}=require("../lib/message-read-state");
 // hub already loaded + one snapshot read and one progress-folder listing per active class × enrolled project.
 const {loadProjectEvaluationSources,deriveProjectEvaluationAttention}=require("../lib/project-tracker/evaluation-attention");
 const {logReadCost}=require("../lib/read-cost-log");
+const {loadPublishedAssignmentsForClasses}=require("../lib/class-assignment-index");
 
-const AP="platform/assignments/",CP="platform/classes/",UP="platform/users/",SP="platform/submissions/";
+const CP="platform/classes/",UP="platform/users/",SP="platform/submissions/";
 const ITEM_CAP=8,RECENT_CAP=10;
 const ms=v=>{const t=Date.parse(String(v||""));return Number.isFinite(t)?t:0};
 const studentName=u=>String(u.displayName||[u.firstName,u.familyName].filter(Boolean).join(" ")||u.code||u.userId||"");
@@ -93,8 +94,13 @@ async function handler(request,deps={},obs=null){
   const teacherId=String(auth.user&&auth.user.sub||"builder");
   const container=deps.container||(deps.getContainer||getContainer)();
   const lj=deps.listJson||listJson,nowMs=typeof deps.nowMs==="number"?deps.nowMs:Date.now();
-  const [assignments,classes,users]=await Promise.all([lj(container,AP),lj(container,CP),lj(container,UP)]);
+  // Classes + users are still scanned (Phase 12E-B targets assignment discovery only).
+  const [classes,users]=await Promise.all([lj(container,CP),lj(container,UP)]);
   const activeIds=new Set(classes.filter(c=>c&&c.classId&&normalizeClassStatus(c)==="active").map(c=>String(c.classId)));
+  // Phase 12E-B — the published assignments of the ACTIVE classes through the per-class index: no global assignment
+  // listing in steady state; classes not yet bootstrapped share AT MOST ONE legacy scan for this whole request.
+  const idx=await loadPublishedAssignmentsForClasses(container,[...activeIds],{...deps,listJson:lj},obs);
+  const assignments=[...idx.byClass.values()].flat().sort((x,y)=>{const a=String(x.assignmentId)+".json",b=String(y.assignmentId)+".json";return a<b?-1:a>b?1:0});
   const published=assignments.filter(a=>a&&a.assignmentId&&normalizeAssignmentStatus(a)==="published"&&activeIds.has(String(a.classId||"")));
   const tally={submissionDocsLoaded:0};
   // One folder listing + its blobs per published assignment of an active class — the SAME scoped read shape as the
@@ -114,7 +120,7 @@ async function handler(request,deps={},obs=null){
   if(projectSources.ok){try{projectEvaluation=deriveProjectEvaluationAttention({users,sources:projectSources.value})}catch(e){partial.push("projectEvaluation");obs?.logError("teacher.today.projectEvaluation",e)}}
   else{partial.push("projectEvaluation");obs?.logError("teacher.today.projectEvaluation",projectSources.error)}
   // Phase 12E-A — count-only read-cost telemetry (the scans' own sizes; never an id/name/title/mark).
-  logReadCost(obs,"teacher.today.read_cost",{assignmentDocsScanned:assignments.length,classDocsScanned:classes.length,userDocsScanned:users.length,publishedActiveAssignments:published.length,submissionFolderListings:published.length,submissionDocsLoaded:tally.submissionDocsLoaded});
+  logReadCost(obs,"teacher.today.read_cost",{assignmentDocsScanned:idx.stats.assignmentDocsLoaded,classDocsScanned:classes.length,userDocsScanned:users.length,publishedActiveAssignments:published.length,submissionFolderListings:published.length,submissionDocsLoaded:tally.submissionDocsLoaded,assignmentIndexReads:idx.stats.indexReads,assignmentIndexesBootstrapped:idx.stats.bootstrapped,globalAssignmentScans:idx.stats.globalScans,assignmentIndexAuthoritative:idx.stats.authoritative,assignmentIndexAuthorityChanges:idx.stats.authorityChanges});
   return {status:200,jsonBody:{ok:true,generatedAt:new Date(nowMs).toISOString(),...derived,attention:{...derived.attention,unreadMessages},projectEvaluation,partial}};
  }catch(e){obs?.logError("teacher.today.error",e);return {status:500,jsonBody:{ok:false,error:"تعذر تحميل ملخص اليوم حاليًا."}}}
 }
