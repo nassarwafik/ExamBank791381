@@ -30,3 +30,6 @@ scripts/output/
 *.njsproj
 *.sln
 *.sw?
+
+# Phase 15A — db-backfill dry-run reports (may list blob names of real data; never commit)
+db-backfill-report*.json

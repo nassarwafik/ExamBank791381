@@ -77,6 +77,7 @@ Configured as application settings of the Static Web App's managed API. Derived 
 | Variable | Status | Purpose |
 |---|---|---|
 | `AZURE_STORAGE_CONNECTION_STRING` | **required** | Blob Storage account holding the `bank`, `assets` and `raw` containers |
+| `AZURE_SQL_CONNECTION_STRING` | optional (Phase 15) | Azure SQL database of the Phase 15 migration. **No endpoint uses it yet**; only `api/scripts/db-migrate.js` and `api/scripts/db-backfill.js` do. See `docs/database-architecture-15.md` |
 
 ### Authentication and security
 
@@ -182,4 +183,5 @@ Every change ships as one phase on its own branch and one pull request:
 | Auth | `api/src/lib/builder-auth.js`, `api/src/lib/student-auth.js`, `api/src/lib/login-throttle.js` |
 | Observability (structured logs, request ids) | `api/src/lib/observability.js` |
 | Design tokens and shell styles | `src/design-tokens.css`, `src/shell.css`, `src/ui/` |
+| Database migration (Phase 15): schema, runner, backfill | `api/db/migrations/`, `api/src/lib/db/`, `api/src/lib/db-migration/`, `api/scripts/db-*.js`, `docs/database-architecture-15.md` |
 | Further documentation | `docs/` |

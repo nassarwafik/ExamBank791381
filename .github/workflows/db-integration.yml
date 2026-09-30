@@ -1,0 +1,68 @@
+name: Database Integration
+
+# Phase 15A — applies the schema migrations to a real SQL Server 2022 and loads the legacy fixture through the
+# backfill (api/tests/db-integration-15a.test.js). Separate from the deploy workflow: it never receives a secret and
+# never deploys. The same tests are skipped in the normal `npm test` run (no TEST_SQL_CONNECTION_STRING there).
+
+on:
+  pull_request:
+    branches:
+      - main
+    paths:
+      - "api/db/**"
+      - "api/src/lib/db/**"
+      - "api/src/lib/db-migration/**"
+      - "api/scripts/db-*.js"
+      - "api/tests/db-*"
+      - "api/tests/fixtures/db-*"
+      - "api/package.json"
+      - "api/package-lock.json"
+      - ".github/workflows/db-integration.yml"
+  push:
+    branches:
+      - main
+    paths:
+      - "api/db/**"
+      - "api/src/lib/db/**"
+      - "api/src/lib/db-migration/**"
+      - "api/scripts/db-*.js"
+      - "api/tests/db-*"
+      - "api/tests/fixtures/db-*"
+      - "api/package.json"
+      - "api/package-lock.json"
+      - ".github/workflows/db-integration.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  sql_server:
+    runs-on: ubuntu-latest
+    name: Migrations & backfill on SQL Server 2022
+    services:
+      mssql:
+        image: mcr.microsoft.com/mssql/server:2022-latest
+        env:
+          ACCEPT_EULA: "Y"
+          # Throwaway password of a CI-only container that exists for the duration of this job.
+          MSSQL_SA_PASSWORD: "ExamBank_CI_only_1433"
+        ports:
+          - 1433:1433
+    steps:
+      - uses: actions/checkout@v5
+      - name: Set up Node.js
+        uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: |
+            package-lock.json
+            api/package-lock.json
+      - name: Install app dependencies
+        run: npm ci
+      - name: Install API dependencies
+        run: npm ci --prefix api
+      - name: Integration tests
+        env:
+          TEST_SQL_CONNECTION_STRING: "Server=localhost,1433;Database=master;User Id=sa;Password=ExamBank_CI_only_1433;Encrypt=true;TrustServerCertificate=true"
+        run: npx vitest run api/tests/db-integration-15a.test.js
