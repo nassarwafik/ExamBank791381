@@ -1,0 +1,30 @@
+/* Phase 15A — «القوالب الأكاديمية» library / preview / save dialog. RTL-first, narrow-screen safe (no fixed widths). */
+.ap-library{display:flex;flex-direction:column;gap:14px;min-width:0;max-width:100%}
+.ap-toolbar{display:flex;flex-wrap:wrap;gap:10px;align-items:flex-end}
+.ap-toolbar .sb-btn{min-height:44px}
+.ap-filter{flex:1 1 220px;min-width:0}
+.ap-live{min-height:1.2em}
+.ap-cards{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:12px}
+.ap-card{border:1px solid var(--line,#e5e9f0);border-radius:12px;background:var(--surface,#fff);padding:12px;display:flex;flex-direction:column;gap:8px;min-width:0}
+.ap-card-head{display:flex;justify-content:space-between;align-items:flex-start;gap:8px}
+.ap-card-title{margin:0;font-size:16px;overflow-wrap:anywhere}
+.ap-card-desc{margin:0;font-size:13px;color:var(--muted,#64748b);overflow-wrap:anywhere}
+.ap-version{display:inline-flex;align-items:center;border-radius:999px;padding:2px 8px;font-size:12px;font-weight:700;background:var(--surface2,#f4f6fa);border:1px solid var(--line2,#cdd5e0);white-space:nowrap}
+.ap-facts{display:grid;grid-template-columns:repeat(auto-fit,minmax(110px,1fr));gap:6px 12px;margin:0}
+.ap-facts div{display:flex;flex-direction:column;gap:1px;min-width:0}
+.ap-facts dt{font-size:12px;color:var(--muted,#64748b);font-weight:600}
+.ap-facts dd{margin:0;font-weight:600;overflow-wrap:anywhere}
+.ap-actions{display:flex;flex-wrap:wrap;gap:8px}
+.ap-actions .sb-btn{min-height:44px}
+.ap-empty{border:1px dashed var(--line2,#cdd5e0);border-radius:12px;padding:20px;text-align:center;color:var(--muted,#64748b)}
+.ap-issues{margin:0;padding-inline-start:20px;color:#b91c1c;font-size:13px;display:flex;flex-direction:column;gap:2px}
+.ap-issues code{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:12px}
+.ap-form{display:flex;flex-direction:column;gap:10px}
+.ap-preview-body{display:flex;flex-direction:column;gap:14px}
+.ap-preview-body section{border:1px solid var(--line,#e5e9f0);border-radius:12px;padding:10px 12px;display:flex;flex-direction:column;gap:8px}
+.ap-list{margin:0;padding-inline-start:20px;display:flex;flex-direction:column;gap:4px;font-size:14px}
+@media (max-width:640px){
+  .ap-cards{grid-template-columns:1fr}
+  .ap-actions .sb-btn{flex:1 1 100%}
+  .ap-facts{grid-template-columns:1fr 1fr}
+}

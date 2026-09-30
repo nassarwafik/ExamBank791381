@@ -51,6 +51,8 @@ export { default as ExamPreview } from "./ExamPreview";
 export type { BankPickerService } from "./BankQuestionPicker";
 import type { GovernanceService } from "./examGovernance";
 export type { GovernanceService } from "./examGovernance";
+import type { AssessmentPresetService } from "./presets/assessmentPresetClient";
+export type { AssessmentPresetService } from "./presets/assessmentPresetClient";
 
 // Phase 13B — the Question Bank picker is loaded only when a teacher opens it (its own chunk inside the builder chunk).
 const BankQuestionPicker = lazy(() => import("./BankQuestionPicker"));
@@ -63,6 +65,8 @@ const BulkClassifyDialog = lazy(() => import("./BulkClassifyDialog"));
 const QualityPolicyPanel = lazy(() => import("./QualityPolicyPanel"));
 const FinalizationPanel = lazy(() => import("./FinalizationPanel"));
 const GovernancePanel = lazy(() => import("./GovernancePanel"));
+// Phase 15A — «القوالب الأكاديمية» (personal Assessment Presets): lazy like the governance panel.
+const PresetLibraryPanel = lazy(() => import("./presets/PresetLibraryPanel"));
 
 // Top-level Structured Exam Builder. It is a CONTROLLED component: the exam lives in the parent
 // (App.tsx) and every edit flows back through onChange as a FUNCTIONAL updater that the parent applies to
@@ -105,6 +109,11 @@ type Props = {
   // Phase 14A — the App-owned window onto the SERVER publishing authority (status, revisions, transitions). Like the bank
   // picker, the builder never receives a token; without a service the «إدارة النشر والإصدارات» action is simply not offered.
   governance?: GovernanceService;
+  // Phase 15A — the App-owned Assessment Preset service («القوالب الأكاديمية»). The builder never receives a token; without a
+  // service the action is simply not offered. `onOpenExamFromPreset` receives a NEW draft exam (fresh examId / section ids,
+  // zero questions) that the owner opens through its history authority — after the 13A unsaved-work guard ran here.
+  presets?: AssessmentPresetService;
+  onOpenExamFromPreset?: (exam: StructuredExam) => void;
 };
 
 const AUTOSAVE_DELAY_MS = 800;
@@ -116,7 +125,7 @@ const FLASH_MS = 1200;
 type ProductivityUi = { examId: string; ids: ReadonlySet<string>; filters: NavigatorFilters };
 const formatBackupTime = (iso: string) => { const t = Date.parse(iso); return Number.isFinite(t) ? new Date(t).toLocaleString("ar", { dateStyle: "medium", timeStyle: "short" }) : ""; };
 
-export default function StructuredExamBuilder({ exam, onChange, onSave, onExit, saving, notice, error, requestQuestionImage, onUndo, onRedo, canUndo = false, canRedo = false, saveState, recoveryScope, onRecover, backupStorage, autosaveDelayMs = AUTOSAVE_DELAY_MS, bankPicker, governance }: Props) {
+export default function StructuredExamBuilder({ exam, onChange, onSave, onExit, saving, notice, error, requestQuestionImage, onUndo, onRedo, canUndo = false, canRedo = false, saveState, recoveryScope, onRecover, backupStorage, autosaveDelayMs = AUTOSAVE_DELAY_MS, bankPicker, governance, presets, onOpenExamFromPreset }: Props) {
   const [preview, setPreview] = useState<StructuredExam | null>(null);
   const [showIssues, setShowIssues] = useState(true);
   const { confirm, confirmDialog } = useConfirm();
@@ -237,19 +246,30 @@ export default function StructuredExamBuilder({ exam, onChange, onSave, onExit, 
     window.addEventListener("beforeunload", handler);
     return () => window.removeEventListener("beforeunload", handler);
   }, [unsaved]);
+  // The ONE unsaved-work confirmation (13A): used by the builder's own "back" AND by every flow that replaces the active exam
+  // (Phase 15A: creating a new exam from an Assessment Preset). Resolves true when leaving is allowed.
+  const confirmLeaveUnsaved = async (confirmLabel: string) => {
+    if (!unsaved) return true;
+    const ok = await confirm({
+      title: "تغييرات غير محفوظة",
+      message: "توجد تغييرات غير محفوظة في هذا الامتحان.\nستبقى نسخة غير محفوظة في هذه الجلسة" + (autosaveEnabled ? " ونسخة احتياطية محلية على هذا الجهاز" : "") + "، لكنها لن تُحفظ على الخادم حتى تضغط حفظ.",
+      confirmLabel,
+      cancelLabel: "البقاء في المحرر",
+      tone: "danger"
+    });
+    return ok && alive.current;
+  };
   const requestExit = async () => {
     if (!onExit) return;
-    if (unsaved) {
-      const ok = await confirm({
-        title: "تغييرات غير محفوظة",
-        message: "توجد تغييرات غير محفوظة في هذا الامتحان.\nستبقى نسخة غير محفوظة في هذه الجلسة" + (autosaveEnabled ? " ونسخة احتياطية محلية على هذا الجهاز" : "") + "، لكنها لن تُحفظ على الخادم حتى تضغط حفظ.",
-        confirmLabel: "الخروج دون حفظ",
-        cancelLabel: "البقاء في المحرر",
-        tone: "danger"
-      });
-      if (!ok || !alive.current) return;
-    }
+    if (!(await confirmLeaveUnsaved("الخروج دون حفظ"))) return;
     onExit();
+  };
+  // Phase 15A — a preset instantiates a NEW draft; it never merges into or silently overwrites the current exam.
+  const openExamFromPreset = async (next: StructuredExam): Promise<boolean> => {
+    if (!onOpenExamFromPreset) return false;
+    if (!(await confirmLeaveUnsaved("فتح الامتحان الجديد دون حفظ"))) return false;
+    onOpenExamFromPreset(next);
+    return true;
   };
 
   // ── Phase 13B · authoring productivity: navigator, selection, bulk actions, bank picker ──
@@ -413,6 +433,7 @@ export default function StructuredExamBuilder({ exam, onChange, onSave, onExit, 
   const [policyOpen, setPolicyOpen] = useState(false);
   const [readinessOpen, setReadinessOpen] = useState(false);
   const [governanceOpen, setGovernanceOpen] = useState(false);
+  const [presetsOpen, setPresetsOpen] = useState(false);
   const editPolicy = (fn: Parameters<typeof withQualityPolicy>[1]) => update(prev => withBlueprint(prev, bp => withQualityPolicy(bp, fn)));
   // The FINAL action re-checks the LATEST committed exam (never a stale render or a re-enabled button): a refused request
   // opens the readiness panel instead of calling the owner. The owner (App) applies the same authority again on the exact
@@ -449,6 +470,7 @@ export default function StructuredExamBuilder({ exam, onChange, onSave, onExit, 
           {exam.blueprint && <button type="button" className={"sb-btn" + (coverageOpen ? " is-active" : "")} onClick={() => setCoverageOpen(true)} aria-haspopup="dialog" title="تحليل المخطط">📊 <span className="sb-btn-label">تحليل المخطط</span></button>}
           {exam.blueprint && <button type="button" className={"sb-btn" + (policyOpen ? " is-active" : "")} onClick={() => setPolicyOpen(true)} aria-haspopup="dialog" title="سياسات الجودة">🛡 <span className="sb-btn-label">سياسات الجودة</span></button>}
           {governance && <button type="button" className={"sb-btn" + (governanceOpen ? " is-active" : "")} onClick={() => setGovernanceOpen(true)} aria-haspopup="dialog" title="إدارة النشر والإصدارات">🗂 <span className="sb-btn-label">إدارة النشر والإصدارات</span></button>}
+          {presets && <button type="button" className={"sb-btn" + (presetsOpen ? " is-active" : "")} onClick={() => setPresetsOpen(true)} aria-haspopup="dialog" title="القوالب الأكاديمية">📋 <span className="sb-btn-label">القوالب الأكاديمية</span></button>}
           <button type="button" className={"sb-btn" + (blueprintOpen ? " is-active" : "")} onClick={() => setBlueprintOpen(true)} aria-haspopup="dialog" title="مخطط الامتحان">📐 <span className="sb-btn-label">مخطط الامتحان</span>{blueprintIssueCount > 0 && <span className="sb-bp-badge" aria-label={blueprintIssueCount + " مشكلات في المخطط"}>{blueprintIssueCount}</span>}</button>
           <button type="button" className="sb-btn" onClick={() => setPreview(exam)}>👁 معاينة الامتحان</button>
           {onSave && mediaPending && <span className="sb-stat sb-media-wait" role="status">{MEDIA_WAIT}</span>}
@@ -557,6 +579,11 @@ export default function StructuredExamBuilder({ exam, onChange, onSave, onExit, 
       {policyOpen && exam.blueprint && (
         <Suspense fallback={<p className="sb-hint" role="status">جارٍ تحميل سياسات الجودة…</p>}>
           <QualityPolicyPanel open onClose={() => setPolicyOpen(false)} blueprint={exam.blueprint} sections={sectionOptions} onEdit={editPolicy} disabled={saving} />
+        </Suspense>
+      )}
+      {presetsOpen && presets && (
+        <Suspense fallback={null}>
+          <PresetLibraryPanel open onClose={() => setPresetsOpen(false)} exam={exam} service={presets} getLatestExam={() => latestExamRef.current} onCreateExam={openExamFromPreset} />
         </Suspense>
       )}
       {governanceOpen && governance && (

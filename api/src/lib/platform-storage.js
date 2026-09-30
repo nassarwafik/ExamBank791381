@@ -34,6 +34,9 @@ async function listJson(container,prefix){const names=await listBlobNames(contai
 async function listBlobNames(container,prefix){const out=[];for await(const blob of container.listBlobsFlat({prefix})){if(blob.name.endsWith(".json"))out.push(blob.name)}return out}
 // Deletes a single blob if it exists (no error when it's already gone).
 async function deleteBlob(container,name){await container.getBlobClient(name).deleteIfExists()}
+// Phase 15A — ETag-conditional delete (If-Match): the blob is removed only if nobody changed it since it was read; a changed
+// ETag throws a concurrency conflict (isConcurrencyConflict) instead of silently deleting a newer document.
+async function deleteBlobConditional(container,name,etag){return container.getBlobClient(name).deleteIfExists(etag?{conditions:{ifMatch:etag}}:undefined)}
 
 // --- Optimistic concurrency helpers (opt-in; existing callers keep using uploadJson unchanged) ---
 
@@ -110,4 +113,4 @@ async function mutateJsonWithRetry(container,name,mutateFn,observer){
  throw new StorageConflictError("Optimistic concurrency conflict after "+MAX_MUTATE_ATTEMPTS+" attempts.");
 }
 
-module.exports={getContainer,downloadJsonOrNull,uploadJson,uploadBinary,downloadBinaryOrNull,listJson,listBlobNames,deleteBlob,downloadJsonWithEtagOrNull,uploadJsonConditional,mutateJsonWithRetry,StorageConflictError,isConcurrencyConflict,mapConcurrent,downloadManyJson,setReadConcurrency,getReadConcurrency};
+module.exports={getContainer,downloadJsonOrNull,uploadJson,uploadBinary,downloadBinaryOrNull,listJson,listBlobNames,deleteBlob,deleteBlobConditional,downloadJsonWithEtagOrNull,uploadJsonConditional,mutateJsonWithRetry,StorageConflictError,isConcurrencyConflict,mapConcurrent,downloadManyJson,setReadConcurrency,getReadConcurrency};

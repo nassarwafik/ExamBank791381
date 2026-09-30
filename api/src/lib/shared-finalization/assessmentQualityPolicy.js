@@ -44,8 +44,8 @@ function validateAssessmentQualityPolicy(policy, blueprint) {
         add("INVALID_RULES", "قائمة القواعد غير صالحة.", "qualityPolicy.rules");
         return issues;
     }
-    const constraintIds = new Set((blueprint?.constraints ?? []).map(c => c.id).filter((id) => typeof id === "string"));
-    const targets = blueprint?.targets;
+    const constraintIds = new Set((Array.isArray(blueprint?.constraints) ? blueprint.constraints : []).map(c => c && typeof c === "object" ? c.id : undefined).filter((id) => typeof id === "string"));
+    const targets = isPlainObject(blueprint?.targets) ? blueprint.targets : undefined;
     const seen = new Set();
     policy.rules.forEach((r, i) => {
         const path = "rules[" + i + "]";
@@ -148,7 +148,7 @@ exports.isCoverageQualityRule = isCoverageQualityRule;
 const isThresholdQualityRule = (r) => r.source.kind === "unclassified" || r.source.kind === "unmapped-bank";
 exports.isThresholdQualityRule = isThresholdQualityRule;
 function defaultQualityRule(bp) {
-    const first = bp?.constraints.find(c => typeof c.id === "string" && c.id);
+    const first = (Array.isArray(bp?.constraints) ? bp.constraints : []).find(c => c && typeof c === "object" && typeof c.id === "string" && c.id);
     if (first)
         return { id: newQualityRuleId(), enabled: true, source: { kind: "constraint", constraintId: first.id }, relations: ["below-min"], effect: "warning" };
     return { id: newQualityRuleId(), enabled: true, source: { kind: "unclassified" }, metric: "count", max: 0, effect: "warning" };

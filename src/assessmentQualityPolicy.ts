@@ -31,8 +31,11 @@ export function validateAssessmentQualityPolicy(policy: unknown, blueprint: Asse
   if (policy.schemaVersion !== ASSESSMENT_QUALITY_POLICY_SCHEMA_VERSION) return [{ code: "UNSUPPORTED_POLICY_SCHEMA", message: "إصدار سياسة الجودة غير مدعوم.", path: "qualityPolicy.schemaVersion" }];
   if (typeof policy.enabled !== "boolean") add("INVALID_ENABLED", "حالة تفعيل السياسة غير صالحة.", "qualityPolicy.enabled");
   if (!Array.isArray(policy.rules)) { add("INVALID_RULES", "قائمة القواعد غير صالحة.", "qualityPolicy.rules"); return issues; }
-  const constraintIds = new Set((blueprint?.constraints ?? []).map(c => c.id).filter((id): id is string => typeof id === "string"));
-  const targets = blueprint?.targets;
+  // Blueprint substructures are read defensively (Phase 15A Review Fix 2): a malformed imported / legacy Blueprint
+  // (constraints not an array, targets not an object) yields reference / target issues here instead of a runtime exception —
+  // the finalization authority, the Builder render and the preset extraction all reach this validator with untrusted data.
+  const constraintIds = new Set((Array.isArray(blueprint?.constraints) ? blueprint.constraints : []).map(c => c && typeof c === "object" ? c.id : undefined).filter((id): id is string => typeof id === "string"));
+  const targets = isPlainObject(blueprint?.targets) ? blueprint.targets : undefined;
   const seen = new Set<string>();
   policy.rules.forEach((r, i) => {
     const path = "rules[" + i + "]";
@@ -102,7 +105,7 @@ export const isThresholdQualityRule = (r: AssessmentQualityRule): r is Threshold
 /** A fresh rule for the editor: the first Blueprint constraint when one exists, else the unclassified threshold. Explicit
  *  starting values (the teacher edits them); nothing is inferred. */
 export function defaultQualityRule(bp: AssessmentBlueprintV1 | undefined): AssessmentQualityRule {
-  const first = bp?.constraints.find(c => typeof c.id === "string" && c.id);
+  const first = (Array.isArray(bp?.constraints) ? bp.constraints : []).find(c => c && typeof c === "object" && typeof c.id === "string" && c.id);
   if (first) return { id: newQualityRuleId(), enabled: true, source: { kind: "constraint", constraintId: first.id }, relations: ["below-min"], effect: "warning" };
   return { id: newQualityRuleId(), enabled: true, source: { kind: "unclassified" }, metric: "count", max: 0, effect: "warning" };
 }
