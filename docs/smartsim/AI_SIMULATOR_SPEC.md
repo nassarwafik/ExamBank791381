@@ -38,7 +38,9 @@ npm, tsc, vite or any build step. A package without dist/index.html is rejected.
 - No cookies, no localStorage/sessionStorage (they do not exist in the sandbox), no window.top/parent DOM access, no
   window.open, no navigation, no form submission, no eval / new Function.
 - Sizes: archive ≤ 15 MB, unpacked ≤ 30 MB, one file ≤ 10 MB, ≤ 500 files.
-- The page runs inside <iframe sandbox="allow-scripts"> with a strict CSP; inline <script> and <style> are allowed.
+- The page runs sandboxed (iframe sandbox="allow-scripts" AND an HTTP CSP `sandbox allow-scripts`, even when opened directly):
+  opaque origin, strict CSP; inline <script> and <style> are allowed; ES modules and relative assets load normally; your own
+  JSON files cannot be fetched (bundle data into JS).
 
 ## Behaviour contract (SmartSimBridgeV1 over window.postMessage)
 Every message is an object { protocolVersion: 1, instanceId, type, payload }.

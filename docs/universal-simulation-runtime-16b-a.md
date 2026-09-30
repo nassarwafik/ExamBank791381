@@ -69,13 +69,20 @@ re-read and reconciled. There is **no delete** (immutable retention; §12).
 The runtime route validates the identity **before** any storage access: id pattern, positive integer version (`latest` →
 404), 64-hex hash, safe decoded asset path (no `..`, no `%2F` tricks, no trailing slash / listing). The stored record must
 match id **and** version for that hash (V1's hash under V2's version → 404). `metadata.json`, `package.smartsim` and
-anything outside `dist/` are never served. Responses (`runtime-headers.js`): strict MIME,
-`Cache-Control: public, max-age=31536000, immutable`, `X-Content-Type-Options: nosniff`, `Referrer-Policy: no-referrer`,
-`Cross-Origin-Resource-Policy: same-origin`, and
-`Content-Security-Policy: default-src 'none'; script-src 'self' <origin><package-prefix> 'unsafe-inline'; style-src 'self'
-<prefix> 'unsafe-inline'; img-src 'self' <prefix> data:; font-src 'self' <prefix>; media-src 'self' <prefix>; connect-src
-'none'; frame-src 'none'; object-src 'none'; base-uri 'none'; form-action 'none'; frame-ancestors 'self'`. The main
-application CSP / `staticwebapp.config.json` are untouched. Route inventory: `simulatorRuntime` is classified
+anything outside `dist/` are never served. Responses (`runtime-headers.js`, revised by the Independent Review Fix, §15):
+strict MIME; `Cache-Control: no-cache` for executable documents (HTML / SVG) and `public, max-age=31536000, immutable` for
+content-addressed sub-resources; `X-Content-Type-Options: nosniff`; `Referrer-Policy: no-referrer`;
+`Cross-Origin-Resource-Policy: cross-origin`; `Access-Control-Allow-Origin: *` (never with credentials); and
+
+```
+Content-Security-Policy: sandbox allow-scripts; default-src 'none'; script-src <origin><package-prefix> 'unsafe-inline';
+  style-src <prefix> 'unsafe-inline'; img-src <prefix> data:; font-src <prefix>; media-src <prefix>; connect-src 'none';
+  frame-src 'none'; worker-src 'none'; object-src 'none'; base-uri 'none'; form-action 'none'; frame-ancestors 'self'
+```
+
+`<prefix>` is the exact `…/runtime/<id>/<version>/<sha256>/` path — never `'self'`. 404 responses carry
+`Cache-Control: no-store`, `nosniff`, `no-referrer` and `Content-Security-Policy: sandbox; default-src 'none';
+frame-ancestors 'none'`. The main application CSP / `staticwebapp.config.json` / `index.html` are untouched (test-pinned). Route inventory: `simulatorRuntime` is classified
 `PUBLIC_BY_DESIGN` with its rationale (content-addressed capability, no enumeration); the three others answer 401 anonymously.
 Student availability comes from the published exam's exact reference — no teacher ownership check at student runtime.
 
@@ -101,13 +108,14 @@ card) and by the editor's «معاينة المحاكاة» (`mode="preview"` ad
   as text, code only). Emission is debounced (150 ms) below the page's own 800 ms autosave debounce.
 * Telemetry seam `onError({ packageId, packageVersion, errorCode })` — never state, never student data.
 
-**Residual origin model (documented, not claimed as tested in a browser):** the frame's origin is opaque; the served
-documents are same-origin *to the API* but the sandbox flag removes the origin, so package scripts cannot read the parent,
-cookies or storage, and CSP blocks every outbound connection. Two packages on the same page are isolated from each other
-by the same mechanism. What the package *can* do: consume CPU / memory inside its frame and post messages that the host
-filters. happy-dom does not run iframe scripts and does not enforce sandbox / CSP, so those browser properties are pinned as
-**contract + architecture guards** (`api/tests/smartsim-guards-16b-a.test.js`) and as header tests on real server
-responses — not claimed from a fake DOM.
+**Origin model (browser-verified, §15):** uploaded code is sandboxed TWICE and independently — by the iframe attribute
+`sandbox="allow-scripts"` and by the HTTP response header `Content-Security-Policy: sandbox allow-scripts`. Either one alone
+gives the document an opaque (`"null"`) origin: no parent DOM, no application `localStorage` / `sessionStorage` /
+IndexedDB / cookies, no popups, no top / parent navigation, no forms, no modals. The HTTP sandbox is what protects a runtime
+URL that is opened directly, bookmarked or navigated to outside `SimulationSandboxHost`; headless Chromium proves it for
+HTML and SVG documents, and proves that even a frame deliberately weakened with `allow-same-origin` still yields an opaque
+origin. The CSP then limits loads to the package's own prefix and blocks every network API. What the package *can* still
+do: consume CPU / memory inside its document and post messages that the host filters.
 
 ## 7. Answer contract (`src/smartsimState.ts`, shared build)
 
@@ -170,22 +178,31 @@ learning-goal addendum), `manifest.schema.json`, `sdk-v1.js` (~4 KB, dependency-
 | `src/smartsim/bridge.16b-a.test.tsx` | S24–S32: sandbox attributes, URL builder refusals, READY/INIT key set, timeout panel, source / instanceId / protocol / type / payload policy, oversized state, error panel, resize clamp, request-reset, disabled, preview ≡ student, pure parser + normalizer |
 | `src/questionTypes/simulation.16b-a.test.tsx` | S1 catalog row, registry, answer kind, S22 exact identity, S33 finalization refusals, S34 duplicate / move / clone / undo / redo, palette 16 + editor flows (library, upload, rejected report, conflict, retry, preview, copy spec), student card + sanitizer |
 | `src/smartsim/counterE2E.16b-a.test.tsx` | the vertical: upload → store → pin → availability → served entry with CSP → real `StudentExamPage` → package script executed in `node:vm` wired to the real host → click ×3 → autosave `{kind:"simulation", state:{count:3}}` → unmount → remount → restore 3 → server grader zero authority |
+| `api/tests/smartsim-runtime-isolation-16b-a-rf.test.js` | Independent Review Fix: HTTP sandbox tokens on every asset type, forbidden tokens, exact CSP directive set, CORP / ACAO, document vs asset caching, inert 404s, main-app headers unchanged, route classification unchanged, identity pinning unchanged, production iframe tokens |
+| `api/tests/smartsim-browser-16b-a-rf.test.js` | Independent Review Fix, **real headless Chromium** over the production upload + runtime handlers: B1 single-file bridge, B2 multi-file (classic JS + CSS + image), B3 Vite-shaped module graph + the React fixture, B4 direct navigation (HTML + SVG), B5 escapes framed and direct, B6 weakened-frame defense in depth, M8 header-fidelity guard |
 
 Adjusted pins: palette 15 → 16 (`authoring.16a`), catalog order `[...LEGACY, ...WAVE1, "simulation"]`
 (`questionTypeCatalog.16a`), `simulatorRuntime` in `PUBLIC_BY_DESIGN` (route inventory).
 
 ## 12. Limitations and honest scope
 
-* Browser sandbox / CSP enforcement is not exercised by tests (no browser runner in this repo); it is pinned by contract
-  tests on the rendered attributes, header tests on real server responses and architecture guards. The E2E drives the
-  package script in `node:vm` because happy-dom does not execute iframe scripts.
+* Browser enforcement is proven in **headless Chromium only** (the engine available here and on the CI runner); Firefox /
+  Safari behaviour of `CSP: sandbox`, CORP and module CORS is expected to match the specifications but is not exercised by
+  tests. The student-side E2E still drives the counter script in `node:vm` (happy-dom does not execute iframe scripts); the
+  isolation properties are proven separately by the real-browser suite.
+* The real-browser suite needs a Chromium / Chrome binary: it is **required** in CI (`CI=true`) and with
+  `SMARTSIM_REQUIRE_BROWSER=1`; on a machine without any browser it reports a skip instead of passing silently.
+* Packages still share the application's registrable domain. The opaque origin removes every same-origin privilege, but
+  CPU / memory use and resource-timing side channels remain possible, as for any sandboxed frame; see §15 for the
+  dedicated-origin hardening path.
 * `'unsafe-inline'` for `script-src` is granted for every served document in V1 (single-file packages need it; a Vite
   `index.html` may too). It does not widen isolation (`connect-src 'none'`, opaque origin); a per-package strict mode is
   the lever `buildRuntimeHeaders({ singleFile: false })` already exposes.
 * No delete / hide of packages (immutable retention by design); no organization sharing; no upload by URL / GitHub / iframe
   URL; no simulation as a compound part; manual review only (no assertions) — 16B-B.
-* The external-resource scan is a heuristic (defense in depth): it can flag a library that mentions `fetch(`; the sandbox
-  is the real boundary.
+* The external-resource scan is a heuristic (defense in depth): it can flag a library that mentions `fetch(`, and the
+  real-browser escape package deliberately evades it; the HTTP + iframe sandbox and the CSP are the real boundary.
+* `connect-src 'none'` also stops a package from `fetch`ing its own JSON files; data must be bundled into the JS.
 
 ## 13. Mutation campaign (SM1–SM20)
 
@@ -214,6 +231,86 @@ Adjusted pins: palette 15 → 16 (`authoring.16a`), catalog order `[...LEGACY, .
 
 **20 / 20 killed** after one strengthening: SM5 (per-member compression-ratio check removed) first SURVIVED because the archive-wide ratio check caught the only bomb fixture; S11 gained a case with a bomb-like member hidden next to a 200 KB incompressible member (archive-wide ratio ≈ 1.7×), which the narrowed check alone catches — SM5 re-run: killed. Campaign 1: fingerprint before: 8df16323aac5f4bb · fingerprint after: 8df16323aac5f4bb — one mutant at a time · targeted suites · shared build regenerated for shared-TS mutants · revert · fingerprint (md5 of `git status --short` + `git diff` + untracked md5s). · SM5 re-run: fingerprint before: 0df57b8385a3f91d · fingerprint after: 0df57b8385a3f91d — one mutant at a time · targeted suites · shared build regenerated for shared-TS mutants · revert · fingerprint (md5 of `git status --short` + `git diff` + untracked md5s). — one mutant at a time · targeted suites · shared build regenerated for the shared-TS mutant (SM14) · revert · fingerprint identical after every mutant (md5 of `git status --short` + `git diff` + untracked md5s).
 
+
+## 15. Independent Review Fix — HTTP-level isolation of uploaded code (RF1 / RF2)
+
+Reviewed head `6d8e22acbb8b286b9466b79995d80ea1dc56c482`; baseline `main` `6bb3b97d0456b632c2406392d13f3eb90e5bd419`.
+
+**RF1 root cause (CRITICAL).** Uploaded HTML / JS / SVG is served from the application origin by a public route. The only
+thing that removed its origin was the iframe attribute `sandbox="allow-scripts"` — a property of the *embedding*, not of
+the resource. Opened directly (link, bookmark, typed URL, `window.open` from elsewhere) the same URL ran as an ordinary
+top-level page of the application origin: headless Chromium on the reviewed head reported `self.origin =
+"http://127.0.0.1:<port>"`, read the application's `localStorage` / `sessionStorage` / cookie, opened a modal `alert`, and an
+SVG asset did the same.
+
+**RF2 root cause (BLOCKER).** A sandboxed document has an opaque origin, so every request it makes — including for its own
+package's `app.js`, `style.css` or images — is cross-origin. `Cross-Origin-Resource-Policy: same-origin` made Chromium block
+them (`net::ERR_BLOCKED_BY_RESPONSE.NotSameOrigin`, `blockedReason: corp-not-same-origin`), and module scripts / `crossorigin`
+CSS (the shape Vite emits) failed CORS with `Origin: null` (`corsError: MissingAllowOriginHeader`). Multi-file and
+React/Vite packages therefore never ran in a real browser; the earlier `node:vm` proof could not see this.
+
+**Also found by the browser proof:** `img-src 'self'` let a framed simulator send an image request to any application
+URL (`/escape-img-app` reached the server); fetch directives are now scoped to the exact package prefix.
+
+**Remediation (`api/src/lib/smartsim/runtime-headers.js`, `api/src/functions/simulators.js`, runtime responses only):**
+
+| header | before | after | why |
+|---|---|---|---|
+| `Content-Security-Policy` | no `sandbox`; fetch directives `'self' <prefix>` | `sandbox allow-scripts` on EVERY runtime response; fetch directives `<prefix>` only; `worker-src 'none'` added | RF1: the response sandboxes itself, so direct navigation keeps an opaque origin; `'self'` admitted every app script, every other package and beacons |
+| `Cross-Origin-Resource-Policy` | `same-origin` | `cross-origin` | RF2: an opaque-origin document is cross-origin to its own assets |
+| `Access-Control-Allow-Origin` | — | `*` (no credentials) | RF2: module scripts, fonts and `crossorigin` CSS are CORS loads with `Origin: null` |
+| `Cache-Control` (HTML / SVG) | `public, max-age=31536000, immutable` | `no-cache` | a security-header change must reach the next load; a year-long cache would pin the old headers |
+| `Cache-Control` (other assets) | immutable | immutable (unchanged) | content-addressed |
+| 404 responses | `no-store`, `nosniff` | + `no-referrer`, `CSP: sandbox; default-src 'none'; frame-ancestors 'none'` | inert even if navigated to or framed |
+
+Why relaxing CORP / adding ACAO is safe here: the runtime assets are already public by design (§5); URLs are immutable and
+content-addressed; the route exposes no archive, metadata or owner data; no credentials are ever allowed; the CSP still
+restricts what executes and what may be loaded; `frame-ancestors 'self'` still restricts embedding; and the HTTP sandbox
+protects direct navigation. The application's own CSP / CORP are unchanged. The iframe keeps `sandbox="allow-scripts"`;
+`allow-same-origin` is **not** added (with same-origin uploaded code, `allow-scripts allow-same-origin` would let the frame
+remove its own sandbox).
+
+**Real-browser proof** (`api/tests/smartsim-browser-16b-a-rf.test.js`, headless Chromium over the DevTools protocol;
+packages uploaded through the production upload handler and served over real HTTP by the production runtime handler; the
+host frames them with the sandbox tokens parsed from `SimulationSandboxHost.tsx`):
+
+| case | proves |
+|---|---|
+| B1 single-file | inline JS runs framed; READY → INIT → STATE_CHANGED with the host instance id; `savedState` restored; `postMessage` origin `"null"`; no `localStorage` / `sessionStorage` / cookie / parent DOM |
+| B2 multi-file | classic external JS, external CSS (computed width) and an image (natural width) load and run inside the opaque sandbox; no blocked runtime request |
+| B3 Vite-shaped dist | `crossorigin` module entry, static chunk import, dynamic `import()`, `crossorigin` CSS all execute; the repository React fixture's module script runs |
+| B4 direct navigation | the HTML entry and an SVG asset opened top-level run their scripts but report `self.origin === "null"`; `localStorage` throws `SecurityError`; no application secret is readable |
+| B5 escapes | framed and top-level: no popup, no top / parent navigation, no form submission, no `fetch` (app or other origin), no beacon, no image to the app or another origin, no modal — the server request log records none of them |
+| B6 defense in depth | a frame deliberately given `allow-same-origin` still produces an opaque origin because of the HTTP sandbox |
+| M8 guard | every header the browser receives equals the production `runtimeHandler` output; the harness never sets a security header |
+
+Fail-first on `6d8e22a` (tests unchanged afterwards except two test-defect corrections made on the reviewed head *before*
+any production change, recorded in `scratchpad/16b-a/rf/`): **12 failed · 9 passed (21)** — RF1 (B4 ×2, B5 direct: dialog
+opened), RF2 (B2 `corp-not-same-origin`, B3 `MissingAllowOriginHeader`), the `img-src 'self'` beacon (B5 framed) and the
+header contract (sandbox, exact directives, CORP / ACAO, caching, 404). After the fix: **22 passed (22)** including B6.
+
+**Mutation campaign RF-M1…RF-M8** (focused suites: RF isolation, RF browser, bridge, store; one mutant at a time):
+
+| mutation | result (RF isolation + RF browser + bridge + store suites) | failing tests (first) | tree after revert | verdict |
+|---|---|---|---|---|
+| RF-M1 — remove the HTTP CSP `sandbox` directive | 7 failed / 39 passed (46) | `serves exact stored assets with strict MIME, immutable cache, CSP and security headers; refuses`<br>`CSP has a `sandbox` directive whose tokens are EXACTLY ['allow-scripts'] on every asset type (H`<br>`the header builder itself applies the sandbox for single-file and prebuilt packages alike (it i` | clean | **killed** |
+| RF-M2 — add `allow-same-origin` to the HTTP sandbox | 7 failed / 39 passed (46) | `serves exact stored assets with strict MIME, immutable cache, CSP and security headers; refuses`<br>`CSP has a `sandbox` directive whose tokens are EXACTLY ['allow-scripts'] on every asset type (H`<br>`no forbidden sandbox token (allow-same-origin / top-navigation / popups / forms / modals / down` | clean | **killed** |
+| RF-M3 — restore the incompatible `Cross-Origin-Resource-Policy: same-origin` | 4 failed / 42 passed (46) | `serves exact stored assets with strict MIME, immutable cache, CSP and security headers; refuses`<br>`Cross-Origin-Resource-Policy is `cross-origin` (an opaque-origin document is cross-origin to ev`<br>`B2 — multi-file package: classic external JS, external CSS and an image all load and execute in` | clean | **killed** |
+| RF-M3b — drop `Access-Control-Allow-Origin` (module scripts / fonts need it from an opaque origin) | 3 failed / 43 passed (46) | `serves exact stored assets with strict MIME, immutable cache, CSP and security headers; refuses`<br>`Cross-Origin-Resource-Policy is `cross-origin` (an opaque-origin document is cross-origin to ev`<br>`B3 — Vite-shaped dist: crossorigin module entry, static chunk import, dynamic import() and cros` | clean | **killed** |
+| RF-M4 — remove `connect-src 'none'` | 2 failed / 44 passed (46) | `serves exact stored assets with strict MIME, immutable cache, CSP and security headers; refuses`<br>`fetch directives name ONLY the exact package prefix ('self' would admit every application scrip` | clean | **killed** |
+| RF-M5 — widen `frame-ancestors` to any origin | 2 failed / 44 passed (46) | `serves exact stored assets with strict MIME, immutable cache, CSP and security headers; refuses`<br>`fetch directives name ONLY the exact package prefix ('self' would admit every application scrip` | clean | **killed** |
+| RF-M6 — weaken the iframe sandbox (allow-same-origin on the production host) | 4 failed / 42 passed (46) | `the production iframe keeps `sandbox="allow-scripts"` only — the fix is NOT `allow-same-origin``<br>`renders exactly one iframe with sandbox='allow-scripts' only, no allow-same-origin / popups / t`<br>`mode='preview' renders the SAME iframe contract (sandbox, src, referrerpolicy) plus a debug sta` | clean | **killed** |
+| RF-M7 — bypass the exact id / version / hash route binding | 3 failed / 43 passed (46) | `package identity pinning is unchanged: only the exact (packageId, positive-integer version, sha`<br>`S20 V1 remains retrievable byte-for-byte after V2 is uploaded; the runtime never resolves lates`<br>`serves exact stored assets with strict MIME, immutable cache, CSP and security headers; refuses` | clean | **killed** |
+| RF-M8 — browser fixture serves MOCKED headers instead of the production runtime headers | 7 failed / 39 passed (46) | `M8 guard — the browser sees EXACTLY the production runtime headers (the harness serves through `<br>`B3 — Vite-shaped dist: crossorigin module entry, static chunk import, dynamic import() and cros`<br>`B4 — DIRECT top-level navigation to the runtime HTML entry: scripts run, but the document is an` | clean | **killed** |
+
+fingerprint before `c9aab1b10f7d3a57` · after `c9aab1b10f7d3a57`.
+
+**Dedicated simulator origin (future hardening, not required for V1).** A separate registrable domain (e.g. a
+`*.usercontent` host) would also remove same-site cookie scope and some side channels and would make the sandbox a second
+rather than the primary line. It needs a new deployment / DNS / certificate dependency, so it is not introduced here: with
+the HTTP CSP sandbox, an opaque origin is enforced for every runtime document regardless of how it is loaded, which closes
+RF1 for V1. The runtime URL builder (`src/smartsim/runtimeUrl.ts`) and `buildRuntimeHeaders` are the two places a future
+dedicated origin would change.
 
 ## 14. 16B-B handoff
 

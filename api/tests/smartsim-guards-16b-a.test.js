@@ -73,7 +73,7 @@ describe("16B-A guards — no code execution of uploads, no build tooling, no ex
     expect(sdk.length).toBeLessThan(8000);
     const manifest = JSON.parse(fs.readFileSync(path.join(repo, "examples/smartsim/counter/manifest.json"), "utf8"));
     expect(manifest).toMatchObject({ schemaVersion: 1, packageId: "counter-sim", packageVersion: 1, entry: "dist/index.html", runtime: "web", runtimeVersion: 1, responseSchemaVersion: 1 });
-  });
+  }, 30000);                                                                                                        // walks all of src/: allow for a loaded test pool
   it("the shared server build carries the manifest / state modules (finalization parity) and SHARED_ENTRIES names them", () => {
     expect(read("scripts/build-shared-finalization.mjs")).toMatch(/src\/smartsimManifest\.ts/);
     expect(read("scripts/build-shared-finalization.mjs")).toMatch(/src\/smartsimState\.ts/);
@@ -121,24 +121,30 @@ describe("16B-A S23 — sanitizer contract for simulation questions", () => {
 });
 
 describe("16B-A — runtime response headers (contract)", () => {
-  it("buildRuntimeHeaders: strict MIME, immutable cache, nosniff, no-referrer, CORP same-origin, CSP default-src 'none' with package-self script/style/img/font/media, connect/frame/object none, base-uri none, form-action none, frame-ancestors self", () => {
+  // Independent Review Fix: the header contract is RF1 / RF2 — an HTTP `sandbox allow-scripts` on every response, fetch
+  // directives scoped to the exact package prefix (no 'self'), CORP cross-origin + ACAO * for the opaque-origin document,
+  // `no-cache` for executable documents. The full matrix lives in smartsim-runtime-isolation-16b-a-rf.test.js; this pin keeps
+  // the original contract's shape.
+  it("buildRuntimeHeaders: strict MIME, document no-cache / asset immutable cache, nosniff, no-referrer, CORP cross-origin + ACAO *, CSP sandbox allow-scripts + default-src 'none' with package-prefix-only script/style/img/font/media, connect/frame/worker/object none, base-uri none, form-action none, frame-ancestors self", () => {
     const h = buildRuntimeHeaders({ contentType: "text/html; charset=utf-8", origin: "https://app.example", packagePrefix: "/api/simulators/runtime/counter-sim/1/" + "ab".repeat(32) + "/", singleFile: true });
     expect(h["Content-Type"]).toBe("text/html; charset=utf-8");
-    expect(h["Cache-Control"]).toBe("public, max-age=31536000, immutable");
-    expect(h["X-Content-Type-Options"]).toBe("nosniff"); expect(h["Referrer-Policy"]).toBe("no-referrer"); expect(h["Cross-Origin-Resource-Policy"]).toBe("same-origin");
+    expect(h["Cache-Control"]).toBe("no-cache");
+    expect(h["X-Content-Type-Options"]).toBe("nosniff"); expect(h["Referrer-Policy"]).toBe("no-referrer"); expect(h["Cross-Origin-Resource-Policy"]).toBe("cross-origin"); expect(h["Access-Control-Allow-Origin"]).toBe("*");
     expect(h["X-Frame-Options"]).toBeUndefined();                                                                        // frame-ancestors governs
     const csp = h["Content-Security-Policy"];
     const self = "https://app.example/api/simulators/runtime/counter-sim/1/" + "ab".repeat(32) + "/";
+    expect(csp.startsWith("sandbox allow-scripts;")).toBe(true);
     expect(csp).toContain("default-src 'none'");
-    expect(csp).toContain("script-src 'self' " + self + " 'unsafe-inline'");
-    expect(csp).toContain("style-src 'self' " + self + " 'unsafe-inline'");
-    expect(csp).toContain("img-src 'self' " + self + " data:");
-    expect(csp).toContain("font-src 'self' " + self); expect(csp).toContain("media-src 'self' " + self);
-    expect(csp).toContain("connect-src 'none'"); expect(csp).toContain("frame-src 'none'"); expect(csp).toContain("object-src 'none'"); expect(csp).toContain("base-uri 'none'"); expect(csp).toContain("form-action 'none'"); expect(csp).toContain("frame-ancestors 'self'");
-    expect(csp).not.toMatch(/unsafe-eval|\*|https:(\s|;)/);
+    expect(csp).toContain("script-src " + self + " 'unsafe-inline'");
+    expect(csp).toContain("style-src " + self + " 'unsafe-inline'");
+    expect(csp).toContain("img-src " + self + " data:");
+    expect(csp).toContain("font-src " + self); expect(csp).toContain("media-src " + self);
+    expect(csp).toContain("connect-src 'none'"); expect(csp).toContain("frame-src 'none'"); expect(csp).toContain("worker-src 'none'"); expect(csp).toContain("object-src 'none'"); expect(csp).toContain("base-uri 'none'"); expect(csp).toContain("form-action 'none'"); expect(csp).toContain("frame-ancestors 'self'");
+    expect(csp).not.toMatch(/unsafe-eval|\*|https:(\s|;)|'self' https|allow-same-origin/);
     const h2 = buildRuntimeHeaders({ contentType: "application/javascript; charset=utf-8", origin: "https://app.example", packagePrefix: self.replace("https://app.example", ""), singleFile: false });
-    expect(h2["Content-Security-Policy"]).toContain("script-src 'self' " + self + ";");                                  // no unsafe-inline for a prebuilt dist
-    expect(h2["Content-Security-Policy"]).toContain("style-src 'self' " + self + " 'unsafe-inline'");                    // Vite CSS-in-JS injection still works
+    expect(h2["Cache-Control"]).toBe("public, max-age=31536000, immutable");                                            // content-addressed sub-resource
+    expect(h2["Content-Security-Policy"]).toContain("script-src " + self + ";");                                          // no unsafe-inline for a prebuilt dist
+    expect(h2["Content-Security-Policy"]).toContain("style-src " + self + " 'unsafe-inline'");                            // Vite CSS-in-JS injection still works
   });
 });
 

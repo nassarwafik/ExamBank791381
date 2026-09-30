@@ -80,7 +80,8 @@ describe("E2E — counter simulator: upload → store → question → student �
     const h = served.headers!;
     expect(h["Content-Type"]).toBe("text/html; charset=utf-8");
     expect(h["Content-Security-Policy"]).toContain("default-src 'none'"); expect(h["Content-Security-Policy"]).toContain("connect-src 'none'");
-    expect(h["Cache-Control"]).toBe("public, max-age=31536000, immutable");
+    expect(h["Cache-Control"]).toBe("no-cache");                                                             // RF: the entry DOCUMENT revalidates
+    expect(h["Content-Security-Policy"]).toMatch(/^sandbox allow-scripts;/);
     const html = Buffer.from(served.body!).toString("utf8");
     const script = /<script>([\s\S]*?)<\/script>/.exec(html)![1];
     expect(html).not.toContain("answer"); expect(html).not.toContain("assertions");

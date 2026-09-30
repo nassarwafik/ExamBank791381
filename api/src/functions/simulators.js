@@ -4,7 +4,7 @@ const { requireBuilderAuth } = require("../lib/builder-auth");
 const { getContainer } = require("../lib/platform-storage");
 const { validateSmartSimPackage, publicReport, SMARTSIM_LIMITS } = require("../lib/smartsim/package-validator");
 const store = require("../lib/smartsim/package-store");
-const { buildRuntimeHeaders, originOf } = require("../lib/smartsim/runtime-headers");
+const { buildRuntimeHeaders, originOf, RUNTIME_ERROR_HEADERS } = require("../lib/smartsim/runtime-headers");
 const { SMARTSIM_PACKAGE_ID_PATTERN, isSafePackagePath } = require("../lib/shared-finalization/smartsimManifest");
 
 // Phase 16B-A — simulator package endpoints.
@@ -74,7 +74,7 @@ async function versionsHandler(request, deps = DEFAULT_DEPS) {
   return { status: 200, jsonBody: { ok: true, packageId, versions } };
 }
 
-const NOT_FOUND = Object.freeze({ status: 404, headers: { "Cache-Control": "no-store", "X-Content-Type-Options": "nosniff" }, jsonBody: { ok: false, error: "Not found" } });
+const NOT_FOUND = Object.freeze({ status: 404, headers: RUNTIME_ERROR_HEADERS, jsonBody: { ok: false, error: "Not found" } });
 function safeDecode(v) { try { return decodeURIComponent(String(v)); } catch { return null; } }
 
 async function runtimeHandler(request, deps = DEFAULT_DEPS, obs) {

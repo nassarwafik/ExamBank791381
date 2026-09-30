@@ -101,13 +101,13 @@ describe("S47 / S79 / S90 / S91 — runtime serving", () => {
     const serve = (assetPath, over = {}) => runtimeHandler(getReq("https://app.example/api/simulators/runtime/react-sim/1/" + hash + "/" + assetPath, { packageId: "react-sim", packageVersion: "1", hash, assetPath, ...over }), depsFor(c.container, null));
     const html = await serve("index.html");
     expect(html.status).toBe(200); expect(html.headers["Content-Type"]).toBe("text/html; charset=utf-8");
-    expect(html.headers["Cache-Control"]).toBe("public, max-age=31536000, immutable");
-    expect(html.headers["X-Content-Type-Options"]).toBe("nosniff"); expect(html.headers["Referrer-Policy"]).toBe("no-referrer"); expect(html.headers["Cross-Origin-Resource-Policy"]).toBe("same-origin");
+    expect(html.headers["Cache-Control"]).toBe("no-cache");                                   // RF: executable documents revalidate; assets below stay immutable
+    expect(html.headers["X-Content-Type-Options"]).toBe("nosniff"); expect(html.headers["Referrer-Policy"]).toBe("no-referrer"); expect(html.headers["Cross-Origin-Resource-Policy"]).toBe("cross-origin"); expect(html.headers["Access-Control-Allow-Origin"]).toBe("*");
     const csp = html.headers["Content-Security-Policy"];
     expect(csp).toMatch(/default-src 'none'/); expect(csp).toMatch(/connect-src 'none'/); expect(csp).toMatch(/frame-src 'none'/); expect(csp).toMatch(/object-src 'none'/); expect(csp).toMatch(/base-uri 'none'/); expect(csp).toMatch(/form-action 'none'/); expect(csp).toMatch(/frame-ancestors 'self'/);
     expect(csp).not.toMatch(/connect-src \*/); expect(csp).not.toMatch(/script-src[^;]*\shttps:(?:\s|;)/);                                            // no bare https: scheme source
-    expect(csp).toMatch(/script-src 'self' https:\/\/app\.example\/api\/simulators\/runtime\/react-sim\/1\/[0-9a-f]{64}\/ 'unsafe-inline'/);
-    const js = await serve("assets/index-abc123.js"); expect(js.status).toBe(200); expect(js.headers["Content-Type"]).toMatch(/javascript/); expect(js.headers["Content-Security-Policy"]).toBeTruthy();
+    expect(csp).toMatch(/^sandbox allow-scripts;/); expect(csp).toMatch(/script-src https:\/\/app\.example\/api\/simulators\/runtime\/react-sim\/1\/[0-9a-f]{64}\/ 'unsafe-inline'/); expect(csp).not.toMatch(/'self' https/);
+    const js = await serve("assets/index-abc123.js"); expect(js.status).toBe(200); expect(js.headers["Cache-Control"]).toBe("public, max-age=31536000, immutable"); expect(js.headers["Content-Type"]).toMatch(/javascript/); expect(js.headers["Content-Security-Policy"]).toBeTruthy();
     const css = await serve("assets/index-abc123.css"); expect(css.headers["Content-Type"]).toBe("text/css; charset=utf-8");
     expect((await serve("../metadata.json")).status).toBe(404); expect((await serve("..%2Fmetadata.json")).status).toBe(404);
     expect((await serve("metadata.json")).status).toBe(404); expect((await serve("package.smartsim")).status).toBe(404);

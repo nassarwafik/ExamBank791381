@@ -22,7 +22,8 @@ manifest.json:
   "capabilities": { "autosave": true, "restore": true, "reset": true, "partialCredit": false, "offline": true }
 }
 
-RUNTIME: your page runs inside <iframe sandbox="allow-scripts"> with a strict CSP: NO network (fetch/XHR/WebSocket/EventSource are blocked
+RUNTIME: your page runs sandboxed — inside <iframe sandbox="allow-scripts"> AND under an HTTP CSP "sandbox allow-scripts" that also
+applies when the runtime URL is opened directly — with an opaque origin and a strict CSP: NO network (fetch/XHR/WebSocket/EventSource are blocked
 and refused at upload), no external scripts/styles/images/fonts (relative package paths and data: images only), no cookies, no
 localStorage, no parent DOM, no top navigation, no popups, no forms submission. Be fully self-contained, responsive (fluid width),
 RTL-aware (dir="rtl" when the UI is Arabic), keyboard accessible, and respect prefers-reduced-motion.

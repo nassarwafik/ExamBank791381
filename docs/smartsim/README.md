@@ -48,17 +48,24 @@ anything not on the file-type allow-list inside `dist/` (no `.exe .dll .so .sh .
 ## Runtime environment
 
 Your page is served from `/api/simulators/runtime/<packageId>/<version>/<sha256>/<path>` with
-`Cache-Control: immutable`, `X-Content-Type-Options: nosniff`, `Referrer-Policy: no-referrer`,
-`Cross-Origin-Resource-Policy: same-origin` and this CSP:
+`X-Content-Type-Options: nosniff`, `Referrer-Policy: no-referrer`, `Cross-Origin-Resource-Policy: cross-origin`,
+`Access-Control-Allow-Origin: *`, `Cache-Control: no-cache` for HTML / SVG documents (immutable for every other asset) and
+this CSP, where `<package-prefix>` is your package's exact runtime path:
 
 ```
-default-src 'none'; script-src 'self' <package-prefix> 'unsafe-inline'; style-src 'self' <package-prefix> 'unsafe-inline';
-img-src 'self' <package-prefix> data:; font-src 'self' <package-prefix>; media-src 'self' <package-prefix>;
-connect-src 'none'; frame-src 'none'; object-src 'none'; base-uri 'none'; form-action 'none'; frame-ancestors 'self'
+sandbox allow-scripts; default-src 'none'; script-src <package-prefix> 'unsafe-inline';
+style-src <package-prefix> 'unsafe-inline'; img-src <package-prefix> data:; font-src <package-prefix>;
+media-src <package-prefix>; connect-src 'none'; frame-src 'none'; worker-src 'none'; object-src 'none'; base-uri 'none';
+form-action 'none'; frame-ancestors 'self'
 ```
 
-The host iframe is `sandbox="allow-scripts"` only: your page has an opaque origin, no cookies, no `localStorage`, no access
-to the parent document, no popups, no top navigation, no form submission, no downloads. Use relative asset URLs (`./assets/…`).
+Your page is sandboxed twice: by the host iframe (`sandbox="allow-scripts"`) and by the `sandbox allow-scripts` CSP
+directive on the HTTP response, which also applies when the runtime URL is opened directly. Either way it runs with an
+opaque origin: no cookies, no `localStorage` / `sessionStorage` / IndexedDB, no access to the parent document, no popups, no
+top navigation, no form submission, no modal dialogs, no downloads, no network. Only files from your own package can be
+loaded, so use relative asset URLs (`./assets/…`). Classic scripts, ES modules (including Vite's `crossorigin` entry, static
+chunks and dynamic `import()`), stylesheets, images and fonts are verified to load in headless Chromium. `fetch` cannot read
+your own JSON files (`connect-src 'none'`), so bundle data into your JS.
 
 ## The protocol (SmartSimBridgeV1)
 
