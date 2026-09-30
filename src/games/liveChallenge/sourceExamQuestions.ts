@@ -5,10 +5,11 @@
 // (countExamQuestions) already counts for the saved-exams list:
 //   structured: exam.sections[].questions[]
 //   legacy    : exam.questions[]            (converted through the canonical legacyToStructured, never re-implemented)
-// Question types are resolved through the canonical registry (BUILDER_QUESTION_TYPES) and the existing import alias
+// Question types are resolved through the LIVE canonical catalog (isKnownQuestionType) and the existing import alias
 // table (canonicalizeType — e.g. a legacy generated "open" is a shortAnswer); there is no second list of types and no
 // second question model. JSON files are parsed as DATA only, through the existing structured-exam JSON parser.
-import { BUILDER_QUESTION_TYPES, type BuilderQuestion, type BuilderQuestionType } from "../../examTypes";
+import type { BuilderQuestion, BuilderQuestionType } from "../../examTypes";
+import { isKnownQuestionType } from "../../questionTypeCatalog";
 import { legacyToStructured, genId } from "../../examBuilderState";
 import { canonicalizeType, parseStructuredExamJson, MAX_IMPORT_BYTES } from "../../structuredExamImport";
 
@@ -31,7 +32,7 @@ const deepCopy = <T,>(v: T): T => JSON.parse(JSON.stringify(v)) as T;
 function canonicalQuestion(raw: unknown): BuilderQuestion | null {
   if (!isObj(raw)) return null;
   const { type, known } = canonicalizeType(raw.presentationType ?? raw.type);
-  if (!known || !(BUILDER_QUESTION_TYPES as readonly string[]).includes(type)) return null;
+  if (!known || !isKnownQuestionType(type)) return null;
   const marks = Number(raw.marks ?? raw.points);
   return {
     ...raw,

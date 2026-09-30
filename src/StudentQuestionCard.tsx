@@ -1,7 +1,10 @@
 
+import {Suspense} from "react";
 import {IconCheck} from "./icons";
 import {parseTable,promptText,resolveTableRowOptions} from "./questionContent";
 import QuestionField from "./QuestionField";
+import {resolveStudentRenderer,studentUnsupported} from "./questionTypes/studentRegistry";
+import StudentUnsupported from "./questionTypes/StudentUnsupported";
 
 // Extracted verbatim from StudentExamPage.tsx so the exact same rendering (including PR #33's
 // table-dropdown logic) can be reused both by the real student exam page and by the teacher-facing
@@ -56,6 +59,9 @@ type Props={
  onTable:(index:number,value:string|boolean)=>void;
  onText:(value:string)=>void;
  onField?:(fieldId:string,value:FieldValue)=>void;
+ // Phase 16A — the ONE generic answer seam: a REGISTERED type's renderer emits the whole next Answer here. Legacy types keep
+ // their original callbacks above (adapted by the owners); no new top-level state store is ever needed for a new type.
+ onAnswer?:(next:Answer)=>void;
  disabled?:boolean;
 };
 
@@ -64,8 +70,16 @@ type Props={
 // existing {kind:"sequence"} path below untouched.
 export function isFieldType(q:Question){const t=typeOf(q);return t==="multitruefalse"||t==="clifill"||(t==="tablefill"&&!!(q.tableHeaders||q.tableRows));}
 
-export default function StudentQuestionCard({q,index,id,answer,onChoice,onSeq,onTable,onText,onField,disabled}:Props){
- const a=answer,t=typeOf(q),fieldType=isFieldType(q),table=!fieldType&&parseTable(q.text),seq=!fieldType&&(t==="wordbank"||t==="fillblank"||((q.fields?.length||0)>0&&t!=="open"));
+export default function StudentQuestionCard({q,index,id,answer,onChoice,onSeq,onTable,onText,onField,onAnswer,disabled}:Props){
+ const a=answer,t=typeOf(q);
+ // Phase 16A — a registered (Wave 1 / plugin) type renders through the code-owned student registry inside the SAME card chrome;
+ // everything below this block is the legacy path, byte-for-byte.
+ // Review Fix 1 / R1: the renderer is resolved for the EXACT stored (type, version) identity — a student on an old published
+ // revision gets that version's renderer; a known type without an implementation for its version (or a non-legacy type with
+ // none registered) renders a SAFE unsupported notice — never the latest renderer, never a legacy guess, never a crash.
+ const registered=resolveStudentRenderer(q.presentationType||q.type,q.questionTypeVersion);
+ const unsupported=!registered&&studentUnsupported(q.presentationType||q.type,q.questionTypeVersion);
+ const fieldType=!registered&&!unsupported&&isFieldType(q),table=!registered&&!unsupported&&!fieldType&&parseTable(q.text),seq=!registered&&!unsupported&&!fieldType&&(t==="wordbank"||t==="fillblank"||((q.fields?.length||0)>0&&t!=="open"));
  const fieldValues=a?.kind==="fields"?a.values:{};
  const noopField=()=>{};
  // UX-7b-1 accessibility (additive): the prompt carries an id so the radio group / textarea are named by the
@@ -74,12 +88,14 @@ export default function StudentQuestionCard({q,index,id,answer,onChoice,onSeq,on
  const textId="iex-qtext-"+String(id).replace(/[^a-zA-Z0-9_-]/g,"_");
  const labelPrefix="السؤال "+(q.displayNumber??(index+1));
  const tableAnswerHeader=table?(table.headers[1]||"الإجابة"):"";
- return <article className={"iex-q "+(answered(a)?"done":"")}><div className="iex-node" aria-hidden="true">{q.displayNumber??(index+1)}</div><div className="iex-card"><div className="iex-qhead"><span>{t==="multiplechoice"?"اختيار من متعدد":t==="truefalse"?"صح أو خطأ":t==="multitruefalse"?"صح/خطأ متعدد":t==="clifill"?"أوامر CLI":t==="matching"?"طابق":t==="ordering"?"رتّب العناصر":(table||fieldType)?"أكمل الجدول":seq?"أكمل الناقص":"سؤال"}</span><strong>{q.marks} علامة</strong></div><p className="iex-qtext" id={textId}>{promptText(q.text)}</p>
+ return <article className={"iex-q "+(answered(a)?"done":"")}><div className="iex-node" aria-hidden="true">{q.displayNumber??(index+1)}</div><div className="iex-card"><div className="iex-qhead"><span>{registered?registered.label:t==="multiplechoice"?"اختيار من متعدد":t==="truefalse"?"صح أو خطأ":t==="multitruefalse"?"صح/خطأ متعدد":t==="clifill"?"أوامر CLI":t==="matching"?"طابق":t==="ordering"?"رتّب العناصر":(table||fieldType)?"أكمل الجدول":seq?"أكمل الناقص":"سؤال"}</span><strong>{q.marks} علامة</strong></div><p className="iex-qtext" id={textId}>{promptText(q.text)}</p>
   {imageList(q).map((im,n)=>im.dataUrl?<img className="iex-image" src={im.dataUrl} alt={"صورة السؤال "+(index+1)} key={n}/>:null)}
-  {(t==="multiplechoice"||t==="truefalse")&&<fieldset className="iex-options" aria-labelledby={textId}>{optionsFor(q).map((o,n)=><label className={"iex-option "+(a?.kind==="choice"&&a.index===n?"selected":"")} key={n}><input type="radio" name={id} checked={a?.kind==="choice"&&a.index===n} onChange={()=>onChoice(n)} disabled={disabled}/><span className="iex-pick" aria-hidden="true">{a?.kind==="choice"&&a.index===n&&<IconCheck size={14}/>}</span><b>{o.text||o.label||o.value||""}</b></label>)}</fieldset>}
+  {registered&&<Suspense fallback={<p className="iex-loading" role="status">جارٍ تحميل السؤال…</p>}><registered.Renderer q={q} id={id} answer={a} onAnswer={onAnswer||(()=>{})} disabled={disabled} labelPrefix={labelPrefix} textId={textId}/></Suspense>}
+  {unsupported&&<StudentUnsupported/>}
+  {!registered&&!unsupported&&(t==="multiplechoice"||t==="truefalse")&&<fieldset className="iex-options" aria-labelledby={textId}>{optionsFor(q).map((o,n)=><label className={"iex-option "+(a?.kind==="choice"&&a.index===n?"selected":"")} key={n}><input type="radio" name={id} checked={a?.kind==="choice"&&a.index===n} onChange={()=>onChoice(n)} disabled={disabled}/><span className="iex-pick" aria-hidden="true">{a?.kind==="choice"&&a.index===n&&<IconCheck size={14}/>}</span><b>{o.text||o.label||o.value||""}</b></label>)}</fieldset>}
   {fieldType&&<QuestionField q={q} idBase={id} values={fieldValues} onField={onField||noopField} disabled={disabled} labelPrefix={labelPrefix}/>}
   {table&&<div className="iex-table-wrap"><table><thead><tr>{table.headers.map((h,n)=><th key={n} scope="col">{h}</th>)}</tr></thead><tbody>{table.rows.map((r,n)=>{const rowOptions=resolveTableRowOptions(q,n);const cellName=(r[0]||("الصف "+(n+1)))+" — "+tableAnswerHeader;return <tr key={n}><th scope="row">{r[0]}</th><td>{rowOptions?<select className="iex-cell-select" aria-label={cellName} value={a?.kind==="table"?String(a.values[n]??""):""} onChange={e=>onTable(n,e.target.value)} disabled={disabled}><option value="">— اختر —</option>{rowOptions.isBoolean?<><option value="true">صحيح</option><option value="false">غير صحيح</option></>:rowOptions.values.map((v,k)=><option key={k} value={v}>{v}</option>)}</select>:tableCheckbox(q)?<input className="iex-check" type="checkbox" aria-label={cellName} checked={a?.kind==="table"&&Boolean(a.values[n])} onChange={e=>onTable(n,e.target.checked)} disabled={disabled}/>:<input className="iex-cell" aria-label={cellName} value={a?.kind==="table"?String(a.values[n]??""):""} onChange={e=>onTable(n,e.target.value)} placeholder="اكتب الإجابة" disabled={disabled}/>}</td></tr>})}</tbody></table></div>}
   {!table&&seq&&(()=>{const bank=getWordBank(q);const seqVal=(n:number)=>a?.kind==="sequence"?a.values[n]||"":"";return <><div className="iex-bank" aria-label="بنك الكلمات">{bank.map((w,n)=><span key={n}>{w}</span>)}</div><div className={"iex-seq"+(t==="ordering"?" iex-order-list":"")}>{(q.fields||[]).map((f,n)=><label key={f.id||f.number||n}><span>{f.label||"الحقل "+(n+1)}</span>{bank.length?<select value={seqVal(n)} onChange={e=>onSeq(n,e.target.value)} disabled={disabled}><option value="">— اختر —</option>{bank.map((w,k)=><option key={k} value={w}>{w}</option>)}</select>:<input className="iex-cell" value={seqVal(n)} onChange={e=>onSeq(n,e.target.value)} placeholder="اكتب الإجابة" disabled={disabled}/>}</label>)}</div></>})()}
-  {!table&&!seq&&!fieldType&&t!=="multiplechoice"&&t!=="truefalse"&&<textarea className="iex-open" aria-labelledby={textId} value={a?.kind==="text"?a.value:""} onChange={e=>onText(e.target.value)} placeholder="اكتب إجابتك هنا..." disabled={disabled}/>}
+  {!registered&&!unsupported&&!table&&!seq&&!fieldType&&t!=="multiplechoice"&&t!=="truefalse"&&<textarea className="iex-open" aria-labelledby={textId} value={a?.kind==="text"?a.value:""} onChange={e=>onText(e.target.value)} placeholder="اكتب إجابتك هنا..." disabled={disabled}/>}
  </div></article>;
 }

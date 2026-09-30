@@ -1,5 +1,6 @@
 // @vitest-environment happy-dom
 import { describe, it, expect, afterEach, vi } from "vitest";
+import { BUILDER_QUESTION_TYPES } from "../../examTypes";
 import { render, cleanup, screen, fireEvent, waitFor, within } from "@testing-library/react";
 import { readFileSync } from "fs";
 import path from "path";
@@ -51,11 +52,11 @@ describe("LiveChallengeGenerator — home + authoring", () => {
     expect((await screen.findByLabelText("عنوان التحدّي") as HTMLInputElement).value).toBe("قديم");
   });
 
-  it("adds a manual question through the SHARED composer; all 11 canonical types are offered", async () => {
+  it("adds a manual question through the SHARED composer; every canonical catalog type is offered", async () => {
     const client = fakeClient();
     await openEditor(client);
-    // the new-question type picker offers all 11 canonical types (no duplicated registry)
-    expect((screen.getByLabelText("نوع السؤال الجديد") as HTMLSelectElement).querySelectorAll("option").length).toBe(11);
+    // the new-question type picker offers every canonical catalog type (no duplicated registry)
+    expect(Array.from((screen.getByLabelText("نوع السؤال الجديد") as HTMLSelectElement).querySelectorAll("option")).map(o => o.value)).toEqual([...BUILDER_QUESTION_TYPES]);
     fireEvent.click(screen.getByRole("button", { name: "+ إضافة سؤال" }));
     // the question is edited through QuestionComposer (its type selector is present)
     expect(await screen.findByLabelText("نوع السؤال")).toBeTruthy();

@@ -110,6 +110,11 @@ function isResponseAnswered(a) {
       return !!a.values && Object.values(a.values).some(v => (Array.isArray(v) ? v.some(nonEmpty) : nonEmpty(v)));
     case "compound":
       return !!a.parts && Object.values(a.parts).some(isResponseAnswered);
+    // Phase 16A — Multiple Select (option identities) and Numeric Response (raw typed value); mirror of answerState.ts.
+    case "multiChoice":
+      return Array.isArray(a.optionIds) && a.optionIds.some(id => typeof id === "string" && id !== "");
+    case "numeric":
+      return typeof a.value === "string" && a.value.trim() !== "";
     default:
       return false;
   }

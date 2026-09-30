@@ -11,7 +11,8 @@ describe("dependency direction and isolation", () => {
   it("the quality engine imports only coverage / policy / types / format modules — never the grader, the bank, the generator, React, the API or the exam state", () => {
     for (const f of ["src/assessmentQualityGates.ts", "src/assessmentQualityPolicy.ts"]) {
       expect(existsSync(f), f).toBe(true);
-      for (const dep of imports(read(f))) expect(dep, f + " → " + dep).toMatch(/^\.\/(assessmentBlueprintCoverage|assessmentQualityPolicy|assessmentTypes|assessmentBlueprint|coverageFormat|examTypes)$/);
+      // questionTypeCatalog is the pure, React-free canonical type vocabulary (16A / Review Fix 1: live labels replace the frozen snapshot)
+      for (const dep of imports(read(f))) expect(dep, f + " → " + dep).toMatch(/^\.\/(assessmentBlueprintCoverage|assessmentQualityPolicy|assessmentTypes|assessmentBlueprint|coverageFormat|examTypes|questionTypeCatalog)$/);
       expect(code(read(f)), f).not.toMatch(/\bfetch\s*\(|from\s+["']react["']|api\/|bankQuestion|BankQuestionPicker|generate-exam/i);
     }
   });

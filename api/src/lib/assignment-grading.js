@@ -12,6 +12,9 @@ const {
   selectGradedUnits,
   defaultTrueFalseOptions
 } = require("./exam-structure");
+// Phase 16A — code-owned grading registry (see question-type-graders.js): registered types, the legacy adapter, fail-closed
+// unknown types / unsupported versions. This file never grows a per-type branch again.
+const { resolveGrader, unknownTypeResult, LEGACY } = require("./question-type-graders");
 
 function clean(v){
   return String(v??"")
@@ -152,15 +155,30 @@ function gradeCompound(question,response){
   return {score,maxMarks:maxM,correct:maxM>0&&score>=maxM-1e-9,manualReview:manualMarks>0,manualReviewMarks:manualMarks,parts:partResults};
 }
 
-// Grades a single question (or part). Dispatch is response-kind first (so a compound/fields response
-// always routes correctly regardless of type spelling), then falls back to the legacy type/answer.mode
-// dispatch — byte-for-byte the same decisions the original grader made for choice/sequence/table/text.
+// Grades a single question (or part). Phase 16A: the type is resolved through the code-owned registry first — a registered
+// (Wave 1 / plugin) type uses its handler; a legacy type / alias / absent type uses the LEGACY adapter below, which is the
+// original grader byte-for-byte (response-kind first, then type / answer.mode); an unknown type or an unsupported version
+// fails closed (score 0, manual review). Compound questions compose their parts through the same resolution.
 function gradeQuestion(question,response){
   if(isCompound(question)){
     const r=gradeCompound(question,response);
     return {score:r.score,maxMarks:r.maxMarks,correct:r.correct,manualReview:r.manualReview,manualReviewMarks:r.manualReviewMarks,parts:r.parts};
   }
-  const max=marks(question),answer=question?.answer||{},type=String(question?.presentationType||question?.type||"").toLowerCase();
+  const max=marks(question);
+  const handler=resolveGrader(question?.presentationType||question?.type,question?.questionTypeVersion,{legacyFlat:!(typeof question?.presentationType==="string"&&question.presentationType.trim()!=="")});
+  if(handler===undefined)return unknownTypeResult(max);
+  if(handler!==LEGACY){
+    const r=handler(question,response,max)||{};
+    const score=Math.min(Math.max(0,Number(r.score)||0),max);
+    const manualReview=r.manualReview===true;
+    return {score,maxMarks:max,correct:r.correct===true&&!manualReview,manualReview,...(r.parts?{parts:r.parts}:{})};
+  }
+  return gradeLegacyQuestion(question,response,max);
+}
+// LEGACY ADAPTER — the original dispatch, unchanged: response-kind first (so a fields response always routes correctly
+// regardless of type spelling), then the legacy type / answer.mode decisions for choice / sequence / table / text.
+function gradeLegacyQuestion(question,response,max){
+  const answer=question?.answer||{},type=String(question?.presentationType||question?.type||"").toLowerCase();
   if(response?.kind==="fields"){
     const r=gradeFields(question,response,max);
     return {...r,maxMarks:max,correct:r.score>=max-1e-9&&!r.manualReview};

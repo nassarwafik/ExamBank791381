@@ -6,7 +6,7 @@ exports.evaluateConstraintRelation = evaluateConstraintRelation;
 exports.buildAssessmentEvidenceIndex = buildAssessmentEvidenceIndex;
 exports.prepareCoverageLabels = prepareCoverageLabels;
 exports.evaluateBlueprintCoverage = evaluateBlueprintCoverage;
-const examTypes_1 = require("./examTypes");
+const questionTypeCatalog_1 = require("./questionTypeCatalog");
 const assessmentBlueprint_1 = require("./assessmentBlueprint");
 exports.COVERAGE_EPSILON = 1e-9;
 const lt = (a, b) => a < b - exports.COVERAGE_EPSILON;
@@ -81,7 +81,7 @@ function refLabelFor(labels, c) {
             return l ? ref + " — " + l : ref;
         }
         case "cognitiveLevel": return labels.cognitive.get(ref) || ref;
-        case "questionType": return examTypes_1.QUESTION_TYPE_LABELS[ref] || ref;
+        case "questionType": return (0, questionTypeCatalog_1.questionTypeLabel)(ref) || ref;
         case "section": return labels.sections.get(ref) || ref;
         default: return ref;
     }

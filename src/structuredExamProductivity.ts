@@ -6,7 +6,7 @@
 // updater through the Phase 13A history authority (= one undo step). A transformation that changes nothing returns the
 // SAME sections reference, so `updateExamHistory` records no entry.
 import type { BuilderQuestion, BuilderSection, StructuredExam } from "./examTypes";
-import { QUESTION_TYPE_LABELS } from "./examTypes";
+import { questionTypeLabel } from "./questionTypeCatalog";
 import { cloneQuestionWithNewIds, genId } from "./examBuilderState";
 
 /** The bank-sourced metadata a converted bank question carries next to the engine-native fields (see bank-question-exam.js). */
@@ -61,7 +61,7 @@ export function filterNavigatorEntries(entries: NavigatorEntry[], f: NavigatorFi
     (!f.type || e.presentationType === f.type) &&
     (!f.origin || e.origin === f.origin) &&
     (!f.difficulty || String(e.difficulty ?? "") === f.difficulty) &&
-    (!q || [e.text, e.number, e.displayNumber, e.topic, e.sourceQuestionNumber, e.sectionTitle, QUESTION_TYPE_LABELS[e.presentationType as keyof typeof QUESTION_TYPE_LABELS] || ""].some(v => norm(String(v || "")).includes(q)))
+    (!q || [e.text, e.number, e.displayNumber, e.topic, e.sourceQuestionNumber, e.sectionTitle, questionTypeLabel(e.presentationType) || ""].some(v => norm(String(v || "")).includes(q)))
   );
 }
 

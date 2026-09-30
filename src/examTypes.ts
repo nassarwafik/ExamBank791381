@@ -14,54 +14,31 @@ import type { AssessmentBlueprintV1, AssessmentMeta, AssessmentActivityDescripto
 
 import type { ExamTheme } from "./examTheme";
 import type { ExamCoverPage } from "./examCover";
+import { QUESTION_TYPE_CATALOG, compoundPartTypeKeys, type ProductionQuestionTypeKey } from "./questionTypeCatalog";
 
 export type { ExamCoverPage } from "./examCover";
 
 export type GradingPolicy = "all" | "capScore" | "firstNAnswered";
 export type AnswerUnit = "question" | "part";
 
-// The question/part types the structured engine supports and the builder can author.
-export type BuilderQuestionType =
-  | "multipleChoice"
-  | "trueFalse"
-  | "multiTrueFalse"
-  | "shortAnswer"
-  | "fillBlank"
-  | "wordBank"
-  | "matching"
-  | "ordering"
-  | "tableFill"
-  | "cliFill"
-  | "compound";
+// The question/part types the structured engine supports and the builder can author. Review Fix 1 / R2-D: the compile-time
+// union DERIVES from the `as const` production rows of the ONE canonical Question Type Catalog (src/questionTypeCatalog.ts) —
+// adding a production type is one catalog row, never an edit here. Membership, order and labels at RUNTIME derive from the
+// same catalog. Plugin types registered at module level (registerQuestionTypePlugin) are runtime data: they widen to `string`
+// at the extension seams (listQuestionTypes / compoundPartTypeKeys / questionTypeLabel are the LIVE authorities every
+// authoring, planning and student surface consults); the frozen constants below are the immutable PRODUCTION SNAPSHOT for
+// callers that explicitly want production-only membership (structured import parity, Live Challenge source import).
+export type BuilderQuestionType = ProductionQuestionTypeKey;
 
-// Part types are every question type EXCEPT compound (parts do not nest compounds in this phase).
+// Part types = every catalog type whose capability contract says `compoundPart` (compound never nests).
 export type BuilderPartType = Exclude<BuilderQuestionType, "compound">;
 
-// Canonical, ordered registries of the authorable types. Defined ONCE here and shared by every authoring surface
-// (the Structured Exam Builder / QuestionComposer today, the Live Challenge composer later) so the ordered lists are
-// never duplicated per component. Frozen at runtime, matching the games-catalog registry convention. Display text
-// always comes from QUESTION_TYPE_LABELS — these lists carry order + membership only.
-export const BUILDER_QUESTION_TYPES: readonly BuilderQuestionType[] = Object.freeze([
-  "multipleChoice", "trueFalse", "multiTrueFalse", "shortAnswer", "fillBlank", "wordBank", "matching", "ordering", "tableFill", "cliFill", "compound",
-]);
-// Parts allow every question type EXCEPT compound (no nested compounds) — derived from the single source above.
-export const BUILDER_PART_TYPES: readonly BuilderPartType[] = Object.freeze(
-  BUILDER_QUESTION_TYPES.filter((t): t is BuilderPartType => t !== "compound"),
-);
+export const BUILDER_QUESTION_TYPES: readonly BuilderQuestionType[] = Object.freeze(QUESTION_TYPE_CATALOG.map(d => d.key as BuilderQuestionType));
+export const BUILDER_PART_TYPES: readonly BuilderPartType[] = Object.freeze(compoundPartTypeKeys().filter(k => (BUILDER_QUESTION_TYPES as readonly string[]).includes(k)) as BuilderPartType[]);
 
-export const QUESTION_TYPE_LABELS: Record<BuilderQuestionType, string> = {
-  multipleChoice: "اختيار من متعدد",
-  trueFalse: "صح أو خطأ",
-  multiTrueFalse: "صح/خطأ متعدد",
-  shortAnswer: "إجابة قصيرة / مفتوحة",
-  fillBlank: "إكمال فراغات",
-  wordBank: "مخزن كلمات",
-  matching: "مطابقة",
-  ordering: "ترتيب",
-  tableFill: "إكمال جدول",
-  cliFill: "أوامر CLI",
-  compound: "سؤال مركّب"
-};
+export const QUESTION_TYPE_LABELS: Record<BuilderQuestionType, string> = Object.freeze(
+  Object.fromEntries(QUESTION_TYPE_CATALOG.map(d => [d.key, d.label]))
+) as Record<BuilderQuestionType, string>;
 
 export const GRADING_POLICY_LABELS: Record<GradingPolicy, string> = {
   all: "تصحيح جميع الأسئلة",
@@ -69,7 +46,14 @@ export const GRADING_POLICY_LABELS: Record<GradingPolicy, string> = {
   firstNAnswered: "تصحيح أول عدد محدد من الإجابات"
 };
 
-export type BuilderOption = { value?: string; label?: string; text?: string };
+// `id` (Phase 16A) is the STABLE identity of an option for types whose answer key references options by identity
+// (multipleSelect); legacy MCQ options stay index-addressed and never need one.
+export type BuilderOption = { id?: string; value?: string; label?: string; text?: string };
+// Phase 16A — Wave 1 type configuration (student-visible structure; every answer key lives ONLY under `answer`).
+export type LabeledIdentity = { id: string; label: string };
+export type NumericConfig = { unitRequired: boolean };
+export type MatrixConfig = { rows: LabeledIdentity[]; columns: LabeledIdentity[] };
+export type CategorizationConfig = { categories: LabeledIdentity[]; items: LabeledIdentity[] };
 
 // A generalized answer field (multiTrueFalse row, tableFill cell, cliFill blank, fill/wordBank blank).
 // `correct` is the SECRET answer key — present on builder objects, stripped for students.
@@ -98,9 +82,14 @@ export type BuilderPart = {
   id: string;
   label?: string;
   type: BuilderPartType;
+  // Phase 16A — explicit type version (absent = the canonical V1 behaviour of the type; never bulk-written on legacy data).
+  questionTypeVersion?: number;
   text?: string;
   marks?: number; // when every part supplies marks they are used verbatim; otherwise the engine splits
   options?: BuilderOption[];
+  numeric?: NumericConfig;
+  matrix?: MatrixConfig;
+  categorization?: CategorizationConfig;
   fields?: BuilderField[];
   wordBank?: string[];
   cli?: string;
@@ -115,9 +104,14 @@ export type BuilderQuestion = {
   examQuestionId: string; // stable internal identity — NEVER the display number
   displayNumber?: string; // editable printed number, may repeat across the exam
   presentationType: BuilderQuestionType;
+  // Phase 16A — explicit type version (absent = V1; a newly created Wave 1 question is stamped with its current version).
+  questionTypeVersion?: number;
   text: string;
   marks: number;
   options?: BuilderOption[];
+  numeric?: NumericConfig;
+  matrix?: MatrixConfig;
+  categorization?: CategorizationConfig;
   fields?: BuilderField[];
   wordBank?: string[];
   cli?: string;
@@ -138,7 +132,11 @@ export type BuilderQuestion = {
 // editors and one set of pure helpers work for both. Identity/label/marks live outside this.
 export type QuestionBody = {
   text?: string;
+  questionTypeVersion?: number;
   options?: BuilderOption[];
+  numeric?: NumericConfig;
+  matrix?: MatrixConfig;
+  categorization?: CategorizationConfig;
   fields?: BuilderField[];
   wordBank?: string[];
   cli?: string;

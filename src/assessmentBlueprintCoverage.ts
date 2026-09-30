@@ -10,7 +10,7 @@
 //   A constraint with a structural issue is `unassessable` (blueprint-issue) — never a silent 0.
 //   Topic buckets are PRIMARY-topic only (13C-A attribution); objectives / capabilities overlap by design.
 import type { StructuredExam, BuilderQuestion, BuilderSection } from "./examTypes";
-import { QUESTION_TYPE_LABELS } from "./examTypes";
+import { questionTypeLabel } from "./questionTypeCatalog";
 import type { AssessmentBlueprintV1, BlueprintConstraint, BlueprintDimension, BlueprintMetric, BlueprintUnit } from "./assessmentTypes";
 import {
   buildAssessmentProfile, effectiveAssessmentMeta, validateBlueprintForExam, blueprintCognitiveLevels, blueprintDifficultyScale, prepareAssessmentMetaContext,
@@ -129,7 +129,7 @@ function refLabelFor(labels: CoverageLabelIndex, c: BlueprintConstraint): string
     case "objective": return labels.objectives.get(ref) || ref;
     case "difficulty": { const l = labels.difficulty?.[ref]; return l ? ref + " — " + l : ref; }
     case "cognitiveLevel": return labels.cognitive.get(ref) || ref;
-    case "questionType": return (QUESTION_TYPE_LABELS as Record<string, string>)[ref] || ref;
+    case "questionType": return questionTypeLabel(ref) || ref;                                           // live catalog label (plugins included)
     case "section": return labels.sections.get(ref) || ref;
     default: return ref;
   }

@@ -2,6 +2,10 @@
 import type { BuilderSection, GradingPolicy, AnswerUnit } from "./examTypes";
 import { GRADING_POLICY_LABELS } from "./examTypes";
 import { SECTION_PRESETS, gradingRuleExplanation, newQuestion, changeSectionPolicy } from "./examBuilderState";
+import { lazy, Suspense, useState } from "react";
+import type { BuilderQuestionType } from "./examTypes";
+// Phase 16A — the Question Type Palette is lazy (its own chunk); it hands back a KEY and the canonical factory creates the question.
+const QuestionTypePalette = lazy(() => import("./questionTypes/QuestionTypePalette"));
 import { SECTION_INSTRUCTION_TEMPLATES, findSectionInstructionTemplate } from "./instructionTemplates";
 import StructuredQuestionEditor from "./StructuredQuestionEditor";
 import StimulusEditor from "./StimulusEditor";
@@ -43,6 +47,7 @@ type Props = {
 };
 
 export default function ExamSectionEditor(props: Props) {
+  const [paletteOpen, setPaletteOpen] = useState(false);
   const { section, index, total, sectionOptions, patch, onDelete, onMove, onAddQuestion, onQuestionChange, onQuestionDelete, onQuestionMove, onQuestionDuplicate, onQuestionMoveToSection, onPreviewQuestion, requestQuestionImage, onMediaBusyChange, pendingMediaIds, disabled, selectedIds, onToggleSelect, registerQuestionNode, flashQuestionId, blueprint } = props;
   const groupOptions = Object.entries(section.stimuli || {}).map(([id, s]) => ({ id, label: s.title ? s.title + " (" + id + ")" : id }));
 
@@ -141,7 +146,8 @@ export default function ExamSectionEditor(props: Props) {
         ))}
       </div>
 
-      <button type="button" className="sb-add-btn" onClick={() => onAddQuestion(newQuestion("multipleChoice"))} disabled={disabled}>+ إضافة سؤال</button>
+      <button type="button" className="sb-add-btn" onClick={() => setPaletteOpen(true)} disabled={disabled} aria-haspopup="dialog">+ إضافة سؤال</button>
+      {paletteOpen && <Suspense fallback={null}><QuestionTypePalette open onClose={() => setPaletteOpen(false)} onPick={key => { setPaletteOpen(false); onAddQuestion(newQuestion(key as BuilderQuestionType)); }} /></Suspense>}
     </section>
   );
 }

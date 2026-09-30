@@ -1,0 +1,2488 @@
+{
+ "generatedFrom": "6468cc74db71131ef8d9f91e91a1af7ebc8e9a41",
+ "exam": {
+  "examId": "PARITY-16A",
+  "title": "parity",
+  "sections": [
+   {
+    "id": "s1",
+    "title": "all",
+    "gradingPolicy": "all",
+    "questions": [
+     {
+      "examQuestionId": "q1",
+      "presentationType": "multipleChoice",
+      "text": "MCQ q1",
+      "marks": 2,
+      "options": [
+       {
+        "text": "A"
+       },
+       {
+        "text": "B"
+       },
+       {
+        "text": "C"
+       }
+      ],
+      "answer": {
+       "correctOptionIndex": 1
+      }
+     },
+     {
+      "examQuestionId": "q2",
+      "presentationType": "trueFalse",
+      "text": "TF q2",
+      "marks": 1,
+      "answer": {
+       "correct": true
+      }
+     },
+     {
+      "examQuestionId": "q3",
+      "presentationType": "multiTrueFalse",
+      "text": "MTF q3",
+      "marks": 3,
+      "fields": [
+       {
+        "id": "r1",
+        "statement": "s1",
+        "kind": "boolean",
+        "correct": true
+       },
+       {
+        "id": "r2",
+        "statement": "s2",
+        "kind": "boolean",
+        "correct": false
+       },
+       {
+        "id": "r3",
+        "statement": "s3",
+        "kind": "boolean",
+        "correct": true
+       }
+      ]
+     },
+     {
+      "examQuestionId": "q4",
+      "presentationType": "shortAnswer",
+      "text": "SA q4",
+      "marks": 2,
+      "answer": {
+       "text": "Paris"
+      }
+     },
+     {
+      "examQuestionId": "q5",
+      "presentationType": "shortAnswer",
+      "text": "SA q5",
+      "marks": 2,
+      "answer": {}
+     },
+     {
+      "examQuestionId": "q6",
+      "presentationType": "fillBlank",
+      "text": "Fill q6",
+      "marks": 2,
+      "wordBank": [
+       "x",
+       "y"
+      ],
+      "fields": [
+       {
+        "id": "b1",
+        "label": "1",
+        "kind": "select",
+        "correct": "x"
+       },
+       {
+        "id": "b2",
+        "label": "2",
+        "kind": "select",
+        "correct": "y"
+       }
+      ],
+      "answer": {
+       "mode": "exactSequence",
+       "values": [
+        "x",
+        "y"
+       ]
+      }
+     },
+     {
+      "examQuestionId": "q7",
+      "presentationType": "wordBank",
+      "text": "WB q7",
+      "marks": 4,
+      "wordBank": [
+       "a",
+       "b",
+       "c"
+      ],
+      "fields": [
+       {
+        "id": "w1",
+        "kind": "select",
+        "correct": "a"
+       },
+       {
+        "id": "w2",
+        "kind": "select",
+        "correct": "b"
+       }
+      ],
+      "answer": {
+       "mode": "exactSequence",
+       "values": [
+        "a",
+        "b"
+       ]
+      }
+     },
+     {
+      "examQuestionId": "q8",
+      "presentationType": "matching",
+      "text": "Match q8",
+      "marks": 3,
+      "fields": [
+       {
+        "id": "m1",
+        "label": "HTTP",
+        "kind": "select",
+        "options": [
+         {
+          "text": "80"
+         },
+         {
+          "text": "443"
+         },
+         {
+          "text": "22"
+         }
+        ],
+        "correct": "80"
+       },
+       {
+        "id": "m2",
+        "label": "HTTPS",
+        "kind": "select",
+        "options": [
+         {
+          "text": "80"
+         },
+         {
+          "text": "443"
+         },
+         {
+          "text": "22"
+         }
+        ],
+        "correct": "443"
+       },
+       {
+        "id": "m3",
+        "label": "SSH",
+        "kind": "select",
+        "options": [
+         {
+          "text": "80"
+         },
+         {
+          "text": "443"
+         },
+         {
+          "text": "22"
+         }
+        ],
+        "correct": "22"
+       }
+      ],
+      "answer": {
+       "text": "HTTP=80;HTTPS=443;SSH=22"
+      }
+     },
+     {
+      "examQuestionId": "q9",
+      "presentationType": "ordering",
+      "text": "Order q9",
+      "marks": 3,
+      "wordBank": [
+       "first",
+       "second",
+       "third"
+      ],
+      "fields": [
+       {
+        "id": "o1",
+        "kind": "select",
+        "correct": "first"
+       },
+       {
+        "id": "o2",
+        "kind": "select",
+        "correct": "second"
+       },
+       {
+        "id": "o3",
+        "kind": "select",
+        "correct": "third"
+       }
+      ],
+      "answer": {
+       "mode": "exactSequence",
+       "values": [
+        "first",
+        "second",
+        "third"
+       ]
+      }
+     },
+     {
+      "examQuestionId": "q10",
+      "presentationType": "tableFill",
+      "text": "Table q10",
+      "marks": 4,
+      "tableHeaders": [
+       "Device",
+       "Layer"
+      ],
+      "tableRows": [
+       [
+        "Switch",
+        ""
+       ],
+       [
+        "Router",
+        ""
+       ]
+      ],
+      "fields": [
+       {
+        "id": "t1",
+        "row": 0,
+        "column": 1,
+        "kind": "select",
+        "options": [
+         {
+          "text": "2"
+         },
+         {
+          "text": "3"
+         }
+        ],
+        "correct": "2"
+       },
+       {
+        "id": "t2",
+        "row": 1,
+        "column": 1,
+        "kind": "select",
+        "options": [
+         {
+          "text": "2"
+         },
+         {
+          "text": "3"
+         }
+        ],
+        "correct": "3"
+       }
+      ]
+     },
+     {
+      "examQuestionId": "q11",
+      "presentationType": "cliFill",
+      "text": "CLI q11",
+      "marks": 2,
+      "cli": "Router(config)# [[c1]] vlan [[c2]]",
+      "fields": [
+       {
+        "id": "c1",
+        "correct": "interface"
+       },
+       {
+        "id": "c2",
+        "correct": "10"
+       }
+      ]
+     },
+     {
+      "examQuestionId": "q12",
+      "presentationType": "tableFill",
+      "text": "| Item | Answer |\n|---|---|\n| A | |\n| B | |",
+      "marks": 2,
+      "answer": {
+       "text": "A=1;B=2"
+      }
+     }
+    ]
+   },
+   {
+    "id": "s2",
+    "title": "cap",
+    "gradingPolicy": "capScore",
+    "maxMarks": 3,
+    "questions": [
+     {
+      "examQuestionId": "q13",
+      "presentationType": "multipleChoice",
+      "text": "MCQ q13",
+      "marks": 2,
+      "options": [
+       {
+        "text": "A"
+       },
+       {
+        "text": "B"
+       },
+       {
+        "text": "C"
+       }
+      ],
+      "answer": {
+       "correctOptionIndex": 0
+      }
+     },
+     {
+      "examQuestionId": "q14",
+      "presentationType": "multipleChoice",
+      "text": "MCQ q14",
+      "marks": 2,
+      "options": [
+       {
+        "text": "A"
+       },
+       {
+        "text": "B"
+       },
+       {
+        "text": "C"
+       }
+      ],
+      "answer": {
+       "correctOptionIndex": 2
+      }
+     },
+     {
+      "examQuestionId": "q15",
+      "presentationType": "trueFalse",
+      "text": "TF q15",
+      "marks": 2,
+      "answer": {
+       "correct": false
+      }
+     }
+    ]
+   },
+   {
+    "id": "s3",
+    "title": "firstN-q",
+    "gradingPolicy": "firstNAnswered",
+    "requiredAnswers": 2,
+    "answerUnit": "question",
+    "maxMarks": 4,
+    "questions": [
+     {
+      "examQuestionId": "q16",
+      "presentationType": "multipleChoice",
+      "text": "MCQ q16",
+      "marks": 2,
+      "options": [
+       {
+        "text": "A"
+       },
+       {
+        "text": "B"
+       },
+       {
+        "text": "C"
+       }
+      ],
+      "answer": {
+       "correctOptionIndex": 1
+      }
+     },
+     {
+      "examQuestionId": "q17",
+      "presentationType": "multipleChoice",
+      "text": "MCQ q17",
+      "marks": 2,
+      "options": [
+       {
+        "text": "A"
+       },
+       {
+        "text": "B"
+       },
+       {
+        "text": "C"
+       }
+      ],
+      "answer": {
+       "correctOptionIndex": 1
+      }
+     },
+     {
+      "examQuestionId": "q18",
+      "presentationType": "multipleChoice",
+      "text": "MCQ q18",
+      "marks": 2,
+      "options": [
+       {
+        "text": "A"
+       },
+       {
+        "text": "B"
+       },
+       {
+        "text": "C"
+       }
+      ],
+      "answer": {
+       "correctOptionIndex": 1
+      }
+     }
+    ]
+   },
+   {
+    "id": "s4",
+    "title": "compound",
+    "gradingPolicy": "all",
+    "questions": [
+     {
+      "examQuestionId": "q19",
+      "presentationType": "compound",
+      "text": "Compound q19",
+      "marks": 6,
+      "parts": [
+       {
+        "id": "pa",
+        "type": "multipleChoice",
+        "text": "part pa",
+        "marks": 2,
+        "options": [
+         {
+          "text": "A"
+         },
+         {
+          "text": "B"
+         }
+        ],
+        "answer": {
+         "correctOptionIndex": 0
+        }
+       },
+       {
+        "id": "pb",
+        "type": "trueFalse",
+        "text": "part pb",
+        "marks": 2,
+        "answer": {
+         "correct": false
+        }
+       },
+       {
+        "id": "pc",
+        "type": "shortAnswer",
+        "text": "part pc",
+        "marks": 2,
+        "answer": {
+         "text": "ok"
+        }
+       }
+      ]
+     },
+     {
+      "examQuestionId": "q20",
+      "presentationType": "compound",
+      "text": "Compound q20",
+      "marks": 9,
+      "parts": [
+       {
+        "id": "pd",
+        "type": "fillBlank",
+        "text": "part pd",
+        "wordBank": [
+         "x",
+         "y"
+        ],
+        "fields": [
+         {
+          "id": "f1",
+          "kind": "select",
+          "correct": "x"
+         },
+         {
+          "id": "f2",
+          "kind": "select",
+          "correct": "y"
+         }
+        ],
+        "answer": {
+         "mode": "exactSequence",
+         "values": [
+          "x",
+          "y"
+         ]
+        }
+       },
+       {
+        "id": "pe",
+        "type": "matching",
+        "text": "part pe",
+        "fields": [
+         {
+          "id": "m1",
+          "label": "L",
+          "kind": "select",
+          "options": [
+           {
+            "text": "R1"
+           },
+           {
+            "text": "R2"
+           }
+          ],
+          "correct": "R1"
+         }
+        ],
+        "answer": {
+         "text": "L=R1"
+        }
+       },
+       {
+        "id": "pf",
+        "type": "cliFill",
+        "text": "part pf",
+        "cli": "ip [[a]]",
+        "fields": [
+         {
+          "id": "a",
+          "correct": "route"
+         }
+        ]
+       }
+      ]
+     },
+     {
+      "examQuestionId": "q21",
+      "presentationType": "compound",
+      "text": "Compound q21",
+      "marks": 10,
+      "parts": [
+       {
+        "id": "pg",
+        "type": "multipleChoice",
+        "text": "part pg",
+        "marks": 4,
+        "options": [
+         {
+          "text": "A"
+         },
+         {
+          "text": "B"
+         }
+        ],
+        "answer": {
+         "correctOptionIndex": 1
+        }
+       },
+       {
+        "id": "ph",
+        "type": "shortAnswer",
+        "text": "part ph"
+       },
+       {
+        "id": "pi",
+        "type": "multiTrueFalse",
+        "text": "part pi",
+        "fields": [
+         {
+          "id": "r1",
+          "statement": "a",
+          "kind": "boolean",
+          "correct": true
+         },
+         {
+          "id": "r2",
+          "statement": "b",
+          "kind": "boolean",
+          "correct": false
+         }
+        ]
+       }
+      ]
+     }
+    ]
+   },
+   {
+    "id": "s5",
+    "title": "firstN-part",
+    "gradingPolicy": "firstNAnswered",
+    "requiredAnswers": 2,
+    "answerUnit": "part",
+    "maxMarks": 6,
+    "questions": [
+     {
+      "examQuestionId": "q22",
+      "presentationType": "compound",
+      "text": "Compound q22",
+      "marks": 9,
+      "parts": [
+       {
+        "id": "x1",
+        "type": "multipleChoice",
+        "text": "part x1",
+        "options": [
+         {
+          "text": "A"
+         },
+         {
+          "text": "B"
+         }
+        ],
+        "answer": {
+         "correctOptionIndex": 0
+        }
+       },
+       {
+        "id": "x2",
+        "type": "trueFalse",
+        "text": "part x2",
+        "answer": {
+         "correct": true
+        }
+       },
+       {
+        "id": "x3",
+        "type": "multipleChoice",
+        "text": "part x3",
+        "options": [
+         {
+          "text": "A"
+         },
+         {
+          "text": "B"
+         }
+        ],
+        "answer": {
+         "correctOptionIndex": 1
+        }
+       }
+      ]
+     }
+    ]
+   }
+  ]
+ },
+ "answers": {
+  "q1": {
+   "kind": "choice",
+   "index": 1
+  },
+  "q2": {
+   "kind": "choice",
+   "index": 1
+  },
+  "q3": {
+   "kind": "fields",
+   "values": {
+    "r1": "true",
+    "r2": "true",
+    "r3": "صحيح"
+   }
+  },
+  "q4": {
+   "kind": "text",
+   "value": " paris "
+  },
+  "q5": {
+   "kind": "text",
+   "value": "anything"
+  },
+  "q6": {
+   "kind": "sequence",
+   "values": [
+    "x",
+    "z"
+   ]
+  },
+  "q7": {
+   "kind": "fields",
+   "values": {
+    "w1": "a",
+    "w2": "c"
+   }
+  },
+  "q8": {
+   "kind": "fields",
+   "values": {
+    "m1": "80",
+    "m2": "22",
+    "m3": "22"
+   }
+  },
+  "q9": {
+   "kind": "sequence",
+   "values": [
+    "first",
+    "third",
+    "second"
+   ]
+  },
+  "q10": {
+   "kind": "fields",
+   "values": {
+    "t1": "2",
+    "t2": "2"
+   }
+  },
+  "q11": {
+   "kind": "fields",
+   "values": {
+    "c1": "Interface",
+    "c2": "10"
+   }
+  },
+  "q12": {
+   "kind": "table",
+   "values": [
+    "1",
+    "3"
+   ]
+  },
+  "q13": {
+   "kind": "choice",
+   "index": 0
+  },
+  "q14": {
+   "kind": "choice",
+   "index": 2
+  },
+  "q15": {
+   "kind": "choice",
+   "index": 1
+  },
+  "q16": {
+   "kind": "choice",
+   "index": 1
+  },
+  "q17": {
+   "kind": "choice",
+   "index": 0
+  },
+  "q18": {
+   "kind": "choice",
+   "index": 1
+  },
+  "q19": {
+   "kind": "compound",
+   "parts": {
+    "pa": {
+     "kind": "choice",
+     "index": 0
+    },
+    "pb": {
+     "kind": "choice",
+     "index": 1
+    },
+    "pc": {
+     "kind": "text",
+     "value": "no"
+    }
+   }
+  },
+  "q20": {
+   "kind": "compound",
+   "parts": {
+    "pd": {
+     "kind": "fields",
+     "values": {
+      "f1": "x",
+      "f2": "y"
+     }
+    },
+    "pe": {
+     "kind": "fields",
+     "values": {
+      "m1": "R1"
+     }
+    },
+    "pf": {
+     "kind": "fields",
+     "values": {
+      "a": "route"
+     }
+    }
+   }
+  },
+  "q21": {
+   "kind": "compound",
+   "parts": {
+    "pg": {
+     "kind": "choice",
+     "index": 1
+    },
+    "ph": {
+     "kind": "text",
+     "value": "essay"
+    },
+    "pi": {
+     "kind": "fields",
+     "values": {
+      "r1": "true",
+      "r2": "false"
+     }
+    }
+   }
+  },
+  "q22": {
+   "kind": "compound",
+   "parts": {
+    "x1": {
+     "kind": "choice",
+     "index": 0
+    },
+    "x2": {
+     "kind": "choice",
+     "index": 0
+    },
+    "x3": {
+     "kind": "choice",
+     "index": 1
+    }
+   }
+  }
+ },
+ "result": {
+  "score": 48,
+  "totalMarks": 68,
+  "percentage": 70.59,
+  "manualReviewMarks": 7,
+  "finalized": false,
+  "questions": [
+   {
+    "questionId": "q1",
+    "questionNumber": 1,
+    "sectionId": "s1",
+    "score": 2,
+    "maxMarks": 2,
+    "countedMaxMarks": 2,
+    "correct": true,
+    "manualReview": false,
+    "ignored": false,
+    "parts": null
+   },
+   {
+    "questionId": "q2",
+    "questionNumber": 2,
+    "sectionId": "s1",
+    "score": 0,
+    "maxMarks": 1,
+    "countedMaxMarks": 1,
+    "correct": false,
+    "manualReview": false,
+    "ignored": false,
+    "parts": null
+   },
+   {
+    "questionId": "q3",
+    "questionNumber": 3,
+    "sectionId": "s1",
+    "score": 2,
+    "maxMarks": 3,
+    "countedMaxMarks": 3,
+    "correct": false,
+    "manualReview": false,
+    "ignored": false,
+    "parts": {
+     "correct": 2,
+     "total": 3
+    }
+   },
+   {
+    "questionId": "q4",
+    "questionNumber": 4,
+    "sectionId": "s1",
+    "score": 2,
+    "maxMarks": 2,
+    "countedMaxMarks": 2,
+    "correct": true,
+    "manualReview": false,
+    "ignored": false,
+    "parts": null
+   },
+   {
+    "questionId": "q5",
+    "questionNumber": 5,
+    "sectionId": "s1",
+    "score": 0,
+    "maxMarks": 2,
+    "countedMaxMarks": 2,
+    "correct": false,
+    "manualReview": true,
+    "ignored": false,
+    "parts": null
+   },
+   {
+    "questionId": "q6",
+    "questionNumber": 6,
+    "sectionId": "s1",
+    "score": 1,
+    "maxMarks": 2,
+    "countedMaxMarks": 2,
+    "correct": false,
+    "manualReview": false,
+    "ignored": false,
+    "parts": {
+     "correct": 1,
+     "total": 2
+    }
+   },
+   {
+    "questionId": "q7",
+    "questionNumber": 7,
+    "sectionId": "s1",
+    "score": 2,
+    "maxMarks": 4,
+    "countedMaxMarks": 4,
+    "correct": false,
+    "manualReview": false,
+    "ignored": false,
+    "parts": {
+     "correct": 1,
+     "total": 2
+    }
+   },
+   {
+    "questionId": "q8",
+    "questionNumber": 8,
+    "sectionId": "s1",
+    "score": 2,
+    "maxMarks": 3,
+    "countedMaxMarks": 3,
+    "correct": false,
+    "manualReview": false,
+    "ignored": false,
+    "parts": {
+     "correct": 2,
+     "total": 3
+    }
+   },
+   {
+    "questionId": "q9",
+    "questionNumber": 9,
+    "sectionId": "s1",
+    "score": 1,
+    "maxMarks": 3,
+    "countedMaxMarks": 3,
+    "correct": false,
+    "manualReview": false,
+    "ignored": false,
+    "parts": {
+     "correct": 1,
+     "total": 3
+    }
+   },
+   {
+    "questionId": "q10",
+    "questionNumber": 10,
+    "sectionId": "s1",
+    "score": 2,
+    "maxMarks": 4,
+    "countedMaxMarks": 4,
+    "correct": false,
+    "manualReview": false,
+    "ignored": false,
+    "parts": {
+     "correct": 1,
+     "total": 2
+    }
+   },
+   {
+    "questionId": "q11",
+    "questionNumber": 11,
+    "sectionId": "s1",
+    "score": 2,
+    "maxMarks": 2,
+    "countedMaxMarks": 2,
+    "correct": true,
+    "manualReview": false,
+    "ignored": false,
+    "parts": {
+     "correct": 2,
+     "total": 2
+    }
+   },
+   {
+    "questionId": "q12",
+    "questionNumber": 12,
+    "sectionId": "s1",
+    "score": 1,
+    "maxMarks": 2,
+    "countedMaxMarks": 2,
+    "correct": false,
+    "manualReview": false,
+    "ignored": false,
+    "parts": {
+     "correct": 1,
+     "total": 2
+    }
+   },
+   {
+    "questionId": "q13",
+    "questionNumber": 13,
+    "sectionId": "s2",
+    "score": 2,
+    "maxMarks": 2,
+    "countedMaxMarks": 2,
+    "correct": true,
+    "manualReview": false,
+    "ignored": false,
+    "parts": null
+   },
+   {
+    "questionId": "q14",
+    "questionNumber": 14,
+    "sectionId": "s2",
+    "score": 2,
+    "maxMarks": 2,
+    "countedMaxMarks": 2,
+    "correct": true,
+    "manualReview": false,
+    "ignored": false,
+    "parts": null
+   },
+   {
+    "questionId": "q15",
+    "questionNumber": 15,
+    "sectionId": "s2",
+    "score": 2,
+    "maxMarks": 2,
+    "countedMaxMarks": 2,
+    "correct": true,
+    "manualReview": false,
+    "ignored": false,
+    "parts": null
+   },
+   {
+    "questionId": "q16",
+    "questionNumber": 16,
+    "sectionId": "s3",
+    "score": 2,
+    "maxMarks": 2,
+    "countedMaxMarks": 2,
+    "correct": true,
+    "manualReview": false,
+    "ignored": false,
+    "parts": null
+   },
+   {
+    "questionId": "q17",
+    "questionNumber": 17,
+    "sectionId": "s3",
+    "score": 0,
+    "maxMarks": 2,
+    "countedMaxMarks": 2,
+    "correct": false,
+    "manualReview": false,
+    "ignored": false,
+    "parts": null
+   },
+   {
+    "questionId": "q18",
+    "questionNumber": 18,
+    "sectionId": "s3",
+    "score": 0,
+    "maxMarks": 2,
+    "countedMaxMarks": 0,
+    "correct": true,
+    "manualReview": false,
+    "ignored": true,
+    "parts": null
+   },
+   {
+    "questionId": "q19",
+    "questionNumber": 19,
+    "sectionId": "s4",
+    "score": 4,
+    "maxMarks": 6,
+    "countedMaxMarks": 6,
+    "correct": false,
+    "manualReview": true,
+    "ignored": false,
+    "parts": [
+     {
+      "partId": "pa",
+      "label": "أ",
+      "score": 2,
+      "maxMarks": 2,
+      "correct": true,
+      "manualReview": false
+     },
+     {
+      "partId": "pb",
+      "label": "ب",
+      "score": 2,
+      "maxMarks": 2,
+      "correct": true,
+      "manualReview": false
+     },
+     {
+      "partId": "pc",
+      "label": "ج",
+      "score": 0,
+      "maxMarks": 2,
+      "correct": false,
+      "manualReview": true
+     }
+    ]
+   },
+   {
+    "questionId": "q20",
+    "questionNumber": 20,
+    "sectionId": "s4",
+    "score": 9,
+    "maxMarks": 9,
+    "countedMaxMarks": 9,
+    "correct": true,
+    "manualReview": false,
+    "ignored": false,
+    "parts": [
+     {
+      "partId": "pd",
+      "label": "أ",
+      "score": 3,
+      "maxMarks": 3,
+      "correct": true,
+      "manualReview": false
+     },
+     {
+      "partId": "pe",
+      "label": "ب",
+      "score": 3,
+      "maxMarks": 3,
+      "correct": true,
+      "manualReview": false
+     },
+     {
+      "partId": "pf",
+      "label": "ج",
+      "score": 3,
+      "maxMarks": 3,
+      "correct": true,
+      "manualReview": false
+     }
+    ]
+   },
+   {
+    "questionId": "q21",
+    "questionNumber": 21,
+    "sectionId": "s4",
+    "score": 7,
+    "maxMarks": 10,
+    "countedMaxMarks": 10,
+    "correct": false,
+    "manualReview": true,
+    "ignored": false,
+    "parts": [
+     {
+      "partId": "pg",
+      "label": "أ",
+      "score": 4,
+      "maxMarks": 4,
+      "correct": true,
+      "manualReview": false
+     },
+     {
+      "partId": "ph",
+      "label": "ب",
+      "score": 0,
+      "maxMarks": 3,
+      "correct": false,
+      "manualReview": true
+     },
+     {
+      "partId": "pi",
+      "label": "ج",
+      "score": 3,
+      "maxMarks": 3,
+      "correct": true,
+      "manualReview": false
+     }
+    ]
+   },
+   {
+    "questionId": "q22",
+    "questionNumber": 22,
+    "sectionId": "s5",
+    "score": 6,
+    "maxMarks": 9,
+    "countedMaxMarks": 6,
+    "correct": true,
+    "manualReview": false,
+    "ignored": false,
+    "parts": [
+     {
+      "partId": "x1",
+      "label": "أ",
+      "score": 3,
+      "maxMarks": 3,
+      "correct": true,
+      "manualReview": false,
+      "counted": true,
+      "ignored": false
+     },
+     {
+      "partId": "x2",
+      "label": "ب",
+      "score": 3,
+      "maxMarks": 3,
+      "correct": true,
+      "manualReview": false,
+      "counted": true,
+      "ignored": false
+     },
+     {
+      "partId": "x3",
+      "label": "ج",
+      "score": 3,
+      "maxMarks": 3,
+      "correct": true,
+      "manualReview": false,
+      "counted": false,
+      "ignored": true
+     }
+    ]
+   }
+  ],
+  "sections": [
+   {
+    "id": "s1",
+    "title": "all",
+    "gradingPolicy": "all",
+    "answerUnit": "question",
+    "requiredAnswers": null,
+    "maxMarks": 30,
+    "score": 17,
+    "questionIds": [
+     "q1",
+     "q2",
+     "q3",
+     "q4",
+     "q5",
+     "q6",
+     "q7",
+     "q8",
+     "q9",
+     "q10",
+     "q11",
+     "q12"
+    ]
+   },
+   {
+    "id": "s2",
+    "title": "cap",
+    "gradingPolicy": "capScore",
+    "answerUnit": "question",
+    "requiredAnswers": null,
+    "maxMarks": 3,
+    "score": 3,
+    "questionIds": [
+     "q13",
+     "q14",
+     "q15"
+    ]
+   },
+   {
+    "id": "s3",
+    "title": "firstN-q",
+    "gradingPolicy": "firstNAnswered",
+    "answerUnit": "question",
+    "requiredAnswers": 2,
+    "maxMarks": 4,
+    "score": 2,
+    "questionIds": [
+     "q16",
+     "q17",
+     "q18"
+    ]
+   },
+   {
+    "id": "s4",
+    "title": "compound",
+    "gradingPolicy": "all",
+    "answerUnit": "question",
+    "requiredAnswers": null,
+    "maxMarks": 25,
+    "score": 20,
+    "questionIds": [
+     "q19",
+     "q20",
+     "q21"
+    ]
+   },
+   {
+    "id": "s5",
+    "title": "firstN-part",
+    "gradingPolicy": "firstNAnswered",
+    "answerUnit": "part",
+    "requiredAnswers": 2,
+    "maxMarks": 6,
+    "score": 6,
+    "questionIds": [
+     "q22"
+    ]
+   }
+  ]
+ },
+ "empty": {
+  "score": 0,
+  "totalMarks": 68,
+  "percentage": 0,
+  "manualReviewMarks": 32,
+  "finalized": false,
+  "questions": [
+   {
+    "questionId": "q1",
+    "questionNumber": 1,
+    "sectionId": "s1",
+    "score": 0,
+    "maxMarks": 2,
+    "countedMaxMarks": 2,
+    "correct": false,
+    "manualReview": false,
+    "ignored": false,
+    "parts": null
+   },
+   {
+    "questionId": "q2",
+    "questionNumber": 2,
+    "sectionId": "s1",
+    "score": 0,
+    "maxMarks": 1,
+    "countedMaxMarks": 1,
+    "correct": false,
+    "manualReview": false,
+    "ignored": false,
+    "parts": null
+   },
+   {
+    "questionId": "q3",
+    "questionNumber": 3,
+    "sectionId": "s1",
+    "score": 0,
+    "maxMarks": 3,
+    "countedMaxMarks": 3,
+    "correct": false,
+    "manualReview": true,
+    "ignored": false,
+    "parts": null
+   },
+   {
+    "questionId": "q4",
+    "questionNumber": 4,
+    "sectionId": "s1",
+    "score": 0,
+    "maxMarks": 2,
+    "countedMaxMarks": 2,
+    "correct": false,
+    "manualReview": true,
+    "ignored": false,
+    "parts": null
+   },
+   {
+    "questionId": "q5",
+    "questionNumber": 5,
+    "sectionId": "s1",
+    "score": 0,
+    "maxMarks": 2,
+    "countedMaxMarks": 2,
+    "correct": false,
+    "manualReview": true,
+    "ignored": false,
+    "parts": null
+   },
+   {
+    "questionId": "q6",
+    "questionNumber": 6,
+    "sectionId": "s1",
+    "score": 0,
+    "maxMarks": 2,
+    "countedMaxMarks": 2,
+    "correct": false,
+    "manualReview": false,
+    "ignored": false,
+    "parts": {
+     "correct": 0,
+     "total": 2
+    }
+   },
+   {
+    "questionId": "q7",
+    "questionNumber": 7,
+    "sectionId": "s1",
+    "score": 0,
+    "maxMarks": 4,
+    "countedMaxMarks": 4,
+    "correct": false,
+    "manualReview": false,
+    "ignored": false,
+    "parts": {
+     "correct": 0,
+     "total": 2
+    }
+   },
+   {
+    "questionId": "q8",
+    "questionNumber": 8,
+    "sectionId": "s1",
+    "score": 0,
+    "maxMarks": 3,
+    "countedMaxMarks": 3,
+    "correct": false,
+    "manualReview": true,
+    "ignored": false,
+    "parts": null
+   },
+   {
+    "questionId": "q9",
+    "questionNumber": 9,
+    "sectionId": "s1",
+    "score": 0,
+    "maxMarks": 3,
+    "countedMaxMarks": 3,
+    "correct": false,
+    "manualReview": false,
+    "ignored": false,
+    "parts": {
+     "correct": 0,
+     "total": 3
+    }
+   },
+   {
+    "questionId": "q10",
+    "questionNumber": 10,
+    "sectionId": "s1",
+    "score": 0,
+    "maxMarks": 4,
+    "countedMaxMarks": 4,
+    "correct": false,
+    "manualReview": true,
+    "ignored": false,
+    "parts": null
+   },
+   {
+    "questionId": "q11",
+    "questionNumber": 11,
+    "sectionId": "s1",
+    "score": 0,
+    "maxMarks": 2,
+    "countedMaxMarks": 2,
+    "correct": false,
+    "manualReview": true,
+    "ignored": false,
+    "parts": null
+   },
+   {
+    "questionId": "q12",
+    "questionNumber": 12,
+    "sectionId": "s1",
+    "score": 0,
+    "maxMarks": 2,
+    "countedMaxMarks": 2,
+    "correct": false,
+    "manualReview": true,
+    "ignored": false,
+    "parts": null
+   },
+   {
+    "questionId": "q13",
+    "questionNumber": 13,
+    "sectionId": "s2",
+    "score": 0,
+    "maxMarks": 2,
+    "countedMaxMarks": 2,
+    "correct": false,
+    "manualReview": false,
+    "ignored": false,
+    "parts": null
+   },
+   {
+    "questionId": "q14",
+    "questionNumber": 14,
+    "sectionId": "s2",
+    "score": 0,
+    "maxMarks": 2,
+    "countedMaxMarks": 2,
+    "correct": false,
+    "manualReview": false,
+    "ignored": false,
+    "parts": null
+   },
+   {
+    "questionId": "q15",
+    "questionNumber": 15,
+    "sectionId": "s2",
+    "score": 0,
+    "maxMarks": 2,
+    "countedMaxMarks": 2,
+    "correct": false,
+    "manualReview": false,
+    "ignored": false,
+    "parts": null
+   },
+   {
+    "questionId": "q16",
+    "questionNumber": 16,
+    "sectionId": "s3",
+    "score": 0,
+    "maxMarks": 2,
+    "countedMaxMarks": 0,
+    "correct": false,
+    "manualReview": false,
+    "ignored": false,
+    "parts": null
+   },
+   {
+    "questionId": "q17",
+    "questionNumber": 17,
+    "sectionId": "s3",
+    "score": 0,
+    "maxMarks": 2,
+    "countedMaxMarks": 0,
+    "correct": false,
+    "manualReview": false,
+    "ignored": false,
+    "parts": null
+   },
+   {
+    "questionId": "q18",
+    "questionNumber": 18,
+    "sectionId": "s3",
+    "score": 0,
+    "maxMarks": 2,
+    "countedMaxMarks": 0,
+    "correct": false,
+    "manualReview": false,
+    "ignored": false,
+    "parts": null
+   },
+   {
+    "questionId": "q19",
+    "questionNumber": 19,
+    "sectionId": "s4",
+    "score": 0,
+    "maxMarks": 6,
+    "countedMaxMarks": 6,
+    "correct": false,
+    "manualReview": true,
+    "ignored": false,
+    "parts": [
+     {
+      "partId": "pa",
+      "label": "أ",
+      "score": 0,
+      "maxMarks": 2,
+      "correct": false,
+      "manualReview": false
+     },
+     {
+      "partId": "pb",
+      "label": "ب",
+      "score": 0,
+      "maxMarks": 2,
+      "correct": false,
+      "manualReview": false
+     },
+     {
+      "partId": "pc",
+      "label": "ج",
+      "score": 0,
+      "maxMarks": 2,
+      "correct": false,
+      "manualReview": true
+     }
+    ]
+   },
+   {
+    "questionId": "q20",
+    "questionNumber": 20,
+    "sectionId": "s4",
+    "score": 0,
+    "maxMarks": 9,
+    "countedMaxMarks": 9,
+    "correct": false,
+    "manualReview": true,
+    "ignored": false,
+    "parts": [
+     {
+      "partId": "pd",
+      "label": "أ",
+      "score": 0,
+      "maxMarks": 3,
+      "correct": false,
+      "manualReview": false
+     },
+     {
+      "partId": "pe",
+      "label": "ب",
+      "score": 0,
+      "maxMarks": 3,
+      "correct": false,
+      "manualReview": true
+     },
+     {
+      "partId": "pf",
+      "label": "ج",
+      "score": 0,
+      "maxMarks": 3,
+      "correct": false,
+      "manualReview": true
+     }
+    ]
+   },
+   {
+    "questionId": "q21",
+    "questionNumber": 21,
+    "sectionId": "s4",
+    "score": 0,
+    "maxMarks": 10,
+    "countedMaxMarks": 10,
+    "correct": false,
+    "manualReview": true,
+    "ignored": false,
+    "parts": [
+     {
+      "partId": "pg",
+      "label": "أ",
+      "score": 0,
+      "maxMarks": 4,
+      "correct": false,
+      "manualReview": false
+     },
+     {
+      "partId": "ph",
+      "label": "ب",
+      "score": 0,
+      "maxMarks": 3,
+      "correct": false,
+      "manualReview": true
+     },
+     {
+      "partId": "pi",
+      "label": "ج",
+      "score": 0,
+      "maxMarks": 3,
+      "correct": false,
+      "manualReview": true
+     }
+    ]
+   },
+   {
+    "questionId": "q22",
+    "questionNumber": 22,
+    "sectionId": "s5",
+    "score": 0,
+    "maxMarks": 9,
+    "countedMaxMarks": 0,
+    "correct": false,
+    "manualReview": false,
+    "ignored": false,
+    "parts": [
+     {
+      "partId": "x1",
+      "label": "أ",
+      "score": 0,
+      "maxMarks": 3,
+      "correct": false,
+      "manualReview": false,
+      "counted": false,
+      "ignored": false
+     },
+     {
+      "partId": "x2",
+      "label": "ب",
+      "score": 0,
+      "maxMarks": 3,
+      "correct": false,
+      "manualReview": false,
+      "counted": false,
+      "ignored": false
+     },
+     {
+      "partId": "x3",
+      "label": "ج",
+      "score": 0,
+      "maxMarks": 3,
+      "correct": false,
+      "manualReview": false,
+      "counted": false,
+      "ignored": false
+     }
+    ]
+   }
+  ],
+  "sections": [
+   {
+    "id": "s1",
+    "title": "all",
+    "gradingPolicy": "all",
+    "answerUnit": "question",
+    "requiredAnswers": null,
+    "maxMarks": 30,
+    "score": 0,
+    "questionIds": [
+     "q1",
+     "q2",
+     "q3",
+     "q4",
+     "q5",
+     "q6",
+     "q7",
+     "q8",
+     "q9",
+     "q10",
+     "q11",
+     "q12"
+    ]
+   },
+   {
+    "id": "s2",
+    "title": "cap",
+    "gradingPolicy": "capScore",
+    "answerUnit": "question",
+    "requiredAnswers": null,
+    "maxMarks": 3,
+    "score": 0,
+    "questionIds": [
+     "q13",
+     "q14",
+     "q15"
+    ]
+   },
+   {
+    "id": "s3",
+    "title": "firstN-q",
+    "gradingPolicy": "firstNAnswered",
+    "answerUnit": "question",
+    "requiredAnswers": 2,
+    "maxMarks": 4,
+    "score": 0,
+    "questionIds": [
+     "q16",
+     "q17",
+     "q18"
+    ]
+   },
+   {
+    "id": "s4",
+    "title": "compound",
+    "gradingPolicy": "all",
+    "answerUnit": "question",
+    "requiredAnswers": null,
+    "maxMarks": 25,
+    "score": 0,
+    "questionIds": [
+     "q19",
+     "q20",
+     "q21"
+    ]
+   },
+   {
+    "id": "s5",
+    "title": "firstN-part",
+    "gradingPolicy": "firstNAnswered",
+    "answerUnit": "part",
+    "requiredAnswers": 2,
+    "maxMarks": 6,
+    "score": 0,
+    "questionIds": [
+     "q22"
+    ]
+   }
+  ]
+ },
+ "partial": {
+  "score": 2,
+  "totalMarks": 68,
+  "percentage": 2.94,
+  "manualReviewMarks": 32,
+  "finalized": false,
+  "questions": [
+   {
+    "questionId": "q1",
+    "questionNumber": 1,
+    "sectionId": "s1",
+    "score": 0,
+    "maxMarks": 2,
+    "countedMaxMarks": 2,
+    "correct": false,
+    "manualReview": false,
+    "ignored": false,
+    "parts": null
+   },
+   {
+    "questionId": "q2",
+    "questionNumber": 2,
+    "sectionId": "s1",
+    "score": 0,
+    "maxMarks": 1,
+    "countedMaxMarks": 1,
+    "correct": false,
+    "manualReview": false,
+    "ignored": false,
+    "parts": null
+   },
+   {
+    "questionId": "q3",
+    "questionNumber": 3,
+    "sectionId": "s1",
+    "score": 0,
+    "maxMarks": 3,
+    "countedMaxMarks": 3,
+    "correct": false,
+    "manualReview": true,
+    "ignored": false,
+    "parts": null
+   },
+   {
+    "questionId": "q4",
+    "questionNumber": 4,
+    "sectionId": "s1",
+    "score": 0,
+    "maxMarks": 2,
+    "countedMaxMarks": 2,
+    "correct": false,
+    "manualReview": true,
+    "ignored": false,
+    "parts": null
+   },
+   {
+    "questionId": "q5",
+    "questionNumber": 5,
+    "sectionId": "s1",
+    "score": 0,
+    "maxMarks": 2,
+    "countedMaxMarks": 2,
+    "correct": false,
+    "manualReview": true,
+    "ignored": false,
+    "parts": null
+   },
+   {
+    "questionId": "q6",
+    "questionNumber": 6,
+    "sectionId": "s1",
+    "score": 0,
+    "maxMarks": 2,
+    "countedMaxMarks": 2,
+    "correct": false,
+    "manualReview": false,
+    "ignored": false,
+    "parts": {
+     "correct": 0,
+     "total": 2
+    }
+   },
+   {
+    "questionId": "q7",
+    "questionNumber": 7,
+    "sectionId": "s1",
+    "score": 0,
+    "maxMarks": 4,
+    "countedMaxMarks": 4,
+    "correct": false,
+    "manualReview": false,
+    "ignored": false,
+    "parts": {
+     "correct": 0,
+     "total": 2
+    }
+   },
+   {
+    "questionId": "q8",
+    "questionNumber": 8,
+    "sectionId": "s1",
+    "score": 0,
+    "maxMarks": 3,
+    "countedMaxMarks": 3,
+    "correct": false,
+    "manualReview": true,
+    "ignored": false,
+    "parts": null
+   },
+   {
+    "questionId": "q9",
+    "questionNumber": 9,
+    "sectionId": "s1",
+    "score": 0,
+    "maxMarks": 3,
+    "countedMaxMarks": 3,
+    "correct": false,
+    "manualReview": false,
+    "ignored": false,
+    "parts": {
+     "correct": 0,
+     "total": 3
+    }
+   },
+   {
+    "questionId": "q10",
+    "questionNumber": 10,
+    "sectionId": "s1",
+    "score": 0,
+    "maxMarks": 4,
+    "countedMaxMarks": 4,
+    "correct": false,
+    "manualReview": true,
+    "ignored": false,
+    "parts": null
+   },
+   {
+    "questionId": "q11",
+    "questionNumber": 11,
+    "sectionId": "s1",
+    "score": 0,
+    "maxMarks": 2,
+    "countedMaxMarks": 2,
+    "correct": false,
+    "manualReview": true,
+    "ignored": false,
+    "parts": null
+   },
+   {
+    "questionId": "q12",
+    "questionNumber": 12,
+    "sectionId": "s1",
+    "score": 0,
+    "maxMarks": 2,
+    "countedMaxMarks": 2,
+    "correct": false,
+    "manualReview": true,
+    "ignored": false,
+    "parts": null
+   },
+   {
+    "questionId": "q13",
+    "questionNumber": 13,
+    "sectionId": "s2",
+    "score": 0,
+    "maxMarks": 2,
+    "countedMaxMarks": 2,
+    "correct": false,
+    "manualReview": false,
+    "ignored": false,
+    "parts": null
+   },
+   {
+    "questionId": "q14",
+    "questionNumber": 14,
+    "sectionId": "s2",
+    "score": 0,
+    "maxMarks": 2,
+    "countedMaxMarks": 2,
+    "correct": false,
+    "manualReview": false,
+    "ignored": false,
+    "parts": null
+   },
+   {
+    "questionId": "q15",
+    "questionNumber": 15,
+    "sectionId": "s2",
+    "score": 0,
+    "maxMarks": 2,
+    "countedMaxMarks": 2,
+    "correct": false,
+    "manualReview": false,
+    "ignored": false,
+    "parts": null
+   },
+   {
+    "questionId": "q16",
+    "questionNumber": 16,
+    "sectionId": "s3",
+    "score": 0,
+    "maxMarks": 2,
+    "countedMaxMarks": 0,
+    "correct": false,
+    "manualReview": false,
+    "ignored": false,
+    "parts": null
+   },
+   {
+    "questionId": "q17",
+    "questionNumber": 17,
+    "sectionId": "s3",
+    "score": 0,
+    "maxMarks": 2,
+    "countedMaxMarks": 0,
+    "correct": false,
+    "manualReview": false,
+    "ignored": false,
+    "parts": null
+   },
+   {
+    "questionId": "q18",
+    "questionNumber": 18,
+    "sectionId": "s3",
+    "score": 0,
+    "maxMarks": 2,
+    "countedMaxMarks": 0,
+    "correct": false,
+    "manualReview": false,
+    "ignored": false,
+    "parts": null
+   },
+   {
+    "questionId": "q19",
+    "questionNumber": 19,
+    "sectionId": "s4",
+    "score": 2,
+    "maxMarks": 6,
+    "countedMaxMarks": 6,
+    "correct": false,
+    "manualReview": true,
+    "ignored": false,
+    "parts": [
+     {
+      "partId": "pa",
+      "label": "أ",
+      "score": 2,
+      "maxMarks": 2,
+      "correct": true,
+      "manualReview": false
+     },
+     {
+      "partId": "pb",
+      "label": "ب",
+      "score": 0,
+      "maxMarks": 2,
+      "correct": false,
+      "manualReview": false
+     },
+     {
+      "partId": "pc",
+      "label": "ج",
+      "score": 0,
+      "maxMarks": 2,
+      "correct": false,
+      "manualReview": true
+     }
+    ]
+   },
+   {
+    "questionId": "q20",
+    "questionNumber": 20,
+    "sectionId": "s4",
+    "score": 0,
+    "maxMarks": 9,
+    "countedMaxMarks": 9,
+    "correct": false,
+    "manualReview": true,
+    "ignored": false,
+    "parts": [
+     {
+      "partId": "pd",
+      "label": "أ",
+      "score": 0,
+      "maxMarks": 3,
+      "correct": false,
+      "manualReview": false
+     },
+     {
+      "partId": "pe",
+      "label": "ب",
+      "score": 0,
+      "maxMarks": 3,
+      "correct": false,
+      "manualReview": true
+     },
+     {
+      "partId": "pf",
+      "label": "ج",
+      "score": 0,
+      "maxMarks": 3,
+      "correct": false,
+      "manualReview": true
+     }
+    ]
+   },
+   {
+    "questionId": "q21",
+    "questionNumber": 21,
+    "sectionId": "s4",
+    "score": 0,
+    "maxMarks": 10,
+    "countedMaxMarks": 10,
+    "correct": false,
+    "manualReview": true,
+    "ignored": false,
+    "parts": [
+     {
+      "partId": "pg",
+      "label": "أ",
+      "score": 0,
+      "maxMarks": 4,
+      "correct": false,
+      "manualReview": false
+     },
+     {
+      "partId": "ph",
+      "label": "ب",
+      "score": 0,
+      "maxMarks": 3,
+      "correct": false,
+      "manualReview": true
+     },
+     {
+      "partId": "pi",
+      "label": "ج",
+      "score": 0,
+      "maxMarks": 3,
+      "correct": false,
+      "manualReview": true
+     }
+    ]
+   },
+   {
+    "questionId": "q22",
+    "questionNumber": 22,
+    "sectionId": "s5",
+    "score": 0,
+    "maxMarks": 9,
+    "countedMaxMarks": 0,
+    "correct": false,
+    "manualReview": false,
+    "ignored": false,
+    "parts": [
+     {
+      "partId": "x1",
+      "label": "أ",
+      "score": 0,
+      "maxMarks": 3,
+      "correct": false,
+      "manualReview": false,
+      "counted": false,
+      "ignored": false
+     },
+     {
+      "partId": "x2",
+      "label": "ب",
+      "score": 0,
+      "maxMarks": 3,
+      "correct": false,
+      "manualReview": false,
+      "counted": false,
+      "ignored": false
+     },
+     {
+      "partId": "x3",
+      "label": "ج",
+      "score": 0,
+      "maxMarks": 3,
+      "correct": false,
+      "manualReview": false,
+      "counted": false,
+      "ignored": false
+     }
+    ]
+   }
+  ],
+  "sections": [
+   {
+    "id": "s1",
+    "title": "all",
+    "gradingPolicy": "all",
+    "answerUnit": "question",
+    "requiredAnswers": null,
+    "maxMarks": 30,
+    "score": 0,
+    "questionIds": [
+     "q1",
+     "q2",
+     "q3",
+     "q4",
+     "q5",
+     "q6",
+     "q7",
+     "q8",
+     "q9",
+     "q10",
+     "q11",
+     "q12"
+    ]
+   },
+   {
+    "id": "s2",
+    "title": "cap",
+    "gradingPolicy": "capScore",
+    "answerUnit": "question",
+    "requiredAnswers": null,
+    "maxMarks": 3,
+    "score": 0,
+    "questionIds": [
+     "q13",
+     "q14",
+     "q15"
+    ]
+   },
+   {
+    "id": "s3",
+    "title": "firstN-q",
+    "gradingPolicy": "firstNAnswered",
+    "answerUnit": "question",
+    "requiredAnswers": 2,
+    "maxMarks": 4,
+    "score": 0,
+    "questionIds": [
+     "q16",
+     "q17",
+     "q18"
+    ]
+   },
+   {
+    "id": "s4",
+    "title": "compound",
+    "gradingPolicy": "all",
+    "answerUnit": "question",
+    "requiredAnswers": null,
+    "maxMarks": 25,
+    "score": 2,
+    "questionIds": [
+     "q19",
+     "q20",
+     "q21"
+    ]
+   },
+   {
+    "id": "s5",
+    "title": "firstN-part",
+    "gradingPolicy": "firstNAnswered",
+    "answerUnit": "part",
+    "requiredAnswers": 2,
+    "maxMarks": 6,
+    "score": 0,
+    "questionIds": [
+     "q22"
+    ]
+   }
+  ]
+ },
+ "legacyFlat": {
+  "examId": "LEGACY-16A",
+  "title": "legacy",
+  "questions": [
+   {
+    "id": 1,
+    "type": "multipleChoice",
+    "text": "Q1",
+    "marks": 2,
+    "options": [
+     {
+      "text": "A"
+     },
+     {
+      "text": "B"
+     }
+    ],
+    "answer": {
+     "correctOptionIndex": 1
+    }
+   },
+   {
+    "id": 2,
+    "type": "open",
+    "text": "Q2",
+    "marks": 3,
+    "answer": {
+     "text": "Cairo"
+    }
+   },
+   {
+    "id": 3,
+    "text": "| Item | Answer |\n|---|---|\n| A | |\n| B | |",
+    "marks": 2,
+    "answer": {
+     "text": "A=1;B=2"
+    }
+   },
+   {
+    "id": 4,
+    "type": "sequence",
+    "text": "Q4",
+    "marks": 2,
+    "answer": {
+     "mode": "sequence",
+     "values": [
+      "1",
+      "2"
+     ]
+    }
+   }
+  ]
+ },
+ "legacyAnswers": {
+  "1": {
+   "kind": "choice",
+   "index": 1
+  },
+  "2": {
+   "kind": "text",
+   "value": "cairo"
+  },
+  "3": {
+   "kind": "table",
+   "values": [
+    "1",
+    "2"
+   ]
+  },
+  "4": {
+   "kind": "sequence",
+   "values": [
+    "1",
+    "3"
+   ]
+  }
+ },
+ "legacyResult": {
+  "score": 8,
+  "totalMarks": 9,
+  "percentage": 88.89,
+  "manualReviewMarks": 0,
+  "finalized": true,
+  "questions": [
+   {
+    "questionId": "1",
+    "questionNumber": 1,
+    "sectionId": "__default__",
+    "score": 2,
+    "maxMarks": 2,
+    "countedMaxMarks": 2,
+    "correct": true,
+    "manualReview": false,
+    "ignored": false,
+    "parts": null
+   },
+   {
+    "questionId": "2",
+    "questionNumber": 2,
+    "sectionId": "__default__",
+    "score": 3,
+    "maxMarks": 3,
+    "countedMaxMarks": 3,
+    "correct": true,
+    "manualReview": false,
+    "ignored": false,
+    "parts": null
+   },
+   {
+    "questionId": "3",
+    "questionNumber": 3,
+    "sectionId": "__default__",
+    "score": 2,
+    "maxMarks": 2,
+    "countedMaxMarks": 2,
+    "correct": true,
+    "manualReview": false,
+    "ignored": false,
+    "parts": {
+     "correct": 2,
+     "total": 2
+    }
+   },
+   {
+    "questionId": "4",
+    "questionNumber": 4,
+    "sectionId": "__default__",
+    "score": 1,
+    "maxMarks": 2,
+    "countedMaxMarks": 2,
+    "correct": false,
+    "manualReview": false,
+    "ignored": false,
+    "parts": {
+     "correct": 1,
+     "total": 2
+    }
+   }
+  ],
+  "sections": [
+   {
+    "id": "__default__",
+    "title": "",
+    "gradingPolicy": "all",
+    "answerUnit": "question",
+    "requiredAnswers": null,
+    "maxMarks": 9,
+    "score": 8,
+    "questionIds": [
+     "1",
+     "2",
+     "3",
+     "4"
+    ]
+   }
+  ]
+ },
+ "singles": [
+  {
+   "name": "mcq-bad-index",
+   "result": {
+    "score": 0,
+    "maxMarks": 2,
+    "correct": false,
+    "manualReview": false
+   }
+  },
+  {
+   "name": "mcq-no-response",
+   "result": {
+    "score": 0,
+    "maxMarks": 2,
+    "correct": false,
+    "manualReview": false
+   }
+  },
+  {
+   "name": "tf-options-stored",
+   "result": {
+    "score": 1,
+    "maxMarks": 1,
+    "correct": true,
+    "manualReview": false
+   }
+  },
+  {
+   "name": "sa-no-key-empty",
+   "result": {
+    "score": 0,
+    "maxMarks": 2,
+    "correct": false,
+    "manualReview": true
+   }
+  },
+  {
+   "name": "fields-no-key",
+   "result": {
+    "score": 0,
+    "manualReview": true,
+    "maxMarks": 2,
+    "correct": false
+   }
+  },
+  {
+   "name": "choice-on-unknown-type-legacy",
+   "result": {
+    "score": 2,
+    "maxMarks": 2,
+    "correct": true,
+    "manualReview": false
+   }
+  }
+ ]
+}

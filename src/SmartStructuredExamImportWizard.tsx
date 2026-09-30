@@ -2,7 +2,8 @@ import { useCallback, useEffect, useId, useMemo, useRef, useState } from "react"
 import useFocusTrap from "./ui/useFocusTrap";
 import useBodyScrollLock from "./ui/useBodyScrollLock";
 import type { StructuredExam, QuestionBody } from "./examTypes";
-import { QUESTION_TYPE_LABELS, GRADING_POLICY_LABELS, type GradingPolicy } from "./examTypes";
+import { GRADING_POLICY_LABELS, type GradingPolicy } from "./examTypes";
+import { questionTypeLabel } from "./questionTypeCatalog";
 import { importStructuredExam } from "./structuredExamHtmlParser";
 import { MAX_IMPORT_BYTES } from "./structuredExamImport";
 import { validateStructuredExam, type StructuredIssue } from "./examQuality";
@@ -274,7 +275,7 @@ export default function SmartStructuredExamImportWizard({ token, onClose, onOpen
                   <label className="si-check"><input type="checkbox" checked={!q.excluded} onChange={() => toggleDetected(q.importedQuestionId)} aria-label={"تضمين السؤال من الصفحة " + q.pageNumbers.join("،")} /> تضمين</label>
                   <div className="si-detected-main">
                     <span className="si-badge">صفحة {q.pageNumbers.join("،") || "—"}</span>
-                    <span className="si-badge">{q.presentationType ? QUESTION_TYPE_LABELS[q.presentationType as keyof typeof QUESTION_TYPE_LABELS] || q.presentationType : "غير محدد"}</span>
+                    <span className="si-badge">{q.presentationType ? questionTypeLabel(q.presentationType) || q.presentationType : "غير محدد"}</span>
                     <p className="si-detected-text">{q.text}</p>
                     {q.options?.length > 0 && <p className="sb-hint">خيارات: {q.options.map(o => o.text).join(" · ")}</p>}
                     {q.hasVisibleAnswer && q.answerText && <p className="sb-hint">إجابة ظاهرة في المصدر: {q.answerText}</p>}
@@ -404,7 +405,7 @@ function ProposalCard({ p, exam, onAccept, onReject }: { p: StructuredAiProposal
   return (
     <li className={"si-proposal si-status-" + p.status}>
       <div className="si-proposal-head">
-        <strong>{p.partId ? "بند " + p.partId : "سؤال"} — {QUESTION_TYPE_LABELS[p.presentationType as keyof typeof QUESTION_TYPE_LABELS] || p.presentationType}</strong>
+        <strong>{p.partId ? "بند " + p.partId : "سؤال"} — {questionTypeLabel(p.presentationType) || p.presentationType}</strong>
         <span className="si-status-badge">{badge[p.status] || p.status}</span>
       </div>
       <p className="sb-hint">{node ? String((node as { text?: string }).text || "") : ""}</p>

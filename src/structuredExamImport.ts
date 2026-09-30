@@ -11,6 +11,8 @@
 
 import type { StructuredExam } from "./examTypes";
 import { genId } from "./examBuilderState";
+import { isKnownQuestionType } from "./questionTypeCatalog";
+import { resolveQuestionTypeKeyOrAlias } from "./questionTypeAliases";
 import { validateStructuredExam, type StructuredIssue } from "./examQuality";
 
 export type ImportFormat = "json" | "html";
@@ -56,22 +58,9 @@ const toNumOrUndef = (v: unknown): number | undefined => {
   return Number.isFinite(n) ? n : undefined;
 };
 
-// Canonical question/part types + harmless aliases (normalized explicitly, with a warning — never a
-// silent guess). An unknown type is reported as an error and kept verbatim so the builder shows it.
-const CANONICAL_TYPES = ["multipleChoice", "trueFalse", "multiTrueFalse", "shortAnswer", "fillBlank", "wordBank", "matching", "ordering", "tableFill", "cliFill", "compound"] as const;
-const TYPE_ALIASES: Record<string, string> = {
-  mcq: "multipleChoice", multiplechoice: "multipleChoice",
-  tf: "trueFalse", truefalse: "trueFalse",
-  multitruefalse: "multiTrueFalse", multitf: "multiTrueFalse",
-  open: "shortAnswer", short: "shortAnswer", shortanswer: "shortAnswer", essay: "shortAnswer",
-  fillblank: "fillBlank", fill: "fillBlank",
-  wordbank: "wordBank",
-  matching: "matching", match: "matching",
-  ordering: "ordering", order: "ordering",
-  tablefill: "tableFill", table: "tableFill",
-  clifill: "cliFill", cli: "cliFill",
-  compound: "compound"
-};
+// Canonical question/part types + harmless aliases come from the ONE Question Type Catalog (Phase 16A — no second list here).
+// Aliases are normalized explicitly, with a warning — never a silent guess. An unknown type is reported as an error and kept
+// verbatim so the builder shows its unsupported state (never converted to shortAnswer / multipleChoice).
 
 type Ctx = { errors: ImportMessage[]; warnings: ImportMessage[]; generated: number };
 
@@ -80,9 +69,9 @@ type Ctx = { errors: ImportMessage[]; warnings: ImportMessage[]; generated: numb
 // body against a raw alias (e.g. data-type="mcq") would silently drop its options/answer.
 export function canonicalizeType(raw: unknown): { type: string; isAlias: boolean; known: boolean } {
   const s = toStr(raw).trim();
-  if ((CANONICAL_TYPES as readonly string[]).includes(s)) return { type: s, isAlias: false, known: true };
-  const alias = TYPE_ALIASES[s.toLowerCase()];
-  if (alias) return { type: alias, isAlias: true, known: true };
+  if (isKnownQuestionType(s)) return { type: s, isAlias: false, known: true };
+  const resolved = resolveQuestionTypeKeyOrAlias(s);
+  if (resolved) return { type: resolved, isAlias: true, known: true };
   return { type: s, isAlias: false, known: false };
 }
 

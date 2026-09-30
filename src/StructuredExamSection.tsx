@@ -45,6 +45,8 @@ export type SectionHandlers={
  onText:(id:string,value:string)=>void;
  onField:(id:string,fieldId:string,value:FieldValue)=>void;
  onPart:(id:string,partId:string,answer:Answer)=>void;
+ // Phase 16A — generic seam for registered question types (the owner stores the whole next Answer under the question id).
+ onAnswer?:(id:string,answer:Answer)=>void;
 };
 
 type Props=SectionHandlers&{
@@ -57,7 +59,7 @@ type Props=SectionHandlers&{
 
 
 export default function StructuredExamSection(props:Props){
- const {section,sectionNumber,startIndex,answers,disabled,onChoice,onSeq,onTable,onText,onField,onPart}=props;
+ const {section,sectionNumber,startIndex,answers,disabled,onChoice,onSeq,onTable,onText,onField,onPart,onAnswer}=props;
  const {countedKeys}=selectGradedUnits(section,answers);
  const progress=calculateSectionProgress(section,answers);
  const rule=sectionRuleLine(section);
@@ -80,7 +82,7 @@ export default function StructuredExamSection(props:Props){
    // Render this question's shared stimulus once, on first appearance of its groupId.
    let showStimulus=false;
    if(q.groupId&&!rendered.has(q.groupId)){rendered.add(q.groupId);showStimulus=true;}
-   return <div key={id}><StructuredSectionQuestion section={section} q={q} questionIndex={i} globalIndex={startIndex+i} answers={answers} countedKeys={countedKeys} showStimulus={showStimulus} disabled={disabled} onChoice={onChoice} onSeq={onSeq} onTable={onTable} onText={onText} onField={onField} onPart={onPart}/></div>;
+   return <div key={id}><StructuredSectionQuestion section={section} q={q} questionIndex={i} globalIndex={startIndex+i} answers={answers} countedKeys={countedKeys} showStimulus={showStimulus} disabled={disabled} onChoice={onChoice} onSeq={onSeq} onTable={onTable} onText={onText} onField={onField} onPart={onPart} onAnswer={onAnswer}/></div>;
   });})()}</div>
  </section>;
 }
@@ -100,7 +102,7 @@ export type StructuredQuestionProps=SectionHandlers&{
  disabled?:boolean;
 };
 export function StructuredSectionQuestion(props:StructuredQuestionProps){
- const {section,q,questionIndex,globalIndex,answers,countedKeys,showStimulus,disabled,onChoice,onSeq,onTable,onText,onField,onPart}=props;
+ const {section,q,questionIndex,globalIndex,answers,countedKeys,showStimulus,disabled,onChoice,onSeq,onTable,onText,onField,onPart,onAnswer}=props;
  const id=sectionQuestionId(section,q,questionIndex);
  let stimulusNode:ReactNode=null;
  if(showStimulus&&q.groupId){const stim=(section.stimuli||{})[q.groupId]||q.stimulus;if(stim)stimulusNode=<StimulusBlock stimulus={stim}/>;}
@@ -121,5 +123,5 @@ export function StructuredSectionQuestion(props:StructuredQuestionProps){
   return <>{stimulusNode}{activityBefore}{wholeExcess&&<div className="iex-extra-hint iex-extra-hint-block"><IconCheck size={11}/>إجابة إضافية — لن تدخل في التصحيح</div>}<CompoundQuestion q={q} index={globalIndex} id={id} answer={answers[id]} onPart={(pid,ans)=>onPart(id,pid,ans)} disabled={disabled} excessPartIds={excessPartIds}/>{activityTail}</>;
  }
  const excess=answered(answers[id])&&!countedKeys.has(id);
- return <>{stimulusNode}{activityBefore}{excess&&<div className="iex-extra-hint iex-extra-hint-block"><IconCheck size={11}/>إجابة إضافية — لن تدخل في التصحيح</div>}<StudentQuestionCard q={q} index={globalIndex} id={id} answer={answers[id]} onChoice={n=>onChoice(id,n)} onSeq={(n,v)=>onSeq(id,n,v)} onTable={(n,v)=>onTable(id,n,v)} onText={v=>onText(id,v)} onField={(fid,v)=>onField(id,fid,v)} disabled={disabled}/>{activityTail}</>;
+ return <>{stimulusNode}{activityBefore}{excess&&<div className="iex-extra-hint iex-extra-hint-block"><IconCheck size={11}/>إجابة إضافية — لن تدخل في التصحيح</div>}<StudentQuestionCard q={q} index={globalIndex} id={id} answer={answers[id]} onChoice={n=>onChoice(id,n)} onSeq={(n,v)=>onSeq(id,n,v)} onTable={(n,v)=>onTable(id,n,v)} onText={v=>onText(id,v)} onField={(fid,v)=>onField(id,fid,v)} onAnswer={onAnswer?next=>onAnswer(id,next):undefined} disabled={disabled}/>{activityTail}</>;
 }

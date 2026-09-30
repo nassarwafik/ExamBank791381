@@ -5,7 +5,7 @@
 // Marks: every figure reuses the builder's authoritative helpers (questionMaxMarks / sectionMaxMarks / computeTotalMarks),
 // which mirror api/src/lib/exam-structure.js and the grader — never a third implementation.
 import type { StructuredExam, BuilderQuestion, BuilderSection } from "./examTypes";
-import { BUILDER_QUESTION_TYPES } from "./examTypes";
+import { isKnownQuestionType } from "./questionTypeCatalog";
 import { questionMaxMarks, sectionMaxMarks, computeTotalMarks, countQuestions, genId } from "./examBuilderState";
 import {
   ASSESSMENT_BLUEPRINT_SCHEMA_VERSION, BLUEPRINT_DIMENSIONS, BLUEPRINT_METRICS, BLUEPRINT_UNITS, DEFAULT_COGNITIVE_LEVELS, DEFAULT_DIFFICULTY_SCALE,
@@ -152,7 +152,8 @@ export function validateBlueprint(input: unknown, context?: BlueprintValidationC
       case "objective": if (!objectiveIds.has(ref)) add("BROKEN_OBJECTIVE_REF", "القيد يشير إلى هدف غير موجود: " + ref, path + ".ref", refId); break;
       case "difficulty": if (!/^-?\d+$/.test(ref) || !scaleValues.has(Number(ref))) add("INVALID_DIFFICULTY", "قيمة صعوبة خارج السلّم: " + ref, path + ".ref", refId); break;
       case "cognitiveLevel": if (!vocabulary.has(ref)) add("BROKEN_COGNITIVE_REF", "مستوى معرفي غير معرّف: " + ref, path + ".ref", refId); break;
-      case "questionType": if (!(BUILDER_QUESTION_TYPES as readonly string[]).includes(ref)) add("INVALID_QUESTION_TYPE", "نوع سؤال غير معروف: " + ref, path + ".ref", refId); break;
+      // Review Fix 1 / R2-A: the LIVE canonical catalog decides membership (registered plugins included) — never a frozen list.
+      case "questionType": if (!isKnownQuestionType(ref)) add("INVALID_QUESTION_TYPE", "نوع سؤال غير معروف: " + ref, path + ".ref", refId); break;
       case "section": if (sectionIds && !sectionIds.has(ref)) add("BROKEN_SECTION_REF", "القيد يشير إلى قسم غير موجود في الامتحان: " + ref, path + ".ref", refId); break;   // Review Fix 1 / R4
       default: break;                                                        // capability: any non-empty stable id
     }

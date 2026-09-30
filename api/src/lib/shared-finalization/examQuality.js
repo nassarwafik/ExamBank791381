@@ -3,6 +3,8 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.hasBlockingErrors = void 0;
 exports.validateStructuredExam = validateStructuredExam;
+const questionTypeValidation_1 = require("./questionTypeValidation");
+const questionTypeCatalog_1 = require("./questionTypeCatalog");
 const examBuilderState_1 = require("./examBuilderState");
 const num = (v) => {
     const n = Number(v);
@@ -106,7 +108,14 @@ function validateQuestion(q, sectionLabel, section, add) {
         validateBody(q, q.presentationType, disp, where, add);
     }
 }
-function validateBody(node, type, label, where, add) {
+function validateBody(node, type, label, where, add, part = false) {
+    const typeIssues = (0, questionTypeValidation_1.validateQuestionTypeNode)(node, type, node.questionTypeVersion, { part });
+    for (const i of typeIssues)
+        add(i.severity, i.code, "«" + label + "»: " + i.message, where);
+    if (typeIssues.some(i => i.code === "UNKNOWN_QUESTION_TYPE" || i.code === "UNSUPPORTED_QUESTION_TYPE_VERSION"))
+        return;
+    if (!(0, questionTypeCatalog_1.questionTypeDefinition)(type)?.legacy)
+        return;
     switch (type) {
         case "multipleChoice": {
             const opts = node.options || [];
@@ -246,7 +255,7 @@ function validateCompound(q, disp, sectionLabel, where, add) {
         if (seen.has(p.id))
             add("error", "COMPOUND_DUP_PART", "معرّف بند مكرّر في السؤال المركّب " + disp + ".", where);
         seen.add(p.id);
-        validateBody(p, p.type, "البند " + (p.label || i + 1) + " من " + disp, where, add);
+        validateBody(p, p.type, "البند " + (p.label || i + 1) + " من " + disp, where, add, true);
     });
     const info = (0, examBuilderState_1.partMarksInfo)(q);
     if (info.mismatch) {

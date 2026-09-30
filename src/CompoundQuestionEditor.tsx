@@ -1,7 +1,8 @@
 
 import type { BuilderQuestion, BuilderPart, BuilderPartType } from "./examTypes";
-import { QUESTION_TYPE_LABELS, BUILDER_PART_TYPES } from "./examTypes";
-import { addPart, deletePart, duplicatePart, movePart, newPart, changePartType, partMarksInfo, ordinalLabel } from "./examBuilderState";
+import { compoundPartTypeKeys, questionTypeLabel } from "./questionTypeCatalog";
+import { addPart, deletePart, duplicatePart, movePart, newPart, partMarksInfo, ordinalLabel, mergePatch } from "./examBuilderState";
+import { partTypeChangePatch } from "./questionTypes/typeContent";
 import QuestionBodyEditor from "./QuestionBodyEditor";
 
 // Editor for a compound question's independent parts. Each part chooses its own type (the canonical part registry —
@@ -14,7 +15,7 @@ type Props = { question: BuilderQuestion; onChange: (patch: Partial<BuilderQuest
 export default function CompoundQuestionEditor({ question, onChange, disabled }: Props) {
   const parts = question.parts || [];
   const setParts = (next: BuilderPart[]) => onChange({ parts: next });
-  const patchPart = (id: string, patch: Partial<BuilderPart>) => setParts(parts.map(p => (p.id === id ? { ...p, ...patch } : p)));
+  const patchPart = (id: string, patch: Partial<BuilderPart>) => setParts(parts.map(p => (p.id === id ? mergePatch(p, patch) : p)));
   const info = partMarksInfo(question);
 
   return (
@@ -30,8 +31,9 @@ export default function CompoundQuestionEditor({ question, onChange, disabled }:
         <div className="sb-part" key={p.id}>
           <div className="sb-part-head">
             <b className="sb-part-badge">{p.label?.trim() ? p.label : ordinalLabel(i)}</b>
-            <select className="sb-input sb-input-sm" value={p.type} onChange={e => patchPart(p.id, changePartType(p, e.target.value as BuilderPartType))} disabled={disabled}>
-              {BUILDER_PART_TYPES.map(t => <option key={t} value={t}>{QUESTION_TYPE_LABELS[t]}</option>)}
+            <select className="sb-input sb-input-sm" value={p.type} onChange={e => patchPart(p.id, partTypeChangePatch(p, e.target.value as BuilderPartType))} disabled={disabled}>
+              {/* Review Fix 1 / R2-C: the LIVE `compoundPart` capability of the canonical catalog (plugins included) */}
+              {compoundPartTypeKeys().map(t => <option key={t} value={t}>{questionTypeLabel(t) ?? t}</option>)}
             </select>
             <input className="sb-input sb-input-sm" value={p.label ?? ""} placeholder="التسمية (أ، ب...)" onChange={e => patchPart(p.id, { label: e.target.value })} disabled={disabled} />
             <input className="sb-input sb-input-xs" type="number" step="0.25" value={p.marks ?? ""} placeholder="علامة" onChange={e => patchPart(p.id, { marks: e.target.value === "" ? undefined : Number(e.target.value) })} disabled={disabled} />

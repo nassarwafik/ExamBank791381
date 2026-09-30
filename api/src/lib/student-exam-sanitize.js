@@ -148,10 +148,28 @@ function sanitizeFieldForStudent(field) {
   return out;
 }
 
+// Phase 16A / Review Fix 1 — the UNIVERSAL student projection contract for registered question types (Wave 1 today; every
+// simulation / interactive runtime profile of Phase 16B tomorrow): a type's student-visible data is PUBLIC configuration
+// carried under type-owned object fields (numeric / matrix / categorization / scenario / publicConfig / …); every answer key,
+// expected state, scoring assertion or solution lives ONLY under `answer` (removed above) or another teacher-only field the
+// sanitizer always strips. This function never names a domain: EVERY object-valued field of a node that is not one of the
+// structural fields with a dedicated sanitizer below is passed through the canonical secret-key policy (recursive), so a
+// smuggled `correctColumn` / `expectedState` / `answerKey` inside any plugin object never reaches a student (defense in
+// depth) while public structure (ids, labels, values) passes byte-for-byte. Persisted exam JSON can never name this code.
+const STRUCTURAL_NODE_KEYS = new Set(["answer", "options", "fields", "parts", "image", "images", "activity", "stimulus"]);
+function applyTypeConfigForStudent(node) {
+  for (const k of Object.keys(node)) {
+    if (STRUCTURAL_NODE_KEYS.has(k)) continue;
+    const v = node[k];
+    if (v && typeof v === "object") node[k] = stripSecretsDeep(v);
+  }
+}
+
 function sanitizePartForStudent(part) {
   if (!part || typeof part !== "object") return part;
-  const out = { ...part }; // keeps id / label / text / textHtml / marks / type / wordBank / cli / tableHeaders / tableRows / image(s) / groupId
+  const out = { ...part }; // keeps id / label / text / textHtml / marks / type / questionTypeVersion / wordBank / cli / tableHeaders / tableRows / image(s) / groupId
   delete out.answer; // remove part.answer (grading key)
+  applyTypeConfigForStudent(out);
   stripKeys(out, NODE_SECRET_KEYS);
   stripKeys(out, PLANNING_KEYS);
   applyActivityForStudent(out);
@@ -169,6 +187,7 @@ function sanitizeQuestionForStudent(question) {
   // Legacy-identical blanking (answer:{}, hint:"", …) so existing behaviour/tests are unchanged,
   // then strip any additional secret flags and recurse into the new structured children.
   const out = { ...question, answer: {}, hint: "", teacherNote: "", aiInstruction: "", history: [], redoStack: [] };
+  applyTypeConfigForStudent(out);
   stripKeys(out, ["explanation", "rationale", ...FLAG_SECRET_KEYS]);
   stripKeys(out, PLANNING_KEYS);
   applyActivityForStudent(out);
