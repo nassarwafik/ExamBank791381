@@ -176,7 +176,7 @@ export default function AssignmentsPanel({token,classes,currentExam,onCopyLibrar
   setBusy(true);setError("");setNotice("");
   try{
    const r=await api<{assignment:Item}>("/api/assignments",{method:"POST",body:JSON.stringify({action:"create",classId,title:title.trim(),instructions:instructions.trim(),openAt:openAt?new Date(openAt).toISOString():"",dueAt:dueAt?new Date(dueAt).toISOString():"",maxAttempts,durationMinutes,attemptPolicy,publish,examSnapshot:sourceExam})});
-   setItems(x=>[r.assignment,...x]);setNotice("✓ تم إنشاء الواجب من الامتحان المختار.");
+   setItems(x=>[r.assignment,...x]);setNotice(r.assignment?.source?.revisionNumber?"✓ تم إنشاء الواجب من الإصدار المنشور رقم "+r.assignment.source.revisionNumber+" (إدارة النشر) — النسخة المنشورة مثبّتة لهذا الواجب.":"✓ تم إنشاء الواجب من الامتحان المختار.");
    closeComposer();
   }catch(e){setError(e instanceof Error?e.message:"تعذر إنشاء الواجب.")}finally{setBusy(false)}
  }

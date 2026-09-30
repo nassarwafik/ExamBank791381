@@ -29,6 +29,7 @@ import type { StructuredExam, BuilderImageAsset } from "./examTypes";
 import { useAutoRefresh } from "./ui/useAutoRefresh";
 import type { AiImageRequestQuestion } from "./questionMedia";
 import type { BankPickerService } from "./StructuredExamBuilder";
+import type { GovernanceService } from "./examGovernance";
 import type { BankQuestionRow } from "./bank/bankQuestionModel";
 import type { BankExamQuestion } from "./structuredExamProductivity";
 import { legacyToStructured, newSection, newQuestion, type StructuredExamUpdater } from "./examBuilderState";
@@ -1067,9 +1068,14 @@ function App() {
         handleLogout();
       }
 
-      throw new Error(
+      // Phase 14A — callers that need the HTTP status / server payload (the governance client maps 409 / 422 / 403 to
+      // authoritative-state handling) read them from the thrown error; the message contract is unchanged.
+      const requestError = new Error(
         data.error || `HTTP ${response.status}`
-      );
+      ) as Error & { status?: number; payload?: unknown };
+      requestError.status = response.status;
+      requestError.payload = data;
+      throw requestError;
     }
 
     return data;
@@ -2845,6 +2851,23 @@ function App() {
     list: () => apiRequestRef.current<{ questions?: BankQuestionRow[] }>("/api/bank-questions").then(r => r.questions || []),
     select: ids => apiRequestRef.current<{ questions?: BankExamQuestion[] }>("/api/bank-question-select", { method: "POST", body: JSON.stringify({ ids }) }).then(r => r.questions || [])
   }), []);
+
+  // Phase 14A — the App-owned GovernanceService for the Builder's «إدارة النشر والإصدارات». Authenticated through the same
+  // request helper (the builder never receives the token); the client module is loaded on demand so the initial graph does
+  // not grow. Every mutation carries the authority version the UI saw plus a fresh requestId (see examGovernanceClient).
+  const structuredGovernance = useMemo<GovernanceService>(() => {
+    let clientPromise: Promise<GovernanceService> | null = null;
+    const client = () => (clientPromise ??= import("./examGovernanceClient").then(m => m.createGovernanceService(body => apiRequestRef.current<Record<string, unknown>>("/api/exam-governance", { method: "POST", body: JSON.stringify(body) }))));
+    return {
+      status: examId => client().then(c => c.status(examId)),
+      enable: (examId, exam, requestId) => client().then(c => c.enable(examId, exam, requestId)),
+      createRevision: (examId, exam, args) => client().then(c => c.createRevision(examId, exam, args)),
+      transition: (examId, action, args) => client().then(c => c.transition(examId, action, args)),
+      listRevisions: (examId, cursor) => client().then(c => c.listRevisions(examId, cursor)),
+      loadRevision: (examId, revisionId) => client().then(c => c.loadRevision(examId, revisionId)),
+      listEvents: (examId, cursor) => client().then(c => c.listEvents(examId, cursor))
+    };
+  }, []);
 
   async function saveExamArtifact(
     kind:
@@ -7845,6 +7868,7 @@ function App() {
               recoveryScope={teacherProfile?.teacherId || undefined}
               onRecover={structuredHistory.recover}
               bankPicker={structuredBankPicker}
+              governance={structuredGovernance}
             />
           </Suspense>
         </div>

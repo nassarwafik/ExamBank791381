@@ -49,6 +49,8 @@ import "./structured-builder.css";
 // callers/tests that import { ExamPreview } from "./StructuredExamBuilder" keep working unchanged.
 export { default as ExamPreview } from "./ExamPreview";
 export type { BankPickerService } from "./BankQuestionPicker";
+import type { GovernanceService } from "./examGovernance";
+export type { GovernanceService } from "./examGovernance";
 
 // Phase 13B — the Question Bank picker is loaded only when a teacher opens it (its own chunk inside the builder chunk).
 const BankQuestionPicker = lazy(() => import("./BankQuestionPicker"));
@@ -60,6 +62,7 @@ const BulkClassifyDialog = lazy(() => import("./BulkClassifyDialog"));
 // Phase 13C-C — policy editor and readiness panel are lazy too.
 const QualityPolicyPanel = lazy(() => import("./QualityPolicyPanel"));
 const FinalizationPanel = lazy(() => import("./FinalizationPanel"));
+const GovernancePanel = lazy(() => import("./GovernancePanel"));
 
 // Top-level Structured Exam Builder. It is a CONTROLLED component: the exam lives in the parent
 // (App.tsx) and every edit flows back through onChange as a FUNCTIONAL updater that the parent applies to
@@ -99,6 +102,9 @@ type Props = {
   // Phase 13B — App-owned, authenticated Question Bank callbacks (list rows / exact-id canonical retrieval). The builder
   // never receives a token; without a service the "إضافة من بنك الأسئلة" action is simply not offered.
   bankPicker?: BankPickerService;
+  // Phase 14A — the App-owned window onto the SERVER publishing authority (status, revisions, transitions). Like the bank
+  // picker, the builder never receives a token; without a service the «إدارة النشر والإصدارات» action is simply not offered.
+  governance?: GovernanceService;
 };
 
 const AUTOSAVE_DELAY_MS = 800;
@@ -110,7 +116,7 @@ const FLASH_MS = 1200;
 type ProductivityUi = { examId: string; ids: ReadonlySet<string>; filters: NavigatorFilters };
 const formatBackupTime = (iso: string) => { const t = Date.parse(iso); return Number.isFinite(t) ? new Date(t).toLocaleString("ar", { dateStyle: "medium", timeStyle: "short" }) : ""; };
 
-export default function StructuredExamBuilder({ exam, onChange, onSave, onExit, saving, notice, error, requestQuestionImage, onUndo, onRedo, canUndo = false, canRedo = false, saveState, recoveryScope, onRecover, backupStorage, autosaveDelayMs = AUTOSAVE_DELAY_MS, bankPicker }: Props) {
+export default function StructuredExamBuilder({ exam, onChange, onSave, onExit, saving, notice, error, requestQuestionImage, onUndo, onRedo, canUndo = false, canRedo = false, saveState, recoveryScope, onRecover, backupStorage, autosaveDelayMs = AUTOSAVE_DELAY_MS, bankPicker, governance }: Props) {
   const [preview, setPreview] = useState<StructuredExam | null>(null);
   const [showIssues, setShowIssues] = useState(true);
   const { confirm, confirmDialog } = useConfirm();
@@ -406,6 +412,7 @@ export default function StructuredExamBuilder({ exam, onChange, onSave, onExit, 
   const gateWarnings = decision.warnings.filter(w => w.kind === "quality").length;
   const [policyOpen, setPolicyOpen] = useState(false);
   const [readinessOpen, setReadinessOpen] = useState(false);
+  const [governanceOpen, setGovernanceOpen] = useState(false);
   const editPolicy = (fn: Parameters<typeof withQualityPolicy>[1]) => update(prev => withBlueprint(prev, bp => withQualityPolicy(bp, fn)));
   // The FINAL action re-checks the LATEST committed exam (never a stale render or a re-enabled button): a refused request
   // opens the readiness panel instead of calling the owner. The owner (App) applies the same authority again on the exact
@@ -441,6 +448,7 @@ export default function StructuredExamBuilder({ exam, onChange, onSave, onExit, 
           {bankPicker && <button type="button" className="sb-btn" onClick={() => { setPickerFocus(null); setPickerOpenFor(exam.examId); }} disabled={saving}>📚 إضافة من بنك الأسئلة</button>}
           {exam.blueprint && <button type="button" className={"sb-btn" + (coverageOpen ? " is-active" : "")} onClick={() => setCoverageOpen(true)} aria-haspopup="dialog" title="تحليل المخطط">📊 <span className="sb-btn-label">تحليل المخطط</span></button>}
           {exam.blueprint && <button type="button" className={"sb-btn" + (policyOpen ? " is-active" : "")} onClick={() => setPolicyOpen(true)} aria-haspopup="dialog" title="سياسات الجودة">🛡 <span className="sb-btn-label">سياسات الجودة</span></button>}
+          {governance && <button type="button" className={"sb-btn" + (governanceOpen ? " is-active" : "")} onClick={() => setGovernanceOpen(true)} aria-haspopup="dialog" title="إدارة النشر والإصدارات">🗂 <span className="sb-btn-label">إدارة النشر والإصدارات</span></button>}
           <button type="button" className={"sb-btn" + (blueprintOpen ? " is-active" : "")} onClick={() => setBlueprintOpen(true)} aria-haspopup="dialog" title="مخطط الامتحان">📐 <span className="sb-btn-label">مخطط الامتحان</span>{blueprintIssueCount > 0 && <span className="sb-bp-badge" aria-label={blueprintIssueCount + " مشكلات في المخطط"}>{blueprintIssueCount}</span>}</button>
           <button type="button" className="sb-btn" onClick={() => setPreview(exam)}>👁 معاينة الامتحان</button>
           {onSave && mediaPending && <span className="sb-stat sb-media-wait" role="status">{MEDIA_WAIT}</span>}
@@ -549,6 +557,11 @@ export default function StructuredExamBuilder({ exam, onChange, onSave, onExit, 
       {policyOpen && exam.blueprint && (
         <Suspense fallback={<p className="sb-hint" role="status">جارٍ تحميل سياسات الجودة…</p>}>
           <QualityPolicyPanel open onClose={() => setPolicyOpen(false)} blueprint={exam.blueprint} sections={sectionOptions} onEdit={editPolicy} disabled={saving} />
+        </Suspense>
+      )}
+      {governanceOpen && governance && (
+        <Suspense fallback={<p className="sb-hint" role="status">جارٍ تحميل إدارة النشر…</p>}>
+          <GovernancePanel open onClose={() => setGovernanceOpen(false)} exam={exam} service={governance} getLatestExam={() => latestExamRef.current} onReveal={ids => { setGovernanceOpen(false); revealQuestions(ids); }} onPreview={setPreview} />
         </Suspense>
       )}
       {readinessOpen && (

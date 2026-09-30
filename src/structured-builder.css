@@ -342,3 +342,28 @@
 .sb-fin-item .sb-btn{align-self:flex-start}
 @media (max-width:640px){.sb-fin-item .sb-btn{align-self:stretch;min-height:40px}.sb-qp-grid{grid-template-columns:1fr}}
 .sb-btn.is-gated{opacity:.7;border-style:dashed}
+
+/* ── Phase 14A · إدارة النشر والإصدارات (server-owned publishing governance) ───────────────────────────────────────── */
+.sb-gov{display:flex;flex-direction:column;gap:14px;min-width:0}
+.sb-gov-card{border:1px solid var(--line,#e5e9f0);border-radius:12px;padding:12px;display:flex;flex-direction:column;gap:10px;background:var(--surface,#fff)}
+.sb-gov-facts{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:8px 16px;margin:0}
+.sb-gov-facts div{display:flex;flex-direction:column;gap:2px}
+.sb-gov-facts dt{font-size:12px;color:var(--muted,#64748b);font-weight:600}
+.sb-gov-facts dd{margin:0;font-weight:600;overflow-wrap:anywhere}
+.sb-gov-facts code,.sb-gov-table code,.sb-gov-events code{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:12px;background:var(--surface2,#f4f6fa);border-radius:6px;padding:1px 6px}
+.sb-gov-state{display:inline-block;border-radius:999px;padding:2px 10px;font-weight:700;border:1px solid var(--line2,#cdd5e0)}
+.sb-gov-state.is-draft{background:#f4f6fa;color:#334155}
+.sb-gov-state.is-in-review{background:#fff7ed;color:#9a3412;border-color:#fed7aa}
+.sb-gov-state.is-approved{background:#eff6ff;color:#1d4ed8;border-color:#bfdbfe}
+.sb-gov-state.is-published{background:#ecfdf5;color:#047857;border-color:#a7f3d0}
+.sb-gov-actions{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.sb-gov-table{width:100%;border-collapse:collapse;font-size:13px}
+.sb-gov-table th,.sb-gov-table td{padding:6px 8px;border-bottom:1px solid var(--line,#e5e9f0);text-align:start;vertical-align:top}
+.sb-gov-table th{font-size:12px;color:var(--muted,#64748b);font-weight:600}
+.sb-gov-events{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:6px;font-size:13px}
+.sb-gov-events li{padding:6px 8px;border-inline-start:3px solid var(--line2,#cdd5e0);background:var(--surface2,#f8fafc);border-radius:6px}
+.sb-gov-viewer-body{display:flex;flex-direction:column;gap:12px}
+.sb-gov-outline{margin:0;padding-inline-start:20px;display:flex;flex-direction:column;gap:8px}
+.sb-gov-outline ol{margin:4px 0 0;padding-inline-start:20px;display:flex;flex-direction:column;gap:4px}
+.sb-fin-confirm{display:flex;flex-wrap:wrap;gap:10px;align-items:center;justify-content:flex-end}
+@media (max-width:640px){.sb-gov-table th:nth-child(4),.sb-gov-table td:nth-child(4),.sb-gov-table th:nth-child(7),.sb-gov-table td:nth-child(7){display:none}}
