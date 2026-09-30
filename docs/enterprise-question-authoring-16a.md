@@ -249,7 +249,14 @@ Representative plugin families (each ONE `registerQuestionTypePlugin` + ONE `reg
 | `data-experiment@1` | CS / Data | dataset, tools | expected statistics ± tolerance | computed values |
 
 Rules every 16B plugin inherits from 16A: identity is `(key, version)`; V2 is ADDITIVE (V1 keeps serving stored V1
-questions); the student receives ONLY the public scenario (the universal sanitizer strips `answer` and every secret-looking
+questions); **`definition.version = N` means the family ships implementations 1..N with no gaps** — a deployment that
+introduces `network-lab@3` ships V1, V2 and V3 while those versions remain supported, and no historical implementation may
+disappear merely because the current version increased; the same historical-version preservation rule binds future
+`.smartsim` / uploaded simulator package versions (a package that claims version N must carry, or resolve to, every supported
+version 1..N; a gapped package is refused exactly like a gapped code family); **production server-grader invariant**: for
+every AUTO-GRADED simulation version admitted into a production plugin family, `(key, version)` must also have an
+authoritative server grader registered (`registerGrader(key, version, handler)`) before that type/version may ship — Phase
+16B tests must pin this for every production simulation plugin (16A ships no fake graders); the student receives ONLY the public scenario (the universal sanitizer strips `answer` and every secret-looking
 key inside any plugin object without knowing the domain); the response is a serializable `Answer` routed through
 `onAnswer(next)`; the server grader for the exact version is the only scoring authority; an unknown key or unsupported
 version fails closed on every surface. Deferred deliberately: the simulators themselves, any iframe / external URL / HTML
@@ -287,8 +294,10 @@ replaces V1 (duplicate identity refused) · RV9 V3 fails closed · RV10 a saniti
 V2 exists.
 
 ### 13.3 Plugin family + transactional registration
-`registerQuestionTypePlugin({ definition, versions: { 1: {...}, 2: {...} } })`: the family is validated up front (every
-version within `1..definition.version`, the current version implemented, components / functions well-formed), then
+`registerQuestionTypePlugin({ definition, versions: { 1: {...}, 2: {...} } })`: the family is validated up front — **the
+COMPLETE family first: `definition.version = N` means the family ships implementations 1..N with no gaps** (Review Fix 2;
+`{2}` for current 2, `{1,3}` for current 3 and `{1,2,4}` for current 4 are refused before any registry is touched, and a
+missing version is never filled from a neighbour) — then every version within `1..N`, components / functions well-formed, then
 registered step by step (catalog → per version: defaults, validator, editor, renderer). If step N fails, steps N-1…1 are
 undone and the error is rethrown — no catalog / defaults / validator / editor / renderer residue (tested by occupying the
 last step's slot). The returned function removes every registration.
@@ -323,3 +332,36 @@ needed — the contract is data-shape-based and identical for every version.
 Fail-first on `e1f295a`: `src/questionTypes/versionedRuntime.16a-rf1.test.tsx` + `api/tests/question-type-versioning-16a-rf1.test.js`
 → 2 files failed · 18 tests failed / 1 passed. Mutation campaign RF1-M1–M10: see the table in the PR body (§13 of the PR).
 
+## 14. Independent Review Fix 2 — Complete Version Family Invariant
+
+**Root cause.** `effectiveQuestionTypeVersion` / `supportsQuestionTypeVersion` treat every integer `1..definition.version`
+as supported, but `registerQuestionTypePlugin` required only the CURRENT version to be implemented. A family
+`{ definition.version: 2, versions: { 2 } }` was therefore accepted while `effectiveQuestionTypeVersion(key, 1)` returned 1:
+the catalog said "V1 supported", the runtime had no V1 editor / renderer / validator, and a stored or imported `key@1` could
+pass version validation only to fail closed later at render / grade time.
+
+**Invariant (narrow fix, no catalog redesign).** `definition.version = N` ⇔ the family ships an executable implementation for
+every version `1..N`, no gaps. `registerQuestionTypePlugin` checks the complete family FIRST — before the per-version shape
+checks and before `registerQuestionType()` or any executable registry is touched — and throws
+`missing implementation for version v`. Nothing is ever filled from a neighbouring version (V1 never uses V2, V2 never uses
+V3). Optional `defaults` / `validate` stay optional; `Editor` and `StudentRenderer` stay mandatory per version.
+
+| family | current | verdict |
+|---|---|---|
+| `{1}` | 1 | valid |
+| `{1, 2}` | 2 | valid |
+| `{1, 2, 3, 4}` | 4 | valid |
+| `{2}` | 2 | refused — missing 1 |
+| `{1, 3}` | 3 | refused — missing 2 |
+| `{1, 2, 4}` | 4 | refused — missing 3 |
+
+**Proof** (`src/questionTypes/versionFamily.16a-rf2.test.tsx`): RF2-1 `{2}`/current 2 refused with no catalog / editor /
+renderer / defaults / validator residue · RF2-2 `{1,3}`/3 and `{1,2,4}`/4 refused · RF2-3 `{1,2,3}` registers and `@1 → V1`,
+`@2 → V2`, `@3 → V3` for editor, renderer, validator and defaults · RF2-4 absent stored version → V1 with current 3 ·
+RF2-5 stored V4 fails closed everywhere · RF2-6 a gapped family fails before any registry mutation and a later complete
+registration of the same key succeeds · finalization invariant: for every registered type and every version `1..current+1`,
+`supportsQuestionTypeVersion` ⇔ (non-legacy) an authoring editor AND a student renderer exist.
+
+**16B production invariant (documented, not implemented here).** Every auto-graded simulation version `(key, version)`
+admitted into a production plugin family must have an authoritative server grader registered before it ships; 16B tests pin
+this per production plugin. `.smartsim` / uploaded simulator packages obey the same historical-version preservation rule.

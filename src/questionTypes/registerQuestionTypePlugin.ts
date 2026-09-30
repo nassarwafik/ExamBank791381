@@ -8,6 +8,12 @@
 //
 // Review Fix 1 / R1: every executable registration is version-bound. A future V2 is ADDITIVE: the family lists BOTH
 // implementations and the catalog's `version` becomes 2; V1 keeps serving every stored V1 question.
+// Review Fix 2 — COMPLETE version-family invariant: `definition.version = N` means the family ships an executable
+// implementation for EVERY version 1..N with no gaps (that is exactly what effectiveQuestionTypeVersion /
+// supportsQuestionTypeVersion promise to validation and finalization). A gapped family ({2}, {1,3}, {1,2,4}) is refused
+// BEFORE any registry is touched; a missing version is never filled from a neighbouring implementation. A deployment that
+// introduces V3 therefore ships V1, V2 and V3 while those versions remain supported — an old published assessment keeps
+// access to every historical version it references.
 // Registration is TRANSACTIONAL: if any step fails, every earlier step is undone (no catalog / defaults / validator /
 // editor / renderer residue) and the error is rethrown. Returns the function that removes every registration again.
 import { registerQuestionType, type QuestionTypeDefinition } from "../questionTypeCatalog";
@@ -40,8 +46,12 @@ export function registerQuestionTypePlugin(plugin: QuestionTypePlugin): () => vo
   const current = definition.version;
   // ── validate the whole family BEFORE touching any registry ─────────────────────────────────────────────────────────
   if (!versions || typeof versions !== "object") throw new Error("question type plugin requires versions for " + String(key));
+  if (!Number.isInteger(current) || current < 1) throw new Error("question type plugin " + String(key) + ": invalid current version " + String(current));
+  // complete family 1..current — checked first, before any per-version shape check and before ANY registry mutation
+  for (let v = 1; v <= current; v++) {
+    if (!Object.prototype.hasOwnProperty.call(versions, v) || !versions[v]) throw new Error("question type plugin " + String(key) + ": missing implementation for version " + v);
+  }
   const entries = Object.keys(versions).map(v => [Number(v), versions[Number(v)]] as const);
-  if (!entries.length) throw new Error("question type plugin " + String(key) + " implements no version");
   for (const [v, impl] of entries) {
     if (!Number.isInteger(v) || v < 1 || v > current) throw new Error("question type plugin " + String(key) + ": version " + v + " is outside 1.." + current);
     if (!impl || typeof impl !== "object") throw new Error("question type plugin " + String(key) + "@" + v + ": implementation required");
@@ -50,7 +60,6 @@ export function registerQuestionTypePlugin(plugin: QuestionTypePlugin): () => vo
     if (impl.defaults !== undefined && typeof impl.defaults !== "function") throw new Error("question type plugin " + String(key) + "@" + v + ": defaults must be a function");
     if (impl.validate !== undefined && typeof impl.validate !== "function") throw new Error("question type plugin " + String(key) + "@" + v + ": validate must be a function");
   }
-  if (!versions[current]) throw new Error("question type plugin " + String(key) + ": the current version " + current + " has no implementation");
   // ── transactional registration: any failure rolls back every earlier step ───────────────────────────────────────────
   const undo: (() => void)[] = [];
   const rollback = () => { for (const u of undo.splice(0).reverse()) { try { u(); } catch { /* best effort: keep unwinding */ } } };
