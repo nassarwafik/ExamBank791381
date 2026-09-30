@@ -3,7 +3,8 @@ const { withObservability } = require("../lib/observability");
 const {
   TOKEN_TTL_SECONDS,
   createBuilderToken,
-  validateBuilderCredentials
+  validateBuilderCredentials,
+  builderAuthConfigurationStatus
 } = require("../lib/builder-auth");
 const { getContainer } = require("../lib/platform-storage");
 const {
@@ -37,6 +38,14 @@ async function handler(request, deps = {}, obs = null) {
     }
     if (userCode.length > 128 || password.length > 512) {
       return { status: 400, headers: NO_STORE, jsonBody: { ok: false, error: "بيانات الدخول غير صالحة." } };
+    }
+
+    // Phase 14B — a malformed non-empty BUILDER_USERS fails CLOSED for everyone (no fallback to the shared password). The
+    // response names the configuration problem, never a value, an account or an environment-variable name.
+    const authConfig = (deps.builderAuthConfigurationStatus || builderAuthConfigurationStatus)();
+    if (authConfig.broken) {
+      obs?.logError("auth.login.config_invalid", new Error("BUILDER_USERS: " + String(authConfig.reason || "invalid")), { kind: "builder" });
+      return { status: 503, headers: NO_STORE, jsonBody: { ok: false, code: "AUTH_CONFIG_INVALID", error: "إعدادات حسابات المعلمين على الخادم غير صالحة. لا يمكن تسجيل الدخول حتى يصحّحها المسؤول." } };
     }
 
     const container = getC();

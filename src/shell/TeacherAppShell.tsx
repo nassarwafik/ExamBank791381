@@ -6,8 +6,7 @@ import BrandMark from "../ui/BrandMark";
 import useFocusTrap from "../ui/useFocusTrap";
 import {
   IconDashboard, IconStudents, IconAssignments, IconProjects, IconReports, IconBuilder, IconUpload, IconAudit,
-  IconBank, IconBook, IconSparkles, IconLogout, IconUser, IconMenu, IconClose, IconSidebar, IconMail
-} from "../icons";
+  IconBank, IconBook, IconSparkles, IconLogout, IconUser, IconMenu, IconClose, IconSidebar, IconMail, IconCheck } from "../icons";
 import {
   NAV_LABELS, EXAM_BANK_GROUP_LABEL, EXAM_BANK_HEAD, PRIMARY_NAV, EXAM_BANK_NAV, FOOTER_NAV,
   activeNavId, breadcrumbFor, pageTitleFor, type TeacherNavId, type TeacherNavState
@@ -22,7 +21,7 @@ import "../shell.css";
 // with breadcrumb + <h1>, footer navigation (audit, user, logout). No data fetching, no routing authority.
 const ICONS: Record<TeacherNavId, (p: { size?: number }) => ReactNode> = {
   dashboard: IconDashboard, learning: IconBook, students: IconStudents, assignments: IconAssignments, messages: IconMail, projects: IconProjects,
-  reports: IconReports, games: IconSparkles, bank: IconBank, builder: IconBuilder, import: IconUpload, audit: IconAudit
+  reports: IconReports, games: IconSparkles, bank: IconBank, builder: IconBuilder, import: IconUpload, reviews: IconCheck, audit: IconAudit
 };
 /** Phase 8B — every teacher page title carries its destination's sidebar icon (the ONE central ICONS mapping; the
  *  icon is decorative — PageHeader hides it from assistive technology, so the <h1> text stays the only name). */

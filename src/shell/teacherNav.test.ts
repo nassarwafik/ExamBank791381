@@ -42,7 +42,7 @@ describe("UX-2 teacherNav mapping", () => {
     expect(all.sort()).toEqual(Object.keys(NAV_LABELS).sort());
     expect(FOOTER_NAV).toEqual(["audit"]);
     expect(EXAM_BANK_HEAD).toBe("bank");                                       // UX-6c — the group head is itself a destination
-    expect(EXAM_BANK_NAV).toEqual(["builder", "import"]);
+    expect(EXAM_BANK_NAV).toEqual(["builder", "import", "reviews"]);                // 14B — «مراجعات النشر» joins the Exam Bank group
   });
   it("Learning Materials is a top-level destination in the exact primary order (Phase 1), not inside Exam Bank", () => {
     expect(PRIMARY_NAV).toEqual(["dashboard", "learning", "students", "assignments", "messages", "projects", "reports", "games"]);

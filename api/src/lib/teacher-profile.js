@@ -6,6 +6,7 @@
 // "المعلم". The preset avatar allow-list mirrors src/avatars.tsx (the same set students use).
 const { downloadJsonOrNull } = require("./platform-storage");
 const { photoMeta } = require("./profile-photo-store");
+const { getBuilderAccount } = require("./builder-users");
 
 const PROFILE_PREFIX = "platform/teacher-profiles/";
 const PHOTO_PREFIX = "platform/teacher-profile-images/";
@@ -23,7 +24,12 @@ const profileDocName = sub => PROFILE_PREFIX + teacherKey(sub) + ".json";
 /** The teacher's photo namespace — every immutable revision lives under it; the profile document selects the active one. */
 const teacherPhotoPrefix = sub => PHOTO_PREFIX + teacherKey(sub) + "/";
 
-function fallbackDisplayName() {
+// Phase 14B — in multi-user mode (BUILDER_USERS) the configured account's display name sits between the stored profile
+// name and the single-teacher TEACHER_DISPLAY_NAME fallback: profile displayName → account displayName → configured
+// fallback → «المعلم». The actor id stays the authority; a display name is presentation only.
+function fallbackDisplayName(sub) {
+  const account = sub ? getBuilderAccount(process.env, String(sub)) : null;
+  if (account && account.displayName && account.displayName !== account.actorId) return account.displayName;
   const configured = String(process.env.TEACHER_DISPLAY_NAME || "").trim();
   return configured || DEFAULT_DISPLAY_NAME;
 }
@@ -41,7 +47,7 @@ function publicTeacherProfile(sub, doc) {
   const name = normalizeDisplayName(d.displayName);
   return {
     teacherId: String(sub || ""),
-    displayName: name || fallbackDisplayName(),
+    displayName: name || fallbackDisplayName(sub),
     hasCustomName: !!name,
     avatarId: VALID_AVATARS.has(String(d.avatarId || "")) ? String(d.avatarId) : "",
     profilePhoto: photoMeta(d),
@@ -53,12 +59,12 @@ function publicTeacherProfile(sub, doc) {
 async function resolveTeacherDisplayName(containerOrGetter, sub, deps = {}) {
   try {
     const dl = deps.downloadJsonOrNull || downloadJsonOrNull;
-    if (!teacherKey(sub)) return fallbackDisplayName();
+    if (!teacherKey(sub)) return fallbackDisplayName(sub);
     const container = typeof containerOrGetter === "function" ? containerOrGetter() : containerOrGetter;
     const doc = await dl(container, profileDocName(sub));
     return publicTeacherProfile(sub, doc).displayName;
   } catch {
-    return fallbackDisplayName();
+    return fallbackDisplayName(sub);
   }
 }
 

@@ -20,6 +20,8 @@ const LearningMaterialsPage = lazy(lazyWithRetry(() => import("./learning/Learni
 const TeacherGamesPage = lazy(lazyWithRetry(() => import("./games/TeacherGamesPage"), "teacher-games"));
 // Phase 5C — teacher messaging (direct conversations + class announcements), code-split like the other destinations.
 const TeacherMessagesPage = lazy(lazyWithRetry(() => import("./messages/TeacherMessagesPage"), "teacher-messages"));
+// Phase 14B — the Review Inbox («مراجعات النشر»): a global workflow page for the reviewer / approver / publisher, lazy like every teacher page.
+const ReviewInboxPage = lazy(lazyWithRetry(() => import("./governance/ReviewInboxPage"), "teacher-review-inbox"));
 // Structured Exam Builder (Phase 2) — code-split so it only loads when a teacher opens it.
 const StructuredExamBuilder = lazy(lazyWithRetry(() => import("./StructuredExamBuilder"), "structured-exam-builder"));
 const SmartStructuredExamImportWizard = lazy(lazyWithRetry(() => import("./SmartStructuredExamImportWizard"), "smart-structured-import"));
@@ -597,7 +599,8 @@ function App() {
       "bank" |
       "learning" |
       "games" |
-      "messages"
+      "messages" |
+      "reviews"
     >(
       "builder"
     );
@@ -712,6 +715,7 @@ function App() {
     if (id === "learning") { setTeacherView("learning"); return; }
     if (id === "games") { setTeacherView("games"); return; }
     if (id === "messages") { setTeacherView("messages"); return; }
+    if (id === "reviews") { setTeacherView("reviews"); return; }          // 14B — Review Inbox («مراجعات النشر»)
     if (id === "projects") { goToProjects(""); return; }
     if (id === "reports") { setTeacherView("reports"); return; }
     if (id === "import") { setTeacherView("import"); return; }
@@ -5855,6 +5859,12 @@ function App() {
       {teacherView === "messages" && (
         <Suspense fallback={<p className="eb-muted" role="status">جارٍ التحميل...</p>}>
           <TeacherMessagesPage token={token} onUnreadChanged={() => setMessageUnreadNonce(n => n + 1)} />
+        </Suspense>
+      )}
+
+      {teacherView === "reviews" && (
+        <Suspense fallback={<p className="eb-muted" role="status">جارٍ التحميل...</p>}>
+          <ReviewInboxPage token={token} />
         </Suspense>
       )}
 
