@@ -14,7 +14,7 @@ import { QUESTION_TYPE_LABELS } from "./examTypes";
 import type { AssessmentBlueprintV1, BlueprintConstraint, BlueprintDimension, BlueprintMetric, BlueprintUnit } from "./assessmentTypes";
 import {
   buildAssessmentProfile, effectiveAssessmentMeta, validateBlueprintForExam, blueprintCognitiveLevels, blueprintDifficultyScale, prepareAssessmentMetaContext,
-  type AssessmentProfile, type AssessmentMetaContext, type BlueprintIssue, type Tally
+  type AssessmentProfile, type AssessmentMetaContext, type AssessmentEvaluationInstrumentation, type BlueprintIssue, type Tally
 } from "./assessmentBlueprint";
 
 /** Comparison tolerance for floating official marks / percentages (proportional attribution produces fractions). */
@@ -90,9 +90,9 @@ export type AssessmentEvidenceIndex = {
   unmappedQuestionIds: string[];
 };
 const push = (rec: Record<string, string[]>, key: string, id: string) => { (rec[key] || (rec[key] = [])).push(id); };
-export function buildAssessmentEvidenceIndex(exam: StructuredExam, blueprint?: AssessmentBlueprintV1 | null, context?: AssessmentMetaContext): AssessmentEvidenceIndex {
+export function buildAssessmentEvidenceIndex(exam: StructuredExam, blueprint?: AssessmentBlueprintV1 | null, context?: AssessmentMetaContext, instrumentation?: AssessmentEvaluationInstrumentation): AssessmentEvidenceIndex {
   const bp = blueprint === undefined ? exam.blueprint : blueprint;
-  const ctx = context ?? prepareAssessmentMetaContext(bp);                                       // R3-C: one taxonomy lookup per pass
+  const ctx = context ?? prepareAssessmentMetaContext(bp, instrumentation);                                       // R3-C: one taxonomy lookup per pass
   const idx: AssessmentEvidenceIndex = { order: [], byTopic: {}, byObjective: {}, byDifficulty: {}, byType: {}, byCognitiveLevel: {}, byCapability: {}, bySection: {}, unclassified: [], unmappedBankTopics: {}, unmappedQuestionIds: [] };
   for (const s of exam.sections || []) {
     for (const q of (s.questions || []) as BuilderQuestion[]) {
@@ -113,16 +113,24 @@ export function buildAssessmentEvidenceIndex(exam: StructuredExam, blueprint?: A
   return idx;
 }
 
-// ── labels (display only) ────────────────────────────────────────────────────────────────────────────────────────
-function refLabelFor(bp: AssessmentBlueprintV1, exam: StructuredExam, c: BlueprintConstraint): string {
+// ── labels (display only) — prepared ONCE per evaluation (13C-C hardening H2: no per-row array scans) ───────────
+export type CoverageLabelIndex = { topics: Map<string, string>; objectives: Map<string, string>; cognitive: Map<string, string>; sections: Map<string, string>; difficulty: Record<string, string> | undefined };
+export function prepareCoverageLabels(bp: AssessmentBlueprintV1, exam: Pick<StructuredExam, "sections">): CoverageLabelIndex {
+  const m = (items: ReadonlyArray<{ id: string; label?: string; title?: string }>, pick: (x: { label?: string; title?: string }) => string | undefined) => { const out = new Map<string, string>(); for (const x of items) if (typeof x.id === "string" && !out.has(x.id)) out.set(x.id, pick(x) || x.id); return out; };
+  return {
+    topics: m(bp.topics, x => x.label), objectives: m(bp.objectives, x => x.label), cognitive: m(blueprintCognitiveLevels(bp), x => x.label),
+    sections: m(exam.sections || [], x => x.title), difficulty: blueprintDifficultyScale(bp).labels
+  };
+}
+function refLabelFor(labels: CoverageLabelIndex, c: BlueprintConstraint): string {
   const ref = String(c.ref ?? "");
   switch (c.dimension) {
-    case "topic": return bp.topics.find(t => t.id === ref)?.label || ref;
-    case "objective": return bp.objectives.find(o => o.id === ref)?.label || ref;
-    case "difficulty": { const l = blueprintDifficultyScale(bp).labels?.[ref]; return l ? ref + " — " + l : ref; }
-    case "cognitiveLevel": return blueprintCognitiveLevels(bp).find(l => l.id === ref)?.label || ref;
+    case "topic": return labels.topics.get(ref) || ref;
+    case "objective": return labels.objectives.get(ref) || ref;
+    case "difficulty": { const l = labels.difficulty?.[ref]; return l ? ref + " — " + l : ref; }
+    case "cognitiveLevel": return labels.cognitive.get(ref) || ref;
     case "questionType": return (QUESTION_TYPE_LABELS as Record<string, string>)[ref] || ref;
-    case "section": return (exam.sections || []).find(s => s.id === ref)?.title || ref;
+    case "section": return labels.sections.get(ref) || ref;
     default: return ref;
   }
 }
@@ -170,11 +178,12 @@ function indexIssues(issues: BlueprintIssue[]): IssueIndex {
 }
 const uniq = (a: BlueprintIssue[], b: BlueprintIssue[]): BlueprintIssue[] => (b.length === 0 ? a : a.length === 0 ? b : Array.from(new Set([...a, ...b])));
 
-export function evaluateBlueprintCoverage(exam: StructuredExam, blueprint?: AssessmentBlueprintV1 | null): BlueprintCoverageReport {
+export type CoverageEvaluationOptions = { instrumentation?: AssessmentEvaluationInstrumentation };
+export function evaluateBlueprintCoverage(exam: StructuredExam, blueprint?: AssessmentBlueprintV1 | null, options?: CoverageEvaluationOptions): BlueprintCoverageReport {
   const bp = blueprint === undefined ? exam.blueprint : blueprint;
   const issues = bp ? validateBlueprintForExam(bp, exam) : [];
   const usable = structurallyUsable(bp, issues);
-  const ctx = prepareAssessmentMetaContext(usable ? bp : null);                                  // R3-C: prepared ONCE, shared below
+  const ctx = prepareAssessmentMetaContext(usable ? bp : null, options?.instrumentation);       // R3-C: prepared ONCE, shared below
   const profile = buildAssessmentProfile(exam, usable ? bp : null, ctx);
   const evidence = buildAssessmentEvidenceIndex(exam, usable ? bp : null, ctx);
   const report: BlueprintCoverageReport = {
@@ -186,6 +195,7 @@ export function evaluateBlueprintCoverage(exam: StructuredExam, blueprint?: Asse
   };
   if (!usable) return report;
   const ix = indexIssues(issues);
+  const labels = prepareCoverageLabels(bp, exam);                                                 // H2: label maps once per evaluation
 
   // total targets — first-class rows (count → totalQuestions; marks → totalOfficialMarks, never totalWeightMarks).
   // R2: a target the canonical validator rejected (INVALID_TARGET) is an UNASSESSABLE row carrying that issue — never an
@@ -212,7 +222,7 @@ export function evaluateBlueprintCoverage(exam: StructuredExam, blueprint?: Asse
     const { tally, ids } = bucketFor(profile, evidence, c);
     const base = {
       id: typeof c.id === "string" && c.id ? c.id : prefix, kind: "constraint" as const, dimension: c.dimension, ref: typeof c.ref === "string" ? c.ref : undefined,
-      refLabel: refLabelFor(bp, exam, c), metric: c.metric, unit: c.unit, count: tally.count, weightMarks: tally.weightMarks, officialMarks: tally.officialMarks,
+      refLabel: refLabelFor(labels, c), metric: c.metric, unit: c.unit, count: tally.count, weightMarks: tally.weightMarks, officialMarks: tally.officialMarks,
       ...limitsOf(c), issues: own, evidence: ids
     };
     if (own.length) { report.constraints.push(unassessable(base, "blueprint-issue")); return; }

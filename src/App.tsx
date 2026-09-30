@@ -31,7 +31,7 @@ import type { AiImageRequestQuestion } from "./questionMedia";
 import type { BankPickerService } from "./StructuredExamBuilder";
 import type { BankQuestionRow } from "./bank/bankQuestionModel";
 import type { BankExamQuestion } from "./structuredExamProductivity";
-import { legacyToStructured, toSavedStructuredExam, newSection, newQuestion, type StructuredExamUpdater } from "./examBuilderState";
+import { legacyToStructured, newSection, newQuestion, type StructuredExamUpdater } from "./examBuilderState";
 // Phase 13A — the structured exam lives in a HISTORY authority (undo / redo / saved checkpoint / recovery).
 import { useStructuredExamHistory } from "./useStructuredExamHistory";
 import { examSaveState } from "./examHistory";
@@ -3954,11 +3954,17 @@ function App() {
     setStructuredError("");
     setStructuredNotice("");
     try {
-      const payload = { ...toSavedStructuredExam(snapshot), status: mode };
-      await apiRequest<{ ok: true }>("/api/save-exam-artifact", { method: "POST", body: JSON.stringify({ kind: "exam", exam: payload }) });
-      // Reconcile against the latest exam: an image that arrived DURING the save is kept (not rolled back), and the
-      // saved checkpoint is stamped from the snapshot that was ACTUALLY persisted (Phase 13A saved authority).
-      structuredHistory.commitSaved(snapshot, payload);
+      // Phase 13C-C — SECOND-LINE GUARD: a "final" save evaluates the exact snapshot about to be persisted with the canonical
+      // finalization authority (structural validity + quality gates); when refused, no request is sent and nothing is
+      // committed. Draft saves are never gated. Reconciliation against the latest exam is unchanged (13A saved authority).
+      // The authority is loaded on demand (it already lives in the lazy builder chunk) so the initial graph does not grow.
+      const { runStructuredSave } = await import("./structuredSavePolicy");
+      const result = await runStructuredSave({
+        snapshot, mode,
+        request: payload => apiRequest<{ ok: true }>("/api/save-exam-artifact", { method: "POST", body: JSON.stringify({ kind: "exam", exam: payload }) }),
+        commitSaved: structuredHistory.commitSaved
+      });
+      if (!result.ok) { setStructuredError(result.reason); return; }
       setStructuredNotice(mode === "final" ? "✓ تم اعتماد الامتحان المنظّم نهائيًا وحفظه." : "✓ تم حفظ مسودة الامتحان المنظّم.");
       await loadSavedExams();
     }

@@ -71,16 +71,16 @@ describe("R3 — near-linear structure: prepared taxonomy context, indexed issue
     expect(BP.effectiveAssessmentMeta(bankQ, bp, ctx).primaryTopicId).toBe("T7"); expect(BP.effectiveAssessmentMeta(bankQ, bp, ctx).unmappedBankTopics).toEqual(["nope"]);
     expect(BP.effectiveAssessmentMeta(q("x", 1, undefined, { topic: "t7" }), bp, ctx).primaryTopicId).toBeUndefined();    // still exact, never fuzzy
     const big = examOf([sec("s1", Array.from({ length: 3000 }, (_, i) => q("q" + i, 1, undefined, { topic: "T" + (i % 400) })))]);
-    BP.assessmentMetaDiagnostics.contextsPrepared = 0;
-    COV.evaluateBlueprintCoverage(big, bp);
-    expect(BP.assessmentMetaDiagnostics.contextsPrepared).toBe(1);                                                        // not 3000, not 6000
-    BP.assessmentMetaDiagnostics.contextsPrepared = 0;
-    BP.buildAssessmentProfile(big, bp); expect(BP.assessmentMetaDiagnostics.contextsPrepared).toBe(1);
-    BP.assessmentMetaDiagnostics.contextsPrepared = 0;
-    COV.buildAssessmentEvidenceIndex(big, bp); expect(BP.assessmentMetaDiagnostics.contextsPrepared).toBe(1);
-    BP.assessmentMetaDiagnostics.contextsPrepared = 0;
-    BP.effectiveAssessmentMeta(bankQ, bp); BP.effectiveAssessmentMeta(bankQ, bp);
-    expect(BP.assessmentMetaDiagnostics.contextsPrepared).toBe(2);                                                        // the legacy 2-arg path prepares per call (documented)
+    // 13C-C H1: no global counter — the CALLER supplies an instrumentation sink (pure), and a getter-counting blueprint proves
+    // taxonomy is read a constant number of times regardless of n (no per-question rebuild anywhere in the pipeline).
+    let prepared = 0; const instrumentation = { contextPrepared: () => { prepared += 1; } };
+    COV.evaluateBlueprintCoverage(big, bp, { instrumentation });
+    expect(prepared).toBe(1);                                                                                              // not 3000, not 6000
+    prepared = 0; BP.buildAssessmentProfile(big, bp, undefined, instrumentation); expect(prepared).toBe(1);
+    prepared = 0; COV.buildAssessmentEvidenceIndex(big, bp, undefined, instrumentation); expect(prepared).toBe(1);
+    const counting = (n: number) => { let reads = 0; const topics = bp.topics; const probe = { ...bp }; Object.defineProperty(probe, "topics", { get() { reads += 1; return topics; }, enumerable: true }); COV.evaluateBlueprintCoverage(examOf([sec("s1", Array.from({ length: n }, (_, i) => q("q" + i, 1, undefined, { topic: "T" + (i % 400) })))]), probe as never); return reads; };
+    expect(counting(3000)).toBe(counting(30));                                                                           // taxonomy reads do not grow with n
+    expect(BP).not.toHaveProperty("assessmentMetaDiagnostics");
   });
   it("R3-A — the evidence index carries the ordered, de-duplicated unmapped question list from the same pass", () => {
     const exam = examOf([sec("s1", [q("q1", 1, undefined, { topic: "U1", secondaryTopics: ["U2", "U3"] }), q("q2", 1, { primaryTopicId: "IP_ADDRESSING" }), q("q3", 1, undefined, { topic: "U1" })])]);
@@ -111,15 +111,16 @@ describe("R3 — near-linear structure: prepared taxonomy context, indexed issue
     expect(src).toMatch(/prepareAssessmentMetaContext\(/);
     const bpSrc = code(readFileSync("src/assessmentBlueprint.ts", "utf8"));
     expect(bpSrc).toMatch(/export function prepareAssessmentMetaContext/);
+    expect(bpSrc).toMatch(/\(context \?\? prepareAssessmentMetaContext\(blueprint\)\)\.topicIds/);                            // the per-question path reuses the prepared context
   });
   it("worst case (3000 questions × unique unmapped topics × 500 topics × 300 constraints with 150 broken refs) evaluates with one prepared context, exact results and bounded time", () => {
     const topics = Array.from({ length: 500 }, (_, i) => ({ id: "T" + i, label: "t" + i }));
     const constraints: BlueprintConstraint[] = Array.from({ length: 300 }, (_, i) => ({ id: "c" + i, dimension: "topic", ref: i % 2 ? "T" + (i % 500) : "BROKEN" + i, metric: i % 3 ? "count" : "marks", unit: i % 4 ? "absolute" : "percent", target: 5 }));
     const bp: AssessmentBlueprintV1 = { ...networkingBlueprint, topics, objectives: [], constraints, targets: { totalQuestions: 3000, totalMarks: 3000 } };
     const exam = examOf([sec("s1", Array.from({ length: 3000 }, (_, i) => q("q" + i, 1, i % 2 ? { primaryTopicId: "T" + (i % 500) } : undefined, { topic: "UNMAPPED-" + i })))]);
-    BP.assessmentMetaDiagnostics.contextsPrepared = 0;
-    const t0 = performance.now(); const r = COV.evaluateBlueprintCoverage(exam, bp); const ms = performance.now() - t0;
-    expect(BP.assessmentMetaDiagnostics.contextsPrepared).toBe(1);
+    let prepared = 0;
+    const t0 = performance.now(); const r = COV.evaluateBlueprintCoverage(exam, bp, { instrumentation: { contextPrepared: () => { prepared += 1; } } }); const ms = performance.now() - t0;
+    expect(prepared).toBe(1);
     expect(r.unmappedBank.questionIds).toHaveLength(1500); expect(r.unmappedBank.questionIds[0]).toBe("q0"); expect(Object.keys(r.unmappedBank.byTopic)).toHaveLength(1500);
     expect(r.constraints).toHaveLength(300); expect(r.constraints.filter(c => c.relation === "unassessable")).toHaveLength(150); expect(r.issues).toHaveLength(150);
     expect(r.totals[0]).toMatchObject({ actual: 3000, relation: "at-target" });

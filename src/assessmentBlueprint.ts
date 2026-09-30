@@ -242,10 +242,11 @@ export type EffectiveAssessmentMeta = {
 /** Prepared taxonomy lookup for effectiveAssessmentMeta. Prepare ONCE per evaluation and reuse across every question
  *  (13C-B Review Fix 1 / R3-C): the semantics are identical to the two-argument call, only the Set is not rebuilt. */
 export type AssessmentMetaContext = { topicIds: ReadonlySet<string> };
-/** Pure diagnostics seam (tests): how many contexts were prepared. Never read by production code. */
-export const assessmentMetaDiagnostics = { contextsPrepared: 0 };
-export function prepareAssessmentMetaContext(blueprint?: AssessmentBlueprintV1 | null): AssessmentMetaContext {
-  assessmentMetaDiagnostics.contextsPrepared += 1;
+/** Optional instrumentation a CALLER supplies (tests / diagnostics). No global mutable state exists in this module
+ *  (13C-C hardening H1): when nothing is supplied, nothing is recorded. */
+export type AssessmentEvaluationInstrumentation = { contextPrepared?: () => void };
+export function prepareAssessmentMetaContext(blueprint?: AssessmentBlueprintV1 | null, instrumentation?: AssessmentEvaluationInstrumentation): AssessmentMetaContext {
+  instrumentation?.contextPrepared?.();
   return { topicIds: new Set((blueprint?.topics ?? []).map(t => t.id)) };
 }
 export function effectiveAssessmentMeta(question: BuilderQuestion | BankEvidenceQuestion, blueprint?: AssessmentBlueprintV1 | null, context?: AssessmentMetaContext): EffectiveAssessmentMeta {
@@ -329,9 +330,9 @@ export function officialQuestionMarks(q: BuilderQuestion, s: BuilderSection): nu
   return w > 0 ? (questionMaxMarks(q) * sectionMaxMarks(s)) / w : 0;
 }
 const bump = (rec: Record<string, Tally>, key: string, weight: number, official: number) => { const t = rec[key] || (rec[key] = { count: 0, weightMarks: 0, officialMarks: 0 }); t.count += 1; t.weightMarks += weight; t.officialMarks += official; };
-export function buildAssessmentProfile(exam: StructuredExam, blueprint?: AssessmentBlueprintV1 | null, context?: AssessmentMetaContext): AssessmentProfile {
+export function buildAssessmentProfile(exam: StructuredExam, blueprint?: AssessmentBlueprintV1 | null, context?: AssessmentMetaContext, instrumentation?: AssessmentEvaluationInstrumentation): AssessmentProfile {
   const bp = blueprint === undefined ? exam.blueprint : blueprint;
-  const ctx = context ?? prepareAssessmentMetaContext(bp);
+  const ctx = context ?? prepareAssessmentMetaContext(bp, instrumentation);
   const p: AssessmentProfile = {
     totalQuestions: countQuestions(exam), totalWeightMarks: 0, totalOfficialMarks: computeTotalMarks(exam), unattributedOfficialMarks: 0,
     byTopic: {}, byObjective: {}, byDifficulty: {}, byType: {}, byCognitiveLevel: {}, byCapability: {}, bySection: {},
