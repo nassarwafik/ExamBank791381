@@ -12,6 +12,7 @@ exports.changePartType = changePartType;
 exports.moveInArray = moveInArray;
 exports.changeSectionPolicy = changeSectionPolicy;
 exports.moveSection = moveSection;
+exports.mergePatch = mergePatch;
 exports.moveQuestion = moveQuestion;
 exports.duplicateQuestion = duplicateQuestion;
 exports.moveQuestionToSection = moveQuestionToSection;
@@ -46,6 +47,8 @@ exports.buildMatchingPatch = buildMatchingPatch;
 exports.matchingPairs = matchingPairs;
 exports.stripAnswersForPreview = stripAnswersForPreview;
 const examPreviewModel_1 = require("./examPreviewModel");
+const questionTypeDefaults_1 = require("./questionTypeDefaults");
+const questionTypeCatalog_1 = require("./questionTypeCatalog");
 function genId(prefix = "id") {
     const g = globalThis.crypto;
     if (g && typeof g.randomUUID === "function")
@@ -85,6 +88,11 @@ function applyTypeDefaults(node) {
     const out = { ...node };
     const ensure = (key, value) => { if (out[key] === undefined)
         out[key] = value; };
+    if (t && (0, questionTypeDefaults_1.hasRegisteredTypeDefaults)(t) && !(0, questionTypeCatalog_1.questionTypeDefinition)(t)?.legacy) {
+        (0, questionTypeDefaults_1.applyRegisteredTypeDefaults)(t, ensure, genId);
+        ensure("questionTypeVersion", (0, questionTypeCatalog_1.currentQuestionTypeVersion)(t));
+        return out;
+    }
     switch (t) {
         case "multipleChoice":
             ensure("options", [{ text: "" }, { text: "" }]);
@@ -133,10 +141,22 @@ function applyTypeDefaults(node) {
 }
 function changeQuestionType(q, type) {
     const carried = { examQuestionId: q.examQuestionId, displayNumber: q.displayNumber, groupId: q.groupId, presentationType: type, text: q.text, marks: q.marks };
+    if (q.assessmentMeta !== undefined)
+        carried.assessmentMeta = q.assessmentMeta;
+    if (q.activity !== undefined)
+        carried.activity = q.activity;
+    if (q.image !== undefined)
+        carried.image = q.image;
+    if (q.images !== undefined)
+        carried.images = q.images;
     return applyTypeDefaults(carried);
 }
 function changePartType(p, type) {
     const carried = { id: p.id, label: p.label, type, text: p.text, marks: p.marks };
+    if (p.assessmentMeta !== undefined)
+        carried.assessmentMeta = p.assessmentMeta;
+    if (p.activity !== undefined)
+        carried.activity = p.activity;
     return applyTypeDefaults(carried);
 }
 function insertAt(arr, index, value) {
@@ -179,7 +199,14 @@ const addQuestion = (sections, sectionId, question = newQuestion()) => mapSectio
 exports.addQuestion = addQuestion;
 const deleteQuestion = (sections, sectionId, questionId) => mapSection(sections, sectionId, s => ({ ...s, questions: s.questions.filter(q => q.examQuestionId !== questionId) }));
 exports.deleteQuestion = deleteQuestion;
-const updateQuestion = (sections, sectionId, questionId, patch) => mapSection(sections, sectionId, s => ({ ...s, questions: s.questions.map(q => (q.examQuestionId === questionId ? { ...q, ...patch } : q)) }));
+function mergePatch(base, patch) {
+    const out = { ...base, ...patch };
+    for (const [k, v] of Object.entries(patch))
+        if (v === undefined)
+            delete out[k];
+    return out;
+}
+const updateQuestion = (sections, sectionId, questionId, patch) => mapSection(sections, sectionId, s => ({ ...s, questions: s.questions.map(q => (q.examQuestionId === questionId ? mergePatch(q, patch) : q)) }));
 exports.updateQuestion = updateQuestion;
 function moveQuestion(sections, sectionId, questionId, delta) {
     return mapSection(sections, sectionId, s => {
@@ -230,7 +257,7 @@ const addPart = (parts, part = newPart()) => [...parts, part];
 exports.addPart = addPart;
 const deletePart = (parts, id) => parts.filter(p => p.id !== id);
 exports.deletePart = deletePart;
-const updatePart = (parts, id, patch) => parts.map(p => (p.id === id ? { ...p, ...patch } : p));
+const updatePart = (parts, id, patch) => parts.map(p => (p.id === id ? mergePatch(p, patch) : p));
 exports.updatePart = updatePart;
 function movePart(parts, id, delta) {
     const i = parts.findIndex(p => p.id === id);

@@ -50,6 +50,8 @@ export default function ExamPreview({ exam, onClose }: Props) {
   const showCover = !!cover?.enabled && !coverStarted;
 
   const onChoice = (id: string, index: number) => setAnswers(a => ({ ...a, [id]: { kind: "choice", index } }));
+  // Phase 16A — generic seam for registered question types (preview parity: the SAME student card + renderers as the exam page).
+  const onAnswer = (id: string, next: Answer) => setAnswers(a => ({ ...a, [id]: next }));
   const onSeq = (id: string, index: number, value: string) => setAnswers(a => {
     const prev = a[id]?.kind === "sequence" ? (a[id] as { kind: "sequence"; values: string[] }).values : [];
     const values = [...prev]; values[index] = value;
@@ -105,6 +107,7 @@ export default function ExamPreview({ exam, onClose }: Props) {
                     onText={onText}
                     onField={onField}
                     onPart={onPart}
+                    onAnswer={onAnswer}
                   />
                 );
               })
@@ -118,14 +121,14 @@ export default function ExamPreview({ exam, onClose }: Props) {
                     <button onClick={() => setFocusIndex(x => nextFocusIndex(x, flatQs.length))} disabled={i === flatQs.length - 1}>التالي ▶</button>
                   </div>
                   <div className="iex-focus-progress"><i style={{ width: focusProgressPercent(i, flatQs.length) + "%" }} /></div>
-                  <StudentQuestionCard q={q} index={i} id={id} answer={answers[id]} onChoice={n => onChoice(id, n)} onSeq={(n, v) => onSeq(id, n, v)} onTable={(n, v) => onTable(id, n, v)} onText={v => onText(id, v)} onField={(fid, v) => onField(id, fid, v)} />
+                  <StudentQuestionCard q={q} index={i} id={id} answer={answers[id]} onChoice={n => onChoice(id, n)} onSeq={(n, v) => onSeq(id, n, v)} onTable={(n, v) => onTable(id, n, v)} onText={v => onText(id, v)} onField={(fid, v) => onField(id, fid, v)} onAnswer={next => onAnswer(id, next)} />
                 </div>
               );
             })() : (
               <section className="iex-flow">
                 {flatQs.map((q, i) => {
                   const id = qid(q, i);
-                  return <StudentQuestionCard key={id} q={q} index={i} id={id} answer={answers[id]} onChoice={n => onChoice(id, n)} onSeq={(n, v) => onSeq(id, n, v)} onTable={(n, v) => onTable(id, n, v)} onText={v => onText(id, v)} onField={(fid, v) => onField(id, fid, v)} />;
+                  return <StudentQuestionCard key={id} q={q} index={i} id={id} answer={answers[id]} onChoice={n => onChoice(id, n)} onSeq={(n, v) => onSeq(id, n, v)} onTable={(n, v) => onTable(id, n, v)} onText={v => onText(id, v)} onField={(fid, v) => onField(id, fid, v)} onAnswer={next => onAnswer(id, next)} />;
                 })}
               </section>
             )}

@@ -3,6 +3,7 @@
 // import dialog (saved exam | local JSON file), the legacy saved-exam regression through the REAL client, and the JSON
 // import flow (local parse only, selection before import, immutable snapshots, source metadata kind "exam").
 import { describe, it, expect, afterEach, vi } from "vitest";
+import { BUILDER_QUESTION_TYPES } from "../../examTypes";
 import { render, cleanup, screen, fireEvent, waitFor, within, act } from "@testing-library/react";
 import { readFileSync } from "fs";
 import path from "path";
@@ -51,7 +52,7 @@ describe("editor — header card, toolbar, empty state", () => {
     const bar = screen.getByRole("region", { name: "إضافة أسئلة إلى التحدّي" });
     expect(bar.classList.contains("eb-lc-toolbar")).toBe(true);
     const newGroup = within(bar).getByRole("group", { name: "سؤال جديد" });
-    expect((within(newGroup).getByLabelText("نوع السؤال الجديد") as HTMLSelectElement).options.length).toBe(11);
+    expect(Array.from((within(newGroup).getByLabelText("نوع السؤال الجديد") as HTMLSelectElement).options).map(o => o.value)).toEqual([...BUILDER_QUESTION_TYPES]); // mirrors the canonical catalog (11 legacy + Wave 1), no duplicated registry
     expect(within(newGroup).getByRole("button", { name: "+ إضافة سؤال" })).toBeTruthy();
     const importGroup = within(bar).getByRole("group", { name: "الاستيراد" });
     expect(within(importGroup).getByRole("button", { name: "استيراد من امتحان" })).toBeTruthy();

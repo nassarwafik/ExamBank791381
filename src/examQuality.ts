@@ -9,6 +9,8 @@
 // can no longer slip through to final status).
 
 import type { BuilderQuestion, BuilderSection, QuestionBody, StructuredExam, BuilderPartType, BuilderQuestionType } from "./examTypes";
+import { validateQuestionTypeNode } from "./questionTypeValidation";
+import { questionTypeDefinition } from "./questionTypeCatalog";
 import { cliPlaceholders, partMarksInfo } from "./examBuilderState";
 
 export type Severity = "error" | "warning";
@@ -149,7 +151,15 @@ function validateQuestion(q: BuilderQuestion, sectionLabel: string, section: Bui
 
 // Type-specific structural validation for ONE answer body — used for both a top-level question and a
 // compound part. `label` is a human hint (question display number, or part label) for messages.
-function validateBody(node: QuestionBody, type: BuilderQuestionType | BuilderPartType, label: string, where: Where, add: Add): void {
+function validateBody(node: QuestionBody, type: BuilderQuestionType | BuilderPartType, label: string, where: Where, add: Add, part = false): void {
+  // Phase 16A — the canonical question-type seam runs FIRST: unknown key / unsupported version / non-compound-capable part /
+  // executable field names and every registered type's configuration + answer-key checks are BLOCKING (finalization refuses
+  // them; a draft still opens). The legacy 11 then keep their exact structural checks below; registered non-legacy types are
+  // fully validated by the seam (no per-type branch here).
+  const typeIssues = validateQuestionTypeNode(node as unknown as Record<string, unknown>, type, node.questionTypeVersion, { part });
+  for (const i of typeIssues) add(i.severity, i.code, "«" + label + "»: " + i.message, where);
+  if (typeIssues.some(i => i.code === "UNKNOWN_QUESTION_TYPE" || i.code === "UNSUPPORTED_QUESTION_TYPE_VERSION")) return;
+  if (!questionTypeDefinition(type)?.legacy) return;
   switch (type) {
     case "multipleChoice": {
       const opts = node.options || [];
@@ -266,7 +276,7 @@ function validateCompound(q: BuilderQuestion, disp: string, sectionLabel: string
     seen.add(p.id);
     // Each part runs the SAME type-specific structural validation a standalone question of that type
     // would, so a malformed compound part is caught before finalization.
-    validateBody(p, p.type, "البند " + (p.label || i + 1) + " من " + disp, where, add);
+    validateBody(p, p.type, "البند " + (p.label || i + 1) + " من " + disp, where, add, true);
   });
   const info = partMarksInfo(q);
   if (info.mismatch) {

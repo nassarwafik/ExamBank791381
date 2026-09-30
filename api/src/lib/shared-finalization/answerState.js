@@ -16,5 +16,9 @@ function answered(a) {
         return Object.values(a.values).some(v => (Array.isArray(v) ? v.some(nonEmptyValue) : nonEmptyValue(v)));
     if (a.kind === "compound")
         return Object.values(a.parts).some(answered);
+    if (a.kind === "multiChoice")
+        return Array.isArray(a.optionIds) && a.optionIds.some(id => typeof id === "string" && id !== "");
+    if (a.kind === "numeric")
+        return typeof a.value === "string" && a.value.trim() !== "";
     return false;
 }

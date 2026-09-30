@@ -20,5 +20,6 @@ export default function LiveChallengeQuestion({ q, index, answer, onAnswer, disa
     onSeq={(n, v) => { const prev = answer?.kind === "sequence" ? answer.values : []; const values = [...prev]; values[n] = v; onAnswer({ kind: "sequence", values }); }}
     onTable={(n, v) => { const prev = answer?.kind === "table" ? answer.values : []; const values = [...prev]; values[n] = v; onAnswer({ kind: "table", values }); }}
     onText={v => onAnswer({ kind: "text", value: v })}
-    onField={(fieldId, v: FieldValue) => { const prev = answer?.kind === "fields" ? answer.values : {}; onAnswer({ kind: "fields", values: { ...prev, [fieldId]: v } }); }} />;
+    onField={(fieldId, v: FieldValue) => { const prev = answer?.kind === "fields" ? answer.values : {}; onAnswer({ kind: "fields", values: { ...prev, [fieldId]: v } }); }}
+    onAnswer={onAnswer} />;
 }

@@ -16,6 +16,8 @@ import type {
   StructuredExam
 } from "./examTypes";
 import { toSafePreviewExam, type PreviewExamInput } from "./examPreviewModel";
+import { applyRegisteredTypeDefaults, hasRegisteredTypeDefaults } from "./questionTypeDefaults";
+import { currentQuestionTypeVersion, questionTypeDefinition } from "./questionTypeCatalog";
 
 // ── Identity ────────────────────────────────────────────────────────────────
 // Stable unique ids. crypto.randomUUID when available (browser / modern Node), else a random string.
@@ -65,6 +67,13 @@ function applyTypeDefaults<T extends { presentationType?: BuilderQuestionType; t
   const t = (node.presentationType || node.type) as BuilderQuestionType | undefined;
   const out: Record<string, unknown> = { ...node };
   const ensure = (key: string, value: unknown) => { if (out[key] === undefined) out[key] = value; };
+  // Phase 16A — registered (Wave 1 / plugin) types seed their CODE-OWNED defaults and are stamped with the current type
+  // version. The legacy 11 keep the byte-for-byte factory shapes below and are NEVER stamped (absence = V1).
+  if (t && hasRegisteredTypeDefaults(t) && !questionTypeDefinition(t)?.legacy) {
+    applyRegisteredTypeDefaults(t, ensure, genId);
+    ensure("questionTypeVersion", currentQuestionTypeVersion(t));
+    return out as T;
+  }
   switch (t) {
     case "multipleChoice":
       ensure("options", [{ text: "" }, { text: "" }]);
@@ -115,12 +124,21 @@ function applyTypeDefaults<T extends { presentationType?: BuilderQuestionType; t
 }
 
 // Re-seed defaults when the teacher changes a question/part type, preserving text/marks/label.
+// Phase 16A §24 — a type change is destructive to the type-specific body ONLY: identity, display number, prompt, marks,
+// group / stimulus relation, pedagogical classification, interactive context and media are carried (media is type-neutral);
+// every option / field / table / CLI / answer-key value of the previous type is dropped, then the new type is initialised.
 export function changeQuestionType(q: BuilderQuestion, type: BuilderQuestionType): BuilderQuestion {
   const carried: BuilderQuestion = { examQuestionId: q.examQuestionId, displayNumber: q.displayNumber, groupId: q.groupId, presentationType: type, text: q.text, marks: q.marks };
+  if (q.assessmentMeta !== undefined) carried.assessmentMeta = q.assessmentMeta;
+  if (q.activity !== undefined) carried.activity = q.activity;
+  if (q.image !== undefined) carried.image = q.image;
+  if (q.images !== undefined) carried.images = q.images;
   return applyTypeDefaults(carried);
 }
 export function changePartType(p: BuilderPart, type: BuilderPartType): BuilderPart {
   const carried: BuilderPart = { id: p.id, label: p.label, type, text: p.text, marks: p.marks };
+  if (p.assessmentMeta !== undefined) carried.assessmentMeta = p.assessmentMeta;
+  if (p.activity !== undefined) carried.activity = p.activity;
   return applyTypeDefaults(carried) as BuilderPart;
 }
 
@@ -176,8 +194,15 @@ export const addQuestion = (sections: BuilderSection[], sectionId: string, quest
   mapSection(sections, sectionId, s => ({ ...s, questions: [...s.questions, question] }));
 export const deleteQuestion = (sections: BuilderSection[], sectionId: string, questionId: string): BuilderSection[] =>
   mapSection(sections, sectionId, s => ({ ...s, questions: s.questions.filter(q => q.examQuestionId !== questionId) }));
+/** Merge a patch; a key whose patch value is `undefined` is REMOVED (an explicit reset), so no stale key survives — the
+ *  serialized form is unchanged (JSON never carried undefined values) while `"key" in q` is now honest. */
+export function mergePatch<T extends object>(base: T, patch: Partial<T>): T {
+  const out = { ...base, ...patch } as Record<string, unknown>;
+  for (const [k, v] of Object.entries(patch)) if (v === undefined) delete out[k];
+  return out as T;
+}
 export const updateQuestion = (sections: BuilderSection[], sectionId: string, questionId: string, patch: Partial<BuilderQuestion>): BuilderSection[] =>
-  mapSection(sections, sectionId, s => ({ ...s, questions: s.questions.map(q => (q.examQuestionId === questionId ? { ...q, ...patch } : q)) }));
+  mapSection(sections, sectionId, s => ({ ...s, questions: s.questions.map(q => (q.examQuestionId === questionId ? mergePatch(q, patch) : q)) }));
 export function moveQuestion(sections: BuilderSection[], sectionId: string, questionId: string, delta: number): BuilderSection[] {
   return mapSection(sections, sectionId, s => {
     const i = s.questions.findIndex(q => q.examQuestionId === questionId);
@@ -224,7 +249,7 @@ export function updateQuestionBy(sections: BuilderSection[], sectionId: string, 
 }
 export const addPart = (parts: BuilderPart[], part = newPart()): BuilderPart[] => [...parts, part];
 export const deletePart = (parts: BuilderPart[], id: string): BuilderPart[] => parts.filter(p => p.id !== id);
-export const updatePart = (parts: BuilderPart[], id: string, patch: Partial<BuilderPart>): BuilderPart[] => parts.map(p => (p.id === id ? { ...p, ...patch } : p));
+export const updatePart = (parts: BuilderPart[], id: string, patch: Partial<BuilderPart>): BuilderPart[] => parts.map(p => (p.id === id ? mergePatch(p, patch) : p));
 export function movePart(parts: BuilderPart[], id: string, delta: number): BuilderPart[] {
   const i = parts.findIndex(p => p.id === id);
   return i < 0 ? parts : moveInArray(parts, i, delta);

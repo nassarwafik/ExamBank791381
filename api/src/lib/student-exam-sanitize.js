@@ -148,10 +148,20 @@ function sanitizeFieldForStudent(field) {
   return out;
 }
 
+// Phase 16A — Wave 1 type configuration objects are student-visible STRUCTURE (option ids, rows / columns, categories /
+// items, unitRequired). Every answer key of these types lives ONLY under `answer` (removed above); the config objects are
+// additionally passed through the canonical secret-key policy so a smuggled `correctColumn` / `answerKey` never reaches a
+// student (defense in depth).
+const TYPE_CONFIG_KEYS = ["numeric", "matrix", "categorization"];
+function applyTypeConfigForStudent(node) {
+  for (const k of TYPE_CONFIG_KEYS) if (k in node && node[k] && typeof node[k] === "object") node[k] = stripSecretsDeep(node[k]);
+}
+
 function sanitizePartForStudent(part) {
   if (!part || typeof part !== "object") return part;
-  const out = { ...part }; // keeps id / label / text / textHtml / marks / type / wordBank / cli / tableHeaders / tableRows / image(s) / groupId
+  const out = { ...part }; // keeps id / label / text / textHtml / marks / type / questionTypeVersion / wordBank / cli / tableHeaders / tableRows / image(s) / groupId
   delete out.answer; // remove part.answer (grading key)
+  applyTypeConfigForStudent(out);
   stripKeys(out, NODE_SECRET_KEYS);
   stripKeys(out, PLANNING_KEYS);
   applyActivityForStudent(out);
@@ -169,6 +179,7 @@ function sanitizeQuestionForStudent(question) {
   // Legacy-identical blanking (answer:{}, hint:"", …) so existing behaviour/tests are unchanged,
   // then strip any additional secret flags and recurse into the new structured children.
   const out = { ...question, answer: {}, hint: "", teacherNote: "", aiInstruction: "", history: [], redoStack: [] };
+  applyTypeConfigForStudent(out);
   stripKeys(out, ["explanation", "rationale", ...FLAG_SECRET_KEYS]);
   stripKeys(out, PLANNING_KEYS);
   applyActivityForStudent(out);

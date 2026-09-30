@@ -570,6 +570,9 @@ export default function StudentExamPage({token,assignment,studentName,className,
  const setTable=(id:string,index:number,value:string|boolean)=>setAnswers(a=>{const prev=a[id]?.kind==="table"?(a[id] as {kind:"table";values:(string|boolean)[]}).values:[];const values=[...prev];values[index]=value;return {...a,[id]:{kind:"table",values}}});
  const setField=(id:string,fieldId:string,value:FieldValue)=>setAnswers(a=>{const prev=a[id]?.kind==="fields"?(a[id] as {kind:"fields";values:Record<string,FieldValue>}).values:{};return {...a,[id]:{kind:"fields",values:{...prev,[fieldId]:value}}}});
  const setPart=(id:string,partId:string,ans:Answer)=>setAnswers(a=>{const prev=a[id]?.kind==="compound"?(a[id] as {kind:"compound";parts:Record<string,Answer>}).parts:{};return {...a,[id]:{kind:"compound",parts:{...prev,[partId]:ans}}}});
+ // Phase 16A — the generic seam for registered question types: the renderer emits the whole next Answer; it lands in the SAME
+ // Record<questionId, Answer> store, so autosave / submission / resync are untouched.
+ const setAnswer=(id:string,next:Answer)=>setAnswers(a=>({...a,[id]:next}));
  // The exact former window.confirm messages, now through the shared ConfirmDialog (same gating order; cancel = no request).
  const SUBMIT_CONFIRM={title:"تسليم الامتحان",confirmLabel:"تسليم الآن",cancelLabel:"متابعة الحل",tone:"danger" as const};
  function confirmSubmit():Promise<boolean>{
@@ -756,8 +759,8 @@ export default function StudentExamPage({token,assignment,studentName,className,
    <h2 id="iex-page-heading" className="iex-page-heading" tabIndex={-1} ref={questionHeadingRef}>السؤال {q.displayNumber??(currentIndex+1)} من {pages.length}</h2>
    {page.section&&<ExamSectionContext section={page.section} sectionNumber={page.sectionIndex+1} positionInSection={page.positionInSection} sectionSize={page.sectionSize} firstInSection={page.firstInSection} answers={answers}/>}
    {page.section
-    ?<StructuredSectionQuestion section={page.section} q={q} questionIndex={page.positionInSection} globalIndex={currentIndex} answers={answers} countedKeys={currentCountedKeys} showStimulus={!!q.groupId} disabled={inputsDisabled} onChoice={setChoice} onSeq={setSeq} onTable={setTable} onText={(qid2,v)=>setAnswers(x=>({...x,[qid2]:{kind:"text",value:v}}))} onField={setField} onPart={setPart}/>
-    :<StudentQuestionCard q={q} index={currentIndex} id={id} answer={answers[id]} onChoice={n=>setChoice(id,n)} onSeq={(n,v)=>setSeq(id,n,v)} onTable={(n,v)=>setTable(id,n,v)} onText={v=>setAnswers(x=>({...x,[id]:{kind:"text",value:v}}))} disabled={inputsDisabled}/>}
+    ?<StructuredSectionQuestion section={page.section} q={q} questionIndex={page.positionInSection} globalIndex={currentIndex} answers={answers} countedKeys={currentCountedKeys} showStimulus={!!q.groupId} disabled={inputsDisabled} onChoice={setChoice} onSeq={setSeq} onTable={setTable} onText={(qid2,v)=>setAnswers(x=>({...x,[qid2]:{kind:"text",value:v}}))} onField={setField} onPart={setPart} onAnswer={setAnswer}/>
+    :<StudentQuestionCard q={q} index={currentIndex} id={id} answer={answers[id]} onChoice={n=>setChoice(id,n)} onSeq={(n,v)=>setSeq(id,n,v)} onTable={(n,v)=>setTable(id,n,v)} onText={v=>setAnswers(x=>({...x,[id]:{kind:"text",value:v}}))} onAnswer={next=>setAnswer(id,next)} disabled={inputsDisabled}/>}
   </section>})():<p className="iex-loading" role="status">لا توجد أسئلة في هذا الامتحان.</p>}
   {view==="answer"&&<ExamBottomNavigation index={currentIndex} total={pages.length} onPrevious={goPrevious} onNext={goNext} onReview={openReview}/>}
   <QuestionNavigatorDialog open={navOpen} onClose={()=>setNavOpen(false)} pages={pages} answers={answers} currentIndex={view==="answer"?currentIndex:-1} onJump={goTo} answeredCount={answeredPages}/>

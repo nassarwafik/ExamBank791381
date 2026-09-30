@@ -3,23 +3,10 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.examHasQuestions = exports.isStructuredExam = exports.GRADING_POLICY_LABELS = exports.QUESTION_TYPE_LABELS = exports.BUILDER_PART_TYPES = exports.BUILDER_QUESTION_TYPES = void 0;
 exports.examQuestionCount = examQuestionCount;
-exports.BUILDER_QUESTION_TYPES = Object.freeze([
-    "multipleChoice", "trueFalse", "multiTrueFalse", "shortAnswer", "fillBlank", "wordBank", "matching", "ordering", "tableFill", "cliFill", "compound",
-]);
-exports.BUILDER_PART_TYPES = Object.freeze(exports.BUILDER_QUESTION_TYPES.filter((t) => t !== "compound"));
-exports.QUESTION_TYPE_LABELS = {
-    multipleChoice: "اختيار من متعدد",
-    trueFalse: "صح أو خطأ",
-    multiTrueFalse: "صح/خطأ متعدد",
-    shortAnswer: "إجابة قصيرة / مفتوحة",
-    fillBlank: "إكمال فراغات",
-    wordBank: "مخزن كلمات",
-    matching: "مطابقة",
-    ordering: "ترتيب",
-    tableFill: "إكمال جدول",
-    cliFill: "أوامر CLI",
-    compound: "سؤال مركّب"
-};
+const questionTypeCatalog_1 = require("./questionTypeCatalog");
+exports.BUILDER_QUESTION_TYPES = Object.freeze(questionTypeCatalog_1.QUESTION_TYPE_CATALOG.map(d => d.key));
+exports.BUILDER_PART_TYPES = Object.freeze((0, questionTypeCatalog_1.compoundPartTypeKeys)().filter(k => exports.BUILDER_QUESTION_TYPES.includes(k)));
+exports.QUESTION_TYPE_LABELS = Object.freeze(Object.fromEntries(questionTypeCatalog_1.QUESTION_TYPE_CATALOG.map(d => [d.key, d.label])));
 exports.GRADING_POLICY_LABELS = {
     all: "تصحيح جميع الأسئلة",
     capScore: "تصحيح الإجابات مع سقف للعلامة",

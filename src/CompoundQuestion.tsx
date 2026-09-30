@@ -1,6 +1,8 @@
 
+import {Suspense} from "react";
 import {IconCheck} from "./icons";
 import QuestionField from "./QuestionField";
+import {resolveStudentRenderer} from "./questionTypes/studentRegistry";
 import {promptText} from "./questionContent";
 import {answered,optionsFor} from "./StudentQuestionCard";
 import type {Question,QuestionPart,Answer,FieldValue} from "./StudentQuestionCard";
@@ -38,7 +40,10 @@ export default function CompoundQuestion({q,index,id,answer,onPart,disabled,exce
   {(q.image?.exists&&q.image.visible?q.image.assets:q.images||[])?.map((im,n)=>im?.dataUrl?<img className="iex-image" src={im.dataUrl} alt={"صورة السؤال "+(index+1)} key={n}/>:null)}
   <div className="iex-parts">{parts.map((p:QuestionPart,pi)=>{
    const pid=partId(p,pi),t=String(p.type||"").toLowerCase(),pAns=partAnswers[pid];
-   const isField=fieldPartTypes.has(t)||((p.fields?.length||0)>0&&!isChoice(t)&&t!=="shortanswer"&&t!=="open");
+   // Phase 16A — a registered (Wave 1 / plugin) part type renders through the SAME student registry a standalone question uses;
+   // its answer bubbles through the existing onPart seam. Legacy part types keep the inline path below unchanged.
+   const registered=resolveStudentRenderer(p.type);
+   const isField=!registered&&(fieldPartTypes.has(t)||((p.fields?.length||0)>0&&!isChoice(t)&&t!=="shortanswer"&&t!=="open"));
    const excess=excessPartIds?.has(pid);
    // UX-7b-1 accessibility (additive): each part's controls are named by the part text (or the part label when
    // the part has no text) — same answer shapes and handlers as before.
@@ -47,9 +52,10 @@ export default function CompoundQuestion({q,index,id,answer,onPart,disabled,exce
    return <div className={"iex-part "+(answered(pAns)?"done":"")} key={pid}>
     <div className="iex-part-head"><b className="iex-part-label" aria-hidden="true">{partLabel(p,pi)}</b><span className="iex-part-marks">{marks[pi]} علامة</span></div>
     {p.text&&<p className="iex-part-text" id={partTextId}>{p.text}</p>}
-    {isChoice(t)&&<fieldset className="iex-options" {...(p.text?{"aria-labelledby":partTextId}:{"aria-label":partName})}>{optionsFor(p).map((o,n)=><label className={"iex-option "+(pAns?.kind==="choice"&&pAns.index===n?"selected":"")} key={n}><input type="radio" name={id+"-"+pid} checked={pAns?.kind==="choice"&&pAns.index===n} onChange={()=>setChoice(pid,n)} disabled={disabled}/><span className="iex-pick" aria-hidden="true">{pAns?.kind==="choice"&&pAns.index===n&&<IconCheck size={14}/>}</span><b>{o.text||o.label||o.value||""}</b></label>)}</fieldset>}
+    {registered&&<Suspense fallback={<p className="iex-loading" role="status">جارٍ تحميل البند…</p>}><registered.Renderer q={p as unknown as Question} id={id+"-"+pid} answer={pAns} onAnswer={ans=>onPart(pid,ans)} disabled={disabled} labelPrefix={partName} textId={p.text?partTextId:undefined}/></Suspense>}
+    {!registered&&isChoice(t)&&<fieldset className="iex-options" {...(p.text?{"aria-labelledby":partTextId}:{"aria-label":partName})}>{optionsFor(p).map((o,n)=><label className={"iex-option "+(pAns?.kind==="choice"&&pAns.index===n?"selected":"")} key={n}><input type="radio" name={id+"-"+pid} checked={pAns?.kind==="choice"&&pAns.index===n} onChange={()=>setChoice(pid,n)} disabled={disabled}/><span className="iex-pick" aria-hidden="true">{pAns?.kind==="choice"&&pAns.index===n&&<IconCheck size={14}/>}</span><b>{o.text||o.label||o.value||""}</b></label>)}</fieldset>}
     {isField&&<QuestionField q={p} idBase={id+"-"+pid} values={pAns?.kind==="fields"?pAns.values:{}} onField={(fid,v)=>setField(pid,fid,v)} disabled={disabled} labelPrefix={partName}/>}
-    {!isChoice(t)&&!isField&&<textarea className="iex-open" {...(p.text?{"aria-labelledby":partTextId}:{"aria-label":partName})} value={pAns?.kind==="text"?pAns.value:""} onChange={e=>setText(pid,e.target.value)} placeholder="اكتب إجابتك هنا..." disabled={disabled}/>}
+    {!registered&&!isChoice(t)&&!isField&&<textarea className="iex-open" {...(p.text?{"aria-labelledby":partTextId}:{"aria-label":partName})} value={pAns?.kind==="text"?pAns.value:""} onChange={e=>setText(pid,e.target.value)} placeholder="اكتب إجابتك هنا..." disabled={disabled}/>}
     {excess&&<div className="iex-extra-hint">إجابة إضافية — لن تدخل في التصحيح</div>}
    </div>;
   })}</div>

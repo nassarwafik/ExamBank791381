@@ -1,21 +1,41 @@
 
-import { useId } from "react";
+import { Suspense, createElement, useId } from "react";
 import type { QuestionBody, BuilderOption, BuilderQuestionType, BuilderPartType } from "./examTypes";
 import { buildMatchingPatch, matchingPairs, moveMcqOption, deleteMcqOption, type MatchPair } from "./examBuilderState";
 import QuestionFieldEditor from "./QuestionFieldEditor";
 import TableFillEditor from "./TableFillEditor";
 import CliFillEditor from "./CliFillEditor";
+import { resolveAuthoringEditor } from "./questionTypes/authoringRegistry";
+import { isKnownQuestionType, questionTypeDefinition } from "./questionTypeCatalog";
 
-// Type-specific answer-body editor shared by a question and a compound part. It never renders identity,
-// text or marks (the caller owns those) — only the answer controls for the given type. All editing
-// flows through onChange(patch), and every type writes an answer shape the backend grader already
-// understands (proven end-to-end in examBuilder.test.ts).
+// Type-specific answer-body HOST shared by a question and a compound part. It never renders identity, text or marks (the
+// caller owns those) — only the answer controls for the given type. Phase 16A: the host resolves the CODE-OWNED authoring
+// registry first (Wave 1 / plugin editors, lazy); the 11 legacy types keep their original inline editors below through the
+// legacy adapter (unchanged behaviour, unchanged storage shapes); an unknown type renders an explicit unsupported state
+// (never a silent conversion). All editing flows through onChange(patch).
 
-type Props = { node: QuestionBody; type: BuilderQuestionType | BuilderPartType; onChange: (patch: Partial<QuestionBody>) => void; disabled?: boolean };
+type Props = { node: QuestionBody; type: BuilderQuestionType | BuilderPartType | string; onChange: (patch: Partial<QuestionBody>) => void; disabled?: boolean };
 
 const optText = (o: BuilderOption) => o.text ?? o.label ?? o.value ?? "";
 
 export default function QuestionBodyEditor({ node, type, onChange, disabled }: Props) {
+  const registered = resolveAuthoringEditor(type);
+  if (registered) {
+    return <Suspense fallback={<p className="sb-hint" role="status">جارٍ تحميل محرر النوع…</p>}>{createElement(registered, { node, onChange, disabled })}</Suspense>;
+  }
+  if (!isKnownQuestionType(type) || !questionTypeDefinition(type)?.legacy) {
+    return <UnsupportedQuestionType type={type} />;
+  }
+  return <LegacyQuestionAuthoringAdapter node={node} type={type as BuilderQuestionType} onChange={onChange} disabled={disabled} />;
+}
+
+/** Unknown / unsupported type: the data is kept verbatim, finalization is blocked by examQuality, the teacher resolves it by choosing a type. */
+function UnsupportedQuestionType({ type }: { type: string }) {
+  return <div className="qt-unsupported" data-testid="qt-unsupported" role="note">نوع سؤال غير مدعوم: <code>{String(type || "—")}</code>. لن يُقبل هذا السؤال في الاعتماد النهائي؛ اختر نوعًا مدعومًا من قائمة «نوع السؤال» أو احذف السؤال.</div>;
+}
+
+// LEGACY ADAPTER — the original 11-type editor, byte-for-byte.
+function LegacyQuestionAuthoringAdapter({ node, type, onChange, disabled }: { node: QuestionBody; type: BuilderQuestionType | BuilderPartType; onChange: (patch: Partial<QuestionBody>) => void; disabled?: boolean }) {
   // Unique per-editor-instance radio group name, so MCQ/trueFalse pickers on several questions/parts
   // rendered on the same page never share a radio group. This UI id is never stored in exam data.
   const groupId = useId();

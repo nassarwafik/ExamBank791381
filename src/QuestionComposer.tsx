@@ -1,7 +1,9 @@
 
 import type { BuilderQuestion, BuilderQuestionType } from "./examTypes";
 import { QUESTION_TYPE_LABELS, BUILDER_QUESTION_TYPES } from "./examTypes";
-import { changeQuestionType } from "./examBuilderState";
+import { typeChangePatch, typeSpecificContentPresent } from "./questionTypes/typeContent";
+import { isKnownQuestionType, questionTypeLabel } from "./questionTypeCatalog";
+import { useConfirm } from "./ui/useConfirm";
 import QuestionBodyEditor from "./QuestionBodyEditor";
 import CompoundQuestionEditor from "./CompoundQuestionEditor";
 
@@ -20,19 +22,35 @@ type Props = {
 };
 
 export default function QuestionComposer({ question: q, onChange, disabled }: Props) {
+  // Phase 16A §24 — changing the type is destructive to the type-specific body. When the question carries meaningful authored
+  // content the change goes through the shared ConfirmDialog authority (never window.confirm); a fresh default question
+  // changes silently. changeQuestionType (canonical) carries identity / prompt / marks / number / group / meta / media and
+  // resets ONLY the body, initialising the new type at its current version.
+  const { confirm, confirmDialog } = useConfirm();
+  const currentKnown = isKnownQuestionType(q.presentationType);
+  const requestTypeChange = async (next: BuilderQuestionType) => {
+    if (next === q.presentationType) return;
+    if (typeSpecificContentPresent(q as unknown as Record<string, unknown>)) {
+      const ok = await confirm({ title: "تغيير نوع السؤال", message: "تغيير النوع إلى «" + (questionTypeLabel(next) ?? next) + "» سيحذف الخيارات / الحقول / مفتاح الإجابة الخاصة بالنوع الحالي.\nسيبقى نص السؤال والعلامة والرقم والتصنيف والصورة.", confirmLabel: "تغيير النوع", cancelLabel: "إلغاء", tone: "danger" });
+      if (!ok) return;
+    }
+    onChange(typeChangePatch(q, next));
+  };
   return (
     <div className="sb-composer">
       <div className="sb-composer-type">
         <select
           className="sb-input sb-input-sm"
           value={q.presentationType}
-          onChange={e => onChange(changeQuestionType(q, e.target.value as BuilderQuestionType))}
+          onChange={e => { void requestTypeChange(e.target.value as BuilderQuestionType); }}
           disabled={disabled}
           aria-label="نوع السؤال"
         >
+          {!currentKnown && <option value={q.presentationType}>{"غير مدعوم: " + String(q.presentationType)}</option>}
           {BUILDER_QUESTION_TYPES.map(t => <option key={t} value={t}>{QUESTION_TYPE_LABELS[t]}</option>)}
         </select>
       </div>
+      {confirmDialog}
 
       <textarea
         className="sb-input sb-textarea"

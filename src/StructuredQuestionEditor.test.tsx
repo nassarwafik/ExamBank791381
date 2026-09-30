@@ -1,5 +1,6 @@
 // @vitest-environment happy-dom
 import { describe, it, expect, afterEach, vi } from "vitest";
+import { BUILDER_QUESTION_TYPES } from "./examTypes";
 import { render, cleanup, screen, fireEvent, within } from "@testing-library/react";
 import StructuredQuestionEditor from "./StructuredQuestionEditor";
 import { newQuestion } from "./examBuilderState";
@@ -37,9 +38,11 @@ describe("StructuredQuestionEditor — exam chrome after extraction", () => {
     expect(container.querySelector(".sb-options")).toBeTruthy();
   });
 
-  it("all 11 question types remain selectable through the composer", () => {
+  it("all 11 legacy question types remain selectable through the composer (first, in order), plus every other catalog type", () => {
     render(<StructuredQuestionEditor {...baseProps()} />);
-    expect((screen.getByLabelText("نوع السؤال") as HTMLSelectElement).querySelectorAll("option").length).toBe(11);
+    const values = Array.from((screen.getByLabelText("نوع السؤال") as HTMLSelectElement).querySelectorAll("option")).map(o => o.value);
+    expect(values.slice(0, 11)).toEqual(["multipleChoice", "trueFalse", "multiTrueFalse", "shortAnswer", "fillBlank", "wordBank", "matching", "ordering", "tableFill", "cliFill", "compound"]);
+    expect(values).toEqual([...BUILDER_QUESTION_TYPES]);
   });
 
   it("preview / move / duplicate / delete callbacks still fire", () => {

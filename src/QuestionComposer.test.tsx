@@ -1,5 +1,6 @@
 // @vitest-environment happy-dom
 import { describe, it, expect, afterEach, vi } from "vitest";
+import { BUILDER_QUESTION_TYPES, BUILDER_PART_TYPES } from "./examTypes";
 import { render, cleanup, screen, fireEvent } from "@testing-library/react";
 import { readFileSync } from "fs";
 import path from "path";
@@ -9,10 +10,12 @@ import { newQuestion } from "./examBuilderState";
 afterEach(cleanup);
 
 describe("QuestionComposer — the shared question content editor", () => {
-  it("renders the type selector (all 11 canonical types) and the question prompt", () => {
+  it("renders the type selector (every catalog type — the 11 canonical types first, in order) and the question prompt", () => {
     render(<QuestionComposer question={newQuestion("multipleChoice")} onChange={vi.fn()} />);
     const sel = screen.getByLabelText("نوع السؤال") as HTMLSelectElement;
-    expect(sel.querySelectorAll("option").length).toBe(11);
+    const values = Array.from(sel.querySelectorAll("option")).map(o => o.value);
+    expect(values).toEqual([...BUILDER_QUESTION_TYPES]);
+    expect(values.slice(0, 11)).toEqual(["multipleChoice", "trueFalse", "multiTrueFalse", "shortAnswer", "fillBlank", "wordBank", "matching", "ordering", "tableFill", "cliFill", "compound"]);
     expect(screen.getByPlaceholderText("نص السؤال")).toBeTruthy();
   });
 
@@ -36,11 +39,13 @@ describe("QuestionComposer — the shared question content editor", () => {
     expect(screen.getByPlaceholderText("نص السؤال المركّب (اختياري)")).toBeTruthy();   // compound prompt copy
   });
 
-  it("a compound part selector offers all 10 part types (compound excluded — no nesting)", () => {
+  it("a compound part selector offers every compound-capable type (the 10 legacy part types first; compound excluded — no nesting)", () => {
     const q = newQuestion("compound", { parts: [{ id: "p1", type: "multipleChoice", text: "" }] });
     const { container } = render(<QuestionComposer question={q} onChange={vi.fn()} />);
     const partSelect = container.querySelector(".sb-part select") as HTMLSelectElement;
-    expect(partSelect.querySelectorAll("option").length).toBe(10);
+    const values = Array.from(partSelect.querySelectorAll("option")).map(o => o.value);
+    expect(values).toEqual([...BUILDER_PART_TYPES]); expect(values).not.toContain("compound");
+    expect(values.slice(0, 10)).toEqual(["multipleChoice", "trueFalse", "multiTrueFalse", "shortAnswer", "fillBlank", "wordBank", "matching", "ordering", "tableFill", "cliFill"]);
   });
 
   it("changing the type goes through the canonical helper — onChange receives the new presentationType", () => {

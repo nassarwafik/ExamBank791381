@@ -7,6 +7,8 @@ import type { AiImageRequestQuestion } from "./questionMedia";
 import type { AssessmentBlueprintV1 } from "./assessmentTypes";
 import QuestionClassificationEditor from "./QuestionClassificationEditor";
 import ActivityDescriptorEditor from "./ActivityDescriptorEditor";
+import { questionTypeDefinition } from "./questionTypeCatalog";
+import { GRADING_MODE_LABELS } from "./questionTypeAliases";
 
 // Exam-specific chrome around a question: collapse, the displayed-number badge, and the row actions (preview, move,
 // duplicate, delete), plus the exam-only metadata (display number, marks, shared stimulus/group, move-to-section).
@@ -87,6 +89,7 @@ export default function StructuredQuestionEditor(props: Props) {
             )}
           </div>
 
+          <QuestionTypeMeta type={q.presentationType} version={q.questionTypeVersion} />
           <QuestionComposer question={q} onChange={onChange} disabled={disabled} />
           <QuestionMediaEditor question={q} onChange={onChange} disabled={disabled} requestQuestionImage={requestQuestionImage} onBusyChange={onMediaBusyChange} mediaPending={mediaPending} />
           <QuestionClassificationEditor question={q} blueprint={blueprint} onChange={onChange} disabled={disabled} />
@@ -94,5 +97,21 @@ export default function StructuredQuestionEditor(props: Props) {
         </div>
       )}
     </div>
+  );
+}
+
+// Phase 16A §25 — restrained, factual registry metadata for the selected question (no new inspector panel).
+function QuestionTypeMeta({ type, version }: { type: string; version?: number }) {
+  const d = questionTypeDefinition(type);
+  if (!d) return <dl className="qt-meta" data-testid="qt-meta"><dt>نوع السؤال</dt><dd>غير مدعوم: {String(type)}</dd></dl>;
+  return (
+    <dl className="qt-meta" data-testid="qt-meta">
+      <dt>نوع السؤال</dt><dd>{d.label}</dd>
+      <dd className="qt-chip">الإصدار {version ?? d.version}</dd>
+      <dd className="qt-chip">{GRADING_MODE_LABELS[d.gradingMode]}</dd>
+      {d.capabilities.partialCredit && <dd className="qt-chip">يدعم علامة جزئية</dd>}
+      {d.capabilities.compoundPart && <dd className="qt-chip">يدعم البنود المركبة</dd>}
+      {d.capabilities.interactive && <dd className="qt-chip">تفاعلي</dd>}
+    </dl>
   );
 }
