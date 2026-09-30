@@ -140,17 +140,21 @@ describe("14B §46 — identity attack matrix", () => {
     }
     expect(mem.getJson("exam-governance/EX-1/manifest.json").lifecycleState).toBe("draft");
   });
-  it("R14 — configuration goes bad while the UI is open: the next mutation fails safe (503), reads still work and describe the problem", async () => {
+  it("R14 — configuration goes bad while the UI is open: the next mutation fails safe (401 / 503), nothing is mutated", async () => {
     const e = await enable();
-    process.env.BUILDER_USERS = "{broken";                                                             // assigned mode without trustworthy identities
-    let r = await post({ action: "submit-review", examId: "EX-1", revisionId: e.manifest.latestRevisionId, requestId: "s-x", expectedStateVersion: 1, assignments: ASSIGN }, AUTHOR);
-    expect(r.status).toBe(503); expect(r.jsonBody.code).toBe("GOVERNANCE_IDENTITY_CONFIG_INVALID");
-    let st = await ok({ action: "status", examId: "EX-1" }, AUTHOR); expect(st.identityConfigurationError).toBe("GOVERNANCE_IDENTITY_CONFIG_INVALID");
+    const authorToken = T(AUTHOR);                                                                       // the session the open UI holds
+    const send = (body, token) => handler(req(body, token), deps);
+    process.env.BUILDER_USERS = "{broken";                                                             // malformed directory ⇒ Review Fix 1: EVERY teacher session fails closed
+    let r = await send({ action: "submit-review", examId: "EX-1", revisionId: e.manifest.latestRevisionId, requestId: "s-x", expectedStateVersion: 1, assignments: ASSIGN }, authorToken);
+    expect(r.status).toBe(401);
+    expect((await send({ action: "status", examId: "EX-1" }, authorToken)).status).toBe(401);
     assignedEnv(); process.env.GOVERNANCE_CAPABILITIES = JSON.stringify({ ...CAPS, users: { ...CAPS.users, "ghost": ["review"] } });   // an assigned actor outside the directory
-    r = await post({ action: "submit-review", examId: "EX-1", revisionId: e.manifest.latestRevisionId, requestId: "s-y", expectedStateVersion: 1, assignments: ASSIGN }, AUTHOR);
+    r = await send({ action: "submit-review", examId: "EX-1", revisionId: e.manifest.latestRevisionId, requestId: "s-y", expectedStateVersion: 1, assignments: ASSIGN }, authorToken);
     expect(r.status).toBe(503); expect(r.jsonBody.code).toBe("GOVERNANCE_IDENTITY_CONFIG_INVALID");
+    const st = await ok({ action: "status", examId: "EX-1" }, AUTHOR); expect(st.identityConfigurationError).toBe("GOVERNANCE_IDENTITY_CONFIG_INVALID");
     assignedEnv(); delete process.env.BUILDER_USERS;                                                    // assigned mode requested with legacy identity ⇒ never downgraded
-    r = await post({ action: "submit-review", examId: "EX-1", revisionId: e.manifest.latestRevisionId, requestId: "s-z", expectedStateVersion: 1, assignments: ASSIGN }, AUTHOR);
+    expect((await send({ action: "status", examId: "EX-1" }, authorToken)).status).toBe(401);           // the multi-user session is not a legacy session
+    r = await post({ action: "submit-review", examId: "EX-1", revisionId: e.manifest.latestRevisionId, requestId: "s-z", expectedStateVersion: 1, assignments: ASSIGN }, AUTHOR);   // a fresh legacy-mode session
     expect(r.status).toBe(503); expect(r.jsonBody.code).toBe("GOVERNANCE_IDENTITY_CONFIG_INVALID");
     assignedEnv(); process.env.GOVERNANCE_CAPABILITIES = "{not json";
     r = await post({ action: "submit-review", examId: "EX-1", revisionId: e.manifest.latestRevisionId, requestId: "s-w", expectedStateVersion: 1, assignments: ASSIGN }, AUTHOR);

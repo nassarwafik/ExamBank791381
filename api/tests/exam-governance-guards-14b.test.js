@@ -61,6 +61,31 @@ describe("14B §57 — identity guards", () => {
   });
 });
 
+describe("14B Review Fix 1 — session binding guards (builder-auth is the ONE teacher-session authority)", () => {
+  it("every v2 teacher token is bound to the current authentication mode / directory inside verifyBuilderToken; pre-R8 tokens are legacy-only", () => {
+    const v2 = AUTH.slice(AUTH.indexOf("if (payload.ver === TOKEN_VERSION) {"), AUTH.indexOf("if (payload.ver === undefined) {"));
+    expect(v2).toMatch(/return bindSessionToConfiguration\(payload\);/);
+    expect(v2).not.toMatch(/return payload;/);                                                        // no unbound early return
+    const legacyBranch = AUTH.slice(AUTH.indexOf("if (payload.ver === undefined) {"), AUTH.indexOf("function getBearerToken("));
+    expect(legacyBranch).toMatch(/if \(currentAuthMode\(\) !== AUTH_MODE_LEGACY\) return null;/);
+    const bind = AUTH.slice(AUTH.indexOf("function bindSessionToConfiguration("), AUTH.indexOf("function createBuilderToken("));
+    expect(bind).toMatch(/if \(mode === null\) return null;/);                                        // malformed BUILDER_USERS ⇒ fail closed
+    expect(bind).toMatch(/if \(claim !== AUTH_MODE_MULTI_USER\) return null;/);                       // an unbound / legacy token is never a multi-user identity
+    expect(bind).toMatch(/if \(!getBuilderAccount\(process\.env, payload\.sub\)\) return null;/);  // membership re-checked on every request
+    expect(bind).not.toMatch(/\b(body|request|req|headers)\b/);
+  });
+  it("the mode claim is minted from the SERVER configuration only, never from a request, and no token is minted under a malformed directory; the token carries no secrets", () => {
+    const mint = AUTH.slice(AUTH.indexOf("function createBuilderToken("), AUTH.indexOf("function validateTemporalClaims("));
+    expect(mint).toMatch(/const mode = currentAuthMode\(\);/);
+    expect(mint).toMatch(/if \(mode === null\) throw new Error/);
+    expect(mint).toMatch(/am: mode,/);
+    expect(mint).not.toMatch(/passwordEnv|configuredPasswordFor|GOVERNANCE_CAPABILITIES|capabilities|password\b/);
+    expect(mint).not.toMatch(/\b(body|request|req)\b/);
+    expect(FN).toMatch(/requireBuilderAuth/); expect(INBOX_FN).toMatch(/requireBuilderAuth/);    // every teacher endpoint inherits through the shared authority
+    expect(FN).not.toMatch(/verifyBuilderToken|parseBuilderUsers|getBuilderAccount|currentAuthMode/);   // no governance-local re-implementation of the session binding
+  });
+});
+
 describe("14B §57 — workflow authority guards", () => {
   it("the function trusts nothing in the body for authority: no body.role / capabilities / actorId / reviewedBy / approvedBy / publishedBy / cycleId / displayName", () => {
     expect(FN).not.toMatch(/body\.(role|capabilities|actorId|reviewedBy|approvedBy|publishedBy|cycleId|displayName|reviewerName|submittedBy|occurredAt|reviewedAt|approvedAt|publishedAt)\b/);

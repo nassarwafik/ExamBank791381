@@ -1,5 +1,5 @@
 const crypto = require("crypto");
-const { parseBuilderUsers, configuredPasswordFor } = require("./builder-users");
+const { parseBuilderUsers, configuredPasswordFor, getBuilderAccount } = require("./builder-users");
 
 // Roadmap #8 — Auth / Session Hardening (teacher / builder side).
 const TOKEN_TTL_SECONDS = 8 * 60 * 60;          // teacher session lifetime (unchanged)
@@ -92,16 +92,50 @@ function verifySignedAssetParams(blobName, exp, suppliedSignature) {
   return timingSafeEqualText(suppliedSignature, expectedSignature);
 }
 
+// Phase 14B Review Fix 1 — the teacher session is BOUND to the authentication mode / account directory that issued it.
+// `am` ("legacy" | "multi-user") is a signed claim minted from the SERVER configuration at login (never from a request), so the
+// client cannot change it. No token is ever minted while BUILDER_USERS is malformed, and a multi-user token is minted only for a
+// subject that exists in the directory. Verification (bindSessionToConfiguration) then requires:
+//   configuration legacy            → a legacy-issued session (`am` "legacy", or a pre-14B v2 / pre-R8 token without the claim);
+//   configuration valid multi-user  → `am` === "multi-user" AND `sub` still present in BUILDER_USERS;
+//   configuration malformed         → nothing is accepted (fail closed for EXISTING sessions, not only new logins).
+// A legacy-issued token can therefore never become a server-owned identity after a cutover, a removed account loses its session
+// at once, and BUILDER_SESSION_VERSION remains an additional global revocation on top — not the mechanism correctness relies on.
+const AUTH_MODE_LEGACY = "legacy";
+const AUTH_MODE_MULTI_USER = "multi-user";
+function currentAuthMode(env = process.env) {
+  const cfg = parseBuilderUsers(env);
+  if (cfg.kind === "configured") return AUTH_MODE_MULTI_USER;
+  if (cfg.kind === "legacy") return AUTH_MODE_LEGACY;
+  return null;                                                                 // configuration-error
+}
+function bindSessionToConfiguration(payload) {
+  const mode = currentAuthMode();
+  if (mode === null) return null;                                              // malformed BUILDER_USERS: every teacher session fails closed
+  const claim = payload.am;
+  if (mode === AUTH_MODE_LEGACY) {
+    return claim === undefined || claim === AUTH_MODE_LEGACY ? payload : null;  // compatibility: pre-14B tokens carry no claim
+  }
+  if (claim !== AUTH_MODE_MULTI_USER) return null;                             // a legacy-issued / unbound token is never a multi-user identity
+  if (!getBuilderAccount(process.env, payload.sub)) return null;               // the account must still exist in the directory
+  return payload;
+}
+
 function createBuilderToken(userCode) {
   const secret = getSigningSecret();
   if (!secret) {
     throw new Error("BUILDER_SESSION_SECRET or BANK_SETUP_KEY is not configured");
   }
+  const mode = currentAuthMode();
+  if (mode === null) throw new Error("BUILDER_USERS is malformed; no teacher session can be issued");
+  const sub = String(userCode || "builder");
+  if (mode === AUTH_MODE_MULTI_USER && !getBuilderAccount(process.env, sub)) throw new Error("Unknown builder account; no teacher session can be issued");
   const now = Math.floor(Date.now() / 1000);
   const payload = {
     ver: TOKEN_VERSION,
     role: "teacher",
-    sub: String(userCode || "builder"),
+    sub,
+    am: mode,
     iat: now,
     exp: now + TOKEN_TTL_SECONDS,
     sv: getBuilderSessionVersion()
@@ -151,7 +185,7 @@ function verifyBuilderToken(token) {
     if (payload.role !== "teacher") return null;
     if (!validateTemporalClaims(payload, TOKEN_TTL_SECONDS)) return null;
     if (String(payload.sv || "") !== getBuilderSessionVersion()) return null;
-    return payload;
+    return bindSessionToConfiguration(payload);                                 // Review Fix 1: mode / directory binding
   }
 
   // Legacy (pre-R8) builder token: no `ver`, signed with the raw secret, payload {sub,iat,exp}. Bounded
@@ -161,6 +195,7 @@ function verifyBuilderToken(token) {
   // accepted within their ORIGINAL lifetime, only by THIS (builder) verifier — never cross-role.
   if (payload.ver === undefined) {
     if (getBuilderSessionVersion() !== "1") return null;
+    if (currentAuthMode() !== AUTH_MODE_LEGACY) return null;                    // Review Fix 1: a pre-R8 token is a legacy-mode session only
     const expectedLegacy = signPayload(encodedPayload, secret);
     if (!timingSafeEqualText(suppliedSignature, expectedLegacy)) return null;
     if (payload.role !== undefined && payload.role !== "teacher") return null; // never accept a student payload
@@ -256,5 +291,6 @@ module.exports = {
   requireBuilderAuth,
   validateBuilderCredentials,
   builderAuthConfigurationStatus,
+  currentAuthMode,
   getBuilderSessionVersion
 };

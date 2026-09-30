@@ -293,10 +293,76 @@ Run on the final tree of this commit (`scratchpad/14b/{tsc,full,build,bundle,lin
 | `npm run check:bundle` | initial JS graph 12 files, **118.9 KB gzip / budget 125 KB** (baseline `b9e45e8`: 118.7 KB — +0.2 KB: the nav registry entry, the lazy page registration and the client's workflow fields; the Review Inbox page, dialogs and viewer are lazy chunks) |
 | `npm run lint` | exit 0 — **99 findings on `b9e45e8` vs 99 on the final tree, finding-for-finding identical** (line numbers ignored); three transient findings introduced during development (an unused test variable, two `set-state-in-effect` warnings) were fixed before the commit |
 
+## 16. Independent Review Fix 1 — teacher sessions bound to the authentication mode / account directory
+
+**Root cause.** `createBuilderToken()` / `verifyBuilderToken()` (v2) established signature, teacher role, `iat`/`exp` and the
+session version, but not (1) the authentication configuration the token was issued under, nor (2) that the subject still exists
+in the current `BUILDER_USERS` directory. Two gaps followed:
+
+* **Scenario A — legacy → multi-user cutover.** With `BUILDER_USERS` absent, the shared password issues a v2 token for ANY typed
+  code — e.g. `sub = "teacher-approver"`. After the operator enables `BUILDER_USERS` containing `teacher-approver` (same signing
+  secret, same session version) that token kept verifying: an identity that was never authenticated through the account's own
+  credential impersonated a server-owned account until expiry.
+* **Scenario B — account removal.** A multi-user token outlived the removal of its account from `BUILDER_USERS`.
+
+Correctness must not depend on an operator remembering to bump `BUILDER_SESSION_VERSION`.
+
+**Threat model.** An attacker who knows (or knew) the shared legacy password, or a former account holder, keeps a valid HMAC
+token across a configuration change and uses it against every `requireBuilderAuth()` endpoint (governance, inbox, profile, …).
+
+**Contract (central, in `builder-auth.js` + the `builder-users.js` seam; every teacher endpoint inherits it):**
+
+```
+mint   : mode = currentAuthMode()  → legacy | multi-user | null(malformed)
+         null        → no token is ever minted
+         multi-user  → sub must exist in BUILDER_USERS; payload.am = "multi-user"
+         legacy      → payload.am = "legacy"
+verify : after signature / role / temporal / session-version checks → bindSessionToConfiguration(payload)
+         configuration malformed        → null (EVERY teacher session fails closed, not only new logins)
+         configuration legacy           → accept am === "legacy" or NO claim (pre-14B v2 tokens; pre-R8 tokens likewise legacy-only)
+         configuration valid multi-user → require am === "multi-user" AND getBuilderAccount(env, sub) present
+```
+`am` is a signed claim minted from server configuration only (never from a request); the token carries no password, `passwordEnv`,
+capability configuration or secret. `BUILDER_SESSION_VERSION` remains an additional global revocation. Student auth, signed bank
+assets, the login throttle, governance capability checks and the Assigned workflow rules are untouched; no governance-local
+special case was added (`exam-governance.js` does not reference the session binding).
+
+**Fail-first (recorded on the reviewed head `e3dc54e`, `scratchpad/14b/fail-first-rf-e3dc54e.log`):** `builder-auth-cutover-14b`
+→ **5 failed / 3 passed (8)** — RF1 (legacy token survives cutover), RF2 (removed account keeps its session), RF5 (malformed
+`BUILDER_USERS` leaves sessions alive), RF6 (the pre-14B token half: it became a multi-user identity after cutover) and RF8
+(governance + teacher-profile accepted a pre-cutover / removed-account token) failed; RF3, RF4, RF7 passed (positive controls:
+kept account, subject integrity, session-version revocation).
+
+**R14 adjusted** (function suite): a malformed `BUILDER_USERS` now yields `401` for the open session (fail-closed session) instead of
+`503`; the identity-configuration `503` cases are exercised with a fresh legacy session.
+
+**Mutation proofs RF-M1–RF-M5** (each applied alone → `builder-auth-cutover-14b` + `builder-users-14b` + `exam-governance-guards-14b` +
+`exam-governance-function-14b` + `auth-hardening-r8` + `platform-login-teacher` (128 tests) → reverted → tree fingerprint compared):
+
+| # | Mutation | Result | Failing tests |
+|---|---|---|---|
+| RF-M1 | remove the auth-mode binding during verification (`return payload` instead of `bindSessionToConfiguration`) | **7 failed** · tree clean | RF1 — a token issued under the LEGACY shared password cannot; RF2 — removing an account from BUILDER_USERS revokes its exi; RF5 — a malformed non-empty BUILDER_USERS invalidates EXISTI (expected RF1: yes) |
+| RF-M2 | stop checking current `BUILDER_USERS` membership | **3 failed** · tree clean | every v2 teacher token is bound to the current authenticatio; RF2 — removing an account from BUILDER_USERS revokes its exi; RF8 — the governance endpoint and an ordinary teacher endpoi (expected RF2: yes) |
+| RF-M3 | let a malformed `BUILDER_USERS` keep existing sessions alive | **3 failed** · tree clean | every v2 teacher token is bound to the current authenticatio; RF5 — a malformed non-empty BUILDER_USERS invalidates EXISTI; R14 — configuration goes bad while the UI is open: the next  (expected RF5: yes) |
+| RF-M4 | accept an old unbound v2 token in multi-user mode when its sub matches an account | **4 failed** · tree clean | every v2 teacher token is bound to the current authenticatio; RF1 — a token issued under the LEGACY shared password cannot; RF6 — legacy compatibility: with BUILDER_USERS absent the ex (expected RF1: yes) |
+| RF-M5 | break legacy compatibility (reject pre-14B tokens without the claim in legacy mode) | **1 failed** · tree clean | RF6 — legacy compatibility: with BUILDER_USERS absent the ex (expected RF6: yes) |
+
+fingerprint before: 06e8fa2160b7227e → fingerprint after: 06e8fa2160b7227e (identical).
+
+**Focused regression (16 suites, 257 tests, all green):** `builder-auth-cutover-14b`, `builder-users-14b`, workflow / function /
+races / inbox / guards 14B, the 14A governance suites (lib, function, review fixes 1–2, guards, assignments), `auth-hardening-r8`
+(login throttle, role separation), `platform-login-teacher`, `teacher-profile`.
+
+**Full validation (final tree of the follow-up commit):** `npx tsc -b` exit 0 · `npm test` **554 files / 6647 tests passed**, 0
+failed · `npm run build` exit 0 · `npm run check:bundle` initial JS 12 files, **118.9 KB gzip / budget 125 KB** (unchanged —
+server-only fix) · `npm run lint` exit 0, **99 findings vs 99 on `b9e45e8`, finding-for-finding identical**, zero new warnings.
+
 ## 15. Recovery / error semantics (operator notes)
 
 * `503 AUTH_CONFIG_INVALID` on login ⇒ `BUILDER_USERS` is malformed: fix the JSON / `passwordEnv` names / duplicate secrets;
-  nobody can log in until then (by design).
+  nobody can log in until then (by design), and EXISTING teacher sessions answer `401` meanwhile (Review Fix 1).
+* Enabling `BUILDER_USERS` (cutover) or removing an account invalidates the affected sessions at once: teachers sign in again with
+  their per-account credential. Disabling `BUILDER_USERS` invalidates multi-user sessions (they are not legacy sessions).
 * `503 GOVERNANCE_IDENTITY_CONFIG_INVALID` ⇒ `mode: "assigned"` without a valid `BUILDER_USERS`, or a `users` subject outside the
   account directory; reads work, mutations wait for the fix.
 * `409 WORKFLOW_ACTION_REQUIRED` ⇒ use the cycle's own actions; `409 WORKFLOW_REQUIRED` ⇒ return to draft and resubmit through a
