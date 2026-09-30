@@ -46,7 +46,13 @@ function createMemoryContainer(seed = {}, hooks = {}) {
           if (!entry) throw conflict(404, "BlobNotFound");
           return { readableStreamBody: [Buffer.from(entry.content)], etag: entry.etag, contentType: entry.contentType || undefined };
         },
-        async deleteIfExists() { const had = store.delete(name); return { succeeded: had }; },
+        // Phase 15A — honours an If-Match condition like Azure: a changed ETag is a 412 ConditionNotMet, never a silent delete.
+        async deleteIfExists(options = {}) {
+          const ifMatch = options && options.conditions && options.conditions.ifMatch;
+          const existing = store.get(name);
+          if (ifMatch && existing && existing.etag !== ifMatch) throw conflict(412, "ConditionNotMet");
+          const had = store.delete(name); return { succeeded: had };
+        },
         // In-process queuing lease (credential / assignment locks): acquireLease waits for the previous holder of the
         // same blob (models Azure mutual exclusion deterministically), releaseLease frees the next waiter.
         getBlobLeaseClient() {

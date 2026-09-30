@@ -32,6 +32,7 @@ import { useAutoRefresh } from "./ui/useAutoRefresh";
 import type { AiImageRequestQuestion } from "./questionMedia";
 import type { BankPickerService } from "./StructuredExamBuilder";
 import type { GovernanceService } from "./examGovernance";
+import type { AssessmentPresetService } from "./presets/assessmentPresetClient";
 import type { BankQuestionRow } from "./bank/bankQuestionModel";
 import type { BankExamQuestion } from "./structuredExamProductivity";
 import { legacyToStructured, newSection, newQuestion, type StructuredExamUpdater } from "./examBuilderState";
@@ -2859,6 +2860,28 @@ function App() {
   // Phase 14A — the App-owned GovernanceService for the Builder's «إدارة النشر والإصدارات». Authenticated through the same
   // request helper (the builder never receives the token); the client module is loaded on demand so the initial graph does
   // not grow. Every mutation carries the authority version the UI saw plus a fresh requestId (see examGovernanceClient).
+  // Phase 15A — the App-owned Assessment Preset service («القوالب الأكاديمية»), same pattern: authenticated through the App's
+  // request helper, module loaded on demand, the Builder never sees the token.
+  const structuredPresets = useMemo<AssessmentPresetService>(() => {
+    let clientPromise: Promise<AssessmentPresetService> | null = null;
+    const client = () => (clientPromise ??= import("./presets/assessmentPresetClient").then(m => m.createAssessmentPresetService(body => apiRequestRef.current<Record<string, unknown>>("/api/assessment-presets", { method: "POST", body: JSON.stringify(body) }))));
+    return {
+      list: (q, cursor) => client().then(c => c.list(q, cursor)),
+      load: presetId => client().then(c => c.load(presetId)),
+      create: preset => client().then(c => c.create(preset)),
+      update: (presetId, expectedVersion, preset) => client().then(c => c.update(presetId, expectedVersion, preset)),
+      remove: (presetId, expectedVersion) => client().then(c => c.remove(presetId, expectedVersion))
+    };
+  }, []);
+  // Phase 15A — a NEW draft instantiated from a preset opens through the ONE history authority as an unsaved exam: empty undo /
+  // redo, fresh examId (independent autosave identity), never merged into the previous exam (the Builder already ran the 13A
+  // unsaved-work guard).
+  function openExamFromPreset(next: StructuredExam) {
+    setStructuredError("");
+    setStructuredNotice("✓ أُنشئ امتحان جديد من القالب الأكاديمي — راجعه ثم احفظه ليصبح مسودة على الخادم.");
+    structuredHistory.open(next, "unsaved");
+    setStructuredBuilderOpen(true);
+  }
   const structuredGovernance = useMemo<GovernanceService>(() => {
     let clientPromise: Promise<GovernanceService> | null = null;
     const client = () => (clientPromise ??= import("./examGovernanceClient").then(m => m.createGovernanceService(body => apiRequestRef.current<Record<string, unknown>>("/api/exam-governance", { method: "POST", body: JSON.stringify(body) }))));
@@ -7879,6 +7902,8 @@ function App() {
               onRecover={structuredHistory.recover}
               bankPicker={structuredBankPicker}
               governance={structuredGovernance}
+              presets={structuredPresets}
+              onOpenExamFromPreset={openExamFromPreset}
             />
           </Suspense>
         </div>
