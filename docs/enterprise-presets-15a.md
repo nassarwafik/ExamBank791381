@@ -159,7 +159,64 @@ Fingerprint before = after; 20 / 20 killed (`scratchpad/15a/mutations-15a-summar
 
 Suites run per mutation: model, API, guards, UI, shared-build drift.
 
-## 9. Phase 15B handoff
+## 9. Independent Review Fix 1 — fail-closed source design extraction
+
+**Root cause.** `assessmentPresetFromExam()` checked only `isPlainObject(exam.blueprint)` and `Array.isArray(exam.sections)` and then
+copied: `copyBlueprintWithSectionRefs` assumed runtime-valid collections (`(bp.topics ?? []).map`, …) and `copyPolicy` /
+`copyRule` assumed rule shapes (`p.rules.map`, `r.source.kind`). Malformed imported / legacy structured data therefore threw
+(`topics.map is not a function`, `Cannot read properties of null (reading 'kind')`) before the canonical validators ran, and the
+UI validated the *result* (`validateAssessmentPreset(preset)`) — too late to protect extraction. Secondary: the source section map
+`Map<examSectionId, presetSectionId>` was built with `map.set(s.id, pid)`, so two source sections with the same runtime id
+collapsed to the later mapping and a section constraint on that id was silently retargeted to ONE generated preset section.
+
+**Threat / correctness model.** The source of an extraction is whatever the Builder currently holds — including exams imported
+from files or older schema versions. Its Blueprint / Quality Policy / section identities are untrusted input for the extraction
+authority: an invalid design must yield structured validation issues (predictable, shown to the teacher, never sent), never a
+JavaScript failure and never a repaired guess. Browser validation is UX / integrity; the server validator remains the security
+authority and is unchanged — a client that POSTs malformed preset data still receives `400 PRESET_INVALID`.
+
+**Order (one pure authority, `extractAssessmentPresetFromExam` → `PresetExtractionResult`).**
+
+```
+inspect source shape → validateSourceDesign:
+   source sections (array, ≥ 1, plain objects, stable non-empty string ids, UNIQUE — duplicates refused, never "first wins")
+ → validateBlueprint(exam.blueprint, { sectionIds: sourceSectionIds })         (canonical, reused)
+ → validateAssessmentQualityPolicy(blueprint.qualityPolicy, blueprint)        (canonical, reused)
+→ construct the allow-listed preset (unchanged field-by-field construction; nothing copied before this point)
+→ validateAssessmentPreset(preset)
+```
+
+Result: `{ ok: true, preset }` · `{ ok: false, reason: "no-blueprint", issues: [BLUEPRINT_REQUIRED] }` (the distinct factual
+case) · `{ ok: false, reason: "invalid-source", issues }`. New issue codes: `INVALID_SOURCE_SECTIONS`, `INVALID_SOURCE_SECTION`,
+`INVALID_SOURCE_SECTION_ID`, `DUPLICATE_SOURCE_SECTION_ID`. `assessmentPresetFromExam()` remains as the preset-or-null wrapper
+(null for both failure kinds, never throws). The allow-list design is untouched; the module is still compiled into the shared
+build (drift test green); no server-side Blueprint validator was added.
+
+**UI.** `PresetLibraryPanel.extractCurrent` uses the result: `no-blueprint` → `أضف مخطط الامتحان أولًا قبل حفظ قالب أكاديمي.`
+(unchanged); `invalid-source` → `لا يمكن حفظ تصميم غير صالح كقالب أكاديمي.` + the issues in «مشكلات التحقق»; no create / update
+request, no history or dirty-state mutation. The panel's generic error path now shows only `PresetRequestError` text or a fixed
+phrase — never an internal runtime message.
+
+**Fail-first on `0bc6656` (`scratchpad/15a/fail-first-rf1-0bc6656.log`).** `src/assessmentPreset.reviewfix1.test.ts` (RF1–RF7,
+8 tests) and `src/presets/PresetLibraryPanel.reviewfix1.test.tsx` (RF8, 3 tests): 11 / 11 failed. Behavioural probe of the head
+build: `topics: "broken"` → `TypeError: (bp.topics ?? []).map is not a function`; a rule with `source: null` → `TypeError: Cannot
+read properties of null (reading 'kind')`; `rules: null` → a preset was returned; duplicate source ids → a preset whose section
+constraint was retargeted to `ps-1` (silently). The RF8 UI case failed with `topics.map is not a function`.
+
+**Mutations RF-M1–RF-M6** (each alone, targeted suites: review-fix model + UI, 15A model, guards; reverted; fingerprint identical):
+
+| # | Mutation | Must fail | Result |
+|---|---|---|---|
+| RF-M1 | skip source Blueprint validation (`validateBlueprint` not called in `validateSourceDesign`) | RF1 / RF2 / RF5 | **killed** — 5 failed / 38 (tree clean); failing: guard, RF1, RF2, RF5, RF7 |
+| RF-M2 | copy the Quality Policy (`copyPolicy`) BEFORE validating it | RF3 | **killed** — 2 failed / 38 (tree clean); failing: guard, RF3 |
+| RF-M3 | allow duplicate source section ids (silent first-wins) | RF4 | **killed** — 3 failed / 38 (tree clean); failing: guard, RF4, RF8 |
+| RF-M4 | restore the copy-first extraction order (copy, then validate the source) | RF1 or RF3 | **killed** — 8 failed / 38 (tree clean); failing: guard, RF1, RF2, RF3, RF4b, RF5, RF7, RF8 |
+| RF-M5 | break valid extraction while handling malformed input (section constraints dropped) | RF6 | **killed** — 15 failed / 38 (tree clean); failing: RF6, 15A-model |
+| RF-M6 | missing Blueprint routed to the generic `invalid-source` path | RF7 | **killed** — 1 failed / 38 (tree clean); failing: RF7 |
+
+Fingerprint before = after (`293a323fc6e16716`); 6 / 6 killed; RF5 / RF3 additionally prove that no preset section id is minted before validation.
+
+## 10. Phase 15B handoff
 
 - **Sharing / catalog**: add an institutional namespace (`assessment-preset-catalog/…`) with explicit publish / unpublish of a
   preset *version*; personal presets stay private; the summary shape is already share-ready (no owner secrets).

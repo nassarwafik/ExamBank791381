@@ -9,9 +9,15 @@
 // so browser and API validate presets with the SAME code:
 //   • validateAssessmentPreset(input)      — canonical validation, reusing validateBlueprint / validateAssessmentQualityPolicy
 //                                            with the preset section identities as the section context;
-//   • assessmentPresetFromExam(exam)       — ALLOW-LIST extraction (the preset is constructed from permitted fields; nothing
-//                                            is copied and then stripped), section ids → stable presetSectionIds, every
-//                                            section-dimension constraint rewritten to the preset identity;
+//   • extractAssessmentPresetFromExam(exam) — FAIL-CLOSED, ALLOW-LIST extraction (Independent Review Fix 1): the SOURCE design
+//                                            is validated first (section identity unique and stable → canonical Blueprint →
+//                                            canonical Quality Policy) and nothing is copied until that passes; then the
+//                                            preset is constructed from permitted fields (never copied-then-stripped),
+//                                            section ids → stable presetSectionIds, every section-dimension constraint
+//                                            rewritten to the preset identity, and the result is validated again. Malformed
+//                                            imported / legacy data yields structured issues — never a runtime exception,
+//                                            never a silently repaired mapping. assessmentPresetFromExam() is the
+//                                            null-on-failure wrapper kept for callers that only need "preset or nothing";
 //   • instantiateExamFromPreset(preset)    — a NEW draft StructuredExam: fresh examId, fresh section ids, empty questions /
 //                                            stimuli, section constraints remapped to the new real ids, Blueprint + Quality
 //                                            Policy deep-copied, theme copied; no governance, owner or history fields.
@@ -60,7 +66,8 @@ export type AssessmentPresetSummary = {
   presetId: string; version: number; title: string; description?: string; subject: string; course?: string; level?: string;
   sectionCount: number; topicCount: number; objectiveCount: number; constraintCount: number; qualityRuleCount: number; updatedAt: string; presentationTheme?: ExamTheme;
 };
-export type PresetIssueCode = "UNSUPPORTED_SCHEMA_VERSION" | "TITLE_REQUIRED" | "TITLE_TOO_LONG" | "DESCRIPTION_TOO_LONG" | "INVALID_PRESET_ID" | "SECTIONS_REQUIRED" | "TOO_MANY_SECTIONS" | "INVALID_SECTION" | "INVALID_SECTION_ID" | "DUPLICATE_SECTION_ID" | "SECTION_TITLE_INVALID" | "INVALID_GRADING_POLICY" | "INVALID_SECTION_NUMBER" | "INVALID_ANSWER_UNIT" | "FORBIDDEN_FIELD" | "BLUEPRINT_REQUIRED" | "BLUEPRINT_INVALID" | "QUALITY_POLICY_INVALID" | "INVALID_THEME";
+export type PresetIssueCode = "UNSUPPORTED_SCHEMA_VERSION" | "TITLE_REQUIRED" | "TITLE_TOO_LONG" | "DESCRIPTION_TOO_LONG" | "INVALID_PRESET_ID" | "SECTIONS_REQUIRED" | "TOO_MANY_SECTIONS" | "INVALID_SECTION" | "INVALID_SECTION_ID" | "DUPLICATE_SECTION_ID" | "SECTION_TITLE_INVALID" | "INVALID_GRADING_POLICY" | "INVALID_SECTION_NUMBER" | "INVALID_ANSWER_UNIT" | "FORBIDDEN_FIELD" | "BLUEPRINT_REQUIRED" | "BLUEPRINT_INVALID" | "QUALITY_POLICY_INVALID" | "INVALID_THEME"
+  | "INVALID_SOURCE_SECTIONS" | "INVALID_SOURCE_SECTION" | "INVALID_SOURCE_SECTION_ID" | "DUPLICATE_SOURCE_SECTION_ID";
 export type PresetIssue = { code: PresetIssueCode; message: string; path?: string; refId?: string };
 
 // Every key a preset (root) or a preset section may carry. Anything else is FORBIDDEN — questions, stimuli, answers, exam /
@@ -169,9 +176,54 @@ export const newPresetId = () => genId("apr");
 export const newPresetSectionId = () => genId("ps");
 
 export type ExtractOptions = { title?: string; description?: string; presetId?: string; presetSectionIdFor?: (section: BuilderSection, index: number) => string };
-/** ALLOW-LIST extraction of the reusable design. Returns null when the exam has no Blueprint (nothing is invented). */
-export function assessmentPresetFromExam(exam: StructuredExam, options: ExtractOptions = {}): AssessmentPresetV1 | null {
-  if (!exam || !isPlainObject(exam.blueprint) || !Array.isArray(exam.sections)) return null;
+export type PresetExtractionResult =
+  | { ok: true; preset: AssessmentPresetV1 }
+  | { ok: false; reason: "no-blueprint"; issues: PresetIssue[] }        // the distinct factual case: nothing to extract yet
+  | { ok: false; reason: "invalid-source"; issues: PresetIssue[] };     // malformed design: structured issues, nothing copied
+
+/**
+ * Source-design validation (pure, copies NOTHING). Order: source section identity (array, ≥ 1 section, every section a plain
+ * object with a stable non-empty string id, ids unique — a duplicate is refused, never repaired or "first wins") → canonical
+ * Blueprint validation with the REAL source section ids as the section context → canonical Quality Policy validation.
+ * Any issue makes extraction impossible: copyBlueprintWithSectionRefs / copyPolicy assume runtime-valid collections.
+ */
+export function validateSourceDesign(exam: unknown): { issues: PresetIssue[]; sectionIds: string[] } {
+  const issues: PresetIssue[] = [];
+  const add = (code: PresetIssueCode, message: string, path?: string, refId?: string) => issues.push({ code, message, path, refId });
+  const sectionIds: string[] = [];
+  if (!isPlainObject(exam)) { add("INVALID_SOURCE_SECTIONS", "الامتحان المصدر غير صالح.", ""); return { issues, sectionIds }; }
+  const sections = exam.sections;
+  if (!Array.isArray(sections) || sections.length === 0) add("INVALID_SOURCE_SECTIONS", "يجب أن يحوي الامتحان المصدر قائمة أقسام تضم قسمًا واحدًا على الأقل.", "sections");
+  else {
+    const seen = new Set<string>();
+    sections.forEach((s, i) => {
+      const path = "sections[" + i + "]";
+      if (!isPlainObject(s)) { add("INVALID_SOURCE_SECTION", "قسم غير صالح في الامتحان المصدر.", path); return; }
+      const id = typeof s.id === "string" ? s.id : "";
+      if (!id.trim() || id !== id.trim()) { add("INVALID_SOURCE_SECTION_ID", "معرّف قسم مفقود أو غير صالح في الامتحان المصدر.", path + ".id"); return; }
+      if (seen.has(id)) { add("DUPLICATE_SOURCE_SECTION_ID", "معرّف قسم مكرر في الامتحان المصدر؛ لا يمكن تحديد القسم الذي تقصده قيود المخطط.", path + ".id", id); return; }
+      seen.add(id); sectionIds.push(id);
+    });
+  }
+  if (exam.blueprint === undefined || exam.blueprint === null) add("BLUEPRINT_REQUIRED", "يحتاج القالب الأكاديمي إلى مخطط امتحان.", "blueprint");
+  else {
+    for (const bi of validateBlueprint(exam.blueprint, { sectionIds })) add("BLUEPRINT_INVALID", bi.message, "blueprint." + (bi.path ?? ""), bi.refId);
+    const bp = exam.blueprint;
+    if (isPlainObject(bp) && bp.qualityPolicy !== undefined) {
+      for (const qi of validateAssessmentQualityPolicy(bp.qualityPolicy, bp as unknown as AssessmentBlueprintV1)) add("QUALITY_POLICY_INVALID", qi.message, "blueprint.qualityPolicy." + (qi.path ?? ""), qi.ruleId);
+    }
+  }
+  return { issues, sectionIds };
+}
+
+/**
+ * FAIL-CLOSED allow-list extraction: inspect source shape → validate source section identity → canonical Blueprint validation
+ * → canonical Quality Policy validation → construct the allow-listed preset → validate the resulting preset. No Blueprint /
+ * Policy / section remapping happens before the source has been proven safe to copy. The source exam is never mutated.
+ */
+export function extractAssessmentPresetFromExam(exam: StructuredExam, options: ExtractOptions = {}): PresetExtractionResult {
+  const source = validateSourceDesign(exam);
+  if (source.issues.length) return { ok: false, reason: source.issues.some(i => i.code === "BLUEPRINT_REQUIRED") ? "no-blueprint" : "invalid-source", issues: source.issues };
   const idFor = options.presetSectionIdFor ?? (() => newPresetSectionId());
   const map = new Map<string, string>();
   const sections = exam.sections.map((s, i) => { const pid = idFor(s, i); map.set(s.id, pid); return presetSectionOf(s, pid); });
@@ -185,7 +237,14 @@ export function assessmentPresetFromExam(exam: StructuredExam, options: ExtractO
   const description = text(options.description);
   if (description) preset.description = description.slice(0, PRESET_DESCRIPTION_MAX);
   if (exam.presentationTheme && (EXAM_THEMES as string[]).includes(exam.presentationTheme)) preset.presentationTheme = exam.presentationTheme;
-  return preset;
+  const check = validateAssessmentPreset(preset);
+  if (check.length) return { ok: false, reason: "invalid-source", issues: check };
+  return { ok: true, preset };
+}
+/** Preset-or-null wrapper over extractAssessmentPresetFromExam: null for a missing Blueprint AND for a malformed source (never throws). */
+export function assessmentPresetFromExam(exam: StructuredExam, options: ExtractOptions = {}): AssessmentPresetV1 | null {
+  const result = extractAssessmentPresetFromExam(exam, options);
+  return result.ok ? result.preset : null;
 }
 
 export type InstantiateOptions = { examId?: string; title?: string; sectionIdFor?: (section: AssessmentPresetSection, index: number) => string };

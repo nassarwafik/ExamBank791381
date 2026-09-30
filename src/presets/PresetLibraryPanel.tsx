@@ -2,7 +2,7 @@ import { useCallback, useEffect, useId, useMemo, useRef, useState } from "react"
 import Dialog from "../ui/Dialog";
 import { useConfirm } from "../ui/useConfirm";
 import type { StructuredExam } from "../examTypes";
-import { assessmentPresetFromExam, instantiateExamFromPreset, validateAssessmentPreset, PRESET_LABEL, PRESET_TITLE_MAX, PRESET_DESCRIPTION_MAX, type AssessmentPresetV1, type AssessmentPresetRecordV1, type AssessmentPresetSummary, type PresetIssue } from "../assessmentPreset";
+import { extractAssessmentPresetFromExam, instantiateExamFromPreset, validateAssessmentPreset, PRESET_LABEL, PRESET_TITLE_MAX, PRESET_DESCRIPTION_MAX, type AssessmentPresetV1, type AssessmentPresetRecordV1, type AssessmentPresetSummary, type PresetIssue } from "../assessmentPreset";
 import { PresetRequestError, type AssessmentPresetService } from "./assessmentPresetClient";
 import { EFFECT_LABEL } from "../assessmentQualityPolicy";
 import "./presetLibrary.css";
@@ -61,7 +61,7 @@ export default function PresetLibraryPanel({ open, onClose, exam, getLatestExam,
     let cancelled = false;
     void (async () => {
       try { await refresh(query); }
-      catch (e) { if (!cancelled) setError(e instanceof Error ? e.message : "تعذر تحميل القوالب الأكاديمية."); }
+      catch (e) { if (!cancelled) setError(e instanceof PresetRequestError ? e.message : "تعذر تحميل القوالب الأكاديمية."); }
       finally { if (!cancelled) setLoading(false); }
     })();
     return () => { cancelled = true; };
@@ -77,15 +77,18 @@ export default function PresetLibraryPanel({ open, onClose, exam, getLatestExam,
         try { await refresh(query); } catch { /* the conflict message stands */ }
       } else if (e instanceof PresetRequestError && e.status === 400 && e.issues) {
         setError("رفض الخادم القالب: " + e.message); setIssues(e.issues);
-      } else setError(e instanceof Error ? e.message : "تعذر تنفيذ الإجراء.");
+      } else setError(e instanceof PresetRequestError ? e.message : "تعذر تنفيذ الإجراء.");          // never an internal runtime message
     } finally { if (alive.current) setBusy(false); }
   }
+  // Independent Review Fix 1 — the source design is validated BEFORE anything is copied (extractAssessmentPresetFromExam is
+  // fail-closed): a malformed imported / legacy design shows structured issues in «مشكلات التحقق», never a runtime message, and
+  // no request is sent. A missing Blueprint stays the distinct factual case.
   const extractCurrent = (title: string, description: string): AssessmentPresetV1 | null => {
-    const preset = assessmentPresetFromExam(latest(), { title, description });
-    if (!preset) { setError(NO_BLUEPRINT_MESSAGE); return null; }
-    const local = validateAssessmentPreset(preset);
-    if (local.length) { setError("لا يمكن حفظ تصميم غير صالح كقالب أكاديمي."); setIssues(local); return null; }
-    return preset;
+    const result = extractAssessmentPresetFromExam(latest(), { title, description });
+    if (result.ok) return result.preset;
+    if (result.reason === "no-blueprint") setError(NO_BLUEPRINT_MESSAGE);
+    else { setError("لا يمكن حفظ تصميم غير صالح كقالب أكاديمي."); setIssues(result.issues); }
+    return null;
   };
   const saveCurrent = (title: string, description: string) => {
     const target = saveDialog; setSaveDialog(null);

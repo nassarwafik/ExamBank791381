@@ -4,6 +4,8 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.newInstantiatedExamId = exports.newPresetSectionId = exports.newPresetId = exports.PRESET_SECTIONS_MAX = exports.PRESET_DESCRIPTION_MAX = exports.PRESET_TITLE_MAX = exports.PRESET_LABEL = exports.ASSESSMENT_PRESET_SCHEMA_VERSION = void 0;
 exports.validateAssessmentPreset = validateAssessmentPreset;
 exports.copyBlueprintWithSectionRefs = copyBlueprintWithSectionRefs;
+exports.validateSourceDesign = validateSourceDesign;
+exports.extractAssessmentPresetFromExam = extractAssessmentPresetFromExam;
 exports.assessmentPresetFromExam = assessmentPresetFromExam;
 exports.instantiateExamFromPreset = instantiateExamFromPreset;
 exports.presetSummary = presetSummary;
@@ -169,9 +171,55 @@ const newPresetId = () => (0, examBuilderState_1.genId)("apr");
 exports.newPresetId = newPresetId;
 const newPresetSectionId = () => (0, examBuilderState_1.genId)("ps");
 exports.newPresetSectionId = newPresetSectionId;
-function assessmentPresetFromExam(exam, options = {}) {
-    if (!exam || !isPlainObject(exam.blueprint) || !Array.isArray(exam.sections))
-        return null;
+function validateSourceDesign(exam) {
+    const issues = [];
+    const add = (code, message, path, refId) => issues.push({ code, message, path, refId });
+    const sectionIds = [];
+    if (!isPlainObject(exam)) {
+        add("INVALID_SOURCE_SECTIONS", "الامتحان المصدر غير صالح.", "");
+        return { issues, sectionIds };
+    }
+    const sections = exam.sections;
+    if (!Array.isArray(sections) || sections.length === 0)
+        add("INVALID_SOURCE_SECTIONS", "يجب أن يحوي الامتحان المصدر قائمة أقسام تضم قسمًا واحدًا على الأقل.", "sections");
+    else {
+        const seen = new Set();
+        sections.forEach((s, i) => {
+            const path = "sections[" + i + "]";
+            if (!isPlainObject(s)) {
+                add("INVALID_SOURCE_SECTION", "قسم غير صالح في الامتحان المصدر.", path);
+                return;
+            }
+            const id = typeof s.id === "string" ? s.id : "";
+            if (!id.trim() || id !== id.trim()) {
+                add("INVALID_SOURCE_SECTION_ID", "معرّف قسم مفقود أو غير صالح في الامتحان المصدر.", path + ".id");
+                return;
+            }
+            if (seen.has(id)) {
+                add("DUPLICATE_SOURCE_SECTION_ID", "معرّف قسم مكرر في الامتحان المصدر؛ لا يمكن تحديد القسم الذي تقصده قيود المخطط.", path + ".id", id);
+                return;
+            }
+            seen.add(id);
+            sectionIds.push(id);
+        });
+    }
+    if (exam.blueprint === undefined || exam.blueprint === null)
+        add("BLUEPRINT_REQUIRED", "يحتاج القالب الأكاديمي إلى مخطط امتحان.", "blueprint");
+    else {
+        for (const bi of (0, assessmentBlueprint_1.validateBlueprint)(exam.blueprint, { sectionIds }))
+            add("BLUEPRINT_INVALID", bi.message, "blueprint." + (bi.path ?? ""), bi.refId);
+        const bp = exam.blueprint;
+        if (isPlainObject(bp) && bp.qualityPolicy !== undefined) {
+            for (const qi of (0, assessmentQualityPolicy_1.validateAssessmentQualityPolicy)(bp.qualityPolicy, bp))
+                add("QUALITY_POLICY_INVALID", qi.message, "blueprint.qualityPolicy." + (qi.path ?? ""), qi.ruleId);
+        }
+    }
+    return { issues, sectionIds };
+}
+function extractAssessmentPresetFromExam(exam, options = {}) {
+    const source = validateSourceDesign(exam);
+    if (source.issues.length)
+        return { ok: false, reason: source.issues.some(i => i.code === "BLUEPRINT_REQUIRED") ? "no-blueprint" : "invalid-source", issues: source.issues };
     const idFor = options.presetSectionIdFor ?? (() => (0, exports.newPresetSectionId)());
     const map = new Map();
     const sections = exam.sections.map((s, i) => { const pid = idFor(s, i); map.set(s.id, pid); return presetSectionOf(s, pid); });
@@ -187,7 +235,14 @@ function assessmentPresetFromExam(exam, options = {}) {
         preset.description = description.slice(0, exports.PRESET_DESCRIPTION_MAX);
     if (exam.presentationTheme && examTheme_1.EXAM_THEMES.includes(exam.presentationTheme))
         preset.presentationTheme = exam.presentationTheme;
-    return preset;
+    const check = validateAssessmentPreset(preset);
+    if (check.length)
+        return { ok: false, reason: "invalid-source", issues: check };
+    return { ok: true, preset };
+}
+function assessmentPresetFromExam(exam, options = {}) {
+    const result = extractAssessmentPresetFromExam(exam, options);
+    return result.ok ? result.preset : null;
 }
 const newInstantiatedExamId = () => "EXAM-" + Date.now() + "-" + (0, examBuilderState_1.genId)("").replace(/^-/, "").slice(0, 8);
 exports.newInstantiatedExamId = newInstantiatedExamId;

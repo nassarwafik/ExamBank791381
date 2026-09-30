@@ -37,6 +37,23 @@ describe("15A §62 — pure model guards", () => {
     expect(MODEL).toMatch(/const SECTION_KEYS: ReadonlySet<string> = new Set\(\["presetSectionId", "title", "instructions", "gradingPolicy", "maxMarks", "requiredAnswers", "answerUnit"\]\)/);
     expect(MODEL).toMatch(/if \(!PRESET_KEYS\.has\(key\)\) add\("FORBIDDEN_FIELD"/); expect(MODEL).toMatch(/if \(!SECTION_KEYS\.has\(key\)\) add\("FORBIDDEN_FIELD"/);
   });
+  it("Review Fix 1 — extraction is FAIL-CLOSED: validateSourceDesign (section identity → validateBlueprint with the SOURCE ids → validateAssessmentQualityPolicy) runs and returns BEFORE any copy; duplicates are refused, never repaired", () => {
+    const extract = MODEL.slice(MODEL.indexOf("export function extractAssessmentPresetFromExam("), MODEL.indexOf("export function assessmentPresetFromExam("));
+    const validateAt = extract.indexOf("validateSourceDesign(exam)"), returnAt = extract.indexOf("if (source.issues.length) return"), copyAt = extract.indexOf("copyBlueprintWithSectionRefs(");
+    expect(validateAt).toBeGreaterThan(-1); expect(returnAt).toBeGreaterThan(validateAt); expect(copyAt).toBeGreaterThan(returnAt);
+    expect(extract.indexOf("map.set(s.id, pid)")).toBeGreaterThan(returnAt);
+    expect(extract).toMatch(/const check = validateAssessmentPreset\(preset\);/);
+    const source = MODEL.slice(MODEL.indexOf("export function validateSourceDesign("), MODEL.indexOf("export function extractAssessmentPresetFromExam("));
+    expect(source).not.toMatch(/copyBlueprintWithSectionRefs|copyPolicy|copyRule|presetSectionOf|\.map\(copy/);
+    expect(source).toMatch(/validateBlueprint\(exam\.blueprint, \{ sectionIds \}\)/); expect(source).toMatch(/validateAssessmentQualityPolicy\(bp\.qualityPolicy/);
+    expect(source).toMatch(/add\("DUPLICATE_SOURCE_SECTION_ID"/); expect(source).toMatch(/add\("INVALID_SOURCE_SECTION_ID"/);
+    expect(source).not.toMatch(/first wins|seen\.has\(id\)\) \{ sectionIds/);
+    // the null wrapper delegates to the fail-closed authority (no second copy path)
+    expect(MODEL).toMatch(/return result\.ok \? result\.preset : null;/);
+    // the panel never shows an internal runtime message: only PresetRequestError text or a fixed phrase reaches the alert
+    expect(PANEL).not.toMatch(/e instanceof Error \? e\.message/);
+    expect(PANEL).toMatch(/result\.reason === "no-blueprint"\) setError\(NO_BLUEPRINT_MESSAGE\)/);
+  });
   it("instantiation always regenerates section ids and the exam id, starts as draft with empty questions / stimuli, and never copies a governance or owner field", () => {
     const inst = MODEL.slice(MODEL.indexOf("export function instantiateExamFromPreset("), MODEL.indexOf("export function presetSummary("));
     expect(inst).toMatch(/sectionIdFor \?\? \(\(\) => genId\("sec"\)\)/);
@@ -89,7 +106,7 @@ describe("15A §62 — server guards", () => {
 
 describe("15A §62 — UI guards", () => {
   it("the panel creates exams only through the pure authority and hands them to the owner; it never mutates the current exam or calls the exam save path", () => {
-    expect(PANEL).toMatch(/instantiateExamFromPreset\(rec\.preset\)/); expect(PANEL).toMatch(/assessmentPresetFromExam\(latest\(\)/);
+    expect(PANEL).toMatch(/instantiateExamFromPreset\(rec\.preset\)/); expect(PANEL).toMatch(/extractAssessmentPresetFromExam\(latest\(\)/); expect(PANEL).not.toMatch(/[^t]assessmentPresetFromExam\(/);
     expect(PANEL).not.toMatch(/onChange\(|onSave\(|save-exam-artifact|examGovernance|structuredHistory/);
     expect(PANEL).not.toMatch(/dangerouslySetInnerHTML/);
     expect(CLIENT).not.toMatch(/ownerId|version:|createdAt/);                                              // the client sends preset content and expectedVersion only
