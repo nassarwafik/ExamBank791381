@@ -45,3 +45,6 @@
   .qt-two-col{grid-template-columns:1fr}
   .qt-card{padding:10px}
 }
+
+/* Review Fix 1 — safe student state for a stored (type, version) without an implementation in this build */
+.iex-unsupported { margin: 0.5rem 0 0; padding: 0.6rem 0.8rem; border: 1px dashed var(--iex-border, #c9c9c9); border-radius: 8px; background: var(--iex-muted-bg, #f7f7f7); color: var(--iex-muted, #555); font-size: 0.95rem; }

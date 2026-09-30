@@ -2,7 +2,7 @@
 // identity (known key, supported version, compound capability), refuses executable field names on any node, and delegates
 // type-specific configuration / answer-key checks to CODE-OWNED validators registered per type (Wave 1 included here;
 // legacy types keep their existing structural checks in examQuality). examQuality / finalization block on every error.
-import { isKnownQuestionType, supportsQuestionTypeVersion, questionTypeDefinition } from "./questionTypeCatalog";
+import { isKnownQuestionType, effectiveQuestionTypeVersion, questionTypeDefinition, createVersionedRegistry } from "./questionTypeCatalog";
 import { MULTIPLE_SELECT_SCORING } from "./questionTypeScoring";
 
 export type QuestionTypeIssue = { code: string; message: string; severity: "error" | "warning"; path?: string };
@@ -10,11 +10,10 @@ export type TypeValidator = (node: Record<string, unknown>, context: { version: 
 /** Field names persisted content might use to name code / markup. Always refused, on any node. */
 export const EXECUTABLE_NODE_FIELDS: readonly string[] = Object.freeze(["component", "module", "load", "loader", "render", "renderer", "grader", "import", "src", "srcdoc", "html", "script", "code", "eval", "path", "url", "handler", "onLoad", "onRender"]);
 
-const validators = new Map<string, TypeValidator>();
-export function registerTypeValidator(key: string, validator: TypeValidator): () => void {
-  validators.set(key, validator);
-  return () => { validators.delete(key); };
-}
+// Review Fix 1 / R1: validators are bound to (key, version). A V1 configuration is checked by the V1 validator even once the
+// catalog's current version is 2 — the exact identity is resolved, never "latest".
+const validators = createVersionedRegistry<TypeValidator>("type validator");
+export const registerTypeValidator = (key: string, version: number, validator: TypeValidator): (() => void) => validators.register(key, version, validator);
 const isObj = (v: unknown): v is Record<string, unknown> => !!v && typeof v === "object" && !Array.isArray(v);
 const err = (code: string, message: string, path?: string): QuestionTypeIssue => ({ code, message, severity: "error", path });
 const idOf = (v: unknown): string | undefined => (isObj(v) && typeof v.id === "string" && v.id.trim() ? v.id : undefined);
@@ -35,15 +34,16 @@ export function validateQuestionTypeNode(node: unknown, type: unknown, version: 
   for (const f of EXECUTABLE_NODE_FIELDS) if (f in n) issues.push(err("EXECUTABLE_FIELD", "حقل غير مسموح في بيانات السؤال: " + f, f));
   if (!isKnownQuestionType(type)) { issues.push(err("UNKNOWN_QUESTION_TYPE", "نوع سؤال غير معروف: " + String(type ?? ""))); return issues; }
   const key = type as string;
-  if (!supportsQuestionTypeVersion(key, version)) { issues.push(err("UNSUPPORTED_QUESTION_TYPE_VERSION", "إصدار نوع السؤال غير مدعوم: " + String(version) + " (" + key + ").")); return issues; }
+  const effective = effectiveQuestionTypeVersion(key, version);
+  if (effective === undefined) { issues.push(err("UNSUPPORTED_QUESTION_TYPE_VERSION", "إصدار نوع السؤال غير مدعوم: " + String(version) + " (" + key + ").")); return issues; }
   if (options.part && !questionTypeDefinition(key)!.capabilities.compoundPart) issues.push(err("TYPE_NOT_COMPOUND_CAPABLE", "النوع «" + questionTypeDefinition(key)!.label + "» لا يمكن استخدامه كبند مركّب."));
-  const v = validators.get(key);
-  if (v) issues.push(...v(n, { version: version === undefined ? 1 : (version as number), part: !!options.part }));
+  const v = validators.resolve(key, effective);
+  if (v && v.version === effective) issues.push(...v.impl(n, { version: effective, part: !!options.part }));
   return issues;
 }
 
 // ── Wave 1 validators ─────────────────────────────────────────────────────────────────────────────────────────────
-registerTypeValidator("multipleSelect", node => {
+registerTypeValidator("multipleSelect", 1, node => {
   const out: QuestionTypeIssue[] = [];
   const options = Array.isArray(node.options) ? node.options : [];
   if (options.length < 2) out.push(err("MS_TOO_FEW_OPTIONS", "اختيار متعدد الإجابات يحتاج خيارين على الأقل."));
@@ -57,7 +57,7 @@ registerTypeValidator("multipleSelect", node => {
   return out;
 });
 const finite = (v: unknown): v is number => typeof v === "number" && Number.isFinite(v);
-registerTypeValidator("numericResponse", node => {
+registerTypeValidator("numericResponse", 1, node => {
   const out: QuestionTypeIssue[] = [];
   const answer = isObj(node.answer) ? node.answer : {};
   const numeric = isObj(node.numeric) ? node.numeric : {};
@@ -71,7 +71,7 @@ registerTypeValidator("numericResponse", node => {
   if (numeric.unitRequired === true && !(typeof answer.unit === "string" && answer.unit.trim())) out.push(err("NUM_UNIT_REQUIRED_WITHOUT_UNIT", "الوحدة مطلوبة من الطالب دون تحديد الوحدة الصحيحة."));
   return out;
 });
-registerTypeValidator("matrix", node => {
+registerTypeValidator("matrix", 1, node => {
   const out: QuestionTypeIssue[] = [];
   const m = isObj(node.matrix) ? node.matrix : {};
   const rows = Array.isArray(m.rows) ? m.rows : [], columns = Array.isArray(m.columns) ? m.columns : [];
@@ -86,7 +86,7 @@ registerTypeValidator("matrix", node => {
   }
   return out;
 });
-registerTypeValidator("categorization", node => {
+registerTypeValidator("categorization", 1, node => {
   const out: QuestionTypeIssue[] = [];
   const c = isObj(node.categorization) ? node.categorization : {};
   const categories = Array.isArray(c.categories) ? c.categories : [], items = Array.isArray(c.items) ? c.items : [];

@@ -38,24 +38,36 @@ const row = (key: string, label: string, category: QuestionTypeCategory, grading
 
 export const LEGACY_QUESTION_TYPE_KEYS: readonly string[] = Object.freeze(["multipleChoice", "trueFalse", "multiTrueFalse", "shortAnswer", "fillBlank", "wordBank", "matching", "ordering", "tableFill", "cliFill", "compound"]);
 
-/** Production catalog: legacy 11 (historical order) then the Wave 1 enterprise types. Frozen. */
-export const QUESTION_TYPE_CATALOG: readonly QuestionTypeDefinition[] = Object.freeze([
-  row("multipleChoice", "اختيار من متعدد", "choice", "auto", "aco", ["choice"], true),
-  row("trueFalse", "صح أو خطأ", "choice", "auto", "aco", ["choice"], true),
-  row("multiTrueFalse", "صح/خطأ متعدد", "choice", "auto", "acop", ["fields"], true),
-  row("shortAnswer", "إجابة قصيرة / مفتوحة", "response", "hybrid", "amhco", ["text"], true),
-  row("fillBlank", "إكمال فراغات", "response", "auto", "acop", ["sequence", "fields"], true),
-  row("wordBank", "مخزن كلمات", "response", "auto", "acop", ["sequence", "fields"], true),
-  row("matching", "مطابقة", "structured", "auto", "acop", ["fields"], true),
-  row("ordering", "ترتيب", "structured", "auto", "acop", ["sequence"], true),
-  row("tableFill", "إكمال جدول", "structured", "auto", "acop", ["fields", "table"], true),
-  row("cliFill", "أوامر CLI", "response", "auto", "acop", ["fields"], true),
-  row("compound", "سؤال مركّب", "composite", "composed", "amhpo", ["compound"], true),
-  row("multipleSelect", "اختيار متعدد الإجابات", "choice", "auto", "acop", ["multiChoice"]),
-  row("numericResponse", "إجابة رقمية", "response", "auto", "aco", ["numeric"]),
-  row("matrix", "مصفوفة / شبكة اختيارات", "structured", "auto", "acop", ["fields"]),
-  row("categorization", "تصنيف العناصر", "structured", "auto", "acop", ["fields"])
-]);
+/** Production rows — `as const` so TypeScript keeps the literal keys: the production key UNION derives from here (R2-D),
+ *  never from a second hand-written list. Legacy 11 (historical order) then the Wave 1 enterprise types. */
+const PRODUCTION_ROWS = [
+  ["multipleChoice", "اختيار من متعدد", "choice", "auto", "aco", ["choice"], true],
+  ["trueFalse", "صح أو خطأ", "choice", "auto", "aco", ["choice"], true],
+  ["multiTrueFalse", "صح/خطأ متعدد", "choice", "auto", "acop", ["fields"], true],
+  ["shortAnswer", "إجابة قصيرة / مفتوحة", "response", "hybrid", "amhco", ["text"], true],
+  ["fillBlank", "إكمال فراغات", "response", "auto", "acop", ["sequence", "fields"], true],
+  ["wordBank", "مخزن كلمات", "response", "auto", "acop", ["sequence", "fields"], true],
+  ["matching", "مطابقة", "structured", "auto", "acop", ["fields"], true],
+  ["ordering", "ترتيب", "structured", "auto", "acop", ["sequence"], true],
+  ["tableFill", "إكمال جدول", "structured", "auto", "acop", ["fields", "table"], true],
+  ["cliFill", "أوامر CLI", "response", "auto", "acop", ["fields"], true],
+  ["compound", "سؤال مركّب", "composite", "composed", "amhpo", ["compound"], true],
+  ["multipleSelect", "اختيار متعدد الإجابات", "choice", "auto", "acop", ["multiChoice"], false],
+  ["numericResponse", "إجابة رقمية", "response", "auto", "aco", ["numeric"], false],
+  ["matrix", "مصفوفة / شبكة اختيارات", "structured", "auto", "acop", ["fields"], false],
+  ["categorization", "تصنيف العناصر", "structured", "auto", "acop", ["fields"], false]
+] as const;
+/** The production type identity as a TypeScript union — ONE source of truth with the runtime catalog. Registered plugin
+ *  keys widen to `string` at the extension seams (they are runtime data, not compile-time identity). */
+export type ProductionQuestionTypeKey = (typeof PRODUCTION_ROWS)[number][0];
+
+/** Production catalog: frozen definitions built from PRODUCTION_ROWS. */
+export const QUESTION_TYPE_CATALOG: readonly QuestionTypeDefinition[] = Object.freeze(PRODUCTION_ROWS.map(r => row(r[0], r[1], r[2], r[3], r[4], [...r[5]], r[6])));
+
+/** Runtime identity of ONE implementation: a type key AND a version. Persisted data carries `presentationType` / `type` +
+ *  `questionTypeVersion` (absence = V1); every runtime registry resolves by BOTH. */
+export type QuestionTypeIdentity = { key: string; version: number };
+export const questionTypeIdentityKey = (key: string, version: number): string => key + "@" + version;
 
 const KEY_PATTERN = /^[A-Za-z][A-Za-z0-9]{1,63}$/;
 const registry = new Map<string, QuestionTypeDefinition>(QUESTION_TYPE_CATALOG.map(d => [d.key, d]));
@@ -87,6 +99,49 @@ export function supportsQuestionTypeVersion(key: unknown, version: unknown): boo
   if (version === undefined) return true;
   return Number.isInteger(version) && (version as number) >= 1 && (version as number) <= d.version;
 }
+/** THE version-normalization authority (Review Fix 1 / R1). Known type + absent stored version → canonical V1 (legacy data is
+ *  never bulk-rewritten); an explicit positive integer within 1..current → itself; anything else (unknown key, 0, negative,
+ *  fraction, string, above current) → undefined = FAIL CLOSED. Never coerces 2 into 1, never upgrades V1 to current. */
+export function effectiveQuestionTypeVersion(key: unknown, storedVersion: unknown): number | undefined {
+  const d = questionTypeDefinition(key);
+  if (!d) return undefined;
+  if (storedVersion === undefined) return 1;
+  if (typeof storedVersion !== "number" || !Number.isInteger(storedVersion) || storedVersion < 1 || storedVersion > d.version) return undefined;
+  return storedVersion;
+}
+
+/** A CODE-OWNED runtime registry bound to (key, version). `register` refuses a taken identity (a new version is ADDITIVE and
+ *  can never replace an older implementation); `resolve` normalizes the stored version through effectiveQuestionTypeVersion
+ *  and looks the EXACT identity up — no "latest" fallback, ever. */
+export type VersionedRegistry<T> = {
+  register(key: string, version: number, impl: T): () => void;
+  resolve(rawKey: unknown, storedVersion: unknown): { key: string; version: number; impl: T } | undefined;
+  has(key: string, version: number): boolean;
+};
+export function createVersionedRegistry<T>(what: string, options: { requireKnownType?: boolean } = {}): VersionedRegistry<T> {
+  const entries = new Map<string, T>();
+  return {
+    register(key, version, impl) {
+      if (typeof key !== "string" || !KEY_PATTERN.test(key) || !Number.isInteger(version) || version < 1 || impl == null) throw new Error("invalid " + what + " registration: " + key + "@" + version);
+      const id = questionTypeIdentityKey(key, version);
+      if (entries.has(id)) throw new Error(what + " already registered: " + id);
+      entries.set(id, impl);
+      return () => { if (entries.get(id) === impl) entries.delete(id); };
+    },
+    resolve(rawKey, storedVersion) {
+      const key = resolveQuestionTypeKey(rawKey) ?? (typeof rawKey === "string" && !options.requireKnownType ? rawKey.trim() : undefined);
+      if (!key) return undefined;
+      // Known type → the catalog decides the effective version. A code-owned implementation registered for a key the catalog
+      // does not (yet) know serves version 1 only (test-only graders); anything else fails closed.
+      const version = isKnownQuestionType(key) ? effectiveQuestionTypeVersion(key, storedVersion) : (storedVersion === undefined || storedVersion === 1 ? 1 : undefined);
+      if (version === undefined) return undefined;
+      const impl = entries.get(questionTypeIdentityKey(key, version));
+      return impl === undefined ? undefined : { key, version, impl };
+    },
+    has(key, version) { return entries.has(questionTypeIdentityKey(key, version)); }
+  };
+}
+
 /** Canonical key for an exact key or a case-insensitive spelling; undefined when unknown. Legacy import aliases (mcq, tf,
  *  open, …) are resolved by questionTypeAliases.ts (import / server), which is not part of the student initial graph. */
 export function resolveQuestionTypeKey(raw: unknown): string | undefined {

@@ -5,7 +5,7 @@
 import type { AssessmentBlueprintV1, AssessmentQualityPolicyV1, AssessmentQualityRule, CoverageQualityRule, ThresholdQualityRule, QualityRuleSource, BlueprintConstraint, QualityEffect } from "./assessmentTypes";
 import { ASSESSMENT_QUALITY_POLICY_SCHEMA_VERSION, QUALITY_EFFECTS, QUALITY_TRIGGER_RELATIONS, QUALITY_THRESHOLD_METRICS } from "./assessmentTypes";
 import { blueprintCognitiveLevels, blueprintDifficultyScale } from "./assessmentBlueprint";
-import { QUESTION_TYPE_LABELS } from "./examTypes";
+import { questionTypeLabel } from "./questionTypeCatalog";
 
 export { ASSESSMENT_QUALITY_POLICY_SCHEMA_VERSION, QUALITY_EFFECTS, QUALITY_TRIGGER_RELATIONS, QUALITY_THRESHOLD_METRICS };
 export function emptyQualityPolicy(): AssessmentQualityPolicyV1 { return { schemaVersion: ASSESSMENT_QUALITY_POLICY_SCHEMA_VERSION, enabled: false, rules: [] }; }
@@ -128,7 +128,7 @@ export function describeConstraint(bp: AssessmentBlueprintV1, c: BlueprintConstr
     case "objective": label = bp.objectives.find(o => o.id === ref)?.label || ref; break;
     case "difficulty": { const l = blueprintDifficultyScale(bp).labels?.[ref]; label = l ? ref + " — " + l : ref; break; }
     case "cognitiveLevel": label = blueprintCognitiveLevels(bp).find(l => l.id === ref)?.label || ref; break;
-    case "questionType": label = (QUESTION_TYPE_LABELS as Record<string, string>)[ref] || ref; break;
+    case "questionType": label = questionTypeLabel(ref) || ref; break;
     case "section": label = sections.find(s => s.id === ref)?.title || ref; break;
   }
   return (DIM_LABEL[c.dimension] || c.dimension) + ": " + label + " — " + (c.metric === "marks" ? "العلامات" : "عدد الأسئلة") + (c.unit === "percent" ? " (نسبة مئوية)" : "");

@@ -193,10 +193,12 @@ describe("16A A3 — a synthetic interactive plugin authors through the seam", (
   it("registerQuestionTypePlugin makes the type available to newQuestion, the palette, the body host and validation — without any change to the central files", async () => {
     const unregister = registerQuestionTypePlugin({
       definition: { key: "syntheticInteractive", version: 1, label: "محاكاة تجريبية", description: "نوع تجريبي للاختبار", category: "interactive", gradingMode: "auto", capabilities: { autoGrading: true, manualGrading: false, hybridGrading: false, partialCredit: true, compoundPart: true, interactive: true, requiresImage: false, offline: false }, responseKinds: ["fields"], legacy: false, icon: "⚙" },
-      defaults: ensure => { ensure("simulation", { links: [{ id: "l1", label: "Link 1" }] }); ensure("answer", { expectedState: { l1: "up" } }); },
-      validate: node => (Array.isArray((node.simulation as { links?: unknown[] })?.links) && (node.simulation as { links: unknown[] }).links.length ? [] : [{ code: "SIM_NO_LINKS", message: "لا توجد وصلات.", severity: "error" }]),
-      Editor: ({ node }) => <div data-testid="qt-editor-syntheticInteractive">محرر المحاكاة: {((node as unknown as Record<string, unknown>).simulation as { links: { label: string }[] }).links.map(l => l.label).join(", ")}</div>,
-      StudentRenderer: ({ answer, onAnswer }) => <button type="button" onClick={() => onAnswer({ kind: "fields", values: { l1: "up" } })}>{answer?.kind === "fields" ? "up" : "down"}</button>
+      versions: { 1: {
+        defaults: ensure => { ensure("simulation", { links: [{ id: "l1", label: "Link 1" }] }); ensure("answer", { expectedState: { l1: "up" } }); },
+        validate: node => (Array.isArray((node.simulation as { links?: unknown[] })?.links) && (node.simulation as { links: unknown[] }).links.length ? [] : [{ code: "SIM_NO_LINKS", message: "لا توجد وصلات.", severity: "error" }]),
+        Editor: ({ node }) => <div data-testid="qt-editor-syntheticInteractive">محرر المحاكاة: {((node as unknown as Record<string, unknown>).simulation as { links: { label: string }[] }).links.map(l => l.label).join(", ")}</div>,
+        StudentRenderer: ({ answer, onAnswer }) => <button type="button" onClick={() => onAnswer({ kind: "fields", values: { l1: "up" } })}>{answer?.kind === "fields" ? "up" : "down"}</button>
+      } }
     });
     try {
       const q = newQuestion("syntheticInteractive" as never, { examQuestionId: "sim1", text: "شغّل الوصلة" });

@@ -32,7 +32,7 @@ exports.officialQuestionMarks = officialQuestionMarks;
 exports.buildAssessmentProfile = buildAssessmentProfile;
 exports.legacyPlanToBlueprint = legacyPlanToBlueprint;
 exports.blueprintToLegacyPlanTargets = blueprintToLegacyPlanTargets;
-const examTypes_1 = require("./examTypes");
+const questionTypeCatalog_1 = require("./questionTypeCatalog");
 const examBuilderState_1 = require("./examBuilderState");
 const assessmentTypes_1 = require("./assessmentTypes");
 function validateBlueprintForExam(bp, exam) {
@@ -230,7 +230,7 @@ function validateBlueprint(input, context) {
                             add("BROKEN_COGNITIVE_REF", "مستوى معرفي غير معرّف: " + ref, path + ".ref", refId);
                         break;
                     case "questionType":
-                        if (!examTypes_1.BUILDER_QUESTION_TYPES.includes(ref))
+                        if (!(0, questionTypeCatalog_1.isKnownQuestionType)(ref))
                             add("INVALID_QUESTION_TYPE", "نوع سؤال غير معروف: " + ref, path + ".ref", refId);
                         break;
                     case "section":

@@ -6,7 +6,7 @@ import QuestionFieldEditor from "./QuestionFieldEditor";
 import TableFillEditor from "./TableFillEditor";
 import CliFillEditor from "./CliFillEditor";
 import { resolveAuthoringEditor } from "./questionTypes/authoringRegistry";
-import { isKnownQuestionType, questionTypeDefinition } from "./questionTypeCatalog";
+import { isKnownQuestionType, questionTypeDefinition, effectiveQuestionTypeVersion } from "./questionTypeCatalog";
 
 // Type-specific answer-body HOST shared by a question and a compound part. It never renders identity, text or marks (the
 // caller owns those) — only the answer controls for the given type. Phase 16A: the host resolves the CODE-OWNED authoring
@@ -19,18 +19,23 @@ type Props = { node: QuestionBody; type: BuilderQuestionType | BuilderPartType |
 const optText = (o: BuilderOption) => o.text ?? o.label ?? o.value ?? "";
 
 export default function QuestionBodyEditor({ node, type, onChange, disabled }: Props) {
-  const registered = resolveAuthoringEditor(type);
+  // Review Fix 1 / R1: the editor is resolved for the EXACT (type, stored version) identity — absence = V1, never "latest".
+  const registered = resolveAuthoringEditor(type, node.questionTypeVersion);
   if (registered) {
     return <Suspense fallback={<p className="sb-hint" role="status">جارٍ تحميل محرر النوع…</p>}>{createElement(registered, { node, onChange, disabled })}</Suspense>;
   }
-  if (!isKnownQuestionType(type) || !questionTypeDefinition(type)?.legacy) {
-    return <UnsupportedQuestionType type={type} />;
+  if (!isKnownQuestionType(type)) return <UnsupportedQuestionType type={type} />;
+  if (effectiveQuestionTypeVersion(type, node.questionTypeVersion) === undefined || !questionTypeDefinition(type)?.legacy) {
+    return <UnsupportedQuestionType type={type} version={node.questionTypeVersion} />;
   }
   return <LegacyQuestionAuthoringAdapter node={node} type={type as BuilderQuestionType} onChange={onChange} disabled={disabled} />;
 }
 
 /** Unknown / unsupported type: the data is kept verbatim, finalization is blocked by examQuality, the teacher resolves it by choosing a type. */
-function UnsupportedQuestionType({ type }: { type: string }) {
+function UnsupportedQuestionType({ type, version }: { type: string; version?: unknown }) {
+  if (isKnownQuestionType(type)) {
+    return <div className="qt-unsupported" data-testid="qt-unsupported" role="note">إصدار غير مدعوم لنوع السؤال «{questionTypeDefinition(type)?.label}»: <code>{String(version ?? "—")}</code>. لا يوجد تنفيذ لهذا الإصدار في هذا التطبيق؛ لن يُقبل السؤال في الاعتماد النهائي ولن يُعاد تفسيره بإصدار آخر.</div>;
+  }
   return <div className="qt-unsupported" data-testid="qt-unsupported" role="note">نوع سؤال غير مدعوم: <code>{String(type || "—")}</code>. لن يُقبل هذا السؤال في الاعتماد النهائي؛ اختر نوعًا مدعومًا من قائمة «نوع السؤال» أو احذف السؤال.</div>;
 }
 

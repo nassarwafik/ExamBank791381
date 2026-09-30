@@ -119,7 +119,7 @@ describe("16A A12 — student sanitizer: zero answer leak for the Wave 1 types",
 
 describe("16A A3 — a synthetic interactive type registers through the seam without touching the central dispatcher", () => {
   it("registerGrader → gradeExam uses it for the synthetic type, per-type result shape honoured, unregister restores fail-closed", () => {
-    const unregister = registerGrader("syntheticInteractive", (question, response, max) => {
+    const unregister = registerGrader("syntheticInteractive", 1, (question, response, max) => {
       const state = response && response.kind === "fields" && response.values ? response.values : {};
       const ok = Object.values(state).filter(v => v === "up").length;
       return { score: max * (ok / 2), manualReview: false, parts: { correct: ok, total: 2 } };

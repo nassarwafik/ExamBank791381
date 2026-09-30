@@ -1,7 +1,7 @@
 import { useEffect, useId, useRef, useState } from "react";
 import Dialog from "../../ui/Dialog";
 import type { BuilderQuestion } from "../../examTypes";
-import { QUESTION_TYPE_LABELS } from "../../examTypes";
+import { questionTypeLabel } from "../../questionTypeCatalog";
 import { MAX_IMPORT_BYTES } from "../../structuredExamImport";
 import { formatDateLatn } from "../../student/exam/format";
 import type { ChallengeQuestionSource } from "../domain/challenge";
@@ -223,7 +223,7 @@ export default function ChallengeImportPicker({ client, initialSource = "saved",
                         <input type="checkbox" checked={checked.has(i)} onChange={() => toggle(i)} />
                         <span className="eb-lc-qpick-num" aria-hidden="true">{q.displayNumber || i + 1}</span>
                         <span className="eb-lc-qpick-body">
-                          <span className="eb-lc-qpick-type">{QUESTION_TYPE_LABELS[q.presentationType]}</span>
+                          <span className="eb-lc-qpick-type">{questionTypeLabel(q.presentationType) ?? q.presentationType}</span>
                           <span className="eb-lc-qpick-text">{text || "(سؤال بدون نص)"}</span>
                         </span>
                       </label>

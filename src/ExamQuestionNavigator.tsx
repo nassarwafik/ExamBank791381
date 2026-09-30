@@ -1,5 +1,5 @@
 import { useId } from "react";
-import { QUESTION_TYPE_LABELS, type BuilderQuestionType } from "./examTypes";
+import { listQuestionTypes, questionTypeLabel } from "./questionTypeCatalog";
 import { EMPTY_NAVIGATOR_FILTERS, filterNavigatorEntries, navigatorFiltersActive, type NavigatorEntry, type NavigatorFilters } from "./structuredExamProductivity";
 
 // Phase 13B — the Question Navigator (مستكشف الأسئلة): a compact productivity layer over the real section / question
@@ -23,8 +23,7 @@ type Props = {
   id?: string;
 };
 
-const TYPES = Object.keys(QUESTION_TYPE_LABELS) as BuilderQuestionType[];
-const typeLabel = (t: string) => QUESTION_TYPE_LABELS[t as BuilderQuestionType] || t || "—";
+const typeLabel = (t: string) => questionTypeLabel(t) || t || "—";
 
 export default function ExamQuestionNavigator({ entries, sections, filters, onFilters, selected, onToggle, onSelectMany, onClearSelection, onNavigate, asPanel = true, id }: Props) {
   const uid = useId();
@@ -42,7 +41,7 @@ export default function ExamQuestionNavigator({ entries, sections, filters, onFi
           <label className="sb-nav-filter"><span>القسم</span>
             <select className="sb-input sb-input-sm" value={filters.sectionId} onChange={e => set({ sectionId: e.target.value })}><option value="">الكل</option>{sections.map(s => <option key={s.id} value={s.id}>{s.title || "قسم"}</option>)}</select></label>
           <label className="sb-nav-filter"><span>النوع</span>
-            <select className="sb-input sb-input-sm" value={filters.type} onChange={e => set({ type: e.target.value })}><option value="">الكل</option>{TYPES.map(t => <option key={t} value={t}>{QUESTION_TYPE_LABELS[t]}</option>)}</select></label>
+            <select className="sb-input sb-input-sm" value={filters.type} onChange={e => set({ type: e.target.value })}><option value="">الكل</option>{listQuestionTypes().map(d => <option key={d.key} value={d.key}>{d.label}</option>)}</select></label>
           <label className="sb-nav-filter"><span>المصدر</span>
             <select className="sb-input sb-input-sm" value={filters.origin} onChange={e => set({ origin: e.target.value as NavigatorFilters["origin"] })}><option value="">الكل</option><option value="bank">من البنك</option><option value="manual">غير بنك</option></select></label>
           {difficulties.length > 0 && (

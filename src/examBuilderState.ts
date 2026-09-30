@@ -17,7 +17,7 @@ import type {
 } from "./examTypes";
 import { toSafePreviewExam, type PreviewExamInput } from "./examPreviewModel";
 import { applyRegisteredTypeDefaults, hasRegisteredTypeDefaults } from "./questionTypeDefaults";
-import { currentQuestionTypeVersion, questionTypeDefinition } from "./questionTypeCatalog";
+import { currentQuestionTypeVersion, effectiveQuestionTypeVersion, questionTypeDefinition } from "./questionTypeCatalog";
 
 // ── Identity ────────────────────────────────────────────────────────────────
 // Stable unique ids. crypto.randomUUID when available (browser / modern Node), else a random string.
@@ -67,12 +67,17 @@ function applyTypeDefaults<T extends { presentationType?: BuilderQuestionType; t
   const t = (node.presentationType || node.type) as BuilderQuestionType | undefined;
   const out: Record<string, unknown> = { ...node };
   const ensure = (key: string, value: unknown) => { if (out[key] === undefined) out[key] = value; };
-  // Phase 16A — registered (Wave 1 / plugin) types seed their CODE-OWNED defaults and are stamped with the current type
-  // version. The legacy 11 keep the byte-for-byte factory shapes below and are NEVER stamped (absence = V1).
-  if (t && hasRegisteredTypeDefaults(t) && !questionTypeDefinition(t)?.legacy) {
-    applyRegisteredTypeDefaults(t, ensure, genId);
-    ensure("questionTypeVersion", currentQuestionTypeVersion(t));
-    return out as T;
+  // Phase 16A — registered (Wave 1 / plugin) types seed their CODE-OWNED defaults and are stamped with the type version.
+  // Review Fix 1 / R1: the version is DECIDED first — a node that already carries a supported version keeps it (an existing
+  // V1 node is only ever seeded with V1 defaults); a new node takes the catalog's CURRENT version — and the defaults of
+  // EXACTLY that version are applied. The legacy 11 keep the byte-for-byte factory shapes below and are NEVER stamped.
+  if (t && !questionTypeDefinition(t)?.legacy) {
+    const version = out.questionTypeVersion === undefined ? currentQuestionTypeVersion(t) : effectiveQuestionTypeVersion(t, out.questionTypeVersion);
+    if (version !== undefined && hasRegisteredTypeDefaults(t, version)) {
+      applyRegisteredTypeDefaults(t, version, ensure, genId);
+      ensure("questionTypeVersion", version);
+      return out as T;
+    }
   }
   switch (t) {
     case "multipleChoice":

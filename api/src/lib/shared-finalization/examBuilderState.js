@@ -88,10 +88,13 @@ function applyTypeDefaults(node) {
     const out = { ...node };
     const ensure = (key, value) => { if (out[key] === undefined)
         out[key] = value; };
-    if (t && (0, questionTypeDefaults_1.hasRegisteredTypeDefaults)(t) && !(0, questionTypeCatalog_1.questionTypeDefinition)(t)?.legacy) {
-        (0, questionTypeDefaults_1.applyRegisteredTypeDefaults)(t, ensure, genId);
-        ensure("questionTypeVersion", (0, questionTypeCatalog_1.currentQuestionTypeVersion)(t));
-        return out;
+    if (t && !(0, questionTypeCatalog_1.questionTypeDefinition)(t)?.legacy) {
+        const version = out.questionTypeVersion === undefined ? (0, questionTypeCatalog_1.currentQuestionTypeVersion)(t) : (0, questionTypeCatalog_1.effectiveQuestionTypeVersion)(t, out.questionTypeVersion);
+        if (version !== undefined && (0, questionTypeDefaults_1.hasRegisteredTypeDefaults)(t, version)) {
+            (0, questionTypeDefaults_1.applyRegisteredTypeDefaults)(t, version, ensure, genId);
+            ensure("questionTypeVersion", version);
+            return out;
+        }
     }
     switch (t) {
         case "multipleChoice":

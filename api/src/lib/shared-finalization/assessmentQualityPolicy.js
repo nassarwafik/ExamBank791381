@@ -22,7 +22,7 @@ Object.defineProperty(exports, "QUALITY_EFFECTS", { enumerable: true, get: funct
 Object.defineProperty(exports, "QUALITY_TRIGGER_RELATIONS", { enumerable: true, get: function () { return assessmentTypes_1.QUALITY_TRIGGER_RELATIONS; } });
 Object.defineProperty(exports, "QUALITY_THRESHOLD_METRICS", { enumerable: true, get: function () { return assessmentTypes_1.QUALITY_THRESHOLD_METRICS; } });
 const assessmentBlueprint_1 = require("./assessmentBlueprint");
-const examTypes_1 = require("./examTypes");
+const questionTypeCatalog_1 = require("./questionTypeCatalog");
 function emptyQualityPolicy() { return { schemaVersion: assessmentTypes_1.ASSESSMENT_QUALITY_POLICY_SCHEMA_VERSION, enabled: false, rules: [] }; }
 let ruleSeq = 0;
 function newQualityRuleId() { ruleSeq += 1; return "qr" + Date.now().toString(36) + ruleSeq.toString(36); }
@@ -181,7 +181,7 @@ function describeConstraint(bp, c, sections = []) {
             label = (0, assessmentBlueprint_1.blueprintCognitiveLevels)(bp).find(l => l.id === ref)?.label || ref;
             break;
         case "questionType":
-            label = examTypes_1.QUESTION_TYPE_LABELS[ref] || ref;
+            label = (0, questionTypeCatalog_1.questionTypeLabel)(ref) || ref;
             break;
         case "section":
             label = sections.find(s => s.id === ref)?.title || ref;

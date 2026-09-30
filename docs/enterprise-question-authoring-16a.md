@@ -7,7 +7,8 @@ authoritative design of the phase; the PR body carries the evidence summary.
 ## 1. Objective
 
 Turn the fixed 11-type Structured Exam Builder into an authoring studio with ONE versioned, extensible Question Type Catalog
-and code-owned runtime registries, so that a future question type (Phase 16B: `networkSimulation` v1) is a registration —
+and code-owned runtime registries, so that a future question type (Phase 16B: every simulation / interactive runtime
+profile — network lab, function graph, projectile motion, circuit lab, chemical equation, algorithm trace, …) is a registration —
 not another set of `if (type === …)` branches across the Builder, the student page, the grader, the sanitizer and the
 Blueprint. Wave 1 delivers four production types on top of the registry: Multiple Select, Numeric Response, Matrix,
 Categorization — plus the Question Type Palette and versioned type / capability metadata.
@@ -60,9 +61,11 @@ compound renderer, quality validator, grader, import list) and the student card 
   aliases (`mcq`, `tf`, `open`, …), category / grading-mode labels live in `src/questionTypeAliases.ts` (shared build, but
   outside the student initial graph); descriptions / icons in `src/questionTypes/typePresentation.ts` (lazy with the palette);
   the type-change patch helpers and the authored-content heuristic in `src/questionTypes/typeContent.ts` (builder only).
-- **Plugin seam** `src/questionTypes/registerQuestionTypePlugin.ts` registers definition + defaults + validator + editor +
-  student renderer in one call (server grader: `registerGrader`). The test-only synthetic type `syntheticInteractive`
-  proves the seam without touching any central file (guarded).
+- **Plugin seam** `src/questionTypes/registerQuestionTypePlugin.ts` registers ONE type FAMILY: the catalog definition
+  (identity + CURRENT version + capabilities) and one executable implementation PER VERSION (defaults, validator, editor,
+  student renderer) in one transactional call (server grader: `registerGrader(key, version, handler)`). The test-only
+  synthetic families `syntheticInteractive`, `versionedSynthetic` (V1 + V2) and `universalSim` prove the seam without
+  touching any central file (guarded). See §13 for the version-bound runtime identity.
 - **Persisted data never selects code**: exam JSON carries `presentationType` / `type` + `questionTypeVersion` + its own
   configuration; every `import()` in a registry is a literal relative path; `EXECUTABLE_NODE_FIELDS` (`component`,
   `module`, `path`, `import`, `renderer`, `grader`, `script`, `html`, `srcdoc`, `eval`, `src`, `url`, …) on a node is a
@@ -200,22 +203,123 @@ passing tests are the grading-parity snapshot, which must pass before and after 
 Fingerprint (md5 of `git status --short` + `git diff` + untracked md5s) identical before and after every mutant. Log: `scratchpad/16a/mutations-16a-summary.txt`, per-mutant `mut16a-M*.log`.
 
 
-## 12. Phase 16B handoff — Packet-Tracer-Familiar Network Simulation Assessment Runtime
+## 12. Phase 16B handoff — Universal Simulation & Interactive Assessment Runtime
 
-16B adds ONE registered type, `networkSimulation` version 1, as a plugin:
+Phase 16B is NOT a network simulator with an assessment bolted on. It is a **domain-neutral runtime**: networking is ONE
+plugin / runtime profile alongside mathematics, physics, chemistry, computer science and future domains. The Question Type
+Registry built here (catalog + version-bound registries + universal sanitizer contract + `onAnswer` seam + authoritative
+grader registry) is the **host boundary** 16B plugs into; nothing in the universal runtime may branch on a subject.
 
-| 16B piece | 16A seam |
-|---|---|
-| catalog definition (`category: "interactive"`, `gradingMode: "auto"`, `capabilities.interactive = true`, `compoundPart` as decided, `responseKinds: ["fields"]` or a new explicit kind) | `registerQuestionType` via `registerQuestionTypePlugin` |
-| topology authoring editor (lazy) | `Editor` in the plugin → rendered by the `QuestionBodyEditor` host |
-| device / runtime renderer + CLI terminal (lazy) | `StudentRenderer` in the plugin → rendered by `StudentQuestionCard` / `CompoundQuestion` through `onAnswer(next)` |
-| student simulation response / state | an ordinary `Answer` stored in the existing `Record<questionId, Answer>` (autosave / submission untouched); add a discriminated kind to `answerState.ts` + `exam-structure.js` only if `fields` is not semantically clean |
-| server state validator | `registerTypeValidator` (config / answer-key shape, stable identities, executable-field refusal already enforced) |
-| partial-credit grader | `registerGrader("networkSimulation", handler)` using a pure scoring module compiled into the shared build |
+```
+                         Universal Simulation Runtime  (16B)
+                                    │
+        ├── Simulation Registry            = registerQuestionTypePlugin family (key@version), 16A
+        ├── Versioned Scenario Contract    = public `scenario` / `publicConfig` per (key, version), 16A sanitizer contract
+        ├── Serializable State             = an ordinary `Answer` (fields / a new explicit kind), 16A
+        ├── Student Runtime Host           = StudentQuestionCard / CompoundQuestion → StudentRenderer@version, 16A
+        ├── Authoring Host                 = QuestionBodyEditor → Editor@version, Palette, composer selector, 16A
+        ├── State Validation               = registerTypeValidator(key, version), 16A
+        ├── Server Grading                 = registerGrader(key, version, handler) → assignment-grading authority, 16A
+        ├── Partial Credit Assertions      = pure scoring module per plugin, compiled into the shared build
+        ├── Autosave / Restore             = existing Record<questionId, Answer> pipeline, untouched
+        ├── Accessibility                  = renderer contract (labelled controls, keyboard, RTL)
+        ├── Lazy Loading                   = every runtime chunk behind import(), bundle guard
+        └── Security Boundary              = no eval / iframe / external URL; exam JSON never names code; answer keys only under `answer`
+                                    │
+                    ┌───────────────┼───────────────┐
+                    │               │               │
+                  Math           Physics        Chemistry
+                    │               │               │
+               Networking        CS / Data     future domains
+```
 
-Nothing in `StructuredExamBuilder`, `QuestionComposer`, `StudentExamPage`, the central grading flow or the Blueprint changes
-beyond registration. The synthetic `syntheticInteractive` plugin in the 16A tests exercises exactly this path (authoring
-host, palette, validation, student card, compound part, server grader). Deferred deliberately: the simulator itself, any
-iframe / external URL / HTML runtime, GeoGebra / Desmos / H5P / LTI / QTI, hotspot, coding sandbox, drag-and-drop UI
-(16C may add a drag presentation over the same `fields` response), recently-used / favourites in the palette, a larger
-Enterprise Inspector, Question Bank generalization (Phase 17).
+Representative plugin families (each ONE `registerQuestionTypePlugin` + ONE `registerGrader` per version; no central edit):
+
+| family | domain | scenario (public) | answer (private) | response |
+|---|---|---|---|---|
+| `network-lab@1` | Networking | topology, devices, links, initial configs | expected reachability / config assertions | device states / CLI transcript (`fields`) |
+| `function-graph@1` | Mathematics | axes, given points, allowed tools | expected function parameters ± tolerance | plotted parameters (`fields`) |
+| `quadratic-function@1` | Mathematics | coefficients range, prompt | roots / vertex with tolerance | numeric fields |
+| `projectile-motion@1` | Physics | launcher, target, g | expected angle / speed ± tolerance | chosen parameters |
+| `free-fall@1` | Physics | height, medium | expected time / velocity | measured values |
+| `circuit-lab@1` | Physics | components, board | expected currents / closed loops | wiring state |
+| `chemical-equation@1` | Chemistry | reactants, products | balanced coefficients | coefficient fields |
+| `molecule-builder@1` | Chemistry | atom palette | expected bonds / formula | built structure |
+| `algorithm-trace@1` | Computer Science | code, inputs | expected trace / outputs | trace table (`fields`) |
+| `data-experiment@1` | CS / Data | dataset, tools | expected statistics ± tolerance | computed values |
+
+Rules every 16B plugin inherits from 16A: identity is `(key, version)`; V2 is ADDITIVE (V1 keeps serving stored V1
+questions); the student receives ONLY the public scenario (the universal sanitizer strips `answer` and every secret-looking
+key inside any plugin object without knowing the domain); the response is a serializable `Answer` routed through
+`onAnswer(next)`; the server grader for the exact version is the only scoring authority; an unknown key or unsupported
+version fails closed on every surface. Deferred deliberately: the simulators themselves, any iframe / external URL / HTML
+runtime, GeoGebra / Desmos / H5P / LTI / QTI, hotspot, coding sandbox, drag-and-drop presentation, palette favourites, a
+larger Enterprise Inspector, Question Bank generalization (Phase 17).
+
+## 13. Independent Review Fix 1 — Truly Versioned & Universal Plugin Runtime
+
+### 13.1 R1 root cause
+The persisted identity was already `type + questionTypeVersion` and `supportsQuestionTypeVersion` accepted `1..current`, but
+every runtime registry (authoring editor, student renderer, validator, defaults, server grader) was keyed by the type KEY
+alone. With a future `functionSimulation@2`, a stored `functionSimulation@1` would have resolved the V2 implementation —
+silently reinterpreting a published assessment and breaking governance immutability.
+
+### 13.2 Version-bound runtime identity
+- `QuestionTypeIdentity = { key, version }`, canonical id `key@version` (`questionTypeIdentityKey`).
+- **`effectiveQuestionTypeVersion(key, stored)`** is THE normalization authority (pure, shared build): known type + absent →
+  1; explicit integer within `1..current` → itself; unknown key / 0 / negative / fraction / string / above current →
+  `undefined` = fail closed. It never coerces 2 into 1 and never upgrades V1 to current.
+- **`createVersionedRegistry<T>()`** (catalog module) backs every registry: `register(key, version, impl)` refuses a taken
+  identity (a new version is additive and can never replace an older one); `resolve(key, stored)` normalizes through the
+  authority and looks the EXACT identity up — no "latest" fallback anywhere.
+
+| registry | was | now | miss → |
+|---|---|---|---|
+| authoring (`authoringRegistry.tsx`) | key → Editor | `(key, version)` → Editor (`resolveAuthoringEditor(type, node.questionTypeVersion)`) | explicit «إصدار غير مدعوم» state in `QuestionBodyEditor` |
+| student (`studentRegistry.tsx`) | key → Renderer | `(key, version)` → Renderer (card / compound pass the stored version) | `qt-student-unsupported` safe notice, no crash, no legacy guess for a versioned identity |
+| validation (`questionTypeValidation.ts`) | key → validator | `(key, version)` → validator; `validateQuestionTypeNode` resolves the effective version first | `UNSUPPORTED_QUESTION_TYPE_VERSION` (blocking) |
+| defaults (`questionTypeDefaults.ts`) | key → defaults | `(key, version)`; a NEW node takes the catalog's current version's defaults and is stamped with it; a node that already carries a supported version keeps it (V2 defaults never touch a V1 node) | legacy factories untouched, never stamped |
+| server (`question-type-graders.js`) | key → grader | `registerGrader(key, version, handler)`; `resolveGrader` → exact identity through the shared authority; a family registered without a catalog entry serves V1 only | `unknownTypeResult` (score 0 + manual review) |
+
+Proof (`versionedSynthetic`, current 2, both versions registered): RV1 absent → V1 · RV2/RV3 exact editors · RV4/RV5 exact
+renderers, V3 → safe notice · RV6/RV7 `@1` → 4/10 and `@2` → 8/10 for the same response · RV8 registering V2 never
+replaces V1 (duplicate identity refused) · RV9 V3 fails closed · RV10 a sanitized/published V1 stays V1 and grades V1 after
+V2 exists.
+
+### 13.3 Plugin family + transactional registration
+`registerQuestionTypePlugin({ definition, versions: { 1: {...}, 2: {...} } })`: the family is validated up front (every
+version within `1..definition.version`, the current version implemented, components / functions well-formed), then
+registered step by step (catalog → per version: defaults, validator, editor, renderer). If step N fails, steps N-1…1 are
+undone and the error is rethrown — no catalog / defaults / validator / editor / renderer residue (tested by occupying the
+last step's slot). The returned function removes every registration.
+
+### 13.4 R2 — the platform reflects a live registration everywhere
+| surface | was | now |
+|---|---|---|
+| Blueprint `questionType` validation | frozen `BUILDER_QUESTION_TYPES` | `isKnownQuestionType(ref)` — live catalog (UP3) |
+| coverage / quality-policy labels | frozen `QUESTION_TYPE_LABELS` | `questionTypeLabel(ref)` — live (UP4) |
+| composer type selector | frozen list | `listQuestionTypes()` — live, canonical label, selected after creation, survives undo/redo (UP2) |
+| compound part selector | frozen `BUILDER_PART_TYPES` | `compoundPartTypeKeys()` — live `compoundPart` capability (UP5) |
+| Blueprint panel ref picker, navigator type filter, Live Challenge picker, import wizard / challenge picker / productivity labels | frozen | live list / `questionTypeLabel` |
+| Live Challenge source import | frozen membership | `isKnownQuestionType` |
+| `BuilderQuestionType` union | hand-written 15-key union | **derived** from the `as const` production rows (`ProductionQuestionTypeKey`) — adding a production type is one catalog row |
+
+`BUILDER_QUESTION_TYPES` / `BUILDER_PART_TYPES` / `QUESTION_TYPE_LABELS` remain exported as the immutable PRODUCTION
+SNAPSHOT (their own contract tests keep mirroring the catalog). Registered plugin keys are runtime data and widen to `string`
+at the extension seams; production identity has ONE compile-time source of truth.
+
+### 13.5 Universal student sanitization contract
+A plugin never asks the central sanitizer to know its domain. Contract: **student-visible data is PUBLIC configuration under
+type-owned object fields** (`numeric`, `matrix`, `categorization`, `scenario`, `publicConfig`, …); **every answer key /
+expected state / scoring assertion / solution lives ONLY under `answer`** (always blanked) or another teacher-only field the
+sanitizer always strips. Enforcement is generic: every object-valued field of a question / part that is not a structural
+field with its own sanitizer (`answer`, `options`, `fields`, `parts`, `image`, `images`, `activity`, `stimulus`) is passed
+through the canonical secret-key policy recursively (`expected*`, `correct*`, `solution*`, `answer*`, `scoring*`, … removed
+at any depth; ids / labels / values pass byte-for-byte). The former `TYPE_CONFIG_KEYS` domain list is gone (guarded); the Wave
+1 protections are unchanged (tested). Persisted exam JSON cannot name this code; a version-bound projection hook was not
+needed — the contract is data-shape-based and identical for every version.
+
+### 13.6 Evidence
+Fail-first on `e1f295a`: `src/questionTypes/versionedRuntime.16a-rf1.test.tsx` + `api/tests/question-type-versioning-16a-rf1.test.js`
+→ 2 files failed · 18 tests failed / 1 passed. Mutation campaign RF1-M1–M10: see the table in the PR body (§13 of the PR).
+

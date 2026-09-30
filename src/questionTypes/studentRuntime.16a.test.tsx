@@ -127,9 +127,10 @@ describe("16A A3 — synthetic interactive plugin renders as a student question 
   it("its state is an ordinary Answer emitted through onAnswer / onPart", async () => {
     const unregister = registerQuestionTypePlugin({
       definition: { key: "syntheticInteractive", version: 1, label: "محاكاة تجريبية", description: "", category: "interactive", gradingMode: "auto", capabilities: { autoGrading: true, manualGrading: false, hybridGrading: false, partialCredit: true, compoundPart: true, interactive: true, requiresImage: false, offline: false }, responseKinds: ["fields"], legacy: false, icon: "⚙" },
-      defaults: () => {}, validate: () => [],
-      Editor: () => <div />,
-      StudentRenderer: ({ answer, onAnswer }) => <button type="button" data-testid="sim-toggle" onClick={() => onAnswer({ kind: "fields", values: { l1: "up" } })}>{answer?.kind === "fields" ? "up" : "down"}</button>
+      versions: { 1: {
+        Editor: () => <div />,
+        StudentRenderer: ({ answer, onAnswer }) => <button type="button" data-testid="sim-toggle" onClick={() => onAnswer({ kind: "fields", values: { l1: "up" } })}>{answer?.kind === "fields" ? "up" : "down"}</button>
+      } }
     });
     try {
       render(<Harness q={{ examQuestionId: "sim", presentationType: "syntheticInteractive", questionTypeVersion: 1, text: "شغّل", marks: 4 } as Question} />);

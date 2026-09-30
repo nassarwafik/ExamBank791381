@@ -14,34 +14,21 @@ import type { AssessmentBlueprintV1, AssessmentMeta, AssessmentActivityDescripto
 
 import type { ExamTheme } from "./examTheme";
 import type { ExamCoverPage } from "./examCover";
-import { QUESTION_TYPE_CATALOG, compoundPartTypeKeys } from "./questionTypeCatalog";
+import { QUESTION_TYPE_CATALOG, compoundPartTypeKeys, type ProductionQuestionTypeKey } from "./questionTypeCatalog";
 
 export type { ExamCoverPage } from "./examCover";
 
 export type GradingPolicy = "all" | "capScore" | "firstNAnswered";
 export type AnswerUnit = "question" | "part";
 
-// The question/part types the structured engine supports and the builder can author. The compile-time union names the
-// production catalog keys (legacy 11 + Wave 1); membership, order and labels at RUNTIME derive from the ONE canonical
-// Question Type Catalog (src/questionTypeCatalog.ts) — never from a second hand-maintained list. Plugin types registered at
-// module level (registerQuestionType) are reached through listQuestionTypes(); these frozen constants are the production
-// snapshot every existing authoring surface keeps consuming unchanged.
-export type BuilderQuestionType =
-  | "multipleChoice"
-  | "trueFalse"
-  | "multiTrueFalse"
-  | "shortAnswer"
-  | "fillBlank"
-  | "wordBank"
-  | "matching"
-  | "ordering"
-  | "tableFill"
-  | "cliFill"
-  | "compound"
-  | "multipleSelect"
-  | "numericResponse"
-  | "matrix"
-  | "categorization";
+// The question/part types the structured engine supports and the builder can author. Review Fix 1 / R2-D: the compile-time
+// union DERIVES from the `as const` production rows of the ONE canonical Question Type Catalog (src/questionTypeCatalog.ts) —
+// adding a production type is one catalog row, never an edit here. Membership, order and labels at RUNTIME derive from the
+// same catalog. Plugin types registered at module level (registerQuestionTypePlugin) are runtime data: they widen to `string`
+// at the extension seams (listQuestionTypes / compoundPartTypeKeys / questionTypeLabel are the LIVE authorities every
+// authoring, planning and student surface consults); the frozen constants below are the immutable PRODUCTION SNAPSHOT for
+// callers that explicitly want production-only membership (structured import parity, Live Challenge source import).
+export type BuilderQuestionType = ProductionQuestionTypeKey;
 
 // Part types = every catalog type whose capability contract says `compoundPart` (compound never nests).
 export type BuilderPartType = Exclude<BuilderQuestionType, "compound">;

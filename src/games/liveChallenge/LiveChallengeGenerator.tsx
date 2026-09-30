@@ -4,7 +4,7 @@ import { IconChevronBack } from "../../icons";
 import ExamPreview from "../../ExamPreview";
 import type { PreviewExamInput } from "../../examPreviewModel";
 import type { BuilderQuestion, BuilderQuestionType } from "../../examTypes";
-import { BUILDER_QUESTION_TYPES, QUESTION_TYPE_LABELS } from "../../examTypes";
+import { listQuestionTypes } from "../../questionTypeCatalog";
 import type { ChallengeDefinition, ChallengeSummary } from "../domain/challenge";
 import {
   newChallengeDefinition, addManualQuestion, addImportedQuestions, updateChallengeQuestion,
@@ -220,7 +220,7 @@ export default function LiveChallengeGenerator({ token, onBack, client: injected
                 <label className="eb-lc-field eb-lc-type-field">
                   <span className="eb-lc-field-label">نوع السؤال الجديد</span>
                   <select className="sb-input eb-lc-type-select" value={addType} onChange={e => setAddType(e.target.value as BuilderQuestionType)} disabled={saving}>
-                    {BUILDER_QUESTION_TYPES.map(t => <option key={t} value={t}>{QUESTION_TYPE_LABELS[t]}</option>)}
+                    {listQuestionTypes().map(d => <option key={d.key} value={d.key}>{d.label}</option>)}
                   </select>
                 </label>
                 <button type="button" className="eb-button eb-lc-action" onClick={addManual} disabled={saving}>+ إضافة سؤال</button>

@@ -1,8 +1,7 @@
 
 import type { BuilderQuestion, BuilderQuestionType } from "./examTypes";
-import { QUESTION_TYPE_LABELS, BUILDER_QUESTION_TYPES } from "./examTypes";
 import { typeChangePatch, typeSpecificContentPresent } from "./questionTypes/typeContent";
-import { isKnownQuestionType, questionTypeLabel } from "./questionTypeCatalog";
+import { isKnownQuestionType, questionTypeLabel, listQuestionTypes } from "./questionTypeCatalog";
 import { useConfirm } from "./ui/useConfirm";
 import QuestionBodyEditor from "./QuestionBodyEditor";
 import CompoundQuestionEditor from "./CompoundQuestionEditor";
@@ -47,7 +46,8 @@ export default function QuestionComposer({ question: q, onChange, disabled }: Pr
           aria-label="نوع السؤال"
         >
           {!currentKnown && <option value={q.presentationType}>{"غير مدعوم: " + String(q.presentationType)}</option>}
-          {BUILDER_QUESTION_TYPES.map(t => <option key={t} value={t}>{QUESTION_TYPE_LABELS[t]}</option>)}
+          {/* Review Fix 1 / R2-B: the LIVE canonical catalog (production types + registered plugins), never a frozen snapshot */}
+          {listQuestionTypes().map(d => <option key={d.key} value={d.key}>{d.label}</option>)}
         </select>
       </div>
       {confirmDialog}

@@ -1,6 +1,6 @@
 import { useMemo } from "react";
 import Dialog from "./ui/Dialog";
-import { BUILDER_QUESTION_TYPES, QUESTION_TYPE_LABELS } from "./examTypes";
+import { listQuestionTypes } from "./questionTypeCatalog";
 import {
   emptyBlueprint, validateBlueprint, orderedTopics, addTopic, updateTopic, setTopicParent, removeTopic, addObjective, updateObjective, removeObjective,
   upsertConstraint, updateConstraint, removeConstraint, setSubject, setContextIdentity, setTargets, newTopicId, newObjectiveId, newConstraintId,
@@ -50,7 +50,7 @@ export default function BlueprintPanel({ open, onClose, blueprint, sections, onE
       case "objective": return <select {...common} onChange={e => set(e.target.value)}><option value="">اختر…</option>{bp.objectives.map(o => <option key={o.id} value={o.id}>{o.label || o.id}</option>)}</select>;
       case "difficulty": return <select {...common} onChange={e => set(e.target.value)}><option value="">اختر…</option>{difficultyValues(bp).map(v => <option key={v} value={String(v)}>{scale.labels?.[String(v)] ? v + " — " + scale.labels[String(v)] : String(v)}</option>)}</select>;
       case "cognitiveLevel": return <select {...common} onChange={e => set(e.target.value)}><option value="">اختر…</option>{levels.map(l => <option key={l.id} value={l.id}>{l.label}</option>)}</select>;
-      case "questionType": return <select {...common} onChange={e => set(e.target.value)}><option value="">اختر…</option>{BUILDER_QUESTION_TYPES.map(t => <option key={t} value={t}>{QUESTION_TYPE_LABELS[t]}</option>)}</select>;
+      case "questionType": return <select {...common} onChange={e => set(e.target.value)}><option value="">اختر…</option>{listQuestionTypes().map(d => <option key={d.key} value={d.key}>{d.label}</option>)}</select>;
       case "section": return <select {...common} onChange={e => set(e.target.value)}><option value="">اختر…</option>{sections.map(s => <option key={s.id} value={s.id}>{s.title || s.id}</option>)}</select>;
       default: return <input {...common} placeholder="مثال: cli, calculation" onChange={e => set(e.target.value)} />;
     }
