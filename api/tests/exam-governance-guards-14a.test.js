@@ -65,10 +65,39 @@ describe("14A §52 — governance source guards", () => {
     expect(FN).toMatch(/requireBuilderAuth/);
     expect(FN).not.toMatch(/student-auth|requireStudentAuth|requireActiveStudentSession/);
   });
-  it("audit events reference revision ids only — the event factory has no exam field", () => {
-    const factory = GOV.slice(GOV.indexOf("function eventOf("), GOV.indexOf("function publicManifest("));
+  it("audit events reference revision ids only — the audit descriptor / event factory has no exam field", () => {
+    const factory = GOV.slice(GOV.indexOf("function auditDescriptorOf("), GOV.indexOf("async function ensureAuditEvent("));
+    expect(factory.length).toBeGreaterThan(100);
     expect(factory).not.toMatch(/exam\b\s*[:,]/);
     expect(factory).toMatch(/revisionId/);
+  });
+  it("Review Fix 1 — commit + audit-repair protocol: the event is ensured only AFTER a manifest CAS, on every replay path, never before the CAS", () => {
+    const body = GOV.slice(GOV.indexOf("async function enableGovernance("), GOV.indexOf("// ── history readers"));
+    // every CAS is followed by an ensureAuditEvent before the return; no ensure precedes its CAS
+    const casIdx = [...body.matchAll(/await casManifest\(/g)].map(m => m.index);
+    const ensureIdx = [...body.matchAll(/await ensureAuditEvent\(container, examId, command, deps\)/g)].map(m => m.index);
+    expect(casIdx).toHaveLength(3); expect(ensureIdx).toHaveLength(3);
+    casIdx.forEach((c, i) => expect(ensureIdx[i]).toBeGreaterThan(c));
+    // every replay returns only after re-ensuring the recorded event
+    expect([...body.matchAll(/await ensureAuditEvent\(container, examId, recorded, deps\)/g)]).toHaveLength(3);
+    expect(GOV).not.toMatch(/await writeEventDocument\(container, event\)/);
+    // the command record carries the audit descriptor (ids / states / actor / time), never content
+    expect(GOV).toMatch(/result: \{ revisionId: revision\.revisionId \}, audit \}/);
+  });
+  it("Review Fix 1 — the published loader reads the manifest through the ONE validated authority; a corrupt manifest is never legacy", () => {
+    const loader = GOV.slice(GOV.indexOf("async function loadPublishedRevision"), GOV.indexOf("async function resolveGovernedExamSource"));
+    expect(loader).toMatch(/await readManifest\(container, examId, deps\)/);
+    expect(loader).not.toMatch(/dlOf\(deps\)\(container, model\.manifestName/);
+    const resolver = GOV.slice(GOV.indexOf("async function resolveGovernedExamSource"), GOV.indexOf("module.exports"));
+    expect(resolver).not.toMatch(/catch/);
+    expect(resolver).toMatch(/loadPublishedRevision\(container, examId, deps\)/);
+  });
+  it("Review Fix 1 — a malformed capability configuration is a configuration-error that grants nothing; the API refuses mutations under it", () => {
+    expect(CAPS).toMatch(/kind: "configuration-error"/);
+    expect(CAPS).toMatch(/if \(cfg\.kind !== "configured"\) return \[\];/);
+    expect(CAPS).not.toMatch(/malformed configuration ignored/);
+    expect(FN).toMatch(/isCapabilityConfigurationBroken\(process\.env\)/);
+    expect(FN).toMatch(/GOVERNANCE_CONFIG_INVALID/);
   });
   it("governed assignments materialize the server's revision and never the browser body; legacy path untouched", () => {
     expect(ASG).toMatch(/exam=cleanExam\(gov\.revision\.exam\)/);

@@ -177,8 +177,18 @@ disabled; unsupported policy schema).
 - Every mutation carries `requestId` (≤128 chars). The manifest's `commands` ring records completed commands inside the
   same CAS write, so a retry of the SAME command replays its outcome (`replayed: true`, no new revision / event / publish)
   while a DIFFERENT command reusing the id is `409 REQUEST_ID_CONFLICT`. Failed / stale / forbidden commands record nothing.
-- Write order for a revision-creating command: revision + meta (create-only) → manifest CAS → event (create-only). A CAS
-  loss discards the never-referenced revision; a stale conflict therefore emits no event and leaves no lineage change.
+- **Commit + audit-repair protocol (Independent Review Fix 1 / Blocker 1).** The audit event's identity and descriptor
+  (`eventId`, `sequence`, `type`, `revisionId?`, `fromState?`, `toState?`, `actorId`, `occurredAt` — never content) are
+  allocated BEFORE the manifest CAS and stored in the command record. After the CAS commits, `ensureAuditEvent()` makes the
+  create-only event exist and success is reported only then. Every replay of the same `requestId` runs `ensureAuditEvent()`
+  again before returning `replayed: true`: a missing event is recreated EXACTLY from the committed descriptor (server actor /
+  time / ids, create-only); an identical existing event is accepted; an event at the authoritative name that differs from
+  the descriptor is `500 AUDIT_INTEGRITY` (never overwritten). If the repair write itself fails the call is
+  `503 AUDIT_EVENT_PENDING` — not a successful replay — and the committed state is untouched, so the next retry can still
+  repair the same event. `manifest.eventCount` therefore always equals the persisted, contiguous event sequence.
+- Write order for a revision-creating command: revision → metadata (create-only; a metadata failure discards the still
+  unreferenced revision) → manifest CAS (a loss discards both) → event. A stale conflict therefore emits no event and leaves
+  no lineage change and no orphan.
 
 ## 9. Capabilities (§20–§22)
 
@@ -188,7 +198,11 @@ disabled; unsupported policy schema).
   — reported as `capabilitySource: "default-single-teacher"` and shown in the UI. This is stated honestly: there is one
   account model and no institutional separation yet (Phase 14B);
 - `GOVERNANCE_CAPABILITIES='{"default":[…],"users":{"<sub>":[…]}}'` gives distinct subjects distinct capabilities
-  (`capabilitySource: "configured"`); unknown names dropped; malformed JSON ⇒ baseline (normal Builder use never breaks);
+  (`capabilitySource: "configured"`); unknown names dropped;
+- **a NON-EMPTY malformed value is `configuration-error` (Independent Review Fix 1 / Blocker 3): it grants ZERO
+  capabilities to everyone and the API refuses every mutation with `503 GOVERNANCE_CONFIG_INVALID` until an operator fixes
+  it; reads stay available and report the source so the UI can show an administrator-facing warning. Only an absent / empty
+  variable means the single-teacher baseline — a configuration failure never widens authority;
 - per action: enable / create-revision / submit-review ⇒ `author`; approve ⇒ `approve`; publish ⇒ `publish`;
   return-to-draft ⇒ `author|review` (from in-review), `author|approve` (from approved), `author` (from published).
 Nothing in a request body (`role`, `capabilities`, `governanceRole`) is read. No teacher is hard-coded as approver; no fake users.
@@ -214,7 +228,10 @@ mutate neither manifest, revisions, `publishedRevisionId` nor approval state (te
 ## 12. Assignments (§28–§32)
 
 `manage-assignments.create`: if `examSnapshot.examId` has a manifest, `resolveGovernedExamSource` loads
-**manifest → publishedRevisionId → immutable revision** (fail closed) and that revision becomes the snapshot; the browser
+**manifest → publishedRevisionId → immutable revision** through the ONE validated manifest read (`readManifest`, Independent
+Review Fix 1 / Blocker 2): manifest absent ⇒ legacy; present and valid ⇒ governed; present but malformed (state, version,
+lineage, pointer contract, timestamps) ⇒ `500 MANIFEST_CORRUPT`, the assignment is refused and nothing is stored — never a
+fallback to the latest draft, the browser body or legacy behaviour. That revision becomes the snapshot; the browser
 body is ignored; the assignment records `source: { kind: "governed-revision", examId, revisionId, revisionNumber, contentHash }`.
 No published revision ⇒ `409 NO_PUBLISHED_REVISION`, nothing stored. Missing / corrupt reference ⇒
 `409 PUBLISHED_REVISION_UNAVAILABLE` — never the latest draft. Legacy exams: unchanged. Publishing a later revision touches
@@ -309,6 +326,36 @@ Tree fingerprint before `afb79dc3674fde57` → after `afb79dc3674fde57` (identic
 | `npm run build` | build exit: 0 |
 | `npm run check:bundle` | initial JS graph 12 files, 118.7 KB gzip (budget 125 KB) — baseline `6918ce1` (fresh worktree): 12 files, 119.3 KB gzip (budget 125 KB) → **delta -0.6 KB**; lazy chunks: `examGovernanceClient` 0.67 KB gzip, `FinalizationPanel` 1.44 KB gzip, `GovernancePanel` 4.09 KB gzip, `examFinalization` 9.35 KB gzip; check:bundle exit: 0 |
 | `npm run lint` | lint exit: 0 — 99 findings on baseline (fresh worktree at `6918ce1`) vs 99 on head; finding-for-finding IDENTICAL (line numbers aside): **ZERO new warnings** |
+
+## 18a. Independent Review Fix 1
+
+Reviewed HEAD `e1a7b1dea680604a28b5fabcc0683dcc4a144c6b`; base unmoved at `6918ce1…`; one normal follow-up commit.
+
+| Blocker | Root cause | Fix |
+|---|---|---|
+| 1 — manifest CAS could commit without its audit event | the event was written after the CAS and `replayOrConflict()` returned the recorded result without checking the event | commit + audit-repair protocol (§8): descriptor allocated before the CAS and stored in the command record; `ensureAuditEvent()` after the CAS and on every replay; `AUDIT_INTEGRITY` on conflict; `AUDIT_EVENT_PENDING` (503) when repair fails |
+| 2 — published loader bypassed manifest validation | `loadPublishedRevision()` read the manifest raw and checked a subset | `readManifest()` (validated) is the only manifest authority for the loader and therefore for governed assignments; `resolveGovernedExamSource` never treats a corrupt manifest as legacy |
+| 3 — malformed capability configuration failed open | parse error ⇒ `default-single-teacher` ⇒ all capabilities | `configuration-error` ⇒ zero capabilities; API refuses mutations (`GOVERNANCE_CONFIG_INVALID`); reads report the source |
+| hardening — partial pre-CAS artifacts | a metadata failure after the revision write left an unreferenced revision | `writeRevisionPair()` discards the unreferenced revision on metadata failure (enable + createRevision) |
+
+**Fail-first (recorded on `e1a7b1d`, `scratchpad/14a/fail-first-fix1-e1a7b1d.log`):** `api/tests/exam-governance-reviewfix1-14a.test.js` + the new C4 API test → **14 failed / 14 passed**: A1, A2, A3, A5, repair-failure, A6, M1, M2, M3, M4, C3, C4, both metadata-failure hardening tests failed; A4, M5, C1, C2, C5, the CAS-race event test and the CAS-loss cleanup test passed (they pin behaviour that must not regress).
+
+**Tests added:** A1–A6 (+ repair failure, + CAS race never writes a false event) through a storage-fault harness over the faithful memory container (an upload matching a pattern raises a storage error instead of writing); M1–M5; C1–C5 (C4 at the API: `503 GOVERNANCE_CONFIG_INVALID`, reads keep working and report `configuration-error`, nothing written); hardening: metadata failure on enable / createRevision leaves no manifest change and no orphan, CAS loss still cleans both. Existing expectations updated for the corrected semantics: a dangling `publishedRevisionId` is now `500 MANIFEST_CORRUPT` (validated authority) and a malformed configuration yields `[]`. Source guards extended (ensure-after-CAS on all three paths, ensure on every replay, validated loader, resolver never catches, `configuration-error` + `GOVERNANCE_CONFIG_INVALID`).
+
+**Mutation proofs P25–P30**
+
+| # | Mutation | Result | First failing test |
+|---|---|---|---|
+| P25 | replay returns without repairing a missing committed audit event | **5 failed** · tree clean | × A3 — publish: CAS commits, the published event fails; the retry repairs the exact event; publication time / actor / revision stay the original server values; no second transition |
+| P26 | event written before the manifest CAS (a losing CAS leaves a false event) | **6 failed** · tree clean | × Review Fix 1 — commit + audit-repair protocol: the event is ensured only AFTER a manifest CAS, on every replay path, never before the CAS |
+| P27 | `loadPublishedRevision()` bypasses `validateManifest` (raw manifest read) | **6 failed** · tree clean | × Review Fix 1 — the published loader reads the manifest through the ONE validated authority; a corrupt manifest is never legacy |
+| P28 | malformed manifest falls back to browser / legacy assignment snapshot | **2 failed** · tree clean | × Review Fix 1 — the published loader reads the manifest through the ONE validated authority; a corrupt manifest is never legacy |
+| P29 | malformed `GOVERNANCE_CAPABILITIES` grants all permissions | **4 failed** · tree clean | × Review Fix 1 — a malformed capability configuration is a configuration-error that grants nothing; the API refuses mutations under it |
+| P30 | meta-write failure leaves an orphan revision | **2 failed** · tree clean | × enable: revision written, metadata write fails → no manifest, no orphan revision |
+
+Tree fingerprint before `dacbb1ad3a3bd6b2` → after `dacbb1ad3a3bd6b2` (identical); each mutation applied alone → the reviewfix suite + the nine 14A suites (111 tests) → reverted.
+
+**Validation (this follow-up commit):** `npx tsc -b` exit 0 · `npm test` **542 files / 6534 tests passed** (was 541 / 6510) · `npm run build` exit 0 · `npm run check:bundle` initial JS 118.7 KB gzip / budget 125 KB (unchanged; server-only fix) · `npm run lint` exit 0, 99 findings, finding-for-finding identical to baseline `6918ce1` — zero new warnings.
 
 ## 19. Phase 14B boundary and non-goals
 

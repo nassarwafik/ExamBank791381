@@ -8,8 +8,9 @@
 // authenticated teacher holds all four capabilities ("default-single-teacher"). An operator may configure
 //   GOVERNANCE_CAPABILITIES='{"default":["author"],"users":{"<sub>":["review","approve","publish"]}}'
 // to give distinct subjects distinct capabilities; unknown capability names are dropped, a subject absent from `users`
-// receives `default` (or nothing). A malformed value falls back to the single-teacher baseline so normal Builder use never
-// breaks (the fallback is reported through capabilitySource so the UI can say so).
+// receives `default` (or nothing). Review Fix 1: a NON-EMPTY malformed value is a `configuration-error` — it grants NOTHING
+// (zero capabilities for everyone) until the operator fixes it; only an ABSENT / empty variable means the baseline. Reads
+// stay available (the UI shows the administrator-facing source), mutations are refused by the API (GOVERNANCE_CONFIG_INVALID).
 const GOVERNANCE_CAPABILITIES = Object.freeze(["author", "review", "approve", "publish"]);
 
 function sanitizeList(list) {
@@ -29,7 +30,7 @@ function parseCapabilityConfig(env) {
     }
     return { kind: "configured", malformed: false, default: sanitizeList(parsed.default), users };
   } catch {
-    return { kind: "default-single-teacher", malformed: true };
+    return { kind: "configuration-error", malformed: true };
   }
 }
 
@@ -41,13 +42,14 @@ function resolveGovernanceCapabilities(user, env = process.env) {
   if (!isTeacherIdentity(user)) return [];
   const cfg = parseCapabilityConfig(env);
   if (cfg.kind === "default-single-teacher") return [...GOVERNANCE_CAPABILITIES];
+  if (cfg.kind !== "configured") return [];                       // configuration-error: fail SAFE, never open
   if (Object.prototype.hasOwnProperty.call(cfg.users, user.sub)) return [...cfg.users[user.sub]];
   return cfg.default ? [...cfg.default] : [];
 }
 
 function describeCapabilitySource(env = process.env) {
   const cfg = parseCapabilityConfig(env);
-  return cfg.kind === "configured" ? "configured" : cfg.malformed ? "default-single-teacher (malformed configuration ignored)" : "default-single-teacher";
+  return cfg.kind;
 }
 
 // Which capabilities may perform an action (ANY one of the returned list suffices). Reads need none beyond authentication.
@@ -64,4 +66,5 @@ function requiredCapabilities(action, fromState) {
   }
 }
 
-module.exports = { GOVERNANCE_CAPABILITIES, parseCapabilityConfig, resolveGovernanceCapabilities, describeCapabilitySource, requiredCapabilities, isTeacherIdentity };
+function isCapabilityConfigurationBroken(env = process.env) { return parseCapabilityConfig(env).kind === "configuration-error"; }
+module.exports = { GOVERNANCE_CAPABILITIES, parseCapabilityConfig, resolveGovernanceCapabilities, describeCapabilitySource, isCapabilityConfigurationBroken, requiredCapabilities, isTeacherIdentity };

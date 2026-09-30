@@ -290,7 +290,7 @@ describe("14A — published revision loader (fail closed) and legacy coexistence
     mem.store.delete(revisionName("EX-1", p.manifest.publishedRevisionId));
     await expectErr(GOV.loadPublishedRevision(c, "EX-1", deps), 409, "PUBLISHED_REVISION_UNAVAILABLE");
     const m = mem.getJson(manifestName("EX-1")); m.publishedRevisionId = "ghost"; mem.setJson(manifestName("EX-1"), m);
-    await expectErr(GOV.loadPublishedRevision(c, "EX-1", deps), 409, "PUBLISHED_REVISION_UNAVAILABLE");
+    await expectErr(GOV.loadPublishedRevision(c, "EX-1", deps), 500, "MANIFEST_CORRUPT");        // Review Fix 1: the validated authority, fail closed
   });
   it("resolveGovernedExamSource: legacy → {governed:false}; governed+published → the exact revision; governed unpublished → error", async () => {
     expect(await GOV.resolveGovernedExamSource(c, "EX-1", deps)).toEqual({ governed: false });
@@ -369,7 +369,7 @@ describe("14A G10 — server capability resolver", () => {
     // client-supplied role / capabilities on the payload are never trusted
     expect(resolveGovernanceCapabilities({ role: "student", sub: "s1", capabilities: ALL, governanceRole: "approver" }, env)).toEqual([]);
   });
-  it("configured deployment: GOVERNANCE_CAPABILITIES JSON maps subjects to capabilities with an optional default; malformed config falls back to the baseline", () => {
+  it("configured deployment: GOVERNANCE_CAPABILITIES JSON maps subjects to capabilities with an optional default; malformed config grants nothing", () => {
     const env = { GOVERNANCE_CAPABILITIES: JSON.stringify({ default: ["author"], users: { reviewer: ["review"], approver: ["approve", "publish"], both: ["author", "review"] } }) };
     expect(resolveGovernanceCapabilities({ role: "teacher", sub: "t1" }, env)).toEqual(["author"]);
     expect(resolveGovernanceCapabilities({ role: "teacher", sub: "reviewer" }, env)).toEqual(["review"]);
@@ -377,7 +377,7 @@ describe("14A G10 — server capability resolver", () => {
     expect(resolveGovernanceCapabilities({ role: "teacher", sub: "both" }, env)).toEqual(["author", "review"]);
     expect(resolveGovernanceCapabilities({ role: "teacher", sub: "t1" }, { GOVERNANCE_CAPABILITIES: JSON.stringify({ users: { x: ["author"] } }) })).toEqual([]);
     expect(resolveGovernanceCapabilities({ role: "teacher", sub: "t1" }, { GOVERNANCE_CAPABILITIES: JSON.stringify({ default: ["author", "bogus"] }) })).toEqual(["author"]);
-    expect(resolveGovernanceCapabilities({ role: "teacher", sub: "t1" }, { GOVERNANCE_CAPABILITIES: "{not json" })).toEqual(ALL);
+    expect(resolveGovernanceCapabilities({ role: "teacher", sub: "t1" }, { GOVERNANCE_CAPABILITIES: "{not json" })).toEqual([]);      // Review Fix 1: malformed ⇒ fail SAFE
     expect(resolveGovernanceCapabilities({ role: "student", sub: "reviewer" }, env)).toEqual([]);
   });
 });

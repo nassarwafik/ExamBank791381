@@ -113,6 +113,27 @@ describe("14A — action contract", () => {
   });
 });
 
+describe("14A Review Fix 1 / C4 — malformed capability configuration fails SAFE at the API", () => {
+  it("a NON-EMPTY malformed GOVERNANCE_CAPABILITIES denies every mutation with GOVERNANCE_CONFIG_INVALID (503); reads still work and report configuration-error; nothing is written", async () => {
+    const e = await ok({ action: "enable", examId: "EX-1", exam: validExam(), requestId: "e1" });
+    const s = await ok({ action: "submit-review", examId: "EX-1", revisionId: e.manifest.latestRevisionId, requestId: "s1", expectedStateVersion: 1 });
+    const a = await ok({ action: "approve", examId: "EX-1", requestId: "a1", expectedStateVersion: s.manifest.stateVersion });
+    process.env.GOVERNANCE_CAPABILITIES = "{\"default\":[\"author\",";
+    try {
+      const before = JSON.stringify(mem.getJson(manifestName("EX-1")));
+      const r = await post({ action: "publish", examId: "EX-1", requestId: "p1", expectedStateVersion: a.manifest.stateVersion, capabilities: ["publish"], role: "publisher" });
+      expect(r.status).toBe(503); expect(r.jsonBody.code).toBe("GOVERNANCE_CONFIG_INVALID");
+      expect(JSON.stringify(mem.getJson(manifestName("EX-1")))).toBe(before);
+      expect(mem.names("exam-governance/EX-1/events/")).toHaveLength(3);
+      const st = await ok({ action: "status", examId: "EX-1" });
+      expect(st.capabilities).toEqual([]); expect(st.capabilitySource).toBe("configuration-error");
+      expect(st.manifest.lifecycleState).toBe("approved");
+    } finally { delete process.env.GOVERNANCE_CAPABILITIES; }
+    const p = await ok({ action: "publish", examId: "EX-1", requestId: "p2", expectedStateVersion: a.manifest.stateVersion });
+    expect(p.manifest.lifecycleState).toBe("published");
+  });
+});
+
 describe("14A §26 — the generic artifact endpoint has no governance authority", () => {
   it("saving a governed exam with governance-looking root fields / status:final changes neither manifest nor revisions", async () => {
     const e = await ok({ action: "enable", examId: "EX-1", exam: validExam(), requestId: "e1" });

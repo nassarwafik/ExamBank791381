@@ -3,7 +3,7 @@ const { withObservability } = require("../lib/observability");
 const { requireBuilderAuth } = require("../lib/builder-auth");
 const { getContainer } = require("../lib/platform-storage");
 const { isSafeExamId } = require("../lib/exam-governance-model");
-const { resolveGovernanceCapabilities, describeCapabilitySource } = require("../lib/exam-governance-capabilities");
+const { resolveGovernanceCapabilities, describeCapabilitySource, isCapabilityConfigurationBroken } = require("../lib/exam-governance-capabilities");
 const GOV = require("../lib/exam-governance");
 
 // Phase 14A — /api/exam-governance: the dedicated server API of the exam publishing authority (the generic
@@ -50,6 +50,8 @@ async function handler(request, deps = {}, obs = null) {
     if (action === "events") { const r = await GOV.listEvents(container, { examId, cursor: body.cursor, limit: body.limit }, libDeps); return { status: 200, jsonBody: { ok: true, ...r } }; }
     if (action === "published") { const revision = await GOV.loadPublishedRevision(container, examId, libDeps); return { status: 200, jsonBody: { ok: true, revision } }; }
     if (!MUTATIONS.has(action)) return { status: 400, jsonBody: { ok: false, code: "INVALID", error: "Unsupported governance action." } };
+    // Review Fix 1 / Blocker 3: a malformed capability configuration fails SAFE — no mutation until an operator fixes it.
+    if (isCapabilityConfigurationBroken(process.env)) return { status: 503, jsonBody: { ok: false, code: "GOVERNANCE_CONFIG_INVALID", error: "إعدادات صلاحيات إدارة النشر على الخادم غير صالحة (GOVERNANCE_CAPABILITIES). لا يمكن تنفيذ أي تعديل حتى يصحّحها المسؤول.", capabilitySource } };
     const requestId = typeof body.requestId === "string" ? body.requestId : undefined;
     const expectedStateVersion = Number.isInteger(body.expectedStateVersion) ? body.expectedStateVersion : undefined;
     if (action === "enable") {

@@ -1,7 +1,7 @@
 const crypto = require("crypto");
 const storage = require("./platform-storage");
 const model = require("./exam-governance-model");
-const { canonicalizeExamContent, contentHashOf } = require("./exam-canonical");
+const { canonicalizeExamContent, contentHashOf, stableStringify } = require("./exam-canonical");
 const { requiredCapabilities } = require("./exam-governance-capabilities");
 const { countExamQuestions, examOfficialStats } = require("./exam-structure");
 
@@ -21,7 +21,12 @@ const { countExamQuestions, examOfficialStats } = require("./exam-structure");
 //  • draft → in-review runs the SERVER finalization authority on the STORED revision (never a client body / flag);
 //  • approval binds reviewRevisionId; publication binds approvedRevisionId, with server time and the authenticated actor;
 //  • actor identity and every timestamp are server values; nothing here reads publishedBy / occurredAt from a request;
-//  • the published revision is loaded manifest → publishedRevisionId → immutable revision, and fails CLOSED.
+//  • the published revision is loaded manifest → publishedRevisionId → immutable revision, and fails CLOSED — through the
+//    ONE validated manifest read (readManifest): a corrupt manifest is MANIFEST_CORRUPT, never "legacy";
+//  • commit + audit-repair protocol (Review Fix 1): the audit event's identity/descriptor is allocated BEFORE the manifest
+//    CAS and stored in the command record; after the CAS the create-only event is ensured, and every replay of the same
+//    requestId re-ensures it (recreating the EXACT committed event when missing, failing closed on a conflicting one)
+//    before reporting success — so a committed transition can never end up without its immutable audit event.
 class GovernanceError extends Error {
   constructor(status, code, message, details) {
     super(message || code);
@@ -55,7 +60,10 @@ function requireCapability(actor, action, fromState) {
 
 // ── storage primitives ──────────────────────────────────────────────────────────────────────────────────────────────
 async function readManifestRaw(container, examId, deps) {
-  const { value, etag } = deps && deps.downloadJsonWithEtagOrNull ? await deps.downloadJsonWithEtagOrNull(container, model.manifestName(examId)) : await storage.downloadJsonWithEtagOrNull(container, model.manifestName(examId));
+  const name = model.manifestName(examId);
+  if (deps && deps.downloadJsonWithEtagOrNull) { const r = await deps.downloadJsonWithEtagOrNull(container, name); return { manifest: r.value, etag: r.etag }; }
+  if (deps && deps.downloadJsonOrNull) return { manifest: await deps.downloadJsonOrNull(container, name), etag: null };
+  const { value, etag } = await storage.downloadJsonWithEtagOrNull(container, name);
   return { manifest: value, etag };
 }
 async function readManifest(container, examId, deps) {
@@ -101,6 +109,13 @@ async function discardUnreferenced(container, names) {
 }
 
 // ── documents ────────────────────────────────────────────────────────────────────────────────────────────────────────
+// Revision + metadata are written before the manifest references them; if the metadata write fails, the revision is not
+// referenced by any authority version and is discarded (best effort) so no orphan lingers.
+async function writeRevisionPair(container, revision, meta) {
+  await writeRevisionDocument(container, revision);
+  try { await writeRevisionMetaDocument(container, meta); }
+  catch (e) { await discardUnreferenced(container, [model.revisionName(revision.examId, revision.revisionId)]); throw e; }
+}
 function buildRevision({ examId, exam, revisionNumber, sourceRevisionId, actor, deps }) {
   const content = canonicalizeExamContent(exam);
   if (content.examId !== examId) throw invalid("معرّف الامتحان في المحتوى لا يطابق الطلب.");
@@ -143,12 +158,43 @@ function replayOrConflict(manifest, requestId, type) {
   if (recorded.type !== type) throw new GovernanceError(409, "REQUEST_ID_CONFLICT", "معرّف الطلب مستعمل لأمر مختلف.");
   return recorded;
 }
-function eventOf({ manifest, type, revisionId, fromState, toState, actor, at, requestId, deps }) {
+// ── commit + audit-repair protocol ───────────────────────────────────────────────────────────────────────────────────
+// The audit descriptor is allocated BEFORE the manifest CAS and stored inside the command record (bounded: ids, type,
+// states, actor, time — never exam content). After the CAS commits, ensureAuditEvent() makes the create-only event exist;
+// every replay of the same requestId runs it again, so a missing event is recreated EXACTLY from the committed descriptor,
+// an identical existing event is accepted, and a conflicting event at the authoritative name fails closed.
+function auditDescriptorOf({ manifestAfter, type, revisionId, fromState, toState, actor, at, deps }) {
   return {
-    schemaVersion: 1, eventId: "ev-" + newId(deps), examId: manifest.examId, type,
+    eventId: "ev-" + newId(deps), sequence: manifestAfter.eventCount, type,
     ...(revisionId ? { revisionId } : {}), ...(fromState ? { fromState } : {}), ...(toState ? { toState } : {}),
-    actorId: actor.id, occurredAt: at, requestId, sequence: manifest.eventCount
+    actorId: actor.id, occurredAt: at
   };
+}
+function eventFromAudit(examId, audit, requestId) {
+  return {
+    schemaVersion: 1, eventId: audit.eventId, examId, type: audit.type,
+    ...(audit.revisionId ? { revisionId: audit.revisionId } : {}), ...(audit.fromState ? { fromState: audit.fromState } : {}), ...(audit.toState ? { toState: audit.toState } : {}),
+    actorId: audit.actorId, occurredAt: audit.occurredAt, requestId, sequence: audit.sequence
+  };
+}
+async function ensureAuditEvent(container, examId, command, deps) {
+  const audit = command && command.audit;
+  if (!audit || typeof audit.eventId !== "string" || !Number.isInteger(audit.sequence) || audit.sequence < 1 || !model.GOVERNANCE_EVENT_TYPES.includes(audit.type) || typeof audit.actorId !== "string" || typeof audit.occurredAt !== "string") {
+    throw new GovernanceError(500, "AUDIT_INTEGRITY", "سجل الأمر المعتمد لا يحمل واصف حدث تدقيق صالح.");
+  }
+  const expected = eventFromAudit(examId, audit, command.requestId);
+  const name = model.eventName(examId, audit.sequence, audit.eventId);
+  try { await storage.uploadJsonConditional(container, name, expected, null); return expected; }
+  catch (e) {
+    if (storage.isConcurrencyConflict(e)) {
+      const existing = await dlOf(deps)(container, name);
+      if (existing && stableStringify(existing) === stableStringify(expected)) return existing;
+      throw new GovernanceError(500, "AUDIT_INTEGRITY", "يوجد حدث تدقيق مخالف باسم السجل المعتمد؛ لا يمكن الكتابة فوقه.");
+    }
+    const pending = new GovernanceError(503, "AUDIT_EVENT_PENDING", "اكتملت العملية على الخادم لكن حدث التدقيق لم يُسجَّل بعد؛ أعد المحاولة بنفس requestId لإتمام التسجيل.");
+    pending.cause = e;
+    throw pending;
+  }
 }
 // The manifest as returned to callers: internal idempotency bookkeeping never leaves the server.
 function publicManifest(manifest) {
@@ -173,23 +219,23 @@ async function enableGovernance(container, { examId, exam, actor: rawActor, requ
   const existing = await readManifestRaw(container, examId, deps);
   if (existing.manifest) {
     const recorded = replayOrConflict(existing.manifest, requestId, "enable");
-    if (recorded) return { manifest: existing.manifest, replayed: true };
+    if (recorded) { await ensureAuditEvent(container, examId, recorded, deps); return { manifest: existing.manifest, replayed: true }; }
     throw new GovernanceError(409, "ALREADY_GOVERNED", "هذا الامتحان مسجّل في إدارة النشر بالفعل.");
   }
   const revision = buildRevision({ examId, exam, revisionNumber: 1, actor, deps });
   const meta = metaOf(revision);
-  await writeRevisionDocument(container, revision);
-  await writeRevisionMetaDocument(container, meta);
+  await writeRevisionPair(container, revision, meta);
   const at = nowOf(deps);
   const manifest = model.newManifest({ examId, revisionId: revision.revisionId, now: at, actorId: actor.id });
   manifest.latestContentHash = revision.contentHash;
   manifest.eventCount = 1;
   manifest.lastTransition = { type: "governance-enabled", at, by: actor.id, requestId };
-  manifest.commands = [{ requestId, type: "enable", at, stateVersion: 1, result: { revisionId: revision.revisionId } }];
+  const audit = auditDescriptorOf({ manifestAfter: manifest, type: "governance-enabled", revisionId: revision.revisionId, toState: "draft", actor, at, deps });
+  const command = { requestId, type: "enable", at, stateVersion: 1, result: { revisionId: revision.revisionId }, audit };
+  manifest.commands = [command];
   try { await casManifest(container, examId, manifest, null); }
   catch (e) { await discardUnreferenced(container, [model.revisionName(examId, revision.revisionId), model.revisionMetaName(examId, 1, revision.revisionId)]); throw e; }
-  const event = eventOf({ manifest, type: "governance-enabled", revisionId: revision.revisionId, toState: "draft", actor, at, requestId, deps });
-  await writeEventDocument(container, event);
+  const event = await ensureAuditEvent(container, examId, command, deps);
   return { manifest, revision, meta, event, replayed: false };
 }
 
@@ -203,28 +249,28 @@ async function createRevision(container, { examId, exam, actor: rawActor, reques
   if (content.examId !== examId) throw invalid("معرّف الامتحان في المحتوى لا يطابق الطلب.");
   const { manifest, etag } = await requireManifest(container, examId, deps);
   const recorded = replayOrConflict(manifest, requestId, "create-revision");
-  if (recorded) return { manifest, created: recorded.result ? recorded.result.created === true : false, replayed: true };
+  if (recorded) { await ensureAuditEvent(container, examId, recorded, deps); return { manifest, created: recorded.result ? recorded.result.created === true : false, replayed: true }; }
   if (manifest.stateVersion !== expectedStateVersion) { const e = new GovernanceError(409, "STALE_STATE", STALE_MESSAGE); e.manifest = manifest; throw e; }
   if (manifest.lifecycleState !== "draft") { const e = new GovernanceError(409, "ILLEGAL_TRANSITION", "لا يمكن إنشاء إصدار جديد إلا في حالة المسودة؛ أعد الامتحان إلى المسودة أولًا."); e.manifest = manifest; throw e; }
   const hash = contentHashOf(content);
   if (hash === manifest.latestContentHash) return { manifest, created: false, replayed: false };
   const revision = buildRevision({ examId, exam: content, revisionNumber: manifest.latestRevisionNumber + 1, sourceRevisionId: manifest.latestRevisionId, actor, deps });
   const meta = metaOf(revision);
-  await writeRevisionDocument(container, revision);
-  await writeRevisionMetaDocument(container, meta);
+  await writeRevisionPair(container, revision, meta);
   const at = nowOf(deps);
   const next = {
     ...manifest, stateVersion: manifest.stateVersion + 1, updatedAt: at,
     latestRevisionId: revision.revisionId, latestRevisionNumber: revision.revisionNumber, latestContentHash: revision.contentHash,
     revisions: [...manifest.revisions, { revisionId: revision.revisionId, revisionNumber: revision.revisionNumber }],
     eventCount: manifest.eventCount + 1,
-    lastTransition: { type: "revision-created", at, by: actor.id, requestId },
-    commands: recordCommand(manifest, { requestId, type: "create-revision", at, stateVersion: manifest.stateVersion + 1, result: { revisionId: revision.revisionId, created: true } })
+    lastTransition: { type: "revision-created", at, by: actor.id, requestId }
   };
+  const audit = auditDescriptorOf({ manifestAfter: next, type: "revision-created", revisionId: revision.revisionId, fromState: "draft", toState: "draft", actor, at, deps });
+  const command = { requestId, type: "create-revision", at, stateVersion: next.stateVersion, result: { revisionId: revision.revisionId, created: true }, audit };
+  next.commands = recordCommand(manifest, command);
   try { await casManifest(container, examId, next, etag); }
   catch (e) { await discardUnreferenced(container, [model.revisionName(examId, revision.revisionId), model.revisionMetaName(examId, revision.revisionNumber, revision.revisionId)]); throw e; }
-  const event = eventOf({ manifest: next, type: "revision-created", revisionId: revision.revisionId, fromState: "draft", toState: "draft", actor, at, requestId, deps });
-  await writeEventDocument(container, event);
+  const event = await ensureAuditEvent(container, examId, command, deps);
   return { manifest: next, revision, meta, event, created: true, replayed: false };
 }
 
@@ -244,7 +290,7 @@ async function transition(container, { examId, to, actor: rawActor, requestId, e
   const { manifest, etag } = await requireManifest(container, examId, deps);
   requireCapability(actor, action, manifest.lifecycleState);
   const recorded = replayOrConflict(manifest, requestId, "transition:" + to);
-  if (recorded) return { manifest, replayed: true, ...(recorded.result && recorded.result.decision ? { decision: recorded.result.decision } : {}) };
+  if (recorded) { await ensureAuditEvent(container, examId, recorded, deps); return { manifest, replayed: true, ...(recorded.result && recorded.result.decision ? { decision: recorded.result.decision } : {}) }; }
   if (manifest.stateVersion !== expectedStateVersion) { const e = new GovernanceError(409, "STALE_STATE", STALE_MESSAGE); e.manifest = manifest; throw e; }
   const from = manifest.lifecycleState;
   if (!model.isLegalTransition(from, to)) { const e = new GovernanceError(409, "ILLEGAL_TRANSITION", "الانتقال من «" + from + "» إلى «" + to + "» غير مسموح."); e.manifest = manifest; throw e; }
@@ -285,12 +331,13 @@ async function transition(container, { examId, to, actor: rawActor, requestId, e
   next.updatedAt = at;
   next.eventCount = manifest.eventCount + 1;
   next.lastTransition = { type, at, by: actor.id, requestId, fromState: from, toState: to };
-  next.commands = recordCommand(manifest, { requestId, type: "transition:" + to, at, stateVersion: next.stateVersion, result: { ...(boundRevisionId ? { revisionId: boundRevisionId } : {}), ...(decision ? { decision } : {}) } });
+  const audit = auditDescriptorOf({ manifestAfter: next, type, revisionId: boundRevisionId || undefined, fromState: from, toState: to, actor, at, deps });
+  const command = { requestId, type: "transition:" + to, at, stateVersion: next.stateVersion, result: { ...(boundRevisionId ? { revisionId: boundRevisionId } : {}), ...(decision ? { decision } : {}) }, audit };
+  next.commands = recordCommand(manifest, command);
   const issues = model.validateManifest(next);
   if (issues.length) throw new GovernanceError(500, "MANIFEST_CORRUPT", "لا يمكن تنفيذ الانتقال: " + issues.join("، "));
   await casManifest(container, examId, next, etag);
-  const event = eventOf({ manifest: next, type, revisionId: boundRevisionId || undefined, fromState: from, toState: to, actor, at, requestId, deps });
-  await writeEventDocument(container, event);
+  const event = await ensureAuditEvent(container, examId, command, deps);
   return { manifest: next, event, replayed: false, ...(decision ? { decision } : {}) };
 }
 const submitForReview = (container, args, deps) => transition(container, { ...args, to: "in-review" }, deps);
@@ -342,7 +389,9 @@ async function listEvents(container, { examId, cursor, limit }, deps = {}) {
 // ── the ONE published-revision loader (fail closed) ──────────────────────────────────────────────────────────────────
 async function loadPublishedRevision(container, examId, deps = {}) {
   requireExamId(examId);
-  const manifest = await dlOf(deps)(container, model.manifestName(examId));
+  // The ONE validated manifest authority: absent → NOT_GOVERNED; present but malformed → MANIFEST_CORRUPT (never a
+  // partial check, never a fallback to a draft, a browser body or legacy behaviour).
+  const { manifest } = await readManifest(container, examId, deps);
   if (!manifest) throw new GovernanceError(404, "NOT_GOVERNED", "هذا الامتحان غير مسجّل في إدارة النشر.");
   const unavailable = () => new GovernanceError(409, "PUBLISHED_REVISION_UNAVAILABLE", "النسخة المنشورة غير متاحة أو غير سليمة؛ لا يمكن استخدام مسودة بدلًا منها.");
   if (!manifest.publishedRevisionId) throw new GovernanceError(409, "NO_PUBLISHED_REVISION", "لا توجد نسخة منشورة لهذا الامتحان. انشر الامتحان من «إدارة النشر والإصدارات» أولًا.");
@@ -356,17 +405,18 @@ async function loadPublishedRevision(container, examId, deps = {}) {
   return revision;
 }
 // Assignment integration: is this exam governed, and if so, which immutable published revision must be used?
+// manifest absent ⇒ legacy / not governed · present and valid ⇒ governed · present but invalid ⇒ FAIL CLOSED (thrown).
 async function resolveGovernedExamSource(container, examId, deps = {}) {
   if (!model.isSafeExamId(examId)) return { governed: false };
-  const manifest = await dlOf(deps)(container, model.manifestName(examId));
-  if (!manifest) return { governed: false };
+  const raw = await readManifestRaw(container, examId, deps);
+  if (!raw.manifest) return { governed: false };
   const revision = await loadPublishedRevision(container, examId, deps);
-  return { governed: true, manifest: publicManifest(manifest), revision };
+  return { governed: true, manifest: publicManifest(raw.manifest), revision };
 }
 
 module.exports = {
   GovernanceError, STALE_MESSAGE,
   getGovernanceStatus, enableGovernance, createRevision, transition, submitForReview, approve, publish, returnToDraft,
   listRevisions, loadRevision, listEvents, loadPublishedRevision, resolveGovernedExamSource,
-  writeRevisionDocument, writeEventDocument, publicManifest, rolesOf
+  writeRevisionDocument, writeEventDocument, ensureAuditEvent, publicManifest, rolesOf
 };
