@@ -33,7 +33,7 @@ describe("14A §52 — governance source guards", () => {
   });
   it("capabilities are resolved from the authenticated identity + server environment only; the resolver never reads request payload fields", () => {
     expect(FN).toMatch(/resolveGovernanceCapabilities\(auth\.user, process\.env\)/);
-    expect(CAPS).not.toMatch(/\b(body|request|req|payload)\b/);
+    expect(CAPS.replace(/"request-changes"/g, "")).not.toMatch(/\b(body|request|req|payload)\b/);   // 14B: the action NAME "request-changes" is a string literal, not a payload read
     expect(CAPS).toMatch(/user\.role === "teacher"/);
   });
   it("actor identity and timestamps are server values: the function builds the actor from auth.user.sub and the lib stamps nowOf(deps)", () => {
@@ -79,7 +79,7 @@ describe("14A §52 — governance source guards", () => {
     expect(casIdx).toHaveLength(3); expect(ensureIdx).toHaveLength(3);
     casIdx.forEach((c, i) => expect(ensureIdx[i]).toBeGreaterThan(c));
     // every replay returns only after re-ensuring the recorded event
-    expect([...body.matchAll(/await ensureAuditEvent\(container, examId, recorded, deps\)/g)]).toHaveLength(3);
+    expect([...body.matchAll(/await ensureAuditEvent\(container, examId, recorded, deps\)/g)]).toHaveLength(4);   // enable · createRevision · transition · workflowDecision (14B)
     expect(GOV).not.toMatch(/await writeEventDocument\(container, event\)/);
     // the command record carries the audit descriptor (ids / states / actor / time), never content
     expect(GOV).toMatch(/result: \{ revisionId: revision\.revisionId \}, audit \}/);
@@ -88,9 +88,15 @@ describe("14A §52 — governance source guards", () => {
     const body = GOV.slice(GOV.indexOf("async function createRevision("), GOV.indexOf("// ── history readers"));
     const pre = [...body.matchAll(/await ensureCommittedAudit\(container, examId, manifest, deps\);/g)].map(m => m.index);
     const replays = [...body.matchAll(/const recorded = replayOrConflict\(/g)].map(m => m.index);
+    // 14B: createRevision commits through its own CAS; transition and workflowDecision commit ONLY through the one commit core
+    // (commitMutation → casManifest), which is defined before them — so the preflight precedes the replay check in every
+    // mutation and precedes every commit call site.
     const casIdx = [...body.matchAll(/await casManifest\(/g)].map(m => m.index);
-    expect(pre).toHaveLength(2); expect(replays).toHaveLength(2); expect(casIdx).toHaveLength(2);
-    pre.forEach((p, i) => { expect(p).toBeLessThan(replays[i]); expect(p).toBeLessThan(casIdx[i]); });
+    const commits = [...body.matchAll(/await commitMutation\(container, examId/g)].map(m => m.index);
+    expect(pre).toHaveLength(3); expect(replays).toHaveLength(3); expect(casIdx).toHaveLength(2); expect(commits).toHaveLength(2);
+    pre.forEach((p, i) => expect(p).toBeLessThan(replays[i]));
+    expect(pre[0]).toBeLessThan(casIdx[0]);                                 // createRevision: preflight before its CAS
+    expect(pre[1]).toBeLessThan(commits[0]); expect(pre[2]).toBeLessThan(commits[1]);   // transition / workflowDecision: preflight before the commit core call
     const finder = GOV.slice(GOV.indexOf("function latestCommittedCommand("), GOV.indexOf("async function ensureCommittedAudit("));
     expect(finder).toMatch(/c\.stateVersion === manifest\.stateVersion/);
     const preflight = GOV.slice(GOV.indexOf("async function ensureCommittedAudit("), GOV.indexOf("function publicManifest("));

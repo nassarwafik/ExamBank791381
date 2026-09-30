@@ -20,6 +20,7 @@ const PROTECTED: [string, string, string, string][] = [
   ["./App.tsx", "LearningMaterialsPage", "./learning/LearningMaterialsPage", "teacher-learning-materials"],
   ["./App.tsx", "TeacherGamesPage", "./games/TeacherGamesPage", "teacher-games"],
   ["./App.tsx", "TeacherMessagesPage", "./messages/TeacherMessagesPage", "teacher-messages"],
+  ["./App.tsx", "ReviewInboxPage", "./governance/ReviewInboxPage", "teacher-review-inbox"],
   ["./App.tsx", "StructuredExamBuilder", "./StructuredExamBuilder", "structured-exam-builder"],
   ["./App.tsx", "SmartStructuredExamImportWizard", "./SmartStructuredExamImportWizard", "smart-structured-import"],
   // nested views

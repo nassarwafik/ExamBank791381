@@ -1,4 +1,5 @@
 const crypto = require("crypto");
+const { parseBuilderUsers, configuredPasswordFor } = require("./builder-users");
 
 // Roadmap #8 — Auth / Session Hardening (teacher / builder side).
 const TOKEN_TTL_SECONDS = 8 * 60 * 60;          // teacher session lifetime (unchanged)
@@ -195,16 +196,40 @@ function requireBuilderAuth(request) {
   return { ok: true, user: payload };
 }
 
+// Phase 14B — the authentication configuration state the login endpoints expose SAFELY (structure only, never a value):
+// "legacy" (single shared builder password), "multi-user" (BUILDER_USERS) or "configuration-error" (a non-empty malformed
+// BUILDER_USERS: every login is refused with 503 until an operator fixes it — never a silent fallback to the shared password).
+function builderAuthConfigurationStatus(env = process.env) {
+  const cfg = parseBuilderUsers(env);
+  if (cfg.kind === "configured") return { mode: "multi-user", broken: false };
+  if (cfg.kind === "configuration-error") return { mode: "configuration-error", broken: true, reason: cfg.reason };
+  return { mode: "legacy", broken: false };
+}
+
 function validateBuilderCredentials(userCode, password) {
+  const normalizedUserCode = String(userCode || "").trim();
+  const passwordText = String(password || "");
+
+  // Phase 14B — multi-user mode: the account's OWN server secret is the only accepted password. There is deliberately no
+  // fallback to BUILDER_PASSWORD / BANK_SETUP_KEY / BUILDER_USER_CODE in this branch, an unknown account and a wrong
+  // password are the same `false`, a missing / empty referenced secret refuses that account, and a malformed non-empty
+  // BUILDER_USERS refuses everyone (fail closed).
+  const accounts = parseBuilderUsers(process.env);
+  if (accounts.kind !== "legacy") {
+    if (accounts.kind !== "configured") return false;
+    if (!normalizedUserCode || normalizedUserCode.length > 128 || passwordText.length > 512) return false;
+    const secret = configuredPasswordFor(process.env, normalizedUserCode);
+    if (!secret) return false;
+    return timingSafeEqualText(passwordText, secret);
+  }
+
+  // Legacy single-teacher deployment (BUILDER_USERS absent / empty): unchanged.
   const configuredPassword = getBuilderPassword();
   const configuredUserCode = String(process.env.BUILDER_USER_CODE || "").trim();
 
   if (!configuredPassword) {
     throw new Error("BUILDER_PASSWORD or BANK_SETUP_KEY is not configured");
   }
-
-  const normalizedUserCode = String(userCode || "").trim();
-  const passwordText = String(password || "");
 
   // Cheap bounds before any comparison work; also avoids pathological inputs. Generic failure (no
   // enumeration): an empty/oversized code or a code mismatch returns the same false as a wrong password.
@@ -230,5 +255,6 @@ module.exports = {
   verifySignedAssetParams,
   requireBuilderAuth,
   validateBuilderCredentials,
+  builderAuthConfigurationStatus,
   getBuilderSessionVersion
 };

@@ -400,6 +400,9 @@ Tree fingerprint before `f4e93ca9e3e92c60` → after `f4e93ca9e3e92c60` (identic
 
 ## 19. Phase 14B boundary and non-goals
 
+> Phase 14B is now implemented — see `docs/enterprise-governance-14b.md` (server-owned multi-teacher identity, Assigned workflow mode,
+> review cycles, immutable decision records, Review Inbox). The institutional administration items below remain Phase 20.
+
 14A delivers the secure primitives (immutable revisions, server lifecycle, CAS + idempotency, capability enforcement,
 audit). 14B — Review & Approval Roles / Institutional Governance — will add distinct Reviewer / Approver identities,
 school / department role assignments, separation-of-duties policy, reviewer comments, approval requests / inboxes,

@@ -57,7 +57,7 @@ describe("UX-6c — Exam Bank navigation", () => {
     await screen.findByRole("heading", { level: 1 });
     const group = within(sidebar()).getByRole("group", { name: "بنك الامتحانات" });
     const links = within(group).getAllByRole("button").map(b => b.textContent?.trim());
-    expect(links).toEqual(["بنك الامتحانات", "باني الامتحان", "استيراد من ملف"]);
+    expect(links).toEqual(["بنك الامتحانات", "باني الامتحان", "استيراد من ملف", "مراجعات النشر"]);   // 14B — the Review Inbox is the group's third child
     expect(within(group).getByRole("button", { name: "بنك الامتحانات" }).className).toContain("eb-nav-group-head");
     expect(within(group).getByRole("button", { name: "باني الامتحان" }).className).toContain("eb-nav-child");
     const before = calls.length;

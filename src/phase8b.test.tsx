@@ -280,7 +280,7 @@ const NAV_STATE: Record<TeacherNavId, Partial<TeacherNavState>> = {
   dashboard: { teacherView: "platform", workspaceTab: "dashboard" }, students: { teacherView: "platform", workspaceTab: "students" },
   assignments: { teacherView: "platform", workspaceTab: "assignments" }, audit: { teacherView: "platform", workspaceTab: "audit" },
   learning: { teacherView: "learning" }, messages: { teacherView: "messages" }, projects: { teacherView: "project" }, reports: { teacherView: "reports" },
-  games: { teacherView: "games" }, bank: { teacherView: "bank" }, builder: { teacherView: "builder" }, import: { teacherView: "import" }
+  games: { teacherView: "games" }, bank: { teacherView: "bank" }, builder: { teacherView: "builder" }, import: { teacherView: "import" }, reviews: { teacherView: "reviews" }
 };
 const EMOJI = /[\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}]/u;
 describe("8B-C every teacher page title carries its sidebar icon", () => {

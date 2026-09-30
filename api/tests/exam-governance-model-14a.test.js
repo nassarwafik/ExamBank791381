@@ -29,8 +29,9 @@ describe("14A G3 — lifecycle state machine (pure)", () => {
     expect(isLegalTransition("nope", "draft")).toBe(false);
     expect(isLegalTransition("draft", undefined)).toBe(false);
   });
-  it("event types are the six governance events; transition event types derive from the (from,to) pair", () => {
-    expect(GOVERNANCE_EVENT_TYPES).toEqual(["governance-enabled", "revision-created", "submitted-for-review", "returned-to-draft", "approved", "published"]);
+  it("event types are the six governance events (+ the five 14B workflow decisions); transition event types derive from the (from,to) pair", () => {
+    expect(GOVERNANCE_EVENT_TYPES.slice(0, 6)).toEqual(["governance-enabled", "revision-created", "submitted-for-review", "returned-to-draft", "approved", "published"]);
+    expect(GOVERNANCE_EVENT_TYPES.slice(6)).toEqual(["review-completed", "changes-requested", "approval-rejected", "publication-rejected", "review-withdrawn"]);   // 14B
     expect(transitionEventType("draft", "in-review")).toBe("submitted-for-review");
     expect(transitionEventType("in-review", "approved")).toBe("approved");
     expect(transitionEventType("approved", "published")).toBe("published");

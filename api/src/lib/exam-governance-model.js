@@ -13,7 +13,16 @@ const LEGAL_TRANSITIONS = Object.freeze({
   approved: Object.freeze(["draft", "published"]),
   published: Object.freeze(["draft"])
 });
-const GOVERNANCE_EVENT_TYPES = Object.freeze(["governance-enabled", "revision-created", "submitted-for-review", "returned-to-draft", "approved", "published"]);
+const GOVERNANCE_EVENT_TYPES = Object.freeze(["governance-enabled", "revision-created", "submitted-for-review", "returned-to-draft", "approved", "published",
+  // Phase 14B — workflow decisions (ids only in the event; the human note lives in the immutable decision record)
+  "review-completed", "changes-requested", "approval-rejected", "publication-rejected", "review-withdrawn"]);
+// Phase 14B Part C / H — the review workflow inside `in-review` / `approved` / `published` (never a new lifecycle state) and
+// the immutable decision records under exam-governance/<examId>/decisions/<seq>-<decisionId>.json.
+const REVIEW_STATUSES = Object.freeze(["pending", "completed"]);
+const WORKFLOW_ROLES = Object.freeze(["authorId", "reviewerId", "approverId", "publisherId"]);
+const DECISION_STAGES = Object.freeze(["review", "approval", "publication", "author"]);
+const DECISION_TYPES = Object.freeze(["review-completed", "changes-requested", "approved", "approval-rejected", "publication-rejected", "withdrawn"]);
+const MAX_NOTE_LENGTH = 2000;
 
 const SAFE_ID = /^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$/;
 function isSafeId(value) { return typeof value === "string" && SAFE_ID.test(value) && !value.includes(".."); }
@@ -27,6 +36,47 @@ function revisionName(examId, revisionId) { return GOVERNANCE_PREFIX + assertSaf
 function revisionMetaName(examId, revisionNumber, revisionId) { return GOVERNANCE_PREFIX + assertSafe(examId, "examId") + "/revision-meta/" + pad6(revisionNumber) + "-" + assertSafe(revisionId, "revisionId") + ".json"; }
 function eventsPrefix(examId) { return GOVERNANCE_PREFIX + assertSafe(examId, "examId") + "/events/"; }
 function eventName(examId, sequence, eventId) { return eventsPrefix(examId) + pad6(sequence) + "-" + assertSafe(eventId, "eventId") + ".json"; }
+function decisionsPrefix(examId) { return GOVERNANCE_PREFIX + assertSafe(examId, "examId") + "/decisions/"; }
+function decisionName(examId, sequence, decisionId) { return decisionsPrefix(examId) + pad6(sequence) + "-" + assertSafe(decisionId, "decisionId") + ".json"; }
+
+// Decision notes are plain text (never rendered as HTML by the UI), normalized (line breaks kept, other control characters
+// dropped, trimmed) and bounded. Returns { ok: true, note } or { ok: false, code } — pure, so callers map the code to HTTP.
+function normalizeDecisionNote(value, { required = false } = {}) {
+  if (value === undefined || value === null) return required ? { ok: false, code: "NOTE_REQUIRED" } : { ok: true, note: "" };
+  if (typeof value !== "string") return { ok: false, code: "NOTE_INVALID" };
+  if (value.length > MAX_NOTE_LENGTH * 2) return { ok: false, code: "NOTE_TOO_LONG" };
+  // eslint-disable-next-line no-control-regex
+  const note = value.replace(/\r\n?/g, "\n").replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F]/g, "").split("\n").map(l => l.replace(/[ \t]+$/g, "")).join("\n").trim();
+  if (!note) return required ? { ok: false, code: "NOTE_REQUIRED" } : { ok: true, note: "" };
+  if (note.length > MAX_NOTE_LENGTH) return { ok: false, code: "NOTE_TOO_LONG" };
+  return { ok: true, note };
+}
+
+// The ONE authoritative workflow representation. Returns a list of problems (empty = valid).
+function validateReviewWorkflow(w, m) {
+  const issues = [];
+  if (!w || typeof w !== "object" || Array.isArray(w)) return ["reviewWorkflow is not an object"];
+  if (typeof w.cycleId !== "string" || !w.cycleId || !isSafeId(w.cycleId)) issues.push("reviewWorkflow.cycleId invalid");
+  if (typeof w.revisionId !== "string" || !w.revisionId) issues.push("reviewWorkflow.revisionId missing");
+  if (!Number.isInteger(w.revisionNumber) || w.revisionNumber < 1) issues.push("reviewWorkflow.revisionNumber invalid");
+  for (const role of WORKFLOW_ROLES) if (typeof w[role] !== "string" || !w[role]) issues.push("reviewWorkflow." + role + " missing");
+  const ids = WORKFLOW_ROLES.map(r => w[r]).filter(x => typeof x === "string" && x);
+  if (new Set(ids).size !== ids.length) issues.push("reviewWorkflow participants must be distinct identities");
+  if (typeof w.submittedAt !== "string" || typeof w.submittedBy !== "string") issues.push("reviewWorkflow submission stamp missing");
+  if (!REVIEW_STATUSES.includes(w.reviewStatus)) issues.push("reviewWorkflow.reviewStatus invalid");
+  if (w.reviewStatus === "completed" && (typeof w.reviewedAt !== "string" || typeof w.reviewedBy !== "string")) issues.push("completed review without reviewedAt / reviewedBy");
+  if (m) {
+    if (m.lifecycleState === "draft") issues.push("draft must not carry an active reviewWorkflow");
+    if (m.lifecycleState === "in-review" && w.revisionId !== m.reviewRevisionId) issues.push("reviewWorkflow.revisionId differs from reviewRevisionId");
+    if (m.lifecycleState === "approved" || m.lifecycleState === "published") {
+      if (w.reviewStatus !== "completed") issues.push(m.lifecycleState + " requires a completed review");
+      if (w.revisionId !== m.approvedRevisionId) issues.push("approved revision outside the workflow cycle");
+      if (typeof w.approvedAt !== "string" || w.approvedBy !== m.approvedBy) issues.push("approval stamp does not match the workflow cycle");
+    }
+    if (m.lifecycleState === "published" && w.revisionId !== m.publishedRevisionId) issues.push("published revision outside the workflow cycle");
+  }
+  return issues;
+}
 
 function isLegalTransition(from, to) {
   if (typeof from !== "string" || typeof to !== "string") return false;
@@ -80,11 +130,13 @@ function validateManifest(m) {
   if (m.lifecycleState === "approved" && !m.approvedRevisionId) issues.push("approved without approvedRevisionId");
   if (m.lifecycleState === "published" && !m.publishedRevisionId) issues.push("published without publishedRevisionId");
   if (typeof m.createdAt !== "string" || typeof m.updatedAt !== "string") issues.push("timestamps missing");
+  if (m.reviewWorkflow !== undefined) issues.push(...validateReviewWorkflow(m.reviewWorkflow, m));   // 14B: workflow data, when present, is validated fail-closed
+  if (m.lastDecision !== undefined && (!m.lastDecision || typeof m.lastDecision !== "object" || typeof m.lastDecision.decisionId !== "string" || !DECISION_TYPES.includes(m.lastDecision.decision))) issues.push("lastDecision malformed");
   return issues;
 }
 
 module.exports = {
-  GOVERNANCE_PREFIX, LIFECYCLE_STATES, LEGAL_TRANSITIONS, GOVERNANCE_EVENT_TYPES,
-  isSafeExamId, isSafeRevisionId, manifestName, revisionName, revisionMetaName, eventsPrefix, eventName,
-  isLegalTransition, transitionEventType, newManifest, validateManifest
+  GOVERNANCE_PREFIX, LIFECYCLE_STATES, LEGAL_TRANSITIONS, GOVERNANCE_EVENT_TYPES, REVIEW_STATUSES, WORKFLOW_ROLES, DECISION_STAGES, DECISION_TYPES, MAX_NOTE_LENGTH,
+  isSafeExamId, isSafeRevisionId, isSafeId, manifestName, revisionName, revisionMetaName, eventsPrefix, eventName, decisionsPrefix, decisionName,
+  isLegalTransition, transitionEventType, newManifest, validateManifest, validateReviewWorkflow, normalizeDecisionNote
 };

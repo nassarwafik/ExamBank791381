@@ -3,9 +3,9 @@
 // values to the active destination, the page title and the breadcrumb, and names the destinations the shell can
 // ask App to navigate to (App maps each id back onto its existing setters).
 
-export type TeacherView = "builder" | "platform" | "import" | "project" | "reports" | "bank" | "learning" | "games" | "messages";
+export type TeacherView = "builder" | "platform" | "import" | "project" | "reports" | "bank" | "learning" | "games" | "messages" | "reviews";
 export type WorkspaceTab = "dashboard" | "students" | "assignments" | "audit";
-export type TeacherNavId = "dashboard" | "learning" | "students" | "assignments" | "messages" | "projects" | "reports" | "games" | "bank" | "builder" | "import" | "audit";
+export type TeacherNavId = "dashboard" | "learning" | "students" | "assignments" | "messages" | "projects" | "reports" | "games" | "bank" | "builder" | "import" | "reviews" | "audit";
 
 export interface TeacherNavState {
   teacherView: TeacherView;
@@ -26,6 +26,7 @@ export const NAV_LABELS: Record<TeacherNavId, string> = {
   bank: "بنك الامتحانات",
   builder: "باني الامتحان",
   import: "استيراد من ملف",
+  reviews: "مراجعات النشر",
   audit: "سجل النشاط"
 };
 export const EXAM_BANK_GROUP_LABEL = "بنك الامتحانات";
@@ -34,7 +35,8 @@ export const EXAM_BANK_GROUP_LABEL = "بنك الامتحانات";
 // Phase 5C — «الرسائل» (teacher ↔ student conversations + class announcements) sits right after «الواجبات».
 export const PRIMARY_NAV: TeacherNavId[] = ["dashboard", "learning", "students", "assignments", "messages", "projects", "reports", "games"];
 export const EXAM_BANK_HEAD: TeacherNavId = "bank";
-export const EXAM_BANK_NAV: TeacherNavId[] = ["builder", "import"];
+// Phase 14B — «مراجعات النشر» (the Review Inbox: my review / approval / publishing tasks) is a child of the Exam Bank group.
+export const EXAM_BANK_NAV: TeacherNavId[] = ["builder", "import", "reviews"];
 export const FOOTER_NAV: TeacherNavId[] = ["audit"];
 
 export function activeNavId(state: TeacherNavState): TeacherNavId {
@@ -47,6 +49,7 @@ export function activeNavId(state: TeacherNavState): TeacherNavId {
     case "reports": return "reports";
     case "import": return "import";
     case "bank": return "bank";
+    case "reviews": return "reviews";
     default: return "builder";
   }
 }
@@ -67,7 +70,7 @@ export function breadcrumbFor(state: TeacherNavState): CrumbModel[] {
       : [{ label: NAV_LABELS.projects }];
   }
   // UX-6c — the Exam Bank crumb leads to the management page; the page itself is a single crumb.
-  if (active === "builder" || active === "import") return [{ label: EXAM_BANK_GROUP_LABEL, navId: "bank" }, { label: NAV_LABELS[active] }];
+  if (active === "builder" || active === "import" || active === "reviews") return [{ label: EXAM_BANK_GROUP_LABEL, navId: "bank" }, { label: NAV_LABELS[active] }];
   return [{ label: NAV_LABELS[active] }];
 }
 
