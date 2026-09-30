@@ -82,7 +82,17 @@ export async function launchBrowser() {
     exe, product, cdp,
     newPage: () => newPage(cdp),
     async pageCount() { const { targetInfos } = await cdp.send("Target.getTargets"); return targetInfos.filter(t => t.type === "page").length; },
-    async close() { try { await cdp.send("Browser.close"); } catch { /* gone */ } cdp.close(); try { proc.kill("SIGKILL"); } catch { /* gone */ } await sleep(50); fs.rmSync(dir, { recursive: true, force: true }); }
+    // Teardown waits for Chromium to exit before removing its profile (it keeps writing into it while shutting down —
+    // CI run #864 hit ENOTEMPTY here), retries the removal, and never lets temp-profile cleanup fail the proof itself.
+    async close() {
+      const exited = new Promise(r => { if (proc.exitCode !== null || proc.signalCode !== null) r(); else proc.once("exit", () => r()); });
+      try { await cdp.send("Browser.close"); } catch { /* already gone */ }
+      cdp.close();
+      await Promise.race([exited, sleep(5000)]);
+      try { proc.kill("SIGKILL"); } catch { /* already gone */ }
+      await Promise.race([exited, sleep(2000)]);
+      try { fs.rmSync(dir, { recursive: true, force: true, maxRetries: 10, retryDelay: 100 }); } catch { /* best effort: a leftover temp profile is harmless */ }
+    }
   };
 }
 
