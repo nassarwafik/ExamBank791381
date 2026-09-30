@@ -364,7 +364,8 @@ describe("UX-7b-1 — digits, reduced motion, views", () => {
 
 describe("UX-7b-1 — source guards", () => {
   const RAW = import.meta.glob("./{StudentExamPage,StudentQuestionCard,CompoundQuestion,QuestionField,StructuredExamSection,StructuredExamCover,student/exam/SaveStatus,student/exam/ExamTopBar,student/exam/ExamDetailsDisclosure}.tsx", { query: "?raw", import: "default", eager: true }) as Record<string, string>;
-  const RAW_TS = import.meta.glob("./{student/exam/format,examTimer,studentSaveState}.ts", { query: "?raw", import: "default", eager: true }) as Record<string, string>;
+  // Phase 14A — the Answer union moved verbatim to the pure answerState module (re-exported by StudentQuestionCard); the guard follows it.
+  const RAW_TS = import.meta.glob("./{student/exam/format,examTimer,studentSaveState,answerState}.ts", { query: "?raw", import: "default", eager: true }) as Record<string, string>;
   const CSS = import.meta.glob("./{studentexam-pro,platform}.css", { query: "?raw", import: "default", eager: true }) as Record<string, string>;
   const code = (src: string) => src.replace(/\/\*[\s\S]*?\*\//g, "").replace(/^\s*\/\/.*$/gm, "");
   const page = () => code(RAW["./StudentExamPage.tsx"]);
@@ -410,7 +411,8 @@ describe("UX-7b-1 — source guards", () => {
       expect(EMOJI.test(withoutContentDetection), f + " must not carry emoji glyphs").toBe(false);
       expect(code(src)).not.toMatch(/localStorage|sessionStorage/);
     }
-    expect(code(RAW["./StudentQuestionCard.tsx"])).toContain('export type Answer={kind:"choice";index:number}|{kind:"sequence";values:string[]}|{kind:"table";values:(string|boolean)[]}|{kind:"text";value:string}|{kind:"fields";values:Record<string,FieldValue>}|{kind:"compound";parts:Record<string,Answer>};');
+    expect(code(RAW_TS["./answerState.ts"])).toContain('export type Answer={kind:"choice";index:number}|{kind:"sequence";values:string[]}|{kind:"table";values:(string|boolean)[]}|{kind:"text";value:string}|{kind:"fields";values:Record<string,FieldValue>}|{kind:"compound";parts:Record<string,Answer>};');
+    expect(code(RAW["./StudentQuestionCard.tsx"])).toContain('export type {Answer,FieldValue} from "./answerState";');
     expect(code(RAW["./StudentQuestionCard.tsx"])).toContain('<fieldset className="iex-options" aria-labelledby={textId}>');
     expect(code(RAW["./StudentQuestionCard.tsx"])).toContain('<input type="radio" name={id}');
     expect(code(RAW["./QuestionField.tsx"])).not.toMatch(/fetch\(/);

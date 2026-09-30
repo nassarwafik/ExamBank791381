@@ -39,9 +39,11 @@ export type DialogProps = {
   suspended?: boolean;
   hideClose?: boolean;
   describedBy?: string;
+  /** Phase 14A — marks a read-only view (an immutable revision); exposed as data-readonly for styling / tests. */
+  readOnly?: boolean;
 };
 
-export default function Dialog({ open, title, onClose, children, footer, size = "md", tone = "default", className, initialFocusRef, suspended = false, hideClose = false, describedBy }: DialogProps) {
+export default function Dialog({ open, title, onClose, children, footer, size = "md", tone = "default", className, initialFocusRef, suspended = false, hideClose = false, describedBy, readOnly = false }: DialogProps) {
   const reactId = useId();
   const titleId = "eb-dialog-" + reactId.replace(/[^a-zA-Z0-9_-]/g, "") + "-title";
   const token = useRef<symbol | null>(null);
@@ -113,7 +115,7 @@ export default function Dialog({ open, title, onClose, children, footer, size = 
   return createPortal(
     <div className={"eb-dialog-root" + (suspended ? " is-suspended" : "") + (covered ? " is-covered" : "")} dir="rtl">
       <div className="eb-dialog-backdrop" onClick={hidden ? undefined : onClose} aria-hidden="true" data-testid="eb-dialog-backdrop" />
-      <div ref={panelRef} className={cls} role="dialog" aria-modal="true" aria-labelledby={titleId} aria-describedby={describedBy} aria-hidden={hidden ? true : undefined} inert={hidden ? true : undefined}>
+      <div ref={panelRef} className={cls} role="dialog" aria-modal="true" aria-labelledby={titleId} aria-describedby={describedBy} aria-hidden={hidden ? true : undefined} inert={hidden ? true : undefined} data-readonly={readOnly ? "true" : undefined}>
         <div className="eb-dialog-head">
           <h2 id={titleId} className="eb-dialog-title">{title}</h2>
           {!hideClose && <IconButton label="إغلاق" icon={<IconClose size={18} />} onClick={onClose} className="eb-dialog-close" />}

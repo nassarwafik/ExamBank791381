@@ -18,6 +18,11 @@ const {recordEventSafely}=require("../lib/notification-events");
 const {ensurePublishedAssignmentIndexed,removePublishedAssignmentFromIndex}=require("../lib/class-assignment-index");
 // Bank image assets are persisted by durable identity only; the signed URL is minted when the student is served (student-assignment).
 const {normalizeBankAssetsForStorage}=require("../lib/bank-asset-hydrate");
+// Phase 14A — GOVERNED exams: an assignment binds the exact immutable PUBLISHED revision the server owns (manifest →
+// publishedRevisionId → revision, fail closed); the browser's exam body is never the source for a governed exam. Legacy
+// (non-governed) exams keep the historical behaviour byte-for-byte: no governance blob is read into existence, the posted
+// snapshot is stored as before.
+const {resolveGovernedExamSource,GovernanceError}=require("../lib/exam-governance");
 const PREFIX="platform/assignments/",CLASS_PREFIX="platform/classes/",SUB_PREFIX="platform/submissions/";
 const CONFLICT_MESSAGE="حدث تعارض مؤقت أثناء حفظ البيانات. حاول مرة أخرى.";
 // Read-only impact of deleting/archiving an assignment (Roadmap #7). submissionDocuments is the count of
@@ -47,7 +52,7 @@ function parseDurationMinutes(v){
  if(n<1||n>1440)return {ok:false};
  return {ok:true,value:n};
 }
-function summary(a){return {assignmentId:a.assignmentId,classId:a.classId,className:a.className,title:a.title,instructions:a.instructions,status:a.status,openAt:a.openAt||"",dueAt:a.dueAt||"",sourceExamId:a.sourceExamId||"",sourceExamTitle:a.sourceExamTitle||"",questionCount:Number(a.questionCount||0),totalMarks:Number(a.totalMarks||0),maxAttempts:Math.max(1,Number(a.maxAttempts||1)),durationMinutes:Number(a.durationMinutes||0),attemptModelVersion:Number(a.attemptModelVersion||0),attemptPolicy:attemptPolicyOf(a),archivedAt:String(a.archivedAt||""),archivedBy:String(a.archivedBy||""),archivedFromStatus:String(a.archivedFromStatus||""),archiveReason:String(a.archiveReason||""),createdAt:a.createdAt||"",updatedAt:a.updatedAt||""}}
+function summary(a){return {assignmentId:a.assignmentId,classId:a.classId,className:a.className,title:a.title,instructions:a.instructions,status:a.status,openAt:a.openAt||"",dueAt:a.dueAt||"",sourceExamId:a.sourceExamId||"",sourceExamTitle:a.sourceExamTitle||"",questionCount:Number(a.questionCount||0),totalMarks:Number(a.totalMarks||0),maxAttempts:Math.max(1,Number(a.maxAttempts||1)),durationMinutes:Number(a.durationMinutes||0),attemptModelVersion:Number(a.attemptModelVersion||0),attemptPolicy:attemptPolicyOf(a),...(a.source&&typeof a.source==="object"?{source:a.source}:{}),archivedAt:String(a.archivedAt||""),archivedBy:String(a.archivedBy||""),archivedFromStatus:String(a.archivedFromStatus||""),archiveReason:String(a.archiveReason||""),createdAt:a.createdAt||"",updatedAt:a.updatedAt||""}}
 // `deps` is an optional dependency-injection seam for unit tests (production passes nothing, so the
 // real implementations are used). It does not change runtime behavior.
 async function handler(request,deps={},obs=null){
@@ -59,8 +64,15 @@ async function handler(request,deps={},obs=null){
   let b={};try{b=await request.json()}catch{}
   const action=String(b.action||"create").toLowerCase();
   if(action==="create"){
-   const classId=String(b.classId||"").trim(),title=String(b.title||"").trim(),instructions=String(b.instructions||"").trim(),exam=cleanExam(b.examSnapshot);
+   const classId=String(b.classId||"").trim(),title=String(b.title||"").trim(),instructions=String(b.instructions||"").trim();let exam=cleanExam(b.examSnapshot),source=null;
    if(!classId||!title)return {status:400,jsonBody:{ok:false,error:"الصف وعنوان الواجب مطلوبان."}};
+   // Phase 14A — governed exam ⇒ the server's published revision is the ONLY snapshot source (P15/P16/P17).
+   if(exam.examId){
+    try{
+     const gov=await (deps.resolveGovernedExamSource||resolveGovernedExamSource)(c,String(exam.examId),{downloadJsonOrNull:dl});
+     if(gov.governed){exam=cleanExam(gov.revision.exam);source={kind:"governed-revision",examId:String(gov.revision.examId),revisionId:String(gov.revision.revisionId),revisionNumber:Number(gov.revision.revisionNumber),contentHash:String(gov.revision.contentHash)}}
+    }catch(e){if(e instanceof GovernanceError)return {status:e.status===404?409:e.status,jsonBody:{ok:false,code:e.code,error:e.message}};throw e}
+   }
    // AUTHORITATIVE structural stats — the CURRENT exam structure is the single source of truth for
    // questionCount and totalMarks. A stale/imported top-level exam.totalMarks can NEVER override it
    // (see examOfficialStats). The values match gradeExam() so the assignment total, the grader total
@@ -89,7 +101,7 @@ async function handler(request,deps={},obs=null){
    // Phase 7A: strict / pausable attempts need the per-attempt epoch → attemptModelVersion 3. A continuous assignment
    // stays on model 2, i.e. EXACTLY the pre-7A lifecycle. The policy is persisted on the document and never changed
    // afterwards (there is no edit action — historical assignments keep theirs).
-   const a={schemaVersion:2,attemptModelVersion:attemptPolicy==="continuous"?2:3,attemptPolicy,assignmentId,classId,className:String(classroom.name||""),title,instructions,status:b.publish===true?"published":"draft",openAt,dueAt,maxAttempts,durationMinutes:dur.value,sourceExamId:String(exam.examId||""),sourceExamTitle:String(exam.title||title),questionCount:stats.questionCount,totalMarks:stats.totalMarks,examSnapshot:exam,createdBy:String(auth.user?.sub||"teacher"),createdAt:now,updatedAt:now};
+   const a={schemaVersion:2,attemptModelVersion:attemptPolicy==="continuous"?2:3,attemptPolicy,assignmentId,classId,className:String(classroom.name||""),title,instructions,status:b.publish===true?"published":"draft",openAt,dueAt,maxAttempts,durationMinutes:dur.value,sourceExamId:String(exam.examId||""),sourceExamTitle:String(exam.title||title),questionCount:stats.questionCount,totalMarks:stats.totalMarks,examSnapshot:exam,...(source?{source}:{}),createdBy:String(auth.user?.sub||"teacher"),createdAt:now,updatedAt:now};
    // Phase 12E-B — STRICT: the published pointer exists BEFORE the published document does. If the index cannot be
    // updated the assignment is NOT created (retryable); a later failure of the upload below only leaves a harmless
    // stale pointer (readers ignore a missing document). A draft is never indexed.

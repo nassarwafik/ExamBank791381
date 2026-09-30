@@ -4,7 +4,9 @@
 import type { GradingStatus } from "../gradingStatus";
 
 export type Classroom = { classId: string; name: string; grade: string; active: boolean; status?: string };
-export type Item = { assignmentId: string; classId: string; className: string; title: string; instructions: string; status: "draft" | "published" | "archived"; openAt: string; dueAt: string; questionCount: number; totalMarks: number; maxAttempts: number; durationMinutes?: number; attemptPolicy?: string; archivedAt?: string; archivedBy?: string; archivedFromStatus?: string; archiveReason?: string };
+export type Item = { assignmentId: string; classId: string; className: string; title: string; instructions: string; status: "draft" | "published" | "archived"; openAt: string; dueAt: string; questionCount: number; totalMarks: number; maxAttempts: number; durationMinutes?: number; attemptPolicy?: string; archivedAt?: string; archivedBy?: string; archivedFromStatus?: string; archiveReason?: string;
+  // Phase 14A — present only on assignments created from a GOVERNED exam: the exact immutable published revision they bind.
+  source?: { kind: "governed-revision"; examId: string; revisionId: string; revisionNumber: number; contentHash: string } };
 // Read-only deletion impact (Roadmap #7) returned by action:"deleteImpact".
 export type Impact = { assignmentId: string; status: string; submissionDocuments: number; studentsWithCompletedAttempts: number; completedAttempts: number; activeAttempts: number; draftDocuments: number; canPurge: boolean };
 export type Exam = { examId?: string; title?: string; totalMarks?: number; questions?: unknown[]; sections?: unknown[] };

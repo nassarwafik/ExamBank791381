@@ -4,8 +4,9 @@
 // progress without a round-trip, and it is kept deliberately identical to the backend so the two
 // never diverge (both are covered by mirror unit tests). No React import: pure and unit-testable.
 
-import type { Question, QuestionPart, Answer } from "./StudentQuestionCard";
-import { answered } from "./StudentQuestionCard";
+import type { Question, QuestionPart } from "./studentQuestionTypes";
+import type { Answer } from "./answerState";
+import { answered } from "./answerState";
 
 export type GradingPolicy = "all" | "capScore" | "firstNAnswered";
 export type AnswerUnit = "question" | "part";

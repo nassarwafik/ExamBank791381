@@ -9,6 +9,9 @@ const {
   requireBuilderAuth
 } = require("../lib/builder-auth");
 const { normalizeBankAssetsInQuestion } = require("../lib/bank-asset-hydrate");
+// Phase 14A — the ONE canonical exam content form (shared with the immutable governance revisions).
+const { canonicalizeExamContent } = require("../lib/exam-canonical");
+const { uploadJson } = require("../lib/platform-storage");
 
 const BANK_CONTAINER =
   "bank";
@@ -55,60 +58,17 @@ function cleanQuestion(
 function cleanExam(
   exam
 ) {
-  // Structured exams: sections[].questions[] is the ONLY canonical question tree. Clean those and do
-  // NOT emit a top-level questions[] (neither a stale copy nor an empty []), so nothing competes with
-  // the sections as the canonical source.
-  if (
-    Array.isArray(
-      exam.sections
-    )
-  ) {
-    const structured = {
-      ...exam,
-
-      updatedAt:
-        new Date()
-          .toISOString(),
-
-      sections:
-        exam.sections.map(
-          section => ({
-            ...section,
-
-            questions:
-              Array.isArray(
-                section &&
-                section.questions
-              )
-                ? section.questions.map(
-                    cleanQuestion
-                  )
-                : []
-          })
-        )
-    };
-
-    delete structured.questions;
-
-    return structured;
-  }
-
-  // Legacy flat exams: unchanged behaviour.
+  // Phase 14A — canonical content (sections[].questions[] as the ONLY question tree — no stale / empty top-level
+  // questions[] on a structured exam; per-question history / redo cleared; bank image assets by durable identity only;
+  // governance-looking root fields stripped so a body can never smuggle authority) comes from the shared canonicalizer —
+  // the same form an immutable governance revision stores — plus the server save timestamp. Legacy flat exams keep their
+  // questions[] exactly as before.
   return {
-    ...exam,
+    ...canonicalizeExamContent(exam),
 
     updatedAt:
       new Date()
-        .toISOString(),
-
-    questions:
-      Array.isArray(
-        exam.questions
-      )
-        ? exam.questions.map(
-            cleanQuestion
-          )
-        : []
+        .toISOString()
   };
 }
 
@@ -155,24 +115,13 @@ function buildTemplateDocument(
   };
 }
 
-app.http(
-  "saveExamArtifact",
-  {
-    methods: [
-      "POST"
-    ],
-
-    authLevel:
-      "anonymous",
-
-    route:
-      "save-exam-artifact",
-
-    handler:
-      async request => {
+// `deps` is an optional dependency-injection seam for unit tests (production passes nothing). The endpoint is a GENERIC
+// artifact persistence endpoint: it saves the teacher's working copy / templates and holds NO governance authority — the
+// exam publishing lifecycle lives in /api/exam-governance (Phase 14A) and is never touched here.
+async function handler(request, deps = {}) {
         try {
           const auth =
-            requireBuilderAuth(
+            (deps.requireBuilderAuth || requireBuilderAuth)(
               request
             );
 
@@ -217,29 +166,8 @@ app.http(
             };
           }
 
-          const connectionString =
-            process.env
-              .AZURE_STORAGE_CONNECTION_STRING;
-
-          if (
-            !connectionString
-          ) {
-            throw new Error(
-              "AZURE_STORAGE_CONNECTION_STRING is not configured."
-            );
-          }
-
-          const blobService =
-            BlobServiceClient
-              .fromConnectionString(
-                connectionString
-              );
-
           const container =
-            blobService
-              .getContainerClient(
-                BANK_CONTAINER
-              );
+            (deps.getContainer || defaultContainer)();
 
           const now =
             new Date();
@@ -299,32 +227,10 @@ app.http(
               ".json";
           }
 
-          const blockBlob =
-            container
-              .getBlockBlobClient(
-                blobName
-              );
-
-          const json =
-            JSON.stringify(
-              document,
-              null,
-              2
-            );
-
-          await blockBlob.uploadData(
-            Buffer.from(
-              json,
-              "utf8"
-            ),
-            {
-              overwrite: true,
-
-              blobHTTPHeaders: {
-                blobContentType:
-                  "application/json; charset=utf-8"
-              }
-            }
+          await uploadJson(
+            container,
+            blobName,
+            document
           );
 
           return {
@@ -352,11 +258,50 @@ app.http(
             }
           };
         }
-      }
+}
+
+function defaultContainer() {
+  const connectionString =
+    process.env
+      .AZURE_STORAGE_CONNECTION_STRING;
+
+  if (
+    !connectionString
+  ) {
+    throw new Error(
+      "AZURE_STORAGE_CONNECTION_STRING is not configured."
+    );
+  }
+
+  return BlobServiceClient
+    .fromConnectionString(
+      connectionString
+    )
+    .getContainerClient(
+      BANK_CONTAINER
+    );
+}
+
+app.http(
+  "saveExamArtifact",
+  {
+    methods: [
+      "POST"
+    ],
+
+    authLevel:
+      "anonymous",
+
+    route:
+      "save-exam-artifact",
+
+    handler:
+      request => handler(request)
   }
 );
 
 module.exports = {
+  handler,
   cleanExam,
   cleanQuestion,
   buildTemplateDocument

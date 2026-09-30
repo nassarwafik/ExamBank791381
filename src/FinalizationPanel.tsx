@@ -7,7 +7,10 @@ import { formatCoverageNumber } from "./coverageFormat";
 // errors, quality gate blockers (incl. policy problems) and warnings are separated; every item states the effect, the
 // factual reason, the current value / relation and the expected condition as TEXT (never colour alone). Evidence buttons
 // reuse the existing selection / navigator (onReveal). Nothing is stored.
-type Props = { open: boolean; onClose: () => void; decision: FinalizationDecision; onReveal: (ids: string[]) => void };
+type Props = { open: boolean; onClose: () => void; decision: FinalizationDecision; onReveal: (ids: string[]) => void;
+  /** Phase 14A — optional confirmation (e.g. «متابعة إرسال للمراجعة»): the readiness view is shown BEFORE a governance
+   *  transition; the server re-validates the exact revision, so this is an affordance, never an authorization. */
+  confirm?: { label: string; onConfirm: () => void; disabled?: boolean; hint?: string } };
 
 const revealLabel = (item: FinalizationItem): string => {
   const kind = item.gate?.source.kind;
@@ -28,11 +31,12 @@ function Item({ item, onReveal, tone }: { item: FinalizationItem; onReveal: (ids
   );
 }
 
-export default function FinalizationPanel({ open, onClose, decision, onReveal }: Props) {
+export default function FinalizationPanel({ open, onClose, decision, onReveal, confirm }: Props) {
   const structural = decision.blockers.filter(b => b.kind === "structural");
   const gates = decision.blockers.filter(b => b.kind !== "structural");
   return (
-    <Dialog open={open} onClose={onClose} size="lg" title="فحص الجاهزية للاعتماد" className="sb-fin-dialog">
+    <Dialog open={open} onClose={onClose} size="lg" title="فحص الجاهزية للاعتماد" className="sb-fin-dialog"
+      footer={confirm ? <div className="sb-fin-confirm">{confirm.hint && <span className="sb-hint">{confirm.hint}</span>}<button type="button" className="sb-btn sb-btn-primary" onClick={confirm.onConfirm} disabled={confirm.disabled}>{confirm.label}</button></div> : undefined}>
       <div className="sb-fin">
         <p className="sb-fin-status" role="status">{decision.canFinalize ? "الحالة الحالية تسمح بالاعتماد النهائي وفق القواعد المُعدَّة." : "الاعتماد النهائي غير ممكن الآن: " + decision.blockers.length + " مانع."}<span className="sb-hint"> هذا قرار تشغيلي لسير التأليف وليس حكمًا على جودة الامتحان.</span></p>
         <section className="sb-fin-section" aria-labelledby="sb-fin-structural">
