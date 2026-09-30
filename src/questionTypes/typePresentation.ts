@@ -9,9 +9,10 @@ const DESCRIPTIONS: Readonly<Record<string, string>> = Object.freeze({
   shortAnswer: "نص حر، مع إجابة نموذجية اختيارية أو مراجعة يدوية.", fillBlank: "فراغات تُكمَل من قائمة أو كتابة.", wordBank: "فراغات تُملأ من مخزن كلمات مشترك.",
   matching: "مطابقة كل عنصر بإجابته الصحيحة.", ordering: "ترتيب عناصر في تسلسل صحيح.", tableFill: "خلايا جدول قابلة للإجابة.", cliFill: "فراغات داخل أوامر سطر الأوامر.",
   compound: "بنود مستقلة بأنواع مختلفة ضمن سؤال واحد.", multipleSelect: "عدة إجابات صحيحة؛ تصحيح كامل أو جزئي مع أو بدون خصم.", numericResponse: "قيمة عددية بتسامح أو ضمن مدى، مع وحدة اختيارية.",
-  matrix: "صفوف وأعمدة؛ إجابة واحدة لكل صف مع علامة جزئية.", categorization: "إسناد كل عنصر إلى فئته الصحيحة مع علامة جزئية."
+  matrix: "صفوف وأعمدة؛ إجابة واحدة لكل صف مع علامة جزئية.", categorization: "إسناد كل عنصر إلى فئته الصحيحة مع علامة جزئية.",
+  simulation: "محاكاة تفاعلية من حزمة .smartsim مرفوعة تعمل في بيئة معزولة؛ تُحفظ حالة الطالب وتُراجع يدويًا."
 });
-const ICONS: Readonly<Record<string, string>> = Object.freeze({ multipleChoice: "◉", trueFalse: "✓", multiTrueFalse: "☑", shortAnswer: "✎", fillBlank: "▭", wordBank: "▤", matching: "⇄", ordering: "↕", tableFill: "▦", cliFill: ">_", compound: "▣", multipleSelect: "☑☑", numericResponse: "#", matrix: "⊞", categorization: "⊟" });
+const ICONS: Readonly<Record<string, string>> = Object.freeze({ multipleChoice: "◉", trueFalse: "✓", multiTrueFalse: "☑", shortAnswer: "✎", fillBlank: "▭", wordBank: "▤", matching: "⇄", ordering: "↕", tableFill: "▦", cliFill: ">_", compound: "▣", multipleSelect: "☑☑", numericResponse: "#", matrix: "⊞", categorization: "⊟", simulation: "⚙" });
 
 export const typeDescription = (d: QuestionTypeDefinition): string => d.description || DESCRIPTIONS[d.key] || "";
 export const typeIcon = (d: QuestionTypeDefinition): string => d.icon || ICONS[d.key] || "▫";

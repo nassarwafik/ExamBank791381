@@ -2,6 +2,8 @@
 // React-free module so the exam structure helpers (examStructure → examCover → examPreviewModel → examBuilderState →
 // examQuality → examFinalization) can be compiled for the server governance authority without pulling a React component.
 // StudentQuestionCard re-exports it, so every existing importer keeps the same function.
+import { isSimulationStateAnswered, type JsonValue } from "./smartsimState";
+// Phase 16B-A adds "simulation" (an opaque, bounded JSON state reported by a sandboxed simulator; answered ⇔ non-empty).
 export type FieldValue = string | boolean | string[];
 // Answer is a discriminated union. The first four members are the ORIGINAL shapes and are kept
 // byte-for-byte so every stored draft / submitted attempt still loads and grades. "fields" and
@@ -10,7 +12,7 @@ export type FieldValue = string | boolean | string[];
 // visual indexes) and "numeric" (Numeric Response — the raw text the student typed plus an optional unit; parsing happens in
 // the grader). Matrix and Categorization reuse "fields" (rowId → columnId / itemId → categoryId), which is semantically clean.
 // Unknown kinds fail closed in answered() (never counted as answered).
-export type Answer={kind:"choice";index:number}|{kind:"sequence";values:string[]}|{kind:"table";values:(string|boolean)[]}|{kind:"text";value:string}|{kind:"fields";values:Record<string,FieldValue>}|{kind:"compound";parts:Record<string,Answer>}|{kind:"multiChoice";optionIds:string[]}|{kind:"numeric";value:string;unit?:string};
+export type Answer={kind:"choice";index:number}|{kind:"sequence";values:string[]}|{kind:"table";values:(string|boolean)[]}|{kind:"text";value:string}|{kind:"fields";values:Record<string,FieldValue>}|{kind:"compound";parts:Record<string,Answer>}|{kind:"multiChoice";optionIds:string[]}|{kind:"numeric";value:string;unit?:string}|{kind:"simulation";state:JsonValue};
 
 const nonEmptyValue = (v: unknown) => (typeof v === "boolean" ? v : String(v ?? "").trim() !== "");
 export function answered(a: Answer | undefined): boolean {
@@ -22,5 +24,6 @@ export function answered(a: Answer | undefined): boolean {
   if (a.kind === "compound") return Object.values(a.parts).some(answered);
   if (a.kind === "multiChoice") return Array.isArray(a.optionIds) && a.optionIds.some(id => typeof id === "string" && id !== "");
   if (a.kind === "numeric") return typeof a.value === "string" && a.value.trim() !== "";
+  if (a.kind === "simulation") return isSimulationStateAnswered(a.state);
   return false;
 }

@@ -33,6 +33,9 @@ registerTypeDefaults("matrix", 1, (ensure, newId) => {
   ensure("matrix", { rows: [{ id: newId("row"), label: "" }], columns: [{ id: newId("col"), label: "" }, { id: newId("col"), label: "" }] });
   ensure("answer", { correctColumnByRow: {} });
 });
+// Phase 16B-A — a new simulation question carries NO package yet (the teacher picks / uploads one; finalization blocks until
+// the exact reference is pinned) and NO answer key (`answer` is reserved for the 16B-B assertion engine).
+registerTypeDefaults("simulation", 1, () => { /* identity only: presentationType + questionTypeVersion */ });
 registerTypeDefaults("categorization", 1, (ensure, newId) => {
   ensure("categorization", { categories: [{ id: newId("cat"), label: "" }, { id: newId("cat"), label: "" }], items: [{ id: newId("item"), label: "" }] });
   ensure("answer", { correctCategoryByItem: {} });

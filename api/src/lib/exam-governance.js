@@ -440,6 +440,11 @@ async function transition(container, { examId, to, actor: rawActor, requestId, e
     const { summarizeFinalization } = require("./server-finalization");
     decision = summarizeFinalization(finalize(stored.exam));
     if (!decision.canFinalize) throw new GovernanceError(422, "FINALIZATION_REFUSED", "الإصدار لا يستوفي متطلبات الجاهزية للاعتماد على الخادم.", decision);
+    // Phase 16B-A — every simulation question must pin a package that EXISTS in storage with exactly that id / version / hash
+    // (finalization above only checks the reference's shape). deps-injectable for tests; the default reads the package store.
+    const simulationAvailability = typeof deps.simulationAvailability === "function" ? deps.simulationAvailability : require("./smartsim/package-store").examSimulationAvailabilityIssues;
+    const unavailable = await simulationAvailability(container, stored.exam);
+    if (unavailable.length) throw new GovernanceError(422, "SIMULATION_PACKAGE_UNAVAILABLE", "حزمة محاكاة مثبّتة في الامتحان غير متاحة في المخزن؛ لا يمكن إرسال الإصدار للمراجعة.", { issues: unavailable });
     next.reviewRevisionId = revisionId;
     next.reviewRevisionNumber = manifest.latestRevisionNumber;
     boundRevisionId = revisionId;

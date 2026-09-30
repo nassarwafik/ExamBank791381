@@ -1,0 +1,12 @@
+{
+  "schemaVersion": 1,
+  "packageId": "counter-sim",
+  "packageVersion": 1,
+  "title": "Counter",
+  "description": "A minimal single-file simulator: press + and the count is reported as the learner's state.",
+  "entry": "dist/index.html",
+  "runtime": "web",
+  "runtimeVersion": 1,
+  "responseSchemaVersion": 1,
+  "capabilities": { "autosave": true, "restore": true, "reset": true, "partialCredit": false, "offline": true }
+}

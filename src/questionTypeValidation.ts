@@ -4,6 +4,7 @@
 // legacy types keep their existing structural checks in examQuality). examQuality / finalization block on every error.
 import { isKnownQuestionType, effectiveQuestionTypeVersion, questionTypeDefinition, createVersionedRegistry } from "./questionTypeCatalog";
 import { MULTIPLE_SELECT_SCORING } from "./questionTypeScoring";
+import { validateSimulationReference } from "./smartsimManifest";
 
 export type QuestionTypeIssue = { code: string; message: string; severity: "error" | "warning"; path?: string };
 export type TypeValidator = (node: Record<string, unknown>, context: { version: number; part: boolean }) => QuestionTypeIssue[];
@@ -101,3 +102,6 @@ registerTypeValidator("categorization", 1, node => {
   }
   return out;
 });
+// Phase 16B-A — simulation@1: the ONLY configuration is the exact package reference; every problem blocks finalization.
+// Nothing here loads, fetches or executes the package — availability in storage is checked by the server governance gate.
+registerTypeValidator("simulation", 1, node => validateSimulationReference(node.simulation));

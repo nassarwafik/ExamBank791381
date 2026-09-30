@@ -411,8 +411,9 @@ describe("UX-7b-1 — source guards", () => {
       expect(EMOJI.test(withoutContentDetection), f + " must not carry emoji glyphs").toBe(false);
       expect(code(src)).not.toMatch(/localStorage|sessionStorage/);
     }
-    // Phase 16A — the six original members stay byte-identical (a permanent prefix); the two additive Wave 1 kinds follow.
-    expect(code(RAW_TS["./answerState.ts"])).toContain('export type Answer={kind:"choice";index:number}|{kind:"sequence";values:string[]}|{kind:"table";values:(string|boolean)[]}|{kind:"text";value:string}|{kind:"fields";values:Record<string,FieldValue>}|{kind:"compound";parts:Record<string,Answer>}|{kind:"multiChoice";optionIds:string[]}|{kind:"numeric";value:string;unit?:string};');
+    // Phase 16A — the six original members stay byte-identical (a permanent prefix); the two additive Wave 1 kinds follow;
+    // Phase 16B-A appends the additive "simulation" kind (bounded JSON state from a sandboxed simulator).
+    expect(code(RAW_TS["./answerState.ts"])).toContain('export type Answer={kind:"choice";index:number}|{kind:"sequence";values:string[]}|{kind:"table";values:(string|boolean)[]}|{kind:"text";value:string}|{kind:"fields";values:Record<string,FieldValue>}|{kind:"compound";parts:Record<string,Answer>}|{kind:"multiChoice";optionIds:string[]}|{kind:"numeric";value:string;unit?:string}|{kind:"simulation";state:JsonValue};');
     expect(code(RAW["./StudentQuestionCard.tsx"])).toContain('export type {Answer,FieldValue} from "./answerState";');
     expect(code(RAW["./StudentQuestionCard.tsx"])).toContain('<fieldset className="iex-options" aria-labelledby={textId}>');
     expect(code(RAW["./StudentQuestionCard.tsx"])).toContain('<input type="radio" name={id}');

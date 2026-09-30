@@ -55,7 +55,10 @@ const PRODUCTION_ROWS = [
   ["multipleSelect", "اختيار متعدد الإجابات", "choice", "auto", "acop", ["multiChoice"], false],
   ["numericResponse", "إجابة رقمية", "response", "auto", "aco", ["numeric"], false],
   ["matrix", "مصفوفة / شبكة اختيارات", "structured", "auto", "acop", ["fields"], false],
-  ["categorization", "تصنيف العناصر", "structured", "auto", "acop", ["fields"], false]
+  ["categorization", "تصنيف العناصر", "structured", "auto", "acop", ["fields"], false],
+  // Phase 16B-A — ONE universal interactive type: a sandboxed, teacher-uploaded simulation package (simulation@1). Manual-review
+  // only in 16B-A (uploaded code never grades); not a compound part (V1 decision, documented); interactive; offline-capable.
+  ["simulation", "محاكاة تفاعلية", "interactive", "manual", "mio", ["simulation"], false]
 ] as const;
 /** The production type identity as a TypeScript union — ONE source of truth with the runtime catalog. Registered plugin
  *  keys widen to `string` at the extension seams (they are runtime data, not compile-time identity). */

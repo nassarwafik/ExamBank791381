@@ -33,3 +33,5 @@ registerStudentRenderer("multipleSelect", 1, lazy(() => import("./student/Multip
 registerStudentRenderer("numericResponse", 1, lazy(() => import("./student/NumericResponseInput")));
 registerStudentRenderer("matrix", 1, lazy(() => import("./student/MatrixResponse")));
 registerStudentRenderer("categorization", 1, lazy(() => import("./student/CategorizationResponse")));
+// Phase 16B-A — the sandboxed simulation host (lazy: loaded only when a simulation question is rendered).
+registerStudentRenderer("simulation", 1, lazy(() => import("./student/SimulationResponse")));

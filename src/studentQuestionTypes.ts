@@ -1,3 +1,4 @@
+import type { SimulationQuestionConfig } from "./smartsimManifest";
 // Phase 14A — the student-facing question shape types, extracted verbatim from StudentQuestionCard.tsx into a pure module so
 // the exam structure helpers can be compiled for the server finalization authority without reaching a React component.
 // StudentQuestionCard re-exports them, so every existing importer is unchanged.
@@ -12,4 +13,4 @@ export type ImageAsset={dataUrl?:string};
 // A compound question's independent subpart. Reuses the same answer-control vocabulary as a whole
 // question so parts render through the exact same field/choice/text machinery (no second engine).
 export type QuestionPart={id:string;label?:string;text?:string;textHtml?:string;marks?:number;type:string;questionTypeVersion?:number;options?:Opt[];fields?:Field[];wordBank?:string[];cli?:string;tableHeaders?:string[];tableRows?:string[][];image?:{exists?:boolean;visible?:boolean;assets?:ImageAsset[]};images?:ImageAsset[]};
-export type Question={examQuestionId?:string;id?:string;number?:number;displayNumber?:string;text:string;textHtml?:string;marks:number;presentationType?:string;type?:string;questionTypeVersion?:number;options?:Opt[];fields?:Field[];wordBank?:string[];cli?:string;tableHeaders?:string[];tableRows?:string[][];parts?:QuestionPart[];groupId?:string;stimulus?:{title?:string;text?:string;image?:ImageAsset};image?:{exists?:boolean;visible?:boolean;assets?:ImageAsset[]};images?:ImageAsset[]};
+export type Question={examQuestionId?:string;id?:string;number?:number;displayNumber?:string;text:string;textHtml?:string;marks:number;presentationType?:string;type?:string;questionTypeVersion?:number;options?:Opt[];fields?:Field[];wordBank?:string[];cli?:string;tableHeaders?:string[];tableRows?:string[][];simulation?:SimulationQuestionConfig;parts?:QuestionPart[];groupId?:string;stimulus?:{title?:string;text?:string;image?:ImageAsset};image?:{exists?:boolean;visible?:boolean;assets?:ImageAsset[]};images?:ImageAsset[]};

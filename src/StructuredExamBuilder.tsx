@@ -53,6 +53,8 @@ import type { GovernanceService } from "./examGovernance";
 export type { GovernanceService } from "./examGovernance";
 import type { AssessmentPresetService } from "./presets/assessmentPresetClient";
 export type { AssessmentPresetService } from "./presets/assessmentPresetClient";
+import { SimulationServiceContext, type SimulationService } from "./smartsim/simulationService";
+export type { SimulationService } from "./smartsim/simulationService";
 
 // Phase 13B — the Question Bank picker is loaded only when a teacher opens it (its own chunk inside the builder chunk).
 const BankQuestionPicker = lazy(() => import("./BankQuestionPicker"));
@@ -114,6 +116,9 @@ type Props = {
   // zero questions) that the owner opens through its history authority — after the 13A unsaved-work guard ran here.
   presets?: AssessmentPresetService;
   onOpenExamFromPreset?: (exam: StructuredExam) => void;
+  // Phase 16B-A — the App-owned Simulation service (upload / library). Same pattern: the builder never receives a token; the
+  // lazy simulation editor reaches the service through context; without a service the upload / library actions are not offered.
+  simulations?: SimulationService;
 };
 
 const AUTOSAVE_DELAY_MS = 800;
@@ -125,7 +130,7 @@ const FLASH_MS = 1200;
 type ProductivityUi = { examId: string; ids: ReadonlySet<string>; filters: NavigatorFilters };
 const formatBackupTime = (iso: string) => { const t = Date.parse(iso); return Number.isFinite(t) ? new Date(t).toLocaleString("ar", { dateStyle: "medium", timeStyle: "short" }) : ""; };
 
-export default function StructuredExamBuilder({ exam, onChange, onSave, onExit, saving, notice, error, requestQuestionImage, onUndo, onRedo, canUndo = false, canRedo = false, saveState, recoveryScope, onRecover, backupStorage, autosaveDelayMs = AUTOSAVE_DELAY_MS, bankPicker, governance, presets, onOpenExamFromPreset }: Props) {
+export default function StructuredExamBuilder({ exam, onChange, onSave, onExit, saving, notice, error, requestQuestionImage, onUndo, onRedo, canUndo = false, canRedo = false, saveState, recoveryScope, onRecover, backupStorage, autosaveDelayMs = AUTOSAVE_DELAY_MS, bankPicker, governance, presets, onOpenExamFromPreset, simulations }: Props) {
   const [preview, setPreview] = useState<StructuredExam | null>(null);
   const [showIssues, setShowIssues] = useState(true);
   const { confirm, confirmDialog } = useConfirm();
@@ -447,6 +452,7 @@ export default function StructuredExamBuilder({ exam, onChange, onSave, onExit, 
   const totalMarks = computeTotalMarks(exam);
 
   return (
+    <SimulationServiceContext.Provider value={simulations}>
     <div className="sb-builder" dir="rtl">
       <header className="sb-toolbar">
         <div className="sb-toolbar-main">
@@ -624,6 +630,7 @@ export default function StructuredExamBuilder({ exam, onChange, onSave, onExit, 
         </p>
       </Dialog>
     </div>
+    </SimulationServiceContext.Provider>
   );
 }
 

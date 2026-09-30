@@ -38,7 +38,7 @@ describe("16A A18 — Question Type Palette", () => {
     await mount();
     const d = await openPalette();
     expect(d.getAttribute("dir") === "rtl" || d.closest("[dir=rtl]") !== null || document.documentElement.dir === "rtl").toBe(true);
-    const all = cards(d); expect(all.length).toBe(15);
+    const all = cards(d); expect(all.length).toBe(16);                                            // 16B-A adds simulation
     const ms = all.find(c => c.getAttribute("data-type-key") === "multipleSelect")!;
     expect(ms.textContent).toContain("اختيار متعدد الإجابات"); expect(ms.textContent).toContain("تصحيح تلقائي"); expect(ms.textContent).toContain("علامة جزئية"); expect(ms.textContent).toContain("يدعم السؤال المركب");
     const mcq = all.find(c => c.getAttribute("data-type-key") === "multipleChoice")!; expect(mcq.textContent).toContain("اختيار من متعدد");

@@ -2,6 +2,7 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.answered = answered;
+const smartsimState_1 = require("./smartsimState");
 const nonEmptyValue = (v) => (typeof v === "boolean" ? v : String(v ?? "").trim() !== "");
 function answered(a) {
     if (!a)
@@ -20,5 +21,7 @@ function answered(a) {
         return Array.isArray(a.optionIds) && a.optionIds.some(id => typeof id === "string" && id !== "");
     if (a.kind === "numeric")
         return typeof a.value === "string" && a.value.trim() !== "";
+    if (a.kind === "simulation")
+        return (0, smartsimState_1.isSimulationStateAnswered)(a.state);
     return false;
 }

@@ -1,4 +1,5 @@
 import type { AssessmentBlueprintV1, AssessmentMeta, AssessmentActivityDescriptor } from "./assessmentTypes";
+import type { SimulationQuestionConfig } from "./smartsimManifest";
 // Teacher-side structured-exam types for the Structured Exam Builder (Phase 2).
 //
 // Design contract: a builder object is ALREADY in the engine-native shape that PR #51's student
@@ -90,6 +91,8 @@ export type BuilderPart = {
   numeric?: NumericConfig;
   matrix?: MatrixConfig;
   categorization?: CategorizationConfig;
+  // Phase 16B-A — the EXACT simulation package reference (simulation@1); never "latest".
+  simulation?: SimulationQuestionConfig;
   fields?: BuilderField[];
   wordBank?: string[];
   cli?: string;
@@ -112,6 +115,8 @@ export type BuilderQuestion = {
   numeric?: NumericConfig;
   matrix?: MatrixConfig;
   categorization?: CategorizationConfig;
+  // Phase 16B-A — the EXACT simulation package reference (simulation@1); never "latest".
+  simulation?: SimulationQuestionConfig;
   fields?: BuilderField[];
   wordBank?: string[];
   cli?: string;
@@ -137,6 +142,8 @@ export type QuestionBody = {
   numeric?: NumericConfig;
   matrix?: MatrixConfig;
   categorization?: CategorizationConfig;
+  // Phase 16B-A — the EXACT simulation package reference (simulation@1); never "latest".
+  simulation?: SimulationQuestionConfig;
   fields?: BuilderField[];
   wordBank?: string[];
   cli?: string;

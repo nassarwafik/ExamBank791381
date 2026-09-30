@@ -30,3 +30,7 @@ scripts/output/
 *.njsproj
 *.sln
 *.sw?
+
+# Phase 16B-A — committed SmartSim example / template runtime sets are SOURCE (hand-written dist/), not build output
+!examples/smartsim/**/dist/
+!docs/smartsim/templates/**/dist/

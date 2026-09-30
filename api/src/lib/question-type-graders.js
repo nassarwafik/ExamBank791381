@@ -93,6 +93,10 @@ registerBuiltIn("matrix", (question, response, max) => {
   const r = scoring.scoreMatrix({ rows: Array.isArray(m.rows) ? m.rows : [], columns: Array.isArray(m.columns) ? m.columns : [], correctColumnByRow: answer.correctColumnByRow, values: response && response.kind === "fields" ? response.values : undefined, maxMarks: max });
   return { score: r.score, correct: r.correct, manualReview: false, parts: { correct: r.correctRows, total: r.totalRows } };
 });
+// Phase 16B-A — simulation@1 has ZERO automatic authority: the uploaded JavaScript can never grade. Whatever the response
+// state carries (score / passed / SMARTSIM_SCORE…) is ignored; the attempt goes to manual review with score 0. The 16B-B
+// assertion engine will register the authoritative grader for a FUTURE version — never by reading a number from the sandbox.
+registerBuiltIn("simulation", () => ({ score: 0, manualReview: true, correct: false }));
 registerBuiltIn("categorization", (question, response, max) => {
   const c = question.categorization && typeof question.categorization === "object" ? question.categorization : {};
   const answer = question.answer && typeof question.answer === "object" ? question.answer : {};
