@@ -357,6 +357,47 @@ Tree fingerprint before `dacbb1ad3a3bd6b2` → after `dacbb1ad3a3bd6b2` (identic
 
 **Validation (this follow-up commit):** `npx tsc -b` exit 0 · `npm test` **542 files / 6534 tests passed** (was 541 / 6510) · `npm run build` exit 0 · `npm run check:bundle` initial JS 118.7 KB gzip / budget 125 KB (unchanged; server-only fix) · `npm run lint` exit 0, 99 findings, finding-for-finding identical to baseline `6918ce1` — zero new warnings.
 
+## 18b. Final Independent Review Blocker — audit continuity
+
+Reviewed HEAD `cf5b8fcef1dab1ef7e8cc1ee78661f63698d3345`; base unmoved at `6918ce1…`; one normal follow-up commit.
+
+**Root cause.** The Review Fix 1 repair descriptor lived only in the bounded `manifest.commands` ring (64 entries). A
+committed mutation whose event write failed (`503 AUDIT_EVENT_PENDING`) that was never replayed could have its descriptor
+evicted by 64 later commands — leaving `eventCount` ahead of the persisted events with no way to reconstruct the exact event.
+
+**Design — mutation preflight audit repair (server-enforced continuity).** Before ANY new state-changing mutation
+(`createRevision`, every `transition`), after the manifest read and the capability check and BEFORE the replay check and
+any write, `ensureCommittedAudit()` identifies the most recent committed command deterministically — the command whose
+recorded `stateVersion` equals the manifest's current `stateVersion` (every committing mutation increments `stateVersion`
+and records exactly that number; a no-op createRevision records nothing) — and runs `ensureAuditEvent()` on it:
+- event present and identical ⇒ continue (one read, no write — the normal path stays cheap);
+- event missing ⇒ recreated EXACTLY from the committed descriptor (create-only; server actor / time / ids), then continue;
+- repair write fails ⇒ `503 AUDIT_EVENT_PENDING`, the new mutation does NOT execute (no revision, no CAS, no event);
+- event present but different ⇒ `500 AUDIT_INTEGRITY`, nothing advances, nothing is overwritten;
+- no command matches the current `stateVersion` ⇒ `500 AUDIT_INTEGRITY` (continuity cannot be verified; fail closed).
+
+Therefore `mutation N committed ⇒ event N exists ⇒ only then may mutation N+1 commit`: a command with an unresolved event is
+always the latest committed command, so it can never be pushed out of the ring while unresolved. The ring stays bounded, no
+event is ever written before a CAS, and same-requestId replay (Review Fix 1) is unchanged. Ordinary reads stay available
+while an event is pending; publication / assignment materialization stays fail-closed as before.
+
+**Fail-first (recorded on `cf5b8fc`, `scratchpad/14a/fail-first-fix2-cf5b8fc.log`):** `api/tests/exam-governance-reviewfix2-14a.test.js` → **5 failed / 2 passed** — F1, F2, F3, F4 and the enable / createRevision-gap case failed on the reviewed head (a new mutation committed past an unresolved audit event); F5 and F6 passed (they pin the cheap normal path and the same-requestId replay that must not regress).
+
+**Tests F1–F6:** F1 pending event blocks the next mutation with `503 AUDIT_EVENT_PENDING` (no write at all); F2 automatic exact repair then the new mutation, contiguous events, original actor / time / requestId / eventId; F3 70 attempted mutations against a gap whose own event blob keeps failing are all refused, the manifest never advances, the descriptor stays effective, recovery completes the trail, same-requestId replay still works; F4 conflicting event ⇒ `AUDIT_INTEGRITY` for every newer mutation, nothing advances or is overwritten; F5 normal path = one manifest write + one event write, illegal transition still writes nothing; F6 immediate replay unchanged; plus a revision-created gap blocking `submit-review` until repaired. Source guards extended (preflight before replay and before any write on both mutation paths, latest command found by `stateVersion`, preflight never swallows, repair never mints new ids / time / actor).
+
+**Mutation proofs P31–P34**
+
+| # | Mutation | Result | First failing behavioural test |
+|---|---|---|---|
+| P31 | remove mutation-preflight audit enforcement | **6 failed** · tree clean | × F1 — a pending published event blocks the NEXT mutation while storage still fails: 503 AUDIT_EVENT_PENDING, no commit, no stateVersion advance, no new event |
+| P32 | let the next mutation proceed when the repair returns `AUDIT_EVENT_PENDING` | **4 failed** · tree clean | × F1 — a pending published event blocks the NEXT mutation while storage still fails: 503 AUDIT_EVENT_PENDING, no commit, no stateVersion advance, no new event |
+| P33 | ignore an audit conflict and continue the new mutation | **2 failed** · tree clean | × F4 — a CONFLICTING event at the committed descriptor's authoritative name blocks every newer mutation with AUDIT_INTEGRITY; nothing advances, nothing is overwritten |
+| P34 | repair the old event with a new actor / time / eventId instead of the committed descriptor | **31 failed** · tree clean | × F1 — a pending published event blocks the NEXT mutation while storage still fails: 503 AUDIT_EVENT_PENDING, no commit, no stateVersion advance, no new event |
+
+Tree fingerprint before `f4e93ca9e3e92c60` → after `f4e93ca9e3e92c60` (identical); each mutation applied alone → both review-fix suites + the nine 14A suites (119 tests) → reverted.
+
+**Validation (this follow-up commit):** `npx tsc -b` exit 0 · `npm test` **543 files / 6542 tests passed** (was 542 / 6534) · `npm run build` exit 0 · `npm run check:bundle` initial JS 118.7 KB gzip / budget 125 KB (unchanged; server-only fix) · `npm run lint` exit 0, 99 findings, finding-for-finding identical to baseline `6918ce1` — zero new warnings.
+
 ## 19. Phase 14B boundary and non-goals
 
 14A delivers the secure primitives (immutable revisions, server lifecycle, CAS + idempotency, capability enforcement,

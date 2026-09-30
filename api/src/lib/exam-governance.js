@@ -26,7 +26,12 @@ const { countExamQuestions, examOfficialStats } = require("./exam-structure");
 //  • commit + audit-repair protocol (Review Fix 1): the audit event's identity/descriptor is allocated BEFORE the manifest
 //    CAS and stored in the command record; after the CAS the create-only event is ensured, and every replay of the same
 //    requestId re-ensures it (recreating the EXACT committed event when missing, failing closed on a conflicting one)
-//    before reporting success — so a committed transition can never end up without its immutable audit event.
+//    before reporting success — so a committed transition can never end up without its immutable audit event;
+//  • audit continuity (final review fix): before ANY new state-changing mutation the most recent committed command
+//    (the one whose recorded stateVersion equals the manifest's) has its event ensured first — repaired from its committed
+//    descriptor, accepted when identical, AUDIT_INTEGRITY when conflicting, AUDIT_EVENT_PENDING (no new mutation) when the
+//    repair write fails. mutation N committed ⇒ event N exists ⇒ only then may mutation N+1 commit, so an unresolved
+//    descriptor can never be evicted from the bounded command ring.
 class GovernanceError extends Error {
   constructor(status, code, message, details) {
     super(message || code);
@@ -184,17 +189,35 @@ async function ensureAuditEvent(container, examId, command, deps) {
   }
   const expected = eventFromAudit(examId, audit, command.requestId);
   const name = model.eventName(examId, audit.sequence, audit.eventId);
+  const conflict = () => new GovernanceError(500, "AUDIT_INTEGRITY", "يوجد حدث تدقيق مخالف باسم السجل المعتمد؛ لا يمكن الكتابة فوقه.");
+  // Read first: the normal path (event already committed) costs one read and writes nothing.
+  const present = await dlOf(deps)(container, name);
+  if (present) { if (stableStringify(present) === stableStringify(expected)) return present; throw conflict(); }
   try { await storage.uploadJsonConditional(container, name, expected, null); return expected; }
   catch (e) {
     if (storage.isConcurrencyConflict(e)) {
       const existing = await dlOf(deps)(container, name);
       if (existing && stableStringify(existing) === stableStringify(expected)) return existing;
-      throw new GovernanceError(500, "AUDIT_INTEGRITY", "يوجد حدث تدقيق مخالف باسم السجل المعتمد؛ لا يمكن الكتابة فوقه.");
+      throw conflict();
     }
     const pending = new GovernanceError(503, "AUDIT_EVENT_PENDING", "اكتملت العملية على الخادم لكن حدث التدقيق لم يُسجَّل بعد؛ أعد المحاولة بنفس requestId لإتمام التسجيل.");
     pending.cause = e;
     throw pending;
   }
+}
+// Audit continuity preflight: the most recent committed state-changing command is the one whose recorded stateVersion equals
+// the manifest's current stateVersion (every committing mutation increments stateVersion and records exactly that number;
+// a no-op createRevision records nothing). Its event must exist and match before any NEW mutation may commit. A manifest
+// whose latest committed command cannot be found fails closed: audit continuity cannot be verified.
+function latestCommittedCommand(manifest) {
+  const commands = Array.isArray(manifest.commands) ? manifest.commands : [];
+  for (let i = commands.length - 1; i >= 0; i--) { const c = commands[i]; if (c && c.stateVersion === manifest.stateVersion) return c; }
+  return null;
+}
+async function ensureCommittedAudit(container, examId, manifest, deps) {
+  const latest = latestCommittedCommand(manifest);
+  if (!latest) throw new GovernanceError(500, "AUDIT_INTEGRITY", "لا يمكن التحقق من استمرارية سجل التدقيق للحالة الحالية؛ لا يُسمح بتعديل جديد.");
+  await ensureAuditEvent(container, examId, latest, deps);
 }
 // The manifest as returned to callers: internal idempotency bookkeeping never leaves the server.
 function publicManifest(manifest) {
@@ -248,6 +271,7 @@ async function createRevision(container, { examId, exam, actor: rawActor, reques
   const content = canonicalizeExamContent(exam);
   if (content.examId !== examId) throw invalid("معرّف الامتحان في المحتوى لا يطابق الطلب.");
   const { manifest, etag } = await requireManifest(container, examId, deps);
+  await ensureCommittedAudit(container, examId, manifest, deps);          // audit continuity before any new mutation
   const recorded = replayOrConflict(manifest, requestId, "create-revision");
   if (recorded) { await ensureAuditEvent(container, examId, recorded, deps); return { manifest, created: recorded.result ? recorded.result.created === true : false, replayed: true }; }
   if (manifest.stateVersion !== expectedStateVersion) { const e = new GovernanceError(409, "STALE_STATE", STALE_MESSAGE); e.manifest = manifest; throw e; }
@@ -289,6 +313,7 @@ async function transition(container, { examId, to, actor: rawActor, requestId, e
   const action = ACTION_OF_TARGET[to];
   const { manifest, etag } = await requireManifest(container, examId, deps);
   requireCapability(actor, action, manifest.lifecycleState);
+  await ensureCommittedAudit(container, examId, manifest, deps);          // audit continuity before any new mutation
   const recorded = replayOrConflict(manifest, requestId, "transition:" + to);
   if (recorded) { await ensureAuditEvent(container, examId, recorded, deps); return { manifest, replayed: true, ...(recorded.result && recorded.result.decision ? { decision: recorded.result.decision } : {}) }; }
   if (manifest.stateVersion !== expectedStateVersion) { const e = new GovernanceError(409, "STALE_STATE", STALE_MESSAGE); e.manifest = manifest; throw e; }
@@ -418,5 +443,5 @@ module.exports = {
   GovernanceError, STALE_MESSAGE,
   getGovernanceStatus, enableGovernance, createRevision, transition, submitForReview, approve, publish, returnToDraft,
   listRevisions, loadRevision, listEvents, loadPublishedRevision, resolveGovernedExamSource,
-  writeRevisionDocument, writeEventDocument, ensureAuditEvent, publicManifest, rolesOf
+  writeRevisionDocument, writeEventDocument, ensureAuditEvent, ensureCommittedAudit, latestCommittedCommand, publicManifest, rolesOf
 };

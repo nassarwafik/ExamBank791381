@@ -84,6 +84,23 @@ describe("14A §52 — governance source guards", () => {
     // the command record carries the audit descriptor (ids / states / actor / time), never content
     expect(GOV).toMatch(/result: \{ revisionId: revision\.revisionId \}, audit \}/);
   });
+  it("Final review fix — audit continuity preflight: createRevision and every transition ensure the latest committed command's event BEFORE the replay check and BEFORE any write; the latest command is found by stateVersion, and a missing one fails closed", () => {
+    const body = GOV.slice(GOV.indexOf("async function createRevision("), GOV.indexOf("// ── history readers"));
+    const pre = [...body.matchAll(/await ensureCommittedAudit\(container, examId, manifest, deps\);/g)].map(m => m.index);
+    const replays = [...body.matchAll(/const recorded = replayOrConflict\(/g)].map(m => m.index);
+    const casIdx = [...body.matchAll(/await casManifest\(/g)].map(m => m.index);
+    expect(pre).toHaveLength(2); expect(replays).toHaveLength(2); expect(casIdx).toHaveLength(2);
+    pre.forEach((p, i) => { expect(p).toBeLessThan(replays[i]); expect(p).toBeLessThan(casIdx[i]); });
+    const finder = GOV.slice(GOV.indexOf("function latestCommittedCommand("), GOV.indexOf("async function ensureCommittedAudit("));
+    expect(finder).toMatch(/c\.stateVersion === manifest\.stateVersion/);
+    const preflight = GOV.slice(GOV.indexOf("async function ensureCommittedAudit("), GOV.indexOf("function publicManifest("));
+    expect(preflight).toMatch(/AUDIT_INTEGRITY/);
+    expect(preflight).not.toMatch(/catch/);                       // pending / integrity errors are never swallowed
+    // the repair always recreates the EXACT committed descriptor — never a fresh id / time / actor
+    const ensure = GOV.slice(GOV.indexOf("async function ensureAuditEvent("), GOV.indexOf("function latestCommittedCommand("));
+    expect(ensure).toMatch(/const expected = eventFromAudit\(examId, audit, command\.requestId\);/);
+    expect(ensure).not.toMatch(/newId\(|nowOf\(/);
+  });
   it("Review Fix 1 — the published loader reads the manifest through the ONE validated authority; a corrupt manifest is never legacy", () => {
     const loader = GOV.slice(GOV.indexOf("async function loadPublishedRevision"), GOV.indexOf("async function resolveGovernedExamSource"));
     expect(loader).toMatch(/await readManifest\(container, examId, deps\)/);
