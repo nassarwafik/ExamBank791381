@@ -273,30 +273,30 @@ Each mutation applied alone → the nine 14A suites (87 tests) → exact failure
 
 | # | Mutation | Result | First failing test |
 |---|---|---|---|
-| P1 | trust `exam.status === "final"` as published | **2 failed** · tree tree=clean | × the lifecycle authority never reads exam.status; the panel derives state from the server manifest only |
-| P2 | allow client `publishedRevisionId` to bind publication | **3 failed** · tree tree=clean | × publication and approval bind only the manifest's own pointers — no client revision id in the approve / publish paths |
-| P3 | overwrite an existing revision blob (unconditional write) | **3 failed** · tree tree=clean | × revision / event blobs are written create-only and the manifest only through a conditional (ETag) write; no unconditional uploadJson in the authority |
-| P4 | remove ETag / CAS protection on the manifest | **2 failed** · tree tree=clean | × revision / event blobs are written create-only and the manifest only through a conditional (ETag) write; no unconditional uploadJson in the authority |
-| P5 | allow a stale transition (skip expectedStateVersion) | **3 failed** · tree tree=clean | × correct expectedStateVersion succeeds; a stale one is 409 STALE_STATE and mutates nothing (no event, no revision) |
-| P6 | permit draft → published | **5 failed** · tree tree=clean | × illegal transitions are refused with 409 and mutate NOTHING (draft→approved, draft→published, in-review→published, approved→in-review) |
-| P7 | approve a client-supplied exam body instead of the stored review revision | **3 failed** · tree tree=clean | × approve binds reviewRevisionId; a client exam body / revisionId is ignored — P7 |
-| P8 | publish a client-supplied revision instead of `approvedRevisionId` | **2 failed** · tree tree=clean | × publication and approval bind only the manifest's own pointers — no client revision id in the approve / publish paths |
-| P9 | trust client actor id | **2 failed** · tree tree=clean | × actor identity and timestamps are server values: the function builds the actor from auth.user.sub and the lib stamps nowOf(deps) |
-| P10 | trust client timestamp | **2 failed** · tree tree=clean | × actor identity and timestamps are server values: the function builds the actor from auth.user.sub and the lib stamps nowOf(deps) |
-| P11 | trust client governance capability | **1 failed** · tree tree=clean | × capabilities are enforced per action from the server actor, never from the request — P11 |
-| P12 | skip server finalization validation | **4 failed** · tree tree=clean | × draft → in-review is refused (422) when the SERVER finalization decision blocks; the client's canFinalize flag is ignored — P12/P13 |
-| P13 | use the frontend `canFinalize` flag sent in the body | **1 failed** · tree tree=clean | × draft → in-review is refused (422) when the SERVER finalization decision blocks; the client's canFinalize flag is ignored — P12/P13 |
-| P14 | mutate the published revision when a new draft is saved | **4 failed** · tree tree=clean | × return to draft from in-review / approved / published keeps the published revision intact and clears review/approval pointers |
-| P15 | assignment uses the latest revision instead of the published one | **2 failed** · tree tree=clean | × resolveGovernedExamSource: legacy → {governed:false}; governed+published → the exact revision; governed unpublished → error |
-| P16 | a new publication rewrites the old assignment snapshot | **3 failed** · tree tree=clean | × a later draft and a later publication never rewrite an existing assignment; a NEW assignment binds the NEW publication — P15/P16 |
-| P17 | missing published revision falls back to the draft | **2 failed** · tree tree=clean | × the published loader never falls back to the latest / draft revision |
-| P18 | duplicate requestId creates a duplicate revision / event | **2 failed** · tree tree=clean | × retrying the SAME completed command replays the result: no duplicate revision, no double increment, no duplicate event, no double publish — P18 |
-| P19 | reading a legacy exam silently creates governance | **1 failed** · tree tree=clean | × a legacy exam has no governance: status is not governed and reading it creates NO blob |
-| P20 | audit event stores the complete exam body | **2 failed** · tree tree=clean | × one event per successful mutation with server actor/time and requestId; events reference revision ids and never carry the exam body, tokens or answer keys — P20 |
-| P21 | a student / anonymous request can use governance (auth removed) | **1 failed** · tree tree=clean | × anonymous, student and invalid tokens are rejected with 401; nothing is written |
-| P22 | signed bank image URL hashed / persisted as durable identity | **3 failed** · tree tree=clean | × createRevision requires draft state, the author capability and a matching exam id; the exam body is canonicalized (signed bank URLs never persisted) |
-| P23 | the published revision is deleted by a normal author operation | **5 failed** · tree tree=clean | × return to draft from in-review / approved / published keeps the published revision intact and clears review/approval pointers |
-| P24 | governance state derived from UI state (`exam.status`) instead of the server manifest | **5 failed** · tree tree=clean | × the lifecycle authority never reads exam.status; the panel derives state from the server manifest only |
+| P1 | trust `exam.status === "final"` as published | **2 failed** · tree clean | × the lifecycle authority never reads exam.status; the panel derives state from the server manifest only |
+| P2 | allow client `publishedRevisionId` to bind publication | **3 failed** · tree clean | × publication and approval bind only the manifest's own pointers — no client revision id in the approve / publish paths |
+| P3 | overwrite an existing revision blob (unconditional write) | **3 failed** · tree clean | × revision / event blobs are written create-only and the manifest only through a conditional (ETag) write; no unconditional uploadJson in the authority |
+| P4 | remove ETag / CAS protection on the manifest | **2 failed** · tree clean | × revision / event blobs are written create-only and the manifest only through a conditional (ETag) write; no unconditional uploadJson in the authority |
+| P5 | allow a stale transition (skip expectedStateVersion) | **3 failed** · tree clean | × correct expectedStateVersion succeeds; a stale one is 409 STALE_STATE and mutates nothing (no event, no revision) |
+| P6 | permit draft → published | **5 failed** · tree clean | × illegal transitions are refused with 409 and mutate NOTHING (draft→approved, draft→published, in-review→published, approved→in-review) |
+| P7 | approve a client-supplied exam body instead of the stored review revision | **3 failed** · tree clean | × approve binds reviewRevisionId; a client exam body / revisionId is ignored — P7 |
+| P8 | publish a client-supplied revision instead of `approvedRevisionId` | **2 failed** · tree clean | × publication and approval bind only the manifest's own pointers — no client revision id in the approve / publish paths |
+| P9 | trust client actor id | **2 failed** · tree clean | × actor identity and timestamps are server values: the function builds the actor from auth.user.sub and the lib stamps nowOf(deps) |
+| P10 | trust client timestamp | **2 failed** · tree clean | × actor identity and timestamps are server values: the function builds the actor from auth.user.sub and the lib stamps nowOf(deps) |
+| P11 | trust client governance capability | **1 failed** · tree clean | × capabilities are enforced per action from the server actor, never from the request — P11 |
+| P12 | skip server finalization validation | **4 failed** · tree clean | × draft → in-review is refused (422) when the SERVER finalization decision blocks; the client's canFinalize flag is ignored — P12/P13 |
+| P13 | use the frontend `canFinalize` flag sent in the body | **1 failed** · tree clean | × draft → in-review is refused (422) when the SERVER finalization decision blocks; the client's canFinalize flag is ignored — P12/P13 |
+| P14 | mutate the published revision when a new draft is saved | **4 failed** · tree clean | × return to draft from in-review / approved / published keeps the published revision intact and clears review/approval pointers |
+| P15 | assignment uses the latest revision instead of the published one | **2 failed** · tree clean | × resolveGovernedExamSource: legacy → {governed:false}; governed+published → the exact revision; governed unpublished → error |
+| P16 | a new publication rewrites the old assignment snapshot | **3 failed** · tree clean | × a later draft and a later publication never rewrite an existing assignment; a NEW assignment binds the NEW publication — P15/P16 |
+| P17 | missing published revision falls back to the draft | **2 failed** · tree clean | × the published loader never falls back to the latest / draft revision |
+| P18 | duplicate requestId creates a duplicate revision / event | **2 failed** · tree clean | × retrying the SAME completed command replays the result: no duplicate revision, no double increment, no duplicate event, no double publish — P18 |
+| P19 | reading a legacy exam silently creates governance | **1 failed** · tree clean | × a legacy exam has no governance: status is not governed and reading it creates NO blob |
+| P20 | audit event stores the complete exam body | **2 failed** · tree clean | × one event per successful mutation with server actor/time and requestId; events reference revision ids and never carry the exam body, tokens or answer keys — P20 |
+| P21 | a student / anonymous request can use governance (auth removed) | **1 failed** · tree clean | × anonymous, student and invalid tokens are rejected with 401; nothing is written |
+| P22 | signed bank image URL hashed / persisted as durable identity | **3 failed** · tree clean | × createRevision requires draft state, the author capability and a matching exam id; the exam body is canonicalized (signed bank URLs never persisted) |
+| P23 | the published revision is deleted by a normal author operation | **5 failed** · tree clean | × return to draft from in-review / approved / published keeps the published revision intact and clears review/approval pointers |
+| P24 | governance state derived from UI state (`exam.status`) instead of the server manifest | **5 failed** · tree clean | × the lifecycle authority never reads exam.status; the panel derives state from the server manifest only |
 
 Tree fingerprint before `afb79dc3674fde57` → after `afb79dc3674fde57` (identical); every mutation applied alone, reverted, re-fingerprinted.
 
