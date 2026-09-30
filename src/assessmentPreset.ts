@@ -184,7 +184,8 @@ export type PresetExtractionResult =
 /**
  * Source-design validation (pure, copies NOTHING). Order: source section identity (array, ≥ 1 section, every section a plain
  * object with a stable non-empty string id, ids unique — a duplicate is refused, never repaired or "first wins") → canonical
- * Blueprint validation with the REAL source section ids as the section context → canonical Quality Policy validation.
+ * Blueprint validation with the REAL source section ids as the section context → canonical Quality Policy validation ONLY
+ * when the Blueprint is structurally valid (Review Fix 2: policy semantics are downstream of Blueprint validity).
  * Any issue makes extraction impossible: copyBlueprintWithSectionRefs / copyPolicy assume runtime-valid collections.
  */
 export function validateSourceDesign(exam: unknown): { issues: PresetIssue[]; sectionIds: string[] } {
@@ -207,9 +208,13 @@ export function validateSourceDesign(exam: unknown): { issues: PresetIssue[]; se
   }
   if (exam.blueprint === undefined || exam.blueprint === null) add("BLUEPRINT_REQUIRED", "يحتاج القالب الأكاديمي إلى مخطط امتحان.", "blueprint");
   else {
-    for (const bi of validateBlueprint(exam.blueprint, { sectionIds })) add("BLUEPRINT_INVALID", bi.message, "blueprint." + (bi.path ?? ""), bi.refId);
+    const blueprintIssues = validateBlueprint(exam.blueprint, { sectionIds });
+    for (const bi of blueprintIssues) add("BLUEPRINT_INVALID", bi.message, "blueprint." + (bi.path ?? ""), bi.refId);
+    // Independent Review Fix 2 — a Quality Policy is defined AGAINST a Blueprint: the canonical policy validator assumes a
+    // structurally valid Blueprint (constraints collection, targets object). It runs ONLY when the Blueprint reported zero
+    // issues; a malformed Blueprint yields its Blueprint issues alone (fail closed) — never a downstream runtime exception.
     const bp = exam.blueprint;
-    if (isPlainObject(bp) && bp.qualityPolicy !== undefined) {
+    if (blueprintIssues.length === 0 && isPlainObject(bp) && bp.qualityPolicy !== undefined) {
       for (const qi of validateAssessmentQualityPolicy(bp.qualityPolicy, bp as unknown as AssessmentBlueprintV1)) add("QUALITY_POLICY_INVALID", qi.message, "blueprint.qualityPolicy." + (qi.path ?? ""), qi.ruleId);
     }
   }

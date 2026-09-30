@@ -216,7 +216,59 @@ constraint was retargeted to `ps-1` (silently). The RF8 UI case failed with `top
 
 Fingerprint before = after (`293a323fc6e16716`); 6 / 6 killed; RF5 / RF3 additionally prove that no preset section id is minted before validation.
 
-## 10. Phase 15B handoff
+## 10. Independent Review Fix 2 — Blueprint-safe policy validation
+
+**Root cause.** After Review Fix 1, `validateSourceDesign()` still invoked the canonical `validateAssessmentQualityPolicy()` even when
+`validateBlueprint()` had already reported issues. The policy validator is written against the Blueprint *contract*: it does
+`(blueprint?.constraints ?? []).map(...)` and `"totalQuestions" in targets` / `"totalMarks" in targets`. With
+`blueprint.constraints = {}` / `"broken"` the map threw, and with `blueprint.targets = "broken"` the `in` operator threw — after
+the Blueprint validator had correctly said `INVALID_CONSTRAINTS` / invalid targets. Head-build probe: `TypeError: ((intermediate
+value) ?? []).map is not a function`, `TypeError: Cannot use 'in' operator to search for 'totalQuestions' in broken`.
+
+**Why the gate is correct.** A Quality Policy is defined against a Blueprint. When the Blueprint is structurally invalid, policy
+semantics cannot be trusted, so returning the Blueprint issues alone is fail-closed and complete for the teacher: fix the Blueprint
+first; once it is valid the canonical policy validator is authoritative again. Blueprint-shape checks are not duplicated inside
+the preset module, and the canonical validators are not patched for Phase 15A (the narrowest safe fix).
+
+**Order now:**
+
+```
+source section identity → validateBlueprint
+→ IF Blueprint issues: return them (policy validator never sees the malformed Blueprint)
+→ ELSE validateAssessmentQualityPolicy → IF policy issues: return them
+→ allow-list copy → validate the resulting preset
+```
+
+**Fail-first on `3cb85cf` (`scratchpad/15a/fail-first-rf2-3cb85cf.log`).** `src/assessmentPreset.reviewfix2.test.ts` (RF9–RF14 + the
+Review Fix 1 invariants, 7 tests) and `src/presets/PresetLibraryPanel.reviewfix2.test.tsx` (2 UI cases): 6 / 9 failed — RF9, RF10,
+RF11, RF12 and both UI cases threw the runtime errors above; RF13 (valid Blueprint + malformed policy → `QUALITY_POLICY_INVALID`),
+RF14 (valid source unchanged) and the invariants passed on the head, as they must.
+
+**Audit outcome — the canonical validator is hardened too.** The RF2 UI case could not even be reached: the Builder's render calls
+`evaluateExamFinalization(exam)` (the 13C-C finalization authority, also compiled for the server), which fed the same malformed
+Blueprint into `validateAssessmentQualityPolicy()` and crashed the Builder (`StructuredExamBuilder.tsx:427` → `examFinalization.ts:40`
+→ `assessmentQualityPolicy.ts:34`); `QualityPolicyPanel` calls it the same way. Coverage already guards its Blueprint reads with
+`Array.isArray` (`assessmentBlueprintCoverage.ts`), so the policy validator was the one canonical module assuming structural validity
+of its Blueprint argument. The audit therefore proves the broader fix is correct: the validator now reads `constraints` and `targets`
+defensively (`Array.isArray(blueprint?.constraints) ? … : []`, `isPlainObject(blueprint?.targets) ? … : undefined`; `defaultQualityRule`
+likewise) and reports reference / target issues instead of throwing. Results for a valid Blueprint are unchanged (existing policy,
+gates, finalization and parity suites green; drift test regenerated). The preset module keeps its own gate: it never calls the
+policy validator on a Blueprint that reported issues, so the source result carries Blueprint issues alone.
+
+**Mutations RF2-M1–RF2-M6** (each alone, targeted suites, reverted, fingerprint identical):
+
+| # | Mutation | Must fail | Result |
+|---|---|---|---|
+| RF2-M1 | remove the `blueprintIssues.length === 0` gate (policy validator runs on a malformed Blueprint) | RF9 / RF10 or RF11 | **killed** — 5 failed / 46 (tree clean); failing: RF9, RF10, RF11, RF12, guard |
+| RF2-M2 | skip Quality Policy validation entirely | RF13 | **killed** — 3 failed / 46 (tree clean); failing: guard, RF13, RF3 |
+| RF2-M3 | continue after Blueprint errors and sanitize malformed constraints / targets ad hoc (silent repair, Blueprint issues dropped) | source rejected, not repaired | **killed** — 11 failed / 46 (tree clean); failing: guard, RF1, RF2, RF4b, RF5, RF7, RF9, RF10, RF11, RF12 |
+| RF2-M4 | gate only on `Array.isArray(constraints)` — malformed targets reach policy validation | RF11 / RF12 | **killed** — 3 failed / 46 (tree clean); failing: RF11, RF12, guard |
+| RF2-M5 | break valid extraction (section constraints dropped, theme dropped) | RF14 | **killed** — 16 failed / 46 (tree clean); failing: RF14, RF6 + 14 15A-model tests |
+| RF2-M6 | revert the canonical validator hardening (copy-first Blueprint reads restored) | UI + audit tests | **killed** — 4 failed / 46 (tree clean); failing: audit, UI |
+
+Fingerprint before = after (`9982e8283dce17b9`); 6 / 6 killed.
+
+## 11. Phase 15B handoff
 
 - **Sharing / catalog**: add an institutional namespace (`assessment-preset-catalog/…`) with explicit publish / unpublish of a
   preset *version*; personal presets stay private; the summary shape is already share-ready (no owner secrets).

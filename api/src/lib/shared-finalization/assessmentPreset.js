@@ -206,10 +206,11 @@ function validateSourceDesign(exam) {
     if (exam.blueprint === undefined || exam.blueprint === null)
         add("BLUEPRINT_REQUIRED", "يحتاج القالب الأكاديمي إلى مخطط امتحان.", "blueprint");
     else {
-        for (const bi of (0, assessmentBlueprint_1.validateBlueprint)(exam.blueprint, { sectionIds }))
+        const blueprintIssues = (0, assessmentBlueprint_1.validateBlueprint)(exam.blueprint, { sectionIds });
+        for (const bi of blueprintIssues)
             add("BLUEPRINT_INVALID", bi.message, "blueprint." + (bi.path ?? ""), bi.refId);
         const bp = exam.blueprint;
-        if (isPlainObject(bp) && bp.qualityPolicy !== undefined) {
+        if (blueprintIssues.length === 0 && isPlainObject(bp) && bp.qualityPolicy !== undefined) {
             for (const qi of (0, assessmentQualityPolicy_1.validateAssessmentQualityPolicy)(bp.qualityPolicy, bp))
                 add("QUALITY_POLICY_INVALID", qi.message, "blueprint.qualityPolicy." + (qi.path ?? ""), qi.ruleId);
         }

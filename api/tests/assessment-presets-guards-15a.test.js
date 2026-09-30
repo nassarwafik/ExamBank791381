@@ -48,6 +48,11 @@ describe("15A §62 — pure model guards", () => {
     expect(source).toMatch(/validateBlueprint\(exam\.blueprint, \{ sectionIds \}\)/); expect(source).toMatch(/validateAssessmentQualityPolicy\(bp\.qualityPolicy/);
     expect(source).toMatch(/add\("DUPLICATE_SOURCE_SECTION_ID"/); expect(source).toMatch(/add\("INVALID_SOURCE_SECTION_ID"/);
     expect(source).not.toMatch(/first wins|seen\.has\(id\)\) \{ sectionIds/);
+    // Review Fix 2 — the canonical policy validator runs ONLY on a Blueprint that reported zero issues (no ad-hoc sanitizing)
+    expect(source).toMatch(/const blueprintIssues = validateBlueprint\(exam\.blueprint, \{ sectionIds \}\);/);
+    expect(source).toMatch(/if \(blueprintIssues\.length === 0 && isPlainObject\(bp\) && bp\.qualityPolicy !== undefined\)/);
+    expect(source.indexOf("blueprintIssues.length === 0")).toBeLessThan(source.indexOf("validateAssessmentQualityPolicy("));
+    expect(source).not.toMatch(/Array\.isArray\(bp\.constraints\)|constraints: \[\]|targets: \{\}|sanitize|repair/);
     // the null wrapper delegates to the fail-closed authority (no second copy path)
     expect(MODEL).toMatch(/return result\.ok \? result\.preset : null;/);
     // the panel never shows an internal runtime message: only PresetRequestError text or a fixed phrase reaches the alert
