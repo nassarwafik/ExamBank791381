@@ -115,7 +115,9 @@ test("CB1 retryable callback failures (network, timeout, 5xx, 408, 429) are retr
   const dir = tmpJournalDir(), a = job(6);
   const script = [{ delivered: false, retryable: true, errorClass: "network" }, { delivered: false, retryable: true, errorClass: "timeout" }, { delivered: false, retryable: true, status: 503, errorClass: "http" }, { delivered: false, retryable: true, status: 429, errorClass: "http" }];
   const at = [];
-  const api = fakeApi(async n => { at.push(Date.now()); return script[n - 1] || null; });
+  // the backoff runs from each attempt's DURABLE reservation (callback.lastAt, committed before the send), not from the moment the
+  // send happens: a slow reservation fsync delays one send without shifting the schedule (CI: send gaps [111, 3, 71, 71])
+  const api = fakeApi(async n => { at.push(Date.parse(recordOf(dir, a.jobId).callback.lastAt)); return script[n - 1] || null; });
   const h = await boot(dir, { api, callbackPolicy: { ...FAST, baseMs: 20, capMs: 70, maxAttemptsPerWindow: 8 } });
   await h.q.submit(a);
   await waitFor(() => (recordOf(dir, a.jobId) || {}).state === "confirmed", { timeoutMs: 4000 });
@@ -124,7 +126,7 @@ test("CB1 retryable callback failures (network, timeout, 5xx, 408, 429) are retr
   assert.equal(rec.callback.attempts, 5);
   assert.equal(rec.callback.confirmedAs, "complete");
   const gaps = at.slice(1).map((t, i) => t - at[i]);
-  assert.ok(gaps[0] >= 15 && gaps[1] >= 35, JSON.stringify(gaps));                           // 20 ms, 40 ms, then capped at 70 ms
+  assert.ok(gaps[0] >= 20 && gaps[1] >= 40 && gaps[2] >= 70 && gaps[3] >= 70, JSON.stringify(gaps));   // 20 ms, 40 ms, then capped at 70 ms
   assert.ok(gaps.every(g => g < 400), JSON.stringify(gaps));
   assert.equal(h.sandbox.count(a.jobId), 1);
   await crash(h);
