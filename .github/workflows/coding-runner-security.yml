@@ -1,0 +1,41 @@
+name: Coding Runner Security & Smoke Tests
+
+# Phase 17B — the isolated Coding Runner (runner/): gateway unit tests, then the three worker images are built from their
+# digest-pinned official bases, then REAL Docker functional / security / end-to-end smoke tests run against them.
+# This workflow uses no secrets and no cloud credentials (TEST keys are generated inside the tests); it never deploys anything.
+# A missing Docker daemon or worker image FAILS the run — nothing is skipped.
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    types: [opened, synchronize, reopened]
+    branches:
+      - main
+
+permissions:
+  contents: read
+
+jobs:
+  runner:
+    name: Runner unit, Docker security & smoke tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v5
+      - name: Set up Node.js
+        uses: actions/setup-node@v5
+        with:
+          node-version: 22
+      - name: Runner unit tests (no Docker)
+        run: npm --prefix runner test
+      - name: Docker environment
+        run: |
+          docker version --format 'client {{.Client.Version}} / server {{.Server.Version}}'
+          docker info --format 'cgroup v{{.CgroupVersion}}; security: {{.SecurityOptions}}'
+      - name: Build worker images (python@1, java@1, csharp@1)
+        run: npm --prefix runner run build:images
+      - name: Docker functional, security and end-to-end smoke tests
+        run: npm --prefix runner run test:docker
+      - name: No sandbox container left behind
+        run: test -z "$(docker ps -aq --filter label=smartassess.coding-runner=1)"

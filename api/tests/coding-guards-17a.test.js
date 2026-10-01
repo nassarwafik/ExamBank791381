@@ -66,9 +66,12 @@ describe("C32 — no production source path can execute student code", () => {
     }
     expect(hits).toEqual([]);
   });
-  it("no Docker / container orchestration / process spawning is introduced (Phase 17B owns the isolated runner deployment)", () => {
+  it("no Docker / container orchestration / process spawning in the application (Phase 17B: only the isolated runner/ subtree)", () => {
     for (const f of CODING_FILES) expect(read(f), f).not.toMatch(/docker|dockerode|kubectl|containerd|process\.binding|\.spawn\(/i);
-    expect(exists("api/src/functions/coding-run.js")).toBe(false);                                  // no /api/coding/run in 17A (deferred, documented)
+    // Phase 17B (deliberate pin update): /api/coding/run now exists — it only FORWARDS to the remote runner and contains no
+    // container / process code itself (the global scan above covers it as well).
+    expect(exists("api/src/functions/coding-run.js")).toBe(true);
+    expect(read("api/src/functions/coding-run.js")).not.toMatch(/docker|dockerode|kubectl|containerd|child_process|\.spawn\(/i);
   });
   it("the server provider never falls back to local execution: without a trusted provider it answers EXECUTION_UNAVAILABLE", () => {
     const src = read("api/src/lib/coding/execution-provider.js");

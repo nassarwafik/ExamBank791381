@@ -1,0 +1,21 @@
+{
+  "language": "csharp",
+  "languageVersion": 1,
+  "toolchain": ".NET SDK 10.0.401 / runtime 10.0.12 LTS, Roslyn csc offline (official mcr.microsoft.com/dotnet/sdk:10.0)",
+  "sourceFile": "Program.cs",
+  "env": {
+    "DOTNET_SYSTEM_GLOBALIZATION_INVARIANT": "1",
+    "DOTNET_CLI_TELEMETRY_OPTOUT": "1",
+    "DOTNET_NOLOGO": "1",
+    "DOTNET_EnableDiagnostics": "0",
+    "DOTNET_EnableWriteXorExecute": "0",
+    "DOTNET_TieredPGO": "0"
+  },
+  "compile": {
+    "argv": ["/usr/share/dotnet/dotnet", "/opt/runner/roslyn/csc.dll", "-nologo", "-noconfig", "-nostdlib", "-langversion:latest", "-nullable:enable", "-optimize+", "-target:exe", "-utf8output", "-warn:0", "@/opt/runner/references.rsp", "-out:/workspace/out/Main.dll", "/opt/runner/GlobalUsings.cs", "/workspace/Program.cs"]
+  },
+  "run": {
+    "argv": ["/usr/share/dotnet/dotnet", "exec", "--runtimeconfig", "/opt/runner/Main.runtimeconfig.json", "/workspace/out/Main.dll"],
+    "env": { "DOTNET_GCHeapHardLimit": "{memoryBytesHex}" }
+  }
+}

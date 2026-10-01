@@ -292,6 +292,11 @@ Server (`api/src/lib/coding/execution-provider.js`):
   is derived internally (none). A run route needs per-attempt context validation and rate limiting (§13), which belong
   with the executor in 17B. No unbounded execution endpoint exists.
 
+> **Forward reference (Phase 17B).** The remote gateway provider, `GET /api/coding/capabilities`, `POST /api/coding/run`
+> (practice runs only), the distributed run budget and the isolated `runner/` subtree are specified in
+> [`enterprise-coding-assessment-17b.md`](enterprise-coding-assessment-17b.md). Without runner configuration the
+> provider is still UNAVAILABLE (fail closed).
+
 ## 12. Security boundary — why Azure Functions never execute code
 
 ```
@@ -319,6 +324,9 @@ SmartAssess API ──(authenticated, minimal request)──▶ Execution Gatewa
   SmartSim runtime; its suites, including the real-browser isolation proof, were re-run.
 
 ## 13. Future authoritative flow (17B) and abuse model
+
+> **Forward reference.** Phase 17B ships **practice** execution only (17B doc §1); the authoritative hidden-test flow below
+> is Phase **17C**. The 17B run budget is 20 runs / 5 minutes per student + assignment (17B doc §9).
 
 ```
 student submits source
@@ -365,6 +373,11 @@ The teacher's manual marks are the official grade. The UI never claims automatic
 ## 16. Known deferrals (17B and later)
 
 Phase 17B must initially build isolated execution toolchains **only** for **Python, Java and C#** (the V1 registry).
+
+> **Forward reference.** Delivered in Phase 17B: the isolated workers + gateway, the three toolchain images, capability
+> discovery, compile / run / timeouts / memory / output limits, the run budget, observability and the authenticated run
+> route — see [`enterprise-coding-assessment-17b.md`](enterprise-coding-assessment-17b.md). Hidden-test execution and
+> weighted automatic grading move to Phase 17C.
 
 
 - **17B:**

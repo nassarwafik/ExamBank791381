@@ -132,7 +132,10 @@ describe("C21 / C22 — code answer autosaves through the existing pipeline and 
         expect(v, "storage value of " + k).not.toMatch(/print\(1/);
       }
     }
-    expect(calls.every(c => /\/api\/student-(submission|assignment)\//.test(c.url))).toBe(true);
+    // Phase 17B (deliberate pin update): the coding renderer may ask ONCE which languages the trusted runner offers
+    // (GET /api/coding/capabilities, through the exam page's attempt seam); it never runs code on its own and adds no
+    // other request — persistence is still only the existing student-submission draft pipeline.
+    expect(calls.filter(c => !/\/api\/student-(submission|assignment)\//.test(c.url)).map(c => c.method + " " + c.url)).toEqual(["GET /api/coding/capabilities"]);
     expect(posts("saveDraft").length).toBeLessThanOrEqual(2);                                          // debounced by the existing cadence, not per keystroke
   });
 });
