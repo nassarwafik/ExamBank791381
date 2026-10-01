@@ -22,6 +22,7 @@ import ExamSectionContext from "./student/exam/ExamSectionContext";
 import ExamReviewScreen from "./student/exam/ExamReviewScreen";
 import StructuredExamCover from "./StructuredExamCover";
 import ExamGeneralInstructions from "./ExamGeneralInstructions";
+import {StudentAttemptContext,type StudentAttemptApi} from "./questionTypes/studentAttemptContext";
 import {normalizeCoverPage,examMarksDistribution,type ExamCoverPage,type MarksDistribution} from "./examCover";
 import {countdownTone} from "./examTimer";
 import {isUnexpectedStatus,trackingSuffix} from "./lib/requestTrace";
@@ -139,6 +140,9 @@ export default function StudentExamPage({token,assignment,studentName,className,
 
  async function subApi<T>(options:RequestInit={}):Promise<T>{const h=new Headers(options.headers||{});h.set("Content-Type","application/json");h.set("x-student-token",token);h.set("Authorization","Bearer "+token);const r=await fetch("/api/student-submission/"+encodeURIComponent(assignment.assignmentId),{...options,headers:h}),j=await r.json() as T&{error?:string};if(r.status===401){onLogout();throw new ApiError(401,"انتهت الجلسة.")}if(!r.ok)throw new ApiError(r.status,j.error||"حدث خطأ.",r.headers?.get?.("x-request-id")||"");return j}
  const api=subApi;
+ // Phase 17B — the generic attempt seam for registered renderers (coding practice runs): same-origin /api/ paths only; the
+ // token is added HERE and never handed to the renderer, the Answer, storage or the builder.
+ const attemptApi=useMemo<StudentAttemptApi>(()=>({assignmentId:assignment.assignmentId,request:(path,init={})=>{if(!path.startsWith("/api/")||path.includes("//"))return Promise.reject(new Error("path"));const h=new Headers(init.headers||{});h.set("x-student-token",token);h.set("Authorization","Bearer "+token);return fetch(path,{...init,headers:h})}}),[assignment.assignmentId,token]);
  // Re-anchor the local countdown clock to a fresh server state (serverNow + effectiveAttemptEndsAt).
  const anchorClock=useCallback((st:State)=>{
   const end=st.effectiveAttemptEndsAt?Date.parse(st.effectiveAttemptEndsAt):0;
@@ -755,13 +759,13 @@ export default function StudentExamPage({token,assignment,studentName,className,
       compact section context; flat questions through the same StudentQuestionCard as before. Keys are unchanged. */}
   {view==="review"?(
    <ExamReviewScreen title={assignment.title} pages={pages} answers={answers} sections={structured?norm.sections:[]} headingRef={reviewHeadingRef} onJump={goTo} onBackToAnswering={backToAnswering} onSubmit={()=>{void submit()}} submitBusy={submitBusy} submitDisabled={submitBusy||!writable}/>
-  ):currentPage?(()=>{const page=currentPage,id=page.id,q=page.question;return <section className="iex-page" aria-labelledby="iex-page-heading" key={id}>
+  ):currentPage?(()=>{const page=currentPage,id=page.id,q=page.question;return <StudentAttemptContext.Provider value={attemptApi} key={id}><section className="iex-page" aria-labelledby="iex-page-heading">
    <h2 id="iex-page-heading" className="iex-page-heading" tabIndex={-1} ref={questionHeadingRef}>السؤال {q.displayNumber??(currentIndex+1)} من {pages.length}</h2>
    {page.section&&<ExamSectionContext section={page.section} sectionNumber={page.sectionIndex+1} positionInSection={page.positionInSection} sectionSize={page.sectionSize} firstInSection={page.firstInSection} answers={answers}/>}
    {page.section
     ?<StructuredSectionQuestion section={page.section} q={q} questionIndex={page.positionInSection} globalIndex={currentIndex} answers={answers} countedKeys={currentCountedKeys} showStimulus={!!q.groupId} disabled={inputsDisabled} onChoice={setChoice} onSeq={setSeq} onTable={setTable} onText={(qid2,v)=>setAnswers(x=>({...x,[qid2]:{kind:"text",value:v}}))} onField={setField} onPart={setPart} onAnswer={setAnswer}/>
     :<StudentQuestionCard q={q} index={currentIndex} id={id} answer={answers[id]} onChoice={n=>setChoice(id,n)} onSeq={(n,v)=>setSeq(id,n,v)} onTable={(n,v)=>setTable(id,n,v)} onText={v=>setAnswers(x=>({...x,[id]:{kind:"text",value:v}}))} onAnswer={next=>setAnswer(id,next)} disabled={inputsDisabled}/>}
-  </section>})():<p className="iex-loading" role="status">لا توجد أسئلة في هذا الامتحان.</p>}
+  </section></StudentAttemptContext.Provider>})():<p className="iex-loading" role="status">لا توجد أسئلة في هذا الامتحان.</p>}
   {view==="answer"&&<ExamBottomNavigation index={currentIndex} total={pages.length} onPrevious={goPrevious} onNext={goNext} onReview={openReview}/>}
   <QuestionNavigatorDialog open={navOpen} onClose={()=>setNavOpen(false)} pages={pages} answers={answers} currentIndex={view==="answer"?currentIndex:-1} onJump={goTo} answeredCount={answeredPages}/>
   {confirmDialog}

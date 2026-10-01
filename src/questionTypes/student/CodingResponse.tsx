@@ -1,12 +1,14 @@
-import { useContext, useMemo, useState } from "react";
+import { useContext, useEffect, useMemo, useState } from "react";
 import type { StudentRendererProps } from "../registryTypes";
 import CodingEditor from "../../coding/CodingEditor";
-import { CodingExecutionContext, EXECUTION_STATUS_LABELS, RUN_UNAVAILABLE_MESSAGE, canRun } from "../../coding/codingExecution";
-import { CODE_SOURCE_MAX_BYTES, codingLanguage, isCodingLanguage, projectCodingConfigForStudent } from "../../codingQuestion";
+import { CodingExecutionContext, EXECUTION_STATUS_LABELS, RUN_STDIN_MAX_BYTES, RUN_UNAVAILABLE_MESSAGE, canRun, runErrorMessage, type CodingCapabilities } from "../../coding/codingExecution";
+import { createApiCodingService, loadCodingCapabilities, type CodingRunFailure } from "../../coding/codingRunClient";
+import { StudentAttemptContext } from "../studentAttemptContext";
+import { CODE_SOURCE_MAX_BYTES, codingLanguage, isCodingLanguage, projectCodingConfigForStudent, utf8ByteLength } from "../../codingQuestion";
 import { compareOutput, normalizeExecutionResult, type CodeExecutionResult } from "../../codingContract";
 import { useConfirm } from "../../ui/useConfirm";
 
-// Phase 17A — coding@1 student renderer (lazy). ONE component for the student exam AND the teacher preview (ExamPreview
+// Phase 17A / 17B — coding@1 student renderer (lazy). ONE component for the student exam AND the teacher preview (ExamPreview
 // renders the same StudentQuestionCard). It reads ONLY the allow-listed public projection of `q.coding` (so even a teacher-
 // side question handed to it can never put a hidden test or a reference solution into the DOM or component state) and emits
 // the canonical Answer {kind:"code", language, languageVersion, source} through the generic onAnswer seam — the EXISTING
@@ -14,16 +16,31 @@ import { useConfirm } from "../../ui/useConfirm";
 //   • starter code fills the editor; nothing is recorded until the student edits or picks a language;
 //   • switching language on untouched code loads that language's starter; edited code is NEVER destroyed;
 //   • «استعادة الكود الابتدائي» goes through the shared ConfirmDialog when meaningful source would be lost;
-//   • «تشغيل» exists ONLY when a trusted execution provider reports the selected language (none in 17A): results are
-//     ephemeral practice evidence, rendered as TEXT, never stored in the Answer and never an official score.
-type Run = { testId?: string; title?: string; result: CodeExecutionResult; sample?: string };
+//   • «تشغيل» (Phase 17B) exists ONLY when the trusted runner reports the selected language: in the student exam the service
+//     comes from the attempt seam (authenticated /api/coding/*), in tests from CodingExecutionContext; the teacher preview has
+//     neither and shows the unavailable notice. One click = one practice run with the chosen stdin (a public sample's input or
+//     custom input ≤ 16 KB). Results are ephemeral practice evidence rendered as TEXT (LTR, bounded scroll), announced politely,
+//     never stored in the Answer and never a grade; a sample comparison is labelled «للتدريب فقط».
+type Run = { title?: string; result: CodeExecutionResult; sample?: string };
 
-export default function CodingResponse({ q, answer, onAnswer, disabled, labelPrefix }: StudentRendererProps) {
+export default function CodingResponse({ q, id, answer, onAnswer, disabled, labelPrefix }: StudentRendererProps) {
   const cfg = useMemo(() => projectCodingConfigForStudent((q as { coding?: unknown }).coding), [q]);
-  const exec = useContext(CodingExecutionContext);
+  const injected = useContext(CodingExecutionContext);
+  const attempt = useContext(StudentAttemptContext);
   const { confirm, confirmDialog } = useConfirm();
-  const [runs, setRuns] = useState<Run[]>([]);
+  const [run, setRun] = useState<Run | null>(null);
+  const [runError, setRunError] = useState<string>("");
   const [running, setRunning] = useState(false);
+  const [stdin, setStdin] = useState<string>(() => cfg?.publicTests?.[0]?.input ?? "");
+  const [remoteCaps, setRemoteCaps] = useState<CodingCapabilities | null>(null);
+  useEffect(() => {
+    if (injected || !attempt) return;
+    let live = true;
+    void loadCodingCapabilities(attempt).then(c => { if (live) setRemoteCaps(c); });   // cached per attempt seam: one request
+    return () => { live = false; };
+  }, [injected, attempt]);
+  const exec = useMemo(() => injected ?? (attempt && remoteCaps ? createApiCodingService(attempt, id, remoteCaps) : undefined), [injected, attempt, remoteCaps, id]);
+
   const allowed = cfg?.allowedLanguages ?? [];
   const valid = !!cfg && allowed.length > 0 && allowed.every(isCodingLanguage) && typeof cfg.defaultLanguage === "string" && allowed.includes(cfg.defaultLanguage);
   if (!valid || !cfg) return <div className="cx-coding" data-testid="coding-config-invalid" role="note">إعداد سؤال البرمجة غير صالح أو يستخدم لغة غير مدعومة؛ لا يمكن عرض محرر الكود. أبلغ المعلم.</div>;
@@ -36,7 +53,7 @@ export default function CodingResponse({ q, answer, onAnswer, disabled, labelPre
   const limit = Math.min(CODE_SOURCE_MAX_BYTES, cfg.limits?.sourceBytes ?? CODE_SOURCE_MAX_BYTES);
   const emit = (lang: string, src: string) => onAnswer({ kind: "code", language: lang, languageVersion: codingLanguage(lang)!.version, source: src });
   const untouched = !code || code.source === starter(code.language) || code.source.trim() === "";
-  const changeLanguage = (next: string) => { if (!allowed.includes(next) || next === language) return; setRuns([]); emit(next, untouched ? starter(next) : source); };
+  const changeLanguage = (next: string) => { if (!allowed.includes(next) || next === language) return; setRun(null); setRunError(""); emit(next, untouched ? starter(next) : source); };
   const reset = async () => {
     const lost = source.trim() !== "" && source !== starter(language);
     if (lost && !(await confirm({ title: "استعادة الكود الابتدائي", message: "سيُستبدل الكود الحالي بالكود الابتدائي للغة " + def.label + ".\nلا يمكن التراجع عن هذا الإجراء.", confirmLabel: "استعادة", cancelLabel: "إلغاء", tone: "danger" }))) return;
@@ -44,19 +61,23 @@ export default function CodingResponse({ q, answer, onAnswer, disabled, labelPre
   };
   const runnable = canRun(exec, language, def.version);
   const samples = cfg.publicTests ?? [];
-  const run = async () => {
-    if (!exec || !runnable || running) return;
+  const stdinTooLarge = utf8ByteLength(stdin) > RUN_STDIN_MAX_BYTES;
+  const loading = !injected && !!attempt && !remoteCaps;
+  const execute = async () => {
+    if (!exec || !runnable || running || stdinTooLarge) return;
     setRunning(true);
-    const cases = samples.length ? samples : [{ id: undefined, title: undefined, input: "", sampleOutput: undefined }];
-    const out: Run[] = [];
-    for (const t of cases) {
-      let result: CodeExecutionResult;
-      try { result = normalizeExecutionResult(await exec.run({ language, languageVersion: def.version, source, stdin: t.input, ...(t.id ? { testId: t.id } : {}) }), cfg.limits?.outputBytes ?? 65536); }
-      catch { result = { status: "internal-error", stdout: "", stderr: "" }; }
-      out.push({ testId: t.id, title: t.title, result, sample: t.sampleOutput });
+    setRunError("");
+    const sample = samples.find(t => t.input === stdin);
+    try {
+      const raw = await exec.run({ language, languageVersion: def.version, source, stdin, ...(sample?.id ? { testId: sample.id } : {}) });
+      setRun({ title: sample?.title, result: normalizeExecutionResult(raw, cfg.limits?.outputBytes ?? 65536), sample: sample?.sampleOutput });
+    } catch (e) {
+      setRun(null);
+      const f = e as Partial<CodingRunFailure>;
+      setRunError(typeof f.code === "string" ? runErrorMessage(f.code, f.retryAfterSeconds) : runErrorMessage("EXECUTION_FAILED"));
+    } finally {
+      setRunning(false);
     }
-    setRuns(out);
-    setRunning(false);
   };
 
   return (
@@ -81,16 +102,25 @@ export default function CodingResponse({ q, answer, onAnswer, disabled, labelPre
         </section>)}
       </div>}
       {runnable && !disabled
-        ? <button type="button" className="cx-run-button" onClick={() => void run()} disabled={running}>تشغيل</button>
-        : <p className="cx-run-note" data-testid="coding-run-unavailable" role="note">{RUN_UNAVAILABLE_MESSAGE}</p>}
-      {runs.length > 0 && <div aria-live="polite">{runs.map((r, i) => (
-        <div key={r.testId || i} className="cx-result" data-testid="coding-result" data-status={r.result.status}>
-          <span className="cx-result-status">{(r.title ? r.title + ": " : "") + EXECUTION_STATUS_LABELS[r.result.status]}</span>
-          {r.result.status === "success" && r.sample !== undefined && <span>{compareOutput(r.result.stdout, r.sample, "trimTrailingWhitespace") ? "يطابق المخرجات النموذجية (للتدريب فقط)" : "لا يطابق المخرجات النموذجية (للتدريب فقط)"}</span>}
-          {r.result.stdout !== "" && <div className="cx-io-block"><span>المخرجات</span><pre dir="ltr">{r.result.stdout}</pre></div>}
-          {r.result.stderr !== "" && <div className="cx-io-block"><span>رسائل الخطأ</span><pre dir="ltr">{r.result.stderr}</pre></div>}
-        </div>))}
-      </div>}
+        ? <div className="cx-run-panel">
+            <label className="cx-stdin-field"><span>مدخلات التشغيل</span>
+              <textarea className="cx-stdin" aria-label="مدخلات التشغيل" dir="ltr" spellCheck={false} autoCapitalize="off" autoCorrect="off" rows={3} value={stdin} onChange={e => setStdin(e.target.value)} />
+            </label>
+            {samples.length > 0 && <div className="cx-sample-pick">{samples.map((t, i) => <button key={t.id || i} type="button" onClick={() => setStdin(t.input)}>{"استخدام مدخلات: " + (t.title || "مثال " + (i + 1))}</button>)}</div>}
+            {stdinTooLarge && <p className="cx-run-error" data-testid="coding-stdin-too-large" role="alert">المدخلات أكبر من الحد المسموح (16 كيلوبايت).</p>}
+            <button type="button" className="cx-run-button" aria-disabled={running || stdinTooLarge ? "true" : "false"} aria-busy={running ? "true" : "false"} onClick={() => void execute()}>تشغيل</button>
+            {running && <span className="cx-run-progress">جارٍ التشغيل…</span>}
+          </div>
+        : <p className="cx-run-note" data-testid="coding-run-unavailable" role="note">{loading ? "جارٍ التحقق من بيئة التشغيل…" : RUN_UNAVAILABLE_MESSAGE}</p>}
+      <div className="cx-run-results" aria-live="polite">
+        {runError !== "" && <p className="cx-run-error" data-testid="coding-run-error">{runError}</p>}
+        {run && <div className="cx-result" data-testid="coding-result" data-status={run.result.status}>
+          <span className="cx-result-status">{(run.title ? run.title + ": " : "") + EXECUTION_STATUS_LABELS[run.result.status]}</span>
+          {run.result.status === "success" && run.sample !== undefined && <span>{compareOutput(run.result.stdout, run.sample, "trimTrailingWhitespace") ? "يطابق المخرجات النموذجية (للتدريب فقط)" : "لا يطابق المخرجات النموذجية (للتدريب فقط)"}</span>}
+          {run.result.stdout !== "" && <div className="cx-io-block"><span>المخرجات</span><pre className="cx-run-output" dir="ltr">{run.result.stdout}</pre></div>}
+          {run.result.stderr !== "" && <div className="cx-io-block"><span>رسائل الخطأ</span><pre className="cx-run-output" dir="ltr">{run.result.stderr}</pre></div>}
+        </div>}
+      </div>
       {confirmDialog}
     </div>
   );

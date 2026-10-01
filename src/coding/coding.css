@@ -60,3 +60,19 @@
   .cx-code-gutter, .cx-code-input, .cx-code-view, .cx-code-view-gutter { font-size: 13px; padding: 8px; }
   .cx-code-input { min-height: 10rem; }
 }
+
+/* Phase 17B — practice run panel and results. Input / output are LTR monospace inside the RTL page; every output box scrolls
+   INSIDE itself (bounded height, horizontal scroll) so long or wide program output never overflows the exam page. */
+.cx-run-panel { display: grid; gap: 8px; min-width: 0; }
+.cx-stdin-field { display: grid; gap: 4px; min-width: 0; }
+.cx-stdin { width: 100%; box-sizing: border-box; min-height: 4.5rem; max-height: 14rem; resize: vertical; direction: ltr; text-align: left; white-space: pre; overflow: auto; font: 13px/1.5 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+.cx-sample-pick { display: flex; flex-wrap: wrap; gap: 6px; }
+.cx-sample-pick button { min-height: 44px; }
+.cx-run-button[aria-disabled="true"] { opacity: .6; cursor: not-allowed; }
+.cx-run-progress { font-size: 13px; color: var(--eb-muted, #475569); }
+.cx-run-results { display: grid; gap: 8px; min-width: 0; }
+.cx-run-error { margin: 0; padding: 8px 10px; border-radius: 8px; background: var(--eb-danger-soft, #fef2f2); color: var(--eb-danger, #b91c1c); font-size: 13px; }
+.cx-run-output { max-width: 100%; max-height: 16rem; overflow: auto; white-space: pre; direction: ltr; text-align: left; }
+@media (max-width: 600px) {
+  .cx-run-output { max-height: 12rem; font-size: 12px; }
+}

@@ -1,0 +1,13 @@
+{
+  "language": "python",
+  "languageVersion": 1,
+  "toolchain": "CPython 3.13.15 (official python:3.13-slim, Debian 13)",
+  "sourceFile": "main.py",
+  "compile": {
+    "argv": ["/usr/local/bin/python3", "-I", "-S", "-B", "-c", "import sys; compile(open(sys.argv[1], 'rb').read(), 'main.py', 'exec')", "/workspace/main.py"]
+  },
+  "run": {
+    "argv": ["/usr/local/bin/python3", "-I", "-S", "-B", "-X", "utf8", "/workspace/main.py"],
+    "addressSpaceOverheadMb": 96
+  }
+}

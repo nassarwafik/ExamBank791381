@@ -1,0 +1,12 @@
+{
+  "language": "java",
+  "languageVersion": 1,
+  "toolchain": "Eclipse Temurin OpenJDK 21.0.12.1+1 LTS (official eclipse-temurin:21-jdk)",
+  "sourceFile": "Main.java",
+  "compile": {
+    "argv": ["/opt/java/openjdk/bin/javac", "-J-Xmx512m", "-J-XX:+UseSerialGC", "-J-XX:-UsePerfData", "-J-XX:TieredStopAtLevel=1", "-encoding", "UTF-8", "-proc:none", "-nowarn", "-Xlint:none", "-d", "/workspace/out", "/workspace/Main.java"]
+  },
+  "run": {
+    "argv": ["/opt/java/openjdk/bin/java", "-Xmx{memoryMb}m", "-Xss16m", "-XX:+UseSerialGC", "-XX:-UsePerfData", "-XX:TieredStopAtLevel=1", "-XX:MaxMetaspaceSize=128m", "-XX:ReservedCodeCacheSize=48m", "-Dfile.encoding=UTF-8", "-Dstdout.encoding=UTF-8", "-Dstderr.encoding=UTF-8", "-Djava.io.tmpdir=/tmp", "-cp", "/workspace/out", "Main"]
+  }
+}

@@ -25,3 +25,20 @@ export const EXECUTION_STATUS_LABELS: Readonly<Record<CodeExecutionStatus, strin
   "internal-error": "تعذّر التشغيل في بيئة التنفيذ"
 });
 export const RUN_UNAVAILABLE_MESSAGE = "تشغيل الكود غير متاح حاليًا؛ يمكن حفظ الإجابة وتسليمها للمراجعة.";
+
+// Phase 17B — Arabic messages for practice-run refusals (the run area shows one of these instead of a result).
+const RUN_ERROR_MESSAGES: Readonly<Record<string, string>> = Object.freeze({
+  EXECUTION_UNAVAILABLE: RUN_UNAVAILABLE_MESSAGE,
+  LANGUAGE_UNAVAILABLE: RUN_UNAVAILABLE_MESSAGE,
+  RUNNER_BUSY: "بيئة التشغيل مشغولة حاليًا. حاول مرة أخرى بعد قليل.",
+  CODE_SOURCE_TOO_LARGE: "الكود أكبر من الحد المسموح لهذا السؤال.",
+  ATTEMPT_NOT_WRITABLE: "لا يمكن تشغيل الكود لأن المحاولة غير متاحة للكتابة الآن.",
+  NETWORK: "تعذّر الاتصال بالخادم. تحقّق من الاتصال وحاول مرة أخرى."
+});
+export const RUN_FAILED_MESSAGE = "تعذّر تشغيل الكود الآن. حاول مرة أخرى لاحقًا.";
+export function runErrorMessage(code: string, retryAfterSeconds?: number): string {
+  if (code === "RATE_LIMITED") return "تجاوزت الحد المسموح به لمرات التشغيل مؤقتًا. حاول مرة أخرى بعد " + (retryAfterSeconds && retryAfterSeconds > 0 ? retryAfterSeconds : 60) + " ثانية.";
+  return Object.prototype.hasOwnProperty.call(RUN_ERROR_MESSAGES, code) ? RUN_ERROR_MESSAGES[code] : RUN_FAILED_MESSAGE;
+}
+/** Bound for the practice stdin box (the platform's per-input ceiling, 16 KB UTF-8). */
+export const RUN_STDIN_MAX_BYTES = 16384;
