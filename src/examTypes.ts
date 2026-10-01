@@ -1,5 +1,6 @@
 import type { AssessmentBlueprintV1, AssessmentMeta, AssessmentActivityDescriptor } from "./assessmentTypes";
 import type { SimulationQuestionConfig } from "./smartsimManifest";
+import type { CodingQuestionConfigV1 } from "./codingQuestion";
 // Teacher-side structured-exam types for the Structured Exam Builder (Phase 2).
 //
 // Design contract: a builder object is ALREADY in the engine-native shape that PR #51's student
@@ -93,6 +94,8 @@ export type BuilderPart = {
   categorization?: CategorizationConfig;
   // Phase 16B-A — the EXACT simulation package reference (simulation@1); never "latest".
   simulation?: SimulationQuestionConfig;
+  // Phase 17A — the PUBLIC coding configuration (coding@1); private hidden tests / reference solutions live under `answer`.
+  coding?: CodingQuestionConfigV1;
   fields?: BuilderField[];
   wordBank?: string[];
   cli?: string;
@@ -117,6 +120,8 @@ export type BuilderQuestion = {
   categorization?: CategorizationConfig;
   // Phase 16B-A — the EXACT simulation package reference (simulation@1); never "latest".
   simulation?: SimulationQuestionConfig;
+  // Phase 17A — the PUBLIC coding configuration (coding@1); private hidden tests / reference solutions live under `answer`.
+  coding?: CodingQuestionConfigV1;
   fields?: BuilderField[];
   wordBank?: string[];
   cli?: string;
@@ -144,6 +149,8 @@ export type QuestionBody = {
   categorization?: CategorizationConfig;
   // Phase 16B-A — the EXACT simulation package reference (simulation@1); never "latest".
   simulation?: SimulationQuestionConfig;
+  // Phase 17A — the PUBLIC coding configuration (coding@1); private hidden tests / reference solutions live under `answer`.
+  coding?: CodingQuestionConfigV1;
   fields?: BuilderField[];
   wordBank?: string[];
   cli?: string;

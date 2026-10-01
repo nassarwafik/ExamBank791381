@@ -97,6 +97,10 @@ registerBuiltIn("matrix", (question, response, max) => {
 // state carries (score / passed / SMARTSIM_SCORE…) is ignored; the attempt goes to manual review with score 0. The 16B-B
 // assertion engine will register the authoritative grader for a FUTURE version — never by reading a number from the sandbox.
 registerBuiltIn("simulation", () => ({ score: 0, manualReview: true, correct: false }));
+// Phase 17A — coding@1 has NO automatic authority until a trusted, ISOLATED execution provider exists (Phase 17B): score 0 /
+// manual review for every response, whatever it carries (score / passed / testsPassed are never read), and never by comparing
+// the source to a reference solution. The teacher's manual marks are the official grade.
+registerBuiltIn("coding", () => ({ score: 0, manualReview: true, correct: false }));
 registerBuiltIn("categorization", (question, response, max) => {
   const c = question.categorization && typeof question.categorization === "object" ? question.categorization : {};
   const answer = question.answer && typeof question.answer === "object" ? question.answer : {};

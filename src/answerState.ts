@@ -12,7 +12,7 @@ export type FieldValue = string | boolean | string[];
 // visual indexes) and "numeric" (Numeric Response — the raw text the student typed plus an optional unit; parsing happens in
 // the grader). Matrix and Categorization reuse "fields" (rowId → columnId / itemId → categoryId), which is semantically clean.
 // Unknown kinds fail closed in answered() (never counted as answered).
-export type Answer={kind:"choice";index:number}|{kind:"sequence";values:string[]}|{kind:"table";values:(string|boolean)[]}|{kind:"text";value:string}|{kind:"fields";values:Record<string,FieldValue>}|{kind:"compound";parts:Record<string,Answer>}|{kind:"multiChoice";optionIds:string[]}|{kind:"numeric";value:string;unit?:string}|{kind:"simulation";state:JsonValue};
+export type Answer={kind:"choice";index:number}|{kind:"sequence";values:string[]}|{kind:"table";values:(string|boolean)[]}|{kind:"text";value:string}|{kind:"fields";values:Record<string,FieldValue>}|{kind:"compound";parts:Record<string,Answer>}|{kind:"multiChoice";optionIds:string[]}|{kind:"numeric";value:string;unit?:string}|{kind:"simulation";state:JsonValue}|{kind:"code";language:string;languageVersion:number;source:string};
 
 const nonEmptyValue = (v: unknown) => (typeof v === "boolean" ? v : String(v ?? "").trim() !== "");
 export function answered(a: Answer | undefined): boolean {
@@ -25,5 +25,6 @@ export function answered(a: Answer | undefined): boolean {
   if (a.kind === "multiChoice") return Array.isArray(a.optionIds) && a.optionIds.some(id => typeof id === "string" && id !== "");
   if (a.kind === "numeric") return typeof a.value === "string" && a.value.trim() !== "";
   if (a.kind === "simulation") return isSimulationStateAnswered(a.state);
+  if (a.kind === "code") return typeof a.source === "string" && a.source.trim() !== "";   // 17A — source TEXT, never trimmed when stored
   return false;
 }

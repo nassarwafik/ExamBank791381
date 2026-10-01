@@ -19,3 +19,5 @@ registerAuthoringEditor("matrix", 1, lazy(() => import("./editors/MatrixEditor")
 registerAuthoringEditor("categorization", 1, lazy(() => import("./editors/CategorizationEditor")));
 // Phase 16B-A — the universal simulation package type (lazy: upload / library / preview UI never enters the initial graph).
 registerAuthoringEditor("simulation", 1, lazy(() => import("./editors/SimulationEditor")));
+// Phase 17A — coding@1 authoring (lazy: languages, starter code, public / hidden tests, limits never enter the initial graph).
+registerAuthoringEditor("coding", 1, lazy(() => import("./editors/CodingQuestionEditor")));

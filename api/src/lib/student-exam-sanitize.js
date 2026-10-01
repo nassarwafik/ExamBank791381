@@ -157,6 +157,16 @@ function sanitizeFieldForStudent(field) {
 // smuggled `correctColumn` / `expectedState` / `answerKey` inside any plugin object never reaches a student (defense in
 // depth) while public structure (ids, labels, values) passes byte-for-byte. Persisted exam JSON can never name this code.
 const STRUCTURAL_NODE_KEYS = new Set(["answer", "options", "fields", "parts", "image", "images", "activity", "stimulus"]);
+// Phase 17A — the coding config is additionally REBUILT through its allow-list projection (shared with the client renderer):
+// only allowed / default languages, starter code, public sample tests (id / title / input / sampleOutput) and limits survive,
+// so hidden tests, reference solutions, weights or notes smuggled into the public object never reach a student; a malformed
+// config is dropped (fail closed). Hidden tests / comparator / reference solutions live under `answer`, blanked above.
+const { projectCodingConfigForStudent } = require("./shared-finalization/codingQuestion");
+function applyCodingProjection(node) {
+  if (!("coding" in node)) return;
+  const projected = projectCodingConfigForStudent(node.coding);
+  if (projected) node.coding = projected; else delete node.coding;
+}
 function applyTypeConfigForStudent(node) {
   for (const k of Object.keys(node)) {
     if (STRUCTURAL_NODE_KEYS.has(k)) continue;
@@ -170,6 +180,7 @@ function sanitizePartForStudent(part) {
   const out = { ...part }; // keeps id / label / text / textHtml / marks / type / questionTypeVersion / wordBank / cli / tableHeaders / tableRows / image(s) / groupId
   delete out.answer; // remove part.answer (grading key)
   applyTypeConfigForStudent(out);
+  applyCodingProjection(out);
   stripKeys(out, NODE_SECRET_KEYS);
   stripKeys(out, PLANNING_KEYS);
   applyActivityForStudent(out);
@@ -188,6 +199,7 @@ function sanitizeQuestionForStudent(question) {
   // then strip any additional secret flags and recurse into the new structured children.
   const out = { ...question, answer: {}, hint: "", teacherNote: "", aiInstruction: "", history: [], redoStack: [] };
   applyTypeConfigForStudent(out);
+  applyCodingProjection(out);
   stripKeys(out, ["explanation", "rationale", ...FLAG_SECRET_KEYS]);
   stripKeys(out, PLANNING_KEYS);
   applyActivityForStudent(out);

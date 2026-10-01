@@ -36,6 +36,13 @@ registerTypeDefaults("matrix", 1, (ensure, newId) => {
 // Phase 16B-A — a new simulation question carries NO package yet (the teacher picks / uploads one; finalization blocks until
 // the exact reference is pinned) and NO answer key (`answer` is reserved for the 16B-B assertion engine).
 registerTypeDefaults("simulation", 1, () => { /* identity only: presentationType + questionTypeVersion */ });
+// Phase 17A — a new coding question: one allowed language, empty starter code / samples, bounded default limits; the PRIVATE key
+// (hidden tests, comparator, reference solutions) lives under `answer`. Literal on purpose (initial graph): parity-tested
+// against defaultCodingConfig() / defaultCodingAnswerKey() in src/codingQuestion.ts.
+registerTypeDefaults("coding", 1, ensure => {
+  ensure("coding", { allowedLanguages: ["python"], defaultLanguage: "python", starterCode: {}, taskMode: "program", inputMode: "stdin", outputMode: "stdout", limits: { sourceBytes: 65536, outputBytes: 65536, timeMs: 2000, memoryMb: 256 }, publicTests: [] });
+  ensure("answer", { hiddenTests: [], comparator: "trimTrailingWhitespace", referenceSolutions: {} });
+});
 registerTypeDefaults("categorization", 1, (ensure, newId) => {
   ensure("categorization", { categories: [{ id: newId("cat"), label: "" }, { id: newId("cat"), label: "" }], items: [{ id: newId("item"), label: "" }] });
   ensure("answer", { correctCategoryByItem: {} });

@@ -87,7 +87,7 @@ describe("16B-A guards — no code execution of uploads, no build tooling, no ex
     expect(validation.validateQuestionTypeNode({ text: "x" }, "simulation", 1).map(i => i.code)).toEqual(["SIM_PACKAGE_MISSING"]);
     expect(validation.validateQuestionTypeNode({ simulation: REF }, "simulation", 1)).toEqual([]);
     const catalog = require_(path.join(repo, "api/src/lib/shared-finalization/questionTypeCatalog.js"));
-    expect(catalog.QUESTION_TYPE_CATALOG.length).toBe(16);
+    expect(catalog.QUESTION_TYPE_CATALOG.length).toBe(17);                                         // Phase 17A adds coding
     expect(catalog.questionTypeDefinition("simulation")).toMatchObject({ version: 1, gradingMode: "manual", legacy: false });
   });
 });

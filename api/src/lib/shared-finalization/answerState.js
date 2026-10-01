@@ -23,5 +23,7 @@ function answered(a) {
         return typeof a.value === "string" && a.value.trim() !== "";
     if (a.kind === "simulation")
         return (0, smartsimState_1.isSimulationStateAnswered)(a.state);
+    if (a.kind === "code")
+        return typeof a.source === "string" && a.source.trim() !== "";
     return false;
 }

@@ -281,7 +281,7 @@ async function handler(request,deps={},obs=null){
   if(action==="pauseAttempt"){
    const rej=pauseRejection(a,s,Date.now());
    if(rej)return {status:rej.status,jsonBody:{ok:false,error:rej.error}};
-   const answers=b.answers&&typeof b.answers==="object"?b.answers:null;
+   const answers=b.answers&&typeof b.answers==="object"?normalizeDraftAnswers(b.answers).answers:null; // Phase 17A — the pause path bounds answers like saveDraft / submit
    let finalState=null,already=false;
    try{
     await maybeLock(()=>mut(c,name,async current=>{
