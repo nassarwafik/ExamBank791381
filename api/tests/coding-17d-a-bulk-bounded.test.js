@@ -142,10 +142,33 @@ describe("BR — teacher Bulk Retry is bounded in reads, dispatches, concurrency
     expect(r1.hasMore).toBe(true);
     expect(r1.scheduled).toBeLessThan(12);
     expect(r1.scheduled).toBeGreaterThanOrEqual(1);
+    // no NEW claim starts after the deadline: only claims already in flight (≤ concurrency) may end up claimed-but-undispatched
+    const claimedOnly = Array.from({ length: 30 }, (_, i) => X.target(ctx, { studentId: X.sid(i + 1) })).filter(t => t.recovery && t.state === "pending").length;
+    expect(claimedOnly).toBeLessThanOrEqual(R().BULK_RETRY_CONCURRENCY);
     const fetch = F.runnerFetch(), rest = await untilDone(ctx, { fetch, now });
     const all = [...jobsOf(slow), ...rest.flatMap(c => c.jobs)];
     expect(all).toHaveLength(30);
     expect(new Set(all).size).toBe(30);
+  });
+
+  it("BR5b the deadline passes while the page downloads: NO claim starts afterwards (no CAS write, no dispatch); later calls finish everything", async () => {
+    const DEADLINE = R().BULK_RETRY_DEADLINE_MS, now = clock();
+    const ctx = population(6);
+    let armed = true, writesAfter = 0;
+    const slowRead = new Proxy(ctx.container, { get(t, p) {
+      if (p === "getBlobClient") return name => { const c = t.getBlobClient(name); return { ...c, download: async (...a) => { if (armed && name.startsWith(SP) && !name.includes("system")) { armed = false; now.advance(DEADLINE + 1000); } return c.download(...a); } }; };
+      if (p === "getBlockBlobClient") return name => { const c = t.getBlockBlobClient(name); return { ...c, upload: async (...a) => { if (name.startsWith(SP) && now() - callStart >= DEADLINE) writesAfter++; return c.upload(...a); } }; };
+      const v = t[p]; return typeof v === "function" ? v.bind(t) : v;
+    } });
+    const fetch = F.runnerFetch(), callStart = now();
+    const r1 = await bulk(slowRead, { fetch, now });
+    expect(armed).toBe(false);
+    expect(r1).toMatchObject({ scheduled: 0, hasMore: true });
+    expect(writesAfter, "submission CAS writes (claims) started after the deadline").toBe(0);
+    expect(fetch.calls).toHaveLength(0);
+    for (let i = 0; i < 3; i++) { const r = await bulk(ctx.container, { fetch, now }); if (!r.hasMore) break; }
+    expect(new Set(jobsOf(fetch)).size).toBe(6);
+    expect(jobsOf(fetch)).toHaveLength(6);
   });
 
   it("BR6 hasMore means unscanned assignment space remains — not 'more candidates than 12 after a full scan'", async () => {
@@ -208,6 +231,77 @@ describe("BR — teacher Bulk Retry is bounded in reads, dispatches, concurrency
     expect(new Set(all).size).toBe(30);
     expect(rest[rest.length - 1].r.hasMore).toBe(false);
     planned.forEach((p, i) => expect(X.target(ctx, { studentId: X.sid(i + 1) })).toMatchObject({ revision: p.revision, jobId: p.jobId, gradingKey: p.gradingKey }));
+  });
+
+  it("BR11 the deadline expires DURING the claim: no dispatch starts after it; the target is not lost and is dispatched exactly once later", async () => {
+    const DEADLINE = R().BULK_RETRY_DEADLINE_MS, JOBS = "platform/coding-grading-jobs/", now = clock();
+    let armed = false, fired = false, claimAt = null;
+    // storage / CAS latency: the FIRST claim write of the call carries the clock past the deadline (the write still succeeds)
+    const ctx = population(3, { hooks: { beforeConditionalUpload: name => {
+      if (!armed || fired || !name.startsWith(SP)) return;
+      fired = true; claimAt = now(); now.advance(DEADLINE + 1000);
+    } } });
+    X.commitAttempt(ctx, { studentId: X.sid(4) }); X.age(ctx, { studentId: X.sid(4), state: "complete", minutesAgo: 30 });
+    X.commitAttempt(ctx, { studentId: X.sid(5), answers: {} });                                            // no-answer → complete
+    X.commitAttempt(ctx, { studentId: X.sid(6) }); X.age(ctx, { studentId: X.sid(6), state: "dispatched", minutesAgo: 5 });  // fresh
+    const planned = [1, 2, 3].map(i => X.target(ctx, { studentId: X.sid(i) }));
+    const bystanders = () => [4, 5, 6].map(i => ctx.store.get(X.subName(F.AID, X.sid(i))).etag);
+    const before = bystanders();
+    const fetch = F.runnerFetch();
+    armed = true;
+    const callStart = now();
+    const r1 = await bulk(ctx.container, { fetch, now });
+    armed = false;
+    expect(fired).toBe(true);
+    expect(claimAt - callStart, "below the deadline when the claim began").toBeLessThan(DEADLINE);
+    expect(now() - callStart, "the claim carried the call past the deadline").toBeGreaterThanOrEqual(DEADLINE);
+    expect(fetch.calls, "no runner dispatch after the deadline").toHaveLength(0);
+    expect(ctx.names(JOBS), "the dispatch path was not even entered").toEqual([]);
+    expect(r1).toMatchObject({ status: 200, scheduled: 0, dispatched: 0, hasMore: true });
+    const r2 = await bulk(ctx.container, { fetch, now });                                                   // same operation resumes
+    expect(r2).toMatchObject({ status: 200, scheduled: 3, dispatched: 3, hasMore: false });
+    expect(jobsOf(fetch).sort()).toEqual(planned.map(t => t.jobId).sort());                                  // each exactly once
+    planned.forEach((p, i) => expect(X.target(ctx, { studentId: X.sid(i + 1) })).toMatchObject({ state: "dispatched", revision: p.revision, jobId: p.jobId, gradingKey: p.gradingKey }));
+    expect(bystanders()).toEqual(before);                                                                    // complete / no-answer / fresh untouched
+    const audits = ctx.names("platform/audit/").map(n => ctx.getJson(n)).filter(e => e.action === "coding.autoGrade.bulkRetry");
+    expect(audits).toHaveLength(2);
+    for (const a of audits) {
+      expect(Object.keys(a.details).sort()).toEqual(["assignmentId", "dispatched", "hasMore", "retryable", "scheduled"]);
+      expect(JSON.stringify(a)).not.toMatch(/22222222-|cg_|gradingKey/);
+    }
+  });
+
+  it("BR11b concurrent claims finishing OUT OF ORDER around the deadline: none dispatched after it; every target exactly once, even after the cooldown", async () => {
+    const DEADLINE = R().BULK_RETRY_DEADLINE_MS, now = clock();
+    const ctx = population(8), slowClaim = X.subName(F.AID, X.sid(2));
+    let armed = true;
+    // the 2nd target's claim write is slow in REAL time; meanwhile the other workers claim + dispatch; when it lands the clock
+    // has crossed the deadline, so the 2nd target is deferred AFTER later targets already finished (out-of-order completion)
+    const slow = new Proxy(ctx.container, { get(t, p) {
+      if (p === "getBlockBlobClient") return name => { const c = t.getBlockBlobClient(name); return { ...c, upload: async (...a) => { if (armed && name === slowClaim) { armed = false; await new Promise(r => setTimeout(r, 30)); now.advance(DEADLINE + 1000); } return c.upload(...a); } }; };
+      const v = t[p]; return typeof v === "function" ? v.bind(t) : v;
+    } });
+    const callStart = now(), late = [];
+    let firstCall = true;
+    // a BUSY runner keeps every attempted target retryable (still eligible) — so only the operation cursor prevents a repeat
+    const fetch = F.runnerFetch(async () => { if (firstCall && now() - callStart >= DEADLINE) late.push(now()); return { status: 503, json: { ok: false, code: "RUNNER_BUSY" } }; });
+    const r1 = await bulk(slow, { fetch, now });
+    firstCall = false;
+    const deferredJob = X.target(ctx, { studentId: X.sid(2) }).jobId;
+    expect(armed).toBe(false);
+    expect(late, "runner dispatches that started after the deadline").toEqual([]);
+    expect(r1.hasMore).toBe(true);
+    expect(r1.scheduled, "later targets finished while the 2nd was still claiming").toBeGreaterThanOrEqual(1);
+    expect(jobsOf(fetch)).not.toContain(deferredJob);
+    for (let i = 0; i < 5; i++) {
+      now.advance(R().BULK_RETRY_COOLDOWN_MS + 1000);                                        // only the cursor can prevent repeats
+      const r = await bulk(ctx.container, { fetch, now });
+      if (!r.hasMore) break;
+    }
+    const all = jobsOf(fetch);
+    expect(all).toHaveLength(8);
+    expect(new Set(all).size).toBe(8);
+    expect(all).toContain(deferredJob);
   });
 
   it("BR10 the route never lets the client select targets or progress, and the reply stays aggregate-only", async () => {

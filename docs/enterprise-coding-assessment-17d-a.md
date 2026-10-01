@@ -235,7 +235,7 @@ Builder auth. Body exactly `{ "assignmentId": "<id>" }`; anything else → 400; 
   same revision, job id and grading key), then dispatched via `ensureCodingGradingJobs(..., expect)`.
 * **Bounded in every dimension (Review Fix 1, §20):** per call at most `BULK_RETRY_MAX_SCANNED = 100` blob names listed (and
   so at most 100 submissions downloaded), `BULK_RETRY_LIMIT = 12` dispatches, `BULK_RETRY_CONCURRENCY = 4` in flight, and no new
-  work after `BULK_RETRY_DEADLINE_MS = 20 s`. All of these are server constants; the body is exactly `{ assignmentId }`. Reply:
+  claim *and no new runner dispatch* after `BULK_RETRY_DEADLINE_MS = 20 s` (Review Fix 2, §21). All of these are server constants; the body is exactly `{ assignmentId }`. Reply:
   `{ ok, scheduled, dispatched, retryable, hasMore }`.
 * **Resumable through a server-owned operation cursor:** see §20. The cooldown (`BULK_RETRY_COOLDOWN_MS`, 2 min) only dedupes
   a target a teacher retried moments ago; it never owns progress.
@@ -395,8 +395,10 @@ call over 1 000 submissions downloaded **1 000** submission documents.
 * **`hasMore`** means that this operation still has assignment space it has not processed: unscanned pages, or untaken targets
   of a page cut short by the dispatch limit, the scan bound or the deadline. It no longer means "more than 12 candidates after a
   full scan" (BR6).
-* **Deadline.** Checked before each page, before each page's downloads, and before each dispatch. In-flight dispatches finish
-  (bounded by the 8 s runner timeout). Progress is saved and the call returns `hasMore: true` (BR5).
+* **Deadline.** Checked before each page, before each page's downloads and before each target is claimed. *As corrected by
+  Review Fix 2 (§21):* the claim is asynchronous, so the Review Fix 1 code could still enter the dispatch path after the deadline.
+  The deadline is now also re-checked synchronously between a successful claim and `ensureCodingGradingJobs()`. Work already in
+  flight finishes (bounded by the 8 s runner timeout). Progress is saved and the call returns `hasMore: true` (BR5, BR5b, BR11).
 * **Concurrency control.** Acquiring the cursor is a CAS write that sets a 60 s lock (create with `If-None-Match`, or update
   with `If-Match`). A concurrent call gets **409 `BULK_RETRY_BUSY`** (BR9). Progress is written and the lock released with
   `If-Match` on the acquired ETag. A call that lost an expired lock never overwrites newer progress; its work is simply
@@ -437,4 +439,78 @@ BR4, BR7, BR8 and BR10 passed (they guard behaviour that was already correct).
 | BRM6 | remove the internal deadline | BR5 |
 | BRM7 | accept a client `studentId` to select targets | BR10 / R29 |
 | BRM8 | bulk retry increments the revision | R27 / BR9 |
+
+## 21. Independent Reliability Review Fix 2 — Strict Pre-Dispatch Deadline
+
+**Race window (at `03e3616`).** The Bulk Retry worker checked the deadline *before* taking a target. It then awaited
+`mutateTarget()` — the CAS claim that re-checks eligibility and applies `manualRecovery()` — and called
+`ensureCodingGradingJobs()` straight after. The claim is asynchronous (a read plus a conditional write, with CAS retries), so
+storage latency could carry it past `BULK_RETRY_DEADLINE_MS`. The dispatch path, meaning the job upsert and the runner request,
+then **started after the deadline**. Fail-first evidence:
+* BR11: 3 runner dispatches started after the deadline in one call;
+* BR11b: 1 started after the deadline while concurrent claims finished out of order.
+
+**Why a simple second check after `mutateTarget()` is unsafe.** By then the claim has already written
+`recovery = { automaticAttempts: 0, exhausted: false, manualRetryAt: now }`. If the call just stopped:
+* the Review Fix 1 cooldown would skip that target on the next call, because `manualRetryAt` is recent;
+* the cursor would already have moved past it (it was "taken").
+
+The target would be stranded for the rest of the operation. This was verified with a temporary probe and reverted byte-exact:
+with only a naive post-claim check, BR11's second call scheduled **0** of the 3 claimed targets.
+
+**Implemented invariant.** *A Bulk Retry request never begins a new runner dispatch after `BULK_RETRY_DEADLINE_MS`, and a target
+is never lost because the deadline expired between its claim and its dispatch.*
+
+1. **Synchronous pre-dispatch gate.** After a successful claim, `overDeadline()` is re-checked with no `await` between the check
+   and the call to `ensureCodingGradingJobs()`. A target that misses it is **deferred**: it is not dispatched, not counted as
+   scheduled, and the call stops with `hasMore: true`. Work already in the dispatch path finishes (bounded by the 8 s runner
+   timeout).
+2. **The claim stays rediscoverable.** The claim changes neither the target's state, revision, job id nor grading key; it only
+   resets the automatic counters, which is the teacher's intent. The cooldown now dedupes only a manual retry that **reached a
+   dispatch outcome** (`target.updatedAt ≥ recovery.manualRetryAt`), so a bare claim never hides a target. This also covers a host
+   crash between claim and dispatch. Single-target retries and finished bulk retries are still deduped (R28 unchanged).
+3. **Exact cursor.**
+   * The cursor stops just **before the first deferred target** (`after`). Everything before it was finished in order.
+   * Targets past it that concurrent workers already finished out of order are recorded in the cursor's `handled` list. That
+     list holds at most `BULK_RETRY_HANDLED_MAX = 16` positions, all after `after`; it is validated on read, and a malformed one
+     starts a fresh operation.
+   * The next call resumes at the deferred target and skips `handled` positions, so no target is skipped and none is sent twice
+     within the operation.
+   * `handled` is cleared when the page completes.
+4. **Unchanged.**
+   * Authority, eligibility, and the CAS precedence of callbacks and force regrades (BR7, BR8).
+   * Same revision, job id and grading key.
+   * The pre-claim deadline check, and every Review Fix 1 bound.
+   * The server-owned cursor and lock.
+   * The aggregate-only reply and audit, and the API reply shape.
+
+**Tests (`api/tests/coding-17d-a-bulk-bounded.test.js`).** Fail-first on `03e3616`'s implementation: BR11 and BR11b failed; the
+other 11 passed.
+
+| # | Proof |
+|---|---|
+| BR11 | The first claim write advances the clock past the deadline. The claim began below the limit and ended above it. **No runner request and no job upsert** happen in call 1, which returns `hasMore: true`, 0 scheduled. Call 2 schedules and dispatches all 3 targets **exactly once**, with the same revision, job id and grading key. The complete, no-answer and freshly dispatched bystanders are byte-identical. The two audits carry aggregate keys only. |
+| BR11b | sid2's claim is slow in real time while later targets claim and dispatch, so the completion is out of order (the deferred target sits before finished ones). No dispatch starts after the deadline. With a busy runner (targets stay eligible) and the cooldown expiring before every later call, all 8 targets are attempted exactly once, including the deferred one. |
+| BR5 (strengthened) | After a deadline stop, at most `BULK_RETRY_CONCURRENCY` targets are left claimed but undispatched. |
+| BR5b | The deadline passes while the page is downloading: **no claim (no submission CAS write) and no dispatch** start afterwards. Later calls finish all 6 targets exactly once. |
+
+**Mutations BRM1–BRM9: 9/9 killed** (byte-exact restore; fingerprint `8791d7e0…da7dfa` matched before and after).
+
+| # | Mutation | Killed by |
+|---|---|---|
+| BRM1 | `listBlobNames()` instead of pagination | BR1 |
+| BRM2 | ignore the stored cursor | BR2 |
+| BRM3 | advance the cursor past untaken or deferred targets | BR4 |
+| BRM4 | never persist the cursor | BR3 |
+| BRM5 | remove the scan bound | BR1 |
+| BRM6 | remove the pre-claim deadline check | BR5b |
+| BRM7 | accept extra body fields | BR10 |
+| BRM8 | bulk retry increments the revision | R27 |
+| **BRM9** | **remove the post-claim / pre-dispatch deadline check** | **BR11** |
+
+Two supplementary mutations were also killed:
+* reverting the cooldown to "recent `manualRetryAt`" only → BR11 (the deferred targets become stranded);
+* removing the `handled` skip → BR11b (duplicates after the cooldown).
+
+**Validation.** See the PR body "Independent Reliability Review Fix 2" section for the exact counts on the pushed head.
 
