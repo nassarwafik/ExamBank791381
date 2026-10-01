@@ -59,6 +59,8 @@ describe("U1–U2 — pure helpers", () => {
     expect(bulkRetryNotice({ scheduled: 8, hasMore: false })).toBe("تمت جدولة إعادة المحاولة لـ 8 أسئلة برمجية.");
     expect(bulkRetryNotice({ scheduled: 0, hasMore: false })).toBe("لا توجد أسئلة برمجية تحتاج إلى إعادة المحاولة الآن.");
     expect(bulkRetryNotice({ scheduled: 12, hasMore: true })).toBe("تمت جدولة إعادة المحاولة لـ 12 أسئلة برمجية. ما زالت هناك أسئلة أخرى؛ أعد تنفيذ الإجراء لمتابعتها.");
+    // Review Fix 1: a bounded call may scan a slice of the assignment and schedule nothing while more remains
+    expect(bulkRetryNotice({ scheduled: 0, hasMore: true })).toBe("لم تُجدول أسئلة في هذه الدفعة، وما زالت هناك أسئلة أخرى للفحص؛ أعد تنفيذ الإجراء لمتابعتها.");
   });
 });
 

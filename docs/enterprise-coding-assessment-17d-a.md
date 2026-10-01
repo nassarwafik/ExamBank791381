@@ -233,10 +233,12 @@ Builder auth. Body exactly `{ "assignmentId": "<id>" }`; anything else → 400; 
   Never `complete`, never a freshly dispatched target, never a no-answer.
 * **Same revision:** each target is reset by a CAS (`recovery = { automaticAttempts: 0, exhausted: false, manualRetryAt }`,
   same revision, job id and grading key), then dispatched via `ensureCodingGradingJobs(..., expect)`.
-* **Bounded:** `BULK_RETRY_LIMIT = 12` per call, `BULK_RETRY_CONCURRENCY = 4`; reply
+* **Bounded in every dimension (Review Fix 1, §20):** per call at most `BULK_RETRY_MAX_SCANNED = 100` blob names listed (and
+  so at most 100 submissions downloaded), `BULK_RETRY_LIMIT = 12` dispatches, `BULK_RETRY_CONCURRENCY = 4` in flight, and no new
+  work after `BULK_RETRY_DEADLINE_MS = 20 s`. All of these are server constants; the body is exactly `{ assignmentId }`. Reply:
   `{ ok, scheduled, dispatched, retryable, hasMore }`.
-* **Resumable without a client cursor:** a target retried by a teacher within `BULK_RETRY_COOLDOWN_MS` (2 min) is skipped, so
-  the next call continues with the rest (R28).
+* **Resumable through a server-owned operation cursor:** see §20. The cooldown (`BULK_RETRY_COOLDOWN_MS`, 2 min) only dedupes
+  a target a teacher retried moments ago; it never owns progress.
 * **Audit:** ONE `coding.autoGrade.bulkRetry` event per call (`targetType: "assignment"`, counts only) and one observability
   event with the same aggregates.
 
@@ -273,8 +275,10 @@ Per sweep, worst case with the default limits:
 
 So about 280 reads and 55 writes per sweep at most. At 6 sweeps an hour that is ≤ ~1 700 reads and ~330 writes an hour; an
 idle system (nothing due) costs only the scan, about 205 reads per sweep. A full cycle over N submission documents takes
-⌈N / 200⌉ sweeps (≈ 10 min each). Bulk retry reads one assignment, lists the assignment prefix, reads its submissions, and does
-≤ 12 dispatches per call.
+⌈N / 200⌉ sweeps (≈ 10 min each). Bulk retry (per call): 1 assignment read, 1 cursor read + 2 cursor writes (lock, then
+progress and release), ≤ 100 listed names, ≤ 100 submission downloads, ≤ 12 dispatches (each ≈ 6 reads and 5 writes, as for the
+sweep) and 1 audit write. An assignment with N submissions is walked in about ⌈N / 100⌉ calls when little is eligible, and in
+⌈eligible / 12⌉ calls when a lot is.
 
 ## 15. Observability and audit
 
@@ -359,3 +363,78 @@ Each mutation is applied to the working tree, the killing test is run, and the f
 | RM18 | bulk retry selects freshly dispatched targets | R27 |
 | RM19 | teacher retry does not reset recovery | R12 |
 | RM20 | scheduler treats any 409 as success | R33c |
+
+## 20. Independent Reliability Review Fix 1 — Bounded Bulk Retry Enumeration
+
+**Root cause (at `81d7733`).** `bulkRetryAssignment()` bounded only the *dispatches* (12 per call). It still listed the whole
+`platform/submissions/<assignment>/` prefix with `listBlobNames()`, downloaded *every* submission, derived every candidate,
+and only then took the first 12. Each `hasMore` call repeated that full scan. Progress across calls depended on the 2-minute
+cooldown: once it expired, the first batch became eligible again and later targets could starve. Fail-first evidence (BR1): one
+call over 1 000 submissions downloaded **1 000** submission documents.
+
+**Fix.** The per-call bounds of §12, plus a server-owned operation cursor per assignment,
+`platform/system/coding-bulk-retry/<assignmentId>.json`:
+
+```js
+{ schemaVersion: 1, assignmentId,
+  operation: { startedAt, pageToken, after: { name, attemptNumber, targetKey } | null } | null,   // null = no operation in progress
+  lock?: { owner, expiresAt },                                                                   // held only while a call runs
+  updatedAt, lastCompletedAt? }
+```
+
+* **Paginated enumeration.** The call uses `listBlobNamesPage()` with `maxPageSize = BULK_RETRY_MAX_SCANNED − listed so far`;
+  the unbounded `listBlobNames()` is no longer used here. Every listed name counts toward the bound, so listing and downloads
+  are both ≤ 100 per call.
+* **Total order.** Targets are ordered by (blob name, attempt number, target key). `after` is the last target **taken** in the
+  page identified by `pageToken`. The next call re-lists that page, skips the names before `after.name` without downloading
+  them, and resumes with the first target after `after`. That works mid-page, mid-submission and mid-attempt (BR4). Workers take
+  targets strictly in order, so the processed set is always a prefix: no target is skipped and none is advanced past unseen.
+* **Page completion.** A page whose targets are all taken moves `pageToken` to the next page and clears `after`. The end of the
+  listing completes the operation (`operation: null`, `hasMore: false`), and the next call starts a new operation from the
+  beginning.
+* **`hasMore`** means that this operation still has assignment space it has not processed: unscanned pages, or untaken targets
+  of a page cut short by the dispatch limit, the scan bound or the deadline. It no longer means "more than 12 candidates after a
+  full scan" (BR6).
+* **Deadline.** Checked before each page, before each page's downloads, and before each dispatch. In-flight dispatches finish
+  (bounded by the 8 s runner timeout). Progress is saved and the call returns `hasMore: true` (BR5).
+* **Concurrency control.** Acquiring the cursor is a CAS write that sets a 60 s lock (create with `If-None-Match`, or update
+  with `If-Match`). A concurrent call gets **409 `BULK_RETRY_BUSY`** (BR9). Progress is written and the lock released with
+  `If-Match` on the acquired ETag. A call that lost an expired lock never overwrites newer progress; its work is simply
+  re-checked later (the reset and dispatch are idempotent: same revision, same deterministic job id). An invalid listing token
+  resets the operation once. A malformed, foreign or stale (> 24 h) operation starts a new one.
+* **Unchanged.**
+  * Eligibility (pending, retryable including exhausted, stale dispatched; never complete or fresh).
+  * Same revision, job id and grading key; the reset applies only to targets actually taken (`manualRecovery()`).
+  * The CAS skips a target that completed since the scan (BR7) or whose revision moved after a force regrade (BR8).
+  * One aggregate audit event per call, and an aggregate-only reply. The client never sees or sends the cursor (BR10).
+* The automatic recovery sweep is unchanged.
+
+**Tests (`api/tests/coding-17d-a-bulk-bounded.test.js`).** Fail-first on `81d7733`: BR1, BR2, BR3, BR5, BR6 and BR9 failed;
+BR4, BR7, BR8 and BR10 passed (they guard behaviour that was already correct).
+
+| # | Proof |
+|---|---|
+| BR1 | 1 000 submissions, one call: ≤ 100 distinct submission downloads, ≤ 100 listed names, ≤ 12 dispatches, ≤ 4 in flight |
+| BR2 | 30 targets → calls schedule 12 / 12 / 6, each target exactly once; no call restarts at submission #1; one audit per call |
+| BR3 | cooldown expiring between every call: all 30 targets still progress, exactly once, in 3 calls |
+| BR4 | 2 attempts × 2 coding targets per submission: the limit stops mid-attempt; the next call resumes at the first untaken target |
+| BR5 | a slow runner stops the call at the deadline with `hasMore`; later calls finish every target exactly once |
+| BR6 | 150 submissions with only the last one eligible: call 1 → 0 scheduled, `hasMore: true`; call 2 → 1 scheduled, done |
+| BR7 | a callback completes a target between scan and claim: skipped, still complete, never revisited |
+| BR8 | a force regrade between scan and claim: old (revision, job) refused; the new revision stays authoritative |
+| BR9 | two concurrent calls: one 200, one 409 `BULK_RETRY_BUSY`; no revision / job id change; all targets finish exactly once |
+| BR10 | extra body fields (student / question / job id, revision, cursor, limit, states) → 400; the reply is aggregate-only |
+
+**Mutations BRM1–BRM8**
+
+| # | Mutation | Killed by |
+|---|---|---|
+| BRM1 | enumerate with `listBlobNames()` (unpaginated) | BR1 |
+| BRM2 | ignore the stored cursor (restart every call) | BR2 / BR3 |
+| BRM3 | advance `after` past untaken targets of the page | BR4 |
+| BRM4 | never persist the cursor (cooldown alone owns progress) | BR3 |
+| BRM5 | remove the scan bound | BR1 |
+| BRM6 | remove the internal deadline | BR5 |
+| BRM7 | accept a client `studentId` to select targets | BR10 / R29 |
+| BRM8 | bulk retry increments the revision | R27 / BR9 |
+

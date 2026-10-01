@@ -19,7 +19,9 @@ export function codingStatusBadge(s?: CodingGradingStatus | null): CodingBadge |
 
 /** The notice shown after a bulk retry request. */
 export function bulkRetryNotice(r: { scheduled: number; hasMore: boolean }): string {
-  if (!(r.scheduled > 0)) return "لا توجد أسئلة برمجية تحتاج إلى إعادة المحاولة الآن.";
+  if (!(r.scheduled > 0)) return r.hasMore
+    ? "لم تُجدول أسئلة في هذه الدفعة، وما زالت هناك أسئلة أخرى للفحص؛ أعد تنفيذ الإجراء لمتابعتها."   // bounded scan: more remains
+    : "لا توجد أسئلة برمجية تحتاج إلى إعادة المحاولة الآن.";
   const base = "تمت جدولة إعادة المحاولة لـ " + r.scheduled + " أسئلة برمجية.";
   return r.hasMore ? base + " ما زالت هناك أسئلة أخرى؛ أعد تنفيذ الإجراء لمتابعتها." : base;
 }

@@ -248,60 +248,156 @@ async function runCodingGradingRecoverySweep(container, options = {}, deps = {})
 }
 
 // ── Teacher bulk retry ───────────────────────────────────────────────────────────────────────────────────────────────────
+// Review Fix 1 — ONE teacher request is bounded in EVERY dimension: blob names listed / submissions downloaded
+// (BULK_RETRY_MAX_SCANNED), targets dispatched (BULK_RETRY_LIMIT), concurrency (BULK_RETRY_CONCURRENCY) and wall clock
+// (BULK_RETRY_DEADLINE_MS, checked before every page and every dispatch). All limits are server-owned constants.
+//
+// Progress across calls is a SERVER-OWNED operation cursor per assignment, platform/system/coding-bulk-retry/<assignment>.json:
+//     { schemaVersion: 1, assignmentId, operation: { startedAt, pageToken, after } | null, lock?: { owner, expiresAt }, updatedAt }
+// `pageToken` is the listing token of the page being worked (null = first page); `after` = { name, attemptNumber, targetKey } is
+// the LAST target considered in that page, in the total order (blob name, attempt number, target key). Everything at or before
+// `after` was considered by this operation; the next call resumes with the first target after it — mid-page, mid-submission or
+// mid-attempt — and never advances past a target it did not consider. The end of the listing completes the operation
+// (`operation: null`); the next call starts a new one. The cooldown only dedupes a target a teacher retried moments ago; it never
+// owns progress. The cursor is a CAS-protected lock as well: a second concurrent call is refused with 409 BULK_RETRY_BUSY, and a
+// call that lost its (expired) lock never overwrites the newer progress. The client never sees or sends the cursor.
+const BULK_RETRY_MAX_SCANNED = 100;
+const BULK_RETRY_DEADLINE_MS = 20000;
+const BULK_RETRY_LOCK_TTL_MS = 60 * 1000;
+const BULK_RETRY_OPERATION_TTL_MS = 24 * 60 * MIN;
+const BULK_CURSOR_PREFIX = "platform/system/coding-bulk-retry/";
+const ASSIGNMENT_ID = /^[A-Za-z0-9._:-]{1,128}$/;
+const TARGET_KEY = /^[A-Za-z0-9._:-]{1,128}$/;
+
+/** Total order of a target inside an assignment listing: (blob name, attempt number, target key). */
+function comparePosition(a, b) {
+  if (a.name !== b.name) return a.name < b.name ? -1 : 1;
+  if (a.attemptNumber !== b.attemptNumber) return a.attemptNumber < b.attemptNumber ? -1 : 1;
+  return a.targetKey === b.targetKey ? 0 : (a.targetKey < b.targetKey ? -1 : 1);
+}
+/** A stored operation, or null when absent / malformed / stale / not this assignment's (→ a new operation starts). */
+function validOperation(op, assignmentId, nowMs) {
+  if (!isObj(op)) return null;
+  const started = timeOf(op.startedAt);
+  if (!started || nowMs - started > BULK_RETRY_OPERATION_TTL_MS || started - nowMs > LEASE_MAX_FUTURE_MS) return null;
+  const tokenOk = op.pageToken === null || (typeof op.pageToken === "string" && op.pageToken.length > 0 && op.pageToken.length <= CURSOR_TOKEN_MAX && /^[\x21-\x7e]+$/.test(op.pageToken));
+  if (!tokenOk) return null;
+  let after = null;
+  if (op.after !== null) {
+    const a = op.after, m = isObj(a) && typeof a.name === "string" ? SUBMISSION_NAME.exec(a.name) : null;
+    if (!m || m[1] !== assignmentId || !Number.isInteger(a.attemptNumber) || a.attemptNumber < 1 || typeof a.targetKey !== "string" || !TARGET_KEY.test(a.targetKey)) return null;
+    after = { name: a.name, attemptNumber: a.attemptNumber, targetKey: a.targetKey };
+  }
+  return { startedAt: op.startedAt, pageToken: op.pageToken, after };
+}
+/** CAS-acquire the assignment's bulk retry cursor (create, or take over an expired lock). → { ok, etag, operation } | busy */
+async function acquireBulkCursor(container, assignmentId, owner, nowMs) {
+  const name = BULK_CURSOR_PREFIX + assignmentId + ".json";
+  const { value, etag } = await storage.downloadJsonWithEtagOrNull(container, name);
+  if (isObj(value) && isObj(value.lock)) {
+    const exp = timeOf(value.lock.expiresAt);
+    if (exp > nowMs && exp - nowMs <= LEASE_MAX_FUTURE_MS) return { ok: false };
+  }
+  const operation = (isObj(value) && value.assignmentId === assignmentId ? validOperation(value.operation, assignmentId, nowMs) : null) || { startedAt: iso(nowMs), pageToken: null, after: null };
+  const doc = { schemaVersion: 1, assignmentId, operation, lock: { owner, expiresAt: iso(nowMs + BULK_RETRY_LOCK_TTL_MS) }, updatedAt: iso(nowMs) };
+  try { return { ok: true, name, operation, etag: await storage.uploadJsonConditional(container, name, doc, etag || null) }; }
+  catch (e) { if (storage.isConcurrencyConflict(e)) return { ok: false }; throw e; }
+}
+/** Persists progress and releases the lock — only if this call still owns it (If-Match on the acquired ETag). */
+async function releaseBulkCursor(container, held, assignmentId, operation, nowMs) {
+  const doc = { schemaVersion: 1, assignmentId, operation, updatedAt: iso(nowMs), ...(operation ? {} : { lastCompletedAt: iso(nowMs) }) };
+  try { await storage.uploadJsonConditional(container, held.name, doc, held.etag); return true; }
+  catch (e) { if (storage.isConcurrencyConflict(e)) return false; throw e; }
+}
+
+/** The bulk-eligible targets of ONE submission strictly after `after`, in (attempt number, target key) order. */
+function bulkItemsOf(name, doc, assignmentId, after, nowMs) {
+  const m = SUBMISSION_NAME.exec(name);
+  if (!m || m[1] !== assignmentId || !isObj(doc) || !Array.isArray(doc.attempts) || (doc.studentId !== undefined && String(doc.studentId) !== m[2])) return [];
+  const out = [];
+  for (const attempt of [...doc.attempts].filter(a => isObj(a) && Number.isInteger(a.attemptNumber) && a.attemptNumber >= 1).sort((a, b) => a.attemptNumber - b.attemptNumber)) {
+    const targets = isObj(attempt.codingGrading) && isObj(attempt.codingGrading.targets) ? attempt.codingGrading.targets : null;
+    if (!targets) continue;
+    for (const key of Object.keys(targets).filter(k => TARGET_KEY.test(k)).sort()) {
+      const pos = { name, attemptNumber: attempt.attemptNumber, targetKey: key };
+      if (after && comparePosition(pos, after) <= 0) continue;
+      const t = targets[key];
+      if (!bulkEligible(t, nowMs)) continue;
+      if (isObj(t.recovery) && nowMs - timeOf(t.recovery.manualRetryAt) < BULK_RETRY_COOLDOWN_MS) continue;     // dedupe only
+      out.push({ pos, ids: { assignmentId, studentId: m[2], attemptNumber: attempt.attemptNumber }, targetKey: key, revision: t.revision, jobId: t.jobId, state: t.state });
+    }
+  }
+  return out;
+}
+
 /**
- * Re-dispatches every open coding target of ONE assignment that needs it — pending, retryable (incl. exhausted) and STALE
- * dispatched; never complete or freshly dispatched — at the SAME revision, resetting automatic backoff / exhaustion. Bounded per
- * call (BULK_RETRY_LIMIT, hasMore); resumable without a client cursor: a target retried by a teacher within the cooldown is
- * skipped, so the next call continues with the rest. ONE audit event per call. → { status, scheduled, dispatched, retryable,
- * skipped, hasMore } | { status: 404, code }
+ * Teacher bulk retry of ONE assignment: re-dispatches pending, retryable (incl. exhausted) and STALE dispatched coding targets —
+ * never complete or freshly dispatched — at the SAME revision, resetting automatic backoff / exhaustion (manualRecovery). One call
+ * does at most BULK_RETRY_MAX_SCANNED listed names, BULK_RETRY_LIMIT dispatches, BULK_RETRY_CONCURRENCY in flight and stops
+ * starting work at BULK_RETRY_DEADLINE_MS; `hasMore` = this operation has assignment space it has not processed yet. ONE audit
+ * event per call. → { status: 200, scheduled, dispatched, retryable, skipped, hasMore } | { status: 404 | 409, code }
  */
-async function bulkRetryAssignment(container, { assignmentId, actor, limit } = {}, deps = {}, obs = null) {
+async function bulkRetryAssignment(container, { assignmentId, actor } = {}, deps = {}, obs = null) {
   const now = typeof deps.now === "function" ? deps.now : Date.now;
   const id = String(assignmentId || "");
+  if (!ASSIGNMENT_ID.test(id) || id.includes("..")) return { status: 404, code: "NOT_FOUND" };
   const assignment = await storage.downloadJsonOrNull(container, AP + id + ".json");
   if (!assignment) return { status: 404, code: "NOT_FOUND" };
-  const names = (await storage.listBlobNames(container, SP + id + "/")).sort();
-  const docs = await storage.mapConcurrent(names, storage.getReadConcurrency(), n => storage.downloadJsonOrNull(container, n));
-  const nowMs = now(), candidates = [];
-  names.forEach((name, i) => {
-    const m = SUBMISSION_NAME.exec(name), doc = docs[i];
-    if (!m || m[1] !== id || !isObj(doc) || !Array.isArray(doc.attempts) || (doc.studentId !== undefined && String(doc.studentId) !== m[2])) return;
-    for (const attempt of [...doc.attempts].sort((a, b) => Number(a && a.attemptNumber) - Number(b && b.attemptNumber))) {
-      const targets = isObj(attempt) && isObj(attempt.codingGrading) && isObj(attempt.codingGrading.targets) ? attempt.codingGrading.targets : null;
-      if (!targets || !Number.isInteger(attempt.attemptNumber)) continue;
-      for (const key of Object.keys(targets).sort()) {
-        const t = targets[key];
-        if (!bulkEligible(t, nowMs)) continue;
-        if (isObj(t.recovery) && nowMs - timeOf(t.recovery.manualRetryAt) < BULK_RETRY_COOLDOWN_MS) continue;
-        candidates.push({ ids: { assignmentId: id, studentId: m[2], attemptNumber: attempt.attemptNumber }, targetKey: key, revision: t.revision, jobId: t.jobId, state: t.state });
-      }
-    }
-  });
-  const cap = Number.isInteger(limit) && limit >= 1 ? Math.min(limit, BULK_RETRY_LIMIT) : BULK_RETRY_LIMIT;
-  const batch = candidates.slice(0, cap), hasMore = candidates.length > cap;
+  const started = now();
+  const held = await acquireBulkCursor(container, id, "br_" + crypto.randomBytes(9).toString("hex"), started);
+  if (!held.ok) { obs?.logInfo?.("coding.autoGrade.bulkRetry.busy", {}); return { status: 409, code: "BULK_RETRY_BUSY" }; }
+  const overDeadline = () => now() - started >= BULK_RETRY_DEADLINE_MS;
   const r = { scheduled: 0, dispatched: 0, retryable: 0, skipped: 0 };
-  let next = 0;
-  const worker = async () => {
-    while (next < batch.length) {
-      const item = batch[next++];
-      try {
-        const expect = { revision: item.revision, jobId: item.jobId };
-        const reset = await mutateTarget(container, item.ids, item.targetKey, expect, t => {
-          if (!bulkEligible(t, now())) return false;
-          t.recovery = manualRecovery(deps);
-          return true;
-        }, deps);
-        if (!reset) { r.skipped++; continue; }
-        r.scheduled++;
-        const out = await ensureCodingGradingJobs(container, item.ids, deps, { targets: [item.targetKey], states: [item.state], expect });
-        if (out[0] && out[0].state === "dispatched") r.dispatched++; else r.retryable++;
-      } catch { r.skipped++; }
+  let { pageToken, after } = held.operation, scanned = 0, budget = BULK_RETRY_LIMIT, complete = false, tokenReset = false;
+  let saved = false;
+  try {
+    for (;;) {
+      if (overDeadline() || budget <= 0 || scanned >= BULK_RETRY_MAX_SCANNED) break;
+      let page;
+      try { page = await storage.listBlobNamesPage(container, SP + id + "/", { continuationToken: pageToken, maxPageSize: BULK_RETRY_MAX_SCANNED - scanned }); }
+      catch (e) {
+        if (e && e.code === "INVALID_CONTINUATION_TOKEN" && pageToken && !tokenReset) { tokenReset = true; pageToken = null; after = null; continue; }
+        throw e;
+      }
+      scanned += page.names.length;
+      const toRead = page.names.filter(n => { const m = SUBMISSION_NAME.exec(n); return m && m[1] === id && (!after || n >= after.name); });
+      if (overDeadline()) break;                                                            // the cursor stays at this page
+      const docs = await storage.mapConcurrent(toRead, storage.getReadConcurrency(), n => storage.downloadJsonOrNull(container, n).catch(() => null));
+      const nowMs = now(), items = [];
+      toRead.forEach((n, i) => { for (const it of bulkItemsOf(n, docs[i], id, after, nowMs)) items.push(it); });
+      let next = 0, pageStop = false;
+      const worker = async () => {
+        for (;;) {
+          if (pageStop || next >= items.length) return;
+          if (overDeadline() || budget <= 0) { pageStop = true; return; }
+          budget--;
+          const item = items[next++];
+          try {
+            const expect = { revision: item.revision, jobId: item.jobId };
+            const reset = await mutateTarget(container, item.ids, item.targetKey, expect, t => {
+              if (!bulkEligible(t, now())) return false;                                    // completed / changed since the scan
+              t.recovery = manualRecovery(deps);
+              return true;
+            }, deps);
+            if (!reset) { r.skipped++; continue; }
+            r.scheduled++;
+            const out = await ensureCodingGradingJobs(container, item.ids, deps, { targets: [item.targetKey], states: [item.state], expect });
+            if (out[0] && out[0].state === "dispatched") r.dispatched++; else r.retryable++;
+          } catch { r.skipped++; }
+        }
+      };
+      await Promise.all(Array.from({ length: Math.min(BULK_RETRY_CONCURRENCY, Math.max(1, items.length)) }, worker));
+      if (pageStop) { if (next > 0) after = items[next - 1].pos; break; }                  // resume right after the last one taken
+      if (!page.continuationToken) { complete = true; break; }                              // end of the listing: operation done
+      pageToken = page.continuationToken; after = null;
     }
-  };
-  await Promise.all(Array.from({ length: Math.min(BULK_RETRY_CONCURRENCY, Math.max(1, batch.length)) }, worker));
-  const summary = { scheduled: r.scheduled, dispatched: r.dispatched, retryable: r.retryable, hasMore };
+    saved = await releaseBulkCursor(container, held, id, complete ? null : { startedAt: held.operation.startedAt, pageToken, after }, now());
+  } finally {
+    if (!saved) { try { await releaseBulkCursor(container, held, id, held.operation, now()); } catch { /* the lock expires on its own */ } }
+  }
+  const summary = { scheduled: r.scheduled, dispatched: r.dispatched, retryable: r.retryable, hasMore: !complete };
   await (deps.recordAuditEvent || recordAuditEvent)(container, { actor: String(actor || "builder"), action: "coding.autoGrade.bulkRetry", targetType: "assignment", targetId: id, targetLabel: String(assignment.title || ""), details: { assignmentId: id, ...summary } });
-  obs?.logInfo?.("coding.autoGrade.bulkRetry", { ...summary, skipped: r.skipped });
+  obs?.logInfo?.("coding.autoGrade.bulkRetry", { ...summary, skipped: r.skipped, scanned });
   return { status: 200, ...summary, skipped: r.skipped };
 }
 /** Bulk retry selection: pending, retryable, or dispatched for longer than the stale threshold (never complete). */
@@ -312,6 +408,7 @@ function bulkEligible(t, nowMs) {
 }
 
 module.exports = {
-  RECOVERY_POLICY, SWEEP_LIMITS, RECOVERY_CURSOR_NAME, SWEEP_LEASE_NAME, BULK_RETRY_LIMIT, BULK_RETRY_COOLDOWN_MS,
+  RECOVERY_POLICY, SWEEP_LIMITS, RECOVERY_CURSOR_NAME, SWEEP_LEASE_NAME, BULK_RETRY_LIMIT, BULK_RETRY_COOLDOWN_MS, BULK_RETRY_MAX_SCANNED,
+  BULK_RETRY_CONCURRENCY, BULK_RETRY_DEADLINE_MS, BULK_CURSOR_PREFIX,
   retryBackoffMs, recoveryDecision, acquireSweepLease, releaseSweepLease, runCodingGradingRecoverySweep, bulkRetryAssignment
 };
