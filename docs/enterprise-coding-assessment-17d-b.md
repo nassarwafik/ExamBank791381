@@ -306,7 +306,7 @@ sweep re-dispatches the stale target, the runner executes it as a new job, the A
 ## B2.3 Runner journal (`runner/gateway/journal.js`)
 
 ```
-RUNNER_JOURNAL_DIR/            0700, owned by the gateway user, one gateway process (journal.lock: pid + token)
+RUNNER_JOURNAL_DIR/            0700, owned by the gateway user, one gateway process (journal.lock: pid + boot id + token, §B2.13)
   jobs/<jobId>.json            0600  lifecycle record (below) — identifiers, hashes, states, timestamps, counters
   inputs/<jobId>.json          0600  validated job (source + hidden-test stdin) — ONLY until the result is durable
   results/<jobId>.json         0600  raw-evidence callback body — ONLY until SmartAssess confirms (or the record is pruned)
@@ -360,7 +360,7 @@ and its result durable — the crash window the journal exists for); CALLBACK_CO
 At startup: lock → **bounded** scan of `jobs/` (≤ `startupScanMax` entries; beyond → `truncated`, new admissions refused) →
 quarantine corrupt entries → `received` re-queued, `running` interrupted, `executed` result verified and callback scheduled at its
 persisted `nextAt`, terminal records left alone (leftover inputs / results of a crash between two steps released) → bounded
-orphan cleanup → serve. Leftover sandbox containers of the dead process are removed by the existing startup sweep.
+orphan cleanup, **only when the scan was complete** (a truncated scan skips it, §B2.13) → serve. Leftover sandbox containers of the dead process are removed by the existing startup sweep.
 
 ### Callback retry
 
@@ -435,7 +435,8 @@ revision; recovery and retries stay on the same revision and job id.
 API: `coding.runner.delivery.claimed`, `coding.runner.delivery.duplicate`, `coding.runner.delivery.release.failed`.
 Runner: `coding.runner.delivery.duplicate`, `coding.runner.delivery.stale`, `coding.runner.execution.started | resumed |
 interrupted | superseded | regenerated`, `coding.runner.callback.retry | confirmed | failed | rearmed`,
-`coding.runner.journal.corrupt | truncated | orphans | write-failed | recovered`. Identifiers are the opaque job id only; never
+`coding.runner.journal.corrupt | truncated | orphans | orphans-skipped | write-failed | recovered`; the gateway start event
+reports `recovery.staleLock` (`previous-boot | dead-pid | own-pid | malformed | null`). Identifiers are the opaque job id only; never
 source, hidden tests, output, keys or signed payloads (LK1). `queue.status()` exposes aggregate counts for operations; there is
 no new route and no UI.
 
@@ -500,3 +501,97 @@ fingerprint of `git status` + `git diff` + every untracked file's SHA-256 identi
 | DM12 | log the source and hidden-test cases | LK1 |
 
 **12 / 12 killed.**
+
+## B2.13 Production-readiness hardening (after the 17D-B2 merge)
+
+Three findings of the independent review are fixed. Nothing else changes: the B2 state machine, its bounds, its telemetry
+contract and the API authority are untouched.
+
+### M1 — the journal lock survives an unclean reboot
+
+`journal.lock` is on the persistent disk, so a host crash leaves it behind. It used to record only the gateway's PID, and after
+a reboot Linux may give that PID to an unrelated live process: the new gateway then concluded that another gateway owned the
+journal (`JOURNAL_LOCKED`) and the whole gateway stayed down until someone deleted the lock by hand.
+
+The lock now also records the kernel boot identity: `{ pid, bootId, token, at }`, `bootId` from
+`/proc/sys/kernel/random/boot_id`. On `open()`, an existing lock is judged as follows:
+
+| Existing lock | Verdict |
+|---|---|
+| stored and current boot id both readable and **different** | stale (written before this boot) → replaced, whatever its PID |
+| same boot id, PID of a **live** process other than this one | owned by another gateway → `JOURNAL_LOCKED` (unchanged) |
+| same boot id, **dead** PID | stale → replaced (unchanged) |
+| boot id **unavailable** (current unreadable, or stored missing / not a boot id) | the 17D-B2 PID rule: live → `JOURNAL_LOCKED`, dead → replaced |
+| this process's own PID | this process's lock → replaced (unchanged 17D-B2 semantics) |
+| malformed (unparseable, no integer PID) | `JOURNAL_LOCKED` while younger than 60 s (it may still be being written by a starting gateway); stale after that |
+
+- An unreadable boot id is never taken to mean "stale". It only removes the boot check, never the live-PID check, so it
+  cannot let two live gateways share a journal.
+- A stale lock is removed only if it is still exactly the lock that was judged; if another starting gateway replaced it in
+  between, the decision is taken again.
+- The start event reports why a stale lock was replaced, as `recovery.staleLock` (`previous-boot | dead-pid | own-pid |
+  malformed | null`). No PID or boot id is logged.
+- A genuine reboot therefore never needs manual intervention. The production configuration
+  (`RUNNER_JOURNAL_DIR=/data/smartassess-runner` on an ext4 managed data disk) is unaffected.
+
+### m1 — a truncated startup scan never deletes what it did not see
+
+The startup orphan cleanup removes inputs and results that no record references. After a **truncated** scan (more
+directory entries than `startupScanMax`) the record set is incomplete, and the cleanup used to delete the inputs and results
+of valid records that were simply not scanned — including the durable result of an EXECUTED-but-unconfirmed job, which was
+then quarantined on the next complete scan.
+
+The cleanup now runs only after a **complete** scan. A truncated scan skips it, logs
+`coding.runner.journal.orphans-skipped { reason: "truncated" }` and stays fail-closed for new official admissions, exactly as
+before. A complete scan still removes genuine orphans. The scan bound is unchanged.
+
+### m2 — the new-generation path is covered
+
+When SmartAssess confirms a technical outcome as **retryable**, the next delivery of the same job starts a new execution
+generation, bounded by `EXECUTION_POLICY.maxGenerations` (3). The code was correct but untested (review mutation X3
+survived). GEN1–GEN3 now prove that:
+
+- the input is re-persisted;
+- the generation increments and the job executes again with a fresh result (the generation-1 result is never re-used);
+- callback counters stay cumulative and bounded;
+- the revision and `targetRef` never change;
+- no fourth generation starts, also after restarts;
+- the generation counter survives a restart.
+
+### Tests — `runner/tests/unit/production-readiness.rtest.js` (11)
+
+| Test | Proves |
+|---|---|
+| LOCK1 | same boot + live foreign PID → `JOURNAL_LOCKED`, the lock is untouched |
+| LOCK2 | same boot + dead PID → replaced; the new lock carries this process's PID and boot id |
+| LOCK3 | a lock from a previous boot whose PID is now a **live unrelated process** → replaced (the regression case) |
+| LOCK4 | a second gateway **process** on the same boot is refused; this process's own lock reopens; after close another process opens |
+| LOCK5 | boot id unavailable (current unreadable, stored missing, stored not a boot id) → the PID rule; never a bypass |
+| LOCK6 | malformed locks (empty, truncated JSON, string PID, array) → refused while fresh, untouched; replaced after the grace period; an old malformed lock is replaced at once |
+| SCAN1 | 8 EXECUTED jobs + 120 foreign entries, `startupScanMax` 6 → `truncated`; every result survives; new jobs refused; a later complete scan calls back all 8 from their durable results, 0 quarantined, 0 re-executed |
+| SCAN2 | a complete scan still removes orphan inputs / results and keeps the referenced result |
+| GEN1 | retryable → same job delivered again → generation 2: input re-persisted, executed again (`gen-2` output), same revision / `targetRef`, cumulative callback counters |
+| GEN2 | three retryable generations → a fourth delivery is a duplicate of the confirmed job, before and after a restart: 3 executions, 3 callbacks |
+| GEN3 | generation 2 survives a restart → the next delivery runs generation 3 → after another restart no generation 4 |
+
+**Fail-first on unchanged `c4d8268`:**
+
+- **Failed:** LOCK2, LOCK3, LOCK5, LOCK6 (no boot id in the lock; a previous boot's lock held by a re-used live PID →
+  `JOURNAL_LOCKED`; a fresh malformed lock was removed at once) and SCAN1 (the truncated scan deleted a result of an unscanned
+  EXECUTED job).
+- **Passed:** LOCK1, LOCK4, SCAN2 and GEN1–GEN3, which guard behaviour that already existed. The generation coverage gap is
+  proven by mutation: review mutation X3 applied to the baseline fails GEN1, GEN2 and GEN3.
+
+### Mutations
+
+Each mutation is restored byte-for-byte; the `git status` + `git diff` + untracked-file fingerprint is identical before and
+after the campaign. **6 / 6 killed.**
+
+| # | Mutation | Killed by |
+|---|---|---|
+| PM1 | ignore the stored boot id (PID only) | LOCK3 |
+| PM2 | treat every different boot id as locked | LOCK3 |
+| PM3 | skip the live-PID check on the same boot | LOCK1 (also LOCK4, LOCK5) |
+| PM4 | run the orphan cleanup even after a truncated scan | SCAN1 |
+| PM5 | never start a new generation after a confirmed retryable outcome | GEN1 (also GEN2, GEN3) |
+| PM6 | reset the generation to 1 on restart | GEN3 (also GEN2) |
