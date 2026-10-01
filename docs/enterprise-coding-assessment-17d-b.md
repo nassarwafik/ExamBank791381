@@ -21,7 +21,7 @@ that: **every validly signed sweep request is accepted at most once**, enforced 
 | Changing the request id to dodge the ledger | — | impossible: the id is part of the HMAC canonical input (RP2, RPM9) |
 | Storage-amplification by unauthenticated traffic | no writes | still **no storage access at all** before HMAC + freshness + id format (RP4, RP5, RP7) |
 | Path traversal through the request id | — | ledger names are `sha256` hex digests under a fixed prefix (RP7) |
-| Ledger unavailable / ambiguous CAS outcome | — | **503 `SWEEP_UNAVAILABLE`**, sweep never runs (fail closed, RP11) |
+| Ledger unavailable / ambiguous CAS outcome | — | **503 `SWEEP_UNAVAILABLE`**, sweep never runs (fail closed, RP11, RP11b) |
 
 The sweep was already idempotent (it only re-dispatches *still due* targets at the same revision with deterministic job ids)
 and the body is fixed, so a replay could never choose targets or grades. 17D-B1 removes the remaining "one extra sweep per
@@ -59,8 +59,9 @@ verify: format, HMAC, freshness            → 401 UNAUTHORIZED            (no s
 body ≠ {"version":1}                       → 400 REQUEST_INVALID         (no storage)
 ── 17D-B1 ──────────────────────────────────────────────────────────────────────────────
 reserve request id (conditional create)
-    exists (409 BlobAlreadyExists)         → 409 REPLAYED_REQUEST        (no lease, no engine)
-    any other failure                      → 503 SWEEP_UNAVAILABLE       (no lease, no engine)
+    exists: 409 BlobAlreadyExists          → 409 REPLAYED_REQUEST        (no lease, no engine)
+    exists: 412 ConditionNotMet            → 409 REPLAYED_REQUEST        (no lease, no engine)
+    any other outcome                      → 503 SWEEP_UNAVAILABLE       (no lease, no engine)
 ────────────────────────────────────────────────────────────────────────────────────────
 lease (17D-A)                              → 409 SWEEP_BUSY
 engine                                     → 200 aggregates
@@ -78,13 +79,49 @@ race has still consumed its id (it was authenticated and reserved); the schedule
 * **Path:** `platform/system/coding-sweep-replay/<hex(SHA-256("sa-sweep-replay-v1\n" + requestId))>.json`. Fixed prefix + 64 hex
   characters: request-id text never becomes part of a blob name, so no traversal or prefix confusion is possible. The digest
   is derived from the id alone (no time bucket), so one id always maps to one record.
-* **Atomicity:** one `uploadJsonConditional(..., etag = null)` → `If-None-Match: *`. Created → accepted. `409
-  BlobAlreadyExists` → replay. Anything else (5xx, network, a `412` or any other conflict) → `LEDGER_UNAVAILABLE` → 503.
-  There is no read-then-write window; Azure Blob guarantees at most one creator.
+* **Atomicity:** one `uploadJsonConditional(..., etag = null)` → a single Put Blob whose **only** precondition is
+  `If-None-Match: *` (RP3b pins the exact `conditions` object). The service evaluates the precondition together with the
+  write, so there is no read-then-write window and at most one request can create the record. See §4.1 for how the outcome
+  is classified.
 * **Record (identifier-free metadata only):**
   `{ schemaVersion: 1, protocol: "SA-CODING-SWEEP-1", requestDigest, signedAt, acceptedAt, expiresAt }`.
   No key, signature, raw request id, body, student, attempt, job id, source, hidden test or grading key (RP9, RP12).
 * **No in-memory state.** Every decision is made against blob storage, so restarts and scale-out are covered (RP8).
+
+### 4.1 Reservation outcome classification (review fix 1)
+
+A failed create-only write can report "the blob already exists" in two shapes, and both are accepted as a replay:
+
+* `409` with error code `BlobAlreadyExists` — the in-memory test store and other compatible backends use this shape.
+* `412` with error code `ConditionNotMet` — the failed-precondition shape. `@azure/storage-blob` 12.33 (the pinned
+  dependency) surfaces it as `RestError { statusCode: 412, code: "ConditionNotMet", details.errorCode: "ConditionNotMet" }`;
+  this was verified by driving the real SDK client against a local endpoint that answered with Azure's error headers and
+  XML body (`x-ms-error-code`), and the request it sent carried `If-None-Match: *` and no other condition.
+
+This repository does not depend on which of the two a particular service version returns. Because `If-None-Match: *` is the
+write's only precondition, `ConditionNotMet` on **this** write can only mean that the record exists. The mapping lives inside
+`reserveSweepRequest()` and is not a general storage-error mapping (the shared `isConcurrencyConflict` helper is untouched
+and not used here).
+
+| Reservation write outcome | Result | HTTP |
+|---|---|---|
+| created | accepted → lease → engine | 200 / 409 `SWEEP_BUSY` |
+| status `409` and code `BlobAlreadyExists` | `REPLAYED_REQUEST` | 409 |
+| status `412` and code `ConditionNotMet` | `REPLAYED_REQUEST` | 409 |
+| `412` with another code (e.g. `LeaseIdMissing`) or no code | `LEDGER_UNAVAILABLE` | 503 |
+| `409` with another code or no code | `LEDGER_UNAVAILABLE` | 503 |
+| right code with a wrong / missing status (e.g. `ConditionNotMet` + 400) | `LEDGER_UNAVAILABLE` | 503 |
+| `statusCode` vs `response.status`, or `code` vs `details.errorCode`, disagree | `LEDGER_UNAVAILABLE` | 503 |
+| 5xx, 403, network (`ECONNRESET`, `REQUEST_SEND_ERROR`), non-object / malformed error | `LEDGER_UNAVAILABLE` | 503 |
+
+Status and code must both match one row exactly, and must agree everywhere the SDK reports them. Neither `REPLAYED_REQUEST`
+nor `LEDGER_UNAVAILABLE` reaches the lease or the engine, so classification affects only the response code and telemetry;
+the sweep runs **only** after a successful create.
+
+**Lost-response retry.** The storage SDK retries a request when the transport fails. If a first Put Blob succeeded but its
+response was lost, the retry finds the record and is classified as a replay. That request then answers 409
+`REPLAYED_REQUEST` without running a sweep. This errs on the side of not executing; the scheduler exits 1 and the next
+scheduled invocation, with a new id, runs normally.
 
 ## 5. TTL invariant
 
@@ -139,6 +176,8 @@ now?". A replay or a failed reservation is refused before the lease is touched (
 | RP1 | fresh signed request with an unseen id → 200, sweep runs exactly once, one ledger record |
 | RP2 | exact replays → 409 `REPLAYED_REQUEST` ×3, sweep not re-run; a swapped id under the old signature → 401 (id is HMAC-bound) |
 | RP3 | 3 concurrent identical requests → exactly one 200, two `REPLAYED_REQUEST`, one record |
+| RP3b | Azure-shaped `412 ConditionNotMet` (`RestError`) on an existing reservation → 409 `REPLAYED_REQUEST` twice; no sweep; the lease blob is never accessed; `sweepReplay.rejected` emitted, no `storageError`; every reservation write's conditions are exactly `{ ifNoneMatch: "*" }` |
+| RP3c | 4 concurrent identical requests against Azure 412 semantics → exactly one 200, three `REPLAYED_REQUEST`, no 503, one record |
 | RP4 | bad signature → 401 with zero storage access |
 | RP5 | stale (±301 s, far past) → 401 with zero storage access |
 | RP6 | distinct ids with identical body are independent sweeps |
@@ -147,12 +186,18 @@ now?". A replay or a failed reservation is refused before the lease is touched (
 | RP8 | a re-required handler (restart) over the same storage still refuses the replay |
 | RP9 | retention invariant; record never pruned before `expiresAt`; replay inside window → 409, later → 401; expired records are pruned, unexpired kept |
 | RP10 | 300 expired records: one call lists ≤ 25, reads ≤ 25, deletes ≤ 10; repeated calls drain the ledger via the cursor |
-| RP11 | ledger upload 500 or 412 → 503 `SWEEP_UNAVAILABLE`, sweep never runs, no lock, no error text in logs |
+| RP11 | ledger upload 500, `412 LeaseIdMissing`, 412 without code, or `ECONNRESET` → 503 `SWEEP_UNAVAILABLE`, sweep never runs, no lock, no error text in logs |
+| RP11b | the §4.1 decision matrix: 5 replay shapes and 17 fail-closed shapes, each checked on `reserveSweepRequest()` directly and through the handler (status, body, telemetry, no run, no lock, no record, no error text) |
 | RP12 | replay response is `{ ok, code }` with `no-store`; record has exactly the six metadata fields; nothing leaks into responses, logs or the record |
 
 **Fail-first on `6a50f54`:** 10 failed, 3 passed (RP4, RP5 and RP6b already held in 17D-A: no storage before auth, and the
 signer already used a fresh 27-character id). The failures were: replay `expected 200 to be 409`; `"short_id_1234": expected
 200 to be 401`; `500: expected 200 to be 503`; empty ledger arrays; `Cannot find module …/sweep-replay-ledger.js`.
+
+**Review fix 1 fail-first on `77f6839`** (unchanged source): RP3b `expected 503 to be 409`; RP3c `expected [] to have a
+length of 3 but got +0`; RP11b `azure 412 ConditionNotMet: expected { ok: false, code: 'LEDGER_UNAVAILABLE' } to deeply equal
+{ ok: false, code: 'REPLAYED_REQUEST' }`. RP11's former `412 ConditionNotMet → 503` case encoded the defect; it was replaced by
+`412 LeaseIdMissing`, a 412 without a code and a network error, which keeps RP11's 412 fail-closed coverage.
 
 The 17D-A sweep suite's fixed short ids (`sw_parity0001`, `gh_proof00001`, the 15-character random default) were lengthened
 to satisfy the new minimum; no assertion changed.
@@ -176,9 +221,15 @@ fingerprint of `git status` + `git diff` + every untracked file's SHA-256 before
 | RPM10a | unbounded listing page (`maxPageSize: 5000`) | RP10 |
 | RPM10b | ignore `maxDeleted` | RP10 |
 | RPM11 | store the raw request id in the record | RP12 |
+| RPM12 | remove the `412 ConditionNotMet` replay classification | RP3b (`expected 503 to be 409`) |
+| RPM13 | over-broad: every 412 is a replay | RP11b (`412 LeaseIdMissing` → `REPLAYED_REQUEST`) |
+| RPM14 | match the error code only, ignore the status | RP11b (`ConditionNotMet` without a status → `REPLAYED_REQUEST`) |
+| RPM15 | drop the status / code consistency check | RP11b (`412 code/details disagree` → `REPLAYED_REQUEST`) |
 
-12 / 12 killed; fingerprint before = after. (RPM11 initially survived; RP12 was strengthened to pin the record's exact key
-set and scan it for leaks.)
+16 / 16 killed (RPM1–RPM11 re-run after review fix 1); fingerprint before = after. RPM11 initially survived, and RP12 was
+strengthened to pin the record's exact key set and scan it for leaks. During review fix 1 a further candidate (drop the "status and
+code present" guard) survived because it was equivalent: a missing status or code can never equal a matrix row. The redundant
+guard was removed from the code instead of being kept as dead logic.
 
 ## 11. Production migration note
 

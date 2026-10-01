@@ -211,7 +211,8 @@ describe("RP — signed sweep replay protection", () => {
   });
 
   it("RP11 the ledger cannot atomically reserve → 503 SWEEP_UNAVAILABLE and the sweep NEVER runs (storage error or a non-'exists' CAS conflict)", async () => {
-    for (const failure of [Object.assign(new Error("storage down"), { statusCode: 500 }), Object.assign(new Error("ConditionNotMet"), { statusCode: 412, code: "ConditionNotMet" })]) {
+    // (a 412 ConditionNotMet on the create-only write means "already reserved" — RP3b / RP11b; a 412 with another code does not)
+    for (const failure of [Object.assign(new Error("storage down"), { statusCode: 500 }), Object.assign(new Error("LeaseIdMissing"), { statusCode: 412, code: "LeaseIdMissing" }), Object.assign(new Error("precondition"), { statusCode: 412 }), Object.assign(new Error("socket hang up"), { code: "ECONNRESET" })]) {
       const ctx = emptyStore();
       const broken = new Proxy(ctx.container, { get(t, p) {
         if (p === "getBlockBlobClient") return name => { const b = t.getBlockBlobClient(name); return { ...b, upload: async (...a) => { if (name.startsWith(LEDGER)) throw failure; return b.upload(...a); } }; };
@@ -224,7 +225,7 @@ describe("RP — signed sweep replay protection", () => {
       expect(h.runs()).toBe(0);
       expect(ctx.has(LOCK)).toBe(false);
       expect(h.logs.map(l => l[0])).toContain("coding.autoGrade.sweepReplay.storageError");
-      expect(JSON.stringify(h.logs)).not.toMatch(/storage down|ConditionNotMet/);
+      expect(JSON.stringify(h.logs)).not.toMatch(/storage down|LeaseIdMissing|precondition|socket hang up/);
     }
   });
 
@@ -249,5 +250,126 @@ describe("RP — signed sweep replay protection", () => {
     const events = h.logs.map(l => l[0]);
     expect(events).toContain("coding.autoGrade.sweepReplay.accepted");
     expect(events).toContain("coding.autoGrade.sweepReplay.rejected");
+  });
+});
+
+// Review fix 1 — the reservation is ONE create-only write (If-None-Match: *). @azure/storage-blob 12.33 reports a failed target
+// condition as a RestError { statusCode: 412, code: "ConditionNotMet", details.errorCode: "ConditionNotMet" } (pinned by driving
+// the real SDK against an Azure-shaped endpoint); a backend may also answer 409 BlobAlreadyExists. Both mean "this id is already
+// reserved" → 409 REPLAYED_REQUEST. Every other outcome — including 412 / 409 with any other or a missing / inconsistent error
+// code — stays fail-closed (503 SWEEP_UNAVAILABLE). Either way the sweep lease and the engine are never reached.
+const { RestError } = require_("@azure/storage-blob");
+const azureError = (statusCode, code, message = "storage") => { const e = new RestError(message, { statusCode, code }); if (code) e.details = { errorCode: code }; return e; };
+const AZURE_EXISTS = () => azureError(412, "ConditionNotMet", "The condition specified using HTTP conditional header(s) is not met.");
+/** The memory store, answering a create-only write on an existing ledger record the way Azure does (412 ConditionNotMet). */
+function azureStore(container, { touched = [], conditions = [] } = {}) {
+  return new Proxy(container, { get(t, p) {
+    if (p === "getBlockBlobClient" || p === "getBlobClient") return name => {
+      touched.push(name);
+      const b = t[p](name);
+      if (p !== "getBlockBlobClient" || !name.startsWith(LEDGER)) return b;
+      return { ...b, upload: async (body, len, opts) => {
+        conditions.push(opts && opts.conditions);
+        try { return await b.upload(body, len, opts); }
+        catch (e) { if (e && e.statusCode === 409 && e.code === "BlobAlreadyExists") throw AZURE_EXISTS(); throw e; }
+      } };
+    };
+    const v = t[p]; return typeof v === "function" ? v.bind(t) : v;
+  } });
+}
+/** A store whose ledger write fails with `failure` (no record is ever created). */
+function failingLedger(container, failure) {
+  return new Proxy(container, { get(t, p) {
+    if (p === "getBlockBlobClient") return name => { const b = t.getBlockBlobClient(name); return { ...b, upload: async (...a) => { if (name.startsWith(LEDGER)) throw failure(); return b.upload(...a); } }; };
+    const v = t[p]; return typeof v === "function" ? v.bind(t) : v;
+  } });
+}
+
+describe("RP — Azure conditional-create semantics of the replay reservation", () => {
+  it("RP3b Azure-style 412 ConditionNotMet on an existing reservation → 409 REPLAYED_REQUEST; no sweep, lease untouched, rejected telemetry", async () => {
+    const ctx = emptyStore(), touched = [], conditions = [];
+    const h = harness(ctx, { container: azureStore(ctx.container, { touched, conditions }) }), headers = sign();
+    expect((await h.call(request(headers))).status).toBe(200);
+    expect(h.runs()).toBe(1);
+    const lockBefore = ctx.has(LOCK) ? JSON.stringify(ctx.getJson(LOCK)) : null;
+    touched.length = 0; h.logs.length = 0;
+    for (let i = 0; i < 2; i++) {
+      const replay = await h.call(request(headers));
+      expect(replay.status).toBe(409);
+      expect(replay.jsonBody).toEqual({ ok: false, code: "REPLAYED_REQUEST" });
+    }
+    expect(h.runs()).toBe(0);                                                             // (logs were reset) no sweep started
+    expect(touched.filter(n => n === LOCK)).toEqual([]);                                  // the lease is never touched by a replay
+    expect(ctx.has(LOCK) ? JSON.stringify(ctx.getJson(LOCK)) : null).toBe(lockBefore);
+    expect(touched.every(n => n.startsWith(LEDGER))).toBe(true);                         // the replay's only storage access is the reservation
+    const events = h.logs.map(l => l[0]);
+    expect(events.filter(e => e === "coding.autoGrade.sweepReplay.rejected")).toHaveLength(2);
+    expect(events).not.toContain("coding.autoGrade.sweepReplay.storageError");
+    expect(events).not.toContain("coding.autoGrade.sweepReplay.accepted");
+    // the reservation is exactly one create-only write — the only precondition a 412 ConditionNotMet can refer to
+    expect(conditions.length).toBeGreaterThanOrEqual(3);
+    for (const c of conditions) expect(c).toEqual({ ifNoneMatch: "*" });
+    expect(ctx.names(LEDGER)).toHaveLength(1);
+  });
+
+  it("RP3c concurrent identical requests against Azure 412 semantics: exactly one runs, the rest are REPLAYED_REQUEST", async () => {
+    const ctx = emptyStore(), h = harness(ctx, { container: azureStore(ctx.container) }), headers = sign();
+    const results = await Promise.all(Array.from({ length: 4 }, () => h.call(request(headers))));
+    expect(results.filter(r => r.status === 200)).toHaveLength(1);
+    expect(results.filter(r => r.status === 409 && r.jsonBody.code === "REPLAYED_REQUEST")).toHaveLength(3);
+    expect(results.filter(r => r.status === 503)).toHaveLength(0);
+    expect(h.runs()).toBe(1);
+    expect(ctx.names(LEDGER)).toHaveLength(1);
+  });
+
+  it("RP11b reservation decision matrix: only the two create-only conflict shapes are replays; everything else fails closed", async () => {
+    const plain = (statusCode, code) => () => Object.assign(new Error("storage"), { statusCode, ...(code ? { code } : {}) });
+    const replays = [
+      ["azure 412 ConditionNotMet", () => AZURE_EXISTS()],
+      ["azure 409 BlobAlreadyExists", () => azureError(409, "BlobAlreadyExists")],
+      ["plain 409 BlobAlreadyExists", plain(409, "BlobAlreadyExists")],
+      ["412 ConditionNotMet via details only", () => { const e = new RestError("x", { statusCode: 412 }); e.details = { errorCode: "ConditionNotMet" }; return e; }],
+      ["412 ConditionNotMet via response.status", () => Object.assign(new Error("x"), { code: "ConditionNotMet", response: { status: 412 } })],
+    ];
+    const closed = [
+      ["412 LeaseIdMissing", () => azureError(412, "LeaseIdMissing")],
+      ["412 without an error code", () => azureError(412, undefined)],
+      ["412 code/details disagree", () => { const e = azureError(412, "ConditionNotMet"); e.details = { errorCode: "LeaseIdMissing" }; return e; }],
+      ["ConditionNotMet without a status", () => Object.assign(new Error("x"), { code: "ConditionNotMet" })],
+      ["ConditionNotMet with status 400", plain(400, "ConditionNotMet")],
+      ["BlobAlreadyExists with status 412", plain(412, "BlobAlreadyExists")],
+      ["409 LeaseIdMissing", () => azureError(409, "LeaseIdMissing")],
+      ["409 without an error code", plain(409)],
+      ["status 412 vs response.status 500", () => Object.assign(azureError(412, "ConditionNotMet"), { response: { status: 500 } })],
+      ["500 InternalError", () => azureError(500, "InternalError")],
+      ["503 ServerBusy", () => azureError(503, "ServerBusy")],
+      ["403 AuthorizationFailure", () => azureError(403, "AuthorizationFailure")],
+      ["network ECONNRESET", () => Object.assign(new Error("socket hang up"), { code: "ECONNRESET" })],
+      ["REQUEST_SEND_ERROR", () => azureError(undefined, "REQUEST_SEND_ERROR")],
+      ["thrown string", () => "boom"],
+      ["thrown null", () => null],
+      ["empty object", () => ({})],
+    ];
+    const L = ledger();
+    for (const [label, failure, expected] of [...replays.map(r => [...r, "REPLAYED_REQUEST"]), ...closed.map(c => [...c, "LEDGER_UNAVAILABLE"])]) {
+      const ctx = emptyStore();
+      const direct = await L.reserveSweepRequest(failingLedger(ctx.container, failure), { requestId: rid(), timestamp: Math.floor(Date.now() / 1000), nowMs: Date.now() });
+      expect(direct, label).toEqual({ ok: false, code: expected });
+      const h = harness(ctx, { container: failingLedger(ctx.container, failure) });
+      const r = await h.call(request(sign()));
+      if (expected === "REPLAYED_REQUEST") {
+        expect(r.status, label).toBe(409);
+        expect(r.jsonBody, label).toEqual({ ok: false, code: "REPLAYED_REQUEST" });
+        expect(h.logs.map(l => l[0]), label).toContain("coding.autoGrade.sweepReplay.rejected");
+      } else {
+        expect(r.status, label).toBe(503);
+        expect(r.jsonBody, label).toEqual({ ok: false, code: "SWEEP_UNAVAILABLE" });
+        expect(h.logs.map(l => l[0]), label).toContain("coding.autoGrade.sweepReplay.storageError");
+      }
+      expect(h.runs(), label).toBe(0);
+      expect(ctx.has(LOCK), label).toBe(false);
+      expect(ctx.names(LEDGER), label).toEqual([]);
+      expect(JSON.stringify(h.logs), label).not.toMatch(/ConditionNotMet|BlobAlreadyExists|LeaseIdMissing|socket hang up|boom/);
+    }
   });
 });

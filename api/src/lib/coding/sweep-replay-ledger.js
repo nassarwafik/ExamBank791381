@@ -5,10 +5,14 @@
 // an attacker cannot change it without the key; reserving it ONCE in durable storage makes every signed request execute at
 // most once — across concurrent calls and process restarts (no in-memory state).
 //
-//   • reservation is ONE conditional create (If-None-Match: *) of
+//   • reservation is ONE conditional create (If-None-Match: *, and no other precondition) of
 //       platform/system/coding-sweep-replay/<sha256("sa-sweep-replay-v1\n" + requestId)>.json
-//     created → accepted; 409 BlobAlreadyExists → replay; ANY other outcome (storage error, a 412 / other conflict) → the
-//     sweep must not run (fail closed). The blob name is a fixed prefix + a hex digest: request-id text never becomes a path.
+//     created → accepted. The record already existing is reported as either 409 BlobAlreadyExists or 412 ConditionNotMet
+//     (@azure/storage-blob surfaces the latter as RestError { statusCode: 412, code / details.errorCode: "ConditionNotMet" });
+//     because If-None-Match: * is this write's ONLY condition, both can mean only "already reserved" → replay. ANY other
+//     outcome (5xx, network, auth, 412 / 409 with another, a missing or an inconsistent error code) → the sweep must not run
+//     (fail closed). The classification is local to this one write — it is not a general storage-error mapping.
+//     The blob name is a fixed prefix + a hex digest: request-id text never becomes a path.
 //   • a record holds identifiers-free metadata only: { schemaVersion, protocol, requestDigest, signedAt, acceptedAt, expiresAt }
 //     — never the key, the signature, the raw request id, a body, or any student / grading data.
 //   • retention: expiresAt = acceptedAt + REPLAY_RETENTION_MS. A request is acceptable only while |now − timestamp| ≤ skew, and
@@ -44,6 +48,20 @@ function replayLedgerName(requestId) {
   return REPLAY_LEDGER_PREFIX + replayDigest(requestId) + ".json";
 }
 
+// The two representations of "If-None-Match: * failed because the blob exists" for the reservation's create-only write.
+const CREATE_ONLY_CONFLICTS = Object.freeze([Object.freeze([409, "BlobAlreadyExists"]), Object.freeze([412, "ConditionNotMet"])]);
+const present = v => v !== undefined && v !== null && v !== "";
+
+/** Does a failed reservation write prove the record ALREADY EXISTS? The status and the error code must agree across every place
+ *  the SDK reports them and match one create-only conflict exactly (a missing one never matches); anything else is unknown. */
+function isExistingReservation(e) {
+  if (!e || typeof e !== "object") return false;
+  const statuses = [e.statusCode, e.response && e.response.status].filter(present).map(Number);
+  const codes = [e.code, e.details && e.details.errorCode].filter(present).map(String);
+  if (!statuses.every(s => s === statuses[0]) || !codes.every(c => c === codes[0])) return false;
+  return CREATE_ONLY_CONFLICTS.some(([status, code]) => statuses[0] === status && codes[0] === code);
+}
+
 /**
  * ATOMICALLY reserves one authenticated request id. Call only AFTER signature, freshness and body validation.
  * → { ok: true } | { ok: false, code: "REPLAYED_REQUEST" } | { ok: false, code: "LEDGER_UNAVAILABLE" }
@@ -55,8 +73,7 @@ async function reserveSweepRequest(container, { requestId, timestamp, nowMs = Da
     await storage.uploadJsonConditional(container, REPLAY_LEDGER_PREFIX + requestDigest + ".json", record, null);   // If-None-Match: *
     return { ok: true };
   } catch (e) {
-    const status = Number(e && (e.statusCode ?? (e.response && e.response.status)) || 0), code = String(e && (e.code || (e.details && e.details.errorCode)) || "");
-    if (status === 409 && code === "BlobAlreadyExists") return { ok: false, code: "REPLAYED_REQUEST" };
+    if (isExistingReservation(e)) return { ok: false, code: "REPLAYED_REQUEST" };
     return { ok: false, code: "LEDGER_UNAVAILABLE" };                                  // fail closed: anything else is not a reservation
   }
 }
