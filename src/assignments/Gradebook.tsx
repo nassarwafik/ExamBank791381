@@ -6,7 +6,8 @@ import EmptyState from "../ui/EmptyState";
 import VisuallyHidden from "../ui/VisuallyHidden";
 import { IconSearch, IconSort, IconPlus, IconRestore, IconEdit, IconClose } from "../icons";
 import { gradingClass, gradingLabel, type GradingStatus } from "../gradingStatus";
-import { LIFECYCLE_LABEL, type GradebookFilter, type GradebookSort, type Item, type StudentResult } from "./types";
+import { LIFECYCLE_LABEL, type CodingGradingStatus, type GradebookFilter, type GradebookSort, type Item, type StudentResult } from "./types";
+import { codingStatusBadge, needsCodingRetry } from "./codingRecovery";
 
 export type GradebookProps = {
   assignment: Item;
@@ -27,6 +28,9 @@ export type GradebookProps = {
   /** Phase 12B — the student a Today Hub drill asked for (present in the authoritative rows): that row is marked
    *  (aria-current + highlight) and scrolled into view once. Presentation only; filtering stays the panel's. */
   focusStudentId?: string;
+  /** Phase 17D-A — assignment-level coding grading summary (server-derived) and the ONE bulk retry action. */
+  codingSummary?: CodingGradingStatus | null;
+  onBulkCodingRetry?: () => void;
 };
 
 const FILTERS: Array<[GradebookFilter, string]> = [["all", "الكل"], ["pendingReview", "بانتظار التصحيح"], ["final", "نهائي"], ["notSubmitted", "لم يسلّم"], ["active", "قيد المحاولة"]];
@@ -53,6 +57,7 @@ export default function Gradebook(p: GradebookProps) {
           {FILTERS.map(([f, label]) => <button key={f} type="button" className={"gradebook-chip" + (p.filter === f ? " active" : "")} aria-pressed={p.filter === f} onClick={() => p.onFilter(f)}>{label}</button>)}
         </div>
         <button type="button" className={"eb-button is-small" + (p.sort === "pendingFirst" ? " is-quiet is-active" : "")} aria-pressed={p.sort === "pendingFirst"} onClick={() => p.onSort(p.sort === "pendingFirst" ? "name" : "pendingFirst")}>بانتظار التصحيح أولًا</button>
+        {!archived && p.onBulkCodingRetry && needsCodingRetry(p.codingSummary) && <button type="button" className="eb-button is-small coding-bulk-retry" disabled={p.busy} onClick={p.onBulkCodingRetry}>إعادة محاولة التصحيح البرمجي</button>}
       </div>
       {p.rows.length > 0 && (
         <div className="students-table-wrap eb-gradebook-table-wrap"><table className="students-table eb-gradebook-table">
@@ -69,6 +74,7 @@ export default function Gradebook(p: GradebookProps) {
             const gs = p.gradingOf(s);
             const pending = gs === "pendingReview";
             const focused = s.studentId === p.focusStudentId;
+            const coding = codingStatusBadge(s.latestResult?.codingGrading);
             return (
               <tr key={s.studentId} className={focused ? "is-drill-focus" : undefined} aria-current={focused ? "true" : undefined} ref={focused ? focusRow : undefined}>
                 <td><strong>{s.studentName}</strong><small className="result-code">{s.studentCode}</small>{focused && <small className="eb-drill-focus-note">الطالب المطلوب</small>}</td>
@@ -78,6 +84,7 @@ export default function Gradebook(p: GradebookProps) {
                     {gs === "notSubmitted"
                       ? <StatusBadge tone="neutral" className="review-state none">{gradingLabel(gs)}</StatusBadge>
                       : <StatusBadge tone={gs === "final" ? "success" : "warn"} className={"review-state " + gradingClass(gs)}>{gradingLabel(gs)}{pending && s.latestResult && s.latestResult.manualReviewMarks > 0 ? " (" + s.latestResult.manualReviewMarks + " ع.)" : ""}</StatusBadge>}
+                    {coding && <StatusBadge tone={coding.tone} className="coding-grading-badge">{coding.label}</StatusBadge>}
                     {s.activeAttempt && <small className="lifecycle-attempt">المحاولة الحالية: {s.activeAttempt.attemptNumber}</small>}
                     {s.activeAttempt?.startedAt && <small className="lifecycle-started">بدأ: {p.fmt(s.activeAttempt.startedAt)}</small>}
                     {s.timed && s.activeAttempt && s.effectiveAttemptEndsAt && s.activeAttempt.status !== "paused" && <small className="lifecycle-ends">ينتهي فعليًا: {p.fmt(s.effectiveAttemptEndsAt)}</small>}

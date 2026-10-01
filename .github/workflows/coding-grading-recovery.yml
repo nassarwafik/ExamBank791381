@@ -1,0 +1,38 @@
+# Phase 17D-A — scheduler of the coding grading RECOVERY SWEEP.
+# The managed API Functions host is HTTP-only (no timer / queue triggers), so the schedule lives here: every 10 minutes this job sends ONE signed
+# POST {"version":1} to /api/coding/grading-sweep (SA-CODING-SWEEP-1). The server does all the work (bounded, lease-protected,
+# resumable); this job only signs and reports. A 409 SWEEP_BUSY reply is a success (another sweep holds the lease).
+# Configuration (both required; the job fails clearly when either is missing — recovery stays inactive until configured):
+#   repository variable  SMARTASSESS_GRADING_SWEEP_URL   https://<host>/api/coding/grading-sweep
+#   repository secret    CODING_GRADING_SWEEP_HMAC_KEY   the THIRD key (never the runner or callback key)
+# No cloud credentials and no other secrets are available to this job; the key and the signature are never printed.
+name: Coding Grading Recovery
+
+on:
+  schedule:
+    - cron: "7,17,27,37,47,57 * * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: coding-grading-recovery
+  cancel-in-progress: false
+
+jobs:
+  sweep:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Trigger one signed recovery sweep
+        env:
+          SMARTASSESS_GRADING_SWEEP_URL: ${{ vars.SMARTASSESS_GRADING_SWEEP_URL }}
+          CODING_GRADING_SWEEP_HMAC_KEY: ${{ secrets.CODING_GRADING_SWEEP_HMAC_KEY }}
+        run: node scripts/coding-grading-sweep.mjs

@@ -621,6 +621,9 @@ directions the same key: equal keys always make the callback route answer `503`.
 
 - **Automatic re-dispatch.** Add a durable sweeper (timer trigger or queue) for `pending`, `retryable` and stale
   `dispatched` targets. It must use bounded backoff and reuse `ensureCodingGradingJobs`, which is idempotent.
+  *Delivered in Phase 17D-A* as an HTTP-triggered Recovery Engine driven by a GitHub Actions schedule (the managed Functions
+  host is HTTP-only), together with the gradebook badges and bulk retry below — see
+  [`enterprise-coding-assessment-17d-a.md`](enterprise-coding-assessment-17d-a.md).
 - **Callback nonce store.** Close the ±300 s replay window for same-job `failed` re-delivery (§9).
 - **Stronger isolation.** gVisor or Kata runtime, and per-tenant runner hosts.
 - **Gradebook.** The «تصحيح برمجي جارٍ» badge, plus bulk retry per assignment.

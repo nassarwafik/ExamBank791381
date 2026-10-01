@@ -81,8 +81,35 @@ function createMemoryContainer(seed = {}, hooks = {}) {
         }
       };
     },
-    async *listBlobsFlat({ prefix }) {
-      for (const name of Array.from(store.keys())) if (name.startsWith(prefix)) yield { name };
+    // Phase 17D-A — like Azure, listBlobsFlat() returns an async-iterable that ALSO exposes .byPage({ continuationToken,
+    // maxPageSize }): pages in lexicographic name order with an opaque continuation token ("" / undefined at the end). An
+    // unknown / tampered token is rejected the way the service rejects it (400 InvalidQueryParameterValue). The plain
+    // `for await` iteration used by every existing caller is unchanged.
+    listBlobsFlat({ prefix } = {}) {
+      const matching = () => Array.from(store.keys()).filter(n => n.startsWith(prefix || "")).sort();
+      return {
+        async *[Symbol.asyncIterator]() { for (const name of Array.from(store.keys())) if (name.startsWith(prefix || "")) yield { name }; },
+        byPage({ continuationToken, maxPageSize } = {}) {
+          return (async function* pages() {
+            let after = null;
+            if (continuationToken) {
+              const raw = Buffer.from(String(continuationToken), "base64").toString("utf8");
+              if (!raw.startsWith("mc1:")) throw conflict(400, "InvalidQueryParameterValue");
+              after = raw.slice(4);
+            }
+            const size = Math.max(1, Math.min(5000, Number(maxPageSize) || 5000));
+            let rest = matching().filter(n => after === null || n > after);
+            for (;;) {
+              const page = rest.slice(0, size);
+              rest = rest.slice(size);
+              const next = rest.length ? Buffer.from("mc1:" + page[page.length - 1], "utf8").toString("base64") : "";
+              if (typeof hooks.onListPage === "function") hooks.onListPage(page.length);
+              yield { segment: { blobItems: page.map(name => ({ name })) }, continuationToken: next };
+              if (!rest.length) return;
+            }
+          })();
+        }
+      };
     }
   };
 
