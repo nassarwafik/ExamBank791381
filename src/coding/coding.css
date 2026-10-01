@@ -76,3 +76,19 @@
 @media (max-width: 600px) {
   .cx-run-output { max-height: 12rem; font-size: 12px; }
 }
+
+/* Phase 17C — official grading mode (editor) and the teacher's automatic grading block (review). */
+.cx-grading-mode { display: grid; gap: 6px; }
+.cx-grading-mode label { display: inline-flex; gap: 6px; align-items: center; }
+.cx-autograde { display: grid; gap: 8px; margin-top: 10px; padding: 10px 12px; border: 1px solid var(--line, #d7dde5); border-radius: 10px; direction: rtl; font-size: 13px; }
+.cx-autograde-head { display: flex; gap: 10px; align-items: center; justify-content: space-between; }
+.cx-autograde-state { padding: 2px 8px; border-radius: 999px; background: #eef2f7; }
+.cx-autograde-state.is-complete { background: #e6f6ec; color: #17633a; }
+.cx-autograde-state.is-retryable { background: #fff4e0; color: #8a5300; }
+.cx-autograde-facts { display: flex; flex-wrap: wrap; gap: 6px 14px; }
+.cx-autograde-cases { display: grid; gap: 8px; margin: 0; padding-inline-start: 18px; }
+.cx-autograde-cases .is-fail > div:first-child span { color: #a32020; }
+.cx-autograde-cases .is-pass > div:first-child span { color: #17633a; }
+.cx-autograde-io { display: grid; gap: 6px; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); margin-top: 4px; }
+.cx-autograde-io pre, .cx-autograde-compile pre { margin: 2px 0 0; max-height: 160px; overflow: auto; white-space: pre-wrap; word-break: break-word; background: #f6f8fa; padding: 6px; border-radius: 6px; font-size: 12px; }
+.cx-autograde-actions { display: flex; flex-wrap: wrap; gap: 8px; }

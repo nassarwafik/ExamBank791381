@@ -2,6 +2,9 @@ name: Coding Runner Security & Smoke Tests
 
 # Phase 17B — the isolated Coding Runner (runner/): gateway unit tests, then the three worker images are built from their
 # digest-pinned official bases, then REAL Docker functional / security / end-to-end smoke tests run against them.
+# Phase 17C — plus the OFFICIAL hidden-test grading path: raw-runtime authority, compile once / fresh runtime per case,
+# cross-case isolation, cleanup, and an end-to-end run through the REAL SmartAssess API handlers (dispatch → gateway → real
+# sandboxes → signed callback → server-side comparison + weighting), which needs the API's own dependencies.
 # This workflow uses no secrets and no cloud credentials (TEST keys are generated inside the tests); it never deploys anything.
 # A missing Docker daemon or worker image FAILS the run — nothing is skipped.
 on:
@@ -29,13 +32,17 @@ jobs:
           node-version: 22
       - name: Runner unit tests (no Docker)
         run: npm --prefix runner test
+      - name: Install API dependencies (official grading end-to-end test drives the real API handlers)
+        run: npm ci --prefix api
       - name: Docker environment
         run: |
           docker version --format 'client {{.Client.Version}} / server {{.Server.Version}}'
           docker info --format 'cgroup v{{.CgroupVersion}}; security: {{.SecurityOptions}}'
       - name: Build worker images (python@1, java@1, csharp@1)
         run: npm --prefix runner run build:images
-      - name: Docker functional, security and end-to-end smoke tests
-        run: npm --prefix runner run test:docker
+      - name: Docker functional, security and end-to-end smoke tests (practice path, Phase 17B)
+        run: npm --prefix runner run test:docker:security
+      - name: Official hidden-test grading Docker tests (Phase 17C)
+        run: npm --prefix runner run test:docker:official
       - name: No sandbox container left behind
         run: test -z "$(docker ps -aq --filter label=smartassess.coding-runner=1)"

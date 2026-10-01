@@ -312,11 +312,12 @@ describe("Teacher authoring panel inside the REAL Builder", () => {
     const ed = await screen.findByTestId("qt-editor-coding", {}, { timeout: 3000 });
     const insp = within(ed).getByTestId("coding-inspector");
     expect(insp.textContent).toContain("نوع السؤال: برمجة"); expect(insp.textContent).toContain("الإصدار: 1");
-    expect(insp.textContent).toContain("طريقة التقييم الحالية: مراجعة يدوية"); expect(insp.textContent).toContain("Python"); expect(insp.textContent).toContain("C#");
+    expect(insp.textContent).toContain("طريقة التصحيح الرسمي: يدوي بواسطة المعلم");   // Phase 17C: explicit official mode (default manual) expect(insp.textContent).toContain("Python"); expect(insp.textContent).toContain("C#");
     expect(within(ed).getAllByRole("checkbox").map(c => c.getAttribute("aria-label"))).toEqual(["Python", "Java", "C#"]);   // registry-driven, exactly three
     expect(ed.textContent).not.toMatch(/JavaScript|TypeScript|C\+\+|SQL/);
-    expect(ed.textContent).toContain("في هذه المرحلة يمكن للطالب كتابة وتسليم الكود، ويقوم المعلم بمراجعته.");
-    expect(ed.textContent).toContain("التشغيل والتصحيح الآلي يحتاجان إلى بيئة تنفيذ معزولة وسيتم ربطهما عبر محرك التنفيذ الآمن.");
+    // Phase 17C — the 17A "automatic grading not connected yet" explanation is replaced by the current, factual one.
+    expect(ed.textContent).toContain("يكتب الطالب الكود ويسلّمه، ويمكنه تجربته على الأمثلة الظاهرة عبر محرك التنفيذ المعزول.");
+    expect(ed.textContent).toContain("العلامة الرسمية إما من المعلم، أو تُحتسب تلقائيًا على الخادم من الاختبارات المخفية.");
     for (const h of ["اللغات المسموحة", "اللغة الافتراضية", "الكود الابتدائي", "أمثلة ظاهرة للطالب", "اختبارات مخفية للتصحيح", "حدود التنفيذ"]) expect(ed.textContent, h).toContain(h);
   });
   it("languages + default + starter code + limits + comparator edit the canonical config (allowed languages are registry data)", async () => {

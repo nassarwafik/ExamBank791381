@@ -13,7 +13,9 @@ Real, **isolated** execution of student code for **Python, Java and C# only**, f
 - the code runs in **one disposable, hardened Docker runtime sandbox per execution** (Java / C# are first compiled in a separate
   compile sandbox — §11a), behind an authenticated gateway, on a host that holds **no** application secrets;
 - **no official grading change**: `coding@1` stays manual (score 0, `manualReview: true`); `weightedPassFraction` stays
-  unwired; hidden tests never reach the browser or the practice path. Authoritative hidden-test grading is **Phase 17C**.
+  unwired; hidden tests never reach the browser or the practice path. Authoritative hidden-test grading is **Phase 17C**
+  (delivered — [`enterprise-coding-assessment-17c.md`](enterprise-coding-assessment-17c.md); the practice path described here
+  is unchanged by it).
 
 Out of scope (deferred): hidden-test execution and automatic marks (17C), teacher preview runs, queues, multiple files,
 packages, network access for programs, additional languages.
@@ -148,7 +150,7 @@ Independent deployable (Node ≥ 22 built-ins only, zero dependencies; not an Az
   `POST /v1/execute`. Body ≤ 512 KB (413 otherwise, before parsing). Bounded concurrency (`RUNNER_MAX_CONCURRENCY`, 1–16,
   default 2): beyond it **503 `RUNNER_BUSY` immediately** (no queue). One runtime sandbox per request (Java / C#: preceded by
   one separate compile sandbox — §11a).
-- **Registry** (`gateway/registry.js`, data only): `python@1`, `java@1`, `csharp@1` → `smartassess-coding-<lang>:17b-v1` +
+- **Registry** (`gateway/registry.js`, data only): `python@1`, `java@1`, `csharp@1` → `smartassess-coding-<lang>:17b-v1` (Phase 17C rebuilt the images as `:17c-v1` for the official exec entry) +
   compile timeout + memory model + pids / cpu / tmpfs sizes. Requests can never supply image, command, flags, entrypoint,
   mounts or environment.
 - **Capabilities** report only contracts whose image exists on the host (`docker image inspect`, cached 30 s).
@@ -371,7 +373,9 @@ Never commit a key; never reuse the test key elsewhere.
   Kata Containers on the dedicated host; the gateway needs no change beyond the runtime flag.
 - **Same uid for supervisor and program.** Mitigated by the non-dumpable supervisor and PID 1 signal semantics; a program can
   still forge its *own* practice result (no grading impact in 17B). 17C must not trust in-sandbox reporting for marks
-  without this analysis (e.g. per-test containers with outputs captured by the gateway).
+  without this analysis (e.g. per-test containers with outputs captured by the gateway). **Addressed in 17C:** the official
+  path has no in-container reporter at all — a trusted entry `execve()`s the program after a fixed exec marker, every hidden
+  case runs in a fresh container, and the gateway derives each status from its own observation (17C doc §6).
 - **Replay guard is per gateway process** (in-memory); multiple gateway replicas would each accept an id once within ±60 s.
 - **Gateway responses are not signed** (TLS authenticates the gateway); responses are bounded and re-labelled by the API.
 - **No teacher preview runs** and **no queue** in V1.
@@ -419,6 +423,11 @@ from the restored source.
 **20 / 20 killed**; fingerprint `e70a08986dc335f6` → `e70a08986dc335f6`.
 
 ## 22. Phase 17C handoff
+
+> **Delivered.** Phase 17C implements this handoff with one deliberate change: the official score is computed by the
+> SmartAssess server from per-test raw evidence (`evaluateOfficialCodingRun` + `officialCodingScore` =
+> effective marks × passed weight / total weight), not through `weightedPassFraction`; dispatch is asynchronous (durable intent
+> + signed callback) instead of synchronous. See [`enterprise-coding-assessment-17c.md`](enterprise-coding-assessment-17c.md).
 
 17C adds authoritative hidden-test execution: server loads hidden tests (never sent to the browser) → one sandbox per test
 (stdin of one test) → gateway-captured output → `compareOutput` with the stored comparator → `weightedPassFraction` by stable

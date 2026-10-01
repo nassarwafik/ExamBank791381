@@ -1,17 +1,24 @@
+import { useId } from "react";
 import type { AuthoringEditorProps } from "../registryTypes";
 import type { QuestionBody } from "../../examTypes";
 import CodingEditor from "../../coding/CodingEditor";
 import { duplicateCodingTest, moveCodingTest, newCodingTestId, removeCodingTest, updateCodingTest } from "../../coding/codingTests";
-import { CODE_SOURCE_MAX_BYTES, CODING_COMPARATORS, CODING_LANGUAGES, CODING_LIMIT_RANGES, CODING_TEST_LIMITS, DEFAULT_CODING_COMPARATOR, codingLanguage, defaultCodingConfig, isCodingLanguage, type CodingComparator, type CodingLimits, type CodingQuestionConfigV1, type CodingTestCasePrivate, type CodingTestCasePublic } from "../../codingQuestion";
+import { CODE_SOURCE_MAX_BYTES, CODING_COMPARATORS, CODING_LANGUAGES, CODING_LIMIT_RANGES, CODING_TEST_LIMITS, DEFAULT_CODING_COMPARATOR, codingGradingMode, codingLanguage, defaultCodingConfig, isCodingLanguage, type CodingComparator, type CodingGradingMode, type CodingLimits, type CodingQuestionConfigV1, type CodingTestCasePrivate, type CodingTestCasePublic } from "../../codingQuestion";
 import "../../coding/coding.css";
 
 // Phase 17A — coding@1 authoring (lazy). Edits the canonical node only: the PUBLIC configuration under `coding` (languages,
 // default, starter code, public samples, limits) and the PRIVATE key under `answer` (hidden tests with stable ids and weights,
 // output comparator, reference solutions). Languages come from the Coding Language Registry (data — no per-language code path).
 // Test identity is the stable id (reorder / duplicate / delete never renumber). Nothing here runs, compiles or grades code.
-type Key = { hiddenTests: CodingTestCasePrivate[]; comparator: CodingComparator; referenceSolutions: Record<string, string> };
+// Phase 17C — the OFFICIAL grading mode lives under the PRIVATE key (`answer.gradingMode`: "manual" — the default, also when
+// missing — or "hiddenTests": graded on the SmartAssess server from the isolated runner's raw evidence). Switching the mode never
+// deletes hidden tests, the comparator or reference solutions.
+type Key = { hiddenTests: CodingTestCasePrivate[]; comparator: CodingComparator; referenceSolutions: Record<string, string>; gradingMode: CodingGradingMode };
 const isObj = (v: unknown): v is Record<string, unknown> => !!v && typeof v === "object" && !Array.isArray(v);
 const COMPARATOR_OPTIONS: Record<CodingComparator, string> = { exact: "مطابقة حرفية تامة", trimTrailingWhitespace: "تجاهل المسافات في نهايات الأسطر (افتراضي)", normalizeWhitespace: "توحيد كل المسافات (اختياري صريح)" };
+const COMPARATOR_SHORT: Record<CodingComparator, string> = { exact: "مطابقة حرفية تامة", trimTrailingWhitespace: "تجاهل المسافات في نهايات الأسطر", normalizeWhitespace: "توحيد كل المسافات" };
+const MODE_LABELS: Record<CodingGradingMode, string> = { manual: "يدوي بواسطة المعلم", hiddenTests: "تلقائي بواسطة الاختبارات المخفية" };
+const sumWeights = (tests: CodingTestCasePrivate[]) => Math.round(tests.reduce((s, t) => s + (Number.isFinite(t.weight) && t.weight > 0 ? t.weight : 0), 0) * 100) / 100;
 const LIMIT_FIELDS: [keyof CodingLimits, string][] = [["sourceBytes", "الحد الأقصى لحجم الكود (بايت)"], ["outputBytes", "حد المخرجات (بايت)"], ["timeMs", "حد الوقت (ملّي ثانية)"], ["memoryMb", "حد الذاكرة (ميغابايت)"]];
 
 function readConfig(node: QuestionBody): CodingQuestionConfigV1 {
@@ -20,7 +27,7 @@ function readConfig(node: QuestionBody): CodingQuestionConfigV1 {
 }
 function readKey(node: QuestionBody): Key {
   const a = isObj(node.answer) ? (node.answer as Record<string, unknown>) : {};
-  return { hiddenTests: Array.isArray(a.hiddenTests) ? (a.hiddenTests as CodingTestCasePrivate[]) : [], comparator: CODING_COMPARATORS.includes(a.comparator as CodingComparator) ? (a.comparator as CodingComparator) : DEFAULT_CODING_COMPARATOR, referenceSolutions: isObj(a.referenceSolutions) ? (a.referenceSolutions as Record<string, string>) : {} };
+  return { hiddenTests: Array.isArray(a.hiddenTests) ? (a.hiddenTests as CodingTestCasePrivate[]) : [], comparator: CODING_COMPARATORS.includes(a.comparator as CodingComparator) ? (a.comparator as CodingComparator) : DEFAULT_CODING_COMPARATOR, referenceSolutions: isObj(a.referenceSolutions) ? (a.referenceSolutions as Record<string, string>) : {}, gradingMode: codingGradingMode(a) };
 }
 const without = (o: Record<string, string>, k: string) => { const c = { ...o }; delete c[k]; return c; };
 
@@ -39,13 +46,23 @@ export default function CodingQuestionEditor({ node, onChange, disabled }: Autho
   const publicTests = cfg.publicTests ?? [];
   const sourceLimit = Math.min(CODE_SOURCE_MAX_BYTES, cfg.limits.sourceBytes || CODE_SOURCE_MAX_BYTES);
   const labelOf = (l: string) => codingLanguage(l)?.label ?? l;
+  const modeName = useId();
 
   return (
     <div className="qt-editor cx-author" data-testid="qt-editor-coding">
       <dl className="cx-inspector" data-testid="coding-inspector">
-        <div>نوع السؤال: برمجة</div><div>الإصدار: 1</div><div>طريقة التقييم الحالية: مراجعة يدوية</div><div>اللغات: {known.map(labelOf).join("، ") || "—"}</div>
+        <div>نوع السؤال: برمجة</div><div>الإصدار: 1</div><div>طريقة التصحيح الرسمي: {MODE_LABELS[key.gradingMode]}</div><div>اللغات: {known.map(labelOf).join("، ") || "—"}</div>
       </dl>
-      <p className="cx-help">في هذه المرحلة يمكن للطالب كتابة وتسليم الكود، ويقوم المعلم بمراجعته.<br />التشغيل والتصحيح الآلي يحتاجان إلى بيئة تنفيذ معزولة وسيتم ربطهما عبر محرك التنفيذ الآمن.</p>
+      <p className="cx-help">يكتب الطالب الكود ويسلّمه، ويمكنه تجربته على الأمثلة الظاهرة عبر محرك التنفيذ المعزول.<br />العلامة الرسمية إما من المعلم، أو تُحتسب تلقائيًا على الخادم من الاختبارات المخفية.</p>
+      <fieldset role="radiogroup" aria-label="طريقة التصحيح الرسمي" className="cx-grading-mode">
+        <legend>طريقة التصحيح الرسمي</legend>
+        {(["manual", "hiddenTests"] as const).map(m => <label key={m}><input type="radio" name={modeName} value={m} checked={key.gradingMode === m} onChange={() => setKey({ gradingMode: m })} disabled={disabled} /><span>{MODE_LABELS[m]}</span></label>)}
+        {key.gradingMode === "hiddenTests"
+          ? <div className="cx-help" data-testid="coding-auto-info"><p>الاختبارات المخفية لا تظهر للطالب، ويتم احتساب العلامة على الخادم بواسطة محرك التنفيذ المعزول.</p>
+            <p>عدد الاختبارات المخفية: {key.hiddenTests.length} · مجموع الأوزان: {sumWeights(key.hiddenTests)} · طريقة المقارنة: {COMPARATOR_SHORT[key.comparator]}</p>
+            {key.hiddenTests.length === 0 && <p className="cx-code-alert" role="alert">أضف اختبارًا مخفيًا واحدًا على الأقل ليُصحَّح السؤال تلقائيًا.</p>}</div>
+          : key.hiddenTests.length > 0 && <p className="cx-help" data-testid="coding-manual-hidden-notice">الاختبارات المخفية محفوظة، لكنها لا تُستخدم في العلامة الرسمية في وضع التصحيح اليدوي.</p>}
+      </fieldset>
       {unknown.length > 0 && <p className="cx-code-alert" data-testid="coding-unsupported-language" role="alert">لغة غير مدعومة: {unknown.join("، ")} — لن يُقبل السؤال في الاعتماد النهائي ولن تُحوَّل إلى لغة أخرى تلقائيًا.{" "}
         <button type="button" onClick={() => setCfg({ allowedLanguages: known, defaultLanguage: known.includes(cfg.defaultLanguage) ? cfg.defaultLanguage : (known[0] ?? "") })} disabled={disabled}>إزالة اللغات غير المدعومة</button></p>}
 
@@ -93,7 +110,7 @@ export default function CodingQuestionEditor({ node, onChange, disabled }: Autho
 
       <fieldset data-private="true">
         <legend>اختبارات مخفية للتصحيح</legend>
-        <p className="cx-help">لا تُرسل إلى الطالب أبدًا. ستُستخدم للتصحيح الآلي الموزون عند ربط محرك التنفيذ الآمن؛ حاليًا العلامة الرسمية هي علامة المعلم.</p>
+        <p className="cx-help">لا تُرسل إلى الطالب أبدًا، ولا يرى محرك التنفيذ إلا مدخلاتها. تُستخدم للتصحيح الآلي الموزون على الخادم عند اختيار «{MODE_LABELS.hiddenTests}».</p>
         {key.hiddenTests.map((t, i) => { const n = i + 1, set = (patch: Partial<CodingTestCasePrivate>) => setKey({ hiddenTests: updateCodingTest(key.hiddenTests, t.id, patch) }); return (
           <div key={t.id} className="cx-test-row is-private">
             <div className="cx-test-head"><strong>اختبار مخفي {n}</strong><span className="cx-private-badge">مخفي عن الطالب</span>
@@ -120,7 +137,7 @@ export default function CodingQuestionEditor({ node, onChange, disabled }: Autho
 
       <fieldset data-private="true">
         <legend>الحلول المرجعية (للمعلم فقط)</legend>
-        <p className="cx-help">مساعدة للتأليف والمراجعة اليدوية؛ لا تُرسل إلى الطالب ولا يُصحَّح بمقارنة نص الكود بها.</p>
+        <p className="cx-help">مساعدة للمعلم فقط؛ لا تُرسل إلى الطالب ولا إلى محرك التنفيذ، ولا يُصحَّح بمقارنة نص الكود بها.</p>
         {known.map(l => <div key={l} className="cx-io-block"><span>{labelOf(l)}</span>
           <CodingEditor value={key.referenceSolutions[l] ?? ""} onChange={v => setKey({ referenceSolutions: v === "" ? without(key.referenceSolutions, l) : { ...key.referenceSolutions, [l]: v } })} language={l} label={"محرر الكود — الحل المرجعي — " + labelOf(l)} readOnly={disabled} maxBytes={CODE_SOURCE_MAX_BYTES} minRows={4} />
         </div>)}
@@ -128,7 +145,7 @@ export default function CodingQuestionEditor({ node, onChange, disabled }: Autho
 
       <fieldset>
         <legend>حدود التنفيذ</legend>
-        <p className="cx-help">تُرسل إلى محرك التنفيذ الآمن عند تفعيله؛ لا يُشغَّل أي كود الآن. الحد الأقصى لحجم الكود يُطبَّق على إجابة الطالب فورًا.</p>
+        <p className="cx-help">تُطبَّق على التجربة وعلى التصحيح الرسمي في محرك التنفيذ المعزول. الحد الأقصى لحجم الكود يُطبَّق على إجابة الطالب فورًا.</p>
         <div className="cx-limits">
           {LIMIT_FIELDS.map(([k, label]) => <label key={k}><span>{label}</span><input className="sb-input sb-input-sm" type="number" step="1" min={CODING_LIMIT_RANGES[k][0]} max={CODING_LIMIT_RANGES[k][1]} aria-label={label} value={Number.isFinite(cfg.limits[k]) ? String(cfg.limits[k]) : ""} onChange={e => setLimit(k, e.target.value)} disabled={disabled} /></label>)}
         </div>
