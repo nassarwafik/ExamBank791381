@@ -115,6 +115,15 @@ function isResponseAnswered(a) {
       return Array.isArray(a.optionIds) && a.optionIds.some(id => typeof id === "string" && id !== "");
     case "numeric":
       return typeof a.value === "string" && a.value.trim() !== "";
+    // Phase 16B-A — simulation state (bounded JSON reported by a sandboxed simulator); mirror of answerState.ts.
+    case "simulation": {
+      const s = a.state;
+      if (s === null || s === undefined) return false;
+      if (Array.isArray(s)) return s.length > 0;
+      if (typeof s === "object") return Object.keys(s).length > 0;
+      if (typeof s === "string") return s.trim() !== "";
+      return typeof s === "number" ? Number.isFinite(s) : typeof s === "boolean";
+    }
     default:
       return false;
   }

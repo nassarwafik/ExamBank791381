@@ -1,5 +1,6 @@
 
 const {app}=require("@azure/functions");
+const {normalizeDraftAnswers}=require("../lib/draft-answers");
 const {withObservability}=require("../lib/observability");
 const {requireActiveStudentSession}=require("../lib/student-auth");
 const {getContainer,downloadJsonOrNull,mutateJsonWithRetry,StorageConflictError}=require("../lib/platform-storage");
@@ -138,7 +139,7 @@ async function handler(request,deps={},obs=null){
   if(action==="saveDraft"){
    const rej=writeRejection(a,s,"saveDraft",Date.now());
    if(rej)return {status:rej.status,jsonBody:{ok:false,error:rej.error}};
-   const answers=b.answers&&typeof b.answers==="object"?b.answers:{};
+   const answers=normalizeDraftAnswers(b.answers&&typeof b.answers==="object"?b.answers:{}).answers; // Phase 16B-A — bounded simulation states
    let savedAt="",finalState=null;
    try{
     await maybeLock(()=>mut(c,name,async current=>{
@@ -178,7 +179,7 @@ async function handler(request,deps={},obs=null){
   if(action==="submit"){
    const rej=writeRejection(a,s,"submit",Date.now());
    if(rej)return {status:rej.status,jsonBody:{ok:false,error:rej.error}};
-   const answers=b.answers&&typeof b.answers==="object"?b.answers:{},now=new Date().toISOString();
+   const answers=normalizeDraftAnswers(b.answers&&typeof b.answers==="object"?b.answers:{}).answers,now=new Date().toISOString(); // Phase 16B-A — bounded simulation states
    let resultAttempt=null,finalState=null;
    try{
     await maybeLock(()=>mut(c,name,async current=>{

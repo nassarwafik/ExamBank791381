@@ -32,6 +32,7 @@ import { useAutoRefresh } from "./ui/useAutoRefresh";
 import type { AiImageRequestQuestion } from "./questionMedia";
 import type { BankPickerService } from "./StructuredExamBuilder";
 import type { GovernanceService } from "./examGovernance";
+import type { SimulationService } from "./smartsim/simulationService";
 import type { AssessmentPresetService } from "./presets/assessmentPresetClient";
 import type { BankQuestionRow } from "./bank/bankQuestionModel";
 import type { BankExamQuestion } from "./structuredExamProductivity";
@@ -2882,6 +2883,23 @@ function App() {
     structuredHistory.open(next, "unsaved");
     setStructuredBuilderOpen(true);
   }
+  // Phase 16B-A — the App-owned SimulationService («المحاكاة التفاعلية»): JSON calls through the same request helper, the raw
+  // binary upload through the lazily loaded client with the SAME auth headers (progress via XHR). The Builder never sees the
+  // token; nothing about the token reaches exam state, localStorage or the sandboxed frame.
+  const tokenRef = useRef(token);
+  useEffect(() => { tokenRef.current = token; });
+  const structuredSimulations = useMemo<SimulationService>(() => {
+    let clientPromise: Promise<SimulationService> | null = null;
+    const client = () => (clientPromise ??= import("./smartsim/simulationClient").then(m => m.createSimulationService({
+      requestJson: url => apiRequestRef.current(url),
+      authHeaders: (): Record<string, string> => (tokenRef.current ? { "x-builder-token": tokenRef.current, Authorization: "Bearer " + tokenRef.current } : {})
+    })));
+    return {
+      list: () => client().then(c => c.list()),
+      versions: packageId => client().then(c => c.versions(packageId)),
+      upload: (file, onProgress) => client().then(c => c.upload(file, onProgress))
+    };
+  }, []);
   const structuredGovernance = useMemo<GovernanceService>(() => {
     let clientPromise: Promise<GovernanceService> | null = null;
     const client = () => (clientPromise ??= import("./examGovernanceClient").then(m => m.createGovernanceService(body => apiRequestRef.current<Record<string, unknown>>("/api/exam-governance", { method: "POST", body: JSON.stringify(body) }))));
@@ -7904,6 +7922,7 @@ function App() {
               governance={structuredGovernance}
               presets={structuredPresets}
               onOpenExamFromPreset={openExamFromPreset}
+              simulations={structuredSimulations}
             />
           </Suspense>
         </div>

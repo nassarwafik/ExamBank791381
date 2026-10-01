@@ -1,0 +1,12 @@
+{
+  "schemaVersion": 1,
+  "packageId": "my-react-simulator",
+  "packageVersion": 1,
+  "title": "My React Simulator",
+  "description": "Describe what the learner does here.",
+  "entry": "dist/index.html",
+  "runtime": "web",
+  "runtimeVersion": 1,
+  "responseSchemaVersion": 1,
+  "capabilities": { "autosave": true, "restore": true, "reset": true, "partialCredit": false, "offline": true }
+}

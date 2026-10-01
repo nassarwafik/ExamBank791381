@@ -29,7 +29,11 @@ const FUNCTIONS_DIR = join(HERE, "..", "src", "functions");
 const PUBLIC_BY_DESIGN = {
   builderLogin: "teacher credential exchange (POST user code + password → session token); throttled; no data without valid credentials",
   platformLogin: "unified teacher/student credential exchange; throttled; no data without valid credentials",
-  health: "liveness probe; returns only { ok, service, time[, version] }; no storage I/O, no configuration"
+  health: "liveness probe; returns only { ok, service, time[, version] }; no storage I/O, no configuration",
+  // Phase 16B-A — content-addressed simulator asset serving: the URL carries an unguessable SHA-256 capability pinned by the
+  // published exam; identity is validated before any storage access (unknown / malformed → 404); no listing, no metadata, no
+  // archive, no owner data; a sandboxed student frame has no auth token to send. Upload / list / versions require builder auth.
+  simulatorRuntime: "sandboxed simulator asset by exact (packageId, version, sha256) capability; validated before storage; 404 otherwise; no enumeration"
 };
 /** name → the non-bearer mechanism that protects it. Still asserted to reject anonymous callers. */
 const SIGNED = {

@@ -30,6 +30,7 @@ function applyRegisteredTypeDefaults(key, version, ensure, newId) {
     ensure("matrix", { rows: [{ id: newId("row"), label: "" }], columns: [{ id: newId("col"), label: "" }, { id: newId("col"), label: "" }] });
     ensure("answer", { correctColumnByRow: {} });
 });
+(0, exports.registerTypeDefaults)("simulation", 1, () => { });
 (0, exports.registerTypeDefaults)("categorization", 1, (ensure, newId) => {
     ensure("categorization", { categories: [{ id: newId("cat"), label: "" }, { id: newId("cat"), label: "" }], items: [{ id: newId("item"), label: "" }] });
     ensure("answer", { correctCategoryByItem: {} });

@@ -5,6 +5,7 @@ exports.registerTypeValidator = exports.EXECUTABLE_NODE_FIELDS = void 0;
 exports.validateQuestionTypeNode = validateQuestionTypeNode;
 const questionTypeCatalog_1 = require("./questionTypeCatalog");
 const questionTypeScoring_1 = require("./questionTypeScoring");
+const smartsimManifest_1 = require("./smartsimManifest");
 exports.EXECUTABLE_NODE_FIELDS = Object.freeze(["component", "module", "load", "loader", "render", "renderer", "grader", "import", "src", "srcdoc", "html", "script", "code", "eval", "path", "url", "handler", "onLoad", "onRender"]);
 const validators = (0, questionTypeCatalog_1.createVersionedRegistry)("type validator");
 const registerTypeValidator = (key, version, validator) => validators.register(key, version, validator);
@@ -135,3 +136,4 @@ const finite = (v) => typeof v === "number" && Number.isFinite(v);
     }
     return out;
 });
+(0, exports.registerTypeValidator)("simulation", 1, node => (0, smartsimManifest_1.validateSimulationReference)(node.simulation));

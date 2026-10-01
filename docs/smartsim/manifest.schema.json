@@ -1,0 +1,31 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://exambank.local/schemas/smartsim/manifest-v1.json",
+  "title": "SmartSim package manifest (schemaVersion 1)",
+  "description": "Root manifest.json of a .smartsim / .zip simulator package. Only dist/ executes; the entry must be an HTML document inside dist/. Validated server-side on upload; the same rules run in the exam builder.",
+  "type": "object",
+  "additionalProperties": true,
+  "required": ["schemaVersion", "packageId", "packageVersion", "title", "entry", "runtime", "runtimeVersion", "responseSchemaVersion", "capabilities"],
+  "properties": {
+    "schemaVersion": { "const": 1 },
+    "packageId": { "type": "string", "pattern": "^[a-z][a-z0-9-]{1,63}$", "description": "Stable identity of the simulator across versions (lowercase letters, digits, dashes)." },
+    "packageVersion": { "type": "integer", "minimum": 1, "description": "Positive integer. Bump for ANY content change: the same version with different bytes is refused." },
+    "title": { "type": "string", "minLength": 1, "maxLength": 120 },
+    "description": { "type": "string", "maxLength": 1000 },
+    "entry": { "type": "string", "pattern": "^dist/[^\\\\\\u0000]+\\.html?$", "description": "Relative path of the entry document, inside dist/. No '..', no absolute paths, no URL schemes." },
+    "runtime": { "const": "web" },
+    "runtimeVersion": { "type": "integer", "enum": [1], "description": "SmartSimBridgeV1 / host contract version." },
+    "responseSchemaVersion": { "type": "integer", "enum": [1], "description": "Shape contract of the emitted state (v1: bounded plain JSON)." },
+    "capabilities": {
+      "type": "object",
+      "additionalProperties": { "type": "boolean" },
+      "properties": {
+        "autosave": { "type": "boolean" },
+        "restore": { "type": "boolean" },
+        "reset": { "type": "boolean" },
+        "partialCredit": { "type": "boolean" },
+        "offline": { "type": "boolean" }
+      }
+    }
+  }
+}

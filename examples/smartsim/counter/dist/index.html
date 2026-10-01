@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Counter</title>
+<style>
+  :root{color-scheme:light}
+  body{font-family:system-ui,sans-serif;margin:0;padding:16px;background:#fff;color:#111}
+  main{display:flex;flex-direction:column;gap:12px;max-width:420px}
+  output{font-size:32px;font-weight:700;display:block}
+  button{min-height:44px;min-width:44px;font:inherit;font-size:18px;border-radius:10px;border:1px solid #cdd5e0;background:#f4f6fa;cursor:pointer}
+  button:focus-visible{outline:3px solid #f59e0b;outline-offset:2px}
+  button[disabled]{opacity:.5;cursor:not-allowed}
+  @media (prefers-reduced-motion:no-preference){output{transition:transform .15s ease}.bump{transform:scale(1.1)}}
+</style>
+</head>
+<body>
+<main>
+  <p>العدّاد: <output id="count" aria-live="polite">0</output></p>
+  <div>
+    <button id="inc" type="button" aria-label="زيادة">+</button>
+    <button id="reset" type="button">إعادة الضبط</button>
+  </div>
+  <p style="font-size:13px;color:#64748b">اضغط + عدة مرات؛ تُحفَظ الحالة تلقائيًا وتُستعاد عند العودة.</p>
+</main>
+<script>
+(function () {
+  // SmartSimBridgeV1 implemented directly (the SDK in docs/smartsim/sdk-v1.js does exactly this).
+  var P = 1, id = null, n = 0, disabled = false;
+  var out = document.getElementById("count"), inc = document.getElementById("inc"), reset = document.getElementById("reset");
+  function send(type, payload) { window.parent.postMessage({ protocolVersion: P, instanceId: id, type: type, payload: payload || {} }, "*"); }
+  function render() { out.textContent = String(n); inc.disabled = disabled; reset.disabled = disabled; }
+  window.addEventListener("message", function (e) {
+    var m = e.data; if (!m || m.protocolVersion !== P) return;
+    if (m.type === "SMARTSIM_INIT") { id = m.instanceId; var s = m.payload && m.payload.savedState; if (s && typeof s.count === "number") n = s.count; disabled = !!(m.payload && m.payload.disabled); render(); }
+    else if (m.instanceId !== id) { return; }
+    else if (m.type === "SMARTSIM_RESTORE_STATE") { var r = m.payload && m.payload.state; n = r && typeof r.count === "number" ? r.count : 0; render(); }
+    else if (m.type === "SMARTSIM_SET_DISABLED") { disabled = !!(m.payload && m.payload.disabled); render(); }
+    else if (m.type === "SMARTSIM_RESET") { n = 0; render(); send("SMARTSIM_STATE_CHANGED", { state: { count: 0 } }); }
+  });
+  inc.addEventListener("click", function () { if (disabled) return; n++; render(); send("SMARTSIM_STATE_CHANGED", { state: { count: n } }); });
+  reset.addEventListener("click", function () { if (disabled) return; send("SMARTSIM_REQUEST_RESET", {}); });
+  send("SMARTSIM_READY", {});
+})();
+</script>
+</body>
+</html>
