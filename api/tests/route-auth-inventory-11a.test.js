@@ -40,7 +40,10 @@ const SIGNED = {
   questionImage: "question asset download; requires blob + exp + sig produced by createSignedAssetParams (HMAC, 15 min TTL)",
   // Phase 17C — Runner → SmartAssess official grading callback: no session; SA-CODING-CALLBACK-1 HMAC (its own key) over the
   // exact body + timestamp (±300 s) + request id; unsigned → 401, unconfigured key → 503 (fail closed), raw evidence only.
-  codingGradeCallback: "official coding grading callback; requires an x-sa-callback-* HMAC signature under CODING_GRADING_CALLBACK_HMAC_KEY"
+  codingGradeCallback: "official coding grading callback; requires an x-sa-callback-* HMAC signature under CODING_GRADING_CALLBACK_HMAC_KEY",
+  // Phase 17D-A — scheduler → recovery sweep trigger: no session; SA-CODING-SWEEP-1 HMAC (a THIRD key, separated from the runner and
+  // callback keys) over the exact body {"version":1} + timestamp (±300 s) + request id; unsigned → 401 before any storage access.
+  codingGradingSweep: "coding grading recovery sweep trigger; requires an x-sa-sweep-* HMAC signature under CODING_GRADING_SWEEP_HMAC_KEY"
 };
 
 const SECRETS = {

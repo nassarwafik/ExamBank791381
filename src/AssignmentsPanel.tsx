@@ -16,7 +16,8 @@ import AssignmentDetail from "./assignments/AssignmentDetail";
 import AssignmentComposer from "./assignments/AssignmentComposer";
 import Gradebook from "./assignments/Gradebook";
 import {DeadlineDialog,ReopenDialog,ExtendDialog,PurgeDialog} from "./assignments/GradebookRowEditors";
-import type {Classroom,Item,Impact,Exam,SavedExam,StudentResult,LifecycleSnap,Stats,GradebookFilter,GradebookSort,QuestionStat,ItemAnalysis,AnalysisSort,SourceMode,WorkspaceMode} from "./assignments/types";
+import {bulkRetryNotice} from "./assignments/codingRecovery";
+import type {CodingGradingStatus,Classroom,Item,Impact,Exam,SavedExam,StudentResult,LifecycleSnap,Stats,GradebookFilter,GradebookSort,QuestionStat,ItemAnalysis,AnalysisSort,SourceMode,WorkspaceMode} from "./assignments/types";
 import {gradebookFilterFor,drillStudentId,type AssignmentDrill} from "./assignments/drillTarget";
 
 // Server-authoritative grading status for a student's LATEST result; fall back to the same inputs the
@@ -54,6 +55,7 @@ export default function AssignmentsPanel({token,classes,currentExam,onCopyLibrar
  const [showArchived,setShowArchived]=useState(false),[purgeFor,setPurgeFor]=useState<Item|null>(null),[purgeTitle,setPurgeTitle]=useState("");
  const [analysis,setAnalysis]=useState<ItemAnalysis|null>(null),[analysisBusy,setAnalysisBusy]=useState(false),[analysisSort,setAnalysisSort]=useState<AnalysisSort>("number");
  // Roadmap #13 — gradebook search/filter/sort (client-side over the already-loaded results; no request per keystroke).
+ const [codingSummary,setCodingSummary]=useState<CodingGradingStatus|null>(null);
  const [gbSearch,setGbSearch]=useState(""),[gbFilter,setGbFilter]=useState<GradebookFilter>("all"),[gbSort,setGbSort]=useState<GradebookSort>("name");
  const [savedExams,setSavedExams]=useState<SavedExam[]>([]),[examSource,setExamSource]=useState(current?"current":""),[savedExam,setSavedExam]=useState<Exam|null>(null),[examLoading,setExamLoading]=useState(false);
  const [sourceMode,setSourceMode]=useState<SourceMode>("mine");
@@ -228,11 +230,11 @@ export default function AssignmentsPanel({token,classes,currentExam,onCopyLibrar
   resultsBusy.current=true;
   setBusy(true);setDeadlineFor(null);setReopenFor(null);setExtendFor(null);setAnalysis(null);
   try{
-   const r=await api<{students:StudentResult[];stats:Stats}>("/api/assignment-results?assignmentId="+encodeURIComponent(item.assignmentId));
+   const r=await api<{students:StudentResult[];stats:Stats;codingSummary?:CodingGradingStatus}>("/api/assignment-results?assignmentId="+encodeURIComponent(item.assignmentId));
    if(seq!==resultsSeq.current)return;
    if(!matchesMasterScope(item,scopeRef.current))return;
    const students=r.students||[];
-   setResultsFor(item);setResults(students);setStats(r.stats||null);
+   setResultsFor(item);setResults(students);setStats(r.stats||null);setCodingSummary(r.codingSummary||null);
    if(drillTarget)applyDrillView(drillTarget,item,students);
   }catch(e){if(seq===resultsSeq.current)setError(e instanceof Error?e.message:"تعذر تحميل النتائج.")}finally{if(seq===resultsSeq.current){resultsBusy.current=false;setBusy(false)}}
  }
@@ -322,6 +324,21 @@ export default function AssignmentsPanel({token,classes,currentExam,onCopyLibrar
  async function loadItemAnalysis(item=resultsFor){if(!item)return;setAnalysisBusy(true);setError("");try{const r=await api<ItemAnalysis>("/api/assignment-item-analysis?assignmentId="+encodeURIComponent(item.assignmentId));setAnalysis(r)}catch(e){setError(e instanceof Error?e.message:"تعذر تحميل تحليل الأسئلة.")}finally{setAnalysisBusy(false)}}
  // Merge an authoritative lifecycle snapshot (returned by every mutating action) into the student's row
  // so the UI never guesses (B2B #2/#20). Only defined fields are applied.
+ // Phase 17D-A — ONE bulk retry of the assignment's open coding grading (same revision, server-selected targets), then an
+ // authoritative reload of the gradebook. The request carries the assignment id only.
+ async function bulkCodingRetry(){
+  if(!resultsFor)return;
+  const item=resultsFor;
+  if(!(await confirm({message:"سيُعاد إرسال الأسئلة البرمجية التي لم يكتمل تصحيحها الآلي إلى خادم التنفيذ بنفس الإصدار. لن تتغير الإجابات أو المراجعات اليدوية.",title:"إعادة محاولة التصحيح البرمجي",confirmLabel:"إعادة المحاولة"})))return;
+  setBusy(true);setError("");setNotice("");
+  let r:{scheduled:number;hasMore:boolean}|null=null;
+  try{r=await api<{scheduled:number;hasMore:boolean}>("/api/coding/bulk-retry",{method:"POST",body:JSON.stringify({assignmentId:item.assignmentId})})}
+  catch{setError("تعذر جدولة إعادة محاولة التصحيح البرمجي.")}
+  finally{setBusy(false)}
+  if(!r)return;
+  await loadResults(item);
+  setNotice(bulkRetryNotice({scheduled:Number(r.scheduled)||0,hasMore:!!r.hasMore}));
+ }
  function mergeSnap(studentId:string,snap:LifecycleSnap){setResults(x=>x.map(y=>y.studentId===studentId?{...y,...snap}:y))}
  async function grantAttempt(s:StudentResult){
   if(!resultsFor)return;
@@ -446,7 +463,8 @@ export default function AssignmentsPanel({token,classes,currentExam,onCopyLibrar
     analysis={analysis} analysisBusy={analysisBusy} analysisSort={analysisSort} onAnalysisSort={setAnalysisSort} onToggleAnalysis={()=>{if(analysis)setAnalysis(null);else void loadItemAnalysis()}} sortedQuestions={sortedQuestions} analysisSummary={analysisSummary} fmt={fmt}>
     <Gradebook assignment={resultsFor} rows={visibleResults} totalRows={results.length} gradingOf={rowGrading} busy={busy} focusStudentId={drillFocus&&drillFocus.assignmentId===resultsFor.assignmentId?drillFocus.studentId:undefined}
      search={gbSearch} onSearch={setGbSearch} filter={gbFilter} onFilter={setGbFilter} sort={gbSort} onSort={setGbSort}
-     onReview={openReview} onGrant={s=>void grantAttempt(s)} onReopen={openReopen} onExtend={openExtend} onDeadline={openDeadline} onEndAttempt={s=>void endAttempt(s)} fmt={fmt}/>
+     onReview={openReview} onGrant={s=>void grantAttempt(s)} onReopen={openReopen} onExtend={openExtend} onDeadline={openDeadline} onEndAttempt={s=>void endAttempt(s)} fmt={fmt}
+     codingSummary={codingSummary} onBulkCodingRetry={()=>void bulkCodingRetry()}/>
    </AssignmentDetail>}
   </div>
 

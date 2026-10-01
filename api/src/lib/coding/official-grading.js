@@ -26,7 +26,7 @@
 const crypto = require("crypto");
 const { readCodingRunnerConfig } = require("./runner-config");
 const { signRunnerRequest } = require("./runner-protocol");
-const { readCallbackKey } = require("./callback-protocol");
+const { resolveCallbackKey } = require("./hmac-key-separation");
 const { codingGradingMode, bindCodeAnswerToQuestion, validateCodingQuestion, CODING_COMPARATORS, DEFAULT_CODING_COMPARATOR, CODING_TEST_LIMITS } = require("../shared-finalization/codingQuestion");
 const { evaluateOfficialCodingRun, officialCodingScore, officialCaseToken, OFFICIAL_STDOUT_CAPTURE_BYTES, OFFICIAL_STDERR_CAPTURE_BYTES } = require("../shared-finalization/codingContract");
 const { flattenQuestions, effectiveMaxMarks } = require("../exam-structure");
@@ -49,6 +49,9 @@ const JOB_ID = /^cg_[A-Za-z0-9_-]{16,64}$/;
 const TECH_CODE = /^[A-Z][A-Z0-9_]{0,47}$/;
 const SYSTEM_ACTOR = "system:coding-grader";
 const ACTIVE_STATES = Object.freeze(["pending", "dispatched", "retryable"]);
+// Phase 17D-A — a "dispatched" target older than this has most likely lost its callback (the Recovery Engine re-dispatches the
+// SAME revision; the gradebook counts it as stale). Shared by the recovery policy and the gradebook status.
+const STALE_DISPATCHED_MS = 30 * 60 * 1000;
 
 const sha256 = text => crypto.createHash("sha256").update(text, "utf8").digest("hex");
 const isObj = v => !!v && typeof v === "object" && !Array.isArray(v);
@@ -167,6 +170,24 @@ function planCodingGrading(exam, attempt, { assignmentId, studentId, now } = {})
   return { dispatch };
 }
 
+/**
+ * Phase 17D-A — the teacher-facing AGGREGATE coding grading status of one attempt: { pending, retryable, stale } counts (pending
+ * includes a freshly dispatched target; stale = dispatched longer than STALE_DISPATCHED_MS ago), or null when nothing is open.
+ * Never a technical code, job id, grading key or recovery internals.
+ */
+function codingGradingStatus(attempt, nowMs = Date.now()) {
+  const t = attempt && attempt.codingGrading && isObj(attempt.codingGrading.targets) ? attempt.codingGrading.targets : null;
+  if (!t) return null;
+  const out = { pending: 0, retryable: 0, stale: 0 };
+  for (const x of Object.values(t)) {
+    if (!isObj(x) || x.state === "complete") continue;
+    if (x.state === "retryable") out.retryable++;
+    else if (x.state === "dispatched" && nowMs - (Number.isFinite(Date.parse(x.updatedAt)) ? Date.parse(x.updatedAt) : 0) > STALE_DISPATCHED_MS) out.stale++;   // no timestamp = old (as the recovery policy)
+    else out.pending++;
+  }
+  return out.pending + out.retryable + out.stale > 0 ? out : null;
+}
+
 /** true while any official coding target of the attempt is not complete (student-facing: a boolean, nothing else). */
 function autoGradingPending(attempt) {
   const t = attempt && attempt.codingGrading && isObj(attempt.codingGrading.targets) ? attempt.codingGrading.targets : null;
@@ -192,7 +213,9 @@ async function readBounded(res, maxBytes) {
 async function dispatchOfficialJob(job, deps = {}) {
   const env = deps.env || process.env;
   const config = readCodingRunnerConfig(env);
-  if (!config.enabled || !readCallbackKey(env)) return { state: "retryable", technicalCode: "EXECUTION_UNAVAILABLE" };
+  // Phase 17D-A — the callback key must also be SEPARATED from the runner request key (Review Fix 1 resolver): with equal keys
+  // nothing is sent (a result could not be authenticated anyway) and the target stays retryable.
+  if (!config.enabled || !resolveCallbackKey(env)) return { state: "retryable", technicalCode: "EXECUTION_UNAVAILABLE" };
   const fetchImpl = deps.fetch || globalThis.fetch, now = deps.now || Date.now;
   const bodyText = JSON.stringify(job), body = Buffer.from(bodyText, "utf8");
   const requestId = "og_" + crypto.randomBytes(12).toString("hex");
@@ -236,6 +259,28 @@ async function updateTarget(container, ids, targetKey, expect, patch, deps) {
   } catch (e) { if (e !== STOP) throw e; }
   return applied;
 }
+/**
+ * Phase 17D-A — CAS on the submission that lets `fn(target, attempt)` change ONE target only while it is still the expected
+ * (revision, job) and not complete; `fn` returns false to abort without a write. → true when the change was written.
+ */
+async function mutateTarget(container, ids, targetKey, expect, fn, deps) {
+  const { mut } = io(deps);
+  let applied = false;
+  try {
+    await mut(container, SP + ids.assignmentId + "/" + ids.studentId + ".json", current => {
+      applied = false;
+      const attempt = current && Array.isArray(current.attempts) ? current.attempts.find(x => Number(x.attemptNumber) === Number(ids.attemptNumber)) : null;
+      const t = attempt && attempt.codingGrading && isObj(attempt.codingGrading.targets) ? attempt.codingGrading.targets[targetKey] : null;
+      if (!t || t.revision !== expect.revision || t.jobId !== expect.jobId || t.state === "complete") throw STOP;
+      if (fn(t, attempt) === false) throw STOP;
+      applied = true;
+      return current;
+    });
+  } catch (e) { if (e !== STOP) throw e; }
+  return applied;
+}
+/** The recovery metadata after a TEACHER action (retry / bulk retry): automatic backoff and exhaustion start over. */
+const manualRecovery = deps => ({ automaticAttempts: 0, exhausted: false, manualRetryAt: nowIso(deps) });
 async function setJobState(container, jobId, revision, state, extra, deps) {
   const { mut } = io(deps);
   try {
@@ -279,6 +324,8 @@ async function dispatchTarget(container, assignment, ids, attempt, targetKey, ta
  * Dispatches the attempt's targets whose state is in `opts.states` (default pending + retryable). Re-reads the authoritative
  * attempt + snapshot; idempotent (same revision → same job id, the runner dedupes). Never throws for a runner / storage failure
  * of an individual target (the target simply stays pending / retryable). → [{ targetKey, jobId, revision, state, ... }]
+ * Phase 17D-A: `opts.expect` = { revision, jobId } binds the call to ONE known revision — a target that has moved on (force
+ * regrade) is skipped, so a recovery decided on an older read can never dispatch a different revision.
  */
 async function ensureCodingGradingJobs(container, { assignmentId, studentId, attemptNumber }, deps = {}, opts = {}) {
   const { dl } = io(deps), obs = opts.obs || null;
@@ -291,6 +338,7 @@ async function ensureCodingGradingJobs(container, { assignmentId, studentId, att
   const out = [];
   for (const [key, t] of Object.entries(targets)) {
     if (!t || !states.includes(t.state) || (Array.isArray(opts.targets) && !opts.targets.includes(key))) continue;
+    if (opts.expect && (t.revision !== opts.expect.revision || t.jobId !== opts.expect.jobId)) continue;
     try { out.push(await dispatchTarget(container, assignment, ids, attempt, key, t, deps, obs)); }
     catch { obs?.logWarn?.("coding.autoGrade.dispatch.failed", { jobId: t.jobId, revision: t.revision }); out.push({ targetKey: key, jobId: t.jobId, revision: t.revision, state: t.state, applied: false }); }
   }
@@ -316,6 +364,8 @@ async function regradeTarget(container, { assignmentId, studentId, attemptNumber
   if (!target) return { status: 404, code: "NOT_FOUND" };
   if (action === "retry") {
     if (target.state === "complete") return { status: 409, code: "ALREADY_COMPLETE" };
+    // Phase 17D-A — a teacher retry resets automatic backoff / exhaustion (same revision, job id and grading key).
+    if (target.recovery) await mutateTarget(container, ids, questionId, { revision: target.revision, jobId: target.jobId }, t => { t.recovery = manualRecovery(deps); }, deps);
     const r = await ensureCodingGradingJobs(container, ids, deps, { obs, targets: [questionId], states: ACTIVE_STATES });
     const t = r[0] || { state: target.state, revision: target.revision };
     return { status: 200, state: t.state, revision: t.revision };
@@ -473,6 +523,6 @@ function codingAutoGradeView(question, attempt) {
 }
 
 module.exports = {
-  JOB_PREFIX, OFFICIAL_PATH, ENGINE, officialJobId, officialLimits, targetAuthority, planCodingGrading, autoGradingPending, buildOfficialRunnerJob,
-  dispatchOfficialJob, ensureCodingGradingJobs, dispatchPlannedGrading, regradeTarget, validateCallbackBody, applyOfficialCallback, codingAutoGradeView
+  JOB_PREFIX, OFFICIAL_PATH, ENGINE, ACTIVE_STATES, STALE_DISPATCHED_MS, officialJobId, officialLimits, targetAuthority, planCodingGrading, autoGradingPending, codingGradingStatus, buildOfficialRunnerJob,
+  dispatchOfficialJob, ensureCodingGradingJobs, dispatchPlannedGrading, regradeTarget, validateCallbackBody, applyOfficialCallback, codingAutoGradeView, mutateTarget, manualRecovery
 };

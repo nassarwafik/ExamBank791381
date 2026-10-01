@@ -11,7 +11,10 @@ const {normalizeAssignmentStatus}=require("../lib/assignment-lifecycle");
 const {deriveGradingStatus}=require("../lib/grading-status");
 const {isStudentClassMember}=require("../lib/class-membership");
 // Phase 17C — a teacher-ended attempt records the official coding grading intent in the same CAS and dispatches after it.
-const {planCodingGrading,dispatchPlannedGrading,autoGradingPending}=require("../lib/coding/official-grading");
+const {planCodingGrading,dispatchPlannedGrading,autoGradingPending,codingGradingStatus}=require("../lib/coding/official-grading");
+// Phase 17D-A — a server-derived AGGREGATE coding grading status per attempt ({pending,retryable,stale} counts, only while something
+// is open) and an assignment-level codingSummary for the bulk retry action. Never a technical code, job id or recovery internals.
+function codingFields(x,nowMs){const c=codingGradingStatus(x,nowMs);return c?{codingGrading:c}:{}}
 const AP="platform/assignments/",SP="platform/submissions/",UP="platform/users/";
 const CONFLICT_MESSAGE="حدث تعارض مؤقت أثناء حفظ البيانات. حاول مرة أخرى.";
 // Additive audit view of a completed attempt for the teacher gradebook (B2A #20 / B2B #16). startedAt/
@@ -28,9 +31,9 @@ function lifecycle(a,s){
 }
 // The graded-result half of a gradebook row (completed attempts + latest result + its grading status). Shared by the GET
 // row and by endActiveAttempt, so the row a teacher action returns is byte-for-byte the row a reload would show.
-function resultFields(s){
+function resultFields(s,nowMs=Date.now()){
  const attempts=Array.isArray(s?.attempts)?s.attempts:[],latest=attempts.length?attempts[attempts.length-1]:null,latestGrading=deriveGradingStatus(latest);
- return {gradingStatus:latestGrading,attempts:attempts.map(x=>({attemptNumber:x.attemptNumber,score:x.score,totalMarks:x.totalMarks,percentage:x.percentage,submittedAt:x.submittedAt,finalized:x.finalized,manualReviewMarks:x.manualReviewMarks,gradingStatus:deriveGradingStatus(x),...attemptAudit(x),...(autoGradingPending(x)?{autoGradingPending:true}:{})})),latestResult:latest?{attemptNumber:latest.attemptNumber,score:latest.score,totalMarks:latest.totalMarks,percentage:latest.percentage,submittedAt:latest.submittedAt,finalized:latest.finalized,manualReviewMarks:latest.manualReviewMarks,gradingStatus:latestGrading,teacherFeedback:String(latest.teacherFeedback||""),...attemptAudit(latest),...(autoGradingPending(latest)?{autoGradingPending:true}:{})}:null};
+ return {gradingStatus:latestGrading,attempts:attempts.map(x=>({attemptNumber:x.attemptNumber,score:x.score,totalMarks:x.totalMarks,percentage:x.percentage,submittedAt:x.submittedAt,finalized:x.finalized,manualReviewMarks:x.manualReviewMarks,gradingStatus:deriveGradingStatus(x),...attemptAudit(x),...(autoGradingPending(x)?{autoGradingPending:true}:{}),...codingFields(x,nowMs)})),latestResult:latest?{attemptNumber:latest.attemptNumber,score:latest.score,totalMarks:latest.totalMarks,percentage:latest.percentage,submittedAt:latest.submittedAt,finalized:latest.finalized,manualReviewMarks:latest.manualReviewMarks,gradingStatus:latestGrading,teacherFeedback:String(latest.teacherFeedback||""),...attemptAudit(latest),...(autoGradingPending(latest)?{autoGradingPending:true}:{}),...codingFields(latest,nowMs)}:null};
 }
 // Phase 7B — the identity a teacher's endActiveAttempt was composed under. STRICT, fail closed (same rules as the student
 // write guard): attemptNumber a real integer >= 1, startedAt a non-empty string, and for model 3 an attemptEpoch integer
@@ -79,18 +82,19 @@ async function handler(request,deps={},obs=null){
    // Roadmap #24: the gradebook population is CLASS MEMBERSHIP (canonical predicate) — a login-disabled
    // (active:false, non-archived) student keeps their row, results and pending-review visibility.
    const users=scopedStudent?[scopedStudent]:(await ls(c,UP)).filter(x=>isStudentClassMember(x,a.classId)),out=[];
-   let submitted=0,pending=0,finalizedCount=0,notSubmitted=0,active=0,sum=0,highest=null,lowest=null;
+   let submitted=0,pending=0,finalizedCount=0,notSubmitted=0,active=0,sum=0,highest=null,lowest=null;const codingSummary={pending:0,retryable:0,stale:0},nowMs=Date.now();
    // Roadmap #27: fetch every member's submission with bounded concurrency (aligned with `users`), then aggregate in order.
    const submissionsByIndex=await mapConcurrent(users,getReadConcurrency(),student=>dl(c,SP+id+"/"+student.userId+".json"));
    for(let index=0;index<users.length;index++){
     const student=users[index];
-    const s=submissionsByIndex[index],rf=resultFields(s),latest=rf.latestResult;
+    const s=submissionsByIndex[index],rf=resultFields(s,nowMs),latest=rf.latestResult;
+    for(const x of rf.attempts)if(x.codingGrading){codingSummary.pending+=x.codingGrading.pending;codingSummary.retryable+=x.codingGrading.retryable;codingSummary.stale+=x.codingGrading.stale}
     const latestGrading=rf.gradingStatus;                                   // notSubmitted | pendingReview | final
     if(latest){submitted++;sum+=Number(latest.percentage||0);highest=highest===null?Number(latest.percentage||0):Math.max(highest,Number(latest.percentage||0));lowest=lowest===null?Number(latest.percentage||0):Math.min(lowest,Number(latest.percentage||0));if(latestGrading==="pendingReview")pending++;else if(latestGrading==="final")finalizedCount++}
     else notSubmitted++;
     if(activeAttemptOf(s))active++;                                         // active attempt is INDEPENDENT of grading status
     out.push({studentId:student.userId,studentName:student.displayName,studentCode:student.code,...lifecycle(a,s),...rf})}
-   out.sort((x,y)=>String(x.studentName).localeCompare(String(y.studentName),"ar"));return {status:200,jsonBody:{ok:true,assignment:{assignmentId:a.assignmentId,title:a.title,dueAt:String(a.dueAt||""),durationMinutes:Number(a.durationMinutes||0),maxAttempts:Math.max(1,Number(a.maxAttempts||1)),totalMarks:Number(a.totalMarks||0),attemptPolicy:attemptPolicyOf(a)},stats:{students:users.length,submitted,pendingReview:pending,finalized:finalizedCount,notSubmitted,active,average:submitted?Number((sum/submitted).toFixed(1)):null,highest,lowest},students:out,...(scopedStudent?{scope:{mode:"student",studentId:scopedStudentId}}:{})}};
+   out.sort((x,y)=>String(x.studentName).localeCompare(String(y.studentName),"ar"));return {status:200,jsonBody:{ok:true,assignment:{assignmentId:a.assignmentId,title:a.title,dueAt:String(a.dueAt||""),durationMinutes:Number(a.durationMinutes||0),maxAttempts:Math.max(1,Number(a.maxAttempts||1)),totalMarks:Number(a.totalMarks||0),attemptPolicy:attemptPolicyOf(a)},stats:{students:users.length,submitted,pendingReview:pending,finalized:finalizedCount,notSubmitted,active,average:submitted?Number((sum/submitted).toFixed(1)):null,highest,lowest},codingSummary,students:out,...(scopedStudent?{scope:{mode:"student",studentId:scopedStudentId}}:{})}};
   }
   let b={};try{b=await request.json()}catch{}const resultAction=String(b.action||"");
 

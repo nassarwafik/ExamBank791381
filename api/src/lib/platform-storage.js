@@ -32,6 +32,22 @@ async function listJson(container,prefix){const names=await listBlobNames(contai
 // Returns the names of the .json blobs under a prefix (no download) — for callers that need to act on
 // blobs by name, e.g. deleting a whole prefix.
 async function listBlobNames(container,prefix){const out=[];for await(const blob of container.listBlobsFlat({prefix})){if(blob.name.endsWith(".json"))out.push(blob.name)}return out}
+// Phase 17D-A — ONE page of .json blob names under a prefix (Azure listBlobsFlat().byPage), for bounded, resumable scans.
+// → { names, continuationToken } where continuationToken is an opaque string, or null at the end of the listing. A token the
+// service rejects (tampered / expired / from another listing: HTTP 400) is reported as INVALID_CONTINUATION_TOKEN so a caller
+// can restart from the beginning instead of failing forever. listBlobNames above is unchanged.
+const LIST_PAGE_MAX=5000;
+class InvalidContinuationTokenError extends Error{constructor(){super("Invalid continuation token.");this.name="InvalidContinuationTokenError";this.code="INVALID_CONTINUATION_TOKEN"}}
+async function listBlobNamesPage(container,prefix,{continuationToken,maxPageSize}={}){
+ const size=Math.max(1,Math.min(LIST_PAGE_MAX,Math.floor(Number(maxPageSize))||LIST_PAGE_MAX)),token=typeof continuationToken==="string"&&continuationToken?continuationToken:undefined;
+ let step;
+ try{step=await container.listBlobsFlat({prefix}).byPage({continuationToken:token,maxPageSize:size}).next()}
+ catch(e){if(token&&Number(e?.statusCode??e?.response?.status??0)===400)throw new InvalidContinuationTokenError();throw e}
+ const page=step&&!step.done?step.value:null,items=page&&page.segment&&Array.isArray(page.segment.blobItems)?page.segment.blobItems:[];
+ const names=[];for(const b of items)if(b&&typeof b.name==="string"&&b.name.endsWith(".json"))names.push(b.name);
+ const next=page&&typeof page.continuationToken==="string"&&page.continuationToken?page.continuationToken:null;
+ return {names,continuationToken:next};
+}
 // Deletes a single blob if it exists (no error when it's already gone).
 async function deleteBlob(container,name){await container.getBlobClient(name).deleteIfExists()}
 // Phase 15A — ETag-conditional delete (If-Match): the blob is removed only if nobody changed it since it was read; a changed
@@ -113,4 +129,4 @@ async function mutateJsonWithRetry(container,name,mutateFn,observer){
  throw new StorageConflictError("Optimistic concurrency conflict after "+MAX_MUTATE_ATTEMPTS+" attempts.");
 }
 
-module.exports={getContainer,downloadJsonOrNull,uploadJson,uploadBinary,downloadBinaryOrNull,listJson,listBlobNames,deleteBlob,deleteBlobConditional,downloadJsonWithEtagOrNull,uploadJsonConditional,mutateJsonWithRetry,StorageConflictError,isConcurrencyConflict,mapConcurrent,downloadManyJson,setReadConcurrency,getReadConcurrency};
+module.exports={getContainer,downloadJsonOrNull,uploadJson,uploadBinary,downloadBinaryOrNull,listJson,listBlobNames,listBlobNamesPage,InvalidContinuationTokenError,deleteBlob,deleteBlobConditional,downloadJsonWithEtagOrNull,uploadJsonConditional,mutateJsonWithRetry,StorageConflictError,isConcurrencyConflict,mapConcurrent,downloadManyJson,setReadConcurrency,getReadConcurrency};
