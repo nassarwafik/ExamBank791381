@@ -10,13 +10,16 @@ const {normalizeClassStatus}=require("../lib/class-lifecycle");
 const {timerState,startRejection,writeRejection,normalizeDurationMinutes,activeAttemptOf,normalizeEndReason,attemptModelVersion,attemptPolicyOf,attemptEpochOf,pauseRejection,resumeRejection,toMs}=require("../lib/assignment-availability");
 const {deriveGradingStatus}=require("../lib/grading-status");
 const {withAssignmentLock,AssignmentLockBusyError}=require("../lib/assignment-lock");
+// Phase 17C — official hidden-test coding grading: the durable intent is planned INSIDE each completed-attempt CAS; the runner
+// is reached only AFTER the commit (dispatchPlannedGrading never fails the submission; an outage is never a zero).
+const {planCodingGrading,dispatchPlannedGrading,autoGradingPending}=require("../lib/coding/official-grading");
 const AP="platform/assignments/",SP="platform/submissions/";
 const CONFLICT_MESSAGE="حدث تعارض مؤقت أثناء حفظ البيانات. حاول مرة أخرى.";
 // A completed attempt's public shape. timedOut/startedAt/endsAt/endedAt/endReason are additive audit
 // fields; they are "" / false / normalized for legacy/untimed attempts (backward compatible). endReason
 // is normalized from a legacy attempt's timedOut flag when the explicit field is absent (never mutates
 // stored data — normalization is read-time only).
-function pub(x){return {attemptNumber:x.attemptNumber,submittedAt:x.submittedAt,score:x.score,totalMarks:x.totalMarks,percentage:x.percentage,manualReviewMarks:x.manualReviewMarks,finalized:x.finalized,gradingStatus:deriveGradingStatus(x),teacherFeedback:String(x.teacherFeedback||""),timedOut:!!x.timedOut,startedAt:String(x.startedAt||""),endsAt:String(x.endsAt||""),extendedEndsAt:String(x.extendedEndsAt||""),endedAt:String(x.endedAt||""),endReason:normalizeEndReason(x),...(x.pauseCount!==undefined?{pauseCount:Math.max(0,Number(x.pauseCount)||0)}:{})}}
+function pub(x){return {attemptNumber:x.attemptNumber,submittedAt:x.submittedAt,score:x.score,totalMarks:x.totalMarks,percentage:x.percentage,manualReviewMarks:x.manualReviewMarks,finalized:x.finalized,gradingStatus:deriveGradingStatus(x),teacherFeedback:String(x.teacherFeedback||""),timedOut:!!x.timedOut,startedAt:String(x.startedAt||""),endsAt:String(x.endsAt||""),extendedEndsAt:String(x.extendedEndsAt||""),endedAt:String(x.endedAt||""),endReason:normalizeEndReason(x),...(x.pauseCount!==undefined?{pauseCount:Math.max(0,Number(x.pauseCount)||0)}:{}),...(autoGradingPending(x)?{autoGradingPending:true}:{})}}
 // Unified state from the shared timer/availability helper, so this endpoint agrees with the
 // dashboard/assignment endpoints. `canAttempt` keeps its historical (untimed) meaning; `canWrite`
 // (save/submit gate) and `canStartAttempt` (timed start gate) are explicit and separate. serverNow +
@@ -180,7 +183,7 @@ async function handler(request,deps={},obs=null){
    const rej=writeRejection(a,s,"submit",Date.now());
    if(rej)return {status:rej.status,jsonBody:{ok:false,error:rej.error}};
    const answers=normalizeDraftAnswers(b.answers&&typeof b.answers==="object"?b.answers:{},a.examSnapshot||null).answers,now=new Date().toISOString(); // Phase 16B-A — bounded simulation states; 17A — code answers bound to the published coding question
-   let resultAttempt=null,finalState=null;
+   let resultAttempt=null,finalState=null,codingPlan=null;
    try{
     await maybeLock(()=>mut(c,name,async current=>{
      // Roadmap #7 race guard: re-read the assignment from storage inside the mutation and require
@@ -198,6 +201,7 @@ async function handler(request,deps={},obs=null){
      // Audit (B2A #12 / B2B #16): a normal submit records endReason "submitted", endedAt = server
      // submission time, and preserves any teacher timer extension (extendedEndsAt) on the completed attempt.
      const attempt={attemptNumber,submittedAt:now,score:g.score,totalMarks:g.totalMarks,percentage:g.percentage,manualReviewMarks:g.manualReviewMarks,finalized:g.finalized,questionGrades:g.questions,sections:g.sections,answers,manualOverrides:{},teacherFeedback:"",timedOut:false,startedAt:active?active.startedAt:"",endsAt:active?active.endsAt||"":"",extendedEndsAt:active&&active.extendedEndsAt?String(active.extendedEndsAt):"",endedAt:now,endReason:"submitted",...modelThreeAudit(a,active)};
+     codingPlan=planCodingGrading(a.examSnapshot,attempt,{assignmentId:id,studentId:student.userId,now});   // Phase 17C — atomic with the attempt
      doc.attempts=Array.isArray(doc.attempts)?doc.attempts:[];doc.attempts.push(attempt);
      doc.draftAnswers={};doc.draftSavedAt="";doc.activeAttempt=null;doc.updatedAt=now;
      resultAttempt=attempt;finalState=state(a,doc,Date.now());
@@ -214,6 +218,7 @@ async function handler(request,deps={},obs=null){
    if(resultAttempt.finalized){
     await recFn(c,{classId:student.classId,studentId:student.userId,studentDisplayName:student.displayName,assignmentId:id,assignmentTitle:a.title,percentage:resultAttempt.percentage,shareAchievements:student.shareAchievements});
    }
+   await dispatchPlannedGrading(c,{assignmentId:id,studentId:student.userId,attemptNumber:resultAttempt.attemptNumber},codingPlan,deps,obs);   // AFTER the commit
    obs?.logInfo("student.submission.completed",{action:"submit",assignmentId:id,finalized:!!resultAttempt.finalized});
    return {status:200,jsonBody:{ok:true,result:pub(resultAttempt),state:finalState}};
   }
@@ -222,7 +227,7 @@ async function handler(request,deps={},obs=null){
   // ONLY submission.draftAnswers already on the server; any client-supplied answers are IGNORED, so a
   // student cannot edit answers after expiry and pass them as a "timeout" submission. Idempotent. ──
   if(action==="finalizeTimedOutAttempt"){
-   let resultAttempt=null,finalState=null,already=false;
+   let resultAttempt=null,finalState=null,already=false,codingPlan=null;
    try{
     await maybeLock(()=>mut(c,name,async current=>{
      // Roadmap #7 race guard: re-read the assignment from storage inside the mutation and require
@@ -241,6 +246,7 @@ async function handler(request,deps={},obs=null){
      // finalization timestamp. The teacher extension is preserved on the completed attempt (extendedEndsAt).
      const endedAt=ts.effectiveAttemptEndsAt||active.endsAt||now;
      const attempt={attemptNumber:active.attemptNumber,submittedAt:now,score:g.score,totalMarks:g.totalMarks,percentage:g.percentage,manualReviewMarks:g.manualReviewMarks,finalized:g.finalized,questionGrades:g.questions,sections:g.sections,answers:serverAnswers,manualOverrides:{},teacherFeedback:"",timedOut:true,startedAt:active.startedAt,endsAt:active.endsAt,extendedEndsAt:active.extendedEndsAt?String(active.extendedEndsAt):"",endedAt,endReason:"timedOut",...modelThreeAudit(a,active)};
+     codingPlan=planCodingGrading(a.examSnapshot,attempt,{assignmentId:id,studentId:student.userId,now});   // Phase 17C — atomic with the attempt
      doc.attempts=Array.isArray(doc.attempts)?doc.attempts:[];doc.attempts.push(attempt);
      doc.draftAnswers={};doc.draftSavedAt="";doc.activeAttempt=null;doc.updatedAt=now;
      resultAttempt=attempt;finalState=state(a,doc,Date.now());
@@ -257,6 +263,7 @@ async function handler(request,deps={},obs=null){
    if(!already&&resultAttempt&&resultAttempt.finalized){
     await recFn(c,{classId:student.classId,studentId:student.userId,studentDisplayName:student.displayName,assignmentId:id,assignmentTitle:a.title,percentage:resultAttempt.percentage,shareAchievements:student.shareAchievements});
    }
+   if(!already&&resultAttempt)await dispatchPlannedGrading(c,{assignmentId:id,studentId:student.userId,attemptNumber:resultAttempt.attemptNumber},codingPlan,deps,obs);   // AFTER the commit
    if(!already)obs?.logInfo("student.submission.completed",{action:"finalizeTimedOutAttempt",assignmentId:id,timedOut:true});
    return {status:200,jsonBody:{ok:true,result:resultAttempt?pub(resultAttempt):(finalState?finalState.latestResult:null),state:finalState,alreadyFinalized:already}};
   }
@@ -349,7 +356,7 @@ async function handler(request,deps={},obs=null){
   // that won the race): never a second result. ──
   if(action==="finalizeIntegrityExit"){
    if(attemptPolicyOf(a)!=="strict")return {status:400,jsonBody:{ok:false,error:"هذا الواجب ليس بوضع صارم."}};
-   let resultAttempt=null,finalState=null,already=false;
+   let resultAttempt=null,finalState=null,already=false,codingPlan=null;
    try{
     await maybeLock(()=>mut(c,name,async current=>{
      await reread();
@@ -361,6 +368,7 @@ async function handler(request,deps={},obs=null){
      const serverAnswers=doc.draftAnswers&&typeof doc.draftAnswers==="object"?doc.draftAnswers:{};
      const g=gradeFn(a.examSnapshot,serverAnswers),timedOut=!!ts.attemptExpired;
      const attempt={attemptNumber:active.attemptNumber,submittedAt:now,score:g.score,totalMarks:g.totalMarks,percentage:g.percentage,manualReviewMarks:g.manualReviewMarks,finalized:g.finalized,questionGrades:g.questions,sections:g.sections,answers:serverAnswers,manualOverrides:{},teacherFeedback:"",timedOut,startedAt:active.startedAt,endsAt:active.endsAt||"",extendedEndsAt:active.extendedEndsAt?String(active.extendedEndsAt):"",endedAt:timedOut?(ts.effectiveAttemptEndsAt||now):now,endReason:timedOut?"timedOut":"integrityExit",...modelThreeAudit(a,active)};
+     codingPlan=planCodingGrading(a.examSnapshot,attempt,{assignmentId:id,studentId:student.userId,now});   // Phase 17C — atomic with the attempt
      doc.attempts=Array.isArray(doc.attempts)?doc.attempts:[];doc.attempts.push(attempt);
      doc.draftAnswers={};doc.draftSavedAt="";doc.activeAttempt=null;doc.updatedAt=now;
      resultAttempt=attempt;finalState=state(a,doc,nowMs);
@@ -370,6 +378,7 @@ async function handler(request,deps={},obs=null){
    if(!already&&resultAttempt&&resultAttempt.finalized){
     await recFn(c,{classId:student.classId,studentId:student.userId,studentDisplayName:student.displayName,assignmentId:id,assignmentTitle:a.title,percentage:resultAttempt.percentage,shareAchievements:student.shareAchievements});
    }
+   if(!already&&resultAttempt)await dispatchPlannedGrading(c,{assignmentId:id,studentId:student.userId,attemptNumber:resultAttempt.attemptNumber},codingPlan,deps,obs);   // AFTER the commit
    if(!already)obs?.logInfo("student.submission.completed",{action,assignmentId:id,endReason:resultAttempt?resultAttempt.endReason:""});
    return {status:200,jsonBody:{ok:true,result:resultAttempt?pub(resultAttempt):(finalState?finalState.latestResult:null),state:finalState,alreadyFinalized:already}};
   }

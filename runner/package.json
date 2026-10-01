@@ -2,7 +2,7 @@
   "name": "smartassess-coding-runner",
   "version": "1.0.0",
   "private": true,
-  "description": "SmartAssess Coding Runner Gateway (Phase 17B): authenticated practice execution of Python / Java / C# in one disposable, hardened Docker sandbox per run. Not an Azure Function; not part of the web app build.",
+  "description": "SmartAssess Coding Runner Gateway (Phase 17B/17C): authenticated practice execution and official hidden-test execution of Python / Java / C# in disposable, hardened Docker sandboxes (the runner executes; SmartAssess grades). Not an Azure Function; not part of the web app build.",
   "type": "commonjs",
   "engines": {
     "node": ">=22.12.0"
@@ -11,6 +11,8 @@
     "start": "node gateway/main.js",
     "test": "node --test --test-reporter=spec tests/unit/*.rtest.js",
     "build:images": "sh scripts/build-images.sh",
-    "test:docker": "node --test --test-concurrency=1 --test-reporter=spec tests/docker/*.rtest.js"
+    "test:docker": "npm run test:docker:security && npm run test:docker:official",
+    "test:docker:security": "node --test --test-concurrency=1 --test-reporter=spec tests/docker/*.rtest.js",
+    "test:docker:official": "node --test --test-concurrency=1 --test-reporter=spec tests/docker-official/*.rtest.js"
   }
 }

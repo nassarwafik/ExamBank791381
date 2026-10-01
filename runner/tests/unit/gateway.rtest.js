@@ -57,7 +57,7 @@ test("registry: three frozen entries mapping contract → fixed image and fixed 
   assert.deepEqual(Object.keys(LANGUAGES).sort(), ["csharp@1", "java@1", "python@1"]);
   for (const e of Object.values(LANGUAGES)) {
     assert.ok(Object.isFrozen(e));
-    assert.match(e.image, /^smartassess-coding-(python|java|csharp):17b-v1$/);
+    assert.match(e.image, /^smartassess-coding-(python|java|csharp):17c-v1$/);
     // review fix: the RUNTIME ceiling is memoryMb + a fixed overhead (never the compile allowance); bounded walls per sandbox
     assert.equal(runtimeMemoryMb(e, 64), 64 + e.runtimeOverheadMb);
     assert.ok(e.runtimeOverheadMb >= 32 && e.runtimeOverheadMb <= 128);
@@ -74,7 +74,7 @@ test("sandbox args: hardened profile; image last; nothing from the request excep
   const s = a.join(" ");
   for (const f of ["--rm", "-i", "--read-only", "--network none", "--cap-drop ALL", "--security-opt no-new-privileges", "--pull never", "--log-driver none", "--cpus 1", "--user 10001:10001"]) assert.ok(s.includes(f), f);
   assert.doesNotMatch(s, /--privileged|-v |--volume|--mount|docker\.sock|--env|-e |--entrypoint|--cap-add/);
-  assert.equal(a[a.length - 1], "smartassess-coding-csharp:17b-v1");
+  assert.equal(a[a.length - 1], "smartassess-coding-csharp:17c-v1");
   assert.throws(() => buildDockerRunArgs({ name: "bad name; rm -rf /", entry: resolveLanguage("python", 1), limits: LIMITS }));
   assert.throws(() => buildDockerRunArgs({ name: "sa-coding-00112233445566778899aabb", entry: { image: "alpine" }, limits: LIMITS }));
 });
@@ -203,7 +203,7 @@ test("docker sandbox: an oversized result stream is cut off while reading (never
 test("docker sandbox: capabilities report only images that exist on the host", async () => {
   const spawnImpl = (cmd, argv) => {
     const child = new EventEmitter(); child.stdin = new PassThrough(); child.stdout = new PassThrough(); child.stderr = new PassThrough(); child.kill = () => {};
-    setImmediate(() => { child.stdout.end(); child.stderr.end(); child.emit("close", argv.includes("smartassess-coding-java:17b-v1") ? 1 : 0, null); });
+    setImmediate(() => { child.stdout.end(); child.stderr.end(); child.emit("close", argv.includes("smartassess-coding-java:17c-v1") ? 1 : 0, null); });
     return child;
   };
   const sb = createDockerSandbox({ spawnImpl, env: {} });

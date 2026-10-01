@@ -44,7 +44,7 @@ export function presentNotification(item: NotificationItem): NotificationPresent
       return { title: "مادة تعليمية جديدة", preview: item.moduleTitle + (item.courseTitle ? " — " + item.courseTitle : ""), icon: "material" };
     case "assignment_reviewed": {
       const graded = item.becameFinal || item.scoreChanged;
-      const title = graded ? "تم تصحيح واجبك" : "لديك ملاحظة جديدة من المعلم";
+      const title = graded ? (item.automatic ? "اكتمل تصحيح واجبك" : "تم تصحيح واجبك") : "لديك ملاحظة جديدة من المعلم";
       const parts = [quoted(item.assignmentTitle)];
       if (graded && item.finalized && typeof item.percentage === "number") parts.push("النتيجة " + item.percentage + "%");
       if (graded && item.feedbackChanged) parts.push("مع ملاحظة جديدة من المعلم");

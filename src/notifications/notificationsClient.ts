@@ -13,7 +13,7 @@ export type MessageNotification = Common & { type: "direct" | "announcement"; se
 export type AssignmentEventType = "assignment_published" | "assignment_deadline_extended" | "assignment_reopened" | "assignment_retry_granted" | "attempt_time_extended";
 export type AssignmentNotification = Common & { type: AssignmentEventType; assignmentId: string; assignmentTitle: string; dueAt?: string; attemptNumber?: number };
 export type LearningMaterialNotification = Common & { type: "learning_module_published"; courseId: string; courseTitle: string; moduleId: string; moduleTitle: string };
-export type ReviewNotification = Common & { type: "assignment_reviewed"; assignmentId: string; assignmentTitle: string; becameFinal: boolean; scoreChanged: boolean; feedbackChanged: boolean; finalized: boolean; percentage: number | null };
+export type ReviewNotification = Common & { type: "assignment_reviewed"; assignmentId: string; assignmentTitle: string; becameFinal: boolean; scoreChanged: boolean; feedbackChanged: boolean; finalized: boolean; percentage: number | null; automatic?: boolean };
 export type ReactionId = "heart" | "clap" | "cheer" | "fire";
 export type RecognitionNotification =
   | (Common & { type: "teacher_reaction"; postId: string; reaction: ReactionId })
@@ -54,7 +54,7 @@ export function notificationItemOf(v: unknown): NotificationItem | null {
   }
   if (type === "assignment_reviewed") {
     if (!str(o.assignmentId)) return null;
-    return { ...common, type, assignmentId: str(o.assignmentId), assignmentTitle: str(o.assignmentTitle), becameFinal: o.becameFinal === true, scoreChanged: o.scoreChanged === true, feedbackChanged: o.feedbackChanged === true, finalized: o.finalized === true, percentage: typeof o.percentage === "number" ? o.percentage : null };
+    return { ...common, type, assignmentId: str(o.assignmentId), assignmentTitle: str(o.assignmentTitle), becameFinal: o.becameFinal === true, scoreChanged: o.scoreChanged === true, feedbackChanged: o.feedbackChanged === true, finalized: o.finalized === true, percentage: typeof o.percentage === "number" ? o.percentage : null, ...(o.automatic === true ? { automatic: true } : {}) };
   }
   if (type === "teacher_reaction") return str(o.postId) && REACTIONS.has(str(o.reaction)) ? { ...common, type, postId: str(o.postId), reaction: str(o.reaction) as ReactionId } : null;
   if (type === "teacher_note") return str(o.postId) ? { ...common, type, postId: str(o.postId), notePreview: str(o.notePreview) } : null;

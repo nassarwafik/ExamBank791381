@@ -5,9 +5,19 @@
 //     RUNNER_HOST             bind address (default 127.0.0.1 — put a TLS-terminating reverse proxy in front for remote use)
 //     RUNNER_PORT             default 8787
 //     RUNNER_MAX_CONCURRENCY  concurrent sandboxes, clamped to 1..16 (default 2)
+//   Phase 17C — official grading jobs (POST /v1/official-grading-jobs) are enabled ONLY when the callback destination is valid:
+//     SMARTASSESS_CALLBACK_BASE_URL   https://<SmartAssess host> (fixed destination; never taken from a request)
+//     SMARTASSESS_CALLBACK_HMAC_KEY   ≥ 32 characters; a callback-only key (independent of RUNNER_HMAC_KEY)
+//     RUNNER_OFFICIAL_MAX_PENDING     queued + running official jobs, clamped to 1..64 (default 8)
+//     RUNNER_OFFICIAL_MAX_ACTIVE      official jobs running at once, clamped to 1..4 (default 1)
+//     RUNNER_OFFICIAL_CASE_CONCURRENCY hidden cases of one job running at once, clamped to 1..4 (default 2)
 // The key is held in memory only: it is never logged, echoed, or passed to the docker CLI / a sandbox.
 const { createGatewayServer } = require("./server.js");
 const { createDockerSandbox } = require("./sandbox.js");
+const { createOfficialGradingQueue } = require("./official.js");
+const { readCallbackConfig, createCallbackDeliverer } = require("./callback.js");
+
+const clampInt = (v, lo, hi, dflt) => { const n = Number(v === undefined || v === "" ? dflt : v); return Number.isFinite(n) ? Math.min(hi, Math.max(lo, Math.floor(n))) : dflt; };
 
 function readGatewayConfig(env) {
   const key = typeof env.RUNNER_HMAC_KEY === "string" ? env.RUNNER_HMAC_KEY : "";
@@ -16,8 +26,14 @@ function readGatewayConfig(env) {
   if (!Number.isInteger(port) || port < 1 || port > 65535) throw new Error("RUNNER_PORT is invalid.");
   const requested = Number(env.RUNNER_MAX_CONCURRENCY || 2);
   const maxConcurrency = Number.isFinite(requested) ? Math.min(16, Math.max(1, Math.floor(requested))) : 2;
-  const config = { host: env.RUNNER_HOST || "127.0.0.1", port, maxConcurrency };
+  // Review Fix 1 — key separation on the RAW secrets, regardless of the callback URL's validity: equal keys refuse startup.
+  const rawCallbackKey = typeof env.SMARTASSESS_CALLBACK_HMAC_KEY === "string" ? env.SMARTASSESS_CALLBACK_HMAC_KEY : "";
+  if (rawCallbackKey && rawCallbackKey === key) throw new Error("SMARTASSESS_CALLBACK_HMAC_KEY must differ from RUNNER_HMAC_KEY.");
+  const callback = readCallbackConfig(env);
+  const official = { enabled: callback.enabled, maxPending: clampInt(env.RUNNER_OFFICIAL_MAX_PENDING, 1, 64, 8), maxActive: clampInt(env.RUNNER_OFFICIAL_MAX_ACTIVE, 1, 4, 1), caseConcurrency: clampInt(env.RUNNER_OFFICIAL_CASE_CONCURRENCY, 1, 4, 2) };
+  const config = { host: env.RUNNER_HOST || "127.0.0.1", port, maxConcurrency, official };
   Object.defineProperty(config, "key", { value: key, enumerable: false });
+  Object.defineProperty(config, "callback", { value: callback, enumerable: false });
   return config;
 }
 
@@ -25,9 +41,12 @@ async function main() {
   const config = readGatewayConfig(process.env);
   const sandbox = createDockerSandbox();
   const removed = await sandbox.sweep();
-  const server = createGatewayServer({ key: config.key, sandbox, maxConcurrency: config.maxConcurrency });
+  const officialQueue = config.official.enabled
+    ? createOfficialGradingQueue({ sandbox, deliver: createCallbackDeliverer({ config: config.callback }).deliver, maxPending: config.official.maxPending, maxActive: config.official.maxActive, caseConcurrency: config.official.caseConcurrency })
+    : undefined;
+  const server = createGatewayServer({ key: config.key, sandbox, maxConcurrency: config.maxConcurrency, officialQueue });
   server.listen(config.port, config.host, () => {
-    console.info(JSON.stringify({ event: "runner.gateway.started", host: config.host, port: config.port, maxConcurrency: config.maxConcurrency, sweptContainers: removed }));
+    console.info(JSON.stringify({ event: "runner.gateway.started", host: config.host, port: config.port, maxConcurrency: config.maxConcurrency, officialGrading: config.official, sweptContainers: removed }));
   });
   for (const signal of ["SIGINT", "SIGTERM"]) process.on(signal, () => server.close(() => process.exit(0)));
 }

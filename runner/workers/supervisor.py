@@ -24,6 +24,17 @@ What it does, data-driven by /opt/runner/toolchain.json (fixed at image build; n
      ("timeout"); kills the whole process group; reports "success" / "runtime-error" from the exit status.
 The supervisor marks itself non-dumpable so the (same-uid) student program cannot open its /proc file descriptors or memory.
 Output is decoded as UTF-8 after a cut that never splits a multi-byte sequence.
+
+Phase 17C — the OFFICIAL raw runtime ("official" phase). For official grading there must be NO trusted process beside student
+code that later interprets student-controlled data as a result. In this phase the supervisor is only a setup step:
+  1. reads an exact-length frame from fd 0 with unbuffered os.read calls — b"SAOFF1 " + 10 decimal digits + b"\n" + a JSON
+     setup payload of exactly that length — so not one byte of the case's stdin (which follows the frame) is consumed;
+  2. validates it and materialises the bounded artifact (compiled toolchains) or the source (interpreted ones) in /workspace;
+  3. applies the program's rlimits / oom_score_adj / signal dispositions to ITSELF, writes a fixed exec marker to fd 1 (before
+     any student code exists in the container, so the marker is authentic) and execve()s the fixed runtime command.
+After exec the student program IS the container's main process: the gateway observes its raw stdout / stderr / exit status /
+wall clock directly. A setup failure exits 125 without the marker (the gateway reports internal-error). Nothing is ever printed
+by trusted code after the marker, and no JSON result envelope exists in this phase.
 """
 import base64
 import codecs
@@ -51,6 +62,9 @@ COMPILE_OUTPUT_MAX_BYTES = 32 * 1024
 FILE_SIZE_LIMIT = 16 * 1024 * 1024
 CHILD_ENV_BASE = {"PATH": "/usr/local/bin:/usr/bin:/bin", "HOME": "/tmp", "TMPDIR": "/tmp", "LANG": "C.UTF-8", "LC_ALL": "C.UTF-8"}
 BOUNDS = {"timeMs": (250, 10000), "memoryMb": (16, 512), "outputBytes": (1024, 262144), "compileTimeoutMs": (1000, 30000)}
+OFFICIAL_MAGIC = b"SAOFF1 "
+OFFICIAL_MARKER = b"\x00SA-EXEC-17C\x00"
+OFFICIAL_SETUP_FAILED = 125
 
 
 def emit(result):
@@ -86,8 +100,20 @@ def safe_relpath(rel):
     return parts
 
 
-def read_job(toolchain):
-    raw = sys.stdin.buffer.read(MAX_JOB_BYTES + 1)
+def read_exact(fd, n):
+    """Exactly n bytes from fd with unbuffered reads (fewer only at EOF) — never reads past what was asked for."""
+    parts, got = [], 0
+    while got < n:
+        chunk = os.read(fd, n - got)
+        if not chunk:
+            break
+        parts.append(chunk)
+        got += len(chunk)
+    return b"".join(parts)
+
+
+def read_job(toolchain, head=b""):
+    raw = head + sys.stdin.buffer.read(MAX_JOB_BYTES + 1 - len(head))
     if len(raw) > MAX_JOB_BYTES:
         internal_error()
     job = json.loads(raw.decode("utf-8"))
@@ -257,6 +283,69 @@ def execute(argv, stdin_bytes, timeout_ms, out_cap, err_cap, env, address_space_
     }
 
 
+def official_setup_failed():
+    os._exit(OFFICIAL_SETUP_FAILED)
+
+
+def official_main(toolchain):
+    """Phase 17C official raw runtime: exact-length setup frame → materialise → exec marker → execve. Never returns."""
+    try:
+        length_field = read_exact(0, 11)
+        if len(length_field) != 11 or length_field[10:] != b"\n" or not length_field[:10].isdigit():
+            official_setup_failed()
+        size = int(length_field[:10])
+        if size <= 0 or size > MAX_JOB_BYTES:
+            official_setup_failed()
+        payload = read_exact(0, size)
+        if len(payload) != size:
+            official_setup_failed()
+        setup = json.loads(payload.decode("utf-8"))
+        if not isinstance(setup, dict) or setup.get("phase") != "official" or set(setup) - {"phase", "source", "artifact", "limits"}:
+            official_setup_failed()
+        limits = setup.get("limits")
+        if not isinstance(limits, dict):
+            official_setup_failed()
+        for name, (lo, hi) in BOUNDS.items():
+            value = limits.get(name)
+            if not isinstance(value, int) or isinstance(value, bool) or value < lo or value > hi:
+                official_setup_failed()
+        os.umask(0o077)
+        out_dir = os.path.join(WORKSPACE, "out")
+        os.makedirs(out_dir, exist_ok=True)
+        if toolchain.get("compile"):
+            # a compiled toolchain's official runtime gets ONLY the validated artifact — never the source, never a compiler
+            if "source" in setup or not write_artifact(out_dir, setup.get("artifact")):
+                official_setup_failed()
+        else:
+            src = setup.get("source")
+            if "artifact" in setup or not isinstance(src, str) or len(src.encode("utf-8")) > SOURCE_MAX_BYTES:
+                official_setup_failed()
+            with open(os.path.join(WORKSPACE, toolchain["sourceFile"]), "w", encoding="utf-8", newline="") as f:
+                f.write(src)
+        run_step = toolchain["run"]
+        env = dict(CHILD_ENV_BASE)
+        for k, v in list(toolchain.get("env", {}).items()) + list(run_step.get("env", {}).items()):
+            env[k] = expand(v, limits)
+        argv = [expand(a, limits) for a in run_step["argv"]]
+        address_space = 0
+        if run_step.get("addressSpaceOverheadMb") is not None:
+            address_space = (limits["memoryMb"] + int(run_step["addressSpaceOverheadMb"])) * 1024 * 1024
+        # the program's limits are applied to THIS process and survive execve (the program inherits them)
+        child_setup(address_space, max(1, -(-limits["timeMs"] // 1000)) + 1)()
+        for sig in (signal.SIGHUP,):
+            signal.signal(sig, signal.SIG_DFL)
+        os.chdir(WORKSPACE)
+        os.write(1, OFFICIAL_MARKER)
+    except SystemExit:
+        raise
+    except Exception:
+        official_setup_failed()
+    try:
+        os.execve(argv[0], argv, env)
+    except Exception:
+        official_setup_failed()
+
+
 def main():
     for sig in (signal.SIGINT, signal.SIGTERM, signal.SIGHUP):
         signal.signal(sig, signal.SIG_IGN)
@@ -264,7 +353,15 @@ def main():
     try:
         with open(TOOLCHAIN_PATH, "rb") as f:
             toolchain = json.loads(f.read().decode("utf-8"))
-        job, limits = read_job(toolchain)
+    except Exception:
+        internal_error()
+    # Phase 17C: an official job starts with a fixed magic; a practice / compile job is JSON (starts with "{").
+    head = read_exact(0, len(OFFICIAL_MAGIC))
+    if head == OFFICIAL_MAGIC:
+        official_main(toolchain)
+        return
+    try:
+        job, limits = read_job(toolchain, head)
     except Exception:
         internal_error()
 

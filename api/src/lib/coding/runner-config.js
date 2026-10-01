@@ -35,4 +35,15 @@ function readCodingRunnerConfig(env = process.env) {
   return Object.freeze(config);
 }
 
-module.exports = { readCodingRunnerConfig };
+/**
+ * Phase 17C — Review Fix 1. The RAW request-signing key exactly as configured (byte-for-byte; "" when absent / not a string).
+ * Deliberately independent of URL validity, the kill switch and every other runner setting: it exists ONLY so that key
+ * separation (callback key ≠ runner key) can be enforced whatever state the outbound runner configuration is in. It never
+ * enables the runner and is never used to sign anything.
+ */
+function readRunnerSigningKey(env = process.env) {
+  const key = env && typeof env === "object" ? env.CODING_RUNNER_HMAC_KEY : undefined;
+  return typeof key === "string" ? key : "";
+}
+
+module.exports = { readCodingRunnerConfig, readRunnerSigningKey };

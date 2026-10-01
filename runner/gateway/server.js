@@ -6,14 +6,21 @@
 //     GET  /healthz           → { ok: true }                               (no auth; reveals nothing)
 //     GET  /v1/capabilities   → { ok, available, languages: [{ key, languageVersion }] }   (signed)
 //     POST /v1/execute        → { ok: true, result } | { ok: false, code }                  (signed)
+//     POST /v1/official-grading-jobs → 202 { ok, accepted, duplicate } | 409 JOB_ID_CONFLICT | 503 RUNNER_BUSY |
+//                               503 GRADING_UNAVAILABLE (no callback destination configured)  (signed; Phase 17C, official.js)
+//   An official job is executed asynchronously by the bounded official queue; its raw evidence goes back to SmartAssess through
+//   the callback deliverer (callback.js). The request never carries an expected output, a weight, a mark or an identity.
 // Telemetry is limited to request id, language, status, duration and refusal reasons — never source, stdin, stdout, stderr,
 // signatures or keys.
 const http = require("node:http");
 const { verifyRequest, createReplayGuard, HEADERS } = require("./auth.js");
 const { validateExecuteRequest } = require("./validate.js");
 const { resolveLanguage } = require("./registry.js");
+const { validateOfficialJobRequest } = require("./official.js");
 
 const MAX_BODY_BYTES = 512 * 1024;
+const OFFICIAL_MAX_BODY_BYTES = 2 * 1024 * 1024;     // 64 KB source + 256 KB stdin, with worst-case JSON escaping
+const ROUTES = new Set(["GET /v1/capabilities", "POST /v1/execute", "POST /v1/official-grading-jobs"]);
 const JSON_HEADERS = { "content-type": "application/json; charset=utf-8", "cache-control": "no-store", "x-content-type-options": "nosniff" };
 
 class BodyTooLarge extends Error {}
@@ -28,7 +35,7 @@ function readBody(req, max) {
   });
 }
 
-function createGateway({ key, sandbox, maxConcurrency = 2, now = () => Date.now(), logger = console, replay = createReplayGuard() }) {
+function createGateway({ key, sandbox, maxConcurrency = 2, now = () => Date.now(), logger = console, replay = createReplayGuard(), officialQueue }) {
   if (typeof key !== "string" || key.length < 32) throw new Error("gateway key missing or too short");
   let active = 0;
   const log = (level, event, fields) => { try { (logger[level] || logger.info).call(logger, JSON.stringify({ event, ...fields })); } catch { /* telemetry never breaks a request */ } };
@@ -38,10 +45,10 @@ function createGateway({ key, sandbox, maxConcurrency = 2, now = () => Date.now(
     const url = new URL(req.url || "/", "http://gateway.invalid");
     const route = req.method + " " + url.pathname;
     if (route === "GET /healthz") return send(res, 200, { ok: true });
-    if (route !== "GET /v1/capabilities" && route !== "POST /v1/execute") return send(res, 404, { ok: false, code: "NOT_FOUND" });
+    if (!ROUTES.has(route)) return send(res, 404, { ok: false, code: "NOT_FOUND" });
 
     let body;
-    try { body = await readBody(req, MAX_BODY_BYTES); }
+    try { body = await readBody(req, route === "POST /v1/official-grading-jobs" ? OFFICIAL_MAX_BODY_BYTES : MAX_BODY_BYTES); }
     catch (e) { if (e instanceof BodyTooLarge) { log("warn", "runner.request.refused", { reason: "body-too-large" }); return send(res, 413, { ok: false, code: "REQUEST_INVALID" }); } throw e; }
 
     const auth = verifyRequest({ key, method: req.method, path: url.pathname, headers: req.headers, body, nowMs: now(), replay });
@@ -56,6 +63,7 @@ function createGateway({ key, sandbox, maxConcurrency = 2, now = () => Date.now(
 
     let parsed;
     try { parsed = JSON.parse(body.toString("utf8")); } catch { return send(res, 400, { ok: false, code: "REQUEST_INVALID" }); }
+    if (route === "POST /v1/official-grading-jobs") return official(res, parsed, auth.requestId);
     if (!parsed || typeof parsed !== "object" || parsed.requestId !== auth.requestId) {
       if (parsed && typeof parsed === "object" && typeof parsed.requestId === "string") { log("warn", "runner.request.unauthorized", { reason: "request-id-binding" }); return send(res, 401, { ok: false, code: "UNAUTHORIZED" }); }
       return send(res, 400, { ok: false, code: "REQUEST_INVALID" });
@@ -82,6 +90,20 @@ function createGateway({ key, sandbox, maxConcurrency = 2, now = () => Date.now(
     }
   }
 
+  async function official(res, parsed, requestId) {
+    if (!officialQueue) { log("warn", "runner.official.refused", { requestId, reason: "grading-unavailable" }); return send(res, 503, { ok: false, code: "GRADING_UNAVAILABLE" }); }
+    const v = validateOfficialJobRequest(parsed);
+    if (!v.ok) { log("warn", "runner.official.refused", { requestId, reason: "invalid" }); return send(res, 400, { ok: false, code: "REQUEST_INVALID" }); }
+    const entry = resolveLanguage(v.job.language, v.job.languageVersion);
+    let offered = [];
+    try { offered = await sandbox.availableLanguages(); } catch { offered = []; }
+    if (!offered.some(l => l.key === entry.key && l.languageVersion === entry.languageVersion)) return send(res, 422, { ok: false, code: "LANGUAGE_UNAVAILABLE" });
+    const r = officialQueue.submit(v.job);
+    if (r.status === "accepted" || r.status === "duplicate") return send(res, 202, { ok: true, accepted: true, duplicate: r.status === "duplicate" });
+    if (r.status === "conflict") return send(res, 409, { ok: false, code: "JOB_ID_CONFLICT" });
+    return send(res, 503, { ok: false, code: "RUNNER_BUSY" });
+  }
+
   return {
     handle(req, res) { handle(req, res).catch(() => { if (!res.headersSent) send(res, 500, { ok: false, code: "INTERNAL" }); else res.destroy(); }); },
     activeCount: () => active
@@ -95,4 +117,4 @@ function createGatewayServer(options) {
   return server;
 }
 
-module.exports = { createGateway, createGatewayServer, MAX_BODY_BYTES, HEADERS };
+module.exports = { createGateway, createGatewayServer, MAX_BODY_BYTES, OFFICIAL_MAX_BODY_BYTES, HEADERS };

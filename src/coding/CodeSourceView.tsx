@@ -37,7 +37,7 @@ export function CodeKeySummary({ answerKey }: { answerKey: unknown }) {
     <div className="cx-key-summary" data-testid="code-review-key">
       <span>اختبارات مخفية: {hidden}</span>
       <span>طريقة مقارنة المخرجات: {comparator}</span>
-      <span>التصحيح الآلي غير مفعّل في هذه المرحلة؛ علامة المعلم هي العلامة الرسمية.</span>
+      <span>{key.gradingMode === "hiddenTests" ? "طريقة التصحيح الرسمي: تلقائي بالاختبارات المخفية على الخادم؛ التعديل اليدوي يتقدّم عليه عند إدخاله." : "طريقة التصحيح الرسمي: يدوي بواسطة المعلم."}</span>
       {refs.map(([lang, src]) => <div key={lang}><span>حل مرجعي ({codingLanguage(lang)?.label ?? lang})</span><CodeSourceView source={src} language={lang} label={"حل مرجعي " + lang} testIdPrefix="code-key" copyLabel="نسخ الحل المرجعي" /></div>)}
     </div>
   );

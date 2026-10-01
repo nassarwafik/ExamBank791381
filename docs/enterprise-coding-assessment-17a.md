@@ -201,9 +201,11 @@ Behaviour:
 
 ## 8. Teacher authoring (`CodingQuestionEditor`, lazy)
 
-- **Inspector:** «نوع السؤال: برمجة · الإصدار: 1 · طريقة التقييم الحالية: مراجعة يدوية · اللغات: …».
-- **Help text:** «في هذه المرحلة يمكن للطالب كتابة وتسليم الكود، ويقوم المعلم بمراجعته. التشغيل والتصحيح الآلي يحتاجان
-  إلى بيئة تنفيذ معزولة وسيتم ربطهما عبر محرك التنفيذ الآمن.»
+- **Inspector:** «نوع السؤال: برمجة · الإصدار: 1 · طريقة التصحيح الرسمي: يدوي بواسطة المعلم · اللغات: …» (Phase 17C replaced
+  the 17A line «طريقة التقييم الحالية: مراجعة يدوية» with the explicit official grading mode — 17C doc §11).
+- **Help text (since 17C):** «يكتب الطالب الكود ويسلّمه، ويمكنه تجربته على الأمثلة الظاهرة عبر محرك التنفيذ المعزول. العلامة
+  الرسمية إما من المعلم، أو تُحتسب تلقائيًا على الخادم من الاختبارات المخفية.» (the 17A text said execution and automatic
+  grading were not yet connected).
 - **Sections:** اللغات المسموحة · اللغة الافتراضية · الكود الابتدائي · أمثلة ظاهرة للطالب · اختبارات مخفية للتصحيح
   (each row marked «مخفي عن الطالب»; weight per test) · طريقة مقارنة المخرجات · الحلول المرجعية (للمعلم فقط) ·
   حدود التنفيذ.
@@ -326,7 +328,9 @@ SmartAssess API ──(authenticated, minimal request)──▶ Execution Gatewa
 ## 13. Future authoritative flow (17B) and abuse model
 
 > **Forward reference.** Phase 17B ships **practice** execution only (17B doc §1); the authoritative hidden-test flow below
-> is Phase **17C**. The 17B run budget is 20 runs / 5 minutes per student + assignment (17B doc §9).
+> is delivered by Phase **17C** — see [`enterprise-coding-assessment-17c.md`](enterprise-coding-assessment-17c.md) (opt-in per
+> question via `answer.gradingMode: "hiddenTests"`; manual stays the default). The 17B run budget is 20 runs / 5 minutes per
+> student + assignment (17B doc §9).
 
 ```
 student submits source
@@ -377,7 +381,8 @@ Phase 17B must initially build isolated execution toolchains **only** for **Pyth
 > **Forward reference.** Delivered in Phase 17B: the isolated workers + gateway, the three toolchain images, capability
 > discovery, compile / run / timeouts / memory / output limits, the run budget, observability and the authenticated run
 > route — see [`enterprise-coding-assessment-17b.md`](enterprise-coding-assessment-17b.md). Hidden-test execution and
-> weighted automatic grading move to Phase 17C.
+> weighted automatic grading are delivered by Phase 17C — see
+> [`enterprise-coding-assessment-17c.md`](enterprise-coding-assessment-17c.md).
 
 
 - **17B:**

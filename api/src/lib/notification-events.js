@@ -109,7 +109,7 @@ function eventFields(type, src) {
       const a = assignment();
       if (!a) return null;
       const pct = Number(s.percentage);
-      return { ...a, attemptNumber: cleanInt(s.attemptNumber), becameFinal: s.becameFinal === true, scoreChanged: s.scoreChanged === true, feedbackChanged: s.feedbackChanged === true, finalized: s.finalized === true, percentage: Number.isFinite(pct) && s.finalized === true ? Math.round(pct * 100) / 100 : null };
+      return { ...a, attemptNumber: cleanInt(s.attemptNumber), becameFinal: s.becameFinal === true, scoreChanged: s.scoreChanged === true, feedbackChanged: s.feedbackChanged === true, finalized: s.finalized === true, percentage: Number.isFinite(pct) && s.finalized === true ? Math.round(pct * 100) / 100 : null, ...(s.automatic === true ? { automatic: true } : {}) };
     }
     case "learning_module_published": {
       const courseId = String(s.courseId || ""), moduleId = String(s.moduleId || "");

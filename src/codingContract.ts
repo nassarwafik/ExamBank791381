@@ -81,3 +81,79 @@ export function weightedPassFraction(tests: readonly { id: string; weight: numbe
   for (const t of tests) { const w = Number.isFinite(t.weight) && t.weight > 0 ? t.weight : 0; total += w; if (passed.has(t.id)) got += w; }
   return total > 0 ? got / total : 0;
 }
+
+// ── Phase 17C — OFFICIAL grading evaluation (pure). The ONLY place an official coding mark is derived: the SmartAssess server
+// passes the hidden tests from the assignment snapshot, the stored comparator and the RAW evidence the runner observed; nothing
+// here trusts a runner-reported status beyond the fixed execution vocabulary, and nothing a runner adds (passed / score / weight)
+// is ever read. An infrastructure failure is NEVER a zero: it is a technical result and no score is produced.
+/** Per-case stdout the official runner captures: the hidden-test I/O contract (16 KB) + a small margin to detect excess output. */
+export const OFFICIAL_STDOUT_CAPTURE_BYTES = CODING_TEST_LIMITS.ioBytes + 1024;
+/** Per-case stderr the official runner forwards (diagnostics only — stderr never decides correctness). */
+export const OFFICIAL_STDERR_CAPTURE_BYTES = 4096;
+/** Bounded teacher evidence previews (actual stdout / stderr of a failed test, compiler diagnostics). */
+export const OFFICIAL_PREVIEW_BYTES = 4096;
+/** Opaque case token for the i-th hidden test (the runner never learns the canonical test id). */
+export const officialCaseToken = (index: number): string => "c" + String(index + 1).padStart(2, "0");
+export type OfficialCaseStatus = "success" | "runtime-error" | "timeout" | "output-limit" | "internal-error";
+const OFFICIAL_CASE_STATUSES: readonly OfficialCaseStatus[] = Object.freeze(["success", "runtime-error", "timeout", "output-limit", "internal-error"]);
+export type OfficialCaseEvidence = { token: string; status: string; stdout: string; stderr: string; exitCode?: number; durationMs?: number };
+export type OfficialRunEvidence = { compile?: { status: string; stderr?: string; durationMs?: number }; cases: OfficialCaseEvidence[] };
+export type OfficialCaseOutcome = { testId: string; token: string; status: CodeExecutionStatus; passed: boolean; durationMs?: number; actualPreview?: string; stderrPreview?: string };
+export type OfficialEvaluation =
+  | { kind: "complete"; passedWeight: number; totalWeight: number; passedCount: number; testCount: number; compileError: boolean; compilePreview?: string; cases: OfficialCaseOutcome[] }
+  | { kind: "technical"; code: string };
+
+/** The longest prefix of s within maxBytes UTF-8 bytes, never splitting a code point. */
+export function utf8Prefix(s: string, maxBytes: number): string {
+  if (utf8ByteLength(s) <= maxBytes) return s;
+  let end = 0, bytes = 0;
+  while (end < s.length) { const cp = s.codePointAt(end)!, w = cp < 0x80 ? 1 : cp < 0x800 ? 2 : cp < 0x10000 ? 3 : 4; if (bytes + w > maxBytes) break; bytes += w; end += cp > 0xffff ? 2 : 1; }
+  return s.slice(0, end);
+}
+const weightOf = (w: unknown) => (typeof w === "number" && Number.isFinite(w) && w > 0 ? w : 0);
+
+/** Evaluates the raw evidence of ONE official run against the authoritative hidden tests (matched by order ↔ opaque token). */
+export function evaluateOfficialCodingRun({ tests, comparator, run }: { tests: readonly { id: string; expectedOutput: string; weight: number }[]; comparator: CodingComparator; run: OfficialRunEvidence }): OfficialEvaluation {
+  const technical = (code: string): OfficialEvaluation => ({ kind: "technical", code });
+  if (!Array.isArray(tests) || tests.length === 0 || !CODING_COMPARATORS.includes(comparator) || !isObj(run) || !Array.isArray(run.cases)) return technical("EVIDENCE_INVALID");
+  const totalWeight = tests.reduce((s, t) => s + weightOf(t.weight), 0);
+  if (!(totalWeight > 0)) return technical("NO_GRADEABLE_WEIGHT");
+  if (run.compile !== undefined) {
+    if (!isObj(run.compile) || (run.compile.status !== "compiled" && run.compile.status !== "compile-error")) return technical("EVIDENCE_INVALID");
+    if (run.compile.status === "compile-error") {
+      if (run.cases.length !== 0) return technical("EVIDENCE_INVALID");
+      const compilePreview = utf8Prefix(typeof run.compile.stderr === "string" ? run.compile.stderr : "", OFFICIAL_PREVIEW_BYTES);
+      return { kind: "complete", passedWeight: 0, totalWeight, passedCount: 0, testCount: tests.length, compileError: true, compilePreview, cases: tests.map((t, i) => ({ testId: t.id, token: officialCaseToken(i), status: "compile-error", passed: false })) };
+    }
+  }
+  if (run.cases.length !== tests.length) return technical("SUITE_INCOMPLETE");
+  const byToken = new Map<string, OfficialCaseEvidence>();
+  for (const c of run.cases) {
+    if (!isObj(c) || typeof c.token !== "string" || byToken.has(c.token) || typeof c.stdout !== "string" || typeof c.stderr !== "string") return technical("EVIDENCE_INVALID");
+    byToken.set(c.token, c);
+  }
+  let passedWeight = 0, passedCount = 0;
+  const cases: OfficialCaseOutcome[] = [];
+  for (let i = 0; i < tests.length; i++) {
+    const t = tests[i], token = officialCaseToken(i), c = byToken.get(token);
+    if (!c) return technical("SUITE_INCOMPLETE");
+    if (!OFFICIAL_CASE_STATUSES.includes(c.status as OfficialCaseStatus)) return technical("EVIDENCE_INVALID");
+    if (c.status === "internal-error") return technical("CASE_INTERNAL_ERROR");                  // infrastructure: never a failed test
+    const passed = c.status === "success" && compareOutput(c.stdout, t.expectedOutput, comparator);
+    const out: OfficialCaseOutcome = { testId: t.id, token, status: c.status as CodeExecutionStatus, passed };
+    if (typeof c.durationMs === "number" && Number.isFinite(c.durationMs) && c.durationMs >= 0) out.durationMs = Math.round(c.durationMs);
+    if (!passed) {
+      if (c.stdout !== "") out.actualPreview = utf8Prefix(c.stdout, OFFICIAL_PREVIEW_BYTES);
+      if (c.stderr !== "") out.stderrPreview = utf8Prefix(c.stderr, OFFICIAL_PREVIEW_BYTES);
+    } else { passedWeight += weightOf(t.weight); passedCount++; }
+    cases.push(out);
+  }
+  return { kind: "complete", passedWeight, totalWeight, passedCount, testCount: tests.length, compileError: false, cases };
+}
+
+/** The official automatic mark: maxMarks × passedWeight / totalWeight, rounded ONCE (the platform's 2-decimal rounding). */
+export function officialCodingScore(maxMarks: number, passedWeight: number, totalWeight: number): number {
+  const m = typeof maxMarks === "number" && Number.isFinite(maxMarks) && maxMarks > 0 ? maxMarks : 0;
+  if (!(totalWeight > 0) || !(passedWeight > 0)) return 0;
+  return Number((m * Math.min(passedWeight, totalWeight) / totalWeight).toFixed(2));
+}
