@@ -189,6 +189,10 @@ x-sa-sweep-signature   "v1=" + hex(HMAC-SHA256(CODING_GRADING_SWEEP_HMAC_KEY,
   It is bounded and serialized by the lease, so a replay can at most cause one more bounded sweep or a 409 `SWEEP_BUSY`. It
   cannot choose targets, revisions or grades, because the body is fixed (`{"version":1}`).
 
+> **Superseded by Phase 17D-B1:** each signed request id is now reserved once in a durable replay ledger (409
+> `REPLAYED_REQUEST`), and the request-id minimum is 20 characters. See
+> [enterprise-coding-assessment-17d-b.md](enterprise-coding-assessment-17d-b.md).
+
 ## 9. Key separation (third key)
 
 `resolveSweepKey(env)` returns the key only if `CODING_GRADING_SWEEP_HMAC_KEY` is 32–512 characters with no whitespace **and**

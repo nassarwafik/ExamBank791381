@@ -3,7 +3,9 @@
 // Sends ONE signed POST {"version":1} to SmartAssess (SA-CODING-SWEEP-1) and maps the reply to an exit code:
 //     2xx                        → 0 (sweep ran; aggregate counts printed)
 //     409 { code: "SWEEP_BUSY" } → 0 (another sweep holds the lease: documented success, the next schedule continues)
-//     anything else              → 1 (401 / 400 / 503 / 500 / redirect / network error / missing configuration)
+//     anything else              → 1 (401 / 400 / 503 / 500 / 409 REPLAYED_REQUEST / redirect / network error / missing configuration)
+// Every invocation signs a FRESH crypto-random request id (24 bytes, base64url), which the server reserves once (17D-B1); a step
+// retry therefore never collides with an earlier request. The id is never printed.
 // Configuration (environment): SMARTASSESS_GRADING_SWEEP_URL (repository variable: https://<host>/api/coding/grading-sweep) and
 // CODING_GRADING_SWEEP_HMAC_KEY (repository secret). Node crypto only — no third-party code; the key and the signature are
 // never printed. An independent implementation of api/src/lib/coding/sweep-protocol.js (a test pins both to the same bytes).
@@ -32,7 +34,7 @@ export function readSweepConfig(env = process.env) {
 }
 
 /** The signed request: { url, init } for fetch (redirects are errors; the body is exactly {"version":1}). */
-export function buildSweepRequest({ url, key, nowMs = Date.now(), requestId = "gh_" + crypto.randomBytes(12).toString("hex") }) {
+export function buildSweepRequest({ url, key, nowMs = Date.now(), requestId = "gh_" + crypto.randomBytes(24).toString("base64url") }) {
   const timestamp = String(Math.floor(nowMs / 1000));
   const bodyHash = crypto.createHash("sha256").update(Buffer.from(BODY, "utf8")).digest("hex");
   const canonical = [PROTOCOL, "POST", PATH, timestamp, requestId, bodyHash].join("\n");
