@@ -9,8 +9,8 @@ const { EventEmitter } = require("node:events");
 const { PassThrough } = require("node:stream");
 const { signRequest, verifyRequest, createReplayGuard, MAX_SKEW_SECONDS } = require("../../gateway/auth.js");
 const { validateExecuteRequest } = require("../../gateway/validate.js");
-const { LANGUAGES, resolveLanguage, containerMemoryMb, hardWallMs } = require("../../gateway/registry.js");
-const { buildDockerRunArgs, createDockerSandbox, boundResult } = require("../../gateway/sandbox.js");
+const { LANGUAGES, resolveLanguage, runtimeMemoryMb, compileWallMs, runWallMs } = require("../../gateway/registry.js");
+const { buildDockerRunArgs, createDockerSandbox, boundResult, validateArtifact } = require("../../gateway/sandbox.js");
 const { createGatewayServer } = require("../../gateway/server.js");
 const { readGatewayConfig } = require("../../gateway/main.js");
 
@@ -58,8 +58,12 @@ test("registry: three frozen entries mapping contract → fixed image and fixed 
   for (const e of Object.values(LANGUAGES)) {
     assert.ok(Object.isFrozen(e));
     assert.match(e.image, /^smartassess-coding-(python|java|csharp):17b-v1$/);
-    assert.ok(containerMemoryMb(e, 16) >= 128 && containerMemoryMb(e, 512) <= 2048);
-    assert.ok(hardWallMs(e, 10000) <= 60000 && hardWallMs(e, 250) > 250);
+    // review fix: the RUNTIME ceiling is memoryMb + a fixed overhead (never the compile allowance); bounded walls per sandbox
+    assert.equal(runtimeMemoryMb(e, 64), 64 + e.runtimeOverheadMb);
+    assert.ok(e.runtimeOverheadMb >= 32 && e.runtimeOverheadMb <= 128);
+    if (e.compileSandbox) { assert.ok(runtimeMemoryMb(e, 64) < e.compileMemoryMb); assert.ok(compileWallMs(e) <= 60000); }
+    else assert.equal(e.compileMemoryMb, null);
+    assert.ok(runWallMs(e, 10000) <= 60000 && runWallMs(e, 250) > 250);
   }
   assert.equal(resolveLanguage("constructor", 1), undefined);
   assert.equal(resolveLanguage("toString", 1), undefined);
@@ -109,11 +113,70 @@ test("docker sandbox: the payload is written to stdin (never argv / env / files)
   assert.doesNotMatch(JSON.stringify(run.opts.env), /LEAK/);
   assert.doesNotMatch(run.argv.join(" "), /print\(input/);
   const job = JSON.parse(run.stdin);
-  assert.deepEqual(Object.keys(job).sort(), ["limits", "source", "stdin"]);
+  assert.deepEqual(Object.keys(job).sort(), ["limits", "phase", "source", "stdin"]);                // python: ONE runtime sandbox
+  assert.equal(job.phase, "run");
+  assert.equal(spawned.filter(x => x.argv[0] === "run").length, 1);
   assert.equal(job.source, REQ.source); assert.equal(job.stdin, REQ.stdin);
   const name = run.argv[run.argv.indexOf("--name") + 1];
   assert.match(name, /^sa-coding-[0-9a-f]{24}$/);
   assert.ok(spawned.some(s => s.argv[0] === "rm" && s.argv.includes("-f") && s.argv.includes(name)));
+});
+
+function twoPhaseSpawn({ compileResult, runResult }) {
+  const spawned = [];
+  const spawnImpl = (cmd, argv, opts) => {
+    const child = new EventEmitter(); child.stdin = new PassThrough(); child.stdout = new PassThrough(); child.stderr = new PassThrough(); child.kill = () => {};
+    const rec = { cmd, argv, opts, stdin: "" }; spawned.push(rec);
+    child.stdin.on("data", d => { rec.stdin += d; });
+    child.stdin.on("finish", () => setImmediate(() => {
+      let out = "";
+      if (argv[0] === "run") { const job = JSON.parse(rec.stdin); out = JSON.stringify(job.phase === "compile" ? compileResult : runResult) + "\n"; }
+      child.stdout.end(out); child.stderr.end(); child.emit("close", 0, null);
+    }));
+    return child;
+  };
+  return { spawnImpl, spawned };
+}
+const memOf = rec => rec.argv[rec.argv.indexOf("--memory") + 1];
+const JAVA_REQ = { ...REQ, language: "java", source: "public class Main { public static void main(String[] a) { System.out.println(1); } }", limits: { ...LIMITS, memoryMb: 64 } };
+const ARTIFACT = [{ path: "Main.class", data: Buffer.from("cafebabe").toString("base64") }];
+
+test("two sandboxes for a compiled language: compile ceiling = compile allowance, runtime ceiling = memoryMb + overhead; the runtime gets the artifact, never the source", async () => {
+  const { spawnImpl, spawned } = twoPhaseSpawn({ compileResult: { status: "compiled", artifact: ARTIFACT }, runResult: { status: "success", stdout: "1\n", stderr: "", exitCode: 0, durationMs: 3 } });
+  const java = resolveLanguage("java", 1);
+  const r = await createDockerSandbox({ spawnImpl, env: {} }).run(java, JAVA_REQ);
+  assert.deepEqual(r, { status: "success", stdout: "1\n", stderr: "", exitCode: 0, durationMs: 3 });
+  const runs = spawned.filter(x => x.argv[0] === "run");
+  assert.equal(runs.length, 2);
+  const [compile, runtime] = runs.map(x => ({ ...x, job: JSON.parse(x.stdin) }));
+  assert.equal(compile.job.phase, "compile"); assert.equal(compile.job.source, JAVA_REQ.source); assert.equal(compile.job.stdin, "");
+  assert.equal(memOf(compile), java.compileMemoryMb + "m");
+  assert.equal(runtime.job.phase, "run"); assert.equal("source" in runtime.job, false); assert.deepEqual(runtime.job.artifact, ARTIFACT); assert.equal(runtime.job.stdin, JAVA_REQ.stdin);
+  assert.equal(memOf(runtime), (64 + java.runtimeOverheadMb) + "m");
+  assert.ok(64 + java.runtimeOverheadMb < java.compileMemoryMb);
+  for (const x of [compile, runtime]) { const name = x.argv[x.argv.indexOf("--name") + 1]; assert.ok(spawned.some(y => y.argv[0] === "rm" && y.argv.includes(name)), "not removed: " + name); }
+  for (const f of ["--network", "--read-only", "--cap-drop", "--pids-limit", "--user"]) { assert.ok(compile.argv.includes(f)); assert.ok(runtime.argv.includes(f)); }
+});
+
+test("a compile error stops after the compile sandbox (no runtime sandbox); a malformed artifact or an unexpected 'compiled' from the runtime is internal-error", async () => {
+  let t = twoPhaseSpawn({ compileResult: { status: "compile-error", stdout: "", stderr: "Main.java:1: error", exitCode: 1 }, runResult: { status: "success", stdout: "x", stderr: "" } });
+  assert.equal((await createDockerSandbox({ spawnImpl: t.spawnImpl, env: {} }).run(resolveLanguage("java", 1), JAVA_REQ)).status, "compile-error");
+  assert.equal(t.spawned.filter(x => x.argv[0] === "run").length, 1);
+  t = twoPhaseSpawn({ compileResult: { status: "compiled", artifact: [{ path: "../etc/passwd", data: "AA==" }] }, runResult: { status: "success", stdout: "x", stderr: "" } });
+  assert.equal((await createDockerSandbox({ spawnImpl: t.spawnImpl, env: {} }).run(resolveLanguage("java", 1), JAVA_REQ)).status, "internal-error");
+  assert.equal(t.spawned.filter(x => x.argv[0] === "run").length, 1);
+  t = twoPhaseSpawn({ compileResult: { status: "compiled", artifact: ARTIFACT }, runResult: { status: "compiled", artifact: ARTIFACT } });
+  assert.equal((await createDockerSandbox({ spawnImpl: t.spawnImpl, env: {} }).run(resolveLanguage("java", 1), JAVA_REQ)).status, "internal-error");
+});
+
+test("artifact validation: relative safe names only, bounded count and size, base64 only, no duplicates", () => {
+  const ok = { path: "pkg/Main.class", data: "AAAA" };
+  assert.deepEqual(validateArtifact([ok]), [ok]);
+  for (const bad of [[], null, "x", [{ path: "/etc/passwd", data: "AA==" }], [{ path: "../x", data: "AA==" }], [{ path: "a//b", data: "AA==" }], [{ path: "a\\b", data: "AA==" }],
+    [{ path: "./x", data: "AA==" }], [{ path: "x", data: "!!" }], [{ path: "x", data: "AA==", extra: 1 }], [ok, ok], Array.from({ length: 257 }, (_, i) => ({ path: "f" + i, data: "AA==" })),
+    [{ path: "big", data: Buffer.alloc(8 * 1024 * 1024 + 1).toString("base64") }]]) assert.equal(validateArtifact(bad), null, JSON.stringify(bad).slice(0, 60));
+  assert.throws(() => buildDockerRunArgs({ name: "sa-coding-00112233445566778899aabb", entry: resolveLanguage("python", 1), limits: LIMITS, phase: "compile" }));
+  assert.throws(() => buildDockerRunArgs({ name: "sa-coding-00112233445566778899aabb", entry: resolveLanguage("java", 1), limits: LIMITS, phase: "exec" }));
 });
 
 test("docker sandbox: a hung container hits the hard wall → timeout, killed by name, removed", async () => {

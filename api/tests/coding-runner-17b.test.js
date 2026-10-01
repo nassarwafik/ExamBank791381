@@ -341,6 +341,24 @@ describe("P12 — every sandbox is launched with the fixed hardening profile", (
     const mem = l => Number(flag(buildDockerRunArgs({ name: "sa-coding-0123456789abcdef", entry: resolveLanguage("python", 1), limits: { ...LIMITS, memoryMb: l } }), "--memory").replace("m", ""));
     expect(mem(64)).toBeGreaterThan(64); expect(mem(512)).toBeGreaterThan(512); expect(mem(512)).toBeLessThanOrEqual(2048);
   });
+  it("review fix: the RUNTIME sandbox ceiling is memoryMb + a fixed overhead — never the compile allowance (which only the compile sandbox gets)", () => {
+    const { buildDockerRunArgs } = gatewaySandbox();
+    const { resolveLanguage } = gatewayRegistry();
+    const name = "sa-coding-0123456789abcdef";
+    for (const key of ["python", "java", "csharp"]) {
+      const e = resolveLanguage(key, 1);
+      const runtime = Number(flag(buildDockerRunArgs({ name, entry: e, limits: { ...LIMITS, memoryMb: 64 } }), "--memory").replace("m", ""));
+      expect(runtime, key).toBe(64 + e.runtimeOverheadMb);
+      expect(e.runtimeOverheadMb, key).toBeLessThanOrEqual(128);
+      if (e.compileSandbox) {
+        const compile = buildDockerRunArgs({ name, entry: e, limits: { ...LIMITS, memoryMb: 64 }, phase: "compile" });
+        expect(Number(flag(compile, "--memory").replace("m", "")), key).toBe(e.compileMemoryMb);
+        expect(runtime, key).toBeLessThan(e.compileMemoryMb);
+        for (const f of ["--rm", "--read-only"]) expect(compile, key).toContain(f);
+        expect(flag(compile, "--network")).toBe("none"); expect(flag(compile, "--cap-drop")).toBe("ALL");
+      } else expect(() => buildDockerRunArgs({ name, entry: e, limits: LIMITS, phase: "compile" }), key).toThrow();
+    }
+  });
   it("the sandbox module spawns docker with a FIXED argument array and never through a shell", async () => {
     const src = (await import("node:fs")).readFileSync(require_.resolve("../../runner/gateway/sandbox.js"), "utf8");
     expect(src).toMatch(/shell:\s*false/);

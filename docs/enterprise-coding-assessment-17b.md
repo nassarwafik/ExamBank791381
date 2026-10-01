@@ -10,8 +10,8 @@ question type, the `code` Answer, the language registry, the execution contract,
 Real, **isolated** execution of student code for **Python, Java and C# only**, for **practice**:
 
 - a student presses «تشغيل» on a coding question during a writable attempt and sees the program's real output;
-- the code runs in **one disposable, hardened Docker sandbox per execution**, behind an authenticated gateway, on a host that
-  holds **no** application secrets;
+- the code runs in **one disposable, hardened Docker runtime sandbox per execution** (Java / C# are first compiled in a separate
+  compile sandbox — §11a), behind an authenticated gateway, on a host that holds **no** application secrets;
 - **no official grading change**: `coding@1` stays manual (score 0, `manualReview: true`); `weightedPassFraction` stays
   unwired; hidden tests never reach the browser or the practice path. Authoritative hidden-test grading is **Phase 17C**.
 
@@ -146,7 +146,8 @@ Independent deployable (Node ≥ 22 built-ins only, zero dependencies; not an Az
 
 - **Gateway** (`gateway/server.js`): `GET /healthz` → `{ ok: true }`; signed `GET /v1/capabilities`; signed
   `POST /v1/execute`. Body ≤ 512 KB (413 otherwise, before parsing). Bounded concurrency (`RUNNER_MAX_CONCURRENCY`, 1–16,
-  default 2): beyond it **503 `RUNNER_BUSY` immediately** (no queue). One sandbox per request.
+  default 2): beyond it **503 `RUNNER_BUSY` immediately** (no queue). One runtime sandbox per request (Java / C#: preceded by
+  one separate compile sandbox — §11a).
 - **Registry** (`gateway/registry.js`, data only): `python@1`, `java@1`, `csharp@1` → `smartassess-coding-<lang>:17b-v1` +
   compile timeout + memory model + pids / cpu / tmpfs sizes. Requests can never supply image, command, flags, entrypoint,
   mounts or environment.
@@ -167,7 +168,7 @@ Independent deployable (Node ≥ 22 built-ins only, zero dependencies; not an Az
 | no secrets | no `-e` / `--env-file`; the docker CLI is spawned with an allow-listed environment (`PATH`, `HOME`, `DOCKER_HOST`) |
 | logs | `--log-driver none` — student output is never stored in host logs |
 | images | `--pull never` — only the locally built, digest-pinned images |
-| input | the job (source, stdin, limits) is written to the container **stdin** as JSON; never argv, env or a host file |
+| input | the job (source or compiled artifact, stdin, limits) is written to the container **stdin** as JSON; never argv, env or a host file |
 | process launch | `spawn("docker", <fixed array>, { shell: false })` — no shell, no interpolation |
 
 **Inside** (`workers/supervisor.py`, PID 1, non-dumpable so the same-uid program cannot open its `/proc` fds / memory):
@@ -175,13 +176,85 @@ rlimits for the program (core 0, file size 16 MB, 256 open files, CPU-time backs
 `oom_score_adj = 1000` (the kernel kills the program, not the supervisor), a new session per step and a process-group kill
 at the limit, output read **while the program runs** and cut at the cap (UTF-8-safe), one JSON result line.
 
-**Memory model:** container ceiling = `max(compileMemoryMb, memoryMb + runtimeOverheadMb)` (python 256 / +128, java 768 /
-+384, csharp 1024 / +384 → at most 1024 MB); the program limit is the question's `memoryMb` (Python `RLIMIT_AS` = memoryMb +
-96 MB interpreter overhead; JVM `-Xmx`; .NET `DOTNET_GCHeapHardLimit`).
+**Time model:** Java / C# compile sandbox: compile timeout 20 s → `compile-error` ("Compilation timed out."), hard wall
+20 s + 10 s. Runtime sandbox: program wall limit = `timeMs` → `timeout`; hard wall = timeMs + 10 s (Python: + its 10 s syntax
+check, which runs inside the runtime sandbox). At a hard wall the gateway kills the container by name → `timeout`. No orphan
+containers (tested after success, timeout, memory failure, compile failure and fork-bomb cases).
 
-**Time model:** compile timeout (python 10 s, java / csharp 20 s) → `compile-error` ("Compilation timed out."); program
-wall limit = `timeMs` → `timeout`; the gateway's hard wall = compile timeout + timeMs + 10 s → container killed by name →
-`timeout`; no orphan containers (tested after every timeout / fork-bomb case).
+### 11a. Memory isolation — compile memory vs runtime memory (independent security review fix)
+
+**The defect (reviewed HEAD `27595c3`).** One container compiled AND ran the program, so its cgroup ceiling had to be
+`max(compileMemoryMb, memoryMb + runtimeOverheadMb)`: at least **768 MB for Java** and **1024 MB for C#**, even for a
+question with `memoryMb = 64`. The program limits used then — JVM `-Xmx`, .NET `GCHeapHardLimit` — bound only the
+**managed heap**. They do not bound native allocations, child processes or their descendants, and both images also contain
+the Python runtime the supervisor uses. Real-Docker fail-first evidence at 64 MB (`runner/tests/docker/memory-isolation.rtest.js`):
+
+| case | result on `27595c3` |
+|---|---|
+| cgroup ceiling read by the Java program | `805306368` (768 MB) |
+| RF1 Java → `ProcessBuilder` child allocating 480 MB | `success`, `child-exit=0`, **`CHILD-ALLOCATED 480`** |
+| RF2 C# → `System.Diagnostics.Process` child allocating 480 MB | `success`, `child-exit=0`, **`CHILD-ALLOCATED 480`** |
+| RF3 C# `Marshal.AllocHGlobal` 480 MB, every page touched | `success`, **`NATIVE-ALLOCATED 480`** |
+
+**The fix — two disposable sandboxes for compiled languages** (`gateway/sandbox.js`, `workers/supervisor.py`):
+
+1. **Compile sandbox** (Java, C# only): same hardening as every sandbox (no network, read-only root, `--cap-drop ALL`,
+   non-root, `no-new-privileges`, PID limit, noexec tmpfs, no secrets, no mounts). Cgroup ceiling = the toolchain's fixed
+   **compile allowance** (`compileMemoryMb`: Java 768 MB, C# 1024 MB). It runs **only the trusted compiler** (`javac
+   -proc:none`, offline Roslyn `csc` with no analyzers / generators) — student code never executes there — and returns a
+   bounded artifact on stdout: regular files only, ≤ 256 files, ≤ 8 MB decoded, safe relative names (no absolute path,
+   no `..`, no empty segment, no links). The container is then removed.
+2. **Runtime sandbox** (every language): a NEW container whose cgroup ceiling is fixed by `docker run --memory /
+   --memory-swap` **before any student code starts** and is derived only from the question:
+
+   | contract | runtime ceiling (MB) | compile allowance (MB, compile sandbox only) |
+   |---|---|---|
+   | `java@1` | **`memoryMb + 128`** | 768 |
+   | `csharp@1` | **`memoryMb + 96`** | 1024 |
+   | `python@1` | **`memoryMb + 64`** | — (no compile sandbox; its syntax check runs inside the runtime sandbox) |
+
+   The gateway re-validates the artifact and passes it to the runtime sandbox on stdin, **never the source**. The runtime
+   supervisor refuses a compiled toolchain's job that carries source instead of an artifact, so it never compiles. The
+   artifact exists only in gateway memory between the two containers; nothing is written to the host.
+
+**Why this bounds child / native memory.** The runtime ceiling is the container's memory cgroup, which accounts for **every**
+process in the container: the supervisor, the program's managed heap, native allocations, threads, child processes and
+forked descendants. With `--memory-swap = --memory` there is no swap escape. The program runs with `oom_score_adj = 1000`
+(inherited by its children), so on pressure the kernel kills the student process (or its child), not the supervisor, and the
+supervisor still reports a bounded result. JVM `-Xmx` / .NET `GCHeapHardLimit` / Python `RLIMIT_AS` remain as defence in depth
+only.
+
+**Runtime overhead (measured, not guessed).** `runtimeOverheadMb` covers the supervisor (CPython, ~10 MB), the language
+runtime's non-heap memory (JVM metaspace / code cache / threads, the .NET runtime, the CPython interpreter) and the page
+cache of the program's files. Peak cgroup usage (`memory.peak` / `memory.max_usage_in_bytes`) with the program filling 80 %
+of `memoryMb`:
+
+| memoryMb | Java peak / ceiling | C# peak / ceiling | Python peak / ceiling |
+|---|---|---|---|
+| 16 | 41 / 144 MB | 27 / 112 MB | 28 / 80 MB |
+| 64 | 88 / 192 MB | 67 / 160 MB | 67 / 128 MB |
+| 256 | 239 / 384 MB | 220 / 352 MB | 220 / 320 MB |
+| 512 | 504 / 640 MB | 425 / 608 MB | 426 / 576 MB |
+
+The worst measured excess over `memoryMb` is ≈ 25 MB (Java), ≈ 11 MB (C#) and ≈ 12 MB (Python); each overhead keeps at
+least a 3× margin above that, and RF8 keeps proving it (80 % of 256 / 512 MB succeeds in all three languages).
+
+**What is and is not claimed.** The whole runtime process tree is bounded by `memoryMb + runtimeOverheadMb` — proven by
+real-Docker tests that read the ceiling from inside the student program and attack it with child processes and native
+memory. A program can therefore use somewhat more than `memoryMb` itself, up to the documented fixed overhead (this is
+the runtime's own working memory). It is **not** claimed that a program is held to exactly `memoryMb` bytes.
+
+**Post-fix real-Docker evidence (64 MB question):** Java ceiling read in the program = `(64 + 128) MB`; C# = `(64 + 96) MB`;
+Python = `(64 + 64) MB`. RF1 Java child → `child-exit=137` (OOM-killed by the runtime cgroup), no sentinel. RF2 C# child →
+`child-exit=137`, no sentinel. RF3 C# native → `runtime-error` (exit 137), no sentinel. RF4 / RF5 normal programs at 64 MB
+succeed; RF6 compilation of a 400-method source at the minimum `memoryMb = 16` succeeds while the program's ceiling stays below
+the compile allowance; RF7 no container / host temporary entry remains after success, memory failure, timeout and compile
+failure; RF8 80 % of 256 / 512 MB succeeds.
+
+**Mutation proof.** Temporarily giving the runtime sandbox the compile allowance again
+(`Math.max(compileMemoryMb, memoryMb + overhead)`) makes RF-C, RF1, RF2, RF3 and RF6 fail on real Docker (the 480 MB child
+and native allocations succeed again; the Java ceiling reads `805306368`), plus one runner unit test and one Vitest test;
+after the revert the tree fingerprint is identical.
 
 ## 12. Toolchains (verified on 2026-10-01, pinned by digest)
 
@@ -249,7 +322,7 @@ allows exactly one `GET /api/coding/capabilities` (still no run, no other reques
 
 ## 16. Security tests (real Docker)
 
-`runner/tests/docker/sandbox.rtest.js` + `api-e2e.rtest.js` (required in CI, never skipped):
+`runner/tests/docker/sandbox.rtest.js` + `memory-isolation.rtest.js` + `api-e2e.rtest.js` (required in CI, never skipped):
 
 | case | proof |
 |---|---|
@@ -259,6 +332,7 @@ allows exactly one `GET /api/coding/capabilities` (still no run, no other reques
 | host filesystem | host canary file absent; root read-only; no docker.sock; `/workspace` noexec; uid 10001; CapEff 0; NoNewPrivs 1 |
 | timeout | infinite loops and detached sleepers → `timeout`, no container left |
 | memory | Python / Java / C# allocations beyond the limit → `runtime-error` (MemoryError / OutOfMemoryError / heap hard limit) |
+| memory isolation (§11a) | runtime cgroup ceiling read inside the program = `memoryMb + overhead` (< compile allowance); Java / C# child processes and C# native memory cannot exceed it (RF1–RF3); normal programs, minimum-memory compilation and 80 % of 256 / 512 MB still work (RF4–RF6, RF8); no leftovers (RF7) |
 | output flood | stdout and stderr floods → `output-limit`, ≤ outputBytes, valid UTF-8, stopped quickly |
 | process limit | fork bomb bounded by the PID limit; the next run still works; no container left |
 | functional | per language: hello, stdin → stdout, compile / syntax error, runtime error, timeout; Java and C# compile → run |
@@ -309,7 +383,7 @@ Never commit a key; never reuse the test key elsewhere.
 | `api/tests/coding-guards-17b.test.js` | R1–R7 architecture / security guards (§15) |
 | `src/coding/codingRun.17b.test.tsx` | U1–U10: attempt seam, minimal run body, Arabic messages, text-only LTR output, aria-live, stable focus, samples «للتدريب فقط», stdin bound, no Answer change, no token leak, real exam page + real handlers end to end |
 | `runner/tests/unit/gateway.rtest.js` | gateway units without Docker |
-| `runner/tests/docker/*.rtest.js` | §16 |
+| `runner/tests/docker/*.rtest.js` | §16 (incl. `memory-isolation.rtest.js`, §11a) |
 
 ## 21. Mutation matrix
 

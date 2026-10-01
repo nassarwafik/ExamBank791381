@@ -2,7 +2,8 @@
 
 The **only** place in this repository where student code is executed. The SmartAssess web app (`src/`) and API (`api/src/`)
 never execute student code; they forward an authenticated, minimal request to this gateway, which runs it in **one disposable,
-hardened Docker sandbox per execution** and returns a bounded result. V1 supports exactly **Python, Java and C#**. Practice
+hardened Docker runtime sandbox per execution** (Java / C# are compiled beforehand in a separate compile sandbox) and returns a
+bounded result. V1 supports exactly **Python, Java and C#**. Practice
 execution only — no hidden tests, no grades (official hidden-test grading is Phase 17C).
 
 ```
@@ -14,7 +15,8 @@ Browser ──(student session)──▶ SmartAssess API  /api/coding/run
                                    │  verify signature / freshness / replay · validate · registry → fixed image
                                    │  bounded concurrency (503 RUNNER_BUSY) · hard wall clock · result cap
                                    ▼
-                     ONE docker run --rm … smartassess-coding-<language>:17b-v1   (supervisor = entrypoint)
+        Java / C#: a COMPILE sandbox (compile allowance, compiler only) → bounded artifact → then, for every language:
+                     ONE runtime docker run --rm … smartassess-coding-<language>:17b-v1   (cgroup ceiling = memoryMb + fixed overhead)
 ```
 
 ## Layout
@@ -54,6 +56,11 @@ mounts / volumes / docker.sock / environment / entrypoint override. The job trav
 file). Inside: rlimits (core, file size, open files, CPU backstop, Python address space), `oom_score_adj=1000` for the program,
 JVM `-Xmx` / .NET `GCHeapHardLimit` = the question's memory limit, output capped **while reading**, process group killed at
 the time limit; the gateway kills the container by name at the hard wall and always force-removes it.
+
+**Memory:** a compiled language (Java, C#) is compiled in a separate disposable sandbox whose ceiling is the compiler's
+allowance (768 / 1024 MB) and which never runs student code. The program then runs in a NEW sandbox whose cgroup ceiling —
+covering the whole process tree, native memory and child processes — is `memoryMb + 128` (Java), `memoryMb + 96` (C#) or
+`memoryMb + 64` (Python). See `docs/enterprise-coding-assessment-17b.md` §11a and `tests/docker/memory-isolation.rtest.js`.
 
 ## Local development (TEST key only)
 

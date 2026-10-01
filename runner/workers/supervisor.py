@@ -1,25 +1,36 @@
 """SmartAssess coding sandbox supervisor (Phase 17B).
 
 Runs INSIDE one disposable sandbox container as PID 1 and as the unprivileged sandbox user (uid 10001). It is the image
-ENTRYPOINT; the gateway never passes a command or arguments. Contract:
+ENTRYPOINT; the gateway never passes a command or arguments. Every execution uses at most TWO separate sandboxes:
 
-    stdin  : ONE JSON job  {"source": str, "stdin": str, "limits": {"timeMs", "memoryMb", "outputBytes", "compileTimeoutMs"}}
-    stdout : ONE JSON line {"status", "stdout", "stderr", "exitCode"?, "durationMs"?}
+  phase "compile" (only for toolchains with a "compile" step — Java, C#): a COMPILE sandbox whose memory ceiling is the
+      compiler's fixed allowance. It compiles the source with the trusted toolchain compiler and NEVER runs student code.
+          stdin : {"phase":"compile", "source": str, "stdin": "", "limits": {...}}
+          stdout: {"status":"compiled", "artifact":[{"path": rel, "data": base64}]}  or a "compile-error" result
+  phase "run": a RUNTIME sandbox whose cgroup memory ceiling is derived ONLY from the question's memoryMb (+ a fixed runtime
+      overhead). It receives either the source (no compile step: Python, after a syntax check) or the bounded compiled
+      artifact (Java, C#) — never compiles — and runs the program.
+          stdin : {"phase":"run", "source"|"artifact": …, "stdin": str, "limits": {...}}
+          stdout: {"status", "stdout", "stderr", "exitCode"?, "durationMs"?}
 
 What it does, data-driven by /opt/runner/toolchain.json (fixed at image build; no language branches here):
-  1. writes the source to the tmpfs workspace (the only writable places are the tmpfs /workspace and /tmp, both noexec);
-  2. optionally compiles it (bounded time; failure -> "compile-error" with the bounded compiler diagnostics);
-  3. runs the program with the job's stdin, in a new session, with rlimits (no core dumps, bounded file size / open files,
-     optional address-space limit, CPU-time backstop) and oom_score_adj=1000 (the kernel kills the program, not the supervisor);
-  4. reads stdout / stderr WHILE the program runs and stops it at the output cap ("output-limit") or at the time limit
+  1. writes the source / artifact to the tmpfs workspace (the only writable places are the tmpfs /workspace and /tmp, both
+     noexec); artifact paths are validated (relative, safe characters, bounded count and size, no links);
+  2. compile phase: compiles (bounded time; failure -> "compile-error" with the bounded compiler diagnostics) and returns
+     the bounded artifact; run phase: optional syntax check, then runs the program with the job's stdin, in a new session,
+     with rlimits (no core dumps, bounded file size / open files, optional address-space limit, CPU-time backstop) and
+     oom_score_adj=1000 (the kernel kills the program, not the supervisor);
+  3. reads stdout / stderr WHILE the program runs and stops it at the output cap ("output-limit") or at the time limit
      ("timeout"); kills the whole process group; reports "success" / "runtime-error" from the exit status.
 The supervisor marks itself non-dumpable so the (same-uid) student program cannot open its /proc file descriptors or memory.
 Output is decoded as UTF-8 after a cut that never splits a multi-byte sequence.
 """
+import base64
 import codecs
 import ctypes
 import json
 import os
+import re
 import resource
 import selectors
 import signal
@@ -29,7 +40,10 @@ import time
 
 TOOLCHAIN_PATH = "/opt/runner/toolchain.json"
 WORKSPACE = "/workspace"
-MAX_JOB_BYTES = 512 * 1024
+MAX_JOB_BYTES = 16 * 1024 * 1024
+ARTIFACT_MAX_FILES = 256
+ARTIFACT_MAX_BYTES = 8 * 1024 * 1024
+ARTIFACT_SEGMENT = re.compile(r"^[A-Za-z0-9_$][A-Za-z0-9_$.-]{0,127}$")
 SOURCE_MAX_BYTES = 64 * 1024
 STDIN_MAX_BYTES = 16 * 1024
 STDERR_MAX_BYTES = 64 * 1024
@@ -62,15 +76,36 @@ def utf8_text(data, cap):
     return decoder.decode(data[:cap], final=False)
 
 
-def read_job():
+def safe_relpath(rel):
+    """A relative artifact path made only of safe segments (no absolute path, no '..', no empty segment), else None."""
+    if not isinstance(rel, str) or len(rel) > 512:
+        return None
+    parts = rel.split("/")
+    if len(parts) > 16 or any(not ARTIFACT_SEGMENT.match(p) or p in (".", "..") for p in parts):
+        return None
+    return parts
+
+
+def read_job(toolchain):
     raw = sys.stdin.buffer.read(MAX_JOB_BYTES + 1)
     if len(raw) > MAX_JOB_BYTES:
         internal_error()
     job = json.loads(raw.decode("utf-8"))
-    if not isinstance(job, dict) or not isinstance(job.get("source"), str) or not isinstance(job.get("stdin"), str):
+    if not isinstance(job, dict) or job.get("phase") not in ("compile", "run") or not isinstance(job.get("stdin"), str):
         internal_error()
-    if len(job["source"].encode("utf-8")) > SOURCE_MAX_BYTES or len(job["stdin"].encode("utf-8")) > STDIN_MAX_BYTES:
+    if len(job["stdin"].encode("utf-8")) > STDIN_MAX_BYTES:
         internal_error()
+    compiled = bool(toolchain.get("compile"))
+    if job["phase"] == "compile" or not compiled:
+        # the source goes to the compile sandbox (compiled toolchains) or straight to the runtime sandbox (interpreted ones)
+        if job["phase"] == "compile" and not compiled:
+            internal_error()
+        if not isinstance(job.get("source"), str) or len(job["source"].encode("utf-8")) > SOURCE_MAX_BYTES or "artifact" in job:
+            internal_error()
+    else:
+        # a compiled toolchain's runtime sandbox gets ONLY the artifact — it never compiles and never sees the source
+        if "source" in job or not isinstance(job.get("artifact"), list):
+            internal_error()
     limits = job.get("limits")
     if not isinstance(limits, dict):
         internal_error()
@@ -78,7 +113,56 @@ def read_job():
         value = limits.get(name)
         if not isinstance(value, int) or isinstance(value, bool) or value < lo or value > hi:
             internal_error()
-    return job["source"], job["stdin"], limits
+    return job, limits
+
+
+def collect_artifact(directory):
+    """The compiled output as [{path, data}] — regular files only, safe names, bounded count / size; anything else fails."""
+    files, total = [], 0
+    for root, dirs, names in os.walk(directory, followlinks=False):
+        for d in dirs:
+            if os.path.islink(os.path.join(root, d)):
+                return None
+        for name in sorted(names):
+            full = os.path.join(root, name)
+            if os.path.islink(full) or not os.path.isfile(full):
+                return None
+            rel = os.path.relpath(full, directory).replace(os.sep, "/")
+            if safe_relpath(rel) is None:
+                return None
+            with open(full, "rb") as f:
+                data = f.read(ARTIFACT_MAX_BYTES + 1)
+            total += len(data)
+            if total > ARTIFACT_MAX_BYTES or len(files) >= ARTIFACT_MAX_FILES:
+                return None
+            files.append({"path": rel, "data": base64.b64encode(data).decode("ascii")})
+    return files if files else None
+
+
+def write_artifact(directory, artifact):
+    """Re-validates and writes the artifact into the runtime workspace (exclusive creation, no links). False on any violation."""
+    if not isinstance(artifact, list) or not artifact or len(artifact) > ARTIFACT_MAX_FILES:
+        return False
+    total = 0
+    for entry in artifact:
+        if not isinstance(entry, dict) or set(entry) != {"path", "data"} or not isinstance(entry["data"], str):
+            return False
+        parts = safe_relpath(entry["path"])
+        if parts is None:
+            return False
+        try:
+            data = base64.b64decode(entry["data"], validate=True)
+        except (ValueError, TypeError):
+            return False
+        total += len(data)
+        if total > ARTIFACT_MAX_BYTES:
+            return False
+        target = os.path.join(directory, *parts)
+        os.makedirs(os.path.dirname(target), exist_ok=True)
+        fd = os.open(target, os.O_WRONLY | os.O_CREAT | os.O_EXCL | os.O_NOFOLLOW, 0o600)
+        with os.fdopen(fd, "wb") as f:
+            f.write(data)
+    return True
 
 
 def expand(value, limits):
@@ -180,15 +264,16 @@ def main():
     try:
         with open(TOOLCHAIN_PATH, "rb") as f:
             toolchain = json.loads(f.read().decode("utf-8"))
-        source, stdin_text, limits = read_job()
+        job, limits = read_job(toolchain)
     except Exception:
         internal_error()
 
     os.umask(0o077)
-    source_path = os.path.join(WORKSPACE, toolchain["sourceFile"])
-    with open(source_path, "w", encoding="utf-8", newline="") as f:
-        f.write(source)
-    os.makedirs(os.path.join(WORKSPACE, "out"), exist_ok=True)
+    out_dir = os.path.join(WORKSPACE, "out")
+    os.makedirs(out_dir, exist_ok=True)
+    if "source" in job:
+        with open(os.path.join(WORKSPACE, toolchain["sourceFile"]), "w", encoding="utf-8", newline="") as f:
+            f.write(job["source"])
 
     def step_env(step):
         env = dict(CHILD_ENV_BASE)
@@ -196,16 +281,32 @@ def main():
             env[k] = expand(v, limits)
         return env
 
-    compile_step = toolchain.get("compile")
-    if compile_step:
-        step = execute([expand(a, limits) for a in compile_step["argv"]], b"", limits["compileTimeoutMs"], COMPILE_OUTPUT_MAX_BYTES, COMPILE_OUTPUT_MAX_BYTES, step_env(compile_step))
-        if step["timed_out"]:
+    def checked(step):
+        """Runs a compile / syntax-check step; emits compile-error and returns False on failure."""
+        r = execute([expand(a, limits) for a in step["argv"]], b"", limits["compileTimeoutMs"], COMPILE_OUTPUT_MAX_BYTES, COMPILE_OUTPUT_MAX_BYTES, step_env(step))
+        if r["timed_out"]:
             emit({"status": "compile-error", "stdout": "", "stderr": "Compilation timed out."})
+            return False
+        if r["code"] != 0 or r["over"]:
+            diagnostics = utf8_text(r["out"] + r["err"], min(COMPILE_OUTPUT_MAX_BYTES, limits["outputBytes"]))
+            emit({"status": "compile-error", "stdout": "", "stderr": diagnostics, "exitCode": r["code"] if isinstance(r["code"], int) else -1})
+            return False
+        return True
+
+    if job["phase"] == "compile":
+        if not checked(toolchain["compile"]):
             return
-        if step["code"] != 0 or step["over"]:
-            diagnostics = utf8_text(step["out"] + step["err"], min(COMPILE_OUTPUT_MAX_BYTES, limits["outputBytes"]))
-            emit({"status": "compile-error", "stdout": "", "stderr": diagnostics, "exitCode": step["code"] if isinstance(step["code"], int) else -1})
-            return
+        artifact = collect_artifact(out_dir)
+        if artifact is None:
+            internal_error()
+        emit({"status": "compiled", "artifact": artifact})
+        return
+
+    if "artifact" in job:
+        if not write_artifact(out_dir, job["artifact"]):
+            internal_error()
+    elif toolchain.get("check") and not checked(toolchain["check"]):
+        return
 
     run_step = toolchain["run"]
     address_space = 0
@@ -213,7 +314,7 @@ def main():
         address_space = (limits["memoryMb"] + int(run_step["addressSpaceOverheadMb"])) * 1024 * 1024
     out_cap = limits["outputBytes"]
     err_cap = min(limits["outputBytes"], STDERR_MAX_BYTES)
-    step = execute([expand(a, limits) for a in run_step["argv"]], stdin_text.encode("utf-8"), limits["timeMs"], out_cap, err_cap, step_env(run_step), address_space)
+    step = execute([expand(a, limits) for a in run_step["argv"]], job["stdin"].encode("utf-8"), limits["timeMs"], out_cap, err_cap, step_env(run_step), address_space)
 
     code = step["code"]
     if step["timed_out"]:
