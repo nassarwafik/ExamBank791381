@@ -1,10 +1,19 @@
-# SmartAssess Coding Runner (Phase 17B)
+# SmartAssess Coding Runner (Phase 17B practice · Phase 17C official grading)
 
 The **only** place in this repository where student code is executed. The SmartAssess web app (`src/`) and API (`api/src/`)
 never execute student code; they forward an authenticated, minimal request to this gateway, which runs it in **one disposable,
 hardened Docker runtime sandbox per execution** (Java / C# are compiled beforehand in a separate compile sandbox) and returns a
-bounded result. V1 supports exactly **Python, Java and C#**. Practice
-execution only — no hidden tests, no grades (official hidden-test grading is Phase 17C).
+bounded result. V1 supports exactly **Python, Java and C#**.
+
+Two paths share the images, the hardened sandbox profile and the request-signing key:
+
+- **Practice** (Phase 17B) — `POST /v1/execute`: one run with the student's own stdin; the result is shown to the student only.
+- **Official grading** (Phase 17C) — `POST /v1/official-grading-jobs`: SmartAssess sends an opaque job (`jobId`, language,
+  source, `cases: [{ token, stdin }]`, limits — never expected outputs, weights, titles, marks or any identity). The gateway
+  answers `202`, compiles ONCE (Java / C#), runs every hidden case in a FRESH runtime container with no in-container grading
+  supervisor (a trusted entry materialises the program, writes a fixed exec marker and `execve()`s it), derives each case
+  status itself from what it observed (marker, exit code, wall clock, byte counts) and delivers the RAW evidence back to
+  SmartAssess through a signed callback. **The runner executes; SmartAssess compares, weights and decides the grade.**
 
 ```
 Browser ──(student session)──▶ SmartAssess API  /api/coding/run
@@ -16,7 +25,13 @@ Browser ──(student session)──▶ SmartAssess API  /api/coding/run
                                    │  bounded concurrency (503 RUNNER_BUSY) · hard wall clock · result cap
                                    ▼
         Java / C#: a COMPILE sandbox (compile allowance, compiler only) → bounded artifact → then, for every language:
-                     ONE runtime docker run --rm … smartassess-coding-<language>:17b-v1   (cgroup ceiling = memoryMb + fixed overhead)
+                     ONE runtime docker run --rm … smartassess-coding-<language>:17c-v1   (cgroup ceiling = memoryMb + fixed overhead)
+
+Official grading (Phase 17C):
+SmartAssess API (after the attempt commit) ──signed POST /v1/official-grading-jobs──▶ gateway ──202──▶ bounded official queue
+   → compile ONCE (Java / C#) → per hidden case: a FRESH runtime container (gateway-captured stdout / stderr / exit / timeout)
+   → raw evidence ──POST <SMARTASSESS_CALLBACK_BASE_URL>/api/coding/grade-callback (SA-CODING-CALLBACK-1, own HMAC key)──▶
+   SmartAssess compares with the stored comparator, weights, scores, rebuilds the attempt totals
 ```
 
 ## Layout
@@ -24,16 +39,19 @@ Browser ──(student session)──▶ SmartAssess API  /api/coding/run
 | path | what |
 |---|---|
 | `gateway/main.js` | entry point (`npm start`); reads `RUNNER_*` settings, sweeps leftover sandboxes, listens |
-| `gateway/server.js` | HTTP surface: `GET /healthz`, signed `GET /v1/capabilities`, signed `POST /v1/execute` |
+| `gateway/server.js` | HTTP surface: `GET /healthz`, signed `GET /v1/capabilities`, signed `POST /v1/execute`, signed `POST /v1/official-grading-jobs` (17C) |
+| `gateway/official.js` | 17C: strict official job validation, payload-hash dedupe (`JOB_ID_CONFLICT`), bounded queue (`RUNNER_BUSY`), server-owned job wall, result cache |
+| `gateway/callback.js` | 17C: fixed callback destination from the host config, SA-CODING-CALLBACK-1 signing, raw-evidence-only body, bounded retry with backoff, no redirects |
 | `gateway/auth.js` | request signing / verification (HMAC-SHA256, ±60 s, replay guard, constant-time compare) |
 | `gateway/validate.js` | the one accepted request shape (exact allow-list, bounded fields) |
 | `gateway/registry.js` | `python@1` / `java@1` / `csharp@1` → fixed image + fixed resource ceilings (data only) |
 | `gateway/sandbox.js` | the ONLY module that starts a process: `docker` with a fixed argv, `shell: false` |
-| `workers/supervisor.py` | in-sandbox supervisor (PID 1, uid 10001): compile → run → cap output → JSON result |
+| `workers/supervisor.py` | in-sandbox supervisor (PID 1, uid 10001): practice compile → run → cap output → JSON result; 17C official frame (`SAOFF1`): materialise → exec marker → `execve` (no result reporting) |
 | `workers/<language>/` | `Dockerfile` (digest-pinned official bases) + `toolchain.json` (commands as data) |
 | `scripts/build-images.sh` | builds the three worker images (`docker build --network none`) |
 | `tests/unit/` | gateway unit tests (no Docker): `npm test` |
-| `tests/docker/` | REAL Docker functional + security + end-to-end tests: `npm run test:docker` |
+| `tests/docker/` | REAL Docker functional + security + end-to-end tests (practice): `npm run test:docker:security` |
+| `tests/docker-official/` | REAL Docker official grading tests (17C, incl. an end-to-end run through the real API handlers): `npm run test:docker:official` |
 
 No third-party dependencies (Node ≥ 22 built-ins only). Not an Azure Function, not part of the Vite build.
 
@@ -71,7 +89,15 @@ npm --prefix runner run build:images
 RUNNER_HMAC_KEY="$(node -e 'console.log(require("crypto").randomBytes(32).toString("hex"))')" npm --prefix runner start
 # 3. point a LOCAL Functions host at it (api/local.settings.json is git-ignored):
 #    CODING_RUNNER_URL=http://127.0.0.1:8787   CODING_RUNNER_HMAC_KEY=<the same TEST key>
+# 4. (17C official grading) give BOTH sides a SECOND, different throw-away TEST key for callbacks:
+#    gateway: SMARTASSESS_CALLBACK_BASE_URL=http://127.0.0.1:7071  SMARTASSESS_CALLBACK_HMAC_KEY=<callback TEST key>
+#    API:     CODING_GRADING_CALLBACK_HMAC_KEY=<the same callback TEST key>
 ```
+
+Official grading is **disabled** (`503 GRADING_UNAVAILABLE`) unless the callback destination is valid: `https://` (plain
+`http://` only for a loopback host), no credentials / path / query, a key of ≥ 32 characters that differs from
+`RUNNER_HMAC_KEY`. Queue bounds: `RUNNER_OFFICIAL_MAX_PENDING` (1..64, default 8), `RUNNER_OFFICIAL_MAX_ACTIVE` (1..4,
+default 1), `RUNNER_OFFICIAL_CASE_CONCURRENCY` (1..4, default 2). Keys are held in memory only and never logged.
 
 `http://` is accepted by the API **only** for `localhost` / `127.0.0.1` / `[::1]`; anything else must be `https://`.
 
@@ -80,10 +106,16 @@ RUNNER_HMAC_KEY="$(node -e 'console.log(require("crypto").randomBytes(32).toStri
 ```sh
 npm --prefix runner test              # gateway unit tests (auth, validation, registry, argv, HTTP, bounded reads)
 npm --prefix runner run build:images
-npm --prefix runner run test:docker   # per-language functional + security (shell injection, network, env canaries,
-                                      # host-file canary, timeout / orphans, memory, output flood, fork bomb) + API→gateway e2e
+npm --prefix runner run test:docker   # both groups below
+npm --prefix runner run test:docker:security   # practice: per-language functional + security (shell injection, network, env
+                                               # canaries, host-file canary, timeout / orphans, memory, output flood, fork bomb)
+                                               # + API→gateway e2e
+npm --prefix runner run test:docker:official   # 17C: raw-runtime authority (stdout can never forge a status), compile once /
+                                               # fresh container per case, cross-case isolation, per-case limits, cleanup,
+                                               # end-to-end through the real API handlers (needs `npm ci --prefix api`)
 ```
 
 CI: `.github/workflows/coding-runner-security.yml` ("Coding Runner Security & Smoke Tests", no secrets).
 
-Full design, threat model, deployment and operations: `docs/enterprise-coding-assessment-17b.md`.
+Full design, threat model, deployment and operations: `docs/enterprise-coding-assessment-17b.md` (practice) and
+`docs/enterprise-coding-assessment-17c.md` (official hidden-test grading).

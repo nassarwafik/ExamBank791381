@@ -19,7 +19,7 @@ const STARTUP_SLACK_MS = 10000;
 const entry = (key, { compileSandbox, compileTimeoutMs, compileMemoryMb, runtimeOverheadMb }) => Object.freeze({
   key,
   languageVersion: 1,
-  image: "smartassess-coding-" + key + ":17b-v1",
+  image: "smartassess-coding-" + key + ":17c-v1",                 // Phase 17C: the images carry the official exec entry (tag bump)
   compileSandbox,                 // true → compile in its own sandbox, run the artifact in a second one
   compileTimeoutMs,               // compile (Java, C#) or syntax-check (Python, inside the runtime sandbox) time limit
   compileMemoryMb,                // compile sandbox ceiling (null when there is no compile sandbox)
@@ -49,5 +49,8 @@ const runtimeMemoryMb = (e, memoryMb) => memoryMb + e.runtimeOverheadMb;
 const compileWallMs = e => e.compileTimeoutMs + STARTUP_SLACK_MS;
 /** Hard wall clock of the runtime sandbox (includes the in-sandbox syntax check of toolchains without a compile sandbox). */
 const runWallMs = (e, timeMs) => (e.compileSandbox ? 0 : e.compileTimeoutMs) + timeMs + STARTUP_SLACK_MS;
+/** Phase 17C — hard wall clock of ONE official runtime sandbox (container start-up + setup + the program's own time limit, which
+ *  the gateway starts counting at the authentic exec marker). */
+const officialCaseWallMs = (e, timeMs) => timeMs + STARTUP_SLACK_MS;
 
-module.exports = { LANGUAGES, resolveLanguage, runtimeMemoryMb, compileWallMs, runWallMs, STARTUP_SLACK_MS };
+module.exports = { LANGUAGES, resolveLanguage, runtimeMemoryMb, compileWallMs, runWallMs, officialCaseWallMs, STARTUP_SLACK_MS };

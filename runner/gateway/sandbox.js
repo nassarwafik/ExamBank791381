@@ -20,9 +20,17 @@
 // argv or the environment; the artifact lives only in gateway memory between the two sandboxes. The docker CLI itself receives
 // an allow-listed environment (never the gateway's HMAC key). Every result stream is read with a hard byte cap; a hard wall
 // clock per sandbox kills the container by name; every container is force-removed in every outcome.
+//
+// Phase 17C — OFFICIAL raw runtime (runOfficialSuite). For an official grading job there is no grading supervisor beside student
+// code: a compiled toolchain is compiled ONCE in the compile sandbox above (trusted compiler only); then EVERY hidden case runs in
+// a BRAND-NEW runtime sandbox (same hardening, same memoryMb + overhead cgroup ceiling) whose stdin is an exact-length setup frame
+// (artifact / source + limits) followed by that case's stdin. The in-sandbox entry materialises the program, writes a fixed exec
+// marker and execve()s the runtime — so THIS module observes the program directly: the status is derived here from the marker,
+// the exit status, the wall clock and the byte counts, never from anything the program prints. A missing marker means student code
+// never ran (internal-error, an infrastructure outcome). Global official container slots are bounded by server configuration.
 const { spawn } = require("node:child_process");
 const crypto = require("node:crypto");
-const { LANGUAGES, runtimeMemoryMb, compileWallMs, runWallMs } = require("./registry.js");
+const { LANGUAGES, runtimeMemoryMb, compileWallMs, runWallMs, officialCaseWallMs } = require("./registry.js");
 
 const SANDBOX_USER = "10001:10001";
 const LABEL_KEY = "smartassess.coding-runner";
@@ -36,6 +44,12 @@ const ARTIFACT_MAX_FILES = 256;
 const ARTIFACT_MAX_BYTES = 8 * 1024 * 1024;
 const ARTIFACT_SEGMENT = /^[A-Za-z0-9_$][A-Za-z0-9_$.-]{0,127}$/;
 const COMPILE_RESULT_MAX_BYTES = 12 * 1024 * 1024;              // base64 artifact (≤ 8 MB raw) + JSON framing / diagnostics
+// Phase 17C — official raw runtime constants (mirrored by runner/workers/supervisor.py; parity-tested).
+const OFFICIAL_EXEC_MARKER = "\u0000SA-EXEC-17C\u0000";
+const OFFICIAL_MARKER_BYTES = Buffer.from(OFFICIAL_EXEC_MARKER, "latin1");
+const OFFICIAL_STDERR_CAPTURE_BYTES = 4096;                     // forwarded stderr (diagnostics only)
+const OFFICIAL_STDERR_FLOOD_BYTES = 64 * 1024;                  // stderr beyond this stops the program (output-limit)
+const OFFICIAL_COMPILE_STDERR_BYTES = 32 * 1024;
 
 const isRegistered = entry => !!entry && Object.values(LANGUAGES).includes(entry);
 
@@ -116,7 +130,42 @@ function validateArtifact(artifact) {
 /** Upper bound of the supervisor's JSON line for these limits (worst-case JSON escaping is 6 bytes per input byte). */
 const resultCapBytes = outputBytes => 6 * (outputBytes + Math.min(outputBytes, STDERR_MAX_BYTES)) + 65536;
 
-function createDockerSandbox({ dockerBin = "docker", spawnImpl = spawn, env = process.env, hardWallOverrideMs, capabilitiesCacheMs = 30000 } = {}) {
+/** Phase 17C — the official setup frame: b"SAOFF1 " + 10-digit decimal length + b"\n" + JSON setup + the case's raw stdin. The
+ *  in-sandbox entry reads exactly the header and the declared length, so the stdin that follows is never consumed by setup. */
+function encodeOfficialFrame(setup, stdin) {
+  const payload = Buffer.from(JSON.stringify(setup), "utf8");
+  const header = Buffer.from("SAOFF1 " + String(payload.length).padStart(10, "0") + "\n", "ascii");
+  return Buffer.concat([header, payload, Buffer.isBuffer(stdin) ? stdin : Buffer.from(String(stdin == null ? "" : stdin), "utf8")]);
+}
+/** Captured bytes → text bounded to maxBytes UTF-8 bytes (invalid sequences become U+FFFD, then re-bounded). */
+const decodeBounded = (buf, maxBytes) => utf8Prefix(buf.toString("utf8"), maxBytes).text;
+/** The execution status of one official runtime, derived ONLY from the gateway's own observation. */
+function officialStatus(r) {
+  if (!r.markerSeen || r.markerBad) return { status: "internal-error" };               // student code never started
+  if (r.timedOut) return { status: "timeout" };
+  if (r.overflow) return { status: "output-limit" };
+  if (r.code === 0) return { status: "success", exitCode: 0 };
+  if (Number.isInteger(r.code) && r.code > 0) return { status: "runtime-error", exitCode: r.code };
+  return { status: "internal-error" };                                                 // the CLI vanished without an exit status
+}
+/** A bounded counting semaphore (global official runtime containers of this gateway). */
+function createSlots(n) {
+  let free = Math.max(1, n);
+  const waiters = [];
+  return {
+    acquire(signal) {
+      return new Promise((resolve, reject) => {
+        const grant = () => { free--; let released = false; resolve(() => { if (released) return; released = true; free++; const w = waiters.shift(); if (w) w(); }); };
+        if (free > 0) { grant(); return; }
+        const w = () => grant();
+        waiters.push(w);
+        if (signal) signal.addEventListener("abort", () => { const i = waiters.indexOf(w); if (i >= 0) { waiters.splice(i, 1); reject(new Error("official suite aborted")); } }, { once: true });
+      });
+    }
+  };
+}
+
+function createDockerSandbox({ dockerBin = "docker", spawnImpl = spawn, env = process.env, hardWallOverrideMs, capabilitiesCacheMs = 30000, officialWallOverrideMs, officialMaxContainers = 2 } = {}) {
   const dockerEnv = {};
   for (const k of DOCKER_ENV_KEYS) if (typeof env[k] === "string" && env[k] !== "") dockerEnv[k] = env[k];
 
@@ -203,7 +252,104 @@ function createDockerSandbox({ dockerBin = "docker", spawnImpl = spawn, env = pr
     return ids.length;
   }
 
-  return { run, availableLanguages, sweep };
+  // ── Phase 17C — official raw runtime ─────────────────────────────────────────────────────────────────────────────────────
+  const slots = createSlots(officialMaxContainers);
+
+  /** ONE brand-new runtime sandbox for ONE hidden case; resolves with the gateway's raw observation. Always force-removed. */
+  function officialRuntimeOnce(entry, setup, stdinBuf, limits, signal) {
+    const name = "sa-coding-" + crypto.randomBytes(12).toString("hex");
+    const args = buildDockerRunArgs({ name, entry, limits, phase: "run" });
+    const input = encodeOfficialFrame(setup, stdinBuf);
+    const outCap = limits.outputBytes;
+    const wallMs = officialWallOverrideMs || officialCaseWallMs(entry, limits.timeMs);
+    return new Promise(resolve => {
+      let child;
+      try { child = spawnImpl(dockerBin, args, { shell: false, env: dockerEnv, stdio: ["pipe", "pipe", "pipe"], windowsHide: true }); }
+      catch { resolve({ name, code: -1, markerSeen: false, markerBad: false, timedOut: false, overflow: false, stdout: Buffer.alloc(0), stderr: Buffer.alloc(0), durationMs: 0 }); return; }
+      let head = Buffer.alloc(0), markerSeen = false, markerBad = false, execAt = 0, outSize = 0, errSize = 0, errTotal = 0;
+      let timedOut = false, overflow = false, settled = false, killed = false, programTimer = null;
+      const out = [], err = [];
+      const kill = () => { if (killed) return; killed = true; try { child.kill("SIGKILL"); } catch { /* already gone */ } void invoke(["kill", name], { timeoutMs: 10000 }); };
+      const wall = setTimeout(() => { if (markerSeen) timedOut = true; kill(); }, wallMs);
+      const onAbort = () => kill();
+      if (signal) { if (signal.aborted) kill(); else signal.addEventListener("abort", onAbort, { once: true }); }
+      const finish = code => {
+        if (settled) return; settled = true;
+        clearTimeout(wall); if (programTimer) clearTimeout(programTimer);
+        if (signal) signal.removeEventListener("abort", onAbort);
+        resolve({ name, code, markerSeen, markerBad, timedOut, overflow, stdout: Buffer.concat(out), stderr: Buffer.concat(err), durationMs: execAt ? Date.now() - execAt : 0 });
+      };
+      child.stdout.on("data", d => {
+        if (!markerSeen) {
+          if (markerBad) return;
+          head = Buffer.concat([head, d]);
+          const n = Math.min(head.length, OFFICIAL_MARKER_BYTES.length);
+          if (!head.subarray(0, n).equals(OFFICIAL_MARKER_BYTES.subarray(0, n))) { markerBad = true; kill(); return; }
+          if (head.length < OFFICIAL_MARKER_BYTES.length) return;
+          // the marker is written by trusted setup code BEFORE execve: from here on, every byte is the program's stdout
+          markerSeen = true; execAt = Date.now();
+          programTimer = setTimeout(() => { timedOut = true; kill(); }, limits.timeMs);
+          d = head.subarray(OFFICIAL_MARKER_BYTES.length); head = null;
+          if (!d.length) return;
+        }
+        if (overflow) return;
+        outSize += d.length;
+        if (outSize > outCap) { overflow = true; const keep = d.length - (outSize - outCap); if (keep > 0) out.push(d.subarray(0, keep)); kill(); return; }
+        out.push(d);
+      });
+      child.stderr.on("data", d => {
+        errTotal += d.length;
+        if (errSize < OFFICIAL_STDERR_CAPTURE_BYTES) { const keep = Math.min(d.length, OFFICIAL_STDERR_CAPTURE_BYTES - errSize); err.push(d.subarray(0, keep)); errSize += keep; }
+        if (errTotal > OFFICIAL_STDERR_FLOOD_BYTES && markerSeen && !overflow) { overflow = true; kill(); }
+      });
+      child.on("error", () => finish(-1));
+      child.on("close", code => finish(code));
+      if (child.stdin) { child.stdin.on("error", () => { /* the program may exit before reading its stdin */ }); child.stdin.end(input); }
+    }).then(async r => { await invoke(["rm", "-f", r.name], { timeoutMs: 15000 }); return r; });
+  }
+
+  /** Runs one validated official job: compile ONCE (compiled toolchains), then a fresh runtime sandbox per case (bounded case
+   *  concurrency + global slots). Resolves with raw evidence { compile?, cases[] }; throws on any infrastructure failure. */
+  async function runOfficialSuite(entry, job, { signal, caseConcurrency = 2 } = {}) {
+    if (!isRegistered(entry)) throw new Error("unregistered language entry");
+    const limits = { timeMs: job.limits.timeMs, memoryMb: job.limits.memoryMb, outputBytes: job.limits.outputBytes, compileTimeoutMs: entry.compileTimeoutMs };
+    const ensureLive = () => { if (signal && signal.aborted) throw new Error("official suite aborted"); };
+    let setupBase, compile;
+    if (entry.compileSandbox) {
+      const t0 = Date.now();
+      const c = await sandboxOnce(entry, "compile", { phase: "compile", source: job.source, stdin: "", limits }, limits, compileWallMs(entry), COMPILE_RESULT_MAX_BYTES);
+      ensureLive();
+      if (c.timedOut || !c.parsed || typeof c.parsed !== "object") throw new Error("official compile sandbox failed");
+      if (c.parsed.status === "compile-error") return { compile: { status: "compile-error", stderr: utf8Prefix(typeof c.parsed.stderr === "string" ? c.parsed.stderr : "", OFFICIAL_COMPILE_STDERR_BYTES).text, durationMs: Date.now() - t0 }, cases: [] };
+      const artifact = c.parsed.status === "compiled" ? validateArtifact(c.parsed.artifact) : null;
+      if (!artifact) throw new Error("official compile produced no valid artifact");
+      compile = { status: "compiled", durationMs: Date.now() - t0 };
+      setupBase = { phase: "official", artifact };                 // the artifact stays in gateway memory; the source never reaches the runtime
+    } else setupBase = { phase: "official", source: job.source };
+    const results = new Array(job.cases.length);
+    let next = 0;
+    const worker = async () => {
+      while (next < job.cases.length) {
+        const i = next++;
+        ensureLive();
+        const c = job.cases[i];
+        const release = await slots.acquire(signal);
+        let r;
+        try { r = await officialRuntimeOnce(entry, { ...setupBase, limits }, Buffer.from(c.stdin, "utf8"), limits, signal); }
+        finally { release(); }
+        ensureLive();
+        const st = officialStatus(r);
+        const out = { token: c.token, status: st.status, stdout: decodeBounded(r.stdout, limits.outputBytes), stderr: decodeBounded(r.stderr, OFFICIAL_STDERR_CAPTURE_BYTES) };
+        if (st.exitCode !== undefined) out.exitCode = st.exitCode;
+        out.durationMs = r.durationMs;
+        results[i] = out;
+      }
+    };
+    await Promise.all(Array.from({ length: Math.max(1, Math.min(caseConcurrency, job.cases.length)) }, worker));
+    return compile ? { compile, cases: results } : { cases: results };
+  }
+
+  return { run, availableLanguages, sweep, runOfficialSuite };
 }
 
-module.exports = { buildDockerRunArgs, createDockerSandbox, boundResult, validateArtifact, resultCapBytes, LABEL };
+module.exports = { buildDockerRunArgs, createDockerSandbox, boundResult, validateArtifact, resultCapBytes, encodeOfficialFrame, OFFICIAL_EXEC_MARKER, OFFICIAL_STDERR_CAPTURE_BYTES, LABEL };
