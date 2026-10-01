@@ -5,10 +5,14 @@ const {requireBuilderAuth}=require("../lib/builder-auth");
 const {getContainer,downloadJsonOrNull,mutateJsonWithRetry,StorageConflictError}=require("../lib/platform-storage");
 const {recordAuditEvent}=require("../lib/audit-log");
 const {recordAchievementIfEligible}=require("../lib/achievement-feed");
-const {flattenQuestions,sectionCappedScore,effectiveMaxMarks}=require("../lib/exam-structure");
+const {flattenQuestions,effectiveMaxMarks}=require("../lib/exam-structure");
+// Phase 17C — the ONE canonical attempt-score rebuild, shared with the automatic coding grading callback.
+const {rebuildAttemptGrades}=require("../lib/attempt-grade-rebuild");
 const {normalizeEndReason}=require("../lib/assignment-availability");
 const {deriveGradingStatus}=require("../lib/grading-status");
 const {recordEventSafely}=require("../lib/notification-events");
+// Phase 17C — teacher-only view of the official automatic coding grade (expected outputs from the teacher snapshot).
+const {codingAutoGradeView}=require("../lib/coding/official-grading");
 // Phase 6D — the student-facing meaning of an attempt's review state: finalized, the score, the overall feedback and the
 // per-question teacher comments (never reviewedAt timestamps, which change on every save).
 function reviewFacts(attempt){
@@ -41,20 +45,6 @@ function historicalSubmissionProvesOwnership(submission,assignmentId,studentId,a
  if(submission.classId!==undefined&&String(submission.classId)!==String(assignmentClassId))return false;
  return true;
 }
-function rebuildAttempt(attempt){
- const grades=Array.isArray(attempt.questionGrades)?attempt.questionGrades:[],overrides=attempt.manualOverrides&&typeof attempt.manualOverrides==="object"?attempt.manualOverrides:{};let remaining=0;const scoreById=new Map();
- // Manual overrides are clamped to the EFFECTIVE (counted) max, so a firstN-excluded answer
- // (countedMaxMarks 0) can never be awarded marks, and a partially-counted compound is limited to
- // its counted parts' marks — not the full question max.
- attempt.questionGrades=grades.map(g=>{const id=String(g.questionId||""),o=overrides[id],cap=effectiveMaxMarks(g);if(o&&o.score!==undefined&&o.score!==null){const s=clamp(o.score,0,cap);scoreById.set(id,s);return {...g,score:round(s),manualScore:round(s),manualReview:false,reviewed:true,teacherComment:String(o.comment||"")}}const s=Number(g.score||0);scoreById.set(id,s);if(g.manualReview)remaining+=cap;return {...g,reviewed:!g.manualReview}});
- // Section-cap-aware total when the attempt was graded structured (attempt.sections present). A
- // capScore / firstNAnswered section's total is capped at its maxMarks even after manual overrides.
- // Legacy attempts (no attempt.sections) fall back to the exact original flat sum.
- let score;const sections=Array.isArray(attempt.sections)?attempt.sections:null;
- if(sections&&sections.length){score=sectionCappedScore(sections,id=>scoreById.get(id)||0);}
- else{score=0;for(const s of scoreById.values())score+=s;}
- attempt.score=round(score);attempt.manualReviewMarks=round(remaining);attempt.totalMarks=round(attempt.totalMarks);attempt.percentage=attempt.totalMarks?round(attempt.score/attempt.totalMarks*100):0;attempt.finalized=remaining===0;return attempt;
-}
 // `deps` is an optional dependency-injection seam for unit tests (production passes nothing, so the real
 // implementations are used). It does not change runtime behavior or the grading logic.
 async function handler(request,deps={},obs=null){
@@ -71,7 +61,7 @@ async function handler(request,deps={},obs=null){
    if(!sameClass&&!historicalSubmissionProvesOwnership(submission,assignmentId,studentId,String(assignment.classId||"")))return {status:403,jsonBody:{ok:false,error:"الطالب لا ينتمي إلى صف هذا الواجب."}};
    const attempts=Array.isArray(submission.attempts)?submission.attempts:[],attempt=attempts.find(x=>Number(x.attemptNumber)===attemptNumber);if(!attempt)return {status:404,jsonBody:{ok:false,error:"المحاولة غير موجودة."}};
    const flat=flattenQuestions(assignment.examSnapshot),gradeMap=new Map((attempt.questionGrades||[]).map(x=>[String(x.questionId),x]));
-   const questions=flat.map(({question:q,questionId:id,sectionId,displayNumber})=>{const grade=gradeMap.get(id)||null,o=attempt.manualOverrides?.[id]??null;return {questionId:id,questionNumber:displayNumber,sectionId,text:String(q.text||""),textHtml:String(q.textHtml||""),marks:Number(q.marks||q.points||0),type:String(q.presentationType||q.type||""),options:Array.isArray(q.options)?q.options:[],fields:Array.isArray(q.fields)?q.fields:[],wordBank:Array.isArray(q.wordBank)?q.wordBank:[],parts:Array.isArray(q.parts)?q.parts:null,studentAnswer:attempt.answers?.[id]??null,expectedAnswer:q.answer??null,autoGrade:grade,manualScore:o?.score??null,teacherComment:String(o?.comment||"")}});
+   const questions=flat.map(({question:q,questionId:id,sectionId,displayNumber})=>{const grade=gradeMap.get(id)||null,o=attempt.manualOverrides?.[id]??null;return {questionId:id,questionNumber:displayNumber,sectionId,text:String(q.text||""),textHtml:String(q.textHtml||""),marks:Number(q.marks||q.points||0),type:String(q.presentationType||q.type||""),options:Array.isArray(q.options)?q.options:[],fields:Array.isArray(q.fields)?q.fields:[],wordBank:Array.isArray(q.wordBank)?q.wordBank:[],parts:Array.isArray(q.parts)?q.parts:null,studentAnswer:attempt.answers?.[id]??null,expectedAnswer:q.answer??null,autoGrade:grade,manualScore:o?.score??null,teacherComment:String(o?.comment||""),...(()=>{const v=codingAutoGradeView({questionId:id,node:q},attempt);return v?{codingAutoGrade:v}:{}})()}});
    return {status:200,jsonBody:{ok:true,assignment:{assignmentId:assignment.assignmentId,title:assignment.title,totalMarks:assignment.totalMarks},student:{studentId:student.userId,studentName:student.displayName,studentCode:student.code},attempt:{attemptNumber:attempt.attemptNumber,submittedAt:attempt.submittedAt,score:attempt.score,totalMarks:attempt.totalMarks,percentage:attempt.percentage,manualReviewMarks:attempt.manualReviewMarks,finalized:attempt.finalized,gradingStatus:deriveGradingStatus(attempt),teacherFeedback:String(attempt.teacherFeedback||""),...attemptAudit(attempt)},attempts:attempts.map(x=>({attemptNumber:x.attemptNumber,submittedAt:x.submittedAt,score:x.score,totalMarks:x.totalMarks,percentage:x.percentage,manualReviewMarks:x.manualReviewMarks,finalized:x.finalized,gradingStatus:deriveGradingStatus(x),...attemptAudit(x)})),questions}};
   }
   let b={};try{b=await request.json()}catch{}if(String(b.action)!=="saveReview")return {status:400,jsonBody:{ok:false,error:"Unsupported review action."}};
@@ -95,7 +85,7 @@ async function handler(request,deps={},obs=null){
     attempt.manualOverrides=attempt.manualOverrides&&typeof attempt.manualOverrides==="object"?attempt.manualOverrides:{};
     appliedCount=0;
     for(const [questionId,value] of Object.entries(incoming)){if(!value||typeof value!=="object")continue;const grade=(attempt.questionGrades||[]).find(g=>String(g.questionId)===String(questionId));if(!grade)continue;attempt.manualOverrides[String(questionId)]={score:round(clamp(value.score,0,effectiveMaxMarks(grade))),comment:String(value.comment||"").trim(),reviewedAt};appliedCount++}
-    attempt.teacherFeedback=teacherFeedback;attempt.reviewedAt=reviewedAt;rebuildAttempt(attempt);
+    attempt.teacherFeedback=teacherFeedback;attempt.reviewedAt=reviewedAt;rebuildAttemptGrades(attempt);
     change=reviewChange(factsBefore,reviewFacts(attempt));
     attempts[index]=attempt;current.attempts=attempts;current.updatedAt=reviewedAt;
     resultOut={attemptNumber:attempt.attemptNumber,score:attempt.score,totalMarks:attempt.totalMarks,percentage:attempt.percentage,manualReviewMarks:attempt.manualReviewMarks,finalized:attempt.finalized,gradingStatus:deriveGradingStatus(attempt),teacherFeedback:attempt.teacherFeedback};

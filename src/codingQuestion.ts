@@ -52,11 +52,18 @@ export type CodingQuestionConfigV1 = {
   allowedLanguages: string[]; defaultLanguage: string; starterCode?: Record<string, string>;
   taskMode: "program"; inputMode: "stdin"; outputMode: "stdout"; limits: CodingLimits; publicTests?: CodingTestCasePublic[];
 };
-export type CodingAnswerKeyV1 = { hiddenTests?: CodingTestCasePrivate[]; comparator?: CodingComparator; referenceSolutions?: Record<string, string> };
+/** Phase 17C — the OFFICIAL grading mode (teacher-private, under `answer`). Missing / unknown → "manual" (the Phase 17A behaviour:
+ *  score 0, manual review); "hiddenTests" → the SmartAssess server grades the stored submission against the hidden tests through
+ *  the isolated Coding Runner. Existing 17A questions with hidden tests are NEVER silently switched to automatic grading. */
+export type CodingGradingMode = "manual" | "hiddenTests";
+export const CODING_GRADING_MODES: readonly CodingGradingMode[] = Object.freeze(["manual", "hiddenTests"]);
+export type CodingAnswerKeyV1 = { hiddenTests?: CodingTestCasePrivate[]; comparator?: CodingComparator; referenceSolutions?: Record<string, string>; gradingMode?: CodingGradingMode };
+/** The effective official grading mode of an answer key: "hiddenTests" only when explicitly stored as such. */
+export const codingGradingMode = (answerKey: unknown): CodingGradingMode => (!!answerKey && typeof answerKey === "object" && !Array.isArray(answerKey) && (answerKey as Record<string, unknown>).gradingMode === "hiddenTests" ? "hiddenTests" : "manual");
 export type CodeAnswer = { kind: "code"; language: string; languageVersion: number; source: string };
 
 export const defaultCodingConfig = (): CodingQuestionConfigV1 => ({ allowedLanguages: ["python"], defaultLanguage: "python", starterCode: {}, taskMode: "program", inputMode: "stdin", outputMode: "stdout", limits: { ...DEFAULT_CODING_LIMITS }, publicTests: [] });
-export const defaultCodingAnswerKey = (): Required<CodingAnswerKeyV1> => ({ hiddenTests: [], comparator: DEFAULT_CODING_COMPARATOR, referenceSolutions: {} });
+export const defaultCodingAnswerKey = (): Required<CodingAnswerKeyV1> => ({ hiddenTests: [], comparator: DEFAULT_CODING_COMPARATOR, referenceSolutions: {}, gradingMode: "manual" });
 
 /** UTF-8 byte length without TextEncoder (pure; same result in the browser and the server). */
 export function utf8ByteLength(s: string): number {
@@ -177,6 +184,16 @@ export function validateCodingQuestion(node: Record<string, unknown>): CodingIss
   if (nHidden > 0 && hiddenWeight <= 0 && !out.some(i => i.code === "CODING_WEIGHT_INVALID")) out.push(err("CODING_WEIGHT_TOTAL_ZERO", "مجموع أوزان الاختبارات المخفية يجب أن يكون أكبر من صفر.", "answer.hiddenTests"));
   if (nPublic + nHidden > 0 && [...allowed].some(l => !codingLanguage(l)!.capabilities.tests)) out.push(err("CODING_TESTS_UNSUPPORTED_FOR_LANGUAGE", "اختبارات الإدخال/الإخراج لا تنطبق على لغة مسموحة في هذا السؤال.", "coding.allowedLanguages"));
   if (key.comparator !== undefined && !CODING_COMPARATORS.includes(key.comparator as CodingComparator)) out.push(err("CODING_COMPARATOR_UNKNOWN", "طريقة مقارنة مخرجات غير معروفة.", "answer.comparator"));
+  // Phase 17C — official automatic grading fails CLOSED: the suite must be gradeable before the question can be published.
+  if (key.gradingMode !== undefined && !CODING_GRADING_MODES.includes(key.gradingMode as CodingGradingMode)) out.push(err("CODING_GRADING_MODE_UNKNOWN", "طريقة تصحيح رسمي غير معروفة.", "answer.gradingMode"));
+  if (key.gradingMode === "hiddenTests") {
+    if (nHidden === 0) out.push(err("CODING_AUTO_NO_HIDDEN_TESTS", "التصحيح التلقائي يحتاج إلى اختبار مخفي واحد على الأقل.", "answer.hiddenTests"));
+    // the student program's output can never exceed the question's output limit, so an expected output above it is unreachable
+    const outputLimit = limits && validLimit("outputBytes", limits.outputBytes) ? (limits.outputBytes as number) : 0;
+    if (Array.isArray(key.hiddenTests)) key.hiddenTests.forEach((t, i) => {
+      if (isObj(t) && typeof t.expectedOutput === "string" && outputLimit > 0 && utf8ByteLength(t.expectedOutput) > outputLimit) out.push(err("CODING_EXPECTED_OUTPUT_EXCEEDS_LIMIT", "الاختبار المخفي " + (i + 1) + ": المخرجات المتوقعة أكبر من حد المخرجات المسموح للبرنامج.", "answer.hiddenTests"));
+    });
+  }
   if (key.referenceSolutions !== undefined) {
     if (!isObj(key.referenceSolutions)) out.push(err("CODING_REFERENCE_INVALID", "الحلول المرجعية غير صالحة.", "answer.referenceSolutions"));
     else for (const [k, v] of Object.entries(key.referenceSolutions)) {
